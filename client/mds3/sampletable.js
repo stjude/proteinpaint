@@ -267,6 +267,25 @@ function printSampleName(sample, tk, div, block) {
 				}
 			})
 	}
+
+	if (tk.mds.queries?.singleSampleGenomeQuantification) {
+		for (const k in tk.mds.queries.singleSampleGenomeQuantification) {
+			const q = tk.mds.queries.singleSampleGenomeQuantification[k]
+			extraRow
+				.append('button')
+				.text(k)
+				.on('click', async event => {
+					const data = await q.get(sample[q.sample_id_key])
+					tk.menutip
+						.clear()
+						.show(event.clientX, event.clientY)
+						.d.append('img')
+						.attr('width', data.width)
+						.attr('height', data.height)
+						.attr('src', data.src)
+				})
+		}
+	}
 }
 
 async function showDtDisco(event, sample, arg, fromTable = false) {

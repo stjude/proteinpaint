@@ -1,6 +1,9 @@
 const gdc = require('./mds3.gdc')
 const fs = require('fs')
+const readline = require('readline')
 const path = require('path')
+const scaleLinear = require('d3-scale').scaleLinear
+const createCanvas = require('canvas').createCanvas
 const { initGDCdictionary } = require('./termdb.gdc')
 const { validate_variant2samples } = require('./mds3.variant2samples')
 const utils = require('./utils')
@@ -55,6 +58,7 @@ validate_query_cnv
 validate_query_ld
 validate_query_geneExpression
 validate_query_singleSampleMutation
+validate_query_singleSampleGenomeQuantification
 validate_variant2samples
 validate_ssm2canonicalisoform
 mayAdd_refseq2ensembl
@@ -87,6 +91,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
+		await validate_query_singleSampleGenomeQuantification(ds, genome)
 
 		validate_variant2samples(ds)
 		validate_ssm2canonicalisoform(ds)
@@ -435,6 +440,17 @@ function copy_queries(ds, dscopy) {
 	if (ds.queries.singleSampleMutation) {
 		copy.singleSampleMutation = {
 			sample_id_key: ds.queries.singleSampleMutation.sample_id_key
+		}
+	}
+	if (ds.queries.singleSampleGenomeQuantification) {
+		copy.singleSampleGenomeQuantification = {}
+		for (const k in ds.queries.singleSampleGenomeQuantification) {
+			const q = ds.queries.singleSampleGenomeQuantification[k]
+			copy.singleSampleGenomeQuantification[k] = {
+				sample_id_key: q.sample_id_key,
+				min: q.min,
+				max: q.max
+			}
 		}
 	}
 
@@ -1217,6 +1233,112 @@ async function validate_query_singleSampleMutation(ds, genome) {
 	}
 }
 
+async function validate_query_singleSampleGenomeQuantification(ds, genome) {
+	const q = ds.queries.singleSampleGenomeQuantification
+	if (!q) return
+	for (const key in q) {
+		// each key is one data type
+		if (!Number.isFinite(q[key].min)) throw 'min not a number'
+		if (!Number.isFinite(q[key].max)) throw 'max not a number'
+		if (q[key].min >= q[key].max) throw 'min>=max'
+		if (q[key].folder) {
+			// using a folder to store text files for individual samples
+			// file names are integer sample id
+			q[key].get = async (sampleName, devicePixelRatio) => {
+				/* as mds3 client may not be using integer sample id for now,
+				the argument is string id and has to be mapped to integer id
+				*/
+				let fileName = sampleName
+				if (ds.cohort?.termdb?.q?.sampleName2id) {
+					// has name-to-id converter
+					fileName = ds.cohort.termdb.q.sampleName2id(sampleName)
+					if (fileName == undefined) {
+						// unable to convert string id to integer
+						return []
+					}
+				}
+				const result = await plotSampleGenomeQuantification(
+					path.join(serverconfig.tpmasterdir, q[key].folder, fileName.toString()),
+					genome,
+					q[key],
+					devicePixelRatio
+				)
+				return result
+			}
+		} else {
+			throw 'unknown query method for singleSampleGenomeQuantification'
+		}
+	}
+}
+
+function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio = 1) {
+	devicePixelRatio = Number(devicePixelRatio)
+	const axisHeight = 100,
+		ypad = 20,
+		xpad = 20,
+		plotWidth = 800,
+		axisWidth = 50
+
+	let bpTotal = 0
+	for (const chr in genome.majorchr) {
+		bpTotal += genome.majorchr[chr]
+	}
+	const wgScale = plotWidth / bpTotal
+	const chrScale = {}
+	let bpCum = 0
+	for (const chr in genome.majorchr) {
+		const chrLen = genome.majorchr[chr]
+		chrScale[chr] = scaleLinear()
+			.domain([0, chrLen])
+			.range([wgScale * bpCum, wgScale * (bpCum + chrLen)])
+		bpCum += chrLen
+	}
+
+	const yScale = scaleLinear()
+		.domain([control.min, control.max])
+		.range([axisHeight, 0])
+
+	const canvasWidth = xpad * 2 + axisWidth + plotWidth
+	const canvasHeight = ypad * 2 + axisHeight
+	const canvas = createCanvas(canvasWidth * devicePixelRatio, canvasHeight * devicePixelRatio)
+	const ctx = canvas.getContext('2d')
+	if (devicePixelRatio > 1) ctx.scale(devicePixelRatio, devicePixelRatio)
+
+	ctx.strokeStle = 'black'
+	{
+		ctx.beginPath()
+		const y = axisHeight - yScale(0)
+		ctx.moveTo(xpad + axisWidth, y)
+		ctx.lineTo(xpad + axisWidth + plotWidth, y)
+		ctx.stroke()
+		ctx.closePath()
+	}
+
+	const rl = readline.createInterface({ input: fs.createReadStream(file) })
+
+	return new Promise((resolve, reject) => {
+		rl.on('line', line => {
+			const tmp = line.split(',') // \t
+			const chr = tmp[0]
+			if (!chr) return
+			if (!chrScale[chr]) return
+			const pos = Number(tmp[1])
+			if (!Number.isInteger(pos)) return
+			const value = Number(tmp[2])
+			if (!Number.isFinite(value)) return
+
+			ctx.fillStyle = value > 0 ? '#a35069' : '#5051a3'
+
+			const x = chrScale[chr](pos)
+			const y = yScale(value)
+			ctx.fillRect(xpad + axisWidth + x, y, 1, 1)
+		})
+		rl.on('close', () => {
+			resolve({ src: canvas.toDataURL(), width: canvasWidth, height: canvasHeight })
+		})
+	})
+}
+
 /*
 getter input:
 .rglst=[ { chr, start, stop} ]
@@ -1484,7 +1606,6 @@ export async function cnvByRangeGetter_file(ds, genome) {
 						if (!Number.isFinite(j.value)) return
 						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
 						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
-
 
 						j.start = start
 						j.stop = stop

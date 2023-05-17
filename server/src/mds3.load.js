@@ -182,6 +182,12 @@ async function load_driver(q, ds) {
 		if (!ds.queries.singleSampleMutation?.get) throw 'not supported on this dataset'
 		return { mlst: await ds.queries.singleSampleMutation.get(q.singleSampleMutation, q) }
 	}
+	if (q.singleSampleGenomeQuantification) {
+		if (!ds.queries.singleSampleGenomeQuantification) throw 'not supported on this dataset'
+		const p = ds.queries.singleSampleGenomeQuantification[q.singleSampleGenomeQuantification.dataType]
+		if (!p) throw 'invalid dataType'
+		return await p.get(q.singleSampleGenomeQuantification.sample, q.devicePixelRatio)
+	}
 
 	if (q.ssm2canonicalisoform) {
 		// gdc-specific logic
