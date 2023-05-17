@@ -185,7 +185,7 @@ function divideValues(q, data, term, overlayTerm) {
 		if (overlayTerm) {
 			if (!v[(overlayTerm?.id)]) continue
 			// if there is no value for q.divideTw then skip this
-			if (overlayTerm.term.values[(v[overlayTerm.id]?.key)]?.uncomputable) {
+			if (overlayTerm.term?.values?.[v[overlayTerm.id]?.key]?.uncomputable) {
 				const label = overlayTerm.term.values[(v[overlayTerm.id]?.value)]?.label // label of this uncomputable category
 				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			}
