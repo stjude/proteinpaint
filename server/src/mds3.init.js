@@ -1273,7 +1273,7 @@ async function validate_query_singleSampleGenomeQuantification(ds, genome) {
 
 function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio = 1) {
 	devicePixelRatio = Number(devicePixelRatio)
-	const axisHeight = 100,
+	const axisHeight = 200,
 		ypad = 20,
 		xpad = 20,
 		plotWidth = 800,
@@ -1304,39 +1304,85 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 	const ctx = canvas.getContext('2d')
 	if (devicePixelRatio > 1) ctx.scale(devicePixelRatio, devicePixelRatio)
 
-	ctx.strokeStle = 'black'
-	{
-		ctx.beginPath()
-		const y = axisHeight - yScale(0)
-		ctx.moveTo(xpad + axisWidth, y)
-		ctx.lineTo(xpad + axisWidth + plotWidth, y)
-		ctx.stroke()
-		ctx.closePath()
-	}
+	plotTick(control.max)
+	plotTick(0)
+	plotTick(control.min)
 
 	const rl = readline.createInterface({ input: fs.createReadStream(file) })
 
 	return new Promise((resolve, reject) => {
 		rl.on('line', line => {
-			const tmp = line.split(',') // \t
+			const tmp = line.split('\t')
 			const chr = tmp[0]
 			if (!chr) return
-			if (!chrScale[chr]) return
+			if (!chrScale[chr]) return // first line may be header
 			const pos = Number(tmp[1])
 			if (!Number.isInteger(pos)) return
 			const value = Number(tmp[2])
 			if (!Number.isFinite(value)) return
+			if (value < control.min || value > control.max) return
 
 			ctx.fillStyle = value > 0 ? '#a35069' : '#5051a3'
 
 			const x = chrScale[chr](pos)
-			const y = yScale(value)
+			const y = ypad + yScale(value)
 			ctx.fillRect(xpad + axisWidth + x, y, 1, 1)
 		})
 		rl.on('close', () => {
+			addLines()
 			resolve({ src: canvas.toDataURL(), width: canvasWidth, height: canvasHeight })
 		})
 	})
+
+	function plotTick(v) {
+		ctx.fillStyle = 'black'
+		ctx.font = '12px Arial'
+		ctx.textAlign = 'right'
+		const y = ypad + yScale(v)
+		ctx.fillText(v, xpad + axisWidth - 6, y + 5)
+		ctx.strokeStyle = 'black'
+		ctx.beginPath()
+		ctx.moveTo(xpad + axisWidth - 4, y)
+		ctx.lineTo(xpad + axisWidth, y)
+		ctx.stroke()
+		ctx.closePath()
+	}
+	function addLines() {
+		ctx.strokeStyle = 'black'
+		ctx.beginPath()
+		{
+			// horizontal line at y=0
+			const y = ypad + axisHeight - yScale(0)
+			ctx.moveTo(xpad + axisWidth, y)
+			ctx.lineTo(xpad + axisWidth + plotWidth, y)
+			ctx.stroke()
+		}
+
+		// vertical lines delineating chrs
+		let first = true
+		ctx.fillStyle = 'black'
+		ctx.font = '12px Arial'
+		ctx.textAlign = 'center'
+		for (const chr in chrScale) {
+			// plot name
+			ctx.fillText(
+				chr.replace('chr', ''),
+				xpad + axisWidth + chrScale[chr](genome.majorchr[chr] / 2),
+				ypad + axisHeight + 14
+			)
+
+			if (first) {
+				first = false
+				continue // do not plot separator line for chr1
+			}
+
+			const x = Math.floor(xpad + axisWidth + chrScale[chr](0)) + 0.5 // crisp line
+			ctx.moveTo(x, ypad)
+			ctx.lineTo(x, ypad + axisHeight)
+			ctx.stroke()
+		}
+		ctx.closePath()
+	}
 }
 
 /*
