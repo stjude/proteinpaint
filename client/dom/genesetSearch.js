@@ -32,9 +32,15 @@ export function initGenesetSearch({ holder, genome, callback, geneList, mode = '
 			.append('button')
 			.attr('name', 'msigdbBt')
 			.text('Load MSigDB gene set')
-	rightDiv.append('button').text('Clear')
+	rightDiv
+		.append('button')
+		.text('Clear')
+		.on('click', () => {
+			geneList = []
+			renderGenes()
+		})
 
-	const genesDiv = div.append('div')
+	const genesDiv = div.append('div').style('padding', '5px')
 	renderGenes()
 
 	const submitDiv = div
@@ -51,7 +57,6 @@ export function initGenesetSearch({ holder, genome, callback, geneList, mode = '
 					.append('span')
 					.text(gene.name)
 					.style('padding', '5px')
-		else genesDiv.append('span').text('...')
 	}
 	function addGene() {
 		const name = inputSearch.node().value
