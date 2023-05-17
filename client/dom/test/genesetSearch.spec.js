@@ -107,17 +107,20 @@ tape('Search genes test', function(test) {
 
 			initGenesetSearch({ holder, genome: hg38, callback: console.log })
 			const button = holder.select('button[name="msigdbBt"]')
-			console.log(button)
-			console.log(button.empty())
 			test.true(!button.empty(), `Should show MSigDB button for the hg38 genome`)
 		}
 
 		function testHG19() {
 			const holder = getHolder()
-
-			initGenesetSearch({ holder, genome: hg19, callback: console.log })
+			const vocabApi = { geneAPI: { mode: 'expression', getTopGenes: () => hg19.geneset[0].lst } } //Fake vocab api returning  some genes
+			initGenesetSearch({
+				holder,
+				genome: hg19,
+				callback: console.log,
+				geneList: vocabApi.geneAPI.getTopGenes(),
+				mode: 'expression'
+			})
 			const button = holder.select('button[name="msigdbBt"]')
-
 			test.true(button.empty(), `Should not show MSigDB button for the hg19 genome`)
 		}
 	}
