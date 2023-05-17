@@ -6,9 +6,12 @@ export function initGenesetSearch({ holder, genome, callback, geneList, mode = '
 		.style('border-color', '#eee')
 		.style('padding', '5px')
 	const headerDiv = div.append('div')
-	headerDiv.append('input').attr('placeholder', 'Search genes')
+	const inputSearch = headerDiv.append('input').attr('placeholder', 'Search genes')
+	headerDiv
+		.append('button')
+		.text('Add')
+		.on('click', () => addGene())
 
-	headerDiv.append('button').text('Search')
 	const rightDiv = headerDiv
 		.append('div')
 		.style('display', 'inline-block')
@@ -32,16 +35,27 @@ export function initGenesetSearch({ holder, genome, callback, geneList, mode = '
 	rightDiv.append('button').text('Clear')
 
 	const genesDiv = div.append('div')
-	if (geneList)
-		for (const gene of geneList)
-			genesDiv
-				.append('span')
-				.text(gene.name)
-				.style('padding', '5px')
-	else genesDiv.append('span').text('...')
+	renderGenes()
+
 	const submitDiv = div
 		.append('div')
 		.append('button')
 		.text('Submit')
 		.on('click', callback)
+
+	function renderGenes() {
+		genesDiv.selectAll('*').remove()
+		if (geneList)
+			for (const gene of geneList)
+				genesDiv
+					.append('span')
+					.text(gene.name)
+					.style('padding', '5px')
+		else genesDiv.append('span').text('...')
+	}
+	function addGene() {
+		const name = inputSearch.node().value
+		geneList.push({ name })
+		renderGenes()
+	}
 }
