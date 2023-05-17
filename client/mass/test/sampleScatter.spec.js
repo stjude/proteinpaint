@@ -11,15 +11,6 @@ const d3drag = require('d3-drag')
  reusable helper functions
 **************************/
 
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-}
-
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		vocab: {
