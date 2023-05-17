@@ -1193,9 +1193,15 @@ function setInteractivity(self) {
 			.showunder(this)
 			.d.append('button')
 			.html('Download SVG')
-			.on('click', () =>
-				to_svg(this.parentNode.parentNode.querySelector('svg'), 'survival', { apply_dom_styles: true })
-			)
+			.on('click', () => {
+				if (!self.state) return
+				const chartDiv = select(this.closest('.pp-survival-chart'))
+				downloadChart(
+					chartDiv.select('.sjpp-survival-mainG'),
+					'Survival_Plot',
+					chartDiv.node() // use to get computed styles
+				)
+			})
 	}
 }
 
