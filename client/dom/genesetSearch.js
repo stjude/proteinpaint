@@ -47,7 +47,7 @@ export function initGenesetSearch({ holder, genome, callback, geneList, mode = '
 		.append('div')
 		.append('button')
 		.text('Submit')
-		.on('click', callback)
+		.on('click', () => callback(geneList))
 
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()

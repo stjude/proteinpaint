@@ -105,7 +105,7 @@ tape('Search genes test', function(test) {
 		function testHG38() {
 			const holder = getHolder()
 
-			initGenesetSearch({ holder, genome: hg38, callback: console.log })
+			initGenesetSearch({ holder, genome: hg38, callback: printGenes })
 			const button = holder.select('button[name="msigdbBt"]')
 			test.true(!button.empty(), `Should show MSigDB button for the hg38 genome`)
 		}
@@ -116,12 +116,17 @@ tape('Search genes test', function(test) {
 			initGenesetSearch({
 				holder,
 				genome: hg19,
-				callback: console.log,
+				callback: printGenes,
 				geneList: vocabApi.geneAPI.getTopGenes(),
 				mode: 'expression'
 			})
 			const button = holder.select('button[name="msigdbBt"]')
 			test.true(button.empty(), `Should not show MSigDB button for the hg19 genome`)
+		}
+
+		function printGenes(geneList) {
+			console.log('Genes submitted')
+			for (const gene of geneList) console.log(gene.name)
 		}
 	}
 })
