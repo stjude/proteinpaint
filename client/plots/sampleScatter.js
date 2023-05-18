@@ -272,7 +272,9 @@ class Scatter {
 			})
 		}
 		// TODO: handle multiple chart download when there is a divide by term
-		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.mainDiv.select('svg')))
+		this.components.controls.on('downloadClick.scatter', () => {
+			for (const chart of this.charts) this.downloadSVG(chart.svg)
+		})
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 }
