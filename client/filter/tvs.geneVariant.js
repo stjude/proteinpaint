@@ -64,8 +64,8 @@ async function fillMenu(self, _div, tvs) {
 			}
 			/* values is an array that stores classes (for each available dt) that have/haven't been crossed out by the user at this round of edit-and-apply, e.g.
             [
-                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'G'}
-                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'S'},
+                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'germline'}
+                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'somatic'},
                 {dt: 2, mclassLst: ['Blank', 'WT'], mclassExcludeLst:[]}
                 {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
             ]
@@ -88,14 +88,15 @@ async function fillMenu(self, _div, tvs) {
             if distinguish between somatic and germline snv/indel:   
             1 : {
                     byOrigin: {
-                        G: { Blank: 45, WT: 35 },
-                        S: { WT: 55, Blank: 18, M: 5, N: 1, F: 1 }
+                        germline: { Blank: 45, WT: 35 },
+                        somatic: { WT: 55, Blank: 18, M: 5, N: 1, F: 1 }
                     }
                 }
         */
 		if (classes.byOrigin) {
-			buildItems(classes.byOrigin['G'], dt, 'G')
-			buildItems(classes.byOrigin['S'], dt, 'S')
+			for (const [k, v] of Object.entries(classes.byOrigin)) {
+				buildItems(v, dt, k)
+			}
 		} else {
 			buildItems(classes, dt)
 		}
@@ -112,12 +113,7 @@ async function fillMenu(self, _div, tvs) {
 			items.sort((item1, item2) => item2.num - item1.num)
 			if (items.length) {
 				groups.push({
-					name:
-						dt == 1 && origin == 'G'
-							? 'Germline SNV/indel'
-							: dt == 1 && origin == 'S'
-							? 'Somatic SNV/indel'
-							: dt2label[dt],
+					name: origin ? `${origin.charAt(0).toUpperCase() + origin.slice(1)} ${dt2label[dt]}` : dt2label[dt],
 					items
 				})
 			}
@@ -125,8 +121,8 @@ async function fillMenu(self, _div, tvs) {
 	}
 	/* groups is an array that contains each dt as {name, items}, items is an array that contains the dt's classes in the format of {dt, label, key, num, origin}
     [
-        {name: 'Germline SNV/indel', items:[{dt: '1', label: "Not tested",  key: 'Blank', num:64, origin:'G'}, ...]}},
-        {name: 'Somatic SNV/indel', items:[{dt: 1, label: "Not tested",  key: 'Blank', num:44, origin'S'}, ...]}},
+        {name: 'Germline SNV/indel', items:[{dt: '1', label: "Not tested",  key: 'Blank', num:64, origin:'germline'}, ...]}},
+        {name: 'Somatic SNV/indel', items:[{dt: 1, label: "Not tested",  key: 'Blank', num:44, origin'somatic'}, ...]}},
         {name: 'Fusion RNA', items:[{dt: 2, label: "Not tested",  key: 'Blank', num:53}, ...]}},
         {name: 'CNV', items:[{dt: 4, label: "Not tested",  key: 'Blank', num:77}, ...]}}
     ]
@@ -135,8 +131,8 @@ async function fillMenu(self, _div, tvs) {
 	if (tvs.values.length) {
 		/* tvs.values is an array that stores classes (for each available dt) that have/haven't been crossed out by the user at the last round of edit-and-apply, e.g.
             [
-                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'G'}
-                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'S'},
+                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'germline'}
+                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'somatic'},
                 {dt: 2, mclassLst: ['Blank', 'WT'], mclassExcludeLst:[]}
                 {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
             ]
@@ -154,8 +150,8 @@ async function fillMenu(self, _div, tvs) {
 	/*
     exclude is an array of class/item crossed by users, as {dt, label, key, num, origin}, same as item in groups, e.g.,
     [
-        {dt: "1", key: "WT", label: "Wildtype", num: 35, origin: 'G'},
-        {dt: "1", key: "WT", label: "Wildtype", num: 25, origin: 'S'},
+        {dt: "1", key: "WT", label: "Wildtype", num: 35, origin: 'germline'},
+        {dt: "1", key: "WT", label: "Wildtype", num: 25, origin: 'somatic'},
         {dt: 4, key: "CNV_loss", label: "Copy number loss", num: 1}
     ]
     */
