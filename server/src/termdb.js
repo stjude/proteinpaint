@@ -274,17 +274,19 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 	if (q.type == 'geneVariant') {
 		const samples = data.samples
 		const dtClassMap = new Map()
-		const wesByOrigin = ds?.assayAvailability?.byDt?.['1']?.byOrigin //whether distinguising germline and somatic snv/indel
-		if (wesByOrigin) {
-			// if distinguising germline and somatic snv/indel, G for germline snv/indel classes, S for somatic snv/indel classes
-			dtClassMap.set(1, { byOrigin: { G: {}, S: {} } })
+		if (ds.assayAvailability?.byDt) {
+			for (const [dtType, dtValue] of Object.entries(ds.assayAvailability.byDt)) {
+				if (dtValue.byOrigin) {
+					dtClassMap.set(parseInt(dtType), { byOrigin: { germline: {}, somatic: {} } })
+				}
+			}
 		}
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
 			const values = sampleData[q.tid].values
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
 			[
-				{ dt: 1, class: 'Blank', _SAMPLEID_: 1, origin: 'G' },
-				{ dt: 1, class: 'WT', _SAMPLEID_: 1, origin: 'S' },
+				{ dt: 1, class: 'Blank', _SAMPLEID_: 1, origin: 'germline' },
+				{ dt: 1, class: 'WT', _SAMPLEID_: 1, origin: 'somatic' },
 				{ dt: 2, class: 'Blank', _SAMPLEID_: 1 },
 				{ dt: 4, class: 'WT', _SAMPLEID_: 1 }
 			]

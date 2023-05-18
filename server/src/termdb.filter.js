@@ -146,8 +146,8 @@ async function get_geneVariant(tvs, CTEname, ds) {
 		/*
 		sampleVlaues here is an array of results for each available dt for the sampleID. e.g.
 		[
-			{ dt: 1, class: 'WT', _SAMPLEID_: 21, origin: 'G' },
-			{ dt: 1, class: 'WT', _SAMPLEID_: 21, origin: 'S' },
+			{ dt: 1, class: 'WT', _SAMPLEID_: 21, origin: 'germline' },
+			{ dt: 1, class: 'WT', _SAMPLEID_: 21, origin: 'somatic' },
 			{ dt: 2, class: 'Blank', _SAMPLEID_: 21 },
 			{ dt: 4, class: 'WT', _SAMPLEID_: 21 }
 		]
@@ -156,8 +156,8 @@ async function get_geneVariant(tvs, CTEname, ds) {
 		for (const tvsValue of tvs.values) {
 			/* tvs.values is an array that stores classes (for each available dt) that have/haven't been crossed out by the user at this round of edit-and-apply, e.g.
             [
-                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'G'}
-                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'S'},
+                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'germline'}
+                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'somatic'},
                 {dt: 2, mclassLst: ['Blank', 'WT'], mclassExcludeLst:[]}
                 {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
             ]
