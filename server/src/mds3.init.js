@@ -825,6 +825,12 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 					// m should have .info{}
 					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
 
+					/* m0.mlst.length>1 has multiple alt alleles
+					even if just one allele passes info filter, bcftools still returns the whole line
+					thus must do this manual filter
+					*/
+					if (m0.mlst.length > 1 && param.variantFilter?.lst && mayDropMbyInfoFilter_2(m, param)) continue
+
 					m.chr = (q._tk.nochr ? 'chr' : '') + chr
 					//m.pos = pos - 1 // bcf pos is 1-based, return 0-based
 					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
@@ -881,7 +887,6 @@ FIXME replace this with variantFilter
 */
 function mayDropMbyInfoFilter(m0, param) {
 	if (!param.infoFilter) return false
-
 	for (const infoKey in param.infoFilter) {
 		// each key corresponds to a value to skip
 		const variantValue = m0.info[infoKey]
@@ -896,6 +901,37 @@ function mayDropMbyInfoFilter(m0, param) {
 		} else {
 			// variantValue is single value, not array
 			if (param.infoFilter[infoKey].includes(variantValue)) return true // skip
+		}
+	}
+	return false
+}
+
+function mayDropMbyInfoFilter_2(m0, param) {
+	for (const e of param.variantFilter.lst) {
+		const value = m0.info[e.tvs.term.id]
+		if (value == undefined) return true
+		if (e.tvs.term.type == 'integer' || e.tvs.term.type == 'float') {
+			const numValue = Number(value)
+			if (Number.isNaN(numValue)) return true
+			const range = e.tvs.ranges?.[0]
+			if (range) {
+				if ('start' in range) {
+					// skip numValue < start
+					if (range.startinclusive) {
+						if (numValue < range.start) return true
+					} else {
+						if (numValue <= range.start) return true
+					}
+				}
+				if ('stop' in range) {
+					// skip numValue > stop
+					if (range.stopinclusive) {
+						if (numValue > range.stop) return true
+					} else {
+						if (numValue >= range.stop) return true
+					}
+				}
+			}
 		}
 	}
 	return false
