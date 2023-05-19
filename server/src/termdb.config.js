@@ -46,7 +46,6 @@ export function make(q, res, ds, genome) {
 		matrix: tdb.matrix,
 		mclass: tdb.mclass
 	}
-
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
@@ -57,6 +56,7 @@ export function make(q, res, ds, genome) {
 	if (tdb.coxStartTimeMsg) c.coxStartTimeMsg = tdb.coxStartTimeMsg
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
 	if (tdb.additionalSampleAttributes) c.additionalSampleAttributes = tdb.additionalSampleAttributes
+	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
 	addRequiredAuth(c, q)

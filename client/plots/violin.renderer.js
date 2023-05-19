@@ -55,7 +55,7 @@ export default function violinRenderer(self) {
 		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
 
 		const svg = renderSvg(t1, self, isH, settings)
-		renderScale(t1, t2, settings, isH, svg)
+		renderScale(t1, t2, settings, isH, svg, self)
 
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
@@ -65,41 +65,6 @@ export default function violinRenderer(self) {
 			self.labelHideLegendClicking(t2, plot)
 		}
 	}
-
-	// self.displaySummaryStats = function(d, event, tip) {
-	// 	const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`]
-	// 	if (d.summaryStats) {
-	// 		rows.push(`<tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'total').label}</td>
-	//           <td style='padding:3px; text-align:center'>n=${d.summaryStats.values.find(x => x.id === 'total').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'min').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'min').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p25').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p25').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'mean').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'mean').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'median').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'median').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p75').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p75').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'max').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'max').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'variance').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'variance').value}
-	//           <tr>
-	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'SD').label}</td>
-	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'SD').value}
-	//           `)
-	// 	}
-	// 	tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-	// }
 
 	self.displaySummaryStats = function(d, event, tip) {
 		let rows = []
@@ -236,17 +201,30 @@ export default function violinRenderer(self) {
 		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, settings, isH), violinSvg: violinSvg }
 	}
 
-	function renderScale(t1, t2, settings, isH, svg) {
+	function renderScale(t1, t2, settings, isH, svg, self) {
 		// <g>: holder of numeric axis
-		const g = svg.svgG.append('g')
-		// .style('font-size', '15')
+		const g = svg.svgG.append('g').style('font-size', '12')
 
-		const ticks = svg.axisScale.ticks(3).filter(tick => tick > 0)
+		const ticks = svg.axisScale.ticks().filter(tick => tick > 0)
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
 				.scale(svg.axisScale)
-				.tickFormat(settings.unit === 'log' ? d3format('.3f') : null)
+				.tickFormat((d, i) => {
+					if (settings.unit === 'log') {
+						if (self.app.vocabApi.termdbConfig.logscaleBase2) {
+							if (ticks.length > 10 && i % 2 !== 0) return ''
+							if (d < 0.1) return d3format('.3f')(d)
+							return d3format('.1f')(d)
+						} else {
+							if (ticks.length >= 15 && i % 4 !== 0) return ''
+							if (d < 1) return d3format('.1f')(d)
+							if (d >= 1) return d3format('.1s')(d)
+							return d3format('.0f')(d)
+						}
+					}
+					return null
+				})
 				.tickValues(ticks)
 		)
 
@@ -459,7 +437,7 @@ export function createNumericScale(self, settings, isH) {
 	let axisScale
 	settings.unit == 'log'
 		? (axisScale = scaleLog()
-				.base(2)
+				.base(self.app.vocabApi.termdbConfig.logscaleBase2 ? 2 : 10)
 				.domain([self.data.min, self.data.max + self.data.max])
 				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 		: (axisScale = scaleLinear()
