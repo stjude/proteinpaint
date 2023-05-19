@@ -55,8 +55,13 @@ export function setRenderers(self) {
 		;(chart.xScaleMin = chart.xAxisScale(xMin)), (chart.xScaleMax = chart.xAxisScale(xMax))
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
-		if (!self.config.gradientColor) self.config.gradientColor = {}
-		if (!self.config.gradientColor[chart.id]) self.config.gradientColor[chart.id] = '#008000'
+		if (typeof self.config.gradientColor !== 'object') {
+			const defaultColor = self.config.gradientColor
+			self.config.gradientColor = {}
+			self.config.gradientColor[chart.id] = defaultColor
+		} else if (!self.config.gradientColor[chart.id]) {
+			self.config.gradientColor[chart.id] = '#008000'
+		}
 		chart.startColor = rgb(self.config.gradientColor[chart.id])
 			.brighter()
 			.brighter()
