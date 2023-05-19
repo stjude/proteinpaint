@@ -79,7 +79,7 @@ arg
 			// subsequently opened ones hasn't
 			const p = arg.block.holder.node().getBoundingClientRect()
 			this.presize = {
-				x: p.left + p.width,
+				x: p.left + arg.block.leftheadw + arg.block.width + 20,
 				y: p.top,
 				width: Math.min(maxwidth, Math.max(minwidth, document.body.scrollWidth - p.left - p.width - 100)),
 				height: Math.min(maxheight, Math.max(minheight, document.body.clientHeight - 270))

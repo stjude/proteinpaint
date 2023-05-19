@@ -178,6 +178,10 @@ export class Block {
 			const minwidth = 800
 			const w = arg.holder.node().getBoundingClientRect().width
 			this.width = ntpxwidth * Math.ceil(Math.max(w * 0.63, minwidth) / ntpxwidth)
+
+			// !!! TEMP !!!
+			// hardcoded method to detect legacy ds with floating exp panel, to make room for the panels; delete after pediatric legacy ds is retired
+			if (arg.datasetlst?.includes('pediatric')) this.width -= 100
 		}
 
 		if (arg.usegm) {
