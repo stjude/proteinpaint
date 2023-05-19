@@ -85,7 +85,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
 
-	createCanvasImg(q, result)
+	createCanvasImg(q, result, ds)
 
 	res.send(result)
 }
@@ -268,7 +268,7 @@ function resultObj(valuesObject, data, q) {
 	return result
 }
 
-function createCanvasImg(q, result) {
+function createCanvasImg(q, result, ds) {
 	// size on x-y for creating circle and ticks
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
@@ -285,7 +285,7 @@ function createCanvasImg(q, result) {
 
 	if (useLog) {
 		axisScale = scaleLog()
-			.base(2)
+			.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)
 			.domain([result.min, result.max + result.max])
 			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 	} else {
