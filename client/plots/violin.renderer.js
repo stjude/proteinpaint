@@ -205,7 +205,8 @@ export default function violinRenderer(self) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG.append('g').style('font-size', '12')
 
-		const ticks = svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0)
+		const ticks =
+			settings.unit === 'log' ? svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0) : svg.axisScale.ticks()
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
