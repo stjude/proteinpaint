@@ -29,8 +29,8 @@ export function setRenderers(self) {
 			self.renderCanvas(this.serieses, g, d, s, _g, duration)
 		} else {
 			self.dom.seriesesG
-				.transition()
-				.duration(duration)
+				//.transition()
+				//.duration(duration)
 				.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
 			const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
@@ -51,8 +51,8 @@ export function setRenderers(self) {
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
 
-		g.transition()
-			.duration(duration)
+		g //.transition()
+			//.duration(duration)
 			.attr('transform', `translate(${series.x},${series.y})`)
 			.style('opacity', 1)
 		const last = series.cells[series.cells.length - 1]
@@ -162,11 +162,11 @@ export function setRenderers(self) {
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
 		const s = self.settings.matrix
 		const rect = select(this)
-			.transition()
+			//.transition()
 			// TODO: use s.duration if there is a way to avoid any remaining glitchy transitions
 			// using the cell index in the .data() bind function seems to fix glitches in split cells,
 			// but cells with overriden values flashes during a transition
-			.duration(0) //'x' in cell ? s.duration : 0)
+			//.duration(0) //'x' in cell ? s.duration : 0)
 			.attr('x', cell.x || 0)
 			.attr('y', cell.y || 0)
 			.attr('width', cell.width || self.dimensions.colw)
@@ -182,8 +182,8 @@ export function setRenderers(self) {
 			const side = l[direction]
 			side.box
 				.style('display', side.display || '')
-				.transition()
-				.duration(duration)
+				//.transition()
+				//.duration(duration)
 				.attr('transform', side.attr.boxTransform)
 
 			const labels = side.box.selectAll('.sjpp-matrix-label').data(side.data, side.key)
@@ -198,8 +198,8 @@ export function setRenderers(self) {
 			function renderLabel(lab) {
 				const g = select(this)
 				const textduration = g.attr('transform') ? duration : 0
-				g.transition()
-					.duration(textduration)
+				g //.transition()
+					//.duration(textduration)
 					.attr('transform', side.attr.labelGTransform)
 
 				if (!g.select(':scope>text').size()) g.append('text')
@@ -208,8 +208,8 @@ export function setRenderers(self) {
 				const text = g.select(':scope>text').attr('fill', '#000')
 
 				text
-					.transition()
-					.duration(textduration)
+					//.transition()
+					//.duration(textduration)
 					//.attr('opacity', side.attr.fontSize < 6 || labelText === 'configure' ? 0.1 : 1)
 					.attr('font-size', side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
@@ -346,16 +346,16 @@ export function setRenderers(self) {
 		d.svgw = d.mainw + d.extraWidth
 		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20 + s.scrollHeight
 		self.dom.svg
-			.transition()
-			.duration(duration)
+			//.transition()
+			//.duration(duration)
 			.attr('width', d.svgw)
 			.attr('height', d.svgh)
 
 		const x = leftBox.width - self.layout.left.offset
 		const y = topBox.height - self.layout.top.offset
 		self.dom.mainG
-			.transition()
-			.duration(duration)
+			//.transition()
+			//.duration(duration)
 			.attr('transform', `translate(${x},${y})`)
 
 		// this position is based on layout.btm.attr.boxTransform, plus box height and margins
@@ -363,8 +363,8 @@ export function setRenderers(self) {
 		const legendY = d.yOffset + d.mainh + s.collabelgap + btmBox.height + 20
 
 		self.dom.legendG
-			.transition()
-			.duration(duration)
+			//.transition()
+			//.duration(duration)
 			.attr('transform', `translate(${legendX},${legendY})`)
 	}
 }
