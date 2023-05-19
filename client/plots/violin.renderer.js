@@ -223,7 +223,7 @@ export default function violinRenderer(self) {
 							return d3format('.0f')(d)
 						}
 					}
-					return null
+					return d3format('.1f')(d)
 				})
 				.tickValues(ticks)
 		)
