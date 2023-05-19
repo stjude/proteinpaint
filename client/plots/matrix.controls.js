@@ -96,11 +96,15 @@ export class MatrixControls {
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
-						label: `Display ${l.sample} Counts for Gene`,
-						boxLabel: '',
-						type: 'checkbox',
+						label: `${l.sample} Counts for Gene`,
+						type: 'radio',
 						chartType: 'matrix',
-						settingsKey: 'samplecount4gene'
+						settingsKey: 'samplecount4gene',
+						options: [
+							{ label: 'Absolute', value: 'abs' },
+							{ label: `Percent`, value: 'pct' },
+							{ label: `None`, value: '' }
+						]
 					},
 					{
 						label: 'Rendering Style',

@@ -622,7 +622,11 @@ class Matrix {
 
 			t.label = t.tw.label || t.tw.term.name
 			if (s.samplecount4gene && t.tw.term.type.startsWith('gene')) {
-				t.label = `${t.label} (${t.counts.samples})`
+				const count =
+					s.samplecount4gene === 'abs'
+						? t.counts.samples
+						: ((100 * t.counts.samples) / this.sampleOrder.length).toFixed(1) + '%'
+				t.label = `${t.label} (${count})`
 			}
 
 			if (t.tw.q?.mode == 'continuous') {
