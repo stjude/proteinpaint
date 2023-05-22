@@ -106,6 +106,11 @@ const express = require('express'),
 	{ handle_healthcheck_closure } = require('./health'),
 	{ handle_genelookup_closure } = require('./gene'),
 	minimatch = require('minimatch')
+	ServerTest = require('../shared/test')
+
+// import ServerTest from '../shared/test'	
+
+
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -361,6 +366,10 @@ app.get(basepath + '/ideogram', handle_ideogram)
 
 pp_init()
 	.then(async () => {
+
+		const test = new ServerTest()
+		test.main()
+
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
 		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
