@@ -1,7 +1,7 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 
-export function initGenesetEdit({ holder, genome, callback, geneList, mode = 'mutation', vocabApi }) {
+export function initGenesetEdit({ holder, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
 	const div = holder.append('div').style('width', '50vw')
 	div
 		.style('border-style', 'solid')
