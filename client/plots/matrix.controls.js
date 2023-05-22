@@ -6,7 +6,7 @@ import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
-import { initGenesetEdit } from '../dom/genesetEdit'
+import { showGenesetEdit } from '../dom/genesetEdit'
 
 const tip = new Menu({ padding: '' })
 const tip2 = new Menu({ padding: '' })
@@ -655,13 +655,24 @@ export class MatrixControls {
 			.on('click', event => {
 				tip2.clear()
 				const vocabApi = this.parent.app.vocabApi
-				initGenesetEdit({
-					holder: tip2.d,
+				const callback = () => {
+					this.parent.app.dispatch({
+						type: 'plot_edit',
+						id: parent.id,
+						config: {
+							termgroups: parent.config.termgroups
+						}
+					})
+				}
+				showGenesetEdit({
+					x: event.clientX,
+					y: event.clientY,
+					menu: tip2,
 					genome: app.opts.genome,
 					geneList: [],
+					callback,
 					mode: 'expression'
 				})
-				tip2.show(event.clientX, event.clientY)
 			})
 	}
 

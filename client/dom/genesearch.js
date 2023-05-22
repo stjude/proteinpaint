@@ -150,7 +150,7 @@ export function addGeneSearchbox(arg) {
 		.attr('type', 'text')
 		.attr('placeholder', placeholder)
 		.attr('aria-label', 'Gene symbol, position, or alias')
-		.attr('class','sja_genesearchinput')
+		.attr('class', 'sja_genesearchinput')
 		.style('width', width + 'px')
 		.on('focus', event => {
 			event.target.select()
@@ -162,6 +162,7 @@ export function addGeneSearchbox(arg) {
 
 			// typed 2 or more chars, prompt user to press enter to search
 			searchStat.mark.html('')
+			searchStat.word.style('font-size', '0.7em')
 			searchStat.word.text('Press ENTER to search, ESC to cancel')
 
 			if (keyupEnter(event)) {
