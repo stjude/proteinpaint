@@ -1,6 +1,7 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 
+const tip2 = new Menu({ padding: '0px' })
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation' }) {
 	const div = menu.d.append('div').style('width', '60vw')
 	div
@@ -10,7 +11,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		.style('padding', '5px')
 	const headerDiv = div.append('div')
 	const inputSearch = addGeneSearchbox({
-		tip: new Menu({ padding: '5px' }),
+		tip: tip2,
 		genome,
 		row: headerDiv,
 		geneOnly: true,
@@ -35,10 +36,42 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		rightDiv.append('span').html('Minimum average value cut off')
 	}
 	if (genome?.termdbs?.msigdb)
-		rightDiv
-			.append('button')
-			.attr('name', 'msigdbBt')
-			.text('Load MSigDB gene set')
+		for (const key in genome.termdbs) {
+			let text = 'Load MSigDB gene set &#9660;'
+			const id = genome.termdbs.length > 1 ? key : ''
+			const msigdbBt = rightDiv
+				.append('button')
+				.attr('name', 'msigdbBt')
+				.html(`Load MSigDB gene set ${id} &#9660;`)
+				.on('click', async event => {
+					tip2.clear()
+					const termdb = await import('../termdb/app')
+					termdb.appInit({
+						holder: tip2.d,
+						state: {
+							dslabel: key,
+							genome: genome.name,
+							nav: {
+								header_mode: 'search_only'
+							}
+						},
+						tree: {
+							click_term: term => {
+								const geneset = term._geneset
+								console.log(geneset)
+								if (geneset) {
+									console.log(geneset)
+									geneList = geneset
+									renderGenes()
+								}
+								//menu.hide()
+								tip2.hide()
+							}
+						}
+					})
+					tip2.showunder(msigdbBt.node())
+				})
+		}
 	rightDiv
 		.append('button')
 		.text('Clear')
@@ -62,7 +95,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			callback(geneList)
 			menu.hide()
 		})
-	menu.show(x, y)
+	menu.show(x, y, false, true)
 
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()

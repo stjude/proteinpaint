@@ -608,12 +608,6 @@ export class MatrixControls {
 		}
 
 		self.addGeneSearch(app, parent, table.append('tr'))
-
-		if (app.opts.genome?.termdbs) {
-			for (const key in app.opts.genome.termdbs) {
-				self.addMsigdbMenu(app, parent, table.append('tr'), key)
-			}
-		}
 	}
 
 	appendDictInputs(self, app, parent, table) {
@@ -654,9 +648,24 @@ export class MatrixControls {
 			.text('Edit')
 			.on('click', event => {
 				tip2.clear()
-				const vocabApi = this.parent.app.vocabApi
-				const callback = () => {
-					this.parent.app.dispatch({
+				const callback = geneset => {
+					const tws = geneset.map(d => {
+						const tw = {
+							$id: get$id(),
+							term: {
+								name: d.symbol,
+								type: 'geneVariant'
+							},
+							q: {}
+						}
+						return tw
+					})
+
+					// TODO: see above for input to select which group to add the gene
+					// right not it assumes the first group
+					parent.config.termgroups[parent.selectedGroup].lst.push(...tws)
+
+					app.dispatch({
 						type: 'plot_edit',
 						id: parent.id,
 						config: {
@@ -671,71 +680,9 @@ export class MatrixControls {
 					genome: app.opts.genome,
 					geneList: [],
 					callback,
-					mode: 'expression'
+					mode: 'expression',
+					parent
 				})
-			})
-	}
-
-	// should be fine to name this method Msigdb as this is the only eligible geneset db for now
-	addMsigdbMenu(app, parent, tr, termdbKey) {
-		tr.attr('title', 'Select and add genes from the Mutation Signatures Database (MSigDB)')
-		const tdb = app.opts.genome.termdbs[termdbKey]
-		const td = tr
-			.append('td')
-			.attr('class', 'sja-termdb-config-row-label')
-			.html('Add a Gene Group')
-		const span = tr
-			.append('td')
-			.append('span')
-			.style('cursor', 'pointer')
-			.style('margin', '3px 5px')
-			.html(`Select from ${tdb.label} &#9660;`)
-			.on('click', async () => {
-				tip.clear()
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: tip.d,
-					state: {
-						dslabel: termdbKey,
-						genome: app.opts.genome.name,
-						nav: {
-							header_mode: 'search_only'
-						}
-					},
-					tree: {
-						click_term: term => {
-							const geneset = term._geneset
-							const tws = geneset.map(d => {
-								const tw = {
-									$id: get$id(),
-									term: {
-										name: d.symbol,
-										type: 'geneVariant'
-									},
-									q: {}
-								}
-								return tw
-							})
-
-							// TODO: see above for input to select which group to add the gene
-							// right not it assumes the first group
-							parent.config.termgroups[parent.selectedGroup].lst.push(...tws)
-
-							app.dispatch({
-								type: 'plot_edit',
-								id: parent.id,
-								config: {
-									termgroups: parent.config.termgroups
-								}
-							})
-
-							tip.hide()
-							app.tip.hide()
-						}
-					}
-				})
-
-				tip.showunder(span.node())
 			})
 	}
 
