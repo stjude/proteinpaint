@@ -5,10 +5,11 @@ import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
+import { showDtDisco } from '../mds3/sampletable'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
-		if (event.target.tagName == 'path' && event.target.__data__) {
+		if (event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie') {
 			const s2 = event.target.__data__
 			const displaySample = 'sample' in s2
 			const shrink = self.opts.parent?.type == 'summary' && !displaySample
@@ -103,9 +104,31 @@ export function setInteractivity(self) {
 		}
 	}
 
-	self.mouseclick = function() {
+	self.mouseclick = function(event) {
 		if (!self.lassoOn) self.dom.tip.hide()
 		tip2.hide()
+		const target = event.target
+		if (target.tagName == 'path' && target.getAttribute('name') == 'serie') {
+			self.dom.tooltip.hide()
+			const sample = event.target.__data__
+			self.dom.tip.clear()
+			self.dom.tip.show(event.clientX, event.clientY, false, true)
+			const menuDiv = self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(`Show disco plot`)
+				.on('click', event => {
+					showDtDisco(event, sample.sample, {}, true)
+					self.dom.tip.hide()
+				})
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(`Show methylation array`)
+				.on('click', e => {
+					self.dom.tip.hide()
+				})
+		}
 	}
 
 	self.onLegendClick = function(chart, legendG, name, key, e) {

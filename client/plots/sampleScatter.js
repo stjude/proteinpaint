@@ -1,6 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '#termsetting'
-
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import {
