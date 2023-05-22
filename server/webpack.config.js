@@ -46,7 +46,7 @@ const commonConfig = {
 		strictExportPresence: true,
 		rules: [
 			{
-				test: /\.js$/,
+				test: /\.(js|jsx|tsx|ts)$/,
 				use: [
 					{
 						loader: 'babel-loader',
@@ -80,6 +80,9 @@ module.exports = env => {
 							}
 						})
 					]
+				},
+				resolve: {
+					extensions: ['.js', '.jsx', '.ts', '.tsx']
 				}
 			})
 
@@ -99,7 +102,10 @@ module.exports = env => {
 				// devtool: 'source-map' is slowest to build/rebuild, but
 				// line numbers in stack traces are accurate
 				//
-				devtool: 'source-map'
+				devtool: 'source-map',
+				resolve: {
+					extensions: ['.js', '.jsx', '.ts', '.tsx']
+				}
 			})
 
 		case 'test':

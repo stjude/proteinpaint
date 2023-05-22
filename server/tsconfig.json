@@ -1,42 +1,13 @@
 {
   "compilerOptions": {
+    "extends": "../tsconfig.json",
     "baseUrl": "./",
     "paths": {
       "#src/*": [
         "./src/*"
       ],
-      "#common/*": [
-        "./common/*"
-      ],
-      "#dom/*": [
-        "./dom/*"
-      ],
-      "#filter": [
-        "./filter/filter.js"
-      ],
-      "#filter/*": [
-        "./filter/*"
-      ],
-      "#mass/*": [
-        "./mass/*"
-      ],
-      "#plots/*": [
-        "./plots/*"
-      ],
-      "#rx": [
-        "./rx/index.js"
-      ],
       "#shared/*": [
         "./shared/*"
-      ],
-      "#termdb/*": [
-        "./termdb/*"
-      ],
-      "#termsetting": [
-        "./termsetting/termsetting.js"
-      ],
-      "#termsetting/handlers/*": [
-        "./termsetting/handlers/*"
       ]
     }
   },
