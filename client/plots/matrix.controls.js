@@ -6,8 +6,10 @@ import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
+import { initGenesetEdit } from '../dom/genesetEdit'
 
 const tip = new Menu({ padding: '' })
+const tip2 = new Menu({ padding: '' })
 
 export class MatrixControls {
 	constructor(opts, appState) {
@@ -644,35 +646,23 @@ export class MatrixControls {
 		tr.attr('title', 'Search for a gene to add')
 			.append('td')
 			.attr('class', 'sja-termdb-config-row-label')
-			.html('Add a single gene &nbsp;')
+			.html('Edit gene set')
 
-		const coordInput = addGeneSearchbox({
-			tip,
-			genome: app.opts.genome,
-			row: tr.append('td'),
-			geneOnly: true,
-			callback: () => {
-				if (!coordInput.geneSymbol) throw 'geneSymbol missing'
-				// TODO: see above for input to select which group to add the gene,
-				// right now it assumes the first group; also may use fillTermWrapper
-				const tw = {
-					$id: get$id(),
-					term: {
-						name: coordInput.geneSymbol,
-						type: 'geneVariant'
-					}
-				}
-				parent.config.termgroups[parent.selectedGroup].lst.push(tw)
-
-				app.dispatch({
-					type: 'plot_edit',
-					id: parent.id,
-					config: {
-						termgroups: parent.config.termgroups
-					}
+		const button = tr
+			.append('td')
+			.append('button')
+			.text('Edit')
+			.on('click', event => {
+				tip2.clear()
+				const vocabApi = this.parent.app.vocabApi
+				initGenesetEdit({
+					holder: tip2.d,
+					genome: app.opts.genome,
+					geneList: [],
+					mode: 'expression'
 				})
-			}
-		})
+				tip2.show(event.clientX, event.clientY)
+			})
 	}
 
 	// should be fine to name this method Msigdb as this is the only eligible geneset db for now
