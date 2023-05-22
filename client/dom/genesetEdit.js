@@ -2,7 +2,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 
 export function initGenesetEdit({ holder, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
-	const div = holder.append('div').style('width', '50vw')
+	const div = holder.append('div').style('width', '40vw')
 	div
 		.style('border-style', 'solid')
 		.style('border-width', '2px')
