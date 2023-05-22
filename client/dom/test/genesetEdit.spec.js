@@ -1,8 +1,8 @@
-import { initGenesetEdit } from '../genesetEdit'
-const helpers = require('../../test/front.helpers.js')
+import { showGenesetEdit } from '../genesetEdit'
 const tape = require('tape')
 const d3s = require('d3-selection')
 import { hg38, hg19 } from '../../test/testdata/genomes'
+import { Menu } from '#dom/menu'
 
 function getHolder() {
 	return d3s.select('body').append('div')
@@ -28,24 +28,26 @@ tape('Search genes test', function(test) {
 	test.end()
 
 	function testHG38() {
-		const holder = getHolder()
+		const menu = new Menu({ padding: '0px' })
 
-		initGenesetEdit({ holder, genome: hg38, callback: printGenes })
-		const button = holder.select('button[name="msigdbBt"]')
+		showGenesetEdit({ x: 0, y: 200, menu, genome: hg38, callback: printGenes })
+		const button = menu.d.select('button[name="msigdbBt"]')
 		test.true(!button.empty(), `Should show MSigDB button for the hg38 genome`)
 	}
 
 	function testHG19() {
-		const holder = getHolder()
+		const menu = new Menu({ padding: '0px' })
 		const vocabApi = { geneAPI: { mode: 'expression', getTopGenes: () => hg19.geneset[0].lst } } //Fake vocab api returning  some genes
-		initGenesetEdit({
-			holder,
+		showGenesetEdit({
+			x: 0,
+			y: 400,
+			menu,
 			genome: hg19,
 			callback: printGenes,
 			geneList: vocabApi.geneAPI.getTopGenes(),
 			mode: 'expression'
 		})
-		const button = holder.select('button[name="msigdbBt"]')
+		const button = menu.d.select('button[name="msigdbBt"]')
 		test.true(button.empty(), `Should not show MSigDB button for the hg19 genome`)
 	}
 

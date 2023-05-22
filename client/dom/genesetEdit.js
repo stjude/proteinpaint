@@ -1,8 +1,8 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 
-export function initGenesetEdit({ holder, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
-	const div = holder.append('div').style('width', '40vw')
+export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation' }) {
+	const div = menu.d.append('div').style('width', '60vw')
 	div
 		.style('border-style', 'solid')
 		.style('border-width', '2px')
@@ -58,7 +58,11 @@ export function initGenesetEdit({ holder, genome, callback, geneList = [], mode 
 		.append('div')
 		.append('button')
 		.text('Submit')
-		.on('click', () => callback(geneList))
+		.on('click', () => {
+			callback(geneList)
+			menu.hide()
+		})
+	menu.show(x, y)
 
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()
