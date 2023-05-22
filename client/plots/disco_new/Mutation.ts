@@ -1,3 +1,0 @@
-class Mutation extends PlotElement {
-
-}

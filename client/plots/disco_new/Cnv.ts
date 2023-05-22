@@ -1,3 +1,0 @@
-class Cnv extends PlotElement {
-
-}
