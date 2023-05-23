@@ -203,7 +203,10 @@ export default function violinRenderer(self) {
 
 	function renderScale(t1, t2, settings, isH, svg, self) {
 		// <g>: holder of numeric axis
-		const g = svg.svgG.append('g').style('font-size', '12')
+		const g = svg.svgG
+			.append('g')
+			.style('font-size', '12')
+			.classed(settings.unit === 'log' ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
 		const ticks =
 			settings.unit === 'log' ? svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0) : svg.axisScale.ticks()
@@ -334,15 +337,16 @@ export default function violinRenderer(self) {
 			.style('opacity', '0.8')
 			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
-		renderSymbolImage(violinG, plot, isH, imageOffset)
+		renderSymbolImage(self, violinG, plot, isH, imageOffset)
 		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg)
 		renderLines(violinG, isH, self.config.settings.violin.lines, svg)
 	}
 
-	function renderSymbolImage(violinG, plot, isH, imageOffset) {
+	function renderSymbolImage(self, violinG, plot, isH, imageOffset) {
 		violinG
 			.append('image')
 			.style('opacity', 0)
+			.classed(self.config.settings.violin.datasymbol === 'rug' ? 'sjpp-rug-img' : 'sjpp-beans-img', true)
 			// .transition()
 			// .delay(self.opts.mode == 'minimal' ? 0 : 400)
 			// .duration(self.opts.mode == 'minimal' ? 0 : 100)
