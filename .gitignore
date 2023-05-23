@@ -11,6 +11,8 @@ dist/*
 */*/dist/
 */*/*/dist/
 
+server/genome/*.ts.js
+
 **/public/bin/*
 public/tmp/*
 **/public/cards
