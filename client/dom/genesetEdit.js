@@ -21,12 +21,17 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 	const rightDiv = headerDiv
 		.append('div')
 		.style('display', 'inline-flex')
+		.style('align-items', 'center')
 		.style('float', 'right')
 		.style('gap', '5px')
 
 	if (mode == 'mutation') {
 		rightDiv.append('input').attr('type', 'checkbox')
 		rightDiv.append('span').html('Use only cancer census genes')
+		rightDiv
+			.append('button')
+			.html(`Load top mutated genes`)
+			.on('click', async event => {})
 	} else if (mode == 'expression') {
 		rightDiv
 			.append('input')
@@ -34,6 +39,10 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			.attr('type', 'number')
 			.style('width', '40px')
 		rightDiv.append('span').html('Minimum average value cut off')
+		rightDiv
+			.append('button')
+			.html(`Load top variably expressed genes`)
+			.on('click', async event => {})
 	}
 	if (genome?.termdbs?.msigdb)
 		for (const key in genome.termdbs) {
