@@ -107,7 +107,6 @@ const express = require('express'),
 	{ handle_genelookup_closure } = require('./gene'),
 	minimatch = require('minimatch')
 
-
 //////////////////////////////
 // Global variable (storing things in memory)
 const genomes = {} // { hg19: {...}, ... }
@@ -362,7 +361,6 @@ app.get(basepath + '/ideogram', handle_ideogram)
 
 pp_init()
 	.then(async () => {
-
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
 		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
