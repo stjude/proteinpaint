@@ -3,7 +3,7 @@ import { Menu } from '#dom/menu'
 
 const tip2 = new Menu({ padding: '0px' })
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
-	const div = menu.d.append('div').style('width', '60vw')
+	const div = menu.d.append('div').style('width', '50vw')
 	div
 		.style('border-style', 'solid')
 		.style('border-width', '2px')
@@ -25,25 +25,25 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		.style('float', 'right')
 		.style('gap', '5px')
 
-	if (mode == 'mutation') {
-		rightDiv.append('input').attr('type', 'checkbox')
-		rightDiv.append('span').html('Use only cancer census genes')
-		rightDiv
-			.append('button')
-			.html(`Load top mutated genes`)
-			.on('click', async event => {})
-	} else if (mode == 'expression') {
-		rightDiv
-			.append('input')
-			.attr('value', 10)
-			.attr('type', 'number')
-			.style('width', '40px')
-		rightDiv.append('span').html('Minimum average value cut off')
-		rightDiv
-			.append('button')
-			.html(`Load top variably expressed genes`)
-			.on('click', async event => {})
-	}
+	// if (mode == 'mutation') {
+	// 	rightDiv.append('input').attr('type', 'checkbox')
+	// 	rightDiv.append('span').html('Use only cancer census genes')
+	// 	rightDiv
+	// 		.append('button')
+	// 		.html(`Load top mutated genes`)
+	// 		.on('click', async event => {})
+	// } else if (mode == 'expression') {
+	// 	rightDiv
+	// 		.append('input')
+	// 		.attr('value', 10)
+	// 		.attr('type', 'number')
+	// 		.style('width', '40px')
+	// 	rightDiv.append('span').html('Minimum average value cut off')
+	// 	rightDiv
+	// 		.append('button')
+	// 		.html(`Load top variably expressed genes`)
+	// 		.on('click', async event => {})
+	// }
 	if (genome?.termdbs?.msigdb)
 		for (const key in genome.termdbs) {
 			let text = 'Load MSigDB gene set &#9660;'
@@ -110,8 +110,13 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			for (const gene of geneList)
 				genesDiv
 					.append('span')
+					.style('display', 'inline-block')
 					.text(gene.name || gene.symbol)
 					.style('padding', '5px')
+					.on('click', () => {
+						geneList.splice(geneList.indexOf(gene), 1)
+						renderGenes()
+					})
 	}
 	function addGene() {
 		const name = inputSearch.geneSymbol
