@@ -91,7 +91,16 @@ export const searchInit = getCompInit(TermSearch)
 function setRenderers(self) {
 	self.initUI = state => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
-		const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, state.usecase).has('plot')
+
+		/* term search prompt is decided by two factors:
+		1. if the term type exists in allowedTermTypes from the dataset
+		   e.g. if geneVariant type does not exist in the dataset, do not show prompt (and no need to check usecase)
+		2. termdb client app usecase, defines the context for using terms selected from the termdb app
+		   e.g. if the usecase context does not allow geneVariant, even if geneVariant exists in ds, do not show "gene" in prompt
+		*/
+		const mayUseGeneVariant =
+			state.allowedTermTypes.includes('geneVariant') && isUsableTerm({ type: 'geneVariant' }, state.usecase).has('plot')
+
 		const placeholderDetail = mayUseGeneVariant ? ' variables or genes' : ' variables'
 		self.dom.input = self.dom.holder
 			.style('text-align', 'left')
