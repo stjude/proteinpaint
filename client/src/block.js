@@ -4629,7 +4629,7 @@ seekrange(chr,start,stop) {
 			// dna
 			row
 				.append('button')
-				.text('DNA sequence')
+				.text('Reference DNA sequence')
 				.on('click', () => {
 					maygetdna(this, tip)
 				})
@@ -4748,19 +4748,21 @@ seekrange(chr,start,stop) {
 		}
 
 		// experimental
-		tip.d
-			.append('div')
-			.text('EXPERIMENTAL')
-			.style('font-size', '.7em')
-			.style('margin', '10px 0px 2px 0px')
-			.style('opacity', 0.5)
-		tip.d
-			.append('button')
-			.text('Customize mutation class color')
-			.on('click', () => {
-				tip.clear()
-				client.mclasscolorchangeui(tip)
-			})
+		if (!JSON.parse(sessionStorage.getItem('optionalFeatures')).disableBlockExperimentFeatures) {
+			tip.d
+				.append('div')
+				.text('EXPERIMENTAL')
+				.style('font-size', '.7em')
+				.style('margin', '10px 0px 2px 0px')
+				.style('opacity', 0.5)
+			tip.d
+				.append('button')
+				.text('Customize mutation class color')
+				.on('click', () => {
+					tip.clear()
+					client.mclasscolorchangeui(tip)
+				})
+		}
 	}
 
 	initIdeogram(arg) {
@@ -5266,7 +5268,6 @@ async function maygetdna(block, tip) {
 		tip.d.append('div').text('Please zoom in under ' + common.bplen(dnalenlimit) + ' to get DNA sequence.')
 		return
 	}
-	const wait = tip.d.append('div').text('Loading DNA sequence ...')
 	const lst = []
 	for (const r of regions) {
 		const coord = r.chr + ':' + (r.start + 1) + '-' + r.stop
@@ -5276,8 +5277,7 @@ async function maygetdna(block, tip) {
 		})
 		lst.push('>' + coord + '\n' + data.seq)
 	}
-	client.export_data('DNA from ' + block.genome.name, [{ text: lst.join('\n') }])
-	tip.hide()
+	client.export_data('Reference DNA from ' + block.genome.name, [{ text: lst.join('\n') }], 1, 1, 10, 100, tip.d)
 }
 
 function init_cursorhlbar(block) {

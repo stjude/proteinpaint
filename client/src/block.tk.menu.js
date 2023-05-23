@@ -82,15 +82,17 @@ export default function(block, tip, x, y) {
 	hardlist4block(block, div)
 
 	// custom track entry button
-	div
-		.append('div')
-		.html('Add custom track &raquo;')
-		.style('padding', '15px')
-		.style('text-align', 'center')
-		.attr('class', 'sja_menuoption')
-		.on('click', () => {
-			customtracktypeui(block, div)
-		})
+	if (!JSON.parse(sessionStorage.getItem('optionalFeatures')).disableCustomTrackUI) {
+		div
+			.append('div')
+			.html('Add custom track &raquo;')
+			.style('padding', '15px')
+			.style('text-align', 'center')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				customtracktypeui(block, div)
+			})
+	}
 
 	tip.show(x, y)
 }
@@ -202,7 +204,7 @@ function onesearchui(block, div) {
 				const handle = tr
 					.append('td')
 					.classed('sja_menuoption', true)
-					.html(tkhtmllabel(cold, block))
+					.text(tkhtmllabel(cold, block))
 				if (hot) {
 					handle.on('click', () => tkhandleclick(block, hot, td1))
 				} else {
@@ -259,7 +261,7 @@ function hardlist4block(block, div) {
 			.text('SHOWN')
 			.style('color', '#aaa')
 			.style('font-size', '.7em')
-		const handle = tr.append('td').html(tkhtmllabel(tk, block))
+		const handle = tr.append('td').text(tkhtmllabel(tk, block))
 		if (tk.type == client.tkt.usegm) {
 			// usegm track is always on, cannot remove, because it's not registered in genome.tracks[]
 			handle.style('padding', '5px 10px')
@@ -301,7 +303,7 @@ function hardlist4block(block, div) {
 		const handle = tr
 			.append('td')
 			.attr('class', 'sja_menuoption')
-			.html(tkhtmllabel(tk, block))
+			.text(tkhtmllabel(tk, block))
 		const td3 = tr.append('td')
 		if (tk.iscustom) {
 			td3
@@ -1747,6 +1749,9 @@ function deletecustom(block, tk, tr) {
 	}
 }
 
+/* this function has been changed to return text rather than HTML,
+to prevent it from showing injected code in custom tk name
+*/
 function tkhtmllabel(tk, block) {
 	let basename
 	if (tk.type == client.tkt.usegm) {
@@ -1803,24 +1808,30 @@ function tkhtmllabel(tk, block) {
 		if (tk.totalsamplecount == 1) {
 			return basename
 		}
+		return `${basename} (${tk.totalsamplecount})`
+		/*
 		return (
 			basename +
 			' <span class="sja_mcdot" style="font-size:.7em;background-color:#bbb">' +
 			tk.totalsamplecount +
 			' combined</span>'
 		)
+		*/
 	}
 	if (!tk.tracks || tk.tracks.length == 1) {
 		// singleton
 		return basename
 	}
 	// tell # of members
+	return `${basename} (${tk.tracks.length})`
+	/*
 	return (
 		basename +
 		' <span style="font-size:.7em;padding:1px 5px;background-color:#bbb;color:white;border-radius:3px">' +
 		tk.tracks.length +
 		' combined</span>'
 	)
+	*/
 }
 
 function stringisurl(s) {

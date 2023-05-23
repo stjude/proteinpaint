@@ -700,30 +700,38 @@ export function filetypeselect(holder) {
 	return s
 }
 
-export function export_data(title, lst, posx = 1, posy = 1, rows = 10, cols = 100) {
+export function export_data(title, lst, posx = 1, posy = 1, rows = 10, cols = 100, div = null) {
 	// lst: {label, text}
 
-	const pane = newpane({
-		x: (window.innerWidth / 2 - 200) * posx,
-		y: (window.innerHeight / 2 - 150) * posy
-	})
-	pane.header.text(title)
+	let body // holder of ui
+	if (!div) {
+		const pane = newpane({
+			x: (window.innerWidth / 2 - 200) * posx,
+			y: (window.innerHeight / 2 - 150) * posy
+		})
+		pane.header.text(title)
+		body = pane.body
+	} else {
+		div.append('p').text(title)
+		body = div.append('div')
+	}
+
 	for (const w of lst) {
-		const div = pane.body.append('div').style('margin-top', '10px')
+		const div = body.append('div').style('margin-top', '10px')
 		if (w.label) {
 			div
 				.append('div')
 				.text(w.label)
 				.style('margin', '5px')
 		}
-		pane.body
+		body
 			.append('textarea')
 			.text(w.text)
 			.attr('readonly', 1)
 			.attr('rows', rows)
 			.attr('cols', cols)
 	}
-	pane.body
+	body
 		.append('p')
 		.style('font-size', '.7em')
 		.text('Click on the text box above and press Ctrl-A to select all text for copy-pasting.')
