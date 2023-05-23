@@ -7137,6 +7137,7 @@ async function pp_init() {
 		*/
 		const g2 = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
 		genomes[g.name] = g2
+		console.log(7139, g.file, fs.existsSync(overrideFile) ? overrideFile : g.file, g2.genomefile)
 
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
 		if (g2.genomefile == 'NA') {

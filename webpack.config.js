@@ -8,5 +8,5 @@
 const wpServer = require('./server/webpack.config.js')
 const wpClient = require('./client/webpack.config.js')
 
-module.exports = [wpServer, wpClient]
+module.exports = [wpServer] //, wpClient]
 process.traceDeprecation = true

@@ -1,67 +1,46 @@
-/******/ ;(() => {
-	// webpackBootstrap
-	/******/ var __webpack_modules__ = {
-		/***/ './server/genome/hg38.test.ts':
-			/*!************************************!*\
-  !*** ./server/genome/hg38.test.ts ***!
-  \************************************/
-			/***/ (module, __unused_webpack_exports, __webpack_require__) => {
-				const fs = __webpack_require__(/*! fs */ 'fs')
-				const path = __webpack_require__(/*! path */ 'path')
-				const { Genome } = __webpack_require__(/*! ../shared/types.ts */ './server/shared/types.ts')
-				const genome = {
-					species: 'human',
-					genomefile: 'NA',
-					genedb: {
-						dbfile: 'anno/genes.hg38.test.db'
-					},
-					tracks: [
-						{
-							__isgene: true,
-							translatecoding: true,
-							file: 'anno/refGene.hg38.test.gz',
-							type: 'bedj',
-							name: 'RefGene',
-							stackheight: 16,
-							stackspace: 1,
-							vpad: 4,
-							color: '#1D591D'
-						},
-						{
-							__isgene: true,
-							file: 'anno/gencode.v41.hg38.test.gz',
-							translatecoding: true,
-							categories: {
-								coding: {
-									color: '#004D99',
-									label: 'Coding gene'
-								},
-								nonCoding: {
-									color: '#009933',
-									label: 'Noncoding gene'
-								},
-								problem: {
-									color: '#FF3300',
-									label: 'Problem'
-								},
-								pseudo: {
-									color: '#FF00CC',
-									label: 'Pseudogene'
-								}
-							},
-							type: 'bedj',
-							name: 'GENCODE v41',
-							stackheight: 16,
-							stackspace: 1,
-							vpad: 4
-						}
-					],
-					defaultcoord: {
-						chr: 'chr17',
-						start: 7666657,
-						stop: 7688274
-					},
-					majorchr: `chr1	248956422
+const fs = require('fs')
+const path = require('path')
+const { Genome } = require('../shared/types.ts')
+
+const genome: Genome = {
+	species: 'human',
+	genomefile: 'NA',
+	genedb: {
+		dbfile: 'anno/genes.hg38.test.db'
+	},
+
+	tracks: [
+		{
+			__isgene: true,
+			translatecoding: true,
+			file: 'anno/refGene.hg38.test.gz',
+			type: 'bedj',
+			name: 'RefGene',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
+		},
+		{
+			__isgene: true,
+			file: 'anno/gencode.v41.hg38.test.gz',
+			translatecoding: true,
+			categories: {
+				coding: { color: '#004D99', label: 'Coding gene' },
+				nonCoding: { color: '#009933', label: 'Noncoding gene' },
+				problem: { color: '#FF3300', label: 'Problem' },
+				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
+			},
+			type: 'bedj',
+			name: 'GENCODE v41',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4
+		}
+	],
+	defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
+
+	majorchr: `chr1	248956422
 chr2	242193529
 chr3	198295559
 chr4	190214555
@@ -86,7 +65,7 @@ chr22	50818468
 chrX	156040895
 chrY	57227415
 chrM	16569`,
-					minorchr: `chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
+	minorchr: `chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
 	chr6_GL000250v2_alt	4672374 chr6_GL000255v2_alt	4606388 chr6_GL000252v2_alt	4604811 chr17_KI270857v1_alt	2877074 chr16_KI270853v1_alt	2659700
 	chr16_KI270728v1_random	1872759 chr17_GL000258v2_alt	1821992 chr5_GL339449v2_alt	1612928 chr14_KI270847v1_alt	1511111 chr17_KI270908v1_alt	1423190
 	chr14_KI270846v1_alt	1351393 chr5_KI270897v1_alt	1144418 chr7_KI270803v1_alt	1111570 chr19_GL949749v2_alt	1091841 chr19_KI270938v1_alt	1066800
@@ -428,128 +407,6 @@ chrM	16569`,
 	chrUn_KI270423v1	981
 	chrUn_KI270392v1	971
 	chrUn_KI270394v1	970`
-				}
-				module.exports = genome
+}
 
-				/***/
-			},
-
-		/***/ './server/shared/types.ts':
-			/*!********************************!*\
-  !*** ./server/shared/types.ts ***!
-  \********************************/
-			/***/ (__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-				'use strict'
-				__webpack_require__.r(__webpack_exports__)
-				/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-					/* harmony export */ Test: () => /* binding */ Test
-					/* harmony export */
-				})
-				//interface Cohort: any
-
-				class Test {
-					constructor() {}
-					main() {
-						console.log('server test')
-					}
-				}
-
-				/***/
-			},
-
-		/***/ fs:
-			/*!*********************!*\
-  !*** external "fs" ***!
-  \*********************/
-			/***/ module => {
-				'use strict'
-				module.exports = require('fs')
-
-				/***/
-			},
-
-		/***/ path:
-			/*!***********************!*\
-  !*** external "path" ***!
-  \***********************/
-			/***/ module => {
-				'use strict'
-				module.exports = require('path')
-
-				/***/
-			}
-
-		/******/
-	} // The module cache
-	/************************************************************************/
-	/******/ /******/ var __webpack_module_cache__ = {} // The require function
-	/******/
-
-	/******/ /******/ function __webpack_require__(moduleId) {
-		/******/ // Check if module is in cache
-		/******/ var cachedModule = __webpack_module_cache__[moduleId]
-		/******/ if (cachedModule !== undefined) {
-			/******/ return cachedModule.exports
-			/******/
-		} // Create a new module (and put it into the cache)
-		/******/ /******/ var module = (__webpack_module_cache__[moduleId] = {
-			/******/ // no module.id needed
-			/******/ // no module.loaded needed
-			/******/ exports: {}
-			/******/
-		}) // Execute the module function
-		/******/
-
-		/******/ /******/ __webpack_modules__[moduleId](module, module.exports, __webpack_require__) // Return the exports of the module
-		/******/
-
-		/******/ /******/ return module.exports
-		/******/
-	} /* webpack/runtime/define property getters */
-	/******/
-
-	/************************************************************************/
-	/******/ /******/ ;(() => {
-		/******/ // define getter functions for harmony exports
-		/******/ __webpack_require__.d = (exports, definition) => {
-			/******/ for (var key in definition) {
-				/******/ if (__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
-					/******/ Object.defineProperty(exports, key, { enumerable: true, get: definition[key] })
-					/******/
-				}
-				/******/
-			}
-			/******/
-		}
-		/******/
-	})() /* webpack/runtime/hasOwnProperty shorthand */
-	/******/
-
-	/******/ /******/ ;(() => {
-		/******/ __webpack_require__.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
-		/******/
-	})() /* webpack/runtime/make namespace object */
-	/******/
-
-	/******/ /******/ ;(() => {
-		/******/ // define __esModule on exports
-		/******/ __webpack_require__.r = exports => {
-			/******/ if (typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-				/******/ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
-				/******/
-			}
-			/******/ Object.defineProperty(exports, '__esModule', { value: true })
-			/******/
-		}
-		/******/
-	})() // startup // Load entry module and return exports // This entry module is referenced by other modules so it can't be inlined
-	/******/
-
-	/************************************************************************/
-	/******/
-
-	/******/ /******/ /******/ /******/ var __webpack_exports__ = __webpack_require__('./server/genome/hg38.test.ts')
-	/******/
-	/******/
-})()
-//# sourceMappingURL=hg38.test.js.map
+module.exports = genome
