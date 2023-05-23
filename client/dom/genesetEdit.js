@@ -2,8 +2,8 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 
 const tip2 = new Menu({ padding: '0px' })
-export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation' }) {
-	const div = menu.d.append('div').style('width', '60vw')
+export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
+	const div = menu.d.append('div').style('width', '70vw')
 	div
 		.style('border-style', 'solid')
 		.style('border-width', '2px')
@@ -67,9 +67,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 						tree: {
 							click_term: term => {
 								const geneset = term._geneset
-								console.log(geneset)
 								if (geneset) {
-									console.log(geneset)
 									geneList = geneset
 									renderGenes()
 								}
@@ -112,7 +110,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			for (const gene of geneList)
 				genesDiv
 					.append('span')
-					.text(gene.name)
+					.text(gene.name || gene.symbol)
 					.style('padding', '5px')
 	}
 	function addGene() {

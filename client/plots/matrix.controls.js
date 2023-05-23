@@ -579,9 +579,6 @@ export class MatrixControls {
 	async appendGeneInputs(self, app, parent, table) {
 		tip.clear()
 		if (!parent.selectedGroup) parent.selectedGroup = 0
-		if (parent.config.termgroups.length > 1) {
-			self.addTermGroupSelector(app, parent, table.append('tr'))
-		}
 
 		if (parent.opts.customInputs?.genes) {
 			for (const inputConfig of parent.opts.customInputs?.genes) {
@@ -619,10 +616,14 @@ export class MatrixControls {
 		self.addDictMenu(app, parent)
 	}
 
-	addTermGroupSelector(app, parent, tr) {
-		const td = tr.append('td') //.attr('colspan', 2)
-		td.append('span').html('Add to term group &nbsp;')
+	addGeneSearch(app, parent, tr) {
 		const tg = parent.config.termgroups
+
+		tr.append('td')
+			.attr('class', 'sja-termdb-config-row-label')
+			.html('Gene set')
+		const group = parent.config.termgroups[parent.selectedGroup]
+		const td = tr.append('td')
 		td.append('select')
 			.selectAll('option')
 			.data(tg)
@@ -634,6 +635,7 @@ export class MatrixControls {
 			.on('change', (d, i) => {
 				parent.selectedGroup = i
 			})
+<<<<<<< HEAD
 	}
 
 	addGeneSearch(app, parent, tr) {
@@ -645,6 +647,9 @@ export class MatrixControls {
 		const button = tr
 			.append('td')
 			.append('button')
+=======
+		td.append('button')
+>>>>>>> e7e899aea (Showing group name by the geneset edit)
 			.text('Edit')
 			.on('click', event => {
 				tip2.clear()
@@ -663,8 +668,8 @@ export class MatrixControls {
 
 					// TODO: see above for input to select which group to add the gene
 					// right not it assumes the first group
-					parent.config.termgroups[parent.selectedGroup].lst.push(...tws)
-
+					group.lst.push(...tws)
+					group.geneset = geneset
 					app.dispatch({
 						type: 'plot_edit',
 						id: parent.id,
@@ -678,7 +683,7 @@ export class MatrixControls {
 					y: event.clientY,
 					menu: tip2,
 					genome: app.opts.genome,
-					geneList: [],
+					geneList: group.geneset,
 					callback,
 					mode: 'expression',
 					parent
@@ -739,7 +744,7 @@ export class MatrixControls {
 				]
 			})
 		} else {
-			const grp = { name: 'Variables', lst: newterms }
+			const grp = { name: 'Variables', lst: newterms, geneset: [] }
 			termgroups.unshift(grp)
 			this.parent.app.dispatch({
 				type: 'plot_edit',
