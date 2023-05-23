@@ -3,7 +3,7 @@ import { Menu } from '#dom/menu'
 
 const tip2 = new Menu({ padding: '0px' })
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
-	const div = menu.d.append('div').style('width', '70vw')
+	const div = menu.d.append('div').style('width', '60vw')
 	div
 		.style('border-style', 'solid')
 		.style('border-width', '2px')
