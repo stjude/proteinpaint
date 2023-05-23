@@ -622,7 +622,6 @@ export class MatrixControls {
 		tr.append('td')
 			.attr('class', 'sja-termdb-config-row-label')
 			.html('Gene set')
-		const group = parent.config.termgroups[parent.selectedGroup]
 		const td = tr.append('td')
 		td.append('select')
 			.selectAll('option')
@@ -652,6 +651,7 @@ export class MatrixControls {
 >>>>>>> e7e899aea (Showing group name by the geneset edit)
 			.text('Edit')
 			.on('click', event => {
+				const group = parent.config.termgroups[parent.selectedGroup]
 				tip2.clear()
 				const callback = geneset => {
 					const tws = geneset.map(d => {

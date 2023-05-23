@@ -99,8 +99,8 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		.append('button')
 		.text('Submit')
 		.on('click', () => {
-			callback(geneList)
 			menu.hide()
+			callback(geneList)
 		})
 	menu.show(x, y, false, true)
 
