@@ -467,6 +467,13 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 				l[4], // vcf INFO column
 				l[1] // vcf ID column
 			)
+
+			// !! quick fix !!
+			// use rsid if available
+			for (const m of variant.mlst) {
+				if (m.vcf_id) m.mname = m.vcf_id
+			}
+
 			result.snps.push(variant)
 
 			const lst = [
