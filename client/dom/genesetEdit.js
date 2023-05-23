@@ -4,11 +4,6 @@ import { Menu } from '#dom/menu'
 const tip2 = new Menu({ padding: '0px' })
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
 	const div = menu.d.append('div').style('width', '50vw')
-	div
-		.style('border-style', 'solid')
-		.style('border-width', '2px')
-		.style('border-color', '#eee')
-		.style('padding', '5px')
 	const headerDiv = div.append('div')
 	const inputSearch = addGeneSearchbox({
 		tip: tip2,

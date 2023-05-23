@@ -9,7 +9,6 @@ import { svgScroll } from '#dom/svg.scroll'
 import { showGenesetEdit } from '../dom/genesetEdit'
 
 const tip = new Menu({ padding: '' })
-const tip2 = new Menu({ padding: '' })
 
 export class MatrixControls {
 	constructor(opts, appState) {
@@ -604,7 +603,7 @@ export class MatrixControls {
 			}
 		}
 
-		self.addGeneSearch(app, parent, table.append('tr'))
+		self.addGeneSearch(event, app, parent, table.append('tr'))
 	}
 
 	appendDictInputs(self, app, parent, table) {
@@ -616,7 +615,7 @@ export class MatrixControls {
 		self.addDictMenu(app, parent)
 	}
 
-	addGeneSearch(app, parent, tr) {
+	addGeneSearch(event, app, parent, tr) {
 		const tg = parent.config.termgroups
 
 		tr.append('td')
@@ -650,9 +649,9 @@ export class MatrixControls {
 		td.append('button')
 >>>>>>> e7e899aea (Showing group name by the geneset edit)
 			.text('Edit')
-			.on('click', event => {
+			.on('click', () => {
 				const group = parent.config.termgroups[parent.selectedGroup]
-				tip2.clear()
+				app.tip.clear().hide()
 				const callback = geneset => {
 					const tws = geneset.map(d => {
 						const tw = {
@@ -669,7 +668,6 @@ export class MatrixControls {
 					// TODO: see above for input to select which group to add the gene
 					// right not it assumes the first group
 					group.lst.push(...tws)
-					group.geneset = geneset
 					app.dispatch({
 						type: 'plot_edit',
 						id: parent.id,
@@ -678,12 +676,15 @@ export class MatrixControls {
 						}
 					})
 				}
+				const geneList = []
+				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ symbol: tw.term.name })
+
 				showGenesetEdit({
 					x: event.clientX,
 					y: event.clientY,
-					menu: tip2,
+					menu: app.tip,
 					genome: app.opts.genome,
-					geneList: group.geneset,
+					geneList,
 					callback,
 					mode: 'expression',
 					parent
@@ -744,7 +745,7 @@ export class MatrixControls {
 				]
 			})
 		} else {
-			const grp = { name: 'Variables', lst: newterms, geneset: [] }
+			const grp = { name: 'Variables', lst: newterms }
 			termgroups.unshift(grp)
 			this.parent.app.dispatch({
 				type: 'plot_edit',
