@@ -6,7 +6,7 @@ import { sleep, detectOne, detectGte, whenHidden, whenVisible } from '../../test
 
 /***************** Test Layout *****************:
 
-1.  'term1 as numeric and term2 categorical'
+1.  'term1 as numeric and term2 categorical, test median rendering'
 2.  'render violin plot'
 3.  'test basic controls'
 4.  'test label clicking, filtering and hovering'
@@ -58,34 +58,6 @@ const open_state = {
 		id: 'sex'
 	}
 }
-
-tape.skip('term1 as numeric and term2 categorical', function(test) {
-	test.timeoutAfter(3000)
-	runpp({
-		state: {
-			plots: [open_state]
-		},
-		violin: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-	async function runTests(violin) {
-		const violinDiv = violin.Inner.dom.violinDiv
-		await testMedianRendering(violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
-		test.end()
-	}
-
-	async function testMedianRendering(violinDiv) {
-		const median = await detectGte({
-			elem: violinDiv.node(),
-			selector: '.sjpp-median-line',
-			count: 2
-		})
-	}
-})
 
 tape('render violin plot', function(test) {
 	test.timeoutAfter(5000)
@@ -235,6 +207,57 @@ tape('render violin plot', function(test) {
 	}
 })
 
+tape('term1 as numeric and term2 categorical, test median rendering', function(test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [open_state]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testMedianRendering(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+
+	async function testMedianRendering(violin, violinDiv) {
+		const median = await detectGte({
+			elem: violinDiv.node(),
+			selector: '.sjpp-median-line',
+			count: 2
+		})
+		test.equal(
+			median.length,
+			violin.Inner.data.plots.length,
+			'Number of median lines rendered should be/is equal to number of plots rendered'
+		)
+		const medianValues = median.map(({ __data__: { summaryStats: { values } } }) => {
+			const { value } = values.find(c => c.id === 'median')
+			return value
+		})
+		const sumStatsValues = violin.Inner.data.plots.map(({ summaryStats: { values } }) => {
+			const { value } = values.find(c => c.id === 'median')
+			return value
+		})
+		test.equal(
+			medianValues[0],
+			sumStatsValues[0],
+			`median rendered correctly for plot ${violin.Inner.data.plots[0].label}`
+		)
+		test.equal(
+			medianValues[1],
+			sumStatsValues[1],
+			`median rendered correctly for plot ${violin.Inner.data.plots[1].label}`
+		)
+	}
+})
+
 tape('test basic controls', function(test) {
 	test.timeoutAfter(100000)
 	runpp({
@@ -251,8 +274,7 @@ tape('test basic controls', function(test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const violinDiv = violin.Inner.dom.violinDiv
-		const violinDivControls = violin.Inner.dom.controls
-		await changeOrientation(violin, violinDivControls, violinDiv) // test orientation by changing to vertical
+		await changeOrientation(violin, violinDiv) // test orientation by changing to vertical
 		await changeDataSymbol(violin, violinDiv) //test change in Data symbol
 		await changeStrokeWidth(violin, violinDiv) //test change in stroke width
 		await changeSymbolSize(violin, violinDiv) //test change in symbol size
@@ -263,7 +285,7 @@ tape('test basic controls', function(test) {
 		test.end()
 	}
 
-	async function changeOrientation(violin, violinDivControls, violinDiv) {
+	async function changeOrientation(violin, violinDiv) {
 		//capture if the angle is rotated to -90 degrees to test orientation
 		const termLabel = await detectGte({
 			elem: violinDiv.node(),
@@ -529,9 +551,10 @@ tape('test hide option on label clicking', function(test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const legendDiv = violin.Inner.dom.legendDiv
+		const violinDiv = violin.Inner.dom.violinDiv
 
 		testHideOption(violin, legendDiv) //test filter on label clicking
-		await testHiddenValues(violin, legendDiv)
+		await testHiddenValues(violin, legendDiv, violinDiv)
 
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
@@ -540,7 +563,7 @@ tape('test hide option on label clicking', function(test) {
 	function testHideOption(violin) {
 		const q = {
 			groupsetting: { disabled: true },
-			hiddenValues: { 'Female, n=35': 1 },
+			hiddenValues: { [violin.Inner.data.plots[0].label]: 1 },
 			isAtomic: true,
 			type: 'values'
 		}
@@ -559,12 +582,21 @@ tape('test hide option on label clicking', function(test) {
 		test.ok(true, 'label Clicking and Hide option ok!')
 	}
 
-	async function testHiddenValues(violin, legendDiv) {
+	async function testHiddenValues(violin, legendDiv, violinDiv) {
 		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend', count: 8 })
+		const hiddenKeys = Object.keys(violin.Inner.config.term2.q.hiddenValues)
 		test.equal(
 			Object.keys(violin.Inner.config.term2.q.hiddenValues)[0],
 			htmlLegends[8].innerHTML,
 			'q.hiddenValues match legend'
+		)
+		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
+		unhideLegendValue[0].dispatchEvent(new Event('click'), { bubbles: true })
+		const hiddenValueRendered = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-axislabel', count: 2 })
+		test.equal(
+			hiddenValueRendered[0].__data__.label,
+			unhideLegendValue[0].innerHTML,
+			'Clicking on hidden legend value renders the hidden plot'
 		)
 	}
 })
