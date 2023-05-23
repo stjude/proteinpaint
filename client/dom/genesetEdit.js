@@ -85,6 +85,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 	const genesDiv = div
 		.append('div')
 		.style('display', 'flex')
+		.style('flex-wrap', 'wrap')
 		.style('gap', '5px')
 		.style('min-height', '20px')
 	renderGenes()
