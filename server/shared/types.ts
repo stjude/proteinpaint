@@ -3,7 +3,7 @@ interface GeneDb {
 }
 
 interface TermDbs {
-  msigdb?: TermdbsEntry
+  msigdb?: TermDbsEntry
 }
 
 interface TermDbsEntry {
@@ -17,7 +17,11 @@ export interface Genome {
   species: string
 	genomefile: string
 	genedb: GeneDb
-	termdbs: TermDbs
+	termdbs?: TermDbs
+	tracks: any
+	defaultcoord: any
+	majorchr: string
+	minorchr: string
 }
 
 export class Test {

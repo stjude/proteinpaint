@@ -64,13 +64,10 @@ module.exports = env => {
 		case 'production':
 			return merge(commonConfig, {
 				mode: 'production',
-				entry: {
-					server: path.join(__dirname, './src/app.js'),
-					'genome/hg38.test.ts': path.join(__dirname, './genome/hg38.test.ts')
-				},
+				entry: path.join(__dirname, './src/app.js'),
 				output: {
 					path: path.join(__dirname, './'),
-					filename: '[name].js'
+					filename: 'server.js'
 				},
 				optimization: {
 					minimizer: [
@@ -92,13 +89,10 @@ module.exports = env => {
 		case 'development':
 			return merge(commonConfig, {
 				mode: 'development',
-				entry: {
-					'genome/hg38.test.ts': path.join(__dirname, './genome/hg38.test.ts'),
-					server: path.join(__dirname, './src/app.js')
-				},
+				entry: path.join(__dirname, './src/app.js'),
 				output: {
 					path: path.join(__dirname, './'),
-					filename: ['genome', '[name]']
+					filename: 'server.js'
 				},
 				// see https://v4.webpack.js.org/configuration/devtool/ for option details
 				//

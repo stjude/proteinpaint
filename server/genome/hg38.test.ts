@@ -1,6 +1,4 @@
-const fs = require('fs')
-const path = require('path')
-const { Genome } = require('../shared/types.ts')
+import { Genome }  from '../shared/types'
 
 const genome: Genome = {
 	species: 'human',
