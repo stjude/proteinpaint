@@ -1,6 +1,5 @@
 {
 	"presets": [
-		"@babel/preset-typescript",
 		[
 			"@babel/preset-env",
 			{
@@ -12,8 +11,6 @@
 
 	"plugins": [
 		"@babel/plugin-syntax-dynamic-import",
-		"@babel/plugin-transform-runtime",
-		"@babel/proposal-class-properties",
-		"@babel/proposal-object-rest-spread"
+		"@babel/plugin-transform-runtime"
 	]
 }
