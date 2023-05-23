@@ -16,8 +16,6 @@ import { appDrawerInit } from '../appdrawer/app'
 import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import { first_genetrack_tolist } from '../common/1stGenetk'
-import  Test  from '../typescript/test'
-import ServerTest from '../shared/test'
 
 /*
 
@@ -64,16 +62,7 @@ const headtip = new client.Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
 headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
-export function runproteinpaint(arg) {
-
-
-	const test = new Test()
-
-	test.main()
-
-	const x = new ServerTest().main()
-
-	
+export function runproteinpaint(arg) {	
 	/*
 	the "app" object is the main Proteinpaint instance, unique for each runproteinpaint() call
 	NOTE: this app instance may be returned or not depending on the
