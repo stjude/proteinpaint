@@ -247,7 +247,10 @@ function handleColorClick(event, self, color) {
 	if (d === undefined) return
 	const termNum = d.type == 'col' ? 'term' : 'term2'
 	const term = self.config[termNum]
-	if (term.term.values?.[d.dataId]) term.term.values[d.dataId].color = color
+	let dataId = d.dataId
+	if (term.term.values && !term.term.values?.[dataId])
+		for (const [key, value] of Object.entries(term.term.values)) if (value.label == d.dataId) dataId = key
+	if (term.term.values?.[dataId]) term.term.values[dataId].color = color
 	if (term.term.type == 'geneVariant') {
 		if (!term.term.values) term.term.values = {}
 		term.term.values[d.dataId] = { label: d.dataId, color }
