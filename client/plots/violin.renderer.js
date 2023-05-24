@@ -221,13 +221,13 @@ export default function violinRenderer(self) {
 							if (d < 0.1) return d3format('.3f')(d)
 							return d3format('.1f')(d)
 						} else {
-							if (ticks.length >= 15 && i % 4 !== 0) return ''
-							if (d < 1) return d3format('.1f')(d)
-							if (d >= 1) return d3format('.1s')(d)
-							return d3format('.0f')(d)
+							if (ticks.length >= 12 && i % 5 !== 0) return ''
+							if (d < 50) return d
+							return d3format('.1s')(d)
 						}
 					}
-					return d3format('.1f')(d)
+					if (ticks.length >= 12 && i % 2 !== 0) return ''
+					return d
 				})
 				.tickValues(ticks)
 		)
