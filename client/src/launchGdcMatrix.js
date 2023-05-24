@@ -95,6 +95,7 @@ export async function init(arg, holder, genomes) {
 				genes: [
 					{
 						settingsKey: 'geneFilter',
+						title: 'Apply a filter to the top genes',
 						type: 'radio',
 						label: 'Gene filter',
 						labelDisplay: 'block',
@@ -124,6 +125,7 @@ export async function init(arg, holder, genomes) {
 					},
 					{
 						label: `Maximum # Genes`,
+						title: 'Limit the number of displayed genes',
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxGenes',

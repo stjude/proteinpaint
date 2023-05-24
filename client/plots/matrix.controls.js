@@ -45,6 +45,7 @@ export class MatrixControls {
 				rows: [
 					{
 						label: `Sort ${l.samples}`,
+						title: 'Set how to sort samples',
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
@@ -53,12 +54,14 @@ export class MatrixControls {
 					},
 					{
 						label: `Maximum # ${l.samples}`,
+						title: 'Limit the number of displayed samples',
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxSample'
 					},
 					{
 						label: `Group ${l.samples} By`,
+						title: 'Select a variable with discrete values to group samples',
 						type: 'term',
 						chartType: 'matrix',
 						configKey: 'divideBy',
@@ -96,7 +99,8 @@ export class MatrixControls {
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
-						label: `${l.sample} Counts for Gene`,
+						label: `Display ${l.sample} Counts for Gene`,
+						title: 'Include the case count in the gene label',
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'samplecount4gene',
@@ -108,20 +112,21 @@ export class MatrixControls {
 					},
 					{
 						label: 'Rendering Style',
-						title: '',
+						title: `Set how to indicate a sample's applicable variant types in the same matrix cell`,
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'cellEncoding',
-						options: [{ label: 'ProteinPaint', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }],
+						options: [{ label: 'Stacked', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }],
 						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
 					},
 					{
 						label: 'Sort Genes',
+						title: 'Set how to order the genes as rows',
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortTermsBy',
 						options: [
-							{ label: 'As Listed', value: 'asListed' },
+							{ label: 'By Input Data Order', value: 'asListed' },
 							{ label: `By ${l.sample} Count`, value: 'sampleCount' }
 						],
 						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
@@ -158,6 +163,9 @@ export class MatrixControls {
 						rows: [
 							{
 								label: 'Grid',
+								title:
+									'Show grid lines, which creates borders around each matrix cells. ' +
+									' Note that grid lines are hidden when the auto-computed width <= 2, or when either the column and row spacing is set to 0.',
 								type: 'checkbox',
 								boxLabel: 'show',
 								// v===true means property('checked') and convert to recognized 'rect' value for dispatch
@@ -187,6 +195,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Outline Color',
+								title: 'Set a border color for the whole matrix',
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'outlineStroke',
@@ -196,6 +205,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Grid Line Color',
+								title: 'Set the grid color, equivalent to applying the same border color for each matrix cell',
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'gridStroke',
@@ -205,6 +215,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Background Color',
+								title: 'Set the background color when there are no alterations or annotation data for a sample',
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'cellbg',
@@ -213,6 +224,7 @@ export class MatrixControls {
 							},
 							{
 								label: `Use Canvas If # ${l.sample} Exceeds`,
+								title: 'Switch from SVG to canvas rendering when the number of samples exceeds this number',
 								type: 'number',
 								chartType: 'matrix',
 								settingsKey: 'svgCanvasSwitch',
@@ -225,6 +237,8 @@ export class MatrixControls {
 							},
 							{
 								label: 'Canvas Min. Pixel Width',
+								title:
+									'Set a minimum pixel width for a matrix cell when using canvas, may affect the perceived sharpness of the canvas image',
 								type: 'checkbox',
 								boxLabel: 'apply',
 								chartType: 'matrix',
@@ -240,6 +254,7 @@ export class MatrixControls {
 						rows: [
 							{
 								label: 'Row Height',
+								title: 'Set the height of a matrix row',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -248,6 +263,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Min Col. Width',
+								title: 'Set the minimum width of the auto-computed matrix column width',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -256,6 +272,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Max Col. Width',
+								title: 'Set the maximum width of the auto-computed matrix column width',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -264,6 +281,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Spacing',
+								title: 'Set the column spacing. Note that this will be set to 0 when the auto-computed width < 2.',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -275,6 +293,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Group spacing',
+								title: 'Set the spacing between column and row groups.',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -291,6 +310,7 @@ export class MatrixControls {
 						rows: [
 							{
 								label: 'Offset',
+								title: 'Set the gap between the label text and matrix edge',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -302,6 +322,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Spacing',
+								title: 'Set the gap between labels',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -313,6 +334,8 @@ export class MatrixControls {
 							},
 							{
 								label: 'Minimum Size',
+								title:
+									'Set the minimum auto-computed font size for labels. Note that labels will be hidden if the auto-computed values falls below this minimum.',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -325,6 +348,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Maximum Size',
+								title: 'Set the maximum auto-computed font size for labels',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -336,7 +360,8 @@ export class MatrixControls {
 								step: 0.1
 							},
 							{
-								label: 'Individual label<br/>position',
+								label: 'Group label<br/>position',
+								title: 'Set which side of the matrix to display group labels',
 								type: 'radio',
 								width: 50,
 								chartType: 'matrix',
@@ -344,11 +369,13 @@ export class MatrixControls {
 								inputs: [
 									{
 										settingsKey: 'collabelpos',
-										options: [{ label: 'Top', value: 'top' }, { label: 'Bottom', value: 'bottom' }]
+										// switched since settings.collabelpos refers to the individual column label, not group
+										options: [{ label: 'Bottom', value: 'top' }, { label: 'Top', value: 'bottom' }]
 									},
 									{
 										settingsKey: 'rowlabelpos',
-										options: [{ label: 'Left', value: 'left' }, { label: 'Right', value: 'right' }]
+										// switched since settings.rowlabelpos refers to the individual column label, not group
+										options: [{ label: 'Right', value: 'left' }, { label: 'Left', value: 'right' }]
 									}
 								]
 							}
@@ -371,33 +398,31 @@ export class MatrixControls {
 					//ontop: false,
 					{
 						label: 'Font Size',
+						title: 'Set the font size for the legend text',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'fontsize'
 					},
 					{
 						label: 'Line Height',
+						title: 'Set the line height for a legend group',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'lineh'
 					},
 					{
 						label: 'Icon Height',
+						title: 'Set the icon height for a legend item',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'iconh'
 					},
 					{
 						label: 'Icon Width',
+						title: 'Set the icon width for a legend item',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'iconw'
-					},
-					{
-						label: 'Left Margin',
-						type: 'number',
-						chartType: 'legend',
-						settingsKey: 'padleft'
 					},
 					/*{
 						label: 'Bottom margin',
@@ -407,22 +432,35 @@ export class MatrixControls {
 					},*/
 					{
 						label: 'Item Left Pad',
+						title: 'Set a left margin for each legend item',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'padx'
 					},
 					{
+						label: 'Left Margin',
+						title: 'Set a left margin for the whole legend',
+						type: 'number',
+						chartType: 'legend',
+						settingsKey: 'padleft'
+					},
+					{
+						label: 'Left Indent',
+						title:
+							`Set a left margin for the first legend item in each group, and should be set to the length of the longest group label.` +
+							` The left indent will align the legend group label text to the right.`,
+						type: 'number',
+						chartType: 'legend',
+						settingsKey: 'hangleft'
+					},
+					{
 						label: 'Item Layout',
+						title:
+							'Option to separate each legend item into a new line, instead of a horizontal layout in the same line.',
 						type: 'checkbox',
 						chartType: 'legend',
 						settingsKey: 'linesep',
 						boxLabel: 'Line separated'
-					},
-					{
-						label: 'Left Indent',
-						type: 'number',
-						chartType: 'legend',
-						settingsKey: 'hangleft'
 					}
 				]
 			})
@@ -503,11 +541,13 @@ export class MatrixControls {
 			}
 
 			for (const inputConfig of t.rows) {
+				const holder = table.append('tr')
+				if (inputConfig.title) holder.attr('title', inputConfig.title)
 				const input = await initByInput[inputConfig.type](
 					Object.assign(
 						{},
 						{
-							holder: table.append('tr'),
+							holder,
 							dispatch: app.dispatch,
 							id: parent.id,
 							//instanceNum: this.instanceNum,
@@ -544,11 +584,13 @@ export class MatrixControls {
 		if (parent.opts.customInputs?.genes) {
 			for (const inputConfig of parent.opts.customInputs?.genes) {
 				inputConfig.chartType = 'matrix'
+				const holder = table.append('tr')
+				if (inputConfig.title) holder.attr('title', inputConfig.title)
 				const input = await initByInput[inputConfig.type](
 					Object.assign(
 						{},
 						{
-							holder: table.append('tr'),
+							holder,
 							//dispatch: app.dispatch,
 							id: parent.id,
 							//instanceNum: this.instanceNum,
@@ -582,7 +624,7 @@ export class MatrixControls {
 	}
 
 	addTermGroupSelector(app, parent, tr) {
-		const td = tr.append('td').attr('colspan', 2)
+		const td = tr.append('td') //.attr('colspan', 2)
 		td.append('span').html('Add to term group &nbsp;')
 		const tg = parent.config.termgroups
 		td.append('select')
@@ -599,7 +641,8 @@ export class MatrixControls {
 	}
 
 	addGeneSearch(app, parent, tr) {
-		tr.append('td')
+		tr.attr('title', 'Search for a gene to add')
+			.append('td')
 			.attr('class', 'sja-termdb-config-row-label')
 			.html('Add a single gene &nbsp;')
 
@@ -634,6 +677,7 @@ export class MatrixControls {
 
 	// should be fine to name this method Msigdb as this is the only eligible geneset db for now
 	addMsigdbMenu(app, parent, tr, termdbKey) {
+		tr.attr('title', 'Select and add genes from the Mutation Signatures Database (MSigDB)')
 		const tdb = app.opts.genome.termdbs[termdbKey]
 		const td = tr
 			.append('td')

@@ -322,7 +322,7 @@ export function getTermSorter(self, s) {
 export function getSortOptions(termdbConfig) {
 	const sortOptions = {
 		asListed: {
-			label: 'as-listed',
+			label: 'By Input Data Order',
 			value: 'asListed',
 			order: 0
 		}
