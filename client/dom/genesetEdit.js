@@ -1,5 +1,7 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
+import { select } from 'd3-selection'
+import { rgb } from 'd3-color'
 
 const tip2 = new Menu({ padding: '0px' })
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
@@ -76,7 +78,18 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		}
 	rightDiv
 		.append('button')
-		.text('Clear')
+		.text('Delete')
+		.on('click', () => {
+			const spans = genesDiv.selectAll('span').nodes()
+			for (const [i, span] of Object.entries(spans)) {
+				if (span.selected) geneList.splice(i, 1)
+			}
+
+			renderGenes()
+		})
+	rightDiv
+		.append('button')
+		.text('Delete All')
 		.on('click', () => {
 			geneList = []
 			renderGenes()
@@ -102,17 +115,22 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()
-		if (geneList)
-			for (const gene of geneList)
-				genesDiv
-					.append('span')
-					.style('display', 'inline-block')
-					.text(gene.name || gene.symbol)
-					.style('padding', '5px')
-					.on('click', () => {
-						geneList.splice(geneList.indexOf(gene), 1)
-						renderGenes()
-					})
+
+		const spans = genesDiv.selectAll('span').data(geneList)
+		spans
+			.enter()
+			.append('span')
+			.style('display', 'inline-block')
+			.attr('class', 'sja_menuoption')
+			.text(gene => gene.name || gene.symbol)
+			.style('padding', '5px')
+			.on('click', function(event) {
+				const span = select(this)
+				const activeColor = rgb('#FFD580').toString()
+				if (span.style('background-color') != activeColor) span.style('background-color', activeColor)
+				else span.style('background-color', '#F2F2F2')
+				span.node().selected = span.style('background-color') == activeColor
+			})
 	}
 	function addGene() {
 		const name = inputSearch.geneSymbol
