@@ -18,6 +18,7 @@ Tests:
 	TermdbVocab
 		getTermdbConfig()
 		getTermChildren()
+		mayFillInMissingCatValues()
 		getTdbDataUrl()
 		findTerm()
 		getTermInfo()
@@ -27,7 +28,6 @@ Tests:
 		getCohortsData()
 	******TODO: 
 			getNestedChartSeriesData()
-			mayFillInMissingCatValues()
 			syncTermData()
 			getRegressionData()
 			getCohortSampleCount()
@@ -339,17 +339,18 @@ tape('getTermChildren()', async test => {
 	test.end()
 })
 
-tape.skip('getNestedChartSeriesData()', async test => {
-	test.timeoutAfter(100)
+tape.only('getNestedChartSeriesData()', async test => {
+	test.timeoutAfter(1000)
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
-	let opts, result, message
+	let opts, result
 
-	message = 'Should return the correct URL for only one term'
 	opts = {
-		chartType: 'barchart',
-		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
+		filter: { in: true, join: 'and', lst: [], type: 'tvslst'},
+		term: { id: 'diaggrp', term: termjson['diaggrp'], q: termjson['diaggrp'] },
+		term0: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] },
+		term2: { id: 'sex', term: termjson['agedx'], q: termjson['sex'] }
 	}
 	result = await termdbVocabApi.getNestedChartSeriesData(opts)
 	console.log(result)
@@ -357,10 +358,38 @@ tape.skip('getNestedChartSeriesData()', async test => {
 	test.end()
 })
 
-tape.skip('mayFillInMissingCatValues()', async test => {
+tape('mayFillInMissingCatValues()', async test => {
 	test.timeoutAfter(100)
+	/* mayFillInMissingCatValues() requires missingCatValsByTermId{} and samplecount{} to complete */
 
 	const termdbVocabApi = await getTermdbVocabApi()
+
+	let testTerm, term, key, total
+
+	//Invalid input, no missingCatValsByTermId defined
+	testTerm = 'diaggrp'
+	term = await termdbVocabApi.getterm(testTerm)
+	key = '1'
+	total = 4
+	termdbVocabApi.mayFillInMissingCatValues(term, key, total)
+	test.ok(!term.values[key], `Should return term.values unchanged`)
+
+	//Key exists, no change to samplecount
+	key = 'Acute lymphoblastic leukemia'
+	termdbVocabApi.missingCatValsByTermId = { 'Acute lymphoblastic leukemia': term }
+	term.samplecount = {}
+	termdbVocabApi.mayFillInMissingCatValues(term, key, total)
+	test.ok(!term.samplecount[key], `Should return empty term.samplecount`)
+
+	//Add value
+	testTerm = 'sex'
+	term = await termdbVocabApi.getterm(testTerm)
+	term.samplecount = {}
+	termdbVocabApi.missingCatValsByTermId = { sex: term }
+	key = '3'
+	total = 2
+	termdbVocabApi.mayFillInMissingCatValues(term, key, total)
+	test.ok(term.values[key] && typeof term.values[key] == 'object' && term.samplecount[key] && typeof term.samplecount[key] == 'object', `Should return term.values and term.samplecount with new '${key}' objects`)
 
 	test.end()
 })
@@ -511,13 +540,25 @@ tape.skip('syncTermData()', async test => {
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
-	let result, config, data
+	let result, config, data, previousConfig
 
 	//Invalid arguments
 	config = { notRealKey: 'Not a real value' }
 	data = { refs: [1] }
 	result = termdbVocabApi.syncTermData(config, data)
 	test.equal(result, undefined, `Should return 'undefined' for invalid arguments`)
+
+	config = { 
+		term: { id: 'diaggrp', q: { isAtomic: true }, term: { id: 'diaggrp'} }, 
+		term0: { id: 'agedx', term: { id: 'agedx'} }, 
+		term2: { id: 'survival', term: { id: 'survival'} }  
+	}
+	data  = { charts: [{ chartId: '' }], refs: {}}
+	previousConfig = { 
+		term: { id: 'diaggrp', q: { isAtomic: true }, term: { id: 'diaggrp'} }, 
+	}
+	result = termdbVocabApi.syncTermData(config, data, previousConfig)
+	console.log(543, termdbVocabApi)
 
 	test.end()
 })
