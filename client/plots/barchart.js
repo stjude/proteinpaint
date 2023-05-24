@@ -376,24 +376,18 @@ class Barchart {
 	}
 
 	processData(chartsData) {
-		const self = this
 		const cols = chartsData.refs.cols
-
+		this.seriesOrder = this.setMaxVisibleTotals(chartsData)
 		if (!chartsData.charts.length) {
-			self.seriesOrder = []
+			this.seriesOrder = []
 		} else if (chartsData.refs.useColOrder) {
-			self.seriesOrder = chartsData.refs.cols
-		} else {
-			self.seriesOrder = chartsData.charts[0].serieses
-				.sort((a, b) => (!isNaN(a.seriesId) && !isNaN(b.seriesId) ? +b.seriesId - +a.seriesId : b.total - a.total))
-				.map(series => series.seriesId)
+			this.seriesOrder = chartsData.refs.cols
 		}
 
-		self.setMaxVisibleTotals(chartsData)
 		const rows = chartsData.refs.rows
 
-		self.barSorter = (a, b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
-		self.overlaySorter = chartsData.refs.useRowOrder
+		this.barSorter = (a, b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
+		this.overlaySorter = chartsData.refs.useRowOrder
 			? (a, b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
 			: (a, b) =>
 					this.totalsByDataId[b.dataId] > this.totalsByDataId[a.dataId]
@@ -404,7 +398,7 @@ class Barchart {
 						? -1
 						: 1
 
-		self.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
+		this.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
 
 		const t1 = this.config.term
 		const t2 = this.config.term2
@@ -435,8 +429,9 @@ class Barchart {
 		this.totalsByDataId = {}
 		const t1 = this.config.term
 		const t2 = this.config.term2
-
-		const addlSeriesIds = {} // to track series IDs that are not already in this.seriesOrder
+		// this will prioritize sorting series totals in the first chart,
+		// then serieses in the subsequent chart that are not already in the first chart, and so on
+		const visibleTotalsByChartSeriesId = {}
 		let maxVisibleAcrossCharts = 0
 		for (const chart of chartsData.charts) {
 			if (!chart.settings) chart.settings = JSON.parse(rendererSettings)
@@ -448,10 +443,8 @@ class Barchart {
 				series.visibleTotal = series.visibleData.reduce((sum, a) => sum + a.total, 0)
 				if (!series.visibleTotal) return false
 				chart.visibleTotal += series.visibleTotal
-				if (!this.seriesOrder.includes(series.seriesId)) {
-					if (!(series.seriesId in addlSeriesIds)) addlSeriesIds[series.seriesId] = 0
-					addlSeriesIds[series.seriesId] += series.visibleTotal
-				}
+				if (!(series.seriesId in visibleTotalsByChartSeriesId))
+					visibleTotalsByChartSeriesId[series.seriesId] = series.visibleTotal
 				for (const data of series.data) {
 					data.seriesId = series.seriesId
 					if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
@@ -493,7 +486,10 @@ class Barchart {
 		for (const chart of chartsData.charts) {
 			chart.maxVisibleAcrossCharts = maxVisibleAcrossCharts
 		}
-		this.seriesOrder.push(...Object.keys(addlSeriesIds).sort((a, b) => addlSeriesIds[b] - addlSeriesIds[a]))
+
+		return Object.keys(visibleTotalsByChartSeriesId).sort(
+			(a, b) => visibleTotalsByChartSeriesId[b] - visibleTotalsByChartSeriesId[a]
+		)
 	}
 
 	sortStacking(series, chart, chartsData) {
