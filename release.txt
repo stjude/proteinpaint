@@ -1,0 +1,12 @@
+- improve the matrix control layout, labels, and mouseover information
+- option to display quantitative CNV data using a chromatic scale in the matrix plot
+- support new flags to disable custom track ui to guard against html injection
+- support divide-by term and regression curve fitting for sample scatter plot
+- support downloading multiple charts as one svg image file for survival and sample scatter plots
+- update the optional origin values for variant data
+- improve wholegenome numeric data plotting
+
+- fix epaint panel positioning
+- manual info filtering due to bcftools not filtering multi-ALT
+- fix violin plot bugs related to scales, uncomputable values, pvalue table, and condition terms
+- detect missing sample vcf file
