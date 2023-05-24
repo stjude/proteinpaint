@@ -633,26 +633,17 @@ export class MatrixControls {
 			.on('change', (d, i) => {
 				parent.selectedGroup = i
 			})
-<<<<<<< HEAD
-	}
 
-	addGeneSearch(app, parent, tr) {
-		tr.attr('title', 'Search for a gene to add')
-			.append('td')
-			.attr('class', 'sja-termdb-config-row-label')
-			.html('Edit gene set')
-
-		const button = tr
-			.append('td')
-			.append('button')
-=======
 		td.append('button')
->>>>>>> e7e899aea (Showing group name by the geneset edit)
 			.text('Edit')
 			.on('click', () => {
 				const group = parent.config.termgroups[parent.selectedGroup]
 				app.tip.clear().hide()
+
 				const callback = geneset => {
+					const lst = []
+					for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
+					group.lst = lst
 					const tws = geneset.map(d => {
 						const tw = {
 							$id: get$id(),
