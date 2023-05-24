@@ -2,7 +2,7 @@ import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '../../termsetting/termsetting.js'
 import { getFilterItemByTag, filterJoin } from '../../filter/filter.js'
-import { sleep, detectOne, detectGte, whenHidden, whenVisible } from '../../test/test.helpers.js'
+import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
 
 /***************** Test Layout *****************:
 
@@ -13,9 +13,10 @@ import { sleep, detectOne, detectGte, whenHidden, whenVisible } from '../../test
 5.  'test hide option on label clicking'
 6.  'term1 as numeric and term2 numeric'
 7.  'term1 as categorical and term2 numeric'
-8.  'test samplelst term2'
-9.  'test uncomputable categories legend'
-10. 'Load linear regression-violin UI'
+8. 	'term1 as numerical and term2 condition'
+9.  'test samplelst term2'
+10.  'test uncomputable categories legend'
+11. 'Load linear regression-violin UI'
 
 ***********************************************/
 
@@ -63,6 +64,9 @@ tape('render violin plot', function(test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [open_state]
 		},
 		violin: {
@@ -259,9 +263,12 @@ tape('term1 as numeric and term2 categorical, test median rendering', function(t
 })
 
 tape('test basic controls', function(test) {
-	test.timeoutAfter(100000)
+	test.timeoutAfter(5000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [open_state]
 		},
 		violin: {
@@ -352,13 +359,6 @@ tape('test basic controls', function(test) {
 
 	async function changeSymbolSize(violin, violinDiv) {
 		const testSymSize = 10
-		//breaks
-		// await detectGte({
-		// 	elem: violinDiv.node(),
-		// 	selector: '.sjpp-rug-img',
-		// 	count: 2,
-		// 	async trigger() {
-		// await
 		violin.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: violin.Inner.id,
@@ -370,8 +370,6 @@ tape('test basic controls', function(test) {
 				}
 			}
 		})
-		// 	}
-		// })
 		await sleep(20)
 		test.true(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.radius === testSymSize,
@@ -428,7 +426,7 @@ tape('test basic controls', function(test) {
 				term: await fillTermWrapper({ id: 'agedx', q: { mode: 'discrete' } }, violin.Inner.app.vocabApi)
 			}
 		})
-		await sleep(50)
+		await sleep(20)
 		test.true(violin.Inner.app.Inner.state.plots[0].term.q.mode === 'discrete', "q.mode changed to 'Discrete' ")
 	}
 })
@@ -437,6 +435,9 @@ tape('test label clicking, filtering and hovering', function(test) {
 	test.timeoutAfter(8000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [open_state]
 		},
 		violin: {
@@ -537,9 +538,12 @@ tape('test label clicking, filtering and hovering', function(test) {
 })
 
 tape('test hide option on label clicking', function(test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [open_state]
 		},
 		violin: {
@@ -605,6 +609,9 @@ tape.skip('term1 as numeric and term2 numeric', function(test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -682,10 +689,62 @@ tape.skip('term1 as categorical and term2 numeric', function(test) {
 	}
 })
 
-tape.skip('test samplelst term2', function(test) {
-	test.timeoutAfter(1000)
+tape('term1 as numerical and term2 condition', function(test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						id: 'agedx',
+						isAtomic: true,
+						isLeaf: true,
+						q: {
+							mode: 'continuous',
+							hiddenValues: {},
+							isAtomic: true
+						}
+					},
+					term2: {
+						id: 'Hearing loss'
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testConditionTermOrder(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+	async function testConditionTermOrder(violin, violinDiv) {
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 5 })
+		test.deepEqual(
+			groups.map(k => k.__data__.label),
+			violin.Inner.data.plots.map(k => k.label),
+			'Order of conditional categories in term2 is accurate'
+		)
+	}
+})
+
+tape('test samplelst term2', function(test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -698,31 +757,144 @@ tape.skip('test samplelst term2', function(test) {
 					},
 					term2: {
 						term: {
-							name: 'test',
+							name: 'TermdbTest TSNE groups',
 							type: 'samplelst',
 							values: {
-								'Group 1': { key: 'Group 1', label: 'Group 1' },
-								Others: { key: 'Others', label: 'Others' }
+								'Group 1': {
+									key: 'Group 1',
+									label: 'Group 1'
+								},
+								'Not in Group 1': {
+									key: 'Not in Group 1',
+									label: 'Not in Group 1'
+								}
 							}
 						},
 						q: {
 							mode: 'discrete',
 							groups: [
 								{
-									name: 'Group 22',
+									name: 'Group 1',
 									in: true,
-									values: [2646, 2800, 2856, 2884, 2954, 2954].map(i => {
-										return { sampleId: i }
-									})
+									values: [
+										{
+											sampleId: 42,
+											sample: '2660'
+										},
+										{
+											sampleId: 44,
+											sample: '2688'
+										},
+										{
+											sampleId: 45,
+											sample: '2702'
+										},
+										{
+											sampleId: 46,
+											sample: '2716'
+										},
+										{
+											sampleId: 59,
+											sample: '2898'
+										},
+										{
+											sampleId: 60,
+											sample: '2912'
+										},
+										{
+											sampleId: 67,
+											sample: '3010'
+										},
+										{
+											sampleId: 68,
+											sample: '3024'
+										},
+										{
+											sampleId: 69,
+											sample: '3038'
+										},
+										{
+											sampleId: 70,
+											sample: '3052'
+										},
+										{
+											sampleId: 73,
+											sample: '3094'
+										},
+										{
+											sampleId: 79,
+											sample: '3178'
+										},
+										{
+											sampleId: 80,
+											sample: '3192'
+										}
+									]
 								},
 								{
-									name: 'Others',
+									name: 'Not in Group 1',
 									in: false,
-									values: [2646, 2800, 2856, 2884, 2954, 2954].map(i => {
-										return { sampleId: i }
-									})
+									values: [
+										{
+											sampleId: 42,
+											sample: '2660'
+										},
+										{
+											sampleId: 44,
+											sample: '2688'
+										},
+										{
+											sampleId: 45,
+											sample: '2702'
+										},
+										{
+											sampleId: 46,
+											sample: '2716'
+										},
+										{
+											sampleId: 59,
+											sample: '2898'
+										},
+										{
+											sampleId: 60,
+											sample: '2912'
+										},
+										{
+											sampleId: 67,
+											sample: '3010'
+										},
+										{
+											sampleId: 68,
+											sample: '3024'
+										},
+										{
+											sampleId: 69,
+											sample: '3038'
+										},
+										{
+											sampleId: 70,
+											sample: '3052'
+										},
+										{
+											sampleId: 73,
+											sample: '3094'
+										},
+										{
+											sampleId: 79,
+											sample: '3178'
+										},
+										{
+											sampleId: 80,
+											sample: '3192'
+										}
+									]
 								}
-							]
+							],
+							groupsetting: {
+								disabled: false
+							},
+							isAtomic: true,
+							type: 'custom-groupsetting'
 						}
 					}
 				}
@@ -736,11 +908,16 @@ tape.skip('test samplelst term2', function(test) {
 	})
 
 	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
 		violin.on('postRender.test', null)
-		test.equal(violin.Inner.data.plots.length, 1, 'Inner.data.plots[] should be array length of 1')
-		// TODO test on sjpp-violinG rendering
-		// if (test._ok) violin.Inner.app.destroy()
+
+		await testGroupsRendering(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
+	}
+	async function testGroupsRendering(violin, violinDiv) {
+		await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
+		test.equal(violin.Inner.data.plots.length, 2, 'Inner.data.plots[] should be array length of 2')
 	}
 })
 
@@ -748,6 +925,9 @@ tape('test uncomputable categories legend', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
 			nav: {
 				header_mode: 'hide_search'
 			},
