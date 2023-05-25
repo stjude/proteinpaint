@@ -11,7 +11,8 @@ dist/*
 */*/dist/
 */*/*/dist/
 
-server/genome/*.ts.js
+server/genome/*.js
+server/shared/types.js
 
 **/public/bin/*
 public/tmp/*

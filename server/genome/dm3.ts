@@ -1,4 +1,4 @@
-module.exports={
+export default {
 	species:'fruit fly',
 	genomefile:'genomes/dm3.gz',
 	genedb:{

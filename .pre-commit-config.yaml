@@ -1,10 +1,10 @@
 repos:
   - repo: https://github.com/Yelp/detect-secrets.git
-    rev: v1.2.0
+    rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args: [--baseline, .secrets.baseline]
-        exclude: package-lock.json
+        args: [--baseline, .secrets.baseline, --exclude-files, server\/genome]
+        exclude: package-lock.json 
 
   # for Proteinpaint, the team preference is for the prettier formatting
   # to be applied as part of the commit, not as a separate commit

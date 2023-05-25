@@ -1,4 +1,4 @@
-module.exports={
+export default {
 	species:'fruit fly',
 	genomefile:'genomes/dm6.gz',
 	genedb:{
@@ -44,7 +44,7 @@ module.exports={
 
 	majorchr:`chr3R	32079331
 chr3L	28110227
-chr2R	25286936
+chr2R	25286936` /* pragma: allowlist secret */ + `
 chrX	23542271
 chr2L	23513712
 chrY	3667352
