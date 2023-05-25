@@ -15,7 +15,7 @@ import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
 7.  'term1 as categorical and term2 numeric'
 8. 	'term1 as numerical and term2 condition'
 9.  'test samplelst term2'
-10.  'test uncomputable categories legend'
+10. 'test uncomputable categories legend'
 11. 'Load linear regression-violin UI'
 
 ***********************************************/
@@ -61,7 +61,7 @@ const open_state = {
 }
 
 tape('render violin plot', function(test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -236,6 +236,8 @@ tape('term1 as numeric and term2 categorical, test median rendering', function(t
 			selector: '.sjpp-median-line',
 			count: 2
 		})
+		test.ok(median, 'Median exists')
+
 		test.equal(
 			median.length,
 			violin.Inner.data.plots.length,
@@ -263,7 +265,7 @@ tape('term1 as numeric and term2 categorical, test median rendering', function(t
 })
 
 tape('test basic controls', function(test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -283,8 +285,8 @@ tape('test basic controls', function(test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await changeOrientation(violin, violinDiv) // test orientation by changing to vertical
 		await changeDataSymbol(violin, violinDiv) //test change in Data symbol
-		await changeStrokeWidth(violin, violinDiv) //test change in stroke width
-		await changeSymbolSize(violin, violinDiv) //test change in symbol size
+		await changeStrokeWidth(violin) //test change in stroke width
+		await changeSymbolSize(violin) //test change in symbol size
 		await changeScaleToLog(violin, violinDiv) //test change in axis scale
 		await changeOverlayTerm(violin, violinDiv) //test change in term2/overlay term
 		await changeModeToDiscrete(violin) //test change in q: {mode: 'Discrete'} to display barchart
@@ -312,11 +314,12 @@ tape('test basic controls', function(test) {
 				})
 			}
 		})
+		test.ok(termLabel, 'Term label exists')
 		test.true(termLabel[0].transform.animVal[0].angle === -90, 'Orientation is now vertical')
 	}
 
 	async function changeDataSymbol(violin, violinDiv) {
-		await detectGte({
+		const datasymbol = await detectGte({
 			elem: violinDiv.node(),
 			selector: '.sjpp-rug-img',
 			count: 2,
@@ -334,10 +337,11 @@ tape('test basic controls', function(test) {
 				})
 			}
 		})
+		test.ok(datasymbol, 'Data symbol exists')
 		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.datasymbol === 'rug', 'Data Symbol are now Ticks')
 	}
 
-	async function changeStrokeWidth(violin, violinDiv) {
+	async function changeStrokeWidth(violin) {
 		const testStrokeWidth = 1
 		violin.Inner.app.dispatch({
 			type: 'plot_edit',
@@ -357,7 +361,7 @@ tape('test basic controls', function(test) {
 		)
 	}
 
-	async function changeSymbolSize(violin, violinDiv) {
+	async function changeSymbolSize(violin) {
 		const testSymSize = 10
 		violin.Inner.app.dispatch({
 			type: 'plot_edit',
@@ -378,7 +382,7 @@ tape('test basic controls', function(test) {
 	}
 
 	async function changeOverlayTerm(violin, violinDiv) {
-		await detectGte({
+		const changeOvTerm = await detectGte({
 			elem: violinDiv.node(),
 			selector: '.sjpp-vp-path',
 			count: 3,
@@ -392,11 +396,12 @@ tape('test basic controls', function(test) {
 				})
 			}
 		})
+		test.ok(changeOvTerm, 'Overlay Term has been changed')
 		test.true(violin.Inner.app.Inner.state.plots[0].term2.id === 'genetic_race', 'Overlay term changed')
 	}
 
 	async function changeScaleToLog(violin, violinDiv) {
-		await detectGte({
+		const showLogScale = await detectGte({
 			elem: violinDiv.node(),
 			selector: '.sjpp-logscale',
 			count: 1,
@@ -414,6 +419,7 @@ tape('test basic controls', function(test) {
 				})
 			}
 		})
+		test.ok(showLogScale, 'Log scale exists')
 		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.unit === 'log', 'Axis scale rendered in log')
 	}
 
@@ -432,7 +438,7 @@ tape('test basic controls', function(test) {
 })
 
 tape('test label clicking, filtering and hovering', function(test) {
-	test.timeoutAfter(8000)
+	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			nav: {
@@ -530,6 +536,7 @@ tape('test label clicking, filtering and hovering', function(test) {
 			selector: '.sjpp-axislabel',
 			count: 1
 		})
+		test.ok(elem, 'Hover Element exists')
 		elem[0].dispatchEvent(new Event('mouseover'), { bubbles: true })
 		const tip = violin.Inner.dom.tip
 		test.ok(tip.d.node().style.display == 'block', 'Should display table of summary statistics on hover')
@@ -588,6 +595,8 @@ tape('test hide option on label clicking', function(test) {
 
 	async function testHiddenValues(violin, legendDiv, violinDiv) {
 		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend', count: 8 })
+		test.ok(htmlLegends, 'Legend exists')
+
 		const hiddenKeys = Object.keys(violin.Inner.config.term2.q.hiddenValues)
 		test.equal(
 			Object.keys(violin.Inner.config.term2.q.hiddenValues)[0],
@@ -597,6 +606,8 @@ tape('test hide option on label clicking', function(test) {
 		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
 		unhideLegendValue[0].dispatchEvent(new Event('click'), { bubbles: true })
 		const hiddenValueRendered = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-axislabel', count: 2 })
+		test.ok(hiddenValueRendered, 'hidden value rendered')
+
 		test.equal(
 			hiddenValueRendered[0].__data__.label,
 			unhideLegendValue[0].innerHTML,
@@ -730,6 +741,8 @@ tape('term1 as numerical and term2 condition', function(test) {
 	}
 	async function testConditionTermOrder(violin, violinDiv) {
 		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 5 })
+		test.ok(groups, 'Condition groups exist')
+
 		test.deepEqual(
 			groups.map(k => k.__data__.label),
 			violin.Inner.data.plots.map(k => k.label),
@@ -967,6 +980,8 @@ tape('test uncomputable categories legend', function(test) {
 	async function testUncomputableCategories(violin, legendDiv) {
 		const keys = Object.keys(violin.Inner.data.uncomputableValueObj)
 		const categories = await detectGte({ elem: legendDiv.node(), selector: '.legend-row', count: 9 })
+		test.ok(categories, 'Uncomputable categories exist')
+
 		const uncomputableLegend = categories.filter(c => keys.find(k => c.__data__.text.startsWith(k)))
 
 		test.equal(keys.length, uncomputableLegend.length, 'should have the correct number of uncomputable legend entries')
@@ -1016,15 +1031,19 @@ tape('Load linear regression-violin UI', function(test) {
 	})
 	async function runTests(regression) {
 		regression.on('postRender.test', null)
-		await sleep(200)
-		regressionViolinRendering(regression)
+		await regressionViolinRendering(regression)
 		if (test._ok) regression.Inner.app.destroy()
 		test.end()
 	}
-	function regressionViolinRendering(regression) {
-		test.true(
-			regression.Inner.dom.inputs.node().querySelectorAll('#sjpp-vp-holder')[0],
-			'Violin path rendered for regression UI'
-		)
+	async function regressionViolinRendering(regression) {
+		const regressionVp = await detectGte({
+			elem: regression.Inner.dom.inputs.node(),
+			selector: '.sjpp-vp-path',
+			count: 1
+		})
+		test.ok(regressionVp, 'Violin plot for regression UI exists')
+
+		const expectedPathColor = 'rgb(221, 221, 221)'
+		test.equal(expectedPathColor, getComputedStyle(regressionVp[0]).fill, 'Path fill matches expected fill')
 	}
 })
