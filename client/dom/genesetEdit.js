@@ -4,6 +4,7 @@ import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 
 const tip2 = new Menu({ padding: '0px' })
+let selectedCount = 0
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
 	const div = menu.d.append('div').style('width', '50vw')
 	const headerDiv = div.append('div')
@@ -66,6 +67,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 								const geneset = term._geneset
 								if (geneset) {
 									geneList = geneset
+									selectedCount = 0
 									renderGenes()
 								}
 								//menu.hide()
@@ -76,9 +78,10 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 					tip2.showunder(msigdbBt.node())
 				})
 		}
-	rightDiv
+	const deleteBt = rightDiv
 		.append('button')
 		.text('Delete')
+		.property('disabled', true)
 		.on('click', () => {
 			const spans = genesDiv.selectAll('span').nodes()
 			for (const [i, span] of Object.entries(spans)) {
@@ -87,11 +90,12 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 
 			renderGenes()
 		})
-	rightDiv
+	const deleteAllBt = rightDiv
 		.append('button')
 		.text('Delete All')
 		.on('click', () => {
 			geneList = []
+			selectedCount = 0
 			renderGenes()
 		})
 
@@ -130,7 +134,10 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 				if (span.style('background-color') != activeColor) span.style('background-color', activeColor)
 				else span.style('background-color', '#F2F2F2')
 				span.node().selected = span.style('background-color') == activeColor
+				selectedCount = span.node().selected ? selectedCount + 1 : selectedCount - 1
+				deleteBt.property('disabled', selectedCount == 0)
 			})
+		deleteBt.property('disabled', selectedCount == 0)
 	}
 	function addGene() {
 		const name = inputSearch.geneSymbol
