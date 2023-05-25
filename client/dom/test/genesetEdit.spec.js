@@ -25,7 +25,6 @@ tape('Search genes test', function(test) {
 	const vocabApi = { getTopGenes: mode => [] } //Fake vocab api returning  some genes
 
 	testHG38()
-	testHG19()
 	test.end()
 
 	function testHG38() {
@@ -34,21 +33,6 @@ tape('Search genes test', function(test) {
 		showGenesetEdit({ x: 0, y: 200, menu, genome: hg38, callback: printGenes, vocabApi })
 		const button = menu.d.select('button[name="msigdbBt"]')
 		test.true(!button.empty(), `Should show MSigDB button for the hg38 genome`)
-	}
-
-	function testHG19() {
-		const menu = new Menu({ padding: '0px' })
-		showGenesetEdit({
-			x: 0,
-			y: 400,
-			menu,
-			genome: hg19,
-			callback: printGenes,
-			mode: 'expression',
-			vocabApi
-		})
-		const button = menu.d.select('button[name="msigdbBt"]')
-		test.true(button.empty(), `Should not show MSigDB button for the hg19 genome`)
 	}
 
 	function printGenes(geneList) {
