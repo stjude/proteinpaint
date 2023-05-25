@@ -274,12 +274,13 @@ function get_condition(tvs, CTEname) {
 	const CTEs = []
 	const values = []
 	if (tvs.values) {
-		values.push(tvs.term.id, ...tvs.values.map(i => '' + i.key))
+		values.push(tvs.term.id, value_for, ...tvs.values.map(i => '' + i.key))
 		CTEs.push(`
 			${CTEname} AS (
 				SELECT sample
-				FROM ${value_for == 'grade' ? 'precomputed_chc_grade' : 'precomputed_chc_child'}
+				FROM precomputed
 				WHERE term_id = ? 
+				AND value_for = ? 
 				AND ${restriction} = 1
 				AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})
 			)`)

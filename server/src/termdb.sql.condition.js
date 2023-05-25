@@ -28,19 +28,20 @@ export const discrete = {
 		} else {
 			// no breaks, so all grades in one group
 			const [value_for, restriction] = validateQ(q)
-			values.push(term.id)
+			values.push(term.id, value_for)
 			const uncomputable = getUncomputableClause(term, q)
 			values.push(...uncomputable.values)
 			return {
 				sql: `${tablename} AS (
 					SELECT
 						sample,
-						value as key,
-						value
+						${value_for == 'grade' ? `CAST(value AS integer) as key` : 'value as key'},
+						${value_for == 'grade' ? `CAST(value AS integer) as value` : 'value'}
 					FROM
-						${value_for == 'grade' ? 'precomputed_chc_grade' : 'precomputed_chc_child'}
+						precomputed
 					WHERE
 						term_id = ?
+						AND value_for = ?
 						AND ${restriction} = 1
 						${uncomputable.clause}
 				)`,
@@ -291,17 +292,17 @@ function getCTE_discreteWithBreaks(tablename, term, q, values) {
 
 	// build CTE
 	const [value_for, restriction] = validateQ(q)
-	if (value_for != 'grade') throw 'breaks must be used on grade values'
 	const categories = []
 	for (const g of groups) {
 		categories.push(`SELECT sample, ? as key, value
-			FROM precomputed_chc_grade
+			FROM precomputed a
 			WHERE
 				term_id=?
+				AND value_for=?
 				AND ${restriction}=1
 				AND value IN (${g.values.map(v => '?').join(',')})
 		`)
-		values.push(g.name, term.id, ...g.values.map(v => v.toString()))
+		values.push(g.name, term.id, value_for, ...g.values.map(v => v.toString()))
 	}
 
 	return {

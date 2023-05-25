@@ -110,18 +110,7 @@ where term_id='sex' and value=2 and abs(random() % 3) = 0
 limit 15;
 
 delete
-from precomputed_chc_grade
-where 
-sample not in (select sample from samples) 
-OR 
-(
-term_id NOT IN (select id from annoterms)
-AND
-term_id NOT IN (select id from treeterms)
-);
-
-delete
-from precomputed_chc_child
+from precomputed
 where 
 sample not in (select sample from samples) 
 OR 
