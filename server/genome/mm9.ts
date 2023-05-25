@@ -1,4 +1,4 @@
-module.exports = {
+export default {
 	species: 'mouse',
 	genomefile: 'genomes/mm9.gz',
 	genedb: {

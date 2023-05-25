@@ -1,4 +1,4 @@
-module.exports = {
+export default {
 	species: 'human',
 	genomefile: 'genomes/hgvirus.gz',
 	genedb: {

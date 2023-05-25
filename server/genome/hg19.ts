@@ -1,5 +1,5 @@
 const clinvar = require('../dataset/clinvar')
-module.exports = {
+export default {
 	species: 'human',
 	genomefile: 'genomes/hg19.gz',
 	genedb: {

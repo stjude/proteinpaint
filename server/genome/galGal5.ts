@@ -1,4 +1,4 @@
-module.exports = {
+export default {
 	species: 'chicken',
 	genomefile: 'genomes/galGal5.gz',
 	genedb: {

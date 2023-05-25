@@ -7135,7 +7135,8 @@ async function pp_init() {
 		settings in g will modify g2
 		g2 is registered in the global "genomes"
 		*/
-		const g2 = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
+		const g2module = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
+		const g2 = g2module.default || g2module
 		genomes[g.name] = g2
 
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name

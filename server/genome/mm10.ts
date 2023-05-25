@@ -1,4 +1,4 @@
-module.exports = {
+export default {
 	species: 'mouse',
 	genomefile: 'genomes/mm10.gz',
 	genedb: {
@@ -66,7 +66,7 @@ module.exports = {
 
 	majorchr: `
 chr1	195471971
-chr2	182113224
+chr2	182113224` /* pragma: allowlist secret */ + `
 chrX	171031299
 chr3	160039680
 chr4	156508116

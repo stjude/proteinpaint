@@ -1,4 +1,4 @@
-module.exports = {
+export default {
 	species: 'zebrafish',
 	genomefile: 'genomes/danRer10.gz',
 	genedb: {
