@@ -1,7 +1,7 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom/control.icons'
 import { d3lasso } from '#common/lasso'
-import { dt2label, morigin, mclass } from '#shared/common'
+import { dt2label, morigin, add_scriptTag } from '#shared/common'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -97,7 +97,8 @@ export function setRenderers(self) {
 		fillSvgSubElems(chart)
 		/* eslint-enable */
 
-		renderSerie(chart, s.duration)
+		//renderSerie(chart, s.duration)
+		self.render3DSerie(chart)
 		self.renderLegend(chart)
 	}
 
@@ -256,6 +257,64 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 		self.mayRenderRegression()
+	}
+
+	self.render3DSerie = async function(chart) {
+		await add_scriptTag('/static/js/three.js')
+		await add_scriptTag('/static/js/loaders/PCDLoader.js')
+		//await add_scriptTag('/static/js/controls/TrackballControls.js')
+		await add_scriptTag('/static/js/WebGL.js')
+		if (!WEBGL.isWebGLAvailable()) {
+			obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
+			return
+		}
+		chart.chartDiv.selectAll('*').remove()
+
+		const zoom = 45
+		const width = self.settings.svgw
+		const height = self.settings.svgh
+		const camera = new THREE.PerspectiveCamera(zoom, width / height, 0.1, 1000)
+		camera.position.x = 0
+		camera.position.y = 0
+		camera.up.set(0, 1, 0)
+
+		const renderer = new THREE.WebGLRenderer({
+			antialias: true
+		})
+
+		renderer.setSize(width, height)
+		renderer.setPixelRatio(window.devicePixelRatio)
+
+		chart.chartDiv.node().appendChild(renderer.domElement)
+
+		const scene = new THREE.Scene()
+		scene.background = new THREE.Color(0xffffff)
+
+		const scatterPlot = new THREE.Object3D()
+		scatterPlot.rotation.y = 0
+		scene.add(scatterPlot)
+		const pointGeo = new THREE.Geometry()
+		for (const sample of chart.data.samples) {
+			const x = chart.xAxisScale(sample.x)
+			const y = chart.yAxisScale(sample.y)
+			const z = chart.xAxisScale(sample.x)
+			console.log(x, y, z)
+			pointGeo.vertices.push(v(x, y, z))
+			pointGeo.colors.push(new THREE.Color().setRGB(rgb(sample.color)))
+		}
+
+		const mat = new THREE.PointsMaterial({
+			vertexColors: true,
+			size: 5
+		})
+
+		const points = new THREE.Points(pointGeo, mat)
+		scatterPlot.add(points)
+		renderer.render(scene, camera)
+
+		function v(x, y, z) {
+			return new THREE.Vector3(x, y, z)
+		}
 	}
 
 	self.mayRenderRegression = async function() {
