@@ -82,18 +82,6 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 					tip2.showunder(msigdbBt.node())
 				})
 		}
-	const deleteBt = rightDiv
-		.append('button')
-		.text('Delete')
-		.property('disabled', true)
-		.on('click', () => {
-			const spans = genesDiv.selectAll('span').nodes()
-			for (const [i, span] of Object.entries(spans)) {
-				if (span.selected) geneList.splice(i, 1)
-			}
-
-			renderGenes()
-		})
 	const deleteAllBt = rightDiv
 		.append('button')
 		.text('Delete All')
@@ -134,45 +122,46 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		spans
 			.enter()
 			.append('div')
-			.style('display', 'inline-block')
-			.style('position', 'relative')
+			.attr('title', 'click to delete')
 			.attr('class', 'sja_menuoption')
+			.style('position', 'relative')
+			.style('display', 'inline-block')
+			.style('padding', '5px 15px 5px 10px')
 			.text(gene => gene.name || gene.symbol)
-			.style('padding', '5px 20px')
-			.on('click', function(event) {
-				const span = select(this)
-				const activeColor = rgb('#FFD580').toString()
-				if (span.style('background-color') != activeColor) span.style('background-color', activeColor)
-				else span.style('background-color', '#F2F2F2')
-				span.node().selected = span.style('background-color') == activeColor
-				selectedCount = span.node().selected ? selectedCount + 1 : selectedCount - 1
-				deleteBt.property('disabled', selectedCount == 0)
-			})
-			.on('mouseover', function(event) {
-				const span = select(this)
-				span
+			.on('click', deleteGene)
+			.on('mouseover', function(event, d) {
+				select(this)
 					.append('div')
+					.datum(d)
 					.classed('sjpp_deletebt', true)
 					.style('vertical-align', 'middle')
 					.style('display', 'inline-block')
 					.style('position', 'absolute')
-					.style('right', '2px')
+					.style('right', 0)
+					.style('transform', 'scale(0.7)')
+					.style('pointer-events', 'none')
 					.html(
 						`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
-				<path stroke='#000' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+				<path stroke='#f00' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
 				</svg>`
 					)
 			})
 			.on('mouseout', function(event) {
-				const span = select(this)
-				span.select('.sjpp_deletebt').remove()
+				select(this)
+					.select('.sjpp_deletebt')
+					.remove()
 			})
-
-		deleteBt.property('disabled', selectedCount == 0)
 	}
 	function addGene() {
 		const name = inputSearch.geneSymbol
 		geneList.push({ name })
 		renderGenes()
+	}
+	function deleteGene(event, d) {
+		const i = geneList.findIndex(g => g.symbol === d.symbol)
+		if (i != -1) {
+			geneList.splice(i, 1)
+			renderGenes()
+		}
 	}
 }
