@@ -1,7 +1,6 @@
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
 import { fillTermWrapper, termsettingInit, get$id } from '../termsetting/termsetting'
-import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'

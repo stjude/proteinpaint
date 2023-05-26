@@ -29,8 +29,8 @@ tape('Search genes test', function(test) {
 
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
-
-		showGenesetEdit({ x: 0, y: 200, menu, genome: hg38, callback: printGenes, vocabApi })
+		const geneList = [{ symbol: 'TP53' }, { symbol: 'KRAS' }]
+		showGenesetEdit({ x: 100, y: 200, menu, genome: hg38, geneList, callback: printGenes, vocabApi })
 		const button = menu.d.select('button[name="msigdbBt"]')
 		test.true(!button.empty(), `Should show MSigDB button for the hg38 genome`)
 	}
