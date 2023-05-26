@@ -1,14 +1,12 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
-import { rgb } from 'd3-color'
 
 const tip2 = new Menu({ padding: '0px' })
-let selectedCount = 0
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
 	const div = menu.d
 		.append('div')
-		.style('width', '1000px')
+		.style('width', '900px')
 		.style('padding', '5px')
 	const headerDiv = div.append('div')
 	const inputSearch = addGeneSearchbox({
@@ -71,7 +69,6 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 								const geneset = term._geneset
 								if (geneset) {
 									geneList = geneset
-									selectedCount = 0
 									renderGenes()
 								}
 								//menu.hide()
@@ -82,12 +79,11 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 					tip2.showunder(msigdbBt.node())
 				})
 		}
-	const deleteAllBt = rightDiv
+	rightDiv
 		.append('button')
-		.text('Delete All')
+		.text('Clear')
 		.on('click', () => {
 			geneList = []
-			selectedCount = 0
 			renderGenes()
 		})
 
@@ -123,16 +119,17 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			.enter()
 			.append('div')
 			.attr('title', 'click to delete')
+			.style('width', '120px')
 			.attr('class', 'sja_menuoption')
 			.style('position', 'relative')
 			.style('display', 'inline-block')
 			.style('padding', '5px 15px 5px 10px')
 			.text(gene => gene.name || gene.symbol)
 			.on('click', deleteGene)
-			.on('mouseover', function(event, d) {
-				select(this)
+			.on('mouseover', function(event) {
+				const span = select(this)
+				span
 					.append('div')
-					.datum(d)
 					.classed('sjpp_deletebt', true)
 					.style('vertical-align', 'middle')
 					.style('display', 'inline-block')
