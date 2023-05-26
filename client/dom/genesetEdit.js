@@ -8,7 +8,7 @@ let selectedCount = 0
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
 	const div = menu.d
 		.append('div')
-		.style('width', '50vw')
+		.style('width', '1000px')
 		.style('padding', '5px')
 	const headerDiv = div.append('div')
 	const inputSearch = addGeneSearchbox({
@@ -16,7 +16,8 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		genome,
 		row: headerDiv,
 		geneOnly: true,
-		callback: addGene
+		callback: addGene,
+		hideHelp: true
 	})
 
 	const rightDiv = headerDiv
@@ -39,7 +40,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			.attr('value', 10)
 			.attr('type', 'number')
 			.style('width', '40px')
-		rightDiv.append('span').html('Minimum average value cut off')
+		rightDiv.append('span').html('Min average value cut off')
 		rightDiv
 			.append('button')
 			.html(`Load top expressed genes`)

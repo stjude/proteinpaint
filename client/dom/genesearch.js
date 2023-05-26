@@ -163,7 +163,7 @@ export function addGeneSearchbox(arg) {
 			// typed 2 or more chars, prompt user to press enter to search
 			searchStat.mark.html('')
 			searchStat.word.style('font-size', '0.7em')
-			searchStat.word.text('Press ENTER to search, ESC to cancel')
+			if (!arg.hideHelp) searchStat.word.text('Press ENTER to search, ESC to cancel')
 
 			if (keyupEnter(event)) {
 				// pressed enter
