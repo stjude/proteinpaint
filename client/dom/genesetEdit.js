@@ -2,13 +2,36 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
-const tip2 = new Menu({ padding: '0px' })
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
+	const api = {
+		dom: {
+			tdbBtns: {}
+		},
+		destroy(_obj) {
+			const obj = _obj || api.dom
+			for (const key in obj) {
+				if (key == 'holder') continue
+				else if (key == 'tdbBtns') {
+					api.destroy(obj[key])
+				} else {
+					obj[key].remove()
+				}
+				delete obj[key]
+			}
+			if (obj.holder) obj.holder.remove()
+		}
+	}
+	const tip2 = new Menu({ padding: '0px' })
+
 	const div = menu.d
 		.append('div')
 		.style('width', '858px')
 		.style('padding', '5px')
+
+	api.dom.holder = div
+
 	const headerDiv = div.append('div')
+
 	const inputSearch = addGeneSearchbox({
 		tip: tip2,
 		genome,
@@ -44,14 +67,13 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			.html(`Load top expressed genes`)
 			.on('click', async event => {})
 	}
-	if (genome?.termdbs?.msigdb)
+	if (genome?.termdbs?.msigdb) {
 		for (const key in genome.termdbs) {
-			let text = 'Load MSigDB gene set &#9660;'
-			const id = genome.termdbs.length > 1 ? key : ''
-			const msigdbBt = rightDiv
+			const tdb = genome.termdbs[key]
+			api.dom.tdbBtns[key] = rightDiv
 				.append('button')
 				.attr('name', 'msigdbBt')
-				.html(`Load MSigDB gene set ${id} &#9660;`)
+				.html(`Load ${tdb.label} gene set &#9660;`)
 				.on('click', async event => {
 					tip2.clear()
 					const termdb = await import('../termdb/app')
@@ -76,11 +98,14 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 							}
 						}
 					})
-					tip2.showunder(msigdbBt.node())
+					tip2.showunder(api.dom.tdbBtns[key].node())
 				})
 		}
-	rightDiv
+	}
+
+	api.dom.clearBtn = rightDiv
 		.append('button')
+		.property('disabled', !geneList.length)
 		.text('Clear')
 		.on('click', () => {
 			geneList = []
@@ -99,16 +124,21 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		.style('margin', '10px 0px')
 		.style('padding', '2px 0px')
 		.style('min-height', '30px')
-	renderGenes()
 
-	const submitDiv = div
+	api.dom.genesDiv = genesDiv
+
+	const submitBtn = div
 		.append('div')
 		.append('button')
+		.property('disabled', !geneList.length)
 		.text('Submit')
 		.on('click', () => {
 			menu.hide()
 			callback(geneList)
 		})
+
+	api.dom.submitBtn = submitBtn
+
 	menu.show(x, y, false, true)
 
 	function renderGenes() {
@@ -134,7 +164,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 					.style('vertical-align', 'middle')
 					.style('display', 'inline-block')
 					.style('position', 'absolute')
-					.style('right', 0)
+					.style('right', '2px')
 					.style('transform', 'scale(0.7)')
 					.style('pointer-events', 'none')
 					.html(
@@ -148,6 +178,9 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 					.select('.sjpp_deletebt')
 					.remove()
 			})
+
+		api.dom.submitBtn.property('disabled', !geneList.length)
+		api.dom.clearBtn.property('disabled', !geneList.length)
 	}
 	function addGene() {
 		const name = inputSearch.geneSymbol
@@ -161,4 +194,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			renderGenes()
 		}
 	}
+
+	renderGenes()
+	return api
 }
