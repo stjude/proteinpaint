@@ -1,4 +1,4 @@
-// *********Genome interfaces
+/********* Genome interfaces *********/
 
 interface GeneDb {
   dbfile: string
@@ -15,7 +15,7 @@ interface TermDbsEntry {
 
 interface Cohort {
 	db: { file: string }
-	termdb?: object
+	termdb: object
 }
 
 interface DbStatement { 
@@ -117,10 +117,17 @@ interface HicDomain{
 	[index: string] : HicDomainGroups
 }
 
-export interface Genome {
+//Separated to force g.tracks as required, see hgvirus.ts
+export interface MinGenome {
 	species: string
 	genomefile: string
 	genedb: GeneDb
+	defaultcoord: DefaultCoord
+	hicenzymefragment?: HicEnzymeFragment[],
+	majorchr: string
+}
+
+export interface Genome extends MinGenome {
 	termdbs?: TermDbs
 	proteindomain?: DbStatement
 	repeatmasker?: DbStatement
@@ -129,9 +136,6 @@ export interface Genome {
 	clinvarVCF?: ClinVarVCF
 	tracks: Track[]
 	geneset?: GeneSet[]
-	defaultcoord: DefaultCoord
-	hicenzymefragment?: HicEnzymeFragment[],
 	hicdomain?: HicDomain
-	majorchr: string
-	minorchr: string
+	minorchr?: string
 }

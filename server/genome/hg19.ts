@@ -1,7 +1,7 @@
-import clinvar from '../dataset/clinvar'
-import { Genome } from '#shared/types'
+const clinvar = require('../dataset/clinvar')
+import { Genome } from '../shared/types'
 
-export const genome: Genome = {
+export default <Genome>{
 	species: 'human',
 	genomefile: 'genomes/hg19.gz',
 	genedb: {

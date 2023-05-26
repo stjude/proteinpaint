@@ -1,4 +1,6 @@
-export default {
+import { Genome } from '../shared/types'
+
+export default <Genome> {
 	species:'fruit fly',
 	genomefile:'genomes/dm6.gz',
 	genedb:{
