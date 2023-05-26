@@ -6,7 +6,10 @@ import { rgb } from 'd3-color'
 const tip2 = new Menu({ padding: '0px' })
 let selectedCount = 0
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
-	const div = menu.d.append('div').style('width', '50vw')
+	const div = menu.d
+		.append('div')
+		.style('width', '50vw')
+		.style('padding', '5px')
 	const headerDiv = div.append('div')
 	const inputSearch = addGeneSearchbox({
 		tip: tip2,
