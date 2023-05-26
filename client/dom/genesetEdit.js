@@ -6,7 +6,7 @@ const tip2 = new Menu({ padding: '0px' })
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
 	const div = menu.d
 		.append('div')
-		.style('width', '900px')
+		.style('width', '858px')
 		.style('padding', '5px')
 	const headerDiv = div.append('div')
 	const inputSearch = addGeneSearchbox({
@@ -119,7 +119,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			.enter()
 			.append('div')
 			.attr('title', 'click to delete')
-			.style('width', '120px')
+			.style('width', '110px')
 			.attr('class', 'sja_menuoption')
 			.style('position', 'relative')
 			.style('display', 'inline-block')
