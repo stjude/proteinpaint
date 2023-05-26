@@ -133,11 +133,12 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		const spans = genesDiv.selectAll('span').data(geneList)
 		spans
 			.enter()
-			.append('span')
+			.append('div')
 			.style('display', 'inline-block')
+			.style('position', 'relative')
 			.attr('class', 'sja_menuoption')
 			.text(gene => gene.name || gene.symbol)
-			.style('padding', '5px')
+			.style('padding', '5px 20px')
 			.on('click', function(event) {
 				const span = select(this)
 				const activeColor = rgb('#FFD580').toString()
@@ -147,6 +148,26 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 				selectedCount = span.node().selected ? selectedCount + 1 : selectedCount - 1
 				deleteBt.property('disabled', selectedCount == 0)
 			})
+			.on('mouseover', function(event) {
+				const span = select(this)
+				span
+					.append('div')
+					.classed('sjpp_deletebt', true)
+					.style('vertical-align', 'middle')
+					.style('display', 'inline-block')
+					.style('position', 'absolute')
+					.style('right', '2px')
+					.html(
+						`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
+				<path stroke='#000' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+				</svg>`
+					)
+			})
+			.on('mouseout', function(event) {
+				const span = select(this)
+				span.select('.sjpp_deletebt').remove()
+			})
+
 		deleteBt.property('disabled', selectedCount == 0)
 	}
 	function addGene() {
