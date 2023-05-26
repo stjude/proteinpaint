@@ -177,7 +177,7 @@ if (!serverconfig.features) {
 	serverconfig.features = {}
 }
 
-if (!serverconfig.backend_only) {
+if (!serverconfig.backend_only && fs.existsSync(path.join(process.cwd(), './public'))) {
 	const defaultTarget = path.join(serverconfig.binpath, 'cards')
 	if (!serverconfig.cards) {
 		serverconfig.cards = {
