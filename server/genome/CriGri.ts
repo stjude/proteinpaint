@@ -1,4 +1,6 @@
-export default {
+import { Genome } from '../shared/types'
+
+export default <Genome> {
     species:'Chinese hamster ovary cells',
     genomefile:'genomes/CriGri.fa.gz',
     genedb:{
