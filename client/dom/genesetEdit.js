@@ -23,25 +23,25 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		.style('float', 'right')
 		.style('gap', '5px')
 
-	// if (mode == 'mutation') {
-	// 	rightDiv.append('input').attr('type', 'checkbox')
-	// 	rightDiv.append('span').html('Use only cancer census genes')
-	// 	rightDiv
-	// 		.append('button')
-	// 		.html(`Load top mutated genes`)
-	// 		.on('click', async event => {})
-	// } else if (mode == 'expression') {
-	// 	rightDiv
-	// 		.append('input')
-	// 		.attr('value', 10)
-	// 		.attr('type', 'number')
-	// 		.style('width', '40px')
-	// 	rightDiv.append('span').html('Minimum average value cut off')
-	// 	rightDiv
-	// 		.append('button')
-	// 		.html(`Load top variably expressed genes`)
-	// 		.on('click', async event => {})
-	// }
+	if (mode == 'mutation') {
+		rightDiv.append('input').attr('type', 'checkbox')
+		rightDiv.append('span').html('Use only cancer census genes')
+		rightDiv
+			.append('button')
+			.html(`Load top mutated genes`)
+			.on('click', async event => {})
+	} else if (mode == 'expression') {
+		rightDiv
+			.append('input')
+			.attr('value', 10)
+			.attr('type', 'number')
+			.style('width', '40px')
+		rightDiv.append('span').html('Minimum average value cut off')
+		rightDiv
+			.append('button')
+			.html(`Load top expressed genes`)
+			.on('click', async event => {})
+	}
 	if (genome?.termdbs?.msigdb)
 		for (const key in genome.termdbs) {
 			let text = 'Load MSigDB gene set &#9660;'
@@ -105,6 +105,12 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		.style('flex-wrap', 'wrap')
 		.style('gap', '5px')
 		.style('min-height', '20px')
+		.style('border-style', 'solid')
+		.style('border-width', '2px')
+		.style('border-color', '#eee')
+		.style('margin', '10px 0px')
+		.style('padding', '2px 0px')
+		.style('min-height', '30px')
 	renderGenes()
 
 	const submitDiv = div
