@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "typescript": "^5.0.3",
-    "@types/estree": "^1.0.1"
+    "@types/estree": "^1.0.1",
+    "@types/node": "^20.2.4"
   }
 }
