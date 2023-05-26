@@ -9,7 +9,8 @@
       "#shared/*": [
         "./shared/*"
       ]
-    }
+    },
+    "skipLibCheck": true
   },
   "exclude": [
     "node_modules"
