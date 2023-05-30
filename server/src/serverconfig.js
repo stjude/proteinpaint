@@ -188,16 +188,9 @@ if (!serverconfig.backend_only && fs.existsSync(path.join(process.cwd(), './publ
 	const cards = serverconfig.cards
 	const cardsPath = path.join(process.cwd(), './public/', cards.path)
 
-	let cardsExists = false
-	try {
-		if (fs.lstatSync(cardsPath, { throwIfNoEntry: false })) cardsExists = true
-	} catch (e) {
-		console.log(e)
-	}
-
 	// only set up the symlink if the user doesn't already have a custom public/${cards.path} directory
 	// a user may also not specify cards.path for other reasons, in that case no need for symlink
-	if (cards.path && !fs.existsSync(cardsPath) && !cardsExists) {
+	if (cards.path && !fs.existsSync(cardsPath)) {
 		// a user may only wish to use a different public path for the cards
 		// and keep the defaulf of using server/cards
 		if (!cards.target) cards.target = defaultTarget

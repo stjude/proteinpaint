@@ -70,7 +70,7 @@
     "bin.js",
     "dataset/clinvar*.js",
     "dataset/gdc*.js",
-    "genome",
+    "genome/*.js",
     "src/serverconfig.js",
     "src/lines2R.js",
     "src/mds3.gdc.filter.js",
