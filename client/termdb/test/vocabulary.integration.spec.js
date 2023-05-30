@@ -20,7 +20,10 @@ Tests:
 		getTermChildren()
 		mayFillInMissingCatValues()
 		getTdbDataUrl()
+		syncTermData()
+		getRegressionData()
 		findTerm()
+		getFilteredSampleCount()
 		getTermInfo()
 		getPercentile()
 		getterm()
@@ -28,10 +31,7 @@ Tests:
 		getCohortsData()
 	******TODO: 
 			getNestedChartSeriesData()
-			syncTermData()
-			getRegressionData()
 			getCohortSampleCount()
-			getFilteredSampleCount()
 			getViolinPlotData()
 			getNumericUncomputableCategories()
 			getConditionCategories()
@@ -39,7 +39,6 @@ Tests:
 			get_variantFilter()
 			getAnnotatedSampleData()
 			getTwMinCopy()
-			getTermTypes()
 			getLDdata()
 			getScatterData()
 			getMds3queryDetails()
@@ -47,6 +46,9 @@ Tests:
 			Tested in FrontendVocab
 				getDescrStats()
 				graphable()
+			Not enabled on TermdbTest??
+				getTermTypes()
+
 
 	FrontendVocab
 		Missing state.vocab
@@ -87,15 +89,6 @@ const runpp = helpers.getRunPp('termdb', {
 	},
 	debug: 1
 })
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('position', 'relative')
-		.style('margin', '20px')
-		.style('border', '1px solid #000')
-}
 
 // const frontendVocabApi = new FrontendVocab({ state: { vocabData }})
 
@@ -339,7 +332,7 @@ tape('getTermChildren()', async test => {
 	test.end()
 })
 
-tape.only('getNestedChartSeriesData()', async test => {
+tape.skip('getNestedChartSeriesData()', async test => {
 	test.timeoutAfter(1000)
 
 	const termdbVocabApi = await getTermdbVocabApi()
@@ -347,7 +340,7 @@ tape.only('getNestedChartSeriesData()', async test => {
 	let opts, result
 
 	opts = {
-		filter: { in: true, join: 'and', lst: [], type: 'tvslst'},
+		filter: { in: true, join: 'and', lst: [], type: 'tvslst' },
 		term: { id: 'diaggrp', term: termjson['diaggrp'], q: termjson['diaggrp'] },
 		term0: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] },
 		term2: { id: 'sex', term: termjson['agedx'], q: termjson['sex'] }
@@ -389,7 +382,13 @@ tape('mayFillInMissingCatValues()', async test => {
 	key = '3'
 	total = 2
 	termdbVocabApi.mayFillInMissingCatValues(term, key, total)
-	test.ok(term.values[key] && typeof term.values[key] == 'object' && term.samplecount[key] && typeof term.samplecount[key] == 'object', `Should return term.values and term.samplecount with new '${key}' objects`)
+	test.ok(
+		term.values[key] &&
+			typeof term.values[key] == 'object' &&
+			term.samplecount[key] &&
+			typeof term.samplecount[key] == 'object',
+		`Should return term.values and term.samplecount with new '${key}' objects`
+	)
 
 	test.end()
 })
@@ -535,30 +534,50 @@ tape('getTdbDataUrl()', async test => {
 	}
 })
 
-tape.skip('syncTermData()', async test => {
+tape('syncTermData()', async test => {
 	test.timeoutAfter(100)
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
-	let result, config, data, previousConfig
+	let config, data, previousConfig
 
-	//Invalid arguments
-	config = { notRealKey: 'Not a real value' }
-	data = { refs: [1] }
-	result = termdbVocabApi.syncTermData(config, data)
-	test.equal(result, undefined, `Should return 'undefined' for invalid arguments`)
+	//Missing term
+	const message = `Should throw for missing plot.term{}`
+	try {
+		config = {}
+		data = { charts: [{ chartId: '' }], refs: {} }
+		previousConfig = {}
+		termdbVocabApi.syncTermData(config, data, previousConfig)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
 
-	config = { 
-		term: { id: 'diaggrp', q: { isAtomic: true }, term: { id: 'diaggrp'} }, 
-		term0: { id: 'agedx', term: { id: 'agedx'} }, 
-		term2: { id: 'survival', term: { id: 'survival'} }  
+	//Missing data
+	config = { term: { id: 'agedx', term: { id: 'agedx' } } }
+	data = {}
+	previousConfig = {}
+	termdbVocabApi.syncTermData(config, data, previousConfig)
+	test.ok(!config.term.q && Object.keys(data).length == 0, `Should return without altering config or data inputs`)
+
+	//Add term.q and term.q.groupsetting
+	config = {
+		term: { id: 'diaggrp', q: { isAtomic: true }, term: { id: 'diaggrp' } },
+		term0: { id: 'agedx', term: { id: 'agedx' } },
+		term2: { id: 'survival', term: { id: 'survival' } }
 	}
-	data  = { charts: [{ chartId: '' }], refs: {}}
-	previousConfig = { 
-		term: { id: 'diaggrp', q: { isAtomic: true }, term: { id: 'diaggrp'} }, 
+	data = { charts: [{ chartId: '' }], refs: {} }
+	previousConfig = {
+		term: { id: 'diaggrp', term: { id: 'diaggrp' } }
 	}
-	result = termdbVocabApi.syncTermData(config, data, previousConfig)
-	console.log(543, termdbVocabApi)
+	termdbVocabApi.syncTermData(config, data, previousConfig)
+	test.ok(
+		previousConfig.term != config.term &&
+			config.term.q.groupsetting &&
+			config.term2.q.groupsetting &&
+			config.term0.q.groupsetting,
+		`Should update all term objs to include term.q{} and term.q.groupsetting`
+	)
 
 	test.end()
 })
@@ -767,10 +786,93 @@ tape.skip('getCohortSampleCount()', async test => {
 	test.end()
 })
 
-tape.skip('getFilteredSampleCount()', async test => {
-	test.timeoutAfter(100)
+tape('getFilteredSampleCount()', async test => {
+	test.timeoutAfter(300)
+
+	let result, filterJSON, getSampleLst, message
 
 	const termdbVocabApi = await getTermdbVocabApi()
+
+	//Data error
+	message = `Should throw for data error`
+	try {
+		filterJSON = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				{
+					tag: 'filterUiRoot',
+					type: 'tvslst',
+					join: '',
+					lst: [{ tvs: { term: termjson['agedx'] }, type: 'tvs' }]
+				}
+			]
+		}
+		result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	//Data error
+	message = `Should throw for missing data`
+	try {
+		filterJSON = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [{ tag: 'filterUiRoot', type: 'tvslst', join: '', lst: [{}] }]
+		}
+		result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	//Valid JSON
+	filterJSON = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				tag: 'filterUiRoot',
+				type: 'tvslst',
+				join: '',
+				lst: [
+					{
+						tvs: {
+							term: termjson['agedx'],
+							ranges: [
+								{
+									start: 10,
+									startinclusive: false,
+									startunbounded: false,
+									stop: 16,
+									stopinclusive: false,
+									stopunbounded: false
+								}
+							]
+						},
+						type: 'tvs'
+					}
+				]
+			}
+		]
+	}
+	result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
+	test.equal(result, 24, `Should return simple sample count as number`)
+
+	//Return sample list
+	getSampleLst = 'list'
+	result = await termdbVocabApi.getFilteredSampleCount(filterJSON, getSampleLst)
+	test.ok(Array.isArray(result), `Should return an array of sample objects`)
+
+	//Return sample list object
+	getSampleLst = '*'
+	result = await termdbVocabApi.getFilteredSampleCount(filterJSON, getSampleLst)
+	test.ok(result[0].samplecount == 24 && result[0].subcohort, `Should return object with .samplecount and .subcohort`)
 
 	test.end()
 })
@@ -1056,10 +1158,16 @@ tape.skip('getTwMinCopy()', async test => {
 tape.skip('getTermTypes()', async test => {
 	test.timeoutAfter(100)
 
+	/*
+	FAILS!  
+		console error: ds.getTermTypes is not a function
+		Does not appear to be enabled on TermdbTest?? 
+	*/
+
 	const termdbVocabApi = await getTermdbVocabApi()
 	let testIds, result
 
-	testIds = 'agedx'
+	testIds = ['agedx']
 	result = await termdbVocabApi.getTermTypes(testIds)
 	console.log(result)
 
