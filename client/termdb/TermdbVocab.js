@@ -334,6 +334,13 @@ export class TermdbVocab extends Vocab {
 		return data[0]?.samplecount || data.count || 0
 	}
 
+	/** opts: 
+	 	filterJSON: JSON || string, required
+		getSampleLst: STR, optional
+			- 'count' (default) returns sample count
+			- 'list' returns sample list in array of [{id, name}....]
+			- '*' returns sample list array of [{samplecount, subcohort}]
+	 */
 	async getFilteredSampleCount(filterJSON, getSampleLst) {
 		const body = {
 			genome: this.vocab.genome,
