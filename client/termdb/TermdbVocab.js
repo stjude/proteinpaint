@@ -214,11 +214,11 @@ export class TermdbVocab extends Vocab {
     */
 	syncTermData(config, data, prevConfig = {}) {
 		if (!data || !data.refs) return
-		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
+		for (const [i, key] of ['term', 'term2', 'term0'].entries()) {
 			const term = config[key]
 			const persistTerm = !prevConfig[key] || prevConfig[key].term?.id === term?.term?.id
 			if (term == 'genotype') return
-			if (!term) {
+			if (!term || term == undefined) {
 				if (key == 'term') throw `missing plot.term{}`
 				return
 			}
