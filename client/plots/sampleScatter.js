@@ -178,7 +178,7 @@ class Scatter {
 				title: 'Categories to divide by',
 				label: 'Divide by',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['discrete']
+				numericEditMenuVersion: ['discrete', 'continuous']
 			},
 
 			{

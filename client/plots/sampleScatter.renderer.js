@@ -10,6 +10,7 @@ import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { regressionLoess, regressionPoly } from 'd3-regression'
 import { line } from 'd3'
+import * as THREE from 'three'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -44,6 +45,7 @@ export function setRenderers(self) {
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
 			[s0.x, s0.x, s0.y, s0.y]
 		)
+
 		chart.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
 			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
@@ -52,7 +54,11 @@ export function setRenderers(self) {
 		chart.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
 			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
-		;(chart.xScaleMin = chart.xAxisScale(xMin)), (chart.xScaleMax = chart.xAxisScale(xMax))
+
+		chart.xScaleMin = chart.xAxisScale(xMin)
+		chart.xScaleMax = chart.xAxisScale(xMax)
+		chart.yScaleMin = chart.yAxisScale(yMin)
+		chart.yScaleMax = chart.yAxisScale(yMax)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		if (typeof self.config.gradientColor !== 'object') {
@@ -260,61 +266,57 @@ export function setRenderers(self) {
 	}
 
 	self.render3DSerie = async function(chart) {
-		await add_scriptTag('/static/js/three.js')
-		await add_scriptTag('/static/js/loaders/PCDLoader.js')
-		//await add_scriptTag('/static/js/controls/TrackballControls.js')
 		await add_scriptTag('/static/js/WebGL.js')
 		if (!WEBGL.isWebGLAvailable()) {
 			obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
 			return
 		}
 		chart.chartDiv.selectAll('*').remove()
-
-		const zoom = 45
-		const width = self.settings.svgw
-		const height = self.settings.svgh
-		const camera = new THREE.PerspectiveCamera(zoom, width / height, 0.1, 1000)
-		camera.position.x = 0
-		camera.position.y = 0
-		camera.up.set(0, 1, 0)
-
-		const renderer = new THREE.WebGLRenderer({
-			antialias: true
-		})
-
-		renderer.setSize(width, height)
-		renderer.setPixelRatio(window.devicePixelRatio)
-
-		chart.chartDiv.node().appendChild(renderer.domElement)
-
+		const canvas = chart.chartDiv.append('canvas').node()
+		canvas.width = self.settings.svgw
+		canvas.height = self.settings.svgh
+		const fov = 75
+		const near = 0.1
+		const far = 1000
+		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
-		scene.background = new THREE.Color(0xffffff)
-
-		const scatterPlot = new THREE.Object3D()
-		scatterPlot.rotation.y = 0
-		scene.add(scatterPlot)
-		const pointGeo = new THREE.Geometry()
+		camera.position.set(0, 0, 30)
+		camera.lookAt(scene.position)
+		camera.updateMatrix()
+		scene.background = new THREE.Color('rgb(255,255,255)')
+		const numPoints = chart.data.samples.length
+		const positions = new Float32Array(numPoints * 3)
+		const colors = new Float32Array(numPoints * 3)
+		let count = 0
 		for (const sample of chart.data.samples) {
-			const x = chart.xAxisScale(sample.x)
-			const y = chart.yAxisScale(sample.y)
-			const z = chart.xAxisScale(sample.x)
-			console.log(x, y, z)
-			pointGeo.vertices.push(v(x, y, z))
-			pointGeo.colors.push(new THREE.Color().setRGB(rgb(sample.color)))
+			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / canvas.width
+			let y = (chart.yAxisScale(sample.y) - chart.yScaleMin) / canvas.height
+			let z = x
+			positions[count] = x
+			positions[count + 1] = y
+			positions[count + 2] = z
+
+			const color = rgb(self.getColor(sample, chart))
+			colors[count] = color.r
+			colors[count + 1] = color.g
+			colors[count + 2] = color.b
+			count += 3
 		}
+		const geometry = new THREE.BufferGeometry()
+		geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 
-		const mat = new THREE.PointsMaterial({
-			vertexColors: true,
-			size: 5
-		})
+		geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+		geometry.computeBoundingBox()
 
-		const points = new THREE.Points(pointGeo, mat)
-		scatterPlot.add(points)
+		const material = new THREE.PointsMaterial({ size: 0.1, vertexColors: true })
+
+		const points = new THREE.Points(geometry, material)
+		points.scale.set(30, 30, 20)
+		points.position.set(-20, 15, 0)
+		scene.add(points)
+
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas })
 		renderer.render(scene, camera)
-
-		function v(x, y, z) {
-			return new THREE.Vector3(x, y, z)
-		}
 	}
 
 	self.mayRenderRegression = async function() {
