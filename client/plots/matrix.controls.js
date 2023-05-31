@@ -668,7 +668,6 @@ export class MatrixControls {
 				}
 				const geneList = []
 				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ symbol: tw.term.name })
-
 				showGenesetEdit({
 					x: event.clientX,
 					y: event.clientY,

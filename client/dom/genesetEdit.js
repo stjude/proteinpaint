@@ -1,7 +1,7 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
-
+import { getGdcCohort } from '../src/launchGdcMatrix'
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'mutation', vocabApi }) {
 	const api = {
 		dom: {
@@ -25,7 +25,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 
 	const div = menu.d
 		.append('div')
-		.style('width', '858px')
+		.style('width', '874px')
 		.style('padding', '5px')
 
 	api.dom.holder = div
@@ -54,7 +54,15 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		rightDiv
 			.append('button')
 			.html(`Load top mutated genes`)
-			.on('click', async event => {})
+			.on('click', async event => {
+				const result = await vocabApi.getTopMutatedGenes({
+					genome: genome.name,
+					filter0: vocabApi.state.termfilter.filter0
+				})
+				geneList = []
+				for (const gene of result.genes) geneList.push({ symbol: gene })
+				renderGenes()
+			})
 	} else if (mode == 'expression') {
 		rightDiv
 			.append('input')
@@ -154,6 +162,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 			.style('position', 'relative')
 			.style('display', 'inline-block')
 			.style('padding', '5px 15px 5px 10px')
+			.style('margin-left', '4px')
 			.text(gene => gene.name || gene.symbol)
 			.on('click', deleteGene)
 			.on('mouseover', function(event) {
