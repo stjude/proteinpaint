@@ -60,6 +60,8 @@ function argument object {}
 	triggered when a valid hit is found, and has been written to RESULT object (see below)
 	no parameter is supplied
 
+.hideHelp: true
+	if true, hide the text msg on the right of <input>
 
 ***********************************
 by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed below without await
