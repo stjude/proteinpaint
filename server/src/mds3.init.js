@@ -1474,15 +1474,15 @@ async function validate_query_singleSampleGbtk(ds, genome) {
 					fileName = ds.cohort.termdb.q.sampleName2id(sampleName)
 					if (fileName == undefined) {
 						// unable to convert string id to integer
-						return []
+						return {}
 					}
 				}
-				const bedgraphfile = path.join(q[key].folder, fileName.toString(), '.gz')
+				const bedgraphfile = path.join(q[key].folder, fileName + '.gz')
 				try {
-					await fs.promises.stat(bedgraphfile)
-					return bedgraphfile
+					await fs.promises.stat(path.join(serverconfig.tpmasterdir, bedgraphfile))
+					return { path: bedgraphfile }
 				} catch (e) {
-					return
+					return {}
 				}
 			}
 		} else {
