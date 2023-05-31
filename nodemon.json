@@ -1,5 +1,5 @@
 {
 	"events": {
-    "restart": "npx tsc genome/*.ts"
+    "restart": "npx tsc genome/*.ts dataset/*.ts"
   }
 }
