@@ -48,9 +48,8 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 		.style('align-items', 'center')
 		.style('float', 'right')
 		.style('gap', '5px')
-
-	if (vocabApi.termdbConfig?.topMutatedGenes) {
-		for (const param of vocabApi.termdbConfig?.topMutatedGenes.params) addParameter(param)
+	if (vocabApi.termdbConfig?.queries?.topMutatedGenes) {
+		for (const param of vocabApi.termdbConfig.queries.topMutatedGenes.arguments) addParameter(param)
 		api.dom.loadBt = rightDiv
 			.append('button')
 			.html(`Load top mutated genes`)
@@ -65,8 +64,8 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 				for (const gene of result.genes) geneList.push({ symbol: gene })
 				renderGenes()
 			})
-	} else if (vocabApi.termdbConfig?.topVariablyExpressedGenes) {
-		for (const param of vocabApi.termdbConfig?.topVariablyExpressedGenes.params) addParameter(param)
+	} else if (vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
+		for (const param of vocabApi.termdbConfig.topVariablyExpressedGenes.arguments) addParameter(param)
 		rightDiv
 			.append('button')
 			.html(`Load top expressed genes`)

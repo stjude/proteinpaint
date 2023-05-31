@@ -26,7 +26,7 @@ tape('Empty opts.geneList', function(test) {
 	const vocabApi = {
 		getTopGenes: () => [],
 		termdbConfig: {
-			topMutatedGenes: { params: [param] }
+			queries: { topMutatedGenes: { arguments: [param] } }
 		}
 	} //Fake vocab api returning  some genes
 
