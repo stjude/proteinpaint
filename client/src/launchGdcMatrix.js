@@ -205,13 +205,13 @@ async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
 	}
 
 	// genes are not predefined. query to get top genes using the current cohort
-	const lst = [
-		'genome=' + gdcGenome,
-		'filter0=' + encodeURIComponent(JSON.stringify(gdcCohort)),
-		'maxGenes=' + maxGenes
-	]
-	if (CGConly) lst.push('CGConly=1')
-	const data = await dofetch3('gdc_filter2topGenes?' + lst.join('&'))
+	const body = {
+		genome: gdcGenome,
+		filter0: gdcCohort,
+		maxGenes: maxGenes
+	}
+	if (CGConly) body.CGConly = 1
+	const data = await dofetch3('gdc_filter2topGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) throw 'no top genes found using the cohort filter'
 	return await Promise.all(

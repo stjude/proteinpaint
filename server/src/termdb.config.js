@@ -107,12 +107,15 @@ function addMatrixplots(c, ds) {
 function addGenomicQueries(c, ds, genome) {
 	const q = ds.queries
 	if (!q) return
-	// supports genomic query methods
+	// this ds supports genomic query methods
 	c.queries = {
-		defaultBlock2GeneMode: q.defaultBlock2GeneMode,
 		defaultCoord: q.defaultCoord || genome.defaultcoord
 	}
-	if (q.snvindel) c.queries.snvindel = true
+	const q2 = c.queries
+	if (q.defaultBlock2GeneMode) q2.defaultBlock2GeneMode = q.defaultBlock2GeneMode
+	if (q.snvindel) q2.snvindel = true
+	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes.arguments
+	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes.arguments
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset

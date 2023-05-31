@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
-import { showGenesetEdit } from '../dom/genesetEdit'
+import { showGenesetEdit } from '#dom/genesetEdit'
 
 const tip = new Menu({ padding: '' })
 
@@ -676,8 +676,9 @@ export class MatrixControls {
 					genome: app.opts.genome,
 					geneList,
 					callback,
-					mode: 'expression',
-					parent
+					vocabApi: this.opts.app.vocabApi
+					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
+					//mode: 'expression',
 				})
 			})
 	}

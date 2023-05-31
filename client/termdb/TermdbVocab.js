@@ -922,6 +922,10 @@ export class TermdbVocab extends Vocab {
 			}
 		})
 	}
+
+	async getTopMutatedGenes(arg) {
+		return await dofetch3('gdc_filter2topGenes', { body: arg })
+	}
 }
 
 /*
