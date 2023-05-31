@@ -1,2 +1,2 @@
 export { Genome } from './genome'
-export { Mds3Dataset } from './dataset'
+export { Mds3 } from './dataset'
