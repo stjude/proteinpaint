@@ -1,4 +1,4 @@
-const clinvar = require('../dataset/clinvar')
+import { clinsig } from '../dataset/clinvar'
 import { Genome } from '../shared/types/genome'
 
 export default <Genome>{
@@ -25,7 +25,7 @@ export default <Genome>{
 	clinvarVCF: {
 		file: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz',
 		infokey: 'CLNSIG',
-		categories: clinvar.clinsig
+		categories: clinsig
 	},
 	tracks: [
 		{

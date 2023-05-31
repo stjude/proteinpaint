@@ -1,13 +1,16 @@
-'use strict'
-Object.defineProperty(exports, '__esModule', { value: true })
-var path = require('path')
-var serverconfig
+const path = require('path')
+// TODO require serverconfig from @sjcrh/proteinpaint-server when transition to npm packages is finished
+import { TestMds3 } from "../shared/types/dataset"
+
+let serverconfig
 try {
 	serverconfig = require('../src/serverconfig')
 } catch (e) {
 	serverconfig = require('@sjcrh/proteinpaint-server/src/serverconfig')
 }
-var fs = require('fs')
+
+const fs = require('fs')
+
 /*
 the "test mule" for the type of termdb dataset using server-side sqlite3 db
 follows the mds3 specification
@@ -30,30 +33,38 @@ reason:
 - ensure TermdbTest/db2 to be fully static and recoverable, to ensure tests work as expected
 
 */
+
 copyDataFilesFromRepo2Tp()
-exports.default = {
+
+export default <TestMds3> {
 	isMds3: true,
 	cohort: {
 		db: {
 			file: 'files/hg38/TermdbTest/db'
 		},
 		termdb: {
-			displaySampleIds: true,
-			minTimeSinceDx: 5,
-			ageEndOffset: 0.00274,
+			displaySampleIds: true, // allow to display sample-level data
+
+			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
+
+			ageEndOffset: 0.00274, // number of years to offset ending age of patients
 			// for cox outcome with timeScale='age'
 			// 1 day (i.e. 1/365 or 0.00274) needs to be added
 			// to age_end to prevent age_end = age_start (which
 			// would cause regression analysis to fail in R)
+
 			coxTimeMsg: 'years since entry into the cohort',
-			coxStartTimeMsg: 'begins at 5 years post cancer diagnosis',
+
+			coxStartTimeMsg: `begins at 5 years post cancer diagnosis`,
+
 			// term ids specific to dataset
 			termIds: {
-				ageDxId: 'agedx',
-				ageLastVisitId: 'agelastvisit',
-				ageNdiId: 'a_ndi',
+				ageDxId: 'agedx', // age at diagnosis
+				ageLastVisitId: 'agelastvisit', // age at last visit
+				ageNdiId: 'a_ndi', // age at last NDI seach
 				ageDeathId: 'a_death' // age at death
 			},
+
 			selectCohort: {
 				// wrap term.id into a term json object so as to use it in tvs;
 				// the term is not required to exist in termdb
@@ -86,6 +97,7 @@ exports.default = {
 					}
 				]
 			},
+
 			dataDownloadCatch: {
 				helpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/',
 				missingAccess: {
@@ -115,9 +127,11 @@ exports.default = {
 		}
 	}
 }
+
 function copyDataFilesFromRepo2Tp() {
-	var targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
-	var datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
+	const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
+	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
+
 	if (!targetDir.endsWith(datadir)) {
 		if (fs.existsSync(datadir)) fs.unlinkSync(datadir)
 		fs.symlinkSync(targetDir, datadir)
