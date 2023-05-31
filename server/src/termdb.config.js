@@ -57,7 +57,6 @@ export function make(q, res, ds, genome) {
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
 	if (tdb.additionalSampleAttributes) c.additionalSampleAttributes = tdb.additionalSampleAttributes
 	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2
-	if (tdb.topMutatedGenes) c.topMutatedGenes = tdb.topMutatedGenes
 
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
@@ -116,7 +115,7 @@ function addGenomicQueries(c, ds, genome) {
 	const q2 = c.queries
 	if (q.defaultBlock2GeneMode) q2.defaultBlock2GeneMode = q.defaultBlock2GeneMode
 	if (q.snvindel) q2.snvindel = true
-	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes.arguments
+	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
 	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes.arguments
 }
 
