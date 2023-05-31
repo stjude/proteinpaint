@@ -1563,14 +1563,17 @@ get_filter2topGenes() and mayAddCGC2filter() are copied to
 and hosted on https://proteinpaint.stjude.org/GDC/
 */
 async function get_filter2topGenes({ filter, CGConly, maxGenes }) {
-	if (!filter) throw 'filter missing'
-	if (typeof filter != 'object') throw 'filter not object'
+	let _f = { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
+	if (filter) {
+		if (typeof filter != 'object') throw 'filter not object'
+		_f = filter
+	}
 	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
 			size: maxGenes || 50,
 			fields: 'symbol',
-			filters: mayAddCGC2filter(filter, CGConly)
+			filters: mayAddCGC2filter(_f, CGConly)
 		})
 	})
 	const re = JSON.parse(response.body)
