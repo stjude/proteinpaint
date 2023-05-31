@@ -188,6 +188,12 @@ async function load_driver(q, ds) {
 		if (!p) throw 'invalid dataType'
 		return await p.get(q.singleSampleGenomeQuantification.sample, q.devicePixelRatio)
 	}
+	if (q.singleSampleGbtk) {
+		if (!ds.queries.singleSampleGbtk) throw 'not supported on this dataset'
+		const p = ds.queries.singleSampleGbtk[q.singleSampleGbtk.dataType]
+		if (!p) throw 'invalid dataType'
+		return { path: await p.get(q.singleSampleGbtk.sample) }
+	}
 
 	if (q.ssm2canonicalisoform) {
 		// gdc-specific logic

@@ -59,6 +59,7 @@ validate_query_ld
 validate_query_geneExpression
 validate_query_singleSampleMutation
 validate_query_singleSampleGenomeQuantification
+validate_query_singleSampleGbtk
 validate_variant2samples
 validate_ssm2canonicalisoform
 mayAdd_refseq2ensembl
@@ -92,6 +93,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_geneExpression(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
+		await validate_query_singleSampleGbtk(ds, genome)
 
 		validate_variant2samples(ds)
 		validate_ssm2canonicalisoform(ds)
@@ -442,11 +444,25 @@ function copy_queries(ds, dscopy) {
 			sample_id_key: ds.queries.singleSampleMutation.sample_id_key
 		}
 	}
+
 	if (ds.queries.singleSampleGenomeQuantification) {
 		copy.singleSampleGenomeQuantification = {}
 		for (const k in ds.queries.singleSampleGenomeQuantification) {
 			const q = ds.queries.singleSampleGenomeQuantification[k]
 			copy.singleSampleGenomeQuantification[k] = {
+				sample_id_key: q.sample_id_key,
+				min: q.min,
+				max: q.max,
+				singleSampleGbtk: q.singleSampleGbtk
+			}
+		}
+	}
+
+	if (ds.queries.singleSampleGbtk) {
+		copy.singleSampleGbtk = {}
+		for (const k in ds.queries.singleSampleGbtk) {
+			const q = ds.queries.singleSampleGbtk[k]
+			copy.singleSampleGbtk[k] = {
 				sample_id_key: q.sample_id_key,
 				min: q.min,
 				max: q.max
@@ -1319,15 +1335,23 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 	for (const chr in genome.majorchr) {
 		bpTotal += genome.majorchr[chr]
 	}
-	const wgScale = plotWidth / bpTotal
-	const chrScale = {}
+	const wgScale = plotWidth / bpTotal // whole-genome scale
+	const chrScale = {} // k: chr, v: scale getter
 	let bpCum = 0
+	const chrLst = [] // to return to client, for converting image xoffset to {chr,pos}
+
 	for (const chr in genome.majorchr) {
 		const chrLen = genome.majorchr[chr]
 		chrScale[chr] = scaleLinear()
 			.domain([0, chrLen])
 			.range([wgScale * bpCum, wgScale * (bpCum + chrLen)])
 		bpCum += chrLen
+		chrLst.push({
+			chr,
+			chrLen,
+			xStart: wgScale * (bpCum - chrLen),
+			xStop: wgScale * bpCum
+		})
 	}
 
 	const yScale = scaleLinear()
@@ -1366,7 +1390,13 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 		})
 		rl.on('close', () => {
 			addLines()
-			resolve({ src: canvas.toDataURL(), width: canvasWidth, height: canvasHeight })
+			resolve({
+				src: canvas.toDataURL(),
+				canvasWidth,
+				canvasHeight,
+				xoff: xpad + axisWidth,
+				chrLst
+			})
 		})
 	})
 
@@ -1418,6 +1448,46 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 			ctx.stroke()
 		}
 		ctx.closePath()
+	}
+}
+
+async function validate_query_singleSampleGbtk(ds, genome) {
+	const q = ds.queries.singleSampleGbtk
+	if (!q) return
+	for (const key in q) {
+		// each key is one data type
+		if (!Number.isFinite(q[key].min)) throw 'min not a number'
+		if (!Number.isFinite(q[key].max)) throw 'max not a number'
+		if (q[key].min >= q[key].max) throw 'min>=max'
+		if (q[key].folder) {
+			// using a folder to store text files for individual samples
+			// file names are integer sample id
+			q[key].get = async sampleName => {
+				// (quick fix) callback returns bedgraph file path for this sample
+
+				/* as mds3 client may not be using integer sample id for now,
+				the argument is string id and has to be mapped to integer id
+				*/
+				let fileName = sampleName
+				if (ds.cohort?.termdb?.q?.sampleName2id) {
+					// has name-to-id converter
+					fileName = ds.cohort.termdb.q.sampleName2id(sampleName)
+					if (fileName == undefined) {
+						// unable to convert string id to integer
+						return []
+					}
+				}
+				const bedgraphfile = path.join(q[key].folder, fileName.toString(), '.gz')
+				try {
+					await fs.promises.stat(bedgraphfile)
+					return bedgraphfile
+				} catch (e) {
+					return
+				}
+			}
+		} else {
+			throw 'unknown query method for singleSampleGbtk'
+		}
 	}
 }
 

@@ -276,13 +276,35 @@ function printSampleName(sample, tk, div, block) {
 				.text(k)
 				.on('click', async event => {
 					const data = await q.get(sample[q.sample_id_key])
-					tk.menutip
+					const img = tk.menutip
 						.clear()
 						.show(event.clientX, event.clientY)
 						.d.append('img')
-						.attr('width', data.width)
-						.attr('height', data.height)
+						.attr('width', data.canvasWidth)
+						.attr('height', data.canvasHeight)
 						.attr('src', data.src)
+
+					const q2 = tk.mds.queries.singleSampleGbtk?.[q.singleSampleGbtk]
+					if (!q2) return
+
+					// !!
+					img.on('click', async event => {
+						const x = event.offsetX - data.xoff
+						let chr, position
+						for (const c of data.chrLst) {
+							if (c.xStart <= x && c.xStop >= x) {
+								chr = c.chr
+								position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
+								break
+							}
+						}
+						if (!chr) return
+
+						const d2 = await q2.get(sample[q2.sample_id_key])
+						// d2={path:str}
+						if (!d2.path) return // no file
+						//console.log(d2,chr, position)
+					})
 				})
 		}
 	}
