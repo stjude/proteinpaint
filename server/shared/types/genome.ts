@@ -1,3 +1,5 @@
+import { Cohort, ClinvarClinsig } from './dataset'
+
 /********* server/genome interfaces *********/
 
 interface GeneDb {
@@ -11,11 +13,6 @@ interface TermDbs {
 interface TermDbsEntry {
   label: string,
   cohort: Cohort
-}
-
-interface Cohort {
-	db: { file: string }
-	termdb: object
 }
 
 interface DbStatement { 
@@ -32,21 +29,10 @@ interface FimoMotif {
 	annotationfile: string
 }
 
-export interface ClinvarCategoriesEntry {
-	color: string
-	label: string
-	desc: string
-	textcolor?: string
-}
-
-export interface ClinvarCategories {
-	[index: string]: ClinvarCategoriesEntry
-}
-
 interface ClinVarVCF{
 	file: string
 	infokey: string
-	categories: ClinvarCategories
+	categories: ClinvarClinsig
 }
 
 interface TrackCategoryEntry { 
