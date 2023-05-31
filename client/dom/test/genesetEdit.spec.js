@@ -22,7 +22,12 @@ tape('\n', function(test) {
 
 tape('Empty opts.geneList', function(test) {
 	test.timeoutAfter(100)
-	const vocabApi = { getTopGenes: mode => [] } //Fake vocab api returning  some genes
+	const vocabApi = {
+		getTopGenes: () => [],
+		termdbConfig: {
+			topMutatedGenes: { params: [{ label: 'Use only cancer census genes', type: 'boolean' }] }
+		}
+	} //Fake vocab api returning  some genes
 
 	testHG38()
 	testHG19()
@@ -35,17 +40,21 @@ tape('Empty opts.geneList', function(test) {
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
-		if (test._ok) ui.destroy()
+		test.true(ui.dom.loadBt !== undefined, `should show load top genes button`)
+
+		//if (test._ok) ui.destroy()
 	}
 
 	function testHG19() {
 		const menu = new Menu({ padding: '0px' })
-		const ui = showGenesetEdit({ x: 100, y: 200, menu, genome: hg19, callback: () => {}, vocabApi })
+		const ui = showGenesetEdit({ x: 100, y: 200, menu, genome: hg19, callback: () => {}, vocabApi: {} })
 		test.false('msigdb' in ui.dom.tdbBtns, `should not show MSigDB button for the hg19 genome`)
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
-		if (test._ok) ui.destroy()
+		test.true(ui.dom.loadBt == undefined, `should not show load top genes button`)
+
+		//if (test._ok) ui.destroy()
 	}
 })
 
@@ -69,7 +78,6 @@ tape('Non-empty opts.geneList', function(test) {
 
 tape('gene deletion', function(test) {
 	test.timeoutAfter(100)
-	const vocabApi = { getTopGenes: mode => [] } //Fake vocab api returning  some genes
 
 	testHG38()
 	test.end()
@@ -78,7 +86,7 @@ tape('gene deletion', function(test) {
 		const menu = new Menu({ padding: '0px' })
 		const geneList = [{ symbol: 'TP53' }, { symbol: 'KRAS' }]
 		const len = geneList.length
-		const ui = showGenesetEdit({ x: 100, y: 200, menu, genome: hg38, geneList, callback: () => {}, vocabApi })
+		const ui = showGenesetEdit({ x: 100, y: 200, menu, genome: hg38, geneList, callback: () => {}, vocabApi: {} })
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), len, `should render ${len} gene pills`)
 		const geneListCopy = geneList.slice()
 		ui.dom.genesDiv
@@ -92,7 +100,7 @@ tape('gene deletion', function(test) {
 
 tape('submit button', function(test) {
 	test.timeoutAfter(100)
-	const vocabApi = { getTopGenes: mode => [] } //Fake vocab api returning  some genes
+	const vocabApi = {} //Fake vocab api returning  some genes
 
 	const geneList = [{ symbol: 'TP53' }, { symbol: 'KRAS' }]
 	const geneLstCopy = structuredClone(geneList)

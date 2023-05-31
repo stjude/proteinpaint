@@ -2,8 +2,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import { getGdcCohort } from '../src/launchGdcMatrix'
-export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], mode = 'none', vocabApi }) {
-	console.log(vocabApi)
+export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], vocabApi }) {
 	const api = {
 		dom: {
 			tdbBtns: {}
@@ -49,10 +48,9 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		.style('float', 'right')
 		.style('gap', '5px')
 
-	if (mode == 'mutation') {
-		rightDiv.append('input').attr('type', 'checkbox')
-		rightDiv.append('span').html('Use only cancer census genes')
-		rightDiv
+	if (vocabApi.termdbConfig?.topMutatedGenes) {
+		for (const param of vocabApi.termdbConfig?.topMutatedGenes.params) addParameter(param)
+		api.dom.loadBt = rightDiv
 			.append('button')
 			.html(`Load top mutated genes`)
 			.on('click', async event => {
@@ -64,13 +62,8 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 				for (const gene of result.genes) geneList.push({ symbol: gene })
 				renderGenes()
 			})
-	} else if (mode == 'expression') {
-		rightDiv
-			.append('input')
-			.attr('value', 10)
-			.attr('type', 'number')
-			.style('width', '40px')
-		rightDiv.append('span').html('Min average value cut off')
+	} else if (vocabApi.termdbConfig?.topVariablyExpressedGenes) {
+		for (const param of vocabApi.termdbConfig?.topVariablyExpressedGenes.params) addParameter(param)
 		rightDiv
 			.append('button')
 			.html(`Load top expressed genes`)
@@ -192,16 +185,32 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], m
 		api.dom.submitBtn.property('disabled', !geneList.length)
 		api.dom.clearBtn.property('disabled', !geneList.length)
 	}
+
 	function addGene() {
 		const name = inputSearch.geneSymbol
 		geneList.push({ name })
 		renderGenes()
 	}
+
 	function deleteGene(event, d) {
 		const i = geneList.findIndex(g => g.symbol === d.symbol)
 		if (i != -1) {
 			geneList.splice(i, 1)
 			renderGenes()
+		}
+	}
+
+	function addParameter(param) {
+		if (param.type == 'boolean') {
+			rightDiv.append('input').attr('type', 'checkbox')
+			rightDiv.append('span').html(param.label)
+		} else if (param.type == 'number') {
+			rightDiv
+				.append('input')
+				.attr('value', param.value)
+				.attr('type', 'number')
+				.style('width', '40px')
+			rightDiv.append('span').html(param.label)
 		}
 	}
 
