@@ -57,6 +57,8 @@ export function make(q, res, ds, genome) {
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
 	if (tdb.additionalSampleAttributes) c.additionalSampleAttributes = tdb.additionalSampleAttributes
 	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2
+	if (tdb.topMutatedGenes) c.topMutatedGenes = tdb.topMutatedGenes
+
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
 	addRequiredAuth(c, q)
