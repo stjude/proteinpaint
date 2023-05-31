@@ -668,17 +668,19 @@ export class MatrixControls {
 				}
 				const geneList = []
 				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ symbol: tw.term.name })
-				showGenesetEdit({
+				let config = {
 					x: event.clientX,
 					y: event.clientY,
 					menu: app.tip,
 					genome: app.opts.genome,
 					geneList,
 					callback,
-					vocabApi: this.opts.app.vocabApi
+					vocabApi: app.vocabApi
 					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
 					//mode: 'expression',
-				})
+				}
+				if (app.vocabApi.termdbConfig.topMutatedGenes) config.mode = 'mutation'
+				showGenesetEdit(config)
 			})
 	}
 
