@@ -1,5 +1,5 @@
 const clinvar = require('../dataset/clinvar')
-import { Genome } from '../shared/types'
+import { Genome } from '../shared/types/genome'
 
 export default <Genome>{
 	species: 'human',
