@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "webpack --env NODE_ENV=development --watch --color",
-    "start": "npx tsc genome/*.ts dataset/*.ts && nodemon --enable-source-maps server.js --watch ./server*.js* --watch genome/*.ts --watch dataset",
+    "start": "npx tsc genome/*.ts dataset/*.ts && nodemon --enable-source-maps server.js --watch ./server*.js* --watch dataset/*.ts --watch genome/*.ts",
     "pretest": "npx tsc genome/*.ts dataset/*.ts && ./test/pretest.js",
     "test": "webpack --env NODE_ENV=test exportsFilename=all-test-context.js && node --enable-source-maps test/serverTests.js",
     "test:unit": "webpack --env NODE_ENV=test exportsFilename=unit-test-context.js && node --enable-source-maps test/serverTests.js",
