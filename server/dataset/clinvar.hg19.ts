@@ -1,6 +1,7 @@
-const clinvar = require('./clinvar')
-import { Mds3Dataset } from '../shared/types/dataset'
-export default <Mds3Dataset> {
+import { clinsig } from './clinvar'
+import { Mds3 } from '../shared/types/dataset'
+
+export default <Mds3> {
 	isMds3: true,
 	dsinfo: [
 		{ k: 'Source', v: '<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>' },
@@ -18,7 +19,7 @@ export default <Mds3Dataset> {
 					{
 						name: 'Clinical Significance',
 						key: 'CLNSIG',
-						categories: clinvar.clinsig,
+						categories: clinsig,
 						separator: '|'
 					}
 				]
