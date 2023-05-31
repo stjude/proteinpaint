@@ -1,4 +1,4 @@
-/********* Genome interfaces *********/
+/********* server/genome interfaces *********/
 
 interface GeneDb {
   dbfile: string
@@ -32,14 +32,14 @@ interface FimoMotif {
 	annotationfile: string
 }
 
-interface ClinvarCategoriesEntry {
+export interface ClinvarCategoriesEntry {
 	color: string
 	label: string
 	desc: string
 	textcolor?: string
 }
 
-interface ClinvarCategories {
+export interface ClinvarCategories {
 	[index: string]: ClinvarCategoriesEntry
 }
 
