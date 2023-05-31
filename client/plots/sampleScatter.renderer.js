@@ -41,9 +41,16 @@ export function setRenderers(self) {
 	self.initAxes = function(chart) {
 		if (chart.data.samples.length == 0) return
 		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax] = chart.data.samples.reduce(
-			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0.x, s0.x, s0.y, s0.y]
+		const [xMin, xMax, yMin, yMax, zMin, zMax] = chart.data.samples.reduce(
+			(s, d) => [
+				d.x < s[0] ? d.x : s[0],
+				d.x > s[1] ? d.x : s[1],
+				d.y < s[2] ? d.y : s[2],
+				d.y > s[3] ? d.y : s[3],
+				d.z < s[4] ? d.z : s[4],
+				d.z > s[5] ? d.z : s[5]
+			],
+			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z]
 		)
 
 		chart.xAxisScale = d3Linear()
@@ -55,10 +62,14 @@ export function setRenderers(self) {
 			.domain([yMax, yMin])
 			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
 
+		chart.zAxisScale = d3Linear()
+			.domain([zMin, zMax])
+			.range([0, 100])
+
 		chart.xScaleMin = chart.xAxisScale(xMin)
-		chart.xScaleMax = chart.xAxisScale(xMax)
 		chart.yScaleMin = chart.yAxisScale(yMin)
-		chart.yScaleMax = chart.yAxisScale(yMax)
+		chart.zScaleMin = chart.zAxisScale(zMin)
+		console.log(zMin)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		if (typeof self.config.gradientColor !== 'object') {
@@ -291,11 +302,10 @@ export function setRenderers(self) {
 		for (const sample of chart.data.samples) {
 			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / canvas.width
 			let y = (chart.yAxisScale(sample.y) - chart.yScaleMin) / canvas.height
-			let z = x
+			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / 100
 			positions[count] = x
 			positions[count + 1] = y
 			positions[count + 2] = z
-
 			const color = rgb(self.getColor(sample, chart))
 			colors[count] = color.r
 			colors[count + 1] = color.g
