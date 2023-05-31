@@ -924,6 +924,7 @@ export class TermdbVocab extends Vocab {
 	}
 
 	async getTopMutatedGenes(arg) {
+		console.log(arg)
 		return await dofetch3('gdc_filter2topGenes', { method: 'GET', body: arg })
 	}
 }

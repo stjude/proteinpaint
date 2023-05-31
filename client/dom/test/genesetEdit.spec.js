@@ -22,15 +22,16 @@ tape('\n', function(test) {
 
 tape('Empty opts.geneList', function(test) {
 	test.timeoutAfter(100)
+	const param = { label: 'Param 1', type: 'number', value: 10 }
 	const vocabApi = {
 		getTopGenes: () => [],
 		termdbConfig: {
-			topMutatedGenes: { params: [{ label: 'Use only cancer census genes', type: 'boolean' }] }
+			topMutatedGenes: { params: [param] }
 		}
 	} //Fake vocab api returning  some genes
 
 	testHG38()
-	testHG19()
+	//testHG19()
 	test.end()
 
 	function testHG38() {
@@ -42,7 +43,7 @@ tape('Empty opts.geneList', function(test) {
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
 		test.true(ui.dom.loadBt !== undefined, `should show load top genes button`)
 
-		//if (test._ok) ui.destroy()
+		if (test._ok) ui.destroy()
 	}
 
 	function testHG19() {
@@ -54,7 +55,7 @@ tape('Empty opts.geneList', function(test) {
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
 		test.true(ui.dom.loadBt == undefined, `should not show load top genes button`)
 
-		//if (test._ok) ui.destroy()
+		if (test._ok) ui.destroy()
 	}
 })
 

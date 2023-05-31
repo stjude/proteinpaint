@@ -7,6 +7,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 		dom: {
 			tdbBtns: {}
 		},
+		params: [],
 		destroy(_obj) {
 			const obj = _obj || api.dom
 			for (const key in obj) {
@@ -54,10 +55,12 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 			.append('button')
 			.html(`Load top mutated genes`)
 			.on('click', async event => {
-				const result = await vocabApi.getTopMutatedGenes({
+				let args = {
 					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
-				})
+				}
+				for (const input of api.params) args[input.attr('id')] = getInputValue(input)
+				const result = await vocabApi.getTopMutatedGenes(args)
 				geneList = []
 				for (const gene of result.genes) geneList.push({ symbol: gene })
 				renderGenes()
@@ -201,17 +204,29 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 	}
 
 	function addParameter(param) {
+		let input
 		if (param.type == 'boolean') {
-			rightDiv.append('input').attr('type', 'checkbox')
+			input = rightDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('id', param.id)
+			if (param.value) input.attr('value', param.value)
 			rightDiv.append('span').html(param.label)
 		} else if (param.type == 'number') {
-			rightDiv
+			input = rightDiv
 				.append('input')
-				.attr('value', param.value)
 				.attr('type', 'number')
 				.style('width', '40px')
+				.attr('id', param.id)
+			if (param.value) input.attr('value', param.value)
 			rightDiv.append('span').html(param.label)
 		}
+		api.params.push(input)
+	}
+
+	function getInputValue(input) {
+		if (input.attr('type') == 'number') return Number(input.node().value)
+		if (input.attr('type') == 'checkbox') return Boolean(input.node().value)
 	}
 
 	renderGenes()
