@@ -4,6 +4,7 @@ import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
 ********************** EXPORTED
@@ -271,6 +272,7 @@ function printSampleName(sample, tk, div, block) {
 	if (tk.mds.queries?.singleSampleGenomeQuantification) {
 		for (const k in tk.mds.queries.singleSampleGenomeQuantification) {
 			const q = tk.mds.queries.singleSampleGenomeQuantification[k]
+			// { get(), positiveColor, negativeColor}
 			extraRow
 				.append('button')
 				.text(k)
@@ -288,22 +290,60 @@ function printSampleName(sample, tk, div, block) {
 					if (!q2) return
 
 					// !!
+
+					let bb // only load block once
+
 					img.on('click', async event => {
 						const x = event.offsetX - data.xoff
-						let chr, position
+
+						let chr, chrLen, position
+
 						for (const c of data.chrLst) {
 							if (c.xStart <= x && c.xStop >= x) {
 								chr = c.chr
+								chrLen = c.chrLen
 								position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
 								break
 							}
 						}
 						if (!chr) return
 
+						const start = Math.max(0, position - 500000),
+							stop = Math.min(position + 500000, chrLen)
+
+						if (bb) {
+							// block already loaded, jump
+							bb.jump_1basedcoordinate({ chr, start, stop })
+							return
+						}
+						// load block
 						const d2 = await q2.get(sample[q2.sample_id_key])
 						// d2={path:str}
 						if (!d2.path) return // no file
-						//console.log(d2,chr, position)
+						// has bedgraph file, load block
+						const _ = await import('../src/block')
+						const tklst = [
+							{
+								type: 'bigwig',
+								name: sample[q2.sample_id_key],
+								file: d2.path,
+								height: 100,
+								scale: { min: q2.min, max: q2.max },
+								pcolor: q.positiveColor,
+								ncolor: q.negativeColor
+							}
+						]
+						first_genetrack_tolist(block.genome, tklst)
+
+						bb = new _.Block({
+							genome: block.genome,
+							holder: tk.menutip.d.append('div'),
+							nobox: true,
+							tklst,
+							chr,
+							start,
+							stop
+						})
 					})
 				})
 		}

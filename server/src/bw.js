@@ -229,11 +229,15 @@ export async function handle_tkbigwig(req, res) {
 }
 
 async function getBedgraph(req, res, minv, maxv, file, bedgraphdir) {
-	/*
+	/* read and plot all bedgraph lines from a locus, without summary
 	 */
 	if (minv == undefined || maxv == undefined) throw 'Y axis scale must be defined for bedgraph track'
-	const canvas = createCanvas(req.query.width, req.query.barheight)
+	const canvas = createCanvas(
+		req.query.width * req.query.devicePixelRatio,
+		req.query.barheight * req.query.devicePixelRatio
+	)
 	const ctx = canvas.getContext('2d')
+	if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 	let xoff = 0
 	for (let r of req.query.rglst) {
 		await bedgraphRegion(req, r, xoff, minv, maxv, file, bedgraphdir, ctx)

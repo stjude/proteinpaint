@@ -448,13 +448,10 @@ function copy_queries(ds, dscopy) {
 	if (ds.queries.singleSampleGenomeQuantification) {
 		copy.singleSampleGenomeQuantification = {}
 		for (const k in ds.queries.singleSampleGenomeQuantification) {
-			const q = ds.queries.singleSampleGenomeQuantification[k]
-			copy.singleSampleGenomeQuantification[k] = {
-				sample_id_key: q.sample_id_key,
-				min: q.min,
-				max: q.max,
-				singleSampleGbtk: q.singleSampleGbtk
-			}
+			copy.singleSampleGenomeQuantification[k] = JSON.parse(
+				JSON.stringify(ds.queries.singleSampleGenomeQuantification[k])
+			)
+			delete copy.singleSampleGenomeQuantification[k].folder
 		}
 	}
 
@@ -1382,7 +1379,7 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 			if (!Number.isFinite(value)) return
 			if (value < control.min || value > control.max) return
 
-			ctx.fillStyle = value > 0 ? '#a35069' : '#5051a3'
+			ctx.fillStyle = value > 0 ? control.positiveColor : control.negativeColor
 
 			const x = chrScale[chr](pos)
 			const y = ypad + yScale(value)
