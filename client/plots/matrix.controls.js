@@ -652,7 +652,6 @@ export class MatrixControls {
 							},
 							q: {}
 						}
-						console.log(tw)
 						return tw
 					})
 
