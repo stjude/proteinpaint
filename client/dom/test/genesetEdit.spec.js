@@ -12,6 +12,8 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
+
 /**************
  test sections
 ***************/
@@ -31,7 +33,7 @@ tape('Empty opts.geneList', function(test) {
 	} //Fake vocab api returning  some genes
 
 	testHG38()
-	//testHG19()
+	testHG19()
 	test.end()
 
 	function testHG38() {
@@ -68,7 +70,6 @@ tape('Non-empty opts.geneList', function(test) {
 
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
-		const geneList = [{ symbol: 'TP53' }, { symbol: 'KRAS' }]
 		const ui = showGenesetEdit({ x: 100, y: 200, menu, genome: hg38, geneList, callback: () => {}, vocabApi })
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), geneList.length, 'should render two gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), false, `should not have a disabled submit button`)
@@ -85,7 +86,6 @@ tape('gene deletion', function(test) {
 
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
-		const geneList = [{ symbol: 'TP53' }, { symbol: 'KRAS' }]
 		const len = geneList.length
 		const ui = showGenesetEdit({ x: 100, y: 200, menu, genome: hg38, geneList, callback: () => {}, vocabApi: {} })
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), len, `should render ${len} gene pills`)
@@ -103,7 +103,6 @@ tape('submit button', function(test) {
 	test.timeoutAfter(100)
 	const vocabApi = {} //Fake vocab api returning  some genes
 
-	const geneList = [{ symbol: 'TP53' }, { symbol: 'KRAS' }]
 	const geneLstCopy = structuredClone(geneList)
 	const menu = new Menu({ padding: '0px' })
 	const ui = showGenesetEdit({ x: 100, y: 200, menu, genome: hg38, geneList, callback, vocabApi })

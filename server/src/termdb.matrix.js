@@ -165,6 +165,7 @@ function divideTerms(lst) {
 	const dict = [],
 		nonDict = []
 	for (const tw of lst) {
+		console.log(tw)
 		const type = tw.term.type
 		if (type == 'snplst' || type == 'snplocus' || type == 'geneVariant') {
 			nonDict.push(tw)

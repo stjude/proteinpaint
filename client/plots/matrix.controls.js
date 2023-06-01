@@ -643,15 +643,17 @@ export class MatrixControls {
 					const lst = []
 					for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
 					group.lst = lst
+					console.log(lst)
 					const tws = geneset.map(d => {
 						const tw = {
 							$id: get$id(),
 							term: {
-								name: d.symbol,
+								name: d.symbol || d.name,
 								type: 'geneVariant'
 							},
 							q: {}
 						}
+						console.log(tw)
 						return tw
 					})
 
@@ -667,7 +669,7 @@ export class MatrixControls {
 					})
 				}
 				const geneList = []
-				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ symbol: tw.term.name })
+				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ name: tw.term.name })
 				let config = showGenesetEdit({
 					x: event.clientX,
 					y: event.clientY,
