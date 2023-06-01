@@ -26,7 +26,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 
 	const div = menu.d
 		.append('div')
-		.style('width', '874px')
+		.style('width', '850px')
 		.style('padding', '5px')
 
 	api.dom.holder = div
@@ -58,10 +58,13 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
 				}
-				for (const input of api.params) args[input.attr('id')] = getInputValue(input)
+				for (const input of api.params) {
+					const id = input.attr('id')
+					args[id] = getInputValue(input)
+				}
 				const result = await vocabApi.getTopMutatedGenes(args)
 				geneList = []
-				for (const gene of result.genes) geneList.push({ symbol: gene })
+				for (const gene of result.genes) geneList.push({ name: gene })
 				renderGenes()
 			})
 	} else if (vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
@@ -92,9 +95,10 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 						},
 						tree: {
 							click_term: term => {
+								geneList = []
 								const geneset = term._geneset
 								if (geneset) {
-									geneList = geneset
+									for (const gene of geneset) geneList.push({ name: gene.symbol })
 									renderGenes()
 								}
 								//menu.hide()
@@ -153,24 +157,24 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 			.enter()
 			.append('div')
 			.attr('title', 'click to delete')
-			.style('width', '110px')
 			.attr('class', 'sja_menuoption')
 			.style('position', 'relative')
 			.style('display', 'inline-block')
-			.style('padding', '5px 15px 5px 10px')
-			.style('margin-left', '4px')
-			.text(gene => gene.name || gene.symbol)
+			.style('padding', '5px 16px 5px 9px')
+			.style('margin-left', '5px')
+			.text(gene => gene.name)
 			.on('click', deleteGene)
 			.on('mouseover', function(event) {
-				const span = select(this)
-				span
+				const div = select(this)
+				div
 					.append('div')
+					.style('margin-left', '4px')
 					.classed('sjpp_deletebt', true)
 					.style('vertical-align', 'middle')
 					.style('display', 'inline-block')
 					.style('position', 'absolute')
-					.style('right', '2px')
-					.style('transform', 'scale(0.7)')
+					.style('right', '0px')
+					.style('transform', 'scale(0.6)')
 					.style('pointer-events', 'none')
 					.html(
 						`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
@@ -195,7 +199,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 	}
 
 	function deleteGene(event, d) {
-		const i = geneList.findIndex(g => g.symbol === d.symbol)
+		const i = geneList.findIndex(g => g.name === d.name)
 		if (i != -1) {
 			geneList.splice(i, 1)
 			renderGenes()
