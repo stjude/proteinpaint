@@ -1546,7 +1546,7 @@ export function handle_filter2topGenes(genomes) {
 			res.send({
 				genes: await get_filter2topGenes({
 					filter: req.query.filter0,
-					CGConly: req.query.CGConly,
+					CGConly: parseInt(req.query.CGConly),
 					maxGenes: req.query.maxGenes
 				})
 			})
