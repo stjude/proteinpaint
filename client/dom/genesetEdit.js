@@ -233,7 +233,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 	function getInputValue(input) {
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
-		if (input.attr('type') == 'checkbox') return input.node().checked
+		if (input.attr('type') == 'checkbox') return input.node().checked ? 1 : 0
 	}
 
 	renderGenes()
