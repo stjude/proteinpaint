@@ -11,9 +11,7 @@ dist/*
 */*/dist/
 */*/*/dist/
 
-server/dataset/*.js
 server/genome/*.js
-server/shared/types.js
 
 **/public/bin/*
 public/tmp/*

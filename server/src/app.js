@@ -7473,8 +7473,8 @@ async function pp_init() {
 			*/
 			const overrideFile = path.join(process.cwd(), d.jsfile)
 			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
-			const ds = typeof _ds == 'function' ? _ds(common) : _ds?.default ? _ds.default : _ds
-			console.log(7477, ds)
+			const ds =
+				typeof _ds == 'function' ? _ds(common) : _ds?.default == 'function' ? _ds.default(common) : _ds.default || _ds
 
 			// !!! TODO: is this unnecessarily repeated at a later time? !!!
 			server_updateAttr(ds, d)
@@ -7484,7 +7484,6 @@ async function pp_init() {
 			g.datasets[ds.label] = ds
 
 			if (ds.isMds3) {
-				console.log(7463)
 				try {
 					await mds3_init.init(ds, g, d, app, basepath)
 				} catch (e) {
@@ -7668,7 +7667,7 @@ function initLegacyDataset(ds, genome) {
 
 	if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + ds.genomename
 	if (!Array.isArray(ds.queries)) throw ds.label + '.queries is not array'
-	for (const q of Object.entries(ds.queries)) {
+	for (const q of ds.queries) {
 		const err = legacyds_init_one_query(q, ds, genome)
 		if (err) throw 'Error parsing a query in "' + ds.label + '": ' + err
 	}
