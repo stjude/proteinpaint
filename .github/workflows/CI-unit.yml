@@ -47,7 +47,7 @@ jobs:
         run: xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: Server unit tests
-        run: npm run test:unit --workspace="server"
+        run: npx tsc server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: Rust unit tests
         run: |
