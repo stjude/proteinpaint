@@ -7226,7 +7226,6 @@ async function pp_init() {
 		/*
 		validate each genome
 		*/
-
 		const g = genomes[genomename]
 		if (!g.majorchr) throw genomename + ': majorchr missing'
 		if (!g.defaultcoord) throw genomename + ': defaultcoord missing'
@@ -7474,7 +7473,8 @@ async function pp_init() {
 			*/
 			const overrideFile = path.join(process.cwd(), d.jsfile)
 			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
-			const ds = typeof _ds == 'function' ? _ds(common) : _ds
+			const ds = typeof _ds == 'function' ? _ds(common) : _ds?.default ? _ds.default : _ds
+			console.log(7477, ds)
 
 			// !!! TODO: is this unnecessarily repeated at a later time? !!!
 			server_updateAttr(ds, d)
@@ -7484,6 +7484,7 @@ async function pp_init() {
 			g.datasets[ds.label] = ds
 
 			if (ds.isMds3) {
+				console.log(7463)
 				try {
 					await mds3_init.init(ds, g, d, app, basepath)
 				} catch (e) {
@@ -7591,7 +7592,6 @@ function checkDependenciesAndVersions() {
 
 function initLegacyDataset(ds, genome) {
 	/* old official dataset */
-
 	if (ds.dbfile) {
 		/* this dataset has a db */
 		try {
@@ -7618,10 +7618,10 @@ function initLegacyDataset(ds, genome) {
 		// a dataset with cohort
 
 		if (ds.cohort.levels) {
-			if (!Array.isArray(ds.cohort.levels)) throw 'cohort.levels must be array for ' + genomename + '.' + ds.label
-			if (ds.cohort.levels.length == 0) throw 'levels is blank array for cohort of ' + genomename + '.' + ds.label
+			if (!Array.isArray(ds.cohort.levels)) throw 'cohort.levels must be array for ' + ds.genomename + '.' + ds.label
+			if (ds.cohort.levels.length == 0) throw 'levels is blank array for cohort of ' + ds.genomename + '.' + ds.label
 			for (const i of ds.cohort.levels) {
-				if (!i.k) throw '.k key missing in one of the levels, .cohort, in ' + genomename + '.' + ds.label
+				if (!i.k) throw '.k key missing in one of the levels, .cohort, in ' + ds.genomename + '.' + ds.label
 			}
 		}
 
@@ -7629,7 +7629,7 @@ function initLegacyDataset(ds, genome) {
 			/*
 		cohort content to be loaded lazily from db
 		*/
-			if (!ds.cohort.fromdb.sql) throw '.sql missing from ds.cohort.fromdb in ' + genomename + '.' + ds.label
+			if (!ds.cohort.fromdb.sql) throw '.sql missing from ds.cohort.fromdb in ' + ds.genomename + '.' + ds.label
 			const rows = ds.newconn.prepare(ds.cohort.fromdb.sql).all()
 			delete ds.cohort.fromdb
 			ds.cohort.raw = rows ///// backward compatible
@@ -7640,9 +7640,9 @@ function initLegacyDataset(ds, genome) {
 			// sample annotation load directly from text files, in sync
 			let rows = []
 			for (const file of ds.cohort.files) {
-				if (!file.file) throw '.file missing from one of cohort.files[] for ' + genomename + '.' + ds.label
+				if (!file.file) throw '.file missing from one of cohort.files[] for ' + ds.genomename + '.' + ds.label
 				const txt = fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file), 'utf8').trim()
-				if (!txt) throw file.file + ' is empty for ' + genomename + '.' + ds.label
+				if (!txt) throw file.file + ' is empty for ' + ds.genomename + '.' + ds.label
 				rows = [...rows, ...d3dsv.tsvParse(txt)]
 			}
 			delete ds.cohort.files
@@ -7656,16 +7656,19 @@ function initLegacyDataset(ds, genome) {
 		if (ds.cohort.tosampleannotation) {
 			// a directive to tell client to convert cohort.raw[] to cohort.annotation{}, key-value hash
 			if (!ds.cohort.tosampleannotation.samplekey)
-				throw '.samplekey missing from .cohort.tosampleannotation for ' + genomename + '.' + ds.label
+				throw '.samplekey missing from .cohort.tosampleannotation for ' + ds.genomename + '.' + ds.label
 			if (!ds.cohort.key4annotation)
-				throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' + genomename + '.' + ds.label
+				throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' +
+					ds.genomename +
+					'.' +
+					ds.label
 			// in fact, it still requires ds.cohort.raw, but since db querying is async, not checked
 		}
 	}
 
-	if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + genomename
+	if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + ds.genomename
 	if (!Array.isArray(ds.queries)) throw ds.label + '.queries is not array'
-	for (const q of ds.queries) {
+	for (const q of Object.entries(ds.queries)) {
 		const err = legacyds_init_one_query(q, ds, genome)
 		if (err) throw 'Error parsing a query in "' + ds.label + '": ' + err
 	}
