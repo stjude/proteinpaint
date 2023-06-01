@@ -203,7 +203,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			}
 		}
 		if (!results[divideBy]) {
-			const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
+			const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref', z: 0 }))
 			results[divideBy] = { samples, colorMap: {}, shapeMap: {} }
 		}
 		if (!q.divideByTW) sample.z = 0
@@ -379,6 +379,7 @@ export async function getScatterCoordinates(req, q, ds) {
 	const xterm = q.coordTWs[0].term
 	const yterm = q.coordTWs[1].term
 	let zterm
+
 	if (q.divideByTW && q.divideByTW.q.mode == 'continuous') zterm = q.divideByTW.term
 
 	sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
@@ -391,7 +392,7 @@ export async function getScatterCoordinates(req, q, ds) {
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	for (const { sampleId, x, y, z } of rows) {
-		const sample = { sampleId, x, y, z: z in zterm.values ? 0 : z }
+		const sample = { sampleId, x, y, z: zterm && z in zterm.values ? 0 : z }
 		if (canDisplay) sample.sample = ds.sampleId2Name.get(sampleId)
 		const computable = isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y)
 		if (sample && computable) samples.push(sample)
