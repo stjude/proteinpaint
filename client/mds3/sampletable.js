@@ -280,7 +280,7 @@ function printSampleName(sample, tk, div, block) {
 					const data = await q.get(sample[q.sample_id_key])
 					const img = tk.menutip
 						.clear()
-						.show(event.clientX, event.clientY)
+						.show(200, event.clientY)
 						.d.append('img')
 						.attr('width', data.canvasWidth)
 						.attr('height', data.canvasHeight)

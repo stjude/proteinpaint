@@ -28,11 +28,9 @@ const mayInitiateMatrixplots = require('./termdb.matrix').mayInitiateMatrixplots
 const { add_bcf_variant_filter } = require('./termdb.snp')
 
 /*
-********************** EXPORTED
 init
 client_copy
 	copy_queries
-********************** INTERNAL
 validate_termdb
 	mayInitiateScatterplots
 	mayValidateSelectCohort
@@ -458,12 +456,8 @@ function copy_queries(ds, dscopy) {
 	if (ds.queries.singleSampleGbtk) {
 		copy.singleSampleGbtk = {}
 		for (const k in ds.queries.singleSampleGbtk) {
-			const q = ds.queries.singleSampleGbtk[k]
-			copy.singleSampleGbtk[k] = {
-				sample_id_key: q.sample_id_key,
-				min: q.min,
-				max: q.max
-			}
+			copy.singleSampleGbtk[k] = JSON.parse(JSON.stringify(ds.queries.singleSampleGbtk[k]))
+			delete copy.singleSampleGbtk[k].folder
 		}
 	}
 
