@@ -256,6 +256,19 @@ class Scatter {
 				]
 			)
 			inputs.push({
+				label: 'Show regression',
+				type: 'dropdown',
+				chartType: 'sampleScatter',
+				settingsKey: 'regression',
+				options: [
+					{ label: 'None', value: 'None' },
+					{ label: 'Loess', value: 'Loess' },
+					{ label: 'Lowess-R', value: 'Lowess-R' },
+					{ label: 'Polynomial', value: 'Polynomial' }
+				]
+			})
+
+			inputs.push({
 				label: 'Default color',
 				type: 'color',
 				chartType: 'sampleScatter',
