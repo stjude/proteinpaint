@@ -171,7 +171,7 @@ class genomeBrowser {
 			custom_variants: data.mlst,
 			skewerModes: [nm]
 		}
-		this.blockInstance = await this.launchBlockWithTracks([tk])
+		await this.launchBlockWithTracks([tk])
 	}
 
 	mayDisplaySampleCountInControls(data) {
@@ -234,6 +234,7 @@ class genomeBrowser {
 	async launchBlockWithTracks(tklst) {
 		// when state changes, delete existing block and relaunch new one
 		// since block/tk is not state-controlled
+		// attaches this.blockInstance
 		this.dom.blockHolder.selectAll('*').remove()
 
 		const arg = {
@@ -249,6 +250,7 @@ class genomeBrowser {
 			arg.query = this.state.config.geneSearchResult.geneSymbol
 			const _ = await import('#src/block.init')
 			await _.default(arg)
+			this.blockInstance = arg.__blockInstance
 			return
 		}
 		// launch locus
@@ -266,7 +268,7 @@ class genomeBrowser {
 		}
 
 		const _ = await import('#src/block')
-		return new _.Block(arg)
+		this.blockInstance = new _.Block(arg)
 	}
 
 	async getTracks2show(tklst) {

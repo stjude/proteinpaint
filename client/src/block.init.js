@@ -11,6 +11,8 @@ import { string2snp } from '#common/snp'
 for processing requests from entry point (app.js ui, embedding)
 mainly for launching gene view
 also for browser view if search term is position/snp
+
+quick fix: arg.__blockInstance is attached
 */
 
 export default async function(arg) {
@@ -286,7 +288,8 @@ async function step3(arg) {
 
 	const b = await import('./block')
 
-	new b.Block({
+	// quick fix to make block instance available to caller
+	arg.__blockInstance = new b.Block({
 		genome: arg.genome,
 		holder: arg.holder,
 		nobox: true,

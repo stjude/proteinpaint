@@ -10,20 +10,6 @@ const {
 	detectGte
 } = require('../../test/test.helpers')
 
-/*************************
- reusable helper functions
-**************************/
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-		.node()
-}
-
 /**************
  test sections
 
@@ -37,6 +23,7 @@ geneSearch4GDCmds3
 
 ### ash dataset is based on bcf file with samples
 ASH - gene BCR
+IHG - gene p53
 
 ### clinvar dataset is based on sample-less bcf file
 Clinvar - gene kras
@@ -57,11 +44,21 @@ ASH - mclass filtering
 Clinvar - mclass filtering
 
 Collapse and expand mutations from variant link
+
 Launch sample table from sunburst plot
 
 ### custom data
 Numeric mode custom dataset, with mode change
 ***************/
+function getHolder() {
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+		.node()
+}
 
 tape('\n', function(test) {
 	test.pass('-***- mds3 -***-')
@@ -227,6 +224,26 @@ tape('ASH - gene BCR', test => {
 	})
 	function callbackOnRender(tk, bb) {
 		test.equal(bb.usegm.name, 'BCR', 'block.usegm.name="BCR"')
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape.skip('IHG - gene p53', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38',
+		gene: 'p53',
+		tracks: [{ type: 'mds3', dslabel: 'IHG', callbackOnRender }]
+	})
+	function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.name, 'TP53', 'block.usegm.name="TP53"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
 		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
@@ -612,24 +629,22 @@ tape('Launch sample table from sunburst plot', test => {
 						.selectAll('circle.sja_aa_disckick')
 						.nodes()
 						.find(e => e.__data__.occurrence >= '310')
-					test.ok(discFound, 'Should display sunburst for G12D')
+					test.ok(discFound, 'Found a mutation with occurrence >= 310, click on it to show sunburst')
 					discFound.dispatchEvent(new Event('click'))
 
-					//Still required. Sunburst takes too long to render for the rest of the test to proceed
-					await sleep(2000)
-
-					// Click 'Info' in the center
-					const clickInfo = tk.g.selectAll('rect.sja_info_click').node()
+					const clickInfo = await detectOne({ elem: tk.skewer.g.node(), selector: 'rect.sja_info_click' })
+					test.ok(clickInfo, 'Info button from sunburst is found')
 					clickInfo.dispatchEvent(new Event('click'))
 
 					// Confirm sample table launched
-					await sleep(500)
-					const multiSampleTableFound = tk.itemtip.d.node()
-					test.ok(multiSampleTableFound != null && multiSampleTableFound != undefined, 'Should display sample table')
+					await whenVisible(tk.itemtip.d)
+					// FIXME really detect sample table from tooltip
+					test.pass('tk.itemtip displayed showing the sample table from sunburst')
 
-					await sleep(500)
-					if (test._ok) multiSampleTableFound.remove()
-					if (test._ok) holder.remove()
+					if (test._ok) {
+						holder.remove()
+						tk.itemtip.d.remove()
+					}
 					test.end()
 				}
 			}
