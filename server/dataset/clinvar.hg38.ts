@@ -1,5 +1,5 @@
 import { clinsig } from './clinvar.js'
-import { Mds } from '../shared/types/dataset'
+import { Mds } from '../shared/types'
 
 export default <Mds> {
 	isMds3: true,

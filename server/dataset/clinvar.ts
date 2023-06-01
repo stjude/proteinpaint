@@ -1,4 +1,4 @@
-import { ClinvarClinsig, ClinvarAF } from "../shared/types/dataset"
+import { ClinvarClinsig, ClinvarAF } from "../shared/types"
 
 export const clinsig: ClinvarClinsig = {
 	Affects: { color: '#ccc', label: 'Affects', desc: "Variants that cause a non-disease phenotype, such as lactose intolerance." },

@@ -1,4 +1,4 @@
-import { MinGenome } from '../shared/types/genome'
+import { MinGenome } from '../shared/types'
 
 export default <MinGenome> {
 	species: 'human',

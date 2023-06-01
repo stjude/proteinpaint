@@ -1,4 +1,4 @@
-import { Genome } from '../shared/types/genome'
+import { Genome } from '../shared/types'
 
 export default <Genome> {
 	species: 'mouse',
