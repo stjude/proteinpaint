@@ -69,7 +69,6 @@ export function setRenderers(self) {
 		chart.xScaleMin = chart.xAxisScale(xMin)
 		chart.yScaleMin = chart.yAxisScale(yMin)
 		chart.zScaleMin = chart.zAxisScale(zMin)
-		console.log(zMin)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		if (typeof self.config.gradientColor !== 'object') {
@@ -295,30 +294,25 @@ export function setRenderers(self) {
 		camera.lookAt(scene.position)
 		camera.updateMatrix()
 		scene.background = new THREE.Color('rgb(255,255,255)')
-		const numPoints = chart.data.samples.length
-		const positions = new Float32Array(numPoints * 3)
-		const colors = new Float32Array(numPoints * 3)
+		const positions = []
+		const colors = []
 		let count = 0
+
 		for (const sample of chart.data.samples) {
 			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / canvas.width
 			let y = (chart.yAxisScale(sample.y) - chart.yScaleMin) / canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / 100
-			positions[count] = x
-			positions[count + 1] = y
-			positions[count + 2] = z
-			const color = rgb(self.getColor(sample, chart))
-			colors[count] = color.r
-			colors[count + 1] = color.g
-			colors[count + 2] = color.b
-			count += 3
+			positions.push(x, y, z)
+			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
+			colors.push(color.r, color.g, color.b)
 		}
 		const geometry = new THREE.BufferGeometry()
-		geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
 
-		geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
 		geometry.computeBoundingBox()
 
-		const material = new THREE.PointsMaterial({ size: 0.1, vertexColors: true })
+		const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true })
 
 		const points = new THREE.Points(geometry, material)
 		points.scale.set(30, 30, 20)
