@@ -214,7 +214,10 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 				.attr('type', 'checkbox')
 				.attr('id', param.id)
 			if (param.value) input.attr('value', param.value)
-			rightDiv.append('span').html(param.label)
+			rightDiv
+				.append('label')
+				.html(param.label)
+				.attr('for', param.id)
 		} else if (param.type == 'number') {
 			input = rightDiv
 				.append('input')
