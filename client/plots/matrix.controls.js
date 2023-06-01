@@ -643,7 +643,6 @@ export class MatrixControls {
 					const lst = []
 					for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
 					group.lst = lst
-					console.log(lst)
 					const tws = geneset.map(d => {
 						const tw = {
 							$id: get$id(),
