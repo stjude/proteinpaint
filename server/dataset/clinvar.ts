@@ -55,5 +55,3 @@ export const AF: ClinvarAF = {
 		numericfilter: [{ side: '<', value: 0.0001 }, { side: '<', value: 0.001 }, { side: '<', value: 0.01 }]
 	}
 }
-
-// module.exports = [ clinsig, AF ]

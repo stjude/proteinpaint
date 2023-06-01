@@ -1,7 +1,7 @@
 import { clinsig } from './clinvar'
-import { Mds3 } from '../shared/types/dataset'
+import { Mds } from '../shared/types/dataset'
 
-export default <Mds3> {
+export default <Mds> {
 	isMds3: true,
 	dsinfo: [
 		{ k: 'Source', v: '<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>' },

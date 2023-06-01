@@ -131,8 +131,10 @@ export interface TestMds3 {
     cohort: Cohort
 }
 
-export interface Mds3 {
-    isMds3: boolean,
+export interface Mds {
+    isMds?: boolean,
+    isMds2?: boolean,
+    isMds3?: boolean,
     dsinfo: DsinfoEntry[],
     genome: string,
     queries: Queries

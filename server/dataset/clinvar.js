@@ -151,4 +151,3 @@ exports.AF = {
 		numericfilter: [{ side: '<', value: 0.0001 }, { side: '<', value: 0.001 }, { side: '<', value: 0.01 }]
 	}
 }
-// module.exports = [ clinsig, AF ]
