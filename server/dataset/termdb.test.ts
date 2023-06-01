@@ -1,6 +1,6 @@
-const path = require('path')
+import path from 'path'
 // TODO require serverconfig from @sjcrh/proteinpaint-server when transition to npm packages is finished
-import { TestMds3 } from "../shared/types/dataset"
+import { TestMds3 } from "../shared/types"
 
 let serverconfig
 try {
