@@ -113,9 +113,9 @@ export function setRenderers(self) {
 		fillSvgSubElems(chart)
 		/* eslint-enable */
 
-		//renderSerie(chart, s.duration)
-		self.render3DSerie(chart)
-		self.renderLegend(chart)
+		renderSerie(chart, s.duration)
+		if (self.opts.parent?.type == 'summary' && self.config.term0?.q.mode == 'continuous') self.render3DSerie(chart)
+		else self.renderLegend(chart)
 	}
 
 	function fillSvgSubElems(chart) {
@@ -245,6 +245,7 @@ export function setRenderers(self) {
 	}
 
 	function renderSerie(chart, duration) {
+		if (self.canvas) self.canvas.remove()
 		const g = chart.serie
 		const data = chart.data
 		// remove all symbols as there is no data id for privacy
@@ -282,9 +283,9 @@ export function setRenderers(self) {
 			return
 		}
 		chart.chartDiv.selectAll('*').remove()
-		const canvas = chart.chartDiv.append('canvas').node()
-		canvas.width = self.settings.svgw
-		canvas.height = self.settings.svgh
+		self.canvas = chart.chartDiv.append('canvas').node()
+		self.canvas.width = self.settings.svgw
+		self.canvas.height = self.settings.svgh
 		const fov = 75
 		const near = 0.1
 		const far = 1000
@@ -299,27 +300,27 @@ export function setRenderers(self) {
 		let count = 0
 
 		for (const sample of chart.data.samples) {
-			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / canvas.width
-			let y = (chart.yAxisScale(sample.y) - chart.yScaleMin) / canvas.height
+			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
+			let y = (chart.yAxisScale(sample.y) - chart.yScaleMin) / self.canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / 100
 			positions.push(x, y, z)
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			colors.push(color.r, color.g, color.b)
 		}
 		const geometry = new THREE.BufferGeometry()
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3, true))
 
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
 		geometry.computeBoundingBox()
 
-		const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true })
+		const material = new THREE.PointsMaterial({ size: 0.3, vertexColors: true })
 
 		const points = new THREE.Points(geometry, material)
-		points.scale.set(30, 30, 20)
+		points.scale.set(30, 30, 30)
 		points.position.set(-20, 15, 0)
 		scene.add(points)
 
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas })
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas })
 		renderer.render(scene, camera)
 	}
 
