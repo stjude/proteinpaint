@@ -304,13 +304,12 @@ export function setRenderers(self) {
 			let x = -0.5 + (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
 			let y = 0.5 - (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
-			console.log(z)
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			const geometry = new THREE.CircleGeometry(0.01, 64)
 			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.5, transparent: true })
 			const circle = new THREE.Mesh(geometry, material)
 			scene.add(circle)
-			circle.position.set(x, y, z)
+			circle.position.set(x, y, z * 2)
 			scene.add(circle)
 		}
 
