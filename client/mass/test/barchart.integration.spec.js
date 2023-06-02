@@ -629,7 +629,8 @@ tape('click non-group bar to add filter', function(test) {
 							}
 						]
 					},
-					q
+					q,
+					{ groupsetting: {} }
 				)
 			},
 			'should create a condition term-value filter with bar_by_*, value_by_*, and other expected keys'
