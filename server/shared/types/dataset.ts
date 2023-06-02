@@ -139,3 +139,5 @@ export interface Mds {
     genome: string,
     queries: Queries
 }
+
+export type Mds3 = Mds
