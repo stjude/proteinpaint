@@ -199,7 +199,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				divideBy = getMutation(true, dbSample, q.divideByTW) || getMutation(false, dbSample, q.divideByTW)
 			else {
 				const key = dbSample[q.divideByTW.term.id || q.divideByTW.term.name]?.key
-				divideBy = q.divideByTW.term.values[key]?.label || key
+				divideBy = q.divideByTW.term.values?.[key]?.label || key
 			}
 		}
 		if (!results[divideBy]) {
@@ -387,12 +387,11 @@ export async function getScatterCoordinates(req, q, ds) {
 			JOIN anno_${yterm.type} ay on ax.sample = ay.sample and ay.term_id = '${yterm.id}'  
 			${zterm ? `JOIN anno_${zterm.type} az on ax.sample = az.sample and az.term_id = '${zterm.id}' ` : ''}
 			WHERE ax.term_id = '${xterm.id}'`
-	console.log(sql)
 	if (filter) sql += ` AND ax.sample IN ${filter.CTEname}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	for (const { sampleId, x, y, z } of rows) {
-		const sample = { sampleId, x, y, z: zterm && z in zterm.values ? 0 : z }
+		const sample = { sampleId, x, y, z: zterm?.values && z in zterm.values ? 0 : z }
 		if (canDisplay) sample.sample = ds.sampleId2Name.get(sampleId)
 		const computable = isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y)
 		if (sample && computable) samples.push(sample)

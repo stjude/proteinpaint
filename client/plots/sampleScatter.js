@@ -133,10 +133,9 @@ class Scatter {
 			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 			this.createChart(key, data)
 		}
-
+		this.is3D = this.opts.parent?.type == 'summary' && this.config.term0?.q.mode == 'continuous'
 		this.render()
-		this.setTools()
-		this.updateGroupsButton()
+		if (!this.is3D) this.setTools()
 		this.dom.tip.hide()
 	}
 
@@ -368,6 +367,7 @@ export function getDefaultScatterSettings() {
 		refSize: 9,
 		svgw: 550,
 		svgh: 550,
+		svgd: 550,
 		axisTitleFontSize: 16,
 		showAxes: true,
 		showRef: true,
