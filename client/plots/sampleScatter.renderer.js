@@ -289,7 +289,7 @@ export function setRenderers(self) {
 		self.canvas.width = self.settings.svgw
 		self.canvas.height = self.settings.svgh
 		chart.chartDiv.style('margin', '20px 20px')
-		const fov = 15
+		const fov = 20
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
