@@ -1,14 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const {
-	sleep,
-	detectLst,
-	detectOne,
-	detectZero,
-	whenHidden,
-	whenVisible,
-	detectGte
-} = require('../../test/test.helpers')
+const { detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } = require('../../test/test.helpers')
 
 /**************
  test sections
@@ -45,7 +37,7 @@ Clinvar - mclass filtering
 
 Collapse and expand mutations from variant link
 
-Launch sample table from sunburst plot
+Launch sample table from sunburst
 
 ### custom data
 Numeric mode custom dataset, with mode change
@@ -558,59 +550,58 @@ tape('Collapse and expand mutations from variant link', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'ASH',
-				callbackOnRender: async (tk, bb) => {
-					const mtk = bb.tklst.find(i => i.type == 'mds3')
-
-					//Click on track variant link to open menu
-					const variantsControl = tk.leftlabels.doms.variants.node()
-					variantsControl.dispatchEvent(new Event('click'))
-
-					//Click 'Collapse' menu option
-					const collaspseOptionFound = tk.menutip.d
-						.selectAll('.sja_menuoption')
-						.nodes()
-						.find(e => e.innerHTML == 'Collapse')
-					collaspseOptionFound.dispatchEvent(new Event('click'))
-
-					//Ensure only collapsed data points appear
-					const onlyCollapsedCircles = tk.skewer.selection
-						.selectAll('text.sja_aa_disclabel')
-						.nodes()
-						.some(e => e.attributes.transform.value == 'scale(1)')
-					test.ok(!onlyCollapsedCircles, 'Should collaspe data points')
-
-					//Go back and click on 'Expand' to test the circle expanding
-					variantsControl.dispatchEvent(new Event('click'))
-					const expandOptionFound = tk.menutip.d
-						.selectAll('.sja_menuoption')
-						.nodes()
-						.find(e => e.innerHTML == 'Expand')
-					expandOptionFound.dispatchEvent(new Event('click'))
-
-					await sleep(1000) //Still required. The animation takes too long to find dom elements
-
-					//Confirm expanded mutations
-					const expandedCircleFound = mtk.skewer.g
-						.selectAll('.sja_aa_disclabel')
-						.nodes()
-						.some(e => e.attributes['fill-opacity'].value == '1')
-					test.ok(expandedCircleFound, 'Should expand mutation points')
-
-					if (test._ok) holder.remove()
-					test.end()
-				}
-			}
-		]
+		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }]
 	})
+	async function callbackOnRender(tk, bb) {
+		//Click on variant leftlabel to open menu
+		const variantsLeftlabel = tk.leftlabels.doms.variants.node()
+		variantsLeftlabel.dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d)
+
+		//Click 'Collapse' menu option
+		tk.menutip.d
+			.selectAll('.sja_menuoption')
+			.nodes()
+			.find(e => e.innerHTML == 'Collapse')
+			.dispatchEvent(new Event('click'))
+
+		// as soon as collapsing animation starts, none of the sja_aa_disclabel should have "scale(1)"
+		{
+			const expandedText = tk.skewer.selection
+				.selectAll('text.sja_aa_disclabel')
+				.nodes()
+				.some(e => {
+					//console.log(e)
+					e.attributes.transform.value == 'scale(1)'
+				})
+			test.notOk(expandedText, 'No expanded skewer found after collapsing')
+		}
+
+		//Go back and click on 'Expand' to test skewer expanding
+		variantsLeftlabel.dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d)
+
+		tk.menutip.d
+			.selectAll('.sja_menuoption')
+			.nodes()
+			.find(e => e.innerHTML == 'Expand')
+			.dispatchEvent(new Event('click'))
+
+		// as soon as expanding animation starts, some sja_aa_disclabel should have opacity!=0
+		{
+			const expandedText = tk.skewer.g
+				.selectAll('.sja_aa_disclabel')
+				.nodes()
+				.some(e => e.attributes['fill-opacity'].value != '0')
+			test.ok(expandedText, 'Should find some expanded skewers')
+		}
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
-tape('Launch sample table from sunburst plot', test => {
-	//If dispatchEvent error in browser, run again before debugging
-	test.timeoutAfter(8000)
+tape('Launch sample table from sunburst', test => {
 	const holder = getHolder()
 
 	runproteinpaint({
@@ -619,37 +610,35 @@ tape('Launch sample table from sunburst plot', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'GDC',
-				callbackOnRender: async (tk, bb) => {
-					// Click on track variant link to open menu
-					const discFound = tk.skewer.g
-						.selectAll('circle.sja_aa_disckick')
-						.nodes()
-						.find(e => e.__data__.occurrence >= '310')
-					test.ok(discFound, 'Found a mutation with occurrence >= 310, click on it to show sunburst')
-					discFound.dispatchEvent(new Event('click'))
-
-					const clickInfo = await detectOne({ elem: tk.skewer.g.node(), selector: 'rect.sja_info_click' })
-					test.ok(clickInfo, 'Info button from sunburst is found')
-					clickInfo.dispatchEvent(new Event('click'))
-
-					// Confirm sample table launched
-					await whenVisible(tk.itemtip.d)
-					// FIXME really detect sample table from tooltip
-					test.pass('tk.itemtip displayed showing the sample table from sunburst')
-
-					if (test._ok) {
-						holder.remove()
-						tk.itemtip.d.remove()
-					}
-					test.end()
-				}
-			}
-		]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
+	async function callbackOnRender(tk, bb) {
+		// Click on track variant link to open menu
+		const discFound = tk.skewer.g
+			.selectAll('circle.sja_aa_disckick')
+			.nodes()
+			.find(e => e.__data__.occurrence >= 310)
+		test.ok(discFound, 'Found a mutation with occurrence >= 310, click on it to show sunburst')
+		discFound.dispatchEvent(new Event('click'))
+
+		const clickInfo = await detectOne({ elem: tk.skewer.g.node(), selector: 'rect.sja_info_click' })
+		test.ok(clickInfo, 'Info button from sunburst is found')
+		clickInfo.dispatchEvent(new Event('click'))
+
+		// Confirm sample table launched
+		await whenVisible(tk.itemtip.d)
+		test.pass('tk.itemtip displayed showing the sample table after clicking "Info" from sunburst')
+
+		// this test doesn't work
+		//const divFound = await detectOne({elem:tk.itemtip.d.node(), selector:':scope>div'}) // use :scope> to select immediate children
+		//test.ok(divFound,'Found <div> as variant/sample table in tooltip')
+
+		if (test._ok) {
+			holder.remove()
+			tk.itemtip.d.remove()
+		}
+		test.end()
+	}
 })
 
 tape('Numeric mode custom dataset, with mode change', test => {
