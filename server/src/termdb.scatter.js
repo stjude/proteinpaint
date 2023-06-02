@@ -391,7 +391,8 @@ export async function getScatterCoordinates(req, q, ds) {
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	for (const { sampleId, x, y, z } of rows) {
-		const sample = { sampleId, x, y, z: zterm?.values && z in zterm.values ? 0 : z }
+		if (zterm?.values && z in zterm.values) continue
+		const sample = { sampleId, x, y, z }
 		if (canDisplay) sample.sample = ds.sampleId2Name.get(sampleId)
 		const computable = isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y)
 		if (sample && computable) samples.push(sample)
