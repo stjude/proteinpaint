@@ -64,10 +64,10 @@ export function setRenderers(self) {
 
 		chart.zAxisScale = d3Linear()
 			.domain([zMin, zMax])
-			.range([0, 100])
+			.range([0, self.settings.svgd])
 
 		chart.xScaleMin = chart.xAxisScale(xMin)
-		chart.yScaleMin = chart.yAxisScale(yMin)
+		chart.yScaleMax = chart.yAxisScale(yMax)
 		chart.zScaleMin = chart.zAxisScale(zMin)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
@@ -113,9 +113,12 @@ export function setRenderers(self) {
 		fillSvgSubElems(chart)
 		/* eslint-enable */
 
-		renderSerie(chart, s.duration)
-		if (self.opts.parent?.type == 'summary' && self.config.term0?.q.mode == 'continuous') self.render3DSerie(chart)
-		else self.renderLegend(chart)
+		if (self.is3D) self.render3DSerie(chart)
+		else {
+			if (self.canvas) self.canvas.remove()
+			renderSerie(chart, s.duration)
+			self.renderLegend(chart)
+		}
 	}
 
 	function fillSvgSubElems(chart) {
@@ -245,7 +248,6 @@ export function setRenderers(self) {
 	}
 
 	function renderSerie(chart, duration) {
-		if (self.canvas) self.canvas.remove()
 		const g = chart.serie
 		const data = chart.data
 		// remove all symbols as there is no data id for privacy
@@ -286,39 +288,30 @@ export function setRenderers(self) {
 		self.canvas = chart.chartDiv.append('canvas').node()
 		self.canvas.width = self.settings.svgw
 		self.canvas.height = self.settings.svgh
-		const fov = 75
+		chart.chartDiv.style('margin', '20px 20px')
+		const fov = 15
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
-		camera.position.set(0, 0, 30)
+		camera.position.set(0, 0, 5)
 		camera.lookAt(scene.position)
 		camera.updateMatrix()
 		scene.background = new THREE.Color('rgb(255,255,255)')
-		const positions = []
-		const colors = []
 		let count = 0
 
 		for (const sample of chart.data.samples) {
-			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
-			let y = (chart.yAxisScale(sample.y) - chart.yScaleMin) / self.canvas.height
-			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / 100
-			positions.push(x, y, z)
+			let x = -0.5 + (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
+			let y = 0.5 - (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
+			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
-			colors.push(color.r, color.g, color.b)
+			const geometry = new THREE.CircleGeometry(0.008, 64)
+			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.5, transparent: true })
+			const circle = new THREE.Mesh(geometry, material)
+			scene.add(circle)
+			circle.position.set(x, y, z)
+			scene.add(circle)
 		}
-		const geometry = new THREE.BufferGeometry()
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3, true))
-
-		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		geometry.computeBoundingBox()
-
-		const material = new THREE.PointsMaterial({ size: 0.3, vertexColors: true })
-
-		const points = new THREE.Points(geometry, material)
-		points.scale.set(30, 30, 30)
-		points.position.set(-20, 15, 0)
-		scene.add(points)
 
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas })
 		renderer.render(scene, camera)
@@ -607,8 +600,14 @@ export function setRenderers(self) {
 			})
 
 		mainG.call(zoom)
+		for (const chart of self.charts) {
+			chart.lasso = d3lasso()
+			self.lassoReset(chart)
+		}
+		self.updateGroupsButton()
 
 		const s = self.settings
+
 		function handleZoom(event) {
 			for (const chart of self.charts) {
 				// create new scale ojects based on event
@@ -640,11 +639,6 @@ export function setRenderers(self) {
 					.transition()
 					.duration(750)
 					.call(zoom.transform, zoomIdentity)
-		}
-
-		for (const chart of self.charts) {
-			chart.lasso = d3lasso()
-			self.lassoReset(chart)
 		}
 
 		function toggle_lasso() {
