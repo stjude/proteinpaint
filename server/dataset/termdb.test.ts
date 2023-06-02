@@ -1,4 +1,4 @@
-import { TestMds3 } from "../shared/types"
+import { Mds3 } from "../shared/types"
 
 const path = require('path')
 
@@ -37,7 +37,7 @@ reason:
 
 copyDataFilesFromRepo2Tp()
 
-export default <TestMds3> {
+export default <Mds3> {
 	isMds3: true,
 	cohort: {
 		db: {

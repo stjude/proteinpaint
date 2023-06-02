@@ -125,19 +125,14 @@ export interface Cohort {
 	termdb?: Termdb
 }
 
-//Separated because throwing error related to cohort
-export interface TestMds3 {
-    isMds3: boolean,
-    cohort: Cohort
-}
 
-export interface Mds {
+export interface Mds3 {
     isMds?: boolean,
     isMds2?: boolean,
-    isMds3?: boolean,
-    dsinfo: DsinfoEntry[],
-    genome: string,
-    queries: Queries
+    isMds3: boolean,
+    
+    dsinfo?: DsinfoEntry[],
+    genome?: string,
+    queries?: Queries
 }
 
-export type Mds3 = Mds
