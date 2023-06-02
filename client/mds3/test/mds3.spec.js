@@ -224,7 +224,7 @@ tape('ASH - gene BCR', test => {
 })
 
 tape.skip('IHG - gene p53', test => {
-	test.timeoutAfter(3000)
+	// only works with sjpp branch
 	const holder = getHolder()
 
 	runproteinpaint({
@@ -234,12 +234,42 @@ tape.skip('IHG - gene p53', test => {
 		gene: 'p53',
 		tracks: [{ type: 'mds3', dslabel: 'IHG', callbackOnRender }]
 	})
-	function callbackOnRender(tk, bb) {
-		test.equal(bb.usegm.name, 'TP53', 'block.usegm.name="TP53"')
-		test.equal(bb.tklst.length, 2, 'should have two tracks')
-		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
+	async function callbackOnRender(tk, bb) {
+		test.ok(tk.skewer.data.length > 0, 'mds3 tk should be showing some skewers')
+		// click disc of first skewer, it should be a single mutation
+		tk.skewer.g
+			.select('.sja_aa_disckick')
+			.nodes()[0]
+			.dispatchEvent(new Event('click'))
+
+		await whenVisible(tk.itemtip.d)
+		test.pass('itemtip shows with variant table')
+		const buttons = tk.itemtip.d.selectAll('button').nodes()
+		test.ok(buttons.length == 2, 'two buttons are showing in itemtip')
+
+		await testDisco(buttons[0], tk)
+		await testCnv(buttons[1], tk)
+
 		if (test._ok) holder.remove()
 		test.end()
+	}
+	async function testDisco(btn, tk) {
+		const name = 'Disco plot'
+		test.equal(btn.innerHTML, name, '1st button is called ' + name)
+		btn.dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
+		test.pass(`clicking 1st button ${name} the menutip shows`)
+		// TODO detect plot in menutip.d
+	}
+	async function testCnv(btn, tk) {
+		const name = 'MethylationArray'
+		test.equal(btn.innerHTML, name, '2nd button is called ' + name)
+		btn.dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
+		test.pass(`clicking 2nd button ${name} the menutip shows`)
+		const img = await detectOne({ elem: tk.menutip.d.node(), selector: 'img' })
+		test.ok(img, '<img> found in menutip')
+		// TODO click at a particular position on img
 	}
 })
 
