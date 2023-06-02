@@ -214,13 +214,15 @@ export class TermdbVocab extends Vocab {
     */
 	syncTermData(config, data, prevConfig = {}) {
 		if (!data || !data.refs) return
-		for (const [i, key] of ['term', 'term2', 'term0'].entries()) {
+		// must maintain the order of term* string values in the looped array,
+		// so that the entry index must matches the data.refs.bins[], q[] order
+		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
 			const term = config[key]
 			const persistTerm = !prevConfig[key] || prevConfig[key].term?.id === term?.term?.id
-			if (term == 'genotype') return
-			if (!term || term == undefined) {
+			if (term == 'genotype') continue
+			if (!term) {
 				if (key == 'term') throw `missing plot.term{}`
-				return
+				continue
 			}
 			if (data.refs.bins) {
 				term.bins = data.refs.bins[i]
@@ -229,9 +231,11 @@ export class TermdbVocab extends Vocab {
 					const q = data.refs.q[i]
 					// FIGURE OUT: when will q equal term.q?
 					if (q !== term.q || !persistTerm) {
-						for (const key in term.q) {
-							// persist hiddenValues if it exists, but may be overridden by the server data's q
-							if (key != 'hiddenValues' || !persistTerm) delete term.q[key]
+						if (q.type != term.q.type || q.mode != term.q.mode) {
+							for (const key in term.q) {
+								// persist hiddenValues if it exists, but may be overridden by the server data's q
+								if (key != 'hiddenValues' || !persistTerm) delete term.q[key]
+							}
 						}
 						Object.assign(term.q, q)
 					}
