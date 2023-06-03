@@ -289,13 +289,15 @@ export function setRenderers(self) {
 		self.canvas.width = self.settings.svgw
 		self.canvas.height = self.settings.svgh
 		chart.chartDiv.style('margin', '20px 20px')
-		const fov = 20
+		const fov = 25
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
-		camera.position.set(0, 0, 5)
+		camera.position.set(0.5, 0.5, 5)
 		camera.lookAt(scene.position)
+		const axesHelper = new THREE.AxesHelper(3)
+		scene.add(axesHelper)
 		camera.updateMatrix()
 		scene.background = new THREE.Color('rgb(255,255,255)')
 		let count = 0
@@ -305,11 +307,11 @@ export function setRenderers(self) {
 			let y = 0.5 - (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
-			const geometry = new THREE.CircleGeometry(0.01, 64)
+			const geometry = new THREE.CircleGeometry(0.02, 64)
 			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.5, transparent: true })
 			const circle = new THREE.Mesh(geometry, material)
 			scene.add(circle)
-			circle.position.set(x, y, z * 2)
+			circle.position.set(x, y, z)
 			scene.add(circle)
 		}
 
