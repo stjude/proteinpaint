@@ -1,7 +1,7 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom/control.icons'
 import { d3lasso } from '#common/lasso'
-import { dt2label, morigin, add_scriptTag } from '#shared/common'
+import { dt2label, morigin } from '#shared/common'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -10,8 +10,6 @@ import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { regressionLoess, regressionPoly } from 'd3-regression'
 import { line } from 'd3'
-import * as THREE from 'three'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -280,11 +278,9 @@ export function setRenderers(self) {
 	}
 
 	self.render3DSerie = async function(chart) {
-		await add_scriptTag('/static/js/WebGL.js')
-		if (!WEBGL.isWebGLAvailable()) {
-			obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
-			return
-		}
+		const THREE = await require('three')
+		const OrbitControls = await require('three/addons/controls/OrbitControls.js')
+		console.log(OrbitControls)
 		chart.chartDiv.selectAll('*').remove()
 		self.canvas = chart.chartDiv.append('canvas').node()
 		self.canvas.width = self.settings.svgw
@@ -295,7 +291,7 @@ export function setRenderers(self) {
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
-		const controls = new OrbitControls(camera, self.canvas)
+		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 		controls.update()
 		camera.position.set(0.5, 0.5, 5)
 		camera.lookAt(scene.position)

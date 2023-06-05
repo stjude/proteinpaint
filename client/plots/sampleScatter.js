@@ -188,7 +188,7 @@ class Scatter {
 				title: 'Categories to divide by',
 				label: 'Divide by',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['discrete', 'continuous']
+				numericEditMenuVersion: this.app.hasWebGL() ? ['discrete', 'continuous'] : ['discrete']
 			},
 
 			{
@@ -328,7 +328,7 @@ export async function getPlotConfig(opts, app) {
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)
-		return result
+		if (result.term0?.q?.mode == 'continuous' && !app.hasWebGL()) return result
 	} catch (e) {
 		console.log(e)
 		throw `${e} [sampleScatter getPlotConfig()]`
