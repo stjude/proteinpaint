@@ -64,18 +64,19 @@ class Scatter {
 
 		const offsetX = this.opts.parent?.type == 'summary' ? 80 : 50
 		this.axisOffset = { x: offsetX, y: 30 }
+		const controlsHolder = controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 
 		this.dom = {
 			header: this.opts.header,
 			//holder,
 			controls,
 			tip: new Menu({ padding: '5px' }),
-			tooltip: new Menu({ padding: '5px' })
+			tooltip: new Menu({ padding: '5px' }),
+			controlsHolder
 		}
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
-		await this.setControls()
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -134,6 +135,8 @@ class Scatter {
 			this.createChart(key, data)
 		}
 		this.is3D = this.opts.parent?.type == 'summary' && this.config.term0?.q.mode == 'continuous'
+		await this.setControls()
+
 		this.render()
 		if (!this.is3D) this.setTools()
 		this.dom.tip.hide()
@@ -147,8 +150,24 @@ class Scatter {
 	}
 
 	async setControls() {
-		const controlsHolder = this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
-
+		this.dom.controlsHolder.selectAll('*').remove()
+		const shapeOption = {
+			type: 'term',
+			configKey: 'shapeTW',
+			chartType: 'sampleScatter',
+			usecase: { target: 'sampleScatter', detail: 'shapeTW' },
+			title: 'Categories to assign a shape',
+			label: 'Shape',
+			vocabApi: this.app.vocabApi
+		}
+		const symbolSizeOption = {
+			label: 'Symbol size',
+			type: 'number',
+			chartType: 'sampleScatter',
+			settingsKey: 'size',
+			title: 'It represents the area of a symbol in square pixels',
+			min: 0
+		}
 		const inputs = [
 			{
 				type: 'term',
@@ -160,15 +179,7 @@ class Scatter {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete']
 			},
-			{
-				type: 'term',
-				configKey: 'shapeTW',
-				chartType: 'sampleScatter',
-				usecase: { target: 'sampleScatter', detail: 'shapeTW' },
-				title: 'Categories to assign a shape',
-				label: 'Shape',
-				vocabApi: this.app.vocabApi
-			},
+
 			{
 				type: 'term',
 				configKey: 'term0',
@@ -178,15 +189,6 @@ class Scatter {
 				label: 'Divide by',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete', 'continuous']
-			},
-
-			{
-				label: 'Symbol size',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'size',
-				title: 'It represents the area of a symbol in square pixels',
-				min: 0
 			},
 
 			{
@@ -208,14 +210,6 @@ class Scatter {
 				chartType: 'sampleScatter',
 				settingsKey: 'showAxes',
 				title: `Option to show/hide plot axes`
-			},
-			{
-				label: 'Reference size',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'refSize',
-				title: 'It represents the area of the reference symbol in square pixels',
-				min: 0
 			},
 			{
 				label: 'Opacity',
@@ -254,24 +248,45 @@ class Scatter {
 					}
 				]
 			)
-			inputs.push({
-				label: 'Show regression',
-				type: 'dropdown',
-				chartType: 'sampleScatter',
-				settingsKey: 'regression',
-				options: [
-					{ label: 'None', value: 'None' },
-					{ label: 'Loess', value: 'Loess' },
-					{ label: 'Lowess-R', value: 'Lowess-R' },
-					{ label: 'Polynomial', value: 'Polynomial' }
-				]
-			})
-
+			if (!this.is3D) {
+				inputs.splice(3, 0, shapeOption)
+				inputs.push(symbolSizeOption)
+				inputs.push({
+					label: 'Show regression',
+					type: 'dropdown',
+					chartType: 'sampleScatter',
+					settingsKey: 'regression',
+					options: [
+						{ label: 'None', value: 'None' },
+						{ label: 'Loess', value: 'Loess' },
+						{ label: 'Lowess-R', value: 'Lowess-R' },
+						{ label: 'Polynomial', value: 'Polynomial' }
+					]
+				})
+			} else {
+				inputs.splice(6, 0, {
+					label: 'Chart depth',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'svgd'
+				})
+			}
 			inputs.push({
 				label: 'Default color',
 				type: 'color',
 				chartType: 'sampleScatter',
 				settingsKey: 'defaultColor'
+			})
+		} else {
+			inputs.splice(1, 0, shapeOption)
+			inputs.push(symbolSizeOption)
+			inputs.push({
+				label: 'Reference size',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'refSize',
+				title: 'It represents the area of the reference symbol in square pixels',
+				min: 0
 			})
 		}
 
@@ -279,7 +294,7 @@ class Scatter {
 			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
-				holder: controlsHolder,
+				holder: this.dom.controlsHolder,
 				inputs
 			})
 		}
