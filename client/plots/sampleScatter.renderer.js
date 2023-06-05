@@ -11,6 +11,7 @@ import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { regressionLoess, regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -294,6 +295,8 @@ export function setRenderers(self) {
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
+		const controls = new OrbitControls(camera, self.canvas)
+		controls.update()
 		camera.position.set(0.5, 0.5, 5)
 		camera.lookAt(scene.position)
 		const axesHelper = new THREE.AxesHelper(3)
@@ -307,7 +310,7 @@ export function setRenderers(self) {
 			let y = 0.5 - (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
-			const geometry = new THREE.CircleGeometry(0.02, 64)
+			const geometry = new THREE.SphereGeometry(0.02, 64)
 			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.5, transparent: true })
 			const circle = new THREE.Mesh(geometry, material)
 			scene.add(circle)
@@ -316,7 +319,16 @@ export function setRenderers(self) {
 		}
 
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas })
-		renderer.render(scene, camera)
+
+		function animate() {
+			requestAnimationFrame(animate)
+
+			// required if controls.enableDamping or controls.autoRotate are set to true
+			controls.update()
+
+			renderer.render(scene, camera)
+		}
+		animate()
 	}
 
 	self.mayRenderRegression = async function() {
