@@ -328,7 +328,9 @@ export async function getPlotConfig(opts, app) {
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)
-		if (result.term0?.q?.mode == 'continuous' && !app.hasWebGL()) return result
+		if (result.term0?.q?.mode == 'continuous' && !app.hasWebGL())
+			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
+		return result
 	} catch (e) {
 		console.log(e)
 		throw `${e} [sampleScatter getPlotConfig()]`
