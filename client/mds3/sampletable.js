@@ -91,6 +91,20 @@ export async function displaySampleTable(samples, args) {
 		}
 		params.columnButtons.push(colButton)
 	}
+
+	if (args.tk.mds.queries?.singleSampleGenomeQuantification) {
+		for (const k in args.tk.mds.queries.singleSampleGenomeQuantification) {
+			const btn = {
+				text: k,
+				callback: async (event, i) => {
+					args.tk.menutip.clear().show(200, event.clientY)
+					await plotSingleSampleGenomeQuantification(args.tk, k, samples[i], args.tk.menutip.d, args.block.genome)
+				}
+			}
+			params.columnButtons.push(btn)
+		}
+	}
+
 	if (args.tk.allow2selectSamples) {
 		// this tk allows to select samples; create new opt to display button
 
@@ -271,83 +285,88 @@ function printSampleName(sample, tk, div, block) {
 
 	if (tk.mds.queries?.singleSampleGenomeQuantification) {
 		for (const k in tk.mds.queries.singleSampleGenomeQuantification) {
-			const q = tk.mds.queries.singleSampleGenomeQuantification[k]
-			// { get(), positiveColor, negativeColor}
 			extraRow
 				.append('button')
 				.text(k)
 				.on('click', async event => {
-					const data = await q.get(sample[q.sample_id_key])
-					const img = tk.menutip
-						.clear()
-						.show(200, event.clientY)
-						.d.append('img')
-						.attr('width', data.canvasWidth)
-						.attr('height', data.canvasHeight)
-						.attr('src', data.src)
-
-					const q2 = tk.mds.queries.singleSampleGbtk?.[q.singleSampleGbtk]
-					if (!q2) return
-
-					// !!
-
-					let bb // only load block once
-
-					img.on('click', async event => {
-						const x = event.offsetX - data.xoff
-
-						let chr, chrLen, position
-
-						for (const c of data.chrLst) {
-							if (c.xStart <= x && c.xStop >= x) {
-								chr = c.chr
-								chrLen = c.chrLen
-								position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
-								break
-							}
-						}
-						if (!chr) return
-
-						const start = Math.max(0, position - 500000),
-							stop = Math.min(position + 500000, chrLen)
-
-						if (bb) {
-							// block already loaded, jump
-							bb.jump_1basedcoordinate({ chr, start, stop })
-							return
-						}
-						// load block
-						const d2 = await q2.get(sample[q2.sample_id_key])
-						// d2={path:str}
-						if (!d2.path) return // no file
-						// has bedgraph file, load block
-						const _ = await import('../src/block')
-						const tklst = [
-							{
-								type: 'bigwig',
-								name: sample[q2.sample_id_key],
-								file: d2.path,
-								height: 100,
-								scale: { min: q2.min, max: q2.max },
-								pcolor: q.positiveColor,
-								ncolor: q.negativeColor
-							}
-						]
-						first_genetrack_tolist(block.genome, tklst)
-
-						bb = new _.Block({
-							genome: block.genome,
-							holder: tk.menutip.d.append('div'),
-							nobox: true,
-							tklst,
-							chr,
-							start,
-							stop
-						})
-					})
+					tk.menutip.clear().show(200, event.clientY)
+					await plotSingleSampleGenomeQuantification(tk, k, sample, tk.menutip.d, block.genome)
 				})
 		}
 	}
+}
+
+async function plotSingleSampleGenomeQuantification(tk, queryKey, sample, holder, genomeObj) {
+	const q = tk.mds.queries.singleSampleGenomeQuantification[queryKey]
+	// { get(), positiveColor, negativeColor, sample_id_key}
+	const data = await q.get(sample[q.sample_id_key])
+	if (data.error) return holder.append('div').text(data.error)
+
+	const img = holder
+		.append('img')
+		.attr('width', data.canvasWidth)
+		.attr('height', data.canvasHeight)
+		.attr('src', data.src)
+
+	const q2 = tk.mds.queries.singleSampleGbtk?.[q.singleSampleGbtk]
+	if (!q2) return
+
+	// !!
+
+	let bb // only load block once
+
+	img.on('click', async event => {
+		const x = event.offsetX - data.xoff
+
+		let chr, chrLen, position
+
+		for (const c of data.chrLst) {
+			if (c.xStart <= x && c.xStop >= x) {
+				chr = c.chr
+				chrLen = c.chrLen
+				position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
+				break
+			}
+		}
+		if (!chr) return
+
+		const start = Math.max(0, position - 500000),
+			stop = Math.min(position + 500000, chrLen)
+
+		if (bb) {
+			// block already loaded, jump
+			bb.jump_1basedcoordinate({ chr, start, stop })
+			return
+		}
+		// load block
+		const d2 = await q2.get(sample[q2.sample_id_key])
+		// d2={path:str}
+		if (!d2.path) return // no file
+		// has bedgraph file, load block
+		const _ = await import('../src/block')
+		const tklst = [
+			{
+				type: 'bigwig',
+				name: sample[q2.sample_id_key],
+				file: d2.path,
+				height: 100,
+				scale: { min: q2.min, max: q2.max },
+				pcolor: q.positiveColor,
+				ncolor: q.negativeColor
+			}
+		]
+		first_genetrack_tolist(genomeObj, tklst)
+
+		bb = new _.Block({
+			genome: genomeObj,
+			holder: tk.menutip.d.append('div'),
+			nobox: true,
+			tklst,
+			chr,
+			start,
+			stop
+		})
+	})
 }
 
 async function showDtDisco(event, sample, arg, fromTable = false) {
