@@ -280,7 +280,6 @@ export function setRenderers(self) {
 	self.render3DSerie = async function(chart) {
 		const THREE = await require('three')
 		const OrbitControls = await require('three/addons/controls/OrbitControls.js')
-		console.log(OrbitControls)
 		chart.chartDiv.selectAll('*').remove()
 		self.canvas = chart.chartDiv.append('canvas').node()
 		self.canvas.width = self.settings.svgw
