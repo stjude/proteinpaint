@@ -73,7 +73,18 @@ class MassApp {
 				fetchOpts: this.opts.fetchOpts,
 				getDatasetAccessToken: this.opts.getDatasetAccessToken
 			})
-
+			api.hasWebGL = function() {
+				//Copied from static/js/WEBGL.js
+				try {
+					var canvas = document.createElement('canvas')
+					return !!(
+						window.WebGLRenderingContext &&
+						(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+					)
+				} catch (e) {
+					return false
+				}
+			}
 			// the vocabApi's vocab may be reprocessed from the original input
 			this.opts.state.vocab = api.vocabApi.vocab
 		} catch (e) {
