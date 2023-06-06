@@ -231,7 +231,7 @@ function setRenderers(self) {
 			} else {
 				div
 					.style('max-height', scrollDivMaxHeight)
-					.style('padding', '10px 10px 20px 10px')
+					.style('padding', '10px')
 					.style('resize', 'vertical')
 					.classed('sjpp_hide_scrollbar', true)
 
