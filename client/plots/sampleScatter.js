@@ -91,7 +91,8 @@ class Scatter {
 			termfilter: appState.termfilter,
 			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
 			matrixplots: appState.termdbConfig.matrixplots,
-			vocab: appState.vocab
+			vocab: appState.vocab,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
