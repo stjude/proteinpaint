@@ -315,6 +315,23 @@ export function getSortOptions(termdbConfig) {
 					tiebreakers: [
 						{
 							filter: {
+								values: [
+									{
+										dt: 2
+									}
+								]
+							},
+							by: 'class',
+							order: ['Fuserna', 'WT', 'Blank']
+						}
+					]
+				},
+
+				{
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							filter: {
 								values: [{ dt: 1 }]
 							},
 							by: 'class',

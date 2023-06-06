@@ -505,6 +505,8 @@ class Matrix {
 				if (v) renderedValues.push(v)
 			}
 		}
+		// group stacked cell values to avoid striped pattern
+		if (tw.term.type == 'geneVariant') renderedValues.sort(this.stackSiblingCellsByClass)
 
 		return {
 			filteredValues,
@@ -518,6 +520,10 @@ class Matrix {
 			}),
 			renderedValues
 		}
+	}
+
+	stackSiblingCellsByClass(a, b) {
+		return a.class === b.class ? 0 : a.class === 'Blank' ? 1 : b.class == 'Blank' ? -1 : a.class < b.class ? -1 : 1
 	}
 
 	setAutoDimensions(xOffset) {
