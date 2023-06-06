@@ -60,6 +60,40 @@ export const binary = {
 	}
 }
 
+export const cuminc = {
+	/*
+	Get CTE for cuminc term
+
+	SQL output: sample|key|value
+		- sample: sample id
+		- key: event status code
+			0 = censored
+			1 = event of interest
+			2 = competing risk event
+		- value: time-to-event
+			When key=0, time is from diagnosis to last visit
+			When key=1, time is from diagnosis to first occurence of event
+			When key=2, time is from diagnosis to death
+	*/
+	getCTE(tablename, term, ds, q, values) {
+		values.push(term.id, q.breaks[0])
+		return {
+			sql: `${tablename} AS (
+				SELECT
+					sample,
+					event AS key,
+					time AS value
+				FROM
+					precomputed_cuminc
+				WHERE
+					term_id = ?
+					AND grade_cutoff = ?
+			)`,
+			tablename
+		}
+	}
+}
+
 export const time2event = {
 	/*
 	Get CTE for time-to-event term
