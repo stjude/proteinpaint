@@ -476,7 +476,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		// the error is coming from this
 		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else if (term.type == 'condition') {
-		const mode = termq.mode == 'cuminc' || termq.mode == 'cox' ? 'time2event' : termq.mode || 'discrete'
+		const mode = termq.mode == 'cox' ? 'time2event' : termq.mode || 'discrete'
 		CTE = await conditionSql[mode].getCTE(tablename, term, q.ds, termq, values)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)

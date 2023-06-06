@@ -21,11 +21,7 @@ export async function get_incidence(q, ds) {
 		for (const d of results.lst) {
 			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string (see comments in get_rows())
 			const chartId = d.key0
-			// determine time component (years from diagnosis to event)
-			// if time < min time since diagnosis, then set time to this min time
-			const { age_dx, age_event } = JSON.parse(d.val1)
-			const t = age_event - age_dx
-			const time = t < minTimeSinceDx ? minTimeSinceDx : t
+			const time = d.val1
 			const event = d.key1
 			const series = d.key2
 			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
