@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
-import { showDtDisco } from '../mds3/sampletable'
+import { plotSingleSampleGenomeQuantification } from '../mds3/sampletable'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
@@ -108,26 +108,44 @@ export function setInteractivity(self) {
 		if (!self.lassoOn) self.dom.tip.hide()
 		tip2.hide()
 		const target = event.target
-		if (target.tagName == 'path' && target.getAttribute('name') == 'serie') {
+
+		if (
+			self.state.termdbConfig.queries?.singleSampleGenomeQuantification &&
+			target.tagName == 'path' &&
+			target.getAttribute('name') == 'serie'
+		) {
 			self.dom.tooltip.hide()
 			const sample = event.target.__data__
+			sample.sample_id = sample.sample
 			self.dom.tip.clear()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
-			const menuDiv = self.dom.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(`Show disco plot`)
-				.on('click', event => {
-					showDtDisco(event, sample.sample, {}, true)
-					self.dom.tip.hide()
-				})
-			self.dom.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(`Show methylation array`)
-				.on('click', e => {
-					self.dom.tip.hide()
-				})
+			for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				const menuDiv = self.dom.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(k)
+					.on('click', event => {
+						const menu = new Menu()
+						menu.show(event.clientX, event.clientY)
+
+						plotSingleSampleGenomeQuantification(
+							self.state.termdbConfig,
+							self.state.vocab.dslabel,
+							k,
+							sample,
+							menu.d,
+							self.app.opts.genome
+						)
+						self.dom.tip.hide()
+					})
+				// self.dom.tip.d
+				// 	.append('div')
+				// 	.attr('class', 'sja_menuoption sja_sharp_border')
+				// 	.text(`Show methylation array`)
+				// 	.on('click', e => {
+				// 		self.dom.tip.hide()
+				// 	})
+			}
 		}
 	}
 
@@ -258,7 +276,6 @@ export function setInteractivity(self) {
 			const items = []
 			for (const chart of self.charts)
 				for (const sample of chart.cohortSamples) {
-					console.log(sample)
 					if (
 						sample.sample.toUpperCase().includes(value) ||
 						sample.category?.toUpperCase().includes(value) ||
