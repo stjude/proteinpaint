@@ -99,7 +99,14 @@ export async function displaySampleTable(samples, args) {
 				text: k,
 				callback: async (event, i) => {
 					args.tk.menutip.clear().show(200, event.clientY)
-					await plotSingleSampleGenomeQuantification(args.tk, k, samples[i], args.tk.menutip.d, args.block.genome)
+					await plotSingleSampleGenomeQuantification(
+						args.tk.mds,
+						args.tk.mds.label,
+						k,
+						samples[i],
+						args.tk.menutip.d,
+						args.block.genome
+					)
 				}
 			}
 			params.columnButtons.push(btn)
