@@ -1,11 +1,15 @@
 import { showGenesetEdit } from '../genesetEdit'
-const tape = require('tape')
-const d3s = require('d3-selection')
+import tape from 'tape'
+import { select } from 'd3-selection'
 import { hg38, hg19 } from '../../test/testdata/genomes'
 import { Menu } from '#dom/menu'
 
+/*************************
+ reusable helper functions
+**************************/
+
 function getHolder() {
-	return d3s.select('body').append('div')
+	return select('body').append('div')
 }
 
 function sleep(ms) {
