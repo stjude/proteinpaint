@@ -125,13 +125,16 @@ interface RangesEntry {
     stopunbounded: boolean
 }
 
-interface TvsFilter {
+interface BaseTvsFilter {
     isnot?: boolean,
-    values?: never[],
     ranges?: RangesEntry[]
 }
 
-interface FilterTermEntry extends TvsTerm {
+interface TvsFilter extends BaseTvsFilter {
+    values?: (string | number)[]
+}
+
+interface FilterTermEntry extends BaseTvsFilter {
     parent_id: string | null, 
     isleaf: boolean, 
     values?: FilterValues,
@@ -140,8 +143,9 @@ interface FilterTermEntry extends TvsTerm {
     max?: number
 }
 
-interface FilterLstTvs extends TvsFilter {
-    term: FilterTermEntry
+interface FilterLstTvs extends BaseTvsFilter {
+    term: FilterTermEntry,
+    values: (string | number | FilterValues )[]
 }
 
 interface FilterLstEntry {
