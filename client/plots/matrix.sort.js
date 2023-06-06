@@ -121,9 +121,7 @@ function getSortSamplesByHits(st, self, rows, s) {
 	for (const row of rows) {
 		if (!hits[row.sample]) hits[row.sample] = 0
 		if ($id in row) {
-			const t = self.termOrder.find(t => t.tw.$id === $id)
-			const { countedValues } = getFilteredValues(row[$id], t.tw, t.grp)
-			hits[row.sample] += countedValues.length // ? 1 : 0
+			hits[row.sample] += row[$id].countedValues?.length || 0
 		}
 	}
 	return (a, b) => (hits[a.sample] == hits[b.sample] ? 0 : hits[a.sample] > hits[b.sample] ? -1 : 1)
@@ -226,11 +224,12 @@ function getSortSamplesByClass(st, self, rows, s) {
 			cls.set(row.sample, nextRound)
 			return
 		}
-		if (sortSamples.filter && !findMatchingValue(row[$id].values, sortSamples.filter.values)) {
+		const values = row[$id].renderedValues || row[$id].filteredValues || row[$id].values
+		if (sortSamples.filter && !findMatchingValue(values, sortSamples.filter.values)) {
 			cls.set(row.sample, nextRound)
 			return
 		}
-		const indices = row[$id].values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
+		const indices = values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
 		cls.set(row.sample, indices.length ? Math.min(...indices) : nextRound)
 		// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
 		// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
@@ -257,41 +256,6 @@ function findMatchingValue(annoValues, filterValues) {
 				return true
 			}
 		}
-	}
-}
-
-function getFilteredValues(anno, tw, grp) {
-	const values = 'value' in anno ? [anno.value] : anno.values
-	if (!values) return { filteredValues: null, countedValues: null }
-	const valueFilter = tw.valueFilter || grp.valueFilter
-
-	const filteredValues = values.filter(v => {
-		/*** do not count wildtype and not tested as hits ***/
-		if (tw.term.type == 'geneVariant' && v.class == 'WT') return false
-		if (!valueFilter) return true
-
-		if (valueFilter.type == 'tvs') {
-			const matched = true
-			// quick fix: assume tvs values are joined by "and", not "or"
-			// TODO: reuse the filter.js code/data format for a more flexible filter configuration
-			for (const vf of valueFilter.tvs.values) {
-				if (v[vf.key] === vf.value && valueFilter.isnot) return false
-				else if (v[vf.key] !== vf.value && !valueFilter.isnot) return false
-			}
-			return matched
-		} else {
-			// TODO: handle non-tvs type value filter
-			throw `unknown matrix value filter type='${valueFilter.type}'`
-		}
-	})
-
-	return {
-		filteredValues,
-		countedValues: filteredValues.filter(v => {
-			/*** do not count wildtype and not tested as hits ***/
-			if (tw.term.type == 'geneVariant' && (v.class == 'WT' || v.class == 'Blank')) return false
-			return true
-		})
 	}
 }
 

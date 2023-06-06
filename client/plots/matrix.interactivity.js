@@ -935,6 +935,7 @@ function setTermActions(self) {
 						by: 'class',
 						// TODO: may use ds-defined default order instead of hardcoding here
 						order: [
+							'Fuserna',
 							'CNV_loss',
 							'CNV_amp',
 							// truncating

@@ -479,10 +479,7 @@ class Matrix {
 		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
 		const filteredValues = values.filter(v => {
-			/*** do not count wildtype and not tested as hits ***/
-			if (tw.term.type == 'geneVariant' && v.class == 'WT') return false
 			if (!valueFilter) return true
-
 			if (valueFilter.type == 'tvs') {
 				const matched = true
 				// quick fix: assume tvs values are joined by "and", not "or"
