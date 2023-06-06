@@ -5,6 +5,7 @@ import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
 import { first_genetrack_tolist } from '../common/1stGenetk'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 ********************** EXPORTED
@@ -290,16 +291,38 @@ function printSampleName(sample, tk, div, block) {
 				.text(k)
 				.on('click', async event => {
 					tk.menutip.clear().show(200, event.clientY)
-					await plotSingleSampleGenomeQuantification(tk, k, sample, tk.menutip.d, block.genome)
+					await plotSingleSampleGenomeQuantification(tk.mds, tk.mds.label, k, sample, tk.menutip.d, block.genome)
 				})
 		}
 	}
 }
 
-async function plotSingleSampleGenomeQuantification(tk, queryKey, sample, holder, genomeObj) {
-	const q = tk.mds.queries.singleSampleGenomeQuantification[queryKey]
-	// { get(), positiveColor, negativeColor, sample_id_key}
-	const data = await q.get(sample[q.sample_id_key])
+/*
+termdbConfig = {}
+	.queries{}
+		.singleSampleGenomeQuantification{ k: {} }
+			{ positiveColor, negativeColor, sample_id_key=str, singleSampleGbtk=str }
+		.singleSampleGbtk{ k: {} }
+dslabel=str
+	as on vocab.dslabel
+queryKey=str
+	a key in singleSampleGenomeQuantification{}
+sample={}
+	must have value for key of singleSampleGenomeQuantification[queryKey].sample_id_key
+holder
+genomeObj={}
+	client side genome obj
+*/
+export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel, queryKey, sample, holder, genomeObj) {
+	const q = termdbConfig.queries.singleSampleGenomeQuantification[queryKey]
+
+	const body = {
+		genome: genomeObj.name,
+		dslabel,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
+		singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
+	}
+	const data = await dofetch3('mds3', { body })
 	if (data.error) return holder.append('div').text(data.error)
 
 	const img = holder
@@ -308,7 +331,7 @@ async function plotSingleSampleGenomeQuantification(tk, queryKey, sample, holder
 		.attr('height', data.canvasHeight)
 		.attr('src', data.src)
 
-	const q2 = tk.mds.queries.singleSampleGbtk?.[q.singleSampleGbtk]
+	const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
 	if (!q2) return
 
 	// !!
@@ -338,8 +361,15 @@ async function plotSingleSampleGenomeQuantification(tk, queryKey, sample, holder
 			bb.jump_1basedcoordinate({ chr, start, stop })
 			return
 		}
-		// load block
-		const d2 = await q2.get(sample[q2.sample_id_key])
+
+		// block is not present yet. load block
+
+		const body = {
+			genome: genomeObj.name,
+			dslabel,
+			singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] }
+		}
+		const d2 = await dofetch3('mds3', { body })
 		// d2={path:str}
 		if (!d2.path) return // no file
 		// has bedgraph file, load block
@@ -359,7 +389,7 @@ async function plotSingleSampleGenomeQuantification(tk, queryKey, sample, holder
 
 		bb = new _.Block({
 			genome: genomeObj,
-			holder: tk.menutip.d.append('div'),
+			holder: holder.append('div'),
 			nobox: true,
 			tklst,
 			chr,

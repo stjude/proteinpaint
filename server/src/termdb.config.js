@@ -113,10 +113,25 @@ function addGenomicQueries(c, ds, genome) {
 		defaultCoord: q.defaultCoord || genome.defaultcoord
 	}
 	const q2 = c.queries
+	// copy from q{} to q2{}
 	if (q.defaultBlock2GeneMode) q2.defaultBlock2GeneMode = q.defaultBlock2GeneMode
 	if (q.snvindel) q2.snvindel = true
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
 	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes.arguments
+	if (q.singleSampleGenomeQuantification) {
+		q2.singleSampleGenomeQuantification = {}
+		for (const k in q.singleSampleGenomeQuantification) {
+			q2.singleSampleGenomeQuantification[k] = JSON.parse(JSON.stringify(q.singleSampleGenomeQuantification[k]))
+			delete q2.singleSampleGenomeQuantification[k].folder
+		}
+	}
+	if (q.singleSampleGbtk) {
+		q2.singleSampleGbtk = {}
+		for (const k in q.singleSampleGbtk) {
+			q2.singleSampleGbtk[k] = JSON.parse(JSON.stringify(q.singleSampleGbtk[k]))
+			delete q2.singleSampleGbtk[k].folder
+		}
+	}
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset

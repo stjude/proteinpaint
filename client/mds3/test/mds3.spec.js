@@ -15,7 +15,7 @@ geneSearch4GDCmds3
 
 ### ash dataset is based on bcf file with samples
 ASH - gene BCR
-IHG - gene p53
+Mbmeta - gene p53
 
 ### clinvar dataset is based on sample-less bcf file
 Clinvar - gene kras
@@ -223,8 +223,7 @@ tape('ASH - gene BCR', test => {
 	}
 })
 
-tape.skip('IHG - gene p53', test => {
-	// only works with sjpp branch
+tape('Mbmeta - gene p53', test => {
 	const holder = getHolder()
 
 	runproteinpaint({
@@ -232,7 +231,7 @@ tape.skip('IHG - gene p53', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'p53',
-		tracks: [{ type: 'mds3', dslabel: 'IHG', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'MB_meta_analysis', callbackOnRender }]
 	})
 	async function callbackOnRender(tk, bb) {
 		test.ok(tk.skewer.data.length > 0, 'mds3 tk should be showing some skewers')
@@ -269,7 +268,7 @@ tape.skip('IHG - gene p53', test => {
 		test.pass(`clicking 2nd button ${name} the menutip shows`)
 		const img = await detectOne({ elem: tk.menutip.d.node(), selector: 'img' })
 		test.ok(img, '<img> found in menutip')
-		// TODO click at a particular position on img
+		// TODO click at a particular position on img, detect if block shows up
 	}
 })
 

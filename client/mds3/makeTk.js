@@ -117,8 +117,6 @@ export async function makeTk(tk, block) {
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
 	mayaddGetter_singleSampleMutation(tk, block)
-	mayaddGetter_singleSampleGenomeQuantification(tk, block)
-	mayaddGetter_singleSampleGbtk(tk, block)
 
 	mayInitSkewer(tk) // tk.skewer{} may be added
 
@@ -412,43 +410,6 @@ function mayaddGetter_singleSampleMutation(tk, block) {
 		if (data.error) throw data.error
 		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
 		return data.mlst
-	}
-}
-
-function mayaddGetter_singleSampleGenomeQuantification(tk, block) {
-	if (!tk.mds.queries?.singleSampleGenomeQuantification) return
-	for (const k in tk.mds.queries.singleSampleGenomeQuantification) {
-		tk.mds.queries.singleSampleGenomeQuantification[k].get = async sample => {
-			const body = {
-				genome: block.genome.name,
-				dslabel: tk.mds.label,
-				devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
-				singleSampleGenomeQuantification: { dataType: k, sample }
-			}
-			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-			if (tk.token) headers['X-Auth-Token'] = tk.token
-			const data = await dofetch3('mds3', { body, headers })
-			if (data.error) throw data.error
-			return data
-		}
-	}
-}
-
-function mayaddGetter_singleSampleGbtk(tk, block) {
-	if (!tk.mds.queries?.singleSampleGbtk) return
-	for (const k in tk.mds.queries.singleSampleGbtk) {
-		tk.mds.queries.singleSampleGbtk[k].get = async sample => {
-			const body = {
-				genome: block.genome.name,
-				dslabel: tk.mds.label,
-				singleSampleGbtk: { dataType: k, sample }
-			}
-			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-			if (tk.token) headers['X-Auth-Token'] = tk.token
-			const data = await dofetch3('mds3', { body, headers })
-			if (data.error) throw data.error
-			return data
-		}
 	}
 }
 
