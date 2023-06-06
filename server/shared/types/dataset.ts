@@ -40,6 +40,8 @@ interface DsinfoEntry {
     v: string
 }
 
+/*** types and interfaces supporting Termdb interface ***/
+
 interface InfoFieldsEntry {
     name: string,
     key: string,
@@ -58,6 +60,8 @@ interface VariablesRange2VariantsArgs {
     rglst: GenomicPositionEntry[]
 }
 
+type Chr2bcffile = { [index: string]: string }
+
 interface GDCRangeEntry {
     query: string,
     variables: (p: VariablesRange2VariantsArgs) => void
@@ -67,6 +71,7 @@ interface ByRangeEntry {
     bcffile?: string,
     file?: string
     infoFields?: InfoFieldsEntry[],
+    chr2bcffile?: Chr2bcffile,
     //GDC
     gdcapi?: GDCRangeEntry
 }
@@ -79,9 +84,11 @@ interface VariantUrl {
 }
 
 interface URLEntry {
-    base: string,
+    base?: string,
     key?: string,
-    namekey?: string
+    namekey?: string,
+    label?: string,
+    url?: string
 }
 
 interface SkewerRim {
@@ -108,8 +115,57 @@ interface SnvIndelFormat {
     [index: string]: SnvIndelFormatEntry
 }
 
+interface FilterValues {
+    [ index: string | number ]: { label: string }
+}
+
+interface RangesEntry {
+    start: number, 
+    startinclusive: boolean,
+    stopunbounded: boolean
+}
+
+interface TvsFilter {
+    isnot?: boolean,
+    values?: never[],
+    ranges?: RangesEntry[]
+}
+
+interface FilterTermEntry extends TvsTerm {
+    parent_id: string | null, 
+    isleaf: boolean, 
+    values?: FilterValues,
+    tvs?: TvsFilter,
+    min?: number,
+    max?: number
+}
+
+interface FilterLstTvs extends TvsFilter {
+    term: FilterTermEntry
+}
+
+interface FilterLstEntry {
+    type: string,
+    tvs: FilterLstTvs
+}
+
+interface Filter {
+    type: string,
+    join: string,
+    in: boolean,
+    lst?: FilterLstEntry[],
+}
+
+type VariantFilterOpts = { joinWith: string[] }
+
+interface VariantFilter {
+    opts: VariantFilterOpts,
+    filter: Filter,
+    terms: FilterTermEntry[]
+}
+
 interface SnvIndel {
-    forTrack: boolean,
+    forTrack?: boolean,
     byrange: ByRangeEntry,
     variantUrl?: VariantUrl,
     infoUrl?: URLEntry[],
@@ -117,7 +173,8 @@ interface SnvIndel {
     format4filters?: Array<string>,
     byisoform?: GdcApi,
     m2csp?: M2Csq,
-    format?: SnvIndelFormat
+    format?: SnvIndelFormat,
+    variant_filter?: VariantFilter
 }
 
 interface SvFusion {
@@ -167,6 +224,8 @@ interface Queries{
     trackLst?: TrackLstEntry[]
 }
 
+/*** types and interfaces supporting Termdb ***/
+
 interface TermIds {
     [index: string]: string
 }
@@ -182,7 +241,9 @@ interface SelectCohortValuesEntry {
 interface SelectCohortEntry {
     term: { id: string, type: string },
     prompt: string,
-    values: SelectCohortValuesEntry[]
+    values: SelectCohortValuesEntry[],
+    description?: string,
+    asterisk?: string
 }
 
 interface MissingAccess{
@@ -212,12 +273,12 @@ interface MatrixSettingsControlLabels {
     sample: string
 }
 
-interface FilterValuesEntry {
+interface TieBreakerFilterValuesEntry {
     dt: number
 }
 
 interface TieBreakerFilter {
-    values: FilterValuesEntry[]
+    values: TieBreakerFilterValuesEntry[]
 }
 
 interface TieBreakersEntry {
@@ -271,24 +332,58 @@ interface MultipleTestingCorrection {
     skipLowSampleSize: boolean
 }
 
-interface Termdb {
+interface TvsTerm {
+    id: string, 
+    type: string,
+    name: string
+}
+
+interface TvsValues {
+    key?: string,
+    label: string
+}
+
+interface Tvs {
+    term: TvsTerm,
+    values: TvsValues[],
+}
+
+interface PCfileBySubcohort {
+    [index: string]: { file: string }
+}
+
+interface RestrictAncestriesEntry {
+    name: string
+    tvs: Tvs,
+    PCcount: number,
+    PCfileBySubcohort: PCfileBySubcohort
+}
+
+/*** types and interfaces supporting Cohort interface ***/
+interface Termdb { 
     displaySampleIds?: boolean,
     minTimeSinceDx?: number,
     ageEndOffset?: number,
+    //Cox
     coxTimeMsg?: string,
     coxStartTimeMsg?: string,
     termIds?: TermIds,
     selectCohort?: SelectCohortEntry,
     dataDownloadCatch?: DataDownloadCatch,
-    scatterplots?: Scatterplots,
     termid2totalsize2?: GdcApi,
     additionalSampleAttributes?: Array<string>,
     useLower?: boolean,
     alwaysShowBranchTerms?: boolean,
+    //Plots
+    scatterplots?: Scatterplots,
     matrix?: Matrix,
     matrixplots?: MatrixPlots
     allowedTermTypes?: Array<string>,
-    multipleTestingCorrection?: MultipleTestingCorrection
+    multipleTestingCorrection?: MultipleTestingCorrection,
+    logscaleBase2?: boolean,
+    minimumSampleAllowed4filter?: number
+    restrictAncestries?: RestrictAncestriesEntry[],
+    helpPages?: URLEntry[],
     //For the GDC
     dictionary?: GdcApi,
     allowCaseDetails?: AllowCaseDetails
@@ -341,7 +436,8 @@ export interface Cohort {
     allowedChartTypes?: Array<string>,
     mutationset?: MutationSet[],
 	db: { file: string }
-	termdb?: Termdb
+	termdb?: Termdb,
+    scatterplots?: Scatterplots
 }
 
 export interface Mds3 {
