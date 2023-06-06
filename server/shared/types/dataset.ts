@@ -142,13 +142,29 @@ interface TopMutatedGenes {
     arguments: ArgumentsEntry[]
 }
 
+interface TklstEntry {
+    assay?: string,
+    type: string,
+    name: string,
+    sample?: string,
+    file: string,
+    defaultShown?: boolean
+}
+
+interface TrackLstEntry {
+    isfacet: boolean,
+    name: string,
+    tklst: TklstEntry[]
+}
+
 interface Queries{
     defaultBlock2GeneMode?: boolean
-    snvindel: SnvIndel,
+    snvindel?: SnvIndel,
     svfusion?: SvFusion,
     singleSampleMutation?: SingleSampleMutation
     geneExpression?: { file: string },
-    topMutatedGenes?: TopMutatedGenes
+    topMutatedGenes?: TopMutatedGenes,
+    trackLst?: TrackLstEntry[]
 }
 
 interface TermIds {
@@ -180,7 +196,7 @@ interface DataDownloadCatch {
     jwt: { [index:string]: string }
 }
 
-interface PlotsEntry {
+interface ScatterPlotsEntry {
     name: string,
     dimension: number, 
     file: string, 
@@ -188,7 +204,7 @@ interface PlotsEntry {
 }
 
 interface Scatterplots {
-    plots: PlotsEntry[]
+    plots: ScatterPlotsEntry[]
 }
 
 interface MatrixSettingsControlLabels {
@@ -235,9 +251,24 @@ interface Matrix {
     mclass: Mclass
 }
 
+interface MatrixPlotsEntry {
+    name: string,
+    file: string,
+    getConfig: (f: any) => void,
+}
+
+interface MatrixPlots {
+    plots: MatrixPlotsEntry[]
+}
+
 interface AllowCaseDetails {
     sample_id_key: string,
     terms: Array<string>
+}
+
+interface MultipleTestingCorrection {
+    method: string,
+    skipLowSampleSize: boolean
 }
 
 interface Termdb {
@@ -250,29 +281,65 @@ interface Termdb {
     selectCohort?: SelectCohortEntry,
     dataDownloadCatch?: DataDownloadCatch,
     scatterplots?: Scatterplots,
-    termid2totalsize2: {}, //Empty in ash.hg38
+    termid2totalsize2?: GdcApi,
     additionalSampleAttributes?: Array<string>,
     useLower?: boolean,
     alwaysShowBranchTerms?: boolean,
-    matrix?: Matrix
+    matrix?: Matrix,
+    matrixplots?: MatrixPlots
+    allowedTermTypes?: Array<string>,
+    multipleTestingCorrection?: MultipleTestingCorrection
     //For the GDC
-    termid2totalsize?: GdcApi,
     dictionary?: GdcApi,
     allowCaseDetails?: AllowCaseDetails
 }
 
-type BaseTermEntry = { id: string, q: {} }
+type SimpleTermEntry = { 
+    id: string, 
+    q: {}, 
+    baseURL?: string //Only appears as a quick fix in SAMD9-SAMD9L.hg19?
+}
 
 interface Variant2Samples extends GdcApi {
     variantkey: string,
-    twLst: BaseTermEntry[],
-    sunburst_twLst: BaseTermEntry[],
+    twLst: SimpleTermEntry[],
+    sunburst_twLst?: SimpleTermEntry[],
     url?: URLEntry,
+}
+
+interface MutationSet {
+    snvindel: string,
+    cnv: string,
+    fusion: string
+}
+
+interface BaseDtEntry {
+    term_id: string,
+    yes: { value: Array<string> },
+    no: { value: Array<string> }
+}
+
+interface SNVByOrigin {
+    [index: string]: BaseDtEntry
+}
+
+interface DtEntrySNV {
+    byOrigin: SNVByOrigin
+}
+
+interface ByDt {
+    //SNVs differentiate by sample origin. Non-SNV, no differentiation
+    [index: number]: DtEntrySNV | BaseDtEntry
+}
+
+interface AssayAvailability {
+    byDt: ByDt
 }
 
 //Shared with genome.ts
 export interface Cohort {
-    allowedChartTypes: Array<string>
+    allowedChartTypes?: Array<string>,
+    mutationset?: MutationSet[],
 	db: { file: string }
 	termdb?: Termdb
 }
@@ -282,9 +349,11 @@ export interface Mds3 {
     dsinfo?: DsinfoEntry[],
     genome?: string,
     queries?: Queries,
+    cohort?: Cohort,
     termdb?: Termdb,
     validate_filter0?: (f: any) => void,
     ssm2canonicalisoform?: GdcApi,
-    variant2samples?: Variant2Samples
+    variant2samples?: Variant2Samples,
+    assayAvailability?: AssayAvailability
 }
 
