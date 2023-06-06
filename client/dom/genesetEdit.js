@@ -1,7 +1,6 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
-import { getGdcCohort } from '../src/launchGdcMatrix'
 export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], vocabApi }) {
 	const api = {
 		dom: {
