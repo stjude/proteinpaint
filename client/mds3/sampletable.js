@@ -22,6 +22,7 @@ samples2columnsRows()
 
 ********************** INTERNAL
 make_singleSampleTable
+	plotSingleSampleGenomeQuantification
 feedSample2selectCallback
 
 
@@ -104,7 +105,7 @@ export async function displaySampleTable(samples, args) {
 						args.tk.mds.label,
 						k,
 						samples[i],
-						args.tk.menutip.d,
+						args.tk.menutip.d.append('div').style('margin', '20px'),
 						args.block.genome
 					)
 				}
@@ -298,13 +299,23 @@ function printSampleName(sample, tk, div, block) {
 				.text(k)
 				.on('click', async event => {
 					tk.menutip.clear().show(200, event.clientY)
-					await plotSingleSampleGenomeQuantification(tk.mds, tk.mds.label, k, sample, tk.menutip.d, block.genome)
+					await plotSingleSampleGenomeQuantification(
+						tk.mds,
+						tk.mds.label,
+						k,
+						sample,
+						tk.menutip.d.append('div').style('margin', '20px'),
+						block.genome
+					)
 				})
 		}
 	}
 }
 
 /*
+make a plot for the "singleSampleGenomeQuantification" directive, as well as the subsequent block-launching from clicking the image
+this function is not made as a vocab api method as it has a lot of dom and interactivity things
+
 termdbConfig = {}
 	.queries{}
 		.singleSampleGenomeQuantification{ k: {} }
@@ -313,7 +324,7 @@ termdbConfig = {}
 dslabel=str
 	as on vocab.dslabel
 queryKey=str
-	a key in singleSampleGenomeQuantification{}
+	a key of singleSampleGenomeQuantification{}
 sample={}
 	must have value for key of singleSampleGenomeQuantification[queryKey].sample_id_key
 holder
@@ -332,13 +343,23 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 	const data = await dofetch3('mds3', { body })
 	if (data.error) return holder.append('div').text(data.error)
 
+	// optional query, if present, will enable clicking on genome-wide img to launch block
+	const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
+
+	// description
+	holder.append('div').text(`${sample[q.sample_id_key]} - ${q.description || queryKey}`)
+	if (q2) {
+		holder
+			.append('div')
+			.text(`Click a chromosomal position to zoom in and view ${q2.description || q.singleSampleGbtk}`)
+	}
+
 	const img = holder
 		.append('img')
 		.attr('width', data.canvasWidth)
 		.attr('height', data.canvasHeight)
 		.attr('src', data.src)
 
-	const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
 	if (!q2) return
 
 	// !!
