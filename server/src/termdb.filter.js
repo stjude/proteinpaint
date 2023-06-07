@@ -50,6 +50,8 @@ async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .CTEs: []
 			// .values:[]
 			// .CTEname
+		} else if (item.tvs.term.type == 'survival') {
+			f = get_categorical(item.tvs, CTEname_i)
 		} else if (item.tvs.term.type == 'samplelst') {
 			f = get_samplelst(item.tvs, CTEname_i)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
