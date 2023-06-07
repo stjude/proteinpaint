@@ -9,6 +9,7 @@ export default class ViewModel {
 
     width: number
     height: number
+    legendHeight: number
 
     rings: Rings
     legend: Legend;
@@ -23,8 +24,11 @@ export default class ViewModel {
         this.legend = legend
         this.fusions = fusions
 
-        this.width = 2 * (this.settings.rings.labelLinesInnerRadius + this.settings.rings.labelsToLinesDistance + this.settings.padding)
-        this.height = this.width
+        this.width = 2 * (this.settings.rings.labelLinesInnerRadius + this.settings.rings.labelsToLinesDistance + this.settings.horizontalPadding)
+        this.height = 2 * (this.settings.rings.labelLinesInnerRadius + this.settings.rings.labelsToLinesDistance + this.settings.verticalPadding)
+
+        // TODO Calculate legendHeight
+        this.legendHeight = 400
     }
 
     getElements(ringType: RingType): Array<Arc> {

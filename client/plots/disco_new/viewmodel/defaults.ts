@@ -26,7 +26,9 @@ export default function discoDefaults(overrides = {}): Settings {
                 labelsToLinesGap: 2,
 
             },
-            padding: 70,
+
+            verticalPadding: 70,
+            horizontalPadding: 200,
 
             layerScaler: 1,
             padAngle: 0.002, //0.01, //0.04,
