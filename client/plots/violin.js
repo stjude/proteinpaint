@@ -83,12 +83,15 @@ class ViolinPlot {
 			},
 			{
 				type: 'overlay',
+				title: 'Overlay data',
 				//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
 				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
+
 				usecase: { target: 'violin', detail: 'term2' }
 			},
 			{
 				label: 'Orientation',
+				title: 'Orientation of the chart',
 				type: 'radio',
 				chartType: 'violin',
 				settingsKey: 'orientation',
@@ -96,10 +99,19 @@ class ViolinPlot {
 			},
 			{
 				label: 'Data symbol',
+				title: 'Symbol type',
 				type: 'radio',
 				chartType: 'violin',
 				settingsKey: 'datasymbol',
 				options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
+			},
+			{
+				label: 'Scale',
+				title: 'Axis scale',
+				type: 'radio',
+				chartType: 'violin',
+				settingsKey: 'unit',
+				options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
 			},
 			{
 				label: 'Symbol size',
@@ -112,6 +124,7 @@ class ViolinPlot {
 			},
 			{
 				label: 'Stroke width',
+				title: 'Size of Symbol stroke',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'strokeWidth',
@@ -119,13 +132,7 @@ class ViolinPlot {
 				max: 2,
 				min: 0.1
 			},
-			{
-				label: 'Scale',
-				type: 'radio',
-				chartType: 'violin',
-				settingsKey: 'unit',
-				options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
-			},
+
 			{
 				label: 'Plot length',
 				title: 'Length of the plot',
@@ -138,7 +145,8 @@ class ViolinPlot {
 				debounceInterval: 1000
 			},
 			{
-				label: 'Min plot thickness',
+				label: 'Min thickness',
+				title: 'Minimum plot thickness',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'minThickness',
@@ -148,7 +156,8 @@ class ViolinPlot {
 				debounceInterval: 1000
 			},
 			{
-				label: 'Max plot thickness',
+				label: 'Max thickness',
+				title: 'Maximum plot thickness',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'maxThickness',
@@ -252,7 +261,7 @@ class ViolinPlot {
 	validateArg() {
 		const { term, term2, settings } = this.config
 		const s = settings.violin
-		// const thicknessMargin = s.orientation == 'horizontal' ? top
+		const thicknessMargin = s.orientation === 'horizontal' ? 70 : 55
 		const arg = {
 			filter: this.state.termfilter.filter,
 			svgw: s.svgw / window.devicePixelRatio,
@@ -266,7 +275,7 @@ class ViolinPlot {
 			unit: s.unit,
 			minThickness: s.minThickness,
 			maxThickness: s.maxThickness,
-			screenThickness: window.document.body.clientWidth - 100
+			screenThickness: window.document.body.clientWidth - thicknessMargin
 		}
 		if (s.plotThickness) arg.plotThickness = s.plotThickness
 

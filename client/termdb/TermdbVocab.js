@@ -416,7 +416,7 @@ export class TermdbVocab extends Vocab {
 				devicePixelRatio: window.devicePixelRatio,
 				minThickness: 60,
 				maxThickness: 150,
-				screenThickness: window.document.body.clientWidth - 100
+				screenThickness: arg.screenThickness
 			},
 			arg,
 			_body
