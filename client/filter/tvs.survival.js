@@ -24,18 +24,26 @@ export const handler = {
 
 async function fillMenu(self, div, tvs) {
 	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || {})
-	console.log(data)
 	const sortedVals = data.lst.sort((a, b) => {
 		return b.samplecount - a.samplecount
 	})
-
-	const callback = indexes => {
+	const cutoffDiv = div
+		.append('div')
+		.style('font-size', '0.8em')
+		.style('padding-left', '4px')
+	cutoffDiv.append('label').text('Time to event')
+	const cutoffInput = cutoffDiv.append('input').attr('type', 'number')
+	if (tvs.q?.cutoff) cutoffInput.node().value = tvs.q.cutoff
+	const tableCallback = indexes => {
 		//update term values by ckeckbox values
 
 		// for categorical terms, force v.key to a string
 		const new_tvs = JSON.parse(JSON.stringify(tvs))
 		delete new_tvs.groupset_label
 		new_tvs.values = sortedVals.filter((v, index, array) => indexes.includes(index))
+		const cutoff = cutoffInput.node().value
+		if (cutoff) new_tvs.q = { cutoff }
+		else new_tvs.q = {}
 		try {
 			validateCategoricalTvs(new_tvs)
 		} catch (e) {
@@ -46,7 +54,8 @@ async function fillMenu(self, div, tvs) {
 		self.opts.callback(new_tvs)
 	}
 
-	const values_table = self.makeValueTable(div, tvs, sortedVals, callback).node()
+	const tableDiv = div.append('div')
+	const values_table = self.makeValueTable(tableDiv, tvs, sortedVals, tableCallback).node()
 }
 
 function term_name_gen(d) {

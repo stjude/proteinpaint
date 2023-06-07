@@ -184,7 +184,7 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	self.makeValueTable = function(div, tvs, values, callback = null) {
+	self.makeValueTable = function(div, tvs, values, callback) {
 		if (values?.length == 0) return div
 		const containerDiv = div.append('div').style('font-size', '0.8rem')
 		self.clusionNote = containerDiv
@@ -207,7 +207,8 @@ function setRenderers(self) {
 			const bar_td = `<div style='margin:1px 10px;width:${barWidth}px;height:15px;background-color:#ddd'>`
 			rows.push([{ value: label }, { html: bar_td }])
 			let checked = false
-			if (tvs.term.type == 'categorical') checked = tvs.values.find(a => a.key === value.key)
+			if (tvs.term.type == 'categorical' || tvs.term.type == 'survival')
+				checked = tvs.values.find(a => a.key === value.key)
 			else if (tvs.term.type == 'float' || tvs.term.type == 'integer')
 				checked = tvs.ranges.find(a => String(a.value) === value.value.toString())
 			else if (tvs.term.type == 'condition') checked = tvs.values.find(a => String(a.key) === String(value.key))
