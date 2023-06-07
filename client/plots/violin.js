@@ -125,6 +125,37 @@ class ViolinPlot {
 				chartType: 'violin',
 				settingsKey: 'unit',
 				options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
+			},
+			{
+				label: 'Plot length',
+				title: 'Length of the plot',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'svgw',
+				step: 10,
+				max: 1000,
+				min: 500,
+				debounceInterval: 1000
+			},
+			{
+				label: 'Min plot thickness',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'minThickness',
+				step: 10,
+				max: 300,
+				min: 30,
+				debounceInterval: 1000
+			},
+			{
+				label: 'Max plot thickness',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'maxThickness',
+				step: 10,
+				max: 300,
+				min: 30,
+				debounceInterval: 1000
 			}
 		]
 
@@ -221,6 +252,7 @@ class ViolinPlot {
 	validateArg() {
 		const { term, term2, settings } = this.config
 		const s = settings.violin
+		// const thicknessMargin = s.orientation == 'horizontal' ? top
 		const arg = {
 			filter: this.state.termfilter.filter,
 			svgw: s.svgw / window.devicePixelRatio,
@@ -231,7 +263,10 @@ class ViolinPlot {
 			strokeWidth: s.strokeWidth,
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
-			unit: s.unit
+			unit: s.unit,
+			minThickness: s.minThickness,
+			maxThickness: s.maxThickness,
+			screenThickness: window.document.body.clientWidth - 100
 		}
 		if (s.plotThickness) arg.plotThickness = s.plotThickness
 
@@ -280,7 +315,9 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		rightMargin: 50,
 		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
 		lines: [],
-		unit: 'abs' // abs: absolute scale, log: log scale
+		unit: 'abs', // abs: absolute scale, log: log scale
+		minThickness: 60,
+		maxThickness: 150
 	}
 	return Object.assign(defaults, overrides)
 }
