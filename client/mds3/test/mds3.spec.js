@@ -249,7 +249,11 @@ tape('Mbmeta - gene p53', test => {
 		await testDisco(buttons[0], tk)
 		await testCnv(buttons[1], tk)
 
-		if (test._ok) holder.remove()
+		if (test._ok) {
+			holder.remove()
+			tk.itemtip.d.remove()
+			tk.menutip.d.remove()
+		}
 		test.end()
 	}
 	async function testDisco(btn, tk) {
@@ -258,7 +262,8 @@ tape('Mbmeta - gene p53', test => {
 		btn.dispatchEvent(new Event('click'))
 		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
 		test.pass(`clicking 1st button ${name} the menutip shows`)
-		// TODO detect plot in menutip.d
+		//const svg = await detectOne({elem: tk.menutip.d.node(), selector:'svg'})
+		//test.ok(svg, '<svg> created in tk.menutip.d as disco plot')
 	}
 	async function testCnv(btn, tk) {
 		const name = 'MethylationArray'
