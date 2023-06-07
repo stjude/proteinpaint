@@ -357,14 +357,5 @@ function createCanvasImg(q, result, ds) {
 function plotThickness(result, q) {
 	const tentativeThickness = q.screenThickness / result.plots.length
 	const plotThickness = Math.round(Math.max(q.minThickness, Math.min(tentativeThickness, q.maxThickness)))
-	// result.plots.length < 2
-	// 	? 150
-	// 	: result.plots.length >= 2 && result.plots.length < 5
-	// 	? 120
-	// 	: result.plots.length >= 5 && result.plots.length < 8
-	// 	? 90
-	// 	: result.plots.length >= 8 && result.plots.length < 11
-	// 	? 75
-	// 	: 60
 	return plotThickness
 }
