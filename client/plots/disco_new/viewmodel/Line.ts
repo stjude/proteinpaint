@@ -1,4 +1,4 @@
-import Point from "#plots/disco_new/viewmodel/Point";
+import Point from "./Point";
 
 export default class Line {
 

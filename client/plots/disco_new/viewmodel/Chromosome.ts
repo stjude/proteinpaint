@@ -1,17 +1,27 @@
-import Arc from "#plots/disco_new/viewmodel/Arc";
+import Arc from "./Arc";
+
 export default class Chromosome extends Arc {
-    key: string
-    start: number
-    size: number
-    factor: number
 
-    posbins: any[]
+    angle: number;
+    ccAngle: number;
 
-    constructor(key: string, start: number, size: number, factor: number) {
-        super();
-        this.key = key
-        this.start = start
-        this.size = size
-        this.factor = factor
+    posbins: Array<any> = []
+
+    constructor(readonly start: number,
+                readonly size: number,
+                readonly factor: number,
+                startAngle: number,
+                endAngle: number,
+                innerRadius: number,
+                outerRadius: number,
+                cssClass: string,
+                label: string,
+                padAngle = undefined,
+                width: number = -1,) {
+
+        super(startAngle, endAngle, innerRadius, outerRadius, cssClass, width, label, padAngle = undefined);
+
+        this.angle = (startAngle + endAngle) / 2
+        this.ccAngle = this.angle - Math.PI / 2
     }
 }

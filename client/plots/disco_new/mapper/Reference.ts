@@ -1,51 +1,65 @@
-import Chromosome from "#plots/disco_new/viewmodel/Chromosome";
+import Chromosome from "../viewmodel/Chromosome";
 
 export default class Reference {
 
-    chromosomes: Array<Chromosome>;
+    chromosomes: Array<Chromosome> = []
+    chromosomesOrder: Array<string> = []
     totalSize: number;
+
+    totalPadAngle: number;
+    totalChromosomesAngle: number;
+
+    private keysArray: Array<string> = []
+    private totalSizeArray: Array<number> = []
+    private chrSizesArray: Array<number> = []
 
     private settings: any;
 
     constructor(settings: any, chrSizes: any) {
         this.settings = settings
-        const chromosomes: Array<Chromosome> = []
+
+        this.chromosomesOrder = []
         let totalSize = 0
+        this.totalPadAngle = Object.keys(chrSizes).length * this.settings.padAngle
+        this.totalChromosomesAngle = 2 * Math.PI - this.totalPadAngle
+
+
         for (const chr in chrSizes) {
             const key = chr.slice(0, 3) === 'chr' ? chr.slice(3) : chr
-            const chromosome = new Chromosome(key, totalSize, chrSizes[chr], 1)
-            chromosomes.push(chromosome)
+            this.chromosomesOrder.push(chr)
+            this.keysArray.push(key)
+            this.totalSizeArray.push(totalSize)
+            this.chrSizesArray.push(chrSizes[chr])
+
             totalSize += chrSizes[chr]
         }
 
-        this.chromosomes = chromosomes
         this.totalSize = totalSize
 
-        // number of base pairs per pixel
-        const bpx = Math.floor(this.totalSize / (2 * Math.PI * settings.innerRadius))
+        let lastAngle: number = 0
 
-        for (const chr in chromosomes) {
-            const length = chromosomes[chr].size
-            const posbins = [] // positional bins
-            let bptotal = 0
-            while (bptotal < length) {
-                posbins.push({
-                    chr: chr,
-                    start: bptotal,
-                    stop: bptotal + bpx - 1
-                })
-                bptotal += bpx
+        for (let i = 0; i < this.keysArray.length; i++) {
+            const chromosomeAngle = this.totalChromosomesAngle * (this.chrSizesArray[i] / totalSize)
+
+            const startAngle = (i == 0) ? this.settings.padAngle / 2 : lastAngle + this.settings.padAngle
+            const endAngle = (i == 0) ? this.settings.padAngle / 2 + chromosomeAngle : lastAngle + this.settings.padAngle + chromosomeAngle
+            const chromosome = new Chromosome(this.totalSizeArray[i],
+                this.chrSizesArray[i],
+                1,
+                startAngle,
+                endAngle,
+                this.settings.chromosomeInnerRadius,
+                this.settings.chromosomeInnerRadius + this.settings.chromosomeWidth,
+                "#AAA",
+                this.keysArray[i])
+
+            this.chromosomes.push(chromosome)
+
+            if (chromosome.endAngle != null) {
+                lastAngle = chromosome.endAngle
             }
-            chromosomes[chr].posbins = posbins
+
         }
 
-    }
-
-    getChrBin(data) {
-        const chrKey = typeof data.chr == 'string' ? data.chr.replace('chr', '') : data.chr
-        const chr = this.chromosomes.find(c => c.key == chrKey)
-        const start = data.position ? data.position : data.start ? data.start : 0
-        let bin = chr.posbins.find(p => p.stop > start)
-        return [chr, bin]
     }
 }
