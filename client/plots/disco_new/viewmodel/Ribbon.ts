@@ -1,4 +1,4 @@
-import Arc from "#plots/disco_new/viewmodel/Arc";
+import Arc from "./Arc";
 
 export default class Ribbon extends Arc{
 }

@@ -1,19 +1,30 @@
-import IRenderer from "#plots/disco_new/renderer/IRenderer";
-import ViewModel from "#plots/disco_new/viewmodel/ViewModel";
-import ArcRenderer from "#plots/disco_new/renderer/ArcRenderer";
-import LabelsRenderer from "#plots/disco_new/renderer/LabelsRenderer";
+import IRenderer from "./IRenderer";
+import ViewModel from "../viewmodel/ViewModel";
+import LegendRenderer from "./LegendRenderer";
+import {RingType} from "../viewmodel/RingType";
+import FusionRenderer from "./FusionRenderer";
 
-export class DiscoRenderer implements IRenderer {
-    private arcRenderer: ArcRenderer;
-    private labelsRenderer: LabelsRenderer;
+export class DiscoRenderer {
+    private renders: Map<RingType, IRenderer>;
+    private legendRenderer: LegendRenderer;
+    private fusionRenderer: FusionRenderer;
 
-    constructor() {
-        this.arcRenderer = new ArcRenderer()
-        this.labelsRenderer = new LabelsRenderer()
+    constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer) {
+        this.renders = renders
+        this.legendRenderer = legendRenderer
+        this.fusionRenderer = new FusionRenderer()
     }
 
     render(holder: any, viewModel: ViewModel) {
-        const svg = holder.append('svg')
+        const rootDiv = holder.append("div")
+
+        const svgDiv = rootDiv.append("div")
+            .style("display", "inline-block")
+            .style('width', "100%")
+            .style('text-align', "center")
+            .style('font-family', "Arial")
+
+        const svg = svgDiv.append('svg')
             .attr('width', viewModel.width)
             .attr('height', viewModel.height)
 
@@ -21,14 +32,19 @@ export class DiscoRenderer implements IRenderer {
             .attr('class', "mainG")
             .attr('transform', `translate(${viewModel.width / 2},${viewModel.height / 2})`);
 
-        this.arcRenderer.render(mainG, viewModel)
+        for (const rendererPair of this.renders) {
+            const ringType = rendererPair[0]
+            const renderer = rendererPair[1]
+            const elements = viewModel.getElements(ringType)
+            const collisions = viewModel.getCollisions(ringType)
 
-        this.labelsRenderer.render(mainG, viewModel)
+            renderer.render(mainG, elements, collisions)
+        }
+
+        this.fusionRenderer.render(mainG, viewModel.fusions)
+
+        this.legendRenderer.render(rootDiv, viewModel.legend)
+
+
     }
-}
-
-// TODO remove to other file
-function degrees_to_radians(degrees) {
-    var pi = Math.PI;
-    return degrees * (pi / 180);
 }

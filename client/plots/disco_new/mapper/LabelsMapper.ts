@@ -1,105 +1,58 @@
-import Data from "#plots/disco_new/mapper/Data";
-import {StateViewModelMapper} from "#plots/disco_new/mapper/StateViewModelMapper";
-import LabelProcessor from "#plots/disco_new/mapper/LabelProcessor";
-import Reference from "#plots/disco_new/mapper/Reference";
-import Label from "#plots/disco_new/viewmodel/Label";
+import Data from "./Data";
+import Reference from "./Reference";
+import Label from "../viewmodel/Label";
+import LabelFactory from "../viewmodel/LabelFactory";
+import MLabel from "../mapper/MLabel";
 
 export default class LabelsMapper {
 
-    private processors = {
-        labels: new LabelProcessor(),
-    }
-
     private settings: any;
     private sampleName: string;
-    private chromosomes: Reference;
+    private reference: Reference;
 
-    constructor(settings: any, sampleName: string, chromosomes: Reference) {
+    constructor(settings: any, sampleName: string, reference: Reference) {
         this.settings = settings
         this.sampleName = sampleName
-        this.chromosomes = chromosomes
+        this.reference = reference
     }
 
-    map(data: Array<Data>) : Array<Label> {
+    map(data: Array<Data>): Array<Label> {
+        const innerRadius = this.settings.rings.labelLinesInnerRadius
+        const outerRadius = innerRadius + this.settings.rings.labelsToLinesDistance
+
         const labels: Array<Label> = []
+
         data.forEach(data => {
-            if (!StateViewModelMapper.dtNums.includes(data.dt)) return
-            const alias = data.dt == 1 && this.settings.snv.byClassWidth ? StateViewModelMapper.snvClassLayer[data.class] : StateViewModelMapper.dtAlias[data.dt]
-            if (!this.processors[alias]) {
-                this.processors[alias] = new StateViewModelMapper.processorClasses[data.dt == 1 ? 'snv' : alias](this.settings, alias, this.chromosomes)
-            }
-            const cls = this.processors[alias].main(data)
-            // if (!this.hits.classes.includes(cls)) {
-            //     this.hits.classes.push(cls)
-            // }
+            const startAngle = this.calculateStartAngle(data)
+            const endAngle = this.calculateEndAngle(data)
+
+            const label = LabelFactory.createLabel(startAngle,
+                endAngle,
+                innerRadius,
+                outerRadius,
+                data.value,
+                data.gene,
+                MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass].color : '#000',
+                data.isCancerGene,
+                this.settings.rings.labelsToLinesGap)
+
+            labels.push(label)
         })
 
-        const plot = {
-            title: '', //sampleName,
-            sample: this.sampleName,
-            // TODO calculate this value base on chromosome radius
-            lastRadius: 190,
-            layers: []
-        }
+        return labels
+    }
 
-        StateViewModelMapper.dtNums.forEach(dt => {
-            const alias = dt in StateViewModelMapper.dtAlias ? StateViewModelMapper.dtAlias[dt] : dt
-            if (!this.processors[alias]) return
-            const geneArcs = this.processors[alias].setLayer(plot, plot.sample)
+    calculateStartAngle(data: Data) {
+        const index = this.reference.chromosomesOrder.findIndex(element => element == data.chr)
+        const chromosome = this.reference.chromosomes[index]
 
-            if(!geneArcs) return // no data
+        return chromosome.startAngle + ((chromosome.endAngle - chromosome.startAngle) * (Number(data.position) / chromosome.size));
+    }
 
-            this.processors.labels.setGeneArcs(geneArcs, alias)
-            const s = this.settings
-            if (!s.showLabels) return
+    private calculateEndAngle(data: Data) {
+        const index = this.reference.chromosomesOrder.indexOf(data.chr)
+        const chromosome = this.reference.chromosomes[index]
 
-            const innerRadius = plot.lastRadius //+ s.gene.gap
-            const outerRadius = innerRadius + s.label.width
-            this.processors.labels.getTopGenes().forEach(arc => {
-                    const data = arc[0]
-                    const g = data.gene
-
-                    //if (s.clickedChromosome && s.clickedChromosome!=arc.chromosome
-                    //&& !this.fusedToGeneInClickedChr.includes(g)) return;
-
-                    const labelVal = data.label ? data.label : g
-                    if (labelVal) {
-                        const label = new Label(
-                            data.startAngle, // + padAngle,
-                            data.endAngle, // - padAngle,
-                            innerRadius,
-                            outerRadius,
-                            outerRadius + s.label.labelGap * s.layerScaler,
-                            1,
-                            // index: i,
-                            g, //rowsByGene[g].filter(d=>d.class=='Fuser' || (d.classification && d.classification!='NONE')).length ? g : '',
-                            g,
-                            0,
-                            data.chromosome,
-                            data.class,
-                            data.aachange,
-                            data,
-                            data.sample,
-                            arc.length,
-                            '#aaa'
-                        )
-
-                        // this.setCountText(d)
-                        labels.push(label)
-
-                        if (s.label.colorBy == 'variant-class' && geneArcs[g] && geneArcs[g].variantTypes) {
-                            const types = Object.keys(geneArcs[g].variantTypes).sort((a, b) => {
-                                return geneArcs[g].variantTypes[b] - geneArcs[g].variantTypes[a]
-                            })
-                            const mainType = types[0]
-                            // d.labelFill = mainType in this.app.mlabel ? this.app.mlabel[mainType].color : '#aaa'
-                            // d.labelFill = '#aaa'
-                        }
-                    }
-                }
-            )
-        })
-
-        return labels.slice(0, 31)
+        return chromosome.startAngle + ((chromosome.endAngle - chromosome.startAngle) * (Number(data.position) / chromosome.size));
     }
 }
