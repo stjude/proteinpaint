@@ -23,6 +23,7 @@ samples2columnsRows()
 ********************** INTERNAL
 make_singleSampleTable
 	plotSingleSampleGenomeQuantification
+	plotDisco
 feedSample2selectCallback
 
 
@@ -85,10 +86,10 @@ export async function displaySampleTable(samples, args) {
 		const height = screen.height
 		const colButton = {
 			text: 'Disco',
-			//disabled: (i) => false,
 			callback: async (event, i) => {
+				args.tk.menutip.clear().show(event.clientX, event.clientY)
 				const sample = samples[i]
-				showDtDisco(event, sample, args, true)
+				plotDisco(args.tk.mds, args.tk.mds.label, sample, args.tk.menutip.d, args.block.genome)
 			}
 		}
 		params.columnButtons.push(colButton)
@@ -281,10 +282,9 @@ function printSampleName(sample, tk, div, block) {
 			.style('margin-right', '10px')
 			.text('Disco plot')
 			.on('click', async event => {
-				event.target.innerHTML = 'Loading...'
-				event.target.disabled = true
+				tk.menutip.clear().show(event.clientX, event.clientY)
 				try {
-					showDtDisco(event, sample, { tk, block })
+					plotDisco(tk.mds, tk.mds.label, sample, tk.menutip.d, block.genome)
 				} catch (e) {
 					event.target.innerHTML = 'Error: ' + (e.message || e)
 					if (e.stack) console.log(e.stack)
@@ -347,7 +347,15 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 	const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
 
 	// description
-	holder.append('div').text(`${sample[q.sample_id_key]} - ${q.description || queryKey}`)
+	{
+		const d = holder.append('div')
+		d.append('span')
+			.text(sample[q.sample_id_key])
+			.style('font-weight', 'bold')
+		d.append('span')
+			.text(q.description || queryKey)
+			.style('padding-left', '10px')
+	}
 	if (q2) {
 		holder
 			.append('div')
@@ -427,39 +435,53 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 	})
 }
 
-async function showDtDisco(event, sample, arg, fromTable = false) {
-	const mlst = await arg.tk.mds.queries.singleSampleMutation.get(
-		sample[arg.tk.mds.queries.singleSampleMutation.sample_id_key || 'sample_id']
-	)
+/*
+make a disco plot for the "singleSampleMutation" directive, as well as the subsequent block-launching from clicking the image
+this function is not made as a vocab api method as it has a lot of dom and interactivity things
+
+termdbConfig = {}
+	.queries{}
+		.singleSampleGenomeQuantification{ k: {} }
+			{ positiveColor, negativeColor, sample_id_key=str, singleSampleGbtk=str }
+		.singleSampleGbtk{ k: {} }
+dslabel=str
+	as on vocab.dslabel
+sample={}
+	must have value for key of singleSampleGenomeQuantification[queryKey].sample_id_key
+holder
+genomeObj={}
+	client side genome obj
+*/
+export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj) {
+	// request data
+	const body = {
+		genome: genomeObj.name,
+		dslabel,
+		singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
+	}
+	const data = await dofetch3('mds3', { body })
+	if (data.error) throw data.error
+	if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
+	const mlst = data.mlst
 
 	for (const i of mlst) i.position = i.pos
 
 	const disco_arg = {
-		sampleName: sample.sample_id,
+		sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
 		data: mlst
 	}
-	arg.tk.menutip.clear().show(event.clientX, event.clientY)
-	if (!fromTable) event.target.innerHTML = mlst.length + ' variants loaded'
-	else
-		arg.tk.menutip.d
-			.append('div')
-			.text(`Sample ${sample.sample_id}`)
-			.style('text-align', 'center')
-			.style('font-weight', 'bold')
-			.style('margin', '5px')
 
 	const dtDisco = await import('#plots/disco/dt.disco').then(
 		Cls =>
 			new Cls.default({
-				genome: arg.block.genome,
-				holderSelector: arg.tk.menutip.d.append('div'),
+				genome: genomeObj,
+				holderSelector: holder,
 				settings: {
 					showControls: false,
 					selectedSamples: []
 				}
 			})
 	)
-
 	dtDisco.main(disco_arg)
 }
 

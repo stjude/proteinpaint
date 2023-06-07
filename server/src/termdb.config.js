@@ -118,6 +118,7 @@ function addGenomicQueries(c, ds, genome) {
 	if (q.snvindel) q2.snvindel = true
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
 	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes.arguments
+	if (q.singleSampleMutation) q2.singleSampleMutation = { sample_id_key: q.singleSampleMutation.sample_id_key }
 	if (q.singleSampleGenomeQuantification) {
 		q2.singleSampleGenomeQuantification = {}
 		for (const k in q.singleSampleGenomeQuantification) {
