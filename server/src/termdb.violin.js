@@ -63,7 +63,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
 
 	if (q.divideTw) {
-		if (typeof q.divideTw === 'object' && !('id' in q.divideTw)) {
+		if (q.divideTw !== null && q.divideTw !== undefined && typeof q.divideTw === 'object' && !('id' in q.divideTw)) {
 			q.divideTw.id = q.divideTw.term.name
 			q.divideTw.term.id = q.divideTw.term.name
 		}
