@@ -552,6 +552,7 @@ export function setRenderers(self) {
 	}
 
 	self.setTools = function() {
+		if (!self.charts[0]) return
 		const inline = self.config.settings.controls.isOpen
 		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
 		toolsDiv.selectAll('*').remove()

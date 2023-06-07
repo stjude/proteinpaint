@@ -125,6 +125,7 @@ function get_survival(tvs, CTEname) {
 				SELECT sample
 				FROM survival
 				WHERE term_id = ?
+				${tvs.q?.cutoff ? 'AND tte <= ' + tvs.q?.cutoff : ''}
 				AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})
 			)`
 		],
