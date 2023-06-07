@@ -344,6 +344,7 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 // may reuse or already done elsewhere?
 function getDefaultQ(term, q) {
 	if (term.type == 'categorical') return {}
+	if (term.type == 'survival') return {}
 	if (term.type == 'integer' || term.type == 'float') return term.bins.default
 	if (term.type == 'condition') {
 		return {
