@@ -407,26 +407,22 @@ export class TermdbVocab extends Vocab {
 		// the violin plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders()
-		const body = {
-			getViolinPlotData: 1,
-			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel,
-			termid: arg.termid,
-			svgw: arg.svgw,
-			orientation: arg.orientation,
-			datasymbol: arg.datasymbol,
-			devicePixelRatio: window.devicePixelRatio,
-			radius: arg.radius,
-			unit: arg.unit,
-			..._body,
-			embedder: window.location.hostname
-		}
+		const body = Object.assign(
+			{
+				getViolinPlotData: 1,
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				embedder: window.location.hostname,
+				devicePixelRatio: window.devicePixelRatio,
+				minThickness: 60,
+				maxThickness: 150,
+				screenThickness: window.document.body.clientWidth - 100
+			},
+			arg,
+			_body
+		)
 
-		if (arg.filter) body.filter = getNormalRoot(arg.filter)
-		if (arg.divideTw) body.divideTw = arg.divideTw
-		if (arg.plotThickness) body.plotThickness = arg.plotThickness
-		if (arg.scale) body.scale = arg.scale
-
+		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const d = await dofetch3('termdb', { headers, body })
 
 		return d
