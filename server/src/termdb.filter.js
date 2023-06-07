@@ -51,7 +51,7 @@ async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
-			f = get_categorical(item.tvs, CTEname_i)
+			f = get_survival(item.tvs, CTEname_i)
 		} else if (item.tvs.term.type == 'samplelst') {
 			f = get_samplelst(item.tvs, CTEname_i)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
@@ -110,6 +110,22 @@ function get_categorical(tvs, CTEname) {
 				FROM anno_categorical
 				WHERE term_id = ?
 				AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})
+			)`
+		],
+		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
+		CTEname
+	}
+}
+
+function get_survival(tvs, CTEname) {
+	return {
+		CTEs: [
+			`
+		  ${CTEname} AS (
+				SELECT sample
+				FROM survival
+				WHERE term_id = ?
+				AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})
 			)`
 		],
 		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
