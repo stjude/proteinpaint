@@ -31,8 +31,12 @@ async function fillMenu(self, div, tvs) {
 		.append('div')
 		.style('font-size', '0.8em')
 		.style('padding-left', '4px')
-	cutoffDiv.append('label').text('Time to event')
-	const cutoffInput = cutoffDiv.append('input').attr('type', 'number')
+
+	const cutoffInput = cutoffDiv
+		.append('input')
+		.attr('type', 'number')
+		.style('width', '40px')
+	cutoffDiv.append('label').text('years after')
 	if (tvs.q?.cutoff) cutoffInput.node().value = tvs.q.cutoff
 	const tableCallback = indexes => {
 		//update term values by ckeckbox values
