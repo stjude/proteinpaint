@@ -285,9 +285,9 @@ class ViolinPlot {
 			}
 		} else if ((term.term.type === 'float' || term.term.type === 'integer') && term.q.mode === 'continuous') {
 			arg.termid = term.id
-			arg.divideTw = term2
+			if (term2) arg.divideTw = term2
 		} else if ((term2?.term?.type === 'float' || term2?.term?.type === 'integer') && term2.q.mode === 'continuous') {
-			arg.termid = term2.id
+			if (term2) arg.termid = term2.id
 			arg.divideTw = term
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'

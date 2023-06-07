@@ -414,7 +414,6 @@ export class TermdbVocab extends Vocab {
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
-				// minThickness: 60,
 				maxThickness: 150,
 				screenThickness: arg.screenThickness
 			},
