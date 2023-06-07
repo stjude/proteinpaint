@@ -26,15 +26,13 @@ export class DiscoRenderer {
 
         const svg = svgDiv.append('svg')
             .attr('width', viewModel.width)
-            .attr('height', viewModel.height)
+            .attr('height', viewModel.height + viewModel.legendHeight)
 
         const mainG = svg.append('g')
             .attr('class', "mainG")
             .attr('transform', `translate(${viewModel.width / 2},${viewModel.height / 2})`);
 
-        for (const rendererPair of this.renders) {
-            const ringType = rendererPair[0]
-            const renderer = rendererPair[1]
+        for (const [ringType, renderer] of this.renders) {
             const elements = viewModel.getElements(ringType)
             const collisions = viewModel.getCollisions(ringType)
 
@@ -43,8 +41,6 @@ export class DiscoRenderer {
 
         this.fusionRenderer.render(mainG, viewModel.fusions)
 
-        this.legendRenderer.render(rootDiv, viewModel.legend)
-
-
+        this.legendRenderer.render(mainG, viewModel.legend)
     }
 }

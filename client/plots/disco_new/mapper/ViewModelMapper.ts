@@ -89,7 +89,6 @@ export class ViewModelMapper {
 
         const dataMapper = new DataMapper(this.settings, reference, sampleName, exonicFilter, cancerGenes)
 
-
         dataMapper.map(data)
 
         const labelsMapper = new LabelsMapper(this.settings, sampleName, reference)
@@ -122,7 +121,7 @@ export class ViewModelMapper {
 
         const lohLegend = new LohLegend(0, 0, "", "")
 
-        const legend = new Legend("SNV-Indel", exonicSnvArcsMapper.snvClassMap, "Copy Number (log2 ratio)", cnvArcsMapper.cnvClassMap, "LOH seg. mean", lohLegend)
+        const legend = new Legend("SNV-Indel", exonicSnvArcsMapper.snvClassMap, "CNV (log2 ratio)", cnvArcsMapper.cnvClassMap, "LOH seg. mean", lohLegend)
 
         const rings = new Rings(labelsRing, chromosomesRing, nonExonicArcRing, exonicArcRing, cnvArcRing, lohArcRing)
 

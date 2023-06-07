@@ -1,5 +1,8 @@
 export default interface Settings {
-    padding: number;
+
+    verticalPadding: number;
+    horizontalPadding: number;
+
     rings: {
         fusionRadius: number;
         chromosomeInnerRadius: number;
