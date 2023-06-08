@@ -95,6 +95,16 @@ const terms = [
 		},
 		included_types: ['categorical'],
 		child_types: []
+	},
+	{
+		type: 'survival',
+		id: 's',
+		name: 'Survival term',
+		isleaf: true,
+		values: {
+			1: { label: 'Deceased' },
+			0: { label: 'Alive' }
+		}
 	}
 ]
 
