@@ -11,7 +11,7 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
-import { mclass } from '#shared/common'
+import { mclass, dt2label, morigin } from '#shared/common'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
 export { getPlotConfig } from './matrix.config'
@@ -66,7 +66,7 @@ class Matrix {
 		this.setPill(appState)
 
 		/*
-		Levels of mclass overrides, from more general to more specific.
+		Levels of mclass overrides, from more general to more specific. Same logic for dt2label
 
 		1. server-level:
 		  - specified as serverconfig.commonOverrides
@@ -91,7 +91,11 @@ class Matrix {
 			in the resulting merged overrides, as outputted by rx.copyMerge()
 		!!!
 		*/
-		this.mclass = copyMerge({}, mclass, appState.termdbConfig.mclass || {}, appState.termdbConfig.matrix?.mclass || {})
+		const commonKeys = { mclass, dt2label, morigin }
+		for (const k in commonKeys) {
+			const v = commonKeys[k]
+			this[k] = copyMerge({}, v, appState.termdbConfig[k] || {}, appState.termdbConfig.matrix?.[k] || {})
+		}
 	}
 
 	setControls(appState) {
@@ -633,9 +637,12 @@ class Matrix {
 			}
 
 			if (t.tw.q?.mode == 'continuous') {
+				if (!t.tw.settings) t.tw.settings = {}
+				if (!t.tw.settings.barh) t.tw.settings.barh = s.barh
+				if (!('gap' in t.tw.settings)) t.tw.settings.gap = 0
 				t.scale = scaleLinear()
 					.domain([t.counts.minval, t.counts.maxval])
-					.range([1, t.tw.settings.barh])
+					.range([1, s.barh])
 			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
 				const maxVals = []
 				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
