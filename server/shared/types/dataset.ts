@@ -8,6 +8,15 @@ Mds3
 
 */
 
+/*** General usage types and interfaces ***/
+type FileObj = { file: string }
+
+interface KeyVal { k: string, v?: string }
+
+interface KeyLabel { key: string, label: string}
+
+/*** interfaces specific to ClinVar ***/
+
 interface ClinvarCategoriesEntry {
 	color: string
 	label: string
@@ -35,12 +44,7 @@ export interface ClinvarAF {
     [index: string]: AFEntry
 }
 
-interface DsinfoEntry {
-    k: string
-    v: string
-}
-
-/*** types and interfaces supporting Termdb interface ***/
+/*** types and interfaces supporting Queries interface ***/
 
 interface InfoFieldsEntry {
     name: string,
@@ -174,7 +178,7 @@ interface SnvIndel {
     variantUrl?: VariantUrl,
     infoUrl?: URLEntry[],
     skewerRim?: SkewerRim
-    format4filters?: Array<string>,
+    format4filters?: (string)[],
     byisoform?: GdcApi,
     m2csp?: M2Csq,
     format?: SnvIndelFormat,
@@ -223,7 +227,7 @@ interface Queries{
     snvindel?: SnvIndel,
     svfusion?: SvFusion,
     singleSampleMutation?: SingleSampleMutation
-    geneExpression?: { file: string },
+    geneExpression?: FileObj,
     topMutatedGenes?: TopMutatedGenes,
     trackLst?: TrackLstEntry[]
 }
@@ -235,7 +239,7 @@ interface TermIds {
 }
 
 interface SelectCohortValuesEntry {
-    keys: Array<string>,
+    keys: string[],
     label: string,
     shortLabel: string,
     isdefault?: boolean,
@@ -261,6 +265,8 @@ interface DataDownloadCatch {
     jwt: { [index:string]: string }
 }
 
+//Plots
+
 interface ScatterPlotsEntry {
     name: string,
     dimension: number, 
@@ -277,6 +283,79 @@ interface MatrixSettingsControlLabels {
     sample: string
 }
 
+interface ExcludeClasses {
+    [index: string]: number
+}
+
+type FeatureAttrs = {
+    valuecutoff?: number,
+    focalsizelimit?: number,
+    excludeclasses?: ExcludeClasses
+}
+
+interface CommonFeatureAttributes {
+    querykeylst: string[],
+    cnv: FeatureAttrs,
+    loh: FeatureAttrs,
+    snvindel: FeatureAttrs
+}
+
+type MatrixConfigFeaturesEntry = {
+    ismutation: number
+    label: string
+    position: string
+}
+
+type LimitSampleByEitherAnnotationEntry = {
+    key: string,
+    value: string
+}
+
+
+interface MatrixConfig {
+    header: string,
+    hidelegend_features: number,
+    features: MatrixConfigFeaturesEntry[],
+    limitsamplebyeitherannotation: LimitSampleByEitherAnnotationEntry[]
+}
+
+interface GroupsEntry {
+    name: string,
+    matrixconfig: MatrixConfig
+}
+
+interface Group {
+    groups: GroupsEntry[]
+}
+
+interface AnnotationSampleGroups {
+    [index: string]: Group
+}
+
+interface AaaAnnotationSampleset2Matrix {
+    key: string
+    commonfeatureattributes: CommonFeatureAttributes,
+    groups: AnnotationSampleGroups
+}
+
+type SurvPlotsEntry = {
+    name: string,
+    serialtimekey: string, 
+    iscensoredkey: string, 
+    timelabel: string
+}
+
+interface SurvPlots {
+    [index: string]: SurvPlotsEntry
+}
+
+type sampleGroupAttrLstEntry = { key: string }
+
+interface SurvivalPlot {
+    plots: SurvPlots,
+    samplegroupattrlst: sampleGroupAttrLstEntry[]
+}
+
 interface TieBreakerFilterValuesEntry {
     dt: number
 }
@@ -287,12 +366,12 @@ interface TieBreakerFilter {
 
 interface TieBreakersEntry {
     by: string,
-    order?: Array<string | number>
+    order?: (string | number)[],
     filter?: TieBreakerFilter
 }
 
 interface SortPriorityEntry {
-    types: Array<string>,
+    types: string[],
     tiebreakers: TieBreakersEntry[]
 }
 
@@ -328,7 +407,7 @@ interface MatrixPlots {
 
 interface AllowCaseDetails {
     sample_id_key: string,
-    terms: Array<string>
+    terms: string[]
 }
 
 interface MultipleTestingCorrection {
@@ -353,7 +432,7 @@ interface Tvs {
 }
 
 interface PCfileBySubcohort {
-    [index: string]: { file: string }
+    [index: string]: FileObj
 }
 
 interface RestrictAncestriesEntry {
@@ -365,30 +444,33 @@ interface RestrictAncestriesEntry {
 
 /*** types and interfaces supporting Cohort interface ***/
 interface Termdb { 
+    //Terms
+    termIds?: TermIds,
     displaySampleIds?: boolean,
+    allowedTermTypes?: string[],
+    alwaysShowBranchTerms?: boolean,
+    minimumSampleAllowed4filter?: number,
     minTimeSinceDx?: number,
     ageEndOffset?: number,
+    restrictAncestries?: RestrictAncestriesEntry[],
+    //Cohort specific
+    selectCohort?: SelectCohortEntry,
+    additionalSampleAttributes?: string[],
     //Cox
     coxTimeMsg?: string,
     coxStartTimeMsg?: string,
-    termIds?: TermIds,
-    selectCohort?: SelectCohortEntry,
-    dataDownloadCatch?: DataDownloadCatch,
-    termid2totalsize2?: GdcApi,
-    additionalSampleAttributes?: Array<string>,
-    useLower?: boolean,
-    alwaysShowBranchTerms?: boolean,
     //Plots
+    useLower?: boolean,
     scatterplots?: Scatterplots,
     matrix?: Matrix,
     matrixplots?: MatrixPlots
-    allowedTermTypes?: Array<string>,
-    multipleTestingCorrection?: MultipleTestingCorrection,
     logscaleBase2?: boolean,
-    minimumSampleAllowed4filter?: number
-    restrictAncestries?: RestrictAncestriesEntry[],
+    //Functionality
+    dataDownloadCatch?: DataDownloadCatch,
     helpPages?: URLEntry[],
-    //For the GDC
+    multipleTestingCorrection?: MultipleTestingCorrection,
+    //GDC
+    termid2totalsize2?: GdcApi,
     dictionary?: GdcApi,
     allowCaseDetails?: AllowCaseDetails
 }
@@ -414,8 +496,8 @@ interface MutationSet {
 
 interface BaseDtEntry {
     term_id: string,
-    yes: { value: Array<string> },
-    no: { value: Array<string> }
+    yes: { value: string[] },
+    no: { value: string[] }
 }
 
 interface SNVByOrigin {
@@ -431,29 +513,302 @@ interface ByDt {
     [index: number]: DtEntrySNV | BaseDtEntry
 }
 
+interface AssayValuesEntry {
+    [index: string]: { label: string, color: string}
+}
+
+type AssaysEntry = {
+    id: string, 
+    name: string, 
+    type: string, 
+    values?: AssayValuesEntry
+}
+
 interface AssayAvailability {
-    byDt: ByDt
+    byDt?: ByDt,
+    file?: string,
+    assays?: AssaysEntry[]
 }
 
 //Shared with genome.ts
 export interface Cohort {
-    allowedChartTypes?: Array<string>,
+    allowedChartTypes?: string[],
     mutationset?: MutationSet[],
-	db: { file: string }
+	db: FileObj
 	termdb?: Termdb,
     scatterplots?: Scatterplots
 }
+/*** types and interfaces supporting MdsCohort interface ***/
+interface SampleAttribute {
+    attributes: Attributes
+}
 
-export interface Mds3 {
+type HierarchiesLstEntry = {
+    name: string,
+    levels: KeyLabelFull[]
+}
+
+interface Hierarchies {
+    lst: HierarchiesLstEntry[]
+}
+
+type SetSamples = {
+    file: string, 
+    valuename: string, 
+    skipzero: boolean
+}
+
+interface SetSignatures {
+    [index: number]: { name: string, color: string }
+}
+
+interface MutSigSets {
+    [index: string]: {
+        name: string
+        samples: SetSamples,
+        signatures: SetSignatures
+    }
+}
+
+interface MutationSignature {
+    sets: MutSigSets
+}
+
+interface MdsCohort { //Does not apply to Mds3 or genomes!
+    files: FileObj[],
+    samplenamekey: string,
+    tohash: (item: any, ds: any) => void, //Fix later
+    sampleAttribute?: SampleAttribute,
+    hierarchies?: Hierarchies,
+    survivalplot?: SurvivalPlot,
+    mutation_signature?: MutationSignature
+    //scatterplot - skipping b/c codes to the old scatterplot, not mass
+}
+
+/*** types and interfaces supporting MdsQueries interface ***/
+interface BaseTrack {
+    name?: string,
+    istrack?: boolean,
+    type?: string,
+    file?: string,
+    hideforthemoment?: number,
+    viewrangeupperlimit?: number
+}
+
+interface LegendVOrigin {
+    key: string,
+    somatic: string,
+    germline: string
+}
+
+interface GroupSampleByAttr{
+    attrlst: KeyLabelFull[],
+    sortgroupby?: {
+        key: string,
+        order: string[]
+    },
+    attrnamespacer?: string
+}
+
+interface Svcnv extends BaseTrack {
+    valueCutoff: number,
+    bplengthUpperLimit: number, 
+    segmeanValueCutoff: number,
+    no_loh?: number,
+    lohLengthUpperLimit: number,
+    hideLOHwithCNVoverlap?: boolean,
+    vcf_querykey?: string, 
+    expressionrank_querykey: string,
+    multihidelabel_vcf: boolean,
+    multihidelabel_fusion?: boolean,
+    multihidelabel_sv: boolean,
+    legend_vorigin?: LegendVOrigin,
+    groupsamplebyattr?: GroupSampleByAttr
+}
+
+type KeyLabelFull = {
+    /* Used in: 
+        queries.genefpkm.boxplotbysamplegroup.attributes
+        cohort.hierarchies.lst[i].levels
+    */
+    k: string, 
+    label: string,
+    full?: string
+}
+
+type ASE = {
+    qvalue: number,
+    meandelta_monoallelic: number,
+    asemarkernumber_biallelic: number,
+    color_noinfo: string,
+    color_notsure: string,
+    color_biallelic: string,
+    color_monoallelic: string
+}
+
+type GeneFpkmOutlier = {
+    pvalue: number, 
+    color: string
+}
+
+interface BoxPlotAdditionalsEntry {
+    label: string,
+    attributes: KeyVal[]
+}
+
+interface BoxPlotBySampleGroup {
+    attributes: KeyLabelFull[],
+    additionals?: BoxPlotAdditionalsEntry[]
+}
+
+interface GeneFpkm extends BaseTrack {
+    isgenenumeric: boolean,
+    datatype: string,
+    itemcolor: string,
+    boxplotbysamplegroup?: BoxPlotBySampleGroup,
+    ase?: ASE,
+    outlier?: GeneFpkmOutlier
+}
+
+type CutoffValueLstEntry = {
+    side: string,
+    value: number,
+    label: string
+}
+
+interface ValuePerSample extends KeyLabel{
+    cutoffValueLst: CutoffValueLstEntry[]
+}
+
+interface InfoFilterCatEntry {
+    label: string,
+    color: string, 
+    valuePerSample?: ValuePerSample
+}
+
+interface InfoFilterCat {
+    [index: string]: InfoFilterCatEntry
+}
+
+interface InfoFilterLstEntry extends KeyLabel {
+    categories: InfoFilterCat
+    hiddenCategories: { Unannotated: number }
+}
+
+interface InfoFilter {
+    lst: InfoFilterLstEntry[]
+}
+
+interface ReadCountBoxPlotPerCohort {
+    groups: KeyLabel[]
+}
+
+interface SingleJunctionSummary {
+    readcountboxplotpercohort: ReadCountBoxPlotPerCohort
+}
+
+interface Junction extends BaseTrack {
+    readcountCutoff: number,
+    infoFilter: InfoFilter,
+    singlejunctionsummary: SingleJunctionSummary
+}
+
+interface TracksEntry extends BaseTrack {
+    //Leave for now
+}
+
+interface MdsSnvindel extends BaseTrack {
+    tracks: TracksEntry[],
+    singlesamples?: {
+        tablefile: string
+    }
+}
+
+interface SomaticCnv extends BaseTrack {
+    valueLabel: string,
+    valueCutoff: number,
+    bplengthUpperLimit: number
+}
+
+interface MdsQueries {
+    svcnv?: Svcnv,
+    genefpkm?: GeneFpkm,
+    junction?: Junction,
+    snvindel?: MdsSnvindel,
+    somaticcnv?: SomaticCnv
+}
+
+interface AttrValues {
+    [index: string]: { 
+        name?: string
+        label?: string
+        color?: string 
+    }
+}
+
+interface AttributesEntry {
+    label: string,
+    values?: AttrValues,
+    hidden?: number, 
+    filter?: number,
+    appendto_link?: string,
+    isfloat?: number,
+    isinteger?: number, 
+    clientnoshow?: number
+}
+
+interface Attributes {
+    [index:string]: AttributesEntry
+}
+
+interface MutationAttribute {
+    attributes: Attributes
+}
+
+type MutationTypesEntry = {
+    db_col: string, 
+    label: string, 
+    default: number
+}
+
+interface Gene2MutCount {
+    dbfile: string,
+    mutationTypes: MutationTypesEntry[]
+}
+
+interface LocusAttribute {
+    attributes: Attributes
+}
+
+/*** types and interfaces supporting Mds Dataset interfaces ***/
+interface BaseMds {
+    genome?: string //Not declared in TermdbTest
+    assayAvailability?: AssayAvailability
+}
+
+export interface Mds extends BaseMds {
+    isMds: boolean,
+    about?: KeyVal[],
+    sampleAssayTrack?: FileObj,
+    singlesamplemutationjson?: FileObj,
+    cohort: MdsCohort,
+    queries: MdsQueries,
+    mutationAttribute?: MutationAttribute,
+    dbFile?: string,
+    version?: { label: string, link: string },
+    gene2mutcount?: Gene2MutCount,
+    aaaannotationsampleset2matrix?: AaaAnnotationSampleset2Matrix,
+    locusAttribute?: LocusAttribute
+}
+
+export interface Mds3 extends BaseMds{
     isMds3: boolean,
-    dsinfo?: DsinfoEntry[],
-    genome?: string,
+    dsinfo?: KeyVal[],
     queries?: Queries,
     cohort?: Cohort,
     termdb?: Termdb,
     validate_filter0?: (f: any) => void,
     ssm2canonicalisoform?: GdcApi,
-    variant2samples?: Variant2Samples,
-    assayAvailability?: AssayAvailability
+    variant2samples?: Variant2Samples
 }
 
