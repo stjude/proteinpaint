@@ -86,8 +86,10 @@ function get_pill_label(tvs) {
 				txt = value.key || value.label
 			}
 		}
-		console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`)
-		if (!txt) txt = v.key
+		if (!txt) {
+			txt = v.key
+			console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`)
+		}
 	} else {
 		// multiple
 		if (tvs.groupset_label) txt = tvs.groupset_label

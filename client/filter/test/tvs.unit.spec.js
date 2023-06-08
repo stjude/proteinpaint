@@ -37,7 +37,7 @@ async function getPillFilterItem(termType) {
 		}
 	}
 
-	if (termType == 'categorical') item.tvs.values = [{ key: Object.keys(term.values)[0] }]
+	if (termType == 'categorical' || termType == 'survival') item.tvs.values = [{ key: Object.keys(term.values)[0] }]
 	if (termType == 'condition') {
 		item.tvs.bar_by_grade = 1
 		item.tvs.values_by_max_grade = 1
@@ -106,6 +106,29 @@ tape('categorical tvs', async test => {
 		// TODO: other handler methods may require different tests by term type
 		// and may not be abstracted into a separate function, so put here
 		// ...
+		pill.Inner.dom.holder.remove()
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	test.end()
+})
+
+tape.only('survival tvs', async test => {
+	//test.timeoutAfter(10000)
+	//test.plan(5)
+	const { pill, filter, item, term } = await getPillFilterItem('survival')
+	console.log(pill, filter, item)
+	try {
+		await pill.main({ tvs: item.tvs, filter })
+		test.equal(
+			pill.Inner.dom.holder.node().querySelectorAll('.tvs_pill').length,
+			1,
+			'should render 1 pill for a single-tvs filter'
+		)
+		const handler = pill.Inner.handler
+		test.equal(handler.type, 'survival', 'should use the survival handler for a survival term')
+		testHandlerMethodsExists(test, handler)
+		testTermNameGen(test, handler)
 		pill.Inner.dom.holder.remove()
 	} catch (e) {
 		test.fail('test error: ' + e)
