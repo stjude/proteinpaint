@@ -13,21 +13,21 @@ type FileObj = { file: string }
 
 interface KeyVal { k: string, v?: string }
 
-interface KeyLabel { key: string, label: string}
+interface KeyLabel { key: string, label: string }
 
 /*** interfaces specific to ClinVar ***/
 
 interface ClinvarCategoriesEntry {
-	color: string
-	label?: string
-	desc: string
-	textcolor?: string,
+    color: string
+    label?: string
+    desc: string
+    textcolor?: string,
     name?: string
 }
 
 //Shared with genome.ts
 export interface ClinvarClinsig {
-	[index: string]: ClinvarCategoriesEntry
+    [index: string]: ClinvarCategoriesEntry
 }
 
 interface NumericFilterEntry {
@@ -82,7 +82,7 @@ interface ByRangeEntry {
 }
 
 interface VariantUrl {
-    base: string, 
+    base: string,
     key: string,
     linkText?: string,
     shownSeparately?: boolean
@@ -121,11 +121,11 @@ interface SnvIndelFormat {
 }
 
 interface FilterValues {
-    [ index: string | number ]: { label: string }
+    [index: string | number]: { label: string }
 }
 
 interface RangesEntry {
-    start: number, 
+    start: number,
     startinclusive: boolean,
     stopunbounded: boolean
 }
@@ -140,8 +140,8 @@ interface TvsFilter extends BaseTvsFilter {
 }
 
 interface FilterTermEntry extends BaseTvsFilter {
-    parent_id: string | null, 
-    isleaf: boolean, 
+    parent_id: string | null,
+    isleaf: boolean,
     values?: FilterValues,
     tvs?: TvsFilter,
     min?: number,
@@ -150,7 +150,7 @@ interface FilterTermEntry extends BaseTvsFilter {
 
 interface FilterLstTvs extends BaseTvsFilter {
     term: FilterTermEntry,
-    values: (string | number | FilterValues )[]
+    values: (string | number | FilterValues)[]
 }
 
 interface FilterLstEntry {
@@ -223,7 +223,7 @@ interface TrackLstEntry {
     tklst: TklstEntry[]
 }
 
-interface Queries{
+interface Queries {
     defaultBlock2GeneMode?: boolean
     snvindel?: SnvIndel,
     svfusion?: SvFusion,
@@ -255,23 +255,23 @@ interface SelectCohortEntry {
     asterisk?: string
 }
 
-interface MissingAccess{
+interface MissingAccess {
     message: string,
-    links: { [index:string]: string }
+    links: { [index: string]: string }
 }
 
 interface DataDownloadCatch {
     helpLink: string,
     missingAccess: MissingAccess,
-    jwt: { [index:string]: string }
+    jwt: { [index: string]: string }
 }
 
 //Plots
 
 interface ScatterPlotsEntry {
     name: string,
-    dimension: number, 
-    file: string, 
+    dimension: number,
+    file: string,
     colorTW: { id: string }
 }
 
@@ -341,8 +341,8 @@ interface AaaAnnotationSampleset2Matrix {
 
 type SurvPlotsEntry = {
     name: string,
-    serialtimekey: string, 
-    iscensoredkey: string, 
+    serialtimekey: string,
+    iscensoredkey: string,
     timelabel: string
 }
 
@@ -417,7 +417,7 @@ interface MultipleTestingCorrection {
 }
 
 interface TvsTerm {
-    id: string, 
+    id: string,
     type: string,
     name: string
 }
@@ -444,7 +444,7 @@ interface RestrictAncestriesEntry {
 }
 
 /*** types and interfaces supporting Cohort interface ***/
-interface Termdb { 
+interface Termdb {
     //Terms
     termIds?: TermIds,
     displaySampleIds?: boolean,
@@ -476,9 +476,9 @@ interface Termdb {
     allowCaseDetails?: AllowCaseDetails
 }
 
-type SimpleTermEntry = { 
-    id: string, 
-    q: {}, 
+type SimpleTermEntry = {
+    id: string,
+    q: {},
     baseURL?: string //Only appears as a quick fix in SAMD9-SAMD9L.hg19?
 }
 
@@ -515,13 +515,13 @@ interface ByDt {
 }
 
 interface AssayValuesEntry {
-    [index: string]: { label: string, color: string}
+    [index: string]: { label: string, color: string }
 }
 
 type AssaysEntry = {
-    id: string, 
-    name: string, 
-    type: string, 
+    id: string,
+    name: string,
+    type: string,
     values?: AssayValuesEntry
 }
 
@@ -535,8 +535,8 @@ interface AssayAvailability {
 export interface Cohort {
     allowedChartTypes?: string[],
     mutationset?: MutationSet[],
-	db: FileObj
-	termdb?: Termdb,
+    db: FileObj
+    termdb?: Termdb,
     scatterplots?: Scatterplots
 }
 /*** types and interfaces supporting MdsCohort interface ***/
@@ -554,8 +554,8 @@ interface Hierarchies {
 }
 
 type SetSamples = {
-    file: string, 
-    valuename: string, 
+    file: string,
+    valuename: string,
     skipzero: boolean
 }
 
@@ -602,7 +602,7 @@ interface LegendVOrigin {
     germline: string
 }
 
-interface GroupSampleByAttr{
+interface GroupSampleByAttr {
     attrlst: KeyLabelFull[],
     sortgroupby?: {
         key: string,
@@ -613,12 +613,12 @@ interface GroupSampleByAttr{
 
 interface Svcnv extends BaseTrack {
     valueCutoff: number,
-    bplengthUpperLimit: number, 
+    bplengthUpperLimit: number,
     segmeanValueCutoff?: number,
     no_loh?: number,
     lohLengthUpperLimit?: number,
     hideLOHwithCNVoverlap?: boolean,
-    vcf_querykey?: string, 
+    vcf_querykey?: string,
     expressionrank_querykey?: string,
     multihidelabel_vcf: boolean,
     multihidelabel_fusion?: boolean,
@@ -632,7 +632,7 @@ type KeyLabelFull = {
         queries.genefpkm.boxplotbysamplegroup.attributes
         cohort.hierarchies.lst[i].levels
     */
-    k: string, 
+    k: string,
     label: string,
     full?: string
 }
@@ -648,7 +648,7 @@ type ASE = {
 }
 
 type GeneFpkmOutlier = {
-    pvalue: number, 
+    pvalue: number,
     color: string
 }
 
@@ -680,13 +680,13 @@ type CutoffValueLstEntry = {
     label: string
 }
 
-interface ValuePerSample extends KeyLabel{
+interface ValuePerSample extends KeyLabel {
     cutoffValueLst: CutoffValueLstEntry[]
 }
 
 interface InfoFilterCatEntry {
     label: string,
-    color: string, 
+    color: string,
     valuePerSample?: ValuePerSample
 }
 
@@ -717,12 +717,8 @@ interface Junction extends BaseTrack {
     singlejunctionsummary: SingleJunctionSummary
 }
 
-interface TracksEntry extends BaseTrack {
-    //Leave for now
-}
-
 interface MdsSnvindel extends BaseTrack {
-    tracks: TracksEntry[],
+    tracks: BaseTrack[],
     singlesamples?: {
         tablefile: string
     }
@@ -735,7 +731,7 @@ interface SomaticCnv extends BaseTrack {
 }
 
 interface Vcf extends BaseTrack {
-    tracks: TracksEntry[]
+    tracks: BaseTrack[]
 }
 
 interface MdsQueries {
@@ -749,27 +745,27 @@ interface MdsQueries {
 }
 
 interface AttrValues {
-    [index: string]: { 
+    [index: string]: {
         name?: string
         label?: string
-        color?: string 
+        color?: string
     }
 }
 
 interface AttributesEntry {
     label: string,
     values?: AttrValues,
-    hidden?: number, 
+    hidden?: number,
     filter?: number,
     appendto_link?: string,
     isfloat?: number | boolean,
-    isinteger?: number | boolean, 
+    isinteger?: number | boolean,
     clientnoshow?: number,
     showintrack?: boolean
 }
 
 interface Attributes {
-    [index:string]: AttributesEntry
+    [index: string]: AttributesEntry
 }
 
 interface MutationAttribute {
@@ -777,8 +773,8 @@ interface MutationAttribute {
 }
 
 type MutationTypesEntry = {
-    db_col: string, 
-    label?: string, 
+    db_col: string,
+    label?: string,
     default: number,
     sizecutoff?: string,
     log2cutoff?: number
@@ -814,7 +810,7 @@ export interface Mds extends BaseMds {
     locusAttribute?: LocusAttribute
 }
 
-export interface Mds3 extends BaseMds{
+export interface Mds3 extends BaseMds {
     isMds3: boolean,
     dsinfo?: KeyVal[],
     queries?: Queries,
