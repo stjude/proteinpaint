@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
-import { plotSingleSampleGenomeQuantification } from '../mds3/sampletable'
+import { plotSingleSampleGenomeQuantification, plotDisco } from '../mds3/sampletable'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
@@ -138,13 +138,19 @@ export function setInteractivity(self) {
 						)
 						self.dom.tip.hide()
 					})
-				// self.dom.tip.d
-				// 	.append('div')
-				// 	.attr('class', 'sja_menuoption sja_sharp_border')
-				// 	.text(`Show methylation array`)
-				// 	.on('click', e => {
-				// 		self.dom.tip.hide()
-				// 	})
+			}
+			if (self.state.termdbConfig.queries.singleSampleMutation) {
+				const menuDiv = self.dom.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Disco plot')
+					.on('click', event => {
+						const menu = new Menu()
+						menu.show(event.clientX, event.clientY)
+
+						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, menu.d, self.app.opts.genome)
+						self.dom.tip.hide()
+					})
 			}
 		}
 	}
