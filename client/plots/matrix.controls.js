@@ -608,9 +608,6 @@ export class MatrixControls {
 	appendDictInputs(self, app, parent, table) {
 		tip.clear()
 		if (!parent.selectedGroup) parent.selectedGroup = 0
-		if (parent.config.termgroups.length > 1) {
-			self.addTermGroupSelector(app, parent, table.append('tr'))
-		}
 		self.addDictMenu(app, parent)
 	}
 
