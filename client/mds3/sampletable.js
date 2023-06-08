@@ -484,7 +484,7 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 		data: mlst
 	}
 
-	const dtDisco = await import('#plots/disco/dt.disco').then(
+	const dtDisco = await import('#plots/disco/dt.disco.js').then(
 		Cls =>
 			new Cls.default({
 				genome: genomeObj,
@@ -545,7 +545,7 @@ async function showDtDiscoNew(event, sample, arg, fromTable = false) {
 				]
 			}
 		}
-		const plot = await import('#plots/plot.app')
+		const plot = await import('#plots/plot.app.js')
 		const plotAppApi = await plot.appInit(opts)
 	} catch (e) {
 		throw e
