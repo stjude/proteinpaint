@@ -22,6 +22,7 @@ export const handler = {
 	setTvsDefaults
 }
 
+let cutoff
 async function fillMenu(self, div, tvs) {
 	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || {})
 	const sortedVals = data.lst.sort((a, b) => {
@@ -41,7 +42,7 @@ async function fillMenu(self, div, tvs) {
 
 	const label = cutoffDiv.append('label').text('years after')
 	if (tvs.q?.cutoff) {
-		const cutoff = tvs.q.cutoff
+		cutoff = tvs.q.cutoff
 		cutoffInput.node().value = cutoff
 	}
 	const tableCallback = indexes => {
@@ -51,7 +52,7 @@ async function fillMenu(self, div, tvs) {
 		const new_tvs = JSON.parse(JSON.stringify(tvs))
 		delete new_tvs.groupset_label
 		new_tvs.values = sortedVals.filter((v, index, array) => indexes.includes(index))
-		const cutoff = cutoffInput.node().value
+		cutoff = cutoffInput.node().value
 		if (cutoff) new_tvs.q = { cutoff }
 		else new_tvs.q = {}
 		try {
@@ -74,21 +75,26 @@ function term_name_gen(d) {
 }
 
 function get_pill_label(tvs) {
+	let txt
 	if (tvs.values.length == 1) {
 		// single
 		const v = tvs.values[0]
-		if (v.label) return { txt: v.label }
-		const value = tvs.term.values?.[v.key]
-		if (value) {
-			return { txt: value.key || value.label }
-			console.log(tvs.term, v.key)
+		if (v.label) txt = v.label
+		else {
+			const value = tvs.term.values?.[v.key]
+			if (value) {
+				txt = value.key || value.label
+			}
 		}
 		console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`)
-		return { txt: v.key }
+		if (!txt) txt = v.key
+	} else {
+		// multiple
+		if (tvs.groupset_label) txt = tvs.groupset_label
+		else txt = tvs.values.length + ' groups'
 	}
-	// multiple
-	if (tvs.groupset_label) return { txt: tvs.groupset_label }
-	return { txt: tvs.values.length + ' groups' }
+	if (cutoff) txt = `${txt} (${cutoff == '1' ? '1 year later' : cutoff + ' years later'})`
+	return { txt }
 }
 
 function getSelectRemovePos(j) {
