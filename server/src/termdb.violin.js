@@ -1,13 +1,13 @@
-const fs = require('fs')
-const { scaleLinear, scaleLog } = require('d3-scale')
-const serverconfig = require('./serverconfig')
-const lines2R = require('./lines2R')
-const path = require('path')
-const utils = require('./utils')
-const { getData } = require('./termdb.matrix')
-const createCanvas = require('canvas').createCanvas
-const { violinBinsObj } = require('../../server/shared/violin.bins')
-const { summaryStats } = require('../../server/shared/descriptive.stats')
+import * as fs from 'node:fs/promises'
+import { scaleLinear, scaleLog } from 'd3'
+import serverconfig from './serverconfig'
+import lines2R from './lines2R'
+import path from 'path'
+import utils from './utils'
+import { getData } from './termdb.matrix'
+import { createCanvas } from 'canvas'
+import { violinBinsObj } from '../../server/shared/violin.bins'
+import { summaryStats } from '../../server/shared/descriptive.stats'
 import roundValue from '../shared/roundValue'
 
 /*
@@ -355,5 +355,6 @@ function createCanvasImg(q, result, ds) {
 function plotThickness(result, q) {
 	const tentativeThickness = q.screenThickness / result.plots.length
 	const plotThickness = Math.round(Math.min(tentativeThickness, q.maxThickness))
+	// console.log(358, plotThickness);
 	return plotThickness
 }
