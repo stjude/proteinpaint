@@ -3,7 +3,7 @@ repos:
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args: [--baseline, .secrets.baseline, --exclude-files, server\/genome, server\/dataset]
+        args: [--baseline, .secrets.baseline, --exclude-files, 'genome\/', --exclude-files, 'dataset\/']
         exclude: package-lock.json 
 
   # for Proteinpaint, the team preference is for the prettier formatting
