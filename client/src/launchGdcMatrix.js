@@ -1,6 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
 import { make_one_checkbox } from '#dom/checkbox'
-import { appInit } from '#plots/plot.app'
+import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
 
 /*
