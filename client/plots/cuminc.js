@@ -473,7 +473,7 @@ class MassCumInc {
 						if (serieses.length) {
 							skipped[chart] = []
 							for (const series of serieses) {
-								const v = config.term2.term.values?.[series]
+								const v = config.term2?.term.values?.[series]
 								skipped[chart].push(v ? v.label : series)
 							}
 						}

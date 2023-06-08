@@ -139,7 +139,7 @@ tape('term1=Cardiovascular System, filter=ALL', function(test) {
 	}
 })
 
-tape.skip('term1=Cardiovascular System, term2=agedx', function(test) {
+tape('term1=Cardiovascular System, term2=agedx', function(test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -196,7 +196,7 @@ tape.skip('term1=Cardiovascular System, term2=agedx', function(test) {
 	}
 })
 
-tape.skip('term1=Cardiovascular System, term0=sex', test => {
+tape('term1=Cardiovascular System, term0=sex', test => {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
@@ -243,7 +243,7 @@ tape.skip('term1=Cardiovascular System, term0=sex', test => {
 	}
 })
 
-tape.skip('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test => {
+tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test => {
 	test.timeoutAfter(10000)
 
 	const testBinSize = 5
@@ -348,7 +348,7 @@ tape.skip('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', 
 	}
 })
 
-tape.skip('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', test => {
+tape('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', test => {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -527,7 +527,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 	}
 })
 
-tape.skip('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test => {
+tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test => {
 	test.timeoutAfter(10000)
 
 	runpp({
@@ -677,7 +677,7 @@ tape('hidden uncomputable', function(test) {
 	}
 })
 
-tape.skip('skipped series', function(test) {
+tape('skipped series', function(test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
