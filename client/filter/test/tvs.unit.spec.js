@@ -113,11 +113,10 @@ tape('categorical tvs', async test => {
 	test.end()
 })
 
-tape.only('survival tvs', async test => {
+tape('survival tvs', async test => {
 	//test.timeoutAfter(10000)
 	//test.plan(5)
 	const { pill, filter, item, term } = await getPillFilterItem('survival')
-	console.log(pill, filter, item)
 	try {
 		await pill.main({ tvs: item.tvs, filter })
 		test.equal(
