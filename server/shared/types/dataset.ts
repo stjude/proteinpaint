@@ -19,9 +19,10 @@ interface KeyLabel { key: string, label: string}
 
 interface ClinvarCategoriesEntry {
 	color: string
-	label: string
+	label?: string
 	desc: string
-	textcolor?: string
+	textcolor?: string,
+    name?: string
 }
 
 //Shared with genome.ts
@@ -613,12 +614,12 @@ interface GroupSampleByAttr{
 interface Svcnv extends BaseTrack {
     valueCutoff: number,
     bplengthUpperLimit: number, 
-    segmeanValueCutoff: number,
+    segmeanValueCutoff?: number,
     no_loh?: number,
-    lohLengthUpperLimit: number,
+    lohLengthUpperLimit?: number,
     hideLOHwithCNVoverlap?: boolean,
     vcf_querykey?: string, 
-    expressionrank_querykey: string,
+    expressionrank_querykey?: string,
     multihidelabel_vcf: boolean,
     multihidelabel_fusion?: boolean,
     multihidelabel_sv: boolean,
@@ -661,10 +662,13 @@ interface BoxPlotBySampleGroup {
     additionals?: BoxPlotAdditionalsEntry[]
 }
 
-interface GeneFpkm extends BaseTrack {
-    isgenenumeric: boolean,
+interface Fpkm extends BaseTrack {
     datatype: string,
     itemcolor: string,
+}
+
+interface GeneFpkm extends Fpkm {
+    isgenenumeric: boolean,
     boxplotbysamplegroup?: BoxPlotBySampleGroup,
     ase?: ASE,
     outlier?: GeneFpkmOutlier
@@ -730,12 +734,18 @@ interface SomaticCnv extends BaseTrack {
     bplengthUpperLimit: number
 }
 
+interface Vcf extends BaseTrack {
+    tracks: TracksEntry[]
+}
+
 interface MdsQueries {
     svcnv?: Svcnv,
     genefpkm?: GeneFpkm,
     junction?: Junction,
     snvindel?: MdsSnvindel,
-    somaticcnv?: SomaticCnv
+    somaticcnv?: SomaticCnv,
+    vcf?: Vcf
+    fpkm?: Fpkm
 }
 
 interface AttrValues {
@@ -752,9 +762,10 @@ interface AttributesEntry {
     hidden?: number, 
     filter?: number,
     appendto_link?: string,
-    isfloat?: number,
-    isinteger?: number, 
-    clientnoshow?: number
+    isfloat?: number | boolean,
+    isinteger?: number | boolean, 
+    clientnoshow?: number,
+    showintrack?: boolean
 }
 
 interface Attributes {
@@ -767,8 +778,10 @@ interface MutationAttribute {
 
 type MutationTypesEntry = {
     db_col: string, 
-    label: string, 
-    default: number
+    label?: string, 
+    default: number,
+    sizecutoff?: string,
+    log2cutoff?: number
 }
 
 interface Gene2MutCount {
@@ -791,8 +804,8 @@ export interface Mds extends BaseMds {
     about?: KeyVal[],
     sampleAssayTrack?: FileObj,
     singlesamplemutationjson?: FileObj,
-    cohort: MdsCohort,
-    queries: MdsQueries,
+    cohort?: MdsCohort,
+    queries?: MdsQueries,
     mutationAttribute?: MutationAttribute,
     dbFile?: string,
     version?: { label: string, link: string },
