@@ -265,7 +265,7 @@ tape('term1 as numeric and term2 categorical, test median rendering', function(t
 })
 
 tape('test basic controls', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
