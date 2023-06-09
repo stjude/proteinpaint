@@ -145,14 +145,14 @@ class ViolinPlot {
 				debounceInterval: 1000
 			},
 			{
-				label: 'Max thickness',
-				title: 'Maximum plot thickness',
+				label: 'Plot thickness',
+				title: 'Thickness of plots, min:60 and max:150',
 				type: 'number',
 				chartType: 'violin',
-				settingsKey: 'maxThickness',
+				settingsKey: 'plotThickness',
 				step: 10,
-				max: 300,
-				min: 30,
+				max: 150,
+				min: 60,
 				debounceInterval: 1000
 			}
 		]
@@ -208,7 +208,7 @@ class ViolinPlot {
 		const arg = this.validateArg()
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
-
+		if (this.data.plotThickness) this.config.settings.violin.plotThickness = this.data.plotThickness
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -262,7 +262,6 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			maxThickness: s.maxThickness,
 			screenThickness: window.document.body.clientWidth - thicknessMargin
 		}
 		if (s.plotThickness) arg.plotThickness = s.plotThickness
@@ -313,7 +312,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
-		maxThickness: 150
+		plotThickness: Number
 	}
 	return Object.assign(defaults, overrides)
 }
