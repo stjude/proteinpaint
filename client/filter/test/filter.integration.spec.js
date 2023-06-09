@@ -8,7 +8,7 @@ const {
 	getFilterItemByTag,
 	filterPromptInit
 } = require('../filter')
-const { sleep, detectLst, detectOne, detectGte } = require('../../test/test.helpers.js')
+const { sleep, detectLst, detectOne, detectGte, whenVisible } = require('../../test/test.helpers.js')
 
 /*********
 Tests:
@@ -283,9 +283,9 @@ tape('1-entry root filter: visible controls', async test => {
 	const menuRows = tipd.selectAll('tr')
 	const pill0 = opts.holder.select('.sja_pill_wrapper').node()
 	pill0.click()
-	await sleep(50)
 
-	test.notEqual(tipd.node().style.display, 'none', 'should be dsplayed when clicking a pill')
+	await whenVisible(tipd.node())
+	test.pass('filter controlsTip should be displayed when clicking a pill')
 
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	test.equal(editOpt.style('display'), 'table-row', 'should have an Edit option')
