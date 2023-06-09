@@ -1,5 +1,14 @@
 {
-	"events": {
-    "restart": "npx tsc genome/*.ts dataset/*.ts"
-  }
+  "delay": 1000,
+  "watch": [
+    "./server/dataset",
+    "./server/genome",
+    "./server/server.js",
+    "./client/test/specHelpers.js",
+    "./serverconfig.json"
+  ],
+  "ignore": [
+    "./server/dataset/*.ts",
+    "./server/genome/*.ts"
+  ]
 }

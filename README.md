@@ -49,8 +49,10 @@ When running your dev server, you can see [marked up README's in the browser](ht
 
 ## Test
 ```bash
-npm test # tests both frontend and backend code
+npm testws # tests all workspaces
 ```
+
+You can also set your `serverconfig.debugmode: true`, and open http://localhost:3000/testrun.html to see available client-side unit and integration tests.
 
 ## Build
 
