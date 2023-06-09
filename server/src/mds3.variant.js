@@ -516,7 +516,7 @@ async function may_apply_fishertest(mlst) {
 			m.htmlSections = [
 				{
 					key: 'Contigency table',
-					html: `<table style="font-size:.8em">
+					html: `<table style="font-size:.9em">
 				<tr style="opacity:.5">
 				  <td></td>
 				  <td>Group1</td>
@@ -531,6 +531,11 @@ async function may_apply_fishertest(mlst) {
 				  <td style="opacity:.5">REF allele count</td>
 				  <td>${d[0].refCount}</td>
 				  <td>${Math.floor(d[1].refCount)}</td>
+				</tr>
+				<tr>
+				  <td style="opacity:.5">Allele frequency</td>
+				  <td>${(d[0].altCount / (d[0].altCount + d[0].refCount)).toFixed(3)}</td>
+				  <td>${(d[1].altCount / (d[1].altCount + d[1].refCount)).toFixed(3)}</td>
 				</tr>
 				</table>`
 				}

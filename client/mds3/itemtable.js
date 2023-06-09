@@ -293,6 +293,10 @@ async function itemtable_multiItems(arg) {
 	}
 }
 
+/*
+table display of variant attributes, for mlst[0] single variant
+do not show sample level details
+*/
 function table_snvindel({ mlst, tk, block }, grid) {
 	const m = mlst[0]
 	{
