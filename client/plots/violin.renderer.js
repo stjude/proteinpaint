@@ -365,7 +365,7 @@ export default function violinRenderer(self) {
 				// .duration(30)
 				.style('opacity', 1)
 				.attr('class', 'sjpp-median-line')
-				.style('stroke-width', '3')
+				.style('stroke-width', '5')
 				.style('stroke', 'red')
 				.style('opacity', '1')
 				.attr('y1', isH ? -7 : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))

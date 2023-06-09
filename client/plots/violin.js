@@ -103,7 +103,11 @@ class ViolinPlot {
 				type: 'radio',
 				chartType: 'violin',
 				settingsKey: 'datasymbol',
-				options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
+				options: [
+					{ label: 'Ticks', value: 'rug' },
+					{ label: 'Circles', value: 'bean' },
+					{ label: 'Off', value: 'none' }
+				]
 			},
 			{
 				label: 'Scale',
