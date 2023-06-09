@@ -541,14 +541,10 @@ export function setRenderers(self) {
 		const samplelstTW = getSamplelstTW([group])
 		const appGroup = {
 			name: group.name,
-			filter: self.getFilter(samplelstTW)
+			filter: self.getFilter(samplelstTW),
+			plotId: self.id
 		}
 		await self.app.vocabApi.addGroup(appGroup)
-		const appGroups = await self.app.vocabApi.getGroups()
-		self.app.dispatch({
-			type: 'app_refresh',
-			state: { groups: appGroups }
-		})
 	}
 
 	self.setTools = function() {
