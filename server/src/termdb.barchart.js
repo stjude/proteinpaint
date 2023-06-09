@@ -512,7 +512,7 @@ export function getOrderedLabels(term, bins, q) {
 					? term.values[b].order
 					: 0
 			)
-			.map(i => term.values[i].label)
+			.map(i => term.values[i].key)
 	}
 	return bins.map(bin => (bin.name ? bin.name : bin.label))
 }

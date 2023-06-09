@@ -428,6 +428,10 @@ morigin[morigingermline] = {
 		'A constitutional variant found in a normal sample. The proportion is indicated by the span of the solid arc within the whole circle.',
 	legend: germlinelegend
 }
+
+morigin.germline = morigin[morigingermline]
+morigin.somatic = morigin[moriginsomatic]
+
 export const moriginrelapse = 'R'
 morigin[moriginrelapse] = {
 	label: 'Relapse',
