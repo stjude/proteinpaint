@@ -497,8 +497,6 @@ export function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Delete group`)
 			.on('click', async e => {
-				self.config.groups.splice(group.index, 1)
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				await self.app.vocabApi.deleteGroup(group.name)
 			})
 		menuDiv
@@ -580,7 +578,6 @@ export function setInteractivity(self) {
 			.text('Delete groups')
 			.on('click', async event => {
 				for (const group of self.config.groups) await self.app.vocabApi.deleteGroup(group.name)
-
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: [] } })
 			})
 	}
