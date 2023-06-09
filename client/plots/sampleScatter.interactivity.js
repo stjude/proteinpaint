@@ -500,11 +500,6 @@ export function setInteractivity(self) {
 				self.config.groups.splice(group.index, 1)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				await self.app.vocabApi.deleteGroup(group.name)
-				const appGroups = await self.app.vocabApi.getGroups()
-				self.app.dispatch({
-					type: 'app_refresh',
-					state: { groups: appGroups }
-				})
 			})
 		menuDiv
 			.append('div')
@@ -585,11 +580,7 @@ export function setInteractivity(self) {
 			.text('Delete groups')
 			.on('click', async event => {
 				for (const group of self.config.groups) await self.app.vocabApi.deleteGroup(group.name)
-				const appGroups = await self.app.vocabApi.getGroups()
-				self.app.dispatch({
-					type: 'app_refresh',
-					state: { groups: appGroups }
-				})
+
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: [] } })
 			})
 	}

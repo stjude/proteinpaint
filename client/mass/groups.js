@@ -318,11 +318,8 @@ async function updateUI(self) {
 			{
 				text: 'Delete',
 				callback: (e, i) => {
-					groups.splice(i, 1)
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: { groups }
-					})
+					const group = groups[i]
+					self.app.vocabApi.deleteGroup(group.name)
 				}
 			}
 		],
