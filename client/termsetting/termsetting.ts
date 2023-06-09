@@ -1,7 +1,7 @@
 import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
-import minimatch from 'minimatch'
+import { minimatch } from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 /*
 ********************* EXPORTED
