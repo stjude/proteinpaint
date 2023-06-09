@@ -328,13 +328,15 @@ function createCanvasImg(q, result, ds) {
 					}
 					ctx.stroke()
 			  })
-			: plot.values.forEach(i => {
+			: q.datasymbol === 'bean'
+			? plot.values.forEach(i => {
 					ctx.beginPath()
 					if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, arcEndAngle)
 					else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, arcEndAngle)
 					ctx.fill()
 					ctx.stroke()
 			  })
+			: null
 
 		plot.src = canvas.toDataURL()
 
