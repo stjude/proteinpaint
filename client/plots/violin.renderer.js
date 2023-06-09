@@ -396,30 +396,32 @@ export default function violinRenderer(self) {
 
 	function renderBrushing(t1, t2, violinG, settings, plot, isH, svg) {
 		//brushing on data points
-		violinG
-			.append('g')
-			.classed('sjpp-brush', true)
-			.call(
-				isH
-					? brushX()
-							.extent([[0, -20], [settings.svgw, 20]])
-							.on('end', async event => {
-								const selection = event.selection
+		if (settings.datasymbol === 'rug' || settings.datasymbol === 'bean') {
+			violinG
+				.append('g')
+				.classed('sjpp-brush', true)
+				.call(
+					isH
+						? brushX()
+								.extent([[0, -20], [settings.svgw, 20]])
+								.on('end', async event => {
+									const selection = event.selection
 
-								if (!selection) return
+									if (!selection) return
 
-								self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
-							})
-					: brushY()
-							.extent([[-20, 0], [20, settings.svgw]])
-							.on('end', async event => {
-								const selection = event.selection
+									self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+								})
+						: brushY()
+								.extent([[-20, 0], [20, settings.svgw]])
+								.on('end', async event => {
+									const selection = event.selection
 
-								if (!selection) return
+									if (!selection) return
 
-								self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
-							})
-			)
+									self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+								})
+				)
+		} else return
 	}
 
 	self.toggleLoadingDiv = function(display = '') {
