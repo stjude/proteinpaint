@@ -221,7 +221,7 @@ arg
 				}
 
 				this.busy = true
-				const x = d3pointer(event, event.grabbar.node())[0]
+				const x = d3pointer(event, this.grabbar.node())[0]
 				const val1 = Number.parseFloat(this.x_scale.invert(x).toFixed(1))
 				this.grab.x = x
 				this.grab.width = 1
