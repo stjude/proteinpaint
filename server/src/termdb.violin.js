@@ -1,4 +1,4 @@
-import * as fs from 'node:fs/promises'
+import { unlink } from 'fs'
 import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
 import lines2R from './lines2R'
@@ -111,7 +111,7 @@ export async function wilcoxon(term, result) {
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
 	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-	fs.unlink(tmpfile, () => {})
+	unlink(tmpfile, () => {})
 
 	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
 		const labelParts = k.split(',')
