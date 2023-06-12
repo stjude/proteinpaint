@@ -1,6 +1,7 @@
 import Ring from "./Ring";
 import Label from "./Label";
 import LabelFactory from "../viewmodel/LabelFactory";
+import Settings from "./Settings";
 
 export default class Labels<T extends Label> extends Ring<Label> {
 
@@ -12,8 +13,7 @@ export default class Labels<T extends Label> extends Ring<Label> {
     private filteredHasCancerGenesList: Array<Label> = []
     private overlapAngle: number;
 
-    constructor(settings: any, elements: Array<Label>, hasCancerGenes: boolean) {
-        //  TODO add 20 to contacts or calculate
+    constructor(settings: Settings, elements: Array<Label>, hasCancerGenes: boolean) {
         super(settings.rings.labelLinesInnerRadius, settings.rings.labelsToLinesDistance, elements.sort((a, b) => {
             return a.startAngle < b.startAngle ? -1 : a.startAngle > b.startAngle ? 1 : 0
         }));
@@ -22,10 +22,8 @@ export default class Labels<T extends Label> extends Ring<Label> {
         this.hasCancerGenes = hasCancerGenes
 
         const circumference = 2 * Math.PI * (settings.rings.labelLinesInnerRadius + settings.rings.labelsToLinesDistance)
-        // TODO add 7 to defaults. 7 is set by testing, because label height is not known before rendering
-        this.overlapAngle = (5 * this.settings.label.fontSize) / circumference
+        this.overlapAngle = (this.settings.label.overlapAngleFactor * this.settings.label.fontSize) / circumference
 
-        //  todo handle 0 elemenets
         this.calculateCollisions()
     }
 

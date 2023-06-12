@@ -27,7 +27,16 @@ export default interface Settings {
         lossCapped: number;
         lossColor: string
     };
-    label: { maxDeltaAngle: number; fontSize: number };
+    label: {
+        maxDeltaAngle: number;
+        fontSize: number,
+        animationDuration: number,
+        overlapAngleFactor: number
+    };
     padAngle: number;
-    layerScaler: number
+    layerScaler: number,
+    menu: {
+        padding: number
+
+    }
 }

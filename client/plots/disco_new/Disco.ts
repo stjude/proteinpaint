@@ -46,10 +46,10 @@ export default class Disco {
 
     getRingRenderers() {
         const chromosomesRenderer = new ChromosomesRenderer(this.settings.padAngle, this.settings.rings.chromosomeInnerRadius, this.settings.rings.chromosomeInnerRadius +  this.settings.rings.chromosomeWidth)
-        const labelsRenderer = new LabelsRenderer()
+        const labelsRenderer = new LabelsRenderer(this.settings.label.animationDuration)
         const nonExonicSnvRenderer = new NonExonicSnvRenderer()
         const snvRenderer = new SnvRenderer(this.settings.rings.svnInnerRadius, this.settings.rings.svnWidth)
-        const cnvRenderer = new CnvRenderer()
+        const cnvRenderer = new CnvRenderer(this.settings.menu.padding)
         const lohRenderer = new LohRenderer()
 
         const renderersMap: Map<RingType, IRenderer> = new Map()
@@ -68,7 +68,7 @@ export const discoInit = getCompInit(Disco)
 // this alias will allow abstracted dynamic imports
 export const componentInit = discoInit
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts: any, app: any) {
     return {
         chartType: 'Disco',
         subfolder: 'disco_new',

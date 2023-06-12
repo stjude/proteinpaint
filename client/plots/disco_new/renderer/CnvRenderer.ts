@@ -1,9 +1,13 @@
 import * as d3 from "d3";
-import {Menu} from "#dom/menu";
 import IRenderer from "./IRenderer";
 import CnvArc from "../viewmodel/CnvArc";
+import MenuProvider from "./MenuProvider";
 export default class CnvRenderer implements IRenderer {
-    constructor() {
+
+    private menuPadding: number;
+
+    constructor(menuPadding: number) {
+        this.menuPadding = menuPadding
     }
 
     render(holder: any, elements: Array<CnvArc>, collisions?: Array<CnvArc>) {
@@ -11,23 +15,19 @@ export default class CnvRenderer implements IRenderer {
 
         const arcs = holder.append("g")
 
-        // TODO add 5 to defaults
-        const menu = new Menu({padding: 5})
-        menu.d.style('border', '1px solid #FFF')
-            .style('position', 'absolute')
-            .style('z-index', 1001)
+        const menu = MenuProvider.create()
 
         arcs.selectAll("path")
             .data(elements)
             .enter()
             .append("path")
             .attr('d', (d: CnvArc) => arcGenerator(d))
-            .attr("fill", (d: CnvArc) => d.cssClass)
+            .attr("fill", (d: CnvArc) => d.color)
             .on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
-                menu.d.style("color", arc.cssClass).html(`Copy Number Variation <br /> ${arc.chr}:${arc.start}-${arc.stop} <br /> log2 ratio: ${arc.value}  `)
+                menu.d.style("color", arc.color).html(`Copy Number Variation <br /> ${arc.chr}:${arc.start}-${arc.stop} <br /> log2 ratio: ${arc.value}  `)
                 menu.showunder(mouseEvent.target)
             })
-            .on('mouseout', (d) => {
+            .on('mouseout', ()=> {
                 menu.hide()
             })
     }

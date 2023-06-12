@@ -1,14 +1,12 @@
 import Data from "./Data";
-import SnvArc from "../viewmodel/SnvArc";
-import MLabel from "./MLabel";
 import Reference from "./Reference";
 import CnvArc from "../viewmodel/CnvArc";
 import CnvLegend from "../viewmodel/CnvLegend";
-import {getColors} from "../../../shared/common";
+import {CnvType} from "../viewmodel/CnvType";
 
 export default class CnvArcsMapper {
 
-    cnvClassMap: Map<string, CnvLegend> = new Map()
+    cnvClassMap: Map<CnvType, CnvLegend> = new Map()
 
     private settings: any;
     private sampleName: string;
@@ -26,14 +24,13 @@ export default class CnvArcsMapper {
         this.cnvMinValue = cnvMinValue
 
         this.bpx = Math.floor(this.reference.totalSize / (this.reference.totalChromosomesAngle * settings.rings.cnvInnerRadius))
-        // TODO check if this is correct?
         this.onePxArcAngle = 1 / (settings.rings.cnvInnerRadius)
 
-        const gain = new CnvLegend("Gain", this.getColor(cnvMaxValue), cnvMaxValue)
-        const loss = new CnvLegend("Loss", this.getColor(cnvMinValue), cnvMinValue)
+        const gain = new CnvLegend(CnvType.Gain, this.getColor(cnvMaxValue), cnvMaxValue)
+        const loss = new CnvLegend(CnvType.Loss, this.getColor(cnvMinValue), cnvMinValue)
 
-        this.cnvClassMap.set("gain", gain)
-        this.cnvClassMap.set("loss", loss)
+        this.cnvClassMap.set(CnvType.Gain, gain)
+        this.cnvClassMap.set(CnvType.Loss, loss)
     }
 
     map(arcData: Array<Data>): Array<CnvArc> {
@@ -53,18 +50,11 @@ export default class CnvArcsMapper {
             const cnvWidth = this.settings.rings.cnvWidth
             const color = this.getColor(data.value)
 
-            // TODO refactor this
-            const diff = this.cnvMaxValue - this.cnvMinValue
+            const maxMinDiff = this.cnvMaxValue - this.cnvMinValue
 
-            let outerRadius = innerRadius + ((data.value / diff)) * (cnvWidth / 2)
+            let outerRadius = innerRadius + ((data.value / maxMinDiff)) * (cnvWidth / 2)
 
-            if (outerRadius - innerRadius >= 0 && outerRadius - innerRadius < 1) {
-                outerRadius = innerRadius + 1
-            }
-
-            if (outerRadius - innerRadius <= 0 && outerRadius - innerRadius > -1) {
-                outerRadius = innerRadius - 1
-            }
+            outerRadius = Math.abs(outerRadius - innerRadius) < 1 ? innerRadius + Math.sign(outerRadius - innerRadius) : outerRadius;
 
             const arc = new CnvArc(startAngle,
                 endAngle,
@@ -72,7 +62,6 @@ export default class CnvArcsMapper {
                 outerRadius,
                 color,
                 data.gene,
-                -1,
                 data.chr,
                 data.start,
                 data.stop,
@@ -109,7 +98,7 @@ export default class CnvArcsMapper {
 
         if (value < lossCapped) {
             return cappedLossColor
-        } else if (value < 0) {
+        } else if (value <= 0) {
             return lossColor
         } else if (value <= ampCapped) {
             return ampColor

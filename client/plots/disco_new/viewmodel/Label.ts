@@ -11,13 +11,12 @@ export default class Label extends Arc {
         readonly angle: number,
         readonly value: number,
         label: string,
-        cssClass: any,
+        color: any,
         readonly transform: string,
         readonly textAnchor: string,
         readonly ccAngle: number,
         readonly line: Line,
         readonly isCancerGene: boolean) {
-        //  TODO handle -1
-        super(startAngle, endAngle, innerRadius, outerRadius,  cssClass, -1, label)
+        super(startAngle, endAngle, innerRadius, outerRadius,  color, label)
     }
 }

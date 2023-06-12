@@ -10,7 +10,7 @@ export default class LabelFactory {
                        outerRadius: number,
                        value: number,
                        label: string,
-                       cssClass: string,
+                       color: string,
                        isCancerGene = false,
                        labelsToLinesGap: number) {
         const angle = (startAngle + endAngle) / 2
@@ -25,7 +25,7 @@ export default class LabelFactory {
         points.push(new Point(r0 * Math.cos(ccAngle), r0 * Math.sin(ccAngle)))
         points.push(new Point(r1 * Math.cos(ccAngle), r1 * Math.sin(ccAngle)))
 
-        const line = new Line(points, cssClass)
+        const line = new Line(points, color)
 
         return new Label(startAngle,
             endAngle,
@@ -34,7 +34,7 @@ export default class LabelFactory {
             angle,
             value,
             label,
-             cssClass,
+             color,
             transform,
             textAnchor,
             ccAngle,
@@ -64,7 +64,7 @@ export default class LabelFactory {
         points.push(new Point((r0 + 2 * dr) * cos1, (r0 + 2 * dr) * sin1))
         points.push(new Point((r0 + 3 * dr) * cos1, (r0 + 3 * dr) * sin1))
 
-        const line = new Line(points, element.cssClass)
+        const line = new Line(points, element.color)
 
         const transform: string = 'rotate(' +
             ((angle * 180) / Math.PI - 90) +
@@ -82,8 +82,8 @@ export default class LabelFactory {
             element.outerRadius,
             angle,
             element.value,
-            element.label,
-            element.cssClass,
+            element.text,
+            element.color,
             transform,
             textAnchor,
             ccAngle,

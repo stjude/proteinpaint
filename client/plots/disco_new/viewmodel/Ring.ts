@@ -1,6 +1,4 @@
 import Arc from "./Arc";
-import Ribbon from "./Ribbon";
-import SnvArc from "./SnvArc";
 
 export default class Ring<T extends Arc> {
     width: number
@@ -9,7 +7,6 @@ export default class Ring<T extends Arc> {
     outerRadius: number
 
     elements: Array<T>
-    ribbons?: Array<Ribbon>
 
     constructor(innerRadius: number, width: number,  elements: Array<T>) {
         this.innerRadius = innerRadius

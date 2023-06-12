@@ -109,19 +109,24 @@ export class ViewModelMapper {
 
         const lohMapper = new LohArcMapper(this.settings, sampleName, reference)
 
-        const lohArcRing: Ring<LohArc> = new Ring(120, 20, lohMapper.map(dataMapper.lohData))
+        const lohArcRing: Ring<LohArc> = new Ring(this.settings.rings.lohInnerRadius, this.settings.rings.lohWidth, lohMapper.map(dataMapper.lohData))
 
         const cnvArcsMapper = new CnvArcsMapper(this.settings, sampleName, reference, dataMapper.cnvMaxValue, dataMapper.cnvMinValue)
 
-        const cnvArcRing: Ring<CnvArc> = new Ring(100, 20, cnvArcsMapper.map(dataMapper.cnvData))
+        const cnvArcRing: Ring<CnvArc> = new Ring(this.settings.rings.cnvInnerRadius, this.settings.rings.cnvWidth, cnvArcsMapper.map(dataMapper.cnvData))
 
         const fusionMapper = new FusionMapper(this.settings, sampleName, reference)
 
         const fusions = fusionMapper.map(dataMapper.fusionData)
 
-        const lohLegend = new LohLegend(0, 0, "", "")
+        let lohLegend: LohLegend | undefined;
 
-        const legend = new Legend("SNV-Indel", exonicSnvArcsMapper.snvClassMap, "CNV (log2 ratio)", cnvArcsMapper.cnvClassMap, "LOH seg. mean", lohLegend)
+        if (dataMapper.lohMinValue && dataMapper.lohMaxValue) {
+
+            lohLegend = new LohLegend(dataMapper.lohMinValue, dataMapper.lohMaxValue, "#656565", "#000")
+        }
+
+        const legend = new Legend(exonicSnvArcsMapper.snvClassMap, cnvArcsMapper.cnvClassMap, fusions.length > 0, lohLegend)
 
         const rings = new Rings(labelsRing, chromosomesRing, nonExonicArcRing, exonicArcRing, cnvArcRing, lohArcRing)
 

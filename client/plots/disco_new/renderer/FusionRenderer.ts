@@ -1,9 +1,10 @@
 import * as d3 from 'd3';
 import FullArcRenderer from "./FullArcRenderer";
-import {Menu} from "#dom/menu";
 import Fusion from "../viewmodel/Fusion";
-import {getColors} from "../../../shared/common";
+import MenuProvider from "./MenuProvider";
+import {FusionLegend} from "../viewmodel/FusionLegend";
 
+// TODO extract constants from this file.
 export default class FusionRenderer {
     private fullArcRenderer: FullArcRenderer;
 
@@ -12,18 +13,15 @@ export default class FusionRenderer {
     }
 
     render(holder: any, fusions: Array<Fusion>) {
-        this.fullArcRenderer.render(holder)
-        // Use of d3.ribbon() function
+        if (fusions.length) {
+            this.fullArcRenderer.render(holder)
+        }
+
         const ribboon = d3.ribbon().radius(80);
-        const color = d3.scaleOrdinal(d3.schemeCategory10);
 
         const ribbons = holder.selectAll('.chord').data(fusions)
 
-        // TODO add 5 to defaults
-        const menu = new Menu({padding: 5})
-        menu.d.style('border', '1px solid #FFF')
-            .style('position', 'absolute')
-            .style('z-index', 1001)
+        const menu = MenuProvider.create()
 
         ribbons
             .enter()
@@ -42,9 +40,9 @@ export default class FusionRenderer {
             })
     }
 
+
     getColor(fusion: Fusion) {
         const c = fusion.source.chromosomes;
-        return c.size < 2 ? "#1B9E77" : "#6A3D9A";
+        return c.size < 2 ? FusionLegend.Intrachromosomal.valueOf() : FusionLegend.Interchromosomal.valueOf();
     }
-
 }

@@ -31,7 +31,6 @@ export default class LohArcMapper {
                 outerRadius,
                 color,
                 data.gene,
-                -1,
                 data.chr,
                 data.start,
                 data.stop,

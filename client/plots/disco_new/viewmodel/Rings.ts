@@ -2,7 +2,6 @@ import Label from "./Label";
 import Ring from "./Ring";
 import Chromosome from "./Chromosome";
 import Labels from "./Labels";
-import Arc from "./Arc";
 import SnvArc from "./SnvArc";
 import CnvArc from "./CnvArc";
 import LohArc from "./LohArc";
