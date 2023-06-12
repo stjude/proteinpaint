@@ -1,6 +1,7 @@
 import Partjson from 'partjson'
 import { compute_bins } from '#shared/termdb.bins'
 import { sample_match_termvaluesetting } from '../common/termutils'
+import { isNumeric } from '#shared/helpers'
 
 export function getBarchartData(_q, data) {
 	/*
@@ -377,8 +378,4 @@ export function getCategoryData(q, data) {
 		}
 	})
 	return { lst: Object.values(pj.tree.results) }
-}
-
-function isNumeric(n) {
-	return !isNaN(parseFloat(n)) && isFinite(n)
 }
