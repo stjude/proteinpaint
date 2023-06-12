@@ -1,3 +1,5 @@
+import { VocabApi } from './vocab'
+
 interface Dom {
     holder: any, 
     tip: any, 
@@ -7,9 +9,9 @@ interface Dom {
 export interface Api {
     main: (f: any) => void,
     runCallback: (f: any) => void
-    showTree: boolean
-    showMenu: boolean
-    showGeneSearch: boolean
+    showTree: (f: any) => void
+    showMenu: (f: any) => void
+    showGeneSearch: (f: any) => void
     hasError: () => boolean
     validateQ: (d: any) => void
 }
@@ -34,36 +36,32 @@ interface CustomFillTW {
 
 }
 
-interface TermSettingOpts {
-    placeholder?: string,
-    placeholderIcon?: string,
-    vocabApi: any,
-    activeCohort: number,
-    disable_terms?: string[],
-    usecase?: UseCase,
-    abbrCutoff?: number,
-}
-
-export interface Input extends TermSettingOpts{
+export interface TermSettingOpts {
     holder: any
-    tip?: any,
-    genomeObj?: any,
-    menuOptions: string,
-    menuLayout?: string,
-    noTermPromptOptions?: NoTermPromptOptions,
+    tip?: any
+    genomeObj?: any
+    menuOptions: string
+    menuLayout?: string
+    noTermPromptOptions?: NoTermPromptOptions
     buttons?: string[],
-    callback?: (f:any) => void,
-    defaultQ4fillTW?: DefaultQ4fillTW,
+    callback?: (f:any) => void
+    defaultQ4fillTW?: DefaultQ4fillTW
     customFillTW?: CustomFillTW
-    use_bins_less?: boolean,
-    numericEditMenuVersion?: string[],
+    use_bins_less?: boolean
+    numericEditMenuVersion?: string[]
     numericContinuousEditOptions: string[]
-    showTimeScale?: boolean,
+    showTimeScale?: boolean
     renderAs: string
-}
-
-export interface Return extends TermSettingOpts {
+    placeholder?: string
+    placeholderIcon?: string
+    vocabApi: any
+    activeCohort: number
+    disable_terms?: string[]
+    usecase?: UseCase
+    abbrCutoff?: number
     durations: { exit: number}
-    numqByTermIdModeType: {}
-    dom: Dom
+    numqByTermIdModeType?: any //{}
+    dom: Dom,
+    error: any
+    handler: any
 }
