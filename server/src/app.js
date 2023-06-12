@@ -7474,7 +7474,11 @@ async function pp_init() {
 			const overrideFile = path.join(process.cwd(), d.jsfile)
 			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
 			const ds =
-				typeof _ds == 'function' ? _ds(common) : _ds?.default == 'function' ? _ds.default(common) : _ds.default || _ds
+				typeof _ds == 'function'
+					? _ds(common)
+					: typeof _ds?.default == 'function'
+					? _ds.default(common)
+					: _ds.default || _ds
 
 			// !!! TODO: is this unnecessarily repeated at a later time? !!!
 			server_updateAttr(ds, d)
