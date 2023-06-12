@@ -3,7 +3,7 @@ import { renderTable } from '#dom/table'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW, getFilter } from '#termsetting/handlers/samplelst'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 import { plotSingleSampleGenomeQuantification, plotDisco } from '../mds3/sampletable'
 
@@ -336,29 +336,12 @@ export function setInteractivity(self) {
 
 	self.addToFilter = function(samplelstTW) {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, self.getFilter(samplelstTW)])
+		const filter = filterJoin([filterUiRoot, getFilter(samplelstTW)])
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',
 			filter
 		})
-	}
-
-	self.getFilter = function(samplelstTW) {
-		const values = samplelstTW.q.groups[0].values
-		const filter = {
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst: [
-				{
-					type: 'tvs',
-					tvs: { term: samplelstTW.term, values },
-					noEdit: !('sample' in values[0])
-				}
-			]
-		}
-		return filter
 	}
 
 	self.showTable = function(group, x, y, addGroup) {

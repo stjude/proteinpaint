@@ -129,3 +129,20 @@ export function getSamplelstTW(groups, name = 'groups') {
 		return values
 	}
 }
+
+export function getFilter(samplelstTW) {
+	const values = samplelstTW.q.groups[0].values
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: { term: samplelstTW.term, values },
+				noEdit: !('sample' in values[0])
+			}
+		]
+	}
+	return filter
+}

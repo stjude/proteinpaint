@@ -1,6 +1,7 @@
 import { getStoreInit } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { getFilterItemByTag, findParent } from '#filter/filter'
+import { getSamplelstTW, getFilter } from '#termsetting/handlers/samplelst'
 
 // to distinguish from IDs assigned by other code or users
 const idPrefix =
@@ -363,7 +364,14 @@ TdbStore.prototype.actions = {
 	},
 
 	add_group(action) {
-		this.state.groups.push(action.obj)
+		const group = action.obj
+		const samplelstTW = getSamplelstTW([group])
+		const appGroup = {
+			name: group.name,
+			filter: getFilter(samplelstTW),
+			plotId: group.plotId
+		}
+		this.state.groups.push(appGroup)
 		if ('plotId' in action.obj) {
 			const plot = this.state.plots.find(p => p.id == action.obj.plotId)
 			if (plot.groups) plot.groups.push(action.obj)
