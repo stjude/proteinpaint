@@ -1,5 +1,6 @@
 import { format } from 'd3-format'
 import { getColors } from '#shared/common'
+import { isNumeric } from './helpers'
 
 export function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -350,8 +351,4 @@ export function target_percentiles(binconfig) {
 	if (l && isNumeric(l.start_percentile)) percentiles.push(l.start_percentile)
 	if (l && isNumeric(l.stop_percentile)) percentiles.push(l.stop_percentile)
 	return percentiles
-}
-
-function isNumeric(n) {
-	return !isNaN(parseFloat(n)) && isFinite(n)
 }

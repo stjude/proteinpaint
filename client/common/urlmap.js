@@ -7,6 +7,8 @@
 	a Map() of URL parameter key-values 
 */
 // keys are case insensitive and will be converted to lower case in the map
+import { isNumeric } from '#shared/helpers'
+
 export default function(search = '', log = console.warn) {
 	const location = search ? { search } : window.location
 	const urlp = new Map()
@@ -38,8 +40,4 @@ export default function(search = '', log = console.warn) {
 		}
 	}
 	return urlp
-}
-
-function isNumeric(n) {
-	return !isNaN(parseFloat(n)) && isFinite(n)
 }

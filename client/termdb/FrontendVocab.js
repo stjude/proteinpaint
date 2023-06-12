@@ -5,6 +5,7 @@ import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { Vocab } from './Vocab'
 import roundValue from '#shared/roundValue'
 import computePercentile from '../../server/shared/compute.percentile'
+import { isNumeric } from '#shared/helpers'
 
 export class FrontendVocab extends Vocab {
 	constructor(opts) {
@@ -335,10 +336,6 @@ export class FrontendVocab extends Vocab {
 		delete q2.hiddenValues
 		return encodeURIComponent(JSON.stringify(q2))
 	}
-}
-
-function isNumeric(n) {
-	return !isNaN(parseFloat(n)) && isFinite(n)
 }
 
 function get_histogram(ticks) {

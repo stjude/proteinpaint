@@ -1,6 +1,7 @@
 import initBinConfig from '#shared/termdb.initbinconfig'
 import { TermdbVocab } from './TermdbVocab'
 import { FrontendVocab } from './FrontendVocab'
+import { isNumeric } from '#shared/helpers'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -124,8 +125,4 @@ export function getVocabFromSamplesArray({ samples, sample_attributes }) {
 		sampleannotation: sanno,
 		terms: Object.values(terms)
 	}
-}
-
-function isNumeric(n) {
-	return !isNaN(parseFloat(n)) && isFinite(n)
 }
