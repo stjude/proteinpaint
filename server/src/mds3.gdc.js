@@ -19,7 +19,7 @@ validate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
-validate_query_geneCnv
+validate_query_geneCnv2
 	filter2GDCfilter
 querySamples_gdcapi
 	flattenCaseByFields
@@ -364,6 +364,13 @@ function snvindel_addclass(m, consequence) {
 
 ////////////////////////// CNV /////////////////////////////
 
+/* using the "cnvs" endpoint
+!!! not in use !!!
+due to the trouble of getting samples filtered
+and inability to work with filters below:
+{"field":"cases.primary_site","value":["pancreas"]}
+{"field":"cases.case_id","value":["39710434-3a67-40eb-8ff3-0995df3e155c","b8a1732f-c1cb-4a02-af4f-61b63d3d52df","7d198ee2-d80a-4759-804f-a7ef85971843","2270d09e-a8be-4b7d-9520-a4bb1cd053c0","56c07b06-c6d3-4c03-9e57-7be636e7cc5c","e46b6434-ee88-4630-9fc3-441afc431745"]}
+*/
 export function validate_query_geneCnv(ds) {
 	const defaultFields = [
 		'cnv_id',
@@ -471,7 +478,126 @@ export function validate_query_geneCnv(ds) {
 		*/
 
 		if (p.filter0) {
-			filters.content.push(typeof p.filter0 == 'string' ? JSON.parse(p.filter0) : p.filter0)
+			filters.content.push(cnvsGetFilter0(p.filter0))
+		}
+		if (p.filterObj) {
+			filters.content.push(filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj))
+		}
+		return filters
+	}
+}
+/*
+f0 = {"op":"and","content":[{"op":"in","content":{"field":"cases.case_id","value":
+*/
+function cnvsGetFilter0(f0) {
+	const fstr = typeof f0 == 'string' ? f0 : JSON.stringify(f0)
+	return JSON.parse(fstr.replace('"cases.case_id"', '"occurrence.case.case_id"'))
+}
+
+// using the "cnv_occurrences" endpoint
+export function validate_query_geneCnv2(ds) {
+	const defaultFields = ['cnv.cnv_change', 'cnv.gene_level_cn', 'case.submitter_id', 'cnv.consequence.gene.symbol']
+
+	/*
+	opts{}
+		.gene=str
+	*/
+	ds.queries.geneCnv.bygene.get = async opts => {
+		const headers = getheaders(opts)
+		const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
+			headers,
+			body: JSON.stringify({
+				size: 100000,
+				fields: getFields(opts),
+				filters: getFilter(opts)
+			})
+		})
+		const re = JSON.parse(tmp.body)
+		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
+
+		const gainEvent = {
+			ssm_id: 'geneCnvGain',
+			dt: common.dtcnv,
+			class: common.mclasscnvgain,
+			samples: []
+		}
+		const lossEvent = {
+			ssm_id: 'geneCnvLoss',
+			dt: common.dtcnv,
+			class: common.mclasscnvloss,
+			samples: []
+		}
+
+		for (const hit of re.data.hits) {
+			if (typeof hit.cnv != 'object') throw 'hit.cnv{} not obj'
+			if (typeof hit.case != 'object') throw 'hit.case{} not obj'
+			if (!hit.cnv.gene_level_cn) throw 'hit.cnv.gene_level_cn is not true'
+
+			let cnv
+			if (hit.cnv.cnv_change == 'Gain') {
+				cnv = gainEvent
+			} else if (hit.cnv.cnv_change == 'Loss') {
+				cnv = lossEvent
+			} else {
+				throw 'hit.cnv.cnv_change is not Gain/Loss'
+			}
+			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
+			const sample = {
+				sample_id: hit.case.submitter_id
+			}
+
+			if (opts.twLst) {
+				for (const tw of opts.twLst) {
+					flattenCaseByFields(sample, hit.case, tw.term)
+				}
+			}
+
+			cnv.samples.push(sample)
+		}
+
+		const mlst = []
+		if (gainEvent.samples.length) mlst.push(gainEvent)
+		if (lossEvent.samples.length) mlst.push(lossEvent)
+		return mlst
+	}
+
+	function getFields(p) {
+		/* p={}
+		.twLst=[]
+		*/
+		const lst = defaultFields.slice()
+		if (p.twLst) {
+			for (const t of p.twLst) {
+				let id = t.term.id
+				if (id.startsWith('case.')) id = 'occurrence.' + id // ???
+				lst.push(id)
+			}
+		}
+		return lst.join(',')
+	}
+
+	function getFilter(p) {
+		/* p={}
+		.gene=str
+			needed for lollipop view, to limit data on one gene
+			gene-level cnv query doesn't work for single sample query, as the amount of data is too big, should be segments
+		.case_id=str
+			optional
+			to get 
+		.filter0, read-only gdc filter
+		.filterObj, pp filter
+		*/
+
+		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string' // gene is required for now
+
+		const filters = { op: 'and', content: [] }
+
+		if (p.gene) {
+			filters.content.push({ op: '=', content: { field: 'cnv.consequence.gene.symbol', value: p.gene.split(',') } })
+		}
+
+		if (p.filter0) {
+			filters.content.push(p.filter0)
 		}
 		if (p.filterObj) {
 			filters.content.push(filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj))

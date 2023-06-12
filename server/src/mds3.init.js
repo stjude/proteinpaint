@@ -507,7 +507,7 @@ async function validate_query_geneCnv(ds, genome) {
 	if (!q) return
 	if (q.bygene) {
 		if (q.bygene.gdcapi) {
-			gdc.validate_query_geneCnv(ds)
+			gdc.validate_query_geneCnv2(ds)
 			// q.bygene.get() added
 		}
 	} else {
