@@ -3,6 +3,7 @@ import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import { minimatch } from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
+import { Input, Return, Api } from '#shared/types/index'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -23,20 +24,40 @@ opts{}
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
-const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
-let $id = 0
+const idSuffix: string = `_ts_${(+new Date()).toString().slice(-8)}`
+let $id: number = 0
 
 export function get$id() {
 	return `${$id++}${idSuffix}`
 }
 
-const defaultOpts = {
+type DefaultOpts = {
+	menuOptions: string,
+	menuLayout: string
+}
+
+const defaultOpts: DefaultOpts = {
 	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical'
 }
 
 class TermSetting {
-	constructor(opts) {
+	opts: Return
+	vocabApi: any 
+	activeCohort: any 
+	placeholder: any 
+	durations: any
+	disable_terms: any
+	usecase: any
+	abbrCutoff: any
+	numqByTermIdModeType: any
+	dom: any
+	handlerByType
+	hasError: boolean
+	api: Api
+	
+
+	constructor(opts: Input) {
 		this.opts = this.validateOpts(opts)
 		this.vocabApi = opts.vocabApi
 		this.activeCohort = opts.activeCohort
@@ -122,7 +143,7 @@ class TermSetting {
 		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg)
 	}
 
-	validateOpts(_opts) {
+	validateOpts(_opts: any) {
 		const o = Object.assign({}, defaultOpts, _opts)
 		if (!o.holder && o.renderAs != 'none') throw '.holder missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
@@ -215,7 +236,7 @@ class TermSetting {
 		this.noTermPromptOptions = o.noTermPromptOptions
 	}
 
-	async setHandler(termtype) {
+	async setHandler(termtype: string) {
 		if (!termtype) {
 			this.handler = this.handlerByType.default
 			return
@@ -244,7 +265,7 @@ class TermSetting {
 
 export const termsettingInit = getInitFxn(TermSetting)
 
-function setRenderers(self) {
+function setRenderers(self: any) {
 	self.initUI = () => {
 		// run only once, upon init
 		if (self.opts.$id) {
@@ -312,7 +333,7 @@ function setRenderers(self) {
 				.style('color', '#999')
 				.style('font-size', '.8em')
 				.html(d => d.toUpperCase())
-				.on('click', (event, d) => {
+				.on('click', (event: any, d: any) => {
 					if (d == 'delete') self.removeTerm()
 					else if (d == 'replace') {
 						self.showTree(event.target)
@@ -504,7 +525,7 @@ function setInteractivity(self) {
 			},
 			tree: {
 				disable_terms: self.disable_terms,
-				click_term: async term => {
+				click_term: async (term: any) => {
 					self.dom.tip.hide()
 
 					const tw = term.term ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
@@ -518,7 +539,7 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.showMenu = (event, clickedElem = null, menuHolder = null) => {
+	self.showMenu = (event: any, clickedElem = null, menuHolder = null) => {
 		const tip = self.dom.tip
 		tip.clear()
 		// self.dom.holder really is set to clickedElem because
