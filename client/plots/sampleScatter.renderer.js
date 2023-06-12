@@ -536,8 +536,6 @@ export function setRenderers(self) {
 	}
 
 	self.addGroup = async function(group) {
-		self.config.groups.push(group)
-		self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 		const samplelstTW = getSamplelstTW([group])
 		const appGroup = {
 			name: group.name,

@@ -360,6 +360,25 @@ TdbStore.prototype.actions = {
 	delete_customTerm({ name }) {
 		const i = this.state.customTerms.findIndex(i => i.name == name)
 		if (i != -1) this.state.customTerms.splice(i, 1)
+	},
+
+	add_group(action) {
+		this.state.groups.push(action.obj)
+		if ('plotId' in action.obj) {
+			const plot = this.state.plots.find(p => p.id == action.obj.plotId)
+			if (plot.groups) plot.groups.push(action.obj)
+		}
+	},
+
+	delete_group({ name }) {
+		const i = this.state.groups.findIndex(i => i.name == name)
+		if (i != -1) this.state.groups.splice(i, 1)
+		for (const plot of this.state.plots) {
+			if (plot?.groups) {
+				const j = plot.groups.findIndex(j => j.name == name)
+				if (j != -1) plot.groups.splice(j, 1)
+			}
+		}
 	}
 }
 

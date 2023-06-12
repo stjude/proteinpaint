@@ -11,6 +11,7 @@ class MassPlot {
 
 	reactsTo(action) {
 		if (action.type.includes('cache_termq')) return true
+		if (action.type.endsWith('_group')) return true
 		if (action.type.startsWith('plot_')) {
 			return action.id === this.id
 		}
@@ -27,6 +28,7 @@ class MassPlot {
 		}
 		return {
 			config,
+			groups: appState.groups,
 			// quick fix to skip history tracking as needed
 			_scope_: appState._scope_
 		}
