@@ -171,34 +171,17 @@ export class Vocab {
 	}
 
 	async addGroup(obj) {
-		// save one custom term
-		// obj = { name:str, term:{} }
-		this.state.groups.push(obj)
-
 		await this.app.dispatch({
-			type: 'app_refresh',
-			state: { groups: this.state.groups }
+			type: 'add_group',
+			obj
 		})
 	}
 
 	async deleteGroup(name) {
-		const i = this.state.groups.findIndex(i => i.name == name)
-		if (i != -1) {
-			const group = this.state.groups[i]
-			this.state.groups.splice(i, 1)
-			await this.app.dispatch({
-				type: 'app_refresh',
-				state: { groups: this.state.groups }
-			})
-			const config = this.state.plots.find(p => p.id === group.plotId)
-			if (config) {
-				const j = config.groups.findIndex(item => item.name == name)
-				if (j != -1) {
-					config.groups.splice(j, 1)
-					this.app.dispatch({ type: 'plot_edit', id: group.plotId, config: { groups: config.groups } })
-				}
-			}
-		}
+		await this.app.dispatch({
+			type: 'delete_group',
+			name
+		})
 	}
 
 	async getGroups() {

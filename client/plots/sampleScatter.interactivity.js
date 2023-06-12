@@ -474,11 +474,10 @@ export function setInteractivity(self) {
 					.append('input')
 					.attr('value', group.name)
 					.on('change', () => {
-						const value = input.node().value
-						if (value) group.name = value
+						const name = input.node().value
+						if (name) self.renameGroup(group, name)
 						else input.node().value = group.name
 						groupDiv.html('&nbsp;' + group.name)
-						self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 					})
 				input.node().focus()
 				input.node().select()
@@ -498,6 +497,7 @@ export function setInteractivity(self) {
 			.text(`Delete group`)
 			.on('click', async e => {
 				await self.app.vocabApi.deleteGroup(group.name)
+				self.dom.tip.hide()
 			})
 		menuDiv
 			.append('div')
@@ -515,6 +515,11 @@ export function setInteractivity(self) {
 				group.showOnly = !group.showOnly
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
+	}
+
+	self.renameGroup = function(group, name) {
+		group.name = name
+		self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 	}
 
 	self.addCommonMenuItems = function(menuDiv, tw) {

@@ -117,6 +117,7 @@ class TdbNav {
 		if (action.type == 'plot_delete') return true
 		if (action.type == 'app_refresh') return true
 		if (action.type.endsWith('_customTerm')) return true
+		if (action.type.endsWith('_group')) return true
 	}
 
 	getState(appState) {
