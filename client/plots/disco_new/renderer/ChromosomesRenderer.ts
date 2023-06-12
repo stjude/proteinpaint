@@ -1,4 +1,3 @@
-import ViewModel from "../viewmodel/ViewModel";
 import * as d3 from "d3";
 import IRenderer from "./IRenderer";
 import Chromosome from "../viewmodel/Chromosome";
@@ -16,8 +15,7 @@ export default class ChromosomesRenderer implements IRenderer {
         this.outerRadius = outerRadius
     }
 
-    render(holder: any,  elements: Array<Chromosome>, collisions?: Array<Arc>) {
-
+    render(holder: any, elements: Array<Chromosome>, collisions?: Array<Arc>) {
 
         const pie = d3.pie<Chromosome>()
             .padAngle(this.padAngle)
@@ -44,12 +42,12 @@ export default class ChromosomesRenderer implements IRenderer {
             .enter()
             .append("text")
             // TODO extract all value and functions to Chromosomes
-            .attr("transform", (d) => {
+            .attr("transform", (d: d3.PieArcDatum<Chromosome>) => {
                 return `translate(${arc.centroid(<any>d)}) rotate(${(d.data.angle * 180) / Math.PI - 90})${d.data.angle > Math.PI ? 'rotate(180)' : ''}`
             })
             .attr("dy", "0.35em")
             .attr("text-anchor", "middle")
-            .text(d => d.data.label)
+            .text((d: d3.PieArcDatum<Chromosome>) => d.data.text)
             .style("fill", "white")
     }
 }

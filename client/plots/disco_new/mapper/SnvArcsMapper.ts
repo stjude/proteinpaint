@@ -8,7 +8,6 @@ export default class SnvArcsMapper {
 
     snvClassMap: Map<string, SnvLegendElement> = new Map()
 
-
     private settings: any;
     private sampleName: string;
     private reference: Reference;
@@ -23,7 +22,6 @@ export default class SnvArcsMapper {
 
         // number of base pairs per pixel
         this.bpx = Math.floor(this.reference.totalSize / (this.reference.totalChromosomesAngle * settings.rings.svnInnerRadius))
-        // TODO check if this is correct?
         this.onePxArcAngle = 1 / (settings.rings.svnInnerRadius)
     }
 
@@ -48,7 +46,6 @@ export default class SnvArcsMapper {
                         this.settings.rings.svnInnerRadius + ((i + 1) * this.settings.rings.svnWidth / arraySize),
                         MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass].color : '#000',
                         data.gene,
-                        -1,
                         data.mClass,
                         data.mname,
                         data.chr,
@@ -61,33 +58,8 @@ export default class SnvArcsMapper {
         return snvArray
     }
 
-    getChrBin(data) {
-        const chrKey = typeof data.chr == 'string' ? data.chr.replace('chr', '') : data.chr
-        const chr = this.reference.chromosomes.find(c => c.label == chrKey)
-        const start = data.position ? data.position : data.start ? data.start : 0
-        // TODO fix this
-        // @ts-ignore
-        let bin = chr.posbins.find(p => p.stop > start)
-        return [chr, bin]
-    }
-
     private createSnvLegend(dataClass: string) {
         const mClass = MLabel.getInstance().mlabel[dataClass]
         return new SnvLegendElement(mClass.label, mClass.color)
     }
 }
-
-// const length = this.chrSizesArray[i]
-// const posbins: Array<any> = [] // positional bins
-// let bptotal = 0
-// while (bptotal < length) {
-//     posbins.push({
-//         chr: this.chromosomesOrder[i],
-//         start: bptotal,
-//         stop: bptotal + bpx - 1
-//     })
-//     bptotal += bpx
-// }
-//
-//
-// chromosome.posbins = posbins

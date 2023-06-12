@@ -6,9 +6,8 @@ export default class SnvArc extends Arc {
         endAngle: number,
         innerRadius: number,
         outerRadius: number,
-        cssClass: string,
+        color: string,
         label: string,
-        width: number = -1,
         readonly dataClass: string,
         readonly mname: string,
         readonly chr: string,
@@ -18,8 +17,7 @@ export default class SnvArc extends Arc {
             endAngle,
             innerRadius,
             outerRadius,
-            cssClass,
-            width,
+            color,
             label)
     }
 

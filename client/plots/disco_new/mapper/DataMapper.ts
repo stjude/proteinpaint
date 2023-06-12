@@ -32,7 +32,7 @@ export default class DataMapper {
 
     private lohFilter = data => data.dt == 10
     // TODO rename or refactor?
-    private nonExonicFilter = data => ViewModelMapper.snvClassLayer[data.class] == 'non-exonic';
+    private nonExonicFilter = (data: Data) => ViewModelMapper.snvClassLayer[data.mClass] == 'non-exonic';
     // TODO rename or refactor?
     private snvRingFilter: (data: any) => boolean;
 
@@ -62,7 +62,6 @@ export default class DataMapper {
 
         // number of base pairs per pixel
         this.bpx = Math.floor(this.reference.totalSize / (this.reference.totalChromosomesAngle * settings.rings.svnInnerRadius))
-        // TODO check is this is Ok
         this.onePxArcAngle = 1 / (settings.rings.svnInnerRadius)
     }
 

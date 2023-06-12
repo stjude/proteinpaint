@@ -14,12 +14,10 @@ export default class Chromosome extends Arc {
                 endAngle: number,
                 innerRadius: number,
                 outerRadius: number,
-                cssClass: string,
-                label: string,
-                padAngle = undefined,
-                width: number = -1,) {
+                color: string,
+                label: string) {
 
-        super(startAngle, endAngle, innerRadius, outerRadius, cssClass, width, label, padAngle = undefined);
+        super(startAngle, endAngle, innerRadius, outerRadius, color, label);
 
         this.angle = (startAngle + endAngle) / 2
         this.ccAngle = this.angle - Math.PI / 2

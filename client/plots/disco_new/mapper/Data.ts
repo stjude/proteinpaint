@@ -1,5 +1,3 @@
-// TODO fix data class
-
 export default class Data {
     constructor(readonly dt: number,
                 readonly mname: string,

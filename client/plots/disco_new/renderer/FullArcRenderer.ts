@@ -16,8 +16,8 @@ export default class FullArcRenderer {
         const arc = new Arc(0,
             Math.PI * 2, this.svnInnerRadius,
             this.svnInnerRadius + this.svnWidth,
+    // TODO extract color
     "#6464641A",
-            this.svnWidth,
             "No label")
 
         const array: Array<Arc> = []
@@ -28,6 +28,6 @@ export default class FullArcRenderer {
             .enter()
             .append("path")
             .attr('d', (d: Arc) => donutGenerator(d))
-            .attr("fill", (d: Arc) => d.cssClass)
+            .attr("fill", (d: Arc) => d.color)
     }
 }

@@ -35,7 +35,9 @@ export default function discoDefaults(overrides = {}): Settings {
 
             label: {
                 fontSize: 12,
-                maxDeltaAngle: 0.05
+                maxDeltaAngle: 0.05,
+                animationDuration: 1000,
+                overlapAngleFactor: 5 // 7 is set by testing, because label height is not known before rendering
             },
 
             cnv: {
@@ -45,6 +47,11 @@ export default function discoDefaults(overrides = {}): Settings {
                 lossColor: '#67a9cf',
                 cappedAmpColor: '#8B0000',
                 cappedLossColor: '#00008B'
+            },
+
+            menu: {
+                padding: 5
+
             }
         },
         overrides

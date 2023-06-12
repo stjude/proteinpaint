@@ -1,17 +1,14 @@
 
 import {DefaultArcObject} from "d3-shape";
 
-// TODO change to interface?
-// TODO Rename?
 export default class Arc implements DefaultArcObject {
 
     startAngle: number
     endAngle: number
     readonly innerRadius: number
     readonly outerRadius: number
-    readonly width: number
-    readonly label: string
-    readonly cssClass: any
+    readonly text: string
+    readonly color: any
 
     readonly padAngle?: number | undefined
 
@@ -19,17 +16,15 @@ export default class Arc implements DefaultArcObject {
                 endAngle: number,
                 innerRadius: number,
                 outerRadius: number,
-                cssClass: string,
-                width: number = -1,
-                label: string,
+                color: string,
+                text: string,
                 padAngle = undefined) {
         this.startAngle = startAngle;
         this.endAngle = endAngle;
         this.innerRadius = innerRadius;
         this.outerRadius = outerRadius;
-        this.width = width;
-        this.cssClass = cssClass;
-        this.label = label
+        this.color = color;
+        this.text = text
         this.padAngle = padAngle
     }
 }

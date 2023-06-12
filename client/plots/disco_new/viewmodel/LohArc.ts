@@ -6,10 +6,8 @@ export default class LohArc extends Arc {
         endAngle: number,
         innerRadius: number,
         outerRadius: number,
-        cssClass: string,
+        color: string,
         label: string,
-        // TODO remove width
-        width: number = -1,
         readonly chr: string,
         readonly start: number,
         readonly stop: number,
@@ -19,8 +17,7 @@ export default class LohArc extends Arc {
             endAngle,
             innerRadius,
             outerRadius,
-            cssClass,
-            width,
+            color,
             label)
     }
 

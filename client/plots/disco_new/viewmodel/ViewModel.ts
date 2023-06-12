@@ -27,8 +27,8 @@ export default class ViewModel {
         this.width = 2 * (this.settings.rings.labelLinesInnerRadius + this.settings.rings.labelsToLinesDistance + this.settings.horizontalPadding)
         this.height = 2 * (this.settings.rings.labelLinesInnerRadius + this.settings.rings.labelsToLinesDistance + this.settings.verticalPadding)
 
-        // TODO Calculate legendHeight
-        this.legendHeight = 400
+
+        this.legendHeight = this.calculateLegendHeight(legend)
     }
 
     getElements(ringType: RingType): Array<Arc> {
@@ -56,5 +56,11 @@ export default class ViewModel {
         } else {
             return undefined
         }
+    }
+
+    private calculateLegendHeight(legend: Legend): number {
+        let rawHeight = 30
+
+        return rawHeight * legend.legendCount()
     }
 }
