@@ -1051,6 +1051,7 @@ async function launchgeneview(arg, app) {
 	}
 	if (arg.tracks) {
 		for (const t of arg.tracks) {
+			if (t.type == 'mds3' && t.dslabel) continue // is an official mds3, do not flag as custom
 			t.iscustom = true
 		}
 	}
@@ -1161,10 +1162,8 @@ async function launchblock(arg, app) {
 	if (arg.tracks) {
 		// tracks have to be labeled custom, even for smuggled native tracks
 		for (const t of arg.tracks) {
-			if (t.type == client.tkt.mds2 && t.dslabel) {
-				// is an official mds2, do not flag as custom
-				continue
-			}
+			if (t.type == client.tkt.mds3 && t.dslabel) continue // is an official mds3, do not flag as custom
+
 			if (t.mdsjsonfile || t.mdsjsonurl) {
 				try {
 					const tks = await init_mdsjson(t.mdsjsonfile, t.mdsjsonurl)

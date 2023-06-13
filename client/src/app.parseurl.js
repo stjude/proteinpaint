@@ -865,7 +865,11 @@ export async function get_tklst(urlp, genomeobj) {
 			}
 		}
 	}
+
 	for (const t of tklst) {
+		// uncertain reason why all tk are labeled as custom
+		// the mds3 tk has "dslabel" and should be official, do not label as custom, so in block.tk.menu won't show the delete button
+		if (t.type == 'mds3' && t.dslabel) continue
 		t.iscustom = true
 	}
 

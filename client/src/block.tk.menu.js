@@ -261,9 +261,15 @@ function hardlist4block(block, div) {
 			.text('SHOWN')
 			.style('color', '#aaa')
 			.style('font-size', '.7em')
+
 		const handle = tr.append('td').text(tkhtmllabel(tk, block))
+
 		if (tk.type == client.tkt.usegm) {
 			// usegm track is always on, cannot remove, because it's not registered in genome.tracks[]
+			handle.style('padding', '5px 10px')
+		} else if (tk.type == 'mds3' && tk.dslabel) {
+			// is official mds3 tk, always on
+			// could be temporary fix! can encode this choice at ds if indeed we need to hide an official mds3...
 			handle.style('padding', '5px 10px')
 		} else {
 			// other tracks can toggle show/hide
