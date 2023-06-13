@@ -382,12 +382,11 @@ export function setInteractivity(self) {
 				const input = groupDiv
 					.append('input')
 					.attr('value', group.name)
-					.on('change', () => {
+					.on('change', async () => {
 						const value = input.node().value
-						if (value) group.name = value
+						if (value) await self.app.dispatch({ type: 'rename_group', name: group.name, newName: value })
 						else input.node().value = group.name
 						groupDiv.html('&nbsp;' + group.name)
-						self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 					})
 				input.node().focus()
 				input.node().select()
@@ -456,9 +455,9 @@ export function setInteractivity(self) {
 				const input = groupDiv
 					.append('input')
 					.attr('value', group.name)
-					.on('change', () => {
+					.on('change', async () => {
 						const name = input.node().value
-						if (name) self.renameGroup(group, name)
+						if (name) await self.app.dispatch({ type: 'rename_group', name: group.name, newName: name })
 						else input.node().value = group.name
 						groupDiv.html('&nbsp;' + group.name)
 					})
