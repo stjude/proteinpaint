@@ -207,6 +207,10 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 	throw 'unknown method for dictionary terms'
 }
 
+/*
+--- XXX bug ---
+q.currentGeneNames[] is ignored and will not restrict to samples mutated for said genes
+*/
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const samples = {}
 	const refs = { byTermId: {} }
@@ -260,11 +264,11 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 }
 
 /*
-using mds3 dataset
+using mds3 dataset, that's without server-side sqlite db
 */
 async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
-		filter: q.filter,
+		filterObj: q.filter, // must rename key as "filterObj" but not "filter" to go with what mds3 backend is using
 		genome: q.genome,
 		get: 'samples',
 		twLst: termWrappers,
