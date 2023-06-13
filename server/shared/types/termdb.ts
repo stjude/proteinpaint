@@ -1,6 +1,5 @@
 import { Tvs } from './filter'
 
-
 type kv = {
     k: string
     v: string
@@ -18,7 +17,6 @@ type BinConfigLstEntry = {
     stopunbounded?: boolean
     stopinclusive?: boolean
     label?: string
-
 }
 
 interface BinConfig extends BaseQ {
@@ -172,8 +170,8 @@ export interface Term {
     unit?: string,
     hashtmldetail?: boolean,
     logScale?: string | number //2, 10, or e only
-    child_types?: [],
-    included_types?: [],
+    child_types?: any //[],
+    included_types?: any //[],
     skip0forPercentile?: boolean,
     densityNotAvailable: boolean
     bins?: NumericalBins,
@@ -189,5 +187,5 @@ export interface TW { //Term wrapper
     $id?: string
     isAtomic?: boolean
     term: Term
-    q?: Q
+    q: Q
 }

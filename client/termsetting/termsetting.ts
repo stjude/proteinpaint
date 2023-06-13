@@ -36,6 +36,10 @@ type DefaultOpts = {
 	menuLayout: string
 }
 
+type DefaultQByTsHandler = {
+    [index: string]: Q
+}
+
 const defaultOpts: DefaultOpts = {
 	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical'
@@ -595,7 +599,7 @@ function setInteractivity(self: any) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text(d => d.label)
+			.text((d: any) => d.label)
 			.on('click', (event: any, d: any) => {
 				self.dom.tip.clear()
 				d.callback(self.dom.tip.d)
@@ -635,7 +639,7 @@ function setInteractivity(self: any) {
 			})
 
 		const tableWrapper = _div.append('div').style('margin', '10px')
-		const defaultTw: TW = { term: self.term }
+		const defaultTw: TW = { term: self.term, q: {} }
 		await fillTermWrapper(defaultTw, self.vocabApi)
 		defaultTw.q.reuseId = 'Default'
 		qlst.push(defaultTw.q)
@@ -707,7 +711,7 @@ function setInteractivity(self: any) {
 			)
 	}
 
-	self.showGeneSearch = (clickedElem: any) => {
+	self.showGeneSearch = (clickedElem: any, event: any) => {
 		self.dom.tip.clear()
 		if (clickedElem)
 			self.dom.tip.showunder(
@@ -731,7 +735,7 @@ function setInteractivity(self: any) {
 					resultsDiv.selectAll('*').remove()
 					resultsDiv
 						.selectAll('div')
-						.data(results.lst.filter(g => !selectedGenes.has(g)))
+						.data(results.lst.filter((g: any) => !selectedGenes.has(g)))
 						.enter()
 						.append('div')
 						.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term')
@@ -812,7 +816,7 @@ defaultQ{}
 	value is { condition: {mode:'binary'}, ... }
 	with term types as keys
 */
-export async function fillTermWrapper(tw: TW, vocabApi: VocabApi, defaultQ?: Q) {
+export async function fillTermWrapper(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	tw.isAtomic = true
 	if (!tw.$id) tw.$id = get$id()
 
@@ -836,16 +840,16 @@ export async function fillTermWrapper(tw: TW, vocabApi: VocabApi, defaultQ?: Q) 
 	tw.q.isAtomic = true
 
 	// call term-type specific logic to fill tw
-	await call_fillTW(tw, vocabApi, defaultQ)
+	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
 
 	mayValidateQmode(tw)
 	return tw as TW
 } 
 
-async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q | undefined) {
+async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	if (!tw.$id) tw.$id = get$id()
 	const t = tw.term.type
-	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
+	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t as string
 	let _
 	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.js`)
 	else if (tw.term.type) {
@@ -855,7 +859,7 @@ async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q | undefined) 
 			throw `Type ${type} does not exist`
 		}
 	} else throw `Type not defined for ${JSON.stringify(tw)}`
-	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
+	await _.fillTW(tw, vocabApi, defaultQByTsHandler ? defaultQByTsHandler[type] : null)
 }
 
 function mayValidateQmode(tw: TW) {
