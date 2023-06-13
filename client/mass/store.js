@@ -366,9 +366,11 @@ TdbStore.prototype.actions = {
 	add_group(action) {
 		if (this.state.nav.header_mode != 'hidden') {
 			const group = action.obj
+			const name = `Group ${this.state.groups.length + 1}`
+
 			const samplelstTW = getSamplelstTW([group])
 			const appGroup = {
-				name: group.name,
+				name: name,
 				filter: getFilter(samplelstTW),
 				plotId: group.plotId
 			}
@@ -376,7 +378,11 @@ TdbStore.prototype.actions = {
 			this.state.nav.activeTab = 1
 		} else if ('plotId' in action.obj) {
 			const plot = this.state.plots.find(p => p.id == action.obj.plotId)
-			if (plot.groups) plot.groups.push(action.obj)
+			if (plot.groups) {
+				action.obj.index = plot.groups.length
+				action.obj.name = `Group ${plot.groups.length + 1}`
+				plot.groups.push(action.obj)
+			}
 		}
 	},
 
