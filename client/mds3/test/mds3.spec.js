@@ -25,10 +25,10 @@ Incorrect dataset name: ah instead of ASH
 Launch variant table from track variant label
 
 ### via gdc api
-GDC - sample summaries table, create subtrack
+GDC - sample summaries table, create subtrack (tk.filterObj)
 
 ### via bcf and termdb
-ASH - sample summaries table, create subtrack
+ASH - sample summaries table, create subtrack (tk.filterObj)
 
 ###
 GDC - mclass filtering
@@ -367,7 +367,7 @@ tape('Launch variant table from track variant label', test => {
 	}
 })
 
-tape('GDC - sample summaries table, create subtrack', test => {
+tape('GDC - sample summaries table, create subtrack (tk.filterObj)', test => {
 	//If dispatchEvent error in browser, run again before debugging
 	test.timeoutAfter(5000)
 	const holder = getHolder()
@@ -376,7 +376,7 @@ tape('GDC - sample summaries table, create subtrack', test => {
 		holder,
 		noheader: true,
 		genome: 'hg38',
-		gene: 'kras',
+		gene: 'idh1',
 		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
 
@@ -400,7 +400,7 @@ tape('GDC - sample summaries table, create subtrack', test => {
 
 		// find one of the clickable label for a category
 		// attach this callback on bb (block instance) to be triggered when the subtrack is loaded
-		bb.onloadalltk_always = () => {
+		bb.onloadalltk_always = async () => {
 			test.equal(
 				bb.tklst.length,
 				3,
@@ -421,13 +421,17 @@ tape('GDC - sample summaries table, create subtrack', test => {
 			)
 
 			test.ok(subtk.leftlabels.doms.filterObj, '.leftlabels.doms.filterObj is set on subtrack')
-			// TODO trigger click on filterObj and detect filter ui
+			// click on the filterObj left label to show menu with filter UI
+			subtk.leftlabels.doms.filterObj.node().dispatchEvent(new Event('click'))
+			await whenVisible(subtk.menutip.d)
+			test.pass('subtk.menutip is shown (with filter UI), after clicking leftlabels.doms.filterObj')
 
 			test.ok(subtk.leftlabels.doms.close, '.leftlabels.doms.close is set on subtrack')
 
-			// Close orphaned popup window
-			tk.menutip.d.remove()
-			if (test._ok) holder.remove()
+			if (test._ok) {
+				holder.remove()
+				tk.menutip.d.remove() // Close orphaned popup window
+			}
 			test.end()
 		}
 
@@ -436,7 +440,7 @@ tape('GDC - sample summaries table, create subtrack', test => {
 	}
 })
 
-tape('ASH - sample summaries table, create subtrack', test => {
+tape('ASH - sample summaries table, create subtrack (tk.filterObj)', test => {
 	//If dispatchEvent error in browser, run again before debugging
 	test.timeoutAfter(5000)
 	const holder = getHolder()
