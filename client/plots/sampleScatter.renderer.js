@@ -502,9 +502,7 @@ export function setRenderers(self) {
 				.text('Add to a group')
 				.on('click', async () => {
 					const group = {
-						name: `Group ${self.config.groups.length + 1}`,
-						items: self.selectedItems.map(item => item.__data__),
-						index: self.config.groups.length
+						items: self.selectedItems.map(item => item.__data__)
 					}
 					self.addGroup(group)
 				})
@@ -514,9 +512,7 @@ export function setRenderers(self) {
 				.text('Add to a group and filter')
 				.on('click', () => {
 					const group = {
-						name: `Group ${self.config.groups.length + 1}`,
-						items: self.selectedItems.map(item => item.__data__),
-						index: self.config.groups.length
+						items: self.selectedItems.map(item => item.__data__)
 					}
 					self.addGroup(group)
 					const tw = getSamplelstTW([group])
