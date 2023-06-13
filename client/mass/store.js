@@ -364,27 +364,32 @@ TdbStore.prototype.actions = {
 	},
 
 	add_group(action) {
-		const group = action.obj
-		const samplelstTW = getSamplelstTW([group])
-		const appGroup = {
-			name: group.name,
-			filter: getFilter(samplelstTW),
-			plotId: group.plotId
-		}
-		this.state.groups.push(appGroup)
-		if ('plotId' in action.obj) {
+		if (this.state.nav.header_mode != 'hidden') {
+			const group = action.obj
+			const samplelstTW = getSamplelstTW([group])
+			const appGroup = {
+				name: group.name,
+				filter: getFilter(samplelstTW),
+				plotId: group.plotId
+			}
+			this.state.groups.push(appGroup)
+			this.state.nav.activeTab = 1
+		} else if ('plotId' in action.obj) {
 			const plot = this.state.plots.find(p => p.id == action.obj.plotId)
 			if (plot.groups) plot.groups.push(action.obj)
 		}
 	},
 
 	delete_group({ name }) {
-		const i = this.state.groups.findIndex(i => i.name == name)
-		if (i != -1) this.state.groups.splice(i, 1)
-		for (const plot of this.state.plots) {
-			if (plot?.groups) {
-				const j = plot.groups.findIndex(j => j.name == name)
-				if (j != -1) plot.groups.splice(j, 1)
+		if (this.state.nav.header_mode != 'hidden') {
+			const i = this.state.groups.findIndex(i => i.name == name)
+			if (i != -1) this.state.groups.splice(i, 1)
+		} else {
+			for (const plot of this.state.plots) {
+				if (plot?.groups) {
+					const j = plot.groups.findIndex(j => j.name == name)
+					if (j != -1) plot.groups.splice(j, 1)
+				}
 			}
 		}
 	}
