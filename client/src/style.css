@@ -1170,3 +1170,14 @@ sandbox header
     -ms-user-select: none;
     -user-select: none;
 }
+
+.sjpp-nav
+{
+    position: sticky;
+    background-color: white;
+    width: 100%;
+    z-index: 10;
+    top: 0px;
+    left: 0px;
+    padding: 30px 0;
+}

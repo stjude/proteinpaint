@@ -181,6 +181,7 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.style('margin', '10px')
 			.style('display', 'inline-block')
+		self.opts.holder.attr('class', 'sjpp-nav')
 		self.dom = {
 			holder: self.opts.holder,
 			header,
@@ -203,7 +204,7 @@ function setRenderers(self) {
 				.append('div')
 				.style('margin', '30px')
 				.style('display', 'none'),
-			tip: new Menu({ padding: '5px' })
+			tip: new Menu({ padding: '5px', zIndex: 100 })
 		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {

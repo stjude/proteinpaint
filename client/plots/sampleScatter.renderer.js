@@ -538,6 +538,7 @@ export function setRenderers(self) {
 	self.addGroup = async function(group) {
 		group.plotId = self.id
 		await self.app.vocabApi.addGroup(group)
+		self.dom.tip.hide()
 	}
 
 	self.setTools = function() {
