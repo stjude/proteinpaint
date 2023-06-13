@@ -92,10 +92,10 @@ export class Menu {
 			// close a menu for all other mousedown events outside of its own div or submenu
 			this.hide()
 		})
-		if (arg.zIndex) this.d.style('z-index', arg.zIndex)
-		else {
-			const base_zindex = get_base_zindex()
-			if (base_zindex) this.d.style('z-index', base_zindex + 1)
+
+		const base_zindex = get_base_zindex()
+		if (base_zindex) {
+			this.d.style('z-index', base_zindex + 1)
 		}
 
 		this.d.style('padding', 'padding' in arg ? arg.padding : '10px')

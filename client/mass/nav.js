@@ -204,7 +204,7 @@ function setRenderers(self) {
 				.append('div')
 				.style('margin', '30px')
 				.style('display', 'none'),
-			tip: new Menu({ padding: '5px', zIndex: 100 })
+			tip: new Menu({ padding: '5px' })
 		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
