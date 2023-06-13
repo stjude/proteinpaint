@@ -193,7 +193,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			continue
 		}
 		let divideBy = 'Default'
-		if (q.divideByTW && q.divideByTW.q.mode == 'discrete') {
+		if (q.divideByTW && q.divideByTW.q.mode != 'continuous') {
 			sample.z = 0
 			if (q.divideByTW.term.type == 'geneVariant')
 				divideBy = getMutation(true, dbSample, q.divideByTW) || getMutation(false, dbSample, q.divideByTW)
