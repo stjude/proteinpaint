@@ -192,8 +192,9 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}
+		if ((q.colorTW && !hasValue(dbSample, q.colorTW)) || (q.shapeTW && !hasValue(dbSample, q.shapeTW))) continue
 		let divideBy = 'Default'
-		if (q.divideByTW && q.divideByTW.q.mode == 'discrete') {
+		if (q.divideByTW && q.divideByTW.q.mode != 'continuous') {
 			sample.z = 0
 			if (q.divideByTW.term.type == 'geneVariant')
 				divideBy = getMutation(true, dbSample, q.divideByTW) || getMutation(false, dbSample, q.divideByTW)
@@ -266,6 +267,13 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		result.shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
 	}
 	return results
+}
+
+function hasValue(dbSample, tw) {
+	const key = dbSample?.[tw?.term?.id || tw?.term?.name]?.key
+	const hasKey = key !== undefined
+	if (!hasKey) console.log(JSON.stringify(dbSample) + ' missing value for the term ' + JSON.stringify(tw))
+	return hasKey
 }
 
 function processSample(dbSample, sample, tw, categoryMap, category) {
