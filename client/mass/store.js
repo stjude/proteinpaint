@@ -386,6 +386,29 @@ TdbStore.prototype.actions = {
 		}
 	},
 
+	rename_group(action) {
+		const name = action.name
+		const newName = action.newName
+		if (this.state.nav.header_mode != 'hidden') {
+			let i = this.state.groups.findIndex(i => i.name == newName)
+			if (i != -1) throw `Group named ${newName} already exists`
+			i = this.state.groups.findIndex(i => (group.name = name))
+			if (i == -1) throw `Group named ${name} does not exist`
+			this.state.groups[i].name = newName
+		} else {
+			for (const plot of this.state.plots) {
+				if (plot?.groups) {
+					let j = plot.groups.findIndex(j => j.name == newName)
+					console.log(j)
+					if (j != -1) throw `Group named ${newName} already exists`
+					j = plot.groups.findIndex(group => (group.name = name))
+					if (j == -1) throw `Group named ${name} does not exist`
+					plot.groups[j].name = newName
+				}
+			}
+		}
+	},
+
 	delete_group({ name }) {
 		if (this.state.nav.header_mode != 'hidden') {
 			const i = this.state.groups.findIndex(i => i.name == name)
