@@ -642,7 +642,7 @@ class Matrix {
 				if (!('gap' in t.tw.settings)) t.tw.settings.gap = 0
 				t.scale = scaleLinear()
 					.domain([t.counts.minval, t.counts.maxval])
-					.range([1, s.barh])
+					.range([1, t.tw.settings.barh])
 			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
 				const maxVals = []
 				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
