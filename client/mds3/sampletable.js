@@ -2,6 +2,7 @@ import { fillbar } from '#dom/fillbar'
 import { get_list_cells } from '#dom/gridutils'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
+import { newSandboxDiv } from '#dom/sandbox'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
 import { first_genetrack_tolist } from '../common/1stGenetk'
@@ -87,9 +88,10 @@ export async function displaySampleTable(samples, args) {
 		const colButton = {
 			text: 'Disco',
 			callback: async (event, i) => {
-				args.tk.menutip.clear().show(event.clientX, event.clientY)
 				const sample = samples[i]
-				plotDisco(args.tk.mds, args.tk.mds.label, sample, args.tk.menutip.d, args.block.genome)
+				const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
+				sandbox.header.text(sample.sample_id)
+				plotDisco(args.tk.mds, args.tk.mds.label, sample, sandbox.body, args.block.genome)
 			}
 		}
 		params.columnButtons.push(colButton)
@@ -100,13 +102,14 @@ export async function displaySampleTable(samples, args) {
 			const btn = {
 				text: k,
 				callback: async (event, i) => {
-					args.tk.menutip.clear().show(200, event.clientY)
+					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
+					sandbox.header.text(samples[i].sample_id)
 					await plotSingleSampleGenomeQuantification(
 						args.tk.mds,
 						args.tk.mds.label,
 						k,
 						samples[i],
-						args.tk.menutip.d.append('div').style('margin', '20px'),
+						sandbox.body.append('div').style('margin', '20px'),
 						args.block.genome
 					)
 				}
@@ -281,10 +284,12 @@ function printSampleName(sample, tk, div, block) {
 			.append('button')
 			.style('margin-right', '10px')
 			.text('Disco plot')
-			.on('click', async event => {
-				tk.menutip.clear().show(event.clientX, event.clientY)
+			.on('click', async () => {
+				// create ad-hoc sandbox; if newChartHolder is present, plot into it
+				const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
+				sandbox.header.text(sample.sample_id)
 				try {
-					plotDisco(tk.mds, tk.mds.label, sample, tk.menutip.d, block.genome)
+					plotDisco(tk.mds, tk.mds.label, sample, sandbox.body, block.genome)
 				} catch (e) {
 					event.target.innerHTML = 'Error: ' + (e.message || e)
 					if (e.stack) console.log(e.stack)
@@ -297,14 +302,15 @@ function printSampleName(sample, tk, div, block) {
 			extraRow
 				.append('button')
 				.text(k)
-				.on('click', async event => {
-					tk.menutip.clear().show(200, event.clientY)
+				.on('click', async () => {
+					const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
+					sandbox.header.text(sample.sample_id)
 					await plotSingleSampleGenomeQuantification(
 						tk.mds,
 						tk.mds.label,
 						k,
 						sample,
-						tk.menutip.d.append('div').style('margin', '20px'),
+						sandbox.body.append('div').style('margin', '20px'),
 						block.genome
 					)
 				})
@@ -347,15 +353,7 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 	const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
 
 	// description
-	{
-		const d = holder.append('div')
-		d.append('span')
-			.text(sample[q.sample_id_key])
-			.style('font-weight', 'bold')
-		d.append('span')
-			.text(q.description || queryKey)
-			.style('padding-left', '10px')
-	}
+	holder.append('div').text(q.description || queryKey)
 	if (q2) {
 		holder
 			.append('div')

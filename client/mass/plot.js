@@ -1,6 +1,7 @@
-import { getCompInit, copyMerge } from '../rx'
-import { Menu } from '../src/client'
+import { getCompInit, copyMerge } from '#rx'
+import { Menu } from '#dom/menu'
 import { recoverInit } from '../rx/src/recover'
+import { select as d3select } from 'd3-selection'
 
 class MassPlot {
 	constructor(opts) {
@@ -59,8 +60,21 @@ class MassPlot {
 			app: this.app,
 			holder: this.dom.viz,
 			header: this.dom.paneTitleDiv,
-			id: this.id
+			id: this.id,
+			plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
 		})
+		/******* reason for passing plotDiv to chart ********
+
+		- this plot instance may allow to launch a new plot as a persistent sandbox
+		  inside mass plotDiv, maintaining the uniform plot appearance despite it's ad-hoc
+		  the new plot is not a formal mass plot type, and cannot be done via app.dispatch()
+		  thus the need to directly access plotDiv
+		- example: mds3 tk from genome browser can launch disco etc
+		- having access to plotDiv may offer flexibility for the plot to do stuff
+
+		since plot.js has no access to mass app .dom.plotDiv in which all apps are shown,
+		this workarounds gets the parent node of sandbox.app_div which is app.dom.plotDiv
+		*/
 	}
 
 	destroy() {

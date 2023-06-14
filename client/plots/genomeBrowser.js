@@ -25,6 +25,7 @@ this{}
 		app{}
 		header
 		holder
+		plotDiv
 		id
 	state {}
 		config {}
@@ -128,8 +129,14 @@ class genomeBrowser {
 				// launch official mds3 tk, same way as mds3/tk.js
 				const tk = {
 					type: 'mds3',
-					filterObj: this.state.filter,
-					dslabel: this.app.opts.state.vocab.dslabel
+					dslabel: this.app.opts.state.vocab.dslabel,
+					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
+					newChartHolder: this.opts.plotDiv
+				}
+				if (this.state.filter?.lst?.length > 0) {
+					// state has a non-empty filter, register at tk obj to pass to mds3 data queries
+					tk.filterObj = this.state.filter
+					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
 				await this.launchBlockWithTracks([tk])
 			}
