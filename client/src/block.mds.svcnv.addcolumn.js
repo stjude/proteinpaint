@@ -1021,7 +1021,7 @@ async function findgene4fix(name, tk, block, norender) {
 	const wait = tk.tkconfigtip.d.append('div').text('Searching for ' + name + ' ...')
 
 	try {
-		const data1 = await client.dofetch('genelookup', { genome: block.genome.name, input: name, deep: 1 })
+		const data1 = await client.dofetch3('genelookup', { body: { genome: block.genome.name, input: name, deep: 1 } })
 
 		if (data1.error) throw data1.error
 		if (!data1.gmlst) throw '.gmlst[] missing'

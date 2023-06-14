@@ -51,8 +51,7 @@ async function step1_findgm(arg) {
 		.text('Searching for ' + arg.query + ' ...')
 
 	const data = await dofetch3('genelookup', {
-		method: 'POST',
-		body: JSON.stringify({ deep: 1, input: arg.query, genome: arg.genome.name })
+		body: { deep: 1, input: arg.query, genome: arg.genome.name }
 	})
 	if (!data) throw 'querying genes: server error'
 	if (data.error) throw 'error querying genes: ' + data.error
