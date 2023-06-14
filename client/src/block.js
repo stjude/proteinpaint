@@ -5277,7 +5277,15 @@ async function maygetdna(block, tip) {
 		})
 		lst.push('>' + coord + '\n' + data.seq)
 	}
-	client.export_data('Reference DNA from ' + block.genome.name, [{ text: lst.join('\n') }], 1, 1, 10, 100, tip.d)
+	client.export_data(
+		'Reference DNA from ' + block.genome.name,
+		[{ text: lst.join('\n') }],
+		1,
+		1,
+		10,
+		100,
+		tip.d.style('left', '100px')
+	)
 }
 
 function init_cursorhlbar(block) {
