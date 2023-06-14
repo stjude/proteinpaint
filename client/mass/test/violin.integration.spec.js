@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
-import { fillTermWrapper } from '../../termsetting/termsetting.js'
+import { fillTermWrapper } from '../../termsetting/termsetting'
 import { getFilterItemByTag, filterJoin } from '../../filter/filter.js'
 import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
 

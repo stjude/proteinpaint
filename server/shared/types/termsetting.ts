@@ -3,27 +3,27 @@ import { Term, Q, TW } from './termdb'
 import { Filter } from './filter'
 
 export interface Dom {
-    holder: any, 
-    tip: any, 
+    holder: Selection
+    tip: any //TODO Menu type??
     tip2: any
-    nopilldiv?: any
-    pilldiv?: any
-    btnDiv?: any
+    nopilldiv?: Selection
+    pilldiv?: Selection
+    btnDiv?: Selection
 }
 
 export interface Api {
-    main: (f: any) => void,
+    main: (d: PillData) => void,
     runCallback: (f: any) => void
-    showTree: () => boolean
-    showMenu: (f: any) => void
-    showGeneSearch: (f: any) => void
+    showTree: (holder: Selection, event: any) => boolean
+    showMenu: (event: any, clickedElem: Selection | null, menuHolder: Selection | null) => void
+    showGeneSearch: (event: any, clickedElem: Selection | null) => void
     hasError: () => boolean
     validateQ: (d: Q) => void
 }
 
-export type NoTermPromptOptions = {
+export type NoTermPromptOptsEntry = {
     isDictionary?: boolean,
-    termType?: string,
+    termtype?: string,
     text?: string,
     html?: string
     q?: Q
@@ -50,8 +50,11 @@ type SampleCountsEntry = {
     v: number //This maybe a string???
 }
 
-type Handler = {
-    defaultHandler?: string
+export interface Handler {
+    getPillName: (d: PillData) => string
+    showEditMenu: (div: Selection) => void
+    validateQ?: (d: Q) => void
+    postMain?: () => void
 }
 
 interface BaseTermSettingOpts {
@@ -60,7 +63,7 @@ interface BaseTermSettingOpts {
     disable_terms?: string[]
     handler: Handler
     abbrCutoff?: number
-    noTermPromptOptions?: NoTermPromptOptions
+    noTermPromptOptions?: NoTermPromptOptsEntry[]
 }
 
 export interface PillData extends BaseTermSettingOpts {
@@ -96,5 +99,7 @@ export interface TermSettingOpts extends BaseTermSettingOpts{
     placeholderIcon?: string
     usecase?: UseCase
     debug?: boolean | number //true or 1
-    $id?: string
+    $id?: string,
+    //getBodyParams used but not documented??
+    //vocab??
 }

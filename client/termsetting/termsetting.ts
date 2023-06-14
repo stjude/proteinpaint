@@ -3,7 +3,7 @@ import { Menu } from '#dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
-import { TermSettingOpts, Term, Q, TW, VocabApi, Api, PillData, Dom, UseCase } from '#shared/types/index'
+import { TermSettingOpts, Term, Q, TW, VocabApi, Api, PillData, Dom, UseCase, NoTermPromptOptsEntry, Handler } from '#shared/types/index'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -39,6 +39,10 @@ const defaultOpts: { menuOptions: string, menuLayout: string } = {
 	menuLayout: 'vertical'
 }
 
+type HandlerByType = {
+	[index: string]: Handler
+}
+
 class TermSetting {
 	opts: TermSettingOpts
 	vocabApi: VocabApi
@@ -52,27 +56,27 @@ class TermSetting {
 	abbrCutoff: number | undefined
 	$id: string | undefined
 	sampleCounts: {k: string, v: number}[] | undefined
+	noTermPromptOptions: NoTermPromptOptsEntry[] | undefined
 	//Optional opts in script, not init()
 	doNotHideTipInMain: boolean | undefined
 	//Created
 	hasError: boolean
 	api: Api
 	numqByTermIdModeType: {}
-	handlerByType: any
+	handlerByType: HandlerByType
 	showTree: any
 	showGeneSearch: any
 	showMenu: any
+	initUI: any
+	updateUI: any
 	handler: any
-	
-	
+	//Pill data
 	data: any
-	noTermPromptOptions: any
-	error: any
+	error: string | undefined
 	filter: any
 	term: any
 	q: any
-	initUI: any
-	updateUI: any
+	
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
@@ -140,7 +144,7 @@ class TermSetting {
 					throw e
 				}
 			}
-		} as Api
+		}
 	}
 
 	runCallback(overrideTw = null) {
@@ -189,7 +193,7 @@ class TermSetting {
 			delete this.error
 			this.validateMainData(data)
 			// may need original values for comparing edited settings
-			this.data = data
+			this.data = data as PillData
 			// term is read-only if it comes from state, let it remain read-only
 			this.term = data.term
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
@@ -255,7 +259,7 @@ class TermSetting {
 
 	async setHandler(termtype: string) {
 		if (!termtype) {
-			this.handler = this.handlerByType.default
+			this.handler = this.handlerByType.default as Handler
 			return
 		}
 		const type = termtype == 'integer' || termtype == 'float' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
@@ -283,7 +287,7 @@ class TermSetting {
 export const termsettingInit = getInitFxn(TermSetting)
 
 function setRenderers(self: any){
-	self.initUI = (): void => {
+	self.initUI = () => {
 		// run only once, upon init
 		if (self.opts.$id) {
 			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
@@ -406,7 +410,7 @@ function setRenderers(self: any){
 			.each(self.enterPill)
 	}
 
-	self.enterPill = async function() {
+	self.enterPill = async function(this: string) {
 		const one_term_div = select(this)
 
 		// left half of blue pill
@@ -436,7 +440,7 @@ function setRenderers(self: any){
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
 			// bind d.txt to dom, is important in making sure the same text label won't trigger the dom update
-			.data(pillstat.text ? [{ txt: pillstat.text }] : [], (d: any) => d.txt)
+			.data(pillstat.text ? [{ txt: pillstat.text }] : [], (d: any) => d.txt as string)
 
 		// because of using d.txt of binding data, exitPill cannot be used here
 		// as two different labels will create the undesirable effect of two right halves
@@ -522,7 +526,7 @@ function setInteractivity(self: any) {
 		// load the input ui for this term type
 	}
 
-	self.showTree = async function(holder: any, event: any) {
+	self.showTree = async function(holder: Selection, event: any) {
 		self.dom.tip.clear()
 		if (holder)
 			self.dom.tip.showunder(
