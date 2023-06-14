@@ -4,8 +4,15 @@ import {FusionLegend} from "../viewmodel/FusionLegend";
 
 export default class LegendJSONMapper {
 
-    map(legend: Legend) {
+    private cvnCapping: number;
+    private onClickCallback: (d: any, t: any) => any;
 
+    constructor(cvnCapping: number, onClickCallback: (d: any, t: any) => any) {
+        this.cvnCapping = cvnCapping
+        this.onClickCallback = onClickCallback
+    }
+
+    map(legend: Legend) {
         const legendJSON: Array<any> = [];
 
         let order = 0
@@ -28,18 +35,18 @@ export default class LegendJSONMapper {
         return legendJSON
     }
 
-
     private mapSnv(legend: Legend, legendJSON: Array<any>, order: number) {
         const snvItems: Array<any> = []
 
         let snvOrder = 0
 
+        // @ts-ignore
         for (const [snvKey, snvLegendElement] of legend.snvClassMap!) {
             snvItems.push(
                 {
                     termid: legend.snvTitle,
                     key: snvKey,
-                    text: snvLegendElement.snvType,
+                    text: `${snvLegendElement.snvType} (${snvLegendElement.count})`,
                     color: snvLegendElement.color,
                     order: snvOrder++,
                     border: "1px solid #ccc"
@@ -57,31 +64,49 @@ export default class LegendJSONMapper {
     private mapCnv(legend: Legend, legendJSON: Array<any>, order: number) {
         const gain = legend.cnvClassMap!.get(CnvType.Gain)
         const loss = legend.cnvClassMap!.get(CnvType.Loss)
+        const cap = legend.cnvClassMap!.get(CnvType.Cap)
 
-        if (gain && loss) {
+        if (gain && loss && cap) {
             let cnvOrder = 0
             const cnvItems: Array<any> = []
-            cnvItems.push(
-                {
-                    termid: legend.cnvTitle,
-                    key: CnvType.Gain,
-                    text: `Gain: ${gain.value}`,
-                    color: gain.color,
-                    order: cnvOrder++,
-                    border: "1px solid #ccc"
-                }
-            )
+            if (gain.value > 0) {
+                cnvItems.push(
+                    {
+                        termid: legend.cnvTitle,
+                        key: CnvType.Gain,
+                        text: `Max: ${gain.value}`,
+                        color: gain.color,
+                        order: cnvOrder++,
+                        border: "1px solid #ccc"
+                    }
+                )
+            }
 
-            cnvItems.push(
-                {
-                    termid: legend.cnvTitle,
-                    key: CnvType.Loss,
-                    text: `Loss: ${loss.value}`,
-                    color: loss.color,
-                    order: cnvOrder++,
-                    border: "1px solid #ccc"
-                }
-            )
+            if (loss.value < 0) {
+                cnvItems.push(
+                    {
+                        termid: legend.cnvTitle,
+                        key: CnvType.Loss,
+                        text: `Min: ${loss.value}`,
+                        color: loss.color,
+                        order: cnvOrder++,
+                        border: "1px solid #ccc"
+                    }
+                )
+            }
+
+                cnvItems.push(
+                    {
+                        termid: legend.cnvTitle,
+                        key: CnvType.Cap,
+                        text: `Capping: ${cap.value}`,
+                        color: cap.color,
+                        order: cnvOrder++,
+                        border: "1px solid #ccc",
+                        onClickCallback: this.onClickCallback
+                    }
+                )
+
 
             legendJSON.push({
                 name: legend.cnvTitle,
@@ -98,7 +123,7 @@ export default class LegendJSONMapper {
             {
                 termid: legend.lohTitle,
                 key: "min",
-                text: legend.lohLegend!.minValue.toString(),
+                text: "min",
                 color: legend.lohLegend!.colorStartValue,
                 order: 0,
                 border: "1px solid #ccc"
@@ -109,7 +134,7 @@ export default class LegendJSONMapper {
             {
                 termid: legend.lohTitle,
                 key: "max",
-                text: legend.lohLegend!.maxValue.toString(),
+                text: "max",
                 color: legend.lohLegend!.colorEndValue,
                 order: 1,
                 border: "1px solid #ccc"

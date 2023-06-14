@@ -158,6 +158,11 @@ export default function svgLegend(opts) {
 						}
 					})
 			}
+
+			if (d.onClickCallback) {
+				t.on('click', () => d.onClickCallback(d, t))
+				t.style('cursor', 'pointer')
+			}
 		})
 
 		const bbox = itemlabel.node().getBBox()

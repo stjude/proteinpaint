@@ -1,4 +1,6 @@
 import Settings from "./Settings";
+import Data from "../mapper/Data";
+import {ViewModelMapper} from "../mapper/ViewModelMapper";
 
 export default function discoDefaults(overrides = {}): Settings {
     return Object.assign(
@@ -8,15 +10,19 @@ export default function discoDefaults(overrides = {}): Settings {
 
                 cnvInnerRadius: 100,
                 cnvWidth: 20,
+                cnvCapping: 5,
+                cnvUnit: "Cnv Unit",
 
                 lohInnerRadius: 120,
                 lohWidth: 20,
 
                 svnInnerRadius: 140,
                 svnWidth: 20,
+                snvRingFilter: 'exonic',
 
                 nonExonicInnerRadius: 160,
                 nonExonicWidht: 30,
+                nonExonicRingEnabled: false,
 
                 chromosomeInnerRadius: 190,
                 chromosomeWidth: 20,
@@ -24,6 +30,14 @@ export default function discoDefaults(overrides = {}): Settings {
                 labelLinesInnerRadius: 210,
                 labelsToLinesDistance: 30,
                 labelsToLinesGap: 2,
+
+                snvFilterValue: 1,
+                fusionFilterValue:2,
+                cnvFilterValue: 4,
+
+                lohFilterValue:10,
+
+                nonExonicFilterValue:'non-exonic'
 
             },
 
@@ -37,16 +51,23 @@ export default function discoDefaults(overrides = {}): Settings {
                 fontSize: 12,
                 maxDeltaAngle: 0.05,
                 animationDuration: 1000,
-                overlapAngleFactor: 5 // 7 is set by testing, because label height is not known before rendering
+                overlapAngleFactor: 5 // 5 is set by testing, because label height is not known before rendering
             },
 
             cnv: {
-                lossCapped: -5,
-                ampCapped: 5,
+                capping: 5,
                 ampColor: '#D6683C',
                 lossColor: '#67a9cf',
                 cappedAmpColor: '#8B0000',
-                cappedLossColor: '#00008B'
+                cappedLossColor: '#00008B',
+                unit: "Unit"
+            },
+            legend: {
+                snvTitle: "SNV",
+                cnvTitle: "CNV",
+                lohTitle: "LOH",
+                fusionTitle: "SV", // Structural Variants (color by co-location)
+                lohLegendEnabled: true
             },
 
             menu: {

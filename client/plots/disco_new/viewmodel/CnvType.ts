@@ -1,4 +1,5 @@
 export enum CnvType {
     Loss,
-    Gain
+    Gain,
+    Cap
 }
