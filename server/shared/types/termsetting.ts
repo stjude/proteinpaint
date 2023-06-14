@@ -2,6 +2,20 @@ import { VocabApi } from './vocab'
 import { Term, Q, TW } from './termdb'
 import { Filter } from './filter'
 
+/*
+--------EXPORTED--------
+Dom
+Api
+NoTermPromptOptsEntry
+UseCase
+Handler
+PillData
+TermSettingOpts
+
+*/
+
+/*** interfaces supporting TermSettingOpts & PillData interfaces ***/
+
 export interface Dom {
     holder: Selection
     tip: any //TODO Menu type??
@@ -79,11 +93,10 @@ export interface PillData extends BaseTermSettingOpts {
 
 export interface TermSettingOpts extends BaseTermSettingOpts{
     //Required
-    holder: any
+    holder: Selection
     vocabApi: VocabApi
     //Optional 
-    tip?: any
-    genomeObj?: any
+    tip?: any //TODO: Menu type?
     menuOptions: string //all, edit, replace, remove
     menuLayout?: string //horizonal, all
     buttons?: string[] //replace, delete, info
@@ -100,6 +113,8 @@ export interface TermSettingOpts extends BaseTermSettingOpts{
     usecase?: UseCase
     debug?: boolean | number //true or 1
     $id?: string,
+    //'snplocus' types
+    genomeObj?: any
     //getBodyParams used but not documented??
     //vocab??
 }

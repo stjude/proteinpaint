@@ -1,5 +1,14 @@
 import { Term, RangeEntry } from './termdb'
 
+/*
+--------EXPORTED--------
+Tvs
+Filter
+
+*/
+
+/*** types and interfaces supporting Tvs interface ***/
+
 type TvsValues = {
     key?: string
     label?: string
@@ -29,6 +38,8 @@ export interface Tvs {
     value_by_computable_grade?: boolean
     grade_and_child?: GradeAndChildEntry[]
 }
+
+/*** types and interfaces supporting Filter interface ***/
 
 interface LstEntry {
 
