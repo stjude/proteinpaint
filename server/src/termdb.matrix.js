@@ -207,10 +207,6 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 	throw 'unknown method for dictionary terms'
 }
 
-/*
---- XXX bug ---
-q.currentGeneNames[] is ignored and will not restrict to samples mutated for said genes
-*/
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const samples = {}
 	const refs = { byTermId: {} }
@@ -252,15 +248,33 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
-	//console.log(interpolateSqlValues(sql, values))
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+
+	// if q.currentGeneNames is in use, must restrict to these samples
+	const limitMutatedSamples = await mayQueryMutatedSamples(q)
+
 	for (const { sample, term_id, key, value } of rows) {
+		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
 		const tw = twByTermId[term_id]
 		samples[sample][term_id] = { key, value }
 	}
 
 	return { samples, refs }
+}
+
+async function mayQueryMutatedSamples(q) {
+	if (!q.currentGeneNames) return // no genes, do not query mutated samples and do not limit
+	// has genes. query samples mutated on any of these genes, collect sample id into a set and return
+	const sampleSet = new Set()
+	for (const geneName of q.currentGeneNames) {
+		const tw = { term: { name: geneName, type: 'geneVariant' } }
+		const bySampleId = await q.ds.mayGetGeneVariantData(tw, q)
+		for (const [sampleId, value] of bySampleId.entries()) {
+			sampleSet.add(sampleId)
+		}
+	}
+	return sampleSet
 }
 
 /*

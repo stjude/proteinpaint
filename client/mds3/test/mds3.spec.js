@@ -367,17 +367,24 @@ tape('Launch variant table from track variant label', test => {
 	}
 })
 
+// same tests applied on two datasets, each using a different data source
 tape('GDC - sample summaries table, create subtrack (tk.filterObj)', test => {
-	//If dispatchEvent error in browser, run again before debugging
-	test.timeoutAfter(5000)
+	testSampleSummary2subtrack('IDH1', 'GDC', test)
+})
+tape('ASH - sample summaries table, create subtrack (tk.filterObj)', test => {
+	testSampleSummary2subtrack('KRAS', 'ASH', test)
+})
+
+// a helper shared by above two tests
+async function testSampleSummary2subtrack(gene, dslabel, test) {
 	const holder = getHolder()
 
 	runproteinpaint({
 		holder,
 		noheader: true,
 		genome: 'hg38',
-		gene: 'idh1',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		gene,
+		tracks: [{ type: 'mds3', dslabel, callbackOnRender }]
 	})
 
 	async function callbackOnRender(tk, bb) {
@@ -430,7 +437,7 @@ tape('GDC - sample summaries table, create subtrack (tk.filterObj)', test => {
 
 			if (test._ok) {
 				holder.remove()
-				tk.menutip.d.remove() // Close orphaned popup window
+				subtk.menutip.d.remove() // Close orphaned popup window
 			}
 			test.end()
 		}
@@ -438,74 +445,7 @@ tape('GDC - sample summaries table, create subtrack (tk.filterObj)', test => {
 		const categoryDiv = tk.menutip.d.select('.sja_clbtext2')
 		categoryDiv.node().dispatchEvent(new Event('click'))
 	}
-})
-
-tape('ASH - sample summaries table, create subtrack (tk.filterObj)', test => {
-	//If dispatchEvent error in browser, run again before debugging
-	test.timeoutAfter(5000)
-	const holder = getHolder()
-
-	runproteinpaint({
-		holder,
-		noheader: true,
-		genome: 'hg38',
-		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'ash', callbackOnRender }]
-	})
-
-	async function callbackOnRender(tk, bb) {
-		//Click on track cases link to open table
-		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
-		await whenVisible(tk.menutip.d)
-
-		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
-		test.ok(div, 'Sample summary table rendered in menutip')
-
-		for (const tw of tk.mds.variant2samples.twLst) {
-			// each tw should show up in div as a tab
-			const twDiv = tk.menutip.d
-				.selectAll('div')
-				.nodes()
-				.find(e => e.innerText.startsWith(tw.term.name))
-			// the found div is <div>TW.name <span></span></div>, thus must use startsWith
-			test.ok(twDiv, 'Should display tab for ' + tw.term.name)
-		}
-
-		// find one of the clickable label for a category
-		// attach this callback on bb (block instance) to be triggered when the subtrack is loaded
-		bb.onloadalltk_always = () => {
-			test.equal(
-				bb.tklst.length,
-				3,
-				'now bb has 3 tracks after clicking a category from mds3 tk sample summaries table'
-			)
-			const subtk = bb.tklst[2]
-			test.equal(subtk.type, 'mds3', '3rd track type is mds3 (subtrack launched from main track)')
-
-			test.ok(
-				Number(tk.leftlabels.doms.variants.text().split(' ')[0]) >
-					Number(subtk.leftlabels.doms.variants.text().split(' ')[0]),
-				'subtrack has fewer number of mutations than main track'
-			)
-			test.ok(
-				Number(tk.leftlabels.doms.samples.text().split(' ')[0]) >
-					Number(subtk.leftlabels.doms.samples.text().split(' ')[0]),
-				'subtrack has fewer number of samples than main track'
-			)
-
-			test.ok(subtk.leftlabels.doms.filterObj, '.leftlabels.doms.filterObj is set on subtrack')
-			test.ok(subtk.leftlabels.doms.close, '.leftlabels.doms.close is set on subtrack')
-
-			// Close orphaned popup window
-			tk.menutip.d.remove()
-			if (test._ok) holder.remove()
-			test.end()
-		}
-
-		const categoryDiv = tk.menutip.d.select('.sja_clbtext2')
-		categoryDiv.node().dispatchEvent(new Event('click'))
-	}
-})
+}
 
 tape('GDC - mclass filtering', test => {
 	const holder = getHolder()
