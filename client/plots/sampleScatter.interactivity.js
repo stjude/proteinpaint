@@ -383,8 +383,8 @@ export function setInteractivity(self) {
 					.append('input')
 					.attr('value', group.name)
 					.on('change', async () => {
-						const value = input.node().value
-						if (value) await self.app.dispatch({ type: 'rename_group', name: group.name, newName: value })
+						const name = input.node().value
+						if (name) self.renameGroup(group, name)
 						else input.node().value = group.name
 						groupDiv.html('&nbsp;' + group.name)
 					})
@@ -457,7 +457,7 @@ export function setInteractivity(self) {
 					.attr('value', group.name)
 					.on('change', async () => {
 						const name = input.node().value
-						if (name) await self.app.dispatch({ type: 'rename_group', name: group.name, newName: name })
+						if (name) self.renameGroup(group, name)
 						else input.node().value = group.name
 						groupDiv.html('&nbsp;' + group.name)
 					})
@@ -499,9 +499,15 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.renameGroup = function(group, name) {
-		group.name = name
-		self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+	self.renameGroup = async function(group, newName) {
+		const i = self.config.groups.findIndex(group => group.name == newName)
+		if (i != -1) alert(`Group named ${newName} already exists`)
+		else
+			await self.app.dispatch({
+				type: 'rename_group',
+				index: group.index,
+				newName
+			})
 	}
 
 	self.addCommonMenuItems = function(menuDiv, tw) {

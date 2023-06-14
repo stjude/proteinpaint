@@ -302,13 +302,18 @@ async function updateUI(self) {
 		columns: [
 			{
 				label: 'NAME',
-				editCallback: (i, cell) => {
-					// group name is changed
-					groups[i].name = cell.value
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: { groups }
-					})
+				editCallback: async (i, cell) => {
+					const newName = cell.value
+					const index = self.state.groups.findIndex(group => group.name == newName)
+					if (index != -1) {
+						alert(`Group named ${newName} already exists`)
+						updateUI(self)
+					} else
+						await self.app.dispatch({
+							type: 'rename_group',
+							index: i,
+							newName: cell.value
+						})
 				}
 			},
 			{ label: '#SAMPLE' },
