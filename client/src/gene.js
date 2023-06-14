@@ -1,4 +1,5 @@
 import * as client from './client'
+import { dofetch3 } from '#common/dofetch'
 import { debounce } from 'debounce'
 
 export function gene_searchbox(p) {
@@ -89,15 +90,19 @@ otherwise to show in client.tip
 }
 
 export function findgenemodel_bysymbol(genome, str) {
-	return client
-		.dofetch('genelookup', {
+	dofetch3('genelookup', {
+		body: {
 			deep: 1,
 			input: str,
 			genome: genome
-		})
+		}
+	})
 		.then(data => {
 			if (data.error) throw data.error
 			if (!data.gmlst || data.gmlst.length == 0) return null
 			return data.gmlst
+		})
+		.catch(e => {
+			throw e
 		})
 }

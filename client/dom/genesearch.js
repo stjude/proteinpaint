@@ -282,8 +282,7 @@ export function addGeneSearchbox(arg) {
 		tip.showunder(searchbox.node()).clear()
 		try {
 			const data = await dofetch3('genelookup', {
-				method: 'POST',
-				body: JSON.stringify({ genome: arg.genome.name, input: v })
+				body: { genome: arg.genome.name, input: v }
 			})
 			if (data.error) throw data.error
 			if (!data.hits || data.hits.length == 0) return tip.hide()
@@ -315,8 +314,7 @@ export function addGeneSearchbox(arg) {
 		tip.hide()
 		try {
 			const data = await dofetch3('genelookup', {
-				method: 'POST',
-				body: JSON.stringify({ genome: arg.genome.name, input: s, deep: 1 })
+				body: { genome: arg.genome.name, input: s, deep: 1 }
 			})
 			if (data.error) throw data.error
 			if (!data.gmlst || data.gmlst.length == 0) {
@@ -362,8 +360,7 @@ export function addGeneSearchbox(arg) {
 
 	async function searchSNP(s) {
 		const data = await dofetch3('snp', {
-			method: 'POST',
-			body: JSON.stringify({ byName: true, genome: arg.genome.name, lst: [s] })
+			body: { byName: true, genome: arg.genome.name, lst: [s] }
 		})
 		if (data.error) throw data.error
 		if (!data.results || data.results.length == 0) throw 'Not a gene or SNP'
@@ -589,10 +586,10 @@ async function hgvs_delins(chr, v, genome) {
 }
 
 async function getRefAllele(chr, start, stop, genome) {
-	const arg = {
+	const body = {
 		coord: chr + ':' + start + '-' + stop,
 		genome: genome.name
 	}
-	const d = await dofetch3('ntseq', { method: 'POST', body: JSON.stringify(arg) })
+	const d = await dofetch3('ntseq', { body })
 	return d.seq
 }

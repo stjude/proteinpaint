@@ -1802,8 +1802,7 @@ reverseorient() {
 	async block_jump_gene(s) {
 		try {
 			const data = await dofetch3('genelookup', {
-				method: 'POST',
-				body: JSON.stringify({ genome: this.genome.name, input: s, deep: 1 })
+				body: { genome: this.genome.name, input: s, deep: 1 }
 			})
 			if (data.error) throw data.error
 			if (!data.gmlst || data.gmlst.length == 0) {
@@ -5165,8 +5164,7 @@ function makecoordinput(bb, butrow) {
 		bb.coord.inputtipshow()
 		try {
 			const data = await dofetch3('genelookup', {
-				method: 'POST',
-				body: JSON.stringify({ genome: bb.genome.name, input: v })
+				body: { genome: bb.genome.name, input: v }
 			})
 			if (data.error) throw data.error
 			if (!data.hits || data.hits.length == 0) return bb.coord.inputtip.hide()

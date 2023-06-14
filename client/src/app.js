@@ -495,46 +495,41 @@ function update_genome_browser_btn(app) {
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
 }
 
-function findgenelst(app, str, genome, tip, jwt) {
+async function findgenelst(app, str, genome, tip, jwt) {
 	if (str.length <= 1) {
 		tip.d.selectAll('*').remove()
 		return
 	}
-	const req = new Request(app.hostURL + '/genelookup', {
-		method: 'POST',
-		body: JSON.stringify({
-			input: str,
-			genome,
-			jwt
-		})
-	})
-	fetch(req)
-		.then(data => {
-			return data.json()
-		})
-		.then(data => {
-			if (data.error) throw data.error
-			if (!data.hits) throw '.hits[] missing'
-			for (const name of data.hits) {
-				tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.attr('isgene', '1')
-					.text(name)
-					.on('click', () => {
-						app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-						tip.hide()
-						findgene2paint(app, name, genome, jwt)
-					})
+	try {
+		const data = await dofetch3('/genelookup', {
+			body: {
+				input: str,
+				genome,
+				jwt
 			}
 		})
-		.catch(err => {
+
+		if (data.error) throw data.error
+		if (!data.hits) throw '.hits[] missing'
+		for (const name of data.hits) {
 			tip.d
 				.append('div')
-				.style('border', 'solid 1px red')
-				.style('padding', '10px')
-				.text(err)
-		})
+				.attr('class', 'sja_menuoption')
+				.attr('isgene', '1')
+				.text(name)
+				.on('click', () => {
+					app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+					tip.hide()
+					findgene2paint(app, name, genome, jwt)
+				})
+		}
+	} catch (err) {
+		tip.d
+			.append('div')
+			.style('border', 'solid 1px red')
+			.style('padding', '10px')
+			.text(err)
+	}
 }
 
 async function findgene2paint(app, str, genomename, jwt) {
@@ -1506,8 +1501,7 @@ async function launch_genefusion(arg, app) {
 async function getGm(p, genome) {
 	// p={isoform}
 	const d = await dofetch3('genelookup', {
-		method: 'POST',
-		body: JSON.stringify({ genome: genome.name, input: p.isoform, deep: 1 })
+		body: { genome: genome.name, input: p.isoform, deep: 1 }
 	})
 	if (d.error) throw d.error
 	if (!Array.isArray(d.gmlst)) throw 'gmlst not array'
