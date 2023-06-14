@@ -81,6 +81,8 @@ export const plotInit = getCompInit(MassPlot)
 function setRenderers(self) {
 	self.initUi = function(opts) {
 		const holder = opts.holder
+		// opts.holder is "sandbox" obj: {app_div, body, header, header_row, id}
+
 		holder.header.style('padding', 0)
 
 		try {

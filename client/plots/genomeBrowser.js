@@ -21,6 +21,11 @@ this{}
 					genome:str
 		dispatch()
 		save()
+	opts{}
+		app{}
+		header
+		holder
+		id
 	state {}
 		config {}
 			filter{} // mass filter
@@ -251,6 +256,9 @@ class genomeBrowser {
 			const _ = await import('#src/block.init')
 			await _.default(arg)
 			this.blockInstance = arg.__blockInstance
+
+			// update sandbox header with gene name
+			this.opts.header.text(arg.query)
 			return
 		}
 		// launch locus
