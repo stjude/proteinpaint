@@ -9,7 +9,7 @@ interface HiddenValues {
     [index: string]: number
 }
 
-type BinConfigLstEntry = {
+export type RangeEntry = {
     start?: number
     startunbounded?: boolean
     startinclusive?: boolean
@@ -17,6 +17,7 @@ type BinConfigLstEntry = {
     stopunbounded?: boolean
     stopinclusive?: boolean
     label?: string
+    value?: string
 }
 
 interface BinConfig extends BaseQ {
@@ -35,7 +36,7 @@ interface BinConfig extends BaseQ {
     }
     //binary
     scale?: number //0.1, 0.01 or 0.001.
-    lst?: BinConfigLstEntry[]
+    lst?: RangeEntry[]
 }
 
 interface NumericalBins {
@@ -167,15 +168,15 @@ export interface Term {
     name?: string
     min?: number
     max?: number
-    tvs: Tvs
-    values: TermValues,
+    tvs?: Tvs
+    values?: TermValues,
     unit?: string,
     hashtmldetail?: boolean,
     logScale?: string | number //2, 10, or e only
     child_types?: any //[],
     included_types?: any //[],
     skip0forPercentile?: boolean,
-    densityNotAvailable: boolean
+    densityNotAvailable?: boolean //Not used?
     bins?: NumericalBins,
     subconditions?: any //{}
     //snplocus
@@ -184,7 +185,7 @@ export interface Term {
     snps?: SnpsEntry[]
 }
 
-export interface TW { //Term wrapper
+export interface TW { //Term wrapper aka.. term:{term:{...}, q:{...}...}
     id?: string
     $id?: string
     isAtomic?: boolean

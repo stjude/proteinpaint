@@ -3,7 +3,7 @@ import { Menu } from '#dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
-import { TermSettingOpts, Term, Q, TW, VocabApi, Api, PillData, Dom, UseCase, NoTermPromptOptsEntry, Handler } from '#shared/types/index'
+import { TermSettingOpts, Term, Q, TW, VocabApi, Api, PillData, Dom, UseCase, NoTermPromptOptsEntry, Handler, Filter } from '#shared/types/index'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -73,9 +73,9 @@ class TermSetting {
 	//Pill data
 	data: any
 	error: string | undefined
-	filter: any
-	term: any
-	q: any
+	filter: Filter | undefined
+	term: Term | undefined
+	q: Q | undefined
 	
 
 	constructor(opts: TermSettingOpts) {
@@ -195,11 +195,11 @@ class TermSetting {
 			// may need original values for comparing edited settings
 			this.data = data as PillData
 			// term is read-only if it comes from state, let it remain read-only
-			this.term = data.term
+			this.term = data.term as Term
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
 			if ('$id' in data) this.$id = data.$id
 			if ('disable_terms' in data) this.disable_terms = data.disable_terms
-			if ('filter' in data) this.filter = data.filter
+			if ('filter' in data) this.filter = data.filter as Filter
 			if ('activeCohort' in data) this.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler(this.term ? this.term.type : null)
@@ -257,7 +257,7 @@ class TermSetting {
 		this.noTermPromptOptions = o.noTermPromptOptions
 	}
 
-	async setHandler(termtype: string) {
+	async setHandler(termtype: string | undefined | null) {
 		if (!termtype) {
 			this.handler = this.handlerByType.default as Handler
 			return
@@ -280,7 +280,7 @@ class TermSetting {
 				throw `error with handler='./handlers/${typeSubtype}.js': ${e}`
 			}
 		}
-		this.handler = this.handlerByType[typeSubtype]
+		this.handler = this.handlerByType[typeSubtype] as Handler
 	}
 }
 
@@ -353,8 +353,8 @@ function setRenderers(self: any){
 				.style('cursor', 'pointer')
 				.style('color', '#999')
 				.style('font-size', '.8em')
-				.html((d: any) => d.toUpperCase())
-				.on('click', (event: any, d: any) => {
+				.html((d: string) => d.toUpperCase())
+				.on('click', (event: any, d: string) => {
 					if (d == 'delete') self.removeTerm()
 					else if (d == 'replace') {
 						self.showTree(event.target)
@@ -546,7 +546,7 @@ function setInteractivity(self: any) {
 			},
 			tree: {
 				disable_terms: self.disable_terms,
-				click_term: async (term: any) => {
+				click_term: async (term: TW) => {
 					self.dom.tip.hide()
 
 					const tw = term.term ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
@@ -572,7 +572,8 @@ function setInteractivity(self: any) {
 			else tip.show(event.clientX, event.clientY)
 		}
 
-		const options = []
+		type opt = {label: string, callback:(f: any)=> void}
+		const options: opt[] = []
 
 		if (self.term?.type == 'categorical' && self.q?.groupsetting?.inuse) {
 			// this instance is using a categorical term doing groupsetting; add option to cancel it
@@ -604,8 +605,8 @@ function setInteractivity(self: any) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text((d: any) => d.label)
-			.on('click', (event: any, d: any) => {
+			.text((d: opt) => d.label)
+			.on('click', (event: any, d: opt) => {
 				self.dom.tip.clear()
 				d.callback(self.dom.tip.d)
 			})
@@ -717,7 +718,7 @@ function setInteractivity(self: any) {
 			)
 	}
 
-	self.showGeneSearch = function (clickedElem: any, event: any) {
+	self.showGeneSearch = function(clickedElem: any, event: any) {
 		self.dom.tip.clear()
 		if (clickedElem)
 			self.dom.tip.showunder(
