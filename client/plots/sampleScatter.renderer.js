@@ -329,14 +329,17 @@ export function setRenderers(self) {
 	self.mayRenderRegression = async function() {
 		const duration = self.config.settings.sampleScatter.duration
 		for (const chart of self.charts) {
+			console.log('Calculating regression for ' + chart.id)
 			const regressionType = self.config.settings.sampleScatter.regression
 			if (chart.lowessG) chart.lowessG.selectAll('*').remove()
 
 			if (!regressionType || regressionType == 'None') continue
 			let regression
 			const data = []
-			chart.cohortSamples.forEach(c => {
-				data.push({ x: chart.xAxisScale(c.x), y: chart.yAxisScale(c.y) })
+			await chart.cohortSamples.forEach(c => {
+				const x = chart.xAxisScale(c.x)
+				const y = chart.yAxisScale(c.y)
+				data.push({ x, y })
 			})
 			let regressionCurve
 			if (regressionType == 'Loess') {
