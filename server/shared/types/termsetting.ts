@@ -93,7 +93,7 @@ export interface PillData extends BaseTermSettingOpts {
 
 export interface TermSettingOpts extends BaseTermSettingOpts{
     //Required
-    holder: Selection
+    holder: any
     vocabApi: VocabApi
     //Optional 
     tip?: any //TODO: Menu type?
