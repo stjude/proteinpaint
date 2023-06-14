@@ -1,9 +1,14 @@
 import { VocabApi } from './vocab'
+import { Term, Q } from './termdb'
+import { Filter } from './filter'
 
 interface Dom {
     holder: any, 
     tip: any, 
     tip2: any
+    nopilldiv?: any
+    pilldiv?: any
+    btnDiv?: any
 }
 
 export interface Api {
@@ -36,7 +41,34 @@ interface CustomFillTW {
 
 }
 
-export interface TermSettingOpts {
+type SampleCountsEntry = {
+    k: string
+    v: number //This maybe a string???
+}
+
+type Handler = {
+    defaultHandler?: string
+}
+
+interface BaseTermSettingData {
+    activeCohort?: number
+    disable_terms?: string[]
+    handler: Handler
+    abbrCutoff?: number
+}
+
+export interface Data extends BaseTermSettingData {
+    doNotHideTipInMain: boolean
+    dom: Dom
+    hasError: boolean
+    term: Term
+    q: Q
+    $id?: string
+    filter?: Filter
+    sampleCounts?: SampleCountsEntry[]
+}
+
+export interface TermSettingOpts extends BaseTermSettingData{
     holder: any
     tip?: any
     genomeObj?: any
@@ -54,14 +86,10 @@ export interface TermSettingOpts {
     renderAs: string
     placeholder?: string
     placeholderIcon?: string
-    vocabApi: any
-    activeCohort: number
-    disable_terms?: string[]
+    vocabApi: VocabApi
     usecase?: UseCase
-    abbrCutoff?: number
     durations: { exit: number}
     numqByTermIdModeType?: any //{}
     dom: Dom,
     error: any
-    handler: any
 }

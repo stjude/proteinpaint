@@ -1,9 +1,9 @@
 import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom/menu'
-import { select } from 'd3-selection'
-import { minimatch } from 'minimatch'
+import { select, BaseType } from 'd3-selection'
+import minimatch from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
-import { TermSettingOpts, Term, Q, TW, VocabApi, Api } from '#shared/types/index'
+import { TermSettingOpts, Term, Q, TW, VocabApi, Api, Data, Filter } from '#shared/types/index'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -47,10 +47,10 @@ const defaultOpts: DefaultOpts = {
 
 class TermSetting {
 	opts: TermSettingOpts
-	vocabApi: any 
-	activeCohort: any 
-	placeholder: any 
-	durations: any
+	vocabApi: VocabApi
+	activeCohort: number
+	placeholder: string 
+	durations: { exit: number }
 	disable_terms: any
 	usecase: any
 	abbrCutoff: any
@@ -72,12 +72,14 @@ class TermSetting {
 	sampleCounts: any
 	term: any
 	q: any
+	initUI: any
+	updateUI: any
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
 		this.vocabApi = opts.vocabApi
-		this.activeCohort = opts.activeCohort
-		this.placeholder = opts.placeholder
+		this.activeCohort = opts.activeCohort as number
+		this.placeholder = opts.placeholder as string
 		this.durations = { exit: 0 }
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
@@ -147,7 +149,7 @@ class TermSetting {
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
-		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q, isAtomic: true } : {}
+		const arg: any = this.term ? { id: this.term.id, term: this.term, q: this.q, isAtomic: true } : {}
 		if ('$id' in this) arg.$id = this.$id
 		if (arg.q?.reuseId && arg.q.reuseId === this.data.q?.reuseId) {
 			if (!deepEqual(arg.q, this.data.q)) {
@@ -156,10 +158,10 @@ class TermSetting {
 			}
 		}
 		const otw = overrideTw ? JSON.parse(JSON.stringify(overrideTw)) : {}
-		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg)
+		if (this.opts.callback) this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg)
 	}
 
-	validateOpts(_opts: any) {
+	validateOpts(_opts: TermSettingOpts) {
 		const o = Object.assign({}, defaultOpts, _opts)
 		if (!o.holder && o.renderAs != 'none') throw '.holder missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
@@ -176,7 +178,7 @@ class TermSetting {
 		return o
 	}
 
-	async main(data = {} as any) {
+	async main(data = {} as Data) {
 		try {
 			if (this.doNotHideTipInMain) {
 				// single use: if true then delete
@@ -194,8 +196,8 @@ class TermSetting {
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
 			if ('$id' in data) this.$id = data.$id
 			if ('disable_terms' in data) this.disable_terms = data.disable_terms
-			if ('filter' in data) this.filter = data.filter
-			if ('activeCohort' in data) this.activeCohort = data.activeCohort
+			if ('filter' in data) this.filter = data.filter as Filter
+			if ('activeCohort' in data) this.activeCohort = data.activeCohort as number
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler(this.term ? this.term.type : null)
 			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
@@ -207,7 +209,7 @@ class TermSetting {
 		}
 	}
 
-	validateMainData(d: any) {
+	validateMainData(d: Data) {
 		if (d.term) {
 			// term is optional
 			if (!d.term.type) throw 'data.term.type missing'
@@ -258,7 +260,7 @@ class TermSetting {
 			return
 		}
 		const type = termtype == 'integer' || termtype == 'float' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
-		const numEditVers = this.opts.numericEditMenuVersion
+		const numEditVers = this.opts.numericEditMenuVersion as string[]
 		const subtype: string = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
 		const typeSubtype: string = `${type}${subtype}`
 		if (!this.handlerByType[typeSubtype]) {
@@ -281,8 +283,8 @@ class TermSetting {
 
 export const termsettingInit = getInitFxn(TermSetting)
 
-function setRenderers(self: any) {
-	self.initUI = () => {
+function setRenderers(self: any){
+	self.initUI = (): void => {
 		// run only once, upon init
 		if (self.opts.$id) {
 			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
@@ -358,7 +360,7 @@ function setRenderers(self: any) {
 
 			// render info button only if term has html details
 			if (self.term.hashtmldetail) {
-				const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(() => {
+				const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function (this: BaseType) {
 					return select(this).text() === 'INFO'
 				})
 				const content_holder = select(self.dom.holder.node().parentNode).append('div')
@@ -427,7 +429,7 @@ function setRenderers(self: any) {
 		// decide if to show/hide the right half based on term status, and modify pill
 		const one_term_div = select(this)
 
-		const pillstat = self.handler.getPillStatus() || {}
+		const pillstat: { text: string, bgcolor?: string } = self.handler.getPillStatus() || {}
 		// { text, bgcolor }
 
 		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px').html(self.handler.getPillName)
@@ -521,7 +523,7 @@ function setInteractivity(self: any) {
 		// load the input ui for this term type
 	}
 
-	self.showTree = async function(holder: any) {
+	self.showTree = async function(holder: any, event: any) {
 		self.dom.tip.clear()
 		if (holder)
 			self.dom.tip.showunder(
@@ -657,14 +659,15 @@ function setInteractivity(self: any) {
 			.enter()
 			.append('tr')
 			.style('margin', '2px 5px')
-			.each(function(q: any) {
+			.each(function(this: BaseType, q: Q) {
 				const tr = select(this)
 				const inuse = equivalentQs(self.q, q)
+				const html2Use = q.name || q.reuseId as string
 				tr.append('td')
 					.style('min-width', '180px')
 					//.style('border-bottom', '1px solid #eee')
 					.style('text-align', 'center')
-					.html(q.name || q.reuseId)
+					.html(html2Use)
 
 				const useTd = tr.append('td').style('text-align', 'center')
 				if (inuse) {
@@ -711,7 +714,7 @@ function setInteractivity(self: any) {
 			)
 	}
 
-	self.showGeneSearch = (clickedElem: any, event: any) => {
+	self.showGeneSearch = function (clickedElem: any, event: any) {
 		self.dom.tip.clear()
 		if (clickedElem)
 			self.dom.tip.showunder(

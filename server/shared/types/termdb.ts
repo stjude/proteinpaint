@@ -108,6 +108,7 @@ interface BaseQ {
 }
 
 export interface Q extends BaseQ{
+    name?: string
     reuseId?: string
     isAtomic?: boolean 
     hiddenValues?: HiddenValues
@@ -163,6 +164,7 @@ interface TermValues {
 export interface Term {
     id?: string
     type?: string //samplelst, geneVariant, categorical, integer, float, condition, survival
+    name?: string
     min?: number
     max?: number
     tvs: Tvs
