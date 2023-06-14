@@ -41,7 +41,7 @@
                 "./termdb/*"
             ],
             "#termsetting": [
-                "./termsetting/termsetting.js"
+                "./termsetting/termsetting.ts"
             ],
             "#termsetting/handlers/*": [
                 "./termsetting/handlers/*"
