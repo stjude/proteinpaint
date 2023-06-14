@@ -133,6 +133,7 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 		this.charts = []
+		this.mainDiv.selectAll('*').remove()
 		this.dom.loadingDiv.style('display', 'block').html('Processing data...')
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
 		if (results.error) throw results.error
