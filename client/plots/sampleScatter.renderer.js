@@ -13,7 +13,7 @@ import { line } from 'd3'
 
 export function setRenderers(self) {
 	self.render = function() {
-		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart.id)
+		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
 		chartDivs.exit().remove()
 		chartDivs.each(self.renderChart)
 		chartDivs
@@ -96,7 +96,6 @@ export function setRenderers(self) {
 	}
 
 	function renderSVG(chart, s) {
-		self.initAxes(chart)
 		const svg = chart.svg
 		let colorLegends = chart.colorLegend.size * 30
 		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
@@ -143,7 +142,7 @@ export function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
-			chart.lowessG = chart.serie.append('g').attr('class', 'sjpcb-scatter-lowess')
+			chart.regressionG = chart.serie.append('g').attr('class', 'sjpcb-scatter-lowess')
 
 			//Adding clip path
 			const id = `${Date.now()}`
@@ -179,7 +178,7 @@ export function setRenderers(self) {
 		} else {
 			chart.mainG = svg.select('.sjpcb-scatter-mainG')
 			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
-			chart.lowessG = chart.mainG.select('.sjpcb-scatter-lowess')
+			chart.regressionG = chart.mainG.select('.sjpcb-scatter-lowess')
 			axisG = svg.select('.sjpcb-scatter-axis')
 			labelsG = svg.select('.sjpcb-scatter-labelsG')
 			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
@@ -326,12 +325,11 @@ export function setRenderers(self) {
 		animate()
 	}
 
-	self.mayRenderRegression = async function() {
-		const duration = self.config.settings.sampleScatter.duration
+	self.processData = async function() {
 		for (const chart of self.charts) {
-			console.log('Calculating regression for ' + chart.id)
+			self.initAxes(chart)
+			console.log(`Calculating regression for chart ${chart.id}...`)
 			const regressionType = self.config.settings.sampleScatter.regression
-			if (chart.lowessG) chart.lowessG.selectAll('*').remove()
 
 			if (!regressionType || regressionType == 'None') continue
 			let regression
@@ -365,16 +363,25 @@ export function setRenderers(self) {
 			} else {
 				throw `unsupported regression type='${regressionType}'`
 			}
+			chart.regressionCurve = regressionCurve
+		}
+	}
 
-			const l = line()
-				.x(d => d[0])
-				.y(d => d[1])
-			const regressionPath = chart.lowessG.append('path')
-			regressionPath
-				.attr('d', l(regressionCurve))
-				.attr('stroke', 'blue')
-				.attr('fill', 'none')
-				.style('stroke-width', '2')
+	self.mayRenderRegression = async function() {
+		for (const chart of self.charts) {
+			if (chart.regressionG) {
+				if (chart.regressionG) chart.regressionG.selectAll('*').remove()
+
+				const l = line()
+					.x(d => d[0])
+					.y(d => d[1])
+				const regressionPath = chart.regressionG.append('path')
+				regressionPath
+					.attr('d', l(chart.regressionCurve))
+					.attr('stroke', 'blue')
+					.attr('fill', 'none')
+					.style('stroke-width', '2')
+			}
 		}
 	}
 
