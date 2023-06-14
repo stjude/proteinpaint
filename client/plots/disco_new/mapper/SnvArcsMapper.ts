@@ -29,14 +29,18 @@ export default class SnvArcsMapper {
         const snvArray: Array<SnvArc> = []
         for (const angle of exonicSnvDataMap.keys()) {
             const array = exonicSnvDataMap.get(angle)
-
-
             if (array) {
                 const arraySize = array.length
 
                 for (let i = 0; i < array.length; i++) {
                     const data = array[i]
-                    this.snvClassMap.set(data.mClass, this.createSnvLegend(data.mClass))
+                    const snvLegendElement = this.snvClassMap.get(data.mClass)
+                    if (snvLegendElement) {
+                        this.snvClassMap.set(data.mClass, this.createSnvLegend(data.mClass, ++snvLegendElement.count))
+                    } else {
+                        this.snvClassMap.set(data.mClass, this.createSnvLegend(data.mClass, 1))
+                    }
+
                     const startAngle = angle
                     const endAngle = angle + this.onePxArcAngle
 
@@ -58,8 +62,8 @@ export default class SnvArcsMapper {
         return snvArray
     }
 
-    private createSnvLegend(dataClass: string) {
+    private createSnvLegend(dataClass: string, count: number) {
         const mClass = MLabel.getInstance().mlabel[dataClass]
-        return new SnvLegendElement(mClass.label, mClass.color)
+        return new SnvLegendElement(mClass.label, mClass.color, count)
     }
 }

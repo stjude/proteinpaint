@@ -1,3 +1,6 @@
+import Data from "../mapper/Data";
+import {ViewModelMapper} from "../mapper/ViewModelMapper";
+
 export default interface Settings {
 
     verticalPadding: number;
@@ -5,34 +8,57 @@ export default interface Settings {
 
     rings: {
         fusionRadius: number;
-        chromosomeInnerRadius: number;
-        cnvWidth: number;
-        lohWidth: number;
-        svnInnerRadius: number;
-        chromosomeWidth: number;
-        lohInnerRadius: number;
-        labelsToLinesGap: number;
+
         cnvInnerRadius: number;
-        nonExonicWidht: number;
+        cnvWidth: number;
+        cnvCapping: number;
+        cnvUnit: string;
+
+        lohWidth: number;
+        lohInnerRadius: number;
+
+        svnInnerRadius: number;
         svnWidth: number;
+        snvRingFilter: string;
+
         nonExonicInnerRadius: number;
+        nonExonicWidht: number;
+        nonExonicRingEnabled: boolean,
+
+        chromosomeWidth: number;
+        chromosomeInnerRadius: number;
+
+        labelsToLinesGap: number;
         labelsToLinesDistance: number;
         labelLinesInnerRadius: number
+
+        snvFilterValue: number,
+        fusionFilterValue: number,
+        cnvFilterValue: number,
+        lohFilterValue: number,
+        nonExonicFilterValue: string
     };
     cnv: {
         cappedAmpColor: string;
         ampColor: string;
-        ampCapped: number;
+        capping: number;
         cappedLossColor: string;
-        lossCapped: number;
-        lossColor: string
+        lossColor: string,
+        unit: string
     };
     label: {
         maxDeltaAngle: number;
-        fontSize: number,
-        animationDuration: number,
-        overlapAngleFactor: number
+        fontSize: number;
+        animationDuration: number;
+        overlapAngleFactor: number;
     };
+    legend: {
+        snvTitle: string;
+        cnvTitle: string;
+        lohTitle: string;
+        fusionTitle: string;
+        lohLegendEnabled: boolean,
+    },
     padAngle: number;
     layerScaler: number,
     menu: {

@@ -1,7 +1,7 @@
 import Reference from "./Reference";
 import Data from "./Data";
-import CnvArc from "../viewmodel/CnvArc";
 import LohArc from "../viewmodel/LohArc";
+import GradientColorProvider from "./GradientColorProvider";
 
 export default class LohArcMapper {
     private settings: any;
@@ -14,8 +14,8 @@ export default class LohArcMapper {
         this.reference = reference
     }
 
-    map(arcData: Array<Data>): Array<CnvArc> {
-        const arcs: Array<CnvArc> = []
+    map(arcData: Array<Data>): Array<LohArc> {
+        const arcs: Array<LohArc> = []
 
         arcData.forEach(data => {
             let startAngle = this.calculateStartAngle(data)
@@ -23,7 +23,7 @@ export default class LohArcMapper {
 
             const innerRadius = this.settings.rings.lohInnerRadius
             const outerRadius = innerRadius + this.settings.rings.lohWidth
-            const color = "#000"
+            const color = GradientColorProvider.provide(data.segmean)
 
             const arc = new LohArc(startAngle,
                 endAngle,

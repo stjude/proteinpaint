@@ -24,7 +24,7 @@ export default class CnvRenderer implements IRenderer {
             .attr('d', (d: CnvArc) => arcGenerator(d))
             .attr("fill", (d: CnvArc) => d.color)
             .on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
-                menu.d.style("color", arc.color).html(`Copy Number Variation <br /> ${arc.chr}:${arc.start}-${arc.stop} <br /> log2 ratio: ${arc.value}  `)
+                menu.d.style("color", arc.color).html(`Copy Number Variation <br /> ${arc.chr}:${arc.start}-${arc.stop} <br /> ${arc.unit}: ${arc.value}  `)
                 menu.showunder(mouseEvent.target)
             })
             .on('mouseout', ()=> {

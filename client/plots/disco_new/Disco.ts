@@ -1,12 +1,11 @@
 import {getCompInit} from "#rx"
 import {DiscoRenderer} from "./renderer/DiscoRenderer";
-import {DiscoInteractions} from "./viewmodel/DiscoInteractions";
+import {DiscoInteractions} from "./interactions/DiscoInteractions";
 import {ViewModelMapper} from "./mapper/ViewModelMapper"
 import LegendRenderer from "./renderer/LegendRenderer";
 import ChromosomesRenderer from "./renderer/ChromosomesRenderer";
 import LabelsRenderer from "./renderer/LabelsRenderer";
 import discoDefaults from "./viewmodel/defaults";
-import Settings from "./viewmodel/Settings";
 import NonExonicSnvRenderer from "./renderer/NonExonicSnvRenderer";
 import SnvRenderer from "./renderer/SnvRenderer";
 import LohRenderer from "./renderer/LohRenderer";
@@ -20,41 +19,45 @@ export default class Disco {
     private discoRenderer: DiscoRenderer;
     private discoInteractions: DiscoInteractions;
     private opts: any;
-    private stateViewModelMapper: ViewModelMapper
-    private settings: Settings
+
+    private state: any
+    private id: any
+    private app: any
 
     constructor(opts: any) {
         this.type = 'Disco'
         this.opts = opts
-
-        this.settings = discoDefaults({
-            "showControls": false,
-            "selectedSamples": []
-        })
-
-        const legendRenderer = new LegendRenderer()
-        this.discoRenderer = new DiscoRenderer(this.getRingRenderers(), legendRenderer)
-        this.discoInteractions = new DiscoInteractions()
-        this.stateViewModelMapper = new ViewModelMapper(this.settings)
+        this.discoInteractions = new DiscoInteractions(this)
     }
 
-    async init(appState: any): Promise<void> {
-        const viewModel = this.stateViewModelMapper.map(appState)
-        const holder = this.opts.holder.append('div')
+    getState(appState: any) {
+        return appState.plots.find(p => p.id === this.id)
+    }
+
+    async main(): Promise<void> {
+        const settings = this.state.settings
+        const stateViewModelMapper = new ViewModelMapper(settings)
+        const viewModel = stateViewModelMapper.map(this.app.getState())
+
+        const holder = this.opts.holder
+        holder.selectAll("*").remove()
+
+        const legendRenderer = new LegendRenderer(settings.cnv.capping, this.discoInteractions.cappingClickCallback)
+        this.discoRenderer = new DiscoRenderer(this.getRingRenderers(settings), legendRenderer)
         this.discoRenderer.render(holder, viewModel)
     }
 
-    getRingRenderers() {
-        const chromosomesRenderer = new ChromosomesRenderer(this.settings.padAngle, this.settings.rings.chromosomeInnerRadius, this.settings.rings.chromosomeInnerRadius +  this.settings.rings.chromosomeWidth)
-        const labelsRenderer = new LabelsRenderer(this.settings.label.animationDuration)
+    getRingRenderers(settings: any) {
+        const chromosomesRenderer = new ChromosomesRenderer(settings.padAngle, settings.rings.chromosomeInnerRadius, settings.rings.chromosomeInnerRadius + settings.rings.chromosomeWidth)
+        const labelsRenderer = new LabelsRenderer(settings.label.animationDuration)
         const nonExonicSnvRenderer = new NonExonicSnvRenderer()
-        const snvRenderer = new SnvRenderer(this.settings.rings.svnInnerRadius, this.settings.rings.svnWidth)
-        const cnvRenderer = new CnvRenderer(this.settings.menu.padding)
+        const snvRenderer = new SnvRenderer(settings.rings.svnInnerRadius, settings.rings.svnWidth)
+        const cnvRenderer = new CnvRenderer(settings.menu.padding)
         const lohRenderer = new LohRenderer()
 
         const renderersMap: Map<RingType, IRenderer> = new Map()
-        renderersMap.set(RingType.CHROMOSOME,chromosomesRenderer )
-        renderersMap.set(RingType.LABEL,labelsRenderer )
+        renderersMap.set(RingType.CHROMOSOME, chromosomesRenderer)
+        renderersMap.set(RingType.LABEL, labelsRenderer)
         renderersMap.set(RingType.NONEXONICSNV, nonExonicSnvRenderer)
         renderersMap.set(RingType.SNV, snvRenderer)
         renderersMap.set(RingType.CNV, cnvRenderer)
@@ -65,13 +68,14 @@ export default class Disco {
 }
 
 export const discoInit = getCompInit(Disco)
-// this alias will allow abstracted dynamic imports
+
 export const componentInit = discoInit
 
 export async function getPlotConfig(opts: any, app: any) {
     return {
         chartType: 'Disco',
         subfolder: 'disco_new',
-        extension: 'ts'
+        extension: 'ts',
+        settings: discoDefaults(opts.overrides)
     }
 }

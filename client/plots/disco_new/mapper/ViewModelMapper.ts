@@ -69,25 +69,21 @@ export class ViewModelMapper {
     private settings: Settings;
 
     constructor(settings: Settings) {
-        this.settings = settings
+        this.settings = discoDefaults(settings)
     }
 
     map(opts: any): ViewModel {
-        this.settings = discoDefaults(opts.settings)
-
         const chrSizes = opts.args.genome.majorchr
 
         const sampleName = opts.args.sampleName
 
-        const cancerGenes = opts.args.cancerGenes? opts.args.cancerGenes: []
+        const cancerGenes = opts.args.cancerGenes ? opts.args.cancerGenes : []
 
         const data: Array<Data> = opts.args.data
 
         const reference = new Reference(this.settings, chrSizes)
 
-        const exonicFilter = (data: Data) => ViewModelMapper.snvClassLayer[data.mClass] == 'exonic';
-
-        const dataMapper = new DataMapper(this.settings, reference, sampleName, exonicFilter, cancerGenes)
+        const dataMapper = new DataMapper(this.settings, reference, sampleName, cancerGenes)
 
         dataMapper.map(data)
 
@@ -103,15 +99,15 @@ export class ViewModelMapper {
 
         const nonExonicArcRing: Ring<SnvArc> = new Ring(this.settings.rings.nonExonicInnerRadius, this.settings.rings.nonExonicWidht, arcsMapper.map(dataMapper.nonExonicSnvData))
 
-        const exonicSnvArcsMapper = new SnvArcsMapper(this.settings, sampleName, reference)
+        const snvArcsMapper = new SnvArcsMapper(this.settings, sampleName, reference)
 
-        const exonicArcRing: Ring<SnvArc> = new Ring(this.settings.rings.svnInnerRadius, this.settings.rings.svnWidth, exonicSnvArcsMapper.map(dataMapper.snvRingDataMap))
+        const snvArcRing: Ring<SnvArc> = new Ring(this.settings.rings.svnInnerRadius, this.settings.rings.svnWidth, snvArcsMapper.map(dataMapper.snvRingDataMap))
 
         const lohMapper = new LohArcMapper(this.settings, sampleName, reference)
 
         const lohArcRing: Ring<LohArc> = new Ring(this.settings.rings.lohInnerRadius, this.settings.rings.lohWidth, lohMapper.map(dataMapper.lohData))
 
-        const cnvArcsMapper = new CnvArcsMapper(this.settings, sampleName, reference, dataMapper.cnvMaxValue, dataMapper.cnvMinValue)
+        const cnvArcsMapper = new CnvArcsMapper(this.settings, sampleName, reference, dataMapper.cnvMaxValue, dataMapper.cnvMinValue, this.settings.cnv.unit)
 
         const cnvArcRing: Ring<CnvArc> = new Ring(this.settings.rings.cnvInnerRadius, this.settings.rings.cnvWidth, cnvArcsMapper.map(dataMapper.cnvData))
 
@@ -121,14 +117,20 @@ export class ViewModelMapper {
 
         let lohLegend: LohLegend | undefined;
 
-        if (dataMapper.lohMinValue && dataMapper.lohMaxValue) {
-
-            lohLegend = new LohLegend(dataMapper.lohMinValue, dataMapper.lohMaxValue, "#656565", "#000")
+        if (this.settings.legend.lohLegendEnabled && dataMapper.lohMinValue && dataMapper.lohMaxValue) {
+            lohLegend = new LohLegend(dataMapper.lohMinValue, dataMapper.lohMaxValue)
         }
 
-        const legend = new Legend(exonicSnvArcsMapper.snvClassMap, cnvArcsMapper.cnvClassMap, fusions.length > 0, lohLegend)
+        const legend = new Legend(this.settings.legend.snvTitle,
+            this.settings.legend.cnvTitle,
+            this.settings.legend.lohTitle,
+            this.settings.legend.fusionTitle,
+            snvArcsMapper.snvClassMap,
+            cnvArcsMapper.cnvClassMap,
+            fusions.length > 0,
+            lohLegend)
 
-        const rings = new Rings(labelsRing, chromosomesRing, nonExonicArcRing, exonicArcRing, cnvArcRing, lohArcRing)
+        const rings = new Rings(labelsRing, chromosomesRing, nonExonicArcRing, snvArcRing, cnvArcRing, lohArcRing)
 
         return new ViewModel(this.settings, rings, legend, fusions)
     }

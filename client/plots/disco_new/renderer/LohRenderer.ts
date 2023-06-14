@@ -1,5 +1,4 @@
 import * as d3 from "d3";
-import {Menu} from "../../../client/dom/menu";
 import LohArc from "../viewmodel/LohArc";
 import IRenderer from "./IRenderer";
 import Arc from "../viewmodel/Arc";
@@ -22,10 +21,10 @@ export default class LohRenderer implements IRenderer {
             .attr('d', (d: LohArc) => arcGenerator(d))
             .attr("fill", (d: LohArc) => d.color)
             .on('mouseover', (mouseEvent: MouseEvent, arc: LohArc) => {
-                menu.d.style("color", arc.color).html(`Loss of Heterozygosity  <br /> ${arc.chr}:${arc.start}-${arc.stop} <br /> segmean ${arc.value}  `)
+                menu.d.style("color", arc.color).html(`Loss of Heterozygosity  <br /> ${arc.chr}:${arc.start}-${arc.stop} <br /> segmean ${arc.value}`)
                 menu.showunder(mouseEvent.target)
             })
-            .on('mouseout', (d) => {
+            .on('mouseout', () => {
                 menu.hide()
             })
     }

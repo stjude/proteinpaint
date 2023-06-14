@@ -2,7 +2,6 @@ import SnvLegendElement from "./SnvLegendElement";
 import CnvLegend from "./CnvLegend";
 import LohLegend from "./LohLegend";
 import {CnvType} from "./CnvType";
-import {FusionLegend} from "./FusionLegend";
 
 export default class Legend {
 
@@ -20,16 +19,19 @@ export default class Legend {
 
 
     constructor(
+        snvTitle: string,
+        cnvTitle: string,
+        lohTitle: string,
+        fusionTitle: string,
         snvClassMap: Map<string, SnvLegendElement>,
         cnvClassMap: Map<CnvType, CnvLegend>,
         fusionLegend: boolean,
         lohLegend?: LohLegend,
-
     ) {
-        this.snvTitle = "SNV"
-        this.cnvTitle = "CNV (log2 ratio)"
-        this.lohTitle = "LOH seg. mean"
-        this.fusionTitle = "Structural Variants (color by co-location)"
+        this.snvTitle = snvTitle
+        this.cnvTitle = cnvTitle
+        this.lohTitle = lohTitle
+        this.fusionTitle = fusionTitle
         this.snvClassMap = snvClassMap;
         this.cnvClassMap = cnvClassMap;
         this.lohLegend = lohLegend

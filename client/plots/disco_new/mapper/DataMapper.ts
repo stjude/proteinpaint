@@ -1,7 +1,8 @@
 import Data from "./Data";
-import {ViewModelMapper} from "./ViewModelMapper";
 import Reference from "./Reference";
 import DataObjectMapper from "./DataObjectMapper";
+import Settings from "../viewmodel/Settings";
+import {ViewModelMapper} from "#plots/disco_new/mapper/ViewModelMapper";
 
 export default class DataMapper {
 
@@ -23,22 +24,18 @@ export default class DataMapper {
     lohMaxValue?: number = undefined
     lohMinValue?: number = undefined
 
-    private settings: any;
+    private settings: Settings;
     private reference: Reference;
     private sample: string;
-    private snvFilter = data => data.dt == 1
-    private fusionFilter = data => data.dt == 2
-    private cnvFilter = data => data.dt == 4
-
-    private lohFilter = data => data.dt == 10
-    // TODO rename or refactor?
-    private nonExonicFilter = (data: Data) => ViewModelMapper.snvClassLayer[data.mClass] == 'non-exonic';
-    // TODO rename or refactor?
-    private snvRingFilter: (data: any) => boolean;
-
-    private bpx: number;
+    private snvFilter: (data: Data) => boolean;
+    private fusionFilter: (data: Data) => boolean;
+    private cnvFilter: (data: Data) => boolean;
+    private lohFilter: (data: Data) => boolean;
+    private nonExonicFilter: (data: Data) => boolean;
+    private snvRingFilter: (data: Data) => boolean;
     private onePxArcAngle: number;
     private dataObjectMapper: DataObjectMapper;
+    private bpx: number;
 
     private compareData = (a, b) => {
         const chrDiff = this.reference.chromosomesOrder.indexOf(a.chr) - this.reference.chromosomesOrder.indexOf(b.chr)
@@ -53,11 +50,17 @@ export default class DataMapper {
         return aPos - bPos
     }
 
-    constructor(settings: any, reference: Reference, sample: string, snvRingFilter: (data:any) => boolean, cancerGenes: Array<string>) {
+    constructor(settings: Settings, reference: Reference, sample: string, cancerGenes: Array<string>) {
         this.settings = settings
         this.reference = reference
         this.sample = sample
-        this.snvRingFilter = snvRingFilter
+
+        this.snvFilter = (data: Data) => data.dt == settings.rings.snvFilterValue
+        this.fusionFilter = (data: Data) => data.dt == settings.rings.fusionFilterValue
+        this.cnvFilter = (data: Data) => data.dt == settings.rings.cnvFilterValue
+        this.lohFilter = (data: Data) => data.dt == settings.rings.lohFilterValue
+        this.nonExonicFilter = (data: Data) => ViewModelMapper.snvClassLayer[data.mClass] == settings.rings.nonExonicFilterValue
+        this.snvRingFilter = (data: Data) => ViewModelMapper.snvClassLayer[data.mClass] == settings.rings.snvRingFilter
         this.dataObjectMapper = new DataObjectMapper(sample, cancerGenes)
 
         // number of base pairs per pixel
@@ -81,7 +84,6 @@ export default class DataMapper {
         const sortedData = dataArray.sort(this.compareData)
 
         sortedData.forEach(data => {
-
             this.filterSnvs(data);
             this.filterCnvs(data);
             this.filterLohs(data);
@@ -105,7 +107,7 @@ export default class DataMapper {
                 this.snvRingDataMap.set(arcAngle, dataArray)
             }
 
-            if (this.nonExonicFilter(data)) {
+            if (this.settings.rings.nonExonicRingEnabled && this.nonExonicFilter(data)) {
                 this.nonExonicSnvData.push(data)
             }
         }
@@ -148,7 +150,7 @@ export default class DataMapper {
     private calculateArcAngle(data: Data) {
         const currentChromosome = this.reference.chromosomes[this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)]
 
-        const dataAnglePos = Math.floor((data.pos ) / this.bpx)
+        const dataAnglePos = Math.floor((data.pos) / this.bpx)
 
         return currentChromosome.startAngle + dataAnglePos * this.onePxArcAngle
     }
