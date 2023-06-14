@@ -1,8 +1,8 @@
 import { VocabApi } from './vocab'
-import { Term, Q } from './termdb'
+import { Term, Q, TW } from './termdb'
 import { Filter } from './filter'
 
-interface Dom {
+export interface Dom {
     holder: any, 
     tip: any, 
     tip2: any
@@ -14,31 +14,35 @@ interface Dom {
 export interface Api {
     main: (f: any) => void,
     runCallback: (f: any) => void
-    showTree: (f: any) => void
+    showTree: () => boolean
     showMenu: (f: any) => void
     showGeneSearch: (f: any) => void
     hasError: () => boolean
-    validateQ: (d: any) => void
+    validateQ: (d: Q) => void
 }
 
-interface NoTermPromptOptions {
+export type NoTermPromptOptions = {
     isDictionary?: boolean,
-    text?: string,
     termType?: string,
+    text?: string,
     html?: string
-    q?: any
+    q?: Q
 }
 
-interface UseCase {
+interface NumericContEditOptsEntry{
+    scale: string
+    transform: string
+}
+
+export interface UseCase {
     target: string
+    detail?: string //Maybe?
+    regressionType?: string //Maybe?
+    term1type?: string //Maybe? not documented
 }
 
 interface DefaultQ4fillTW {
-
-}
-
-interface CustomFillTW {
-
+    [index: string]: Q
 }
 
 type SampleCountsEntry = {
@@ -50,46 +54,47 @@ type Handler = {
     defaultHandler?: string
 }
 
-interface BaseTermSettingData {
+interface BaseTermSettingOpts {
+    //Optional
     activeCohort?: number
     disable_terms?: string[]
     handler: Handler
     abbrCutoff?: number
+    noTermPromptOptions?: NoTermPromptOptions
 }
 
-export interface Data extends BaseTermSettingData {
+export interface PillData extends BaseTermSettingOpts {
     doNotHideTipInMain: boolean
     dom: Dom
-    hasError: boolean
-    term: Term
-    q: Q
+    term?: Term
+    q?: Q
     $id?: string
     filter?: Filter
     sampleCounts?: SampleCountsEntry[]
+    error?: string
 }
 
-export interface TermSettingOpts extends BaseTermSettingData{
+export interface TermSettingOpts extends BaseTermSettingOpts{
+    //Required
     holder: any
+    vocabApi: VocabApi
+    //Optional 
     tip?: any
     genomeObj?: any
-    menuOptions: string
-    menuLayout?: string
-    noTermPromptOptions?: NoTermPromptOptions
-    buttons?: string[],
-    callback?: (f:any) => void
+    menuOptions: string //all, edit, replace, remove
+    menuLayout?: string //horizonal, all
+    buttons?: string[] //replace, delete, info
+    callback?: (f:TW) => void
     defaultQ4fillTW?: DefaultQ4fillTW
-    customFillTW?: CustomFillTW
+    customFillTW?: (f:TW) => void
     use_bins_less?: boolean
     numericEditMenuVersion?: string[]
-    numericContinuousEditOptions: string[]
-    showTimeScale?: boolean
-    renderAs: string
+    numericContinuousEditOptions?: NumericContEditOptsEntry[]
+    showTimeScale?: boolean //Not used?
+    renderAs: string //none
     placeholder?: string
     placeholderIcon?: string
-    vocabApi: VocabApi
     usecase?: UseCase
-    durations: { exit: number}
-    numqByTermIdModeType?: any //{}
-    dom: Dom,
-    error: any
+    debug?: boolean | number //true or 1
+    $id?: string
 }

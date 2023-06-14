@@ -15,7 +15,7 @@
     "#rx": "./rx/index.js",
     "#shared/*": "./shared/*.js",
     "#termdb/*": "./termdb/*.js",
-    "#termsetting": "./termsetting/termsetting.js",
+    "#termsetting": "./termsetting/termsetting.ts",
     "#termsetting/handlers/*": "./termsetting/handlers/*.js"
   },
   "scripts": {

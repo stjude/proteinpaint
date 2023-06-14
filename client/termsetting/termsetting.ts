@@ -3,7 +3,7 @@ import { Menu } from '#dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
-import { TermSettingOpts, Term, Q, TW, VocabApi, Api, Data, Filter } from '#shared/types/index'
+import { TermSettingOpts, Term, Q, TW, VocabApi, Api, PillData, Dom, UseCase } from '#shared/types/index'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -16,7 +16,6 @@ set_hiddenvalues()
 ********************* Instance methods
 clickNoPillDiv
 showTree
-
 
 opts{}
 
@@ -31,16 +30,11 @@ export function get$id() {
 	return <string> `${$id++}${idSuffix}`
 }
 
-type DefaultOpts = {
-	menuOptions: string,
-	menuLayout: string
-}
-
 type DefaultQByTsHandler = {
     [index: string]: Q
 }
 
-const defaultOpts: DefaultOpts = {
+const defaultOpts: { menuOptions: string, menuLayout: string } = {
 	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical'
 }
@@ -48,28 +42,33 @@ const defaultOpts: DefaultOpts = {
 class TermSetting {
 	opts: TermSettingOpts
 	vocabApi: VocabApi
-	activeCohort: number
-	placeholder: string 
+	dom: Dom //opts.holder is required
+	//Optional opts, hence undefined type
+	activeCohort: number | undefined
+	placeholder: string | undefined
 	durations: { exit: number }
-	disable_terms: any
-	usecase: any
-	abbrCutoff: any
-	numqByTermIdModeType: any
-	dom: any
-	handlerByType: any
+	disable_terms: string[] | undefined
+	usecase: UseCase | undefined
+	abbrCutoff: number | undefined
+	$id: string | undefined
+	sampleCounts: {k: string, v: number}[] | undefined
+	//Optional opts in script, not init()
+	doNotHideTipInMain: boolean | undefined
+	//Created
 	hasError: boolean
 	api: Api
-	doNotHideTipInMain: any
+	numqByTermIdModeType: {}
+	handlerByType: any
 	showTree: any
 	showGeneSearch: any
 	showMenu: any
 	handler: any
-	noTermPromptOptions: any
+	
+	
 	data: any
+	noTermPromptOptions: any
 	error: any
-	$id: any
 	filter: any
-	sampleCounts: any
 	term: any
 	q: any
 	initUI: any
@@ -78,8 +77,8 @@ class TermSetting {
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
 		this.vocabApi = opts.vocabApi
-		this.activeCohort = opts.activeCohort as number
-		this.placeholder = opts.placeholder as string
+		this.activeCohort = opts.activeCohort
+		this.placeholder = opts.placeholder
 		this.durations = { exit: 0 }
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
@@ -103,7 +102,7 @@ class TermSetting {
 					padding: '0px',
 					parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
 				})
-		}
+		} as Dom
 		// tip2 is for showing inside tip, e.g. in snplocus UI
 		this.dom.tip2 = new Menu({
 			padding: '0px',
@@ -132,7 +131,7 @@ class TermSetting {
 			showMenu: this.showMenu.bind(this),
 			showGeneSearch: this.showGeneSearch,
 			hasError: () => this.hasError,
-			validateQ: d => {
+			validateQ: (d: Q) => {
 				if (!this.handler || !this.handler.validateQ) return
 				try {
 					this.handler.validateQ(d)
@@ -141,7 +140,7 @@ class TermSetting {
 					throw e
 				}
 			}
-		}
+		} as Api
 	}
 
 	runCallback(overrideTw = null) {
@@ -178,7 +177,7 @@ class TermSetting {
 		return o
 	}
 
-	async main(data = {} as Data) {
+	async main(data = {} as PillData) {
 		try {
 			if (this.doNotHideTipInMain) {
 				// single use: if true then delete
@@ -196,8 +195,8 @@ class TermSetting {
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
 			if ('$id' in data) this.$id = data.$id
 			if ('disable_terms' in data) this.disable_terms = data.disable_terms
-			if ('filter' in data) this.filter = data.filter as Filter
-			if ('activeCohort' in data) this.activeCohort = data.activeCohort as number
+			if ('filter' in data) this.filter = data.filter
+			if ('activeCohort' in data) this.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler(this.term ? this.term.type : null)
 			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
@@ -209,7 +208,7 @@ class TermSetting {
 		}
 	}
 
-	validateMainData(d: Data) {
+	validateMainData(d: PillData) {
 		if (d.term) {
 			// term is optional
 			if (!d.term.type) throw 'data.term.type missing'
@@ -227,7 +226,7 @@ class TermSetting {
 		this.mayValidate_noTermPromptOptions(d)
 	}
 
-	validateMenuOptions(o: any) {
+	validateMenuOptions(o: TermSettingOpts) {
 		if (!o.menuOptions) o.menuOptions = defaultOpts.menuOptions
 		// support legacy options, now converted to use glob-style pattern matching
 		if (o.menuOptions == 'all') o.menuOptions = '*'
@@ -237,7 +236,7 @@ class TermSetting {
 		throw `no matches found for termsetting opts.menuOptions='${o.menuOptions}'`
 	}
 
-	mayValidate_noTermPromptOptions(o: any) {
+	mayValidate_noTermPromptOptions(o: TermSettingOpts | PillData) {
 		if (!o.noTermPromptOptions) return
 		if (!Array.isArray(o.noTermPromptOptions)) throw 'noTermPromptOptions[] is not array'
 		// allow empty array
@@ -468,7 +467,7 @@ function setRenderers(self: any){
 		}
 	}
 
-	self.exitPill = function() {
+	self.exitPill = function(this: string) {
 		select(this)
 			.style('opacity', 1)
 			.transition()
