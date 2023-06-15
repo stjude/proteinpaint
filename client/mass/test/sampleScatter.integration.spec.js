@@ -1,8 +1,8 @@
-const tape = require('tape')
-const helpers = require('../../test/front.helpers.js')
-const d3color = require('d3-color')
-const d3s = require('d3-selection')
-const {
+import { tape } from 'tape'
+import * as helpers from '../../test/front.helpers.js'
+import * as d3color from 'd3-color'
+import * as d3s from 'd3-selection'
+import {
 	detectLst,
 	detectStyle,
 	detectAttr,
@@ -11,7 +11,7 @@ const {
 	detectGte,
 	detectOne,
 	sleep
-} = require('../../test/test.helpers')
+} from '../../test/test.helpers'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { openSummaryPlot, openPlot } from '../groups'
 

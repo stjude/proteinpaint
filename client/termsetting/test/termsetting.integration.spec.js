@@ -3,7 +3,7 @@ const d3s = require('d3-selection')
 const vocabData = require('../../termdb/test/vocabData')
 const vocabInit = require('../../termdb/vocabulary').vocabInit
 const termjson = require('../../test/testdata/termjson').termjson
-const { termsettingInit, termsetting_fill_q } = require('../termsetting')
+const { termsettingInit, termsetting_fill_q } = require('#termsetting')
 const {
 	sleep,
 	detectLst,
