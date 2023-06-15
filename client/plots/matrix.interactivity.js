@@ -1641,18 +1641,20 @@ function setZoomPanActions(self) {
 								.map(Number)
 							const xMin = xy[0]
 							const xMax = xMin + self.zoomWidth
+							const processed = new Set()
 							const filter = c => c.row && c.x >= xMin && c.x <= xMax
 							const samples = []
 							for (const series of self.serieses) {
-								samples.push(
-									...series.cells.filter(filter).map(d => {
-										const obj = {}
-										for (const a of ss.attributes) {
-											obj[a] = d.row[a]
-										}
-										return obj
-									})
-								)
+								series.cells.filter(filter).forEach(d => {
+									const obj = {}
+									for (const a of ss.attributes) {
+										obj[a] = d.row[a]
+									}
+									const sid = Object.values(obj).join(';;')
+									if (processed.has(sid)) return
+									processed.add(sid)
+									samples.push(obj)
+								})
 							}
 							ss.callback({
 								samples,
