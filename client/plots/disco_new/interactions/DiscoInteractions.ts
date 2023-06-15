@@ -1,5 +1,6 @@
 export class DiscoInteractions {
     cappingClickCallback: (d: any, t: any) => void;
+    downloadClickListener: (d: any) => void
 
     constructor(app: any) {
         this.cappingClickCallback = (d: any, t: any) => {
@@ -25,6 +26,26 @@ export class DiscoInteractions {
             const y = rect.top - 40;
 
             tip.show(x, y)
+        }
+
+        this.downloadClickListener = (svg: any) => {
+            const a = document.createElement('a')
+            document.body.appendChild(a)
+
+            a.addEventListener(
+                'click',
+                function () {
+                    const serializer = new XMLSerializer()
+                    const svg_blob = new Blob([serializer.serializeToString(svg)], {
+                        type: 'image/svg+xml'
+                    })
+                    a.download = "disco" + '.svg'
+                    a.href = URL.createObjectURL(svg_blob)
+                    document.body.removeChild(a)
+                },
+                false
+            )
+            a.click()
         }
     }
 }
