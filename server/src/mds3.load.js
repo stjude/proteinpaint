@@ -1,7 +1,7 @@
 const app = require('./app')
 const fs = require('fs')
-const lines2R = require('./lines2R')
 const path = require('path')
+const spawn = require('child_process').spawn
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
@@ -467,9 +467,54 @@ async function geneExpressionClustering(data, q) {
 	const time1 = new Date()
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(Rinputfile, JSON.stringify(inputData))
-	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [], [Rinputfile])
+	const Routput = await run_clustering(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [Rinputfile])
 	fs.unlink(Rinputfile, () => {})
-	console.log(Routput)
+	//const r_output_lines = Routput.trim().split('\n')
+	//console.log('r_output_lines:', r_output_lines)
+
+	let row_coordinates = []
+	let col_coordinates = []
+	let row_coordinate_start = false
+	let col_coordinate_start = false
+	let row_names_index
+	let col_names_index
+	for (const line of Routput) {
+		console.log(line)
+		if (line.includes('[1] "RowCoordinates"')) {
+			row_coordinate_start = true
+		} else if (line.includes('"ColumnCoordinates"')) {
+			//console.log(line)
+			col_coordinate_start = true
+			row_coordinate_start = false
+		} else if (line.includes('rownames')) {
+			row_names_index = line
+				.replace('rownames\t', '')
+				.split('\t')
+				.map((i) => Number(i))
+		} else if (line.includes('colnames')) {
+			col_names_index = line
+				.replace('colnames\t', '')
+				.split('\t')
+				.map((i) => Number(i))
+		} else if (line.includes('"Done"')) {
+			col_coordinate_start = false
+		} else if (row_coordinate_start == true) {
+			row_coordinates.push(line)
+		} else if (col_coordinate_start == true) {
+			col_coordinates.push(line)
+		}
+	}
+
+	//console.log('row_coordinates:', row_coordinates)
+	//console.log('col_coordinates:', col_coordinates)
+
+	let row_dendro = parseclust(row_coordinates)
+	let col_dendro = parseclust(col_coordinates)
+	console.log('row_dendro:', row_dendro)
+	console.log('col_dendro:', col_dendro)
+	console.log('row_names_index:', row_names_index)
+	console.log('col_names_index:', col_names_index)
+
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
 	const time2 = new Date()
 	console.log('Time taken to run rust gene clustering script:', time2 - time1, 'ms')
@@ -510,4 +555,115 @@ function zscore(lst) {
 		return lst
 	}
 	return lst.map((i) => (i - mean) / sd)
+}
+
+async function run_clustering(Rscript, args = []) {
+	try {
+		await fs.promises.stat(Rscript)
+	} catch (e) {
+		throw `${Rscript} does not exist`
+	}
+	const stdout = []
+	const stderr = []
+	return new Promise((resolve, reject) => {
+		console.log('serverconfig.Rscript:', serverconfig.Rscript)
+		console.log('Rscript:', Rscript)
+		console.log('args:', ...args)
+		const sp = spawn(serverconfig.Rscript, [Rscript, ...args])
+		sp.stdout.on('data', (data) => stdout.push(data))
+		sp.stderr.on('data', (data) => stderr.push(data))
+		sp.on('error', (err) => reject(err))
+		sp.on('close', (code) => {
+			//if (code !== 0) {
+			//	// handle non-zero exit status
+			//	let errmsg = `R process exited with non-zero status code=${code}`
+			//	if (stdout.length > 0) errmsg += `\nR stdout: ${stdout.join('').trim()}`
+			//	if (stderr.length > 0) errmsg += `\nR stderr: ${stderr.join('').trim()}`
+			//	reject(errmsg)
+			//}
+			//if (stderr.length > 0) {
+			//	// handle R stderr
+			//	const err = stderr.join('').trim()
+			//	const errmsg = `R process emitted standard error\nR stderr: ${err}`
+			//	reject(errmsg)
+			//}
+			const out = stdout.join('').trim().split('\n')
+			resolve(out)
+		})
+	})
+}
+
+function parseclust(coordinates) {
+	let first = 1
+	let xs = []
+	let ys = []
+	for (const line of coordinates) {
+		if (first == 1) {
+			first = 0
+		} else if (line.length == 0) {
+		} else {
+			let line2 = line.split(/(\s+)/)
+			//console.log(line)
+			//console.log(line2)
+			//console.log(line2[line2.length - 3], line2[line2.length - 1])
+			xs.push(Number(line2[line2.length - 3]))
+			ys.push(Number(line2[line2.length - 1]))
+		}
+	}
+	//console.log(xs)
+	//console.log(ys)
+
+	let depth_start_position = 0 // Initializing position of depth start to position 0 in R output
+	let i = 0
+	let depth_first_branch = []
+	let prev_ys = []
+	let prev_xs = []
+	let break_point = false
+	let old_depth_start_position = 0
+	for (let i = 0; i < ys.length - 2; i++) {
+		if (break_point == true) {
+			// Determine where the new branch should start from
+			let hit = 0
+			//console.log('prev_ys:', prev_ys)
+			for (let j = 0; j < prev_ys.length; j++) {
+				let k = prev_ys.length - j - 1
+				//console.log('prev_ys[k]:', prev_ys[k])
+				//console.log('ys[i]:', ys[i])
+				if (prev_ys[k] > ys[i]) {
+					depth_first_branch.push({ x1: xs[i], y1: ys[i], x2: prev_xs[k], y2: prev_ys[k] })
+					hit = 1
+					//console.log('Found')
+					break
+				}
+			}
+			if (hit == 0) {
+				console.log('No suitable branch point found')
+			}
+			depth_first_branch.push({ x1: xs[i], y1: ys[i], x2: xs[i + 1], y2: ys[i + 1] })
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+			//prev_ys = []
+			//prev_xs = []
+			//old_depth_start_position = depth_start_position
+			break_point = false
+		} else if (ys[i] > ys[i + 1] && i <= ys.length - 2) {
+			depth_first_branch.push({ x1: xs[i], y1: ys[i], x2: xs[i + 1], y2: ys[i + 1] })
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+		} else if (ys[i] == ys[i + 1] && i <= ys.length - 2) {
+			depth_first_branch.push({ x1: xs[i - 1], y1: ys[i - 1], x2: xs[i + 1], y2: ys[i + 1] })
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+		} else {
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+			//old_depth_first_branch = depth_first_branch
+			//depth_first_branch = []
+			break_point = true
+
+			//depth_start_position = i // Start of new branch
+		}
+	}
+	return depth_first_branch
+	//console.log(depth_first_branch)
 }
