@@ -124,11 +124,11 @@ class Scatter {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
-
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		if (this.config.settings.sampleScatter.regression !== 'None' && this.config.term0)
+		if (this.config.settings.sampleScatter.regression !== 'None' && this.config.term0) {
+			if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', 'block').html('Processing data...')
+		}
 
 		if (this.dom.header)
 			this.dom.header.html(
