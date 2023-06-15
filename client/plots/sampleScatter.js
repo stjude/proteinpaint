@@ -69,6 +69,11 @@ class Scatter {
 			header: this.opts.header,
 			//holder,
 			controls,
+			loadingDiv: this.opts.holder
+				.append('div')
+				.style('position', 'absolute')
+				.style('left', '50%')
+				.style('top', '50%'),
 			tip: new Menu({ padding: '5px' }),
 			tooltip: new Menu({ padding: '5px' }),
 			controlsHolder
@@ -128,6 +133,8 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 		this.charts = []
+		this.mainDiv.selectAll('*').remove()
+		this.dom.loadingDiv.style('display', 'block').html('Processing data...')
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
 		if (results.error) throw results.error
 		for (const [key, data] of Object.entries(results)) {
@@ -136,8 +143,10 @@ class Scatter {
 		}
 		this.is3D = this.opts.parent?.type == 'summary' && this.config.term0?.q.mode == 'continuous'
 		await this.setControls()
-
+		await this.processData()
 		this.render()
+		this.dom.loadingDiv.style('display', 'none')
+
 		if (!this.is3D) this.setTools()
 		this.dom.tip.hide()
 	}
