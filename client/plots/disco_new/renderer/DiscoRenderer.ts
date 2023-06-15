@@ -37,7 +37,6 @@ export class DiscoRenderer {
             .attr('class', "mainG")
             .attr('transform', `translate(${viewModel.width / 2},${viewModel.height / 2})`);
 
-        // @ts-ignore suppress webstorm warning
         for (const [ringType, renderer] of this.renders) {
             const elements = viewModel.getElements(ringType)
             const collisions = viewModel.getCollisions(ringType)
