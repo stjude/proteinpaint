@@ -66,13 +66,14 @@ RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
 RowDendro <- as.dendrogram(RowDend)
 #print ("Attributes as.dendrogram")
 #attributes(RowDendro)
-plot(RowDendro)
+#plot(RowDendro)
 
-node_coordinates <- get_nodes_xy(
+row_node_coordinates <- get_nodes_xy(
   RowDendro,
   type = "rectangle"
 )
-print (node_coordinates)
+print ("RowCoordinates")
+print (row_node_coordinates)
 
 # For columns (i.e samples)
 ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matrix
@@ -82,8 +83,16 @@ ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matr
 ColumnDend <- hclust(ColumnDist, method = tolower(input$cluster_method))
 #ColumnDend <- flashClust(ColumnDist,method = tolower(input$cluster_method))
 ColumnDendro <- as.dendrogram(ColumnDend)
-plot (ColumnDendro)
+#plot (ColumnDendro)
 
+col_node_coordinates <- get_nodes_xy(
+  ColumnDendro,
+  type = "rectangle"
+)
+print ("ColumnCoordinates")
+print (col_node_coordinates)
+
+print ("Done")
 # Sorting the matrix
 
 SortedMatrix  <- input$matrix[RowDend$order, ColumnDend$order]
@@ -93,6 +102,8 @@ SortedColumnNames <- input$col_names[ColumnDend$order]
 m <- matrix(SortedMatrix,length(SortedRowNames),length(SortedColumnNames))
 colnames(m) <- SortedColumnNames
 rownames(m) <- SortedRowNames
+cat("rownames",RowDend$order,"\n",sep="\t")
+cat("colnames",ColumnDend$order,"\n",sep="\t")
 
 df  <- melt(m)
 colnames(df) <- c("Genes", "Samples", "value")
