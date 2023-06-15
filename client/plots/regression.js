@@ -3,7 +3,7 @@ import { RegressionResults } from './regression.results'
 import { getCompInit, copyMerge } from '../rx'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/error'
-import { fillTermWrapper } from '../termsetting/termsetting'
+import { fillTermWrapper } from '#termsetting'
 
 /*
 Code architecture:

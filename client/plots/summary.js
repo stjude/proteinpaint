@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom/menu'
-import { fillTermWrapper } from '../termsetting/termsetting'
+import { fillTermWrapper } from '#termsetting'
 import { recoverInit } from '../rx/src/recover'
 import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from './violin.js'

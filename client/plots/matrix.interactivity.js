@@ -1,5 +1,5 @@
 import { select, pointer } from 'd3-selection'
-import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
+import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '../dom/control.icons'
 
 let inputIndex = 0

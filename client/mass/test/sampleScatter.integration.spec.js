@@ -1,4 +1,4 @@
-import { tape } from 'tape'
+import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
 import * as d3color from 'd3-color'
 import * as d3s from 'd3-selection'

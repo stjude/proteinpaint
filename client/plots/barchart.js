@@ -10,7 +10,7 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { renderTable } from '../dom/table'
-import { fillTermWrapper } from '../termsetting/termsetting'
+import { fillTermWrapper } from '#termsetting'
 import { getColors } from '#shared/common'
 import { mclass } from '#shared/common'
 

@@ -3,7 +3,7 @@ import { overlayInit } from './controls.overlay'
 import { term1uiInit } from './controls.term1'
 import { divideInit } from './controls.divide'
 import { initRadioInputs } from '../dom/radio2'
-import { termsettingInit } from '../termsetting/termsetting'
+import { termsettingInit } from '#termsetting'
 import { rgb } from 'd3-color'
 
 // to be used for assigning unique

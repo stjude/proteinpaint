@@ -5,7 +5,7 @@ import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
-import { get$id } from '../termsetting/termsetting'
+import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
 
 /*

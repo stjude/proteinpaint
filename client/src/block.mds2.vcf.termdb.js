@@ -4,7 +4,7 @@ import { scaleOrdinal, scaleLinear } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft } from 'd3-axis'
-import { filterInit } from '../filter/filter'
+import { filterInit } from '#filter'
 import { appInit } from '../termdb/app'
 
 /*
