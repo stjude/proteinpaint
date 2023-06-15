@@ -331,8 +331,6 @@ export function setRenderers(self) {
 			const regressionType = self.config.settings.sampleScatter.regression
 
 			if (!regressionType || regressionType == 'None') continue
-			console.log(`Calculating regression for chart ${chart.id}...`)
-
 			let regression
 			const data = []
 			await chart.cohortSamples.forEach(c => {
