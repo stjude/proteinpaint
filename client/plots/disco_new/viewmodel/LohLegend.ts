@@ -1,11 +1,10 @@
-import GradientColorProvider from "../mapper/GradientColorProvider";
+import GradientColorProvider from "#plots/disco_new/mapper/GradientColorProvider";
 
 export default class LohLegend {
     minValue: number
     maxValue: number
     colorStartValue: string
     colorEndValue: string
-
     constructor(minValue: number, maxValue: number) {
         this.minValue = minValue;
         this.maxValue = maxValue;

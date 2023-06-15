@@ -1,6 +1,6 @@
-import Legend from "../viewmodel/Legend";
-import {CnvType} from "../viewmodel/CnvType";
-import {FusionLegend} from "../viewmodel/FusionLegend";
+import Legend from "#plots/disco_new/viewmodel/Legend";
+import {CnvType} from "#plots/disco_new/viewmodel/CnvType";
+import {FusionLegend} from "#plots/disco_new/viewmodel/FusionLegend";
 
 export default class LegendJSONMapper {
 

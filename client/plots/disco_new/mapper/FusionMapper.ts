@@ -1,8 +1,8 @@
 import Reference from "./Reference";
 import Data from "./Data";
-import Fusion from "../viewmodel/Fusion";
-import FusionSubgroup from "../viewmodel/FusionSubgroup";
-import Settings from "../viewmodel/Settings";
+import Fusion from "#plots/disco_new/viewmodel/Fusion";
+import FusionSubgroup from "#plots/disco_new/viewmodel/FusionSubgroup";
+import Settings from "#plots/disco_new/viewmodel/Settings";
 
 export default class FusionMapper {
     private settings: Settings;

@@ -10,7 +10,6 @@ export default class FusionSubgroup implements RibbonSubgroup{
     value: number;
     genes: Set<string>;
     chromosomes: Set<string>
-
     constructor(startAngle: number, endAngle: number, radius: number, gene: string, value: number, genes: Set<string>, chromosomes: Set<string>) {
         this.startAngle = startAngle;
         this.endAngle = endAngle;

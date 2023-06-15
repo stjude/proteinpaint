@@ -1,6 +1,3 @@
-import Data from "../mapper/Data";
-import {ViewModelMapper} from "../mapper/ViewModelMapper";
-
 export default interface Settings {
 
     verticalPadding: number;

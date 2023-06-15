@@ -1,8 +1,8 @@
 import Data from "./Data";
 import Reference from "./Reference";
-import Label from "../viewmodel/Label";
-import LabelFactory from "../viewmodel/LabelFactory";
-import MLabel from "../mapper/MLabel";
+import Label from "#plots/disco_new/viewmodel/Label";
+import LabelFactory from "#plots/disco_new/viewmodel/LabelFactory";
+import MLabel from "#plots/disco_new/mapper/MLabel";
 
 export default class LabelsMapper {
 
@@ -42,7 +42,7 @@ export default class LabelsMapper {
         return labels
     }
 
-    calculateStartAngle(data: Data) {
+    private calculateStartAngle(data: Data) {
         const index = this.reference.chromosomesOrder.findIndex(element => element == data.chr)
         const chromosome = this.reference.chromosomes[index]
 
