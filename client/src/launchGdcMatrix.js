@@ -63,6 +63,7 @@ export async function init(arg, holder, genomes) {
 	const settings = arg.settings || {}
 	if (!settings.matrix) settings.matrix = {}
 	settings.matrix.geneFilter = geneFilter
+	settings.matrix.maxGenes = maxGenes
 	const opts = {
 		holder,
 		genome,
@@ -88,7 +89,7 @@ export async function init(arg, holder, genomes) {
 			redoHtml: 'redo'
 		},
 		matrix: {
-			// allow2selectSamples: arg.allow2selectSamples,
+			allow2selectSamples: arg.allow2selectSamples,
 			// these will display the inputs together in the Genes menu,
 			// instead of being rendered outside of the matrix holder
 			customInputs: {
@@ -208,7 +209,7 @@ async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
 	const body = {
 		genome: gdcGenome,
 		filter0: gdcCohort,
-		maxGenes: maxGenes
+		maxGenes
 	}
 	if (CGConly) body.CGConly = 1
 	const data = await dofetch3('gdc_filter2topGenes', { body })
