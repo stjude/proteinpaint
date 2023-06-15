@@ -328,10 +328,11 @@ export function setRenderers(self) {
 	self.processData = async function() {
 		for (const chart of self.charts) {
 			self.initAxes(chart)
-			console.log(`Calculating regression for chart ${chart.id}...`)
 			const regressionType = self.config.settings.sampleScatter.regression
 
 			if (!regressionType || regressionType == 'None') continue
+			console.log(`Calculating regression for chart ${chart.id}...`)
+
 			let regression
 			const data = []
 			await chart.cohortSamples.forEach(c => {
@@ -369,7 +370,7 @@ export function setRenderers(self) {
 
 	self.mayRenderRegression = async function() {
 		for (const chart of self.charts) {
-			if (chart.regressionG) {
+			if (chart.regressionG && chart.regressionCurve) {
 				if (chart.regressionG) chart.regressionG.selectAll('*').remove()
 
 				const l = line()
