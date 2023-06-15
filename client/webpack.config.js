@@ -45,6 +45,7 @@ module.exports = function(env = {}) {
 				path: require.resolve('path-browserify'),
 				process: require.resolve('process')
 			}*/
+			extensions: ['*', '.js', '.jsx', '.tsx', '.ts']
 		},
 		plugins: [
 			new NodePolyfillPlugin()
@@ -68,7 +69,7 @@ module.exports = function(env = {}) {
 					use: [path.join(__dirname, './test/empty-wp-loader.js')]
 				},
 				{
-					test: /\.js$/,
+					test: /\.(js|jsx|tsx|ts)$/,
 					exclude: /\.spec\.js$/,
 					use: [
 						{

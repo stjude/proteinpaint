@@ -1,6 +1,6 @@
 import { getCompInit } from '../rx'
-import { termsettingInit } from '../termsetting/termsetting'
-import { getNormalRoot } from '../filter/filter'
+import { termsettingInit } from '#termsetting'
+import { getNormalRoot } from '#filter'
 
 /*
 for configuring term1; wraps termsetting

@@ -1,4 +1,4 @@
-import { getNormalRoot } from '../filter/filter'
+import { getNormalRoot } from '#filter'
 
 /*
 	Create URL parameters for charts that use the 

@@ -1,6 +1,12 @@
 import { Cohort, ClinvarClinsig } from './dataset'
 
-/********* server/genome interfaces *********/
+/********* server/genome ********
+ 
+--------EXPORTED--------
+MinGenome
+Genome
+
+*/
 
 interface GeneDb {
   dbfile: string

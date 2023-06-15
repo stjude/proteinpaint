@@ -1,4 +1,4 @@
-/********* server/dataset interfaces ********
+/********* private and public datasets ********
  
 --------EXPORTED--------
 ClinvarClinsig

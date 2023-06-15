@@ -6,6 +6,7 @@ import postcssImport from 'postcss-import'
 import { terser } from 'rollup-plugin-terser'
 import json from '@rollup/plugin-json'
 import dynamicImportVars from '@rollup/plugin-dynamic-import-vars'
+import typescript from '@rollup/plugin-typescript'
 import path from 'path'
 
 const production = !process.env.ROLLUP_WATCH && process.env.NODE_ENV !== 'dev'
@@ -33,6 +34,7 @@ export default [
 			postcss({
 				plugins: [postcssImport()]
 			}),
+			typescript(), // Added
 			dynamicImportVars(),
 			// for GDC webpack 3 use case: do not use terser by running
 			// `cd client && rm -rf dist && NODE_ENV=dev npx rollup -c ./rollup.config.js`
