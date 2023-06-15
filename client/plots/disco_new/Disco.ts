@@ -43,7 +43,7 @@ export default class Disco {
         holder.selectAll("*").remove()
 
         const legendRenderer = new LegendRenderer(settings.cnv.capping, this.discoInteractions.cappingClickCallback)
-        this.discoRenderer = new DiscoRenderer(this.getRingRenderers(settings), legendRenderer)
+        this.discoRenderer = new DiscoRenderer(this.getRingRenderers(settings), legendRenderer, this.discoInteractions.downloadClickListener)
         this.discoRenderer.render(holder, viewModel)
     }
 
