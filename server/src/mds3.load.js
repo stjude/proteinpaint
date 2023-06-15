@@ -1,7 +1,9 @@
 const app = require('./app')
 const fs = require('fs')
+const lines2R = require('./lines2R')
 const path = require('path')
 const utils = require('./utils')
+const serverconfig = require('./serverconfig')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
 const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 
@@ -355,7 +357,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -441,7 +443,7 @@ async function geneExpressionClustering(data, q) {
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
 		cluster_method: q.clusterMethod,
-		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
@@ -463,6 +465,11 @@ async function geneExpressionClustering(data, q) {
 	//})
 
 	const time1 = new Date()
+	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(Rinputfile, JSON.stringify(inputData))
+	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [], [Rinputfile])
+	fs.unlink(Rinputfile, () => {})
+	console.log(Routput)
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
 	const time2 = new Date()
 	console.log('Time taken to run rust gene clustering script:', time2 - time1, 'ms')
@@ -491,16 +498,16 @@ async function geneExpressionClustering(data, q) {
 		rowSteps,
 		geneNameLst: inputData.row_names,
 		sampleNameLst: inputData.col_names,
-		matrix: inputData.matrix
+		matrix: inputData.matrix,
 	}
 }
 function zscore(lst) {
 	let total = 0
 	for (const v of lst) total += v
 	const mean = total / lst.length
-	const sd = Math.sqrt(lst.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
+	const sd = Math.sqrt(lst.map((x) => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
 	if (sd == 0) {
 		return lst
 	}
-	return lst.map(i => (i - mean) / sd)
+	return lst.map((i) => (i - mean) / sd)
 }
