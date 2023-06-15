@@ -47,6 +47,9 @@ module.exports = env => {
 					library: 'unittest',
 					libraryExport: 'unittest',
 					libraryTarget: 'window'
+				},
+				resolve: {
+					extensions: ['*', '.js', '.jsx', '.tsx', '.ts']
 				}
 			})
 
@@ -61,6 +64,9 @@ module.exports = env => {
 					library: 'testrunproteinpaint',
 					libraryExport: 'testrunproteinpaint',
 					libraryTarget: 'window'
+				},
+				resolve: {
+					extensions: ['*', '.js', '.jsx', '.tsx', '.ts']
 				}
 			})
 
