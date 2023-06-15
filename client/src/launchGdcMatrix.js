@@ -95,36 +95,6 @@ export async function init(arg, holder, genomes) {
 			customInputs: {
 				genes: [
 					{
-						settingsKey: 'geneFilter',
-						title: 'Apply a filter to the top genes',
-						type: 'radio',
-						label: 'Gene filter',
-						labelDisplay: 'block',
-						options: [
-							{
-								label: 'Cancer Gene Census only',
-								value: 'CGC'
-							},
-							{
-								label: 'None',
-								value: 'none'
-							}
-						],
-						styles: { padding: '3px 0' },
-						callback: async value => {
-							CGConly = value === 'CGC'
-							const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
-							api.update({
-								termgroups: [{ lst: genes }],
-								settings: {
-									matrix: {
-										geneFilter: value
-									}
-								}
-							})
-						}
-					},
-					{
 						label: `Maximum # Genes`,
 						title: 'Limit the number of displayed genes',
 						type: 'number',
