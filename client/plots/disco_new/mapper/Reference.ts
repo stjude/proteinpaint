@@ -1,4 +1,4 @@
-import Chromosome from "../viewmodel/Chromosome";
+import Chromosome from "#plots/disco_new/viewmodel/Chromosome";
 
 export default class Reference {
 

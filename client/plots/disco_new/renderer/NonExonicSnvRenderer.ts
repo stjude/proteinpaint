@@ -1,7 +1,7 @@
 import IRenderer from "./IRenderer";
 import * as d3 from "d3";
-import SnvArc from "../viewmodel/SnvArc";
-import Arc from "../viewmodel/Arc";
+import SnvArc from "#plots/disco_new/viewmodel/SnvArc";
+import Arc from "#plots/disco_new/viewmodel/Arc";
 import MenuProvider from "./MenuProvider";
 
 export default class NonExonicSnvRenderer implements IRenderer {

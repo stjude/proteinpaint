@@ -1,8 +1,8 @@
 import * as d3 from 'd3';
 import FullArcRenderer from "./FullArcRenderer";
-import Fusion from "../viewmodel/Fusion";
+import Fusion from "#plots/disco_new/viewmodel/Fusion";
 import MenuProvider from "./MenuProvider";
-import {FusionLegend} from "../viewmodel/FusionLegend";
+import {FusionLegend} from "#plots/disco_new/viewmodel/FusionLegend";
 
 // TODO extract constants from this file.
 export default class FusionRenderer {

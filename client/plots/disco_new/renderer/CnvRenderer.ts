@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import IRenderer from "./IRenderer";
-import CnvArc from "../viewmodel/CnvArc";
+import CnvArc from "#plots/disco_new/viewmodel/CnvArc";
 import MenuProvider from "./MenuProvider";
 export default class CnvRenderer implements IRenderer {
 

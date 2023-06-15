@@ -1,9 +1,9 @@
 import Data from "./Data";
 import Reference from "./Reference";
-import CnvArc from "../viewmodel/CnvArc";
-import CnvLegend from "../viewmodel/CnvLegend";
-import {CnvType} from "../viewmodel/CnvType";
-import Settings from "../viewmodel/Settings";
+import CnvArc from "#plots/disco_new/viewmodel/CnvArc";
+import CnvLegend from "#plots/disco_new/viewmodel/CnvLegend";
+import {CnvType} from "#plots/disco_new/viewmodel/CnvType";
+import Settings from "#plots/disco_new/viewmodel/Settings";
 
 export default class CnvArcsMapper {
 

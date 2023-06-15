@@ -1,6 +1,6 @@
 import Settings from "./Settings";
-import Data from "../mapper/Data";
-import {ViewModelMapper} from "../mapper/ViewModelMapper";
+import Data from "#plots/disco_new/mapper/Data";
+import {ViewModelMapper} from "#plots/disco_new/mapper/ViewModelMapper";
 
 export default function discoDefaults(overrides = {}): Settings {
     return Object.assign(

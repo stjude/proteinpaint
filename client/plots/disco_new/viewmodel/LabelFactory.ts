@@ -19,7 +19,6 @@ export default class LabelFactory {
         const textAnchor = angle > Math.PI ? 'end' : ''
         const r0 = innerRadius
         const r1 = outerRadius - labelsToLinesGap
-        // this.color = label.labelFill
 
         const points: Array<Point> = []
         points.push(new Point(r0 * Math.cos(ccAngle), r0 * Math.sin(ccAngle)))

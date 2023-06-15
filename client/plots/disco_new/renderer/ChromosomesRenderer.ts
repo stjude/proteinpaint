@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import IRenderer from "./IRenderer";
-import Chromosome from "../viewmodel/Chromosome";
-import Arc from "../viewmodel/Arc";
+import Chromosome from "#plots/disco_new/viewmodel/Chromosome";
+import Arc from "#plots/disco_new/viewmodel/Arc";
 
 export default class ChromosomesRenderer implements IRenderer {
 

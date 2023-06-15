@@ -1,7 +1,7 @@
 import IRenderer from "./IRenderer";
-import ViewModel from "../viewmodel/ViewModel";
+import ViewModel from "#plots/disco_new/viewmodel/ViewModel";
 import LegendRenderer from "./LegendRenderer";
-import {RingType} from "../viewmodel/RingType";
+import {RingType} from "#plots/disco_new/viewmodel/RingType";
 import FusionRenderer from "./FusionRenderer";
 
 export class DiscoRenderer {
@@ -32,6 +32,7 @@ export class DiscoRenderer {
             .attr('class', "mainG")
             .attr('transform', `translate(${viewModel.width / 2},${viewModel.height / 2})`);
 
+        // @ts-ignore suppress webstorm warning
         for (const [ringType, renderer] of this.renders) {
             const elements = viewModel.getElements(ringType)
             const collisions = viewModel.getCollisions(ringType)
@@ -41,6 +42,9 @@ export class DiscoRenderer {
 
         this.fusionRenderer.render(mainG, viewModel.fusions)
 
-        this.legendRenderer.render(mainG, viewModel.legend)
+        this.legendRenderer.render(mainG, viewModel.legend,
+            -1 * (viewModel.width - viewModel.settings.horizontalPadding) / 2,
+            viewModel.width,
+            viewModel.height / 2)
     }
 }

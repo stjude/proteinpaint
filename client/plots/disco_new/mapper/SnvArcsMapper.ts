@@ -1,8 +1,8 @@
 import Reference from "./Reference";
 import Data from "./Data";
-import SnvArc from "../viewmodel/SnvArc";
+import SnvArc from "#plots/disco_new/viewmodel/SnvArc";
 import MLabel from "./MLabel";
-import SnvLegendElement from "../viewmodel/SnvLegendElement";
+import SnvLegendElement from "#plots/disco_new/viewmodel/SnvLegendElement";
 
 export default class SnvArcsMapper {
 

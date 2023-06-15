@@ -1,8 +1,8 @@
 import Reference from "./Reference";
 import Data from "./Data";
 import MLabel from "./MLabel";
-import SnvArc from "../viewmodel/SnvArc";
-import Settings from "../viewmodel/Settings";
+import SnvArc from "#plots/disco_new/viewmodel/SnvArc";
+import Settings from "#plots/disco_new/viewmodel/Settings";
 
 export default class NonExonicSnvArcsMapper {
 

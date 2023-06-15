@@ -1,9 +1,8 @@
 import * as d3 from "d3";
-import SnvArc from "../viewmodel/SnvArc";
-import {Menu} from "../../../client/dom/menu";
+import SnvArc from "#plots/disco_new/viewmodel/SnvArc";
 import IRenderer from "./IRenderer";
 import FullArcRenderer from "./FullArcRenderer";
-import Arc from "../viewmodel/Arc";
+import Arc from "#plots/disco_new/viewmodel/Arc";
 import MenuProvider from "./MenuProvider";
 
 

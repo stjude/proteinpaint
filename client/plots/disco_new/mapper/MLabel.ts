@@ -1,4 +1,4 @@
-import { mclass } from '../../../shared/common'
+import { mclass } from '#shared/common'
 export default class MLabel {
 
     private static instance: MLabel;
