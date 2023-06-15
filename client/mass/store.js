@@ -463,6 +463,7 @@ function validatePlot(p, vocabApi) {
 			if (!p.file) `plot error: missing the plot coordinates file for '${p.chartType}'`
 		} else if (p.chartType == 'genomeBrowser') {
 		} else if (p.chartType == 'geneExpression') {
+		} else if (p.chartType == 'Disco') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
