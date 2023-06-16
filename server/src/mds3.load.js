@@ -508,8 +508,8 @@ async function geneExpressionClustering(data, q) {
 	//console.log('row_coordinates:', row_coordinates)
 	//console.log('col_coordinates:', col_coordinates)
 
-	let row_dendro = parseclust(row_coordinates)
-	let col_dendro = parseclust(col_coordinates)
+	let row_dendro = await parseclust(row_coordinates)
+	let col_dendro = await parseclust(col_coordinates)
 	console.log('row_dendro:', row_dendro)
 	console.log('col_dendro:', col_dendro)
 	console.log('row_names_index:', row_names_index)
@@ -593,7 +593,7 @@ async function run_clustering(Rscript, args = []) {
 	})
 }
 
-function parseclust(coordinates) {
+async function parseclust(coordinates) {
 	let first = 1
 	let xs = []
 	let ys = []
@@ -603,7 +603,7 @@ function parseclust(coordinates) {
 		} else if (line.length == 0) {
 		} else {
 			let line2 = line.split(/(\s+)/)
-			//console.log(line)
+			console.log(line)
 			//console.log(line2)
 			//console.log(line2[line2.length - 3], line2[line2.length - 1])
 			xs.push(Number(line2[line2.length - 3]))
@@ -620,6 +620,8 @@ function parseclust(coordinates) {
 	let prev_xs = []
 	let break_point = false
 	let old_depth_start_position = 0
+	let node_children = []
+	let leaf_counter = 0
 	for (let i = 0; i < ys.length - 2; i++) {
 		if (break_point == true) {
 			// Determine where the new branch should start from
@@ -630,7 +632,7 @@ function parseclust(coordinates) {
 				//console.log('prev_ys[k]:', prev_ys[k])
 				//console.log('ys[i]:', ys[i])
 				if (prev_ys[k] > ys[i]) {
-					depth_first_branch.push({ x1: xs[i], y1: ys[i], x2: prev_xs[k], y2: prev_ys[k] })
+					depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: k, x2: prev_xs[k], y2: prev_ys[k] })
 					hit = 1
 					//console.log('Found')
 					break
@@ -639,7 +641,11 @@ function parseclust(coordinates) {
 			if (hit == 0) {
 				console.log('No suitable branch point found')
 			}
-			depth_first_branch.push({ x1: xs[i], y1: ys[i], x2: xs[i + 1], y2: ys[i + 1] })
+			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 			//prev_ys = []
@@ -647,11 +653,19 @@ function parseclust(coordinates) {
 			//old_depth_start_position = depth_start_position
 			break_point = false
 		} else if (ys[i] > ys[i + 1] && i <= ys.length - 2) {
-			depth_first_branch.push({ x1: xs[i], y1: ys[i], x2: xs[i + 1], y2: ys[i + 1] })
+			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 		} else if (ys[i] == ys[i + 1] && i <= ys.length - 2) {
-			depth_first_branch.push({ x1: xs[i - 1], y1: ys[i - 1], x2: xs[i + 1], y2: ys[i + 1] })
+			depth_first_branch.push({ id1: i - 1, x1: xs[i - 1], y1: ys[i - 1], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 		} else {
@@ -660,10 +674,82 @@ function parseclust(coordinates) {
 			//old_depth_first_branch = depth_first_branch
 			//depth_first_branch = []
 			break_point = true
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
 
 			//depth_start_position = i // Start of new branch
 		}
 	}
+	console.log('node_children:', node_children)
 	return depth_first_branch
 	//console.log(depth_first_branch)
+}
+
+async function update_children(depth_first_branch, given_node, node_children, node_id) {
+	//let node_connector = node_children.find((i) => i.id == k)
+	//if (node_connector) {
+	//	let node_index = node_children.findIndex(node_connector)
+	//	node_children[node_index].children.push()
+	//}
+
+	let current_node = given_node
+	let node_result = node_children.find((i) => i.id == current_node)
+	if (node_result) {
+		let node_index = node_children.findIndex((i) => i.id == current_node)
+		node_children[node_index].children.push(node_id)
+	} else {
+		node_children.push({ id: current_node, children: [node_id] })
+	}
+
+	// Find branch of current node
+	while (current_node != 0) {
+		// Top node. This loop will continue until top node is reached
+		let node_connector1 = depth_first_branch.find((i) => i.id1 == current_node)
+		let current_node1
+		let current_node2
+		if (node_connector1) {
+			if (node_connector1.y1 <= node_connector1.y2) {
+				//console.log('depth_first_branch:', depth_first_branch)
+				//console.log('current_node:', current_node)
+				//console.log('node_connector1:', node_connector1)
+				current_node1 = node_connector1.id2
+			}
+		}
+		let node_connector2 = depth_first_branch.find((i) => i.id2 == current_node)
+		if (node_connector2) {
+			if (node_connector2.y1 >= node_connector2.y2) {
+				//console.log('depth_first_branch:', depth_first_branch)
+				//console.log('current_node:', current_node)
+				//console.log('node_connector2:', node_connector2)
+				current_node2 = node_connector2.id1
+			}
+		}
+
+		if (!node_connector1 && node_connector2) {
+			current_node = current_node2
+		} else if (node_connector1 && !node_connector2) {
+			current_node = current_node1
+		} else if (node_connector1 && node_connector2) {
+			if (node_connector1.y2 > node_connector2.y1) {
+				current_node = current_node1
+			} else {
+				current_node = current_node2
+			}
+		} else {
+			console.log('No connections found!')
+		}
+
+		// Adding node_id to current_node
+
+		let node_result = node_children.find((i) => i.id == current_node)
+		if (node_result) {
+			let node_index = node_children.findIndex((i) => i.id == current_node)
+			node_children[node_index].children.push(node_id)
+		} else {
+			node_children.push({ id: current_node, children: [node_id] })
+		}
+	}
+	return node_children
 }
