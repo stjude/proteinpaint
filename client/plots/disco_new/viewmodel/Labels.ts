@@ -37,7 +37,7 @@ export default class Labels<T extends Label> extends Ring<Label> {
             hasCancerGenesList = this.elements.filter(label => label.isCancerGene)
             this.filteredHasCancerGenesList = this.getLabelsWithoutCancerGenes(hasCancerGenesList)
 
-            let hasNoCancerGenes = this.elements.filter(label => !label.isCancerGene)
+            const hasNoCancerGenes = this.elements.filter(label => !label.isCancerGene)
 
 
             const combinedAndSortedList = hasNoCancerGenes.concat(this.filteredHasCancerGenesList).sort((a, b) => {
@@ -137,7 +137,7 @@ export default class Labels<T extends Label> extends Ring<Label> {
     }
 
     private isElementOverlappingNextCancerGene(elemenets: Array<Label>, lastCancerGeneLabelIndex: number, element: Label, prevOverlap: number) {
-        let nextLabelWithCancerGene = this.getNextLabelWithCancerGene(elemenets, lastCancerGeneLabelIndex)
+        const nextLabelWithCancerGene = this.getNextLabelWithCancerGene(elemenets, lastCancerGeneLabelIndex)
         if (nextLabelWithCancerGene) {
             const nextOverlap = (element.endAngle + prevOverlap) - nextLabelWithCancerGene.startAngle + this.overlapAngle
             if (nextOverlap > 0) {

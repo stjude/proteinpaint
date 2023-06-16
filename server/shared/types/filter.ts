@@ -40,7 +40,7 @@ export interface Tvs {
 }
 
 /*** types and interfaces supporting Filter interface ***/
-
+// eslint-disable-next-line
 interface LstEntry {
 
 }

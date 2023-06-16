@@ -16,7 +16,7 @@ export default class DataMapper {
 
     snvRingDataMap: Map<number, Array<Data>> = new Map()
 
-    hasCancerGenes: boolean = false
+    hasCancerGenes = false
 
     cnvMaxValue?: number = undefined
     cnvMinValue?: number = undefined

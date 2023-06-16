@@ -59,7 +59,7 @@ export default class ViewModel {
     }
 
     private calculateLegendHeight(legend: Legend): number {
-        let rawHeight = 30
+        const rawHeight = 30
 
         return rawHeight * legend.legendCount()
     }

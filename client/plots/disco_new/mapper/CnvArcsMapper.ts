@@ -24,7 +24,7 @@ export default class CnvArcsMapper {
     private maxAbsValue: number;
 
 
-    constructor(settings: Settings, sampleName: string, reference: Reference, cnvMaxValue: number = 0, cnvMinValue: number = 0, cnvUnit = "") {
+    constructor(settings: Settings, sampleName: string, reference: Reference, cnvMaxValue = 0, cnvMinValue = 0, cnvUnit = "") {
         this.settings = settings
         this.sampleName = sampleName
         this.reference = reference
@@ -124,7 +124,7 @@ export default class CnvArcsMapper {
         }
 
         if (this.lossOnly) {
-            let outerRadius = this.settings.rings.cnvInnerRadius + this.settings.rings.cnvWidth
+            const outerRadius = this.settings.rings.cnvInnerRadius + this.settings.rings.cnvWidth
             return outerRadius - this.capMinValue((this.settings.rings.cnvWidth * this.capMaxValue(data.value) / this.maxAbsValue))
         }
 

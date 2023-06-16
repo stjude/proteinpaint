@@ -30,6 +30,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Run ESLint
+        run: npx eslint . --ext .ts
+
       - name: Copy serverconfig.json to root
         run: |
           cd server/test/
@@ -47,7 +50,7 @@ jobs:
         run: xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: Server unit tests
-        run: npx tsc server/dataset/*.ts && npm run test:unit --workspace="server"
+        run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: Rust unit tests
         run: |

@@ -1,16 +1,7 @@
-import { Mds3 } from "../shared/types"
-
-const path = require('path')
-
-// TODO require serverconfig from @sjcrh/proteinpaint-server when transition to npm packages is finished
-let serverconfig
-try {
-	serverconfig = require('../src/serverconfig')
-} catch (e) {
-	serverconfig = require('@sjcrh/proteinpaint-server/src/serverconfig')
-}
-
-const fs = require('fs')
+import {Mds3} from "../shared/types"
+import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
+import path from 'path';
+import {existsSync, unlinkSync, symlinkSync} from 'fs';
 
 /*
 the "test mule" for the type of termdb dataset using server-side sqlite3 db
@@ -134,7 +125,7 @@ function copyDataFilesFromRepo2Tp() {
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 
 	if (!targetDir.endsWith(datadir)) {
-		if (fs.existsSync(datadir)) fs.unlinkSync(datadir)
-		fs.symlinkSync(targetDir, datadir)
+		if (existsSync(datadir)) unlinkSync(datadir)
+		symlinkSync(targetDir, datadir)
 	}
 }

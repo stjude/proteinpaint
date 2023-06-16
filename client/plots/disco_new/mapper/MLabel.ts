@@ -10,7 +10,7 @@ export default class MLabel {
      */
     private constructor() {
         const mlabel = {}
-        for (var key in mclass) {
+        for (const key in mclass) {
             mlabel[mclass[key].label] = mclass[key]
             mlabel[key] = mclass[key]
         }

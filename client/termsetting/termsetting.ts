@@ -23,8 +23,8 @@ opts{}
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
-const idSuffix: string = `_ts_${(+new Date()).toString().slice(-8)}`
-let $id: number = 0
+const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
+let $id = 0
 
 export function get$id() {
 	return <string> `${$id++}${idSuffix}`
@@ -62,7 +62,7 @@ class TermSetting {
 	//Created
 	hasError: boolean
 	api: Api
-	numqByTermIdModeType: {}
+	numqByTermIdModeType: unknown
 	handlerByType: HandlerByType
 	showTree: any
 	showGeneSearch: any
@@ -265,7 +265,7 @@ class TermSetting {
 		const type = termtype == 'integer' || termtype == 'float' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
 		const numEditVers = this.opts.numericEditMenuVersion as string[]
 		const subtype: string = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
-		const typeSubtype: string = `${type}${subtype}`
+		const typeSubtype = `${type}${subtype}`
 		if (!this.handlerByType[typeSubtype]) {
 			try {
 				let _
@@ -796,7 +796,9 @@ function equivalentQs(q0: Q, q1: Q) {
 
 function getDefaultHandler(self: any) {
 	return {
+		// eslint-disable-next-line
 		showEditMenu() {},
+		// eslint-disable-next-line
 		getPillStatus() {},
 		getPillName(d: any) {
 			return getPillNameDefault(self, d)

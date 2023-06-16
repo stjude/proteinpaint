@@ -1,4 +1,3 @@
-
 import {DefaultArcObject} from "d3-shape";
 
 export default class Arc implements DefaultArcObject {

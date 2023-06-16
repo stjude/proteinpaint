@@ -40,7 +40,6 @@ export default class LegendJSONMapper {
 
         let snvOrder = 0
 
-        // @ts-ignore
         for (const [snvKey, snvLegendElement] of legend.snvClassMap!) {
             snvItems.push(
                 {

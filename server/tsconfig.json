@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "extends": "../tsconfig.json",
+    "esModuleInterop": true,
     "baseUrl": "./",
     "paths": {
       "#src/*": [

@@ -36,7 +36,7 @@ export default class Reference {
 
         this.totalSize = totalSize
 
-        let lastAngle: number = 0
+        let lastAngle = 0
 
         for (let i = 0; i < this.keysArray.length; i++) {
             const chromosomeAngle = this.totalChromosomesAngle * (this.chrSizesArray[i] / totalSize)

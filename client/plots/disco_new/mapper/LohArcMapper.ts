@@ -18,8 +18,8 @@ export default class LohArcMapper {
         const arcs: Array<LohArc> = []
 
         arcData.forEach(data => {
-            let startAngle = this.calculateStartAngle(data)
-            let endAngle = this.calculateEndAngle(data)
+            const startAngle = this.calculateStartAngle(data)
+            const endAngle = this.calculateEndAngle(data)
 
             const innerRadius = this.settings.rings.lohInnerRadius
             const outerRadius = innerRadius + this.settings.rings.lohWidth
