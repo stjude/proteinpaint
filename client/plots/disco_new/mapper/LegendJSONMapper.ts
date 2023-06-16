@@ -40,7 +40,7 @@ export default class LegendJSONMapper {
 
         let snvOrder = 0
 
-        for (const [snvKey, snvLegendElement] of legend.snvClassMap!) {
+        for (const [snvKey, snvLegendElement] of legend.snvClassMap) {
             snvItems.push(
                 {
                     termid: legend.snvTitle,
@@ -61,9 +61,10 @@ export default class LegendJSONMapper {
     }
 
     private mapCnv(legend: Legend, legendJSON: Array<any>, order: number) {
-        const gain = legend.cnvClassMap!.get(CnvType.Gain)
-        const loss = legend.cnvClassMap!.get(CnvType.Loss)
-        const cap = legend.cnvClassMap!.get(CnvType.Cap)
+        if(!legend.cnvClassMap) return
+        const gain = legend.cnvClassMap.get(CnvType.Gain)
+        const loss = legend.cnvClassMap.get(CnvType.Loss)
+        const cap = legend.cnvClassMap.get(CnvType.Cap)
 
         if (gain && loss && cap) {
             let cnvOrder = 0
@@ -116,6 +117,7 @@ export default class LegendJSONMapper {
     }
 
     private mapLoh(legend: Legend, legendJSON: Array<any>, order: number) {
+        if(!legend.lohLegend) return
         const lohItems: Array<any> = []
 
         lohItems.push(
@@ -123,7 +125,7 @@ export default class LegendJSONMapper {
                 termid: legend.lohTitle,
                 key: "min",
                 text: "min",
-                color: legend.lohLegend!.colorStartValue,
+                color: legend.lohLegend.colorStartValue,
                 order: 0,
                 border: "1px solid #ccc"
             }
@@ -134,7 +136,7 @@ export default class LegendJSONMapper {
                 termid: legend.lohTitle,
                 key: "max",
                 text: "max",
-                color: legend.lohLegend!.colorEndValue,
+                color: legend.lohLegend.colorEndValue,
                 order: 1,
                 border: "1px solid #ccc"
             }

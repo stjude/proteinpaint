@@ -1,6 +1,5 @@
 import Arc from "./Arc";
 import Line from "./Line";
-import Point from "./Point";
 
 export default class Label extends Arc {
     constructor(
