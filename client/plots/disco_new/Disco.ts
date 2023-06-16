@@ -71,7 +71,7 @@ export const discoInit = getCompInit(Disco)
 
 export const componentInit = discoInit
 
-export async function getPlotConfig(opts: any, app: any) {
+export async function getPlotConfig(opts: any) {
     return {
         chartType: 'Disco',
         subfolder: 'disco_new',

@@ -5,7 +5,7 @@ import Arc from "#plots/disco_new/viewmodel/Arc";
 import MenuProvider from "./MenuProvider";
 
 export default class NonExonicSnvRenderer implements IRenderer {
-    render(holder: any,  elements: Array<Arc>, collisions?: Array<Arc>) {
+    render(holder: any,  elements: Array<Arc>) {
         const arcGenerator = d3.arc<SnvArc>();
 
         const arcs = holder.append("g")

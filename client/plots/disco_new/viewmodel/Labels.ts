@@ -64,7 +64,7 @@ export default class Labels extends Ring<Label> {
                 const overlap = prev.endAngle - element.startAngle + this.overlapAngle
 
                 if (overlap > 0 && overlap < this.settings.label.maxDeltaAngle) {
-                    const labelCopy = LabelFactory.createMovedLabel(element, overlap, this.settings.rings.labelsToLinesGap)
+                    const labelCopy = LabelFactory.createMovedLabel(element, overlap)
                     filteredList?.push(labelCopy)
                     prev = labelCopy
                 }
@@ -118,7 +118,7 @@ export default class Labels extends Ring<Label> {
                     continue
                 }
 
-                const labelCopy = LabelFactory.createMovedLabel(element, prevOverlap, this.settings.rings.labelsToLinesGap)
+                const labelCopy = LabelFactory.createMovedLabel(element, prevOverlap)
                 this.collisions?.push(labelCopy)
                 filteredList.push(element)
                 prev = labelCopy
