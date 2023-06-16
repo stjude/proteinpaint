@@ -1,11 +1,10 @@
 import * as d3 from "d3";
 import LohArc from "#plots/disco_new/viewmodel/LohArc";
 import IRenderer from "./IRenderer";
-import Arc from "#plots/disco_new/viewmodel/Arc";
 import MenuProvider from "./MenuProvider";
 
 export default class LohRenderer implements IRenderer {
-    render(holder: any, elements: Array<LohArc>, collisions?: Array<Arc>) {
+    render(holder: any, elements: Array<LohArc>) {
         const arcGenerator = d3.arc<LohArc>();
 
         const arcs = holder.append("g")

@@ -41,7 +41,7 @@ export default class LabelFactory {
             isCancerGene)
     }
 
-    static createMovedLabel(element: Label, overlap: number, labelsToLinesGap: number): Label {
+    static createMovedLabel(element: Label, overlap: number): Label {
         const startAngle = element.startAngle + overlap
         const endAngle = element.endAngle + overlap
 

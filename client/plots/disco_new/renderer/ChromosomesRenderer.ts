@@ -1,7 +1,6 @@
 import * as d3 from "d3";
 import IRenderer from "./IRenderer";
 import Chromosome from "#plots/disco_new/viewmodel/Chromosome";
-import Arc from "#plots/disco_new/viewmodel/Arc";
 
 export default class ChromosomesRenderer implements IRenderer {
 
@@ -15,7 +14,7 @@ export default class ChromosomesRenderer implements IRenderer {
         this.outerRadius = outerRadius
     }
 
-    render(holder: any, elements: Array<Chromosome>, collisions?: Array<Arc>) {
+    render(holder: any, elements: Array<Chromosome>) {
 
         const pie = d3.pie<Chromosome>()
             .padAngle(this.padAngle)

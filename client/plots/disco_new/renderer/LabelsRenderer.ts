@@ -14,8 +14,7 @@ export default class LabelsRenderer implements IRenderer {
         const lineFunction = line<{ x: number, y: number }>()
             .x(point => point.x)
             .y(point => point.y)
-
-        const labelsGroup = labelsG
+        labelsG
             .selectAll('.group')
             .data(elements)
             .enter()
@@ -39,7 +38,7 @@ export default class LabelsRenderer implements IRenderer {
                     .style('stroke', label.color)
                     .style('fill', 'none')
                     .attr('d', lineFunction)
-            })
+            });
 
         labelsG.selectAll('.group').each((label: Label, i: number, nodes: HTMLDivElement[]) => {
             const collision = collisions ? collisions.find(l => l.text === label.text) : undefined

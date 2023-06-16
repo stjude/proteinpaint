@@ -10,7 +10,7 @@ export default class CnvRenderer implements IRenderer {
         this.menuPadding = menuPadding
     }
 
-    render(holder: any, elements: Array<CnvArc>, collisions?: Array<CnvArc>) {
+    render(holder: any, elements: Array<CnvArc>) {
         const arcGenerator = d3.arc<CnvArc>();
 
         const arcs = holder.append("g")

@@ -2,7 +2,6 @@ import * as d3 from "d3";
 import SnvArc from "#plots/disco_new/viewmodel/SnvArc";
 import IRenderer from "./IRenderer";
 import FullArcRenderer from "./FullArcRenderer";
-import Arc from "#plots/disco_new/viewmodel/Arc";
 import MenuProvider from "./MenuProvider";
 
 
@@ -18,7 +17,7 @@ export default class SnvRenderer implements IRenderer {
         this.fullArcRenderer = new FullArcRenderer(this.svnInnerRadius, this.svnWidth, "#6464641A")
     }
 
-    render(holder: any, elements: Array<SnvArc>, collisions?: Array<Arc>) {
+    render(holder: any, elements: Array<SnvArc>) {
         if (elements.length) {
             this.fullArcRenderer.render(holder)
         }
