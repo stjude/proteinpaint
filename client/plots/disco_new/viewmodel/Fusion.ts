@@ -1,4 +1,4 @@
-import {Ribbon, RibbonSubgroup} from "d3";
+import {Ribbon} from "d3";
 import FusionSubgroup from "./FusionSubgroup";
 
 export default class Fusion implements Ribbon {

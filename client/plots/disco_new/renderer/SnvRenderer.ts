@@ -39,7 +39,7 @@ export default class SnvRenderer implements IRenderer {
                 menu.d.style("color", arc.color).html(`${arc.text} <br />${arc.mname} <br /> ${arc.dataClass} <br /> ${arc.chr}:${arc.pos}`)
                 menu.showunder(mouseEvent.target)
             })
-            .on('mouseout', (d) => {
+            .on('mouseout', () => {
                 menu.hide()
             })
     }

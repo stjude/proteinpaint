@@ -3,7 +3,7 @@ import Label from "./Label";
 import LabelFactory from "#plots/disco_new/viewmodel/LabelFactory";
 import Settings from "./Settings";
 
-export default class Labels<T extends Label> extends Ring<Label> {
+export default class Labels extends Ring<Label> {
 
     collisions?: Array<Label>
     settings: any;

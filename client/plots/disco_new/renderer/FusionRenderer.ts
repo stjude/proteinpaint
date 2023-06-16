@@ -35,7 +35,7 @@ export default class FusionRenderer {
                 menu.d.style("color", "#000").html(`${fusion.source.gene}<br />${fusion.target.gene}`)
                 menu.showunder(mouseEvent.target)
             })
-            .on('mouseout', (d) => {
+            .on('mouseout', () => {
                 menu.hide()
             })
     }
