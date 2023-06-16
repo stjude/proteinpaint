@@ -16,7 +16,6 @@ import {RingType} from "./viewmodel/RingType";
 export default class Disco {
 
     private type: string;
-    private discoRenderer: DiscoRenderer;
     private discoInteractions: DiscoInteractions;
     private opts: any;
 
@@ -43,8 +42,9 @@ export default class Disco {
         holder.selectAll("*").remove()
 
         const legendRenderer = new LegendRenderer(settings.cnv.capping, this.discoInteractions.cappingClickCallback)
-        this.discoRenderer = new DiscoRenderer(this.getRingRenderers(settings), legendRenderer, this.discoInteractions.downloadClickListener)
-        this.discoRenderer.render(holder, viewModel)
+        const discoRenderer = new DiscoRenderer(this.getRingRenderers(settings), legendRenderer, this.discoInteractions.downloadClickListener)
+
+        discoRenderer.render(holder, viewModel)
     }
 
     getRingRenderers(settings: any) {
