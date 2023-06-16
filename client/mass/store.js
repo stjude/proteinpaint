@@ -87,7 +87,7 @@ class TdbStore {
 
 			for (const [i, savedPlot] of this.state.plots.entries()) {
 				const _ = await import(
-					`../plots/${savedPlot.subfolder ? savedPlot.subfolder : ''}/${savedPlot.chartType}.${
+					`../plots/${savedPlot.subfolder ? savedPlot.subfolder + '/' : ''}${savedPlot.chartType}.${
 						savedPlot.extension ? savedPlot.extension : 'js'
 					}`
 				)
