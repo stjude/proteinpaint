@@ -3,7 +3,7 @@ import ViewModel from "#plots/disco_new/viewmodel/ViewModel";
 import LegendRenderer from "./LegendRenderer";
 import {RingType} from "#plots/disco_new/viewmodel/RingType";
 import FusionRenderer from "./FusionRenderer";
-import DownloadButtonRenderer from "#plots/disco_new/mapper/DownloadButtonRenderer";
+import DownloadButtonRenderer from "#plots/disco_new/renderer/DownloadButtonRenderer";
 
 export class DiscoRenderer {
     private renders: Map<RingType, IRenderer>;
