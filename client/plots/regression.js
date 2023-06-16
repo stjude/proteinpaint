@@ -185,12 +185,17 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
 
 	// condition term
-	// will only apply to outcome term because condition
-	// term cannot be an independent term
-	// note: for mode='cox', do not preset timeScale to 'time' here because
-	// that can cause copyMerge to overwrite saved setting. fillTW will
-	// auto fill missing value
-	defaultQ.condition = regressionType == 'cox' ? { mode: 'cox' } : { mode: 'binary' }
+	if (useCase == 'outcome') {
+		if (regressionType == 'cox') {
+			// do not preset timeScale to 'time' here because
+			// that can cause copyMerge to overwrite saved setting
+			// fillTW will auto fill missing value
+			defaultQ.condition = { mode: 'cox' }
+		}
+		if (regressionType == 'logistic') {
+			defaultQ.condition = { mode: 'binary' }
+		}
+	}
 
 	return defaultQ
 }

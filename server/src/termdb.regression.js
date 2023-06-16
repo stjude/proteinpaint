@@ -1208,6 +1208,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 			if (row.term_id == q.outcome.id) {
 				// cox outcome row
 
+				// TODO: should be able to remove this (already precomputed)
 				// convert event=2 to event=0 because competing
 				// risks events should not be treated as a separate
 				// event category in cox regression
@@ -1215,6 +1216,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 				// time of death
 				const key = row.key === 2 ? 0 : row.key
 
+				// TODO: should be able to remove this (already precomputed)
 				// convert age values to age_start and age_end
 				// age_start: age at beginning of follow-up
 				// age_end: age at event or age at censoring
@@ -1225,6 +1227,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 					continue
 				}
 
+				// TODO: do NOT remove this (not accounted for in precomputed data)
 				// for timeScale='age', add a small offset to age_end
 				// to prevent age_end = age_start (which would cause
 				// R to error out)
