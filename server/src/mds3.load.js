@@ -508,10 +508,12 @@ async function geneExpressionClustering(data, q) {
 	//console.log('row_coordinates:', row_coordinates)
 	//console.log('col_coordinates:', col_coordinates)
 
-	let row_dendro = await parseclust(row_coordinates)
-	let col_dendro = await parseclust(col_coordinates)
-	console.log('row_dendro:', row_dendro)
-	console.log('col_dendro:', col_dendro)
+	let row_output = await parseclust(row_coordinates, row_names_index)
+	let col_output = await parseclust(col_coordinates, col_names_index)
+	console.log('row_dendro:', row_output.dendrogram)
+	console.log('row_children:', row_output.children)
+	console.log('col_dendro:', col_output.dendrogram)
+	console.log('col_children:', col_output.children)
 	console.log('row_names_index:', row_names_index)
 	console.log('col_names_index:', col_names_index)
 
@@ -593,7 +595,7 @@ async function run_clustering(Rscript, args = []) {
 	})
 }
 
-async function parseclust(coordinates) {
+async function parseclust(coordinates, names_index) {
 	let first = 1
 	let xs = []
 	let ys = []
@@ -622,7 +624,8 @@ async function parseclust(coordinates) {
 	let old_depth_start_position = 0
 	let node_children = []
 	let leaf_counter = 0
-	for (let i = 0; i < ys.length - 2; i++) {
+	for (let i = 0; i < ys.length; i++) {
+		//console.log('i:', i)
 		if (break_point == true) {
 			// Determine where the new branch should start from
 			let hit = 0
@@ -643,7 +646,8 @@ async function parseclust(coordinates) {
 			}
 			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
@@ -652,22 +656,30 @@ async function parseclust(coordinates) {
 			//prev_xs = []
 			//old_depth_start_position = depth_start_position
 			break_point = false
-		} else if (ys[i] > ys[i + 1] && i <= ys.length - 2) {
+		} else if (ys[i] > ys[i + 1] && i <= ys.length - 1) {
 			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
-		} else if (ys[i] == ys[i + 1] && i <= ys.length - 2) {
+		} else if (ys[i] == ys[i + 1] && i <= ys.length - 1) {
 			depth_first_branch.push({ id1: i - 1, x1: xs[i - 1], y1: ys[i - 1], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
+		} else if (i == ys.length - 1) {
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
+				leaf_counter += 1
+			}
 		} else {
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
@@ -675,15 +687,16 @@ async function parseclust(coordinates) {
 			//depth_first_branch = []
 			break_point = true
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
 				leaf_counter += 1
 			}
 
 			//depth_start_position = i // Start of new branch
 		}
 	}
-	console.log('node_children:', node_children)
-	return depth_first_branch
+	//console.log('node_children:', node_children)
+	return { dendrogram: depth_first_branch, children: node_children }
 	//console.log(depth_first_branch)
 }
 
@@ -694,6 +707,7 @@ async function update_children(depth_first_branch, given_node, node_children, no
 	//	node_children[node_index].children.push()
 	//}
 
+	//console.log('given_node:', given_node)
 	let current_node = given_node
 	let node_result = node_children.find((i) => i.id == current_node)
 	if (node_result) {
@@ -744,12 +758,15 @@ async function update_children(depth_first_branch, given_node, node_children, no
 		// Adding node_id to current_node
 
 		let node_result = node_children.find((i) => i.id == current_node)
+		//console.log('node_result:', node_result)
+		//console.log('given_node2:', given_node)
 		if (node_result) {
 			let node_index = node_children.findIndex((i) => i.id == current_node)
 			node_children[node_index].children.push(node_id)
 		} else {
 			node_children.push({ id: current_node, children: [node_id] })
 		}
+		//console.log('node_children:', node_children)
 	}
 	return node_children
 }
