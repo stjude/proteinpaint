@@ -513,8 +513,8 @@ async function geneExpressionClustering(data, q) {
 
 	let row_output = await parseclust(row_coordinates, row_names_index)
 	let col_output = await parseclust(col_coordinates, col_names_index)
-	//console.log('row_dendro:', row_output.dendrogram)
-	//console.log('row_children:', row_output.children)
+	console.log('row_dendro:', row_output.dendrogram)
+	console.log('row_children:', row_output.children)
 	console.log('row_names_index:', JSON.stringify(row_names_index))
 	//console.log('col_dendro:', col_output.dendrogram)
 	//console.log('col_children:', col_output.children)
@@ -611,8 +611,14 @@ async function parseclust(coordinates, names_index) {
 			console.log(line)
 			//console.log(line2)
 			//console.log(line2[line2.length - 3], line2[line2.length - 1])
-			xs.push(Number(line2[line2.length - 3]))
-			ys.push(Number(line2[line2.length - 1]))
+			if (Number(line2[line2.length - 3]) % 1 != 0 && Number(line2[line2.length - 1]) == 0) {
+				// In rare cases sometimes y=0 when x is decimal (not integer). This is happening most probably because the y-value is infinitesimally small so y is set to 0.0001 to approximate it.
+				xs.push(Number(line2[line2.length - 3]))
+				ys.push(0.0001)
+			} else {
+				xs.push(Number(line2[line2.length - 3]))
+				ys.push(Number(line2[line2.length - 1]))
+			}
 		}
 	}
 	//console.log(xs)
