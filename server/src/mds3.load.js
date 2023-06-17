@@ -490,12 +490,15 @@ async function geneExpressionClustering(data, q) {
 			row_names_index = line
 				.replace('rownames\t', '')
 				.split('\t')
-				.map((i) => Number(i))
+				.map((i) => parseInt(i))
+				.filter((n) => n)
 		} else if (line.includes('colnames')) {
+			console.log('colnames:', line)
 			col_names_index = line
 				.replace('colnames\t', '')
 				.split('\t')
-				.map((i) => Number(i))
+				.map((i) => parseInt(i))
+				.filter((n) => n)
 		} else if (line.includes('"Done"')) {
 			col_coordinate_start = false
 		} else if (row_coordinate_start == true) {
@@ -510,12 +513,12 @@ async function geneExpressionClustering(data, q) {
 
 	let row_output = await parseclust(row_coordinates, row_names_index)
 	let col_output = await parseclust(col_coordinates, col_names_index)
-	console.log('row_dendro:', row_output.dendrogram)
-	console.log('row_children:', row_output.children)
-	console.log('col_dendro:', col_output.dendrogram)
-	console.log('col_children:', col_output.children)
-	console.log('row_names_index:', row_names_index)
-	console.log('col_names_index:', col_names_index)
+	//console.log('row_dendro:', row_output.dendrogram)
+	//console.log('row_children:', row_output.children)
+	console.log('row_names_index:', JSON.stringify(row_names_index))
+	//console.log('col_dendro:', col_output.dendrogram)
+	//console.log('col_children:', col_output.children)
+	console.log('col_names_index:', JSON.stringify(col_names_index))
 
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
 	const time2 = new Date()
@@ -647,7 +650,7 @@ async function parseclust(coordinates, names_index) {
 			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
 				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
@@ -660,7 +663,7 @@ async function parseclust(coordinates, names_index) {
 			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
 				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
@@ -669,7 +672,7 @@ async function parseclust(coordinates, names_index) {
 			depth_first_branch.push({ id1: i - 1, x1: xs[i - 1], y1: ys[i - 1], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
 				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
@@ -677,7 +680,7 @@ async function parseclust(coordinates, names_index) {
 		} else if (i == ys.length - 1) {
 			if (ys[i] == 0) {
 				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 		} else {
@@ -688,7 +691,7 @@ async function parseclust(coordinates, names_index) {
 			break_point = true
 			if (ys[i] == 0) {
 				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, names_index)
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 
