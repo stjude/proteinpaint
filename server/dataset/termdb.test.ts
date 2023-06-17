@@ -1,6 +1,6 @@
 import {Mds3} from "../shared/types"
-import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
-import path from 'path';
+import * as serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
+import * as path from 'path';
 import {existsSync, unlinkSync, symlinkSync} from 'fs';
 
 /*

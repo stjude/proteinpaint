@@ -87,7 +87,7 @@ class TermSetting {
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
-
+console.log('tests')
 		// numqByTermIdModeType is used if/when a numeric pill term type changes:
 		// it will track numeric term.q by term.id, q.mode, and q.type to enable
 		// the "remember" input values when switching between
