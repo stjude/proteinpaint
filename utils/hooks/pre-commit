@@ -17,4 +17,7 @@ echo "$FILES" | xargs git add
 # doing per GDC requirements
 pre-commit run --files "$FILES"
 
+# lint against team preferences
+npx eslint . --ext .ts
+
 exit 0
