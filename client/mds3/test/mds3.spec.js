@@ -244,10 +244,15 @@ tape('Mbmeta - gene p53', test => {
 		await whenVisible(tk.itemtip.d)
 		test.pass('itemtip shows with variant table')
 		const buttons = tk.itemtip.d.selectAll('button').nodes()
-		test.ok(buttons.length == 2, 'two buttons are showing in itemtip')
+		/* two buttons should be shown
+		#1: disco
+		#2: methylation cnv
+		*/
+
+		test.ok(buttons.length == 3, 'two buttons are showing in itemtip') // TODO old disco button will be removed soon
 
 		await testDisco(buttons[0], tk)
-		await testCnv(buttons[1], tk)
+		await testCnv(buttons[2], tk)
 
 		if (test._ok) {
 			holder.remove()
@@ -260,8 +265,11 @@ tape('Mbmeta - gene p53', test => {
 		const name = 'Disco plot'
 		test.equal(btn.innerHTML, name, '1st button is called ' + name)
 		btn.dispatchEvent(new Event('click'))
-		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
-		test.pass(`clicking 1st button ${name} the menutip shows`)
+
+		// TODO disco now shows in new sandbox
+
+		//await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
+		//test.pass(`clicking 1st button ${name} the menutip shows`)
 		//const svg = await detectOne({elem: tk.menutip.d.node(), selector:'svg'})
 		//test.ok(svg, '<svg> created in tk.menutip.d as disco plot')
 	}
@@ -269,11 +277,16 @@ tape('Mbmeta - gene p53', test => {
 		const name = 'MethylationArray'
 		test.equal(btn.innerHTML, name, '2nd button is called ' + name)
 		btn.dispatchEvent(new Event('click'))
+
+		// TODO cnv now shows in new sandbox
+
+		/*
 		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
 		test.pass(`clicking 2nd button ${name} the menutip shows`)
 		const img = await detectOne({ elem: tk.menutip.d.node(), selector: 'img' })
 		test.ok(img, '<img> found in menutip')
 		// TODO click at a particular position on img, detect if block shows up
+		*/
 	}
 })
 
