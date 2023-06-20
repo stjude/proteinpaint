@@ -23,9 +23,12 @@ export default class CnvArcsMapper {
     private lossCapped: number;
     private maxAbsValue: number;
 
+    private readonly rings;
+
 
     constructor(settings: Settings, sampleName: string, reference: Reference, cnvMaxValue = 0, cnvMinValue = 0, cnvUnit = "") {
         this.settings = settings
+        this.rings = this.settings.rings
         this.sampleName = sampleName
         this.reference = reference
         this.cnvMaxValue = cnvMaxValue
@@ -36,7 +39,7 @@ export default class CnvArcsMapper {
         this.lossOnly = cnvMaxValue <= 0
         this.gainOnly = cnvMinValue >= 0
 
-        this.onePxArcAngle = 1 / (settings.rings.cnvInnerRadius)
+        this.onePxArcAngle = 1 / (this.rings.cnvInnerRadius)
 
         const gain = new CnvLegend("Max", (cnvMaxValue > 0)?CnvType.Gain: CnvType.Loss, this.getColor(cnvMaxValue), cnvMaxValue)
         const loss = new CnvLegend("Min", (cnvMinValue > 0)?CnvType.Gain: CnvType.Loss, this.getColor(cnvMinValue), cnvMinValue)
@@ -100,31 +103,25 @@ export default class CnvArcsMapper {
     }
 
     getColor(value) {
-
-        const lossColor = this.settings.cnv.lossColor
-        const ampColor = this.settings.cnv.ampColor
-        const cappedLossColor = this.settings.cnv.cappedLossColor
-        const cappedAmpColor = this.settings.cnv.cappedAmpColor
-
-
+        const { lossColor, ampColor, cappedLossColor, cappedAmpColor } = this.settings.cnv;
         if (value < this.lossCapped) {
-            return cappedLossColor
-        } else if (value <= 0) {
-            return lossColor
-        } else if (value <= this.gainCapped) {
-            return ampColor
-        } else if (value > this.gainCapped  ) {
-            return cappedAmpColor
+            return cappedLossColor;
+        } else if (value >= this.lossCapped && value <= 0) {
+            return lossColor;
+        } else if (value > 0 && value <= this.gainCapped) {
+            return ampColor;
+        } else if (value > this.gainCapped) {
+            return cappedAmpColor;
         }
     }
 
     private calculateInnerRadius(data: Data) {
         if (this.gainOnly) {
-            return this.settings.rings.cnvInnerRadius
+            return this.rings.cnvInnerRadius
         }
 
         if (this.lossOnly) {
-            const outerRadius = this.settings.rings.cnvInnerRadius + this.settings.rings.cnvWidth
+            const outerRadius = this.rings.cnvInnerRadius + this.settings.rings.cnvWidth
             return outerRadius - this.capMinValue((this.settings.rings.cnvWidth * this.capMaxValue(data.value) / this.maxAbsValue))
         }
 
@@ -142,19 +139,19 @@ export default class CnvArcsMapper {
     }
 
     private calculateOuterRadius(data: Data) {
-        const maxOuterRadius = this.settings.rings.cnvInnerRadius + this.settings.rings.cnvWidth
+        const maxOuterRadius = this.rings.cnvInnerRadius + this.rings.cnvWidth
         if (this.gainOnly) {
-            return this.settings.rings.cnvInnerRadius + this.capMinValue(((this.settings.rings.cnvWidth * this.capMaxValue(data.value) / this.maxAbsValue)))
+            return this.rings.cnvInnerRadius + this.capMinValue(((this.rings.cnvWidth * this.capMaxValue(data.value) / this.maxAbsValue)))
         }
 
         if (this.lossOnly) {
             return maxOuterRadius
         }
 
-        const centerRadius = this.settings.rings.cnvInnerRadius + (this.settings.rings.cnvWidth / 2)
+        const centerRadius = this.rings.cnvInnerRadius + (this.rings.cnvWidth / 2)
 
         if (Math.sign(data.value) == 1) {
-            return centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.settings.rings.cnvWidth / 2))
+            return centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.rings.cnvWidth / 2))
         }
 
         if (Math.sign(data.value) == -1) {
