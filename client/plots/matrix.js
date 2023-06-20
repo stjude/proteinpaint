@@ -130,7 +130,9 @@ class Matrix {
 			filter0: appState.termfilter.filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
-			geneVariantCountSamplesSkipMclass: this.app.vocabApi.termdbConfig.matrix?.geneVariantCountSamplesSkipMclass || []
+			geneVariantCountSamplesSkipMclass: this.app.vocabApi.termdbConfig.matrix?.geneVariantCountSamplesSkipMclass || [],
+			vocab: appState.vocab,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 

@@ -2,6 +2,9 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '../dom/control.icons'
 
+import { Menu } from '#dom/menu'
+import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
+import { plotSingleSampleGenomeQuantification, plotDisco } from '../mds3/sampletable'
 let inputIndex = 0
 
 export function setInteractivity(self) {
@@ -55,10 +58,10 @@ export function setInteractivity(self) {
 				}
 			}
 		}
-
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		self.dom.tip.show(event.clientX, event.clientY)
+		self.dom.mainG.on('mouseout', self.mouseout)
 	}
 
 	self.getImgCell = function(event) {
@@ -77,8 +80,61 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseout = function() {
-		if (!self.activeLabel && !self.activeLabel && !self.activeLabel) self.dom.tip.hide()
+		if (!self.activeLabel) self.dom.tip.hide()
 		delete self.imgBox
+	}
+
+	self.mouseclick = function(event) {
+		//const target = event.target
+		// self.dom.tip.hide()
+		// tip2.hide()
+
+		if (
+			self.state.termdbConfig.queries?.singleSampleGenomeQuantification
+			// &&
+			// target.tagName == 'rect'
+			// &&
+			// target.getAttribute('name') == 'serie'
+		) {
+			const sample = event.target.__data__
+			sample.sample_id = sample.row?.sampleName
+			self.dom.tip.clear()
+			self.dom.tip.show(event.clientX, event.clientY, false, true)
+			for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				const menuDiv = self.dom.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(k)
+					.on('click', event => {
+						const menu = new Menu()
+						menu.show(event.clientX, event.clientY)
+
+						plotSingleSampleGenomeQuantification(
+							self.state.termdbConfig,
+							self.state.vocab.dslabel,
+							k,
+							sample,
+							menu.d,
+							self.app.opts.genome
+						)
+						self.dom.tip.hide()
+						menuDiv.remove()
+					})
+			}
+			if (self.state.termdbConfig.queries.singleSampleMutation) {
+				const menuDiv = self.dom.tip.d
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Disco plot')
+					.on('click', event => {
+						const menu = new Menu()
+						menu.show(event.clientX, event.clientY)
+
+						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, menu.d, self.app.opts.genome)
+						self.dom.tip.hide()
+					})
+			}
+		}
 	}
 
 	self.legendClick = function() {}
@@ -1607,6 +1663,19 @@ function setZoomPanActions(self) {
 			.style('user-select', '')
 
 		const c = self.clickedSeriesCell
+		if (c.startCell && !c.endCell) {
+			self.dom.mainG.on('mouseout', null)
+			delete self.clickedSeriesCell
+			//self.mouseclick(event)
+			self.dom.tip.clear()
+			const menuDiv = self.dom.tip.d
+				//.append('div')
+				//.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('hello test')
+				.on('click', event => {})
+			return
+			//return
+		}
 		if (!c || !c.startCell || !c.endCell) {
 			delete self.clickedSeriesCell
 			return
