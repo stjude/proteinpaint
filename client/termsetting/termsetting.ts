@@ -3,7 +3,20 @@ import { Menu } from '#dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
-import { TermSettingOpts, Term, Q, TW, VocabApi, Api, PillData, Dom, UseCase, NoTermPromptOptsEntry, Handler, Filter } from '#shared/types/index'
+import {
+	TermSettingOpts,
+	Term,
+	Q,
+	TW,
+	VocabApi,
+	Api,
+	PillData,
+	Dom,
+	UseCase,
+	NoTermPromptOptsEntry,
+	Handler,
+	Filter,
+} from '#shared/types/index'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -27,16 +40,16 @@ const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
 let $id = 0
 
 export function get$id() {
-	return <string> `${$id++}${idSuffix}`
+	return <string>`${$id++}${idSuffix}`
 }
 
 type DefaultQByTsHandler = {
-    [index: string]: Q
+	[index: string]: Q
 }
 
-const defaultOpts: { menuOptions: string, menuLayout: string } = {
+const defaultOpts: { menuOptions: string; menuLayout: string } = {
 	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
-	menuLayout: 'vertical'
+	menuLayout: 'vertical',
 }
 
 type HandlerByType = {
@@ -55,7 +68,7 @@ class TermSetting {
 	usecase: UseCase | undefined
 	abbrCutoff: number | undefined
 	$id: string | undefined
-	sampleCounts: {k: string, v: number}[] | undefined
+	sampleCounts: { k: string; v: number }[] | undefined
 	noTermPromptOptions: NoTermPromptOptsEntry[] | undefined
 	//Optional opts in script, not init()
 	doNotHideTipInMain: boolean | undefined
@@ -76,7 +89,6 @@ class TermSetting {
 	filter: Filter | undefined
 	term: Term | undefined
 	q: Q | undefined
-	
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
@@ -87,7 +99,7 @@ class TermSetting {
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
-console.log('tests')
+
 		// numqByTermIdModeType is used if/when a numeric pill term type changes:
 		// it will track numeric term.q by term.id, q.mode, and q.type to enable
 		// the "remember" input values when switching between
@@ -104,13 +116,13 @@ console.log('tests')
 				opts.tip ||
 				new Menu({
 					padding: '0px',
-					parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
-				})
+					parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div'),
+				}),
 		} as Dom
 		// tip2 is for showing inside tip, e.g. in snplocus UI
 		this.dom.tip2 = new Menu({
 			padding: '0px',
-			parent_menu: this.dom.tip.d.node()
+			parent_menu: this.dom.tip.d.node(),
 		})
 
 		setInteractivity(this)
@@ -119,7 +131,7 @@ console.log('tests')
 
 		const defaultHandler = getDefaultHandler(this)
 		this.handlerByType = {
-			default: defaultHandler
+			default: defaultHandler,
 		}
 
 		this.hasError = false
@@ -143,7 +155,7 @@ console.log('tests')
 					this.hasError = true
 					throw e
 				}
-			}
+			},
 		}
 	}
 
@@ -286,7 +298,7 @@ console.log('tests')
 
 export const termsettingInit = getInitFxn(TermSetting)
 
-function setRenderers(self: any){
+function setRenderers(self: any) {
 	self.initUI = () => {
 		// run only once, upon init
 		if (self.opts.$id) {
@@ -296,10 +308,7 @@ function setRenderers(self: any){
 		if (!self.dom.holder) return
 
 		// toggle the display of pilldiv and nopilldiv with availability of this.term
-		self.dom.nopilldiv = self.dom.holder
-			.append('div')
-			.style('cursor', 'pointer')
-			.on('click', self.clickNoPillDiv)
+		self.dom.nopilldiv = self.dom.holder.append('div').style('cursor', 'pointer').on('click', self.clickNoPillDiv)
 		self.dom.pilldiv = self.dom.holder.append('div')
 
 		// nopilldiv - placeholder label
@@ -376,7 +385,7 @@ function setRenderers(self: any){
 					icon_holder: infoIcon_div,
 					content_holder,
 					id: self.term.id,
-					state: { term: self.term }
+					state: { term: self.term },
 				})
 			}
 		}
@@ -390,10 +399,7 @@ function setRenderers(self: any){
 		// this exit is really nice
 		pills.exit().each(self.exitPill)
 
-		pills
-			.transition()
-			.duration(200)
-			.each(self.updatePill)
+		pills.transition().duration(200).each(self.updatePill)
 
 		pills
 			.enter()
@@ -410,7 +416,7 @@ function setRenderers(self: any){
 			.each(self.enterPill)
 	}
 
-	self.enterPill = async function(this: string) {
+	self.enterPill = async function (this: string) {
 		const one_term_div = select(this)
 
 		// left half of blue pill
@@ -428,11 +434,11 @@ function setRenderers(self: any){
 		self.updatePill.call(this)
 	}
 
-	self.updatePill = async function() {
+	self.updatePill = async function () {
 		// decide if to show/hide the right half based on term status, and modify pill
 		const one_term_div = select(this)
 
-		const pillstat: { text: string, bgcolor?: string } = self.handler.getPillStatus() || {}
+		const pillstat: { text: string; bgcolor?: string } = self.handler.getPillStatus() || {}
 		// { text, bgcolor }
 
 		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px').html(self.handler.getPillName)
@@ -464,20 +470,12 @@ function setRenderers(self: any){
 			.style('opacity', 1)
 
 		if (pillstat.bgcolor) {
-			righthalf
-				.transition()
-				.duration(200)
-				.style('background-color', pillstat.bgcolor)
+			righthalf.transition().duration(200).style('background-color', pillstat.bgcolor)
 		}
 	}
 
-	self.exitPill = function(this: string) {
-		select(this)
-			.style('opacity', 1)
-			.transition()
-			.duration(self.durations.exit)
-			.style('opacity', 0)
-			.remove()
+	self.exitPill = function (this: string) {
+		select(this).style('opacity', 1).transition().duration(self.durations.exit).style('opacity', 0).remove()
 	}
 }
 
@@ -489,7 +487,7 @@ function setInteractivity(self: any) {
 	self.cancelGroupsetting = () => {
 		self.opts.callback({
 			term: self.term,
-			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } }
+			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } },
 		})
 	}
 
@@ -526,7 +524,7 @@ function setInteractivity(self: any) {
 		// load the input ui for this term type
 	}
 
-	self.showTree = async function(holder: Selection, event: any) {
+	self.showTree = async function (holder: Selection, event: any) {
 		self.dom.tip.clear()
 		if (holder)
 			self.dom.tip.showunder(
@@ -541,8 +539,8 @@ function setInteractivity(self: any) {
 			state: {
 				activeCohort: self.activeCohort,
 				tree: {
-					usecase: self.usecase
-				}
+					usecase: self.usecase,
+				},
 			},
 			tree: {
 				disable_terms: self.disable_terms,
@@ -555,8 +553,8 @@ function setInteractivity(self: any) {
 					// tw is now furbished
 
 					self.opts.callback(tw)
-				}
-			}
+				},
+			},
 		})
 	}
 
@@ -572,7 +570,7 @@ function setInteractivity(self: any) {
 			else tip.show(event.clientX, event.clientY)
 		}
 
-		type opt = {label: string, callback:(f: any)=> void}
+		type opt = { label: string; callback: (f: any) => void }
 		const options: opt[] = []
 
 		if (self.term?.type == 'categorical' && self.q?.groupsetting?.inuse) {
@@ -614,7 +612,7 @@ function setInteractivity(self: any) {
 		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
-	self.showReuseMenu = async function(_div: any) {
+	self.showReuseMenu = async function (_div: any) {
 		const saveDiv = _div.append('div')
 		saveDiv
 			.style('display', 'block')
@@ -650,10 +648,7 @@ function setInteractivity(self: any) {
 		defaultTw.q.reuseId = 'Default'
 		qlst.push(defaultTw.q)
 		if (qlst.length > 1) {
-			tableWrapper
-				.append('div')
-				.style('color', '#aaa')
-				.html('Previously saved settings')
+			tableWrapper.append('div').style('color', '#aaa').html('Previously saved settings')
 		}
 
 		tableWrapper
@@ -663,10 +658,10 @@ function setInteractivity(self: any) {
 			.enter()
 			.append('tr')
 			.style('margin', '2px 5px')
-			.each(function(this: BaseType, q: Q) {
+			.each(function (this: BaseType, q: Q) {
 				const tr = select(this)
 				const inuse = equivalentQs(self.q, q)
-				const html2Use = q.name || q.reuseId as string
+				const html2Use = q.name || (q.reuseId as string)
 				tr.append('td')
 					.style('min-width', '180px')
 					//.style('border-bottom', '1px solid #eee')
@@ -718,7 +713,7 @@ function setInteractivity(self: any) {
 			)
 	}
 
-	self.showGeneSearch = function(clickedElem: any, event: any) {
+	self.showGeneSearch = function (clickedElem: any, event: any) {
 		self.dom.tip.clear()
 		if (clickedElem)
 			self.dom.tip.showunder(
@@ -755,11 +750,11 @@ function setInteractivity(self: any) {
 							self.runCallback({
 								term: {
 									name: gene.name,
-									type: 'geneVariant'
+									type: 'geneVariant',
 								},
 								q: {
-									exclude: []
-								}
+									exclude: [],
+								},
 							})
 						})
 				} catch (e) {
@@ -778,7 +773,7 @@ function setInteractivity(self: any) {
 // do not consider irrelevant q attributes when
 // computing the deep equality of two term.q's
 function equivalentQs(q0: Q, q1: Q) {
-	const qlst = [q0, q1].map(q => JSON.parse(JSON.stringify(q)))
+	const qlst = [q0, q1].map((q) => JSON.parse(JSON.stringify(q)))
 	for (const q of qlst) {
 		delete q.binLabelFormatter
 		if (q.reuseId === 'Default') delete q.reuseId
@@ -802,7 +797,7 @@ function getDefaultHandler(self: any) {
 		getPillStatus() {},
 		getPillName(d: any) {
 			return getPillNameDefault(self, d)
-		}
+		},
 	}
 }
 
@@ -853,12 +848,12 @@ export async function fillTermWrapper(tw: TW, vocabApi: VocabApi, defaultQByTsHa
 
 	mayValidateQmode(tw)
 	return tw as TW
-} 
+}
 
 async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	if (!tw.$id) tw.$id = get$id()
 	const t = tw.term.type
-	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t as string
+	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : (t as string)
 	let _
 	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.js`)
 	else if (tw.term.type) {
