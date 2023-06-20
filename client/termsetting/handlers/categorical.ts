@@ -1,6 +1,7 @@
 import { setGroupsettingMethods } from './groupsetting'
 import { filterInit } from '#filter'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
+import { PillData, TW, Term, Q, TermValues, GroupSetting, BaseGroupSet, GroupEntry } from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -24,27 +25,28 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 ********************** INTERNAL
 */
 
-export function getHandler(self) {
+export function getHandler(self: any) {
 	setGroupsettingMethods(self)
 	setCategoryConditionMethods(self)
 
 	return {
 		showEditMenu: self.showGrpOpts,
 
-		getPillName(d) {
+		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
 		},
 
 		getPillStatus: self.usecase?.target == 'regression' ? () => ({ text: 'categorical' }) : self.validateGroupsetting,
 
-		validateQ(data) {
-			const t = data.term
-			const endNote = `(${t.type}, mode='${data.q.mode}', type='${data.q.type}')`
+		validateQ(data: PillData) {
+			const t = data.term as Term
+			const q = data.q as Q
+			const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
 			// validate the configuration
-			if (data.q.type == 'values') {
+			if (q.type == 'values') {
 				if (!t.values) self.error = `no term.values defined ${endNote}`
-				if (data.q.mode == 'binary') {
-					if (Object.keys(t.values).length != 2) self.error = `term.values must have exactly two keys ${endNote}`
+				if (q.mode == 'binary') {
+					if (Object.keys(t.values as TermValues).length != 2) self.error = `term.values must have exactly two keys ${endNote}`
 
 					if (data.sampleCounts) {
 						for (const key in t.values) {
@@ -56,24 +58,24 @@ export function getHandler(self) {
 				return
 			}
 
-			if (data.q.type == 'predefined-groupset' || data.q.type == 'custom-groupset') {
-				const tgs = t.groupsetting
+			if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
+				const tgs = t.groupsetting as GroupSetting
 				if (!tgs) throw `no term.groupsetting ${endNote}`
 
-				let groupset
-				if (data.q.type == 'predefined-groupset') {
-					const idx = data.q.groupsetting.predefined_groupset_idx
-					if (!tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
-					groupset = tgs.lst[idx]
-				} else {
-					if (!data.q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
-					groupset = data.q.groupsetting.customset
+				let groupset!: BaseGroupSet
+				if (q.groupsetting && q.type == 'predefined-groupset') {
+					const idx = q.groupsetting.predefined_groupset_idx as number
+					if (tgs.lst && !tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
+					else if (tgs.lst) groupset = tgs.lst[idx]
+				} else if (q.groupsetting) {
+					if (!q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
+					groupset = q.groupsetting.customset
 				}
 
-				if (!groupset.groups.every(g => g.name !== undefined))
+				if (!groupset.groups.every((g: GroupEntry) => g.name !== undefined))
 					throw `every group in groupset must have 'name' defined ${endNote}`
 
-				if (data.q.mode == 'binary') {
+				if (q.mode == 'binary') {
 					if (groupset.groups.length != 2) throw `there must be exactly two groups ${endNote}`
 
 					if (data.sampleCounts) {
@@ -85,8 +87,7 @@ export function getHandler(self) {
 				}
 				return
 			}
-			//console.log(88, data)
-			throw `unknown xxxx q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
+			throw `unknown xxxx q.type='${q.type}' for categorical q.mode='${q.mode}'`
 		},
 
 		async postMain() {
@@ -114,7 +115,7 @@ export function getHandler(self) {
 }
 
 // same method used to set methods for categorical and condition terms
-export function setCategoryConditionMethods(self) {
+export function setCategoryConditionMethods(self: any) {
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		const text = self.q?.name || self.q?.reuseId
@@ -140,10 +141,10 @@ export function setCategoryConditionMethods(self) {
 	}
 
 	/******************* Functions for Categorical terms *******************/
-	self.showGrpOpts = async function(_div) {
+	self.showGrpOpts = async function(_div: string | Selection) {
 		const tgs = self.term.groupsetting
-		const qgs = self.q?.groupsetting
-		const activeGroup = tgs?.lst?.[qgs?.predefined_groupset_idx] || (qgs?.inuse && qgs.customset)
+		const qgs = self.q?.groupsetting as GroupSetting
+		const activeGroup = qgs?.predefined_groupset_idx ? tgs?.lst?.[qgs?.predefined_groupset_idx] : (qgs?.inuse && qgs.customset)
 
 		if (!activeGroup) self.regroupMenu()
 		else {
@@ -153,21 +154,25 @@ export function setCategoryConditionMethods(self) {
 	}
 
 	self.getQlst = () => {
-		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-		const defaultGrpName = `default categories ${values ? '(n=' + Object.keys(values).length + ')' : ''}`
-		const activeName = self.q.name || qgs?.name || activeGroup?.name || defaultGrpName
+		/********* Not used at all?? Commented out b/c of type errors *********/
 
-		//show button/s for default groups
-		const gsLst = tgs?.lst || []
-		const qlst = self.vocabApi.getCustomTermQLst(self.term)
-		const lst = [...gsLst, ...qlst].sort((a, b) => (a.name === self.q.name ? -1 : 0))
-		return lst.map(q => {
-			return {
-				name: q.name || defaultGrpName,
-				isActive: activeName === defaultGrpName,
-				callback
-			}
-		})
+		// const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
+		// const defaultGrpName = `default categories ${values ? '(n=' + Object.keys(values).length + ')' : ''}`
+		// const activeName = self.q.name || qgs?.name || activeGroup?.name || defaultGrpName
+
+		// //show button/s for default groups
+		// const gsLst = tgs?.lst || []
+		// const qlst = self.vocabApi.getCustomTermQLst(self.term)
+		// const lst = [...gsLst, ...qlst].sort((a, b) => (a.name === self.q.name ? -1 : 0))
+		// return lst.map(q => {
+		// 	return {
+		// 		name: q.name || defaultGrpName,
+		// 		isActive: activeName === defaultGrpName,
+		// 		callback
+		// 	}
+		// })
+
+
 		/*
 		const div = _div.append('div').style('display', 'grid')
 		div
@@ -283,50 +288,50 @@ export function setCategoryConditionMethods(self) {
 		*/
 	}
 
-	function mayShowGroupDetails(tgs, qgs, groupset, div) {
-		return
-		const active_group_info_div = div.append('div').style('margin', '10px')
+	// function mayShowGroupDetails(tgs, qgs, groupset, div) {
+	// 	return
+	// 	const active_group_info_div = div.append('div').style('margin', '10px')
 
-		//display groups and categories assigned to that group
-		if (!qgs?.inuse) return
-		console.log(161, groupset)
-		const group_table = active_group_info_div.append('table').style('font-size', '.8em')
+	// 	//display groups and categories assigned to that group
+	// 	if (!qgs?.inuse) return
+	// 	console.log(161, groupset)
+	// 	const group_table = active_group_info_div.append('table').style('font-size', '.8em')
 
-		for (const [i, g] of groupset.groups.entries()) {
-			const group_tr = group_table.append('tr')
+	// 	for (const [i, g] of groupset.groups.entries()) {
+	// 		const group_tr = group_table.append('tr')
 
-			//group name
-			group_tr
-				.append('td')
-				.style('font-weight', 'bold')
-				.style('vertical-align', 'top')
-				.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
+	// 		//group name
+	// 		group_tr
+	// 			.append('td')
+	// 			.style('font-weight', 'bold')
+	// 			.style('vertical-align', 'top')
+	// 			.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
 
-			const values_td = group_tr.append('td')
-			if (!g.type || g.type == 'values') {
-				for (const v of g.values) {
-					values_td.append('div').html(values[v.key].label)
-				}
-			} else if (g.type == 'filter') {
-				const cohortFilter = tgs.lst[0].groups[i].filter4activeCohort
-				if (!g.filter && cohortFilter) {
-					const filter = JSON.parse(JSON.stringify(cohortFilter[self.activeCohort]))
+	// 		const values_td = group_tr.append('td')
+	// 		if (!g.type || g.type == 'values') {
+	// 			for (const v of g.values) {
+	// 				values_td.append('div').html(values[v.key].label)
+	// 			}
+	// 		} else if (g.type == 'filter') {
+	// 			const cohortFilter = tgs.lst[0].groups[i].filter4activeCohort
+	// 			if (!g.filter && cohortFilter) {
+	// 				const filter = JSON.parse(JSON.stringify(cohortFilter[self.activeCohort]))
 
-					// show filter for predefined tvslst for activeCohort
-					filterInit({
-						btn: values_td.append('div'),
-						btnLabel: 'Filter',
-						emptyLabel: '+New Filter',
-						holder: values_td.append('div').style('width', '300px'),
-						vocabApi: self.vocabApi,
-						callback: () => {}
-					}).main(filter)
-				}
-			}
-		}
-	}
+	// 				// show filter for predefined tvslst for activeCohort
+	// 				filterInit({
+	// 					btn: values_td.append('div'),
+	// 					btnLabel: 'Filter',
+	// 					emptyLabel: '+New Filter',
+	// 					holder: values_td.append('div').style('width', '300px'),
+	// 					vocabApi: self.vocabApi,
+	// 					callback: () => {}
+	// 				}).main(filter)
+	// 			}
+	// 		}
+	// 	}
+	// }
 
-	self.grpSet2valGrp = function(groupset) {
+	self.grpSet2valGrp = function(groupset: BaseGroupSet) {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const vals_with_grp = JSON.parse(JSON.stringify(values))
 		for (const [i, g] of groupset.groups.entries()) {
@@ -345,7 +350,7 @@ export function setCategoryConditionMethods(self) {
 	}
 }
 
-export function fillTW(tw, vocabApi) {
+export function fillTW(tw: TW) {
 	set_hiddenvalues(tw.q, tw.term)
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
@@ -377,6 +382,8 @@ export function fillTW(tw, vocabApi) {
 	if (tw.q.groupsetting.inuse) {
 		if (
 			tw.term.groupsetting.lst &&
+			tw.term.groupsetting.useIndex && //Typescript emits error that this could possibly be undefined
+			//Fix is to check the property is present
 			tw.term.groupsetting.useIndex >= 0 &&
 			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
 		) {
