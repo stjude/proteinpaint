@@ -70,6 +70,7 @@
     "style-loader": "^3.3.1",
     "tape": "^5.2.2",
     "tape-run": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.60.0",
     "webpack": "^5.76.0",
     "webpack-cli": "^4.9.2",
     "webpack-node-externals": "^3.0.0",
