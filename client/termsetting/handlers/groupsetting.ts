@@ -2,6 +2,7 @@ import { keyupEnter } from '#src/client'
 import { select } from 'd3-selection'
 import { filterInit } from '#filter'
 import { make_radios } from '#dom/radiobutton'
+import { GroupSetEntry, GroupEntry } from '#shared/types'
 
 /*
 Arguments
@@ -17,8 +18,12 @@ other internal functions:
 	addOnDrop() //move dom from one group holder to another group holder
 */
 
-export function setGroupsettingMethods(self) {
-	self.regroupMenu = function(grp_count, temp_cat_grps) {
+type KeyLabel = { key: string | number, label: string}
+type ScaleEntry = { label: string, value: number, checked: boolean }
+type GroupArgs = { holder: any, name: string, group_idx: number, group_type?: string }
+
+export function setGroupsettingMethods(self: any) {
+	self.regroupMenu = function(grp_count: number, temp_cat_grps: GroupSetEntry) {
 		if (self.q.mode == 'cutoff') {
 			self.showCutoff()
 		} else {
@@ -35,9 +40,9 @@ export function setGroupsettingMethods(self) {
 
 		// get sorted list of grades
 		const grades = Object.keys(self.term.values)
-			.filter(k => !self.term.values[k].uncomputable && k !== '0')
-			.sort((a, b) => Number(a) - Number(b))
-			.map(k => {
+			.filter((k: string) => !self.term.values[k].uncomputable && k !== '0')
+			.sort((a: string, b: string) => Number(a) - Number(b))
+			.map((k: string) => {
 				return { key: k, label: self.term.values[k].label }
 			})
 
@@ -56,9 +61,9 @@ export function setGroupsettingMethods(self) {
 			.data(grades)
 			.enter()
 			.append('option')
-			.attr('value', d => d.key)
-			.property('selected', d => Number(d.key) == defaultCutoff)
-			.html(d => d.label)
+			.attr('value', (d: KeyLabel) => d.key)
+			.property('selected', (d: KeyLabel) => Number(d.key) == defaultCutoff)
+			.html((d: KeyLabel) => d.label)
 
 		// div for time scale
 		const scale_select = cutoff_div
@@ -66,9 +71,9 @@ export function setGroupsettingMethods(self) {
 			.style('margin', '10px 0px')
 			//.style('display', 'inline')
 			.text('Time scale: ')
-		const defaultScale = 'timeScale' in self.q ? self.q.timeScale : 'time'
+		const defaultScale: string = 'timeScale' in self.q ? self.q.timeScale : 'time'
 		self.q.timeScale = defaultScale
-		const scales = [
+		const scales: ScaleEntry[] = [
 			{
 				label: 'Time from study entry',
 				value: 1,
@@ -85,7 +90,7 @@ export function setGroupsettingMethods(self) {
 		make_radios({
 			holder: scale_select,
 			options: scales,
-			callback: value => {
+			callback: (value: number) => {
 				self.q.timeScale = value == 1 ? 'time' : 'age'
 			}
 		})
@@ -158,7 +163,7 @@ export function setGroupsettingMethods(self) {
 		*/
 	}
 
-	self.showDraggables = function(grp_count, temp_cat_grps) {
+	self.showDraggables = function(grp_count: number, temp_cat_grps: GroupSetEntry) {
 		//start with default 2 groups, extra groups can be added by user
 		const default_grp_count = grp_count || 2
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
@@ -178,10 +183,9 @@ export function setGroupsettingMethods(self) {
 		const default_empty_group = { type: 'values', values: [] }
 		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
 		const default_groupset = { groups: [...default_1grp, ...empty_groups] }
-		const excluded_cats = []
+		const excluded_cats: KeyLabel[] = []
 		// to not change background of native group, keep track of dragged items original group
-		let drag_native_grp, dragged_item
-
+		let drag_native_grp: number, dragged_item: any
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
 		const groupset =
 			grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
@@ -196,13 +200,13 @@ export function setGroupsettingMethods(self) {
 		})
 
 		//initiate empty customset
-		let customset = { groups: [] }
-		let group_names = []
+		let customset: GroupSetEntry = { groups: [] }
+		let group_names: (string | undefined)[] = []
 		if (self.q.bar_by_grade) customset.is_grade = true
 		else if (self.q.bar_by_children) customset.is_subcondition = true
 
 		for (let i = 0; i < default_grp_count; i++) {
-			let group_name =
+			let group_name: (string | undefined)=
 				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name
 					? groupset.groups[i].name
 					: undefined
@@ -214,7 +218,7 @@ export function setGroupsettingMethods(self) {
 
 			customset.groups.push({
 				values: [],
-				name: group_name
+				name: group_name as (string)
 			})
 		}
 
@@ -298,7 +302,7 @@ export function setGroupsettingMethods(self) {
 			.append('div')
 			.style('margin', '5px')
 			.classed('sjpp-drag-list-div', true) //For unit testing
-
+		
 		// show excluded categories
 		addGroupItems(exclude_list, excluded_cats)
 
@@ -319,13 +323,13 @@ export function setGroupsettingMethods(self) {
 				//update customset and add to self.q
 				for (const [key, val] of Object.entries(cat_grps)) {
 					const i = cat_grps[key].group - 1
-					const group = customset.groups[i]
+					const group: GroupEntry = customset.groups[i]
 					if (group) {
 						group.name = name_inputs[i].value
 						group.type = 'values'
 						// for conditional terms, keys are string but digits, so check if it's parseInt(str)
 						const key_ = typeof key == 'string' && !isNaN(parseInt(key)) ? parseInt(key) : key
-						group.values.push({ key: key_, label: val.label })
+						group.values.push({ key: key_, label: (val as KeyLabel).label })
 					}
 				}
 				self.q.type = 'custom-groupset'
@@ -338,7 +342,7 @@ export function setGroupsettingMethods(self) {
 			})
 
 		// create holder for each group from groupset with group name input
-		function addGroupHolder(group, i) {
+		function addGroupHolder(group: GroupEntry, i: number) {
 			const group_args = {
 				holder: non_exclude_div,
 				name: 'Group ' + (i + 1),
@@ -362,7 +366,7 @@ export function setGroupsettingMethods(self) {
 				.style('display', 'inline-block')
 				.style('font-size', '.8em')
 				.style('width', '87%')
-				.on('keyup', event => {
+				.on('keyup', (event: KeyboardEvent) => {
 					if (!keyupEnter(event)) return
 
 					customset.groups[i].name = group_name_input.node().value
@@ -400,8 +404,11 @@ export function setGroupsettingMethods(self) {
 		}
 
 		// make draggable div to render drag-drop list of categories
-		function initGroupDiv(args) {
-			const { holder, group_name, group_i, group_type } = args
+		function initGroupDiv(args: GroupArgs) {
+			const holder = args.holder,
+				group_name = args.name,
+				group_i = args.group_idx,
+				group_type = args.group_type
 			const dragable_div = holder
 				.append('div')
 				.style('display', 'block')
@@ -411,7 +418,7 @@ export function setGroupsettingMethods(self) {
 
 			if (group_type !== 'filter') {
 				dragable_div
-					.on('dragover', event => {
+					.on('dragover', (event: DragEvent) => {
 						if (group_i == drag_native_grp) {
 							dragged_item
 								.style('transition-property', 'background-color')
@@ -423,18 +430,18 @@ export function setGroupsettingMethods(self) {
 						event.stopPropagation()
 						dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
 					})
-					.on('dragenter', event => {
+					.on('dragenter', (event: DragEvent) => {
 						if (group_i == drag_native_grp) return
 						event.preventDefault()
 						event.stopPropagation()
 						dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
 					})
-					.on('dragleave', event => {
+					.on('dragleave', (event: DragEvent) => {
 						event.preventDefault()
 						event.stopPropagation()
 						dragable_div.style('background-color', '#fff')
 					})
-					.on('dragend', event => {
+					.on('dragend', (event: DragEvent) => {
 						event.preventDefault()
 						event.stopPropagation()
 						dragable_div.style('background-color', '#fff')
@@ -456,12 +463,12 @@ export function setGroupsettingMethods(self) {
 		}
 
 		// make drag-drop list of categories
-		function addGroupItems(list_holder, values) {
+		function addGroupItems(list_holder: any, values: KeyLabel[]) {
 			const group_items = list_holder.selectAll('div').data(values)
 			group_items
 				.enter()
 				.append('div')
-				.each(function(val) {
+				.each(function(this: Element, val: KeyLabel) {
 					if (cat_grps[val.key].group == undefined && !cat_grps[val.key].uncomputable) cat_grps[val.key].group = 1
 					else if (cat_grps[val.key].group == undefined && cat_grps[val.key].uncomputable == true)
 						cat_grps[val.key].group = 0
@@ -500,7 +507,7 @@ export function setGroupsettingMethods(self) {
 				})
 		}
 
-		function addOnDrop(group_list, group_i) {
+		function addOnDrop(group_list: any, group_i: number) {
 			// move dom from one group holder to another group holder
 			// if .group is same as previous, return (don't move or reorder categories)
 			const val = dragged_item._groups[0][0].__data__ // get data attached to dom
