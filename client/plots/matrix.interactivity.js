@@ -8,7 +8,7 @@ import { plotSingleSampleGenomeQuantification, plotDisco } from '../mds3/samplet
 let inputIndex = 0
 
 export function setInteractivity(self) {
-	self.showCellInfo = function (event) {
+	self.showCellInfo = function(event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
@@ -25,9 +25,9 @@ export function setInteractivity(self) {
 			)
 		} else if (d.term.type == 'geneVariant' && d.value) {
 			rows.push(
-				`<tr><td colspan='2' style='text-align: center'>Sample: ${
-					d._SAMPLENAME_ || d.value._SAMPLENAME_ || d.value.sample
-				}</td></tr>`
+				`<tr><td colspan='2' style='text-align: center'>Sample: ${d._SAMPLENAME_ ||
+					d.value._SAMPLENAME_ ||
+					d.value.sample}</td></tr>`
 			)
 			rows.push(`<tr><td colspan='2' style='text-align: center'>${d.term.name}</td></tr>`)
 			for (const c of d.siblingCells) {
@@ -45,7 +45,7 @@ export function setInteractivity(self) {
 
 				const tds = !info.length
 					? `<td colspan='2' style='text-align: center'>${label}</td>`
-					: `<td style='text-align: right'>${label}</td><td>${info.map((i) => `<span>${i}</span>`).join(' ')}</td>`
+					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
 
 				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
 				if (v.dt == 4 && 'value' in v) {
@@ -64,10 +64,10 @@ export function setInteractivity(self) {
 		self.dom.mainG.on('mouseout', self.mouseout)
 	}
 
-	self.getImgCell = function (event) {
+	self.getImgCell = function(event) {
 		//const [x,y] = pointer(event, event.target)
 		const y = event.clientY - self.imgBox.y - event.target.clientTop
-		const d = event.target.__data__.find((series) => series.y <= y && y <= series.y + self.dimensions.dy)
+		const d = event.target.__data__.find(series => series.y <= y && y <= series.y + self.dimensions.dy)
 		if (!d) return
 		const { xMin, dx } = self.dimensions
 		const x2 = event.clientX - self.imgBox.x - event.target.clientLeft + xMin
@@ -79,23 +79,13 @@ export function setInteractivity(self) {
 		return null
 	}
 
-	self.mouseout = function () {
+	self.mouseout = function() {
 		if (!self.activeLabel) self.dom.tip.hide()
 		delete self.imgBox
 	}
 
-	self.mouseclick = function (event) {
-		//const target = event.target
-		// self.dom.tip.hide()
-		// tip2.hide()
-
-		if (
-			self.state.termdbConfig.queries?.singleSampleGenomeQuantification
-			// &&
-			// target.tagName == 'rect'
-			// &&
-			// target.getAttribute('name') == 'serie'
-		) {
+	self.mouseclick = function(event) {
+		if (self.state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			const sample = event.target.__data__
 			sample.sample_id = sample.row?.sampleName
 			self.dom.menubody.selectAll('*').remove()
@@ -105,7 +95,7 @@ export function setInteractivity(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(k)
-					.on('click', (event) => {
+					.on('click', event => {
 						const menu = new Menu()
 						menu.show(event.clientX, event.clientY)
 
@@ -127,7 +117,7 @@ export function setInteractivity(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Disco plot')
-					.on('click', (event) => {
+					.on('click', event => {
 						const menu = new Menu()
 						menu.show(event.clientX, event.clientY)
 
@@ -139,9 +129,9 @@ export function setInteractivity(self) {
 		}
 	}
 
-	self.legendClick = function () {}
+	self.legendClick = function() {}
 
-	self.svgMousemove = function (event) {
+	self.svgMousemove = function(event) {
 		if (!self.dragged) return
 		const s = self.config.settings.matrix
 		const d = self.dragged
@@ -150,14 +140,14 @@ export function setInteractivity(self) {
 		d.clone.attr('transform', `translate(${x2},${y2})`)
 	}
 
-	self.svgMouseup = function (event) {
+	self.svgMouseup = function(event) {
 		if (!self.dragged) return
 		self.dragged.clone.remove()
 		delete self.dragged
 		delete self.clicked
 	}
 
-	self.getVisibleCenterCell = function (dx) {
+	self.getVisibleCenterCell = function(dx) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const i = Math.round((0.5 * d.mainw - d.seriesXoffset - dx) / d.dx)
@@ -300,7 +290,7 @@ function setSampleActions(self) {
 function setTermActions(self) {
 	setLabelDragEvents(self, 'term')
 
-	self.setPill = function (appState) {
+	self.setPill = function(appState) {
 		// will reuse a pill instance to show term edit menu
 		self.pill = termsettingInit({
 			tip: self.customTipApi,
@@ -313,7 +303,7 @@ function setTermActions(self) {
 			//holder: {}, //self.dom.inputTd.append('div'),
 			//debug: opts.debug,
 			renderAs: 'none',
-			callback: (tw) => {
+			callback: tw => {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 				const t = self.activeLabel || self.lastactiveLabel
@@ -326,24 +316,30 @@ function setTermActions(self) {
 						edits: [
 							{
 								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
-								value: tw,
-							},
-						],
+								value: tw
+							}
+						]
 					})
 				} else {
 					self.removeTerm()
 				}
 				self.dom.tip.hide()
-			},
+			}
 		})
 	}
 
-	self.showTermMenu = async function (event) {
+	self.showTermMenu = async function(event) {
 		const t = event.target.__data__
 		if (!t || !t.tw) return
 		self.activeLabel = t
-		self.dom.menutop.style('display', '').selectAll('*').remove()
-		self.dom.menubody.style('padding', 0).selectAll('*').remove()
+		self.dom.menutop
+			.style('display', '')
+			.selectAll('*')
+			.remove()
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
 
 		self.dom.shortcutDiv = self.dom.menutop.append('div')
 		self.showShortcuts(t, self.dom.shortcutDiv)
@@ -409,9 +405,9 @@ function setTermActions(self) {
 			edits: [
 				{
 					nestedKeys: ['termgroups', t.grpIndex],
-					value: t.grp,
-				},
-			],
+					value: t.grp
+				}
+			]
 		})
 	}
 
@@ -429,44 +425,44 @@ function setTermActions(self) {
 						icon: 'corner',
 						title: `Sort samples against this gene positioned at the top left corner`,
 						disabled: t.grp.lst.length < 1 || (t.index === 0 && t.tw.sortSamples?.priority === 0),
-						handler: self.sortSamplesAgainstCornerTerm,
+						handler: self.sortSamplesAgainstCornerTerm
 					},
 					{
 						icon: 'left',
 						title: `Sort samples against this gene`,
 						disabled: t.tw.sortSamples?.priority === 0,
-						handler: self.sortSamplesAgainstTerm,
+						handler: self.sortSamplesAgainstTerm
 					},
 					{
-						html: '&nbsp;|&nbsp;',
+						html: '&nbsp;|&nbsp;'
 					},
 					{
 						icon: 'up',
 						title: `Move this term up`,
 						disabled: t.index === 0,
-						handler: self.moveTermUp,
+						handler: self.moveTermUp
 					},
 
 					{
 						icon: 'down',
 						title: `Move this term down`,
 						disabled: t.index === t.grp.lst.length - 1,
-						handler: self.moveTermDown,
-					},
+						handler: self.moveTermDown
+					}
 				],
-				(d) => d.icon
+				d => d.icon
 			)
 			.enter()
 			.append('div')
 			.style('display', 'inline-block')
-			.each(function (d) {
+			.each(function(d) {
 				const elem = select(this)
 				if (d.icon) icons[d.icon](elem, d)
 				else elem.html(d.html)
 			})
 	}
 
-	self.sortSamplesAgainstCornerTerm = (event) => {
+	self.sortSamplesAgainstCornerTerm = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const termgroups = JSON.parse(JSON.stringify(self.termGroups))
@@ -486,7 +482,7 @@ function setTermActions(self) {
 			} else {
 				for (const tw of g.lst) {
 					if (!tw.sortSamples) continue
-					tw.sortSamples.priority = sorterTerms.findIndex((t) => t.tw?.$id === tw.$id) + grp.lst.length
+					tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id) + grp.lst.length
 				}
 			}
 		}
@@ -498,15 +494,15 @@ function setTermActions(self) {
 				termgroups,
 				settings: {
 					matrix: {
-						sortTermsBy: 'asListed',
-					},
-				},
-			},
+						sortTermsBy: 'asListed'
+					}
+				}
+			}
 		})
 		self.dom.tip.hide()
 	}
 
-	self.sortSamplesAgainstTerm = (event) => {
+	self.sortSamplesAgainstTerm = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const [tcopy] = self.getSorterTerms(t)
@@ -525,13 +521,13 @@ function setTermActions(self) {
 			type: 'plot_edit',
 			id: self.opts.id,
 			config: {
-				termgroups,
-			},
+				termgroups
+			}
 		})
 		self.dom.tip.hide()
 	}
 
-	self.moveTermUp = (event) => {
+	self.moveTermUp = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
@@ -545,18 +541,18 @@ function setTermActions(self) {
 			edits: [
 				{
 					nestedKeys: ['termgroups', t.grpIndex],
-					value: grp,
+					value: grp
 				},
 				{
 					nestedKeys: ['settings', 'matrix', 'sortTermsBy'],
-					value: 'asListed',
-				},
-			],
+					value: 'asListed'
+				}
+			]
 		})
 		self.dom.tip.hide()
 	}
 
-	self.moveTermDown = (event) => {
+	self.moveTermDown = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
@@ -570,13 +566,13 @@ function setTermActions(self) {
 			edits: [
 				{
 					nestedKeys: ['termgroups', t.grpIndex],
-					value: grp,
+					value: grp
 				},
 				{
 					nestedKeys: ['settings', 'matrix', 'sortTermsBy'],
-					value: 'asListed',
-				},
-			],
+					value: 'asListed'
+				}
+			]
 		})
 		self.dom.tip.hide()
 	}
@@ -618,9 +614,9 @@ function setTermActions(self) {
 						edits: [
 							{
 								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
-								value: t.tw,
-							},
-						],
+								value: t.tw
+							}
+						]
 					})
 					self.dom.tip.hide()
 				})
@@ -656,14 +652,11 @@ function setTermActions(self) {
 		})
 		self.dom.grpNameSelect
 			.selectAll('option')
-			.data([
-				{ label: 'current', value: 'current', selected: true },
-				{ label: 'new', value: 'new' },
-			])
+			.data([{ label: 'current', value: 'current', selected: true }, { label: 'new', value: 'new' }])
 			.enter()
 			.append('option')
-			.attr('selected', (d) => d.selected)
-			.html((d) => d.label)
+			.attr('selected', d => d.selected)
+			.html(d => d.label)
 
 		grpNameDiv.append('span').html('&nbsp;group: &nbsp;')
 
@@ -688,11 +681,13 @@ function setTermActions(self) {
 		self.showDictTermSelection()
 	}
 
-	self.makeInsertPosRadios = function (div) {
-		const insertPosInput = div
-			.append('div') /*.style('display', 'inline-block')*/
-			.style('margin', '10px 5px')
-		insertPosInput.append('div').style('display', 'inline-block').style('padding-right', '10px').html('Insert&nbsp')
+	self.makeInsertPosRadios = function(div) {
+		const insertPosInput = div.append('div') /*.style('display', 'inline-block')*/.style('margin', '10px 5px')
+		insertPosInput
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding-right', '10px')
+			.html('Insert&nbsp')
 
 		const insertRadiosDiv = insertPosInput.append('div').style('display', 'inline-block')
 
@@ -709,7 +704,11 @@ function setTermActions(self) {
 		insertRadiosDiv.append('span').html('&nbsp;&nbsp')
 
 		const belowLabel = insertRadiosDiv.append('label')
-		belowLabel.append('input').attr('type', 'radio').attr('value', 'below').attr('name', self.insertRadioId)
+		belowLabel
+			.append('input')
+			.attr('type', 'radio')
+			.attr('value', 'below')
+			.attr('name', self.insertRadioId)
 		belowLabel.append('span').html('&nbsp;below')
 	}
 
@@ -726,24 +725,24 @@ function setTermActions(self) {
 				vocab: self.state.vocab,
 				activeCohort: self.activeCohort,
 				nav: {
-					header_mode: 'search_only',
+					header_mode: 'search_only'
 				},
 				tree: {
-					usecase: { target: 'matrix', detail: 'termgroups' },
-				},
+					usecase: { target: 'matrix', detail: 'termgroups' }
+				}
 			},
 			tree: {
-				submit_lst,
+				submit_lst
 			},
 			search: {
-				handleGeneVariant: (term) => submit_lst([term]),
-			},
+				handleGeneVariant: term => submit_lst([term])
+			}
 		})
 	}
 
 	async function submit_lst(termlst) {
 		const newterms = await Promise.all(
-			termlst.map(async (term) => {
+			termlst.map(async term => {
 				const tw = 'id' in term ? { id: term.id, term } : { term }
 				await fillTermWrapper(tw)
 				return tw
@@ -763,20 +762,20 @@ function setTermActions(self) {
 				edits: [
 					{
 						nestedKeys: ['termgroups', t.grpIndex, 'lst'],
-						value: grp.lst,
-					},
-				],
+						value: grp.lst
+					}
+				]
 			})
 		} else {
 			const i = pos == 'above' ? t.grpIndex : t.grpIndex + 1
 			termgroups.splice(i, 0, {
 				name: self.dom.grpNameTextInput.property('value'),
-				lst: newterms,
+				lst: newterms
 			})
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.opts.id,
-				config: { termgroups },
+				config: { termgroups }
 			})
 		}
 		self.dom.tip.hide()
@@ -805,38 +804,42 @@ function setTermActions(self) {
 		const t = self.activeLabel
 		self.dom.menubody.selectAll('*').remove()
 
-		self.dom.menubody.append('div').style('margin-top', '10px').style('text-align', 'center').html(t.tw.term.name)
+		self.dom.menubody
+			.append('div')
+			.style('margin-top', '10px')
+			.style('text-align', 'center')
+			.html(t.tw.term.name)
 
 		self.moveInput = undefined
 		//if (t.grp.lst.length > 1) self.showTermMoveOptions(t)
 		self.showSortOptions(t)
 	}
 
-	self.showTermMoveOptions = (t) => {
+	self.showTermMoveOptions = t => {
 		const moveDiv = self.dom.menubody.append('div').style('margin-top', '10px')
 
 		const moveLabel = moveDiv.append('label')
-		self.moveInput = moveLabel.append('input').attr('type', 'checkbox').style('text-align', 'center')
+		self.moveInput = moveLabel
+			.append('input')
+			.attr('type', 'checkbox')
+			.style('text-align', 'center')
 
 		moveLabel.append('span').html('&nbsp;move this term&nbsp;')
 
 		const movePos = moveDiv.append('select')
 		movePos
 			.selectAll('option')
-			.data([
-				{ label: 'before', value: 0 },
-				{ label: 'after', value: 1 },
-			])
+			.data([{ label: 'before', value: 0 }, { label: 'after', value: 1 }])
 			.enter()
 			.append('option')
-			.attr('value', (d) => d.value)
-			.html((d) => d.label)
+			.attr('value', d => d.value)
+			.html(d => d.label)
 
 		moveDiv.append('span').html('&nbsp;')
 
 		const otherTermsInGrp = t.grp.lst
-			.filter((tw) => tw.$id != t.tw.$id)
-			.map((tw) => {
+			.filter(tw => tw.$id != t.tw.$id)
+			.map(tw => {
 				return { label: tw.term.name, value: tw.$id }
 			})
 		const moveTarget = moveDiv.append('select')
@@ -845,11 +848,11 @@ function setTermActions(self) {
 			.data([{ label: 'all', value: '*' }, ...otherTermsInGrp])
 			.enter()
 			.append('option')
-			.attr('value', (d) => d.value)
-			.html((d) => d.label)
+			.attr('value', d => d.value)
+			.html(d => d.label)
 	}
 
-	self.showSortOptions = (t) => {
+	self.showSortOptions = t => {
 		const sortColDiv = self.dom.menubody.append('div').style('margin-top', '10px')
 		const sortColLabel = sortColDiv.append('label')
 		const sortColInput = sortColLabel
@@ -881,9 +884,9 @@ function setTermActions(self) {
 						edits: [
 							{
 								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
-								value: tcopy,
-							},
-						],
+								value: tcopy
+							}
+						]
 					})
 				}
 
@@ -898,7 +901,7 @@ function setTermActions(self) {
 			.style('margin', '5px')
 			.style('padding', '5px 10px')
 			.selectAll('div')
-			.data(sorterTerms, (s) => s.$id)
+			.data(sorterTerms, s => s.$id)
 			.enter()
 			.append('div')
 			.style('width', 'fit-content')
@@ -908,11 +911,14 @@ function setTermActions(self) {
 			.style('border-radius', '5px')
 			.style('color', 'black')
 			.style('background-color', 'rgb(238, 238, 238)')
-			.each(function (st, i) {
+			.each(function(st, i) {
 				st.sortSamples.priority = i
 				st.div = select(this)
 				const label = st.$id == 'sample' ? 'Sample name' : st.term.name
-				st.div.append('span').style('margin-right', '10px').html(label)
+				st.div
+					.append('span')
+					.style('margin-right', '10px')
+					.html(label)
 				st.up = st.div
 					.append('span')
 					.html(' &#9650; ')
@@ -960,15 +966,15 @@ function setTermActions(self) {
 		return tcopy
 	}
 
-	self.getSorterTerms = (t) => {
+	self.getSorterTerms = t => {
 		const sorterTerms = [
 			...self.termOrder
-				.filter((t) => t.tw.sortSamples)
-				.map((t) => JSON.parse(JSON.stringify(t.tw)))
+				.filter(t => t.tw.sortSamples)
+				.map(t => JSON.parse(JSON.stringify(t.tw)))
 				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
-			...self.config.settings.matrix.sortSamplesTieBreakers.map((st) => JSON.parse(JSON.stringify(st))),
+			...self.config.settings.matrix.sortSamplesTieBreakers.map(st => JSON.parse(JSON.stringify(st)))
 		]
-		const i = sorterTerms.findIndex((st) => st.$id === t.tw.$id)
+		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))
 
 		const sortSamples =
@@ -996,8 +1002,8 @@ function setTermActions(self) {
 							'S',
 							'Intron',
 							'WT',
-							'Blank',
-						],
+							'Blank'
+						]
 				  }
 				: { by: 'values' }
 
@@ -1025,9 +1031,9 @@ function setTermActions(self) {
 				edits: [
 					{
 						nestedKeys: ['termgroups', t.grpIndex, 'lst'],
-						value: grp.lst,
-					},
-				],
+						value: grp.lst
+					}
+				]
 			})
 		} else {
 			// remove this now-empty group
@@ -1035,7 +1041,7 @@ function setTermActions(self) {
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.opts.id,
-				config: { termgroups },
+				config: { termgroups }
 			})
 		}
 		self.dom.tip.hide()
@@ -1048,12 +1054,12 @@ function setTermActions(self) {
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.opts.id,
-			config: { termgroups },
+			config: { termgroups }
 		})
 		self.dom.tip.hide()
 	}
 
-	self.launchBrowser = (event) => {
+	self.launchBrowser = event => {
 		event.stopPropagation()
 		const tw = self.activeLabel.tw
 		const custom_variants = []
@@ -1067,21 +1073,24 @@ function setTermActions(self) {
 				term: tw,
 				chartType: 'variantBrowser',
 				insertBefore: self.id,
-				custom_variants,
-			},
+				custom_variants
+			}
 		})
 	}
 }
 
 function setSampleGroupActions(self) {
-	self.showSampleGroupMenu = function () {
+	self.showSampleGroupMenu = function() {
 		const d = event.target.__data__
 		if (!d) return
 		self.activeLabel = d
 		self.dom.menutop.selectAll('*').remove()
-		self.dom.menubody.style('padding', 0).selectAll('*').remove()
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
 
-		const options = JSON.parse(JSON.stringify(self.config.menuOpts?.sampleGroup || [])).map((d) => {
+		const options = JSON.parse(JSON.stringify(self.config.menuOpts?.sampleGroup || [])).map(d => {
 			d.callback = self[d.callback]
 			return d
 		})
@@ -1095,7 +1104,7 @@ function setSampleGroupActions(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
-			.html((d) => d.label)
+			.html(d => d.label)
 			.on('click', (event, d) => {
 				event.stopPropagation()
 				d.callback(d)
@@ -1108,7 +1117,7 @@ function setSampleGroupActions(self) {
 		self.dom.menubody.selectAll('*').remove()
 	}
 
-	self.launchSurvivalPlot = async (menuOpt) => {
+	self.launchSurvivalPlot = async menuOpt => {
 		self.dom.menubody.selectAll('*').remove()
 		self.dom.menubody
 			.append('div')
@@ -1128,10 +1137,17 @@ function setSampleGroupActions(self) {
 		label1.append('span').html(' overlay')
 
 		const label2 = radioDiv.append('label').style('margin-left', '10px')
-		label2.append('input').attr('type', 'radio').attr('name', radioName).attr('value', 'term0')
+		label2
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', radioName)
+			.attr('value', 'term0')
 		label2.append('span').html(' divide')
 
-		self.dom.menubody.append('div').style('padding-bottom', '10px').html(`the selected survival term below:`)
+		self.dom.menubody
+			.append('div')
+			.style('padding-bottom', '10px')
+			.html(`the selected survival term below:`)
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
@@ -1141,12 +1157,12 @@ function setSampleGroupActions(self) {
 				vocab: self.state.vocab,
 				activeCohort: self.state.activeCohort,
 				nav: {
-					header_mode: 'search_only',
+					header_mode: 'search_only'
 				},
-				tree: { usecase: { target: 'survival', detail: 'term' } },
+				tree: { usecase: { target: 'survival', detail: 'term' } }
 			},
 			tree: {
-				click_term: (term) => {
+				click_term: term => {
 					self.dom.tip.hide()
 					const termNum = radioDiv.select(`input[name='${radioName}']:checked`).property('value')
 					self.dom.menubody.selectAll('*').remove()
@@ -1154,15 +1170,15 @@ function setSampleGroupActions(self) {
 						chartType: 'survival',
 						term,
 						[termNum]: JSON.parse(JSON.stringify(self.config.divideBy)),
-						insertBefore: self.id,
+						insertBefore: self.id
 					}
 
 					if (menuOpt.config) {
 						Object.assign(config, menuOpt.config)
 					}
 					self.app.dispatch({ type: 'plot_create', config })
-				},
-			},
+				}
+			}
 		})
 	}
 
@@ -1174,8 +1190,8 @@ function setSampleGroupActions(self) {
 			type: 'plot_edit',
 			id: self.id,
 			config: {
-				divideBy,
-			},
+				divideBy
+			}
 		})
 		self.dom.tip.hide()
 	}
@@ -1184,16 +1200,19 @@ function setSampleGroupActions(self) {
 function setTermGroupActions(self) {
 	setLabelDragEvents(self, 'termGrp')
 
-	self.showTermGroupMenu = function (event) {
+	self.showTermGroupMenu = function(event) {
 		const d = event.target.tagName.toLowerCase() == 'tspan' ? event.target.parentNode.__data__ : event.target.__data__
 		if (!d) return
 		self.activeLabel = d
-		self.dom.menutop.style('display', '').selectAll('*').remove()
+		self.dom.menutop
+			.style('display', '')
+			.selectAll('*')
+			.remove()
 		self.showTermGroupInputs(self.dom.menutop.append('div'))
 		self.dom.tip.showunder(event.target)
 	}
 
-	self.showTermGroupInputs = function (div) {
+	self.showTermGroupInputs = function(div) {
 		const holder = div
 		const labelEditDiv = holder.append('div').style('text-align', 'center')
 		labelEditDiv.append('span').text('Group ')
@@ -1219,13 +1238,16 @@ function setTermGroupActions(self) {
 			.html('submit')
 			.on('click', self.updateTermGrpName)
 
-		self.dom.menubody.style('padding', 0).selectAll('*').remove()
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
 
 		const menuOptions = [
 			{ label: 'Edit', callback: self.showTermGroupEditMenu },
 			{ label: 'Add Terms', callback: self.showTermInsertMenu },
 			{ label: 'Sort', callback: self.showSortMenu },
-			{ label: 'Delete', callback: self.removeTermGroup },
+			{ label: 'Delete', callback: self.removeTermGroup }
 		]
 
 		holder
@@ -1237,7 +1259,7 @@ function setTermGroupActions(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
-			.html((d) => d.label)
+			.html(d => d.label)
 			.on('click', (event, d) => {
 				event.stopPropagation()
 				self.dom.menutop.style('display', 'none')
@@ -1256,9 +1278,9 @@ function setTermGroupActions(self) {
 			edits: [
 				{
 					nestedKeys: ['termgroups', t.grpIndex],
-					value: t.grp,
-				},
-			],
+					value: t.grp
+				}
+			]
 		})
 	}
 
@@ -1266,7 +1288,11 @@ function setTermGroupActions(self) {
 		self.dom.menubody.selectAll('*').remove()
 
 		const menu = self.dom.menubody.append('div').style('padding', '5px')
-		menu.append('div').style('width', '100%').style('font-weight', 600).html('Group options')
+		menu
+			.append('div')
+			.style('width', '100%')
+			.style('font-weight', 600)
+			.html('Group options')
 
 		const label = menu.append('div').append('label')
 		label
@@ -1294,9 +1320,9 @@ function setTermGroupActions(self) {
 					edits: [
 						{
 							nestedKeys: ['termgroups', self.activeLabel.grpIndex, 'settings'],
-							value: settings,
-						},
-					],
+							value: settings
+						}
+					]
 				})
 			})
 	}
@@ -1308,15 +1334,15 @@ function setTermGroupActions(self) {
 			type: 'plot_edit',
 			id: self.id,
 			config: {
-				termgroups,
-			},
+				termgroups
+			}
 		})
 		self.dom.tip.hide()
 	}
 	const labelParentSelectors = ['series', 'series-group', 'term', 'term-group']
-		.map((d) => `.sjpp-matrix-${d}-label-g`)
+		.map(d => `.sjpp-matrix-${d}-label-g`)
 		.join(',')
-	self.enableTextHighlight = (event) => {
+	self.enableTextHighlight = event => {
 		select(event.target.closest(labelParentSelectors))
 			.selectAll('.sjpp-matrix-label text')
 			//.selectAll('text')
@@ -1328,7 +1354,7 @@ function setTermGroupActions(self) {
 		select('body').on('mouseup.sjppMatrixLabelText', self.disableTextHighlight)
 	}
 
-	self.disableTextHighlight = (event) => {
+	self.disableTextHighlight = event => {
 		select(event.target.closest(labelParentSelectors))
 			.selectAll('.sjpp-matrix-label text')
 			.style('-webkit-user-select', 'none')
@@ -1353,7 +1379,7 @@ function setLabelDragEvents(self, prefix) {
 		self.hovered = event.target.__data__
 	}
 
-	self[`${prefix}LabelMouseout`] = (event) => {
+	self[`${prefix}LabelMouseout`] = event => {
 		select(event.target).style('fill', '')
 		//if (!this.dragged) return
 	}
@@ -1370,17 +1396,24 @@ function setLabelDragEvents(self, prefix) {
 
 			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
 			// TODO: use a native or D3 transform accessor
-			const [x, y] = select(label).attr('transform').split('translate(')[1].split(')')[0].split(',').map(Number)
+			const [x, y] = select(label)
+				.attr('transform')
+				.split('translate(')[1]
+				.split(')')[0]
+				.split(',')
+				.map(Number)
 			const node = label.cloneNode(true)
 			self.dom[`${prefix}LabelG`].node().prepend(node)
 			self.dragged = {
 				orig: label,
-				clone: select(node).style('cursor', 'move').style('pointer-events', 'none'),
+				clone: select(node)
+					.style('cursor', 'move')
+					.style('pointer-events', 'none'),
 				node,
 				x,
 				y,
 				clientX: event.clientX,
-				clientY: event.clientY,
+				clientY: event.clientY
 			}
 			self.dragged.clone.selectAll('text').style('fill', 'red')
 		}
@@ -1391,7 +1424,7 @@ function setLabelDragEvents(self, prefix) {
 		d.clone.attr('transform', `translate(${x2},${y2})`)
 	}
 
-	self[`${prefix}LabelMouseup`] = (event) => {
+	self[`${prefix}LabelMouseup`] = event => {
 		delete self.clicked
 		const s = self.config.settings.matrix
 		if (self.dragged) {
@@ -1411,8 +1444,8 @@ function setLabelDragEvents(self, prefix) {
 					// ??? actually resort termgroup.lst to reflect the current term order ???
 					for (const grp of self.config.termgroups) {
 						grp.lst.sort((a, b) => {
-							const a1 = self.termOrder.find((t) => t.tw.$id === a.$id)
-							const b1 = self.termOrder.find((t) => t.tw.$id === b.$id)
+							const a1 = self.termOrder.find(t => t.tw.$id === a.$id)
+							const b1 = self.termOrder.find(t => t.tw.$id === b.$id)
 							if (!a1 && !b1) return 0
 							if (!a1) return 1
 							if (!b1) return -1
@@ -1432,10 +1465,10 @@ function setLabelDragEvents(self, prefix) {
 						termgroups: self.config.termgroups,
 						settings: {
 							matrix: {
-								[sortKey]: 'asListed',
-							},
-						},
-					},
+								[sortKey]: 'asListed'
+							}
+						}
+					}
 				})
 			}
 
@@ -1457,7 +1490,7 @@ function setLabelDragEvents(self, prefix) {
 }
 
 function setZoomPanActions(self) {
-	self.resetInteractions = function () {
+	self.resetInteractions = function() {
 		if (self.zoomArea) {
 			self.zoomArea.remove()
 			delete self.zoomArea
@@ -1467,7 +1500,7 @@ function setZoomPanActions(self) {
 		delete self.clickedSeriesCell
 	}
 
-	self.seriesesGMousedown = function (event) {
+	self.seriesesGMousedown = function(event) {
 		event.stopPropagation()
 		self.resetInteractions()
 		const startCell = self.getCellByPos(event)
@@ -1490,7 +1523,7 @@ function setZoomPanActions(self) {
 			.style('user-select', 'none')
 	}
 
-	self.getCellByPos = function (event) {
+	self.getCellByPos = function(event) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		if (event.target.tagName == 'rect') {
@@ -1508,7 +1541,7 @@ function setZoomPanActions(self) {
 		}
 	}
 
-	self.seriesesGdragInit = function () {
+	self.seriesesGdragInit = function() {
 		//self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
 		select('body')
 			.on('mousemove.sjppMatrixDrag', self.seriesesGdrag)
@@ -1525,11 +1558,11 @@ function setZoomPanActions(self) {
 		const halfw = 0.5 * d.mainw
 		c.center = {
 			max: halfw + (d.zoomedMainW - d.mainw),
-			min: halfw,
+			min: halfw
 		}
 	}
 
-	self.seriesesGdrag = function (event) {
+	self.seriesesGdrag = function(event) {
 		const s = self.settings.matrix
 		const c = self.clickedSeriesCell
 		const d = self.dimensions
@@ -1540,7 +1573,7 @@ function setZoomPanActions(self) {
 		self.translateElems(dx, d, s, c)
 	}
 
-	self.translateElems = function (dx, d, s, c) {
+	self.translateElems = function(dx, d, s, c) {
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
@@ -1548,8 +1581,10 @@ function setZoomPanActions(self) {
 		self.controlsRenderer.svgScrollApi.update({ zoomCenter: computedCenter })
 	}
 
-	self.seriesesGcancelDrag = function (event) {
-		select('body').on('mousemove.sjppMatrixDrag', null).on('mouseup.sjppMatrixDrag', null)
+	self.seriesesGcancelDrag = function(event) {
+		select('body')
+			.on('mousemove.sjppMatrixDrag', null)
+			.on('mouseup.sjppMatrixDrag', null)
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const cc = self.clickedSeriesCell
@@ -1569,14 +1604,14 @@ function setZoomPanActions(self) {
 					matrix: {
 						zoomCenterPct: 0.5,
 						zoomIndex: c.totalIndex,
-						zoomGrpIndex: c.grpIndex,
-					},
-				},
-			},
+						zoomGrpIndex: c.grpIndex
+					}
+				}
+			}
 		})
 	}
 
-	self.seriesesGoutlineZoom = function (event) {
+	self.seriesesGoutlineZoom = function(event) {
 		if (!self.clickedSeriesCell) return
 		const s = self.config.settings.matrix
 		const e = self.clickedSeriesCell.event
@@ -1606,7 +1641,7 @@ function setZoomPanActions(self) {
 		if (!self.clickedSeriesCell.endCell) self.clickedSeriesCell.endCell = self.getCellByPos(event)
 	}
 
-	self.seriesesGtriggerZoom = function (event) {
+	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
 		//const d = event.target.__data__
@@ -1640,7 +1675,7 @@ function setZoomPanActions(self) {
 				.data([
 					{
 						label: 'Zoom in',
-						callback: self.triggerZoomArea,
+						callback: self.triggerZoomArea
 					},
 					{
 						label: ss.buttonText || 'Select samples',
@@ -1651,14 +1686,19 @@ function setZoomPanActions(self) {
 							const d = self.dimensions
 							const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 
-							const xy = self.zoomArea.attr('transform').split('(')[1].split(')')[0].split(',').map(Number)
+							const xy = self.zoomArea
+								.attr('transform')
+								.split('(')[1]
+								.split(')')[0]
+								.split(',')
+								.map(Number)
 							const xMin = xy[0]
 							const xMax = xMin + self.zoomWidth
 							const processed = new Set()
-							const filter = (c) => c.row && c.x >= xMin && c.x <= xMax
+							const filter = c => c.row && c.x >= xMin && c.x <= xMax
 							const samples = []
 							for (const series of self.serieses) {
-								series.cells.filter(filter).forEach((d) => {
+								series.cells.filter(filter).forEach(d => {
 									const obj = {}
 									for (const a of ss.attributes) {
 										obj[a] = d.row[a]
@@ -1671,19 +1711,19 @@ function setZoomPanActions(self) {
 							}
 							ss.callback({
 								samples,
-								source: 'Selected samples from OncoMatrix',
+								source: 'Selected samples from OncoMatrix'
 							})
 							self.zoomArea.remove()
 							delete self.zoomArea
 							delete self.clickedSeriesCell
-						},
-					},
+						}
+					}
 				])
 				.enter()
 				.append('div')
 				.attr('class', 'sja_menuoption')
-				.html((d) => d.label)
-				.on('click', (event) => {
+				.html(d => d.label)
+				.on('click', event => {
 					self.app.tip.hide()
 					event.target.__data__.callback()
 				})
@@ -1694,7 +1734,7 @@ function setZoomPanActions(self) {
 		}
 	}
 
-	self.triggerZoomArea = function () {
+	self.triggerZoomArea = function() {
 		if (self.zoomArea) {
 			self.zoomArea.remove()
 			delete self.zoomArea
@@ -1718,10 +1758,10 @@ function setZoomPanActions(self) {
 						zoomLevel,
 						zoomCenterPct: zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
 						zoomIndex,
-						zoomGrpIndex: centerCell.grpIndex,
-					},
-				},
-			},
+						zoomGrpIndex: centerCell.grpIndex
+					}
+				}
+			}
 		})
 
 		self.resetInteractions()
