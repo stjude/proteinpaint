@@ -293,21 +293,6 @@ function printSampleName(sample, tk, div, block) {
 					if (e.stack) console.log(e.stack)
 				}
 			})
-		extraRow
-			.append('button')
-			.style('margin-right', '10px')
-			.text('Old disco plot')
-			.on('click', async (event) => {
-				// create ad-hoc sandbox; if newChartHolder is present, plot into it
-				const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
-				sandbox.header.text(sample.sample_id)
-				try {
-					plotDiscoOld(tk.mds, tk.mds.label, sample, sandbox.body, block.genome)
-				} catch (e) {
-					event.target.innerHTML = 'Error: ' + (e.message || e)
-					if (e.stack) console.log(e.stack)
-				}
-			})
 	}
 
 	if (tk.mds.queries?.singleSampleGenomeQuantification) {
