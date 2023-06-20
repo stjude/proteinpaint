@@ -7,7 +7,7 @@ import { PillData, TW, Q, VocabApi } from '#shared/types'
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
 const cutoffGrades: number[] = [1, 2, 3, 4, 5]
-const not_tested_grade: number = -1
+//const not_tested_grade = -1
 
 export function getHandler(self: any) {
 	return {
@@ -31,7 +31,7 @@ export function getHandler(self: any) {
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
-		}
+		},
 	}
 }
 
@@ -136,11 +136,7 @@ function showMenu_discrete(self: any, div: any) {
 		.style('margin-right', '5px')
 
 	// TODO replace <textarea> with progressive cutoff selector, may keep using ui components for rangeNameDiv
-	gradeValuesDiv
-		.append('div')
-		.style('margin-bottom', '5px')
-		.style('color', 'rgb(136, 136, 136)')
-		.text('Cutoff grades')
+	gradeValuesDiv.append('div').style('margin-bottom', '5px').style('color', 'rgb(136, 136, 136)').text('Cutoff grades')
 
 	const textarea = gradeValuesDiv
 		.append('textarea')
@@ -168,16 +164,8 @@ function showMenu_discrete(self: any, div: any) {
 		rangeNameDiv.selectAll('*').remove()
 		const breaks: number[] = textarea2breaks()
 		if (breaks.length == 0) return
-		rangeNameDiv
-			.append('div')
-			.style('margin-bottom', '3px')
-			.style('color', 'rgb(136, 136, 136)')
-			.text('Range')
-		rangeNameDiv
-			.append('div')
-			.style('margin-bottom', '3px')
-			.style('color', 'rgb(136, 136, 136)')
-			.text('Label')
+		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Range')
+		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Label')
 		for (const [i, b1] of breaks.entries()) {
 			// each break creates a group
 			const b0 = breaks[i - 1]
@@ -224,7 +212,7 @@ function showMenu_discrete(self: any, div: any) {
 					.split('\n')
 					.map(Number)
 					.filter((i: number) => Number.isInteger(i) && i >= 1 && i <= 5)
-			)
+			),
 		]
 		if (lst.size == 0) return []
 		return lst.sort((i: number, j: number) => i - j)
@@ -235,14 +223,16 @@ function showMenu_discrete(self: any, div: any) {
 		.append('button')
 		.text('Apply')
 		.style('margin', '10px')
-		.on('click', (event: MouseEvent) => {
+		.on('click', (event: any) => {
 			self.q.breaks = textarea2breaks()
 			self.q.groupNames = []
 			for (const i of rangeNameDiv.selectAll('input').nodes()) {
 				self.q.groupNames.push(i.value)
 			}
-			(event.target as HTMLButtonElement).disabled = true;
-			(event.target as HTMLButtonElement).innerHTML = 'Loading...'
+			event.target.disabled = true
+			event.target.innerHTML = 'Loading...'
+			// (event.target as HTMLButtonElement).disabled = true
+			// (event.target as HTMLButtonElement).innerHTML = 'Loading...'
 			self.runCallback()
 		})
 }
@@ -256,10 +246,7 @@ function showMenu_cutoff(self: any, div: any) {
 		.style('gap', '20px')
 
 	// row 1
-	holder
-		.append('div')
-		.text('Grade cutoff')
-		.style('opacity', 0.4)
+	holder.append('div').text('Grade cutoff').style('opacity', 0.4)
 	const sd = holder.append('div')
 	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
 	for (const i of cutoffGrades) {
@@ -304,16 +291,13 @@ function showMenu_cutoff(self: any, div: any) {
 	let timeScaleChoice: string
 	if (self.q.mode == 'cox') {
 		timeScaleChoice = self.q.timeScale
-		holder
-			.append('div')
-			.text('Time axis')
-			.style('opacity', 0.4)
-		const options: { label: string, value: string, checked?: boolean }[] = [
+		holder.append('div').text('Time axis').style('opacity', 0.4)
+		const options: { label: string; value: string; checked?: boolean }[] = [
 			{
 				label: 'Years since entry into the cohort', // may define from ds
-				value: 'time'
+				value: 'time',
 			},
-			{ label: 'Age', value: 'age' }
+			{ label: 'Age', value: 'age' },
 		]
 		if (self.q.timeScale == 'age') {
 			options[1].checked = true
@@ -324,7 +308,7 @@ function showMenu_cutoff(self: any, div: any) {
 			holder: holder.append('div'),
 			options,
 			styles: { margin: '' },
-			callback: (v: string) => (timeScaleChoice = v)
+			callback: (v: string) => (timeScaleChoice = v),
 		})
 	}
 
@@ -333,7 +317,7 @@ function showMenu_cutoff(self: any, div: any) {
 		.append('button')
 		.text('Apply')
 		.style('margin', '10px')
-		.on('click', (event: MouseEvent ) => {
+		.on('click', (event: any) => {
 			const grade = gradeSelect.property('selectedIndex') + 1
 			self.q.breaks[0] = grade
 			if (self.q.mode == 'binary') {
@@ -345,8 +329,10 @@ function showMenu_cutoff(self: any, div: any) {
 				self.q.groupNames[1] = `Event (grade >= ${grade})`
 				self.q.timeScale = timeScaleChoice
 			}
-			(event.target as HTMLButtonElement).disabled = true;
-			(event.target as HTMLButtonElement).innerHTML = 'Loading...'
+			event.target.disabled = true
+			event.target.innerHTML = 'Loading...'
+			// (event.target as HTMLButtonElement).disabled = true
+			// (event.target as HTMLButtonElement).innerHTML = 'Loading...'
 			self.runCallback()
 		})
 }
@@ -370,6 +356,7 @@ export function fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q) {
 		tw.q.value_by_max_grade = true
 	}
 	if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+		//ignore
 	} else {
 		tw.q.bar_by_grade = true
 	}

@@ -42,22 +42,22 @@ export function getHandler(self: TermSettingInstance) {
 				width: 500,
 				height: 100,
 				xpad: 10,
-				ypad: 20
+				ypad: 20,
 			}
-			try {
-				const d = await self.vocabApi!.getViolinPlotData({
-					termid: self.term!.id,
-					filter: self.filter,
-					svgw: self.num_obj.plot_size.width,
-					orientation: 'horizontal',
-					datasymbol: 'bean',
-					radius: 5,
-					strokeWidth: 0.2
-				})
-				self.num_obj.density_data = convertViolinData(d)
-			} catch (e) {
-				throw e
-			}
+			// try {
+			const d = await self.vocabApi!.getViolinPlotData({
+				termid: self.term!.id,
+				filter: self.filter,
+				svgw: self.num_obj.plot_size.width,
+				orientation: 'horizontal',
+				datasymbol: 'bean',
+				radius: 5,
+				strokeWidth: 0.2,
+			})
+			self.num_obj.density_data = convertViolinData(d)
+			// } catch (e) {
+			// 	throw e
+			// }
 			self.dom.num_holder = div
 			div.selectAll('*').remove()
 			self.dom.bins_div = div.append('div').style('padding', '5px')
@@ -107,11 +107,11 @@ export function getHandler(self: TermSettingInstance) {
 					// delete self.q and create new with default
 					// TODO: rightnow reset will devide bins at max-min/2 as per logic at line 134
 					// if it must be reset at median, the logic must be changned
-					delete self.q 
+					delete self.q
 					delete self.numqByTermIdModeType[self.term!.id!]
 					getHandler(self).showEditMenu(self.dom.num_holder)
 				})
-		}
+		},
 	}
 }
 
@@ -140,13 +140,13 @@ function setqDefaults(self: TermSettingInstance) {
 				{
 					startunbounded: true,
 					stopinclusive: true,
-					stop: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+					stop: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2),
 				},
 				{
 					stopunbounded: true,
-					start: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
-				}
-			]
+					start: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2),
+				},
+			],
 		}
 	}
 
@@ -154,7 +154,7 @@ function setqDefaults(self: TermSettingInstance) {
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id!].binary))
 	self.q = Object.assign(cacheCopy, self.q)
 	if (self.q!.lst) {
-		self.q!.lst.forEach(bin => {
+		self.q!.lst.forEach((bin) => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
 			if (!('range' in bin)) bin.range = get_bin_range_equation(bin, self.q)
 		})
@@ -164,11 +164,7 @@ function setqDefaults(self: TermSettingInstance) {
 
 async function renderCuttoffInput(self: TermSettingInstance) {
 	// binary mode unqiue UI
-	self.dom.cutoff_div
-		.append('span')
-		.style('margin-right', '5px')
-		.style('opacity', 0.5)
-		.text('Boundary value')
+	self.dom.cutoff_div.append('span').style('margin-right', '5px').style('opacity', 0.5).text('Boundary value')
 
 	/* known bug:
 	when percentile checkbox is checked,
@@ -189,7 +185,7 @@ async function renderCuttoffInput(self: TermSettingInstance) {
 		labeltext: 'Use percentile',
 		checked: self.q!.modeBinaryCutoffType == 'percentile',
 		divstyle: { display: 'inline-block' },
-		callback: handleCheckbox
+		callback: handleCheckbox,
 	})
 
 	async function handleChange(this: any) {
@@ -213,7 +209,7 @@ async function renderCuttoffInput(self: TermSettingInstance) {
 		// cutoff is the actual data value, not percentile
 		self.q!.lst![0].stop = cutoff
 		self.q!.lst![1].start = cutoff
-		self.q!.lst!.forEach(bin => {
+		self.q!.lst!.forEach((bin) => {
 			bin.label = get_bin_label(bin, self.q)
 			bin.range = get_bin_range_equation(bin, self.q)
 		})
@@ -236,7 +232,11 @@ async function renderCuttoffInput(self: TermSettingInstance) {
 		}
 	}
 	async function setPercentile() {
-		const data = await self.opts.vocabApi.getPercentile(self.term!.id!, [self.q!.modeBinaryCutoffPercentile!], self.filter!)
+		const data = await self.opts.vocabApi.getPercentile(
+			self.term!.id!,
+			[self.q!.modeBinaryCutoffPercentile!],
+			self.filter!
+		)
 		updateUI(data.values[0])
 	}
 }
@@ -253,14 +253,14 @@ function processCustomBinInputs(self: TermSettingInstance) {
 			startunbounded: true,
 			stop: val,
 			startinclusive,
-			stopinclusive
+			stopinclusive,
 		},
 		{
 			start: val,
 			startinclusive,
 			stopinclusive,
-			stopunbounded: true
-		}
+			stopunbounded: true,
+		},
 	]
 
 	// assign bin labels

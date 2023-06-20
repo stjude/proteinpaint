@@ -4,6 +4,7 @@ import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import {
+	TermSettingInstance,
 	TermSettingOpts,
 	Term,
 	Q,
@@ -16,6 +17,7 @@ import {
 	NoTermPromptOptsEntry,
 	Handler,
 	Filter,
+	SampleCountsEntry,
 } from '#shared/types/index'
 /*
 ********************* EXPORTED
@@ -43,18 +45,14 @@ export function get$id() {
 	return <string>`${$id++}${idSuffix}`
 }
 
-type DefaultQByTsHandler = {
-	[index: string]: Q
-}
+type DefaultQByTsHandler = { [index: string]: Q }
 
 const defaultOpts: { menuOptions: string; menuLayout: string } = {
 	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical',
 }
 
-type HandlerByType = {
-	[index: string]: Handler
-}
+type HandlerByType = { [index: string]: Handler }
 
 class TermSetting {
 	opts: TermSettingOpts
@@ -68,14 +66,14 @@ class TermSetting {
 	usecase: UseCase | undefined
 	abbrCutoff: number | undefined
 	$id: string | undefined
-	sampleCounts: { k: string; v: number }[] | undefined
+	sampleCounts: SampleCountsEntry[] | undefined
 	noTermPromptOptions: NoTermPromptOptsEntry[] | undefined
 	//Optional opts in script, not init()
 	doNotHideTipInMain: boolean | undefined
 	//Created
 	hasError: boolean
 	api: Api
-	numqByTermIdModeType: unknown
+	numqByTermIdModeType: any //{}
 	handlerByType: HandlerByType
 	showTree: any
 	showGeneSearch: any
@@ -84,17 +82,17 @@ class TermSetting {
 	updateUI: any
 	handler: any
 	//Pill data
+	term: any
 	data: any
 	error: string | undefined
 	filter: Filter | undefined
-	term: Term | undefined
 	q: Q | undefined
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
 		this.vocabApi = opts.vocabApi
 		this.activeCohort = opts.activeCohort
-		this.placeholder = opts.placeholder
+		this.placeholder = opts.placeholder as string
 		this.durations = { exit: 0 }
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
@@ -285,7 +283,7 @@ class TermSetting {
 				if (typeSubtype == 'numeric.toggle') {
 					_ = await import(`./numeric.toggle.js`)
 				} else {
-					_ = await import(`./handlers/${typeSubtype}.js`)
+					_ = await import(`./handlers/${typeSubtype}.ts`)
 				}
 				this.handlerByType[typeSubtype] = await _.getHandler(this)
 			} catch (e) {
@@ -298,17 +296,18 @@ class TermSetting {
 
 export const termsettingInit = getInitFxn(TermSetting)
 
-function setRenderers(self: any) {
+function setRenderers(self: TermSettingInstance) {
 	self.initUI = () => {
 		// run only once, upon init
 		if (self.opts.$id) {
 			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
 		}
 
-		if (!self.dom.holder) return
-
-		// toggle the display of pilldiv and nopilldiv with availability of this.term
-		self.dom.nopilldiv = self.dom.holder.append('div').style('cursor', 'pointer').on('click', self.clickNoPillDiv)
+		if (!self.dom.holder) return // toggle the display of pilldiv and nopilldiv with availability of this.term
+		;(self.dom.nopilldiv as HTMLElement) = self.dom.holder
+			.append('div')
+			.style('cursor', 'pointer')
+			.on('click', self.clickNoPillDiv)
 		self.dom.pilldiv = self.dom.holder.append('div')
 
 		// nopilldiv - placeholder label
@@ -364,7 +363,7 @@ function setRenderers(self: any) {
 				.style('font-size', '.8em')
 				.html((d: string) => d.toUpperCase())
 				.on('click', (event: any, d: string) => {
-					if (d == 'delete') self.removeTerm()
+					if (d == 'delete') self.removeTerm!()
 					else if (d == 'replace') {
 						self.showTree(event.target)
 					} else throw 'unknown button'
@@ -429,19 +428,19 @@ function setRenderers(self: any) {
 			.style('align-items', 'center')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.html(self.handler.getPillName)
+			.html(self.handler!.getPillName)
 
-		self.updatePill.call(this)
+		self.updatePill!.call(this)
 	}
 
-	self.updatePill = async function () {
+	self.updatePill = async function (this: string) {
 		// decide if to show/hide the right half based on term status, and modify pill
 		const one_term_div = select(this)
 
-		const pillstat: { text: string; bgcolor?: string } = self.handler.getPillStatus() || {}
+		const pillstat: { text: string; bgcolor?: string } = self.handler!.getPillStatus() || {}
 		// { text, bgcolor }
 
-		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px').html(self.handler.getPillName)
+		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px').html(self.handler!.getPillName)
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
@@ -479,14 +478,14 @@ function setRenderers(self: any) {
 	}
 }
 
-function setInteractivity(self: any) {
+function setInteractivity(self: TermSettingInstance) {
 	self.removeTerm = () => {
-		self.opts.callback(null)
+		self.opts.callback!(null)
 	}
 
 	self.cancelGroupsetting = () => {
-		self.opts.callback({
-			term: self.term,
+		self.opts.callback!({
+			term: self.term!,
 			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } },
 		})
 	}
@@ -512,8 +511,8 @@ function setInteractivity(self: any) {
 					} else if (option.termtype) {
 						// pass in default q{} to customize settings in edit menu
 						if (option.q) self.q = structuredClone(option.q)
-						await self.setHandler(option.termtype)
-						self.handler.showEditMenu(self.dom.tip.d)
+						await self.setHandler!(option.termtype)
+						self.handler!.showEditMenu(self.dom.tip.d)
 					} else {
 						throw 'termtype missing'
 					}
@@ -524,13 +523,13 @@ function setInteractivity(self: any) {
 		// load the input ui for this term type
 	}
 
-	self.showTree = async function (holder: Selection, event: any) {
+	self.showTree = async function (holder: Selection, event: MouseEvent | undefined) {
 		self.dom.tip.clear()
 		if (holder)
 			self.dom.tip.showunder(
 				holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node()
 			)
-		else self.dom.tip.show(event.clientX, event.clientY)
+		else self.dom.tip.show(event!.clientX, event!.clientY)
 
 		const termdb = await import('#termdb/app')
 		termdb.appInit({
@@ -549,16 +548,16 @@ function setInteractivity(self: any) {
 
 					const tw = term.term ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
 					if (self.opts.customFillTw) self.opts.customFillTw(tw)
-					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
+					await call_fillTW(tw, self.vocabApi!, self.opts.defaultQ4fillTW)
 					// tw is now furbished
 
-					self.opts.callback(tw)
+					self.opts.callback!(tw)
 				},
 			},
 		})
 	}
 
-	self.showMenu = (event: any, clickedElem = null, menuHolder = null) => {
+	self.showMenu = (event: MouseEvent, clickedElem = null, menuHolder = null) => {
 		const tip = self.dom.tip
 		tip.clear()
 		// self.dom.holder really is set to clickedElem because
@@ -570,29 +569,29 @@ function setInteractivity(self: any) {
 			else tip.show(event.clientX, event.clientY)
 		}
 
-		type opt = { label: string; callback: (f: any) => void }
+		type opt = { label: string; callback: (f?: any) => void }
 		const options: opt[] = []
 
 		if (self.term?.type == 'categorical' && self.q?.groupsetting?.inuse) {
 			// this instance is using a categorical term doing groupsetting; add option to cancel it
 			// as categorical edit menu cannot do the canceling
-			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting })
+			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
 		}
 
 		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
-			options.push({ label: 'Edit', callback: self.handler.showEditMenu })
+			options.push({ label: 'Edit', callback: self.handler!.showEditMenu } as opt)
 		}
 
 		if (minimatch('reuse', self.opts.menuOptions)) {
-			options.push({ label: 'Reuse', callback: self.showReuseMenu })
+			options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
 		}
 
 		if (minimatch('replace', self.opts.menuOptions)) {
-			options.push({ label: 'Replace', callback: self.showTree })
+			options.push({ label: 'Replace', callback: self.showTree } as opt)
 		}
 
 		if (minimatch('remove', self.opts.menuOptions)) {
-			options.push({ label: 'Remove', callback: self.removeTerm })
+			options.push({ label: 'Remove', callback: self.removeTerm } as opt)
 		}
 
 		const d3elem = menuHolder || tip.d
@@ -604,7 +603,7 @@ function setInteractivity(self: any) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text((d: opt) => d.label)
-			.on('click', (event: any, d: opt) => {
+			.on('click', (event: MouseEvent, d: opt) => {
 				self.dom.tip.clear()
 				d.callback(self.dom.tip.d)
 			})
@@ -621,12 +620,12 @@ function setInteractivity(self: any) {
 			.style('color', '#aaa')
 			.html('Save current setting as ')
 
-		const qlst = self.vocabApi.getCustomTermQLst(self.term)
+		const qlst = self.vocabApi!.getCustomTermQLst(self.term!)
 		const qNameInput = saveDiv
 			.append('input')
 			.attr('type', 'text')
 			.attr('placeholder', qlst.nextReuseId)
-			.attr('value', self.q.reuseId || qlst.nextReuseId)
+			.attr('value', self.q!.reuseId || qlst.nextReuseId)
 		//.style('width', '300px')
 
 		saveDiv
@@ -635,16 +634,16 @@ function setInteractivity(self: any) {
 			.html('Save')
 			.on('click', () => {
 				const reuseId = qNameInput.property('value').trim() || qlst.nextReuseId
-				self.q.reuseId = reuseId
+				self.q!.reuseId = reuseId
 				//self.q.name = self.q.reuseId
-				self.vocabApi.cacheTermQ(self.term, self.q)
-				self.runCallback()
+				self.vocabApi!.cacheTermQ(self.term!, self.q!)
+				self.runCallback!()
 				self.dom.tip.hide()
 			})
 
 		const tableWrapper = _div.append('div').style('margin', '10px')
-		const defaultTw: TW = { term: self.term, q: {} }
-		await fillTermWrapper(defaultTw, self.vocabApi)
+		const defaultTw: TW = { term: self.term!, q: {} }
+		await fillTermWrapper(defaultTw, self.vocabApi!)
 		defaultTw.q.reuseId = 'Default'
 		qlst.push(defaultTw.q)
 		if (qlst.length > 1) {
@@ -660,7 +659,7 @@ function setInteractivity(self: any) {
 			.style('margin', '2px 5px')
 			.each(function (this: BaseType, q: Q) {
 				const tr = select(this)
-				const inuse = equivalentQs(self.q, q)
+				const inuse = equivalentQs(self.q!, q)
 				const html2Use = q.name || (q.reuseId as string)
 				tr.append('td')
 					.style('min-width', '180px')
@@ -683,7 +682,7 @@ function setInteractivity(self: any) {
 							}
 							self.q = q
 							self.dom.tip.hide()
-							self.runCallback()
+							self.runCallback!()
 						})
 				}
 
@@ -694,9 +693,9 @@ function setInteractivity(self: any) {
 						.style('min-width', '80px')
 						.html('Delete')
 						.on('click', async () => {
-							await self.vocabApi.uncacheTermQ(self.term, q)
+							await self.vocabApi!.uncacheTermQ(self.term!, q)
 							self.dom.tip.hide()
-							self.runCallback()
+							self.runCallback!()
 						})
 				}
 			})
@@ -713,7 +712,7 @@ function setInteractivity(self: any) {
 			)
 	}
 
-	self.showGeneSearch = function (clickedElem: any, event: any) {
+	self.showGeneSearch = function (clickedElem: Element | null, event: MouseEvent) {
 		self.dom.tip.clear()
 		if (clickedElem)
 			self.dom.tip.showunder(
@@ -733,7 +732,7 @@ function setInteractivity(self: any) {
 				try {
 					const results = !str
 						? { lst: [] }
-						: await self.vocabApi.findTerm(str, self.activeCohort, self.usecase, 'gene')
+						: await self.vocabApi!.findTerm(str, self.activeCohort!, self.usecase!, 'gene')
 					resultsDiv.selectAll('*').remove()
 					resultsDiv
 						.selectAll('div')
@@ -747,7 +746,7 @@ function setInteractivity(self: any) {
 						.text((gene: any) => gene.name)
 						.on('click', (gene: any) => {
 							self.dom.tip.hide()
-							self.runCallback({
+							self.runCallback!({
 								term: {
 									name: gene.name,
 									type: 'geneVariant',
@@ -789,19 +788,21 @@ function equivalentQs(q0: Q, q1: Q) {
 	return deepEqual(...qlst)
 }
 
-function getDefaultHandler(self: any) {
+function getDefaultHandler(self: TermSettingInstance) {
 	return {
-		// eslint-disable-next-line
-		showEditMenu() {},
-		// eslint-disable-next-line
-		getPillStatus() {},
-		getPillName(d: any) {
+		showEditMenu() {
+			//ignore
+		},
+		getPillStatus() {
+			//ignore
+		},
+		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
 		},
 	}
 }
 
-export function getPillNameDefault(self: any, d: any) {
+export function getPillNameDefault(self: TermSettingInstance, d: any) {
 	if (!self.opts.abbrCutoff) return d.name
 	return d.name.length <= self.opts.abbrCutoff + 2
 		? d.name
@@ -815,7 +816,7 @@ a rendered element such as a pill or a matrix row
 
 tw: termWrapper = {id, term{}, q{}}
 vocabApi
-defaultQ{}
+defaultQByTsHandler{}
 	supply the optional default q{}
 	value is { condition: {mode:'binary'}, ... }
 	with term types as keys
@@ -858,7 +859,7 @@ async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: Def
 	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.js`)
 	else if (tw.term.type) {
 		try {
-			_ = await import(`./handlers/${type}.js`)
+			_ = await import(`./handlers/${type}.ts`)
 		} catch (error) {
 			throw `Type ${type} does not exist`
 		}
@@ -873,7 +874,7 @@ function mayValidateQmode(tw: TW) {
 	}
 	// q.mode is set. here will validate
 	if (typeof tw.q.mode != 'string') throw 'q.mode not string'
-	if (tw.q.mode == '') throw 'q.mode is empty string'
+	// if (tw.q.mode == '') throw 'q.mode is empty string' //No longer required with typescript
 	// handler code should implement term type-specific validations
 	// e.g. to prevent cases such as mode=continuous for categorical term
 }

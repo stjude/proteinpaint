@@ -18,19 +18,19 @@ other internal functions:
 	addOnDrop() //move dom from one group holder to another group holder
 */
 
-type KeyLabel = { key: string | number, label: string}
-type ScaleEntry = { label: string, value: number, checked: boolean }
-type GroupArgs = { holder: any, name: string, group_idx: number, group_type?: string }
+type KeyLabel = { key: string | number; label: string }
+type ScaleEntry = { label: string; value: number; checked: boolean }
+type GroupArgs = { holder: any; name: string; group_idx: number; group_type?: string }
 
 export function setGroupsettingMethods(self: any) {
-	self.regroupMenu = function(grp_count: number, temp_cat_grps: GroupSetEntry) {
+	self.regroupMenu = function (grp_count: number, temp_cat_grps: GroupSetEntry) {
 		if (self.q.mode == 'cutoff') {
 			self.showCutoff()
 		} else {
 			self.showDraggables(grp_count, temp_cat_grps)
 		}
 	}
-	self.showCutoff = function() {
+	self.showCutoff = function () {
 		// regroup menu for cutoff mode
 		// NOTE: assumes condition term. Eventually, apply to any ordinal term.
 		self.dom.tip.clear().showunder(self.dom.holder.node())
@@ -77,13 +77,13 @@ export function setGroupsettingMethods(self: any) {
 			{
 				label: 'Time from study entry',
 				value: 1,
-				checked: defaultScale == 'time' ? true : false
+				checked: defaultScale == 'time' ? true : false,
 			},
 			{
 				label: 'Age',
 				value: 2,
-				checked: defaultScale == 'age' ? true : false
-			}
+				checked: defaultScale == 'age' ? true : false,
+			},
 		]
 
 		// build radio buttons for time scale
@@ -92,7 +92,7 @@ export function setGroupsettingMethods(self: any) {
 			options: scales,
 			callback: (value: number) => {
 				self.q.timeScale = value == 1 ? 'time' : 'age'
-			}
+			},
 		})
 
 		// 'Apply' button
@@ -114,27 +114,27 @@ export function setGroupsettingMethods(self: any) {
 				const belowCutoff = [
 					{
 						key: '0',
-						label: 'No condition'
+						label: 'No condition',
 					},
 					{
 						key: '-1',
-						label: 'Not tested'
-					}
+						label: 'Not tested',
+					},
 				]
-				belowCutoff.push(...grades.filter(grade => Number(grade.key) < self.q.cutoff))
+				belowCutoff.push(...grades.filter((grade) => Number(grade.key) < self.q.cutoff))
 
 				// above cutoff group
-				const aboveCutoff = grades.filter(grade => Number(grade.key) >= self.q.cutoff)
+				const aboveCutoff = grades.filter((grade) => Number(grade.key) >= self.q.cutoff)
 
 				const groups = [
 					{
 						name: `Grade < ${self.q.cutoff}`,
-						values: belowCutoff
+						values: belowCutoff,
 					},
 					{
 						name: `Grade >= ${self.q.cutoff}`,
-						values: aboveCutoff
-					}
+						values: aboveCutoff,
+					},
 				]
 
 				self.q.type = 'custom-groupset'
@@ -143,8 +143,8 @@ export function setGroupsettingMethods(self: any) {
 					customset: {
 						name: 'grade cutoff',
 						is_grade: true,
-						groups
-					}
+						groups,
+					},
 				}
 				self.dom.tip.hide()
 				self.runCallback()
@@ -163,7 +163,7 @@ export function setGroupsettingMethods(self: any) {
 		*/
 	}
 
-	self.showDraggables = function(grp_count: number, temp_cat_grps: GroupSetEntry) {
+	self.showDraggables = function (grp_count: number, temp_cat_grps: GroupSetEntry) {
 		//start with default 2 groups, extra groups can be added by user
 		const default_grp_count = grp_count || 2
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
@@ -172,13 +172,13 @@ export function setGroupsettingMethods(self: any) {
 			{
 				type: 'values',
 				values: Object.keys(values)
-					.filter(key => {
+					.filter((key) => {
 						if (!values[key].uncomputable) return true
 					})
-					.map(key => {
+					.map((key) => {
 						return { key, label: values[key].label }
-					})
-			}
+					}),
+			},
 		]
 		const default_empty_group = { type: 'values', values: [] }
 		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
@@ -194,19 +194,19 @@ export function setGroupsettingMethods(self: any) {
 				? self.q.groupsetting.customset
 				: default_groupset
 
-		Object.keys(cat_grps).forEach(key => {
+		Object.keys(cat_grps).forEach((key) => {
 			if (cat_grps[key].group == 0 || (!grpsetting_flag && cat_grps[key].uncomputable == true))
 				excluded_cats.push({ key, label: cat_grps[key].label })
 		})
 
 		//initiate empty customset
-		let customset: GroupSetEntry = { groups: [] }
-		let group_names: (string | undefined)[] = []
+		const customset: GroupSetEntry = { groups: [] }
+		const group_names: (string | undefined)[] = []
 		if (self.q.bar_by_grade) customset.is_grade = true
 		else if (self.q.bar_by_children) customset.is_subcondition = true
 
 		for (let i = 0; i < default_grp_count; i++) {
-			let group_name: (string | undefined)=
+			let group_name: string | undefined =
 				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name
 					? groupset.groups[i].name
 					: undefined
@@ -218,7 +218,7 @@ export function setGroupsettingMethods(self: any) {
 
 			customset.groups.push({
 				values: [],
-				name: group_name as (string)
+				name: group_name as string,
 			})
 		}
 
@@ -231,11 +231,7 @@ export function setGroupsettingMethods(self: any) {
 			.attr('class', 'group_edit_div')
 			.style('margin', '10px 5px 5px 5px')
 
-		header_buttons_div
-			.append('label')
-			.attr('for', 'grp_ct')
-			.style('display', 'inline-block')
-			.html('Number of groups')
+		header_buttons_div.append('label').attr('for', 'grp_ct').style('display', 'inline-block').html('Number of groups')
 
 		const group_ct_select = header_buttons_div
 			.append('select')
@@ -289,7 +285,7 @@ export function setGroupsettingMethods(self: any) {
 		const exclude_grp_args = {
 			holder: groups_holder,
 			name: 'Excluded categories',
-			group_idx: 0
+			group_idx: 0,
 		}
 
 		const exclude_div = initGroupDiv(exclude_grp_args)
@@ -298,11 +294,8 @@ export function setGroupsettingMethods(self: any) {
 			addOnDrop(exclude_list, 0)
 		})
 
-		const exclude_list = exclude_div
-			.append('div')
-			.style('margin', '5px')
-			.classed('sjpp-drag-list-div', true) //For unit testing
-		
+		const exclude_list = exclude_div.append('div').style('margin', '5px').classed('sjpp-drag-list-div', true) //For unit testing
+
 		// show excluded categories
 		addGroupItems(exclude_list, excluded_cats)
 
@@ -335,7 +328,7 @@ export function setGroupsettingMethods(self: any) {
 				self.q.type = 'custom-groupset'
 				self.q.groupsetting = {
 					inuse: true,
-					customset: customset
+					customset: customset,
 				}
 				self.dom.tip.hide()
 				self.runCallback()
@@ -347,7 +340,7 @@ export function setGroupsettingMethods(self: any) {
 				holder: non_exclude_div,
 				name: 'Group ' + (i + 1),
 				group_idx: i + 1,
-				group_type: group.type
+				group_type: group.type,
 			}
 			const group_div = initGroupDiv(group_args)
 
@@ -373,14 +366,11 @@ export function setGroupsettingMethods(self: any) {
 					self.q.type = 'custom-groupset'
 					self.q.groupsetting = {
 						inuse: true,
-						customset
+						customset,
 					}
 				})
 
-			const group_items_div = group_div
-				.append('div')
-				.style('margin', '5px')
-				.classed('sjpp-drag-list-div', true) //For unit testing
+			const group_items_div = group_div.append('div').style('margin', '5px').classed('sjpp-drag-list-div', true) //For unit testing
 			// show categories from the group
 			if (!group.type || group.type == 'values') addGroupItems(group_items_div, group.values)
 			else if (group.type == 'filter') {
@@ -395,7 +385,7 @@ export function setGroupsettingMethods(self: any) {
 						emptyLabel: '+New Filter',
 						holder: group_items_div.style('width', '320px'),
 						vocab: self.vocab,
-						callback: () => {}
+						//callback: () => {},
 					}).main(filter)
 				}
 			} else {
@@ -468,12 +458,12 @@ export function setGroupsettingMethods(self: any) {
 			group_items
 				.enter()
 				.append('div')
-				.each(function(this: Element, val: KeyLabel) {
+				.each(function (this: Element, val: KeyLabel) {
 					if (cat_grps[val.key].group == undefined && !cat_grps[val.key].uncomputable) cat_grps[val.key].group = 1
 					else if (cat_grps[val.key].group == undefined && cat_grps[val.key].uncomputable == true)
 						cat_grps[val.key].group = 0
 					const samplecount_obj = self.category2samplecount
-						? self.category2samplecount.find(d => d.key == val.key)
+						? self.category2samplecount.find((d) => d.key == val.key)
 						: 'n/a'
 					const count =
 						samplecount_obj !== undefined && samplecount_obj !== 'n/a'

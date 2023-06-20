@@ -17,8 +17,8 @@ self.term{}
 */
 
 //TODO move to common.ts??? Corresponds to client/shared/common.js
-type MClassEntry = { label: string, color: string, dt: number, desc: string, key: string }
-type GroupsEntry = { name: string, items: MClassEntry[]}
+type MClassEntry = { label: string; color: string; dt: number; desc: string; key: string }
+type GroupsEntry = { name: string; items: MClassEntry[] }
 
 const term_name = 'Variants in a locus'
 
@@ -33,11 +33,11 @@ export function getHandler(self: any) {
 			return { text: self.q.exclude?.length ? 'matching variants' : 'any variant class' }
 		},
 
-		validateQ(data: Q) {},
+		//validateQ(data: Q) {},
 
 		async showEditMenu(div: Element) {
 			await makeEditMenu(self, div)
-		}
+		},
 	}
 }
 
@@ -51,7 +51,8 @@ export function fillTW(tw: TW, vocabApi: VocabApi) {
 	{
 		// apply optional ds-level configs for this specific term
 		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant
-		if (c && tw.term.name) { //if (c) valid js code but `&& tw.term.name` required to avoid type error
+		if (c && tw.term.name) {
+			//if (c) valid js code but `&& tw.term.name` required to avoid type error
 			// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
 			Object.assign(tw.q, c.default || {}, c.byGene?.[tw.term.name] || {}, tw.q)
 		}
@@ -83,15 +84,9 @@ export function fillTW(tw: TW, vocabApi: VocabApi) {
 }
 
 function makeEditMenu(self: any, _div: any) {
-	const div = _div
-		.append('div')
-		.style('padding', '5px')
-		.style('cursor', 'pointer')
+	const div = _div.append('div').style('padding', '5px').style('cursor', 'pointer')
 
-	div
-		.append('div')
-		.style('font-size', '1.2rem')
-		.text(self.term.name)
+	div.append('div').style('font-size', '1.2rem').text(self.term.name)
 	const applyBtn = div
 		.append('button')
 		.property('disabled', true)
@@ -100,22 +95,22 @@ function makeEditMenu(self: any, _div: any) {
 		.on('click', () => {
 			self.runCallback({
 				term: JSON.parse(JSON.stringify(self.term)),
-				q: { exclude }
+				q: { exclude },
 			})
 		})
 
 	const exclude = self.q?.exclude?.slice().sort() || []
 	const origExclude = JSON.stringify(exclude)
 	const mclasses = Object.values(mclass)
-	const dtNums = [...new Set(mclasses.map(c => c.dt))].sort() as number[]
+	const dtNums = [...new Set(mclasses.map((c) => c.dt))].sort() as number[]
 
 	const groups: GroupsEntry[] = []
 	for (const dt of dtNums) {
-		const items = mclasses.filter(c => c.dt === dt)
+		const items = mclasses.filter((c) => c.dt === dt)
 		if (items.length) {
 			groups.push({
 				name: dt2label[dt],
-				items
+				items,
 			})
 		}
 	}
@@ -130,12 +125,9 @@ function makeEditMenu(self: any, _div: any) {
 		.style('margin', '5px')
 		.style('padding-left', '5px')
 		.style('text-align', 'left')
-		.each(function(this: any, grp: GroupsEntry) {
+		.each(function (this: any, grp: GroupsEntry) {
 			const div = select(this)
-			div
-				.append('div')
-				.style('font-weight', 600)
-				.html(grp.name)
+			div.append('div').style('font-weight', 600).html(grp.name)
 			//.on('click', )
 
 			div
@@ -145,14 +137,14 @@ function makeEditMenu(self: any, _div: any) {
 				.append('div')
 				.style('margin', '5px')
 				.style('display', 'inline-block')
-				.on('click', function(this: any, event: Event, d: MClassEntry) {
+				.on('click', function (this: any, event: Event, d: MClassEntry) {
 					const i = exclude.indexOf(d.key)
 					if (i == -1) exclude.push(d.key)
 					else exclude.splice(i, 1)
 					select(this.lastChild).style('text-decoration', i == -1 ? 'line-through' : '')
 					applyBtn.property('disabled', JSON.stringify(exclude) === origExclude)
 				})
-				.each(function(d: MClassEntry) {
+				.each(function (d: MClassEntry) {
 					const itemDiv = select(this)
 					itemDiv
 						.append('div')

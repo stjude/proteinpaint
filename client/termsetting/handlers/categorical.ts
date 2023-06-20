@@ -46,11 +46,12 @@ export function getHandler(self: any) {
 			if (q.type == 'values') {
 				if (!t.values) self.error = `no term.values defined ${endNote}`
 				if (q.mode == 'binary') {
-					if (Object.keys(t.values as TermValues).length != 2) self.error = `term.values must have exactly two keys ${endNote}`
+					if (Object.keys(t.values as TermValues).length != 2)
+						self.error = `term.values must have exactly two keys ${endNote}`
 
 					if (data.sampleCounts) {
 						for (const key in t.values) {
-							if (!data.sampleCounts.find(d => d.key === key))
+							if (!data.sampleCounts.find((d) => d.key === key))
 								self.error = `there are no samples for the required binary value=${key} ${endNote}`
 						}
 					}
@@ -80,7 +81,7 @@ export function getHandler(self: any) {
 
 					if (data.sampleCounts) {
 						for (const grp of groupset.groups) {
-							if (!data.sampleCounts.find(d => d.label === grp.name))
+							if (!data.sampleCounts.find((d) => d.label === grp.name))
 								throw `there are no samples for the required binary value=${grp.name} ${endNote}`
 						}
 					}
@@ -110,13 +111,13 @@ export function getHandler(self: any) {
 					self.term.q = {}
 				} // ...
 			}
-		}
+		},
 	}
 }
 
 // same method used to set methods for categorical and condition terms
 export function setCategoryConditionMethods(self: any) {
-	self.validateGroupsetting = function() {
+	self.validateGroupsetting = function () {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		const text = self.q?.name || self.q?.reuseId
 		if (text) return { text }
@@ -127,7 +128,7 @@ export function setCategoryConditionMethods(self: any) {
 			if (!i)
 				return {
 					text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
-					bgcolor: 'red'
+					bgcolor: 'red',
 				}
 			return { text: i.name }
 		}
@@ -141,10 +142,12 @@ export function setCategoryConditionMethods(self: any) {
 	}
 
 	/******************* Functions for Categorical terms *******************/
-	self.showGrpOpts = async function(_div: string | Selection) {
+	self.showGrpOpts = async function (_div: string | Selection) {
 		const tgs = self.term.groupsetting
 		const qgs = self.q?.groupsetting as GroupSetting
-		const activeGroup = qgs?.predefined_groupset_idx ? tgs?.lst?.[qgs?.predefined_groupset_idx] : (qgs?.inuse && qgs.customset)
+		const activeGroup = qgs?.predefined_groupset_idx
+			? tgs?.lst?.[qgs?.predefined_groupset_idx]
+			: qgs?.inuse && qgs.customset
 
 		if (!activeGroup) self.regroupMenu()
 		else {
@@ -155,11 +158,9 @@ export function setCategoryConditionMethods(self: any) {
 
 	self.getQlst = () => {
 		/********* Not used at all?? Commented out b/c of type errors *********/
-
 		// const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		// const defaultGrpName = `default categories ${values ? '(n=' + Object.keys(values).length + ')' : ''}`
 		// const activeName = self.q.name || qgs?.name || activeGroup?.name || defaultGrpName
-
 		// //show button/s for default groups
 		// const gsLst = tgs?.lst || []
 		// const qlst = self.vocabApi.getCustomTermQLst(self.term)
@@ -171,8 +172,6 @@ export function setCategoryConditionMethods(self: any) {
 		// 		callback
 		// 	}
 		// })
-
-
 		/*
 		const div = _div.append('div').style('display', 'grid')
 		div
@@ -331,7 +330,7 @@ export function setCategoryConditionMethods(self: any) {
 	// 	}
 	// }
 
-	self.grpSet2valGrp = function(groupset: BaseGroupSet) {
+	self.grpSet2valGrp = function (groupset: BaseGroupSet) {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const vals_with_grp = JSON.parse(JSON.stringify(values))
 		for (const [i, g] of groupset.groups.entries()) {
@@ -373,6 +372,7 @@ export function fillTW(tw: TW) {
 			tw.q.value_by_max_grade = true
 		}
 		if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+			//ignore
 		} else {
 			tw.q.bar_by_grade = true
 		}
