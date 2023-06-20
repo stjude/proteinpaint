@@ -367,7 +367,7 @@ async function unusedCode() {
 	rangequery_rglst(tk, block, geneTerm)
 
 	try {
-		const plot = await import('#plots/plot.app')
+		const plot = await import('#plots/plot.app.js')
 		await plot.appInit({
 			holder,
 			vocab: tk.mds.termdb.vocabApi.state.vocab,

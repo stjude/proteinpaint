@@ -72,8 +72,8 @@ class Scatter {
 			loadingDiv: this.opts.holder
 				.append('div')
 				.style('position', 'absolute')
-				.style('left', '50%')
-				.style('top', '50%'),
+				.style('left', '45%')
+				.style('top', '60%'),
 			tip: new Menu({ padding: '5px' }),
 			tooltip: new Menu({ padding: '5px' }),
 			controlsHolder
@@ -125,6 +125,11 @@ class Scatter {
 	// or current.state != replcament.state
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+		if (this.config.settings.sampleScatter.regression !== 'None' && this.config.term0) {
+			if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
+			this.dom.loadingDiv.style('display', 'block').html('Processing data...')
+		}
+
 		if (this.dom.header)
 			this.dom.header.html(
 				this.config.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
@@ -133,8 +138,6 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 		this.charts = []
-		this.mainDiv.selectAll('*').remove()
-		this.dom.loadingDiv.style('display', 'block').html('Processing data...')
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
 		if (results.error) throw results.error
 		for (const [key, data] of Object.entries(results)) {

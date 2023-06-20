@@ -1,6 +1,6 @@
 import { getCompInit } from '../rx'
 import { select, selectAll } from 'd3-selection'
-import { getNormalRoot } from '../filter/filter'
+import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
 

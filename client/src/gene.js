@@ -90,7 +90,7 @@ otherwise to show in client.tip
 }
 
 export function findgenemodel_bysymbol(genome, str) {
-	dofetch3('genelookup', {
+	return dofetch3('genelookup', {
 		body: {
 			deep: 1,
 			input: str,

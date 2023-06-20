@@ -1,5 +1,5 @@
 {
-  "version": "2.16.0",
+  "version": "2.17.0",
   "name": "@sjcrh/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server/main.js",
@@ -22,7 +22,7 @@
     "dev1": "trap 'kill %1' INT; npm run transpileDynLoaded & npm run bundle & npm start",
     "server": "trap 'kill %1' INT; npm run dev -w @sjcrh/proteinpaint-server & npm start",
     "client": "npm run dev -w @sjcrh/proteinpaint-client",
-    "ci-pp-server": "tsc server/genome/*.ts server/dataset/*.ts && ./build/dev/resetBundles.sh && node server/server.js &",
+    "ci-pp-server": "tsc --esModuleInterop server/genome/*.ts server/dataset/*.ts && ./build/dev/resetBundles.sh && node server/server.js &",
     "test:integration": "webpack --config=./webpack.config.js && npm run ci-pp-server && sleep 10 && npm run test:integration --workspace=client",
     "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
     "local:integration": "cd client; npm run test:integration",
@@ -42,8 +42,12 @@
     "url": "https://github.com/stjude/proteinpaint"
   },
   "devDependencies": {
-    "typescript": "^5.0.3",
+    "@types/d3": "^7.4.0",
     "@types/estree": "^1.0.1",
-    "@types/node": "^20.2.4"
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "^20.2.4",
+    "@typescript-eslint/eslint-plugin": "^5.60.0",
+    "eslint": "^8.43.0",
+    "typescript": "^5.1.3"
   }
 }

@@ -86,7 +86,11 @@ class TdbStore {
 			})
 
 			for (const [i, savedPlot] of this.state.plots.entries()) {
-				const _ = await import(`../plots/${savedPlot.chartType}.js`)
+				const _ = await import(
+					`../plots/${savedPlot.subfolder ? savedPlot.subfolder + '/' : ''}${savedPlot.chartType}.${
+						savedPlot.extension ? savedPlot.extension : 'js'
+					}`
+				)
 				const plot = await _.getPlotConfig(savedPlot, this.app)
 				this.state.plots[i] = plot
 				if (!('id' in plot)) plot.id = `_AUTOID_${id++}_${i}`
@@ -459,6 +463,7 @@ function validatePlot(p, vocabApi) {
 			if (!p.file) `plot error: missing the plot coordinates file for '${p.chartType}'`
 		} else if (p.chartType == 'genomeBrowser') {
 		} else if (p.chartType == 'geneExpression') {
+		} else if (p.chartType == 'Disco') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}

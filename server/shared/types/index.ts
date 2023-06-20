@@ -1,2 +1,6 @@
 export * from './genome'
 export * from './dataset'
+export * from './termsetting'
+export * from './termdb'
+export * from './filter'
+export * from './vocab'

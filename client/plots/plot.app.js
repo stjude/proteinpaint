@@ -120,7 +120,11 @@ class PlotApp {
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!plot.id) plot.id = `mds3bar_${+new Date()}_${Math.random()}`
 			if (!this.components.plots.find(p => p.id === plot.id)) {
-				const _ = await import(`../plots/${plot.chartType}.js`)
+				const _ = await import(
+					`../plots/${plot.subfolder ? plot.subfolder + '/' : ''}${plot.chartType}.${
+						plot.extension ? plot.extension : 'js'
+					}`
+				)
 
 				const plotInstance = await _.componentInit({
 					id: plot.id,

@@ -1,7 +1,7 @@
 import { getCompInit } from '../rx'
-import { termsettingInit } from '../termsetting/termsetting'
+import { termsettingInit } from '#termsetting'
 import { Menu } from '#dom/menu'
-import { getNormalRoot } from '../filter/filter'
+import { getNormalRoot } from '#filter'
 
 /*
 options for term2:

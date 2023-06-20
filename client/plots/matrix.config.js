@@ -1,6 +1,6 @@
 import { copyMerge } from '../rx'
 import { getSortOptions } from './matrix.sort'
-import { fillTermWrapper } from '../termsetting/termsetting'
+import { fillTermWrapper } from '#termsetting'
 
 export async function getPlotConfig(opts, app) {
 	const config = {

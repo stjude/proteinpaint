@@ -4,7 +4,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: [--baseline, .secrets.baseline, --exclude-files, 'genome\/', --exclude-files, 'dataset\/']
-        exclude: package-lock.json 
+        exclude: package-lock.json
 
   # for Proteinpaint, the team preference is for the prettier formatting
   # to be applied as part of the commit, not as a separate commit

@@ -1,6 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
 import { make_one_checkbox } from '#dom/checkbox'
-import { appInit } from '#plots/plot.app'
+import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
 
 /*
@@ -63,6 +63,7 @@ export async function init(arg, holder, genomes) {
 	const settings = arg.settings || {}
 	if (!settings.matrix) settings.matrix = {}
 	settings.matrix.geneFilter = geneFilter
+	settings.matrix.maxGenes = maxGenes
 	const opts = {
 		holder,
 		genome,
@@ -88,41 +89,11 @@ export async function init(arg, holder, genomes) {
 			redoHtml: 'redo'
 		},
 		matrix: {
-			// allow2selectSamples: arg.allow2selectSamples,
+			allow2selectSamples: arg.allow2selectSamples,
 			// these will display the inputs together in the Genes menu,
 			// instead of being rendered outside of the matrix holder
 			customInputs: {
 				genes: [
-					{
-						settingsKey: 'geneFilter',
-						title: 'Apply a filter to the top genes',
-						type: 'radio',
-						label: 'Gene filter',
-						labelDisplay: 'block',
-						options: [
-							{
-								label: 'Cancer Gene Census only',
-								value: 'CGC'
-							},
-							{
-								label: 'None',
-								value: 'none'
-							}
-						],
-						styles: { padding: '3px 0' },
-						callback: async value => {
-							CGConly = value === 'CGC'
-							const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
-							api.update({
-								termgroups: [{ lst: genes }],
-								settings: {
-									matrix: {
-										geneFilter: value
-									}
-								}
-							})
-						}
-					},
 					{
 						label: `Maximum # Genes`,
 						title: 'Limit the number of displayed genes',
@@ -208,7 +179,7 @@ async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
 	const body = {
 		genome: gdcGenome,
 		filter0: gdcCohort,
-		maxGenes: maxGenes
+		maxGenes
 	}
 	if (CGConly) body.CGConly = 1
 	const data = await dofetch3('gdc_filter2topGenes', { body })

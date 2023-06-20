@@ -1,7 +1,7 @@
 import { Menu } from '../dom/menu'
 import { dofetch3 } from '../common/dofetch'
 import { newpane, export_data } from '../src/client'
-import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '../filter/filter'
+import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
 import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
 

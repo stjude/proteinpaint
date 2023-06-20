@@ -1,6 +1,21 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.17.0
+
+- start using typescript in core code
+- option to filter by survival data
+- precompute intermediate cuminc data to improve server response
+- reactivate the support for selecting samples in the matrix plot
+- create an improved geneset edit UI that can be used in matrix and other plots
+- disambiguate variant and testing status matrix data by alteration type and origin
+- fix the matrix sorting by fusion data
+- fix the GDC server-side data query for matrix data, using cnv_occurrences
+- fix the barchart sort order
+- option to customize the violin plot "thickeness"
+- experimental: prototype more features in the new disco plot
+
+ 
 ## 2.16.0
 
 - improve the matrix control layout, labels, and mouseover information

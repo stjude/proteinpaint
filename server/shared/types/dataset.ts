@@ -1,4 +1,4 @@
-/********* server/dataset interfaces ********
+/********* private and public datasets ********
  
 --------EXPORTED--------
 ClinvarClinsig
@@ -478,7 +478,7 @@ interface Termdb {
 
 type SimpleTermEntry = {
     id: string,
-    q: {},
+    q: unknown,
     baseURL?: string //Only appears as a quick fix in SAMD9-SAMD9L.hg19?
 }
 
