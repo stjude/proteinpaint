@@ -75,7 +75,8 @@ export function setMatrixDom(opts) {
 			.append('g')
 			.attr('class', 'sjpp-matrix-series-label-g')
 			.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
-			.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
+			.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight)
+			.on('click', event => this.mouseclick(event)),
 		/* // TODO: sample label drag to move
 			.on('mouseover', this.sampleLabelMouseover)
 			.on('mouseout', this.sampleLabelMouseout)
