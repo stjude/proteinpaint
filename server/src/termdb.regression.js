@@ -1195,59 +1195,41 @@ async function getSampleData_dictionaryTerms(q, terms) {
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 
 	// process rows
-	let prows
-	if (q.regressionType == 'cox') {
-		// cox regression
-		// process cox outcome rows
-		prows = []
-		const minTimeSinceDx = q.ds.cohort.termdb.minTimeSinceDx
-		const ageEndOffset = q.ds.cohort.termdb.ageEndOffset
-		if (!minTimeSinceDx) throw 'missing min time since dx'
-		if (!ageEndOffset) throw 'missing age end offset'
-		for (const row of rows) {
-			if (row.term_id == q.outcome.id) {
-				// cox outcome row
+	const prows = []
+	const ageEndOffset = q.ds.cohort.termdb.ageEndOffset
+	if (!ageEndOffset) throw 'missing age end offset'
+	for (const row of rows) {
+		if (q.regressionType == 'cox' && row.term_id == q.outcome.id) {
+			// cox outcome row
 
-				// TODO: should be able to remove this (already precomputed)
-				// convert event=2 to event=0 because competing
-				// risks events should not be treated as a separate
-				// event category in cox regression
-				// these events should be treated as censored at
-				// time of death
-				const key = row.key === 2 ? 0 : row.key
+			// event: event status code
+			// age_start: age at beginning of follow-up
+			// age_end: age at event or at censoring
+			const { event } = JSON.parse(row.key)
+			const { age_start, age_end } = JSON.parse(row.value)
 
-				// TODO: should be able to remove this (already precomputed)
-				// convert age values to age_start and age_end
-				// age_start: age at beginning of follow-up
-				// age_end: age at event or age at censoring
-				const { age_dx, age_event } = JSON.parse(row.value)
-				const age_start = age_dx + minTimeSinceDx
-				if (age_event - age_start < 0) {
-					// discard samples that had events before follow-up
-					continue
-				}
+			// discard samples that had events before follow-up
+			if (event == -1) continue
 
-				// TODO: do NOT remove this (not accounted for in precomputed data)
-				// for timeScale='age', add a small offset to age_end
-				// to prevent age_end = age_start (which would cause
-				// R to error out)
-				const age_end = q.outcome.q.timeScale == 'age' ? age_event + ageEndOffset : age_event
-
-				const value = { age_start, age_end }
-				prows.push({
-					sample: row.sample,
-					key,
-					value,
-					term_id: row.term_id
-				})
-			} else {
-				prows.push(row)
+			// for timeScale='age', add a small offset to age_end
+			// to prevent age_end = age_start (which would cause
+			// R to error out)
+			const value = {
+				age_start,
+				age_end: q.outcome.q.timeScale == 'age' ? age_end + ageEndOffset : age_end
 			}
+
+			prows.push({
+				sample: row.sample,
+				key: event,
+				value,
+				term_id: row.term_id
+			})
+		} else {
+			// not cox outcome row
+			// no need to process row
+			prows.push(row)
 		}
-	} else {
-		// not cox regression
-		// no need to process rows
-		prows = rows
 	}
 
 	// parse the processed rows
