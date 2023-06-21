@@ -120,6 +120,7 @@ export function setInteractivity(self) {
 					.text(k)
 					.on('click', event => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv)
+						sandbox.header.text(sample.sample_id)
 						plotSingleSampleGenomeQuantification(
 							self.state.termdbConfig,
 							self.state.vocab.dslabel,
@@ -138,6 +139,7 @@ export function setInteractivity(self) {
 					.text('Disco plot')
 					.on('click', event => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv)
+						sandbox.header.text(sample.sample_id)
 						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
 						self.dom.tip.hide()
 					})
