@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import Arc from "#plots/disco_new/viewmodel/Arc";
+import Arc from "#plots/disco/viewmodel/Arc";
 
 export default class FullArcRenderer {
 

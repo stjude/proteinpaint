@@ -1,8 +1,8 @@
 import Data from "./Data";
 import Reference from "./Reference";
 import DataObjectMapper from "./DataObjectMapper";
-import Settings from "#plots/disco_new/viewmodel/Settings";
-import {ViewModelMapper} from "#plots/disco_new/mapper/ViewModelMapper";
+import Settings from "#plots/disco/viewmodel/Settings";
+import {ViewModelMapper} from "#plots/disco/mapper/ViewModelMapper";
 
 export default class DataMapper {
 

@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import SnvArc from '#plots/disco_new/viewmodel/SnvArc'
+import SnvArc from '#plots/disco/viewmodel/SnvArc'
 import IRenderer from './IRenderer'
 import FullArcRenderer from './FullArcRenderer'
 import MenuProvider from './MenuProvider'

@@ -1,8 +1,8 @@
 import Reference from './Reference'
 import Data from './Data'
-import SnvArc from '#plots/disco_new/viewmodel/SnvArc'
+import SnvArc from '#plots/disco/viewmodel/SnvArc'
 import MLabel from './MLabel'
-import SnvLegendElement from '#plots/disco_new/viewmodel/SnvLegendElement'
+import SnvLegendElement from '#plots/disco/viewmodel/SnvLegendElement'
 
 export default class SnvArcsMapper {
 	snvClassMap: Map<string, SnvLegendElement> = new Map()

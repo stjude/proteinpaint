@@ -1,4 +1,4 @@
-import GradientColorProvider from "#plots/disco_new/mapper/GradientColorProvider";
+import GradientColorProvider from "#plots/disco/mapper/GradientColorProvider";
 
 export default class LohLegend {
     minValue: number

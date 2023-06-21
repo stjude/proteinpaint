@@ -1,6 +1,6 @@
-import Legend from '#plots/disco_new/viewmodel/Legend'
+import Legend from '#plots/disco/viewmodel/Legend'
 import svgLegend from '#dom/svg.legend'
-import LegendJSONMapper from '#plots/disco_new/mapper/LegendJSONMapper'
+import LegendJSONMapper from '#plots/disco/mapper/LegendJSONMapper'
 
 export default class LegendRenderer {
 	private legendJSONMapper: LegendJSONMapper

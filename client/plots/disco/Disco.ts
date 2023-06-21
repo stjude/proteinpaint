@@ -12,7 +12,7 @@ import LohRenderer from './renderer/LohRenderer'
 import CnvRenderer from './renderer/CnvRenderer'
 import IRenderer from './renderer/IRenderer'
 import { RingType } from './viewmodel/RingType'
-import Settings from '#plots/disco_new/viewmodel/Settings'
+import Settings from '#plots/disco/viewmodel/Settings'
 
 export default class Disco {
 	private type: string
@@ -86,7 +86,7 @@ export const componentInit = discoInit
 export async function getPlotConfig(opts: any) {
 	return {
 		chartType: 'Disco',
-		subfolder: 'disco_new',
+		subfolder: 'disco',
 		extension: 'ts',
 		settings: discoDefaults(opts.overrides),
 	}

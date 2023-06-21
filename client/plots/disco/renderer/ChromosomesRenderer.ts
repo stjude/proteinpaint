@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import IRenderer from "./IRenderer";
-import Chromosome from "#plots/disco_new/viewmodel/Chromosome";
+import Chromosome from "#plots/disco/viewmodel/Chromosome";
 
 export default class ChromosomesRenderer implements IRenderer {
 

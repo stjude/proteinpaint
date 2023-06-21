@@ -1,6 +1,6 @@
 import Ring from "./Ring";
 import Label from "./Label";
-import LabelFactory from "#plots/disco_new/viewmodel/LabelFactory";
+import LabelFactory from "#plots/disco/viewmodel/LabelFactory";
 import Settings from "./Settings";
 
 export default class Labels extends Ring<Label> {

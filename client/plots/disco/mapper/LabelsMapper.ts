@@ -1,8 +1,8 @@
 import Data from "./Data";
 import Reference from "./Reference";
-import Label from "#plots/disco_new/viewmodel/Label";
-import LabelFactory from "#plots/disco_new/viewmodel/LabelFactory";
-import MLabel from "#plots/disco_new/mapper/MLabel";
+import Label from "#plots/disco/viewmodel/Label";
+import LabelFactory from "#plots/disco/viewmodel/LabelFactory";
+import MLabel from "#plots/disco/mapper/MLabel";
 
 export default class LabelsMapper {
 
