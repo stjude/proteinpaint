@@ -1,17 +1,18 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
+import { TermSettingInstance, PillData, TW } from '#shared/types'
 
-export function getHandler(self) {
+export function getHandler(self: TermSettingInstance) {
 	return {
-		showEditMenu(div) {
+		showEditMenu(div: any) {
 			div.selectAll('*').remove()
-			const groups = self.q.groups
+			const groups = self.q!.groups
 			for (const group of groups) {
 				const groupDiv = div
 					.append('div')
 					.style('display', 'inline-block')
 					.style('vertical-align', 'top')
-				const noButtonCallback = (i, node) => {
+				const noButtonCallback = (i: number, node: any) => {
 					group.values[i].checked = node.checked
 				}
 				const name = group.in ? group.name : `${group.name} will exclude these samples`
@@ -29,26 +30,28 @@ export function getHandler(self) {
 				.on('click', () => {
 					for (const group of groups)
 						group.values = group.values.filter(value => !('checked' in value) || value.checked)
-					self.runCallback()
+					self.runCallback!()
 				})
 		},
-		getPillStatus() {},
-		getPillName(d) {
+		getPillStatus() {
+			//ignore
+		},
+		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
 		}
 	}
 }
 
-function addTable(div, name, group, noButtonCallback) {
+function addTable(div: any, name: any, group: any, noButtonCallback: any) {
 	div
 		.style('padding', '6px')
 		.append('div')
 		.style('margin', '10px')
 		.style('font-size', '0.8rem')
 		.html(`<b> ${name}</b>.`)
-	const rows = []
+	const rows: any = []
 	for (const value of group.values) rows.push([{ value: value.sample }])
-	const columns = [{ label: 'Sample' }]
+	const columns: any = [{ label: 'Sample' }]
 
 	renderTable({
 		rows,
@@ -59,11 +62,13 @@ function addTable(div, name, group, noButtonCallback) {
 		noButtonCallback,
 		striped: false,
 		showHeader: false,
-		selectAll: true
+		selectAll: true,
+		columnButtons: undefined, //Leave until table.js is typed
+		buttons: undefined
 	})
 }
 
-export function fillTW(tw, vocabApi) {
+export function fillTW(tw: TW) {
 	// quick fix!!
 	if (!tw.q.type) tw.q.type = 'custom-groupsetting'
 	if (!tw.q.groups) tw.q.groups = []
@@ -79,11 +84,11 @@ export function fillTW(tw, vocabApi) {
 	}
 }
 
-export function getSamplelstTW(groups, name = 'groups') {
+export function getSamplelstTW(groups: any, name = 'groups') {
 	let disabled = true
 	const values = {}
-	const qgroups = []
-	let samples
+	const qgroups: any = []
+	let samples: any
 	for (const group of groups) {
 		values[group.name] = { key: group.name, label: group.name }
 		samples = getGroupSamples(group)
@@ -116,10 +121,10 @@ export function getSamplelstTW(groups, name = 'groups') {
 	}
 	return tw
 
-	function getGroupSamples(group) {
-		const values = []
+	function getGroupSamples(group: any) {
+		const values: any = []
 		for (const item of group.items) {
-			const value = { sampleId: item.sampleId }
+			const value: { sampleId: string, sample?: string } = { sampleId: item.sampleId }
 			if ('sample' in item) {
 				disabled = false
 				value.sample = item.sample
@@ -130,7 +135,7 @@ export function getSamplelstTW(groups, name = 'groups') {
 	}
 }
 
-export function getFilter(samplelstTW) {
+export function getFilter(samplelstTW: any) {
 	const values = samplelstTW.q.groups[0].values
 	const filter = {
 		type: 'tvslst',

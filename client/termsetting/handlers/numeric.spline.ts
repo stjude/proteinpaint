@@ -46,7 +46,7 @@ export function getHandler(self: any) {
 				width: 500,
 				height: 100,
 				xpad: 10,
-				ypad: 20
+				ypad: 20,
 			}
 			try {
 				const d = await self.vocabApi.getViolinPlotData({
@@ -56,7 +56,7 @@ export function getHandler(self: any) {
 					orientation: 'horizontal',
 					datasymbol: 'bean',
 					radius: 5,
-					strokeWidth: 0.2
+					strokeWidth: 0.2,
 				})
 				self.num_obj.density_data = convertViolinData(d)
 			} catch (err) {
@@ -71,7 +71,7 @@ export function getHandler(self: any) {
 			// renderTypeInputs(self)
 			renderEditMenu(self)
 			renderButtons(self)
-		}
+		},
 	}
 }
 
@@ -82,7 +82,7 @@ async function setqDefaults(self: any) {
 	if (!cache[t.id]['spline']) {
 		cache[t.id]['spline'] = {
 			mode: 'spline',
-			knots: []
+			knots: [],
 		}
 	}
 
@@ -127,7 +127,7 @@ function renderCustomSplineInputs(self: any, div: any) {
 		.style('width', '100px')
 		.text(self.q.knots.map((d: any) => d.value).join('\n'))
 		.on('change', handleChange)
-		.on('keyup', async function(this: any, event: any) {
+		.on('keyup', async function (this: any, event: any) {
 			// enter or backspace/delete
 			// i don't think backspace works
 			if (!keyupEnter(event) && event.key != 8) return
@@ -185,7 +185,7 @@ function processKnotsInputs(self: any) {
 		.sort((a: any, b: any) => a - b)
 		.map((d: any) => {
 			const knot = {
-				value: +d
+				value: +d,
 			}
 			return knot
 		})
@@ -211,10 +211,7 @@ function renderAutoSplineInputs(self: any, div: any) {
 		.style('margin-bottom', '7px')
 
 	for (let i = default_knot_count - 1; i < default_knot_count + 5; i++) {
-		knot_ct_select
-			.append('option')
-			.attr('value', i)
-			.html(i)
+		knot_ct_select.append('option').attr('value', i).html(i)
 	}
 
 	const knots_count = self.q.knots && self.q.knots.length ? self.q.knots.length : default_knot_count
@@ -233,7 +230,7 @@ function renderAutoSplineInputs(self: any, div: any) {
 		// .property('disabled', knot_count == knot_ct_select.node().value)
 		.html('Compute')
 		.on('click', async () => {
-			let desired_knots_ct = Number.parseInt(knot_ct_select.node().value)
+			const desired_knots_ct = Number.parseInt(knot_ct_select.node().value)
 			let requested_knots_ct = Number.parseInt(knot_ct_select.node().value)
 			// request knots util desired_knots are available
 			while (self.q.knots.length != desired_knots_ct) {
@@ -274,7 +271,7 @@ async function getKnots(self: any, knot_count: any) {
 
 	async function getPercentile2Value(percentile_lst: any) {
 		const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
-		if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
+		if (data.error || !data.values.length || !data.values.every((v) => Number.isFinite(v)))
 			throw 'cannot get median value: ' + (data.error || 'no data')
 		const perc_values = [...new Set(data.values)]
 		return perc_values

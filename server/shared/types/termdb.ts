@@ -42,9 +42,10 @@ interface BaseQ {
 	mode?: 'discrete' | 'binary' | 'continuous' | 'spline' | 'cuminc' | 'cox'
 	modeBinaryCutoffType?: 'normal' | 'percentile'
 	modeBinaryCutoffPercentile?: number
-	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset'
+	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 	reuseId?: string
 	hiddenValues?: HiddenValues
+	groups?: any // Not documented but appears in samplelst?? same as groupsetting?
 }
 
 export interface BinConfig extends BaseQ {
