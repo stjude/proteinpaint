@@ -53,7 +53,7 @@ export function getHandler(self: any) {
 
 		async showEditMenu(div: any) {
 			await makeEditMenu(self, div)
-		}
+		},
 
 		/* no need for postMain()
 		cache file contains all samples,
@@ -75,7 +75,7 @@ async function makeEditMenu(self: any, div: any) {
 		genome: self.opts.genomeObj,
 		tip: self.dom.tip2,
 		row: div.append('div').style('margin', '15px'),
-		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null
+		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null,
 	})
 	div
 		.append('span')
@@ -102,12 +102,13 @@ async function makeEditMenu(self: any, div: any) {
 		.append('button')
 		.style('margin', '0px 15px 15px 15px')
 		.text('Submit')
-		.on('click', async event => {
+		.on('click', async (event) => {
 			if (!coordResult.chr) return window.alert('Invalid coordinate')
 			event.target.disabled = true
 			event.target.innerHTML = 'Validating input...'
 			// parse input text
 			if (self.term) {
+				//ignore
 			} else {
 				self.term = { id: makeId() }
 			}
@@ -140,9 +141,8 @@ async function makeEditMenu(self: any, div: any) {
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			if (select_ancestry) {
 				// ancestry restriction is optional
-				self.q.restrictAncestry = select_ancestry.node().options[
-					select_ancestry.property('selectedIndex')
-				].__ancestry_obj
+				self.q.restrictAncestry =
+					select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
 			}
 
 			self.runCallback()
@@ -201,7 +201,7 @@ export async function fillTW(tw: TW, vocabApi: VocabApi) {
 	await validateInput({
 		term: tw.term,
 		q: tw.q,
-		vocabApi
+		vocabApi,
 	})
 }
 
@@ -241,11 +241,7 @@ async function mayDisplayVariantFilter(self: any, filterInState: any, holder: an
 	}
 	const div = holder.append('div').style('margin', '15px')
 
-	const label = div
-		.append('span')
-		.text('VARIANT FILTERS')
-		.style('font-size', '.8em')
-		.style('opacity', 0.6)
+	const label = div.append('span').text('VARIANT FILTERS').style('font-size', '.8em').style('opacity', 0.6)
 
 	const filterBody = div.append('div')
 
@@ -254,11 +250,11 @@ async function mayDisplayVariantFilter(self: any, filterInState: any, holder: an
 		emptyLabel: '+Variant Filter',
 		holder: filterBody,
 		vocab: { terms: self.variantFilter.terms },
-		callback: async filter => {
+		callback: async (filter) => {
 			// once the filter is updated from UI, it's only updated here
 			// user must press submit button to attach current filter to self.q{}
 			self.variantFilter.active = filter
 			if (callback2) await callback2()
-		}
+		},
 	}).main(self.variantFilter.active)
 }

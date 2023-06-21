@@ -41,12 +41,15 @@ export interface Tvs {
 
 /*** types and interfaces supporting Filter interface ***/
 
-//interface LstEntry {}
+export interface LstEntry {
+	type: string
+	tvs: Tvs
+}
 
 export interface Filter {
 	type: string
 	in: boolean
 	join?: string //and, or
 	tag?: string
-	lst: any //LstEntry[]
+	lst: LstEntry[]
 }
