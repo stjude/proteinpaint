@@ -92,7 +92,7 @@ export function setInteractivity(self) {
 			sample.sample_id = sample.row?.sampleName
 			self.dom.menubody.selectAll('*').remove()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
-			if (self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+			if (self.state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 					const menuDiv = self.dom.menubody
 						.append('div')
@@ -115,7 +115,7 @@ export function setInteractivity(self) {
 						})
 				}
 			}
-			if (self.state.termdbConfig.queries.singleSampleMutation) {
+			if (self.state.termdbConfig.queries?.singleSampleMutation) {
 				const menuDiv = self.dom.menubody
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
