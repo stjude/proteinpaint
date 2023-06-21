@@ -1,22 +1,30 @@
-import {RibbonSubgroup} from "d3";
+import { RibbonSubgroup } from 'd3'
+import PositionInChromosome from '#plots/disco/viewmodel/PositionInChromosome'
 
-export default class FusionSubgroup implements RibbonSubgroup{
+export default class FusionSubgroup implements RibbonSubgroup {
+	startAngle: number
+	endAngle: number
+	radius: number
 
-    startAngle: number;
-    endAngle: number;
-    radius: number;
-
-    gene: string;
-    value: number;
-    genes: Set<string>;
-    chromosomes: Set<string>
-    constructor(startAngle: number, endAngle: number, radius: number, gene: string, value: number, genes: Set<string>, chromosomes: Set<string>) {
-        this.startAngle = startAngle;
-        this.endAngle = endAngle;
-        this.radius = radius;
-        this.gene = gene;
-        this.value = value;
-        this.genes = genes;
-        this.chromosomes = chromosomes;
-    }
+	gene: string
+	value: number
+	genes: Set<string>
+	positionInChromosome: PositionInChromosome
+	constructor(
+		startAngle: number,
+		endAngle: number,
+		radius: number,
+		gene: string,
+		value: number,
+		genes: Set<string>,
+		positionInChromosome: PositionInChromosome
+	) {
+		this.startAngle = startAngle
+		this.endAngle = endAngle
+		this.radius = radius
+		this.gene = gene
+		this.value = value
+		this.genes = genes
+		this.positionInChromosome = positionInChromosome
+	}
 }
