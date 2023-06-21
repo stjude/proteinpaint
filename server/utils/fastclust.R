@@ -108,8 +108,7 @@ cat("colnames",ColumnDend$order,"\n",sep="\t")
 df  <- melt(m)
 colnames(df) <- c("Genes", "Samples", "value")
 
-ggplot(df, aes(x = Genes, y = Samples, fill = value)) +
-    geom_tile() + scale_fill_gradient(low="blue", high="red")
+#ggplot(df, aes(x = Genes, y = Samples, fill = value)) + geom_tile() + scale_fill_gradient(low="blue", high="red") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 #ggsave("heatmap.png")
 
