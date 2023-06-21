@@ -84,13 +84,12 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseclick = function(event) {
-		self.dom.mainG.on('mouseout', null)
 		if (
 			self.state.termdbConfig.queries?.singleSampleGenomeQuantification ||
 			self.state.termdbConfig.queries?.singleSampleMutation
 		) {
-			const sample = event.target.__data__
-			sample.sample_id = sample.row?.sampleName
+			self.dom.mainG.on('mouseout', null)
+			const sample = { sample_id: event.target.__data__._SAMPLENAME_ }
 			self.dom.menubody.selectAll('*').remove()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
 			if (self.state.termdbConfig.queries?.singleSampleGenomeQuantification) {
