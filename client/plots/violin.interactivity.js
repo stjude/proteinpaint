@@ -151,7 +151,6 @@ export function setInteractivity(self) {
 			rows,
 			columns,
 			div: tableDiv,
-			showLines: false,
 			maxWidth: '30vw',
 			maxHeight: '25vh',
 			resize: true,
