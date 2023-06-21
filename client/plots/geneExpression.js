@@ -3,10 +3,17 @@ import { dofetch3 } from '#common/dofetch'
 import { interpolateRgb } from 'd3-interpolate'
 
 const defaultConfig = {
-	clusterMethod: 'Average'
+	clusterMethod: 'average'
 }
 
-const clusterMethodLst = ['Single', 'Complete', 'Average', 'Weighted', 'Ward', 'Centroid', 'Median']
+const clusterMethodLst = [
+	'average',
+	'complete',
+	'mcquitty'
+	//'single', very slow
+	//'median', 'centroid', crashes R with "No connections found!"
+	//'ward.D','ward.D2', crashes client
+]
 
 class geneExpression {
 	constructor() {
