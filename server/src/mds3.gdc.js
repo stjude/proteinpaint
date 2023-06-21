@@ -1395,7 +1395,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 
 	// convert each term id to {path}
 	// id=case.project.project_id, convert to path=project__project_id, for graphql
-	// required for termid2size_query() of gdc.hg38.js
+	// required for the graphql query of termid2size_query()
 	const termPaths = []
 	for (const tw of twLst) {
 		if (!tw.term) continue
