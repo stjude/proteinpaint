@@ -1,7 +1,9 @@
 const app = require('./app')
 const fs = require('fs')
 const path = require('path')
+const spawn = require('child_process').spawn
 const utils = require('./utils')
+const serverconfig = require('./serverconfig')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
 const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 
@@ -463,17 +465,72 @@ async function geneExpressionClustering(data, q) {
 	//})
 
 	const time1 = new Date()
+	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(Rinputfile, JSON.stringify(inputData))
+	const Routput = await run_clustering(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [Rinputfile])
+	fs.unlink(Rinputfile, () => {})
+	//const r_output_lines = Routput.trim().split('\n')
+	//console.log('r_output_lines:', r_output_lines)
+
+	let row_coordinates = []
+	let col_coordinates = []
+	let row_coordinate_start = false
+	let col_coordinate_start = false
+	let row_names_index
+	let col_names_index
+	for (const line of Routput) {
+		//console.log(line)
+		if (line.includes('[1] "RowCoordinates"')) {
+			row_coordinate_start = true
+		} else if (line.includes('"ColumnCoordinates"')) {
+			//console.log(line)
+			col_coordinate_start = true
+			row_coordinate_start = false
+		} else if (line.includes('rownames')) {
+			row_names_index = line
+				.replace('rownames\t', '')
+				.split('\t')
+				.map(i => parseInt(i))
+				.filter(n => n)
+		} else if (line.includes('colnames')) {
+			//console.log('colnames:', line)
+			col_names_index = line
+				.replace('colnames\t', '')
+				.split('\t')
+				.map(i => parseInt(i))
+				.filter(n => n)
+		} else if (line.includes('"Done"')) {
+			col_coordinate_start = false
+		} else if (row_coordinate_start == true) {
+			row_coordinates.push(line)
+		} else if (col_coordinate_start == true) {
+			col_coordinates.push(line)
+		}
+	}
+
+	//console.log('row_coordinates:', row_coordinates)
+	//console.log('col_coordinates:', col_coordinates)
+
+	let row_output = await parseclust(row_coordinates, row_names_index)
+	let col_output = await parseclust(col_coordinates, col_names_index)
+	//console.log('row_dendro:', row_output.dendrogram)
+	//console.log('row_children:', row_output.children)
+	//console.log('row_names_index:', JSON.stringify(row_names_index))
+	//console.log('col_dendro:', col_output.dendrogram)
+	//console.log('col_children:', col_output.children)
+	//console.log('col_names_index:', JSON.stringify(col_names_index))
+
+	/* rust is no longer used
+
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
 	const time2 = new Date()
 	console.log('Time taken to run rust gene clustering script:', time2 - time1, 'ms')
 	//console.log('result:', result)
 
-	/*
         sorted_sample_elements: List of indices of samples in sorted matrix
         sorted_gene_elements: List of indices of genes in sorted matrix
         sorted_gene_coordinates: Information for each node in the sample dendrogram (see details in rust/src/cluster.rs)
         sorted_sample_coordinates: Information for each node in the gene dendrogram (see details in rust/src/cluster.rs)
-        */
 	let colSteps, rowSteps
 	const rust_output_list = rust_output.split('\n')
 	for (let item of rust_output_list) {
@@ -485,13 +542,19 @@ async function geneExpressionClustering(data, q) {
 	}
 	//console.log('colSteps:', colSteps)
 	//console.log('rowSteps:', rowSteps)
+	*/
 
 	return {
-		colSteps,
-		rowSteps,
 		geneNameLst: inputData.row_names,
 		sampleNameLst: inputData.col_names,
-		matrix: inputData.matrix
+		matrix: inputData.matrix,
+
+		row_dendro: row_output.dendrogram,
+		row_children: row_output.children,
+		row_names_index: row_names_index,
+		col_dendro: col_output.dendrogram,
+		col_children: col_output.children,
+		col_names_index: col_names_index
 	}
 }
 function zscore(lst) {
@@ -503,4 +566,224 @@ function zscore(lst) {
 		return lst
 	}
 	return lst.map(i => (i - mean) / sd)
+}
+
+async function run_clustering(Rscript, args = []) {
+	try {
+		await fs.promises.stat(Rscript)
+	} catch (e) {
+		throw `${Rscript} does not exist`
+	}
+	const stdout = []
+	const stderr = []
+	return new Promise((resolve, reject) => {
+		console.log('serverconfig.Rscript:', serverconfig.Rscript)
+		console.log('Rscript:', Rscript)
+		console.log('args:', ...args)
+		const sp = spawn(serverconfig.Rscript, [Rscript, ...args])
+		sp.stdout.on('data', data => stdout.push(data))
+		sp.stderr.on('data', data => stderr.push(data))
+		sp.on('error', err => reject(err))
+		sp.on('close', code => {
+			//if (code !== 0) {
+			//	// handle non-zero exit status
+			//	let errmsg = `R process exited with non-zero status code=${code}`
+			//	if (stdout.length > 0) errmsg += `\nR stdout: ${stdout.join('').trim()}`
+			//	if (stderr.length > 0) errmsg += `\nR stderr: ${stderr.join('').trim()}`
+			//	reject(errmsg)
+			//}
+			//if (stderr.length > 0) {
+			//	// handle R stderr
+			//	const err = stderr.join('').trim()
+			//	const errmsg = `R process emitted standard error\nR stderr: ${err}`
+			//	reject(errmsg)
+			//}
+			const out = stdout
+				.join('')
+				.trim()
+				.split('\n')
+			resolve(out)
+		})
+	})
+}
+
+async function parseclust(coordinates, names_index) {
+	let first = 1
+	let xs = []
+	let ys = []
+	for (const line of coordinates) {
+		if (first == 1) {
+			first = 0
+		} else if (line.length == 0) {
+		} else {
+			let line2 = line.split(/(\s+)/)
+			//console.log(line2)
+			//console.log(line2[line2.length - 3], line2[line2.length - 1])
+			if (Number(line2[line2.length - 3]) % 1 != 0 && Number(line2[line2.length - 1]) == 0) {
+				// In rare cases sometimes y=0 when x is decimal (not integer). This is happening most probably because the y-value is infinitesimally small so y is set to 0.0001 to approximate it.
+				xs.push(Number(line2[line2.length - 3]))
+				ys.push(0.0001)
+			} else {
+				xs.push(Number(line2[line2.length - 3]))
+				ys.push(Number(line2[line2.length - 1]))
+			}
+		}
+	}
+	//console.log(xs)
+	//console.log(ys)
+
+	let depth_start_position = 0 // Initializing position of depth start to position 0 in R output
+	let i = 0
+	let depth_first_branch = []
+	let prev_ys = []
+	let prev_xs = []
+	let break_point = false
+	let old_depth_start_position = 0
+	let node_children = []
+	let leaf_counter = 0
+	for (let i = 0; i < ys.length; i++) {
+		//console.log('i:', i)
+		if (break_point == true) {
+			// Determine where the new branch should start from
+			let hit = 0
+			//console.log('prev_ys:', prev_ys)
+			for (let j = 0; j < prev_ys.length; j++) {
+				let k = prev_ys.length - j - 1
+				//console.log('prev_ys[k]:', prev_ys[k])
+				//console.log('ys[i]:', ys[i])
+				if (prev_ys[k] > ys[i]) {
+					depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: k, x2: prev_xs[k], y2: prev_ys[k] })
+					hit = 1
+					//console.log('Found')
+					break
+				}
+			}
+			if (hit == 0) {
+				console.log('No suitable branch point found')
+			}
+			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+			//prev_ys = []
+			//prev_xs = []
+			//old_depth_start_position = depth_start_position
+			break_point = false
+		} else if (ys[i] > ys[i + 1] && i <= ys.length - 1) {
+			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+		} else if (ys[i] == ys[i + 1] && i <= ys.length - 1) {
+			depth_first_branch.push({ id1: i - 1, x1: xs[i - 1], y1: ys[i - 1], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+		} else if (i == ys.length - 1) {
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
+		} else {
+			prev_ys.push(ys[i])
+			prev_xs.push(xs[i])
+			//old_depth_first_branch = depth_first_branch
+			//depth_first_branch = []
+			break_point = true
+			if (ys[i] == 0) {
+				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				leaf_counter += 1
+			}
+
+			//depth_start_position = i // Start of new branch
+		}
+	}
+	//console.log('node_children:', node_children)
+	return { dendrogram: depth_first_branch, children: node_children }
+	//console.log(depth_first_branch)
+}
+
+async function update_children(depth_first_branch, given_node, node_children, node_id) {
+	//let node_connector = node_children.find((i) => i.id == k)
+	//if (node_connector) {
+	//	let node_index = node_children.findIndex(node_connector)
+	//	node_children[node_index].children.push()
+	//}
+
+	//console.log('given_node:', given_node)
+	let current_node = given_node
+	let node_result = node_children.find(i => i.id == current_node)
+	if (node_result) {
+		let node_index = node_children.findIndex(i => i.id == current_node)
+		node_children[node_index].children.push(node_id)
+	} else {
+		node_children.push({ id: current_node, children: [node_id] })
+	}
+
+	// Find branch of current node
+	while (current_node != 0) {
+		// Top node. This loop will continue until top node is reached
+		let node_connector1 = depth_first_branch.find(i => i.id1 == current_node)
+		let current_node1
+		let current_node2
+		if (node_connector1) {
+			if (node_connector1.y1 <= node_connector1.y2) {
+				//console.log('depth_first_branch:', depth_first_branch)
+				//console.log('current_node:', current_node)
+				//console.log('node_connector1:', node_connector1)
+				current_node1 = node_connector1.id2
+			}
+		}
+		let node_connector2 = depth_first_branch.find(i => i.id2 == current_node)
+		if (node_connector2) {
+			if (node_connector2.y1 >= node_connector2.y2) {
+				//console.log('depth_first_branch:', depth_first_branch)
+				//console.log('current_node:', current_node)
+				//console.log('node_connector2:', node_connector2)
+				current_node2 = node_connector2.id1
+			}
+		}
+
+		if (!node_connector1 && node_connector2) {
+			current_node = current_node2
+		} else if (node_connector1 && !node_connector2) {
+			current_node = current_node1
+		} else if (node_connector1 && node_connector2) {
+			if (node_connector1.y2 > node_connector2.y1) {
+				current_node = current_node1
+			} else {
+				current_node = current_node2
+			}
+		} else {
+			console.log('No connections found!')
+		}
+
+		// Adding node_id to current_node
+
+		let node_result = node_children.find(i => i.id == current_node)
+		//console.log('node_result:', node_result)
+		//console.log('given_node2:', given_node)
+		if (node_result) {
+			let node_index = node_children.findIndex(i => i.id == current_node)
+			node_children[node_index].children.push(node_id)
+		} else {
+			node_children.push({ id: current_node, children: [node_id] })
+		}
+		//console.log('node_children:', node_children)
+	}
+	return node_children
 }
