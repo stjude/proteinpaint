@@ -9,7 +9,7 @@ import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 
 export default function violinRenderer(self) {
-	self.render = function() {
+	self.render = function () {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
 		const imageOffset = settings.datasymbol === 'bean' ? settings.radius * window.devicePixelRatio : settings.radius
@@ -21,6 +21,7 @@ export default function violinRenderer(self) {
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
 		const termNum =
 			t2?.term.type === 'condition' ||
+			t2?.term.type === 'samplelst' ||
 			t2?.term.type === 'categorical' ||
 			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
 				? t2
@@ -38,7 +39,7 @@ export default function violinRenderer(self) {
 		}
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
-		self.data.plots = self.data.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
+		self.data.plots = self.data.plots.filter((p) => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
 		this.k2c = getColors(self.data.plots.length)
 		if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
@@ -66,7 +67,7 @@ export default function violinRenderer(self) {
 		}
 	}
 
-	self.displaySummaryStats = function(d, event, tip) {
+	self.displaySummaryStats = function (d, event, tip) {
 		let rows = []
 
 		if (d.summaryStats) {
@@ -79,7 +80,7 @@ export default function violinRenderer(self) {
 					<td style='padding:3px; color:#aaa'>${label}</td>
 					<td style='padding:3px; text-align:center'>${value}</td>
 				</tr>`
-				)
+				),
 			]
 		}
 
@@ -87,7 +88,7 @@ export default function violinRenderer(self) {
 		tip.show(event.clientX, event.clientY).d.html(tableHtml)
 	}
 
-	self.renderPvalueTable = function() {
+	self.renderPvalueTable = function () {
 		self.dom.tableHolder.selectAll('*').remove()
 		if (self.data.plots.length === 1) return
 
@@ -102,16 +103,17 @@ export default function violinRenderer(self) {
 
 		const termNum =
 			t2?.term.type === 'condition' ||
+			t2?.term.type === 'samplelst' ||
 			t2?.term.type === 'categorical' ||
 			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
 				? t2
 				: t1
 
 		//hide p-values for categories that are hidden
-		self.data.pvalues = self.data.pvalues.filter(arr => {
+		self.data.pvalues = self.data.pvalues.filter((arr) => {
 			for (let i = 0; i < arr.length; i++) {
 				if (typeof arr[i].value === 'string') {
-					if (arr[i].value in termNum.q.hiddenValues) {
+					if (termNum.q?.hiddenValues && arr[i].value in termNum.q.hiddenValues) {
 						return false
 					}
 				}
@@ -136,7 +138,7 @@ export default function violinRenderer(self) {
 			showLines: false,
 			maxWidth: '27vw',
 			maxHeight: '20vh',
-			resize: true
+			resize: true,
 		})
 	}
 
@@ -209,7 +211,7 @@ export default function violinRenderer(self) {
 			.classed(settings.unit === 'log' ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
 		const ticks =
-			settings.unit === 'log' ? svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0) : svg.axisScale.ticks()
+			settings.unit === 'log' ? svg.axisScale.ticks().filter((tick) => tick > 0 || tick < 0) : svg.axisScale.ticks()
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
@@ -233,10 +235,8 @@ export default function violinRenderer(self) {
 		)
 
 		if (self.opts.mode != 'minimal') {
-			let lab
-
 			// TODO need to add term2 label onto the svg
-			lab = svg.svgG
+			const lab = svg.svgG
 				.append('text')
 				.text(t2?.q?.mode === 'continuous' ? t2.term.name : t1.term.name)
 				.classed('sjpp-numeric-term-label', true)
@@ -278,16 +278,16 @@ export default function violinRenderer(self) {
 			.classed('sjpp-axislabel', true)
 			.text(`${plot.label}, n=${plot.plotValueCount}`)
 			.style('cursor', 'pointer')
-			.on('click', function(event) {
+			.on('click', function (event) {
 				if (!event) return
 				self.displayLabelClickMenu(t1, t2, plot, event)
 			})
-			.on('mouseover', function(event, d) {
+			.on('mouseover', function (event, d) {
 				event.stopPropagation()
 				if (!event) return
 				self.displaySummaryStats(d, event, tip)
 			})
-			.on('mouseout', function() {
+			.on('mouseout', function () {
 				tip.hide()
 			})
 			.style('opacity', 0)
@@ -311,20 +311,20 @@ export default function violinRenderer(self) {
 		let areaBuilder
 		if (isH) {
 			areaBuilder = area()
-				.y0(d => wScale(-d.binValueCount))
-				.y1(d => wScale(d.binValueCount))
-				.x(d => svg.axisScale(d.x0))
+				.y0((d) => wScale(-d.binValueCount))
+				.y1((d) => wScale(d.binValueCount))
+				.x((d) => svg.axisScale(d.x0))
 				.curve(curveBumpX)
 		} else {
 			areaBuilder = area()
-				.x0(d => wScale(-d.binValueCount))
-				.x1(d => wScale(d.binValueCount))
-				.y(d => svg.axisScale(d.x0))
+				.x0((d) => wScale(-d.binValueCount))
+				.x1((d) => wScale(d.binValueCount))
+				.y((d) => svg.axisScale(d.x0))
 				.curve(curveBumpY)
 		}
 		const label = plot.label.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
-		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
+		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find((o) => o.label == label) : null
 		const color = category?.color ? category.color : plot.divideTwBins ? plot.divideTwBins.color : self.k2c(plotIdx)
 		violinG
 			.append('path')
@@ -368,10 +368,10 @@ export default function violinRenderer(self) {
 				.style('stroke-width', '5')
 				.style('stroke', 'red')
 				.style('opacity', '1')
-				.attr('y1', isH ? -7 : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
-				.attr('y2', isH ? 7 : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
-				.attr('x1', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : -7)
-				.attr('x2', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : 7)
+				.attr('y1', isH ? -7 : svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value))
+				.attr('y2', isH ? 7 : svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value))
+				.attr('x1', isH ? svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value) : -7)
+				.attr('x2', isH ? svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value) : 7)
 		} else return
 	}
 
@@ -403,8 +403,11 @@ export default function violinRenderer(self) {
 				.call(
 					isH
 						? brushX()
-								.extent([[0, -20], [settings.svgw, 20]])
-								.on('end', async event => {
+								.extent([
+									[0, -20],
+									[settings.svgw, 20],
+								])
+								.on('end', async (event) => {
 									const selection = event.selection
 
 									if (!selection) return
@@ -412,8 +415,11 @@ export default function violinRenderer(self) {
 									self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
 								})
 						: brushY()
-								.extent([[-20, 0], [20, settings.svgw]])
-								.on('end', async event => {
+								.extent([
+									[-20, 0],
+									[20, settings.svgw],
+								])
+								.on('end', async (event) => {
 									const selection = event.selection
 
 									if (!selection) return
@@ -424,7 +430,7 @@ export default function violinRenderer(self) {
 		} else return
 	}
 
-	self.toggleLoadingDiv = function(display = '') {
+	self.toggleLoadingDiv = function (display = '') {
 		if (display != 'none') {
 			self.dom.loadingDiv
 				.style('opacity', 0)
@@ -484,10 +490,10 @@ function getLegendGrps(termNum, self) {
 
 function addDescriptiveStats(term, legendGrps, headingStyle) {
 	if (term?.q.descrStats) {
-		const items = term.q.descrStats.map(stat => {
+		const items = term.q.descrStats.map((stat) => {
 			return {
 				text: `${stat.label}: ${stat.value}`,
-				noIcon: true
+				noIcon: true,
 			}
 		})
 		const title = `Descriptive statistics: ${term.term.name}`
@@ -503,7 +509,7 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 			if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
 				items.push({
 					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
-					noIcon: true
+					noIcon: true,
 				})
 			}
 		}
@@ -521,7 +527,7 @@ function addHiddenValues(term, legendGrps, headingStyle) {
 			text: `${key}`,
 			noIcon: true,
 			isHidden: true,
-			hiddenOpacity: 1
+			hiddenOpacity: 1,
 		})
 	}
 	const title = `${term.term.name}`
