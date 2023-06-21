@@ -6,6 +6,7 @@ import { rgb } from 'd3-color'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 import { plotSingleSampleGenomeQuantification, plotDisco } from '../mds3/sampletable'
+import { newSandboxDiv } from '#dom/sandbox'
 
 export function setInteractivity(self) {
 	self.mouseover = function (event, chart) {
@@ -117,16 +118,14 @@ export function setInteractivity(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(k)
-					.on('click', (event) => {
-						const menu = new Menu()
-						menu.show(event.clientX, event.clientY)
-
+					.on('click', event => {
+						const sandbox = newSandboxDiv(self.opts.plotDiv)
 						plotSingleSampleGenomeQuantification(
 							self.state.termdbConfig,
 							self.state.vocab.dslabel,
 							k,
 							sample,
-							menu.d,
+							sandbox.body.append('div').style('margin', '20px'),
 							self.app.opts.genome
 						)
 						self.dom.tip.hide()
@@ -137,11 +136,9 @@ export function setInteractivity(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Disco plot')
-					.on('click', (event) => {
-						const menu = new Menu()
-						menu.show(event.clientX, event.clientY)
-
-						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, menu.d, self.app.opts.genome)
+					.on('click', event => {
+						const sandbox = newSandboxDiv(self.opts.plotDiv)
+						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
 						self.dom.tip.hide()
 					})
 			}
