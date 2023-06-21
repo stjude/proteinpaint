@@ -3,6 +3,7 @@ import { Term, RangeEntry } from './termdb'
 /*
 --------EXPORTED--------
 Tvs
+LstEntry
 Filter
 
 */

@@ -44,6 +44,7 @@ interface BaseQ {
 	modeBinaryCutoffPercentile?: number
 	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 	reuseId?: string
+	name?: string
 	hiddenValues?: HiddenValues
 	groups?: any // Not documented but appears in samplelst?? same as groupsetting?
 }
@@ -65,7 +66,6 @@ export interface BinConfig extends BaseQ {
 	//binary
 	scale?: number //0.1 | 0.01 | 0.001
 	lst?: RangeEntry[]
-	name?: string
 }
 
 export type GroupEntry = {

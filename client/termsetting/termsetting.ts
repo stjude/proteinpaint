@@ -859,7 +859,7 @@ async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: Def
 	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.js`)
 	else if (tw.term.type) {
 		try {
-			_ = await import(`./handlers/${type}.ts`)
+			_ = await import(`./handlers/${type}.js`)
 		} catch (error) {
 			throw `Type ${type} does not exist`
 		}
