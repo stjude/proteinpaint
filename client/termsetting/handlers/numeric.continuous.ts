@@ -1,4 +1,5 @@
 import { getPillNameDefault } from '#termsetting'
+import { TermSettingInstance, PillData, Term } from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -12,9 +13,13 @@ getHandler(self)
 		setqDefaults() // set self.q from self.numqByTermIdModeType
 */
 
-export function getHandler(self) {
+//Types 
+
+type DropDownOpt = { html: string, value: number }
+
+export function getHandler(self: TermSettingInstance) {
 	return {
-		getPillName(d) {
+		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
 		},
 
@@ -22,7 +27,7 @@ export function getHandler(self) {
 			return { text: 'continuous' } // FIXME not effective
 		},
 
-		async showEditMenu(div) {
+		async showEditMenu(div: any) {
 			setqDefaults(self)
 
 			div
@@ -38,7 +43,8 @@ export function getHandler(self) {
 				.style('padding', '3px 10px')
 				.html('Scale values')
 
-			const select = div.append('select').on('change', event => {
+			const select = div.append('select').on('change', (event: any) => {
+				if (!self.q) throw `Missing .q{} [numeric.continuous getHandler()]`
 				if (event.target.value != '1') self.q.scale = Number(event.target.value)
 				else delete self.q.scale
 			})
@@ -53,9 +59,9 @@ export function getHandler(self) {
 				])
 				.enter()
 				.append('option')
-				.attr('value', d => d.value)
-				.html(d => d.html)
-				.property('selected', d => 'scale' in self.q && d.value == self.q.scale)
+				.attr('value', (d: DropDownOpt) => d.value)
+				.html((d: DropDownOpt) => d.html)
+				.property('selected', (d: DropDownOpt) => 'scale' in self.q! && d.value == self.q.scale)
 
 			const btndiv = div.append('div').style('padding', '3px 10px')
 
@@ -64,23 +70,23 @@ export function getHandler(self) {
 				.style('margin', '5px')
 				.html('Apply')
 				.on('click', () => {
-					self.q.mode = 'continuous'
-					self.runCallback()
+					self.q!.mode = 'continuous'
+					self.runCallback!()
 				})
 		}
 	}
 }
 
-function setqDefaults(self) {
+function setqDefaults(self: TermSettingInstance) {
 	const cache = self.numqByTermIdModeType
-	const t = self.term
-	if (!cache[t.id]) cache[t.id] = {}
-	if (!cache[t.id].continuous) {
-		cache[t.id].continuous = {
+	const t = self.term as Term
+	if (!cache[t.id!]) cache[t.id!] = {}
+	if (!cache[t.id!].continuous) {
+		cache[t.id!].continuous = {
 			mode: 'continuous'
 		}
 	}
-	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].continuous))
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id!].continuous))
 	self.q = Object.assign(cacheCopy, self.q)
 	//*** validate self.q ***//
 }
