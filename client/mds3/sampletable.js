@@ -93,7 +93,7 @@ export async function displaySampleTable(samples, args) {
 				const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 				sandbox.header.text(sample.sample_id)
 				plotDisco(args.tk.mds, args.tk.mds.label, sample, sandbox.body, args.block.genome)
-			},
+			}
 		}
 		params.columnButtons.push(colButton)
 	}
@@ -113,7 +113,7 @@ export async function displaySampleTable(samples, args) {
 						sandbox.body.append('div').style('margin', '20px'),
 						args.block.genome
 					)
-				},
+				}
 			}
 			params.columnButtons.push(btn)
 		}
@@ -125,13 +125,13 @@ export async function displaySampleTable(samples, args) {
 		params.buttons = [
 			{
 				text: args.tk.allow2selectSamples.buttonText,
-				callback: (sampleIdxLst) => {
+				callback: sampleIdxLst => {
 					// argument is list of array index of selected samples
 					feedSample2selectCallback(args.tk, args.block, samples, sampleIdxLst)
 					args.tk.itemtip.hide()
 					args.tk.menutip.hide()
-				},
-			},
+				}
+			}
 		]
 	}
 
@@ -188,7 +188,7 @@ async function make_singleSampleTable(s, arg) {
 			if (tw.id in s) {
 				if (Array.isArray(s[tw.id])) {
 					if (tw.baseURL) {
-						cell2.html(s[tw.id].map((i) => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
+						cell2.html(s[tw.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
 					} else {
 						cell2.html(s[tw.id].join('<br>'))
 					}
@@ -209,8 +209,11 @@ async function make_singleSampleTable(s, arg) {
 		for (const ssmid of s.ssm_id_lst) {
 			if (s.ssm_id_lst.length > 1) {
 				// there are multiple, need to mark it out
-				const div = grid_div.append('div').style('grid-column', 'span 2').style('margin-top', '20px')
-				const m = arg.tk.skewer.rawmlst.find((i) => i.ssm_id == ssmid)
+				const div = grid_div
+					.append('div')
+					.style('grid-column', 'span 2')
+					.style('margin-top', '20px')
+				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
 					if (m.dt == 1) {
@@ -336,99 +339,106 @@ genomeObj={}
 	client side genome obj
 */
 export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel, queryKey, sample, holder, genomeObj) {
-	const q = termdbConfig.queries.singleSampleGenomeQuantification[queryKey]
-
-	const body = {
-		genome: genomeObj.name,
-		dslabel,
-		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
-		singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] },
-	}
-	const data = await dofetch3('mds3', { body })
-	if (data.error) return holder.append('div').text(data.error)
-
-	// optional query, if present, will enable clicking on genome-wide img to launch block
-	const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
-
-	// description
-	holder.append('div').text(q.description || queryKey)
-	if (q2) {
-		holder
-			.append('div')
-			.text(`Click a chromosomal position to zoom in and view ${q2.description || q.singleSampleGbtk}`)
-	}
-
-	const img = holder
-		.append('img')
-		.attr('width', data.canvasWidth)
-		.attr('height', data.canvasHeight)
-		.attr('src', data.src)
-
-	if (!q2) return
-
-	// !!
-
-	let bb // only load block once
-
-	img.on('click', async (event) => {
-		const x = event.offsetX - data.xoff
-
-		let chr, chrLen, position
-
-		for (const c of data.chrLst) {
-			if (c.xStart <= x && c.xStop >= x) {
-				chr = c.chr
-				chrLen = c.chrLen
-				position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
-				break
-			}
-		}
-		if (!chr) return
-
-		const start = Math.max(0, position - 500000),
-			stop = Math.min(position + 500000, chrLen)
-
-		if (bb) {
-			// block already loaded, jump
-			bb.jump_1basedcoordinate({ chr, start, stop })
-			return
-		}
-
-		// block is not present yet. load block
+	const loadingDiv = holder.append('div').text('Loading...')
+	try {
+		const q = termdbConfig.queries.singleSampleGenomeQuantification[queryKey]
 
 		const body = {
 			genome: genomeObj.name,
 			dslabel,
-			singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] },
+			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
+			singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
 		}
-		const d2 = await dofetch3('mds3', { body })
-		// d2={path:str}
-		if (!d2.path) return // no file
-		// has bedgraph file, load block
-		const _ = await import('../src/block')
-		const tklst = [
-			{
-				type: 'bigwig',
-				name: sample[q2.sample_id_key],
-				file: d2.path,
-				height: 100,
-				scale: { min: q2.min, max: q2.max },
-				pcolor: q.positiveColor,
-				ncolor: q.negativeColor,
-			},
-		]
-		first_genetrack_tolist(genomeObj, tklst)
+		const data = await dofetch3('mds3', { body })
+		if (data.error) throw data.error
 
-		bb = new _.Block({
-			genome: genomeObj,
-			holder: holder.append('div'),
-			nobox: true,
-			tklst,
-			chr,
-			start,
-			stop,
+		// optional query, if present, will enable clicking on genome-wide img to launch block
+		const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
+
+		// description
+		holder.append('div').text(q.description || queryKey)
+		if (q2) {
+			holder
+				.append('div')
+				.text(`Click a chromosomal position to zoom in and view ${q2.description || q.singleSampleGbtk}`)
+		}
+
+		const img = holder
+			.append('img')
+			.attr('width', data.canvasWidth)
+			.attr('height', data.canvasHeight)
+			.attr('src', data.src)
+
+		loadingDiv.remove()
+
+		if (!q2) return
+
+		// !!
+
+		let bb // only load block once
+
+		img.on('click', async event => {
+			const x = event.offsetX - data.xoff
+
+			let chr, chrLen, position
+
+			for (const c of data.chrLst) {
+				if (c.xStart <= x && c.xStop >= x) {
+					chr = c.chr
+					chrLen = c.chrLen
+					position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
+					break
+				}
+			}
+			if (!chr) return
+
+			const start = Math.max(0, position - 500000),
+				stop = Math.min(position + 500000, chrLen)
+
+			if (bb) {
+				// block already loaded, jump
+				bb.jump_1basedcoordinate({ chr, start, stop })
+				return
+			}
+
+			// block is not present yet. load block
+
+			const body = {
+				genome: genomeObj.name,
+				dslabel,
+				singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] }
+			}
+			const d2 = await dofetch3('mds3', { body })
+			// d2={path:str}
+			if (!d2.path) return // no file
+			// has bedgraph file, load block
+			const _ = await import('../src/block')
+			const tklst = [
+				{
+					type: 'bigwig',
+					name: sample[q2.sample_id_key],
+					file: d2.path,
+					height: 100,
+					scale: { min: q2.min, max: q2.max },
+					pcolor: q.positiveColor,
+					ncolor: q.negativeColor
+				}
+			]
+			first_genetrack_tolist(genomeObj, tklst)
+
+			bb = new _.Block({
+				genome: genomeObj,
+				holder: holder.append('div'),
+				nobox: true,
+				tklst,
+				chr,
+				start,
+				stop
+			})
 		})
-	})
+	} catch (e) {
+		loadingDiv.text('Error: ' + (e.message || e))
+	}
 }
 
 /*
@@ -449,26 +459,31 @@ genomeObj={}
 	client side genome obj
 */
 export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj) {
-	// request data
-	const body = {
-		genome: genomeObj.name,
-		dslabel,
-		singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
-	}
-	const data = await dofetch3('mds3', { body })
-	if (data.error) throw data.error
-	if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
-	const mlst = data.mlst
-
-	for (const i of mlst) i.position = i.pos
-
-	const disco_arg = {
-		sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
-		data: mlst,
-		genome: genomeObj,
-	}
+	const loadingDiv = holder
+		.append('div')
+		.style('margin', '20px')
+		.text('Loading...')
 
 	try {
+		// request data
+		const body = {
+			genome: genomeObj.name,
+			dslabel,
+			singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
+		}
+		const data = await dofetch3('mds3', { body })
+		if (data.error) throw data.error
+		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
+		const mlst = data.mlst
+
+		for (const i of mlst) i.position = i.pos
+
+		const disco_arg = {
+			sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
+			data: mlst,
+			genome: genomeObj
+		}
+
 		const opts = {
 			holder: holder,
 			state: {
@@ -479,15 +494,16 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 					{
 						chartType: 'Disco',
 						subfolder: 'disco_new',
-						extension: 'ts',
-					},
-				],
-			},
+						extension: 'ts'
+					}
+				]
+			}
 		}
 		const plot = await import('#plots/plot.app.js')
 		const plotAppApi = await plot.appInit(opts)
+		loadingDiv.remove()
 	} catch (e) {
-		throw e
+		loadingDiv.text('Error: ' + (e.message || e))
 	}
 }
 
@@ -496,7 +512,7 @@ export async function plotDiscoOld(termdbConfig, dslabel, sample, holder, genome
 	const body = {
 		genome: genomeObj.name,
 		dslabel,
-		singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
+		singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
 	}
 	const data = await dofetch3('mds3', { body })
 	if (data.error) throw data.error
@@ -507,18 +523,18 @@ export async function plotDiscoOld(termdbConfig, dslabel, sample, holder, genome
 
 	const disco_arg = {
 		sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
-		data: mlst,
+		data: mlst
 	}
 
 	const dtDisco = await import('#plots/disco/dt.disco.js').then(
-		(Cls) =>
+		Cls =>
 			new Cls.default({
 				genome: genomeObj,
 				holderSelector: holder,
 				settings: {
 					showControls: false,
-					selectedSamples: [],
-				},
+					selectedSamples: []
+				}
 			})
 	)
 	dtDisco.main(disco_arg)
@@ -532,9 +548,9 @@ samples with multiple variants must have been grouped to the same sample obj
 */
 export async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
-	const has_caseAccess = samples.some((i) => 'caseIsOpenAccess' in i),
-		has_ssm = samples.some((i) => i.ssm_id) || samples.some((i) => i.ssm_id_lst),
-		has_format = samples.some((i) => i.ssmid2format) && tk.mds?.bcf?.format
+	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
+		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst),
+		has_format = samples.some(i => i.ssmid2format) && tk.mds?.bcf?.format
 	const displayedFormatKeySet = new Set() // set of format keys for display, to skip keys not in display
 
 	// to be returned by this function, as inputs for renderTable
@@ -556,7 +572,7 @@ export async function samples2columnsRows(samples, tk) {
 	if (has_ssm) {
 		columns.push({
 			label: 'Mutations',
-			isSsm: true, // flag for text file downloader to do detect and do special treatment on this field
+			isSsm: true // flag for text file downloader to do detect and do special treatment on this field
 		})
 	}
 
@@ -572,7 +588,7 @@ export async function samples2columnsRows(samples, tk) {
 			if (!displayedFormatKeySet.has(f)) continue
 			const fobj = tk.mds.bcf.format[f]
 			columns.push({
-				label: fobj.Description || f,
+				label: fobj.Description || f
 			})
 		}
 	}
@@ -614,7 +630,7 @@ export async function samples2columnsRows(samples, tk) {
 				const htmls = []
 				for (const ssm_id of ssm_id_lst) {
 					const oneHtml = []
-					const m = (tk.skewer.rawmlst || tk.custom_variants).find((i) => i.ssm_id == ssm_id)
+					const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
 					if (m) {
 						// found m data point
 						if (m.dt == dtsnvindel) {
@@ -626,9 +642,8 @@ export async function samples2columnsRows(samples, tk) {
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							const p = m.pairlst[0]
 							oneHtml.push(
-								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
-									p.b.name || ''
-								} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b.name ||
+									''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 							)
 						} else {
 							throw 'unknown dt'
