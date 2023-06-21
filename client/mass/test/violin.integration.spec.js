@@ -27,16 +27,16 @@ import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
 const runpp = getRunPp('mass', {
 	state: {
 		nav: { activeTab: 1 },
-		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
+		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' },
 	},
-	debug: 1
+	debug: 1,
 })
 
 /**************
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- plots/violin -***-')
 	test.end()
 })
@@ -52,28 +52,28 @@ const open_state = {
 		q: {
 			mode: 'continuous',
 			hiddenValues: {},
-			isAtomic: true
-		}
+			isAtomic: true,
+		},
 	},
 	term2: {
-		id: 'sex'
-	}
+		id: 'sex',
+	},
 }
 
-tape('render violin plot', function(test) {
+tape('render violin plot', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
-			plots: [open_state]
+			plots: [open_state],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 
 	async function runTests(violin) {
@@ -145,83 +145,59 @@ tape('render violin plot', function(test) {
 
 	function testDescrStats(violin, legendDiv) {
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[0]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[0].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[0].value,
 			'Total n values rendered'
 		)
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[1]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[1].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[1].value,
 			'Minimum value rendered'
 		)
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[2]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[2].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[2].value,
 			'1st quartile value rendered'
 		)
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[3]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[3].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[3].value,
 			'Median value rendered'
 		)
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[4]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[4].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[4].value,
 			'Mean value rendered'
 		)
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[5]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[5].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[5].value,
 			'3rd quartile value rendered'
 		)
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[6]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[6].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[6].value,
 			'Max value rendered'
 		)
 		test.equal(
-			+legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[7]
-				.innerText.split(':')[1],
+			+legendDiv.node().querySelectorAll('.legend-row')[7].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats[7].value,
 			'Standard deviation rendered'
 		)
 	}
 })
 
-tape('term1 as numeric and term2 categorical, test median rendering', function(test) {
+tape('term1 as numeric and term2 categorical, test median rendering', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			plots: [open_state]
+			plots: [open_state],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
@@ -234,7 +210,7 @@ tape('term1 as numeric and term2 categorical, test median rendering', function(t
 		const median = await detectGte({
 			elem: violinDiv.node(),
 			selector: '.sjpp-median-line',
-			count: 2
+			count: 2,
 		})
 		test.ok(median, 'Median exists')
 
@@ -243,12 +219,18 @@ tape('term1 as numeric and term2 categorical, test median rendering', function(t
 			violin.Inner.data.plots.length,
 			'Number of median lines rendered should be/is equal to number of plots rendered'
 		)
-		const medianValues = median.map(({ __data__: { summaryStats: { values } } }) => {
-			const { value } = values.find(c => c.id === 'median')
-			return value
-		})
+		const medianValues = median.map(
+			({
+				__data__: {
+					summaryStats: { values },
+				},
+			}) => {
+				const { value } = values.find((c) => c.id === 'median')
+				return value
+			}
+		)
 		const sumStatsValues = violin.Inner.data.plots.map(({ summaryStats: { values } }) => {
-			const { value } = values.find(c => c.id === 'median')
+			const { value } = values.find((c) => c.id === 'median')
 			return value
 		})
 		test.equal(
@@ -264,20 +246,20 @@ tape('term1 as numeric and term2 categorical, test median rendering', function(t
 	}
 })
 
-tape('test basic controls', function(test) {
+tape('test basic controls', function (test) {
 	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
-			plots: [open_state]
+			plots: [open_state],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 
 	async function runTests(violin) {
@@ -307,12 +289,12 @@ tape('test basic controls', function(test) {
 					config: {
 						settings: {
 							violin: {
-								orientation: 'vertical'
-							}
-						}
-					}
+								orientation: 'vertical',
+							},
+						},
+					},
 				})
-			}
+			},
 		})
 		test.ok(termLabel, 'Term label exists')
 		test.true(termLabel[0].transform.animVal[0].angle === -90, 'Orientation is now vertical')
@@ -330,12 +312,12 @@ tape('test basic controls', function(test) {
 					config: {
 						settings: {
 							violin: {
-								datasymbol: 'rug'
-							}
-						}
-					}
+								datasymbol: 'rug',
+							},
+						},
+					},
 				})
-			}
+			},
 		})
 		test.ok(datasymbol, 'Data symbol exists')
 		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.datasymbol === 'rug', 'Data Symbol are now Ticks')
@@ -349,10 +331,10 @@ tape('test basic controls', function(test) {
 			config: {
 				settings: {
 					violin: {
-						strokeWidth: testStrokeWidth
-					}
-				}
-			}
+						strokeWidth: testStrokeWidth,
+					},
+				},
+			},
 		})
 		await sleep(20)
 		test.true(
@@ -369,10 +351,10 @@ tape('test basic controls', function(test) {
 			config: {
 				settings: {
 					violin: {
-						radius: testSymSize
-					}
-				}
-			}
+						radius: testSymSize,
+					},
+				},
+			},
 		})
 		await sleep(20)
 		test.true(
@@ -391,10 +373,10 @@ tape('test basic controls', function(test) {
 					type: 'plot_edit',
 					id: violin.Inner.id,
 					config: {
-						term2: await fillTermWrapper({ id: 'genetic_race' }, violin.Inner.app.vocabApi)
-					}
+						term2: await fillTermWrapper({ id: 'genetic_race' }, violin.Inner.app.vocabApi),
+					},
 				})
-			}
+			},
 		})
 		test.ok(changeOvTerm, 'Overlay Term has been changed')
 		test.true(violin.Inner.app.Inner.state.plots[0].term2.id === 'genetic_race', 'Overlay term changed')
@@ -412,12 +394,12 @@ tape('test basic controls', function(test) {
 					config: {
 						settings: {
 							violin: {
-								unit: 'log'
-							}
-						}
-					}
+								unit: 'log',
+							},
+						},
+					},
 				})
-			}
+			},
 		})
 		test.ok(showLogScale, 'Log scale exists')
 		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.unit === 'log', 'Axis scale rendered in log')
@@ -429,28 +411,28 @@ tape('test basic controls', function(test) {
 			id: violin.Inner.id,
 			type: 'plot_edit',
 			config: {
-				term: await fillTermWrapper({ id: 'agedx', q: { mode: 'discrete' } }, violin.Inner.app.vocabApi)
-			}
+				term: await fillTermWrapper({ id: 'agedx', q: { mode: 'discrete' } }, violin.Inner.app.vocabApi),
+			},
 		})
 		await sleep(20)
 		test.true(violin.Inner.app.Inner.state.plots[0].term.q.mode === 'discrete', "q.mode changed to 'Discrete' ")
 	}
 })
 
-tape('test label clicking, filtering and hovering', function(test) {
+tape('test label clicking, filtering and hovering', function (test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
-			plots: [open_state]
+			plots: [open_state],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 
 	async function runTests(violin) {
@@ -482,12 +464,12 @@ tape('test label clicking, filtering and hovering', function(test) {
 							type: 'categorical',
 							values: {
 								1: { label: 'Male' },
-								2: { label: 'Female' }
-							}
+								2: { label: 'Female' },
+							},
 						},
-						values: [{ key: '2' }]
+						values: [{ key: '2' }],
 					},
-					type: 'tvs'
+					type: 'tvs',
 				},
 				{
 					type: 'tvs',
@@ -495,8 +477,8 @@ tape('test label clicking, filtering and hovering', function(test) {
 						ranges: [
 							{
 								start: 12.289737495475805,
-								stop: 16.794964344698805
-							}
+								stop: 16.794964344698805,
+							},
 						],
 						term: {
 							id: 'agedx',
@@ -510,22 +492,22 @@ tape('test label clicking, filtering and hovering', function(test) {
 									startinclusive: true,
 									first_bin: {
 										startunbounded: true,
-										stop: 5
-									}
+										stop: 5,
+									},
 								},
-								label_offset: 1
-							}
-						}
-					}
-				}
-			]
+								label_offset: 1,
+							},
+						},
+					},
+				},
+			],
 		}
 		const filterUiRoot = getFilterItemByTag(violin.Inner.state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, tvslst])
 		filter.tag = 'filterUiRoot'
 		await violin.Inner.app.dispatch({
 			type: 'filter_replace',
-			filter
+			filter,
 		})
 		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
 	}
@@ -534,7 +516,7 @@ tape('test label clicking, filtering and hovering', function(test) {
 		const elem = await detectGte({
 			elem: violinDiv.node(),
 			selector: '.sjpp-axislabel',
-			count: 1
+			count: 1,
 		})
 		test.ok(elem, 'Hover Element exists')
 		elem[0].dispatchEvent(new Event('mouseover'), { bubbles: true })
@@ -544,20 +526,20 @@ tape('test label clicking, filtering and hovering', function(test) {
 	}
 })
 
-tape('test hide option on label clicking', function(test) {
+tape('test hide option on label clicking', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
-			plots: [open_state]
+			plots: [open_state],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
@@ -576,7 +558,7 @@ tape('test hide option on label clicking', function(test) {
 			groupsetting: { disabled: true },
 			hiddenValues: { [violin.Inner.data.plots[0].label]: 1 },
 			isAtomic: true,
-			type: 'values'
+			type: 'values',
 		}
 		violin.Inner.app.dispatch({
 			type: 'plot_edit',
@@ -586,9 +568,9 @@ tape('test hide option on label clicking', function(test) {
 					isAtomic: true,
 					id: violin.Inner.config.term2.id,
 					term: violin.Inner.config.term2.term,
-					q: q
-				}
-			}
+					q: q,
+				},
+			},
 		})
 		test.ok(true, 'label Clicking and Hide option ok!')
 	}
@@ -603,7 +585,7 @@ tape('test hide option on label clicking', function(test) {
 			htmlLegends[8].innerHTML,
 			'q.hiddenValues match legend'
 		)
-		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
+		const unhideLegendValue = htmlLegends.filter((c) => hiddenKeys.find((k) => c.__data__.text === k))
 		unhideLegendValue[0].dispatchEvent(new Event('click'), { bubbles: true })
 		const hiddenValueRendered = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-axislabel', count: 2 })
 		test.ok(hiddenValueRendered, 'hidden value rendered')
@@ -616,12 +598,12 @@ tape('test hide option on label clicking', function(test) {
 	}
 })
 
-tape.skip('term1 as numeric and term2 numeric', function(test) {
+tape.skip('term1 as numeric and term2 numeric', function (test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
 			plots: [
 				{
@@ -636,20 +618,20 @@ tape.skip('term1 as numeric and term2 numeric', function(test) {
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
-							isAtomic: true
-						}
+							isAtomic: true,
+						},
 					},
 					term2: {
-						id: 'agelastvisit'
-					}
-				}
-			]
+						id: 'agelastvisit',
+					},
+				},
+			],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 	async function runTests(violin) {
 		//TODO
@@ -658,12 +640,12 @@ tape.skip('term1 as numeric and term2 numeric', function(test) {
 	}
 })
 
-tape.skip('term1 as categorical and term2 numeric', function(test) {
+tape.skip('term1 as categorical and term2 numeric', function (test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
 			plots: [
 				{
@@ -674,24 +656,24 @@ tape.skip('term1 as categorical and term2 numeric', function(test) {
 						included_types: ['categorical'],
 						isAtomic: true,
 						isLeaf: true,
-						name: 'Sex'
+						name: 'Sex',
 					},
 					term2: {
 						id: 'agedx',
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
-							isAtomic: true
-						}
-					}
-				}
-			]
+							isAtomic: true,
+						},
+					},
+				},
+			],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 	async function runTests(violin) {
 		//TODO
@@ -700,12 +682,12 @@ tape.skip('term1 as categorical and term2 numeric', function(test) {
 	}
 })
 
-tape('term1 as numerical and term2 condition', function(test) {
+tape('term1 as numerical and term2 condition', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
 			plots: [
 				{
@@ -718,20 +700,20 @@ tape('term1 as numerical and term2 condition', function(test) {
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
-							isAtomic: true
-						}
+							isAtomic: true,
+						},
 					},
 					term2: {
-						id: 'Hearing loss'
-					}
-				}
-			]
+						id: 'Hearing loss',
+					},
+				},
+			],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
@@ -744,19 +726,19 @@ tape('term1 as numerical and term2 condition', function(test) {
 		test.ok(groups, 'Condition groups exist')
 
 		test.deepEqual(
-			groups.map(k => k.__data__.label),
-			violin.Inner.data.plots.map(k => k.label),
+			groups.map((k) => k.__data__.label),
+			violin.Inner.data.plots.map((k) => k.label),
 			'Order of conditional categories in term2 is accurate'
 		)
 	}
 })
 
-tape('test samplelst term2', function(test) {
+tape('test samplelst term2', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
 			plots: [
 				{
@@ -765,8 +747,8 @@ tape('test samplelst term2', function(test) {
 					term: {
 						id: 'agedx',
 						q: {
-							mode: 'continuous'
-						}
+							mode: 'continuous',
+						},
 					},
 					term2: {
 						term: {
@@ -775,13 +757,13 @@ tape('test samplelst term2', function(test) {
 							values: {
 								'Group 1': {
 									key: 'Group 1',
-									label: 'Group 1'
+									label: 'Group 1',
 								},
 								'Not in Group 1': {
 									key: 'Not in Group 1',
-									label: 'Not in Group 1'
-								}
-							}
+									label: 'Not in Group 1',
+								},
+							},
 						},
 						q: {
 							mode: 'discrete',
@@ -792,57 +774,57 @@ tape('test samplelst term2', function(test) {
 									values: [
 										{
 											sampleId: 42,
-											sample: '2660'
+											sample: '2660',
 										},
 										{
 											sampleId: 44,
-											sample: '2688'
+											sample: '2688',
 										},
 										{
 											sampleId: 45,
-											sample: '2702'
+											sample: '2702',
 										},
 										{
 											sampleId: 46,
-											sample: '2716'
+											sample: '2716',
 										},
 										{
 											sampleId: 59,
-											sample: '2898'
+											sample: '2898',
 										},
 										{
 											sampleId: 60,
-											sample: '2912'
+											sample: '2912',
 										},
 										{
 											sampleId: 67,
-											sample: '3010'
+											sample: '3010',
 										},
 										{
 											sampleId: 68,
-											sample: '3024'
+											sample: '3024',
 										},
 										{
 											sampleId: 69,
-											sample: '3038'
+											sample: '3038',
 										},
 										{
 											sampleId: 70,
-											sample: '3052'
+											sample: '3052',
 										},
 										{
 											sampleId: 73,
-											sample: '3094'
+											sample: '3094',
 										},
 										{
 											sampleId: 79,
-											sample: '3178'
+											sample: '3178',
 										},
 										{
 											sampleId: 80,
-											sample: '3192'
-										}
-									]
+											sample: '3192',
+										},
+									],
 								},
 								{
 									name: 'Not in Group 1',
@@ -850,74 +832,74 @@ tape('test samplelst term2', function(test) {
 									values: [
 										{
 											sampleId: 42,
-											sample: '2660'
+											sample: '2660',
 										},
 										{
 											sampleId: 44,
-											sample: '2688'
+											sample: '2688',
 										},
 										{
 											sampleId: 45,
-											sample: '2702'
+											sample: '2702',
 										},
 										{
 											sampleId: 46,
-											sample: '2716'
+											sample: '2716',
 										},
 										{
 											sampleId: 59,
-											sample: '2898'
+											sample: '2898',
 										},
 										{
 											sampleId: 60,
-											sample: '2912'
+											sample: '2912',
 										},
 										{
 											sampleId: 67,
-											sample: '3010'
+											sample: '3010',
 										},
 										{
 											sampleId: 68,
-											sample: '3024'
+											sample: '3024',
 										},
 										{
 											sampleId: 69,
-											sample: '3038'
+											sample: '3038',
 										},
 										{
 											sampleId: 70,
-											sample: '3052'
+											sample: '3052',
 										},
 										{
 											sampleId: 73,
-											sample: '3094'
+											sample: '3094',
 										},
 										{
 											sampleId: 79,
-											sample: '3178'
+											sample: '3178',
 										},
 										{
 											sampleId: 80,
-											sample: '3192'
-										}
-									]
-								}
+											sample: '3192',
+										},
+									],
+								},
 							],
 							groupsetting: {
-								disabled: false
+								disabled: false,
 							},
 							isAtomic: true,
-							type: 'custom-groupsetting'
-						}
-					}
-				}
-			]
+							type: 'custom-groupsetting',
+						},
+					},
+				},
+			],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 
 	async function runTests(violin) {
@@ -934,15 +916,12 @@ tape('test samplelst term2', function(test) {
 	}
 })
 
-tape('test uncomputable categories legend', function(test) {
+tape('test uncomputable categories legend', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
-			},
-			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
 			plots: [
 				{
@@ -955,17 +934,17 @@ tape('test uncomputable categories legend', function(test) {
 						isLeaf: true,
 						name: 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)',
 						q: {
-							mode: 'continuous'
-						}
-					}
-				}
-			]
+							mode: 'continuous',
+						},
+					},
+				},
+			],
 		},
 		violin: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 
 	async function runTests(violin) {
@@ -982,12 +961,12 @@ tape('test uncomputable categories legend', function(test) {
 		const categories = await detectGte({ elem: legendDiv.node(), selector: '.legend-row', count: 9 })
 		test.ok(categories, 'Uncomputable categories exist')
 
-		const uncomputableLegend = categories.filter(c => keys.find(k => c.__data__.text.startsWith(k)))
+		const uncomputableLegend = categories.filter((c) => keys.find((k) => c.__data__.text.startsWith(k)))
 
 		test.equal(keys.length, uncomputableLegend.length, 'should have the correct number of uncomputable legend entries')
 		test.equal(
 			uncomputableLegend
-				.find(c => c.__data__.text.startsWith(keys[0]))
+				.find((c) => c.__data__.text.startsWith(keys[0]))
 				?.__data__.text.split(',')
 				.pop(),
 			' n = ' + violin.Inner.data.uncomputableValueObj[keys[0]],
@@ -995,7 +974,7 @@ tape('test uncomputable categories legend', function(test) {
 		)
 		test.equal(
 			uncomputableLegend
-				.find(c => c.__data__.text.startsWith(keys[1]))
+				.find((c) => c.__data__.text.startsWith(keys[1]))
 				?.__data__.text.split(',')
 				.pop(),
 			' n = ' + violin.Inner.data.uncomputableValueObj[keys[1]],
@@ -1004,12 +983,12 @@ tape('test uncomputable categories legend', function(test) {
 	}
 })
 
-tape('Load linear regression-violin UI', function(test) {
+tape('Load linear regression-violin UI', function (test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			nav: {
-				header_mode: 'hide_search'
+				header_mode: 'hide_search',
 			},
 			plots: [
 				{
@@ -1018,16 +997,16 @@ tape('Load linear regression-violin UI', function(test) {
 					regressionType: 'linear',
 					outcome: {
 						id: 'hrtavg',
-						isAtomic: true
-					}
-				}
-			]
+						isAtomic: true,
+					},
+				},
+			],
 		},
 		regression: {
 			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+				'postRender.test': runTests,
+			},
+		},
 	})
 	async function runTests(regression) {
 		regression.on('postRender.test', null)
@@ -1039,7 +1018,7 @@ tape('Load linear regression-violin UI', function(test) {
 		const regressionVp = await detectGte({
 			elem: regression.Inner.dom.inputs.node(),
 			selector: '.sjpp-vp-path',
-			count: 1
+			count: 1,
 		})
 		test.ok(regressionVp, 'Violin plot for regression UI exists')
 
