@@ -1,6 +1,7 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { addGeneSearchbox } from '#dom/genesearch'
+import { TW, VocabApi } from '#shared/types'
 
 /* 
 ***************** EXPORT
@@ -28,9 +29,9 @@ self.q{}
 const term_name = 'Variants in a locus'
 
 // self is the termsetting instance
-export function getHandler(self) {
+export function getHandler(self: any) {
 	return {
-		getPillName(d) {
+		getPillName() {
 			return self.term.name
 		},
 
@@ -46,11 +47,11 @@ export function getHandler(self) {
 			return { text }
 		},
 
-		validateQ(data) {
-			validateQ(self, data)
+		validateQ(data: any) {
+			validateQ(data)
 		},
 
-		async showEditMenu(div) {
+		async showEditMenu(div: any) {
 			await makeEditMenu(self, div)
 		}
 
@@ -67,7 +68,7 @@ export function getHandler(self) {
 	}
 }
 
-async function makeEditMenu(self, div) {
+async function makeEditMenu(self: any, div: any) {
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
 	const coordResult = addGeneSearchbox({
@@ -154,7 +155,7 @@ self: may be a termsetting instance or any object
 snp validation will write snp-by-sample gt matrix to a cache file, using all samples from bcf file of this dataset
 do not apply sample filtering
 */
-async function validateInput(self) {
+async function validateInput(self: any) {
 	const data = await self.vocabApi.validateSnps(self.q)
 	if (data.error) throw data.error
 	// copy result to instance
@@ -163,7 +164,7 @@ async function validateInput(self) {
 	self.term.reachedVariantLimit = data.reachedVariantLimit
 }
 
-function validateQ(self, data) {
+function validateQ(data: any) {
 	const q = data.q
 	if (!Number.isFinite(q.AFcutoff)) throw 'AFcutoff is not number'
 	if (q.AFcutoff < 0 || q.AFcutoff > 100) throw 'AFcutoff is not within 0 to 100'
@@ -176,10 +177,10 @@ function validateQ(self, data) {
 	if (q.stop <= q.start) throw 'stop <= start'
 }
 
-export async function fillTW(tw, vocabApi) {
+export async function fillTW(tw: TW, vocabApi: VocabApi) {
 	try {
 		// to catch any error in q{} before running validateInput()
-		validateQ(null, tw)
+		validateQ(tw)
 	} catch (e) {
 		throw 'snplocus validateQ(): ' + e
 	}
@@ -216,7 +217,7 @@ filterInState{}
 callback2
 	optional callback to run upon filter update, no parameter
 */
-async function mayDisplayVariantFilter(self, filterInState, holder, callback2) {
+async function mayDisplayVariantFilter(self: any, filterInState: any, holder: any, callback2?: any) {
 	if (!self.variantFilter) {
 		self.variantFilter = await self.vocabApi.get_variantFilter()
 		// variantFilter should be {opts{}, filter{}, terms[]}
