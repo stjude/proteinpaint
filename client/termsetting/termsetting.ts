@@ -856,7 +856,7 @@ async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: Def
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : (t as string)
 	let _
-	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.js`)
+	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.ts`)
 	else if (tw.term.type) {
 		try {
 			_ = await import(`./handlers/${type}.ts`)
