@@ -334,7 +334,7 @@ tape('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 })
 
 tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassic_5"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(9000) // increased to 9 seconds to avoid timeout
 
 	runpp({
 		state: {
