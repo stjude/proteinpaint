@@ -287,7 +287,7 @@ class TermSetting {
 				}
 				this.handlerByType[typeSubtype] = await _.getHandler(this)
 			} catch (e) {
-				throw `error with handler='./handlers/${typeSubtype}.js': ${e}`
+				throw `error with handler='./handlers/${typeSubtype}.ts': ${e}`
 			}
 		}
 		this.handler = this.handlerByType[typeSubtype] as Handler
@@ -859,7 +859,7 @@ async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: Def
 	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.ts`)
 	else if (tw.term.type) {
 		try {
-			_ = await import(`./handlers/${type}.js`)
+			_ = await import(`./handlers/${type}.ts`)
 		} catch (error) {
 			throw `Type ${type} does not exist`
 		}
