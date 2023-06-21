@@ -38,18 +38,22 @@ export type RangeEntry = {
 }
 
 interface BaseQ {
+	groups?: any // Not documented but appears in samplelst?? same as groupsetting?
 	groupsetting?: GroupSetting
+	hiddenValues?: HiddenValues
+	isAtomic?: boolean
+	lst?: RangeEntry[]
+	name?: string
 	mode?: 'discrete' | 'binary' | 'continuous' | 'spline' | 'cuminc' | 'cox'
 	modeBinaryCutoffType?: 'normal' | 'percentile'
 	modeBinaryCutoffPercentile?: number
-	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 	reuseId?: string
-	name?: string
-	hiddenValues?: HiddenValues
-	groups?: any // Not documented but appears in samplelst?? same as groupsetting?
+	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 }
 
 export interface BinConfig extends BaseQ {
+	//TODO: this is probably a numeric Q. Will rename and split out later
+	preferredBins?: string
 	termtype?: string
 	//regular-sized bins
 	bin_size?: number
@@ -65,7 +69,6 @@ export interface BinConfig extends BaseQ {
 	}
 	//binary
 	scale?: number //0.1 | 0.01 | 0.001
-	lst?: RangeEntry[]
 }
 
 export type GroupEntry = {
@@ -101,7 +104,6 @@ type RestrictAncestry = {
 }
 
 export interface Q extends BaseQ {
-	isAtomic?: boolean
 	knots?: []
 	//Condition terms
 	bar_by_children?: boolean
@@ -109,8 +111,8 @@ export interface Q extends BaseQ {
 	breaks?: number[]
 	computableValuesOnly?: boolean
 	groupNames?: string[]
-	timeScale?: string
 	showTimeScale?: boolean
+	timeScale?: string
 	value_by_max_grade?: boolean
 	value_by_most_recent?: boolean
 	value_by_computable_grade?: boolean

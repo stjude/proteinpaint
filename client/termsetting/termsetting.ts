@@ -281,7 +281,7 @@ class TermSetting {
 				let _
 				// @rollup/plugin-dynamic-import-vars cannot use a import variable name in the same dir
 				if (typeSubtype == 'numeric.toggle') {
-					_ = await import(`./numeric.toggle.js`)
+					_ = await import(`./numeric.toggle.ts`)
 				} else {
 					_ = await import(`./handlers/${typeSubtype}.ts`)
 				}

@@ -215,6 +215,7 @@ export type TermSettingInstance = {
 	showMenu: (event: MouseEvent, clickedElem: string | null, menuHolder: any) => void
 	showReuseMenu?: (div: any) => void
 	showTree: (holder: Selection, event?: MouseEvent) => void
+	tabCallback?: (event: any, tab: any) => void
 	updatePill?: () => void
 	updateUI: () => void
 }
