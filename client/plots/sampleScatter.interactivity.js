@@ -114,7 +114,10 @@ export function setInteractivity(self) {
 			self.state.termdbConfig.queries?.singleSampleGenomeQuantification &&
 			target.tagName == 'path' &&
 			target.getAttribute('name') == 'serie'
-		const drawDiscoPlot = self.state.termdbConfig.queries?.singleSampleMutation
+		const drawDiscoPlot =
+			self.state.termdbConfig.queries?.singleSampleMutation &&
+			target.tagName == 'path' &&
+			target.getAttribute('name') == 'serie'
 
 		if (drawMethylationArrayPlot || drawDiscoPlot) {
 			self.dom.tooltip.hide()
