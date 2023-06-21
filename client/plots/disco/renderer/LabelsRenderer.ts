@@ -1,7 +1,7 @@
 import IRenderer from "./IRenderer";
 import {select} from 'd3-selection'
 import {line} from 'd3-shape'
-import Label from "#plots/disco_new/viewmodel/Label";
+import Label from "#plots/disco/viewmodel/Label";
 
 export default class LabelsRenderer implements IRenderer {
     private animationDuration: number;

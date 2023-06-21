@@ -1,6 +1,6 @@
 import Reference from "./Reference";
 import Data from "./Data";
-import LohArc from "#plots/disco_new/viewmodel/LohArc";
+import LohArc from "#plots/disco/viewmodel/LohArc";
 import GradientColorProvider from "./GradientColorProvider";
 
 export default class LohArcMapper {
