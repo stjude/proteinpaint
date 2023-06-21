@@ -84,6 +84,7 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseclick = function(event) {
+		self.dom.mainG.on('mouseout', null)
 		if (
 			self.state.termdbConfig.queries?.singleSampleGenomeQuantification ||
 			self.state.termdbConfig.queries?.singleSampleMutation
@@ -1657,12 +1658,16 @@ function setZoomPanActions(self) {
 			.style('user-select', '')
 
 		const c = self.clickedSeriesCell
+
+		/* TODO enable clicking matrix cell to launch /methylationArrayPlot/DIsco plot
 		if (c.startCell && !c.endCell) {
 			self.dom.mainG.on('mouseout', null)
 			delete self.clickedSeriesCell
 			self.mouseclick(event)
 			return
 		}
+		*/
+
 		if (!c || !c.startCell || !c.endCell) {
 			delete self.clickedSeriesCell
 			return
