@@ -17,12 +17,12 @@ export function setInteractivity(self) {
 		// let prevY = 0,
 		// 	numChartsPerRow = 0
 
-		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function() {
+		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function () {
 			to_svg(this, 'violin', { apply_dom_styles: true })
 		})
 	}
 
-	self.displayLabelClickMenu = function(t1, t2, plot, event) {
+	self.displayLabelClickMenu = function (t1, t2, plot, event) {
 		self.displayLabelClickMenu.called = true
 
 		if (!t2 || self.data.plots.length === 1) {
@@ -33,7 +33,7 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
-				callback: getAddFilterCallback(t1, t2, self, plot, label)
+				callback: getAddFilterCallback(t1, t2, self, plot, label),
 			},
 			{
 				label: `Hide: ${plot.label}`,
@@ -50,12 +50,12 @@ export function setInteractivity(self) {
 								isAtomic: true,
 								id: term.id,
 								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden)
-							}
-						}
+								q: getUpdatedQfromClick(plot, term, isHidden),
+							},
+						},
 					})
-				}
-			}
+				},
+			},
 		]
 
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
@@ -64,13 +64,13 @@ export function setInteractivity(self) {
 				callback: async () => {
 					const [start, end] = [self.data.min, self.data.max * 2]
 					await self.listSamples(event, t1, t2, plot, start, end)
-				}
+				},
 			})
 		}
 		self.displayMenu(event, options)
 	}
 
-	self.displayBrushMenu = function(t1, t2, self, plot, selection, scale, isH) {
+	self.displayBrushMenu = function (t1, t2, self, plot, selection, scale, isH) {
 		self.displayBrushMenu.called = true
 		const [start, end] = isH
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
@@ -79,21 +79,21 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end)
-			}
+				callback: getAddFilterCallback(t1, t2, self, plot, start, end),
+			},
 		]
 
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
-				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
+				callback: async () => self.listSamples(event, t1, t2, plot, start, end),
 			})
 		}
 		self.displayMenu(event, options)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function(event, options) {
+	self.displayMenu = function (event, options) {
 		self.app.tip.d.selectAll('*').remove()
 
 		//show menu options for label clicking and brush selection
@@ -104,7 +104,7 @@ export function setInteractivity(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.text(d => d.label)
+			.text((d) => d.label)
 			.on('click', (event, d) => {
 				self.app.tip.hide()
 				d.callback()
@@ -114,25 +114,25 @@ export function setInteractivity(self) {
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
-	self.listSamples = async function(event, t1, t2, plot, start, end) {
+	self.listSamples = async function (event, t1, t2, plot, start, end) {
 		const tvslst = self.getTvsLst(t1, t2, plot, start, end)
 		const term = t1.q?.mode === 'continuous' ? t1 : t2
 		const filter = {
 			type: 'tvslst',
 			join: 'and',
 			lst: [self.state.termfilter.filter, tvslst],
-			in: true
+			in: true,
 		}
 		const opts = {
 			terms: [term],
-			filter
+			filter,
 		}
 		//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 		self.displaySampleIds(event, term, data)
 	}
 
-	self.displaySampleIds = function(event, term, data) {
+	self.displaySampleIds = function (event, term, data) {
 		self.app.tip.clear()
 		if (!data?.samples) return
 		const sampleIdArr = []
@@ -155,20 +155,21 @@ export function setInteractivity(self) {
 			maxWidth: '30vw',
 			maxHeight: '25vh',
 			resize: true,
-			showLines: true
+			showLines: true,
 		})
 
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
-	self.labelHideLegendClicking = function(t2, plot) {
+	self.labelHideLegendClicking = function (t2, plot) {
 		self.dom.legendDiv
 			.selectAll('.sjpp-htmlLegend')
-			.on('click', event => {
+			.on('click', (event) => {
 				event.stopPropagation()
 				const d = event.target.__data__
 				const termNum =
 					t2?.term.type === 'condition' ||
+					t2?.term.type === 'samplelst' ||
 					t2?.term.type === 'categorical' ||
 					((t2?.term.type === 'float' || t2?.term.type === 'integer') && self.config.term?.q.mode === 'continuous')
 						? 'term2'
@@ -189,13 +190,13 @@ export function setInteractivity(self) {
 								isAtomic: true,
 								id: term.id,
 								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden)
-							}
-						}
+								q: getUpdatedQfromClick(plot, term, isHidden),
+							},
+						},
 					})
 				}
 			})
-			.on('mouseover', event => {
+			.on('mouseover', (event) => {
 				const q = event.target.__data__
 				if (q === undefined) return
 				if (q.isHidden === true) {
@@ -203,12 +204,12 @@ export function setInteractivity(self) {
 					self.dom.tip.show(event.clientX, event.clientY)
 				}
 			})
-			.on('mouseout', function() {
+			.on('mouseout', function () {
 				self.dom.tip.hide()
 			})
 	}
 
-	self.createTvsLstRanges = function(term, tvslst, rangeStart, rangeStop, lstIdx) {
+	self.createTvsLstRanges = function (term, tvslst, rangeStart, rangeStop, lstIdx) {
 		createTvsTerm(term, tvslst)
 
 		tvslst.lst[lstIdx].tvs.ranges = [
@@ -218,17 +219,17 @@ export function setInteractivity(self) {
 				startinclusive: true,
 				stopinclusive: true,
 				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
-				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
-			}
+				stopunbounded: self.displayLabelClickMenu.called == false ? true : false,
+			},
 		]
 	}
 
-	self.getTvsLst = function(t1, t2, plot, rangeStart, rangeStop) {
+	self.getTvsLst = function (t1, t2, plot, rangeStart, rangeStop) {
 		const tvslst = {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: []
+			lst: [],
 		}
 
 		if (t2) {
@@ -247,8 +248,8 @@ export function setInteractivity(self) {
 						startinclusive: plot.divideTwBins?.startinclusive || true,
 						stopinclusive: plot.divideTwBins?.stopinclusive || false,
 						startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
-					}
+						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null,
+					},
 				]
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 			} else {
@@ -265,7 +266,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 		type: 'tvslst',
 		in: true,
 		join: 'and',
-		lst: []
+		lst: [],
 	}
 
 	if (t2) {
@@ -287,8 +288,8 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 					startinclusive: plot.divideTwBins?.startinclusive || true,
 					stopinclusive: plot.divideTwBins?.stopinclusive || false,
 					startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
-				}
+					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null,
+				},
 			]
 			if (self.displayBrushMenu.called === true) {
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
@@ -311,7 +312,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',
-			filter
+			filter,
 		})
 	}
 }
@@ -332,12 +333,15 @@ function createTvsLstValues(term, plot, tvslst, lstIdx) {
 	tvslst.lst[lstIdx].tvs.values = [
 		{
 			key: plot.seriesId,
-			label: plot.label
-		}
+			label: plot.label,
+		},
 	]
 	if (term.term.type === 'condition') {
 		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
 		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
+	}
+	if (term.term.type === 'samplelst') {
+		tvslst.lst[lstIdx].tvs.values = term.term.values[plot.label].list
 	}
 }
 
@@ -345,7 +349,7 @@ function createTvsTerm(term, tvslst) {
 	tvslst.lst.push({
 		type: 'tvs',
 		tvs: {
-			term: term.term
-		}
+			term: term.term,
+		},
 	})
 }
