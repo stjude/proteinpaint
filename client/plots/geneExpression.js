@@ -37,7 +37,7 @@ class geneExpression {
 	async main() {
 		const body = this.getParam()
 		const data = await dofetch3('mds3', { body })
-		plotHeatmap(data, this)
+		plotHeatmap_R(data, this)
 	}
 
 	getParam() {
@@ -112,6 +112,171 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		})
 }
 
+// connect with output from R
+function plotHeatmap_R(data, self) {
+	/* data={
+		geneNameLst,sampleNameLst,matrix,
+		row_dendro [ {id1, x1, y1, id2, x2, y2} ... ]
+		row_children [ {id:0, children:[1]}, ...]
+		row_names_index [3,1,2]
+		col_dendro
+		col_children
+		col_names_index
+	}
+	*/
+	self.dom.clusterMethodSelect.property('selectedIndex', clusterMethodLst.indexOf(self.state.config.clusterMethod))
+	const obj = data.clustering
+	console.log(obj)
+	obj.d = {
+		minColor: '#0c306b',
+		maxColor: '#ffcc00',
+		xDendrogramHeight: 150,
+		yDendrogramHeight: 150
+	}
+	obj.d.colorScale = interpolateRgb(obj.d.minColor, obj.d.maxColor)
+	const ctx = self.dom.canvas.node().getContext('2d')
+
+	obj.d.rowHeight = getRowHeight(obj)
+	obj.d.colWidth = getColWidth(obj)
+
+	getLabHeight(ctx, obj) // set obj.d.xLabHeight obj.d.yLabHeight
+
+	self.dom.canvas
+		.attr('width', obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * obj.matrix[0].length)
+		.attr('height', obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * obj.matrix.length)
+
+	plotNames(obj, ctx)
+	drawHeatmap(obj, ctx)
+	plotDendrogram_R(ctx, obj)
+	plotHmColorScale(self, obj)
+}
+
+/*
+in both row_dendro[] and col_dendro[], elements are: {id1,x1,y1, id2,x2,y2}
+is one line traversing between a parent and a child
+id1/2 can either be parent or child, it's mixed
+x1/2 is row/column node index, 1-based
+y1/2 is depth
+*/
+function plotDendrogram_R(ctx, obj) {
+	try {
+		obj.row_dendro.map(validateRline)
+	} catch (e) {
+		throw 'row_dendro error: ' + e
+	}
+	try {
+		obj.col_dendro.map(validateRline)
+	} catch (e) {
+		throw 'col_dendro error: ' + e
+	}
+
+	// hardcoding gene to be on rows, swap x/y for row dendrogram
+	for (const r of obj.row_dendro) {
+		let t = r.x1
+		r.x1 = r.y1
+		r.y1 = t
+		t = r.x2
+		r.x2 = r.y2
+		r.y2 = t
+	}
+
+	// replace node x/y values with on-screen #pixel for plotting
+	{
+		let max = 0
+		for (const r of obj.row_dendro) max = Math.max(max, r.x1, r.x2)
+		const sf = obj.d.xDendrogramHeight / max
+		for (const r of obj.row_dendro) {
+			r.x1 = sf * (max - r.x1) // for row dendrogram, x is now depth
+			r.x2 = sf * (max - r.x2)
+			r.y1 *= obj.d.rowHeight // y is number of row items
+			r.y2 *= obj.d.rowHeight
+		}
+	}
+	{
+		let max = 0
+		for (const r of obj.col_dendro) max = Math.max(max, r.y1, r.y2)
+		const sf = obj.d.yDendrogramHeight / max
+		for (const r of obj.col_dendro) {
+			r.y1 = sf * (max - r.y1) // for col dendrogram, y is depth
+			r.y2 = sf * (max - r.y2)
+			r.x1 *= obj.d.colWidth // x is number of column items
+			r.x2 *= obj.d.colWidth
+		}
+	}
+
+	ctx.strokeStyle = 'black'
+
+	// plot row dendrogram
+
+	let F = obj.d.yDendrogramHeight + obj.d.yLabHeight // yoffset applied to y coord when plotting x dendrogram
+
+	for (const r of obj.row_dendro) {
+		ctx.beginPath()
+
+		// r is a line between two points. get extreme x/y
+		const x1 = Math.min(r.x1, r.x2),
+			x2 = Math.max(r.x1, r.x2),
+			y1 = Math.min(r.y1, r.y2),
+			y2 = Math.max(r.y1, r.y2)
+
+		// always one way to plot vertical line
+		ctx.moveTo(x1, y1 + F)
+		ctx.lineTo(x1, y2 + F)
+
+		// two ways to plot horizontal line
+		if ((r.x1 > r.x2 && r.y1 > r.y2) || (r.x1 < r.x2 && r.y1 < r.y2)) {
+			// one point is on lower right of another, the horizontal line is based on *max y*
+			ctx.lineTo(x2, y2 + F)
+		} else {
+			// one point is on upper right of another, the horizontal line is based on *min y*
+			ctx.moveTo(x1, y1 + F)
+			ctx.lineTo(x2, y1 + F)
+		}
+		ctx.stroke()
+		ctx.closePath()
+	}
+
+	// plot column dendrogram
+	F = obj.d.xDendrogramHeight + obj.d.xLabHeight // xoffset applied to x coord when plotting y dendrogram
+	for (const r of obj.col_dendro) {
+		ctx.beginPath()
+		const x1 = Math.min(r.x1, r.x2),
+			x2 = Math.max(r.x1, r.x2),
+			y1 = Math.min(r.y1, r.y2),
+			y2 = Math.max(r.y1, r.y2)
+		ctx.moveTo(F + x1, y1)
+		ctx.lineTo(F + x2, y1) // hline
+		if ((r.x1 > r.x2 && r.y1 > r.y2) || (r.x1 < r.x2 && r.y1 < r.y2)) {
+			// vline at max x
+			ctx.lineTo(F + x2, y2)
+		} else {
+			// vline at min x
+			ctx.moveTo(F + x1, y1)
+			ctx.lineTo(F + x1, y2)
+		}
+		ctx.stroke()
+		ctx.closePath()
+	}
+}
+function validateRline(r) {
+	// a line between parent and child, {id1,x1,y1, id2,x2,y2}
+
+	// r1/2 is node id, 0-based, currently not used
+	if (r.r1 < 0) throw `r.r1<0 ${r.r1}`
+	if (r.r2 < 0) throw `r.r2<0 ${r.r2}`
+
+	// x1/2 is matrix row/column entity index, 1-based; parent node can get non-integer value
+	if (r.x1 < 1) throw `r.x1<1 ${r.x1}`
+	if (r.x2 < 1) throw `r.x2<1 ${r.x2}`
+	r.x1 -= 0.5 // since the values are 1-based, subtract 0.5 to point to middle of row/column when rendering
+	r.x2 -= 0.5
+
+	// y1/2 is dendrogram node depth, non-negative
+	if (r.y1 < 0) throw `r.y1<0 ${r.y1}`
+	if (r.y2 < 0) throw `r.y2<0 ${r.y2}`
+}
+
+// connect with output from rust/src/cluster
 function plotHeatmap(data, self) {
 	self.dom.clusterMethodSelect.property('selectedIndex', clusterMethodLst.indexOf(self.state.config.clusterMethod))
 
@@ -179,29 +344,34 @@ function plotHeatmap(data, self) {
 		.attr('width', obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * obj.colIdxLst.length)
 		.attr('height', obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * obj.rowIdxLst.length)
 
-	// plot
-
+	plotNames(obj, ctx)
+	drawHeatmap(obj, ctx)
+	plotDendrogram(ctx, obj)
+	plotHmColorScale(self, obj)
+}
+function plotNames(obj, ctx) {
 	if (obj.d.xLabHeight) {
 		// can plot gene name as row label, do first loop
 		ctx.font = obj.d.rowHeight + 'px Arial'
 		ctx.textAlign = 'end'
 		ctx.fillStyle = 'black'
-		for (const [rowIdx, geneIdx] of obj.rowIdxLst.entries()) {
+		for (const [rowIdx, geneIdx] of obj.row_names_index.entries()) {
 			ctx.fillText(
-				obj.geneNameLst[geneIdx],
+				obj.geneNameLst[geneIdx - 1],
 				obj.d.xDendrogramHeight + obj.d.xLabHeight,
 				obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * (rowIdx + 1)
 			)
 		}
 	}
 	// col names are not plotted yet
-
-	for (let i = 0; i < obj.rowIdxLst.length; i++) {
-		const sampleValues = obj.matrix[obj.rowIdxLst[i]] // row of matrix, that are sample values for this gene
+}
+function drawHeatmap(obj, ctx) {
+	for (let i = 0; i < obj.row_names_index.length; i++) {
+		const sampleValues = obj.matrix[obj.row_names_index[i] - 1] // row of matrix, that are sample values for this gene
 		// min/max of this gene, to convert to [0,1] for mapping to color
 		const [min, max] = getMinMax(sampleValues)
-		for (let j = 0; j < obj.colIdxLst.length; j++) {
-			const v = sampleValues[obj.colIdxLst[j]]
+		for (let j = 0; j < obj.col_names_index.length; j++) {
+			const v = sampleValues[obj.col_names_index[j] - 1]
 			ctx.fillStyle = obj.d.colorScale((v - min) / (max - min))
 			ctx.fillRect(
 				obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * j,
@@ -211,10 +381,6 @@ function plotHeatmap(data, self) {
 			)
 		}
 	}
-
-	plotDendrogram(ctx, obj)
-
-	plotHmColorScale(self, obj)
 }
 function getRowHeight(obj) {
 	const h = 500 / obj.matrix.length
