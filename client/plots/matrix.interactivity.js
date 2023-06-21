@@ -84,31 +84,36 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseclick = function(event) {
-		if (self.state.termdbConfig.queries?.singleSampleGenomeQuantification) {
+		if (
+			self.state.termdbConfig.queries?.singleSampleGenomeQuantification ||
+			self.state.termdbConfig.queries?.singleSampleMutation
+		) {
 			const sample = event.target.__data__
 			sample.sample_id = sample.row?.sampleName
 			self.dom.menubody.selectAll('*').remove()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
-			for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-				const menuDiv = self.dom.menubody
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(k)
-					.on('click', event => {
-						const sandbox = newSandboxDiv(self.opts.plotDiv)
-						sandbox.header.text(sample.sample_id)
-						plotSingleSampleGenomeQuantification(
-							self.state.termdbConfig,
-							self.state.vocab.dslabel,
-							k,
-							sample,
-							sandbox.body.append('div').style('margin', '20px'),
-							self.app.opts.genome
-						)
-						self.dom.tip.hide()
-						menuDiv.remove()
-						self.dom.menubody.selectAll('*').remove()
-					})
+			if (self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					const menuDiv = self.dom.menubody
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text(k)
+						.on('click', event => {
+							const sandbox = newSandboxDiv(self.opts.plotDiv)
+							sandbox.header.text(sample.sample_id)
+							plotSingleSampleGenomeQuantification(
+								self.state.termdbConfig,
+								self.state.vocab.dslabel,
+								k,
+								sample,
+								sandbox.body.append('div').style('margin', '20px'),
+								self.app.opts.genome
+							)
+							self.dom.tip.hide()
+							menuDiv.remove()
+							self.dom.menubody.selectAll('*').remove()
+						})
+				}
 			}
 			if (self.state.termdbConfig.queries.singleSampleMutation) {
 				const menuDiv = self.dom.menubody

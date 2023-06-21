@@ -103,36 +103,40 @@ export function setInteractivity(self) {
 		tip2.hide()
 		const target = event.target
 
-		if (
+		const drawMethylationArrayPlot =
 			self.state.termdbConfig.queries?.singleSampleGenomeQuantification &&
 			target.tagName == 'path' &&
 			target.getAttribute('name') == 'serie'
-		) {
+		const drawDiscoPlot = self.state.termdbConfig.queries?.singleSampleMutation
+
+		if (drawMethylationArrayPlot || drawDiscoPlot) {
 			self.dom.tooltip.hide()
 			const sample = event.target.__data__
 			sample.sample_id = sample.sample
 			self.dom.tip.clear()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
-			for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-				const menuDiv = self.dom.tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(k)
-					.on('click', event => {
-						const sandbox = newSandboxDiv(self.opts.plotDiv)
-						sandbox.header.text(sample.sample_id)
-						plotSingleSampleGenomeQuantification(
-							self.state.termdbConfig,
-							self.state.vocab.dslabel,
-							k,
-							sample,
-							sandbox.body.append('div').style('margin', '20px'),
-							self.app.opts.genome
-						)
-						self.dom.tip.hide()
-					})
+			if (drawMethylationArrayPlot) {
+				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					const menuDiv = self.dom.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text(k)
+						.on('click', event => {
+							const sandbox = newSandboxDiv(self.opts.plotDiv)
+							sandbox.header.text(sample.sample_id)
+							plotSingleSampleGenomeQuantification(
+								self.state.termdbConfig,
+								self.state.vocab.dslabel,
+								k,
+								sample,
+								sandbox.body.append('div').style('margin', '20px'),
+								self.app.opts.genome
+							)
+							self.dom.tip.hide()
+						})
+				}
 			}
-			if (self.state.termdbConfig.queries.singleSampleMutation) {
+			if (drawDiscoPlot) {
 				const menuDiv = self.dom.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
