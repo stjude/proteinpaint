@@ -22,7 +22,7 @@ export async function getHandler(self) {
 		self.q.mode = tab.subType
 		const typeSubtype = `numeric.${tab.subType}`
 		if (!self.handlerByType[typeSubtype]) {
-			const _ = await import(`./handlers/${typeSubtype}.js`)
+			const _ = await import(`./handlers/${typeSubtype}.ts`)
 			self.handlerByType[typeSubtype] = await _.getHandler(self)
 		}
 		tab.isRendered = true
@@ -38,7 +38,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'continuous',
 			label: 'Continuous',
-			callback: self.tabCallback
+			callback: self.tabCallback,
 		})
 	}
 
@@ -46,7 +46,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'discrete',
 			label: 'Discrete',
-			callback: self.tabCallback
+			callback: self.tabCallback,
 		})
 	}
 
@@ -54,7 +54,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'spline',
 			label: 'Cubic spline',
-			callback: self.tabCallback
+			callback: self.tabCallback,
 		})
 	}
 
@@ -62,7 +62,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'binary',
 			label: 'Binary',
-			callback: self.tabCallback
+			callback: self.tabCallback,
 		})
 	}
 
@@ -102,9 +102,9 @@ export async function getHandler(self) {
 			new Tabs({
 				holder: topBar.append('div').style('display', 'inline-block'),
 				contentHolder: div.append('div'),
-				tabs
+				tabs,
 			}).main()
-		}
+		},
 	}
 }
 
@@ -143,14 +143,14 @@ export async function fillTW(tw, vocabApi, defaultQ = null) {
 					startunbounded: true,
 					stop: median,
 					stopinclusive: false,
-					label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
+					label: '<' + median, // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
 				},
 				{
 					start: median,
 					startinclusive: true,
 					stopunbounded: true,
-					label: '≥' + median
-				}
+					label: '≥' + median,
+				},
 			]
 		} else if (defaultQ.preferredBins == 'less') {
 			/* this flag is true, use term.bins.less

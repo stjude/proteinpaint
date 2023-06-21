@@ -207,6 +207,7 @@ export type Term = {
 	groupsetting?: GroupSetting
 	hashtmldetail?: boolean
 	included_types?: string[]
+	isleaf?: boolean
 	logScale?: string | number //2, 10, or e only
 	max?: number
 	min?: number
