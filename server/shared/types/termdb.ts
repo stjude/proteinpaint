@@ -44,6 +44,7 @@ interface BaseQ {
 	modeBinaryCutoffPercentile?: number
 	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset'
 	reuseId?: string
+	hiddenValues?: HiddenValues
 }
 
 export interface BinConfig extends BaseQ {
@@ -63,6 +64,7 @@ export interface BinConfig extends BaseQ {
 	//binary
 	scale?: number //0.1 | 0.01 | 0.001
 	lst?: RangeEntry[]
+	name?: string
 }
 
 export type GroupEntry = {
@@ -99,9 +101,7 @@ type RestrictAncestry = {
 
 export interface Q extends BaseQ {
 	isAtomic?: boolean
-	hiddenValues?: HiddenValues
 	knots?: []
-	name?: string
 	//Condition terms
 	bar_by_children?: boolean
 	bar_by_grade?: boolean

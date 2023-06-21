@@ -160,7 +160,7 @@ export type NumberObj = {
 }
 
 type InstanceDom = {
-	//Separate from the Dom outlined in termsetting.ts
+	//Separate from the Dom outlined in termsetting.ts?????
 	//Required
 	holder: any
 	tip: any //TODO Menu type??
@@ -171,10 +171,12 @@ type InstanceDom = {
 	//Optional
 	bins_div?: any
 	bins_table?: any
+	boundaryInput?: any
 	customBinBoundaryInput?: any
 	customBinBoundaryPercentileCheckbox?: any
+	customBinLabelInput?: any
+	customBinRanges?: any
 	cutoff_div?: any
-	boundaryInput?: any
 	num_holder?: any
 	pill_termname?: any
 	rangeAndLabelDiv?: any
@@ -206,6 +208,7 @@ export type TermSettingInstance = {
 	exitPill?: () => void
 	initUI: () => void
 	removeTerm?: () => void
+	renderBinLines?: (self: any, q: Q) => void
 	runCallback?: (f?: any) => any
 	setHandler?: (f: string) => any
 	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
