@@ -52,9 +52,7 @@ const defaultOpts: { menuOptions: string; menuLayout: string } = {
 	menuLayout: 'vertical',
 }
 
-type HandlerByType = {
-	[index: string]: Handler //another test
-}
+type HandlerByType = { [index: string]: Handler }
 
 class TermSetting {
 	opts: TermSettingOpts
