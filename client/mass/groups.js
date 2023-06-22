@@ -4,7 +4,7 @@ import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from 
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
-import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
 
@@ -33,7 +33,7 @@ class MassGroups {
 
 	async init() {
 		this.dom = {
-			holder: this.opts.holder.append('div').style('margin', '10px')
+			holder: this.opts.holder.append('div').style('margin', '10px'),
 		}
 		initUI(this)
 		this.tip = new Menu({ padding: '5px' })
@@ -47,7 +47,7 @@ class MassGroups {
 			termdbConfig: appState.termdbConfig,
 			customTerms: appState.customTerms,
 			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
-			matrixplots: appState.termdbConfig.matrixplots
+			matrixplots: appState.termdbConfig.matrixplots,
 		}
 		return state
 	}
@@ -124,7 +124,7 @@ class MassGroups {
 			return
 		}
 		this.dom.launchButton.text(`Create variable using ${lst.length} groups`)
-		this.dom.newTermNameInput.property('value', lst.map(i => this.state.groups[i].name).join(' vs '))
+		this.dom.newTermNameInput.property('value', lst.map((i) => this.state.groups[i].name).join(' vs '))
 	}
 
 	displayCustomTerms() {
@@ -149,7 +149,7 @@ class MassGroups {
 				.style('padding', '3px 6px')
 				.style('border-radius', '6px')
 				.style('margin-right', '5px')
-				.on('click', event => {
+				.on('click', (event) => {
 					const deleteCallback = () => this.app.vocabApi.deleteCustomTerm(name)
 					this.showGroupsMenu(event, tw, deleteCallback)
 				})
@@ -175,19 +175,13 @@ class MassGroups {
 		if (this.state.supportedChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', this.tip, samplelstTW, id, this, true)
 
-		const summarizeDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.html('Summarize')
-		summarizeDiv
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
+		const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
+		summarizeDiv.insert('div').html('›').style('float', 'right')
 
-		summarizeDiv.on('click', async e => {
+		summarizeDiv.on('click', async (e) => {
 			showTermsTree(
 				summarizeDiv,
-				term => {
+				(term) => {
 					openSummaryPlot(term, samplelstTW, this.app, id, () => this.newId)
 				},
 				this.app,
@@ -198,7 +192,7 @@ class MassGroups {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Delete variable')
-			.on('click', event => {
+			.on('click', (event) => {
 				deleteCallback()
 				this.tip.hide()
 			})
@@ -220,10 +214,7 @@ function initUI(self) {
 
 	// btn 2: patch of controls to create new term
 	self.dom.newTermSpan = btnRow.append('span') // contains "create button" and <input>, so they can toggle on/off together
-	self.dom.newTermSpan
-		.append('span')
-		.style('padding-left', '15px')
-		.text('Add variable:')
+	self.dom.newTermSpan.append('span').style('padding-left', '15px').text('Add variable:')
 	self.dom.newTermNameInput = self.dom.newTermSpan.append('input').attr('type', 'text')
 
 	self.dom.launchButton = self.dom.newTermSpan
@@ -232,10 +223,7 @@ function initUI(self) {
 		.on('click', () => clickLaunchBtn(self))
 
 	// msg: none selected
-	self.dom.noGroupSelected = btnRow
-		.append('span')
-		.text('No groups selected')
-		.style('opacity', 0.5)
+	self.dom.noGroupSelected = btnRow.append('span').text('No groups selected').style('opacity', 0.5)
 
 	// bottom box to list custom terms
 	self.dom.customTermDiv = self.dom.holder
@@ -244,7 +232,7 @@ function initUI(self) {
 		.style('border-left', 'solid 1px black')
 		.style('padding', '10px')
 
-	self.dom.holder.on('click', event => tip2.hide())
+	self.dom.holder.on('click', (event) => tip2.hide())
 }
 
 async function updateUI(self) {
@@ -259,25 +247,25 @@ async function updateUI(self) {
 		vocab: self.app.opts.state.vocab,
 		emptyLabel: 'Add group',
 		termdbConfig: self.state.termdbConfig,
-		callback: f => {
+		callback: (f) => {
 			// create new group
 			const name = 'New group'
 			let i = 0
 			while (1) {
 				const name2 = name + (i == 0 ? '' : ' ' + i)
-				if (!groups.find(g => g.name == name2)) break
+				if (!groups.find((g) => g.name == name2)) break
 				i++
 			}
 			const newGroup = {
 				name: name + (i == 0 ? '' : ' ' + i),
-				filter: f
+				filter: f,
 			}
 			groups.push(newGroup)
 			self.app.dispatch({
 				type: 'app_refresh',
-				state: { groups }
+				state: { groups },
 			})
-		}
+		},
 	}).main(self.getMassFilter()) // provide mass filter to limit the term tree
 
 	// duplicate groups[] array to mutate and add to action.state for dispatching
@@ -292,10 +280,7 @@ async function updateUI(self) {
 	}
 
 	// clear table and populate rows
-	self.dom.filterTableDiv
-		.style('display', '')
-		.selectAll('*')
-		.remove()
+	self.dom.filterTableDiv.style('display', '').selectAll('*').remove()
 
 	const tableArg = {
 		div: self.dom.filterTableDiv,
@@ -304,7 +289,7 @@ async function updateUI(self) {
 				label: 'NAME',
 				editCallback: async (i, cell) => {
 					const newName = cell.value
-					const index = self.state.groups.findIndex(group => group.name == newName)
+					const index = self.state.groups.findIndex((group) => group.name == newName)
 					if (index != -1) {
 						alert(`Group named ${newName} already exists`)
 						updateUI(self)
@@ -312,12 +297,12 @@ async function updateUI(self) {
 						await self.app.dispatch({
 							type: 'rename_group',
 							index: i,
-							newName: cell.value
+							newName: cell.value,
 						})
-				}
+				},
 			},
 			{ label: '#SAMPLE' },
-			{ label: 'FILTER' }
+			{ label: 'FILTER' },
 		],
 		columnButtons: [
 			{
@@ -325,16 +310,16 @@ async function updateUI(self) {
 				callback: (e, i) => {
 					const group = groups[i]
 					self.app.vocabApi.deleteGroup(group.name)
-				}
-			}
+				},
+			},
 		],
-		rows: []
+		rows: [],
 	}
 	for (const g of groups) {
 		tableArg.rows.push([
 			{ value: g.name }, // to allow click to show <input>
 			{ value: 'n=' + (await self.app.vocabApi.getFilteredSampleCount(g.filter)) },
-			{} // blank cell to show filter ui
+			{}, // blank cell to show filter ui
 		])
 	}
 
@@ -367,10 +352,10 @@ async function updateUI(self) {
 			holder: row[2].__td,
 			vocab: self.app.opts.state.vocab,
 			termdbConfig: self.state.termdbConfig,
-			callback: f => {
+			callback: (f) => {
 				if (!f || f.lst.length == 0) {
 					// blank filter (user removed last tvs from this filter), delete this element from groups[]
-					const i = groups.findIndex(g => g.name == group.name)
+					const i = groups.findIndex((g) => g.name == group.name)
 					groups.splice(i, 1)
 				} else {
 					// update filter
@@ -378,9 +363,9 @@ async function updateUI(self) {
 				}
 				self.app.dispatch({
 					type: 'app_refresh',
-					state: { groups }
+					state: { groups },
 				})
-			}
+			},
 		}).main(group.filter)
 	}
 
@@ -435,7 +420,7 @@ function rebaseGroupFilter(s) {
 		f.join = f.lst.length > 1 ? 'and' : ''
 		const g2 = {
 			name: g.name,
-			filter: f
+			filter: f,
 		}
 		groups.push(g2)
 	}
@@ -446,13 +431,13 @@ export async function openPlot(chartType, term, term2, app, id, newId) {
 	let config = {
 		chartType,
 		term,
-		term2
+		term2,
 	}
 	if (id) config.insertBefore = id
 	if (newId) config.id = newId()
 	await app.dispatch({
 		type: 'plot_create',
-		config
+		config,
 	})
 }
 
@@ -465,13 +450,13 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 		chartType: 'summary',
 		childType: 'barchart',
 		term: tw,
-		term2: samplelstTW
+		term2: samplelstTW,
 	}
 	if (id) config.insertBefore = id
 	if (newId) config.id = newId()
 	await app.dispatch({
 		type: 'plot_create',
-		config
+		config,
 	})
 }
 
@@ -483,12 +468,12 @@ export async function showTermsTree(div, callback, app, tip, state = { tree: { u
 		vocabApi: app.vocabApi,
 		state,
 		tree: {
-			click_term: term => {
+			click_term: (term) => {
 				callback(term)
 				tip2.hide()
 				tip.hide()
-			}
-		}
+			},
+		},
 	})
 }
 export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
@@ -497,12 +482,12 @@ export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, pare
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		//.html('Compare survival&nbsp;&nbsp;›')
 		.html(`${text}&nbsp;&nbsp;›`)
-		.on('click', e => {
+		.on('click', (e) => {
 			const state = { tree: { usecase: { target: chartType, detail: 'term' } } }
 			if (chartType == 'survival') state.nav = { header_mode: 'hide_search' }
 			showTermsTree(
 				itemDiv,
-				term => {
+				(term) => {
 					openPlot(chartType, term, samplelstTW, parent.app, id, openOnTop ? () => parent.newId : null)
 				},
 				parent.app,
@@ -528,7 +513,7 @@ export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, newId) {
 
 					app.dispatch({
 						type: 'plot_create',
-						config
+						config,
 					})
 					menu.hide()
 				})
