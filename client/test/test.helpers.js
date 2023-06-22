@@ -21,7 +21,7 @@ whenVisible
 */
 
 export function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
+	return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 //exports.sleep = sleep
@@ -63,8 +63,8 @@ export async function detectLst(_opts = {}) {
 			childList: true,
 			subtree: true,
 			attributes: true,
-			characterData: true
-		}
+			characterData: true,
+		},
 	}
 
 	if (!_opts.matcher) {
@@ -89,9 +89,9 @@ export async function detectLst(_opts = {}) {
 			}
 		}
 
-		const callback = mutations => {
+		const callback = (mutations) => {
 			const elems = opts.selector ? [...opts.target.querySelectorAll(opts.selector)] : [opts.target]
-			const mutated = mutations.filter(m => elems.includes(m.target))
+			const mutated = mutations.filter((m) => elems.includes(m.target))
 			if (!mutated.length && opts.count !== 0) return
 			const matched = opts.matcher ? opts.matcher(mutated, observer) : matchedCount(elems.length, opts)
 			const expired = Date.now() - start > opts.maxTime
@@ -156,8 +156,8 @@ export async function detectChildAttr(opts) {
 		if (opts.matcher) console.warn(`will not use opts.attr since an opts.matcher is already available`)
 		else {
 			if (!('count' in opts)) opts.count = 1
-			opts.matcher = mutations => {
-				const matched = mutations.filter(m => {
+			opts.matcher = (mutations) => {
+				const matched = mutations.filter((m) => {
 					for (const key in opts.attr) {
 						if (typeof opts.attr[key] === 'function') {
 							const value = m.target.getAttribute(key)
@@ -169,7 +169,7 @@ export async function detectChildAttr(opts) {
 					return true
 				})
 				// TODO: should accumulate matched counts???
-				if (matched.length === opts.count) return matched.map(d => d.target)
+				if (matched.length === opts.count) return matched.map((d) => d.target)
 			}
 		}
 	}
@@ -194,9 +194,9 @@ export async function detectChildStyle(opts) {
 		if (opts.matcher) console.warn(`will not use opts.style since an opts.matcher is already available`)
 		else {
 			if (!('count' in opts)) opts.count = 1
-			opts.matcher = mutations => {
+			opts.matcher = (mutations) => {
 				// need to be careful of strings
-				const matched = mutations.filter(m => {
+				const matched = mutations.filter((m) => {
 					for (const key in opts.style) {
 						const value = m.target.style[key]
 						if (typeof opts.style[key] == 'function') {
@@ -206,7 +206,7 @@ export async function detectChildStyle(opts) {
 					return true
 				})
 				// TODO: should accumulate matched counts???
-				if (matched.length === opts.count) return matched.map(d => d.target)
+				if (matched.length === opts.count) return matched.map((d) => d.target)
 			}
 		}
 	}
@@ -227,7 +227,7 @@ export async function detectChildText(opts) {
 	opts.observe.characterData = true
 	opts.observe.childList = true
 	if (!opts.matcher) {
-		opts.matcher = mutations => mutations.map(m => m.target)
+		opts.matcher = (mutations) => mutations.map((m) => m.target)
 	}
 	const lst = await detectLst(opts)
 	return lst
@@ -353,7 +353,8 @@ class TestAppStore {
 	constructor(opts) {
 		;(this.type = 'store'),
 			(this.defaultState = {
-				debug: true
+				//another prettier test, should see () and ; that have been removed
+				debug: true,
 			})
 	}
 
