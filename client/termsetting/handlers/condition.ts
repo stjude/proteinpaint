@@ -2,15 +2,16 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { keyupEnter } from '#src/client'
 import { copyMerge } from '#rx'
+import { PillData, TW, Q, VocabApi } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
-const cutoffGrades = [1, 2, 3, 4, 5]
-const not_tested_grade = -1
+const cutoffGrades: number[] = [1, 2, 3, 4, 5]
+//const not_tested_grade = -1
 
-export function getHandler(self) {
+export function getHandler(self: any) {
 	return {
-		getPillName(d) {
+		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
 		},
 
@@ -18,7 +19,7 @@ export function getHandler(self) {
 			return getPillStatus(self)
 		},
 
-		showEditMenu(div) {
+		showEditMenu(div: string) {
 			if (self.q.mode == 'discrete') {
 				// barchart, cuminc term0/2
 				return showMenu_discrete(self, div)
@@ -30,12 +31,12 @@ export function getHandler(self) {
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
-		}
+		},
 	}
 }
 
-function getPillStatus(self) {
-	const text = self.q?.name || self.q?.reuseId
+function getPillStatus(self: any) {
+	const text: string = self.q?.name || self.q?.reuseId
 	if (text) return { text }
 	if (self.q.mode == 'discrete') {
 		if (self.q.breaks.length == 0) {
@@ -55,7 +56,7 @@ function getPillStatus(self) {
 	return { text: 'Error: unknown q.mode', bgcolor: 'red' }
 }
 
-function showMenu_discrete(self, div) {
+function showMenu_discrete(self: any, div: any) {
 	// div for selecting type of grade
 	const value_type_div = div
 		.append('div')
@@ -135,17 +136,13 @@ function showMenu_discrete(self, div) {
 		.style('margin-right', '5px')
 
 	// TODO replace <textarea> with progressive cutoff selector, may keep using ui components for rangeNameDiv
-	gradeValuesDiv
-		.append('div')
-		.style('margin-bottom', '5px')
-		.style('color', 'rgb(136, 136, 136)')
-		.text('Cutoff grades')
+	gradeValuesDiv.append('div').style('margin-bottom', '5px').style('color', 'rgb(136, 136, 136)').text('Cutoff grades')
 
 	const textarea = gradeValuesDiv
 		.append('textarea')
 		.style('width', '100px')
 		.style('height', '70px')
-		.on('keyup', event => {
+		.on('keyup', (event: KeyboardEvent) => {
 			if (!keyupEnter(event)) return
 			textarea2gradeUI()
 		})
@@ -165,18 +162,10 @@ function showMenu_discrete(self, div) {
 	textarea2gradeUI()
 	function textarea2gradeUI() {
 		rangeNameDiv.selectAll('*').remove()
-		const breaks = textarea2breaks()
+		const breaks: number[] = textarea2breaks()
 		if (breaks.length == 0) return
-		rangeNameDiv
-			.append('div')
-			.style('margin-bottom', '3px')
-			.style('color', 'rgb(136, 136, 136)')
-			.text('Range')
-		rangeNameDiv
-			.append('div')
-			.style('margin-bottom', '3px')
-			.style('color', 'rgb(136, 136, 136)')
-			.text('Label')
+		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Range')
+		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Label')
 		for (const [i, b1] of breaks.entries()) {
 			// each break creates a group
 			const b0 = breaks[i - 1]
@@ -217,16 +206,16 @@ function showMenu_discrete(self, div) {
 	function textarea2breaks() {
 		const str = textarea.property('value').trim()
 		if (!str) return []
-		const lst = [
+		const lst: any = [
 			...new Set(
 				str
 					.split('\n')
 					.map(Number)
-					.filter(i => Number.isInteger(i) && i >= 1 && i <= 5)
-			)
+					.filter((i: number) => Number.isInteger(i) && i >= 1 && i <= 5)
+			),
 		]
 		if (lst.size == 0) return []
-		return lst.sort((i, j) => i - j)
+		return lst.sort((i: number, j: number) => i - j)
 	}
 
 	// Apply button
@@ -234,7 +223,7 @@ function showMenu_discrete(self, div) {
 		.append('button')
 		.text('Apply')
 		.style('margin', '10px')
-		.on('click', event => {
+		.on('click', (event: any) => {
 			self.q.breaks = textarea2breaks()
 			self.q.groupNames = []
 			for (const i of rangeNameDiv.selectAll('input').nodes()) {
@@ -242,11 +231,13 @@ function showMenu_discrete(self, div) {
 			}
 			event.target.disabled = true
 			event.target.innerHTML = 'Loading...'
+			// (event.target as HTMLButtonElement).disabled = true
+			// (event.target as HTMLButtonElement).innerHTML = 'Loading...'
 			self.runCallback()
 		})
 }
 
-function showMenu_cutoff(self, div) {
+function showMenu_cutoff(self: any, div: any) {
 	const holder = div
 		.append('div')
 		.style('margin', '10px')
@@ -255,10 +246,7 @@ function showMenu_cutoff(self, div) {
 		.style('gap', '20px')
 
 	// row 1
-	holder
-		.append('div')
-		.text('Grade cutoff')
-		.style('opacity', 0.4)
+	holder.append('div').text('Grade cutoff').style('opacity', 0.4)
 	const sd = holder.append('div')
 	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
 	for (const i of cutoffGrades) {
@@ -300,19 +288,16 @@ function showMenu_cutoff(self, div) {
 	}
 
 	// row 4: time scale toggle (for cox outcome)
-	let timeScaleChoice
+	let timeScaleChoice: string
 	if (self.q.mode == 'cox') {
 		timeScaleChoice = self.q.timeScale
-		holder
-			.append('div')
-			.text('Time axis')
-			.style('opacity', 0.4)
-		const options = [
+		holder.append('div').text('Time axis').style('opacity', 0.4)
+		const options: { label: string; value: string; checked?: boolean }[] = [
 			{
 				label: 'Years since entry into the cohort', // may define from ds
-				value: 'time'
+				value: 'time',
 			},
-			{ label: 'Age', value: 'age' }
+			{ label: 'Age', value: 'age' },
 		]
 		if (self.q.timeScale == 'age') {
 			options[1].checked = true
@@ -323,7 +308,7 @@ function showMenu_cutoff(self, div) {
 			holder: holder.append('div'),
 			options,
 			styles: { margin: '' },
-			callback: v => (timeScaleChoice = v)
+			callback: (v: string) => (timeScaleChoice = v),
 		})
 	}
 
@@ -332,7 +317,7 @@ function showMenu_cutoff(self, div) {
 		.append('button')
 		.text('Apply')
 		.style('margin', '10px')
-		.on('click', event => {
+		.on('click', (event: any) => {
 			const grade = gradeSelect.property('selectedIndex') + 1
 			self.q.breaks[0] = grade
 			if (self.q.mode == 'binary') {
@@ -346,11 +331,13 @@ function showMenu_cutoff(self, div) {
 			}
 			event.target.disabled = true
 			event.target.innerHTML = 'Loading...'
+			// (event.target as HTMLButtonElement).disabled = true
+			// (event.target as HTMLButtonElement).innerHTML = 'Loading...'
 			self.runCallback()
 		})
 }
 
-export function fillTW(tw, vocabApi, defaultQ) {
+export function fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q) {
 	set_hiddenvalues(tw.q, tw.term)
 
 	if (defaultQ) {
@@ -369,6 +356,7 @@ export function fillTW(tw, vocabApi, defaultQ) {
 		tw.q.value_by_max_grade = true
 	}
 	if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+		//ignore
 	} else {
 		tw.q.bar_by_grade = true
 	}

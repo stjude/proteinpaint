@@ -1,11 +1,12 @@
+//import { TW } from '#shared/types'
 /*
 if the "effect allele" is already set for a snp (by user), return it
 otherwise, compute it based on the alleleType setting (from termwrapper.q{})
 
 snp: { effectAllele, alleles[ {allele, count, isRef} ] }
 */
-function get_effectAllele(alleleType, snp) {
-	let effectAllele
+function get_effectAllele(alleleType: any, snp: any) {
+	let effectAllele: any
 	if (snp.effectAllele) return snp.effectAllele // already selected by user
 	if (alleleType == 0) {
 		// minor allele(s)
@@ -50,7 +51,7 @@ data: returned by vocab getCategories()
 this function will alter tw,
 the changes must be kept in sync between termsetting instance and app state
 */
-export function mayRunSnplstTask(tw, data) {
+export function mayRunSnplstTask(tw: any, data: any) {
 	if (tw.term.type != 'snplst' && tw.term.type != 'snplocus') return // this func may be called on different terms, skip in that case
 	if (data.error) throw data.error
 	if (!Array.isArray(data.snps)) throw 'data.snps[] not array'

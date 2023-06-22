@@ -3,209 +3,237 @@ import { Tvs, Filter } from './filter'
 /*
 --------EXPORTED--------
 RangeEntry
+GroupEntry
+GroupSetEntry
+GroupSetting
 Q
+TermValues
 Term
 TW
 
 */
 
 type KV = {
-    k: string
-    v: string
+	k: string
+	v: string
 }
 
 /*** interfaces supporting Q interface ***/
 
-interface HiddenValues {
-    [index: string]: number
+type HiddenValues = {
+	[index: string]: number
 }
 
 export type RangeEntry = {
-    //Used binconfig.lst[] and in tvs.ranges[]
-    start?: number
-    startunbounded?: boolean
-    startinclusive?: boolean
-    stop?: number
-    stopunbounded?: boolean
-    stopinclusive?: boolean
-    label?: string //for binconfig.lst[]
-    value?: string //for tvs.ranges[]
-}
-
-interface BinConfig extends BaseQ {
-    termtype?: string
-    //regular-sized bins
-    bin_size?: number
-    startinclusive?: boolean
-    stopinclusive?: boolean
-    first_bin?: {
-        startunbounded: boolean
-        stop: number
-    },
-    last_bin?: {
-        start: number
-        stopunbounded: boolean
-    }
-    //binary
-    scale?: number //0.1, 0.01 or 0.001.
-    lst?: RangeEntry[]
-}
-
-type GroupEntry = {
-    name: string
-    type?: string //values or filter
-    color?: string
-    values: { key: number, label: string }[]
-    filter: Filter
-}
-
-interface GroupSetEntry {
-    name?: string
-    is_grade?: boolean
-    is_subcondition?: boolean
-    groups: GroupEntry[]
-}
-
-interface GroupSetting {
-    inuse?: boolean
-    disabled?: boolean
-    useIndex?: number
-    predefined_groupset_idx?: number
-    lst?: GroupSetEntry[]
-    customset?: GroupSetEntry[]
-}
-
-interface RestrictAncestry {
-    name: string
-    tvs: Tvs
+	//Used binconfig.lst[] and in tvs.ranges[]
+	start?: number
+	startunbounded?: boolean
+	startinclusive?: boolean
+	stop?: number
+	stopunbounded?: boolean
+	stopinclusive?: boolean
+	label?: string //for binconfig.lst[]
+	value?: string //for tvs.ranges[]
+	range?: any //No idea what this is
 }
 
 interface BaseQ {
-    mode?: string //discrete, binary, continuous, spline, cuminc, cox
-    type?: string //values, regular-bin, custom-bin, predefined-groupset, custom-groupset
-    modeBinaryCutoffType?: string //normal, percentile
-    modeBinaryCutoffPercentile?: number
+	groups?: any // Not documented but appears in samplelst?? same as groupsetting?
+	groupsetting?: GroupSetting
+	hiddenValues?: HiddenValues
+	isAtomic?: boolean
+	lst?: RangeEntry[]
+	name?: string
+	mode?: 'discrete' | 'binary' | 'continuous' | 'spline' | 'cuminc' | 'cox'
+	modeBinaryCutoffType?: 'normal' | 'percentile'
+	modeBinaryCutoffPercentile?: number
+	reuseId?: string
+	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 }
 
-export interface Q extends BaseQ{
-    name?: string
-    reuseId?: string
-    isAtomic?: boolean 
-    hiddenValues?: HiddenValues
-    knots?: []
-    groupsetting?: GroupSetting
-    //Condition terms 
-    breaks?: number[]
-    groupNames?: string[]
-    timeScale?: string
-    showTimeScale?: boolean
-    bar_by_children?: boolean
-    bar_by_grade?: boolean
-    value_by_max_grade?: boolean
-    value_by_most_recent?: boolean
-    value_by_computable_grade?: boolean
-    computableValuesOnly?: boolean
-    //geneVariant
-    cnvMaxLength?: number
-    cnvMinAbsValue?: number
-    //snplst
-    cacheid?: string
-    AFcutoff?: number
-    alleleType?: number
-    geneticModel?: number
-    missingGenotype?: number
-    numOfSampleWithAnyValidGT?: number
-    snp2effAle?: KV
-    snp2refGrp?: KV
-    restrictAncestry?: RestrictAncestry
-    //snplocus
-    info_fields?: any //[] Not documented
-    chr?: string
-    start?: number
-    stop?: number
-    //variant_filter???????? No documentation
+export interface BinConfig extends BaseQ {
+	//TODO: this is probably a numeric Q. Will rename and split out later
+	preferredBins?: string
+	termtype?: string
+	//regular-sized bins
+	bin_size?: number
+	startinclusive?: boolean
+	stopinclusive?: boolean
+	first_bin?: {
+		startunbounded: boolean
+		stop: number
+	}
+	last_bin?: {
+		start: number
+		stopunbounded: boolean
+	}
+	//binary
+	scale?: number //0.1 | 0.01 | 0.001
+}
+
+export type GroupEntry = {
+	name: string
+	type?: 'values' | 'filter'
+	color?: string
+	values: { key: number | string; label: string }[]
+	filter?: Filter
+}
+
+export interface BaseGroupSet {
+	groups: GroupEntry[]
+}
+
+export interface GroupSetEntry extends BaseGroupSet {
+	name?: string
+	is_grade?: boolean
+	is_subcondition?: boolean
+}
+
+export type GroupSetting = {
+	inuse?: boolean
+	disabled?: boolean
+	useIndex?: number
+	predefined_groupset_idx?: number
+	lst?: GroupSetEntry[]
+	customset?: BaseGroupSet
+}
+
+type RestrictAncestry = {
+	name: string
+	tvs: Tvs
+}
+
+export interface Q extends BaseQ {
+	knots?: []
+	//Condition terms
+	bar_by_children?: boolean
+	bar_by_grade?: boolean
+	breaks?: number[]
+	computableValuesOnly?: boolean
+	groupNames?: string[]
+	showTimeScale?: boolean
+	timeScale?: string
+	value_by_max_grade?: boolean
+	value_by_most_recent?: boolean
+	value_by_computable_grade?: boolean
+	//geneVariant
+	cnvGainCutoff?: number
+	cnvMaxLength?: number
+	cnvMinAbsValue?: number
+	cnvLossCutoff?: number
+	//snplst
+	AFcutoff?: number
+	alleleType?: number
+	cacheid?: string
+	geneticModel?: number
+	missingGenotype?: number
+	numOfSampleWithAnyValidGT?: number
+	restrictAncestry?: RestrictAncestry
+	snp2effAle?: KV
+	snp2refGrp?: KV
+	//snplocus
+	info_fields?: any //[] Not documented
+	chr?: string
+	start?: number
+	stop?: number
+	//variant_filter???????? No documentation
 }
 
 /*** interfaces supporting Term interface ***/
 
-interface TermValues {
-    [index: string | number]: {
-        uncomputable?: boolean
-        label?: string
-        order?: string
-        color?: string
-        //'samplelst' values
-        key?: string
-        inuse?: boolean
-        list?: { sampleId: string, sample: string}[]
-        filter?: Filter
-    }
+export type TermValues = {
+	[index: string | number]: {
+		uncomputable?: boolean
+		label?: string
+		order?: string
+		color?: string
+		//'samplelst' values
+		key?: string
+		inuse?: boolean
+		list?: { sampleId: string; sample: string }[]
+		filter?: Filter
+	}
 }
 
-interface NumericalBins {
-    label_offset?: number
-    label_offset_ignored?: boolean
-    rounding?: string
-    default: BinConfig
-    less: BinConfig
+type NumericalBins = {
+	label_offset?: number
+	label_offset_ignored?: boolean
+	rounding?: string
+	default: BinConfig
+	less: BinConfig
 }
 
-interface Gt2Count {
-    k: string
-    v: number
+type Gt2Count = {
+	k: string
+	v: number
 }
 
 type AllelesEntry = {
-    allele: string
-    isRef: boolean
-    count: number
+	allele: string
+	isRef: boolean
+	count: number
 }
 
 type SnpsEntry = {
-    snpid: string
-    invalid?: boolean
-    effectAllele?: string
-    referenceAllele?: string
-    altAlleles?: string[]
-    alleles?: AllelesEntry[],
-    gt2count?: Gt2Count,
-    chr?: string
-    pos?: number
-    alt2csq?: any //{} In document but not implemented?
+	snpid: string
+	invalid?: boolean
+	effectAllele?: string
+	referenceAllele?: string
+	altAlleles?: string[]
+	alleles?: AllelesEntry[]
+	gt2count?: Gt2Count
+	chr?: string
+	pos?: number
+	alt2csq?: any //{} In document but not implemented?
 }
 
 type Subconditions = {
-    [index: string]: { label: string }
+	[index: string]: { label: string }
 }
 
-export interface Term {
-    id?: string
-    type?: string //samplelst, geneVariant, categorical, integer, float, condition, survival
-    name?: string
-    min?: number
-    max?: number
-    tvs?: Tvs
-    values?: TermValues,
-    unit?: string,
-    groupsetting?: GroupSetting
-    hashtmldetail?: boolean,
-    logScale?: string | number //2, 10, or e only
-    child_types?: string[]
-    included_types?: string[]
-    skip0forPercentile?: boolean,
-    densityNotAvailable?: boolean //Not used?
-    bins?: NumericalBins,
-    subconditions?: Subconditions
-    //snplocus
-    reachedVariantLimit?: boolean
-    //snplist
-    snps?: SnpsEntry[]
+export type Term = {
+	id?: string
+	type?:
+		| 'categorical'
+		| 'integer'
+		| 'float'
+		| 'condition'
+		| 'survival'
+		| 'samplelst'
+		| 'geneVariant'
+		| 'snplocus'
+		| 'snplist'
+	bins?: NumericalBins
+	child_types?: string[]
+	densityNotAvailable?: boolean //Not used?
+	groupsetting?: GroupSetting
+	hashtmldetail?: boolean
+	included_types?: string[]
+	isleaf?: boolean
+	logScale?: string | number //2, 10, or e only
+	max?: number
+	min?: number
+	name?: string
+	skip0forPercentile?: boolean
+	subconditions?: Subconditions
+	tvs?: Tvs
+	values?: TermValues
+	unit?: string
+	//snplocus
+	reachedVariantLimit?: boolean
+	//snplist
+	snps?: SnpsEntry[]
+	//geneVariant
+	isoform?: string
 }
 
-export interface TW { //Term wrapper aka. term:{term:{...}, q:{...}...}
-    id?: string
-    $id?: string
-    isAtomic?: boolean
-    term: Term
-    q: Q
+export type TW = {
+	//Term wrapper aka. term:{term:{...}, q:{...}...}
+	id?: string
+	$id?: string
+	isAtomic?: boolean
+	term: Term
+	term2?: Term
+	term0?: Term
+	q: Q
 }

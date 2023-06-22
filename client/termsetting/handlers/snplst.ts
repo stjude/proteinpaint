@@ -1,4 +1,5 @@
 import { mayRunSnplstTask } from './snplst.sampleSum'
+import { TW, VocabApi, LstEntry } from '#shared/types'
 
 /* 
 TODO clean up ui logic, may use table.js?
@@ -42,9 +43,9 @@ Exports following functions shared with snplocus term
 */
 
 // self is the termsetting instance
-export function getHandler(self) {
+export function getHandler(self: any) {
 	return {
-		getPillName(d) {
+		getPillName() {
 			return self.term.name
 		},
 
@@ -55,11 +56,11 @@ export function getHandler(self) {
 			if (invalid) return { text: invalid + ' invalid' }
 		},
 
-		validateQ(data) {
-			validateQ(self, data)
+		validateQ(data: any) {
+			validateQ(data)
 		},
 
-		async showEditMenu(div) {
+		async showEditMenu(div: any) {
 			await makeEditMenu(self, div)
 		}
 	}
@@ -76,7 +77,7 @@ ui switches between two modes
 if the instance carries snps (self.term.snps), directly enter edit ui
 else, enter input ui; after validating raw input, show edit ui
 */
-async function makeEditMenu(self, div0) {
+async function makeEditMenu(self: any, div0: any) {
 	const div = div0.append('div').style('margin', '15px')
 
 	const select_ancestry = await mayRestrictAncestry(self, div)
@@ -105,7 +106,7 @@ async function makeEditMenu(self, div0) {
 		.text('Validate variants')
 		.on('click', async () => {
 			// parse input text
-			const snps = parseSnpFromText(textarea)
+			const snps: any = parseSnpFromText(textarea)
 			/*
 			if (snps.length && snps.find(snp => snp.effectAllele)) {
 				// if user provides custom effect allele in input text
@@ -125,7 +126,7 @@ async function makeEditMenu(self, div0) {
 			if (self.term.snps) {
 				// append new ones to existing array
 				for (const n of snps) {
-					if (self.term.snps.find(i => i.rsid == n.rsid)) continue
+					if (self.term.snps.find((i: any) => i.rsid == n.rsid)) continue
 					self.term.snps.push(n)
 				}
 			} else {
@@ -152,7 +153,7 @@ async function makeEditMenu(self, div0) {
 
 			try {
 				await validateInput(self)
-			} catch (e) {
+			} catch (e: any) {
 				alert('Error: ' + (e.message || e))
 				validateBtn.text('Validate variants').property('disabled', false)
 				return
@@ -226,7 +227,7 @@ async function makeEditMenu(self, div0) {
 
 			try {
 				await validateInput(self)
-			} catch (e) {
+			} catch (e: any) {
 				alert('Error: ' + (e.message || e))
 			}
 			//q.cacheid is set
@@ -285,7 +286,7 @@ async function makeEditMenu(self, div0) {
 	}
 }
 
-function initSnpEditTable(div, self, select_alleleType) {
+function initSnpEditTable(div: any, self: any, select_alleleType: any) {
 	self.dom.snplst_table = div.append('table')
 	renderSnpEditTable(self, select_alleleType)
 	div
@@ -297,7 +298,7 @@ function initSnpEditTable(div, self, select_alleleType) {
 		)
 }
 
-function renderSnpEditTable(self, select_alleleType) {
+function renderSnpEditTable(self: any, select_alleleType: any) {
 	// allow to delete or add to this list
 	self.dom.snplst_table.selectAll('*').remove()
 	const title_tr = self.dom.snplst_table.append('tr').style('opacity', 0.4)
@@ -321,7 +322,7 @@ function renderSnpEditTable(self, select_alleleType) {
 	// SNPs
 	for (const [i, snp] of self.term.snps.entries()) {
 		//const invalid_snp = snp.invalid || (!snp.alleles && !snp.gt2count) ? true : false
-		let invalid_snp = false
+		let invalid_snp: boolean | string = false
 		if (snp.invalid) {
 			invalid_snp = snp.invalid
 		} else if (!snp.alleles && !snp.gt2count) {
@@ -337,7 +338,7 @@ function renderSnpEditTable(self, select_alleleType) {
 			.style('padding', '8px')
 
 		// col 2: sample count
-		const sample_count = invalid_snp ? invalid_snp : Object.values(snp.gt2count).reduce((a, b) => a + b, 0)
+		const sample_count: any = invalid_snp ? invalid_snp : Object.values(snp.gt2count).reduce((a: number, b: any) => a + b, 0)
 		tr.append('td')
 			.style('text-align', 'center')
 			.text(sample_count)
@@ -350,58 +351,14 @@ function renderSnpEditTable(self, select_alleleType) {
 
 		if (!invalid_snp) {
 			const effectAllele = self.q.snp2effAle ? self.q.snp2effAle[snp.rsid] : undefined
-			const refAllele = snp.alleles.find(s => s.isRef)
-			const altAlleles = snp.alleles.filter(s => !s.isRef)
+			const refAllele = snp.alleles.find((s: any) => s.isRef)
+			const altAlleles = snp.alleles.filter((s: any) => !s.isRef)
 
 			// create reference allele button
-			createAlleleBtn(refAllele, ref_allele_td)
+			createAlleleBtn(refAllele, ref_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
 			// create alternative allele buttons
 			for (const [j, al] of altAlleles.entries()) {
-				createAlleleBtn(al, alt_allele_td)
-			}
-
-			function createAlleleBtn(al, td) {
-				//const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
-				const allele_freq = ((al.count * 100) / (sample_count * 2)).toFixed(2)
-				const allele_div = td
-					.style('text-align', 'center')
-					.append('button')
-					.style('display', 'inline-block')
-					.style('margin', '0px 3px')
-					.style('padding', '3px 7px')
-					.style('border-radius', '3px')
-					.style('background-color', '#d9ead3')
-					.style('border', al.allele == effectAllele ? '3px solid #ff0000' : `3px solid ${rowcolor}`)
-					.on('mouseover', () => {
-						if (snp.effectAllele && snp.effectAllele == al.allele) return
-						else {
-							allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
-						}
-					})
-					.on('mouseout', () => {
-						if (snp.effectAllele && snp.effectAllele == al.allele) return
-						else {
-							allele_div.style('background', '#d9ead3')
-						}
-					})
-					.on('click', () => {
-						snp.effectAllele = al.allele
-						tr.selectAll('button').style('border', 'none')
-						allele_div.style('border', '3px solid #ff0000').style('background', '#d9ead3')
-						select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
-					})
-
-				allele_div
-					.append('div')
-					.style('display', 'inline-block')
-					.text(`${al.allele}  `)
-
-				allele_div
-					.append('div')
-					.style('display', 'inline-block')
-					.style('margin', '0px 5px')
-					.style('font-size', '.8em')
-					.text('(' + `${allele_freq}%` + ')')
+				createAlleleBtn(al, alt_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
 			}
 		}
 
@@ -409,7 +366,7 @@ function renderSnpEditTable(self, select_alleleType) {
 		const gt_td = tr.append('td')
 		if (!invalid_snp) {
 			const refGT = self.q.snp2refGrp ? self.q.snp2refGrp[snp.rsid] : undefined
-			for (const [gt, freq] of Object.entries(snp.gt2count)) {
+			for (const [gt, freq] of Object.entries<number>(snp.gt2count)) {
 				//const gt_freq = Math.round((freq * 100) / sample_count)
 				const gt_freq = ((freq * 100) / sample_count).toFixed(2)
 				const gt_div = gt_td
@@ -442,27 +399,72 @@ function renderSnpEditTable(self, select_alleleType) {
 				snp.tobe_deleted = snp_checkbox.node().checked
 			})
 	}
+
+	function createAlleleBtn(al: any, td: any, effectAllele: any, sample_count: any, snp: any, rowcolor: any, tr: any) { //Moved b/c of linter error
+		//const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
+		const allele_freq = ((al.count * 100) / (sample_count * 2)).toFixed(2)
+		const allele_div = td
+			.style('text-align', 'center')
+			.append('button')
+			.style('display', 'inline-block')
+			.style('margin', '0px 3px')
+			.style('padding', '3px 7px')
+			.style('border-radius', '3px')
+			.style('background-color', '#d9ead3')
+			.style('border', al.allele == effectAllele ? '3px solid #ff0000' : `3px solid ${rowcolor}`)
+			.on('mouseover', () => {
+				if (snp.effectAllele && snp.effectAllele == al.allele) return
+				else {
+					allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
+				}
+			})
+			.on('mouseout', () => {
+				if (snp.effectAllele && snp.effectAllele == al.allele) return
+				else {
+					allele_div.style('background', '#d9ead3')
+				}
+			})
+			.on('click', () => {
+				snp.effectAllele = al.allele
+				tr.selectAll('button').style('border', 'none')
+				allele_div.style('border', '3px solid #ff0000').style('background', '#d9ead3')
+				select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
+			})
+
+		allele_div
+			.append('div')
+			.style('display', 'inline-block')
+			.text(`${al.allele}  `)
+
+		allele_div
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin', '0px 5px')
+			.style('font-size', '.8em')
+			.text('(' + `${allele_freq}%` + ')')
+	}
+
 }
 
 // not in use
-function updateSnps(snps, _tmp_snps) {
-	// snp 'deleted' from edit menu or effectAllele changed
-	for (const [i, s] of snps.entries()) {
-		const s1 = _tmp_snps.find(snp => snp.rsid == s.rsid)
-		if (s1 === undefined) {
-			throw 'snp not found in edit list'
-		} else if (s1.tobe_deleted) {
-			// snp selected for deletetion from edit menu, remove from term.snps
-			snps = snps.filter(s => s.rsid !== s1.rsid)
-		} else {
-			// effectAllele changed from edit menu
-			if (s.effectAllele !== s1.effectAllele) s.effectAllele = s1.effectAllele
-		}
-	}
-	return snps
-}
+// function updateSnps(snps, _tmp_snps) {
+// 	// snp 'deleted' from edit menu or effectAllele changed
+// 	for (const [i, s] of snps.entries()) {
+// 		const s1 = _tmp_snps.find(snp => snp.rsid == s.rsid)
+// 		if (s1 === undefined) {
+// 			throw 'snp not found in edit list'
+// 		} else if (s1.tobe_deleted) {
+// 			// snp selected for deletetion from edit menu, remove from term.snps
+// 			snps = snps.filter(s => s.rsid !== s1.rsid)
+// 		} else {
+// 			// effectAllele changed from edit menu
+// 			if (s.effectAllele !== s1.effectAllele) s.effectAllele = s1.effectAllele
+// 		}
+// 	}
+// 	return snps
+// }
 
-function getTermName(snps) {
+function getTermName(snps: any) {
 	if (snps.length == 1) {
 		const s = snps[0]
 		if (s.rsid) return s.rsid
@@ -471,15 +473,15 @@ function getTermName(snps) {
 	return snps.length + ' variant' + (snps.length > 1 ? 's' : '')
 }
 
-function parseSnpFromText(textarea) {
+function parseSnpFromText(textarea: any) {
 	// may support chr:pos
 	const text = textarea.property('value')
-	const snps = []
+	const snps: any = []
 	for (const tmp of text.trim().split('\n')) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
 		if (!rsid) continue
-		if (snps.find(i => i.rsid == rsid)) continue // duplicate
-		const s = { rsid }
+		if (snps.find((i: any) => i.rsid == rsid)) continue // duplicate
+		const s: { rsid: string, effectAllele?: string } = { rsid }
 		if (ale) s.effectAllele = ale
 		snps.push(s)
 	}
@@ -487,9 +489,9 @@ function parseSnpFromText(textarea) {
 	return snps
 }
 
-function snp2text(self) {
+function snp2text(self: any) {
 	if (!self.term || !self.term.snps) return ''
-	const lines = []
+	const lines: any = []
 	for (const a of self.term.snps) {
 		const l = a.rsid + (a.effectAllele ? ' ' + a.effectAllele : '')
 		lines.push(l)
@@ -506,7 +508,7 @@ very expensive step
 will write snp-by-sample gt matrix to a cache file, using all samples from bcf file of this dataset
 do not apply sample filtering
 */
-async function validateInput(self) {
+async function validateInput(self: any) {
 	const data = await self.vocabApi.validateSnps({ text: snp2text(self) })
 	if (data.error) throw data.error
 	// copy result to instance
@@ -525,13 +527,13 @@ only need it to instantly update snp table in menu
 thus this function is not needed
 if there's a way to automatically update menu then can delete it TODO
 */
-async function makeSampleSummary(self) {
+async function makeSampleSummary(self: any) {
 	const body = { cacheid: self.q.cacheid }
 
 	// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
 
-	const extraFilters = []
-	let f // copy of self.filter and to be combined with extraFilters
+	const extraFilters: LstEntry[] = []
+	let f!: any // copy of self.filter and to be combined with extraFilters
 
 	if (self.q.restrictAncestry) {
 		if (self.filter) {
@@ -558,7 +560,7 @@ async function makeSampleSummary(self) {
 	mayRunSnplstTask({ term: self.term, q: self.q }, data)
 }
 
-function validateQ(self, data) {
+function validateQ(data: any) {
 	if (!Number.isFinite(data.q.AFcutoff)) throw 'AFcutoff is not number'
 	if (data.q.AFcutoff < 0 || data.q.AFcutoff > 100) throw 'AFcutoff is not within 0 to 100'
 	if (![0, 1, 2].includes(data.q.alleleType)) throw 'alleleType value is not one of 0/1'
@@ -566,9 +568,9 @@ function validateQ(self, data) {
 	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 }
 
-export async function fillTW(tw, vocabApi) {
+export async function fillTW(tw: TW, vocabApi: VocabApi) {
 	try {
-		validateQ(null, tw)
+		validateQ(tw)
 	} catch (e) {
 		throw 'snplst validateQ(): ' + e
 	}
@@ -609,8 +611,8 @@ create following dom elements and return in an array
   (missing gt is not created for snplocus)
 
 */
-export function makeSnpSelect(div, self, termtype) {
-	let input_AFcutoff_label, input_AFcutoff, select_geneticModel, select_missingGenotype, select_alleleType
+export function makeSnpSelect(div: any, self: any, termtype: string) {
+	let input_AFcutoff_label: any, input_AFcutoff: any, select_missingGenotype: any
 
 	// input - af cutoff
 	{
@@ -631,7 +633,7 @@ export function makeSnpSelect(div, self, termtype) {
 			// if value is set in self.q, will be overwritten later
 			.property('value', 5)
 		row.append('span').text('%')
-		let text
+		let text: string
 		if (termtype == 'snplst') {
 			// snplst term
 			text = 'Variants below this cutoff are discarded'
@@ -660,7 +662,7 @@ export function makeSnpSelect(div, self, termtype) {
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.text('SET EFFECT ALLELE AS')
-	select_alleleType = div.append('select')
+	const select_alleleType = div.append('select')
 	select_alleleType.append('option').text('Minor allele')
 	select_alleleType.append('option').text('Alternative allele')
 	if (termtype !== 'snplocus') {
@@ -669,7 +671,7 @@ export function makeSnpSelect(div, self, termtype) {
 
 	// hint message to indicate which allele will be used as the effect allele
 	// for multi-allelic variants
-	let setEffectAlleleAsHint = div
+	const setEffectAlleleAsHint = div
 		.append('div')
 		.style('display', 'inline-block')
 		.style('margin-left', '15px')
@@ -698,7 +700,7 @@ export function makeSnpSelect(div, self, termtype) {
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.text('GENETIC MODEL')
-	select_geneticModel = div.append('select')
+	const select_geneticModel = div.append('select')
 	select_geneticModel.append('option').text('Additive: EE=2, EN=1, NN=0')
 	select_geneticModel.append('option').text('Dominant: EE=1, EN=1, NN=0')
 	select_geneticModel.append('option').text('Recessive: EE=1, EN=0, NN=0')
@@ -744,7 +746,7 @@ export function makeSnpSelect(div, self, termtype) {
 	return [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype]
 }
 
-export async function mayRestrictAncestry(self, holder) {
+export async function mayRestrictAncestry(self: any, holder: any) {
 	if (self.q?.doNotRestrictAncestry) return
 
 	const tdbcfg = await self.vocabApi.getTermdbConfig()
@@ -763,7 +765,7 @@ export async function mayRestrictAncestry(self, holder) {
 		opt.node().__ancestry_obj = ancestry
 	}
 	if (self.q && self.q.restrictAncestry) {
-		const i = tdbcfg.restrictAncestries.findIndex(i => i.name == self.q.restrictAncestry.name)
+		const i = tdbcfg.restrictAncestries.findIndex((i: any) => i.name == self.q.restrictAncestry.name)
 		if (i == -1) throw 'unknown restrictAncestry: ' + self.q.restrictAncestry.name
 		select.property('selectedIndex', i)
 	}
@@ -771,8 +773,8 @@ export async function mayRestrictAncestry(self, holder) {
 }
 
 // return corresponding hint messages based on the option users select for "SET EFFECT ALLELE AS"
-function getSetEffectAlleleAsHint(select_alleleType) {
-	let hint
+function getSetEffectAlleleAsHint(select_alleleType: any) {
+	let hint: string
 	const i = select_alleleType.property('selectedIndex')
 	if (i == 0) {
 		hint = 'For multi-allelic variants, the second most common allele is used as the effect allele'

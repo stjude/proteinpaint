@@ -7,37 +7,31 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
-import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { regressionLoess, regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 
 export function setRenderers(self) {
-	self.render = function() {
-		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
+	self.render = function () {
+		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, (chart) => chart?.id)
 		chartDivs.exit().remove()
 		chartDivs.each(self.renderChart)
-		chartDivs
-			.enter()
-			.append('div')
-			.each(self.renderChart)
+		chartDivs.enter().append('div').each(self.renderChart)
 	}
 
-	self.renderChart = function(chart) {
+	self.renderChart = function (chart) {
 		chart.chartDiv = select(this)
 		const s = self.settings
 		chart.chartDiv.style('opacity', 0).style('display', 'inline-block')
-		chart.chartDiv.on('mouseover', event => self.mouseover(event, chart))
+		chart.chartDiv.on('mouseover', (event) => self.mouseover(event, chart))
 
 		chart.svg = chart.chartDiv.select('svg').empty() ? chart.chartDiv.append('svg') : chart.chartDiv.select('svg')
 		renderSVG(chart, s, 0)
 
-		chart.chartDiv
-			.transition()
-			.duration(s.duration)
-			.style('opacity', 1)
+		chart.chartDiv.transition().duration(s.duration).style('opacity', 1)
 	}
 
-	self.initAxes = function(chart) {
+	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
 		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax] = chart.data.samples.reduce(
@@ -47,7 +41,7 @@ export function setRenderers(self) {
 				d.y < s[2] ? d.y : s[2],
 				d.y > s[3] ? d.y : s[3],
 				d.z < s[4] ? d.z : s[4],
-				d.z > s[5] ? d.z : s[5]
+				d.z > s[5] ? d.z : s[5],
 			],
 			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z]
 		)
@@ -61,9 +55,7 @@ export function setRenderers(self) {
 			.domain([yMax, yMin])
 			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
 
-		chart.zAxisScale = d3Linear()
-			.domain([zMin, zMax])
-			.range([0, self.settings.svgd])
+		chart.zAxisScale = d3Linear().domain([zMin, zMax]).range([0, self.settings.svgd])
 
 		chart.xScaleMin = chart.xAxisScale(xMin)
 		chart.yScaleMax = chart.yAxisScale(yMax)
@@ -77,21 +69,15 @@ export function setRenderers(self) {
 		} else if (!self.config.gradientColor[chart.id]) {
 			self.config.gradientColor[chart.id] = '#008000'
 		}
-		chart.startColor = rgb(self.config.gradientColor[chart.id])
-			.brighter()
-			.brighter()
-		chart.stopColor = rgb(self.config.gradientColor[chart.id])
-			.darker()
-			.darker()
+		chart.startColor = rgb(self.config.gradientColor[chart.id]).brighter().brighter()
+		chart.stopColor = rgb(self.config.gradientColor[chart.id]).darker().darker()
 		if (self.config.colorTW?.q.mode === 'continuous') {
 			const [min, max] = chart.cohortSamples.reduce(
 				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
 				[chart.cohortSamples[0].category, chart.cohortSamples[0].category]
 			)
 
-			chart.colorGenerator = d3Linear()
-				.domain([min, max])
-				.range([chart.startColor, chart.stopColor])
+			chart.colorGenerator = d3Linear().domain([min, max]).range([chart.startColor, chart.stopColor])
 		}
 	}
 
@@ -148,10 +134,7 @@ export function setRenderers(self) {
 			const id = `${Date.now()}`
 			const idclip = `sjpp_clip_${id}`
 			self.defs = svg.append('defs')
-			clipRect = self.defs
-				.append('clipPath')
-				.attr('id', idclip)
-				.append('rect')
+			clipRect = self.defs.append('clipPath').attr('id', idclip).append('rect')
 
 			const gradient = self.defs
 				.append('linearGradient')
@@ -160,14 +143,8 @@ export function setRenderers(self) {
 				.attr('y1', '0%')
 				.attr('x2', '100%')
 				.attr('y2', '0%')
-			self.startGradient = gradient
-				.append('stop')
-				.attr('offset', '0%')
-				.attr('start-color', chart.startColor)
-			self.stopGradient = gradient
-				.append('stop')
-				.attr('offset', '100%')
-				.attr('stop-color', chart.stopColor)
+			self.startGradient = gradient.append('stop').attr('offset', '0%').attr('start-color', chart.startColor)
+			self.stopGradient = gradient.append('stop').attr('offset', '100%').attr('stop-color', chart.stopColor)
 
 			chart.mainG.attr('clip-path', `url(#${idclip})`)
 
@@ -257,26 +234,26 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('name', 'serie')
-			.attr('transform', c => translate(chart, c))
-			.attr('d', c => self.getShape(chart, c))
-			.attr('fill', c => self.getColor(c, chart))
-			.style('fill-opacity', c => self.getOpacity(c))
+			.attr('transform', (c) => translate(chart, c))
+			.attr('d', (c) => self.getShape(chart, c))
+			.attr('fill', (c) => self.getColor(c, chart))
+			.style('fill-opacity', (c) => self.getOpacity(c))
 		symbols
 			.enter()
 			.append('path')
 			.attr('name', 'serie')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => translate(chart, c))
-			.attr('d', c => self.getShape(chart, c))
-			.attr('fill', c => self.getColor(c, chart))
+			.attr('transform', (c) => translate(chart, c))
+			.attr('d', (c) => self.getShape(chart, c))
+			.attr('fill', (c) => self.getColor(c, chart))
 
-			.style('fill-opacity', c => self.getOpacity(c))
+			.style('fill-opacity', (c) => self.getOpacity(c))
 			.transition()
 			.duration(duration)
 		self.mayRenderRegression()
 	}
 
-	self.render3DSerie = async function(chart) {
+	self.render3DSerie = async function (chart) {
 		const THREE = await require('three')
 		const OrbitControls = await require('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
@@ -325,7 +302,7 @@ export function setRenderers(self) {
 		animate()
 	}
 
-	self.processData = async function() {
+	self.processData = async function () {
 		for (const chart of self.charts) {
 			self.initAxes(chart)
 			const regressionType = self.config.settings.sampleScatter.regression
@@ -333,7 +310,7 @@ export function setRenderers(self) {
 			if (!regressionType || regressionType == 'None') continue
 			let regression
 			const data = []
-			await chart.cohortSamples.forEach(c => {
+			await chart.cohortSamples.forEach((c) => {
 				const x = chart.xAxisScale(c.x)
 				const y = chart.yAxisScale(c.y)
 				data.push({ x, y })
@@ -341,14 +318,14 @@ export function setRenderers(self) {
 			let regressionCurve
 			if (regressionType == 'Loess') {
 				regression = regressionLoess()
-					.x(c => c.x)
-					.y(c => c.y)
+					.x((c) => c.x)
+					.y((c) => c.y)
 					.bandwidth(0.25)
 				regressionCurve = regression(data)
 			} else if (regressionType == 'Polynomial') {
 				regression = regressionPoly()
-					.x(c => c.x)
-					.y(c => c.y)
+					.x((c) => c.x)
+					.y((c) => c.y)
 					.order(3)
 				regressionCurve = regression(data)
 			} else if (regressionType == 'Lowess-R') {
@@ -366,14 +343,14 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.mayRenderRegression = async function() {
+	self.mayRenderRegression = async function () {
 		for (const chart of self.charts) {
 			if (chart.regressionG && chart.regressionCurve) {
 				if (chart.regressionG) chart.regressionG.selectAll('*').remove()
 
 				const l = line()
-					.x(d => d[0])
-					.y(d => d[1])
+					.x((d) => d[0])
+					.y((d) => d[1])
 				const regressionPath = chart.regressionG.append('path')
 				regressionPath
 					.attr('d', l(chart.regressionCurve))
@@ -384,14 +361,14 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.getColor = function(c, chart) {
+	self.getColor = function (c, chart) {
 		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return chart.colorGenerator(c.category)
 		if (c.category == 'Default') return self.config.settings.sampleScatter.defaultColor
 		const category = chart.colorLegend.get(c.category)
 		return category.color
 	}
 
-	self.getOpacity = function(c) {
+	self.getOpacity = function (c) {
 		if ('sampleId' in c) {
 			for (const group of self.config.groups)
 				if (group.showOnly) {
@@ -407,7 +384,7 @@ export function setRenderers(self) {
 		return refOpacity
 	}
 
-	self.getShape = function(chart, c, factor = 1) {
+	self.getShape = function (chart, c, factor = 1) {
 		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
 		const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 		return self.symbols[index].size((size * factor) / self.k)()
@@ -418,7 +395,7 @@ export function setRenderers(self) {
 		return transform
 	}
 
-	self.lassoReset = chart => {
+	self.lassoReset = (chart) => {
 		const mainG = chart.chartDiv.select('.sjpcb-scatter-mainG')
 
 		if (chart.lasso)
@@ -433,8 +410,8 @@ export function setRenderers(self) {
 			if (self.lassoOn) {
 				chart.lasso
 					.items()
-					.attr('d', c => self.getShape(chart, c, 1 / 2))
-					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
+					.attr('d', (c) => self.getShape(chart, c, 1 / 2))
+					.style('fill-opacity', (c) => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('selected', false)
 			}
@@ -446,16 +423,16 @@ export function setRenderers(self) {
 
 				chart.lasso
 					.possibleItems()
-					.attr('d', c => self.getShape(chart, c, 2))
-					.style('fill-opacity', c => self.getOpacity(c))
+					.attr('d', (c) => self.getShape(chart, c, 2))
+					.style('fill-opacity', (c) => self.getOpacity(c))
 					.classed('not_possible', false)
 					.classed('possible', true)
 
 				//Style the not possible dot
 				chart.lasso
 					.notPossibleItems()
-					.attr('d', c => self.getShape(chart, c, 1 / 2))
-					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
+					.attr('d', (c) => self.getShape(chart, c, 1 / 2))
+					.style('fill-opacity', (c) => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
@@ -466,20 +443,17 @@ export function setRenderers(self) {
 				// Reset classes of all items (.possible and .not_possible are useful
 				// only while drawing lasso. At end of drawing, only selectedItems()
 				// should be used)
-				chart.lasso
-					.items()
-					.classed('not_possible', false)
-					.classed('possible', false)
+				chart.lasso.items().classed('not_possible', false).classed('possible', false)
 
 				// Style the selected dots
-				chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
-				chart.lasso.items().style('fill-opacity', c => self.getOpacity(c))
+				chart.lasso.selectedItems().attr('d', (c) => self.getShape(chart, c, 2))
+				chart.lasso.items().style('fill-opacity', (c) => self.getOpacity(c))
 				self.selectedItems = []
 				for (const item of chart.lasso.selectedItems()) {
 					const data = item.__data__
 					if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) self.selectedItems.push(item)
 				}
-				chart.lasso.notSelectedItems().attr('d', c => self.getShape(chart, c))
+				chart.lasso.notSelectedItems().attr('d', (c) => self.getShape(chart, c))
 
 				showLassoMenu(dragEnd.sourceEvent)
 			}
@@ -495,10 +469,13 @@ export function setRenderers(self) {
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
-				.on('click', event => {
+				.on('click', (event) => {
 					self.dom.tip.hide()
 					self.showTable(
-						{ name: 'Group ' + (self.config.groups.length + 1), items: self.selectedItems.map(item => item.__data__) },
+						{
+							name: 'Group ' + (self.config.groups.length + 1),
+							items: self.selectedItems.map((item) => item.__data__),
+						},
 						event.clientX,
 						event.clientY,
 						true
@@ -511,7 +488,7 @@ export function setRenderers(self) {
 				.text('Add to a group')
 				.on('click', async () => {
 					const group = {
-						items: self.selectedItems.map(item => item.__data__)
+						items: self.selectedItems.map((item) => item.__data__),
 					}
 					self.addGroup(group)
 				})
@@ -521,7 +498,7 @@ export function setRenderers(self) {
 				.text('Add to a group and filter')
 				.on('click', () => {
 					const group = {
-						items: self.selectedItems.map(item => item.__data__)
+						items: self.selectedItems.map((item) => item.__data__),
 					}
 					self.addGroup(group)
 					const tw = getSamplelstTW([group])
@@ -540,13 +517,13 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.addGroup = async function(group) {
+	self.addGroup = async function (group) {
 		group.plotId = self.id
 		await self.app.vocabApi.addGroup(group)
 		self.dom.tip.hide()
 	}
 
-	self.setTools = function() {
+	self.setTools = function () {
 		if (!self.charts[0]) return
 		const inline = self.config.settings.controls.isOpen
 		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
@@ -559,7 +536,7 @@ export function setRenderers(self) {
 			.style('margin', '20px')
 			.attr('name', 'sjpp-help-btn') //For unit tests
 		icon_functions['help'](helpDiv, {
-			handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+			handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank'),
 		})
 
 		const homeDiv = toolsDiv
@@ -580,26 +557,17 @@ export function setRenderers(self) {
 			.style('margin', '20px')
 			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
 		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
-		const searchDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
-		icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
-		const lassoDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
+		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
+		icon_functions['search'](searchDiv, { handler: (e) => self.searchSample(e) })
+		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
-		self.dom.groupDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
+		self.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 
 		const mainG = self.charts[0].mainG
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
 			.on('zoom', handleZoom)
-			.filter(event => {
+			.filter((event) => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
@@ -625,8 +593,8 @@ export function setRenderers(self) {
 				self.k = event.transform.scale(1).k
 				//on zoom in the particle size is kept
 				const symbols = chart.serie.selectAll('path[name="serie"')
-				symbols.attr('d', c => self.getShape(chart, c))
-				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
+				symbols.attr('d', (c) => self.getShape(chart, c))
+				if (self.lassoOn) chart.lasso.selectedItems().attr('d', (c) => self.getShape(chart, c, 2))
 			}
 		}
 
@@ -639,11 +607,7 @@ export function setRenderers(self) {
 		}
 
 		function resetToIdentity() {
-			for (const chart of self.charts)
-				chart.mainG
-					.transition()
-					.duration(750)
-					.call(zoom.transform, zoomIdentity)
+			for (const chart of self.charts) chart.mainG.transition().duration(750).call(zoom.transform, zoomIdentity)
 		}
 
 		function toggle_lasso() {
@@ -659,7 +623,7 @@ export function setRenderers(self) {
 					chart.lasso
 						.items()
 						.attr('r', self.settings.size)
-						.style('fill-opacity', c => self.getOpacity(c))
+						.style('fill-opacity', (c) => self.getOpacity(c))
 					chart.mainG.call(zoom)
 					self.selectedItems = null
 				}
@@ -669,7 +633,7 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.updateGroupsButton = function() {
+	self.updateGroupsButton = function () {
 		self.dom.groupDiv.selectAll('*').remove()
 		self.dom.tip.hide()
 		if (self.config.groups.length == 0) return
@@ -681,13 +645,13 @@ export function setRenderers(self) {
 			.append('div')
 			.style('font-size', '1.1em')
 			.html(`&#931${self.config.groups.length + 1};`)
-			.on('click', event => {
+			.on('click', (event) => {
 				if (self.config.groups.length == 1) self.showGroupMenu(event, self.config.groups[0])
 				else self.showGroupsMenu(event)
 			})
 	}
 
-	self.renderLegend = function(chart) {
+	self.renderLegend = function (chart) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
 		if (!self.config.colorTW && !self.config.shapeTW) return
@@ -736,14 +700,9 @@ export function setRenderers(self) {
 
 				if (self.config.colorTW.q.mode === 'continuous') {
 					const [min, max] = chart.colorGenerator.domain()
-					const gradientScale = d3Linear()
-						.domain([min, max])
-						.range([0, 130])
+					const gradientScale = d3Linear().domain([min, max]).range([0, 130])
 					const axis = axisBottom(gradientScale).ticks(3)
-					const axisG = colorG
-						.append('g')
-						.attr('transform', `translate(0, 70)`)
-						.call(axis)
+					const axisG = colorG.append('g').attr('transform', `translate(0, 70)`).call(axis)
 
 					const rect = colorG
 						.append('rect')
@@ -752,7 +711,7 @@ export function setRenderers(self) {
 						.attr('width', 130)
 						.attr('height', 20)
 						.style('fill', `url(#linear-gradient-${self.id})`)
-						.on('click', e => {
+						.on('click', (e) => {
 							const menu = new Menu()
 							const input = menu.d
 								.append('input')
@@ -760,12 +719,8 @@ export function setRenderers(self) {
 								.attr('value', self.config.gradientColor[chart.id])
 								.on('change', () => {
 									self.config.gradientColor[chart.id] = input.node().value
-									chart.startColor = rgb(self.config.gradientColor[chart.id])
-										.brighter()
-										.brighter()
-									chart.stopColor = rgb(self.config.gradientColor[chart.id])
-										.darker()
-										.darker()
+									chart.startColor = rgb(self.config.gradientColor[chart.id]).brighter().brighter()
+									chart.stopColor = rgb(self.config.gradientColor[chart.id]).darker().darker()
 									chart.colorGenerator = d3Linear().range([chart.startColor, chart.stopColor])
 
 									self.startGradient.attr('stop-color', chart.startColor)
@@ -773,7 +728,7 @@ export function setRenderers(self) {
 									self.app.dispatch({
 										type: 'plot_edit',
 										id: self.id,
-										config: self.config
+										config: self.config,
 									})
 									menu.hide()
 								})
@@ -787,9 +742,9 @@ export function setRenderers(self) {
 						const name = key
 						const hidden = self.config.colorTW.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
 						const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
-						circleG.on('click', e => self.onColorClick(e, key, category))
+						circleG.on('click', (e) => self.onColorClick(e, key, category))
 						offsetY += step
-						itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event))
+						itemG.on('click', (event) => self.onLegendClick(chart, legendG, 'colorTW', key, event))
 					}
 				}
 			}
@@ -810,12 +765,12 @@ export function setRenderers(self) {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+					.attr('transform', (c) => `translate(${offsetX}, ${offsetY})`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', symbol)
 					.style('stroke', rgb(colorRefCategory.color).darker())
 
-				refColorG.on('click', e => self.onColorClick(e, 'Ref', colorRefCategory))
+				refColorG.on('click', (e) => self.onColorClick(e, 'Ref', colorRefCategory))
 				const refText = legendG
 					.append('g')
 					.append('text')
@@ -835,8 +790,8 @@ export function setRenderers(self) {
 						type: 'plot_edit',
 						id: self.id,
 						config: {
-							settings: { sampleScatter: self.settings }
-						}
+							settings: { sampleScatter: self.settings },
+						},
 					})
 				})
 			}
@@ -869,7 +824,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+						.attr('transform', (c) => `translate(${offsetX}, ${offsetY})`)
 						.style('fill', color)
 						.attr('d', symbol)
 						.style('stroke', rgb(color).darker())
@@ -884,7 +839,7 @@ export function setRenderers(self) {
 						.attr('alignment-baseline', 'middle')
 						.style('font-size', '0.8em')
 					offsetY += step
-					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event))
+					itemG.on('click', (event) => self.onLegendClick(chart, legendG, 'shapeTW', key, event))
 				}
 			}
 		}
@@ -907,7 +862,7 @@ export function setRenderers(self) {
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 
-			circleG.on('click', e => self.onColorClick(e, key, category))
+			circleG.on('click', (e) => self.onColorClick(e, key, category))
 			const itemG = g.append('g')
 			itemG
 				.append('text')
@@ -924,7 +879,7 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.renderGeneVariantLegend = function(chart, offsetX, offsetY, legendG, tw, cname, map) {
+	self.renderGeneVariantLegend = function (chart, offsetX, offsetY, legendG, tw, cname, map) {
 		const step = 125
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		let title = `${name}, n=${chart.cohortSamples.length}`
@@ -962,7 +917,7 @@ export function setRenderers(self) {
 					const index = category.shape % self.symbols.length
 					itemG
 						.append('path')
-						.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
+						.attr('transform', (c) => `translate(${offsetX - step}, ${offsetY - 5})`)
 						.style('fill', 'gray')
 						.attr('d', self.symbols[index].size(64)())
 						.style('stroke', rgb('gray').darker())
@@ -974,7 +929,7 @@ export function setRenderers(self) {
 						.attr('r', 5)
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
-					itemG.on('click', e => self.onColorClick(e, key, category))
+					itemG.on('click', (e) => self.onColorClick(e, key, category))
 				}
 				const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 				G.append('g')
@@ -985,7 +940,7 @@ export function setRenderers(self) {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(mkey)
 					.style('font-size', '0.8em')
-					.on('click', event => self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
+					.on('click', (event) => self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
 
 				const assay = key.split(',')[1]
 				if (key.includes(dtlabel))
