@@ -47,7 +47,7 @@ export default class Disco {
 			this.discoInteractions.cappingClickCallback
 		)
 		const discoRenderer = new DiscoRenderer(
-			this.getRingRenderers(settings),
+			this.getRingRenderers(settings, this.discoInteractions.geneClickListener),
 			legendRenderer,
 			this.discoInteractions.downloadClickListener
 		)
@@ -55,15 +55,15 @@ export default class Disco {
 		discoRenderer.render(holder, viewModel)
 	}
 
-	getRingRenderers(settings: any) {
+	getRingRenderers(settings: any, geneClickListener: (gene: string, mname: string) => void) {
 		const chromosomesRenderer = new ChromosomesRenderer(
 			settings.padAngle,
 			settings.rings.chromosomeInnerRadius,
 			settings.rings.chromosomeInnerRadius + settings.rings.chromosomeWidth
 		)
-		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration)
+		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer()
-		const snvRenderer = new SnvRenderer(settings.rings.svnInnerRadius, settings.rings.svnWidth)
+		const snvRenderer = new SnvRenderer(settings.rings.svnInnerRadius, settings.rings.svnWidth, geneClickListener)
 		const cnvRenderer = new CnvRenderer(settings.menu.padding)
 		const lohRenderer = new LohRenderer()
 

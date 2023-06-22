@@ -8,11 +8,13 @@ export default class SnvRenderer implements IRenderer {
 	private svnInnerRadius: number
 	private svnWidth: number
 	private fullArcRenderer: FullArcRenderer
+	private geneClickListener: (gene: string, mname: string) => void
 
-	constructor(svnInnerRadius: number, svnWidth: number) {
+	constructor(svnInnerRadius: number, svnWidth: number, geneClickListener: (gene: string, mname: string) => void) {
 		this.svnInnerRadius = svnInnerRadius
 		this.svnWidth = svnWidth
 		this.fullArcRenderer = new FullArcRenderer(this.svnInnerRadius, this.svnWidth, '#6464641A')
+		this.geneClickListener = geneClickListener
 	}
 
 	render(holder: any, elements: Array<SnvArc>) {
@@ -41,6 +43,9 @@ export default class SnvRenderer implements IRenderer {
 			})
 			.on('mouseout', () => {
 				menu.hide()
+			})
+			.on('click', (mouseEvent: MouseEvent, arc: SnvArc) => {
+				this.geneClickListener(arc.text, arc.mname)
 			})
 	}
 }
