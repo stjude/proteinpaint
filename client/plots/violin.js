@@ -17,10 +17,7 @@ class ViolinPlot {
 	}
 
 	async init(appState) {
-		const controls = this.opts.holder
-			.append('div')
-			.attr('class', 'sjpp-plot-controls')
-			.style('display', 'inline-block')
+		const controls = this.opts.holder.append('div').attr('class', 'sjpp-plot-controls').style('display', 'inline-block')
 
 		const holder = this.opts.holder
 			.append('div')
@@ -42,10 +39,7 @@ class ViolinPlot {
 				.append('div')
 				.attr('id', 'sjpp-vp-violinDiv')
 				.style('padding-left', this.opts.mode != 'minimal' ? '10px' : '0px'),
-			legendDiv: holder
-				.append('div')
-				.classed('sjpp-vp-legend', true)
-				.style('padding-left', '5px'),
+			legendDiv: holder.append('div').classed('sjpp-vp-legend', true).style('padding-left', '5px'),
 
 			tableHolder: this.opts.holder
 				.append('div')
@@ -55,7 +49,7 @@ class ViolinPlot {
 				.style('vertical-align', 'top')
 				.style('margin-left', '0px')
 				.style('margin-top', '30px')
-				.style('margin-right', '30px')
+				.style('margin-right', '30px'),
 		}
 
 		violinRenderer(this)
@@ -64,9 +58,9 @@ class ViolinPlot {
 		if (this.opts.mode != 'minimal') {
 			this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 				settings: {
-					legendOrientation: 'vertical'
+					legendOrientation: 'vertical',
 				},
-				handlers: {}
+				handlers: {},
 			})
 		}
 		await this.setControls(this.getState(appState))
@@ -79,7 +73,7 @@ class ViolinPlot {
 			{
 				type: 'term1',
 				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-				usecase: { target: 'violin', detail: 'term' }
+				usecase: { target: 'violin', detail: 'term' },
 			},
 			{
 				type: 'overlay',
@@ -87,7 +81,7 @@ class ViolinPlot {
 				//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
 				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
 
-				usecase: { target: 'violin', detail: 'term2' }
+				usecase: { target: 'violin', detail: 'term2' },
 			},
 			{
 				label: 'Orientation',
@@ -95,7 +89,10 @@ class ViolinPlot {
 				type: 'radio',
 				chartType: 'violin',
 				settingsKey: 'orientation',
-				options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+				options: [
+					{ label: 'Vertical', value: 'vertical' },
+					{ label: 'Horizontal', value: 'horizontal' },
+				],
 			},
 			{
 				label: 'Data symbol',
@@ -106,8 +103,8 @@ class ViolinPlot {
 				options: [
 					{ label: 'Ticks', value: 'rug' },
 					{ label: 'Circles', value: 'bean' },
-					{ label: 'Off', value: 'none' }
-				]
+					{ label: 'Off', value: 'none' },
+				],
 			},
 			{
 				label: 'Scale',
@@ -115,7 +112,10 @@ class ViolinPlot {
 				type: 'radio',
 				chartType: 'violin',
 				settingsKey: 'unit',
-				options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
+				options: [
+					{ label: 'Linear', value: 'abs' },
+					{ label: 'Log', value: 'log' },
+				],
 			},
 			{
 				label: 'Symbol size',
@@ -124,7 +124,7 @@ class ViolinPlot {
 				settingsKey: 'radius',
 				step: 1,
 				max: 15,
-				min: 3
+				min: 3,
 			},
 			{
 				label: 'Stroke width',
@@ -134,7 +134,7 @@ class ViolinPlot {
 				settingsKey: 'strokeWidth',
 				step: 0.1,
 				max: 2,
-				min: 0.1
+				min: 0.1,
 			},
 
 			{
@@ -146,7 +146,7 @@ class ViolinPlot {
 				step: 10,
 				max: 1000,
 				min: 500,
-				debounceInterval: 1000
+				debounceInterval: 1000,
 			},
 			{
 				label: 'Plot thickness',
@@ -157,15 +157,15 @@ class ViolinPlot {
 				step: 10,
 				max: 150,
 				min: 60,
-				debounceInterval: 1000
-			}
+				debounceInterval: 1000,
+			},
 		]
 
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
 			holder: this.dom.controls,
-			inputs
+			inputs,
 		})
 
 		this.components.controls.on('downloadClick.violin', this.download)
@@ -179,7 +179,7 @@ class ViolinPlot {
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find((p) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
@@ -188,11 +188,11 @@ class ViolinPlot {
 			termfilter: appState.termfilter,
 			config: Object.assign({}, config, {
 				settings: {
-					violin: config.settings.violin
-				}
+					violin: config.settings.violin,
+				},
 			}),
 			displaySampleIds: appState.termdbConfig.displaySampleIds,
-			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken()
+			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 		}
 	}
 
@@ -266,7 +266,7 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			screenThickness: window.document.body.clientWidth - thicknessMargin
+			screenThickness: window.document.body.clientWidth - thicknessMargin,
 		}
 		if (s.plotThickness) arg.plotThickness = s.plotThickness
 
@@ -277,7 +277,7 @@ class ViolinPlot {
 			if (term.q.mode == 'spline') {
 				// term may be cubic spline from regression analysis
 				// render knot values as vertical lines on the plot
-				s.lines = term.q.knots.map(x => Number(x.value))
+				s.lines = term.q.knots.map((x) => Number(x.value))
 			} else {
 				s.lines = []
 			}
@@ -316,7 +316,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
-		plotThickness: Number
+		plotThickness: Number,
 	}
 	return Object.assign(defaults, overrides)
 }
@@ -337,7 +337,7 @@ export async function getPlotConfig(opts, app) {
 			controls: {
 				isOpen: false, // control panel is hidden by default
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling
-				term0: null
+				term0: null,
 			},
 			// common: {
 			// 	use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
@@ -346,8 +346,8 @@ export async function getPlotConfig(opts, app) {
 			// 	barwidth: 20, // bar thickness
 			// 	barspace: 2 // space between two bars
 			// },
-			violin: getDefaultViolinSettings(app)
-		}
+			violin: getDefaultViolinSettings(app),
+		},
 	}
 
 	// may apply term-specific changes to the default object
