@@ -91,6 +91,7 @@ export function setInteractivity(self) {
 			self.dom.mainG.on('mouseout', null)
 			const sample = { sample_id: event.target.__data__._SAMPLENAME_ }
 			self.dom.menubody.selectAll('*').remove()
+			self.dom.menutop.selectAll('*').remove()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
 			if (self.state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
