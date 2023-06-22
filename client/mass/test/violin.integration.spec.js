@@ -17,6 +17,7 @@ import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
 9.  'test samplelst term2'
 10. 'test uncomputable categories legend'
 11. 'Load linear regression-violin UI'
+12. 'test change in plot length and thickness for new custom group variable'
 
 ***********************************************/
 
@@ -47,7 +48,7 @@ const open_state = {
 		id: 'agedx',
 		included_types: ['float'],
 		isAtomic: true,
-		isLeaf: true,
+		isleaf: true,
 		name: 'Age (years) at Cancer Diagnosis',
 		q: {
 			mode: 'continuous',
@@ -459,7 +460,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 						term: {
 							groupsetting: { disbled: true },
 							id: 'sex',
-							isLeaf: true,
+							isleaf: true,
 							name: 'Sex',
 							type: 'categorical',
 							values: {
@@ -613,7 +614,7 @@ tape.skip('term1 as numeric and term2 numeric', function (test) {
 						id: 'agedx',
 						included_types: ['float'],
 						isAtomic: true,
-						isLeaf: true,
+						isleaf: true,
 						name: 'Age (years) at Cancer Diagnosis',
 						q: {
 							mode: 'continuous',
@@ -655,7 +656,7 @@ tape.skip('term1 as categorical and term2 numeric', function (test) {
 						id: 'sex',
 						included_types: ['categorical'],
 						isAtomic: true,
-						isLeaf: true,
+						isleaf: true,
 						name: 'Sex',
 					},
 					term2: {
@@ -696,7 +697,7 @@ tape('term1 as numerical and term2 condition', function (test) {
 					term: {
 						id: 'agedx',
 						isAtomic: true,
-						isLeaf: true,
+						isleaf: true,
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
@@ -910,6 +911,7 @@ tape('test samplelst term2', function (test) {
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
+	// TODO test listsamples/hide - callbacks on label clicking and brushing for samplelst
 	async function testGroupsRendering(violin, violinDiv) {
 		await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
 		test.equal(violin.Inner.data.plots.length, 2, 'Inner.data.plots[] should be array length of 2')
@@ -931,7 +933,7 @@ tape('test uncomputable categories legend', function (test) {
 						id: 'aaclassic_5',
 						included_types: ['float'],
 						isAtomic: true,
-						isLeaf: true,
+						isleaf: true,
 						name: 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)',
 						q: {
 							mode: 'continuous',
@@ -1024,5 +1026,197 @@ tape('Load linear regression-violin UI', function (test) {
 
 		const expectedPathColor = 'rgb(221, 221, 221)'
 		test.equal(expectedPathColor, getComputedStyle(regressionVp[0]).fill, 'Path fill matches expected fill')
+	}
+})
+
+tape('test change in plot length and thickness for custom group variable', function (test) {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'hide_search',
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						id: 'agedx',
+						name: 'Age (years) at Cancer Diagnosis',
+						q: {
+							mode: 'continuous',
+						},
+					},
+					term2: {
+						term: {
+							name: 'Group 1 vs Group 2',
+							type: 'samplelst',
+							values: {
+								'Group 1': {
+									key: 'Group 1',
+									label: 'Group 1',
+									list: [
+										{
+											sampleId: 41,
+											sample: '2646',
+										},
+										{
+											sampleId: 52,
+											sample: '2800',
+										},
+										{
+											sampleId: 56,
+											sample: '2856',
+										},
+										{
+											sampleId: 58,
+											sample: '2884',
+										},
+									],
+								},
+								'Group 2': {
+									key: 'Group 2',
+									label: 'Group 2',
+									list: [
+										{
+											sampleId: 49,
+											sample: '2758',
+										},
+										{
+											sampleId: 50,
+											sample: '2772',
+										},
+										{
+											sampleId: 61,
+											sample: '2926',
+										},
+										{
+											sampleId: 74,
+											sample: '3108',
+										},
+										{
+											sampleId: 75,
+											sample: '3122',
+										},
+										{
+											sampleId: 76,
+											sample: '3136',
+										},
+									],
+								},
+							},
+						},
+						q: {
+							mode: 'discrete',
+							groups: [
+								{
+									name: 'Group 1',
+									values: [
+										{
+											sampleId: 41,
+											sample: '2646',
+										},
+										{
+											sampleId: 52,
+											sample: '2800',
+										},
+										{
+											sampleId: 56,
+											sample: '2856',
+										},
+										{
+											sampleId: 58,
+											sample: '2884',
+										},
+									],
+								},
+								{
+									name: 'Group 2',
+									values: [
+										{
+											sampleId: 49,
+											sample: '2758',
+										},
+										{
+											sampleId: 50,
+											sample: '2772',
+										},
+										{
+											sampleId: 61,
+											sample: '2926',
+										},
+										{
+											sampleId: 74,
+											sample: '3108',
+										},
+										{
+											sampleId: 75,
+											sample: '3122',
+										},
+										{
+											sampleId: 76,
+											sample: '3136',
+										},
+									],
+								},
+							],
+							type: 'custom-groupsetting',
+						},
+					},
+				},
+			],
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests,
+			},
+		},
+	})
+	async function runTests(violin) {
+		violin.on('postRender.test', null)
+		await changePlotLength(violin)
+		await changePlotThickness(violin)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+
+	async function changePlotLength(violin) {
+		const testPlotLength = 800
+		violin.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: violin.Inner.id,
+			config: {
+				settings: {
+					violin: {
+						plotLength: testPlotLength,
+					},
+				},
+			},
+		})
+		await sleep(20)
+		test.true(
+			violin.Inner.app.Inner.state.plots[0].settings.violin.plotLength === testPlotLength,
+			`Plot length changed to ${testPlotLength}`
+		)
+	}
+
+	async function changePlotThickness(violin) {
+		const testPlotThickness = 80
+		violin.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: violin.Inner.id,
+			config: {
+				settings: {
+					violin: {
+						plotThickness: testPlotThickness,
+					},
+				},
+			},
+		})
+		await sleep(20)
+		test.true(
+			violin.Inner.app.Inner.state.plots[0].settings.violin.plotThickness === testPlotThickness,
+			`Plot thickness changed to ${testPlotThickness}`
+		)
 	}
 })
