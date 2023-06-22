@@ -353,7 +353,6 @@ class TestAppStore {
 	constructor(opts) {
 		;(this.type = 'store'),
 			(this.defaultState = {
-				//another prettier test, should see () and ; that have been removed
 				debug: true,
 			})
 	}
