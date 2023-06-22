@@ -472,9 +472,9 @@ function getLogisticOutcomeNonref(outcome) {
 	// outcome is q.outcome{}, the term-wrapper {q{}, refGrp, term{}}
 	if (outcome.term.type == 'condition') {
 		// condition term does not use q.type
-		// from q.groupNames[], return the str name that's not refgrp
-		for (const i of outcome.q.groupNames) {
-			if (i != outcome.q.refGrp) return i
+		// from q.groups[], return the str name that's not refgrp
+		for (const i of outcome.q.groups) {
+			if (i.name != outcome.refGrp) return i
 		}
 		throw 'nonref group not found for logistic outcome'
 	}

@@ -96,7 +96,6 @@ export interface Q extends BaseQ{
     groupsetting?: GroupSetting
     //Condition terms 
     breaks?: number[]
-    groupNames?: string[]
     timeScale?: string
     showTimeScale?: boolean
     bar_by_children?: boolean
