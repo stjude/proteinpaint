@@ -53,9 +53,7 @@ const defaultOpts: { menuOptions: string; menuLayout: string } = {
 }
 
 type HandlerByType = {
-	//I'm a test comment
-
-	[index: string]: Handler
+	[index: string]: Handler //another test
 }
 
 class TermSetting {
