@@ -58,14 +58,6 @@ export default <Mds3> {
 
 			coxStartTimeMsg: `begins at 5 years post cancer diagnosis`,
 
-			// term ids specific to dataset
-			termIds: {
-				ageDxId: 'agedx', // age at diagnosis
-				ageLastVisitId: 'agelastvisit', // age at last visit
-				ageNdiId: 'a_ndi', // age at last NDI seach
-				ageDeathId: 'a_death' // age at death
-			},
-
 			selectCohort: {
 				// wrap term.id into a term json object so as to use it in tvs;
 				// the term is not required to exist in termdb
