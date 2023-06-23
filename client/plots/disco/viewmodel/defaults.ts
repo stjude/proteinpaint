@@ -1,9 +1,47 @@
 import Settings from './Settings'
+import { RingType } from '#plots/disco/viewmodel/RingType.ts'
 
 export default function discoDefaults(overrides = {}): Settings {
 	return Object.assign(
 		{
 			rings: {
+				order: [
+					RingType.FUSION,
+					RingType.CNV,
+					RingType.LOH,
+					RingType.SNV,
+					RingType.NONEXONICSNV,
+					// RingType.CHROMOSOME,
+					// RingType.LABEL
+				],
+
+				dimensions: [
+					{
+						radius: 80, //	fusionRadius: 80,
+						width: undefined,
+					},
+					{
+						radius: 100, //	cnvInnerRadius: 80,
+						width: 20,
+					},
+					{
+						radius: 120, // lohInnerRadius: 120,
+						width: 20,
+					},
+					{
+						radius: 140, // svnInnerRadius: 140,
+						width: 20,
+					},
+					{
+						radius: 140, // svnInnerRadius: 140,
+						width: 20,
+					},
+					{
+						radius: 160, // nonExonicInnerRadius: 140,
+						width: 20,
+					},
+				],
+
 				fusionRadius: 80,
 
 				cnvInnerRadius: 100,
