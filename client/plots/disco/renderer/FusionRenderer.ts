@@ -32,7 +32,7 @@ export default class FusionRenderer {
 				return this.getColor(fusion)
 			})
 			.on('mouseover', (mouseEvent: MouseEvent, fusion: Fusion) => {
-				menu.d.style('color', '#000').html(this.getTooltip(fusion))
+				menu.d.style('padding', '2px').html(this.getTooltip(fusion))
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
 			.on('mouseout', () => {

@@ -2,6 +2,8 @@ import IRenderer from './IRenderer'
 import { select } from 'd3-selection'
 import { line } from 'd3-shape'
 import Label from '#plots/disco/viewmodel/Label'
+import SnvArc from '#plots/disco/viewmodel/SnvArc.ts'
+import MenuProvider from '#plots/disco/renderer/MenuProvider.ts'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
@@ -16,6 +18,9 @@ export default class LabelsRenderer implements IRenderer {
 		const lineFunction = line<{ x: number; y: number }>()
 			.x((point) => point.x)
 			.y((point) => point.y)
+
+		const menu = MenuProvider.create()
+
 		labelsG
 			.selectAll('.group')
 			.data(elements)
@@ -33,6 +38,15 @@ export default class LabelsRenderer implements IRenderer {
 					.style('fill', label.color)
 					.style('cursor', 'pointer')
 					.text(label.text)
+					.on('mouseover', (mouseEvent: MouseEvent) => {
+						console.log('mouseEvent', mouseEvent)
+						menu.d
+							.style('padding', '2px')
+							.html(
+								`Gene: ${label.label} <br />Consequence: ${label.mname} <span style="color: ${label.color}" >${label.dataClass}</span> <br />Mutation: ${label.chr}:${label.position}`
+							)
+						menu.show(mouseEvent.x, mouseEvent.y)
+					})
 					.on('click', () => this.geneClickListener(label.label, label.mname))
 
 				g.append('path')

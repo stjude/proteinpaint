@@ -19,7 +19,7 @@ export default class LohRenderer implements IRenderer {
 			.attr('d', (d: LohArc) => arcGenerator(d))
 			.attr('fill', (d: LohArc) => d.color)
 			.on('mouseover', (mouseEvent: MouseEvent, arc: LohArc) => {
-				menu.d.style('color', arc.color).html(`Loss of Heterozygosity  <br /> ${arc.chr}:${arc.start}-${arc.stop}`)
+				menu.d.style('padding', '2px').html(`Loss of Heterozygosity  <br /> ${arc.chr}:${arc.start}-${arc.stop}`)
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
 			.on('mouseout', () => {
