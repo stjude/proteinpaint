@@ -25,6 +25,8 @@ export default class LabelsMapper {
 			const startAngle = this.calculateStartAngle(data)
 			const endAngle = this.calculateEndAngle(data)
 
+			const mLabel = MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass] : undefined
+
 			const label = LabelFactory.createLabel(
 				startAngle,
 				endAngle,
@@ -33,7 +35,10 @@ export default class LabelsMapper {
 				data.value,
 				data.gene,
 				data.mname,
-				MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass].color : '#000',
+				mLabel.color,
+				mLabel.label,
+				data.chr,
+				data.position,
 				data.isCancerGene,
 				this.settings.rings.labelsToLinesGap
 			)
