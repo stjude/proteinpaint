@@ -1,5 +1,5 @@
 import { setGroupsettingMethods } from './groupsetting'
-import { filterInit } from '#filter'
+// import { filterInit } from '#filter'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { PillData, TW, Term, Q, TermValues, GroupSetting, BaseGroupSet, GroupEntry } from '#shared/types'
 
