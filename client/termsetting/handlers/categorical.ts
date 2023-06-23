@@ -341,7 +341,7 @@ export function setCategoryConditionMethods(self: any) {
 			}
 		}
 
-		for (const [key, val] of Object.entries(vals_with_grp)) {
+		for (const key of Object.keys(vals_with_grp)) {
 			if (vals_with_grp[key].group == undefined) vals_with_grp[key].group = 0
 		}
 
