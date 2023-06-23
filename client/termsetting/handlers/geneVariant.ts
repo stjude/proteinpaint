@@ -136,7 +136,7 @@ function makeEditMenu(self: any, _div: any) {
 					select(this.lastChild).style('text-decoration', i == -1 ? 'line-through' : '')
 					applyBtn.property('disabled', JSON.stringify(exclude) === origExclude)
 				})
-				.each(function (d: MClassEntry) {
+				.each(function (this: any, d: MClassEntry) {
 					const itemDiv = select(this)
 					itemDiv
 						.append('div')

@@ -1,12 +1,15 @@
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
-import { keyupEnter } from '#src/client'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
 import { PillData, TW, Q, VocabApi } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
+
+//Types 
+type GroupEntry = { name: string, values: (string | number)[] }
+
 const cutoffGrades: number[] = [1, 2, 3, 4, 5]
 
 export function getHandler(self: any) {
@@ -176,7 +179,7 @@ function showMenu_discrete(self: any, div: any) {
 			.map(Number)
 			.sort((a, b) => a - b)
 
-		const groups = getGroups(grades, breaks)
+		const groups: any = getGroups(grades, breaks)
 
 		// render groups as ranges and names
 		rangeNameDiv
@@ -200,7 +203,7 @@ function showMenu_discrete(self: any, div: any) {
 				.attr('type', 'text')
 				.property('value', g.name)
 				.style('margin', '2px 0px')
-				.on('change', function() {
+				.on('change', function(this: any) {
 					groups[i].name = this.value
 				})
 		}
@@ -213,7 +216,7 @@ function showMenu_discrete(self: any, div: any) {
 		const str = textarea.property('value').trim()
 		if (!str) return []
 		const lst: any = [...new Set(str.split('\n'))]
-		const breaks = []
+		const breaks: number[] = []
 		for (const x of lst) {
 			const b = Number(x)
 			if (!Number.isInteger(b)) {
@@ -346,11 +349,11 @@ function showMenu_cutoff(self: any, div: any) {
 }
 
 // split grades into groups based on breaks
-function getGroups(grades, breaks) {
+function getGroups(grades: any, breaks: any) {
 	grades.sort((a, b) => a - b)
-	const groups = [] // [ {name, values}, {name, values} ]
-	let group = { values: [] }
-	let b
+	const groups: GroupEntry[] = [] // [ {name, values}, {name, values} ]
+	let group: any = { values: [] }
+	let b: any
 	for (const g of grades) {
 		if (breaks.includes(g)) {
 			b = g
@@ -362,7 +365,7 @@ function getGroups(grades, breaks) {
 				if (group.values.length == 1) {
 					// single value in group
 					// should be grade 0
-					if (!group.values[0] === '0') throw 'unexpected group value'
+					if (group.values[0] !== '0') throw 'unexpected group value'
 					group.name = 'Grade 0'
 				} else {
 					// multiple values in group
@@ -429,6 +432,7 @@ export function fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q) {
 	// for binary term, split grades into groups based on breaks
 	// for cuminc and cox terms, groups will be determined in sql query
 	if (tw.q.mode == 'binary') {
+		if (!tw.term.values) throw `Missing term.values [condition.ts, fillTW()]`
 		// include both tested and not tested grades
 		const grades = Object.keys(tw.term.values)
 			.map(Number)
