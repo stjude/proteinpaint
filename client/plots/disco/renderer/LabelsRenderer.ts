@@ -39,7 +39,6 @@ export default class LabelsRenderer implements IRenderer {
 					.style('cursor', 'pointer')
 					.text(label.text)
 					.on('mouseover', (mouseEvent: MouseEvent) => {
-						console.log('mouseEvent', mouseEvent)
 						menu.d
 							.style('padding', '2px')
 							.html(
