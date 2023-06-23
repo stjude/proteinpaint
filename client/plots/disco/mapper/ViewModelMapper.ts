@@ -2,22 +2,9 @@ import ViewModel from '#plots/disco/viewmodel/ViewModel'
 import discoDefaults from '#plots/disco/viewmodel/defaults'
 import Reference from './Reference'
 import DataMapper from './DataMapper'
-import LabelsMapper from './LabelsMapper'
-import Ring from '#plots/disco/viewmodel/Ring'
-import Labels from '#plots/disco/viewmodel/Labels'
-import NonExonicSnvArcsMapper from './NonExonicSnvArcsMapper'
-import SnvArc from '#plots/disco/viewmodel/SnvArc'
-import SnvArcsMapper from './SnvArcsMapper'
-import LohArcMapper from './LohArcMapper'
-import LohArc from '#plots/disco/viewmodel/LohArc'
-import CnvArcsMapper from './CnvArcsMapper'
-import CnvArc from '#plots/disco/viewmodel/CnvArc'
-import LohLegend from '#plots/disco/viewmodel/LohLegend'
-import Legend from '#plots/disco/viewmodel/Legend'
-import Rings from '#plots/disco/viewmodel/Rings'
 import Settings from '#plots/disco/viewmodel/Settings'
 import Data from './Data'
-import FusionMapper from './FusionMapper'
+import ViewModelProvider from '#plots/disco/mapper/ViewModelProvider.ts'
 
 export class ViewModelMapper {
 	static dtNums = [2, 5, 4, 10, 1, 'exonic', 'non-exonic']
@@ -77,82 +64,6 @@ export class ViewModelMapper {
 
 		const dataMapper = new DataMapper(this.settings, reference, sampleName, cancerGenes)
 
-		dataMapper.map(data)
-
-		const labelsMapper = new LabelsMapper(this.settings, sampleName, reference)
-
-		const labelsData = labelsMapper.map(dataMapper.filteredSnvData)
-
-		const chromosomesRing = new Ring(
-			this.settings.rings.chromosomeInnerRadius,
-			this.settings.rings.chromosomeWidth,
-			reference.chromosomes
-		)
-
-		const labelsRing = new Labels(this.settings, labelsData, dataMapper.hasCancerGenes)
-
-		const arcsMapper = new NonExonicSnvArcsMapper(this.settings, sampleName, reference)
-
-		const nonExonicArcRing: Ring<SnvArc> = new Ring(
-			this.settings.rings.nonExonicInnerRadius,
-			this.settings.rings.nonExonicWidht,
-			arcsMapper.map(dataMapper.nonExonicSnvData)
-		)
-
-		const snvArcsMapper = new SnvArcsMapper(this.settings, sampleName, reference)
-
-		const snvArcRing: Ring<SnvArc> = new Ring(
-			this.settings.rings.svnInnerRadius,
-			this.settings.rings.svnWidth,
-			snvArcsMapper.map(dataMapper.snvRingDataMap)
-		)
-
-		const lohMapper = new LohArcMapper(this.settings, sampleName, reference)
-
-		const lohArcRing: Ring<LohArc> = new Ring(
-			this.settings.rings.lohInnerRadius,
-			this.settings.rings.lohWidth,
-			lohMapper.map(dataMapper.lohData)
-		)
-
-		const cnvArcsMapper = new CnvArcsMapper(
-			this.settings,
-			sampleName,
-			reference,
-			dataMapper.cnvMaxValue,
-			dataMapper.cnvMinValue,
-			this.settings.cnv.unit
-		)
-
-		const cnvArcRing: Ring<CnvArc> = new Ring(
-			this.settings.rings.cnvInnerRadius,
-			this.settings.rings.cnvWidth,
-			cnvArcsMapper.map(dataMapper.cnvData)
-		)
-
-		const fusionMapper = new FusionMapper(this.settings, sampleName, reference)
-
-		const fusions = fusionMapper.map(dataMapper.fusionData)
-
-		let lohLegend: LohLegend | undefined
-
-		if (this.settings.legend.lohLegendEnabled && dataMapper.lohMinValue && dataMapper.lohMaxValue) {
-			lohLegend = new LohLegend(dataMapper.lohMinValue, dataMapper.lohMaxValue)
-		}
-
-		const legend = new Legend(
-			this.settings.legend.snvTitle,
-			this.settings.legend.cnvTitle,
-			this.settings.legend.lohTitle,
-			this.settings.legend.fusionTitle,
-			snvArcsMapper.snvClassMap,
-			cnvArcsMapper.cnvClassMap,
-			fusions.length > 0,
-			lohLegend
-		)
-
-		const rings = new Rings(labelsRing, chromosomesRing, nonExonicArcRing, snvArcRing, cnvArcRing, lohArcRing)
-
-		return new ViewModel(this.settings, rings, legend, fusions)
+		return new ViewModelProvider(this.settings, dataMapper, reference, sampleName).map(data)
 	}
 }
