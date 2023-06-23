@@ -25,9 +25,9 @@ export default class ViewModel {
 
 		this.width =
 			2 *
-			(this.settings.rings.labelLinesInnerRadius +
-				this.settings.rings.labelsToLinesDistance +
-				this.settings.horizontalPadding)
+			(this.settings.horizontalPadding +
+				this.settings.rings.labelLinesInnerRadius +
+				this.settings.rings.labelsToLinesDistance)
 		this.height =
 			2 *
 			(this.settings.rings.labelLinesInnerRadius +
