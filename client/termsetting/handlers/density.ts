@@ -205,17 +205,17 @@ function renderBinLines(self: any, data: any) {
 		.on('mouseover', function (this: BaseType, d: LineData) {
 			if (self.q.type != 'regular-bin' || d.isDraggable) select(this).style('stroke-width', 3)
 		})
-		.on('mouseout', function (this: BaseType, d: LineData) {
+		.on('mouseout', function (this: BaseType) {
 			select(this).style('stroke-width', 1)
 		})
-		.each(function (this: Element, d: LineData, i: number) {
+		.each(function (this: Element, d: LineData) {
 			if (d.isDraggable) {
 				const dragger = d3drag().on('drag', dragged).on('end', dragend)
 				select(this).call(dragger)
 			}
 		})
 
-	const middleLines = self.num_obj.binsize_g.selectAll('line').filter((d: LineData, i: number) => !d.isDraggable)
+	const middleLines = self.num_obj.binsize_g.selectAll('line').filter((d: LineData) => !d.isDraggable)
 
 	function dragged(this: any, event: PointerEvent, b: any) {
 		const draggedX: number = pointer(event, this)[0]
@@ -244,7 +244,7 @@ function renderBinLines(self: any, data: any) {
 				self.dom.first_stop_input.restyle()
 				const maxX = self.q.last_bin ? lastScaledX : scaledMaxX
 				const diff = d.draggedX - d.scaledX
-				middleLines.each(function (this: Element, c: LineData, i: number) {
+				middleLines.each(function (this: Element, c: LineData) {
 					c.draggedX = c.scaledX + diff
 					select(this)
 						.attr('x1', c.draggedX)
