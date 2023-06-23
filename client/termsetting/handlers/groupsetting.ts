@@ -241,16 +241,16 @@ export function setGroupsettingMethods(self: any) {
 			.on('change', () => {
 				if (group_ct_select.node().value < default_grp_count) {
 					const grp_diff = default_grp_count - group_ct_select.node().value
-					for (const [key, val] of Object.entries(cat_grps)) {
-						if (cat_grps[key].uncomputable) continue
-						if (cat_grps[key].group > group_ct_select.node().value) cat_grps[key].group = 1
+					for (const value of Object.values(cat_grps)) {
+						if (value.uncomputable) continue
+						if (value.group > group_ct_select.node().value) value.group = 1
 					}
 					self.regroupMenu(default_grp_count - grp_diff, cat_grps)
 				} else if (group_ct_select.node().value > default_grp_count) {
 					const grp_diff = group_ct_select.node().value - default_grp_count
-					for (const [key, val] of Object.entries(cat_grps)) {
-						if (cat_grps[key].uncomputable) continue
-						if (!cat_grps[key].group) cat_grps[key].group = 1
+					for (const value of Object.values(cat_grps)) {
+						if (value.uncomputable) continue
+						if (!value.group) value.group = 1
 					}
 					self.regroupMenu(default_grp_count + grp_diff, cat_grps)
 				}

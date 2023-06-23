@@ -1,4 +1,3 @@
-import { select } from 'd3-selection'
 import { setDensityPlot } from './density'
 import { keyupEnter } from '#src/client'
 import { getPillNameDefault } from '#termsetting'
@@ -194,8 +193,8 @@ function processKnotsInputs(self: any) {
 
 /******************* Functions for Auto Spline knots *******************/
 function renderAutoSplineInputs(self: any, div: any) {
-	let knot_count
-	const default_knot_count = (knot_count = 4)
+	const knot_count = 4
+	const default_knot_count = knot_count
 	self.dom.knot_select_div = div.append('div')
 
 	self.dom.knot_select_div
