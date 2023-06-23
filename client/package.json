@@ -17,7 +17,7 @@
     "#shared/*": "./shared/*.js",
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/termsetting.ts",
-    "#termsetting/handlers/*": "./termsetting/handlers/*.js"
+    "#termsetting/handlers/*": "./termsetting/handlers/*.ts"
   },
   "scripts": {
     "predev": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
@@ -48,6 +48,7 @@
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
     "@rollup/plugin-typescript": "^11.1.1",
+    "@typescript-eslint/eslint-plugin": "^5.60.0",
     "babel-loader": "^8.2.2",
     "css-loader": "^6.7.1",
     "d3": "^7.6.1",
@@ -60,7 +61,7 @@
     "normalize.css": "^8.0.1",
     "partjson": "^0.58.1",
     "postcss-import": "^14.1.0",
-    "prettier": "1.18.2",
+    "prettier": "^2.8.8",
     "process": "^0.11.10",
     "read-cache": "^1.0.0",
     "rollup": "^2.35.1",

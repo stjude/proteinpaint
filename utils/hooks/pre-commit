@@ -2,7 +2,7 @@
 
 set -e
 
-FILES=$(git diff --cached --name-only --diff-filter=ACM "*.js" | sed 's| |\\ |g')
+FILES=$(git diff --cached --name-only --diff-filter=ACM "*.js" "*.ts" | sed 's| |\\ |g')
 [ -z "$FILES" ] && exit 0
 
 echo "Prettifying $FILES ..."
@@ -16,5 +16,8 @@ echo "$FILES" | xargs git add
 
 # doing per GDC requirements
 pre-commit run --files "$FILES"
+
+# lint against team preferences
+npx eslint . --ext .ts
 
 exit 0

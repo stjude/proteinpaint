@@ -52,7 +52,7 @@ function getHolder() {
 		.node()
 }
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- mds3 -***-')
 	test.end()
 })
@@ -62,13 +62,13 @@ run test with a runpp callback, which eliminates need of sleep()
 for that to work, the tape() callback function must not be "async"
 */
 
-tape('GDC - gene symbol KRAS', test => {
+tape('GDC - gene symbol KRAS', (test) => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 	function callbackOnRender(tk, bb) {
 		// tk is gdc mds3 track object; bb is block object
@@ -86,7 +86,7 @@ tape('GDC - gene symbol KRAS', test => {
 	}
 })
 
-tape('GDC - GENCODE transcript ENST00000407796', test => {
+tape('GDC - GENCODE transcript ENST00000407796', (test) => {
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -95,7 +95,7 @@ tape('GDC - GENCODE transcript ENST00000407796', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'ENST00000407796',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 	function callbackOnRender(tk, bb) {
 		test.equal(bb.usegm.isoform, 'ENST00000407796', 'block.usegm.isoform="ENST00000407796"')
@@ -106,7 +106,7 @@ tape('GDC - GENCODE transcript ENST00000407796', test => {
 	}
 })
 
-tape('GDC - GENCODE gene ENSG00000133703', test => {
+tape('GDC - GENCODE gene ENSG00000133703', (test) => {
 	// this GENCODE gene is kras
 	// due to change of genedb in which ENSG are treated as aliases, they now map to refseq instead
 	// can change back when this behavior is restored
@@ -118,7 +118,7 @@ tape('GDC - GENCODE gene ENSG00000133703', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'ENSG00000133703',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 	function callbackOnRender(tk, bb) {
 		test.equal(bb.usegm.name, 'KRAS', 'ENSG00000133703 is mapped to block.usegm.name="KRAS"')
@@ -128,7 +128,7 @@ tape('GDC - GENCODE gene ENSG00000133703', test => {
 	}
 })
 
-tape('GDC - RefSeq NM_005163', test => {
+tape('GDC - RefSeq NM_005163', (test) => {
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -137,7 +137,7 @@ tape('GDC - RefSeq NM_005163', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'NM_005163',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 	function callbackOnRender(tk, block) {
 		test.equal(bb.usegm.isoform, 'NM_005163', 'block.usegm.isoform="NM_005163"')
@@ -147,7 +147,7 @@ tape('GDC - RefSeq NM_005163', test => {
 	}
 })
 
-tape('GDC - KRAS SSM ID', test => {
+tape('GDC - KRAS SSM ID', (test) => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 	const ssm_id = '4fb37566-16d1-5697-9732-27c359828bc7' // kras G12V
@@ -156,7 +156,7 @@ tape('GDC - KRAS SSM ID', test => {
 		noheader: true,
 		genome: 'hg38',
 		mds3_ssm2canonicalisoform: { dslabel: 'GDC', ssm_id },
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 
 	function callbackOnRender(tk, bb) {
@@ -170,14 +170,14 @@ tape('GDC - KRAS SSM ID', test => {
 	}
 })
 
-tape('geneSearch4GDCmds3', async test => {
+tape('geneSearch4GDCmds3', async (test) => {
 	// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
 	const holder = getHolder()
 	const gene = 'HOXA1'
 	await runproteinpaint({
 		holder,
 		noheader: 1,
-		geneSearch4GDCmds3: { postRender }
+		geneSearch4GDCmds3: { postRender },
 	})
 	async function postRender(arg) {
 		// arg={tip}; convenient method to provide the tooltip used by gene search <input> (remove some hassle of finding this tooltip)_
@@ -203,7 +203,7 @@ tape('geneSearch4GDCmds3', async test => {
 	}
 })
 
-tape('ASH - gene BCR', test => {
+tape('ASH - gene BCR', (test) => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -212,7 +212,7 @@ tape('ASH - gene BCR', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'BCR',
-		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }],
 	})
 	function callbackOnRender(tk, bb) {
 		test.equal(bb.usegm.name, 'BCR', 'block.usegm.name="BCR"')
@@ -223,7 +223,7 @@ tape('ASH - gene BCR', test => {
 	}
 })
 
-tape('Mbmeta - gene p53', test => {
+tape('Mbmeta - gene p53', (test) => {
 	const holder = getHolder()
 
 	runproteinpaint({
@@ -231,23 +231,25 @@ tape('Mbmeta - gene p53', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'p53',
-		tracks: [{ type: 'mds3', dslabel: 'MB_meta_analysis', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'MB_meta_analysis', callbackOnRender }],
 	})
 	async function callbackOnRender(tk, bb) {
 		test.ok(tk.skewer.data.length > 0, 'mds3 tk should be showing some skewers')
 		// click disc of first skewer, it should be a single mutation
-		tk.skewer.g
-			.select('.sja_aa_disckick')
-			.nodes()[0]
-			.dispatchEvent(new Event('click'))
+		tk.skewer.g.select('.sja_aa_disckick').nodes()[0].dispatchEvent(new Event('click'))
 
 		await whenVisible(tk.itemtip.d)
 		test.pass('itemtip shows with variant table')
 		const buttons = tk.itemtip.d.selectAll('button').nodes()
-		test.ok(buttons.length == 2, 'two buttons are showing in itemtip')
+		/* two buttons should be shown
+		#1: disco
+		#2: methylation cnv
+		*/
+
+		test.ok(buttons.length == 3, 'two buttons are showing in itemtip') // TODO old disco button will be removed soon
 
 		await testDisco(buttons[0], tk)
-		await testCnv(buttons[1], tk)
+		await testCnv(buttons[2], tk)
 
 		if (test._ok) {
 			holder.remove()
@@ -260,8 +262,11 @@ tape('Mbmeta - gene p53', test => {
 		const name = 'Disco plot'
 		test.equal(btn.innerHTML, name, '1st button is called ' + name)
 		btn.dispatchEvent(new Event('click'))
-		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
-		test.pass(`clicking 1st button ${name} the menutip shows`)
+
+		// TODO disco now shows in new sandbox
+
+		//await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
+		//test.pass(`clicking 1st button ${name} the menutip shows`)
 		//const svg = await detectOne({elem: tk.menutip.d.node(), selector:'svg'})
 		//test.ok(svg, '<svg> created in tk.menutip.d as disco plot')
 	}
@@ -269,15 +274,20 @@ tape('Mbmeta - gene p53', test => {
 		const name = 'MethylationArray'
 		test.equal(btn.innerHTML, name, '2nd button is called ' + name)
 		btn.dispatchEvent(new Event('click'))
+
+		// TODO cnv now shows in new sandbox
+
+		/*
 		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
 		test.pass(`clicking 2nd button ${name} the menutip shows`)
 		const img = await detectOne({ elem: tk.menutip.d.node(), selector: 'img' })
 		test.ok(img, '<img> found in menutip')
 		// TODO click at a particular position on img, detect if block shows up
+		*/
 	}
 })
 
-tape('Clinvar - gene kras', test => {
+tape('Clinvar - gene kras', (test) => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -286,7 +296,7 @@ tape('Clinvar - gene kras', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'clinvar', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'clinvar', callbackOnRender }],
 	})
 	function callbackOnRender(tk, bb) {
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
@@ -298,7 +308,7 @@ tape('Clinvar - gene kras', test => {
 	}
 })
 
-tape('Incorrect dataset name: ah instead of ASH', test => {
+tape('Incorrect dataset name: ah instead of ASH', (test) => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 	runproteinpaint({
@@ -306,7 +316,7 @@ tape('Incorrect dataset name: ah instead of ASH', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'BCR',
-		tracks: [{ type: 'mds3', dslabel: 'ah', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'ah', callbackOnRender }],
 	})
 	function callbackOnRender(tk, bb) {
 		// Confirm mds3 track sent to block instance but not rendering
@@ -315,14 +325,14 @@ tape('Incorrect dataset name: ah instead of ASH', test => {
 		const errorDivFound = tk.gmiddle
 			.selectAll('text')
 			.nodes()
-			.find(i => i.textContent == 'Error: invalid dsname')
+			.find((i) => i.textContent == 'Error: invalid dsname')
 		test.ok(errorDivFound, 'Should display invalid dsname error')
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
 
-tape('Launch variant table from track variant label', test => {
+tape('Launch variant table from track variant label', (test) => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 
@@ -331,7 +341,7 @@ tape('Launch variant table from track variant label', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 	function callbackOnRender(tk, bb) {
 		//Click on track variant link to open menu
@@ -341,7 +351,7 @@ tape('Launch variant table from track variant label', test => {
 		const listMenuOptionFound = tk.menutip.d
 			.selectAll('.sja_menuoption')
 			.nodes()
-			.find(e => e.innerHTML == 'List')
+			.find((e) => e.innerHTML == 'List')
 		test.ok(listMenuOptionFound, 'Should open menu from clicking on variant link beneath track label')
 		listMenuOptionFound.dispatchEvent(new Event('click'))
 
@@ -349,14 +359,14 @@ tape('Launch variant table from track variant label', test => {
 		const E3KvariantFound = tk.menutip.d
 			.selectAll('div.sja_menuoption')
 			.nodes()
-			.find(e => e.innerText == 'E3KMISSENSEchr12:25245378, C>T')
+			.find((e) => e.innerText == 'E3KMISSENSEchr12:25245378, C>T')
 		E3KvariantFound.dispatchEvent(new Event('click'))
 
 		//Confirm variant annotation table appears
 		const variantTableFound = tk.menutip.d
 			.selectAll('span')
 			.nodes()
-			.find(e => e.innerText == 'E3K')
+			.find((e) => e.innerText == 'E3K')
 		test.ok(variantTableFound, 'Should display variant annotation table')
 
 		//Close orphaned popup window
@@ -368,10 +378,10 @@ tape('Launch variant table from track variant label', test => {
 })
 
 // same tests applied on two datasets, each using a different data source
-tape('GDC - sample summaries table, create subtrack (tk.filterObj)', test => {
+tape('GDC - sample summaries table, create subtrack (tk.filterObj)', (test) => {
 	testSampleSummary2subtrack('IDH1', 'GDC', test)
 })
-tape('ASH - sample summaries table, create subtrack (tk.filterObj)', test => {
+tape('ASH - sample summaries table, create subtrack (tk.filterObj)', (test) => {
 	testSampleSummary2subtrack('KRAS', 'ASH', test)
 })
 
@@ -384,7 +394,7 @@ async function testSampleSummary2subtrack(gene, dslabel, test) {
 		noheader: true,
 		genome: 'hg38',
 		gene,
-		tracks: [{ type: 'mds3', dslabel, callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel, callbackOnRender }],
 	})
 
 	async function callbackOnRender(tk, bb) {
@@ -400,7 +410,7 @@ async function testSampleSummary2subtrack(gene, dslabel, test) {
 			const twDiv = tk.menutip.d
 				.selectAll('div')
 				.nodes()
-				.find(e => e.innerText.startsWith(tw.term.name))
+				.find((e) => e.innerText.startsWith(tw.term.name))
 			// the found div is <div>TW.name <span></span></div>, thus must use startsWith
 			test.ok(twDiv, 'Should display tab for ' + tw.term.name)
 		}
@@ -447,69 +457,87 @@ async function testSampleSummary2subtrack(gene, dslabel, test) {
 	}
 }
 
-tape('GDC - mclass filtering', test => {
+tape('GDC - mclass filtering', (test) => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 	async function callbackOnRender(tk, bb) {
 		const allMcount = tk.skewer.rawmlst.length
-		test.ok(tk.skewer.rawmlst.find(m => m.class == 'M'), 'has class=M before filtering')
+		test.ok(
+			tk.skewer.rawmlst.find((m) => m.class == 'M'),
+			'has class=M before filtering'
+		)
 		tk.legend.mclass.hiddenvalues.add('M')
 		// must delete this to not to trigger the same function on rerendering
 		delete tk.callbackOnRender
 		bb.onloadalltk_always = () => {
 			test.ok(allMcount > tk.skewer.rawmlst.length, 'fewer mutations left after filtering by mclass')
-			test.notOk(tk.skewer.rawmlst.find(m => m.class == 'M'), 'no longer has class=M after filtering')
+			test.notOk(
+				tk.skewer.rawmlst.find((m) => m.class == 'M'),
+				'no longer has class=M after filtering'
+			)
 			if (test._ok) holder.remove()
 			test.end()
 		}
 		await tk.load()
 	}
 })
-tape('ASH - mclass filtering', test => {
+tape('ASH - mclass filtering', (test) => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'ash', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'ash', callbackOnRender }],
 	})
 	async function callbackOnRender(tk, bb) {
 		const allMcount = tk.skewer.rawmlst.length
-		test.ok(tk.skewer.rawmlst.find(m => m.class == 'M'), 'has class=M before filtering')
+		test.ok(
+			tk.skewer.rawmlst.find((m) => m.class == 'M'),
+			'has class=M before filtering'
+		)
 		tk.legend.mclass.hiddenvalues.add('M')
 		// must delete this to not to trigger the same function on rerendering
 		delete tk.callbackOnRender
 		bb.onloadalltk_always = () => {
 			test.ok(allMcount > tk.skewer.rawmlst.length, 'fewer mutations left after filtering by mclass')
-			test.notOk(tk.skewer.rawmlst.find(m => m.class == 'M'), 'no longer has class=M after filtering')
+			test.notOk(
+				tk.skewer.rawmlst.find((m) => m.class == 'M'),
+				'no longer has class=M after filtering'
+			)
 			if (test._ok) holder.remove()
 			test.end()
 		}
 		await tk.load()
 	}
 })
-tape('Clinvar - mclass filtering', test => {
+tape('Clinvar - mclass filtering', (test) => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'clinvar', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'clinvar', callbackOnRender }],
 	})
 	async function callbackOnRender(tk, bb) {
 		const allMcount = tk.skewer.rawmlst.length
-		test.ok(tk.skewer.rawmlst.find(m => m.class == 'M'), 'has class=M before filtering')
+		test.ok(
+			tk.skewer.rawmlst.find((m) => m.class == 'M'),
+			'has class=M before filtering'
+		)
 		tk.legend.mclass.hiddenvalues.add('M')
 		// must delete this to not to trigger the same function on rerendering
 		delete tk.callbackOnRender
 		bb.onloadalltk_always = () => {
 			test.ok(allMcount > tk.skewer.rawmlst.length, 'fewer mutations left after filtering by mclass')
-			test.notOk(tk.skewer.rawmlst.find(m => m.class == 'M'), 'no longer has class=M after filtering')
+			test.notOk(
+				tk.skewer.rawmlst.find((m) => m.class == 'M'),
+				'no longer has class=M after filtering'
+			)
 			if (test._ok) holder.remove()
 			test.end()
 		}
@@ -517,7 +545,7 @@ tape('Clinvar - mclass filtering', test => {
 	}
 })
 
-tape('Collapse and expand mutations from variant link', test => {
+tape('Collapse and expand mutations from variant link', (test) => {
 	test.timeoutAfter(10000) //Fix for succeeding tape tests running before this one finishes
 	//Will throw a not ok error if another test fires
 	const holder = getHolder()
@@ -528,7 +556,7 @@ tape('Collapse and expand mutations from variant link', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }],
 	})
 	async function callbackOnRender(tk, bb) {
 		//Click on variant leftlabel to open menu
@@ -540,7 +568,7 @@ tape('Collapse and expand mutations from variant link', test => {
 		tk.menutip.d
 			.selectAll('.sja_menuoption')
 			.nodes()
-			.find(e => e.innerHTML == 'Collapse')
+			.find((e) => e.innerHTML == 'Collapse')
 			.dispatchEvent(new Event('click'))
 
 		// as soon as collapsing animation starts, none of the sja_aa_disclabel should have "scale(1)"
@@ -548,7 +576,7 @@ tape('Collapse and expand mutations from variant link', test => {
 			const expandedText = tk.skewer.selection
 				.selectAll('text.sja_aa_disclabel')
 				.nodes()
-				.some(e => {
+				.some((e) => {
 					//console.log(e)
 					e.attributes.transform.value == 'scale(1)'
 				})
@@ -562,7 +590,7 @@ tape('Collapse and expand mutations from variant link', test => {
 		tk.menutip.d
 			.selectAll('.sja_menuoption')
 			.nodes()
-			.find(e => e.innerHTML == 'Expand')
+			.find((e) => e.innerHTML == 'Expand')
 			.dispatchEvent(new Event('click'))
 
 		// as soon as expanding animation starts, some sja_aa_disclabel should have opacity!=0
@@ -570,7 +598,7 @@ tape('Collapse and expand mutations from variant link', test => {
 			const expandedText = tk.skewer.g
 				.selectAll('.sja_aa_disclabel')
 				.nodes()
-				.some(e => e.attributes['fill-opacity'].value != '0')
+				.some((e) => e.attributes['fill-opacity'].value != '0')
 			test.ok(expandedText, 'Should find some expanded skewers')
 		}
 
@@ -579,7 +607,7 @@ tape('Collapse and expand mutations from variant link', test => {
 	}
 })
 
-tape('Launch sample table from sunburst', test => {
+tape('Launch sample table from sunburst', (test) => {
 	const holder = getHolder()
 
 	runproteinpaint({
@@ -588,14 +616,14 @@ tape('Launch sample table from sunburst', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
 	async function callbackOnRender(tk, bb) {
 		// Click on track variant link to open menu
 		const discFound = tk.skewer.g
 			.selectAll('circle.sja_aa_disckick')
 			.nodes()
-			.find(e => e.__data__.occurrence >= 310)
+			.find((e) => e.__data__.occurrence >= 310)
 		test.ok(discFound, 'Found a mutation with occurrence >= 310, click on it to show sunburst')
 		discFound.dispatchEvent(new Event('click'))
 
@@ -619,20 +647,20 @@ tape('Launch sample table from sunburst', test => {
 	}
 })
 
-tape('Numeric mode custom dataset, with mode change', test => {
+tape('Numeric mode custom dataset, with mode change', (test) => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
 	const skewerModes = [
 		{ type: 'numeric', byAttribute: 'lpv', label: '-log10(p-value)', inuse: true, axisheight: 100 },
-		{ type: 'numeric', byAttribute: 'value2', label: 'other numbers', axisheight: 200 }
+		{ type: 'numeric', byAttribute: 'value2', label: 'other numbers', axisheight: 200 },
 	]
 
 	const custom_variants = [
 		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, lpv: 1, value2: 4 },
 		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, lpv: 2, value2: 5 },
 		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, lpv: 3, value2: 6 },
-		{ chr: 'chr8', pos: 128750754, mname: 'data point', class: 'I', dt: 1 }
+		{ chr: 'chr8', pos: 128750754, mname: 'data point', class: 'I', dt: 1 },
 	]
 
 	runproteinpaint({
@@ -646,9 +674,9 @@ tape('Numeric mode custom dataset, with mode change', test => {
 				skewerModes,
 				name: 'AA sites with numbers',
 				custom_variants,
-				callbackOnRender
-			}
-		]
+				callbackOnRender,
+			},
+		],
 	})
 
 	// TODO all data points should be rendered in svg
@@ -656,7 +684,7 @@ tape('Numeric mode custom dataset, with mode change', test => {
 	function callbackOnRender(tk, bb) {
 		// verify that all custom data points are present in tk
 		for (const m of custom_variants) {
-			const m2 = tk.skewer.rawmlst.find(i => i.mname == m.mname)
+			const m2 = tk.skewer.rawmlst.find((i) => i.mname == m.mname)
 			test.ok(m2, `custom variant "${m.mname}" exists in tk`)
 		}
 
@@ -668,7 +696,7 @@ tape('Numeric mode custom dataset, with mode change', test => {
 		// get the numericmode axis label
 		const n = tk.g.select('.sjpp-mds3-nm-axislabel')
 		test.equal(
-			tk.skewer.viewModes.find(i => i.inuse).label,
+			tk.skewer.viewModes.find((i) => i.inuse).label,
 			n.text(),
 			`numericmode axis label "${n.text()}" matches with view mode obj`
 		)
@@ -685,7 +713,7 @@ tape('Numeric mode custom dataset, with mode change', test => {
 	function viewModeChange(tk, bb) {
 		const n = tk.g.select('.sjpp-mds3-nm-axislabel')
 		test.equal(
-			tk.skewer.viewModes.find(i => i.inuse).label,
+			tk.skewer.viewModes.find((i) => i.inuse).label,
 			n.text(),
 			`numericmode axis label "${n.text()}" matches with view mode obj after switching mode`
 		)
