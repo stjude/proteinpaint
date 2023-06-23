@@ -91,7 +91,7 @@ async function makeEditMenu(self: any, div: any) {
 
 	await mayDisplayVariantFilter(self, self?.q?.variant_filter, div)
 
-	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
+	const [input_AFcutoff, select_alleleType, select_geneticModel] = makeSnpSelect(
 		div.append('div').style('margin', '15px'),
 		self,
 		'snplocus'
@@ -241,7 +241,7 @@ async function mayDisplayVariantFilter(self: any, filterInState: any, holder: an
 	}
 	const div = holder.append('div').style('margin', '15px')
 
-	const label = div.append('span').text('VARIANT FILTERS').style('font-size', '.8em').style('opacity', 0.6)
+	div.append('span').text('VARIANT FILTERS').style('font-size', '.8em').style('opacity', 0.6)
 
 	const filterBody = div.append('div')
 

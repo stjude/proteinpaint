@@ -62,7 +62,7 @@ export function getHandler(self: any) {
 
 		async showEditMenu(div: any) {
 			await makeEditMenu(self, div)
-		}
+		},
 	}
 }
 
@@ -167,9 +167,8 @@ async function makeEditMenu(self: any, div0: any) {
 			if (!Number.isInteger(self.q.geneticModel)) self.q.geneticModel = 0
 			if (!Number.isInteger(self.q.missingGenotype)) self.q.missingGenotype = 0
 			if (select_ancestry) {
-				self.q.restrictAncestry = select_ancestry.node().options[
-					select_ancestry.property('selectedIndex')
-				].__ancestry_obj
+				self.q.restrictAncestry =
+					select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
 			}
 
 			await makeSampleSummary(self)
@@ -212,7 +211,7 @@ async function makeEditMenu(self: any, div0: any) {
 		.append('button')
 		.text('Submit')
 		.on('click', async () => {
-			self.term.snps = self.term.snps.filter(i => !i.tobe_deleted)
+			self.term.snps = self.term.snps.filter((i) => !i.tobe_deleted)
 
 			self.term.name = getTermName(self.term.snps)
 
@@ -240,9 +239,8 @@ async function makeEditMenu(self: any, div0: any) {
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
 			if (select_ancestry) {
-				self.q.restrictAncestry = select_ancestry.node().options[
-					select_ancestry.property('selectedIndex')
-				].__ancestry_obj
+				self.q.restrictAncestry =
+					select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
 			}
 
 			await makeSampleSummary(self)
@@ -308,15 +306,10 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 		{ title: 'Reference allele<sup><b>**</b></sup><br>(frequency)' },
 		{ title: 'Alternative allele(s)<sup><b>**</b></sup><br>(frequency)' },
 		{ title: 'Genotype<br>(frequency)' },
-		{ title: 'Delete' }
+		{ title: 'Delete' },
 	]
-	col_titles.forEach(c => {
-		title_tr
-			.append('td')
-			.html(c.title)
-			.style('font-size', '.8em')
-			.style('text-align', 'center')
-			.style('padding', '8px')
+	col_titles.forEach((c) => {
+		title_tr.append('td').html(c.title).style('font-size', '.8em').style('text-align', 'center').style('padding', '8px')
 	})
 
 	// SNPs
@@ -333,15 +326,13 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 		const tr = self.dom.snplst_table.append('tr').style('background', rowcolor)
 
 		// col 1: rsid
-		tr.append('td')
-			.text(snp.rsid)
-			.style('padding', '8px')
+		tr.append('td').text(snp.rsid).style('padding', '8px')
 
 		// col 2: sample count
-		const sample_count: any = invalid_snp ? invalid_snp : Object.values(snp.gt2count).reduce((a: number, b: any) => a + b, 0)
-		tr.append('td')
-			.style('text-align', 'center')
-			.text(sample_count)
+		const sample_count: any = invalid_snp
+			? invalid_snp
+			: Object.values(snp.gt2count).reduce((a: number, b: any) => a + b, 0)
+		tr.append('td').style('text-align', 'center').text(sample_count)
 
 		// col 3: Reference allele (frequency)
 		const ref_allele_td = tr.append('td')
@@ -357,7 +348,7 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 			// create reference allele button
 			createAlleleBtn(refAllele, ref_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
 			// create alternative allele buttons
-			for (const [j, al] of altAlleles.entries()) {
+			for (const al of altAlleles.values()) {
 				createAlleleBtn(al, alt_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
 			}
 		}
@@ -374,11 +365,7 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 					.style('display', 'inline-block')
 					.style('border', gt == refGT ? '3px solid #ff0000' : `3px solid ${rowcolor}`)
 
-				gt_div
-					.append('div')
-					.style('display', 'inline-block')
-					.style('padding', '3px 5px')
-					.text(`${gt}`)
+				gt_div.append('div').style('display', 'inline-block').style('padding', '3px 5px').text(`${gt}`)
 
 				gt_div
 					.append('div')
@@ -400,7 +387,8 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 			})
 	}
 
-	function createAlleleBtn(al: any, td: any, effectAllele: any, sample_count: any, snp: any, rowcolor: any, tr: any) { //Moved b/c of linter error
+	function createAlleleBtn(al: any, td: any, effectAllele: any, sample_count: any, snp: any, rowcolor: any, tr: any) {
+		//Moved b/c of linter error
 		//const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
 		const allele_freq = ((al.count * 100) / (sample_count * 2)).toFixed(2)
 		const allele_div = td
@@ -431,10 +419,7 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 				select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
 			})
 
-		allele_div
-			.append('div')
-			.style('display', 'inline-block')
-			.text(`${al.allele}  `)
+		allele_div.append('div').style('display', 'inline-block').text(`${al.allele}  `)
 
 		allele_div
 			.append('div')
@@ -443,7 +428,6 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 			.style('font-size', '.8em')
 			.text('(' + `${allele_freq}%` + ')')
 	}
-
 }
 
 // not in use
@@ -481,7 +465,7 @@ function parseSnpFromText(textarea: any) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
 		if (!rsid) continue
 		if (snps.find((i: any) => i.rsid == rsid)) continue // duplicate
-		const s: { rsid: string, effectAllele?: string } = { rsid }
+		const s: { rsid: string; effectAllele?: string } = { rsid }
 		if (ale) s.effectAllele = ale
 		snps.push(s)
 	}
@@ -539,7 +523,7 @@ async function makeSampleSummary(self: any) {
 		if (self.filter) {
 			// tricky: detect if self.filter contains the same ancestry term
 			f = structuredClone(self.filter)
-			const idx = f.lst.findIndex(i => i.tvs?.term?.id == self.q.restrictAncestry.tvs.term.id)
+			const idx = f.lst.findIndex((i) => i.tvs?.term?.id == self.q.restrictAncestry.tvs.term.id)
 			if (idx != -1) {
 				// has the same term! must overwrite to avoid two tvs of the same ancestry term, each with a different ancestry which will result in 0 samples
 				f.lst[idx] = { type: 'tvs', tvs: self.q.restrictAncestry.tvs }
@@ -593,7 +577,7 @@ export async function fillTW(tw: TW, vocabApi: VocabApi) {
 	await validateInput({
 		term: tw.term,
 		q: tw.q,
-		vocabApi
+		vocabApi,
 	})
 }
 
@@ -647,12 +631,7 @@ export function makeSnpSelect(div: any, self: any, termtype: string) {
 				text = 'Variants below this cutoff are analyzed by the cumulative incidence test'
 			}
 		}
-		row
-			.append('span')
-			.style('margin-left', '10px')
-			.style('opacity', 0.5)
-			.style('font-size', '.7em')
-			.text(text)
+		row.append('span').style('margin-left', '10px').style('opacity', 0.5).style('font-size', '.7em').text(text)
 	}
 
 	// select - allele type
@@ -694,12 +673,7 @@ export function makeSnpSelect(div: any, self: any, termtype: string) {
 	})
 
 	// select - genetic model
-	div
-		.append('div')
-		.style('margin-top', '10px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('GENETIC MODEL')
+	div.append('div').style('margin-top', '10px').style('opacity', 0.4).style('font-size', '.7em').text('GENETIC MODEL')
 	const select_geneticModel = div.append('select')
 	select_geneticModel.append('option').text('Additive: EE=2, EN=1, NN=0')
 	select_geneticModel.append('option').text('Dominant: EE=1, EN=1, NN=0')
@@ -753,11 +727,7 @@ export async function mayRestrictAncestry(self: any, holder: any) {
 	if (!tdbcfg.restrictAncestries) return
 	const row = holder.append('div').style('margin-bottom', '15px')
 	self.dom.restrictAncestriesRow = row
-	row
-		.append('span')
-		.text('Restrict analysis to')
-		.style('margin-right', '5px')
-		.style('opacity', 0.5)
+	row.append('span').text('Restrict analysis to').style('margin-right', '5px').style('opacity', 0.5)
 	const select = row.append('select')
 	for (const ancestry of tdbcfg.restrictAncestries) {
 		// ancestry: {name, tvs}
