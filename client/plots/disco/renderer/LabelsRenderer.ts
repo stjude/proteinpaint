@@ -41,8 +41,10 @@ export default class LabelsRenderer implements IRenderer {
 					.on('mouseover', (mouseEvent: MouseEvent) => {
 						console.log('mouseEvent', mouseEvent)
 						menu.d
-							.style('color', label.color)
-							.html(`Consequence: ${label.mname} ${label.dataClass} <br /> Mutation: ${label.chr}:${label.position}`)
+							.style('padding', '2px')
+							.html(
+								`Gene: ${label.label} <br />Consequence: ${label.mname} <span style="color: ${label.color}" >${label.dataClass}</span> <br />Mutation: ${label.chr}:${label.position}`
+							)
 						menu.show(mouseEvent.x, mouseEvent.y)
 					})
 					.on('click', () => this.geneClickListener(label.label, label.mname))

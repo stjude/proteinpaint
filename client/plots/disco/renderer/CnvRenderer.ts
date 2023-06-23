@@ -25,7 +25,7 @@ export default class CnvRenderer implements IRenderer {
 			.attr('fill', (d: CnvArc) => d.color)
 			.on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
 				menu.d
-					.style('color', arc.color)
+					.style('padding', '2px')
 					.html(`Copy Number Variation <br /> ${arc.chr}:${arc.start}-${arc.stop} <br /> ${arc.unit}: ${arc.value}  `)
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
