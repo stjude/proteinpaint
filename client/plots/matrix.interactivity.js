@@ -89,7 +89,9 @@ export function setInteractivity(self) {
 			self.state.termdbConfig.queries?.singleSampleMutation
 		) {
 			self.dom.mainG.on('mouseout', null)
-			const sample = { sample_id: event.target.__data__._SAMPLENAME_ }
+			const sampleData = event.target.__data__
+			const sample = { sample_id: sampleData._SAMPLENAME_ || sampleData.row.sample }
+			if (sampleData.row['case.case_id']) sample['case.case_id'] = sampleData.row['case.case_id']
 			self.dom.menubody.selectAll('*').remove()
 			self.dom.menutop.selectAll('*').remove()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
