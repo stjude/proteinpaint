@@ -242,28 +242,6 @@ export async function validate_termdb(ds) {
 		if (!Number.isFinite(tdb.ageEndOffset)) throw 'termdb.ageEndOffset not number'
 		if (tdb.ageEndOffset <= 0) throw 'termdb.ageEndOffset<=0'
 	}
-	if (tdb.termIds) {
-		if (tdb.termIds.ageDxId) {
-			const t = tdb.q.termjsonByOneid(tdb.termIds.ageDxId)
-			if (!t) throw 'unknown term for termIds.ageDxId'
-			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageDxId not integer/float'
-		}
-		if (tdb.termIds.ageLastVisitId) {
-			const t = tdb.q.termjsonByOneid(tdb.termIds.ageLastVisitId)
-			if (!t) throw 'unknown term for termIds.ageLastVisitId'
-			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageLastVisitId not integer/float'
-		}
-		if (tdb.termIds.ageNdiId) {
-			const t = tdb.q.termjsonByOneid(tdb.termIds.ageNdiId)
-			if (!t) throw 'unknown term for termIds.ageNdiId'
-			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageNdiId not integer/float'
-		}
-		if (tdb.termIds.ageDeathId) {
-			const t = tdb.q.termjsonByOneid(tdb.termIds.ageDeathId)
-			if (!t) throw 'unknown term for termIds.ageDeathId'
-			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageDeathId not integer/float'
-		}
-	}
 
 	if (ds.cohort.termdb.additionalSampleAttributes) {
 		if (!Array.isArray(ds.cohort.termdb.additionalSampleAttributes)) throw 'termdb.additionalSampleAttributes not array'

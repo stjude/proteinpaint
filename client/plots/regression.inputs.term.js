@@ -60,7 +60,7 @@ export class InputTerm {
 				disable_terms,
 				abbrCutoff: 50,
 				genomeObj: this.parent.parent.genomeObj, // required for snplocus
-				defaultQ4fillTW: get_defaultQ4fillTW(config.regressionType),
+				defaultQ4fillTW: get_defaultQ4fillTW(config.regressionType, this.section.configKey),
 				callback: (term) => {
 					this.parent.editConfig(this, term)
 				},
@@ -197,10 +197,7 @@ export class InputTerm {
 		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : { term1_q: tw.q }
 
 		// get term categories
-		const data =
-			tw.term.type == 'condition'
-				? await this.parent.app.vocabApi.getConditionCategories(tw.term, this.parent.parent.filter, body)
-				: await this.parent.app.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
+		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 
@@ -297,7 +294,10 @@ export class InputTerm {
 				if (tw.term.values[i].uncomputable) excluded_values.add(tw.term.values[i].label)
 			}
 		}
-		if (tw.q.mode == 'cox') excluded_values.add('Event before entry into the cohort')
+		if (tw.q.mode == 'cox') {
+			const toExclude = datalst.find((x) => x.key == -1)
+			if (toExclude) excluded_values.add(toExclude.label)
+		}
 		const sampleCounts = (this.termStatus.sampleCounts = datalst.filter((v) => !excluded_values.has(v.label)))
 		const excludeCounts = (this.termStatus.excludeCounts = datalst.filter((v) => excluded_values.has(v.label)))
 
@@ -501,16 +501,10 @@ function setQ4conditionOutcome(tw, vocabApi, filter, state) {
 	this requires q.breaks[] to have a single grade value
 	for logistic: set tw.refGrp
 	*/
-	const { term, q } = tw
 	if (state.config.regressionType == 'logistic') {
-		if (tw.refGrp) {
-			if (!q.groupNames.includes(tw.refGrp)) {
-				// not found!
-				tw.refGrp = q.groupNames[0]
-			}
-		} else {
-			// missing, set to be first group, guaranteed to be "No event"
-			tw.refGrp = q.groupNames[0]
+		if (!tw.refGrp) {
+			// refGrp missing, set to be first group, guaranteed to be "No event / Grade 0"
+			tw.refGrp = tw.q.groups[0].name
 		}
 	}
 }

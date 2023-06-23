@@ -3,13 +3,13 @@ import { dofetch3 } from '#common/dofetch'
 import { interpolateRgb } from 'd3-interpolate'
 
 const defaultConfig = {
-	clusterMethod: 'average'
+	clusterMethod: 'average',
 }
 
 const clusterMethodLst = [
 	'average',
 	'complete',
-	'mcquitty'
+	'mcquitty',
 	//'single', very slow
 	//'median', 'centroid', crashes R with "No connections found!"
 	//'ward.D','ward.D2', crashes client
@@ -25,19 +25,19 @@ class geneExpression {
 			holder,
 			controlsDiv: holder.append('div'),
 			canvas: holder.append('canvas'),
-			colorScaleDiv: holder.append('div')
+			colorScaleDiv: holder.append('div'),
 		}
 		this.makeControls()
 		this.components = {}
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find((p) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found`
 		}
 		return {
-			config
+			config,
 		}
 	}
 
@@ -53,7 +53,7 @@ class geneExpression {
 			dslabel: this.app.opts.state.vocab.dslabel,
 			geneExpression: 1,
 			genes: this.state.config.genes,
-			clusterMethod: this.state.config.clusterMethod
+			clusterMethod: this.state.config.clusterMethod,
 		}
 		return body
 	}
@@ -66,7 +66,7 @@ class geneExpression {
 			this.app.dispatch({
 				type: 'plot_edit',
 				id: this.id,
-				config: { clusterMethod: clusterMethodLst[s.property('selectedIndex')] }
+				config: { clusterMethod: clusterMethodLst[s.property('selectedIndex')] },
 			})
 		})
 	}
@@ -113,8 +113,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			chartsInstance.dom.tip.hide()
 			chartsInstance.prepPlot({
 				config: {
-					chartType: 'geneExpression'
-				}
+					chartType: 'geneExpression',
+				},
 			})
 		})
 }
@@ -138,7 +138,7 @@ function plotHeatmap_R(data, self) {
 		minColor: '#0c306b',
 		maxColor: '#ffcc00',
 		xDendrogramHeight: 150,
-		yDendrogramHeight: 150
+		yDendrogramHeight: 150,
 	}
 	obj.d.colorScale = interpolateRgb(obj.d.minColor, obj.d.maxColor)
 	const ctx = self.dom.canvas.node().getContext('2d')
@@ -294,7 +294,7 @@ function plotHeatmap(data, self) {
 		minColor: '#0c306b',
 		maxColor: '#ffcc00',
 		xDendrogramHeight: 150,
-		yDendrogramHeight: 150
+		yDendrogramHeight: 150,
 	}
 	obj.d.colorScale = interpolateRgb(obj.d.minColor, obj.d.maxColor)
 
@@ -494,7 +494,7 @@ function parseDendrogram2(steps, leafCount) {
 			parentHeap.push({
 				x: step.dissimilarity,
 				y: (y1 + y2) / 2,
-				children: [step.cluster1, step.cluster2]
+				children: [step.cluster1, step.cluster2],
 			})
 			continue
 		}
@@ -525,7 +525,7 @@ function parseDendrogram2(steps, leafCount) {
 			parentHeap.push({
 				x: step.dissimilarity,
 				y: (y1 + p.y) / 2,
-				children: [step.cluster1, step.cluster2]
+				children: [step.cluster1, step.cluster2],
 			})
 			continue
 		}
@@ -540,7 +540,7 @@ function parseDendrogram2(steps, leafCount) {
 		parentHeap.push({
 			x: step.dissimilarity,
 			y: (p1.y + p2.y) / 2,
-			children: [step.cluster1, step.cluster2]
+			children: [step.cluster1, step.cluster2],
 		})
 	}
 
@@ -622,22 +622,9 @@ function plotHmColorScale(self, obj) {
 	self.dom.colorScaleDiv.append('span').text('Min')
 	const svg = self.dom.colorScaleDiv.append('svg')
 	self.dom.colorScaleDiv.append('span').text('Max')
-	const grad = svg
-		.append('defs')
-		.append('linearGradient')
-		.attr('id', 'grad')
-	grad
-		.append('stop')
-		.attr('offset', '0%')
-		.attr('stop-color', obj.d.minColor)
-	grad
-		.append('stop')
-		.attr('offset', '100%')
-		.attr('stop-color', obj.d.maxColor)
-	svg
-		.append('rect')
-		.attr('width', width)
-		.attr('height', height)
-		.attr('fill', 'url(#grad)')
+	const grad = svg.append('defs').append('linearGradient').attr('id', 'grad')
+	grad.append('stop').attr('offset', '0%').attr('stop-color', obj.d.minColor)
+	grad.append('stop').attr('offset', '100%').attr('stop-color', obj.d.maxColor)
+	svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'url(#grad)')
 	svg.attr('width', width).attr('height', height)
 }

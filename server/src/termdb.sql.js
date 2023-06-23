@@ -120,75 +120,6 @@ export async function get_summary_numericcategories(q) {
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
 }
 
-export async function get_summary_conditioncategories(q) {
-	/*
-	q{}
-		.filter
-		.ds
-		.term[0,1,2]_id
-		.term[0,1,2]_q
-	*/
-
-	let result
-	if (q.term1_q && q.term1_q.mode == 'cox') {
-		// cox regression
-		// do not use 'groupby'
-		// need to filter sql results before
-		// summarizing sample counts
-		result = await get_rows(q, {
-			withCTEs: true
-		})
-
-		const minTimeSinceDx = q.ds.cohort.termdb.minTimeSinceDx
-		if (!minTimeSinceDx) throw 'missing min time since dx'
-
-		const keyTosamplecount = new Map()
-		for (const row of result.lst) {
-			let key1
-			// convert event=2 to event=0 because competing
-			// risks events should not be treated as a separate
-			// event category in cox regression
-			// these events should be treated as censored at
-			// time of death
-			key1 = row.key1 === 2 ? 0 : row.key1
-
-			// flag samples that had events before follow-up
-			// these samples are excluded during the analysis
-			// so they should be labeled as excluded in the summary
-			const { age_dx, age_event } = JSON.parse(row.val1)
-			const age_start = age_dx + minTimeSinceDx
-			if (age_event - age_start < 0) key1 = -1
-
-			// compute sample counts for each event status
-			const samplecount = keyTosamplecount.get(key1)
-			samplecount ? keyTosamplecount.set(key1, samplecount + 1) : keyTosamplecount.set(key1, 1)
-		}
-
-		const lst = []
-		for (const [key1, samplecount] of keyTosamplecount) {
-			lst.push({ key1, samplecount })
-		}
-		result.lst = lst
-	} else {
-		result = await get_rows(q, {
-			withCTEs: true,
-			groupby: `key1`
-		})
-	}
-
-	const nums = [0, 1, 2]
-	const labeler = {}
-	for (const n of nums) {
-		labeler[n] = getlabeler(q, n, result)
-	}
-	for (const row of result.lst) {
-		for (const n of nums) {
-			labeler[n](row)
-		}
-	}
-	return result
-}
-
 export async function get_rows_by_one_key(q) {
 	/*
 get all sample and value by one key
@@ -476,7 +407,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		// the error is coming from this
 		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else if (term.type == 'condition') {
-		const mode = termq.mode == 'cox' ? 'time2event' : termq.mode || 'discrete'
+		const mode = termq.mode || 'discrete'
 		CTE = await conditionSql[mode].getCTE(tablename, term, q.ds, termq, values)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
@@ -583,13 +514,6 @@ function get_label4key(key, term, q, ds) {
 		if (q.breaks?.length == 0) {
 			if (!(key in term.values)) throw `unknown grade='${key}'`
 			return term.values[key].label
-		}
-		if (q.mode == 'cox') {
-			// key is event status from cox sql query (0 = no event; 1 = event; -1 = Event before entry into the cohort)
-			// if key is -1, return descriptive label
-			// otherwise, use key to get label from q.groupNames
-			if (key === -1) return 'Event before entry into the cohort'
-			return q.groupNames[key]
 		}
 		// breaks[] has values, chart is by group and key should be group name
 		return key

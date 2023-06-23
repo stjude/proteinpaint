@@ -77,7 +77,7 @@ export function validate_variant2samples(ds) {
 		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
 
-	vs.get = async q => {
+	vs.get = async (q) => {
 		return await variant2samples_getresult(q, ds)
 	}
 
@@ -150,7 +150,7 @@ async function variant2samples_getresult(q, ds) {
 		if (!q.useIntegerSampleId && ds?.cohort?.termdb?.q?.id2sampleName) {
 			// dataset can map integer to string sample name, and query does not ask to keep integer id, thus convert to string id
 			// this is default behavior for client display
-			mutatedSamples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
+			mutatedSamples.forEach((i) => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
 		}
 		return mutatedSamples
 	}
@@ -242,7 +242,7 @@ async function queryMutatedSamples(q, ds) {
 	const q2 = {
 		ds,
 		// filterObj does not exist if query is from mass. still added it here in case it may come from mds3...
-		filter: q.filter || q.filterObj
+		filter: q.filter || q.filterObj,
 	}
 	const out = await getSampleData_dictionaryTerms_termdb(q2, q.twLst)
 	// quick fix to reshape result data
@@ -289,7 +289,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 
 			// new param with rglst as the variant position, also inherit q.tid2value if provided
 			const param = Object.assign({}, q, {
-				rglst: [{ chr, start: pos, stop: pos }]
+				rglst: [{ chr, start: pos, stop: pos }],
 			})
 
 			const mlst = await ds.queries.snvindel.byrange.get(param)
@@ -408,7 +408,7 @@ async function make_sunburst(mutatedSamples, ds, q) {
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		mutatedSamples,
-		q.twLst.map(tw => {
+		q.twLst.map((tw) => {
 			return { k: tw.id }
 		})
 	)
@@ -484,14 +484,14 @@ async function make_summary(mutatedSamples, ds, q) {
 			entries.push({
 				termid: tw.id,
 				termname: tw.term.name,
-				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
+				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1]),
 			})
 		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
 			const density_data = await get_densityplot(tw.term, mutatedSamples)
 			entries.push({
 				termid: tw.id,
 				termname: tw.term.name,
-				density_data
+				density_data,
 			})
 		} else {
 			throw 'unknown term type'
@@ -505,7 +505,7 @@ async function make_summary(mutatedSamples, ds, q) {
 			// array ele: [category, total]
 			if (categories) {
 				for (const cat of numbycategory) {
-					const vtotal = categories.find(v => v[0].toLowerCase() == cat[0].toLowerCase())
+					const vtotal = categories.find((v) => v[0].toLowerCase() == cat[0].toLowerCase())
 					if (vtotal) cat.push(vtotal[1])
 				}
 			}
@@ -748,7 +748,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		}
 		const v0 = ds.cohort.termdb.useLower ? node.v0.toLowerCase() : node.v0
 		if (!node.id1) {
-			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
+			const n = combinations.find((i) => i.id1 == undefined && i.v0 == v0)
 			if (n) node.cohortsize = n.count
 			continue
 		}
@@ -760,7 +760,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		const v1 = ds.cohort.termdb.useLower ? node.v1.toLowerCase() : node.v1
 		if (!node.id2) {
 			// second level, use crosstabL1
-			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
+			const n = combinations.find((i) => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
 			if (n) node.cohortsize = n.count
 			continue
 		}
@@ -771,7 +771,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		const v2 = ds.cohort.termdb.useLower ? node.v2.toLowerCase() : node.v2
 		if (!node.id3) {
 			// third level, use crosstabL2
-			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
+			const n = crosstabL2.find((i) => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
 			if (n) node.cohortsize = n.count
 		}
 	}
@@ -804,15 +804,18 @@ function summary2barchart(input, q) {
 		charts: [
 			{
 				chartId: '',
-				serieses: []
-			}
-		]
+				serieses: [],
+			},
+		],
 	}
 	for (const [category, mutCount, total] of summary.numbycategory) {
 		data.charts[0].serieses.push({
 			seriesId: category,
 			total,
-			data: [{ dataId: 'Mutated', total: mutCount }, { dataId: 'Others', total: total - mutCount }]
+			data: [
+				{ dataId: 'Mutated', total: mutCount },
+				{ dataId: 'Others', total: total - mutCount },
+			],
 		})
 	}
 	return data

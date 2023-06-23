@@ -56,12 +56,12 @@ const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/grap
 
 export async function validate_ssm2canonicalisoform(api) {
 	const fields = ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
-	api.get = async q => {
+	api.get = async (q) => {
 		// q is client request object
 		if (!q.ssm_id) throw '.ssm_id missing'
 		const response = await got(apihost + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			method: 'GET',
-			headers: getheaders(q)
+			headers: getheaders(q),
 		})
 		let re
 		try {
@@ -71,7 +71,7 @@ export async function validate_ssm2canonicalisoform(api) {
 		}
 		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
 		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
-		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
+		const canonical = re.data.consequence.find((i) => i.transcript.is_canonical)
 		return canonical ? canonical.transcript.transcript_id : re.data.consequence[0].transcript.transcript_id
 	}
 }
@@ -85,10 +85,10 @@ export function validate_query_snvindel_byrange(ds) {
 	if (!api.query) throw '.query missing for byrange.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string in byrange.gdcapi'
 	if (typeof api.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
-	ds.queries.snvindel.byrange.get = async opts => {
+	ds.queries.snvindel.byrange.get = async (opts) => {
 		const response = await got.post(apihostGraphql, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify({ query: api.query, variables: api.variables(opts) })
+			body: JSON.stringify({ query: api.query, variables: api.variables(opts) }),
 		})
 		let re
 		try {
@@ -114,12 +114,12 @@ export function validate_query_snvindel_byrange(ds) {
 				pos: h.node.start_position - 1,
 				ref: h.node.reference_allele,
 				alt: h.node.tumor_allele,
-				samples: []
+				samples: [],
 			}
 			if (h.node.consequence && h.node.consequence.hits && h.node.consequence.hits.edges) {
 				m.csqcount = h.node.consequence.hits.edges.length
 				let c
-				if (opts.isoform) c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
+				if (opts.isoform) c = h.node.consequence.hits.edges.find((i) => i.node.transcript.transcript_id == opts.isoform)
 				const c2 = c || h.node.consequence.hits.edges[0]
 				// c2: { node: {consequence} }
 				snvindel_addclass(m, c2.node)
@@ -156,7 +156,7 @@ export function validate_query_snvindel_byisoform(ds) {
 		read-only gdc cohort filter, pass to gdc api as-is
 	TODO .tid2value can be used to filter samples
 	*/
-	ds.queries.snvindel.byisoform.get = async opts => {
+	ds.queries.snvindel.byisoform.get = async (opts) => {
 		/*
 		hardcoded logic!!
 
@@ -182,7 +182,7 @@ export function validate_query_snvindel_byisoform(ds) {
 				ref: ssm.reference_allele,
 				alt: ssm.tumor_allele,
 				isoform: opts.isoform,
-				csqcount: ssm.csqcount
+				csqcount: ssm.csqcount,
 			}
 			snvindel_addclass(m, ssm.consequence)
 
@@ -226,13 +226,13 @@ export function validate_query_snvindel_byisoform_2(ds) {
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
 	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not function'
-	ds.queries.snvindel.byisoform.get = async opts => {
+	ds.queries.snvindel.byisoform.get = async (opts) => {
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		const headers = getheaders(opts)
 		const response = await got.post(api.apihost, {
 			headers,
-			body: JSON.stringify({ query: api.query, variables: api.filters(opts) })
+			body: JSON.stringify({ query: api.query, variables: api.filters(opts) }),
 		})
 		const tmp = JSON.parse(response.body)
 		if (
@@ -256,9 +256,12 @@ export function validate_query_snvindel_byisoform_2(ds) {
 				alt: b.tumor_allele,
 				isoform: opts.isoform,
 				occurrence: a._score,
-				csqcount: b.consequence.length
+				csqcount: b.consequence.length,
 			}
-			snvindel_addclass(m, b.consequence.find(i => i.transcript.transcript_id == opts.isoform))
+			snvindel_addclass(
+				m,
+				b.consequence.find((i) => i.transcript.transcript_id == opts.isoform)
+			)
 			mlst.push(m)
 		}
 
@@ -377,22 +380,22 @@ export function validate_query_geneCnv(ds) {
 		'cnv_change',
 		'gene_level_cn',
 		'occurrence.case.submitter_id',
-		'consequence.gene.symbol'
+		'consequence.gene.symbol',
 	]
 
 	/*
 	opts{}
 		.gene=str
 	*/
-	ds.queries.geneCnv.bygene.get = async opts => {
+	ds.queries.geneCnv.bygene.get = async (opts) => {
 		const headers = getheaders(opts)
 		const tmp = await got.post(path.join(apihost, 'cnvs'), {
 			headers,
 			body: JSON.stringify({
 				size: 100000,
 				fields: getFields(opts),
-				filters: getFilter(opts)
-			})
+				filters: getFilter(opts),
+			}),
 		})
 		const re = JSON.parse(tmp.body)
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
@@ -406,7 +409,7 @@ export function validate_query_geneCnv(ds) {
 			const m = {
 				ssm_id: hit.cnv_id, // keep using ssm_id
 				dt: common.dtcnv,
-				samples: []
+				samples: [],
 			}
 			if (hit.cnv_change == 'Gain') m.class = common.mclasscnvgain
 			else if (hit.cnv_change == 'Loss') m.class = common.mclasscnvloss
@@ -420,7 +423,7 @@ export function validate_query_geneCnv(ds) {
 				if (!h.case) throw 'hit.occurrence[].case{} missing'
 				if (!h.case.submitter_id) throw 'hit.occurrence[].case.submitter_id missing'
 				const sample = {
-					sample_id: h.case.submitter_id
+					sample_id: h.case.submitter_id,
 				}
 
 				if (opts.twLst) {
@@ -502,15 +505,15 @@ export function validate_query_geneCnv2(ds) {
 	opts{}
 		.gene=str
 	*/
-	ds.queries.geneCnv.bygene.get = async opts => {
+	ds.queries.geneCnv.bygene.get = async (opts) => {
 		const headers = getheaders(opts)
 		const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
 			headers,
 			body: JSON.stringify({
 				size: 100000,
 				fields: getFields(opts),
-				filters: getFilter(opts)
-			})
+				filters: getFilter(opts),
+			}),
 		})
 		const re = JSON.parse(tmp.body)
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
@@ -519,13 +522,13 @@ export function validate_query_geneCnv2(ds) {
 			ssm_id: 'geneCnvGain',
 			dt: common.dtcnv,
 			class: common.mclasscnvgain,
-			samples: []
+			samples: [],
 		}
 		const lossEvent = {
 			ssm_id: 'geneCnvLoss',
 			dt: common.dtcnv,
 			class: common.mclasscnvloss,
-			samples: []
+			samples: [],
 		}
 
 		for (const hit of re.data.hits) {
@@ -543,7 +546,7 @@ export function validate_query_geneCnv2(ds) {
 			}
 			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
 			const sample = {
-				sample_id: hit.case.submitter_id
+				sample_id: hit.case.submitter_id,
 			}
 
 			if (opts.twLst) {
@@ -619,7 +622,7 @@ async function getGeneCnv4oneCase(opts) {
 		'cnv.end_position',
 		'cnv.cnv_change',
 		'cnv.gene_level_cn',
-		'cnv.consequence.gene.symbol' // turn on later if gene is needed
+		'cnv.consequence.gene.symbol', // turn on later if gene is needed
 	]
 	const headers = getheaders(opts)
 	const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
@@ -627,8 +630,8 @@ async function getGeneCnv4oneCase(opts) {
 		body: JSON.stringify({
 			size: 10000,
 			fields: fields.join(','),
-			filters: getFilter(opts)
-		})
+			filters: getFilter(opts),
+		}),
 	})
 	const re = JSON.parse(tmp.body)
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
@@ -645,7 +648,7 @@ async function getGeneCnv4oneCase(opts) {
 			ssm_id: h.id,
 			chr: 'chr' + h.cnv.chromosome,
 			start: h.cnv.start_position,
-			stop: h.cnv.end_position
+			stop: h.cnv.end_position,
 		}
 		if (h.cnv.cnv_change == 'Gain') {
 			m.value = 1
@@ -683,7 +686,7 @@ async function getCnvFusion4oneCase(opts) {
 		'file_id',
 		'data_format',
 		'experimental_strategy',
-		'analysis.workflow_type'
+		'analysis.workflow_type',
 	]
 	const headers = getheaders(opts)
 	const tmp = await got.post(path.join(apihost, 'files'), {
@@ -691,8 +694,8 @@ async function getCnvFusion4oneCase(opts) {
 		body: JSON.stringify({
 			size: 10000,
 			fields: fields.join(','),
-			filters: getFilter(opts)
-		})
+			filters: getFilter(opts),
+		}),
 	})
 	const re = JSON.parse(tmp.body)
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
@@ -747,7 +750,7 @@ async function getCnvFusion4oneCase(opts) {
 				chr: l[1],
 				start: Number(l[2]),
 				stop: Number(l[3]),
-				value: total
+				value: total,
 			}
 			if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
 			events.push(cnv)
@@ -778,7 +781,7 @@ async function getCnvFusion4oneCase(opts) {
 						// may make "segmean" value optional; if missing, indicates quanlitative event and should plot without color shading
 						// otherwise, the value quantifies allelic imbalance and is plotted with color shading
 						// all loh events in a plot should be uniformlly quanlitative or quantitative
-						segmean: 0.5
+						segmean: 0.5,
 					})
 				}
 			}
@@ -799,7 +802,7 @@ async function getCnvFusion4oneCase(opts) {
 				chr: 'chr' + l[1],
 				start: Number(l[2]),
 				stop: Number(l[3]),
-				value: Number(l[5])
+				value: Number(l[5]),
 			}
 			if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
 			events.push(cnv)
@@ -819,7 +822,7 @@ async function getCnvFusion4oneCase(opts) {
 					chrA: l[0],
 					posA: Number(l[1]),
 					chrB: l[3],
-					posB: Number(l[4])
+					posB: Number(l[4]),
 				}
 				if (!f.chrA || !f.chrB || Number.isNaN(f.posA) || Number.isNaN(f.posB)) continue
 				parseArribaName(f, l[6])
@@ -848,11 +851,11 @@ async function getCnvFusion4oneCase(opts) {
 						value: [
 							'Masked Copy Number Segment', // for snp array we only want this type of file
 							'Copy Number Segment', // for wgs we want this type of file
-							'Transcript Fusion' // fusion
-						]
-					}
-				}
-			]
+							'Transcript Fusion', // fusion
+						],
+					},
+				},
+			],
 		}
 		return filters
 	}
@@ -900,16 +903,16 @@ async function snvindel_byisoform(opts, ds) {
 		body: JSON.stringify({
 			size: query1.size,
 			fields: query1.fields.join(','),
-			filters: query1.filters(opts)
-		})
+			filters: query1.filters(opts),
+		}),
 	})
 	const p2 = got.post(path.join(apihost, query2.endpoint), {
 		headers,
 		body: JSON.stringify({
 			size: query2.size,
 			fields: query2.fields.join(','),
-			filters: query2.filters(opts, ds)
-		})
+			filters: query2.filters(opts, ds),
+		}),
 	})
 	const [tmp1, tmp2] = await Promise.all([p1, p2])
 	let re_ssms, re_cases
@@ -930,7 +933,7 @@ async function snvindel_byisoform(opts, ds) {
 		if (!h.consequence) throw '.consequence[] missing from a ssm'
 		if (!Number.isInteger(h.start_position)) throw 'hit.start_position is not integer'
 		h.csqcount = h.consequence.length
-		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
+		const consequence = h.consequence.find((i) => i.transcript.transcript_id == opts.isoform)
 		if (!consequence) {
 			// may alert??
 		}
@@ -1156,38 +1159,38 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			// must be from mds3 tk; in such case should return following info
 
 			// need ssm id to associate with ssm (when displaying in sample table?)
-			if (!twLst.some(i => i.id == 'ssm.ssm_id')) twLst.push({ term: { id: 'ssm.ssm_id' } })
+			if (!twLst.some((i) => i.id == 'ssm.ssm_id')) twLst.push({ term: { id: 'ssm.ssm_id' } })
 
 			// need read depth info
 			// TODO should only add when getting list of samples with mutation for a gene
 			// TODO not when adding a dict term in matrix?
-			if (!twLst.some(i => i.id == 'case.observation.read_depth.t_alt_count'))
+			if (!twLst.some((i) => i.id == 'case.observation.read_depth.t_alt_count'))
 				twLst.push({ term: { id: 'case.observation.read_depth.t_alt_count' } })
-			if (!twLst.some(i => i.id == 'case.observation.read_depth.t_depth'))
+			if (!twLst.some((i) => i.id == 'case.observation.read_depth.t_depth'))
 				twLst.push({ term: { id: 'case.observation.read_depth.t_depth' } })
-			if (!twLst.some(i => i.id == 'case.observation.read_depth.n_depth'))
+			if (!twLst.some((i) => i.id == 'case.observation.read_depth.n_depth'))
 				twLst.push({ term: { id: 'case.observation.read_depth.n_depth' } })
 
 			// get aliquot id for converting to sample name from which the mutation is detected
 			// TODO no need when
-			if (!twLst.some(i => i.id == 'case.observation.sample.tumor_sample_uuid'))
+			if (!twLst.some((i) => i.id == 'case.observation.sample.tumor_sample_uuid'))
 				twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
 		}
 
 		if (geneTwLst) {
 			// using isoforms, should be from matrix to get annotated samples for dictionary term
 			// use submitter id to be able to align with geneVariant terms
-			if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
+			if (!twLst.some((i) => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 		}
 
 		// need case_id to generate url/cases/<ID> link in table display; submitter and aliquot id won't work
-		if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
+		if (!twLst.some((i) => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
 	}
 
 	if (q.get == 'summary' || q.get == 'sunburst') {
 		// submitter id is sufficient to count unique number of samples
 		// no need for case_id
-		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
+		if (!twLst.some((i) => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
 	const dictTwLst = []
@@ -1196,7 +1199,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		if (t) dictTwLst.push({ term: t })
 	}
 
-	const fields = twLst.map(tw => tw.term.id)
+	const fields = twLst.map((tw) => tw.term.id)
 
 	if (q.hiddenmclass) {
 		/* to drop mutations by pp class
@@ -1224,7 +1227,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	const response = await got.post(path.join(apihost, isoform2ssm_query2_getcase.endpoint), {
 		headers,
-		body: JSON.stringify(param)
+		body: JSON.stringify(param),
 	})
 
 	delete q.isoforms
@@ -1264,7 +1267,10 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			}
 			*/
 			const m = {}
-			snvindel_addclass(m, s.ssm.consequence.find(i => i.transcript.transcript_id == q.isoform))
+			snvindel_addclass(
+				m,
+				s.ssm.consequence.find((i) => i.transcript.transcript_id == q.isoform)
+			)
 			if (q.hiddenmclass.has(m.class)) {
 				// this variant is dropped
 				continue
@@ -1275,7 +1281,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			if (!s.ssm?.chromosome || !s.ssm?.start_position) continue // lack position, skip
 			if (
 				!q.rglst.find(
-					i => i.chr == s.ssm.chromosome && i.start < s.ssm.start_position && i.stop >= s.ssm.start_position
+					(i) => i.chr == s.ssm.chromosome && i.start < s.ssm.start_position && i.stop >= s.ssm.start_position
 				)
 			) {
 				continue // out of range
@@ -1312,8 +1318,8 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	if (geneTwLst) {
 		const param = {
-			gene: geneTwLst.map(i => i.term.name).join(','),
-			twLst: dictTwLst
+			gene: geneTwLst.map((i) => i.term.name).join(','),
+			twLst: dictTwLst,
 		}
 		const cnvdata = await ds.queries.geneCnv.bygene.get(param)
 		for (const h of cnvdata) {
@@ -1359,7 +1365,7 @@ function may_add_readdepth(acase, sample) {
 	if (!dat.read_depth) return
 	sample.formatK2v = {
 		TumorAC: dat.read_depth.t_depth - dat.read_depth.t_alt_count + ',' + dat.read_depth.t_alt_count,
-		NormalDepth: dat.read_depth.n_depth
+		NormalDepth: dat.read_depth.n_depth,
 	}
 }
 
@@ -1403,7 +1409,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 		termPaths.push({
 			id: tw.id,
 			path: tw.id.replace('case.', '').replace(/\./g, '__'),
-			type: tw.term.type
+			type: tw.term.type,
 		})
 	}
 
@@ -1412,7 +1418,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 
 	const response = await got.post(apihostGraphql, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query, variables })
+		body: JSON.stringify({ query, variables }),
 	})
 
 	let re
@@ -1429,12 +1435,14 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	for (let i = 1; i < keys.length; i++) {
 		h = h[keys[i]]
 		if (!h)
-			throw '.' +
+			throw (
+				'.' +
 				keys[i] +
 				' missing from data structure of termid2totalsize2 for query :' +
 				query +
 				' and filter: ' +
 				filter
+			)
 	}
 	for (const term of termPaths) {
 		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
@@ -1468,13 +1476,13 @@ export function validate_m2csq(ds) {
 	const fields = [
 		'consequence.transcript.transcript_id',
 		'consequence.transcript.consequence_type',
-		'consequence.transcript.aa_change'
+		'consequence.transcript.aa_change',
 	]
-	ds.queries.snvindel.m2csq.get = async q => {
+	ds.queries.snvindel.m2csq.get = async (q) => {
 		// q is client request object
 		const response = await got(apihost + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			method: 'GET',
-			headers: getheaders(q)
+			headers: getheaders(q),
 		})
 		let re
 		try {
@@ -1484,7 +1492,7 @@ export function validate_m2csq(ds) {
 		}
 		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
 		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
-		return re.data.consequence.map(i => i.transcript)
+		return re.data.consequence.map((i) => i.transcript)
 	}
 }
 
@@ -1523,8 +1531,8 @@ function termid2size_filters(p, ds) {
 	const f = {
 		filters: {
 			op: 'and',
-			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-		}
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }],
+		},
 	}
 
 	if (p && p.tid2value) {
@@ -1541,8 +1549,8 @@ function termid2size_filters(p, ds) {
 						but in this graphql query, fields must start with "cases.**"
 						*/
 						field: termid.replace(/^case\./, 'cases.'),
-						value: [p.tid2value[termid]]
-					}
+						value: [p.tid2value[termid]],
+					},
 				})
 			}
 		}
@@ -1551,7 +1559,7 @@ function termid2size_filters(p, ds) {
 	if (p && p.ssm_id_lst) {
 		f.filters.content.push({
 			op: '=',
-			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
+			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') },
 		})
 	}
 	//console.log(JSON.stringify(f,null,2))
@@ -1604,8 +1612,8 @@ async function getSingleSampleMutations(query, ds, genome) {
 			body: JSON.stringify({
 				size: 1000,
 				fields: isoform2ssm_query1_getvariant.fields.join(','),
-				filters: isoform2ssm_query1_getvariant.filters(query)
-			})
+				filters: isoform2ssm_query1_getvariant.filters(query),
+			}),
 		})
 		const re = JSON.parse(response.body)
 		for (const hit of re.data.hits) {
@@ -1629,7 +1637,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 				// no canonical isoform
 				continue
 			}
-			let c = hit.consequence.find(i => i.transcript.transcript_id == data.isoform)
+			let c = hit.consequence.find((i) => i.transcript.transcript_id == data.isoform)
 			if (!c) {
 				// no consequence match with given isoform, just use the first one
 				c = hit.consequence[0]
@@ -1645,7 +1653,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 				chr: hit.chromosome,
 				pos: hit.start_position,
 				ref: hit.reference_allele,
-				alt: hit.tumor_allele
+				alt: hit.tumor_allele,
 			})
 		}
 	}
@@ -1673,8 +1681,8 @@ export function handle_filter2topGenes(genomes) {
 				genes: await get_filter2topGenes({
 					filter: req.query.filter0,
 					CGConly: parseInt(req.query.CGConly),
-					maxGenes: req.query.maxGenes
-				})
+					maxGenes: req.query.maxGenes,
+				}),
 			})
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
@@ -1699,8 +1707,8 @@ async function get_filter2topGenes({ filter, CGConly, maxGenes }) {
 		body: JSON.stringify({
 			size: maxGenes || 50,
 			fields: 'symbol',
-			filters: mayAddCGC2filter(_f, CGConly)
-		})
+			filters: mayAddCGC2filter(_f, CGConly),
+		}),
 	})
 	const re = JSON.parse(response.body)
 	const genes = []
@@ -1747,15 +1755,15 @@ function mayAddCGC2filter(f, CGConly) {
 		op: 'NOT',
 		content: {
 			field: 'ssms.consequence.transcript.annotation.vep_impact',
-			value: 'missing'
-		}
+			value: 'missing',
+		},
 	})
 	f2.content.push({
 		op: 'in',
 		content: {
 			field: 'ssms.consequence.transcript.consequence_type',
-			value: ['missense_variant', 'frameshift_variant', 'start_lost', 'stop_lost', 'stop_gained']
-		}
+			value: ['missense_variant', 'frameshift_variant', 'start_lost', 'stop_lost', 'stop_gained'],
+		},
 	})
 
 	if (CGConly) {
@@ -1787,7 +1795,7 @@ const isoform2ssm_query1_getvariant = {
 		'consequence.transcript.consequence_type',
 		'consequence.transcript.aa_change',
 		// gene symbol is not required for mds3 tk, but is used in gdc bam slicing ui
-		'consequence.transcript.gene.symbol'
+		'consequence.transcript.gene.symbol',
 	],
 
 	/*
@@ -1800,10 +1808,10 @@ const isoform2ssm_query1_getvariant = {
 		.filter0{}
 		.filterObj{}
 	*/
-	filters: p => {
+	filters: (p) => {
 		const f = {
 			op: 'and',
-			content: []
+			content: [],
 		}
 		if (p.isoform) {
 			if (typeof p.isoform != 'string') throw '.isoform value not string'
@@ -1811,8 +1819,8 @@ const isoform2ssm_query1_getvariant = {
 				op: '=',
 				content: {
 					field: 'consequence.transcript.transcript_id',
-					value: [p.isoform]
-				}
+					value: [p.isoform],
+				},
 			})
 		}
 		if (p.case_id) {
@@ -1821,8 +1829,8 @@ const isoform2ssm_query1_getvariant = {
 				op: '=',
 				content: {
 					field: 'cases.case_id',
-					value: [p.case_id]
-				}
+					value: [p.case_id],
+				},
 			})
 		}
 		if (p.set_id) {
@@ -1831,8 +1839,8 @@ const isoform2ssm_query1_getvariant = {
 				op: 'in',
 				content: {
 					field: 'cases.case_id',
-					value: [p.set_id]
-				}
+					value: [p.set_id],
+				},
 			})
 		}
 		if (p.filter0) {
@@ -1842,7 +1850,7 @@ const isoform2ssm_query1_getvariant = {
 			f.content.push(filter2GDCfilter(p.filterObj))
 		}
 		return f
-	}
+	},
 }
 
 // REST: get case details for each ssm, no variant-level info
@@ -1859,7 +1867,7 @@ const isoform2ssm_query2_getcase = {
 		'case.case_id',
 
 		'case.submitter_id', // can be used to make sample url link
-		'case.observation.sample.tumor_sample_uuid' // gives aliquot id and convert to submitter id for display
+		'case.observation.sample.tumor_sample_uuid', // gives aliquot id and convert to submitter id for display
 	],
 	filters: (p, ds) => {
 		/* p:{}
@@ -1877,22 +1885,22 @@ const isoform2ssm_query2_getcase = {
 				op: '=',
 				content: {
 					field: 'ssm.ssm_id',
-					value: p.ssm_id_lst.split(',')
-				}
+					value: p.ssm_id_lst.split(','),
+				},
 			})
 		} else if (p.isoform) {
 			f.content.push({
 				op: '=',
 				content: {
 					field: 'ssms.consequence.transcript.transcript_id',
-					value: [p.isoform]
-				}
+					value: [p.isoform],
+				},
 			})
 		} else if (p.isoforms) {
 			if (!Array.isArray(p.isoforms)) throw '.isoforms[] not array'
 			f.content.push({
 				op: 'in',
-				content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms }
+				content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms },
 			})
 		} else {
 			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
@@ -1907,11 +1915,11 @@ const isoform2ssm_query2_getcase = {
 			*/
 			f.content.push({
 				op: '>=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].start }
+				content: { field: 'ssms.start_position', value: p.rglst[0].start },
 			})
 			f.content.push({
 				op: '<=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].stop }
+				content: { field: 'ssms.start_position', value: p.rglst[0].stop },
 			})
 		}
 
@@ -1921,8 +1929,8 @@ const isoform2ssm_query2_getcase = {
 				op: 'in',
 				content: {
 					field: 'cases.case_id',
-					value: [p.set_id]
-				}
+					value: [p.set_id],
+				},
 			})
 		}
 		if (p.filter0) {
@@ -1938,18 +1946,18 @@ const isoform2ssm_query2_getcase = {
 				if (t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: termid, value: [p.tid2value[termid]] }
+						content: { field: termid, value: [p.tid2value[termid]] },
 					})
 				} else if (t.type == 'integer') {
 					for (const val of p.tid2value[termid]) {
 						f.content.push({
 							op: val.op,
-							content: { field: termid, value: val.range }
+							content: { field: termid, value: val.range },
 						})
 					}
 				}
 			}
 		}
 		return f
-	}
+	},
 }

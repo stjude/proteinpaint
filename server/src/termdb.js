@@ -48,7 +48,6 @@ export function handle_request_closure(genomes) {
 			if (q.getpercentile) return trigger_getpercentile(q, res, ds)
 			if (q.getdescrstats) return trigger_getdescrstats(q, res, ds)
 			if (q.getnumericcategories) return await trigger_getnumericcategories(q, res, tdb, ds)
-			if (q.getconditioncategories) return await trigger_getconditioncategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
 			if (q.findterm) return await trigger_findterm(q, res, tdb, ds, genome)
@@ -324,13 +323,13 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 		for (const [key, count] of key2count) {
 			lst.push({
 				samplecount: count,
-				key,
-				label: term?.values?.[key]?.label || key
+				key: q.term1_q?.mode == 'cox' ? JSON.parse(key).event : key,
+				label: q.term1_q?.mode == 'cox' ? JSON.parse(key).label : term?.values?.[key]?.label || key
 			})
 		}
 	}
 
-	const orderedLabels = getOrderedLabels(term, data.refs?.byTermId?.[q.tid]?.bins || [])
+	const orderedLabels = getOrderedLabels(term, data.refs?.byTermId?.[q.tid]?.bins || [], q.term1_q)
 	if (orderedLabels.length) {
 		lst.sort((a, b) => orderedLabels.indexOf(a.label) - orderedLabels.indexOf(b.label))
 	}
@@ -372,23 +371,6 @@ async function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (q.filter) arg.filter = q.filter
 	const lst = await termdbsql.get_summary_numericcategories(arg)
 	res.send({ lst })
-}
-
-async function trigger_getconditioncategories(q, res, tdb, ds) {
-	if (!q.tid) throw '.tid missing'
-	const term = tdb.q.termjsonByOneid(q.tid)
-	const arg = {
-		ds,
-		term1_id: q.tid,
-		term1_q: q.term1_q || getDefaultQ(term, q)
-	}
-	if (q.filter) arg.filter = q.filter
-	const result = await termdbsql.get_summary_conditioncategories(arg)
-	const bins = result.CTE1.bins ? result.CTE1.bins : []
-	res.send({
-		lst: result.lst,
-		orderedLabels: getOrderedLabels(term, bins)
-	})
 }
 
 function trigger_getterminfo(q, res, tdb) {
