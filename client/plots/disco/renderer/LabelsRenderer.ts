@@ -38,6 +38,7 @@ export default class LabelsRenderer implements IRenderer {
 					.style('fill', label.color)
 					.style('cursor', 'pointer')
 					.text(label.text)
+					.on('click', () => this.geneClickListener(label.label, label.mname))
 					.on('mouseover', (mouseEvent: MouseEvent) => {
 						menu.d
 							.style('padding', '2px')
@@ -46,7 +47,9 @@ export default class LabelsRenderer implements IRenderer {
 							)
 						menu.show(mouseEvent.x, mouseEvent.y)
 					})
-					.on('click', () => this.geneClickListener(label.label, label.mname))
+					.on('mouseout', () => {
+						menu.hide()
+					})
 
 				g.append('path')
 					.attr('class', 'chord-tick')
