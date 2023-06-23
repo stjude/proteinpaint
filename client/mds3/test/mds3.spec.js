@@ -223,6 +223,7 @@ tape('ASH - gene BCR', (test) => {
 	}
 })
 
+// TODO duplicate test on gdc, using different mechanism
 tape('Mbmeta - gene p53', (test) => {
 	const holder = getHolder()
 
@@ -235,7 +236,9 @@ tape('Mbmeta - gene p53', (test) => {
 	})
 	async function callbackOnRender(tk, bb) {
 		test.ok(tk.skewer.data.length > 0, 'mds3 tk should be showing some skewers')
+
 		// click disc of first skewer, it should be a single mutation
+		// TODO verify the dot is singleton
 		tk.skewer.g.select('.sja_aa_disckick').nodes()[0].dispatchEvent(new Event('click'))
 
 		await whenVisible(tk.itemtip.d)
@@ -246,10 +249,10 @@ tape('Mbmeta - gene p53', (test) => {
 		#2: methylation cnv
 		*/
 
-		test.ok(buttons.length == 3, 'two buttons are showing in itemtip') // TODO old disco button will be removed soon
+		test.ok(buttons.length == 2, 'two buttons are showing in itemtip')
 
 		await testDisco(buttons[0], tk)
-		await testCnv(buttons[2], tk)
+		await testCnv(buttons[1], tk)
 
 		if (test._ok) {
 			holder.remove()
