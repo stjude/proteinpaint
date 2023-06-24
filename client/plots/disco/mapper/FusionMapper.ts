@@ -2,22 +2,20 @@ import Reference from './Reference'
 import Data from './Data'
 import Fusion from '#plots/disco/viewmodel/Fusion'
 import FusionSubgroup from '#plots/disco/viewmodel/FusionSubgroup'
-import Settings from '#plots/disco/viewmodel/Settings'
 import PositionInChromosome from '#plots/disco/viewmodel/PositionInChromosome'
 
 export default class FusionMapper {
-	private settings: Settings
+	private radius: number
 	private sampleName: string
 	private reference: Reference
 
-	constructor(settings: any, sampleName: string, reference: Reference) {
-		this.settings = settings
+	constructor(radius: number, sampleName: string, reference: Reference) {
+		this.radius = radius
 		this.sampleName = sampleName
 		this.reference = reference
 	}
 
 	map(fusionData: Array<Data>): Array<Fusion> {
-		const radius = this.settings.rings.fusionRadius
 		const fusions: Array<Fusion> = []
 
 		fusionData.forEach((data) => {
@@ -28,7 +26,7 @@ export default class FusionMapper {
 			const source = new FusionSubgroup(
 				this.calculateStartAngle(data.chrA, data.posA),
 				this.calculateEndAngle(data.chrA, data.posA),
-				radius,
+				this.radius,
 				data.geneA,
 				data.value,
 				genes,
@@ -38,7 +36,7 @@ export default class FusionMapper {
 			const target = new FusionSubgroup(
 				this.calculateStartAngle(data.chrB, data.posB),
 				this.calculateEndAngle(data.chrB, data.posB),
-				radius,
+				this.radius,
 				data.geneB,
 				data.value,
 				genes,
