@@ -7,8 +7,8 @@ import CnvArc from './CnvArc'
 import LohArc from './LohArc'
 
 export default class Rings {
-	labelsRing?: Labels<Label>
-	chromosomesRing?: Ring<Chromosome>
+	labelsRing: Labels<Label>
+	chromosomesRing: Ring<Chromosome>
 	nonExonicArcRing?: Ring<SnvArc>
 	snvArcRing?: Ring<SnvArc>
 	cnvArcRing?: Ring<CnvArc>
@@ -17,10 +17,10 @@ export default class Rings {
 	constructor(
 		labelsRing: Labels<Label>,
 		chromosomesRing: Ring<Chromosome>,
-		nonExonicArcRing: Ring<SnvArc>,
-		snvArcRing: Ring<SnvArc>,
-		cnvArcRing: Ring<CnvArc>,
-		lohArcRing: Ring<LohArc>
+		nonExonicArcRing?: Ring<SnvArc>,
+		snvArcRing?: Ring<SnvArc>,
+		cnvArcRing?: Ring<CnvArc>,
+		lohArcRing?: Ring<LohArc>
 	) {
 		this.labelsRing = labelsRing
 		this.chromosomesRing = chromosomesRing

@@ -1,5 +1,4 @@
 import { RingType } from '#plots/disco/viewmodel/RingType.ts'
-import { RingDimension } from '#plots/disco/viewmodel/RingDimension.ts'
 
 export default interface Settings {
 	verticalPadding: number
@@ -8,11 +7,12 @@ export default interface Settings {
 	rings: {
 		order: Array<RingType>
 
-		dimensions: Array<RingDimension>
+		width: number
 
 		fusionRadius: number
 
 		cnvInnerRadius: number
+
 		cnvWidth: number
 		cnvCapping: number
 		cnvUnit: string
