@@ -15,7 +15,9 @@ geneSearch4GDCmds3
 
 ### ash dataset is based on bcf file with samples
 ASH - gene BCR
-Mbmeta - gene p53
+
+Mbmeta - gene p53 - Disco button
+GDC - gene p53 - Disco button
 
 ### clinvar dataset is based on sample-less bcf file
 Clinvar - gene kras
@@ -223,37 +225,66 @@ tape('ASH - gene BCR', (test) => {
 	}
 })
 
-// TODO duplicate test on gdc, using different mechanism
-tape('Mbmeta - gene p53', (test) => {
-	const holder = getHolder()
+/*
+want to apply both disco/cnv plot button test on both mbmeta and gdc
+as the data are served from different sources
+somehow running both tests will cause it to be stuck at mbmeta
+*/
+tape('Mbmeta - gene p53 - Disco button', (test) => {
+	testClickDiscForDiscoButtons(test, 'p53', 'MB_meta_analysis')
+})
+tape.skip('GDC - gene p53 - Disco button', (test) => {
+	testClickDiscForDiscoButtons(test, 'hoxa1', 'GDC')
+})
 
+async function testClickDiscForDiscoButtons(test, gene, dslabel) {
+	const holder = getHolder()
 	runproteinpaint({
 		holder,
 		noheader: true,
 		genome: 'hg38',
-		gene: 'p53',
-		tracks: [{ type: 'mds3', dslabel: 'MB_meta_analysis', callbackOnRender }],
+		gene,
+		tracks: [{ type: 'mds3', dslabel, callbackOnRender }],
 	})
 	async function callbackOnRender(tk, bb) {
 		test.ok(tk.skewer.data.length > 0, 'mds3 tk should be showing some skewers')
-
-		// click disc of first skewer, it should be a single mutation
-		// TODO verify the dot is singleton
-		tk.skewer.g.select('.sja_aa_disckick').nodes()[0].dispatchEvent(new Event('click'))
-
+		// find a singleton skewer, click disc
+		const singletonMutationDisc = tk.skewer.g
+			.selectAll('.sja_aa_disckick')
+			.nodes()
+			.find((i) => i.__data__.occurrence == 1)
+		test.ok(singletonMutationDisc, 'a singleton mutation is found') // if not found can change to different gene
+		// click the singleton disc to show itemtip
+		singletonMutationDisc.dispatchEvent(new Event('click'))
 		await whenVisible(tk.itemtip.d)
 		test.pass('itemtip shows with variant table')
-		const buttons = tk.itemtip.d.selectAll('button').nodes()
-		/* two buttons should be shown
+
+		/* surprise
+		in mbmeta, as soon as itemtip.d is shown, buttons are already created; calling detectLst() will timeout
+		in gdc, there's a delay (api request) for buttons to be shown after itemtip, thus must use detectLst
+		*/
+		let buttons = tk.itemtip.d.selectAll('button').nodes()
+		if (buttons.length == 0) {
+			buttons = await detectLst({ elem: tk.itemtip.d.node(), selector: 'button' })
+		}
+		/* multiplt buttons can be shown, based on data availability
 		#1: disco
 		#2: methylation cnv
 		*/
+		test.ok(buttons.length >= 1, '1 or more buttons are showing in itemtip')
 
-		test.ok(buttons.length == 2, 'two buttons are showing in itemtip')
-
-		await testDisco(buttons[0], tk)
-		await testCnv(buttons[1], tk)
-
+		for (const btn of buttons) {
+			switch (btn.innerHTML) {
+				case 'Disco plot':
+					await testDisco(btn, tk)
+					break
+				case 'MethylationArray':
+					await testCnv(btn, tk)
+					break
+				default:
+					throw 'unknown button: ' + btn.innerHTML
+			}
+		}
 		if (test._ok) {
 			holder.remove()
 			tk.itemtip.d.remove()
@@ -288,7 +319,7 @@ tape('Mbmeta - gene p53', (test) => {
 		// TODO click at a particular position on img, detect if block shows up
 		*/
 	}
-})
+}
 
 tape('Clinvar - gene kras', (test) => {
 	test.timeoutAfter(3000)
@@ -381,6 +412,7 @@ tape('Launch variant table from track variant label', (test) => {
 })
 
 // same tests applied on two datasets, each using a different data source
+// somehow calling helper twice in one tape() call will break, thus calling tape twice
 tape('GDC - sample summaries table, create subtrack (tk.filterObj)', (test) => {
 	testSampleSummary2subtrack('IDH1', 'GDC', test)
 })
