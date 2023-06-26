@@ -536,7 +536,7 @@ function make_summary_categorical(samples, termid) {
 		sample.sample_id is set. this should be present for all non-gdc tracks
 		*/
 		for (const s of samples) {
-			const c = getSingleStringValueByKey(s, termid)
+			const c = s[termid]
 			if (!c) continue
 			if (!cat2count.has(c)) {
 				cat2count.set(c, new Set())
@@ -579,14 +579,6 @@ function make_summary_categorical(samples, termid) {
 		cat2count.set(c, 1 + (cat2count.get(c) || 0))
 	}
 	return cat2count
-}
-
-function getSingleStringValueByKey(s, termid) {
-	// get single string value by key; if value is array, return first element
-	const c = s[termid]
-	if (!c) return
-	if (Array.isArray(c)) return c[0] // quick fix!! only use first value
-	return c
 }
 
 /*
