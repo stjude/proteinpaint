@@ -741,7 +741,7 @@ async function update_leaf_node(depth_first_branch, given_node, node_children, n
 	// Find branch of current node
 	while (current_node != 0) {
 		// Top node. This loop will continue until top node is reached
-		let node_connector1 = depth_first_branch.find((i) => i.id1 == current_node) // Find id1 with curren_node
+		let node_connector1 = depth_first_branch.find((i) => i.id1 == current_node) // Find id1 with current_node
 		let current_node1
 		let current_node2
 		if (node_connector1) {
@@ -754,7 +754,7 @@ async function update_leaf_node(depth_first_branch, given_node, node_children, n
 				current_node1 = node_connector1.id2
 			}
 		}
-		let node_connector2 = depth_first_branch.find((i) => i.id2 == current_node)
+		let node_connector2 = depth_first_branch.find((i) => i.id2 == current_node) // Find id2 with current_node
 		if (node_connector2) {
 			if (node_connector2.y1 >= node_connector2.y2) {
 				// If y-coordinate of id2 is less than that of id1 then current_node2 = id1
