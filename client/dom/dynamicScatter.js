@@ -43,7 +43,7 @@ export function addDynamicScatterForm(tip, app) {
 		})
 
 	function getTreeTerm(div, callback) {
-		const state = { tree: { usecase: { detail: 'term', target: 'sampleScatter' } } }
+		const state = { tree: { usecase: { detail: 'numeric', target: 'sampleScatter' } } }
 		//state.nav = {header_mode: 'hide_search'}
 
 		showTermsTree(

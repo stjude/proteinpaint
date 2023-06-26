@@ -80,7 +80,7 @@ export function isUsableTerm(term, _usecase, ds) {
 			return uses
 
 		case 'sampleScatter':
-			if (usecase.detail == 'term') {
+			if (usecase.detail == 'numeric') {
 				if (term.type == 'float' || term.type == 'integer') {
 					uses.add('plot')
 				}
