@@ -461,7 +461,15 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 }
 
 export const tip2 = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
-export async function showTermsTree(div, callback, app, tip, state = { tree: { usecase: { detail: 'term' } } }) {
+export async function showTermsTree(
+	div,
+	callback,
+	app,
+	tip,
+	state = { tree: { usecase: { detail: 'term' } } },
+	treeTip = tip2,
+	closeParent = true
+) {
 	tip2.clear().showunderoffset(div.node())
 	appInit({
 		holder: tip2.d,
@@ -470,8 +478,8 @@ export async function showTermsTree(div, callback, app, tip, state = { tree: { u
 		tree: {
 			click_term: (term) => {
 				callback(term)
-				tip2.hide()
-				tip.hide()
+				treeTip.hide()
+				if (closeParent) tip.hide()
 			},
 		},
 	})
