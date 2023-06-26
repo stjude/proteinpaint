@@ -3,8 +3,8 @@ import { Menu } from '#dom/menu'
 
 export function addDynamicScatterForm(tip, app) {
 	const tip2 = new Menu({ padding: '5px', offsetX: 30, offsetY: -20 })
-	const coordsDiv = tip.d.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-	coordsDiv.append('div').html('Select terms to build a new plot').style('font-size', '0.7rem')
+	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
+	coordsDiv.append('div').html('Select variables to build a new plot').style('font-size', '0.7rem')
 	let xterm, yterm
 	const xDiv = coordsDiv.append('div').style('padding-top', '5px').html('&nbsp;X&nbsp;&nbsp;')
 	const xtermDiv = xDiv
