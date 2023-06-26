@@ -606,10 +606,43 @@ async function run_clustering(Rscript, args = []) {
 
 async function parseclust(coordinates, names_index) {
 	// This function parses the output from fastclust.R output. The dendextend packages prints the x-y coordinates for each node in depth-first search format. So the order of x-y coordinates describes how each nodes is connected to ane another.
+
+	/*
+
+        |         (1.75, 69.749)  
+        |     ____._____
+        |     |        |(2.5,65.0797)           
+        |     |     ___.___             
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |_____._____._____.__
+             (1,0)  (2,0) (3,0) 
+
+        R dendextend output for the above dendrogram is as follows (depth-first search format)
+             [,1]     [,2]
+        [1,] 1.75 69.74910
+        [2,] 1.00  0.00000
+        [3,] 2.50 65.07977
+        [4,] 2.00  0.00000
+        [5,] 3.00  0.00000
+
+        Output is in depth-first search format
+
+
+        */
+
 	let first = 1
 	let xs = []
 	let ys = []
 	for (const line of coordinates) {
+		// Lines are parsed into arrays xs and ys
 		if (first == 1) {
 			first = 0
 		} else if (line.length == 0) {
@@ -642,7 +675,7 @@ async function parseclust(coordinates, names_index) {
 	for (let i = 0; i < ys.length; i++) {
 		//console.log('i:', i)
 		if (break_point == true) {
-			// This clause is invoked when the a node's y-coordinate is found to be higher than the previous one (break_point = true). Then all previous nodes are searched for the closest node that is higher than the current node. This determines where the new branch should start from
+			// This clause is invoked when the a node's y-coordinate is found to be higher than the previous one (break_point = true). Then all previous nodes are searched for the closest node that is higher than the current node. This determines where the new branch should start from. In above example line 3 will be parsed (after break_point is set to true in previous iteration) since the y-coordinate of the node is higher than the node described in the previous line
 			let hit = 0
 			//console.log('prev_ys:', prev_ys)
 			for (let j = 0; j < prev_ys.length; j++) {
@@ -674,7 +707,7 @@ async function parseclust(coordinates, names_index) {
 			//old_depth_start_position = depth_start_position
 			break_point = false
 		} else if (ys[i] > ys[i + 1] && i <= ys.length - 1) {
-			// When y-coordinate of current node is greater than that of the next node, the current branch is extended to the next node
+			// When y-coordinate of current node is greater than that of the next node, the current branch is extended to the next node. In case of line 2 and 4 in example output is parsed using this if clause statement.
 			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
 				// When y-axis of a node is found to be 0, then it is a leaf node. In that particular case this leaf node needs to be added to the "children" list of all nodes above it
@@ -685,7 +718,7 @@ async function parseclust(coordinates, names_index) {
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 		} else if (ys[i] == ys[i + 1] && i <= ys.length - 1) {
-			// When y-coordinate of current node is equal to that of the next node, it suggests both nodes are leaf nodes. IN that case the branch is extended from the previous node to the next node.
+			// When y-coordinate of current node is equal to that of the next node, it suggests both nodes are leaf nodes. IN that case the branch is extended from the previous node to the next node. Line 5 (in example output) will be parsed using this if clause.
 			depth_first_branch.push({ id1: i - 1, x1: xs[i - 1], y1: ys[i - 1], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
 				// When y-axis of a node is found to be 0, then it is a leaf node. In that particular case this leaf node needs to be added to the "children" list of all nodes above it
@@ -704,7 +737,7 @@ async function parseclust(coordinates, names_index) {
 				leaf_counter += 1
 			}
 		} else {
-			// When y-coordinate of next node is greater than that of the current node. The current branch ends and break_point is set to true. In the next iteration of the loop it is decided where the new branch should start from.
+			// When y-coordinate of next node is greater than that of the current node. The current branch ends and break_point is set to true. In the next iteration of the loop it is decided where the new branch should start from. Line 3 (in example) will be parsed using this clause.
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 			//old_depth_first_branch = depth_first_branch
