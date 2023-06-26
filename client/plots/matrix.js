@@ -30,7 +30,7 @@ class Matrix {
 		this.setDom = setMatrixDom
 		this.setDom(opts)
 
-		this.config = appState.plots.find(p => p.id === this.id)
+		this.config = appState.plots.find((p) => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
 		if (this.dom.header) this.dom.header.html('Sample Matrix')
 
@@ -38,19 +38,19 @@ class Matrix {
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app, parent: this })
 		this.legendRenderer = svgLegend({
 			holder: this.dom.legendG,
-			rectFillFxn: d => d.color,
+			rectFillFxn: (d) => d.color,
 			iconStroke: '#aaa',
 			handlers: {
 				legend: {
-					click: this.legendClick
-				}
-			}
+					click: this.legendClick,
+				},
+			},
 		})
 
 		// enable embedding of termsetting and tree menu inside self.dom.menu
 		this.customTipApi = this.dom.tip.getCustomApi({
 			d: this.dom.menubody,
-			clear: event => {
+			clear: (event) => {
 				if (event?.target) this.dom.menutop.style('display', 'none')
 				this.dom.menubody.selectAll('*').remove()
 				return this.customTipApi
@@ -60,7 +60,7 @@ class Matrix {
 			},
 			hide: () => {
 				//this.dom.menubody.style('display', 'none')
-			}
+			},
 		})
 
 		this.setPill(appState)
@@ -106,7 +106,7 @@ class Matrix {
 				id: this.id,
 				parent: this,
 				holder: this.dom.controls,
-				getSvg: () => this.dom.svg.node()
+				getSvg: () => this.dom.svg.node(),
 			},
 			appState
 		)
@@ -122,7 +122,7 @@ class Matrix {
 	}*/
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find((p) => p.id === this.id)
 		return {
 			isVisible: true,
 			config,
@@ -132,7 +132,7 @@ class Matrix {
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
 			geneVariantCountSamplesSkipMclass: this.app.vocabApi.termdbConfig.matrix?.geneVariantCountSamplesSkipMclass || [],
 			vocab: appState.vocab,
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
 		}
 	}
 
@@ -183,7 +183,7 @@ class Matrix {
 				settings: this.settings.matrix,
 				xGrps: this[xGrps],
 				yGrps: this[yGrps],
-				dimensions: d
+				dimensions: d,
 			})
 
 			this.legendRenderer(this.legendData, {
@@ -191,8 +191,8 @@ class Matrix {
 					svgw: Math.max(400, d.mainw + d.xOffset - this.settings.matrix.margin.right),
 					svgh: d.mainh + d.yOffset,
 					dimensions: d,
-					padleft: this.settings.legend.padleft //+ d.xOffset
-				})
+					padleft: this.settings.legend.padleft, //+ d.xOffset
+				}),
 			})
 
 			await this.adjustSvgDimensions(prevTranspose)
@@ -234,7 +234,7 @@ class Matrix {
 					sortTermsBy: p.sortTermsBy,
 					// TODO: take out dimension related computations in setTermOrder,
 					// so that sorting is not affected by rowh
-					rowh: p.rowh
+					rowh: p.rowh,
 				},
 				{
 					maxSample: c.maxSample,
@@ -246,7 +246,7 @@ class Matrix {
 					sortTermsBy: c.sortTermsBy,
 					// TODO: take out dimension related computations in setTermOrder,
 					// so that sorting is not affected by rowh
-					rowh: c.rowh
+					rowh: c.rowh,
 				}
 			),
 			cellDimensions: !deepEqual(
@@ -258,7 +258,7 @@ class Matrix {
 					rowgspace: p.rowgspace,
 					colw: p.colw,
 					colspace: p.colspace,
-					colgspace: p.colgspace
+					colgspace: p.colgspace,
 				},
 				{
 					transpose: c.transpose,
@@ -268,9 +268,9 @@ class Matrix {
 					rowgspace: c.rowgspace,
 					colw: c.colw,
 					colspace: c.colspace,
-					colgspace: c.colgspace
+					colgspace: c.colgspace,
 				}
-			)
+			),
 		}
 	}
 
@@ -301,7 +301,7 @@ class Matrix {
 			terms,
 			filter: this.state.filter,
 			filter0: this.state.filter0,
-			loadingDiv: this.dom.loadingDiv
+			loadingDiv: this.dom.loadingDiv,
 		}
 	}
 
@@ -310,7 +310,7 @@ class Matrix {
 		const defaultSampleGrp = {
 			id: this.config.divideBy?.$id,
 			name: this.config.divideBy ? 'Not annotated' : '',
-			lst: []
+			lst: [],
 		}
 
 		const sampleGroups = new Map()
@@ -329,8 +329,8 @@ class Matrix {
 						id: key,
 						name: key in values && values[key].label ? values[key].label : key,
 						lst: [],
-						order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
-						tw: this.config.divideBy
+						order: ref.bins ? ref.bins.findIndex((bin) => bin.name == key) : 0,
+						tw: this.config.divideBy,
 					})
 				}
 				sampleGroups.get(key).lst.push(row)
@@ -380,7 +380,7 @@ class Matrix {
 					totalHtAdjustments: 0, // may be required when transposed???
 					grpTotals: { htAdjustment: 0 }, // may be required when transposed???
 					_SAMPLENAME_: data.refs.bySampleId[row.sample],
-					processedLst
+					processedLst,
 				})
 			}
 			total += processedLst.length
@@ -436,7 +436,7 @@ class Matrix {
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
 			const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
 			const processedLst = lst
-				.filter(t => {
+				.filter((t) => {
 					if ('minNumSamples' in t.tw) return t.tw.minNumSamples <= t.counts.samples
 					if (!grp.settings) return true
 					return !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
@@ -469,7 +469,7 @@ class Matrix {
 					prevGrpTotalIndex: totalIndex,
 					totalIndex: totalIndex + index,
 					ref,
-					allCounts: counts
+					allCounts: counts,
 					// note: term label will be assigned after sample counts are known
 					// label: t.tw.label || t.tw.term.name,
 				})
@@ -484,7 +484,7 @@ class Matrix {
 		const values = 'value' in anno ? [anno.value] : anno.values
 		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
-		const filteredValues = values.filter(v => {
+		const filteredValues = values.filter((v) => {
 			if (!valueFilter) return true
 			if (valueFilter.type == 'tvs') {
 				const matched = true
@@ -507,7 +507,7 @@ class Matrix {
 			// dt=1 are SNVindels, dt=4 CNV
 			// will render only one matching value per dt
 			for (const dt of [4, 1]) {
-				const v = filteredValues.find(v => v.dt === dt)
+				const v = filteredValues.find((v) => v.dt === dt)
 				if (v) renderedValues.push(v)
 			}
 		}
@@ -516,7 +516,7 @@ class Matrix {
 
 		return {
 			filteredValues,
-			countedValues: filteredValues.filter(v => {
+			countedValues: filteredValues.filter((v) => {
 				/*** do not count wildtype and not tested as hits ***/
 				if (tw.term.type == 'geneVariant') {
 					if (v.class == 'WT' || v.class == 'Blank') return false
@@ -524,7 +524,7 @@ class Matrix {
 				}
 				return true
 			}),
-			renderedValues
+			renderedValues,
 		}
 	}
 
@@ -543,7 +543,7 @@ class Matrix {
 
 		const s = this.settings.matrix
 		this.computedSettings = {
-			useCanvas: this.sampleOrder.length > m.svgCanvasSwitch
+			useCanvas: this.sampleOrder.length > m.svgCanvasSwitch,
 		}
 
 		if (s.availContentWidth) {
@@ -642,9 +642,7 @@ class Matrix {
 				if (!t.tw.settings) t.tw.settings = {}
 				if (!t.tw.settings.barh) t.tw.settings.barh = s.barh
 				if (!('gap' in t.tw.settings)) t.tw.settings.gap = 0
-				t.scale = scaleLinear()
-					.domain([t.counts.minval, t.counts.maxval])
-					.range([1, t.tw.settings.barh])
+				t.scale = scaleLinear().domain([t.counts.minval, t.counts.maxval]).range([1, t.tw.settings.barh])
 			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
 				const maxVals = []
 				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
@@ -652,7 +650,7 @@ class Matrix {
 				t.scales = {
 					loss: interpolateBlues,
 					gain: interpolateReds,
-					max: Math.max(...maxVals)
+					max: Math.max(...maxVals),
 				}
 			}
 
@@ -677,9 +675,9 @@ class Matrix {
 
 		// TODO: should not need aliases, rename class properties to simplify
 		this.samples = this.sampleOrder
-		this.sampleGrps = this.sampleOrder.filter(s => s.index === 0)
+		this.sampleGrps = this.sampleOrder.filter((s) => s.index === 0)
 		this.terms = this.termOrder
-		this.termGrps = this.termOrder.filter(t => t.index === 0)
+		this.termGrps = this.termOrder.filter((t) => t.index === 0)
 
 		const layout = {}
 		const sides = { top, btm, left, right }
@@ -694,7 +692,7 @@ class Matrix {
 				key: this[`${d}Key`],
 				label: this[`${d}Label`],
 				render: this[`render${Direction}Label`],
-				isGroup: sides[direction].includes('Grp')
+				isGroup: sides[direction].includes('Grp'),
 			}
 		}
 
@@ -726,7 +724,7 @@ class Matrix {
 		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
-			adjustBoxTransform: dx =>
+			adjustBoxTransform: (dx) =>
 				layout.top.box.attr('transform', `translate(${xOffset + dx}, ${yOffset - s.collabelgap})`),
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'start',
@@ -734,14 +732,14 @@ class Matrix {
 			labelGTransform: this[`col${_t_}LabelGTransform`],
 			fontSize: topFontSize,
 			textpos: { coord: 'y', factor: -1 },
-			axisFxn: axisTop
+			axisFxn: axisTop,
 		}
 		if (layout.top.prefix == 'sample') layout.top.display = colw >= s.minLabelFontSize ? '' : 'none'
 
 		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
-			adjustBoxTransform: dx =>
+			adjustBoxTransform: (dx) =>
 				layout.btm.box.attr('transform', `translate(${xOffset + dx}, ${yOffset + mainh + s.collabelgap})`),
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'end',
@@ -749,7 +747,7 @@ class Matrix {
 			labelGTransform: this[`col${_b_}LabelGTransform`],
 			fontSize: btmFontSize,
 			textpos: { coord: 'y', factor: 1 },
-			axisFxn: axisBottom
+			axisFxn: axisBottom,
 		}
 		if (layout.btm.prefix == 'sample') layout.btm.display = colw >= s.minLabelFontSize ? '' : 'none'
 
@@ -765,7 +763,7 @@ class Matrix {
 			labelGTransform: this[`row${_l_}LabelGTransform`],
 			fontSize: leftFontSize,
 			textpos: { coord: 'x', factor: -1 },
-			axisFxn: axisLeft
+			axisFxn: axisLeft,
 		}
 
 		const rtFontSize =
@@ -778,7 +776,7 @@ class Matrix {
 			labelGTransform: this[`row${_r_}LabelGTransform`],
 			fontSize: rtFontSize,
 			textpos: { coord: 'x', factor: 1 },
-			axisFxn: axisRight
+			axisFxn: axisRight,
 		}
 
 		this.dom.sampleLabelsPG.attr('clip-path', s.transpose ? '' : `url(#${this.seriesClipId})`)
@@ -832,7 +830,7 @@ class Matrix {
 			// recompute the resolvable "pixel width", in case the pixel ratio changes
 			// when moving the browser window to a different monitor,
 			// will be used to sharpen canvas shapes that are smaller than this pixel width
-			pxw: 1 / window.devicePixelRatio
+			pxw: 1 / window.devicePixelRatio,
 		}
 	}
 
@@ -850,7 +848,7 @@ class Matrix {
 				t,
 				tw: t.tw,
 				cells: [],
-				y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
+				y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0,
 			}
 
 			for (const so of this.sampleOrder) {
@@ -869,7 +867,7 @@ class Matrix {
 					totalIndex,
 					grpIndex,
 					row,
-					t
+					t,
 				}
 
 				if (!anno || !anno.renderedValues?.length) {
@@ -926,7 +924,7 @@ class Matrix {
 	}
 
 	sampleLabel(series) {
-		return series.row.sampleName || ''
+		return series.row.sampleName || series.row.sample || ''
 	}
 
 	sampleGrpKey(s) {
@@ -974,15 +972,15 @@ class Matrix {
 							text: item.label,
 							color: item.fill,
 							order: i,
-							border: '1px solid #ccc'
+							border: '1px solid #ccc',
 						}
-					})
+					}),
 				})
 				continue
 			}
 
 			const keys = Object.keys(legend.values).sort((a, b) => legend.values[a].order - legend.values[b].order)
-			const hasScale = Object.values(legend.values).find(v => v.scale)
+			const hasScale = Object.values(legend.values).find((v) => v.scale)
 			if (hasScale) {
 				legendData.push({
 					name: $id,
@@ -1000,7 +998,7 @@ class Matrix {
 								domain: item.domain,
 								minLabel: item.minLabel,
 								maxLabel: item.maxLabel,
-								order: 'order' in item ? item.order : i
+								order: 'order' in item ? item.order : i,
 							}
 						} else {
 							return {
@@ -1008,20 +1006,20 @@ class Matrix {
 								key,
 								text: item.label,
 								color: item.fill || this.colorScaleByTermId[$id](key),
-								order: 'order' in item ? item.order : i
+								order: 'order' in item ? item.order : i,
 							}
 						}
-					})
+					}),
 				})
 			} else {
-				const t = this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id) || {
-					tw: { term: { id: $id, name: $id } }
+				const t = this.termOrder.find((t) => t.tw.$id == $id || t.tw.legend?.group == $id) || {
+					tw: { term: { id: $id, name: $id } },
 				}
 				const grp = $id
 				const term = t.tw.term
 				const ref = legend.ref
 				if (ref.bins)
-					keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
+					keys.sort((a, b) => ref.bins.findIndex((bin) => bin.name === a) - ref.bins.findIndex((bin) => bin.name === b))
 				else if (ref.keyOrder) keys.sort((a, b) => ref.keyOrder.indexOf(a) - ref.keyOrder.indexOf(b))
 
 				if (!this.colorScaleByTermId[grp])
@@ -1038,9 +1036,9 @@ class Matrix {
 							key,
 							text: item.label,
 							color: t.scale || item.fill || this.colorScaleByTermId[grp](key),
-							order: 'order' in item ? item.order : i
+							order: 'order' in item ? item.order : i,
 						}
-					})
+					}),
 				})
 			}
 		}
@@ -1080,7 +1078,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					const config = await chartsInstance.app.vocabApi.getMatrixByName(plot.name)
 					chartsInstance.app.dispatch({
 						type: 'plot_create',
-						config
+						config,
 					})
 				})
 		}
@@ -1092,19 +1090,19 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			clickTo: chartsInstance.showTree_selectlst,
 			chartType: 'matrix',
 			usecase: { target: 'matrix', detail: 'termgroups' },
-			processSelection: lst => {
+			processSelection: (lst) => {
 				return [
 					{
 						name: '',
-						lst: lst.map(term => {
+						lst: lst.map((term) => {
 							return { term }
-						})
-					}
+						}),
+					},
 				]
-			}
+			},
 		})
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text(d => d.label)
+		.text((d) => d.label)
 		.on('click', (event, chart) => chartsInstance.showTree_selectlst(chart))
 
 	menuDiv
@@ -1115,9 +1113,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			clickTo: showTextAreaInput,
 			usecase: { target: 'matrix', detail: 'termgroups' },
 			placeholder: 'term\tgroup',
-			processInput: async text => {
-				const lines = text.split('\n').map(line => line.split('\t'))
-				const ids = lines.map(cols => cols[0]).filter(t => !!t)
+			processInput: async (text) => {
+				const lines = text.split('\n').map((line) => line.split('\t'))
+				const ids = lines.map((cols) => cols[0]).filter((t) => !!t)
 				const terms = await chartsInstance.app.vocabApi.getTermTypes(ids)
 				const groups = {}
 				for (const [id, name] of lines) {
@@ -1126,10 +1124,10 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					groups[name].lst.push({ term: terms[id] })
 				}
 				return Object.values(groups)
-			}
+			},
 		})
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text(d => d.label)
+		.text((d) => d.label)
 		.on('click', (event, chart) => showTextAreaInput(chart, chartsInstance))
 }
 
@@ -1151,8 +1149,8 @@ function showTextAreaInput(opt, self) {
 				id: getId(),
 				config: {
 					chartType: opt.usecase.target,
-					[opt.usecase.detail]: data
-				}
+					[opt.usecase.detail]: data,
+				},
 			}
 			self.app.dispatch(action)
 		})
@@ -1166,7 +1164,7 @@ function showTextAreaInput(opt, self) {
 		.style('height', '300px')
 		.style('margin', '5px')
 		.style('padding', '5px')
-		.on('keydown', event => {
+		.on('keydown', (event) => {
 			const keyCode = event.keyCode || event.which
 			// handle tab key press, otherwise it will cause the focus to move to another input
 			if (keyCode == 9) {

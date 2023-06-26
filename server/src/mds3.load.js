@@ -787,6 +787,7 @@ async function update_leaf_node(depth_first_branch, given_node, node_children, n
 				current_node1 = node_connector1.id2
 			}
 		}
+
 		let node_connector2 = depth_first_branch.find((i) => i.id2 == current_node) // Find id2 with current_node
 		if (node_connector2) {
 			if (node_connector2.y1 >= node_connector2.y2) {

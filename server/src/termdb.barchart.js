@@ -492,7 +492,7 @@ function getPj(q, data, tdb, ds) {
 
 export function getOrderedLabels(term, bins, q) {
 	if (term.type == 'condition') {
-		if (q?.groupNames?.length) return q.groupNames
+		if (q?.groups?.length) return q.groups.map(g => g.name)
 		if (term.values) {
 			return Object.keys(term.values)
 				.map(Number)

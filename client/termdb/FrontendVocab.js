@@ -321,9 +321,6 @@ export class FrontendVocab extends Vocab {
 	getNumericUncomputableCategories(term, filter) {
 		throw 'to be implemented!! getNumericUncomputableCategories'
 	}
-	getConditionCategories(term, filter) {
-		throw 'to be implemented!! getConditionCategories'
-	}
 
 	graphable(term) {
 		if (!term) throw 'graphable: term is missing'

@@ -36,7 +36,7 @@ otherwise to show in client.tip
 		}
 	}
 
-	input.on('keyup', event => {
+	input.on('keyup', (event) => {
 		const str = event.target.value
 		if (str.length <= 1) {
 			fold()
@@ -58,7 +58,7 @@ otherwise to show in client.tip
 	function genesearch() {
 		client
 			.dofetch('genelookup', { genome: p.genome, input: input.property('value') })
-			.then(data => {
+			.then((data) => {
 				if (data.error) throw data.error
 				if (!data.hits) throw '.hits[] missing'
 
@@ -81,7 +81,7 @@ otherwise to show in client.tip
 						})
 				}
 			})
-			.catch(err => {
+			.catch((err) => {
 				printdiv.append('div').text(err.message || err)
 				if (err.stack) console.log(err.stack)
 			})
@@ -94,15 +94,15 @@ export function findgenemodel_bysymbol(genome, str) {
 		body: {
 			deep: 1,
 			input: str,
-			genome: genome
-		}
+			genome: genome,
+		},
 	})
-		.then(data => {
+		.then((data) => {
 			if (data.error) throw data.error
 			if (!data.gmlst || data.gmlst.length == 0) return null
 			return data.gmlst
 		})
-		.catch(e => {
+		.catch((e) => {
 			throw e
 		})
 }

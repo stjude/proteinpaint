@@ -17,7 +17,7 @@
     "#shared/*": "./shared/*.js",
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/termsetting.ts",
-    "#termsetting/handlers/*": "./termsetting/handlers/*.js"
+    "#termsetting/handlers/*": "./termsetting/handlers/*.ts"
   },
   "scripts": {
     "predev": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",

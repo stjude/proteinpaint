@@ -8,11 +8,13 @@ export default class SnvRenderer implements IRenderer {
 	private svnInnerRadius: number
 	private svnWidth: number
 	private fullArcRenderer: FullArcRenderer
+	private geneClickListener: (gene: string, mname: string) => void
 
-	constructor(svnInnerRadius: number, svnWidth: number) {
+	constructor(svnInnerRadius: number, svnWidth: number, geneClickListener: (gene: string, mname: string) => void) {
 		this.svnInnerRadius = svnInnerRadius
 		this.svnWidth = svnWidth
 		this.fullArcRenderer = new FullArcRenderer(this.svnInnerRadius, this.svnWidth, '#6464641A')
+		this.geneClickListener = geneClickListener
 	}
 
 	render(holder: any, elements: Array<SnvArc>) {
@@ -35,12 +37,17 @@ export default class SnvRenderer implements IRenderer {
 			.attr('fill', (d: SnvArc) => d.color)
 			.on('mouseover', (mouseEvent: MouseEvent, arc: SnvArc) => {
 				menu.d
-					.style('color', arc.color)
-					.html(`Gene: ${arc.text} <br />${arc.mname} <br /> ${arc.dataClass} <br /> ${arc.chr}:${arc.pos}`)
+					.style('padding', '2px')
+					.html(
+						`Gene: ${arc.text} <br />${arc.mname} <br /> <span style="color:${arc.color}">${arc.dataClass}</span> <br /> ${arc.chr}:${arc.pos}`
+					)
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
 			.on('mouseout', () => {
 				menu.hide()
+			})
+			.on('click', (mouseEvent: MouseEvent, arc: SnvArc) => {
+				this.geneClickListener(arc.text, arc.mname)
 			})
 	}
 }

@@ -9,10 +9,7 @@ export function setMatrixDom(opts) {
 		.style('position', 'absolute')
 		.style('top', this.opts.controls ? 0 : '50px')
 		.style('left', '50px')
-	const errdiv = holder
-		.append('div')
-		.attr('class', 'sja_errorbar')
-		.style('display', 'none')
+	const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 	const svg = holder
 		.append('svg')
 		.style('margin', '20px 10px')
@@ -58,10 +55,7 @@ export function setMatrixDom(opts) {
 			.on('mousedown', this.seriesesGMousedown)
 			.on('mousemove', this.seriesesGMousemove),
 		//.on('mouseup', this.seriesesGMouseup),
-		seriesesG: rectsG
-			.append('g')
-			.attr('class', 'sjpp-matrix-serieses-g')
-			.on('mousedown', this.seriesesGMousedown),
+		seriesesG: rectsG.append('g').attr('class', 'sjpp-matrix-serieses-g').on('mousedown', this.seriesesGMousedown),
 		//.on('mousemove', this.seriesesGMousemove)
 		//.on('mouseup', this.seriesesGMouseup),
 		sampleLabelsPG,
@@ -76,7 +70,7 @@ export function setMatrixDom(opts) {
 			.attr('class', 'sjpp-matrix-series-label-g')
 			// .on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
 			// .on('mouseup.sjppMatrixLabelText', this.disableTextHighlight)
-			.on('click', event => this.mouseclick(event)),
+			.on('click', (event) => this.mouseclick(event)),
 		/* // TODO: sample label drag to move
 			.on('mouseover', this.sampleLabelMouseover)
 			.on('mouseout', this.sampleLabelMouseout)
@@ -109,7 +103,7 @@ export function setMatrixDom(opts) {
 		legendG: mainG.append('g'),
 		tip,
 		menutop: tip.d.append('div'),
-		menubody: tip.d.append('div')
+		menubody: tip.d.append('div'),
 	}
 
 	this.dom.tip.onHide = () => {

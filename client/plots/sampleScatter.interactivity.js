@@ -3,20 +3,20 @@ import { renderTable } from '#dom/table'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getSamplelstTW, getFilter } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 import { plotSingleSampleGenomeQuantification, plotDisco } from '../mds3/sampletable'
 import { newSandboxDiv } from '#dom/sandbox'
 
 export function setInteractivity(self) {
-	self.mouseover = function(event, chart) {
+	self.mouseover = function (event, chart) {
 		if (event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie') {
 			const s2 = event.target.__data__
 			const displaySample = 'sample' in s2
 			const shrink = self.opts.parent?.type == 'summary' && !displaySample
-			const include = shrink ? dist => dist > 0 && dist < 0.2 : dist => dist < 0.2
+			const include = shrink ? (dist) => dist > 0 && dist < 0.2 : (dist) => dist < 0.2
 			const overlapSamples = []
-			const samples = chart.data.samples.filter(s => {
+			const samples = chart.data.samples.filter((s) => {
 				const dist = distance(s.x, s.y, s2.x, s2.y)
 				if (dist == 0) overlapSamples.push(s)
 				return self.getOpacity(s) > 0 && include(dist)
@@ -47,15 +47,8 @@ export function setInteractivity(self) {
 					if (d.sample == s2.sample) {
 						let title = ''
 						for (const os of overlapSamples) title += os.sample + ' '
-						row
-							.append('td')
-							.attr('colspan', 2)
-							.html(`<b>${title}</b>`)
-					} else
-						row
-							.append('td')
-							.attr('colspan', 2)
-							.html(`<b>${d.sample}</b>`)
+						row.append('td').attr('colspan', 2).html(`<b>${title}</b>`)
+					} else row.append('td').attr('colspan', 2).html(`<b>${d.sample}</b>`)
 				}
 
 				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
@@ -105,7 +98,7 @@ export function setInteractivity(self) {
 		}
 	}
 
-	self.mouseclick = function(event) {
+	self.mouseclick = function (event) {
 		if (!self.lassoOn) self.dom.tip.hide()
 		tip2.hide()
 		const target = event.target
@@ -131,7 +124,7 @@ export function setInteractivity(self) {
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
 						.text(k)
-						.on('click', event => {
+						.on('click', (event) => {
 							const sandbox = newSandboxDiv(self.opts.plotDiv)
 							sandbox.header.text(sample.sample_id)
 							plotSingleSampleGenomeQuantification(
@@ -151,7 +144,7 @@ export function setInteractivity(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Disco plot')
-					.on('click', event => {
+					.on('click', (event) => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv)
 						sandbox.header.text(sample.sample_id)
 						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
@@ -161,7 +154,7 @@ export function setInteractivity(self) {
 		}
 	}
 
-	self.onLegendClick = function(chart, legendG, name, key, e) {
+	self.onLegendClick = function (chart, legendG, name, key, e) {
 		const tw = self.config[name]
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		const menu = new Menu({ padding: '5px' })
@@ -178,7 +171,7 @@ export function setInteractivity(self) {
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
-					config
+					config,
 				})
 			})
 		div
@@ -195,7 +188,7 @@ export function setInteractivity(self) {
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
-					config
+					config,
 				})
 			})
 		div
@@ -211,24 +204,24 @@ export function setInteractivity(self) {
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
-					config
+					config,
 				})
 			})
 		menu.show(e.clientX, e.clientY, false)
 	}
 
-	self.hideCategory = function(legendG, tw, key, hide) {
+	self.hideCategory = function (legendG, tw, key, hide) {
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
 		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
 		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
-		const itemG = items.find(item => key.startsWith(item.innerHTML))?.parentElement
+		const itemG = items.find((item) => key.startsWith(item.innerHTML))?.parentElement
 
 		if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'
 		if (!hide) delete tw.q.hiddenValues[key]
 		else tw.q.hiddenValues[key] = value
 	}
 
-	self.onColorClick = function(e, key, category) {
+	self.onColorClick = function (e, key, category) {
 		const color = rgb(category.color)
 		const menu = new Menu()
 		const input = menu.d
@@ -244,7 +237,7 @@ export function setInteractivity(self) {
 		menu.show(e.clientX, e.clientY, false)
 	}
 
-	self.changeColor = async function(key, color) {
+	self.changeColor = async function (key, color) {
 		const tw = self.config.colorTW
 		if (tw.term.type != 'geneVariant' && tw.term.values[key]) tw.term.values[key].color = color
 		else {
@@ -254,14 +247,14 @@ export function setInteractivity(self) {
 		await self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: { colorTW: tw }
+			config: { colorTW: tw },
 		})
 	}
 
-	self.searchSample = function(e) {
+	self.searchSample = function (e) {
 		const menu = new Menu({ padding: '5px' })
 		let group
-		const input = menu.d.append('input').on('keyup', event => {
+		const input = menu.d.append('input').on('keyup', (event) => {
 			if (event.code == 'Escape') {
 				if (group) {
 					self.config.groups.splice(group.index, 1)
@@ -307,7 +300,7 @@ export function setInteractivity(self) {
 					items,
 					index: self.config.groups.length,
 					showOnly: true,
-					fromSearch: true
+					fromSearch: true,
 				}
 				self.config.groups.push(group)
 			}
@@ -318,7 +311,7 @@ export function setInteractivity(self) {
 		menu.show(e.clientX, e.clientY, false)
 	}
 
-	self.downloadSVG = function(svg) {
+	self.downloadSVG = function (svg) {
 		const link = document.createElement('a')
 		// If you don't know the name or want to use
 		// the webserver default set name = ''
@@ -328,29 +321,29 @@ export function setInteractivity(self) {
 		link.remove()
 		const serializer = new XMLSerializer()
 		const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
-			type: 'image/svg+xml'
+			type: 'image/svg+xml',
 		})
 		link.href = URL.createObjectURL(svg_blob)
 		link.click()
 		link.remove()
 	}
 
-	self.getCategoryInfo = function(d, category) {
+	self.getCategoryInfo = function (d, category) {
 		if (!(category in d)) return ''
 		return d[category]
 	}
 
-	self.addToFilter = function(samplelstTW) {
+	self.addToFilter = function (samplelstTW) {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, getFilter(samplelstTW)])
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',
-			filter
+			filter,
 		})
 	}
 
-	self.showTable = function(group, x, y, addGroup) {
+	self.showTable = function (group, x, y, addGroup) {
 		let rows = []
 		const columns = []
 		const first = group.items[0]
@@ -402,25 +395,25 @@ export function setInteractivity(self) {
 		if (addGroup) {
 			const addGroupCallback = {
 				text: 'Add to a group',
-				callback: indexes => {
+				callback: (indexes) => {
 					const items = []
 					for (const i of indexes) items.push(self.selectedItems[i].__data__)
 					const group = {
 						name: `Group ${self.config.groups.length + 1}`,
 						items,
-						index: self.config.groups.length
+						index: self.config.groups.length,
 					}
 					self.addGroup(group)
-				}
+				},
 			}
 			buttons.push(addGroupCallback)
 		} else {
 			const deleteSamples = {
 				text: 'Delete samples',
-				callback: indexes => {
+				callback: (indexes) => {
 					group.items = group.items.filter((elem, index, array) => !(index in indexes))
 					self.showTable(group, x, y, addGroup)
-				}
+				},
 			}
 			buttons.push(deleteSamples)
 		}
@@ -432,7 +425,7 @@ export function setInteractivity(self) {
 			maxWidth: columns.length * '15' + 'vw',
 			maxHeight: '35vh',
 			buttons,
-			selectAll: true
+			selectAll: true,
 		})
 
 		self.dom.tip.show(x, y, false, false)
@@ -443,7 +436,7 @@ export function setInteractivity(self) {
 		}
 	}
 
-	self.showGroupMenu = function(event, group) {
+	self.showGroupMenu = function (event, group) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY, false, true)
 		const menuDiv = self.dom.tip.d.append('div')
@@ -474,7 +467,7 @@ export function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Edit ${group.items.length} samples`)
-			.on('click', e => {
+			.on('click', (e) => {
 				self.dom.tip.hide()
 				self.showTable(group, event.clientX, event.clientY, false)
 			})
@@ -483,7 +476,7 @@ export function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Delete group`)
-			.on('click', async e => {
+			.on('click', async (e) => {
 				await self.app.vocabApi.deleteGroup(group.name)
 				self.dom.tip.hide()
 			})
@@ -505,18 +498,18 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.renameGroup = async function(group, newName) {
-		const i = self.config.groups.findIndex(group => group.name == newName)
+	self.renameGroup = async function (group, newName) {
+		const i = self.config.groups.findIndex((group) => group.name == newName)
 		if (i != -1) alert(`Group named ${newName} already exists`)
 		else
 			await self.app.dispatch({
 				type: 'rename_group',
 				index: group.index,
-				newName
+				newName,
 			})
 	}
 
-	self.addCommonMenuItems = function(menuDiv, tw) {
+	self.addCommonMenuItems = function (menuDiv, tw) {
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
 		if (self.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', self.dom.tip, tw, self.id, this)
@@ -524,19 +517,13 @@ export function setInteractivity(self) {
 		if (self.state.supportedChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.dom.tip, tw, self.id, this)
 
-		const summarizeDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.html('Summarize')
-		summarizeDiv
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
+		const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
+		summarizeDiv.insert('div').html('›').style('float', 'right')
 
-		summarizeDiv.on('click', async e => {
+		summarizeDiv.on('click', async (e) => {
 			showTermsTree(
 				summarizeDiv,
-				term => {
+				(term) => {
 					openSummaryPlot(term, tw, self.app, self.id)
 				},
 				self.app,
@@ -545,7 +532,7 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.showGroupsMenu = function(event) {
+	self.showGroupsMenu = function (event) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY, false, true)
 		const menuDiv = self.dom.tip.d.append('div')
@@ -555,17 +542,10 @@ export function setInteractivity(self) {
 
 		for (const [i, group] of self.config.groups.entries()) {
 			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-			row
-				.insert('div')
-				.style('display', 'inline-block')
-				.text(` ${group.name}: ${group.items.length} `)
+			row.insert('div').style('display', 'inline-block').text(` ${group.name}: ${group.items.length} `)
 
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.style('float', 'right')
-				.html('&nbsp;&nbsp;›')
-			row.on('click', e => {
+			row.append('div').style('display', 'inline-block').style('float', 'right').html('&nbsp;&nbsp;›')
+			row.on('click', (e) => {
 				self.dom.tip.clear().hide()
 				self.showGroupMenu(event, group)
 			})
@@ -575,7 +555,7 @@ export function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Delete groups')
-			.on('click', async event => {
+			.on('click', async (event) => {
 				for (const group of self.config.groups) await self.app.vocabApi.deleteGroup(group.name)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: [] } })
 			})
