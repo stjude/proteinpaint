@@ -21,10 +21,12 @@ export default class CnvArcsMapper {
 	private gainCapped: number
 	private lossCapped: number
 	private maxAbsValue: number
-
-	private readonly rings
+	private cnvInnerRadius: number
+	private cnvWidth: number
 
 	constructor(
+		cnvInnerRadius: number,
+		cnvWidth: number,
 		settings: Settings,
 		sampleName: string,
 		reference: Reference,
@@ -32,8 +34,9 @@ export default class CnvArcsMapper {
 		cnvMinValue = 0,
 		cnvUnit = ''
 	) {
+		this.cnvInnerRadius = cnvInnerRadius
+		this.cnvWidth = cnvWidth
 		this.settings = settings
-		this.rings = this.settings.rings
 		this.sampleName = sampleName
 		this.reference = reference
 		this.cnvMaxValue = cnvMaxValue
@@ -44,7 +47,7 @@ export default class CnvArcsMapper {
 		this.lossOnly = cnvMaxValue <= 0
 		this.gainOnly = cnvMinValue >= 0
 
-		this.onePxArcAngle = 1 / this.rings.cnvInnerRadius
+		this.onePxArcAngle = 1 / this.cnvInnerRadius
 
 		const gain = new CnvLegend(
 			'Max',
@@ -140,51 +143,41 @@ export default class CnvArcsMapper {
 
 	private calculateInnerRadius(data: Data) {
 		if (this.gainOnly) {
-			return this.rings.cnvInnerRadius
+			return this.cnvInnerRadius
 		}
 
 		if (this.lossOnly) {
-			const outerRadius = this.rings.cnvInnerRadius + this.settings.rings.cnvWidth
-			return (
-				outerRadius - this.capMinValue((this.settings.rings.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
-			)
+			const outerRadius = this.cnvInnerRadius + this.cnvWidth
+			return outerRadius - this.capMinValue((this.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
 		}
 
-		const centerRadius = this.settings.rings.cnvInnerRadius + this.settings.rings.cnvWidth / 2
+		const centerRadius = this.cnvInnerRadius + this.cnvWidth / 2
 
 		if (Math.sign(data.value) == 1) {
 			return centerRadius
 		}
 
 		if (Math.sign(data.value) == -1) {
-			return (
-				centerRadius +
-				this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.settings.rings.cnvWidth / 2))
-			)
+			return centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.cnvWidth / 2))
 		}
 
 		return 1
 	}
 
 	private calculateOuterRadius(data: Data) {
-		const maxOuterRadius = this.rings.cnvInnerRadius + this.rings.cnvWidth
+		const maxOuterRadius = this.cnvInnerRadius + this.cnvWidth
 		if (this.gainOnly) {
-			return (
-				this.rings.cnvInnerRadius +
-				this.capMinValue((this.rings.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
-			)
+			return this.cnvInnerRadius + this.capMinValue((this.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
 		}
 
 		if (this.lossOnly) {
 			return maxOuterRadius
 		}
 
-		const centerRadius = this.rings.cnvInnerRadius + this.rings.cnvWidth / 2
+		const centerRadius = this.cnvInnerRadius + this.cnvWidth / 2
 
 		if (Math.sign(data.value) == 1) {
-			return (
-				centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.rings.cnvWidth / 2))
-			)
+			return centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.cnvWidth / 2))
 		}
 
 		if (Math.sign(data.value) == -1) {

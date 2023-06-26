@@ -5,36 +5,14 @@ export default function discoDefaults(overrides = {}): Settings {
 	return Object.assign(
 		{
 			rings: {
-				order: [
-					RingType.NONEXONICSNV,
-					RingType.SNV,
-					RingType.LOH,
-					RingType.CNV,
+				ringWidth: 20,
 
-					// RingType.FUSION,
-					// RingType.CHROMOSOME,
-					// RingType.LABEL
-				],
-
-				width: 20,
-
-				fusionRadius: 80,
-
-				cnvInnerRadius: 100,
-				cnvWidth: 20,
 				cnvCapping: 5,
 				cnvUnit: 'Cnv Unit',
 
-				lohInnerRadius: 120,
-				lohWidth: 20,
+				snvRingFilters: ['exonic'],
 
-				svnInnerRadius: 140,
-				svnWidth: 20,
-				snvRingFilter: 'exonic',
-
-				nonExonicInnerRadius: 160,
-				nonExonicWidht: 30,
-				nonExonicRingEnabled: false,
+				nonExonicRingEnabled: true,
 
 				chromosomeInnerRadius: 190,
 				chromosomeWidth: 20,
@@ -49,7 +27,8 @@ export default function discoDefaults(overrides = {}): Settings {
 
 				lohFilterValue: 10,
 
-				nonExonicFilterValue: 'non-exonic',
+				displayNonExonic: true,
+				nonExonicFilterValues: ['non-exonic'],
 			},
 
 			verticalPadding: 70,
