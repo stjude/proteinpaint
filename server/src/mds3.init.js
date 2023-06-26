@@ -17,7 +17,7 @@ const {
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
-	mclasscnvloss
+	mclasscnvloss,
 } = require('#shared/common')
 const { get_samples } = require('./termdb.sql')
 const { server_init_db_queries } = require('./termdb.server.init')
@@ -114,7 +114,7 @@ export function client_copy(ds) {
 */
 	const ds2_client = {
 		isMds3: true,
-		label: ds.label
+		label: ds.label,
 	}
 
 	copy_queries(ds, ds2_client)
@@ -127,7 +127,7 @@ export function client_copy(ds) {
 		// to query /termdb server route with standard methods
 		if (ds.cohort.termdb.allowCaseDetails) {
 			ds2_client.termdb.allowCaseDetails = {
-				sample_id_key: ds.cohort.termdb.allowCaseDetails.sample_id_key // optional key
+				sample_id_key: ds.cohort.termdb.allowCaseDetails.sample_id_key, // optional key
 			}
 		}
 	}
@@ -140,7 +140,7 @@ export function client_copy(ds) {
 			type_summary: v.type_summary,
 			type_sunburst: v.type_sunburst,
 			url: v.url,
-			variantkey: v.variantkey
+			variantkey: v.variantkey,
 		}
 	}
 	return ds2_client
@@ -267,7 +267,7 @@ export async function validate_termdb(ds) {
 			ds.sampleName2Id.set(r.name, r.id)
 		}
 
-		ds.getSampleIdMap = samples => {
+		ds.getSampleIdMap = (samples) => {
 			const bySampleId = {}
 			for (const sampleId in samples) {
 				bySampleId[sampleId] = ds.sampleId2Name.get(+sampleId)
@@ -388,7 +388,7 @@ async function call_barchart_data(twLst, q, combination, ds) {
 		if (tw.term.type == 'categorical') {
 			const _q = {
 				term1_id: tw.id,
-				term1_q: { type: 'values' }
+				term1_q: { type: 'values' },
 			}
 			if (q.tid2value) {
 				_q.filter = tid2value2filter(q.tid2value, ds)
@@ -417,7 +417,8 @@ function copy_queries(ds, dscopy) {
 
 	if (ds.queries.singleSampleMutation) {
 		copy.singleSampleMutation = {
-			sample_id_key: ds.queries.singleSampleMutation.sample_id_key
+			sample_id_key: ds.queries.singleSampleMutation.sample_id_key,
+			discoSkipChrM: ds.queries.singleSampleMutation.discoSkipChrM,
 		}
 	}
 
@@ -446,7 +447,7 @@ function copy_queries(ds, dscopy) {
 			forTrack: qs.forTrack,
 			vcfid4skewerName: qs.vcfid4skewerName,
 			variantUrl: qs.variantUrl,
-			skewerRim: qs.skewerRim
+			skewerRim: qs.skewerRim,
 		}
 
 		if (qs.m2csq) {
@@ -745,7 +746,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		.formatFilter{}
 			{ <formatKey> : set of hidden values }
 	*/
-	return async param => {
+	return async (param) => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 
@@ -769,15 +770,15 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			'-r',
 			// plus 1 to stop, as rglst pos is 0-based, and bcf is 1-based
 			param.rglst
-				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + (r.stop + 1))
+				.map((r) => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + (r.stop + 1))
 				.join(','),
 			'-f',
-			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n'
+			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n',
 		]
 
 		const limitSamples = await mayLimitSamples(param, q._tk.samples, ds)
 		if (limitSamples) {
-			bcfArgs.push('-s', limitSamples.map(i => i.name).join(','))
+			bcfArgs.push('-s', limitSamples.map((i) => i.name).join(','))
 		}
 		if (param.variantFilter) {
 			add_bcf_variant_filter(param.variantFilter, bcfArgs)
@@ -789,7 +790,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			isbcf: true,
 			args: bcfArgs,
 			dir: q._tk.dir,
-			callback: line => {
+			callback: (line) => {
 				const l = line.split('\t')
 				const id = l[0],
 					chr = l[1],
@@ -834,7 +835,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 					// acceptable variant
 					variants.push(m)
 				}
-			}
+			},
 		})
 		return variants
 	}
@@ -947,15 +948,15 @@ async function mayLimitSamples(param, allSamples, ds) {
 	}
 
 	// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-	const filterSamples = [...new Set((await get_samples(filter, ds)).map(i => i.id))]
+	const filterSamples = [...new Set((await get_samples(filter, ds)).map((i) => i.id))]
 
 	// filterSamples is the list of samples retrieved from termdb that are matching filter
 	// as allSamples (from bcf etc) may be a subset of what's in termdb
 	// must only use those from allSamples
-	const set = new Set(allSamples.map(i => i.name))
+	const set = new Set(allSamples.map((i) => i.name))
 	return filterSamples
-		.filter(i => set.has(i))
-		.map(i => {
+		.filter((i) => set.has(i))
+		.map((i) => {
 			return { name: i }
 		})
 }
@@ -981,7 +982,7 @@ function tid2value2filter(t, ds) {
 		type: 'tvslst',
 		in: true,
 		join: 'and',
-		lst: []
+		lst: [],
 	}
 	for (const k in t) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(k)
@@ -992,8 +993,8 @@ function tid2value2filter(t, ds) {
 			tvs: {
 				term,
 				// assuming only categorical
-				values: [{ key: v }]
-			}
+				values: [{ key: v }],
+			},
 		})
 	}
 	return f
@@ -1108,7 +1109,7 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 	}
 	// the sample harbor this variant; return valid sample obj
 	const sampleObj = {
-		sample_id: sampleHeaderObj.name
+		sample_id: sampleHeaderObj.name,
 	}
 	if (addFormatValues) {
 		// query asks to return format values (e.g. for sample table display)
@@ -1190,11 +1191,11 @@ async function validate_query_geneExpression(ds, genome) {
 		.stop=int
 	.filterObj{}
 	*/
-	q.get = async param => {
+	q.get = async (param) => {
 		let limitSamples
 		{
 			const lst = await mayLimitSamples(param, null, ds)
-			if (lst) limitSamples = new Set(lst.map(i => i.name))
+			if (lst) limitSamples = new Set(lst.map((i) => i.name))
 		}
 
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
@@ -1205,7 +1206,7 @@ async function validate_query_geneExpression(ds, genome) {
 			await utils.get_lines_bigfile({
 				args: [q.file, (q.nochr ? g.chr.replace('chr', '') : g.chr) + ':' + g.start + '-' + g.stop],
 				dir: q.dir,
-				callback: line => {
+				callback: (line) => {
 					const l = line.split('\t')
 					let j
 					try {
@@ -1217,7 +1218,7 @@ async function validate_query_geneExpression(ds, genome) {
 					if (j.gene != g.gene) return
 					if (limitSamples && !limitSamples.has(j.sample)) return
 					gene2sample2value.get(g.gene)[j.sample] = j.value
-				}
+				},
 			})
 		}
 		return gene2sample2value
@@ -1233,7 +1234,7 @@ async function validate_query_singleSampleMutation(ds, genome) {
 	} else if (q.folder) {
 		// using a folder to store text files for individual samples
 		// file names are integer sample id
-		q.get = async sampleName => {
+		q.get = async (sampleName) => {
 			/* as mds3 client may not be using integer sample id for now,
 			the argument is string id and has to be mapped to integer id
 			*/
@@ -1319,13 +1320,11 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 			chr,
 			chrLen,
 			xStart: wgScale * (bpCum - chrLen),
-			xStop: wgScale * bpCum
+			xStop: wgScale * bpCum,
 		})
 	}
 
-	const yScale = scaleLinear()
-		.domain([control.min, control.max])
-		.range([axisHeight, 0])
+	const yScale = scaleLinear().domain([control.min, control.max]).range([axisHeight, 0])
 
 	const canvasWidth = xpad * 2 + axisWidth + plotWidth
 	const canvasHeight = ypad * 2 + axisHeight
@@ -1340,7 +1339,7 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 	const rl = readline.createInterface({ input: fs.createReadStream(file) })
 
 	return new Promise((resolve, reject) => {
-		rl.on('line', line => {
+		rl.on('line', (line) => {
 			const tmp = line.split('\t')
 			const chr = tmp[0]
 			if (!chr) return
@@ -1364,7 +1363,7 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 				canvasWidth,
 				canvasHeight,
 				xoff: xpad + axisWidth,
-				chrLst
+				chrLst,
 			})
 		})
 	})
@@ -1431,7 +1430,7 @@ async function validate_query_singleSampleGbtk(ds, genome) {
 		if (q[key].folder) {
 			// using a folder to store text files for individual samples
 			// file names are integer sample id
-			q[key].get = async sampleName => {
+			q[key].get = async (sampleName) => {
 				// (quick fix) callback returns bedgraph file path for this sample
 
 				/* as mds3 client may not be using integer sample id for now,
@@ -1487,13 +1486,13 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		if (!lines[0]) throw 'header line missing from ' + q.file
 		const l = lines[0].split(' ')
 		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
-		q.samples = l.slice(1).map(i => {
+		q.samples = l.slice(1).map((i) => {
 			return { name: i }
 		})
 	}
 
 	// same parameter as snvindel.byrange.get()
-	return async param => {
+	return async (param) => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 
@@ -1502,7 +1501,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		let limitSamples
 		{
 			const lst = await mayLimitSamples(param, q.samples, ds)
-			if (lst) limitSamples = new Set(lst.map(i => i.name))
+			if (lst) limitSamples = new Set(lst.map((i) => i.name))
 		}
 
 		const key2variants = new Map()
@@ -1522,7 +1521,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 			await utils.get_lines_bigfile({
 				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 				dir: q.dir,
-				callback: line => {
+				callback: (line) => {
 					const l = line.split('\t')
 					const pos = Number(l[1])
 					let j
@@ -1571,8 +1570,8 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						pairlst = [
 							{
 								a: { chr: j.chrA, pos: j.posA, strand: j.strandA, name: j.geneA },
-								b: { chr: r.chr, pos, strand: j.strandB, name: j.geneB }
-							}
+								b: { chr: r.chr, pos, strand: j.strandB, name: j.geneB },
+							},
 						]
 					} else if (j.chrB) {
 						// chrB given, current chr:pos is on 5'
@@ -1583,13 +1582,13 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						pairlst = [
 							{
 								a: { chr: r.chr, pos, strand: j.strandA, name: j.geneA },
-								b: { chr: j.chrB, pos: j.posB, strand: j.strandB, name: j.geneB }
-							}
+								b: { chr: j.chrB, pos: j.posB, strand: j.strandB, name: j.geneB },
+							},
 						]
 					} else if (j.pairlst) {
 						// todo: support pairlst=[{chr,pos}, {chr,pos}, ...]
 						pairlst = j.pairlst
-						const idx = j.pairlst.findIndex(i => i.chr == chr && i.pos == pos)
+						const idx = j.pairlst.findIndex((i) => i.chr == chr && i.pos == pos)
 						if (idx == -1) throw 'current point missing from pairlst'
 						pairlstIdx = idx
 						// todo mname as joining names of rest of pairlst points
@@ -1638,11 +1637,11 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 							pairlstIdx,
 							mname,
 							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
-							samples: []
+							samples: [],
 						})
 					}
 					if (sampleObj) key2variants.get(ssm_id).samples.push(sampleObj)
-				}
+				},
 			})
 		}
 		return [...key2variants.values()]
@@ -1675,7 +1674,7 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		if (!lines[0]) throw 'header line missing from ' + q.file
 		const l = lines[0].split(' ')
 		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
-		q.samples = l.slice(1).map(i => {
+		q.samples = l.slice(1).map((i) => {
 			return { name: i }
 		})
 	}
@@ -1684,7 +1683,7 @@ export async function cnvByRangeGetter_file(ds, genome) {
 	cnvMaxLength: int
 	cnvMinAbsValue: float
 	*/
-	return async param => {
+	return async (param) => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
@@ -1696,7 +1695,7 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		let limitSamples
 		{
 			const lst = await mayLimitSamples(param, q.samples, ds)
-			if (lst) limitSamples = new Set(lst.map(i => i.name))
+			if (lst) limitSamples = new Set(lst.map((i) => i.name))
 		}
 
 		const cnvs = []
@@ -1706,7 +1705,7 @@ export async function cnvByRangeGetter_file(ds, genome) {
 				utils.get_lines_bigfile({
 					args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 					dir: q.dir,
-					callback: line => {
+					callback: (line) => {
 						const l = line.split('\t')
 						const start = Number(l[1]) // must always be numbers
 						const stop = Number(l[2])
@@ -1771,7 +1770,7 @@ export async function cnvByRangeGetter_file(ds, genome) {
 							j.samples = [sampleObj]
 						}
 						cnvs.push(j)
-					}
+					},
 				})
 			)
 		}
@@ -1901,7 +1900,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					pos: m.pos || (m.start ? m.start + '-' + m.stop : ''),
 					mname: m.mname,
 					_SAMPLEID_: s.sample_id,
-					_SAMPLENAME_: s.sample_id
+					_SAMPLENAME_: s.sample_id,
 				}
 
 				if ('value' in m) m2.value = m.value
@@ -1935,7 +1934,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 async function mayAddDataAvailability(q, ds, bySampleId, tname) {
 	if (!ds.assayAvailability?.byDt) return
 	// get samples passing filter if filter is in use
-	const sampleFilter = q.filter ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
+	const sampleFilter = q.filter ? new Set((await get_samples(q.filter, ds)).map((i) => i.id)) : null
 	for (const dtKey in ds.assayAvailability.byDt) {
 		const dt = ds.assayAvailability.byDt[dtKey]
 		if (dt.byOrigin) {
@@ -1954,10 +1953,10 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleFilter)
 		const sampleData = bySampleId.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 		if (origin) {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
+			if (!sampleData[tname].values.some((val) => val.dt == dtKey && val.origin == origin))
 				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'WT', _SAMPLEID_: sid, origin: origin })
 		} else {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey))
+			if (!sampleData[tname].values.some((val) => val.dt == dtKey))
 				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
 		}
 	}
@@ -1967,10 +1966,10 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleFilter)
 		const sampleData = bySampleId.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 		if (origin) {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
+			if (!sampleData[tname].values.some((val) => val.dt == dtKey && val.origin == origin))
 				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid, origin: origin })
 		} else {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey))
+			if (!sampleData[tname].values.some((val) => val.dt == dtKey))
 				sampleData[tname].values.push({ dt: Number.parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
 		}
 	}
@@ -1983,7 +1982,7 @@ async function mayMapGeneName2coord(term, genome) {
 	// may reuse code from route genelookup?deep=1
 	const lst = genome.genedb.getjsonbyname.all(term.name)
 	if (lst.length == 0) throw 'unknown gene name'
-	const tmp = lst.find(i => i.isdefault) || lst[0]
+	const tmp = lst.find((i) => i.isdefault) || lst[0]
 	const gm = JSON.parse(tmp.genemodel)
 	if (!gm.chr || !Number.isInteger(gm.start) || !Number.isInteger(gm.stop))
 		throw 'invalid chr/start/stop from returned gm'
@@ -1998,7 +1997,7 @@ async function mayMapGeneName2isoform(term, genome) {
 	const lst = genome.genedb.getjsonbyname.all(term.name)
 	if (lst.length == 0) return // no match, do not crash
 
-	const tmp = lst.find(i => i.isdefault) || lst[0]
+	const tmp = lst.find((i) => i.isdefault) || lst[0]
 	const gm = JSON.parse(tmp.genemodel)
 	if (!gm.isoform) throw 'isoform missing from returned gm'
 	term.isoform = gm.isoform
@@ -2009,7 +2008,7 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
-		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 	}
 
 	if (ds.queries.geneCnv) {
@@ -2040,7 +2039,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
-		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 	}
 	if (ds.queries.svfusion.byrange) {
 		await mayMapGeneName2coord(term, genome)
@@ -2060,7 +2059,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		cnvMaxLength: tw?.q?.cnvMaxLength,
 		cnvGainCutoff: tw?.q?.cnvGainCutoff,
-		cnvLossCutoff: tw?.q?.cnvLossCutoff
+		cnvLossCutoff: tw?.q?.cnvLossCutoff,
 	}
 	if (ds.queries.cnv.byrange) {
 		await mayMapGeneName2coord(tw.term, genome)
@@ -2072,7 +2071,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 }
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
-		filter0: q.filter0
+		filter0: q.filter0,
 	}
 
 	if (ds.queries.geneCnv.bygene) {

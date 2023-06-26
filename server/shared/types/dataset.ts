@@ -201,8 +201,8 @@ interface SvFusion {
 interface SingleSampleMutation extends GdcApi {
 	sample_id?: string
 	folder?: string
-	//For the GDC
 	sample_id_key?: string
+	discoSkipChrM?: boolean
 }
 
 interface ArgumentsEntry {

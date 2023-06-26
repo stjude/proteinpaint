@@ -478,6 +478,16 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 			genome: genomeObj,
 		}
 
+		if (termdbConfig.queries.singleSampleMutation.discoSkipChrM) {
+			// quick fix: exclude chrM from list of chromosomes
+			// assume the name of "chrM" but not chrMT. do case insensitive match
+			disco_arg.chromosomes = {}
+			for (const k in genomeObj.majorchr) {
+				if (k.toLowerCase() == 'chrm') continue
+				disco_arg.chromosomes[k] = genomeObj.majorchr[k]
+			}
+		}
+
 		const opts = {
 			holder: holder,
 			state: {
