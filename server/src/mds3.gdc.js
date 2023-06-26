@@ -978,7 +978,7 @@ examples of terms from termdb as below, note the dot-delimited value of term id
 }
 
 
-example of a case returned by api (/ssm_occurrences/ query)
+example of a case returned by GDC api (/ssm_occurrences/ query)
 
 case {
   primary_site: 'Hematopoietic and reticuloendothelial systems',
@@ -1017,16 +1017,22 @@ the flattening is done by splitting term id, and some hardcoded logic
 function flattenCaseByFields(sample, caseObj, term) {
 	const fields = term.id.split('.')
 
-	query(caseObj, 1)
 	/* start with caseObj as "current" root
 	i=1 as fields[0]='case', and caseObj is already the "case", so start from i=1
 	*/
+	query(caseObj, 1)
 
-	// done searching; if available, a new value is now assigned to sample[term.id]
-	// if value is a Set, convert to array
-	// hardcoded to use set to dedup values (e.g. chemo drug from multiple treatments)
+	/* done searching; if available, a new value is now assigned to sample[term.id]
+	if value is a Set, convert to array
+	hardcoded to use set to dedup values (e.g. chemo drug from multiple treatments)
+
+	*** quick fix!! ***
+	downstream mds3 code does not handle array value well.
+	return 1st value for those to work; later can change back when array values can be handled
+	*/
 	if (sample[term.id] instanceof Set) {
-		sample[term.id] = [...sample[term.id]]
+		//sample[term.id] = [...sample[term.id]]
+		sample[term.id] = [...sample[term.id]][0]
 	}
 
 	/* query()
@@ -1109,6 +1115,7 @@ q{}
 twLst[]
 	array of termwrapper objects, for sample-annotating terms (not geneVariant)
 	tw.id is appended to "&fields="
+	e.g. case.disease_type, case.diagnoses.primary_diagnosis
 	and to parse out as sample attributes
 
 ds{}
