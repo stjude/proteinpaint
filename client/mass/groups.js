@@ -467,7 +467,6 @@ export async function showTermsTree(
 	app,
 	tip,
 	state = { tree: { usecase: { detail: 'term' } } },
-	treeTip = tip2,
 	closeParent = true
 ) {
 	tip2.clear().showunderoffset(div.node())
@@ -478,7 +477,7 @@ export async function showTermsTree(
 		tree: {
 			click_term: (term) => {
 				callback(term)
-				treeTip.hide()
+				tip2.hide()
 				if (closeParent) tip.hide()
 			},
 		},
