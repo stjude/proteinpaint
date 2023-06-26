@@ -5,27 +5,35 @@ export default interface Settings {
 	horizontalPadding: number
 
 	rings: {
-		order: Array<RingType>
+		// ringWidth: 20,
+		//
+		// cnvCapping: 5,
+		// cnvUnit: 'Cnv Unit',
+		//
+		// snvRingFilters: ['exonic'],
+		//
+		// nonExonicRingEnabled: true,
+		//
+		// labelLinesInnerRadius: 210,
+		// labelsToLinesDistance: 30,
+		// labelsToLinesGap: 2,
+		//
+		// snvFilterValue: 1,
+		// fusionFilterValue: 2,
+		// cnvFilterValue: 4,
+		//
+		// lohFilterValue: 10,
+		//
+		// displayNonExonic: true,
+		// nonExonicFilterValues: ['non-exonic'],
 
-		width: number
+		ringWidth: number
 
-		fusionRadius: number
-
-		cnvInnerRadius: number
-
-		cnvWidth: number
 		cnvCapping: number
 		cnvUnit: string
 
-		lohWidth: number
-		lohInnerRadius: number
+		snvRingFilters: Array<string>
 
-		svnInnerRadius: number
-		svnWidth: number
-		snvRingFilter: string
-
-		nonExonicInnerRadius: number
-		nonExonicWidht: number
 		nonExonicRingEnabled: boolean
 
 		chromosomeWidth: number
@@ -39,7 +47,7 @@ export default interface Settings {
 		fusionFilterValue: number
 		cnvFilterValue: number
 		lohFilterValue: number
-		nonExonicFilterValue: string
+		nonExonicFilterValues: Array<string>
 	}
 	cnv: {
 		cappedAmpColor: string

@@ -55,7 +55,7 @@ export default class Disco {
 		discoRenderer.render(holder, viewModel)
 	}
 
-	getRingRenderers(settings: any, geneClickListener: (gene: string, mname: string) => void) {
+	getRingRenderers(settings: Settings, geneClickListener: (gene: string, mname: string) => void) {
 		const chromosomesRenderer = new ChromosomesRenderer(
 			settings.padAngle,
 			settings.rings.chromosomeInnerRadius,
@@ -63,7 +63,7 @@ export default class Disco {
 		)
 		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer()
-		const snvRenderer = new SnvRenderer(settings.rings.svnInnerRadius, settings.rings.svnWidth, geneClickListener)
+		const snvRenderer = new SnvRenderer(settings.rings.ringWidth, geneClickListener)
 		const cnvRenderer = new CnvRenderer(settings.menu.padding)
 		const lohRenderer = new LohRenderer()
 

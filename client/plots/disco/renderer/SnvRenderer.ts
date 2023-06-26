@@ -5,21 +5,21 @@ import FullArcRenderer from './FullArcRenderer'
 import MenuProvider from './MenuProvider'
 
 export default class SnvRenderer implements IRenderer {
-	private svnInnerRadius: number
 	private svnWidth: number
-	private fullArcRenderer: FullArcRenderer
+
 	private geneClickListener: (gene: string, mname: string) => void
 
-	constructor(svnInnerRadius: number, svnWidth: number, geneClickListener: (gene: string, mname: string) => void) {
-		this.svnInnerRadius = svnInnerRadius
+	constructor(svnWidth: number, geneClickListener: (gene: string, mname: string) => void) {
 		this.svnWidth = svnWidth
-		this.fullArcRenderer = new FullArcRenderer(this.svnInnerRadius, this.svnWidth, '#6464641A')
+
 		this.geneClickListener = geneClickListener
 	}
 
 	render(holder: any, elements: Array<SnvArc>) {
-		if (elements.length) {
-			this.fullArcRenderer.render(holder)
+		if (elements.length > 0) {
+			const svnInnerRadius = elements[0].innerRadius
+			const fullArcRenderer = new FullArcRenderer(svnInnerRadius, this.svnWidth, '#6464641A')
+			fullArcRenderer.render(holder)
 		}
 
 		const arcGenerator = d3.arc<SnvArc>()

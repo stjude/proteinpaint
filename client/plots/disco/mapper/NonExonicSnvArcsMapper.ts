@@ -5,22 +5,24 @@ import SnvArc from '#plots/disco/viewmodel/SnvArc'
 import Settings from '#plots/disco/viewmodel/Settings'
 
 export default class NonExonicSnvArcsMapper {
-	private settings: Settings
 	private sampleName: string
 	private reference: Reference
 	private onePxArcAngle: number
+	private nonExonicInnerRadius: number
+	private nonExonicWidht: number
 
-	constructor(settings: Settings, sampleName: string, reference: Reference) {
-		this.settings = settings
+	constructor(nonExonicInnerRadius: number, nonExonicWidht: number, sampleName: string, reference: Reference) {
+		this.nonExonicInnerRadius = nonExonicInnerRadius
+		this.nonExonicWidht = nonExonicWidht
 		this.sampleName = sampleName
 		this.reference = reference
 
-		this.onePxArcAngle = 1 / settings.rings.nonExonicInnerRadius
+		this.onePxArcAngle = 1 / nonExonicInnerRadius
 	}
 
 	map(arcData: Array<Data>): Array<SnvArc> {
-		const innerRadius = this.settings.rings.nonExonicInnerRadius
-		const outerRadius = innerRadius + this.settings.rings.nonExonicWidht
+		const innerRadius = this.nonExonicInnerRadius
+		const outerRadius = innerRadius + this.nonExonicWidht
 
 		const arcs: Array<SnvArc> = []
 

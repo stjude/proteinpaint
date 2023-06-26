@@ -7,23 +7,23 @@ import SnvLegendElement from '#plots/disco/viewmodel/SnvLegendElement'
 export default class SnvArcsMapper {
 	snvClassMap: Map<string, SnvLegendElement> = new Map()
 
-	private settings: any
 	private sampleName: string
 	private reference: Reference
 
 	private onePxArcAngle: number
 	private bpx: number
+	private svnInnerRadius: number
+	private svnWidth: number
 
-	constructor(settings: any, sampleName: string, reference: Reference) {
-		this.settings = settings
+	constructor(svnInnerRadius: number, svnWidth: number, sampleName: string, reference: Reference) {
+		this.svnInnerRadius = svnInnerRadius
+		this.svnWidth = svnWidth
 		this.sampleName = sampleName
 		this.reference = reference
 
 		// number of base pairs per pixel
-		this.bpx = Math.floor(
-			this.reference.totalSize / (this.reference.totalChromosomesAngle * settings.rings.svnInnerRadius)
-		)
-		this.onePxArcAngle = 1 / settings.rings.svnInnerRadius
+		this.bpx = Math.floor(this.reference.totalSize / (this.reference.totalChromosomesAngle * svnInnerRadius))
+		this.onePxArcAngle = 1 / svnInnerRadius
 	}
 
 	map(exonicSnvDataMap: Map<number, Array<Data>>): Array<SnvArc> {
@@ -50,8 +50,8 @@ export default class SnvArcsMapper {
 					const arc = new SnvArc(
 						startAngle,
 						endAngle,
-						this.settings.rings.svnInnerRadius + (i * this.settings.rings.svnWidth) / arraySize,
-						this.settings.rings.svnInnerRadius + ((i + 1) * this.settings.rings.svnWidth) / arraySize,
+						this.svnInnerRadius + (i * this.svnWidth) / arraySize,
+						this.svnInnerRadius + ((i + 1) * this.svnWidth) / arraySize,
 						mLabel.color,
 						data.gene,
 						mLabel.label,

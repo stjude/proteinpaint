@@ -17,15 +17,12 @@ import FusionMapper from '#plots/disco/mapper/FusionMapper.ts'
 import LohLegend from '#plots/disco/viewmodel/LohLegend.ts'
 import Data from '#plots/disco/mapper/Data.ts'
 import ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
-import { RingType } from '#plots/disco/viewmodel/RingType.ts'
 
 export default class ViewModelProvider {
 	private settings: Settings
 	private reference: Reference
 	private sampleName: string
 	private dataMapper: DataMapper
-
-	private currentInnerRadius: number
 
 	private nonExonicArcRing?: Ring<SnvArc> = undefined
 	private snvArcsMapper?: SnvArcsMapper
@@ -39,7 +36,6 @@ export default class ViewModelProvider {
 		this.dataMapper = dataMapper
 		this.reference = reference
 		this.sampleName = sampleName
-		this.currentInnerRadius = settings.rings.chromosomeInnerRadius
 	}
 
 	map(data: Array<Data>) {
@@ -57,13 +53,62 @@ export default class ViewModelProvider {
 			this.reference.chromosomes
 		)
 
-		const order = this.settings.rings.order
+		const nonExonicSnvArcsMapper = new NonExonicSnvArcsMapper(
+			this.dataMapper.nonExonicInnerRadius,
+			this.settings.rings.ringWidth,
+			this.sampleName,
+			this.reference
+		)
 
-		order.forEach((value: RingType, index: number, array: RingType[]) => {
-			this.createRing(value, index)
-		})
+		const nonExonicData = nonExonicSnvArcsMapper.map(this.dataMapper.nonExonicSnvData)
 
-		const fusionMapper = new FusionMapper(this.currentInnerRadius, this.sampleName, this.reference)
+		if (nonExonicData.length > 0) {
+			this.nonExonicArcRing = new Ring(
+				this.dataMapper.nonExonicInnerRadius,
+				this.settings.rings.ringWidth,
+				nonExonicData
+			)
+		}
+
+		this.snvArcsMapper = new SnvArcsMapper(
+			this.dataMapper.snvInnerRadius,
+			this.settings.rings.ringWidth,
+			this.sampleName,
+			this.reference
+		)
+		const snvData = this.snvArcsMapper.map(this.dataMapper.snvRingDataMap)
+		if (snvData.length > 0) {
+			this.snvArcRing = new Ring(this.dataMapper.snvInnerRadius, this.settings.rings.ringWidth, snvData)
+		}
+
+		const lohMapper = new LohArcMapper(
+			this.dataMapper.lohInnerRadius,
+			this.settings.rings.ringWidth,
+			this.sampleName,
+			this.reference
+		)
+		const lohData = lohMapper.map(this.dataMapper.lohData)
+		if (lohData.length > 0) {
+			this.lohArcRing = new Ring(this.dataMapper.lohInnerRadius, this.settings.rings.ringWidth, lohData)
+		}
+
+		this.cnvArcsMapper = new CnvArcsMapper(
+			this.dataMapper.cnvInnerRadius,
+			this.settings.rings.ringWidth,
+			this.settings,
+			this.sampleName,
+			this.reference,
+			this.dataMapper.cnvMaxValue,
+			this.dataMapper.cnvMinValue,
+			this.settings.cnv.unit
+		)
+
+		const cnvData = this.cnvArcsMapper.map(this.dataMapper.cnvData)
+		if (cnvData.length > 0) {
+			this.cnvArcRing = new Ring(this.dataMapper.cnvInnerRadius, this.settings.rings.ringWidth, cnvData)
+		}
+
+		const fusionMapper = new FusionMapper(this.dataMapper.fusionRadius, this.sampleName, this.reference)
 
 		const fusions = fusionMapper.map(this.dataMapper.fusionData)
 
@@ -94,64 +139,5 @@ export default class ViewModelProvider {
 		)
 
 		return new ViewModel(this.settings, rings, legend, fusions)
-	}
-
-	createRing(value: RingType, index: number) {
-		if (value == RingType.NONEXONICSNV) {
-			const nonExonicSnvArcsMapper = new NonExonicSnvArcsMapper(this.settings, this.sampleName, this.reference)
-
-			const data = nonExonicSnvArcsMapper.map(this.dataMapper.nonExonicSnvData)
-
-			if (data.length > 0) {
-				this.decreaseCurrentInnerRadius()
-				this.nonExonicArcRing = new Ring(this.currentInnerRadius, this.settings.rings.width, data)
-
-				return
-			}
-		}
-
-		if (value == RingType.SNV) {
-			this.snvArcsMapper = new SnvArcsMapper(this.settings, this.sampleName, this.reference)
-			const data = this.snvArcsMapper.map(this.dataMapper.snvRingDataMap)
-			if (data.length > 0) {
-				this.decreaseCurrentInnerRadius()
-				this.snvArcRing = new Ring(this.currentInnerRadius, this.settings.rings.width, data)
-			}
-
-			return
-		}
-
-		if (value == RingType.LOH) {
-			const lohMapper = new LohArcMapper(this.settings, this.sampleName, this.reference)
-			const data = lohMapper.map(this.dataMapper.lohData)
-			if (data.length > 0) {
-				this.decreaseCurrentInnerRadius()
-				this.lohArcRing = new Ring(this.currentInnerRadius, this.settings.rings.width, data)
-			}
-			return
-		}
-
-		if (value == RingType.CNV) {
-			this.cnvArcsMapper = new CnvArcsMapper(
-				this.settings,
-				this.sampleName,
-				this.reference,
-				this.dataMapper.cnvMaxValue,
-				this.dataMapper.cnvMinValue,
-				this.settings.cnv.unit
-			)
-
-			const data = this.cnvArcsMapper.map(this.dataMapper.cnvData)
-			if (data.length > 0) {
-				this.decreaseCurrentInnerRadius()
-				this.cnvArcRing = new Ring(this.currentInnerRadius, this.settings.rings.width, data)
-			}
-
-			return
-		}
-	}
-
-	private decreaseCurrentInnerRadius() {
-		this.currentInnerRadius = this.currentInnerRadius - 2 * this.settings.rings.width
 	}
 }
