@@ -4,7 +4,7 @@ import { Menu } from '#dom/menu'
 export function addDynamicScatterForm(tip, app) {
 	const tip2 = new Menu({ padding: '5px', offsetX: 30, offsetY: -20 })
 	const coordsDiv = tip.d.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-	coordsDiv.append('div').html('Select terms to build a new plot').style('font-size', '0.8rem')
+	coordsDiv.append('div').html('Select terms to build a new plot').style('font-size', '0.7rem')
 	let xterm, yterm
 	const xDiv = coordsDiv.append('div').style('padding-top', '5px').html('&nbsp;X&nbsp;&nbsp;')
 	const xtermDiv = xDiv
@@ -44,18 +44,19 @@ export function addDynamicScatterForm(tip, app) {
 
 	function getTreeTerm(div, callback) {
 		const state = { tree: { usecase: { detail: 'term', target: 'sampleScatter' } } }
+		//state.nav = {header_mode: 'hide_search'}
 
 		showTermsTree(
 			div,
 			(term) => {
 				callback(term)
+				tip2.hide()
 				div.selectAll('*').remove()
 				div.text(term.name)
 			},
 			app,
 			tip,
 			state,
-			tip2,
 			false
 		)
 	}
