@@ -113,7 +113,10 @@ function getImportedSpecs(targetFile, format = '') {
 	if (!format) return importedSpecs
 	else if (format == 'array') {
 		if (!importedSpecs) return []
-		const specs = importedSpecs.split('\n').map(line => line.split(' ')[1].slice(1, -1))
+		const specs = importedSpecs
+			.split('\n')
+			.filter(line => line != '')
+			.map(line => line.split(' ')[1].slice(1, -1))
 		return specs
 	} else {
 		throw `unsupported format='${format}'`
