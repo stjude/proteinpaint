@@ -428,7 +428,7 @@ export function validate_query_geneCnv(ds) {
 
 				if (opts.twLst) {
 					for (const tw of opts.twLst) {
-						flattenCaseByFields(sample, h.case, tw.term)
+						flattenCaseByFields(sample, h.case, tw)
 					}
 				}
 
@@ -551,7 +551,7 @@ export function validate_query_geneCnv2(ds) {
 
 			if (opts.twLst) {
 				for (const tw of opts.twLst) {
-					flattenCaseByFields(sample, hit.case, tw.term)
+					flattenCaseByFields(sample, hit.case, tw)
 				}
 			}
 
@@ -1014,8 +1014,8 @@ this function "flattens" case{} to make the sample obj for easier use later
 
 the flattening is done by splitting term id, and some hardcoded logic
 */
-function flattenCaseByFields(sample, caseObj, term) {
-	const fields = term.id.split('.')
+function flattenCaseByFields(sample, caseObj, tw) {
+	const fields = tw.term.id.split('.')
 
 	/* start with caseObj as "current" root
 	i=1 as fields[0]='case', and caseObj is already the "case", so start from i=1
@@ -1030,12 +1030,24 @@ function flattenCaseByFields(sample, caseObj, term) {
 	downstream mds3 code does not handle array value well.
 	return 1st value for those to work; later can change back when array values can be handled
 	*/
-	if (sample[term.id] instanceof Set) {
+	if (sample[tw.term.id] instanceof Set) {
 		//sample[term.id] = [...sample[term.id]]
-		sample[term.id] = [...sample[term.id]][0]
+		sample[tw.term.id] = [...sample[tw.term.id]][0]
 	}
 
-	/* query()
+	if (tw.term.id in sample) {
+		// a valid value is set, if tw.q defines binning or groupsetting, convert the value
+		if (tw.term.type == 'categorical') {
+			const v = mayApplyGroupsetting(sample[tw.term.id], tw)
+			if (v) sample[tw.term.id] = v
+		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
+			const v = mayApplyBinning(sample[tw.term.id], tw)
+			if (v) sample[tw.term.id] = v
+		}
+	}
+
+	/* helper function query()
+
 	e.g. "case.AA.BB.CC"
 	begin with query( case{}, 1 )
 		--> found case.AA{}
@@ -1059,10 +1071,10 @@ function flattenCaseByFields(sample, caseObj, term) {
 		const field = fields[i]
 		if (i == fields.length - 1) {
 			// i is at the end of fields[], sample attr key is term.id
-			if (sample[term.id]) {
-				sample[term.id].add(current[field])
+			if (sample[tw.term.id]) {
+				sample[tw.term.id].add(current[field])
 			} else {
-				sample[term.id] = current[field]
+				sample[tw.term.id] = current[field]
 			}
 			return
 		}
@@ -1074,7 +1086,7 @@ function flattenCaseByFields(sample, caseObj, term) {
 		}
 		if (Array.isArray(next)) {
 			// next is array, initiate set to collect values from all array elements
-			sample[term.id] = new Set()
+			sample[tw.term.id] = new Set()
 			// recurse through each array element
 			for (const n of next) {
 				query(n, i + 1)
@@ -1084,6 +1096,36 @@ function flattenCaseByFields(sample, caseObj, term) {
 		// advance i and recurse
 		query(next, i + 1)
 	}
+}
+
+function mayApplyGroupsetting(v, tw) {
+	if (tw.q?.type == 'custom-groupset' && Array.isArray(tw.q?.groupsetting?.customset?.groups)) {
+		for (const group of tw.q.groupsetting.customset.groups) {
+			if (!Array.isArray(group.values)) throw 'group.values[] not array from tw.q.groupsetting.customset.groups'
+			if (group.values.findIndex((i) => i.key == v) != -1) {
+				// value "v" is in this group
+				return group.name
+			}
+		}
+		// not matching with a group
+	}
+	if (
+		tw.q?.type == 'predefined-groupset' &&
+		Number.isInteger(tw.q.groupsetting?.predefined_groupset_idx) &&
+		tw.term.groupsetting?.lst[tw.q.groupsetting.predefined_groupset_idx]
+	) {
+		for (const group of tw.term.groupsetting.lst[tw.q.groupsetting.predefined_groupset_idx]) {
+			if (!Array.isArray(group.values)) throw 'group.values[] not array from tw.term.groupsetting.lst[]'
+			if (group.values.findIndex((i) => i.key == v) != -1) {
+				// value "v" is in this group
+				return group.name
+			}
+		}
+	}
+}
+
+function mayApplyBinning(v, tw) {
+	throw 'fill in method'
 }
 
 function prepTwLst(lst) {
@@ -1203,7 +1245,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	const dictTwLst = []
 	for (const tw of twLst) {
 		const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-		if (t) dictTwLst.push({ term: t })
+		if (t) dictTwLst.push({ term: t, q: tw.q })
 	}
 
 	const fields = twLst.map((tw) => tw.term.id)
@@ -1309,7 +1351,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		}
 
 		for (const tw of dictTwLst) {
-			flattenCaseByFields(sample, s.case, tw.term)
+			flattenCaseByFields(sample, s.case, tw)
 		}
 
 		/////////////////// hardcoded logic to add read depth using .observation
