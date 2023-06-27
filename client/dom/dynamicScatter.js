@@ -24,11 +24,12 @@ export function addDynamicScatterForm(tip, app) {
 			getTreeTerm(ytermDiv, (term) => (yterm = term))
 		})
 
-	coordsDiv
+	const submitbt = coordsDiv
 		.append('div')
 		.insert('button')
 		.style('margin-left', '100px')
 		.text('Submit')
+		.property('disabled', true)
 		.on('click', () => {
 			app.dispatch({
 				type: 'plot_create',
@@ -53,6 +54,7 @@ export function addDynamicScatterForm(tip, app) {
 				tip2.hide()
 				div.selectAll('*').remove()
 				div.text(term.name)
+				if (xterm != null && yterm != null) submitbt.property('disabled', false)
 			},
 			app,
 			tip,
