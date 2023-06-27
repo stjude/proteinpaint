@@ -2,7 +2,7 @@ import Rings from './Rings'
 import Legend from './Legend'
 import { RingType } from './RingType'
 import Arc from './Arc'
-import Settings from './Settings'
+import Settings from '../Settings.ts'
 import Fusion from './Fusion'
 
 export default class ViewModel {

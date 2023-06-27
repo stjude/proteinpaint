@@ -3,7 +3,7 @@ import Reference from './Reference'
 import CnvArc from '#plots/disco/viewmodel/CnvArc'
 import CnvLegend from '#plots/disco/viewmodel/CnvLegend'
 import { CnvType } from '#plots/disco/viewmodel/CnvType'
-import Settings from '#plots/disco/viewmodel/Settings'
+import Settings from '#plots/disco/Settings.ts'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()

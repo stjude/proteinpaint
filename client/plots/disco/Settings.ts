@@ -5,28 +5,6 @@ export default interface Settings {
 	horizontalPadding: number
 
 	rings: {
-		// ringWidth: 20,
-		//
-		// cnvCapping: 5,
-		// cnvUnit: 'Cnv Unit',
-		//
-		// snvRingFilters: ['exonic'],
-		//
-		// nonExonicRingEnabled: true,
-		//
-		// labelLinesInnerRadius: 210,
-		// labelsToLinesDistance: 30,
-		// labelsToLinesGap: 2,
-		//
-		// snvFilterValue: 1,
-		// fusionFilterValue: 2,
-		// cnvFilterValue: 4,
-		//
-		// lohFilterValue: 10,
-		//
-		// displayNonExonic: true,
-		// nonExonicFilterValues: ['non-exonic'],
-
 		ringWidth: number
 
 		cnvCapping: number
