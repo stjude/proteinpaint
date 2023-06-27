@@ -1125,7 +1125,7 @@ function mayApplyGroupsetting(v, tw) {
 }
 
 function mayApplyBinning(v, tw) {
-	throw 'fill in method'
+	//TODO fill in method
 }
 
 function prepTwLst(lst) {
