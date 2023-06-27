@@ -257,7 +257,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
 		const tw = twByTermId[term_id]
-		samples[sample][term_id] = { key, value }
+		samples[sample][term_id] = { key, value: key }
 	}
 
 	return { samples, refs }
@@ -307,7 +307,6 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		}
 		for (const tw of termWrappers) {
 			const v = s[tw.term.id]
-
 			////////////////////////////
 			// somehow value can be undefined! must skip them
 			////////////////////////////
@@ -317,7 +316,6 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 				// "v" can be array
 				// e.g. "age of diagnosis"
 				////////////////////////////
-
 				s2[tw.term.id] = {
 					key: v[0],
 					value: v[0],
