@@ -1,7 +1,7 @@
 import Data from './Data'
 import Reference from './Reference'
 import DataObjectMapper from './DataObjectMapper'
-import Settings from '#plots/disco/viewmodel/Settings'
+import Settings from '#plots/disco/Settings.ts'
 import { ViewModelMapper } from '#plots/disco/mapper/ViewModelMapper'
 
 export default class DataMapper {
@@ -90,9 +90,13 @@ export default class DataMapper {
 
 		const sortedData = dataArray.sort(this.compareData)
 
-		sortedData.forEach((data) => {
-			this.filterNonExonicSnvData(data)
-		})
+		console.log('this.settings.rings.nonExonicRingEnabled', this.settings.rings.nonExonicRingEnabled)
+
+		if (this.settings.rings.nonExonicRingEnabled) {
+			sortedData.forEach((data) => {
+				this.filterNonExonicSnvData(data)
+			})
+		}
 
 		if (this.nonExonicSnvData.length > 0) {
 			this.nonExonicInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth

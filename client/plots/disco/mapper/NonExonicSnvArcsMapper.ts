@@ -2,7 +2,7 @@ import Reference from './Reference'
 import Data from './Data'
 import MLabel from './MLabel'
 import SnvArc from '#plots/disco/viewmodel/SnvArc'
-import Settings from '#plots/disco/viewmodel/Settings'
+import Settings from '#plots/disco/Settings.ts'
 
 export default class NonExonicSnvArcsMapper {
 	private sampleName: string

@@ -1,7 +1,7 @@
 import Ring from './Ring'
 import Label from './Label'
 import LabelFactory from '#plots/disco/viewmodel/LabelFactory'
-import Settings from './Settings'
+import Settings from '../Settings.ts'
 
 export default class Labels<T extends Label> extends Ring<Label> {
 	collisions?: Array<Label>

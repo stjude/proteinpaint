@@ -7,6 +7,7 @@ import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { dofetch3 } from '#common/dofetch'
+
 const d3s = require('d3-selection')
 
 /*
@@ -238,11 +239,11 @@ async function make_singleSampleTable(s, arg) {
 	}
 
 	/* quick fix for accessing details of a single case
-	if (arg.tk.mds.termdb && arg.tk.mds.termdb.allowCaseDetails) {
-		// has one single case
-		arg.div.append('div').text('Case details')
-	}
-	*/
+    if (arg.tk.mds.termdb && arg.tk.mds.termdb.allowCaseDetails) {
+        // has one single case
+        arg.div.append('div').text('Case details')
+    }
+    */
 }
 
 function printSampleName(sample, tk, div, block) {
@@ -480,10 +481,12 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 
 		const opts = {
 			holder: holder,
+
 			state: {
 				genome: genomeObj.name,
 				dslabel: dslabel,
 				args: disco_arg,
+
 				plots: [
 					{
 						chartType: 'Disco',
@@ -535,11 +538,11 @@ export async function plotDiscoOld(termdbConfig, dslabel, sample, holder, genome
 }
 
 /***********************************************
-converts list of samples into inputs for renderTable()
+ converts list of samples into inputs for renderTable()
 
-samples with multiple variants must have been grouped to the same sample obj
+ samples with multiple variants must have been grouped to the same sample obj
 
-*/
+ */
 export async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
 	const has_caseAccess = samples.some((i) => 'caseIsOpenAccess' in i),

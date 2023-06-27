@@ -1,8 +1,8 @@
 import ViewModel from '#plots/disco/viewmodel/ViewModel'
-import discoDefaults from '#plots/disco/viewmodel/defaults'
+import discoDefaults from '#plots/disco/defaults.ts'
 import Reference from './Reference'
 import DataMapper from './DataMapper'
-import Settings from '#plots/disco/viewmodel/Settings'
+import Settings from '#plots/disco/Settings.ts'
 import Data from './Data'
 import ViewModelProvider from '#plots/disco/mapper/ViewModelProvider.ts'
 
@@ -46,7 +46,7 @@ export class ViewModelMapper {
 	private settings: Settings
 
 	constructor(settings: Settings) {
-		this.settings = discoDefaults(settings)
+		this.settings = settings
 	}
 
 	map(opts: any): ViewModel {
