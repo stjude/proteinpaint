@@ -1153,6 +1153,8 @@ q{}
 	.tid2value={}
 	.hiddenmclass = set
 	.rglst[]
+	.filterObj
+	.filter0
 
 twLst[]
 	array of termwrapper objects, for sample-annotating terms (not geneVariant)
@@ -1926,6 +1928,8 @@ const isoform2ssm_query2_getcase = {
 		.rglst=[]
 		.set_id=str
 		.tid2value={}
+		.filter0
+		.filterObj
 		*/
 		const f = { op: 'and', content: [] }
 		if (p.ssm_id_lst) {
