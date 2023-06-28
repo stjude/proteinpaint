@@ -35,7 +35,7 @@ export function setInteractivity(self) {
 			if (shrink)
 				self.dom.tooltip.d
 					.append('div')
-					.html(`<b> ${overlapSamples.length} ${overlapSamples.length == 1 ? 'sample' : 'samples'}</b>`)
+					.html(` ${overlapSamples.length} ${overlapSamples.length == 1 ? 'sample' : 'samples'}`)
 
 			for (const [i, d] of samples.entries()) {
 				if (i > 5) break
@@ -47,8 +47,8 @@ export function setInteractivity(self) {
 					if (d.sample == s2.sample) {
 						let title = ''
 						for (const os of overlapSamples) title += os.sample + ' '
-						row.append('td').attr('colspan', 2).html(`<b>${title}</b>`)
-					} else row.append('td').attr('colspan', 2).html(`<b>${d.sample}</b>`)
+						row.append('td').attr('colspan', 2).html(`${title}`)
+					} else row.append('td').attr('colspan', 2).html(`${d.sample}`)
 				}
 
 				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
@@ -65,7 +65,7 @@ export function setInteractivity(self) {
 			}
 			if (samples.length > 5) self.dom.tooltip.d.append('div').html(`<b>...(${samples.length - 5} more)</b>`)
 
-			self.dom.tooltip.show(event.clientX, event.clientY, true, false)
+			self.dom.tooltip.show(event.clientX, event.clientY, true, true)
 		} else self.dom.tooltip.hide()
 
 		function addCategoryInfo(term, category, d, table) {
