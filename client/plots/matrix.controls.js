@@ -620,7 +620,7 @@ export class MatrixControls {
 
 	addGeneSearch(event, app, parent, tr) {
 		const tg = parent.config.termgroups
-
+		parent.selectedGroup = 0
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene set')
 		const td = tr.append('td')
 		if (tg.length > 1) {
@@ -636,12 +636,14 @@ export class MatrixControls {
 				.attr('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
 				.attr('value', (d, i) => i)
 				.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
+			parent.selectedGroup = parseInt(select.node().value)
 		}
 
 		td.append('button')
 			.text('Edit')
 			.on('click', () => {
 				const group = parent.config.termgroups[parent.selectedGroup]
+
 				app.tip.clear().hide()
 
 				const callback = geneset => {
@@ -680,9 +682,10 @@ export class MatrixControls {
 					genome: app.opts.genome,
 					geneList,
 					callback,
-					vocabApi: this.opts.app.vocabApi
+					vocabApi: this.opts.app.vocabApi,
 					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
 					//mode: 'expression',
+					name: group.name
 				})
 			})
 	}

@@ -2,7 +2,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
-export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], vocabApi }) {
+export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], vocabApi, name = null }) {
 	const api = {
 		dom: {
 			tdbBtns: {}
@@ -24,10 +24,8 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 	}
 	const tip2 = new Menu({ padding: '0px' })
 
-	const div = menu.d
-		.append('div')
-		.style('width', '850px')
-		.style('padding', '5px')
+	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')
+	if (name) div.append('div').style('padding', '5px').append('span').style('color', '#aaa').text(name)
 
 	api.dom.holder = div
 
@@ -164,7 +162,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 			.style('margin-left', '5px')
 			.text(gene => gene.name)
 			.on('click', deleteGene)
-			.on('mouseover', function(event) {
+			.on('mouseover', function (event) {
 				const div = select(this)
 				div
 					.append('div')
@@ -182,10 +180,8 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 				</svg>`
 					)
 			})
-			.on('mouseout', function(event) {
-				select(this)
-					.select('.sjpp_deletebt')
-					.remove()
+			.on('mouseout', function (event) {
+				select(this).select('.sjpp_deletebt').remove()
 			})
 
 		api.dom.submitBtn.property('disabled', !geneList.length)
@@ -209,21 +205,11 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 	function addParameter(param) {
 		let input
 		if (param.type == 'boolean') {
-			input = rightDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('id', param.id)
+			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
 			if (param.value) input.property('checked', param.value)
-			rightDiv
-				.append('label')
-				.html(param.label)
-				.attr('for', param.id)
+			rightDiv.append('label').html(param.label).attr('for', param.id)
 		} else if (param.type == 'number') {
-			input = rightDiv
-				.append('input')
-				.attr('type', 'number')
-				.style('width', '40px')
-				.attr('id', param.id)
+			input = rightDiv.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
 			if (param.value) input.attr('value', param.value)
 			rightDiv.append('span').html(param.label)
 		}
