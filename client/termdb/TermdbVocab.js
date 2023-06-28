@@ -13,8 +13,8 @@ export class TermdbVocab extends Vocab {
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
 				gettermdbconfig: 1,
-				embedder: window.location.hostname,
-			},
+				embedder: window.location.hostname
+			}
 		})
 
 		if (data.error) throw data.error
@@ -27,7 +27,7 @@ export class TermdbVocab extends Vocab {
 	async getTermChildren(term, cohortValuelst) {
 		const body = {
 			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel,
+			dslabel: this.vocab.dslabel
 		}
 		if (term.__tree_isroot) {
 			body.default_rootterm = 1
@@ -269,7 +269,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			regressionType: opts.regressionType,
 			outcome,
-			independent: opts.independent.map((t) => {
+			independent: opts.independent.map(t => {
 				const q = JSON.parse(JSON.stringify(t.q))
 				delete q.values
 				delete q.totalCount
@@ -285,9 +285,9 @@ export class TermdbVocab extends Vocab {
 					type: t.term.type,
 					refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
 					interactions: t.interactions || [],
-					values: t.term.values,
+					values: t.term.values
 				}
-			}),
+			})
 		}
 
 		const filterData = getNormalRoot(opts.filter)
@@ -302,7 +302,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			findterm: encodeURIComponent(str),
-			cohortStr: cohortStr,
+			cohortStr: cohortStr
 		}
 		if (usecase) body.usecase = usecase
 		if (this.state.treeFilter) body.treeFilter = this.state.treeFilter
@@ -327,7 +327,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			getcohortsamplecount: 1,
-			cohort,
+			cohort
 		}
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw 'missing data'
@@ -347,7 +347,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			getsamplecount: getSampleLst || 'count',
-			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON),
+			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON)
 		}
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
@@ -412,7 +412,7 @@ export class TermdbVocab extends Vocab {
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
 				maxThickness: 150,
-				screenThickness: arg.screenThickness,
+				screenThickness: arg.screenThickness
 			},
 			arg,
 			_body
@@ -426,13 +426,13 @@ export class TermdbVocab extends Vocab {
 
 	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
-		if (percentile_lst.find((p) => !Number.isInteger(p))) throw 'non-integer percentiles found'
+		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'
 		if (Math.max(...percentile_lst) > 99 || Math.min(...percentile_lst) < 1) throw 'percentiles must be between 1-99'
 		const body = {
 			getpercentile: percentile_lst,
 			tid: term_id,
 			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel,
+			dslabel: this.vocab.dslabel
 		}
 		if (filter) {
 			body.filter = getNormalRoot(filter)
@@ -448,7 +448,7 @@ export class TermdbVocab extends Vocab {
 			tid: term_id,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
-			settings,
+			settings
 		}
 		if (filter) {
 			body.filter = getNormalRoot(filter)
@@ -496,7 +496,7 @@ export class TermdbVocab extends Vocab {
 					validateSnps: 1,
 					sumSamples: 1,
 					genome: this.state.vocab.genome,
-					dslabel: this.state.vocab.dslabel,
+					dslabel: this.state.vocab.dslabel
 				},
 				_body
 			)
@@ -514,7 +514,7 @@ export class TermdbVocab extends Vocab {
 				l2.push({
 					key,
 					label: term?.values?.[key]?.label || key,
-					samplecount: term.category2samplecount[key],
+					samplecount: term.category2samplecount[key]
 				})
 			}
 			return { lst: l2 }
@@ -526,7 +526,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			tid: term.type == 'geneVariant' ? term.name : term.id,
-			..._body,
+			..._body
 		}
 		if (term.type == 'geneVariant') {
 			body.type = 'geneVariant'
@@ -551,7 +551,7 @@ export class TermdbVocab extends Vocab {
 			getnumericcategories: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
-			tid: term.id,
+			tid: term.id
 		}
 		if (filter) {
 			body.filter = getNormalRoot(filter)
@@ -585,7 +585,7 @@ export class TermdbVocab extends Vocab {
 	async get_variantFilter() {
 		// used for snplocus term type
 		return await dofetch3('termdb', {
-			body: { getvariantfilter: 1, genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel },
+			body: { getvariantfilter: 1, genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel }
 		})
 	}
 
@@ -658,8 +658,8 @@ export class TermdbVocab extends Vocab {
         NOTE: sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
         */
 		const currentGeneNames = opts.terms
-			.filter((tw) => tw.term.type === 'geneVariant')
-			.map((tw) => tw.term.name)
+			.filter(tw => tw.term.type === 'geneVariant')
+			.map(tw => tw.term.name)
 			.sort()
 
 		let numResponses = 0
@@ -678,8 +678,8 @@ export class TermdbVocab extends Vocab {
 					// one request per term
 					terms: [copy],
 					filter,
-					embedder: window.location.hostname,
-				},
+					embedder: window.location.hostname
+				}
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 
@@ -687,7 +687,7 @@ export class TermdbVocab extends Vocab {
 			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)
 				init.body.currentGeneNames = currentGeneNames
 			promises.push(
-				dofetch3('termdb', init).then((data) => {
+				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
 					const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 
@@ -735,7 +735,7 @@ export class TermdbVocab extends Vocab {
 		}
 		try {
 			opts.loadingDiv?.html(`Processing data ...`)
-			const dictTerm$ids = opts.terms.filter((tw) => !nonDictionaryTermTypes.has(tw.term.type)).map((tw) => tw.$id)
+			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
 			// const lst = Object.values(samples)
 
 			// NOTE: Reactivated so that filtering works as expectd for pnet, mbmeta, etc
@@ -762,8 +762,8 @@ export class TermdbVocab extends Vocab {
 
 			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
 			const data = {
-				lst: lst.filter((row) => samplesToShow.has(row.sample) && sampleFilter.test(row.sample)),
-				refs,
+				lst: lst.filter(row => samplesToShow.has(row.sample) && sampleFilter.test(row.sample)),
+				refs
 			}
 			data.samples = data.lst.reduce((obj, row) => {
 				obj[row.sample] = row
@@ -807,8 +807,8 @@ export class TermdbVocab extends Vocab {
 				for: 'termTypes',
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
-				ids: JSON.stringify(ids),
-			},
+				ids: JSON.stringify(ids)
+			}
 		}
 		const data = await dofetch3('termdb', init, this.opts.fetchOpts)
 		if (data.error) throw data.error
@@ -821,7 +821,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			ldtkname: tkname,
-			m: { chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt },
+			m: { chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt }
 		}
 		return await dofetch3('termdb', { body })
 	}
@@ -840,7 +840,7 @@ export class TermdbVocab extends Vocab {
 			plotName: opts.name,
 			coordTWs: opts.coordTWs,
 			filter: getNormalRoot(opts.filter),
-			embedder: window.location.hostname,
+			embedder: window.location.hostname
 		}
 		if (opts.colorTW) body.colorTW = opts.colorTW
 		if (opts.shapeTW) body.shapeTW = opts.shapeTW
@@ -860,7 +860,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			getLowessCurve: 1,
-			coords: opts.coords,
+			coords: opts.coords
 		}
 
 		return await dofetch3('termdb', { headers, body })
@@ -870,7 +870,7 @@ export class TermdbVocab extends Vocab {
 		const body = {
 			getCohortsData: 1,
 			genome: this.state.vocab.genome,
-			dslabel: this.state.vocab.dslabel,
+			dslabel: this.state.vocab.dslabel
 		}
 		return await dofetch3('termdb', { body })
 	}
@@ -880,8 +880,8 @@ export class TermdbVocab extends Vocab {
 			body: {
 				for: 'mds3queryDetails',
 				genome: this.state.vocab.genome,
-				dslabel: this.state.vocab.dslabel,
-			},
+				dslabel: this.state.vocab.dslabel
+			}
 		})
 	}
 
@@ -892,13 +892,12 @@ export class TermdbVocab extends Vocab {
 				for: 'matrix',
 				getPlotDataByName: name,
 				genome: this.state.vocab.genome,
-				dslabel: this.state.vocab.dslabel,
-			},
+				dslabel: this.state.vocab.dslabel
+			}
 		})
 	}
 
 	async getTopMutatedGenes(arg) {
-		console.log(arg)
 		return await dofetch3('gdc_filter2topGenes', { method: 'GET', body: arg })
 	}
 }
