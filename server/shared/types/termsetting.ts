@@ -121,6 +121,7 @@ export interface TermSettingOpts extends BaseTermSettingOpts {
 	//Methods
 	callback?: (f: TW | null) => void
 	customFillTw?: (f: TW) => void
+	getBodyParams: () => any
 }
 
 /*** types and interfaces supporting TermSettingInstance type ***/
@@ -198,10 +199,10 @@ export type TermSettingInstance = {
 	numqByTermIdModeType?: any
 	opts: TermSettingOpts
 	placeholder: string | undefined
-	q?: BinConfig
-	term?: Term
+	q: Q
+	term: Term
 	usecase?: UseCase
-	vocabApi?: VocabApi
+	vocabApi: VocabApi
 	//Methods
 	cancelGroupsetting?: () => void
 	enterPill?: () => void

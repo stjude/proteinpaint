@@ -15,6 +15,7 @@ export interface VocabApi {
 	//Methods
 	cacheTermQ: (term: Term, q: Q) => any
 	findTerm: (f: string, activeCohort: number, usecase: UseCase, x: string) => { lst: Term[] }
+	getCategories: (term: Term, filer: Filter, body?: any) => any
 	getCustomTermQLst: (f: Term) => any
 	getPercentile: (term_id: string | number, percentile_lst: number[], filter?: Filter) => number[]
 	getterm: (f: any) => Term
