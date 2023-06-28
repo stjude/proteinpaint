@@ -460,6 +460,7 @@ interface Termdb {
 	minimumSampleAllowed4filter?: number
 	minTimeSinceDx?: number
 	ageEndOffset?: number
+	alwaysRefillCategoricalTermValues?: boolean
 	restrictAncestries?: RestrictAncestriesEntry[]
 	//Cohort specific
 	selectCohort?: SelectCohortEntry

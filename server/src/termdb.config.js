@@ -45,6 +45,7 @@ export function make(q, res, ds, genome) {
 		dataDownloadCatch: tdb.dataDownloadCatch,
 		matrix: tdb.matrix,
 		mclass: tdb.mclass,
+		alwaysRefillCategoricalTermValues: tdb.alwaysRefillCategoricalTermValues,
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
