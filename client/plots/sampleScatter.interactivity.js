@@ -54,7 +54,7 @@ export function setInteractivity(self) {
 					}
 				}
 
-				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
+				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table, true)
 				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)
 				if (self.config.term) addCategoryInfo(self.config.term.term, 'x', d, table)
 				if (self.config.term2) addCategoryInfo(self.config.term2?.term, 'y', d, table)
@@ -62,7 +62,7 @@ export function setInteractivity(self) {
 				if ('info' in d)
 					for (const [k, v] of Object.entries(d.info)) {
 						const row = table.append('tr')
-						row.append('td').text(k)
+						row.append('td').style('color', '#aaa').text(k)
 						row.append('td').text(v)
 					}
 			}
@@ -71,7 +71,7 @@ export function setInteractivity(self) {
 			self.dom.tooltip.show(event.clientX, event.clientY, true, true)
 		} else self.dom.tooltip.hide()
 
-		function addCategoryInfo(term, category, d, table) {
+		function addCategoryInfo(term, category, d, table, showColor = false) {
 			if (!term) return
 			if (d[category] == 'Ref') return
 			let row = table.append('tr')
@@ -86,7 +86,7 @@ export function setInteractivity(self) {
 					row = table.append('tr')
 					const class_info = mclass[mutation.class]
 					const clabel = 'mname' in mutation ? `${mutation.mname} ${class_info.label}` : class_info.label
-					const tdclass = row.append('td').text(clabel)
+					const tdclass = row.append('td').text(clabel).style('color', '#aaa')
 					if (mutation.class != 'Blank') tdclass.style('color', class_info.color)
 					else tdclass.style('color', mclass['WT'].color)
 					const origin = morigin[mutation.origin]?.label
@@ -96,7 +96,17 @@ export function setInteractivity(self) {
 			} else {
 				let value = d[category]
 				if (typeof value == 'number') value = value.toFixed(2)
-				row.append('td').text(value)
+				const td = row.append('td')
+				if (showColor) {
+					const color = self.getColor(d, chart)
+					const svg = td.append('svg').attr('width', '20px').attr('height', '20px')
+					svg
+						.append('path')
+						.attr('d', self.getShape(chart, d, self.k * 2))
+						.attr('fill', color)
+						.attr('transform', 'translate(10, 15)')
+				}
+				td.append('span').text(value)
 			}
 		}
 	}
