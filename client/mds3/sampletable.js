@@ -90,11 +90,17 @@ export async function displaySampleTable(samples, args) {
 		const colButton = {
 			text: 'Disco',
 			callback: async (event, i) => {
-				const sample = samples[i]
-				const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
-				sandbox.header.text(sample.sample_id)
-				plotDisco(args.tk.mds, args.tk.mds.label, sample, sandbox.body, args.block.genome)
-			},
+				// hide tooltips where disco may have been launched
+				args.tk.itemtip.hide() // when clicking dot with occurrence>1
+				args.tk.menutip.hide() // when from sample leftlabel
+				let thisMutation
+				if (samples[i].ssm_id_lst?.[0]) {
+					thisMutation = (args.tk.skewer.rawmlst || args.tk.custom_variants).find(
+						m => m.ssm_id == samples[i].ssm_id_lst[0]
+					)
+				}
+				await createDiscoInSandbox(args.tk, args.block, samples[i], thisMutation)
+			}
 		}
 		params.columnButtons.push(colButton)
 	}
@@ -114,7 +120,7 @@ export async function displaySampleTable(samples, args) {
 						sandbox.body.append('div').style('margin', '20px'),
 						args.block.genome
 					)
-				},
+				}
 			}
 			params.columnButtons.push(btn)
 		}
@@ -126,13 +132,13 @@ export async function displaySampleTable(samples, args) {
 		params.buttons = [
 			{
 				text: args.tk.allow2selectSamples.buttonText,
-				callback: (sampleIdxLst) => {
+				callback: sampleIdxLst => {
 					// argument is list of array index of selected samples
 					feedSample2selectCallback(args.tk, args.block, samples, sampleIdxLst)
 					args.tk.itemtip.hide()
 					args.tk.menutip.hide()
-				},
-			},
+				}
+			}
 		]
 	}
 
@@ -170,7 +176,7 @@ async function make_singleSampleTable(s, arg) {
 		// sample_id is hardcoded
 		const [cell1, cell2] = get_list_cells(grid_div)
 		cell1.text('Sample')
-		printSampleName(s, arg.tk, cell2, arg.block)
+		printSampleName(s, arg.tk, cell2, arg.block, arg.mlst?.[0])
 	}
 
 	/////////////
@@ -189,7 +195,7 @@ async function make_singleSampleTable(s, arg) {
 			if (tw.id in s) {
 				if (Array.isArray(s[tw.id])) {
 					if (tw.baseURL) {
-						cell2.html(s[tw.id].map((i) => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
+						cell2.html(s[tw.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
 					} else {
 						cell2.html(s[tw.id].join('<br>'))
 					}
@@ -211,7 +217,7 @@ async function make_singleSampleTable(s, arg) {
 			if (s.ssm_id_lst.length > 1) {
 				// there are multiple, need to mark it out
 				const div = grid_div.append('div').style('grid-column', 'span 2').style('margin-top', '20px')
-				const m = arg.tk.skewer.rawmlst.find((i) => i.ssm_id == ssmid)
+				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
 					if (m.dt == 1) {
@@ -246,7 +252,11 @@ async function make_singleSampleTable(s, arg) {
     */
 }
 
-function printSampleName(sample, tk, div, block) {
+/*
+print name of a single sample
+optional mutation from this sample may be provided, for showing along with disco launched from the button clicking to maintain context
+*/
+function printSampleName(sample, tk, div, block, thisMutation) {
 	// print sample name in a div, if applicable, generate a hyper link using the sample name
 	if (tk.mds.variant2samples.url) {
 		const a = div.append('a')
@@ -279,20 +289,14 @@ function printSampleName(sample, tk, div, block) {
 	}
 
 	if (tk.mds.queries?.singleSampleMutation) {
+		// make disco button
 		extraRow
 			.append('button')
 			.style('margin-right', '10px')
 			.text('Disco plot')
 			.on('click', async () => {
-				// create ad-hoc sandbox; if newChartHolder is present, plot into it
-				const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
-				sandbox.header.text(sample.sample_id)
-				try {
-					plotDisco(tk.mds, tk.mds.label, sample, sandbox.body, block.genome)
-				} catch (e) {
-					event.target.innerHTML = 'Error: ' + (e.message || e)
-					if (e.stack) console.log(e.stack)
-				}
+				tk.itemtip.hide() // hide tooltip so it won't block
+				await createDiscoInSandbox(tk, block, sample, thisMutation)
 			})
 	}
 
@@ -314,6 +318,30 @@ function printSampleName(sample, tk, div, block) {
 					)
 				})
 		}
+	}
+}
+
+async function createDiscoInSandbox(tk, block, sample, thisMutation) {
+	// create ad-hoc sandbox; if newChartHolder is present, plot into it
+	const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
+	const headerTexts = [sample.sample_id] // for sandbox header
+	if (thisMutation) {
+		// mutation of this sample is provided (tooltip currently shows info about this mutation)
+		// as tooltip is hidden, display this in disco header to inform context
+		headerTexts.push(', with ')
+		if (block.usegm) {
+			headerTexts.push(block.usegm.name)
+		} else {
+			headerTexts.push(thisMutation.isoform) // todo convert to gene symbol
+		}
+		headerTexts.push(' ' + thisMutation.mname)
+	}
+	sandbox.header.text(headerTexts.join(''))
+	try {
+		await plotDisco(tk.mds, tk.mds.label, sample, sandbox.body, block.genome)
+	} catch (e) {
+		sandbox.body.append('div').text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
 	}
 }
 
@@ -345,7 +373,7 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 			genome: genomeObj.name,
 			dslabel,
 			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
-			singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] },
+			singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
 		}
 		const data = await dofetch3('mds3', { body })
 		if (data.error) throw data.error
@@ -375,7 +403,7 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 
 		let bb // only load block once
 
-		img.on('click', async (event) => {
+		img.on('click', async event => {
 			const x = event.offsetX - data.xoff
 
 			let chr, chrLen, position
@@ -404,7 +432,7 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 			const body = {
 				genome: genomeObj.name,
 				dslabel,
-				singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] },
+				singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] }
 			}
 			const d2 = await dofetch3('mds3', { body })
 			// d2={path:str}
@@ -419,8 +447,8 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 					height: 100,
 					scale: { min: q2.min, max: q2.max },
 					pcolor: q.positiveColor,
-					ncolor: q.negativeColor,
-				},
+					ncolor: q.negativeColor
+				}
 			]
 			first_genetrack_tolist(genomeObj, tklst)
 
@@ -431,7 +459,7 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 				tklst,
 				chr,
 				start,
-				stop,
+				stop
 			})
 		})
 	} catch (e) {
@@ -464,7 +492,7 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 		const body = {
 			genome: genomeObj.name,
 			dslabel,
-			singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
+			singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
 		}
 		const data = await dofetch3('mds3', { body })
 		if (data.error) throw data.error
@@ -476,7 +504,7 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 		const disco_arg = {
 			sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
 			data: mlst,
-			genome: genomeObj,
+			genome: genomeObj
 		}
 
 		if (termdbConfig.queries.singleSampleMutation.discoSkipChrM) {
@@ -501,10 +529,10 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 					{
 						chartType: 'Disco',
 						subfolder: 'disco',
-						extension: 'ts',
-					},
-				],
-			},
+						extension: 'ts'
+					}
+				]
+			}
 		}
 		const plot = await import('#plots/plot.app.js')
 		const plotAppApi = await plot.appInit(opts)
@@ -512,39 +540,6 @@ export async function plotDisco(termdbConfig, dslabel, sample, holder, genomeObj
 	} catch (e) {
 		loadingDiv.text('Error: ' + (e.message || e))
 	}
-}
-
-export async function plotDiscoOld(termdbConfig, dslabel, sample, holder, genomeObj) {
-	// request data
-	const body = {
-		genome: genomeObj.name,
-		dslabel,
-		singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
-	}
-	const data = await dofetch3('mds3', { body })
-	if (data.error) throw data.error
-	if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
-	const mlst = data.mlst
-
-	for (const i of mlst) i.position = i.pos
-
-	const disco_arg = {
-		sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
-		data: mlst,
-	}
-
-	const dtDisco = await import('#plots/disco_old/dt.disco.js').then(
-		(Cls) =>
-			new Cls.default({
-				genome: genomeObj,
-				holderSelector: holder,
-				settings: {
-					showControls: false,
-					selectedSamples: [],
-				},
-			})
-	)
-	dtDisco.main(disco_arg)
 }
 
 /***********************************************
@@ -555,9 +550,9 @@ export async function plotDiscoOld(termdbConfig, dslabel, sample, holder, genome
  */
 export async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
-	const has_caseAccess = samples.some((i) => 'caseIsOpenAccess' in i),
-		has_ssm = samples.some((i) => i.ssm_id) || samples.some((i) => i.ssm_id_lst),
-		has_format = samples.some((i) => i.ssmid2format) && tk.mds?.bcf?.format
+	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
+		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst),
+		has_format = samples.some(i => i.ssmid2format) && tk.mds?.bcf?.format
 	const displayedFormatKeySet = new Set() // set of format keys for display, to skip keys not in display
 
 	// to be returned by this function, as inputs for renderTable
@@ -579,7 +574,7 @@ export async function samples2columnsRows(samples, tk) {
 	if (has_ssm) {
 		columns.push({
 			label: 'Mutations',
-			isSsm: true, // flag for text file downloader to do detect and do special treatment on this field
+			isSsm: true // flag for text file downloader to do detect and do special treatment on this field
 		})
 	}
 
@@ -595,7 +590,7 @@ export async function samples2columnsRows(samples, tk) {
 			if (!displayedFormatKeySet.has(f)) continue
 			const fobj = tk.mds.bcf.format[f]
 			columns.push({
-				label: fobj.Description || f,
+				label: fobj.Description || f
 			})
 		}
 	}
@@ -637,7 +632,7 @@ export async function samples2columnsRows(samples, tk) {
 				const htmls = []
 				for (const ssm_id of ssm_id_lst) {
 					const oneHtml = []
-					const m = (tk.skewer.rawmlst || tk.custom_variants).find((i) => i.ssm_id == ssm_id)
+					const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
 					if (m) {
 						// found m data point
 						if (m.dt == dtsnvindel) {
