@@ -24,12 +24,12 @@ export class MatrixControls {
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
 		this.setDownloadBtn(s)
-		this.btns = this.opts.holder.selectAll('button').filter((d) => d && d.label)
+		this.btns = this.opts.holder.selectAll('button').filter(d => d && d.label)
 
 		this.setZoomInput()
 		this.setDragToggle({
 			holder: this.opts.holder.append('div').style('display', 'inline-block'),
-			target: this.parent.dom.seriesesG,
+			target: this.parent.dom.seriesesG
 		})
 		this.setSvgScroll(state)
 	}
@@ -50,14 +50,14 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
 						options: Object.values(s.sortOptions).sort((a, b) => a.order - b.order),
-						labelDisplay: 'block',
+						labelDisplay: 'block'
 					},
 					{
 						label: `Maximum # ${l.samples}`,
 						title: 'Limit the number of displayed samples',
 						type: 'number',
 						chartType: 'matrix',
-						settingsKey: 'maxSample',
+						settingsKey: 'maxSample'
 					},
 					{
 						label: `Group ${l.samples} By`,
@@ -67,23 +67,23 @@ export class MatrixControls {
 						configKey: 'divideBy',
 						vocabApi: this.opts.app.vocabApi,
 						state: {
-							vocab: this.opts.vocab,
+							vocab: this.opts.vocab
 							//activeCohort: appState.activeCohort
 						},
-						processInput: (tw) => {
+						processInput: tw => {
 							if (tw) fillTermWrapper(tw)
 						},
 						getBodyParams: () => {
 							const currentGeneNames = this.parent.termOrder
-								.filter((t) => t.tw.term.type === 'geneVariant')
-								.map((t) => t.tw.term.name)
+								.filter(t => t.tw.term.type === 'geneVariant')
+								.map(t => t.tw.term.name)
 								.sort()
 							return { currentGeneNames }
-						},
-					},
-				],
+						}
+					}
+				]
 			})
-			.html((d) => d.label)
+			.html(d => d.label)
 			.style('margin', '2px 0')
 			.on('click', (event, d) => this.callback(event, d))
 	}
@@ -95,7 +95,7 @@ export class MatrixControls {
 			//.property('disabled', d => d.disabled)
 			.datum({
 				label: 'Genes',
-				getCount: () => this.parent.termOrder.filter((t) => t.tw.term.type == 'geneVariant').length,
+				getCount: () => this.parent.termOrder.filter(t => t.tw.term.type == 'geneVariant').length,
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
@@ -107,8 +107,8 @@ export class MatrixControls {
 						options: [
 							{ label: 'Absolute', value: 'abs' },
 							{ label: `Percent`, value: 'pct' },
-							{ label: `None`, value: '' },
-						],
+							{ label: `None`, value: '' }
+						]
 					},
 					{
 						label: 'Rendering Style',
@@ -118,9 +118,9 @@ export class MatrixControls {
 						settingsKey: 'cellEncoding',
 						options: [
 							{ label: 'Stacked', value: '' },
-							{ label: 'Oncoprint', value: 'oncoprint' },
+							{ label: 'Oncoprint', value: 'oncoprint' }
 						],
-						styles: { padding: 0, 'padding-right': '10px', margin: 0 },
+						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
 					},
 					{
 						label: 'Sort Genes',
@@ -130,13 +130,13 @@ export class MatrixControls {
 						settingsKey: 'sortTermsBy',
 						options: [
 							{ label: 'By Input Data Order', value: 'asListed' },
-							{ label: `By ${l.sample} Count`, value: 'sampleCount' },
+							{ label: `By ${l.sample} Count`, value: 'sampleCount' }
 						],
-						styles: { padding: 0, 'padding-right': '10px', margin: 0 },
-					},
-				],
+						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
+					}
+				]
 			})
-			.html((d) => d.label)
+			.html(d => d.label)
 			.style('margin', '2px 0')
 			.on('click', (event, d) => this.callback(event, d))
 	}
@@ -148,9 +148,9 @@ export class MatrixControls {
 				label: s.controlLabels.terms || `Variables`,
 				//getCount: () => this.parent.termOrder.filter(t => t.tw.term.type != 'geneVariant').length.length,
 				customInputs: this.appendDictInputs,
-				rows: [],
+				rows: []
 			})
-			.html((d) => d.label)
+			.html(d => d.label)
 			.style('margin', '2px 0')
 			.on('click', (event, d) => this.callback(event, d))
 	}
@@ -174,11 +174,11 @@ export class MatrixControls {
 								// v===true means property('checked') and convert to recognized 'rect' value for dispatch
 								// otherwise, compared value to 'rect' to set the current value of the checkbox
 								// note: the non-boolean showGrid values allow keeping the hidden value='pattern' option for benchmark tests
-								processInput: (v) => (v === true ? 'rect' : v === 'rect'),
+								processInput: v => (v === true ? 'rect' : v === 'rect'),
 								chartType: 'matrix',
 								settingsKey: 'showGrid',
 								colspan: 2,
-								align: 'center',
+								align: 'center'
 								// for testing/benchmarking
 								// type: 'radio',
 								// options: [
@@ -203,7 +203,7 @@ export class MatrixControls {
 								chartType: 'matrix',
 								settingsKey: 'outlineStroke',
 								colspan: 2,
-								align: 'center',
+								align: 'center'
 								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
 							},
 							{
@@ -213,7 +213,7 @@ export class MatrixControls {
 								chartType: 'matrix',
 								settingsKey: 'gridStroke',
 								colspan: 2,
-								align: 'center',
+								align: 'center'
 								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
 							},
 							{
@@ -223,7 +223,7 @@ export class MatrixControls {
 								chartType: 'matrix',
 								settingsKey: 'cellbg',
 								colspan: 2,
-								align: 'center',
+								align: 'center'
 							},
 							{
 								label: `Use Canvas If # ${l.sample} Exceeds`,
@@ -236,7 +236,7 @@ export class MatrixControls {
 								width: 60,
 								min: 0,
 								max: 10000,
-								step: 1,
+								step: 1
 							},
 							{
 								label: 'Canvas Min. Pixel Width',
@@ -248,9 +248,9 @@ export class MatrixControls {
 								settingsKey: 'useMinPixelWidth',
 								colspan: 2,
 								align: 'center',
-								getDisplayStyle: () => (this.parent.settings.matrix.useCanvas ? '' : 'none'),
-							},
-						],
+								getDisplayStyle: () => (this.parent.settings.matrix.useCanvas ? '' : 'none')
+							}
+						]
 					},
 					{
 						header: ['Cells', 'Columns', 'Rows'],
@@ -262,7 +262,7 @@ export class MatrixControls {
 								width: 50,
 								align: 'center',
 								chartType: 'matrix',
-								inputs: [{ label: 'N/A' }, { settingsKey: 'rowh', min: 8, max: 30, step: 1 }],
+								inputs: [{ label: 'N/A' }, { settingsKey: 'rowh', min: 8, max: 30, step: 1 }]
 							},
 							{
 								label: 'Min Col. Width',
@@ -271,7 +271,7 @@ export class MatrixControls {
 								width: 50,
 								align: 'center',
 								chartType: 'matrix',
-								inputs: [{ settingsKey: 'colwMin', min: 0.1, max: 16, step: 0.2 }, { label: 'N/A' }],
+								inputs: [{ settingsKey: 'colwMin', min: 0.1, max: 16, step: 0.2 }, { label: 'N/A' }]
 							},
 							{
 								label: 'Max Col. Width',
@@ -280,7 +280,7 @@ export class MatrixControls {
 								width: 50,
 								align: 'center',
 								chartType: 'matrix',
-								inputs: [{ settingsKey: 'colwMax', min: 1, max: 24, step: 0.2 }, { label: 'N/A' }],
+								inputs: [{ settingsKey: 'colwMax', min: 1, max: 24, step: 0.2 }, { label: 'N/A' }]
 							},
 							{
 								label: 'Spacing',
@@ -291,8 +291,8 @@ export class MatrixControls {
 								chartType: 'matrix',
 								inputs: [
 									{ settingsKey: 'colspace', min: 0, max: 20, step: 1 },
-									{ settingsKey: 'rowspace', min: 0, max: 20, step: 1 },
-								],
+									{ settingsKey: 'rowspace', min: 0, max: 20, step: 1 }
+								]
 							},
 							{
 								label: 'Group spacing',
@@ -303,10 +303,10 @@ export class MatrixControls {
 								chartType: 'matrix',
 								inputs: [
 									{ settingsKey: 'colgspace', min: 0, max: 20, step: 1 },
-									{ settingsKey: 'rowgspace', min: 0, max: 20, step: 1 },
-								],
-							},
-						],
+									{ settingsKey: 'rowgspace', min: 0, max: 20, step: 1 }
+								]
+							}
+						]
 					},
 					{
 						header: ['Labels', 'Columns', 'Rows'],
@@ -320,8 +320,8 @@ export class MatrixControls {
 								chartType: 'matrix',
 								inputs: [
 									{ settingsKey: 'collabelgap', min: 0, max: 20, step: 1 },
-									{ settingsKey: 'rowlabelgap', min: 0, max: 20, step: 1 },
-								],
+									{ settingsKey: 'rowlabelgap', min: 0, max: 20, step: 1 }
+								]
 							},
 							{
 								label: 'Spacing',
@@ -332,8 +332,8 @@ export class MatrixControls {
 								chartType: 'matrix',
 								inputs: [
 									{ settingsKey: 'collabelpad', min: 0, max: 20, step: 1 },
-									{ settingsKey: 'rowlabelpad', min: 0, max: 20, step: 1 },
-								],
+									{ settingsKey: 'rowlabelpad', min: 0, max: 20, step: 1 }
+								]
 							},
 							{
 								label: 'Minimum Size',
@@ -347,7 +347,7 @@ export class MatrixControls {
 								settingsKey: 'minLabelFontSize',
 								min: 0,
 								max: 24,
-								step: 0.1,
+								step: 0.1
 							},
 							{
 								label: 'Maximum Size',
@@ -360,7 +360,7 @@ export class MatrixControls {
 								settingsKey: 'maxLabelFontSize',
 								min: 0,
 								max: 24,
-								step: 0.1,
+								step: 0.1
 							},
 							{
 								label: 'Group label<br/>position',
@@ -375,24 +375,24 @@ export class MatrixControls {
 										// switched since settings.collabelpos refers to the individual column label, not group
 										options: [
 											{ label: 'Bottom', value: 'top' },
-											{ label: 'Top', value: 'bottom' },
-										],
+											{ label: 'Top', value: 'bottom' }
+										]
 									},
 									{
 										settingsKey: 'rowlabelpos',
 										// switched since settings.rowlabelpos refers to the individual column label, not group
 										options: [
 											{ label: 'Right', value: 'left' },
-											{ label: 'Left', value: 'right' },
-										],
-									},
-								],
-							},
-						],
-					},
-				],
+											{ label: 'Left', value: 'right' }
+										]
+									}
+								]
+							}
+						]
+					}
+				]
 			})
-			.html((d) => d.label)
+			.html(d => d.label)
 			.style('margin', '2px 0')
 			.on('click', (event, d) => this.callback(event, d))
 	}
@@ -410,28 +410,28 @@ export class MatrixControls {
 						title: 'Set the font size for the legend text',
 						type: 'number',
 						chartType: 'legend',
-						settingsKey: 'fontsize',
+						settingsKey: 'fontsize'
 					},
 					{
 						label: 'Line Height',
 						title: 'Set the line height for a legend group',
 						type: 'number',
 						chartType: 'legend',
-						settingsKey: 'lineh',
+						settingsKey: 'lineh'
 					},
 					{
 						label: 'Icon Height',
 						title: 'Set the icon height for a legend item',
 						type: 'number',
 						chartType: 'legend',
-						settingsKey: 'iconh',
+						settingsKey: 'iconh'
 					},
 					{
 						label: 'Icon Width',
 						title: 'Set the icon width for a legend item',
 						type: 'number',
 						chartType: 'legend',
-						settingsKey: 'iconw',
+						settingsKey: 'iconw'
 					},
 					/*{
 						label: 'Bottom margin',
@@ -444,14 +444,14 @@ export class MatrixControls {
 						title: 'Set a left margin for each legend item',
 						type: 'number',
 						chartType: 'legend',
-						settingsKey: 'padx',
+						settingsKey: 'padx'
 					},
 					{
 						label: 'Left Margin',
 						title: 'Set a left margin for the whole legend',
 						type: 'number',
 						chartType: 'legend',
-						settingsKey: 'padleft',
+						settingsKey: 'padleft'
 					},
 					{
 						label: 'Left Indent',
@@ -460,7 +460,7 @@ export class MatrixControls {
 							` The left indent will align the legend group label text to the right.`,
 						type: 'number',
 						chartType: 'legend',
-						settingsKey: 'hangleft',
+						settingsKey: 'hangleft'
 					},
 					{
 						label: 'Item Layout',
@@ -469,11 +469,11 @@ export class MatrixControls {
 						type: 'checkbox',
 						chartType: 'legend',
 						settingsKey: 'linesep',
-						boxLabel: 'Line separated',
-					},
-				],
+						boxLabel: 'Line separated'
+					}
+				]
 			})
-			.html((d) => d.label)
+			.html(d => d.label)
 			.style('margin', '2px 0')
 			.on('click', (event, d) => this.callback(event, d))
 	}
@@ -491,9 +491,9 @@ export class MatrixControls {
 		this.parent.app.tip.hide()
 
 		this.btns
-			.text((d) => (d.getCount ? `${d.getCount()} ` : '') + d.label)
-			.style('text-decoration', (d) => (d.active ? 'underline' : ''))
-			.style('color', (d) => (d.active ? '#3a3' : ''))
+			.text(d => (d.getCount ? `${d.getCount()} ` : '') + d.label)
+			.style('text-decoration', d => (d.active ? 'underline' : ''))
+			.style('color', d => (d.active ? '#3a3' : ''))
 
 		const s = this.parent.config.settings.matrix
 		const d = this.parent.dimensions
@@ -503,7 +503,7 @@ export class MatrixControls {
 				min: s.colwMin / s.colw,
 				max: s.colwMax / s.colw,
 				increment: s.zoomIncrement,
-				step: s.zoomStep || 1,
+				step: s.zoomStep || 1
 			})
 
 		if (this.svgScrollApi) {
@@ -512,7 +512,7 @@ export class MatrixControls {
 				y: d.yOffset - s.scrollHeight,
 				totalWidth: d.zoomedMainW,
 				visibleWidth: d.mainw,
-				zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset,
+				zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
 			})
 		}
 
@@ -524,7 +524,7 @@ export class MatrixControls {
 	getSettings() {
 		// return control settings that are not tracked in the global app state or plot state
 		return {
-			mouseMode: this.dragToggleApi.getSettings().mouseMode,
+			mouseMode: this.dragToggleApi.getSettings().mouseMode
 		}
 	}
 
@@ -546,7 +546,7 @@ export class MatrixControls {
 					.data(t.header)
 					.enter()
 					.append('th')
-					.html((d) => d)
+					.html(d => d)
 			}
 
 			for (const inputConfig of t.rows) {
@@ -561,7 +561,7 @@ export class MatrixControls {
 							id: parent.id,
 							//instanceNum: this.instanceNum,
 							debug: this.opts.debug,
-							parent,
+							parent
 						},
 						inputConfig
 					)
@@ -599,7 +599,7 @@ export class MatrixControls {
 							id: parent.id,
 							//instanceNum: this.instanceNum,
 							debug: self.opts.debug,
-							parent,
+							parent
 						},
 						inputConfig
 					)
@@ -623,8 +623,12 @@ export class MatrixControls {
 
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene set')
 		const td = tr.append('td')
-		if (tg.length > 1)
-			td.append('select')
+		if (tg.length > 1) {
+			const select = td.append('select').on('change', e => {
+				const i = select.node().value
+				parent.selectedGroup = parseInt(i)
+			})
+			select
 				.selectAll('option')
 				.data(tg)
 				.enter()
@@ -632,9 +636,7 @@ export class MatrixControls {
 				.attr('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
 				.attr('value', (d, i) => i)
 				.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
-				.on('change', (d, i) => {
-					parent.selectedGroup = i
-				})
+		}
 
 		td.append('button')
 			.text('Edit')
@@ -642,18 +644,18 @@ export class MatrixControls {
 				const group = parent.config.termgroups[parent.selectedGroup]
 				app.tip.clear().hide()
 
-				const callback = (geneset) => {
+				const callback = geneset => {
 					const lst = []
 					for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
 					group.lst = lst
-					const tws = geneset.map((d) => {
+					const tws = geneset.map(d => {
 						const tw = {
 							$id: get$id(),
 							term: {
 								name: d.symbol || d.name,
-								type: 'geneVariant',
+								type: 'geneVariant'
 							},
-							q: {},
+							q: {}
 						}
 						return tw
 					})
@@ -665,8 +667,8 @@ export class MatrixControls {
 						type: 'plot_edit',
 						id: parent.id,
 						config: {
-							termgroups: parent.config.termgroups,
-						},
+							termgroups: parent.config.termgroups
+						}
 					})
 				}
 				const geneList = []
@@ -678,7 +680,7 @@ export class MatrixControls {
 					genome: app.opts.genome,
 					geneList,
 					callback,
-					vocabApi: this.opts.app.vocabApi,
+					vocabApi: this.opts.app.vocabApi
 					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
 					//mode: 'expression',
 				})
@@ -696,24 +698,24 @@ export class MatrixControls {
 				vocab: this.parent.state.vocab,
 				activeCohort: this.parent.activeCohort,
 				nav: {
-					header_mode: 'search_only',
+					header_mode: 'search_only'
 				},
 				tree: {
-					usecase: { target: 'matrix', detail: 'termgroups' },
-				},
+					usecase: { target: 'matrix', detail: 'termgroups' }
+				}
 			},
 			tree: {
-				submit_lst: (termlst) => {
+				submit_lst: termlst => {
 					this.submit_lst(termlst)
 					app.tip.hide()
-				},
-			},
+				}
+			}
 		})
 	}
 
 	async submit_lst(termlst) {
 		const newterms = await Promise.all(
-			termlst.map(async (_term) => {
+			termlst.map(async _term => {
 				const term = structuredClone(_term)
 				const tw = 'id' in term ? { id: term.id, term } : { term }
 				await fillTermWrapper(tw)
@@ -723,7 +725,7 @@ export class MatrixControls {
 
 		const s = this.parent.settings.matrix
 		const termgroups = structuredClone(this.parent.config.termgroups)
-		const i = termgroups.findIndex((g) => g.name == 'Variables')
+		const i = termgroups.findIndex(g => g.name == 'Variables')
 		if (i !== -1) {
 			const grp = termgroups[i]
 			grp.lst.push(...newterms)
@@ -733,9 +735,9 @@ export class MatrixControls {
 				edits: [
 					{
 						nestedKeys: ['termgroups', i, 'lst'],
-						value: grp.lst,
-					},
-				],
+						value: grp.lst
+					}
+				]
 			})
 		} else {
 			const grp = { name: 'Variables', lst: newterms }
@@ -743,7 +745,7 @@ export class MatrixControls {
 			this.parent.app.dispatch({
 				type: 'plot_edit',
 				id: this.parent.id,
-				config: { termgroups },
+				config: { termgroups }
 			})
 		}
 	}
@@ -762,9 +764,9 @@ export class MatrixControls {
 				min: 0.1, // will be determined once the auto-computed width is determined
 				max: 10, // will be determined once the auto-computed width is determined
 				increment: s.zoomIncrement,
-				step: s.zoomStep || 5,
+				step: s.zoomStep || 5
 			},
-			callback: (zoomLevel) => {
+			callback: zoomLevel => {
 				const p = this.parent
 				const d = p.dimensions
 				const s = p.settings.matrix
@@ -778,10 +780,10 @@ export class MatrixControls {
 								zoomLevel,
 								zoomCenterPct: 0.5,
 								zoomIndex: c.totalIndex,
-								zoomGrpIndex: c.grpIndex,
-							},
-						},
-					},
+								zoomGrpIndex: c.grpIndex
+							}
+						}
+					}
 				})
 			},
 			reset: () => {
@@ -794,19 +796,19 @@ export class MatrixControls {
 						settings: {
 							matrix: {
 								zoomLevel: 1,
-								zoomCenterPct: 0,
-							},
-						},
-					},
+								zoomCenterPct: 0
+							}
+						}
+					}
 				})
-			},
+			}
 		})
 	}
 
 	setDragToggle(opts = {}) {
 		const defaults = {
 			mouseMode: 'select',
-			activeBgColor: 'rgb(255, 255, 255)',
+			activeBgColor: 'rgb(255, 255, 255)'
 		}
 
 		// hardcode to always be in select mode on first render
@@ -831,8 +833,8 @@ export class MatrixControls {
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')
-					.on('click', () => setMode('pan')),
-			},
+					.on('click', () => setMode('pan'))
+			}
 		}
 
 		//icons.crosshair(instance.dom.selectBtn, { width: 18, height: 18, transform: 'translate(50,50)' })
@@ -856,9 +858,9 @@ export class MatrixControls {
 			},
 			getSettings() {
 				return {
-					mouseMode: instance.opts.mouseMode,
+					mouseMode: instance.opts.mouseMode
 				}
-			},
+			}
 		}
 	}
 
@@ -885,13 +887,13 @@ export class MatrixControls {
 								matrix: {
 									zoomCenterPct: 0.5,
 									zoomIndex: c.totalIndex,
-									zoomGrpIndex: c.grpIndex,
-								},
-							},
-						},
+									zoomGrpIndex: c.grpIndex
+								}
+							}
+						}
 					})
 				}
-			},
+			}
 		})
 	}
 }
