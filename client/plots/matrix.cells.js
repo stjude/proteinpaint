@@ -44,7 +44,7 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 	cell.y = height * i
 	const group = tw.legend?.group || tw.$id
-	return { ref: t.ref, group, value, entry: { key, label: cell.label, fill: cell.fill } }
+	return { ref: t.ref, group, value: anno.key, entry: { key, label: cell.label, fill: cell.fill } }
 }
 
 function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
