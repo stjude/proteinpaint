@@ -51,15 +51,13 @@ class TermSearch {
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
-					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys
-							.slice()
-							.sort()
-							.join(','),
+					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
 			allowedTermTypes: appState.termdbConfig.allowedTermTypes || [],
 			expandedTermIds: appState.tree.expandedTermIds,
 			selectedTerms: appState.selectedTerms,
 			usecase: appState.tree.usecase,
-			search: appState.search
+			search: appState.search,
+			isGeneSetTermdb: appState.termdbConfig.isGeneSetTermdb
 		}
 	}
 
@@ -92,22 +90,12 @@ function setRenderers(self) {
 	self.initUI = state => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
 
-		/* term search prompt is decided by two factors:
-		1. if the term type exists in allowedTermTypes from the dataset
-		   e.g. if geneVariant type does not exist in the dataset, do not show prompt (and no need to check usecase)
-		2. termdb client app usecase, defines the context for using terms selected from the termdb app
-		   e.g. if the usecase context does not allow geneVariant, even if geneVariant exists in ds, do not show "gene" in prompt
-		*/
-		const mayUseGeneVariant =
-			state.allowedTermTypes.includes('geneVariant') && isUsableTerm({ type: 'geneVariant' }, state.usecase).has('plot')
-
-		const placeholderDetail = mayUseGeneVariant ? ' variables or genes' : ' variables'
 		self.dom.input = self.dom.holder
 			.style('text-align', 'left')
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
-			.attr('placeholder', 'Search' + placeholderDetail)
+			.attr('placeholder', 'Search' + self.getPrompt(state))
 			.style('width', '220px')
 			.style('margin', '10px')
 			.style('display', 'block')
@@ -137,25 +125,31 @@ function setRenderers(self) {
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
 
-		self.dom.nonDictDiv = self.dom.holder
-			.append('div')
-			.style('margin', '0px 0px 10px 10px')
-			.style('display', 'none')
+		self.dom.nonDictDiv = self.dom.holder.append('div').style('margin', '0px 0px 10px 10px').style('display', 'none')
 
-		self.dom.nonDictDiv
-			.append('div')
-			.style('font-weight', 600)
-			.html('Selected genes')
+		self.dom.nonDictDiv.append('div').style('font-weight', 600).html('Selected genes')
 		self.dom.selectedNonDictDiv = self.dom.nonDictDiv.append('div')
 	}
+
+	self.getPrompt = state => {
+		/* term search prompt is decided by two factors:
+		1. if the term type exists in allowedTermTypes from the dataset
+		   e.g. if geneVariant type does not exist in the dataset, do not show prompt (and no need to check usecase)
+		2. termdb client app usecase, defines the context for using terms selected from the termdb app
+		   e.g. if the usecase context does not allow geneVariant, even if geneVariant exists in ds, do not show "gene" in prompt
+		*/
+		const mayUseGeneVariant =
+			state.allowedTermTypes.includes('geneVariant') && isUsableTerm({ type: 'geneVariant' }, state.usecase).has('plot')
+
+		if (mayUseGeneVariant) return ' variables or genes' // if true, it should be "variables" but not gene set
+		if (state.isGeneSetTermdb) return ' gene sets'
+		return ' variables'
+	}
+
 	self.noResult = () => {
 		self.clear()
 		self.dom.resultDiv.style('display', 'inline-grid')
-		self.dom.resultDiv_terms
-			.append('div')
-			.text('No match')
-			.style('padding', '3px 3px 3px 0px')
-			.style('opacity', 0.5)
+		self.dom.resultDiv_terms.append('div').text('No match').style('padding', '3px 3px 3px 0px').style('opacity', 0.5)
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
@@ -178,26 +172,14 @@ function setRenderers(self) {
 		}
 
 		if (geneTerms.length) {
-			self.dom.resultDiv_genes
-				.append('table')
-				.selectAll()
-				.data(geneTerms)
-				.enter()
-				.append('tr')
-				.each(self.showTerm)
+			self.dom.resultDiv_genes.append('table').selectAll().data(geneTerms).enter().append('tr').each(self.showTerm)
 		}
 
 		if (dictTerms.length) {
-			self.dom.resultDiv_terms
-				.append('table')
-				.selectAll()
-				.data(dictTerms)
-				.enter()
-				.append('tr')
-				.each(self.showTerm)
+			self.dom.resultDiv_terms.append('table').selectAll().data(dictTerms).enter().append('tr').each(self.showTerm)
 		}
 	}
-	self.showTerm = function(term) {
+	self.showTerm = function (term) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
 		const uses = isUsableTerm(term, self.state.usecase)
@@ -290,7 +272,7 @@ function setRenderers(self) {
 		self.dom.resultDiv.style('display', 'none')
 	}
 
-	self.renderSelectedNonDictTerms = function() {
+	self.renderSelectedNonDictTerms = function () {
 		// this is to show selected genes during multi-selection
 		// FIXME no way to unselect a gene here
 		const lst = self.state.selectedTerms.filter(t => nonDictionaryTermTypes.has(t.type))

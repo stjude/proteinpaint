@@ -46,6 +46,7 @@ export function make(q, res, ds, genome) {
 		matrix: tdb.matrix,
 		mclass: tdb.mclass,
 		alwaysRefillCategoricalTermValues: tdb.alwaysRefillCategoricalTermValues,
+		isGeneSetTermdb: tdb.isGeneSetTermdb
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
@@ -79,13 +80,13 @@ function addRequiredAuth(c, q) {
 	// currently, the client code assumes that it will only apply to the dataDownload MASS app
 	c.requiredAuth = {
 		type: cred.type || 'login',
-		headerKey: cred.headerKey,
+		headerKey: cred.headerKey
 	}
 }
 
 function addRestrictAncestries(c, tdb) {
 	if (!tdb.restrictAncestries) return
-	c.restrictAncestries = tdb.restrictAncestries.map((i) => {
+	c.restrictAncestries = tdb.restrictAncestries.map(i => {
 		return { name: i.name, tvs: i.tvs }
 	})
 }
@@ -93,7 +94,7 @@ function addRestrictAncestries(c, tdb) {
 function addScatterplots(c, ds) {
 	if (!ds.cohort.scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
-	c.scatterplots = ds.cohort.scatterplots.plots.map((p) => {
+	c.scatterplots = ds.cohort.scatterplots.plots.map(p => {
 		return { name: p.name, dimensions: p.dimensions, colorTW: p.colorTW, shapeTW: p.shapeTW }
 	})
 }
@@ -101,7 +102,7 @@ function addScatterplots(c, ds) {
 function addMatrixplots(c, ds) {
 	if (!ds.cohort.matrixplots) return
 	// this dataset has premade matrixplots. reveal matrix plot names to client
-	c.matrixplots = ds.cohort.matrixplots.plots.map((p) => {
+	c.matrixplots = ds.cohort.matrixplots.plots.map(p => {
 		return { name: p.name }
 	})
 }
@@ -111,7 +112,7 @@ function addGenomicQueries(c, ds, genome) {
 	if (!q) return
 	// this ds supports genomic query methods
 	c.queries = {
-		defaultCoord: q.defaultCoord || genome.defaultcoord,
+		defaultCoord: q.defaultCoord || genome.defaultcoord
 	}
 	const q2 = c.queries
 	// copy from q{} to q2{}
@@ -122,7 +123,7 @@ function addGenomicQueries(c, ds, genome) {
 	if (q.singleSampleMutation) {
 		q2.singleSampleMutation = {
 			sample_id_key: q.singleSampleMutation.sample_id_key,
-			discoSkipChrM: q.singleSampleMutation.discoSkipChrM,
+			discoSkipChrM: q.singleSampleMutation.discoSkipChrM
 		}
 	}
 	if (q.singleSampleGenomeQuantification) {
