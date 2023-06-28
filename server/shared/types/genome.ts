@@ -9,20 +9,20 @@ Genome
 */
 
 interface GeneDb {
-  dbfile: string
+	dbfile: string
 }
 
-interface TermDbs {
-  msigdb?: TermDbsEntry
+type TermDbs = {
+	[key: string]: TermDbsEntry
 }
 
-interface TermDbsEntry {
-  label: string,
-  cohort: Cohort
+type TermDbsEntry = {
+	label: string
+	cohort: Cohort
 }
 
-interface DbStatement { 
-	dbfile: string, 
+interface DbStatement {
+	dbfile: string
 	statement: string
 }
 
@@ -35,14 +35,14 @@ interface FimoMotif {
 	annotationfile: string
 }
 
-interface ClinVarVCF{
+interface ClinVarVCF {
 	file: string
 	infokey: string
 	categories: ClinvarClinsig
 }
 
-interface TrackCategoryEntry { 
-	color: string, 
+interface TrackCategoryEntry {
+	color: string
 	label: string
 }
 
@@ -65,14 +65,14 @@ interface Track {
 }
 
 interface DefaultCoord {
-	chr: string,
-	start: number,
-	stop: number,
+	chr: string
+	start: number
+	stop: number
 	gene?: string
 }
 
-interface GeneSetEntry { 
-	name: string 
+interface GeneSetEntry {
+	name: string
 }
 
 interface GeneSet {
@@ -80,8 +80,8 @@ interface GeneSet {
 	lst: GeneSetEntry[]
 }
 
-interface HicEnzymeFragment { 
-	enzyme: string, 
+interface HicEnzymeFragment {
+	enzyme: string
 	file: string
 }
 
@@ -95,7 +95,7 @@ interface HicDomainSet {
 	[index: string]: HicDomainSetEntry
 }
 
-interface HicDomainGrpEntry{
+interface HicDomainGrpEntry {
 	name: string
 	reference: string
 	sets: HicDomainSet
@@ -105,8 +105,8 @@ interface HicDomainGroups {
 	[index: string]: HicDomainGrpEntry
 }
 
-interface HicDomain{
-	[index: string] : HicDomainGroups
+interface HicDomain {
+	[index: string]: HicDomainGroups
 }
 
 //Separated to force g.tracks as required, see hgvirus.ts
@@ -115,7 +115,7 @@ export interface MinGenome {
 	genomefile: string
 	genedb: GeneDb
 	defaultcoord: DefaultCoord
-	hicenzymefragment?: HicEnzymeFragment[],
+	hicenzymefragment?: HicEnzymeFragment[]
 	majorchr: string
 }
 
