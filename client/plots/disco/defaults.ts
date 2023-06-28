@@ -1,5 +1,4 @@
 import Settings from './Settings.ts'
-import { RingType } from '#plots/disco/viewmodel/RingType.ts'
 import { copyMerge } from '#rx'
 
 export default function discoDefaults(overrides = {}): Settings {

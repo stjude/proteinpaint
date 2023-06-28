@@ -63,7 +63,7 @@ export default class Disco {
 			settings.rings.chromosomeInnerRadius + settings.rings.chromosomeWidth
 		)
 		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
-		const nonExonicSnvRenderer = new NonExonicSnvRenderer()
+		const nonExonicSnvRenderer = new NonExonicSnvRenderer(geneClickListener)
 		const snvRenderer = new SnvRenderer(settings.rings.ringWidth, geneClickListener)
 		const cnvRenderer = new CnvRenderer(settings.menu.padding)
 		const lohRenderer = new LohRenderer()
