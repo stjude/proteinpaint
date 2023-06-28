@@ -5,6 +5,12 @@ import Arc from '#plots/disco/viewmodel/Arc'
 import MenuProvider from './MenuProvider'
 
 export default class NonExonicSnvRenderer implements IRenderer {
+	private geneClickListener: (gene: string, mname: string) => void
+
+	constructor(geneClickListener: (gene: string, mname: string) => void) {
+		this.geneClickListener = geneClickListener
+	}
+
 	render(holder: any, elements: Array<Arc>) {
 		const arcGenerator = d3.arc<SnvArc>()
 
@@ -29,6 +35,9 @@ export default class NonExonicSnvRenderer implements IRenderer {
 			})
 			.on('mouseout', () => {
 				menu.hide()
+			})
+			.on('click', (mouseEvent: MouseEvent, arc: SnvArc) => {
+				this.geneClickListener(arc.text, arc.mname)
 			})
 	}
 }
