@@ -672,7 +672,8 @@ export class MatrixControls {
 					})
 				}
 				const geneList = []
-				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ name: tw.term.name })
+				for (const tw of group.lst)
+					if (tw.term.type == 'geneVariant' || tw.term.name.startsWith('chr')) geneList.push({ name: tw.term.name })
 				let config = showGenesetEdit({
 					x: event.clientX,
 					y: event.clientY,
