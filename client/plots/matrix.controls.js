@@ -674,6 +674,7 @@ export class MatrixControls {
 		}
 
 		td.append('button')
+			.style('margin-left', '3px')
 			.text('Edit')
 			.on('click', () => {
 				const group = parent.config.termgroups[parent.selectedGroup]
