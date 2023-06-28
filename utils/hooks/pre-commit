@@ -18,6 +18,7 @@ echo "$FILES" | xargs git add
 pre-commit run --files "$FILES"
 
 # lint against team preferences
-npx eslint . --ext .ts
+echo "Linting ..."
+echo "$FILES" | xargs sh -c "f=$1; ${f:0:1} != '.' && npx eslint $f"
 
 exit 0
