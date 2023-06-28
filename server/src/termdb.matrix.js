@@ -150,12 +150,12 @@ async function getSampleData(q) {
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {
 	// if snplst/snplocus term is present, they will need the set of samples passing filter, to only return gt data for those samples
-	if (!nonDictTerms.find((i) => i.term.type == 'snplst' || i.term.type == 'snplocus')) {
+	if (!nonDictTerms.find(i => i.term.type == 'snplst' || i.term.type == 'snplocus')) {
 		// no such term
 		return
 	}
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
-	return new Set((await get_samples(q.filter, q.ds)).map((i) => i.id))
+	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
 }
 
 function divideTerms(lst) {
@@ -225,9 +225,9 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			}
 			if (tw.term.values) {
 				const values = Object.values(tw.term.values)
-				if (values.find((v) => 'order' in v)) {
+				if (values.find(v => 'order' in v)) {
 					refs.byTermId[tw.term.id] = {
-						keyOrder: values.sort((a, b) => a.order - b.order).map((v) => v.key),
+						keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
 					}
 				}
 			}
@@ -237,12 +237,12 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	).catch(console.error)
 
 	// for "samplelst" term, term.id is missing and must use term.name
-	values.push(...termWrappers.map((tw) => tw.term.id || tw.term.name))
+	values.push(...termWrappers.map(tw => tw.term.id || tw.term.name))
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
-		${CTEs.map((t) => t.sql).join(',\n')}
+		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
-			(t) => `
+			t => `
 			SELECT sample, key, value, ? as term_id
 			FROM ${t.tablename}
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
@@ -257,7 +257,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
 		const tw = twByTermId[term_id]
-		samples[sample][term_id] = { key, value: key }
+		samples[sample][term_id] = { key, value }
 	}
 
 	return { samples, refs }
@@ -287,7 +287,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		genome: q.genome,
 		get: 'samples',
 		twLst: termWrappers,
-		useIntegerSampleId: true, // ask v2s.get() to return integer sample id
+		useIntegerSampleId: true // ask v2s.get() to return integer sample id
 	}
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
@@ -303,7 +303,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 
 	for (const s of sampleLst) {
 		const s2 = {
-			sample: s.sample_id,
+			sample: s.sample_id
 		}
 		for (const tw of termWrappers) {
 			const v = s[tw.term.id]
@@ -318,12 +318,12 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 				////////////////////////////
 				s2[tw.term.id] = {
 					key: v[0],
-					value: v[0],
+					value: v[0]
 				}
 			} else if (v != undefined && v != null) {
 				s2[tw.term.id] = {
 					key: v,
-					value: v,
+					value: v
 				}
 			}
 		}
