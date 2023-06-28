@@ -36,19 +36,22 @@ export function setInteractivity(self) {
 				self.dom.tooltip.d
 					.append('div')
 					.html(` ${overlapSamples.length} ${overlapSamples.length == 1 ? 'sample' : 'samples'}`)
+			const table = self.dom.tooltip.d.append('table').style('width', '100%')
 
 			for (const [i, d] of samples.entries()) {
 				if (i > 5) break
 				if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) continue
-				const div = self.dom.tooltip.d.append('div').style('padding-top', '2px')
-				const table = div.append('table').style('width', '100%')
-				const row = table.append('tr')
+				const row = table.append('tr').style('padding-top', '2px')
 				if (displaySample) {
 					if (d.sample == s2.sample) {
 						let title = ''
 						for (const os of overlapSamples) title += os.sample + ' '
-						row.append('td').attr('colspan', 2).html(`${title}`)
-					} else row.append('td').attr('colspan', 2).html(`${d.sample}`)
+						row.append('td').style('color', '#aaa').html(`Sample`)
+						row.append('td').html(`${title}`)
+					} else {
+						row.append('td').style('color', '#aaa').html(`Sample`)
+						row.append('td').html(d.sample)
+					}
 				}
 
 				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
@@ -72,7 +75,7 @@ export function setInteractivity(self) {
 			if (!term) return
 			if (d[category] == 'Ref') return
 			let row = table.append('tr')
-			const ctd = row.append('td').text(term.name)
+			const ctd = row.append('td').style('color', '#aaa').html(`Sample`).text(term.name)
 
 			if ('cat_info' in d && d.cat_info[category]) {
 				const mutations = d.cat_info[category]
