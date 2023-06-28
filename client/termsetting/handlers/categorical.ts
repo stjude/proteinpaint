@@ -1,7 +1,17 @@
 import { setGroupsettingMethods } from './groupsetting'
 // import { filterInit } from '#filter'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
-import { PillData, TW, Term, Q, TermValues, GroupSetting, BaseGroupSet, GroupEntry } from '#shared/types'
+import {
+	PillData,
+	TW,
+	Term,
+	Q,
+	TermValues,
+	GroupSetting,
+	BaseGroupSet,
+	GroupEntry,
+	TermSettingInstance,
+} from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -25,7 +35,21 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 ********************** INTERNAL
 */
 
-export function getHandler(self: any) {
+//Types
+type Cat2SampleCntEntry = { key: string; count: number }
+
+type CategoricalInstance = TermSettingInstance & {
+	category2samplecount: Cat2SampleCntEntry[]
+	error: string
+	//Methods
+	getQlst: () => void
+	grpSet2valGrp: (f: any) => void
+	regroupMenu: (x?: any, y?: any) => void //Not defined
+	showGrpOpts: (div: any) => void
+	validateGroupsetting: () => void
+}
+
+export function getHandler(self: CategoricalInstance) {
 	setGroupsettingMethods(self)
 	setCategoryConditionMethods(self)
 
@@ -100,7 +124,7 @@ export function getHandler(self: any) {
 				}
 			}
 
-			const data = await self.vocabApi.getCategories(self.term, self.filter, body)
+			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
 			self.category2samplecount = []
 			for (const i of data.lst) {
 				self.category2samplecount.push({ key: i.key, count: i.samplecount })
@@ -116,12 +140,12 @@ export function getHandler(self: any) {
 }
 
 // same method used to set methods for categorical and condition terms
-export function setCategoryConditionMethods(self: any) {
+export function setCategoryConditionMethods(self: CategoricalInstance) {
 	self.validateGroupsetting = function () {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		const text = self.q?.name || self.q?.reuseId
 		if (text) return { text }
-		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+		if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
 			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
 			const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
@@ -332,6 +356,7 @@ export function setCategoryConditionMethods(self: any) {
 
 	self.grpSet2valGrp = function (groupset: BaseGroupSet) {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values || {}
+		console.log(349, values)
 		/*
 		values{} is an object of key:{key,label,color}
 		it is read only attribute of the term object
