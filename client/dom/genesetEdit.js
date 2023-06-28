@@ -2,7 +2,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
-export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], vocabApi, name = null }) {
+export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], vocabApi, group, showGroup }) {
 	const api = {
 		dom: {
 			tdbBtns: {}
@@ -22,10 +22,10 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 			if (obj.holder) obj.holder.remove()
 		}
 	}
+	menu.clear()
 	const tip2 = new Menu({ padding: '0px' })
-
 	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')
-	if (name) div.append('div').style('padding', '5px').append('span').style('color', '#aaa').text(name)
+	if (showGroup) div.append('div').style('padding', '5px').append('span').style('color', '#aaa').text(group.name)
 
 	api.dom.holder = div
 
@@ -133,14 +133,21 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 
 	api.dom.genesDiv = genesDiv
 
-	const submitBtn = div
-		.append('div')
+	const footerDiv = div.append('div')
+	const submitBtn = footerDiv
 		.append('button')
 		.property('disabled', !geneList.length)
 		.text('Submit')
 		.on('click', () => {
 			menu.hide()
-			callback(geneList)
+			callback(group, geneList)
+		})
+	footerDiv
+		.append('button')
+		.style('margin-left', '10px')
+		.text('Close')
+		.on('click', () => {
+			menu.hide()
 		})
 
 	api.dom.submitBtn = submitBtn

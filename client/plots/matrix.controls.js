@@ -608,8 +608,35 @@ export class MatrixControls {
 				//parent.opts.customInputs.genes(table.append('tr').append('td').attr('colspan', 2).style('text-align', 'center'))
 			}
 		}
+		const callback = (group, geneset) => {
+			const lst = []
+			for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
+			group.lst = lst
+			const tws = geneset.map(d => {
+				const tw = {
+					$id: get$id(),
+					term: {
+						name: d.symbol || d.name,
+						type: 'geneVariant'
+					},
+					q: {}
+				}
+				return tw
+			})
 
-		self.addGeneSearch(event, app, parent, table.append('tr'))
+			// TODO: see above for input to select which group to add the gene
+			// right not it assumes the first group
+			group.lst.push(...tws)
+			app.dispatch({
+				type: 'plot_edit',
+				id: parent.id,
+				config: {
+					termgroups: parent.config.termgroups
+				}
+			})
+		}
+		self.addGeneSearch(event, app, parent, table.append('tr'), callback)
+		self.addGeneGroup(event, app, parent, table.append('tr'), callback)
 	}
 
 	appendDictInputs(self, app, parent, table) {
@@ -618,7 +645,7 @@ export class MatrixControls {
 		self.addDictMenu(app, parent)
 	}
 
-	addGeneSearch(event, app, parent, tr) {
+	addGeneSearch(event, app, parent, tr, callback) {
 		const tg = parent.config.termgroups
 		parent.selectedGroup = 0
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene set')
@@ -637,6 +664,13 @@ export class MatrixControls {
 				.attr('value', (d, i) => i)
 				.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
 			parent.selectedGroup = parseInt(select.node().value)
+		} else {
+			const group = parent.config.termgroups[parent.selectedGroup]
+			const count = group.lst.filter(tw => tw.term.type == 'geneVariant').length
+			td.append('span')
+				.style('color', '#aaa')
+				.style('padding', '5px')
+				.text(`${count} ${count == 1 ? 'gene' : 'genes'} `)
 		}
 
 		td.append('button')
@@ -646,36 +680,9 @@ export class MatrixControls {
 
 				app.tip.clear().hide()
 
-				const callback = geneset => {
-					const lst = []
-					for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
-					group.lst = lst
-					const tws = geneset.map(d => {
-						const tw = {
-							$id: get$id(),
-							term: {
-								name: d.symbol || d.name,
-								type: 'geneVariant'
-							},
-							q: {}
-						}
-						return tw
-					})
-
-					// TODO: see above for input to select which group to add the gene
-					// right not it assumes the first group
-					group.lst.push(...tws)
-					app.dispatch({
-						type: 'plot_edit',
-						id: parent.id,
-						config: {
-							termgroups: parent.config.termgroups
-						}
-					})
-				}
 				const geneList = []
 				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ name: tw.term.name })
-				let config = showGenesetEdit({
+				showGenesetEdit({
 					x: event.clientX,
 					y: event.clientY,
 					menu: app.tip,
@@ -685,7 +692,48 @@ export class MatrixControls {
 					vocabApi: this.opts.app.vocabApi,
 					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
 					//mode: 'expression',
-					name: group.name
+					group,
+					showGroup: parent.config.termgroups > 1
+				})
+			})
+	}
+
+	addGeneGroup(event, app, parent, tr, callback) {
+		const tg = parent.config.termgroups
+		parent.selectedGroup = 0
+		tr.append('td').attr('class', 'sja-termdb-config-row-label')
+		const td = tr.append('td')
+		const input = td
+			.append('input')
+			.attr('placeholder', 'New group name')
+			.on('input', function () {
+				const name = input.node().value
+				button.property('disabled', name == '')
+			})
+		const button = td
+			.append('button')
+			.text('Add new group')
+			.property('disabled', true)
+			.on('click', () => {
+				const name = input.node().value
+				const group = {
+					name,
+					overrides: false,
+					lst: []
+				}
+				tg.push(group)
+				showGenesetEdit({
+					x: event.clientX,
+					y: event.clientY,
+					menu: app.tip,
+					genome: app.opts.genome,
+					geneList: [],
+					callback,
+					vocabApi: this.opts.app.vocabApi,
+					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
+					//mode: 'expression',
+					group,
+					showGroup: true
 				})
 			})
 	}
