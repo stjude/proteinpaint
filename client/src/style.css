@@ -1181,3 +1181,8 @@ sandbox header
     left: 0px;
     padding: 30px 0;
 }
+
+.add_term_btn
+{
+    border-radius: 6px;
+}

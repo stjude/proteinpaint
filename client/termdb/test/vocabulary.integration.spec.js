@@ -34,7 +34,6 @@ Tests:
 			getCohortSampleCount()
 			getViolinPlotData()
 			getNumericUncomputableCategories()
-			getConditionCategories()
 			validateSnps()
 			get_variantFilter()
 			getAnnotatedSampleData()
@@ -75,7 +74,6 @@ Tests:
 				getFilteredSampleCount()
 				getDensityPlotData()
 				getNumericUncomputableCategories()
-				getConditionCategories()
  */
 
 /*************************
@@ -167,7 +165,6 @@ tape('vocabInit(), default', test => {
 		'function',
 		'should have a vocab.getNumericUncomputableCategories function'
 	)
-	test.equal(typeof vocabApi.getConditionCategories, 'function', 'should have a vocab.getConditionCategories function')
 	test.equal(typeof vocabApi.validateSnps, 'function', 'should have a vocab.validateSnps function')
 	test.equal(typeof vocabApi.get_variantFilter, 'function', 'should have a vocab.get_variantFilter function')
 	test.equal(typeof vocabApi.getAnnotatedSampleData, 'function', 'should have a vocab.getAnnotatedSampleData function')
@@ -221,11 +218,6 @@ tape('getVocab(), custom', test => {
 			typeof app.vocabApi.getNumericUncomputableCategories,
 			'function',
 			'should have a vocab.getNumericUncomputableCategories function'
-		)
-		test.equal(
-			typeof app.vocabApi.getConditionCategories,
-			'function',
-			'should have a vocab.getConditionCategories function'
 		)
 		test.equal(typeof app.vocabApi.graphable, 'function', 'should have a vocab.graphable function')
 		test.equal(typeof app.vocabApi.q_to_param, 'function', 'should have a vocab.q_to_param function')
@@ -711,8 +703,7 @@ tape('getRegressionData()', async test => {
 			bar_by_grade: true,
 			value_by_max_grade: true,
 			timeScale: 'time',
-			breaks: ['2'],
-			groupNames: ['No event / censored', 'Event (grade >= 2)']
+			breaks: ['2']
 		}
 	}
 	results = await termdbVocabApi.getRegressionData(opts)
@@ -1108,14 +1099,6 @@ tape('getCategories()', async test => {
 })
 
 tape.skip('getNumericUncomputableCategories()', async test => {
-	test.timeoutAfter(100)
-
-	const termdbVocabApi = await getTermdbVocabApi()
-
-	test.end()
-})
-
-tape.skip('getConditionCategories()', async test => {
 	test.timeoutAfter(100)
 
 	const termdbVocabApi = await getTermdbVocabApi()

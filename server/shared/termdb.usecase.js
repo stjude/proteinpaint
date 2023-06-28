@@ -9,7 +9,7 @@ export const graphableTypes = new Set([
 	'snplst',
 	'snplocus',
 	'geneVariant',
-	'samplelst'
+	'samplelst',
 ])
 /*
 	isUsableTerm() will
@@ -80,8 +80,10 @@ export function isUsableTerm(term, _usecase, ds) {
 			return uses
 
 		case 'sampleScatter':
-			if (usecase.detail == 'xTW' || usecase.detail == 'yTW') {
-				if (term.type == 'float' || term.type == 'integer') uses.add('plot')
+			if (usecase.detail == 'numeric') {
+				if (term.type == 'float' || term.type == 'integer') {
+					uses.add('plot')
+				}
 				if (hasNumericChild(child_types)) uses.add('branch')
 			} else {
 				if (graphableTypes.has(term.type)) uses.add('plot')

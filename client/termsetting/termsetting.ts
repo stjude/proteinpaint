@@ -485,6 +485,7 @@ function setInteractivity(self: TermSettingInstance) {
 
 	self.cancelGroupsetting = () => {
 		self.opts.callback!({
+			id: self.term.id,
 			term: self.term!,
 			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } },
 		})

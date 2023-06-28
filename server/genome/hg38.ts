@@ -1,11 +1,11 @@
-import { clinsig }  from '../dataset/clinvar'
+import { clinsig } from '../dataset/clinvar'
 import { Genome } from '../shared/types'
 
-export default <Genome> {
+export default <Genome>{
 	species: 'human',
 	genomefile: 'genomes/hg38.gz',
 	genedb: {
-		dbfile: 'anno/genes.hg38.db'
+		dbfile: 'anno/genes.hg38.db',
 	},
 
 	termdbs: {
@@ -13,26 +13,26 @@ export default <Genome> {
 			label: 'MSigDB', // to be compatible with ds.label
 			cohort: {
 				db: { file: 'anno/msigdb/db' },
-				termdb: {}
-			}
-		}
+				termdb: {},
+			},
+		},
 	},
 
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',
-		statement: 'select data from domain where isoform=? collate nocase'
+		statement: 'select data from domain where isoform=? collate nocase',
 	},
 	snp: {
-		bigbedfile: 'anno/dbsnp.hg38.bb'
+		bigbedfile: 'anno/dbsnp.hg38.bb',
 	},
 	fimo_motif: {
 		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
-		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
+		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv',
 	},
 	clinvarVCF: {
 		file: 'hg38/clinvar.hg38.hgvs_short.vep.bcf.gz',
 		infokey: 'CLNSIG',
-		categories: clinsig
+		categories: clinsig,
 	},
 	tracks: [
 		{
@@ -44,7 +44,7 @@ export default <Genome> {
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4,
-			color: '#1D591D'
+			color: '#1D591D',
 		},
 		{
 			__isgene: true,
@@ -54,13 +54,13 @@ export default <Genome> {
 				coding: { color: '#004D99', label: 'Coding gene' },
 				nonCoding: { color: '#009933', label: 'Noncoding gene' },
 				problem: { color: '#FF3300', label: 'Problem' },
-				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
+				pseudo: { color: '#FF00CC', label: 'Pseudogene' },
 			},
 			type: 'bedj',
 			name: 'GENCODE v41',
 			stackheight: 16,
 			stackspace: 1,
-			vpad: 4
+			vpad: 4,
 		},
 		{
 			type: 'bedj',
@@ -78,32 +78,32 @@ export default <Genome> {
 				satellite: { color: '#B59A84', label: 'Satellite' },
 				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
 				other: { color: '#9BADC2', label: 'Other' },
-				unknown: { color: '#858585', label: 'Unknown' }
-			}
-		}
+				unknown: { color: '#858585', label: 'Unknown' },
+			},
+		},
 	],
 	defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
 	hicenzymefragment: [
 		{
 			enzyme: 'DpnII',
-			file: 'anno/hicFragment/hic.DpnII.hg38.gz'
+			file: 'anno/hicFragment/hic.DpnII.hg38.gz',
 		},
 		{
 			enzyme: 'EcoRI',
-			file: 'anno/hicFragment/hic.EcoRI.hg38.gz'
+			file: 'anno/hicFragment/hic.EcoRI.hg38.gz',
 		},
 		{
 			enzyme: 'HindIII',
-			file: 'anno/hicFragment/hic.HindIII.hg38.gz'
+			file: 'anno/hicFragment/hic.HindIII.hg38.gz',
 		},
 		{
 			enzyme: 'MboI',
-			file: 'anno/hicFragment/hic.MboI.hg38.gz'
+			file: 'anno/hicFragment/hic.MboI.hg38.gz',
 		},
 		{
 			enzyme: 'NcoI',
-			file: 'anno/hicFragment/hic.NcoI.hg38.gz'
-		}
+			file: 'anno/hicFragment/hic.NcoI.hg38.gz',
+		},
 	],
 
 	majorchr: `chr1	248956422
@@ -472,5 +472,5 @@ chrM	16569`,
 	chrUn_KI270385v1	990
 	chrUn_KI270423v1	981
 	chrUn_KI270392v1	971
-	chrUn_KI270394v1	970`
+	chrUn_KI270394v1	970`,
 }

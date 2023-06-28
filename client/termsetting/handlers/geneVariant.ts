@@ -1,10 +1,4 @@
 import { select } from 'd3-selection'
-import { makeSnpSelect } from './snplst'
-import { filterInit, getNormalRoot } from '#filter'
-import { gmlst2loci } from '#src/client'
-import { debounce } from 'debounce'
-import { dofetch3 } from '#common/dofetch'
-import { string2pos } from '#src/coord'
 import { mclass, dt2label } from '#shared/common'
 import { PillData, Q, TW, VocabApi } from '#shared/types'
 
@@ -19,8 +13,6 @@ self.term{}
 //TODO move to common.ts??? Corresponds to client/shared/common.js
 type MClassEntry = { label: string; color: string; dt: number; desc: string; key: string }
 type GroupsEntry = { name: string; items: MClassEntry[] }
-
-const term_name = 'Variants in a locus'
 
 // self is the termsetting instance
 export function getHandler(self: any) {
@@ -115,7 +107,7 @@ function makeEditMenu(self: any, _div: any) {
 		}
 	}
 
-	const dtDiv = div
+	div
 		.append('div')
 		.selectAll(':scope>div')
 		.data(groups, (d: GroupsEntry) => d.name)
@@ -144,7 +136,7 @@ function makeEditMenu(self: any, _div: any) {
 					select(this.lastChild).style('text-decoration', i == -1 ? 'line-through' : '')
 					applyBtn.property('disabled', JSON.stringify(exclude) === origExclude)
 				})
-				.each(function (d: MClassEntry) {
+				.each(function (this: any, d: MClassEntry) {
 					const itemDiv = select(this)
 					itemDiv
 						.append('div')

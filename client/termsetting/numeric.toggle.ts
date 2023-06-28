@@ -1,7 +1,7 @@
 import { Tabs } from '#dom/toggleButtons'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { copyMerge } from '#rx'
-import { PillData, Q, TW, TermSettingInstance, VocabApi, BinConfig } from '#shared/types'
+import { PillData, TW, TermSettingInstance, VocabApi, BinConfig } from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -124,8 +124,9 @@ export async function fillTW(tw: TW, vocabApi: VocabApi, defaultQ = null) {
 		copyMerge(tw.q, tw.term.bins!.default)
 	}
 
-	if (defaultQ) { //TODO change when Q objects separated out
-		(defaultQ as BinConfig).isAtomic = true
+	if (defaultQ) {
+		//TODO change when Q objects separated out
+		;(defaultQ as BinConfig).isAtomic = true
 		if ((defaultQ as BinConfig).preferredBins == 'median') {
 			/*
 			do following computing to fill the q{} object
@@ -134,7 +135,8 @@ export async function fillTW(tw: TW, vocabApi: VocabApi, defaultQ = null) {
 			used for cuminc overlay/divideby
 			*/
 
-			if (!(defaultQ as BinConfig).type || (defaultQ as BinConfig).type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
+			if (!(defaultQ as BinConfig).type || (defaultQ as BinConfig).type != 'custom-bin')
+				throw '.type must be custom-bin when .preferredBins=median'
 			const result = await vocabApi.getPercentile(tw.term.id!, [50])
 			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 			const median = result.values[0]
@@ -197,9 +199,9 @@ function valid_binscheme(q: any) {
 	}
 	return false
 }
-
+/*
 function getQlst() {
-	/*
+	
 	const qlst = self.vocabApi.getCustomTermQLst(self.term).sort((a, b) => (a.name === self.q.name ? -1 : 0))
 
 	const templateQ = JSON.parse(JSON.stringify(self.q))
@@ -251,5 +253,5 @@ function getQlst() {
 	}
 
 	self.renderQNameInput(div, `Binning`)
-	*/
-}
+	
+}*/

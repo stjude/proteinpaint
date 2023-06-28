@@ -1,24 +1,17 @@
+import { RingType } from '#plots/disco/viewmodel/RingType.ts'
+
 export default interface Settings {
 	verticalPadding: number
 	horizontalPadding: number
 
 	rings: {
-		fusionRadius: number
+		ringWidth: number
 
-		cnvInnerRadius: number
-		cnvWidth: number
 		cnvCapping: number
 		cnvUnit: string
 
-		lohWidth: number
-		lohInnerRadius: number
+		snvRingFilters: Array<string>
 
-		svnInnerRadius: number
-		svnWidth: number
-		snvRingFilter: string
-
-		nonExonicInnerRadius: number
-		nonExonicWidht: number
 		nonExonicRingEnabled: boolean
 
 		chromosomeWidth: number
@@ -32,7 +25,7 @@ export default interface Settings {
 		fusionFilterValue: number
 		cnvFilterValue: number
 		lohFilterValue: number
-		nonExonicFilterValue: string
+		nonExonicFilterValues: Array<string>
 	}
 	cnv: {
 		cappedAmpColor: string

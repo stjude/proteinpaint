@@ -2,7 +2,7 @@ import Rings from './Rings'
 import Legend from './Legend'
 import { RingType } from './RingType'
 import Arc from './Arc'
-import Settings from './Settings'
+import Settings from '../Settings.ts'
 import Fusion from './Fusion'
 
 export default class ViewModel {
@@ -40,17 +40,17 @@ export default class ViewModel {
 	getElements(ringType: RingType): Array<Arc> {
 		switch (ringType) {
 			case RingType.CHROMOSOME:
-				return this.rings.chromosomesRing.elements
+				return this.rings.chromosomesRing ? this.rings.chromosomesRing.elements : []
 			case RingType.LABEL:
 				return this.rings.labelsRing.elementsToDisplay
 			case RingType.NONEXONICSNV:
-				return this.rings.nonExonicArcRing.elements
+				return this.rings.nonExonicArcRing ? this.rings.nonExonicArcRing.elements : []
 			case RingType.SNV:
-				return this.rings.snvArcRing.elements
+				return this.rings.snvArcRing ? this.rings.snvArcRing.elements : []
 			case RingType.CNV:
-				return this.rings.cnvArcRing.elements
+				return this.rings.cnvArcRing ? this.rings.cnvArcRing.elements : []
 			case RingType.LOH:
-				return this.rings.lohArcRing.elements
+				return this.rings.lohArcRing ? this.rings.lohArcRing.elements : []
 			default:
 				throw new Error(`ringType ${ringType} not defined`)
 		}

@@ -6,18 +6,15 @@ import { FusionLegend } from '#plots/disco/viewmodel/FusionLegend'
 
 // TODO extract constants from this file.
 export default class FusionRenderer {
-	private fullArcRenderer: FullArcRenderer
-
-	constructor() {
-		this.fullArcRenderer = new FullArcRenderer(80, 2, '#6464641A')
-	}
-
 	render(holder: any, fusions: Array<Fusion>) {
-		if (fusions.length) {
-			this.fullArcRenderer.render(holder)
+		let radius = 0
+		if (fusions.length > 0) {
+			radius = fusions[0].target.radius
+			const fullArcRenderer = new FullArcRenderer(radius, 2, '#6464641A')
+			fullArcRenderer.render(holder)
 		}
 
-		const ribboon = d3.ribbon().radius(80)
+		const ribboon = d3.ribbon().radius(radius)
 
 		const ribbons = holder.selectAll('.chord').data(fusions)
 

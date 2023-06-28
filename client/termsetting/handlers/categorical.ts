@@ -1,5 +1,5 @@
 import { setGroupsettingMethods } from './groupsetting'
-import { filterInit } from '#filter'
+// import { filterInit } from '#filter'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { PillData, TW, Term, Q, TermValues, GroupSetting, BaseGroupSet, GroupEntry } from '#shared/types'
 
@@ -331,17 +331,27 @@ export function setCategoryConditionMethods(self: any) {
 	// }
 
 	self.grpSet2valGrp = function (groupset: BaseGroupSet) {
-		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-		const vals_with_grp = JSON.parse(JSON.stringify(values))
+		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values || {}
+		/*
+		values{} is an object of key:{key,label,color}
+		it is read only attribute of the term object
+		duplicate it in order to introduce new attribute "group":INT to each value
+		*/
+		const vals_with_grp = structuredClone(values)
 		for (const [i, g] of groupset.groups.entries()) {
 			if (!g.type || g.type == 'values') {
 				for (const v of g.values) {
+					if (!vals_with_grp[v.key]) {
+						// **note!** gdc terms lack term.values{}, must fill in on the fly
+						vals_with_grp[v.key] = { key: v.key, label: v.key }
+					}
+
 					vals_with_grp[v.key].group = i + 1
 				}
 			}
 		}
 
-		for (const [key, val] of Object.entries(vals_with_grp)) {
+		for (const key of Object.keys(vals_with_grp)) {
 			if (vals_with_grp[key].group == undefined) vals_with_grp[key].group = 0
 		}
 

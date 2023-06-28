@@ -5,14 +5,14 @@ import { ViewModelMapper } from './mapper/ViewModelMapper'
 import LegendRenderer from './renderer/LegendRenderer'
 import ChromosomesRenderer from './renderer/ChromosomesRenderer'
 import LabelsRenderer from './renderer/LabelsRenderer'
-import discoDefaults from './viewmodel/defaults'
+import discoDefaults from './defaults.ts'
 import NonExonicSnvRenderer from './renderer/NonExonicSnvRenderer'
 import SnvRenderer from './renderer/SnvRenderer'
 import LohRenderer from './renderer/LohRenderer'
 import CnvRenderer from './renderer/CnvRenderer'
 import IRenderer from './renderer/IRenderer'
 import { RingType } from './viewmodel/RingType'
-import Settings from '#plots/disco/viewmodel/Settings'
+import Settings from '#plots/disco/Settings.ts'
 
 export default class Disco {
 	private type: string
@@ -35,6 +35,7 @@ export default class Disco {
 
 	async main(): Promise<void> {
 		const settings: Settings = this.state.settings
+		console.log('this.state.settings', this.state.settings)
 		const stateViewModelMapper = new ViewModelMapper(settings)
 		const viewModel = stateViewModelMapper.map(this.app.getState())
 
@@ -55,7 +56,7 @@ export default class Disco {
 		discoRenderer.render(holder, viewModel)
 	}
 
-	getRingRenderers(settings: any, geneClickListener: (gene: string, mname: string) => void) {
+	getRingRenderers(settings: Settings, geneClickListener: (gene: string, mname: string) => void) {
 		const chromosomesRenderer = new ChromosomesRenderer(
 			settings.padAngle,
 			settings.rings.chromosomeInnerRadius,
@@ -63,7 +64,7 @@ export default class Disco {
 		)
 		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer()
-		const snvRenderer = new SnvRenderer(settings.rings.svnInnerRadius, settings.rings.svnWidth, geneClickListener)
+		const snvRenderer = new SnvRenderer(settings.rings.ringWidth, geneClickListener)
 		const cnvRenderer = new CnvRenderer(settings.menu.padding)
 		const lohRenderer = new LohRenderer()
 

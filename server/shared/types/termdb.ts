@@ -110,7 +110,6 @@ export interface Q extends BaseQ {
 	bar_by_grade?: boolean
 	breaks?: number[]
 	computableValuesOnly?: boolean
-	groupNames?: string[]
 	showTimeScale?: boolean
 	timeScale?: string
 	value_by_max_grade?: boolean

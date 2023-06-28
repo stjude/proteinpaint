@@ -153,6 +153,7 @@ class DataDownload {
 			noTermPromptOptions: this.getNoTermPromptOptions(),
 			genomeObj: this.genomeObj,
 			abbrCutoff: 50,
+			defaultQ4fillTW: { condition: { mode: 'cuminc' } },
 			callback: tw => {
 				const termsCopy = this.config.terms.slice(0)
 				const i = this.config.terms.findIndex(tw => tw.$id === d.tw.$id)
@@ -279,10 +280,8 @@ function setInteractivity(self) {
 		const header = ['sample']
 		for (const tw of self.config.terms) {
 			if (tw.term.type == 'condition') {
-				header.push(
-					tw.term.name + `_event code(0="censored", 1="grade ${tw.q.breaks[0]}-5", 2="non-${tw.term.name} death")`
-				)
-				header.push(tw.term.name + '_age at event')
+				header.push(`${tw.term.name}_event (0=censored, 1=grade ${tw.q.breaks[0]}-5, 2=non-${tw.term.name} death)`) // TODO: should retrieve from dataset
+				header.push(`${tw.term.name}_time (years from diagnosis to event)`) // TODO: should retrieve from dataset
 			} else if (tw.term.snps) {
 				for (const s of tw.term.snps) {
 					// {snpid, rsid, }
@@ -303,9 +302,7 @@ function setInteractivity(self) {
 				if (!s[tw.$id]) row.push('')
 				else {
 					if (tw.term.type == 'condition') {
-						row.push(s[tw.$id].key)
-						const v = JSON.parse(s[tw.$id].value)
-						row.push(v.age_event)
+						row.push(s[tw.$id].key, s[tw.$id].value)
 					} else if (tw.term.snps) {
 						for (const snp of tw.term.snps) {
 							row.push(s[tw.$id]?.[snp.snpid] || '.')

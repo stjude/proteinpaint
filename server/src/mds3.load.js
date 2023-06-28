@@ -357,7 +357,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -443,7 +443,7 @@ async function geneExpressionClustering(data, q) {
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
 		cluster_method: q.clusterMethod,
-		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
@@ -490,15 +490,15 @@ async function geneExpressionClustering(data, q) {
 			row_names_index = line
 				.replace('rownames\t', '')
 				.split('\t')
-				.map(i => parseInt(i))
-				.filter(n => n)
+				.map((i) => parseInt(i))
+				.filter((n) => n)
 		} else if (line.includes('colnames')) {
 			//console.log('colnames:', line)
 			col_names_index = line
 				.replace('colnames\t', '')
 				.split('\t')
-				.map(i => parseInt(i))
-				.filter(n => n)
+				.map((i) => parseInt(i))
+				.filter((n) => n)
 		} else if (line.includes('"Done"')) {
 			col_coordinate_start = false
 		} else if (row_coordinate_start == true) {
@@ -554,18 +554,18 @@ async function geneExpressionClustering(data, q) {
 		row_names_index: row_names_index,
 		col_dendro: col_output.dendrogram,
 		col_children: col_output.children,
-		col_names_index: col_names_index
+		col_names_index: col_names_index,
 	}
 }
 function zscore(lst) {
 	let total = 0
 	for (const v of lst) total += v
 	const mean = total / lst.length
-	const sd = Math.sqrt(lst.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
+	const sd = Math.sqrt(lst.map((x) => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
 	if (sd == 0) {
 		return lst
 	}
-	return lst.map(i => (i - mean) / sd)
+	return lst.map((i) => (i - mean) / sd)
 }
 
 async function run_clustering(Rscript, args = []) {
@@ -581,10 +581,10 @@ async function run_clustering(Rscript, args = []) {
 		console.log('Rscript:', Rscript)
 		console.log('args:', ...args)
 		const sp = spawn(serverconfig.Rscript, [Rscript, ...args])
-		sp.stdout.on('data', data => stdout.push(data))
-		sp.stderr.on('data', data => stderr.push(data))
-		sp.on('error', err => reject(err))
-		sp.on('close', code => {
+		sp.stdout.on('data', (data) => stdout.push(data))
+		sp.stderr.on('data', (data) => stderr.push(data))
+		sp.on('error', (err) => reject(err))
+		sp.on('close', (code) => {
 			//if (code !== 0) {
 			//	// handle non-zero exit status
 			//	let errmsg = `R process exited with non-zero status code=${code}`
@@ -598,20 +598,51 @@ async function run_clustering(Rscript, args = []) {
 			//	const errmsg = `R process emitted standard error\nR stderr: ${err}`
 			//	reject(errmsg)
 			//}
-			const out = stdout
-				.join('')
-				.trim()
-				.split('\n')
+			const out = stdout.join('').trim().split('\n')
 			resolve(out)
 		})
 	})
 }
 
 async function parseclust(coordinates, names_index) {
+	// This function parses the output from fastclust.R output. The dendextend packages prints the x-y coordinates for each node in depth-first search format. So the order of x-y coordinates describes how each nodes is connected to ane another.
+
+	/*
+
+        |         (1.75, 69.749)  
+        |     ____._____
+        |     |        |(2.5,65.0797)           
+        |     |     ___.___             
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |     |     |     |	       
+        |_____._____._____.__
+             (1,0)  (2,0) (3,0) 
+
+        R dendextend output for the above dendrogram is as follows (depth-first search format)
+             [,1]     [,2]
+        [1,] 1.75 69.74910
+        [2,] 1.00  0.00000
+        [3,] 2.50 65.07977
+        [4,] 2.00  0.00000
+        [5,] 3.00  0.00000
+
+        Output is in depth-first search format
+
+
+        */
+
 	let first = 1
 	let xs = []
 	let ys = []
 	for (const line of coordinates) {
+		// Lines are parsed into arrays xs and ys
 		if (first == 1) {
 			first = 0
 		} else if (line.length == 0) {
@@ -644,7 +675,7 @@ async function parseclust(coordinates, names_index) {
 	for (let i = 0; i < ys.length; i++) {
 		//console.log('i:', i)
 		if (break_point == true) {
-			// Determine where the new branch should start from
+			// This clause is invoked when the a node's y-coordinate is found to be higher than the previous one (break_point = true). Then all previous nodes are searched for the closest node that is higher than the current node. This determines where the new branch should start from. In above example line 3 will be parsed (after break_point is set to true in previous iteration) since the y-coordinate of the node is higher than the node described in the previous line
 			let hit = 0
 			//console.log('prev_ys:', prev_ys)
 			for (let j = 0; j < prev_ys.length; j++) {
@@ -659,12 +690,14 @@ async function parseclust(coordinates, names_index) {
 				}
 			}
 			if (hit == 0) {
+				// Should not happen
 				console.log('No suitable branch point found')
 			}
 			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				// When y-axis of a node is found to be 0, then it is a leaf node. In that particular case this leaf node needs to be added to the "children" list of all nodes above it
+				node_children = await update_leaf_node(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_leaf_node(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
@@ -674,38 +707,46 @@ async function parseclust(coordinates, names_index) {
 			//old_depth_start_position = depth_start_position
 			break_point = false
 		} else if (ys[i] > ys[i + 1] && i <= ys.length - 1) {
+			// When y-coordinate of current node is greater than that of the next node, the current branch is extended to the next node. In case of line 2 and 4 in example output is parsed using this if clause statement.
 			depth_first_branch.push({ id1: i, x1: xs[i], y1: ys[i], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				// When y-axis of a node is found to be 0, then it is a leaf node. In that particular case this leaf node needs to be added to the "children" list of all nodes above it
+				node_children = await update_leaf_node(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_leaf_node(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 		} else if (ys[i] == ys[i + 1] && i <= ys.length - 1) {
+			// When y-coordinate of current node is equal to that of the next node, it suggests both nodes are leaf nodes. IN that case the branch is extended from the previous node to the next node. Line 5 (in example output) will be parsed using this if clause.
 			depth_first_branch.push({ id1: i - 1, x1: xs[i - 1], y1: ys[i - 1], id2: i + 1, x2: xs[i + 1], y2: ys[i + 1] })
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				// When y-axis of a node is found to be 0, then it is a leaf node. In that particular case this leaf node needs to be added to the "children" list of all nodes above it
+				node_children = await update_leaf_node(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_leaf_node(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 		} else if (i == ys.length - 1) {
+			// When the current node is the last element it is checked if it is a leaf node (it should be)
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				// When y-axis of a node is found to be 0, then it is a leaf node. In that particular case this leaf node needs to be added to the "children" list of all nodes above it
+				node_children = await update_leaf_node(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_leaf_node(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 		} else {
+			// When y-coordinate of next node is greater than that of the current node. The current branch ends and break_point is set to true. In the next iteration of the loop it is decided where the new branch should start from. Line 3 (in example) will be parsed using this clause.
 			prev_ys.push(ys[i])
 			prev_xs.push(xs[i])
 			//old_depth_first_branch = depth_first_branch
 			//depth_first_branch = []
 			break_point = true
 			if (ys[i] == 0) {
-				node_children = await update_children(depth_first_branch, i, node_children, names_index[leaf_counter])
-				//node_children = await update_children(depth_first_branch, i, node_children, leaf_counter)
+				// When y-axis of a node is found to be 0, then it is a leaf node. In that particular case this leaf node needs to be added to the "children" list of all nodes above it
+				node_children = await update_leaf_node(depth_first_branch, i, node_children, names_index[leaf_counter])
+				//node_children = await update_leaf_node(depth_first_branch, i, node_children, leaf_counter)
 				leaf_counter += 1
 			}
 
@@ -717,40 +758,41 @@ async function parseclust(coordinates, names_index) {
 	//console.log(depth_first_branch)
 }
 
-async function update_children(depth_first_branch, given_node, node_children, node_id) {
-	//let node_connector = node_children.find((i) => i.id == k)
-	//if (node_connector) {
-	//	let node_index = node_children.findIndex(node_connector)
-	//	node_children[node_index].children.push()
-	//}
-
+async function update_leaf_node(depth_first_branch, given_node, node_children, node_id) {
 	//console.log('given_node:', given_node)
-	let current_node = given_node
-	let node_result = node_children.find(i => i.id == current_node)
+	let current_node = given_node // Initialize the current node to the given_node
+	let node_result = node_children.find((i) => i.id == current_node) // Search if the node is already been entered in node_children
 	if (node_result) {
-		let node_index = node_children.findIndex(i => i.id == current_node)
+		// If already present add current node to its children field
+		let node_index = node_children.findIndex((i) => i.id == current_node)
 		node_children[node_index].children.push(node_id)
 	} else {
+		// If not present create an object with id = current_node and in children intitialize children array with node_id
 		node_children.push({ id: current_node, children: [node_id] })
 	}
 
 	// Find branch of current node
 	while (current_node != 0) {
 		// Top node. This loop will continue until top node is reached
-		let node_connector1 = depth_first_branch.find(i => i.id1 == current_node)
+		let node_connector1 = depth_first_branch.find((i) => i.id1 == current_node) // Find id1 with current_node
 		let current_node1
 		let current_node2
 		if (node_connector1) {
 			if (node_connector1.y1 <= node_connector1.y2) {
+				// If y-coordinate of id1 is less than that of id2 then current_node1 = id2
+
 				//console.log('depth_first_branch:', depth_first_branch)
 				//console.log('current_node:', current_node)
 				//console.log('node_connector1:', node_connector1)
 				current_node1 = node_connector1.id2
 			}
 		}
-		let node_connector2 = depth_first_branch.find(i => i.id2 == current_node)
+
+		let node_connector2 = depth_first_branch.find((i) => i.id2 == current_node) // Find id2 with current_node
 		if (node_connector2) {
 			if (node_connector2.y1 >= node_connector2.y2) {
+				// If y-coordinate of id2 is less than that of id1 then current_node2 = id1
+
 				//console.log('depth_first_branch:', depth_first_branch)
 				//console.log('current_node:', current_node)
 				//console.log('node_connector2:', node_connector2)
@@ -769,18 +811,21 @@ async function update_children(depth_first_branch, given_node, node_children, no
 				current_node = current_node2
 			}
 		} else {
+			// Should not happen
 			console.log('No connections found!')
 		}
 
 		// Adding node_id to current_node
 
-		let node_result = node_children.find(i => i.id == current_node)
+		let node_result = node_children.find((i) => i.id == current_node) // Search if the node is already been entered in node_children
 		//console.log('node_result:', node_result)
 		//console.log('given_node2:', given_node)
 		if (node_result) {
-			let node_index = node_children.findIndex(i => i.id == current_node)
+			// If already present add current node to its children field
+			let node_index = node_children.findIndex((i) => i.id == current_node)
 			node_children[node_index].children.push(node_id)
 		} else {
+			// If not present create an object with id = current_node and in children intitialize children array with node_id
 			node_children.push({ id: current_node, children: [node_id] })
 		}
 		//console.log('node_children:', node_children)

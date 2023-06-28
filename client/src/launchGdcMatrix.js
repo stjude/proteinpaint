@@ -77,16 +77,16 @@ export async function init(arg, holder, genomes) {
 					termgroups: [{ lst: genes }],
 					// moved default settings to gdc.hg38.js termdb.matrix.settings
 					// but can still override in the runpp() argument
-					settings
-				}
-			]
+					settings,
+				},
+			],
 		},
 		app: {
-			features: ['recover']
+			features: ['recover'],
 		},
 		recover: {
 			undoHtml: 'undo',
-			redoHtml: 'redo'
+			redoHtml: 'redo',
 		},
 		matrix: {
 			allow2selectSamples: arg.allow2selectSamples,
@@ -100,42 +100,42 @@ export async function init(arg, holder, genomes) {
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxGenes',
-						callback: async value => {
+						callback: async (value) => {
 							maxGenes = value
 							const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
 							api.update({
 								termgroups: [{ lst: genes }],
 								settings: {
 									matrix: {
-										maxGenes
-									}
-								}
+										maxGenes,
+									},
+								},
 							})
-						}
-					}
-				]
-			}
-		}
+						},
+					},
+				],
+			},
+		},
 	}
 
 	const plotAppApi = await appInit(opts)
 	const matrixApi = plotAppApi.getComponents('plots.0')
 
 	const api = {
-		update: arg => {
+		update: (arg) => {
 			if ('filter0' in arg) {
 				plotAppApi.dispatch({
 					type: 'filter_replace',
-					filter0: arg.filter0
+					filter0: arg.filter0,
 				})
 			} else {
 				plotAppApi.dispatch({
 					type: 'plot_edit',
 					id: matrixApi.id,
-					config: arg
+					config: arg,
 				})
 			}
-		}
+		},
 	}
 
 	return api
@@ -169,7 +169,7 @@ async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
 		// genes are predefined
 		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw '.genes[] is not non-empty array'
 		return await Promise.all(
-			arg.genes.map(async i => {
+			arg.genes.map(async (i) => {
 				return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
 			})
 		)
@@ -179,14 +179,15 @@ async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
 	const body = {
 		genome: gdcGenome,
 		filter0: gdcCohort,
-		maxGenes
+		maxGenes,
 	}
 	if (CGConly) body.CGConly = 1
 	const data = await dofetch3('gdc_filter2topGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) throw 'no top genes found using the cohort filter'
 	return await Promise.all(
-		data.genes.map(async i => {
+		// do tempfix of "data.genes.slice(0,3).map" for faster testing
+		data.genes.map(async (i) => {
 			return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
 		})
 	)

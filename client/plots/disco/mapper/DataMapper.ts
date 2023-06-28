@@ -1,157 +1,216 @@
-import Data from "./Data";
-import Reference from "./Reference";
-import DataObjectMapper from "./DataObjectMapper";
-import Settings from "#plots/disco/viewmodel/Settings";
-import {ViewModelMapper} from "#plots/disco/mapper/ViewModelMapper";
+import Data from './Data'
+import Reference from './Reference'
+import DataObjectMapper from './DataObjectMapper'
+import Settings from '#plots/disco/Settings.ts'
+import { ViewModelMapper } from '#plots/disco/mapper/ViewModelMapper'
 
 export default class DataMapper {
+	nonExonicSnvData: Array<Data> = []
+	nonExonicInnerRadius = 0
 
-    snvData: Array<Data> = []
-    filteredSnvData: Array<Data> = []
-    nonExonicSnvData: Array<Data> = []
-    lohData: Array<Data> = []
-    fusionData: Array<Data> = []
+	snvRingDataMap: Map<number, Array<Data>> = new Map()
+	snvInnerRadius = 0
 
-    cnvData: Array<Data> = []
+	snvData: Array<Data> = []
+	bpx = 0
+	onePxArcAngle = 0
+	filteredSnvData: Array<Data> = []
 
-    snvRingDataMap: Map<number, Array<Data>> = new Map()
+	lohData: Array<Data> = []
+	lohInnerRadius = 0
 
-    hasCancerGenes = false
+	cnvData: Array<Data> = []
+	cnvInnerRadius = 0
 
-    cnvMaxValue?: number = undefined
-    cnvMinValue?: number = undefined
+	fusionData: Array<Data> = []
+	fusionRadius = 0
 
-    lohMaxValue?: number = undefined
-    lohMinValue?: number = undefined
+	hasCancerGenes = false
 
-    private settings: Settings;
-    private reference: Reference;
-    private sample: string;
-    private snvFilter: (data: Data) => boolean;
-    private fusionFilter: (data: Data) => boolean;
-    private cnvFilter: (data: Data) => boolean;
-    private lohFilter: (data: Data) => boolean;
-    private nonExonicFilter: (data: Data) => boolean;
-    private snvRingFilter: (data: Data) => boolean;
-    private onePxArcAngle: number;
-    private dataObjectMapper: DataObjectMapper;
-    private bpx: number;
+	cnvMaxValue?: number = undefined
+	cnvMinValue?: number = undefined
 
-    private compareData = (a, b) => {
-        const chrDiff = this.reference.chromosomesOrder.indexOf(a.chr) - this.reference.chromosomesOrder.indexOf(b.chr)
-        if (chrDiff != 0) {
-            return chrDiff
-        }
+	lohMaxValue?: number = undefined
+	lohMinValue?: number = undefined
 
-        const aPos = a.pos ? a.pos : a.start
+	private settings: Settings
+	private reference: Reference
+	private sample: string
+	private snvFilter: (data: Data) => boolean
+	private fusionFilter: (data: Data) => boolean
+	private cnvFilter: (data: Data) => boolean
+	private lohFilter: (data: Data) => boolean
+	private nonExonicFilter: (data: Data) => boolean
+	private snvRingFilter: (data: Data) => boolean
+	private dataObjectMapper: DataObjectMapper
+	private lastInnerRadious: number
 
-        const bPos = b.pos ? b.pos : b.start
+	private compareData = (a, b) => {
+		const chrDiff = this.reference.chromosomesOrder.indexOf(a.chr) - this.reference.chromosomesOrder.indexOf(b.chr)
+		if (chrDiff != 0) {
+			return chrDiff
+		}
 
-        return aPos - bPos
-    }
+		const aPos = a.pos ? a.pos : a.start
 
-    constructor(settings: Settings, reference: Reference, sample: string, cancerGenes: Array<string>) {
-        this.settings = settings
-        this.reference = reference
-        this.sample = sample
+		const bPos = b.pos ? b.pos : b.start
 
-        this.snvFilter = (data: Data) => data.dt == settings.rings.snvFilterValue
-        this.fusionFilter = (data: Data) => data.dt == settings.rings.fusionFilterValue
-        this.cnvFilter = (data: Data) => data.dt == settings.rings.cnvFilterValue
-        this.lohFilter = (data: Data) => data.dt == settings.rings.lohFilterValue
-        this.nonExonicFilter = (data: Data) => ViewModelMapper.snvClassLayer[data.mClass] == settings.rings.nonExonicFilterValue
-        this.snvRingFilter = (data: Data) => ViewModelMapper.snvClassLayer[data.mClass] == settings.rings.snvRingFilter
-        this.dataObjectMapper = new DataObjectMapper(sample, cancerGenes)
+		return aPos - bPos
+	}
 
-        // number of base pairs per pixel
-        this.bpx = Math.floor(this.reference.totalSize / (this.reference.totalChromosomesAngle * settings.rings.svnInnerRadius))
-        this.onePxArcAngle = 1 / (settings.rings.svnInnerRadius)
-    }
+	constructor(settings: Settings, reference: Reference, sample: string, cancerGenes: Array<string>) {
+		this.settings = settings
+		this.reference = reference
+		this.sample = sample
+		this.lastInnerRadious = this.settings.rings.chromosomeInnerRadius
 
-    map(data) {
-        const dataArray: Array<Data> = []
+		this.snvFilter = (data: Data) => data.dt == settings.rings.snvFilterValue
+		this.fusionFilter = (data: Data) => data.dt == settings.rings.fusionFilterValue
+		this.cnvFilter = (data: Data) => data.dt == settings.rings.cnvFilterValue
+		this.lohFilter = (data: Data) => data.dt == settings.rings.lohFilterValue
+		this.nonExonicFilter = (data: Data) =>
+			settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
+		this.snvRingFilter = (data: Data) =>
+			settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
+		this.dataObjectMapper = new DataObjectMapper(sample, cancerGenes)
+	}
 
-        data.forEach(dObject => {
-            const instance = this.dataObjectMapper.map(dObject)
+	map(data) {
+		const dataArray: Array<Data> = []
 
-            if (instance.isCancerGene) {
-                this.hasCancerGenes = true
-            }
+		data.forEach((dObject) => {
+			const instance = this.dataObjectMapper.map(dObject)
 
-            dataArray.push(instance)
-        })
+			if (instance.isCancerGene) {
+				this.hasCancerGenes = true
+			}
 
-        const sortedData = dataArray.sort(this.compareData)
+			dataArray.push(instance)
+		})
 
-        sortedData.forEach(data => {
-            this.filterSnvs(data);
-            this.filterCnvs(data);
-            this.filterLohs(data);
-            this.filterFusion(data);
-        })
-    }
+		const sortedData = dataArray.sort(this.compareData)
 
-    private filterSnvs(data: Data) {
-        if (this.snvFilter(data)) {
-            this.snvData.push(data)
+		console.log('this.settings.rings.nonExonicRingEnabled', this.settings.rings.nonExonicRingEnabled)
 
-            if (this.snvRingFilter(data)) {
-                this.filteredSnvData.push(data)
+		if (this.settings.rings.nonExonicRingEnabled) {
+			sortedData.forEach((data) => {
+				this.filterNonExonicSnvData(data)
+			})
+		}
 
-                const arcAngle = this.calculateArcAngle(data);
-                let dataArray = this.snvRingDataMap.get(arcAngle)
-                if (!dataArray) {
-                    dataArray = new Array<Data>()
-                }
-                dataArray.push(data)
-                this.snvRingDataMap.set(arcAngle, dataArray)
-            }
+		if (this.nonExonicSnvData.length > 0) {
+			this.nonExonicInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+			this.lastInnerRadious = this.nonExonicInnerRadius
+		}
 
-            if (this.settings.rings.nonExonicRingEnabled && this.nonExonicFilter(data)) {
-                this.nonExonicSnvData.push(data)
-            }
-        }
-    }
+		sortedData.forEach((data) => {
+			this.filterSnvs(data)
+		})
 
-    private filterFusion(data: Data) {
-        if (this.fusionFilter(data)) {
-            this.fusionData.push(data)
-        }
-    }
+		sortedData.forEach((data) => {
+			this.filterLohs(data)
+		})
 
-    private filterLohs(data: Data) {
-        if (this.lohFilter(data)) {
-            if (this.lohMaxValue == undefined || this.lohMaxValue < data.value) {
-                this.lohMaxValue = data.segmean
-            }
+		if (this.lohData.length > 0) {
+			this.lohInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+			this.lastInnerRadious = this.lohInnerRadius
+		}
 
-            if (this.lohMinValue == undefined || this.lohMinValue > data.value) {
-                this.lohMinValue = data.segmean
-            }
+		sortedData.forEach((data) => {
+			this.filterCnvs(data)
+		})
 
-            this.lohData.push(data)
-        }
-    }
+		if (this.cnvData.length > 0) {
+			this.cnvInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+			this.lastInnerRadious = this.cnvInnerRadius
+		}
 
-    private filterCnvs(data: Data) {
-        if (this.cnvFilter(data)) {
-            if (this.cnvMaxValue == undefined || this.cnvMaxValue < data.value) {
-                this.cnvMaxValue = data.value
-            }
+		sortedData.forEach((data) => {
+			this.filterFusion(data)
+		})
 
-            if (this.cnvMinValue == undefined || this.cnvMinValue > data.value) {
-                this.cnvMinValue = data.value
-            }
+		if (this.fusionData.length > 0) {
+			this.fusionRadius = this.lastInnerRadious
+		}
+	}
 
-            this.cnvData.push(data)
-        }
-    }
+	private filterNonExonicSnvData(data: Data) {
+		if (this.snvFilter(data)) {
+			if (this.settings.rings.nonExonicRingEnabled && this.nonExonicFilter(data)) {
+				this.nonExonicSnvData.push(data)
+			}
+		}
+	}
 
-    private calculateArcAngle(data: Data) {
-        const currentChromosome = this.reference.chromosomes[this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)]
+	private filterSnvs(data: Data) {
+		if (this.snvFilter(data)) {
+			this.snvData.push(data)
 
-        const dataAnglePos = Math.floor((data.pos) / this.bpx)
+			if (this.snvRingFilter(data)) {
+				if (this.snvInnerRadius == 0) {
+					this.snvInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+					this.lastInnerRadious = this.snvInnerRadius
 
-        return currentChromosome.startAngle + dataAnglePos * this.onePxArcAngle
-    }
+					// number of base pairs per pixel
+					this.bpx = Math.floor(this.reference.totalSize / (this.reference.totalChromosomesAngle * this.snvInnerRadius))
+					this.onePxArcAngle = 1 / this.snvInnerRadius
+				}
+
+				this.filteredSnvData.push(data)
+
+				const arcAngle = this.calculateArcAngle(data)
+				let dataArray = this.snvRingDataMap.get(arcAngle)
+				if (!dataArray) {
+					dataArray = new Array<Data>()
+				}
+				dataArray.push(data)
+				this.snvRingDataMap.set(arcAngle, dataArray)
+			}
+		}
+	}
+
+	private filterFusion(data: Data) {
+		if (this.fusionFilter(data)) {
+			this.fusionData.push(data)
+		}
+	}
+
+	private filterLohs(data: Data) {
+		if (this.lohFilter(data)) {
+			if (this.lohMaxValue == undefined || this.lohMaxValue < data.value) {
+				this.lohMaxValue = data.segmean
+			}
+
+			if (this.lohMinValue == undefined || this.lohMinValue > data.value) {
+				this.lohMinValue = data.segmean
+			}
+
+			this.lohData.push(data)
+		}
+	}
+
+	private filterCnvs(data: Data) {
+		if (this.cnvFilter(data)) {
+			if (this.cnvMaxValue == undefined || this.cnvMaxValue < data.value) {
+				this.cnvMaxValue = data.value
+			}
+
+			if (this.cnvMinValue == undefined || this.cnvMinValue > data.value) {
+				this.cnvMinValue = data.value
+			}
+
+			this.cnvData.push(data)
+		}
+	}
+
+	private calculateArcAngle(data: Data) {
+		const currentChromosome =
+			this.reference.chromosomes[
+				this.reference.chromosomesOrder.findIndex((chromosomeOrder) => data.chr == chromosomeOrder)
+			]
+
+		const dataAnglePos = Math.floor(data.pos / this.bpx)
+
+		return currentChromosome.startAngle + dataAnglePos * this.onePxArcAngle
+	}
 }

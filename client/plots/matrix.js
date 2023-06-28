@@ -147,7 +147,7 @@ class Matrix {
 
 			this.computeStateDiff()
 
-			this.dom.loadingDiv.html('').style('display', '')
+			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
 			if (this.stateDiff.nonsettings) {
 				// get the data
 				const reqOpts = await this.getDataRequestOpts()

@@ -1,13 +1,16 @@
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
-import { keyupEnter } from '#src/client'
 import { copyMerge } from '#rx'
+import { sayerror } from '#dom/error'
 import { PillData, TW, Q, VocabApi } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
+
+//Types 
+type GroupEntry = { name: string, values: (string | number)[] }
+
 const cutoffGrades: number[] = [1, 2, 3, 4, 5]
-//const not_tested_grade = -1
 
 export function getHandler(self: any) {
 	return {
@@ -39,7 +42,9 @@ function getPillStatus(self: any) {
 	const text: string = self.q?.name || self.q?.reuseId
 	if (text) return { text }
 	if (self.q.mode == 'discrete') {
-		if (self.q.breaks.length == 0) {
+		if (self.q.breaks?.length) {
+			return { text: self.q.breaks.length + 1 + ' groups' }
+		} else {
 			if (self.q.bar_by_grade) {
 				if (self.q.value_by_max_grade) return { text: 'Max. Grade' }
 				if (self.q.value_by_most_recent) return { text: 'Most Recent Grade' }
@@ -47,13 +52,10 @@ function getPillStatus(self: any) {
 				return { text: 'Error: unknown grade setting', bgcolor: 'red' }
 			}
 			if (self.q.bar_by_children) return { text: 'Sub-condition' }
-		} else {
-			return { text: self.q.breaks.length + 1 + ' groups' }
 		}
 	}
-	if (self.q.mode == 'binary' || self.q.mode == 'cuminc' || self.q.mode == 'cox')
-		return { text: 'Grades ' + self.q.breaks[0] + '-5' }
-	return { text: 'Error: unknown q.mode', bgcolor: 'red' }
+	if (self.q.mode == 'cuminc') return { text: 'Grades ' + self.q.breaks[0] + '-5' }
+	return {}
 }
 
 function showMenu_discrete(self: any, div: any) {
@@ -143,7 +145,6 @@ function showMenu_discrete(self: any, div: any) {
 		.style('width', '100px')
 		.style('height', '70px')
 		.on('keyup', (event: KeyboardEvent) => {
-			if (!keyupEnter(event)) return
 			textarea2gradeUI()
 		})
 
@@ -155,7 +156,7 @@ function showMenu_discrete(self: any, div: any) {
 		.style('color', '#858585')
 		.html('Enter numeric values </br>seperated by ENTER')
 
-	if (self.q.breaks.length) {
+	if (self.q.breaks?.length) {
 		textarea.property('value', self.q.breaks.join('\n'))
 	}
 
@@ -163,59 +164,73 @@ function showMenu_discrete(self: any, div: any) {
 	function textarea2gradeUI() {
 		rangeNameDiv.selectAll('*').remove()
 		const breaks: number[] = textarea2breaks()
-		if (breaks.length == 0) return
-		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Range')
-		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Label')
-		for (const [i, b1] of breaks.entries()) {
-			// each break creates a group
-			const b0 = breaks[i - 1]
-			const range = i === 0 ? '<' + b1 : b1 - b0 === 1 ? b0 : b0 + '-' + (b1 - 1)
+		if (!breaks.length) {
+			delete self.q.breaks
+			delete self.q.groups
+			return
+		}
 
+		// split grades into groups based on breaks
+		// use only computable grades
+		// uncomputable grades (i.e. not tested) will be
+		// be displayed as excluded categories
+		const grades = Object.keys(self.term.values)
+			.filter(g => !self.term.values[g].uncomputable)
+			.map(Number)
+			.sort((a, b) => a - b)
+
+		const groups: any = getGroups(grades, breaks)
+
+		// render groups as ranges and names
+		rangeNameDiv
+			.append('div')
+			.style('margin-bottom', '3px')
+			.style('color', 'rgb(136, 136, 136)')
+			.text('Range')
+		rangeNameDiv
+			.append('div')
+			.style('margin-bottom', '3px')
+			.style('color', 'rgb(136, 136, 136)')
+			.text('Label')
+		for (const [i, g] of groups.entries()) {
 			// range
-			rangeNameDiv.append('div').text(range)
+			rangeNameDiv.append('div').text(g.name.replace('Grade ', ''))
 
 			// name
 			rangeNameDiv
 				.append('div')
 				.append('input')
 				.attr('type', 'text')
-				.property('value', 'Grade ' + range)
+				.property('value', g.name)
 				.style('margin', '2px 0px')
+				.on('change', function(this: any) {
+					groups[i].name = this.value
+				})
 		}
-		// last group
-		const b1 = breaks[breaks.length - 1]
-		const range = b1 == 5 ? b1 : b1 + '-5'
-		rangeNameDiv.append('div').text(range)
-		rangeNameDiv
-			.append('div')
-			.append('input')
-			.attr('type', 'text')
-			.property('value', 'Grade ' + range)
-			.style('margin', '2px 0px')
 
-		// name <input> for all groups are created under rangeNameDiv
-		// if q.groupNames are there, override
-		if (self.q.groupNames) {
-			const lst = rangeNameDiv.selectAll('input').nodes()
-			for (const [i, name] of self.q.groupNames.entries()) {
-				if (lst[i]) lst[i].value = name
-			}
-		}
+		self.q.breaks = breaks
+		self.q.groups = groups
 	}
 
 	function textarea2breaks() {
 		const str = textarea.property('value').trim()
 		if (!str) return []
-		const lst: any = [
-			...new Set(
-				str
-					.split('\n')
-					.map(Number)
-					.filter((i: number) => Number.isInteger(i) && i >= 1 && i <= 5)
-			),
-		]
-		if (lst.size == 0) return []
-		return lst.sort((i: number, j: number) => i - j)
+		const lst: any = [...new Set(str.split('\n'))]
+		const breaks: number[] = []
+		for (const x of lst) {
+			const b = Number(x)
+			if (!Number.isInteger(b)) {
+				sayerror(div, 'cutoff grade must be an integer value')
+				return []
+			}
+			if (b < 1 || b > 5) {
+				sayerror(div, `cutoff grade must be within grades 1-5`)
+				return []
+			}
+			breaks.push(b)
+		}
+		if (!breaks.length) return []
+		return breaks.sort((i: number, j: number) => i - j)
 	}
 
 	// Apply button
@@ -224,11 +239,6 @@ function showMenu_discrete(self: any, div: any) {
 		.text('Apply')
 		.style('margin', '10px')
 		.on('click', (event: any) => {
-			self.q.breaks = textarea2breaks()
-			self.q.groupNames = []
-			for (const i of rangeNameDiv.selectAll('input').nodes()) {
-				self.q.groupNames.push(i.value)
-			}
 			event.target.disabled = true
 			event.target.innerHTML = 'Loading...'
 			// (event.target as HTMLButtonElement).disabled = true
@@ -258,14 +268,14 @@ function showMenu_cutoff(self: any, div: any) {
 	// row 2
 	holder
 		.append('div')
-		.text(self.q.mode == 'binary' ? 'Group 1' : 'No event / censored')
+		.text(self.q.mode == 'binary' ? 'Group 1' : 'Censored')
 		.style('opacity', 0.4)
 	const g1n = holder.append('div').style('opacity', 0.4)
 
 	// row 3
 	holder
 		.append('div')
-		.text(self.q.mode == 'binary' ? 'Group 2' : 'Has event')
+		.text(self.q.mode == 'binary' ? 'Group 2' : 'Event')
 		.style('opacity', 0.4)
 	const g2n = holder.append('div').style('opacity', 0.4)
 
@@ -321,20 +331,70 @@ function showMenu_cutoff(self: any, div: any) {
 			const grade = gradeSelect.property('selectedIndex') + 1
 			self.q.breaks[0] = grade
 			if (self.q.mode == 'binary') {
-				self.q.groupNames[0] = 'Grade < ' + grade
-				self.q.groupNames[1] = 'Grade >= ' + grade
+				// split grades into groups based on breaks
+				// include both tested and not tested grades
+				const grades = Object.keys(self.term.values)
+					.map(Number)
+					.sort((a, b) => a - b)
+				self.q.groups = getGroups(grades, self.q.breaks)
+				self.refGrp = self.q.groups[0].name
 			}
-			if (self.q.mode == 'cox') {
-				self.q.groupNames[0] = 'No event / censored'
-				self.q.groupNames[1] = `Event (grade >= ${grade})`
-				self.q.timeScale = timeScaleChoice
-			}
+			if (self.q.mode == 'cox') self.q.timeScale = timeScaleChoice
 			event.target.disabled = true
 			event.target.innerHTML = 'Loading...'
 			// (event.target as HTMLButtonElement).disabled = true
 			// (event.target as HTMLButtonElement).innerHTML = 'Loading...'
 			self.runCallback()
 		})
+}
+
+// split grades into groups based on breaks
+function getGroups(grades: any, breaks: any) {
+	grades.sort((a, b) => a - b)
+	const groups: GroupEntry[] = [] // [ {name, values}, {name, values} ]
+	let group: any = { values: [] }
+	let b: any
+	for (const g of grades) {
+		if (breaks.includes(g)) {
+			b = g
+			// new break in grades
+			// modify name of previously iterated group
+			const max = Math.max(...group.values)
+			if (!groups.length) {
+				// first group of groups[]
+				if (group.values.length == 1) {
+					// single value in group
+					// should be grade 0
+					if (group.values[0] !== '0') throw 'unexpected group value'
+					group.name = 'Grade 0'
+				} else {
+					// multiple values in group
+					if (group.values.length == 2 && group.values.includes(-1) && group.values.includes(0)) {
+						group.name = 'Not tested/Grade 0'
+					} else {
+						group.name = group.values.includes(-1) ? `Not tested/Grade 0 - Grade ${max}` : `Grade 0-${max}`
+					}
+				}
+			} else {
+				// interior group of groups[]
+				group.name = group.values.length == 1 ? `Grade ${group.values[0]}` : `${group.name}-${max}`
+			}
+			// add previously iterated group to groups[]
+			groups.push(group)
+			// create new group of grades based on new break
+			group = {
+				name: `Grade ${b}`,
+				values: [g]
+			}
+		} else {
+			// add grade to group of grades
+			group.values.push(g)
+		}
+	}
+	// add last group of groups[]
+	group.name = `Grade ${b}-5`
+	groups.push(group)
+	return groups
 }
 
 export function fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q) {
@@ -361,30 +421,24 @@ export function fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q) {
 		tw.q.bar_by_grade = true
 	}
 
-	// assign breaks and group names
-	if (!tw.q.breaks) tw.q.breaks = []
-	if (!tw.q.groupNames) tw.q.groupNames = []
+	// assign breaks
 	if (tw.q.mode == 'binary' || tw.q.mode == 'cox' || tw.q.mode == 'cuminc') {
 		// must have a single break
-		const defaultBreak = tw.q.mode == 'binary' ? 1 : 2 // hardcode for now
-		if (!tw.q.breaks || tw.q.breaks.length == 0) tw.q.breaks = [defaultBreak]
+		const defaultBreak = tw.q.mode == 'binary' ? 1 : 2
+		if (!tw.q.breaks?.length) tw.q.breaks = [defaultBreak]
 		if (tw.q.breaks.length != 1 || ![1, 2, 3, 4, 5].includes(tw.q.breaks[0])) throw 'invalid tw.q.breaks'
-		if (tw.q.mode == 'binary' || tw.q.mode == 'cox') {
-			// assign group names for binary and cox terms
-			if (!tw.q.groupNames || tw.q.groupNames.length == 0) {
-				if (tw.q.mode == 'binary') {
-					tw.q.groupNames[0] = 'Grade < ' + tw.q.breaks[0]
-					tw.q.groupNames[1] = 'Grade >= ' + tw.q.breaks[0]
-				}
-				if (tw.q.mode == 'cox') {
-					tw.q.groupNames[0] = 'No event / censored'
-					tw.q.groupNames[1] = `Event (grade >= ${tw.q.breaks[0]})`
-				}
-			}
-			if (tw.q.groupNames.length != 2) throw 'invalid tw.q.groupNames'
-		}
 	}
-	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
+
+	// for binary term, split grades into groups based on breaks
+	// for cuminc and cox terms, groups will be determined in sql query
+	if (tw.q.mode == 'binary') {
+		if (!tw.term.values) throw `Missing term.values [condition.ts, fillTW()]`
+		// include both tested and not tested grades
+		const grades = Object.keys(tw.term.values)
+			.map(Number)
+			.sort((a, b) => a - b)
+		tw.q.groups = getGroups(grades, tw.q.breaks)
+	}
 
 	// cox time scale
 	if (tw.q.mode == 'cox') {

@@ -124,7 +124,7 @@ export function setInteractivity(self) {
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
 						.text(k)
-						.on('click', event => {
+						.on('click', (event) => {
 							const sandbox = newSandboxDiv(self.opts.plotDiv)
 							sandbox.header.text(sample.sample_id)
 							plotSingleSampleGenomeQuantification(
@@ -144,7 +144,7 @@ export function setInteractivity(self) {
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Disco plot')
-					.on('click', event => {
+					.on('click', (event) => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv)
 						sandbox.header.text(sample.sample_id)
 						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)

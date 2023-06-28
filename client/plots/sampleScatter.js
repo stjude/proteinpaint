@@ -9,15 +9,15 @@ import {
 	symbolCross,
 	symbolSquare,
 	symbolWye,
-	symbolAsterisk,
 	symbolDiamond,
 	symbolDiamond2,
 	symbolStar,
-	symbolSquare2
+	symbolSquare2,
 } from 'd3-shape'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
 import { getActiveCohortStr } from '../mass/charts'
+import { addDynamicScatterForm } from '#dom/dynamicScatter'
 
 /*
 sample object returned by server:
@@ -47,9 +47,9 @@ class Scatter {
 			symbolDiamond,
 			symbolDiamond2,
 			symbolStar,
-			symbolSquare2
+			symbolSquare2,
 		]
-		this.symbols = mySymbols.map(s => symbol(s))
+		this.symbols = mySymbols.map((s) => symbol(s))
 		this.k = 1
 	}
 
@@ -59,7 +59,7 @@ class Scatter {
 			? opts.holder
 			: this.opts.holder.append('div').style('display', 'inline-block')
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
-		this.mainDiv.on('click', event => this.mouseclick(event))
+		this.mainDiv.on('click', (event) => this.mouseclick(event))
 
 		const offsetX = this.opts.parent?.type == 'summary' ? 80 : 50
 		this.axisOffset = { x: offsetX, y: 30 }
@@ -69,14 +69,10 @@ class Scatter {
 			header: this.opts.header,
 			//holder,
 			controls,
-			loadingDiv: this.opts.holder
-				.append('div')
-				.style('position', 'absolute')
-				.style('left', '45%')
-				.style('top', '60%'),
+			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
 			tip: new Menu({ padding: '5px' }),
 			tooltip: new Menu({ padding: '5px' }),
-			controlsHolder
+			controlsHolder,
 		}
 
 		this.settings = {}
@@ -86,7 +82,7 @@ class Scatter {
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find((p) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
@@ -97,7 +93,7 @@ class Scatter {
 			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
 		}
 	}
 
@@ -114,7 +110,7 @@ class Scatter {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
 			filter: this.state.termfilter.filter,
-			coordTWs
+			coordTWs,
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		if (c.term0) opts.divideByTW = c.term0
@@ -155,7 +151,7 @@ class Scatter {
 	}
 
 	createChart(id, data) {
-		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
+		const cohortSamples = data.samples.filter((sample) => 'sampleId' in sample)
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
@@ -170,7 +166,7 @@ class Scatter {
 			usecase: { target: 'sampleScatter', detail: 'shapeTW' },
 			title: 'Categories to assign a shape',
 			label: 'Shape',
-			vocabApi: this.app.vocabApi
+			vocabApi: this.app.vocabApi,
 		}
 		const symbolSizeOption = {
 			label: 'Symbol size',
@@ -178,7 +174,7 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
 			title: 'It represents the area of a symbol in square pixels',
-			min: 0
+			min: 0,
 		}
 		const inputs = [
 			{
@@ -189,7 +185,7 @@ class Scatter {
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete']
+				numericEditMenuVersion: ['continuous', 'discrete'],
 			},
 
 			{
@@ -200,20 +196,20 @@ class Scatter {
 				title: 'Categories to divide by',
 				label: 'Divide by',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: this.app.hasWebGL() ? ['discrete', 'continuous'] : ['discrete']
+				numericEditMenuVersion: this.app.hasWebGL() ? ['discrete', 'continuous'] : ['discrete'],
 			},
 
 			{
 				label: 'Chart width',
 				type: 'number',
 				chartType: 'sampleScatter',
-				settingsKey: 'svgw'
+				settingsKey: 'svgw',
 			},
 			{
 				label: 'Chart height',
 				type: 'number',
 				chartType: 'sampleScatter',
-				settingsKey: 'svgh'
+				settingsKey: 'svgh',
 			},
 			{
 				boxLabel: 'Visible',
@@ -221,7 +217,7 @@ class Scatter {
 				type: 'checkbox',
 				chartType: 'sampleScatter',
 				settingsKey: 'showAxes',
-				title: `Option to show/hide plot axes`
+				title: `Option to show/hide plot axes`,
 			},
 			{
 				label: 'Opacity',
@@ -230,8 +226,8 @@ class Scatter {
 				settingsKey: 'opacity',
 				title: 'It represents the opacity of the symbols',
 				min: 0,
-				max: 1
-			}
+				max: 1,
+			},
 		]
 		if (this.opts.parent?.type == 'summary') {
 			inputs.unshift(
@@ -240,24 +236,24 @@ class Scatter {
 						type: 'term',
 						configKey: 'term',
 						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'term' },
+						usecase: { target: 'sampleScatter', detail: 'numeric' },
 						title: 'X coordinate to plot the samples',
 						label: 'X',
 						vocabApi: this.app.vocabApi,
 						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous', 'discrete']
+						numericEditMenuVersion: ['continuous', 'discrete'],
 					},
 					{
 						type: 'term',
 						configKey: 'term2',
 						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'term2' },
+						usecase: { target: 'sampleScatter', detail: 'numeric' },
 						title: 'Y coordinate to plot the samples',
 						label: 'Y',
 						vocabApi: this.app.vocabApi,
 						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous', 'discrete']
-					}
+						numericEditMenuVersion: ['continuous', 'discrete'],
+					},
 				]
 			)
 			if (!this.is3D) {
@@ -272,22 +268,22 @@ class Scatter {
 						{ label: 'None', value: 'None' },
 						{ label: 'Loess', value: 'Loess' },
 						{ label: 'Lowess-R', value: 'Lowess-R' },
-						{ label: 'Polynomial', value: 'Polynomial' }
-					]
+						{ label: 'Polynomial', value: 'Polynomial' },
+					],
 				})
 			} else {
 				inputs.splice(6, 0, {
 					label: 'Chart depth',
 					type: 'number',
 					chartType: 'sampleScatter',
-					settingsKey: 'svgd'
+					settingsKey: 'svgd',
 				})
 			}
 			inputs.push({
 				label: 'Default color',
 				type: 'color',
 				chartType: 'sampleScatter',
-				settingsKey: 'defaultColor'
+				settingsKey: 'defaultColor',
 			})
 		} else {
 			inputs.splice(1, 0, shapeOption)
@@ -298,7 +294,7 @@ class Scatter {
 				chartType: 'sampleScatter',
 				settingsKey: 'refSize',
 				title: 'It represents the area of the reference symbol in square pixels',
-				min: 0
+				min: 0,
 			})
 		}
 
@@ -307,8 +303,8 @@ class Scatter {
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controlsHolder,
-				inputs
-			})
+				inputs,
+			}),
 		}
 		// TODO: handle multiple chart download when there is a divide by term
 		this.components.controls.on('downloadClick.scatter', () => {
@@ -333,10 +329,10 @@ export async function getPlotConfig(opts, app) {
 			groups: [],
 			settings: {
 				controls: {
-					isOpen: false // control panel is hidden by default
+					isOpen: false, // control panel is hidden by default
 				},
-				sampleScatter: settings
-			}
+				sampleScatter: settings,
+			},
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)
@@ -378,16 +374,18 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				let config = {
 					chartType: 'sampleScatter',
 					colorTW: JSON.parse(JSON.stringify(plot.colorTW)),
-					name: plot.name
+					name: plot.name,
 				}
 				if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
 				chartsInstance.app.dispatch({
 					type: 'plot_create',
-					config: config
+					config: config,
 				})
 				chartsInstance.dom.tip.hide()
 			})
 	}
+	const formDiv = menuDiv.append('div')
+	addDynamicScatterForm(chartsInstance.dom.tip, chartsInstance.app)
 }
 
 export function getDefaultScatterSettings() {
@@ -402,6 +400,6 @@ export function getDefaultScatterSettings() {
 		showRef: true,
 		opacity: 0.8,
 		defaultColor: 'rgb(144, 23, 57)',
-		regression: 'None'
+		regression: 'None',
 	}
 }
