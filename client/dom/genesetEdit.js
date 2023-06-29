@@ -2,7 +2,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
-export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], vocabApi, group, showGroup }) {
+export function showGenesetEdit({ holder, menu, genome, callback, geneList = [], vocabApi, group, showGroup }) {
 	const api = {
 		dom: {
 			tdbBtns: {}
@@ -152,7 +152,7 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 
 	api.dom.submitBtn = submitBtn
 
-	menu.show(x, y, false, true)
+	menu.showunder(holder)
 
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()
