@@ -412,12 +412,11 @@ thus less things to worry about...
 		}
 
 		/* this logic allows to add chart types generally applicable to all numeric terms
-but boxplot and scatter are now child types under "summary" plot. 
+but boxplot and scatter are now child types under "summary" plot. */
 		for (const cohort in numericTypeCount) {
-			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].add('boxplot')
-			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].add('scatterplot')
+			//if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].add('boxplot')
+			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].add('sampleScatter')
 		}
-		*/
 
 		// convert to array
 		for (const cohort in supportedChartTypes) {

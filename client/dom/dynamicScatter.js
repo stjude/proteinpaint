@@ -4,15 +4,15 @@ import { Menu } from '#dom/menu'
 export function addDynamicScatterForm(tip, app) {
 	const tip2 = new Menu({ padding: '5px', offsetX: 30, offsetY: -20 })
 	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
-	coordsDiv.append('div').html('Select variables to build a new plot').style('font-size', '0.7rem')
+	coordsDiv.append('div').html('Select variables to build a new plot').style('font-size', '0.9rem')
 	let xterm, yterm
 	const xDiv = coordsDiv.append('div').style('padding-top', '5px').html('&nbsp;X&nbsp;&nbsp;')
 	const xtermDiv = xDiv
 		.append('div')
 		.attr('class', 'sja_filter_tag_btn add_term_btn')
 		.text('+')
-		.on('click', (e) => {
-			getTreeTerm(xtermDiv, (term) => (xterm = term))
+		.on('click', e => {
+			getTreeTerm(xtermDiv, term => (xterm = term))
 		})
 
 	const yDiv = coordsDiv.append('div').html('&nbsp;Y&nbsp;&nbsp;')
@@ -20,14 +20,15 @@ export function addDynamicScatterForm(tip, app) {
 		.append('div')
 		.attr('class', 'sja_filter_tag_btn add_term_btn')
 		.text('+')
-		.on('click', (e) => {
-			getTreeTerm(ytermDiv, (term) => (yterm = term))
+		.on('click', e => {
+			getTreeTerm(ytermDiv, term => (yterm = term))
 		})
 
 	const submitbt = coordsDiv
 		.append('div')
+		.style('float', 'right')
+		.style('padding', '5px')
 		.insert('button')
-		.style('margin-left', '100px')
 		.text('Submit')
 		.property('disabled', true)
 		.on('click', () => {
@@ -37,8 +38,8 @@ export function addDynamicScatterForm(tip, app) {
 					chartType: 'sampleScatter',
 					term: xterm,
 					term2: yterm,
-					name: 'Dynamic scatter',
-				},
+					name: 'Dynamic scatter'
+				}
 			})
 			tip.hide()
 		})
@@ -49,7 +50,7 @@ export function addDynamicScatterForm(tip, app) {
 
 		showTermsTree(
 			div,
-			(term) => {
+			term => {
 				callback(term)
 				tip2.hide()
 				div.selectAll('*').remove()
