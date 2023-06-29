@@ -7,11 +7,10 @@ const { Menu } = require('#dom/menu')
 /*************************
  reusable helper functions
 **************************/
-
 function getHolder() {
 	return select('body').append('div')
 }
-
+const holder = getHolder().node()
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -26,7 +25,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Empty opts.geneList', function (test) {
+tape.only('Empty opts.geneList', function (test) {
 	test.timeoutAfter(100)
 	const param = { label: 'Param 1', type: 'number', value: 10 }
 	const vocabApi = {
@@ -43,8 +42,7 @@ tape('Empty opts.geneList', function (test) {
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
 		const ui = showGenesetEdit({
-			x: 100,
-			y: 200,
+			holder,
 			menu,
 			genome: hg38,
 			callback: () => {},
@@ -64,8 +62,7 @@ tape('Empty opts.geneList', function (test) {
 	function testHG19() {
 		const menu = new Menu({ padding: '0px' })
 		const ui = showGenesetEdit({
-			x: 100,
-			y: 200,
+			holder,
 			menu,
 			genome: hg19,
 			callback: () => {},
@@ -93,8 +90,7 @@ tape('Non-empty opts.geneList', function (test) {
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
 		const ui = showGenesetEdit({
-			x: 100,
-			y: 200,
+			holder,
 			menu,
 			genome: hg38,
 			geneList,
@@ -120,8 +116,7 @@ tape('gene deletion', function (test) {
 		const menu = new Menu({ padding: '0px' })
 		const len = geneList.length
 		const ui = showGenesetEdit({
-			x: 100,
-			y: 200,
+			holder,
 			menu,
 			genome: hg38,
 			geneList,
@@ -145,8 +140,7 @@ tape('submit button', function (test) {
 	const geneLstCopy = structuredClone(geneList)
 	const menu = new Menu({ padding: '0px' })
 	const ui = showGenesetEdit({
-		x: 100,
-		y: 200,
+		holder,
 		menu,
 		genome: hg38,
 		geneList,
