@@ -197,6 +197,13 @@ export function showGenesetEdit({ x, y, menu, genome, callback, geneList = [], v
 
 	function addGene() {
 		const name = inputSearch.geneSymbol
+		for (const gene of geneList) {
+			if (gene.name == name) {
+				alert(`The gene ${name} has already been added`)
+				return
+			}
+		}
+
 		geneList.push({ name })
 		renderGenes()
 	}
