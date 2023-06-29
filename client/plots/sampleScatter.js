@@ -229,7 +229,7 @@ class Scatter {
 				max: 1
 			}
 		]
-		if (this.opts.parent?.type == 'summary') {
+		if (this.opts.parent?.type == 'summary' || this.config.term) {
 			inputs.unshift(
 				...[
 					{
