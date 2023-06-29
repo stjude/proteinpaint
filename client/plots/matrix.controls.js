@@ -647,14 +647,11 @@ export class MatrixControls {
 
 	addGeneSearch(event, app, parent, tr, callback) {
 		const tg = parent.config.termgroups
-		parent.selectedGroup = 0
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene set')
 		const td = tr.append('td')
+		let select
 		if (tg.length > 1) {
-			const select = td.append('select').on('change', e => {
-				const i = select.node().value
-				parent.selectedGroup = parseInt(i)
-			})
+			select = td.append('select')
 			select
 				.selectAll('option')
 				.data(tg)
@@ -663,7 +660,6 @@ export class MatrixControls {
 				.attr('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
 				.attr('value', (d, i) => i)
 				.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
-			parent.selectedGroup = parseInt(select.node().value)
 		} else {
 			const group = parent.config.termgroups[parent.selectedGroup]
 			const count = group.lst.filter(tw => tw.term.type == 'geneVariant').length
@@ -677,8 +673,8 @@ export class MatrixControls {
 			.style('margin-left', '3px')
 			.text('Edit')
 			.on('click', () => {
-				const group = parent.config.termgroups[parent.selectedGroup]
-
+				const selectedGroup = parseInt(select?.node().value || 0)
+				const group = parent.config.termgroups[selectedGroup]
 				app.tip.clear().hide()
 
 				const geneList = []
