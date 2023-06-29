@@ -1623,16 +1623,57 @@ function termid2size_filters(p, ds) {
 			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
 		})
 	}
-	//console.log(JSON.stringify(f,null,2))
 	return f
 }
 
 export function validate_query_singleSampleMutation(ds, genome) {
-	ds.queries.singleSampleMutation.get = async (case_id, q) => {
-		if (!case_id) throw 'case_id missing'
-		q.case_id = case_id
+	ds.queries.singleSampleMutation.get = async (sampleName, q) => {
+		if (!sampleName) throw 'sampleName missing'
+		/*
+		the "sampleName" is sample.sample_id from client based on gdc dataset
+		the value can be multiple types:
+		- sample submitter id (human redable) from mds3 tk (if cached, if not cached it is aliquot id)
+		- case submitter id  (human readable) from matrix
+		the 3 types of ids will all be converted to case.case_id (uuid) for next use
+
+		do the conversion here on the fly so that no need for client to manage these extra, arbitrary ids that's specific for gdc
+		beyond sample.sample_id for display
+		*/
+		q.case_id = await convert2caseId(sampleName)
 		return await getSingleSampleMutations(q, ds, genome)
 	}
+}
+
+async function convert2caseId(n) {
+	/*
+	convert all below to case.case_id
+	- case submitter id (TCGA-FR-A44A)
+	- aliquot id (d835e9c7-de84-4acd-ba30-516f396cbd84)
+	- aliquot submitter id (TCGA-B5-A1MR-01A)
+	*/
+	const response = await got.post(
+		'https://api.gdc.cancer.gov/cases', //path.join(apihost, 'cases'),
+		{
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, //getheaders({}),
+			body: JSON.stringify({
+				size: 1,
+				fields: 'case_id,submitter_id',
+				filters: {
+					op: 'or',
+					content: [
+						{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: [n] } },
+						{ op: '=', content: { field: 'submitter_id', value: [n] } },
+						{ op: '=', content: { field: 'samples.submitter_id', value: [n] } }
+					]
+				}
+			})
+		}
+	)
+	const re = JSON.parse(response.body)
+	for (const h of re.data.hits) {
+		if (h.case_id) return h.case_id
+	}
+	throw 'cannot convert to case_id (uuid)'
 }
 
 /************************************************
