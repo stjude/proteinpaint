@@ -1,7 +1,7 @@
 import { select } from 'd3-selection'
 
 export function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		const s = self.settings.matrix
 		const l = self.layout
 		const d = self.dimensions
@@ -19,7 +19,7 @@ export function setRenderers(self) {
 		self.renderLabels(s, l, d, duration)
 	}
 
-	self.renderSerieses = function(s, l, d, duration) {
+	self.renderSerieses = function (s, l, d, duration) {
 		if (self.prevUseCanvas != s.useCanvas) {
 			self.dom.seriesesG.selectAll('g').remove()
 		}
@@ -36,16 +36,12 @@ export function setRenderers(self) {
 			const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
 			sg.exit().remove()
 			sg.each(self.renderSeries)
-			sg.enter()
-				.append('g')
-				.attr('class', 'sjpp-mass-series-g')
-				.style('opacity', 0.001)
-				.each(self.renderSeries)
+			sg.enter().append('g').attr('class', 'sjpp-mass-series-g').style('opacity', 0.001).each(self.renderSeries)
 		}
 		self.prevUseCanvas = s.useCanvas
 	}
 
-	self.renderSeries = async function(series) {
+	self.renderSeries = async function (series) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const g = select(this)
@@ -63,13 +59,10 @@ export function setRenderers(self) {
 			.data(series.cells, cell => cell.sample + ';;' + cell.tw.$id + ';;' + cell.valueIndex)
 		rects.exit().remove()
 		rects.each(self.renderCell)
-		rects
-			.enter()
-			.append('rect')
-			.each(self.renderCell)
+		rects.enter().append('rect').each(self.renderCell)
 	}
 
-	self.renderCanvas = async function(serieses, g, d, s, _g, duration) {
+	self.renderCanvas = async function (serieses, g, d, s, _g, duration) {
 		const df = self.stateDiff
 		if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
@@ -129,15 +122,12 @@ export function setRenderers(self) {
 
 			const dataURL = canvas.toDataURL()
 			const ratio = window.devicePixelRatio * window.devicePixelRatio
-			g.append('image')
-				.attr('width', width)
-				.attr('height', height)
-				.attr('xlink:href', dataURL)
+			g.append('image').attr('width', width).attr('height', height).attr('xlink:href', dataURL)
 			if (!window.OffscreenCanvas) canvas.remove()
 		}
 	}
 
-	self.renderCellWithCanvas = function(ctx, cell, series, s, d, _y) {
+	self.renderCellWithCanvas = function (ctx, cell, series, s, d, _y) {
 		if (!cell.fill)
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
 		const x = cell.x ? cell.x - d.xMin : 0
@@ -157,7 +147,7 @@ export function setRenderers(self) {
 		*/
 	}
 
-	self.renderCell = function(cell) {
+	self.renderCell = function (cell) {
 		if (!cell.fill)
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
 		const s = self.settings.matrix
@@ -177,7 +167,7 @@ export function setRenderers(self) {
 			.attr('fill', cell.fill)
 	}
 
-	self.renderLabels = function(s, l, d, duration) {
+	self.renderLabels = function (s, l, d, duration) {
 		for (const direction of ['top', 'btm', 'left', 'right']) {
 			const side = l[direction]
 			side.box
@@ -189,11 +179,7 @@ export function setRenderers(self) {
 			const labels = side.box.selectAll('.sjpp-matrix-label').data(side.data, side.key)
 			labels.exit().remove()
 			labels.each(renderLabel)
-			labels
-				.enter()
-				.append('g')
-				.attr('class', 'sjpp-matrix-label')
-				.each(renderLabel)
+			labels.enter().append('g').attr('class', 'sjpp-matrix-label').each(renderLabel)
 
 			function renderLabel(lab) {
 				const g = select(this)
@@ -221,10 +207,7 @@ export function setRenderers(self) {
 				else {
 					const tspan = text.selectAll('tspan').data(labelText)
 					tspan.exit().remove()
-					tspan
-						.attr('dx', getTspanDx)
-						.attr('font-size', getTspanFontSize)
-						.text(getTspanText)
+					tspan.attr('dx', getTspanDx).attr('font-size', getTspanFontSize).text(getTspanText)
 					tspan
 						.enter()
 						.append('tspan')
@@ -238,11 +221,10 @@ export function setRenderers(self) {
 					.on('mouseover', labelText === 'configure' ? () => text.attr('opacity', 0.5) : null)
 					.on('mouseout', labelText === 'configure' ? () => text.attr('opacity', 0) : null)
 
+				const hasAxis = g.select('.sjpp-matrix-cell-axis').size() && true
 				if (showContAxis && labelText) {
-					if (!g.select('.sjpp-matrix-cell-axis').size()) {
-						g.append('g')
-							.attr('class', 'sjpp-matrix-cell-axis')
-							.attr('shape-rendering', 'crispEdges')
+					if (!hasAxis) {
+						g.append('g').attr('class', 'sjpp-matrix-cell-axis').attr('shape-rendering', 'crispEdges')
 					}
 					const axisg = g.select('.sjpp-matrix-cell-axis')
 					axisg.selectAll('*').remove()
@@ -255,6 +237,8 @@ export function setRenderers(self) {
 						.attr('shape-rendering', 'crispEdges')
 						.attr('transform', `translate(${x},${y})`)
 						.call(side.attr.axisFxn(lab.scale.domain(domain)).tickValues(domain))
+				} else if (hasAxis) {
+					g.select('.sjpp-matrix-cell-axis').remove()
 				}
 			}
 
@@ -325,7 +309,7 @@ export function setRenderers(self) {
 		return `translate(${x},${y})`
 	}
 
-	self.adjustSvgDimensions = async function(prevTranspose) {
+	self.adjustSvgDimensions = async function (prevTranspose) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0

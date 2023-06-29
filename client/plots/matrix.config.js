@@ -86,7 +86,7 @@ export async function getPlotConfig(opts, app) {
 				},
 				cnvUnit: 'log2ratio',
 
-				barh: 16 // default bar height for continuous terms
+				barh: 32 // default bar height for continuous terms
 			}
 		}
 	}
