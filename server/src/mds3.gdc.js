@@ -552,8 +552,8 @@ export function validate_query_geneCnv2(ds) {
 			}
 			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
 			const sample = {
-				sample_id: hit.case.submitter_id,
-				'case.case_id': hit.case.case_id
+				sample_id: hit.case.submitter_id
+				// must not assign "case.case_id" here into sample{}, it breaks flattenCaseByFields() (why)
 			}
 
 			if (opts.twLst) {
@@ -561,6 +561,9 @@ export function validate_query_geneCnv2(ds) {
 					flattenCaseByFields(sample, hit.case, tw)
 				}
 			}
+
+			// assign case.case_id here after calling flattenCaseByFields
+			sample['case.case_id'] = hit.case.case_id
 
 			cnv.samples.push(sample)
 		}
