@@ -2,7 +2,7 @@ import { showTermsTree } from '../mass/groups'
 import { Menu } from '#dom/menu'
 
 export function addDynamicScatterForm(tip, app) {
-	const tip2 = new Menu({ padding: '5px', offsetX: 30, offsetY: -20 })
+	const tip2 = new Menu({ padding: '5px' })
 	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
 	coordsDiv.append('div').html('Select variables to build a new plot').style('font-size', '0.9rem')
 	let xterm, yterm
@@ -60,6 +60,7 @@ export function addDynamicScatterForm(tip, app) {
 			app,
 			tip,
 			state,
+			false,
 			false
 		)
 	}

@@ -61,7 +61,7 @@ class Scatter {
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 		this.mainDiv.on('click', event => this.mouseclick(event))
 
-		const offsetX = this.opts.parent?.type == 'summary' ? 80 : 50
+		const offsetX = 80 //this.opts.parent?.type == 'summary' ? 80 : 50
 		this.axisOffset = { x: offsetX, y: 30 }
 		const controlsHolder = controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 
