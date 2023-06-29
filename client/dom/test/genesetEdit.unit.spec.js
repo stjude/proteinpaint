@@ -25,7 +25,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('Empty opts.geneList', function (test) {
+tape('Empty opts.geneList', function (test) {
 	test.timeoutAfter(100)
 	const param = { label: 'Param 1', type: 'number', value: 10 }
 	const vocabApi = {
