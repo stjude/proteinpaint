@@ -142,13 +142,6 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 			menu.hide()
 			callback(group, geneList)
 		})
-	footerDiv
-		.append('button')
-		.style('margin-left', '10px')
-		.text('Close')
-		.on('click', () => {
-			menu.hide()
-		})
 
 	api.dom.submitBtn = submitBtn
 
