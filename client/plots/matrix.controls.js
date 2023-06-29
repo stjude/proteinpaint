@@ -609,6 +609,10 @@ export class MatrixControls {
 			}
 		}
 		const callback = (group, geneset) => {
+			if (group.lst.length == 0)
+				//it was a new group
+				parent.config.termgroups.push(group)
+
 			const lst = []
 			for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
 			group.lst = lst
@@ -717,7 +721,6 @@ export class MatrixControls {
 					overrides: false,
 					lst: []
 				}
-				tg.push(group)
 				showGenesetEdit({
 					holder: event.target,
 					menu: app.tip,
