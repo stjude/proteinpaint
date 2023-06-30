@@ -183,7 +183,7 @@ class Scatter {
 				chartType: 'sampleScatter',
 				usecase: { target: 'sampleScatter', detail: 'term0' },
 				title: 'Categories to divide by',
-				label: this.config.term0.q.mode == 'continuous' ? 'Z' : 'Divide by',
+				label: this.config.term0?.q?.mode == 'continuous' ? 'Z' : 'Divide by',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.app.hasWebGL() ? ['discrete', 'continuous'] : ['discrete']
 			},
