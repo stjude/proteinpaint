@@ -116,6 +116,10 @@ export function parseline(i, line, flag, header) {
 				json.class = common.mclassdel
 				json.mname = 'Del'
 				break
+			case common.dtsv:
+				json.class = common.mclasssv
+				json.mname = 'SV'
+				break
 			default:
 				badlines.push([i, 'unknown datatype', lst])
 				return
