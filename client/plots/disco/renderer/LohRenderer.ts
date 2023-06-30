@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import LohArc from '#plots/disco/viewmodel/LohArc'
+import LohArc from '../viewmodel/LohArc'
 import IRenderer from './IRenderer'
 import MenuProvider from './MenuProvider'
 

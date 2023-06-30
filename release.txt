@@ -1,0 +1,3 @@
+- handle optional action.config in mass store.plot_edit()
+- fix recover to not prematurely replace state
+- fix LohArc import for rollup

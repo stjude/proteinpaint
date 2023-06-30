@@ -25,6 +25,7 @@ class Recover {
 		this.getState = opts.getState || (appState => appState)
 		// will be used for setTimeout, in case of rapid succession of state changes
 		this.debouncedTrack = () => {
+			this.trackPending = true
 			this.trackState()
 			this.render()
 		}
@@ -32,8 +33,9 @@ class Recover {
 
 	preApiFreeze(api) {
 		api.replaceLastState = state => {
-			if (this.history.length) this.history.pop()
-			this.history.push(state)
+			if (this.isRecovering) return
+			this.state = state
+			if (!this.trackPending) this.history[this.currIndex] = state
 		}
 	}
 
@@ -55,7 +57,8 @@ class Recover {
 		// indicates testing, no need for history in that case
 		if (!this.isActive) return
 		if (this.timedTrack) clearTimeout(this.timedTrack)
-		this.timedTrack = setTimeout(this.debouncedTrack, 1000)
+		this.trackPending = true
+		this.timedTrack = setTimeout(this.debouncedTrack, 800)
 	}
 
 	trackState() {
@@ -65,7 +68,6 @@ class Recover {
 		}
 		if (this.state._scope_ == 'none') return
 		this.isRecovering = false
-
 		if (this.currIndex < this.history.length - 1) {
 			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
 		}
@@ -76,6 +78,7 @@ class Recover {
 			this.history.shift()
 			this.currIndex += -1
 		}
+		this.trackPending = false
 	}
 
 	goto(i) {
@@ -84,9 +87,10 @@ class Recover {
 		else return
 		this.isRecovering = true
 		const state = this.history[this.currIndex]
-		if (this.opts.plot_id)
-			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: structuredClone(state.config) })
-		else this.app.dispatch({ type: 'app_refresh', state })
+		if (this.opts.plot_id) {
+			const config = state.plots.find(p => p.id === this.opts.plot_id)
+			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: structuredClone(config) })
+		} else this.app.dispatch({ type: 'app_refresh', state })
 	}
 }
 

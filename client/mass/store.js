@@ -264,7 +264,7 @@ TdbStore.prototype.actions = {
 		}
 		validatePlot(plot, this.app.vocabApi)
 
-		if ('cutoff' in action.config) {
+		if (action.config && 'cutoff' in action.config) {
 			plot.cutoff = action.config.cutoff
 		} else {
 			delete plot.cutoff
