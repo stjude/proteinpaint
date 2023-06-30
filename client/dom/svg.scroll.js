@@ -5,16 +5,14 @@ export function svgScroll(_opts) {
 	const defaults = {
 		height: 12,
 		zoomLevel: 1,
-		opacity: 0.7
+		opacity: 0.3
 	}
 
 	const opts = Object.assign({}, defaults, _opts)
 
 	function scrollInit(e) {
 		ref.x = e.clientX
-		select('body')
-			.on('mousemove.sjppSvgScroll', scrollMove)
-			.on('mouseup.sjppSvgScroll', scrollStop)
+		select('body').on('mousemove.sjppSvgScroll', scrollMove).on('mouseup.sjppSvgScroll', scrollStop)
 	}
 
 	function scrollMove(e) {
@@ -31,9 +29,7 @@ export function svgScroll(_opts) {
 		const dx = e.clientX - ref.x
 		opts.callback(ref.dxFactor * Math.min(ref.maxDx, Math.max(dx, ref.minDx)), 'up')
 		delete ref.x
-		select('body')
-			.on('mousemove.sjppSvgScroll', null)
-			.on('mouseup.sjppSvgScroll', null)
+		select('body').on('mousemove.sjppSvgScroll', null).on('mouseup.sjppSvgScroll', null)
 	}
 
 	function scrollByClick(e) {
@@ -58,11 +54,7 @@ export function svgScroll(_opts) {
 		.style('fill', '#fff')
 		.on('click', scrollByClick)
 
-	const line = opts.holder
-		.append('line')
-		.style('stroke', '#ccc')
-		.style('stroke-width', 1)
-		.on('click', scrollByClick)
+	const line = opts.holder.append('line').style('stroke', '#ccc').style('stroke-width', 1).on('click', scrollByClick)
 
 	const leftArrow = opts.holder
 		.append('path')
