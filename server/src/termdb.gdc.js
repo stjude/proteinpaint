@@ -217,13 +217,15 @@ export async function initGDCdictionary(ds) {
 		for (let i = 1; i < termLevels.length; i++) {
 			const parentId = termLevels.slice(0, i).join('.')
 			const currentId = parentId + '.' + termLevels[i]
+			if (currentId.endsWith('_id') && !currentId.endsWith('project_id')) continue
+			const name = termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' ')
 
 			// always create an object for currentId
 			// when recording this term in id2term{}, force term id to be lower case
 			// so that findTermByName can work
 			const termObj = {
 				id: currentId.toLowerCase(),
-				name: termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' '),
+				name,
 				included_types_set: new Set(), // apply to leaf terms, should have its own term.type
 				child_types_set: new Set() // empty for leaf terms
 			}
@@ -450,7 +452,10 @@ function makeTermdbQueries(ds, id2term) {
 		// FIXME revive this code
 		if (terms.length == 0 || !treeFilter) return
 
-		const tv2counts = await ds.termdb.termid2totalsize2.get(terms.map(i => i.id), JSON.parse(treeFilter))
+		const tv2counts = await ds.termdb.termid2totalsize2.get(
+			terms.map(i => i.id),
+			JSON.parse(treeFilter)
+		)
 
 		// add term.disabled if samplesize if zero
 		for (const term of terms) {
