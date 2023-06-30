@@ -1,0 +1,11 @@
+- fixed the matrix sample groupung input lag, edit menu error, empty column bug
+- contextualized the matrix row label mouseover title
+- removed GDC terms that are IDs or cause server response errors
+- removed the numeric axis in the matrix row label when switching from continuous to discrete mode 
+- removed an empty matrix term group after its last remaining term gets moved to a different term 
+- supported launching disco plot from a matrix sample label click
+- improved the geneset edit UI by having group input and fixing bugs
+- supported a standalone scatter plot button in the charts tab
+- mds3 gdc convert to case.case_id on the fly for disco plot
+- improved disco plot tooltip, ring logic, other features and bug fixes
+- use typescript for genomes, dataset, termsetting code
