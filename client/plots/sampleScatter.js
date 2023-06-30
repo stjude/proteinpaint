@@ -61,7 +61,7 @@ class Scatter {
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 		this.mainDiv.on('click', event => this.mouseclick(event))
 
-		const offsetX = 80 //this.opts.parent?.type == 'summary' ? 80 : 50
+		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
 		const controlsHolder = controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 
@@ -140,7 +140,7 @@ class Scatter {
 			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 			this.createChart(key, data)
 		}
-		this.is3D = this.opts.parent?.type == 'summary' && this.config.term0?.q.mode == 'continuous'
+		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
 		await this.setControls()
 		await this.processData()
 		this.render()
