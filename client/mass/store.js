@@ -14,7 +14,7 @@ function getId() {
 const defaultState = {
 	nav: {
 		header_mode: 'with_tabs',
-		activeTab: 0,
+		activeTab: 0
 	},
 	// will be ignored if there is no dataset termdb.selectCohort
 	// or value will be set to match a filter node that has been tagged
@@ -27,20 +27,20 @@ const defaultState = {
 			type: 'tvslst',
 			in: true,
 			join: '',
-			lst: [],
-		},
+			lst: []
+		}
 	},
 	reuse: {
 		customTermQ: {
 			byId: {},
 			// non-dictionary terms do not have a term.id,
 			// save by term.type + name?
-			byName: {},
-		},
+			byName: {}
+		}
 	},
 	groups: [], // element: {name=str, filter={}}, to show in Groups tab
 	customTerms: [], // element: {name=str, term={}}, able to attach more attr to object if needed
-	autoSave: true,
+	autoSave: true
 }
 
 // one store for the whole MASS app
@@ -78,15 +78,13 @@ class TdbStore {
 			// so manually set it here
 			await this.app.vocabApi.main({
 				termfilter: JSON.parse(JSON.stringify(this.state.termfilter)),
-				termdbConfig: this.state.termdbConfig,
+				termdbConfig: this.state.termdbConfig
 			})
 
 			for (const [i, savedPlot] of this.state.plots.entries()) {
-				const _ = await import(
-					`../plots/${savedPlot.subfolder ? savedPlot.subfolder + '/' : ''}${savedPlot.chartType}.${
-						savedPlot.extension ? savedPlot.extension : 'js'
-					}`
-				)
+				// easier for rollup to support less complex dynamic imports with variables,
+				// webpack is already more flexible but need to support packing with rollup
+				const _ = await import(`../plots/${savedPlot.chartType}.js`)
 				const plot = await _.getPlotConfig(savedPlot, this.app)
 				this.state.plots[i] = plot
 				if (!('id' in plot)) plot.id = `_AUTOID_${id++}_${i}`
@@ -137,23 +135,23 @@ class TdbStore {
 						values:
 							this.state.activeCohort == -1
 								? []
-								: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map((key) => {
+								: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
 										return { key, label: key }
-								  }),
-					},
+								  })
+					}
 				}
 				this.state.termfilter.filter = {
 					type: 'tvslst',
 					in: true,
 					join: 'and',
-					lst: [cohortFilter, filterUiRoot],
+					lst: [cohortFilter, filterUiRoot]
 				}
 			} else {
 				const sorter = (a, b) => (a < b ? -1 : 1)
 				cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
-				const keysStr = JSON.stringify(cohortFilter.tvs.values.map((v) => v.key).sort(sorter))
+				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
 				const i = this.state.termdbConfig.selectCohort.values.findIndex(
-					(v) => keysStr == JSON.stringify(v.keys.sort(sorter))
+					v => keysStr == JSON.stringify(v.keys.sort(sorter))
 				)
 				if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
 					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
@@ -179,7 +177,7 @@ function rehydrateFilter(filter, vocabApi, proms = []) {
 	} else if (filter.type == 'tvs') {
 		if (!filter.tvs.term.name)
 			proms.push(
-				vocabApi.getterm(filter.tvs.term.id).then((term) => {
+				vocabApi.getterm(filter.tvs.term.id).then(term => {
 					filter.tvs.term = term
 				})
 			)
@@ -230,14 +228,14 @@ TdbStore.prototype.actions = {
 		const cohort = this.state.termdbConfig.selectCohort.values[action.activeCohort]
 		const cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 		if (!cohortFilter) throw `No item tagged with 'cohortFilter'`
-		cohortFilter.tvs.values = cohort.keys.map((key) => {
+		cohortFilter.tvs.values = cohort.keys.map(key => {
 			return { key, label: key }
 		})
 	},
 
 	async plot_prep(action) {
 		const plot = {
-			id: 'id' in action ? action.id : getId(),
+			id: 'id' in action ? action.id : getId()
 		}
 		if (!action.config) throw '.config{} missing for plot_prep'
 		Object.assign(plot, action.config)
@@ -257,7 +255,7 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_edit(action) {
-		const plot = this.state.plots.find((p) => p.id === action.id)
+		const plot = this.state.plots.find(p => p.id === action.id)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		if (plot.mayAdjustConfig) {
@@ -274,12 +272,12 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_delete(action) {
-		const i = this.state.plots.findIndex((p) => p.id === action.id)
+		const i = this.state.plots.findIndex(p => p.id === action.id)
 		if (i !== -1) this.state.plots.splice(i, 1)
 	},
 
 	plot_nestedEdits(action) {
-		const plot = this.state.plots.find((p) => p.id === action.id)
+		const plot = this.state.plots.find(p => p.id === action.id)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit_nested`
 		for (const edit of action.edits) {
 			const lastKey = edit.nestedKeys.pop()
@@ -359,7 +357,7 @@ TdbStore.prototype.actions = {
 	},
 
 	delete_customTerm({ name }) {
-		const i = this.state.customTerms.findIndex((i) => i.name == name)
+		const i = this.state.customTerms.findIndex(i => i.name == name)
 		if (i != -1) this.state.customTerms.splice(i, 1)
 	},
 
@@ -372,12 +370,12 @@ TdbStore.prototype.actions = {
 			const appGroup = {
 				name: name,
 				filter: getFilter(samplelstTW),
-				plotId: group.plotId,
+				plotId: group.plotId
 			}
 			this.state.groups.push(appGroup)
 			this.state.nav.activeTab = 1
 		} else if ('plotId' in action.obj) {
-			const plot = this.state.plots.find((p) => p.id == action.obj.plotId)
+			const plot = this.state.plots.find(p => p.id == action.obj.plotId)
 			if (plot.groups) {
 				action.obj.index = plot.groups.length
 				action.obj.name = `Group ${plot.groups.length + 1}`
@@ -402,32 +400,32 @@ TdbStore.prototype.actions = {
 
 	delete_group({ name }) {
 		if (this.state.nav.header_mode != 'hidden') {
-			const i = this.state.groups.findIndex((i) => i.name == name)
+			const i = this.state.groups.findIndex(i => i.name == name)
 			if (i != -1) this.state.groups.splice(i, 1)
 		} else {
 			for (const plot of this.state.plots) {
 				if (plot?.groups) {
-					const j = plot.groups.findIndex((j) => j.name == name)
+					const j = plot.groups.findIndex(j => j.name == name)
 					if (j != -1) plot.groups.splice(j, 1)
 				}
 			}
 		}
-	},
+	}
 }
 
 // each chartType should have a getter function
 // to return all the term wrappers in the plot config
-const getNestedChartSeriesDataTws = (plot) => [plot.term0, plot.term, plot.term2].filter((d) => !!d)
+const getNestedChartSeriesDataTws = plot => [plot.term0, plot.term, plot.term2].filter(d => !!d)
 const getTwsByChartType = {
 	summary: getNestedChartSeriesDataTws,
 	survival: getNestedChartSeriesDataTws,
 	cuminc: getNestedChartSeriesDataTws,
-	regression: (plot) => [plot.outcome, ...plot.independent].filter((d) => !!d),
-	matrix: (plot) =>
+	regression: plot => [plot.outcome, ...plot.independent].filter(d => !!d),
+	matrix: plot =>
 		plot.termgroups.reduce((arr, grp) => {
 			arr.push(...grp.lst)
 			return arr
-		}, []),
+		}, [])
 }
 
 // must use the await keyword when using this storeInit()

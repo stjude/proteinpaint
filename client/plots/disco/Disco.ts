@@ -35,7 +35,6 @@ export default class Disco {
 
 	async main(): Promise<void> {
 		const settings: Settings = this.state.settings
-		console.log('this.state.settings', this.state.settings)
 		const stateViewModelMapper = new ViewModelMapper(settings)
 		const viewModel = stateViewModelMapper.map(this.app.getState())
 

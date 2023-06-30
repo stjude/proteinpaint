@@ -5,7 +5,6 @@ import { vocabInit } from '#termdb/vocabulary'
 import { recoverInit } from '../rx/src/recover'
 import { sayerror } from '#dom/error'
 import { Menu } from '#dom/menu'
-import * as Disco from './disco/Disco'
 
 /*
 
@@ -45,7 +44,6 @@ TODO allow to hide controls. e.g. in the cuminc plot integrated into cox-snplocu
 
 class PlotApp {
 	constructor(opts) {
-		console.log(46)
 		this.type = 'app'
 		// this will create divs in the correct order
 		const controls = opts.holder.append('div').style('white-space', 'nowrap')
@@ -97,7 +95,6 @@ class PlotApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			console.log(97, this.state)
 			this.components = {
 				plots: []
 			}
@@ -119,35 +116,13 @@ class PlotApp {
 	}
 
 	async main() {
-		console.log(118)
 		this.api.vocabApi.main()
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!plot.id) plot.id = `mds3bar_${+new Date()}_${Math.random()}`
-			console.log(
-				121,
-				plot.id,
-				this.components.plots.find(p => p.id === plot.id)
-			)
 			if (!this.components.plots.find(p => p.id === plot.id)) {
-				console.log(12222222, plot.chartType, plot.extension, plot)
-				const path = plot.subfolder ? plot.subfolder + '/' : ''
-				const fname = path + plot.chartType
-				console.log(fname)
-				let _
-				switch (plot.chartType) {
-					case 'Disco':
-						_ = Disco
-						break
-					default:
-						switch (plot.extension) {
-							case 'ts':
-								_ = await import(`../plots/${fname}.ts`)
-								break
-							default:
-								_ = await import(`../plots/${fname}.js`)
-						}
-				}
-
+				// easier for rollup to support less complex dynamic imports with variables,
+				// webpack is already more flexible but need to support packing with rollup
+				const _ = await import(`../plots/${plot.chartType}.js`)
 				const plotInstance = await _.componentInit({
 					id: plot.id,
 					app: this.api,

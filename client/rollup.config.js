@@ -19,17 +19,21 @@ function onwarn(message, warn) {
 export default [
 	{
 		input: path.join(__dirname, './src/app.js'),
-		output: { dir: path.join(__dirname, 'dist'), format: 'es' },
+		output: {
+			dir: path.join(__dirname, 'dist'),
+			format: 'es'
+		},
 		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {})],
 		plugins: [
 			ignoreTestInternals(),
 			resolve({
-				main: true
+				main: true,
 				//preferBuiltins: false,
+				extensions: ['.js', '.ts']
 			}),
 			json(),
 			commonjs({
-				extensions: ['.js']
+				extensions: ['.js', '.ts']
 			}),
 			postcss({
 				plugins: [postcssImport()]

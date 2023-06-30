@@ -55,6 +55,8 @@ class MassPlot {
 			})
 		}
 
+		// easier for rollup to support less complex dynamic imports with variables,
+		// webpack is already more flexible but need to support packing with rollup
 		const _ = await import(`../plots/${opts.chartType}.js`)
 		this.components.chart = await _.componentInit({
 			app: this.app,
@@ -93,7 +95,7 @@ class MassPlot {
 export const plotInit = getCompInit(MassPlot)
 
 function setRenderers(self) {
-	self.initUi = function(opts) {
+	self.initUi = function (opts) {
 		const holder = opts.holder
 		// opts.holder is "sandbox" obj: {app_div, body, header, header_row, id}
 
