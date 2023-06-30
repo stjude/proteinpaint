@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.18.1
+
+- fix the rollup bundling error caused by the dynamic import of Disco.ts
+
+ 
 ## 2.18.0
 
 - fixed the matrix sample groupung input lag, edit menu error, empty column bug
