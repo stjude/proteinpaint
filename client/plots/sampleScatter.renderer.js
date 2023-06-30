@@ -258,8 +258,8 @@ export function setRenderers(self) {
 		const OrbitControls = await require('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
 		self.canvas = chart.chartDiv.append('canvas').node()
-		self.canvas.width = self.settings.svgw * 2
-		self.canvas.height = self.settings.svgh * 2
+		self.canvas.width = self.settings.svgw * 1.5
+		self.canvas.height = self.settings.svgh * 1.5
 		chart.chartDiv.style('margin', '20px 20px')
 		const fov = 25
 		const near = 0.1
@@ -282,7 +282,7 @@ export function setRenderers(self) {
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			const geometry = new THREE.SphereGeometry(0.02, 64)
-			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.5, transparent: true })
+			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.8, transparent: true })
 			const circle = new THREE.Mesh(geometry, material)
 			scene.add(circle)
 			circle.position.set(x, y, z)
