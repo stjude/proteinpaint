@@ -282,7 +282,7 @@ export function setRenderers(self) {
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			const geometry = new THREE.SphereGeometry(0.02, 64)
-			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.8, transparent: true })
+			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.5, transparent: true })
 			const circle = new THREE.Mesh(geometry, material)
 			scene.add(circle)
 			circle.position.set(x, y, z)
