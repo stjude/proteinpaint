@@ -1,8 +1,8 @@
 import Data from './Data'
 import Reference from './Reference'
-import Label from '#plots/disco/viewmodel/Label'
-import LabelFactory from '#plots/disco/viewmodel/LabelFactory'
-import MLabel from '#plots/disco/mapper/MLabel'
+import Label from '../viewmodel/Label'
+import LabelFactory from '../viewmodel/LabelFactory'
+import MLabel from './MLabel'
 
 export default class LabelsMapper {
 	private settings: any
@@ -21,7 +21,7 @@ export default class LabelsMapper {
 
 		const labels: Array<Label> = []
 
-		data.forEach((data) => {
+		data.forEach(data => {
 			const startAngle = this.calculateStartAngle(data)
 			const endAngle = this.calculateEndAngle(data)
 
@@ -50,7 +50,7 @@ export default class LabelsMapper {
 	}
 
 	private calculateStartAngle(data: Data) {
-		const index = this.reference.chromosomesOrder.findIndex((element) => element == data.chr)
+		const index = this.reference.chromosomesOrder.findIndex(element => element == data.chr)
 		const chromosome = this.reference.chromosomes[index]
 
 		return (

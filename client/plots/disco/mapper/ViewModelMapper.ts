@@ -1,10 +1,10 @@
-import ViewModel from '#plots/disco/viewmodel/ViewModel'
-import discoDefaults from '#plots/disco/defaults.ts'
+import ViewModel from '../viewmodel/ViewModel'
+import discoDefaults from '../defaults.ts'
 import Reference from './Reference'
 import DataMapper from './DataMapper'
-import Settings from '#plots/disco/Settings.ts'
+import Settings from '../Settings.ts'
 import Data from './Data'
-import ViewModelProvider from '#plots/disco/mapper/ViewModelProvider.ts'
+import ViewModelProvider from './ViewModelProvider.ts'
 
 export class ViewModelMapper {
 	static dtNums = [2, 5, 4, 10, 1, 'exonic', 'non-exonic']
@@ -19,7 +19,7 @@ export class ViewModelMapper {
 		7: 'snv', //'del',
 		8: 'snv', //'nloss',
 		9: 'snv', //'closs',
-		10: 'loh',
+		10: 'loh'
 	}
 
 	static snvClassLayer = {
@@ -40,7 +40,7 @@ export class ViewModelMapper {
 		deletion: 'non-exonic',
 		Intron: 'non-exonic',
 		X: 'non-exonic',
-		noncoding: 'non-exonic',
+		noncoding: 'non-exonic'
 	}
 
 	private settings: Settings

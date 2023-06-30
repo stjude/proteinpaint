@@ -1,9 +1,9 @@
 import IRenderer from './IRenderer'
-import ViewModel from '#plots/disco/viewmodel/ViewModel'
+import ViewModel from '../viewmodel/ViewModel'
 import LegendRenderer from './LegendRenderer'
-import { RingType } from '#plots/disco/viewmodel/RingType'
+import { RingType } from '../viewmodel/RingType'
 import FusionRenderer from './FusionRenderer'
-import DownloadButtonRenderer from '#plots/disco/renderer/DownloadButtonRenderer'
+import DownloadButtonRenderer from './DownloadButtonRenderer'
 
 export class DiscoRenderer {
 	private renders: Map<RingType, IRenderer>

@@ -1,8 +1,8 @@
 import Reference from './Reference'
 import Data from './Data'
 import MLabel from './MLabel'
-import SnvArc from '#plots/disco/viewmodel/SnvArc'
-import Settings from '#plots/disco/Settings.ts'
+import SnvArc from '../viewmodel/SnvArc'
+import Settings from '../Settings.ts'
 
 export default class NonExonicSnvArcsMapper {
 	private sampleName: string
@@ -26,7 +26,7 @@ export default class NonExonicSnvArcsMapper {
 
 		const arcs: Array<SnvArc> = []
 
-		arcData.forEach((data) => {
+		arcData.forEach(data => {
 			const mLabel = MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass] : undefined
 
 			const startAngle = this.calculateStartAngle(data)

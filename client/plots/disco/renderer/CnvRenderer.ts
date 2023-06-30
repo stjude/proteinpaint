@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import IRenderer from './IRenderer'
-import CnvArc from '#plots/disco/viewmodel/CnvArc'
+import CnvArc from '../viewmodel/CnvArc'
 import MenuProvider from './MenuProvider'
 export default class CnvRenderer implements IRenderer {
 	private menuPadding: number

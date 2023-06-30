@@ -1,5 +1,5 @@
 import { RibbonSubgroup } from 'd3'
-import PositionInChromosome from '#plots/disco/viewmodel/PositionInChromosome'
+import PositionInChromosome from './PositionInChromosome'
 
 export default class FusionSubgroup implements RibbonSubgroup {
 	startAngle: number

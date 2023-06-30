@@ -1,8 +1,8 @@
 import Reference from './Reference'
 import Data from './Data'
-import Fusion from '#plots/disco/viewmodel/Fusion'
-import FusionSubgroup from '#plots/disco/viewmodel/FusionSubgroup'
-import PositionInChromosome from '#plots/disco/viewmodel/PositionInChromosome'
+import Fusion from '../viewmodel/Fusion'
+import FusionSubgroup from '../viewmodel/FusionSubgroup'
+import PositionInChromosome from '../viewmodel/PositionInChromosome'
 
 export default class FusionMapper {
 	private radius: number
@@ -18,7 +18,7 @@ export default class FusionMapper {
 	map(fusionData: Array<Data>): Array<Fusion> {
 		const fusions: Array<Fusion> = []
 
-		fusionData.forEach((data) => {
+		fusionData.forEach(data => {
 			const genes = new Set<string>()
 			genes.add(data.geneA)
 			genes.add(data.geneB)

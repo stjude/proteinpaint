@@ -1,4 +1,4 @@
-import { RingType } from '#plots/disco/viewmodel/RingType.ts'
+import { RingType } from '../viewmodel/RingType'
 
 export default interface Settings {
 	verticalPadding: number

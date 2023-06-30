@@ -1,5 +1,4 @@
 import { getCompInit, toJson } from '../index.js'
-import { Menu } from '../../dom/menu.js'
 
 /*
 opts:{}
@@ -20,7 +19,6 @@ class Recover {
 				.style('margin', opts.margin ? opts.margin : '10px')
 				.style('text-align', 'right')
 		}
-		this.menu = new Menu({ padding: '5px' })
 		this.hasStatePreMain = true
 		this.state = opts.getState || (appState => appState)
 		this.reactsTo = opts.reactsTo || (() => true) // could be undefined

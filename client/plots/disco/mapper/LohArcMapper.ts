@@ -1,6 +1,6 @@
 import Reference from './Reference'
 import Data from './Data'
-import LohArc from '#plots/disco/viewmodel/LohArc'
+import LohArc from '../viewmodel/LohArc'
 import GradientColorProvider from './GradientColorProvider'
 
 export default class LohArcMapper {
@@ -19,7 +19,7 @@ export default class LohArcMapper {
 	map(arcData: Array<Data>): Array<LohArc> {
 		const arcs: Array<LohArc> = []
 
-		arcData.forEach((data) => {
+		arcData.forEach(data => {
 			const startAngle = this.calculateStartAngle(data)
 			const endAngle = this.calculateEndAngle(data)
 

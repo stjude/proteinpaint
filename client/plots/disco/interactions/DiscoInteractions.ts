@@ -1,4 +1,4 @@
-import Label from '#plots/disco/viewmodel/Label.ts'
+import Label from '../viewmodel/Label'
 
 export class DiscoInteractions {
 	cappingClickCallback: (d: any, t: any) => void
@@ -22,10 +22,10 @@ export class DiscoInteractions {
 						config: {
 							settings: {
 								cnv: {
-									capping: Number(input.property('value')),
-								},
-							},
-						},
+									capping: Number(input.property('value'))
+								}
+							}
+						}
 					})
 					tip.hide()
 				})
@@ -45,7 +45,7 @@ export class DiscoInteractions {
 				function () {
 					const serializer = new XMLSerializer()
 					const svg_blob = new Blob([serializer.serializeToString(svg)], {
-						type: 'image/svg+xml',
+						type: 'image/svg+xml'
 					})
 					a.download = 'disco' + '.svg'
 					a.href = URL.createObjectURL(svg_blob)
@@ -66,9 +66,9 @@ export class DiscoInteractions {
 					{
 						type: 'mds3',
 						dslabel: app.app.opts.state.dslabel,
-						hlaachange: mname,
-					},
-				],
+						hlaachange: mname
+					}
+				]
 			}
 			const _ = await import('#src/block.init')
 			await _.default(arg)

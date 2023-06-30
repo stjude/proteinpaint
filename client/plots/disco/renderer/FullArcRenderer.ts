@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import Arc from '#plots/disco/viewmodel/Arc'
+import Arc from '../viewmodel/Arc'
 
 export default class FullArcRenderer {
 	private radius: number

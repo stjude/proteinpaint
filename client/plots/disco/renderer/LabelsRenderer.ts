@@ -1,9 +1,9 @@
 import IRenderer from './IRenderer'
 import { select } from 'd3-selection'
 import { line } from 'd3-shape'
-import Label from '#plots/disco/viewmodel/Label'
-import SnvArc from '#plots/disco/viewmodel/SnvArc.ts'
-import MenuProvider from '#plots/disco/renderer/MenuProvider.ts'
+import Label from '../viewmodel/Label'
+import SnvArc from '../viewmodel/SnvArc'
+import MenuProvider from './MenuProvider'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
@@ -16,8 +16,8 @@ export default class LabelsRenderer implements IRenderer {
 		const labelsG = holder.append('g')
 
 		const lineFunction = line<{ x: number; y: number }>()
-			.x((point) => point.x)
-			.y((point) => point.y)
+			.x(point => point.x)
+			.y(point => point.y)
 
 		const menu = MenuProvider.create()
 
@@ -60,7 +60,7 @@ export default class LabelsRenderer implements IRenderer {
 			})
 
 		labelsG.selectAll('.group').each((label: Label, i: number, nodes: HTMLDivElement[]) => {
-			const collision = collisions ? collisions.find((l) => l.text === label.text) : undefined
+			const collision = collisions ? collisions.find(l => l.text === label.text) : undefined
 			if (collision) {
 				const g = select(nodes[i])
 				g.selectAll('.chord-text')

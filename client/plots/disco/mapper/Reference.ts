@@ -1,4 +1,4 @@
-import Chromosome from '#plots/disco/viewmodel/Chromosome'
+import Chromosome from '../viewmodel/Chromosome'
 
 export default class Reference {
 	chromosomes: Array<Chromosome> = []

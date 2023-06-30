@@ -12,7 +12,7 @@ import LohRenderer from './renderer/LohRenderer'
 import CnvRenderer from './renderer/CnvRenderer'
 import IRenderer from './renderer/IRenderer'
 import { RingType } from './viewmodel/RingType'
-import Settings from '#plots/disco/Settings.ts'
+import Settings from './Settings.ts'
 
 export default class Disco {
 	private type: string
@@ -30,7 +30,7 @@ export default class Disco {
 	}
 
 	getState(appState: any) {
-		return appState.plots.find((p) => p.id === this.id)
+		return appState.plots.find(p => p.id === this.id)
 	}
 
 	async main(): Promise<void> {
@@ -89,6 +89,6 @@ export async function getPlotConfig(opts: any) {
 		chartType: 'Disco',
 		subfolder: 'disco',
 		extension: 'ts',
-		settings: discoDefaults(opts.overrides),
+		settings: discoDefaults(opts.overrides)
 	}
 }

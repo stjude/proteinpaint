@@ -1,8 +1,8 @@
 import Data from './Data'
 import Reference from './Reference'
 import DataObjectMapper from './DataObjectMapper'
-import Settings from '#plots/disco/Settings.ts'
-import { ViewModelMapper } from '#plots/disco/mapper/ViewModelMapper'
+import Settings from '../Settings.ts'
+import { ViewModelMapper } from '../mapper/ViewModelMapper'
 
 export default class DataMapper {
 	nonExonicSnvData: Array<Data> = []
@@ -78,7 +78,7 @@ export default class DataMapper {
 	map(data) {
 		const dataArray: Array<Data> = []
 
-		data.forEach((dObject) => {
+		data.forEach(dObject => {
 			const instance = this.dataObjectMapper.map(dObject)
 
 			if (instance.isCancerGene) {
@@ -93,7 +93,7 @@ export default class DataMapper {
 		console.log('this.settings.rings.nonExonicRingEnabled', this.settings.rings.nonExonicRingEnabled)
 
 		if (this.settings.rings.nonExonicRingEnabled) {
-			sortedData.forEach((data) => {
+			sortedData.forEach(data => {
 				this.filterNonExonicSnvData(data)
 			})
 		}
@@ -103,11 +103,11 @@ export default class DataMapper {
 			this.lastInnerRadious = this.nonExonicInnerRadius
 		}
 
-		sortedData.forEach((data) => {
+		sortedData.forEach(data => {
 			this.filterSnvs(data)
 		})
 
-		sortedData.forEach((data) => {
+		sortedData.forEach(data => {
 			this.filterLohs(data)
 		})
 
@@ -116,7 +116,7 @@ export default class DataMapper {
 			this.lastInnerRadious = this.lohInnerRadius
 		}
 
-		sortedData.forEach((data) => {
+		sortedData.forEach(data => {
 			this.filterCnvs(data)
 		})
 
@@ -125,7 +125,7 @@ export default class DataMapper {
 			this.lastInnerRadious = this.cnvInnerRadius
 		}
 
-		sortedData.forEach((data) => {
+		sortedData.forEach(data => {
 			this.filterFusion(data)
 		})
 
@@ -206,7 +206,7 @@ export default class DataMapper {
 	private calculateArcAngle(data: Data) {
 		const currentChromosome =
 			this.reference.chromosomes[
-				this.reference.chromosomesOrder.findIndex((chromosomeOrder) => data.chr == chromosomeOrder)
+				this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)
 			]
 
 		const dataAnglePos = Math.floor(data.pos / this.bpx)

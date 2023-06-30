@@ -1,6 +1,6 @@
-import Legend from '#plots/disco/viewmodel/Legend'
+import Legend from '../viewmodel/Legend'
 import svgLegend from '#dom/svg.legend'
-import LegendJSONMapper from '#plots/disco/mapper/LegendJSONMapper'
+import LegendJSONMapper from '../mapper/LegendJSONMapper'
 
 export default class LegendRenderer {
 	private legendJSONMapper: LegendJSONMapper
@@ -14,14 +14,14 @@ export default class LegendRenderer {
 	render(holder: any, legend: Legend, xOffset: number, svgw, svgh) {
 		const svgLegendRenderer = svgLegend({
 			holder: holder.append('g'),
-			rectFillFxn: (d) => d.color,
-			iconStroke: '#aaa',
+			rectFillFxn: d => d.color,
+			iconStroke: '#aaa'
 		})
 
 		// TODO calculate legend dimensions
 
 		const d = {
-			xOffset: xOffset,
+			xOffset: xOffset
 		}
 
 		const data = this.legendJSONMapper.map(legend)
@@ -33,9 +33,9 @@ export default class LegendRenderer {
 					svgw: svgw,
 					svgh: svgh,
 					dimensions: d,
-					fontsize: this.fontSize,
+					fontsize: this.fontSize
 				}
-			),
+			)
 		})
 	}
 }

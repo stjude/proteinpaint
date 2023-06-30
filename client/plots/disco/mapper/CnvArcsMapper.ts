@@ -1,9 +1,9 @@
 import Data from './Data'
 import Reference from './Reference'
-import CnvArc from '#plots/disco/viewmodel/CnvArc'
-import CnvLegend from '#plots/disco/viewmodel/CnvLegend'
-import { CnvType } from '#plots/disco/viewmodel/CnvType'
-import Settings from '#plots/disco/Settings.ts'
+import CnvArc from '../viewmodel/CnvArc'
+import CnvLegend from '../viewmodel/CnvLegend'
+import { CnvType } from '../viewmodel/CnvType'
+import Settings from '../Settings.ts'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()
@@ -78,7 +78,7 @@ export default class CnvArcsMapper {
 	map(arcData: Array<Data>): Array<CnvArc> {
 		const arcs: Array<CnvArc> = []
 
-		arcData.forEach((data) => {
+		arcData.forEach(data => {
 			let startAngle = this.calculateStartAngle(data)
 			let endAngle = this.calculateEndAngle(data)
 

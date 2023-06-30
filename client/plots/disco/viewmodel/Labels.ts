@@ -1,6 +1,6 @@
 import Ring from './Ring'
 import Label from './Label'
-import LabelFactory from '#plots/disco/viewmodel/LabelFactory'
+import LabelFactory from './LabelFactory'
 import Settings from '../Settings.ts'
 
 export default class Labels<T extends Label> extends Ring<Label> {
@@ -36,10 +36,10 @@ export default class Labels<T extends Label> extends Ring<Label> {
 		let hasCancerGenesList: Array<Label> = []
 
 		if (this.hasCancerGenes) {
-			hasCancerGenesList = this.elements.filter((label) => label.isCancerGene)
+			hasCancerGenesList = this.elements.filter(label => label.isCancerGene)
 			this.filteredHasCancerGenesList = this.getLabelsWithoutCancerGenes(hasCancerGenesList)
 
-			const hasNoCancerGenes = this.elements.filter((label) => !label.isCancerGene)
+			const hasNoCancerGenes = this.elements.filter(label => !label.isCancerGene)
 
 			const combinedAndSortedList = hasNoCancerGenes.concat(this.filteredHasCancerGenesList).sort((a, b) => {
 				return a.startAngle < b.startAngle ? -1 : a.startAngle > b.startAngle ? 1 : 0
