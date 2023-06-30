@@ -234,11 +234,12 @@ function setTermActions(self) {
 		labelEditDiv.append('span').text('Term ')
 
 		const twlabel = t.tw.label || t.tw.term.name
+		const vartype = t.tw.term.type == 'geneVariant' ? 'gene' : 'variable'
 		self.dom.twLabelInput = labelEditDiv
 			.append('input')
 			.attr('type', 'text')
 			.attr('size', twlabel.length + 3)
-			.attr('title', 'Type to edit the term label')
+			.attr('title', `Type to edit the ${vartype} label`)
 			.style('padding', '1px 5px')
 			.style('text-align', 'center')
 			.property('value', twlabel)
@@ -301,6 +302,7 @@ function setTermActions(self) {
 		//div.append('span').html('Shortcuts: ')
 
 		// sorting icons
+		const vartype = t.tw.term.type == 'geneVariant' ? 'gene' : 'variable'
 		div
 			.append('span')
 			.selectAll('div')
@@ -308,13 +310,13 @@ function setTermActions(self) {
 				[
 					{
 						icon: 'corner',
-						title: `Sort samples against this gene positioned at the top left corner`,
+						title: `Sort samples against this ${vartype} positioned at the top left corner`,
 						disabled: t.grp.lst.length < 1 || (t.index === 0 && t.tw.sortSamples?.priority === 0),
 						handler: self.sortSamplesAgainstCornerTerm
 					},
 					{
 						icon: 'left',
-						title: `Sort samples against this gene`,
+						title: `Sort samples against this ${vartype}`,
 						disabled: t.tw.sortSamples?.priority === 0,
 						handler: self.sortSamplesAgainstTerm
 					},
@@ -323,14 +325,14 @@ function setTermActions(self) {
 					},
 					{
 						icon: 'up',
-						title: `Move this term up`,
+						title: `Move this ${vartype} up`,
 						disabled: t.index === 0,
 						handler: self.moveTermUp
 					},
 
 					{
 						icon: 'down',
-						title: `Move this term down`,
+						title: `Move this ${vartype} down`,
 						disabled: t.index === t.grp.lst.length - 1,
 						handler: self.moveTermDown
 					}
