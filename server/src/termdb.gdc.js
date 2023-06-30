@@ -218,6 +218,12 @@ export async function initGDCdictionary(ds) {
 			const parentId = termLevels.slice(0, i).join('.')
 			const currentId = parentId + '.' + termLevels[i]
 			if (currentId.endsWith('_id') && !currentId.endsWith('project_id')) continue
+			if (
+				currentId.endsWith('consent_type') ||
+				currentId == 'case.days_to_consent' ||
+				currentId == 'case.days_to_index'
+			)
+				continue
 			const name = termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' ')
 
 			// always create an object for currentId
