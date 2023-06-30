@@ -322,6 +322,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
 		if (opts.term) await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 
 		const settings = getDefaultScatterSettings()
 		if (!opts.term && !opts.term2) settings.showAxes = false
