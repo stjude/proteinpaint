@@ -1,6 +1,12 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.18.2
+
+- handle optional action.config in mass store.plot_edit()
+- fix recover to not prematurely replace state
+- fix LohArc import for rollup
+ 
 ## 2.18.1
 
 - fix the rollup bundling error caused by the dynamic import of Disco.ts
