@@ -146,16 +146,20 @@ class Matrix {
 			Object.assign(this.settings, this.config.settings, this.controlsRenderer.getSettings())
 
 			this.computeStateDiff()
-
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'absolute').style('left', '45%')
-			// turn off skipping of server data request, app + browser cache seems fast enough
-			// skipping the data request may cause missing term.values to not get filled-in, such as for GDC
-			//if (this.stateDiff.nonsettings) {
-			// get the data
-			const reqOpts = await this.getDataRequestOpts()
-			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
-			this.dom.loadingDiv.html('Processing data ...')
-			//}
+
+			// skip data requests when changes are not expected to affect the request payload
+			if (this.stateDiff.nonsettings) {
+				// get the data
+				const reqOpts = await this.getDataRequestOpts()
+				this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+				this.dom.loadingDiv.html('Processing data ...')
+				// tws in the config may be filled-in based on applicable server response data;
+				// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
+				// the corresponding tracked state values in the app store, without causing unnecessary
+				// dispatch notifications, so use app.save()
+				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
+			}
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
 
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {

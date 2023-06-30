@@ -278,6 +278,8 @@ export function prepApp(self, opts) {
 }
 
 export function getAppApi(self) {
+	// optional registry for component instances
+	const componentsByType = {}
 	const middlewares = []
 	let numExpectedWrites = 0
 	const api = {
@@ -315,6 +317,12 @@ export function getAppApi(self) {
 		async save(action) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
+			if (componentsByType.recover) {
+				for (const id in componentsByType.recover) {
+					const instance = componentsByType.recover[id]
+					instance.replaceLastState(self.state)
+				}
+			}
 		},
 		getState() {
 			return self.state
@@ -348,6 +356,10 @@ export function getAppApi(self) {
 		},
 		getComponents(dotSepNames = '') {
 			return getComponents(self.components, dotSepNames)
+		},
+		register(type, instance) {
+			if (!componentsByType[type]) componentsByType[type] = {}
+			componentsByType[type][instance.id] = instance
 		},
 		destroy() {
 			// delete references to other objects to make it easier

@@ -32,7 +32,15 @@ class Recover {
 		}
 	}
 
+	preApiFreeze(api) {
+		api.replaceLastState = state => {
+			if (this.history.length) this.history.pop()
+			this.history.push(state)
+		}
+	}
+
 	init() {
+		this.app.register('recover', this.api)
 		this.currIndex = -1
 		this.history = []
 		// turn off during testing of other components for lighter memory usage
@@ -58,8 +66,8 @@ class Recover {
 			return
 		}
 		if (this.state._scope_ == 'none') return
-
 		this.isRecovering = false
+
 		if (this.currIndex < this.history.length - 1) {
 			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
 		}
@@ -87,7 +95,7 @@ class Recover {
 export const recoverInit = getCompInit(Recover)
 
 function setRenderers(self) {
-	self.initUi = function() {
+	self.initUi = function () {
 		self.dom.undoBtn = self.dom.holder
 			.append('button')
 			.attr('title', 'undo the previous action')
@@ -121,7 +129,7 @@ function setRenderers(self) {
 			.on('click', () => self.goto(1))
 	}
 
-	self.render = function() {
+	self.render = function () {
 		if (self.dom.undoBtn) self.dom.undoBtn.property('disabled', self.currIndex < 1)
 		if (self.dom.redoBtn)
 			self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
