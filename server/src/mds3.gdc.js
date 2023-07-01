@@ -503,8 +503,7 @@ export function validate_query_geneCnv2(ds) {
 		'cnv.cnv_change',
 		'cnv.gene_level_cn',
 		'cnv.consequence.gene.symbol',
-		'case.submitter_id', // human-readable name
-		'case.case_id' // uuid. required for launching disco plot based on settings of singleSampleMutation.sample_id_key of gdc dataset
+		'case.submitter_id' // human-readable name
 	]
 
 	/*
@@ -553,7 +552,6 @@ export function validate_query_geneCnv2(ds) {
 			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
 			const sample = {
 				sample_id: hit.case.submitter_id
-				// must not assign "case.case_id" here into sample{}, it breaks flattenCaseByFields() (why)
 			}
 
 			if (opts.twLst) {
@@ -561,9 +559,6 @@ export function validate_query_geneCnv2(ds) {
 					flattenCaseByFields(sample, hit.case, tw)
 				}
 			}
-
-			// assign case.case_id here after calling flattenCaseByFields
-			sample['case.case_id'] = hit.case.case_id
 
 			cnv.samples.push(sample)
 		}
