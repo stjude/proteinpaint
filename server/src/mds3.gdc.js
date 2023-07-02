@@ -137,6 +137,10 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
+export function validate_query_geneExpression(ds) {
+	// TODO
+}
+
 /* tandem rest api query
 1. variant and csq
 2. cases
