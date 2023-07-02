@@ -1299,7 +1299,6 @@ async function validate_query_probe2cnv(ds, genome) {
 	format attributes are not used since this file does not supply format values for events (unlike cnv segment file in bed-json)
 	*/
 	q.get = async param => {
-		console.log(param)
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
