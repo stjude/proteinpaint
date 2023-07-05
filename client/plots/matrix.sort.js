@@ -26,16 +26,22 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 		.map(t => t.tw)
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
 
-	// always prioritize manually selected terms, if any
-	const sorterTerms = [...selectedTerms]
+	const sorterTerms = []
 
 	const sortPriority = activeOption.sortPriority
 	if (sortPriority) {
-		for (const p of sortPriority) {
-			for (const tw of selectedTerms) {
+		for (const _tw of selectedTerms) {
+			const tw = structuredClone(_tw)
+			if (tw.sortSamples?.by) {
+				sorterTerms.push(Object.assign({}, tw))
+				continue
+			}
+			for (const p of sortPriority) {
 				if (!p.types.includes(tw.term.type)) continue
 				for (const tb of p.tiebreakers) {
-					sorterTerms.push(Object.assign({}, tw, { sortSamples: tb }))
+					const sortSamples = Object.assign(structuredClone(tw.sortSamples || {}), tb)
+					const sorter = Object.assign(structuredClone(tw), { sortSamples })
+					sorterTerms.push(sorter)
 				}
 			}
 		}
@@ -46,10 +52,11 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 	if (sortPriority) {
 		for (const p of sortPriority) {
 			for (const t of self.termOrder) {
+				// skip the selectedTerms that were already processed above
 				if (selectedTerms.find(tw => tw.$id === t.tw.$id)) continue
 				if (!p.types.includes(t.tw.term.type)) continue
 				for (const tb of p.tiebreakers) {
-					sorterTerms.push(Object.assign({ sortSamples: tb }, t.tw))
+					sorterTerms.push(Object.assign({}, t.tw, { sortSamples: tb }))
 				}
 			}
 		}

@@ -851,44 +851,50 @@ function setTermActions(self) {
 				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
 			...self.config.settings.matrix.sortSamplesTieBreakers.map(st => JSON.parse(JSON.stringify(st)))
 		]
+
+		const s = self.settings.matrix
+		const activeOption = s.sortOptions[s.sortSamplesBy]
+		if (!activeOption) {
+			throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
+		}
+		const matchingSortSamples = activeOption.sortPriority.find(o => o.types.includes(t.tw.term.type))?.tiebreakers[0]
+		const sortSamples = matchingSortSamples
+			? {} // will let matrix.sort fill-in based on the first matching tiebreaker
+			: t.tw.term.type == 'geneVariant'
+			? {
+					by: 'class',
+					order: [
+						'Fuserna',
+						'CNV_loss',
+						'CNV_amp',
+						// truncating
+						'F',
+						'N',
+						// indel
+						'D',
+						'I',
+						// point
+						'M',
+						'P',
+						'L',
+						// noncoding
+						'Utr3',
+						'Utr5',
+						'S',
+						'Intron',
+						'WT',
+						'Blank'
+					]
+			  }
+			: { by: 'values' }
+
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))
-
-		const sortSamples =
-			t.tw.term.type == 'geneVariant'
-				? {
-						by: 'class',
-						// TODO: may use ds-defined default order instead of hardcoding here
-						order: [
-							'Fuserna',
-							'CNV_loss',
-							'CNV_amp',
-							// truncating
-							'F',
-							'N',
-							// indel
-							'D',
-							'I',
-							// point
-							'M',
-							'P',
-							'L',
-							// noncoding
-							'Utr3',
-							'Utr5',
-							'S',
-							'Intron',
-							'WT',
-							'Blank'
-						]
-				  }
-				: { by: 'values' }
-
+		// will let the matrix.sorter code fill-in the sortSamples with tiebreakers
+		tcopy.sortSamples = sortSamples
 		if (i == -1) {
-			tcopy.sortSamples = sortSamples
 			sorterTerms.unshift(tcopy)
 		} else {
-			tcopy.sortSamples.by = sortSamples.by
 			if (sortSamples.order) tcopy.sortSamples.order = sortSamples.order
 		}
 
