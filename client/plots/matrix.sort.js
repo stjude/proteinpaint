@@ -1,15 +1,10 @@
 /*
-	priorityKey: string, the settings property to use, 'sortPriority' or 'truncatePriority'
+	
 */
 
-export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriority') {
+export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
 	validateSettings(s)
-	const activeOption = s.sortOptions[s.sortSamplesBy]
-	if (!activeOption) {
-		throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
-	}
-
 	if (s.sortSamplesBy == 'asListed') {
 		//no additional logic required
 		return (a, b) => {
@@ -20,6 +15,9 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 			}
 		}
 	}
+
+	const activeOption = s.sortOptions[s.sortSamplesBy]
+	if (!activeOption) throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
 
 	const selectedTerms = self.termOrder
 		.filter(t => t.tw.sortSamples) // sortSamples property indicates a term is selected
@@ -37,6 +35,7 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 				continue
 			}
 			for (const p of sortPriority) {
+				if (opts.skipSorter?.(p, tw)) continue
 				if (!p.types.includes(tw.term.type)) continue
 				for (const tb of p.tiebreakers) {
 					const sortSamples = Object.assign(structuredClone(tw.sortSamples || {}), tb)
@@ -54,6 +53,7 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 			for (const t of self.termOrder) {
 				// skip the selectedTerms that were already processed above
 				if (selectedTerms.find(tw => tw.$id === t.tw.$id)) continue
+				if (opts.skipSorter?.(p, t.tw)) continue
 				if (!p.types.includes(t.tw.term.type)) continue
 				for (const tb of p.tiebreakers) {
 					sorterTerms.push(Object.assign({}, t.tw, { sortSamples: tb }))
@@ -81,13 +81,14 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 
 		sorterTerms.push(...unSelectedNonDictTerms, ...unSelectedDictTerms)
 	}
-
+	if (opts.tiebreaker) sorterTerms.push(opts.tiebreaker)
 	sorterTerms.push(...s.sortSamplesTieBreakers.map(st => st))
 
 	const sampleSorters = []
 	self.maxSampleSet = new Set()
 	for (const st of sorterTerms) {
-		if (st.$id == 'sample') sampleSorters.push(sortSamplesByName)
+		if (typeof st === 'function') sampleSorters.push(st)
+		else if (st.$id == 'sample') sampleSorters.push(sortSamplesByName)
 		else if (st.sortSamples.by == 'hits') sampleSorters.push(getSortSamplesByHits(st, self, rows, s))
 		else if (st.term.type != 'geneVariant') sampleSorters.push(getSortSamplesByValues(st, self, rows, s))
 		else if (st.sortSamples.by == 'values') sampleSorters.push(getSortSamplesByValues(st, self, rows, s))
