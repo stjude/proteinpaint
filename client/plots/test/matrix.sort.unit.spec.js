@@ -36,7 +36,10 @@ function getArgs(_settings = {}) {
 		3: {
 			sample: 3,
 			aaa: {
-				values: [{ dt: 1, class: 'S' }, { dt: 4, class: 'CNV_loss' }]
+				values: [
+					{ dt: 1, class: 'S' },
+					{ dt: 4, class: 'CNV_loss' }
+				]
 			},
 			ccc: {
 				values: [{ dt: 1, class: 'M' }]
@@ -73,7 +76,11 @@ function getArgs(_settings = {}) {
 	const tg = [
 		{
 			name: 'Term Group 1',
-			lst: [{ $id: 'aaa', term: terms.aaa }, { $id: 'bbb', term: terms.bbb }, { $id: 'ccc', term: terms.ccc }]
+			lst: [
+				{ $id: 'aaa', term: terms.aaa },
+				{ $id: 'bbb', term: terms.bbb },
+				{ $id: 'ccc', term: terms.ccc }
+			]
 		}
 	]
 
@@ -174,7 +181,7 @@ function simpleMatrix(sampleNames, termOrder, rows) {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- plots/matrix.sort -***-')
 	test.end()
 })
@@ -183,7 +190,14 @@ tape('sortSamplesBy = asListed', test => {
 	const { self, settings, rows } = getArgs({ sortSamplesBy: 'asListed' })
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
-	test.deepEqual(sampleNames, [[1, 2, 3], [4, 5]], 'should sort the samples as listed')
+	test.deepEqual(
+		sampleNames,
+		[
+			[1, 2, 3],
+			[4, 5]
+		],
+		'should sort the samples as listed'
+	)
 
 	test.deepEqual(
 		simpleMatrix(sampleNames, self.termOrder, rows),
@@ -204,7 +218,14 @@ tape('sortPriority by default custom that uses a filter', test => {
 	})
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
-	test.deepEqual(sampleNames, [[3, 2, 1], [5, 4]], 'should sort the samples by dt then value')
+	test.deepEqual(
+		sampleNames,
+		[
+			[3, 2, 1],
+			[5, 4]
+		],
+		'should sort the samples by dt then value'
+	)
 	test.deepEqual(
 		simpleMatrix(sampleNames, self.termOrder, rows),
 		// prettier-ignore
@@ -285,7 +306,14 @@ tape('sortPriority by custom, without filter', test => {
 	})
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
-	test.deepEqual(sampleNames, [[2, 3, 1], [5, 4]], 'should sort the samples by dt then value')
+	test.deepEqual(
+		sampleNames,
+		[
+			[2, 3, 1],
+			[5, 4]
+		],
+		'should sort the samples by dt then value'
+	)
 	test.deepEqual(
 		simpleMatrix(sampleNames, self.termOrder, rows),
 		// prettier-ignore
@@ -300,11 +328,18 @@ tape('sortPriority by custom, without filter', test => {
 })
 
 tape('sort against selectedTerms', test => {
-	const { self, settings, rows } = getArgs({ sortSamplesBy: 'dt', sortTermsBy: 'hits' })
-	self.termGroups[0].lst[1].sortSamples = { by: 'hits' }
+	const { self, settings, rows } = getArgs({ sortSamplesBy: 'dt' })
+	self.termGroups[0].lst[1].sortSamples = {}
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
-	test.deepEqual(sampleNames, [[2, 1, 3], [5, 4]], 'should sort the samples by dt-only')
+	test.deepEqual(
+		sampleNames,
+		[
+			[2, 1, 3],
+			[5, 4]
+		],
+		'should sort the samples by dt-only'
+	)
 	test.deepEqual(
 		simpleMatrix(sampleNames, self.termOrder, rows),
 		// prettier-ignore
