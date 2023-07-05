@@ -174,12 +174,20 @@ function getChartTypeList(self) {
 			label: 'Gene expression',
 			chartType: 'geneExpression',
 			clickTo: self.loadChartSpecificMenu
+		},
+
+		// adhoc chart, temporary fix for prototyping a specific ds
+		{
+			label: 'Profile bar plot',
+			chartType: 'profileBarchart',
+			clickTo: self.showTree_select1term,
+			usecase: { detail: 'term' }
 		}
 	]
 }
 
 function setRenderers(self) {
-	self.makeButtons = function() {
+	self.makeButtons = function () {
 		const chartTypeList = getChartTypeList(self)
 
 		self.dom.btns = self.dom.holder
@@ -192,7 +200,7 @@ function setRenderers(self) {
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
 			.html(d => d.label)
-			.on('click', function(event, chart) {
+			.on('click', function (event, chart) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart)
 			})
@@ -296,7 +304,7 @@ function setRenderers(self) {
 		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
 		example: table, scatterplot which requires user to select two terms
 	*/
-	self.prepPlot = function(chart) {
+	self.prepPlot = function (chart) {
 		const action = { type: 'plot_prep', config: chart.config, id: getId() }
 		self.app.dispatch(action)
 	}

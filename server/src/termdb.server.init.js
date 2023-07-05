@@ -1,9 +1,14 @@
-const serverconfig = require('./serverconfig')
-const connect_db = require('./utils').connect_db
-const { isUsableTerm } = require('../shared/termdb.usecase')
+import serverconfig from './serverconfig'
+import { connect_db } from './utils'
+import { isUsableTerm } from '../shared/termdb.usecase'
 
-export function server_init_db_queries(ds) {
-	/*
+/*
+server_init_db_queries()
+listDbTables()
+mayComputeTermtypeByCohort()
+*/
+
+/*
 initiate db queries and produce function wrappers
 run only once
 
@@ -12,6 +17,7 @@ probably fine to hardcode such query strings here
 and no need to define them in each dataset
 thus less things to worry about...
 */
+export function server_init_db_queries(ds) {
 	if (!ds.cohort) throw 'ds.cohort missing'
 	if (!ds.cohort.db) throw 'ds.cohort.db missing'
 	if (!ds.cohort.termdb) throw 'ds.cohort.termdb missing'
@@ -411,8 +417,10 @@ thus less things to worry about...
 			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
 		}
 
-		/* this logic allows to add chart types generally applicable to all numeric terms
-but boxplot and scatter are now child types under "summary" plot. */
+		/*
+		this logic allows to add chart types generally applicable to all numeric terms
+		but boxplot and scatter are now child types under "summary" plot.
+		*/
 		for (const cohort in numericTypeCount) {
 			//if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].add('boxplot')
 			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].add('sampleScatter')
