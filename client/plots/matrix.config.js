@@ -29,7 +29,6 @@ export async function getPlotConfig(opts, app) {
 				maxGenes: opts.settings?.maxGenes || 50,
 				maxSample: opts.settings?.maxSample || 1000,
 				sortPriority: undefined,
-				truncatePriority: undefined,
 
 				sampleNameFilter: '',
 				sortSamplesBy: 'class',

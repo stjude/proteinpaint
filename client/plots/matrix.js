@@ -233,7 +233,6 @@ class Matrix {
 				{
 					maxSample: p.maxSample,
 					sortPriority: p.sortPriority,
-					truncatePriority: p.truncatePriority,
 					sampleNameFilter: p.sampleNameFilter,
 					sortSamplesBy: p.sortSamplesBy,
 					sortSamplesTieBreakers: p.sortSamplesTieBreakers,
@@ -245,7 +244,6 @@ class Matrix {
 				{
 					maxSample: c.maxSample,
 					sortPriority: c.sortPriority,
-					truncatePriority: c.truncatePriority,
 					sampleNameFilter: c.sampleNameFilter,
 					sortSamplesBy: c.sortSamplesBy,
 					sortSamplesTieBreakers: c.sortSamplesTieBreakers,
@@ -355,28 +353,45 @@ class Matrix {
 
 	setSampleOrder(data) {
 		const s = this.settings.matrix
-		this.sampleOrder = []
 		this.visibleSampleGrps = new Set()
-		this.sampleSorter = getSampleSorter(this, s, data.lst)
-		this.truncateSorter = s.truncatePriority && getSampleSorter(this, s, data.lst, 'truncatePriority')
+
+		const selectedDictTerms = this.termOrder.filter(t => t.tw.sortSamples && t.tw.term.type != 'geneVariant')
+		if (!selectedDictTerms.length) {
+			// both the sample truncation and sorting will be determined by gene variant hits
+			this.sampleOrder = this.sortSampleGrpLst(data)
+		} else {
+			// get sample names as sorted by gene variant hits, to be used for truncating the samplegroup.lst
+			const sampleNames = this.sortSampleGrpLst(data, {
+				skipSorter: (p, tw) => selectedDictTerms.find(t => t.tw.$id === tw.$id)
+			})
+				.map(so => so.row.sample)
+				.slice(0, s.maxSample)
+
+			const opts = {
+				skipSorter: (p, tw) => p.types.includes('geneVariant') && selectedDictTerms.find(t => t.tw.$id === tw.$id),
+				dataFilter: d => sampleNames.includes(d.sample),
+				tiebreaker: (a, b) => sampleNames.indexOf(a.sample) - sampleNames.indexOf(b.sample)
+			}
+			this.sampleOrder = this.sortSampleGrpLst(data, opts)
+		}
+	}
+
+	sortSampleGrpLst(data, opts = {}) {
+		const s = this.settings.matrix
+		const sampleSorter = getSampleSorter(this, s, data.lst, opts)
+		const sampleOrder = []
+		const dataFilter = opts.dataFilter || (() => true)
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
-			let processedLst = grp.lst
+			let processedLst = grp.lst.filter(dataFilter)
 
-			if (this.truncateSorter) {
-				processedLst.sort(this.truncateSorter)
-				if (s.maxSample && total + processedLst.length > s.maxSample) {
-					processedLst = processedLst.slice(0, s.maxSample - total)
-				}
-			}
-
-			processedLst.sort(this.sampleSorter)
-			if (!this.truncateSorter && s.maxSample && total + processedLst.length > s.maxSample) {
+			processedLst.sort(sampleSorter)
+			if (s.maxSample && total + processedLst.length > s.maxSample) {
 				processedLst = processedLst.slice(0, s.maxSample - total)
 			}
 
 			for (const [index, row] of processedLst.entries()) {
-				this.sampleOrder.push({
+				sampleOrder.push({
 					grp,
 					grpIndex,
 					row,
@@ -393,6 +408,7 @@ class Matrix {
 			if (processedLst.length) this.visibleSampleGrps.add(grp)
 			if (s.maxSample && total >= s.maxSample) break
 		}
+		return sampleOrder
 	}
 
 	setTermOrder(data) {

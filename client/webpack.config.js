@@ -17,7 +17,7 @@ try {
 	throw e
 }
 
-module.exports = function(env = {}) {
+module.exports = function (env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
@@ -38,13 +38,13 @@ module.exports = function(env = {}) {
 			libraryTarget: 'window'
 		},
 		resolve: {
-			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin
+			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin */
 			fallback: {
 				//stream: false,
 				//fs: false,
 				path: require.resolve('path-browserify'),
 				process: require.resolve('process')
-			}*/
+			},
 			extensions: ['*', '.js', '.jsx', '.tsx', '.ts']
 		},
 		plugins: [
