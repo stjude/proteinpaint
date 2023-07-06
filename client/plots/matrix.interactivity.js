@@ -1619,8 +1619,8 @@ function setZoomPanActions(self) {
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
 		const centerCell = self.sampleOrder[zoomIndex] || self.getImgCell(event)
 		const colw = self.computedSettings.colw
-		const maxZoomLevel = Math.max(s.colwMax, colw) / colw
-		const minZoomLevel = Math.min(s.colwMin, colw) / colw
+		const maxZoomLevel = s.colwMax / colw
+		const minZoomLevel = s.colwMin / colw
 		const tentativeZoomLevel = (s.zoomLevel * d.mainw) / self.zoomWidth
 		const zoomLevel = Math.max(minZoomLevel, Math.min(tentativeZoomLevel, maxZoomLevel))
 		const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset

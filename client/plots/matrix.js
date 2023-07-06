@@ -591,7 +591,8 @@ class Matrix {
 			// detect if using colspace will cause the tentative computed widths to be exceeded
 			if (s.zoomLevel * tentativeColw < 2) {
 				this.computedSettings.colw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
-				this.computedSettings.colspace = s.zoomLevel * this.computedSettings.colw < 2 ? 0 : s.colspace
+				this.computedSettings.colspace =
+					s.zoomLevel <= 1 || s.zoomLevel * this.computedSettings.colw < 2 ? 0 : s.colspace
 			} else {
 				this.computedSettings.colw = tentativeColw
 				this.computedSettings.colspace = s.colspace
