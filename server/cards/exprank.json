@@ -58,7 +58,7 @@
         },
         {
             "name": "Download Track File",
-            "link": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankDemoData.tar.gz"
+            "link": "https://proteinpaint.stjude.org/ppdemo/hg38/exprank/exprankDemoData.tar.gz"
         }
     ]
 }

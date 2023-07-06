@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/singlecell/singlecellDemoData.tar.gz",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/singlecell/singlecellDemoData.tar.gz",
             "urlparam": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json",
             "jsonpath": "proteinpaint_demo/hg19/singlecell/singlecell.json",
             "runargs": {

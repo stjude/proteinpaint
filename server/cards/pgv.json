@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/pgv/pgvDemoData.tar.gz",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/pgv/pgvDemoData.tar.gz",
             "datapreview": [
                 {
                     "file": "proteinpaint_demo/hg19/pgv/sample1.gz",

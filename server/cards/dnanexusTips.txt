@@ -111,18 +111,18 @@
                 Creating the URL from the DNAnexus website is easy but the URL expires in 24 hours. Login to the DNAnexus website and navigate to the appropriate project.
                 <ul>
                     <li>
-                        Find the file and hoover the mouse on the far right of the screen until three dots appear.
-                        <img style="width: 50vw; margin: 1vw 2vw;" src="https://pecan.stjude.cloud/static/examples/images/dnanexus_3dot_menu.png">
+                        Find the file and hover the mouse on the far right of the screen until three dots appear.
+                        <img style="width: 50vw; margin: 1vw 2vw;" src="https://proteinpaint.stjude.org/ppdemo/images/dnanexus_3dot_menu.png">
                     </li>
                     <li>
                         Select 'Download' from the menu
                     </li>
                     <li>
-                        A popup 'Download Data' window will appear. Hoover over the file to see the 'Get URL' icon (&#128279) on the right. Click on the (&#128279) icon. 
+                        A popup 'Download Data' window will appear. Hover over the file to see the 'Get URL' icon (&#128279) on the right. Click on the (&#128279) icon. 
                     </li>
                     <li>
                         The icon button will change to 'Copy URL'. Click to copy the link.
-                        <img style="width: 50vw; margin: 1vw 2vw;" src="https://pecan.stjude.cloud/static/examples/images/dnanexus_copy_URL.png">
+                        <img style="width: 50vw; margin: 1vw 2vw;" src="https://proteinpaint.stjude.org/ppdemo/images/dnanexus_copy_URL.png">
                     </li>
                 </ul>
                 Save the new URL. The next section describes how to create a ProteinPaint track using URL parameters. 
@@ -135,8 +135,8 @@
             <p style="margin-left: 2vw;">
                 Create a track from stringing together URL parameters described in this <a href='https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.737pcqp1tlnt' target='URL param'>document</a>. <br><br>
 
-                Start with "https://proteinpaint.stjude.org/?" and add the URL parameters separated by ampersands. In the example below, parameters for the genome, block, track name, and file URL to launch the genome browser. The final URL <a href="https://proteinpaint.stjude.org/?genome=hg19&block=1&bigwigurl=URL,https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw">https://proteinpaint.stjude.org/?genome=hg19&block=1&bigwigurl=URL,https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw</a>, launches this bigwig track. 
-                <img style="width: 50vw; margin: 1vw 2vw;" src="https://pecan.stjude.cloud/static/examples/images/bigwig_url_ex.png">
+                Start with "https://proteinpaint.stjude.org/?" and add the URL parameters separated by ampersands. In the example below, parameters for the genome, block, track name, and file URL to launch the genome browser. The final URL <a href="https://proteinpaint.stjude.org/?genome=hg19&block=1&bigwigurl=URL,https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw">https://proteinpaint.stjude.org/?genome=hg19&block=1&bigwigurl=URL,https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw</a>, launches this bigwig track. 
+                <img style="width: 50vw; margin: 1vw 2vw;" src="https://proteinpaint.stjude.org/ppdemo/images/bigwig_url_ex.png">
             </p>
             <br>
             <br>
@@ -145,7 +145,7 @@
             <h2 id="fileviewer">ProteinPaint FileViewer</h2>
             <p style="margin-left: 2vw;">The ProteinPaint FileViewer launches VCF, BigWig, JSON BED, Splice Junction, and BAM tracks from the DNAnexus website. Download the ProteinPaint FileViewer from the blue button below.</p>
             <div style="margin:0vw 2vw; display: flex; justify-content: center; padding: 10px;">
-                <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/fileviewers/ProteinPaint%20(VCF,%20bigWig,%20BEDj,%20junction,%20BAM).gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download ProteinPaint FileViewer</button>
+                <button type="button" onclick="window.open('https://proteinpaint.stjude.org/ppdemo/fileviewers/ProteinPaint%20(VCF,%20bigWig,%20BEDj,%20junction,%20BAM).gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download ProteinPaint FileViewer</button>
             </div>
             <br>
 
@@ -199,7 +199,7 @@
                     </li>
                     <li>
                         Select which files to visualize in ProteinPaint. Ensure to include index files.
-                        <img style="width: 50vw; margin: 1vw 2vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/fileviewers/select_files.png">
+                        <img style="width: 50vw; margin: 1vw 2vw;" src="https://proteinpaint.stjude.org/ppdemo/fileviewers/select_files.png">
                     </li>
                     <li>
                         Click Launch Viewer in the bottom right of the window.
@@ -207,10 +207,10 @@
                     <li>
                         The following interface will appear in the browser: 
     
-                        <img style="width: 20vw; margin: 1vw 4vw; display: block;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/fileviewers/interface.png">
+                        <img style="width: 20vw; margin: 1vw 4vw; display: block;" src="https://proteinpaint.stjude.org/ppdemo/fileviewers/interface.png">
 
                         Select the reference genome. Then, enter a genomic position or search for a gene to launch the visualization. ProteinPaint will launch in a new tab, like the example below.<br>
-                        <img style="width: 50vw; margin: 1vw 1vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/fileviewers/final.png">
+                        <img style="width: 50vw; margin: 1vw 1vw;" src="https://proteinpaint.stjude.org/ppdemo/fileviewers/final.png">
                     </li>
                 </ul>
             </p>

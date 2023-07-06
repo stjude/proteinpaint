@@ -69,16 +69,13 @@ export function init_databrowserUI(holder, debugmode) {
 }
 
 function infoSection(div) {
-	div
-		.append('div')
-		.style('margin', '10px')
-		.style('opacity', '0.65').html(`
+	div.append('div').style('margin', '10px').style('opacity', '0.65').html(`
 			<ul>
                 <li>
                     Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
                 </li>
 				<li>
-					Download an example data dictionary <a href="https://pecan.stjude.cloud/static/proteinpaint_demo/databrowser/dictionaryDemoData.tar.gz" target="_self" "download>here</a>.
+					Download an example data dictionary <a href="https://proteinpaint.stjude.org/ppdemo/databrowser/dictionaryDemoData.tar.gz" target="_self" "download>here</a>.
 				</li>
             </ul>`)
 }
@@ -91,10 +88,7 @@ function makeSectionHeader(div, text) {
 		.style('margin', '20px 10px 40px 10px')
 		.classed('sjpp-databrowser-section-header', true)
 	const hr = div.append('hr')
-	hr.style('color', 'ligthgrey')
-		.style('margin', '-30px 0px 15px 0px')
-		.style('width', '50vw')
-		.style('opacity', '0.4')
+	hr.style('color', 'ligthgrey').style('margin', '-30px 0px 15px 0px').style('width', '50vw').style('opacity', '0.4')
 }
 
 function makeDataDictionaryTabs(tabs_div, obj) {
@@ -224,10 +218,7 @@ function submitButton(div, obj, wrapper, holder) {
 		.attr('type', 'submit')
 		.on('click', () => {
 			if (!obj.data || obj.data == undefined) {
-				const sayerrorDiv = errorMessage_div
-					.append('div')
-					.style('display', 'inline-block')
-					.style('max-width', '20vw')
+				const sayerrorDiv = errorMessage_div.append('div').style('display', 'inline-block').style('max-width', '20vw')
 				sayerror(sayerrorDiv, 'Please provide data')
 				setTimeout(() => sayerrorDiv.remove(), 3000)
 			} else {
