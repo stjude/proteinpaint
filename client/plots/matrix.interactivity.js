@@ -85,50 +85,54 @@ export function setInteractivity(self) {
 
 	self.mouseclick = function (event, data) {
 		const q = self.state.termdbConfig.queries || {}
-		if (q.singleSampleGenomeQuantification || q.singleSampleMutation) {
-			self.dom.mainG.on('mouseout', null)
-			const sampleData = data || event.target.__data__
-			const sample = { sample_id: sampleData._SAMPLENAME_ || sampleData.row.sample }
-			if (sampleData.row['case.case_id']) sample['case.case_id'] = sampleData.row['case.case_id']
-			self.dom.menubody.selectAll('*').remove()
-			self.dom.menutop.selectAll('*').remove()
-			self.dom.tip.show(event.clientX, event.clientY, false, true)
-			if (q.singleSampleGenomeQuantification) {
-				for (const k in q.singleSampleGenomeQuantification) {
-					const menuDiv = self.dom.menubody
-						.append('div')
-						.attr('class', 'sja_menuoption sja_sharp_border')
-						.text(k)
-						.on('click', event => {
-							const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-							sandbox.header.text(sample.sample_id)
-							plotSingleSampleGenomeQuantification(
-								self.state.termdbConfig,
-								self.state.vocab.dslabel,
-								k,
-								sample,
-								sandbox.body.append('div').style('margin', '20px'),
-								self.app.opts.genome
-							)
-							self.dom.tip.hide()
-							menuDiv.remove()
-							self.dom.menubody.selectAll('*').remove()
-						})
-				}
-			}
-			if (q?.singleSampleMutation) {
+		if (!q.singleSampleGenomeQuantification && !q.singleSampleMutation) return
+
+		self.dom.mainG.on('mouseout', null)
+		const sampleData = data || event.target.__data__
+		const sample = { sample_id: sampleData._SAMPLENAME_ || sampleData.row.sample }
+		if (sampleData.row['case.case_id']) sample['case.case_id'] = sampleData.row['case.case_id']
+		self.dom.menubody.selectAll('*').remove()
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.tip.show(event.clientX, event.clientY, false, true)
+		if (q.singleSampleGenomeQuantification) {
+			for (const k in q.singleSampleGenomeQuantification) {
 				const menuDiv = self.dom.menubody
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text('Disco plot')
+					.text(k)
 					.on('click', event => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 						sandbox.header.text(sample.sample_id)
-						plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
+						plotSingleSampleGenomeQuantification(
+							self.state.termdbConfig,
+							self.state.vocab.dslabel,
+							k,
+							sample,
+							sandbox.body.append('div').style('margin', '20px'),
+							self.app.opts.genome
+						)
 						self.dom.tip.hide()
+						menuDiv.remove()
 						self.dom.menubody.selectAll('*').remove()
 					})
 			}
+		}
+		if (q?.singleSampleMutation) {
+			const menuDiv = self.dom.menubody
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Disco plot')
+				.on('click', event => {
+					console.log(self.id)
+					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode), {
+						//beforePlotId: self.id || null,
+						style: {
+							width: '98.5%'
+						}
+					})
+					sandbox.header.text(sample.sample_id)
+					plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
+				})
 		}
 	}
 
@@ -1518,23 +1522,25 @@ function setZoomPanActions(self) {
 			self.dom.mainG.on('mouseout', null)
 			self.dom.tip.hide()
 			delete self.clickedSeriesCell
-			const cell = structuredClone(self.getImgCell(event))
+			const cell = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
 			if (self.opts.cellClick) {
-				self.opts.cellClick({
-					sampleData: cell.row,
-					term: cell.term,
-					value: cell.value,
-					s: cell.s,
-					t: cell.t,
-					siblingCells: cell.siblingCells
-						.filter(c => c !== cell)
-						.map(c => ({
-							term: c.term,
-							value: c.value,
-							s: c.s,
-							t: c.t
-						}))
-				})
+				self.opts.cellClick(
+					structuredClone({
+						sampleData: cell.row,
+						term: cell.term,
+						value: cell.value,
+						s: cell.s,
+						t: cell.t,
+						siblingCells: cell.siblingCells
+							.filter(c => c !== cell)
+							.map(c => ({
+								term: c.term,
+								value: c.value,
+								s: c.s,
+								t: c.t
+							}))
+					})
+				)
 			} else {
 				self.mouseclick(event, cell)
 			}
