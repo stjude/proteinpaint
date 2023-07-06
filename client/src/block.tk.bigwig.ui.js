@@ -88,7 +88,7 @@ function makeTrackEntryTabs(tabs_div, obj) {
 		{
 			label: 'Single Track',
 			callback: async (event, tab) => {
-				obj.tabInUse = 'single'
+				// obj.tabInUse = 'single'
 
 				tab.contentHolder.style('border', 'none').style('display', 'block')
 				const singlediv = tab.contentHolder.append('div').style('border', 'none')
@@ -105,7 +105,7 @@ function makeTrackEntryTabs(tabs_div, obj) {
 		{
 			label: 'Multiple Tracks',
 			callback: async (event, tab) => {
-				obj.tabInUse = 'multi'
+				// obj.tabInUse = 'multi'
 
 				tab.contentHolder.style('border', 'none').style('display', 'block')
 				appear(tab.contentHolder)
@@ -150,6 +150,7 @@ function trackFilePathInput(div, obj) {
 		.classed('sjpp_bigwigUI_input', true)
 		.on('keyup', async () => {
 			obj.filepath = filepath.property('value').trim()
+			obj.tabInUse = 'single'
 		})
 }
 //Creates textarea input to input multiple bigwig tracks under Multiple Tracks tab
@@ -162,6 +163,7 @@ function multiTrackInput(div, obj) {
 		.classed('sjpp_bigwigUI_input', true)
 		.on('keyup', async () => {
 			obj.multitrackdata = multi.property('value').trim()
+			obj.tabInUse = 'multi'
 		})
 }
 
@@ -175,10 +177,7 @@ function submitButton(div, obj, holder, genomes) {
 		.style('font-size', '16px')
 		.on('click', () => {
 			const runpp_arg = {
-				holder: holder
-					.append('div')
-					.style('margin', '20px')
-					.node(),
+				holder: holder.append('div').style('margin', '20px').node(),
 				host: window.location.origin
 			}
 			const bigwig_arg = validateInput(obj, genomes)
@@ -254,11 +253,7 @@ function validateInput(obj, genomes) {
 
 function infoSection(div) {
 	// .style('grid-column', 'span 2')
-	div
-		.append('div')
-		.style('margin', '10px')
-		.style('opacity', '0.65')
-		.style('line-height', '1.5').html(`<ul>
+	div.append('div').style('margin', '10px').style('opacity', '0.65').style('line-height', '1.5').html(`<ul>
                 <li>
                     <a href=https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9 target=_blank>BigWig track documentation</a>
                 </li>
