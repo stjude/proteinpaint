@@ -1,7 +1,7 @@
 import { Tabs } from '#dom/toggleButtons'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { copyMerge } from '#rx'
-import { PillData, TW, TermSettingInstance, VocabApi, BinConfig } from '#shared/types'
+import { PillData, TW, TermSettingInstance, VocabApi, NumericQ } from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -40,7 +40,7 @@ export async function getHandler(self: TermSettingInstance) {
 		tabs.push({
 			subType: 'continuous',
 			label: 'Continuous',
-			callback: self.tabCallback,
+			callback: self.tabCallback
 		})
 	}
 
@@ -48,7 +48,7 @@ export async function getHandler(self: TermSettingInstance) {
 		tabs.push({
 			subType: 'discrete',
 			label: 'Discrete',
-			callback: self.tabCallback,
+			callback: self.tabCallback
 		})
 	}
 
@@ -56,7 +56,7 @@ export async function getHandler(self: TermSettingInstance) {
 		tabs.push({
 			subType: 'spline',
 			label: 'Cubic spline',
-			callback: self.tabCallback,
+			callback: self.tabCallback
 		})
 	}
 
@@ -64,7 +64,7 @@ export async function getHandler(self: TermSettingInstance) {
 		tabs.push({
 			subType: 'binary',
 			label: 'Binary',
-			callback: self.tabCallback,
+			callback: self.tabCallback
 		})
 	}
 
@@ -105,15 +105,15 @@ export async function getHandler(self: TermSettingInstance) {
 			new Tabs({
 				holder: topBar.append('div').style('display', 'inline-block'),
 				contentHolder: div.append('div'),
-				tabs,
+				tabs
 			}).main()
-		},
+		}
 	}
 }
 
 export async function fillTW(tw: TW, vocabApi: VocabApi, defaultQ = null) {
 	// when missing, defaults mode to discrete
-	if (!tw.q.mode && !(defaultQ as BinConfig | null)?.mode) tw.q.mode = 'discrete'
+	if (!tw.q.mode && !(defaultQ as NumericQ | null)?.mode) tw.q.mode = 'discrete'
 
 	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q)) {
 		/*
@@ -126,8 +126,8 @@ export async function fillTW(tw: TW, vocabApi: VocabApi, defaultQ = null) {
 
 	if (defaultQ) {
 		//TODO change when Q objects separated out
-		;(defaultQ as BinConfig).isAtomic = true
-		if ((defaultQ as BinConfig).preferredBins == 'median') {
+		;(defaultQ as NumericQ).isAtomic = true
+		if ((defaultQ as NumericQ).preferredBins == 'median') {
 			/*
 			do following computing to fill the q{} object
 			call vocab method to get median value (without filter)
@@ -135,29 +135,29 @@ export async function fillTW(tw: TW, vocabApi: VocabApi, defaultQ = null) {
 			used for cuminc overlay/divideby
 			*/
 
-			if (!(defaultQ as BinConfig).type || (defaultQ as BinConfig).type != 'custom-bin')
+			if (!(defaultQ as NumericQ).type || (defaultQ as NumericQ).type != 'custom-bin')
 				throw '.type must be custom-bin when .preferredBins=median'
 			const result = await vocabApi.getPercentile(tw.term.id!, [50])
 			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 			const median = result.values[0]
 			if (!Number.isFinite(median)) throw 'median value not a number'
 			tw.q = JSON.parse(JSON.stringify(defaultQ))
-			delete (tw.q as BinConfig).preferredBins
+			delete (tw.q as NumericQ).preferredBins
 			tw.q.lst! = [
 				{
 					startunbounded: true,
 					stop: median,
 					stopinclusive: false,
-					label: '<' + median, // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
+					label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
 				},
 				{
 					start: median,
 					startinclusive: true,
 					stopunbounded: true,
-					label: '≥' + median,
-				},
+					label: '≥' + median
+				}
 			]
-		} else if ((defaultQ as BinConfig).preferredBins == 'less') {
+		} else if ((defaultQ as NumericQ).preferredBins == 'less') {
 			/* this flag is true, use term.bins.less
 			in this case, defaultQ{} is not an actual q{} object
 			*/

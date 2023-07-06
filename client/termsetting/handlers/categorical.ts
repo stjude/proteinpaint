@@ -10,7 +10,7 @@ import {
 	GroupSetting,
 	BaseGroupSet,
 	GroupEntry,
-	TermSettingInstance,
+	TermSettingInstance
 } from '#shared/types'
 
 /*
@@ -64,7 +64,7 @@ export function getHandler(self: CategoricalInstance) {
 
 		validateQ(data: PillData) {
 			const t = data.term as Term
-			const q = data.q as Q
+			const q = data.q as CategoricalConditionQ
 			const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
 			// validate the configuration
 			if (q.type == 'values') {
@@ -75,7 +75,7 @@ export function getHandler(self: CategoricalInstance) {
 
 					if (data.sampleCounts) {
 						for (const key in t.values) {
-							if (!data.sampleCounts.find((d) => d.key === key))
+							if (!data.sampleCounts.find(d => d.key === key))
 								self.error = `there are no samples for the required binary value=${key} ${endNote}`
 						}
 					}
@@ -105,7 +105,7 @@ export function getHandler(self: CategoricalInstance) {
 
 					if (data.sampleCounts) {
 						for (const grp of groupset.groups) {
-							if (!data.sampleCounts.find((d) => d.label === grp.name))
+							if (!data.sampleCounts.find(d => d.label === grp.name))
 								throw `there are no samples for the required binary value=${grp.name} ${endNote}`
 						}
 					}
@@ -135,7 +135,7 @@ export function getHandler(self: CategoricalInstance) {
 					self.term.q = {}
 				} // ...
 			}
-		},
+		}
 	}
 }
 
@@ -152,7 +152,7 @@ export function setCategoryConditionMethods(self: CategoricalInstance) {
 			if (!i)
 				return {
 					text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
-					bgcolor: 'red',
+					bgcolor: 'red'
 				}
 			return { text: i.name }
 		}
@@ -356,13 +356,13 @@ export function setCategoryConditionMethods(self: CategoricalInstance) {
 
 	self.grpSet2valGrp = function (groupset: BaseGroupSet) {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values || {}
-		console.log(349, values)
 		/*
 		values{} is an object of key:{key,label,color}
 		it is read only attribute of the term object
 		duplicate it in order to introduce new attribute "group":INT to each value
 		*/
 		const vals_with_grp = structuredClone(values)
+		if (vals_with_grp == undefined) throw `Missing group values [categorical.ts grpSet2valGrp()]`
 		for (const [i, g] of groupset.groups.entries()) {
 			if (!g.type || g.type == 'values') {
 				for (const v of g.values) {

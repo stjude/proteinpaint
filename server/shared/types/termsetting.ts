@@ -1,5 +1,5 @@
 import { VocabApi } from './vocab'
-import { Term, Q, TW, BinConfig } from './termdb'
+import { Term, Q, TW, NumericQ } from './termdb'
 import { Filter } from './filter'
 
 /*

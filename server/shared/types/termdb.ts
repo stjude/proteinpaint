@@ -37,40 +37,6 @@ export type RangeEntry = {
 	range?: any //No idea what this is
 }
 
-interface BaseQ {
-	groups?: any // Not documented but appears in samplelst?? same as groupsetting?
-	groupsetting?: GroupSetting
-	hiddenValues?: HiddenValues
-	isAtomic?: boolean
-	lst?: RangeEntry[]
-	name?: string
-	mode?: 'discrete' | 'binary' | 'continuous' | 'spline' | 'cuminc' | 'cox'
-	modeBinaryCutoffType?: 'normal' | 'percentile'
-	modeBinaryCutoffPercentile?: number
-	reuseId?: string
-	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
-}
-
-export interface BinConfig extends BaseQ {
-	//TODO: this is probably a numeric Q. Will rename and split out later
-	preferredBins?: string
-	termtype?: string
-	//regular-sized bins
-	bin_size?: number
-	startinclusive?: boolean
-	stopinclusive?: boolean
-	first_bin?: {
-		startunbounded: boolean
-		stop: number
-	}
-	last_bin?: {
-		start: number
-		stopunbounded: boolean
-	}
-	//binary
-	scale?: number //0.1 | 0.01 | 0.001
-}
-
 export type GroupEntry = {
 	name: string
 	type?: 'values' | 'filter'
@@ -103,9 +69,42 @@ type RestrictAncestry = {
 	tvs: Tvs
 }
 
-export interface Q extends BaseQ {
-	knots?: []
-	//Condition terms
+type BaseQ = {
+	groups?: any // Not documented but appears in condition and samplelst?? same as groupsetting?
+	groupsetting?: GroupSetting
+	hiddenValues?: HiddenValues
+	isAtomic?: boolean
+	lst?: RangeEntry[]
+	name?: string
+	mode?: 'discrete' | 'binary' | 'continuous' | 'spline' | 'cuminc' | 'cox'
+	modeBinaryCutoffType?: 'normal' | 'percentile'
+	modeBinaryCutoffPercentile?: number
+	reuseId?: string
+	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
+}
+
+export type NumericQ = BaseQ & {
+	termType: 'numeric'
+	preferredBins?: string
+	termtype?: string
+	//regular-sized bins
+	bin_size?: number
+	startinclusive?: boolean
+	stopinclusive?: boolean
+	first_bin?: {
+		startunbounded: boolean
+		stop: number
+	}
+	last_bin?: {
+		start: number
+		stopunbounded: boolean
+	}
+	//binary
+	scale?: number //0.1 | 0.01 | 0.001
+}
+
+export type CategoricalConditionQ = BaseQ & {
+	termType: 'categorical' | 'conditional'
 	bar_by_children?: boolean
 	bar_by_grade?: boolean
 	breaks?: number[]
@@ -115,12 +114,24 @@ export interface Q extends BaseQ {
 	value_by_max_grade?: boolean
 	value_by_most_recent?: boolean
 	value_by_computable_grade?: boolean
-	//geneVariant
+	//variant_filter???????? No documentation
+}
+
+type RegressionQ = BaseQ & {
+	termType: 'regression'
+	knots?: []
+}
+
+type GeneVariantQ = BaseQ & {
+	termType: 'geneVariant'
 	cnvGainCutoff?: number
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
-	//snplst
+}
+
+type SnpLstQ = BaseQ & {
+	termType: 'snplst'
 	AFcutoff?: number
 	alleleType?: number
 	cacheid?: string
@@ -130,13 +141,17 @@ export interface Q extends BaseQ {
 	restrictAncestry?: RestrictAncestry
 	snp2effAle?: KV
 	snp2refGrp?: KV
-	//snplocus
+}
+
+type SnpLocusQ = BaseQ & {
+	termType: 'snplocus'
 	info_fields?: any //[] Not documented
 	chr?: string
 	start?: number
 	stop?: number
-	//variant_filter???????? No documentation
 }
+
+export type Q = BaseQ | CategoricalConditionQ | NumericQ | RegressionQ | GeneVariantQ | SnpLstQ | SnpLocusQ
 
 /*** interfaces supporting Term interface ***/
 
@@ -158,8 +173,8 @@ type NumericalBins = {
 	label_offset?: number
 	label_offset_ignored?: boolean
 	rounding?: string
-	default: BinConfig
-	less: BinConfig
+	default: NumericQ
+	less: NumericQ
 }
 
 type Gt2Count = {
@@ -226,13 +241,22 @@ export type Term = {
 	isoform?: string
 }
 
+// export function getQTypeByTermType<Term extends { termType: string }, Q>(
+// 	term: Term,
+// 	type: string,
+// 	q: Q
+// ): Q {
+// 	if ()
+
+// }
+
 export type TW = {
 	//Term wrapper aka. term:{term:{...}, q:{...}...}
 	id?: string
 	$id?: string
 	isAtomic?: boolean
 	term: Term
-	term2?: Term
-	term0?: Term
+	// term2?: Term
+	// term0?: Term
 	q: Q
 }
