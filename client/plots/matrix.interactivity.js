@@ -83,20 +83,18 @@ export function setInteractivity(self) {
 		delete self.imgBox
 	}
 
-	self.mouseclick = function (event) {
-		if (
-			self.state.termdbConfig.queries?.singleSampleGenomeQuantification ||
-			self.state.termdbConfig.queries?.singleSampleMutation
-		) {
+	self.mouseclick = function (event, data) {
+		const q = self.state.termdbConfig.queries || {}
+		if (q.singleSampleGenomeQuantification || q.singleSampleMutation) {
 			self.dom.mainG.on('mouseout', null)
-			const sampleData = event.target.__data__
+			const sampleData = data || event.target.__data__
 			const sample = { sample_id: sampleData._SAMPLENAME_ || sampleData.row.sample }
 			if (sampleData.row['case.case_id']) sample['case.case_id'] = sampleData.row['case.case_id']
 			self.dom.menubody.selectAll('*').remove()
 			self.dom.menutop.selectAll('*').remove()
 			self.dom.tip.show(event.clientX, event.clientY, false, true)
-			if (self.state.termdbConfig.queries?.singleSampleGenomeQuantification) {
-				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+			if (q.singleSampleGenomeQuantification) {
+				for (const k in q.singleSampleGenomeQuantification) {
 					const menuDiv = self.dom.menubody
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
@@ -118,7 +116,7 @@ export function setInteractivity(self) {
 						})
 				}
 			}
-			if (self.state.termdbConfig.queries?.singleSampleMutation) {
+			if (q?.singleSampleMutation) {
 				const menuDiv = self.dom.menubody
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
@@ -1520,8 +1518,8 @@ function setZoomPanActions(self) {
 			self.dom.mainG.on('mouseout', null)
 			self.dom.tip.hide()
 			delete self.clickedSeriesCell
+			const cell = structuredClone(self.getImgCell(event))
 			if (self.opts.cellClick) {
-				const cell = structuredClone(self.getImgCell(event))
 				self.opts.cellClick({
 					sampleData: cell.row,
 					term: cell.term,
@@ -1537,6 +1535,8 @@ function setZoomPanActions(self) {
 							t: c.t
 						}))
 				})
+			} else {
+				self.mouseclick(event, cell)
 			}
 			return
 		}
