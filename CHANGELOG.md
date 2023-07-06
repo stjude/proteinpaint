@@ -1,6 +1,16 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.18.3
+
+- supported a matrix cell click option 
+- added a dtsv case in the bulk.svjson parser
+- prototyped new chart profileBarplot
+- handled on the fly cnv call from genebody probe signals
+- defaulted to truncate matrix samples against gene variant hits even when there are selected dictionary terms
+- fixed the matrix rezoom-by-outline zooming out instead of zooming in
+- fixed bugs found in 3d plot opened from the new dynamic scatter
+ 
 ## 2.18.2
 
 - handle optional action.config in mass store.plot_edit()
