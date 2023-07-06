@@ -26,6 +26,40 @@ arg = {}
 	.genes[]
 		future: list of genes to launch matrix
 
+	.opts{}
+		.matrix{}
+			.allow2selectSamples: 
+				{
+				  buttonText: "Create Cohort",
+				  attributes: ["case.case_id"],
+				  callback: console.log,
+				}
+
+			.cellClick(cell), where
+				cell = {
+					sampleData: the data.row by sample, part of the data.lst as returned by vocabApi.getAnnotatedSampleData()
+						{
+							sample: name/id string,
+							[term1_$id]: {key, label, values, renderedValues, filteredValues, countedValues, sample},
+							[....]
+						},
+
+					value: the data.row[term.id] value, data shape depends on the term.type,
+						// for gene variant
+						{	
+							dt, class, gene, pos, _SAMPLEID_, _SAMPLENAME
+						}
+						// not shown here: example values for other term types
+
+					term: the term for this matrix cell, equivalent to t.tw,
+
+					s: the matrix.sampleOrder[] entry for this matrix cell,
+
+					t: the matrix.termOrder[] entry for this matrix cell,
+
+					siblingCells: cell data for the same matrix sample/term, but excluding this cell 
+				}
+
 holder
 genomes = { hg38 : {} }
 
@@ -89,34 +123,36 @@ export async function init(arg, holder, genomes) {
 			undoHtml: 'undo',
 			redoHtml: 'redo'
 		},
-		matrix: {
-			allow2selectSamples: arg.allow2selectSamples,
-			// these will display the inputs together in the Genes menu,
-			// instead of being rendered outside of the matrix holder
-			customInputs: {
-				genes: [
-					{
-						label: `Maximum # Genes`,
-						title: 'Limit the number of displayed genes',
-						type: 'number',
-						chartType: 'matrix',
-						settingsKey: 'maxGenes',
-						callback: async value => {
-							maxGenes = value
-							const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
-							api.update({
-								termgroups: [{ lst: genes }],
-								settings: {
-									matrix: {
-										maxGenes
+		matrix: Object.assign(
+			{
+				// these will display the inputs together in the Genes menu,
+				// instead of being rendered outside of the matrix holder
+				customInputs: {
+					genes: [
+						{
+							label: `Maximum # Genes`,
+							title: 'Limit the number of displayed genes',
+							type: 'number',
+							chartType: 'matrix',
+							settingsKey: 'maxGenes',
+							callback: async value => {
+								maxGenes = value
+								const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
+								api.update({
+									termgroups: [{ lst: genes }],
+									settings: {
+										matrix: {
+											maxGenes
+										}
 									}
-								}
-							})
+								})
+							}
 						}
-					}
-				]
-			}
-		}
+					]
+				}
+			},
+			arg.opts?.matrix || {}
+		)
 	}
 
 	const plotAppApi = await appInit(opts)
