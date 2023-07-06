@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
  
 ## 2.18.0
 
-- fixed the matrix sample groupung input lag, edit menu error, empty column bug
+- fixed the matrix sample grouping input lag, edit menu error, empty column bug
 - contextualized the matrix row label mouseover title
 - removed GDC terms that are IDs or cause server response errors
 - removed the numeric axis in the matrix row label when switching from continuous to discrete mode 
