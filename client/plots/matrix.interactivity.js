@@ -123,14 +123,6 @@ export function setInteractivity(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Disco plot')
 				.on('click', event => {
-					/*self.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'Disco',
-							insertBefore: self.id,
-						}
-					})*/
-
 					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 					sandbox.header.text(sample.sample_id)
 					plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
@@ -1626,7 +1618,11 @@ function setZoomPanActions(self) {
 		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
 		const centerCell = self.sampleOrder[zoomIndex] || self.getImgCell(event)
-		const zoomLevel = d.mainw / self.zoomWidth
+		const colw = self.computedSettings.colw
+		const maxZoomLevel = Math.max(s.colwMax, colw) / colw
+		const minZoomLevel = Math.min(s.colwMin, colw) / colw
+		const tentativeZoomLevel = (s.zoomLevel * d.mainw) / self.zoomWidth
+		const zoomLevel = Math.max(minZoomLevel, Math.min(tentativeZoomLevel, maxZoomLevel))
 		const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
 
 		self.app.dispatch({
