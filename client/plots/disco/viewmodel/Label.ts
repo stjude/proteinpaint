@@ -1,5 +1,6 @@
 import Arc from './Arc'
 import Line from './Line'
+import Mutation from '#plots/disco/viewmodel/Mutation.ts'
 
 export default class Label extends Arc {
 	constructor(
@@ -9,18 +10,14 @@ export default class Label extends Arc {
 		readonly outerRadius: number,
 		readonly angle: number,
 		readonly value: number,
-		readonly label: string,
-		readonly mname: string,
-		readonly color: any,
-		readonly dataClass: any,
-		readonly chr: string,
-		readonly position: number,
+		readonly gene: string,
 		readonly transform: string,
 		readonly textAnchor: string,
 		readonly ccAngle: number,
 		readonly line: Line,
-		readonly isCancerGene: boolean
+		readonly isCancerGene: boolean,
+		readonly mutations: Array<Mutation> = []
 	) {
-		super(startAngle, endAngle, innerRadius, outerRadius, color, label)
+		super(startAngle, endAngle, innerRadius, outerRadius, mutations[0].color, gene)
 	}
 }

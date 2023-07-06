@@ -55,7 +55,7 @@ export default class Disco {
 		discoRenderer.render(holder, viewModel)
 	}
 
-	getRingRenderers(settings: Settings, geneClickListener: (gene: string, mname: string) => void) {
+	getRingRenderers(settings: Settings, geneClickListener: (gene: string, mnames: Array<string>) => void) {
 		const chromosomesRenderer = new ChromosomesRenderer(
 			settings.padAngle,
 			settings.rings.chromosomeInnerRadius,
