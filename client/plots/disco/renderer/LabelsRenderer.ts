@@ -4,14 +4,18 @@ import { line } from 'd3-shape'
 import Label from '../viewmodel/Label'
 import SnvArc from '../viewmodel/SnvArc'
 import MenuProvider from './MenuProvider'
+import { renderTable } from '#dom/table.js'
+import Mutation from '#plots/disco/viewmodel/Mutation.ts'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
-	private geneClickListener: (gene: string, mname: string) => void
-	constructor(animationDuration: number, geneClickListener: (gene: string, mname: string) => void) {
+	private geneClickListener: (gene: string, mnames: Array<string>) => void
+
+	constructor(animationDuration: number, geneClickListener: (gene: string, mnames: Array<string>) => void) {
 		this.animationDuration = animationDuration
 		this.geneClickListener = geneClickListener
 	}
+
 	render(holder: any, elements: Array<Label>, collisions?: Array<Label>) {
 		const labelsG = holder.append('g')
 
@@ -38,13 +42,14 @@ export default class LabelsRenderer implements IRenderer {
 					.style('fill', label.color)
 					.style('cursor', 'pointer')
 					.text(label.text)
-					.on('click', () => this.geneClickListener(label.label, label.mname))
+					.on('click', () =>
+						this.geneClickListener(
+							label.gene,
+							label.mutations.map(value => value.mname)
+						)
+					)
 					.on('mouseover', (mouseEvent: MouseEvent) => {
-						menu.d
-							.style('padding', '2px')
-							.html(
-								`Gene: ${label.label} <br />Consequence: ${label.mname} <span style="color: ${label.color}" >${label.dataClass}</span> <br />Mutation: ${label.chr}:${label.position}`
-							)
+						menu.d.style('padding', '2px').html(this.createTooltipHtml(label))
 						menu.show(mouseEvent.x, mouseEvent.y)
 					})
 					.on('mouseout', () => {
@@ -78,5 +83,14 @@ export default class LabelsRenderer implements IRenderer {
 					.attr('d', lineFunction)
 			}
 		})
+	}
+
+	createTooltipHtml(label: Label) {
+		let tooltipHtml = `Gene: ${label.gene} <br />`
+
+		label.mutations.forEach((mutation: Mutation) => {
+			tooltipHtml += `Consequence: ${mutation.mname} <span style="color: ${label.color}" >${mutation.dataClass}</span> <br />Mutation: ${mutation.chr}:${mutation.position} <br />`
+		})
+		return tooltipHtml
 	}
 }

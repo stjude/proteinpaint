@@ -3,11 +3,14 @@ import Reference from './Reference'
 import Label from '../viewmodel/Label'
 import LabelFactory from '../viewmodel/LabelFactory'
 import MLabel from './MLabel'
+import Mutation from '#plots/disco/viewmodel/Mutation.ts'
 
 export default class LabelsMapper {
 	private settings: any
 	private sampleName: string
 	private reference: Reference
+
+	private labelMap: Map<string, Label> = new Map()
 
 	constructor(settings: any, sampleName: string, reference: Reference) {
 		this.settings = settings
@@ -19,34 +22,37 @@ export default class LabelsMapper {
 		const innerRadius = this.settings.rings.labelLinesInnerRadius
 		const outerRadius = innerRadius + this.settings.rings.labelsToLinesDistance
 
-		const labels: Array<Label> = []
-
 		data.forEach(data => {
 			const startAngle = this.calculateStartAngle(data)
 			const endAngle = this.calculateEndAngle(data)
 
+			const label = this.labelMap.get(data.gene)
 			const mLabel = MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass] : undefined
-
-			const label = LabelFactory.createLabel(
-				startAngle,
-				endAngle,
-				innerRadius,
-				outerRadius,
-				data.value,
-				data.gene,
-				data.mname,
-				mLabel.color,
-				mLabel.label,
-				data.chr,
-				data.position,
-				data.isCancerGene,
-				this.settings.rings.labelsToLinesGap
-			)
-
-			labels.push(label)
+			if (!label) {
+				this.labelMap.set(
+					data.gene,
+					LabelFactory.createLabel(
+						startAngle,
+						endAngle,
+						innerRadius,
+						outerRadius,
+						data.value,
+						data.gene,
+						data.mname,
+						mLabel.color,
+						mLabel.label,
+						data.chr,
+						data.position,
+						data.isCancerGene,
+						this.settings.rings.labelsToLinesGap
+					)
+				)
+			} else {
+				label.mutations.push(new Mutation(data.mname, mLabel.color, mLabel.label, data.chr, data.position))
+			}
 		})
 
-		return labels
+		return Array.from(this.labelMap.values())
 	}
 
 	private calculateStartAngle(data: Data) {

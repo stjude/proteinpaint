@@ -5,9 +5,9 @@ import Arc from '../viewmodel/Arc'
 import MenuProvider from './MenuProvider'
 
 export default class NonExonicSnvRenderer implements IRenderer {
-	private geneClickListener: (gene: string, mname: string) => void
+	private geneClickListener: (gene: string, mnames: Array<string>) => void
 
-	constructor(geneClickListener: (gene: string, mname: string) => void) {
+	constructor(geneClickListener: (gene: string, mnames: Array<string>) => void) {
 		this.geneClickListener = geneClickListener
 	}
 
@@ -37,7 +37,7 @@ export default class NonExonicSnvRenderer implements IRenderer {
 				menu.hide()
 			})
 			.on('click', (mouseEvent: MouseEvent, arc: SnvArc) => {
-				this.geneClickListener(arc.text, arc.mname)
+				this.geneClickListener(arc.text, [arc.mname])
 			})
 	}
 }

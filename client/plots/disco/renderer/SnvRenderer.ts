@@ -7,9 +7,9 @@ import MenuProvider from './MenuProvider'
 export default class SnvRenderer implements IRenderer {
 	private svnWidth: number
 
-	private geneClickListener: (gene: string, mname: string) => void
+	private geneClickListener: (gene: string, mnames: Array<string>) => void
 
-	constructor(svnWidth: number, geneClickListener: (gene: string, mname: string) => void) {
+	constructor(svnWidth: number, geneClickListener: (gene: string, mnames: Array<string>) => void) {
 		this.svnWidth = svnWidth
 
 		this.geneClickListener = geneClickListener
@@ -47,7 +47,7 @@ export default class SnvRenderer implements IRenderer {
 				menu.hide()
 			})
 			.on('click', (mouseEvent: MouseEvent, arc: SnvArc) => {
-				this.geneClickListener(arc.text, arc.mname)
+				this.geneClickListener(arc.text, [arc.mname])
 			})
 	}
 }

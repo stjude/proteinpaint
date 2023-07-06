@@ -90,8 +90,6 @@ export default class DataMapper {
 
 		const sortedData = dataArray.sort(this.compareData)
 
-		console.log('this.settings.rings.nonExonicRingEnabled', this.settings.rings.nonExonicRingEnabled)
-
 		if (this.settings.rings.nonExonicRingEnabled) {
 			sortedData.forEach(data => {
 				this.filterNonExonicSnvData(data)

@@ -3,7 +3,7 @@ import Label from '../viewmodel/Label'
 export class DiscoInteractions {
 	cappingClickCallback: (d: any, t: any) => void
 	downloadClickListener: (d: any) => void
-	geneClickListener: (gene: string, mname: string) => void
+	geneClickListener: (gene: string, mnames: Array<string>) => void
 
 	constructor(app: any) {
 		this.cappingClickCallback = (d: any, t: any) => {
@@ -56,7 +56,7 @@ export class DiscoInteractions {
 			a.click()
 		}
 
-		this.geneClickListener = async (gene: string, mname: string) => {
+		this.geneClickListener = async (gene: string, mnames: Array<string>) => {
 			const arg = {
 				holder: app.app.opts.holder,
 				genome: app.app.opts.state.args.genome,
@@ -66,7 +66,7 @@ export class DiscoInteractions {
 					{
 						type: 'mds3',
 						dslabel: app.app.opts.state.dslabel,
-						hlaachange: mname
+						hlaachange: mnames.join(',')
 					}
 				]
 			}
