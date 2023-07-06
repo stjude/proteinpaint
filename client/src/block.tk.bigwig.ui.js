@@ -258,7 +258,7 @@ function infoSection(div) {
                     <a href=https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9 target=_blank>BigWig track documentation</a>
                 </li>
                 <li>
-                    <a href=https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw target=_blank>Example file</a>
+                    <a href=https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw target=_blank>Example file</a>
                 </li>
                 <li>
                     Please see the <a href=https://genome.ucsc.edu/goldenpath/help/bigWig.html target=_blank>UCSC documention</a> for information on bigWig file formatting.

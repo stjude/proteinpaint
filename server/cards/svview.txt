@@ -6,9 +6,9 @@
     </p>
     <br>
     <div style="margin:0vw 2vw; display: flex; justify-content: center; padding: 10px;">
-        <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewPyScript.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download Script</button>
+        <button type="button" onclick="window.open('https://proteinpaint.stjude.org/ppdemo/usecases/svview/svViewPyScript.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download Script</button>
         
-        <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewDemoFiles.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download Example Files</button>
+        <button type="button" onclick="window.open('https://proteinpaint.stjude.org/ppdemo/usecases/svview/svViewDemoFiles.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download Example Files</button>
     </div>
     <div margin: 2vw;">
         <h2 style="font-size: 1.2em;">ProteinPaint</h2>
@@ -43,7 +43,7 @@
 
         <h2 style="font-size: 1.2em;">Run Script</h2>
         <p style="margin-left: 2vw;font-size: 1em;">
-            Download the <a href="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewPyScript.tar.gz" target="_self" download>SV view script</a>. Run the script from the command line with the following arguments:
+            Download the <a href="https://proteinpaint.stjude.org/ppdemo/usecases/svview/svViewPyScript.tar.gz" target="_self" download>SV view script</a>. Run the script from the command line with the following arguments:
         </p>
             <ul style="margin-left: 2vw;">
                 <li> 
@@ -90,12 +90,12 @@
         <p style="margin-left: 2vw;font-size: 1em;">
             The results table is found in the csv file, named from the <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --out</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -o</span> argument.
         </p>
-        <img style="width: 63vw; margin: 0vw 2vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/output.png">
+        <img style="width: 63vw; margin: 0vw 2vw;" src="https://proteinpaint.stjude.org/ppdemo/usecases/svview/svview_images/output.png">
         
         <h2 style="font-size: 1.2em;">SV View Example</h2>
         <p style="margin-left: 2vw;font-size: 1em;">
             Open the results from the csv file. Click on the links to review the SV views for both the left and right breakpoints. Shown below is the URL for the left position from the example data.
         </p>
-        <img style="width: 60vw; margin: 0vw 2vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/leftURL.png">
+        <img style="width: 60vw; margin: 0vw 2vw;" src="https://proteinpaint.stjude.org/ppdemo/usecases/svview/svview_images/leftURL.png">
     </div>
 </div>

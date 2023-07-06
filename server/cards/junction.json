@@ -2,7 +2,7 @@
     "ppcalls": [
         {
             "label": "A sample splice junction",
-            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
+            "download":"https://proteinpaint.stjude.org/ppdemo/hg19/junction/junctionDemoData.tar.gz",
             "urlparam": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
             "datapreview": [
                 {
@@ -30,7 +30,7 @@
         {
             "label":"Cohort from an External JSON",
             "message": "",
-            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/junction/junctionJsonDemoData.tar.gz",
             "urlparam": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
             "datapreview": [
                 {
@@ -57,7 +57,7 @@
         },
         {
             "label":"Cohort from a JSON Matrix File",
-            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/junction/junctionMatrixDemoData.tar.gz",
             "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
             "datapreview": [
                 {
@@ -81,7 +81,7 @@
             "buttons": [
                 {
                     "name": "Download Matrix Script",
-                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/rnapeg2matrix.py.gz"
+                    "download": "https://proteinpaint.stjude.org/ppdemo/scripts/rnapeg2matrix.py.gz"
                 }
             ],
             "testSpec": {

@@ -253,7 +253,7 @@
 	"buttons": [
 		{
 			"name": "Download BAM Slicing Script",
-			"download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
+			"download": "https://proteinpaint.stjude.org/ppdemo/scripts/slice_bam4pp.py.gz"
 		},
 		{
 			"name": "BAM track supporting information",
