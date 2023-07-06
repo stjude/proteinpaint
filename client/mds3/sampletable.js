@@ -8,8 +8,6 @@ import { print_snv, printSvPair } from './itemtable'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { dofetch3 } from '#common/dofetch'
 
-const d3s = require('d3-selection')
-
 /*
 ********************** EXPORTED
 init_sampletable()
@@ -195,16 +193,18 @@ async function make_singleSampleTable(s, arg) {
 			if (tw.id in s) {
 				if (Array.isArray(s[tw.id])) {
 					if (tw.baseURL) {
+						// TODO convert to display value
 						cell2.html(s[tw.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
 					} else {
 						cell2.html(s[tw.id].join('<br>'))
 					}
 				} else {
 					// single value
+					const v = twDisplayValueFromSample(s, tw)
 					if (tw.baseURL) {
-						cell2.html(`<a href=${tw.baseURL + s[tw.id]} target=_blank>${s[tw.id]}</a>`)
+						cell2.html(`<a href=${tw.baseURL + v} target=_blank>${v}</a>`)
 					} else {
-						cell2.text(s[tw.id])
+						cell2.text(v)
 					}
 				}
 			}
@@ -250,6 +250,14 @@ async function make_singleSampleTable(s, arg) {
         arg.div.append('div').text('Case details')
     }
     */
+}
+
+// get display value for a tw from a sample
+function twDisplayValueFromSample(s, tw) {
+	if (!(tw.id in s)) return ''
+	const v = s[tw.id]
+	if (tw.term.values?.[v]?.label) return tw.term.values[v].label
+	return v
 }
 
 /*
@@ -619,10 +627,11 @@ export async function samples2columnsRows(samples, tk) {
 
 		if (tk.mds.variant2samples.twLst) {
 			for (const tw of tk.mds.variant2samples.twLst) {
+				const v = twDisplayValueFromSample(sample, tw)
 				if (tw.baseURL) {
-					row.push({ html: `<a href=${tw.baseURL + sample[tw.id]} target=_blank>${sample[tw.id]}</a>` })
+					row.push({ html: `<a href=${tw.baseURL + v} target=_blank>${v}</a>` })
 				} else {
-					row.push({ value: sample[tw.id] })
+					row.push({ value: v })
 				}
 			}
 		}
