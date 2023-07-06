@@ -123,13 +123,15 @@ export function setInteractivity(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Disco plot')
 				.on('click', event => {
-					console.log(self.id)
-					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode), {
-						//beforePlotId: self.id || null,
-						style: {
-							width: '98.5%'
+					/*self.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'Disco',
+							insertBefore: self.id,
 						}
-					})
+					})*/
+
+					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
 					sandbox.header.text(sample.sample_id)
 					plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
 				})
@@ -1521,8 +1523,7 @@ function setZoomPanActions(self) {
 		} else if (!c.endCell || endCell === c.startCell) {
 			self.dom.mainG.on('mouseout', null)
 			self.dom.tip.hide()
-			delete self.clickedSeriesCell
-			const cell = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
+			const cell = event.target.tagName == 'rect' ? event.target.__data__ : c.startCell
 			if (self.opts.cellClick) {
 				self.opts.cellClick(
 					structuredClone({
@@ -1544,6 +1545,8 @@ function setZoomPanActions(self) {
 			} else {
 				self.mouseclick(event, cell)
 			}
+			delete self.clickedSeriesCell
+			delete self.zoomArea
 			return
 		}
 
