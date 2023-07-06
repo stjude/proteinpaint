@@ -1,6 +1,7 @@
 import Label from './Label'
 import Point from './Point'
 import Line from './Line'
+import Mutation from '#plots/disco/viewmodel/Mutation.ts'
 
 export default class LabelFactory {
 	static createLabel(
@@ -41,16 +42,12 @@ export default class LabelFactory {
 			angle,
 			value,
 			label,
-			mname,
-			color,
-			dataClass,
-			chr,
-			position,
 			transform,
 			textAnchor,
 			ccAngle,
 			line,
-			isCancerGene
+			isCancerGene,
+			[new Mutation(mname, color, dataClass, chr, position)]
 		)
 	}
 
@@ -97,16 +94,12 @@ export default class LabelFactory {
 			angle,
 			element.value,
 			element.text,
-			element.mname,
-			element.color,
-			element.dataClass,
-			element.chr,
-			element.position,
 			transform,
 			textAnchor,
 			ccAngle,
 			line,
-			element.isCancerGene
+			element.isCancerGene,
+			element.mutations
 		)
 	}
 }
