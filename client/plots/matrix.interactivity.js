@@ -84,13 +84,21 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseclick = function (event, data) {
-		const q = self.state.termdbConfig.queries || {}
-		if (!q.singleSampleGenomeQuantification && !q.singleSampleMutation) return
+		// clicking only show actions for available genomic data; can later expand to non-genomic data and custom overrides
+		const q = self.state.termdbConfig.queries
+		if (!q) return // no genomic queries
+		if (!q.singleSampleGenomeQuantification && !q.singleSampleMutation) return // only works for these queries
 
 		self.dom.mainG.on('mouseout', null)
 		const sampleData = data || event.target.__data__
-		const sample = { sample_id: sampleData._SAMPLENAME_ || sampleData.row.sample }
-		if (sampleData.row['case.case_id']) sample['case.case_id'] = sampleData.row['case.case_id']
+
+		if (!sampleData) return // !!! it's undefined when dragging on the sample names
+
+		// preliminary fix: assign string sample name for "sample_id", which is used by data queries below
+		const sample = {
+			sample_id: sampleData._SAMPLENAME_ || sampleData.row.sampleName || sampleData.row.sample
+		}
+
 		self.dom.menubody.selectAll('*').remove()
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.tip.show(event.clientX, event.clientY, false, true)
