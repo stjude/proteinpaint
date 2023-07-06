@@ -1511,21 +1511,37 @@ function setZoomPanActions(self) {
 			.style('user-select', '')
 
 		const c = self.clickedSeriesCell
-
-		/* TODO enable clicking matrix cell to launch /methylationArrayPlot/DIsco plot
-		if (c.startCell && !c.endCell) {
+		const endCell = self.getCellByPos(event)
+		if (!c || !c.startCell) {
 			self.dom.mainG.on('mouseout', null)
 			delete self.clickedSeriesCell
-			self.mouseclick(event)
 			return
-		}
-		*/
-
-		if (!c || !c.startCell || !c.endCell) {
+		} else if (!c.endCell || endCell === c.startCell) {
+			self.dom.mainG.on('mouseout', null)
+			self.dom.tip.hide()
 			delete self.clickedSeriesCell
+			if (self.opts.cellClick) {
+				const cell = structuredClone(self.getImgCell(event))
+				self.opts.cellClick({
+					sampleData: cell.row,
+					term: cell.term,
+					value: cell.value,
+					s: cell.s,
+					t: cell.t,
+					siblingCells: cell.siblingCells
+						.filter(c => c !== cell)
+						.map(c => ({
+							term: c.term,
+							value: c.value,
+							s: c.s,
+							t: c.t
+						}))
+				})
+			}
 			return
 		}
-		c.endCell = self.getCellByPos(event)
+
+		c.endCell = endCell
 		const ss = self.opts.allow2selectSamples
 		if (ss) {
 			self.dom.tip.hide()
