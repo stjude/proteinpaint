@@ -245,18 +245,14 @@ export class ProjectHandler {
 			.property('multiple', true)
 			.property('webkitdirectory', true)
 			.property('directory', true)
-			.style('width', '0')
+			// .style('width', '0') Fix to show reference `Choose Files` field in study UI. Completely hidden when width == 0
 			.on('change', event => this.readFiles(event))
 
 		advancedDiv.append('div').style('margin', '10px 10px 10px 0')
 			.html(`<a href="https://docs.google.com/document/d/1wlfGzyhxFYtWu9Fyf3FK7pgvS3rVb9_vrfYUBUOUrw4/edit?usp=sharing" target="new">Project user guide</a> | 
 			<a href='https://pecan.stjude.org/static/target-tall-project/ref.txt' target=_blank>Example project reference file</a>`)
 
-		advancedDiv
-			.append('div')
-			.style('margin', '20px')
-			.style('width', '100%')
-			.html('-- OR --')
+		advancedDiv.append('div').style('margin', '20px').style('width', '100%').html('-- OR --')
 	}
 
 	/* to be used as a file input (FileList) handler */
@@ -377,7 +373,7 @@ export class ProjectHandler {
 	errHandler() {
 		const errdiv = d3select('body').append('div') //.style('display','none');
 		let mssg = ''
-		return function(m) {
+		return function (m) {
 			if (!m) return //console.log(m)
 			//mssg+=m+'<br/>\n'
 			client.sayerror(errdiv, m) //mssg);
