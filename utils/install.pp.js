@@ -69,10 +69,7 @@ let UC = {}
 
 if (arg.has('c')) {
 	// load config file
-	for (const line of fs
-		.readFileSync(arg.get('c'), { encoding: 'utf8' })
-		.trim()
-		.split('\n')) {
+	for (const line of fs.readFileSync(arg.get('c'), { encoding: 'utf8' }).trim().split('\n')) {
 		if (!line) continue
 		if (line[0] == '#') continue
 		const l = line.split('\t')
@@ -422,53 +419,80 @@ function add_mm10() {
 }
 
 function add_hg38() {
-	trydownload(path.join(path_tpgenome, 'hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hg38.gz')
-	trydownload(path.join(path_tpgenome, 'hg38.gz.fai'), 'https://pecan.stjude.cloud/static/hg38/hg38.gz.fai')
-	trydownload(path.join(path_tpgenome, 'hg38.gz.gzi'), 'https://pecan.stjude.cloud/static/hg38/hg38.gz.gzi')
-	trydownload(path.join(path_tpanno, 'refGene.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/refGene.hg38.gz')
+	trydownload(path.join(path_tpgenome, 'hg38.gz'), 'https://proteinpaint.stjude.org/ppGenomes/hg38.gz')
+	trydownload(path.join(path_tpgenome, 'hg38.gz.fai'), 'https://proteinpaint.stjude.org/ppGenomes/hg38.gz.fai')
+	trydownload(path.join(path_tpgenome, 'hg38.gz.gzi'), 'https://proteinpaint.stjude.org/ppGenomes/hg38.gz.gzi')
+	trydownload(path.join(path_tpanno, 'refGene.hg38.gz'), 'https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz')
 	trydownload(
 		path.join(path_tpanno, 'refGene.hg38.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg38/refGene.hg38.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi'
 	)
 	trydownload(
 		path.join(path_tpanno, 'gencode.v38.hg38.gz'),
-		'https://pecan.stjude.cloud/static/hg38/gencode.v38.hg38.gz'
+		'https://proteinpaint.stjude.org/ppSupport/gencode.v38.hg38.gz'
 	)
 	trydownload(
 		path.join(path_tpanno, 'gencode.v38.hg38.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg38/gencode.v38.hg38.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/gencode.v38.hg38.gz.tbi'
 	)
-	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/rmsk.hg38.gz')
-	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/rmsk.hg38.gz.tbi')
-	trydownload(path.join(path_tpanno, 'genes.hg38.db'), 'https://pecan.stjude.cloud/static/hg38/genes.hg38.db')
+	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz')
+	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz.tbi'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz.tbi')
+	trydownload(path.join(path_tpanno, 'genes.hg38.db'), 'https://proteinpaint.stjude.org/ppSupport/genes.hg38.db')
 	trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
 	trydownload(path.join(path_tpannodb, 'dbsnp.hg38.bb'), 'https://hgdownload.soe.ucsc.edu/gbdb/hg38/snp/dbSnp153.bb')
 
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
-		trydownload(path.join(a, 'hic.DpnII.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.DpnII.hg38.gz')
-		trydownload(path.join(a, 'hic.DpnII.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.DpnII.hg38.gz.tbi')
-		trydownload(path.join(a, 'hic.EcoRI.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.EcoRI.hg38.gz')
-		trydownload(path.join(a, 'hic.EcoRI.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.EcoRI.hg38.gz.tbi')
-		trydownload(path.join(a, 'hic.HindIII.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.HindIII.hg38.gz')
+		trydownload(
+			path.join(a, 'hic.DpnII.hg38.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.hg38.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.DpnII.hg38.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.hg38.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.hg38.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.hg38.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.hg38.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.hg38.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.HindIII.hg38.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.hg38.gz'
+		)
 		trydownload(
 			path.join(a, 'hic.HindIII.hg38.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg38/hic.HindIII.hg38.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.hg38.gz.tbi'
 		)
-		trydownload(path.join(a, 'hic.MboI.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.MboI.hg38.gz')
-		trydownload(path.join(a, 'hic.MboI.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.MboI.hg38.gz.tbi')
-		trydownload(path.join(a, 'hic.NcoI.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/hic.NcoI.hg38.gz')
-		trydownload(path.join(a, 'hic.NcoI.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/hic.NcoI.hg38.gz.tbi')
+		trydownload(
+			path.join(a, 'hic.MboI.hg38.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.hg38.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.MboI.hg38.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.hg38.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.hg38.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.hg38.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.hg38.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.hg38.gz.tbi'
+		)
 	}
 	// defaults to have clinvar dataset
 	{
 		const a = path.join(UC.TP, 'hg38/')
 		mkdir(a)
-		trydownload(path.join(a, 'clinvar.hg38.vcf.gz'), 'https://pecan.stjude.cloud/static/hg38/clinvar.hg38.vcf.gz')
+		trydownload(path.join(a, 'clinvar.hg38.vcf.gz'), 'https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.vcf.gz')
 		trydownload(
 			path.join(a, 'clinvar.hg38.vcf.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg38/clinvar.hg38.vcf.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.vcf.gz.tbi'
 		)
 	}
 
