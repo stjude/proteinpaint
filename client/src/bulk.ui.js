@@ -36,49 +36,46 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(x, y, genomes)
 		pane.header.text('Load mutation from text files')
 	}
-	inputdiv
-		.append('div')
-		.style('margin', '20px 0px')
-		.style('color', '#858585').html(`
+	inputdiv.append('div').style('margin', '20px 0px').style('color', '#858585').html(`
 	<p>Choose one file and upload to initiate the display panel.<br>From there you can add additional files.</p>
 	<div>Supported data types:</div>
 	<ul>
 	  <li>SNV and indel</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1OJ9aXq2_-a3BfIQdKLYCYzrJRTpu4_9i3gephTY-Z38 target=_blank>Format</a>,
-	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.snvindel.txt target=_blank>example file</a></li>
+	        <a href=https://proteinpaint.stjude.org/ppdemo/hg19/heatmap/exampleFiles/example.snvindel.txt target=_blank>example file</a></li>
 	  </ul>
 	  <li>SV or fusion transcript</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1klDZ0MHVkQTW2-lCu_AvpRE4_FcbhdB-yI17wNdPaOM target=_blank>Tabular format</a>,
-	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.svfusion.txt target=_blank>example file</a>
+	        <a href=https://proteinpaint.stjude.org/ppdemo/hg19/heatmap/exampleFiles/example.svfusion.txt target=_blank>example file</a>
 		</li>
 		<li>JSON-format, to come</li>
 	  </ul>
 	  <li>CNV, gene-level</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1WHptqOWNf96V0bYEDpj-EsKZGYnbBNc9aQIrhzdEJaU target=_blank>Format</a>, 
-	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.cnv.txt target=_blank>example file</a>
+	        <a href=https://proteinpaint.stjude.org/ppdemo/hg19/heatmap/exampleFiles/example.cnv.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	  <li>ITD</li>
 	  <ul>
 	  	<li>Internal tandem duplication, in-frame</li>
 	    <li><a href=https://drive.google.com/open?id=1Bh9awBsraoHbV8iWXv_3oDeXMsjIAHaOKHr973IJyZc target=_blank>Format</a>, 
-	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.itd.txt target=_blank>example file</a>
+	        <a href=https://proteinpaint.stjude.org/ppdemo/hg19/heatmap/exampleFiles/example.itd.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	  <li>Intragenic deletion, in-frame</li>
 	  <ul>
 	    <li><a href=https://drive.google.com/open?id=1tWbf3rg3BmVIZPGGPk023P0aBkDw_ry5XuZLGyGodyg target=_blank>Format</a>, 
-	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.deletion.txt target=_blank>example file</a>
+	        <a href=https://proteinpaint.stjude.org/ppdemo/hg19/heatmap/exampleFiles/example.deletion.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	  <li>Truncation</li>
 	  <ul>
 	  	<li>Either N-terminus loss or C-terminus loss</li>
 	    <li><a href=https://drive.google.com/open?id=1P1g-Y8r30pSKfan1BhYZcsUtSk7wRb4plaO1S-JCJr4 target=_blank>Format</a>, 
-	        <a href=https://pecan.stjude.cloud/static/pp-support/example.files/example.truncation.txt target=_blank>example file</a>
+	        <a href=https://proteinpaint.stjude.org/ppdemo/hg19/heatmap/exampleFiles/example.truncation.txt target=_blank>example file</a>
 		</li>
 	  </ul>
 	</ul>`)
@@ -131,7 +128,7 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 
 					flag2tp(flag, file)
 				}
-				reader.onerror = function() {
+				reader.onerror = function () {
 					saydiv.text('Error reading file ' + file.name)
 					fileui()
 					return
@@ -145,11 +142,7 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 	fileui()
 
 	filediv.append('span').html('<br/>Convert gene name to uppercase &nbsp;')
-	const geneToUpper = filediv
-		.append('span')
-		.append('input')
-		.attr('type', 'checkbox')
-		.property('checked', true)
+	const geneToUpper = filediv.append('span').append('input').attr('type', 'checkbox').property('checked', true)
 
 	// has to keep this function here because
 	// of referece to x,y,hostURL,etc closured variables

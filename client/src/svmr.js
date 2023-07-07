@@ -118,7 +118,7 @@ export function svmrui(dlst, genomes, hostURL, jwt) {
 		)
 	inputdiv
 		.append('p')
-		.html('<a href=https://pecan.stjude.cloud/static/hg19/fusioneditor/cicero.output target=_blank>Example file</a>')
+		.html('<a href=https://proteinpaint.stjude.org/ppdemo/hg19/fusion/cicero.output target=_blank>Example file</a>')
 	function cmt(t, red) {
 		saydiv.style('color', red ? 'red' : 'black').text(t)
 	}
@@ -152,7 +152,7 @@ export function svmrui(dlst, genomes, hostURL, jwt) {
 					filediv.remove()
 					inputdiv.remove()
 				}
-				reader.onerror = function() {
+				reader.onerror = function () {
 					cmt('Error reading file ' + file.name, 1)
 					fileui()
 					return
