@@ -89,7 +89,7 @@ export default class LabelsRenderer implements IRenderer {
 		let tooltipHtml = `Gene: ${label.gene} <br />`
 
 		label.mutations.forEach((mutation: Mutation) => {
-			tooltipHtml += `Consequence: ${mutation.mname} <span style="color: ${label.color}" >${mutation.dataClass}</span> <br />Mutation: ${mutation.chr}:${mutation.position} <br />`
+			tooltipHtml += `Consequence: ${mutation.mname} <span style="color: ${mutation.color}" >${mutation.dataClass}</span> <br />Mutation: ${mutation.chr}:${mutation.position} <br />`
 		})
 		return tooltipHtml
 	}
