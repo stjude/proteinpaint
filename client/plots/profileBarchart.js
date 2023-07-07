@@ -23,7 +23,9 @@ class profileBarchart {
 	async main() {
 		const twLst = []
 		for (const row of this.state.config.rows) {
-			twLst.push(...row.twlst)
+			for (const tw of row.twlst) {
+				if (tw.id) twLst.push(tw)
+			}
 		}
 		const data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
@@ -65,7 +67,11 @@ export async function getPlotConfig(opts, app) {
 		const config = copyMerge(defaults, opts)
 		for (const row of config.rows) {
 			for (const t of row.twlst) {
-				await fillTermWrapper(t, app.vocabApi)
+				if (t.id) {
+					await fillTermWrapper(t, app.vocabApi)
+				} else {
+					// allow a cell without a term to leave it blank, e.g the term corresponding to this cell does not exist
+				}
 			}
 		}
 		return config
