@@ -64,7 +64,9 @@ export function d2mafui(genomes, holder) {
 				'<li>To define samples differently than "Diagnosis/Relapse", <a href=https://plus.google.com/+XinZhou_s/posts/WqBVvmd3wYR target=_blank>see how</a>.</li>' +
 				'</ul>'
 		)
-	inputdiv.append('p').html('<a href=https://pecan.stjude.cloud/static/hg19/2dmaf.txt target=_blank>Example file</a>')
+	inputdiv
+		.append('p')
+		.html('<a href=https://proteinpaint.stjude.org/ppdemo/hg19/2dmaf/2dmaf.txt target=_blank>Example file</a>')
 	function cmt(t, red) {
 		saydiv.style('color', red ? 'red' : 'black').html(t)
 	}
@@ -98,7 +100,7 @@ export function d2mafui(genomes, holder) {
 					filediv.remove()
 					saydiv.remove()
 				}
-				reader.onerror = function() {
+				reader.onerror = function () {
 					cmt('Error reading file ' + file.name, 1)
 					fileui()
 					return
@@ -948,10 +950,7 @@ function d2maf_render(showholder, pdata) {
 			select_set1.transition().attr('transform', d => d.posstring + ' scale(' + (d.class == v ? 1 : 0) + ')')
 			select_set2.transition().attr('transform', d => d.posstring + ' scale(' + (d.class == v ? 1 : 0) + ')')
 		})
-		mcselect
-			.append('option')
-			.text('Show all mutation classes')
-			.property('value', 'all')
+		mcselect.append('option').text('Show all mutation classes').property('value', 'all')
 		const lst = []
 		for (const c in mclasses) {
 			lst.push([c, mclasses[c]])
@@ -1030,17 +1029,11 @@ if(pdata.purity2!=undefined) {
 	anchors.setWrapper(g.append('g'))
 
 	// axis 1 (horizontal)
-	const scale1 = scaleLinear()
-		.domain([0, 1])
-		.range([0, sharewidth])
+	const scale1 = scaleLinear().domain([0, 1]).range([0, sharewidth])
 	const scalediv1 = g
 		.append('g')
 		.attr('transform', 'translate(' + (axiswidth + sp + sample2height) + ',' + (shareheight + sample1height + sp) + ')')
-		.call(
-			axisBottom()
-				.scale(scale1)
-				.tickSize(5)
-		)
+		.call(axisBottom().scale(scale1).tickSize(5))
 	client.axisstyle({ axis: scalediv1, showline: true, fontsize: labelfontsize * 0.8 })
 
 	// axis 1 label
@@ -1054,17 +1047,11 @@ if(pdata.purity2!=undefined) {
 		.attr('font-size', labelfontsize)
 
 	// axis 2 (vertical)
-	const scale2 = scaleLinear()
-		.domain([0, 1])
-		.range([shareheight, 0])
+	const scale2 = scaleLinear().domain([0, 1]).range([shareheight, 0])
 	const scalediv2 = g
 		.append('g')
 		.attr('transform', 'translate(' + axiswidth + ',0)')
-		.call(
-			axisLeft()
-				.scale(scale2)
-				.tickSize(5)
-		)
+		.call(axisLeft().scale(scale2).tickSize(5))
 	client.axisstyle({ axis: scalediv2, showline: true, fontsize: labelfontsize * 0.8 })
 
 	// axis 2 label
@@ -1223,11 +1210,7 @@ select_share
 		.attr('width', 3)
 		.attr('height', sample1height - sp2)
 	client.axisstyle({
-		axis: g_set1.call(
-			axisLeft()
-				.scale(set1totalscale)
-				.tickValues([0, maxtotal])
-		),
+		axis: g_set1.call(axisLeft().scale(set1totalscale).tickValues([0, maxtotal])),
 		showline: true,
 		fontsize: labelfontsize * 0.8
 	})
@@ -1343,11 +1326,7 @@ select_set1
 	const g_set2_axis = g_set2
 		.append('g')
 		.attr('transform', 'translate(0,' + shareheight + ')')
-		.call(
-			axisBottom()
-				.scale(set2totalscale)
-				.tickValues([0, maxtotal])
-		)
+		.call(axisBottom().scale(set2totalscale).tickValues([0, maxtotal]))
 	client.axisstyle({
 		axis: g_set2_axis,
 		showline: true,
@@ -1450,11 +1429,7 @@ select_set2
 	// legend - person name
 	const leng = g.append('g').attr('transform', 'translate(0,' + (shareheight + sp2) + ')')
 	let y = labelfontsize
-	leng
-		.append('text')
-		.text(person)
-		.attr('font-size', labelfontsize)
-		.attr('y', y)
+	leng.append('text').text(person).attr('font-size', labelfontsize).attr('y', y)
 	// legend - snv text
 	const r1 = radiusscale(20),
 		r2 = radiusscale(maxtotal)
@@ -1465,19 +1440,13 @@ select_set2
 		.text('SNV coverage')
 		.attr('y', y)
 		.attr('dominant-baseline', 'middle')
-		.each(function() {
+		.each(function () {
 			x = this.getBBox().width
 		})
 
 	// legend - snv ball 1
 	x += r1 + 10
-	leng
-		.append('circle')
-		.attr('cx', x)
-		.attr('cy', y)
-		.attr('r', r1)
-		.attr('stroke', 'black')
-		.attr('fill', 'none')
+	leng.append('circle').attr('cx', x).attr('cy', y).attr('r', r1).attr('stroke', 'black').attr('fill', 'none')
 	leng
 		.append('text')
 		.text(20)
@@ -1488,13 +1457,7 @@ select_set2
 	x += r1 + r2 + 10
 
 	// legend - snv ball 2
-	leng
-		.append('circle')
-		.attr('cx', x)
-		.attr('cy', y)
-		.attr('r', r2)
-		.attr('stroke', 'black')
-		.attr('fill', 'none')
+	leng.append('circle').attr('cx', x).attr('cy', y).attr('r', r2).attr('stroke', 'black').attr('fill', 'none')
 	leng
 		.append('text')
 		.text(maxtotal)
@@ -1510,7 +1473,7 @@ select_set2
 		.text('Indel')
 		.attr('y', y)
 		.attr('dominant-baseline', 'middle')
-		.each(function() {
+		.each(function () {
 			x = this.getBBox().width
 		})
 	leng
@@ -1528,7 +1491,7 @@ select_set2
 		.text('chrX')
 		.attr('y', y)
 		.attr('dominant-baseline', 'middle')
-		.each(function() {
+		.each(function () {
 			x = this.getBBox().width
 		})
 	x += r1 + 10
@@ -1548,17 +1511,11 @@ select_set2
 		.text('D. CNV/LOH')
 		.attr('y', y)
 		.attr('dominant-baseline', 'middle')
-		.each(function() {
+		.each(function () {
 			x = this.getBBox().width
 		})
 	x += r1 + 10
-	leng
-		.append('circle')
-		.attr('cx', x)
-		.attr('cy', y)
-		.attr('r', 10)
-		.attr('stroke', 'black')
-		.attr('fill', 'none')
+	leng.append('circle').attr('cx', x).attr('cy', y).attr('r', 10).attr('stroke', 'black').attr('fill', 'none')
 	leng
 		.append('circle')
 		.attr('cx', x)
@@ -1573,17 +1530,11 @@ select_set2
 		.text('R. CNV/LOH')
 		.attr('y', y)
 		.attr('dominant-baseline', 'central')
-		.each(function() {
+		.each(function () {
 			x = this.getBBox().width
 		})
 	x += r1 + 10
-	leng
-		.append('circle')
-		.attr('cx', x)
-		.attr('cy', y)
-		.attr('r', 10)
-		.attr('stroke', 'black')
-		.attr('fill', 'none')
+	leng.append('circle').attr('cx', x).attr('cy', y).attr('r', 10).attr('stroke', 'black').attr('fill', 'none')
 	leng
 		.append('circle')
 		.attr('cx', x - 10)
@@ -1599,17 +1550,11 @@ select_set2
 			.text('Expected MAF')
 			.attr('y', y)
 			.attr('dominant-baseline', 'middle')
-			.each(function() {
+			.each(function () {
 				x = this.getBBox().width
 			})
 		x += 10
-		leng
-			.append('rect')
-			.attr('fill', emaflinecolor)
-			.attr('x', x)
-			.attr('y', y)
-			.attr('width', 40)
-			.attr('height', 3)
+		leng.append('rect').attr('fill', emaflinecolor).attr('x', x).attr('y', y).attr('width', 40).attr('height', 3)
 		y += 30
 	}
 
@@ -1621,7 +1566,7 @@ select_set2
 			.text('Symbols')
 			.attr('y', y)
 			.attr('dominant-baseline', 'middle')
-			.each(function() {
+			.each(function () {
 				x = this.getBBox().width
 			})
 
@@ -1640,7 +1585,7 @@ select_set2
 				.attr('d', symbolgen.type(symbols[symbolname]).size(100)())
 				.attr('stroke', 'black')
 				.attr('fill', 'none')
-				.each(function() {
+				.each(function () {
 					x1 += this.getBBox().width
 				})
 
@@ -1817,7 +1762,7 @@ select_set2
 				.attr('dominant-baseline', 'middle')
 				.attr('text-anchor', 'start')
 				.attr('font-size', m.radius)
-				.each(function() {
+				.each(function () {
 					w = this.getBBox().width
 				})
 			g.append('rect')
@@ -1853,9 +1798,7 @@ select_set2
 
 function d2maf_dotmover(event, m, tooltip) {
 	if (!m.selected) {
-		d3select(event.target)
-			.attr('fill', m.style.fillhl)
-			.attr('fill-opacity', 0.2)
+		d3select(event.target).attr('fill', m.style.fillhl).attr('fill-opacity', 0.2)
 	}
 	tooltip.clear()
 	tooltip.show(event.clientX, event.clientY)
@@ -1999,7 +1942,7 @@ no buttons
 			.text(s[0])
 			.attr('font-size', rowh)
 			.attr('font-family', client.font)
-			.each(function() {
+			.each(function () {
 				maxlabelw = Math.max(maxlabelw, this.getBBox().width)
 			})
 			.remove()
@@ -2019,11 +1962,7 @@ no buttons
 		.attr('transform', 'translate(' + (maxlabelw + space) + ',' + axish + ')')
 		.call(
 			axisTop()
-				.scale(
-					scaleLinear()
-						.domain([0, maxmcount])
-						.range([0, data.peoplewidth])
-				)
+				.scale(scaleLinear().domain([0, maxmcount]).range([0, data.peoplewidth]))
 				.tickFormat(d3format('d'))
 				.ticks(3)
 		)

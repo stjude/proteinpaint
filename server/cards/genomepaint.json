@@ -109,7 +109,7 @@
             "links": [
                 {
                     "name": "Download Data & Processing Pipeline",
-                    "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
+                    "download": "https://proteinpaint.stjude.org/ppdemo/hg38/GP/GDC.variation.datafile.processing.zip"
                 },
                 {
                     "name": "Data Processing Docs",
