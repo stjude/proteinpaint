@@ -702,7 +702,7 @@ export function setRenderers(self) {
 					const [min, max] = chart.colorGenerator.domain()
 					const gradientScale = d3Linear().domain([min, max]).range([0, 130])
 					const axis = axisBottom(gradientScale).ticks(3)
-					const axisG = colorG.append('g').attr('transform', `translate(0, 70)`).call(axis)
+					colorG.append('g').attr('transform', `translate(0, 70)`).call(axis)
 
 					const rect = colorG
 						.append('rect')
