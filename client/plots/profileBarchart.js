@@ -22,11 +22,12 @@ class profileBarchart {
 
 	async main() {
 		const twLst = []
-		for (const row of this.state.config.rows) {
-			for (const tw of row.twlst) {
-				if (tw.id) twLst.push(tw)
+		for (const group of this.state.config.groups)
+			for (const row of group.rows) {
+				for (const tw of row.twlst) {
+					if (tw.id) twLst.push(tw)
+				}
 			}
-		}
 		const data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
@@ -61,19 +62,26 @@ class profileBarchart {
 				.text(`${c}%`)
 			x += stepx
 		}
+		for (const group of config.groups) {
+			svg
+				.append('text')
+				.attr('transform', `translate(${400}, ${y + 20})`)
+				.attr('text-anchor', 'end')
+				.text(`${group.label}`)
+				.style('font-weight', 'bold')
 
-		for (const row of this.state.config.rows) {
-			x = 400
-			for (const tw of row.twlst) {
-				const color = '#aaa'
-				drawRect(x, y, color, tw)
-				x += stepx
+			y += step + 20
+			for (const row of group.rows) {
+				x = 400
+				for (const tw of row.twlst) {
+					const color = '#aaa'
+					drawRect(x, y, color, tw)
+					x += stepx
+				}
+				y += step
 			}
-			y += step
 		}
-
 		function drawRect(x, y, color, tw) {
-			console.log(tw)
 			const value = data[tw.$id]?.value
 
 			if (value) {
@@ -105,17 +113,15 @@ class profileBarchart {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = { svgw: 1200, svgh: 550 }
+		const defaults = { svgw: 1200, svgh: 1200 }
 		const config = copyMerge(defaults, opts)
-		for (const row of config.rows) {
-			for (const t of row.twlst) {
-				if (t.id) {
-					await fillTermWrapper(t, app.vocabApi)
-				} else {
-					// allow a cell without a term to leave it blank, e.g the term corresponding to this cell does not exist
+		console.log(config)
+		for (const group of config.groups)
+			for (const row of group.rows) {
+				for (const t of row.twlst) {
+					if (t.id) await fillTermWrapper(t, app.vocabApi)
 				}
 			}
-		}
 		return config
 	} catch (e) {
 		throw `${e} [profileBarchart getPlotConfig()]`
