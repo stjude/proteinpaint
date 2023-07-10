@@ -2,10 +2,9 @@ import IRenderer from './IRenderer'
 import { select } from 'd3-selection'
 import { line } from 'd3-shape'
 import Label from '../viewmodel/Label'
-import SnvArc from '../viewmodel/SnvArc'
 import MenuProvider from './MenuProvider'
-import { renderTable } from '#dom/table.js'
-import Mutation from '#plots/disco/viewmodel/Mutation.ts'
+import MutationTooltip from '#plots/disco/viewmodel/MutationTooltip.ts'
+import FusionTooltip from '#plots/disco/viewmodel/FusionTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
@@ -42,12 +41,14 @@ export default class LabelsRenderer implements IRenderer {
 					.style('fill', label.color)
 					.style('cursor', 'pointer')
 					.text(label.text)
-					.on('click', () =>
-						this.geneClickListener(
-							label.gene,
-							label.mutations.map(value => value.mname)
-						)
-					)
+					.on('click', () => {
+						if (label.mutationsTooltip) {
+							this.geneClickListener(
+								label.text,
+								label.mutationsTooltip.map(value => value.mname)
+							)
+						}
+					})
 					.on('mouseover', (mouseEvent: MouseEvent) => {
 						menu.d.style('padding', '2px').html(this.createTooltipHtml(label))
 						menu.show(mouseEvent.x, mouseEvent.y)
@@ -86,11 +87,28 @@ export default class LabelsRenderer implements IRenderer {
 	}
 
 	createTooltipHtml(label: Label) {
-		let tooltipHtml = `Gene: ${label.gene} <br />`
+		let tooltipHtml = ''
 
-		label.mutations.forEach((mutation: Mutation) => {
-			tooltipHtml += `Consequence: ${mutation.mname} <span style="color: ${mutation.color}" >${mutation.dataClass}</span> <br />Mutation: ${mutation.chr}:${mutation.position} <br />`
-		})
+		if (label.mutationsTooltip) {
+			tooltipHtml += `Gene: ${label.text} <br />`
+			label.mutationsTooltip.forEach((mutation: MutationTooltip) => {
+				tooltipHtml += `Consequence: ${mutation.mname} <span style="color: ${mutation.color}" >${mutation.dataClass}</span> <br />Mutation: ${mutation.chr}:${mutation.position} <br />`
+			})
+		}
+
+		if (label.fusionTooltip) {
+			tooltipHtml += `Data type: Fusion transcript <br />`
+			label.fusionTooltip.forEach((fusionTooltip: FusionTooltip) => {
+				tooltipHtml +=
+					`Break points: ${fusionTooltip.geneA} ${fusionTooltip.chrA}  ${fusionTooltip.posA} ${
+						fusionTooltip.strandA == '+' ? 'forward' : 'reverse'
+					} > ` +
+					`${fusionTooltip.geneB} ${fusionTooltip.chrB}  ${fusionTooltip.posB} ${
+						fusionTooltip.strandB == '+' ? 'forward' : 'reverse'
+					} <br /> `
+			})
+		}
+
 		return tooltipHtml
 	}
 }

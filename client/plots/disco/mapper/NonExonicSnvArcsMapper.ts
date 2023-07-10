@@ -31,18 +31,18 @@ export default class NonExonicSnvArcsMapper {
 
 			const startAngle = this.calculateStartAngle(data)
 			const endAngle = this.calculateEndAngle(data)
-			const arc = new SnvArc(
-				startAngle,
-				endAngle,
-				innerRadius,
-				outerRadius,
-				mLabel.color,
-				data.gene,
-				mLabel.label,
-				data.mname,
-				data.chr,
-				data.pos
-			)
+			const arc: SnvArc = {
+				startAngle: startAngle,
+				endAngle: endAngle,
+				innerRadius: innerRadius,
+				outerRadius: outerRadius,
+				color: mLabel.color,
+				text: data.gene,
+				dataClass: mLabel.label,
+				mname: data.mname,
+				chr: data.chr,
+				pos: data.pos
+			}
 
 			arcs.push(arc)
 		})

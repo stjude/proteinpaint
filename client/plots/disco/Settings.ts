@@ -1,5 +1,3 @@
-import { RingType } from '../viewmodel/RingType'
-
 export default interface Settings {
 	verticalPadding: number
 	horizontalPadding: number
@@ -21,10 +19,6 @@ export default interface Settings {
 		labelsToLinesDistance: number
 		labelLinesInnerRadius: number
 
-		snvFilterValue: number
-		fusionFilterValue: number
-		cnvFilterValue: number
-		lohFilterValue: number
 		nonExonicFilterValues: Array<string>
 	}
 	cnv: {

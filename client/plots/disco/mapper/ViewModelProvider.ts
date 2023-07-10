@@ -38,14 +38,14 @@ export default class ViewModelProvider {
 		this.sampleName = sampleName
 	}
 
-	map(data: Array<Data>) {
-		this.dataMapper.map(data)
+	map(data: Array<any>) {
+		const dataHolder = this.dataMapper.map(data)
 
 		const labelsMapper = new LabelsMapper(this.settings, this.sampleName, this.reference)
 
-		const labelsData = labelsMapper.map(this.dataMapper.filteredSnvData)
+		const labelsData = labelsMapper.map(dataHolder.labelData)
 
-		const labelsRing = new Labels(this.settings, labelsData, this.dataMapper.hasCancerGenes)
+		const labelsRing = new Labels(this.settings, labelsData, dataHolder.hasCancerGenes)
 
 		const chromosomesRing = new Ring(
 			this.settings.rings.chromosomeInnerRadius,
@@ -54,68 +54,64 @@ export default class ViewModelProvider {
 		)
 
 		const nonExonicSnvArcsMapper = new NonExonicSnvArcsMapper(
-			this.dataMapper.nonExonicInnerRadius,
+			dataHolder.nonExonicInnerRadius,
 			this.settings.rings.ringWidth,
 			this.sampleName,
 			this.reference
 		)
 
-		const nonExonicData = nonExonicSnvArcsMapper.map(this.dataMapper.nonExonicSnvData)
+		const nonExonicData = nonExonicSnvArcsMapper.map(dataHolder.nonExonicSnvData)
 
 		if (nonExonicData.length > 0) {
-			this.nonExonicArcRing = new Ring(
-				this.dataMapper.nonExonicInnerRadius,
-				this.settings.rings.ringWidth,
-				nonExonicData
-			)
+			this.nonExonicArcRing = new Ring(dataHolder.nonExonicInnerRadius, this.settings.rings.ringWidth, nonExonicData)
 		}
 
 		this.snvArcsMapper = new SnvArcsMapper(
-			this.dataMapper.snvInnerRadius,
+			dataHolder.snvInnerRadius,
 			this.settings.rings.ringWidth,
 			this.sampleName,
 			this.reference
 		)
-		const snvData = this.snvArcsMapper.map(this.dataMapper.snvRingDataMap)
+		const snvData = this.snvArcsMapper.map(dataHolder.snvRingDataMap)
 		if (snvData.length > 0) {
-			this.snvArcRing = new Ring(this.dataMapper.snvInnerRadius, this.settings.rings.ringWidth, snvData)
+			this.snvArcRing = new Ring(dataHolder.snvInnerRadius, this.settings.rings.ringWidth, snvData)
 		}
 
 		const lohMapper = new LohArcMapper(
-			this.dataMapper.lohInnerRadius,
+			dataHolder.lohInnerRadius,
 			this.settings.rings.ringWidth,
 			this.sampleName,
 			this.reference
 		)
-		const lohData = lohMapper.map(this.dataMapper.lohData)
+		const lohData = lohMapper.map(dataHolder.lohData)
 		if (lohData.length > 0) {
-			this.lohArcRing = new Ring(this.dataMapper.lohInnerRadius, this.settings.rings.ringWidth, lohData)
+			this.lohArcRing = new Ring(dataHolder.lohInnerRadius, this.settings.rings.ringWidth, lohData)
 		}
 
 		this.cnvArcsMapper = new CnvArcsMapper(
-			this.dataMapper.cnvInnerRadius,
+			dataHolder.cnvInnerRadius,
 			this.settings.rings.ringWidth,
 			this.settings,
 			this.sampleName,
 			this.reference,
-			this.dataMapper.cnvMaxValue,
-			this.dataMapper.cnvMinValue,
+			dataHolder.cnvMaxValue,
+			dataHolder.cnvMinValue,
 			this.settings.cnv.unit
 		)
 
-		const cnvData = this.cnvArcsMapper.map(this.dataMapper.cnvData)
+		const cnvData = this.cnvArcsMapper.map(dataHolder.cnvData)
 		if (cnvData.length > 0) {
-			this.cnvArcRing = new Ring(this.dataMapper.cnvInnerRadius, this.settings.rings.ringWidth, cnvData)
+			this.cnvArcRing = new Ring(dataHolder.cnvInnerRadius, this.settings.rings.ringWidth, cnvData)
 		}
 
-		const fusionMapper = new FusionMapper(this.dataMapper.fusionRadius, this.sampleName, this.reference)
+		const fusionMapper = new FusionMapper(dataHolder.fusionRadius, this.sampleName, this.reference)
 
-		const fusions = fusionMapper.map(this.dataMapper.fusionData)
+		const fusions = fusionMapper.map(dataHolder.fusionData)
 
 		let lohLegend: LohLegend | undefined
 
-		if (this.settings.legend.lohLegendEnabled && this.dataMapper.lohMinValue && this.dataMapper.lohMaxValue) {
-			lohLegend = new LohLegend(this.dataMapper.lohMinValue, this.dataMapper.lohMaxValue)
+		if (this.settings.legend.lohLegendEnabled && dataHolder.lohMinValue && dataHolder.lohMaxValue) {
+			lohLegend = new LohLegend(dataHolder.lohMinValue, dataHolder.lohMaxValue)
 		}
 
 		const legend = new Legend(

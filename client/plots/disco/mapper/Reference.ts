@@ -44,17 +44,18 @@ export default class Reference {
 			const startAngle = i == 0 ? this.settings.padAngle / 2 : lastAngle + this.settings.padAngle
 			const endAngle =
 				i == 0 ? this.settings.padAngle / 2 + chromosomeAngle : lastAngle + this.settings.padAngle + chromosomeAngle
-			const chromosome = new Chromosome(
-				this.totalSizeArray[i],
-				this.chrSizesArray[i],
-				1,
-				startAngle,
-				endAngle,
-				this.settings.chromosomeInnerRadius,
-				this.settings.chromosomeInnerRadius + this.settings.chromosomeWidth,
-				'#AAA',
-				this.keysArray[i]
-			)
+			const chromosome: Chromosome = {
+				start: this.totalSizeArray[i],
+				size: this.chrSizesArray[i],
+				factor: 1,
+				startAngle: startAngle,
+				endAngle: endAngle,
+				angle: (startAngle + endAngle) / 2,
+				innerRadius: this.settings.chromosomeInnerRadius,
+				outerRadius: this.settings.chromosomeInnerRadius + this.settings.chromosomeWidth,
+				color: '#AAA',
+				text: this.keysArray[i]
+			}
 
 			this.chromosomes.push(chromosome)
 

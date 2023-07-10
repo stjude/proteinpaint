@@ -46,6 +46,7 @@ export default class Disco {
 			settings.label.fontSize,
 			this.discoInteractions.cappingClickCallback
 		)
+
 		const discoRenderer = new DiscoRenderer(
 			this.getRingRenderers(settings, this.discoInteractions.geneClickListener),
 			legendRenderer,

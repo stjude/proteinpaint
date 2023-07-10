@@ -1,5 +1,3 @@
-import Label from '../viewmodel/Label'
-
 export class DiscoInteractions {
 	cappingClickCallback: (d: any, t: any) => void
 	downloadClickListener: (d: any) => void
