@@ -21,7 +21,7 @@ const commonConfig = {
 			},
 			{
 				test: /\.(js|jsx|tsx|ts)$/,
-				exclude: /\.spec\.js$/,
+				exclude: /\.spec\.(js|ts)$/,
 				use: [
 					{
 						loader: 'babel-loader',

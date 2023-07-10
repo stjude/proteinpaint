@@ -27,18 +27,18 @@ export default class LohArcMapper {
 			const outerRadius = innerRadius + this.lohWidth
 			const color = GradientColorProvider.provide(data.segmean)
 
-			const arc = new LohArc(
-				startAngle,
-				endAngle,
-				innerRadius,
-				outerRadius,
-				color,
-				data.gene,
-				data.chr,
-				data.start,
-				data.stop,
-				data.segmean
-			)
+			const arc: LohArc = {
+				startAngle: startAngle,
+				endAngle: endAngle,
+				innerRadius: innerRadius,
+				outerRadius: outerRadius,
+				color: color,
+				text: data.gene,
+				chr: data.chr,
+				start: data.start,
+				stop: data.stop,
+				value: data.segmean
+			}
 
 			arcs.push(arc)
 		})

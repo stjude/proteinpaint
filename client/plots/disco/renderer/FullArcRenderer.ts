@@ -12,15 +12,14 @@ export default class FullArcRenderer {
 	}
 	render(holder: any) {
 		const donutGenerator = d3.arc<Arc>()
-		const arc = new Arc(
-			0,
-			Math.PI * 2,
-			this.radius,
-			this.radius + this.width,
-			// TODO extract color
-			'#6464641A',
-			'No label'
-		)
+		const arc: Arc = {
+			startAngle: 0,
+			endAngle: Math.PI * 2,
+			innerRadius: this.radius,
+			outerRadius: this.radius + this.width,
+			color: this.color,
+			text: 'No label'
+		}
 
 		const array: Array<Arc> = []
 		array.push(arc)

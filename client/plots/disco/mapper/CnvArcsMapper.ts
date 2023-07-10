@@ -94,19 +94,19 @@ export default class CnvArcsMapper {
 
 			const color = this.getColor(data.value)
 
-			const arc = new CnvArc(
-				startAngle,
-				endAngle,
-				innerRadius,
-				outerRadius,
-				color,
-				data.gene,
-				data.chr,
-				data.start,
-				data.stop,
-				data.value,
-				this.cnvUnit
-			)
+			const arc: CnvArc = {
+				startAngle: startAngle,
+				endAngle: endAngle,
+				innerRadius: innerRadius,
+				outerRadius: outerRadius,
+				color: color,
+				text: data.gene,
+				chr: data.chr,
+				start: data.start,
+				stop: data.stop,
+				value: data.value,
+				unit: this.cnvUnit
+			}
 
 			arcs.push(arc)
 		})

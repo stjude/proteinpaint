@@ -3,47 +3,56 @@ import Reference from './Reference'
 import DataObjectMapper from './DataObjectMapper'
 import Settings from '../Settings.ts'
 import { ViewModelMapper } from '../mapper/ViewModelMapper'
+import { DataHolder } from '#plots/disco/mapper/DataHolder.ts'
+import { MutationTypes } from '#plots/disco/viewmodel/MutationTypes.ts'
 
 export default class DataMapper {
-	nonExonicSnvData: Array<Data> = []
-	nonExonicInnerRadius = 0
+	// remove fields and extract filters to seperate classes
 
-	snvRingDataMap: Map<number, Array<Data>> = new Map()
-	snvInnerRadius = 0
+	private labelData: Array<Data> = []
 
-	snvData: Array<Data> = []
-	bpx = 0
-	onePxArcAngle = 0
-	filteredSnvData: Array<Data> = []
+	private nonExonicSnvData: Array<Data> = []
+	private nonExonicInnerRadius = 0
 
-	lohData: Array<Data> = []
-	lohInnerRadius = 0
+	private snvRingDataMap: Map<number, Array<Data>> = new Map()
+	private snvInnerRadius = 0
 
-	cnvData: Array<Data> = []
-	cnvInnerRadius = 0
+	private snvData: Array<Data> = []
+	private bpx = 0
+	private onePxArcAngle = 0
+	private filteredSnvData: Array<Data> = []
 
-	fusionData: Array<Data> = []
-	fusionRadius = 0
+	private lohData: Array<Data> = []
+	private lohInnerRadius = 0
 
-	hasCancerGenes = false
+	private cnvData: Array<Data> = []
+	private cnvInnerRadius = 0
 
-	cnvMaxValue?: number = undefined
-	cnvMinValue?: number = undefined
+	private fusionData: Array<Data> = []
+	private fusionRadius = 0
 
-	lohMaxValue?: number = undefined
-	lohMinValue?: number = undefined
+	private hasPrioritizedGenes = false
+
+	private cnvMaxValue?: number = undefined
+	private cnvMinValue?: number = undefined
+
+	private lohMaxValue?: number = undefined
+	private lohMinValue?: number = undefined
 
 	private settings: Settings
 	private reference: Reference
 	private sample: string
-	private snvFilter: (data: Data) => boolean
-	private fusionFilter: (data: Data) => boolean
-	private cnvFilter: (data: Data) => boolean
-	private lohFilter: (data: Data) => boolean
+
 	private nonExonicFilter: (data: Data) => boolean
 	private snvRingFilter: (data: Data) => boolean
 	private dataObjectMapper: DataObjectMapper
 	private lastInnerRadious: number
+
+	private snvFilter = (data: Data) => data.dt == MutationTypes.SNV
+	private fusionFilter = (data: Data) => data.dt == MutationTypes.FUSION
+
+	private cnvFilter = (data: Data) => data.dt == MutationTypes.CNV
+	private lohFilter = (data: Data) => data.dt == MutationTypes.LOH
 
 	private compareData = (a, b) => {
 		const chrDiff = this.reference.chromosomesOrder.indexOf(a.chr) - this.reference.chromosomesOrder.indexOf(b.chr)
@@ -58,16 +67,12 @@ export default class DataMapper {
 		return aPos - bPos
 	}
 
-	constructor(settings: Settings, reference: Reference, sample: string, cancerGenes: Array<string>) {
+	constructor(settings: Settings, reference: Reference, sample: string, cancerGenes: Array<string> = []) {
 		this.settings = settings
 		this.reference = reference
 		this.sample = sample
 		this.lastInnerRadious = this.settings.rings.chromosomeInnerRadius
 
-		this.snvFilter = (data: Data) => data.dt == settings.rings.snvFilterValue
-		this.fusionFilter = (data: Data) => data.dt == settings.rings.fusionFilterValue
-		this.cnvFilter = (data: Data) => data.dt == settings.rings.cnvFilterValue
-		this.lohFilter = (data: Data) => data.dt == settings.rings.lohFilterValue
 		this.nonExonicFilter = (data: Data) =>
 			settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
 		this.snvRingFilter = (data: Data) =>
@@ -75,14 +80,14 @@ export default class DataMapper {
 		this.dataObjectMapper = new DataObjectMapper(sample, cancerGenes)
 	}
 
-	map(data) {
+	map(data: any) {
 		const dataArray: Array<Data> = []
 
 		data.forEach(dObject => {
 			const instance = this.dataObjectMapper.map(dObject)
 
-			if (instance.isCancerGene) {
-				this.hasCancerGenes = true
+			if (instance.isPrioritized) {
+				this.hasPrioritizedGenes = true
 			}
 
 			dataArray.push(instance)
@@ -130,6 +135,38 @@ export default class DataMapper {
 		if (this.fusionData.length > 0) {
 			this.fusionRadius = this.lastInnerRadious
 		}
+
+		const dataHolder: DataHolder = {
+			labelData: this.labelData,
+			nonExonicSnvData: this.nonExonicSnvData,
+			nonExonicInnerRadius: this.nonExonicInnerRadius,
+			snvRingDataMap: this.snvRingDataMap,
+			snvInnerRadius: this.snvInnerRadius,
+
+			snvData: this.snvData,
+			bpx: this.bpx,
+			onePxArcAngle: this.onePxArcAngle,
+			filteredSnvData: this.filteredSnvData,
+
+			lohData: this.lohData,
+			lohInnerRadius: this.lohInnerRadius,
+
+			cnvData: this.cnvData,
+			cnvInnerRadius: this.cnvInnerRadius,
+
+			fusionData: this.fusionData,
+			fusionRadius: this.fusionRadius,
+
+			hasCancerGenes: this.hasPrioritizedGenes,
+
+			cnvMaxValue: this.cnvMaxValue,
+			cnvMinValue: this.cnvMinValue,
+
+			lohMaxValue: this.lohMaxValue,
+			lohMinValue: this.lohMinValue
+		}
+
+		return dataHolder
 	}
 
 	private filterNonExonicSnvData(data: Data) {
@@ -155,6 +192,7 @@ export default class DataMapper {
 				}
 
 				this.filteredSnvData.push(data)
+				this.labelData.push(data)
 
 				const arcAngle = this.calculateArcAngle(data)
 				let dataArray = this.snvRingDataMap.get(arcAngle)
@@ -169,7 +207,9 @@ export default class DataMapper {
 
 	private filterFusion(data: Data) {
 		if (this.fusionFilter(data)) {
+			data.isPrioritized = true
 			this.fusionData.push(data)
+			this.labelData.push(data)
 		}
 	}
 

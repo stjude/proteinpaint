@@ -3,6 +3,7 @@ import FullArcRenderer from './FullArcRenderer'
 import Fusion from '../viewmodel/Fusion'
 import MenuProvider from './MenuProvider'
 import { FusionLegend } from '../viewmodel/FusionLegend'
+import FusionColorProvider from '#plots/disco/renderer/FusionColorProvider.ts'
 
 // TODO extract constants from this file.
 export default class FusionRenderer {
@@ -26,7 +27,10 @@ export default class FusionRenderer {
 			.attr('class', 'chord')
 			.attr('d', ribboon)
 			.attr('fill', (fusion: Fusion) => {
-				return this.getColor(fusion)
+				return FusionColorProvider.getColor(
+					fusion.source.positionInChromosome.chromosome,
+					fusion.target.positionInChromosome.chromosome
+				)
 			})
 			.on('mouseover', (mouseEvent: MouseEvent, fusion: Fusion) => {
 				menu.d.style('padding', '2px').html(this.getTooltip(fusion))
@@ -35,13 +39,6 @@ export default class FusionRenderer {
 			.on('mouseout', () => {
 				menu.hide()
 			})
-	}
-
-	getColor(fusion: Fusion) {
-		const chromosomeSet: Set<string> = new Set()
-		chromosomeSet.add(fusion.source.positionInChromosome.chromosome)
-		chromosomeSet.add(fusion.target.positionInChromosome.chromosome)
-		return chromosomeSet.size < 2 ? FusionLegend.Intrachromosomal.valueOf() : FusionLegend.Interchromosomal.valueOf()
 	}
 
 	getTooltip(fusion: Fusion) {

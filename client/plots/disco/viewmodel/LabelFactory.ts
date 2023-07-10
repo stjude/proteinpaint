@@ -1,7 +1,9 @@
 import Label from './Label'
 import Point from './Point'
 import Line from './Line'
-import Mutation from '#plots/disco/viewmodel/Mutation.ts'
+import MutationTooltip from '#plots/disco/viewmodel/MutationTooltip.ts'
+import { arc } from 'd3'
+import FusionTooltip from '#plots/disco/viewmodel/FusionTooltip.ts'
 
 export default class LabelFactory {
 	static createLabel(
@@ -10,14 +12,15 @@ export default class LabelFactory {
 		innerRadius: number,
 		outerRadius: number,
 		value: number,
-		label: string,
-		mname: string,
+		gene: string,
 		color: string,
 		dataClass: string,
 		chr: string,
 		position: number,
-		isCancerGene = false,
-		labelsToLinesGap: number
+		isPrioritized = false,
+		labelsToLinesGap: number,
+		mutationTooltip?: MutationTooltip,
+		fusionTooltip?: FusionTooltip
 	) {
 		const angle = (startAngle + endAngle) / 2
 		const ccAngle = angle - Math.PI / 2
@@ -34,21 +37,25 @@ export default class LabelFactory {
 
 		const line = new Line(points, color)
 
-		return new Label(
-			startAngle,
-			endAngle,
-			innerRadius,
-			outerRadius,
-			angle,
-			value,
-			label,
-			transform,
-			textAnchor,
-			ccAngle,
-			line,
-			isCancerGene,
-			[new Mutation(mname, color, dataClass, chr, position)]
-		)
+		const label: Label = {
+			startAngle: startAngle,
+			endAngle: endAngle,
+			innerRadius: innerRadius,
+			outerRadius: outerRadius,
+			angle: angle,
+			value: value,
+			text: gene,
+			color: color,
+			transform: transform,
+			textAnchor: textAnchor,
+			ccAngle: ccAngle,
+			line: line,
+			isPrioritized,
+			mutationsTooltip: mutationTooltip ? [mutationTooltip] : undefined,
+			fusionTooltip: fusionTooltip ? [fusionTooltip] : undefined
+		}
+
+		return label
 	}
 
 	static createMovedLabel(element: Label, overlap: number): Label {
@@ -86,20 +93,30 @@ export default class LabelFactory {
 
 		const textAnchor = angle > Math.PI ? 'end' : ''
 
-		return new Label(
-			startAngle,
-			endAngle,
-			element.innerRadius,
-			element.outerRadius,
-			angle,
-			element.value,
-			element.text,
-			transform,
-			textAnchor,
-			ccAngle,
-			line,
-			element.isCancerGene,
-			element.mutations
-		)
+		const color = element.mutationsTooltip
+			? element.mutationsTooltip[0].color
+			: element.fusionTooltip
+			? element.fusionTooltip[0].color
+			: undefined
+
+		const label: Label = {
+			startAngle: startAngle,
+			endAngle: endAngle,
+			innerRadius: element.innerRadius,
+			outerRadius: element.outerRadius,
+			angle: angle,
+			value: element.value,
+			text: element.text,
+			transform: transform,
+			textAnchor: textAnchor,
+			ccAngle: ccAngle,
+			color: color,
+			line: line,
+			isPrioritized: element.isPrioritized,
+			mutationsTooltip: element.mutationsTooltip,
+			fusionTooltip: element.fusionTooltip
+		}
+
+		return label
 	}
 }

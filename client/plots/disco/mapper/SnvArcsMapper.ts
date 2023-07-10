@@ -47,18 +47,18 @@ export default class SnvArcsMapper {
 
 					const mLabel = MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass] : undefined
 
-					const arc = new SnvArc(
-						startAngle,
-						endAngle,
-						this.svnInnerRadius + (i * this.svnWidth) / arraySize,
-						this.svnInnerRadius + ((i + 1) * this.svnWidth) / arraySize,
-						mLabel.color,
-						data.gene,
-						mLabel.label,
-						data.mname,
-						data.chr,
-						data.pos
-					)
+					const arc: SnvArc = {
+						startAngle: startAngle,
+						endAngle: endAngle,
+						innerRadius: this.svnInnerRadius + (i * this.svnWidth) / arraySize,
+						outerRadius: this.svnInnerRadius + ((i + 1) * this.svnWidth) / arraySize,
+						color: mLabel.color,
+						text: data.gene,
+						dataClass: mLabel.label,
+						mname: data.mname,
+						chr: data.chr,
+						pos: data.pos
+					}
 					snvArray.push(arc)
 				}
 			}
