@@ -797,6 +797,14 @@ export class TermdbVocab extends Vocab {
 			copy.term.type = tw.term.type
 			copy.term.values = tw.term.values
 		}
+
+		// geneVariant term may have term.chr/start/stop, must add those to copy
+		if (tw.term.chr) {
+			copy.term.chr = tw.term.chr
+			copy.term.start = tw.term.start
+			copy.term.stop = tw.term.stop
+		}
+
 		return copy
 	}
 
