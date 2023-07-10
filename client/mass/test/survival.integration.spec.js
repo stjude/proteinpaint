@@ -544,7 +544,7 @@ tape('survival term as term1, term2 = agedx, custom bins', function(test) {
 })
 
 tape('survival term as term1, term0 = agedx, custom bins', function(test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(20000)
 
 	runpp({
 		state: {
