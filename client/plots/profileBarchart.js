@@ -42,26 +42,7 @@ class profileBarchart {
 		const holder = this.dom.holder.append('div')
 		const config = this.state.config
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
-		//this.drawRect(svg, 100, 100, '#aaa')
-		// const table = this.dom.holder.append('table')
-		// // header
-		// {
-		// 	const tr = table.append('tr')
-		// 	tr.append('td').text(this.state.config.sampleName)
-		// 	for (const c of this.state.config.columnNames) tr.append('td').text(c)
-		// }
-		// for (const row of this.state.config.rows) {
-		// 	const tr = table.append('tr')
-		// 	tr.append('td').text(row.name)
-		// 	for (const tw of row.twlst) {
-		// 		const td = tr.append('td')
-		// 		const value = data[tw.$id]?.value
-		// 		// TODO barplot
-		// 		if (Number.isFinite(value)) {
-		// 			td.text(value)
-		// 		}
-		// 	}
-		// }
+
 		let x = 400
 		let y = 100
 		let stepx = 600
