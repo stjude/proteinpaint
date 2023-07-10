@@ -16,8 +16,23 @@ module.exports = function setRoutes(app, basepath) {
 				res.header('content-type', 'text/markdown')
 				res.send(md)
 			} else {
-				const ignore = ['**/node_modules*/**/*', '**/package/**/*', '**/tmpbuild/**/*', '**/tmppack/**/*']
+				const ignore = [
+					'**/node_modules*/**/*',
+					'**/package/**/*',
+					'**/tmpbuild/**/*',
+					'**/tmppack/**/*',
+					'node_modules'
+				]
 				const readmes = glob.sync('**/README*', { cwd, ignore }) //.filter(f => f === 'README.md' || f.startsWith('build'))
+				if (serverconfig.additionalReadmeRoots) {
+					for (const key in serverconfig.additionalReadmeRoots) {
+						const root = serverconfig.additionalReadmeRoots[key]
+						const addlReadmes = glob.sync('**/README*', { cwd: root, ignore })
+						for (const r of addlReadmes) {
+							if (!r.includes('proteinpaint/') && !readmes.includes(r)) readmes.push(path.join(key, r))
+						}
+					}
+				}
 				res.send({ readmes })
 			}
 		} catch (e) {

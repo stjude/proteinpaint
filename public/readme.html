@@ -195,6 +195,8 @@
 			position: fixed;
 			top:  30px;
 			left:  50px;
+			overflow: auto;
+			max-height: 900px;
 		}
 		#right-wrapper {
 			max-width: 1280px;
@@ -234,7 +236,12 @@
 
 		async function init() {
 			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert)
-			data.readmes.sort()
+			data.readmes.sort((a,b)=>{
+				if (a.startsWith('..') && b.startsWith('..')) return 0
+				if (a.startsWith('..')) return 1
+				if (b.startsWith('..')) return -1
+				return a == b ? 0 : a < b ? -1 : 1
+			})
 
 			dom.topTabs = d3.select('#topnav')
 				.selectAll('div')
