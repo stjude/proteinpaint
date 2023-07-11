@@ -1,6 +1,6 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
-import { TermSettingInstance, PillData, TW } from '#shared/types'
+import { TermSettingInstance, PillData, TermWrapper } from '#shared/types'
 
 export function getHandler(self: TermSettingInstance) {
 	return {
@@ -8,10 +8,7 @@ export function getHandler(self: TermSettingInstance) {
 			div.selectAll('*').remove()
 			const groups = self.q!.groups
 			for (const group of groups) {
-				const groupDiv = div
-					.append('div')
-					.style('display', 'inline-block')
-					.style('vertical-align', 'top')
+				const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 				const noButtonCallback = (i: number, node: any) => {
 					group.values[i].checked = node.checked
 				}
@@ -68,7 +65,7 @@ function addTable(div: any, name: any, group: any, noButtonCallback: any) {
 	})
 }
 
-export function fillTW(tw: TW) {
+export function fillTW(tw: TermWrapper) {
 	// quick fix!!
 	if (!tw.q.type) tw.q.type = 'custom-groupsetting'
 	if (!tw.q.groups) tw.q.groups = []
@@ -124,7 +121,7 @@ export function getSamplelstTW(groups: any, name = 'groups') {
 	function getGroupSamples(group: any) {
 		const values: any = []
 		for (const item of group.items) {
-			const value: { sampleId: string, sample?: string } = { sampleId: item.sampleId }
+			const value: { sampleId: string; sample?: string } = { sampleId: item.sampleId }
 			if ('sample' in item) {
 				disabled = false
 				value.sample = item.sample

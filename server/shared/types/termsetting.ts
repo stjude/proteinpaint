@@ -1,5 +1,5 @@
 import { VocabApi } from './vocab'
-import { Term, Q, TW, NumericQ } from './termdb'
+import { Term, Q, TermWrapper, DetermineQ } from './termdb'
 import { Filter } from './filter'
 
 /*
@@ -119,8 +119,8 @@ export interface TermSettingOpts extends BaseTermSettingOpts {
 	//vocab??
 
 	//Methods
-	callback?: (f: TW | null) => void
-	customFillTw?: (f: TW) => void
+	callback?: (f: TermWrapper | null) => void
+	customFillTw?: (f: TermWrapper) => void
 	getBodyParams: () => any
 }
 

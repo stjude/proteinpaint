@@ -2,13 +2,13 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
-import { PillData, TW, Q, VocabApi } from '#shared/types'
+import { PillData, TermWrapper, Q, VocabApi } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
 
-//Types 
-type GroupEntry = { name: string, values: (string | number)[] }
+//Types
+type GroupEntry = { name: string; values: (string | number)[] }
 
 const cutoffGrades: number[] = [1, 2, 3, 4, 5]
 
@@ -34,7 +34,7 @@ export function getHandler(self: any) {
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
-		},
+		}
 	}
 }
 
@@ -182,16 +182,8 @@ function showMenu_discrete(self: any, div: any) {
 		const groups: any = getGroups(grades, breaks)
 
 		// render groups as ranges and names
-		rangeNameDiv
-			.append('div')
-			.style('margin-bottom', '3px')
-			.style('color', 'rgb(136, 136, 136)')
-			.text('Range')
-		rangeNameDiv
-			.append('div')
-			.style('margin-bottom', '3px')
-			.style('color', 'rgb(136, 136, 136)')
-			.text('Label')
+		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Range')
+		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Label')
 		for (const [i, g] of groups.entries()) {
 			// range
 			rangeNameDiv.append('div').text(g.name.replace('Grade ', ''))
@@ -203,7 +195,7 @@ function showMenu_discrete(self: any, div: any) {
 				.attr('type', 'text')
 				.property('value', g.name)
 				.style('margin', '2px 0px')
-				.on('change', function(this: any) {
+				.on('change', function (this: any) {
 					groups[i].name = this.value
 				})
 		}
@@ -305,9 +297,9 @@ function showMenu_cutoff(self: any, div: any) {
 		const options: { label: string; value: string; checked?: boolean }[] = [
 			{
 				label: 'Years since entry into the cohort', // may define from ds
-				value: 'time',
+				value: 'time'
 			},
-			{ label: 'Age', value: 'age' },
+			{ label: 'Age', value: 'age' }
 		]
 		if (self.q.timeScale == 'age') {
 			options[1].checked = true
@@ -318,7 +310,7 @@ function showMenu_cutoff(self: any, div: any) {
 			holder: holder.append('div'),
 			options,
 			styles: { margin: '' },
-			callback: (v: string) => (timeScaleChoice = v),
+			callback: (v: string) => (timeScaleChoice = v)
 		})
 	}
 
@@ -397,7 +389,7 @@ function getGroups(grades: any, breaks: any) {
 	return groups
 }
 
-export function fillTW(tw: TW, vocabApi: VocabApi, defaultQ: Q) {
+export function fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQ: Q) {
 	set_hiddenvalues(tw.q, tw.term)
 
 	if (defaultQ) {

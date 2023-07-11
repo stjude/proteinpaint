@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { mclass, dt2label } from '#shared/common'
-import { PillData, Q, TW, VocabApi } from '#shared/types'
+import { PillData, Q, TermWrapper, VocabApi } from '#shared/types'
 
 /* 
 instance attributes
@@ -29,14 +29,14 @@ export function getHandler(self: any) {
 
 		async showEditMenu(div: Element) {
 			await makeEditMenu(self, div)
-		},
+		}
 	}
 }
 
 const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
 let id = 0
 
-export function fillTW(tw: TW, vocabApi: VocabApi) {
+export function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
 	if (!tw.term.name && tw.term.isoform) tw.term.name = tw.term.isoform as string
 
@@ -87,22 +87,22 @@ function makeEditMenu(self: any, _div: any) {
 		.on('click', () => {
 			self.runCallback({
 				term: JSON.parse(JSON.stringify(self.term)),
-				q: { exclude },
+				q: { exclude }
 			})
 		})
 
 	const exclude = self.q?.exclude?.slice().sort() || []
 	const origExclude = JSON.stringify(exclude)
 	const mclasses = Object.values(mclass)
-	const dtNums = [...new Set(mclasses.map((c) => c.dt))].sort() as number[]
+	const dtNums = [...new Set(mclasses.map(c => c.dt))].sort() as number[]
 
 	const groups: GroupsEntry[] = []
 	for (const dt of dtNums) {
-		const items = mclasses.filter((c) => c.dt === dt)
+		const items = mclasses.filter(c => c.dt === dt)
 		if (items.length) {
 			groups.push({
 				name: dt2label[dt],
-				items,
+				items
 			})
 		}
 	}
