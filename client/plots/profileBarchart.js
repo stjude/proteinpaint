@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { axisLeft, axisBottom } from 'd3-axis'
+import { axisTop } from 'd3-axis'
 class profileBarchart {
 	constructor() {
 		this.type = 'profileBarchart'
@@ -69,6 +69,17 @@ class profileBarchart {
 		const config = this.state.config
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
+		const path = svg
+			.append('defs')
+			.append('pattern')
+			.attr('id', 'diagonalHatch')
+			.attr('patternUnits', 'userSpaceOnUse')
+			.attr('width', 4)
+			.attr('height', 4)
+			.append('path')
+			.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
+			.attr('stroke-width', 1)
+
 		let x
 		let y
 		let stepx = 500
@@ -102,19 +113,24 @@ class profileBarchart {
 				x = 400
 				for (const [i, tw] of row.twlst.entries()) {
 					const color = '#2381c3'
-					drawRect(x, y, color, tw, i)
+					drawRect(x, y, color, row.twlst, i)
 					x += stepx
 				}
 				y += step
 			}
 		}
 
-		function drawRect(x, y, color, tw, i) {
+		function drawRect(x, y, color, twlist, i) {
+			console.log(twlist)
+			const tw = twlist[i]
+			path.attr('stroke', color)
+
 			const value = data[tw.$id]?.value
 			const isFirst = i % 2 == 0
+			const pairValue = isFirst ? data[twlist[1]?.$id]?.value : data[twlist[0]?.$id]?.value
 			if (value) {
 				const width = (value / 100) * barwidth
-				svg
+				const rect = svg
 					.append('g')
 					.attr('transform', `translate(${x + 10}, ${y})`)
 					.append('rect')
@@ -122,7 +138,8 @@ class profileBarchart {
 					.attr('y', 0)
 					.attr('width', width)
 					.attr('height', 20)
-					.attr('fill', color)
+				if (pairValue) rect.attr('fill', color)
+				else rect.attr('fill', 'url(#diagonalHatch)')
 				svg
 					.append('text')
 					.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
@@ -140,7 +157,7 @@ class profileBarchart {
 		function drawAxes(x, y) {
 			const xAxisScale = d3Linear().domain([0, 100]).range([0, barwidth])
 
-			svg.append('g').attr('transform', `translate(${x}, ${y})`).call(axisBottom(xAxisScale))
+			svg.append('g').attr('transform', `translate(${x}, ${y})`).call(axisTop(xAxisScale))
 		}
 	}
 }
