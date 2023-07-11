@@ -50,6 +50,7 @@ export function make(q, res, ds, genome) {
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
+	if (tdb.chartConfigByType) c.chartConfigByType = tdb.chartConfigByType
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.timeScale) c.timeScale = tdb.timeScale
