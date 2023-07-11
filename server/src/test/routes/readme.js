@@ -23,17 +23,25 @@ module.exports = function setRoutes(app, basepath) {
 					'**/tmppack/**/*',
 					'node_modules'
 				]
-				const readmes = glob.sync('**/README*', { cwd, ignore }) //.filter(f => f === 'README.md' || f.startsWith('build'))
-				if (serverconfig.additionalReadmeRoots) {
-					for (const key in serverconfig.additionalReadmeRoots) {
-						const root = serverconfig.additionalReadmeRoots[key]
-						const addlReadmes = glob.sync('**/README*', { cwd: root, ignore })
+				const readmes = glob.sync('**/*.md', { cwd, ignore })
+				const superModuleDir = path.join(serverconfig.binpath, '../../.git/modules/proteinpaint')
+				let parentDir
+				try {
+					const stat = await fs.stat(superModuleDir)
+					if (stat) {
+						const root = path.join(serverconfig.binpath, '../..')
+						const addlReadmes = glob.sync('**/*.md', { cwd: root, ignore })
 						for (const r of addlReadmes) {
-							if (!r.includes('proteinpaint/') && !readmes.includes(r)) readmes.push(path.join(key, r))
+							if (!r.includes('proteinpaint/') && !readmes.includes(r)) readmes.push(path.join('..', r))
 						}
+						if (addlReadmes.length) parentDir = root.split('/').pop()
 					}
+				} catch (e) {
+					console.log(e)
+					// no error
 				}
-				res.send({ readmes })
+
+				res.send({ readmes, parentDir })
 			}
 		} catch (e) {
 			throw e

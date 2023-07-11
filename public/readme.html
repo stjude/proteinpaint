@@ -268,22 +268,26 @@
 		}
 
 		let i=0
-		function setHierarchy(dir) { i++; if (i > 100) return;
+		function setHierarchy(dir) {
+			// avoid infinite loop
+			i++; if (i > 100) return;
+
 			const {path, files, subdirs, filepaths} = dir
 			for(const f of filepaths) {
+				const fname = f.replace(path, '').toUpperCase()
 				if (!path) {
-					if (!f.includes('/')) {
+					if (!f.includes('/') || (!fname.slice(1).includes('/') && fname.endsWith('.MD'))) {
 						files.push(f)
 						continue
 					}
 				}
-
-				if (f.replace(path, '').toUpperCase().startsWith('/README')) {
+ 				
+				if (fname.startsWith('/README')) { //console.log(285, fname)
 					files.push(f)
 					continue
 				}
 				//console.log(237, [path, f.replace(path+'/', ''), f])
-				const subpath = path ? path + '/' + f.replace(path+'/','').split('/')[0] : f.split('/')[0]; //console.log(238, subpath)
+				const subpath = path ? path + '/' + f.replace(path+'/','').split('/')[0] : f.split('/')[0]
 				if (!subdirs[subpath]) subdirs[subpath] = {path: subpath, files: [], subdirs: {}, filepaths: []}
 				subdirs[subpath].filepaths.push(f)
 			}
@@ -338,13 +342,13 @@
 					const hasOwnReadme = d.files[0]?.startsWith(`${d.path}/README`)
 					const name = d.path.replace(dir.path+'/', '')
 					const ownLink = subdiv.append('div')
-					if (hasOwnReadme) {
+					if (hasOwnReadme || name.endsWith('.md')) {
 						ownLink.append('a')
-							.attr('href', `#${d.files[0]}`)
+							.attr('href', `#${d.files[0] || d.path}`)
 							.html(name)
 
 						ownLink.append('span')
-							.datum(d.files[0])
+							.datum(d.files[0] || d.path)
 							.attr('class', 'activehint')
 							.style('display', 'none')
 							.style('color', settings.activeColor)
@@ -353,7 +357,7 @@
 						ownLink.html(name)
 					}
 
-					renderNavBtns.bind(this)(d)
+					if (!name.endsWith('.md')) renderNavBtns.bind(this)(d)
 				})
 		}
 
