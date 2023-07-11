@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
-
+import { scaleLinear as d3Linear } from 'd3-scale'
+import { axisLeft, axisBottom } from 'd3-axis'
 class profileBarchart {
 	constructor() {
 		this.type = 'profileBarchart'
@@ -68,21 +69,26 @@ class profileBarchart {
 		const config = this.state.config
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
-		let x = 500
-		let y = 75
-		let stepx = 400
+		let x
+		let y
+		let stepx = 500
 		let step = 30
 		const barwidth = 400
-
 		for (const [i, c] of config.columnNames.entries()) {
+			x = i % 2 == 0 ? 400 : 900
+			x += 10
+			y = 50
 			svg
 				.append('text')
-				.attr('transform', `translate(${stepx * (i + 1) + 10}, ${50})`)
+				.attr('transform', `translate(${x}, ${y})`)
 				.attr('text-anchor', 'start')
 				.style('font-weight', 'bold')
 				.text(`${c}%`)
+			drawAxes(x, y + 50)
+
 			x += stepx
 		}
+		y = 75
 		for (const group of config.groups) {
 			svg
 				.append('text')
@@ -130,12 +136,18 @@ class profileBarchart {
 					.attr('text-anchor', 'end')
 					.text(tw.term.name)
 		}
+
+		function drawAxes(x, y) {
+			const xAxisScale = d3Linear().domain([0, 100]).range([0, barwidth])
+
+			svg.append('g').attr('transform', `translate(${x}, ${y})`).call(axisBottom(xAxisScale))
+		}
 	}
 }
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = { svgw: 1200, svgh: 1200 }
+		const defaults = { svgw: 1400, svgh: 1200 }
 		const config = copyMerge(defaults, opts)
 		for (const group of config.groups)
 			for (const row of group.rows) {
