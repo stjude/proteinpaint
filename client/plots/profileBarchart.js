@@ -28,35 +28,56 @@ class profileBarchart {
 					if (tw.id) twLst.push(tw)
 				}
 			}
-		const data = await this.app.vocabApi.getAnnotatedSampleData({
+		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
-		this.plot(data)
+		if (!this.sample) this.sample = this.state.config.sampleName
+		this.plot()
 	}
 
-	plot(_d) {
+	plot() {
+		this.dom.holder.selectAll('*').remove()
 		let data
-		for (const k in _d.samples) {
-			if (_d.samples[k].sampleName == this.state.config.sampleName) data = _d.samples[k]
+		const samples = []
+		let sample
+		for (const k in this.data.samples) {
+			if (this.data.samples[k].sampleName == this.sample) data = this.data.samples[k]
+			samples.push(this.data.samples[k].sampleName)
 		}
 		if (!data) throw 'no data returned for sample'
 		const holder = this.dom.holder.append('div')
+		const select = holder
+			.append('div')
+			.style('margin-left', '50px')
+			.style('margin-top', '20px')
+			.append('label')
+			.html('Component:')
+			.style('font-weight', 'bold')
+			.append('select')
+			.style('margin-left', '5px')
+		select
+			.selectAll('option')
+			.data(samples)
+			.enter()
+			.append('option')
+			.property('selected', d => d == this.sample)
+			.html((d, i) => d)
+		select.on('change', () => {
+			this.sample = select.node().value
+			this.plot()
+		})
 		const config = this.state.config
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
-		let x = 400
+		let x = 500
 		let y = 100
-		let stepx = 600
+		let stepx = 300
 		let step = 30
-		svg
-			.append('text')
-			.attr('transform', `translate(${x}, ${50})`)
-			.attr('text-anchor', 'end')
-			.text(`${config.sampleName} Component`)
+
 		for (const c of config.columnNames) {
 			svg
 				.append('text')
-				.attr('transform', `translate(${x}, ${75})`)
+				.attr('transform', `translate(${x + 100}, ${75})`)
 				.attr('text-anchor', 'end')
 				.style('font-weight', 'bold')
 				.text(`${c}%`)
@@ -73,17 +94,18 @@ class profileBarchart {
 			y += step + 20
 			for (const row of group.rows) {
 				x = 400
-				for (const tw of row.twlst) {
-					const color = '#aaa'
-					drawRect(x, y, color, tw)
+				for (const [i, tw] of row.twlst.entries()) {
+					const color = '#2381c3'
+					drawRect(x, y, color, tw, i)
 					x += stepx
 				}
 				y += step
 			}
 		}
-		function drawRect(x, y, color, tw) {
-			const value = data[tw.$id]?.value
 
+		function drawRect(x, y, color, tw, i) {
+			const value = data[tw.$id]?.value
+			const isFirst = i % 2 == 0
 			if (value) {
 				const width = (value / 100) * 100
 				svg
@@ -97,16 +119,16 @@ class profileBarchart {
 					.attr('fill', color)
 				svg
 					.append('text')
-					.attr('transform', `translate(${x + width + 50}, ${y + 15})`)
+					.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
 					.attr('text-anchor', 'end')
 					.text(`${value}%`)
 			}
-
-			svg
-				.append('text')
-				.attr('transform', `translate(${x}, ${y + 15})`)
-				.attr('text-anchor', 'end')
-				.text(tw.term.name)
+			if (isFirst)
+				svg
+					.append('text')
+					.attr('transform', `translate(${x}, ${y + 15})`)
+					.attr('text-anchor', 'end')
+					.text(tw.term.name)
 		}
 	}
 }
@@ -115,7 +137,6 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = { svgw: 1200, svgh: 1200 }
 		const config = copyMerge(defaults, opts)
-		console.log(config)
 		for (const group of config.groups)
 			for (const row of group.rows) {
 				for (const t of row.twlst) {

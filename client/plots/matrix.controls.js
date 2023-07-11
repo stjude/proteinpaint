@@ -661,7 +661,7 @@ export class MatrixControls {
 				.data(tg)
 				.enter()
 				.append('option')
-				.attr('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
+				.property('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
 				.attr('value', (d, i) => i)
 				.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
 		} else {
