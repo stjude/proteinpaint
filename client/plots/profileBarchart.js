@@ -113,7 +113,7 @@ class profileBarchart {
 			for (const row of group.rows) {
 				x = 400
 				for (const [i, tw] of row.twlst.entries()) {
-					drawRect(x, y, color, row.twlst, i)
+					drawRect(x, y, color, row, i)
 					x += stepx
 				}
 				y += step
@@ -125,13 +125,13 @@ class profileBarchart {
 		x += 300
 		drawLegendRect(x, y, 'or')
 
-		function drawRect(x, y, color, twlist, i) {
-			const tw = twlist[i]
+		function drawRect(x, y, color, row, i) {
+			const tw = row.twlst[i]
 			path.attr('stroke', color)
 
 			const value = data[tw.$id]?.value
 			const isFirst = i % 2 == 0
-			const pairValue = isFirst ? data[twlist[1]?.$id]?.value : data[twlist[0]?.$id]?.value
+			const pairValue = isFirst ? data[row.twlst[1]?.$id]?.value : data[row.twlst[0]?.$id]?.value
 			if (value) {
 				const width = (value / 100) * barwidth
 				const rect = svg
@@ -155,7 +155,7 @@ class profileBarchart {
 					.append('text')
 					.attr('transform', `translate(${x}, ${y + 15})`)
 					.attr('text-anchor', 'end')
-					.text(tw.term.name)
+					.text(row.name)
 		}
 
 		function drawAxes(x, y) {
