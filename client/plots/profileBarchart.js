@@ -23,6 +23,7 @@ class profileBarchart {
 	}
 
 	async main() {
+		this.config = JSON.parse(JSON.stringify(this.state.config))
 		const twLst = []
 		for (const group of this.state.config.groups)
 			for (const row of group.rows) {
@@ -33,16 +34,16 @@ class profileBarchart {
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
-		if (!this.sample) this.sample = this.state.config.sampleName
 		this.plot()
 	}
 
 	plot() {
+		const config = this.config
 		this.dom.holder.selectAll('*').remove()
 		let data
 		const samples = []
 		for (const k in this.data.samples) {
-			if (this.data.samples[k].sampleName == this.sample) data = this.data.samples[k]
+			if (this.data.samples[k].sampleName == config.sampleName) data = this.data.samples[k]
 			samples.push(this.data.samples[k].sampleName)
 		}
 		if (!data) throw 'no data returned for sample'
@@ -61,13 +62,12 @@ class profileBarchart {
 			.data(samples)
 			.enter()
 			.append('option')
-			.property('selected', d => d == this.sample)
+			.property('selected', d => d == config.sampleName)
 			.html((d, i) => d)
 		select.on('change', () => {
-			this.sample = select.node().value
-			this.plot()
+			config.sampleName = select.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
-		const config = this.state.config
 		const color = '#2381c3'
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
