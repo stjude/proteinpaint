@@ -3,7 +3,8 @@ import { setGroupsettingMethods } from './groupsetting'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import {
 	PillData,
-	TW,
+	TermWrapper,
+	TWDynamicQ,
 	Term,
 	Q,
 	TermValues,
@@ -64,7 +65,7 @@ export function getHandler(self: CategoricalInstance) {
 
 		validateQ(data: PillData) {
 			const t = data.term as Term
-			const q = data.q as CategoricalConditionQ
+			const q = data.q as Q
 			const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
 			// validate the configuration
 			if (q.type == 'values') {
@@ -132,7 +133,7 @@ export function getHandler(self: CategoricalInstance) {
 			}
 			if (self.term.type == 'categorical') {
 				if (!self.term.values) {
-					self.term.q = {}
+					self.q = {}
 				} // ...
 			}
 		}
@@ -143,7 +144,7 @@ export function getHandler(self: CategoricalInstance) {
 export function setCategoryConditionMethods(self: CategoricalInstance) {
 	self.validateGroupsetting = function () {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
-		const text = self.q?.name || self.q?.reuseId
+		const text = self.q.name || self.q.reuseId
 		if (text) return { text }
 		if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
@@ -384,7 +385,7 @@ export function setCategoryConditionMethods(self: CategoricalInstance) {
 	}
 }
 
-export function fillTW(tw: TW) {
+export function fillTW(tw: TWDynamicQ) {
 	set_hiddenvalues(tw.q, tw.term)
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}

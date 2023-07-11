@@ -1,5 +1,5 @@
 import { mayRunSnplstTask } from './snplst.sampleSum'
-import { TW, VocabApi, LstEntry } from '#shared/types'
+import { TermWrapper, VocabApi, LstEntry } from '#shared/types'
 
 /* 
 TODO clean up ui logic, may use table.js?
@@ -62,7 +62,7 @@ export function getHandler(self: any) {
 
 		async showEditMenu(div: any) {
 			await makeEditMenu(self, div)
-		},
+		}
 	}
 }
 
@@ -211,7 +211,7 @@ async function makeEditMenu(self: any, div0: any) {
 		.append('button')
 		.text('Submit')
 		.on('click', async () => {
-			self.term.snps = self.term.snps.filter((i) => !i.tobe_deleted)
+			self.term.snps = self.term.snps.filter(i => !i.tobe_deleted)
 
 			self.term.name = getTermName(self.term.snps)
 
@@ -306,9 +306,9 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 		{ title: 'Reference allele<sup><b>**</b></sup><br>(frequency)' },
 		{ title: 'Alternative allele(s)<sup><b>**</b></sup><br>(frequency)' },
 		{ title: 'Genotype<br>(frequency)' },
-		{ title: 'Delete' },
+		{ title: 'Delete' }
 	]
-	col_titles.forEach((c) => {
+	col_titles.forEach(c => {
 		title_tr.append('td').html(c.title).style('font-size', '.8em').style('text-align', 'center').style('padding', '8px')
 	})
 
@@ -523,7 +523,7 @@ async function makeSampleSummary(self: any) {
 		if (self.filter) {
 			// tricky: detect if self.filter contains the same ancestry term
 			f = structuredClone(self.filter)
-			const idx = f.lst.findIndex((i) => i.tvs?.term?.id == self.q.restrictAncestry.tvs.term.id)
+			const idx = f.lst.findIndex(i => i.tvs?.term?.id == self.q.restrictAncestry.tvs.term.id)
 			if (idx != -1) {
 				// has the same term! must overwrite to avoid two tvs of the same ancestry term, each with a different ancestry which will result in 0 samples
 				f.lst[idx] = { type: 'tvs', tvs: self.q.restrictAncestry.tvs }
@@ -552,7 +552,7 @@ function validateQ(data: any) {
 	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 }
 
-export async function fillTW(tw: TW, vocabApi: VocabApi) {
+export async function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
 	try {
 		validateQ(tw)
 	} catch (e) {
@@ -577,7 +577,7 @@ export async function fillTW(tw: TW, vocabApi: VocabApi) {
 	await validateInput({
 		term: tw.term,
 		q: tw.q,
-		vocabApi,
+		vocabApi
 	})
 }
 

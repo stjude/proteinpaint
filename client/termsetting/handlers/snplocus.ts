@@ -1,7 +1,7 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { addGeneSearchbox } from '#dom/genesearch'
-import { TW, VocabApi } from '#shared/types'
+import { TermWrapper, VocabApi } from '#shared/types'
 
 /* 
 ***************** EXPORT
@@ -53,7 +53,7 @@ export function getHandler(self: any) {
 
 		async showEditMenu(div: any) {
 			await makeEditMenu(self, div)
-		},
+		}
 
 		/* no need for postMain()
 		cache file contains all samples,
@@ -75,7 +75,7 @@ async function makeEditMenu(self: any, div: any) {
 		genome: self.opts.genomeObj,
 		tip: self.dom.tip2,
 		row: div.append('div').style('margin', '15px'),
-		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null,
+		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null
 	})
 	div
 		.append('span')
@@ -102,7 +102,7 @@ async function makeEditMenu(self: any, div: any) {
 		.append('button')
 		.style('margin', '0px 15px 15px 15px')
 		.text('Submit')
-		.on('click', async (event) => {
+		.on('click', async event => {
 			if (!coordResult.chr) return window.alert('Invalid coordinate')
 			event.target.disabled = true
 			event.target.innerHTML = 'Validating input...'
@@ -177,7 +177,7 @@ function validateQ(data: any) {
 	if (q.stop <= q.start) throw 'stop <= start'
 }
 
-export async function fillTW(tw: TW, vocabApi: VocabApi) {
+export async function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
 	try {
 		// to catch any error in q{} before running validateInput()
 		validateQ(tw)
@@ -201,7 +201,7 @@ export async function fillTW(tw: TW, vocabApi: VocabApi) {
 	await validateInput({
 		term: tw.term,
 		q: tw.q,
-		vocabApi,
+		vocabApi
 	})
 }
 
@@ -250,11 +250,11 @@ async function mayDisplayVariantFilter(self: any, filterInState: any, holder: an
 		emptyLabel: '+Variant Filter',
 		holder: filterBody,
 		vocab: { terms: self.variantFilter.terms },
-		callback: async (filter) => {
+		callback: async filter => {
 			// once the filter is updated from UI, it's only updated here
 			// user must press submit button to attach current filter to self.q{}
 			self.variantFilter.active = filter
 			if (callback2) await callback2()
-		},
+		}
 	}).main(self.variantFilter.active)
 }

@@ -77,14 +77,12 @@ type BaseQ = {
 	lst?: RangeEntry[]
 	name?: string
 	mode?: 'discrete' | 'binary' | 'continuous' | 'spline' | 'cuminc' | 'cox'
-	modeBinaryCutoffType?: 'normal' | 'percentile'
-	modeBinaryCutoffPercentile?: number
 	reuseId?: string
 	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 }
 
 export type NumericQ = BaseQ & {
-	termType: 'numeric'
+	termType: 'numeric' | 'float' | 'integer'
 	preferredBins?: string
 	termtype?: string
 	//regular-sized bins
@@ -99,6 +97,8 @@ export type NumericQ = BaseQ & {
 		start: number
 		stopunbounded: boolean
 	}
+	modeBinaryCutoffType?: 'normal' | 'percentile'
+	modeBinaryCutoffPercentile?: number
 	//binary
 	scale?: number //0.1 | 0.01 | 0.001
 }
@@ -241,16 +241,21 @@ export type Term = {
 	isoform?: string
 }
 
-// export function getQTypeByTermType<Term extends { termType: string }, Q>(
-// 	term: Term,
-// 	type: string,
-// 	q: Q
-// ): Q {
-// 	if ()
+export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
+	? NumericQ
+	: T extends 'categorical' | 'condition'
+	? CategoricalConditionQ
+	: T extends 'regression'
+	? RegressionQ
+	: T extends 'geneVariant'
+	? GeneVariantQ
+	: T extends 'snplst'
+	? SnpLstQ
+	: T extends 'snplocus'
+	? SnpLocusQ
+	: Q
 
-// }
-
-export type TW = {
+export type TermWrapper = {
 	//Term wrapper aka. term:{term:{...}, q:{...}...}
 	id?: string
 	$id?: string
@@ -260,3 +265,5 @@ export type TW = {
 	// term0?: Term
 	q: Q
 }
+
+export type TWDynamicQ = TermWrapper & { q: DetermineQ<TermWrapper['term']['type']> }

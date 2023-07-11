@@ -8,7 +8,8 @@ import {
 	TermSettingOpts,
 	Term,
 	Q,
-	TW,
+	DetermineQ,
+	TermWrapper,
 	VocabApi,
 	Api,
 	PillData,
@@ -17,7 +18,7 @@ import {
 	NoTermPromptOptsEntry,
 	Handler,
 	Filter,
-	SampleCountsEntry,
+	SampleCountsEntry
 } from '#shared/types/index'
 /*
 ********************* EXPORTED
@@ -45,11 +46,9 @@ export function get$id() {
 	return <string>`${$id++}${idSuffix}`
 }
 
-type DefaultQByTsHandler = { [index: string]: Q }
-
 const defaultOpts: { menuOptions: string; menuLayout: string } = {
 	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
-	menuLayout: 'vertical',
+	menuLayout: 'vertical'
 }
 
 type HandlerByType = { [index: string]: Handler }
@@ -86,7 +85,7 @@ class TermSetting {
 	data: any
 	error: string | undefined
 	filter: Filter | undefined
-	q: Q | undefined
+	q!: DetermineQ<Term['type']>
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
@@ -114,13 +113,13 @@ class TermSetting {
 				opts.tip ||
 				new Menu({
 					padding: '0px',
-					parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div'),
-				}),
+					parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+				})
 		} as Dom
 		// tip2 is for showing inside tip, e.g. in snplocus UI
 		this.dom.tip2 = new Menu({
 			padding: '0px',
-			parent_menu: this.dom.tip.d.node(),
+			parent_menu: this.dom.tip.d.node()
 		})
 
 		setInteractivity(this)
@@ -129,7 +128,7 @@ class TermSetting {
 
 		const defaultHandler = getDefaultHandler(this)
 		this.handlerByType = {
-			default: defaultHandler,
+			default: defaultHandler
 		}
 
 		this.hasError = false
@@ -153,7 +152,7 @@ class TermSetting {
 					this.hasError = true
 					throw e
 				}
-			},
+			}
 		}
 	}
 
@@ -384,7 +383,7 @@ function setRenderers(self: TermSettingInstance) {
 					icon_holder: infoIcon_div,
 					content_holder,
 					id: self.term.id,
-					state: { term: self.term },
+					state: { term: self.term }
 				})
 			}
 		}
@@ -487,7 +486,7 @@ function setInteractivity(self: TermSettingInstance) {
 		self.opts.callback!({
 			id: self.term.id,
 			term: self.term!,
-			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } },
+			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } }
 		})
 	}
 
@@ -539,12 +538,12 @@ function setInteractivity(self: TermSettingInstance) {
 			state: {
 				activeCohort: self.activeCohort,
 				tree: {
-					usecase: self.usecase,
-				},
+					usecase: self.usecase
+				}
 			},
 			tree: {
 				disable_terms: self.disable_terms,
-				click_term: async (term: TW) => {
+				click_term: async (term: TermWrapper) => {
 					self.dom.tip.hide()
 
 					const tw = term.term ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
@@ -553,8 +552,8 @@ function setInteractivity(self: TermSettingInstance) {
 					// tw is now furbished
 
 					self.opts.callback!(tw)
-				},
-			},
+				}
+			}
 		})
 	}
 
@@ -643,7 +642,7 @@ function setInteractivity(self: TermSettingInstance) {
 			})
 
 		const tableWrapper = _div.append('div').style('margin', '10px')
-		const defaultTw: TW = { term: self.term!, q: {} }
+		const defaultTw: TermWrapper = { term: self.term!, q: {} }
 		await fillTermWrapper(defaultTw, self.vocabApi!)
 		defaultTw.q.reuseId = 'Default'
 		qlst.push(defaultTw.q)
@@ -750,11 +749,11 @@ function setInteractivity(self: TermSettingInstance) {
 							self.runCallback!({
 								term: {
 									name: gene.name,
-									type: 'geneVariant',
+									type: 'geneVariant'
 								},
 								q: {
-									exclude: [],
-								},
+									exclude: []
+								}
 							})
 						})
 				} catch (e) {
@@ -773,7 +772,7 @@ function setInteractivity(self: TermSettingInstance) {
 // do not consider irrelevant q attributes when
 // computing the deep equality of two term.q's
 function equivalentQs(q0: Q, q1: Q) {
-	const qlst = [q0, q1].map((q) => JSON.parse(JSON.stringify(q)))
+	const qlst = [q0, q1].map(q => JSON.parse(JSON.stringify(q)))
 	for (const q of qlst) {
 		delete q.binLabelFormatter
 		if (q.reuseId === 'Default') delete q.reuseId
@@ -799,7 +798,7 @@ function getDefaultHandler(self: TermSettingInstance) {
 		},
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
-		},
+		}
 	}
 }
 
@@ -822,7 +821,10 @@ defaultQByTsHandler{}
 	value is { condition: {mode:'binary'}, ... }
 	with term types as keys
 */
-export async function fillTermWrapper(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
+
+type DefaultQByTsHandler = { [index: string]: DetermineQ<TermWrapper['term']['type']> }
+
+export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	tw.isAtomic = true
 	if (!tw.$id) tw.$id = get$id()
 
@@ -849,10 +851,10 @@ export async function fillTermWrapper(tw: TW, vocabApi: VocabApi, defaultQByTsHa
 	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
 
 	mayValidateQmode(tw)
-	return tw as TW
+	return tw as TermWrapper
 }
 
-async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
+async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	if (!tw.$id) tw.$id = get$id()
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : (t as string)
@@ -868,7 +870,7 @@ async function call_fillTW(tw: TW, vocabApi: VocabApi, defaultQByTsHandler?: Def
 	await _.fillTW(tw, vocabApi, defaultQByTsHandler ? defaultQByTsHandler[type] : null)
 }
 
-function mayValidateQmode(tw: TW) {
+function mayValidateQmode(tw: TermWrapper) {
 	if (!('mode' in tw.q)) {
 		// at this stage q.mode is allowed to be missing and will not validate
 		return
