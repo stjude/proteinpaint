@@ -6,6 +6,7 @@ ClinvarAF
 Cohort
 Mds3
 
+Termdb
 */
 
 /*** General usage types and interfaces ***/
@@ -493,6 +494,7 @@ interface Termdb {
 	matrix?: Matrix
 	matrixplots?: MatrixPlots
 	logscaleBase2?: boolean
+	chartConfigByType?: ChartConfigByType
 	//Functionality
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
@@ -501,6 +503,13 @@ interface Termdb {
 	termid2totalsize2?: GdcApi
 	dictionary?: GdcApi
 	allowCaseDetails?: AllowCaseDetails
+}
+
+type ChartConfigByType = {
+	[index: string]: ChartConfig
+}
+type ChartConfig = {
+	[key: string]: any
 }
 
 type SimpleTermEntry = {
@@ -526,6 +535,10 @@ interface BaseDtEntry {
 	term_id: string
 	yes: { value: string[] }
 	no: { value: string[] }
+}
+
+interface SNVByOrigin {
+	[index: string]: BaseDtEntry
 }
 
 interface SNVByOrigin {
