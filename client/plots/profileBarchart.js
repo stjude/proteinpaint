@@ -67,6 +67,7 @@ class profileBarchart {
 			this.plot()
 		})
 		const config = this.state.config
+		const color = '#2381c3'
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		const path = svg
@@ -112,16 +113,19 @@ class profileBarchart {
 			for (const row of group.rows) {
 				x = 400
 				for (const [i, tw] of row.twlst.entries()) {
-					const color = '#2381c3'
 					drawRect(x, y, color, row.twlst, i)
 					x += stepx
 				}
 				y += step
 			}
 		}
+		y += 40
+		x = 50
+		drawLegendRect(x, y, 'and')
+		x += 300
+		drawLegendRect(x, y, 'or')
 
 		function drawRect(x, y, color, twlist, i) {
-			console.log(twlist)
 			const tw = twlist[i]
 			path.attr('stroke', color)
 
@@ -158,6 +162,27 @@ class profileBarchart {
 			const xAxisScale = d3Linear().domain([0, 100]).range([0, barwidth])
 
 			svg.append('g').attr('transform', `translate(${x}, ${y})`).call(axisTop(xAxisScale))
+		}
+
+		function drawLegendRect(x, y, operator) {
+			const rect = svg
+				.append('g')
+				.attr('transform', `translate(${x}, ${y})`)
+				.append('rect')
+				.attr('x', 0)
+				.attr('y', 0)
+				.attr('width', 20)
+				.attr('height', 20)
+			if (operator == 'and') rect.attr('fill', color)
+			else rect.attr('fill', 'url(#diagonalHatch)')
+
+			const text = svg
+				.append('text')
+				.attr('transform', `translate(${x + 25}, ${y + 15})`)
+				.attr('text-anchor', 'start')
+				.text('Objective ')
+			text.append('tspan').attr('font-weight', 'bold').text(operator)
+			text.append('tspan').text(' Subjective data')
 		}
 	}
 }
