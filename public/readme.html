@@ -363,15 +363,95 @@
 		}
 
     async function render() {
-    	const file = location.hash?.slice(1) || 'README.md'//; console.log(300, file)
-    	const param = `file=${file}` //console.log(222, file)
+    	const file = location.hash?.slice(1) || 'README.md'
+    	const param = `file=${file}`
     	if (!serverCache[file]) {
     		serverCache[file] = await fetch(`/readme?${param}`).then(r=>r.text()).catch(alert)
     	}
     	const content = serverCache[file]
-    	dom.readme.html(marked.parse(content))
+    	const parsedContent = marked.parse(content)
+    	const parsedContentWithHref = parseByAttr(parsedContent, 'href')
+    	const parsedContentWithImg = parseByAttr(parsedContentWithHref, 'src')
+    	dom.readme.html(parsedContentWithImg)
     	dom.topTabs.style('background-color', d => d === file ? settings.activeColor : '')
     	dom.activeHints.style('display', d => d === file ? '' : 'none')
+    }
+
+    // Example Input
+    // <p>
+    // 	<a href="./images/cards.png" title="Click to see the full image.">
+    // 		<img src="./images/cards.png" alt="Analysis Tools with Oncomatrix Card" />
+    // 	</a>
+    // </p>
+    //
+    // Output
+    // 	replace href='./...' with href='./${publicSubdir}/...', same with src='./...'
+    // 
+    function parseByAttr(parsedContent, attr='href') {
+    	const publicSubdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
+    	return parsedContent.replaceAll(`${attr}="./`, `${attr}="${publicSubdir}/`)
+    }
+
+    // example markdown input, assumes relative image paths
+    //
+    // !(imgPath)
+    // 
+    // example output
+    // <img src='imgPath' />
+    function parseImgSimple(parsedContent) {
+    	const publicSubdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
+    	let parsedContentWithImg = ''
+    	let j=-1, i = parsedContent.indexOf('!(')
+    	while(i !=-1) {
+    		parsedContentWithImg += parsedContent.slice(j+1,i)
+    		j = parsedContent.indexOf(')', i)
+    		const url = parsedContent.slice(i+2, j)
+    		parsedContentWithImg += `<img src='${publicSubdir}/${url}' />`
+    		i = parsedContent.indexOf('!(', j)
+    	}
+    	parsedContentWithImg += parsedContent.slice(j+1)
+    	return parsedContentWithImg
+    }
+
+    // example markdown input, assumes relative image paths
+    //
+    // [![Analysis Tools with Oncomatrix Card](./images/cards.png)](./images/cards.png "Click to see the full image.")
+    // 
+    // Output
+    // <p>
+    // 	<a href="./images/cards.png" title="Click to see the full image.">
+    // 		<img src="./images/cards.png" alt="Analysis Tools with Oncomatrix Card" />
+    // 	</a>
+    // </p>
+    function parseImgComplex(parsedContent) {
+    	const publicSubdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
+    	let parsedContentWithImg = ''
+    	let j=-1, i = parsedContent.indexOf('[![')
+    	while(i !=-1) {
+    		parsedContentWithImg += parsedContent.slice(j+1,i)
+
+    		j = parsedContent.indexOf('](')
+    		const alt = parsedContent.slice(i+3, j) //; console.log(alt, i, j)
+
+    		i = j
+    		j = parsedContent.indexOf(')](')
+    		const imgPath = parsedContent.slice(i+2, j) //; console.log(imgPath, i, j)
+
+    		i = j
+    		j = parsedContent.indexOf(' &quot;', )
+    		const hrefPath = parsedContent.slice(i+3, j) //; console.log(hrefPath, i, j)
+
+    		i = j
+    		j = parsedContent.indexOf('&quot;)')
+    		const title = parsedContent.slice(i+7, j) ; //console.log(title, i, j) //; break;
+
+    		parsedContentWithImg += `<a href='${publicSubdir}/${hrefPath}' title='${title}'><img src='${publicSubdir}/${imgPath}' alt='${alt}'/></a>`
+
+    		i = parsedContent.indexOf('[![', j)
+    		j += 6
+    	}
+    	parsedContentWithImg += parsedContent.slice(j+1)
+    	return parsedContentWithImg
     }
 
     window.onhashchange = render
