@@ -508,6 +508,7 @@ interface Termdb {
 type ChartConfigByType = {
 	[index: string]: ChartConfig
 }
+
 type ChartConfig = {
 	[key: string]: any
 }
@@ -537,11 +538,7 @@ interface BaseDtEntry {
 	no: { value: string[] }
 }
 
-interface SNVByOrigin {
-	[index: string]: BaseDtEntry
-}
-
-interface SNVByOrigin {
+type SNVByOrigin = {
 	[index: string]: BaseDtEntry
 }
 
