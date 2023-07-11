@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
+
 class profileBarchart {
 	constructor() {
 		this.type = 'profileBarchart'
@@ -189,12 +190,14 @@ class profileBarchart {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = { svgw: 1400, svgh: 1200 }
-		const config = copyMerge(defaults, opts)
+		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileBarchart
+		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileBarchart'
+		const config = copyMerge(structuredClone(defaults), opts)
 		for (const group of config.groups)
 			for (const row of group.rows) {
 				for (const t of row.twlst) {
 					if (t.id) await fillTermWrapper(t, app.vocabApi)
+					// allow empty cells, not all cells have a corresponding term
 				}
 			}
 		return config
