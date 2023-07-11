@@ -39,7 +39,6 @@ class profileBarchart {
 		this.dom.holder.selectAll('*').remove()
 		let data
 		const samples = []
-		let sample
 		for (const k in this.data.samples) {
 			if (this.data.samples[k].sampleName == this.sample) data = this.data.samples[k]
 			samples.push(this.data.samples[k].sampleName)
@@ -51,7 +50,7 @@ class profileBarchart {
 			.style('margin-left', '50px')
 			.style('margin-top', '20px')
 			.append('label')
-			.html('Component:')
+			.html('Site ID:')
 			.style('font-weight', 'bold')
 			.append('select')
 			.style('margin-left', '5px')
@@ -71,14 +70,15 @@ class profileBarchart {
 
 		let x = 500
 		let y = 75
-		let stepx = 300
+		let stepx = 400
 		let step = 30
+		const barwidth = 400
 
-		for (const c of config.columnNames) {
+		for (const [i, c] of config.columnNames.entries()) {
 			svg
 				.append('text')
-				.attr('transform', `translate(${x + 100}, ${50})`)
-				.attr('text-anchor', 'end')
+				.attr('transform', `translate(${stepx * (i + 1) + 10}, ${50})`)
+				.attr('text-anchor', 'start')
 				.style('font-weight', 'bold')
 				.text(`${c}%`)
 			x += stepx
@@ -86,8 +86,8 @@ class profileBarchart {
 		for (const group of config.groups) {
 			svg
 				.append('text')
-				.attr('transform', `translate(${400}, ${y + 20})`)
-				.attr('text-anchor', 'end')
+				.attr('transform', `translate(${50}, ${y + 20})`)
+				.attr('text-anchor', 'start')
 				.text(`${group.label}`)
 				.style('font-weight', 'bold')
 
@@ -107,7 +107,7 @@ class profileBarchart {
 			const value = data[tw.$id]?.value
 			const isFirst = i % 2 == 0
 			if (value) {
-				const width = (value / 100) * 100
+				const width = (value / 100) * barwidth
 				svg
 					.append('g')
 					.attr('transform', `translate(${x + 10}, ${y})`)
