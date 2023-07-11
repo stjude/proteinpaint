@@ -458,6 +458,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'genomeBrowser') {
 		} else if (p.chartType == 'geneExpression') {
 		} else if (p.chartType == 'Disco') {
+		} else if (p.chartType == 'profileBarchart') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
@@ -467,6 +468,7 @@ function validatePlot(p, vocabApi) {
 }
 
 function validateGenericPlot(p, vocabApi) {
+	console.log(p)
 	if (!p.term) throw 'plot error: plot.term{} not an object'
 	try {
 		validatePlotTerm(p.chartType == 'regression' ? p.outcome : p.term, vocabApi)
