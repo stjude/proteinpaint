@@ -70,14 +70,14 @@ class profileBarchart {
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		let x = 500
-		let y = 100
+		let y = 75
 		let stepx = 300
 		let step = 30
 
 		for (const c of config.columnNames) {
 			svg
 				.append('text')
-				.attr('transform', `translate(${x + 100}, ${75})`)
+				.attr('transform', `translate(${x + 100}, ${50})`)
 				.attr('text-anchor', 'end')
 				.style('font-weight', 'bold')
 				.text(`${c}%`)
