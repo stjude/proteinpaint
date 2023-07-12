@@ -25,12 +25,13 @@ class profileBarchart {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		const twLst = []
-		for (const group of this.state.config.groups)
-			for (const row of group.rows) {
-				for (const tw of row.twlst) {
-					if (tw.id) twLst.push(tw)
+		for (const component of this.state.config.plotByComponent)
+			for (const group of component.groups)
+				for (const row of group.rows) {
+					for (const tw of row.twlst) {
+						if (tw.id) twLst.push(tw)
+					}
 				}
-			}
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
@@ -39,24 +40,35 @@ class profileBarchart {
 
 	plot() {
 		const config = this.config
-		this.dom.holder.selectAll('*').remove()
+		const components = config.plotByComponent.map(comp => comp.component.name)
 		let data
+		this.dom.holder.selectAll('*').remove()
 		const samples = []
+
 		for (const k in this.data.samples) {
-			if (this.data.samples[k].sampleName == config.sampleName) data = this.data.samples[k]
+			if (!config.sampleName && k == 0) data = this.data.samples[k]
+			if (config.sampleName && this.data.samples[k].sampleName == config.sampleName) data = this.data.samples[k]
 			samples.push(this.data.samples[k].sampleName)
 		}
-		if (!data) throw 'no data returned for sample'
+
 		const holder = this.dom.holder.append('div')
-		const select = holder
-			.append('div')
-			.style('margin-left', '50px')
-			.style('margin-top', '20px')
-			.append('label')
-			.html('Site ID:')
-			.style('font-weight', 'bold')
-			.append('select')
-			.style('margin-left', '5px')
+		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
+		div.append('label').html('Component:').style('font-weight', 'bold')
+		const selectComp = div.append('select').style('margin-left', '5px')
+		selectComp
+			.selectAll('option')
+			.data(components)
+			.enter()
+			.append('option')
+			.property('selected', (d, i) => i == config.componentIndex)
+			.attr('value', (d, i) => i)
+			.html((d, i) => d)
+		selectComp.on('change', () => {
+			config.componentIndex = selectComp.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+		div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
+		const select = div.append('select').style('margin-left', '5px')
 		select
 			.selectAll('option')
 			.data(samples)
@@ -64,11 +76,13 @@ class profileBarchart {
 			.append('option')
 			.property('selected', d => d == config.sampleName)
 			.html((d, i) => d)
+
 		select.on('change', () => {
 			config.sampleName = select.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
-		const color = '#2381c3'
+
+		const color = this.config.plotByComponent[config.componentIndex || 0].component.color
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		const path = svg
@@ -102,7 +116,7 @@ class profileBarchart {
 			x += stepx
 		}
 		y = 75
-		for (const group of config.groups) {
+		for (const group of config.plotByComponent[0].groups) {
 			svg
 				.append('text')
 				.attr('transform', `translate(${50}, ${y + 20})`)
@@ -193,13 +207,14 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileBarchart
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileBarchart'
 		const config = copyMerge(structuredClone(defaults), opts)
-		for (const group of config.groups)
-			for (const row of group.rows) {
-				for (const t of row.twlst) {
-					if (t.id) await fillTermWrapper(t, app.vocabApi)
-					// allow empty cells, not all cells have a corresponding term
+		for (const component of config.plotByComponent)
+			for (const group of component.groups)
+				for (const row of group.rows) {
+					for (const t of row.twlst) {
+						if (t.id) await fillTermWrapper(t, app.vocabApi)
+						// allow empty cells, not all cells have a corresponding term
+					}
 				}
-			}
 		return config
 	} catch (e) {
 		throw `${e} [profileBarchart getPlotConfig()]`
