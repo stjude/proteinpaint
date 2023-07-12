@@ -26,10 +26,14 @@ class profileBarchart {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		const twLst = []
 		this.component = this.config.plotByComponent[this.config.componentIndex || 0]
+		this.component.hasSubjectiveData = false
 		for (const group of this.component.groups)
 			for (const row of group.rows) {
-				for (const tw of row.twlst) {
-					if (tw.id) twLst.push(tw)
+				for (const [i, tw] of row.twlst.entries()) {
+					if (tw.id) {
+						twLst.push(tw)
+						if (i == 1) this.component.hasSubjectiveData = true
+					}
 				}
 			}
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
@@ -86,7 +90,7 @@ class profileBarchart {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 		const color = this.component.component.color
-		const compPath = svg
+		svg
 			.append('defs')
 			.append('pattern')
 			.attr('id', 'diagonalHatch')
@@ -103,7 +107,9 @@ class profileBarchart {
 		let stepx = 500
 		let step = 30
 		const barwidth = 400
+		const hasSubjectiveData = this.component.hasSubjectiveData
 		for (const [i, c] of config.columnNames.entries()) {
+			if (i == 1 && !hasSubjectiveData) break
 			x = i % 2 == 0 ? 400 : 900
 			x += 10
 			y = 50
@@ -136,7 +142,7 @@ class profileBarchart {
 				y += step
 			}
 		}
-
+		if (!hasSubjectiveData) return
 		y += 40
 		x = 50
 		drawLegendRect(x, y, 'and', color)
@@ -150,8 +156,9 @@ class profileBarchart {
 			const value = data[tw.$id]?.value
 			const isFirst = i % 2 == 0
 			const pairValue = isFirst ? data[row.twlst[1]?.$id]?.value : data[row.twlst[0]?.$id]?.value
+			const width = value ? (value / 100) * barwidth : 0
+
 			if (value) {
-				const width = (value / 100) * barwidth
 				const rect = svg
 					.append('g')
 					.attr('transform', `translate(${x + 10}, ${y})`)
@@ -160,7 +167,7 @@ class profileBarchart {
 					.attr('y', 0)
 					.attr('width', width)
 					.attr('height', 20)
-				if (pairValue) rect.attr('fill', termColor)
+				if (pairValue || !hasSubjectiveData) rect.attr('fill', termColor)
 				else {
 					const id = tw.term.name.replace(/[^a-zA-Z0-9]/g, '')
 					svg
@@ -176,12 +183,14 @@ class profileBarchart {
 						.attr('stroke', termColor)
 					rect.attr('fill', `url(#${id})`)
 				}
-				svg
-					.append('text')
-					.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
-					.attr('text-anchor', 'end')
-					.text(`${value}%`)
 			}
+			const text = svg
+				.append('text')
+				.attr('text-anchor', 'end')
+				.text(`${value || 0}%`)
+			if (width > 0) text.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
+			else if (!pairValue && !hasSubjectiveData && i == 0) text.attr('transform', `translate(${x + 35}, ${y + 15})`)
+
 			if (isFirst)
 				svg
 					.append('text')
