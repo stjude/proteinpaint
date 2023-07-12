@@ -4,6 +4,7 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import {
 	PillData,
 	TermWrapper,
+	TSInstanceWithDynamicQ,
 	TWDynamicQ,
 	Term,
 	Q,
@@ -39,7 +40,7 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 //Types
 type Cat2SampleCntEntry = { key: string; count: number }
 
-type CategoricalInstance = TermSettingInstance & {
+type CategoricalInstance = TSInstanceWithDynamicQ & {
 	category2samplecount: Cat2SampleCntEntry[]
 	error: string
 	//Methods
