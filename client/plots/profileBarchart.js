@@ -110,6 +110,7 @@ class profileBarchart {
 		const hasSubjectiveData = this.component.hasSubjectiveData
 		for (const [i, c] of config.columnNames.entries()) {
 			if (i == 1 && !hasSubjectiveData) break
+
 			x = i % 2 == 0 ? 400 : 900
 			x += 10
 			y = 50
@@ -142,7 +143,12 @@ class profileBarchart {
 				y += step
 			}
 		}
+
+		drawLine(410, 120, 50, y)
+		drawLine(410, 120, 75, y)
 		if (!hasSubjectiveData) return
+		drawLine(910, 120, 50, y)
+		drawLine(910, 120, 75, y)
 		y += 40
 		x = 50
 		drawLegendRect(x, y, 'and', color)
@@ -226,6 +232,18 @@ class profileBarchart {
 				.text('Objective ')
 			text.append('tspan').attr('font-weight', 'bold').text(operator)
 			text.append('tspan').text(' Subjective data')
+		}
+
+		function drawLine(x, y, percent, y2) {
+			svg
+				.append('line')
+				.style('stroke', '#aaa')
+				.style('stroke-width', 1)
+				.style('stroke-dasharray', '5, 5') // <== This line here!!
+				.attr('x1', x + (percent / 100) * barwidth)
+				.attr('y1', y)
+				.attr('x2', x + (percent / 100) * barwidth)
+				.attr('y2', y2)
 		}
 	}
 }
