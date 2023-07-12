@@ -1,11 +1,9 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
-import { scaleLinear as d3Linear } from 'd3-scale'
-import { axisTop } from 'd3-axis'
 
-class profileBarchart {
+class profilePolar {
 	constructor() {
-		this.type = 'profileBarchart'
+		this.type = 'profilePolar'
 	}
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
@@ -42,13 +40,47 @@ class profileBarchart {
 		this.plot()
 	}
 
-	plot() {}
+	plot() {
+		const config = this.config
+		const components = config.plotByComponent.map(comp => comp.component.name)
+		let data
+		this.dom.holder.selectAll('*').remove()
+		const samples = []
+
+		for (const k in this.data.samples) {
+			if (!config.sampleName && k == 0) data = this.data.samples[k]
+			if (config.sampleName && this.data.samples[k].sampleName == config.sampleName) data = this.data.samples[k]
+			samples.push(this.data.samples[k].sampleName)
+		}
+
+		const holder = this.dom.holder.append('div')
+
+		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
+
+		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
+
+		if (samples.length == 0) return
+		div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
+		const select = div.append('select').style('margin-left', '5px')
+		select
+			.selectAll('option')
+			.data(samples)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.sampleName)
+			.html((d, i) => d)
+
+		select.on('change', () => {
+			config.sampleName = select.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+	}
 }
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileBarchart
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileBarchart'
+		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
+		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
 		for (const component of config.plotByComponent)
 			for (const group of component.groups)
@@ -60,10 +92,10 @@ export async function getPlotConfig(opts, app) {
 				}
 		return config
 	} catch (e) {
-		throw `${e} [profileBarchart getPlotConfig()]`
+		throw `${e} [profilePolar getPlotConfig()]`
 	}
 }
 
-export const profileBarchartInit = getCompInit(profileBarchart)
+export const profilePolarInit = getCompInit(profilePolar)
 // this alias will allow abstracted dynamic imports
-export const componentInit = profileBarchartInit
+export const componentInit = profilePolarInit
