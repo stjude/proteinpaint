@@ -5,7 +5,6 @@ import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
-import { plotSingleSampleGenomeQuantification } from '../mds3/sampletable'
 import { newSandboxDiv } from '#dom/sandbox'
 
 export function setInteractivity(self) {
@@ -137,10 +136,12 @@ export function setInteractivity(self) {
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
 						.text(k)
-						.on('click', event => {
+						.on('click', async event => {
 							const sandbox = newSandboxDiv(self.opts.plotDiv)
 							sandbox.header.text(sample.sample_id)
-							plotSingleSampleGenomeQuantification(
+							await (
+								await import('./plot.ssgq.js')
+							).plotSingleSampleGenomeQuantification(
 								self.state.termdbConfig,
 								self.state.vocab.dslabel,
 								k,
