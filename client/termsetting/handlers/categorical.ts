@@ -3,16 +3,14 @@ import { setGroupsettingMethods } from './groupsetting'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import {
 	PillData,
-	TermWrapper,
-	TSInstanceWithDynamicQ,
-	TWDynamicQ,
 	Term,
-	Q,
+	CategoricalConditionQ,
 	TermValues,
 	GroupSetting,
 	BaseGroupSet,
 	GroupEntry,
-	TermSettingInstance
+	TermSettingInstance,
+	CategoricalTW
 } from '#shared/types'
 
 /*
@@ -40,9 +38,10 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 //Types
 type Cat2SampleCntEntry = { key: string; count: number }
 
-type CategoricalInstance = TSInstanceWithDynamicQ & {
+type CategoricalInstance = TermSettingInstance & {
 	category2samplecount: Cat2SampleCntEntry[]
 	error: string
+	q: Partial<CategoricalConditionQ>
 	//Methods
 	getQlst: () => void
 	grpSet2valGrp: (f: any) => void
@@ -66,7 +65,7 @@ export function getHandler(self: CategoricalInstance) {
 
 		validateQ(data: PillData) {
 			const t = data.term as Term
-			const q = data.q as Q
+			const q = data.q as CategoricalConditionQ
 			const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
 			// validate the configuration
 			if (q.type == 'values') {
@@ -370,7 +369,7 @@ export function setCategoryConditionMethods(self: CategoricalInstance) {
 				for (const v of g.values) {
 					if (!vals_with_grp[v.key]) {
 						// **note!** gdc terms lack term.values{}, must fill in on the fly
-						vals_with_grp[v.key] = { key: v.key, label: v.key }
+						vals_with_grp[v.key] = { key: v.key as string, label: v.key }
 					}
 
 					vals_with_grp[v.key].group = i + 1
@@ -386,7 +385,7 @@ export function setCategoryConditionMethods(self: CategoricalInstance) {
 	}
 }
 
-export function fillTW(tw: TWDynamicQ) {
+export function fillTW(tw: CategoricalTW) {
 	set_hiddenvalues(tw.q, tw.term)
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
