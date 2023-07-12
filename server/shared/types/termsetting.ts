@@ -204,6 +204,10 @@ export type TermSettingInstance = {
 	usecase?: UseCase
 	vocabApi: VocabApi
 	//Methods
+	/*
+	TODOs: 
+		- Move specifc methods to their own intersection instance type within in termsetting/handler/*.ts, out of main type
+	*/
 	cancelGroupsetting?: () => void
 	enterPill?: () => void
 	exitPill?: () => void
@@ -219,4 +223,8 @@ export type TermSettingInstance = {
 	tabCallback?: (event: any, tab: any) => void
 	updatePill?: () => void
 	updateUI: () => void
+}
+
+export type TSInstanceWithDynamicQ = TermSettingInstance & {
+	q: DetermineQ<TermSettingInstance['term']['type']>
 }
