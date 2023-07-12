@@ -1,7 +1,7 @@
 import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '../dom/control.icons'
-import { plotSingleSampleGenomeQuantification, plotDisco } from '../mds3/sampletable'
+import { plotSingleSampleGenomeQuantification } from '../mds3/sampletable'
 import { newSandboxDiv } from '#dom/sandbox'
 
 let inputIndex = 0
@@ -130,10 +130,11 @@ export function setInteractivity(self) {
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Disco plot')
-				.on('click', event => {
+				.on('click', async event => {
 					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-					sandbox.header.text(sample.sample_id)
-					plotDisco(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
+					sandbox.header
+						.text(sample.sample_id)(await import('./plot.disco.js'))
+						.default(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
 				})
 		}
 	}
