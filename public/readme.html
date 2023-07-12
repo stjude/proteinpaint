@@ -237,10 +237,20 @@
 		async function init() {
 			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert)
 			data.readmes.sort((a,b)=>{
-				if (a.startsWith('..') && b.startsWith('..')) return 0
-				if (a.startsWith('..')) return 1
-				if (b.startsWith('..')) return -1
-				return a == b ? 0 : a < b ? -1 : 1
+				const aPath = a.split('/').slice(0,-1).join("/")
+				const bPath = b.split('/').slice(0,-1).join("/")
+				if (aPath != bPath) {
+					if (a.startsWith('..') && b.startsWith('..')) return aPath < bPath ? -1 : 1
+					if (a.startsWith('..')) return 1
+					if (b.startsWith('..')) return -1
+					return aPath < bPath ? -1 : 1
+				}
+				const A = a.toUpperCase().includes('README')
+				const B = b.toUpperCase().includes('README')
+				if (A && B) return a < b ? -1 : 1
+				if (A) return -1
+				if (B) return 1
+				return a < b ? -1 : 1
 			})
 
 			dom.topTabs = d3.select('#topnav')
@@ -301,71 +311,69 @@
 		}
 
 		function renderNavBtns(dir) {
-			const div = d3.select(this).style('margin-left', '10px')
+			const div = d3.select(this)
 			const readmeIndex = dir.files.findIndex(f => f.toUpperCase().startsWith('README'))
 			const files = dir.files.filter(f => !dir.path || !f.toUpperCase().startsWith('README'))
-			if (files.length)
-			div
-				.append('div')
-				.selectAll(':scope>div')
-				.data(files)
-				.enter()
-				.append('div')
-				.style('margin-left', dir.path && '10px')
-				.style('white-space', 'nowrap')
-				.each(function(file) {
-					const filepath = dir.path ? `${dir.path}/${file}` : file
-					const div = d3.select(this)
-					div.append('a')
-						.attr('href', `#${filepath}`)
-						.html(file)
-
-					div.append('span')
-						.datum(filepath)
-						.attr('class', 'activehint')
-						.style('display', 'none')
-						.style('color', settings.activeColor)
-						.html(settings.hintChar)
-				})
-				//.append('a')
-				//.style('display', 'inline-block')
-				/*.style('margin', '3px 5px')
-				.style('padding', '5px')
-				.style('background-color', '#ccc')
-				.style('font-size', '16px')
-				.style('font-family', 'Consolas, Arial, sans-serif')*/
-				//.html(d => !d.includes('/') ? d : d.split('/').pop()) //d.replace('/README.md', '').replace('/README.txt', '').replace('/README', ''))
-				//.on('click', setHash)
-
-			div.append('div')
-				.selectAll(':scope>div')
-				.data(Object.keys(dir.subdirs))
-				.enter()
-				.append('div')
-				.style('white-space', 'nowrap')
-				.each(function(subname) {
-					const d = dir.subdirs[subname]
-					const subdiv = d3.select(this)
-					const ownReadme = d.files.find(f => f.toUpperCase().startsWith('README'))
-					const ownLink = subdiv.append('div')
-					if (ownReadme) {
-						const filepath = d.path ? `${d.path}/${ownReadme}` : ownReadme
-						ownLink.append('a')
+			if (files.length) {
+				div
+					.append('div')
+					.selectAll(':scope>div')
+					.data(files)
+					.enter()
+					.append('div')
+					.style('margin-left', dir.path && '10px')
+					.style('white-space', 'nowrap')
+					.each(function(file) {
+						const filepath = dir.path ? `${dir.path}/${file}` : file
+						const div = d3.select(this)
+						div.append('a')
 							.attr('href', `#${filepath}`)
-							.html(subname)
+							.html(file)
 
-						ownLink.append('span')
+						div.append('span')
 							.datum(filepath)
 							.attr('class', 'activehint')
 							.style('display', 'none')
 							.style('color', settings.activeColor)
 							.html(settings.hintChar)
-					} else {
-						ownLink.html(subname)
-					}
+					})
+			}
 
-					renderNavBtns.bind(this)(d)
-				})
+			const subdirs = Object.keys(dir.subdirs)
+
+			if (subdirs.length) {
+				div //.append('div')
+					.selectAll(':scope>.subdir')
+					.data(subdirs)
+					.enter()
+					.append('div')
+					.attr('class', 'subdir')
+					.style('white-space', 'nowrap')
+					.style('margin-left', dir.path && '10px')
+					.each(function(subname) {
+						const d = dir.subdirs[subname]
+						const subdiv = d3.select(this)
+						const ownReadme = d.files.find(f => f.toUpperCase().startsWith('README'))
+						const ownLink = subdiv.append('div')
+						if (ownReadme) {
+							const filepath = d.path ? `${d.path}/${ownReadme}` : ownReadme
+							ownLink.append('a')
+								.attr('href', `#${filepath}`)
+								.html(subname)
+
+							ownLink.append('span')
+								.datum(filepath)
+								.attr('class', 'activehint')
+								.style('display', 'none')
+								.style('color', settings.activeColor)
+								.html(settings.hintChar)
+						} else {
+							ownLink.html(subname)
+						}
+
+						renderNavBtns.bind(this)(d)
+					})
+			}
 		}
 
 		function setHash(d) {
@@ -401,68 +409,6 @@
     function parseByAttr(parsedContent, attr='href') {
     	const publicSubdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
     	return parsedContent.replaceAll(`${attr}="./`, `${attr}="${publicSubdir}/`)
-    }
-
-    // example markdown input, assumes relative image paths
-    //
-    // !(imgPath)
-    // 
-    // example output
-    // <img src='imgPath' />
-    function parseImgSimple(parsedContent) {
-    	const publicSubdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
-    	let parsedContentWithImg = ''
-    	let j=-1, i = parsedContent.indexOf('!(')
-    	while(i !=-1) {
-    		parsedContentWithImg += parsedContent.slice(j+1,i)
-    		j = parsedContent.indexOf(')', i)
-    		const url = parsedContent.slice(i+2, j)
-    		parsedContentWithImg += `<img src='${publicSubdir}/${url}' />`
-    		i = parsedContent.indexOf('!(', j)
-    	}
-    	parsedContentWithImg += parsedContent.slice(j+1)
-    	return parsedContentWithImg
-    }
-
-    // example markdown input, assumes relative image paths
-    //
-    // [![Analysis Tools with Oncomatrix Card](./images/cards.png)](./images/cards.png "Click to see the full image.")
-    // 
-    // Output
-    // <p>
-    // 	<a href="./images/cards.png" title="Click to see the full image.">
-    // 		<img src="./images/cards.png" alt="Analysis Tools with Oncomatrix Card" />
-    // 	</a>
-    // </p>
-    function parseImgComplex(parsedContent) {
-    	const publicSubdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
-    	let parsedContentWithImg = ''
-    	let j=-1, i = parsedContent.indexOf('[![')
-    	while(i !=-1) {
-    		parsedContentWithImg += parsedContent.slice(j+1,i)
-
-    		j = parsedContent.indexOf('](')
-    		const alt = parsedContent.slice(i+3, j) //; console.log(alt, i, j)
-
-    		i = j
-    		j = parsedContent.indexOf(')](')
-    		const imgPath = parsedContent.slice(i+2, j) //; console.log(imgPath, i, j)
-
-    		i = j
-    		j = parsedContent.indexOf(' &quot;', )
-    		const hrefPath = parsedContent.slice(i+3, j) //; console.log(hrefPath, i, j)
-
-    		i = j
-    		j = parsedContent.indexOf('&quot;)')
-    		const title = parsedContent.slice(i+7, j) ; //console.log(title, i, j) //; break;
-
-    		parsedContentWithImg += `<a href='${publicSubdir}/${hrefPath}' title='${title}'><img src='${publicSubdir}/${imgPath}' alt='${alt}'/></a>`
-
-    		i = parsedContent.indexOf('[![', j)
-    		j += 6
-    	}
-    	parsedContentWithImg += parsedContent.slice(j+1)
-    	return parsedContentWithImg
     }
 
     window.onhashchange = render
