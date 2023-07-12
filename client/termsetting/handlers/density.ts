@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { makeDensityPlot } from '#filter/densityplot'
-import { BrushEntry, NumberObj } from '#shared/types'
+import { BrushEntry, NumberObj, NumericTermSettingInstance } from '#shared/types'
 import { BaseType } from 'd3-selection'
 /*
 ********************** IMPORTED
@@ -15,7 +15,7 @@ import { BaseType } from 'd3-selection'
 
 */
 
-export async function setDensityPlot(self: any) {
+export async function setDensityPlot(self: NumericTermSettingInstance) {
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
 		handleNoDensity(self)
 		self.num_obj.brushes.forEach((brush: BrushEntry) => {
@@ -30,7 +30,7 @@ export async function setDensityPlot(self: any) {
 			svg: self.num_obj.svg,
 			data: self.num_obj.density_data,
 			term: self.term,
-			plot_size: self.num_obj.plot_size,
+			plot_size: self.num_obj.plot_size
 		}
 		makeDensityPlot(density_plot_opts)
 
@@ -106,13 +106,13 @@ function handleNoDensity(self: any) {
 				startunbounded: true,
 				stop: mean_value,
 				stopinclusive: true,
-				name: 'First bin',
+				name: 'First bin'
 			}
 			const last_bin = {
 				start: mean_value,
 				stopunbounded: true,
 				startinclusive: false,
-				name: 'Last bin',
+				name: 'Last bin'
 			}
 			custom_bins.push(first_bin)
 			custom_bins.push(last_bin)

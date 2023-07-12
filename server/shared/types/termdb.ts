@@ -1,5 +1,6 @@
 import { Tvs, Filter } from './filter'
 import { CategoricalConditionQ } from './categorical'
+import { NumericQ } from './numeric'
 
 /*
 --------EXPORTED--------
@@ -82,27 +83,27 @@ export type BaseQ = {
 	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 }
 
-export type NumericQ = BaseQ & {
-	termType: 'numeric' | 'float' | 'integer'
-	preferredBins?: string
-	termtype?: string
-	//regular-sized bins
-	bin_size?: number
-	startinclusive?: boolean
-	stopinclusive?: boolean
-	first_bin?: {
-		startunbounded: boolean
-		stop: number
-	}
-	last_bin?: {
-		start: number
-		stopunbounded: boolean
-	}
-	modeBinaryCutoffType?: 'normal' | 'percentile'
-	modeBinaryCutoffPercentile?: number
-	//binary
-	scale?: number //0.1 | 0.01 | 0.001
-}
+// export type NumericQ = BaseQ & {
+// 	termType: 'numeric' | 'float' | 'integer'
+// 	preferredBins?: string
+// 	termtype?: string
+// 	//regular-sized bins
+// 	bin_size?: number
+// 	startinclusive?: boolean
+// 	stopinclusive?: boolean
+// 	first_bin?: {
+// 		startunbounded: boolean
+// 		stop: number
+// 	}
+// 	last_bin?: {
+// 		start: number
+// 		stopunbounded: boolean
+// 	}
+// 	modeBinaryCutoffType?: 'normal' | 'percentile'
+// 	modeBinaryCutoffPercentile?: number
+// 	//binary
+// 	scale?: number //0.1 | 0.01 | 0.001
+// }
 
 // export type CategoricalConditionQ = BaseQ & {
 // 	termType: 'categorical' | 'conditional'
