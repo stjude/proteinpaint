@@ -1,4 +1,5 @@
 import { Tvs, Filter } from './filter'
+import { CategoricalConditionQ } from './categorical'
 
 /*
 --------EXPORTED--------
@@ -45,11 +46,11 @@ export type GroupEntry = {
 	filter?: Filter
 }
 
-export interface BaseGroupSet {
+export type BaseGroupSet = {
 	groups: GroupEntry[]
 }
 
-export interface GroupSetEntry extends BaseGroupSet {
+export type GroupSetEntry = BaseGroupSet & {
 	name?: string
 	is_grade?: boolean
 	is_subcondition?: boolean
@@ -69,7 +70,7 @@ type RestrictAncestry = {
 	tvs: Tvs
 }
 
-type BaseQ = {
+export type BaseQ = {
 	groups?: any // Not documented but appears in condition and samplelst?? same as groupsetting?
 	groupsetting?: GroupSetting
 	hiddenValues?: HiddenValues
@@ -103,19 +104,19 @@ export type NumericQ = BaseQ & {
 	scale?: number //0.1 | 0.01 | 0.001
 }
 
-export type CategoricalConditionQ = BaseQ & {
-	termType: 'categorical' | 'conditional'
-	bar_by_children?: boolean
-	bar_by_grade?: boolean
-	breaks?: number[]
-	computableValuesOnly?: boolean
-	showTimeScale?: boolean
-	timeScale?: string
-	value_by_max_grade?: boolean
-	value_by_most_recent?: boolean
-	value_by_computable_grade?: boolean
-	//variant_filter???????? No documentation
-}
+// export type CategoricalConditionQ = BaseQ & {
+// 	termType: 'categorical' | 'conditional'
+// 	bar_by_children?: boolean
+// 	bar_by_grade?: boolean
+// 	breaks?: number[]
+// 	computableValuesOnly?: boolean
+// 	showTimeScale?: boolean
+// 	timeScale?: string
+// 	value_by_max_grade?: boolean
+// 	value_by_most_recent?: boolean
+// 	value_by_computable_grade?: boolean
+// 	//variant_filter???????? No documentation
+// }
 
 type RegressionQ = BaseQ & {
 	termType: 'regression'
@@ -158,7 +159,7 @@ export type Q = BaseQ | CategoricalConditionQ | NumericQ | RegressionQ | GeneVar
 export type TermValues = {
 	[index: string | number]: {
 		uncomputable?: boolean
-		label?: string
+		label?: string | number
 		order?: string
 		color?: string
 		//'samplelst' values
@@ -166,6 +167,7 @@ export type TermValues = {
 		inuse?: boolean
 		list?: { sampleId: string; sample: string }[]
 		filter?: Filter
+		group?: number
 	}
 }
 
@@ -202,7 +204,10 @@ type SnpsEntry = {
 }
 
 type Subconditions = {
-	[index: string]: { label: string }
+	[index: string | number]: {
+		label: string
+		group?: number //see handlers/categorical.ts
+	}
 }
 
 export type Term = {
@@ -216,7 +221,7 @@ export type Term = {
 		| 'samplelst'
 		| 'geneVariant'
 		| 'snplocus'
-		| 'snplist'
+		| 'snplst'
 	bins?: NumericalBins
 	child_types?: string[]
 	densityNotAvailable?: boolean //Not used?
@@ -254,6 +259,49 @@ export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer'
 	: T extends 'snplocus'
 	? SnpLocusQ
 	: Q
+
+// export function matchTermType(term: Term): Q | undefined {
+// 	switch (term.type) {
+// 	  case 'categorical':
+// 		return {
+// 		  termType: 'categorical',
+// 		} as CategoricalConditionQ;
+// 	  case 'integer':
+// 		return {
+// 		  termType: 'integer',
+// 		} as NumericQ;
+// 	  case 'float':
+// 		return {
+// 		  termType: 'float',
+// 		} as NumericQ;
+// 	  case 'condition':
+// 		return {
+// 		  termType: 'conditional',
+// 		} as CategoricalConditionQ;
+// 	  case 'survival':
+// 		return {
+// 		  termType: 'survival',
+// 		} as BaseQ;
+// 	  case 'samplelst':
+// 		return {
+// 		  termType: 'samplelst',
+// 		} as BaseQ;
+// 	  case 'geneVariant':
+// 		return {
+// 		  termType: 'geneVariant',
+// 		} as GeneVariantQ;
+// 	  case 'snplocus':
+// 		return {
+// 		  termType: 'snplocus',
+// 		} as SnpLocusQ;
+// 	  case 'snplst':
+// 		return {
+// 		  termType: 'snplst',
+// 		} as SnpLstQ;
+// 	  default:
+// 		return undefined;
+// 	}
+//   }
 
 export type TermWrapper = {
 	//Term wrapper aka. term:{term:{...}, q:{...}...}
