@@ -85,10 +85,8 @@ class profileBarchart {
 			config.sampleName = select.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
-
 		const color = this.component.component.color
-
-		const path = svg
+		const compPath = svg
 			.append('defs')
 			.append('pattern')
 			.attr('id', 'diagonalHatch')
@@ -96,9 +94,9 @@ class profileBarchart {
 			.attr('width', 4)
 			.attr('height', 4)
 			.append('path')
-			.attr('stroke', color)
 			.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
 			.attr('stroke-width', 1)
+			.attr('stroke', color)
 
 		let x
 		let y
@@ -132,7 +130,7 @@ class profileBarchart {
 			for (const row of group.rows) {
 				x = 400
 				for (const [i, tw] of row.twlst.entries()) {
-					drawRect(x, y, color, row, i)
+					drawRect(x, y, row, i)
 					x += stepx
 				}
 				y += step
@@ -141,12 +139,13 @@ class profileBarchart {
 
 		y += 40
 		x = 50
-		drawLegendRect(x, y, 'and')
+		drawLegendRect(x, y, 'and', color)
 		x += 300
-		drawLegendRect(x, y, 'or')
+		drawLegendRect(x, y, 'or', color)
 
-		function drawRect(x, y, color, row, i) {
+		function drawRect(x, y, row, i) {
 			const tw = row.twlst[i]
+			const termColor = tw?.term?.color
 
 			const value = data[tw.$id]?.value
 			const isFirst = i % 2 == 0
@@ -161,8 +160,22 @@ class profileBarchart {
 					.attr('y', 0)
 					.attr('width', width)
 					.attr('height', 20)
-				if (pairValue) rect.attr('fill', color)
-				else rect.attr('fill', 'url(#diagonalHatch)')
+				if (pairValue) rect.attr('fill', termColor)
+				else {
+					const id = tw.term.name.replace(/[^a-zA-Z0-9]/g, '')
+					svg
+						.append('defs')
+						.append('pattern')
+						.attr('id', id)
+						.attr('patternUnits', 'userSpaceOnUse')
+						.attr('width', 4)
+						.attr('height', 4)
+						.append('path')
+						.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
+						.attr('stroke-width', 1)
+						.attr('stroke', termColor)
+					rect.attr('fill', `url(#${id})`)
+				}
 				svg
 					.append('text')
 					.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
@@ -183,7 +196,7 @@ class profileBarchart {
 			svg.append('g').attr('transform', `translate(${x}, ${y})`).call(axisTop(xAxisScale))
 		}
 
-		function drawLegendRect(x, y, operator) {
+		function drawLegendRect(x, y, operator, color) {
 			const rect = svg
 				.append('g')
 				.attr('transform', `translate(${x}, ${y})`)
@@ -193,7 +206,9 @@ class profileBarchart {
 				.attr('width', 20)
 				.attr('height', 20)
 			if (operator == 'and') rect.attr('fill', color)
-			else rect.attr('fill', 'url(#diagonalHatch)')
+			else {
+				rect.attr('fill', 'url(#diagonalHatch)')
+			}
 
 			const text = svg
 				.append('text')
