@@ -874,7 +874,7 @@ function setTermActions(self) {
 		if (!activeOption) {
 			throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
 		}
-		const matchingSortSamples = activeOption.sortPriority.find(o => o.types.includes(t.tw.term.type))?.tiebreakers[0]
+		const matchingSortSamples = activeOption.sortPriority?.find(o => o.types.includes(t.tw.term.type))?.tiebreakers[0]
 		const sortSamples = matchingSortSamples
 			? {} // will let matrix.sort fill-in based on the first matching tiebreaker
 			: t.tw.term.type == 'geneVariant'
