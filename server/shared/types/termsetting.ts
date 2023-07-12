@@ -195,7 +195,6 @@ export type TermSettingInstance = {
 	handlerByType?: { [index: string]: Handler }
 	hasError?: boolean
 	noTermPromptOptions?: NoTermPromptOptsEntry[]
-	numqByTermIdModeType?: any
 	opts: TermSettingOpts
 	placeholder: string | undefined
 	q: Q
@@ -212,8 +211,7 @@ export type TermSettingInstance = {
 	exitPill?: () => void
 	initUI: () => void
 	removeTerm?: () => void
-	renderBinLines?: (self: any, q: Q) => void
-	runCallback?: (f?: any) => any
+	runCallback: (f?: any) => any
 	setHandler?: (f: string) => any
 	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
 	showMenu: (event: MouseEvent, clickedElem: string | null, menuHolder: any) => void

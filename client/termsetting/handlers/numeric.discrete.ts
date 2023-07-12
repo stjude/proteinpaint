@@ -7,7 +7,7 @@ import { Tabs } from '#dom/toggleButtons'
 import { make_radios } from '#dom/radiobutton'
 import { getPillNameDefault } from '#termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
-import { TermSettingInstance, PillData, RangeEntry } from '#shared/types'
+import { NumericTermSettingInstance, PillData, RangeEntry, NumericQ, DensityData } from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -41,7 +41,7 @@ renderBoundaryInputDivs() //custom bin name inputs
 */
 
 // self is the termsetting instance
-export function getHandler(self: TermSettingInstance) {
+export function getHandler(self: NumericTermSettingInstance) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -57,29 +57,29 @@ export function getHandler(self: TermSettingInstance) {
 
 		async showEditMenu(div: any) {
 			showBinsMenu(self, div)
-		},
+		}
 	}
 }
 
-async function showBinsMenu(self: TermSettingInstance, div: any) {
+async function showBinsMenu(self: NumericTermSettingInstance, div: any) {
 	self.num_obj = {}
 
 	self.num_obj.plot_size = {
 		width: 500,
 		height: 100,
 		xpad: 10,
-		ypad: 20,
+		ypad: 20
 	}
 	try {
 		if (!self.vocabApi) throw `Missing .vocabApi{} [numeric.discrete showBinsMenu()]`
 		const d = await self.vocabApi.getViolinPlotData({
-			termid: self.term!.id,
+			termid: self.term.id,
 			filter: self.filter,
 			svgw: self.num_obj.plot_size.width,
 			orientation: 'horizontal',
 			datasymbol: 'bean',
 			radius: 5,
-			strokeWidth: 0.2,
+			strokeWidth: 0.2
 		})
 		self.num_obj.density_data = convertViolinData(d)
 	} catch (err) {
@@ -96,8 +96,9 @@ async function showBinsMenu(self: TermSettingInstance, div: any) {
 	renderButtons(self)
 }
 
-function applyEdits(self: any) {
+function applyEdits(self: NumericTermSettingInstance) {
 	if (self.q.type == 'regular-bin') {
+		if (!self.q.first_bin) self.q.first_bin = {}
 		self.q.first_bin.startunbounded = true
 		self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
 		self.q.startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
@@ -118,10 +119,12 @@ function applyEdits(self: any) {
 			self.q.last_bin.start = +self.dom.last_start_input.property('value')
 			self.q.last_bin.stopunbounded = true
 		}
+		if (!self.term.id) throw `Missing tw.id [numeric.binary applyEdits()]`
 		self.numqByTermIdModeType[self.term.id].discrete['regular-bin'] = JSON.parse(JSON.stringify(self.q))
 	} else {
 		if (self.dom.bins_table.selectAll('input').node().value) {
 			self.q.lst = processCustomBinInputs(self)
+			if (!self.term.id) throw `Missing tw.id [numeric.binary applyEdits()]`
 			self.numqByTermIdModeType[self.term.id].discrete['custom-bin'] = JSON.parse(JSON.stringify(self.q))
 		}
 	}
@@ -130,7 +133,7 @@ function applyEdits(self: any) {
 	self.runCallback()
 }
 
-function processCustomBinInputs(self: any) {
+function processCustomBinInputs(self: NumericTermSettingInstance) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputs = self.dom.bins_table.node().querySelectorAll('input')
@@ -150,7 +153,7 @@ function processCustomBinInputs(self: any) {
 			const bin = {
 				start: +d,
 				startinclusive,
-				stopinclusive,
+				stopinclusive
 			}
 			if (prevBin) {
 				delete prevBin.stopunbounded
@@ -173,21 +176,22 @@ function processCustomBinInputs(self: any) {
 		stop: data[0].start,
 		startinclusive,
 		stopinclusive,
-		label: inputs[0].value,
+		label: inputs[0].value
 	})
 	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
 	if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
 	return data
 }
 
-function setqDefaults(self: any) {
-	const dd = self.num_obj.density_data
+function setqDefaults(self: NumericTermSettingInstance) {
+	const dd = self.num_obj.density_data as DensityData
 
 	const cache = self.numqByTermIdModeType
 	const t = self.term
-	if (!cache[t.id!]) cache[t.id!] = {}
+	if (!t.id) throw `Missing term.id [numeric.discrete setqDefaults()]`
+	if (!cache[t.id]) cache[t.id] = {}
 
-	if (!cache[t.id!].discrete) {
+	if (!cache[t.id].discrete) {
 		// when cache{}.discrete{} is missing, initiate it
 
 		const defaultCustomBoundary =
@@ -221,16 +225,16 @@ function setqDefaults(self: any) {
 									startunbounded: true,
 									startinclusive: true,
 									stopinclusive: false,
-									stop: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2),
+									stop: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 								},
 								{
 									stopunbounded: true,
 									startinclusive: true,
 									stopinclusive: false,
-									start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2),
-								},
-							],
-					  },
+									start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
+								}
+							]
+					  }
 		}
 		if (!cache[t.id].discrete['regular-bin'].type) {
 			cache[t.id].discrete['regular-bin'].type = 'regular-bin'
@@ -243,13 +247,13 @@ function setqDefaults(self: any) {
 	if (!self.q.type) self.q.type = 'regular-bin'
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
-	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
+	const bin_size = 'bin_size' in self.q && self.q.bin_size!.toString()
 	if (!self.q.rounding && typeof bin_size == 'string' && bin_size.includes('.') && !bin_size.endsWith('.')) {
 		const binDecimals = bin_size.split('.')[1].length
 		self.q.rounding = '.' + binDecimals + 'f'
 	}
 	if (self.q.lst) {
-		self.q.lst.forEach((bin) => {
+		self.q.lst.forEach(bin => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
 			if (!('range' in bin)) bin.range = get_bin_range_equation(bin, self.q)
 		})
@@ -257,7 +261,7 @@ function setqDefaults(self: any) {
 	//*** validate self.q ***//
 }
 
-export function renderBoundaryInclusionInput(self: any) {
+export function renderBoundaryInclusionInput(self: NumericTermSettingInstance) {
 	self.dom.boundaryInclusionDiv = self.dom.bins_div.append('div').style('margin-left', '5px')
 
 	self.dom.boundaryInclusionDiv
@@ -275,12 +279,12 @@ export function renderBoundaryInclusionInput(self: any) {
 			const c =
 				self.q.mode == 'binary'
 					? self.numqByTermIdModeType[self.term.id].binary
-					: self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
+					: self.numqByTermIdModeType[self.term.id].discrete[self.q.type!]
 			c.lst = self.q.lst
 			if (c.type == 'regular-bin') {
 				setBinsInclusion(c)
 			} else {
-				c.lst.forEach((bin) => {
+				c.lst.forEach(bin => {
 					setBinsInclusion(bin)
 					bin.label = get_bin_label(bin, self.q)
 					bin.range = get_bin_range_equation(bin, self.q)
@@ -294,23 +298,25 @@ export function renderBoundaryInclusionInput(self: any) {
 			}
 		})
 
+	type htmlData = { value: string; html: string }
+
 	self.dom.boundaryInput
 		.selectAll('option')
 		.data([
 			{ value: 'stopinclusive', html: 'start &lt; ' + x + ' &le; end' },
-			{ value: 'startinclusive', html: 'start &le; ' + x + ' &lt; end' },
+			{ value: 'startinclusive', html: 'start &le; ' + x + ' &lt; end' }
 		])
 		.enter()
 		.append('option')
-		.property('value', (d) => d.value)
-		.property('selected', (d) => {
+		.property('value', (d: htmlData) => d.value)
+		.property('selected', (d: htmlData) => {
 			if (self.q.type == 'regular-bin') return self.q[d.value] == true
-			else return self.q.lst[0][d.value] == true
+			else return self.q.lst![0][d.value] == true
 		})
-		.html((d) => d.html)
+		.html((d: htmlData) => d.html)
 }
 
-function renderTypeInputs(self: any) {
+function renderTypeInputs(self: NumericTermSettingInstance) {
 	// toggle switch
 	const bins_div = self.dom.bins_div
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
@@ -327,7 +333,7 @@ function renderTypeInputs(self: any) {
 					renderFixedBinsInputs(self, tab.contentHolder)
 					tabs[0].isInitialized = true
 				}
-			},
+			}
 		},
 		{
 			active: self.q.type == 'custom-bin',
@@ -341,34 +347,34 @@ function renderTypeInputs(self: any) {
 					renderCustomBinInputs(self, tab.contentHolder)
 					tabs[1].isInitialized = true
 				}
-			},
-		},
+			}
+		}
 	]
 	new Tabs({ holder: div, tabs }).main()
 }
 
 /******************* Functions for Numerical Fixed size bins *******************/
-function renderFixedBinsInputs(self: TermSettingInstance, tablediv: any) {
+function renderFixedBinsInputs(self: NumericTermSettingInstance, tablediv: any) {
 	self.dom.bins_table = tablediv.append('table')
 	renderBinSizeInput(self, self.dom.bins_table.append('tr'))
 	renderFirstBinInput(self, self.dom.bins_table.append('tr'))
 	renderLastBinInputs(self, self.dom.bins_table.append('tr'))
 }
 
-function renderBinSizeInput(self: any, tr: any) {
+function renderBinSizeInput(self: NumericTermSettingInstance, tr: any) {
 	tr.append('td').style('margin', '5px').style('color', 'rgb(136, 136, 136)').html('Bin Size')
 
-	const dd = self.num_obj.density_data
+	const dd = self.num_obj.density_data as DensityData
 	const origBinSize = self.q.bin_size
 
 	self.dom.bin_size_input = tr
 		.append('td')
 		.append('input')
 		.attr('type', 'number')
-		.attr('value', 'rounding' in self.q ? format(self.q.rounding)(self.q.bin_size) : self.q.bin_size)
+		.attr('value', 'rounding' in self.q ? format(self.q.rounding!)(self.q.bin_size!) : self.q.bin_size)
 		.style('margin-left', '15px')
 		.style('width', '100px')
-		.style('color', () => (self.q.bin_size > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
+		.style('color', () => (self.q.bin_size! > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
 		.on('change', handleChange)
 		.on('keyup', function (this: any, event: any) {
 			if (!keyupEnter(event)) return
@@ -393,19 +399,22 @@ function renderBinSizeInput(self: any, tr: any) {
 		.text('Green text indicates an edited value, red indicates size larger than the current term value range')
 }
 
-function renderFirstBinInput(self: any, tr: any) {
+function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
 	//const brush = self.num_obj.brushes[0]
-	if (!self.q.first_bin) self.q.first_bin = {}
+	if (!self.q.first_bin) self.q.first_bin = {} as NumericQ['first_bin']
 	tr.append('td').style('margin', '5px').style('color', 'rgb(136, 136, 136)').html('First Bin Stop')
 
 	self.dom.first_stop_input = tr
 		.append('td')
 		.append('input')
 		.attr('type', 'number')
-		.property('value', 'stop' in self.q.first_bin ? self.q.first_bin.stop : '')
+		.property('value', 'stop' in self.q.first_bin! ? self.q.first_bin.stop : '')
 		.style('width', '100px')
 		.style('margin-left', '15px')
-		.style('color', self.q.first_bin && self.q.first_bin.stop < self.num_obj.density_data.minvalue ? 'red' : '')
+		.style(
+			'color',
+			self.q.first_bin && self.q.first_bin.stop! < (self.num_obj.density_data as DensityData).minvalue ? 'red' : ''
+		)
 		.on('change', handleChange)
 		.on('keyup', function (this: any, event: any) {
 			if (!keyupEnter(event)) return
@@ -421,25 +430,26 @@ function renderFirstBinInput(self: any, tr: any) {
 		.html('<b>Left most</b>red line indicates the first bin stop. <br> Drag that line to edit this value.')
 
 	function handleChange() {
+		if (!self.q.first_bin) throw `Missing self.q.first_bin [numeric.binary handleChange()]`
 		self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
 		self.dom.first_stop_input.restyle()
-		self.renderBinLines(self, self.q)
+		self.renderBinLines(self, self.q as NumericQ)
 	}
 
-	const origFirstStop = self.q.first_bin.stop
+	const origFirstStop = self.q.first_bin!.stop
 	self.dom.first_stop_input.restyle = () => {
 		self.dom.first_stop_input.style(
 			'color',
-			self.q.first_bin.stop < self.num_obj.density_data.minvalue
+			self.q.first_bin!.stop! < self.num_obj.density_data!.minvalue
 				? 'red'
-				: self.q.first_bin.stop != origFirstStop
+				: self.q.first_bin?.stop != origFirstStop
 				? 'green'
 				: ''
 		)
 	}
 }
 
-function renderLastBinInputs(self: any, tr: any) {
+function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
 	const isAuto = !self.q.last_bin || Object.keys(self.q.last_bin).length === 0
 
 	tr.append('td').style('margin', '5px').style('color', 'rgb(136, 136, 136)').html('Last Bin Start')
@@ -451,18 +461,18 @@ function renderLastBinInputs(self: any, tr: any) {
 		holder: radio_div,
 		options: [
 			{ label: 'Automatic', value: 'auto', checked: isAuto },
-			{ label: 'Fixed', value: 'fixed', checked: !isAuto },
+			{ label: 'Fixed', value: 'fixed', checked: !isAuto }
 		],
-		callback: (v) => {
+		callback: v => {
 			if (v == 'auto') {
-				delete self.q.last_bin.start
+				delete self.q.last_bin!.start
 				edit_div.style('display', 'none')
 			} else if (v == 'fixed') {
 				if (!self.q.last_bin) self.q.last_bin = {}
 				if (!('start' in self.q.last_bin)) {
 					// default to setting the last bin start to max value,
 					// so that it will be dragged to the left by default
-					self.q.last_bin.start = self.num_obj.density_data.maxvalue
+					self.q.last_bin.start = (self.num_obj.density_data as DensityData).maxvalue
 				}
 				self.dom.last_start_input.property('value', self.q.last_bin.start)
 				const value = +self.dom.last_start_input.property('value')
@@ -473,8 +483,8 @@ function renderLastBinInputs(self: any, tr: any) {
 			setDensityPlot(self)
 		},
 		styles: {
-			padding: '0 10px',
-		},
+			padding: '0 10px'
+		}
 	})
 
 	self.dom.last_radio_auto = select(inputs.nodes()[0])
@@ -508,11 +518,11 @@ function renderLastBinInputs(self: any, tr: any) {
 		.html('<b>Right</b>most red line indicates the last bin start. <br> Drag that line to edit this value.')
 
 	function handleChange() {
-		self.q.last_bin.start = +self.dom.last_start_input.property('value')
+		self.q.last_bin!.start = +self.dom.last_start_input.property('value')
 		self.dom.last_start_input.restyle()
-		self.renderBinLines(self, self.q)
+		self.renderBinLines(self, self.q as NumericQ)
 		if (self.dom.last_radio_auto.property('checked')) {
-			delete self.q.last_bin.start
+			delete self.q.last_bin?.start
 			edit_div.style('display', 'none')
 		}
 	}
@@ -521,9 +531,9 @@ function renderLastBinInputs(self: any, tr: any) {
 	self.dom.last_start_input.restyle = () => {
 		self.dom.last_start_input.style(
 			'color',
-			self.q.last_bin.start > self.num_obj.density_data.maxvalue
+			self.q.last_bin!.start! > self.num_obj.density_data!.maxvalue
 				? 'red'
-				: self.q.last_bin.start != origLastStart
+				: self.q.last_bin!.start != origLastStart
 				? 'green'
 				: ''
 		)
@@ -531,7 +541,7 @@ function renderLastBinInputs(self: any, tr: any) {
 }
 
 /******************* Functions for Numerical Custom size bins *******************/
-function renderCustomBinInputs(self: TermSettingInstance, tablediv: any) {
+function renderCustomBinInputs(self: NumericTermSettingInstance, tablediv: any) {
 	if (!self.q) throw `Missing .q{} [numeric.discrete renderCustomBinInputs()]`
 	self.dom.bins_table = tablediv.append('div').style('display', 'flex').style('width', '100%')
 
@@ -549,7 +559,7 @@ function renderCustomBinInputs(self: TermSettingInstance, tablediv: any) {
 		.text(
 			self.q
 				.lst!.slice(1)
-				.map((d) => d.start)
+				.map(d => d.start)
 				.join('\n')
 		)
 		.on('change', handleChange)
@@ -579,8 +589,8 @@ function renderCustomBinInputs(self: TermSettingInstance, tablediv: any) {
 			return
 		}
 		// update self.q.lst and render bin lines only if bin boundry changed
-		const q = self.numqByTermIdModeType[self.term!.id!].discrete[self.q!.type!]
-		if (self.q!.hiddenValues!) q.hiddenValues = self.q!.hiddenValues!
+		const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type!]
+		if (self.q.hiddenValues!) q.hiddenValues = self.q.hiddenValues!
 		if (binsChanged(data, q.lst)) {
 			q.lst = data
 			self.renderBinLines!(self, q)
@@ -607,7 +617,7 @@ function renderCustomBinInputs(self: TermSettingInstance, tablediv: any) {
 	// add help message for custom bin labels
 }
 
-export function renderBoundaryInputDivs(self: TermSettingInstance, data: any) {
+export function renderBoundaryInputDivs(self: NumericTermSettingInstance, data: any) {
 	const holder = self.dom.rangeAndLabelDiv
 	holder.selectAll('*').remove()
 
@@ -640,7 +650,7 @@ export function renderBoundaryInputDivs(self: TermSettingInstance, data: any) {
 	self.dom.customBinLabelInput = self.dom.bins_table.selectAll('input').data(data)
 }
 
-function renderButtons(self: TermSettingInstance) {
+function renderButtons(self: NumericTermSettingInstance) {
 	const btndiv = self.dom.bins_div.append('div')
 	btndiv
 		.append('button')
@@ -652,8 +662,8 @@ function renderButtons(self: TermSettingInstance) {
 		.style('margin', '5px')
 		.html('Reset')
 		.on('click', () => {
-			delete self.q
-			delete self.numqByTermIdModeType[self.term!.id!]
+			self.q = {}
+			delete self.numqByTermIdModeType[self.term.id]
 			showBinsMenu(self, self.dom.num_holder)
 		})
 }

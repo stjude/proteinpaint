@@ -1,5 +1,5 @@
 import { getPillNameDefault } from '#termsetting'
-import { TermSettingInstance, PillData, Term } from '#shared/types'
+import { NumericTermSettingInstance, PillData, Term } from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -13,11 +13,11 @@ getHandler(self)
 		setqDefaults() // set self.q from self.numqByTermIdModeType
 */
 
-//Types 
+//Types
 
-type DropDownOpt = { html: string, value: number }
+type DropDownOpt = { html: string; value: number }
 
-export function getHandler(self: TermSettingInstance) {
+export function getHandler(self: NumericTermSettingInstance) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -30,18 +30,11 @@ export function getHandler(self: TermSettingInstance) {
 		async showEditMenu(div: any) {
 			setqDefaults(self)
 
-			div
-				.style('padding', '10px')
-				.selectAll('*')
-				.remove()
+			div.style('padding', '10px').selectAll('*').remove()
 
 			div.append('div').style('padding', '10px')
 
-			div
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '3px 10px')
-				.html('Scale values')
+			div.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
 			const select = div.append('select').on('change', (event: any) => {
 				if (!self.q) throw `Missing .q{} [numeric.continuous getHandler()]`
@@ -70,14 +63,14 @@ export function getHandler(self: TermSettingInstance) {
 				.style('margin', '5px')
 				.html('Apply')
 				.on('click', () => {
-					self.q!.mode = 'continuous'
-					self.runCallback!()
+					self.q.mode = 'continuous'
+					self.runCallback()
 				})
 		}
 	}
 }
 
-function setqDefaults(self: TermSettingInstance) {
+function setqDefaults(self: NumericTermSettingInstance) {
 	const cache = self.numqByTermIdModeType
 	const t = self.term as Term
 	if (!cache[t.id!]) cache[t.id!] = {}
