@@ -1,5 +1,12 @@
 import { TermWrapper, BaseQ } from './termdb'
 
+/*
+--------EXPORTED--------
+CategoricalConditionQ
+CategoricalTW
+
+*/
+
 export type CategoricalConditionQ = BaseQ & {
 	termType: 'categorical' | 'conditional'
 	bar_by_children?: boolean

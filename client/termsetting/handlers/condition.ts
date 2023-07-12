@@ -2,13 +2,10 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
-import { PillData, TermWrapper, Q, VocabApi } from '#shared/types'
+import { PillData, ConditionalTW, CategoricalConditionQ, VocabApi } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
-
-//Types
-type GroupEntry = { name: string; values: (string | number)[] }
 
 const cutoffGrades: number[] = [1, 2, 3, 4, 5]
 
@@ -343,6 +340,7 @@ function showMenu_cutoff(self: any, div: any) {
 // split grades into groups based on breaks
 function getGroups(grades: any, breaks: any) {
 	grades.sort((a, b) => a - b)
+	type GroupEntry = { name: string; values: (string | number)[] }
 	const groups: GroupEntry[] = [] // [ {name, values}, {name, values} ]
 	let group: any = { values: [] }
 	let b: any
@@ -389,7 +387,7 @@ function getGroups(grades: any, breaks: any) {
 	return groups
 }
 
-export function fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQ: Q) {
+export function fillTW(tw: ConditionalTW, vocabApi: VocabApi, defaultQ: CategoricalConditionQ) {
 	set_hiddenvalues(tw.q, tw.term)
 
 	if (defaultQ) {
