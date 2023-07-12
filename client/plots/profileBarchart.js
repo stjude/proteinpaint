@@ -52,6 +52,7 @@ class profileBarchart {
 		}
 
 		const holder = this.dom.holder.append('div')
+
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
 		div.append('label').html('Component:').style('font-weight', 'bold')
 		const selectComp = div.append('select').style('margin-left', '5px')
@@ -67,6 +68,9 @@ class profileBarchart {
 			config.componentIndex = selectComp.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
+
+		if (samples.length == 0) return
 		div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
 		const select = div.append('select').style('margin-left', '5px')
 		select
@@ -83,7 +87,6 @@ class profileBarchart {
 		})
 
 		const color = this.component.component.color
-		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		const path = svg
 			.append('defs')
@@ -135,6 +138,7 @@ class profileBarchart {
 				y += step
 			}
 		}
+
 		y += 40
 		x = 50
 		drawLegendRect(x, y, 'and')
