@@ -25,13 +25,13 @@ class profileBarchart {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		const twLst = []
-		for (const component of this.state.config.plotByComponent)
-			for (const group of component.groups)
-				for (const row of group.rows) {
-					for (const tw of row.twlst) {
-						if (tw.id) twLst.push(tw)
-					}
+		this.component = this.config.plotByComponent[this.config.componentIndex || 0]
+		for (const group of this.component.groups)
+			for (const row of group.rows) {
+				for (const tw of row.twlst) {
+					if (tw.id) twLst.push(tw)
 				}
+			}
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
@@ -82,7 +82,7 @@ class profileBarchart {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
-		const color = this.config.plotByComponent[config.componentIndex || 0].component.color
+		const color = this.component.component.color
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		const path = svg
@@ -116,7 +116,7 @@ class profileBarchart {
 			x += stepx
 		}
 		y = 75
-		for (const group of config.plotByComponent[0].groups) {
+		for (const group of this.component.groups) {
 			svg
 				.append('text')
 				.attr('transform', `translate(${50}, ${y + 20})`)
