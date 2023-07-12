@@ -16,8 +16,6 @@ opts{}
 	required, will fill-in or override store.defaultState
 .app{} .tree{} etc
 see doc for full spec
-https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
-git branch 
 */
 
 class TdbApp {
@@ -224,10 +222,7 @@ class TdbApp {
 
 		// has usable terms to display
 		this.dom.customTermDiv.selectAll('*').remove()
-		this.dom.customTermDiv
-			.append('div')
-			.text('CUSTOM VARIABLES')
-			.style('font-size', '.7em')
+		this.dom.customTermDiv.append('div').text('CUSTOM VARIABLES').style('font-size', '.7em')
 		for (const tw of useTerms) {
 			this.dom.customTermDiv
 				.append('div')

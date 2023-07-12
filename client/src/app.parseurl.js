@@ -67,6 +67,7 @@ upon error, throw err message as a string
 		return
 	}
 
+	//////////// to delete
 	if (urlp.has('mdsjsonform')) {
 		const _ = await import('./mdsjsonform')
 		await _.init_mdsjsonform(arg)
@@ -186,6 +187,7 @@ upon error, throw err message as a string
 		return
 	}
 
+	//////////// legacy, may be replaced by sampleScatter, kept for existing views on vizcom
 	if (urlp.has('singlecell')) {
 		if (!urlp.has('genome')) throw '"genome" is required for "singlecell"'
 		const genomename = urlp.get('genome')
@@ -241,8 +243,8 @@ upon error, throw err message as a string
 		return
 	}
 
+	//////////// legacy, replaced by sampleScatter (just need to support adhoc data), kept for existing views on vizcom
 	if (urlp.has('scatterplot')) {
-		// FIXME to refactor this design
 		if (!urlp.has('genome')) throw '"genome" is required for "scatterplot"'
 		const genomename = urlp.get('genome')
 		const genome = arg.genomes[genomename]
@@ -443,6 +445,22 @@ upon error, throw err message as a string
 		return
 	}
 
+	if (urlp.has('disco')) {
+		// a direct link to make manual testing easy
+		const genomeName = urlp.get('genome')
+		const genome = arg.genomes[genomeName]
+		if (!genome) throw 'genome missing'
+		const dslabel = urlp.get('dslabel')
+		if (!dslabel) throw 'dslabel missing'
+		const sample_id = urlp.get('sample')
+		if (!sample_id) throw 'sample_id missing'
+		const vocabApi = (await import('#termdb/vocabulary')).vocabInit({ state: { genome: genomeName, dslabel } })
+		const termdbConfig = await vocabApi.getTermdbConfig()
+		await (await import('#plots/plot.disco.js')).default(termdbConfig, dslabel, { sample_id }, arg.holder, genome)
+		return
+	}
+
+	///////////// legacy, totally replaced by mass. kept for some views on vizcom
 	if (urlp.has('study')) {
 		const v = urlp.get('study')
 		if (v != '') {
@@ -747,10 +765,7 @@ export async function get_tklst(urlp, genomeobj) {
 		const lst = urlp.get('bampilefile').split(',')
 		let links = null
 		if (urlp.has('bampilelink')) {
-			links = urlp
-				.get('bampilelink')
-				.split(',')
-				.map(decodeURIComponent)
+			links = urlp.get('bampilelink').split(',').map(decodeURIComponent)
 		}
 		for (let i = 0; i < lst.length; i += 2) {
 			if (lst[i] && lst[i + 1]) {
