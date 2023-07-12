@@ -6,12 +6,17 @@ import { NumericQ } from './numeric'
 --------EXPORTED--------
 RangeEntry
 GroupEntry
+BaseGroupSet
 GroupSetEntry
 GroupSetting
+BaseQ
 Q
 TermValues
+Subconditions
 Term
-TW
+DetermineQ
+TermWrapper
+TWDynamicQ
 
 */
 
@@ -172,18 +177,13 @@ export type TermValues = {
 	}
 }
 
-type NumericalBins = {
-	label_offset?: number
-	label_offset_ignored?: boolean
-	rounding?: string
-	default: NumericQ
-	less: NumericQ
-}
-
-type Gt2Count = {
-	k: string
-	v: number
-}
+// type NumericalBins = {
+// 	label_offset?: number
+// 	label_offset_ignored?: boolean
+// 	rounding?: string
+// 	default: NumericQ
+// 	less: NumericQ
+// }
 
 type AllelesEntry = {
 	allele: string
@@ -198,16 +198,17 @@ type SnpsEntry = {
 	referenceAllele?: string
 	altAlleles?: string[]
 	alleles?: AllelesEntry[]
-	gt2count?: Gt2Count
+	gt2count?: KV
 	chr?: string
 	pos?: number
 	alt2csq?: any //{} In document but not implemented?
 }
 
-type Subconditions = {
+export type Subconditions = {
 	[index: string | number]: {
 		label: string
 		group?: number //see handlers/categorical.ts
+		uncomputable?: true //Not sure if this is correct??
 	}
 }
 
@@ -223,9 +224,7 @@ export type Term = {
 		| 'geneVariant'
 		| 'snplocus'
 		| 'snplst'
-	bins?: NumericalBins
 	child_types?: string[]
-	densityNotAvailable?: boolean //Not used?
 	groupsetting?: GroupSetting
 	hashtmldetail?: boolean
 	included_types?: string[]
