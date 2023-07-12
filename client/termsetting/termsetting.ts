@@ -485,7 +485,7 @@ function setInteractivity(self: TermSettingInstance) {
 	self.cancelGroupsetting = () => {
 		self.opts.callback!({
 			id: self.term.id,
-			term: self.term!,
+			term: self.term,
 			q: { mode: 'discrete', type: 'values', isAtomic: true, groupsetting: { inuse: false } }
 		})
 	}
@@ -548,7 +548,7 @@ function setInteractivity(self: TermSettingInstance) {
 
 					const tw = term.term ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
 					if (self.opts.customFillTw) self.opts.customFillTw(tw)
-					await call_fillTW(tw, self.vocabApi!, self.opts.defaultQ4fillTW)
+					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 					// tw is now furbished
 
 					self.opts.callback!(tw)
@@ -620,12 +620,12 @@ function setInteractivity(self: TermSettingInstance) {
 			.style('color', '#aaa')
 			.html('Save current setting as ')
 
-		const qlst = self.vocabApi!.getCustomTermQLst(self.term!)
+		const qlst = self.vocabApi.getCustomTermQLst(self.term)
 		const qNameInput = saveDiv
 			.append('input')
 			.attr('type', 'text')
 			.attr('placeholder', qlst.nextReuseId)
-			.attr('value', self.q!.reuseId || qlst.nextReuseId)
+			.attr('value', self.q.reuseId || qlst.nextReuseId)
 		//.style('width', '300px')
 
 		saveDiv
@@ -634,16 +634,16 @@ function setInteractivity(self: TermSettingInstance) {
 			.html('Save')
 			.on('click', () => {
 				const reuseId = qNameInput.property('value').trim() || qlst.nextReuseId
-				self.q!.reuseId = reuseId
+				self.q.reuseId = reuseId
 				//self.q.name = self.q.reuseId
-				self.vocabApi!.cacheTermQ(self.term!, self.q!)
+				self.vocabApi.cacheTermQ(self.term, self.q)
 				self.runCallback!()
 				self.dom.tip.hide()
 			})
 
 		const tableWrapper = _div.append('div').style('margin', '10px')
-		const defaultTw: TermWrapper = { term: self.term!, q: {} }
-		await fillTermWrapper(defaultTw, self.vocabApi!)
+		const defaultTw: TermWrapper = { term: self.term, q: {} }
+		await fillTermWrapper(defaultTw, self.vocabApi)
 		defaultTw.q.reuseId = 'Default'
 		qlst.push(defaultTw.q)
 		if (qlst.length > 1) {
@@ -659,7 +659,7 @@ function setInteractivity(self: TermSettingInstance) {
 			.style('margin', '2px 5px')
 			.each(function (this: BaseType, q: Q) {
 				const tr = select(this)
-				const inuse = equivalentQs(self.q!, q)
+				const inuse = equivalentQs(self.q, q)
 				const html2Use = q.name || (q.reuseId as string)
 				tr.append('td')
 					.style('min-width', '180px')
@@ -693,7 +693,7 @@ function setInteractivity(self: TermSettingInstance) {
 						.style('min-width', '80px')
 						.html('Delete')
 						.on('click', async () => {
-							await self.vocabApi!.uncacheTermQ(self.term!, q)
+							await self.vocabApi.uncacheTermQ(self.term!, q)
 							self.dom.tip.hide()
 							self.runCallback!()
 						})
@@ -732,7 +732,7 @@ function setInteractivity(self: TermSettingInstance) {
 				try {
 					const results = !str
 						? { lst: [] }
-						: await self.vocabApi!.findTerm(str, self.activeCohort!, self.usecase!, 'gene')
+						: await self.vocabApi.findTerm(str, self.activeCohort!, self.usecase!, 'gene')
 					resultsDiv.selectAll('*').remove()
 					resultsDiv
 						.selectAll('div')
