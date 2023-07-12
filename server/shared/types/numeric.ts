@@ -6,8 +6,8 @@ import { TermSettingInstance, InstanceDom } from './termsetting'
 NumericQ
 NumericTW
 BrushEntry
+DensityData
 NumberObj
-DensityTermSettingInstance
 NumericTermSettingInstance
 
 */
@@ -89,11 +89,15 @@ type NumericalBins = {
 type NumericTerm = Term & {
 	id: string
 	bins: NumericalBins
+	densityNotAvailable?: boolean //Not used?
 }
 
 type NumericDom = InstanceDom & {
+	bins_div?: any
 	bin_size_input: any
+	bins_table?: any
 	boundaryInclusionDiv: any
+	boundaryInput?: any
 	custom_knots_div: any
 	customKnotsInput: any
 	first_stop_input: any

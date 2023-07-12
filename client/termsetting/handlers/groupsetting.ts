@@ -2,7 +2,7 @@ import { keyupEnter } from '#src/client'
 import { select } from 'd3-selection'
 import { filterInit } from '#filter'
 import { make_radios } from '#dom/radiobutton'
-import { GroupSetEntry, GroupEntry } from '#shared/types'
+import { GroupSetEntry, GroupEntry, TermValues, Subconditions } from '#shared/types'
 
 /*
 Arguments
@@ -77,13 +77,13 @@ export function setGroupsettingMethods(self: any) {
 			{
 				label: 'Time from study entry',
 				value: 1,
-				checked: defaultScale == 'time' ? true : false,
+				checked: defaultScale == 'time' ? true : false
 			},
 			{
 				label: 'Age',
 				value: 2,
-				checked: defaultScale == 'age' ? true : false,
-			},
+				checked: defaultScale == 'age' ? true : false
+			}
 		]
 
 		// build radio buttons for time scale
@@ -92,7 +92,7 @@ export function setGroupsettingMethods(self: any) {
 			options: scales,
 			callback: (value: number) => {
 				self.q.timeScale = value == 1 ? 'time' : 'age'
-			},
+			}
 		})
 
 		// 'Apply' button
@@ -114,27 +114,27 @@ export function setGroupsettingMethods(self: any) {
 				const belowCutoff = [
 					{
 						key: '0',
-						label: 'No condition',
+						label: 'No condition'
 					},
 					{
 						key: '-1',
-						label: 'Not tested',
-					},
+						label: 'Not tested'
+					}
 				]
-				belowCutoff.push(...grades.filter((grade) => Number(grade.key) < self.q.cutoff))
+				belowCutoff.push(...grades.filter(grade => Number(grade.key) < self.q.cutoff))
 
 				// above cutoff group
-				const aboveCutoff = grades.filter((grade) => Number(grade.key) >= self.q.cutoff)
+				const aboveCutoff = grades.filter(grade => Number(grade.key) >= self.q.cutoff)
 
 				const groups = [
 					{
 						name: `Grade < ${self.q.cutoff}`,
-						values: belowCutoff,
+						values: belowCutoff
 					},
 					{
 						name: `Grade >= ${self.q.cutoff}`,
-						values: aboveCutoff,
-					},
+						values: aboveCutoff
+					}
 				]
 
 				self.q.type = 'custom-groupset'
@@ -143,8 +143,8 @@ export function setGroupsettingMethods(self: any) {
 					customset: {
 						name: 'grade cutoff',
 						is_grade: true,
-						groups,
-					},
+						groups
+					}
 				}
 				self.dom.tip.hide()
 				self.runCallback()
@@ -166,19 +166,21 @@ export function setGroupsettingMethods(self: any) {
 	self.showDraggables = function (grp_count: number, temp_cat_grps: GroupSetEntry) {
 		//start with default 2 groups, extra groups can be added by user
 		const default_grp_count = grp_count || 2
-		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
+		type Values = TermValues | Subconditions
+		const values: Values = self.q.bar_by_children ? self.term.subconditions : self.term.values
+		type CategoricalGroups = GroupSetEntry | Values
+		const cat_grps: CategoricalGroups = temp_cat_grps || JSON.parse(JSON.stringify(values))
 		const default_1grp = [
 			{
 				type: 'values',
 				values: Object.keys(values)
-					.filter((key) => {
-						if (!values[key].uncomputable) return true
+					.filter(key => {
+						if (values[key]?.uncomputable) return true
 					})
-					.map((key) => {
+					.map(key => {
 						return { key, label: values[key].label }
-					}),
-			},
+					})
+			}
 		]
 		const default_empty_group = { type: 'values', values: [] }
 		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
@@ -194,13 +196,13 @@ export function setGroupsettingMethods(self: any) {
 				? self.q.groupsetting.customset
 				: default_groupset
 
-		Object.keys(cat_grps).forEach((key) => {
+		Object.keys(cat_grps).forEach(key => {
 			if (cat_grps[key].group == 0 || (!grpsetting_flag && cat_grps[key].uncomputable == true))
 				excluded_cats.push({ key, label: cat_grps[key].label })
 		})
 
 		//initiate empty customset
-		const customset: GroupSetEntry = { groups: [] }
+		const customset: any = { groups: [] }
 		const group_names: (string | undefined)[] = []
 		if (self.q.bar_by_grade) customset.is_grade = true
 		else if (self.q.bar_by_children) customset.is_subcondition = true
@@ -218,7 +220,7 @@ export function setGroupsettingMethods(self: any) {
 
 			customset.groups.push({
 				values: [],
-				name: group_name as string,
+				name: group_name as string
 			})
 		}
 
@@ -241,16 +243,16 @@ export function setGroupsettingMethods(self: any) {
 			.on('change', () => {
 				if (group_ct_select.node().value < default_grp_count) {
 					const grp_diff = default_grp_count - group_ct_select.node().value
-					for (const value of Object.values(cat_grps)) {
-						if (value.uncomputable) continue
+					for (const value of Object.values(cat_grps as CategoricalGroups)) {
+						if (value?.uncomputable) continue
 						if (value.group > group_ct_select.node().value) value.group = 1
 					}
 					self.regroupMenu(default_grp_count - grp_diff, cat_grps)
 				} else if (group_ct_select.node().value > default_grp_count) {
 					const grp_diff = group_ct_select.node().value - default_grp_count
-					for (const value of Object.values(cat_grps)) {
-						if (value.uncomputable) continue
-						if (!value.group) value.group = 1
+					for (const value of Object.values(cat_grps as CategoricalGroups)) {
+						if (value?.uncomputable) continue
+						if (value.group) value.group = 1
 					}
 					self.regroupMenu(default_grp_count + grp_diff, cat_grps)
 				}
@@ -285,7 +287,7 @@ export function setGroupsettingMethods(self: any) {
 		const exclude_grp_args = {
 			holder: groups_holder,
 			name: 'Excluded categories',
-			group_idx: 0,
+			group_idx: 0
 		}
 
 		const exclude_div = initGroupDiv(exclude_grp_args)
@@ -314,7 +316,7 @@ export function setGroupsettingMethods(self: any) {
 			.on('click', () => {
 				const name_inputs = groups_holder.node().querySelectorAll('input')
 				//update customset and add to self.q
-				for (const [key, val] of Object.entries(cat_grps)) {
+				for (const [key, val] of Object.entries(cat_grps as CategoricalGroups)) {
 					const i = cat_grps[key].group - 1
 					const group: GroupEntry = customset.groups[i]
 					if (group) {
@@ -328,7 +330,7 @@ export function setGroupsettingMethods(self: any) {
 				self.q.type = 'custom-groupset'
 				self.q.groupsetting = {
 					inuse: true,
-					customset: customset,
+					customset: customset
 				}
 				self.dom.tip.hide()
 				self.runCallback()
@@ -340,7 +342,7 @@ export function setGroupsettingMethods(self: any) {
 				holder: non_exclude_div,
 				name: 'Group ' + (i + 1),
 				group_idx: i + 1,
-				group_type: group.type,
+				group_type: group.type
 			}
 			const group_div = initGroupDiv(group_args)
 
@@ -366,7 +368,7 @@ export function setGroupsettingMethods(self: any) {
 					self.q.type = 'custom-groupset'
 					self.q.groupsetting = {
 						inuse: true,
-						customset,
+						customset
 					}
 				})
 
@@ -384,7 +386,7 @@ export function setGroupsettingMethods(self: any) {
 						btnLabel: 'Filter',
 						emptyLabel: '+New Filter',
 						holder: group_items_div.style('width', '320px'),
-						vocab: self.vocab,
+						vocab: self.vocab
 						//callback: () => {},
 					}).main(filter)
 				}
@@ -463,7 +465,7 @@ export function setGroupsettingMethods(self: any) {
 					else if (cat_grps[val.key].group == undefined && cat_grps[val.key].uncomputable == true)
 						cat_grps[val.key].group = 0
 					const samplecount_obj = self.category2samplecount
-						? self.category2samplecount.find((d) => d.key == val.key)
+						? self.category2samplecount.find(d => d.key == val.key)
 						: 'n/a'
 					const count =
 						samplecount_obj !== undefined && samplecount_obj !== 'n/a'

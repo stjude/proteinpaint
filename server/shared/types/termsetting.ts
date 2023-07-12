@@ -8,9 +8,13 @@ Dom
 Api
 NoTermPromptOptsEntry
 UseCase
+SampleCountsEntry
 Handler
 PillData
 TermSettingOpts
+InstanceDom
+TermSettingInstance
+TSInstanceWithDynamicQ
 
 */
 
@@ -170,9 +174,6 @@ export type InstanceDom = {
 	pilldiv?: any
 	btnDiv?: any
 	//Optional
-	bins_div?: any
-	bins_table?: any
-	boundaryInput?: any
 	customBinBoundaryInput?: any
 	customBinBoundaryPercentileCheckbox?: any
 	customBinLabelInput?: any
