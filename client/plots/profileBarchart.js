@@ -144,11 +144,12 @@ class profileBarchart {
 			}
 		}
 
-		drawLine(410, 120, 50, y)
-		drawLine(410, 120, 75, y)
+		drawLine(410, 120, 50, y, 'B')
+		drawLine(410, 120, 75, y, 'A')
+
 		if (!hasSubjectiveData) return
-		drawLine(910, 120, 50, y)
-		drawLine(910, 120, 75, y)
+		drawLine(910, 120, 50, y, 'B')
+		drawLine(910, 120, 75, y, 'A')
 		y += 40
 		x = 50
 		drawLegendRect(x, y, 'and', color)
@@ -234,16 +235,30 @@ class profileBarchart {
 			text.append('tspan').text(' Subjective data')
 		}
 
-		function drawLine(x, y, percent, y2) {
+		function drawLine(x, y, percent, y2, text) {
+			const x1 = x + (percent / 100) * barwidth
 			svg
 				.append('line')
 				.style('stroke', '#aaa')
 				.style('stroke-width', 1)
 				.style('stroke-dasharray', '5, 5') // <== This line here!!
-				.attr('x1', x + (percent / 100) * barwidth)
+				.attr('x1', x1)
 				.attr('y1', y)
-				.attr('x2', x + (percent / 100) * barwidth)
+				.attr('x2', x1)
 				.attr('y2', y2)
+			svg
+				.append('text')
+				.attr('transform', `translate(${x1 + 0.125 * barwidth}, ${y2 + 20})`)
+				.attr('text-anchor', 'middle')
+				.text(text)
+				.style('font-weight', 'bold')
+			if (percent == 50)
+				svg
+					.append('text')
+					.attr('transform', `translate(${x1 - 0.25 * barwidth}, ${y2 + 20})`)
+					.attr('text-anchor', 'middle')
+					.text('C')
+					.style('font-weight', 'bold')
 		}
 	}
 }
