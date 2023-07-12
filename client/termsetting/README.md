@@ -6,6 +6,6 @@ The API is [documented here](https://docs.google.com/document/d/13bU1azXD6Jl_1w0
 
 # Tests
 
-- Using a browser: http://localhost:3000/testrun.html?name=termsetting
+- Using a browser: http://localhost:3000/testrun.html?dir=termsetting
 
 - Command line: `node ./test/import-specs.js name=termsetting && npm run tape`

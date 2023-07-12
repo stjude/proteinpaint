@@ -6,6 +6,6 @@ The API is [documented here](https://docs.google.com/document/d/18Qh52MOnwIRXrcq
 
 # Tests
 
-- Using a browser: http://localhost:3000/testrun.html?name=filter
+- Using a browser: http://localhost:3000/testrun.html?dir=filter
 
 - Command line: `node ./test/import-specs.js name=filter && npm run tape`

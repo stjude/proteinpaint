@@ -11,10 +11,15 @@ module.exports = function setRoutes(app, basepath) {
 		try {
 			if (Object.keys(q).length) {
 				const file = path.join(cwd, q.file)
-				if (!(await fs.stat(file))) throw `file='${file}' not found`
-				const md = await fs.readFile(file, { encoding: 'utf8' })
-				res.header('content-type', 'text/markdown')
-				res.send(md)
+				try {
+					if (await fs.stat(file)) {
+						const md = await fs.readFile(file, { encoding: 'utf8' })
+						res.header('content-type', 'text/markdown')
+						res.send(md)
+					}
+				} catch (e) {
+					res.send({ error: `file='${file}' not found: ` + e })
+				}
 			} else {
 				const ignore = [
 					'**/node_modules*/**/*',
