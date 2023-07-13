@@ -175,7 +175,7 @@ export function setGroupsettingMethods(self: any) {
 				type: 'values',
 				values: Object.keys(values)
 					.filter(key => {
-						if (values[key]?.uncomputable) return true
+						if (!values[key].uncomputable) return true
 					})
 					.map(key => {
 						return { key, label: values[key].label }
