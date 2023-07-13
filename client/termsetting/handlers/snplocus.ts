@@ -1,7 +1,7 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { addGeneSearchbox } from '#dom/genesearch'
-import { TermWrapper, VocabApi } from '#shared/types'
+import { SnpLocusTermSettingInstance, SnpLocusTermWrapper, SnpLocusQ, SnpLocusVocabApi } from '#shared/types'
 
 /* 
 ***************** EXPORT
@@ -29,7 +29,7 @@ self.q{}
 const term_name = 'Variants in a locus'
 
 // self is the termsetting instance
-export function getHandler(self: any) {
+export function getHandler(self: SnpLocusTermSettingInstance) {
 	return {
 		getPillName() {
 			return self.term.name
@@ -37,6 +37,7 @@ export function getHandler(self: any) {
 
 		getPillStatus() {
 			if (!self.term || !self.q) return
+			if (!self.term.snps) throw `Missing term.snps [snplocs.ts getPillStatus()]`
 			let text = `${self.q.chr}:${self.q.start}-${self.q.stop}, ${self.term.snps.length} variant${
 				self.term.snps.length > 1 ? 's' : ''
 			}`
@@ -47,7 +48,7 @@ export function getHandler(self: any) {
 			return { text }
 		},
 
-		validateQ(data: any) {
+		validateQ(data: SnpLocusQ) {
 			validateQ(data)
 		},
 
@@ -68,7 +69,7 @@ export function getHandler(self: any) {
 	}
 }
 
-async function makeEditMenu(self: any, div: any) {
+async function makeEditMenu(self: SnpLocusTermSettingInstance, div: any) {
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
 	const coordResult = addGeneSearchbox({
@@ -89,7 +90,7 @@ async function makeEditMenu(self: any, div: any) {
 			'"Gene": Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>"dbSNP": dbSNP accession (e.g. rs1042522)'
 		)
 
-	await mayDisplayVariantFilter(self, self?.q?.variant_filter, div)
+	await mayDisplayVariantFilter(self, self.q?.variant_filter, div)
 
 	const [input_AFcutoff, select_alleleType, select_geneticModel] = makeSnpSelect(
 		div.append('div').style('margin', '15px'),
@@ -165,7 +166,7 @@ async function validateInput(self: any) {
 }
 
 function validateQ(data: any) {
-	const q = data.q
+	const q = data.q as SnpLocusQ
 	if (!Number.isFinite(q.AFcutoff)) throw 'AFcutoff is not number'
 	if (q.AFcutoff < 0 || q.AFcutoff > 100) throw 'AFcutoff is not within 0 to 100'
 	if (![0, 1].includes(q.alleleType)) throw 'alleleType value is not one of 0/1'
@@ -177,7 +178,7 @@ function validateQ(data: any) {
 	if (q.stop <= q.start) throw 'stop <= start'
 }
 
-export async function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
+export async function fillTW(tw: SnpLocusTermWrapper, vocabApi: SnpLocusVocabApi) {
 	try {
 		// to catch any error in q{} before running validateInput()
 		validateQ(tw)
@@ -217,7 +218,12 @@ filterInState{}
 callback2
 	optional callback to run upon filter update, no parameter
 */
-async function mayDisplayVariantFilter(self: any, filterInState: any, holder: any, callback2?: any) {
+async function mayDisplayVariantFilter(
+	self: SnpLocusTermSettingInstance,
+	filterInState: any,
+	holder: any,
+	callback2?: any
+) {
 	if (!self.variantFilter) {
 		self.variantFilter = await self.vocabApi.get_variantFilter()
 		// variantFilter should be {opts{}, filter{}, terms[]}

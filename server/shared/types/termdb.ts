@@ -1,6 +1,9 @@
 import { Tvs, Filter } from './filter'
 import { CategoricalConditionQ } from './categorical'
 import { NumericQ } from './numeric'
+import { GeneVariantQ } from './geneVariant'
+import { SnpLocusQ } from './snplocus'
+import { SnpLstQ } from './snplst'
 
 /*
 --------EXPORTED--------
@@ -20,10 +23,10 @@ TWDynamicQ
 
 */
 
-type KV = {
-	k: string
-	v: string
-}
+// type KV = {
+// 	k: string
+// 	v: string
+// }
 
 /*** interfaces supporting Q interface ***/
 
@@ -71,10 +74,10 @@ export type GroupSetting = {
 	customset?: BaseGroupSet
 }
 
-type RestrictAncestry = {
-	name: string
-	tvs: Tvs
-}
+// type RestrictAncestry = {
+// 	name: string
+// 	tvs: Tvs
+// }
 
 export type BaseQ = {
 	groups?: any // Not documented but appears in condition and samplelst?? same as groupsetting?
@@ -129,34 +132,48 @@ type RegressionQ = BaseQ & {
 	knots?: []
 }
 
-type GeneVariantQ = BaseQ & {
-	termType: 'geneVariant'
-	cnvGainCutoff?: number
-	cnvMaxLength?: number
-	cnvMinAbsValue?: number
-	cnvLossCutoff?: number
+type RestrictAncestry = {
+	name: string
+	tvs: Tvs
 }
 
-type SnpLstQ = BaseQ & {
-	termType: 'snplst'
-	AFcutoff?: number
-	alleleType?: number
-	cacheid?: string
-	geneticModel?: number
-	missingGenotype?: number
-	numOfSampleWithAnyValidGT?: number
-	restrictAncestry?: RestrictAncestry
-	snp2effAle?: KV
-	snp2refGrp?: KV
+export type BaseSnpQ = BaseQ & {
+	//for snplst and snplocus term types
+	AFcutoff: number
+	alleleType: number
+	geneticModel: number
+	restrictAncestry: RestrictAncestry
+	cacheid: string
 }
 
-type SnpLocusQ = BaseQ & {
-	termType: 'snplocus'
-	info_fields?: any //[] Not documented
-	chr?: string
-	start?: number
-	stop?: number
-}
+// type GeneVariantQ = BaseQ & {
+// 	termType: 'geneVariant'
+// 	cnvGainCutoff?: number
+// 	cnvMaxLength?: number
+// 	cnvMinAbsValue?: number
+// 	cnvLossCutoff?: number
+// }
+
+// type SnpLstQ = BaseQ & {
+// 	termType: 'snplst'
+// 	AFcutoff?: number
+// 	alleleType?: number
+// 	cacheid?: string
+// 	geneticModel?: number
+// 	missingGenotype?: number
+// 	numOfSampleWithAnyValidGT?: number
+// 	restrictAncestry?: RestrictAncestry
+// 	snp2effAle?: KV
+// 	snp2refGrp?: KV
+// }
+
+// type SnpLocusQ = BaseQ & {
+// 	termType: 'snplocus'
+// 	info_fields?: any //[] Not documented
+// 	chr?: string
+// 	start?: number
+// 	stop?: number
+// }
 
 export type Q = BaseQ | CategoricalConditionQ | NumericQ | RegressionQ | GeneVariantQ | SnpLstQ | SnpLocusQ
 
@@ -185,24 +202,24 @@ export type TermValues = {
 // 	less: NumericQ
 // }
 
-type AllelesEntry = {
-	allele: string
-	isRef: boolean
-	count: number
-}
+// type AllelesEntry = {
+// 	allele: string
+// 	isRef: boolean
+// 	count: number
+// }
 
-type SnpsEntry = {
-	snpid: string
-	invalid?: boolean
-	effectAllele?: string
-	referenceAllele?: string
-	altAlleles?: string[]
-	alleles?: AllelesEntry[]
-	gt2count?: KV
-	chr?: string
-	pos?: number
-	alt2csq?: any //{} In document but not implemented?
-}
+// type SnpsEntry = {
+// 	snpid: string
+// 	invalid?: boolean
+// 	effectAllele?: string
+// 	referenceAllele?: string
+// 	altAlleles?: string[]
+// 	alleles?: AllelesEntry[]
+// 	gt2count?: KV
+// 	chr?: string
+// 	pos?: number
+// 	alt2csq?: any //{} In document but not implemented?
+// }
 
 export type Subconditions = {
 	[index: string | number]: {
@@ -240,10 +257,6 @@ export type Term = {
 	unit?: string
 	//snplocus
 	reachedVariantLimit?: boolean
-	//snplist
-	snps?: SnpsEntry[]
-	//geneVariant
-	isoform?: string
 }
 
 export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
@@ -309,8 +322,6 @@ export type TermWrapper = {
 	$id?: string
 	isAtomic?: boolean
 	term: Term
-	// term2?: Term
-	// term0?: Term
 	q: Q
 }
 
