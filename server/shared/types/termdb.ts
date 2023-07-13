@@ -80,12 +80,7 @@ export type BaseQ = {
 	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 }
 
-type RegressionQ = BaseQ & {
-	termType: 'regression'
-	knots?: []
-}
-
-export type Q = BaseQ | CategoricalConditionQ | NumericQ | RegressionQ | GeneVariantQ | SnpsQ
+export type Q = BaseQ | CategoricalConditionQ | NumericQ | GeneVariantQ | SnpsQ
 
 /*** types supporting Term types ***/
 
@@ -140,12 +135,10 @@ export type Term = {
 	unit?: string
 }
 
-export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
+export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float' | 'regression'
 	? NumericQ
 	: T extends 'categorical' | 'condition'
 	? CategoricalConditionQ
-	: T extends 'regression'
-	? RegressionQ
 	: T extends 'geneVariant'
 	? GeneVariantQ
 	: T extends 'snplst' | 'snplocus'

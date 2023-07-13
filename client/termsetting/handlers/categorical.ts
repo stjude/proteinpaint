@@ -46,7 +46,7 @@ type CategoricalInstance = TermSettingInstance & {
 	getQlst: () => void
 	grpSet2valGrp: (f: any) => void
 	regroupMenu: (x?: any, y?: any) => void //Not defined
-	showGrpOpts: (div: any) => void
+	showGrpOpts: (div: any) => any
 	validateGroupsetting: () => void
 }
 

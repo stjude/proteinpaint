@@ -18,7 +18,7 @@ TSInstanceWithDynamicQ
 
 */
 
-/*** interfaces supporting TermSettingOpts & PillData interfaces ***/
+/*** types supporting TermSettingOpts & PillData types ***/
 
 export type Dom = {
 	holder: Selection
@@ -121,14 +121,13 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	genomeObj?: any
 	//getBodyParams used but not documented??
 	//vocab??
-
 	//Methods
 	callback?: (f: TermWrapper | null) => void
 	customFillTw?: (f: TermWrapper) => void
 	getBodyParams: () => any
 }
 
-/*** types and interfaces supporting TermSettingInstance type ***/
+/*** types supporting TermSettingInstance type ***/
 
 export type InstanceDom = {
 	//Separate from the Dom outlined in termsetting.ts?????

@@ -662,6 +662,7 @@ function renderButtons(self: NumericTermSettingInstance) {
 		.style('margin', '5px')
 		.html('Reset')
 		.on('click', () => {
+			// delete self.q
 			self.q = {}
 			delete self.numqByTermIdModeType[self.term.id]
 			showBinsMenu(self, self.dom.num_holder)
