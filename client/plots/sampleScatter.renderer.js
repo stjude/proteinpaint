@@ -4,7 +4,7 @@ import { d3lasso } from '#common/lasso'
 import { dt2label, morigin } from '#shared/common'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { axisLeft, axisBottom } from 'd3-axis'
+import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
@@ -63,20 +63,21 @@ export function setRenderers(self) {
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		if (typeof self.config.gradientColor !== 'object') {
-			const defaultColor = self.config.gradientColor
+			const defaultColor = self.config.settings.sampleScatter.defaultColor
 			self.config.gradientColor = {}
 			self.config.gradientColor[chart.id] = defaultColor
 		} else if (!self.config.gradientColor[chart.id]) {
 			self.config.gradientColor[chart.id] = '#008000'
 		}
-		chart.startColor = rgb(self.config.gradientColor[chart.id]).brighter().brighter()
-		chart.stopColor = rgb(self.config.gradientColor[chart.id]).darker().darker()
+
+		const gradientColor = self.config.gradientColor[chart.id]
+		chart.startColor = rgb(gradientColor).brighter().brighter()
+		chart.stopColor = rgb(gradientColor).darker()
 		if (self.config.colorTW?.q.mode === 'continuous') {
 			const [min, max] = chart.cohortSamples.reduce(
 				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
 				[chart.cohortSamples[0].category, chart.cohortSamples[0].category]
 			)
-
 			chart.colorGenerator = d3Linear().domain([min, max]).range([chart.startColor, chart.stopColor])
 		}
 	}
@@ -143,7 +144,7 @@ export function setRenderers(self) {
 				.attr('y1', '0%')
 				.attr('x2', '100%')
 				.attr('y2', '0%')
-			self.startGradient = gradient.append('stop').attr('offset', '0%').attr('start-color', chart.startColor)
+			self.startGradient = gradient.append('stop').attr('offset', '0%').attr('stop-color', chart.startColor)
 			self.stopGradient = gradient.append('stop').attr('offset', '100%').attr('stop-color', chart.stopColor)
 
 			chart.mainG.attr('clip-path', `url(#${idclip})`)
@@ -362,7 +363,10 @@ export function setRenderers(self) {
 	}
 
 	self.getColor = function (c, chart) {
-		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return chart.colorGenerator(c.category)
+		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) {
+			const color = chart.colorGenerator(c.category)
+			return color
+		}
 		if (c.category == 'Default') return self.config.settings.sampleScatter.defaultColor
 		const category = chart.colorLegend.get(c.category)
 		return category.color
@@ -701,29 +705,29 @@ export function setRenderers(self) {
 				if (self.config.colorTW.q.mode === 'continuous') {
 					const [min, max] = chart.colorGenerator.domain()
 					const gradientScale = d3Linear().domain([min, max]).range([0, 130])
-					const axis = axisBottom(gradientScale).ticks(3)
-					colorG.append('g').attr('transform', `translate(0, 70)`).call(axis)
-
+					const axis = axisTop(gradientScale).ticks(3)
+					colorG.append('g').attr('transform', `translate(0, 100)`).call(axis)
 					const rect = colorG
 						.append('rect')
 						.attr('x', 0)
-						.attr('y', 50)
+						.attr('y', 100)
 						.attr('width', 130)
 						.attr('height', 20)
 						.style('fill', `url(#linear-gradient-${self.id})`)
 						.on('click', e => {
+							const color = self.config.gradientColor[chart.id]
 							const menu = new Menu()
 							const input = menu.d
 								.append('input')
 								.attr('type', 'color')
-								.attr('value', self.config.gradientColor[chart.id])
+								.attr('value', rgb(color).formatHex())
 								.on('change', () => {
 									self.config.gradientColor[chart.id] = input.node().value
 									chart.startColor = rgb(self.config.gradientColor[chart.id]).brighter().brighter()
-									chart.stopColor = rgb(self.config.gradientColor[chart.id]).darker().darker()
+									chart.stopColor = rgb(self.config.gradientColor[chart.id]).darker()
 									chart.colorGenerator = d3Linear().range([chart.startColor, chart.stopColor])
 
-									self.startGradient.attr('stop-color', chart.startColor)
+									self.startGradient.attr('start-color', chart.startColor)
 									self.stopGradient.attr('stop-color', chart.stopColor)
 									self.app.dispatch({
 										type: 'plot_edit',
