@@ -15,7 +15,7 @@ NumericTermSettingInstance
 export type NumericQ = BaseQ & {
 	// termType: 'numeric' | 'float' | 'integer',
 	preferredBins?: string
-	termtype?: string
+	termtype: string
 	//regular-sized bins
 	bin_size: number
 	startinclusive?: boolean
