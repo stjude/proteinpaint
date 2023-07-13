@@ -100,10 +100,10 @@ export default class LabelsRenderer implements IRenderer {
 			tooltipHtml += `Data type: Fusion transcript <br />`
 			label.fusionTooltip.forEach((fusionTooltip: FusionTooltip) => {
 				tooltipHtml +=
-					`Break points: ${fusionTooltip.geneA} ${fusionTooltip.chrA}  ${fusionTooltip.posA} ${
+					`Break points: ${fusionTooltip.geneA ? fusionTooltip.geneA : ''}  ${fusionTooltip.posA} ${
 						fusionTooltip.strandA == '+' ? 'forward' : 'reverse'
 					} > ` +
-					`${fusionTooltip.geneB} ${fusionTooltip.chrB}  ${fusionTooltip.posB} ${
+					`${fusionTooltip.geneB ? fusionTooltip.geneB : ''} ${fusionTooltip.chrB}  ${fusionTooltip.posB} ${
 						fusionTooltip.strandB == '+' ? 'forward' : 'reverse'
 					} <br /> `
 			})

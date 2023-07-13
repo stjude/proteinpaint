@@ -44,18 +44,16 @@ export default class FusionRenderer {
 	getTooltip(fusion: Fusion) {
 		let toolTip = ''
 		if (fusion.source.gene) {
-			toolTip += `${fusion.source.gene}<br />`
-		} else {
-			const positionInChromosome = fusion.source.positionInChromosome
-			toolTip += `${positionInChromosome.chromosome}:${positionInChromosome.position}<br />`
+			toolTip += fusion.source.gene
 		}
+		const positionInChromosomeSource = fusion.source.positionInChromosome
+		toolTip += ` ${positionInChromosomeSource.chromosome}:${positionInChromosomeSource.position}<br />`
 
 		if (fusion.target.gene) {
 			toolTip += fusion.target.gene
-		} else {
-			const positionInChromosome = fusion.target.positionInChromosome
-			toolTip += `${positionInChromosome.chromosome}:${positionInChromosome.position}`
 		}
+		const positionInChromosomeTarget = fusion.target.positionInChromosome
+		toolTip += ` ${positionInChromosomeTarget.chromosome}:${positionInChromosomeTarget.position}`
 
 		return toolTip
 	}

@@ -58,7 +58,7 @@ export class ViewModelMapper {
 
 		const cancerGenes = opts.args.cancerGenes ? opts.args.cancerGenes : []
 
-		const data: Array<Data> = opts.args.data
+		const data: Array<any> = opts.args.data
 
 		const reference = new Reference(this.settings, chrSizes, chromosomesOverride)
 

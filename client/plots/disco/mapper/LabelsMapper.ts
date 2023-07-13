@@ -47,17 +47,20 @@ export default class LabelsMapper {
 			}
 
 			if (data.dt == MutationTypes.FUSION) {
-				const startAngleSource = this.calculateStartAngle(data.chrA, data.posA)
-				const endAngleSource = this.calculateEndAngle(data.chrA, data.posA)
-
 				const color = FusionColorProvider.getColor(data.chrA, data.chrB)
+				if (data.geneA) {
+					const startAngleSource = this.calculateStartAngle(data.chrA, data.posA)
+					const endAngleSource = this.calculateEndAngle(data.chrA, data.posA)
 
-				this.addLabelOrFusion(data, data.geneA, startAngleSource, endAngleSource, innerRadius, outerRadius, color)
+					this.addLabelOrFusion(data, data.geneA, startAngleSource, endAngleSource, innerRadius, outerRadius, color)
+				}
 
-				const startAngleTarget = this.calculateStartAngle(data.chrB, data.posB)
-				const endAngleTarget = this.calculateEndAngle(data.chrB, data.posB)
+				if (data.geneB && data.geneA != data.geneB) {
+					const startAngleTarget = this.calculateStartAngle(data.chrB, data.posB)
+					const endAngleTarget = this.calculateEndAngle(data.chrB, data.posB)
 
-				this.addLabelOrFusion(data, data.geneB, startAngleTarget, endAngleTarget, innerRadius, outerRadius, color)
+					this.addLabelOrFusion(data, data.geneB, startAngleTarget, endAngleTarget, innerRadius, outerRadius, color)
+				}
 			}
 		})
 
