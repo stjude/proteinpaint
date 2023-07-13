@@ -142,7 +142,8 @@ function processData(data) {
   const byDir = {}
   for(const file of data.specs) {
     const d = file.split('/')
-    const name = d.pop().replace('.spec.js', '')
+    // no need to display spec.js/.ts in list of test filenames 
+    const name = d.pop().replace('.spec.js', '').replace('.spec.ts', '')
     // the last subdir is /test/, remove from the dir name
     const dir = d.slice(0,-1).join('/')
     if (!byDir[dir]) byDir[dir] = []
