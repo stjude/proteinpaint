@@ -8,7 +8,7 @@ Genome
 
 */
 
-interface GeneDb {
+type GeneDb = {
 	dbfile: string
 }
 
@@ -21,36 +21,36 @@ type TermDbsEntry = {
 	cohort: Cohort
 }
 
-interface DbStatement {
+type DbStatement = {
 	dbfile: string
 	statement: string
 }
 
-interface Snp {
+type Snp = {
 	bigbedfile: string
 }
 
-interface FimoMotif {
+type FimoMotif = {
 	db: string
 	annotationfile: string
 }
 
-interface ClinVarVCF {
+type ClinVarVCF = {
 	file: string
 	infokey: string
 	categories: ClinvarClinsig
 }
 
-interface TrackCategoryEntry {
+type TrackCategoryEntry = {
 	color: string
 	label: string
 }
 
-interface TrackCategories {
+type TrackCategories = {
 	[index: string]: TrackCategoryEntry
 }
 
-interface Track {
+type Track = {
 	__isgene?: boolean
 	translatecoding?: boolean
 	file: string
@@ -64,53 +64,53 @@ interface Track {
 	onerow?: boolean
 }
 
-interface DefaultCoord {
+type DefaultCoord = {
 	chr: string
 	start: number
 	stop: number
 	gene?: string
 }
 
-interface GeneSetEntry {
+type GeneSetEntry = {
 	name: string
 }
 
-interface GeneSet {
+type GeneSet = {
 	name: string
 	lst: GeneSetEntry[]
 }
 
-interface HicEnzymeFragment {
+type HicEnzymeFragment = {
 	enzyme: string
 	file: string
 }
 
-interface HicDomainSetEntry {
+type HicDomainSetEntry = {
 	name: string
 	longname: string
 	file: string
 }
 
-interface HicDomainSet {
+type HicDomainSet = {
 	[index: string]: HicDomainSetEntry
 }
 
-interface HicDomainGrpEntry {
+type HicDomainGrpEntry = {
 	name: string
 	reference: string
 	sets: HicDomainSet
 }
 
-interface HicDomainGroups {
+type HicDomainGroups = {
 	[index: string]: HicDomainGrpEntry
 }
 
-interface HicDomain {
+type HicDomain = {
 	[index: string]: HicDomainGroups
 }
 
 //Separated to force g.tracks as required, see hgvirus.ts
-export interface MinGenome {
+export type MinGenome = {
 	species: string
 	genomefile: string
 	genedb: GeneDb
@@ -119,7 +119,7 @@ export interface MinGenome {
 	majorchr: string
 }
 
-export interface Genome extends MinGenome {
+export type Genome = MinGenome & {
 	termdbs?: TermDbs
 	proteindomain?: DbStatement
 	repeatmasker?: DbStatement
