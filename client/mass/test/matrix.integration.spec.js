@@ -17,12 +17,12 @@ const runpp = helpers.getRunPp('mass', {
 /**************
  test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- plots/matrix -***-')
 	test.end()
 })
 
-tape('only dictionary terms', function(test) {
+tape('only dictionary terms', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -97,7 +97,7 @@ tape('only dictionary terms', function(test) {
 	}
 })
 
-tape('with divide by terms', function(test) {
+tape('with divide by terms', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
@@ -157,6 +157,59 @@ tape('with divide by terms', function(test) {
 		)
 
 		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('long column group labels', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					divideBy: {
+						id: 'diaggrp'
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{ id: 'diaggrp', term: termjson['diaggrp'] },
+								{ id: 'agedx', term: termjson['agedx'] },
+								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		const y = matrix.Inner.dom.clipRect.property('y').baseVal.value
+		test.true(y > -39 && y < -38, `should adjust the clip-path rect y-value to between -39 and -38, actual=${y}`)
+		const h = matrix.Inner.dom.clipRect.property('height').baseVal.value
+		test.true(h > 595 && h <= 596, `should adjust the clip-path height to between 595 and 596, actual=${h}`)
+
+		//if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })

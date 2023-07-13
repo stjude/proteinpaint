@@ -40,12 +40,12 @@ export class MatrixControls {
 			.append('button')
 			//.property('disabled', d => d.disabled)
 			.datum({
-				label: l.samples || `Samples`,
+				label: l.Samples || `Samples`,
 				getCount: () => this.parent.sampleOrder.length,
 				rows: [
 					{
-						label: `Sort ${l.samples}`,
-						title: 'Set how to sort samples',
+						label: `Sort ${l.Samples}`,
+						title: `Set how to sort ${l.samples}`,
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
@@ -53,15 +53,15 @@ export class MatrixControls {
 						labelDisplay: 'block'
 					},
 					{
-						label: `Maximum # ${l.samples}`,
-						title: 'Limit the number of displayed samples',
+						label: `Maximum # ${l.Samples}`,
+						title: `Limit the number of displayed ${l.samples}`,
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxSample'
 					},
 					{
-						label: `Group ${l.samples} By`,
-						title: 'Select a variable with discrete values to group samples',
+						label: `Group ${l.Samples} By`,
+						title: `Select a variable with discrete values to group ${l.samples}`,
 						type: 'term',
 						chartType: 'matrix',
 						configKey: 'divideBy',
@@ -80,6 +80,23 @@ export class MatrixControls {
 								.sort()
 							return { currentGeneNames }
 						}
+					},
+					{
+						label: `${l.Sample} Group Label Max Length`,
+						title: `Truncate the ${l.sample} group label if it exceeds this maximum number of characters`,
+						type: 'number',
+						chartType: 'matrix',
+						settingsKey: 'sampleGrpLabelMaxChars',
+						getDisplayStyle(plot) {
+							return plot.divideBy ? 'block' : 'none'
+						}
+					},
+					{
+						label: `${l.Sample} Label Max Length`,
+						title: `Truncate the ${l.sample} label if it exceeds this maximum number of characters`,
+						type: 'number',
+						chartType: 'matrix',
+						settingsKey: 'collabelmaxchars'
 					}
 				]
 			})
@@ -99,8 +116,8 @@ export class MatrixControls {
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
-						label: `Display ${l.sample} Counts for Gene`,
-						title: 'Include the case count in the gene label',
+						label: `Display ${l.Sample} Counts for Gene`,
+						title: `Include the ${l.sample} count in the gene label`,
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'samplecount4gene',
@@ -111,8 +128,22 @@ export class MatrixControls {
 						]
 					},
 					{
+						label: `Row Group Label Max Length`,
+						title: `Truncate the row group label if it exceeds this maximum number of characters`,
+						type: 'number',
+						chartType: 'matrix',
+						settingsKey: 'termGrpLabelMaxChars'
+					},
+					{
+						label: `Row Label Max Length`,
+						title: `Truncate the row label if it exceeds this maximum number of characters`,
+						type: 'number',
+						chartType: 'matrix',
+						settingsKey: 'rowlabelmaxchars'
+					},
+					{
 						label: 'Rendering Style',
-						title: `Set how to indicate a sample's applicable variant types in the same matrix cell`,
+						title: `Set how to indicate a ${l.sample}'s applicable variant types in the same matrix cell`,
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'cellEncoding',
@@ -142,13 +173,29 @@ export class MatrixControls {
 	}
 
 	setVariablesBtn(s) {
+		const l = s.controlLabels
 		this.opts.holder
 			.append('button')
 			.datum({
-				label: s.controlLabels.terms || `Variables`,
+				label: s.controlLabels.Terms || `Variables`,
 				//getCount: () => this.parent.termOrder.filter(t => t.tw.term.type != 'geneVariant').length.length,
-				customInputs: this.appendDictInputs,
-				rows: []
+				rows: [
+					{
+						label: `Row Group Label Max Length`,
+						title: `Truncate the row group label if it exceeds this maximum number of characters`,
+						type: 'number',
+						chartType: 'matrix',
+						settingsKey: 'termGrpLabelMaxChars'
+					},
+					{
+						label: `Row Label Max Length`,
+						title: `Truncate the row label if it exceeds this maximum number of characters`,
+						type: 'number',
+						chartType: 'matrix',
+						settingsKey: 'rowlabelmaxchars'
+					}
+				],
+				customInputs: this.appendDictInputs
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
@@ -646,7 +693,8 @@ export class MatrixControls {
 	appendDictInputs(self, app, parent, table) {
 		tip.clear()
 		if (!parent.selectedGroup) parent.selectedGroup = 0
-		self.addDictMenu(app, parent)
+		app.tip.d.append('hr')
+		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
 	addGeneSearch(event, app, parent, tr, callback) {
@@ -736,12 +784,12 @@ export class MatrixControls {
 			})
 	}
 
-	async addDictMenu(app, parent, tr) {
-		app.tip.clear()
+	async addDictMenu(app, parent, tr, holder = undefined) {
+		//app.tip.clear()
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
-			holder: app.tip.d,
+			holder: holder || app.tip.d,
 			vocabApi: this.parent.app.vocabApi,
 			state: {
 				vocab: this.parent.state.vocab,

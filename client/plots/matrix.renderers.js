@@ -342,6 +342,13 @@ export function setRenderers(self) {
 			//.duration(duration)
 			.attr('transform', `translate(${x},${y})`)
 
+		self.dom.clipRect
+			// the cliprect has to be moved upwards, plus increased height to that adjustment value,
+			// in order to display all characters of every column/group label
+			.attr('y', -y)
+			// add 500 so that the column labels are not clipped
+			.attr('height', d.mainh + 500 + y)
+
 		// this position is based on layout.btm.attr.boxTransform, plus box height and margins
 		const legendX = d.xOffset + (s.transpose ? 20 : 0)
 		const legendY = d.yOffset + d.mainh + s.collabelgap + btmBox.height + 20

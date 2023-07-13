@@ -32,8 +32,9 @@ export default <Mds3>{
 	isMds3: true,
 	cohort: {
 		db: {
-			file: 'files/hg38/TermdbTest/db',
+			file: 'files/hg38/TermdbTest/db'
 		},
+		allowedChartTypes: ['summary', 'survival', 'matrix', 'sampleScatter', 'cuminc', 'dataDownload'],
 		termdb: {
 			displaySampleIds: true, // allow to display sample-level data
 
@@ -55,7 +56,7 @@ export default <Mds3>{
 				// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
 				term: {
 					id: 'subcohort',
-					type: 'categorical',
+					type: 'categorical'
 				},
 				prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
 				values: [
@@ -64,21 +65,21 @@ export default <Mds3>{
 						keys: ['ABC'],
 						label: 'ABC Lifetime Cohort (ABC)',
 						shortLabel: 'ABC',
-						isdefault: true,
+						isdefault: true
 					},
 					{
 						keys: ['XYZ'],
 						label: 'XYZ Cancer Survivor Study (XYZ)',
-						shortLabel: 'XYZ',
+						shortLabel: 'XYZ'
 					},
 					{
 						keys: ['ABC', 'XYZ'],
 						label: 'Combined ABC+XYZ',
 						shortLabel: 'ABC+XYZ',
 						// show note under label in smaller text size
-						note: 'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.',
-					},
-				],
+						note: 'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
+					}
+				]
 			},
 
 			dataDownloadCatch: {
@@ -90,13 +91,13 @@ export default <Mds3>{
 						sjlife: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002',
 						ccss: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1005',
 						'sjlife,ccss': 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002,SJC-DS-1005',
-						fake: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002',
-					},
+						fake: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002'
+					}
 				},
 				jwt: {
-					'Invalid token': 'https://university.stjude.cloud/docs/visualization-community/data-download/',
-				},
-			},
+					'Invalid token': 'https://university.stjude.cloud/docs/visualization-community/data-download/'
+				}
+			}
 		},
 		scatterplots: {
 			plots: [
@@ -104,11 +105,11 @@ export default <Mds3>{
 					name: 'TermdbTest TSNE',
 					dimension: 2,
 					file: 'files/hg38/TermdbTest/tnse.txt',
-					colorTW: { id: 'diaggrp' },
-				},
-			],
-		},
-	},
+					colorTW: { id: 'diaggrp' }
+				}
+			]
+		}
+	}
 }
 
 function copyDataFilesFromRepo2Tp() {
