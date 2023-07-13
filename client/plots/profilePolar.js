@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
+import { rgb } from 'd3-color'
 
 class profilePolar {
 	constructor() {
@@ -70,9 +71,11 @@ class profilePolar {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 		// Create a polar grid.
-		const radius = 200
-
-		const polarG = svg.append('g').attr('transform', 'translate(400,300)')
+		const radius = 250
+		const x = 400
+		const y = 300
+		const polarG = svg.append('g').attr('transform', `translate(${x},${y})`)
+		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
 		const angle = (Math.PI * 2) / config.terms.length
 		let i = 0
@@ -81,8 +84,8 @@ class profilePolar {
 				.append('g')
 				.append('path')
 				.attr('fill', d.color)
+				.attr('stroke', rgb(d.color).darker())
 				.attr('stroke-width', 1)
-				.attr('stroke', 'darkslategray')
 				.attr(
 					'd',
 					this.arcGenerator({
@@ -94,16 +97,37 @@ class profilePolar {
 			i++
 		}
 
-		addCircle(50)
-		addCircle(75)
-		addCircle(100)
-
-		function addCircle(percent) {
+		addCircle(50, 'C')
+		addCircle(75, 'B')
+		addCircle(100, 'A')
+		for (let i = 0; i <= 10; i++) {
+			const percent = i * 10
 			polarG
+				.append('text')
+				.attr('transform', `translate(-10, ${(-percent / 100) * radius + 5})`)
+				.attr('text-anchor', 'end')
+				.style('font-size', '0.8rem')
+				.text(`${percent}%`)
+		}
+
+		function addCircle(percent, text = null) {
+			const circle = polarG
 				.append('circle')
 				.attr('r', (percent / 100) * radius)
 				.style('fill', 'none')
-				.style('stroke', '#aaa')
+				.style('opacity', '0.5')
+			if (percent != 50) circle.style('stroke', '#aaa')
+			if (text) {
+				if (percent != 100) circle.style('stroke-dasharray', '5, 5').style('stroke-width', '2').style('stroke', 'black')
+
+				polarG
+					.append('text')
+					.attr('transform', `translate(15, ${-(percent / 100 - 0.125) * radius + 10})`)
+					.attr('text-anchor', 'middle')
+					.text(text)
+					.style('font-weight', 'bold')
+					.style('font-size', '24px')
+			}
 		}
 	}
 }
