@@ -86,8 +86,6 @@ class profilePolar {
 				.append('g')
 				.append('path')
 				.attr('fill', d.term.color)
-				.attr('stroke', rgb(d.term.color).darker())
-				.attr('stroke-width', 1)
 				.attr(
 					'd',
 					this.arcGenerator({
