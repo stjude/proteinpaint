@@ -23,17 +23,11 @@ class profilePolar {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		const twLst = []
-		this.component = this.config.plotByComponent[this.config.componentIndex || 0]
-		this.component.hasSubjectiveData = false
-		for (const group of this.component.groups)
-			for (const row of group.rows) {
-				for (const [i, tw] of row.twlst.entries()) {
-					if (tw.id) {
-						twLst.push(tw)
-						if (i == 1) this.component.hasSubjectiveData = true
-					}
-				}
+		for (const [i, tw] of this.config.terms.entries()) {
+			if (tw.id) {
+				twLst.push(tw)
 			}
+		}
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
@@ -42,7 +36,6 @@ class profilePolar {
 
 	plot() {
 		const config = this.config
-		const components = config.plotByComponent.map(comp => comp.component.name)
 		let data
 		this.dom.holder.selectAll('*').remove()
 		const samples = []
@@ -82,14 +75,9 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
-		for (const component of config.plotByComponent)
-			for (const group of component.groups)
-				for (const row of group.rows) {
-					for (const t of row.twlst) {
-						if (t.id) await fillTermWrapper(t, app.vocabApi)
-						// allow empty cells, not all cells have a corresponding term
-					}
-				}
+		for (const t of config.terms) {
+			if (t.id) await fillTermWrapper(t, app.vocabApi)
+		}
 		return config
 	} catch (e) {
 		throw `${e} [profilePolar getPlotConfig()]`
