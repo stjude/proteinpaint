@@ -49,7 +49,7 @@ export default class DataMapper {
 	private lastInnerRadious: number
 
 	private snvFilter = (data: Data) => data.dt == MutationTypes.SNV
-	private fusionFilter = (data: Data) => data.dt == MutationTypes.FUSION
+	private fusionFilter = (data: Data) => data.dt == MutationTypes.FUSION || data.dt == MutationTypes.SV
 
 	private cnvFilter = (data: Data) => data.dt == MutationTypes.CNV
 	private lohFilter = (data: Data) => data.dt == MutationTypes.LOH
@@ -84,14 +84,26 @@ export default class DataMapper {
 		const dataArray: Array<Data> = []
 
 		data.forEach(dObject => {
-			const instance = this.dataObjectMapper.map(dObject)
+			const index = this.reference.chromosomesOrder.indexOf(dObject.chr)
+			const indexA = this.reference.chromosomesOrder.indexOf(dObject.chrA)
+			const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
 
-			if (instance.isPrioritized) {
-				this.hasPrioritizedGenes = true
+			if (dObject.dt == MutationTypes.SNV) {
+				if (index != -1) {
+					this.addData(dObject, dataArray)
+				}
+			} else if (dObject.dt == MutationTypes.FUSION || dObject.dt == MutationTypes.SV) {
+				if (indexA != -1 && indexB != -1) {
+					this.addData(dObject, dataArray)
+				}
+			} else if ([MutationTypes.CNV, MutationTypes.LOH].includes(Number(dObject.dt))) {
+				this.addData(dObject, dataArray)
+			} else {
+				throw Error('Unknown mutation type!')
 			}
-
-			dataArray.push(instance)
 		})
+
+		// || (dObject.chrA && indexA == -1) || (dObject.chrB && indexB == -1))) {
 
 		const sortedData = dataArray.sort(this.compareData)
 
@@ -167,6 +179,16 @@ export default class DataMapper {
 		}
 
 		return dataHolder
+	}
+
+	private addData(dObject, dataArray: Array<Data>) {
+		const instance = this.dataObjectMapper.map(dObject)
+
+		if (instance.isPrioritized) {
+			this.hasPrioritizedGenes = true
+		}
+
+		dataArray.push(instance)
 	}
 
 	private filterNonExonicSnvData(data: Data) {
