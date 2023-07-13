@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { mclass, dt2label } from '#shared/common'
-import { PillData, Q, TermWrapper, VocabApi } from '#shared/types'
+import { PillData, VocabApi, GeneVariantTermSettingInstance, GeneVariantTermWrapper } from '#shared/types'
 
 /* 
 instance attributes
@@ -15,7 +15,7 @@ type MClassEntry = { label: string; color: string; dt: number; desc: string; key
 type GroupsEntry = { name: string; items: MClassEntry[] }
 
 // self is the termsetting instance
-export function getHandler(self: any) {
+export function getHandler(self: GeneVariantTermSettingInstance) {
 	return {
 		getPillName(d: PillData) {
 			return self.term.name
@@ -36,13 +36,13 @@ export function getHandler(self: any) {
 const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
 let id = 0
 
-export function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
+export function fillTW(tw: GeneVariantTermWrapper, vocabApi: VocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
 	if (!tw.term.name && tw.term.isoform) tw.term.name = tw.term.isoform as string
 
 	{
 		// apply optional ds-level configs for this specific term
-		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant
+		const c = vocabApi.termdbConfig.customTwQByType?.geneVariant
 		if (c && tw.term.name) {
 			//if (c) valid js code but `&& tw.term.name` required to avoid type error
 			// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
@@ -75,7 +75,7 @@ export function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
 	}
 }
 
-function makeEditMenu(self: any, _div: any) {
+function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const div = _div.append('div').style('padding', '5px').style('cursor', 'pointer')
 
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
