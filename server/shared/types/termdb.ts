@@ -2,8 +2,7 @@ import { Tvs, Filter } from './filter'
 import { CategoricalConditionQ } from './categorical'
 import { NumericQ } from './numeric'
 import { GeneVariantQ } from './geneVariant'
-import { SnpLocusQ } from './snplocus'
-import { SnpLstQ } from './snplst'
+import { SnpsQ } from './snps'
 
 /*
 --------EXPORTED--------
@@ -132,19 +131,19 @@ type RegressionQ = BaseQ & {
 	knots?: []
 }
 
-type RestrictAncestry = {
-	name: string
-	tvs: Tvs
-}
+// type RestrictAncestry = {
+// 	name: string
+// 	tvs: Tvs
+// }
 
-export type BaseSnpQ = BaseQ & {
-	//for snplst and snplocus term types
-	AFcutoff: number
-	alleleType: number
-	geneticModel: number
-	restrictAncestry: RestrictAncestry
-	cacheid: string
-}
+// export type BaseSnpQ = BaseQ & {
+// 	//for snplst and snplocus term types
+// 	AFcutoff: number,
+// 	alleleType: number,
+// 	geneticModel: number
+// 	restrictAncestry: RestrictAncestry
+// 	cacheid: string
+// }
 
 // type GeneVariantQ = BaseQ & {
 // 	termType: 'geneVariant'
@@ -175,7 +174,7 @@ export type BaseSnpQ = BaseQ & {
 // 	stop?: number
 // }
 
-export type Q = BaseQ | CategoricalConditionQ | NumericQ | RegressionQ | GeneVariantQ | SnpLstQ | SnpLocusQ
+export type Q = BaseQ | CategoricalConditionQ | NumericQ | RegressionQ | GeneVariantQ | SnpsQ
 
 /*** interfaces supporting Term interface ***/
 
@@ -255,8 +254,6 @@ export type Term = {
 	tvs?: Tvs
 	values?: TermValues
 	unit?: string
-	//snplocus
-	reachedVariantLimit?: boolean
 }
 
 export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
@@ -267,10 +264,8 @@ export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer'
 	? RegressionQ
 	: T extends 'geneVariant'
 	? GeneVariantQ
-	: T extends 'snplst'
-	? SnpLstQ
-	: T extends 'snplocus'
-	? SnpLocusQ
+	: T extends 'snplst' | 'snplocus'
+	? SnpsQ
 	: Q
 
 // export function matchTermType(term: Term): Q | undefined {

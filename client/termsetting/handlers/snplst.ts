@@ -1,5 +1,5 @@
 import { mayRunSnplstTask } from './snplst.sampleSum'
-import { TermWrapper, VocabApi, LstEntry } from '#shared/types'
+import { SnpsTermSettingInstance, SnpsQ, SnpsTermWrapper, SnpsVocabApi, SnpsTerm, SnpsEntry } from '#shared/types'
 
 /* 
 TODO clean up ui logic, may use table.js?
@@ -43,7 +43,7 @@ Exports following functions shared with snplocus term
 */
 
 // self is the termsetting instance
-export function getHandler(self: any) {
+export function getHandler(self: SnpsTermSettingInstance) {
 	return {
 		getPillName() {
 			return self.term.name
@@ -77,7 +77,7 @@ ui switches between two modes
 if the instance carries snps (self.term.snps), directly enter edit ui
 else, enter input ui; after validating raw input, show edit ui
 */
-async function makeEditMenu(self: any, div0: any) {
+async function makeEditMenu(self: SnpsTermSettingInstance, div0: any) {
 	const div = div0.append('div').style('margin', '15px')
 
 	const select_ancestry = await mayRestrictAncestry(self, div)
@@ -126,7 +126,7 @@ async function makeEditMenu(self: any, div0: any) {
 			if (self.term.snps) {
 				// append new ones to existing array
 				for (const n of snps) {
-					if (self.term.snps.find((i: any) => i.rsid == n.rsid)) continue
+					if (self.term.snps.find(i => i.rsid == n.rsid)) continue
 					self.term.snps.push(n)
 				}
 			} else {
@@ -211,7 +211,7 @@ async function makeEditMenu(self: any, div0: any) {
 		.append('button')
 		.text('Submit')
 		.on('click', async () => {
-			self.term.snps = self.term.snps.filter(i => !i.tobe_deleted)
+			self.term.snps = self.term.snps!.filter(i => !i.tobe_deleted)
 
 			self.term.name = getTermName(self.term.snps)
 
@@ -284,7 +284,7 @@ async function makeEditMenu(self: any, div0: any) {
 	}
 }
 
-function initSnpEditTable(div: any, self: any, select_alleleType: any) {
+function initSnpEditTable(div: any, self: SnpsTermSettingInstance, select_alleleType: any) {
 	self.dom.snplst_table = div.append('table')
 	renderSnpEditTable(self, select_alleleType)
 	div
@@ -296,7 +296,7 @@ function initSnpEditTable(div: any, self: any, select_alleleType: any) {
 		)
 }
 
-function renderSnpEditTable(self: any, select_alleleType: any) {
+function renderSnpEditTable(self: SnpsTermSettingInstance, select_alleleType: any) {
 	// allow to delete or add to this list
 	self.dom.snplst_table.selectAll('*').remove()
 	const title_tr = self.dom.snplst_table.append('tr').style('opacity', 0.4)
@@ -313,6 +313,7 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 	})
 
 	// SNPs
+	if (!self.term.snps) throw `Missing term.snps [snplst.ts renderSnpEditTable()]`
 	for (const [i, snp] of self.term.snps.entries()) {
 		//const invalid_snp = snp.invalid || (!snp.alleles && !snp.gt2count) ? true : false
 		let invalid_snp: boolean | string = false
@@ -331,7 +332,10 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 		// col 2: sample count
 		const sample_count: any = invalid_snp
 			? invalid_snp
-			: Object.values(snp.gt2count).reduce((a: number, b: any) => a + b, 0)
+			: snp.gt2count
+			? Object.values(snp.gt2count).reduce((a: number, b: any) => a + b, 0)
+			: `Missing sample count for snp`
+
 		tr.append('td').style('text-align', 'center').text(sample_count)
 
 		// col 3: Reference allele (frequency)
@@ -341,6 +345,7 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 		const alt_allele_td = tr.append('td')
 
 		if (!invalid_snp) {
+			if (!snp.alleles) throw `Missing alleles for snp = ${snp} [snplst.ts renderSnpEditTable()]`
 			const effectAllele = self.q.snp2effAle ? self.q.snp2effAle[snp.rsid] : undefined
 			const refAllele = snp.alleles.find((s: any) => s.isRef)
 			const altAlleles = snp.alleles.filter((s: any) => !s.isRef)
@@ -357,9 +362,10 @@ function renderSnpEditTable(self: any, select_alleleType: any) {
 		const gt_td = tr.append('td')
 		if (!invalid_snp) {
 			const refGT = self.q.snp2refGrp ? self.q.snp2refGrp[snp.rsid] : undefined
-			for (const [gt, freq] of Object.entries<number>(snp.gt2count)) {
+			if (!snp.gt2count) throw `Missing gt2count for snp = ${snp} [snplst.ts renderSnpEditTable()]`
+			for (const [gt, freq] of Object.entries(snp.gt2count)) {
 				//const gt_freq = Math.round((freq * 100) / sample_count)
-				const gt_freq = ((freq * 100) / sample_count).toFixed(2)
+				const gt_freq = (((freq as number) * 100) / sample_count).toFixed(2)
 				const gt_div = gt_td
 					.append('div')
 					.style('display', 'inline-block')
@@ -473,7 +479,7 @@ function parseSnpFromText(textarea: any) {
 	return snps
 }
 
-function snp2text(self: any) {
+function snp2text(self: SnpsTermSettingInstance) {
 	if (!self.term || !self.term.snps) return ''
 	const lines: any = []
 	for (const a of self.term.snps) {
@@ -497,6 +503,7 @@ async function validateInput(self: any) {
 	if (data.error) throw data.error
 	// copy result to instance
 	self.q.cacheid = data.cacheid
+	if (!self.term.snps) throw `Missing term.snps [snplst.ts validateInput()]`
 	for (const [i, s] of self.term.snps.entries()) {
 		const s1 = data.snps[i]
 		s.snpid = s1.snpid
@@ -511,19 +518,19 @@ only need it to instantly update snp table in menu
 thus this function is not needed
 if there's a way to automatically update menu then can delete it TODO
 */
-async function makeSampleSummary(self: any) {
+async function makeSampleSummary(self: SnpsTermSettingInstance) {
 	const body = { cacheid: self.q.cacheid }
 
 	// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
 
-	const extraFilters: LstEntry[] = []
+	const extraFilters: any = []
 	let f!: any // copy of self.filter and to be combined with extraFilters
 
 	if (self.q.restrictAncestry) {
 		if (self.filter) {
 			// tricky: detect if self.filter contains the same ancestry term
 			f = structuredClone(self.filter)
-			const idx = f.lst.findIndex(i => i.tvs?.term?.id == self.q.restrictAncestry.tvs.term.id)
+			const idx = f.lst.findIndex(i => i.tvs?.term?.id == (self.q as SnpsQ).restrictAncestry.tvs.term.id)
 			if (idx != -1) {
 				// has the same term! must overwrite to avoid two tvs of the same ancestry term, each with a different ancestry which will result in 0 samples
 				f.lst[idx] = { type: 'tvs', tvs: self.q.restrictAncestry.tvs }
@@ -541,7 +548,7 @@ async function makeSampleSummary(self: any) {
 	if (f) filter.lst.push(f)
 
 	const data = await self.vocabApi.getCategories(self.term, filter, body)
-	mayRunSnplstTask({ term: self.term, q: self.q }, data)
+	mayRunSnplstTask({ term: self.term, q: self.q as SnpsQ }, data)
 }
 
 function validateQ(data: any) {
@@ -552,7 +559,7 @@ function validateQ(data: any) {
 	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 }
 
-export async function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
+export async function fillTW(tw: SnpsTermWrapper, vocabApi: SnpsVocabApi) {
 	try {
 		validateQ(tw)
 	} catch (e) {
@@ -595,7 +602,7 @@ create following dom elements and return in an array
   (missing gt is not created for snplocus)
 
 */
-export function makeSnpSelect(div: any, self: any, termtype: string) {
+export function makeSnpSelect(div: any, self: SnpsTermSettingInstance, termtype: string) {
 	let input_AFcutoff_label: any, input_AFcutoff: any, select_missingGenotype: any
 
 	// input - af cutoff
@@ -662,6 +669,7 @@ export function makeSnpSelect(div: any, self: any, termtype: string) {
 		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint(select_alleleType))
 		self.q.alleleType = select_alleleType.property('selectedIndex')
 		if (termtype !== 'snplocus') {
+			if (!self.term.snps) throw `Missing term.snps [snplst.ts makeSnpSelect()]`
 			for (const snp of self.term.snps) {
 				// clear effect alleles when user changes
 				// the 'set effect allele as' setting
@@ -720,7 +728,7 @@ export function makeSnpSelect(div: any, self: any, termtype: string) {
 	return [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype]
 }
 
-export async function mayRestrictAncestry(self: any, holder: any) {
+export async function mayRestrictAncestry(self: SnpsTermSettingInstance, holder: any) {
 	if (self.q?.doNotRestrictAncestry) return
 
 	const tdbcfg = await self.vocabApi.getTermdbConfig()
@@ -735,7 +743,7 @@ export async function mayRestrictAncestry(self: any, holder: any) {
 		opt.node().__ancestry_obj = ancestry
 	}
 	if (self.q && self.q.restrictAncestry) {
-		const i = tdbcfg.restrictAncestries.findIndex((i: any) => i.name == self.q.restrictAncestry.name)
+		const i = tdbcfg.restrictAncestries.findIndex((i: any) => i.name == self.q.restrictAncestry!.name)
 		if (i == -1) throw 'unknown restrictAncestry: ' + self.q.restrictAncestry.name
 		select.property('selectedIndex', i)
 	}
