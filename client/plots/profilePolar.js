@@ -80,16 +80,18 @@ class profilePolar {
 		const angle = (Math.PI * 2) / config.terms.length
 		let i = 0
 		for (const d of config.terms) {
+			const percentage = data[d.$id]?.value
+
 			polarG
 				.append('g')
 				.append('path')
-				.attr('fill', d.color)
-				.attr('stroke', rgb(d.color).darker())
+				.attr('fill', d.term.color)
+				.attr('stroke', rgb(d.term.color).darker())
 				.attr('stroke-width', 1)
 				.attr(
 					'd',
 					this.arcGenerator({
-						outerRadius: (d.percentage / 100) * radius,
+						outerRadius: (percentage / 100) * radius,
 						startAngle: i * angle,
 						endAngle: (i + 1) * angle
 					})
