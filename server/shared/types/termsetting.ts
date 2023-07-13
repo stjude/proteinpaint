@@ -77,7 +77,7 @@ export type Handler = {
 	postMain?: () => void
 }
 
-interface BaseTermSettingOpts {
+type BaseTermSettingOpts = {
 	//Optional
 	abbrCutoff?: number
 	activeCohort?: number
@@ -86,7 +86,7 @@ interface BaseTermSettingOpts {
 	noTermPromptOptions?: NoTermPromptOptsEntry[]
 }
 
-export interface PillData extends BaseTermSettingOpts {
+export type PillData = BaseTermSettingOpts & {
 	$id?: string
 	doNotHideTipInMain: boolean
 	dom: Dom
@@ -97,7 +97,7 @@ export interface PillData extends BaseTermSettingOpts {
 	term?: Term
 }
 
-export interface TermSettingOpts extends BaseTermSettingOpts {
+export type TermSettingOpts = BaseTermSettingOpts & {
 	//Required
 	holder: any
 	vocabApi: VocabApi
@@ -129,40 +129,6 @@ export interface TermSettingOpts extends BaseTermSettingOpts {
 }
 
 /*** types and interfaces supporting TermSettingInstance type ***/
-// type NumObjRangeEntry = any //{}
-
-// export type BrushEntry = {
-// 	//No documentation!
-// 	orig: string
-// 	range: {
-// 		start: number
-// 		stop: number
-// 	}
-// 	init: () => void
-// }
-
-// type DensityData = {
-// 	maxvalue: number
-// 	minvalue: number
-// }
-
-// type PlotSize = {
-// 	width: number
-// 	height: number
-// 	xpad: number
-// 	ypad: number
-// }
-
-// export type NumberObj = {
-// 	binsize_g?: any //dom element??
-// 	brushes: BrushEntry[]
-// 	density_data: DensityData
-// 	no_density_data?: true
-// 	plot_size: PlotSize
-// 	ranges?: NumObjRangeEntry[]
-// 	svg?: any
-// 	xscale?: any
-// }
 
 export type InstanceDom = {
 	//Separate from the Dom outlined in termsetting.ts?????

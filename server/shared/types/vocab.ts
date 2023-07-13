@@ -10,7 +10,7 @@ VocabApi
 
 //type QLst = [Partial<{ nextReuseId?: string }>, ...Q[]]
 
-export interface VocabApi {
+export type VocabApi = {
 	termdbConfig: any
 	//Methods
 	cacheTermQ: (term: Term, q: Q) => any

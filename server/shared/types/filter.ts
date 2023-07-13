@@ -8,7 +8,7 @@ Filter
 
 */
 
-/*** types and interfaces supporting Tvs interface ***/
+/*** types supporting Tvs type ***/
 
 type TvsValues = {
 	key?: string
@@ -40,7 +40,7 @@ export type Tvs = {
 	grade_and_child?: GradeAndChildEntry[]
 }
 
-/*** types and interfaces supporting Filter interface ***/
+/*** types supporting Filter type ***/
 
 export type LstEntry = {
 	type: string
