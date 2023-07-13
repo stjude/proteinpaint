@@ -330,8 +330,8 @@ class Matrix {
 				const key = row[$id].key
 				if (!sampleGroups.has(key)) {
 					sampleGroups.set(key, {
-						id: key,
 						name: key in values && values[key].label ? values[key].label : key,
+						id: key,
 						lst: [],
 						order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
 						tw: this.config.divideBy
@@ -348,7 +348,12 @@ class Matrix {
 		}
 
 		// TODO: sort sample groups, maybe by sample count, value order, etc
-		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => a.order - b.order)
+		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => {
+			if ('order' in a && 'order' in b) return a.order - b.order
+			if ('order' in a) return -1
+			if ('order' in b) return 1
+			return a.name < b.name ? -1 : 1
+		})
 	}
 
 	setSampleOrder(data) {
@@ -612,14 +617,30 @@ class Matrix {
 		// ht: standard cell dimension for term row or column
 		const ht = s.transpose ? s.colw : s.rowh
 		const grpTotals = {}
+		const processedLabels = { sampleGrpByName: {}, termGrpByName: {} }
 		let totalHtAdjustments = 0
 
 		for (const t of this.termOrder) {
 			const countedSamples = new Set()
 			t.counts = { samples: 0, hits: 0 }
+			if (!processedLabels.termGrpByName[t.grp.name || '']) {
+				const name = t.grp.name || ''
+				t.grp.label = name.length < s.termGrpLabelMaxChars ? name : name.slice(0, s.termGrpLabelMaxChars) + '...'
+				processedLabels.termGrpByName[name] = t.grp.label
+			}
 
 			for (const sample of this.sampleOrder) {
 				if (countedSamples.has(sample.row.sample)) continue
+				const name = sample.grp.name || ''
+				if (!(name in processedLabels.sampleGrpByName)) {
+					sample.grp.label =
+						name.length < s.sampleGrpLabelMaxChars ? name : name.slice(0, s.sampleGrpLabelMaxChars) + '...'
+					processedLabels.sampleGrpByName[name] = sample.grp.label
+				}
+				const sampleName = sample.row.sampleName || sample.row.sample || ''
+				sample.label =
+					sampleName.length < s.collabelmaxchars ? sampleName : sampleName.slice(0, s.collabelmaxchars) + '...'
+
 				const anno = sample.row[t.tw.$id]
 				if (!anno) continue
 				const { filteredValues, countedValues, renderedValues } = this.classifyValues(
@@ -653,6 +674,7 @@ class Matrix {
 			}
 
 			t.label = t.tw.label || t.tw.term.name
+			if (t.label.length > s.rowlabelmaxchars) t.label = t.label.slice(0, s.rowlabelmaxchars) + '...'
 			if (s.samplecount4gene && t.tw.term.type.startsWith('gene')) {
 				const count =
 					s.samplecount4gene === 'abs'
@@ -947,7 +969,7 @@ class Matrix {
 	}
 
 	sampleLabel(series) {
-		return series.row.sampleName || series.row.sample || ''
+		return series.label || series.row.label || series.row.sampleName || series.row.sample || ''
 	}
 
 	sampleGrpKey(s) {
@@ -955,7 +977,7 @@ class Matrix {
 	}
 
 	sampleGrpLabel(s) {
-		return s.grp.name
+		return s.grp.label || s.grp.name
 	}
 
 	termKey(t) {
@@ -971,13 +993,13 @@ class Matrix {
 	}
 
 	termGrpLabel(t) {
-		return t.grp.name || [{ text: '⋮', dx: 3, cls: 'sjpp-exclude-svg-download' }]
+		return t.grp.label || t.grp.name || [{ text: '⋮', dx: 3, cls: 'sjpp-exclude-svg-download' }]
 	}
 
 	setLegendData(legendGroups, refs) {
+		const s = this.settings.matrix
 		this.colorScaleByTermId = {}
 		const legendData = []
-
 		for (const $id in legendGroups) {
 			const legend = legendGroups[$id]
 
@@ -1049,8 +1071,9 @@ class Matrix {
 					this.colorScaleByTermId[grp] =
 						keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 
+				const name = t.tw.legend?.group || t.tw.label || term.name
 				legendData.push({
-					name: t.tw.legend?.group || t.tw.label || term.name,
+					name: name.length < s.rowlabelmaxchars ? name : name.slice(0, s.rowlabelmaxchars) + '...',
 					order: legend.order,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]

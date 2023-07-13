@@ -15,15 +15,17 @@ export function setInteractivity(self) {
 			self.dom.tip.hide()
 			return
 		}
+		const s = self.settings.matrix
+		const l = s.controlLabels
 		const rows = []
 		if (d.term.type != 'geneVariant') {
-			rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
+			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
 			rows.push(
 				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
 			)
 		} else if (d.term.type == 'geneVariant' && d.value) {
 			rows.push(
-				`<tr><td colspan='2' style='text-align: center'>Sample: ${
+				`<tr><td colspan='2' style='text-align: center'>${l.Sample}: ${
 					d._SAMPLENAME_ || d.value._SAMPLENAME_ || d.value.sample
 				}</td></tr>`
 			)
@@ -34,7 +36,7 @@ export function setInteractivity(self) {
 				const label = v.mname ? `${v.mname} ${c.label}` : c.label
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
-				if ('value' in v) info.push(`${self.settings.matrix.cnvUnit}=${v.value}`)
+				if ('value' in v) info.push(`${s.cnvUnit}=${v.value}`)
 				if (v.chr) {
 					const pos = v.pos ? `:${v.pos}` : v.start ? `:${v.start}-${v.stop}` : ''
 					info.push(`${v.chr}${pos}`)
@@ -239,6 +241,8 @@ function setTermActions(self) {
 	self.showTermMenu = async function (event) {
 		const t = event.target.__data__
 		if (!t || !t.tw) return
+		const s = self.settings.matrix
+		const l = s.controlLabels
 		self.activeLabel = t
 		self.dom.menutop.style('display', '').selectAll('*').remove()
 		self.dom.menubody.style('padding', 0).selectAll('*').remove()
@@ -248,7 +252,7 @@ function setTermActions(self) {
 
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
-		labelEditDiv.append('span').text('Term ')
+		labelEditDiv.append('span').text(`${l.Term} `)
 
 		const twlabel = t.tw.label || t.tw.term.name
 		const vartype = t.tw.term.type == 'geneVariant' ? 'gene' : 'variable'
@@ -281,7 +285,7 @@ function setTermActions(self) {
 				.append('div')
 				.style('text-align', 'center')
 				.style('margin', '5px')
-				.text(`#samples: ${t.counts.samples} rendered, ${t.allCounts.samples - t.counts.samples} not rendered`)
+				.text(`#${l.samples}: ${t.counts.samples} rendered, ${t.allCounts.samples - t.counts.samples} not rendered`)
 		}
 
 		self.dom.twMenuBar = self.dom.twMenuDiv.append('div').style('text-align', 'center')
@@ -315,6 +319,7 @@ function setTermActions(self) {
 	}
 
 	self.showShortcuts = (t, div) => {
+		const l = self.settings.matrix.controlLabels
 		div.style('text-align', 'center')
 		//div.append('span').html('Shortcuts: ')
 
@@ -327,13 +332,13 @@ function setTermActions(self) {
 				[
 					{
 						icon: 'corner',
-						title: `Sort samples against this ${vartype} positioned at the top left corner`,
+						title: `Sort ${l.samples} against this ${vartype} positioned at the top left corner`,
 						disabled: t.grp.lst.length < 1 || (t.index === 0 && t.tw.sortSamples?.priority === 0),
 						handler: self.sortSamplesAgainstCornerTerm
 					},
 					{
 						icon: 'left',
-						title: `Sort samples against this ${vartype}`,
+						title: `Sort ${l.samples} against this ${vartype}`,
 						disabled: t.tw.sortSamples?.priority === 0,
 						handler: self.sortSamplesAgainstTerm
 					},
@@ -485,11 +490,12 @@ function setTermActions(self) {
 		self.dom.menubody.selectAll('*').remove()
 		const t = self.activeLabel
 		const s = self.config.settings.matrix
+		const l = s.controlLabels
 
 		if (t.tw.term.type == 'geneVariant') {
 			const div = self.dom.menubody.append('div')
 			const label = div.append('label')
-			label.append('span').html('Minimum #sample to be visible')
+			label.append('span').html(`Minimum # ${l.samples} to be visible`)
 
 			const minNumSamples = 'minNumSamples' in t.tw ? t.tw.minNumSamples : ''
 			const input = label
@@ -547,7 +553,7 @@ function setTermActions(self) {
 		self.dom.editbody = self.dom.menubody.append('div')
 
 		const grpNameDiv = self.dom.editbtns.append('div').style('margin', '10px 5px')
-		grpNameDiv.append('label').html('Insert terms in ')
+		grpNameDiv.append('label').html(`Insert genes or variables in `)
 		self.dom.grpNameSelect = grpNameDiv.append('select').on('change', () => {
 			const value = self.dom.grpNameSelect.property('value')
 			self.dom.grpNameTextInput
@@ -718,7 +724,7 @@ function setTermActions(self) {
 		const moveLabel = moveDiv.append('label')
 		self.moveInput = moveLabel.append('input').attr('type', 'checkbox').style('text-align', 'center')
 
-		moveLabel.append('span').html('&nbsp;move this term&nbsp;')
+		moveLabel.append('span').html(`&nbsp;move this row&nbsp;`)
 
 		const movePos = moveDiv.append('select')
 		movePos
@@ -758,7 +764,8 @@ function setTermActions(self) {
 			.property('checked', true)
 			.style('text-align', 'center')
 
-		sortColLabel.append('span').html(`&nbsp;sort samples against (in order of priority):`)
+		const l = self.settings.matrix.controlLabels
+		sortColLabel.append('span').html(`&nbsp;sort ${l.samples} against (in order of priority):`)
 
 		const tcopy = self.showSorterTerms(sortColDiv, t)
 
@@ -793,6 +800,8 @@ function setTermActions(self) {
 
 	self.showSorterTerms = (sortColDiv, t) => {
 		const [tcopy, sorterTerms] = self.getSorterTerms(t)
+		const s = self.settings.matrix
+		const l = s.controlLabels
 		sortColDiv
 			.append('div')
 			.style('margin', '5px')
@@ -811,7 +820,7 @@ function setTermActions(self) {
 			.each(function (st, i) {
 				st.sortSamples.priority = i
 				st.div = select(this)
-				const label = st.$id == 'sample' ? 'Sample name' : st.term.name
+				const label = st.$id == 'sample' ? `${l.Sample} name` : st.term.name
 				st.div.append('span').style('margin-right', '10px').html(label)
 				st.up = st.div
 					.append('span')
@@ -1037,7 +1046,7 @@ function setSampleGroupActions(self) {
 		label2.append('input').attr('type', 'radio').attr('name', radioName).attr('value', 'term0')
 		label2.append('span').html(' divide')
 
-		self.dom.menubody.append('div').style('padding-bottom', '10px').html(`the selected survival term below:`)
+		self.dom.menubody.append('div').style('padding-bottom', '10px').html(`the selected survival variable below:`)
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
@@ -1129,7 +1138,7 @@ function setTermGroupActions(self) {
 
 		const menuOptions = [
 			{ label: 'Edit', callback: self.showTermGroupEditMenu },
-			{ label: 'Add Terms', callback: self.showTermInsertMenu },
+			{ label: 'Add Rows', callback: self.showTermInsertMenu },
 			{ label: 'Sort', callback: self.showSortMenu },
 			{ label: 'Delete', callback: self.removeTermGroup }
 		]
@@ -1175,10 +1184,11 @@ function setTermGroupActions(self) {
 		menu.append('div').style('width', '100%').style('font-weight', 600).html('Group options')
 
 		const label = menu.append('div').append('label')
+		const l = self.settings.matrix.controlLabels
 		label
 			.append('span')
-			.html('Minimum #samples for visible terms*')
-			.attr('title', 'May be overridden by a term-specific minNumSamples')
+			.html(`Minimum # ${l.samples} for visible ${l.term}`)
+			.attr('title', `May be overridden by a row-specific minNumSamples`)
 		const minNumSampleInput = label
 			.append('input')
 			.attr('type', 'number')
@@ -1563,6 +1573,8 @@ function setZoomPanActions(self) {
 			return
 		}
 
+		const s = self.settings.matrix
+		const l = s.controlLabels
 		c.endCell = endCell
 		const ss = self.opts.allow2selectSamples
 		if (ss) {
@@ -1576,11 +1588,10 @@ function setZoomPanActions(self) {
 						callback: self.triggerZoomArea
 					},
 					{
-						label: ss.buttonText || 'Select samples',
+						label: ss.buttonText || `Select ${l.Samples}`,
 						callback: () => {
 							const c = self.clickedSeriesCell
 							delete self.clickedSeriesCell
-							const s = self.settings.matrix
 							const d = self.dimensions
 							const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 
@@ -1604,7 +1615,7 @@ function setZoomPanActions(self) {
 							}
 							ss.callback({
 								samples,
-								source: 'Selected samples from OncoMatrix'
+								source: `Selected ${l.samples} from OncoMatrix`
 							})
 							self.zoomArea.remove()
 							delete self.zoomArea
