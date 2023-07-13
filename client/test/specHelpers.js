@@ -49,6 +49,7 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	if (opts.name == '?') return
 
 	const specs = findMatchingSpecs(opts)
+	console.log(51, specs)
 	// the import code to write to the target file
 	const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
 	// the current import code as found in the target file
@@ -68,7 +69,7 @@ function findMatchingSpecs(opts) {
 	const SPECDIR = opts.dir ? `**/${opts.dir}` : '**'
 	const SPECNAME = opts.name || '*'
 	const exclude = 'exclude' in opts ? opts.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
-	const pattern = path.join(__dirname, `../${SPECDIR}/test/${SPECNAME}.spec.js`)
+	const pattern = path.join(__dirname, `../${SPECDIR}/test/${SPECNAME}.spec.*s`)
 	const specs =
 		getFromCache(pattern) ||
 		glob.sync(pattern, { cwd: path.join(__dirname, `../**`) }).filter(f => !exclude || !f.includes(exclude))
