@@ -1,7 +1,7 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { addGeneSearchbox } from '#dom/genesearch'
-import { SnpLocusTermSettingInstance, SnpLocusTermWrapper, SnpLocusQ, SnpLocusVocabApi } from '#shared/types'
+import { SnpsTermSettingInstance, SnpsTermWrapper, SnpsQ, SnpsVocabApi } from '#shared/types'
 
 /* 
 ***************** EXPORT
@@ -29,7 +29,7 @@ self.q{}
 const term_name = 'Variants in a locus'
 
 // self is the termsetting instance
-export function getHandler(self: SnpLocusTermSettingInstance) {
+export function getHandler(self: SnpsTermSettingInstance) {
 	return {
 		getPillName() {
 			return self.term.name
@@ -48,7 +48,7 @@ export function getHandler(self: SnpLocusTermSettingInstance) {
 			return { text }
 		},
 
-		validateQ(data: SnpLocusQ) {
+		validateQ(data: any) {
 			validateQ(data)
 		},
 
@@ -69,7 +69,7 @@ export function getHandler(self: SnpLocusTermSettingInstance) {
 	}
 }
 
-async function makeEditMenu(self: SnpLocusTermSettingInstance, div: any) {
+async function makeEditMenu(self: SnpsTermSettingInstance, div: any) {
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
 	const coordResult = addGeneSearchbox({
@@ -166,7 +166,7 @@ async function validateInput(self: any) {
 }
 
 function validateQ(data: any) {
-	const q = data.q as SnpLocusQ
+	const q = data.q as SnpsQ
 	if (!Number.isFinite(q.AFcutoff)) throw 'AFcutoff is not number'
 	if (q.AFcutoff < 0 || q.AFcutoff > 100) throw 'AFcutoff is not within 0 to 100'
 	if (![0, 1].includes(q.alleleType)) throw 'alleleType value is not one of 0/1'
@@ -178,7 +178,7 @@ function validateQ(data: any) {
 	if (q.stop <= q.start) throw 'stop <= start'
 }
 
-export async function fillTW(tw: SnpLocusTermWrapper, vocabApi: SnpLocusVocabApi) {
+export async function fillTW(tw: SnpsTermWrapper, vocabApi: SnpsVocabApi) {
 	try {
 		// to catch any error in q{} before running validateInput()
 		validateQ(tw)
@@ -219,7 +219,7 @@ callback2
 	optional callback to run upon filter update, no parameter
 */
 async function mayDisplayVariantFilter(
-	self: SnpLocusTermSettingInstance,
+	self: SnpsTermSettingInstance,
 	filterInState: any,
 	holder: any,
 	callback2?: any

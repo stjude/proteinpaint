@@ -1,4 +1,5 @@
-//import { TW } from '#shared/types'
+import { SnpsTermSettingInstance, SnpsTermWrapper, SnpsQ, SnpsVocabApi } from '#shared/types'
+
 /*
 if the "effect allele" is already set for a snp (by user), return it
 otherwise, compute it based on the alleleType setting (from termwrapper.q{})
@@ -51,13 +52,14 @@ data: returned by vocab getCategories()
 this function will alter tw,
 the changes must be kept in sync between termsetting instance and app state
 */
-export function mayRunSnplstTask(tw: any, data: any) {
+export function mayRunSnplstTask(tw: SnpsTermWrapper, data: any) {
 	if (tw.term.type != 'snplst' && tw.term.type != 'snplocus') return // this func may be called on different terms, skip in that case
 	if (data.error) throw data.error
 	if (!Array.isArray(data.snps)) throw 'data.snps[] not array'
 	// note!! tw is modified here and is not written to state, but should be fine
 
 	// delete existing sample summaries from snps, in case when a snp is no longer found in latest cohort due to filtering
+	if (!tw.term.snps) throw `Missing tw.term.snps [snplst.sampleSum.ts mayRunSnplstTask()]`
 	for (const s of tw.term.snps) {
 		delete s.alleles
 		delete s.gt2count

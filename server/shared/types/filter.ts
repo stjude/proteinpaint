@@ -27,7 +27,7 @@ type GradeAndChildEntry = {
 	child_label: string
 }
 
-export interface Tvs {
+export type Tvs = {
 	term: Term
 	values: TvsValues[]
 	join?: string //and, or
@@ -42,14 +42,14 @@ export interface Tvs {
 
 /*** types and interfaces supporting Filter interface ***/
 
-export interface LstEntry {
+export type LstEntry = {
 	type: string
 	tvs: Tvs
 }
 
-export interface Filter {
+export type Filter = {
 	type: string
-	in: boolean
+	in?: boolean
 	join?: string //and, or
 	tag?: string
 	lst: LstEntry[]
