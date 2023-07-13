@@ -11,6 +11,7 @@ class profilePolar {
 		this.dom = {
 			holder
 		}
+		this.arcGenerator = d3.arc().innerRadius(0)
 	}
 
 	getState(appState) {
@@ -68,29 +69,42 @@ class profilePolar {
 			config.sampleName = select.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
-		console.log(config.terms)
 		// Create a polar grid.
-		const r = 10
-		const theta = (2 * Math.PI) / config.terms.length
-		svg
-			.append('g')
-			.attr('transform', 'translate(200,200)')
-			.selectAll('circle')
-			.data(config.terms)
-			.enter()
-			.append('path')
-			.attr('fill', 'green')
-			.attr('stroke-width', 3)
-			.attr('stroke', 'darkslategray')
-			.attr(
-				'd',
-				d3
-					.arc()
-					.innerRadius(0)
-					.outerRadius(150)
-					.startAngle(0) // It's in radian, so Pi = 3.14 = bottom.
-					.endAngle(3.14 / 2)
-			) // 2*Pi = 6.28 = top)
+		const radius = 200
+
+		const polarG = svg.append('g').attr('transform', 'translate(400,300)')
+
+		const angle = (Math.PI * 2) / config.terms.length
+		let i = 0
+		for (const d of config.terms) {
+			polarG
+				.append('g')
+				.append('path')
+				.attr('fill', d.color)
+				.attr('stroke-width', 1)
+				.attr('stroke', 'darkslategray')
+				.attr(
+					'd',
+					this.arcGenerator({
+						outerRadius: (d.percentage / 100) * radius,
+						startAngle: i * angle,
+						endAngle: (i + 1) * angle
+					})
+				)
+			i++
+		}
+
+		addCircle(50)
+		addCircle(75)
+		addCircle(100)
+
+		function addCircle(percent) {
+			polarG
+				.append('circle')
+				.attr('r', (percent / 100) * radius)
+				.style('fill', 'none')
+				.style('stroke', '#aaa')
+		}
 	}
 }
 
