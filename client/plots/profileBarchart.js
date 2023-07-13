@@ -241,7 +241,7 @@ class profileBarchart {
 				.append('line')
 				.style('stroke', '#aaa')
 				.style('stroke-width', 1)
-				.style('stroke-dasharray', '5, 5') // <== This line here!!
+				.style('stroke-dasharray', '5, 5')
 				.attr('x1', x1)
 				.attr('y1', y)
 				.attr('x2', x1)
