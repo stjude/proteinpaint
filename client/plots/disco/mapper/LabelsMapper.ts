@@ -28,7 +28,6 @@ export default class LabelsMapper {
 
 		data.forEach(data => {
 			if (data.dt == MutationTypes.SNV) {
-				console.log('data', data)
 				const startAngle = this.calculateStartAngle(data.chr, data.position)
 				const endAngle = this.calculateEndAngle(data.chr, data.position)
 
