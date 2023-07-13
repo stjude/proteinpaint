@@ -13,7 +13,7 @@ NumericTermSettingInstance
 */
 
 export type NumericQ = BaseQ & {
-	// termType: 'numeric' | 'float' | 'integer',
+	// termType: 'numeric' | 'float' | 'integer' | 'regression',
 	preferredBins?: string
 	termtype: string
 	//regular-sized bins
@@ -31,7 +31,7 @@ export type NumericQ = BaseQ & {
 	modeBinaryCutoffType: 'normal' | 'percentile'
 	modeBinaryCutoffPercentile?: number
 	//density
-	knots: any
+	knots: any //[]?
 	//binary
 	scale?: number //0.1 | 0.01 | 0.001
 	//discrete

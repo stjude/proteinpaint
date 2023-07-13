@@ -3,7 +3,6 @@ import { CategoricalConditionQ } from './categorical'
 
 /*
 --------EXPORTED--------
-CategoricalConditionQ
 CategoricalTW
 
 */

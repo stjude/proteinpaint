@@ -8,7 +8,7 @@ CategoricalTW
 */
 
 export type CategoricalConditionQ = BaseQ & {
-	termType: 'categorical' | 'conditional'
+	// termType: 'categorical' | 'conditional'
 	bar_by_children?: boolean
 	bar_by_grade?: boolean
 	breaks?: number[]
