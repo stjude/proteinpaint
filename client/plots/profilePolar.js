@@ -1,5 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
+import * as d3 from 'd3'
 
 class profilePolar {
 	constructor() {
@@ -67,6 +68,29 @@ class profilePolar {
 			config.sampleName = select.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+		console.log(config.terms)
+		// Create a polar grid.
+		const r = 10
+		const theta = (2 * Math.PI) / config.terms.length
+		svg
+			.append('g')
+			.attr('transform', 'translate(200,200)')
+			.selectAll('circle')
+			.data(config.terms)
+			.enter()
+			.append('path')
+			.attr('fill', 'green')
+			.attr('stroke-width', 3)
+			.attr('stroke', 'darkslategray')
+			.attr(
+				'd',
+				d3
+					.arc()
+					.innerRadius(0)
+					.outerRadius(150)
+					.startAngle(0) // It's in radian, so Pi = 3.14 = bottom.
+					.endAngle(3.14 / 2)
+			) // 2*Pi = 6.28 = top)
 	}
 }
 
