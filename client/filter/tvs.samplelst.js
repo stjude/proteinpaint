@@ -11,7 +11,6 @@ async function fillMenu(self, div, tvs) {
 	div.style('font-size', '0.8em')
 	div.append('div').style('margin', '10px').html(`<b>Select <i>${tvs.term.name}</i> samples:</b>`)
 	const rows = []
-	console.log(tvs.term)
 	for (const field in tvs.term.values) {
 		const samples = tvs.term.values[field].list
 		for (const sample of samples) rows.push([{ value: sample.sample }])
