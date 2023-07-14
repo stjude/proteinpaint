@@ -9,12 +9,13 @@ async function fillMenu(self, div, tvs) {
 	div.selectAll('*').remove()
 	div = div.append('div')
 	div.style('font-size', '0.8em')
-	div
-		.append('div')
-		.style('margin', '10px')
-		.html(`<b>Select <i>${tvs.term.name}</i> samples:</b>`)
+	div.append('div').style('margin', '10px').html(`<b>Select <i>${tvs.term.name}</i> samples:</b>`)
 	const rows = []
-	for (const value of tvs.values) rows.push([{ value: value.sample }])
+	console.log(tvs.term)
+	for (const field in tvs.term.values) {
+		const samples = tvs.term.values[field].list
+		for (const sample of samples) rows.push([{ value: sample.sample }])
+	}
 	const columns = [{ label: 'Sample' }]
 	renderTable({
 		rows,
