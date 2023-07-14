@@ -18,6 +18,6 @@ export type ConditionQ = BaseQ & {
 	value_by_computable_grade?: boolean
 }
 
-export type ConditionalTW = TermWrapper & {
+export type ConditionTW = TermWrapper & {
 	q: ConditionQ
 }

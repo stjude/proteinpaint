@@ -5,6 +5,7 @@ import { TermSettingInstance } from '../termsetting'
 --------EXPORTED--------
 CategoricalQ
 CategoricalTW
+CategoricaTermSettingInstance
 
 */
 

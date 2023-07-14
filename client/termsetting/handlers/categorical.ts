@@ -403,8 +403,9 @@ export function fillTW(tw: CategoricalTW) {
 	if (tw.q.groupsetting.inuse) {
 		if (
 			tw.term.groupsetting.lst &&
-			tw.term.groupsetting.useIndex && //Typescript emits error that this could possibly be undefined
-			//Fix is to check the property is present
+			//Typescript emits error that .useIndex could be undefined
+			tw.term.groupsetting.useIndex &&
+			//Fix checks if property is present
 			tw.term.groupsetting.useIndex >= 0 &&
 			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
 		) {
