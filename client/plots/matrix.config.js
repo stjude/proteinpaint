@@ -84,6 +84,7 @@ export async function getPlotConfig(opts, app) {
 					terms: 'Variables'
 				},
 				cnvUnit: 'log2ratio',
+				ignoreCnvValues: false, //will ignore numeric CNV values if true
 
 				barh: 32 // default bar height for continuous terms
 			}

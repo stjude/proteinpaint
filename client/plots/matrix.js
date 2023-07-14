@@ -641,7 +641,7 @@ class Matrix {
 					}
 					if (t.tw.term.type == 'geneVariant' && anno.values) {
 						for (const val of anno.values) {
-							if (val.dt != 4 || !('value' in val)) continue
+							if (val.dt != 4 || !('value' in val) || s.ignoreCnvValues) continue
 							const v = val.value
 							const minKey = v < 0 ? 'minLoss' : 'minGain'
 							const maxKey = v < 0 ? 'maxLoss' : 'maxGain'

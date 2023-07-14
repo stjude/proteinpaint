@@ -40,12 +40,16 @@ export function setInteractivity(self) {
 					info.push(`${v.chr}${pos}`)
 				}
 				if (v.alt) info.push(`${v.ref}>${v.alt}`)
-
+				/*
+				do not use gradient CNV anymore
 				const tds = !info.length
 					? `<td colspan='2' style='text-align: center'>${label}</td>`
 					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
-
+				*/
+				const tds = `<td colspan='2' style='text-align: center'>${label}</td>`
 				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+				/*
+				do not use gradient CNV anymore
 				if (v.dt == 4 && 'value' in v) {
 					const textColor = Math.abs(v.value) < 0.5 ? '#000' : '#fff'
 					rows.push(
@@ -54,6 +58,8 @@ export function setInteractivity(self) {
 				} else {
 					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
 				}
+				*/
+				rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
 			}
 		}
 		self.dom.menutop.selectAll('*').remove()
