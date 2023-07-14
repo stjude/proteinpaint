@@ -133,10 +133,12 @@ export function getSamplelstTW(groups: any, name = 'groups') {
 }
 
 export function getFilter(samplelstTW: any) {
-	const values = samplelstTW.q.groups[0].values
 	let i = 0
+	let noEdit = true
 	for (const field in samplelstTW.term.values) {
-		samplelstTW.term.values[field].list = samplelstTW.q.groups[i].values
+		const values = samplelstTW.q.groups[i].values
+		samplelstTW.term.values[field].list = values
+		if (values[0] && 'sample' in values[0]) noEdit = false
 		i++
 	}
 	const filter = {
@@ -146,8 +148,8 @@ export function getFilter(samplelstTW: any) {
 		lst: [
 			{
 				type: 'tvs',
-				tvs: { term: samplelstTW.term, values },
-				noEdit: !('sample' in values[0])
+				tvs: { term: samplelstTW.term },
+				noEdit
 			}
 		]
 	}
