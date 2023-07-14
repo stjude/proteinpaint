@@ -1814,14 +1814,25 @@ export async function cnvByRangeGetter_file(ds, genome) {
 							return
 						}
 
-						if (!Number.isFinite(j.value)) return
-						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
-						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
-
 						j.start = start
 						j.stop = stop
 
-						j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
+						/*
+						if value=number is present, it's a quantitative call, j.class will be computed dynamically
+							TODO distinguish segmean vs integer copy number; what class to assign when value is copy number?
+						if value is missing, it should be a qualitative call, with j.class=mclasscnvgain/mclasscnvloss 
+						*/
+						if (Number.isFinite(j.value)) {
+							// quantitative
+							if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
+							if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
+							j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
+						} else {
+							// should be qualitative, valid class is required
+							if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
+						}
+
+						j.ssm_id = [r.chr, j.start, j.stop, j.class].join(ssmIdFieldsSeparator) // no longer use j.value as that's optional
 
 						if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
 
@@ -1829,8 +1840,6 @@ export async function cnvByRangeGetter_file(ds, genome) {
 							// to filter sample
 							if (!limitSamples.has(j.sample)) return
 						}
-
-						j.ssm_id = [r.chr, j.start, j.stop, j.value].join(ssmIdFieldsSeparator)
 
 						if (j.sample) {
 							// has sample, prepare the sample obj
