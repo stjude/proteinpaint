@@ -49,7 +49,6 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	if (opts.name == '?') return
 
 	const specs = findMatchingSpecs(opts)
-	console.log(51, specs)
 	// the import code to write to the target file
 	const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
 	// the current import code as found in the target file

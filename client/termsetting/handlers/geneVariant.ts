@@ -36,13 +36,13 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
 let id = 0
 
-export function fillTW(tw: GeneVariantTermWrapper, vocabApi: VocabApi) {
+export function fillTW(tw: GeneVariantTermWrapper, vocabApi?: VocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
 	if (!tw.term.name && tw.term.isoform) tw.term.name = tw.term.isoform as string
 
 	{
 		// apply optional ds-level configs for this specific term
-		const c = vocabApi.termdbConfig.customTwQByType?.geneVariant
+		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant
 		if (c && tw.term.name) {
 			//if (c) valid js code but `&& tw.term.name` required to avoid type error
 			// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
