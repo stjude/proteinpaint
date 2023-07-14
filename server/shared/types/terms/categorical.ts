@@ -1,4 +1,4 @@
-import { TermWrapper, BaseQ } from './termdb'
+import { TermWrapper, BaseQ } from '../termdb'
 
 /*
 --------EXPORTED--------
