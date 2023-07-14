@@ -343,6 +343,7 @@ function getCategory(mutation) {
 }
 
 function order(map, tw, refs) {
+	console.log(map, tw, refs)
 	let entries = []
 	if (!tw || map.size == 0) return entries
 	if (tw.term.type == 'geneVariant') {
@@ -359,7 +360,7 @@ function order(map, tw, refs) {
 			if (v1 && 'order' in v1) {
 				const v2 = tw.term.values[b[0]]
 
-				if (v1.order < v2.order) return -1
+				if (v1?.order < v2?.order) return -1
 				return 1
 			} else {
 				if (a[1].sampleCount > b[1].sampleCount) return -1
