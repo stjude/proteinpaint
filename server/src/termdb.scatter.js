@@ -235,7 +235,11 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			const colorEntries = Object.entries(result.colorMap)
 
 			for (const [category, value] of colorEntries) {
-				const tvalue = q.colorTW.term.values?.[category]
+				let tvalue
+				if (q.colorTW.term.values?.[category]) tvalue = q.colorTW.term.values?.[category]
+				else
+					for (const field in q.colorTW.term.values)
+						if (q.colorTW.term.values?.[field].label == category) tvalue = q.colorTW.term.values?.[field]
 				if (tvalue && 'color' in tvalue) value.color = tvalue.color
 				else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
 					const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
