@@ -283,7 +283,7 @@ class Filter {
 
 		this.vocabApi.main()
 	}
-	updatePromise = function(incr = 1) {
+	updatePromise = function (incr = 1) {
 		if (!this.mainResolve) return
 		this.numProcessedItems += incr
 		if (this.numExpectedItems == this.numProcessedItems) {
@@ -380,15 +380,9 @@ class FilterRxComp extends Filter {
 		if (this.opts.hideLabel) {
 			this.dom.filterDiv = div.style('display', 'inline-block').style('padding', '5px 10px')
 		} else {
-			div
-				.append('span')
-				.text('Filter')
-				.style('padding', '0 10px')
+			div.append('span').text('Filter').style('padding', '0 10px')
 
-			this.dom.filterDiv = div
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '5px 10px')
+			this.dom.filterDiv = div.append('div').style('display', 'inline-block').style('padding', '5px 10px')
 		}
 	}
 }
@@ -468,7 +462,7 @@ export const filterPromptInit = getInitFxn(FilterPrompt)
 let filterIndex = 0
 
 function setRenderers(self) {
-	self.initUI = async function() {
+	self.initUI = async function () {
 		if (self.opts.newBtn) {
 			self.opts.newBtn.on('click.filter', self.displayTreeNew)
 		} else {
@@ -497,10 +491,7 @@ function setRenderers(self) {
 			.html(d => '+' + d.toUpperCase())
 			.on('click', self.displayTreeNew)
 
-		self.dom.table = self.dom.controlsTip
-			.clear()
-			.d.append('table')
-			.style('border-collapse', 'collapse')
+		self.dom.table = self.dom.controlsTip.clear().d.append('table').style('border-collapse', 'collapse')
 
 		const menuOptions = [
 			{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
@@ -536,10 +527,7 @@ function setRenderers(self) {
 			.style('opacity', (d, i) => (i === 0 ? 0.8 : 1))
 			.html(d => d)
 
-		self.dom.treeHead = self.dom.treeTip.d
-			.append('div')
-			.attr('class', 'sja_tree_tip_head')
-			.style('padding', '3px')
+		self.dom.treeHead = self.dom.treeTip.d.append('div').attr('class', 'sja_tree_tip_head').style('padding', '3px')
 		self.dom.termSrcDiv = self.dom.treeTip.d.append('div').attr('class', 'sja_term_src_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
@@ -560,7 +548,7 @@ function setRenderers(self) {
 		})
 	}
 
-	self.updateUI = async function(container, filter) {
+	self.updateUI = async function (container, filter) {
 		container.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'none' : 'inline-block')
 		const pills = container
 			.selectAll(':scope > .sja_filter_grp')
@@ -569,17 +557,12 @@ function setRenderers(self) {
 
 		pills.exit().each(self.removeGrp)
 		pills.each(self.updateGrp)
-		pills
-			.enter()
-			.append('div')
-			.attr('class', 'sja_filter_grp')
-			.style('margin', '5px')
-			.each(self.addGrp)
+		pills.enter().append('div').attr('class', 'sja_filter_grp').style('margin', '5px').each(self.addGrp)
 
 		self.updatePromise(0)
 	}
 
-	self.addGrp = function(item, i) {
+	self.addGrp = function (item, i) {
 		const filter = this.parentNode.__data__
 
 		select(this).style('display', 'inline-block')
@@ -606,14 +589,8 @@ function setRenderers(self) {
 			.on('click', self.displayControlsMenu)
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
-		const pills = select(this)
-			.selectAll(':scope > .sja_filter_item')
-			.data(data, self.getId)
-		pills
-			.enter()
-			.append('div')
-			.attr('class', 'sja_filter_item')
-			.each(self.addItem)
+		const pills = select(this).selectAll(':scope > .sja_filter_item').data(data, self.getId)
+		pills.enter().append('div').attr('class', 'sja_filter_item').each(self.addItem)
 
 		if (self.opts.joinWith.length == 1) {
 			self.dom.last_join_div = select(this)
@@ -658,7 +635,7 @@ function setRenderers(self) {
 			)
 	}
 
-	self.updateGrp = function(item, i) {
+	self.updateGrp = function (item, i) {
 		const filter = this.parentNode.__data__
 
 		select(this)
@@ -678,17 +655,11 @@ function setRenderers(self) {
 					: 'none'
 			)
 
-		const pills = select(this)
-			.selectAll(':scope > .sja_filter_item')
-			.data(data, self.getId)
+		const pills = select(this).selectAll(':scope > .sja_filter_item').data(data, self.getId)
 
 		pills.exit().each(self.removeItem)
 		pills.each(self.updateItem)
-		pills
-			.enter()
-			.insert('div', ':scope > .sja_filter_paren_close')
-			.attr('class', 'sja_filter_item')
-			.each(self.addItem)
+		pills.enter().insert('div', ':scope > .sja_filter_paren_close').attr('class', 'sja_filter_item').each(self.addItem)
 
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
@@ -696,17 +667,12 @@ function setRenderers(self) {
 
 		if (self.dom.last_join_label) {
 			self.dom.last_join_div.datum(filter)
-			this.insertBefore(
-				self.dom.last_join_div.node(),
-				select(this)
-					.select(':scope > .sja_filter_paren_close')
-					.node()
-			)
+			this.insertBefore(self.dom.last_join_div.node(), select(this).select(':scope > .sja_filter_paren_close').node())
 			self.dom.last_join_label.style('display', 'inline')
 		}
 	}
 
-	self.removeGrp = function(item) {
+	self.removeGrp = function (item) {
 		self.numExpectedItems += 1
 		if (item.type == 'tvslst') {
 			for (const subitem of item.lst) {
@@ -719,17 +685,13 @@ function setRenderers(self) {
 			delete self.pills[item.$id]
 		}
 		if (this instanceof Node) {
-			select(this)
-				.selectAll('*')
-				.on('click', null)
-			select(this)
-				.on('click', null)
-				.remove()
+			select(this).selectAll('*').on('click', null)
+			select(this).on('click', null).remove()
 		}
 		self.updatePromise()
 	}
 
-	self.addItem = async function(item, i) {
+	self.addItem = async function (item, i) {
 		const filter = this.parentNode.__data__
 
 		if (item.type == 'tvslst') {
@@ -754,7 +716,7 @@ function setRenderers(self) {
 		self.addJoinLabel(this, filter, item)
 		if (item.renderAs == 'htmlSelect') {
 			const values = getValuesForHtmlSelect(self, item)
-			const selectElem = holder.append('select').on('change', function() {
+			const selectElem = holder.append('select').on('change', function () {
 				const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 				const filterCopy = findItem(filterUiRoot, filter.$id)
 				const i = filter.lst.indexOf(item)
@@ -802,7 +764,7 @@ function setRenderers(self) {
 		self.updatePromise()
 	}
 
-	self.updateItem = async function(item, i) {
+	self.updateItem = async function (item, i) {
 		const filter = this.parentNode.__data__
 		select(this)
 			.select(':scope > .sja_filter_join_label')
@@ -828,14 +790,12 @@ function setRenderers(self) {
 		self.updatePromise()
 	}
 
-	self.removeItem = function(item) {
+	self.removeItem = function (item) {
 		delete self.pills[item.$id]
-		select(this)
-			.on('click', null)
-			.remove()
+		select(this).on('click', null).remove()
 	}
 
-	self.addJoinLabel = function(elem, filter, item) {
+	self.addJoinLabel = function (elem, filter, item) {
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(elem)
 			.append('div')
@@ -856,7 +816,7 @@ function setRenderers(self) {
 			.on('click', self.displayControlsMenu)
 	}
 
-	self.updateJoinLabel = function(item) {
+	self.updateJoinLabel = function (item) {
 		const filter = this.parentNode.parentNode.parentNode.__data__
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
@@ -867,7 +827,7 @@ function setRenderers(self) {
 		)
 	}
 
-	self.getAddTransformerBtnDisplay = function(d) {
+	self.getAddTransformerBtnDisplay = function (d) {
 		if (self.opts.joinWith.length < 2) {
 			return 'none'
 		} else if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
@@ -882,7 +842,7 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.displayControlsMenu = function(event) {
+	self.displayControlsMenu = function (event) {
 		event.stopPropagation() // in mass/group ui, to prevent pill-clicking to check/uncheck table rows
 
 		if (!self.activeData) return
@@ -893,12 +853,12 @@ function setInteractivity(self) {
 		self.resetGrpHighlights(this, filter)
 
 		// disabled for now as it breaks CI
-		//self.dom.table.selectAll('tr').style('display', d => (d.action == 'edit' && item.noEdit ? 'none' : 'table-row'))
+		self.dom.table.selectAll('tr').style('display', d => (d.action == 'edit' && item.noEdit ? 'none' : 'table-row'))
 
 		self.dom.controlsTip.showunder(this)
 	}
 
-	self.resetGrpHighlights = function(elem, filter) {
+	self.resetGrpHighlights = function (elem, filter) {
 		const cls = elem.className
 		const grpAction = cls.includes('join') || cls.includes('negate') || cls.includes('paren')
 		const menuRows = self.dom.controlsTip.d.selectAll('tr').style('background-color', '')
@@ -941,7 +901,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.handleMenuOptionClick = async function(event, d) {
+	self.handleMenuOptionClick = async function (event, d) {
 		event.stopPropagation()
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
@@ -954,7 +914,7 @@ function setInteractivity(self) {
 		await d.handler(this, d)
 	}
 
-	self.resetBlankPill = function(action) {
+	self.resetBlankPill = function (action) {
 		// clear any currently highlighted blank pill/parenthesis
 		self.removeBlankPill()
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
@@ -1048,7 +1008,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.removeBlankPill = function() {
+	self.removeBlankPill = function () {
 		self.dom.holder
 			?.selectAll(
 				'.sja_filter_blank_pill, .sja_pill_wrapper > .sja_filter_paren_open, .sja_pill_wrapper > .sja_filter_paren_close'
@@ -1068,7 +1028,7 @@ function setInteractivity(self) {
 	}
 
 	// menu to add a new term
-	self.displayTreeNew = async function(event, d) {
+	self.displayTreeNew = async function (event, d) {
 		event.stopPropagation() // in mass/group ui, to prevent pill-clicking to check/uncheck table rows
 
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
@@ -1181,7 +1141,7 @@ function setInteractivity(self) {
 	// menu to replace a term or add a subnested filter
 	// elem: the clicked menu row option
 	// d: elem.__data__
-	self.displayTreeMenu = async function(elem, d) {
+	self.displayTreeMenu = async function (elem, d) {
 		select(elem).style('background-color', MENU_OPTION_HIGHLIGHT_COLOR)
 		self.dom.holder.selectAll('.sja_filter_add_transformer').style('display', 'none')
 		const blankPill = self.dom.filterContainer.select('.sja_filter_blank_pill').node()
@@ -1229,10 +1189,8 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.editTerm = function(elem) {
-		select(elem.parentNode)
-			.selectAll('tr')
-			.style('background-color', self.highlightEditRow)
+	self.editTerm = function (elem) {
+		select(elem.parentNode).selectAll('tr').style('background-color', self.highlightEditRow)
 		const holder = self.dom.termSrcDiv
 		const item = self.activeData.item
 		self.dom.treeTip.clear()
@@ -1240,18 +1198,18 @@ function setInteractivity(self) {
 		self.dom.treeTip.showunderoffset(elem.lastChild)
 	}
 
-	self.highlightEditRow = function(d) {
+	self.highlightEditRow = function (d) {
 		return d.action == 'edit' ? MENU_OPTION_HIGHLIGHT_COLOR : ''
 	}
 
-	self.handleNotLabelClick = function(event, d) {
+	self.handleNotLabelClick = function (event, d) {
 		self.activeData = {
 			item: this.__data__
 		}
 		self.negateClause()
 	}
 
-	self.negateClause = function() {
+	self.negateClause = function () {
 		//const filter = self.activeData.filter
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 		const item = findItem(filterUiRoot, self.activeData.item.$id)
@@ -1332,7 +1290,7 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.removeTransform = function(elem, t) {
+	self.removeTransform = function (elem, t) {
 		const item = t.action || typeof t !== 'object' ? self.activeData.item : findItem(self.filter, t.$id)
 		const filter = findParent(self.filter, item.$id) //self.activeData.filter
 		if (item == filter) {
@@ -1375,7 +1333,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.showLastJoinBlank = function(event, d) {
+	self.showLastJoinBlank = function (event, d) {
 		event.stopPropagation()
 		const elem = self.dom.last_join_div.node()
 		self.dom.last_join_label.style('display', 'none')
@@ -1385,7 +1343,7 @@ function setInteractivity(self) {
 		self.displayTreeMenu(elem, d)
 	}
 
-	self.switchJoin = function(event, d) {
+	self.switchJoin = function (event, d) {
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 		const filterCopy = findItem(filterUiRoot, self.activeData.filter.$id)
 		if (filterCopy.join < 2) return

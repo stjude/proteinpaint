@@ -135,18 +135,18 @@ function get_survival(tvs, CTEname) {
 }
 
 function get_samplelst(tvs, CTEname) {
+	const samples = []
+	for (const field in tvs.term.values) samples.push(...tvs.term.values[field].list)
 	return {
 		CTEs: [
 			`
 		  ${CTEname} AS (
 				SELECT id as sample
 				FROM sampleidmap
-				WHERE id IN (${Array(tvs.values.length)
-					.fill('?')
-					.join(', ')})
+				WHERE id IN (${Array(samples.length).fill('?').join(', ')})
 			)`
 		],
-		values: [...tvs.values.map(value => value.sampleId)],
+		values: [...samples.map(value => value.sampleId)],
 		CTEname
 	}
 }
