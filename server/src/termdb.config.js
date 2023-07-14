@@ -54,10 +54,9 @@ export function make(q, res, ds, genome) {
 	if (tdb.chartConfigByType) c.chartConfigByType = tdb.chartConfigByType
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
-	if (tdb.timeScale) c.timeScale = tdb.timeScale
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
-	if (tdb.coxTimeMsg) c.coxTimeMsg = tdb.coxTimeMsg
-	if (tdb.coxStartTimeMsg) c.coxStartTimeMsg = tdb.coxStartTimeMsg
+	if (tdb.timeUnit) c.timeUnit = tdb.timeUnit
+	if (tdb.cohortStartTimeMsg) c.cohortStartTimeMsg = tdb.cohortStartTimeMsg
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
 	if (tdb.additionalSampleAttributes) c.additionalSampleAttributes = tdb.additionalSampleAttributes
 	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2

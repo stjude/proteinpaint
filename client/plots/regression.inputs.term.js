@@ -40,7 +40,7 @@ export class InputTerm {
 				.style('padding', '5px')
 				.style('background-color', 'rgba(255,100,100,0.2)'),
 			infoDiv: holder.append('div'),
-			tip: new Menu(),
+			tip: new Menu()
 		}
 
 		try {
@@ -61,9 +61,9 @@ export class InputTerm {
 				abbrCutoff: 50,
 				genomeObj: this.parent.parent.genomeObj, // required for snplocus
 				defaultQ4fillTW: get_defaultQ4fillTW(config.regressionType, this.section.configKey),
-				callback: (term) => {
+				callback: term => {
 					this.parent.editConfig(this, term)
-				},
+				}
 			}
 			this.furbishTsConstructorArg(arg)
 			// use 'await' here because it is safer to assume that
@@ -79,9 +79,9 @@ export class InputTerm {
 			this.valuesTable = new InputValuesTable({
 				holder: this.dom.infoDiv,
 				input: this,
-				callback: (term) => {
+				callback: term => {
 					this.parent.editConfig(this, term)
-				},
+				}
 			})
 		} catch (e) {
 			this.displayError([e])
@@ -125,7 +125,7 @@ export class InputTerm {
 			.data(Array.isArray(errors) ? errors : [errors])
 			.enter()
 			.append('div')
-			.text((e) => e)
+			.text(e => e)
 		this.parent.handleError()
 		console.error(errors)
 	}
@@ -208,7 +208,7 @@ export class InputTerm {
 			bottomSummaryStatus: undefined,
 			sampleCounts: undefined,
 			excludeCounts: undefined,
-			allowToSelectRefGrp: false,
+			allowToSelectRefGrp: false
 		}
 
 		// update status based on special attr from snplst and snplocus terms
@@ -260,7 +260,7 @@ export class InputTerm {
 				if (tw.q.mode == 'spline') {
 					this.termStatus.topInfoStatus.push(
 						`Cubic spline variable with ${tw.q.knots.length} knots: ${tw.q.knots
-							.map((x) => Number(x.value))
+							.map(x => Number(x.value))
 							.sort((a, b) => a - b)
 							.join(', ')}`
 					)
@@ -274,12 +274,17 @@ export class InputTerm {
 				}
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'cox') {
 					if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
+					const tdb = this.parent.app.vocabApi.termdbConfig
 					this.termStatus.topInfoStatus.push(
-						`Time axis: ${tw.q.timeScale == 'time' ? this.parent.state.coxTimeMsg : 'age'} (${
-							this.parent.state.coxStartTimeMsg
-						})`
+						`Time axis: ${
+							tw.q.timeScale == 'time'
+								? `${tdb.timeUnit} (begins at ${tdb.cohortStartTimeMsg})`
+								: `age (start: age at ${tdb.cohortStartTimeMsg}; end: age at event/censoring)`
+						}`
 					)
-					this.termStatus.topInfoStatus.push(`Event: first occurrence of grade ${tw.q.breaks[0]} or higher`)
+					this.termStatus.topInfoStatus.push(
+						`Event: first occurrence of grade ${tw.q.breaks[0]}-${Math.max(...Object.keys(tw.term.values).map(Number))}`
+					)
 				}
 			}
 			this.maySet_refGrp(tw)
@@ -295,16 +300,16 @@ export class InputTerm {
 			}
 		}
 		if (tw.q.mode == 'cox') {
-			const toExclude = datalst.find((x) => x.key == -1)
+			const toExclude = datalst.find(x => x.key == -1)
 			if (toExclude) excluded_values.add(toExclude.label)
 		}
-		const sampleCounts = (this.termStatus.sampleCounts = datalst.filter((v) => !excluded_values.has(v.label)))
-		const excludeCounts = (this.termStatus.excludeCounts = datalst.filter((v) => excluded_values.has(v.label)))
+		const sampleCounts = (this.termStatus.sampleCounts = datalst.filter(v => !excluded_values.has(v.label)))
+		const excludeCounts = (this.termStatus.excludeCounts = datalst.filter(v => excluded_values.has(v.label)))
 
 		// get include, excluded and total sample count
 		const totalCount = { included: 0, excluded: 0, total: 0 }
-		sampleCounts.forEach((v) => (totalCount.included += v.samplecount))
-		excludeCounts.forEach((v) => (totalCount.excluded += v.samplecount))
+		sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+		excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
 		totalCount.total = totalCount.included + totalCount.excluded
 		// for condition term, subtract included count from totalCount.total to get excluded
 		if (tw.term.type == 'condition' && totalCount.total) {
@@ -329,7 +334,7 @@ export class InputTerm {
 			return
 		}
 		const sc = this.termStatus.sampleCounts
-		if (!('refGrp' in tw) || !sc.find((i) => i.key == tw.refGrp)) {
+		if (!('refGrp' in tw) || !sc.find(i => i.key == tw.refGrp)) {
 			// refGrp not defined or no longer exists according to sampleCounts[]
 			const o = this.orderedLabels
 			if (o && o.length) sc.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
@@ -348,8 +353,8 @@ export class InputTerm {
 				usecase: {
 					target: 'regression',
 					detail: section.configKey,
-					regressionType: config.regressionType,
-				},
+					regressionType: config.regressionType
+				}
 			},
 			this.term
 		)
@@ -411,7 +416,7 @@ export class InputTerm {
 		self.dom.tip.d
 			.append('div')
 			.selectAll('div')
-			.data(self.parent.config.independent.filter((tw) => tw && tw.id !== self.term.id && tw.q.mode != 'spline'))
+			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id && tw.q.mode != 'spline'))
 			.enter()
 			.append('div')
 			.style('margin', '5px')
@@ -454,7 +459,7 @@ function getQSetter4outcome(regressionType) {
 		integer: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		float: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		categorical: maySetTwoGroups,
-		condition: setQ4conditionOutcome,
+		condition: setQ4conditionOutcome
 	}
 }
 
@@ -478,17 +483,17 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 			{
 				startunbounded: true,
 				stopinclusive: true,
-				stop: median,
+				stop: median
 			},
 			{
 				stopunbounded: true,
 				startinclusive: false,
-				start: median,
-			},
-		],
+				start: median
+			}
+		]
 	}
 
-	tw.q.lst.forEach((bin) => {
+	tw.q.lst.forEach(bin => {
 		bin.label = get_bin_label(bin, tw.q)
 	})
 
@@ -610,7 +615,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 		}
 
 		// step 5: see if any predefined groupset has 2 groups. if so, use that
-		const i = t_gs.lst.findIndex((g) => g.groups.length == 2)
+		const i = t_gs.lst.findIndex(g => g.groups.length == 2)
 		if (i != -1 && groupsetNoEmptyGroup(t_gs.lst[i], category2samplecount)) {
 			// found a usable groupset
 			q_gs.predefined_groupset_idx = i
@@ -629,14 +634,14 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 			{
 				name: 'Group 1',
 				type: 'values',
-				values: [],
+				values: []
 			},
 			{
 				name: 'Group 2',
 				type: 'values',
-				values: [],
-			},
-		],
+				values: []
+			}
+		]
 	}
 	// TODO use category2samplecount to evenlly divide samples
 	const group_i_cutoff = Math.round(computableCategories.length / 2)

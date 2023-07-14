@@ -481,15 +481,14 @@ type Termdb = {
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
 	minTimeSinceDx?: number
+	timeUnit?: string
 	ageEndOffset?: number
+	cohortStartTimeMsg?: string
 	alwaysRefillCategoricalTermValues?: boolean
 	restrictAncestries?: RestrictAncestriesEntry[]
 	//Cohort specific
 	selectCohort?: SelectCohortEntry
 	additionalSampleAttributes?: string[]
-	//Cox
-	coxTimeMsg?: string
-	coxStartTimeMsg?: string
 	//Plots
 	useLower?: boolean
 	scatterplots?: Scatterplots

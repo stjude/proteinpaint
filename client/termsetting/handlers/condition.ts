@@ -287,13 +287,14 @@ function showMenu_cutoff(self: any, div: any) {
 	}
 
 	// row 4: time scale toggle (for cox outcome)
+	const timeUnit = self.vocabApi.termdbConfig.timeUnit
 	let timeScaleChoice: string
 	if (self.q.mode == 'cox') {
 		timeScaleChoice = self.q.timeScale
 		holder.append('div').text('Time axis').style('opacity', 0.4)
 		const options: { label: string; value: string; checked?: boolean }[] = [
 			{
-				label: 'Years since entry into the cohort', // may define from ds
+				label: timeUnit.charAt(0).toUpperCase() + timeUnit.slice(1),
 				value: 'time'
 			},
 			{ label: 'Age', value: 'age' }

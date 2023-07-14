@@ -38,6 +38,8 @@ export default <Mds3>{
 		termdb: {
 			displaySampleIds: true, // allow to display sample-level data
 
+			timeUnit: 'years',
+
 			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
 
 			ageEndOffset: 0.00274, // number of years to offset ending age of patients
@@ -46,9 +48,7 @@ export default <Mds3>{
 			// to age_end to prevent age_end = age_start (which
 			// would cause regression analysis to fail in R)
 
-			coxTimeMsg: 'years since entry into the cohort',
-
-			coxStartTimeMsg: `begins at 5 years post cancer diagnosis`,
+			cohortStartTimeMsg: '5 years post cancer diagnosis',
 
 			selectCohort: {
 				// wrap term.id into a term json object so as to use it in tvs;
