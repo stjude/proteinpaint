@@ -262,28 +262,32 @@ export function setRenderers(self) {
 		self.canvas.width = self.settings.svgw * 1.5
 		self.canvas.height = self.settings.svgh * 1.5
 		chart.chartDiv.style('margin', '20px 20px')
-		const fov = 25
+		const fov = 30
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
 		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 		controls.update()
-		camera.position.set(0.5, 0.5, 5)
+		camera.position.set(2, 1, 5)
 		camera.lookAt(scene.position)
 		const axesHelper = new THREE.AxesHelper(3)
 		scene.add(axesHelper)
 		camera.updateMatrix()
-		scene.background = new THREE.Color('rgb(255,255,255)')
-		let count = 0
+		const whiteColor = new THREE.Color('rgb(255,255,255)')
+		scene.background = whiteColor
+
+		const light = new THREE.DirectionalLight(whiteColor, 2)
+		light.position.set(2, 1, 5)
+		scene.add(light)
 
 		for (const sample of chart.data.samples) {
 			let x = -0.5 + (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
 			let y = 0.5 - (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
-			const geometry = new THREE.SphereGeometry(0.02, 64)
-			const material = new THREE.MeshBasicMaterial({ color, opacity: 0.5, transparent: true })
+			const geometry = new THREE.SphereGeometry(0.015, 32)
+			const material = new THREE.MeshLambertMaterial({ color })
 			const circle = new THREE.Mesh(geometry, material)
 			scene.add(circle)
 			circle.position.set(x, y, z)
