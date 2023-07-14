@@ -853,7 +853,11 @@ function setInteractivity(self) {
 		self.resetGrpHighlights(this, filter)
 
 		// disabled for now as it breaks CI
-		self.dom.table.selectAll('tr').style('display', d => (d.action == 'edit' && item.noEdit ? 'none' : 'table-row'))
+		if (item.noEdit)
+			self.dom.table
+				.selectAll('tr')
+				.filter(d => d.action == 'edit')
+				.style('display', 'none')
 
 		self.dom.controlsTip.showunder(this)
 	}
