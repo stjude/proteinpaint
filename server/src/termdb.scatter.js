@@ -343,7 +343,6 @@ function getCategory(mutation) {
 }
 
 function order(map, tw, refs) {
-	console.log(map, tw, refs)
 	let entries = []
 	if (!tw || map.size == 0) return entries
 	if (tw.term.type == 'geneVariant') {
