@@ -4,12 +4,12 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import {
 	PillData,
 	Term,
-	CategoricalConditionQ,
+	CategoricalQ,
 	TermValues,
 	GroupSetting,
 	BaseGroupSet,
 	GroupEntry,
-	TermSettingInstance,
+	CategoricaTermSettingInstance,
 	CategoricalTW
 } from '#shared/types'
 
@@ -35,22 +35,7 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 ********************** INTERNAL
 */
 
-//Types
-type Cat2SampleCntEntry = { key: string; count: number }
-
-type CategoricalInstance = TermSettingInstance & {
-	category2samplecount: Cat2SampleCntEntry[]
-	error: string
-	q: Partial<CategoricalConditionQ>
-	//Methods
-	getQlst: () => void
-	grpSet2valGrp: (f: any) => void
-	regroupMenu: (x?: any, y?: any) => void //Not defined
-	showGrpOpts: (div: any) => any
-	validateGroupsetting: () => void
-}
-
-export function getHandler(self: CategoricalInstance) {
+export function getHandler(self: CategoricaTermSettingInstance) {
 	setGroupsettingMethods(self)
 	setCategoryConditionMethods(self)
 
@@ -65,7 +50,7 @@ export function getHandler(self: CategoricalInstance) {
 
 		validateQ(data: PillData) {
 			const t = data.term as Term
-			const q = data.q as CategoricalConditionQ
+			const q = data.q as CategoricalQ
 			const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
 			// validate the configuration
 			if (q.type == 'values') {
@@ -141,7 +126,7 @@ export function getHandler(self: CategoricalInstance) {
 }
 
 // same method used to set methods for categorical and condition terms
-export function setCategoryConditionMethods(self: CategoricalInstance) {
+export function setCategoryConditionMethods(self: CategoricaTermSettingInstance) {
 	self.validateGroupsetting = function () {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		const text = self.q.name || self.q.reuseId

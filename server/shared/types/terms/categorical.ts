@@ -1,26 +1,38 @@
 import { TermWrapper, BaseQ } from '../termdb'
+import { TermSettingInstance } from '../termsetting'
 
 /*
 --------EXPORTED--------
-CategoricalConditionQ
+CategoricalQ
 CategoricalTW
 
 */
 
-export type CategoricalConditionQ = BaseQ & {
-	// termType: 'categorical' | 'conditional'
+export type CategoricalQ = BaseQ & {
+	// termType: 'categorical'
+	//THIS IS A MISTAKE! These are condition attributes and should be removed
 	bar_by_children?: boolean
 	bar_by_grade?: boolean
-	breaks?: number[]
-	computableValuesOnly?: boolean
-	showTimeScale?: boolean
-	timeScale?: string
 	value_by_max_grade?: boolean
 	value_by_most_recent?: boolean
 	value_by_computable_grade?: boolean
-	//variant_filter???????? No documentation
+	//End condition attributes
 }
 
 export type CategoricalTW = TermWrapper & {
-	q: CategoricalConditionQ
+	q: CategoricalQ
+}
+
+type Cat2SampleCntEntry = { key: string; count: number }
+
+export type CategoricaTermSettingInstance = TermSettingInstance & {
+	category2samplecount: Cat2SampleCntEntry[]
+	error: string
+	q: Partial<CategoricalQ>
+	//Methods
+	getQlst: () => void
+	grpSet2valGrp: (f: any) => void
+	regroupMenu: (x?: any, y?: any) => void //Not defined
+	showGrpOpts: (div: any) => any
+	validateGroupsetting: () => void
 }

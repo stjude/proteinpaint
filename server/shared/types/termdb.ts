@@ -1,5 +1,6 @@
 import { Tvs, Filter } from './filter'
-import { CategoricalConditionQ } from './terms/categorical'
+import { CategoricalQ } from './terms/categorical'
+import { ConditionQ } from './terms/condition'
 import { NumericQ } from './terms/numeric'
 import { GeneVariantQ } from './terms/geneVariant'
 import { SnpsQ } from './terms/snps'
@@ -80,7 +81,7 @@ export type BaseQ = {
 	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 }
 
-export type Q = BaseQ | CategoricalConditionQ | NumericQ | GeneVariantQ | SnpsQ
+export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SnpsQ
 
 /*** types supporting Term types ***/
 
@@ -137,8 +138,10 @@ export type Term = {
 
 export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float' | 'regression'
 	? NumericQ
-	: T extends 'categorical' | 'condition'
-	? CategoricalConditionQ
+	: T extends 'categorical'
+	? CategoricalQ
+	: T extends 'condition'
+	? ConditionQ
 	: T extends 'geneVariant'
 	? GeneVariantQ
 	: T extends 'snplst' | 'snplocus'
