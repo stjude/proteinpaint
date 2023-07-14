@@ -57,7 +57,10 @@ class MassPlot {
 
 		// easier for rollup to support less complex dynamic imports with variables,
 		// webpack is already more flexible but need to support packing with rollup
-		const _ = await import(`../plots/${opts.chartType}.js`)
+		const _ = opts.subfolder
+			? await import(`../plots/${opts.subfolder}/${opts.chartType}.js`)
+			: await import(`../plots/${opts.chartType}.js`)
+		// const _ = await import(opts.subfolder ? `../plots/${opts.subfolder}/${opts.chartType}.js` : `../plots/${opts.chartType}.js`)
 		this.components.chart = await _.componentInit({
 			app: this.app,
 			holder: this.dom.viz,

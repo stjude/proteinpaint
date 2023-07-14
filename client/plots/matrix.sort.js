@@ -5,19 +5,19 @@
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
 	validateSettings(s)
+	const activeOption = s.sortOptions[s.sortSamplesBy]
+	if (!activeOption) throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
+
 	if (s.sortSamplesBy == 'asListed') {
 		//no additional logic required
 		return (a, b) => {
-			for (const s of self.sampleOrder) {
-				if (s.row.sample === a.sample) return -1
-				if (s.row.sample === b.sample) return 1
+			for (const s of activeOption.order) {
+				if (s.row.sample === sample) return -1
+				if (s.row.sample === sample) return 1
 				return 0
 			}
 		}
 	}
-
-	const activeOption = s.sortOptions[s.sortSamplesBy]
-	if (!activeOption) throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
 
 	const selectedTerms = self.termOrder
 		.filter(t => t.tw.sortSamples) // sortSamples property indicates a term is selected
