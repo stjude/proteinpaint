@@ -3,6 +3,7 @@ import { CategoricalQ } from './terms/categorical'
 import { ConditionQ } from './terms/condition'
 import { NumericQ } from './terms/numeric'
 import { GeneVariantQ } from './terms/geneVariant'
+import { SampleLstQ } from './terms/samplelst'
 import { SnpsQ } from './terms/snps'
 
 /*
@@ -81,7 +82,7 @@ export type BaseQ = {
 	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
 }
 
-export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SnpsQ
+export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SampleLstQ | SnpsQ
 
 /*** types supporting Term types ***/
 
@@ -91,12 +92,9 @@ export type TermValues = {
 		label?: string | number
 		order?: string
 		color?: string
-		//'samplelst' values
-		key?: string
-		inuse?: boolean
-		list?: { sampleId: string; sample: string }[]
-		filter?: Filter
 		group?: number
+		key?: string
+		filter?: Filter
 	}
 }
 
@@ -132,11 +130,11 @@ export type Term = {
 	skip0forPercentile?: boolean
 	subconditions?: Subconditions
 	tvs?: Tvs
-	values?: TermValues
+	values: TermValues
 	unit?: string
 }
 
-export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float' | 'regression'
+export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
 	? NumericQ
 	: T extends 'categorical'
 	? CategoricalQ
@@ -144,6 +142,8 @@ export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer'
 	? ConditionQ
 	: T extends 'geneVariant'
 	? GeneVariantQ
+	: T extends 'samplelst'
+	? SampleLstQ
 	: T extends 'snplst' | 'snplocus'
 	? SnpsQ
 	: Q
@@ -197,7 +197,7 @@ export type TermWrapper = {
 	$id?: string
 	isAtomic?: boolean
 	term: Term
-	q: Q
+	// q: Q
 }
 
 export type TWDynamicQ = TermWrapper & { q: DetermineQ<TermWrapper['term']['type']> }
