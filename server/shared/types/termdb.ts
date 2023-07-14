@@ -1,8 +1,8 @@
 import { Tvs, Filter } from './filter'
-import { CategoricalConditionQ } from './categorical'
-import { NumericQ } from './numeric'
-import { GeneVariantQ } from './geneVariant'
-import { SnpsQ } from './snps'
+import { CategoricalConditionQ } from './terms/categorical'
+import { NumericQ } from './terms/numeric'
+import { GeneVariantQ } from './terms/geneVariant'
+import { SnpsQ } from './terms/snps'
 
 /*
 --------EXPORTED--------

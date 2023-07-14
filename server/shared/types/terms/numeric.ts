@@ -1,5 +1,5 @@
-import { TermWrapper, BaseQ, Term } from './termdb'
-import { TermSettingInstance, InstanceDom } from './termsetting'
+import { TermWrapper, BaseQ, Term } from '../termdb'
+import { TermSettingInstance, InstanceDom } from '../termsetting'
 
 /*
 --------EXPORTED--------

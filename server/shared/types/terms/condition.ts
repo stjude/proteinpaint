@@ -1,5 +1,5 @@
-import { TermWrapper } from './termdb'
-import { CategoricalConditionQ } from './categorical'
+import { TermWrapper } from '../termdb'
+import { CategoricalConditionQ } from '../terms/categorical'
 
 /*
 --------EXPORTED--------
