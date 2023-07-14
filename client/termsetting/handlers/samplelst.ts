@@ -134,6 +134,11 @@ export function getSamplelstTW(groups: any, name = 'groups') {
 
 export function getFilter(samplelstTW: any) {
 	const values = samplelstTW.q.groups[0].values
+	let i = 0
+	for (const field in samplelstTW.term.values) {
+		samplelstTW.term.values[field].list = samplelstTW.q.groups[i].values
+		i++
+	}
 	const filter = {
 		type: 'tvslst',
 		in: true,

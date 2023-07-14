@@ -492,6 +492,7 @@ export function setRenderers(self) {
 				.text('Add to a group')
 				.on('click', async () => {
 					const group = {
+						name: 'Group',
 						items: self.selectedItems.map(item => item.__data__)
 					}
 					self.addGroup(group)
@@ -502,6 +503,7 @@ export function setRenderers(self) {
 				.text('Add to a group and filter')
 				.on('click', () => {
 					const group = {
+						name: 'Group',
 						items: self.selectedItems.map(item => item.__data__)
 					}
 					self.addGroup(group)
