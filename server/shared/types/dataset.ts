@@ -404,13 +404,14 @@ type SortPriorityEntry = {
 }
 
 type MatrixSettings = {
-	maxSample: number
-	svgCanvasSwitch: number
-	cellEncoding: string
-	cellbg: string
-	controlLabels: MatrixSettingsControlLabels
-	sortSamplesBy: string
-	sortPriority: SortPriorityEntry[]
+	maxSample?: number
+	svgCanvasSwitch?: number
+	cellEncoding?: string
+	cellbg?: string
+	controlLabels?: MatrixSettingsControlLabels
+	sortSamplesBy?: string
+	sortPriority?: SortPriorityEntry[]
+	ignoreCnvValues?: boolean
 }
 
 type Mclass = {
@@ -418,9 +419,9 @@ type Mclass = {
 }
 
 type Matrix = {
-	settings: MatrixSettings
-	geneVariantCountSamplesSkipMclass: Array<string>
-	mclass: Mclass
+	settings?: MatrixSettings
+	geneVariantCountSamplesSkipMclass?: Array<string>
+	mclass?: Mclass
 }
 
 type MatrixPlotsEntry = {
