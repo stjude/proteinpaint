@@ -282,8 +282,8 @@ export function setRenderers(self) {
 		scene.add(light)
 
 		for (const sample of chart.data.samples) {
-			let x = -0.5 + (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
-			let y = 0.5 - (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
+			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
+			let y = (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			const geometry = new THREE.SphereGeometry(0.015, 32)
