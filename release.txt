@@ -1,0 +1,2 @@
+- Fusion event labels in disco plot prioritized and displayed with a tooltip
+- Various minor disco plot bug fixes
