@@ -582,12 +582,11 @@ function setInteractivity(self: TermSettingInstance) {
 			options.push({ label: 'Edit', callback: self.handler!.showEditMenu } as opt)
 		}
 
-		/* DO NOT SHOW THE REUSE OPTION
-		TODO: remove all tw reuse code, may be spread out in multiple files including vocab code
+		// Restored the reuse menu option for now, due to failing integration tests that will require more code changes to fix
+		// Instead of deleting the reuse code, may move the Reuse to the edit menu for recovering saved grouping/bin config
 		if (minimatch('reuse', self.opts.menuOptions)) {
 			options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
 		}
-		*/
 
 		if (minimatch('replace', self.opts.menuOptions)) {
 			options.push({ label: 'Replace', callback: self.showTree } as opt)
