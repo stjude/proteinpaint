@@ -17,6 +17,7 @@ export function setRenderers(self) {
 
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
+		self.renderDivideByLabel(s, l, d, duration)
 	}
 
 	self.renderSerieses = function (s, l, d, duration) {
@@ -307,6 +308,28 @@ export function setRenderers(self) {
 		const x = 0 // lab.tw?.q?.mode == 'continuous' ? -30 : 0
 		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh + lab.totalHtAdjustments
 		return `translate(${x},${y})`
+	}
+
+	self.renderDivideByLabel = (s, l, d) => {
+		self.dom.mainG.selectAll('.sjpp-matrix-divide-by-label').remove()
+		if (!self.config.divideBy) return
+		const name = self.config.divideBy?.term.name || ''
+		const text = name.length < s.rowlabelmaxchars ? name : name.slice(0, s.rowlabelmaxchars) + '...'
+		const sides = !s.transpose ? [l.left, l.right] : [l.top, l.bottom]
+		const box = sides.find(d => !d.isGroup)?.box
+		const y = (s.collabelpos == 'top' ? d.mainh + s.collabelmaxchars : -s.collabelmaxchars) + 8
+		const anchor = s.rowlabelpos == 'left' ? 'end' : 'start'
+		const cl = s.controlLabels
+		const g = box.append('g').attr('class', 'sjpp-matrix-divide-by-label').attr('transform', `translate(0, ${y})`)
+		g.append('text')
+			.attr('text-anchor', anchor)
+			.attr('font-style', 'italic')
+			.attr('y', -20)
+			.text(`${cl.Samples} grouped by`)
+		g.append('text').attr('text-anchor', anchor).attr('font-weight', 600).text(text)
+		g.append('title').text(
+			`${cl.Samples} are grouped by this gene or variable. Use the Samples -> 'Group Samples By' input in the controls bar to edit.`
+		)
 	}
 
 	self.adjustSvgDimensions = async function (prevTranspose) {
