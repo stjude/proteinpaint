@@ -32,7 +32,7 @@ type Cat2SampleCntEntry = { key: string; count: number }
 export type CategoricaTermSettingInstance = TermSettingInstance & {
 	category2samplecount: Cat2SampleCntEntry[]
 	error: string
-	q: Partial<CategoricalQ>
+	q: CategoricalQ
 	//Methods
 	getQlst: () => void
 	grpSet2valGrp: (f: any) => void
