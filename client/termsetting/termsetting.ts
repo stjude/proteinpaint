@@ -582,9 +582,12 @@ function setInteractivity(self: TermSettingInstance) {
 			options.push({ label: 'Edit', callback: self.handler!.showEditMenu } as opt)
 		}
 
+		/* DO NOT SHOW THE REUSE OPTION
+		TODO: remove all tw reuse code, may be spread out in multiple files including vocab code
 		if (minimatch('reuse', self.opts.menuOptions)) {
 			options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
 		}
+		*/
 
 		if (minimatch('replace', self.opts.menuOptions)) {
 			options.push({ label: 'Replace', callback: self.showTree } as opt)
