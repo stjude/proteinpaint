@@ -37,10 +37,6 @@ export type NumericQ = BaseQ & {
 	rounding: string
 }
 
-export type NumericTW = TermWrapper & {
-	q: NumericQ
-}
-
 type NumObjRangeEntry = any //{}
 
 export type BrushEntry = {
@@ -89,6 +85,11 @@ type NumericTerm = Term & {
 	id: string
 	bins: NumericalBins
 	densityNotAvailable?: boolean //Not used?
+}
+
+export type NumericTW = TermWrapper & {
+	q: NumericQ
+	term: NumericTerm
 }
 
 type NumericDom = InstanceDom & {
