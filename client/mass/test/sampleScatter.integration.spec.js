@@ -144,12 +144,12 @@ function getHolder() {
 /**************
  test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- plots/sampleScatter -***-')
 	test.end()
 })
 
-tape('Render TermdbTest scatter plot and open survival and summary', function(test) {
+tape('Render TermdbTest scatter plot and open survival and summary', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(4)
 	const holder = getHolder()
@@ -174,7 +174,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 		await testOpenSurvivalPlot()
 		await testOpenSummaryPlot()
 
-		if (test._ok) holder.remove()
+		//if (test._ok) holder.remove()
 		test.end()
 
 		function testPlot() {
@@ -192,10 +192,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 			const legendG = scatterDiv.select('.sjpcb-scatter-legend')
 			test.true(legendG != null, 'Should have a legend')
 			test.true(
-				legendG
-					.select('#legendTitle')
-					.text()
-					.startsWith(scatter.Inner.config.colorTW.id),
+				legendG.select('#legendTitle').text().startsWith(scatter.Inner.config.colorTW.id),
 				`Legend title should start with ${scatter.Inner.config.colorTW.id}`
 			)
 		}
@@ -220,20 +217,43 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 		}
 
 		async function testOpenSurvivalPlot() {
-			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
-			openPlot('survival', survivalTerm, tw, scatter.Inner.app)
-			test.equal(d3s.selectAll('.sja_errorbar').size(), 0, 'Should render survival plot without errors".')
+			const plots = scatter.Inner.app.getState().plots
+			const elem = scatter.Inner.app.Inner.dom.holder.node()
+			const preSandboxes = [...elem.querySelectorAll('.sjpp-sandbox')]
+			const sandboxes = await detectLst({
+				elem,
+				selector: '.sjpp-sandbox',
+				count: plots.length + 1,
+				async trigger() {
+					const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
+					await openPlot('survival', survivalTerm, tw, scatter.Inner.app)
+				}
+			})
+			const newSandbox = sandboxes.find(s => !preSandboxes.includes(s))
+			test.equal(newSandbox.querySelectorAll('.sja_errorbar').length, 0, 'Should render survival plot without errors".')
 		}
 
 		async function testOpenSummaryPlot() {
-			const genderTerm = await scatter.Inner.app.vocabApi.getterm('sex')
-			openSummaryPlot(genderTerm, tw, scatter.Inner.app)
-			test.equal(d3s.selectAll('.sja_errorbar').size(), 0, 'Should render summary plot without errors".')
+			const plots = scatter.Inner.app.getState().plots
+			const elem = scatter.Inner.app.Inner.dom.holder.node()
+			const preSandboxes = [...elem.querySelectorAll('.sjpp-sandbox')]
+			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
+			const sandboxes = await detectLst({
+				elem,
+				selector: '.sjpp-sandbox',
+				count: plots.length + 1,
+				async trigger() {
+					const genderTerm = await scatter.Inner.app.vocabApi.getterm('sex')
+					await openSummaryPlot(genderTerm, tw, scatter.Inner.app)
+				}
+			})
+			const newSandbox = sandboxes.find(s => !preSandboxes.includes(s))
+			test.equal(newSandbox.querySelectorAll('.sja_errorbar').length, 0, 'Should render summary plot without errors".')
 		}
 	}
 })
 
-tape('Invalid colorTW.id', async function(test) {
+tape('Invalid colorTW.id', async function (test) {
 	test.timeoutAfter(3000)
 	const message = `Should display error for colorTW.id not found within dataset`
 	const holder = getHolder()
@@ -267,7 +287,7 @@ tape('Invalid colorTW.id', async function(test) {
 	test.end()
 })
 
-tape('Invalid colorTW.term', async function(test) {
+tape('Invalid colorTW.term', async function (test) {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 	const id = 'Not real data'
@@ -295,7 +315,7 @@ tape('Invalid colorTW.term', async function(test) {
 	test.end()
 })
 
-tape('Invalid plot name', async function(test) {
+tape('Invalid plot name', async function (test) {
 	test.timeoutAfter(3000)
 	const message = `Should display error for invalid plot name`
 	const holder = getHolder()
@@ -329,7 +349,7 @@ tape('Invalid plot name', async function(test) {
 	test.end()
 })
 
-tape('Test legend', function(test) {
+tape('Test legend', function (test) {
 	test.timeoutAfter(6000) //Fix for breaking on local CI but maynot be necessary for nightly build
 
 	runpp({
@@ -417,7 +437,7 @@ tape('Test legend', function(test) {
 	}
 })
 
-tape('Render color groups', function(test) {
+tape('Render color groups', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -545,7 +565,7 @@ tape('Render color groups', function(test) {
 	// }
 })
 
-tape('Change symbol and reference size from menu', function(test) {
+tape('Change symbol and reference size from menu', function (test) {
 	test.timeoutAfter(10000)
 
 	runpp({
@@ -596,7 +616,7 @@ tape('Change symbol and reference size from menu', function(test) {
 	}
 })
 
-tape('Change chart width and height from menu', function(test) {
+tape('Change chart width and height from menu', function (test) {
 	test.timeoutAfter(10000)
 
 	runpp({
@@ -665,7 +685,7 @@ tape('Change chart width and height from menu', function(test) {
 	}
 })
 
-tape('Check/uncheck Show axes from menu', function(test) {
+tape('Check/uncheck Show axes from menu', function (test) {
 	test.timeoutAfter(4000)
 
 	runpp({
@@ -704,7 +724,7 @@ tape('Check/uncheck Show axes from menu', function(test) {
 	}
 })
 
-tape('Click zoom in, zoom out, and reset buttons', function(test) {
+tape('Click zoom in, zoom out, and reset buttons', function (test) {
 	test.timeoutAfter(10000)
 
 	runpp({
@@ -770,7 +790,7 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 	//Add tests for changes in axes
 })
 
-tape('Groups and group menus functions', function(test) {
+tape('Groups and group menus functions', function (test) {
 	test.timeoutAfter(8000)
 
 	runpp({
