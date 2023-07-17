@@ -11,12 +11,15 @@ CategoricaTermSettingInstance
 
 export type CategoricalQ = BaseQ & {
 	// termType: 'categorical'
+
+	//Not sure if separate categorical q is needed??
+
 	//THIS IS A MISTAKE! These are condition attributes and should be removed
-	bar_by_children?: boolean
-	bar_by_grade?: boolean
-	value_by_max_grade?: boolean
-	value_by_most_recent?: boolean
-	value_by_computable_grade?: boolean
+	// bar_by_children?: boolean
+	// bar_by_grade?: boolean
+	// value_by_max_grade?: boolean
+	// value_by_most_recent?: boolean
+	// value_by_computable_grade?: boolean
 	//End condition attributes
 }
 
