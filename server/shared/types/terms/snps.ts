@@ -5,10 +5,12 @@ import { Tvs, Filter } from '../filter'
 
 /*
 --------EXPORTED--------
-SnpLocusQ
-SnpLocusTermWrapper
-SnpLocusVocabApi
-SnpLocusTermSettingInstance
+SnpsQ
+SnpsEntry
+SnpsTerm
+SnpsTermWrapper
+SnpsVocabApi
+SnpsTermSettingInstance
 
 */
 
