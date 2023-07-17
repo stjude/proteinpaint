@@ -169,7 +169,7 @@ async function make_singleSampleTable(s, arg) {
 	if (s.sample_id) {
 		// sample_id is hardcoded
 		const [cell1, cell2] = get_list_cells(grid_div)
-		arg.tk.mds.termdbConfig.lollipop ? cell1.text(arg.tk.mds.termdbConfig.lollipop.sample) : cell1.text('Sample')
+		cell1.text(arg.tk.mds.termdbConfig.lollipop?.sample || 'Sample')
 		printSampleName(s, arg.tk, cell2, arg.block, arg.mlst?.[0])
 	}
 
@@ -366,7 +366,7 @@ export async function samples2columnsRows(samples, tk) {
 	const displayedFormatKeySet = new Set() // set of format keys for display, to skip keys not in display
 
 	// to be returned by this function, as inputs for renderTable
-	const columns = [{ label: tk.mds.termdbConfig.lollipop ? tk.mds.termdbConfig.lollipop.sample : 'Sample' }],
+	const columns = [{ label: tk.mds.termdbConfig.lollipop?.sample || 'Sample' }],
 		rows = [] // each row is an array of same length as columns
 
 	///////////////// fill in columns[]
