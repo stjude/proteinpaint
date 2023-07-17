@@ -7,16 +7,14 @@ export function initRadioInputs(opts) {
 		.data(opts.options, d => d.value)
 		.style('display', 'block')
 
-	divs.exit().each(function(d) {
-		d3select(this)
-			.on('input', null)
-			.on('click', null)
-			.remove()
+	divs.exit().each(function (d) {
+		d3select(this).on('input', null).on('click', null).remove()
 	})
 
 	const labels = divs
 		.enter()
 		.append('div')
+		.attr('title', d => d.title)
 		.style('display', 'block')
 		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '5px')
 		.append('label')

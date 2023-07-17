@@ -148,8 +148,17 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'cellEncoding',
 						options: [
-							{ label: 'Stacked', value: '' },
-							{ label: 'Oncoprint', value: 'oncoprint' }
+							{
+								label: 'Stacked',
+								value: '',
+								title: 'Show stacked rectangles in the same matrix cell to render variants for the same sample and gene'
+							},
+							{
+								label: 'Oncoprint',
+								value: 'oncoprint',
+								title:
+									'Show overlapping rectangles in the same matrix cell to render variants for the same sample and gene'
+							}
 						],
 						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
 					},
@@ -207,7 +216,7 @@ export class MatrixControls {
 		this.opts.holder
 			.append('button')
 			.datum({
-				label: 'Cell layout',
+				label: 'Cell Layout',
 				tables: [
 					{
 						rows: [
@@ -421,16 +430,24 @@ export class MatrixControls {
 										settingsKey: 'collabelpos',
 										// switched since settings.collabelpos refers to the individual column label, not group
 										options: [
-											{ label: 'Bottom', value: 'top' },
-											{ label: 'Top', value: 'bottom' }
+											{ label: 'Top', value: 'bottom', title: `Display ${l.sample} group labels at the bottom` },
+											{ label: 'Bottom', value: 'top', title: `Display ${l.sample} group labels on top` }
 										]
 									},
 									{
 										settingsKey: 'rowlabelpos',
 										// switched since settings.rowlabelpos refers to the individual column label, not group
 										options: [
-											{ label: 'Right', value: 'left' },
-											{ label: 'Left', value: 'right' }
+											{
+												label: 'Left',
+												value: 'right',
+												title: `Display gene or variable group labels on the left side`
+											},
+											{
+												label: 'Right',
+												value: 'left',
+												title: `Display gene or variable group labels on the right side`
+											}
 										]
 									}
 								]
