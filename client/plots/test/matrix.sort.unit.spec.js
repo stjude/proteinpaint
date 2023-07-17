@@ -212,9 +212,9 @@ tape('sortSamplesBy = asListed', test => {
 	test.end()
 })
 
-tape('sortPriority by default custom that uses a filter', test => {
+tape('sortPriority by CNV+SSM > SSM-only > CNV-only that uses a filter', test => {
 	const { self, settings, rows } = getArgs({
-		sortSamplesBy: 'custom'
+		sortSamplesBy: 'a'
 	})
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
@@ -239,7 +239,7 @@ tape('sortPriority by default custom that uses a filter', test => {
 	test.end()
 })
 
-tape('sortPriority by custom, without filter', test => {
+tape('custom sortPriority, without filter', test => {
 	const { self, settings, rows } = getArgs({
 		sortSamplesBy: 'custom',
 		sortOptions: {
@@ -330,6 +330,7 @@ tape('sortPriority by custom, without filter', test => {
 tape('sort against selectedTerms', test => {
 	const { self, settings, rows } = getArgs({ sortSamplesBy: 'dt' })
 	self.termGroups[0].lst[1].sortSamples = {}
+	settings.sortSamplesBy = 'a'
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
 	test.deepEqual(
