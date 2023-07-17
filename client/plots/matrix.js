@@ -239,6 +239,7 @@ class Matrix {
 					sortPriority: p.sortPriority,
 					sampleNameFilter: p.sampleNameFilter,
 					sortSamplesBy: p.sortSamplesBy,
+					sortSampleGrpsBy: p.sortSampleGrpsBy,
 					sortSamplesTieBreakers: p.sortSamplesTieBreakers,
 					sortTermsBy: p.sortTermsBy,
 					// TODO: take out dimension related computations in setTermOrder,
@@ -250,6 +251,7 @@ class Matrix {
 					sortPriority: c.sortPriority,
 					sampleNameFilter: c.sampleNameFilter,
 					sortSamplesBy: c.sortSamplesBy,
+					sortSampleGrpsBy: c.sortSampleGrpsBy,
 					sortSamplesTieBreakers: c.sortSamplesTieBreakers,
 					sortTermsBy: c.sortTermsBy,
 					// TODO: take out dimension related computations in setTermOrder,
@@ -334,13 +336,14 @@ class Matrix {
 				const key = row[$id].key
 				const name = key in values && values[key].label ? values[key].label : key
 				if (!sampleGroups.has(key)) {
-					sampleGroups.set(key, {
+					const grp = {
 						name: `${name}`, // convert to a string
 						id: key,
 						lst: [],
-						order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
 						tw: this.config.divideBy
-					})
+					}
+					if (ref.bins) grp.order = ref.bins.findIndex(bin => bin.name == key)
+					sampleGroups.set(key, grp)
 				}
 				sampleGroups.get(key).lst.push(row)
 			} else {
@@ -364,6 +367,7 @@ class Matrix {
 			if ('order' in a && 'order' in b) return a.order - b.order
 			if ('order' in a) return -1
 			if ('order' in b) return 1
+			if (s.sortSampleGrpsBy == 'sampleCount' && a.lst.length != b.lst.length) return b.lst.length - a.lst.length
 			return a.name < b.name ? -1 : 1
 		})
 	}
@@ -372,22 +376,22 @@ class Matrix {
 		const s = this.settings.matrix
 		this.visibleSampleGrps = new Set()
 
+		if (s.sortSampleGrpsBy == 'hits') {
+			this.sampleGroups.sort((a, b) => b.totalCountedValues - a.totalCountedValues)
+		}
+
 		const selectedDictTerms = this.termOrder.filter(t => t.tw.sortSamples && t.tw.term.type != 'geneVariant')
 		if (!selectedDictTerms.length) {
 			// both the sample truncation and sorting will be determined by gene variant hits
 			this.sampleOrder = this.sortSampleGrpLst(data)
 		} else {
 			// get sample names as sorted by gene variant hits, to be used for truncating the samplegroup.lst
-			const sampleNames = this.sortSampleGrpLst(data, {
-				skipSorter: (p, tw) => selectedDictTerms.find(t => t.tw.$id === tw.$id)
-			})
+			const sampleNames = this.sortSampleGrpLst(data)
 				.map(so => so.row.sample)
 				.slice(0, s.maxSample)
 
 			const opts = {
-				skipSorter: (p, tw) => p.types.includes('geneVariant') && selectedDictTerms.find(t => t.tw.$id === tw.$id),
-				dataFilter: d => sampleNames.includes(d.sample),
-				tiebreaker: (a, b) => sampleNames.indexOf(a.sample) - sampleNames.indexOf(b.sample)
+				dataFilter: d => sampleNames.includes(d.sample)
 			}
 			this.sampleOrder = this.sortSampleGrpLst(data, opts)
 		}
@@ -423,7 +427,7 @@ class Matrix {
 			}
 			total += processedLst.length
 			if (processedLst.length) this.visibleSampleGrps.add(grp)
-			if (s.maxSample && total >= s.maxSample) break
+			if (s.maxSample && total >= s.maxSample) break // *** Apply group sorting before column truncation ????? ****
 		}
 		return sampleOrder
 	}
@@ -441,6 +445,7 @@ class Matrix {
 				const counts = { samples: 0, hits: 0 }
 				const countedSamples = new Set()
 				for (const sgrp of this.sampleGroups) {
+					sgrp.totalCountedValues = 0
 					for (const s of sgrp.lst) {
 						if (countedSamples.has(s.sample)) continue
 						countedSamples.add(s.sample)
@@ -466,6 +471,8 @@ class Matrix {
 									if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
 								}
 							}
+							// may be used for sorting sample groups by hits
+							sgrp.totalCountedValues += anno.countedValues?.length || 0
 						}
 					}
 				}

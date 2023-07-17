@@ -305,7 +305,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 			if (d.order >= order) d.order += 1
 		})
 		sortOptions.custom = {
-			label: sortPriority.label || 'Custom sort',
+			label: s.sortPriority.label || 'Custom sort',
 			value: 'custom',
 			order,
 			sortPriority: s.sortPriority

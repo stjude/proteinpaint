@@ -44,6 +44,7 @@ export async function getPlotConfig(opts = {}, app) {
 				sampleNameFilter: '',
 				sortSamplesBy: 'a',
 				sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
+				sortSampleGrpsBy: 'name', // 'hits' | 'name' | 'sampleCount'
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: 'abs', //true, // 'abs' (default, previously true), 'pct', ''  (previously false)
@@ -133,7 +134,7 @@ export async function getPlotConfig(opts = {}, app) {
 		}
 		if (os.sortOptions) {
 			delete os.sortOptions.custom
-			delete os.sortOptions.asListedr
+			delete os.sortOptions.asListed
 		}
 	}
 
@@ -146,7 +147,8 @@ export async function getPlotConfig(opts = {}, app) {
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
-	if (['selectedTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'a'
+	if (!m.sortOptions?.[m.sortSamplesBy]) m.sortSamplesBy = 'a'
+	else if (['selectedTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'a'
 	if (m.samplecount4gene === true || m.samplecount4gene === 1) m.samplecount4gene = 'abs'
 	// support overrides in localhost
 	if (window.location.hostname == 'localhost') {

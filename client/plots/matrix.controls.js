@@ -82,6 +82,33 @@ export class MatrixControls {
 						}
 					},
 					{
+						label: `Sort ${l.Sample} Groups`,
+						title: `Set how to sort ${l.sample} groups`,
+						type: 'radio',
+						chartType: 'matrix',
+						settingsKey: 'sortSampleGrpsBy',
+						options: [
+							{
+								label: 'Group Name',
+								value: 'name',
+								title: `Sort by group name`
+							},
+							{
+								label: `${l.Sample} Count`,
+								value: 'sampleCount',
+								title: `Sort by the number of samples in the group`
+							},
+							{
+								label: `Hits`,
+								value: 'hits',
+								title: `Sort by the total number of variants for every sample in the group`
+							}
+						],
+						getDisplayStyle(plot) {
+							return plot.divideBy ? 'block' : 'none'
+						}
+					},
+					{
 						label: `${l.Sample} Group Label Max Length`,
 						title: `Truncate the ${l.sample} group label if it exceeds this maximum number of characters`,
 						type: 'number',
