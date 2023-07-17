@@ -4,10 +4,10 @@ import { TermSettingInstance, InstanceDom } from '../termsetting'
 /*
 --------EXPORTED--------
 NumericQ
-NumericTW
 BrushEntry
 DensityData
 NumberObj
+NumericTW
 NumericTermSettingInstance
 
 */

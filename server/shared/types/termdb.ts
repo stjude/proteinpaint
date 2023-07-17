@@ -130,7 +130,7 @@ export type Term = {
 	skip0forPercentile?: boolean
 	subconditions?: Subconditions
 	tvs?: Tvs
-	values: TermValues
+	values?: TermValues
 	unit?: string
 }
 
@@ -197,7 +197,7 @@ export type TermWrapper = {
 	$id?: string
 	isAtomic?: boolean
 	term: Term
-	// q: Q
+	q: Q
 }
 
 export type TWDynamicQ = TermWrapper & { q: DetermineQ<TermWrapper['term']['type']> }
