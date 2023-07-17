@@ -314,7 +314,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 
 	// Similar to Oncoprint sorting
 	sortOptions.a = {
-		label: 'SV+Fusion > CNV+SSM > SSM-only > CNV-only',
+		label: 'CNV+SSM > SSM-only > CNV-only',
 		value: 'a',
 		order: 1,
 		sortPriority: [
@@ -381,7 +381,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 	}
 
 	sortOptions.b = {
-		label: 'SV+Fusion > CNV+SSM > SSM-only',
+		label: 'CNV+SSM > SSM-only',
 		value: 'b',
 		order: 1,
 		sortPriority: [
