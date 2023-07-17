@@ -1,7 +1,7 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { addGeneSearchbox } from '#dom/genesearch'
-import { SnpsTermSettingInstance, SnpsTermWrapper, SnpsQ, SnpsVocabApi } from '#shared/types'
+import { SnpsTermSettingInstance, SnpsTermWrapper, SnpsQ, SnpsVocabApi, SnpsTerm } from '#shared/types'
 
 /* 
 ***************** EXPORT
@@ -111,7 +111,7 @@ async function makeEditMenu(self: SnpsTermSettingInstance, div: any) {
 			if (self.term) {
 				//ignore
 			} else {
-				self.term = { id: makeId() }
+				self.term = { id: makeId() } as SnpsTerm
 			}
 
 			// if self.q already exists, do not overwrite to keep settings e.g. doNotRestrictAncestry
