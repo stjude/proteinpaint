@@ -31,7 +31,7 @@
     "test:integration": "npm run tape:integration",
     "tape:integration": "cat ../public/bin/testrunproteinpaint.js ./test/initIntegration.js | tape-run --static ../public",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
-    "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w",
+    "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w --bundleConfigAsCjs",
     "build": "rm -rf dist && rollup -c ./rollup.config.js",
     "prepack": "rm -rf dist && rollup -c ./rollup.config.js"
   },
@@ -46,7 +46,7 @@
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-dynamic-import-vars": "^1.4.3",
     "@rollup/plugin-json": "^4.1.0",
-    "@rollup/plugin-node-resolve": "^11.0.1",
+    "@rollup/plugin-node-resolve": "^11.2.1",
     "@rollup/plugin-typescript": "^11.1.1",
     "@typescript-eslint/eslint-plugin": "^5.60.0",
     "babel-loader": "^8.2.2",
@@ -66,7 +66,6 @@
     "read-cache": "^1.0.0",
     "rollup": "^2.35.1",
     "rollup-plugin-postcss": "^4.0.2",
-    "rollup-plugin-terser": "^7.0.2",
     "source-map-loader": "^4.0.1",
     "style-loader": "^3.3.1",
     "tape": "^5.2.2",
@@ -93,6 +92,7 @@
     "url": "https://github.com/stjude/pp-dist"
   },
   "dependencies": {
+    "@rollup/plugin-terser": "^0.4.3",
     "d3-regression": "^1.3.10",
     "three": "^0.152.2"
   }
