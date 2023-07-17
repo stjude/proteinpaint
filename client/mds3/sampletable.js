@@ -106,9 +106,7 @@ export async function displaySampleTable(samples, args) {
 				callback: async (event, i) => {
 					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 					sandbox.header.text(samples[i].sample_id)
-					await (
-						await import('#plots/plot.ssgq.js')
-					).plotSingleSampleGenomeQuantification(
+					await (await import('#plots/plot.ssgq.js')).plotSingleSampleGenomeQuantification(
 						args.tk.mds,
 						args.tk.mds.label,
 						k,
@@ -171,7 +169,7 @@ async function make_singleSampleTable(s, arg) {
 	if (s.sample_id) {
 		// sample_id is hardcoded
 		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1.text('Sample')
+		arg.tk.mds.termdbConfig.lollipop ? cell1.text(arg.tk.mds.termdbConfig.lollipop.sample) : cell1.text('Sample')
 		printSampleName(s, arg.tk, cell2, arg.block, arg.mlst?.[0])
 	}
 
@@ -214,7 +212,10 @@ async function make_singleSampleTable(s, arg) {
 		for (const ssmid of s.ssm_id_lst) {
 			if (s.ssm_id_lst.length > 1) {
 				// there are multiple, need to mark it out
-				const div = grid_div.append('div').style('grid-column', 'span 2').style('margin-top', '20px')
+				const div = grid_div
+					.append('div')
+					.style('grid-column', 'span 2')
+					.style('margin-top', '20px')
 				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
@@ -314,9 +315,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 				.on('click', async () => {
 					const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
 					sandbox.header.text(sample.sample_id)
-					await (
-						await import('#plots/plot.ssgq.js')
-					).plotSingleSampleGenomeQuantification(
+					await (await import('#plots/plot.ssgq.js')).plotSingleSampleGenomeQuantification(
 						tk.mds,
 						tk.mds.label,
 						k,
@@ -367,7 +366,7 @@ export async function samples2columnsRows(samples, tk) {
 	const displayedFormatKeySet = new Set() // set of format keys for display, to skip keys not in display
 
 	// to be returned by this function, as inputs for renderTable
-	const columns = [{ label: 'Sample' }],
+	const columns = [{ label: tk.mds.termdbConfig.lollipop ? tk.mds.termdbConfig.lollipop.sample : 'Sample' }],
 		rows = [] // each row is an array of same length as columns
 
 	///////////////// fill in columns[]
@@ -456,9 +455,8 @@ export async function samples2columnsRows(samples, tk) {
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							const p = m.pairlst[0]
 							oneHtml.push(
-								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
-									p.b.name || ''
-								} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b.name ||
+									''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 							)
 						} else {
 							throw 'unknown dt'
