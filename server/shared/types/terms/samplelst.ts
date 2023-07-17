@@ -3,6 +3,8 @@ import { TermSettingInstance } from '../termsetting'
 
 /*
 --------EXPORTED--------
+SampleLstTermValues
+SampleLstQ
 SampleLstTerm
 SampleLstTW
 SampleLstSettingInstance
@@ -10,10 +12,12 @@ SampleLstSettingInstance
 */
 
 export type SampleLstTermValues = {
-	name: string
-	inuse: boolean
-	list: { sampleId: string; sample: string }[]
-	values: any
+	[index: string | number]: {
+		name: string
+		inuse: boolean
+		list: { sampleId: string; sample: string }[]
+		values: any
+	}
 }
 
 export type SampleLstQ = BaseQ & {
