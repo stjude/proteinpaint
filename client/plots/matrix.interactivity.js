@@ -1263,6 +1263,8 @@ function setLabelDragEvents(self, prefix) {
 	}
 
 	self[`${prefix}LabelMouseover`] = (event, t) => {
+		const cls = event.target.className?.baseVal || event.target.parentNode.className?.baseVal || ''
+		if (cls.includes('divide-by')) return
 		if (event.target.tagName === 'text') select(event.target).style('fill', 'blue')
 		if (!self.dragged) return
 		// TODO: why is the element-bound __data__ (t) not provided as a second argument by d3??
