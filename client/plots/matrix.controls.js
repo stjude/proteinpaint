@@ -662,19 +662,21 @@ export class MatrixControls {
 
 			const lst = []
 			for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
-			group.lst = lst
 			const tws = geneset.map(d => {
-				const tw = {
-					$id: get$id(),
-					term: {
-						name: d.symbol || d.name,
-						type: 'geneVariant'
-					},
-					q: {}
-				}
+				//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+				let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
+				if (!tw)
+					tw = {
+						$id: get$id(),
+						term: {
+							name: d.symbol || d.name,
+							type: 'geneVariant'
+						},
+						q: {}
+					}
 				return tw
 			})
-
+			group.lst = lst
 			// TODO: see above for input to select which group to add the gene
 			// right not it assumes the first group
 			group.lst.push(...tws)
