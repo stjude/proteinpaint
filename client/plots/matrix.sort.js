@@ -16,6 +16,11 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 		}
 	}
 
+	if (s.sortSamplesBy == 'name') {
+		//no additional logic required
+		return (a, b) => (a.sample < b.sample ? -1 : a.sample > b.sample ? 1 : 0)
+	}
+
 	const activeOption = s.sortOptions[s.sortSamplesBy]
 	if (!activeOption) throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
 
@@ -291,17 +296,10 @@ export function getTermSorter(self, s) {
 	}
 }
 
-export function getSortOptions(termdbConfig) {
-	const sortOptions = {
-		asListed: {
-			label: 'By Input Data Order',
-			value: 'asListed',
-			order: 0
-		}
-	}
-
-	const sortPriority = termdbConfig?.matrix?.settings?.sortPriority
-	if (sortPriority) {
+export function getSortOptions(termdbConfig, controlLabels = {}) {
+	const s = termdbConfig?.matrix?.settings || {}
+	const sortOptions = {}
+	if (s.sortPriority) {
 		const order = 1
 		Object.values(sortOptions).forEach(d => {
 			if (d.order >= order) d.order += 1
@@ -310,85 +308,160 @@ export function getSortOptions(termdbConfig) {
 			label: sortPriority.label || 'Custom sort',
 			value: 'custom',
 			order,
-			sortPriority
+			sortPriority: s.sortPriority
 		}
-	} else {
-		sortOptions.custom = {
-			label: 'against alteration type',
-			value: 'custom',
-			order: 1,
-			sortPriority: [
-				{
-					types: ['geneVariant'],
-					tiebreakers: [
-						{
-							filter: {
-								values: [
-									{
-										dt: 2
-									}
-								]
-							},
-							by: 'class',
-							order: ['Fuserna', 'WT', 'Blank']
-						}
-					]
-				},
+	}
 
-				{
-					types: ['geneVariant'],
-					tiebreakers: [
-						{
-							filter: {
-								values: [{ dt: 1 }]
-							},
-							by: 'class',
-							order: [
-								// copy-number
-								'CNV_amp',
-								'CNV_loss',
-								// truncating
-								'F',
-								'N',
-								// indel
-								'D',
-								'I',
-								// point
-								'M',
-								'P',
-								'L',
-								// noncoding
-								'Utr3',
-								'Utr5',
-								'S',
-								'Intron'
+	// Similar to Oncoprint sorting
+	sortOptions.a = {
+		label: 'SV+Fusion > CNV+SSM > SSM-only > CNV-only',
+		value: 'a',
+		order: 1,
+		sortPriority: [
+			{
+				types: ['geneVariant'],
+				tiebreakers: [
+					{
+						filter: {
+							values: [
+								{
+									dt: 2
+								}
 							]
-						}
-					]
-				},
-				{
-					types: ['geneVariant'],
-					tiebreakers: [
-						{
-							by: 'dt',
-							order: [4] // snvindel, cnv,
-							// other dt values will be ordered last
-							// for the sorter to not consider certain dt values,
-							// need to explicitly not use such values for sorting
-							// ignore: [4]
 						},
-						{
-							by: 'class',
-							order: ['CNV_amp', 'CNV_loss']
-						}
-					]
-				},
-				{
-					types: ['categorical', 'integer', 'float', 'survival'],
-					tiebreakers: [{ by: 'values' }]
-				}
-			]
-		}
+						by: 'class',
+						order: ['Fuserna', 'WT', 'Blank']
+					}
+				]
+			},
+
+			{
+				types: ['geneVariant'],
+				tiebreakers: [
+					{
+						filter: {
+							values: [{ dt: 1 }]
+						},
+						by: 'class',
+						order: [
+							// copy-number
+							'CNV_amp',
+							'CNV_loss',
+							// truncating
+							'F',
+							'N',
+							// indel
+							'D',
+							'I',
+							// point
+							'M',
+							'P',
+							'L',
+							// noncoding
+							'Utr3',
+							'Utr5',
+							'S',
+							'Intron'
+						]
+					},
+					// NOTE: nested CNV filter causes sorting samples by cnv+ssm > ssm-only > cnv-only
+					// per Lou's comment during GDC milestone 10 meeting 6/29/2023
+					// can comment this out and instead uncomment the alternative, non-nested filter below
+					{
+						by: 'class',
+						order: ['CNV_amp', 'CNV_loss']
+					}
+				]
+			},
+			{
+				types: ['categorical', 'integer', 'float', 'survival'],
+				tiebreakers: [{ by: 'values' }]
+			}
+		]
+	}
+
+	sortOptions.b = {
+		label: 'SV+Fusion > CNV+SSM > SSM-only',
+		value: 'b',
+		order: 1,
+		sortPriority: [
+			{
+				types: ['geneVariant'],
+				tiebreakers: [
+					{
+						filter: {
+							values: [
+								{
+									dt: 2
+								}
+							]
+						},
+						by: 'class',
+						order: ['Fuserna', 'WT', 'Blank']
+					}
+				]
+			},
+
+			{
+				types: ['geneVariant'],
+				tiebreakers: [
+					{
+						filter: {
+							values: [{ dt: 1 }]
+						},
+						by: 'class',
+						order: [
+							// copy-number
+							'CNV_amp',
+							'CNV_loss',
+							// truncating
+							'F',
+							'N',
+							// indel
+							'D',
+							'I',
+							// point
+							'M',
+							'P',
+							'L',
+							// noncoding
+							'Utr3',
+							'Utr5',
+							'S',
+							'Intron'
+						]
+					}
+				]
+			},
+			{
+				types: ['geneVariant'],
+				tiebreakers: [
+					{
+						by: 'dt',
+						order: [4] // snvindel, cnv,
+						// other dt values will be ordered last
+						// for the sorter to not consider certain dt values,
+						// need to explicitly not use such values for sorting
+						// ignore: [4]
+					},
+					{
+						by: 'class',
+						order: ['CNV_amp', 'CNV_loss']
+					}
+				]
+			},
+			{
+				types: ['categorical', 'integer', 'float', 'survival'],
+				tiebreakers: [{ by: 'values' }]
+			}
+		]
+	}
+
+	const l = Object.assign({ sample: 'sample' }, controlLabels, s.controlLabels || {})
+	sortOptions.name = {
+		label: `By ${l.sample} name, ID, or label`,
+		value: 'name',
+		order: Object.values(sortOptions).length
 	}
 
 	return sortOptions

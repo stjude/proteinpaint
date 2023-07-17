@@ -2,7 +2,18 @@ import { copyMerge } from '../rx'
 import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '#termsetting'
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts = {}, app) {
+	const controlLabels = {
+		Samples: 'Samples',
+		samples: 'samples',
+		Sample: 'Sample',
+		sample: 'sample',
+		Terms: 'Variables',
+		terms: 'variables',
+		Term: 'Variable',
+		term: 'Variable'
+	}
+
 	const config = {
 		// data configuration
 		termgroups: [],
@@ -31,8 +42,8 @@ export async function getPlotConfig(opts, app) {
 				sortPriority: undefined,
 
 				sampleNameFilter: '',
-				sortSamplesBy: 'class',
-				sortOptions: getSortOptions(app.vocabApi.termdbConfig),
+				sortSamplesBy: 'a',
+				sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: 'abs', //true, // 'abs' (default, previously true), 'pct', ''  (previously false)
@@ -83,16 +94,7 @@ export async function getPlotConfig(opts, app) {
 				// when a canvas dataURL image in a zoomed-in matrix svg stops rendering
 				imgWMax: 60000 / window.devicePixelRatio,
 				scrollHeight: 12,
-				controlLabels: {
-					Samples: 'Samples',
-					samples: 'samples',
-					Sample: 'Sample',
-					sample: 'sample',
-					Terms: 'Variables',
-					terms: 'variables',
-					Term: 'Variable',
-					term: 'Variable'
-				},
+				controlLabels,
 				cnvUnit: 'log2ratio',
 				ignoreCnvValues: false, //will ignore numeric CNV values if true
 
@@ -121,6 +123,20 @@ export async function getPlotConfig(opts, app) {
 	const overrides = app.vocabApi.termdbConfig.matrix || {}
 	copyMerge(config.settings.matrix, overrides.settings)
 
+	const os = opts?.settings?.matrix
+	if (os) {
+		if (
+			(os.sortSamplesBy == 'custom' || os.sortSamplesBy == 'asListed') &&
+			os.sortOptions?.custom.label == 'against alteration type'
+		) {
+			os.sortSamplesBy = 'a'
+		}
+		if (os.sortOptions) {
+			delete os.sortOptions.custom
+			delete os.sortOptions.asListedr
+		}
+	}
+
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
 
@@ -130,7 +146,7 @@ export async function getPlotConfig(opts, app) {
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
-	if (['selectedTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'custom'
+	if (['selectedTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'a'
 	if (m.samplecount4gene === true || m.samplecount4gene === 1) m.samplecount4gene = 'abs'
 	// support overrides in localhost
 	if (window.location.hostname == 'localhost') {
