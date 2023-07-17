@@ -195,7 +195,7 @@ export async function initGDCdictionary(ds) {
 		parentCount = 0
 
 	for (const fieldLine of re.fields) {
-		if (maySkipLine(fieldLine)) {
+		if (maySkipFieldLine(fieldLine)) {
 			skipLineCount++
 			continue
 		}
@@ -217,13 +217,6 @@ export async function initGDCdictionary(ds) {
 		for (let i = 1; i < termLevels.length; i++) {
 			const parentId = termLevels.slice(0, i).join('.')
 			const currentId = parentId + '.' + termLevels[i]
-			if (currentId.endsWith('_id') && !currentId.endsWith('project_id')) continue
-			if (
-				currentId.endsWith('consent_type') ||
-				currentId == 'case.days_to_consent' ||
-				currentId == 'case.days_to_index'
-			)
-				continue
 			const name = termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' ')
 
 			// always create an object for currentId
@@ -348,10 +341,27 @@ function mayAddTermAttribute(t) {
 	}
 }
 
-function maySkipLine(line) {
-	return (
-		line.startsWith('ssm') || line.startsWith('case.observation') || line.startsWith('case.available_variation_data')
-	)
+// hardcoded rules to skip some lines from re.fields[]
+// one thing or the other we do not want these to show up in dictionary
+const skipFieldLines = new Set(['case.consent_type', 'case.days_to_consent', 'case.days_to_index'])
+function maySkipFieldLine(line) {
+	if (
+		line.startsWith('ssm') ||
+		line.startsWith('case.observation') ||
+		line.startsWith('case.available_variation_data')
+	) {
+		// skip lines beginning with these
+		// uncomment to see what's skipped
+		// console.log(line)
+		return true
+	}
+	if (line.endsWith('_id') && !line.endsWith('project_id')) {
+		// skip lines ending with _id
+		// console.log(line)
+		return true
+	}
+	// skip these hardcoded terms
+	if (skipFieldLines.has(line)) return true
 }
 
 /* in order to work with backend /termdb? route,
