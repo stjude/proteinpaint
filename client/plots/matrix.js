@@ -208,7 +208,11 @@ class Matrix {
 			// even if the initial state did not have a token message at the start of a dispatch
 			const message = this.app.vocabApi.tokenVerificationMessage
 			this.mayRequireToken(message)
-			if (!message) throw e
+			if (!message) {
+				this.app.tip.hide()
+				this.dom.loadingDiv.style('display', 'none')
+				throw e
+			}
 		}
 
 		this.prevState = this.state
@@ -328,9 +332,10 @@ class Matrix {
 			if ($id in row) {
 				if (exclude.includes(row[$id].key)) continue
 				const key = row[$id].key
+				const name = key in values && values[key].label ? values[key].label : key
 				if (!sampleGroups.has(key)) {
 					sampleGroups.set(key, {
-						name: key in values && values[key].label ? values[key].label : key,
+						name: `${name}`, // convert to a string
 						id: key,
 						lst: [],
 						order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
@@ -341,6 +346,13 @@ class Matrix {
 			} else {
 				defaultSampleGrp.lst.push(row)
 			}
+		}
+
+		const sampleGrpsArr = [...sampleGroups.values()]
+		const n = sampleGroups.size
+		if (n > 100 && sampleGrpsArr.filter(sg => sg.lst.length < 3).length > 0.8 * n) {
+			const l = s.controlLabels
+			throw `Did not group ${l.samples} by "${term.name}": too many ${l.sample} groups (${n}), with the majority of groups having <= 2 ${l.samples} per group.`
 		}
 
 		if (defaultSampleGrp.lst.length && !sampleGroups.size) {
@@ -831,7 +843,7 @@ class Matrix {
 		if (!s.zoomCenterPct) {
 			s.zoomCenterPct = 0.5
 			s.zoomIndex = Math.round((s.zoomCenterPct * mainw) / dx)
-			s.zoomGrpIndex = this.sampleOrder[s.zoomIndex].grpIndex
+			s.zoomGrpIndex = this.sampleOrder[s.zoomIndex]?.grpIndex || 0
 		}
 		// zoomCenter relative to mainw
 		const zoomCenter = s.zoomCenterPct * mainw
