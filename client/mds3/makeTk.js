@@ -380,6 +380,8 @@ async function mayInitTermdb(tk, block) {
 		tdb.vocabApi = _.vocabInit(arg)
 	}
 
+	tk.mds.termdbConfig = await tdb.vocabApi.getTermdbConfig()
+
 	if (tk.mds.termdb.allowCaseDetails) {
 		tk.mds.termdb.allowCaseDetails.get = async acase => {}
 	}
