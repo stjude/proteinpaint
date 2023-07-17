@@ -13,7 +13,7 @@
     "container"
   ],
   "scripts": {
-    "reset": "npm install",
+    "reset": "rm -rf ./node_modules && rm -rf ./**/node_modules && npm install",
     "transpileDynLoaded": "tsc --watch server/genome/*.ts server/dataset/*.ts",
     "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
     "bundle": "rm -f server/server.js* && webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
