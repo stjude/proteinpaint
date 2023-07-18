@@ -61,8 +61,47 @@ const dummyBins = {
 	}
 }
 
-// stopgap: can declare preconfigured bin configs for specific terms
+// hardcode bin configs for *all* numeric terms
 const termId2bins = {
+	'case.demographic.age_at_index': {
+		default: {
+			mode: 'discrete',
+			type: 'regular-bin',
+			bin_size: 10,
+			startinclusive: false,
+			stopinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: 30
+			}
+		}
+	},
+	'case.demographic.days_to_birth': {
+		default: {
+			mode: 'discrete',
+			type: 'regular-bin',
+			bin_size: 10000,
+			startinclusive: false,
+			stopinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: -30000
+			}
+		}
+	},
+	'case.demographic.days_to_death': {
+		default: {
+			mode: 'discrete',
+			type: 'regular-bin',
+			bin_size: 1000,
+			startinclusive: false,
+			stopinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: 1000
+			}
+		}
+	}
 	// 'case.days_to_index' : { bin_size:10, ... }
 }
 
@@ -241,10 +280,12 @@ export async function initGDCdictionary(ds) {
 					} else if (t.type == 'long') {
 						termObj.type = 'integer'
 						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
+						if (!termId2bins[termObj.id]) console.log('lack bin config for integer ' + termObj.id)
 						integerCount++
 					} else if (t.type == 'double') {
 						termObj.type = 'float'
 						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
+						if (!termId2bins[termObj.id]) console.log('lack bin config for float ' + termObj.id)
 						floatCount++
 					}
 				}
