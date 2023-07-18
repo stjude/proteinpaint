@@ -172,7 +172,7 @@ export function setInteractivity(self) {
 	self.onLegendClick = function (chart, legendG, name, key, e) {
 		const tw = self.config[name]
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
-		const menu = new Menu({ padding: '5px' })
+		const menu = new Menu({ padding: '0px' })
 		const div = menu.d.append('div')
 		div
 			.append('div')
@@ -267,7 +267,7 @@ export function setInteractivity(self) {
 	}
 
 	self.searchSample = function (e) {
-		const menu = new Menu({ padding: '5px' })
+		const menu = new Menu({ padding: '3px' })
 		let group
 		const input = menu.d.append('input').on('keyup', event => {
 			if (event.code == 'Escape') {
@@ -389,7 +389,8 @@ export function setInteractivity(self) {
 		if (info) columns.push(formatCell('Info', 'label'))
 
 		self.dom.tip.clear()
-		const headerDiv = self.dom.tip.d.append('div').style('margin-top', '5px')
+		const div = self.dom.tip.d.append('div').style('padding', '5px')
+		const headerDiv = div.append('div').style('margin-top', '5px')
 
 		const groupDiv = headerDiv
 			.append('div')
@@ -411,7 +412,7 @@ export function setInteractivity(self) {
 				input.node().focus()
 				input.node().select()
 			})
-		const tableDiv = self.dom.tip.d.append('div')
+		const tableDiv = div.append('div')
 		const buttons = []
 		if (addGroup) {
 			const addGroupCallback = {
