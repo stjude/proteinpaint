@@ -39,12 +39,12 @@ module.exports = function (env = {}) {
 		},
 		resolve: {
 			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin */
-			fallback: {
+			/*fallback: {
 				//stream: false,
 				//fs: false,
 				path: require.resolve('path-browserify'),
 				process: require.resolve('process')
-			},
+			},*/
 			extensions: ['*', '.js', '.jsx', '.tsx', '.ts']
 		},
 		plugins: [
