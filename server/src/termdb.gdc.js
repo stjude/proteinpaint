@@ -787,12 +787,13 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 
 // hardcode bin configs for *all* numeric terms
 function hardcodeBinconfigs() {
+	// this provides a concise way to declare bin config for each term
 	const id2binStat = {
 		'case.demographic.age_at_index': { bin_size: 10, first_bin_stop: 30 },
-		'case.demographic.days_to_birth': { binSize: 1000, first_bin_stop: -3000 },
+		'case.demographic.days_to_birth': { bin_size: 1000, first_bin_stop: -3000 },
 		'case.diagnoses.circumferential_resection_margin': null,
-		'case.demographic.days_to_death': { binSize: 1000, first_bin_stop: 1000 }
-		//'': {binSize:, first_bin_stop:},
+		'case.demographic.days_to_death': { bin_size: 1000, first_bin_stop: 1000 }
+		//'': {bin_size:, first_bin_stop:},
 	}
 	const termId2bins = {}
 	for (const id in id2binStat) {
