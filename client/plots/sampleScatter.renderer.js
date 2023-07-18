@@ -140,16 +140,16 @@ export function setRenderers(self) {
 
 			const gradient = self.defs
 				.append('linearGradient')
-				.attr('id', `linear-gradient-${self.id}`)
+				.attr('id', `linear-gradient-${chart.id}`)
 				.attr('x1', '0%')
 				.attr('y1', '0%')
 				.attr('x2', '100%')
 				.attr('y2', '0%')
-			self.startGradient = gradient
+			self.startGradient[chart.id] = gradient
 				.append('stop')
 				.attr('offset', '0%')
 				.attr('stop-color', self.config.startColor[chart.id])
-			self.stopGradient = gradient
+			self.stopGradient[chart.id] = gradient
 				.append('stop')
 				.attr('offset', '100%')
 				.attr('stop-color', self.config.stopColor[chart.id])
@@ -735,8 +735,8 @@ export function setRenderers(self) {
 									self.config.startColor[chart.id],
 									self.config.stopColor[chart.id]
 								])
-								self.startGradient.attr('stop-color', self.config.startColor[chart.id])
-								self.stopGradient.attr('stop-color', self.config.stopColor[chart.id])
+								self.startGradient[chart.id].attr('stop-color', self.config.startColor[chart.id])
+								self.stopGradient[chart.id].attr('stop-color', self.config.stopColor[chart.id])
 								self.app.dispatch({
 									type: 'plot_edit',
 									id: self.id,
@@ -774,7 +774,7 @@ export function setRenderers(self) {
 						.attr('y', 100)
 						.attr('width', 130)
 						.attr('height', 20)
-						.style('fill', `url(#linear-gradient-${self.id})`)
+						.style('fill', `url(#linear-gradient-${chart.id})`)
 
 					offsetY += step
 				} else {
