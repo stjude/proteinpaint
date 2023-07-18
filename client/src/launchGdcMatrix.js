@@ -114,7 +114,7 @@ export async function init(arg, holder, genomes) {
 						//{ lst: [{term}] },
 						{ lst: genes }
 					],
-					//divideBy: { term }, // testing only
+					// divideBy: { term }, // testing only
 					// moved default settings to gdc.hg38.js termdb.matrix.settings
 					// but can still override in the runpp() argument
 					settings
@@ -125,8 +125,8 @@ export async function init(arg, holder, genomes) {
 			features: ['recover']
 		},
 		recover: {
-			undoHtml: 'undo',
-			redoHtml: 'redo'
+			undoHtml: 'Undo',
+			redoHtml: 'Redo'
 		},
 		matrix: Object.assign(
 			{

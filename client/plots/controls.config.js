@@ -92,10 +92,7 @@ class TdbConfigUiInit {
 				.style('transition', '0.2s')
 		}
 
-		this.dom.table = this.dom.holder
-			.append('table')
-			.attr('cellpadding', 0)
-			.attr('cellspacing', 0)
+		this.dom.table = this.dom.holder.append('table').attr('cellpadding', 0).attr('cellspacing', 0)
 
 		return this.dom.table
 	}
@@ -139,7 +136,7 @@ class TdbConfigUiInit {
 export const configUiInit = getCompInit(TdbConfigUiInit)
 
 function setRenderers(self) {
-	self.rowIsVisible = function() {
+	self.rowIsVisible = function () {
 		return this.style.display != 'none'
 	}
 }
@@ -202,10 +199,7 @@ function setNumberInput(opts) {
 			.style('text-align', opts.align || '')
 			.attr('colspan', opts.colspan || '')
 		if (!input.settingsKey) {
-			inputTd
-				.style('color', '#999')
-				.style('cursor', 'default')
-				.html(input.label)
+			inputTd.style('color', '#999').style('cursor', 'default').html(input.label)
 		} else {
 			self.dom.inputs[input.settingsKey] = inputTd
 				.append('input')
@@ -326,10 +320,7 @@ function setColorInput(opts) {
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
-			labelTd: opts.holder
-				.append('td')
-				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
+			labelTd: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
@@ -374,6 +365,7 @@ function setRadioInput(opts) {
 			labelTdb: opts.holder
 				.append('td')
 				.html(opts.label)
+				.attr('title', opts.title)
 				.attr('class', 'sja-termdb-config-row-label')
 		},
 		inputs: {}
@@ -443,10 +435,7 @@ function setDropdownInput(opts) {
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
-			labelTd: opts.holder
-				.append('td')
-				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
+			labelTd: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder.append('td')
 		}
 	}
@@ -488,10 +477,7 @@ function setCheckboxInput(opts) {
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
-			labelTdb: opts.holder
-				.append('td')
-				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
+			labelTdb: opts.holder.append('td').html(opts.label).attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
