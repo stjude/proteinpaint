@@ -28,6 +28,7 @@ querySamples_gdcapi
 	may_add_readdepth
 	may_add_projectAccess
 	mayApplyBinning
+		getBin
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
@@ -1142,7 +1143,7 @@ function mayApplyGroupsetting(v, tw) {
 function mayApplyBinning(samples, twLst) {
 	for (const tw of twLst) {
 		if (tw.term.type != 'integer' && tw.term.type != 'float') continue
-		if (!tw.q) continue // numeric q missing
+		if (!tw.q?.mode) continue // numeric q.mode missing, this
 		if (tw.q.mode == 'discrete' || tw.q.mode == 'binary') {
 			// according to q.mode, must compute bin
 			// code copied from barchart.data.js
