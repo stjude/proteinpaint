@@ -1,7 +1,7 @@
-const got = require('got')
-const path = require('path')
-const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
-const serverconfig = require('./serverconfig')
+import got from 'got'
+import path from 'path'
+import { isUsableTerm } from '#shared/termdb.usecase'
+import serverconfig from './serverconfig'
 
 /*
 ******************** functions *************
@@ -38,10 +38,20 @@ const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/grap
 const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
 
 /*
-adding a dummy default term.bins as it's required
-named dummy as it will likely break when actually used
-need a way to know a reasonable range for gdc terms, but cannot afford to query api for each term
-it's best if a typical min/max range can be available in _mapping
+*** handling of default bin configurations ***
+
+bin configs for gdc numeric terms are hardcoded in hardcodeBinconfigs()
+we should hardcode this for all gdc numeric terms known to us
+since bin config is required for numeric terms by our code
+
+on pp server start, this script will identify all numeric terms
+for those terms that are not found in termId2bins{}:
+- it will print an alert message
+- it will query on the fly to retrieve some datapoints of this term and compute min/max
+- it assigns dummy bin to this term, so the code won't break
+- a new commit should be made to add the new term(s) to hardcodeBinconfigs(),
+  by electing some reasonable bin config based on its min/max
+
 */
 const dummyBins = {
 	default: {
@@ -61,49 +71,7 @@ const dummyBins = {
 	}
 }
 
-// hardcode bin configs for *all* numeric terms
-const termId2bins = {
-	'case.demographic.age_at_index': {
-		default: {
-			mode: 'discrete',
-			type: 'regular-bin',
-			bin_size: 10,
-			startinclusive: false,
-			stopinclusive: true,
-			first_bin: {
-				startunbounded: true,
-				stop: 30
-			}
-		}
-	},
-	'case.demographic.days_to_birth': {
-		default: {
-			mode: 'discrete',
-			type: 'regular-bin',
-			bin_size: 10000,
-			startinclusive: false,
-			stopinclusive: true,
-			first_bin: {
-				startunbounded: true,
-				stop: -30000
-			}
-		}
-	},
-	'case.demographic.days_to_death': {
-		default: {
-			mode: 'discrete',
-			type: 'regular-bin',
-			bin_size: 1000,
-			startinclusive: false,
-			stopinclusive: true,
-			first_bin: {
-				startunbounded: true,
-				stop: 1000
-			}
-		}
-	}
-	// 'case.days_to_index' : { bin_size:10, ... }
-}
+const termId2bins = hardcodeBinconfigs()
 
 /* 
 
@@ -280,13 +248,19 @@ export async function initGDCdictionary(ds) {
 					} else if (t.type == 'long') {
 						termObj.type = 'integer'
 						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
-						if (!termId2bins[termObj.id]) console.log('lack bin config for integer ' + termObj.id)
 						integerCount++
 					} else if (t.type == 'double') {
 						termObj.type = 'float'
 						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
-						if (!termId2bins[termObj.id]) console.log('lack bin config for float ' + termObj.id)
 						floatCount++
+					} else {
+						console.log('GDC !!! ERR !!! Unknown variable type: ' + t.type)
+					}
+					if ((termObj.type == 'integer' || termObj.type == 'float') && !termId2bins[termObj.id]) {
+						console.log(`GDC !!! Lack bin config for ${termObj.type} ${termObj.id}`)
+						await getNumericTermRange(termObj.id)
+						// print out min/max for this term to assist manual curation of binconfig,
+						// a new commit should be made to hardcode config of this term in termId2bins
 					}
 				}
 
@@ -379,6 +353,66 @@ function mayAddTermAttribute(t) {
 	if (t.id == 'case.diagnoses.age_at_diagnosis') {
 		t.printDays2years = true // print 25868 as '70 years, 318 days'
 		return
+	}
+}
+
+/*
+run on the fly query to api to grab some sample data points for this numeric term
+to be able to get the min/max range of this term
+
+id: gdc numeric term id, e.g. "case.demographic.year_of_death"
+for this term, the function prints out: "Min=1992  Max=2021"
+
+*/
+async function getNumericTermRange(id) {
+	// getting more datapoints will slow down the response
+	const response = await got(apihost + '/ssm_occurrences?size=5000&fields=' + id, { method: 'GET' })
+	const re = JSON.parse(response.body)
+	if (!Array.isArray(re.data.hits)) return
+	let min = null,
+		max = null
+	const levels = id.split('.')
+	for (const h of re.data.hits) {
+		// h is data for one case
+		// this case may have 1 or multiple values for this term, do a recursion and collect all values into this array
+		const collectValues = []
+		trace(h, 0, collectValues)
+
+		for (const v of collectValues) {
+			if (min == null) {
+				min = v
+				max = v
+			} else {
+				min = Math.min(min, v)
+				max = Math.max(max, v)
+			}
+		}
+	}
+	console.log(`Min=${min}  Max=${max}`)
+
+	// recursion function
+	function trace(point, i, collectValues) {
+		const newPoint = point[levels[i]]
+		if (newPoint == undefined) {
+			// likely because the sample lacks value for this term, ignore
+			return
+		}
+		if (Number.isFinite(newPoint)) {
+			// reaches a numeric value and is collected into array; should be the end of levels[]
+			collectValues.push(newPoint)
+			return
+		}
+		if (Array.isArray(newPoint)) {
+			// this level corresponds to multiple values e.g. diagnoses[], do recursion in each element
+			for (const p2 of newPoint) {
+				trace(p2, i + 1, collectValues)
+			}
+		} else if (typeof newPoint == 'object') {
+			trace(newPoint, i + 1, collectValues)
+		} else {
+			// invalid type of this value
+			console.log(`GDC !!! ERR !!! a sample has invalid value for ${id}: ${newPoint}`)
+		}
 	}
 }
 
@@ -749,4 +783,37 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 		}
 	}
 	return re.data?.pagination?.total
+}
+
+// hardcode bin configs for *all* numeric terms
+function hardcodeBinconfigs() {
+	const id2binStat = {
+		'case.demographic.age_at_index': { bin_size: 10, first_bin_stop: 30 },
+		'case.demographic.days_to_birth': { binSize: 1000, first_bin_stop: -3000 },
+		'case.diagnoses.circumferential_resection_margin': null,
+		'case.demographic.days_to_death': { binSize: 1000, first_bin_stop: 1000 }
+		//'': {binSize:, first_bin_stop:},
+	}
+	const termId2bins = {}
+	for (const id in id2binStat) {
+		const c = id2binStat[id]
+		if (c) {
+			termId2bins[id] = {
+				default: {
+					mode: 'discrete',
+					type: 'regular-bin',
+					bin_size: c.bin_size,
+					startinclusive: false,
+					stopinclusive: true,
+					first_bin: {
+						startunbounded: true,
+						stop: c.first_bin_stop
+					}
+				}
+			}
+		} else {
+			termId2bins[id] = dummyBins
+		}
+	}
+	return termId2bins
 }
