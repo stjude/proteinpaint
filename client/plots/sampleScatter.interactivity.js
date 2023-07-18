@@ -129,7 +129,8 @@ export function setInteractivity(self) {
 			const sample = event.target.__data__
 			sample.sample_id = sample.sample
 			self.dom.tip.clear()
-			self.dom.tip.show(event.clientX, event.clientY, false, true)
+			self.dom.tip.show(event.clientX, event.clientY, true, true)
+			if ('sample' in sample) self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
 			if (drawMethylationArrayPlot) {
 				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 					const menuDiv = self.dom.tip.d
