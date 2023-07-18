@@ -1,6 +1,16 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.19.0
+
+- Fusion event labels in disco plot are prioritized and displayed with a tooltip
+- Various minor disco plot bug fixes
+- Improved matrix sample sorting options and labels
+- Option to truncate matrix labels for columns and rows
+- Improved readme detection, sorting, and error handling
+- Started type definitions for termwrapper and termsetting-related code
+- Prototyped a custom profile barchart
+
 ## 2.18.3
 
 - supported a matrix cell click option 
