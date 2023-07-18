@@ -1,9 +1,9 @@
-const common = require('#shared/common')
+import * as common from '#shared/common'
 import { compute_bins } from '#shared/termdb.bins'
-const got = require('got')
-const path = require('path')
-const { get_crosstabCombinations, combineSamplesById } = require('./mds3.variant2samples')
-const filter2GDCfilter = require('./mds3.gdc.filter').filter2GDCfilter
+import got from 'got'
+import path from 'path'
+import { get_crosstabCombinations, combineSamplesById } from './mds3.variant2samples'
+import { filter2GDCfilter } from './mds3.gdc.filter'
 
 /*
 GDC API
