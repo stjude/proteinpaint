@@ -36,7 +36,7 @@ class MassGroups {
 			holder: this.opts.holder.append('div').style('margin', '10px')
 		}
 		initUI(this)
-		this.tip = new Menu({ padding: '5px' })
+		this.tip = new Menu({ padding: '0px' })
 	}
 
 	getState(appState) {
@@ -197,7 +197,7 @@ class MassGroups {
 				this.tip.hide()
 			})
 
-		this.tip.show(event.clientX, event.clientY)
+		this.tip.showunder(event.target)
 	}
 }
 
@@ -460,7 +460,7 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 	})
 }
 
-export const tip2 = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
+export const tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34 })
 export async function showTermsTree(
 	div,
 	callback,

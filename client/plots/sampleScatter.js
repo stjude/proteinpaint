@@ -70,8 +70,8 @@ class Scatter {
 			//holder,
 			controls,
 			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
-			tip: new Menu({ padding: '5px' }),
-			tooltip: new Menu({ padding: '5px' }),
+			tip: new Menu({ padding: '0px' }),
+			tooltip: new Menu({ padding: '2px' }),
 			controlsHolder
 		}
 

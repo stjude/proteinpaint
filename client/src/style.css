@@ -229,6 +229,7 @@ h2 {
     color: black;
     padding: 5px 8px;
     background-color: #cfe2f3;
+    cursor: default;
 }
 
 /* .sja_filter_tag_btn:hover { opacity: 0.8; cursor:default} */

@@ -155,10 +155,7 @@ export function renderTable({
 	if (showLines) theadRow.append('td').style('width', '1vw')
 
 	if (buttons || noButtonCallback) {
-		const cell = theadRow
-			.append('td')
-			.attr('class', 'sjpp_table_header')
-			.style('width', '1.5vw')
+		const cell = theadRow.append('td').attr('class', 'sjpp_table_header').style('width', '1.5vw')
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
@@ -173,24 +170,14 @@ export function renderTable({
 				})
 			checkboxH.node().checked = selectAll
 		}
-		if (!showHeader)
-			theadRow
-				.append('th')
-				.text('Check/Uncheck All')
-				.attr('class', 'sjpp_table_header sjpp_table_item')
+		if (!showHeader) theadRow.append('th').text('Check/Uncheck All').attr('class', 'sjpp_table_header sjpp_table_item')
 	}
 	if (columnButtons && columnButtons.length > 0) {
-		theadRow
-			.append('th')
-			.text('Actions')
-			.attr('class', 'sjpp_table_item sjpp_table_header')
+		theadRow.append('th').text('Actions').attr('class', 'sjpp_table_item sjpp_table_header')
 	}
 	if (showHeader)
 		for (const c of columns) {
-			const th = theadRow
-				.append('th')
-				.text(c.label)
-				.attr('class', 'sjpp_table_item sjpp_table_header')
+			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 		}
 
@@ -315,11 +302,10 @@ export function renderTable({
 	if (buttons) {
 		const footerDiv = div
 			.append('div')
-			.style('position', 'sticky')
-			.style('bottom', '0')
 			.insert('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
+			.style('padding-bottom', '5px')
 
 		for (const button of buttons) {
 			button.button = footerDiv
@@ -354,12 +340,8 @@ export function renderTable({
 				_selectedRowStyle = opts.selectedRowStyle
 				const trs = tbody.selectAll('tr')
 				for (const key in _selectedRowStyle) {
-					const value = trs.style(key, function() {
-						return select(this)
-							.select('td input')
-							.property('checked')
-							? _selectedRowStyle[key]
-							: ''
+					const value = trs.style(key, function () {
+						return select(this).select('td input').property('checked') ? _selectedRowStyle[key] : ''
 					})
 				}
 			}
