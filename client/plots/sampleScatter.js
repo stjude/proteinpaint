@@ -51,6 +51,8 @@ class Scatter {
 		]
 		this.symbols = mySymbols.map(s => symbol(s))
 		this.k = 1
+		this.startGradient = {}
+		this.stopGradient = {}
 	}
 
 	async init(opts) {
