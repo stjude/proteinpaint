@@ -45,12 +45,12 @@ if (generalSection) {
 }
 if (featureSection || features) {
 	notes += '\n' + EnhancementsTitle
-	if (featureSection) notes += featureSection + '\n'
+	if (featureSection) notes += featureSection.trim() + '\n'
 	if (features) notes += features.map(getListItem) + '\n'
 }
 if (fixSection || fixes) {
 	notes += '\n' + FixesTitle
-	if (fixSection) notes += fixSection + '\n'
+	if (fixSection) notes += fixSection.trim() + '\n'
 	if (fixes) notes += fixes.map(getListItem) + '\n'
 }
 
