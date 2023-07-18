@@ -7,10 +7,6 @@ const oldChangeLogText = fs.readFileSync(changeLogFile).toString('utf-8')
 const releaseTextFile = './release.txt'
 const releaseLogText = fs.readFileSync(releaseTextFile).toString('utf-8')
 
-if (releaseLogText === '') {
-	throw Error(`Release text in ${releaseTextFile} is empty`)
-}
-
 const header = '# Change Log\n' + '\n' + 'All notable changes to this project will be documented in this file.'
 
 const changeLogWithoutHeader = oldChangeLogText.replace(header, '')
@@ -23,9 +19,13 @@ const commitMessages = commitLog
 	.split('\n')
 	.filter(l => l && true)
 	.map(getStringAfter1stSpace)
+
 // keyword convention loosely follows https://www.conventionalcommits.org/en/v1.0.0/
 // however, breaking changes is not processed here, that would require
 // manual review, handling, coordination, and should not be automated?
+//
+// TODO: support (scope) syntax, like fix(matrix): or feat(disco):
+//
 const features = commitMessages.filter(m => m.toLowerCase().startsWith('feat: ')).map(getStringAfter1stSpace)
 const fixes = commitMessages.filter(m => m.toLowerCase().startsWith('fix: ')).map(getStringAfter1stSpace)
 const EnhancementsTitle = 'Enhancements\n'
@@ -38,37 +38,33 @@ const fixSection = firstSubsectionTitle == FixesTitle ? subsections?.[0] : subse
 
 let notes = ''
 if (generalSection) {
+	notes += '\n'
 	const GeneralTitle = `General\n`
 	if (!generalSection.includes('General')) notes += GeneralTitle
-	notes += generalSection
+	notes += generalSection + '\n'
 }
 if (featureSection || features) {
-	notes += EnhancementsTitle
+	notes += '\n' + EnhancementsTitle
 	if (featureSection) notes += featureSection + '\n'
 	if (features) notes += features.map(getListItem) + '\n'
 }
 if (fixSection || fixes) {
-	notes += FixesTitle
+	notes += '\n' + FixesTitle
 	if (fixSection) notes += fixSection + '\n'
-	if (fixes) notes += fixes.map(getListItem)
+	if (fixes) notes += fixes.map(getListItem) + '\n'
 }
 
-console.log(`## ${version}
+if (!notes.length) {
+	throw Error(`Empty notes: Release text in ${releaseTextFile} is empty AND no commits had a fix:/feat: keyword`)
+}
+
+const newChangeLog = `${header}
+## ${version}
 ${notes}
-`)
+${changeLogWithoutHeader}`
 
-// ${releaseLogText}
-// ${features.map(getListItem)}
-// ${fixes.map(getListItem)}
-// `)
-// const newChangeLog = `${header}
-// ## ${version}
-
-// ${notes}
-// ${changeLogWithoutHeader}`
-
-// fs.writeFileSync(changeLogFile, newChangeLog)
-// fs.writeFileSync(releaseTextFile, '')
+fs.writeFileSync(changeLogFile, newChangeLog)
+fs.writeFileSync(releaseTextFile, '')
 
 function getStringAfter1stSpace(str) {
 	return str.slice(str.indexOf(' ') + 1)
