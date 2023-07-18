@@ -1,4 +1,5 @@
 const common = require('#shared/common')
+import { compute_bins } from '#shared/termdb.bins'
 const got = require('got')
 const path = require('path')
 const { get_crosstabCombinations, combineSamplesById } = require('./mds3.variant2samples')
@@ -23,8 +24,10 @@ validate_query_geneCnv2
 	filter2GDCfilter
 querySamples_gdcapi
 	flattenCaseByFields
+		mayApplyGroupsetting
 	may_add_readdepth
 	may_add_projectAccess
+	mayApplyBinning
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
@@ -1049,10 +1052,13 @@ function flattenCaseByFields(sample, caseObj, tw) {
 		if (tw.term.type == 'categorical') {
 			const v = mayApplyGroupsetting(sample[tw.term.id], tw)
 			if (v) sample[tw.term.id] = v
-		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
-			const v = mayApplyBinning(sample[tw.term.id], tw)
-			if (v) sample[tw.term.id] = v
 		}
+
+		/*
+		reason...
+
+		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
+			*/
 	}
 
 	/* helper function query()
@@ -1133,8 +1139,60 @@ function mayApplyGroupsetting(v, tw) {
 	}
 }
 
-function mayApplyBinning(v, tw) {
-	//TODO fill in method
+function mayApplyBinning(samples, twLst) {
+	for (const tw of twLst) {
+		if (tw.term.type != 'integer' && tw.term.type != 'float') continue
+		if (!tw.q) continue // numeric q missing
+		if (tw.q.mode == 'discrete' || tw.q.mode == 'binary') {
+			// according to q.mode, must compute bin
+			// code copied from barchart.data.js
+			const summary = {}
+			for (const s of samples) {
+				const v = s[tw.term.id]
+				if (Number.isFinite(v)) {
+					if ('min' in summary) {
+						summary.min = Math.min(v, summary.min)
+						summary.max = Math.max(v, summary.max)
+					} else {
+						summary.min = v
+						summary.max = v
+					}
+				}
+			}
+			const bins = compute_bins(tw.q, p => summary)
+
+			// uncomment to allow to see term range and assist hardcoding binconfig in termdb.gdc.js
+			//console.log(summary,bins)
+
+			for (const s of samples) {
+				const v = s[tw.term.id]
+				if (Number.isFinite(v)) {
+					s[tw.term.id] = getBin(bins, v)
+				}
+			}
+		} else if (tw.q.mode == 'continuous') {
+			// do not compute bin
+		} else {
+			throw 'mayApplyBinning: unknown numeric q.mode'
+		}
+	}
+}
+
+function getBin(bins, v) {
+	for (const b of bins) {
+		if (b.startunbounded) {
+			if (v < b.stop) return b.label
+			if (b.stopinclusive && v == b.stop) return b.label
+		} else if (b.stopunbounded) {
+			if (v > b.start) return b.label
+			if (b.startinclusive && v == b.start) return b.label
+		} else if (
+			(v > b.start || (v === b.start && b.startinclusive)) &&
+			(v < b.stop || (v === b.stop && b.stopinclusive))
+		) {
+			return b.label
+		}
+	}
 }
 
 function prepTwLst(lst) {
@@ -1375,6 +1433,8 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		///////////////////
 		samples.push(sample)
 	}
+
+	mayApplyBinning(samples, dictTwLst)
 
 	if (geneTwLst) {
 		const param = {
