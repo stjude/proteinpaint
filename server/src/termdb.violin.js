@@ -103,7 +103,6 @@ export async function wilcoxon(term, result) {
 			wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 		}
 	}
-
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
 	const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
