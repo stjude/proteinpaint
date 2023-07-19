@@ -2,3 +2,4 @@ Fixes
 - Process commit-based release notes on commit instead of in CI; revert changelog generator.
 - Cohort creation in the matrix plot, where sample atttribute mapping is required.
 - Allow continuous variables to be added to GDC matrix without breaking. Next will support query of graphql API to retrieve min/max of the variables.
+- Sort matrix samples by gene variant hits before grouping, then sort again within each group
