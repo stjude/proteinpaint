@@ -1607,7 +1607,9 @@ function setZoomPanActions(self) {
 								series.cells.filter(filter).forEach(d => {
 									const obj = {}
 									for (const a of ss.attributes) {
-										obj[a] = d.row[a]
+										if (!('to' in a)) a.to = a.from
+										// TODO: may need to support a.convert later, not supported right now
+										obj[a.to] = d.row[a.from]
 									}
 									const sid = Object.values(obj).join(';;')
 									if (processed.has(sid)) return
