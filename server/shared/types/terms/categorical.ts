@@ -20,7 +20,7 @@ export type CategoricalTW = TermWrapper & {
 
 type Cat2SampleCntEntry = { key: string; count: number }
 
-export type CategoricaTermSettingInstance = TermSettingInstance & {
+export type CategoricalTermSettingInstance = TermSettingInstance & {
 	category2samplecount: Cat2SampleCntEntry[]
 	error: string
 	q: CategoricalQ
