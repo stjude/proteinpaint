@@ -1,11 +1,17 @@
-// Syntax: cd .. && cargo build --release && echo '{"European Ancestry, African Ancestry":{"group1values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2values":[11.5,5.1,21.1,4.4,-0.04]},"European Ancestry, Asian Ancestry":{"group1values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2values":[1.7]},"African Ancestry, Asian Ancestry":{"group1values":[11.5,5.1,21.1,4.4,-0.04],"group2values":[1.7]}}' | target/release/wilcoxon
+// Syntax: cd .. && cargo build --release && time echo '{"European Ancestry, African Ancestry":{"group1values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2values":[11.5,5.1,21.1,4.4,-0.04]},"European Ancestry, Asian Ancestry":{"group1values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2values":[1.7]},"African Ancestry, Asian Ancestry":{"group1values":[11.5,5.1,21.1,4.4,-0.04],"group2values":[1.7]}}' | target/release/wilcoxon
 
-use json::JsonValue;
-//use serde::{Deserialize, Serialize};
+use json;
+use serde::{Deserialize, Serialize};
 //use serde_json::Value;
 use itertools::Itertools;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::io;
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OutputJson {
+    name: String,
+    p_value: f64,
+}
 
 fn main() {
     let mut input = String::new();
@@ -19,12 +25,13 @@ fn main() {
             match input_json {
                 Ok(json_string) => {
                     //println!("{} bytes read", n);
-                    println!("json_string:{}", json_string);
-                    println!("{}", json_string.is_object());
+                    //println!("json_string:{}", json_string);
+
+                    let mut output_string = "[".to_string();
                     for item in json_string.entries() {
                         let mut vec1 = Vec::<f64>::new();
                         let mut vec2 = Vec::<f64>::new();
-                        println!("key:{}", item.0);
+                        //println!("name:{}", item.0);
                         let mut iter = 0;
                         for array in item.1.entries() {
                             if iter == 0 {
@@ -38,13 +45,22 @@ fn main() {
                             }
                             iter += 1;
                         }
-                        println!("vec1:{:?}", vec1);
-                        println!("vec2:{:?}", vec2);
+                        //println!("vec1:{:?}", vec1);
+                        //println!("vec2:{:?}", vec2);
                         let p_value = wilcoxon_rank_sum_test(
                             vec1, vec2, THRESHOLD, 't', // two-sided test
                         );
-                        println!("p_value:{}", p_value);
+                        output_string += &serde_json::to_string(&OutputJson {
+                            name: item.0.to_string(),
+                            p_value: p_value,
+                        })
+                        .unwrap();
+                        output_string += &",".to_string();
+                        //println!("{},{}", item.0.to_string(), p_value);
                     }
+                    output_string.pop();
+                    output_string += &"]".to_string();
+                    println!("{}", output_string);
                 }
                 Err(error) => println!("Incorrect json: {}", error),
             }
@@ -68,6 +84,8 @@ fn wilcoxon_rank_sum_test(
 
     group1.sort_by(|a, b| a.partial_cmp(b).unwrap());
     group2.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    //println!("group1:{:?}", group1);
+    //println!("group2:{:?}", group2);
 
     let mut group1_iter = 0;
     let mut group2_iter = 0;
@@ -173,7 +191,7 @@ fn wilcoxon_rank_sum_test(
 
     //println!("test_statistic:{}", test_statistic);
 
-    if combined.len() <= threshold {
+    if group1.len() <= threshold || group2.len() <= threshold {
         // Compute exact p-values
 
         // Calculate conditional probability for weight_y
