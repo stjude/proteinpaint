@@ -2,6 +2,7 @@ import { unlink } from 'fs'
 import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
 import lines2R from './lines2R'
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 import path from 'path'
 import utils from './utils'
 import { getData } from './termdb.matrix'
@@ -109,8 +110,11 @@ export async function wilcoxon(term, result) {
 	}
 
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	console.log('Wilcox input:', JSON.stringify(wilcoxInput))
+	const wilcoxOutput2 = await run_rust('wilcoxon', JSON.stringify(wilcoxInput))
 	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
 	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	console.log('Wilcox output:', wilcoxOutput)
 	unlink(tmpfile, () => {})
 
 	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
@@ -123,7 +127,7 @@ export async function wilcoxon(term, result) {
 // TODO: handle .keyOrder as an alternative to .bins ???
 function numericBins(overlayTerm, data) {
 	const divideTwBins = new Map()
-	const divideBins = data.refs.byTermId[(overlayTerm?.term?.id)]?.bins
+	const divideBins = data.refs.byTermId[overlayTerm?.term?.id]?.bins
 	if (divideBins) {
 		for (const bin of divideBins) {
 			divideTwBins.set(bin.label, bin)
@@ -181,10 +185,10 @@ function divideValues(q, data, term, overlayTerm) {
 		}
 
 		if (overlayTerm) {
-			if (!v[(overlayTerm?.id)]) continue
+			if (!v[overlayTerm?.id]) continue
 			// if there is no value for q.divideTw then skip this
 			if (overlayTerm.term?.values?.[v[overlayTerm.id]?.key]?.uncomputable) {
-				const label = overlayTerm.term.values[(v[overlayTerm.id]?.value)]?.label // label of this uncomputable category
+				const label = overlayTerm.term.values[v[overlayTerm.id]?.value]?.label // label of this uncomputable category
 				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			}
 
@@ -208,7 +212,7 @@ function sortObj(object) {
 }
 
 function sortKey2values(data, key2values, overlayTerm) {
-	const keyOrder = data.refs.byTermId[(overlayTerm?.term?.id)]?.keyOrder
+	const keyOrder = data.refs.byTermId[overlayTerm?.term?.id]?.keyOrder
 
 	key2values = new Map(
 		[...key2values].sort(
