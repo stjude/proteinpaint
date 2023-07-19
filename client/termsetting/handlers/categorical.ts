@@ -9,7 +9,7 @@ import {
 	GroupSetting,
 	BaseGroupSet,
 	GroupEntry,
-	CategoricaTermSettingInstance,
+	CategoricalTermSettingInstance,
 	CategoricalTW
 } from '#shared/types'
 
@@ -24,7 +24,7 @@ getHandler(self)
                     // Return null to hide the right half.
 	validateQ(data)
 	postMain() // update samplecount
-setCategoryConditionMethods()
+setCategoryMethods()
 	validateGroupsetting()
 	showGrpOpts() // show menu for available groupset options
 	grpSet2valGrp()
@@ -35,10 +35,9 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 ********************** INTERNAL
 */
 
-export function getHandler(self: CategoricaTermSettingInstance) {
+export function getHandler(self: CategoricalTermSettingInstance) {
 	setGroupsettingMethods(self)
-	//TODO: review setCategoryConditionMethods. Any condition methods should be in handlers/condition.ts
-	setCategoryConditionMethods(self)
+	setCategoryMethods(self)
 
 	return {
 		showEditMenu: self.showGrpOpts,
@@ -104,30 +103,20 @@ export function getHandler(self: CategoricaTermSettingInstance) {
 
 		async postMain() {
 			const body = self.opts.getBodyParams?.() || {}
-			// if (self.term.type == 'condition') {
-			// 	for (const key in self.q) {
-			// 		// detect bar_by_* and value_by_* flags
-			// 		if (key.includes('_by_')) body[key] = self.q[key]
-			// 	}
-			// }
-
 			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
 			self.category2samplecount = []
 			for (const i of data.lst) {
 				self.category2samplecount.push({ key: i.key, count: i.samplecount })
 				//
 			}
-			// if (self.term.type == 'categorical') {
-				if (!self.term.values) {
-					self.q = {}
-				} // ...
-			// }
+			if (!self.term.values) {
+				self.q = {}
+			} // ...
 		}
 	}
 }
 
-// same method used to set methods for categorical and condition terms
-export function setCategoryConditionMethods(self: CategoricaTermSettingInstance) {
+export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 	self.validateGroupsetting = function () {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		const text = self.q.name || self.q.reuseId
@@ -145,8 +134,6 @@ export function setCategoryConditionMethods(self: CategoricaTermSettingInstance)
 		}
 		if (self.q.groupsetting.customset) {
 			const n = self.q.groupsetting.customset.groups.length
-			// if (self.q.bar_by_grade) return { text: n + ' groups of grades' }
-			// if (self.q.bar_by_children) return { text: n + ' groups of sub-conditions' }
 			return { text: 'Divided into ' + n + ' groups' }
 		}
 		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
@@ -342,7 +329,6 @@ export function setCategoryConditionMethods(self: CategoricaTermSettingInstance)
 	// }
 
 	self.grpSet2valGrp = function (groupset: BaseGroupSet) {
-		// const values = self.q.bar_by_children ? self.term.subconditions : self.term.values || {}
 		const values = self.term.values || {}
 		/*
 		values{} is an object of key:{key,label,color}
@@ -383,23 +369,6 @@ export function fillTW(tw: CategoricalTW) {
 	}
 	delete tw.q.groupsetting.disabled
 	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false // do not apply by default
-
-	// if (tw.term.type == 'condition') {
-	// 	/*
-	// 	for condition term, must set up bar/value flags before quiting for inuse:false
-	// 	*/
-	// 	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
-	// 		// need any of the three to be set
-	// 	} else {
-	// 		// set a default one
-	// 		tw.q.value_by_max_grade = true
-	// 	}
-	// 	if (tw.q.bar_by_grade || tw.q.bar_by_children) {
-	// 		//ignore
-	// 	} else {
-	// 		tw.q.bar_by_grade = true
-	// 	}
-	// }
 
 	// inuse:false is either from automatic setup or predefined in state
 	if (tw.q.groupsetting.inuse) {
