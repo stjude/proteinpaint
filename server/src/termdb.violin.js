@@ -91,9 +91,11 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 // compute pvalues using wilcoxon rank sum test
 export async function wilcoxon(term, result) {
 	if (!term) return
+	const numPlots = result.plots.length
+	if (numPlots < 2) return
+
 	const wilcoxInput = []
 
-	const numPlots = result.plots.length
 	for (let i = 0; i < numPlots; i++) {
 		const group1_id = result.plots[i].label
 		const group1_values = result.plots[i].values
