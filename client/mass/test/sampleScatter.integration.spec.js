@@ -14,6 +14,7 @@ import {
 } from '../../test/test.helpers'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { openSummaryPlot, openPlot } from '../groups'
+import { rgb } from 'd3-color'
 
 /*
 Tests:
@@ -174,7 +175,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 		await testOpenSurvivalPlot()
 		await testOpenSummaryPlot()
 
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 
 		function testPlot() {
@@ -250,6 +251,69 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 			const newSandbox = sandboxes.find(s => !preSandboxes.includes(s))
 			test.equal(newSandbox.querySelectorAll('.sja_errorbar').length, 0, 'Should render summary plot without errors".')
 		}
+	}
+})
+
+tape('Test continuous mode with age color', function (test) {
+	test.timeoutAfter(8000)
+	test.plan(4)
+	const holder = getHolder()
+	const state = {
+		plots: [
+			{
+				chartType: 'sampleScatter',
+				colorTW: { id: 'agedx', q: { mode: 'continuous' } },
+				name: 'TermdbTest TSNE'
+			}
+		]
+	}
+	runpp({
+		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+		state,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+
+		const self = scatter.Inner
+		const chart = scatter.Inner.charts[0]
+		const startColor = self.config.startColor[chart.id]
+		const stopColor = self.config.stopColor[chart.id]
+		test.true(startColor == chart.startRect.style('fill'), `The start color rect should be ${startColor}`)
+		test.true(stopColor == chart.stopRect.style('fill'), `The stop color rect should be ${stopColor}`)
+		let color = rgb('green').toString()
+		let matched = await detectChildAttr({
+			elem: scatter.Inner.mainDiv.node(),
+			selector: '.sjpcb-scatter-series > path',
+			observe: {
+				attributeFilter: ['fill']
+			},
+			trigger: () => self.changeGradientColor(chart, 'startColor', chart.startRect, color),
+			matcher(mutations) {
+				return mutations.filter(m => m.target.getAttribute('fill') == color)
+			}
+		})
+		test.true(matched.length > 0, `Should render at least one sample with start color ${color}`)
+		color = rgb('red').toString()
+		matched = await detectChildAttr({
+			elem: scatter.Inner.mainDiv.node(),
+			selector: '.sjpcb-scatter-series > path',
+			observe: {
+				attributeFilter: ['fill']
+			},
+			trigger: () => self.changeGradientColor(chart, 'stopColor', chart.stopRect, color),
+			matcher(mutations) {
+				return mutations.filter(m => m.target.getAttribute('fill') == color)
+			}
+		})
+		test.true(matched.length > 0, `Should render at least one sample with stop color ${color}`)
+		if (test._ok) holder.remove()
+		test.end()
 	}
 })
 

@@ -716,63 +716,33 @@ export function setRenderers(self) {
 				offsetY += step
 
 				if (self.config.colorTW.q.mode === 'continuous') {
-					function updateColor(e, colorKey, elem) {
-						const color = self.config[colorKey][chart.id]
-						const colorMenu = new Menu({ padding: '3px' })
-						const input = colorMenu
-							.clear()
-							.d.append('Label')
-							.text('Color:')
-							.append('input')
-							.attr('type', 'color')
-							.attr('value', rgb(color).formatHex())
-							.on('change', () => {
-								const color = rgb(input.node().value).formatHex()
-								self.config[colorKey][chart.id] = color
-								elem.style('fill', color)
-
-								chart.colorGenerator = d3Linear().range([
-									self.config.startColor[chart.id],
-									self.config.stopColor[chart.id]
-								])
-								self.startGradient[chart.id].attr('stop-color', self.config.startColor[chart.id])
-								self.stopGradient[chart.id].attr('stop-color', self.config.stopColor[chart.id])
-								self.app.dispatch({
-									type: 'plot_edit',
-									id: self.id,
-									config: self.config
-								})
-								colorMenu.hide()
-							})
-						colorMenu.showunder(e.target, false)
-					}
-
+					const gradientWidth = 150
 					const [min, max] = chart.colorGenerator.domain()
 					const gradientScale = d3Linear().domain([min, max]).range([0, 130])
 					const axis = axisTop(gradientScale).ticks(3)
 					colorG.append('g').attr('transform', `translate(0, 100)`).call(axis)
-					const startRect = colorG
+					chart.startRect = colorG
 						.append('rect')
 						.attr('x', -25)
 						.attr('y', 100)
 						.attr('width', 20)
 						.attr('height', 20)
 						.style('fill', self.config.startColor[chart.id])
-						.on('click', e => updateColor(e, 'startColor', startRect))
-					const stopRect = colorG
+						.on('click', e => self.editColor(chart, 'startColor', chart.startRect))
+					chart.stopRect = colorG
 						.append('rect')
-						.attr('x', 135)
+						.attr('x', gradientWidth + 5)
 						.attr('y', 100)
 						.attr('width', 20)
 						.attr('height', 20)
 						.style('fill', self.config.stopColor[chart.id])
-						.on('click', e => updateColor(e, 'stopColor', stopRect))
+						.on('click', e => self.editColor(chart, 'stopColor', chart.stopRect))
 
 					const rect = colorG
 						.append('rect')
 						.attr('x', 0)
 						.attr('y', 100)
-						.attr('width', 130)
+						.attr('width', gradientWidth)
 						.attr('height', 20)
 						.style('fill', `url(#linear-gradient-${chart.id})`)
 
@@ -918,6 +888,39 @@ export function setRenderers(self) {
 
 			return [circleG, itemG]
 		}
+	}
+
+	self.editColor = function (chart, colorKey, elem) {
+		const color = self.config[colorKey][chart.id]
+		const colorMenu = new Menu({ padding: '3px' })
+		const input = colorMenu
+			.clear()
+			.d.append('Label')
+			.text('Color:')
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', rgb(color).formatHex())
+			.on('change', () => {
+				const color = input.node().value
+				self.changeGradientColor(chart, colorKey, elem, color)
+				colorMenu.hide()
+			})
+		colorMenu.showunder(elem.node(), false)
+	}
+
+	self.changeGradientColor = function (chart, colorKey, elem, color) {
+		const hexColor = rgb(color).formatHex()
+		self.config[colorKey][chart.id] = hexColor
+		elem.style('fill', hexColor)
+
+		chart.colorGenerator = d3Linear().range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
+		self.startGradient[chart.id].attr('stop-color', self.config.startColor[chart.id])
+		self.stopGradient[chart.id].attr('stop-color', self.config.stopColor[chart.id])
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: self.config
+		})
 	}
 
 	self.renderGeneVariantLegend = function (chart, offsetX, offsetY, legendG, tw, cname, map) {
