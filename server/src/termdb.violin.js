@@ -90,32 +90,28 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 // compute pvalues using wilcoxon rank sum test
 export async function wilcoxon(term, result) {
-	if (!term) {
-		return
-	}
-	const wilcoxInput = {}
+	if (!term) return
+	const wilcoxInput = []
 
 	const numPlots = result.plots.length
 	for (let i = 0; i < numPlots; i++) {
-		const { label, values } = result.plots[i]
-		const labelParts = label.split(',')
-		const label1 = labelParts[0].trim()
+		const group1_id = result.plots[i].label
+		const group1_values = result.plots[i].values
 		for (let j = i + 1; j < numPlots; j++) {
-			const group1values = values
-			const group2values = result.plots[j].values
-			const label2 = result.plots[j].label.split(',')[0].trim()
-			wilcoxInput[`${label1}, ${label2}`] = { group1values, group2values }
+			const group2_id = result.plots[j].label
+			const group2_values = result.plots[j].values
+			wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 		}
 	}
 
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
-	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
 	unlink(tmpfile, () => {})
+	const wilcoxOutput = JSON.parse(out)
 
-	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
-		const labelParts = k.split(',')
-		result.pvalues.push([{ value: labelParts[0].trim() }, { value: labelParts[1].trim() }, { html: v }])
+	for (const test of wilcoxOutput) {
+		result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue }])
 	}
 }
 
@@ -123,7 +119,7 @@ export async function wilcoxon(term, result) {
 // TODO: handle .keyOrder as an alternative to .bins ???
 function numericBins(overlayTerm, data) {
 	const divideTwBins = new Map()
-	const divideBins = data.refs.byTermId[(overlayTerm?.term?.id)]?.bins
+	const divideBins = data.refs.byTermId[overlayTerm?.term?.id]?.bins
 	if (divideBins) {
 		for (const bin of divideBins) {
 			divideTwBins.set(bin.label, bin)
@@ -181,10 +177,10 @@ function divideValues(q, data, term, overlayTerm) {
 		}
 
 		if (overlayTerm) {
-			if (!v[(overlayTerm?.id)]) continue
+			if (!v[overlayTerm?.id]) continue
 			// if there is no value for q.divideTw then skip this
 			if (overlayTerm.term?.values?.[v[overlayTerm.id]?.key]?.uncomputable) {
-				const label = overlayTerm.term.values[(v[overlayTerm.id]?.value)]?.label // label of this uncomputable category
+				const label = overlayTerm.term.values[v[overlayTerm.id]?.value]?.label // label of this uncomputable category
 				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			}
 
@@ -208,7 +204,7 @@ function sortObj(object) {
 }
 
 function sortKey2values(data, key2values, overlayTerm) {
-	const keyOrder = data.refs.byTermId[(overlayTerm?.term?.id)]?.keyOrder
+	const keyOrder = data.refs.byTermId[overlayTerm?.term?.id]?.keyOrder
 
 	key2values = new Map(
 		[...key2values].sort(
