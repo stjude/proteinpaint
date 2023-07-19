@@ -1,2 +1,3 @@
 Fixes
 - process commit-based release notes on commit instead of in CI; revert changelog generator
+- cohort creation in the matrix plot, where sample atttribute mapping is required
