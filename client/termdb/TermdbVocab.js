@@ -908,6 +908,17 @@ export class TermdbVocab extends Vocab {
 	async getTopMutatedGenes(arg) {
 		return await dofetch3('gdc_filter2topGenes', { method: 'GET', body: arg })
 	}
+
+	async convertSampleId(inputs) {
+		return await dofetch3('termdb', {
+			body: {
+				for: 'convertSampleId',
+				inputs,
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel
+			}
+		})
+	}
 }
 
 /*
