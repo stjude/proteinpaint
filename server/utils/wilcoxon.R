@@ -12,14 +12,21 @@
 # Results are written in JSON format to stdout.
 
 # Input JSON specifications:
-# {
-#   id: {} id of data entry
-#     group1values: [] group 1 values
-#     group2values: [] group 2 values
-# }
+# [{
+#   group1_id: group1 id,
+#   group1_values: [] group1 data values,
+#   group2_id: group2 id,
+#   group2_values: [] group2 data values
+# }]
 #
 # Output JSON specifications:
-# { id: p-value }
+# [{
+#   group1_id: group1 id,
+#   group1_values: [] group1 data values,
+#   group2_id: group2 id,
+#   group2_values: [] group2 data values,
+#   pvalue: p-value of test
+# }]
 
 
 ########
@@ -36,12 +43,12 @@ dat <- fromJSON(infile)
 
 # function to compute wilcox p-value between two groups of values
 getPvalue <- function(x) {
-  if (length(x$group1values) == 0 || length(x$group2values) == 0) {
+  if (length(x$group1_values) == 0 || length(x$group2_values) == 0) {
     # all samples fall in one group
     # return NA p-value
     return(unbox("NA"))
   }
-  
+
   # perform Wilcox test between groups
   # suppress warnings because a warning message will be
   # generated when sample size is small (<50) and ties
@@ -50,14 +57,17 @@ getPvalue <- function(x) {
   # still be computed using a normal approximation
   # NOTE: do not set exact=TRUE because this will use large
   # amounts of memory when sample sizes are large
-  wt <- suppressWarnings(wilcox.test(x$group1values, x$group2values))
-  
+  wt <- suppressWarnings(wilcox.test(x$group1_values, x$group2_values))
+
   # return p-value
   return(unbox(wt$p.value))
 }
 
 # compute Wilcox p-value for each data entry
-pvalues <- lapply(dat, getPvalue)
+pvalues <- apply(dat, 1, getPvalue)
 
-# output p-values
-toJSON(pvalues)
+# append p-values to data
+datWithPvalues <- cbind(dat, "pvalue" = pvalues, stringsAsFactors = F)
+
+# output data with p-values
+toJSON(datWithPvalues)
