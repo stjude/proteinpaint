@@ -1,0 +1,6 @@
+#!/bin/bash
+
+STAGEDFILES="$(git diff --name-only --cached)"
+if [[ "$STAGEDFILES" == *"release.txt"* ]]; then
+  git commit --amend -C HEAD
+fi
