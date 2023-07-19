@@ -56,20 +56,69 @@ class profilePolar {
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		if (samples.length == 0) return
-		div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
-		const select = div.append('select').style('margin-left', '5px')
-		select
+		// div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
+		// const select = div.append('select').style('margin-left', '5px')
+		// select
+		// 	.selectAll('option')
+		// 	.data(samples)
+		// 	.enter()
+		// 	.append('option')
+		// 	.property('selected', d => d == config.sampleName)
+		// 	.html((d, i) => d)
+
+		// select.on('change', () => {
+		// 	config.sampleName = select.node().value
+		// 	this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		// })
+
+		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
+		const regions = ['Region1', 'Region2', 'Region3', 'Region4']
+		const regionSelect = div.append('select').style('margin-left', '5px')
+		regionSelect
 			.selectAll('option')
-			.data(samples)
+			.data(regions)
 			.enter()
 			.append('option')
-			.property('selected', d => d == config.sampleName)
+			.property('selected', d => d == config.region)
 			.html((d, i) => d)
 
-		select.on('change', () => {
-			config.sampleName = select.node().value
+		regionSelect.on('change', () => {
+			config.region = regionSelect.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+
+		div.append('label').style('margin-left', '15px').html('Country:').style('font-weight', 'bold')
+		const countries = ['USA', 'Sweden', 'Spain', 'Cuba']
+		const countrySelect = div.append('select').style('margin-left', '5px')
+		countrySelect
+			.selectAll('option')
+			.data(countries)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.country)
+			.html((d, i) => d)
+
+		countrySelect.on('change', () => {
+			config.country = countrySelect.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
+		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
+		const incomeGroups = ['Income1', 'Income2', 'Income3', 'Income4']
+		const incomeSelect = div.append('select').style('margin-left', '5px')
+		incomeSelect
+			.selectAll('option')
+			.data(incomeGroups)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.incomeGroup)
+			.html((d, i) => d)
+
+		incomeSelect.on('change', () => {
+			config.incomeGroup = countrySelect.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
 		// Create a polar grid.
 		const radius = 250
 		const x = 400
