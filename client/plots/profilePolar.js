@@ -71,24 +71,8 @@ class profilePolar {
 		// 	this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		// })
 
-		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
-		const regions = ['Region1', 'Region2', 'Region3', 'Region4']
-		const regionSelect = div.append('select').style('margin-left', '5px')
-		regionSelect
-			.selectAll('option')
-			.data(regions)
-			.enter()
-			.append('option')
-			.property('selected', d => d == config.region)
-			.html((d, i) => d)
-
-		regionSelect.on('change', () => {
-			config.region = regionSelect.node().value
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-
 		div.append('label').style('margin-left', '15px').html('Country:').style('font-weight', 'bold')
-		const countries = ['USA', 'Sweden', 'Spain', 'Cuba']
+		const countries = ['Mexico', 'Philipines', 'China', 'Brazil', 'Egypt', 'Iraq', 'Oman', 'Syria']
 		const countrySelect = div.append('select').style('margin-left', '5px')
 		countrySelect
 			.selectAll('option')
@@ -103,8 +87,24 @@ class profilePolar {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
+		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
+		const regions = ['AMR', 'SEAR', 'WPR', 'AFR', 'EMR', 'EUR']
+		const regionSelect = div.append('select').style('margin-left', '5px')
+		regionSelect
+			.selectAll('option')
+			.data(regions)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.region)
+			.html((d, i) => d)
+
+		regionSelect.on('change', () => {
+			config.region = regionSelect.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
 		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
-		const incomeGroups = ['Income1', 'Income2', 'Income3', 'Income4']
+		const incomeGroups = ['Upper middle income', 'Lower middle income', 'High income', 'Low income']
 		const incomeSelect = div.append('select').style('margin-left', '5px')
 		incomeSelect
 			.selectAll('option')
