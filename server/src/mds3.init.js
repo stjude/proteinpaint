@@ -254,9 +254,18 @@ export async function validate_termdb(ds) {
 		}
 	}
 
+	if (tdb.convertSampleId) {
+		if (tdb.convertSampleId.gdcapi) {
+			gdc.convertSampleId_addGetter(tdb)
+			// convertSampleId.get() added
+		} else {
+			throw 'unknown implementation of tdb.convertSampleId'
+		}
+	}
+
 	//////////////////////////////////////////////////////
 	//
-	// XXX rest is quick fixes taken from mds2.init.js
+	// XXX rest are quick fixes taken from mds2.init.js
 	//
 	//////////////////////////////////////////////////////
 

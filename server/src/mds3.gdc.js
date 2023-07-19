@@ -58,6 +58,17 @@ thus need to define the "apihost" as global variables in multiple places
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
+export async function convertSampleId_addGetter(tdb) {
+	tdb.convertSampleId.get = async inputs => {
+		const old2new = {}
+		for (const old of inputs) {
+			const id = await convert2caseId(old)
+			old2new[old] = id
+		}
+		return old2new
+	}
+}
+
 export async function validate_ssm2canonicalisoform(api) {
 	const fields = ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 	api.get = async q => {
