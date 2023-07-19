@@ -75,6 +75,8 @@ class profilePolar {
 		const x = 400
 		const y = 300
 		const polarG = svg.append('g').attr('transform', `translate(${x},${y})`)
+		const legendG = svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
+
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
 		const angle = (Math.PI * 2) / config.terms.length
@@ -109,6 +111,16 @@ class profilePolar {
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
 		}
+		legendG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text('Overall Score')
+			.attr('transform', `translate(0, -10)`)
+
+		addLegendItem('A', 'More than 75% of possible scorable items', 1)
+		addLegendItem('B', '50-75% of possible scorable items', 2)
+		addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 
 		function addCircle(percent, text = null) {
 			const circle = polarG
@@ -128,6 +140,15 @@ class profilePolar {
 					.style('font-weight', 'bold')
 					.style('font-size', '24px')
 			}
+		}
+
+		function addLegendItem(category, description, index) {
+			const text = legendG
+				.append('text')
+				.attr('transform', `translate(0, ${index * 20})`)
+				.attr('text-anchor', 'left')
+			text.append('tspan').attr('font-weight', 'bold').text(category)
+			text.append('tspan').text(`: ${description}`)
 		}
 	}
 }
