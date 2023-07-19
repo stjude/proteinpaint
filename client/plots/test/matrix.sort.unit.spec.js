@@ -353,3 +353,32 @@ tape('sort against selectedTerms', test => {
 	)
 	test.end()
 })
+
+tape('getSampleSorter() should apply an opts.skipSorter() argument', test => {
+	const { self, settings, rows } = getArgs({
+		sortSamplesBy: 'a'
+	})
+	const sorter = ms.getSampleSorter(self, settings, rows, {
+		skipSorter: (p, tw) => tw.term.name == 'aaa'
+	})
+	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
+	test.deepEqual(
+		sampleNames,
+		[
+			[1, 2, 3],
+			[5, 4]
+		],
+		'should sort the samples by dt then value'
+	)
+	test.deepEqual(
+		simpleMatrix(sampleNames, self.termOrder, rows),
+		// prettier-ignore
+		[ 
+			[ ' ', '2', '3', '5', ' ' ], 
+			[ '1', '2', ' ', '5', ' ' ], 
+			[ '1', ' ', '3', ' ', '4' ] 
+		],
+		'should sort sample and rows in the expected order'
+	)
+	test.end()
+})
