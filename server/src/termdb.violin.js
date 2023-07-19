@@ -93,29 +93,31 @@ export async function wilcoxon(term, result) {
 	if (!term) {
 		return
 	}
-	const wilcoxInput = {}
+	const wilcoxInput = []
 
 	const numPlots = result.plots.length
 	for (let i = 0; i < numPlots; i++) {
-		const { label, values } = result.plots[i]
-		const labelParts = label.split(',')
-		const label1 = labelParts[0].trim()
+		const label1 = result.plots[i].label.trim(),
+			group1values = result.plots[i].values
+
 		for (let j = i + 1; j < numPlots; j++) {
-			const group1values = values
-			const group2values = result.plots[j].values
-			const label2 = result.plots[j].label.split(',')[0].trim()
-			wilcoxInput[`${label1}, ${label2}`] = { group1values, group2values }
+			const group2values = result.plots[j].values,
+				label2 = result.plots[j].label.trim()
+			wilcoxInput.push({
+				group1_id: label1,
+				group1_values: group1values,
+				group2_id: label2,
+				group2_values: group2values
+			})
 		}
 	}
-
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
 	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
 	unlink(tmpfile, () => {})
 
 	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
-		const labelParts = k.split(',')
-		result.pvalues.push([{ value: labelParts[0].trim() }, { value: labelParts[1].trim() }, { html: v }])
+		result.pvalues.push([{ value: v.group1_id }, { value: v.group2_id }, { html: v.pvalue }])
 	}
 }
 
