@@ -40,23 +40,33 @@ export function violinBinsObj(scale, plot) {
 	for (const b of bins0) {
 		const b2 = {
 			x0: b.x0,
-			x1: b.x1
+			x1: b.x1,
+			binValueCount: b.length
 		}
 		delete b.x0
 		delete b.x1
-		b2.binValueCount = b.length
 		bins.push(b2)
 	}
+	// Add an extra bin with 0 binValueCount at the end of b2 for improving rendering and removing convoluted logic for threshold.
+	const lastBinX1 = bins[bins.length - 1].x1
+	const extraBin = {
+		x0: lastBinX1,
+		x1: lastBinX1,
+		binValueCount: 0
+	}
+	bins.push(extraBin)
+
 	return { bins0, bins }
 }
 
 function computeViolinBins(scale, values) {
-	const uniqueValues = new Set(values)
-	const ticksCompute = uniqueValues.size === 1 ? 50 : uniqueValues.size <= 10 ? 5 : uniqueValues.size <= 20 ? 10 : 20
+	// disable this method for now and hardcode ticks to 15.
+	// const uniqueValues = new Set(values)
+	// const ticksCompute = uniqueValues.size === 1 ? 50 : uniqueValues.size <= 10 ? 5 : uniqueValues.size <= 20 ? 10 : 20
 
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
+		.thresholds(scale.ticks(15)) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 
 	return binBuilder(values)
