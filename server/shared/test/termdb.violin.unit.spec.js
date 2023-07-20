@@ -62,7 +62,8 @@ tape('compute bins given an array', function(test) {
 			{ x0: 8.5, x1: 9, binValueCount: 0 },
 			{ x0: 9, x1: 9.5, binValueCount: 1 },
 			{ x0: 9.5, x1: 10, binValueCount: 0 },
-			{ x0: 10, x1: 10, binValueCount: 1 }
+			{ x0: 10, x1: 10, binValueCount: 1 },
+			{x0: 10, x1: 10, binValueCount: 0}
 		]
 	}
 
