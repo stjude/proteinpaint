@@ -9,8 +9,10 @@ export function setInteractivity(self) {
 	self.showCellInfo = function (event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) {
-			const grp = event.target.__data__?.grp
+			const d = event.target.__data__
+			const grp = d?.grp
 			if (grp?.legendData) self.displaySampleGroupInfo(event, grp)
+			else if (d?.isLegendItem) self.handleLegendMouseover(event, d)
 			return
 		}
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
@@ -1136,6 +1138,35 @@ function setSampleGroupActions(self) {
 		if (Number.isFinite(a.count)) return -1
 		if (Number.isFinite(b.count)) return 1
 		return 0
+	}
+
+	self.handleLegendItemClick = d => {
+		const dvt = structuredClone(self.config.divideBy)
+		const id = 'id' in dvt ? dvt.id : dvt.name
+		if (d.termid == id) {
+			if (!dvt.exclude) dvt.exclude = []
+			const i = dvt.exclude?.indexOf(d.key)
+			if (i == -1) dvt.exclude.push(d.key)
+			else dvt.exclude.splice(i, 1)
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					divideBy: dvt
+				}
+			})
+		}
+	}
+
+	self.handleLegendMouseover = (event, d) => {
+		const dvt = structuredClone(self.config.divideBy)
+		const id = 'id' in dvt ? dvt.id : dvt.name
+		if (d.termid == id) {
+			self.dom.menutop.selectAll('*').remove()
+			self.dom.menubody.selectAll('*').remove()
+			self.dom.menubody.html(`Click to ${d.isExcluded ? 'show' : 'hide'}`)
+			self.dom.tip.show(event.clientX, event.clientY)
+		}
 	}
 }
 
