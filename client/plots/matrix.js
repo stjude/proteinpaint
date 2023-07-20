@@ -889,6 +889,7 @@ class Matrix {
 		const serieses = []
 		const { colw, dx, dy, xMin, xMax } = this.dimensions
 		const legendGroups = {}
+		this.colorScaleByTermId = {}
 
 		for (const t of this.termOrder) {
 			const $id = t.tw.$id
@@ -1010,7 +1011,6 @@ class Matrix {
 
 	getLegendData(legendGroups, refs) {
 		const s = this.settings.matrix
-		this.colorScaleByTermId = {}
 		const legendData = []
 		for (const $id in legendGroups) {
 			const legend = legendGroups[$id]
