@@ -44,6 +44,9 @@ class Matrix {
 				legend: {
 					click: this.legendClick
 				}
+			},
+			settings: {
+				isExcludedAttr: 'isExcluded'
 			}
 		})
 
@@ -330,7 +333,6 @@ class Matrix {
 
 		for (const row of data.lst) {
 			if ($id in row) {
-				if (exclude.includes(row[$id].key)) continue
 				const key = row[$id].key
 				const name = key in values && values[key].label ? values[key].label : key
 				if (!sampleGroups.has(key)) {
@@ -339,7 +341,8 @@ class Matrix {
 						id: key,
 						lst: [],
 						tw: this.config.divideBy,
-						legendGroups: {}
+						legendGroups: {},
+						isExcluded: exclude.includes(key)
 					}
 					if (ref.bins) grp.order = ref.bins.findIndex(bin => bin.name == key)
 					sampleGroups.set(key, grp)
@@ -384,6 +387,9 @@ class Matrix {
 
 		// TODO: sort sample groups, maybe by sample count, value order, etc
 		return sampleGrpsArr.sort((a, b) => {
+			// NOTE: should not reorder by isExcluded, in order to maintain the assigned legend item order, colors, etc
+			//if (a.isExcluded && !b.isExcluded) return 1
+			//if (!a.isExcluded && b.isExcluded) return -1
 			if (a.lst.length && !b.lst.length) return -1
 			if (!a.lst.length && b.lst.length) return 1
 			if ('order' in a && 'order' in b) return a.order - b.order
@@ -399,15 +405,16 @@ class Matrix {
 		const s = this.settings.matrix
 		this.visibleSampleGrps = new Set()
 		const sampleOrder = []
-		let total = 0
+		let total = 0,
+			numHiddenGrps = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			if (!grp.lst.length) continue
+			if (grp.isExcluded) numHiddenGrps++
 			let processedLst = grp.lst
-
 			for (const [index, row] of processedLst.entries()) {
 				sampleOrder.push({
 					grp,
-					grpIndex,
+					grpIndex: grpIndex - numHiddenGrps, // : this.sampleGroups.length,
 					row,
 					index,
 					prevGrpTotalIndex: total,
@@ -418,11 +425,12 @@ class Matrix {
 					processedLst
 				})
 			}
-			total += processedLst.length
+			if (!grp.isExcluded) total += processedLst.length
 			this.visibleSampleGrps.add(grp)
 			//if (s.maxSample && total >= s.maxSample) break // *** Apply group sorting before column truncation ????? ****
 		}
-		return sampleOrder
+		this.unfilteredSampleOrder = sampleOrder
+		return sampleOrder.filter(so => !so.grp.isExcluded)
 	}
 
 	getTermOrder(data) {
@@ -888,12 +896,15 @@ class Matrix {
 		const s = this.settings.matrix
 		const serieses = []
 		const { colw, dx, dy, xMin, xMax } = this.dimensions
+		const dvt = this.config.divideBy || {}
+		const divideByTermId = 'id' in dvt ? dvt.id : dvt.name
 		const legendGroups = {}
 		this.colorScaleByTermId = {}
 
 		for (const t of this.termOrder) {
 			const $id = t.tw.$id
 			const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
+			const isDivideByTerm = termid === divideByTermId
 			const emptyGridCells = []
 			const series = {
 				t,
@@ -902,7 +913,7 @@ class Matrix {
 				y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
 			}
 
-			for (const so of this.sampleOrder) {
+			for (const so of this.unfilteredSampleOrder) {
 				const { totalIndex, grpIndex, row } = so
 				series.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace
 
@@ -922,7 +933,7 @@ class Matrix {
 				}
 
 				if (!anno || !anno.renderedValues?.length) {
-					if (s.useCanvas || so.grp) {
+					if (!so.grp.isExcluded && (s.useCanvas || so.grp)) {
 						const cell = getEmptyCell(cellTemplate, s, this.dimensions)
 						series.cells.push(cell)
 					}
@@ -941,9 +952,7 @@ class Matrix {
 
 					// will assign x, y, width, height, fill, label, order, etc
 					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
-
 					if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
-
 					if (legend) {
 						for (const l of [legendGroups, so.grp.legendGroups]) {
 							if (!l) continue
@@ -954,20 +963,25 @@ class Matrix {
 							}
 							if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
 							lg.values[legend.value].samples.add(row.sample)
+							if (isDivideByTerm) {
+								lg.values[legend.value].isExcluded = so.grp.isExcluded
+							}
 						}
 					}
 
-					series.cells.push(cell)
-					siblingCells.push(cell)
+					if (!so.grp.isExcluded) {
+						series.cells.push(cell)
+						siblingCells.push(cell)
+					}
 				}
 
-				if (s.showGrid == 'rect') {
+				if (s.showGrid == 'rect' && !so.grp.isExcluded) {
 					const cell = maySetEmptyCell[t.tw.term.type]?.(siblingCells, cellTemplate, s, this.dimensions)
 					if (cell) emptyGridCells.push(cell)
 				}
 			}
 			if (emptyGridCells.length) series.cells.unshift(...emptyGridCells)
-			serieses.push(series)
+			if (series.cells.length) serieses.push(series)
 		}
 
 		this.legendData = this.getLegendData(legendGroups, data.refs)
@@ -1012,6 +1026,8 @@ class Matrix {
 	getLegendData(legendGroups, refs) {
 		const s = this.settings.matrix
 		const legendData = []
+		const dvt = this.config.divideBy || {}
+		const dvtId = dvt && 'id' in dvt ? dvt.id : dvt.name
 		for (const $id in legendGroups) {
 			const legend = legendGroups[$id]
 
@@ -1024,21 +1040,27 @@ class Matrix {
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						const count = item.samples.size
-						const note = s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
 						return {
 							termid: 'Mutation Types',
 							key,
-							text: item.label + ` (${count}${note})`,
+							text: this.getLegendItemText(item, count, {}, s),
 							color: item.fill,
 							order: i,
 							border: '1px solid #ccc',
-							count
+							count,
+							isLegendItem: true
 						}
 					})
 				})
 				continue
 			}
 
+			const t =
+				$id == dvtId
+					? { tw: dvt }
+					: this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id) || {
+							tw: { term: { id: $id, name: $id, type: $id === 'CNV' ? 'geneVariant' : '' } }
+					  }
 			const keys = Object.keys(legend.values).sort((a, b) => legend.values[a].order - legend.values[b].order)
 			const hasScale = Object.values(legend.values).find(v => v.scale)
 			if (hasScale) {
@@ -1050,39 +1072,33 @@ class Matrix {
 						const item = legend.values[key]
 						const count = item.samples?.size
 						if (item.scale) {
-							let text = item.label
-							if (item.samples) {
-								const note = s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
-								text += ` (${count}${note})`
-							}
 							return {
 								termid: $id,
 								key,
-								text,
+								text: this.getLegendItemText(item, count, t, s),
 								width: 100,
 								scale: item.scale,
 								domain: item.domain,
 								minLabel: item.minLabel,
 								maxLabel: item.maxLabel,
 								order: 'order' in item ? item.order : i,
-								count
+								count,
+								isLegendItem: true
 							}
 						} else {
 							return {
 								termid: $id,
 								key,
-								text: item.label,
+								text: this.getLegendItemText(item, count, t, s),
 								color: item.fill || this.colorScaleByTermId[$id](key),
 								order: 'order' in item ? item.order : i,
-								count
+								count,
+								isLegendItem: true
 							}
 						}
 					})
 				})
 			} else {
-				const t = this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id) || {
-					tw: { term: { id: $id, name: $id } }
-				}
 				const grp = $id
 				const term = t.tw.term
 				const ref = legend.ref
@@ -1101,18 +1117,16 @@ class Matrix {
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						const count = item.samples?.size
-						let text = item.label
-						if (item.samples) {
-							const note = s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
-							text += ` (${count}${note})`
-						}
 						return {
 							termid: term.id,
 							key,
-							text,
+							text: this.getLegendItemText(item, count, t, s),
 							color: t.scale || item.fill || this.colorScaleByTermId[grp](key),
 							order: 'order' in item ? item.order : i,
-							count
+							count,
+							isExcluded: item.isExcluded,
+							onClickCallback: this.handleLegendItemClick,
+							isLegendItem: true
 						}
 					})
 				})
@@ -1120,6 +1134,16 @@ class Matrix {
 		}
 
 		return legendData.sort((a, b) => (a.order && b.order ? a.order - b.order : a.order ? -1 : b.order ? 1 : 0))
+	}
+
+	getLegendItemText(item, count, t, s) {
+		let text = item.label
+		const notes = [count]
+		if (item.isExcluded) notes.push('hidden')
+		if (t?.tw?.term?.type == 'geneVariant' && s.geneVariantCountSamplesSkipMclass.includes(item.key))
+			notes.push('not counted')
+		if (!notes.length) return text
+		return (text += ` (${notes.join(', ')})`)
 	}
 }
 
