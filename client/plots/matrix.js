@@ -11,7 +11,6 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
-import htmlLegend from '#dom/html.legend'
 import { mclass, dt2label, morigin } from '#shared/common'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
@@ -46,14 +45,6 @@ class Matrix {
 					click: this.legendClick
 				}
 			}
-		})
-
-		this.tipLegendRenderer = htmlLegend(this.dom.tip.d, {
-			settings: {
-				legendTextAlign: 'left',
-				mainWidth: '85%'
-			},
-			handlers: {}
 		})
 
 		// enable embedding of termsetting and tree menu inside self.dom.menu
@@ -1032,14 +1023,16 @@ class Matrix {
 					order: legend.order,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
-						const note = s.geneVariantCountSamplesSkipMclass.includes(key) ? '  not counted' : ''
+						const count = item.samples.size
+						const note = s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
 						return {
 							termid: 'Mutation Types',
 							key,
-							text: item.label + ` (${item.samples.size}${note})`,
+							text: item.label + ` (${count}${note})`,
 							color: item.fill,
 							order: i,
-							border: '1px solid #ccc'
+							border: '1px solid #ccc',
+							count
 						}
 					})
 				})
@@ -1055,11 +1048,12 @@ class Matrix {
 					hasScale,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
+						const count = item.samples?.size
 						if (item.scale) {
 							let text = item.label
 							if (item.samples) {
-								const note = 1 || s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
-								text += ` (${item.samples.size}${note})`
+								const note = s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
+								text += ` (${count}${note})`
 							}
 							return {
 								termid: $id,
@@ -1070,7 +1064,8 @@ class Matrix {
 								domain: item.domain,
 								minLabel: item.minLabel,
 								maxLabel: item.maxLabel,
-								order: 'order' in item ? item.order : i
+								order: 'order' in item ? item.order : i,
+								count
 							}
 						} else {
 							return {
@@ -1078,7 +1073,8 @@ class Matrix {
 								key,
 								text: item.label,
 								color: item.fill || this.colorScaleByTermId[$id](key),
-								order: 'order' in item ? item.order : i
+								order: 'order' in item ? item.order : i,
+								count
 							}
 						}
 					})
@@ -1104,17 +1100,19 @@ class Matrix {
 					order: legend.order,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
+						const count = item.samples?.size
 						let text = item.label
 						if (item.samples) {
-							const note = s.geneVariantCountSamplesSkipMclass.includes(key) ? '  not counted' : ''
-							text += ` (${item.samples.size}${note})`
+							const note = s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
+							text += ` (${count}${note})`
 						}
 						return {
 							termid: term.id,
 							key,
 							text,
 							color: t.scale || item.fill || this.colorScaleByTermId[grp](key),
-							order: 'order' in item ? item.order : i
+							order: 'order' in item ? item.order : i,
+							count
 						}
 					})
 				})
