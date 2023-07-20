@@ -61,6 +61,7 @@ const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/grap
 export async function convertSampleId_addGetter(tdb) {
 	tdb.convertSampleId.get = async inputs => {
 		const old2new = {}
+		// FIXME very slow to query per input; may cache aliquot-to-caseid mapping along with aliquot-to-submitter
 		for (const old of inputs) {
 			const id = await convert2caseId(old)
 			old2new[old] = id
@@ -1723,7 +1724,7 @@ async function convert2caseId(n) {
 	- aliquot submitter id (TCGA-B5-A1MR-01A)
 	*/
 	const response = await got.post(
-		'https://api.gdc.cancer.gov/cases', //path.join(apihost, 'cases'),
+		'https://api.gdc.cancer.gov/cases', //path.join(apihost, 'cases'), TODO chane to apihost
 		{
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, //getheaders({}),
 			body: JSON.stringify({
