@@ -72,6 +72,7 @@ export class MatrixControls {
 						},
 						processInput: tw => {
 							if (tw) fillTermWrapper(tw)
+							return tw
 						},
 						getBodyParams: () => {
 							const currentGeneNames = this.parent.termOrder
@@ -154,6 +155,15 @@ export class MatrixControls {
 							{ label: `None`, value: '' }
 						]
 					},
+					// TODO: implement this contol option
+					// {
+					// 	label: `Exclude From ${l.Sample} Displayed Counts`,
+					// 	title: `Do not include these variations/mutations when counting samples for a gene.`,
+					// 	type: 'text',
+					// 	chartType: 'matrix',
+					// 	settingsKey: 'geneVariantCountSamplesSkipMclass',
+					// 	processInput: tw => {},
+					// },
 					{
 						label: `Row Group Label Max Length`,
 						title: `Truncate the row group label if it exceeds this maximum number of characters`,

@@ -8,11 +8,18 @@ let inputIndex = 0
 export function setInteractivity(self) {
 	self.showCellInfo = function (event) {
 		if (self.activeLabel || self.zoomArea) return
-		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
+		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) {
+			const grp = event.target.__data__?.grp
+			if (grp.legendData) {
+				//self.dom.menutop.html(grp.name)
+				self.tipLegendRenderer(event.target.__data__.grp.legendData)
+				self.dom.tip.show(event.clientX, event.clientY)
+			}
+			return
+		}
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
 		if (!d || !d.term || !d.sample || !d.siblingCells?.length) {
-			self.dom.tip.hide()
 			return
 		}
 		const s = self.settings.matrix

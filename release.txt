@@ -1,3 +1,6 @@
+Enhancements
+- Display sample counts in matrix sample group labels, mouseovers, and legend.
+
 Fixes
 - Process commit-based release notes on commit instead of in CI; revert changelog generator.
 - Cohort creation in the matrix plot, where sample atttribute mapping is required.
