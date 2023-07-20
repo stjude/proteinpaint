@@ -7,7 +7,7 @@
 # Usage #
 #########
 
-# Usage: cd .. && cargo build --release && time echo '[{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"African Ancestry","group2_values":[11.5,5.1,21.1,4.4,-0.04]},{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"Asian Ancestry","group2_values":[1.7]},{"group1_id":"African Ancestry","group1_values":[11.5,5.1,21.1,4.4,-0.04],"group2_id":"Asian Ancestry","group2_values":[1.7]}]' | target/release/wilcoxon
+# Usage: cd .. && cargo build --release && time echo '[{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"African Ancestry","group2_values":[11.5,5.1,21.1,4.4,-0.04]},{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"Asian Ancestry","group2_values":[1.7]},{"group1_id":"African Ancestry","group1_values":[11.5,5.1,21.1,4.4,-0.04],"group2_id":"Asian Ancestry","group2_values":[]}]' | target/release/wilcoxon
 
 # Input data is in JSON format and is read in from <in.json> file.
 # Results are written in JSON format to stdout.
@@ -48,7 +48,7 @@ struct OutputJson {
     group2_id: String,
     group1_values: Vec<f64>,
     group2_values: Vec<f64>,
-    pvalue: f64,
+    pvalue: Option<f64>,
 }
 
 fn main() {
@@ -81,27 +81,52 @@ fn main() {
                             vec2.push(json_string[i]["group2_values"][arr_iter].as_f64().unwrap());
                         }
 
-                        let pvalue: f64 = format!(
-                            "{:.4}",
-                            wilcoxon_rank_sum_test(
-                                vec1.clone(),
-                                vec2.clone(),
-                                THRESHOLD,
-                                't', // two-sided test
-                            ),
-                        )
-                        .parse()
-                        .unwrap();
-                        //println!("p_value:{}", p_value);
-                        output_string += &serde_json::to_string(&OutputJson {
-                            group1_id: json_string[i]["group1_id"].as_str().unwrap().to_string(),
-                            group2_id: json_string[i]["group2_id"].as_str().unwrap().to_string(),
-                            group1_values: vec1,
-                            group2_values: vec2,
-                            pvalue: pvalue,
-                        })
-                        .unwrap();
-                        output_string += &",".to_string();
+                        if vec1.len() == 0 || vec2.len() == 0 {
+                            // If one of the vectors has a length of zero, wilcoxon test is not performed and a pvalue of NULL is given.
+                            output_string += &serde_json::to_string(&OutputJson {
+                                group1_id: json_string[i]["group1_id"]
+                                    .as_str()
+                                    .unwrap()
+                                    .to_string(),
+                                group2_id: json_string[i]["group2_id"]
+                                    .as_str()
+                                    .unwrap()
+                                    .to_string(),
+                                group1_values: vec1,
+                                group2_values: vec2,
+                                pvalue: None,
+                            })
+                            .unwrap();
+                            output_string += &",".to_string();
+                        } else {
+                            let pvalue: f64 = format!(
+                                "{:.4}",
+                                wilcoxon_rank_sum_test(
+                                    vec1.clone(),
+                                    vec2.clone(),
+                                    THRESHOLD,
+                                    't', // two-sided test
+                                ),
+                            )
+                            .parse()
+                            .unwrap();
+                            //println!("p_value:{}", p_value);
+                            output_string += &serde_json::to_string(&OutputJson {
+                                group1_id: json_string[i]["group1_id"]
+                                    .as_str()
+                                    .unwrap()
+                                    .to_string(),
+                                group2_id: json_string[i]["group2_id"]
+                                    .as_str()
+                                    .unwrap()
+                                    .to_string(),
+                                group1_values: vec1,
+                                group2_values: vec2,
+                                pvalue: Some(pvalue),
+                            })
+                            .unwrap();
+                            output_string += &",".to_string();
+                        }
                     }
                     output_string.pop();
                     output_string += &"]".to_string();
