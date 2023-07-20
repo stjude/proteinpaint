@@ -56,25 +56,76 @@ class profilePolar {
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		if (samples.length == 0) return
-		div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
-		const select = div.append('select').style('margin-left', '5px')
-		select
+		// div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
+		// const select = div.append('select').style('margin-left', '5px')
+		// select
+		// 	.selectAll('option')
+		// 	.data(samples)
+		// 	.enter()
+		// 	.append('option')
+		// 	.property('selected', d => d == config.sampleName)
+		// 	.html((d, i) => d)
+
+		// select.on('change', () => {
+		// 	config.sampleName = select.node().value
+		// 	this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		// })
+
+		div.append('label').style('margin-left', '15px').html('Country:').style('font-weight', 'bold')
+		const countries = ['Mexico', 'Philipines', 'China', 'Brazil', 'Egypt', 'Iraq', 'Oman', 'Syria']
+		const countrySelect = div.append('select').style('margin-left', '5px')
+		countrySelect
 			.selectAll('option')
-			.data(samples)
+			.data(countries)
 			.enter()
 			.append('option')
-			.property('selected', d => d == config.sampleName)
+			.property('selected', d => d == config.country)
 			.html((d, i) => d)
 
-		select.on('change', () => {
-			config.sampleName = select.node().value
+		countrySelect.on('change', () => {
+			config.country = countrySelect.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+
+		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
+		const regions = ['AMR', 'SEAR', 'WPR', 'AFR', 'EMR', 'EUR']
+		const regionSelect = div.append('select').style('margin-left', '5px')
+		regionSelect
+			.selectAll('option')
+			.data(regions)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.region)
+			.html((d, i) => d)
+
+		regionSelect.on('change', () => {
+			config.region = regionSelect.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
+		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
+		const incomeGroups = ['Upper middle income', 'Lower middle income', 'High income', 'Low income']
+		const incomeSelect = div.append('select').style('margin-left', '5px')
+		incomeSelect
+			.selectAll('option')
+			.data(incomeGroups)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.incomeGroup)
+			.html((d, i) => d)
+
+		incomeSelect.on('change', () => {
+			config.incomeGroup = countrySelect.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
 		// Create a polar grid.
 		const radius = 250
 		const x = 400
 		const y = 300
 		const polarG = svg.append('g').attr('transform', `translate(${x},${y})`)
+		const legendG = svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
+
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
 		const angle = (Math.PI * 2) / config.terms.length
@@ -109,6 +160,16 @@ class profilePolar {
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
 		}
+		legendG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text('Overall Score')
+			.attr('transform', `translate(0, -10)`)
+
+		addLegendItem('A', 'More than 75% of possible scorable items', 1)
+		addLegendItem('B', '50-75% of possible scorable items', 2)
+		addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 
 		function addCircle(percent, text = null) {
 			const circle = polarG
@@ -128,6 +189,15 @@ class profilePolar {
 					.style('font-weight', 'bold')
 					.style('font-size', '24px')
 			}
+		}
+
+		function addLegendItem(category, description, index) {
+			const text = legendG
+				.append('text')
+				.attr('transform', `translate(0, ${index * 20})`)
+				.attr('text-anchor', 'left')
+			text.append('tspan').attr('font-weight', 'bold').text(category)
+			text.append('tspan').text(`: ${description}`)
 		}
 	}
 }

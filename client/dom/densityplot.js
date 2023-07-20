@@ -24,13 +24,13 @@ export async function make_densityplot(holder, data, callabck) {
 	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
 
 	//density data, add first and last values to array
-	const density_data = data.density
-	density_data.unshift([data.minvalue, 0])
-	density_data.push([data.maxvalue, 0])
+	const density_data = data.density_data.density
+	density_data.unshift([data.density_data.minvalue, 0])
+	density_data.push([data.density_data.maxvalue, 0])
 
 	// x-axis
 	const xscale = scaleLinear()
-		.domain([data.minvalue, data.maxvalue])
+		.domain([data.density_data.minvalue, data.density_data.maxvalue])
 		.range([xpad, width - xpad])
 
 	const x_axis = axisBottom().scale(xscale)
@@ -38,30 +38,27 @@ export async function make_densityplot(holder, data, callabck) {
 
 	// y-scale
 	const yscale = scaleLinear()
-		.domain([0, data.densitymax])
+		.domain([0, data.density_data.densitymax])
 		.range([height + ypad, ypad])
 
 	const y_axis = axisLeft()
 		.scale(yscale)
-		.ticks(data.densitymax < default_ticks ? data.densitymax : default_ticks)
+		.ticks(data.density_data.densitymax < default_ticks ? data.density_data.densitymax : default_ticks)
 		.tickFormat(format('d'))
 
 	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
 
 	// SVG line generator
 	const line = d3line()
-		.x(function(d) {
+		.x(function (d) {
 			return xscale(d[0])
 		})
-		.y(function(d) {
+		.y(function (d) {
 			return yscale(d[1])
 		})
 		.curve(curveMonotoneX)
 
-	const y_scale = g
-		.append('g')
-		.attr('transform', `translate(${xpad}, 0)`)
-		.call(y_axis)
+	g.append('g').attr('transform', `translate(${xpad}, 0)`).call(y_axis)
 
 	// plot the data as a line
 	g.append('path')
@@ -76,22 +73,28 @@ export async function make_densityplot(holder, data, callabck) {
 		.call(x_axis)
 
 	g.append('text')
-		.text(data.unit)
+		.text(data.termname)
 		.attr('fill', 'black')
 		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 		.attr('font-size', '13px')
+		.attr('text-anchor', 'middle')
+		.classed('sjpp-mds3-xlabel', true)
 
 	g.append('text')
 		.text('# samples')
-		.attr('transform', `translate(0,  ${height / 2}) rotate(-90)`)
+		.attr('transform', `translate(-5,  ${height / 2}) rotate(-90)`)
 		.attr('fill', 'black')
 		.attr('font-size', '13px')
 		.attr('text-anchor', 'middle')
+		.classed('sjpp-mds3-ylabel', true)
 
 	// add brush to select range from the density plot
 	g.call(
 		brushX()
-			.extent([[xpad, ypad], [width - xpad, height + ypad]])
+			.extent([
+				[xpad, ypad],
+				[width - xpad, height + ypad]
+			])
 			.on('end', async event => {
 				const selection = event.selection
 				const range_start = xscale.invert(selection[0])

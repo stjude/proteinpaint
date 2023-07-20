@@ -112,7 +112,6 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	placeholder?: string
 	placeholderIcon?: string //default '+'
 	renderAs: string //none
-	showTimeScale?: boolean //Not used?
 	tip?: any //TODO: Menu type?
 	use_bins_less?: boolean
 	usecase?: UseCase

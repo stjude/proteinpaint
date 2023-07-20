@@ -37,11 +37,7 @@ export function makeSampleLabel(data, tk, block, laby) {
 			})
 	} else {
 		// current data has no sample, disable label
-		tk.leftlabels.doms.samples
-			.text('No samples')
-			.attr('class', '')
-			.style('opacity', 0.5)
-			.on('click', null)
+		tk.leftlabels.doms.samples.text('No samples').attr('class', '').style('opacity', 0.5).on('click', null)
 	}
 }
 
@@ -192,7 +188,7 @@ async function showSummary4terms(data, div, tk, block) {
 				.style('margin-bottom', '10px')
 				.style('font-size', '.8em')
 				.style('opacity', 0.5)
-			showDensity4oneTerm(d.termid, holder, d.density_data, tk, block)
+			showDensity4oneTerm(d.termid, holder, d, tk, block)
 		} else {
 			throw 'unknown summary data'
 		}
@@ -218,7 +214,7 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		.style('justify-items', 'left')
 
 	for (const [category_name, count, total] of numbycategory) {
-		const cat_div = grid_div
+		grid_div
 			.append('div')
 			.style('padding-right', '10px')
 			.attr('class', 'sja_clbtext2')
@@ -298,8 +294,8 @@ function getNewFilter(tk, tvs) {
 }
 
 // will be nice if the data computing and rendering can both be replaced by violin
-function showDensity4oneTerm(termid, div, density_data, tk, block) {
-	make_densityplot(div, density_data, async range => {
+function showDensity4oneTerm(termid, div, data, tk, block) {
+	make_densityplot(div, data, async range => {
 		// a range is selected
 		tk.menutip.clear()
 		const term = await tk.mds.termdb.vocabApi.getterm(termid)
@@ -329,10 +325,7 @@ function menu_listSamples(buttonrow, data, tk, block) {
 		.attr('class', 'sja_menuoption')
 		.on('click', async () => {
 			tk.menutip.clear()
-			const wait = tk.menutip.d
-				.append('div')
-				.text('Loading...')
-				.style('margin', '15px')
+			const wait = tk.menutip.d.append('div').text('Loading...').style('margin', '15px')
 			try {
 				const samples = await tk.mds.getSamples()
 				await displaySampleTable(samples, {

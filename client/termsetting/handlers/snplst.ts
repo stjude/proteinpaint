@@ -121,7 +121,7 @@ async function makeEditMenu(self: SnpsTermSettingInstance, div0: any) {
 
 			// have valid input, if no term yet, create new
 			if (!self.term) {
-				self.term = { id: makeId(), type: 'snplst' }
+				self.term = { id: makeId(), type: 'snplst' } as SnpsTerm
 			}
 			if (self.term.snps) {
 				// append new ones to existing array
@@ -548,7 +548,7 @@ async function makeSampleSummary(self: SnpsTermSettingInstance) {
 	if (f) filter.lst.push(f)
 
 	const data = await self.vocabApi.getCategories(self.term, filter, body)
-	mayRunSnplstTask({ term: self.term, q: self.q as SnpsQ }, data)
+	mayRunSnplstTask({ term: self.term as SnpsTerm, q: self.q as SnpsQ }, data)
 }
 
 function validateQ(data: any) {

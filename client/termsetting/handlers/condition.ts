@@ -2,7 +2,7 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
-import { PillData, ConditionalTW, CategoricalConditionQ, VocabApi } from '#shared/types'
+import { PillData, ConditionTW, ConditionQ, VocabApi } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
@@ -387,7 +387,7 @@ function getGroups(grades: any, breaks: any) {
 	return groups
 }
 
-export function fillTW(tw: ConditionalTW, vocabApi: VocabApi, defaultQ: CategoricalConditionQ) {
+export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ) {
 	set_hiddenvalues(tw.q, tw.term)
 
 	if (defaultQ) {

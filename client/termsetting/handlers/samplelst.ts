@@ -1,12 +1,12 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
-import { TermSettingInstance, PillData, TermWrapper } from '#shared/types'
+import { SampleLstSettingInstance, PillData, SampleLstTW } from '#shared/types'
 
-export function getHandler(self: TermSettingInstance) {
+export function getHandler(self: SampleLstSettingInstance) {
 	return {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()
-			const groups = self.q!.groups
+			const groups = self.q.groups
 			for (const group of groups) {
 				const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 				const noButtonCallback = (i: number, node: any) => {
@@ -65,7 +65,7 @@ function addTable(div: any, name: any, group: any, noButtonCallback: any) {
 	})
 }
 
-export function fillTW(tw: TermWrapper) {
+export function fillTW(tw: SampleLstTW) {
 	// quick fix!!
 	if (!tw.q.type) tw.q.type = 'custom-groupsetting'
 	if (!tw.q.groups) tw.q.groups = []

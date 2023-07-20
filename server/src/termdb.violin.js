@@ -91,35 +91,29 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 // compute pvalues using wilcoxon rank sum test
 export async function wilcoxon(term, result) {
-	if (!term) {
-		return
-	}
-	const wilcoxInput = {}
-
+	if (!term) return
 	const numPlots = result.plots.length
+	if (numPlots < 2) return
+
+	const wilcoxInput = []
+
 	for (let i = 0; i < numPlots; i++) {
-		const { label, values } = result.plots[i]
-		const labelParts = label.split(',')
-		const label1 = labelParts[0].trim()
+		const group1_id = result.plots[i].label
+		const group1_values = result.plots[i].values
 		for (let j = i + 1; j < numPlots; j++) {
-			const group1values = values
-			const group2values = result.plots[j].values
-			const label2 = result.plots[j].label.split(',')[0].trim()
-			wilcoxInput[`${label1}, ${label2}`] = { group1values, group2values }
+			const group2_id = result.plots[j].label
+			const group2_values = result.plots[j].values
+			wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 		}
 	}
-
-	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	console.log('Wilcox input:', JSON.stringify(wilcoxInput))
-	const wilcoxOutput2 = await run_rust('wilcoxon', JSON.stringify(wilcoxInput))
-	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
-	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-	console.log('Wilcox output:', wilcoxOutput)
-	unlink(tmpfile, () => {})
-
-	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
-		const labelParts = k.split(',')
-		result.pvalues.push([{ value: labelParts[0].trim() }, { value: labelParts[1].trim() }, { html: v }])
+	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+	//const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	//await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	//const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	//unlink(tmpfile, () => {})
+	//const wilcoxOutput = JSON.parse(out)
+	for (const test of wilcoxOutput) {
+		result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue }])
 	}
 }
 

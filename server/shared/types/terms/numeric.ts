@@ -1,21 +1,20 @@
-import { TermWrapper, BaseQ, Term } from './termdb'
-import { TermSettingInstance, InstanceDom } from './termsetting'
+import { TermWrapper, BaseQ, Term } from '../termdb'
+import { TermSettingInstance, InstanceDom } from '../termsetting'
 
 /*
 --------EXPORTED--------
 NumericQ
-NumericTW
 BrushEntry
 DensityData
 NumberObj
+NumericTW
 NumericTermSettingInstance
 
 */
 
 export type NumericQ = BaseQ & {
-	// termType: 'numeric' | 'float' | 'integer' | 'regression',
-	preferredBins?: string
-	termtype: string
+	// termType: 'numeric' | 'float' | 'integer'
+	preferredBins?: string //median?
 	//regular-sized bins
 	bin_size: number
 	startinclusive?: boolean
@@ -36,10 +35,6 @@ export type NumericQ = BaseQ & {
 	scale?: number //0.1 | 0.01 | 0.001
 	//discrete
 	rounding: string
-}
-
-export type NumericTW = TermWrapper & {
-	q: NumericQ
 }
 
 type NumObjRangeEntry = any //{}
@@ -90,6 +85,11 @@ type NumericTerm = Term & {
 	id: string
 	bins: NumericalBins
 	densityNotAvailable?: boolean //Not used?
+}
+
+export type NumericTW = TermWrapper & {
+	q: NumericQ
+	term: NumericTerm
 }
 
 type NumericDom = InstanceDom & {

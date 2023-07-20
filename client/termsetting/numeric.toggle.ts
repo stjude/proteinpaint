@@ -1,7 +1,7 @@
 import { Tabs } from '#dom/toggleButtons'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { copyMerge } from '#rx'
-import { PillData, TermWrapper, TermSettingInstance, VocabApi, NumericQ } from '#shared/types'
+import { PillData, NumericTW, NumericTermSettingInstance, VocabApi, NumericQ } from '#shared/types'
 
 /*
 ********************** EXPORTED
@@ -17,7 +17,7 @@ fillTW()
 */
 
 // self is the termsetting instance
-export async function getHandler(self: TermSettingInstance) {
+export async function getHandler(self: NumericTermSettingInstance) {
 	self.tabCallback = async (event: any, tab: any) => {
 		if (!tab) return
 		if (!self.q) throw `Missing .q{} [numeric.toggle getHandler()]`
@@ -111,7 +111,7 @@ export async function getHandler(self: TermSettingInstance) {
 	}
 }
 
-export async function fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQ = null) {
+export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null) {
 	// when missing, defaults mode to discrete
 	if (!tw.q.mode && !(defaultQ as NumericQ | null)?.mode) tw.q.mode = 'discrete'
 

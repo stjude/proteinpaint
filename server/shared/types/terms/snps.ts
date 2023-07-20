@@ -1,14 +1,16 @@
-import { TermWrapper, BaseQ, Term } from './termdb'
-import { TermSettingInstance, InstanceDom, UseCase } from './termsetting'
-import { VocabApi } from './vocab'
-import { Tvs, Filter } from './filter'
+import { TermWrapper, BaseQ, Term } from '../termdb'
+import { TermSettingInstance, InstanceDom, UseCase } from '../termsetting'
+import { VocabApi } from '../vocab'
+import { Tvs, Filter } from '../filter'
 
 /*
 --------EXPORTED--------
-SnpLocusQ
-SnpLocusTermWrapper
-SnpLocusVocabApi
-SnpLocusTermSettingInstance
+SnpsQ
+SnpsEntry
+SnpsTerm
+SnpsTermWrapper
+SnpsVocabApi
+SnpsTermSettingInstance
 
 */
 

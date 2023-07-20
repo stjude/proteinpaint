@@ -163,9 +163,9 @@ class Matrix {
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
 
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
-				this.setSampleGroups(this.data)
-				this.setTermOrder(this.data)
-				this.setSampleOrder(this.data)
+				this.termOrder = this.getTermOrder(this.data)
+				this.sampleGroups = this.getSampleGroups(this.data)
+				this.sampleOrder = this.getSampleOrder(this.data)
 			}
 
 			if (!this.sampleOrder.length) {
@@ -315,14 +315,13 @@ class Matrix {
 		}
 	}
 
-	setSampleGroups(data) {
+	getSampleGroups(data) {
 		const s = this.settings.matrix
 		const defaultSampleGrp = {
 			id: this.config.divideBy?.$id,
 			name: this.config.divideBy ? 'Not annotated' : '',
 			lst: []
 		}
-
 		const sampleGroups = new Map()
 		const term = this.config.divideBy?.term || {}
 		const $id = this.config.divideBy?.$id || '-'
@@ -351,7 +350,6 @@ class Matrix {
 			}
 		}
 
-		const sampleGrpsArr = [...sampleGroups.values()]
 		const n = sampleGroups.size
 		if (n > 100 && sampleGrpsArr.filter(sg => sg.lst.length < 3).length > 0.8 * n) {
 			const l = s.controlLabels
@@ -362,54 +360,49 @@ class Matrix {
 			sampleGroups.set(undefined, defaultSampleGrp)
 		}
 
+		const sampleGrpsArr = [...sampleGroups.values()]
+		const selectedDictTerms = this.termOrder.filter(t => t.tw.sortSamples && t.tw.term.type != 'geneVariant')
+		// initial sorting for ungrouped samples, prioritizes grouping by gene variant, skippin other sorters at this step
+		const noGrpSampleSorter = getSampleSorter(this, s, data.lst, {
+			skipSorter: (p, tw) => !p.types?.includes('geneVariant') && selectedDictTerms.find(t => t.tw.$id === tw.$id)
+		})
+		const noGrpSampleOrder = data.lst.sort(noGrpSampleSorter)
+		// truncate the samples based on the initial sorting
+		const allowedSamples = noGrpSampleOrder.slice(0, s.maxSample)
+		// do not include samples that are not in the truncated allowedSamples
+		const dataFilter = d => allowedSamples.includes(d)
+		// these hits counter functions may be used for sortSampleGrpsBy = 'hits'
+		const hitsPerSample = (t, c) => t + (typeof c == 'object' && c.countedValues?.length ? c.countedValues?.length : 0)
+		const countHits = (total, d) => total + Object.values(d).reduce(hitsPerSample, 0)
+		// this second sorter will be applied within each group of samples
+		const grpLstSampleSorter = getSampleSorter(this, s, data.lst)
+		for (const grp of sampleGrpsArr) {
+			grp.lst = grp.lst.filter(dataFilter)
+			grp.totalCountedValues = grp.lst.reduce(countHits, 0)
+			grp.lst.sort(grpLstSampleSorter)
+		}
+
 		// TODO: sort sample groups, maybe by sample count, value order, etc
-		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => {
+		return sampleGrpsArr.sort((a, b) => {
+			if (a.lst.length && !b.lst.length) return -1
+			if (!a.lst.length && b.lst.length) return 1
 			if ('order' in a && 'order' in b) return a.order - b.order
 			if ('order' in a) return -1
 			if ('order' in b) return 1
 			if (s.sortSampleGrpsBy == 'sampleCount' && a.lst.length != b.lst.length) return b.lst.length - a.lst.length
+			if (s.sortSampleGrpsBy == 'hits') return b.totalCountedValues - a.totalCountedValues
 			return a.name < b.name ? -1 : 1
 		})
 	}
 
-	setSampleOrder(data) {
+	getSampleOrder(data) {
 		const s = this.settings.matrix
 		this.visibleSampleGrps = new Set()
-
-		if (s.sortSampleGrpsBy == 'hits') {
-			this.sampleGroups.sort((a, b) => b.totalCountedValues - a.totalCountedValues)
-		}
-
-		const selectedDictTerms = this.termOrder.filter(t => t.tw.sortSamples && t.tw.term.type != 'geneVariant')
-		if (!selectedDictTerms.length) {
-			// both the sample truncation and sorting will be determined by gene variant hits
-			this.sampleOrder = this.sortSampleGrpLst(data)
-		} else {
-			// get sample names as sorted by gene variant hits, to be used for truncating the samplegroup.lst
-			const sampleNames = this.sortSampleGrpLst(data)
-				.map(so => so.row.sample)
-				.slice(0, s.maxSample)
-
-			const opts = {
-				dataFilter: d => sampleNames.includes(d.sample)
-			}
-			this.sampleOrder = this.sortSampleGrpLst(data, opts)
-		}
-	}
-
-	sortSampleGrpLst(data, opts = {}) {
-		const s = this.settings.matrix
-		const sampleSorter = getSampleSorter(this, s, data.lst, opts)
 		const sampleOrder = []
-		const dataFilter = opts.dataFilter || (() => true)
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
-			let processedLst = grp.lst.filter(dataFilter)
-
-			processedLst.sort(sampleSorter)
-			if (s.maxSample && total + processedLst.length > s.maxSample) {
-				processedLst = processedLst.slice(0, s.maxSample - total)
-			}
+			if (!grp.lst.length) continue
+			let processedLst = grp.lst
 
 			for (const [index, row] of processedLst.entries()) {
 				sampleOrder.push({
@@ -426,17 +419,17 @@ class Matrix {
 				})
 			}
 			total += processedLst.length
-			if (processedLst.length) this.visibleSampleGrps.add(grp)
-			if (s.maxSample && total >= s.maxSample) break // *** Apply group sorting before column truncation ????? ****
+			this.visibleSampleGrps.add(grp)
+			//if (s.maxSample && total >= s.maxSample) break // *** Apply group sorting before column truncation ????? ****
 		}
 		return sampleOrder
 	}
 
-	setTermOrder(data) {
+	getTermOrder(data) {
 		const s = this.settings.matrix
 		this.termSorter = getTermSorter(this, s)
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
-		this.termOrder = []
+		const termOrder = []
 		let totalIndex = 0,
 			visibleGrpIndex = 0
 		for (const [grpIndex, grp] of this.termGroups.entries()) {
@@ -444,35 +437,30 @@ class Matrix {
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				const countedSamples = new Set()
-				for (const sgrp of this.sampleGroups) {
-					sgrp.totalCountedValues = 0
-					for (const s of sgrp.lst) {
-						if (countedSamples.has(s.sample)) continue
-						countedSamples.add(s.sample)
-						const anno = data.samples[s.sample][tw.$id]
-						if (anno) {
-							const { filteredValues, countedValues, renderedValues } = this.classifyValues(
-								anno,
-								tw,
-								grp,
-								this.settings.matrix
-							)
-							anno.filteredValues = filteredValues
-							anno.countedValues = countedValues
-							anno.renderedValues = renderedValues
-							if (anno.countedValues?.length) {
-								const v = tw.term.values?.[anno.value]
-								if (v?.uncountable) continue
-								counts.samples += 1
-								counts.hits += anno.countedValues.length
-								if (tw.q?.mode == 'continuous') {
-									const v = anno.value
-									if (!('minval' in counts) || counts.minval > v) counts.minval = v
-									if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
-								}
+				for (const s of data.lst) {
+					if (countedSamples.has(s.sample)) continue
+					countedSamples.add(s.sample)
+					const anno = s[tw.$id]
+					if (anno) {
+						const { filteredValues, countedValues, renderedValues } = this.classifyValues(
+							anno,
+							tw,
+							grp,
+							this.settings.matrix
+						)
+						anno.filteredValues = filteredValues
+						anno.countedValues = countedValues
+						anno.renderedValues = renderedValues
+						if (anno.countedValues?.length) {
+							const v = tw.term.values?.[anno.value]
+							if (v?.uncountable) continue
+							counts.samples += 1
+							counts.hits += anno.countedValues.length
+							if (tw.q?.mode == 'continuous') {
+								const v = anno.value
+								if (!('minval' in counts) || counts.minval > v) counts.minval = v
+								if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
 							}
-							// may be used for sorting sample groups by hits
-							sgrp.totalCountedValues += anno.countedValues?.length || 0
 						}
 					}
 				}
@@ -504,7 +492,7 @@ class Matrix {
 			for (const [index, t] of processedLst.entries()) {
 				const { tw, counts } = t
 				const ref = data.refs.byTermId[t.tw.$id] || {}
-				this.termOrder.push({
+				termOrder.push({
 					grp,
 					grpIndex,
 					visibleGrpIndex,
@@ -524,6 +512,7 @@ class Matrix {
 			totalIndex += processedLst.length
 			visibleGrpIndex += 1
 		}
+		return termOrder
 	}
 
 	classifyValues(anno, tw, grp, s) {

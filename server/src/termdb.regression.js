@@ -799,14 +799,14 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 
 async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
-	const wilcoxInput = {} // { snpid: {hasEffale: [], noEffale: []} }
+	const wilcoxInput = []
 	const snpid2scale = new Map() // k: snpid, v: {minv,maxv} for making scale in boxplot
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		let RinputDataidx = 0
 		let minv = null,
 			maxv = null
-		const group1values = [], // for cases with effect allele
-			group2values = []
+		const hasEffAlleleValues = [],
+			noEffAlleleValues = []
 		for (const { sample, noOutcome } of sampledata) {
 			if (noOutcome) continue
 			const outcomeValue = Rinput.data[RinputDataidx++].outcome
@@ -829,39 +829,48 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 
 			const [a, b] = gt.split('/')
 			if (a == snpO.effAle || b == snpO.effAle) {
-				group1values.push(outcomeValue)
+				hasEffAlleleValues.push(outcomeValue)
 			} else {
-				group2values.push(outcomeValue)
+				noEffAlleleValues.push(outcomeValue)
 			}
 		}
-		wilcoxInput[snpid] = { group1values, group2values }
+		wilcoxInput.push({
+			group1_id: snpid + '_hasEffAllele',
+			group1_values: hasEffAlleleValues,
+			group2_id: snpid + '_noEffAllele',
+			group2_values: noEffAlleleValues
+		})
 		snpid2scale.set(snpid, { minv, maxv })
 	}
-	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
-	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-	fs.unlink(tmpfile, () => {})
-	const pvalues = JSON.parse(wilcoxOutput)
-	for (const snpid in pvalues) {
-		const { group1values, group2values } = wilcoxInput[snpid]
+	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+	//const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	//await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	//const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	//fs.unlink(tmpfile, () => {})
+	//const wilcoxOutput = JSON.parse(out)
+	for (const test of wilcoxOutput) {
+		const snpid = test.group1_id.replace('_hasEffAllele', '')
+		const hasEffAlleleValues = test.group1_values
+		const noEffAlleleValues = test.group2_values
+		const pvalue = test.pvalue
 		const { minv, maxv } = snpid2scale.get(snpid)
 
 		const box1 = app.boxplot_getvalue(
-			group1values
+			hasEffAlleleValues
 				.sort((a, b) => a - b)
 				.map(i => {
 					return { value: i }
 				})
 		)
-		box1.label = `Carry ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${group1values.length}`
+		box1.label = `Carry ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${hasEffAlleleValues.length}`
 		const box2 = app.boxplot_getvalue(
-			group2values
+			noEffAlleleValues
 				.sort((a, b) => a - b)
 				.map(i => {
 					return { value: i }
 				})
 		)
-		box2.label = `No ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${group2values.length}`
+		box2.label = `No ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${noEffAlleleValues.length}`
 
 		// make a result object for this snp
 		const analysisResult = {
@@ -870,7 +879,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
 				wilcoxon: {
-					pvalue: pvalues[snpid],
+					pvalue,
 					boxplots: {
 						minv,
 						maxv,

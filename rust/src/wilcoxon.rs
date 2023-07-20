@@ -1,16 +1,54 @@
-// Syntax: cd .. && cargo build --release && time echo '{"European Ancestry, African Ancestry":{"group1values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2values":[11.5,5.1,21.1,4.4,-0.04]},"European Ancestry, Asian Ancestry":{"group1values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2values":[1.7]},"African Ancestry, Asian Ancestry":{"group1values":[11.5,5.1,21.1,4.4,-0.04],"group2values":[1.7]}}' | target/release/wilcoxon
+/*
+##########################
+# Wilcoxon rank sum test #
+##########################
 
+#########
+# Usage #
+#########
+
+# Usage: cd .. && cargo build --release && time echo '[{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"African Ancestry","group2_values":[11.5,5.1,21.1,4.4,-0.04]},{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"Asian Ancestry","group2_values":[1.7]},{"group1_id":"African Ancestry","group1_values":[11.5,5.1,21.1,4.4,-0.04],"group2_id":"Asian Ancestry","group2_values":[1.7]}]' | target/release/wilcoxon
+
+# Input data is in JSON format and is read in from <in.json> file.
+# Results are written in JSON format to stdout.
+
+# Input JSON specifications:
+# [{
+#   group1_id: group1 id,
+#   group1_values: [] group1 data values,
+#   group2_id: group2 id,
+#   group2_values: [] group2 data values
+# }]
+#
+# Output JSON specifications:
+# [{
+#   group1_id: group1 id,
+#   group1_values: [] group1 data values,
+#   group2_id: group2 id,
+#   group2_values: [] group2 data values,
+#   pvalue: p-value of test
+# }]
+
+
+########
+# Code #
+########
+*/
+
+use itertools::Itertools;
 use json;
 use serde::{Deserialize, Serialize};
-//use serde_json::Value;
-use itertools::Itertools;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::io;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct OutputJson {
-    name: String,
-    p_value: f64,
+    // Output JSON data structure
+    group1_id: String,
+    group2_id: String,
+    group1_values: Vec<f64>,
+    group2_values: Vec<f64>,
+    pvalue: f64,
 }
 
 fn main() {
@@ -20,7 +58,7 @@ fn main() {
         Ok(_n) => {
             //println!("{} bytes read", n);
             //println!("input:{}", input);
-            const THRESHOLD: usize = 50;
+            const THRESHOLD: usize = 50; // Decrease this number so as to invoke the normal approximation for lower sample sizes. This would speed up the test at the cost of sacrificing accuracy.
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
@@ -28,35 +66,42 @@ fn main() {
                     //println!("json_string:{}", json_string);
 
                     let mut output_string = "[".to_string();
-                    for item in json_string.entries() {
+                    for i in 0..json_string.len() {
+                        //println!("group1_id:{}", json_string[i]["group1_id"]);
+                        //println!("group2_id:{}", json_string[i]["group2_id"]);
+                        //println!("group1_values:{}", json_string[i]["group1_values"]);
+                        //println!("group2_values:{}", json_string[i]["group2_values"]);
                         let mut vec1 = Vec::<f64>::new();
                         let mut vec2 = Vec::<f64>::new();
-                        //println!("name:{}", item.0);
-                        let mut iter = 0;
-                        for array in item.1.entries() {
-                            if iter == 0 {
-                                for arr_item in array.1.members() {
-                                    vec1.push(arr_item.as_f64().unwrap());
-                                }
-                            } else if iter == 1 {
-                                for arr_item in array.1.members() {
-                                    vec2.push(arr_item.as_f64().unwrap());
-                                }
-                            }
-                            iter += 1;
+
+                        for arr_iter in 0..json_string[i]["group1_values"].len() {
+                            vec1.push(json_string[i]["group1_values"][arr_iter].as_f64().unwrap());
                         }
-                        //println!("vec1:{:?}", vec1);
-                        //println!("vec2:{:?}", vec2);
-                        let p_value = wilcoxon_rank_sum_test(
-                            vec1, vec2, THRESHOLD, 't', // two-sided test
-                        );
+                        for arr_iter in 0..json_string[i]["group2_values"].len() {
+                            vec2.push(json_string[i]["group2_values"][arr_iter].as_f64().unwrap());
+                        }
+
+                        let pvalue: f64 = format!(
+                            "{:.4}",
+                            wilcoxon_rank_sum_test(
+                                vec1.clone(),
+                                vec2.clone(),
+                                THRESHOLD,
+                                't', // two-sided test
+                            ),
+                        )
+                        .parse()
+                        .unwrap();
+                        //println!("p_value:{}", p_value);
                         output_string += &serde_json::to_string(&OutputJson {
-                            name: item.0.to_string(),
-                            p_value: p_value,
+                            group1_id: json_string[i]["group1_id"].as_str().unwrap().to_string(),
+                            group2_id: json_string[i]["group2_id"].as_str().unwrap().to_string(),
+                            group1_values: vec1,
+                            group2_values: vec2,
+                            pvalue: pvalue,
                         })
                         .unwrap();
                         output_string += &",".to_string();
-                        //println!("{},{}", item.0.to_string(), p_value);
                     }
                     output_string.pop();
                     output_string += &"]".to_string();
