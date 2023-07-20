@@ -11,6 +11,7 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
+import htmlLegend from '#dom/html.legend'
 import { mclass, dt2label, morigin } from '#shared/common'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
@@ -46,6 +47,8 @@ class Matrix {
 				}
 			}
 		})
+
+		this.tipLegendRenderer = htmlLegend(this.dom.tip.d)
 
 		// enable embedding of termsetting and tree menu inside self.dom.menu
 		this.customTipApi = this.dom.tip.getCustomApi({
@@ -130,7 +133,6 @@ class Matrix {
 			filter0: appState.termfilter.filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
-			geneVariantCountSamplesSkipMclass: this.app.vocabApi.termdbConfig.matrix?.geneVariantCountSamplesSkipMclass || [],
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig
 		}
@@ -339,7 +341,8 @@ class Matrix {
 						name: `${name}`, // convert to a string
 						id: key,
 						lst: [],
-						tw: this.config.divideBy
+						tw: this.config.divideBy,
+						legendGroups: {}
 					}
 					if (ref.bins) grp.order = ref.bins.findIndex(bin => bin.name == key)
 					sampleGroups.set(key, grp)
@@ -437,17 +440,13 @@ class Matrix {
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				const countedSamples = new Set()
-				for (const s of data.lst) {
-					if (countedSamples.has(s.sample)) continue
-					countedSamples.add(s.sample)
-					const anno = s[tw.$id]
+				// sd = sample data, s = this.settings.matrix
+				for (const sd of data.lst) {
+					if (countedSamples.has(sd.sample)) continue
+					countedSamples.add(sd.sample)
+					const anno = sd[tw.$id]
 					if (anno) {
-						const { filteredValues, countedValues, renderedValues } = this.classifyValues(
-							anno,
-							tw,
-							grp,
-							this.settings.matrix
-						)
+						const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, tw, grp, s)
 						anno.filteredValues = filteredValues
 						anno.countedValues = countedValues
 						anno.renderedValues = renderedValues
@@ -555,7 +554,7 @@ class Matrix {
 				/*** do not count wildtype and not tested as hits ***/
 				if (tw.term.type == 'geneVariant') {
 					if (v.class == 'WT' || v.class == 'Blank') return false
-					if (this.state.geneVariantCountSamplesSkipMclass.includes(v.class)) return false
+					if (s.geneVariantCountSamplesSkipMclass.includes(v.class)) return false
 				}
 				return true
 			}),
@@ -643,6 +642,7 @@ class Matrix {
 				if (!(name in processedLabels.sampleGrpByName)) {
 					sample.grp.label =
 						name.length < s.sampleGrpLabelMaxChars ? name : name.slice(0, s.sampleGrpLabelMaxChars) + '...'
+					if (this.config.divideBy) sample.grp.label += ` (${sample.grp.lst.length})`
 					processedLabels.sampleGrpByName[name] = sample.grp.label
 				}
 				const sampleName = sample.row.sampleName || sample.row.sample || ''
@@ -947,10 +947,14 @@ class Matrix {
 					if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
 
 					if (legend) {
-						if (!legendGroups[legend.group])
-							legendGroups[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
-						if (!legendGroups[legend.group].values[legend.value]) {
-							legendGroups[legend.group].values[legend.value] = legend.entry
+						for (const l of [legendGroups, so.grp.legendGroups]) {
+							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
+							const lg = l[legend.group]
+							if (!lg.values[legend.value]) {
+								lg.values[legend.value] = legend.entry
+							}
+							if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
+							lg.values[legend.value].samples.add(row.sample)
 						}
 					}
 
@@ -967,8 +971,10 @@ class Matrix {
 			serieses.push(series)
 		}
 
-		this.setLegendData(legendGroups, data.refs)
-
+		this.legendData = this.getLegendData(legendGroups, data.refs)
+		for (const grp of this.sampleGroups) {
+			grp.legendData = this.getLegendData(grp.legendGroups, data.refs)
+		}
 		return serieses
 	}
 
@@ -985,7 +991,7 @@ class Matrix {
 	}
 
 	sampleGrpLabel(s) {
-		return s.grp.label || s.grp.name
+		return s.grp.label || s.grp.name || ''
 	}
 
 	termKey(t) {
@@ -1004,7 +1010,7 @@ class Matrix {
 		return t.grp.label || t.grp.name || [{ text: '⋮', dx: 3, cls: 'sjpp-exclude-svg-download' }]
 	}
 
-	setLegendData(legendGroups, refs) {
+	getLegendData(legendGroups, refs) {
 		const s = this.settings.matrix
 		this.colorScaleByTermId = {}
 		const legendData = []
@@ -1022,7 +1028,7 @@ class Matrix {
 						return {
 							termid: 'Mutation Types',
 							key,
-							text: item.label,
+							text: item.label + ` (${item.samples.size})`,
 							color: item.fill,
 							order: i,
 							border: '1px solid #ccc'
@@ -1042,10 +1048,12 @@ class Matrix {
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						if (item.scale) {
+							let text = item.label
+							if (item.samples) text += ` (${item.samples.size})`
 							return {
 								termid: $id,
 								key,
-								text: item.label,
+								text,
 								width: 100,
 								scale: item.scale,
 								domain: item.domain,
@@ -1085,10 +1093,12 @@ class Matrix {
 					order: legend.order,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
+						let text = item.label
+						if (item.samples) text += ` (${item.samples.size})`
 						return {
 							termid: term.id,
 							key,
-							text: item.label,
+							text,
 							color: t.scale || item.fill || this.colorScaleByTermId[grp](key),
 							order: 'order' in item ? item.order : i
 						}
@@ -1097,9 +1107,7 @@ class Matrix {
 			}
 		}
 
-		this.legendData = legendData.sort((a, b) =>
-			a.order && b.order ? a.order - b.order : a.order ? -1 : b.order ? 1 : 0
-		)
+		return legendData.sort((a, b) => (a.order && b.order ? a.order - b.order : a.order ? -1 : b.order ? 1 : 0))
 	}
 }
 
