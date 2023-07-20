@@ -141,8 +141,28 @@ export async function displaySampleTable(samples, args) {
 	return renderTable(params)
 }
 
+/*
+map sampleIdxLst to sample attributes that caller wants to pick
+callback requests a set of attributes from the mds3 samples
+an attribute may need to convert the value
+*/
 async function feedSample2selectCallback(tk, block, samples, sampleIdxLst) {
-	// map sampleIdxLst to sample attributes that caller wants to pick
+	// first pass of attributes[] and perform id conversion
+	for (const attr of tk.allow2selectSamples.attributes) {
+		if (!attr.convert) continue
+		// this attr requires conversion; collect all values from all samples and call vocabApi once to convert
+		const set = new Set()
+		for (const i of sampleIdxLst) {
+			const fromValue = samples[i][attr.from]
+			if (fromValue == undefined) continue
+			set.add(fromValue)
+		}
+		if (set.size == 0) return console.log('no values collected for conversion')
+		// all pre-conversion value collected
+		attr.convertMapping = (await tk.mds.termdb.vocabApi.convertSampleId([...set])).mapping
+	}
+
+	// make one return object for every requested sample
 	const pickLst = []
 	for (const i of sampleIdxLst) {
 		const s0 = samples[i]
@@ -151,8 +171,7 @@ async function feedSample2selectCallback(tk, block, samples, sampleIdxLst) {
 			const fromValue = s0[attr.from]
 			if (fromValue == undefined) continue
 			if (attr.convert) {
-				const re = await tk.mds.termdb.vocabApi.convertSampleId([fromValue])
-				s1[attr.to] = re.mapping[fromValue]
+				s1[attr.to] = attr.convertMapping[fromValue]
 			} else {
 				// no convert
 				s1[attr.to] = fromValue
