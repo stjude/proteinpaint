@@ -155,10 +155,32 @@ class ViolinPlot {
 				chartType: 'violin',
 				settingsKey: 'plotThickness',
 				step: 10,
-				max: 150,
+				max: 500,
 				min: 60,
 				debounceInterval: 1000,
 			},
+			{
+				label: 'Median length',
+				title: 'Length of median',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'medianLength',
+				step: 1,
+				max: 15,
+				min: 3,
+				debounceInterval: 1000,
+			},
+			{
+				label: 'Median thickness',
+				title: 'Width of median',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'medianThickness',
+				step: 1,
+				max: 10,
+				min: 3,
+				debounceInterval: 100,
+			}
 		]
 
 		this.components.controls = await controlsInit({
@@ -316,7 +338,9 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
-		plotThickness: Number,
+		plotThickness: 150,
+		medianLength: 7,
+		medianThickness: 3
 	}
 	return Object.assign(defaults, overrides)
 }
