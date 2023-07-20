@@ -70,7 +70,7 @@ export function setMatrixDom(opts) {
 			.attr('class', 'sjpp-matrix-series-label-g')
 			// .on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
 			// .on('mouseup.sjppMatrixLabelText', this.disableTextHighlight)
-			.on('click', (event) => this.mouseclick(event)),
+			.on('click', event => this.mouseclick(event)),
 		/* // TODO: sample label drag to move
 			.on('mouseover', this.sampleLabelMouseover)
 			.on('mouseout', this.sampleLabelMouseout)
@@ -101,9 +101,10 @@ export function setMatrixDom(opts) {
 		scroll: mainG.append('g'),
 		//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
 		legendG: mainG.append('g'),
+		// !!! Do NOT use self.dom.tip.clear(), since it will also get rid of menutop and menubody
 		tip,
 		menutop: tip.d.append('div'),
-		menubody: tip.d.append('div'),
+		menubody: tip.d.append('div')
 	}
 
 	this.dom.tip.onHide = () => {

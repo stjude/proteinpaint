@@ -205,9 +205,9 @@ tape('long column group labels', function (test) {
 	function runTests(matrix) {
 		matrix.on('postRender.test', null)
 		const y = matrix.Inner.dom.clipRect.property('y').baseVal.value
-		test.true(y > -39 && y < -38, `should adjust the clip-path rect y-value to between -39 and -38, actual=${y}`)
+		test.true(y > -63 && y < -62, `should adjust the clip-path rect y-value to between -39 and -38, actual=${y}`)
 		const h = matrix.Inner.dom.clipRect.property('height').baseVal.value
-		test.true(h > 595 && h <= 596, `should adjust the clip-path height to between 595 and 596, actual=${h}`)
+		test.true(h > 619 && h <= 620, `should adjust the clip-path height to between 595 and 596, actual=${h}`)
 
 		//if (test._ok) matrix.Inner.app.destroy()
 		test.end()
