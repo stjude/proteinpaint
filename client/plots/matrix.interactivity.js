@@ -10,15 +10,7 @@ export function setInteractivity(self) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) {
 			const grp = event.target.__data__?.grp
-			if (grp?.legendData) {
-				const l = self.settings.matrix.controlLabels
-				const n = grp.lst.length
-				self.dom.menutop.style('text-align', 'center').html(`${grp.name} (${n} ${n < 2 ? l.sample : l.samples})`)
-				self.dom.menubody.selectAll('*').remove()
-				const div = self.dom.menubody.append('div').style('max-width', '600px').style('padding', '5px')
-				self.tipLegendRenderer(event.target.__data__.grp.legendData, { div })
-				self.dom.tip.show(event.clientX, event.clientY)
-			}
+			if (grp?.legendData) self.displaySampleGroupInfo(event, grp)
 			return
 		}
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
@@ -1104,6 +1096,46 @@ function setSampleGroupActions(self) {
 			}
 		})
 		self.dom.tip.hide()
+	}
+
+	self.displaySampleGroupInfo = (event, grp) => {
+		const l = self.settings.matrix.controlLabels
+		const n = grp.lst.length
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.menubody.selectAll('*').remove()
+		self.dom.menubody
+			.append('div')
+			.style('text-align', 'center')
+			.html(`<b>${grp.name}</b> (${n} ${n < 2 ? l.sample : l.samples})`)
+		const div = self.dom.menubody.append('div').style('max-width', '400px').style('padding', '5px')
+		for (const key in event.target.__data__.grp.legendData) {
+			const g = event.target.__data__.grp.legendData[key]
+			div.append('div').style('padding-top', '10px').html(`<b>${g.name}</b>`)
+			const t = div.append('table')
+			for (const i of g.items) {
+				const tr = t.append('tr')
+				// icon
+				tr.append('td')
+					.append('div')
+					.style('width', '12px')
+					.style('height', '12px')
+					.style('background-color', i.color)
+					.style('border', `1px soloid ${i.stroke}`)
+				tr.append('td').html(i.text)
+			}
+		}
+		self.dom.tip.show(event.clientX, event.clientY)
+	}
+
+	// TODO: may use this later to sort legend, mouseover items by count
+	self.legendItemSorter = (a, b) => {
+		if (a.order && b.order) return a.order - b.order
+		if (Number.isFinite(a.order) || b.order == -1) return -1
+		if (Number.isFinite(b.order) || a.order == -1) return 1
+		if (a.count) return b.count - a.count
+		if (Number.isFinite(a.count)) return -1
+		if (Number.isFinite(b.count)) return 1
+		return 0
 	}
 }
 
