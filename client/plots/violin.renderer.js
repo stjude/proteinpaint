@@ -39,7 +39,7 @@ export default function violinRenderer(self) {
 		}
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
-		self.data.plots = self.data.plots.filter((p) => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
+		self.data.plots = self.data.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
 		this.k2c = getColors(self.data.plots.length)
 		if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
@@ -80,7 +80,7 @@ export default function violinRenderer(self) {
 					<td style='padding:3px; color:#aaa'>${label}</td>
 					<td style='padding:3px; text-align:center'>${value}</td>
 				</tr>`
-				),
+				)
 			]
 		}
 
@@ -110,7 +110,7 @@ export default function violinRenderer(self) {
 				: t1
 
 		//hide p-values for categories that are hidden
-		self.data.pvalues = self.data.pvalues.filter((arr) => {
+		self.data.pvalues = self.data.pvalues.filter(arr => {
 			for (let i = 0; i < arr.length; i++) {
 				if (typeof arr[i].value === 'string') {
 					if (termNum.q?.hiddenValues && arr[i].value in termNum.q.hiddenValues) {
@@ -138,7 +138,7 @@ export default function violinRenderer(self) {
 			showLines: false,
 			maxWidth: '27vw',
 			maxHeight: '20vh',
-			resize: true,
+			resize: true
 		})
 	}
 
@@ -211,7 +211,7 @@ export default function violinRenderer(self) {
 			.classed(settings.unit === 'log' ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
 		const ticks =
-			settings.unit === 'log' ? svg.axisScale.ticks().filter((tick) => tick > 0 || tick < 0) : svg.axisScale.ticks()
+			settings.unit === 'log' ? svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0) : svg.axisScale.ticks()
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
@@ -273,7 +273,7 @@ export default function violinRenderer(self) {
 
 	function renderLabels(t1, t2, violinG, plot, isH, settings, tip) {
 		// create scale label
-		const label = violinG
+		violinG
 			.append('text')
 			.classed('sjpp-axislabel', true)
 			.text(`${plot.label}, n=${plot.plotValueCount}`)
@@ -311,20 +311,20 @@ export default function violinRenderer(self) {
 		let areaBuilder
 		if (isH) {
 			areaBuilder = area()
-				.y0((d) => wScale(-d.binValueCount))
-				.y1((d) => wScale(d.binValueCount))
-				.x((d) => svg.axisScale(d.x0))
+				.y0(d => wScale(-d.binValueCount))
+				.y1(d => wScale(d.binValueCount))
+				.x(d => svg.axisScale(d.x0))
 				.curve(curveBumpX)
 		} else {
 			areaBuilder = area()
-				.x0((d) => wScale(-d.binValueCount))
-				.x1((d) => wScale(d.binValueCount))
-				.y((d) => svg.axisScale(d.x0))
+				.x0(d => wScale(-d.binValueCount))
+				.x1(d => wScale(d.binValueCount))
+				.y(d => svg.axisScale(d.x0))
 				.curve(curveBumpY)
 		}
 		const label = plot.label.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
-		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find((o) => o.label == label) : null
+		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
 		const color = category?.color ? category.color : plot.divideTwBins ? plot.divideTwBins.color : self.k2c(plotIdx)
 		violinG
 			.append('path')
@@ -338,7 +338,7 @@ export default function violinRenderer(self) {
 			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
-		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg)
+		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg, self)
 		renderLines(violinG, isH, self.config.settings.violin.lines, svg)
 	}
 
@@ -355,7 +355,8 @@ export default function violinRenderer(self) {
 			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
 	}
 
-	function renderMedian(violinG, isH, plot, svg) {
+	function renderMedian(violinG, isH, plot, svg, self) {
+		const s = self.config.settings.violin
 		//render median values on plots
 		if (plot.plotValueCount >= 2) {
 			violinG
@@ -365,13 +366,13 @@ export default function violinRenderer(self) {
 				// .duration(30)
 				.style('opacity', 1)
 				.attr('class', 'sjpp-median-line')
-				.style('stroke-width', '5')
+				.style('stroke-width', s.medianThickness)
 				.style('stroke', 'red')
 				.style('opacity', '1')
-				.attr('y1', isH ? -7 : svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value))
-				.attr('y2', isH ? 7 : svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value))
-				.attr('x1', isH ? svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value) : -7)
-				.attr('x2', isH ? svg.axisScale(plot.summaryStats.values.find((x) => x.id === 'median').value) : 7)
+				.attr('y1', isH ? -s.medianLength : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
+				.attr('y2', isH ? s.medianLength : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
+				.attr('x1', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : -s.medianLength)
+				.attr('x2', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : s.medianLength)
 		} else return
 	}
 
@@ -405,9 +406,9 @@ export default function violinRenderer(self) {
 						? brushX()
 								.extent([
 									[0, -20],
-									[settings.svgw, 20],
+									[settings.svgw, 20]
 								])
-								.on('end', async (event) => {
+								.on('end', async event => {
 									const selection = event.selection
 
 									if (!selection) return
@@ -417,9 +418,9 @@ export default function violinRenderer(self) {
 						: brushY()
 								.extent([
 									[-20, 0],
-									[20, settings.svgw],
+									[20, settings.svgw]
 								])
-								.on('end', async (event) => {
+								.on('end', async event => {
 									const selection = event.selection
 
 									if (!selection) return
@@ -451,10 +452,10 @@ export function createNumericScale(self, settings, isH) {
 	settings.unit == 'log'
 		? (axisScale = scaleLog()
 				.base(self.app.vocabApi.termdbConfig.logscaleBase2 ? 2 : 10)
-				.domain([self.data.min, self.data.max + self.data.max])
+				.domain([self.data.min, self.data.max])
 				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 		: (axisScale = scaleLinear()
-				.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
+				.domain([self.data.min, self.data.max])
 				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 	return axisScale
 }
@@ -490,10 +491,10 @@ function getLegendGrps(termNum, self) {
 
 function addDescriptiveStats(term, legendGrps, headingStyle) {
 	if (term?.q.descrStats) {
-		const items = term.q.descrStats.map((stat) => {
+		const items = term.q.descrStats.map(stat => {
 			return {
 				text: `${stat.label}: ${stat.value}`,
-				noIcon: true,
+				noIcon: true
 			}
 		})
 		const title = `Descriptive statistics: ${term.term.name}`
@@ -509,7 +510,7 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 			if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
 				items.push({
 					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
-					noIcon: true,
+					noIcon: true
 				})
 			}
 		}
@@ -527,7 +528,7 @@ function addHiddenValues(term, legendGrps, headingStyle) {
 			text: `${key}`,
 			noIcon: true,
 			isHidden: true,
-			hiddenOpacity: 1,
+			hiddenOpacity: 1
 		})
 	}
 	const title = `${term.term.name}`

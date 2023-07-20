@@ -281,11 +281,11 @@ function createCanvasImg(q, result, ds) {
 	if (useLog) {
 		axisScale = scaleLog()
 			.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)
-			.domain([result.min, result.max + result.max])
+			.domain([result.min, result.max])
 			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 	} else {
 		axisScale = scaleLinear()
-			.domain([result.min, result.max + result.max / refSize])
+			.domain([result.min, result.max])
 			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 	}
 
