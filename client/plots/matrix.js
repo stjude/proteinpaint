@@ -48,7 +48,13 @@ class Matrix {
 			}
 		})
 
-		this.tipLegendRenderer = htmlLegend(this.dom.tip.d)
+		this.tipLegendRenderer = htmlLegend(this.dom.tip.d, {
+			settings: {
+				legendTextAlign: 'left',
+				mainWidth: '85%'
+			},
+			handlers: {}
+		})
 
 		// enable embedding of termsetting and tree menu inside self.dom.menu
 		this.customTipApi = this.dom.tip.getCustomApi({
@@ -948,6 +954,7 @@ class Matrix {
 
 					if (legend) {
 						for (const l of [legendGroups, so.grp.legendGroups]) {
+							if (!l) continue
 							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
 							const lg = l[legend.group]
 							if (!lg.values[legend.value]) {
@@ -1025,10 +1032,11 @@ class Matrix {
 					order: legend.order,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
+						const note = s.geneVariantCountSamplesSkipMclass.includes(key) ? '  not counted' : ''
 						return {
 							termid: 'Mutation Types',
 							key,
-							text: item.label + ` (${item.samples.size})`,
+							text: item.label + ` (${item.samples.size}${note})`,
 							color: item.fill,
 							order: i,
 							border: '1px solid #ccc'
@@ -1049,7 +1057,10 @@ class Matrix {
 						const item = legend.values[key]
 						if (item.scale) {
 							let text = item.label
-							if (item.samples) text += ` (${item.samples.size})`
+							if (item.samples) {
+								const note = 1 || s.geneVariantCountSamplesSkipMclass.includes(item.key) ? '  not counted' : ''
+								text += ` (${item.samples.size}${note})`
+							}
 							return {
 								termid: $id,
 								key,
@@ -1094,7 +1105,10 @@ class Matrix {
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						let text = item.label
-						if (item.samples) text += ` (${item.samples.size})`
+						if (item.samples) {
+							const note = s.geneVariantCountSamplesSkipMclass.includes(key) ? '  not counted' : ''
+							text += ` (${item.samples.size}${note})`
+						}
 						return {
 							termid: term.id,
 							key,

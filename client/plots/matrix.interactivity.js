@@ -10,9 +10,13 @@ export function setInteractivity(self) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) {
 			const grp = event.target.__data__?.grp
-			if (grp.legendData) {
-				//self.dom.menutop.html(grp.name)
-				self.tipLegendRenderer(event.target.__data__.grp.legendData)
+			if (grp?.legendData) {
+				const l = self.settings.matrix.controlLabels
+				const n = grp.lst.length
+				self.dom.menutop.style('text-align', 'center').html(`${grp.name} (${n} ${n < 2 ? l.sample : l.samples})`)
+				self.dom.menubody.selectAll('*').remove()
+				const div = self.dom.menubody.append('div').style('max-width', '600px').style('padding', '5px')
+				self.tipLegendRenderer(event.target.__data__.grp.legendData, { div })
 				self.dom.tip.show(event.clientX, event.clientY)
 			}
 			return
