@@ -62,10 +62,15 @@ export async function convertSampleId_addGetter(tdb) {
 	tdb.convertSampleId.get = async inputs => {
 		const old2new = {}
 		// FIXME very slow to query per input; may cache aliquot-to-caseid mapping along with aliquot-to-submitter
+		const promises = []
 		for (const old of inputs) {
-			const id = await convert2caseId(old)
-			old2new[old] = id
+			const id = promises.push(
+				convert2caseId(old).then(id => {
+					old2new[old] = id
+				})
+			)
 		}
+		await Promise.all(promises)
 		return old2new
 	}
 }

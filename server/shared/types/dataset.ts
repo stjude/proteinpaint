@@ -476,6 +476,7 @@ type Termdb = {
 	//Terms
 	termIds?: TermIds
 	displaySampleIds?: boolean
+	converSampleIds?: boolean
 	allowedTermTypes?: string[]
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
