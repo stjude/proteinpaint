@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.19.2
+
+Fixes
+- Use import() instead of require() for dynamic import, so that rollup can bundle properly
+ 
 ## 2.19.1
 
 Enhancements
