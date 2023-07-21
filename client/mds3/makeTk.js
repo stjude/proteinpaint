@@ -855,7 +855,7 @@ function validateSelectSamples(tk) {
 	if (!a) return
 	if (!a.buttonText) a.buttonText = 'Select samples'
 	if (typeof a.buttonText != 'string') throw 'allow2selectSamples.buttonText value is not string'
-	if (!a.attributes) a.attributes = ['sample_id']
+	if (!a.attributes) a.attributes = [{ from: 'sample_id', to: 'sample_id' }]
 	if (!Array.isArray(a.attributes)) throw 'allow2selectSamples.attributes[] is not array'
 	if (a.attributes.length == 0) throw 'allow2selectSamples.attributes[] blank array'
 	for (const i of a.attributes) {
