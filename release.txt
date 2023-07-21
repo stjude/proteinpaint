@@ -1,0 +1,2 @@
+Fixes
+- Use import() instead of require() for dynamic import, so that rollup can bundle properly
