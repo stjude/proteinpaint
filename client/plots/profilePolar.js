@@ -44,7 +44,7 @@ class profilePolar {
 			this.regions.push({ key: region.name, label: region.name })
 			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
 		}
-
+		this.sampleData = null
 		for (const k in this.data.samples) {
 			const sample = this.data.samples[k]
 			if (this.config.sampleName && sample.sampleName == this.config.sampleName) this.sampleData = sample
@@ -68,17 +68,15 @@ class profilePolar {
 			.data(this.regions)
 			.enter()
 			.append('option')
-			.property('selected', d => d.key == config.sampleName)
+			.property('selected', d => d.key == config.region)
 			.attr('value', d => d.key)
 			.html((d, i) => d.label)
 
 		regionSelect.on('change', () => {
 			config.region = regionSelect.node().value
 
-			if (config.region != 'Global') {
-				config.sampleName = config.region
-				config.income = 'Global'
-			}
+			config.sampleName = config.region
+			config.income = 'Global'
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
@@ -89,15 +87,13 @@ class profilePolar {
 			.data(this.incomes)
 			.enter()
 			.append('option')
-			.property('selected', d => d == config.sampleName)
+			.property('selected', d => d == config.income)
 			.html((d, i) => d)
 
 		incomeSelect.on('change', () => {
 			config.income = incomeSelect.node().value
-			if (config.income != '') {
-				config.sampleName = config.income
-				config.region = 'Global'
-			}
+			config.sampleName = config.income
+			config.region = 'Global'
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
