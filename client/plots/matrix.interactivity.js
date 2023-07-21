@@ -1087,6 +1087,8 @@ function setSampleGroupActions(self) {
 	}
 
 	self.removeSampleGroup = () => {
+		// this should not happen, but making sure
+		if (!self.config.divideBy) return
 		const divideBy = JSON.parse(JSON.stringify(self.config.divideBy))
 		if (!divideBy.exclude) divideBy.exclude = []
 		divideBy.exclude.push(self.activeLabel.grp.id)
@@ -1141,7 +1143,7 @@ function setSampleGroupActions(self) {
 	}
 
 	self.handleLegendItemClick = d => {
-		const dvt = structuredClone(self.config.divideBy)
+		const dvt = structuredClone(self.config.divideBy || {})
 		const id = 'id' in dvt ? dvt.id : dvt.name
 		if (d.termid == id) {
 			if (!dvt.exclude) dvt.exclude = []
@@ -1159,7 +1161,7 @@ function setSampleGroupActions(self) {
 	}
 
 	self.handleLegendMouseover = (event, d) => {
-		const dvt = structuredClone(self.config.divideBy)
+		const dvt = structuredClone(self.config.divideBy || {})
 		const id = 'id' in dvt ? dvt.id : dvt.name
 		if (d.termid == id) {
 			self.dom.menutop.selectAll('*').remove()
