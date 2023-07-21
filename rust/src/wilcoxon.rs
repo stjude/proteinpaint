@@ -3,11 +3,20 @@
 # Wilcoxon rank sum test #
 ##########################
 
+##########################
+# Documentation
+##########################
+
+This implementation is based on the book Nonparametric Statistical Analysis (page 115). The advantage of this implementation is that it can even calculate p-values in case of TIES (where same number is repeated in both input vectors or within same vector). See page 124.
+Book link: https://onlinelibrary.wiley.com/doi/epdf/10.1002/9781119196037
+
 #########
 # Usage #
 #########
 
 # Usage: cd .. && cargo build --release && time echo '[{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"African Ancestry","group2_values":[11.5,5.1,21.1,4.4,-0.04]},{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"Asian Ancestry","group2_values":[1.7]},{"group1_id":"African Ancestry","group1_values":[11.5,5.1,21.1,4.4,-0.04],"group2_id":"Asian Ancestry","group2_values":[]}]' | target/release/wilcoxon
+
+# Test example 1: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[22.3950723737944,33.8227081589866,45.1407992918976,28.3479649920482,18.2336819062475,4.32351183332503,11.9014307267498,48.0554144773632,14.9064014137257,11.2484716628678,42.857265946921,6.14226084970869,13.765204195166,23.7536687662359,35.0198161723092,30.1217778825667,1.55535256816074,38.5163993313909,34.6145691110287,8.42882150504738],"group2_id":"group2","group2_values":[35.3232058370486,38.4726115851663,63.7901770556346,63.6540996702388,54.1668611462228,86.2734804977663,87.4467799020931,71.2533111660741,90.7283631013706,36.3230113568716,33.9395571127534,92.234949907288,77.9833765677176,43.5002030362375,79.9727810896002,37.503333974164,39.9319424736314,33.0334767652676,47.5299863377586,80.9905858896673]}]' | target/release/wilcoxon
 
 # Input data is in JSON format and is read in from <in.json> file.
 # Results are written in JSON format to stdout.
@@ -58,7 +67,8 @@ fn main() {
         Ok(_n) => {
             //println!("{} bytes read", n);
             //println!("input:{}", input);
-            const THRESHOLD: usize = 50; // Decrease this number so as to invoke the normal approximation for lower sample sizes. This would speed up the test at the cost of sacrificing accuracy.
+            const MIN_THRESHOLD: usize = 10; // Decrease this number so as to invoke the normal approximation for lower sample sizes. This would speed up the test at the cost of sacrificing accuracy.
+            const MAX_THRESHOLD: usize = 1000;
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
@@ -99,17 +109,17 @@ fn main() {
                             .unwrap();
                             output_string += &",".to_string();
                         } else {
-                            let pvalue: f64 = format!(
-                                "{:.4}",
-                                wilcoxon_rank_sum_test(
-                                    vec1.clone(),
-                                    vec2.clone(),
-                                    THRESHOLD,
-                                    't', // two-sided test
-                                ),
-                            )
-                            .parse()
-                            .unwrap();
+                            let mut pvalue: f64 = wilcoxon_rank_sum_test(
+                                vec1.clone(),
+                                vec2.clone(),
+                                MIN_THRESHOLD,
+                                MAX_THRESHOLD,
+                                't', // two-sided test
+                            );
+
+                            if pvalue > 0.0001 {
+                                pvalue = format!("{:.4}", pvalue).parse().unwrap();
+                            }
                             //println!("p_value:{}", p_value);
                             output_string += &serde_json::to_string(&OutputJson {
                                 group1_id: json_string[i]["group1_id"]
@@ -142,7 +152,8 @@ fn main() {
 fn wilcoxon_rank_sum_test(
     mut group1: Vec<f64>,
     mut group2: Vec<f64>,
-    threshold: usize,
+    min_threshold: usize,
+    max_threshold: usize,
     alternative: char,
 ) -> f64 {
     // Check if there are any ties between the two groups
@@ -261,7 +272,9 @@ fn wilcoxon_rank_sum_test(
 
     //println!("test_statistic:{}", test_statistic);
 
-    if group1.len() <= threshold || group2.len() <= threshold {
+    if (group1.len() <= min_threshold && group2.len() < max_threshold)
+        || (group2.len() <= min_threshold && group1.len() < max_threshold)
+    {
         // Compute exact p-values
 
         // Calculate conditional probability for weight_y
@@ -394,25 +407,31 @@ fn wilcoxon_rank_sum_test(
                 / 12.0;
         //let w_starred = (weight_y - expected_w) / variance_w.sqrt();
         let n = Normal::new(expected_w, variance_w.sqrt()).unwrap();
+        //println!("n:{:?}", n);
         //println!("w_starred:{}", w_starred);
         //normal_distribution(w_starred)
 
         if alternative == 'g' {
             // Alternative "greater"
+            //println!("greater:{}", n.cdf(weight_y));
             n.cdf(weight_y)
         } else if alternative == 'l' {
             // Alternative "lesser"
+            //println!("lesser:{}", n.cdf(weight_x));
             n.cdf(weight_x)
         } else {
             // Alternative "two-sided"
             let p_g = n.cdf(weight_y);
+            //println!("greater:{}", p_g);
             let p_l = n.cdf(weight_x);
+            //println!("lesser:{}", p_l);
             let mut p_value;
             if p_g < p_l {
                 p_value = 2.0 * p_g; // Multiplied by 2 to account for two-sided p-value
             } else {
                 p_value = 2.0 * p_l; // Multiplied by 2 to account for two-sided p-value
             }
+            //println!("p_value:{}", p_value);
             if p_value > 1.0 {
                 p_value = 1.0;
             }
