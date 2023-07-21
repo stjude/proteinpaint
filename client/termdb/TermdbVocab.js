@@ -909,15 +909,66 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('gdc_filter2topGenes', { method: 'GET', body: arg })
 	}
 
-	async convertSampleId(inputs) {
-		return await dofetch3('termdb', {
-			body: {
-				for: 'convertSampleId',
-				inputs,
-				genome: this.state.vocab.genome,
-				dslabel: this.state.vocab.dslabel
+	/* 
+		samples[]					!!! CRITICAL: the samples data must not be modified !!!
+			sample{} 			  the source sample object, will not be changed directly
+				[attr.from]   any collection of keys from the attributes[] argument
+
+		attributes[]
+			.attr{}
+				.from         string, the object to map from, required
+				.to           string, the object to map to, optional
+				.convert      optional step, somehow the caller must know this is needed?
+	*/
+	async convertSampleId(samples, attributes) {
+		// first pass of attributes[] and perform id conversion
+		const byAttr = new Map()
+		const bySample = []
+		// !!! do NOT modify the sample object or samples array
+		for (const sample of samples) {
+			const obj = {}
+			bySample.push(obj)
+			for (const attr of attributes) {
+				if (!('to' in attr)) attr.to = attr.from
+				if (!attr.convert) {
+					// can be filled-in without a server request
+					obj[attr.to] = sample[attr.from]
+					continue
+				}
+				// this attr requires conversion;
+				// collect all values from all samples and later call server for each attribute? //once to convert
+				if (!byAttr.has(attr)) byAttr.set(attr, {})
+				const fromValMap = byAttr.get(attr)
+				const v = sample[attr.from]
+				if (!fromValMap[v]) fromValMap[v] = []
+				fromValMap[v].push({ obj, sample })
 			}
-		})
+		}
+
+		// perform the required conversion of sample attributes
+		const promises = []
+		for (const [attr, fromValMap] of byAttr) {
+			const inputs = Object.keys(fromValMap)
+			promises.push(
+				await dofetch3('termdb', {
+					body: {
+						for: 'convertSampleId',
+						inputs,
+						genome: this.state.vocab.genome,
+						dslabel: this.state.vocab.dslabel
+					}
+				}).then(r => {
+					for (const v of inputs) {
+						for (const { sample, obj } of fromValMap[v]) {
+							obj[attr.to] = r.mapping[v]
+						}
+					}
+				})
+			)
+		}
+
+		await Promise.all(promises)
+		return bySample
 	}
 }
 

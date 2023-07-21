@@ -1591,34 +1591,23 @@ function setZoomPanActions(self) {
 					},
 					{
 						label: ss.buttonText || `Select ${l.Samples}`,
-						callback: () => {
+						callback: async () => {
 							const c = self.clickedSeriesCell
 							delete self.clickedSeriesCell
 							const d = self.dimensions
 							const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
-
 							const xy = self.zoomArea.attr('transform').split('(')[1].split(')')[0].split(',').map(Number)
 							const xMin = xy[0]
 							const xMax = xMin + self.zoomWidth
 							const processed = new Set()
 							const filter = c => c.row && c.x >= xMin && c.x <= xMax
-							const samples = []
+							const addRow = c => samples.add(c.row)
+							const samples = new Set()
 							for (const series of self.serieses) {
-								series.cells.filter(filter).forEach(d => {
-									const obj = {}
-									for (const a of ss.attributes) {
-										if (!('to' in a)) a.to = a.from
-										// TODO: may need to support a.convert later, not supported right now
-										obj[a.to] = d.row[a.from]
-									}
-									const sid = Object.values(obj).join(';;')
-									if (processed.has(sid)) return
-									processed.add(sid)
-									samples.push(obj)
-								})
+								series.cells.filter(filter).forEach(addRow)
 							}
 							ss.callback({
-								samples,
+								samples: await self.app.vocabApi.convertSampleId([...samples], ss.attributes),
 								source: `Selected ${l.samples} from OncoMatrix`
 							})
 							self.zoomArea.remove()
