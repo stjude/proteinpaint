@@ -114,7 +114,7 @@ export default class DataMapper {
 		}
 
 		if (this.nonExonicSnvData.length > 0) {
-			this.nonExonicInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+			this.nonExonicInnerRadius = this.lastInnerRadious - this.settings.rings.nonExonicRingWidth
 			this.lastInnerRadious = this.nonExonicInnerRadius
 		}
 
@@ -127,7 +127,7 @@ export default class DataMapper {
 		})
 
 		if (this.lohData.length > 0) {
-			this.lohInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+			this.lohInnerRadius = this.lastInnerRadious - this.settings.rings.lohRingWidth
 			this.lastInnerRadious = this.lohInnerRadius
 		}
 
@@ -136,7 +136,7 @@ export default class DataMapper {
 		})
 
 		if (this.cnvData.length > 0) {
-			this.cnvInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+			this.cnvInnerRadius = this.lastInnerRadious - this.settings.rings.cnvRingWidth
 			this.lastInnerRadious = this.cnvInnerRadius
 		}
 
@@ -205,7 +205,7 @@ export default class DataMapper {
 
 			if (this.snvRingFilter(data)) {
 				if (this.snvInnerRadius == 0) {
-					this.snvInnerRadius = this.lastInnerRadious - this.settings.rings.ringWidth
+					this.snvInnerRadius = this.lastInnerRadious - this.settings.rings.snvRingWidth
 					this.lastInnerRadious = this.snvInnerRadius
 
 					// number of base pairs per pixel
