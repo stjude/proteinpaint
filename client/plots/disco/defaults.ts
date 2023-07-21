@@ -4,7 +4,10 @@ import { copyMerge } from '#rx'
 export default function discoDefaults(overrides = {}): Settings {
 	const defaults = {
 		rings: {
-			ringWidth: 20,
+			nonExonicRingWidth: 20,
+			snvRingWidth: 20,
+			lohRingWidth: 20,
+			cnvRingWidth: 30,
 
 			cnvCapping: 5,
 			cnvUnit: 'Cnv Unit',

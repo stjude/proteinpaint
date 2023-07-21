@@ -3,8 +3,6 @@ export default interface Settings {
 	horizontalPadding: number
 
 	rings: {
-		ringWidth: number
-
 		cnvCapping: number
 		cnvUnit: string
 
@@ -14,6 +12,11 @@ export default interface Settings {
 
 		chromosomeWidth: number
 		chromosomeInnerRadius: number
+
+		nonExonicRingWidth: number
+		snvRingWidth: number
+		lohRingWidth: number
+		cnvRingWidth: number
 
 		labelsToLinesGap: number
 		labelsToLinesDistance: number

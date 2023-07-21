@@ -64,7 +64,7 @@ export default class Disco {
 		)
 		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer(geneClickListener)
-		const snvRenderer = new SnvRenderer(settings.rings.ringWidth, geneClickListener)
+		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)
 		const cnvRenderer = new CnvRenderer(settings.menu.padding)
 		const lohRenderer = new LohRenderer()
 

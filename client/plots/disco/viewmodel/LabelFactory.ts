@@ -2,7 +2,6 @@ import Label from './Label'
 import Point from './Point'
 import Line from './Line'
 import MutationTooltip from '#plots/disco/viewmodel/MutationTooltip.ts'
-import { arc } from 'd3'
 import FusionTooltip from '#plots/disco/viewmodel/FusionTooltip.ts'
 
 export default class LabelFactory {
