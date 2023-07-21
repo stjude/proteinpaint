@@ -254,7 +254,7 @@ class ViolinPlot {
 				this.render()
 				this.renderPvalueTable()
 			},
-			this.opts.mode == 'minimal' ? 0 : 800
+			this.opts.mode == 'minimal' ? 0 : 500
 		)
 		this.toggleLoadingDiv('none')
 	}
