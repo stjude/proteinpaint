@@ -15,7 +15,6 @@ import Reference from './Reference.ts'
 import Legend from '../viewmodel/Legend.ts'
 import FusionMapper from './FusionMapper.ts'
 import LohLegend from '../viewmodel/LohLegend.ts'
-import Data from './Data.ts'
 import ViewModel from '../viewmodel/ViewModel.ts'
 
 export default class ViewModelProvider {

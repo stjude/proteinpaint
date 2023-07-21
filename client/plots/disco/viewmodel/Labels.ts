@@ -3,7 +3,7 @@ import Label from './Label'
 import LabelFactory from './LabelFactory'
 import Settings from '../Settings.ts'
 
-export default class Labels<T extends Label> extends Ring<Label> {
+export default class Labels extends Ring<Label> {
 	collisions?: Array<Label>
 	settings: any
 	elementsToDisplay: Array<Label> = []

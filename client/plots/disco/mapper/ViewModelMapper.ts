@@ -1,9 +1,7 @@
 import ViewModel from '../viewmodel/ViewModel'
-import discoDefaults from '../defaults.ts'
 import Reference from './Reference'
 import DataMapper from './DataMapper'
 import Settings from '../Settings.ts'
-import Data from './Data'
 import ViewModelProvider from './ViewModelProvider.ts'
 
 export class ViewModelMapper {
