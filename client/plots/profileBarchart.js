@@ -42,7 +42,7 @@ class profileBarchart {
 			terms: twLst
 		})
 		this.regions = [{ key: 'Global', label: 'Global' }]
-		this.incomes = ['Global']
+		this.incomes = ['']
 		this.incomes.push(...this.config.incomes)
 
 		for (const region of this.config.regions) {
@@ -110,7 +110,7 @@ class profileBarchart {
 		incomeSelect.on('change', () => {
 			config.income = incomeSelect.node().value
 			config.sampleName = config.income
-			config.region = 'Global'
+			config.region = ''
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
