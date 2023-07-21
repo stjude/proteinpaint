@@ -31,93 +31,98 @@ class profilePolar {
 				twLst.push(tw)
 			}
 		}
+		twLst.push(this.config.typeTW)
+
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
+		this.regions = ['']
+		this.incomes = ['']
+		this.countries = ['']
+
+		this.region = this.config.region || this.regions[0]
+		this.income = this.config.income || this.incomes[0]
+		this.country = this.config.country || this.countries[0]
+
+		for (const k in this.data.samples) {
+			const sample = this.data.samples[k]
+
+			if (sample[this.config.typeTW.$id]?.value == 'Country') this.countries.push(sample.sampleName)
+			else if (sample[this.config.typeTW.$id]?.value == 'WHO region') this.regions.push(sample.sampleName)
+			else if (sample[this.config.typeTW.$id]?.value == 'Income group') this.incomes.push(sample.sampleName)
+			if (this.config.sampleName && sample.sampleName == this.config.sampleName) this.sampleData = sample
+		}
 		this.plot()
 	}
 
 	plot() {
 		const config = this.config
-		let data
 		this.dom.holder.selectAll('*').remove()
-		const samples = []
-
-		for (const k in this.data.samples) {
-			if (!config.sampleName && k == 0) data = this.data.samples[k]
-			if (config.sampleName && this.data.samples[k].sampleName == config.sampleName) data = this.data.samples[k]
-			samples.push(this.data.samples[k].sampleName)
-		}
 
 		const holder = this.dom.holder.append('div')
-
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
-
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
-		if (samples.length == 0) return
-		// div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
-		// const select = div.append('select').style('margin-left', '5px')
-		// select
-		// 	.selectAll('option')
-		// 	.data(samples)
-		// 	.enter()
-		// 	.append('option')
-		// 	.property('selected', d => d == config.sampleName)
-		// 	.html((d, i) => d)
-
-		// select.on('change', () => {
-		// 	config.sampleName = select.node().value
-		// 	this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		// })
-
-		div.append('label').style('margin-left', '15px').html('Country:').style('font-weight', 'bold')
-		const countries = ['Mexico', 'Philipines', 'China', 'Brazil', 'Egypt', 'Iraq', 'Oman', 'Syria']
-		const countrySelect = div.append('select').style('margin-left', '5px')
-		countrySelect
-			.selectAll('option')
-			.data(countries)
-			.enter()
-			.append('option')
-			.property('selected', d => d == config.country)
-			.html((d, i) => d)
-
-		countrySelect.on('change', () => {
-			config.country = countrySelect.node().value
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-
 		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
-		const regions = ['AMR', 'SEAR', 'WPR', 'AFR', 'EMR', 'EUR']
 		const regionSelect = div.append('select').style('margin-left', '5px')
 		regionSelect
 			.selectAll('option')
-			.data(regions)
+			.data(this.regions)
 			.enter()
 			.append('option')
-			.property('selected', d => d == config.region)
+			.property('selected', d => d == config.sampleName)
 			.html((d, i) => d)
 
 		regionSelect.on('change', () => {
 			config.region = regionSelect.node().value
+			if (config.region != '') {
+				config.sampleName = config.region
+				config.country = ''
+				config.income = ''
+			}
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
-
 		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
-		const incomeGroups = ['Upper middle income', 'Lower middle income', 'High income', 'Low income']
 		const incomeSelect = div.append('select').style('margin-left', '5px')
 		incomeSelect
 			.selectAll('option')
-			.data(incomeGroups)
+			.data(this.incomes)
 			.enter()
 			.append('option')
-			.property('selected', d => d == config.incomeGroup)
+			.property('selected', d => d == config.sampleName)
 			.html((d, i) => d)
 
 		incomeSelect.on('change', () => {
-			config.incomeGroup = countrySelect.node().value
+			config.income = incomeSelect.node().value
+			if (config.income != '') {
+				config.sampleName = config.income
+				config.region = ''
+				config.country = ''
+			}
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+
+		div.append('label').style('margin-left', '15px').html('Country:').style('font-weight', 'bold')
+		const select = div.append('select').style('margin-left', '5px')
+		select
+			.selectAll('option')
+			.data(this.countries)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.sampleName)
+			.html((d, i) => d)
+
+		select.on('change', () => {
+			config.country = select.node().value
+			if (config.country != '') {
+				config.sampleName = select.node().value
+				config.region = ''
+				config.income = ''
+			}
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
+		if (!this.sampleData) return
 
 		// Create a polar grid.
 		const radius = 250
@@ -131,7 +136,7 @@ class profilePolar {
 		const angle = (Math.PI * 2) / config.terms.length
 		let i = 0
 		for (const d of config.terms) {
-			const percentage = data[d.$id]?.value
+			const percentage = this.sampleData[d.$id]?.value
 
 			polarG
 				.append('g')
@@ -210,6 +215,7 @@ export async function getPlotConfig(opts, app) {
 		for (const t of config.terms) {
 			if (t.id) await fillTermWrapper(t, app.vocabApi)
 		}
+		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
 		return config
 	} catch (e) {
 		throw `${e} [profilePolar getPlotConfig()]`
