@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
-import { rgb } from 'd3-color'
 
 class profilePolar {
 	constructor() {
@@ -37,7 +36,7 @@ class profilePolar {
 			terms: twLst
 		})
 		this.regions = [{ key: 'Global', label: 'Global' }]
-		this.incomes = ['Global']
+		this.incomes = ['']
 		this.incomes.push(...this.config.incomes)
 
 		for (const region of this.config.regions) {
@@ -76,7 +75,7 @@ class profilePolar {
 			config.region = regionSelect.node().value
 
 			config.sampleName = config.region
-			config.income = 'Global'
+			config.income = ''
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
