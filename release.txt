@@ -1,0 +1,2 @@
+Fixes:
+- Selecting hundreds of samples from GDC lollipop no longer hangs or crashes (using a cached mapping to case uuid)
