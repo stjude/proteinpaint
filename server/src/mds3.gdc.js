@@ -58,19 +58,12 @@ thus need to define the "apihost" as global variables in multiple places
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
-export async function convertSampleId_addGetter(tdb) {
-	tdb.convertSampleId.get = async inputs => {
+export function convertSampleId_addGetter(tdb, ds) {
+	tdb.convertSampleId.get = inputs => {
 		const old2new = {}
-		// FIXME very slow to query per input; may cache aliquot-to-caseid mapping along with aliquot-to-submitter
-		const promises = []
 		for (const old of inputs) {
-			const id = promises.push(
-				convert2caseId(old).then(id => {
-					old2new[old] = id
-				})
-			)
+			old2new[old] = ds.map2caseid.get(old) || old
 		}
-		await Promise.all(promises)
 		return old2new
 	}
 }
@@ -1716,7 +1709,12 @@ export function validate_query_singleSampleMutation(ds, genome) {
 		do the conversion here on the fly so that no need for client to manage these extra, arbitrary ids that's specific for gdc
 		beyond sample.sample_id for display
 		*/
-		q.case_id = await convert2caseId(sampleName)
+		q.case_id = ds.map2caseid.get(sampleName)
+		if (!q.case_id) {
+			// not mapped to case id
+			// this is possible when the server just started and hasn't finished caching. thus must call this method to map
+			q.case_id = await convert2caseId(sampleName)
+		}
 		return await getSingleSampleMutations(q, ds, genome)
 	}
 }
@@ -1726,7 +1724,7 @@ async function convert2caseId(n) {
 	convert all below to case.case_id
 	- case submitter id (TCGA-FR-A44A)
 	- aliquot id (d835e9c7-de84-4acd-ba30-516f396cbd84)
-	- aliquot submitter id (TCGA-B5-A1MR-01A)
+	- sample submitter id (TCGA-B5-A1MR-01A)
 	*/
 	const response = await got.post(
 		'https://api.gdc.cancer.gov/cases', //path.join(apihost, 'cases'), TODO chane to apihost

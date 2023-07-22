@@ -671,25 +671,39 @@ async function testGraphqlApi(url) {
 	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
 }
 
+/*
+cache things
+*/
 async function cacheAliquot2submitterMapping(ds) {
-	try {
-		ds.aliquot2submitter = {
-			cache: new Map(),
-			get: async aliquot_id => {
-				if (ds.aliquot2submitter.cache.has(aliquot_id)) return ds.aliquot2submitter.cache.get(aliquot_id)
+	// create new attr to map to sample submitter id; it will only map from aliquot id to this id,
+	// as this mapping is only used in mds3 tk, which shows ssm on samples but not cases
+	ds.aliquot2submitter = {
+		cache: new Map(),
+		get: async aliquot_id => {
+			if (ds.aliquot2submitter.cache.has(aliquot_id)) return ds.aliquot2submitter.cache.get(aliquot_id)
 
-				/* 
-				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
-				simply return unconverted id to preserve performance
-				*/
-				return aliquot_id
+			/* 
+			as on the fly api query is still slow, especially to query one at a time for hundreds of ids
+			simply return unconverted id to preserve performance
+			*/
+			return aliquot_id
 
-				// converts one id on the fly while the cache is still loading
-				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
-				//return ds.aliquot2submitter.cache.get(aliquot_id)
-			}
+			// converts one id on the fly while the cache is still loading
+			//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
+			//return ds.aliquot2submitter.cache.get(aliquot_id)
 		}
+	}
+	// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
+	// this mapping serves case selection from mds3 and matrix, where input can be one of these different types
+	ds.map2caseid = {
+		cache: new Map(),
+		get: input => {
+			return ds.map2caseid.cache.get(input)
+			// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
+		}
+	}
 
+	try {
 		if (serverconfig.features.stopGdcCacheAliquot) return console.log('GDC aliquot2submitter not cached!')
 
 		// key: aliquot uuid
@@ -698,7 +712,7 @@ async function cacheAliquot2submitterMapping(ds) {
 		if (!Number.isInteger(totalCases)) throw 'gdc totalCases not integer'
 
 		const begin = new Date()
-		console.log('Start to cache aliquot IDs of', totalCases, 'cases...')
+		console.log('GDC: Start to cache aliquot IDs of', totalCases, 'cases...')
 
 		const size = 1000 // fetch 1000 ids at a time
 		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
@@ -706,6 +720,7 @@ async function cacheAliquot2submitterMapping(ds) {
 		}
 
 		console.log('Done caching', ds.aliquot2submitter.cache.size, 'aliquot IDs.', new Date() - begin, 'ms')
+		console.log('Done caching', ds.map2caseid.cache.size, 'different ids to case uuid.', new Date() - begin, 'ms')
 	} catch (e) {
 		console.log('Error at caching: ' + e)
 	}
@@ -727,7 +742,7 @@ output:
 aliquot-to-submitter mapping are automatically cached
 */
 async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
-	const param = ['fields=samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
+	const param = ['fields=submitter_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
 	if (aliquot_id) {
 		param.push(
 			'filters={"op":"and","content":[{"op":"=","content":{"field":"samples.portions.analytes.aliquots.aliquot_id","value":["' +
@@ -743,10 +758,16 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 	const tmp = await got(apihost + '/cases?' + param.join('&'))
 	const re = JSON.parse(tmp.body)
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
+
+	//console.log(re.data.hits[0]) // uncomment to examine output
+
 	/*
 	re.data.hits = [
 	  {
+	  	// the "id" value seems to be case.case_id
+		// it is always here even if 'case.case_id' is not included in fields
 		"id": "c2829ab9-d5b2-5a82-a134-de9c591363de",
+		submitter_id: 'TCGA-LL-A6FQ', // case submitter id
 		"samples": [
 		  {
 			"submitter_id": "TARGET-50-PAJNID-01A",
@@ -763,11 +784,27 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 				]
 			  },
 			  { ... more analytes ... }
+			]
+		  }
+		]
+	  }
+	 ]
 	*/
 	for (const h of re.data.hits) {
+		const case_id = h.id
+		if (!case_id) throw 'h.id (case uuid) missing'
+		const case_submitter_id = h.submitter_id
+		if (!case_submitter_id) throw 'h.submitter_id missing'
+
+		ds.map2caseid.cache.set(case_submitter_id, case_id)
+
 		if (!Array.isArray(h.samples)) continue //throw 'hit.samples[] not array'
 		for (const sample of h.samples) {
-			const submitter_id = sample.submitter_id
+			const sample_submitter_id = sample.submitter_id
+			if (!sample_submitter_id) throw 'sample.submitter_id missing'
+
+			ds.map2caseid.cache.set(sample_submitter_id, case_id)
+
 			if (!Array.isArray(sample.portions)) continue // throw 'sample.portions[] not array'
 			for (const portion of sample.portions) {
 				if (!Array.isArray(portion.analytes)) continue //throw 'portion.analytes not array'
@@ -776,7 +813,8 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 					for (const aliquot of analyte.aliquots) {
 						const aliquot_id = aliquot.aliquot_id
 						if (!aliquot_id) throw 'aliquot.aliquot_id missing'
-						ds.aliquot2submitter.cache.set(aliquot_id, submitter_id)
+						ds.aliquot2submitter.cache.set(aliquot_id, sample_submitter_id)
+						ds.map2caseid.cache.set(aliquot_id, case_id)
 					}
 				}
 			}
