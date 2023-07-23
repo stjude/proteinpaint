@@ -16,10 +16,9 @@ const verbose = false //true
 
 // root package version
 const rootPkg = require(path.join(cwd, '/package.json'))
-const commitMsg = ex(
-	`git log --format=%B -n 1 v${rootPkg.version}`,
-	`Error finding a commit message prefixed with v${rootPkg.version}: cannot diff for changes`
-)
+const commitMsg = ex(`git log --format=%B -n 1 v${rootPkg.version}`, {
+	message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot diff for changes`
+})
 const newVersion = semver.inc(rootPkg.version, verType)
 console.log('New version:', newVersion)
 
@@ -29,7 +28,12 @@ for (const w of rootPkg.workspaces) {
 	for (const pkgPath of paths) {
 		const pkg = require(path.join(cwd, pkgPath))
 		const pkgDir = pkgPath.replace('/package.json', '')
-		const wsHashOnRelease = ex(`git rev-parse --verify -q v${rootPkg.version}^{commit}:"${pkgDir}"`)
+		// in
+		const wsHashOnRelease = ex(`git rev-parse --verify -q v${rootPkg.version}^{commit}:"${pkgDir}"`, {
+			handler(e) {
+				gitRevParseErrHandler(pkgDir)
+			}
+		})
 		const wsHashCurrent = ex(`git rev-parse --verify -q HEAD:"${pkgDir}"`)
 		pkgs[pkg.name] = {
 			name: pkg.name,
@@ -46,6 +50,7 @@ for (const w of rootPkg.workspaces) {
 	}
 }
 
+// detect changed workspaces, including deps that have changed
 for (const name in pkgs) {
 	setWsDeps(name)
 	if (pkgs[name].hasChanged) {
@@ -60,6 +65,8 @@ if (!verbose) {
 }
 
 console.log(pkgs)
+// list of changed packages
+console.log(Object.keys(pkgs))
 
 function setWsDeps(name) {
 	pkgs[name].checked = true
@@ -109,11 +116,16 @@ function short(name) {
 	}
 }
 
-function ex(cmd, errMessage) {
+function ex(cmd, opts) {
 	try {
 		return execSync(cmd, { encoding: 'utf8' })
 	} catch (e) {
-		if (errMessage) throw errMessage + ': ' + e
+		if (opts.handler) opts.handler(e)
+		else if (opts.message) throw opts.message + ': ' + e
 		else throw e
 	}
+}
+
+function gitRevParseErrHandler(pkgDir) {
+	console.log(`package='${pkgDir}': git-rev-parse error is assumed to be for a new package dir with no commit history`)
 }
