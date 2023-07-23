@@ -139,6 +139,7 @@ async function mayShowSummary(tk, block) {
 
 	try {
 		const data = await tk.mds.getSamples({ isSummary: true })
+		tk.leftlabels.__samples_data = data // for testing
 		wait.remove()
 		await showSummary4terms(data, div.append('div').attr('class', 'sja_mds3samplesummarydiv'), tk, block)
 	} catch (e) {
