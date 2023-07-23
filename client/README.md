@@ -1,6 +1,6 @@
 # Proteinpaint Client
 
-The frontend code for the ProteinPaint application
+The client code for the ProteinPaint application
 
 ## Installation
 
