@@ -1566,19 +1566,12 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	for (let i = 1; i < keys.length; i++) {
 		h = h[keys[i]]
 		if (!h)
-			throw (
-				'.' +
-				keys[i] +
-				' missing from data structure of termid2totalsize2 for query :' +
-				query +
-				' and filter: ' +
-				filter
-			)
+			throw `.${keys[i]} missing from data structure of termid2totalsize2 for query :${query} and filter: ${filter}`
 	}
 	for (const term of termPaths) {
-		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
+		if (term.type == 'categorical' && !Array.isArray(h[term.path].buckets))
 			throw keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
-		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
+		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path].stats != 'object') {
 			throw keys.join('.') + ' not object for query :' + query + ' and filter: ' + filter
 		}
 	}
@@ -1587,14 +1580,14 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 
 	for (const term of termPaths) {
 		if (term.type == 'categorical') {
-			const buckets = h[term.path]['buckets']
-			let values = []
+			const buckets = h[term.path].buckets
+			const values = []
 			for (const bucket of buckets) {
 				values.push([bucket.key.replace('.', '__'), bucket.doc_count])
 			}
 			tv2counts.set(term.id, values)
 		} else if (term.type == 'integer' || term.type == 'float') {
-			const count = h[term.path]['stats']['count']
+			const count = h[term.path].stats.count
 			tv2counts.set(term.id, { total: count })
 		}
 	}
@@ -1692,6 +1685,10 @@ function termid2size_filters(p, ds) {
 			op: '=',
 			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
 		})
+	}
+
+	if (p.filterObj) {
+		f.filters.content.push(filter2GDCfilter(p.filterObj))
 	}
 	return f
 }

@@ -433,7 +433,7 @@ async function testSampleSummary2subtrack(gene, dslabel, test) {
 	})
 
 	async function callbackOnRender(tk, bb) {
-		//Click on track cases link to open table
+		// click on "xx samples" left label, to open sample summary panel
 		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
 		await whenVisible(tk.menutip.d)
 
@@ -458,7 +458,9 @@ async function testSampleSummary2subtrack(gene, dslabel, test) {
 				3,
 				'now bb has 3 tracks after clicking a category from mds3 tk sample summaries table'
 			)
-			const subtk = bb.tklst[2]
+
+			const subtk = bb.tklst[2] // mds3 sub-track object created off main one (tk)
+
 			test.equal(subtk.type, 'mds3', '3rd track type is mds3 (subtrack launched from main track)')
 
 			test.ok(
@@ -471,6 +473,15 @@ async function testSampleSummary2subtrack(gene, dslabel, test) {
 					Number(subtk.leftlabels.doms.samples.text().split(' ')[0]),
 				'subtrack has fewer number of samples than main track'
 			)
+
+			// click on "samples" left label of subtk, to open sample summary panel
+			subtk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
+			await whenVisible(subtk.menutip.d)
+			// same as in main tk, must await for the summary table to be shown in subtk.menutip
+			// that means leftlabels.__samples_data is now created
+			await detectOne({ elem: subtk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
+
+			compareSummary(tk, subtk)
 
 			test.ok(subtk.leftlabels.doms.filterObj, '.leftlabels.doms.filterObj is set on subtrack')
 			// click on the filterObj left label to show menu with filter UI
@@ -489,6 +500,53 @@ async function testSampleSummary2subtrack(gene, dslabel, test) {
 
 		const categoryDiv = tk.menutip.d.select('.sja_clbtext2')
 		categoryDiv.node().dispatchEvent(new Event('click'))
+	}
+
+	// compare sample summary data between sub and main tk
+	function compareSummary(tk, subtk) {
+		test.ok(
+			subtk.leftlabels.__samples_data.length == tk.leftlabels.__samples_data.length,
+			'main and sub track returned summaries for the same number of terms'
+		)
+		// assuming order of terms in the array are identical between main and sub tk
+		// for the same catgory from same term, sub track must show <= samplecount than main
+
+		// since 'sub<=main' must be used in tests but not 'sub<main', verify at least one category shows sub<main
+		let subLTmainCount = 0
+
+		for (const [i, main] of tk.leftlabels.__samples_data.entries()) {
+			const sub = subtk.leftlabels.__samples_data[i]
+			if (main.numbycategory) {
+				test.ok(
+					main.numbycategory.length >= sub.numbycategory.length,
+					'main.numbycategory.length >= sub for ' + main.termname
+				)
+				const k2c = new Map()
+				for (const a of main.numbycategory) {
+					// a=[categorylabel, #mutated, #total]
+					k2c.set(a[0], { mutated: a[1], total: a[2] })
+				}
+				for (const a of sub.numbycategory) {
+					const a2 = k2c.get(a[0])
+					if (!a2) throw 'a2 not found'
+					test.ok(
+						a[1] <= a2.mutated && a[2] <= a2.total,
+						`sub<=main for mutated/total counts of ${a[0]}, ${main.termname}`
+					)
+					if (a[2] < a2.total) subLTmainCount++
+				}
+			} else if (main.density_data) {
+				if (!Number.isInteger(main.density_data.samplecount)) throw 'main.density_data.samplecount is not integer'
+				test.ok(
+					sub.density_data.samplecount <= main.density_data.samplecount,
+					'sub<=main for density_data.samplecount for ' + main.termname
+				)
+				if (sub.density_data.samplecount < main.density_data.samplecount) subLTmainCount++
+			} else {
+			}
+		}
+
+		test.ok(subLTmainCount > 0, subLTmainCount + ' categories have reduced sample count in subtk')
 	}
 }
 
