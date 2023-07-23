@@ -215,6 +215,17 @@ function setTermActions(self) {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			numericEditMenuVersion: ['discrete', 'continuous'],
+			getCurrentGeneNames: () => {
+				const tws = []
+				for (const grp of self.config.termgroups) {
+					tws.push(...grp.lst)
+				}
+				const termNames = tws
+					.filter(tw => tw.term.type === 'geneVariant')
+					.map(tw => tw.term.name)
+					.sort()
+				return termNames.length ? termNames : undefined
+			},
 			//holder: {}, //self.dom.inputTd.append('div'),
 			//debug: opts.debug,
 			renderAs: 'none',

@@ -70,6 +70,8 @@ async function showBinsMenu(self: NumericTermSettingInstance, div: any) {
 		xpad: 10,
 		ypad: 20
 	}
+	div.selectAll('*').remove()
+	div.append('div').style('padding', '10px').style('text-align', 'center').html('Getting distribution data ...<br/>')
 	try {
 		if (!self.vocabApi) throw `Missing .vocabApi{} [numeric.discrete showBinsMenu()]`
 		const d = await self.vocabApi.getViolinPlotData({
@@ -79,7 +81,8 @@ async function showBinsMenu(self: NumericTermSettingInstance, div: any) {
 			orientation: 'horizontal',
 			datasymbol: 'bean',
 			radius: 5,
-			strokeWidth: 0.2
+			strokeWidth: 0.2,
+			currentGeneNames: self.opts.getCurrentGeneNames?.()
 		})
 		self.num_obj.density_data = convertViolinData(d)
 	} catch (err) {

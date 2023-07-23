@@ -98,8 +98,6 @@ export async function init(arg, holder, genomes) {
 	if (!settings.matrix) settings.matrix = {}
 	settings.matrix.geneFilter = geneFilter
 	settings.matrix.maxGenes = maxGenes
-	//const term = { id: 'case.disease_type', name: 'Disease Type', type: 'categorical' }
-	const term = { id: 'case.primary_site', name: 'Primary Site', type: 'categorical' }
 	const opts = {
 		holder,
 		genome,
@@ -110,11 +108,8 @@ export async function init(arg, holder, genomes) {
 			plots: [
 				{
 					chartType: 'matrix',
-					termgroups: [
-						//{ lst: [{term}] },
-						{ lst: genes }
-					],
-					// divideBy: { term }, // testing only
+					termgroups: [...(arg.termgroups || []), { lst: genes }],
+					divideBy: arg.divideBy || undefined,
 					// moved default settings to gdc.hg38.js termdb.matrix.settings
 					// but can still override in the runpp() argument
 					settings
