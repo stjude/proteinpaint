@@ -107,12 +107,6 @@ export async function displaySampleTable(samples, args) {
 					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 					sandbox.header.text(samples[i].sample_id)
 
-					let thisMutation
-					if (samples[i].ssm_id_lst?.[0]) {
-						thisMutation = (args.tk.skewer.rawmlst || args.tk.custom_variants).find(
-							m => m.ssm_id == samples[i].ssm_id_lst[0]
-						)
-					}
 					await (
 						await import('#plots/plot.ssgq.js')
 					).plotSingleSampleGenomeQuantification(
@@ -122,7 +116,7 @@ export async function displaySampleTable(samples, args) {
 						samples[i],
 						sandbox.body.append('div').style('margin', '20px'),
 						args.block.genome,
-						thisMutation.gene
+						args.block.usegm?.name
 					)
 				}
 			}
@@ -331,7 +325,10 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 						sample,
 						sandbox.body.append('div').style('margin', '20px'),
 						block.genome,
-						thisMutation.gene
+						block.usegm?.name
+						/* to pass current gene name to launch ssgb at that gene
+						do not use thisMutation.gene, as "gene" is not guaranteed attribute on mutations
+						*/
 					)
 				})
 		}
