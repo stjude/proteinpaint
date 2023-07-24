@@ -12,6 +12,7 @@ class profilePolar {
 		this.dom = {
 			holder
 		}
+		this.opts.header.text('Polar plot')
 		this.arcGenerator = d3.arc().innerRadius(0)
 	}
 
