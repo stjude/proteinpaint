@@ -13,6 +13,7 @@ class profileBarchart {
 		this.dom = {
 			holder
 		}
+		this.opts.header.text('Barchart plot')
 	}
 
 	getState(appState) {
