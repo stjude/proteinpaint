@@ -103,8 +103,6 @@ export default class DataMapper {
 			}
 		})
 
-		// || (dObject.chrA && indexA == -1) || (dObject.chrB && indexB == -1))) {
-
 		const sortedData = dataArray.sort(this.compareData)
 
 		if (this.settings.rings.nonExonicRingEnabled) {

@@ -3,9 +3,6 @@ export default interface Settings {
 	horizontalPadding: number
 
 	rings: {
-		cnvCapping: number
-		cnvUnit: string
-
 		snvRingFilters: Array<string>
 
 		nonExonicRingEnabled: boolean
