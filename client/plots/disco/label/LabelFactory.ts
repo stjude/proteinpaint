@@ -101,6 +101,11 @@ export default class LabelFactory {
 			y: (r0 + 3 * dr) * sin1
 		}
 
+		points.push(point0)
+		points.push(point1)
+		points.push(point2)
+		points.push(point3)
+
 		const line = new Line(points, element.color)
 
 		const transform: string =

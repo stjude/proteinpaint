@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 import IRenderer from '../IRenderer'
 import Chromosome from './Chromosome'
-import Arc from '#plots/disco/arc/Arc'
 
 export default class ChromosomesRenderer implements IRenderer {
 	private padAngle: number

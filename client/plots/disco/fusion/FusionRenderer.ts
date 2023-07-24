@@ -2,7 +2,6 @@ import * as d3 from 'd3'
 import FullArcRenderer from '../arc/FullArcRenderer'
 import Fusion from './Fusion'
 import MenuProvider from '../menu/MenuProvider'
-import { FusionLegend } from './FusionLegend'
 import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider'
 
 // TODO extract constants from this file.
