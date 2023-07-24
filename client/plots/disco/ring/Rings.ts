@@ -7,7 +7,7 @@ import CnvArc from '../cnv/CnvArc'
 import LohArc from '../loh/LohArc'
 
 export default class Rings {
-	labelsRing: Labels<Label>
+	labelsRing: Labels
 	chromosomesRing: Ring<Chromosome>
 	nonExonicArcRing?: Ring<SnvArc>
 	snvArcRing?: Ring<SnvArc>
@@ -15,7 +15,7 @@ export default class Rings {
 	lohArcRing?: Ring<LohArc>
 
 	constructor(
-		labelsRing: Labels<Label>,
+		labelsRing: Labels,
 		chromosomesRing: Ring<Chromosome>,
 		nonExonicArcRing?: Ring<SnvArc>,
 		snvArcRing?: Ring<SnvArc>,
