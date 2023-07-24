@@ -1,9 +1,9 @@
-import Rings from './Rings'
-import Legend from './Legend'
-import { RingType } from './RingType'
-import Arc from './Arc'
+import Rings from '../ring/Rings.ts'
+import Legend from '../legend/Legend.ts'
+import { RingType } from '../ring/RingType.ts'
+import Arc from '../arc/Arc.ts'
 import Settings from '../Settings.ts'
-import Fusion from './Fusion'
+import Fusion from '../fusion/Fusion.ts'
 
 export default class ViewModel {
 	width: number
