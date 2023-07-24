@@ -2,7 +2,6 @@ import Reference from '../chromosome/Reference'
 import Data from '../data/Data'
 import Fusion from './Fusion'
 import FusionSubgroup from './FusionSubgroup'
-import PositionInChromosome from './PositionInChromosome'
 
 export default class FusionMapper {
 	private radius: number
