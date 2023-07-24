@@ -1,9 +1,9 @@
-import Data from '../data/Data'
-import Reference from '../chromosome/Reference'
+import Data from '#plots/disco/data/Data'
+import Reference from '#plots/disco/chromosome/Reference'
 import CnvArc from './CnvArc'
 import CnvLegend from './CnvLegend'
 import { CnvType } from './CnvType'
-import Settings from '../Settings'
+import Settings from '#plots/disco/Settings'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()

@@ -1,7 +1,7 @@
-import ViewModel from '../viewmodel/ViewModel'
+import ViewModel from '#plots/disco/viewmodel/ViewModel'
 import Reference from '#plots/disco/chromosome/Reference'
 import DataMapper from '#plots/disco/data/DataMapper'
-import Settings from '../Settings'
+import Settings from '#plots/disco/Settings'
 import ViewModelProvider from './ViewModelProvider'
 
 export class ViewModelMapper {

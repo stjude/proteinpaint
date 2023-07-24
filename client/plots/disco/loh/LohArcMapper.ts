@@ -1,5 +1,5 @@
-import Reference from '../chromosome/Reference'
-import Data from '../data/Data'
+import Reference from '#plots/disco/chromosome/Reference'
+import Data from '#plots/disco/data/Data'
 import LohArc from './LohArc'
 import GradientColorProvider from './GradientColorProvider'
 

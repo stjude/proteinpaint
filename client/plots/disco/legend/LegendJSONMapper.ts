@@ -1,6 +1,6 @@
 import Legend from './Legend'
-import { CnvType } from '../cnv/CnvType'
-import { FusionLegend } from '../fusion/FusionLegend'
+import { CnvType } from '#plots/disco/cnv/CnvType'
+import { FusionLegend } from '#plots/disco/fusion/FusionLegend'
 
 export default class LegendJSONMapper {
 	private cvnCapping: number

@@ -1,10 +1,10 @@
-import Label from '../label/Label'
+import Label from '#plots/disco/label/Label'
 import Ring from './Ring'
-import Chromosome from '../chromosome/Chromosome'
-import Labels from '../label/Labels'
-import SnvArc from '../snv/SnvArc'
-import CnvArc from '../cnv/CnvArc'
-import LohArc from '../loh/LohArc'
+import Chromosome from '#plots/disco/chromosome/Chromosome'
+import Labels from '#plots/disco/label/Labels'
+import SnvArc from '#plots/disco/snv/SnvArc'
+import CnvArc from '#plots/disco/cnv/CnvArc'
+import LohArc from '#plots/disco/loh/LohArc'
 
 export default class Rings {
 	labelsRing: Labels

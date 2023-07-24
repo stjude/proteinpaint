@@ -1,7 +1,7 @@
-import SnvLegendElement from '../snv/SnvLegendElement'
-import CnvLegend from '../cnv/CnvLegend'
-import LohLegend from '../loh/LohLegend'
-import { CnvType } from '../cnv/CnvType'
+import SnvLegendElement from '#plots/disco/snv/SnvLegendElement'
+import CnvLegend from '#plots/disco/cnv/CnvLegend'
+import LohLegend from '#plots/disco/loh/LohLegend'
+import { CnvType } from '#plots/disco/cnv/CnvType'
 
 export default class Legend {
 	snvTitle: string

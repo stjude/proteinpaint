@@ -1,9 +1,9 @@
-import Rings from '../ring/Rings'
-import Legend from '../legend/Legend'
-import { RingType } from '../ring/RingType'
-import Arc from '../arc/Arc'
-import Settings from '../Settings'
-import Fusion from '../fusion/Fusion'
+import Rings from '#plots/disco/ring/Rings'
+import Legend from '#plots/disco/legend/Legend'
+import { RingType } from '#plots/disco/ring/RingType'
+import Arc from '#plots/disco/arc/Arc'
+import Settings from '#plots/disco/Settings'
+import Fusion from '#plots/disco/fusion/Fusion'
 
 export default class ViewModel {
 	width: number
