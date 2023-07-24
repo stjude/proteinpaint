@@ -22,7 +22,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('only dictionary terms', function (test) {
+tape('only dictionary terms', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(5)
 	runpp({
@@ -110,7 +110,7 @@ tape.only('only dictionary terms', function (test) {
 
 		// TODO: test for matrix bar plots of continuous mode terms with allowed negative value
 
-		if (test._ok) matrix.Inner.app.destroy()
+		//if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
