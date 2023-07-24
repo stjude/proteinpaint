@@ -1,8 +1,8 @@
-import IRenderer from '../IRenderer.ts'
+import IRenderer from '../IRenderer'
 import * as d3 from 'd3'
-import SnvArc from './SnvArc.ts'
-import Arc from '../arc/Arc.ts'
-import MenuProvider from '../menu/MenuProvider.ts'
+import SnvArc from './SnvArc'
+import Arc from '../arc/Arc'
+import MenuProvider from '../menu/MenuProvider'
 
 export default class NonExonicSnvRenderer implements IRenderer {
 	private geneClickListener: (gene: string, mnames: Array<string>) => void

@@ -1,9 +1,9 @@
-import IRenderer from './IRenderer.ts'
-import ViewModel from './viewmodel/ViewModel.ts'
-import LegendRenderer from './legend/LegendRenderer.ts'
-import { RingType } from './ring/RingType.ts'
-import FusionRenderer from './fusion/FusionRenderer.ts'
-import DownloadButtonRenderer from './download/DownloadButtonRenderer.ts'
+import IRenderer from './IRenderer'
+import ViewModel from './viewmodel/ViewModel'
+import LegendRenderer from './legend/LegendRenderer'
+import { RingType } from './ring/RingType'
+import FusionRenderer from './fusion/FusionRenderer'
+import DownloadButtonRenderer from './download/DownloadButtonRenderer'
 
 export class DiscoRenderer {
 	private renders: Map<RingType, IRenderer>

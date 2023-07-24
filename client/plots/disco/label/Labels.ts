@@ -1,7 +1,7 @@
-import Ring from '../ring/Ring.ts'
-import Label from './Label.ts'
-import LabelFactory from './LabelFactory.ts'
-import Settings from '../Settings.ts'
+import Ring from '../ring/Ring'
+import Label from './Label'
+import LabelFactory from './LabelFactory'
+import Settings from '../Settings'
 
 export default class Labels extends Ring<Label> {
 	collisions?: Array<Label>

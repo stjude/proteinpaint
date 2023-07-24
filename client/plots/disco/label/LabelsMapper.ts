@@ -1,13 +1,13 @@
-import Data from '../data/Data.ts'
-import Reference from '../chromosome/Reference.ts'
-import Label from './Label.ts'
-import LabelFactory from './LabelFactory.ts'
-import MLabel from './MLabel.ts'
-import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
-import Settings from '#plots/disco/Settings.ts'
-import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
-import { MutationTypes } from '#plots/disco/data/MutationTypes.ts'
-import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
+import Data from '../data/Data'
+import Reference from '../chromosome/Reference'
+import Label from './Label'
+import LabelFactory from './LabelFactory'
+import MLabel from './MLabel'
+import MutationTooltip from '#plots/disco/label/MutationTooltip'
+import Settings from '#plots/disco/Settings'
+import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider'
+import { MutationTypes } from '#plots/disco/data/MutationTypes'
+import FusionTooltip from '#plots/disco/fusion/FusionTooltip'
 
 export default class LabelsMapper {
 	private settings: any

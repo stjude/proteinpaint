@@ -1,7 +1,7 @@
-import Reference from '../chromosome/Reference.ts'
-import Data from '../data/Data.ts'
-import LohArc from './LohArc.ts'
-import GradientColorProvider from './GradientColorProvider.ts'
+import Reference from '../chromosome/Reference'
+import Data from '../data/Data'
+import LohArc from './LohArc'
+import GradientColorProvider from './GradientColorProvider'
 
 export default class LohArcMapper {
 	private sampleName: string

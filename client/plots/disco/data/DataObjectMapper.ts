@@ -1,4 +1,4 @@
-import Data from './Data.ts'
+import Data from './Data'
 
 export default class DataObjectMapper {
 	private sampleName: string

@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
-import SnvArc from './SnvArc.ts'
-import IRenderer from '../IRenderer.ts'
-import FullArcRenderer from '../arc/FullArcRenderer.ts'
-import MenuProvider from '../menu/MenuProvider.ts'
+import SnvArc from './SnvArc'
+import IRenderer from '../IRenderer'
+import FullArcRenderer from '../arc/FullArcRenderer'
+import MenuProvider from '../menu/MenuProvider'
 
 export default class SnvRenderer implements IRenderer {
 	private svnWidth: number

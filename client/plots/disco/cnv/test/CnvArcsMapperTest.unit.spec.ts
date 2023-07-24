@@ -1,8 +1,8 @@
 import test from 'tape'
-import discoDefaults from '#plots/disco/defaults.ts'
-import Reference from '#plots/disco/chromosome/Reference.ts'
-import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper.ts'
-import DataMapper from '#plots/disco/data/DataMapper.ts'
+import discoDefaults from '#plots/disco/defaults'
+import Reference from '#plots/disco/chromosome/Reference'
+import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper'
+import DataMapper from '#plots/disco/data/DataMapper'
 
 const overriders = { rings: { labelLinesInnerRadius: 10, labelsToLinesDistance: 5, labelsToLinesGap: 2 } }
 const settings = discoDefaults(overriders)

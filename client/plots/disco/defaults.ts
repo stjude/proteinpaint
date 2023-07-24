@@ -1,4 +1,4 @@
-import Settings from './Settings.ts'
+import Settings from './Settings'
 import { copyMerge } from '#rx'
 
 export default function discoDefaults(overrides = {}): Settings {

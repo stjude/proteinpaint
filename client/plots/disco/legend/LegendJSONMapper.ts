@@ -1,6 +1,6 @@
-import Legend from './Legend.ts'
-import { CnvType } from '../cnv/CnvType.ts'
-import { FusionLegend } from '../fusion/FusionLegend.ts'
+import Legend from './Legend'
+import { CnvType } from '../cnv/CnvType'
+import { FusionLegend } from '../fusion/FusionLegend'
 
 export default class LegendJSONMapper {
 	private cvnCapping: number

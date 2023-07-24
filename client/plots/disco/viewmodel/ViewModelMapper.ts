@@ -1,10 +1,8 @@
-import ViewModel from './ViewModel.ts'
-import discoDefaults from '../defaults.ts'
-import Reference from '../chromosome/Reference.ts'
-import DataMapper from '../data/DataMapper.ts'
-import Settings from '../Settings.ts'
-import Data from '../data/Data.ts'
-import ViewModelProvider from './ViewModelProvider.ts'
+import ViewModel from '../viewmodel/ViewModel'
+import Reference from '#plots/disco/chromosome/Reference'
+import DataMapper from '#plots/disco/data/DataMapper'
+import Settings from '../Settings'
+import ViewModelProvider from './ViewModelProvider'
 
 export class ViewModelMapper {
 	static dtNums = [2, 5, 4, 10, 1, 'exonic', 'non-exonic']

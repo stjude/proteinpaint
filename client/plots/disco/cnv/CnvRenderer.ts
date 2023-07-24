@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
-import IRenderer from '../IRenderer.ts'
-import CnvArc from './CnvArc.ts'
-import MenuProvider from '../menu/MenuProvider.ts'
+import IRenderer from '../IRenderer'
+import CnvArc from './CnvArc'
+import MenuProvider from '../menu/MenuProvider'
 export default class CnvRenderer implements IRenderer {
 	private menuPadding: number
 

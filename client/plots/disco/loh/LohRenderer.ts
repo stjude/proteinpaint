@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
-import LohArc from './LohArc.ts'
-import IRenderer from '../IRenderer.ts'
-import MenuProvider from '../menu/MenuProvider.ts'
+import LohArc from './LohArc'
+import IRenderer from '../IRenderer'
+import MenuProvider from '../menu/MenuProvider'
 
 export default class LohRenderer implements IRenderer {
 	render(holder: any, elements: Array<LohArc>) {

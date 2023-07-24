@@ -1,5 +1,5 @@
 import { RibbonSubgroup } from 'd3'
-import PositionInChromosome from './PositionInChromosome.ts'
+import PositionInChromosome from './PositionInChromosome'
 
 export default class FusionSubgroup implements RibbonSubgroup {
 	startAngle: number

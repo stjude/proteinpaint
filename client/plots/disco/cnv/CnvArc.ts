@@ -1,4 +1,4 @@
-import Arc from '../arc/Arc.ts'
+import Arc from '../arc/Arc'
 
 export default interface CnvArc extends Arc {
 	readonly chr: string

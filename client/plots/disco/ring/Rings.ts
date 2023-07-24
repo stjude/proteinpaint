@@ -1,10 +1,10 @@
-import Label from '../label/Label.ts'
-import Ring from './Ring.ts'
-import Chromosome from '../chromosome/Chromosome.ts'
-import Labels from '../label/Labels.ts'
-import SnvArc from '../snv/SnvArc.ts'
-import CnvArc from '../cnv/CnvArc.ts'
-import LohArc from '../loh/LohArc.ts'
+import Label from '../label/Label'
+import Ring from './Ring'
+import Chromosome from '../chromosome/Chromosome'
+import Labels from '../label/Labels'
+import SnvArc from '../snv/SnvArc'
+import CnvArc from '../cnv/CnvArc'
+import LohArc from '../loh/LohArc'
 
 export default class Rings {
 	labelsRing: Labels<Label>

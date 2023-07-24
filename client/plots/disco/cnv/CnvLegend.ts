@@ -1,15 +1,15 @@
-import {CnvType} from "./CnvType.ts";
+import { CnvType } from './CnvType'
 
 export default class CnvLegend {
-    text: string
-    cnvType: CnvType
-    color: string
-    value: number
+	text: string
+	cnvType: CnvType
+	color: string
+	value: number
 
-    constructor(text: string, cnvType: CnvType, color: string, value: number) {
-        this.text = text
-        this.cnvType = cnvType;
-        this.color = color;
-        this.value = value;
-    }
+	constructor(text: string, cnvType: CnvType, color: string, value: number) {
+		this.text = text
+		this.cnvType = cnvType
+		this.color = color
+		this.value = value
+	}
 }
