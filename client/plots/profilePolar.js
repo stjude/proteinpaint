@@ -97,13 +97,13 @@ class profilePolar {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
+		if (!this.sampleData) return
 		div
 			.append('button')
 			.style('margin-left', '15px')
 			.text('Download SVG')
 			.on('click', () => downloadSingleSVG(svg, 'polar-plot.svg'))
 
-		if (!this.sampleData) return
 		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		// Create a polar grid.
