@@ -67,7 +67,7 @@ function addTable(div: any, name: any, group: any, noButtonCallback: any) {
 
 export function fillTW(tw: SampleLstTW) {
 	// quick fix!!
-	if (!tw.q.type) tw.q.type = 'custom-groupsetting'
+	if (!tw.q.type) tw.q.type = 'custom-samplelst'
 	if (!tw.q.groups) tw.q.groups = []
 	if (tw.q.groups.length == 0) {
 		for (const k in tw.term.values) {
@@ -111,7 +111,6 @@ export function getSamplelstTW(groups: any, name = 'groups') {
 		isAtomic: true,
 		term: { $id, name, type: 'samplelst', values },
 		q: {
-			mode: 'custom-groupsetting',
 			groups: qgroups,
 			groupsetting: { disabled }
 		}
