@@ -699,8 +699,30 @@ class Matrix {
 			if (t.tw.q?.mode == 'continuous') {
 				if (!t.tw.settings) t.tw.settings = {}
 				if (!t.tw.settings.barh) t.tw.settings.barh = s.barh
-				if (!('gap' in t.tw.settings)) t.tw.settings.gap = 0
-				t.scale = scaleLinear().domain([t.counts.minval, t.counts.maxval]).range([1, t.tw.settings.barh])
+				if (!('gap' in t.tw.settings)) t.tw.settings.gap = 4
+				const barh = t.tw.settings.barh
+				const absMin = Math.abs(t.counts.minval)
+				const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
+				t.counts.posMaxHt = ratio * barh
+				const tickValues =
+					t.counts.minVal < 0 && t.counts.maxval > 0
+						? [t.counts.minval, t.counts.maxval]
+						: t.counts.maxval <= 0
+						? [0, t.counts.minval]
+						: [t.counts.maxval, 0]
+
+				t.scales = {
+					tickValues,
+					full: scaleLinear().domain(tickValues).range([1, barh])
+				}
+				if (t.counts.maxval >= 0) {
+					t.scales.pos = scaleLinear().domain([0, t.counts.maxval]).range([0, t.counts.posMaxHt])
+				}
+				if (t.counts.minval < 0) {
+					t.scales.neg = scaleLinear()
+						.domain([0, t.counts.minval])
+						.range([0, barh - t.counts.posMaxHt - 5])
+				}
 			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
 				const maxVals = []
 				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
