@@ -24,9 +24,9 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 			cell.height = t.scale(cell.key)
 			cell.x = tw.settings.gap // - cell.width
 		} else {
-			cell.height = t.scale(cell.key)
+			cell.height = cell.key >= 0 ? t.scales.pos(cell.key) : t.scales.neg(cell.key)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-			cell.y = tw.settings.barh + t.tw.settings.gap - cell.height
+			cell.y = cell.key >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : 0
 		}
 	} else {
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace

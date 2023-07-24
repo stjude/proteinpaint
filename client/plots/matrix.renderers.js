@@ -204,8 +204,10 @@ export function setRenderers(self) {
 					.attr('cursor', 'pointer')
 					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (showContAxis ? 30 : 0))
 
-				if (!Array.isArray(labelText)) text.text(labelText)
-				else {
+				if (!Array.isArray(labelText)) {
+					text.text(labelText)
+					if (lab.tw?.q?.mode == 'continuous') text.attr('y', 10)
+				} else {
 					const tspan = text.selectAll('tspan').data(labelText)
 					tspan.exit().remove()
 					tspan.attr('dx', getTspanDx).attr('font-size', getTspanFontSize).text(getTspanText)
@@ -237,7 +239,7 @@ export function setRenderers(self) {
 					axisg
 						.attr('shape-rendering', 'crispEdges')
 						.attr('transform', `translate(${x},${y})`)
-						.call(side.attr.axisFxn(lab.scale.domain(domain)).tickValues(domain))
+						.call(side.attr.axisFxn(lab.scales.full.domain(lab.scales.tickValues)).tickValues(lab.scales.tickValues))
 				} else if (hasAxis) {
 					g.select('.sjpp-matrix-cell-axis').remove()
 				}
@@ -387,6 +389,7 @@ function getRectFill(d) {
 	if (d.fill) return d.fill
 	/*** TODO: class should be for every values entry, as applicable ***/
 	const cls = d.class || (Array.isArray(d.values) && d.values[0].class)
+	if (!cls) console.log
 	return cls ? mclass[cls].color : '#555'
 }
 
