@@ -1,3 +1,4 @@
+import { downloadSingleSVG } from '../common/svg.download.js'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
@@ -95,6 +96,12 @@ class profilePolar {
 			config.region = 'Global'
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+
+		div
+			.append('button')
+			.style('margin-left', '15px')
+			.text('Download SVG')
+			.on('click', () => downloadSingleSVG(svg, 'polar-plot.svg'))
 
 		if (!this.sampleData) return
 

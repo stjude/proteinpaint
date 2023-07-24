@@ -18,6 +18,7 @@ import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
 import { getActiveCohortStr } from '../mass/charts'
 import { addDynamicScatterForm } from '#dom/dynamicScatter'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 /*
 sample object returned by server:
@@ -310,7 +311,7 @@ class Scatter {
 		}
 		// TODO: handle multiple chart download when there is a divide by term
 		this.components.controls.on('downloadClick.scatter', () => {
-			for (const chart of this.charts) this.downloadSVG(chart.svg)
+			for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg')
 		})
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
