@@ -22,9 +22,9 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('only dictionary terms', function (test) {
+tape.only('only dictionary terms', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(3)
+	test.plan(5)
 	runpp({
 		state: {
 			nav: {
@@ -44,6 +44,12 @@ tape('only dictionary terms', function (test) {
 						{
 							name: 'Demographics',
 							lst: [
+								{
+									id: 'aaclassic_5',
+									q: {
+										mode: 'continuous'
+									}
+								},
 								{
 									id: 'sex'
 									//q: { mode: 'values' } // or 'groupsetting'
@@ -78,12 +84,12 @@ tape('only dictionary terms', function (test) {
 		matrix.on('postRender.test', null)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
-			2,
+			3,
 			`should render the expected number of serieses`
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			120,
+			180,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -91,6 +97,18 @@ tape('only dictionary terms', function (test) {
 			1,
 			`should render the expected number of cluster rects`
 		)
+		// select the first series
+		const sg0rects = matrix.Inner.dom.seriesesG.select('.sjpp-mass-series-g').selectAll('rect')
+		test.equal(
+			sg0rects.filter(d => d.key <= 0 && d.fill === 'transparent').size(),
+			14,
+			`should render special values with transparent rects`
+		)
+		const uniqueHts = new Set()
+		sg0rects.each(d => uniqueHts.add(d.height))
+		test.equal(uniqueHts.size, 45, `should render different rect heights for continuous mode bar plots`)
+
+		// TODO: test for matrix bar plots of continuous mode terms with allowed negative value
 
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
@@ -209,7 +227,7 @@ tape('long column group labels', function (test) {
 		const h = matrix.Inner.dom.clipRect.property('height').baseVal.value
 		test.true(h > 619 && h <= 620, `should adjust the clip-path height to between 595 and 596, actual=${h}`)
 
-		//if (test._ok) matrix.Inner.app.destroy()
+		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })

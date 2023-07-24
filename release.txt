@@ -7,3 +7,4 @@ Fixes:
 - Selecting hundreds of samples from GDC lollipop no longer hangs or crashes (using a cached mapping to case uuid)
 - Fix the numeric edit menu when violin plot data is requested for a GDC variable, which needs currentGeneNames
 - Bug fix to show reduced sample summaries when creating sub-track from GDC lollipop (mds3) track
+- Correctly handle special uncomputable numeric term values in a matrix row bar plot, when mode='continuous' 
