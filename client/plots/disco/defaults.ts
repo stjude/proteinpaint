@@ -9,9 +9,6 @@ export default function discoDefaults(overrides = {}): Settings {
 			lohRingWidth: 20,
 			cnvRingWidth: 30,
 
-			cnvCapping: 5,
-			cnvUnit: 'Cnv Unit',
-
 			snvRingFilters: ['exonic'],
 
 			chromosomeInnerRadius: 190,

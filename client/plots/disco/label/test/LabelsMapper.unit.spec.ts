@@ -126,7 +126,7 @@ test('When there is a fusion event with two genes LabelsMapper.map() should retu
 
 	const labels = labelsMapper.map(dataHolder.labelData)
 
-	t.equal(labels.length, 2, 'Should create one label')
+	t.equal(labels.length, 2, 'Should create 2 labels')
 	t.equal(labels[0].text, 'Gene1', 'Label1 should have correct gene')
 	t.equal(labels[1].text, 'Gene2', 'Label2 should have correct gene')
 	if (labels[0].fusionTooltip) {

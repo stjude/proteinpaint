@@ -128,7 +128,7 @@ export default class CnvArcsMapper {
 		return chromosome.startAngle + (chromosome.endAngle - chromosome.startAngle) * (Number(data.stop) / chromosome.size)
 	}
 
-	getColor(value) {
+	getColor(value: number) {
 		const cnv = this.settings.cnv
 		if (value < this.lossCapped) {
 			return cnv.cappedLossColor
@@ -165,6 +165,8 @@ export default class CnvArcsMapper {
 	}
 
 	private calculateOuterRadius(data: Data) {
+		console.log('this.gainOnly', this.gainOnly)
+		console.log('this.lossOnly', this.lossOnly)
 		const maxOuterRadius = this.cnvInnerRadius + this.cnvWidth
 		if (this.gainOnly) {
 			return this.cnvInnerRadius + this.capMinValue((this.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
@@ -175,15 +177,17 @@ export default class CnvArcsMapper {
 		}
 
 		const centerRadius = this.cnvInnerRadius + this.cnvWidth / 2
-
+		console.log('1')
 		if (Math.sign(data.value) == 1) {
 			return centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.cnvWidth / 2))
 		}
-
+		console.log('2')
 		if (Math.sign(data.value) == -1) {
+			console.log('3')
 			return centerRadius
 		}
 
+		console.log('5 fdsafads')
 		return 1
 	}
 
