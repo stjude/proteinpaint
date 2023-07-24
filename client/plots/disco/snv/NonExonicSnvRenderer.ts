@@ -1,8 +1,8 @@
-import IRenderer from '../IRenderer'
+import IRenderer from '#plots/disco/IRenderer'
 import * as d3 from 'd3'
 import SnvArc from './SnvArc'
-import Arc from '../arc/Arc'
-import MenuProvider from '../menu/MenuProvider'
+import Arc from '#plots/disco/arc/Arc'
+import MenuProvider from '#plots/disco/menu/MenuProvider'
 
 export default class NonExonicSnvRenderer implements IRenderer {
 	private geneClickListener: (gene: string, mnames: Array<string>) => void

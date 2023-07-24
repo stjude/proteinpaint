@@ -1,7 +1,7 @@
-import Ring from '../ring/Ring'
+import Ring from '#plots/disco/ring/Ring'
 import Label from './Label'
 import LabelFactory from './LabelFactory'
-import Settings from '../Settings'
+import Settings from '#plots/disco/Settings'
 
 export default class Labels extends Ring<Label> {
 	collisions?: Array<Label>

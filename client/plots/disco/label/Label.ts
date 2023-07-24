@@ -1,4 +1,4 @@
-import Arc from '../arc/Arc'
+import Arc from '#plots/disco/arc/Arc'
 import Line from './Line'
 import MutationTooltip from '#plots/disco/label/MutationTooltip'
 import FusionTooltip from '#plots/disco/fusion/FusionTooltip'

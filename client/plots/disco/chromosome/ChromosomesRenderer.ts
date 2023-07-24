@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import IRenderer from '../IRenderer'
+import IRenderer from '#plots/disco/IRenderer'
 import Chromosome from './Chromosome'
 
 export default class ChromosomesRenderer implements IRenderer {

@@ -1,8 +1,8 @@
 import Data from './Data'
-import Reference from '../chromosome/Reference'
+import Reference from '#plots/disco/chromosome/Reference'
 import DataObjectMapper from './DataObjectMapper'
-import Settings from '../Settings'
-import { ViewModelMapper } from '../viewmodel/ViewModelMapper'
+import Settings from '#plots/disco/Settings'
+import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper'
 import { DataHolder } from '#plots/disco/data/DataHolder'
 import { MutationTypes } from '#plots/disco/data/MutationTypes'
 

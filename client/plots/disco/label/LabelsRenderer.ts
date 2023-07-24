@@ -1,8 +1,8 @@
-import IRenderer from '../IRenderer'
+import IRenderer from '#plots/disco/IRenderer'
 import { select } from 'd3-selection'
 import { line } from 'd3-shape'
 import Label from './Label'
-import MenuProvider from '../menu/MenuProvider'
+import MenuProvider from '#plots/disco/menu/MenuProvider'
 import MutationTooltip from '#plots/disco/label/MutationTooltip'
 import FusionTooltip from '#plots/disco/fusion/FusionTooltip'
 

@@ -58,9 +58,9 @@ test('CnvArcsMapper.map() should return an array of CnvArc objects', t => {
 	t.equal(arc0.outerRadius, 12.5, 'Arc 0 has outer radius 12.5')
 
 	t.equal(arc1.startAngle, Math.PI, 'Arc 1 has startAngle which is PI')
-	t.equal(arc1.endAngle, 2 * Math.PI, 'Arc 2 has endAngle which is 2*PI')
-	t.equal(arc1.innerRadius, 12.5, 'Arc 0 has inner radius 11.5')
-	t.equal(arc1.outerRadius, 15, 'Arc 0 has outer radius 12.5')
+	t.equal(arc1.endAngle, 2 * Math.PI, 'Arc 1 has endAngle which is 2*PI')
+	t.equal(arc1.innerRadius, 12.5, 'Arc 1 has inner radius 11.5')
+	t.equal(arc1.outerRadius, 15, 'Arc 1 has outer radius 12.5')
 
 	t.end()
 })

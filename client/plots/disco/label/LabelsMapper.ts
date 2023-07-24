@@ -1,5 +1,5 @@
-import Data from '../data/Data'
-import Reference from '../chromosome/Reference'
+import Data from '#plots/disco/data/Data'
+import Reference from '#plots/disco/chromosome/Reference'
 import Label from './Label'
 import LabelFactory from './LabelFactory'
 import MLabel from './MLabel'
