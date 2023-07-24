@@ -1,6 +1,6 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { dofetch3 } from '#common/dofetch'
-import { gmlst2loci } from '../src/client'
+import { gmlst2loci } from '#src/client'
 
 /*
 for lack of better name, this script is called "ssgq", after singleSampleGenomeQuantification
@@ -157,7 +157,7 @@ async function plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, c
 	]
 	first_genetrack_tolist(genomeObj, tklst)
 
-	const bb = new (await import('../src/block')).Block({
+	const bb = new (await import('#src/block')).Block({
 		genome: genomeObj,
 		holder: holder.append('div'),
 		nobox: true,
