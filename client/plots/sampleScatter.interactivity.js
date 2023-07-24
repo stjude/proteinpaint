@@ -333,23 +333,6 @@ export function setInteractivity(self) {
 		menu.show(e.clientX, e.clientY, false)
 	}
 
-	self.downloadSVG = function (svg) {
-		const link = document.createElement('a')
-		// If you don't know the name or want to use
-		// the webserver default set name = ''
-		link.setAttribute('download', 'scatter.svg')
-		document.body.appendChild(link)
-		link.click()
-		link.remove()
-		const serializer = new XMLSerializer()
-		const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
-			type: 'image/svg+xml'
-		})
-		link.href = URL.createObjectURL(svg_blob)
-		link.click()
-		link.remove()
-	}
-
 	self.getCategoryInfo = function (d, category) {
 		if (!(category in d)) return ''
 		return d[category]

@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 class profileBarchart {
 	constructor() {
@@ -116,6 +117,11 @@ class profileBarchart {
 
 		const sampleData = this.sampleData
 		if (!sampleData) return
+		div
+			.append('button')
+			.style('margin-left', '15px')
+			.text('Download SVG')
+			.on('click', () => downloadSingleSVG(svg, 'barchart-plot.svg'))
 		const svg = this.dom.holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		const color = this.component.component.color
