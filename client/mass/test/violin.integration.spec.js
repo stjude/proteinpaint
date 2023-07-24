@@ -46,10 +46,7 @@ const open_state = {
 	childType: 'violin',
 	term: {
 		id: 'agedx',
-		included_types: ['float'],
 		isAtomic: true,
-		isleaf: true,
-		name: 'Age (years) at Cancer Diagnosis',
 		q: {
 			mode: 'continuous',
 			hiddenValues: {},
@@ -612,10 +609,7 @@ tape('term1 as numeric and term2 numeric, change median size', function (test) {
 					childType: 'violin',
 					term: {
 						id: 'agedx',
-						included_types: ['float'],
 						isAtomic: true,
-						isleaf: true,
-						name: 'Age (years) at Cancer Diagnosis',
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
@@ -686,10 +680,7 @@ tape.skip('term1 as categorical and term2 numeric', function (test) {
 					childType: 'violin',
 					term: {
 						id: 'sex',
-						included_types: ['categorical'],
-						isAtomic: true,
-						isleaf: true,
-						name: 'Sex',
+						isAtomic: true
 					},
 					term2: {
 						id: 'agedx',
@@ -729,7 +720,6 @@ tape('term1 as numerical and term2 condition', function (test) {
 					term: {
 						id: 'agedx',
 						isAtomic: true,
-						isleaf: true,
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
@@ -963,10 +953,7 @@ tape('test uncomputable categories legend', function (test) {
 					childType: 'violin',
 					term: {
 						id: 'aaclassic_5',
-						included_types: ['float'],
 						isAtomic: true,
-						isleaf: true,
-						name: 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)',
 						q: {
 							mode: 'continuous',
 						},
@@ -1074,7 +1061,6 @@ tape('test change in plot length and thickness for custom group variable', funct
 					childType: 'violin',
 					term: {
 						id: 'agedx',
-						name: 'Age (years) at Cancer Diagnosis',
 						q: {
 							mode: 'continuous',
 						},
