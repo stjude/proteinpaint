@@ -737,7 +737,8 @@ class Matrix {
 			}
 
 			t.totalHtAdjustments = totalHtAdjustments
-			const adjustment = (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
+			t.rowHt = t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
+			const adjustment = t.rowHt - ht
 			totalHtAdjustments += adjustment
 			if (!(t.visibleGrpIndex in grpTotals)) grpTotals[t.visibleGrpIndex] = { htAdjustment: 0 }
 			grpTotals[t.visibleGrpIndex].htAdjustment += adjustment
@@ -930,11 +931,15 @@ class Matrix {
 			const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 			const isDivideByTerm = termid === divideByTermId
 			const emptyGridCells = []
+			const y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
+			const hoverY0 = t.tw.settings?.gap || y
 			const series = {
 				t,
 				tw: t.tw,
 				cells: [],
-				y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
+				y,
+				hoverY0,
+				hoverY1: hoverY0 + (t.tw.settings?.barh || dy)
 			}
 
 			for (const so of this.unfilteredSampleOrder) {

@@ -17,7 +17,10 @@ export function setInteractivity(self) {
 		}
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
+		// TODO: svg-rendered cell rects may be thin and hard to mouse over,
+		// but the tooltip should still display info
 		if (!d || !d.term || !d.sample || !d.siblingCells?.length) {
+			self.dom.tip.hide()
 			return
 		}
 		const s = self.settings.matrix
@@ -80,7 +83,7 @@ export function setInteractivity(self) {
 	self.getImgCell = function (event) {
 		//const [x,y] = pointer(event, event.target)
 		const y = event.clientY - self.imgBox.y - event.target.clientTop
-		const d = event.target.__data__.find(series => series.y <= y && y <= series.y + self.dimensions.dy)
+		const d = event.target.__data__.find(series => series.hoverY0 <= y && y <= series.hoverY1)
 		if (!d) return
 		const { xMin, dx } = self.dimensions
 		const x2 = event.clientX - self.imgBox.x - event.target.clientLeft + xMin
