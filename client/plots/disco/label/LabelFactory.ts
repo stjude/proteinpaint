@@ -1,9 +1,8 @@
-import Label from './Label.ts'
-import Point from './Point.ts'
-import Line from './Line.ts'
-import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
-import { arc } from 'd3'
-import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
+import Label from './Label'
+import Point from './Point'
+import Line from './Line'
+import MutationTooltip from '#plots/disco/label/MutationTooltip'
+import FusionTooltip from '#plots/disco/fusion/FusionTooltip'
 
 export default class LabelFactory {
 	static createLabel(
@@ -34,7 +33,7 @@ export default class LabelFactory {
 		const points: Array<Point> = []
 		const point0: Point = {
 			x: r0 * Math.cos(ccAngle),
-				y: r0 * Math.sin(ccAngle)
+			y: r0 * Math.sin(ccAngle)
 		}
 		const point1: Point = {
 			x: r1 * Math.cos(ccAngle),

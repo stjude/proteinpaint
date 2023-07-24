@@ -1,7 +1,7 @@
-import Arc from '../arc/Arc.ts'
-import Line from './Line.ts'
-import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
-import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
+import Arc from '../arc/Arc'
+import Line from './Line'
+import MutationTooltip from '#plots/disco/label/MutationTooltip'
+import FusionTooltip from '#plots/disco/fusion/FusionTooltip'
 
 export default interface Label extends Arc {
 	readonly angle: number

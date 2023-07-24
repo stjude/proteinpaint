@@ -1,22 +1,21 @@
-import Rings from '../ring/Rings.ts'
-import LabelsMapper from '../label/LabelsMapper.ts'
-import Ring from '../ring/Ring.ts'
-import Labels from '../label/Labels.ts'
-import NonExonicSnvArcsMapper from '../snv/NonExonicSnvArcsMapper.ts'
-import SnvArc from '../snv/SnvArc.ts'
-import SnvArcsMapper from '../snv/SnvArcsMapper.ts'
-import LohArcMapper from '../loh/LohArcMapper.ts'
-import LohArc from '../loh/LohArc.ts'
-import CnvArcsMapper from '../cnv/CnvArcsMapper.ts'
-import CnvArc from '../cnv/CnvArc.ts'
-import DataMapper from '../data/DataMapper.ts'
-import Settings from '../Settings.ts'
-import Reference from '../chromosome/Reference.ts'
-import Legend from '../legend/Legend.ts'
-import FusionMapper from '../fusion/FusionMapper.ts'
-import LohLegend from '../loh/LohLegend.ts'
-import Data from '../data/Data.ts'
-import ViewModel from './ViewModel.ts'
+import Settings from '../Settings'
+import Reference from '../chromosome/Reference'
+import Legend from '../legend/Legend'
+import FusionMapper from '../fusion/FusionMapper'
+import LohLegend from '../loh/LohLegend'
+import ViewModel from './ViewModel'
+import DataMapper from '#plots/disco/data/DataMapper'
+import Ring from '#plots/disco/ring/Ring'
+import SnvArcsMapper from '#plots/disco/snv/SnvArcsMapper'
+import SnvArc from '#plots/disco/snv/SnvArc'
+import LohArc from '#plots/disco/loh/LohArc'
+import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper'
+import CnvArc from '#plots/disco/cnv/CnvArc'
+import LabelsMapper from '#plots/disco/label/LabelsMapper'
+import Labels from '#plots/disco/label/Labels'
+import NonExonicSnvArcsMapper from '#plots/disco/snv/NonExonicSnvArcsMapper'
+import LohArcMapper from '#plots/disco/loh/LohArcMapper'
+import Rings from '#plots/disco/ring/Rings'
 
 export default class ViewModelProvider {
 	private settings: Settings
@@ -55,7 +54,7 @@ export default class ViewModelProvider {
 
 		const nonExonicSnvArcsMapper = new NonExonicSnvArcsMapper(
 			dataHolder.nonExonicInnerRadius,
-			this.settings.rings.ringWidth,
+			this.settings.rings.nonExonicRingWidth,
 			this.sampleName,
 			this.reference
 		)
@@ -63,34 +62,38 @@ export default class ViewModelProvider {
 		const nonExonicData = nonExonicSnvArcsMapper.map(dataHolder.nonExonicSnvData)
 
 		if (nonExonicData.length > 0) {
-			this.nonExonicArcRing = new Ring(dataHolder.nonExonicInnerRadius, this.settings.rings.ringWidth, nonExonicData)
+			this.nonExonicArcRing = new Ring(
+				dataHolder.nonExonicInnerRadius,
+				this.settings.rings.nonExonicRingWidth,
+				nonExonicData
+			)
 		}
 
 		this.snvArcsMapper = new SnvArcsMapper(
 			dataHolder.snvInnerRadius,
-			this.settings.rings.ringWidth,
+			this.settings.rings.snvRingWidth,
 			this.sampleName,
 			this.reference
 		)
 		const snvData = this.snvArcsMapper.map(dataHolder.snvRingDataMap)
 		if (snvData.length > 0) {
-			this.snvArcRing = new Ring(dataHolder.snvInnerRadius, this.settings.rings.ringWidth, snvData)
+			this.snvArcRing = new Ring(dataHolder.snvInnerRadius, this.settings.rings.snvRingWidth, snvData)
 		}
 
 		const lohMapper = new LohArcMapper(
 			dataHolder.lohInnerRadius,
-			this.settings.rings.ringWidth,
+			this.settings.rings.lohRingWidth,
 			this.sampleName,
 			this.reference
 		)
 		const lohData = lohMapper.map(dataHolder.lohData)
 		if (lohData.length > 0) {
-			this.lohArcRing = new Ring(dataHolder.lohInnerRadius, this.settings.rings.ringWidth, lohData)
+			this.lohArcRing = new Ring(dataHolder.lohInnerRadius, this.settings.rings.lohRingWidth, lohData)
 		}
 
 		this.cnvArcsMapper = new CnvArcsMapper(
 			dataHolder.cnvInnerRadius,
-			this.settings.rings.ringWidth,
+			this.settings.rings.cnvRingWidth,
 			this.settings,
 			this.sampleName,
 			this.reference,
@@ -101,7 +104,7 @@ export default class ViewModelProvider {
 
 		const cnvData = this.cnvArcsMapper.map(dataHolder.cnvData)
 		if (cnvData.length > 0) {
-			this.cnvArcRing = new Ring(dataHolder.cnvInnerRadius, this.settings.rings.ringWidth, cnvData)
+			this.cnvArcRing = new Ring(dataHolder.cnvInnerRadius, this.settings.rings.cnvRingWidth, cnvData)
 		}
 
 		const fusionMapper = new FusionMapper(dataHolder.fusionRadius, this.sampleName, this.reference)

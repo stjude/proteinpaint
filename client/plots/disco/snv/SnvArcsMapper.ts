@@ -1,8 +1,8 @@
-import Reference from '../chromosome/Reference.ts'
-import Data from '../data/Data.ts'
-import SnvArc from './SnvArc.ts'
-import MLabel from '../label/MLabel.ts'
-import SnvLegendElement from './SnvLegendElement.ts'
+import Reference from '../chromosome/Reference'
+import Data from '../data/Data'
+import SnvArc from './SnvArc'
+import MLabel from '../label/MLabel'
+import SnvLegendElement from './SnvLegendElement'
 
 export default class SnvArcsMapper {
 	snvClassMap: Map<string, SnvLegendElement> = new Map()

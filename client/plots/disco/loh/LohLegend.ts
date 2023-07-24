@@ -1,4 +1,4 @@
-import GradientColorProvider from './GradientColorProvider.ts'
+import GradientColorProvider from './GradientColorProvider'
 
 export default class LohLegend {
 	minValue: number

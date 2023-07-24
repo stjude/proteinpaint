@@ -1,9 +1,9 @@
-import Data from '../data/Data.ts'
-import Reference from '../chromosome/Reference.ts'
-import CnvArc from './CnvArc.ts'
-import CnvLegend from './CnvLegend.ts'
-import { CnvType } from './CnvType.ts'
-import Settings from '../Settings.ts'
+import Data from '../data/Data'
+import Reference from '../chromosome/Reference'
+import CnvArc from './CnvArc'
+import CnvLegend from './CnvLegend'
+import { CnvType } from './CnvType'
+import Settings from '../Settings'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()
