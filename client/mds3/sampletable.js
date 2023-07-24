@@ -106,6 +106,13 @@ export async function displaySampleTable(samples, args) {
 				callback: async (event, i) => {
 					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 					sandbox.header.text(samples[i].sample_id)
+
+					let thisMutation
+					if (samples[i].ssm_id_lst?.[0]) {
+						thisMutation = (args.tk.skewer.rawmlst || args.tk.custom_variants).find(
+							m => m.ssm_id == samples[i].ssm_id_lst[0]
+						)
+					}
 					await (
 						await import('#plots/plot.ssgq.js')
 					).plotSingleSampleGenomeQuantification(
@@ -114,7 +121,8 @@ export async function displaySampleTable(samples, args) {
 						k,
 						samples[i],
 						sandbox.body.append('div').style('margin', '20px'),
-						args.block.genome
+						args.block.genome,
+						thisMutation.gene
 					)
 				}
 			}
@@ -322,7 +330,8 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 						k,
 						sample,
 						sandbox.body.append('div').style('margin', '20px'),
-						block.genome
+						block.genome,
+						thisMutation.gene
 					)
 				})
 		}

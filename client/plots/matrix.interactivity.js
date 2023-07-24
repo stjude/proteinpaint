@@ -110,6 +110,8 @@ export function setInteractivity(self) {
 		const sample = {
 			sample_id: sampleData._SAMPLENAME_ || sampleData.row.sampleName || sampleData.row.sample
 		}
+		//when clicking a cell in SV, CNV, mutation panels
+		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
 		self.dom.menubody.selectAll('*').remove()
 		self.dom.menutop.selectAll('*').remove()
@@ -131,7 +133,8 @@ export function setInteractivity(self) {
 							k,
 							sample,
 							sandbox.body.append('div').style('margin', '20px'),
-							self.app.opts.genome
+							self.app.opts.genome,
+							geneName
 						)
 						self.dom.tip.hide()
 						menuDiv.remove()
