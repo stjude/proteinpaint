@@ -134,7 +134,7 @@ export function setRenderers(self) {
 		const x = cell.x ? cell.x - d.xMin : 0
 		const y = _y ? _y + cell.y : cell.y || 0
 		const width = s.useMinPixelWidth ? Math.max(cell.width || d.colw, d.pxw) : cell.width || d.colw
-		const height = cell.height || s.rowh
+		const height = 'height' in cell ? cell.height : s.rowh
 		ctx.fillStyle = cell.fill
 		ctx.fillRect(x, y, width, height)
 
@@ -161,7 +161,7 @@ export function setRenderers(self) {
 			.attr('x', cell.x || 0)
 			.attr('y', cell.y || 0)
 			.attr('width', cell.width || self.dimensions.colw)
-			.attr('height', cell.height || s.rowh)
+			.attr('height', 'height' in cell ? cell.height : s.rowh)
 			.attr('shape-rendering', 'crispEdges')
 			//.attr('stroke', cell.fill)
 			.attr('stroke-width', 0)

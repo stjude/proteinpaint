@@ -670,8 +670,10 @@ class Matrix {
 					t.counts.hits += anno.countedValues.length
 					if (t.tw.q?.mode == 'continuous') {
 						const v = anno.value
-						if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
-						if (!('maxval' in t.counts) || t.counts.maxval < v) t.counts.maxval = v
+						if (!t.tw.term.values?.[v]?.uncomputable) {
+							if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
+							if (!('maxval' in t.counts) || t.counts.maxval < v) t.counts.maxval = v
+						}
 					}
 					if (t.tw.term.type == 'geneVariant' && anno.values) {
 						for (const val of anno.values) {
@@ -716,12 +718,12 @@ class Matrix {
 					full: scaleLinear().domain(tickValues).range([1, barh])
 				}
 				if (t.counts.maxval >= 0) {
-					t.scales.pos = scaleLinear().domain([0, t.counts.maxval]).range([0, t.counts.posMaxHt])
+					t.scales.pos = scaleLinear().domain([0, t.counts.maxval]).range([1, t.counts.posMaxHt])
 				}
 				if (t.counts.minval < 0) {
 					t.scales.neg = scaleLinear()
 						.domain([0, t.counts.minval])
-						.range([0, barh - t.counts.posMaxHt - 5])
+						.range([1, barh - t.counts.posMaxHt - 5])
 				}
 			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
 				const maxVals = []

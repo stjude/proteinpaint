@@ -12,13 +12,28 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 	cell.fill = anno.color || values[anno.key]?.color
 
-	//cell.y = height * i //t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
-
 	cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 	if (tw.q?.mode == 'continuous') {
 		if (!tw.settings) tw.settings = {}
 		if (!tw.settings.barh) tw.settings.barh = s.barh
-		if (!('gap' in tw.settings)) tw.settings.gap = 0
+		if (!('gap' in tw.settings)) tw.settings.gap = 4
+
+		const specialValue = tw.term.values?.[cell.key]
+
+		// handle uncomputable values
+		// TODO: the server response data should not have uncomputable values when mode='continuous'
+		// this may be implemented in getData(), but will require lots of testing since it is used
+		// by multiple charts
+		if (specialValue?.uncomputable) {
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = height * i
+			cell.height = tw.settings.barh
+			cell.fill = 'transparent'
+			//cell.label = specialValue.label
+			const group = tw.legend?.group || tw.$id
+			return //{ ref: t.ref, group, value: specialValue.label || specialValue.key, entry: { key, label: cell.label, fill: cell.fill } }
+		}
+
 		// TODO: may use color scale instead of bars
 		if (s.transpose) {
 			cell.height = t.scale(cell.key)

@@ -26,7 +26,9 @@ export function setInteractivity(self) {
 		if (d.term.type != 'geneVariant') {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
 			rows.push(
-				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
+				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill}'> ${
+					d.label
+				}</td></tr>`
 			)
 		} else if (d.term.type == 'geneVariant' && d.value) {
 			rows.push(
