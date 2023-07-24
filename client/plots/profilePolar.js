@@ -59,7 +59,6 @@ class profilePolar {
 
 		const holder = this.dom.holder.append('div')
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
-		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
 		const regionSelect = div.append('select').style('margin-left', '5px')
@@ -104,6 +103,7 @@ class profilePolar {
 			.on('click', () => downloadSingleSVG(svg, 'polar-plot.svg'))
 
 		if (!this.sampleData) return
+		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
 
 		// Create a polar grid.
 		const radius = 250
