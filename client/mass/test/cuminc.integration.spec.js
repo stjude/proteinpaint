@@ -749,7 +749,6 @@ tape('term1 = Cardiovascular System, term2 = samplelst', function(test) {
 							}
 						},
 						q: {
-							mode: 'custom-groupsetting',
 							groups: [
 								{
 									name: 'Group 1',
