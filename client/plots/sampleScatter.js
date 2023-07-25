@@ -196,6 +196,22 @@ class Scatter {
 			title: 'It represents the area of a symbol in square pixels',
 			min: 0
 		}
+		const minDotSizeOption = {
+			label: 'Min dot size',
+			type: 'number',
+			chartType: 'sampleScatter',
+			settingsKey: 'minDotSize',
+			title: 'It represents the minimum dot size',
+			min: 0
+		}
+		const maxDotSizeOption = {
+			label: 'Max dot size',
+			type: 'number',
+			chartType: 'sampleScatter',
+			settingsKey: 'maxDotSize',
+			title: 'It represents the maximum dot size',
+			min: 0
+		}
 		const refSizeOption = {
 			label: 'Reference size',
 			type: 'number',
@@ -286,7 +302,10 @@ class Scatter {
 			if (!this.is3D) {
 				inputs.splice(4, 0, shapeOption)
 				inputs.splice(5, 0, scaleDotOption)
-				inputs.splice(6, 0, dotSizeOption)
+				if (this.config.scaleDotTW) {
+					inputs.splice(6, 0, minDotSizeOption)
+					inputs.splice(7, 0, maxDotSizeOption)
+				} else inputs.splice(6, 0, dotSizeOption)
 				if (hasRef) inputs.splice(7, 0, refSizeOption)
 
 				inputs.push({
@@ -318,8 +337,14 @@ class Scatter {
 		} else {
 			inputs.splice(2, 0, shapeOption)
 			inputs.splice(3, 0, scaleDotOption)
-			inputs.splice(4, 0, dotSizeOption)
-			if (hasRef) inputs.splice(5, 0, refSizeOption)
+			if (this.config.scaleDotTW) {
+				inputs.splice(4, 0, minDotSizeOption)
+				inputs.splice(5, 0, maxDotSizeOption)
+				if (hasRef) inputs.splice(6, 0, refSizeOption)
+			} else {
+				inputs.splice(4, 0, dotSizeOption)
+				if (hasRef) inputs.splice(5, 0, refSizeOption)
+			}
 		}
 
 		this.components = {
@@ -417,6 +442,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export function getDefaultScatterSettings() {
 	return {
 		size: 36,
+		minDotSize: 25,
+		maxDotSize: 64,
 		refSize: 9,
 		svgw: 550,
 		svgh: 550,
