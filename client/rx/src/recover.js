@@ -44,7 +44,7 @@ class Recover {
 	}
 
 	init() {
-		this.app.register('recover', this.api)
+		this.app.register(this.api)
 		this.currIndex = -1
 		this.history = []
 		// turn off during testing of other components for lighter memory usage
@@ -60,7 +60,6 @@ class Recover {
 		// assume that the presence of app.opts.state
 		// indicates testing, no need for history in that case
 		if (!this.isActive) return
-		if (this.opts.plot_id) console.log('main()', this.state)
 		if (!this.timedTrack) {
 			this.trackState()
 			this.trackPending = true

@@ -317,10 +317,12 @@ export function getAppApi(self) {
 		async save(action) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
+			// TODO: may generalize to use the key instead of hardcoding to only .recover
 			if (componentsByType.recover) {
 				for (const id in componentsByType.recover) {
-					const instance = componentsByType.recover[id]
-					instance.replaceLastState(self.state)
+					const api = componentsByType.recover[id]
+					// note: store.write() returns a frozen state, so safe to pass as argument
+					api.replaceLastState(self.state)
 				}
 			}
 		},
@@ -357,9 +359,12 @@ export function getAppApi(self) {
 		getComponents(dotSepNames = '') {
 			return getComponents(self.components, dotSepNames)
 		},
-		register(type, instance) {
-			if (!componentsByType[type]) componentsByType[type] = {}
-			componentsByType[type][instance.id] = instance
+		register(api) {
+			if (!componentsByType[api.type]) componentsByType[api.type] = {}
+			componentsByType[api.type][api.id] = api
+		},
+		deregister(api) {
+			if (componentsByType[api.type]?.[api.id]) delete componentsByType[api.type][api.id]
 		},
 		destroy() {
 			// delete references to other objects to make it easier
@@ -383,6 +388,7 @@ export function getAppApi(self) {
 			if (self.bus) self.bus.destroy()
 			delete self.store
 			if (self.api) delete self.api
+			self.wasDestroyed = true
 		}
 	}
 
@@ -455,6 +461,7 @@ export function getComponentApi(self) {
 		destroy() {
 			// delete references to other objects to make it easier
 			// for automatic garbage collection to find unreferenced objects
+			self.app.deregister(self.api)
 			for (const key in self.components) {
 				const component = self.components[key]
 				if (typeof component.destroy == 'function') {
@@ -634,9 +641,9 @@ export async function notifyComponents(components, current) {
 		} else if (component.hasOwnProperty('update')) {
 			called.push(component.update(current))
 		} else if (component && typeof component == 'object' && !component.main) {
-			for (const name in component) {
-				if (component.hasOwnProperty(name) && typeof component[name].update == 'function') {
-					called.push(component[name].update(current))
+			for (const subname in component) {
+				if (component.hasOwnProperty(subname) && typeof component[subname].update == 'function') {
+					called.push(component[subname].update(current))
 				}
 			}
 		}
