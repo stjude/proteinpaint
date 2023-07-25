@@ -6,20 +6,24 @@ import { recoverInit } from '../src/recover.js'
  reusable helper functions
 **************************/
 
-async function getAppRecover(state={}, opts={}) {
+async function getAppRecover(state = {}, opts = {}) {
 	const app = {
 		opts: {
 			debug: true,
-			recover: Object.assign({
-				debug: true
-			}, opts)
+			recover: Object.assign(
+				{
+					debug: true
+				},
+				opts
+			)
 		},
 		dispatch: action => {
 			app.state = Object.freeze(structuredClone(action.state))
 			api.update({ appState: app.state })
 		},
 		getState: () => app.state,
-		register: () => {}
+		register: () => {},
+		deregister: () => {}
 	}
 
 	// !!! NOTE !!!
@@ -32,13 +36,19 @@ async function getAppRecover(state={}, opts={}) {
 		wait: 0
 	}
 
-	const api = await recoverInit(Object.assign({
-		app, 
-		holder: getHolder()
-	}, testOnlyDefaults, opts))
+	const api = await recoverInit(
+		Object.assign(
+			{
+				app,
+				holder: getHolder()
+			},
+			testOnlyDefaults,
+			opts
+		)
+	)
 
 	return {
-		app, 
+		app,
 		api,
 		self: api.Inner
 	}
@@ -69,8 +79,8 @@ tape('initial render', async test => {
 	const state = { a: 0 }
 	// simulate an initialized rx appApi
 	{
-		const {app, api, self} = await getAppRecover(state, {resetHtml: ''})
-		const {undoBtn, redoBtn, resetBtn} = self.dom
+		const { app, api, self } = await getAppRecover(state, { resetHtml: '' })
+		const { undoBtn, redoBtn, resetBtn } = self.dom
 		test.equal(resetBtn, undefined, `should not render a reset button if opts.resetHtml is not supplied`)
 		test.deepEqual(
 			[undoBtn.html(), redoBtn.html()],
@@ -87,8 +97,8 @@ tape('initial render', async test => {
 	}
 
 	{
-		const {app, api, self} = await getAppRecover(state)
-		const {undoBtn, redoBtn, resetBtn} = self.dom
+		const { app, api, self } = await getAppRecover(state)
+		const { undoBtn, redoBtn, resetBtn } = self.dom
 		test.equal(resetBtn?.html(), self.opts.resetHtml, `should render a reset button if opts.resetHtml is supplied`)
 		if (test._ok) api.destroy()
 	}
@@ -98,8 +108,8 @@ tape('initial render', async test => {
 
 tape('direct api and instance method calls', async test => {
 	const state = { a: 0 }
-	const {app, api, self} = await getAppRecover(state)
-	const {undoBtn, redoBtn, resetBtn} = self.dom
+	const { app, api, self } = await getAppRecover(state)
+	const { undoBtn, redoBtn, resetBtn } = self.dom
 
 	// the rx store is expected to supply a frozen state copy
 	app.state = Object.freeze(structuredClone(state))
@@ -156,7 +166,7 @@ tape('direct api and instance method calls', async test => {
 
 tape('triggered button clicks', async test => {
 	const state = { a: 0 }
-	const {app, api, self} = await getAppRecover(state, {maxHistoryLen: 5})
+	const { app, api, self } = await getAppRecover(state, { maxHistoryLen: 5 })
 	await api.update({ appState: Object.freeze({ a: 1 }) })
 	await sleep(0)
 	await api.update({ appState: Object.freeze({ b: 2 }) })
@@ -169,7 +179,7 @@ tape('triggered button clicks', async test => {
 	await api.update({ appState: app.state })
 	await sleep(0)
 
-	const {undoBtn, redoBtn, resetBtn} = self.dom
+	const { undoBtn, redoBtn, resetBtn } = self.dom
 	test.deepEqual(
 		[undoBtn.property('disabled'), redoBtn.property('disabled')],
 		[false, true],
@@ -210,7 +220,7 @@ tape('triggered button clicks', async test => {
 	test.deepEqual(app.state, { a: 1 }, `should reset to the initial state on reset button click`)
 
 	let i = 0 // prevent infinite loop
-	while(self.currIndex < self.history.length - 1) {
+	while (self.currIndex < self.history.length - 1) {
 		redoBtn.node().click()
 		await sleep(0)
 		i++
@@ -227,5 +237,3 @@ tape('triggered button clicks', async test => {
 	//if (test._ok) api.destroy()
 	test.end()
 })
-
-
