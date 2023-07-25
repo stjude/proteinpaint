@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
-import SnvArc from './SnvArc'
-import IRenderer from '#plots/disco/IRenderer'
-import FullArcRenderer from '#plots/disco/arc/FullArcRenderer'
-import MenuProvider from '#plots/disco/menu/MenuProvider'
+import SnvArc from './SnvArc.ts'
+import IRenderer from '#plots/disco/IRenderer.ts'
+import FullArcRenderer from '#plots/disco/arc/FullArcRenderer.ts'
+import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 
 export default class SnvRenderer implements IRenderer {
 	private svnWidth: number

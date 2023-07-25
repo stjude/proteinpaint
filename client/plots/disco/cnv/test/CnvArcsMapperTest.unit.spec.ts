@@ -1,8 +1,8 @@
 import test from 'tape'
 import discoDefaults from '#plots/disco/defaults'
-import Reference from '#plots/disco/chromosome/Reference'
-import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper'
-import DataMapper from '#plots/disco/data/DataMapper'
+import Reference from '#plots/disco/chromosome/Reference.ts'
+import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper.ts'
+import DataMapper from '#plots/disco/data/DataMapper.ts'
 
 const overriders = { padAngle: 0.0 }
 const settings = discoDefaults(overriders)

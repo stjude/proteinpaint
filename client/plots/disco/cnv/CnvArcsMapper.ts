@@ -1,9 +1,9 @@
-import Data from '#plots/disco/data/Data'
-import Reference from '#plots/disco/chromosome/Reference'
-import CnvArc from './CnvArc'
-import CnvLegend from './CnvLegend'
-import { CnvType } from './CnvType'
-import Settings from '#plots/disco/Settings'
+import Data from '#plots/disco/data/Data.ts'
+import Reference from '#plots/disco/chromosome/Reference.ts'
+import CnvArc from './CnvArc.ts'
+import CnvLegend from './CnvLegend.ts'
+import { CnvType } from './CnvType.ts'
+import Settings from '#plots/disco/Settings.ts'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()

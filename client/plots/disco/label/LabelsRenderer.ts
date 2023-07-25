@@ -1,10 +1,10 @@
-import IRenderer from '#plots/disco/IRenderer'
+import IRenderer from '#plots/disco/IRenderer.ts'
 import { select } from 'd3-selection'
 import { line } from 'd3-shape'
-import Label from './Label'
-import MenuProvider from '#plots/disco/menu/MenuProvider'
-import MutationTooltip from '#plots/disco/label/MutationTooltip'
-import FusionTooltip from '#plots/disco/fusion/FusionTooltip'
+import Label from './Label.ts'
+import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
+import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
+import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number

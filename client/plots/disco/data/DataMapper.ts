@@ -1,10 +1,10 @@
-import Data from './Data'
-import Reference from '#plots/disco/chromosome/Reference'
-import DataObjectMapper from './DataObjectMapper'
-import Settings from '#plots/disco/Settings'
-import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper'
-import { DataHolder } from '#plots/disco/data/DataHolder'
-import { MutationTypes } from '#plots/disco/data/MutationTypes'
+import Data from './Data.ts'
+import Reference from '#plots/disco/chromosome/Reference.ts'
+import DataObjectMapper from './DataObjectMapper.ts'
+import Settings from '#plots/disco/Settings.ts'
+import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper.ts'
+import { DataHolder } from '#plots/disco/data/DataHolder.ts'
+import { MutationTypes } from '#plots/disco/data/MutationTypes.ts'
 
 export default class DataMapper {
 	// remove fields and extract filters to seperate classes

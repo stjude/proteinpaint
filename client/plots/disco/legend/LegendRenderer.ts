@@ -1,6 +1,6 @@
-import Legend from './Legend'
+import Legend from './Legend.ts'
 import svgLegend from '#dom/svg.legend'
-import LegendJSONMapper from './LegendJSONMapper'
+import LegendJSONMapper from './LegendJSONMapper.ts'
 
 export default class LegendRenderer {
 	private legendJSONMapper: LegendJSONMapper

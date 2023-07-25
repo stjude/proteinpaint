@@ -1,8 +1,8 @@
 import test from 'tape'
-import LabelsMapper from '#plots/disco/label/LabelsMapper'
-import Reference from '#plots/disco/chromosome/Reference'
+import LabelsMapper from '#plots/disco/label/LabelsMapper.ts'
+import Reference from '#plots/disco/chromosome/Reference.ts'
 import discoDefaults from '#plots/disco/defaults'
-import DataMapper from '#plots/disco/data/DataMapper'
+import DataMapper from '#plots/disco/data/DataMapper.ts'
 
 // Create test data
 const overriders = { rings: { labelLinesInnerRadius: 10, labelsToLinesDistance: 5, labelsToLinesGap: 2 } }

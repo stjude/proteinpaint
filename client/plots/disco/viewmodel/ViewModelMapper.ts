@@ -1,8 +1,8 @@
-import ViewModel from '#plots/disco/viewmodel/ViewModel'
-import Reference from '#plots/disco/chromosome/Reference'
-import DataMapper from '#plots/disco/data/DataMapper'
-import Settings from '#plots/disco/Settings'
-import ViewModelProvider from './ViewModelProvider'
+import ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
+import Reference from '#plots/disco/chromosome/Reference.ts'
+import DataMapper from '#plots/disco/data/DataMapper.ts'
+import Settings from '#plots/disco/Settings.ts'
+import ViewModelProvider from './ViewModelProvider.ts'
 
 export class ViewModelMapper {
 	static dtNums = [2, 5, 4, 10, 1, 'exonic', 'non-exonic']
