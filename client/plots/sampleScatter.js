@@ -306,7 +306,7 @@ class Scatter {
 			})
 		} else {
 			inputs.splice(1, 0, shapeOption)
-			inputs.splice(2, 0, dotSizeOption)
+			inputs.splice(2, 0, scaleDotOption)
 			inputs.push(dotSizeOption)
 			inputs.push({
 				label: 'Reference size',
