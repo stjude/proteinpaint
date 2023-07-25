@@ -20,7 +20,6 @@ class Recover {
 				.style('text-align', 'right')
 		}
 		this.hasStatePreMain = true
-		this.state = opts.getState || (appState => appState)
 		this.reactsTo = opts.reactsTo || (() => true) // could be undefined
 		this.getState = opts.getState || (appState => appState)
 		// will be used for setTimeout, in case of rapid succession of state changes
@@ -29,6 +28,7 @@ class Recover {
 			this.trackState()
 			this.render()
 		}
+		this.wait = 'wait' in opts ? opts.wait : 800
 	}
 
 	preApiFreeze(api) {
@@ -58,7 +58,7 @@ class Recover {
 		if (!this.isActive) return
 		if (this.timedTrack) clearTimeout(this.timedTrack)
 		this.trackPending = true
-		this.timedTrack = setTimeout(this.debouncedTrack, 800)
+		this.timedTrack = setTimeout(this.debouncedTrack, this.wait)
 	}
 
 	trackState() {
@@ -68,6 +68,7 @@ class Recover {
 		}
 		if (this.state._scope_ == 'none') return
 		this.isRecovering = false
+
 		if (this.currIndex < this.history.length - 1) {
 			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
 		}
@@ -92,6 +93,16 @@ class Recover {
 			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: structuredClone(config) })
 		} else this.app.dispatch({ type: 'app_refresh', state })
 	}
+
+	reset() {
+		this.currIndex = 0
+		this.isRecovering = true
+		const state = this.history[this.currIndex]
+		if (this.opts.plot_id) {
+			const config = state.plots.find(p => p.id === this.opts.plot_id)
+			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: structuredClone(config) })
+		} else this.app.dispatch({ type: 'app_refresh', state })
+	}
 }
 
 export const recoverInit = getCompInit(Recover)
@@ -101,6 +112,7 @@ function setRenderers(self) {
 		self.dom.undoBtn = self.dom.holder
 			.append('button')
 			.attr('title', 'undo the previous action')
+			.property('disabled', true)
 			.style('margin', '0 0 0 4px')
 			.style('border', '1px solid #ccc')
 			.style('vertical-align', 'middle')
@@ -117,7 +129,8 @@ function setRenderers(self) {
 		self.dom.redoBtn = self.dom.holder
 			.append('button')
 			.attr('title', 'redo a subsequent action')
-			.style('margin', '0 4px 0 0')
+			.property('disabled', true)
+			.style('margin', self.opts.resetHtml ? '0' : '0 4px 0 0')
 			.style('border', '1px solid #ccc')
 			.style('vertical-align', 'middle')
 			.html(
@@ -129,11 +142,24 @@ function setRenderers(self) {
 			)
 			//.style('padding', '2px')
 			.on('click', () => self.goto(1))
+
+		if (self.opts.resetHtml)
+			self.dom.resetBtn = self.dom.holder
+				.append('button')
+				.attr('title', 'Restore the initial rendered state')
+				.property('disabled', true)
+				.style('margin', '0 4px 0 0')
+				.style('border', '1px solid #ccc')
+				.style('vertical-align', 'middle')
+				.html(self.opts.resetHtml)
+				//.style('padding', '2px')
+				.on('click', () => self.reset())
 	}
 
 	self.render = function () {
-		if (self.dom.undoBtn) self.dom.undoBtn.property('disabled', self.currIndex < 1)
+		if (self.dom.undoBtn) self.dom.undoBtn.property('disabled', self.currIndex < 1 || self.history.length === 1)
 		if (self.dom.redoBtn)
 			self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
+		if (self.dom.resetBtn) self.dom.resetBtn.property('disabled', self.history.length < 1 || self.currIndex < 1)
 	}
 }
