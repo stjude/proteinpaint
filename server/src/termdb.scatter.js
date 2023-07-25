@@ -421,7 +421,8 @@ export async function getScatterCoordinates(req, q, ds) {
 }
 
 function isComputable(term, value) {
-	return !term.values?.[value]?.uncomputable
+	const computable = !term.values?.[value]?.uncomputable
+	return computable
 }
 
 export async function trigger_getLowessCurve(req, q, res) {
