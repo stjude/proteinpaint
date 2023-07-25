@@ -11,11 +11,7 @@ tape('default behavior', test => {
 
 	const width = 300
 	const height = 300
-	const svg = select('body')
-		.append('svg')
-		.attr('width', width)
-		.attr('height', height)
-		.attr('overflow', 'visible')
+	const svg = select('body').append('svg').attr('width', width).attr('height', height).attr('overflow', 'visible')
 	const holder = svg.append('g').attr('transform', 'translate(100,0)')
 	const legendRenderer = svgLegend({
 		holder,
@@ -65,13 +61,14 @@ tape('default behavior', test => {
 	test.equal(
 		holder
 			.selectAll('rect')
-			.filter(function(t) {
+			.filter(function (t) {
 				return t.color === select(this).attr('fill')
 			})
 			.size(),
 		legendData.reduce((sum, d) => sum + d.items.length, 0),
 		'should have the expected color for each legend item'
 	)
+	if (test._ok) holder.remove()
 	test.end()
 })
 

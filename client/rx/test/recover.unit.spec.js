@@ -234,6 +234,6 @@ tape('triggered button clicks', async test => {
 	test.equal(self.history.length, self.maxHistoryLen, `history length should not exceed [opts|self].maxHistoryLen`)
 	test.deepEqual(self.history[0], self.origState, `should always keep the initial state as the history[0] entry`)
 
-	//if (test._ok) api.destroy()
+	if (test._ok) api.destroy()
 	test.end()
 })
