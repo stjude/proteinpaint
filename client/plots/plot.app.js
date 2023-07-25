@@ -105,7 +105,7 @@ class PlotApp {
 					// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
 					getState: appState => appState,
 					//reactsTo: action => true, //action.type != 'plot_edit' || action.type == 'app_refresh',
-					maxHistoryLen: 5
+					maxHistoryLen: 10
 				})
 
 			await this.api.dispatch()

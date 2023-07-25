@@ -4,14 +4,17 @@ import { getCompInit, toJson } from '../index.js'
 opts:{}
 	app:{} (required)
 	holder: STR (required)
-	maxHistoryLen: INT (required)
+	maxHistoryLen: INT (optional) 
+		- how many states to keep tracked in history
+		- history[0] will always be the initial state
 */
 
 class Recover {
 	constructor(opts = {}) {
 		this.type = 'recover'
 		this.dom = {
-			holder: opts.holder
+			holder: opts.holder,
+			btnDiv: opts.holder
 				.append('div')
 				.style('position', 'sticky')
 				.style('top', '12px')
@@ -29,13 +32,14 @@ class Recover {
 			this.render()
 		}
 		this.wait = 'wait' in opts ? opts.wait : 800
+		this.maxHistoryLen = opts.maxHistoryLen || 10
 	}
 
 	preApiFreeze(api) {
-		api.replaceLastState = state => {
+		api.replaceLastState = appState => {
 			if (this.isRecovering) return
-			this.state = state
-			if (!this.trackPending) this.history[this.currIndex] = state
+			this.state = this.getState(appState)
+			if (!this.trackPending) this.history[this.currIndex] = this.state
 		}
 	}
 
@@ -44,7 +48,7 @@ class Recover {
 		this.currIndex = -1
 		this.history = []
 		// turn off during testing of other components for lighter memory usage
-		this.isActive = !isNaN(this.opts.maxHistoryLen) && +this.opts.maxHistoryLen > 0
+		this.isActive = !isNaN(this.maxHistoryLen) && +this.maxHistoryLen > 0
 		if (this.isActive) {
 			setRenderers(this)
 			this.initUi()
@@ -56,7 +60,14 @@ class Recover {
 		// assume that the presence of app.opts.state
 		// indicates testing, no need for history in that case
 		if (!this.isActive) return
-		if (this.timedTrack) clearTimeout(this.timedTrack)
+		if (this.opts.plot_id) console.log('main()', this.state)
+		if (!this.timedTrack) {
+			this.trackState()
+			this.trackPending = true
+			this.timedTrack = setTimeout(() => {}, this.wait)
+			return
+		}
+		clearTimeout(this.timedTrack)
 		this.trackPending = true
 		this.timedTrack = setTimeout(this.debouncedTrack, this.wait)
 	}
@@ -68,6 +79,8 @@ class Recover {
 		}
 		if (this.state._scope_ == 'none') return
 		this.isRecovering = false
+		// the goto() code should not allow currIndex to go back to -1
+		if (this.currIndex == -1) this.origState = this.state
 
 		if (this.currIndex < this.history.length - 1) {
 			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
@@ -75,8 +88,9 @@ class Recover {
 		this.history.push(this.state)
 		this.currIndex += 1
 
-		if (this.history.length > this.opts.maxHistoryLen) {
-			this.history.shift()
+		if (this.history.length > this.maxHistoryLen) {
+			// always keep the origState, so remove the 2nd entry in history
+			this.history.splice(1, 1)
 			this.currIndex += -1
 		}
 		this.trackPending = false
@@ -88,16 +102,19 @@ class Recover {
 		else return
 		this.isRecovering = true
 		const state = this.history[this.currIndex]
+		this.render()
 		if (this.opts.plot_id) {
-			const config = state.plots.find(p => p.id === this.opts.plot_id)
-			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: structuredClone(config) })
-		} else this.app.dispatch({ type: 'app_refresh', state })
+			const copy = structuredClone(state)
+			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: copy.config, _scope_: copy._scope_ })
+		} else {
+			this.app.dispatch({ type: 'app_refresh', state })
+		}
 	}
 
 	reset() {
 		this.currIndex = 0
 		this.isRecovering = true
-		const state = this.history[this.currIndex]
+		const state = this.origState
 		if (this.opts.plot_id) {
 			const config = state.plots.find(p => p.id === this.opts.plot_id)
 			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: structuredClone(config) })
@@ -109,7 +126,7 @@ export const recoverInit = getCompInit(Recover)
 
 function setRenderers(self) {
 	self.initUi = function () {
-		self.dom.undoBtn = self.dom.holder
+		self.dom.undoBtn = self.dom.btnDiv
 			.append('button')
 			.attr('title', 'undo the previous action')
 			.property('disabled', true)
@@ -126,7 +143,7 @@ function setRenderers(self) {
 			//.style('padding', '2px')
 			.on('click', () => self.goto(-1))
 
-		self.dom.redoBtn = self.dom.holder
+		self.dom.redoBtn = self.dom.btnDiv
 			.append('button')
 			.attr('title', 'redo a subsequent action')
 			.property('disabled', true)
@@ -144,7 +161,7 @@ function setRenderers(self) {
 			.on('click', () => self.goto(1))
 
 		if (self.opts.resetHtml)
-			self.dom.resetBtn = self.dom.holder
+			self.dom.resetBtn = self.dom.btnDiv
 				.append('button')
 				.attr('title', 'Restore the initial rendered state')
 				.property('disabled', true)
@@ -160,6 +177,6 @@ function setRenderers(self) {
 		if (self.dom.undoBtn) self.dom.undoBtn.property('disabled', self.currIndex < 1 || self.history.length === 1)
 		if (self.dom.redoBtn)
 			self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
-		if (self.dom.resetBtn) self.dom.resetBtn.property('disabled', self.history.length < 1 || self.currIndex < 1)
+		if (self.dom.resetBtn) self.dom.resetBtn.property('disabled', self.currIndex === 0)
 	}
 }
