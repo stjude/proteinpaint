@@ -20,6 +20,7 @@ validate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
+validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
 querySamples_gdcapi
@@ -208,19 +209,23 @@ export function validate_query_snvindel_byisoform(ds) {
 
 			m.samples = []
 			for (const c of ssm.cases) {
-				/* make simple sample obj for counting, with sample_id
-				only returns total number of unique cases to client
-				*/
 				const s = { sample_id: await decideSampleId(c, ds, opts.useCaseid4sample) }
+				if (opts.useCaseid4sample) {
+					// when flag is true, this query came from getData() for gdc matrix
+					// sample_id is case uuid, the required unique identifier to align columns
+					// also create optional attribute __sampleName with submitter_id value, for displaying to user
+					s.__sampleName = c.submitter_id
+				}
 
+				/* remain to see if okay not to pass this
 				if (c.case_id) {
-					/* when case_id is available, pass it on to returned data as "case.case_id"
+					 when case_id is available, pass it on to returned data as "case.case_id"
 					this is used by gdc matrix case selection where case_id (uuid) is needed to build cohort in gdc portal,
 					but the submitter_id cannot be used as it will prevent mds3 gdc filter to work, it only works with uuid
 					see __matrix_case_id__
-					*/
 					s['case.case_id'] = c.case_id
 				}
+				*/
 
 				m.samples.push(s)
 			}
@@ -521,7 +526,8 @@ export function validate_query_geneCnv2(ds) {
 		'cnv.cnv_change',
 		'cnv.gene_level_cn',
 		'cnv.consequence.gene.symbol',
-		'case.submitter_id' // human-readable name
+		'case.submitter_id', // human-readable name, non-unique
+		'case.case_id' // unique uuid
 	]
 
 	/*
@@ -569,7 +575,8 @@ export function validate_query_geneCnv2(ds) {
 			}
 			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
 			const sample = {
-				sample_id: hit.case.submitter_id
+				sample_id: hit.case.case_id,
+				__sampleName: hit.case.submitter_id
 			}
 
 			if (opts.twLst) {
@@ -1306,19 +1313,15 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 				twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
 		}
 
-		if (geneTwLst) {
-			// using isoforms, should be from matrix to get annotated samples for dictionary term
-			// use submitter id to be able to align with geneVariant terms
-			if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
-		}
-
+		// need both case_id and submitter id
 		// need case_id to generate url/cases/<ID> link in table display; submitter and aliquot id won't work
 		if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
+		// need submitter id for
+		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
 	if (q.get == 'summary' || q.get == 'sunburst') {
-		// submitter id is sufficient to count unique number of samples
-		// no need for case_id
+		// submitter id is sufficient to count unique number of samples, no need for case_id
 		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
@@ -1417,8 +1420,16 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			}
 		}
 
-		// set last flag to true to give priority to submitter_id
-		sample.sample_id = await decideSampleId(s.case, ds, true)
+		if (q.variant2samples) {
+			// from mds3 client
+			// set 3rd arg to false to not set uuid as sample_id, but to use sample submitter id
+			sample.sample_id = await decideSampleId(s.case, ds, false)
+		} else {
+			// from getData(), need below:
+			// sample_id=case uuid, __sampleName=case submitter id (not sample submitter!)
+			sample.sample_id = s.case.case_id
+			sample.__sampleName = s.case.submitter_id
+		}
 
 		if (s.case.case_id) {
 			// for making url link on a sample
@@ -1472,16 +1483,16 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 /*
 c is case{}
-decide the generic sample_id used by pp
+decide the value to the generic sample_id attribute
 */
 async function decideSampleId(c, ds, useCaseid4sample) {
-	if (useCaseid4sample && c.submitter_id) {
-		// asking for submitter id (not case id) and the id is present, then return it
-		return c.submitter_id
+	if (useCaseid4sample && c.case_id) {
+		// asks for case uuid, and the id is present, then return it
+		return c.case_id
 	}
 
 	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
-		// hardcoded logic to
+		// hardcoded logic to return sample submitter id when aliquot id is present
 		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
 	}
 

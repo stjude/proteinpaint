@@ -1919,8 +1919,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					isoform
 					chr/pos
 					mname/class
-					_SAMPLENAME_
-					_SAMPLEID_
+					_SAMPLENAME_ // sample name for display
+					_SAMPLEID_   // sample id for computing, 
 
 	this function is diverging from mds3.load, each becoming specialized
 	1. it returns sample level data points {class/mname/sample/origin}
@@ -2015,6 +2015,18 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					_SAMPLEID_: s.sample_id,
 					_SAMPLENAME_: s.sample_id
 				}
+
+				/*
+				optional __sampleName may be returned by mds3 query, if so, assign to m2{}
+
+				*** tricky use case ***
+				mayGetGeneVariantData() is used for gdc matrix
+				in which the useCaseid4sample=true flag is set to inform mds3.gdc to return both uuid and submitter id
+				e.g. s.sample_id=uuid, and s.__sampleName=submitter id
+				as gdc matrix aligns data on case uuid (unique), while must display case submitter id (not unique)
+				later m2._SAMPLENAME_ will not be overriden because gdc has no termdb.q.id2sampleName()
+				*/
+				if (s.__sampleName) m2._SAMPLENAME_ = s.__sampleName
 
 				if ('value' in m) m2.value = m.value
 

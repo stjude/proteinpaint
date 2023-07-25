@@ -796,6 +796,8 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 		const case_submitter_id = h.submitter_id
 		if (!case_submitter_id) throw 'h.submitter_id missing'
 
+		// uncomment to detect different uuids mapping to same submitter id
+		//if(ds.map2caseid.cache.has(case_submitter_id)) console.log(case_submitter_id, case_id, ds.map2caseid.cache.get(case_submitter_id))
 		ds.map2caseid.cache.set(case_submitter_id, case_id)
 
 		if (!Array.isArray(h.samples)) continue //throw 'hit.samples[] not array'

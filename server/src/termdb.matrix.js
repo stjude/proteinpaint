@@ -305,6 +305,15 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		const s2 = {
 			sample: s.sample_id
 		}
+
+		/* optional attribute returned by gdc dataset
+		s.sample_id: case uuid for aligning matrix columns
+		s.__sampleName: case submitter id for display
+
+		non-gdc won't return this and will display s.sample_id
+		*/
+		if (s.__sampleName) s2.sampleName = s.__sampleName
+
 		for (const tw of termWrappers) {
 			const v = s[tw.term.id]
 			////////////////////////////
