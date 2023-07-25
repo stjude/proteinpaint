@@ -34,18 +34,21 @@ export function setRenderers(self) {
 	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
 		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax] = chart.data.samples.reduce(
+		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = chart.data.samples.reduce(
 			(s, d) => [
 				d.x < s[0] ? d.x : s[0],
 				d.x > s[1] ? d.x : s[1],
 				d.y < s[2] ? d.y : s[2],
 				d.y > s[3] ? d.y : s[3],
 				d.z < s[4] ? d.z : s[4],
-				d.z > s[5] ? d.z : s[5]
+				d.z > s[5] ? d.z : s[5],
+				d.scale < s[6] ? d.scale : s[6],
+				d.scale > s[7] ? d.scale : s[7]
 			],
-			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z]
+			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
 		)
-
+		chart.scaleMin = scaleMin
+		chart.scaleMax = scaleMax
 		chart.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
 			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
@@ -401,8 +404,14 @@ export function setRenderers(self) {
 
 	self.getShape = function (chart, c, factor = 1) {
 		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
-		const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
-		return self.symbols[index].size((size * factor) / self.k)()
+		const isRef = !('sampleId' in c)
+		if (!self.config.scaleDotTW || isRef) {
+			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
+			return self.symbols[index].size((size * factor) / self.k)()
+		} else {
+			const size = ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * self.settings.size
+			return self.symbols[index].size((size * factor) / self.k)()
+		}
 	}
 
 	function translate(chart, c) {

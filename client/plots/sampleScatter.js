@@ -116,7 +116,12 @@ class Scatter {
 			coordTWs
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
+		if (c.scaleDotTW) {
+			c.scaleDotTW.q.mode = 'continuous'
+			opts.scaleDotTW = c.scaleDotTW
+		}
 		if (c.term0) opts.divideByTW = c.term0
+
 		return opts
 	}
 
@@ -162,6 +167,16 @@ class Scatter {
 
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
+		const scaleDotOption = {
+			type: 'term',
+			configKey: 'scaleDotTW',
+			chartType: 'sampleScatter',
+			usecase: { target: 'sampleScatter', detail: 'numeric' },
+			title: 'Scale dot size',
+			label: 'Scale dot',
+			vocabApi: this.app.vocabApi,
+			numericEditMenuVersion: ['continuous']
+		}
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
@@ -171,8 +186,8 @@ class Scatter {
 			label: 'Shape',
 			vocabApi: this.app.vocabApi
 		}
-		const symbolSizeOption = {
-			label: 'Symbol size',
+		const dotSizeOption = {
+			label: 'Dot size',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
@@ -261,7 +276,8 @@ class Scatter {
 			)
 			if (!this.is3D) {
 				inputs.splice(3, 0, shapeOption)
-				inputs.push(symbolSizeOption)
+				inputs.splice(4, 0, scaleDotOption)
+				inputs.push(dotSizeOption)
 				inputs.push({
 					label: 'Show regression',
 					type: 'dropdown',
@@ -290,7 +306,8 @@ class Scatter {
 			})
 		} else {
 			inputs.splice(1, 0, shapeOption)
-			inputs.push(symbolSizeOption)
+			inputs.splice(2, 0, dotSizeOption)
+			inputs.push(dotSizeOption)
 			inputs.push({
 				label: 'Reference size',
 				type: 'number',
