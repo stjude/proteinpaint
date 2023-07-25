@@ -33,8 +33,9 @@ export function setRenderers(self) {
 
 	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
-		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = chart.data.samples.reduce(
+		const cohortSamples = chart.cohortSamples
+		const s0 = cohortSamples[0] //First sample to start reduce comparisons
+		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = cohortSamples.reduce(
 			(s, d) => [
 				d.x < s[0] ? d.x : s[0],
 				d.x > s[1] ? d.x : s[1],
@@ -49,6 +50,8 @@ export function setRenderers(self) {
 		)
 		chart.scaleMin = scaleMin
 		chart.scaleMax = scaleMax
+		console.log(scaleMin, scaleMax)
+
 		chart.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
 			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])

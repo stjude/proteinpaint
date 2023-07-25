@@ -117,6 +117,7 @@ class Scatter {
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		if (c.scaleDotTW) {
+			if (!c.scaleDotTW.q) c.scaleDotTW.q = {}
 			c.scaleDotTW.q.mode = 'continuous'
 			opts.scaleDotTW = c.scaleDotTW
 		}
@@ -343,6 +344,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term) await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
 
 		const settings = getDefaultScatterSettings()
 		if (!opts.term && !opts.term2) settings.showAxes = false
@@ -411,7 +413,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultScatterSettings() {
 	return {
-		size: 25,
+		size: 36,
 		refSize: 9,
 		svgw: 550,
 		svgh: 550,
