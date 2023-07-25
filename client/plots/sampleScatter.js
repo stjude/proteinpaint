@@ -168,6 +168,7 @@ class Scatter {
 
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
+		const hasRef = this.charts[0].data.samples.find(s => !('sampleId' in s))
 		const scaleDotOption = {
 			type: 'term',
 			configKey: 'scaleDotTW',
@@ -195,6 +196,14 @@ class Scatter {
 			title: 'It represents the area of a symbol in square pixels',
 			min: 0
 		}
+		const refSizeOption = {
+			label: 'Reference size',
+			type: 'number',
+			chartType: 'sampleScatter',
+			settingsKey: 'refSize',
+			title: 'It represents the area of the reference symbol in square pixels',
+			min: 0
+		}
 		const inputs = [
 			{
 				type: 'term',
@@ -217,19 +226,6 @@ class Scatter {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete']
 			},
-
-			{
-				label: 'Chart width',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'svgw'
-			},
-			{
-				label: 'Chart height',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'svgh'
-			},
 			{
 				boxLabel: 'Visible',
 				label: 'Show axes',
@@ -246,6 +242,18 @@ class Scatter {
 				title: 'It represents the opacity of the symbols',
 				min: 0,
 				max: 1
+			},
+			{
+				label: 'Chart width',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'svgw'
+			},
+			{
+				label: 'Chart height',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'svgh'
 			}
 		]
 		if (this.config.term) {
@@ -276,9 +284,11 @@ class Scatter {
 				]
 			)
 			if (!this.is3D) {
-				inputs.splice(3, 0, shapeOption)
-				inputs.splice(4, 0, scaleDotOption)
-				inputs.push(dotSizeOption)
+				inputs.splice(4, 0, shapeOption)
+				inputs.splice(5, 0, scaleDotOption)
+				inputs.splice(6, 0, dotSizeOption)
+				if (hasRef) inputs.splice(7, 0, refSizeOption)
+
 				inputs.push({
 					label: 'Show regression',
 					type: 'dropdown',
@@ -292,7 +302,7 @@ class Scatter {
 					]
 				})
 			} else {
-				inputs.splice(6, 0, {
+				inputs.push({
 					label: 'Chart depth',
 					type: 'number',
 					chartType: 'sampleScatter',
@@ -306,17 +316,10 @@ class Scatter {
 				settingsKey: 'defaultColor'
 			})
 		} else {
-			inputs.splice(1, 0, shapeOption)
-			inputs.splice(2, 0, scaleDotOption)
-			inputs.push(dotSizeOption)
-			inputs.push({
-				label: 'Reference size',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'refSize',
-				title: 'It represents the area of the reference symbol in square pixels',
-				min: 0
-			})
+			inputs.splice(2, 0, shapeOption)
+			inputs.splice(3, 0, scaleDotOption)
+			inputs.splice(4, 0, dotSizeOption)
+			if (hasRef) inputs.splice(5, 0, refSizeOption)
 		}
 
 		this.components = {
