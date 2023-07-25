@@ -412,7 +412,11 @@ export function setRenderers(self) {
 			return self.symbols[index].size((size * factor) / self.k)()
 		} else {
 			const range = self.settings.maxDotSize - self.settings.minDotSize
-			const size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			let size
+			if (self.settings.scaleDotOrder == 'asc')
+				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+
 			return self.symbols[index].size((size * factor) / self.k)()
 		}
 	}
@@ -819,6 +823,7 @@ export function setRenderers(self) {
 				})
 			}
 		}
+
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
 			offsetY = 60

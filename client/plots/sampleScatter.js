@@ -174,8 +174,8 @@ class Scatter {
 			configKey: 'scaleDotTW',
 			chartType: 'sampleScatter',
 			usecase: { target: 'sampleScatter', detail: 'numeric' },
-			title: 'Scale dot size',
-			label: 'Scale dot',
+			title: 'Scale dot by term value',
+			label: 'Scale dot by',
 			vocabApi: this.app.vocabApi,
 			numericEditMenuVersion: ['continuous']
 		}
@@ -211,6 +211,16 @@ class Scatter {
 			settingsKey: 'maxDotSize',
 			title: 'It represents the maximum dot size',
 			min: 0
+		}
+		const orientation = {
+			label: 'Scale dot order',
+			type: 'radio',
+			chartType: 'sampleScatter',
+			settingsKey: 'scaleDotOrder',
+			options: [
+				{ label: 'Asc', value: 'asc' },
+				{ label: 'Desc', value: 'desc' }
+			]
 		}
 		const refSizeOption = {
 			label: 'Reference size',
@@ -305,8 +315,12 @@ class Scatter {
 				if (this.config.scaleDotTW) {
 					inputs.splice(6, 0, minDotSizeOption)
 					inputs.splice(7, 0, maxDotSizeOption)
-				} else inputs.splice(6, 0, dotSizeOption)
-				if (hasRef) inputs.splice(7, 0, refSizeOption)
+					inputs.splice(8, 0, orientation)
+					if (hasRef) inputs.splice(9, 0, refSizeOption)
+				} else {
+					inputs.splice(6, 0, dotSizeOption)
+					if (hasRef) inputs.splice(7, 0, refSizeOption)
+				}
 
 				inputs.push({
 					label: 'Show regression',
@@ -340,7 +354,8 @@ class Scatter {
 			if (this.config.scaleDotTW) {
 				inputs.splice(4, 0, minDotSizeOption)
 				inputs.splice(5, 0, maxDotSizeOption)
-				if (hasRef) inputs.splice(6, 0, refSizeOption)
+				inputs.splice(6, 0, orientation)
+				if (hasRef) inputs.splice(7, 0, refSizeOption)
 			} else {
 				inputs.splice(4, 0, dotSizeOption)
 				if (hasRef) inputs.splice(5, 0, refSizeOption)
@@ -444,6 +459,7 @@ export function getDefaultScatterSettings() {
 		size: 36,
 		minDotSize: 25,
 		maxDotSize: 64,
+		scaleDotOrder: 'asc',
 		refSize: 9,
 		svgw: 550,
 		svgh: 550,
