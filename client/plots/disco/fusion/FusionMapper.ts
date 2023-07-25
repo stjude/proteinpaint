@@ -1,7 +1,7 @@
-import Reference from '#plots/disco/chromosome/Reference'
-import Data from '#plots/disco/data/Data'
-import Fusion from './Fusion'
-import FusionSubgroup from './FusionSubgroup'
+import Reference from '#plots/disco/chromosome/Reference.ts'
+import Data from '#plots/disco/data/Data.ts'
+import Fusion from './Fusion.ts'
+import FusionSubgroup from './FusionSubgroup.ts'
 
 export default class FusionMapper {
 	private radius: number

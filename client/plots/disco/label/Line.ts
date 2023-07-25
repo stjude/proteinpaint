@@ -1,4 +1,4 @@
-import Point from './Point'
+import Point from './Point.ts'
 
 export default class Line {
 	color: string

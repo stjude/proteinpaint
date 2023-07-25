@@ -1,8 +1,8 @@
-import Label from './Label'
-import Point from './Point'
-import Line from './Line'
-import MutationTooltip from '#plots/disco/label/MutationTooltip'
-import FusionTooltip from '#plots/disco/fusion/FusionTooltip'
+import Label from './Label.ts'
+import Point from './Point.ts'
+import Line from './Line.ts'
+import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
+import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 
 export default class LabelFactory {
 	static createLabel(

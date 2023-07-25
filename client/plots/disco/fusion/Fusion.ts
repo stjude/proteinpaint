@@ -1,5 +1,5 @@
 import { Ribbon } from 'd3'
-import FusionSubgroup from './FusionSubgroup'
+import FusionSubgroup from './FusionSubgroup.ts'
 
 export default class Fusion implements Ribbon {
 	source: FusionSubgroup

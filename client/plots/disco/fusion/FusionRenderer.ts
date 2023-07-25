@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
-import FullArcRenderer from '#plots/disco/arc/FullArcRenderer'
-import Fusion from './Fusion'
-import MenuProvider from '#plots/disco/menu/MenuProvider'
-import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider'
+import FullArcRenderer from '#plots/disco/arc/FullArcRenderer.ts'
+import Fusion from './Fusion.ts'
+import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
+import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 
 // TODO extract constants from this file.
 export default class FusionRenderer {

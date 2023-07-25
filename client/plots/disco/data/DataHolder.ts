@@ -1,4 +1,4 @@
-import Data from '#plots/disco/data/Data'
+import Data from '#plots/disco/data/Data.ts'
 
 export interface DataHolder {
 	labelData: Array<Data>

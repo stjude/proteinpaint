@@ -1,8 +1,8 @@
-import Reference from '#plots/disco/chromosome/Reference'
-import Data from '#plots/disco/data/Data'
-import SnvArc from './SnvArc'
-import MLabel from '#plots/disco/label/MLabel'
-import SnvLegendElement from './SnvLegendElement'
+import Reference from '#plots/disco/chromosome/Reference.ts'
+import Data from '#plots/disco/data/Data.ts'
+import SnvArc from './SnvArc.ts'
+import MLabel from '#plots/disco/label/MLabel.ts'
+import SnvLegendElement from './SnvLegendElement.ts'
 
 export default class SnvArcsMapper {
 	snvClassMap: Map<string, SnvLegendElement> = new Map()
