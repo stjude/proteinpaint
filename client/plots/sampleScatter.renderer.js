@@ -411,7 +411,8 @@ export function setRenderers(self) {
 			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 			return self.symbols[index].size((size * factor) / self.k)()
 		} else {
-			const size = ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * self.settings.size
+			const range = self.settings.maxDotSize - self.settings.minDotSize
+			const size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			return self.symbols[index].size((size * factor) / self.k)()
 		}
 	}
