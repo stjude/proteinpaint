@@ -121,7 +121,8 @@ export async function init(arg, holder, genomes) {
 		},
 		recover: {
 			undoHtml: 'Undo',
-			redoHtml: 'Redo'
+			redoHtml: 'Redo',
+			resetHtml: 'Restore'
 		},
 		matrix: Object.assign(
 			{

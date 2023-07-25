@@ -1,8 +1,8 @@
 Features
-
 - Profile plots have now filters and a download button
 - Make disco plot rings width configurable
 - Added to scatter plot scale dot option
+- Support a reset button option for the rx recover component
 
 Fixes:
 - Selecting hundreds of samples from GDC lollipop no longer hangs or crashes (using a cached mapping to case uuid)
