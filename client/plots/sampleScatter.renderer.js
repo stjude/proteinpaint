@@ -50,7 +50,6 @@ export function setRenderers(self) {
 		)
 		chart.scaleMin = scaleMin
 		chart.scaleMax = scaleMax
-		console.log(scaleMin, scaleMax)
 
 		chart.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
