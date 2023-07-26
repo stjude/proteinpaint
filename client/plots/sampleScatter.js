@@ -459,7 +459,7 @@ export function getDefaultScatterSettings() {
 		size: 25,
 		minDotSize: 16,
 		maxDotSize: 144,
-		scaleDotOrder: 'asc',
+		scaleDotOrder: 'Ascending',
 		refSize: 9,
 		svgw: 550,
 		svgh: 550,
