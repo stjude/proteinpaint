@@ -108,7 +108,6 @@ CMD ["sleep", "3600"]
 FROM pprust AS ppserverdeps
 
 WORKDIR /home/root/pp
-COPY tmppack ./tmppack
 
 WORKDIR /home/root/pp/app 
 RUN mkdir active
@@ -143,7 +142,8 @@ WORKDIR /home/root/pp/app
 COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY ./app-server.js ./
+# the build script/cmd must be called from the proteinpaint/container dir
+COPY ./deps/app-server.js ./
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-server.js"]
 # CMD ["sleep", "3600"]
@@ -156,17 +156,12 @@ CMD ["sh", "-c", "node --enable-source-maps app-server.js"]
 FROM pprust AS ppfulldeps
 
 WORKDIR /home/root/pp
-COPY tmppack ./tmppack
 WORKDIR /home/root/pp/app
 COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 ARG FRONTPKGVER
-RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
-      npm install /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ; \
-    else \
-      npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}; \
-    fi
+RUN npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}
 
 # enable ssh into this stage, for troubleshooting
 CMD ["sleep", "3600"]
@@ -190,7 +185,8 @@ WORKDIR /home/root/pp/app
 COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY ./app-full.js ./
+# the build script/cmd must be called from the proteinpaint/container dir
+COPY ./deps/app-full.js ./
 COPY public ./public
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-full.js"]

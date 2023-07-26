@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# !!! call from the proetinpaint/container dir !!!
+#
+
 set -euxo pipefail
 
 ###############
@@ -44,10 +48,6 @@ done
 if [[ "$MODE" == "pkg" && -d "../client" ]]; then
 	echo "post-install pkg build skipped within repo"
 	exit 0
-fi
-
-if [[ ! -d $PWD/tmppack ]]; then
-    mkdir -p $PWD/tmppack
 fi
 
 ######################
@@ -104,8 +104,4 @@ if [[ "$MODE" != "" ]]; then
 			docker tag "${MODE}pp${target}:latest" "${MODE}pp${target}:$HASH"
 		done
 	fi
-fi
-
-if [[ "$(ls -Alq $PWD/tmppack | grep -q . )" ]]; then
-	rm -r $PWD/tmppack
 fi
