@@ -339,7 +339,7 @@ function showMenu_cutoff(self: any, div: any) {
 }
 
 // split grades into groups based on breaks
-function getGroups(grades: any, breaks: any) {
+function getGroups(grades: number[], breaks: number[]) {
 	grades.sort((a, b) => a - b)
 	type GroupEntry = { name: string; values: (string | number)[] }
 	const groups: GroupEntry[] = [] // [ {name, values}, {name, values} ]
@@ -356,7 +356,7 @@ function getGroups(grades: any, breaks: any) {
 				if (group.values.length == 1) {
 					// single value in group
 					// should be grade 0
-					if (group.values[0] !== '0') throw 'unexpected group value'
+					if (group.values[0] !== 0) throw 'unexpected group value'
 					group.name = 'Grade 0'
 				} else {
 					// multiple values in group
