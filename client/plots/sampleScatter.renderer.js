@@ -928,9 +928,12 @@ export function setRenderers(self) {
 		const titleG = scaleG.append('g')
 
 		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-size', '.8em').style('font-weight', 'bold')
-		let start = chart.scaleMin.toFixed(1)
-		let end = chart.scaleMax.toFixed(1)
-		const minG = scaleG.append('g').attr('transform', `translate(${30},${30})`)
+		let start = chart.scaleMin
+		if (start % 1 != 0) start = start.toFixed(1)
+		let end = chart.scaleMax
+		if (end % 1 != 0) end = end.toFixed(1)
+		const minG = scaleG.append('g').attr('transform', `translate(${40},${30})`)
+		const shift = 5 + start.toString().length * 6
 		minG
 			.append('circle')
 			.attr('r', order == 'Ascending' ? minRadius : maxRadius)
@@ -938,15 +941,15 @@ export function setRenderers(self) {
 			.style('stroke', '#aaa')
 		minG
 			.append('text')
-			.attr('x', order == 'Ascending' ? -minRadius - 30 : -maxRadius - 30)
+			.attr('x', order == 'Ascending' ? -minRadius - shift : -maxRadius - shift)
 			.attr('y', 5)
 			.style('font-size', '.8em')
-			.style('text-anchor', 'start')
+			.attr('text-anchor', 'middle')
 			.text(start)
 
 		const maxG = scaleG.append('g')
 		maxG
-			.attr('transform', `translate(${width + 30},${30})`)
+			.attr('transform', `translate(${width + 40},${30})`)
 			.append('circle')
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
