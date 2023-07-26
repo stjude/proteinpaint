@@ -183,6 +183,11 @@ async function showSummary4terms(data, div, tk, block) {
 				.style('opacity', 0.5)
 			showSummary4oneTerm(d.termid, holder, d.numbycategory, tk, block)
 		} else if (d.density_data) {
+			if (!Number.isFinite(d.density_data.minvalue) || !Number.isFinite(d.density_data.maxvalue)) {
+				holder.append('div').text('No data')
+				continue
+			}
+
 			holder
 				.append('div')
 				.text('Select a range to create new track.')

@@ -504,11 +504,13 @@ export async function get_tklst(urlp, genomeobj) {
 		// official mds3 dataset; value is comma-joined dslabels
 		const lst = urlp.get('mds3').split(',')
 		for (const n of lst) {
-			tklst.push({
+			const tk = {
 				type: client.tkt.mds3,
-				dslabel: n,
-				token: urlp.get('token') // temporary
-			})
+				dslabel: n
+			}
+			if (urlp.has('token')) tk.token = urlp.get('token') // temporary
+			if (urlp.has('filterobj')) tk.filterObj = urlp.get('filterobj')
+			tklst.push(tk)
 		}
 	}
 
