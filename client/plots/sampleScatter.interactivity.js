@@ -57,6 +57,7 @@ export function setInteractivity(self) {
 				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)
 				if (self.config.term) addCategoryInfo(self.config.term.term, 'x', d, table)
 				if (self.config.term2) addCategoryInfo(self.config.term2?.term, 'y', d, table)
+				if (self.config.scaleDotTW) addCategoryInfo(self.config.scaleDotTW?.term, 'y', d, table)
 
 				if ('info' in d)
 					for (const [k, v] of Object.entries(d.info)) {
@@ -98,14 +99,11 @@ export function setInteractivity(self) {
 				const td = row.append('td')
 				if (showColor) {
 					const color = self.getColor(d, chart)
-					const svg = td.append('svg').attr('width', '20px').attr('height', '20px')
-					svg
-						.append('path')
-						.attr('d', self.getShape(chart, d, self.k * 2))
-						.attr('fill', color)
-						.attr('transform', 'translate(10, 15)')
-				}
-				td.append('span').text(value)
+					const svg = td.append('svg').attr('width', '100px').attr('height', '30px')
+					const g = svg.append('g').attr('transform', 'translate(10, 16)')
+					g.append('path').attr('d', self.getShape(chart, d)).attr('fill', color)
+					g.append('text').attr('x', 18).attr('y', 6).text(value)
+				} else td.append('span').text(value)
 			}
 		}
 	}
