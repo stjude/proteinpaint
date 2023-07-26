@@ -218,8 +218,8 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'scaleDotOrder',
 			options: [
-				{ label: 'Asc', value: 'asc' },
-				{ label: 'Desc', value: 'desc' }
+				{ label: 'Ascending', value: 'Ascending' },
+				{ label: 'Descending', value: 'Descending' }
 			]
 		}
 		const refSizeOption = {
