@@ -18,6 +18,10 @@ Book link: https://onlinelibrary.wiley.com/doi/epdf/10.1002/9781119196037
 
 # Test example 1: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[22.3950723737944,33.8227081589866,45.1407992918976,28.3479649920482,18.2336819062475,4.32351183332503,11.9014307267498,48.0554144773632,14.9064014137257,11.2484716628678,42.857265946921,6.14226084970869,13.765204195166,23.7536687662359,35.0198161723092,30.1217778825667,1.55535256816074,38.5163993313909,34.6145691110287,8.42882150504738],"group2_id":"group2","group2_values":[35.3232058370486,38.4726115851663,63.7901770556346,63.6540996702388,54.1668611462228,86.2734804977663,87.4467799020931,71.2533111660741,90.7283631013706,36.3230113568716,33.9395571127534,92.234949907288,77.9833765677176,43.5002030362375,79.9727810896002,37.503333974164,39.9319424736314,33.0334767652676,47.5299863377586,80.9905858896673]}]' | target/release/wilcoxon
 
+# Test example 2: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[0.73, 0.74, 0.8, 0.83, 0.88, 0.90, 1.04, 1.15],"group2_id":"group2","group2_values":[1.21, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91]}]' | target/release/wilcoxon
+
+# Test example 3: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[1.21, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91],"group2_id":"group2","group2_values":[0.73, 0.74, 0.8, 0.83, 0.88, 0.90, 1.04, 1.15]}]' | target/release/wilcoxon
+
 # Input data is in JSON format and is read in from <in.json> file.
 # Results are written in JSON format to stdout.
 
@@ -46,6 +50,7 @@ Book link: https://onlinelibrary.wiley.com/doi/epdf/10.1002/9781119196037
 
 use itertools::Itertools;
 use json;
+use r_stats;
 use serde::{Deserialize, Serialize};
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::io;
@@ -67,8 +72,7 @@ fn main() {
         Ok(_n) => {
             //println!("{} bytes read", n);
             //println!("input:{}", input);
-            const MIN_THRESHOLD: usize = 10; // Decrease this number so as to invoke the normal approximation for lower sample sizes. This would speed up the test at the cost of sacrificing accuracy.
-            const MAX_THRESHOLD: usize = 1000;
+            const THRESHOLD: usize = 50; // Decrease this number so as to invoke the normal approximation for lower sample sizes. This would speed up the test at the cost of sacrificing accuracy.
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
@@ -112,12 +116,11 @@ fn main() {
                             let mut pvalue: f64 = wilcoxon_rank_sum_test(
                                 vec1.clone(),
                                 vec2.clone(),
-                                MIN_THRESHOLD,
-                                MAX_THRESHOLD,
+                                THRESHOLD,
                                 't', // two-sided test
                             );
 
-                            if pvalue > 0.0001 {
+                            if pvalue > 0.01 {
                                 pvalue = format!("{:.4}", pvalue).parse().unwrap();
                             }
                             //println!("p_value:{}", p_value);
@@ -152,8 +155,7 @@ fn main() {
 fn wilcoxon_rank_sum_test(
     mut group1: Vec<f64>,
     mut group2: Vec<f64>,
-    min_threshold: usize,
-    max_threshold: usize,
+    threshold: usize,
     alternative: char,
 ) -> f64 {
     // Check if there are any ties between the two groups
@@ -175,6 +177,7 @@ fn wilcoxon_rank_sum_test(
     let mut is_repeat = false;
     let mut frac_rank: f64 = 0.0;
     let mut num_repeats: f64 = 1.0;
+    let low_cutoff: usize = 6; // When both vectors are below this cutoff, exact p-value will be computed by iterating through all possible combinations. This is helpful especially in case of ties.
     let mut repeat_iter: f64 = 1.0;
     #[allow(unused_variables)]
     let mut weight_x: f64 = 0.0;
@@ -254,11 +257,15 @@ fn wilcoxon_rank_sum_test(
     //println!("weight_x:{}", weight_x);
     //println!("weight_y:{}", weight_y);
 
-    // u_dash (calculated below) calculates the "W Statistic" in wilcox.test function in R
+    //u_dash (calculated below) calculates the "W Statistic" in wilcox.test function in R
 
-    //let u = weight_y - (group2.len() as f64 * (group2.len() as f64 + 1.0) / 2.0) as f64;
-    //let u_dash = (u - (group1.len() * group2.len()) as f64).abs();
-    //println!("u_dash:{}", u_dash);
+    let u_y = weight_y - (group2.len() as f64 * (group2.len() as f64 + 1.0) / 2.0) as f64;
+    let u_dash_y = (u_y - (group1.len() * group2.len()) as f64).abs();
+    //println!("u_dash_y:{}", u_dash_y);
+
+    let u_x = weight_x - (group1.len() as f64 * (group1.len() as f64 + 1.0) / 2.0) as f64;
+    let u_dash_x = (u_x - (group1.len() * group2.len()) as f64).abs();
+    //println!("u_dash_x:{}", u_dash_x);
 
     // Calculate test_statistic
 
@@ -272,8 +279,8 @@ fn wilcoxon_rank_sum_test(
 
     //println!("test_statistic:{}", test_statistic);
 
-    if (group1.len() <= min_threshold && group2.len() < max_threshold)
-        || (group2.len() <= min_threshold && group1.len() < max_threshold)
+    if group1.len() <= threshold || group2.len() < threshold
+    // In principle in case of ties (repeats), iterating through all possible combinations will give an exact p-value but is very slow, so this will be true only when both vectors have lengths lower than low_cutoff
     {
         // Compute exact p-values
 
@@ -281,112 +288,38 @@ fn wilcoxon_rank_sum_test(
 
         if alternative == 'g' {
             // Alternative "greater"
-            let mut combinations = ranks.into_iter().combinations(group2.len());
-            let mut w_distribution = Vec::<f64>::new();
-            let mut combination = combinations.next();
-            let mut num_combinations = 0;
-            while combination != None {
-                //println!("combination:{:?}", combination);
-                //println!("combination_sum:{:?}", combination.into_iter().sum::<f64>());
-                w_distribution.push(combination.unwrap().into_iter().sum::<f64>());
-                num_combinations += 1;
-                combination = combinations.next();
+            if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
+                iterate_exact_p_values(ranks, weight_y, group2.len())
+            } else {
+                calculate_exact_probability_using_combinations(u_dash_y, group1.len(), group2.len())
             }
-            //println!("w_distribution:{:?}", w_distribution);
-            //println!("num_combinations:{}", num_combinations);
-
-            let mut w_less = 0;
-            for item in &w_distribution {
-                if item <= &weight_y {
-                    w_less += 1;
-                }
-            }
-            //println!("w_less:{:?}", w_less);
-            //println!(
-            //    "p_value greater:{}",
-            //    w_less as f64 / num_combinations as f64
-            //);
-            w_less as f64 / num_combinations as f64
         } else if alternative == 'l' {
-            let mut combinations = ranks.into_iter().combinations(group1.len());
-            let mut w_distribution = Vec::<f64>::new();
-            let mut combination = combinations.next();
-            let mut num_combinations = 0;
-            while combination != None {
-                //println!("combination:{:?}", combination);
-                //println!("combination_sum:{:?}", combination.into_iter().sum::<f64>());
-                w_distribution.push(combination.unwrap().into_iter().sum::<f64>());
-                num_combinations += 1;
-                combination = combinations.next();
-            }
-            //println!("w_distribution:{:?}", w_distribution);
-            //println!("num_combinations:{}", num_combinations);
-
             // Alternative "lesser"
-            let mut w_less = 0;
-            for item in &w_distribution {
-                if item <= &weight_x {
-                    w_less += 1;
-                }
+            if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
+                iterate_exact_p_values(ranks, weight_x, group1.len())
+            } else {
+                calculate_exact_probability_using_combinations(u_dash_x, group1.len(), group2.len())
             }
-            //println!("w_less:{:?}", w_less);
-            //println!("p_value lesser:{}", w_less as f64 / num_combinations as f64);
-            w_less as f64 / num_combinations as f64
         } else {
-            let mut combinations_g = ranks.clone().into_iter().combinations(group2.len());
-            let mut w_distribution_g = Vec::<f64>::new();
-            let mut combination_g = combinations_g.next();
-            let mut num_combinations = 0;
-            while combination_g != None {
-                //println!("combination:{:?}", combination);
-                //println!("combination_sum:{:?}", combination.into_iter().sum::<f64>());
-                w_distribution_g.push(combination_g.unwrap().into_iter().sum::<f64>());
-                num_combinations += 1;
-                combination_g = combinations_g.next();
-            }
-            //println!("w_distribution_g:{:?}", w_distribution_g);
-            //println!("num_combinations_g:{}", num_combinations_g);
+            // Two-sided distribution
+            let p_less_g;
+            let p_less_l;
 
-            // Alternative "two sided"
-            let mut w_less_g = 0;
-            for item in &w_distribution_g {
-                if item <= &weight_y {
-                    w_less_g += 1;
-                }
+            if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
+                p_less_g = iterate_exact_p_values(ranks.clone(), weight_y, group2.len());
+                p_less_l = iterate_exact_p_values(ranks, weight_x, group1.len());
+            } else {
+                p_less_g = calculate_exact_probability_using_combinations(
+                    u_dash_y,
+                    group1.len(),
+                    group2.len(),
+                );
+                p_less_l = calculate_exact_probability_using_combinations(
+                    u_dash_x,
+                    group1.len(),
+                    group2.len(),
+                );
             }
-            //println!("w_less_g:{:?}", w_less_g);
-            //println!(
-            //    "p_value greater:{}",
-            //    w_less_g as f64 / num_combinations as f64
-            //);
-            let p_less_g = w_less_g as f64 / num_combinations as f64;
-
-            let mut combinations_l = ranks.into_iter().combinations(group1.len());
-            let mut w_distribution_l = Vec::<f64>::new();
-            let mut combination_l = combinations_l.next();
-            let mut num_combinations = 0;
-            while combination_l != None {
-                //println!("combination:{:?}", combination);
-                //println!("combination_sum:{:?}", combination.into_iter().sum::<f64>());
-                w_distribution_l.push(combination_l.unwrap().into_iter().sum::<f64>());
-                num_combinations += 1;
-                combination_l = combinations_l.next();
-            }
-            //println!("w_distribution_l:{:?}", w_distribution_l);
-            //println!("num_combinations_l:{}", num_combinations_l);
-
-            let mut w_less_l = 0;
-            for item in &w_distribution_l {
-                if item <= &weight_x {
-                    w_less_l += 1;
-                }
-            }
-            //println!("w_less_l:{:?}", w_less_l);
-            //println!(
-            //    "p_value lesser:{}",
-            //    w_less_l as f64 / num_combinations as f64
-            //);
-            let p_less_l = w_less_l as f64 / num_combinations as f64;
 
             let mut p_value;
             if p_less_g < p_less_l {
@@ -438,4 +371,38 @@ fn wilcoxon_rank_sum_test(
             p_value
         }
     }
+}
+
+// To be used only when there are no ties in the input data
+fn calculate_exact_probability_using_combinations(weight: f64, x: usize, y: usize) -> f64 {
+    //println!("Using Wilcoxon CDF");
+    let p_value = r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
+    //println!("p_value:{}", p_value);
+    p_value
+}
+
+// Calculates exact p-values by iterating over all possible combinations of weights
+fn iterate_exact_p_values(ranks: Vec<f64>, weight: f64, y_length: usize) -> f64 {
+    let mut combinations = ranks.into_iter().combinations(y_length);
+    let mut combination = combinations.next();
+    let mut num_combinations = 0;
+    let mut w_less = 0;
+    while combination != None {
+        //println!("combination:{:?}", combination);
+        //println!("combination_sum:{:?}", combination.into_iter().sum::<f64>());
+        //w_distribution.push(combination.unwrap().into_iter().sum::<f64>());
+        if combination.unwrap().into_iter().sum::<f64>() <= weight {
+            w_less += 1;
+        }
+        num_combinations += 1;
+        combination = combinations.next();
+    }
+    //println!("w_distribution:{:?}", w_distribution);
+    //println!("num_combinations:{}", num_combinations);
+    //println!("w_less:{:?}", w_less);
+    //println!(
+    //    "p_value greater:{}",
+    //    w_less as f64 / num_combinations as f64
+    //);
+    w_less as f64 / num_combinations as f64
 }
