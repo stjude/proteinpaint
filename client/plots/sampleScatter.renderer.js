@@ -922,21 +922,20 @@ export function setRenderers(self) {
 		const order = self.settings.scaleDotOrder
 		const titleG = scaleG.append('g')
 
-		titleG.append('text').text(`Scale`).style('font-size', '.8em').style('font-weight', 'bold')
+		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-size', '.8em').style('font-weight', 'bold')
 
 		const minG = scaleG.append('g').attr('transform', `translate(${30},${30})`)
-
-		minG
+		const start = minG
 			.append('circle')
 			.attr('r', order == 'asc' ? minRadius : maxRadius)
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
 		minG
 			.append('text')
-			.attr('x', order == 'asc' ? -minRadius - 30 : -maxRadius - 30)
+			.attr('x', order == 'asc' ? -minRadius - 40 : -maxRadius - 40)
 			.attr('y', 5)
 			.style('font-size', '.8em')
-			.text(`${order == 'asc' ? self.settings.minDotSize : self.settings.maxDotSize}`)
+			.text(`${(order == 'asc' ? chart.scaleMin : chart.scaleMax).toFixed(2)}`)
 
 		const maxG = scaleG.append('g')
 		maxG
@@ -950,7 +949,7 @@ export function setRenderers(self) {
 			.attr('x', order == 'asc' ? maxRadius + 10 : minRadius + 10)
 			.attr('y', 5)
 			.style('font-size', '.8em')
-			.text(`${order == 'asc' ? self.settings.maxDotSize : self.settings.minDotSize}`)
+			.text(`${order == 'asc' ? chart.scaleMax : chart.scaleMin}`)
 		if (order == 'asc') {
 			minG
 				.append('line')
