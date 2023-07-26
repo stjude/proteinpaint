@@ -1,28 +1,43 @@
 #!/bin/bash
 
-set -euxo pipefail
+set -euo pipefail
 
 ###############
 # ARGUMENTS
 ###############
 
 USAGE="Usage:
-	./build.sh [-m] [-r] [-b] [-c]
+	./build.sh [subdir] [-z] [-m] [-r] [-b] [-c]
+	
+	subdir: 'server' | 'full', the subdirectory to build
 
-	-m MODE: string to loosely indicate the build environment.
-			 - defaults to an empty string
+	-z USETGZ: use local tarballs for the server and full packages
+	-r PREFIX: prefix for the image name, defaults to an empty string ""
 			 - 'pkg' is reserved to indicate a package build, outside of the repo or dev environment
-			 - will be used as a prefix for the image name
-	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image
+	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted in the built image
 	-c CROSSENV: cross-env options that are used prior to npm install
 "
+
+TARGET=server
 BUILDARGS=""
 CROSSENV=""
-MODE=""
-while getopts "m:r:b:c:h:x:" opt; do
+PREFIX=""
+SERVERTGZFILE=""
+SERVERTGZ=""
+FRONTTGZ=""
+PKGPATH=""
+
+#################
+# PROCESSED ARGS
+#################
+
+while getopts "zr:b:c:h" opt; do
 	case "${opt}" in
+	z)
+		PKGPATH=/home/root/pp/tmppack
+		;;
 	m)
-		MODE=${OPTARG}
+		PREFIX=${OPTARG}
 		;;
 	b)
 		BUILDARGS=${OPTARG}
@@ -41,18 +56,37 @@ while getopts "m:r:b:c:h:x:" opt; do
 	esac
 done
 
-if [[ "$MODE" == "pkg" && -d "../client" ]]; then
-	echo "post-install pkg build skipped within repo"
-	exit 0
+shift $(($OPTIND-1))
+if [[ "$1" != "" ]]; then
+	TARGET=$1
 fi
 
-if [[ ! -d $PWD/tmppack ]]; then
-    mkdir -p $PWD/tmppack
+if [[ "$PKGPATH" != "" ]]; then
+	PKGSCOPE=sjcrh-proteinpaint
+	SERVERPKGVER="$(node -p "require('./$TARGET/package.json').dependencies['@sjcrh/proteinpaint-server']")"
+	SERVERTGZFILE=$PKGSCOPE-server-$SERVERPKGVER.tgz
+	SERVERTGZ="$PKGPATH/$SERVERTGZFILE"
+	FRONTPKGVER="$(node -p "require('./$TARGET/package.json').dependencies['@sjcrh/proteinpaint-front']")"
+	FRONTTGZ="$PKGPATH/$PKGSCOPE-front-$FRONTPKGVER.tgz"
 fi
 
-######################
-# COMPUTED VARIABLES
-######################
+################
+# DETECTED ARGS
+################
+
+# print a trace of simple commands, after argument parsing above 
+# which can be too noisy
+set -x
+
+IMGVER="$(node -p "require('./$TARGET/package.json').version")"
+# assumes that the branch head is currently checked out
+IMGREV="head"
+set +e
+HASH=$(git rev-parse --short HEAD 2>/dev/null)
+set -e
+if [[ "$HASH" != "" ]]; then
+	IMGREV="$HASH"
+fi
 
 PLATFORM=""
 ARCH=$( uname -m )
@@ -64,48 +98,45 @@ if [[ ${ARCH} == "arm64" ]]; then
 	PLATFORM="--platform=linux/amd64"
 fi
 
-
 #########################
-# Docker build
+# Handle -z option
 #########################
 
-IMGVER="$(node -p "require('./package.json').version")"
-# assumes that the branch head is currently checked out
-IMGREV="head"
-set +e
-HASH=$(git rev-parse --short HEAD 2>/dev/null)
-set -e
-if [[ "$HASH" != "" ]]; then
-	IMGREV="$HASH"
+if [[ ! -d ./tmppack ]]; then
+	mkdir tmppack
 fi
-SERVERPKGVER="$(node -p "require('./package.json').containerDeps.server")"
-FRONTPKGVER="$(node -p "require('./package.json').containerDeps.front")"
 
-echo "building ${MODE}ppbase image"
-docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
+if [[ "$SERVERTGZ" == "" ]]; then
+  rm -f tmppack/* 
+elif [[ ! -f "./tmppack/$SERVERTGZFILE" ]]; then
+	./pack.sh
+fi
 
-echo "building ${MODE}pprust image"
-docker buildx build . --file ./Dockerfile --target pprust --tag "${MODE}pprust:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
-
-echo "building ${MODE}ppserver image"
-docker buildx build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
-
-echo "building ${MODE}ppfull image"
-docker buildx build . --file ./Dockerfile --target ppfull --tag "${MODE}ppfull:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
-
-# in non-dev/repo environment, may automatically add extra tags
-if [[ "$MODE" != "" ]]; then
-	for target in server full; do
-		docker tag "${MODE}pp${target}:latest" "${MODE}pp${target}:$IMGVER"
-	done
-
-	if [[ "$HASH" != "" ]]; then
-		for target in base rust server full; do
-			docker tag "${MODE}pp${target}:latest" "${MODE}pp${target}:$HASH"
-		done
+if [[ "$SERVERTGZ" != "" ]]; then
+	npm pkg set dependencies.@sjcrh/proteinpaint-server=$SERVERTGZ
+	if [[ "$TARGET" == "full" ]]; then
+		npm pkg set dependencies.@sjcrh/proteinpaint-front=$SERVERTGZ
 	fi
 fi
 
-if [[ "$(ls -Alq $PWD/tmppack | grep -q . )" ]]; then
-	rm -r $PWD/tmppack
-fi
+###############
+# Docker build
+###############
+
+IMGNAME="${PREFIX}pp$TARGET"
+
+echo "building $IMGNAME image"
+
+docker buildx build . \
+	--file ./$TARGET/Dockerfile \
+	--tag "$IMGNAME:latest" $PLATFORM \
+	--build-arg IMGVER=$IMGVER \
+	--build-arg IMGREV=$IMGREV \
+	--build-arg CROSSENV="$CROSSENV" $BUILDARGS \
+	--output type=docker
+
+#############
+# Clean up
+#############
+
+git restore package.json

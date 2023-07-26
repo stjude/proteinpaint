@@ -16,10 +16,11 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
 WORKDIR /home/root/pp
 COPY ./tmppack ./tmppack
 WORKDIR /home/root/pp/app/active
-COPY package.json .
+# the build script/cmd must be called from the proteinpaint/container dir
+COPY ./full/package.json .
 
 RUN npm install
-COPY app-full.js .
+COPY ./full/app-full.js .
 COPY ./public .
 
 EXPOSE 3000
