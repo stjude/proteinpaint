@@ -53,3 +53,4 @@ jobs:
           docker push ghcr.io/stjude/ppfull:$TAG-$HASH
           docker push ghcr.io/stjude/ppserver:latest
           docker push ghcr.io/stjude/ppfull:latest
+          

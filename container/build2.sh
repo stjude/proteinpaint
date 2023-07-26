@@ -18,7 +18,7 @@ USAGE="Usage:
 	-c CROSSENV: cross-env options that are used prior to npm install
 "
 
-TARGET=server
+SUBDIR=server
 BUILDARGS=""
 CROSSENV=""
 PREFIX=""
@@ -31,12 +31,14 @@ PKGPATH=""
 # PROCESSED ARGS
 #################
 
+set -x
+
 while getopts "zr:b:c:h" opt; do
 	case "${opt}" in
 	z)
 		PKGPATH=/home/root/pp/tmppack
 		;;
-	m)
+	r)
 		PREFIX=${OPTARG}
 		;;
 	b)
@@ -55,18 +57,19 @@ while getopts "zr:b:c:h" opt; do
   	;;
 	esac
 done
+IMGNAME="${PREFIX}pp$SUBDIR"
 
 shift $(($OPTIND-1))
 if [[ "$1" != "" ]]; then
-	TARGET=$1
+	SUBDIR=$1
 fi
 
 if [[ "$PKGPATH" != "" ]]; then
 	PKGSCOPE=sjcrh-proteinpaint
-	SERVERPKGVER="$(node -p "require('./$TARGET/package.json').dependencies['@sjcrh/proteinpaint-server']")"
+	SERVERPKGVER="$(node -p "require('./$SUBDIR/package.json').dependencies['@sjcrh/proteinpaint-server']")"
 	SERVERTGZFILE=$PKGSCOPE-server-$SERVERPKGVER.tgz
 	SERVERTGZ="$PKGPATH/$SERVERTGZFILE"
-	FRONTPKGVER="$(node -p "require('./$TARGET/package.json').dependencies['@sjcrh/proteinpaint-front']")"
+	FRONTPKGVER="$(node -p "require('./$SUBDIR/package.json').dependencies['@sjcrh/proteinpaint-front']")"
 	FRONTTGZ="$PKGPATH/$PKGSCOPE-front-$FRONTPKGVER.tgz"
 fi
 
@@ -78,7 +81,7 @@ fi
 # which can be too noisy
 set -x
 
-IMGVER="$(node -p "require('./$TARGET/package.json').version")"
+IMGVER="$(node -p "require('./$SUBDIR/package.json').version")"
 # assumes that the branch head is currently checked out
 IMGREV="head"
 set +e
@@ -114,7 +117,7 @@ fi
 
 if [[ "$SERVERTGZ" != "" ]]; then
 	npm pkg set dependencies.@sjcrh/proteinpaint-server=$SERVERTGZ
-	if [[ "$TARGET" == "full" ]]; then
+	if [[ "$SUBDIR" == "full" ]]; then
 		npm pkg set dependencies.@sjcrh/proteinpaint-front=$SERVERTGZ
 	fi
 fi
@@ -123,13 +126,13 @@ fi
 # Docker build
 ###############
 
-IMGNAME="${PREFIX}pp$TARGET"
+IMGNAME="${PREFIX}pp$SUBDIR"
 
 echo "building $IMGNAME image"
 
 docker buildx build . \
-	--file ./$TARGET/Dockerfile \
-	--tag "$IMGNAME:latest" $PLATFORM \
+	--file ./$SUBDIR/Dockerfile \
+	--tag "$IMGNAME:$IMGVER-$HASH" $PLATFORM \
 	--build-arg IMGVER=$IMGVER \
 	--build-arg IMGREV=$IMGREV \
 	--build-arg CROSSENV="$CROSSENV" $BUILDARGS \
@@ -139,4 +142,5 @@ docker buildx build . \
 # Clean up
 #############
 
-git restore package.json
+git restore server/package.json
+git restore full/package.json
