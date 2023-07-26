@@ -116,6 +116,8 @@ export const cox = {
 	getCTE(tablename, term, ds, q, values) {
 		if (q.breaks?.length != 1) throw 'cox mode requires one break'
 		values.push(term.id, q.breaks[0])
+		const grades = Object.keys(term.values).map(Number)
+		const maxgrade = Math.max(...grades)
 		return {
 			sql: `${tablename} AS (
 				SELECT
@@ -130,7 +132,7 @@ export const cox = {
 			)`,
 			tablename,
 			events: [
-				{ event: 1, label: `Event (grade ${q.breaks[0]}-5)` },
+				{ event: 1, label: `Event (grade ${q.breaks[0] === maxgrade ? q.breaks[0] : `${q.breaks[0]}-${maxgrade}`})` },
 				{ event: 0, label: 'Censored' },
 				{ event: -1, label: 'Event before entry into the cohort' }
 			]

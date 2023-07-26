@@ -75,10 +75,7 @@ function setRenderers(self) {
 				.style('text-align', 'left')
 				.style('color', '#999'),
 
-			loading_div: holder
-				.append('div')
-				.text('Loading..')
-				.style('display', 'none'),
+			loading_div: holder.append('div').text('Loading..').style('display', 'none'),
 
 			top_info_div: holder.append('div').style('padding-bottom', '5px'),
 
@@ -195,10 +192,13 @@ function setRenderers(self) {
 		} else {
 			// mode is neither continuous nor spline
 			// render values as a tabular bar chart
-			self.dom.table_div.style('display', 'block')
 			self.dom.violin_div.style('display', 'none')
 			const data = input.termStatus.sampleCounts
-			if (!data || !data.length) return
+			if (!data || !data.length) {
+				self.dom.table_div.style('display', 'none')
+				return
+			}
+			self.dom.table_div.style('display', 'block')
 			const l = self.input.orderedLabels
 			const sortFxn =
 				l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
@@ -212,10 +212,7 @@ function setRenderers(self) {
 
 			//trs.exit().remove()
 			//trs.each(trUpdate)
-			trs
-				.enter()
-				.append('tr')
-				.each(trEnter)
+			trs.enter().append('tr').each(trEnter)
 		}
 	}
 
@@ -229,19 +226,16 @@ function setRenderers(self) {
 
 	function renderExcludedValues(input) {
 		const data = input.termStatus.excludeCounts
-		if (!data || !data.length) return
-		self.dom.excluded_div
-			.style('display', 'block')
-			.selectAll('tr')
-			.remove()
+		if (!data || !data.length) {
+			self.dom.excluded_div.style('display', 'none')
+			return
+		}
+		self.dom.excluded_div.style('display', 'block').selectAll('tr').remove()
 		const trs = self.dom.excluded_div.selectAll('tr').data(data, b => b.key)
 
 		//trs.exit().remove()
 		//trs.each(trUpdate)
-		trs
-			.enter()
-			.append('tr')
-			.each(trEnter)
+		trs.enter().append('tr').each(trEnter)
 
 		self.dom.excluded_div.selectAll('td').style('color', '#999')
 	}
@@ -263,11 +257,7 @@ function setRenderers(self) {
 			.text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
 
 		// label td
-		tr.append('td')
-			.style('padding', tdSpacing)
-			.style('text-align', 'left')
-			.style('color', 'black')
-			.text(item.label)
+		tr.append('td').style('padding', tdSpacing).style('text-align', 'left').style('color', 'black').text(item.label)
 
 		// sample count bar td
 		const bar_td = tr.append('td').style('padding', tdSpacing)
@@ -313,10 +303,7 @@ function setRenderers(self) {
 				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
 				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
 		} else if (input.term.q.mode != 'cutoff') {
-			const reference_td = tr
-				.append('td')
-				.style('padding', '1px 5px')
-				.style('text-align', 'left')
+			const reference_td = tr.append('td').style('padding', '1px 5px').style('text-align', 'left')
 
 			ref_text = reference_td
 				.append('div')
@@ -332,10 +319,7 @@ function setRenderers(self) {
 				tr.on('mouseover', () => {
 					if (t.refGrp !== item.key) {
 						tr.style('background', row_hover_bgcolor)
-						ref_text
-							.style('display', 'inline-block')
-							.style('border', '')
-							.text('Set as reference')
+						ref_text.style('display', 'inline-block').style('border', '').text('Set as reference')
 					} else tr.style('background', 'white')
 				})
 					.on('mouseout', () => {

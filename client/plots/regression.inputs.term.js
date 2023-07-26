@@ -282,8 +282,12 @@ export class InputTerm {
 								: `age (start: age at ${tdb.cohortStartTimeMsg}; end: age at event/censoring)`
 						}`
 					)
+					const grades = Object.keys(tw.term.values).map(Number)
+					const maxgrade = Math.max(...grades)
 					this.termStatus.topInfoStatus.push(
-						`Event: first occurrence of grade ${tw.q.breaks[0]}-${Math.max(...Object.keys(tw.term.values).map(Number))}`
+						`Event: first occurrence of grade ${
+							tw.q.breaks[0] === maxgrade ? tw.q.breaks[0] : `${tw.q.breaks[0]}-${maxgrade}`
+						}`
 					)
 				}
 			}
