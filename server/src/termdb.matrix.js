@@ -223,6 +223,9 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			if (CTE.bins) {
 				refs.byTermId[tw.term.id] = { bins: CTE.bins }
 			}
+			if (CTE.events) {
+				refs.byTermId[tw.term.id] = { events: CTE.events }
+			}
 			if (tw.term.values) {
 				const values = Object.values(tw.term.values)
 				if (values.find(v => 'order' in v)) {
