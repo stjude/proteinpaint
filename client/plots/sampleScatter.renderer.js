@@ -688,11 +688,17 @@ export function setRenderers(self) {
 	self.renderLegend = function (chart) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
-		if (!self.config.colorTW && !self.config.shapeTW) return
-
 		const step = 25
 		let offsetX = 0
 		let offsetY = 25
+		if (!self.config.colorTW && !self.config.shapeTW) {
+			if (self.config.scaleDotTW) {
+				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${offsetY + 30})`)
+				self.drawScaleDotLegend(chart)
+			}
+			return
+		}
+
 		let title
 		const colorG = legendG.append('g')
 
@@ -828,7 +834,6 @@ export function setRenderers(self) {
 			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${offsetY + 30})`)
 			self.drawScaleDotLegend(chart)
 		}
-
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
 			offsetY = 60
