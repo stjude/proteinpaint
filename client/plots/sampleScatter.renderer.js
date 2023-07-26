@@ -9,7 +9,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { regressionLoess, regressionPoly } from 'd3-regression'
-import { line } from 'd3'
+import { line, arc } from 'd3'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -823,6 +823,7 @@ export function setRenderers(self) {
 				})
 			}
 		}
+		if (self.config.scaleDotTW) self.addScaleDotLegend(legendG, offsetX, offsetY + 40)
 
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
@@ -904,6 +905,80 @@ export function setRenderers(self) {
 				.style('font-size', '0.8em')
 
 			return [circleG, itemG]
+		}
+	}
+
+	self.addScaleDotLegend = function (legendG, x, y) {
+		const minRadius = Math.sqrt(self.settings.minDotSize) / 2
+		const maxRadius = Math.sqrt(self.settings.maxDotSize) / 2
+		const order = self.settings.scaleDotOrder
+		const titleG = legendG.append('g')
+
+		titleG
+			.append('text')
+			.attr('x', x)
+			.attr('y', y)
+			.text(`Scale`)
+			.style('font-size', '.8em')
+			.style('font-weight', 'bold')
+
+		const minG = legendG.append('g').attr('transform', `translate(${x + 30},${y + 30})`)
+
+		minG
+			.append('circle')
+			.attr('r', order == 'asc' ? minRadius : maxRadius)
+			.style('fill', '#aaa')
+			.style('stroke', '#aaa')
+		minG
+			.append('text')
+			.attr('x', -30)
+			.attr('y', 5)
+			.style('font-size', '.8em')
+			.text(`${order == 'asc' ? self.settings.minDotSize : self.settings.maxDotSize}`)
+
+		const maxG = legendG.append('g')
+		maxG
+			.attr('transform', `translate(${x + 80},${y + 30})`)
+			.append('circle')
+			.style('fill', '#aaa')
+			.style('stroke', '#aaa')
+			.attr('r', order == 'asc' ? maxRadius : minRadius)
+		maxG
+			.append('text')
+			.attr('x', x + 12)
+			.attr('y', 5)
+			.style('font-size', '.8em')
+			.text(`${order == 'asc' ? self.settings.maxDotSize : self.settings.minDotSize}`)
+		if (order == 'asc') {
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', -minRadius)
+				.attr('x2', 50)
+				.attr('y2', -maxRadius)
+				.style('stroke', '#aaa')
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', minRadius)
+				.attr('x2', 50)
+				.attr('y2', maxRadius)
+				.style('stroke', '#aaa')
+		} else {
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', -maxRadius)
+				.attr('x2', 50)
+				.attr('y2', -minRadius)
+				.style('stroke', '#aaa')
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', maxRadius)
+				.attr('x2', 50)
+				.attr('y2', minRadius)
+				.style('stroke', '#aaa')
 		}
 	}
 
