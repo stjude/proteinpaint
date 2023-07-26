@@ -80,6 +80,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'validateToken') {
 			}
+			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
 
 			throw "termdb: doesn't know what to do"
 		} catch (e) {
@@ -120,6 +121,12 @@ function get_ds_tdb(genome, q) {
 	if (!ds.cohort) throw 'ds.cohort missing for genome-level termdb'
 	if (!ds.cohort.termdb) throw 'ds.cohort.termdb{} missing for a genome-level termdb'
 	return [ds, ds.cohort.termdb]
+}
+
+function get_convertSampleId(q, res, tdb) {
+	if (!tdb.convertSampleId) throw 'not supported on this ds'
+	if (!Array.isArray(q.inputs)) throw 'q.inputs[] not array'
+	res.send({ mapping: tdb.convertSampleId.get(q.inputs) })
 }
 
 async function trigger_getsamples(q, res, ds) {

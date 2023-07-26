@@ -121,6 +121,10 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	//getBodyParams used but not documented??
 	//vocab??
 	//Methods
+
+	// optional method supplied by matrix, to work with geneVariant terms with gdc api
+	getCurrentGeneNames?: () => void
+
 	callback?: (f: TermWrapper | null) => void
 	customFillTw?: (f: TermWrapper) => void
 	getBodyParams: () => any
@@ -166,6 +170,7 @@ export type TermSettingInstance = {
 	term: Term
 	usecase?: UseCase
 	vocabApi: VocabApi
+
 	//Methods
 	/*
 	TODOs: 

@@ -79,7 +79,7 @@ export type BaseQ = {
 	name?: string
 	mode?: 'discrete' | 'binary' | 'continuous' | 'spline' | 'cuminc' | 'cox'
 	reuseId?: string
-	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-groupsetting'
+	type?: 'values' | 'regular-bin' | 'custom-bin' | 'predefined-groupset' | 'custom-groupset' | 'custom-samplelst'
 }
 
 export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SampleLstQ | SnpsQ

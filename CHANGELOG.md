@@ -1,6 +1,25 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.19.2
+
+Fixes
+- Use import() instead of require() for dynamic import, so that rollup can bundle properly
+ 
+## 2.19.1
+
+Enhancements
+- Display sample counts in matrix sample group labels, mouseovers, and legend.
+- Option to toggle a matrix sample group visibility by clicking on the corresponding legend item
+
+Fixes
+- Cohort creation in the matrix plot, where sample atttribute mapping is required.
+- Allow continuous variables to be added to GDC matrix without breaking. Next will support query of graphql API to retrieve min/max of the variables.
+- Sort matrix samples by gene variant hits before grouping, then sort again within each group
+- Reenable selecting samples from lollipop view for cohort creation. On the fly aliquote-to-case.case_id conversion is performed on
+selected samples, allowing to create GDC cohort; next the conversion will be supported by caching to allow to work with large number of samples.
+
+ 
 ## 2.19.0
 
 - Fusion event labels in disco plot are prioritized and displayed with a tooltip

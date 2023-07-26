@@ -8,9 +8,18 @@ let inputIndex = 0
 export function setInteractivity(self) {
 	self.showCellInfo = function (event) {
 		if (self.activeLabel || self.zoomArea) return
-		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
+		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) {
+			const d = event.target.__data__
+			const grp = d?.grp
+			if (grp?.legendData) {
+				if (event.target.closest('.sjpp-matrix-series-group-label-g')) self.displaySampleGroupInfo(event, grp)
+			} else if (d?.isLegendItem) self.handleLegendMouseover(event, d)
+			return
+		}
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
+		// TODO: svg-rendered cell rects may be thin and hard to mouse over,
+		// but the tooltip should still display info
 		if (!d || !d.term || !d.sample || !d.siblingCells?.length) {
 			self.dom.tip.hide()
 			return
@@ -21,7 +30,9 @@ export function setInteractivity(self) {
 		if (d.term.type != 'geneVariant') {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
 			rows.push(
-				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
+				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill}'> ${
+					d.label
+				}</td></tr>`
 			)
 		} else if (d.term.type == 'geneVariant' && d.value) {
 			rows.push(
@@ -73,7 +84,7 @@ export function setInteractivity(self) {
 	self.getImgCell = function (event) {
 		//const [x,y] = pointer(event, event.target)
 		const y = event.clientY - self.imgBox.y - event.target.clientTop
-		const d = event.target.__data__.find(series => series.y <= y && y <= series.y + self.dimensions.dy)
+		const d = event.target.__data__.find(series => series.hoverY0 <= y && y <= series.hoverY1)
 		if (!d) return
 		const { xMin, dx } = self.dimensions
 		const x2 = event.clientX - self.imgBox.x - event.target.clientLeft + xMin
@@ -105,6 +116,8 @@ export function setInteractivity(self) {
 		const sample = {
 			sample_id: sampleData._SAMPLENAME_ || sampleData.row.sampleName || sampleData.row.sample
 		}
+		//when clicking a cell in SV, CNV, mutation panels
+		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
 		self.dom.menubody.selectAll('*').remove()
 		self.dom.menutop.selectAll('*').remove()
@@ -126,7 +139,8 @@ export function setInteractivity(self) {
 							k,
 							sample,
 							sandbox.body.append('div').style('margin', '20px'),
-							self.app.opts.genome
+							self.app.opts.genome,
+							geneName
 						)
 						self.dom.tip.hide()
 						menuDiv.remove()
@@ -210,6 +224,17 @@ function setTermActions(self) {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			numericEditMenuVersion: ['discrete', 'continuous'],
+			getCurrentGeneNames: () => {
+				const tws = []
+				for (const grp of self.config.termgroups) {
+					tws.push(...grp.lst)
+				}
+				const termNames = tws
+					.filter(tw => tw.term.type === 'geneVariant')
+					.map(tw => tw.term.name)
+					.sort()
+				return termNames.length ? termNames : undefined
+			},
 			//holder: {}, //self.dom.inputTd.append('div'),
 			//debug: opts.debug,
 			renderAs: 'none',
@@ -1082,6 +1107,8 @@ function setSampleGroupActions(self) {
 	}
 
 	self.removeSampleGroup = () => {
+		// this should not happen, but making sure
+		if (!self.config.divideBy) return
 		const divideBy = JSON.parse(JSON.stringify(self.config.divideBy))
 		if (!divideBy.exclude) divideBy.exclude = []
 		divideBy.exclude.push(self.activeLabel.grp.id)
@@ -1093,6 +1120,75 @@ function setSampleGroupActions(self) {
 			}
 		})
 		self.dom.tip.hide()
+	}
+
+	self.displaySampleGroupInfo = (event, grp) => {
+		const l = self.settings.matrix.controlLabels
+		const n = grp.lst.length
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.menubody.selectAll('*').remove()
+		self.dom.menubody
+			.append('div')
+			.style('text-align', 'center')
+			.html(`<b>${grp.name}</b> (${n} ${n < 2 ? l.sample : l.samples})`)
+		const div = self.dom.menubody.append('div').style('max-width', '400px').style('padding', '5px')
+		for (const key in event.target.__data__.grp.legendData) {
+			const g = event.target.__data__.grp.legendData[key]
+			div.append('div').style('padding-top', '10px').html(`<b>${g.name}</b>`)
+			const t = div.append('table')
+			for (const i of g.items) {
+				const tr = t.append('tr')
+				// icon
+				tr.append('td')
+					.append('div')
+					.style('width', '12px')
+					.style('height', '12px')
+					.style('background-color', i.color)
+					.style('border', `1px soloid ${i.stroke}`)
+				tr.append('td').html(i.text)
+			}
+		}
+		self.dom.tip.show(event.clientX, event.clientY)
+	}
+
+	// TODO: may use this later to sort legend, mouseover items by count
+	self.legendItemSorter = (a, b) => {
+		if (a.order && b.order) return a.order - b.order
+		if (Number.isFinite(a.order) || b.order == -1) return -1
+		if (Number.isFinite(b.order) || a.order == -1) return 1
+		if (a.count) return b.count - a.count
+		if (Number.isFinite(a.count)) return -1
+		if (Number.isFinite(b.count)) return 1
+		return 0
+	}
+
+	self.handleLegendItemClick = d => {
+		const dvt = structuredClone(self.config.divideBy || {})
+		const id = 'id' in dvt ? dvt.id : dvt.name
+		if (d.termid == id) {
+			if (!dvt.exclude) dvt.exclude = []
+			const i = dvt.exclude?.indexOf(d.key)
+			if (i == -1) dvt.exclude.push(d.key)
+			else dvt.exclude.splice(i, 1)
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					divideBy: dvt
+				}
+			})
+		}
+	}
+
+	self.handleLegendMouseover = (event, d) => {
+		const dvt = structuredClone(self.config.divideBy || {})
+		const id = 'id' in dvt ? dvt.id : dvt.name
+		if (d.termid == id) {
+			self.dom.menutop.selectAll('*').remove()
+			self.dom.menubody.selectAll('*').remove()
+			self.dom.menubody.html(`Click to ${d.isExcluded ? 'show' : 'hide'}`)
+			self.dom.tip.show(event.clientX, event.clientY)
+		}
 	}
 }
 
@@ -1591,34 +1687,23 @@ function setZoomPanActions(self) {
 					},
 					{
 						label: ss.buttonText || `Select ${l.Samples}`,
-						callback: () => {
+						callback: async () => {
 							const c = self.clickedSeriesCell
 							delete self.clickedSeriesCell
 							const d = self.dimensions
 							const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
-
 							const xy = self.zoomArea.attr('transform').split('(')[1].split(')')[0].split(',').map(Number)
 							const xMin = xy[0]
 							const xMax = xMin + self.zoomWidth
 							const processed = new Set()
 							const filter = c => c.row && c.x >= xMin && c.x <= xMax
-							const samples = []
+							const addRow = c => samples.add(c.row)
+							const samples = new Set()
 							for (const series of self.serieses) {
-								series.cells.filter(filter).forEach(d => {
-									const obj = {}
-									for (const a of ss.attributes) {
-										if (!('to' in a)) a.to = a.from
-										// TODO: may need to support a.convert later, not supported right now
-										obj[a.to] = d.row[a.from]
-									}
-									const sid = Object.values(obj).join(';;')
-									if (processed.has(sid)) return
-									processed.add(sid)
-									samples.push(obj)
-								})
+								series.cells.filter(filter).forEach(addRow)
 							}
 							ss.callback({
-								samples,
+								samples: await self.app.vocabApi.convertSampleId([...samples], ss.attributes),
 								source: `Selected ${l.samples} from OncoMatrix`
 							})
 							self.zoomArea.remove()

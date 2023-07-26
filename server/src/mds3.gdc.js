@@ -20,6 +20,7 @@ validate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
+validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
 querySamples_gdcapi
@@ -57,6 +58,16 @@ thus need to define the "apihost" as global variables in multiple places
 */
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
+
+export function convertSampleId_addGetter(tdb, ds) {
+	tdb.convertSampleId.get = inputs => {
+		const old2new = {}
+		for (const old of inputs) {
+			old2new[old] = ds.map2caseid.get(old) || old
+		}
+		return old2new
+	}
+}
 
 export async function validate_ssm2canonicalisoform(api) {
 	const fields = ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
@@ -198,19 +209,23 @@ export function validate_query_snvindel_byisoform(ds) {
 
 			m.samples = []
 			for (const c of ssm.cases) {
-				/* make simple sample obj for counting, with sample_id
-				only returns total number of unique cases to client
-				*/
 				const s = { sample_id: await decideSampleId(c, ds, opts.useCaseid4sample) }
+				if (opts.useCaseid4sample) {
+					// when flag is true, this query came from getData() for gdc matrix
+					// sample_id is case uuid, the required unique identifier to align columns
+					// also create optional attribute __sampleName with submitter_id value, for displaying to user
+					s.__sampleName = c.submitter_id
+				}
 
+				/* remain to see if okay not to pass this
 				if (c.case_id) {
-					/* when case_id is available, pass it on to returned data as "case.case_id"
+					 when case_id is available, pass it on to returned data as "case.case_id"
 					this is used by gdc matrix case selection where case_id (uuid) is needed to build cohort in gdc portal,
 					but the submitter_id cannot be used as it will prevent mds3 gdc filter to work, it only works with uuid
 					see __matrix_case_id__
-					*/
 					s['case.case_id'] = c.case_id
 				}
+				*/
 
 				m.samples.push(s)
 			}
@@ -511,7 +526,8 @@ export function validate_query_geneCnv2(ds) {
 		'cnv.cnv_change',
 		'cnv.gene_level_cn',
 		'cnv.consequence.gene.symbol',
-		'case.submitter_id' // human-readable name
+		'case.submitter_id', // human-readable name, non-unique
+		'case.case_id' // unique uuid
 	]
 
 	/*
@@ -559,7 +575,8 @@ export function validate_query_geneCnv2(ds) {
 			}
 			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
 			const sample = {
-				sample_id: hit.case.submitter_id
+				sample_id: hit.case.case_id,
+				__sampleName: hit.case.submitter_id
 			}
 
 			if (opts.twLst) {
@@ -1296,19 +1313,15 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 				twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
 		}
 
-		if (geneTwLst) {
-			// using isoforms, should be from matrix to get annotated samples for dictionary term
-			// use submitter id to be able to align with geneVariant terms
-			if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
-		}
-
+		// need both case_id and submitter id
 		// need case_id to generate url/cases/<ID> link in table display; submitter and aliquot id won't work
 		if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
+		// need submitter id for
+		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
 	if (q.get == 'summary' || q.get == 'sunburst') {
-		// submitter id is sufficient to count unique number of samples
-		// no need for case_id
+		// submitter id is sufficient to count unique number of samples, no need for case_id
 		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
@@ -1407,8 +1420,16 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			}
 		}
 
-		// set last flag to true to give priority to submitter_id
-		sample.sample_id = await decideSampleId(s.case, ds, true)
+		if (q.variant2samples) {
+			// from mds3 client
+			// set 3rd arg to false to not set uuid as sample_id, but to use sample submitter id
+			sample.sample_id = await decideSampleId(s.case, ds, false)
+		} else {
+			// from getData(), need below:
+			// sample_id=case uuid, __sampleName=case submitter id (not sample submitter!)
+			sample.sample_id = s.case.case_id
+			sample.__sampleName = s.case.submitter_id
+		}
 
 		if (s.case.case_id) {
 			// for making url link on a sample
@@ -1462,16 +1483,16 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 /*
 c is case{}
-decide the generic sample_id used by pp
+decide the value to the generic sample_id attribute
 */
 async function decideSampleId(c, ds, useCaseid4sample) {
-	if (useCaseid4sample && c.submitter_id) {
-		// asking for submitter id (not case id) and the id is present, then return it
-		return c.submitter_id
+	if (useCaseid4sample && c.case_id) {
+		// asks for case uuid, and the id is present, then return it
+		return c.case_id
 	}
 
 	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
-		// hardcoded logic to
+		// hardcoded logic to return sample submitter id when aliquot id is present
 		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
 	}
 
@@ -1556,19 +1577,12 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	for (let i = 1; i < keys.length; i++) {
 		h = h[keys[i]]
 		if (!h)
-			throw (
-				'.' +
-				keys[i] +
-				' missing from data structure of termid2totalsize2 for query :' +
-				query +
-				' and filter: ' +
-				filter
-			)
+			throw `.${keys[i]} missing from data structure of termid2totalsize2 for query :${query} and filter: ${filter}`
 	}
 	for (const term of termPaths) {
-		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
+		if (term.type == 'categorical' && !Array.isArray(h[term.path].buckets))
 			throw keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
-		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
+		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path].stats != 'object') {
 			throw keys.join('.') + ' not object for query :' + query + ' and filter: ' + filter
 		}
 	}
@@ -1577,14 +1591,14 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 
 	for (const term of termPaths) {
 		if (term.type == 'categorical') {
-			const buckets = h[term.path]['buckets']
-			let values = []
+			const buckets = h[term.path].buckets
+			const values = []
 			for (const bucket of buckets) {
 				values.push([bucket.key.replace('.', '__'), bucket.doc_count])
 			}
 			tv2counts.set(term.id, values)
 		} else if (term.type == 'integer' || term.type == 'float') {
-			const count = h[term.path]['stats']['count']
+			const count = h[term.path].stats.count
 			tv2counts.set(term.id, { total: count })
 		}
 	}
@@ -1683,6 +1697,10 @@ function termid2size_filters(p, ds) {
 			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
 		})
 	}
+
+	if (p.filterObj) {
+		f.filters.content.push(filter2GDCfilter(p.filterObj))
+	}
 	return f
 }
 
@@ -1699,7 +1717,12 @@ export function validate_query_singleSampleMutation(ds, genome) {
 		do the conversion here on the fly so that no need for client to manage these extra, arbitrary ids that's specific for gdc
 		beyond sample.sample_id for display
 		*/
-		q.case_id = await convert2caseId(sampleName)
+		q.case_id = ds.map2caseid.get(sampleName)
+		if (!q.case_id) {
+			// not mapped to case id
+			// this is possible when the server just started and hasn't finished caching. thus must call this method to map
+			q.case_id = await convert2caseId(sampleName)
+		}
 		return await getSingleSampleMutations(q, ds, genome)
 	}
 }
@@ -1709,10 +1732,10 @@ async function convert2caseId(n) {
 	convert all below to case.case_id
 	- case submitter id (TCGA-FR-A44A)
 	- aliquot id (d835e9c7-de84-4acd-ba30-516f396cbd84)
-	- aliquot submitter id (TCGA-B5-A1MR-01A)
+	- sample submitter id (TCGA-B5-A1MR-01A)
 	*/
 	const response = await got.post(
-		'https://api.gdc.cancer.gov/cases', //path.join(apihost, 'cases'),
+		'https://api.gdc.cancer.gov/cases', //path.join(apihost, 'cases'), TODO chane to apihost
 		{
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, //getheaders({}),
 			body: JSON.stringify({

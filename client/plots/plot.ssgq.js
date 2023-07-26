@@ -1,5 +1,6 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { dofetch3 } from '#common/dofetch'
+import { gmlst2loci } from '#src/client'
 
 /*
 for lack of better name, this script is called "ssgq", after singleSampleGenomeQuantification
@@ -27,8 +28,19 @@ holder
 
 genomeObj={}
 	client side genome obj
+
+geneName
+	optional, if provided,show a genome browser view around the gene under the methylationArrayPlot when its launched
 */
-export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel, queryKey, sample, holder, genomeObj) {
+export async function plotSingleSampleGenomeQuantification(
+	termdbConfig,
+	dslabel,
+	queryKey,
+	sample,
+	holder,
+	genomeObj,
+	geneName
+) {
 	const loadingDiv = holder.append('div').text('Loading...')
 	try {
 		// verify this dataset supports this plot
@@ -73,6 +85,22 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 		// !!
 
 		let bb // so as to only load block once, later clicks all update existing block
+		if (geneName) {
+			const geneData = await dofetch3('genelookup', {
+				body: { genome: genomeObj.name, input: geneName, deep: 1 }
+			})
+			if (geneData.error) throw geneData.error
+			if (geneData.gmlst && geneData.gmlst.length) {
+				const locs = gmlst2loci(geneData.gmlst)
+				const chr = locs[0].chr
+				const start = Math.max(0, locs[0].start - (locs[0].stop - locs[0].start))
+				const chrLen = data.chrLst.filter(c => c.chr == chr)[0].chrLen
+				const stop = Math.min(chrLen, locs[0].stop + (locs[0].stop - locs[0].start))
+
+				// block is not present yet. load block
+				bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
+			}
+		}
 
 		img.on('click', async event => {
 			const x = event.offsetX - data.xoff
@@ -99,40 +127,44 @@ export async function plotSingleSampleGenomeQuantification(termdbConfig, dslabel
 			}
 
 			// block is not present yet. load block
-
-			const body = {
-				genome: genomeObj.name,
-				dslabel,
-				singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] }
-			}
-			const d2 = await dofetch3('mds3', { body })
-			// d2={path:str}
-			if (!d2.path) return // no file
-			// has bedgraph file, load block
-			const tklst = [
-				{
-					type: 'bigwig',
-					name: sample[q2.sample_id_key],
-					file: d2.path,
-					height: 100,
-					scale: { min: q2.min, max: q2.max },
-					pcolor: q.positiveColor,
-					ncolor: q.negativeColor
-				}
-			]
-			first_genetrack_tolist(genomeObj, tklst)
-
-			bb = new (await import('../src/block')).Block({
-				genome: genomeObj,
-				holder: holder.append('div'),
-				nobox: true,
-				tklst,
-				chr,
-				start,
-				stop
-			})
+			bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
 		})
 	} catch (e) {
 		loadingDiv.text('Error: ' + (e.message || e))
 	}
+}
+
+async function plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop) {
+	const body = {
+		genome: genomeObj.name,
+		dslabel,
+		singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] }
+	}
+	const d2 = await dofetch3('mds3', { body })
+	// d2={path:str}
+	if (!d2.path) return // no file
+	// has bedgraph file, load block
+	const tklst = [
+		{
+			type: 'bigwig',
+			name: sample[q2.sample_id_key],
+			file: d2.path,
+			height: 100,
+			scale: { min: q2.min, max: q2.max },
+			pcolor: q.positiveColor,
+			ncolor: q.negativeColor
+		}
+	]
+	first_genetrack_tolist(genomeObj, tklst)
+
+	const bb = new (await import('#src/block')).Block({
+		genome: genomeObj,
+		holder: holder.append('div'),
+		nobox: true,
+		tklst,
+		chr,
+		start,
+		stop
+	})
+	return bb
 }

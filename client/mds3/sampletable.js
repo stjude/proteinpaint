@@ -106,13 +106,17 @@ export async function displaySampleTable(samples, args) {
 				callback: async (event, i) => {
 					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 					sandbox.header.text(samples[i].sample_id)
-					await (await import('#plots/plot.ssgq.js')).plotSingleSampleGenomeQuantification(
+
+					await (
+						await import('#plots/plot.ssgq.js')
+					).plotSingleSampleGenomeQuantification(
 						args.tk.mds,
 						args.tk.mds.label,
 						k,
 						samples[i],
 						sandbox.body.append('div').style('margin', '20px'),
-						args.block.genome
+						args.block.genome,
+						args.block.usegm?.name
 					)
 				}
 			}
@@ -139,18 +143,18 @@ export async function displaySampleTable(samples, args) {
 	return renderTable(params)
 }
 
-function feedSample2selectCallback(tk, block, samples, sampleIdxLst) {
-	// map sampleIdxLst to sample attributes that caller wants to pick
-	const pickLst = []
-	for (const i of sampleIdxLst) {
-		const s0 = samples[i]
-		const s1 = {}
-		for (const attr of tk.allow2selectSamples.attributes) {
-			s1[attr] = s0[attr]
-		}
-		pickLst.push(s1)
-	}
-	tk.allow2selectSamples.callback({ samples: pickLst, source: 'Samples with ' + block2source(block) })
+/*
+map sampleIdxLst to sample attributes that caller wants to pick
+callback requests a set of attributes from the mds3 samples
+an attribute may need to convert the value
+*/
+async function feedSample2selectCallback(tk, block, _samples, sampleIdxLst) {
+	const s = [..._samples]
+	const samples = sampleIdxLst.map(i => s[i])
+	tk.allow2selectSamples.callback({
+		samples: await tk.mds.termdb.vocabApi.convertSampleId(samples, tk.allow2selectSamples.attributes),
+		source: 'Samples with ' + block2source(block)
+	})
 }
 
 async function make_singleSampleTable(s, arg) {
@@ -212,10 +216,7 @@ async function make_singleSampleTable(s, arg) {
 		for (const ssmid of s.ssm_id_lst) {
 			if (s.ssm_id_lst.length > 1) {
 				// there are multiple, need to mark it out
-				const div = grid_div
-					.append('div')
-					.style('grid-column', 'span 2')
-					.style('margin-top', '20px')
+				const div = grid_div.append('div').style('grid-column', 'span 2').style('margin-top', '20px')
 				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
@@ -315,13 +316,19 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 				.on('click', async () => {
 					const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
 					sandbox.header.text(sample.sample_id)
-					await (await import('#plots/plot.ssgq.js')).plotSingleSampleGenomeQuantification(
+					await (
+						await import('#plots/plot.ssgq.js')
+					).plotSingleSampleGenomeQuantification(
 						tk.mds,
 						tk.mds.label,
 						k,
 						sample,
 						sandbox.body.append('div').style('margin', '20px'),
-						block.genome
+						block.genome,
+						block.usegm?.name
+						/* to pass current gene name to launch ssgb at that gene
+						do not use thisMutation.gene, as "gene" is not guaranteed attribute on mutations
+						*/
 					)
 				})
 		}
@@ -455,8 +462,9 @@ export async function samples2columnsRows(samples, tk) {
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							const p = m.pairlst[0]
 							oneHtml.push(
-								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b.name ||
-									''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
+									p.b.name || ''
+								} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 							)
 						} else {
 							throw 'unknown dt'

@@ -149,6 +149,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 		if (q.colorTW) terms.push(q.colorTW)
 		if (q.shapeTW) terms.push(q.shapeTW)
 		if (q.divideByTW) terms.push(q.divideByTW)
+		if (q.scaleDotTW) terms.push(q.scaleDotTW)
 
 		const data = await getData({ filter: q.filter, terms }, ds, genome)
 		if (data.error) throw data.error
@@ -208,6 +209,13 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			results[divideBy] = { samples, colorMap: {}, shapeMap: {} }
 		}
 		if (!q.divideByTW) sample.z = 0
+		if (!q.scaleDotTW) sample.scale = 1
+		else {
+			const value = dbSample?.[q.scaleDotTW.id]?.key
+			if (!value || !isComputable(q.scaleDotTW.term, value)) continue
+			sample.scale = value
+		}
+
 		sample.cat_info = {}
 		sample.hidden = {}
 		if (!q.colorTW) {
@@ -413,7 +421,8 @@ export async function getScatterCoordinates(req, q, ds) {
 }
 
 function isComputable(term, value) {
-	return !term.values?.[value]?.uncomputable
+	const computable = !term.values?.[value]?.uncomputable
+	return computable
 }
 
 export async function trigger_getLowessCurve(req, q, res) {

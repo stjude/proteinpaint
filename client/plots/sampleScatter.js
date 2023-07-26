@@ -18,6 +18,7 @@ import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
 import { getActiveCohortStr } from '../mass/charts'
 import { addDynamicScatterForm } from '#dom/dynamicScatter'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 /*
 sample object returned by server:
@@ -115,7 +116,13 @@ class Scatter {
 			coordTWs
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
+		if (c.scaleDotTW) {
+			if (!c.scaleDotTW.q) c.scaleDotTW.q = {}
+			c.scaleDotTW.q.mode = 'continuous'
+			opts.scaleDotTW = c.scaleDotTW
+		}
 		if (c.term0) opts.divideByTW = c.term0
+
 		return opts
 	}
 
@@ -161,6 +168,17 @@ class Scatter {
 
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
+		const hasRef = this.charts[0].data.samples.find(s => !('sampleId' in s))
+		const scaleDotOption = {
+			type: 'term',
+			configKey: 'scaleDotTW',
+			chartType: 'sampleScatter',
+			usecase: { target: 'sampleScatter', detail: 'numeric' },
+			title: 'Scale dot by term value',
+			label: 'Scale dot by',
+			vocabApi: this.app.vocabApi,
+			numericEditMenuVersion: ['continuous']
+		}
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
@@ -170,12 +188,46 @@ class Scatter {
 			label: 'Shape',
 			vocabApi: this.app.vocabApi
 		}
-		const symbolSizeOption = {
-			label: 'Symbol size',
+		const dotSizeOption = {
+			label: 'Dot size',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
-			title: 'It represents the area of a symbol in square pixels',
+			title: 'Dot size or area, in square pixels',
+			min: 0
+		}
+		const minDotSizeOption = {
+			label: 'Min dot size',
+			type: 'number',
+			chartType: 'sampleScatter',
+			settingsKey: 'minDotSize',
+			title: 'Minimum dot size or area, in square pixels',
+			min: 0
+		}
+		const maxDotSizeOption = {
+			label: 'Max dot size',
+			type: 'number',
+			chartType: 'sampleScatter',
+			settingsKey: 'maxDotSize',
+			title: 'Maximum dot size or area, in square pixels',
+			min: 0
+		}
+		const orientation = {
+			label: 'Scale dot order',
+			type: 'radio',
+			chartType: 'sampleScatter',
+			settingsKey: 'scaleDotOrder',
+			options: [
+				{ label: 'Ascending', value: 'Ascending' },
+				{ label: 'Descending', value: 'Descending' }
+			]
+		}
+		const refSizeOption = {
+			label: 'Reference size',
+			type: 'number',
+			chartType: 'sampleScatter',
+			settingsKey: 'refSize',
+			title: 'It represents the area of the reference symbol in square pixels',
 			min: 0
 		}
 		const inputs = [
@@ -200,19 +252,6 @@ class Scatter {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete']
 			},
-
-			{
-				label: 'Chart width',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'svgw'
-			},
-			{
-				label: 'Chart height',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'svgh'
-			},
 			{
 				boxLabel: 'Visible',
 				label: 'Show axes',
@@ -229,6 +268,18 @@ class Scatter {
 				title: 'It represents the opacity of the symbols',
 				min: 0,
 				max: 1
+			},
+			{
+				label: 'Chart width',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'svgw'
+			},
+			{
+				label: 'Chart height',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'svgh'
 			}
 		]
 		if (this.config.term) {
@@ -259,8 +310,18 @@ class Scatter {
 				]
 			)
 			if (!this.is3D) {
-				inputs.splice(3, 0, shapeOption)
-				inputs.push(symbolSizeOption)
+				inputs.splice(4, 0, shapeOption)
+				inputs.splice(5, 0, scaleDotOption)
+				if (this.config.scaleDotTW) {
+					inputs.splice(6, 0, minDotSizeOption)
+					inputs.splice(7, 0, maxDotSizeOption)
+					inputs.splice(8, 0, orientation)
+					if (hasRef) inputs.splice(9, 0, refSizeOption)
+				} else {
+					inputs.splice(6, 0, dotSizeOption)
+					if (hasRef) inputs.splice(7, 0, refSizeOption)
+				}
+
 				inputs.push({
 					label: 'Show regression',
 					type: 'dropdown',
@@ -274,7 +335,7 @@ class Scatter {
 					]
 				})
 			} else {
-				inputs.splice(6, 0, {
+				inputs.push({
 					label: 'Chart depth',
 					type: 'number',
 					chartType: 'sampleScatter',
@@ -288,16 +349,17 @@ class Scatter {
 				settingsKey: 'defaultColor'
 			})
 		} else {
-			inputs.splice(1, 0, shapeOption)
-			inputs.push(symbolSizeOption)
-			inputs.push({
-				label: 'Reference size',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'refSize',
-				title: 'It represents the area of the reference symbol in square pixels',
-				min: 0
-			})
+			inputs.splice(2, 0, shapeOption)
+			inputs.splice(3, 0, scaleDotOption)
+			if (this.config.scaleDotTW) {
+				inputs.splice(4, 0, minDotSizeOption)
+				inputs.splice(5, 0, maxDotSizeOption)
+				inputs.splice(6, 0, orientation)
+				if (hasRef) inputs.splice(7, 0, refSizeOption)
+			} else {
+				inputs.splice(4, 0, dotSizeOption)
+				if (hasRef) inputs.splice(5, 0, refSizeOption)
+			}
 		}
 
 		this.components = {
@@ -310,7 +372,7 @@ class Scatter {
 		}
 		// TODO: handle multiple chart download when there is a divide by term
 		this.components.controls.on('downloadClick.scatter', () => {
-			for (const chart of this.charts) this.downloadSVG(chart.svg)
+			for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg')
 		})
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
@@ -325,6 +387,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term) await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
 
 		const settings = getDefaultScatterSettings()
 		if (!opts.term && !opts.term2) settings.showAxes = false
@@ -394,6 +457,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export function getDefaultScatterSettings() {
 	return {
 		size: 25,
+		minDotSize: 16,
+		maxDotSize: 144,
+		scaleDotOrder: 'Ascending',
 		refSize: 9,
 		svgw: 550,
 		svgh: 550,

@@ -1230,7 +1230,6 @@ tape('samplelst term', async test => {
 				}
 			},
 			q: {
-				mode: 'custom-groupsetting',
 				groups: [
 					{
 						name: 'Group 1',

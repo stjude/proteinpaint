@@ -1,6 +1,23 @@
 import { select } from 'd3-selection'
 import { to_svg } from '../src/client'
 
+export function downloadSingleSVG(svg, filename) {
+	const link = document.createElement('a')
+	// If you don't know the name or want to use
+	// the webserver default set name = ''
+	link.setAttribute('download', filename)
+	document.body.appendChild(link)
+	link.click()
+	link.remove()
+	const serializer = new XMLSerializer()
+	const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
+		type: 'image/svg+xml'
+	})
+	link.href = URL.createObjectURL(svg_blob)
+	link.click()
+	link.remove()
+}
+
 /*
 	mainGsel      a d3 selection of root g element(s) of svg(s), expected to contain all
 		            the rendered plot elements that can be copied into one svg
@@ -22,7 +39,7 @@ export function downloadChart(mainGsel, svgName, styleParent = null) {
 	let prevY = 0,
 		numChartsPerRow = 0
 
-	mainGsel.each(function() {
+	mainGsel.each(function () {
 		mainGs.push(this)
 		const bbox = this.getBBox()
 		if (bbox.width > maxw) maxw = bbox.width

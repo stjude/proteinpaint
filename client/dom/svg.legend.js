@@ -63,9 +63,7 @@ export default function svgLegend(opts) {
 		const l = opts.holder.selectAll('g').data(data)
 
 		l.exit().remove()
-		l.enter()
-			.append('g')
-			.each(addGroup)
+		l.enter().append('g').each(addGroup)
 
 		return currliney + settings.lineh + settings.padbtm
 	}
@@ -134,8 +132,11 @@ export default function svgLegend(opts) {
 				settings.exclude && settings.exclude.classes && settings.exclude.classes.includes(d.class) ? 'line-through' : ''
 			)
 
-		itemlabel.each(function(d) {
+		itemlabel.each(function (d) {
 			const t = select(this)
+			if (settings.isExcludedAttr && d[settings.isExcludedAttr]) {
+				t.style('text-decoration', 'line-through').style('opacity', 0.5)
+			}
 			if (typeof d.text == 'string') {
 				t.text(d.text)
 			} else if (Array.isArray(d.text)) {
@@ -145,13 +146,10 @@ export default function svgLegend(opts) {
 					.append('tspan')
 					.text(d => d)
 					.attr('dominant-baseline', 'central')
-					.attr('x', function(dd, i) {
+					.attr('x', function (dd, i) {
 						if (i == 0) {
 							select(this).attr('font-weight', 700)
-							d.lastx =
-								select(this)
-									.node()
-									.getComputedTextLength() + 10
+							d.lastx = select(this).node().getComputedTextLength() + 10
 							return 0
 						} else if (d.lastx) {
 							return d.lastx
@@ -245,9 +243,5 @@ export default function svgLegend(opts) {
 
 let i = 0
 function getId() {
-	return `${i++}-${Date.now()
-		.toString()
-		.slice(-6)}-${Math.random()
-		.toString()
-		.slice(-6)}`
+	return `${i++}-${Date.now().toString().slice(-6)}-${Math.random().toString().slice(-6)}`
 }

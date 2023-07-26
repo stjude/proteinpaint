@@ -48,6 +48,7 @@ export async function getPlotConfig(opts = {}, app) {
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: 'abs', //true, // 'abs' (default, previously true), 'pct', ''  (previously false)
+				geneVariantCountSamplesSkipMclass: [],
 				cellbg: '#ececec',
 				showGrid: '', // false | 'pattern' | 'rect'
 				gridStroke: '#fff',

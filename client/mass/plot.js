@@ -13,15 +13,15 @@ class MassPlot {
 	reactsTo(action) {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.endsWith('_group')) return true
-		if (action.type.startsWith('plot_')) {
-			return action.id === this.id
-		}
+		if (action.type.startsWith('plot_')) return action.id === this.id
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
 		if (action.type.endsWith('customTerm')) return true
 	}
 
+	// !!! NOTE: This getState() method is reused by the plot-specific recover component.
+	// When logging something within getState, it may have been called by either the plot or recover instance
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {

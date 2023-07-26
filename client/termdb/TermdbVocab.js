@@ -412,7 +412,8 @@ export class TermdbVocab extends Vocab {
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
 				maxThickness: 150,
-				screenThickness: arg.screenThickness
+				screenThickness: arg.screenThickness,
+				currentGeneNames: arg.currentGeneNames
 			},
 			arg,
 			_body
@@ -708,7 +709,15 @@ export class TermdbVocab extends Vocab {
 						const row = samples[sampleId]
 						if (idn in sample) {
 							row[tw.$id] = sample[idn]
-							if ('sampleName' in sample) row.sampleName = sample.sampleName
+							if (!row.sampleName) {
+								// only assign this value once for each sample
+								if (data.refs.bySampleId?.[sampleId]) row.sampleName = data.refs.bySampleId[sampleId]
+								else if ('sampleName' in sample) row.sampleName = sample.sampleName
+								else {
+									const v = sample[idn].values?.find(v => v._SAMPLENAME_ && true)
+									if (v._SAMPLENAME_) row.sampleName = v._SAMPLENAME_
+								}
+							}
 						}
 					}
 
@@ -853,6 +862,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.colorTW) body.colorTW = opts.colorTW
 		if (opts.shapeTW) body.shapeTW = opts.shapeTW
 		if (opts.divideByTW) body.divideByTW = opts.divideByTW
+		if (opts.scaleDotTW) body.scaleDotTW = opts.scaleDotTW
 
 		return await dofetch3('termdb', { headers, body })
 	}
@@ -907,6 +917,68 @@ export class TermdbVocab extends Vocab {
 
 	async getTopMutatedGenes(arg) {
 		return await dofetch3('gdc_filter2topGenes', { method: 'GET', body: arg })
+	}
+
+	/* 
+		samples[]					!!! CRITICAL: the samples data must not be modified !!!
+			sample{} 			  the source sample object, will not be changed directly
+				[attr.from]   any collection of keys from the attributes[] argument
+
+		attributes[]
+			.attr{}
+				.from         string, the object to map from, required
+				.to           string, the object to map to, optional
+				.convert      optional step, somehow the caller must know this is needed?
+	*/
+	async convertSampleId(samples, attributes) {
+		// first pass of attributes[] and perform id conversion
+		const byAttr = new Map()
+		const bySample = []
+		// !!! do NOT modify the sample object or samples array
+		for (const sample of samples) {
+			const obj = {}
+			bySample.push(obj)
+			for (const attr of attributes) {
+				if (!('to' in attr)) attr.to = attr.from
+				if (!attr.convert) {
+					// can be filled-in without a server request
+					obj[attr.to] = sample[attr.from]
+					continue
+				}
+				// this attr requires conversion;
+				// collect all values from all samples and later call server for each attribute? //once to convert
+				if (!byAttr.has(attr)) byAttr.set(attr, {})
+				const fromValMap = byAttr.get(attr)
+				const v = sample[attr.from]
+				if (!fromValMap[v]) fromValMap[v] = []
+				fromValMap[v].push({ obj, sample })
+			}
+		}
+
+		// perform the required conversion of sample attributes
+		const promises = []
+		for (const [attr, fromValMap] of byAttr) {
+			const inputs = Object.keys(fromValMap)
+			promises.push(
+				await dofetch3('termdb', {
+					body: {
+						for: 'convertSampleId',
+						inputs,
+						genome: this.state.vocab.genome,
+						dslabel: this.state.vocab.dslabel
+					}
+				}).then(r => {
+					for (const v of inputs) {
+						for (const { sample, obj } of fromValMap[v]) {
+							obj[attr.to] = r.mapping[v]
+						}
+					}
+				})
+			)
+		}
+
+		await Promise.all(promises)
+		return bySample
 	}
 }
 

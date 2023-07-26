@@ -1,13 +1,13 @@
-import Settings from './Settings.ts'
+import Settings from './Settings'
 import { copyMerge } from '#rx'
 
 export default function discoDefaults(overrides = {}): Settings {
 	const defaults = {
 		rings: {
-			ringWidth: 20,
-
-			cnvCapping: 5,
-			cnvUnit: 'Cnv Unit',
+			nonExonicRingWidth: 20,
+			snvRingWidth: 20,
+			lohRingWidth: 20,
+			cnvRingWidth: 30,
 
 			snvRingFilters: ['exonic'],
 

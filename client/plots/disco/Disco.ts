@@ -1,17 +1,17 @@
 import { getCompInit } from '#rx'
-import { DiscoRenderer } from './renderer/DiscoRenderer'
-import { DiscoInteractions } from './interactions/DiscoInteractions'
-import { ViewModelMapper } from './mapper/ViewModelMapper'
-import LegendRenderer from './renderer/LegendRenderer'
-import ChromosomesRenderer from './renderer/ChromosomesRenderer'
-import LabelsRenderer from './renderer/LabelsRenderer'
+import { DiscoRenderer } from './DiscoRenderer.ts'
+import { DiscoInteractions } from './interactions/DiscoInteractions.ts'
+import { ViewModelMapper } from './viewmodel/ViewModelMapper.ts'
+import LegendRenderer from './legend/LegendRenderer.ts'
+import ChromosomesRenderer from './chromosome/ChromosomesRenderer.ts'
+import LabelsRenderer from './label/LabelsRenderer.ts'
 import discoDefaults from './defaults.ts'
-import NonExonicSnvRenderer from './renderer/NonExonicSnvRenderer'
-import SnvRenderer from './renderer/SnvRenderer'
-import LohRenderer from './renderer/LohRenderer'
-import CnvRenderer from './renderer/CnvRenderer'
-import IRenderer from './renderer/IRenderer'
-import { RingType } from './viewmodel/RingType'
+import NonExonicSnvRenderer from './snv/NonExonicSnvRenderer.ts'
+import SnvRenderer from './snv/SnvRenderer.ts'
+import LohRenderer from './loh/LohRenderer.ts'
+import CnvRenderer from './cnv/CnvRenderer.ts'
+import IRenderer from './IRenderer.ts'
+import { RingType } from './ring/RingType.ts'
 import Settings from './Settings.ts'
 
 export default class Disco {
@@ -64,7 +64,7 @@ export default class Disco {
 		)
 		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer(geneClickListener)
-		const snvRenderer = new SnvRenderer(settings.rings.ringWidth, geneClickListener)
+		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)
 		const cnvRenderer = new CnvRenderer(settings.menu.padding)
 		const lohRenderer = new LohRenderer()
 

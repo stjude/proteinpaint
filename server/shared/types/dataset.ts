@@ -412,6 +412,7 @@ type MatrixSettings = {
 	sortSamplesBy?: string
 	sortPriority?: SortPriorityEntry[]
 	ignoreCnvValues?: boolean
+	geneVariantCountSamplesSkipMclass?: Array<string>
 }
 
 type Mclass = {
@@ -420,7 +421,6 @@ type Mclass = {
 
 type Matrix = {
 	settings?: MatrixSettings
-	geneVariantCountSamplesSkipMclass?: Array<string>
 	mclass?: Mclass
 }
 
@@ -476,6 +476,7 @@ type Termdb = {
 	//Terms
 	termIds?: TermIds
 	displaySampleIds?: boolean
+	converSampleIds?: boolean
 	allowedTermTypes?: string[]
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number

@@ -44,6 +44,13 @@ export function getHandler(self: NumericTermSettingInstance) {
 				xpad: 10,
 				ypad: 20
 			}
+
+			div.selectAll('*').remove()
+			div
+				.append('div')
+				.style('padding', '10px')
+				.style('text-align', 'center')
+				.html('Getting distribution data ...<br/>')
 			// try {
 			const d = await self.vocabApi.getViolinPlotData({
 				termid: self.term.id,
@@ -52,7 +59,8 @@ export function getHandler(self: NumericTermSettingInstance) {
 				orientation: 'horizontal',
 				datasymbol: 'bean',
 				radius: 5,
-				strokeWidth: 0.2
+				strokeWidth: 0.2,
+				currentGeneNames: self.opts.getCurrentGeneNames?.()
 			})
 			self.num_obj.density_data = convertViolinData(d)
 			// } catch (e) {

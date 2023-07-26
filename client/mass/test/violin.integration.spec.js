@@ -11,7 +11,7 @@ import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
 3.  'test basic controls'
 4.  'test label clicking, filtering and hovering'
 5.  'test hide option on label clicking'
-6.  'term1 as numeric and term2 numeric'
+6.  'term1 as numeric and term2 numeric, change median size'
 7.  'term1 as categorical and term2 numeric'
 8. 	'term1 as numerical and term2 condition'
 9.  'test samplelst term2'
@@ -46,10 +46,7 @@ const open_state = {
 	childType: 'violin',
 	term: {
 		id: 'agedx',
-		included_types: ['float'],
 		isAtomic: true,
-		isleaf: true,
-		name: 'Age (years) at Cancer Diagnosis',
 		q: {
 			mode: 'continuous',
 			hiddenValues: {},
@@ -599,8 +596,8 @@ tape('test hide option on label clicking', function (test) {
 	}
 })
 
-tape.skip('term1 as numeric and term2 numeric', function (test) {
-	test.timeoutAfter(1000)
+tape('term1 as numeric and term2 numeric, change median size', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -612,10 +609,7 @@ tape.skip('term1 as numeric and term2 numeric', function (test) {
 					childType: 'violin',
 					term: {
 						id: 'agedx',
-						included_types: ['float'],
 						isAtomic: true,
-						isleaf: true,
-						name: 'Age (years) at Cancer Diagnosis',
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
@@ -635,9 +629,41 @@ tape.skip('term1 as numeric and term2 numeric', function (test) {
 		},
 	})
 	async function runTests(violin) {
-		//TODO
+		violin.on('postRender.test', null)
+		const violinDiv = violin.Inner.dom.violinDiv
+		await changeMedianSize(violin, violinDiv)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
+	}
+
+	async function changeMedianSize(violin, violinDiv){
+		const testMedianLength = 10
+		const testMedianThickness = 10
+		const medianEle = await detectGte(
+			{
+			 elem: violinDiv.node(), selector: '.sjpp-median-line', count: 6 ,
+			async trigger() {
+				await violin.Inner.app.dispatch({
+				type: 'plot_edit',
+				id: violin.Inner.id,
+				config: {
+					settings: {
+						violin: {
+							medianLength: testMedianLength,
+							medianThickness: testMedianThickness
+						},
+					},
+				}
+			})
+		}})
+		test.ok(medianEle, 'Median exists')
+		test.true(
+			violin.Inner.app.Inner.state.plots[0].settings.violin.medianLength === testMedianLength,
+			`Plot median length changed to ${testMedianLength}`
+		)
+		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.medianLength === testMedianLength,
+			`Plot median thickness changed to ${testMedianThickness}`
+			)
 	}
 })
 
@@ -654,10 +680,7 @@ tape.skip('term1 as categorical and term2 numeric', function (test) {
 					childType: 'violin',
 					term: {
 						id: 'sex',
-						included_types: ['categorical'],
-						isAtomic: true,
-						isleaf: true,
-						name: 'Sex',
+						isAtomic: true
 					},
 					term2: {
 						id: 'agedx',
@@ -697,7 +720,6 @@ tape('term1 as numerical and term2 condition', function (test) {
 					term: {
 						id: 'agedx',
 						isAtomic: true,
-						isleaf: true,
 						q: {
 							mode: 'continuous',
 							hiddenValues: {},
@@ -890,7 +912,7 @@ tape('test samplelst term2', function (test) {
 								disabled: false,
 							},
 							isAtomic: true,
-							type: 'custom-groupsetting',
+							type: 'custom-groupset',
 						},
 					},
 				},
@@ -931,10 +953,7 @@ tape('test uncomputable categories legend', function (test) {
 					childType: 'violin',
 					term: {
 						id: 'aaclassic_5',
-						included_types: ['float'],
 						isAtomic: true,
-						isleaf: true,
-						name: 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)',
 						q: {
 							mode: 'continuous',
 						},
@@ -1042,7 +1061,6 @@ tape('test change in plot length and thickness for custom group variable', funct
 					childType: 'violin',
 					term: {
 						id: 'agedx',
-						name: 'Age (years) at Cancer Diagnosis',
 						q: {
 							mode: 'continuous',
 						},
@@ -1160,7 +1178,7 @@ tape('test change in plot length and thickness for custom group variable', funct
 									],
 								},
 							],
-							type: 'custom-groupsetting',
+							type: 'custom-groupset',
 						},
 					},
 				},

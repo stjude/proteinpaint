@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 class profileBarchart {
 	constructor() {
@@ -12,6 +13,7 @@ class profileBarchart {
 		this.dom = {
 			holder
 		}
+		this.opts.header.text('Barchart plot')
 	}
 
 	getState(appState) {
@@ -36,28 +38,36 @@ class profileBarchart {
 					}
 				}
 			}
+		twLst.push(this.config.typeTW)
+
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
+		this.regions = [{ key: 'Global', label: 'Global' }]
+		this.incomes = ['']
+		this.incomes.push(...this.config.incomes)
+
+		for (const region of this.config.regions) {
+			this.regions.push({ key: region.name, label: region.name })
+			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
+		}
+		this.sampleData = null
+		for (const k in this.data.samples) {
+			const sample = this.data.samples[k]
+			if (this.config.sampleName && sample.sampleName == this.config.sampleName) this.sampleData = sample
+		}
+
+		this.region = this.config.region || this.regions[0]
+		this.income = this.config.income || this.incomes[0]
+
 		this.plot()
 	}
 
 	plot() {
 		const config = this.config
 		const components = config.plotByComponent.map(comp => comp.component.name)
-		let data
 		this.dom.holder.selectAll('*').remove()
-		const samples = []
-
-		for (const k in this.data.samples) {
-			if (!config.sampleName && k == 0) data = this.data.samples[k]
-			if (config.sampleName && this.data.samples[k].sampleName == config.sampleName) data = this.data.samples[k]
-			samples.push(this.data.samples[k].sampleName)
-		}
-
-		const holder = this.dom.holder.append('div')
-
-		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
+		const div = this.dom.holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
 		div.append('label').html('Component:').style('font-weight', 'bold')
 		const selectComp = div.append('select').style('margin-left', '5px')
 		selectComp
@@ -72,23 +82,49 @@ class profileBarchart {
 			config.componentIndex = selectComp.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
-		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
-
-		if (samples.length == 0) return
-		div.append('label').style('margin-left', '5px').html('Site ID:').style('font-weight', 'bold')
-		const select = div.append('select').style('margin-left', '5px')
-		select
+		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
+		const regionSelect = div.append('select').style('margin-left', '5px')
+		regionSelect
 			.selectAll('option')
-			.data(samples)
+			.data(this.regions)
 			.enter()
 			.append('option')
-			.property('selected', d => d == config.sampleName)
-			.html((d, i) => d)
+			.property('selected', d => d.key == config.region)
+			.attr('value', d => d.key)
+			.html((d, i) => d.label)
 
-		select.on('change', () => {
-			config.sampleName = select.node().value
+		regionSelect.on('change', () => {
+			config.region = regionSelect.node().value
+			config.sampleName = config.region
+			config.income = 'Global'
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
+		const incomeSelect = div.append('select').style('margin-left', '5px')
+		incomeSelect
+			.selectAll('option')
+			.data(this.incomes)
+			.enter()
+			.append('option')
+			.property('selected', d => d == config.income)
+			.html((d, i) => d)
+
+		incomeSelect.on('change', () => {
+			config.income = incomeSelect.node().value
+			config.sampleName = config.income
+			config.region = ''
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
+		const sampleData = this.sampleData
+		if (!sampleData) return
+		div
+			.append('button')
+			.style('margin-left', '15px')
+			.text('Download SVG')
+			.on('click', () => downloadSingleSVG(svg, 'barchart-plot.svg'))
+		const svg = this.dom.holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
+
 		const color = this.component.component.color
 		svg
 			.append('defs')
@@ -159,10 +195,9 @@ class profileBarchart {
 		function drawRect(x, y, row, i) {
 			const tw = row.twlst[i]
 			const termColor = tw?.term?.color
-
-			const value = data[tw.$id]?.value
+			const value = sampleData[tw.$id]?.value
 			const isFirst = i % 2 == 0
-			const pairValue = isFirst ? data[row.twlst[1]?.$id]?.value : data[row.twlst[0]?.$id]?.value
+			const pairValue = isFirst ? sampleData[row.twlst[1]?.$id]?.value : sampleData[row.twlst[0]?.$id]?.value
 			const width = value ? (value / 100) * barwidth : 0
 
 			if (value) {
@@ -276,6 +311,8 @@ export async function getPlotConfig(opts, app) {
 						// allow empty cells, not all cells have a corresponding term
 					}
 				}
+		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
+
 		return config
 	} catch (e) {
 		throw `${e} [profileBarchart getPlotConfig()]`

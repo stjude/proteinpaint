@@ -9,7 +9,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { regressionLoess, regressionPoly } from 'd3-regression'
-import { line } from 'd3'
+import { line, arc } from 'd3'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -33,18 +33,23 @@ export function setRenderers(self) {
 
 	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
-		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax] = chart.data.samples.reduce(
+		const cohortSamples = chart.cohortSamples
+		const s0 = cohortSamples[0] //First sample to start reduce comparisons
+		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = cohortSamples.reduce(
 			(s, d) => [
 				d.x < s[0] ? d.x : s[0],
 				d.x > s[1] ? d.x : s[1],
 				d.y < s[2] ? d.y : s[2],
 				d.y > s[3] ? d.y : s[3],
 				d.z < s[4] ? d.z : s[4],
-				d.z > s[5] ? d.z : s[5]
+				d.z > s[5] ? d.z : s[5],
+				d.scale < s[6] ? d.scale : s[6],
+				d.scale > s[7] ? d.scale : s[7]
 			],
-			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z]
+			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
 		)
+		chart.scaleMin = scaleMin
+		chart.scaleMax = scaleMax
 
 		chart.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
@@ -262,8 +267,8 @@ export function setRenderers(self) {
 	}
 
 	self.render3DSerie = async function (chart) {
-		const THREE = await require('three')
-		const OrbitControls = await require('three/addons/controls/OrbitControls.js')
+		const THREE = await import('three')
+		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
 		self.canvas = chart.chartDiv.append('canvas').node()
 		self.canvas.width = self.settings.svgw * 1.5
@@ -401,8 +406,19 @@ export function setRenderers(self) {
 
 	self.getShape = function (chart, c, factor = 1) {
 		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
-		const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
-		return self.symbols[index].size((size * factor) / self.k)()
+		const isRef = !('sampleId' in c)
+		if (!self.config.scaleDotTW || isRef) {
+			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
+			return self.symbols[index].size((size * factor) / self.k)()
+		} else {
+			const range = self.settings.maxDotSize - self.settings.minDotSize
+			let size
+			if (self.settings.scaleDotOrder == 'Ascending')
+				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+
+			return self.symbols[index].size((size * factor) / self.k)()
+		}
 	}
 
 	function translate(chart, c) {
@@ -612,6 +628,7 @@ export function setRenderers(self) {
 				const symbols = chart.serie.selectAll('path[name="serie"')
 				symbols.attr('d', c => self.getShape(chart, c))
 				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
+				if (self.config.scaleDotTW) self.drawScaleDotLegend(chart)
 			}
 		}
 
@@ -671,11 +688,17 @@ export function setRenderers(self) {
 	self.renderLegend = function (chart) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
-		if (!self.config.colorTW && !self.config.shapeTW) return
-
 		const step = 25
 		let offsetX = 0
 		let offsetY = 25
+		if (!self.config.colorTW && !self.config.shapeTW) {
+			if (self.config.scaleDotTW) {
+				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${offsetY + 30})`)
+				self.drawScaleDotLegend(chart)
+			}
+			return
+		}
+
 		let title
 		const colorG = legendG.append('g')
 
@@ -807,6 +830,10 @@ export function setRenderers(self) {
 				})
 			}
 		}
+		if (self.config.scaleDotTW) {
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${offsetY + 30})`)
+			self.drawScaleDotLegend(chart)
+		}
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
 			offsetY = 60
@@ -888,6 +915,145 @@ export function setRenderers(self) {
 
 			return [circleG, itemG]
 		}
+	}
+
+	self.drawScaleDotLegend = function (chart) {
+		const scaleG = chart.scaleG
+		scaleG.selectAll('*').remove()
+		const minRadius = (Math.sqrt(self.settings.minDotSize) / 2) * self.k
+		const maxRadius = (Math.sqrt(self.settings.maxDotSize) / 2) * self.k
+		const width = 30 * self.k
+
+		const order = self.settings.scaleDotOrder
+		const titleG = scaleG.append('g')
+
+		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-size', '.8em').style('font-weight', 'bold')
+		let start = chart.scaleMin.toFixed(1)
+		let end = chart.scaleMax.toFixed(1)
+		const minG = scaleG.append('g').attr('transform', `translate(${30},${30})`)
+		minG
+			.append('circle')
+			.attr('r', order == 'Ascending' ? minRadius : maxRadius)
+			.style('fill', '#aaa')
+			.style('stroke', '#aaa')
+		minG
+			.append('text')
+			.attr('x', order == 'Ascending' ? -minRadius - 30 : -maxRadius - 30)
+			.attr('y', 5)
+			.style('font-size', '.8em')
+			.style('text-anchor', 'start')
+			.text(start)
+
+		const maxG = scaleG.append('g')
+		maxG
+			.attr('transform', `translate(${width + 30},${30})`)
+			.append('circle')
+			.style('fill', '#aaa')
+			.style('stroke', '#aaa')
+			.attr('r', order == 'Ascending' ? maxRadius : minRadius)
+		maxG
+			.append('text')
+			.attr('x', order == 'Ascending' ? maxRadius + 10 : minRadius + 10)
+			.attr('y', 5)
+			.style('font-size', '.8em')
+			.text(end)
+		if (order == 'Ascending') {
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', -minRadius)
+				.attr('x2', width)
+				.attr('y2', -maxRadius)
+				.style('stroke', '#aaa')
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', minRadius)
+				.attr('x2', width)
+				.attr('y2', maxRadius)
+				.style('stroke', '#aaa')
+		} else {
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', -maxRadius)
+				.attr('x2', width)
+				.attr('y2', -minRadius)
+				.style('stroke', '#aaa')
+			minG
+				.append('line')
+				.attr('x1', 0)
+				.attr('y1', maxRadius)
+				.attr('x2', width)
+				.attr('y2', minRadius)
+				.style('stroke', '#aaa')
+		}
+
+		scaleG
+			.append('rect')
+			.attr('width', 110 * self.k)
+			.attr('height', 50)
+			.attr('fill', 'transparent')
+			.on('click', e => {
+				const menu = new Menu({ padding: '3px' })
+				const div = menu.d
+				div.append('label').text('Min:')
+				const minInput = div
+					.append('input')
+					.attr('type', 'number')
+					.style('width', '50px')
+					.attr('value', self.settings.minDotSize)
+					.on('change', () => {
+						self.config.settings.sampleScatter.minDotSize = minInput.node().value
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+				div.append('label').text('Max:')
+				const maxInput = div
+					.append('input')
+					.attr('type', 'number')
+					.style('width', '50px')
+					.attr('value', self.settings.maxDotSize)
+					.on('change', () => {
+						self.config.settings.sampleScatter.maxDotSize = maxInput.node().value
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+				const divRadios = menu.d.append('div')
+				divRadios.append('label').text('Order: ')
+				const data = ['Ascending', 'Descending']
+				divRadios.selectAll('input').data(data).enter().append('div').style('display', 'inline-block').each(addRadio)
+				function addRadio(text) {
+					const div = select(this)
+					const input = div
+						.append('input')
+						.attr('type', 'radio')
+						.attr('id', text)
+						.attr('value', text)
+						.property('checked', text => text == order)
+
+					div.append('label').text(text).attr('for', text)
+					input.on('change', e => {
+						self.config.settings.sampleScatter.scaleDotOrder = e.target.value
+						const inputs = (divRadios
+							.selectAll('input')
+							.nodes()
+							.find(d => d.value != e.target.value).checked = false)
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+				}
+				menu.showunder(e.target)
+			})
 	}
 
 	self.editColor = function (chart, colorKey, elem) {

@@ -5,56 +5,61 @@ import { rgb } from 'd3-color'
 export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {} }, barDiv) {
 	const isHidden = {}
 
-	function render(data) {
+	// TODO: cleanup, reorgananize, and document all these options
+	function render(data, opts = {}) {
 		const s = viz.settings
-		legendDiv.selectAll('*').remove()
+		if (!opts.div) legendDiv.selectAll('*').remove()
+
+		// TODO: Instead of doing the loop here, the caller should
+		// call legendRenderer instancce multipler times with different data/divs
 		if (data.every(d => Array.isArray(d))) {
 			for (let i = 0; i < data.length; i++) {
+				// TODO: should not hardcode selectors here, this logic should be in the caller/viz code?
 				const barDivChild = barDiv.select(`.pp-sbar-div:nth-child(${i + 1})`)
-				generateLegend(data[i], barDivChild)
+				generateLegend(data[i], s, barDivChild)
 			}
 		} else if (data.every(d => typeof d == 'object')) {
-			generateLegend(data)
+			generateLegend(data, s, opts.div || legendDiv)
 		} else {
 			throw 'render() only takes an array of objects or an array of arrays'
 		}
+	}
 
-		function generateLegend(data, barDivChild) {
-			const oneLegendDiv = barDivChild || legendDiv
-			oneLegendDiv.selectAll('.pp-sbar-div-oneLegend').remove()
+	function generateLegend(data, s, oneLegendDiv) {
+		oneLegendDiv.selectAll('.pp-sbar-div-oneLegend').remove()
 
-			oneLegendDiv
-				.append('div')
-				.attr('class', 'pp-sbar-div-oneLegend')
-				.style(
-					'text-align',
-					data.legendTextAlign || s.legendTextAlign || (s.legendOrientation == 'vertical' ? 'left' : 'center')
-				)
-				.style('display', s.legendOrientation == 'grid' ? 'grid' : '')
-				//.style('grid-template-cols', s.legendOrientation == 'grid' ? 'auto auto' : '')
-				.style('grid-template-rows', s.legendOrientation == 'grid' ? 'auto auto' : '')
-				.style('gap', s.legendOrientation == 'grid' ? '10px' : '')
-				.selectAll('div')
-				.data(data)
-				.enter()
-				.append('div')
-				.each(addLegendRow)
+		oneLegendDiv
+			.append('div')
+			.attr('class', 'pp-sbar-div-oneLegend')
+			.style('width', s.mainWidth || '')
+			.style(
+				'text-align',
+				data.legendTextAlign || s.legendTextAlign || (s.legendOrientation == 'vertical' ? 'left' : 'center')
+			)
+			.style('display', s.legendOrientation == 'grid' ? 'grid' : '')
+			//.style('grid-template-cols', s.legendOrientation == 'grid' ? 'auto auto' : '')
+			.style('grid-template-rows', s.legendOrientation == 'grid' ? 'auto auto' : '')
+			.style('gap', s.legendOrientation == 'grid' ? '10px' : '')
+			.selectAll('div')
+			.data(data)
+			.enter()
+			.append('div')
+			.each(addLegendRow)
 
-			if (s.legendChartSide == 'right') {
-				setTimeout(() => {
-					const pbox = viz.dom.container.node().parentNode.getBoundingClientRect()
-					const mbox = viz.dom.container.node().getBoundingClientRect()
-					const lbox = viz.dom.legendDiv.node().getBoundingClientRect()
-					const currPadTop = parseFloat(viz.dom.legendDiv.style('padding-top'))
-					const padTop = pbox.height - mbox.height + (mbox.height - lbox.height + currPadTop) / 2
-					if (Math.abs(currPadTop - padTop) < 20) return
-					//console.log(padTop, pbox.height, mbox.height, lbox.height)
-					viz.dom.legendDiv
-						.transition()
-						.duration(100)
-						.style('padding-top', padTop < 0 ? 0 : padTop + 'px')
-				}, 1200)
-			}
+		if (s.legendChartSide == 'right') {
+			setTimeout(() => {
+				const pbox = viz.dom.container.node().parentNode.getBoundingClientRect()
+				const mbox = viz.dom.container.node().getBoundingClientRect()
+				const lbox = viz.dom.legendDiv.node().getBoundingClientRect()
+				const currPadTop = parseFloat(viz.dom.legendDiv.style('padding-top'))
+				const padTop = pbox.height - mbox.height + (mbox.height - lbox.height + currPadTop) / 2
+				if (Math.abs(currPadTop - padTop) < 20) return
+				//console.log(padTop, pbox.height, mbox.height, lbox.height)
+				viz.dom.legendDiv
+					.transition()
+					.duration(100)
+					.style('padding-top', padTop < 0 ? 0 : padTop + 'px')
+			}, 1200)
 		}
 	}
 
@@ -69,11 +74,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			if (s.legendChartSide == 'right') {
 				div.style('text-align', 'left')
 
-				div
-					.append('div')
-					.style('font-size', s.legendFontSize)
-					.style('font-weight', 600)
-					.html(d.name)
+				div.append('div').style('font-size', s.legendFontSize).style('font-weight', 600).html(d.name)
 
 				div
 					.append('div')
