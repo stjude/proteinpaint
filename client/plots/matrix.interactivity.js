@@ -11,8 +11,9 @@ export function setInteractivity(self) {
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) {
 			const d = event.target.__data__
 			const grp = d?.grp
-			if (grp?.legendData) self.displaySampleGroupInfo(event, grp)
-			else if (d?.isLegendItem) self.handleLegendMouseover(event, d)
+			if (grp?.legendData) {
+				if (event.target.closest('.sjpp-matrix-series-group-label-g')) self.displaySampleGroupInfo(event, grp)
+			} else if (d?.isLegendItem) self.handleLegendMouseover(event, d)
 			return
 		}
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
