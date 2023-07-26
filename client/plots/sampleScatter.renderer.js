@@ -413,7 +413,7 @@ export function setRenderers(self) {
 		} else {
 			const range = self.settings.maxDotSize - self.settings.minDotSize
 			let size
-			if (self.settings.scaleDotOrder == 'asc')
+			if (self.settings.scaleDotOrder == 'Ascending')
 				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 
@@ -923,19 +923,23 @@ export function setRenderers(self) {
 		const titleG = scaleG.append('g')
 
 		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-size', '.8em').style('font-weight', 'bold')
-
+		let start = order == 'Ascending' ? chart.scaleMin : chart.scaleMax
+		start = start.toFixed(1)
+		let end = order == 'Ascending' ? chart.scaleMax : chart.scaleMin
+		end = end.toFixed(1)
 		const minG = scaleG.append('g').attr('transform', `translate(${30},${30})`)
-		const start = minG
+		minG
 			.append('circle')
-			.attr('r', order == 'asc' ? minRadius : maxRadius)
+			.attr('r', order == 'Ascending' ? minRadius : maxRadius)
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
 		minG
 			.append('text')
-			.attr('x', order == 'asc' ? -minRadius - 40 : -maxRadius - 40)
+			.attr('x', order == 'Ascending' ? -minRadius - 30 : -maxRadius - 30)
 			.attr('y', 5)
 			.style('font-size', '.8em')
-			.text(`${(order == 'asc' ? chart.scaleMin : chart.scaleMax).toFixed(2)}`)
+			.style('text-anchor', 'start')
+			.text(start)
 
 		const maxG = scaleG.append('g')
 		maxG
@@ -943,14 +947,14 @@ export function setRenderers(self) {
 			.append('circle')
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
-			.attr('r', order == 'asc' ? maxRadius : minRadius)
+			.attr('r', order == 'Ascending' ? maxRadius : minRadius)
 		maxG
 			.append('text')
-			.attr('x', order == 'asc' ? maxRadius + 10 : minRadius + 10)
+			.attr('x', order == 'Ascending' ? maxRadius + 10 : minRadius + 10)
 			.attr('y', 5)
 			.style('font-size', '.8em')
-			.text(`${order == 'asc' ? chart.scaleMax : chart.scaleMin}`)
-		if (order == 'asc') {
+			.text(end)
+		if (order == 'Ascending') {
 			minG
 				.append('line')
 				.attr('x1', 0)
@@ -1020,7 +1024,7 @@ export function setRenderers(self) {
 					})
 				const divRadios = menu.d.append('div')
 				divRadios.append('label').text('Order: ')
-				const data = ['Asc', 'Desc']
+				const data = ['Ascending', 'Descending']
 				divRadios.selectAll('input').data(data).enter().append('div').style('display', 'inline-block').each(addRadio)
 				function addRadio(text) {
 					const div = select(this)
@@ -1028,13 +1032,12 @@ export function setRenderers(self) {
 						.append('input')
 						.attr('type', 'radio')
 						.attr('id', text)
-						.attr('value', text.toLowerCase())
-						.property('checked', text => text.toLowerCase() == order)
+						.attr('value', text)
+						.property('checked', text => text == order)
 
 					div.append('label').text(text).attr('for', text)
 					input.on('change', e => {
 						self.config.settings.sampleScatter.scaleDotOrder = e.target.value
-						console.log(e.target.value)
 						const inputs = (divRadios
 							.selectAll('input')
 							.nodes()
