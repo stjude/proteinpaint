@@ -628,7 +628,7 @@ export function setRenderers(self) {
 				const symbols = chart.serie.selectAll('path[name="serie"')
 				symbols.attr('d', c => self.getShape(chart, c))
 				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
-				self.drawScaleDotLegend(chart)
+				if (self.config.scaleDotTW) self.drawScaleDotLegend(chart)
 			}
 		}
 
