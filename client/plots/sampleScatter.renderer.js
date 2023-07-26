@@ -928,10 +928,8 @@ export function setRenderers(self) {
 		const titleG = scaleG.append('g')
 
 		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-size', '.8em').style('font-weight', 'bold')
-		let start = order == 'Ascending' ? chart.scaleMin : chart.scaleMax
-		start = start.toFixed(1)
-		let end = order == 'Ascending' ? chart.scaleMax : chart.scaleMin
-		end = end.toFixed(1)
+		let start = chart.scaleMin.toFixed(1)
+		let end = chart.scaleMax.toFixed(1)
 		const minG = scaleG.append('g').attr('transform', `translate(${30},${30})`)
 		minG
 			.append('circle')
