@@ -628,6 +628,7 @@ export function setRenderers(self) {
 				const symbols = chart.serie.selectAll('path[name="serie"')
 				symbols.attr('d', c => self.getShape(chart, c))
 				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
+				self.drawScaleDotLegend(chart)
 			}
 		}
 
@@ -823,7 +824,10 @@ export function setRenderers(self) {
 				})
 			}
 		}
-		if (self.config.scaleDotTW) self.addScaleDotLegend(legendG, offsetX, offsetY + 40)
+		if (self.config.scaleDotTW) {
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${offsetY + 30})`)
+			self.drawScaleDotLegend(chart)
+		}
 
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
@@ -908,21 +912,18 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.addScaleDotLegend = function (legendG, x, y) {
-		const minRadius = Math.sqrt(self.settings.minDotSize) / 2
-		const maxRadius = Math.sqrt(self.settings.maxDotSize) / 2
+	self.drawScaleDotLegend = function (chart) {
+		const scaleG = chart.scaleG
+		scaleG.selectAll('*').remove()
+		const minRadius = (Math.sqrt(self.settings.minDotSize) / 2) * self.k
+		const maxRadius = (Math.sqrt(self.settings.maxDotSize) / 2) * self.k
+		const width = 30 * self.k
 		const order = self.settings.scaleDotOrder
-		const titleG = legendG.append('g')
+		const titleG = scaleG.append('g')
 
-		titleG
-			.append('text')
-			.attr('x', x)
-			.attr('y', y)
-			.text(`Scale`)
-			.style('font-size', '.8em')
-			.style('font-weight', 'bold')
+		titleG.append('text').text(`Scale`).style('font-size', '.8em').style('font-weight', 'bold')
 
-		const minG = legendG.append('g').attr('transform', `translate(${x + 30},${y + 30})`)
+		const minG = scaleG.append('g').attr('transform', `translate(${30},${30})`)
 
 		minG
 			.append('circle')
@@ -931,21 +932,21 @@ export function setRenderers(self) {
 			.style('stroke', '#aaa')
 		minG
 			.append('text')
-			.attr('x', -30)
+			.attr('x', order == 'asc' ? -minRadius - 30 : -maxRadius - 30)
 			.attr('y', 5)
 			.style('font-size', '.8em')
 			.text(`${order == 'asc' ? self.settings.minDotSize : self.settings.maxDotSize}`)
 
-		const maxG = legendG.append('g')
+		const maxG = scaleG.append('g')
 		maxG
-			.attr('transform', `translate(${x + 80},${y + 30})`)
+			.attr('transform', `translate(${width + 30},${30})`)
 			.append('circle')
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
 			.attr('r', order == 'asc' ? maxRadius : minRadius)
 		maxG
 			.append('text')
-			.attr('x', x + 12)
+			.attr('x', order == 'asc' ? maxRadius + 10 : minRadius + 10)
 			.attr('y', 5)
 			.style('font-size', '.8em')
 			.text(`${order == 'asc' ? self.settings.maxDotSize : self.settings.minDotSize}`)
@@ -954,14 +955,14 @@ export function setRenderers(self) {
 				.append('line')
 				.attr('x1', 0)
 				.attr('y1', -minRadius)
-				.attr('x2', 50)
+				.attr('x2', width)
 				.attr('y2', -maxRadius)
 				.style('stroke', '#aaa')
 			minG
 				.append('line')
 				.attr('x1', 0)
 				.attr('y1', minRadius)
-				.attr('x2', 50)
+				.attr('x2', width)
 				.attr('y2', maxRadius)
 				.style('stroke', '#aaa')
 		} else {
@@ -969,14 +970,14 @@ export function setRenderers(self) {
 				.append('line')
 				.attr('x1', 0)
 				.attr('y1', -maxRadius)
-				.attr('x2', 50)
+				.attr('x2', width)
 				.attr('y2', -minRadius)
 				.style('stroke', '#aaa')
 			minG
 				.append('line')
 				.attr('x1', 0)
 				.attr('y1', maxRadius)
-				.attr('x2', 50)
+				.attr('x2', width)
 				.attr('y2', minRadius)
 				.style('stroke', '#aaa')
 		}
