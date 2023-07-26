@@ -1213,7 +1213,7 @@ async function getSampleData_dictionaryTerms(q, terms) {
 			// event: event status code
 			// age_start: age at beginning of follow-up
 			// age_end: age at event or at censoring
-			const { event } = JSON.parse(row.key)
+			const event = row.key
 			const { age_start, age_end } = JSON.parse(row.value)
 
 			// discard samples that had events before follow-up

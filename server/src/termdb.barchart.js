@@ -369,7 +369,7 @@ function getPj(q, data, tdb, ds) {
 			nval: 'nval' + i,
 			bins,
 			q: d.q,
-			orderedLabels: getOrderedLabels(d.term, bins, d.q)
+			orderedLabels: getOrderedLabels(d.term, bins, undefined, d.q)
 		})
 	})
 
@@ -490,7 +490,8 @@ function getPj(q, data, tdb, ds) {
 	})
 }
 
-export function getOrderedLabels(term, bins, q) {
+export function getOrderedLabels(term, bins, events, q) {
+	if (events) return events.map(e => e.label)
 	if (term.type == 'condition') {
 		if (q?.groups?.length) return q.groups.map(g => g.name)
 		if (term.values) {

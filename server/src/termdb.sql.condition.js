@@ -120,9 +120,7 @@ export const cox = {
 			sql: `${tablename} AS (
 				SELECT
 					sample,
-					json_object('event', event, 'label', IIF(event = 0, 'Censored', IIF(event = 1, 'Event (grade ${
-						q.breaks[0]
-					}-5)', IIF(event = -1, 'Event before entry into the cohort', 'NA')))) AS key,
+					event AS key,
 					json_object('age_start', age_start, 'age_end', age_end) AS value
 				FROM
 					precomputed_cox
@@ -130,7 +128,12 @@ export const cox = {
 					term_id = ?
 					AND grade_cutoff = ?
 			)`,
-			tablename
+			tablename,
+			events: [
+				{ event: 1, label: `Event (grade ${q.breaks[0]}-5)` },
+				{ event: 0, label: 'Censored' },
+				{ event: -1, label: 'Event before entry into the cohort' }
+			]
 		}
 	}
 }

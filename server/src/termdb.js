@@ -330,13 +330,19 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 		for (const [key, count] of key2count) {
 			lst.push({
 				samplecount: count,
-				key: q.term1_q?.mode == 'cox' ? JSON.parse(key).event : key,
-				label: q.term1_q?.mode == 'cox' ? JSON.parse(key).label : term?.values?.[key]?.label || key
+				key,
+				label:
+					data.refs?.byTermId?.[q.tid]?.events?.find(e => e.event === key).label || term?.values?.[key]?.label || key
 			})
 		}
 	}
 
-	const orderedLabels = getOrderedLabels(term, data.refs?.byTermId?.[q.tid]?.bins || [], q.term1_q)
+	const orderedLabels = getOrderedLabels(
+		term,
+		data.refs?.byTermId?.[q.tid]?.bins || [],
+		data.refs?.byTermId?.[q.tid]?.events,
+		q.term1_q
+	)
 	if (orderedLabels.length) {
 		lst.sort((a, b) => orderedLabels.indexOf(a.label) - orderedLabels.indexOf(b.label))
 	}
