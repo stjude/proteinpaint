@@ -44,6 +44,7 @@ public/static/*.pdf
 
 container/public/example*
 container/dataset/*
+container/**/pkg.json
 
 **/rust/*.lock
 **/rust/target/*
