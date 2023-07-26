@@ -918,6 +918,7 @@ export function setRenderers(self) {
 		const minRadius = (Math.sqrt(self.settings.minDotSize) / 2) * self.k
 		const maxRadius = (Math.sqrt(self.settings.maxDotSize) / 2) * self.k
 		const width = 30 * self.k
+
 		const order = self.settings.scaleDotOrder
 		const titleG = scaleG.append('g')
 
@@ -981,6 +982,73 @@ export function setRenderers(self) {
 				.attr('y2', minRadius)
 				.style('stroke', '#aaa')
 		}
+
+		scaleG
+			.append('rect')
+			.attr('width', 110 * self.k)
+			.attr('height', 50)
+			.attr('fill', 'transparent')
+			.on('click', e => {
+				const menu = new Menu({ padding: '3px' })
+				const div = menu.d
+				div.append('label').text('Min:')
+				const minInput = div
+					.append('input')
+					.attr('type', 'number')
+					.style('width', '50px')
+					.attr('value', self.settings.minDotSize)
+					.on('change', () => {
+						self.config.settings.sampleScatter.minDotSize = minInput.node().value
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+				div.append('label').text('Max:')
+				const maxInput = div
+					.append('input')
+					.attr('type', 'number')
+					.style('width', '50px')
+					.attr('value', self.settings.maxDotSize)
+					.on('change', () => {
+						self.config.settings.sampleScatter.maxDotSize = maxInput.node().value
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+				const divRadios = menu.d.append('div')
+				divRadios.append('label').text('Order: ')
+				const data = ['Asc', 'Desc']
+				divRadios.selectAll('input').data(data).enter().append('div').style('display', 'inline-block').each(addRadio)
+				function addRadio(text) {
+					const div = select(this)
+					const input = div
+						.append('input')
+						.attr('type', 'radio')
+						.attr('id', text)
+						.attr('value', text.toLowerCase())
+						.property('checked', text => text.toLowerCase() == order)
+
+					div.append('label').text(text).attr('for', text)
+					input.on('change', e => {
+						self.config.settings.sampleScatter.scaleDotOrder = e.target.value
+						console.log(e.target.value)
+						const inputs = (divRadios
+							.selectAll('input')
+							.nodes()
+							.find(d => d.value != e.target.value).checked = false)
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+				}
+				menu.showunder(e.target)
+			})
 	}
 
 	self.editColor = function (chart, colorKey, elem) {
