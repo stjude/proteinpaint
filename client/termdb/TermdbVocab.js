@@ -709,7 +709,15 @@ export class TermdbVocab extends Vocab {
 						const row = samples[sampleId]
 						if (idn in sample) {
 							row[tw.$id] = sample[idn]
-							if ('sampleName' in sample) row.sampleName = sample.sampleName
+							if (!row.sampleName) {
+								// only assign this value once for each sample
+								if (data.refs.bySampleId?.[sampleId]) row.sampleName = data.refs.bySampleId[sampleId]
+								else if ('sampleName' in sample) row.sampleName = sample.sampleName
+								else {
+									const v = sample[idn].values?.find(v => v._SAMPLENAME_ && true)
+									if (v._SAMPLENAME_) row.sampleName = v._SAMPLENAME_
+								}
+							}
 						}
 					}
 

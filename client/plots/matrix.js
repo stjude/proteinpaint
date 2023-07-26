@@ -421,7 +421,7 @@ class Matrix {
 					totalIndex: total + index,
 					totalHtAdjustments: 0, // may be required when transposed???
 					grpTotals: { htAdjustment: 0 }, // may be required when transposed???
-					_SAMPLENAME_: data.refs.bySampleId[row.sample],
+					_SAMPLENAME_: row.sampleName,
 					processedLst
 				})
 			}
@@ -950,7 +950,7 @@ class Matrix {
 				const cellTemplate = {
 					s: so,
 					sample: row.sample,
-					_SAMPLENAME_: data.refs.bySampleId[row.sample],
+					_SAMPLENAME_: row.sampleName,
 					tw: t.tw,
 					term: t.tw.term,
 					termid,
@@ -1020,12 +1020,12 @@ class Matrix {
 		return serieses
 	}
 
-	sampleKey(series) {
-		return series.row.sample
+	sampleKey(s) {
+		return s.row.sample
 	}
 
-	sampleLabel(series) {
-		return series.label || series.row.label || series.row.sampleName || series.row.sample || ''
+	sampleLabel(s) {
+		return s.label || s.row.label || s.row.sampleName || s.row.sample || ''
 	}
 
 	sampleGrpKey(s) {
