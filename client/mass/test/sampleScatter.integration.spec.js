@@ -254,7 +254,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 	}
 })
 
-tape.only('Test scale dot', function (test) {
+tape('Test scale dot', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(2)
 	const holder = getHolder()
@@ -287,6 +287,8 @@ tape.only('Test scale dot', function (test) {
 
 		test.true(dots.find(dot => dot.getAttribute('d') == minShape) != null, `Dots with the minimum size should be found`)
 		test.true(dots.find(dot => dot.getAttribute('d') == maxShape) != null, `Dots with the maximum size should be found`)
+		if (test._ok) holder.remove()
+		test.end()
 	}
 })
 
