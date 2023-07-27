@@ -62,15 +62,6 @@ jobs:
       - name: Fetch All Tags
         run: git fetch --all --tags
 
-      - name: Run version.sh
-        run:
-          exclude=""
-          if [[ github.event.inputs.include == 'core only' ]]; then
-            exclude="-x=container"
-          fi
-
-          ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} $exclude
-
       # Setup .npmrc file to publish to GitHub Packages
       - uses: actions/setup-node@v3
         with:
@@ -79,6 +70,16 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
       - run: npm ci
+
+      - name: Run version bump
+        run: |
+          exclude="";
+
+          if [ "${{ github.event.inputs.include }}" = "core only" ]; then
+            exclude="-x=container";
+          fi
+
+          ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
 
       - name: 
         run: ./build/ci-npm-publish.sh ${{ github.event.inputs.release_type }}
@@ -93,8 +94,9 @@ jobs:
 
       - name: Build and Publish Docker Images
         run: 
-          sleep 90
-          if [[ "${{ github.event.inputs.include }}" == "core + Docker image" ]]; then
+          sleep 90;
+          
+          if [ "${{ github.event.inputs.include }}" = "core + Docker image" ]; then
             cd container
             ./build2.sh -r "ghcr.io/stjude/" server
             TAG="$(node -p "require('./server/package.json').version")"
