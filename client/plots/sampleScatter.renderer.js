@@ -1004,10 +1004,11 @@ export function setRenderers(self) {
 				const minInput = div
 					.append('input')
 					.attr('type', 'number')
+					.attr('min', '1')
 					.style('width', '50px')
 					.attr('value', self.settings.minDotSize)
 					.on('change', () => {
-						self.config.settings.sampleScatter.minDotSize = minInput.node().value
+						self.config.settings.sampleScatter.minDotSize = parseFloat(minInput.node().value)
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -1018,10 +1019,11 @@ export function setRenderers(self) {
 				const maxInput = div
 					.append('input')
 					.attr('type', 'number')
+					.attr('max', '1000')
 					.style('width', '50px')
 					.attr('value', self.settings.maxDotSize)
 					.on('change', () => {
-						self.config.settings.sampleScatter.maxDotSize = maxInput.node().value
+						self.config.settings.sampleScatter.maxDotSize = parseFloat(maxInput.node().value)
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
