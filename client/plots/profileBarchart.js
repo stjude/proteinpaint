@@ -29,8 +29,10 @@ class profileBarchart {
 		const twLst = []
 		this.component = this.config.plotByComponent[this.config.componentIndex || 0]
 		this.component.hasSubjectiveData = false
+		this.rowCount = 0
 		for (const group of this.component.groups)
 			for (const row of group.rows) {
+				this.rowCount++
 				for (const [i, tw] of row.twlst.entries()) {
 					if (tw.id) {
 						twLst.push(tw)
@@ -123,7 +125,10 @@ class profileBarchart {
 			.style('margin-left', '15px')
 			.text('Download SVG')
 			.on('click', () => downloadSingleSVG(svg, 'barchart-plot.svg'))
-		const svg = this.dom.holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
+		const svg = this.dom.holder
+			.append('svg')
+			.attr('width', 1400)
+			.attr('height', this.rowCount * 30 + 400)
 
 		const color = this.component.component.color
 		svg
