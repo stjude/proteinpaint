@@ -181,6 +181,7 @@ fn wilcoxon_rank_sum_test(
     let mut xy = Vec::<char>::new(); // Stores X-Y classification
     let mut ranks = Vec::<f64>::new(); // Stores the rank of each element
     let mut is_repeat = false;
+    let mut repeat_present = false;
     let mut frac_rank: f64 = 0.0;
     let mut num_repeats: f64 = 1.0;
     let low_cutoff: usize = 6; // When both vectors are below this cutoff, exact p-value will be computed by iterating through all possible combinations. This is helpful especially in case of ties.
@@ -211,6 +212,7 @@ fn wilcoxon_rank_sum_test(
             for j in i + 1..combined.len() {
                 if combined[i] == combined[j] {
                     is_repeat = true;
+                    repeat_present = true;
                     repeat_iter = 1.0;
                     num_repeats += 1.0;
                 } else {
@@ -285,8 +287,8 @@ fn wilcoxon_rank_sum_test(
 
     //println!("test_statistic:{}", test_statistic);
 
-    if group1.len() <= threshold || group2.len() < threshold
-    // In principle in case of ties (repeats), iterating through all possible combinations will give an exact p-value but is very slow, so this will be true only when both vectors have lengths lower than low_cutoff
+    if (group1.len() <= threshold && repeat_present == false)
+        || (group2.len() < threshold && repeat_present == false)
     {
         // Compute exact p-values
 
@@ -340,29 +342,36 @@ fn wilcoxon_rank_sum_test(
         }
     } else {
         // Compute p-values from a normal distribution
-        let expected_w = (group2.len() as f64 * (group1.len() + group2.len() + 1) as f64) / 2.0;
+        let expected_w_y = (group2.len() as f64 * (group1.len() + group2.len() + 1) as f64) / 2.0;
+        let expected_w_x = (group1.len() as f64 * (group1.len() + group2.len() + 1) as f64) / 2.0;
         let variance_w =
             (group2.len() as f64 * group1.len() as f64 * (group1.len() + group2.len() + 1) as f64)
                 / 12.0;
         //let w_starred = (weight_y - expected_w) / variance_w.sqrt();
-        let n = Normal::new(expected_w, variance_w.sqrt()).unwrap();
-        //println!("n:{:?}", n);
+        let n_y = Normal::new(expected_w_y, variance_w.sqrt()).unwrap();
+        let n_x = Normal::new(expected_w_x, variance_w.sqrt()).unwrap();
+        //println!("n_y:{:?}", n_y);
         //println!("w_starred:{}", w_starred);
         //normal_distribution(w_starred)
+
+        //let std_w_y = (weight_y - expected_w_y) / variance_w.sqrt();
+        //let std_w_x = (weight_x - expected_w_x) / variance_w.sqrt();
+        //println!("std_w_y:{}", std_w_y);
+        //println!("std_w_x:{}", std_w_x);
 
         if alternative == 'g' {
             // Alternative "greater"
             //println!("greater:{}", n.cdf(weight_y));
-            n.cdf(weight_y)
+            n_y.cdf(weight_y)
         } else if alternative == 'l' {
             // Alternative "lesser"
             //println!("lesser:{}", n.cdf(weight_x));
-            n.cdf(weight_x)
+            n_x.cdf(weight_x)
         } else {
             // Alternative "two-sided"
-            let p_g = n.cdf(weight_y);
+            let p_g = n_y.cdf(weight_y);
             //println!("greater:{}", p_g);
-            let p_l = n.cdf(weight_x);
+            let p_l = n_x.cdf(weight_x);
             //println!("lesser:{}", p_l);
             let mut p_value;
             if p_g < p_l {
@@ -381,7 +390,7 @@ fn wilcoxon_rank_sum_test(
 
 // To be used only when there are no ties in the input data
 fn calculate_exact_probability_using_combinations(weight: f64, x: usize, y: usize) -> f64 {
-    //println!("Using Wilcoxon CDF");
+    println!("Using Wilcoxon CDF");
     let p_value = r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
     //println!("p_value:{}", p_value);
     p_value
