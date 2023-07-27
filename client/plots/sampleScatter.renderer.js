@@ -93,11 +93,11 @@ export function setRenderers(self) {
 		let colorLegends = chart.colorLegend.size * 30
 		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
 		const legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + 100 //legend step and header
-
+		const width = self.charts.length == 1 ? s.svgw + 800 : self.config.shapeTW ? 600 : 350
 		svg
 			.transition()
 			.duration(s.duration)
-			.attr('width', s.svgw + (self.config.shapeTW ? 600 : 350))
+			.attr('width', width)
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
