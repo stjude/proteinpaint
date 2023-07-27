@@ -1,6 +1,25 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.24.0
+
+Features
+- Profile plots have now filters and a download button
+- Make disco plot rings width configurable
+- Added to scatter plot scale dot option. Added also test for it.
+- Support a reset button option for the rx recover component
+
+Fixes:
+- Selecting hundreds of samples from GDC lollipop no longer hangs or crashes (using a cached mapping to case uuid)
+- Fix the numeric edit menu when violin plot data is requested for a GDC variable, which needs currentGeneNames
+- Bug fix to show reduced sample summaries when creating sub-track from GDC lollipop (mds3) track
+- Correctly handle special uncomputable numeric term values in a matrix row bar plot, when mode='continuous' 
+- GDC OncoMatrix has switched to use case uuid but not case submitter id to align data, while still displaying submitter ids on UI; the latter is not unique between projects.
+
+DevOps:
+- Reuse a published dependencies image for releasing new image versions to improve build times and stability
+
+ 
 ## 2.19.2
 
 Fixes
