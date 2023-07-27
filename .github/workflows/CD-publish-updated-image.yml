@@ -47,12 +47,11 @@ jobs:
       - run: |
           npm ci
           cd container
-          ./build.sh server -r "ghcr.io/stjude/"
+          ./build2.sh -r "ghcr.io/stjude/" server
           TAG="$(node -p "require('./server/package.json').version")"
-          docker push ghcr.io/stjude/ppserver:$TAG
-          docker push ghcr.io/stjude/ppserver:latest
+          HASH=$(git rev-parse --short HEAD)
+          docker push ghcr.io/stjude/ppserver:$TAG-$HASH
 
-           ./build.sh full -r "ghcr.io/stjude/"
+           ./build2.sh -r "ghcr.io/stjude/" full
           TAG="$(node -p "require('./full/package.json').version")"
-          docker push ghcr.io/stjude/ppfull:$TAG
-          docker push ghcr.io/stjude/ppfull:latest
+          docker push ghcr.io/stjude/ppfull:$TAG-$HASH

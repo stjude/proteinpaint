@@ -70,21 +70,13 @@ Use Github Actions to coordinate the release of related package updates.
 The package versioning, build, and deployment uses the standard npm tooling under the hood
 (`version`, `pack`, and `publish`, respectively).
 
-You may dry-run a version change by supplying 3 arguments to the version helper script,
-for example:  
+You may dry-run a version change by running the following:
 
 ```bash
 cd ~/proteinpaint
-./build/version.sh prerelease dry
+# see the comments in the script for arguments
+./build/jump.sh patch
 
-# should show the expected version changes at the end of the output
-> ...
-> SKIPPED commit, tag, and publish in dry-run mode: 
-> v2.4.2-0  server-2.4.1-30 client-2.4.1-30 front-2.4.1-30 pp-prt:^server pp-prt:^front
-```
-
-To undo the dry-run changes, 
-```bash
+# to undo changes if the `-w` option was used 
 git restore .
 ```
-

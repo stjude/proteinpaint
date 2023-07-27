@@ -11,9 +11,15 @@ on:
           - prepatch
           - preminor
           - premajor
-          - major
           - minor
           - patch
+      include:
+        type: choice
+        description: Include
+        options:
+          - core only
+          - core + Docker image
+
       build_secret:
         type: string
         description: Build secret
@@ -56,9 +62,6 @@ jobs:
       - name: Fetch All Tags
         run: git fetch --all --tags
 
-      - name: Run version.sh
-        run: ./build/ci-version-update.sh ${{ github.event.inputs.release_type }}
-
       # Setup .npmrc file to publish to GitHub Packages
       - uses: actions/setup-node@v3
         with:
@@ -67,9 +70,43 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
       - run: npm ci
-      - run: ./build/ci-npm-publish.sh ${{ github.event.inputs.release_type }}
+
+      - name: Run version bump
+        run: |
+          exclude="";
+
+          if [ "${{ github.event.inputs.include }}" = "core only" ]; then
+            exclude="-x=container";
+          fi
+
+          ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
+
+      - name: 
+        run: ./build/ci-npm-publish.sh ${{ github.event.inputs.release_type }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        run: |
+          echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
+        env:
+          CR_PAT: ${{ secrets.PAT }}
+
+      - name: Build and Publish Docker Images
+        run: 
+          sleep 90;
+          
+          if [ "${{ github.event.inputs.include }}" = "core + Docker image" ]; then
+            cd container;
+            ./build2.sh -r "ghcr.io/stjude/" server;
+            TAG="$(node -p "require('./server/package.json').version")";
+            HASH="$(git rev-parse --short HEAD)";
+            docker push ghcr.io/stjude/ppserver:$TAG-$HASH;
+
+            ./build2.sh -r "ghcr.io/stjude/" full;
+            TAG="$(node -p "require('./full/package.json').version")";
+            docker push ghcr.io/stjude/ppfull:$TAG-$HASH;
+          fi
 
       - name: get pp version
         id: pp-version
