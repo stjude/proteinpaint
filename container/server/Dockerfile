@@ -9,6 +9,8 @@ ARG VERSION=2.22.1
 
 FROM ghcr.io/stjude/ppserver:$VERSION
 
+ARG IMGREV=""
+ARG IMGVER=""
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
