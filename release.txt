@@ -1,7 +1,7 @@
 Features
 - Profile plots have now filters and a download button
 - Make disco plot rings width configurable
-- Added to scatter plot scale dot option
+- Added to scatter plot scale dot option. Added also test for it.
 - Support a reset button option for the rx recover component
 
 Fixes:
