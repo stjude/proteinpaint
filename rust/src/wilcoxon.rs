@@ -129,7 +129,7 @@ fn main() {
                             if pvalue > 0.01 {
                                 pvalue = format!("{:.4}", pvalue).parse().unwrap();
                             }
-                            println!("pvalue:{}", pvalue);
+                            //println!("pvalue:{}", pvalue);
                             output_string += &serde_json::to_string(&OutputJson {
                                 group1_id: json_string[i]["group1_id"]
                                     .as_str()
@@ -226,7 +226,7 @@ fn wilcoxon_rank_sum_test(
                     weight_y += i as f64 + 1.0;
                 }
             } else {
-                frac_rank = i as f64 + 1.0 + 1.0 / num_repeats;
+                frac_rank = calculate_frac_rank(i as f64 + 1.0, num_repeats);
                 ranks.push(frac_rank);
                 if group_char == 'X' {
                     weight_x += frac_rank;
@@ -346,7 +346,7 @@ fn wilcoxon_rank_sum_test(
                 / 12.0;
         //let w_starred = (weight_y - expected_w) / variance_w.sqrt();
         let n = Normal::new(expected_w, variance_w.sqrt()).unwrap();
-        println!("n:{:?}", n);
+        //println!("n:{:?}", n);
         //println!("w_starred:{}", w_starred);
         //normal_distribution(w_starred)
 
@@ -361,9 +361,9 @@ fn wilcoxon_rank_sum_test(
         } else {
             // Alternative "two-sided"
             let p_g = n.cdf(weight_y);
-            println!("greater:{}", p_g);
+            //println!("greater:{}", p_g);
             let p_l = n.cdf(weight_x);
-            println!("lesser:{}", p_l);
+            //println!("lesser:{}", p_l);
             let mut p_value;
             if p_g < p_l {
                 p_value = 2.0 * p_g; // Multiplied by 2 to account for two-sided p-value
@@ -411,4 +411,14 @@ fn iterate_exact_p_values(ranks: Vec<f64>, weight: f64, y_length: usize) -> f64 
     //    w_less as f64 / num_combinations as f64
     //);
     w_less as f64 / num_combinations as f64
+}
+
+fn calculate_frac_rank(current_rank: f64, num_repeats: f64) -> f64 {
+    let mut sum = 0.0;
+    for i in 0..num_repeats as usize {
+        let rank = current_rank + i as f64;
+        sum += rank;
+    }
+
+    sum / num_repeats
 }
