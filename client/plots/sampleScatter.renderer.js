@@ -94,7 +94,6 @@ export function setRenderers(self) {
 		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
 		const legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + 100 //legend step and header
 		const width = self.charts.length == 1 ? s.svgw + 800 : s.svgw + (self.config.shapeTW ? 600 : 350)
-		console.log(width)
 		svg
 			.transition()
 			.duration(s.duration)
