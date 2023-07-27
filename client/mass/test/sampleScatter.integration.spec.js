@@ -254,6 +254,42 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 	}
 })
 
+tape.only('Test scale dot', function (test) {
+	test.timeoutAfter(8000)
+	test.plan(2)
+	const holder = getHolder()
+	const state = {
+		plots: [
+			{
+				chartType: 'sampleScatter',
+				scaleDotTW: { id: 'agedx', q: { mode: 'continuous' } },
+				name: 'TermdbTest TSNE'
+			}
+		]
+	}
+	runpp({
+		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+		state,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const self = scatter.Inner
+		const chart = scatter.Inner.charts[0]
+		const dots = self.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		const minShape = self.symbols[0].size(self.settings.minDotSize)()
+		const maxShape = self.symbols[0].size(self.settings.maxDotSize)()
+
+		test.true(dots.find(dot => dot.getAttribute('d') == minShape) != null, `Dots with the minimum size should be found`)
+		test.true(dots.find(dot => dot.getAttribute('d') == maxShape) != null, `Dots with the maximum size should be found`)
+	}
+})
+
 tape('Test continuous mode with age color', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(4)
