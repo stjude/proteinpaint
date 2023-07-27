@@ -7,12 +7,37 @@ const fs = require('fs')
 const execSync = require('child_process').execSync
 const semver = require('semver')
 const cwd = process.cwd()
+
+// ************
+// * ARGUMENTS
+// ************
+
 const verType = process.argv[2]
 if (!verType) {
-	throw `Missing version argument.`
+	throw `Missing version type argument, must be one of the allowed 'npm version [type]'`
 }
-const releaseTextFile = process.argv[3] || ''
-const verbose = false //true
+
+const defaults = {
+	verbose: false, // if true, `git restore each workspace package.json before processing`
+	write: false, // if true, update package.json as needed
+	exclude: [] // list of workspace name patterns to exclude from processing
+}
+
+const opts = process.argv.slice(3).reduce((opts, k) => {
+	if (k[0] == '-') {
+		if (k[1] == 'v') opts.verbose = true
+		if (k[1] == 'w') opts.write = true
+		if (k[1] == 'x') {
+			const [o, pattern] = k.split('=')
+			opts.exclude.push(pattern)
+		}
+	}
+	return opts
+}, defaults)
+
+// ******************************************
+// * WORKSPACE VERSIONS, DEPS, CHANGE STATUS
+// ******************************************
 
 // root package version
 const rootPkg = require(path.join(cwd, '/package.json'))
@@ -24,11 +49,11 @@ console.log('New version:', newVersion)
 
 const pkgs = {}
 for (const w of rootPkg.workspaces) {
+	if (opts.exclude.find(s => w.includes(s))) continue
 	const paths = glob.sync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
 		const pkg = require(path.join(cwd, pkgPath))
 		const pkgDir = pkgPath.replace('/package.json', '')
-		// in
 		const wsHashOnRelease = ex(`git rev-parse --verify -q v${rootPkg.version}^{commit}:"${pkgDir}"`, {
 			handler(e) {
 				gitRevParseErrHandler(pkgDir)
@@ -50,6 +75,10 @@ for (const w of rootPkg.workspaces) {
 	}
 }
 
+// ******************************************
+// * UPDATE WORKSPACE PACKAGE.JSON IF CHANGED
+// ******************************************
+
 // detect changed workspaces, including deps that have changed
 for (const name in pkgs) {
 	setWsDeps(name)
@@ -58,15 +87,23 @@ for (const name in pkgs) {
 	}
 }
 
-if (!verbose) {
-	for (const name in pkgs) {
-		short(name)
-	}
+if (opts.verbose) console.log(pkgs) // echo before shortening
+for (const name in pkgs) {
+	// this may also update a changed workspace's package.json file
+	minWrite(name)
 }
+if (opts.write) {
+	ex(`npm pkg set version=${newVersion}`)
+	ex(`npm i --package-lock-only`)
+}
+if (!opts.verbose) console.log(pkgs) // echo only after shortening
 
-console.log(pkgs)
 // list of changed packages
 console.log(Object.keys(pkgs))
+
+// *******************
+// * HELPER FUNCTIONS
+// *******************
 
 function setWsDeps(name) {
 	pkgs[name].checked = true
@@ -88,7 +125,9 @@ function setWsDeps(name) {
 	pkgs[name].hasChanged = pkgs[name].selfChanged || pkgs[name].changedDeps.size // && (!releaseTextFile /* check if releaseTxtFile is not empty */)
 }
 
-function short(name) {
+// minimize the pkg object as needed by removinng uninformative attributes
+// write version changes if opts.write == true
+function minWrite(name) {
 	if (!pkgs[name].hasChanged) {
 		delete pkgs[name]
 		return
@@ -97,12 +136,11 @@ function short(name) {
 	pkgs[pkg.pkgDir] = pkg
 	delete pkgs[name]
 	delete pkg.name
-	delete pkg.pkgPath
 	delete pkg.selfChanged
 	delete pkg.changedDeps
 	delete pkg.hasChanged
 	delete pkg.checked
-	delete pkg.pkgDir
+	delete pkg.pkgPath
 	for (const key of ['dependencies', 'devDependencies']) {
 		const deps = pkg[key]
 		if (typeof deps != 'object') {
@@ -111,12 +149,17 @@ function short(name) {
 		}
 		for (const dname in deps) {
 			if (deps[dname] != newVersion) delete deps[dname]
+			else if (opts.write) {
+				ex(`cd ${pkg.pkgDir}; npm pkg set ${key}.${dname}=${newVersion}`)
+			}
 		}
 		if (!Object.keys(deps).length) delete pkg[key]
 	}
+	if (opts.write) ex(`cd ${pkg.pkgDir}; npm pkg set version=${newVersion}`)
+	delete pkg.pkgDir
 }
 
-function ex(cmd, opts) {
+function ex(cmd, opts = {}) {
 	try {
 		return execSync(cmd, { encoding: 'utf8' })
 	} catch (e) {
