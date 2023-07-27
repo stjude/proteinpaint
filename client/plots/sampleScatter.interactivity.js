@@ -99,7 +99,8 @@ export function setInteractivity(self) {
 				const td = row.append('td')
 				if (showColor) {
 					const color = self.getColor(d, chart)
-					const svg = td.append('svg').attr('width', '100px').attr('height', '30px')
+					const width = value.length * 9 + 60
+					const svg = td.append('svg').attr('width', width).attr('height', '35px')
 					const g = svg.append('g').attr('transform', 'translate(10, 16)')
 					g.append('path').attr('d', self.getShape(chart, d)).attr('fill', color)
 					g.append('text').attr('x', 18).attr('y', 6).text(value)
