@@ -104,7 +104,7 @@ class profilePolar {
 			.text('Download SVG')
 			.on('click', () => downloadSingleSVG(svg, 'polar-plot.svg'))
 
-		const svg = holder.append('svg').attr('width', config.svgw).attr('height', config.svgh)
+		const svg = holder.append('svg').attr('width', 1200).attr('height', 600)
 
 		// Create a polar grid.
 		const radius = 250
