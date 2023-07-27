@@ -22,6 +22,8 @@ Book link: https://onlinelibrary.wiley.com/doi/epdf/10.1002/9781119196037
 
 # Test example 3: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[1.21, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91],"group2_id":"group2","group2_values":[0.73, 0.74, 0.8, 0.83, 0.88, 0.90, 1.04, 1.15]}]' | target/release/wilcoxon
 
+# Test example 4: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/wilcoxon
+
 # Input data is in JSON format and is read in from <in.json> file.
 # Results are written in JSON format to stdout.
 
@@ -54,6 +56,8 @@ use r_stats;
 use serde::{Deserialize, Serialize};
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::io;
+
+mod test_examples; // Contains examples to test the wilcoxon rank sum test
 
 #[derive(Debug, Serialize, Deserialize)]
 struct OutputJson {
@@ -94,6 +98,8 @@ fn main() {
                         for arr_iter in 0..json_string[i]["group2_values"].len() {
                             vec2.push(json_string[i]["group2_values"][arr_iter].as_f64().unwrap());
                         }
+                        //println!("vec1:{:?}", vec1);
+                        //println!("vec2:{:?}", vec2);
 
                         if vec1.len() == 0 || vec2.len() == 0 {
                             // If one of the vectors has a length of zero, wilcoxon test is not performed and a pvalue of NULL is given.
@@ -123,7 +129,7 @@ fn main() {
                             if pvalue > 0.01 {
                                 pvalue = format!("{:.4}", pvalue).parse().unwrap();
                             }
-                            //println!("p_value:{}", p_value);
+                            println!("pvalue:{}", pvalue);
                             output_string += &serde_json::to_string(&OutputJson {
                                 group1_id: json_string[i]["group1_id"]
                                     .as_str()
@@ -340,7 +346,7 @@ fn wilcoxon_rank_sum_test(
                 / 12.0;
         //let w_starred = (weight_y - expected_w) / variance_w.sqrt();
         let n = Normal::new(expected_w, variance_w.sqrt()).unwrap();
-        //println!("n:{:?}", n);
+        println!("n:{:?}", n);
         //println!("w_starred:{}", w_starred);
         //normal_distribution(w_starred)
 
@@ -355,9 +361,9 @@ fn wilcoxon_rank_sum_test(
         } else {
             // Alternative "two-sided"
             let p_g = n.cdf(weight_y);
-            //println!("greater:{}", p_g);
+            println!("greater:{}", p_g);
             let p_l = n.cdf(weight_x);
-            //println!("lesser:{}", p_l);
+            println!("lesser:{}", p_l);
             let mut p_value;
             if p_g < p_l {
                 p_value = 2.0 * p_g; // Multiplied by 2 to account for two-sided p-value
