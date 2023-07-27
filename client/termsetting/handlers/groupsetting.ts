@@ -1,7 +1,7 @@
 import { keyupEnter } from '#src/client'
 import { select } from 'd3-selection'
 import { filterInit } from '#filter'
-import { make_radios } from '#dom/radiobutton'
+// import { make_radios } from '#dom/radiobutton'
 import { GroupSetEntry, GroupEntry, TermValues, Subconditions } from '#shared/types'
 
 /*
@@ -24,144 +24,144 @@ type GroupArgs = { holder: any; name: string; group_idx: number; group_type?: st
 
 export function setGroupsettingMethods(self: any) {
 	self.regroupMenu = function (grp_count: number, temp_cat_grps: GroupSetEntry) {
-		if (self.q.mode == 'cutoff') {
-			self.showCutoff()
-		} else {
-			self.showDraggables(grp_count, temp_cat_grps)
-		}
+		// if (self.q.mode == 'cutoff') {
+		// 	self.showCutoff()
+		// } else {
+		self.showDraggables(grp_count, temp_cat_grps)
+		// }
 	}
-	self.showCutoff = function () {
-		// regroup menu for cutoff mode
-		// NOTE: assumes condition term. Eventually, apply to any ordinal term.
-		self.dom.tip.clear().showunder(self.dom.holder.node())
+	// self.showCutoff = function () {
+	// 	// regroup menu for cutoff mode
+	// 	// NOTE: assumes condition term. Eventually, apply to any ordinal term.
+	// 	self.dom.tip.clear().showunder(self.dom.holder.node())
 
-		// div for cutoff drop-down menu
-		const cutoff_div = self.dom.tip.d.append('div').style('margin', '10px')
+	// 	// div for cutoff drop-down menu
+	// 	const cutoff_div = self.dom.tip.d.append('div').style('margin', '10px')
 
-		// get sorted list of grades
-		const grades = Object.keys(self.term.values)
-			.filter((k: string) => !self.term.values[k].uncomputable && k !== '0')
-			.sort((a: string, b: string) => Number(a) - Number(b))
-			.map((k: string) => {
-				return { key: k, label: self.term.values[k].label }
-			})
+	// 	// get sorted list of grades
+	// 	const grades = Object.keys(self.term.values)
+	// 		.filter((k: string) => !self.term.values[k].uncomputable && k !== '0')
+	// 		.sort((a: string, b: string) => Number(a) - Number(b))
+	// 		.map((k: string) => {
+	// 			return { key: k, label: self.term.values[k].label }
+	// 		})
 
-		// build drop-down menu
-		const defaultCutoff = 'cutoff' in self.q ? self.q.cutoff : Number(grades[0].key)
+	// 	// build drop-down menu
+	// 	const defaultCutoff = 'cutoff' in self.q ? self.q.cutoff : Number(grades[0].key)
 
-		const cutoff_select = cutoff_div
-			.append('div')
-			//.style('display', 'inline')
-			.text('Minimum grade for event: ')
-			.append('select')
-			.style('margin', '5px 10px')
+	// 	const cutoff_select = cutoff_div
+	// 		.append('div')
+	// 		//.style('display', 'inline')
+	// 		.text('Minimum grade for event: ')
+	// 		.append('select')
+	// 		.style('margin', '5px 10px')
 
-		cutoff_select
-			.selectAll('option')
-			.data(grades)
-			.enter()
-			.append('option')
-			.attr('value', (d: KeyLabel) => d.key)
-			.property('selected', (d: KeyLabel) => Number(d.key) == defaultCutoff)
-			.html((d: KeyLabel) => d.label)
+	// 	cutoff_select
+	// 		.selectAll('option')
+	// 		.data(grades)
+	// 		.enter()
+	// 		.append('option')
+	// 		.attr('value', (d: KeyLabel) => d.key)
+	// 		.property('selected', (d: KeyLabel) => Number(d.key) == defaultCutoff)
+	// 		.html((d: KeyLabel) => d.label)
 
-		// div for time scale
-		const scale_select = cutoff_div
-			.append('div')
-			.style('margin', '10px 0px')
-			//.style('display', 'inline')
-			.text('Time scale: ')
-		const defaultScale: string = 'timeScale' in self.q ? self.q.timeScale : 'time'
-		self.q.timeScale = defaultScale
-		const scales: ScaleEntry[] = [
-			{
-				label: 'Time from study entry',
-				value: 1,
-				checked: defaultScale == 'time' ? true : false
-			},
-			{
-				label: 'Age',
-				value: 2,
-				checked: defaultScale == 'age' ? true : false
-			}
-		]
+	// 	// div for time scale
+	// 	const scale_select = cutoff_div
+	// 		.append('div')
+	// 		.style('margin', '10px 0px')
+	// 		//.style('display', 'inline')
+	// 		.text('Time scale: ')
+	// 	const defaultScale: string = 'timeScale' in self.q ? self.q.timeScale : 'time'
+	// 	self.q.timeScale = defaultScale
+	// 	const scales: ScaleEntry[] = [
+	// 		{
+	// 			label: 'Time from study entry',
+	// 			value: 1,
+	// 			checked: defaultScale == 'time' ? true : false
+	// 		},
+	// 		{
+	// 			label: 'Age',
+	// 			value: 2,
+	// 			checked: defaultScale == 'age' ? true : false
+	// 		}
+	// 	]
 
-		// build radio buttons for time scale
-		make_radios({
-			holder: scale_select,
-			options: scales,
-			callback: (value: number) => {
-				self.q.timeScale = value == 1 ? 'time' : 'age'
-			}
-		})
+	// 	// build radio buttons for time scale
+	// 	make_radios({
+	// 		holder: scale_select,
+	// 		options: scales,
+	// 		callback: (value: number) => {
+	// 			self.q.timeScale = value == 1 ? 'time' : 'age'
+	// 		}
+	// 	})
 
-		// 'Apply' button
-		cutoff_div
-			.append('div')
-			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('float', 'right')
-			.style('text-transform', 'uppercase')
-			.text('Apply')
-			.on('click', () => {
-				self.q.cutoff = Number(cutoff_select.property('value'))
-				// split grades into two groups based on cutoff value
+	// 	// 'Apply' button
+	// 	cutoff_div
+	// 		.append('div')
+	// 		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+	// 		.style('display', 'inline-block')
+	// 		.style('text-align', 'center')
+	// 		.style('font-size', '.8em')
+	// 		.style('float', 'right')
+	// 		.style('text-transform', 'uppercase')
+	// 		.text('Apply')
+	// 		.on('click', () => {
+	// 			self.q.cutoff = Number(cutoff_select.property('value'))
+	// 			// split grades into two groups based on cutoff value
 
-				// below cutoff group
-				// 'no condition' and 'not tested' grades are always below cutoff
-				const belowCutoff = [
-					{
-						key: '0',
-						label: 'No condition'
-					},
-					{
-						key: '-1',
-						label: 'Not tested'
-					}
-				]
-				belowCutoff.push(...grades.filter(grade => Number(grade.key) < self.q.cutoff))
+	// 			// below cutoff group
+	// 			// 'no condition' and 'not tested' grades are always below cutoff
+	// 			const belowCutoff = [
+	// 				{
+	// 					key: '0',
+	// 					label: 'No condition'
+	// 				},
+	// 				{
+	// 					key: '-1',
+	// 					label: 'Not tested'
+	// 				}
+	// 			]
+	// 			belowCutoff.push(...grades.filter(grade => Number(grade.key) < self.q.cutoff))
 
-				// above cutoff group
-				const aboveCutoff = grades.filter(grade => Number(grade.key) >= self.q.cutoff)
+	// 			// above cutoff group
+	// 			const aboveCutoff = grades.filter(grade => Number(grade.key) >= self.q.cutoff)
 
-				const groups = [
-					{
-						name: `Grade < ${self.q.cutoff}`,
-						values: belowCutoff
-					},
-					{
-						name: `Grade >= ${self.q.cutoff}`,
-						values: aboveCutoff
-					}
-				]
+	// 			const groups = [
+	// 				{
+	// 					name: `Grade < ${self.q.cutoff}`,
+	// 					values: belowCutoff
+	// 				},
+	// 				{
+	// 					name: `Grade >= ${self.q.cutoff}`,
+	// 					values: aboveCutoff
+	// 				}
+	// 			]
 
-				self.q.type = 'custom-groupset'
-				self.q.groupsetting = {
-					inuse: true,
-					customset: {
-						name: 'grade cutoff',
-						is_grade: true,
-						groups
-					}
-				}
-				self.dom.tip.hide()
-				self.runCallback()
-			})
+	// 			self.q.type = 'custom-groupset'
+	// 			self.q.groupsetting = {
+	// 				inuse: true,
+	// 				customset: {
+	// 					name: 'grade cutoff',
+	// 					is_grade: true,
+	// 					groups
+	// 				}
+	// 			}
+	// 			self.dom.tip.hide()
+	// 			self.runCallback()
+	// 		})
 
-		// for description blurb
-		// explain to user that 'no condition' and 'not tested' grades are below the grade cutoff for an event
-		/*
-		const descr_div = self.dom.tip.d.append('div').style('margin', '10px')
-		descr_div
-			.style('font-size', '0.8em')
-			.style('text-align', 'left')
-			.style('color', 'rgb(153, 153, 153)')
-			.style('display', 'block')
-			.text('')
-		*/
-	}
+	// 	// for description blurb
+	// 	// explain to user that 'no condition' and 'not tested' grades are below the grade cutoff for an event
+	// 	/*
+	// 	const descr_div = self.dom.tip.d.append('div').style('margin', '10px')
+	// 	descr_div
+	// 		.style('font-size', '0.8em')
+	// 		.style('text-align', 'left')
+	// 		.style('color', 'rgb(153, 153, 153)')
+	// 		.style('display', 'block')
+	// 		.text('')
+	// 	*/
+	// }
 
 	self.showDraggables = function (grp_count: number, temp_cat_grps: GroupSetEntry) {
 		//start with default 2 groups, extra groups can be added by user
