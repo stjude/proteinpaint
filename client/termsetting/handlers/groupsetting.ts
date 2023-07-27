@@ -19,11 +19,15 @@ other internal functions:
 */
 
 type KeyLabel = { key: string | number; label: string }
-type ScaleEntry = { label: string; value: number; checked: boolean }
+// type ScaleEntry = { label: string; value: number; checked: boolean }
 type GroupArgs = { holder: any; name: string; group_idx: number; group_type?: string }
 
 export function setGroupsettingMethods(self: any) {
 	self.regroupMenu = function (grp_count: number, temp_cat_grps: GroupSetEntry) {
+		/* q.mode='cutoff' is no longer used! Commenting out code for now until
+		 * groupsetting is refactored.
+		 */
+
 		// if (self.q.mode == 'cutoff') {
 		// 	self.showCutoff()
 		// } else {
