@@ -1005,6 +1005,7 @@ export function setRenderers(self) {
 					.append('input')
 					.attr('type', 'number')
 					.attr('min', '1')
+					.attr('max', '100')
 					.style('width', '50px')
 					.attr('value', self.settings.minDotSize)
 					.on('change', () => {
@@ -1019,6 +1020,7 @@ export function setRenderers(self) {
 				const maxInput = div
 					.append('input')
 					.attr('type', 'number')
+					.attr('min', '1')
 					.attr('max', '1000')
 					.style('width', '50px')
 					.attr('value', self.settings.maxDotSize)
