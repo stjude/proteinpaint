@@ -10,3 +10,6 @@ Fixes:
 - Bug fix to show reduced sample summaries when creating sub-track from GDC lollipop (mds3) track
 - Correctly handle special uncomputable numeric term values in a matrix row bar plot, when mode='continuous' 
 - GDC OncoMatrix has switched to use case uuid but not case submitter id to align data, while still displaying submitter ids on UI; the latter is not unique between projects.
+
+DevOps:
+- Reuse a published dependencies image for releasing new image versions to improve build times and stability
