@@ -93,7 +93,8 @@ export function setRenderers(self) {
 		let colorLegends = chart.colorLegend.size * 30
 		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
 		const legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + 100 //legend step and header
-		const width = self.charts.length == 1 ? s.svgw + 800 : self.config.shapeTW ? 600 : 350
+		const width = self.charts.length == 1 ? s.svgw + 800 : s.svgw + (self.config.shapeTW ? 600 : 350)
+		console.log(width)
 		svg
 			.transition()
 			.duration(s.duration)
@@ -933,7 +934,8 @@ export function setRenderers(self) {
 		let end = chart.scaleMax
 		if (end % 1 != 0) end = end.toFixed(1)
 		const minG = scaleG.append('g').attr('transform', `translate(${40},${30})`)
-		const shift = 5 + start.toString().length * 6
+		const shift = 5 + start.toString().length * 7
+
 		minG
 			.append('circle')
 			.attr('r', order == 'Ascending' ? minRadius : maxRadius)
@@ -944,7 +946,7 @@ export function setRenderers(self) {
 			.attr('x', order == 'Ascending' ? -minRadius - shift : -maxRadius - shift)
 			.attr('y', 5)
 			.style('font-size', '.8em')
-			.attr('text-anchor', 'middle')
+			.attr('text-anchor', 'start')
 			.text(start)
 
 		const maxG = scaleG.append('g')
