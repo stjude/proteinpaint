@@ -105,6 +105,7 @@ export async function getHandler(self: NumericTermSettingInstance) {
 			new Tabs({
 				holder: topBar.append('div').style('display', 'inline-block'),
 				contentHolder: div.append('div'),
+				noTopContentStyle: true,
 				tabs
 			}).main()
 		}
