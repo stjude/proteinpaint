@@ -23,7 +23,7 @@ fi
 ##########
 
 UPDATED=$(./build/jump.js "$@")
-if [[ "UPDATED" == "" ]]; then
+if [[ "$UPDATED" == "" ]]; then
   echo "No workspace package updates, exiting script with code 1"
   exit 1
 fi
