@@ -12,28 +12,38 @@ const cwd = process.cwd()
 // * ARGUMENTS
 // ************
 
+// see the allowed version types in https://docs.npmjs.com/cli/v8/commands/npm-version
+// e.g., <newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git
 const verType = process.argv[2]
 if (!verType) {
 	throw `Missing version type argument, must be one of the allowed 'npm version [type]'`
 }
 
 const defaults = {
-	verbose: false, // if true, `git restore each workspace package.json before processing`
+	output: 'oneline',
+	// oneline: new version + list of changed workspaces,
+	//          e.g., v2.2.0 client front server, may be useful for commit message
+	// minjson: minimized object copy as JSON
+	// detailed: log errors/warnings and detailed object copy as JSON
 	write: false, // if true, update package.json as needed
 	exclude: [] // list of workspace name patterns to exclude from processing
 }
-
-const opts = process.argv.slice(3).reduce((opts, k) => {
+const opts = JSON.parse(JSON.stringify(defaults))
+for (const k of process.argv.slice(3)) {
 	if (k[0] == '-') {
-		if (k[1] == 'v') opts.verbose = true
 		if (k[1] == 'w') opts.write = true
+		if (k[1] == 'o') {
+			opts.output = k.split('=')[1]
+			if (!opts.output) throw `Empty output -o value`
+			if (!['oneline', 'minjson', 'detailed'].includes(opts.output)) throw `Unknown opts.output value '${opts.output}'`
+		}
 		if (k[1] == 'x') {
 			const [o, pattern] = k.split('=')
+			if (!pattern) throw `Empty exclude -x value`
 			opts.exclude.push(pattern)
 		}
 	}
-	return opts
-}, defaults)
+}
 
 // ******************************************
 // * WORKSPACE VERSIONS, DEPS, CHANGE STATUS
@@ -45,7 +55,6 @@ const commitMsg = ex(`git log --format=%B -n 1 v${rootPkg.version}`, {
 	message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot diff for changes`
 })
 const newVersion = semver.inc(rootPkg.version, verType)
-console.log('New version:', newVersion)
 
 const pkgs = {}
 for (const w of rootPkg.workspaces) {
@@ -75,9 +84,9 @@ for (const w of rootPkg.workspaces) {
 	}
 }
 
-// ******************************************
-// * UPDATE WORKSPACE PACKAGE.JSON IF CHANGED
-// ******************************************
+// ************************************
+// * UPDATE IN-MEMORY WORKSPACE PACKAGE
+// ************************************
 
 // detect changed workspaces, including deps that have changed
 for (const name in pkgs) {
@@ -87,19 +96,26 @@ for (const name in pkgs) {
 	}
 }
 
-if (opts.verbose) console.log(pkgs) // echo before shortening
+// ***********************************
+// * EMIT OUTPUT, UPDATE PACKAGE.JSON
+// ***********************************
+
+if (opts.output == 'detailed') console.log(JSON.stringify(pkgs, null, '   ')) // echo before minimizing
 for (const name in pkgs) {
 	// this may also update a changed workspace's package.json file
 	minWrite(name)
 }
+if (opts.output == 'minjson') console.log(JSON.stringify(pkgs, null, '   ')) // echo only after minimizing
+else if (opts.output == 'oneline') {
+	// list of changed packages
+	const updated = Object.keys(pkgs).join(' ')
+	console.log(`v${newVersion} ${updated}`)
+}
+
 if (opts.write) {
 	ex(`npm pkg set version=${newVersion}`)
 	ex(`npm i --package-lock-only`)
 }
-if (!opts.verbose) console.log(pkgs) // echo only after shortening
-
-// list of changed packages
-console.log(Object.keys(pkgs))
 
 // *******************
 // * HELPER FUNCTIONS
@@ -170,5 +186,6 @@ function ex(cmd, opts = {}) {
 }
 
 function gitRevParseErrHandler(pkgDir) {
+	if (opts.output != 'detailed') return
 	console.log(`package='${pkgDir}': git-rev-parse error is assumed to be for a new package dir with no commit history`)
 }
