@@ -57,7 +57,7 @@ export function setInteractivity(self) {
 				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)
 				if (self.config.term) addCategoryInfo(self.config.term.term, 'x', d, table)
 				if (self.config.term2) addCategoryInfo(self.config.term2?.term, 'y', d, table)
-				if (self.config.scaleDotTW) addCategoryInfo(self.config.scaleDotTW?.term, 'y', d, table)
+				if (self.config.scaleDotTW) addCategoryInfo(self.config.scaleDotTW?.term, 'scale', d, table)
 
 				if ('info' in d)
 					for (const [k, v] of Object.entries(d.info)) {
@@ -95,7 +95,7 @@ export function setInteractivity(self) {
 				}
 			} else {
 				let value = d[category]
-				if (typeof value == 'number') value = value.toFixed(2)
+				if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
 				const td = row.append('td')
 				if (showColor) {
 					const color = self.getColor(d, chart)
