@@ -16,7 +16,7 @@ export function setRenderers(self) {
 		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
 		chartDivs.exit().remove()
 		chartDivs.each(self.renderChart)
-		chartDivs.enter().append('div').each(self.renderChart)
+		chartDivs.enter().append('div').style('vertical-align', 'top').each(self.renderChart)
 	}
 
 	self.renderChart = function (chart) {
