@@ -15,8 +15,13 @@ export async function get_incidence(q, ds) {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
 		if (!minTimeSinceDx) throw 'missing min time since dx'
+		const final_data = {
+			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high', 'nrisk', 'nevent', 'ncensor'],
+			case: []
+		}
 		q.ds = ds
 		const results = await get_rows(q)
+		if (!results.lst.length) return final_data
 		const byChartSeries = {}
 		for (const d of results.lst) {
 			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string (see comments in get_rows())
@@ -28,11 +33,7 @@ export async function get_incidence(q, ds) {
 			byChartSeries[chartId].push({ time, event, series })
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
-		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high', 'nrisk', 'nevent', 'ncensor'],
-			case: [],
-			refs: { bins }
-		}
+		final_data.refs = { bins }
 
 		/*
 		prepare R input
