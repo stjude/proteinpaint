@@ -1947,7 +1947,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		if (ds.queries.svfusion) {
 			const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
-			console.log(lst)
 			mlst.push(...lst)
 		}
 		if (ds.queries.cnv) {
