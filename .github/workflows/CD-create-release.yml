@@ -79,10 +79,9 @@ jobs:
             exclude="-x=container";
           fi
 
-          ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
+          . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
 
-      - name: 
-        run: ./build/ci-npm-publish.sh ${{ github.event.inputs.release_type }}
+          ./build/ci-npm-publish.sh "$UPDATED"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
 

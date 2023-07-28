@@ -40,14 +40,16 @@ node build/changeLogGenerator.js
 #################
 
 TAG="v$(node -p "require('./package.json').version")"
-COMMITMSG="$UPDATED"
+# tag first to detect conflict
+git tag $TAG
+git push origin $TAG
+# commit if there are no tag conflicts
+COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
 echo "committing version change ..."
 git config --global user.email "PPTeam@STJUDE.ORG"
 git config --global user.name "PPTeam CI"
 git add --all
 git commit -m "$COMMITMSG"
-git tag $TAG
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git push origin $BRANCH
-git push origin $TAG

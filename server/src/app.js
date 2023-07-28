@@ -116,9 +116,6 @@ const bcftools = serverconfig.bcftools
 const bigwigsummary = serverconfig.bigwigsummary
 const hicstraw = serverconfig.hicstraw
 
-let codedate, // date for code files last updated
-	launchdate // server launch date
-
 /*
     this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
     */
@@ -276,7 +273,7 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 authApi.maySetAuthRoutes(app, basepath, serverconfig)
-app.get(basepath + '/healthcheck', handle_healthcheck_closure(genomes))
+app.get(basepath + '/healthcheck', handle_healthcheck_closure(genomes, app.codedate, app.launchdate))
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -645,8 +642,8 @@ async function handle_genomes(req, res) {
 		debugmode: serverconfig.debugmode,
 		headermessage: serverconfig.headermessage,
 		base_zindex: serverconfig.base_zindex,
-		codedate: codedate.toDateString(),
-		launchdate,
+		codedate: app.codedate,
+		launchdate: app.launchdate,
 		hasblat,
 		features: exports.features,
 		dsAuth: authApi.getDsAuth(req),
@@ -1042,10 +1039,7 @@ async function handle_ntseq(req, res) {
 		if (!g.genomefile) throw 'no sequence file available'
 		const seq = await utils.get_fasta(g, req.query.coord)
 		res.send({
-			seq: seq
-				.split('\n')
-				.slice(1)
-				.join('')
+			seq: seq.split('\n').slice(1).join('')
 		})
 	} catch (e) {
 		res.send({ error: e.message || e })
@@ -7066,12 +7060,8 @@ async function pp_init() {
 	checkDependenciesAndVersions()
 
 	// date updated
-	codedate = get_codedate()
-	launchdate = Date(Date.now())
-		.toString()
-		.split(' ')
-		.slice(0, 5)
-		.join(' ')
+	app.codedate = get_codedate()
+	app.launchdate = Date(Date.now()).toString().split(' ').slice(0, 5).join(' ')
 	if (serverconfig.base_zindex != undefined) {
 		const v = Number.parseInt(serverconfig.base_zindex)
 		if (Number.isNaN(v) || v <= 0) throw 'base_zindex must be positive integer'
@@ -7661,10 +7651,9 @@ function initLegacyDataset(ds, genome) {
 			if (!ds.cohort.tosampleannotation.samplekey)
 				throw '.samplekey missing from .cohort.tosampleannotation for ' + ds.genomename + '.' + ds.label
 			if (!ds.cohort.key4annotation)
-				throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' +
-					ds.genomename +
-					'.' +
-					ds.label
+				throw (
+					'.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' + ds.genomename + '.' + ds.label
+				)
 			// in fact, it still requires ds.cohort.raw, but since db querying is async, not checked
 		}
 	}
@@ -7712,7 +7701,8 @@ async function mayCreateSubdirInCache(subdir) {
 function get_codedate() {
 	const date1 = fs.statSync(serverconfig.binpath + '/server.js').mtime
 	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
-	return date1 > date2 ? date1 : date2
+	const date = date1 > date2 ? date1 : date2
+	return date.toDateString()
 }
 
 function legacyds_init_one_query(q, ds, genome) {
@@ -8035,8 +8025,9 @@ async function mds_init(ds, genome, _servconfig) {
 				if (!ds.queries) throw '.cohort.scatterplot.colorbygeneexpression in use but ds.queries{} missing'
 				const tk = ds.queries[sp.colorbygeneexpression.querykey]
 				if (!tk)
-					throw 'unknown query by .cohort.scatterplot.colorbygeneexpression.querykey: ' +
-						sp.colorbygeneexpression.querykey
+					throw (
+						'unknown query by .cohort.scatterplot.colorbygeneexpression.querykey: ' + sp.colorbygeneexpression.querykey
+					)
 				if (!tk.isgenenumeric)
 					throw 'isgenenumeric missing from the track pointed to by .cohort.scatterplot.colorbygeneexpression.querykey'
 			}

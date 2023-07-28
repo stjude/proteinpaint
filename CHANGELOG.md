@@ -1,6 +1,13 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.24.1
+
+Devops:
+- Fix the npm publish CI to use the list of changed workspace dirs as argument
+- Fix the empty change detection in the version jump script
+
+ 
 ## 2.24.0
 
 Features
