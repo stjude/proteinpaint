@@ -103,7 +103,7 @@ const express = require('express'),
 	cookieParser = require('cookie-parser'),
 	authApi = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
-	{ handle_healthcheck_closure } = require('./health'),
+	{ handle_healthcheck_closure, versionDates } = require('./health'),
 	{ handle_genelookup_closure } = require('./gene'),
 	minimatch = require('minimatch')
 
@@ -273,7 +273,7 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 authApi.maySetAuthRoutes(app, basepath, serverconfig)
-app.get(basepath + '/healthcheck', handle_healthcheck_closure(genomes, app.codedate, app.launchdate))
+app.get(basepath + '/healthcheck', handle_healthcheck_closure(genomes))
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -642,8 +642,8 @@ async function handle_genomes(req, res) {
 		debugmode: serverconfig.debugmode,
 		headermessage: serverconfig.headermessage,
 		base_zindex: serverconfig.base_zindex,
-		codedate: app.codedate,
-		launchdate: app.launchdate,
+		codedate: versionDates.codedate,
+		launchdate: versionDates.launchdate,
 		hasblat,
 		features: exports.features,
 		dsAuth: authApi.getDsAuth(req),
@@ -7060,8 +7060,7 @@ async function pp_init() {
 	checkDependenciesAndVersions()
 
 	// date updated
-	app.codedate = get_codedate()
-	app.launchdate = Date(Date.now()).toString().split(' ').slice(0, 5).join(' ')
+
 	if (serverconfig.base_zindex != undefined) {
 		const v = Number.parseInt(serverconfig.base_zindex)
 		if (Number.isNaN(v) || v <= 0) throw 'base_zindex must be positive integer'
@@ -7696,13 +7695,6 @@ async function mayCreateSubdirInCache(subdir) {
 		}
 	}
 	return dir
-}
-
-function get_codedate() {
-	const date1 = fs.statSync(serverconfig.binpath + '/server.js').mtime
-	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
-	const date = date1 > date2 ? date1 : date2
-	return date.toDateString()
 }
 
 function legacyds_init_one_query(q, ds, genome) {

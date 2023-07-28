@@ -6,7 +6,20 @@ const util = require('util')
 const execPromise = util.promisify(child_process.exec)
 const pkg = require('../package.json')
 
-export function handle_healthcheck_closure(genomes, codedate, launchdate) {
+export const versionDates = {
+	pkgver: pkg.version,
+	codedate: get_codedate(),
+	launchdate: Date(Date.now()).toString().split(' ').slice(0, 5).join(' ')
+}
+
+function get_codedate() {
+	const date1 = fs.statSync(serverconfig.binpath + '/server.js').mtime
+	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
+	const date = date1 > date2 ? date1 : date2
+	return date.toDateString()
+}
+
+export function handle_healthcheck_closure(genomes, getDates = () => {}) {
 	// only loaded once when this route handler is created
 	const revfile = path.join(process.cwd(), './rev.txt')
 	let rev = ''
@@ -17,9 +30,7 @@ export function handle_healthcheck_closure(genomes, codedate, launchdate) {
 	return async (req, res) => {
 		try {
 			const health = await getStat(genomes, rev)
-			health.pkgver = pkg.version
-			health.launchdate = launchdate
-			health.codedate = codedate
+			Object.assign(health, versionDates)
 			res.send(health)
 		} catch (e) {
 			res.send({ error: e.message || e })
