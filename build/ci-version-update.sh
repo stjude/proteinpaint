@@ -44,7 +44,7 @@ TAG="v$(node -p "require('./package.json').version")"
 git tag $TAG
 git push origin $TAG
 # commit if there are no tag conflicts
-COMMITMSG="v$TAG $UPDATED"
+COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
 echo "committing version change ..."
 git config --global user.email "PPTeam@STJUDE.ORG"
