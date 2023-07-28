@@ -20,8 +20,11 @@ export type NumericQ = BaseQ & {
 	startinclusive?: boolean
 	stopinclusive?: boolean
 	first_bin?: {
+		start?: number
+		start_percentile?: number
 		startunbounded?: boolean
 		stop?: number
+		stop_percentile?: number
 	}
 	last_bin?: {
 		start?: number

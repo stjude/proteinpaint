@@ -272,24 +272,24 @@ class TermSetting {
 			return
 		}
 		const type = termtype == 'integer' || termtype == 'float' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
-		const numEditVers = this.opts.numericEditMenuVersion as string[]
-		const subtype: string = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
-		const typeSubtype = `${type}${subtype}`
-		if (!this.handlerByType[typeSubtype]) {
+		// const numEditVers = this.opts.numericEditMenuVersion as string[]
+		// const subtype: string = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
+		// const typeSubtype = `${type}${subtype}`
+		if (!this.handlerByType[type]) {
 			try {
 				let _
-				// @rollup/plugin-dynamic-import-vars cannot use a import variable name in the same dir
-				if (typeSubtype == 'numeric.toggle') {
-					_ = await import(`./numeric.toggle.ts`)
-				} else {
-					_ = await import(`./handlers/${typeSubtype}.ts`)
-				}
-				this.handlerByType[typeSubtype] = await _.getHandler(this)
+				// // @rollup/plugin-dynamic-import-vars cannot use a import variable name in the same dir
+				// if (typeSubtype == 'numeric.toggle') {
+				// 	_ = await import(`./numeric.toggle.ts`)
+				// } else {
+				_ = await import(`./handlers/${type}.ts`)
+				// }
+				this.handlerByType[type] = await _.getHandler(this)
 			} catch (e) {
-				throw `error with handler='./handlers/${typeSubtype}.ts': ${e}`
+				throw `error with handler='./handlers/${type}.ts': ${e}`
 			}
 		}
-		this.handler = this.handlerByType[typeSubtype] as Handler
+		this.handler = this.handlerByType[type] as Handler
 	}
 }
 
@@ -859,10 +859,11 @@ export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defau
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	if (!tw.$id) tw.$id = get$id()
 	const t = tw.term.type
-	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : (t as string)
+	//const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : (t as string)
+	const type = t == 'float' || t == 'integer' ? 'numeric' : (t as string)
 	let _
-	if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.ts`)
-	else if (tw.term.type) {
+	// if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.ts`)
+	if (tw.term.type) {
 		try {
 			_ = await import(`./handlers/${type}.ts`)
 		} catch (error) {
