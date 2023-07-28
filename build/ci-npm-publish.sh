@@ -4,9 +4,9 @@
 
 # call from the project root
 
-set -e
+set -euxo pipefail
 
-WORKSPACES="rust server client front"
+WORKSPACES=$1
 
 for WS in ${WORKSPACES}; do
   PUBLISHEDVER=$(npm view @sjcrh/proteinpaint-$WS version | tail -n1)

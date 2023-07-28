@@ -22,7 +22,9 @@ if (!verType) {
 const defaults = {
 	output: 'oneline',
 	// oneline: new version + list of changed workspaces,
-	//          e.g., v2.2.0 client front server, may be useful for commit message
+	//          e.g., "client front server"
+	// vline: new version + online, may be useful as a commit message
+	//          e.g., "v2.2.0 client front server"
 	// minjson: minimized object copy as JSON
 	// detailed: log errors/warnings and detailed object copy as JSON
 	write: false, // if true, update package.json as needed
@@ -35,7 +37,8 @@ for (const k of process.argv.slice(3)) {
 		if (k[1] == 'o') {
 			opts.output = k.split('=')[1]
 			if (!opts.output) throw `Empty output -o value`
-			if (!['oneline', 'minjson', 'detailed'].includes(opts.output)) throw `Unknown opts.output value '${opts.output}'`
+			if (!['oneline', 'vline', 'minjson', 'detailed'].includes(opts.output))
+				throw `Unknown opts.output value '${opts.output}'`
 		}
 		if (k[1] == 'x') {
 			const [o, pattern] = k.split('=')
@@ -106,10 +109,13 @@ for (const name in pkgs) {
 	minWrite(name)
 }
 if (opts.output == 'minjson') console.log(JSON.stringify(pkgs, null, '   ')) // echo only after minimizing
-else if (opts.output == 'oneline') {
+else if (opts.output.endsWith('line')) {
 	// list of changed packages
 	const updated = Object.keys(pkgs).join(' ')
-	console.log(`v${newVersion} ${updated}`)
+	if (updated) {
+		if (opts.output == 'oneline') console.log(`${updated}`)
+		else if (opts.output == 'vline') console.log(`${newVersion} ${updated}`)
+	}
 }
 
 if (opts.write) {

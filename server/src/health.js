@@ -4,8 +4,9 @@ const path = require('path')
 const child_process = require('child_process')
 const util = require('util')
 const execPromise = util.promisify(child_process.exec)
+const pkg = require('../package.json')
 
-export function handle_healthcheck_closure(genomes) {
+export function handle_healthcheck_closure(genomes, codedate, launchdate) {
 	// only loaded once when this route handler is created
 	const revfile = path.join(process.cwd(), './rev.txt')
 	let rev = ''
@@ -15,7 +16,11 @@ export function handle_healthcheck_closure(genomes) {
 
 	return async (req, res) => {
 		try {
-			res.send(await getStat(genomes, rev))
+			const health = await getStat(genomes, rev)
+			health.pkgver = pkg.version
+			health.launchdate = launchdate
+			health.codedate = codedate
+			res.send(health)
 		} catch (e) {
 			res.send({ error: e.message || e })
 		}
@@ -41,11 +46,7 @@ async function getStat(genomes, rev) {
 	if (keys.includes('rs')) {
 		const { stdout, stderr } = await execPromise('ps aux | grep rsync -w')
 		if (stderr) throw stderr
-		health.rs =
-			stdout
-				.toString()
-				.trim()
-				.split('\n').length - 1
+		health.rs = stdout.toString().trim().split('\n').length - 1
 	}
 
 	if (!health.rev) health.rev = serverconfig.rev
