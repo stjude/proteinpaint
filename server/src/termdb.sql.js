@@ -526,7 +526,11 @@ function get_label4key(key, term, q, ds) {
 }
 
 export function getUncomputableClause(term, q, tableAlias = '') {
-	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
+	if (!term.values || !q.computableValuesOnly) {
+		// return an empty clause so that uncomputable
+		// values will be included
+		return { values: [], clause: '' }
+	}
 	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
 	const aliasValue = tableAlias ? `${tableAlias}.value` : 'value'
 	return {

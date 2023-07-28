@@ -420,15 +420,19 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 		if (tw.q.breaks.length != 1 || ![1, 2, 3, 4, 5].includes(tw.q.breaks[0])) throw 'invalid tw.q.breaks'
 	}
 
-	// for binary term, split grades into groups based on breaks
-	// for cuminc and cox terms, groups will be determined in sql query
-	if (tw.q.mode == 'binary') {
-		if (!tw.term.values) throw `Missing term.values [condition.ts, fillTW()]`
-		// include both tested and not tested grades
-		const grades = Object.keys(tw.term.values)
-			.map(Number)
-			.sort((a, b) => a - b)
-		tw.q.groups = getGroups(grades, tw.q.breaks)
+	// assign groups based on breaks
+	if (tw.q.breaks?.length) {
+		if (!tw.term.values) throw 'missing term.values'
+		if (tw.q.mode == 'discrete' || tw.q.mode == 'binary') {
+			// only assign groups to discrete and binary terms
+			// for cuminc and cox terms, groups will be determined in sql query
+			const grades = Object.keys(tw.term.values)
+				.filter(g => (tw.q.mode == 'discrete' ? !tw.term.values[g].uncomputable : g))
+				.map(Number)
+				.sort((a, b) => a - b)
+
+			tw.q.groups = getGroups(grades, tw.q.breaks)
+		}
 	}
 
 	// cox time scale
