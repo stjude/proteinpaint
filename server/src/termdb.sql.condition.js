@@ -101,7 +101,7 @@ export const cox = {
 	SQL output: sample|key|value
 		- sample: sample id
 		- key: event status code
-			0 = censored
+			0 = censored/death
 			1 = event of interest
 			-1 = event of interest before follow-up
 		- value: {age_start, age_end}
@@ -133,7 +133,7 @@ export const cox = {
 			tablename,
 			events: [
 				{ event: 1, label: `Event (grade ${q.breaks[0] === maxgrade ? q.breaks[0] : `${q.breaks[0]}-${maxgrade}`})` },
-				{ event: 0, label: 'Censored' },
+				{ event: 0, label: 'Censored/death' },
 				{ event: -1, label: 'Event before entry into the cohort' }
 			]
 		}
