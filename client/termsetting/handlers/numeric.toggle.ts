@@ -24,7 +24,7 @@ export async function getHandler(self: NumericTermSettingInstance) {
 		self.q.mode = tab.subType
 		const typeSubtype = `numeric.${tab.subType}`
 		if (!self.handlerByType![typeSubtype]) {
-			const _ = await import(`./handlers/${typeSubtype}.ts`)
+			const _ = await import(`./numeric.${tab.subType}.ts`)
 			self.handlerByType![typeSubtype] = await _.getHandler(self)
 		}
 		tab.isRendered = true
@@ -173,7 +173,7 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null)
 	set_hiddenvalues(tw.q, tw.term)
 }
 
-function valid_binscheme(q: any) {
+function valid_binscheme(q: NumericQ) {
 	/*if (q.mode == 'continuous') { console.log(472, q)
 		// only expect a few keys for now "mode", "scale", "transform" keys for now
 		const supportedKeys = ['mode', 'scale', 'transform']
