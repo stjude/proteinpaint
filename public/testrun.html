@@ -20,6 +20,11 @@
     background: #ddd;
   }
 
+  #main-div {
+    margin: 10px;
+    padding: 10px;
+  }
+
   .testrun-dir-div {
     display: inline-block;
     vertical-align: top;
@@ -68,6 +73,7 @@
   </h1>
   <div id='testrun-loading-div'></div>
 </div>
+<div id='main-div'></div>
 <script>
 const backArrows = d3.select('#testrun-back-arrows')
 const currTest = d3.select('#testrun-curr-test')
@@ -98,38 +104,35 @@ async function showAvailableSpecs() {
   try {
     const data = await fetch(`/specs?exclude=`).then(r=>r.json())
     const byDir = processData(data)
-    const dirNames = Object.keys(byDir).sort((a,b)=> a < b ? -1 : 1)
+    const dirs = Object.values(byDir).sort((a,b)=> a.short < b.short ? -1 : 1)
 
-    const div = d3.select('body')
-      .append('div')
-      .style('margin', '10px')
-      .style('padding', '10px')
+    const mainDiv = d3.select('#main-div')
     
-    div.append('div')
+    mainDiv
       .selectAll('.testrun-dir-div')
-      .data(dirNames)
+      .data(dirs)
       .enter()
       .append('div')
       .attr('class', 'testrun-dir-div')
-      .each(function(dir){
+      .each(function(dir){ 
         const dirDiv = d3.select(this)
-        const dirName = `${dir}/test`
+        const dirName = `${dir.short}`
         dirDiv
           .append('h3')
           .append('a')
-          .attr('href', d => `testrun.html?dir=${dir}`)
+          .attr('href', d => `testrun.html?dir=${dir.path}`)
           .text(dirName)
 
         dirDiv.append('div')
           .style('padding', '5px 5px 5px 20px')
           .selectAll('div')
-            .data(byDir[dir])
+            .data(dir.specs)
             .enter()
             .append('div')
             .attr('class', 'testrun-file-div')
             .style('font-weight', d => d.isActive ? 600 : '')
             .append('a')
-            .attr('href', d => `testrun.html?name=${d.name}`)
+            .attr('href', d => `testrun.html?dir=${dir.path}&name=${d.name}`)
             .style('color', d => d.isActive ? activeColor : '')
             .text(d => d.name)
       })
@@ -145,9 +148,15 @@ function processData(data) {
     // no need to display spec.js/.ts in list of test filenames 
     const name = d.pop().replace('.spec.js', '').replace('.spec.ts', '')
     // the last subdir is /test/, remove from the dir name
-    const dir = d.slice(0,-1).join('/')
-    if (!byDir[dir]) byDir[dir] = []
-    byDir[dir].push({name, file, isActive: data.active.includes(file)})
+    const path = d.slice(0,-1).join('/')
+    if (d[d.length - 1] == 'test') d.pop()
+    const short = d.slice(0,2).join('/') + (d.length > 2 ? '/**' : '')  
+    if (!byDir[short]) byDir[short] = {
+      path,
+      short,
+      specs: []
+    }
+    byDir[short].specs.push({name, file, isActive: data.active.includes(file)})
   }
   return byDir
 }
