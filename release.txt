@@ -1,0 +1,2 @@
+Fixes:
+- Bug fix to change cutoff grade for condition term
