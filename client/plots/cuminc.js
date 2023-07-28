@@ -493,6 +493,7 @@ class MassCumInc {
 	}
 
 	sortSerieses(charts) {
+		if (!charts) return
 		for (const chart of charts) {
 			// sort series of chart by sorting series that are not hidden by
 			// default ahead of series that are hidden by default
@@ -595,7 +596,7 @@ export const cumincInit = getCompInit(MassCumInc)
 export const componentInit = cumincInit
 
 function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		const data = self.pj.tree.charts || [{ chartTitle: 'No cumulative incidence data' }]
 		const chartDivs = self.dom.chartsDiv.selectAll('.pp-cuminc-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
@@ -614,9 +615,8 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addCharts = function(chart) {
+	self.addCharts = function (chart) {
 		const s = self.settings
-		setVisibleSerieses(chart, s)
 
 		const div = select(this)
 			.append('div')
@@ -648,13 +648,12 @@ function setRenderers(self) {
 		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
 
 		if (chart.serieses) {
+			setVisibleSerieses(chart, s)
+
 			const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
 			renderSVG(svg, chart, s, 0)
 
-			div
-				.transition()
-				.duration(s.duration)
-				.style('opacity', 1)
+			div.transition().duration(s.duration).style('opacity', 1)
 
 			// div for chart-specific legends
 			div
@@ -666,10 +665,7 @@ function setRenderers(self) {
 
 			// p-values legend
 			if (self.tests && chart.chartId in self.tests) {
-				const holder = div
-					.select('.pp-cuminc-chartLegends')
-					.style('display', 'inline-block')
-					.append('div')
+				const holder = div.select('.pp-cuminc-chartLegends').style('display', 'inline-block').append('div')
 				renderPvalues({
 					title: "Group comparisons (Gray's test)",
 					holder,
@@ -710,9 +706,8 @@ function setRenderers(self) {
 			: chart.serieses
 	}
 
-	self.updateCharts = function(chart) {
+	self.updateCharts = function (chart) {
 		const s = self.settings
-		setVisibleSerieses(chart, s)
 
 		const div = select(this)
 
@@ -735,20 +730,16 @@ function setRenderers(self) {
 		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
 		if (chart.serieses) {
+			setVisibleSerieses(chart, s)
+
 			renderSVG(div.select('svg'), chart, s, s.duration)
 
 			// div for chart-specific legends
-			div
-				.select('.pp-cuminc-chartLegends')
-				.selectAll('*')
-				.remove()
+			div.select('.pp-cuminc-chartLegends').selectAll('*').remove()
 
 			// p-values legend
 			if (self.tests && chart.chartId in self.tests) {
-				const holder = div
-					.select('.pp-cuminc-chartLegends')
-					.style('display', 'inline-block')
-					.append('div')
+				const holder = div.select('.pp-cuminc-chartLegends').style('display', 'inline-block').append('div')
 				renderPvalues({
 					title: "Group comparisons (Gray's test)",
 					holder,
@@ -783,16 +774,13 @@ function setRenderers(self) {
 		}
 	}
 
-	self.renderSkippedCharts = function(div, skippedCharts) {
+	self.renderSkippedCharts = function (div, skippedCharts) {
 		if (!skippedCharts || !skippedCharts.length) {
 			div.style('display', 'none')
 			return
 		}
 
-		div
-			.style('display', 'block')
-			.selectAll('*')
-			.remove()
+		div.style('display', 'block').selectAll('*').remove()
 
 		// title div
 		div
@@ -837,14 +825,14 @@ function setRenderers(self) {
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
-		serieses.each(function(series, i) {
+		serieses.each(function (series, i) {
 			renderSeries(select(this), series, s)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpcb-cuminc-series')
-			.each(function(series, i) {
+			.each(function (series, i) {
 				renderSeries(select(this), series, s)
 			})
 
@@ -931,10 +919,7 @@ function setRenderers(self) {
 				.attr('class', 'sjpcb-plot-tip-line')
 				.attr('stroke', '#000')
 				.attr('stroke-width', '2px')
-			plotRect = mainG
-				.append('rect')
-				.attr('class', 'sjpcb-plot-tip-rect')
-				.style('fill', 'transparent')
+			plotRect = mainG.append('rect').attr('class', 'sjpcb-plot-tip-rect').style('fill', 'transparent')
 		} else {
 			mainG = svg.select('.sjpcb-cuminc-mainG')
 			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
@@ -1068,7 +1053,7 @@ function setInteractivity(self) {
 		high: 'Upper 95% CI'
 	}
 
-	self.mouseover = function(event) {
+	self.mouseover = function (event) {
 		const d = event.target.__data__
 		/*if (event.target.tagName == 'circle') {
 			const label = labels[d.seriesName]
@@ -1092,11 +1077,11 @@ function setInteractivity(self) {
 		}*/
 	}
 
-	self.mouseout = function() {
+	self.mouseout = function () {
 		self.app.tip.hide()
 	}
 
-	self.legendClick = function(event) {
+	self.legendClick = function (event) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
