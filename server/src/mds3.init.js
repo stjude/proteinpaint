@@ -1947,6 +1947,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		if (ds.queries.svfusion) {
 			const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
+			console.log(lst)
 			mlst.push(...lst)
 		}
 		if (ds.queries.cnv) {
@@ -2040,6 +2041,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// can supply dt specific attributes
 				if (m.dt == dtsnvindel) {
 				} else if (m.dt == dtfusionrna || m.dt == dtsv) {
+					m2.pairlst = m.pairlst
 				}
 
 				if (ds.cohort.termdb.q.id2sampleName && Number.isInteger(s.sample_id)) {
