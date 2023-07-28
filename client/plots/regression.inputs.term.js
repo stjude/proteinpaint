@@ -275,18 +275,26 @@ export class InputTerm {
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'cox') {
 					if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
 					const tdb = this.parent.app.vocabApi.termdbConfig
+
+					this.termStatus.topInfoStatus.push(`Time axis: ${tw.q.timeScale == 'time' ? tdb.timeUnit : 'age'}`)
+
 					this.termStatus.topInfoStatus.push(
-						`Time axis: ${
-							tw.q.timeScale == 'time'
-								? `${tdb.timeUnit} (begins at ${tdb.cohortStartTimeMsg})`
-								: `age (start: age at ${tdb.cohortStartTimeMsg}; end: age at event/censoring)`
-						}`
+						`<span style="padding-left: 10px;">-start: ${
+							tw.q.timeScale == 'time' ? ' ' : 'age at '
+						}entry into the cohort (i.e., ${tdb.cohortStartTimeMsg})</span>`
 					)
+
+					this.termStatus.topInfoStatus.push(
+						`<span style="padding-left: 10px;">-end: ${
+							tw.q.timeScale == 'time' ? ' ' : 'age at '
+						}event or censoring/death</span>`
+					)
+
 					const grades = Object.keys(tw.term.values).map(Number)
 					const maxgrade = Math.max(...grades)
 					this.termStatus.topInfoStatus.push(
-						`Event: first occurrence of grade ${
-							tw.q.breaks[0] === maxgrade ? tw.q.breaks[0] : `${tw.q.breaks[0]}-${maxgrade}`
+						`<div style="padding-top: 8px;">Event: first occurrence of grade ${
+							tw.q.breaks[0] === maxgrade ? tw.q.breaks[0] : `${tw.q.breaks[0]}-${maxgrade}</div>`
 						}`
 					)
 				}
