@@ -436,7 +436,7 @@ fn wilcoxon_rank_sum_test(
 
 // To be used only when there are no ties in the input data
 fn calculate_exact_probability_using_combinations(weight: f64, x: usize, y: usize) -> f64 {
-    println!("Using Wilcoxon CDF");
+    //println!("Using Wilcoxon CDF");
     let p_value = r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
     //println!("p_value:{}", p_value);
     p_value
