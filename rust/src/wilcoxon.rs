@@ -1,3 +1,5 @@
+// https://users.stat.ufl.edu/~winner/sta3024/chapter14.pdf
+
 /*
 ##########################
 # Wilcoxon rank sum test #
@@ -18,11 +20,13 @@ Book link: https://onlinelibrary.wiley.com/doi/epdf/10.1002/9781119196037
 
 # Test example 1: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[22.3950723737944,33.8227081589866,45.1407992918976,28.3479649920482,18.2336819062475,4.32351183332503,11.9014307267498,48.0554144773632,14.9064014137257,11.2484716628678,42.857265946921,6.14226084970869,13.765204195166,23.7536687662359,35.0198161723092,30.1217778825667,1.55535256816074,38.5163993313909,34.6145691110287,8.42882150504738],"group2_id":"group2","group2_values":[35.3232058370486,38.4726115851663,63.7901770556346,63.6540996702388,54.1668611462228,86.2734804977663,87.4467799020931,71.2533111660741,90.7283631013706,36.3230113568716,33.9395571127534,92.234949907288,77.9833765677176,43.5002030362375,79.9727810896002,37.503333974164,39.9319424736314,33.0334767652676,47.5299863377586,80.9905858896673]}]' | target/release/wilcoxon
 
-# Test example 2: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[0.73, 0.74, 0.8, 0.83, 0.88, 0.90, 1.04, 1.15],"group2_id":"group2","group2_values":[1.21, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91]}]' | target/release/wilcoxon
+# Test example 2: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[165.0, 166.7, 172.2, 176.9],"group2_id":"group2","group2_values":[153.1, 156.0, 158.6, 176.4]}]' | target/release/wilcoxon
 
 # Test example 3: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[1.21, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91],"group2_id":"group2","group2_values":[0.73, 0.74, 0.8, 0.83, 0.88, 0.90, 1.04, 1.15]}]' | target/release/wilcoxon
 
 # Test example 4: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/wilcoxon
+
+# Test example 5: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[117.1, 121.3, 127.8, 121.9, 117.4, 124.5, 119.5, 115.1],"group2_id":"group2","group2_values":[123.5, 125.3, 126.5, 127.9, 122.1, 125.6, 129.8, 117.2]}]' | target/release/wilcoxon
 
 # Input data is in JSON format and is read in from <in.json> file.
 # Results are written in JSON format to stdout.
@@ -68,6 +72,12 @@ struct OutputJson {
     group2_values: Vec<f64>,
     pvalue: Option<f64>,
 }
+
+//#[derive(Debug)]
+//struct RankFreq {
+//    rank: f64,
+//    freq: usize,
+//}
 
 fn main() {
     let mut input = String::new();
@@ -124,6 +134,7 @@ fn main() {
                                 vec2.clone(),
                                 THRESHOLD,
                                 't', // two-sided test
+                                true,
                             );
 
                             if pvalue > 0.01 {
@@ -163,6 +174,7 @@ fn wilcoxon_rank_sum_test(
     mut group2: Vec<f64>,
     threshold: usize,
     alternative: char,
+    correct: bool,
 ) -> f64 {
     // Check if there are any ties between the two groups
 
@@ -190,6 +202,7 @@ fn wilcoxon_rank_sum_test(
     let mut weight_x: f64 = 0.0;
     let mut weight_y: f64 = 0.0;
     let mut group_char: char = 'X';
+    let mut rank_frequencies = Vec::<f64>::new();
     for i in 0..combined.len() {
         //println!("group1_iter:{}", group1_iter);
         //println!("group2_iter:{}", group2_iter);
@@ -227,6 +240,11 @@ fn wilcoxon_rank_sum_test(
                 } else if group_char == 'Y' {
                     weight_y += i as f64 + 1.0;
                 }
+                //rank_frequencies.push(RankFreq {
+                //    rank: i as f64 + 1.0,
+                //    freq: 1,
+                //});
+                rank_frequencies.push(1.0);
             } else {
                 frac_rank = calculate_frac_rank(i as f64 + 1.0, num_repeats);
                 ranks.push(frac_rank);
@@ -235,6 +253,11 @@ fn wilcoxon_rank_sum_test(
                 } else if group_char == 'Y' {
                     weight_y += frac_rank
                 }
+                //rank_frequencies.push(RankFreq {
+                //    rank: frac_rank,
+                //    freq: num_repeats as usize,
+                //});
+                rank_frequencies.push(num_repeats);
             }
         } else if repeat_iter < num_repeats {
             // Repeat case
@@ -260,6 +283,7 @@ fn wilcoxon_rank_sum_test(
             }
         }
     }
+    //println!("rank_frequencies:{:?}", rank_frequencies);
     //println!("xy:{:?}", xy);
     //println!("ranks:{:?}", ranks);
     //println!("weight_x:{}", weight_x);
@@ -342,42 +366,64 @@ fn wilcoxon_rank_sum_test(
         }
     } else {
         // Compute p-values from a normal distribution
-        let expected_w_y = (group2.len() as f64 * (group1.len() + group2.len() + 1) as f64) / 2.0;
-        let expected_w_x = (group1.len() as f64 * (group1.len() + group2.len() + 1) as f64) / 2.0;
-        let variance_w =
-            (group2.len() as f64 * group1.len() as f64 * (group1.len() + group2.len() + 1) as f64)
-                / 12.0;
-        //let w_starred = (weight_y - expected_w) / variance_w.sqrt();
-        let n_y = Normal::new(expected_w_y, variance_w.sqrt()).unwrap();
-        let n_x = Normal::new(expected_w_x, variance_w.sqrt()).unwrap();
-        //println!("n_y:{:?}", n_y);
-        //println!("w_starred:{}", w_starred);
-        //normal_distribution(w_starred)
+        //println!("group1 length:{}", group1.len());
+        //println!("group2 length:{}", group2.len());
 
-        //let std_w_y = (weight_y - expected_w_y) / variance_w.sqrt();
-        //let std_w_x = (weight_x - expected_w_x) / variance_w.sqrt();
-        //println!("std_w_y:{}", std_w_y);
-        //println!("std_w_x:{}", std_w_x);
+        let mut z = u_dash_y - ((group1.len() * group2.len()) as f64) / 2.0;
+        //println!("z_original:{}", z);
+        let mut nties_sum: f64 = 0.0;
+        for i in 0..rank_frequencies.len() {
+            nties_sum += rank_frequencies[i] * rank_frequencies[i] * rank_frequencies[i]
+                - rank_frequencies[i];
+        }
 
+        let sigma = (((group1.len() * group2.len()) as f64) / 12.0
+            * ((group1.len() + group2.len() + 1) as f64
+                - nties_sum
+                    / (((group1.len() + group2.len()) as f64)
+                        * ((group1.len() + group2.len() + 1) as f64))))
+            .sqrt();
+        //println!("sigma:{}", sigma);
+        let mut correction: f64 = 0.0;
+        if correct == true {
+            if alternative == 'g' {
+                // Alternative "greater"
+                correction = 0.5;
+            } else if alternative == 'g' {
+                // Alternative "lesser"
+                correction = -0.5;
+            } else {
+                // Alternative "two-sided"
+                if z > 0.0 {
+                    correction = 0.5;
+                } else if z < 0.0 {
+                    correction = -0.5;
+                } else {
+                    // z=0
+                    correction = 0.0;
+                }
+            }
+        }
+        z = (z - correction) / sigma;
+        //println!("z:{}", z);
+        let n = Normal::new(0.0, 1.0).unwrap();
         if alternative == 'g' {
             // Alternative "greater"
             //println!("greater:{}", n.cdf(weight_y));
-            n_y.cdf(weight_y)
+            1.0 - n.cdf(z) // Applying continuity coorection
         } else if alternative == 'l' {
             // Alternative "lesser"
             //println!("lesser:{}", n.cdf(weight_x));
-            n_x.cdf(weight_x)
+            n.cdf(z) // Applying continuity coorection
         } else {
             // Alternative "two-sided"
-            let p_g = n_y.cdf(weight_y);
-            //println!("greater:{}", p_g);
-            let p_l = n_x.cdf(weight_x);
-            //println!("lesser:{}", p_l);
+            let p_g = 1.0 - n.cdf(z); // Applying continuity coorection
+            let p_l = n.cdf(z); // Applying continuity coorection
             let mut p_value;
             if p_g < p_l {
-                p_value = 2.0 * p_g; // Multiplied by 2 to account for two-sided p-value
+                p_value = 2.0 * p_g;
             } else {
-                p_value = 2.0 * p_l; // Multiplied by 2 to account for two-sided p-value
+                p_value = 2.0 * p_l;
             }
             //println!("p_value:{}", p_value);
             if p_value > 1.0 {
