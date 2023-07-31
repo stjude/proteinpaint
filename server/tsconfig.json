@@ -1,6 +1,6 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "extends": "../tsconfig.json",
     "esModuleInterop": true,
     "baseUrl": "./",
     "paths": {
@@ -11,7 +11,8 @@
         "./shared/*"
       ]
     },
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noImplicitAny": false
   },
   "exclude": [
     "node_modules"
