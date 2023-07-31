@@ -33,6 +33,7 @@ public/builds/*
 public/static/*.docx
 public/static/*.pdf
 **/rev.txt
+public/docs*/*
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html

@@ -80,3 +80,15 @@ cd ~/proteinpaint
 # to undo changes if the `-w` option was used 
 git restore .
 ```
+
+## Document
+
+To auto-generate documentation to public/docs,
+
+```bash
+npm run doc
+```
+
+TODOs: 
+- Organize the leftbar links by API topics, by using typescript namespaces or coding a custom plugin
+- Display test code that are specific to a documented type or interface
