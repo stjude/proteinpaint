@@ -1,0 +1,849 @@
+        {
+            "termgroups": [
+                {
+                    "name": "",
+                    "lst": [
+                        {
+                            "id": "agedx",
+                            "q": {
+                                "mode": "continuous",
+                                "isAtomic": true,
+                                "hiddenValues": {}
+                            },
+                            "settings": {
+                                "barh": 40,
+                                "gap": 10
+                            },
+                            "isAtomic": true,
+                            "$id": "0_ts_15739570",
+                            "term": {
+                                "type": "float",
+                                "bins": {
+                                    "default": {
+                                        "type": "regular-bin",
+                                        "bin_size": 5,
+                                        "startinclusive": true,
+                                        "first_bin": {
+                                            "startunbounded": true,
+                                            "stop": 5
+                                        }
+                                    },
+                                    "label_offset": 1
+                                },
+                                "name": "Age (years) at Cancer Diagnosis",
+                                "id": "agedx",
+                                "isleaf": true,
+                                "values": {}
+                            }
+                        },
+                        {
+                            "id": "sex",
+                            "q": {
+                                "mode": "values",
+                                "isAtomic": true,
+                                "hiddenValues": {},
+                                "type": "values",
+                                "groupsetting": {
+                                    "disabled": true
+                                }
+                            },
+                            "isAtomic": true,
+                            "$id": "1_ts_15739570",
+                            "term": {
+                                "type": "categorical",
+                                "values": {
+                                    "1": {
+                                        "label": "Male",
+                                        "color": "#e75480"
+                                    },
+                                    "2": {
+                                        "label": "Female"
+                                    }
+                                },
+                                "groupsetting": {
+                                    "disabled": true
+                                },
+                                "name": "Sex",
+                                "id": "sex",
+                                "isleaf": true,
+                                "category2samplecount": {
+                                    "1": 25,
+                                    "2": 35
+                                }
+                            }
+                        },
+                        {
+                            "id": "diaggrp",
+                            "isAtomic": true,
+                            "$id": "2_ts_15739570",
+                            "term": {
+                                "type": "categorical",
+                                "values": {
+                                    "Non-Hodgkin lymphoma": {
+                                        "label": "Non-Hodgkin lymphoma"
+                                    },
+                                    "Hodgkin lymphoma": {
+                                        "label": "Hodgkin lymphoma"
+                                    },
+                                    "Central nervous system (CNS)": {
+                                        "label": "Central nervous system (CNS)"
+                                    },
+                                    "Acute myeloid leukemia": {
+                                        "label": "Acute myeloid leukemia"
+                                    },
+                                    "Wilms tumor": {
+                                        "label": "Wilms tumor"
+                                    },
+                                    "Acute lymphoblastic leukemia": {
+                                        "label": "Acute lymphoblastic leukemia"
+                                    },
+                                    "Ewing sarcoma family of tumors": {
+                                        "label": "Ewing sarcoma family of tumors"
+                                    },
+                                    "Neuroblastoma": {
+                                        "label": "Neuroblastoma"
+                                    },
+                                    "Rhabdomyosarcoma": {
+                                        "label": "Rhabdomyosarcoma"
+                                    },
+                                    "Osteosarcoma": {
+                                        "label": "Osteosarcoma"
+                                    },
+                                    "Other leukemia": {
+                                        "label": "Other leukemia"
+                                    },
+                                    "MDS/Acute myeloid leukemia": {
+                                        "label": "MDS/Acute myeloid leukemia"
+                                    },
+                                    "Germ cell tumor": {
+                                        "label": "Germ cell tumor"
+                                    },
+                                    "Soft tissue sarcoma": {
+                                        "label": "Soft tissue sarcoma"
+                                    },
+                                    "Other malignancy": {
+                                        "label": "Other malignancy"
+                                    },
+                                    "Chronic myeloid leukemia": {
+                                        "label": "Chronic myeloid leukemia"
+                                    },
+                                    "Retinoblastoma": {
+                                        "label": "Retinoblastoma"
+                                    },
+                                    "Melanoma": {
+                                        "label": "Melanoma"
+                                    },
+                                    "Liver malignancies": {
+                                        "label": "Liver malignancies"
+                                    },
+                                    "Nasopharyngeal carcinoma": {
+                                        "label": "Nasopharyngeal carcinoma"
+                                    },
+                                    "Other carcinoma": {
+                                        "label": "Other carcinoma"
+                                    },
+                                    "Non-malignancy": {
+                                        "label": "Non-malignancy"
+                                    },
+                                    "Histiocytosis": {
+                                        "label": "Histiocytosis"
+                                    },
+                                    "Colon carcinoma": {
+                                        "label": "Colon carcinoma"
+                                    }
+                                },
+                                "groupsetting": {
+                                    "inuse": false
+                                },
+                                "name": "Diagnosis Group",
+                                "id": "diaggrp",
+                                "isleaf": true,
+                                "category2samplecount": {
+                                    "Acute lymphoblastic leukemia": 36,
+                                    "Wilms tumor": 3,
+                                    "Acute myeloid leukemia": 2,
+                                    "Rhabdomyosarcoma": 2,
+                                    "Hodgkin lymphoma": 5,
+                                    "Non-Hodgkin lymphoma": 10,
+                                    "Neuroblastoma": 2
+                                }
+                            },
+                            "q": {
+                                "isAtomic": true,
+                                "hiddenValues": {},
+                                "type": "values",
+                                "groupsetting": {
+                                    "inuse": false
+                                }
+                            }
+                        },
+                        {
+                            "id": "hrtavg",
+                            "isAtomic": true,
+                            "$id": "3_ts_15739570",
+                            "term": {
+                                "type": "float",
+                                "bins": {
+                                    "default": {
+                                        "type": "regular-bin",
+                                        "startinclusive": true,
+                                        "bin_size": 500,
+                                        "first_bin": {
+                                            "stop": 500
+                                        },
+                                        "last_bin": {
+                                            "start": 3500
+                                        }
+                                    }
+                                },
+                                "values": {
+                                    "-8888": {
+                                        "label": "exposed, dose unknown",
+                                        "uncomputable": true
+                                    },
+                                    "-9999": {
+                                        "label": "unknown exposure",
+                                        "uncomputable": true
+                                    }
+                                },
+                                "name": "Average dose to heart + TBI, cGy",
+                                "skip0forPercentile": true,
+                                "id": "hrtavg",
+                                "isleaf": true
+                            },
+                            "q": {
+                                "isAtomic": true,
+                                "mode": "discrete",
+                                "type": "regular-bin",
+                                "startinclusive": true,
+                                "bin_size": 500,
+                                "first_bin": {
+                                    "stop": 500
+                                },
+                                "last_bin": {
+                                    "start": 3500
+                                },
+                                "hiddenValues": {
+                                    "-8888": 1,
+                                    "-9999": 1
+                                }
+                            }
+                        },
+                        {
+                            "id": "cisplateq_5",
+                            "isAtomic": true,
+                            "$id": "4_ts_15739570",
+                            "term": {
+                                "type": "float",
+                                "bins": {
+                                    "default": {
+                                        "type": "regular-bin",
+                                        "bin_size": 1262,
+                                        "startinclusive": true,
+                                        "first_bin": {
+                                            "startunbounded": true,
+                                            "stop": 1262.76
+                                        }
+                                    }
+                                },
+                                "values": {
+                                    "0": {
+                                        "label": "not exposed",
+                                        "uncomputable": true
+                                    },
+                                    "-8888": {
+                                        "label": "exposed, dose unknown",
+                                        "uncomputable": true
+                                    },
+                                    "-9999": {
+                                        "label": "unknown exposure",
+                                        "uncomputable": true
+                                    }
+                                },
+                                "name": "Cumulative Platinum Agents (Cisplatin Equivalent Dose)",
+                                "id": "cisplateq_5",
+                                "isleaf": true
+                            },
+                            "q": {
+                                "isAtomic": true,
+                                "mode": "discrete",
+                                "type": "regular-bin",
+                                "bin_size": 1262,
+                                "startinclusive": true,
+                                "first_bin": {
+                                    "startunbounded": true,
+                                    "stop": 1262.76
+                                },
+                                "hiddenValues": {
+                                    "0": 1,
+                                    "-8888": 1,
+                                    "-9999": 1
+                                }
+                            }
+                        },
+                        {
+                            "id": "aaclassic_5",
+                            "isAtomic": true,
+                            "$id": "5_ts_15739570",
+                            "term": {
+                                "type": "float",
+                                "bins": {
+                                    "default": {
+                                        "type": "regular-bin",
+                                        "bin_size": 5000,
+                                        "startinclusive": true,
+                                        "first_bin": {
+                                            "startunbounded": true,
+                                            "stop": 5000
+                                        },
+                                        "last_bin": {
+                                            "stopunbounded": true,
+                                            "start": 30000
+                                        }
+                                    },
+                                    "rounding": "d"
+                                },
+                                "values": {
+                                    "0": {
+                                        "label": "not exposed",
+                                        "uncomputable": true
+                                    },
+                                    "-8888": {
+                                        "label": "exposed, dose unknown",
+                                        "uncomputable": true
+                                    },
+                                    "-9999": {
+                                        "label": "unknown exposure",
+                                        "uncomputable": true
+                                    }
+                                },
+                                "name": "Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)",
+                                "id": "aaclassic_5",
+                                "isleaf": true
+                            },
+                            "q": {
+                                "isAtomic": true,
+                                "mode": "discrete",
+                                "type": "regular-bin",
+                                "bin_size": 5000,
+                                "startinclusive": true,
+                                "first_bin": {
+                                    "startunbounded": true,
+                                    "stop": 5000
+                                },
+                                "last_bin": {
+                                    "stopunbounded": true,
+                                    "start": 30000
+                                },
+                                "hiddenValues": {
+                                    "0": 1,
+                                    "-8888": 1,
+                                    "-9999": 1
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Structural Variants",
+                    "valueFilter": {
+                        "type": "tvs",
+                        "tvs": {
+                            "values": [
+                                {
+                                    "key": "dt",
+                                    "value": 2
+                                }
+                            ]
+                        }
+                    },
+                    "lst": [
+                        {
+                            "term": {
+                                "name": "TP53",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "6_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        },
+                        {
+                            "term": {
+                                "name": "KRAS",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "7_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Copy Number Variation",
+                    "valueFilter": {
+                        "type": "tvs",
+                        "tvs": {
+                            "values": [
+                                {
+                                    "key": "dt",
+                                    "value": 4
+                                }
+                            ]
+                        }
+                    },
+                    "lst": [
+                        {
+                            "term": {
+                                "name": "TP53",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "8_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        },
+                        {
+                            "term": {
+                                "name": "AKT1",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "9_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        },
+                        {
+                            "term": {
+                                "name": "KRAS",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "10_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        },
+                        {
+                            "term": {
+                                "name": "BCR",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "11_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        }
+                    ],
+                    "settings": {
+                        "minNumSamples": 1
+                    }
+                },
+                {
+                    "name": "Somatic Mutations",
+                    "valueFilter": {
+                        "type": "tvs",
+                        "isnot": false,
+                        "tvs": {
+                            "values": [
+                                {
+                                    "key": "dt",
+                                    "value": 1
+                                },
+                                {
+                                    "key": "origin",
+                                    "value": "somatic"
+                                }
+                            ]
+                        }
+                    },
+                    "lst": [
+                        {
+                            "term": {
+                                "name": "TP53",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "12_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        },
+                        {
+                            "term": {
+                                "name": "KRAS",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "13_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Germline Mutations",
+                    "valueFilter": {
+                        "type": "tvs",
+                        "tvs": {
+                            "values": [
+                                {
+                                    "key": "dt",
+                                    "value": 1
+                                },
+                                {
+                                    "key": "origin",
+                                    "value": "germline"
+                                }
+                            ]
+                        }
+                    },
+                    "lst": [
+                        {
+                            "term": {
+                                "name": "TP53",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "14_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        },
+                        {
+                            "term": {
+                                "name": "KRAS",
+                                "type": "geneVariant"
+                            },
+                            "isAtomic": true,
+                            "$id": "15_ts_15739570",
+                            "q": {
+                                "isAtomic": true,
+                                "cnvGainCutoff": 0.1,
+                                "cnvLossCutoff": -0.1,
+                                "cnvMaxLength": 0
+                            }
+                        }
+                    ]
+                }
+            ],
+            "samplegroups": [],
+            "divideBy": null,
+            "settings": {
+                "controls": {
+                    "isOpen": false
+                },
+                "matrix": {
+                    "svgCanvasSwitch": 1000,
+                    "useMinPixelWidth": true,
+                    "cellEncoding": "",
+                    "margin": {
+                        "top": 10,
+                        "right": 5,
+                        "bottom": 20,
+                        "left": 50
+                    },
+                    "maxGenes": 50,
+                    "maxSample": 1000,
+                    "sampleNameFilter": "",
+                    "sortSamplesBy": "a",
+                    "sortOptions": {
+                        "a": {
+                            "label": "CNV+SSM > SSM-only > CNV-only",
+                            "value": "a",
+                            "order": 1,
+                            "sortPriority": [
+                                {
+                                    "types": [
+                                        "geneVariant"
+                                    ],
+                                    "tiebreakers": [
+                                        {
+                                            "filter": {
+                                                "values": [
+                                                    {
+                                                        "dt": 2
+                                                    }
+                                                ]
+                                            },
+                                            "by": "class",
+                                            "order": [
+                                                "Fuserna",
+                                                "WT",
+                                                "Blank"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "types": [
+                                        "geneVariant"
+                                    ],
+                                    "tiebreakers": [
+                                        {
+                                            "filter": {
+                                                "values": [
+                                                    {
+                                                        "dt": 1
+                                                    }
+                                                ]
+                                            },
+                                            "by": "class",
+                                            "order": [
+                                                "CNV_amp",
+                                                "CNV_loss",
+                                                "F",
+                                                "N",
+                                                "D",
+                                                "I",
+                                                "M",
+                                                "P",
+                                                "L",
+                                                "Utr3",
+                                                "Utr5",
+                                                "S",
+                                                "Intron"
+                                            ]
+                                        },
+                                        {
+                                            "by": "class",
+                                            "order": [
+                                                "CNV_amp",
+                                                "CNV_loss"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "types": [
+                                        "categorical",
+                                        "integer",
+                                        "float",
+                                        "survival"
+                                    ],
+                                    "tiebreakers": [
+                                        {
+                                            "by": "values"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "b": {
+                            "label": "CNV+SSM > SSM-only",
+                            "value": "b",
+                            "order": 1,
+                            "sortPriority": [
+                                {
+                                    "types": [
+                                        "geneVariant"
+                                    ],
+                                    "tiebreakers": [
+                                        {
+                                            "filter": {
+                                                "values": [
+                                                    {
+                                                        "dt": 2
+                                                    }
+                                                ]
+                                            },
+                                            "by": "class",
+                                            "order": [
+                                                "Fuserna",
+                                                "WT",
+                                                "Blank"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "types": [
+                                        "geneVariant"
+                                    ],
+                                    "tiebreakers": [
+                                        {
+                                            "filter": {
+                                                "values": [
+                                                    {
+                                                        "dt": 1
+                                                    }
+                                                ]
+                                            },
+                                            "by": "class",
+                                            "order": [
+                                                "CNV_amp",
+                                                "CNV_loss",
+                                                "F",
+                                                "N",
+                                                "D",
+                                                "I",
+                                                "M",
+                                                "P",
+                                                "L",
+                                                "Utr3",
+                                                "Utr5",
+                                                "S",
+                                                "Intron"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "types": [
+                                        "geneVariant"
+                                    ],
+                                    "tiebreakers": [
+                                        {
+                                            "by": "dt",
+                                            "order": [
+                                                4
+                                            ]
+                                        },
+                                        {
+                                            "by": "class",
+                                            "order": [
+                                                "CNV_amp",
+                                                "CNV_loss"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "types": [
+                                        "categorical",
+                                        "integer",
+                                        "float",
+                                        "survival"
+                                    ],
+                                    "tiebreakers": [
+                                        {
+                                            "by": "values"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "name": {
+                            "label": "By sample name, ID, or label",
+                            "value": "name",
+                            "order": 2
+                        }
+                    },
+                    "sortSampleGrpsBy": "name",
+                    "sortSamplesTieBreakers": [
+                        {
+                            "$id": "sample",
+                            "sortSamples": {}
+                        }
+                    ],
+                    "sortTermsBy": "asListed",
+                    "samplecount4gene": "abs",
+                    "geneVariantCountSamplesSkipMclass": [],
+                    "cellbg": "#ececec",
+                    "showGrid": "",
+                    "gridStroke": "#fff",
+                    "outlineStroke": "#ccc",
+                    "colw": 0,
+                    "colwMin": 0.05,
+                    "colwMax": 16,
+                    "colspace": 0,
+                    "colgspace": 8,
+                    "colglabelpos": true,
+                    "collabelpos": "bottom",
+                    "collabelmaxchars": 32,
+                    "collabelvisible": true,
+                    "collabelgap": 5,
+                    "collabelpad": 1,
+                    "rowh": 18,
+                    "rowspace": 0,
+                    "rowgspace": 8,
+                    "rowlabelpos": "left",
+                    "rowlabelgap": 5,
+                    "rowlabelvisible": true,
+                    "rowlabelpad": 1,
+                    "rowlabelmaxchars": 32,
+                    "grpLabelFontSize": 13,
+                    "minLabelFontSize": 6,
+                    "maxLabelFontSize": 14,
+                    "transpose": false,
+                    "sampleLabelOffset": 120,
+                    "sampleGrpLabelOffset": 120,
+                    "sampleGrpLabelMaxChars": 32,
+                    "termLabelOffset": 220,
+                    "termGrpLabelOffset": 80,
+                    "termGrpLabelMaxChars": 32,
+                    "duration": 0,
+                    "zoomLevel": 1,
+                    "zoomCenterPct": 0,
+                    "zoomIndex": 0,
+                    "zoomGrpIndex": 0,
+                    "zoomMin": 0.5,
+                    "zoomIncrement": 0.1,
+                    "zoomStep": 1,
+                    "imgWMax": 30000,
+                    "scrollHeight": 12,
+                    "controlLabels": {
+                        "Samples": "Samples",
+                        "samples": "samples",
+                        "Sample": "Sample",
+                        "sample": "sample",
+                        "Terms": "Variables",
+                        "terms": "variables",
+                        "Term": "Variable",
+                        "term": "Variable"
+                    },
+                    "cnvUnit": "log2ratio",
+                    "ignoreCnvValues": true,
+                    "barh": 32
+                },
+                "legend": {
+                    "ontop": false,
+                    "lineh": 25,
+                    "padx": 5,
+                    "padleft": 0,
+                    "padright": 20,
+                    "padbtm": 30,
+                    "fontsize": 16,
+                    "iconh": 14,
+                    "iconw": 14,
+                    "hangleft": 1,
+                    "linesep": false
+                }
+            },
+            "chartType": "matrix",
+            "id": "_AUTOID_15739570_0"
+        }

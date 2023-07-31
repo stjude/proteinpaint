@@ -521,7 +521,9 @@ async function validate_query_snvindel(ds, genome) {
 			gdc.validate_query_snvindel_byrange(ds)
 			// q.byrange.get() added
 		} else if (q.byrange.bcffile) {
-			q.byrange.bcffile = path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
+			q.byrange.bcffile = q.byrange.bcffile.startsWith(serverconfig.tpmasterdir)
+				? q.byrange.bcffile
+				: path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
 			q.byrange._tk = { file: q.byrange.bcffile }
 			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
 			if (!q.byrange._tk?.samples.length) {
@@ -1148,7 +1150,9 @@ async function validate_query_svfusion(ds, genome) {
 	if (!q.byrange) throw 'byrange missing from queries.svfusion'
 	if (q.byrange) {
 		if (q.byrange.file) {
-			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
+			q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
+				? q.byrange.file
+				: path.join(serverconfig.tpmasterdir, q.byrange.file)
 			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
 			mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 		} else {
@@ -1164,7 +1168,9 @@ async function validate_query_cnv(ds, genome) {
 	if (!q.byrange) throw 'byrange missing from queries.cnv'
 	if (q.byrange) {
 		if (q.byrange.file) {
-			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
+			q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
+				? q.byrange.file
+				: path.join(serverconfig.tpmasterdir, q.byrange.file)
 			q.byrange.get = await cnvByRangeGetter_file(ds, genome)
 			mayValidateSampleHeader(ds, q.byrange.samples, 'cnv.byrange')
 		} else {
