@@ -57,7 +57,8 @@ class profilePolar {
 				break
 			}
 		}
-
+		this.region = this.config.region || this.regions[0]
+		this.income = this.config.income || this.incomes[0]
 		this.plot()
 	}
 
@@ -109,7 +110,7 @@ class profilePolar {
 			.append('button')
 			.style('margin-left', '15px')
 			.text('Download SVG')
-			.on('click', () => downloadSingleSVG(svg, `polar-plot-${this.config.region}.svg`))
+			.on('click', () => downloadSingleSVG(svg, `polar-plot-${this.region}-${this.income}.svg`.split(' ').join('')))
 
 		const svg = holder.append('svg').attr('width', 1200).attr('height', 600)
 

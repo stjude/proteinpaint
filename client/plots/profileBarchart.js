@@ -131,7 +131,7 @@ class profileBarchart {
 			.append('button')
 			.style('margin-left', '15px')
 			.text('Download SVG')
-			.on('click', () => downloadSingleSVG(svg, 'barchart-plot.svg'))
+			.on('click', () => downloadSingleSVG(svg, `barchart-plot-${this.region}-${this.income}.svg`.split(' ').join('')))
 		const svg = this.dom.holder
 			.append('svg')
 			.attr('width', 1400)
