@@ -1,5 +1,3 @@
-// https://users.stat.ufl.edu/~winner/sta3024/chapter14.pdf
-
 /*
 ##########################
 # Wilcoxon rank sum test #
@@ -9,8 +7,7 @@
 # Documentation
 ##########################
 
-This implementation is based on the book Nonparametric Statistical Analysis (page 115). The advantage of this implementation is that it can even calculate p-values in case of TIES (where same number is repeated in both input vectors or within same vector). See page 124.
-Book link: https://onlinelibrary.wiley.com/doi/epdf/10.1002/9781119196037
+This wilcoxon test implementation aims to copy the methodology used in R's wilcox_test() function
 
 #########
 # Usage #
@@ -311,9 +308,7 @@ fn wilcoxon_rank_sum_test(
 
     //println!("test_statistic:{}", test_statistic);
 
-    if (group1.len() <= threshold && repeat_present == false)
-        || (group2.len() < threshold && repeat_present == false)
-    {
+    if group1.len() < threshold && group2.len() < threshold && repeat_present == false {
         // Compute exact p-values
 
         // Calculate conditional probability for weight_y
