@@ -46,7 +46,7 @@ class profileBarchart {
 			terms: twLst
 		})
 		this.regions = [{ key: 'Global', label: 'Global' }]
-		this.incomes = ['']
+		this.incomes = ['Any']
 		this.incomes.push(...this.config.incomes)
 
 		for (const region of this.config.regions) {
@@ -56,7 +56,14 @@ class profileBarchart {
 		this.sampleData = null
 		for (const k in this.data.samples) {
 			const sample = this.data.samples[k]
-			if (this.config.sampleName && sample.sampleName == this.config.sampleName) this.sampleData = sample
+			if (this.config.region && sample.sampleName == this.config.region) {
+				this.sampleData = sample
+				break
+			}
+			if (this.config.income && sample.sampleName == this.config.income) {
+				this.sampleData = sample
+				break
+			}
 		}
 
 		this.region = this.config.region || this.regions[0]
@@ -69,7 +76,7 @@ class profileBarchart {
 		const config = this.config
 		const components = config.plotByComponent.map(comp => comp.component.name)
 		this.dom.holder.selectAll('*').remove()
-		const div = this.dom.holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
+		const div = this.dom.holder.append('div').style('margin-left', '55px').style('margin-top', '20px')
 		div.append('label').html('Component:').style('font-weight', 'bold')
 		const selectComp = div.append('select').style('margin-left', '5px')
 		selectComp
@@ -98,7 +105,7 @@ class profileBarchart {
 		regionSelect.on('change', () => {
 			config.region = regionSelect.node().value
 			config.sampleName = config.region
-			config.income = 'Global'
+			config.income = 'Any'
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
@@ -114,7 +121,7 @@ class profileBarchart {
 		incomeSelect.on('change', () => {
 			config.income = incomeSelect.node().value
 			config.sampleName = config.income
-			config.region = ''
+			config.region = 'Global'
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
@@ -236,7 +243,8 @@ class profileBarchart {
 				.attr('text-anchor', 'end')
 				.text(`${value || 0}%`)
 			if (width > 0) text.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
-			else if (!pairValue && !hasSubjectiveData && i == 0) text.attr('transform', `translate(${x + 35}, ${y + 15})`)
+			else if (!pairValue && i == 0) text.attr('transform', `translate(${x + 35}, ${y + 15})`)
+			//else text.attr('transform', `translate(${x + 35}, ${y + 15})`)
 
 			if (isFirst)
 				svg

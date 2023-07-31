@@ -38,7 +38,7 @@ class profilePolar {
 			terms: twLst
 		})
 		this.regions = [{ key: 'Global', label: 'Global' }]
-		this.incomes = ['']
+		this.incomes = ['Any']
 		this.incomes.push(...this.config.incomes)
 
 		for (const region of this.config.regions) {
@@ -48,7 +48,14 @@ class profilePolar {
 		this.sampleData = null
 		for (const k in this.data.samples) {
 			const sample = this.data.samples[k]
-			if (this.config.sampleName && sample.sampleName == this.config.sampleName) this.sampleData = sample
+			if (this.config.region && sample.sampleName == this.config.region) {
+				this.sampleData = sample
+				break
+			}
+			if (this.config.income && sample.sampleName == this.config.income) {
+				this.sampleData = sample
+				break
+			}
 		}
 
 		this.plot()
@@ -76,7 +83,7 @@ class profilePolar {
 			config.region = regionSelect.node().value
 
 			config.sampleName = config.region
-			config.income = ''
+			config.income = 'Any'
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
@@ -102,7 +109,7 @@ class profilePolar {
 			.append('button')
 			.style('margin-left', '15px')
 			.text('Download SVG')
-			.on('click', () => downloadSingleSVG(svg, 'polar-plot.svg'))
+			.on('click', () => downloadSingleSVG(svg, `polar-plot-${this.config.region}.svg`))
 
 		const svg = holder.append('svg').attr('width', 1200).attr('height', 600)
 
