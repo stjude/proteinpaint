@@ -79,7 +79,7 @@ export function setRenderers(self) {
 
 		if (self.config.colorTW?.q.mode === 'continuous') {
 			const [min, max] = chart.cohortSamples.reduce(
-				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
+				(s, d) => [d.category < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
 				[chart.cohortSamples[0].category, chart.cohortSamples[0].category]
 			)
 			chart.colorGenerator = d3Linear()
@@ -741,8 +741,15 @@ export function setRenderers(self) {
 				if (self.config.colorTW.q.mode === 'continuous') {
 					const gradientWidth = 150
 					const [min, max] = chart.colorGenerator.domain()
-					const gradientScale = d3Linear().domain([min, max]).range([0, 130])
-					const axis = axisTop(gradientScale).ticks(3)
+					const gradientScale = d3Linear().domain([min, max]).range([0, gradientWidth])
+					const gradientStep = (max - min) / 4
+					const axis = axisTop(gradientScale).tickValues([
+						min,
+						min + gradientStep,
+						min + 2 * gradientStep,
+						min + 3 * gradientStep,
+						max
+					])
 					colorG.append('g').attr('transform', `translate(0, 100)`).call(axis)
 					chart.startRect = colorG
 						.append('rect')
