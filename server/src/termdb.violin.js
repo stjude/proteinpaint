@@ -3,6 +3,7 @@ import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
 import lines2R from './lines2R'
 const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
+//const fs = require('fs')
 import path from 'path'
 import utils from './utils'
 import { getData } from './termdb.matrix'
@@ -106,6 +107,11 @@ export async function wilcoxon(term, result) {
 			wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 		}
 	}
+
+	//fs.writeFile('test.txt', JSON.stringify(wilcoxInput), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 	//const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	//await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))

@@ -24,9 +24,10 @@ libmath = "^0.2.1"
 json = "^0.12.4"
 serde = {version = "^1.0.147", features = ["derive"]}
 serde_json="^1.0.88"
-itertools="^0.10.0"
 num = "^0.4.1"
+#r_stats = { git = "https://github.com/derekdreery/r_stats.git"}
 r_stats = { git = "https://github.com/robinpaul85/r_stats.git"}
+
 
 [profile.release]
 lto = "fat"

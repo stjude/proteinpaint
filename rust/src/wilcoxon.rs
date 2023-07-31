@@ -51,7 +51,6 @@ This wilcoxon test implementation aims to copy the methodology used in R's wilco
 ########
 */
 
-use itertools::Itertools;
 use json;
 use r_stats;
 use serde::{Deserialize, Serialize};
@@ -193,7 +192,6 @@ fn wilcoxon_rank_sum_test(
     let mut repeat_present = false;
     let mut frac_rank: f64 = 0.0;
     let mut num_repeats: f64 = 1.0;
-    let low_cutoff: usize = 6; // When both vectors are below this cutoff, exact p-value will be computed by iterating through all possible combinations. This is helpful especially in case of ties.
     let mut repeat_iter: f64 = 1.0;
     #[allow(unused_variables)]
     let mut weight_x: f64 = 0.0;
@@ -293,7 +291,7 @@ fn wilcoxon_rank_sum_test(
     //println!("u_dash_y:{}", u_dash_y);
 
     let u_x = weight_x - (group1.len() as f64 * (group1.len() as f64 + 1.0) / 2.0) as f64;
-    let u_dash_x = (u_x - (group1.len() * group2.len()) as f64).abs();
+    let _u_dash_x = (u_x - (group1.len() * group2.len()) as f64).abs();
     //println!("u_dash_x:{}", u_dash_x);
 
     // Calculate test_statistic
@@ -315,49 +313,21 @@ fn wilcoxon_rank_sum_test(
 
         if alternative == 'g' {
             // Alternative "greater"
-            if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
-                iterate_exact_p_values(ranks, weight_y, group2.len())
-            } else {
-                calculate_exact_probability_using_combinations(u_dash_y, group1.len(), group2.len())
-            }
+            //if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
+            //    iterate_exact_p_values(ranks, weight_y, group2.len())
+            //} else {
+            calculate_exact_probability(u_dash_y, group1.len(), group2.len(), alternative)
+            //}
         } else if alternative == 'l' {
             // Alternative "lesser"
-            if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
-                iterate_exact_p_values(ranks, weight_x, group1.len())
-            } else {
-                calculate_exact_probability_using_combinations(u_dash_x, group1.len(), group2.len())
-            }
+            //if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
+            //    iterate_exact_p_values(ranks, weight_x, group1.len())
+            //} else {
+            calculate_exact_probability(u_dash_y, group1.len(), group2.len(), alternative)
+            //}
         } else {
             // Two-sided distribution
-            let p_less_g;
-            let p_less_l;
-
-            if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
-                p_less_g = iterate_exact_p_values(ranks.clone(), weight_y, group2.len());
-                p_less_l = iterate_exact_p_values(ranks, weight_x, group1.len());
-            } else {
-                p_less_g = calculate_exact_probability_using_combinations(
-                    u_dash_y,
-                    group1.len(),
-                    group2.len(),
-                );
-                p_less_l = calculate_exact_probability_using_combinations(
-                    u_dash_x,
-                    group1.len(),
-                    group2.len(),
-                );
-            }
-
-            let mut p_value;
-            if p_less_g < p_less_l {
-                p_value = 2.0 * p_less_g; // Multiplied by 2 to account for two-sided p-value
-            } else {
-                p_value = 2.0 * p_less_l // Multiplied by 2 to account for two-sided p-value
-            }
-            if p_value > 1.0 {
-                p_value = 1.0;
-            }
-            p_value
+            calculate_exact_probability(u_dash_y, group1.len(), group2.len(), alternative)
         }
     } else {
         // Compute p-values from a normal distribution
@@ -430,37 +400,28 @@ fn wilcoxon_rank_sum_test(
 }
 
 // To be used only when there are no ties in the input data
-fn calculate_exact_probability_using_combinations(weight: f64, x: usize, y: usize) -> f64 {
+fn calculate_exact_probability(weight: f64, x: usize, y: usize, alternative: char) -> f64 {
     //println!("Using Wilcoxon CDF");
-    let p_value = r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
+    let mut p_value;
+    if alternative == 't' {
+        if weight > ((x * y) as f64) / 2.0 {
+            p_value = 2.0 * r_stats::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
+        } else {
+            p_value = 2.0 * r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
+        }
+        if p_value > 1.0 {
+            p_value = 1.0;
+        }
+    } else if alternative == 'g' {
+        p_value = r_stats::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
+    } else if alternative == 'l' {
+        p_value = r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
+    } else {
+        // Should not happen
+        panic!("Unknown alternative option given, please check!");
+    }
     //println!("p_value:{}", p_value);
     p_value
-}
-
-// Calculates exact p-values by iterating over all possible combinations of weights
-fn iterate_exact_p_values(ranks: Vec<f64>, weight: f64, y_length: usize) -> f64 {
-    let mut combinations = ranks.into_iter().combinations(y_length);
-    let mut combination = combinations.next();
-    let mut num_combinations = 0;
-    let mut w_less = 0;
-    while combination != None {
-        //println!("combination:{:?}", combination);
-        //println!("combination_sum:{:?}", combination.into_iter().sum::<f64>());
-        //w_distribution.push(combination.unwrap().into_iter().sum::<f64>());
-        if combination.unwrap().into_iter().sum::<f64>() <= weight {
-            w_less += 1;
-        }
-        num_combinations += 1;
-        combination = combinations.next();
-    }
-    //println!("w_distribution:{:?}", w_distribution);
-    //println!("num_combinations:{}", num_combinations);
-    //println!("w_less:{:?}", w_less);
-    //println!(
-    //    "p_value greater:{}",
-    //    w_less as f64 / num_combinations as f64
-    //);
-    w_less as f64 / num_combinations as f64
 }
 
 fn calculate_frac_rank(current_rank: f64, num_repeats: f64) -> f64 {
