@@ -28,217 +28,215 @@ reason:
 
 copyDataFilesFromRepo2Tp()
 
-export default function () {
-	return <Mds3>{
-		isMds3: true,
-		cohort: {
-			db: {
-				file: 'files/hg38/TermdbTest/db'
-			},
-			allowedChartTypes: ['summary', 'survival', 'matrix', 'sampleScatter', 'cuminc', 'dataDownload'],
-			termdb: {
-				displaySampleIds: true, // allow to display sample-level data
+export default <Mds3>{
+	isMds3: true,
+	cohort: {
+		db: {
+			file: 'files/hg38/TermdbTest/db'
+		},
+		allowedChartTypes: ['summary', 'survival', 'matrix', 'sampleScatter', 'cuminc', 'dataDownload'],
+		termdb: {
+			displaySampleIds: true, // allow to display sample-level data
 
-				timeUnit: 'years',
+			timeUnit: 'years',
 
-				minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
+			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
 
-				ageEndOffset: 0.00274, // number of years to offset ending age of patients
-				// for cox outcome with timeScale='age'
-				// 1 day (i.e. 1/365 or 0.00274) needs to be added
-				// to age_end to prevent age_end = age_start (which
-				// would cause regression analysis to fail in R)
+			ageEndOffset: 0.00274, // number of years to offset ending age of patients
+			// for cox outcome with timeScale='age'
+			// 1 day (i.e. 1/365 or 0.00274) needs to be added
+			// to age_end to prevent age_end = age_start (which
+			// would cause regression analysis to fail in R)
 
-				cohortStartTimeMsg: '5 years post cancer diagnosis',
+			cohortStartTimeMsg: '5 years post cancer diagnosis',
 
-				selectCohort: {
-					// wrap term.id into a term json object so as to use it in tvs;
-					// the term is not required to exist in termdb
-					// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
-					term: {
-						id: 'subcohort',
-						type: 'categorical'
-					},
-					prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
-					values: [
-						// <ul><li> for items, with a radio button for each.
-						{
-							keys: ['ABC'],
-							label: 'ABC Lifetime Cohort (ABC)',
-							shortLabel: 'ABC',
-							isdefault: true
-						},
-						{
-							keys: ['XYZ'],
-							label: 'XYZ Cancer Survivor Study (XYZ)',
-							shortLabel: 'XYZ'
-						},
-						{
-							keys: ['ABC', 'XYZ'],
-							label: 'Combined ABC+XYZ',
-							shortLabel: 'ABC+XYZ',
-							// show note under label in smaller text size
-							note: 'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
-						}
-					]
+			selectCohort: {
+				// wrap term.id into a term json object so as to use it in tvs;
+				// the term is not required to exist in termdb
+				// term.id is specific to this dataset, should not use literally in client/server code but always through a variable
+				term: {
+					id: 'subcohort',
+					type: 'categorical'
 				},
-
-				dataDownloadCatch: {
-					helpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/',
-					missingAccess: {
-						message:
-							"You are missing approval to one or more of the required datasets. Please go to <a target=_blank href='MISSING-ACCESS-LINK'>Genomics Platform Data Browser</a> to request access. For more information, please see this <a target=_blank href='https://university.stjude.cloud/docs/visualization-community/data-download/'>tutorial.</a>",
-						links: {
-							sjlife: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002',
-							ccss: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1005',
-							'sjlife,ccss': 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002,SJC-DS-1005',
-							fake: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002'
-						}
-					},
-					jwt: {
-						'Invalid token': 'https://university.stjude.cloud/docs/visualization-community/data-download/'
-					}
-				},
-				matrix: {
-					settings: {
-						ignoreCnvValues: true
-					}
-				}
-			},
-			scatterplots: {
-				plots: [
+				prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+				values: [
+					// <ul><li> for items, with a radio button for each.
 					{
-						name: 'TermdbTest TSNE',
-						dimension: 2,
-						file: 'files/hg38/TermdbTest/tnse.txt',
-						colorTW: { id: 'diaggrp' }
+						keys: ['ABC'],
+						label: 'ABC Lifetime Cohort (ABC)',
+						shortLabel: 'ABC',
+						isdefault: true
+					},
+					{
+						keys: ['XYZ'],
+						label: 'XYZ Cancer Survivor Study (XYZ)',
+						shortLabel: 'XYZ'
+					},
+					{
+						keys: ['ABC', 'XYZ'],
+						label: 'Combined ABC+XYZ',
+						shortLabel: 'ABC+XYZ',
+						// show note under label in smaller text size
+						note: 'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
 					}
 				]
 			},
-			matrixplots: {
-				plots: [
-					{
-						name: 'Matrix plot',
-						file: 'files/hg38/TermdbTest/TermdbTest_matrix.json'
+
+			dataDownloadCatch: {
+				helpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/',
+				missingAccess: {
+					message:
+						"You are missing approval to one or more of the required datasets. Please go to <a target=_blank href='MISSING-ACCESS-LINK'>Genomics Platform Data Browser</a> to request access. For more information, please see this <a target=_blank href='https://university.stjude.cloud/docs/visualization-community/data-download/'>tutorial.</a>",
+					links: {
+						sjlife: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002',
+						ccss: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1005',
+						'sjlife,ccss': 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002,SJC-DS-1005',
+						fake: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002'
 					}
-				]
-			}
-		},
-		customTwQByType: {
-			// dataset-specific termsetting configs on certain term types
-			geneVariant: {
-				default: { cnvGainCutoff: 0.1, cnvLossCutoff: -0.1, cnvMaxLength: 0 },
-				byGene: {
-					// key is term.name, thus possible to use non-gene names e.g. C19MC
-					MYCN: { cnvGainCutoff: 0.5, cnvLossCutoff: -0.1, cnvMaxLength: 0 }
-				}
-			}
-		},
-		variant2samples: {
-			variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
-
-			// list of term ids as sample details
-			twLst: [{ id: 'sex', q: {} }],
-
-			// small list of terms for sunburst rings
-			sunburst_twLst: [{ id: 'sex', q: {} }]
-		},
-		queries: {
-			// temporary fix for genomeBrowser app to show gene model
-			defaultBlock2GeneMode: true,
-
-			snvindel: {
-				forTrack: true,
-				byrange: {
-					bcffile: 'files/hg38/TermdbTest/TermdbTest.bcf.gz'
 				},
-				skewerRim: {
-					type: 'format',
-					formatKey: 'origin',
-					rim1value: 'germline',
-					noRimValue: 'somatic'
+				jwt: {
+					'Invalid token': 'https://university.stjude.cloud/docs/visualization-community/data-download/'
 				}
 			},
-			svfusion: {
-				byrange: {
-					file: 'files/hg38/TermdbTest/TermdbTest_Fusion.gz'
+			matrix: {
+				settings: {
+					ignoreCnvValues: true
 				}
-			},
-			cnv: {
-				byrange: {
-					file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
-				}
-			},
-			/*
-			on the fly cnv calls from gene body probe signals are no longer used
-			probe2cnv:{
-				file: 'files/hg19/pnet/PNET.probesignals.gz'
 			}
-			*/
-			singleSampleMutation: {
+		},
+		scatterplots: {
+			plots: [
+				{
+					name: 'TermdbTest TSNE',
+					dimension: 2,
+					file: 'files/hg38/TermdbTest/tnse.txt',
+					colorTW: { id: 'diaggrp' }
+				}
+			]
+		},
+		matrixplots: {
+			plots: [
+				{
+					name: 'Matrix plot',
+					file: 'files/hg38/TermdbTest/TermdbTest_matrix.json'
+				}
+			]
+		}
+	},
+	customTwQByType: {
+		// dataset-specific termsetting configs on certain term types
+		geneVariant: {
+			default: { cnvGainCutoff: 0.1, cnvLossCutoff: -0.1, cnvMaxLength: 0 },
+			byGene: {
+				// key is term.name, thus possible to use non-gene names e.g. C19MC
+				MYCN: { cnvGainCutoff: 0.5, cnvLossCutoff: -0.1, cnvMaxLength: 0 }
+			}
+		}
+	},
+	variant2samples: {
+		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
+
+		// list of term ids as sample details
+		twLst: [{ id: 'sex', q: {} }],
+
+		// small list of terms for sunburst rings
+		sunburst_twLst: [{ id: 'sex', q: {} }]
+	},
+	queries: {
+		// temporary fix for genomeBrowser app to show gene model
+		defaultBlock2GeneMode: true,
+
+		snvindel: {
+			forTrack: true,
+			byrange: {
+				bcffile: 'files/hg38/TermdbTest/TermdbTest.bcf.gz'
+			},
+			skewerRim: {
+				type: 'format',
+				formatKey: 'origin',
+				rim1value: 'germline',
+				noRimValue: 'somatic'
+			}
+		},
+		svfusion: {
+			byrange: {
+				file: 'files/hg38/TermdbTest/TermdbTest_Fusion.gz'
+			}
+		},
+		cnv: {
+			byrange: {
+				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
+			}
+		},
+		/*
+		on the fly cnv calls from gene body probe signals are no longer used
+		probe2cnv:{
+			file: 'files/hg19/pnet/PNET.probesignals.gz'
+		}
+		*/
+		singleSampleMutation: {
+			sample_id_key: 'sample_id',
+			folder: 'files/hg38/TermdbTest/mutationpersample/'
+		},
+		singleSampleGenomeQuantification: {
+			// to show genome-wide quantification plot for a sample
+			MethylationArray: {
+				description:
+					'Genome-wide copy number variation based on tumor/normal methylation array, averaged at genomic bins.',
+				min: -1.2,
+				max: 1.2,
 				sample_id_key: 'sample_id',
-				folder: 'files/hg38/TermdbTest/mutationpersample/'
-			},
-			singleSampleGenomeQuantification: {
-				// to show genome-wide quantification plot for a sample
-				MethylationArray: {
-					description:
-						'Genome-wide copy number variation based on tumor/normal methylation array, averaged at genomic bins.',
-					min: -1.2,
-					max: 1.2,
-					sample_id_key: 'sample_id',
-					folder: 'files/hg38/TermdbTest/methylationArrayNormalSubtracted_bins/', // binned data, not probe-level
-					positiveColor: '#a35069',
-					negativeColor: '#5051a3',
-					singleSampleGbtk: 'methylationProbeSignal'
-				}
-			},
-			singleSampleGbtk: {
-				methylationProbeSignal: {
-					description: 'Probe signals from methylation array.',
-					min: -1.2,
-					max: 1.2,
-					sample_id_key: 'sample_id',
-					folder: 'files/hg38/TermdbTest/methylationArrayNormalSubtracted/' // probe-level data, only for locus view as genome browser track
-					// each file is 1.gz and 1.gz.tbi, bedgraph format
-				}
+				folder: 'files/hg38/TermdbTest/methylationArrayNormalSubtracted_bins/', // binned data, not probe-level
+				positiveColor: '#a35069',
+				negativeColor: '#5051a3',
+				singleSampleGbtk: 'methylationProbeSignal'
 			}
 		},
-		assayAvailability: {
-			// use "genetic_race" as fake sources of assay availability
-			byDt: {
-				// snvindel, differentiating sample origin
-				1: {
-					byOrigin: {
-						germline: {
-							term_id: 'genetic_race',
-							label: 'Germline', // human readable label of this origin
-							yes: { value: ['European Ancestry', 'Asian Ancestry'] },
-							no: { value: ['Multi-Ancestry-Admixed', 'African Ancestry'] }
-						},
-						somatic: {
-							term_id: 'genetic_race',
-							label: 'Somatic',
-							yes: { value: ['European Ancestry', 'African Ancestry'] },
-							no: { value: ['Multi-Ancestry-Admixed', 'Asian Ancestry'] }
-						}
+		singleSampleGbtk: {
+			methylationProbeSignal: {
+				description: 'Probe signals from methylation array.',
+				min: -1.2,
+				max: 1.2,
+				sample_id_key: 'sample_id',
+				folder: 'files/hg38/TermdbTest/methylationArrayNormalSubtracted/' // probe-level data, only for locus view as genome browser track
+				// each file is 1.gz and 1.gz.tbi, bedgraph format
+			}
+		}
+	},
+	assayAvailability: {
+		// use "genetic_race" as fake sources of assay availability
+		byDt: {
+			// snvindel, differentiating sample origin
+			1: {
+				byOrigin: {
+					germline: {
+						term_id: 'genetic_race',
+						label: 'Germline', // human readable label of this origin
+						yes: { value: ['European Ancestry', 'Asian Ancestry'] },
+						no: { value: ['Multi-Ancestry-Admixed', 'African Ancestry'] }
+					},
+					somatic: {
+						term_id: 'genetic_race',
+						label: 'Somatic',
+						yes: { value: ['European Ancestry', 'African Ancestry'] },
+						no: { value: ['Multi-Ancestry-Admixed', 'Asian Ancestry'] }
 					}
-				},
-
-				// fusion
-				2: {
-					//mutations are detected from RNAseq
-					term_id: 'genetic_race',
-					yes: { value: ['European Ancestry', 'African Ancestry'] },
-					no: { value: ['Asian Ancestry', 'Multi-Ancestry-Admixed'] }
-				},
-				// cnv
-				4: {
-					// mutations are detected from Methylation
-					term_id: 'genetic_race',
-					yes: { value: ['European Ancestry', 'African Ancestry'] },
-					no: { value: ['Asian Ancestry', 'Multi-Ancestry-Admixed'] }
 				}
+			},
+
+			// fusion
+			2: {
+				//mutations are detected from RNAseq
+				term_id: 'genetic_race',
+				yes: { value: ['European Ancestry', 'African Ancestry'] },
+				no: { value: ['Asian Ancestry', 'Multi-Ancestry-Admixed'] }
+			},
+			// cnv
+			4: {
+				// mutations are detected from Methylation
+				term_id: 'genetic_race',
+				yes: { value: ['European Ancestry', 'African Ancestry'] },
+				no: { value: ['Asian Ancestry', 'Multi-Ancestry-Admixed'] }
 			}
 		}
 	}
