@@ -1,5 +1,6 @@
 import { TermWrapper, BaseQ } from '../termdb'
 import { TermSettingInstance } from '../termsetting'
+import { doc } from '../../doc'
 
 /*
 --------EXPORTED--------
@@ -10,6 +11,10 @@ CategoricaTermSettingInstance
 */
 
 /**
+ * A categorical term q object
+ *
+ * test:CategoricalQ:
+ *
  * @category TW
  */
 export type CategoricalQ = BaseQ & {
@@ -17,7 +22,17 @@ export type CategoricalQ = BaseQ & {
 	//Not sure if separate categorical q is needed??
 }
 
+doc({
+	type: 'CategoricalQ',
+	test: t => {
+		if (!t.mode.includes('groupsetting')) throw `CategoricalQ must have a '*-groupsetting' mode`
+		return true
+	}
+})
+
 /**
+ * A categorical term wrapper object
+ *
  * @group Termdb
  * @category TW
  */
