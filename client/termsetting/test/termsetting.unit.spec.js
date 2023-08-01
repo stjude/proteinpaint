@@ -15,12 +15,12 @@ Tests:
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termsetting -***-')
 	test.end()
 })
 
-tape('fillTermWrapper - continuous term', async function(test) {
+tape('fillTermWrapper - continuous term', async function (test) {
 	test.timeoutAfter(100)
 	test.plan(11)
 
@@ -67,7 +67,7 @@ tape('fillTermWrapper - continuous term', async function(test) {
 
 	/////////// defaultQ.preferredBins='median'
 	defaultQ = {
-		'numeric.toggle': {
+		numeric: {
 			mode: 'discrete',
 			type: 'custom-bin',
 			preferredBins: 'median'
@@ -102,7 +102,7 @@ tape('fillTermWrapper - continuous term', async function(test) {
 	test.deepEqual(tw4.q, expectedQ, 'should overwrite tw.q with defaultQ when defaultQ.preferredBins=median')
 
 	defaultQ = {
-		'numeric.toggle': {
+		numeric: {
 			mode: 'discrete',
 			preferredBins: 'median'
 		}
@@ -119,7 +119,7 @@ tape('fillTermWrapper - continuous term', async function(test) {
 	/////////// defaultQ.preferredBins='less'
 	const tw6 = structuredClone(await vocabApi.getterm('d'))
 	defaultQ = {
-		'numeric.toggle': {
+		numeric: {
 			test: 'apple',
 			preferredBins: 'less'
 		}
@@ -139,7 +139,7 @@ tape('fillTermWrapper - continuous term', async function(test) {
 
 	/////////// defaultQ, undefined .preferredBins
 	const tw7 = structuredClone(await vocabApi.getterm('d'))
-	defaultQ = { 'numeric.toggle': { mode: 'continuous' } }
+	defaultQ = { numeric: { mode: 'continuous' } }
 	await fillTermWrapper(tw7, vocabApi, defaultQ)
 	test.deepEqual(
 		tw7.q,

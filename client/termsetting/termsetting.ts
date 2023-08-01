@@ -859,10 +859,8 @@ export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defau
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	if (!tw.$id) tw.$id = get$id()
 	const t = tw.term.type
-	//const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : (t as string)
 	const type = t == 'float' || t == 'integer' ? 'numeric' : (t as string)
 	let _
-	// if (type == 'numeric.toggle') _ = await import(`./numeric.toggle.ts`)
 	if (tw.term.type) {
 		try {
 			_ = await import(`./handlers/${type}.ts`)
