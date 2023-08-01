@@ -32,7 +32,7 @@
     "sethooks": "./utils/hooks/init.sh",
     "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
     "clean": "git add -A; git stash --staged",
-    "doc": "cd server/shared/types && typedoc"
+    "doc": "cd server/shared/types && typedoc --json docs.json --watch"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",

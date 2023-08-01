@@ -1,4 +1,7 @@
 {
 	"entryPoints": ["./index.ts"],
-	"out": "../../../public/docs"
+	"out": "../../../public/docs",
+	"groupOrder": ["Termdb", "Termdb - TW", "TW", "*"],
+	"categoryOrder": ["Termdb", "Termdb - TW", "TW", "*"],
+	"categorizeByGroup": true
 }
