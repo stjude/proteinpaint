@@ -119,7 +119,11 @@ export async function wilcoxon(term, result) {
 	//unlink(tmpfile, () => {})
 	//const wilcoxOutput = JSON.parse(out)
 	for (const test of wilcoxOutput) {
-		result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue.toPrecision(4) }])
+		if (test.pvalue == null || test.pvalue == 'null') {
+			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
+		} else {
+			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue.toPrecision(4) }])
+		}
 	}
 }
 
