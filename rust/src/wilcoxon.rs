@@ -346,7 +346,7 @@ fn wilcoxon_rank_sum_test(
             * ((group1.len() + group2.len() + 1) as f64
                 - nties_sum
                     / (((group1.len() + group2.len()) as f64)
-                        * ((group1.len() + group2.len() + 1) as f64))))
+                        * ((group1.len() + group2.len() - 1) as f64))))
             .sqrt();
         //println!("sigma:{}", sigma);
         let mut correction: f64 = 0.0;
