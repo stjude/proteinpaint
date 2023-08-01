@@ -852,7 +852,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 		const snpid = test.group1_id.replace('_hasEffAllele', '')
 		const hasEffAlleleValues = test.group1_values
 		const noEffAlleleValues = test.group2_values
-		const pvalue = test.pvalue
+		const pvalue = test.pvalue.toPrecision(4)
 		const { minv, maxv } = snpid2scale.get(snpid)
 
 		const box1 = app.boxplot_getvalue(

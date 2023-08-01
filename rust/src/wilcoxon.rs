@@ -125,7 +125,7 @@ fn main() {
                             .unwrap();
                             output_string += &",".to_string();
                         } else {
-                            let mut pvalue: f64 = wilcoxon_rank_sum_test(
+                            let pvalue: f64 = wilcoxon_rank_sum_test(
                                 vec1.clone(),
                                 vec2.clone(),
                                 THRESHOLD,
@@ -133,9 +133,9 @@ fn main() {
                                 true,
                             );
 
-                            if pvalue > 0.01 {
-                                pvalue = format!("{:.4}", pvalue).parse().unwrap();
-                            }
+                            //if pvalue > 0.01 {
+                            //    pvalue = format!("{:.4}", pvalue).parse().unwrap();
+                            //}
                             //println!("pvalue:{}", pvalue);
                             output_string += &serde_json::to_string(&OutputJson {
                                 group1_id: json_string[i]["group1_id"]
