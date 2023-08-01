@@ -7,6 +7,9 @@ ConditionalTW
 
 */
 
+/**
+ * @category TW
+ */
 export type ConditionQ = BaseQ & {
 	// termType: 'conditional'
 	bar_by_children?: boolean
@@ -18,6 +21,10 @@ export type ConditionQ = BaseQ & {
 	value_by_computable_grade?: boolean
 }
 
+/**
+ * @group Termdb
+ * @category TW
+ */
 export type ConditionTW = TermWrapper & {
 	q: ConditionQ
 }
