@@ -1,8 +1,8 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
-import { SampleLstSettingInstance, PillData, SampleLstTW } from '#shared/types'
+import { SampleLstTermSettingInstance, PillData, SampleLstTW } from '#shared/types'
 
-export function getHandler(self: SampleLstSettingInstance) {
+export function getHandler(self: SampleLstTermSettingInstance) {
 	return {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()

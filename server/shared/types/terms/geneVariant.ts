@@ -18,7 +18,7 @@ export type GeneVariantQ = BaseQ & {
 	exclude: any //an array maybe?
 }
 
-export type GeneVariantTermWrapper = TermWrapper & {
+export type GeneVariantTW = TermWrapper & {
 	q: GeneVariantQ
 	term: GeneVariantTerm
 }

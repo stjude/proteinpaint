@@ -34,7 +34,7 @@ export type SampleLstTW = TermWrapper & {
 }
 
 //temporary, will eventually change to SampleLstHandler
-export type SampleLstSettingInstance = TermSettingInstance & {
+export type SampleLstTermSettingInstance = TermSettingInstance & {
 	q: SampleLstQ
 	term: SampleLstTerm
 }
