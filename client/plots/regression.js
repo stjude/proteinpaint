@@ -163,7 +163,7 @@ export async function getPlotConfig(opts, app) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
 			// for numeric variables, set default mode to continuous
-			const defaultQ = !t.q?.mode ? { 'numeric.toggle': { mode: 'continuous' } } : undefined
+			const defaultQ = !t.q?.mode ? { numeric: { mode: 'continuous' } } : undefined
 			await fillTermWrapper(t, app.vocabApi, defaultQ)
 		}
 		config.independent = opts.independent
@@ -179,8 +179,7 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 	const defaultQ = {}
 
 	// numeric term
-	defaultQ['numeric.toggle'] =
-		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
+	defaultQ['numeric'] = regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
 
 	// condition term
 	if (useCase == 'outcome') {

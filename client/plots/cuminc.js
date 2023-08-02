@@ -265,7 +265,7 @@ class MassCumInc {
 
 							defaultQ4fillTW: {
 								// use of "numeric.toggle" is a bit confusing; numeric.discrete.js feels more appropriate
-								'numeric.toggle': {
+								numeric: {
 									isAtomic: true, // if this is needed?
 									mode: 'discrete',
 									type: 'custom-bin',
@@ -279,7 +279,7 @@ class MassCumInc {
 							title: 'Divide by',
 							type: 'divideBy',
 							defaultQ4fillTW: {
-								'numeric.toggle': {
+								numeric: {
 									isAtomic: true, // if this is needed?
 									mode: 'discrete',
 									type: 'custom-bin',
