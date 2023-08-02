@@ -1258,7 +1258,8 @@ function getPj(self) {
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
 			scaledX(row, context) {
-				return context.context.context.context.parent.xScale(context.self.x)
+				const xScale = context.context.context.context.parent.xScale.clamp(true)
+				return xScale(context.self.x)
 			},
 			yTickValues(row, context) {
 				const s = self.settings
