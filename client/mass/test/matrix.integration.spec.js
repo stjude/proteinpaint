@@ -936,6 +936,60 @@ tape('sort sample groups by Hits', function (test) {
 	}
 })
 
+tape('sort sample groups by Hits 2', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortSampleGrpsBy: 'hits'
+						}
+					},
+					divideBy: {
+						id: 'agedx'
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		const matrixGroupLabels = matrix.Inner.dom.sampleLabelsPG.selectAll(
+			'.sjpp-matrix-series-group-label-g .sjpp-matrix-label'
+		)._groups[0]
+		test.true(matrixGroupLabels[0].textContent.startsWith('10 to <15'), `should be the expected group name`)
+		test.true(matrixGroupLabels[4].textContent.startsWith('≥20'), `should be the expected group name`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('Display Sample Counts for Gene: Absolute', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
