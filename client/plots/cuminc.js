@@ -378,6 +378,7 @@ class MassCumInc {
 			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			if (data.error) throw data.error
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data)
 			this.processData(data)
@@ -421,17 +422,35 @@ class MassCumInc {
 	}
 
 	processData(data) {
-		// process case data
-		this.uniqueSeriesIds = new Set()
-		this.currData = []
-		const estKeys = ['cuminc', 'low', 'high']
+		// restructure case data
+		const casedata = []
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
-				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
+				obj[k] = d[i]
 			})
-			this.currData.push(obj)
-			this.uniqueSeriesIds.add(obj.seriesId)
+			casedata.push(obj)
+		}
+
+		// process case data
+		const nriskCutoff = 20 // at-risk count cutoff
+		this.currData = []
+		this.uniqueSeriesIds = new Set()
+		for (const d of casedata) {
+			// convert cuminc estimates to percentages
+			d.cuminc = 100 * d.cuminc
+			d.low = 100 * d.low
+			d.high = 100 * d.high
+			if (d.nrisk < nriskCutoff) {
+				// keep the first timepoint with a low at-risk count and
+				// drop the remaining timepoints
+				// this will allow the curve to extend horizontally up to
+				// this timepoint
+				this.currData.push(d)
+				break
+			}
+			this.currData.push(d)
+			this.uniqueSeriesIds.add(d.seriesId)
 		}
 
 		this.refs = data.refs
@@ -972,25 +991,6 @@ function setRenderers(self) {
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
 		// x-axis ticks
-		if (s.xTickValues?.length) {
-			// custom x-tick values
-			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= self.pj.tree.xMin && v <= self.pj.tree.xMax))
-		} else {
-			// compute x-tick values
-			// compute width between ticks for a maximum of 5 ticks
-			const tickWidth = (self.pj.tree.xMax - self.pj.tree.xMin) / 5
-			// round tick width to the nearest 5
-			const log = Math.floor(Math.log10(tickWidth))
-			const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
-			// compute tick values using tick width
-			chart.xTickValues = [0]
-			let tick = self.pj.tree.xMin
-			while (tick < self.pj.tree.xMax) {
-				chart.xTickValues.push(tick)
-				tick = tick + tickWidth_rnd
-			}
-		}
-
 		const xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 
 		// without this pixel offset, the axes and data are slightly misaligned
@@ -1166,6 +1166,7 @@ function getPj(self) {
 					chartTitle: '=chartTitle()',
 					xMin: '>$time',
 					xMax: '<$time',
+					'__:xTickValues': '=xTickValues()',
 					'__:xScale': '=xScale()',
 					'__:yScale': '=yScale()',
 					yMin: '>=yMin()',
@@ -1233,15 +1234,39 @@ function getPj(self) {
 			yMax(row) {
 				return row.cuminc
 			},
+			xTickValues(row, context) {
+				const s = self.settings
+				if (s.xTickValues?.length) {
+					// custom x-tick values
+					return s.xTickValues
+				} else {
+					// compute x-tick values
+					const xTickValues = [0]
+					const xMax = s.scale == 'byChart' ? context.self.xMax : context.root.xMax
+					const xMin = s.scale == 'byChart' ? context.self.xMin : context.root.xMin
+					// compute width between ticks for a maximum of 5 ticks
+					const tickWidth = (xMax - xMin) / 5
+					// round tick width to the nearest 5
+					const log = Math.floor(Math.log10(tickWidth))
+					const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
+					// compute tick values using tick width
+					let tick = xMin
+					while (tick < xMax + tickWidth_rnd) {
+						// using xMax + tickWidth_rnd to ensure that
+						// the last tick will be greater than the max
+						// value of the chart
+						xTickValues.push(tick)
+						tick = tick + tickWidth_rnd
+					}
+					return xTickValues
+				}
+			},
 			xScale(row, context) {
 				const s = self.settings
-				const xMax = s.scale == 'byChart' ? context.self.xMax : context.root.xMax
 				return (
 					scaleLinear()
-						// force min x=0, instead of using min time in server data
-						// add 2 years to x max value to ensure a horizontally flat ending
-						// and avoid the potential for a vertical line ending
-						.domain([0, xMax + 2])
+						// scale axis according to tick values
+						.domain([Math.min(...context.self.xTickValues), Math.max(...context.self.xTickValues)])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
 			},
@@ -1254,9 +1279,10 @@ function getPj(self) {
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},
 			yScale(row, context) {
+				// TODO: use same approach as used in xScale
 				const s = self.settings
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
-				const domain = [Math.min(100, 1.1 * yMax), 0]
+				const domain = [Math.min(100, 1.1 * yMax), 0] //TODO: verify this
 				return scaleLinear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
