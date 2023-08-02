@@ -18,7 +18,7 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 
 	if (s.sortSamplesBy == 'name') {
 		//no additional logic required
-		return (a, b) => (a.sample < b.sample ? -1 : a.sample > b.sample ? 1 : 0)
+		return sortSamplesByName
 	}
 
 	const activeOption = s.sortOptions[s.sortSamplesBy]
@@ -121,11 +121,16 @@ function validateSettings(s) {
 }
 
 function sortSamplesByName(a, b) {
-	const k = a.sample
-	const l = b.sample
-	if (k < l) return -1
-	if (k > l) return 1
-	return 0
+	if (a.sampleName && b.sampleName) {
+		return a.sampleName < b.sampleName ? -1 : a.sampleName > b.sampleName ? 1 : 0
+	}
+	if (a._SAMPLENAME_ && b._SAMPLENAME_) {
+		return a._SAMPLENAME_ < b._SAMPLENAME_ ? -1 : a._SAMPLENAME_ > b._SAMPLENAME_ ? 1 : 0
+	}
+	if (!a.sample && !b.sample && a.row.sample) {
+		return a.row.sample < b.row.sample ? -1 : a.row.sample > b.row.sample ? 1 : 0
+	}
+	return a.sample < b.sample ? -1 : a.sample > b.sample ? 1 : 0
 }
 
 function getSortSamplesByHits(st, self, rows, s) {
