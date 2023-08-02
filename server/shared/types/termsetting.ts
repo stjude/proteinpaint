@@ -29,16 +29,6 @@ export type Dom = {
 	btnDiv?: Selection
 }
 
-export type Api = {
-	main: (d: PillData) => void
-	runCallback: () => void
-	showTree: (holder: Selection, event: MouseEvent) => boolean
-	showMenu: (event: MouseEvent, clickedElem: Selection | null, menuHolder: Selection | null) => void
-	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
-	hasError: () => boolean
-	validateQ: (d: Q) => void
-}
-
 export type NoTermPromptOptsEntry = {
 	isDictionary?: boolean
 	termtype?: string
