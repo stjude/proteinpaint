@@ -11,7 +11,6 @@ import {
 	DetermineQ,
 	TermWrapper,
 	VocabApi,
-	Api,
 	PillData,
 	Dom,
 	UseCase,
@@ -52,6 +51,16 @@ const defaultOpts: { menuOptions: string; menuLayout: string } = {
 }
 
 type HandlerByType = { [index: string]: Handler }
+
+type Api = {
+	main: (d: PillData) => void
+	runCallback: () => void
+	showTree: (holder: Selection, event: MouseEvent) => boolean
+	showMenu: (event: MouseEvent, clickedElem: Selection | null, menuHolder: Selection | null) => void
+	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
+	hasError: () => boolean
+	validateQ: (d: Q) => void
+}
 
 class TermSetting {
 	opts: TermSettingOpts
@@ -272,18 +281,9 @@ class TermSetting {
 			return
 		}
 		const type = termtype == 'integer' || termtype == 'float' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
-		// const numEditVers = this.opts.numericEditMenuVersion as string[]
-		// const subtype: string = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
-		// const typeSubtype = `${type}${subtype}`
 		if (!this.handlerByType[type]) {
 			try {
-				let _
-				// // @rollup/plugin-dynamic-import-vars cannot use a import variable name in the same dir
-				// if (typeSubtype == 'numeric.toggle') {
-				// 	_ = await import(`./numeric.toggle.ts`)
-				// } else {
-				_ = await import(`./handlers/${type}.ts`)
-				// }
+				const _ = await import(`./handlers/${type}.ts`)
 				this.handlerByType[type] = await _.getHandler(this)
 			} catch (e) {
 				throw `error with handler='./handlers/${type}.ts': ${e}`
