@@ -314,7 +314,15 @@ class MassCumInc {
 							type: 'text',
 							chartType: 'cuminc',
 							settingsKey: 'xTickValues',
-							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
+							placeholder: 'tick,tick,...',
+							processInput: value => (value ? value.split(',').map(Number) : [])
+						},
+						{
+							label: 'Y-axis ticks',
+							type: 'text',
+							chartType: 'cuminc',
+							settingsKey: 'yTickValues',
+							placeholder: 'tick,tick,...',
 							processInput: value => (value ? value.split(',').map(Number) : [])
 						},
 						{
@@ -990,8 +998,8 @@ function setRenderers(self) {
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
-		// x-axis ticks
 		const xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
+		const yTicks = axisLeft(chart.yScale).tickValues(chart.yTickValues)
 
 		// without this pixel offset, the axes and data are slightly misaligned
 		// this could be because the axes have a 0.5 offset in their path,
@@ -1005,13 +1013,7 @@ function setRenderers(self) {
 			)
 			.call(xTicks)
 
-		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(
-			axisLeft(
-				scaleLinear()
-					.domain(chart.yScale.domain())
-					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
-			).ticks(5)
-		)
+		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(yTicks)
 
 		xTitle.select('text, title').remove()
 		const xText = xTitle
@@ -1112,7 +1114,6 @@ const defaultSettings = JSON.stringify({
 		minSampleSize: 1,
 		atRiskVisible: true,
 		atRiskLabelOffset: -10,
-		xTickValues: [], // if undefined or empty, will be ignored
 		seriesTipDecimals: 0,
 		ciVisible: true,
 		radius: 5,
@@ -1167,6 +1168,7 @@ function getPj(self) {
 					xMin: '>$time',
 					xMax: '<$time',
 					'__:xTickValues': '=xTickValues()',
+					'__:yTickValues': '=yTickValues()',
 					'__:xScale': '=xScale()',
 					'__:yScale': '=yScale()',
 					yMin: '>=yMin()',
@@ -1241,51 +1243,48 @@ function getPj(self) {
 					return s.xTickValues
 				} else {
 					// compute x-tick values
-					const xTickValues = [0]
-					const xMax = s.scale == 'byChart' ? context.self.xMax : context.root.xMax
 					const xMin = s.scale == 'byChart' ? context.self.xMin : context.root.xMin
-					// compute width between ticks for a maximum of 5 ticks
-					const tickWidth = (xMax - xMin) / 5
-					// round tick width to the nearest 5
-					const log = Math.floor(Math.log10(tickWidth))
-					const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
-					// compute tick values using tick width
-					let tick = xMin
-					while (tick < xMax + tickWidth_rnd) {
-						// using xMax + tickWidth_rnd to ensure that
-						// the last tick will be greater than the max
-						// value of the chart
-						xTickValues.push(tick)
-						tick = tick + tickWidth_rnd
-					}
-					return xTickValues
+					const xMax = s.scale == 'byChart' ? context.self.xMax : context.root.xMax
+					return computeTickValues(xMin, xMax)
 				}
 			},
 			xScale(row, context) {
+				// scale axis according to tick values
 				const s = self.settings
-				return (
-					scaleLinear()
-						// scale axis according to tick values
-						.domain([Math.min(...context.self.xTickValues), Math.max(...context.self.xTickValues)])
-						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
-				)
+				const min = Math.min(...context.self.xTickValues)
+				const max = Math.max(...context.self.xTickValues)
+				return scaleLinear()
+					.domain([min, max])
+					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
 			scaledX(row, context) {
 				return context.context.context.context.parent.xScale(context.self.x)
+			},
+			yTickValues(row, context) {
+				const s = self.settings
+				if (s.yTickValues?.length) {
+					// custom y-tick values
+					return s.yTickValues
+				} else {
+					// compute y-tick values
+					const yMin = s.scale == 'byChart' ? context.self.yMin : context.root.yMin
+					const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
+					return computeTickValues(yMin, yMax)
+				}
+			},
+			yScale(row, context) {
+				// scale axis according to tick values
+				const s = self.settings
+				const min = Math.min(...context.self.yTickValues)
+				const max = Math.min(100, Math.max(...context.self.yTickValues))
+				return scaleLinear()
+					.domain([max, min])
+					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
 			scaledY(row, context) {
 				const yScale = context.context.context.context.parent.yScale.clamp(true)
 				const s = context.self
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
-			},
-			yScale(row, context) {
-				// TODO: use same approach as used in xScale
-				const s = self.settings
-				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
-				const domain = [Math.min(100, 1.1 * yMax), 0] //TODO: verify this
-				return scaleLinear()
-					.domain(domain)
-					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
 			sortSerieses(result) {
 				if (!self.refs.bins) return
@@ -1296,4 +1295,24 @@ function getPj(self) {
 	})
 
 	return pj
+}
+
+function computeTickValues(min, max) {
+	// compute width between ticks for a maximum of 5 ticks
+	const tickWidth = (max - min) / 5
+	// round tick width to the nearest 5
+	const log = Math.floor(Math.log10(tickWidth))
+	const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
+	// compute tick values using tick width
+	const tickValues = []
+	let tick = min
+	while (tick < max + tickWidth_rnd) {
+		// using max + tickWidth_rnd to ensure that
+		// the last tick will be greater than the max
+		// value of the data
+		tickValues.push(tick)
+		tick = tick + tickWidth_rnd
+	}
+	if (!tickValues.includes(0)) tickValues.unshift(0)
+	return tickValues
 }

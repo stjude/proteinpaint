@@ -290,6 +290,7 @@ function setTextInput(opts) {
 	self.dom.input = self.dom.inputTd
 		.append('input')
 		.attr('type', 'text')
+		.attr('placeholder', opts.placeholder)
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			const value = self.dom.input.property('value')
