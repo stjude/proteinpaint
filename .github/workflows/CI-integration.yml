@@ -58,6 +58,11 @@ jobs:
           cache: 'npm'
           node-version: '16'
 
+      - name: Set up Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
       - name: Install packages
         run: |
           npm ci
