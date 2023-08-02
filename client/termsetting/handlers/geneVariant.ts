@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { mclass, dt2label } from '#shared/common'
-import { PillData, VocabApi, GeneVariantTermSettingInstance, GeneVariantTermWrapper } from '#shared/types'
+import { PillData, VocabApi, GeneVariantTermSettingInstance, GeneVariantTW } from '#shared/types'
 
 /* 
 instance attributes
@@ -36,7 +36,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 const idPrefix = `_geneVariant_AUTOID_${+new Date()}_`
 let id = 0
 
-export function fillTW(tw: GeneVariantTermWrapper, vocabApi?: VocabApi) {
+export function fillTW(tw: GeneVariantTW, vocabApi?: VocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
 	if (!tw.term.name && tw.term.isoform) tw.term.name = tw.term.isoform as string
 
