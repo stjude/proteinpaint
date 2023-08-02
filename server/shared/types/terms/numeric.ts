@@ -12,9 +12,12 @@ NumericTermSettingInstance
 
 */
 
+/**
+ * .q{} for numeric terms
+ */
 export type NumericQ = BaseQ & {
-	// termType: 'numeric' | 'float' | 'integer'
-	preferredBins?: string // 'median' | 'less'
+	// termType: 'float' | 'integer' -- converts to 'numeric'
+	preferredBins?: 'median' | 'less' | 'default'
 	//regular-sized bins
 	bin_size: number
 	startinclusive?: boolean
