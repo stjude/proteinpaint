@@ -18,6 +18,7 @@ server/shared/types/docs.json
 server/shared/types/*.js
 !server/shared/types/typedoc.js
 server/shared/types/terms/*.js
+server/test/testers/*
 
 **/public/bin/*
 public/tmp/*
@@ -57,6 +58,7 @@ Cargo.lock
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
 test/copies/*
+test/testers/*
 client/test/internals.js
 client/test/wpCompileTime.js
 
