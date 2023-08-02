@@ -842,16 +842,22 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 		})
 		snpid2scale.set(snpid, { minv, maxv })
 	}
-	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
-	const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-	fs.unlink(tmpfile, () => {})
-	const wilcoxOutput = JSON.parse(out)
+	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+	//const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	//await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	//const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	//fs.unlink(tmpfile, () => {})
+	//const wilcoxOutput = JSON.parse(out)
 	for (const test of wilcoxOutput) {
 		const snpid = test.group1_id.replace('_hasEffAllele', '')
 		const hasEffAlleleValues = test.group1_values
 		const noEffAlleleValues = test.group2_values
-		const pvalue = test.pvalue
+		let pvalue
+		if (test.pvalue == null || test.pvalue == 'null') {
+			pvalue = 'NA'
+		} else {
+			pvalue = test.pvalue.toPrecision(4)
+		}
 		const { minv, maxv } = snpid2scale.get(snpid)
 
 		const box1 = app.boxplot_getvalue(
