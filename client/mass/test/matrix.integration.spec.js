@@ -231,3 +231,966 @@ tape('long column group labels', function (test) {
 		test.end()
 	}
 })
+
+tape('divide by continuous terms', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(3)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					divideBy: {
+						id: 'agedx'
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{ id: 'sex', term: termjson['sex'] },
+								{ id: 'diaggrp', term: termjson['diaggrp'] },
+								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			180,
+			`should render the expected number of cell rects`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			5,
+			`should render the expected number of cluster rects`
+		)
+
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('geneVariant term', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } }]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			240,
+			`should render the expected number of cell rects`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('geneVariant terms and dictionary terms', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(3)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } },
+								{ id: 'agedx', term: termjson['agedx'] },
+								{ id: 'diaggrp', term: termjson['diaggrp'] },
+								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			6,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			900,
+			`should render the expected number of cell rects`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('geneVariant terms with divide by dictionary term', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(3)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					divideBy: {
+						id: 'sex'
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			720,
+			`should render the expected number of cell rects`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			2,
+			`should render the expected number of cluster rects`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('geneVariant terms and dictionary terms divide by dictionary term', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(3)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					divideBy: {
+						id: 'sex'
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } },
+								{ id: 'agedx', term: termjson['agedx'] },
+								{ id: 'diaggrp', term: termjson['diaggrp'] },
+								{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			6,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			900,
+			`should render the expected number of cell rects`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			2,
+			`should render the expected number of cluster rects`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('sort samples by sample name', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(4)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortSamplesBy: 'name'
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g').size(),
+			60,
+			`should render the expected number of sample names`
+		)
+		//console.dir(matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0][0].textContent)
+		test.equal(
+			matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0][0].textContent,
+			'2646',
+			`should be the expected sample name`
+		)
+		test.equal(
+			matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0][9].textContent,
+			'2772',
+			`should be the expected sample name`
+		)
+		test.equal(
+			matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0][59].textContent,
+			'3472',
+			`should be the expected sample name`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('sort samples by CNV+SSM > SSM-only > CNV-only', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(4)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortSamplesBy: 'a'
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g').size(),
+			60,
+			`should render the expected number of sample names`
+		)
+		const rects = matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0]
+		const index_3346 = Array.from(rects).find(rect => rect.textContent == '3346').__data__.index
+		test.true(index_3346 < 7, `should be in the expected order`)
+		const index_2660 = Array.from(rects).find(rect => rect.textContent == '2660').__data__.index
+		test.true(index_2660 > 9, `should be in the expected order`)
+		const index_3472 = Array.from(rects).find(rect => rect.textContent == '3472').__data__.index
+		test.true(index_3472 > 9, `should be in the expected order`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('sort samples by CNV+SSM > SSM-only', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(4)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortSamplesBy: 'b'
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g').size(),
+			60,
+			`should render the expected number of sample names`
+		)
+		const rects = matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0]
+		const index_3346 = Array.from(rects).find(rect => rect.textContent == '3346').__data__.index
+		test.true(index_3346 < 7, `should be in the expected order`)
+		const index_2660 = Array.from(rects).find(rect => rect.textContent == '2660').__data__.index
+		test.true(index_2660 > 9, `should be in the expected order`)
+		const index_3472 = Array.from(rects).find(rect => rect.textContent == '3472').__data__.index
+		test.true(index_3472 > 9, `should be in the expected order`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('set max number of samples', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(1)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200,
+							maxSample: 10
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{
+									id: 'sex'
+									//q: { mode: 'values' } // or 'groupsetting'
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
+			10,
+			`should render the expected number of cell rects`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('sort sample groups by Group Name', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortSampleGrpsBy: 'name'
+						}
+					},
+					divideBy: {
+						id: 'genetic_race'
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		const matrixGroupLabels = matrix.Inner.dom.sampleLabelsPG.selectAll(
+			'.sjpp-matrix-series-group-label-g .sjpp-matrix-label'
+		)._groups[0]
+		test.true(matrixGroupLabels[0].textContent.startsWith('African Ancestry'), `should be the expected group name`)
+		test.true(matrixGroupLabels[2].textContent.startsWith('European Ancestry'), `should be the expected group name`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('sort sample groups by Sample Count', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortSampleGrpsBy: 'sampleCount'
+						}
+					},
+					divideBy: {
+						id: 'genetic_race'
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		const matrixGroupLabels = matrix.Inner.dom.sampleLabelsPG.selectAll(
+			'.sjpp-matrix-series-group-label-g .sjpp-matrix-label'
+		)._groups[0]
+		test.true(matrixGroupLabels[0].textContent.startsWith('European Ancestry'), `should be the expected group name`)
+		test.true(matrixGroupLabels[2].textContent.startsWith('Asian Ancestry'), `should be the expected group name`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('sort sample groups by Hits', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortSampleGrpsBy: 'hits'
+						}
+					},
+					divideBy: {
+						id: 'Hearing loss'
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		const matrixGroupLabels = matrix.Inner.dom.sampleLabelsPG.selectAll(
+			'.sjpp-matrix-series-group-label-g .sjpp-matrix-label'
+		)._groups[0]
+		test.true(matrixGroupLabels[0].textContent.startsWith('3: Severe'), `should be the expected group name`)
+		test.true(matrixGroupLabels[4].textContent.startsWith('1: Mild'), `should be the expected group name`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Display Sample Counts for Gene: Absolute', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							samplecount4gene: 'abs'
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')._groups[0]
+		const pattern = /\(\d+\)/
+		test.true(pattern.test(termLabels[0].textContent), `should display sample counts for gene by absolute number`)
+		test.true(
+			pattern.test(termLabels[termLabels.length - 1].textContent),
+			`should display sample counts for gene by absolute number`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Display Sample Counts for Gene: Percent', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							samplecount4gene: 'pct'
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')._groups[0]
+		const pattern = /\(\d+(\.\d+)? ?%\)/
+		test.true(pattern.test(termLabels[0].textContent), `should display sample counts for gene by percentage`)
+		test.true(
+			pattern.test(termLabels[termLabels.length - 1].textContent),
+			`should display sample counts for gene by percentage`
+		)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Display Sample Counts for Gene: None', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							samplecount4gene: ''
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')._groups[0]
+		const pattern = /\(\d+(\.\d+)?%\)|\(\d+\)/g
+		test.true(!pattern.test(termLabels[0].textContent), `should not display sample counts for gene`)
+		test.true(!pattern.test(termLabels[termLabels.length - 1].textContent), `should not display sample counts for gene`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Sort Genes By Sample Count', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortTermsBy: 'sampleCount'
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')._groups[0]
+		test.true(termLabels[0].textContent.startsWith('AKT1'), `should sort genes by sample count`)
+		test.true(termLabels[2].textContent.startsWith('KRAS'), `should sort genes by sample count`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Sort Genes By Input Data Order', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortTermsBy: 'asListed'
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')._groups[0]
+		test.true(termLabels[0].textContent.startsWith('TP53'), `should sort genes by sample count`)
+		test.true(termLabels[2].textContent.startsWith('AKT1'), `should sort genes by sample count`)
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
