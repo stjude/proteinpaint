@@ -15,15 +15,7 @@ This wilcoxon test implementation aims to copy the methodology used in R's wilco
 
 # Usage: cd .. && cargo build --release && time echo '[{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"African Ancestry","group2_values":[11.5,5.1,21.1,4.4,-0.04]},{"group1_id":"European Ancestry","group1_values":[3.7,2.5,5.9,13.1,1,10.6,3.2,3,6.5,15.5,2.6,16.5,2.6,4,8.6,8.3,1.9,7.9,7.9,6.1,17.6,3.1,3,1.5,8.1,18.2,-1.8,3.6,6,1.9,8.9,3.2,0.3,-1,11.2,6.2,16.2,7.5,9,9.4,18.9,0.1,11.5,10.1,12.5,14.6,1.5,17.3,15.4,7.6,2.4,13.5,3.8,17],"group2_id":"Asian Ancestry","group2_values":[1.7]},{"group1_id":"African Ancestry","group1_values":[11.5,5.1,21.1,4.4,-0.04],"group2_id":"Asian Ancestry","group2_values":[]}]' | target/release/wilcoxon
 
-# Test example 1: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[22.3950723737944,33.8227081589866,45.1407992918976,28.3479649920482,18.2336819062475,4.32351183332503,11.9014307267498,48.0554144773632,14.9064014137257,11.2484716628678,42.857265946921,6.14226084970869,13.765204195166,23.7536687662359,35.0198161723092,30.1217778825667,1.55535256816074,38.5163993313909,34.6145691110287,8.42882150504738],"group2_id":"group2","group2_values":[35.3232058370486,38.4726115851663,63.7901770556346,63.6540996702388,54.1668611462228,86.2734804977663,87.4467799020931,71.2533111660741,90.7283631013706,36.3230113568716,33.9395571127534,92.234949907288,77.9833765677176,43.5002030362375,79.9727810896002,37.503333974164,39.9319424736314,33.0334767652676,47.5299863377586,80.9905858896673]}]' | target/release/wilcoxon
-
-# Test example 2: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[165.0, 166.7, 172.2, 176.9],"group2_id":"group2","group2_values":[153.1, 156.0, 158.6, 176.4]}]' | target/release/wilcoxon
-
-# Test example 3: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[1.21, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91],"group2_id":"group2","group2_values":[0.73, 0.74, 0.8, 0.83, 0.88, 0.90, 1.04, 1.15]}]' | target/release/wilcoxon
-
-# Test example 4: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/wilcoxon
-
-# Test example 5: cd .. && cargo build --release && time echo '[{"group1_id":"group1","group1_values":[117.1, 121.3, 127.8, 121.9, 117.4, 124.5, 119.5, 115.1],"group2_id":"group2","group2_values":[123.5, 125.3, 126.5, 127.9, 122.1, 125.6, 129.8, 117.2]}]' | target/release/wilcoxon
+# Several examples are present in test_examples.rs. This can be tested using the command: cd .. && cargo build --release && time cargo test
 
 # Input data is in JSON format and is read in from <in.json> file.
 # Results are written in JSON format to stdout.
@@ -54,7 +46,6 @@ This wilcoxon test implementation aims to copy the methodology used in R's wilco
 use json;
 use r_stats;
 use serde::{Deserialize, Serialize};
-use statrs::distribution::{ContinuousCDF, Normal};
 use std::io;
 
 mod test_examples; // Contains examples to test the wilcoxon rank sum test
@@ -371,19 +362,20 @@ fn wilcoxon_rank_sum_test(
         }
         z = (z - correction) / sigma;
         //println!("z:{}", z);
-        let n = Normal::new(0.0, 1.0).unwrap();
         if alternative == 'g' {
             // Alternative "greater"
             //println!("greater:{}", n.cdf(weight_y));
-            1.0 - n.cdf(z) // Applying continuity coorection
+            //1.0 - n.cdf(z) // Applying continuity correction
+            r_stats::normal_cdf(z, 0.0, 1.0, false, false)
         } else if alternative == 'l' {
             // Alternative "lesser"
             //println!("lesser:{}", n.cdf(weight_x));
-            n.cdf(z) // Applying continuity coorection
+            //n.cdf(z) // Applying continuity coorection
+            r_stats::normal_cdf(z, 0.0, 1.0, true, false)
         } else {
             // Alternative "two-sided"
-            let p_g = 1.0 - n.cdf(z); // Applying continuity coorection
-            let p_l = n.cdf(z); // Applying continuity coorection
+            let p_g = r_stats::normal_cdf(z, 0.0, 1.0, false, false); // Applying continuity correction
+            let p_l = r_stats::normal_cdf(z, 0.0, 1.0, true, false); // Applying continuity correction
             let mut p_value;
             if p_g < p_l {
                 p_value = 2.0 * p_g;
