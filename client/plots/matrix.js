@@ -344,7 +344,8 @@ class Matrix {
 						legendGroups: {},
 						isExcluded: exclude.includes(key)
 					}
-					if (ref.bins) grp.order = ref.bins.findIndex(bin => bin.name == key)
+					if (ref.bins && s.sortSampleGrpsBy == 'name') grp.order = ref.bins.findIndex(bin => bin.name == key)
+					else delete grp.order
 					sampleGroups.set(key, grp)
 				}
 				sampleGroups.get(key).lst.push(row)
@@ -375,8 +376,8 @@ class Matrix {
 		// do not include samples that are not in the truncated allowedSamples
 		const dataFilter = d => allowedSamples.includes(d)
 		// these hits counter functions may be used for sortSampleGrpsBy = 'hits'
-		const hitsPerSample = (t, c) => t + (typeof c == 'object' && c.countedValues?.length ? c.countedValues?.length : 0)
-		const countHits = (total, d) => total + Object.values(d).reduce(hitsPerSample, 0)
+		const hitsPerSample = (t, c) => t + (typeof c == 'object' && c.countedValues?.length ? 1 : 0)
+		const countHits = (total, d) => total + (Object.values(d).reduce(hitsPerSample, 0) ? 1 : 0)
 		// this second sorter will be applied within each group of samples
 		const grpLstSampleSorter = getSampleSorter(this, s, data.lst)
 		for (const grp of sampleGrpsArr) {
@@ -988,7 +989,7 @@ class Matrix {
 							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
 							const lg = l[legend.group]
 							if (!lg.values[legend.value]) {
-								lg.values[legend.value] = legend.entry
+								lg.values[legend.value] = structuredClone(legend.entry)
 							}
 							if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
 							lg.values[legend.value].samples.add(row.sample)

@@ -90,7 +90,7 @@ export class MatrixControls {
 						settingsKey: 'sortSampleGrpsBy',
 						options: [
 							{
-								label: 'Group Name',
+								label: 'Predefined or Group Name',
 								value: 'name',
 								title: `Sort by group name`
 							},
