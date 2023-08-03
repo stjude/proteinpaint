@@ -1226,8 +1226,8 @@ tape('Sort Genes By Input Data Order', function (test) {
 		matrix.on('postRender.test', null)
 
 		const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')._groups[0]
-		test.true(termLabels[0].textContent.startsWith('TP53'), `should sort genes by sample count`)
-		test.true(termLabels[2].textContent.startsWith('AKT1'), `should sort genes by sample count`)
+		test.true(termLabels[0].textContent.startsWith('TP53'), `should sort genes by input data order`)
+		test.true(termLabels[2].textContent.startsWith('AKT1'), `should sort genes by input data order`)
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
