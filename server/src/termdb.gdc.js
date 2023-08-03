@@ -11,7 +11,7 @@ initGDCdictionary
 	testGDCapi
 		testRestApi
 		testGraphqlApi
-	cacheAliquot2submitterMapping
+	cacheSampleIdMapping
 		fetchIdsFromGdcApi
 
 
@@ -345,8 +345,10 @@ export async function initGDCdictionary(ds) {
 	**********************************/
 	await getOpenProjects(ds)
 
+	// Important!
+	// do not await on following, as they execute logic that are optional for server function, and should not halt server launch
 	testGDCapi() // do not await
-	cacheAliquot2submitterMapping(ds) // do not await on this
+	cacheSampleIdMapping(ds) // do not await
 }
 
 function mayAddTermAttribute(t) {
@@ -672,9 +674,13 @@ async function testGraphqlApi(url) {
 }
 
 /*
-cache things
+cache gdc sample id mappings
+this is an optional step and can be skipped on dev machines
+this creates two new attributes on ds{} with getter:
+- aliquot2submitter: only used for gdc specific code
+- map2caseid: supports tdb.convertSampleId.get() which is a generic feature and can later be used for non-gdc datasets
 */
-async function cacheAliquot2submitterMapping(ds) {
+async function cacheSampleIdMapping(ds) {
 	// create new attr to map to sample submitter id; it will only map from aliquot id to this id,
 	// as this mapping is only used in mds3 tk, which shows ssm on samples but not cases
 	ds.aliquot2submitter = {
@@ -704,7 +710,10 @@ async function cacheAliquot2submitterMapping(ds) {
 	}
 
 	try {
-		if (serverconfig.features.stopGdcCacheAliquot) return console.log('GDC aliquot2submitter not cached!')
+		if (serverconfig.features.stopGdcCacheAliquot) {
+			// caching is skipped. this allows to speed up dev machine launch but should never happen on gdc server
+			return console.log('GDC aliquot2submitter not cached!')
+		}
 
 		// key: aliquot uuid
 		// value: submitter id
@@ -712,15 +721,16 @@ async function cacheAliquot2submitterMapping(ds) {
 		if (!Number.isInteger(totalCases)) throw 'gdc totalCases not integer'
 
 		const begin = new Date()
-		console.log('GDC: Start to cache aliquot IDs of', totalCases, 'cases...')
+		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
 
 		const size = 1000 // fetch 1000 ids at a time
 		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
 			await fetchIdsFromGdcApi(ds, size, i * 1000)
 		}
 
-		console.log('Done caching', ds.aliquot2submitter.cache.size, 'aliquot IDs.', new Date() - begin, 'ms')
-		console.log('Done caching', ds.map2caseid.cache.size, 'different ids to case uuid.', new Date() - begin, 'ms')
+		console.log('GDC: Done caching sample IDs', Math.ceil((new Date() - begin) / 1000), 's')
+		console.log('\t', ds.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id')
+		console.log('\t', ds.map2caseid.cache.size, 'different ids to case uuid.')
 	} catch (e) {
 		console.log('Error at caching: ' + e)
 	}
