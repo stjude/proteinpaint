@@ -178,23 +178,33 @@ export async function runCumincR(Rinput, final_data) {
 	}
 
 	// parse results
+	const nriskCutoff = 10 // at-risk count cutoff
 	for (const chartId in ci_data) {
 		// retrieve cumulative incidence estimates
 		for (const seriesId in ci_data[chartId].estimates) {
 			const series = ci_data[chartId].estimates[seriesId]
 			// fill in final_data.case[]
 			for (let i = 0; i < series.length; i++) {
-				final_data.case.push([
+				const d = [
 					chartId,
 					seriesId,
 					series[i].time,
-					series[i].est,
-					series[i].low,
-					series[i].up,
+					series[i].est * 100,
+					series[i].low * 100,
+					series[i].up * 100,
 					series[i].nrisk,
 					series[i].nevent,
 					series[i].ncensor
-				])
+				]
+				if (series[i].nrisk < nriskCutoff) {
+					// keep the first timepoint with a low at-risk count and
+					// drop the remaining timepoints
+					// this will allow the curve to extend horizontally up to
+					// this timepoint
+					final_data.case.push(d)
+					break
+				}
+				final_data.case.push(d)
 			}
 		}
 		// retrieve results of Gray's tests
