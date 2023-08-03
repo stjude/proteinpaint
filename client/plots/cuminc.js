@@ -81,11 +81,10 @@ export class Cuminc {
 		data.keys = ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high']
 		this.uniqueSeriesIds = new Set()
 		this.currData = []
-		const estKeys = ['cuminc', 'low', 'high']
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
-				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
+				obj[k] = d[i]
 			})
 			this.currData.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
@@ -430,35 +429,16 @@ class MassCumInc {
 	}
 
 	processData(data) {
-		// restructure case data
-		const casedata = []
+		// process case data
+		this.uniqueSeriesIds = new Set()
+		this.currData = []
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
 				obj[k] = d[i]
 			})
-			casedata.push(obj)
-		}
-
-		// process case data
-		const nriskCutoff = 20 // at-risk count cutoff
-		this.currData = []
-		this.uniqueSeriesIds = new Set()
-		for (const d of casedata) {
-			// convert cuminc estimates to percentages
-			d.cuminc = 100 * d.cuminc
-			d.low = 100 * d.low
-			d.high = 100 * d.high
-			if (d.nrisk < nriskCutoff) {
-				// keep the first timepoint with a low at-risk count and
-				// drop the remaining timepoints
-				// this will allow the curve to extend horizontally up to
-				// this timepoint
-				this.currData.push(d)
-				break
-			}
-			this.currData.push(d)
-			this.uniqueSeriesIds.add(d.seriesId)
+			this.currData.push(obj)
+			this.uniqueSeriesIds.add(obj.seriesId)
 		}
 
 		this.refs = data.refs
