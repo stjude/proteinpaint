@@ -1,10 +1,10 @@
-const serverconfig = require('./serverconfig')
-const fs = require('fs')
-const path = require('path')
-const child_process = require('child_process')
-const util = require('util')
+import serverconfig from './serverconfig'
+import fs from 'fs'
+import child_process from 'child_process'
+import util from 'util'
+import pkg from '../../package.json'
+
 const execPromise = util.promisify(child_process.exec)
-const pkg = require('../package.json')
 //const docs = require('../shared/doc')
 
 export function handle_healthcheck_closure(genomes: any) {
@@ -131,7 +131,8 @@ export const versionInfo: VersionInfo = {
 
 function get_codedate() {
 	const date1 = fs.statSync(serverconfig.binpath + '/server.js').mtime
-	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
+	const date2 =
+		(fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || new Date(0)
 	const date = date1 > date2 ? date1 : date2
 	return date.toDateString()
 }
