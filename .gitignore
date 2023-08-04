@@ -37,7 +37,8 @@ public/builds/*
 public/static/*.docx
 public/static/*.pdf
 **/rev.txt
-public/docs*/*
+public/docs/**/*
+!public/docs/assets/style.css
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html

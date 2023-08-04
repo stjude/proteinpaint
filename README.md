@@ -5,11 +5,7 @@ a genomics visualization tool for exploring a cohort's genotype and phenotype da
 ## Source Code 
 
 ```bash
-# St. Jude developers
-git clone git@github.com:stjude/proteinpaint.git 
-
-# GDC developers
-git clone git@github.com:NCI-GDC/proteinpaint.git
+git clone git@github.com:stjude/proteinpaint.git
 ```
 
 ## Installation

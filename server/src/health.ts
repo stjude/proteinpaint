@@ -5,7 +5,7 @@ const child_process = require('child_process')
 const util = require('util')
 const execPromise = util.promisify(child_process.exec)
 const pkg = require('../package.json')
-const docs = require('../shared/doc')
+//const docs = require('../shared/doc')
 
 export function handle_healthcheck_closure(genomes: any) {
 	return async (req, res): Promise<void> => {
@@ -77,7 +77,7 @@ async function getStat(genomes: any): Promise<HealthCheckResponse> {
 /**
  * for documentation only, to signify integer: not type-checked statically
  */
-export type int = number
+type int = number
 
 /**
  * Information aboute the server build version and dates,
