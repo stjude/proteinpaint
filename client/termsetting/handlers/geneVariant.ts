@@ -17,7 +17,7 @@ type GroupsEntry = { name: string; items: MClassEntry[] }
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
 	return {
-		getPillName(d: PillData) {
+		getPillName() {
 			return self.term.name
 		},
 

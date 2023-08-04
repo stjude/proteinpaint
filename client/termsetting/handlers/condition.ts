@@ -141,9 +141,7 @@ function showMenu_discrete(self: any, div: any) {
 		.append('textarea')
 		.style('width', '100px')
 		.style('height', '70px')
-		.on('keyup', (event: KeyboardEvent) => {
-			textarea2gradeUI()
-		})
+		.on('keyup', textarea2gradeUI)
 
 	// help note
 	gradeValuesDiv

@@ -27,6 +27,7 @@
     "test:integration": "webpack --config=./webpack.config.js && npm run ci-pp-server && sleep 10 && npm run test:integration --workspace=client",
     "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
     "local:integration": "cd client; npm run test:integration",
+    "lint": "eslint . --ext .ts",
     "docker": "./build/dev/run.sh",
     "testws": "npm test --workspaces",
     "sethooks": "./utils/hooks/init.sh",

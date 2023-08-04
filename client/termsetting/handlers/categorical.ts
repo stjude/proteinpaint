@@ -140,7 +140,7 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 	}
 
 	/******************* Functions for Categorical terms *******************/
-	self.showGrpOpts = async function (_div: string | Selection) {
+	self.showGrpOpts = async function () {
 		const tgs = self.term.groupsetting
 		const qgs = self.q?.groupsetting as GroupSetting
 		const activeGroup = qgs?.predefined_groupset_idx
