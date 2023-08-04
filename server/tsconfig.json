@@ -1,7 +1,6 @@
 {
   "extends": "../tsconfig.json",
-  "compilerOptions": {
-    "target": "es2016",   
+  "compilerOptions": { 
     "esModuleInterop": true,
     "baseUrl": "./",
     "paths": {
@@ -18,7 +17,6 @@
   "exclude": [
     "node_modules",
     "**/*+(.spec|.e2e).ts",
-    "**/Point.ts",
-    "**/test/*"
+    "**/Point.ts"
   ]
 }
