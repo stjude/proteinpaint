@@ -186,8 +186,7 @@ class MassCumInc {
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px'),
-			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
-			skippedChartsDiv: holder.append('div').style('margin', '25px 5px')
+			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
@@ -398,7 +397,6 @@ class MassCumInc {
 			this.sortSerieses(this.pj.tree.charts)
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
-			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
 		} catch (e) {
 			console.error(e)
 		}
@@ -439,11 +437,18 @@ class MassCumInc {
 		this.currData = []
 		this.uniqueSeriesIds = new Set()
 		this.lowSampleSize = {}
+		this.noData = []
 		this.tests = {}
 		for (const chartId in data) {
+			const chart = data[chartId]
+			if (!chart.estimates) {
+				// store charts with no data to report to user
+				this.noData.push(chartId)
+				continue
+			}
 			// process cumulative incidence estimates
-			for (const seriesId in data[chartId].estimates) {
-				const series = data[chartId].estimates[seriesId]
+			for (const seriesId in chart.estimates) {
+				const series = chart.estimates[seriesId]
 				if (series[0].nrisk < s.minSampleSize) {
 					// discard series with low starting sample size
 					if (!s.hidden.includes(seriesId)) {
@@ -478,8 +483,8 @@ class MassCumInc {
 				}
 			}
 			// process results of Grey's tests
-			if (data[chartId].tests) {
-				for (const test of data[chartId].tests) {
+			if (chart.tests) {
+				for (const test of chart.tests) {
 					if (s.hidden.includes(test.series1) || s.hidden.includes(test.series2)) {
 						// hide tests that contain hidden series
 						continue
@@ -611,7 +616,15 @@ export const componentInit = cumincInit
 
 function setRenderers(self) {
 	self.render = function () {
-		const data = self.pj.tree.charts || [{ chartTitle: 'No cumulative incidence data' }]
+		const data = self.pj.tree.charts || [{}]
+		if (self.noData.length) {
+			// add in charts with no data
+			data.push(
+				...self.noData.map(chartId => {
+					return { chartId, chartTitle: chartId }
+				})
+			)
+		}
 		const chartDivs = self.dom.chartsDiv.selectAll('.pp-cuminc-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
@@ -660,6 +673,14 @@ function setRenderers(self) {
 			.html(chart.chartTitle)
 
 		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
+
+		div
+			.append('div')
+			.attr('class', 'pp-cuminc-chart-noData')
+			.style('display', 'none')
+			.style('text-align', 'center')
+			.style('margin', '30px')
+			.text('No cumulative incidence data')
 
 		if (chart.serieses) {
 			setVisibleSerieses(chart, s)
@@ -711,6 +732,9 @@ function setRenderers(self) {
 				const title = 'Skipped series (low sample size)'
 				renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 			}
+		} else {
+			// no series in chart
+			div.select('.pp-cuminc-chart-noData').style('display', 'block')
 		}
 	}
 
@@ -744,6 +768,8 @@ function setRenderers(self) {
 		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
 		if (chart.serieses) {
+			div.select('.pp-cuminc-chart-noData').style('display', 'none')
+
 			setVisibleSerieses(chart, s)
 
 			renderSVG(div.select('svg'), chart, s, s.duration)
@@ -785,34 +811,10 @@ function setRenderers(self) {
 				const title = 'Skipped series (low sample size)'
 				renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 			}
+		} else {
+			// no series in chart
+			div.select('.pp-cuminc-chart-noData').style('display', 'block')
 		}
-	}
-
-	self.renderSkippedCharts = function (div, skippedCharts) {
-		if (!skippedCharts || !skippedCharts.length) {
-			div.style('display', 'none')
-			return
-		}
-
-		div.style('display', 'block').selectAll('*').remove()
-
-		// title div
-		div
-			.append('div')
-			.style('font-weight', 'bold')
-			.style('margin-left', '15px')
-			.style('padding-bottom', '2px')
-			.text('Skipped charts (no events)')
-
-		// charts div
-		const chartsDiv = div.append('div').style('margin-left', '15px')
-
-		chartsDiv
-			.selectAll('div')
-			.data(skippedCharts)
-			.enter()
-			.append('div')
-			.text(d => d)
 	}
 
 	function renderSVG(svg, chart, s, duration) {
