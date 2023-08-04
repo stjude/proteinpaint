@@ -18,7 +18,6 @@ server/shared/types/docs.json
 server/shared/types/*.js
 !server/shared/types/typedoc.js
 server/shared/types/terms/*.js
-server/test/testers/*
 
 **/public/bin/*
 public/tmp/*
