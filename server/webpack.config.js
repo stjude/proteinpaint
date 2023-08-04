@@ -109,9 +109,11 @@ module.exports = env => {
 			})
 
 		case 'test':
+			// process.env variable can override webpack specific variable for exportsFilename
+			const exportsFile = process.env.exportsFilename || './test/context/' + env.exportsFilename
 			return merge(commonConfig, {
 				mode: 'development',
-				entry: path.join(__dirname, './test/context/' + env.exportsFilename),
+				entry: path.join(__dirname, exportsFile),
 				output: {
 					path: path.join(__dirname, './'),
 					filename: './test/serverTests.js'

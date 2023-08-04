@@ -7,68 +7,6 @@ const execPromise = util.promisify(child_process.exec)
 const pkg = require('../package.json')
 const docs = require('../shared/doc')
 
-/**
- * for documentation only, to signify integer: not type-checked statically
- */
-export type int = number
-
-/**
- * Information aboute the server build version and dates,
- * including the date when the server was last launched
- */
-export type VersionInfo = {
-	pkgver: string
-	codedate: string
-	launchdate: string
-}
-
-export type BuildByGenome = {
-	[index: string]: GenomeBuildInfo
-}
-
-export type GenomeBuildInfo = {
-	genedb: DbInfo
-	termdbs?: TermdbsInfo
-}
-
-export type DbInfo = {
-	buildDate: string // "unknown" or a Date-convertible string
-	tables?: GenomeDbTableInfo
-}
-
-export type GenomeDbTableInfo = {
-	[index: string]: int
-}
-
-export type TermdbsInfo = {
-	[index: string]: DbInfo
-}
-
-/**
- * @interface
- */
-export type HealthCheckResponse = {
-	status: 'ok' | 'error'
-	error?: any
-	genomes?: BuildByGenome
-	versionInfo: VersionInfo
-	w?: number[]
-	rs?: number
-}
-
-export const versionInfo: VersionInfo = {
-	pkgver: pkg.version,
-	codedate: get_codedate(),
-	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' ')
-}
-
-function get_codedate() {
-	const date1 = fs.statSync(serverconfig.binpath + '/server.js').mtime
-	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
-	const date = date1 > date2 ? date1 : date2
-	return date.toDateString()
-}
-
 export function handle_healthcheck_closure(genomes: any) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -134,4 +72,66 @@ async function getStat(genomes: any): Promise<HealthCheckResponse> {
 	}
 
 	return health
+}
+
+/**
+ * for documentation only, to signify integer: not type-checked statically
+ */
+export type int = number
+
+/**
+ * Information aboute the server build version and dates,
+ * including the date when the server was last launched
+ */
+export type VersionInfo = {
+	pkgver: string
+	codedate: string
+	launchdate: string
+}
+
+export type BuildByGenome = {
+	[index: string]: GenomeBuildInfo
+}
+
+export type GenomeBuildInfo = {
+	genedb: DbInfo
+	termdbs?: TermdbsInfo
+}
+
+export type DbInfo = {
+	buildDate: string // "unknown" or a Date-convertible string
+	tables?: GenomeDbTableInfo
+}
+
+export type GenomeDbTableInfo = {
+	[index: string]: int
+}
+
+export type TermdbsInfo = {
+	[index: string]: DbInfo
+}
+
+/**
+ * @interface
+ */
+export type HealthCheckResponse = {
+	status: 'ok' | 'error'
+	error?: any
+	genomes?: BuildByGenome
+	versionInfo: VersionInfo
+	w?: number[]
+	rs?: number
+}
+
+export const versionInfo: VersionInfo = {
+	pkgver: pkg.version,
+	codedate: get_codedate(),
+	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' ')
+}
+
+function get_codedate() {
+	const date1 = fs.statSync(serverconfig.binpath + '/server.js').mtime
+	const date2 = (fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || 0
+	const date = date1 > date2 ? date1 : date2
+	return date.toDateString()
 }
