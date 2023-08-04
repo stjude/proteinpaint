@@ -16,10 +16,13 @@ export async function get_incidence(q, ds) {
 		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
 		if (!minTimeSinceDx) throw 'missing min time since dx'
 		q.ds = ds
-		const results = await get_rows(q)
-		if (!results.lst.length) return { data: {} }
+		const results = { data: {} }
+		const rows = await get_rows(q)
+		if (!rows.lst.length) return results
+
+		// parse data rows
 		const byChartSeries = {}
-		for (const d of results.lst) {
+		for (const d of rows.lst) {
 			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string (see comments in get_rows())
 			const chartId = d.key0
 			const time = d.val1
@@ -28,17 +31,30 @@ export async function get_incidence(q, ds) {
 			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
 			byChartSeries[chartId].push({ time, event, series })
 		}
-		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
+		const bins = q.term2_id && rows.CTE2.bins ? rows.CTE2.bins : []
+		results.refs = { bins }
 
-		const Rinput = {
-			data: byChartSeries,
-			startTime: minTimeSinceDx // start time of curve will be the min time since cancer diagnosis for the dataset
+		// prepare R input
+		const Rinput = { data: {}, startTime: minTimeSinceDx }
+		// discard charts with no events of interest (event=1)
+		// 	 - if there are only event=0, R will throw error
+		// 	 - if there are only event=0/2, R will consider 2 to be
+		// 	 event of interest
+		// will report discarded charts to user
+		for (const chartId in byChartSeries) {
+			const chart = byChartSeries[chartId]
+			if (!chart.find(x => x.event === 1)) {
+				results.data[chartId] = {}
+			} else {
+				Rinput.data[chartId] = chart
+			}
 		}
 
 		// run cumulative incidence analysis in R
 		const ci_data = await runCumincR(Rinput)
+		Object.assign(results.data, ci_data)
 
-		return { data: ci_data, refs: { bins } }
+		return results
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
