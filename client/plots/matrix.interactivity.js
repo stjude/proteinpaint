@@ -44,7 +44,15 @@ export function setInteractivity(self) {
 			for (const c of d.siblingCells) {
 				if (c.$id != d.$id) continue
 				const v = c.value
-				const label = v.mname ? `${v.mname} ${c.label}` : c.label
+				const p = v.pairlst
+				// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
+				// list that label only once but with a hit count, instead of listing that same label
+				// as multiple table rows in the mouseover
+				const label = p
+					? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+					: v.mname
+					? `${v.mname} ${c.label}`
+					: c.label
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
 				if ('value' in v) info.push(`${s.cnvUnit}=${v.value}`)

@@ -1,2 +1,7 @@
+Features:
+- Display pairlst data, if available, for a fusion event on matrix cell mouseover
+
 Fixes:
 - Bug fix to change cutoff grade for condition term
+- Fix the matrix sample sorting by name, to use the display sampleName instead of sample ID
+- Fix the matrux sample group sorting by group name, to use predefined or group name as applicable
