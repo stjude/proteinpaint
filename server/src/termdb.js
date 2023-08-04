@@ -395,8 +395,6 @@ rightnow only few conditional terms have grade info
 }
 
 async function trigger_getincidence(q, res, ds) {
-	if (!q.minSampleSize) throw 'missing minSampleSize'
-	q.minSampleSize = Number(q.minSampleSize)
 	const data = await cuminc.get_incidence(q, ds)
 	res.send(data)
 }
