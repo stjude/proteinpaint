@@ -15,13 +15,9 @@ export async function get_incidence(q, ds) {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
 		if (!minTimeSinceDx) throw 'missing min time since dx'
-		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high', 'nrisk', 'nevent', 'ncensor'],
-			case: []
-		}
 		q.ds = ds
 		const results = await get_rows(q)
-		if (!results.lst.length) return final_data
+		if (!results.lst.length) return { data: {} }
 		const byChartSeries = {}
 		for (const d of results.lst) {
 			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string (see comments in get_rows())
@@ -33,110 +29,24 @@ export async function get_incidence(q, ds) {
 			byChartSeries[chartId].push({ time, event, series })
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
-		final_data.refs = { bins }
-
-		/*
-		prepare R input
-
-		input format
-		{
-			data: { chartId: [{time, event, series}] },
-			startTime: number, custom start time of cuminc curve
-		}
-		*/
 
 		const Rinput = {
-			data: {},
+			data: byChartSeries,
 			startTime: minTimeSinceDx // start time of curve will be the min time since cancer diagnosis for the dataset
 		}
 
-		for (const chartId in byChartSeries) {
-			/*
-			filter series of chart
-			
-			skip series that do not meet sample size or event count thresholds
-			sample size threshold is specified by user
-			event count threshold is 0, because R will throw error when no series has an event
-			*/
-
-			// compute sample sizes and event counts for each series
-			const series2counts = new Map() // series => {samplesize, eventcnt}
-			for (const sample of byChartSeries[chartId]) {
-				let counts = series2counts.get(sample.series)
-				if (counts) {
-					counts.samplesize++
-					if (sample.event == 1) counts.eventcnt++
-					series2counts.set(sample.series, counts)
-				} else {
-					counts = {
-						samplesize: 1,
-						eventcnt: sample.event == 1 ? 1 : 0
-					}
-					series2counts.set(sample.series, counts)
-				}
-			}
-
-			// flag series that do not meet the sample size or event count thresholds
-			const lowSampleSize = new Set()
-			const lowEventCnt = new Set()
-			for (const [series, counts] of series2counts) {
-				if (counts.samplesize < q.minSampleSize) {
-					lowSampleSize.add(series)
-				}
-				if (counts.eventcnt === 0) {
-					lowEventCnt.add(series)
-				}
-			}
-
-			// keep track of any flagged series
-			if (lowSampleSize.size) {
-				if (!final_data.lowSampleSize) final_data.lowSampleSize = {}
-				final_data.lowSampleSize[chartId] = [...lowSampleSize]
-			}
-			if (lowEventCnt.size) {
-				if (!final_data.lowEventCnt) final_data.lowEventCnt = {}
-				final_data.lowEventCnt[chartId] = [...lowEventCnt]
-			}
-
-			// skip any flagged series
-			const samples = byChartSeries[chartId].filter(
-				sample => !lowSampleSize.has(sample.series) && !lowEventCnt.has(sample.series)
-			)
-
-			if (samples.length) {
-				Rinput.data[chartId] = samples
-			} else {
-				// skip the chart if all series have been skipped
-				// keep track of any skipped charts
-				if (!final_data.skippedCharts) final_data.skippedCharts = []
-				final_data.skippedCharts.push(chartId)
-			}
-		}
-
 		// run cumulative incidence analysis in R
-		await runCumincR(Rinput, final_data)
+		const ci_data = await runCumincR(Rinput)
 
-		return final_data
+		return { data: ci_data, refs: { bins } }
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
 }
 
-/*
-run cumulative incidence analysis in R
-
-function has no returns
-
-R analysis results are collected into "final_data{}"
-
-Rinput: {} see above
-final_data: {
-	.case[]
-	.tests{}
-}
-*/
-export async function runCumincR(Rinput, final_data) {
+// run cumulative incidence analysis in R
+export async function runCumincR(Rinput) {
 	// replace empty string chartIds and seriesIds with '*' for R (will reconvert later)
 	for (let chartId in Rinput.data) {
 		if (chartId === '') {
@@ -161,7 +71,7 @@ export async function runCumincR(Rinput, final_data) {
 	const ci_data = JSON.parse(Routput[0])
 
 	// parse cumulative incidence results
-	// first revert placeholders
+	// revert placeholders
 	for (const chartId in ci_data) {
 		if (chartId === '*') {
 			ci_data[''] = ci_data[chartId]
@@ -177,43 +87,8 @@ export async function runCumincR(Rinput, final_data) {
 		}
 	}
 
-	// parse results
-	const nriskCutoff = 10 // at-risk count cutoff
-	for (const chartId in ci_data) {
-		// retrieve cumulative incidence estimates
-		for (const seriesId in ci_data[chartId].estimates) {
-			const series = ci_data[chartId].estimates[seriesId]
-			// fill in final_data.case[]
-			for (let i = 0; i < series.length; i++) {
-				const d = [
-					chartId,
-					seriesId,
-					series[i].time,
-					series[i].est * 100,
-					series[i].low * 100,
-					series[i].up * 100,
-					series[i].nrisk,
-					series[i].nevent,
-					series[i].ncensor
-				]
-				if (series[i].nrisk < nriskCutoff) {
-					// keep the first timepoint with a low at-risk count and
-					// drop the remaining timepoints
-					// this will allow the curve to extend horizontally up to
-					// this timepoint
-					final_data.case.push(d)
-					break
-				}
-				final_data.case.push(d)
-			}
-		}
-		// retrieve results of Gray's tests
-		if (ci_data[chartId].tests) {
-			if (!final_data.tests) final_data.tests = {}
-			final_data.tests[chartId] = ci_data[chartId].tests
-		}
-	}
-
 	// delete the input data file
 	fs.unlink(datafile, () => {})
+
+	return ci_data
 }

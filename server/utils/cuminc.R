@@ -13,13 +13,15 @@
 
 # Input JSON:
 # {
-#   chartId: [
-#     {
-#       time: time to event
-#       event: event code (0 = censored, 1 = event, 2 = competing risk event)
-#       series: series ID
-#     }
-#   ]
+#   data:
+#     chartId: [
+#       {
+#         time: time to event
+#         event: event code (0 = censored, 1 = event, 2 = competing risk event)
+#         series: series ID
+#       }
+#     ],
+#   startTime: custom start time of cuminc curve
 # }
 #
 # Output JSON:

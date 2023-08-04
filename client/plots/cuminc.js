@@ -288,11 +288,16 @@ class MassCumInc {
 						},
 
 						{
-							label: 'Minimum sample size',
-							title: 'Minimum number of samples in series',
+							label: 'Minimum sample size of series',
 							type: 'number',
 							chartType: 'cuminc',
 							settingsKey: 'minSampleSize'
+						},
+						{
+							label: 'Minimum at-risk count of event',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'minAtRisk'
 						},
 						{
 							label: 'Chart width',
@@ -384,11 +389,11 @@ class MassCumInc {
 			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
-			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			if (data.error) throw data.error
+			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			if (results.error) throw results.error
 			this.toggleLoadingDiv('none')
-			this.app.vocabApi.syncTermData(this.config, data)
-			this.processData(data)
+			this.app.vocabApi.syncTermData(this.config, results)
+			this.processResults(results)
 			this.pj.refresh({ data: this.currData })
 			this.sortSerieses(this.pj.tree.charts)
 			this.setTerm2Color(this.pj.tree.charts)
@@ -405,8 +410,7 @@ class MassCumInc {
 		const opts = {
 			chartType: 'cuminc',
 			term: c.term,
-			filter: this.state.termfilter.filter,
-			minSampleSize: c.settings.minSampleSize
+			filter: this.state.termfilter.filter
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -428,75 +432,78 @@ class MassCumInc {
 		return hidden
 	}
 
-	processData(data) {
-		// process case data
-		this.uniqueSeriesIds = new Set()
+	processResults(results) {
+		const data = results.data
+		const s = this.settings
+		const c = this.config
 		this.currData = []
-		for (const d of data.case) {
-			const obj = {}
-			data.keys.forEach((k, i) => {
-				obj[k] = d[i]
-			})
-			this.currData.push(obj)
-			this.uniqueSeriesIds.add(obj.seriesId)
-		}
-
-		this.refs = data.refs
-
-		// process statistical tests
+		this.uniqueSeriesIds = new Set()
+		this.lowSampleSize = {}
 		this.tests = {}
-		if (data.tests) {
-			for (const chartId in data.tests) {
-				const chartTests = data.tests[chartId]
-				this.tests[chartId] = []
-				for (const test of chartTests) {
-					if (this.settings.hidden.includes(test.series1) || this.settings.hidden.includes(test.series2)) continue // hide tests that contain hidden series
-					this.tests[chartId].push({
+		for (const chartId in data) {
+			// process cumulative incidence estimates
+			for (const seriesId in data[chartId].estimates) {
+				const series = data[chartId].estimates[seriesId]
+				if (series[0].nrisk < s.minSampleSize) {
+					// discard series with low starting sample size
+					if (!s.hidden.includes(seriesId)) {
+						const v = c.term2?.term.values?.[seriesId].label || seriesId
+						chartId in this.lowSampleSize ? this.lowSampleSize[chartId].push(v) : (this.lowSampleSize[chartId] = [v])
+					}
+					continue
+				}
+				for (const timepoint of series) {
+					const { time, est, low, up, nrisk, nevent, ncensor } = timepoint
+					const d = {
+						chartId,
+						seriesId,
+						time,
+						cuminc: est * 100, // convert to percentage
+						low: low * 100,
+						high: up * 100,
+						nrisk,
+						nevent,
+						ncensor
+					}
+					if (d.nrisk < s.minAtRisk) {
+						// keep the first timepoint with a low at-risk count and
+						// drop the remaining timepoints
+						// this will allow the curve to extend horizontally up to
+						// this timepoint
+						this.currData.push(d)
+						break
+					}
+					this.currData.push(d)
+					this.uniqueSeriesIds.add(d.seriesId)
+				}
+			}
+			// process results of Grey's tests
+			if (data[chartId].tests) {
+				for (const test of data[chartId].tests) {
+					if (s.hidden.includes(test.series1) || s.hidden.includes(test.series2)) {
+						// hide tests that contain hidden series
+						continue
+					}
+					if (chartId in this.lowSampleSize) {
+						// hide tests that contain series with low sample size
+						if (
+							this.lowSampleSize[chartId].includes(test.series1) ||
+							this.lowSampleSize[chartId].includes(test.series2)
+						)
+							continue
+					}
+					const d = {
 						pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
 						series1: { id: test.series1 },
 						series2: { id: test.series2 },
 						permutation: test.permutation
-					})
+					}
+					chartId in this.tests ? this.tests[chartId].push(d) : (this.tests[chartId] = [d])
 				}
-				if (!this.tests[chartId].length) delete this.tests[chartId]
 			}
 		}
 
-		// process skipped series and charts
-		const hidden = this.settings.hidden
-		const config = this.config
-		this.lowSampleSize = processSkipped('series', data.lowSampleSize)
-		this.lowEventCnt = processSkipped('series', data.lowEventCnt)
-		this.skippedCharts = processSkipped('chart', data.skippedCharts)
-
-		function processSkipped(type, data) {
-			let skipped
-			if (type == 'series') {
-				skipped = {}
-				if (data) {
-					for (const chart in data) {
-						// hide hidden series
-						const serieses = data[chart].filter(series => !hidden.includes(series))
-						if (serieses.length) {
-							skipped[chart] = []
-							for (const series of serieses) {
-								const v = config.term2?.term.values?.[series]
-								skipped[chart].push(v ? v.label : series)
-							}
-						}
-					}
-				}
-			} else if (type == 'chart') {
-				skipped = []
-				if (data) {
-					for (const chart of data) {
-						const v = config.term0.term.values?.[chart]
-						skipped.push(v ? v.label : chart)
-					}
-				}
-			}
-			return skipped
-		}
+		this.refs = results.refs
 	}
 
 	sortSerieses(charts) {
@@ -701,7 +708,7 @@ function setRenderers(self) {
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin', '30px 0px')
-				const title = 'Skipped series (too few samples)'
+				const title = 'Skipped series (low sample size)'
 				renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 			}
 		}
@@ -775,7 +782,7 @@ function setRenderers(self) {
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin', '30px 0px')
-				const title = 'Skipped series (too few samples)'
+				const title = 'Skipped series (low sample size)'
 				renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 			}
 		}
@@ -1091,7 +1098,8 @@ const defaultSettings = JSON.stringify({
 		term0: null
 	},
 	cuminc: {
-		minSampleSize: 1,
+		minSampleSize: 10,
+		minAtRisk: 10,
 		atRiskVisible: true,
 		atRiskLabelOffset: -10,
 		seriesTipDecimals: 0,
