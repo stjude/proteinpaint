@@ -1,6 +1,7 @@
 import tape from 'tape'
 import fetch from 'node-fetch'
 import { isHealthCheckResponse, validHealthCheckResponse } from '../../test/testers/index.ts'
+import { handle_healthcheck_closure } from '../health.ts'
 
 /**************
  test sections
@@ -14,19 +15,29 @@ tape('\n', function (test) {
 tape('health check response', async test => {
 	test.timeoutAfter(1000)
 	test.plan(1)
-	const msg = 'should return the expected health check response data shape'
+	const msg = 'should have an empty array for type check errors'
+
+	const handler = handle_healthcheck_closure({ hg38: {} })
+	const req = {}
+	const res = {
+		send(r) {
+			test.deepEqual(validHealthCheckResponse(r)?.errors, [], msg)
+		}
+	}
+	await handler(req, res)
+
+	/* TODO: move this to integration test or client-performed api-test/monitoring
 	await fetch('http://localhost:3000/healthcheck')
 		.then(r => r.json())
 		.then(r => {
-			if (isHealthCheckResponse(r)) test.pass(msg)
-			else {
-				console.log(validHealthCheckResponse(r))
-				test.fail(msg)
-			}
+			test.deepEqual(
+				validHealthCheckResponse(r)?.errors, 
+				[], 
+				msg
+			)
 		})
 		.catch(e => {
-			console.log(e)
 			test.fail(msg)
-			//test.end()
 		})
+	*/
 })

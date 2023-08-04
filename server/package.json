@@ -20,7 +20,8 @@
     "prepack": "tsc --esModuleInterop genome/*.ts dataset/*.ts && webpack --env NODE_ENV=production",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js",
-    "gentesters": "typia generate --input types/testers --output test/testers --project types/testers/tsconfig.json"
+    "gentesters": "typia generate --input types/testers --output test/testers --project types/testers/tsconfig.json",
+    "doctest": "npm run gentesters && npm run test:unit"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",
