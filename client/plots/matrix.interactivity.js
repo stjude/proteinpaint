@@ -313,6 +313,16 @@ function setTermActions(self) {
 				self.dom.tip.hide()
 			})
 
+		if (vartype == 'gene') {
+			self.dom.gbButton = labelEditDiv
+				.append('button')
+				.style('text-align', 'center')
+				.html('Lollipop')
+				.on('click', async () => {
+					await self.launchGB(t)
+				})
+		}
+
 		if (self.config.settings.matrix.maxSample) {
 			self.dom.twMenuDiv
 				.append('div')
@@ -331,6 +341,25 @@ function setTermActions(self) {
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
 		//self.showTermGroupInputs(self.dom.grpMenuDiv)
 		self.dom.tip.showunder(clickedElem)
+	}
+
+	self.launchGB = async t => {
+		const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
+		sandbox.header.text(t.tw.term.name)
+		const arg = {
+			holder: sandbox.body.append('div').style('margin', '20px'),
+			genome: self.app.opts.genome,
+			nobox: true,
+			query: t.tw.term.name,
+			tklst: [
+				{
+					type: 'mds3',
+					dslabel: self.app.opts.state.vocab.dslabel
+				}
+			]
+		}
+		const _ = await import('#src/block.init')
+		await _.default(arg)
 	}
 
 	self.updateTermLabel = () => {

@@ -1,5 +1,6 @@
 Features:
 - Display pairlst data, if available, for a fusion event on matrix cell mouseover
+- Launch lollipop from a geneVariant row label of matrix
 
 Fixes:
 - Bug fix to change cutoff grade for condition term
