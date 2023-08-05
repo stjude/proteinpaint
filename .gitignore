@@ -37,7 +37,10 @@ public/static/*.docx
 public/static/*.pdf
 **/rev.txt
 public/docs/**/*
+!public/docs/nav.js
+!public/docs/tabs.json
 !public/docs/assets/style.css
+!public/docs/index.html
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html

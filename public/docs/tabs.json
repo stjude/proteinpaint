@@ -1,0 +1,5 @@
+[
+	{ "label": "Frontend Tests", "href": "/testrun.html"},
+	{ "label": "Server API", "href": "/docs/server/"},
+	{ "label": "READMEs", "href": "/readme.html"}
+]
