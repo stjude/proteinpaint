@@ -3,6 +3,7 @@ import fs from 'fs'
 import child_process from 'child_process'
 import util from 'util'
 import pkg from '../../package.json'
+import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/healthcheck'
 
 const execPromise = util.promisify(child_process.exec)
 //const docs = require('../shared/doc')
@@ -72,55 +73,6 @@ async function getStat(genomes: any): Promise<HealthCheckResponse> {
 	}
 
 	return health
-}
-
-/**
- * for documentation only, to signify integer: not type-checked statically
- */
-type int = number
-
-/**
- * Information aboute the server build version and dates,
- * including the date when the server was last launched
- */
-export type VersionInfo = {
-	pkgver: string
-	codedate: string
-	launchdate: string
-}
-
-export type BuildByGenome = {
-	[index: string]: GenomeBuildInfo
-}
-
-export type GenomeBuildInfo = {
-	genedb: DbInfo
-	termdbs?: TermdbsInfo
-}
-
-export type DbInfo = {
-	buildDate: string // "unknown" or a Date-convertible string
-	tables?: GenomeDbTableInfo
-}
-
-export type GenomeDbTableInfo = {
-	[index: string]: int
-}
-
-export type TermdbsInfo = {
-	[index: string]: DbInfo
-}
-
-/**
- * @interface
- */
-export type HealthCheckResponse = {
-	status: 'ok' | 'error'
-	error?: any
-	genomes?: BuildByGenome
-	versionInfo: VersionInfo
-	w?: number[]
-	rs?: number
 }
 
 export const versionInfo: VersionInfo = {

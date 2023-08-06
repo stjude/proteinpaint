@@ -11,6 +11,7 @@
         "./shared/*"
       ]
     },
+    "strictNullChecks": true,
     "skipLibCheck": true,
     "noImplicitAny": false
   },

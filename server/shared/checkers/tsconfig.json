@@ -1,6 +1,7 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
+    "strictNullChecks": true,
     "plugins": [{
       "transform": "typia/lib/transform"
     }],
