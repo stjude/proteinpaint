@@ -1,5 +1,6 @@
 <html>
-<head>
+<head>	
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC1YmyruXifcj/KFRWoC561YpHpc5Jtzgvbuzx5VozKpWvQ+4nXhPdFgmx8xqexRcpAglTj9sIBWINXa8x5w==" crossorigin="anonymous" referrerpolicy="no-referrer" /><!-- # pragma: allowlist secret -->
 	<style>
 		body {
 		  font: 400 16px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -197,6 +198,7 @@
 			left:  50px;
 			overflow: auto;
 			max-height: 875px;
+			min-width:  200px;
 		}
 		#right-wrapper {
 			max-width: 1280px;
@@ -218,6 +220,9 @@
 </head>
 <body>
 	<script src='/docs/nav.js'></script>
+	<div class='docs-subheader'>
+		<span class='code-snippet'>./docs/readme.sh > public/docs/readme.json</span> # to regenerate
+	</div>
 	<div style='position: relative; display: grid; grid-template-columns: auto auto'>
 		<div id='leftnav'></div>
 		<div id='right-wrapper'>
@@ -234,9 +239,10 @@
 			readme: d3.select('#readme')
 		}
 		const serverCache = {}
+		let parentModule = ''
 
 		async function init() {
-			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert)
+			const data =  await fetch(`/docs/readme.json`).then(r=>r.json()).catch(alert)
 			data.readmes.sort((a,b)=>{
 				const aPath = a.split('/').slice(0,-1).join("/")
 				const bPath = b.split('/').slice(0,-1).join("/")
@@ -254,6 +260,7 @@
 				return a < b ? -1 : 1
 			})
 
+			parentModule = data.parentModule
 			dom.topTabs = d3.select('#topnav')
 				.selectAll('div')
 				.data(data.readmes)
@@ -356,11 +363,12 @@
 						const subdiv = d3.select(this)
 						const ownReadme = d.files.find(f => f.toUpperCase().startsWith('README'))
 						const ownLink = subdiv.append('div')
+						const label = subname == '..' && parentModule ? `${parentModule} (${subname}/)` : subname
 						if (ownReadme) {
 							const filepath = d.path ? `${d.path}/${ownReadme}` : ownReadme
 							ownLink.append('a')
 								.attr('href', `#${filepath}`)
-								.html(subname)
+								.html(label)
 
 							ownLink.append('span')
 								.datum(filepath)
@@ -369,7 +377,7 @@
 								.style('color', settings.activeColor)
 								.html(settings.hintChar)
 						} else {
-							ownLink.html(subname)
+							ownLink.html(label)
 						}
 
 						renderNavBtns.bind(this)(d)

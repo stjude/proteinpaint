@@ -30,7 +30,7 @@ module.exports = function setRoutes(app, basepath) {
 				]
 				const readmes = glob.sync('**/*.md', { cwd, ignore })
 				const superModuleDir = path.join(serverconfig.binpath, '../../.git/modules/proteinpaint')
-				let parentDir
+				let parentModule = ''
 				try {
 					const stat = await fs.stat(superModuleDir)
 					if (stat) {
@@ -39,14 +39,14 @@ module.exports = function setRoutes(app, basepath) {
 						for (const r of addlReadmes) {
 							if (!r.includes('proteinpaint/') && !readmes.includes(r)) readmes.push(path.join('..', r))
 						}
-						if (addlReadmes.length) parentDir = root.split('/').pop()
+						if (addlReadmes.length) parentModule = root.split('/').pop()
 					}
 				} catch (e) {
 					console.log(e)
 					// no error
 				}
 
-				res.send({ readmes, parentDir })
+				res.send({ readmes, parentModule })
 			}
 		} catch (e) {
 			throw e

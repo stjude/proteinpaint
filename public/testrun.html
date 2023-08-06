@@ -11,15 +11,6 @@
     text-decoration: underline;
   }
 
-  .code-snippet {
-    padding: 1px 3px;
-    font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
-    font-size: 14px;
-    color: #990033;
-    font-style: normal;
-    background: #ddd;
-  }
-
   #main-div {
     margin: 10px;
     padding: 10px;
@@ -59,13 +50,11 @@
   </script>
 </head>
 <body>
-<div style='padding: 10px 15px; background: #3a3a3a; color: #fff; font-family: Menlo, Courier'>
-  <p>
-    <span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> 
-    must be active to (re)compile 
-    <span class='code-snippet'>*.spec.js</span> files.
-    <span>For faster repeated reload of the same test(s), add a '&reuse=1' parameter to the URL.</span>
-  </p>
+<div class='docs-subheader'>
+  <span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> 
+  must be active to (re)compile 
+  <span class='code-snippet'>*.spec.js</span> files.
+  <span>For faster repeated reload of unchanged test(s), add a '&reuse=1' parameter to the URL.</span>
 </div>
 <div style='position: absolute; right: 20px; margin: 20px; font-family: Menlo, Courier;'>
   <button><a href='testrun.html?name=*.unit'>All unit tests</a></button>
