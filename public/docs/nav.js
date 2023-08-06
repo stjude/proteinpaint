@@ -20,6 +20,7 @@ body {
   color: #990033;
   font-style: normal;
   background: #ddd;
+  cursor: pointer;
 }
 `)
 // do not position the typedoc input search overlay bar over the injected nav bar?
@@ -76,5 +77,18 @@ setTimeout(() => {
 						.html(d.label)
 						.on('click', () => (window.location = d.href))
 				})
+		})
+
+	d3.selectAll('.code-snippet')
+		.attr('title', function () {
+			const elem = d3.select(this)
+			if (!elem.attr('title') && !this.__data__) {
+				elem.datum(d3.select(this).text())
+				return 'Click to copy to clipboard, run from the proteinpaint dir'
+			}
+		})
+		.on('click.docnav', function (d) {
+			event.stopPropagation()
+			navigator.clipboard.writeText(d)
 		})
 }, 0)
