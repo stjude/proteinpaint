@@ -6,6 +6,7 @@ body {
 	display: inline-block;
 	padding: 5px;
 	border: 1px solid #aaa;
+	font: 400 1rem/1 Consolas, Arial, sans-serif;
 }
 .docs-subheader {
 	padding: 10px 15px; 
@@ -33,11 +34,12 @@ setTimeout(() => {
 		.select('body')
 		.insert('div', 'div')
 		.style('margin-left', '5px')
-		.style('font-family', 'Consolas, Arial, sans-serif')
+		//.style('font-family', 'Consolas, Arial, sans-serif')
+		.style('font', '400 1rem/1.1 Consolas, Arial, sans-serif')
 		.style('z-index', 10)
 
 	const title = navbar
-		.append('h2')
+		.append('h3')
 		.style('display', 'inline-block')
 		.style('margin-block-start', '0.4rem')
 		.style('margin-block-end', '0.4rem')
@@ -84,7 +86,7 @@ setTimeout(() => {
 			const elem = d3.select(this)
 			if (!elem.attr('title') && !this.__data__) {
 				elem.datum(d3.select(this).text())
-				return 'Click to copy to clipboard, run from the proteinpaint dir'
+				return 'Click to copy to clipboard'
 			}
 		})
 		.on('click.docnav', function (d) {

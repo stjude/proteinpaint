@@ -1,6 +1,6 @@
 import tape from 'tape'
 import fetch from 'node-fetch'
-import { isHealthCheckResponse, validHealthCheckResponse } from '../../test/testers/index.ts'
+import { isHealthCheckResponse, validHealthCheckResponse } from '../../shared/checkers/transformed/index.ts'
 import { handle_healthcheck_closure } from '../health.ts'
 
 /**************
