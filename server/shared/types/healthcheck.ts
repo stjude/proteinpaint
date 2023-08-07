@@ -13,7 +13,7 @@ export type VersionInfo = {
 	launchdate: string
 }
 
-type BuildByGenome = {
+export type BuildByGenome = {
 	[index: string]: GenomeBuildInfo
 }
 
@@ -22,21 +22,21 @@ export type GenomeBuildInfo = {
 	termdbs?: TermdbsInfo
 }
 
-type DbInfo = {
+export type DbInfo = {
 	buildDate: string // "unknown" or a Date-convertible string
 	tables?: GenomeDbTableInfo
 }
 
-type GenomeDbTableInfo = {
+export type GenomeDbTableInfo = {
 	[index: string]: int
 }
 
-type TermdbsInfo = {
+export type TermdbsInfo = {
 	[index: string]: DbInfo
 }
 
 /**
- * @interface
+ * The response data shape from the /healthcheck endpoint
  */
 export type HealthCheckResponse = {
 	status: 'ok' | 'error'
@@ -45,10 +45,4 @@ export type HealthCheckResponse = {
 	versionInfo: VersionInfo
 	w?: number[]
 	rs?: number
-}
-
-export const api = {
-	method: 'get',
-	requestType: null,
-	responseType: HealthCheckResponse
 }
