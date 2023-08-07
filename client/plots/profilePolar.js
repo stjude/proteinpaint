@@ -2,6 +2,7 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
+import { getSampleFilter } from '#termsetting/handlers/samplelst'
 
 class profilePolar {
 	constructor() {
@@ -20,8 +21,19 @@ class profilePolar {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
-			config
+			config,
+			termfilter: appState.termfilter
 		}
+	}
+
+	filterBySample(sampleId) {
+		const filter = getSampleFilter(sampleId)
+		filter.tag = 'filterUiRoot'
+		console.log(filter)
+		this.app.dispatch({
+			type: 'filter_replace',
+			filter
+		})
 	}
 
 	async main() {
@@ -35,7 +47,8 @@ class profilePolar {
 		twLst.push(this.config.typeTW)
 
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: twLst
+			terms: twLst,
+			filter: this.state.termfilter.filter
 		})
 		this.regions = [
 			{ key: '', label: '' },
@@ -85,9 +98,8 @@ class profilePolar {
 
 		regionSelect.on('change', () => {
 			config.region = regionSelect.node().value
-
-			config.sampleName = config.region
 			config.income = ''
+			this.filterBySample(12)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
@@ -103,7 +115,6 @@ class profilePolar {
 
 		incomeSelect.on('change', () => {
 			config.income = incomeSelect.node().value
-			config.sampleName = config.income
 			config.region = ''
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})

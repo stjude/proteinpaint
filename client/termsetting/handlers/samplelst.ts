@@ -83,7 +83,7 @@ export function fillTW(tw: SampleLstTW) {
 	}
 }
 
-export function getSamplelstTW(groups: any, name = 'groups') {
+export function getSamplelstTW(groups: any, name = 'groups', notIn = true) {
 	let disabled = true
 	const values = {}
 	const qgroups: any = []
@@ -98,7 +98,7 @@ export function getSamplelstTW(groups: any, name = 'groups') {
 		}
 		qgroups.push(qgroup)
 	}
-	if (groups.length == 1) {
+	if (groups.length == 1 && notIn) {
 		const name2 = 'Not in ' + groups[0].name
 		values[name2] = { key: name2, label: name2 }
 		qgroups.push({
@@ -131,6 +131,13 @@ export function getSamplelstTW(groups: any, name = 'groups') {
 		}
 		return values
 	}
+}
+
+export function getSampleFilter(sampleId: number) {
+	const group = { name: '', index: 0, items: [{ sampleId }] }
+	const samplelst = getSamplelstTW([group], '', false)
+	const filter = getFilter(samplelst)
+	return filter
 }
 
 export function getFilter(samplelstTW: any) {

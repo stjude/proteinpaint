@@ -107,7 +107,6 @@ class profileBarchart {
 
 		regionSelect.on('change', () => {
 			config.region = regionSelect.node().value
-			config.sampleName = config.region
 			config.income = ''
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
@@ -123,7 +122,6 @@ class profileBarchart {
 
 		incomeSelect.on('change', () => {
 			config.income = incomeSelect.node().value
-			config.sampleName = config.income
 			config.region = ''
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
