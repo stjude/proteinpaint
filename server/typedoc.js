@@ -3,7 +3,7 @@
 //const test = require('./shared/doc').test
 
 module.exports = {
-	entryPoints: ['./src/health.ts'],
+	entryPoints: ['./shared/types/healthcheck.ts'],
 	out: '../public/docs/server',
 	groupOrder: ['Termdb', 'Termdb - TW', 'TW', '*'],
 	categoryOrder: ['Termdb', 'Termdb - TW', 'TW', '*'],
