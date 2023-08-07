@@ -344,7 +344,7 @@ class MassCumInc {
 							title: 'Display the at-risk counts'
 						},
 						{
-							label: '95% CI',
+							label: '95% confidence interval',
 							boxLabel: 'Visible',
 							type: 'checkbox',
 							chartType: 'cuminc',
@@ -1228,10 +1228,10 @@ function getPj(self) {
 				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
 			},
 			yMin(row) {
-				return row.cuminc
+				return self.settings.ciVisible ? row.low : row.cuminc
 			},
 			yMax(row) {
-				return row.cuminc
+				return self.settings.ciVisible ? row.high : row.cuminc
 			},
 			xTickValues(row, context) {
 				const s = self.settings
