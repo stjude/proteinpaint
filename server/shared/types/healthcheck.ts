@@ -38,11 +38,12 @@ export type TermdbsInfo = {
 /**
  * The response data shape from the /healthcheck endpoint
  */
-export type HealthCheckResponse = {
-	status: 'ok' | 'error'
-	error?: any
-	genomes?: BuildByGenome
-	versionInfo: VersionInfo
-	w?: number[]
-	rs?: number
-}
+export type HealthCheckResponse =
+	| { status: 'error'; message: string }
+	| {
+			status: 'ok'
+			genomes?: BuildByGenome
+			versionInfo: VersionInfo
+			w?: number[]
+			rs?: number
+	  }

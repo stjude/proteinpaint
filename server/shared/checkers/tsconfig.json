@@ -1,9 +1,17 @@
 {
-  "extends": "../../../tsconfig.json",
-  "compilerOptions": {
+  "compilerOptions": { 
+    "esModuleInterop": true,
+    "baseUrl": "./",
     "strictNullChecks": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
     "plugins": [{
       "transform": "typia/lib/transform"
-    }],
-  }
+    }]
+  },
+  "exclude": [
+    "node_modules",
+    "**/*+(.spec|.e2e).ts",
+    "**/Point.ts"
+  ]
 }
