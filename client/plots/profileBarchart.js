@@ -45,7 +45,10 @@ class profileBarchart {
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst
 		})
-		this.regions = [{ key: 'Global', label: 'Global' }]
+		this.regions = [
+			{ key: '', label: '' },
+			{ key: 'Global', label: 'Global' }
+		]
 		this.incomes = ['Any']
 		this.incomes.push(...this.config.incomes)
 
@@ -121,7 +124,7 @@ class profileBarchart {
 		incomeSelect.on('change', () => {
 			config.income = incomeSelect.node().value
 			config.sampleName = config.income
-			config.region = 'Global'
+			config.region = ''
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
