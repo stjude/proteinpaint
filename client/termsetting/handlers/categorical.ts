@@ -1,4 +1,4 @@
-import { setGroupsettingMethods } from './groupsetting'
+import { groupSetCompInit } from './groupsetting'
 // import { filterInit } from '#filter'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import {
@@ -35,8 +35,9 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 ********************** INTERNAL
 */
 
-export function getHandler(self: CategoricalTermSettingInstance) {
-	setGroupsettingMethods(self)
+export async function getHandler(self: CategoricalTermSettingInstance) {
+	const grpsetFns = await groupSetCompInit(self)
+	grpsetFns.main()
 	setCategoryMethods(self)
 
 	return {
@@ -139,7 +140,6 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
 	}
 
-	/******************* Functions for Categorical terms *******************/
 	self.showGrpOpts = async function () {
 		const tgs = self.term.groupsetting
 		const qgs = self.q?.groupsetting as GroupSetting
