@@ -128,11 +128,17 @@ class profileBarchart {
 
 		const sampleData = this.sampleData
 		if (!sampleData) return
+		const filename = `barchart_plot${this.config.componentIndex ? '_' + components[this.config.componentIndex] : ''}${
+			this.region ? '_' + this.region : ''
+		}${this.income ? '_' + this.income : ''}.svg`
+			.split(' ')
+			.join('_')
+
 		div
 			.append('button')
 			.style('margin-left', '15px')
 			.text('Download SVG')
-			.on('click', () => downloadSingleSVG(svg, `barchart-plot-${this.region}-${this.income}.svg`.split(' ').join('')))
+			.on('click', () => downloadSingleSVG(svg, filename))
 		const svg = this.dom.holder
 			.append('svg')
 			.attr('width', 1400)

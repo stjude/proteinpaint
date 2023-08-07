@@ -8,32 +8,29 @@ class profilePolar {
 	constructor() {
 		this.type = 'profilePolar'
 	}
-	async init(opts) {
+	async init(appState) {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder
 		}
 		this.opts.header.text('Polar plot')
 		this.arcGenerator = d3.arc().innerRadius(0)
+		const config = appState.plots.find(p => p.id === this.id)
+		const tw = structuredClone(config.terms[0])
+		const data = await this.app.vocabApi.getAnnotatedSampleData({ terms: [tw] })
+		this.sampleidmap = {}
+		for (const key in data.samples) {
+			const sample = data.samples[key]
+			this.sampleidmap[sample.sampleName] = sample.sample
+		}
 	}
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
-			config,
-			termfilter: appState.termfilter
+			config
 		}
-	}
-
-	filterBySample(sampleId) {
-		const filter = getSampleFilter(sampleId)
-		filter.tag = 'filterUiRoot'
-		console.log(filter)
-		this.app.dispatch({
-			type: 'filter_replace',
-			filter
-		})
 	}
 
 	async main() {
@@ -45,11 +42,13 @@ class profilePolar {
 			}
 		}
 		twLst.push(this.config.typeTW)
-
+		const sampleName = this.config.region || this.config.income || 'Global'
+		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst,
-			filter: this.state.termfilter.filter
+			filter
 		})
+		this.sampleData = this.data.lst[0]
 		this.regions = [
 			{ key: '', label: '' },
 			{ key: 'Global', label: 'Global' }
@@ -61,19 +60,8 @@ class profilePolar {
 			this.regions.push({ key: region.name, label: region.name })
 			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
 		}
-		this.sampleData = null
-		for (const k in this.data.samples) {
-			const sample = this.data.samples[k]
-			if (this.config.region && sample.sampleName == this.config.region) {
-				this.sampleData = sample
-				break
-			}
-			if (this.config.income && sample.sampleName == this.config.income) {
-				this.sampleData = sample
-				break
-			}
-		}
-		this.region = this.config.region || this.regions[0]
+
+		this.region = this.config.region || this.regions[0].key
 		this.income = this.config.income || this.incomes[0]
 		this.plot()
 	}
@@ -99,7 +87,8 @@ class profilePolar {
 		regionSelect.on('change', () => {
 			config.region = regionSelect.node().value
 			config.income = ''
-			this.filterBySample(12)
+			const sampleId = parseInt(this.sampleidmap[config.region])
+			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
@@ -116,15 +105,20 @@ class profilePolar {
 		incomeSelect.on('change', () => {
 			config.income = incomeSelect.node().value
 			config.region = ''
+			const sampleId = parseInt(this.sampleidmap[config.income])
+			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
 		if (!this.sampleData) return
+		const filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
+			.split(' ')
+			.join('_')
 		div
 			.append('button')
 			.style('margin-left', '15px')
 			.text('Download SVG')
-			.on('click', () => downloadSingleSVG(svg, `polar-plot-${this.region}-${this.income}.svg`.split(' ').join('')))
+			.on('click', () => downloadSingleSVG(svg, filename))
 
 		const svg = holder.append('svg').attr('width', 1200).attr('height', 600)
 
