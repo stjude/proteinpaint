@@ -41,7 +41,7 @@ class profilePolar {
 			{ key: '', label: '' },
 			{ key: 'Global', label: 'Global' }
 		]
-		this.incomes = ['Any']
+		this.incomes = ['']
 		this.incomes.push(...this.config.incomes)
 
 		for (const region of this.config.regions) {
@@ -87,7 +87,7 @@ class profilePolar {
 			config.region = regionSelect.node().value
 
 			config.sampleName = config.region
-			config.income = 'Any'
+			config.income = ''
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
