@@ -49,6 +49,7 @@ export async function get_incidence(q, ds) {
 				Rinput.data[chartId] = chart
 			}
 		}
+		if (!Object.keys(Rinput.data).length) return { data: {} }
 
 		// run cumulative incidence analysis in R
 		const ci_data = await runCumincR(Rinput)
