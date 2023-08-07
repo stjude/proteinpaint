@@ -280,15 +280,9 @@ function setRenderers(self) {
 			.style('margin', '20px 0px 10px 0px')
 			.attr('name', label) //For integration testing
 		const row = div.append('div')
-		row
-			.append('span')
-			.style('text-decoration', 'underline')
-			.text(label)
+		row.append('span').style('text-decoration', 'underline').text(label)
 		if (label2) {
-			row
-				.append('span')
-				.html(label2)
-				.style('margin-left', '5px')
+			row.append('span').html(label2).style('margin-left', '5px')
 		}
 		return div.append('div').style('margin-left', '20px')
 	}
@@ -298,10 +292,7 @@ function setRenderers(self) {
 		const div = self.newDiv('Warnings')
 		const warnings = new Set(result.warnings)
 		for (const line of warnings) {
-			div
-				.append('p')
-				.style('margin', '5px')
-				.text(line)
+			div.append('p').style('margin', '5px').text(line)
 		}
 	}
 
@@ -309,21 +300,14 @@ function setRenderers(self) {
 		if (!result.splinePlots) return
 		const div = self.newDiv('Cubic spline plots')
 		for (const plot of result.splinePlots) {
-			div
-				.append('img')
-				.attr('src', plot.src)
-				.style('width', plot.size.width)
-				.style('height', plot.size.height)
+			div.append('img').attr('src', plot.src).style('width', plot.size.width).style('height', plot.size.height)
 		}
 	}
 
 	self.mayshow_residuals = result => {
 		if (!result.residuals) return
 		const div = self.newDiv(result.residuals.label)
-		const table = div
-			.append('table')
-			.style('border-spacing', '8px')
-			.attr('name', 'sjpp-residuals-table') //For integration tests
+		const table = div.append('table').style('border-spacing', '8px').attr('name', 'sjpp-residuals-table') //For integration tests
 		const tr1 = table.append('tr').style('opacity', 0.4)
 		const tr2 = table.append('tr')
 		for (let i = 0; i < result.residuals.header.length; i++) {
@@ -352,13 +336,10 @@ function setRenderers(self) {
 			}
 		})
 
-		if (result.cuminc.final_data) {
-			plotter.main(result.cuminc.final_data)
+		if (result.cuminc.ci_data) {
+			plotter.main(result.cuminc.ci_data)
 		} else {
-			holder
-				.append('div')
-				.style('margin', '20px')
-				.text(result.cuminc.msg)
+			holder.append('div').style('margin', '20px').text(result.cuminc.msg)
 		}
 	}
 
@@ -376,9 +357,7 @@ function setRenderers(self) {
 				labpad = 20,
 				vpad = 10
 
-			const scale = scaleLinear()
-				.domain([bs.minv, bs.maxv])
-				.range([0, boxplotWidth])
+			const scale = scaleLinear().domain([bs.minv, bs.maxv]).range([0, boxplotWidth])
 
 			const svg = div
 				.append('svg')
@@ -454,9 +433,7 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			result.coefficients.header.forEach((v, i) => {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 				if (i === 1) tr.append('td') // column 3 will be for forest plot
 			})
 		}
@@ -465,9 +442,7 @@ function setRenderers(self) {
 		if (self.config.regressionType != 'cox') {
 			const tr = table.append('tr').style('background', '#eee')
 			result.coefficients.intercept.forEach((v, i) => {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 				if (i === 1) tr.append('td') // column 3 will be for forest plot
 			})
 		}
@@ -505,9 +480,7 @@ function setRenderers(self) {
 				forestPlotter(tr.append('td'), termdata.fields)
 				// rest of columns
 				for (const v of termdata.fields) {
-					tr.append('td')
-						.text(v)
-						.style('padding', '8px')
+					tr.append('td').text(v).style('padding', '8px')
 				}
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
@@ -546,9 +519,7 @@ function setRenderers(self) {
 
 					// rest of columns
 					for (const v of termdata.categories[k]) {
-						tr.append('td')
-							.text(v)
-							.style('padding', '8px')
+						tr.append('td').text(v).style('padding', '8px')
 					}
 				}
 			} else {
@@ -579,9 +550,7 @@ function setRenderers(self) {
 			forestPlotter(tr.append('td'), row.lst)
 			// rest of columns
 			for (const v of row.lst) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 			}
 		}
 
@@ -602,18 +571,14 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			for (const v of result.totalSnpEffect.header) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 			}
 		}
 
 		// total snp effect row
 		const tr = table.append('tr').style('background', '#eee')
 		for (const v of result.totalSnpEffect.lst) {
-			tr.append('td')
-				.text(v)
-				.style('padding', '8px')
+			tr.append('td').text(v).style('padding', '8px')
 		}
 		const snp = self.getIndependentInput(result.totalSnpEffect.snp).term
 		const interactions = result.totalSnpEffect.interactions.map(interaction => {
@@ -622,9 +587,7 @@ function setRenderers(self) {
 				t2: self.getIndependentInput(interaction.term2).term
 			}
 		})
-		const bottomInfo = `Total: total effect of removing the snp (${
-			snp.term.name
-		}) and its interactions (${interactions
+		const bottomInfo = `Total: total effect of removing the snp (${snp.term.name}) and its interactions (${interactions
 			.map(interaction => interaction.t1.term.name + ' : ' + interaction.t2.term.name)
 			.join(' ; ')}) from the model`
 		div
@@ -645,9 +608,7 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 			for (const v of result.type3.header) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 			}
 		}
 
@@ -655,9 +616,7 @@ function setRenderers(self) {
 		if (self.config.regressionType != 'cox') {
 			const tr = table.append('tr').style('background', '#eee')
 			for (const v of result.type3.intercept) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 			}
 		}
 
@@ -674,9 +633,7 @@ function setRenderers(self) {
 			fillTdName(termNameTd, tw.term.name)
 			// rest of columns
 			for (const v of termdata) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 			}
 		}
 		// interactions
@@ -690,9 +647,7 @@ function setRenderers(self) {
 			fillTdName(td.append('div'), t2.term.name)
 			// rest of columns
 			for (const v of row.lst) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+				tr.append('td').text(v).style('padding', '8px')
 			}
 		}
 	}
@@ -703,18 +658,13 @@ function setRenderers(self) {
 		const table = div.append('table').style('border-spacing', '0px')
 		const header = table.append('tr').style('opacity', 0.4)
 		for (const cell of result.tests.header) {
-			header
-				.append('td')
-				.text(cell)
-				.style('padding', '8px')
+			header.append('td').text(cell).style('padding', '8px')
 		}
 		let rowcount = 0
 		for (const row of result.tests.rows) {
 			const tr = table.append('tr').style('background', rowcount++ % 2 ? 'none' : '#eee')
 			for (const cell of row) {
-				tr.append('td')
-					.text(cell)
-					.style('padding', '8px')
+				tr.append('td').text(cell).style('padding', '8px')
 			}
 		}
 	}
@@ -725,9 +675,7 @@ function setRenderers(self) {
 		const table = div.append('table').style('border-spacing', '8px')
 		for (let i = 0; i < result.other.header.length; i++) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.style('opacity', 0.4)
-				.text(result.other.header[i])
+			tr.append('td').style('opacity', 0.4).text(result.other.header[i])
 			tr.append('td').text(result.other.rows[i])
 		}
 	}
@@ -846,9 +794,7 @@ function setRenderers(self) {
 				// had encountered a bug that '.1r' will print "20" at the tick of "15"
 				const tickFormat = self.config.regressionType == 'logistic' ? '.1r' : undefined
 
-				const axis = axisBottom()
-					.ticks(4, tickFormat)
-					.scale(scale)
+				const axis = axisBottom().ticks(4, tickFormat).scale(scale)
 				axisstyle({
 					axis: g.call(axis),
 					color: forestcolor,
@@ -867,12 +813,7 @@ function setRenderers(self) {
 			{
 				// vertical baseline
 				const x = scale(baselineValue)
-				g.append('line')
-					.attr('x1', x)
-					.attr('y1', 0)
-					.attr('x2', x)
-					.attr('y2', height)
-					.attr('stroke', '#ccc')
+				g.append('line').attr('x1', x).attr('y1', 0).attr('x2', x).attr('y2', height).attr('stroke', '#ccc')
 			}
 
 			const mid = Number(lst[midIdx]),
@@ -1282,25 +1223,15 @@ export function showLDlegend(div, colorScale) {
 			.attr('transform', 'translate(' + xpad + ',' + axisheight + ')')
 			.call(
 				axisTop()
-					.scale(
-						scaleLinear()
-							.domain([0, 1])
-							.range([0, axiswidth])
-					)
+					.scale(scaleLinear().domain([0, 1]).range([0, axiswidth]))
 					.ticks(4)
 			),
 		fontsize: 12
 	})
 
 	const id = 'grad' + Math.random()
-	const grad = svg
-		.append('defs')
-		.append('linearGradient')
-		.attr('id', id)
-	grad
-		.append('stop')
-		.attr('offset', '0%')
-		.attr('stop-color', colorlst[0])
+	const grad = svg.append('defs').append('linearGradient').attr('id', id)
+	grad.append('stop').attr('offset', '0%').attr('stop-color', colorlst[0])
 	grad
 		.append('stop')
 		.attr('offset', '100%')

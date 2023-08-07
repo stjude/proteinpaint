@@ -1026,13 +1026,8 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 		cumincRinput.data[snpid] = snpData
 	}
 
-	const final_data = {
-		case: [],
-		tests: {}
-	}
-
 	// run cumulative incidence analysis in R
-	await runCumincR(cumincRinput, final_data)
+	const ci_data = await runCumincR(cumincRinput)
 
 	// parse cumulative incidence results
 	let cuminc
@@ -1043,23 +1038,12 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 				'Cannot perform cumulative incidence test on this snp - at least one allele is not found in any sample'
 			cuminc = { pvalue: 'NA', msg }
 		} else {
-			// parse case data
-			const caselst = []
-			for (const i of final_data.case) {
-				if (i[0] == snpid) caselst.push(i)
-			}
-			// parse statistical tests
-			if (!final_data.tests[snpid] || !final_data.tests[snpid].length) throw 'no tests for snp'
-			const pvalue = Number(final_data.tests[snpid][0].pvalue)
+			if (!ci_data[snpid].tests?.length == 1) throw 'must have a single test'
+			const pvalue = Number(ci_data[snpid].tests[0].pvalue)
 			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
-			const tests = {}
-			tests[snpid] = final_data.tests[snpid]
 			cuminc = {
 				pvalue: Number(pvalue.toFixed(4)),
-				final_data: {
-					case: caselst,
-					tests
-				}
+				ci_data: { [snpid]: ci_data[snpid] }
 			}
 		}
 

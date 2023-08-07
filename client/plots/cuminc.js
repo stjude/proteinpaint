@@ -61,52 +61,59 @@ export class Cuminc {
 		})
 	}
 
-	main(data) {
+	main(results) {
 		this.config = structuredClone(this.state.config)
 		if (this.config.term.term.type != 'condition') throw 'cuminc term is not a condition term'
 		this.settings = this.config.settings.cuminc
 		this.settings.xTitleLabel = 'Years since entry into the cohort' // TODO: do not harcode time unit (see survival.js)
 		this.settings.atRiskVisible = false
-		this.processData(data)
+		this.processResults(results)
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
 	}
 
-	processData(data) {
-		// data is for a single chart/snp
-		if (new Set(data.case.map(d => d[0])).size != 1) throw 'should have one chart'
-
-		// process case data
-		data.keys = ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high']
-		this.uniqueSeriesIds = new Set()
-		this.currData = []
-		for (const d of data.case) {
-			const obj = {}
-			data.keys.forEach((k, i) => {
-				obj[k] = d[i]
-			})
-			this.currData.push(obj)
-			this.uniqueSeriesIds.add(obj.seriesId)
-		}
-
-		this.refs = {} //data.refs
-
-		// process statistical tests
-		this.tests = {}
-		const chartIds = Object.keys(data.tests)
-		if (chartIds.length != 1) throw 'should have one chart'
+	processResults(results) {
+		const chartIds = Object.keys(results)
+		if (chartIds.length != 1) throw 'must be a single chart'
 		const chartId = chartIds[0]
-		this.tests[chartId] = []
-		const chartTests = data.tests[chartId]
-		if (chartTests.length != 1) throw 'should have one test'
-		const test = chartTests[0]
-		this.tests[chartId].push({
-			pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
-			series1: { id: test.series1 },
-			series2: { id: test.series2 },
-			permutation: test.permutation
-		})
+		const chart = results[chartId]
+		this.currData = []
+		this.uniqueSeriesIds = new Set()
+		// process cumulative incidence estimates
+		for (const seriesId in chart.estimates) {
+			const series = chart.estimates[seriesId]
+			for (const timepoint of series) {
+				const { time, est, low, up, nrisk, nevent, ncensor } = timepoint
+				const d = {
+					chartId,
+					seriesId,
+					time,
+					cuminc: est * 100, // convert to percentage
+					low: low * 100,
+					high: up * 100,
+					nrisk,
+					nevent,
+					ncensor
+				}
+				this.currData.push(d)
+				this.uniqueSeriesIds.add(d.seriesId)
+			}
+		}
+		// process results of Grey's tests
+		this.tests = {}
+		if (chart.tests?.length != 1) throw 'must have a single test'
+		const test = chart.tests[0]
+		this.tests[chartId] = [
+			{
+				pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
+				series1: { id: test.series1 },
+				series2: { id: test.series2 },
+				permutation: test.permutation
+			}
+		]
+
+		this.refs = {}
 	}
 
 	setTerm2Color(charts) {
@@ -617,7 +624,7 @@ export const componentInit = cumincInit
 function setRenderers(self) {
 	self.render = function () {
 		const data = self.pj.tree.charts || [{}]
-		if (self.noData.length) {
+		if (self.noData?.length) {
 			// add in charts with no data
 			data.push(
 				...self.noData.map(chartId => {
