@@ -10,3 +10,5 @@ nav="<script src='/docs/nav.js'></script>"
 subheader="<div class='docs-subheader'><span class='code-snippet'>./docs/build.sh</span> # to regenerate</div>"
 # mv ./public/docs/server/index.html-e ./public/docs/server/index.html
 find ./public/docs/server \( -type d -name .git -prune \) -o -type f -print0 | xargs -0 sed -i -e "s|<body>|<body>$d3$nav$subheader|g"
+
+./docs/extractTypesFromHtml.js > public/docs/server/extracts.json

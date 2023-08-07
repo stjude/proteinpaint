@@ -7,7 +7,7 @@
 </head>
 <body>
 <div class='docs-subheader'>
-  <span class='code-snippet'>./docs/build.sh</span> # to regenerate
+  <span class='code-snippet'>./docs/extractTypesFromHtml.js > public/docs/server/extracts.json</span> # to regenerate
 </div>
 <div id='output' style='padding: 10px'>
 <div class='container container-main'>
@@ -22,25 +22,10 @@
 <script>
 
 init()
-
-
-// const flatByName = {}
-// const flatById = {}
-// const output = d3.select('#output')
-//  d3.select('.tsd-page-title')
+let extracts = {}
 
 async function init() {
-  // const data = await fetch('/docs/server.json')
-  //   .then(r=>r.json())
-  //   .catch(console.error)
-
-  // console.log(data)
-  // flatten(data.children)
-  // console.log(flatById)
-  // console.log(flatByName)
-  // const value = getType("HealthCheckResponse")
-  // d3.select('#output').text(JSON.stringify(value, null, '  '))
-
+  extracts = await fetch('/docs/server/extracts.json').then(r => r.json()).catch(console.error)
   const routes = [
     {
       endpoint: '/healthcheck',
@@ -54,39 +39,28 @@ async function init() {
   ]
   const sidebarLinks = d3.select('.tsd-small-nested-navigation')
   const contentDiv = d3.select('.col-content')
-
   for(const r of routes) {
     const section = contentDiv.append('div')
     const title = r.response.type
     sidebarLinks.append('li').append('a').attr('href', `#${title}`).html(r.endpoint)
     const url = `/docs/server/types/${title}.html`
-    fetch(url)
-      .then(d => d.text())
-      .then(text => {
-        const extract = extractSection(text)
-        section.append('h2')
-          .attr('id', r.endpoint)
-          .attr('class', 'tsd-page-title')
-          .style('cursor', 'pointer')
-          .html(r.endpoint) 
-          .on('click', ()=>{window.location = url})
+    const extract = extracts[title]
+    section.append('h2')
+      .attr('id', r.endpoint)
+      .attr('class', 'tsd-page-title')
+      .style('cursor', 'pointer')
+      .html(r.endpoint) 
+      .on('click', ()=>{window.location = url})
 
-        section.append('h3').html('Request')
-        section.append('div').attr('class', 'tsd-signature').append('pre').html(JSON.stringify(r.request.type, null, '   '))
+    section.append('h3').html('Request')
+    section.append('div').attr('class', 'tsd-signature').append('pre').html(JSON.stringify(r.request.type, null, '   '))
 
-        section.append('h3').html('Response')
-        const signature = section.append('div').html(extract)
-        signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).on('click', mayExpand)
-      })
-      .catch(console.error)
+    section.append('h3').html('Response')
+    const signature = section.append('div').html(extract)
+    signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).filter(function(){return this.innerHTML != title}).on('click', mayExpand)
   }
 }
 
-function extractSection(text) {
-  const i = text.indexOf(`<div class="tsd-signature">`)
-  const j = text.indexOf('</div>', i)
-  return text.slice(i, j + 6).replaceAll(';', '').replaceAll('&nbsp;&nbsp;&nbsp;&nbsp;', '&nbsp;&nbsp;')
-}
 // must track the extracted and replaced DOM elements by DOM node;
 // tracking the string keys may not be unique if the same type ID is used
 // in multiple levels of a type declaration
@@ -96,16 +70,11 @@ async function mayExpand(event) {
   const key = this;
   if (!extracted.has(key)) {
     const url = `/docs/server/types/${title}.html`
-    await fetch(url)
-      .then(d => d.text())
-      .then(text => {
-        const extract = extractSection(text).replace(`${title}:`, '')
-        const div = document.createElement('div')
-        d3.select(div).style('display', 'inline-block').style('vertical-align', 'top').html(extract)
-        const obj = {div, parentNode: this.parentNode, title, orig: this,  extract, expanded: false}
-        extracted.set(key, obj)
-        //extracted.set(div)
-      })
+    const extract = extracts[title]
+    const div = document.createElement('div')
+    d3.select(div).style('display', 'inline-block').style('vertical-align', 'top').html(extract)
+    const obj = {div, parentNode: this.parentNode, title, orig: this,  extract, expanded: false}
+    extracted.set(key, obj)
   }
   const x = extracted.get(key)
   if (x.expanded) {
@@ -116,50 +85,16 @@ async function mayExpand(event) {
     x.expanded = true
     const signature = d3.select(x.div)
     const span = signature.select('.tsd-kind-type-alias')
-    span.style('cursor', 'pointer').html(title)
-    extracted.set(span.node(), x) 
+    span.style('font-style', 'italic').style('cursor', 'pointer').html(title)
+    const ns = span.node().nextSibling
+    if (ns.innerHtml == ':') ns.innerHTML = '' 
+    extracted.set(span.node(), x)
     signature.selectAll('.tsd-signature').style('padding', 0).style('position', 'relative').style('top', 0).style('border', 'none')
     signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).on('click', mayExpand)
   }
   return false
 }
 
-function flatten(children) {
-  for(const c of children) {
-    if (!(c.id in flatById)) {
-      flatById[c.id] = c
-      flatByName[c.name] = c
-      if (c.children) flatten(c.children)
-    }
-  }
-}
-
-function getType(name) {
-  const d = flatByName[name]
-  if (!d) throw `not found: '${name}'`
-
-  if (d.children) {
-    const obj = {}
-    for(const c of d.children) {
-      obj[c.name] = 'something'
-    }
-    return obj
-  }
-}
-
-function getParams() {
-  const params={}
-  if (!window.location.search.length) return params
-  window.location.search.substr(1).split("&").forEach(kv=>{
-    const [key,value] = kv.split("=")
-    params[key] = value
-  })
-  return params
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
 </script>
 
 <script src='/docs/nav.js'></script>
