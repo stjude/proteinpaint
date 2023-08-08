@@ -193,20 +193,25 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}
+		let isLast = false
 		if ((q.colorTW && !hasValue(dbSample, q.colorTW)) || (q.shapeTW && !hasValue(dbSample, q.shapeTW))) continue
 		let divideBy = 'Default'
 		if (q.divideByTW && q.divideByTW.q.mode != 'continuous') {
 			sample.z = 0
-			if (q.divideByTW.term.type == 'geneVariant')
-				divideBy = getMutation(true, dbSample, q.divideByTW) || getMutation(false, dbSample, q.divideByTW)
-			else {
+			if (q.divideByTW.term.type == 'geneVariant') {
+				divideBy = getMutation(true, dbSample, q.divideByTW)
+				if (divideBy == null) {
+					divideBy = getMutation(false, dbSample, q.divideByTW)
+					isLast = true
+				}
+			} else {
 				const key = dbSample[q.divideByTW.term.id || q.divideByTW.term.name]?.key
 				divideBy = q.divideByTW.term.values?.[key]?.label || key
 			}
 		}
 		if (!results[divideBy]) {
 			const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref', z: 0 }))
-			results[divideBy] = { samples, colorMap: {}, shapeMap: {} }
+			results[divideBy] = { samples, colorMap: {}, shapeMap: {}, isLast }
 		}
 		if (!q.divideByTW) sample.z = 0
 		if (!q.scaleDotTW) sample.scale = 1
@@ -340,7 +345,8 @@ function getMutation(strict, dbSample, tw) {
 			return mutation.dt == dt && visible
 		})
 		if (!mutation) continue
-		if (strict) if (mutation.class == 'WT' || mutation.class == 'Blank') continue
+		const notImportant = mutation.class == 'WT' || mutation.class == 'Blank'
+		if (strict && notImportant) continue
 		const value = getCategory(mutation)
 		return value
 	}
