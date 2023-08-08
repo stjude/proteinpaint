@@ -8,7 +8,7 @@ import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../../shared/
 const execPromise = util.promisify(child_process.exec)
 //const docs = require('../shared/doc')
 
-export function setRoute(app: any, genomes: any, basepath: string = '') {
+export function setRoute(app: any, genomes: any, basepath) {
 	app.get(basepath + '/healthcheck', async (req, res): Promise<void> => {
 		try {
 			const health = await getStat(genomes)

@@ -1,6 +1,5 @@
 import tape from 'tape'
-import fetch from 'node-fetch'
-import { isHealthCheckResponse, validHealthCheckResponse } from '../../shared/checkers/transformed/index.ts'
+import { validHealthCheckResponse } from '../../shared/checkers/transformed/index.ts'
 import { setRoute } from '#routes/healthcheck'
 
 /****************************************

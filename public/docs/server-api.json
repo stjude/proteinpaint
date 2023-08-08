@@ -1,7 +1,7 @@
 [
   {
     "endpoint": "healthcheck",
-    "test": "/src/test/healthcheck.unit.spec.js",
+    "test": "/src/test/healthcheck.unit.spec.ts",
     "byMethod": {
       "get": {
         "request": {
