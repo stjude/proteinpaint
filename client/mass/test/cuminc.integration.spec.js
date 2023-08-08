@@ -48,22 +48,17 @@ tape('\n', function (test) {
 	test.end()
 })
 
-const plot = {
-	chartType: 'cuminc',
-	settings: {
-		cuminc: {
-			minSampleSize: 1,
-			minAtRisk: 0
-		}
-	}
-}
-
 tape('term1=Cardiac dysrhythmia', function (test) {
 	test.timeoutAfter(10000)
-	plot.term = { id: 'Cardiac dysrhythmia' }
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiac dysrhythmia' },
+					settings: { cuminc: { minSampleSize: 1, minAtRisk: 0 } }
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -93,10 +88,15 @@ tape('term1=Cardiac dysrhythmia', function (test) {
 tape('term1=Cardiovascular System, filter=ALL', function (test) {
 	// this test breaks due to the "missing minSampleSize" err
 	test.timeoutAfter(10000)
-	plot.term = { id: 'Cardiovascular System' }
 	runpp({
 		state: {
-			plots: [plot],
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					settings: { cuminc: { minSampleSize: 1, minAtRisk: 0 } }
+				}
+			],
 			termfilter: {
 				filter: {
 					type: 'tvslst',
@@ -137,11 +137,16 @@ tape('term1=Cardiovascular System, filter=ALL', function (test) {
 
 tape('term1=Cardiovascular System, term2=agedx', function (test) {
 	test.timeoutAfter(10000)
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term2 = { id: 'agedx' }
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term2: { id: 'agedx' },
+					settings: { cuminc: { minSampleSize: 1, minAtRisk: 0 } }
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -187,11 +192,16 @@ tape('term1=Cardiovascular System, term2=agedx', function (test) {
 
 tape('term1=Cardiovascular System, term0=sex', test => {
 	test.timeoutAfter(5000)
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term0 = { id: 'sex' }
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term0: { id: 'sex' },
+					settings: { cuminc: { minSampleSize: 1, minAtRisk: 0 } }
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -232,29 +242,36 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 	test.timeoutAfter(10000)
 	const testBinSize = 5
 	const testStop = 5
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term2 = {
-		id: 'agedx',
-		name: 'Age (years) at Cancer Diagnosis',
-		type: 'float',
-		bins: {
-			default: {
-				type: 'regular-bin',
-				bin_size: testBinSize,
-				startinclusive: true,
-				first_bin: {
-					startunbounded: true,
-					stop: testStop
-				}
-			},
-			label_offset: 1
-		}
-	}
-	plot.settings.controls = { isOpen: true }
 
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term2: {
+						id: 'agedx',
+						name: 'Age (years) at Cancer Diagnosis',
+						type: 'float',
+						bins: {
+							default: {
+								type: 'regular-bin',
+								bin_size: testBinSize,
+								startinclusive: true,
+								first_bin: {
+									startunbounded: true,
+									stop: testStop
+								}
+							},
+							label_offset: 1
+						}
+					},
+					settings: {
+						cuminc: { minSampleSize: 1, minAtRisk: 0 },
+						controls: { isOpen: true }
+					}
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -324,62 +341,68 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 
 tape('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', test => {
 	test.timeoutAfter(5000)
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term0 = {
-		id: 'agedx',
-		term: {
-			type: 'float',
-			bins: {
-				default: {
-					type: 'regular-bin',
-					bin_size: 5,
-					startinclusive: true,
-					first_bin: {
-						startunbounded: true,
-						stop: 5
-					},
-					label_offset: 1
-				},
-				label_offset: 1
-			},
-			name: 'Age (years) at Cancer Diagnosis',
-			id: 'agedx'
-			// isleaf: true,
-			// values: {},
-			// included_types: [
-			// 	'float'
-			// ],
-			// child_types: []
-		},
-		q: {
-			isAtomic: true,
-			mode: 'discrete',
-			type: 'regular-bin'
-			// type: 'custom-bin',
-			// lst: [
-			// 	{
-			// 		startunbounded: true,
-			// 		stop: 8.164619357749999,
-			// 		stopinclusive: false,
-			// 		label: '<8.164619357749999'
-			// 	},
-			// 	{
-			// 		start: 8.164619357749999,
-			// 		startinclusive: true,
-			// 		stopunbounded: true,
-			// 		label: '≥8.164619357749999'
-			// 	}
-			// ],
-			// hiddenValues: {}
-		}
-	}
-	plot.settings.controls = {
-		term0: { id: 'agedx', term: termjson['agedx'] }
-	}
-
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term0: {
+						id: 'agedx',
+						term: {
+							type: 'float',
+							bins: {
+								default: {
+									type: 'regular-bin',
+									bin_size: 5,
+									startinclusive: true,
+									first_bin: {
+										startunbounded: true,
+										stop: 5
+									},
+									label_offset: 1
+								},
+								label_offset: 1
+							},
+							name: 'Age (years) at Cancer Diagnosis',
+							id: 'agedx'
+							// isleaf: true,
+							// values: {},
+							// included_types: [
+							// 	'float'
+							// ],
+							// child_types: []
+						},
+						q: {
+							isAtomic: true,
+							mode: 'discrete',
+							type: 'regular-bin'
+							// type: 'custom-bin',
+							// lst: [
+							// 	{
+							// 		startunbounded: true,
+							// 		stop: 8.164619357749999,
+							// 		stopinclusive: false,
+							// 		label: '<8.164619357749999'
+							// 	},
+							// 	{
+							// 		start: 8.164619357749999,
+							// 		startinclusive: true,
+							// 		stopunbounded: true,
+							// 		label: '≥8.164619357749999'
+							// 	}
+							// ],
+							// hiddenValues: {}
+						}
+					},
+					settings: {
+						cuminc: { minSampleSize: 1, minAtRisk: 0 },
+						controls: {
+							term0: { id: 'agedx', term: termjson['agedx'] }
+						}
+					}
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -400,24 +423,30 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', test 
 
 tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test => {
 	test.timeoutAfter(10000)
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term2 = {
-		id: 'agedx',
-		q: {
-			type: 'custom-bin',
-			mode: 'discrete',
-			lst: [
-				{ startunbounded: true, stop: 7, stopinclusive: false, label: '<7' },
-				{ startinclusive: true, stopinclusive: true, start: 7, stop: 12, label: '7 to 12' },
-				{ start: 12, startinclusive: false, stopunbounded: true, label: '>12' }
-			]
-		}
-	}
-	plot.settings.controls = { isOpen: true }
-
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term2: {
+						id: 'agedx',
+						q: {
+							type: 'custom-bin',
+							mode: 'discrete',
+							lst: [
+								{ startunbounded: true, stop: 7, stopinclusive: false, label: '<7' },
+								{ startinclusive: true, stopinclusive: true, start: 7, stop: 12, label: '7 to 12' },
+								{ start: 12, startinclusive: false, stopunbounded: true, label: '>12' }
+							]
+						}
+					},
+					settings: {
+						cuminc: { minSampleSize: 1, minAtRisk: 0 },
+						controls: { isOpen: true }
+					}
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -485,53 +514,59 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 
 tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test => {
 	test.timeoutAfter(10000)
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term0 = {
-		id: 'agedx',
-		term: {
-			type: 'float',
-			// bins: {
-			// 	default: {
-			// 		type: 'regular-bin',
-			// 		bin_size: 5,
-			// 		startinclusive: true,
-			// 		first_bin: {
-			// 			startunbounded: true,
-			// 			stop: 5
-			// 		},
-			// 		label_offset: 1
-			// 	},
-			// 	label_offset: 1
-			// },
-			name: 'Age (years) at Cancer Diagnosis',
-			id: 'agedx'
-		},
-		q: {
-			isAtomic: true,
-			mode: 'discrete',
-			type: 'custom-bin',
-			lst: [
-				{
-					startunbounded: true,
-					stop: 12,
-					stopinclusive: false,
-					label: '<12'
-				},
-				{
-					start: 12,
-					startinclusive: true,
-					stopunbounded: true,
-					label: '≥12'
-				}
-			],
-			hiddenValues: {}
-		}
-	}
-	plot.settings.controls = { isOpen: true }
-
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term0: {
+						id: 'agedx',
+						term: {
+							type: 'float',
+							// bins: {
+							// 	default: {
+							// 		type: 'regular-bin',
+							// 		bin_size: 5,
+							// 		startinclusive: true,
+							// 		first_bin: {
+							// 			startunbounded: true,
+							// 			stop: 5
+							// 		},
+							// 		label_offset: 1
+							// 	},
+							// 	label_offset: 1
+							// },
+							name: 'Age (years) at Cancer Diagnosis',
+							id: 'agedx'
+						},
+						q: {
+							isAtomic: true,
+							mode: 'discrete',
+							type: 'custom-bin',
+							lst: [
+								{
+									startunbounded: true,
+									stop: 12,
+									stopinclusive: false,
+									label: '<12'
+								},
+								{
+									start: 12,
+									startinclusive: true,
+									stopunbounded: true,
+									label: '≥12'
+								}
+							],
+							hiddenValues: {}
+						}
+					},
+					settings: {
+						cuminc: { minSampleSize: 1, minAtRisk: 0 },
+						controls: { isOpen: true }
+					}
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -590,11 +625,18 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 
 tape('hidden uncomputable', function (test) {
 	test.timeoutAfter(10000)
-	plot.term = { id: 'Cardiac dysrhythmia' }
-	plot.term2 = { id: 'cisplateq_5' }
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiac dysrhythmia' },
+					term2: { id: 'cisplateq_5' },
+					settings: {
+						cuminc: { minSampleSize: 1, minAtRisk: 0 }
+					}
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -612,15 +654,20 @@ tape('hidden uncomputable', function (test) {
 	}
 })
 
-tape.only('skipped series', function (test) {
+tape('skipped series', function (test) {
 	test.timeoutAfter(10000)
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term2 = { id: 'genetic_race' }
-	plot.settings.cuminc.minSampleSize = 10
-
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term2: { id: 'genetic_race' },
+					settings: {
+						cuminc: { minSampleSize: 10, minAtRisk: 0 }
+					}
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -642,65 +689,71 @@ tape.only('skipped series', function (test) {
 
 tape('term1 = Cardiovascular System, term2 = samplelst', function (test) {
 	test.timeoutAfter(5000)
-	plot.term = { id: 'Cardiovascular System' }
-	plot.term2 = {
-		term: {
-			name: 'Samplelst term',
-			type: 'samplelst',
-			values: {
-				'Group 1': {
-					key: 'Group 1',
-					label: 'Test 1',
-					inuse: false,
-					list: [
-						{ sampleId: 1, sample: 1 },
-						{ sampleId: 2, sample: 2 }
-					]
-				},
-				'Group 2': {
-					key: 'Group 2',
-					label: 'Test 2',
-					inuse: false,
-					list: [
-						{ sampleId: 3, sample: 3 },
-						{ sampleId: 4, sample: 4 },
-						{ sampleId: 5, sample: 5 }
-					]
-				},
-				'Group 3': { key: 'Group 3', label: 'Test 3', inuse: false, list: [{ sampleId: 6, sample: 6 }] }
-			}
-		},
-		q: {
-			groups: [
-				{
-					name: 'Group 1',
-					in: false,
-					values: [
-						{ sampleId: 1, sample: 1 },
-						{ sampleId: 2, sample: 2 }
-					]
-				},
-				{
-					name: 'Group 2',
-					in: false,
-					values: [
-						{ sampleId: 3, sample: 3 },
-						{ sampleId: 4, sample: 4 },
-						{ sampleId: 5, sample: 5 }
-					]
-				},
-				{
-					name: 'Group 3',
-					in: false,
-					values: [{ sampleId: 6, sample: 6 }]
-				}
-			]
-		}
-	}
-
 	runpp({
 		state: {
-			plots: [plot]
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term2: {
+						term: {
+							name: 'Samplelst term',
+							type: 'samplelst',
+							values: {
+								'Group 1': {
+									key: 'Group 1',
+									label: 'Test 1',
+									inuse: false,
+									list: [
+										{ sampleId: 1, sample: 1 },
+										{ sampleId: 2, sample: 2 }
+									]
+								},
+								'Group 2': {
+									key: 'Group 2',
+									label: 'Test 2',
+									inuse: false,
+									list: [
+										{ sampleId: 3, sample: 3 },
+										{ sampleId: 4, sample: 4 },
+										{ sampleId: 5, sample: 5 }
+									]
+								},
+								'Group 3': { key: 'Group 3', label: 'Test 3', inuse: false, list: [{ sampleId: 6, sample: 6 }] }
+							}
+						},
+						q: {
+							groups: [
+								{
+									name: 'Group 1',
+									in: false,
+									values: [
+										{ sampleId: 1, sample: 1 },
+										{ sampleId: 2, sample: 2 }
+									]
+								},
+								{
+									name: 'Group 2',
+									in: false,
+									values: [
+										{ sampleId: 3, sample: 3 },
+										{ sampleId: 4, sample: 4 },
+										{ sampleId: 5, sample: 5 }
+									]
+								},
+								{
+									name: 'Group 3',
+									in: false,
+									values: [{ sampleId: 6, sample: 6 }]
+								}
+							]
+						}
+					},
+					settings: {
+						cuminc: { minSampleSize: 1, minAtRisk: 0 }
+					}
+				}
+			]
 		},
 		cuminc: {
 			callbacks: {
