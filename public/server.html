@@ -7,7 +7,7 @@
 </head>
 <body>
 <div class='docs-subheader'>
-  <span class='code-snippet'>./docs/extractTypesFromHtml.js > public/docs/server/extracts.json</span> # to regenerate
+  <span class='code-snippet'>./docs/build.sh</span> # to regenerate
 </div>
 <div id='output' style='padding: 10px'>
 <div class='container container-main'>
@@ -44,7 +44,7 @@ async function init() {
     const title = r.response.type
     sidebarLinks.append('li').append('a').attr('href', `#${title}`).html(r.endpoint)
     const url = `/docs/server/types/${title}.html`
-    const extract = extracts[title]
+    const x = extracts[title]
     section.append('h2')
       .attr('id', r.endpoint)
       .attr('class', 'tsd-page-title')
@@ -52,43 +52,47 @@ async function init() {
       .html(r.endpoint) 
       .on('click', ()=>{window.location = url})
 
+    if (x.comment) {
+      section.append('div').html(x.comment)
+    }
+
     section.append('h3').html('Request')
     section.append('div').attr('class', 'tsd-signature').append('pre').html(JSON.stringify(r.request.type, null, '   '))
 
     section.append('h3').html('Response')
-    const signature = section.append('div').html(extract)
+    const signature = section.append('div').html(x.signature)
     signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).filter(function(){return this.innerHTML != title}).on('click', mayExpand)
   }
 }
 
-// must track the extracted and replaced DOM elements by DOM node;
+// must track the clicked and replaced DOM elements by DOM node;
 // tracking the string keys may not be unique if the same type ID is used
 // in multiple levels of a type declaration
-const extracted = new WeakMap()
+const clicked = new WeakMap()
 async function mayExpand(event) {
   const title = this.innerHTML
   const key = this;
-  if (!extracted.has(key)) {
+  if (!clicked.has(key)) {
     const url = `/docs/server/types/${title}.html`
-    const extract = extracts[title]
+    const x = extracts[title]
     const div = document.createElement('div')
-    d3.select(div).style('display', 'inline-block').style('vertical-align', 'top').html(extract)
-    const obj = {div, parentNode: this.parentNode, title, orig: this,  extract, expanded: false}
-    extracted.set(key, obj)
+    d3.select(div).style('display', 'inline-block').style('vertical-align', 'top').html(x.signature)
+    const obj = {div, parentNode: this.parentNode, title, orig: this, expanded: false}
+    clicked.set(key, obj)
   }
-  const x = extracted.get(key)
-  if (x.expanded) {
-    x.parentNode.replaceChild(x.orig, x.div)
-    x.expanded = false
+  const c = clicked.get(key)
+  if (c.expanded) {
+    c.parentNode.replaceChild(c.orig, c.div)
+    c.expanded = false
   } else {
-    x.parentNode.replaceChild(x.div, x.orig)
-    x.expanded = true
-    const signature = d3.select(x.div)
+    c.parentNode.replaceChild(c.div, c.orig)
+    c.expanded = true
+    const signature = d3.select(c.div)
     const span = signature.select('.tsd-kind-type-alias')
     span.style('font-style', 'italic').style('cursor', 'pointer').html(title)
     const ns = span.node().nextSibling
-    if (ns.innerHtml == ':') ns.innerHTML = '' 
-    extracted.set(span.node(), x)
+    if (ns.innerHTML == ':') ns.innerHTML = ''
+    clicked.set(span.node(), c)
     signature.selectAll('.tsd-signature').style('padding', 0).style('position', 'relative').style('top', 0).style('border', 'none')
     signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).on('click', mayExpand)
   }

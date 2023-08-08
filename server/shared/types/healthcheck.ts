@@ -13,26 +13,22 @@ export type VersionInfo = {
 	launchdate: string
 }
 
-export type BuildByGenome = {
+type BuildByGenome = {
 	[index: string]: GenomeBuildInfo
 }
 
 export type GenomeBuildInfo = {
 	genedb: DbInfo
-	termdbs?: TermdbsInfo
+	termdbs?: {
+		[index: string]: DbInfo
+	}
 }
 
-export type DbInfo = {
+type DbInfo = {
 	buildDate: string // "unknown" or a Date-convertible string
-	tables?: GenomeDbTableInfo
-}
-
-export type GenomeDbTableInfo = {
-	[index: string]: int
-}
-
-export type TermdbsInfo = {
-	[index: string]: DbInfo
+	tables?: {
+		[index: string]: int
+	}
 }
 
 /**
@@ -41,7 +37,7 @@ export type TermdbsInfo = {
 export type HealthCheckResponse = /*{ status: 'error'; error: string }
 	|*/ {
 	status: 'ok' | 'error'
-	genomes?: BuildByGenome
+	genomes: BuildByGenome
 	versionInfo: VersionInfo
 	w?: number[]
 	rs?: number

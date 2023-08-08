@@ -70,7 +70,8 @@
     "minimatch": "^3.1.2",
     "node-fetch": "^2.6.1",
     "partjson": "^0.58.1",
-    "tiny-async-pool": "^1.2.0"
+    "tiny-async-pool": "^1.2.0",
+    "typedoc-plugin-missing-exports": "^2.0.1"
   },
   "repository": {
     "type": "git",

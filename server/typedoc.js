@@ -8,7 +8,8 @@ module.exports = {
 	groupOrder: ['Termdb', 'Termdb - TW', 'TW', '*'],
 	categoryOrder: ['Termdb', 'Termdb - TW', 'TW', '*'],
 	categorizeByGroup: true,
-	plugin: ['typedoc-plugin-replace-text'],
+	plugin: ['typedoc-plugin-replace-text', 'typedoc-plugin-missing-exports'],
+	excludeExternals: true,
 	replaceText: {
 		inCodeCommentText: true,
 		inCodeCommentTags: true,
