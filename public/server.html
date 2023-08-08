@@ -13,6 +13,13 @@
       text-decoration: underline;
       cursor: pointer;
     }
+    .sjpp-tip {
+      position: absolute;
+      padding: 16px;
+      max-width: 400px;
+      background-color: #fff;
+      z-index: 100;
+    }
   </style>
 </head>
 <body>
@@ -33,7 +40,6 @@
 
 init()
 let extracts = {}
-let inprogress = ''
 
 async function init() {
   extracts = await fetch('/docs/server/extracts.json').then(r => r.json()).catch(console.error)
@@ -41,20 +47,25 @@ async function init() {
     {
       endpoint: 'healthcheck',
       test: '/src/test/health.unit.spec.js',
-      request: {
-        type: {},
-      },
-      response: {
-        type: "HealthCheckResponse"
+      byMethod: {
+        get: {
+          request: {
+            type: {},
+          },
+          response: {
+            type: "HealthCheckResponse"
+          }
+        } 
       }
     }
   ]
   const sidebarLinks = d3.select('.tsd-small-nested-navigation')
   const contentDiv = d3.select('.col-content')
+  const service = ['request', 'response']
   for(const r of routes) {
     r.id = r.endpoint.replace('/', '.')
     const section = contentDiv.append('div')
-    
+
     sidebarLinks.append('li').append('a').attr('href', `#${r.id}`).html(r.endpoint)
     
     section.append('h2')
@@ -66,73 +77,46 @@ async function init() {
 
     
     if (r.test) {
-      section.append('div').html(`CLI test: <span class='code-snippet'>exportsFilename=${r.test} npm run test:unit</span>`)
+      section.append('div').html(`CLI test: from the <span class='code-snippet'>proteinpaint/server</span> dir, `
+        + `<span class='code-snippet'>exportsFilename=${r.test} npm run test:unit</span>`)
     }
     
-    {
-      const title = r.request.type
-      const x = title in extracts ? extracts[title] : r.request.type
-      section.append('h3').html('Request')
-      if (x.comment) section.append('div').html(x.comment)
-      const btnDiv =  section.append('div').style('position', 'relative')
-      btnDiv.append('div')
-        .style('position', 'absolute')
-        .style('top', 0)
-        .style('right', 0)
-        .selectAll('button')
-        .data([{label: 'expand'}, {label: 'collapse', callback: ()=>{}}])
-        .enter()
-        .append('button')
-        .style('padding', '2px')
-        .style('font-size', '12px')
-        .html(d => d.label)
-        .on('click', d => {
-          inprogress = d.label
-          clickables.each(simulateClick)
-          inprogress = ''
-        })
-
-      section.append('div').attr('class', 'tsd-signature').append('div').html(JSON.stringify(r.request.type, null, '   '))
-      const signature = section.append('div').html(x.signature)
-      const clickables = signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).filter(function(){return this.innerHTML != title})
-      clickables.on('click', mayExpand)
-    }
-
-    {
-      const title = r.response.type
-      const x = extracts[title]
-      const resTitle = section.append('div').style('position', 'relative')
-      const h3 = section.append('h3')
-      h3.append('span').html('Response')
-      if (title) {
-        const url = `/docs/server/types/${title}.html`
-        h3.append('span').attr('class', 'sjpp-h3link').html('full doc').on('click', ()=>{window.location = url})
+    for(const method in r.byMethod) {
+      const m = r.byMethod[method]
+      const Method = method.toUpperCase()
+      if (m.description) {
+        section.append('h3').html(`${Method}`)
+        section.append('div').html(m.description)
       }
-      if (x.comment) section.append('div').html(x.comment)
-      const btnDiv =  section.append('div').style('position', 'relative')
-      btnDiv.append('div')
-        .style('position', 'absolute')
-        .style('top', 0)
-        .style('right', 0)
-        .selectAll('button')
-        .data([{label: 'expand'}, {label: 'collapse', callback: ()=>{}}])
-        .enter()
-        .append('button')
-        .style('padding', '2px')
-        .style('font-size', '12px')
-        .html(d => d.label)
-        .on('click', d => {
-          inprogress = d.label
-          clickables.each(simulateClick)
-          inprogress = ''
-        })
+      for(const s of service) {
+        const serv = m[s]
+        if (!serv) continue
+        const title = serv.type
+        const x = title in extracts ? extracts[title] : serv.type
+        const h3 = section.append('h3')
+        h3.append('span').html(Method + ' ' + s[0].toUpperCase() + s.slice(1))
+        if (title in extracts) {
+          const url = `/docs/server/types/${title}.html`
+          h3.append('span').attr('class', 'sjpp-h3link').html('typedoc').on('click', ()=>{window.location = url})
+        }
+        if (x.comment) section.append('div').html(x.comment)
+        const toggle = setBtns(section)
+        if (title in extracts) {
+          const signature = section.append('div').html(x.signature)
+          toggle.clickables = signature
+            .selectAll('.tsd-kind-type-alias')
+            .attr('href', `#${title}`)
+            .filter(function(){return this.innerHTML != title})
+            .datum(toggle)
+            .on('click', mayExpand)
 
-      const signature = section.append('div').html(x.signature)
-      const clickables = signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).filter(function(){return this.innerHTML != title})
-      clickables.on('click', mayExpand)
+          signature.selectAll('.tsd-kind-property').style('cursor', 'pointer').on('click', handlePropClick)
+        } else {
+          section.append('div').attr('class', 'tsd-signature').append('div').html(JSON.stringify(serv.type, null, '   '))
+        }
+      }
     }
 
-    // use global function from nav.js
     detectCopyable(section)
   }
 }
@@ -142,6 +126,9 @@ async function init() {
 // in multiple levels of a type declaration
 const clicked = new WeakMap()
 async function mayExpand(event) {
+  tip.hide()
+
+  const t = this.__data__
   const title = this.innerHTML
   const key = this;
   if (!clicked.has(key)) {
@@ -154,11 +141,11 @@ async function mayExpand(event) {
   }
   const c = clicked.get(key)
   if (c.expanded) {
-    if (inprogress != 'expand') {
+    if (t.inprogress != 'expand') {
       c.parentNode.replaceChild(c.orig, c.div)
       c.expanded = false
     }
-  } else if (inprogress != 'collapse') {
+  } else if (t.inprogress != 'collapse') {
     c.parentNode.replaceChild(c.div, c.orig)
     c.expanded = true
     const signature = d3.select(c.div)
@@ -168,15 +155,91 @@ async function mayExpand(event) {
     if (ns.innerHTML == ':') ns.innerHTML = ''
     clicked.set(span.node(), c)
     signature.selectAll('.tsd-signature').style('padding', 0).style('position', 'relative').style('top', 0).style('border', 'none')
-    const clickables = signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`)
-    clickables.on('click', mayExpand)
-    if (inprogress) clickables.each(simulateClick)
+    const clickables = signature
+      .selectAll('.tsd-kind-type-alias')
+      .attr('href', `#${title}`)
+      .datum(t)
+      .on('click', mayExpand)
+    if (t.inprogress) clickables.each(simulateClick)
+    signature.selectAll('.tsd-kind-property').style('cursor', 'pointer').on('click', handlePropClick)
   }
   return false
 }
 
-function simulateClick(){
-  mayExpand.call(this) 
+function setBtns(section) {
+  // clickables to be assigned per signature div 
+  const toggle = {inprogress: '', clickables: undefined}
+  const btn = section
+    .append('div')
+    .style('position', 'relative')
+    .append('div')
+    .style('position', 'absolute')
+    .style('top', 0)
+    .style('right', 0)
+    .append('button')
+    .attr('title', 'Click this button to toggle between expanding or collapsing all type signatures.' 
+      + ' You may also click on individual signature IDs (red text) to toggle each type separately.')
+    .style('padding', '2px')
+    .style('font-size', '12px')
+    .html('expand')
+    .on('click', d => {
+      toggle.inprogress = btn.text()
+      if (toggle.clickables) toggle.clickables.each(simulateClick)
+      toggle.inprogress = ''
+      btn.text(btn.text() == 'expand' ? 'collapse' : 'expand')
+    })
+
+  return toggle
+}
+
+function simulateClick(event){
+  mayExpand.call(this, event) 
+}
+
+function handlePropClick(target) {
+  event.stopPropagation()
+  const ns = event.target.nextSibling.nextSibling
+  const xdiv = ns.firstChild?.firstChild
+  const type = ns?.innerText.trim().split(':')[0].split(' ')[0]
+  const typeLabel = d3.select(ns).attr('class')?.includes('-type') || (xdiv && d3.select(xdiv).attr('class')?.includes('-type')) ? `<b>${type}</b>` : ''
+  const comment = extracts[type]?.comment || '<p>(no parsable comment)</p>'
+  tip.show(`${event.target.innerText}: ${typeLabel} ${comment}`)
+}
+
+
+const tip = getTip() 
+
+function getTip() {
+  const tip = d3.select('body').append('div').attr('class', 'sjpp-tip')
+  
+  tip.head = tip.append('button')
+    .style('position', 'absolute')
+    .style('top', '1px')
+    .style('right', '1px')
+    .style('padding', '1px')
+    .style('height', '14px')
+    .style('width', '14px')
+    .style('line-height', '8px')
+    .style('font-size', '12px')
+    .style('cursor', 'button')
+    .html(`x`)
+    .on('click', ()=>tip.style('display', 'none'))
+  tip.body = tip.append('div')
+  
+  tip.show = (html) => {
+    tip.style('display', '')
+      .style('top', event.clientY + 8)
+      .style('left', event.clientX + 8)
+    tip.body.selectAll('*').remove()
+    tip.body.append('span').html(html)
+  }
+  
+  tip.hide = () => {
+    tip.style('display', 'none')
+  }
+
+  d3.select('body').on('click', tip.hide)  
+  return tip
 }
 
 </script>
