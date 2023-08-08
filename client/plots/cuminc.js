@@ -438,32 +438,65 @@ class MassCumInc {
 	}
 
 	processResults(results) {
-		const data = results.data
 		const s = this.settings
 		const c = this.config
+		const estimates = {}
+		const tests = {}
+		const lowSampleSize = {}
+		const noEvents = results.noEvents
 		this.currData = []
 		this.uniqueSeriesIds = new Set()
-		this.lowSampleSize = {}
-		this.noData = []
 		this.tests = {}
-		for (const chartId in data) {
-			const chart = data[chartId]
+		this.noData = []
+		this.refs = results.refs
+
+		// filter charts and serieses from the data
+		for (const chartId in results.data) {
+			const chart = results.data[chartId]
 			if (!chart.estimates) {
-				// store charts with no data to report to user
+				// chart does not have any data
 				this.noData.push(chartId)
 				continue
 			}
-			// process cumulative incidence estimates
 			for (const seriesId in chart.estimates) {
 				const series = chart.estimates[seriesId]
 				if (series[0].nrisk < s.minSampleSize) {
 					// discard series with low starting sample size
-					if (!s.hidden.includes(seriesId)) {
-						const v = c.term2?.term.values?.[seriesId].label || seriesId
-						chartId in this.lowSampleSize ? this.lowSampleSize[chartId].push(v) : (this.lowSampleSize[chartId] = [v])
-					}
+					chartId in lowSampleSize ? lowSampleSize[chartId].push(seriesId) : (lowSampleSize[chartId] = [seriesId])
 					continue
 				}
+				if (!series.filter(timepoint => timepoint.nrisk >= s.minAtRisk && timepoint.est > 0).length) {
+					// discard series with no events after applying
+					// the at-risk count filter
+					chartId in noEvents ? noEvents[chartId].push(seriesId) : (noEvents[chartId] = [seriesId])
+					continue
+				}
+				chartId in estimates ? (estimates[chartId][seriesId] = series) : (estimates[chartId] = { [seriesId]: series })
+			}
+			if (!(chartId in estimates)) {
+				// chart does not have any data
+				this.noData.push(chartId)
+				continue
+			}
+			if (chart.tests) {
+				// discard tests that have series that are either
+				// discarded or hidden
+				tests[chartId] = chart.tests.filter(
+					test =>
+						test.series1 in estimates[chartId] &&
+						test.series2 in estimates[chartId] &&
+						!s.hidden.includes(test.series1) &&
+						!s.hidden.includes(test.series2)
+				)
+			}
+		}
+
+		// process the filtered data
+		// process estimates
+		for (const chartId in estimates) {
+			const chart = estimates[chartId]
+			for (const seriesId in chart) {
+				const series = chart[seriesId]
 				for (const timepoint of series) {
 					const { time, est, low, up, nrisk, nevent, ncensor } = timepoint
 					const d = {
@@ -489,33 +522,31 @@ class MassCumInc {
 					this.uniqueSeriesIds.add(d.seriesId)
 				}
 			}
-			// process results of Grey's tests
-			if (chart.tests) {
-				for (const test of chart.tests) {
-					if (s.hidden.includes(test.series1) || s.hidden.includes(test.series2)) {
-						// hide tests that contain hidden series
-						continue
-					}
-					if (chartId in this.lowSampleSize) {
-						// hide tests that contain series with low sample size
-						if (
-							this.lowSampleSize[chartId].includes(test.series1) ||
-							this.lowSampleSize[chartId].includes(test.series2)
-						)
-							continue
-					}
-					const d = {
-						pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
-						series1: { id: test.series1 },
-						series2: { id: test.series2 },
-						permutation: test.permutation
-					}
-					chartId in this.tests ? this.tests[chartId].push(d) : (this.tests[chartId] = [d])
+		}
+		// process tests
+		for (const chartId in tests) {
+			for (const test of tests[chartId]) {
+				const d = {
+					pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
+					series1: { id: test.series1 },
+					series2: { id: test.series2 },
+					permutation: test.permutation
 				}
+				chartId in this.tests ? this.tests[chartId].push(d) : (this.tests[chartId] = [d])
 			}
 		}
 
-		this.refs = results.refs
+		// convert series ids to labels if necessary
+		this.lowSampleSize = {}
+		for (const chartId in lowSampleSize) {
+			this.lowSampleSize[chartId] = lowSampleSize[chartId].map(
+				seriesId => c.term2?.term.values?.[seriesId]?.label || seriesId
+			)
+		}
+		this.noEvents = {}
+		for (const chartId in noEvents) {
+			this.noEvents[chartId] = noEvents[chartId].map(seriesId => c.term2?.term.values?.[seriesId]?.label || seriesId)
+		}
 	}
 
 	sortSerieses(charts) {
@@ -720,14 +751,14 @@ function setRenderers(self) {
 
 			// skipped series legends
 			// series with no events
-			if (self.lowEventCnt && chart.chartId in self.lowEventCnt) {
+			if (self.noEvents && chart.chartId in self.noEvents) {
 				const skipdiv = div
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin', '30px 0px')
 				const title = 'Skipped series (no events)'
-				renderSkippedSeries(skipdiv, title, self.lowEventCnt[chart.chartId], s)
+				renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
 			}
 			// series with low sample size
 			if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
@@ -799,14 +830,14 @@ function setRenderers(self) {
 
 			// skipped series legends
 			// series with no events
-			if (self.lowEventCnt && chart.chartId in self.lowEventCnt) {
+			if (self.noEvents && chart.chartId in self.noEvents) {
 				const skipdiv = div
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin', '30px 0px')
 				const title = 'Skipped series (no events)'
-				renderSkippedSeries(skipdiv, title, self.lowEventCnt[chart.chartId], s)
+				renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
 			}
 			// series with low sample size
 			if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
