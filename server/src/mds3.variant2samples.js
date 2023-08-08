@@ -77,7 +77,7 @@ export function validate_variant2samples(ds) {
 		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
 
-	vs.get = async (q) => {
+	vs.get = async q => {
 		return await variant2samples_getresult(q, ds)
 	}
 
@@ -150,7 +150,7 @@ async function variant2samples_getresult(q, ds) {
 		if (!q.useIntegerSampleId && ds?.cohort?.termdb?.q?.id2sampleName) {
 			// dataset can map integer to string sample name, and query does not ask to keep integer id, thus convert to string id
 			// this is default behavior for client display
-			mutatedSamples.forEach((i) => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
+			mutatedSamples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
 		}
 		return mutatedSamples
 	}
@@ -242,7 +242,7 @@ async function queryMutatedSamples(q, ds) {
 	const q2 = {
 		ds,
 		// filterObj does not exist if query is from mass. still added it here in case it may come from mds3...
-		filter: q.filter || q.filterObj,
+		filter: q.filter || q.filterObj
 	}
 	const out = await getSampleData_dictionaryTerms_termdb(q2, q.twLst)
 	// quick fix to reshape result data
@@ -289,7 +289,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 
 			// new param with rglst as the variant position, also inherit q.tid2value if provided
 			const param = Object.assign({}, q, {
-				rglst: [{ chr, start: pos, stop: pos }],
+				rglst: [{ chr, start: pos, stop: pos }]
 			})
 
 			const mlst = await ds.queries.snvindel.byrange.get(param)
@@ -408,7 +408,7 @@ async function make_sunburst(mutatedSamples, ds, q) {
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		mutatedSamples,
-		q.twLst.map((tw) => {
+		q.twLst.map(tw => {
 			return { k: tw.id }
 		})
 	)
@@ -484,14 +484,14 @@ async function make_summary(mutatedSamples, ds, q) {
 			entries.push({
 				termid: tw.id,
 				termname: tw.term.name,
-				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1]),
+				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
 			const density_data = await get_densityplot(tw.term, mutatedSamples)
 			entries.push({
 				termid: tw.id,
 				termname: tw.term.name,
-				density_data,
+				density_data
 			})
 		} else {
 			throw 'unknown term type'
@@ -505,7 +505,7 @@ async function make_summary(mutatedSamples, ds, q) {
 			// array ele: [category, total]
 			if (categories) {
 				for (const cat of numbycategory) {
-					const vtotal = categories.find((v) => v[0].toLowerCase() == cat[0].toLowerCase())
+					const vtotal = categories.find(v => v[0].toLowerCase() == cat[0].toLowerCase())
 					if (vtotal) cat.push(vtotal[1])
 				}
 			}
@@ -603,6 +603,7 @@ twLst[]
 	currently has up to three levels
 ds{}
 q{}
+	.filterObj={}
 nodes[], optional
 
 <output>
@@ -659,7 +660,12 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 	// get term[0] category total, not dependent on other terms
 	const id0 = twLst[0].id
 	{
-		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([twLst[0]])
+		// make new q{} with filters, for termid2totalsize2.get()
+		// must not directly submit q{} to .get([], q), this will filter to only those mutated samples rather than category total size
+		const _q = {}
+		if (q.filterObj) _q.filterObj = q.filterObj
+
+		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([twLst[0]], _q)
 		for (const [v, count] of tv2counts.get(id0)) {
 			const v0 = ds.cohort.termdb.useLower ? v.toLowerCase() : v
 			if (useall) {
@@ -679,7 +685,11 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 		const promises = []
 		// for every id0 category, get id1 category/count conditional on it
 		for (const v0 of id2categories.get(id0)) {
-			promises.push(ds.cohort.termdb.termid2totalsize2.get([twLst[1]], { tid2value: { [id0]: v0 } }, v0))
+			// make new q with filters
+			const _q = { tid2value: { [id0]: v0 } }
+			if (q.filterObj) _q.filterObj = q.filterObj
+
+			promises.push(ds.cohort.termdb.termid2totalsize2.get([twLst[1]], _q, v0))
 		}
 		const lst = await Promise.all(promises)
 		for (const [tv2counts, v0] of lst) {
@@ -704,10 +714,11 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 		const promises = []
 		for (const v0 of id2categories.get(id0)) {
 			for (const v1 of id2categories.get(id1)) {
-				const q2 = JSON.parse(JSON.stringify(q))
-				promises.push(
-					ds.cohort.termdb.termid2totalsize2.get([twLst[2]], { tid2value: { [id0]: v0, [id1]: v1 } }, { v0, v1 })
-				)
+				// make new q with filters
+				const _q = { tid2value: { [id0]: v0, [id1]: v1 } }
+				if (q.filterObj) _q.filterObj = q.filterObj
+
+				promises.push(ds.cohort.termdb.termid2totalsize2.get([twLst[2]], _q, { v0, v1 }))
 			}
 		}
 		const lst = await Promise.all(promises)
@@ -740,7 +751,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		}
 		const v0 = ds.cohort.termdb.useLower ? node.v0.toLowerCase() : node.v0
 		if (!node.id1) {
-			const n = combinations.find((i) => i.id1 == undefined && i.v0 == v0)
+			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
 			if (n) node.cohortsize = n.count
 			continue
 		}
@@ -752,7 +763,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		const v1 = ds.cohort.termdb.useLower ? node.v1.toLowerCase() : node.v1
 		if (!node.id2) {
 			// second level, use crosstabL1
-			const n = combinations.find((i) => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
+			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
 			if (n) node.cohortsize = n.count
 			continue
 		}
@@ -763,7 +774,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		const v2 = ds.cohort.termdb.useLower ? node.v2.toLowerCase() : node.v2
 		if (!node.id3) {
 			// third level, use crosstabL2
-			const n = crosstabL2.find((i) => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
+			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
 			if (n) node.cohortsize = n.count
 		}
 	}
@@ -796,9 +807,9 @@ function summary2barchart(input, q) {
 		charts: [
 			{
 				chartId: '',
-				serieses: [],
-			},
-		],
+				serieses: []
+			}
+		]
 	}
 	for (const [category, mutCount, total] of summary.numbycategory) {
 		data.charts[0].serieses.push({
@@ -806,8 +817,8 @@ function summary2barchart(input, q) {
 			total,
 			data: [
 				{ dataId: 'Mutated', total: mutCount },
-				{ dataId: 'Others', total: total - mutCount },
-			],
+				{ dataId: 'Others', total: total - mutCount }
+			]
 		})
 	}
 	return data

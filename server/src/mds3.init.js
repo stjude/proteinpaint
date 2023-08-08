@@ -9,6 +9,7 @@ import { validate_variant2samples } from './mds3.variant2samples'
 import * as utils from './utils'
 import { compute_mclass } from './vcf.mclass'
 import computePercentile from '#shared/compute.percentile'
+import { filterJoin } from '#shared/filter'
 import serverconfig from './serverconfig'
 import {
 	dtsnvindel,
@@ -393,6 +394,9 @@ async function read_PC_file(file, PCcount) {
 
 async function call_barchart_data(twLst, q, combination, ds) {
 	// makes sense to call barchart function as it adds counting logic over getData output
+
+	const filter = combineFilterAndTid2value(q, ds) // optional filter, based on optional parameters
+
 	const termid2values = new Map()
 	// k: term id
 	// v: [], element is [category, totalCount]
@@ -401,11 +405,10 @@ async function call_barchart_data(twLst, q, combination, ds) {
 		if (tw.term.type == 'categorical') {
 			const _q = {
 				term1_id: tw.id,
-				term1_q: { type: 'values' }
+				term1_q: { type: 'values' },
+				filter
 			}
-			if (q.tid2value) {
-				_q.filter = tid2value2filter(q.tid2value, ds)
-			}
+
 			const out = await barchart_data(_q, ds, ds.cohort.termdb)
 
 			if (!out?.data?.charts?.[0]) {
@@ -422,6 +425,20 @@ async function call_barchart_data(twLst, q, combination, ds) {
 	}
 	if (combination) return [termid2values, combination]
 	return termid2values
+}
+
+/*
+detect following two optional attributes. if only one present, return the single filter; if both present, return joined filter
+q.filterObj
+q.tid2value
+*/
+function combineFilterAndTid2value(q, ds) {
+	const lst = []
+	if (q.filterObj) lst.push(q.filterObj)
+	if (q.tid2value) lst.push(tid2value2filter(q.tid2value, ds))
+	if (lst.length == 0) return
+	if (lst.length == 1) return lst[0]
+	return filterJoin(lst)
 }
 
 function copy_queries(ds, dscopy) {
