@@ -27,7 +27,7 @@ function getApp(setHandler) {
 			app.routes[path][method] = handler
 		}
 	}
-	setHandler(app)
+	setHandler(app, { hg38: {} }, '')
 	return app
 }
 
