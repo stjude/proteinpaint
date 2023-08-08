@@ -32,10 +32,9 @@ type DbInfo = {
 }
 
 /**
- * The response data shape from the /healthcheck endpoint
+ * Server status and data related to it's health
  */
-export type HealthCheckResponse = /*{ status: 'error'; error: string }
-	|*/ {
+export type HealthCheckResponse = {
 	status: 'ok' | 'error'
 	genomes: BuildByGenome
 	versionInfo: VersionInfo

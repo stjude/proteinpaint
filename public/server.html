@@ -23,12 +23,14 @@
 
 init()
 let extracts = {}
+let inprogress = ''
 
 async function init() {
   extracts = await fetch('/docs/server/extracts.json').then(r => r.json()).catch(console.error)
   const routes = [
     {
-      endpoint: '/healthcheck',
+      endpoint: 'healthcheck',
+      test: '/src/test/health.unit.spec.js',
       request: {
         type: {},
       },
@@ -40,28 +42,84 @@ async function init() {
   const sidebarLinks = d3.select('.tsd-small-nested-navigation')
   const contentDiv = d3.select('.col-content')
   for(const r of routes) {
+    r.id = r.endpoint.replace('/', '.')
     const section = contentDiv.append('div')
-    const title = r.response.type
-    sidebarLinks.append('li').append('a').attr('href', `#${title}`).html(r.endpoint)
-    const url = `/docs/server/types/${title}.html`
-    const x = extracts[title]
+    
+    sidebarLinks.append('li').append('a').attr('href', `#${r.id}`).html(r.endpoint)
+    
     section.append('h2')
-      .attr('id', r.endpoint)
+      .attr('id', r.id)
       .attr('class', 'tsd-page-title')
       .style('cursor', 'pointer')
-      .html(r.endpoint) 
-      .on('click', ()=>{window.location = url})
+      .html(`<span style='color:#aaa; font-weight: 200; margin-right: 3px'>/</span>${r.endpoint}`)
+      .on('click', ()=>{window.location.hash = `#${r.id}`})
 
-    if (x.comment) {
-      section.append('div').html(x.comment)
+    
+    if (r.test) {
+      section.append('div').html(`CLI test: <span class='code-snippet'>exportsFilename=${r.test} npm run test:unit</span>`)
+    }
+    
+    {
+      const title = r.request.type
+      const x = title in extracts ? extracts[title] : r.request.type
+      section.append('h3').html('Request')
+      if (x.comment) section.append('div').html(x.comment)
+      const btnDiv =  section.append('div').style('position', 'relative')
+      btnDiv.append('div')
+        .style('position', 'absolute')
+        .style('top', 0)
+        .style('right', 0)
+        .selectAll('button')
+        .data([{label: 'expand'}, {label: 'collapse', callback: ()=>{}}])
+        .enter()
+        .append('button')
+        .style('padding', '2px')
+        .style('font-size', '12px')
+        .html(d => d.label)
+        .on('click', d => {
+          inprogress = d.label
+          clickables.each(simulateClick)
+          inprogress = ''
+        })
+
+      section.append('div').attr('class', 'tsd-signature').append('div').html(JSON.stringify(r.request.type, null, '   '))
+      const signature = section.append('div').html(x.signature)
+      const clickables = signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).filter(function(){return this.innerHTML != title})
+      clickables.on('click', mayExpand)
     }
 
-    section.append('h3').html('Request')
-    section.append('div').attr('class', 'tsd-signature').append('pre').html(JSON.stringify(r.request.type, null, '   '))
+    {
+      const title = r.response.type
+      const x = extracts[title]
+      const resTitle = section.append('div').style('position', 'relative')
+      const url = `/docs/server/types/${title}.html`
+      section.append('h3').html('Response').on('click', ()=>{window.location = url})
+      if (x.comment) section.append('div').html(x.comment)
+      const btnDiv =  section.append('div').style('position', 'relative')
+      btnDiv.append('div')
+        .style('position', 'absolute')
+        .style('top', 0)
+        .style('right', 0)
+        .selectAll('button')
+        .data([{label: 'expand'}, {label: 'collapse', callback: ()=>{}}])
+        .enter()
+        .append('button')
+        .style('padding', '2px')
+        .style('font-size', '12px')
+        .html(d => d.label)
+        .on('click', d => {
+          inprogress = d.label
+          clickables.each(simulateClick)
+          inprogress = ''
+        })
 
-    section.append('h3').html('Response')
-    const signature = section.append('div').html(x.signature)
-    signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).filter(function(){return this.innerHTML != title}).on('click', mayExpand)
+      const signature = section.append('div').html(x.signature)
+      const clickables = signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).filter(function(){return this.innerHTML != title})
+      clickables.on('click', mayExpand)
+    }
+
+    // use global function from nav.js
+    detectCopyable(section)
   }
 }
 
@@ -82,9 +140,11 @@ async function mayExpand(event) {
   }
   const c = clicked.get(key)
   if (c.expanded) {
-    c.parentNode.replaceChild(c.orig, c.div)
-    c.expanded = false
-  } else {
+    if (inprogress != 'expand') {
+      c.parentNode.replaceChild(c.orig, c.div)
+      c.expanded = false
+    }
+  } else if (inprogress != 'collapse') {
     c.parentNode.replaceChild(c.div, c.orig)
     c.expanded = true
     const signature = d3.select(c.div)
@@ -94,9 +154,15 @@ async function mayExpand(event) {
     if (ns.innerHTML == ':') ns.innerHTML = ''
     clicked.set(span.node(), c)
     signature.selectAll('.tsd-signature').style('padding', 0).style('position', 'relative').style('top', 0).style('border', 'none')
-    signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`).on('click', mayExpand)
+    const clickables = signature.selectAll('.tsd-kind-type-alias').attr('href', `#${title}`)
+    clickables.on('click', mayExpand)
+    if (inprogress) clickables.each(simulateClick)
   }
   return false
+}
+
+function simulateClick(){
+  mayExpand.call(this) 
 }
 
 </script>

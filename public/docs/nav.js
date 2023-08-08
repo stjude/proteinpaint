@@ -81,7 +81,12 @@ setTimeout(() => {
 				})
 		})
 
-	d3.selectAll('.code-snippet')
+	detectCopyable(d3.select('body'))
+}, 0)
+
+function detectCopyable(dom) {
+	dom
+		.selectAll('.code-snippet')
 		.attr('title', function () {
 			const elem = d3.select(this)
 			if (!elem.attr('title') && !this.__data__) {
@@ -93,4 +98,4 @@ setTimeout(() => {
 			event.stopPropagation()
 			navigator.clipboard.writeText(d)
 		})
-}, 0)
+}
