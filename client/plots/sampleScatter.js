@@ -148,7 +148,7 @@ class Scatter {
 		let i = 0
 		for (const [key, data] of Object.entries(results)) {
 			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-			if (key.startsWith('Not tested') || key.startsWith('Wildtype')) this.createChart(key, data, i)
+			if (data.isLast) this.createChart(key, data, i)
 			else this.createChart(key, data, 0)
 		}
 		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
