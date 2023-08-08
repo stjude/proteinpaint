@@ -1,6 +1,7 @@
 Features:
 - Display pairlst data, if available, for a fusion event on matrix cell mouseover
 - Launch lollipop from a geneVariant row label of matrix
+- User-controllable filter for at-risk counts in cumulative incidence plot
 
 Fixes:
 - Bug fix to change cutoff grade for condition term
