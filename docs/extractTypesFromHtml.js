@@ -16,7 +16,10 @@ for (const t of ['types', 'interfaces']) {
 			comment: extractComment(text),
 			signature: extractSignature(text)
 		}
-		if (fname.startsWith('_internal_.')) fs.renameSync(htmlFilePath, path.join(dir, `${name}.html`))
+		if (fname.startsWith('_internal_.'))
+			fs.symlink(htmlFilePath, path.join(dir, `${name}.html`), err => {
+				if (err) throw err
+			})
 	}
 }
 

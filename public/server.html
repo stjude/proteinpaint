@@ -4,6 +4,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js" integrity="sha512-FHsFVKQ/T1KWJDGSbrUhTJyS1ph3eRrxI228ND0EGaEp6v4a/vGwPWd3Dtd/+9cI7ccofZvl/wulICEurHN1pg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- pragma: allowlist secret -->
   <link rel="stylesheet" href="/docs/server/assets/style.css"/>
   <link rel="stylesheet" href="/docs/server/assets/highlight.css"/>
+  <style>
+    .sjpp-h3link {
+      margin-left: 12px;
+      font-size: 16px;
+      font-weight: 300;
+      color: #1f70c2;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 <div class='docs-subheader'>
@@ -92,8 +102,12 @@ async function init() {
       const title = r.response.type
       const x = extracts[title]
       const resTitle = section.append('div').style('position', 'relative')
-      const url = `/docs/server/types/${title}.html`
-      section.append('h3').html('Response').on('click', ()=>{window.location = url})
+      const h3 = section.append('h3')
+      h3.append('span').html('Response')
+      if (title) {
+        const url = `/docs/server/types/${title}.html`
+        h3.append('span').attr('class', 'sjpp-h3link').html('full doc').on('click', ()=>{window.location = url})
+      }
       if (x.comment) section.append('div').html(x.comment)
       const btnDiv =  section.append('div').style('position', 'relative')
       btnDiv.append('div')
