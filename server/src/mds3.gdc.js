@@ -2,7 +2,7 @@ import * as common from '#shared/common'
 import { compute_bins } from '#shared/termdb.bins'
 import got from 'got'
 import path from 'path'
-import { get_crosstabCombinations, combineSamplesById } from './mds3.variant2samples'
+import { combineSamplesById } from './mds3.variant2samples'
 import { filter2GDCfilter } from './mds3.gdc.filter'
 
 /*
@@ -1527,6 +1527,7 @@ input:
 	q{}
 		.tid2value={ termid: v}
 		.ssm_id_lst=str
+		.filterObj={}
 	combination={}
 		if provided, return alongside map; needed for sunburst, see get_crosstabCombinations()
 	ds
