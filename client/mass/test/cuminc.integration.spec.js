@@ -158,7 +158,7 @@ tape('term1=Cardiovascular System, term2=agedx', function (test) {
 	async function runTests(cuminc) {
 		const div = cuminc.Inner.dom.chartsDiv
 		test.equal(div.selectAll('.sjpcb-cuminc-series').size(), 2, 'should render 2 cuminc series <g>')
-		/*test.equal(
+		test.equal(
 			div.selectAll('.sjpcb-cuminc-series path').size(),
 			4,
 			'should render 4 cuminc series paths for estimate line and 95% CI area'
@@ -185,7 +185,7 @@ tape('term1=Cardiovascular System, term2=agedx', function (test) {
 			else test.pass(`Should display series = '${d.seriesId}' in both legend and 'Number at risk' table`)
 		}
 
-		if (test._ok) cuminc.Inner.app.destroy()*/
+		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
