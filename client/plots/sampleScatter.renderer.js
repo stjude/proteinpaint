@@ -33,9 +33,9 @@ export function setRenderers(self) {
 
 	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
-		const cohortSamples = chart.cohortSamples
-		const s0 = cohortSamples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = cohortSamples.reduce(
+
+		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
+		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = chart.data.samples.reduce(
 			(s, d) => [
 				d.x < s[0] ? d.x : s[0],
 				d.x > s[1] ? d.x : s[1],
@@ -43,8 +43,8 @@ export function setRenderers(self) {
 				d.y > s[3] ? d.y : s[3],
 				d.z < s[4] ? d.z : s[4],
 				d.z > s[5] ? d.z : s[5],
-				d.scale < s[6] ? d.scale : s[6],
-				d.scale > s[7] ? d.scale : s[7]
+				'scale' in d ? (d.scale < s[6] ? d.scale : s[6]) : Number.POSITIVE_INFINITY,
+				'scale' in d ? (d.scale > s[7] ? d.scale : s[7]) : Number.NEGATIVE_INFINITY
 			],
 			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
 		)
