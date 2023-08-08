@@ -71,6 +71,7 @@ class profileBarchart {
 
 		this.region = this.config.region || this.regions[0]
 		this.income = this.config.income || this.incomes[0]
+		this.componentIndex = this.config.componentIndex || 0
 
 		this.plot()
 	}
@@ -128,9 +129,9 @@ class profileBarchart {
 
 		const sampleData = this.sampleData
 		if (!sampleData) return
-		const filename = `barchart_plot${this.config.componentIndex ? '_' + components[this.config.componentIndex] : ''}${
-			this.region ? '_' + this.region : ''
-		}${this.income ? '_' + this.income : ''}.svg`
+		const filename = `barchart_plot_${components[this.componentIndex]}${this.region ? '_' + this.region : ''}${
+			this.income ? '_' + this.income : ''
+		}.svg`
 			.split(' ')
 			.join('_')
 
