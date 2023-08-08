@@ -36,18 +36,22 @@ export async function get_incidence(q, ds) {
 
 		// prepare R input
 		const Rinput = { data: {}, startTime: minTimeSinceDx }
-		// discard charts with no events of interest (event=1)
-		// 	 - if there are only event=0, R will throw error
-		// 	 - if there are only event=0/2, R will consider 2 to be
-		// 	 event of interest
-		// will report discarded charts to user
+		// remove series with no events of interest (i.e. event=1)
+		// need to do this because if series only has event=0/2
+		// then R will consider event=2 to be event of interest
+		results.noEvents = {}
 		for (const chartId in byChartSeries) {
 			const chart = byChartSeries[chartId]
-			if (!chart.find(x => x.event === 1)) {
-				results.data[chartId] = {}
-			} else {
-				Rinput.data[chartId] = chart
+			const seriesIds = new Set(chart.map(x => x.series))
+			for (const seriesId of seriesIds) {
+				if (!chart.find(x => x.series == seriesId && x.event === 1)) {
+					chartId in results.noEvents
+						? results.noEvents[chartId].push(seriesId)
+						: (results.noEvents[chartId] = [seriesId])
+				}
 			}
+			const serieses = chart.filter(x => !results.noEvents[chartId]?.includes(x.series))
+			serieses.length ? (Rinput.data[chartId] = serieses) : (results.data[chartId] = {})
 		}
 		if (!Object.keys(Rinput.data).length) return { data: {} }
 
