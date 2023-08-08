@@ -15,20 +15,20 @@ initGDCdictionary
 		fetchIdsFromGdcApi
 
 
+******************** major tasks *****************
 - parsing gdc variables and constructing in-memory termdb:
   HARDCODED LOGIC, does not need any configuration in dataset file
+  standard termdb "interface" functions are added to ds.cohort.termdb.q{}
+
+- determine default binconfig for all numeric terms
 
 - querying list of open-access projects
-  also hardcoded logic, not relying on dataset config
+  stores at: ds.gdcOpenProjects = set of project ids that are open-access
 
+- test gdc api, make sure they're all online
 
-standard termdb "interface" functions are added to ds.cohort.termdb.q{}
-
-adds following things:
-
-1. ds.cohort.termdb.q={ ... "standard" termdb callbacks ... }
-2. ds.gdcOpenProjects = set of project ids that are open-access
-
+- cache sample/case name/uuid mapping
+  stores at ds
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -51,7 +51,6 @@ for those terms that are not found in termId2bins{}:
 - it assigns dummy bin to this term, so the code won't break
 - a new commit should be made to add the new term(s) to hardcodeBinconfigs(),
   by electing some reasonable bin config based on its min/max
-
 */
 const dummyBins = {
 	default: {
@@ -258,7 +257,7 @@ export async function initGDCdictionary(ds) {
 					}
 					if ((termObj.type == 'integer' || termObj.type == 'float') && !termId2bins[termObj.id]) {
 						console.log(`GDC !!! Lack bin config for ${termObj.type} ${termObj.id}`)
-						await getNumericTermRange(termObj.id)
+						await getNumericTermRange_graphql(termObj.id)
 						// print out min/max for this term to assist manual curation of binconfig,
 						// a new commit should be made to hardcode config of this term in termId2bins
 					}
@@ -358,13 +357,76 @@ function mayAddTermAttribute(t) {
 	}
 }
 
-/*
+async function getNumericTermRange_graphql(id) {
+	const queriedFacet = id.replace('case.', '').replace('.', '__')
+	const query = `
+	  query ContinuousAggregationQuery($caseFilters: FiltersArgument, $filters: FiltersArgument, $filters2: FiltersArgument) {
+	  viewer {
+		explore {
+		  cases {
+			aggregations(case_filters: $caseFilters, filters: $filters) {
+			  ${queriedFacet} {
+			   stats {
+					Min : min
+					Max: max
+					Mean: avg
+					SD: std_deviation
+					count
+				}
+				range(ranges: $filters2) {
+				  buckets {
+					doc_count
+					key
+				  }
+				}
+			  }
+			}
+		  }
+		}
+	  }
+	}`
+
+	const variables = {
+		caseFilters: {},
+		filters: {},
+		filters2: { op: 'range', content: [{ ranges: [{ from: 0, to: 1 }] }] } // 0/1 values will not affect query
+	}
+
+	try {
+		const response = await got.post(apihostGraphql, {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({ query, variables })
+		})
+		const re = JSON.parse(response.body)
+		const s = re.data.viewer.explore.cases.aggregations[queriedFacet].stats
+		/*
+		{
+		  diagnoses__days_to_recurrence: {
+			range: { buckets: [Array] },
+			stats: {
+			  Max: 3782,
+			  Mean: 819.9636363636364,
+			  Min: 58,
+			  SD: 715.6613630457312,
+			  count: 165
+			}
+		  }
+		}
+		*/
+		console.log(`${id} Min=${s.Min} Max=${s.Max} Mean=${s.Mean} Median=${s.Median} SD=${s.SD} Count=${s.count}`)
+	} catch (e) {
+		console.log(`${id} ??? ERR ???`)
+	}
+}
+
+/* not in use!
+replaced with getNumericTermRange_graphql above
+
 run on the fly query to api to grab some sample data points for this numeric term
 to be able to get the min/max range of this term
 
 id: gdc numeric term id, e.g. "case.demographic.year_of_death"
 for this term, the function prints out: "Min=1992  Max=2021"
-
 */
 async function getNumericTermRange(id) {
 	// getting more datapoints will slow down the response
