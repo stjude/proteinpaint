@@ -103,9 +103,9 @@ const express = require('express'),
 	cookieParser = require('cookie-parser'),
 	authApi = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
-	{ handle_healthcheck_closure, versionInfo } = require('./health'),
 	{ handle_genelookup_closure } = require('./gene'),
-	minimatch = require('minimatch')
+	minimatch = require('minimatch'),
+	{ versionInfo } = require('./routes/healthcheck')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -273,7 +273,14 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 authApi.maySetAuthRoutes(app, basepath, serverconfig)
-app.get(basepath + '/healthcheck', handle_healthcheck_closure(genomes))
+{
+	// start moving migrated route handler code here
+	const files = fs.readdirSync(path.join(serverconfig.binpath, '/src/routes'))
+	for (const f of files) {
+		const handler = require(`./routes/${f}`)
+		handler.setRoute(app, genomes, basepath)
+	}
+}
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)

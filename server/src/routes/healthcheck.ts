@@ -1,22 +1,22 @@
-import serverconfig from './serverconfig'
+import serverconfig from '../serverconfig'
 import fs from 'fs'
 import child_process from 'child_process'
 import util from 'util'
 import pkg from '../../package.json'
-import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/healthcheck'
+import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../../shared/types/healthcheck'
 
 const execPromise = util.promisify(child_process.exec)
 //const docs = require('../shared/doc')
 
-export function handle_healthcheck_closure(genomes: any) {
-	return async (req, res): Promise<void> => {
+export function setRoute(app: any, genomes: any, basepath: string = '') {
+	app.get(basepath + '/healthcheck', async (req, res): Promise<void> => {
 		try {
 			const health = await getStat(genomes)
 			res.send(health)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
-	}
+	})
 }
 
 async function getStat(genomes: any): Promise<HealthCheckResponse> {

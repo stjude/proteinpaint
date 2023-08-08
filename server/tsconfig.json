@@ -9,6 +9,9 @@
       ],
       "#shared/*": [
         "./shared/*"
+      ],
+      "#routes/*": [
+        "./src/routes/*"
       ]
     },
     "strictNullChecks": true,
