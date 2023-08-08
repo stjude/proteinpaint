@@ -89,6 +89,7 @@
     "src/mds3.gdc.filter.js",
     "src/checkReadingFrame.js",
     "src/bedj.parseBed.js",
+    "src/routes/*",
     "cards/*",
     "server.js*",
     "start.js",
