@@ -145,9 +145,11 @@ class Scatter {
 		this.charts = []
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
 		if (results.error) throw results.error
+		let i = 0
 		for (const [key, data] of Object.entries(results)) {
 			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-			this.createChart(key, data)
+			if (key.startsWith('Not tested') || key.startsWith('Wildtype')) this.createChart(key, data, i)
+			else this.createChart(key, data, 0)
 		}
 		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
 		await this.setControls()
@@ -159,16 +161,16 @@ class Scatter {
 		this.dom.tip.hide()
 	}
 
-	createChart(id, data) {
+	createChart(id, data, i) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
-		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
+		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
-		const hasRef = this.charts[0].data.samples.find(s => !('sampleId' in s))
+		const hasRef = this.charts[0]?.data.samples.find(s => !('sampleId' in s)) || false
 		const scaleDotOption = {
 			type: 'term',
 			configKey: 'scaleDotTW',
