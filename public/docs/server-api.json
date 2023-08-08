@@ -1,0 +1,16 @@
+[
+  {
+    "endpoint": "healthcheck",
+    "test": "/src/test/healthcheck.unit.spec.js",
+    "byMethod": {
+      "get": {
+        "request": {
+          "type": {}
+        },
+        "response": {
+          "type": "HealthCheckResponse"
+        }
+      } 
+    }
+  }
+]

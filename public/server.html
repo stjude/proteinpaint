@@ -39,29 +39,16 @@
 <script>
 
 init()
-let extracts = {}
+
+
 
 async function init() {
-  extracts = await fetch('/docs/server/extracts.json').then(r => r.json()).catch(console.error)
-  const routes = [
-    {
-      endpoint: 'healthcheck',
-      test: '/src/test/health.unit.spec.js',
-      byMethod: {
-        get: {
-          request: {
-            type: {},
-          },
-          response: {
-            type: "HealthCheckResponse"
-          }
-        } 
-      }
-    }
-  ]
+  const extracts = await fetch('/docs/server/extracts.json').then(r => r.json()).catch(console.error)
   const sidebarLinks = d3.select('.tsd-small-nested-navigation')
   const contentDiv = d3.select('.col-content')
   const service = ['request', 'response']
+  const routes = await fetch('/docs/server-api.json').then(r => r.json()).catch(console.error)
+  
   for(const r of routes) {
     r.id = r.endpoint.replace('/', '.')
     const section = contentDiv.append('div')
@@ -119,95 +106,92 @@ async function init() {
 
     detectCopyable(section)
   }
-}
 
-// must track the clicked and replaced DOM elements by DOM node;
-// tracking the string keys may not be unique if the same type ID is used
-// in multiple levels of a type declaration
-const clicked = new WeakMap()
-async function mayExpand(event) {
-  tip.hide()
-
-  const t = this.__data__
-  const title = this.innerHTML
-  const key = this;
-  if (!clicked.has(key)) {
-    const url = `/docs/server/types/${title}.html`
-    const x = extracts[title]
-    const div = document.createElement('div')
-    d3.select(div).style('display', 'inline-block').style('vertical-align', 'top').html(x.signature)
-    const obj = {div, parentNode: this.parentNode, title, orig: this, expanded: false}
-    clicked.set(key, obj)
-  }
-  const c = clicked.get(key)
-  if (c.expanded) {
-    if (t.inprogress != 'expand') {
-      c.parentNode.replaceChild(c.orig, c.div)
-      c.expanded = false
+  // must track the clicked and replaced DOM elements by DOM node;
+  // tracking the string keys may not be unique if the same type ID is used
+  // in multiple levels of a type declaration
+  const clicked = new WeakMap()
+  async function mayExpand(event) {
+    const t = this.__data__
+    const title = this.innerHTML
+    const key = this;
+    if (!clicked.has(key)) {
+      const url = `/docs/server/types/${title}.html`
+      const x = extracts[title]
+      const div = document.createElement('div')
+      d3.select(div).style('display', 'inline-block').style('vertical-align', 'top').html(x.signature)
+      const obj = {div, parentNode: this.parentNode, title, orig: this, expanded: false}
+      clicked.set(key, obj)
     }
-  } else if (t.inprogress != 'collapse') {
-    c.parentNode.replaceChild(c.div, c.orig)
-    c.expanded = true
-    const signature = d3.select(c.div)
-    const span = signature.select('.tsd-kind-type-alias')
-    span.style('font-style', 'italic').style('cursor', 'pointer').html(title)
-    const ns = span.node().nextSibling
-    if (ns.innerHTML == ':') ns.innerHTML = ''
-    clicked.set(span.node(), c)
-    signature.selectAll('.tsd-signature').style('padding', 0).style('position', 'relative').style('top', 0).style('border', 'none')
-    const clickables = signature
-      .selectAll('.tsd-kind-type-alias')
-      .attr('href', `#${title}`)
-      .datum(t)
-      .on('click', mayExpand)
-    if (t.inprogress) clickables.each(simulateClick)
-    signature.selectAll('.tsd-kind-property').style('cursor', 'pointer').on('click', handlePropClick)
+    const c = clicked.get(key)
+    if (c.expanded) {
+      if (t.inprogress != 'expand') {
+        c.parentNode.replaceChild(c.orig, c.div)
+        c.expanded = false
+      }
+    } else if (t.inprogress != 'collapse') {
+      c.parentNode.replaceChild(c.div, c.orig)
+      c.expanded = true
+      const signature = d3.select(c.div)
+      const span = signature.select('.tsd-kind-type-alias')
+      span.style('font-style', 'italic').style('cursor', 'pointer').html(title)
+      const ns = span.node().nextSibling
+      if (ns.innerHTML == ':') ns.innerHTML = ''
+      clicked.set(span.node(), c)
+      signature.selectAll('.tsd-signature').style('padding', 0).style('position', 'relative').style('top', 0).style('border', 'none')
+      const clickables = signature
+        .selectAll('.tsd-kind-type-alias')
+        .attr('href', `#${title}`)
+        .datum(t)
+        .on('click', mayExpand)
+      if (t.inprogress) clickables.each(simulateClick)
+      signature.selectAll('.tsd-kind-property').style('cursor', 'pointer').on('click', handlePropClick)
+    }
+    return false
   }
-  return false
+
+  function setBtns(section) {
+    // clickables to be assigned per signature div 
+    const toggle = {inprogress: '', clickables: undefined}
+    const btn = section
+      .append('div')
+      .style('position', 'relative')
+      .append('div')
+      .style('position', 'absolute')
+      .style('top', 0)
+      .style('right', 0)
+      .append('button')
+      .attr('title', 'Click this button to toggle between expanding or collapsing all type signatures.' 
+        + ' You may also click on individual signature IDs (red text) to toggle each type separately.')
+      .style('padding', '2px')
+      .style('font-size', '12px')
+      .html('expand')
+      .on('click', d => {
+        toggle.inprogress = btn.text()
+        if (toggle.clickables) toggle.clickables.each(simulateClick)
+        toggle.inprogress = ''
+        btn.text(btn.text() == 'expand' ? 'collapse' : 'expand')
+      })
+
+    return toggle
+  }
+
+  function simulateClick(event){
+    mayExpand.call(this, event) 
+  }
+
+  const tip = getTip() 
+
+  function handlePropClick(target) {
+    event.stopPropagation()
+    const ns = event.target.nextSibling.nextSibling
+    const xdiv = ns.firstChild?.firstChild
+    const type = ns?.innerText.trim().split(':')[0].split(' ')[0]
+    const typeLabel = d3.select(ns).attr('class')?.includes('-type') || (xdiv && d3.select(xdiv).attr('class')?.includes('-type')) ? `<b>${type}</b>` : ''
+    const comment = extracts[type]?.comment || '<p>(no parsable comment)</p>'
+    tip.show(`${event.target.innerText}: ${typeLabel} ${comment}`)
+  }
 }
-
-function setBtns(section) {
-  // clickables to be assigned per signature div 
-  const toggle = {inprogress: '', clickables: undefined}
-  const btn = section
-    .append('div')
-    .style('position', 'relative')
-    .append('div')
-    .style('position', 'absolute')
-    .style('top', 0)
-    .style('right', 0)
-    .append('button')
-    .attr('title', 'Click this button to toggle between expanding or collapsing all type signatures.' 
-      + ' You may also click on individual signature IDs (red text) to toggle each type separately.')
-    .style('padding', '2px')
-    .style('font-size', '12px')
-    .html('expand')
-    .on('click', d => {
-      toggle.inprogress = btn.text()
-      if (toggle.clickables) toggle.clickables.each(simulateClick)
-      toggle.inprogress = ''
-      btn.text(btn.text() == 'expand' ? 'collapse' : 'expand')
-    })
-
-  return toggle
-}
-
-function simulateClick(event){
-  mayExpand.call(this, event) 
-}
-
-function handlePropClick(target) {
-  event.stopPropagation()
-  const ns = event.target.nextSibling.nextSibling
-  const xdiv = ns.firstChild?.firstChild
-  const type = ns?.innerText.trim().split(':')[0].split(' ')[0]
-  const typeLabel = d3.select(ns).attr('class')?.includes('-type') || (xdiv && d3.select(xdiv).attr('class')?.includes('-type')) ? `<b>${type}</b>` : ''
-  const comment = extracts[type]?.comment || '<p>(no parsable comment)</p>'
-  tip.show(`${event.target.innerText}: ${typeLabel} ${comment}`)
-}
-
-
-const tip = getTip() 
 
 function getTip() {
   const tip = d3.select('body').append('div').attr('class', 'sjpp-tip')
