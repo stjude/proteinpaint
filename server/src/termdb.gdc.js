@@ -207,7 +207,6 @@ export async function initGDCdictionary(ds) {
 		}
 
 		const termLevels = fieldLine.split('.')
-
 		/*
 		for term with multiple levels (all terms should have 2 or more levels), create parent term
 
@@ -296,7 +295,6 @@ export async function initGDCdictionary(ds) {
 					}
 				}
 			}
-
 			// if nested
 			if (nestedSet.has(currentId)) {
 				termObj.isObjectList = true
@@ -417,6 +415,7 @@ async function getNumericTermRange_graphql(id) {
 	} catch (e) {
 		console.log(`${id} ??? ERR ???`)
 	}
+	
 }
 
 /* not in use!
@@ -905,20 +904,20 @@ function hardcodeBinconfigs() {
 		'case.demographic.days_to_birth': { bin_size: 1000, first_bin_stop: -3000 },
 		'case.diagnoses.circumferential_resection_margin': null,
 		'case.demographic.days_to_death': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.demographic.year_of_birth': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.demographic.year_of_death': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.diagnoses.age_at_diagnosis': { bin_size: 1000, first_bin_stop: 2000 },
+		'case.demographic.year_of_birth': { bin_size: 1000, first_bin_stop: 2000},
+		'case.demographic.year_of_death': { bin_size: 1000, first_bin_stop: 2010 },
+		'case.diagnoses.age_at_diagnosis': { bin_size: 1000, first_bin_stop: 5000 },
 		'case.diagnoses.days_to_diagnosis': { bin_size: 1000, first_bin_stop: 5000 },
 		'case.diagnoses.days_to_hiv_diagnosis': null,
 		'case.diagnoses.days_to_last_follow_up': { bin_size: 1000, first_bin_stop: 3500 },
-		'case.diagnoses.days_to_last_known_disease_status': { bin_size: 500, first_bin_stop: 800 },
+		'case.diagnoses.days_to_last_known_disease_status': { bin_size: 500, first_bin_stop: 4500 },
 		'case.diagnoses.days_to_new_event': null,
 		'case.diagnoses.days_to_recurrence': { bin_size: 100, first_bin_stop: 1000 },
 		'case.diagnoses.ldh_level_at_diagnosis': null,
 		'case.diagnoses.ldh_normal_range_upper': null,
 		'case.diagnoses.lymph_nodes_positive': null,
 		'case.diagnoses.lymph_nodes_tested': null,
-		'case.diagnoses.pathology_details.breslow_thickness': { bin_size: 10, first_bin_stop: 10 },
+		'case.diagnoses.pathology_details.breslow_thickness': null,
 		'case.diagnoses.pathology_details.circumferential_resection_margin': null,
 		'case.diagnoses.pathology_details.greatest_tumor_dimension': null,
 		'case.diagnoses.pathology_details.gross_tumor_weight': null,
@@ -938,15 +937,15 @@ function hardcodeBinconfigs() {
 		'case.diagnoses.treatments.treatment_dose': { bin_size: 1000, first_bin_stop: 1000 },
 		'case.diagnoses.tumor_largest_dimension_diameter': null,
 		'case.diagnoses.year_of_diagnosis': { bin_size: 1000, first_bin_stop: 2006 },
-		'case.exposures.alcohol_days_per_week': { bin_size: 1, first_bin_stop: 1 },
+		'case.exposures.alcohol_days_per_week': { bin_size: 1, first_bin_stop: 2 },
 		'case.exposures.bmi': null,
-		'case.exposures.cigarettes_per_day': { bin_size: 50, first_bin_stop: 60 },
+		'case.exposures.cigarettes_per_day': { bin_size: 50, first_bin_stop: 20 },
 		'case.exposures.height': null,
-		'case.exposures.pack_years_smoked': { bin_size: 100, first_bin_stop: 600 },
-		'case.exposures.tobacco_smoking_onset_year': { bin_size: 500, first_bin_stop: 2000 },
-		'case.exposures.tobacco_smoking_quit_year': { bin_size: 1000, first_bin_stop: 1000 },
+		'case.exposures.pack_years_smoked': { bin_size: 100, first_bin_stop: 510 },
+		'case.exposures.tobacco_smoking_onset_year': { bin_size: 500, first_bin_stop: 2008 },
+		'case.exposures.tobacco_smoking_quit_year': { bin_size: 1000, first_bin_stop: 2023 },
 		'case.exposures.weight': null,
-		'case.exposures.years_smoked': { bin_size: 10, first_bin_stop: 60 },
+		'case.exposures.years_smoked': { bin_size: 10, first_bin_stop: 30 },
 		'case.family_histories.relationship_age_at_diagnosis': null
 		//'': {bin_size:, first_bin_stop:},
 	}
