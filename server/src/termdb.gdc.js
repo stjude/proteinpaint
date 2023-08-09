@@ -415,7 +415,6 @@ async function getNumericTermRange_graphql(id) {
 	} catch (e) {
 		console.log(`${id} ??? ERR ???`)
 	}
-	
 }
 
 /* not in use!
@@ -904,9 +903,9 @@ function hardcodeBinconfigs() {
 		'case.demographic.days_to_birth': { bin_size: 1000, first_bin_stop: -3000 },
 		'case.diagnoses.circumferential_resection_margin': null,
 		'case.demographic.days_to_death': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.demographic.year_of_birth': { bin_size: 1000, first_bin_stop: 2000},
-		'case.demographic.year_of_death': { bin_size: 1000, first_bin_stop: 2010 },
-		'case.diagnoses.age_at_diagnosis': { bin_size: 1000, first_bin_stop: 5000 },
+		'case.demographic.year_of_birth': { bin_size: 10, first_bin_stop: 1930 },
+		'case.demographic.year_of_death': { bin_size: 5, first_bin_stop: 1995 },
+		'case.diagnoses.age_at_diagnosis': { bin_size: 3000, first_bin_stop: 10000 },
 		'case.diagnoses.days_to_diagnosis': { bin_size: 1000, first_bin_stop: 5000 },
 		'case.diagnoses.days_to_hiv_diagnosis': null,
 		'case.diagnoses.days_to_last_follow_up': { bin_size: 1000, first_bin_stop: 3500 },
