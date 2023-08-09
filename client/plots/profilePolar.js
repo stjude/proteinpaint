@@ -32,6 +32,9 @@ class profilePolar extends profilePlot {
 
 		this.region = this.config.region || this.regions[0].key
 		this.income = this.config.income || this.incomes[0]
+		this.filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
+			.split(' ')
+			.join('_')
 		this.plot()
 	}
 
@@ -40,9 +43,6 @@ class profilePolar extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 
 		if (!this.sampleData) return
-		this.filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
-			.split(' ')
-			.join('_')
 
 		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 600)
 
