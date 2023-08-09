@@ -1,9 +1,8 @@
-import { downloadSingleSVG } from '../common/svg.download.js'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
-import { profilePlot } from '#plots/profilePlot.js'
+import { profilePlot } from './profilePlot.js'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -26,11 +25,15 @@ class profilePolar extends profilePlot {
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-
+		this.twLst = []
+		for (const [i, tw] of this.config.terms.entries()) {
+			if (tw.id) this.twLst.push(tw)
+		}
+		this.twLst.push(this.config.typeTW)
 		const sampleName = this.config.region || this.config.income || 'Global'
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: structuredClone(this.twLst),
+			terms: this.twLst,
 			filter
 		})
 		this.sampleData = this.data.lst[0]
@@ -42,66 +45,21 @@ class profilePolar extends profilePlot {
 
 	plot() {
 		const config = this.config
-		this.dom.holder.selectAll('*').remove()
-
-		const holder = this.dom.holder.append('div')
-		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
-
-		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
-		const regionSelect = div.append('select').style('margin-left', '5px')
-		regionSelect
-			.selectAll('option')
-			.data(this.regions)
-			.enter()
-			.append('option')
-			.property('selected', d => d.key == config.region)
-			.attr('value', d => d.key)
-			.html((d, i) => d.label)
-
-		regionSelect.on('change', () => {
-			config.region = regionSelect.node().value
-			config.income = ''
-			const sampleId = parseInt(this.sampleidmap[config.region])
-			config.filter = getSampleFilter(sampleId)
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-
-		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
-		const incomeSelect = div.append('select').style('margin-left', '5px')
-		incomeSelect
-			.selectAll('option')
-			.data(this.incomes)
-			.enter()
-			.append('option')
-			.property('selected', d => d == config.income)
-			.html((d, i) => d)
-
-		incomeSelect.on('change', () => {
-			config.income = incomeSelect.node().value
-			config.region = ''
-			const sampleId = parseInt(this.sampleidmap[config.income])
-			config.filter = getSampleFilter(sampleId)
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
+		this.dom.plotDiv.selectAll('*').remove()
 
 		if (!this.sampleData) return
-		const filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
+		this.filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
 			.split(' ')
 			.join('_')
-		div
-			.append('button')
-			.style('margin-left', '15px')
-			.text('Download SVG')
-			.on('click', () => downloadSingleSVG(svg, filename))
 
-		const svg = holder.append('svg').attr('width', 1200).attr('height', 600)
+		this.svg = this.dom.holder.append('svg').attr('width', 1200).attr('height', 600)
 
 		// Create a polar grid.
 		const radius = 250
 		const x = 400
 		const y = 300
-		const polarG = svg.append('g').attr('transform', `translate(${x},${y})`)
-		const legendG = svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
+		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
+		const legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
