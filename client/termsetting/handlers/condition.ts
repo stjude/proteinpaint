@@ -2,14 +2,14 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
-import { PillData, ConditionTW, ConditionQ, VocabApi } from '#shared/types/index'
+import { PillData, ConditionTW, ConditionQ, VocabApi, ConditionTermSettingInstance } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
 
 const cutoffGrades: number[] = [1, 2, 3, 4, 5]
 
-export function getHandler(self: any) {
+export function getHandler(self: ConditionTermSettingInstance) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -35,7 +35,7 @@ export function getHandler(self: any) {
 	}
 }
 
-function getPillStatus(self: any) {
+function getPillStatus(self: ConditionTermSettingInstance) {
 	const text: string = self.q?.name || self.q?.reuseId
 	if (text) return { text }
 	if (self.q.mode == 'discrete') {
@@ -55,7 +55,7 @@ function getPillStatus(self: any) {
 	return {}
 }
 
-function showMenu_discrete(self: any, div: any) {
+function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 	// div for selecting type of grade
 	const value_type_div = div
 		.append('div')
@@ -234,7 +234,7 @@ function showMenu_discrete(self: any, div: any) {
 		})
 }
 
-function showMenu_cutoff(self: any, div: any) {
+function showMenu_cutoff(self: ConditionTermSettingInstance, div: any) {
 	const holder = div
 		.append('div')
 		.style('margin', '10px')
@@ -428,7 +428,7 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 			// term.values is treated optional so tsc won't complain
 
 			const grades = Object.keys(tw.term.values)
-				.filter(g => (tw.q.mode == 'discrete' ? !tw.term.values?.[g].uncomputable : g))
+				.filter(g => (tw.q.mode == 'discrete' ? !tw.term.values![g].uncomputable : g))
 				.map(Number)
 				.sort((a, b) => a - b)
 
