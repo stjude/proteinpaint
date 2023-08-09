@@ -32,14 +32,6 @@ class profileBarchart extends profilePlot {
 		this.opts.header.text('Barchart plot')
 	}
 
-	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		if (!config) throw `No plot with id='${this.id}' found`
-		return {
-			config
-		}
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		const twLst = []

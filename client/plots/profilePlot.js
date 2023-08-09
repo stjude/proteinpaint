@@ -6,6 +6,14 @@ export class profilePlot {
 		this.type = 'profilePlot'
 	}
 
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) throw `No plot with id='${this.id}' found`
+		return {
+			config
+		}
+	}
+
 	async init(appState) {
 		const holder = this.opts.holder.append('div')
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
@@ -50,7 +58,7 @@ export class profilePlot {
 			.html((d, i) => d.label)
 
 		regionSelect.on('change', () => {
-			const config = structuredClone(this.config)
+			const config = this.config
 			config.region = regionSelect.node().value
 			config.income = ''
 			const sampleId = parseInt(this.sampleidmap[config.region])
@@ -69,7 +77,7 @@ export class profilePlot {
 			.html((d, i) => d)
 
 		incomeSelect.on('change', () => {
-			const config = structuredClone(this.config)
+			const config = this.config
 			config.income = incomeSelect.node().value
 			config.region = ''
 			const sampleId = parseInt(this.sampleidmap[config.income])
