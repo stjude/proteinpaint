@@ -10,6 +10,7 @@ class profileBarchart extends profilePlot {
 		super()
 		this.type = 'profileBarchart'
 	}
+
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
@@ -26,8 +27,8 @@ class profileBarchart extends profilePlot {
 			.attr('value', (d, i) => i)
 			.html((d, i) => d)
 		selectComp.on('change', () => {
-			config.componentIndex = selectComp.node().value
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+			this.config.componentIndex = selectComp.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 		})
 		this.opts.header.text('Barchart plot')
 	}
