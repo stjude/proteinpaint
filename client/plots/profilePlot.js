@@ -50,10 +50,11 @@ export class profilePlot {
 			.html((d, i) => d.label)
 
 		regionSelect.on('change', () => {
-			this.config.region = regionSelect.node().value
-			this.config.income = ''
+			const config = structuredClone(this.config)
+			config.region = regionSelect.node().value
+			config.income = ''
 			const sampleId = parseInt(this.sampleidmap[config.region])
-			this.config.filter = getSampleFilter(sampleId)
+			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
@@ -72,7 +73,7 @@ export class profilePlot {
 			this.config.region = ''
 			const sampleId = parseInt(this.sampleidmap[config.income])
 			this.config.filter = getSampleFilter(sampleId)
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 		})
 
 		div

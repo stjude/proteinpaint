@@ -10,8 +10,25 @@ class profileBarchart extends profilePlot {
 		super()
 		this.type = 'profileBarchart'
 	}
-	async init(opts) {
-		await super.init(opts)
+	async init(appState) {
+		await super.init(appState)
+		const config = appState.plots.find(p => p.id === this.id)
+		this.components = config.plotByComponent.map(comp => comp.component.name)
+		const div = this.dom.firstDiv
+		div.insert('label').html('Component:').style('font-weight', 'bold')
+		const selectComp = div.insert('select').style('margin-left', '5px')
+		selectComp
+			.selectAll('option')
+			.data(this.components)
+			.enter()
+			.append('option')
+			.property('selected', (d, i) => i == config.componentIndex)
+			.attr('value', (d, i) => i)
+			.html((d, i) => d)
+		selectComp.on('change', () => {
+			config.componentIndex = selectComp.node().value
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
 		this.opts.header.text('Barchart plot')
 	}
 
@@ -58,33 +75,17 @@ class profileBarchart extends profilePlot {
 
 	plot() {
 		const config = this.config
-		const components = config.plotByComponent.map(comp => comp.component.name)
 		this.dom.plotDiv.selectAll('*').remove()
-		const div = this.dom.firstDiv
-		div.insert('label').html('Component:').style('font-weight', 'bold')
-		const selectComp = div.insert('select').style('margin-left', '5px')
-		selectComp
-			.selectAll('option')
-			.data(components)
-			.enter()
-			.append('option')
-			.property('selected', (d, i) => i == config.componentIndex)
-			.attr('value', (d, i) => i)
-			.html((d, i) => d)
-		selectComp.on('change', () => {
-			config.componentIndex = selectComp.node().value
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
 
 		const sampleData = this.sampleData
 		if (!sampleData) return
-		this.filename = `barchart_plot_${components[this.componentIndex]}${this.region ? '_' + this.region : ''}${
+		this.filename = `barchart_plot_${this.components[this.componentIndex]}${this.region ? '_' + this.region : ''}${
 			this.income ? '_' + this.income : ''
 		}.svg`
 			.split(' ')
 			.join('_')
 
-		this.svg = this.dom.holder
+		this.svg = this.dom.plotDiv
 			.append('svg')
 			.attr('width', 1400)
 			.attr('height', this.rowCount * 30 + 400)
