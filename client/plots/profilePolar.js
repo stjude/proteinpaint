@@ -52,7 +52,7 @@ class profilePolar extends profilePlot {
 			.split(' ')
 			.join('_')
 
-		this.svg = this.dom.holder.append('svg').attr('width', 1200).attr('height', 600)
+		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 600)
 
 		// Create a polar grid.
 		const radius = 250
