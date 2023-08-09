@@ -1,3 +1,4 @@
+import { TermSettingInstance } from 'termsetting'
 import { TermWrapper, BaseQ } from '../termdb'
 
 /*
@@ -26,5 +27,13 @@ export type ConditionQ = BaseQ & {
  * @category TW
  */
 export type ConditionTW = TermWrapper & {
+	q: ConditionQ
+}
+
+/**
+ * @group Termdb
+ * @category TW
+ */
+export type ConditionTermSettingInstance = TermSettingInstance & {
 	q: ConditionQ
 }
