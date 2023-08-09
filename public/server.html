@@ -4,6 +4,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js" integrity="sha512-FHsFVKQ/T1KWJDGSbrUhTJyS1ph3eRrxI228ND0EGaEp6v4a/vGwPWd3Dtd/+9cI7ccofZvl/wulICEurHN1pg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- pragma: allowlist secret -->
   <link rel="stylesheet" href="/docs/server/assets/style.css"/>
   <link rel="stylesheet" href="/docs/server/assets/highlight.css"/>
+  <script src='/docs/checkers/bin/checkers.js' type='module'></script>
   <style>
     .sjpp-h3link {
       margin-left: 12px;
@@ -215,7 +216,8 @@ function getTip() {
       .style('top', event.clientY + 8)
       .style('left', event.clientX + 8)
     tip.body.selectAll('*').remove()
-    tip.body.append('span').html(html)
+    tip.body.html(html)
+    tip.body.selectAll('p').style('margin', '0.5rem 0.25rem')
   }
   
   tip.hide = () => {

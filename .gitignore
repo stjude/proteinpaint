@@ -15,6 +15,7 @@ server/dataset/*.js
 server/genome/*.js
 server/shared/doc.js
 server/shared/checkers/transformed/*
+server/shared/checkers/bin/*
 server/shared/types/docs.json
 server/shared/types/*.js
 !server/shared/types/typedoc.js

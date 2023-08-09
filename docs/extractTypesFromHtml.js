@@ -16,10 +16,14 @@ for (const t of ['types', 'interfaces']) {
 			comment: extractComment(text),
 			signature: extractSignature(text)
 		}
-		if (fname.startsWith('_internal_.'))
-			fs.symlink(htmlFilePath, path.join(dir, `${name}.html`), err => {
-				if (err) throw err
-			})
+		if (fname.startsWith('_internal_.')) {
+			const linkName = path.join(dir, `${name}.html`)
+			if (!fs.existsSync(linkName)) {
+				fs.symlink(htmlFilePath, linkName, err => {
+					if (err) throw err
+				})
+			}
+		}
 	}
 }
 

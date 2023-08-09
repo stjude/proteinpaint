@@ -21,7 +21,7 @@ body {
   color: #990033;
   font-style: normal;
   background: #ddd;
-  cursor: pointer;
+  cursor: copy;
 }
 `)
 // do not position the typedoc input search overlay bar over the injected nav bar?
