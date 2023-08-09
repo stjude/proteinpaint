@@ -69,11 +69,12 @@ export class profilePlot {
 			.html((d, i) => d)
 
 		incomeSelect.on('change', () => {
-			this.config.income = incomeSelect.node().value
-			this.config.region = ''
+			const config = structuredClone(this.config)
+			config.income = incomeSelect.node().value
+			config.region = ''
 			const sampleId = parseInt(this.sampleidmap[config.income])
-			this.config.filter = getSampleFilter(sampleId)
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+			config.filter = getSampleFilter(sampleId)
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
 		div
