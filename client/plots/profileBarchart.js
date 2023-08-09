@@ -214,6 +214,8 @@ class profileBarchart {
 
 		function drawRect(x, y, row, i) {
 			const tw = row.twlst[i]
+			let subjectiveTerm = false
+			if (row.subjective) subjectiveTerm = true
 			const termColor = tw?.term?.color
 			const value = sampleData[tw.$id]?.value
 			const isFirst = i % 2 == 0
@@ -229,7 +231,7 @@ class profileBarchart {
 					.attr('y', 0)
 					.attr('width', width)
 					.attr('height', 20)
-				if (pairValue || !hasSubjectiveData) rect.attr('fill', termColor)
+				if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
 				else {
 					const id = tw.term.name.replace(/[^a-zA-Z0-9]/g, '')
 					svg
