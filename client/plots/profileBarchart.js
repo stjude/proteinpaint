@@ -2,17 +2,15 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
-import { downloadSingleSVG } from '../common/svg.download.js'
+import { profilePlot } from './profilePlot.js'
 
-class profileBarchart {
+class profileBarchart extends profilePlot {
 	constructor() {
+		super()
 		this.type = 'profileBarchart'
 	}
 	async init(opts) {
-		const holder = this.opts.holder.append('div')
-		this.dom = {
-			holder
-		}
+		await super.init(opts)
 		this.opts.header.text('Barchart plot')
 	}
 
@@ -42,32 +40,13 @@ class profileBarchart {
 			}
 		twLst.push(this.config.typeTW)
 
+		const sampleName = this.config.region || this.config.income || 'Global'
+		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: twLst
+			terms: twLst,
+			filter
 		})
-		this.regions = [
-			{ key: '', label: '' },
-			{ key: 'Global', label: 'Global' }
-		]
-		this.incomes = ['']
-		this.incomes.push(...this.config.incomes)
-
-		for (const region of this.config.regions) {
-			this.regions.push({ key: region.name, label: region.name })
-			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
-		}
-		this.sampleData = null
-		for (const k in this.data.samples) {
-			const sample = this.data.samples[k]
-			if (this.config.region && sample.sampleName == this.config.region) {
-				this.sampleData = sample
-				break
-			}
-			if (this.config.income && sample.sampleName == this.config.income) {
-				this.sampleData = sample
-				break
-			}
-		}
+		this.sampleData = this.data.lst[0]
 
 		this.region = this.config.region || this.regions[0]
 		this.income = this.config.income || this.incomes[0]
@@ -79,10 +58,10 @@ class profileBarchart {
 	plot() {
 		const config = this.config
 		const components = config.plotByComponent.map(comp => comp.component.name)
-		this.dom.holder.selectAll('*').remove()
-		const div = this.dom.holder.append('div').style('margin-left', '55px').style('margin-top', '20px')
-		div.append('label').html('Component:').style('font-weight', 'bold')
-		const selectComp = div.append('select').style('margin-left', '5px')
+		this.dom.plotDiv.selectAll('*').remove()
+		const div = this.dom.firstDiv
+		div.insert('label').html('Component:').style('font-weight', 'bold')
+		const selectComp = div.insert('select').style('margin-left', '5px')
 		selectComp
 			.selectAll('option')
 			.data(components)
@@ -95,58 +74,24 @@ class profileBarchart {
 			config.componentIndex = selectComp.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
-		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
-		const regionSelect = div.append('select').style('margin-left', '5px')
-		regionSelect
-			.selectAll('option')
-			.data(this.regions)
-			.enter()
-			.append('option')
-			.property('selected', d => d.key == config.region)
-			.attr('value', d => d.key)
-			.html((d, i) => d.label)
-
-		regionSelect.on('change', () => {
-			config.region = regionSelect.node().value
-			config.income = ''
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
-		const incomeSelect = div.append('select').style('margin-left', '5px')
-		incomeSelect
-			.selectAll('option')
-			.data(this.incomes)
-			.enter()
-			.append('option')
-			.property('selected', d => d == config.income)
-			.html((d, i) => d)
-
-		incomeSelect.on('change', () => {
-			config.income = incomeSelect.node().value
-			config.region = ''
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
 
 		const sampleData = this.sampleData
 		if (!sampleData) return
-		const filename = `barchart_plot_${components[this.componentIndex]}${this.region ? '_' + this.region : ''}${
+		this.filename = `barchart_plot_${components[this.componentIndex]}${this.region ? '_' + this.region : ''}${
 			this.income ? '_' + this.income : ''
 		}.svg`
 			.split(' ')
 			.join('_')
 
-		div
-			.append('button')
-			.style('margin-left', '15px')
-			.text('Download SVG')
-			.on('click', () => downloadSingleSVG(svg, filename))
-		const svg = this.dom.holder
+		this.svg = this.dom.holder
 			.append('svg')
 			.attr('width', 1400)
 			.attr('height', this.rowCount * 30 + 400)
 
+		const svg = this.svg
+
 		const color = this.component.component.color
-		svg
+		this.svg
 			.append('defs')
 			.append('pattern')
 			.attr('id', 'diagonalHatch')

@@ -1,4 +1,5 @@
-import { getCompInit, copyMerge } from '#rx'
+import { downloadSingleSVG } from '../common/svg.download.js'
+import { getSampleFilter } from '#termsetting/handlers/samplelst'
 
 export class profilePlot {
 	constructor() {
@@ -7,19 +8,18 @@ export class profilePlot {
 
 	async init(appState) {
 		const holder = this.opts.holder.append('div')
+		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
+		const firstDiv = div.append('div').style('display', 'inline-block')
+		const plotDiv = holder.append('div')
 		this.dom = {
-			holder
+			holder,
+			firstDiv,
+			filterDiv: div,
+			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
-		this.twLst = []
-		for (const [i, tw] of config.terms.entries()) {
-			if (tw.id) {
-				this.twLst.push(tw)
-			}
-		}
-		this.twLst.push(config.typeTW)
+		const tw = structuredClone(config.terms?.[0] || config.plotByComponent[0].groups[0].rows[0].twlst[0])
 
-		const tw = structuredClone(config.terms[0])
 		const data = await this.app.vocabApi.getAnnotatedSampleData({ terms: [tw] })
 		this.sampleidmap = {}
 		for (const key in data.samples) {
@@ -38,8 +38,6 @@ export class profilePlot {
 			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
 		}
 
-		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
-
 		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
 		const regionSelect = div.append('select').style('margin-left', '5px')
 		regionSelect
@@ -52,10 +50,10 @@ export class profilePlot {
 			.html((d, i) => d.label)
 
 		regionSelect.on('change', () => {
-			config.region = regionSelect.node().value
-			config.income = ''
+			this.config.region = regionSelect.node().value
+			this.config.income = ''
 			const sampleId = parseInt(this.sampleidmap[config.region])
-			config.filter = getSampleFilter(sampleId)
+			this.config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
@@ -70,30 +68,17 @@ export class profilePlot {
 			.html((d, i) => d)
 
 		incomeSelect.on('change', () => {
-			config.income = incomeSelect.node().value
-			config.region = ''
+			this.config.income = incomeSelect.node().value
+			this.config.region = ''
 			const sampleId = parseInt(this.sampleidmap[config.income])
-			config.filter = getSampleFilter(sampleId)
+			this.config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+
+		div
+			.append('button')
+			.style('margin-left', '15px')
+			.text('Download SVG')
+			.on('click', () => downloadSingleSVG(this.svg, this.filename))
 	}
 }
-
-export async function getPlotConfig(opts, app) {
-	try {
-		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePlot'
-		const config = copyMerge(structuredClone(defaults), opts)
-		for (const t of config.terms) {
-			if (t.id) await fillTermWrapper(t, app.vocabApi)
-		}
-		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
-		return config
-	} catch (e) {
-		throw `${e} [profilePolar getPlotConfig()]`
-	}
-}
-
-export const profilePlotInit = getCompInit(profilePlot)
-// this alias will allow abstracted dynamic imports
-export const componentInit = profilePlotInit
