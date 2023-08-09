@@ -3,26 +3,17 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
+import { profilePlot } from '#plots/profilePlot.js'
 
-class profilePolar {
+class profilePolar extends profilePlot {
 	constructor() {
+		super()
 		this.type = 'profilePolar'
 	}
 	async init(appState) {
-		const holder = this.opts.holder.append('div')
-		this.dom = {
-			holder
-		}
+		await super.init(appState)
 		this.opts.header.text('Polar plot')
 		this.arcGenerator = d3.arc().innerRadius(0)
-		const config = appState.plots.find(p => p.id === this.id)
-		const tw = structuredClone(config.terms[0])
-		const data = await this.app.vocabApi.getAnnotatedSampleData({ terms: [tw] })
-		this.sampleidmap = {}
-		for (const key in data.samples) {
-			const sample = data.samples[key]
-			this.sampleidmap[sample.sampleName] = sample.sample
-		}
 	}
 
 	getState(appState) {
@@ -35,31 +26,14 @@ class profilePolar {
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		const twLst = []
-		for (const [i, tw] of this.config.terms.entries()) {
-			if (tw.id) {
-				twLst.push(tw)
-			}
-		}
-		twLst.push(this.config.typeTW)
+
 		const sampleName = this.config.region || this.config.income || 'Global'
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: twLst,
+			terms: structuredClone(this.twLst),
 			filter
 		})
 		this.sampleData = this.data.lst[0]
-		this.regions = [
-			{ key: '', label: '' },
-			{ key: 'Global', label: 'Global' }
-		]
-		this.incomes = ['']
-		this.incomes.push(...this.config.incomes)
-
-		for (const region of this.config.regions) {
-			this.regions.push({ key: region.name, label: region.name })
-			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
-		}
 
 		this.region = this.config.region || this.regions[0].key
 		this.income = this.config.income || this.incomes[0]
