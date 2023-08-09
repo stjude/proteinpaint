@@ -3,6 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
+import { getSampleFilter } from '#termsetting/handlers/samplelst'
 
 class profileBarchart extends profilePlot {
 	constructor() {
