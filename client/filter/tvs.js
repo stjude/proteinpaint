@@ -75,7 +75,7 @@ class TVS {
 export const TVSInit = rx.getInitFxn(TVS)
 
 function setRenderers(self) {
-	self.updateUI = function() {
+	self.updateUI = function () {
 		const terms_div = self.dom.holder
 		/*
 			Currently, only a single pill per tvs is rendered, so using the 
@@ -98,7 +98,7 @@ function setRenderers(self) {
 			.each(self.enterPill)
 	}
 
-	self.enterPill = async function() {
+	self.enterPill = async function () {
 		const one_term_div = select(this).style('font-size', '.9em')
 
 		//term name div
@@ -134,7 +134,7 @@ function setRenderers(self) {
 		self.handler.fillMenu(self, holder, self.tvs)
 	}
 
-	self.updatePill = async function() {
+	self.updatePill = async function () {
 		const one_term_div = select(this)
 		const tvs = one_term_div.datum()
 		const lstlen = (self.tvs.values && self.tvs.values.length) || (self.tvs.ranges && self.tvs.ranges.length)
@@ -144,7 +144,7 @@ function setRenderers(self) {
 			.select('.negate_btn')
 			.style('display', lstlen ? 'inline-block' : 'none')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
-			.html(tvs.isnot ? 'NOT' : 'IS')
+			.html(tvs.isnot && tvs.term.type !== 'geneVariant' ? 'NOT' : 'IS')
 
 		const label = self.handler.get_pill_label(tvs)
 		if (!('grade_type' in label)) label.grade_type = ''
@@ -175,16 +175,11 @@ function setRenderers(self) {
 			.style('opacity', 1)
 	}
 
-	self.exitPill = async function(term) {
-		select(this)
-			.style('opacity', 1)
-			.transition()
-			.duration(self.durations.exit)
-			.style('opacity', 0)
-			.remove()
+	self.exitPill = async function (term) {
+		select(this).style('opacity', 1).transition().duration(self.durations.exit).style('opacity', 0).remove()
 	}
 
-	self.makeValueTable = function(div, tvs, values, callback) {
+	self.makeValueTable = function (div, tvs, values, callback) {
 		if (values?.length == 0) return div
 		const containerDiv = div.append('div').style('font-size', '0.8rem')
 		self.clusionNote = containerDiv
@@ -242,19 +237,14 @@ function setRenderers(self) {
 		return tableDiv
 	}
 
-	self.removeValueBtn = function(d, j) {
+	self.removeValueBtn = function (d, j) {
 		const one_term_div = select(this.parentNode)
 		const tvs = one_term_div.datum()
 		const select_remove_pos = self.handler.getSelectRemovePos(j, tvs)
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()
-		select(this)
-			.style('opacity', 1)
-			.transition()
-			.duration(self.durations.exit)
-			.style('opacity', 0)
-			.remove()
+		select(this).style('opacity', 1).transition().duration(self.durations.exit).style('opacity', 0).remove()
 	}
 }
 

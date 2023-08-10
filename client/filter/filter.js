@@ -1219,11 +1219,10 @@ function setInteractivity(self) {
 		const item = findItem(filterUiRoot, self.activeData.item.$id)
 		if (item.type == 'tvslst') item.in = !item.in
 		else if (item.type == 'tvs' && item.tvs?.term?.type == 'geneVariant') {
-			for (const value of item.tvs.values) {
-				let tmp = value.mclassLst
-				value.mclassLst = value.mclassExcludeLst
-				value.mclassExcludeLst = tmp
-			}
+			const modifiedGrp = item.tvs.values.filter(v => v.mclassExcludeLst.length > 0)[0]
+			const tmp = modifiedGrp.mclassLst
+			modifiedGrp.mclassLst = modifiedGrp.mclassExcludeLst
+			modifiedGrp.mclassExcludeLst = tmp
 			item.tvs.isnot = !item.tvs.isnot
 		} else item.tvs.isnot = !item.tvs.isnot
 		self.refresh(filterUiRoot)

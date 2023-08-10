@@ -287,8 +287,10 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 				}
 			}
 		}
+		const sampleCountedFor = new Set() // if the sample is conunted for the
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
 			const values = sampleData[q.tid].values
+			sampleCountedFor.clear()
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
 			[
 				{ dt: 1, class: 'Blank', _SAMPLEID_: 1, origin: 'germline' },
@@ -303,11 +305,23 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 				}
 				const dtClasses = dtClassMap.get(value.dt)
 				if (dtClasses.byOrigin) {
-					dtClasses.byOrigin[value.origin][value.class] = dtClasses.byOrigin[value.origin][value.class]
-						? dtClasses.byOrigin[value.origin][value.class] + 1
-						: 1
+					if (!dtClasses.byOrigin[value.origin][value.class]) {
+						dtClasses.byOrigin[value.origin][value.class] = 1
+						sampleCountedFor.add(`${value.dt} ${value.origin} ${value.class}`)
+					}
+					if (!sampleCountedFor.has(`${value.dt} ${value.origin} ${value.class}`)) {
+						sampleCountedFor.add(`${value.dt} ${value.origin} ${value.class}`)
+						dtClasses.byOrigin[value.origin][value.class] += 1
+					}
 				} else {
-					dtClasses[value.class] = dtClasses[value.class] ? dtClasses[value.class] + 1 : 1
+					if (!dtClasses[value.class]) {
+						sampleCountedFor.add(`${value.dt} ${value.class}`)
+						dtClasses[value.class] = 1
+					}
+					if (!sampleCountedFor.has(`${value.dt} ${value.class}`)) {
+						sampleCountedFor.add(`${value.dt} ${value.class}`)
+						dtClasses[value.class] += 1
+					}
 				}
 			}
 		}
