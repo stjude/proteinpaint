@@ -103,7 +103,6 @@ const express = require('express'),
 	cookieParser = require('cookie-parser'),
 	authApi = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
-	{ handle_genelookup_closure } = require('./gene'),
 	minimatch = require('minimatch'),
 	{ versionInfo } = require('./routes/healthcheck')
 
@@ -285,7 +284,6 @@ app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.get(basepath + '/getDataset', handle_getDataset)
-app.all(basepath + '/genelookup', handle_genelookup_closure(genomes))
 app.all(basepath + '/ntseq', handle_ntseq)
 app.post(basepath + '/pdomain', handle_pdomain)
 app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
