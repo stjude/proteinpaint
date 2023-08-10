@@ -14,6 +14,12 @@ export class profilePlot {
 		}
 	}
 
+	setFilter() {
+		this.regionSelect.selectAll('option').property('selected', d => d.key == this.region)
+		this.incomeSelect.selectAll('option').property('selected', d => d == this.income)
+		if (this.selectComp) this.selectComp.selectAll('option').property('selected', (d, i) => i == this.componentIndex)
+	}
+
 	async init(appState) {
 		const holder = this.opts.holder.append('div')
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
@@ -47,19 +53,18 @@ export class profilePlot {
 		}
 
 		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
-		const regionSelect = div.append('select').style('margin-left', '5px')
-		regionSelect
+		this.regionSelect = div.append('select').style('margin-left', '5px')
+		this.regionSelect
 			.selectAll('option')
 			.data(this.regions)
 			.enter()
 			.append('option')
-			.property('selected', d => d.key == config.region)
 			.attr('value', d => d.key)
 			.html((d, i) => d.label)
 
-		regionSelect.on('change', () => {
+		this.regionSelect.on('change', () => {
 			const config = this.config
-			config.region = regionSelect.node().value
+			config.region = this.regionSelect.node().value
 			config.income = ''
 			const sampleId = parseInt(this.sampleidmap[config.region])
 			config.filter = getSampleFilter(sampleId)
@@ -67,18 +72,17 @@ export class profilePlot {
 		})
 
 		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
-		const incomeSelect = div.append('select').style('margin-left', '5px')
-		incomeSelect
+		this.incomeSelect = div.append('select').style('margin-left', '5px')
+		this.incomeSelect
 			.selectAll('option')
 			.data(this.incomes)
 			.enter()
 			.append('option')
-			.property('selected', d => d == config.income)
 			.html((d, i) => d)
 
-		incomeSelect.on('change', () => {
+		this.incomeSelect.on('change', () => {
 			const config = this.config
-			config.income = incomeSelect.node().value
+			config.income = this.incomeSelect.node().value
 			config.region = ''
 			const sampleId = parseInt(this.sampleidmap[config.income])
 			config.filter = getSampleFilter(sampleId)

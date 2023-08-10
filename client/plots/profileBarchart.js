@@ -17,17 +17,16 @@ class profileBarchart extends profilePlot {
 		this.components = config.plotByComponent.map(comp => comp.component.name)
 		const div = this.dom.firstDiv
 		div.insert('label').html('Component:').style('font-weight', 'bold')
-		const selectComp = div.insert('select').style('margin-left', '5px')
-		selectComp
+		this.selectComp = div.insert('select').style('margin-left', '5px')
+		this.selectComp
 			.selectAll('option')
 			.data(this.components)
 			.enter()
 			.append('option')
-			.property('selected', (d, i) => i == config.componentIndex)
 			.attr('value', (d, i) => i)
 			.html((d, i) => d)
-		selectComp.on('change', () => {
-			this.config.componentIndex = selectComp.node().value
+		this.selectComp.on('change', () => {
+			this.config.componentIndex = this.selectComp.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 		})
 		this.opts.header.text('Barchart plot')
@@ -62,6 +61,8 @@ class profileBarchart extends profilePlot {
 		this.region = this.config.region || this.regions[0].key
 		this.income = this.config.income || this.incomes[0]
 		this.componentIndex = this.config.componentIndex || 0
+		this.setFilter()
+
 		this.filename = `barchart_plot_${this.components[this.componentIndex]}${this.region ? '_' + this.region : ''}${
 			this.income ? '_' + this.income : ''
 		}.svg`
