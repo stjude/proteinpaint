@@ -308,6 +308,22 @@ function handleLegendClick(event, self) {
 				}
 			})
 		})
+	div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Show all')
+		.on('click', () => {
+			menu.hide()
+			const config = {}
+			const tw = structuredClone(term)
+			delete tw.q.hiddenValues
+
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: { [termNum]: tw }
+			})
+		})
 }
 
 function getUpdatedQfromClick(d, term, isHidden = false, binColored = null) {
