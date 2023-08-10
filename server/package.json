@@ -6,8 +6,8 @@
   "bin": "start.js",
   "imports": {
     "#shared/*": "./shared/*.js",
-    "#src/*": "./src/*.js",
-    "#routes/*": "./src/routes/*.ts"
+    "#src/*": "./src/*",
+    "#routes/*": "./routes/*"
   },
   "scripts": {
     "prepare": "ts-patch install",

@@ -4,7 +4,7 @@ const { get_densityplot } = require('./mds3.densityPlot')
 const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
 const { dtfusionrna, dtsv } = require('#shared/common')
-const geneDbSearch = require('./routes/genelookup')
+const geneDbSearch = require('./gene')
 const { getSampleData_dictionaryTerms_termdb } = require('./termdb.matrix')
 
 /*

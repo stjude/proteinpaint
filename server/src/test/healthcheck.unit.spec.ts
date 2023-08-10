@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { validHealthCheckResponse } from '../../shared/checkers/transformed/index.ts'
-import { setRoute } from '#routes/healthcheck'
+import * as route from '../../routes/healthcheck'
 
 /****************************************
  reusable constants and helper functions
@@ -8,7 +8,7 @@ import { setRoute } from '#routes/healthcheck'
 
 type AnyFunction = (res: any, req: any) => any
 
-function getApp(setHandler) {
+function getApp({ api }) {
 	const app = {
 		routes: {},
 		get(path: string, handler: AnyFunction) {
@@ -27,7 +27,10 @@ function getApp(setHandler) {
 			app.routes[path][method] = handler
 		}
 	}
-	setHandler(app, { hg38: {} }, '')
+	for (const method in api.methods) {
+		const m = api.methods[method]
+		app[method](api.endpoint, m.init({ app, genomes: { hg38: {} } }))
+	}
 	return app
 }
 
@@ -40,8 +43,8 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('health check', async test => {
-	const app = getApp(setRoute)
+tape('healthcheck', async test => {
+	const app = getApp(route)
 	const req = {}
 	const res = {
 		send(r) {
@@ -52,7 +55,8 @@ tape('health check', async test => {
 			)
 		}
 	}
-	test.equal(typeof app.routes['/healthcheck']?.get, 'function', 'should exist as a route')
-	await app.routes['/healthcheck'].get(req, res)
+	const r = app.routes[route.api.endpoint]
+	test.equal(typeof r?.get, 'function', 'should exist as a route')
+	await r.get(req, res)
 	test.end()
 })
