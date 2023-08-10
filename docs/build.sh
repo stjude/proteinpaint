@@ -14,3 +14,4 @@ rm -rf ./public/docs/server/**/*.*-e
 rm -rf ./public/docs/server/*.*-e
 
 ./docs/extractTypesFromHtml.js > public/docs/server/extracts.json
+npx webpack --config=server/shared/checkers/webpack.config.js
