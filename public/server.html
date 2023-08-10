@@ -14,13 +14,18 @@
       text-decoration: underline;
       cursor: pointer;
     }
+    .sjpp-service-div {
+      position: relative;
+    }
     .sjpp-signature-wrapper {
+      position: relative;
       display: block;
       white-space: nowrap;
       overflow: auto;
       vertical-align: top;
     }
     .sjpp-payload-wrapper {
+      position: relative;
       width: 450px;
       display: none;
       resize: both;
@@ -37,6 +42,10 @@
       max-width: 400px;
       background-color: #fff;
       z-index: 100;
+    }
+    .btn-sm {
+      padding: 2px;
+      font-size:  12px;
     }
   </style>
 </head>
@@ -68,7 +77,7 @@ async function init() {
   const routes = await fetch('/docs/server-api.json').then(r => r.json()).catch(console.error)
   
   const hostOptions = [
-    {label: 'Specification'},
+    {label: 'Specification', url: 'spec'},
     {label: 'local', url: 'http://localhost:3000'},
     {label: 'ppr', url: 'https://ppr.stjude.org'},
     {label: 'prp1', url: 'https://proteinpaint.stjude.org'}
@@ -99,8 +108,7 @@ async function init() {
       if (m.description) {
         section.append('h3').html(`${Method}`)
         section.append('div').html(m.description)
-      }
-      const hostSelectHolder = section.append('div') 
+      } 
       for(const s of service) {
         const serv = m[s]
         if (!serv) continue
@@ -113,7 +121,7 @@ async function init() {
           h3.append('span').attr('class', 'sjpp-h3link').html('typedoc').on('click', ()=>{window.location = url})
         }
         if (x.comment) section.append('div').html(x.comment)
-        const mainDiv = section.append('div').style('height', 'fit-content')
+        const mainDiv = section.append('div').attr('class', 'sjpp-service-div').style('height', 'fit-content')
         serv.signatureWrapper = mainDiv.append('div').attr('class', 'sjpp-signature-wrapper')
         const toggle = setBtns(serv.signatureWrapper)
         serv.signature = serv.signatureWrapper.append('div')
@@ -132,8 +140,9 @@ async function init() {
 
         serv.payloadWrapper = mainDiv.append('div').attr('class', 'sjpp-payload-wrapper')
         serv.payloadPre = serv.payloadWrapper.append('pre')
-        setHostSelection(r, method, serv, hostSelectHolder, section)
       }
+
+      setHostSelection(r, method, m, section)
     }
 
     detectCopyable(section)
@@ -182,48 +191,106 @@ async function init() {
     return false
   }
 
-  async function setHostSelection(r, method, serv, holder, section) {
-    holder
-      .style('text-align', 'right')
-      .selectAll(':scope>button')
-      .data(hostOptions)
+  async function setHostSelection(r, method, m, section) {
+    const hostDivs = section.selectAll('.sjpp-service-div')
+      .selectAll('.sjpp-host-div')
+      .data([
+        // TODO: enable the left side select, to compare host responses instead of against the spec    
+        // {hostOptions: structuredClone(hostOptions), x: 200, side: 'left'},
+        {hostOptions: structuredClone(hostOptions), x: 600, side: 'right'}
+      ])
       .enter()
-      .append('button')
-      .style('padding', '2px')
-      .style('font-size', '12px')
-      .html('expand')
-      .html(d => d.label)
-      .on('click', async (d,i) => { //console.log(d, signatureWrapper.node(), payloadWrapper.node())
-        if (!d.url) {
+      .insert('div', 'div')
+      .attr('class', 'sjpp-host-div')
+      .style('display', 'inline-block')
+      .style('position', 'absolute')
+      .style('top', '-10px')
+      .style('left', d => d.x)
+      .style('z-index', 20)
+
+    const selects = hostDivs
+      .append('select')
+      .attr('class', 'sjpp-host-select')
+      .on('change', async function(selectData) { //console.log(211, d) //console.log(d, signatureWrapper.node(), payloadWrapper.node())
+        const d = selectData.hostOptions[this.selectedIndex]
+        selectData.selected = d
+        if (d.url == 'spec') {
           section.selectAll('.sjpp-payload-wrapper').style('display', 'none')
           section.selectAll('.sjpp-signature-wrapper').style('width', '').style('display', 'block')
         } else {
-          const url = d.url + '/' + r.endpoint
-          const reqOpts = {method} 
-          await fetch(url, reqOpts)
-            .then(r => r.json())
-            .then(r => {
-              section.selectAll('.sjpp-payload-wrapper pre').each(function(d, i) {
-                this.innerText = JSON.stringify(i === 0 ? reqOpts.body : r, null, '  ')
-                const sib = this.parentNode.previousSibling
-                if (!sib) return
-                const box = sib.getBoundingClientRect()
-                this.style.height = (box.height - 24) + 'px'
-              })
-            })
-            .catch(e => { 
-              section.selectAll('.sjpp-payload-wrapper pre').each(function(d, i) {
-                this.innerText = i === 0 ? JSON.stringify(reqOpts.body, null, '  ') : (e.message || e)
-                const sib = this.parentNode.previousSibling
-                if (!sib) return
-                const box = sib.getBoundingClientRect()
-                this.style.height = (box.height - 24) + 'px'
-              })
-            })
-
+          await fetchData(r, d, method, section)
           section.selectAll('.sjpp-signature-wrapper').style('width', '450px').style('display', 'inline-block')
           section.selectAll('.sjpp-payload-wrapper').style('display', 'inline-block')
         }
+
+        d3.selectAll('.sjpp-host-select').each(function (sd) {
+          if (sd != selectData) return
+          d3.select(this).property('value', d.url)
+        })
+
+        m.hostBtnsDiv.style('display', d.url == 'spec' ? 'none' : 'inline-block')
+      })
+
+
+    selects
+      .selectAll('option')
+      .data(d => d.hostOptions)
+      .enter()
+      .append('option')
+      .style('text-align', 'center')
+      .attr('value', d => d.url)
+      .html(d => d.label)
+
+    m.hostBtnsDiv = hostDivs.append('div').style('display', 'none')
+
+    m.hostBtnsDiv
+      .append('button')
+      .attr('class', 'btn-sm')
+      .style('position', 'relative')
+      .style('top', '-2px')
+      .html('refresh')
+      .on('click', function(selectData) {
+        const d = selectData.selected
+        if (d?.url == 'spec') return
+        fetchData(r, d, method, section)
+      })
+
+    m.hostBtnsDiv
+      .append('button')
+      .attr('class', 'btn-sm')
+      .style('position', 'relative')
+      .style('top', '-2px')
+      .html('validate')
+      .on('click', function(selectData) {
+        const d = selectData.selected
+        if (d?.url == 'spec') return
+        fetchData(r, d, method, section, window.ppcheckers[`valid${m.response.type}`])
+      })
+  }
+
+  async function fetchData(r, d, method, section, validate=null) {
+    const url = d.url + '/' + r.endpoint
+    const reqOpts = {method} 
+    await fetch(url, reqOpts)
+      .then(r => r.json())
+      .then(r => {
+        section.selectAll('.sjpp-payload-wrapper pre').each(function(d, i) {
+          const data = i === 0 ? reqOpts.body : validate ? validate(r) : r
+          this.innerText = JSON.stringify(data, null, '  ')
+          const sib = this.parentNode.previousSibling
+          if (!sib) return
+          const box = sib.getBoundingClientRect()
+          this.style.height = (box.height - 24) + 'px'
+        })
+      })
+      .catch(e => { 
+        section.selectAll('.sjpp-payload-wrapper pre').each(function(d, i) {
+          this.innerText = i === 0 ? JSON.stringify(reqOpts.body, null, '  ') : (e.message || e)
+          const sib = this.parentNode.previousSibling
+          if (!sib) return
+          const box = sib.getBoundingClientRect()
+          this.style.height = (box.height - 24) + 'px'
+        })
       })
   }
 
@@ -242,8 +309,7 @@ async function init() {
       .append('button')
       .attr('title', 'Click this button to toggle between expanding or collapsing all type signatures.' 
         + ' You may also click on individual signature IDs (red text) to toggle each type separately.')
-      .style('padding', '2px')
-      .style('font-size', '12px')
+      .attr('class', 'btn-sm')
       .html('expand')
       .on('click', d => {
         toggle.inprogress = toggleBtn.text()
