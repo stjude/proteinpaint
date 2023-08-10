@@ -278,6 +278,7 @@ function handleLegendClick(event, self) {
 	event.stopPropagation()
 	const d = event.target.__data__
 	if (d === undefined) return
+	if (!('type' in d)) return
 	const termNum = d.type == 'col' ? 'term' : 'term2'
 	const term = self.config[termNum]
 	const isHidden =
