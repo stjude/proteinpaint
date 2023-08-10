@@ -10,31 +10,41 @@ parameters:
 
 */
 
-export function handle_genelookup_closure(genomes) {
-	return (req, res) => {
+export function setRoute(app, genomes, basepath) {
+	app.all(basepath + '/genelookup', (req: any, res: any): void => {
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
 			res.send(getResult(g, req.query))
-		} catch (e) {
-			res.send({ error: e.message || e })
+		} catch (e: any) {
+			res.send({ error: e.message || e})
 			if (e.stack) console.log(e.stack)
 		}
-	}
+	})
+}
+
+export type GeneLookupRequest = {
+	input: string
+	genome: string
+}
+
+export type GeneLookupResponse = {
+	error?: string,
+	hits: string[]
 }
 
 /*
 g: server side genome obj
 q: {deep:true, input:str}
 */
-export function getResult(g, q) {
+export function getResult(g: any, q: any): GeneLookupResponse {
 	if (g.genomicNameRegexp.test(q.input)) throw 'invalid character in gene name'
 
 	if (q.deep) {
 		///////////// deep
 
 		// isoform query must be converted to symbol first, so as to retrieve all gene models related to this gene
-		const result = {} // object to collect results of gene query and send back
+		const result = {} as any // object to collect results of gene query and send back
 		let symbol
 		{
 			// see if query string match directly with gene symbol

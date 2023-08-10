@@ -12,5 +12,23 @@
         }
       } 
     }
+  },
+  {
+    "endpoint": "genelookup",
+    "test": "/src/test/genelookup.unit.spec.ts",
+    "byMethod": {
+      "get": {
+        "request": {
+          "type": "GeneLookupRequest",
+          "example": {
+            "input": "kra",
+            "genome": "hg38"
+          }
+        },
+        "response": {
+          "type": "GeneLookupResponse"
+        }
+      } 
+    }
   }
 ]

@@ -6,6 +6,9 @@
   <link rel="stylesheet" href="/docs/server/assets/highlight.css"/>
   <script src='/docs/checkers/bin/checkers.js' type='module'></script>
   <style>
+    .sjpp-endpoint-div {
+      margin: 20px 10px 44px 10px;
+    }
     .sjpp-h3link {
       margin-left: 12px;
       font-size: 16px;
@@ -35,6 +38,9 @@
       overflow: auto;
       resize: both;
       border-radius: 0;
+    }
+    .sjpp-host-select {
+      /*background-color: #eee;*/
     }
     .sjpp-tip {
       position: absolute;
@@ -139,7 +145,7 @@ async function init() {
         }
 
         serv.payloadWrapper = mainDiv.append('div').attr('class', 'sjpp-payload-wrapper')
-        serv.payloadPre = serv.payloadWrapper.append('pre')
+        serv.payloadPre = serv.payloadWrapper.append('pre').attr('contentEditable', true)
       }
 
       setHostSelection(r, method, m, section)
@@ -218,7 +224,7 @@ async function init() {
           section.selectAll('.sjpp-payload-wrapper').style('display', 'none')
           section.selectAll('.sjpp-signature-wrapper').style('width', '').style('display', 'block')
         } else {
-          await fetchData(r, d, method, section)
+          await fetchData(r, d, method, m, section)
           section.selectAll('.sjpp-signature-wrapper').style('width', '450px').style('display', 'inline-block')
           section.selectAll('.sjpp-payload-wrapper').style('display', 'inline-block')
         }
@@ -252,7 +258,7 @@ async function init() {
       .on('click', function(selectData) {
         const d = selectData.selected
         if (d?.url == 'spec') return
-        fetchData(r, d, method, section)
+        fetchData(r, d, method, m, section)
       })
 
     m.hostBtnsDiv
@@ -264,18 +270,21 @@ async function init() {
       .on('click', function(selectData) {
         const d = selectData.selected
         if (d?.url == 'spec') return
-        fetchData(r, d, method, section, window.ppcheckers[`valid${m.response.type}`])
+        fetchData(r, d, method, m, section, window.ppcheckers[`valid${m.response.type}`])
       })
   }
 
-  async function fetchData(r, d, method, section, validate=null) {
+  async function fetchData(r, d, method, m, section, validate=null) {
     const url = d.url + '/' + r.endpoint
-    const reqOpts = {method} 
-    await fetch(url, reqOpts)
+    const reqOpts = {method}
+    const params = method == 'get' ? constructUrlParams(m.request.example || {}) : ''
+    if (m.method == 'POST') reqOpts.body = m.request.example
+    const reqPayload = reqOpts.body || m.request.example
+    await fetch(url + params, reqOpts)
       .then(r => r.json())
       .then(r => {
         section.selectAll('.sjpp-payload-wrapper pre').each(function(d, i) {
-          const data = i === 0 ? reqOpts.body : validate ? validate(r) : r
+          const data = i === 0 ? reqPayload : validate ? validate(r) : r
           this.innerText = JSON.stringify(data, null, '  ')
           const sib = this.parentNode.previousSibling
           if (!sib) return
@@ -285,13 +294,22 @@ async function init() {
       })
       .catch(e => { 
         section.selectAll('.sjpp-payload-wrapper pre').each(function(d, i) {
-          this.innerText = i === 0 ? JSON.stringify(reqOpts.body, null, '  ') : (e.message || e)
+          this.innerText = i === 0 ? JSON.stringify(reqPayload, null, '  ') : (e.message || e)
           const sib = this.parentNode.previousSibling
           if (!sib) return
           const box = sib.getBoundingClientRect()
           this.style.height = (box.height - 24) + 'px'
         })
       })
+  }
+
+  function constructUrlParams(obj) {
+    const params = []
+    for(const [key, value] of Object.entries(obj)) {
+      const v = typeof value == 'object' ? JSON.stringify(value) : value 
+      params.push(key + '=' +  v)
+    }
+    return '?' + params.join('&')
   }
 
   function setBtns(holder) {
