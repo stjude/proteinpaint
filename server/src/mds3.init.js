@@ -810,6 +810,13 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 		const limitSamples = await mayLimitSamples(param, q._tk.samples, ds)
 		if (limitSamples) {
+			// is a valid set, parameter asks to filter samples
+
+			if (limitSamples.size == 0) {
+				// got 0 sample after filtering, return blank array for no data
+				return []
+			}
+
 			bcfArgs.push('-s', [...limitSamples].join(','))
 		}
 
@@ -1240,6 +1247,10 @@ async function validate_query_geneExpression(ds, genome) {
 	*/
 	q.get = async param => {
 		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return new Map()
+		}
 
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
@@ -1341,6 +1352,7 @@ async function validate_query_probe2cnv(ds, genome) {
 		{
 			const limitSamples = await mayLimitSamples(param, q.samples, ds) // optional set of sample integer ids
 			if (limitSamples) {
+				if (limitSamples.size == 0) return []
 				for (const [i, s] of q.samples.entries()) {
 					if (limitSamples.has(s.name)) sampleCollectValues.push([])
 					else sampleCollectValues.push(null)
@@ -1630,6 +1642,10 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		const formatFilter = getFormatFilter(param)
 
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return []
+		}
 
 		const key2variants = new Map()
 		/*
@@ -1820,6 +1836,10 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		const formatFilter = getFormatFilter(param)
 
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return []
+		}
 
 		const cnvs = []
 		const promises = []
