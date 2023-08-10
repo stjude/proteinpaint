@@ -1,8 +1,17 @@
 import { keyupEnter } from '#src/client'
-import { select } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 import { filterInit } from '#filter'
-import { GroupSetEntry, GroupEntry, TermValues, Subconditions } from '#shared/types'
-import { getInitFxn, getCompInit } from '#rx'
+import {
+	GroupSetEntry,
+	GroupEntry,
+	TermValues,
+	Subconditions,
+	TermSettingInstance,
+	TermSettingOpts,
+	CategoricalTermSettingInstance,
+	ConditionTermSettingInstance
+} from '#shared/types'
+import { Tabs } from '#dom/toggleButtons'
 
 /*
 Refactor notes:
@@ -13,7 +22,6 @@ Refactor notes:
 	- keeps groups, specifically group 1, already defined 'clean' from removed items
 	- visual reference items moved, such as a collapsed div with animation
  - Technical concerns: 
-	- create a state and stateless components, like Filter and FilterRx
 	- don't add to the app state - create a 'state' within
 	- rm current exclude/include separation for adding items.
 		- exclude is group 0; items added by isHidden
@@ -30,83 +38,277 @@ Refactor notes:
 		- maybe increase the cap? but only from this UI
 */
 
-class GroupSetting {
-	public opts: any
-	public dom: any
+type GrpEntry = { label: string; group_idx: number; sampleCount: any }
+type DataInput = { [index: string]: GrpEntry }
 
-	constructor(opts) {
+export class GroupSettingMethods {
+	opts: any
+	dom: any
+	data: any
+	initGrpSetUI: any
+
+	constructor(opts: CategoricalTermSettingInstance) {
 		this.opts = opts
-		this.dom = {
-			actions: opts.holder.append('div'),
-			groupsWrapper: opts.holder.append('div').classed('sjpp-groups-wrapper', true)
-		}
+		this.dom = {}
+		setInteractivity(this)
 		setRenderers(this)
-		
 	}
-	
-	init(){}
 
-	main(){}
+	async processInput(data: DataInput) {
+		const values = structuredClone(Object.values(data))
+		//add excluded categories, group 1, and group 2 indexes by default
+		//these three groups should always appear in the menu
+		const grpIdxes: Set<number> = new Set([0, 1, 2])
+		for (const d of values) {
+			if (!d.group_idx) d.group_idx = 1 //default to group 1
+			if (d.group_idx > 4)
+				throw `The maximum number of groups is 4. The group index for value = ${d.label} is ${d.group_idx}`
+			// if(!d.sampleCount) d.sampleCount = opts.category2samplecount ? opts.category2samplecount.find(v => v.key == d.label) : 'n/a'
+
+			grpIdxes.add(d.group_idx)
+		}
+		type GroupsData = {
+			currentIdx: number
+			name: string
+		}[]
+		const groups: GroupsData = []
+		for (const g of Array.from(grpIdxes).sort((a, b) => a - b)) {
+			groups.push({
+				currentIdx: g,
+				name: g == 0 ? `Excluded categories` : g.toString()
+			})
+		}
+
+		return { groups, values }
+	}
+
+	async main() {
+		try {
+			const input = this.opts.q.bar_by_children ? this.opts.term.subconditions : this.opts.term.values
+			this.data = await this.processInput(input)
+			this.initGrpSetUI()
+		} catch (e: any) {
+			if (e.stack) console.log(e.stack)
+			else throw e
+		}
+	}
 }
-
-class GroupSettingRx extends GroupSetting {
-	//Accepts state changes for rx apps 
-	opts: any 
-
-	constructor(opts) {
-		super(opts)
-	}
-
-	main(){
-		super.main()
-	}
-}
-
-export const groupSetCompInit = getCompInit(GroupSettingRx)
-
-class GroupSettingStateless extends GroupSetting {
-	//TODO: make stateless version to apply across all apps
-	constructor(opts) {
-		super(opts)
-	}
-
-	main(){
-		super.main()
-	}
-}
-
-export const groupSetInit = getInitFxn(GroupSettingStateless)
-
 
 function setRenderers(self: any) {
-	self.initUI = function() {
- // self.initGroupDiv = function(div: any, i: number) {
-	// 	const groupDiv = div.append('div').append('div').style('margin', '5px').classed('sjpp-drag-list-div', true) //unit testing
-	// 	if (i == 0) groupDiv.append('div').text('Excluded categories')
-	// 	else {
-	// 		groupDiv.append('div').text('Add group input')
-	// 	}
-	// }
+	self.initGrpSetUI = function () {
+		self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
 
-	// const data = self.q.bar_by_children ? self.term.subconditions : self.term.values
-	// console.log(self)
-	// self.showMenu = function() {
-	// 	self.dom.tip.clear().showunder(self.dom.holder.node())
+		//Tabs functionality for later - leave it for layout testing
+		// const tabs = [
+		// 	{
+		// 		label: 'UI',
+		// 		callback:  async (event, tab) => {
+		// 			try {
+		// 				self.opts.showDraggables()
+		// 				delete tab.callback
+		// 			} catch (e: any) {
+		// 				if (e.stack) console.log(e.stack)
+		// 				else throw e
+		// 			}
+		// 		}
+		// 	},
+		// 	{
+		// 		label: 'Text Input',
+		// 		callback: () => {console.log('Under Development')}
+		// 	}
+		// ]
 
-	// 	const dragMenu = self.dom.tip.d.append('div')
-	// 	dragMenu.append('div').text('header')
+		// new Tabs({holder: self.dom.tip.d, tabs}).main()
 
-	// 	const groupsWrapper = dragMenu.append('div').classed('sjpp-groups-wrapper', true)
-	// 	groupsWrapper.append('div').classed('sjpp-groups-include', true).text('include')
-	// 	groupsWrapper.append('div').classed('sjpp-groups-exclude', true).text('exclude')
+		// self.opts.showDraggables()
+	}
+	//Attach to termsetting instance to use in categorical.ts
+	self.opts.showDraggables = async function () {
+		self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
+		self.dom.menuWrapper = self.opts.dom.tip.d.append('div')
+		self.dom.actionDiv = self.dom.menuWrapper.append('div')
 
-	// }
+		//Add Group button
+		self.dom.actionDiv
+			.append('div')
+			.attr('class', 'sjpp_apply_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.style('cursor', 'pointer')
+			.text('Add Group')
+			.on('click', () => {
+				//cap the number of groups at 4, including excluded categories
+				if (self.data.groups.length === 5) return
+
+				self.data.groups.push({
+					currentIdx: self.data.groups.length,
+					name: self.data.groups.length.toString()
+				})
+
+				const group = self.data.groups[self.data.groups.length - 1]
+				initGroupDiv(group)
+			})
+
+		//Apply button
+		self.dom.actionDiv
+			.append('div')
+			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+			.style('display', 'inline-block')
+			.style('border-radius', '13px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('float', 'right')
+			.style('text-transform', 'uppercase')
+			.style('cursor', 'pointer')
+			.text('Apply')
+			.on('click', () => {
+				//submit
+			})
+
+		//Top message
+		self.dom.menuWrapper
+			.append('div')
+			.style('margin', '5px 2px')
+			.style('font-size', '.6em')
+			.style('color', '#999')
+			.text('Drag-and-drop to assign categories to groups.')
+
+		self.dom.grpsWrapper = self.dom.menuWrapper.append('div').classed('sjpp-groups-wrapper', true)
+		self.dom.includedWrapper = self.dom.grpsWrapper
+			.append('div')
+			.classed('sjpp-groups-include', true)
+			.style('display', 'flex')
+			.classed('sjpp-group-edit-div', true)
+		self.dom.excludedWrapper = self.dom.grpsWrapper
+			.append('div')
+			.classed('sjpp-groups-exclude', true)
+			.classed('sjpp-group-edit-div', true)
+
+		await initGroupDiv(self.data.groups.find(d => d.currentIdx === 0))
+
+		await self.dom.includedWrapper
+			.selectAll('div')
+			.data(self.data.groups.filter(d => d.currentIdx != 0))
+			.enter()
+			.append('div')
+			.classed('sjpp-drag-drop-div', true) //unit testing
+			.style('border', '1px solid #efefef')
+			.each(async function (this: any, group: any) {
+				group.wrapper = select(this)
+				await initGroupDiv(group)
+			})
+
+		self.update()
 	}
 
-	self.update = function() {
-		//Should update groups
+	async function initGroupDiv(group) {
+		const wrapper = group.currentIdx === 0 ? self.dom.excludedWrapper : self.dom.includedWrapper
+		if (!group.wrapper)
+			group.wrapper = wrapper
+				.append('div')
+				.classed('sjpp-drag-drop-div', true)
+				.style('border', '1px solid #efefef')
+				.on('dragover', (event: DragEvent) => {
+					event.preventDefault()
+					event.stopPropagation()
+				})
+				.on('dragover', (event: DragEvent) => {
+					event.preventDefault()
+					event.stopPropagation()
+				})
+				.on('dragover', (event: DragEvent) => {
+					event.preventDefault()
+					event.stopPropagation()
+				})
+
+		group.title = group.wrapper
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '3px 10px')
+			.style('text-align', 'left')
+			.style('font-size', '.6em')
+			.style('text-transform', 'uppercase')
+			.style('color', '#999')
+			.text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
+
+		if (group.currentIdx !== 0) {
+			group.destroyBtn = group.wrapper
+				.append('button')
+				.style('float', 'right')
+				.style('display', 'inline-block')
+				// .property('disabled', self.data.groups.length > 2 ? false : true)
+				.text('x')
+				.on('click', (event: MouseEvent) => {
+					if (self.data.groups.length <= 3) return
+					group.wrapper.remove()
+					self.data.groups = self.data.groups.filter(d => d.currentIdx != group.currentIdx)
+					self.update(group.currentIdx)
+				})
+
+			group.input = group.wrapper
+				.append('input')
+				.attr('size', 12)
+				.attr('value', group.currentIdx.toString() == group.name ? group.name : group.currentIdx)
+				.style('margin', '5px')
+				.style('margin-left', '8px')
+				.style('display', 'inline-block')
+				.style('font-size', '.8em')
+				.style('width', '87%')
+				.on('keyup', (event: KeyboardEvent) => {
+					//Must hit enter to save. Problematic for UX?
+					if (!keyupEnter(event)) return
+					group.name = group.input.node().value
+				})
+		}
+
+		group.draggables = group.wrapper.append('div').classed('sjpp-drag-list-div', true)
+
+		await group.draggables
+			.selectAll('div')
+			.data(self.data.values.filter(d => d.group_idx == group.currentIdx))
+			.enter()
+			.append('div')
+			.attr('draggable', 'true')
+			.attr('class', 'sj-drag-item')
+			.style('margin', '3px')
+			.style('cursor', 'default')
+			.style('padding', '3px 10px')
+			.style('border-radius', '5px')
+			// .style('color', count == 0 ? '#777' : 'black')
+			.text(d => d.label)
+			.style('background-color', '#eee')
+			.on('mouseover', function (this: Element) {
+				select(this).style('background-color', '#fff2cc')
+			})
+			.on('mouseout', function (this: Element) {
+				select(this).style('background-color', '#eee')
+			})
+			.on('dragstart', function (this: Element) {
+				select(this).style('background-color', '#fff2cc')
+			})
+	}
+
+	self.update = function (idx: number) {
+		self.data.groups.forEach(group => {
+			if (group.currentIdx > idx) {
+				group.currentIdx = group.currentIdx - 1
+				group.name = (group.currentIdx + 1).toString() == group.name ? group.currentIdx.toString() : group.name
+			}
+		})
+		self.dom.includedWrapper
+			.selectAll('div')
+			.data(self.data.groups.filter(d => d.currentIdx != 0))
+			.each(async (group: any) => {
+				group.title.text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
+				group.input.node().value = group.name
+			})
 	}
 }
+
+function setInteractivity(self: any) {}
 
 /*
 **** OLD IMPLEMENTATION ****
