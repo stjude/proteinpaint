@@ -1,8 +1,8 @@
 import tape from 'tape'
-import { validGeneLookupResponse } from '../../shared/checkers/transformed/index.ts'
-import * as route from '../../routes/genelookup'
+import * as checkers from '../../shared/checkers/transformed/index.ts'
 import serverconfig from '../serverconfig'
 import path from 'path'
+import fs from 'fs'
 
 /****************************************
  reusable constants and helper functions
@@ -37,24 +37,7 @@ function getApp({ api }) {
 	}
 	for (const method in api.methods) {
 		const m = api.methods[method]
-		app[method](
-			api.endpoint,
-			m.init({
-				app,
-				genomes /*: { 
-				hg38: {
-					genomicNameRegexp: {
-						test(){}
-					},
-					genedb: {
-						getjsonbyname: {
-							all(){}
-						}
-					}
-				} 
-			}*/
-			})
-		)
+		app[method](api.endpoint, m.init({app, genomes }))
 	}
 	return app
 }
@@ -63,31 +46,34 @@ function getApp({ api }) {
  test sections
 ***************/
 
-tape('\n', function (test) {
-	test.pass('-***- server/genelookup specs -***-')
-	test.end()
-})
+const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
+for (const f of files) {
+	const { api } = require(`../../routes/${f}`)
 
-tape('genelookup', async test => {
-	const app = getApp(route)
-	const req = { query: { input: 'kras', genome: 'hg38' } }
-	const res = {
-		send(r) {
-			// TODO: use the second test instead of first (to be replaced)
-			test.deepEqual(
-				validGeneLookupResponse(r),
-				{ success: true, errors: [], data: { error: 'invalid genome name' } },
-				' response should have an empty array for type check errors'
-			)
-			// test.deepEqual(
-			// 	validGeneLookupResponse(r)?.errors,
-			// 	[],
-			// 	' response should have an empty array for type check errors'
-			// )
-		}
+	tape('\n', function (test) {
+		test.pass(`-***- server/${f} specs -***-`)
+		test.end()
+	})
+
+	for (const method in api.methods) {
+		const m = api.methods[method]
+		tape(api.endpoint, async test => {
+			const app = getApp({api})
+			const req = { query: { input: 'kras', genome: 'hg38' } }
+			const res = {
+				send(r) {
+					// TODO: use the second test instead of first (to be replaced)
+					test.deepEqual(
+						checkers[`valid${m.response.typeId}`](r)?.errors,
+						[],
+						' response should have an empty array for type check errors'
+					)
+				}
+			}
+			const r = app.routes[api.endpoint]
+			test.equal(typeof r?.get, 'function', 'should exist as a route')
+			await r.get(req, res)
+			test.end()
+		})
 	}
-	const r = app.routes[route.api.endpoint]
-	test.equal(typeof r?.get, 'function', 'should exist as a route')
-	await r.get(req, res)
-	test.end()
-})
+}
