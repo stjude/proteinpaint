@@ -1,6 +1,23 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.25.0
+
+Features:
+- Display pairlst data, if available, for a fusion event on matrix cell mouseover
+- Launch lollipop from a geneVariant row label of matrix
+- User-controllable filter for at-risk counts in cumulative incidence plot
+- Default binning improved for GDC numeric dictionary variables with stats{} from graphql query
+
+Fixes:
+- Bug fix to change cutoff grade for condition term
+- Fix the matrix sample sorting by name, to use the display sampleName instead of sample ID
+- Fix the matrux sample group sorting by group name, to use predefined or group name as applicable
+- In lollipop tk, upon creating a subtk with a filtering criteria, sunburst generated from subtk will show correct total sample count for sunburst wedges by accounting for subtk filtering criteria. this fix works for both GDC and local TK
+- Scatterplot bug fix to improve behavior upon filtering by gene mutation
+- When filtering results in 0 eligible sample, big file query will not happen.
+
+ 
 ## 2.24.1
 
 Devops:
