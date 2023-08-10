@@ -56,4 +56,5 @@ export type CategoricalTermSettingInstance = TermSettingInstance & {
 	regroupMenu: (x?: any, y?: any) => void //Not defined
 	showGrpOpts: (div: any) => any
 	validateGroupsetting: () => void
+	showDraggables: () => void
 }
