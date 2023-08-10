@@ -59,7 +59,8 @@ class Barchart {
 			this.dom.legendDiv,
 			{
 				settings: {
-					legendOrientation: 'vertical'
+					legendOrientation: 'vertical',
+					hiddenStyle: 'line-through'
 				},
 				handlers: this.handlers
 			},
@@ -115,7 +116,10 @@ class Barchart {
 					type: 'radio',
 					chartType: 'barchart',
 					settingsKey: 'orientation',
-					options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+					options: [
+						{ label: 'Vertical', value: 'vertical' },
+						{ label: 'Horizontal', value: 'horizontal' }
+					]
 				},
 				{
 					label: 'Scale',
@@ -737,18 +741,16 @@ export const barInit = getCompInit(Barchart)
 export const componentInit = barInit
 
 function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		const charts = self.dom.barDiv.selectAll('.pp-sbar-div').data(self.visibleCharts, chart => chart.chartId)
 
 		charts.exit().each(self.exitChart)
 		charts.each(self.updateChart)
-		charts
-			.enter()
-			.append('div')
-			.each(self.addChart)
+		charts.enter().append('div').each(self.addChart)
 
 		self.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
-		self.legendRenderer(self.getLegendGrps())
+		const grps = self.getLegendGrps()
+		self.legendRenderer(grps)
 
 		if (!self.visibleCharts.length) {
 			const clickLegendMessage =
@@ -764,12 +766,12 @@ function setRenderers(self) {
 		}
 	}
 
-	self.exitChart = function(chart) {
+	self.exitChart = function (chart) {
 		delete self.renderers[chart.chartId]
 		select(this).remove()
 	}
 
-	self.updateChart = function(chart) {
+	self.updateChart = function (chart) {
 		// this.dom.legendDiv.remove("*")
 		chart.settings.cols.sort(self.barSorter)
 		chart.maxAcrossCharts = self.chartsData.maxAcrossCharts
@@ -779,10 +781,7 @@ function setRenderers(self) {
 		self.renderers[chart.chartId](chart)
 
 		const div = select(this)
-		div
-			.select('.pp-sbar-div-chartLengends')
-			.selectAll('*')
-			.remove()
+		div.select('.pp-sbar-div-chartLengends').selectAll('*').remove()
 
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
 			//chart has pvalues
@@ -790,7 +789,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addChart = function(chart, i) {
+	self.addChart = function (chart, i) {
 		const div = select(this)
 			.attr('class', 'pp-sbar-div')
 			.style('display', 'inline-block')
@@ -831,13 +830,13 @@ function setRenderers(self) {
 			.append('div')
 
 		// sort term1 categories based on self.chartsData.refs.cols
-		self.chartsData.tests[chart.chartId].sort(function(a, b) {
+		self.chartsData.tests[chart.chartId].sort(function (a, b) {
 			return self.chartsData.refs.cols.indexOf(a.term1comparison) - self.chartsData.refs.cols.indexOf(b.term1comparison)
 		})
 
 		// sort term2 categories based on self.chartsData.refs.rows
 		for (const t1c of self.chartsData.tests[chart.chartId]) {
-			t1c.term2tests.sort(function(a, b) {
+			t1c.term2tests.sort(function (a, b) {
 				return self.chartsData.refs.rows.indexOf(a.term2id) - self.chartsData.refs.rows.indexOf(b.term2id)
 			})
 		}
@@ -907,7 +906,7 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
-	self.download = function() {
+	self.download = function () {
 		if (!self.state) return
 		// has to be able to handle multichart view
 		const mainGs = []
@@ -919,7 +918,7 @@ function setInteractivity(self) {
 		let prevY = 0,
 			numChartsPerRow = 0
 
-		self.dom.barDiv.selectAll('.sjpcb-bars-mainG').each(function() {
+		self.dom.barDiv.selectAll('.sjpcb-bars-mainG').each(function () {
 			mainGs.push(this)
 			const bbox = this.getBBox()
 			if (bbox.width > maxw) maxw = bbox.width
@@ -982,9 +981,7 @@ function setInteractivity(self) {
 		})
 
 		// svg + legend must be attached to DOM in order for getBBox() to work within svgLegendRenderer
-		const hiddenDiv = select('body')
-			.append('div')
-			.style('opacity', 0)
+		const hiddenDiv = select('body').append('div').style('opacity', 0)
 		hiddenDiv.node().appendChild(svg)
 
 		self.svgLegendRenderer = svgLegend({
@@ -994,17 +991,13 @@ function setInteractivity(self) {
 		})
 
 		const s = self.settings
-		const svg0 = self.dom.barDiv
-			.select('svg')
-			.node()
-			.getBoundingClientRect()
+		const svg0 = self.dom.barDiv.select('svg').node().getBoundingClientRect()
 		let data = self.getLegendGrps()
 		data.forEach(d => {
 			d.name = d.name.replace(/<[^>]*>?/gm, '')
 			if (d.items) d.items = d.items.filter(c => !c.isHidden)
 		})
 		data = data.filter(d => d.items.length && !d.name.includes('tatistic'))
-
 		const fontsize = 14
 		self.svgLegendRenderer(data, {
 			settings: Object.assign(
