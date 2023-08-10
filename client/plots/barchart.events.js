@@ -284,18 +284,29 @@ function handleLegendClick(event, self) {
 		'isHidden' in d
 			? !d.isHidden
 			: !(term.q && term.q.hiddenValues && term.q.hiddenValues['dataId' in d ? d.dataId : d.id])
-	self.app.dispatch({
-		type: 'plot_edit',
-		id: self.id,
-		config: {
-			[termNum]: {
-				isAtomic: true,
-				id: term.id,
-				term: term.term,
-				q: getUpdatedQfromClick(d, term, isHidden)
-			}
-		}
-	})
+
+	const menu = new Menu({ padding: '0px' })
+	menu.showunder(event.target)
+	const div = menu.d.append('div')
+	div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text(!isHidden ? 'Show' : 'Hide')
+		.on('click', () => {
+			menu.hide()
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					[termNum]: {
+						isAtomic: true,
+						id: term.id,
+						term: term.term,
+						q: getUpdatedQfromClick(d, term, isHidden)
+					}
+				}
+			})
+		})
 }
 
 function getUpdatedQfromClick(d, term, isHidden = false, binColored = null) {
