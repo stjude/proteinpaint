@@ -55,6 +55,9 @@ const commonConfig = {
 				]
 			}
 		]
+	},
+	resolve: {
+		extensions: ['.js', '.jsx', '.ts', '.tsx']
 	}
 }
 
@@ -80,9 +83,6 @@ module.exports = env => {
 							}
 						})
 					]
-				},
-				resolve: {
-					extensions: ['.js', '.jsx', '.ts', '.tsx']
 				}
 			})
 
@@ -102,10 +102,7 @@ module.exports = env => {
 				// devtool: 'source-map' is slowest to build/rebuild, but
 				// line numbers in stack traces are accurate
 				//
-				devtool: 'source-map',
-				resolve: {
-					extensions: ['.js', '.jsx', '.ts', '.tsx']
-				}
+				devtool: 'source-map'
 			})
 
 		case 'test':

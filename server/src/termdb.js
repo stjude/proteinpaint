@@ -17,7 +17,7 @@ import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
 import { get_lines_bigfile } from './utils'
 import authApi from './auth'
-import { getResult as geneSearch } from './routes/genelookup'
+import { getResult as geneSearch } from './gene'
 
 /*
 ********************** EXPORTED
