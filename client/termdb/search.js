@@ -101,6 +101,8 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
 
+		self.dom.input.node().focus()
+
 		// a holder to contain two side-by-side divs for genes and dictionary term hits
 		self.dom.resultDiv = (self.opts.resultsHolder || self.dom.holder)
 			.append('div')
