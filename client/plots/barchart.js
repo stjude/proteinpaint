@@ -60,7 +60,6 @@ class Barchart {
 			{
 				settings: {
 					legendOrientation: 'vertical'
-					//hiddenStyle: 'line-through'
 				},
 				handlers: this.handlers
 			},
