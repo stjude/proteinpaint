@@ -375,9 +375,20 @@ function order(map, tw, refs) {
 	} else if (!refs?.byTermId[tw.term.id]?.bins) {
 		entries = Object.entries(map)
 		entries.sort((a, b) => {
-			const v1 = tw.term.values?.[a[0]]
+			let v1
+			for (const key in tw.term.values) {
+				const value = tw.term.values[key]
+				if (value.label && a[0] == value.label) v1 = value
+				else if (key == a[0]) v1 = value
+			}
+
 			if (v1 && 'order' in v1) {
-				const v2 = tw.term.values[b[0]]
+				let v2
+				for (const key in tw.term.values) {
+					const value = tw.term.values[key]
+					if (value.label && b[0] == value.label) v2 = value
+					else if (key == b[0]) v2 = value
+				}
 
 				if (v1?.order < v2?.order) return -1
 				return 1
