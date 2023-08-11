@@ -1,6 +1,5 @@
 import tape from 'tape'
 import * as checkers from '../../shared/checkers/transformed/index.ts'
-import serverconfig from '../serverconfig'
 import path from 'path'
 import fs from 'fs'
 
@@ -8,11 +7,9 @@ import fs from 'fs'
  reusable constants and helper functions
 /***************************************/
 
-const genomefile = serverconfig.genomes.find(g => g.name == 'hg38-test').file
-const genomefilepath = path.join(serverconfig.binpath, genomefile)
 const genomes = {
-	'hg38-test':
-		typeof __non_webpack_require__ === 'function' ? __non_webpack_require__(genomefilepath) : require(genomefilepath)
+	// test genome js location can be hardcoded for testing
+	'hg38-test': require('../../genome/hg38.test.js')
 }
 
 type AnyFunction = (res: any, req: any) => any
