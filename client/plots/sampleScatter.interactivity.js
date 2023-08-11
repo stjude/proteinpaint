@@ -222,19 +222,21 @@ export function setInteractivity(self) {
 					config
 				})
 			})
-		const color = rgb(category.color).formatHex()
-		const input = div
-			.append('div')
-			.attr('class', 'sja_sharp_border')
-			.style('padding', '0px 10px')
-			.text('Color:')
-			.append('input')
-			.attr('type', 'color')
-			.attr('value', color)
-			.on('change', () => {
-				self.changeColor(key, input.node().value)
-				menu.hide()
-			})
+		if (category.color) {
+			const color = rgb(category.color).formatHex()
+			const input = div
+				.append('div')
+				.attr('class', 'sja_sharp_border')
+				.style('padding', '0px 10px')
+				.text('Color:')
+				.append('input')
+				.attr('type', 'color')
+				.attr('value', color)
+				.on('change', () => {
+					self.changeColor(key, input.node().value)
+					menu.hide()
+				})
+		}
 		menu.showunder(e.target)
 	}
 
