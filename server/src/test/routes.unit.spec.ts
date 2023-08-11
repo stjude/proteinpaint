@@ -1,7 +1,9 @@
 import tape from 'tape'
 import * as checkers from '../../shared/checkers/transformed/index.ts'
+import serverconfig from '../serverconfig'
 import path from 'path'
 import fs from 'fs'
+import { initdb } from '../genome.initdb'
 
 /****************************************
  reusable constants and helper functions
@@ -11,6 +13,8 @@ const genomes = {
 	// test genome js location can be hardcoded for testing
 	'hg38-test': require('../../genome/hg38.test.js')
 }
+const g = genomes['hg38-test']
+initdb(g)
 
 type AnyFunction = (res: any, req: any) => any
 
@@ -53,25 +57,52 @@ for (const f of files) {
 		test.end()
 	})
 
+	// do not retest aliases for the same method, such as when using app.all(...)
+	// where app.get(), .post() to be the same
+	const testedMethods = new WeakMap()
 	for (const method in api.methods) {
 		const m = api.methods[method]
-		tape(api.endpoint, async test => {
-			const app = getApp({ api })
-			const req = { query: { input: 'kras', genome: 'hg38' } }
-			const res = {
-				send(r) {
-					// TODO: should use examples
-					test.deepEqual(
-						checkers[`valid${m.response.typeId}`](r)?.errors,
-						[],
-						' response should have an empty array for type check errors'
-					)
+		if (testedMethods.has(m)) continue
+		const METHOD = method.toUpperCase()
+		if (!m.examples) m.examples = [{ request: {}, response: {} }]
+
+		for (const x of m.examples) {
+			tape(`${api.endpoint} ${METHOD}`, async test => {
+				if (testedMethods.has(m)) {
+					console.log(`${METHOD} method tested previously as '${testedMethods.get(m)}'`)
+					test.end()
+					return
 				}
-			}
-			const r = app.routes[api.endpoint]
-			test.equal(typeof r?.get, 'function', 'should exist as a route')
-			await r.get(req, res)
-			test.end()
-		})
+				testedMethods.set(m, method)
+				const app = getApp({ api })
+				const req = {
+					query: x.request?.body || {}
+				}
+				const res = {
+					statusNum: 200,
+					send(payload) {
+						if (x.response.header?.status) {
+							test.equal(res.statusNum, x.response.header?.status, `response status should match the example`)
+						}
+						if (x.response.body) {
+							test.deepEqual(payload, x.response.body, `response body should match the example`)
+						}
+						test.deepEqual(
+							checkers[`valid${m.response.typeId}`](payload)?.errors,
+							[],
+							'validation should have an empty array for type check errors'
+						)
+					},
+					status(num) {
+						// expect this to be called before send()
+						res.statusNum = num
+					}
+				}
+				const route = app.routes[api.endpoint]
+				test.equal(typeof route?.get, 'function', 'should exist as a route')
+				await route.get(req, res)
+				test.end()
+			})
+		}
 	}
 }

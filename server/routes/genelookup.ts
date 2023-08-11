@@ -1,6 +1,6 @@
 import { getResult } from '#src/gene.js'
 
-export const api = {
+export const api: any = {
 	endpoint: 'genelookup',
 	methods: {
 		get: {
@@ -28,18 +28,11 @@ export const api = {
 			examples: [
 				{
 					request: {
-						//header/body/params // fetch opts
+						body: { input: 'kr', genome: 'hg38-test' }
 					},
 					response: {
-						status: 200
-					}
-				},
-				{
-					request: {
-						//header/body/params // fetch opts
-					},
-					response: {
-						status: 400 // malformed request
+						header: { status: 200 },
+						body: { hits: ['KRAS'] }
 					}
 				}
 			]
@@ -47,9 +40,12 @@ export const api = {
 	}
 }
 
+api.methods.post = api.methods.get
+
 export type GeneLookupRequest = {
 	input: string
 	genome: string
+	deep: boolean
 }
 
 export type GeneLookupResponse = {

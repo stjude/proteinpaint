@@ -22,25 +22,7 @@ export const api = {
 				typeId: 'HealthCheckResponse'
 				// will combine this with type checker
 				//valid: (t) => {}
-			},
-			examples: [
-				{
-					request: {
-						//header/body/params // fetch opts
-					},
-					response: {
-						status: 200
-					}
-				},
-				{
-					request: {
-						//header/body/params // fetch opts
-					},
-					response: {
-						status: 400 // malformed request
-					}
-				}
-			]
+			}
 		}
 	}
 }
