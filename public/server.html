@@ -102,11 +102,8 @@ async function init() {
       .html(`<span style='color:#aaa; font-weight: 200; margin-right: 3px'>/</span>${api.endpoint}`)
       .on('click', ()=>{window.location.hash = `#${api.id}`})
 
-    
-    if (api.test) {
-      section.append('div').html(`CLI test: from the <span class='code-snippet'>proteinpaint/server</span> dir, `
-        + `<span class='code-snippet'>exportsFilename=${api.test} npm run test:unit</span>`)
-    }
+    section.append('div').html(`CLI test: from the <span class='code-snippet'>proteinpaint/server</span> dir, `
+      + `<span class='code-snippet'>exportsFilename=src/test/routes.unit.spec.ts npm run test:unit</span>`)
     
     for(const method in api.methods) {
       const m = api.methods[method]
