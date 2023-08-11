@@ -873,7 +873,7 @@ export function setRenderers(self) {
 						.attr('alignment-baseline', 'middle')
 						.style('font-size', '0.8em')
 					offsetY += step
-					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event))
+					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event, shape))
 				}
 			}
 		}

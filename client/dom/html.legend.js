@@ -171,7 +171,6 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.text(d.inset)
 				.on('click', viz.handlers.legend?.onColorClick)
 		}
-		if (d.isHidden) console.log(d)
 		div
 			.append('div')
 			.classed('sjpp-htmlLegend', true)
