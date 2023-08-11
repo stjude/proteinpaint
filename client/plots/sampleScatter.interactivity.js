@@ -169,7 +169,7 @@ export function setInteractivity(self) {
 		}
 	}
 
-	self.onLegendClick = function (chart, legendG, name, key, e) {
+	self.onLegendClick = function (chart, legendG, name, key, e, category) {
 		const tw = self.config[name]
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		const menu = new Menu({ padding: '0px' })
@@ -222,10 +222,33 @@ export function setInteractivity(self) {
 					config
 				})
 			})
-		menu.show(e.clientX, e.clientY, false)
+		const color = rgb(category.color).formatHex()
+		const input = div
+			.append('div')
+			.attr('class', 'sja_sharp_border')
+			.style('padding', '0px 10px')
+			.text('Color:')
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', color)
+			.on('change', () => {
+				self.changeColor(key, input.node().value)
+				menu.hide()
+			})
+		menu.showunder(e.target)
 	}
 
 	self.hideCategory = function (legendG, tw, key, hide) {
+		if (key == 'Ref') {
+			self.settings.showRef = !hide
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					settings: { sampleScatter: self.settings }
+				}
+			})
+		}
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
 		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
 		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
@@ -234,22 +257,6 @@ export function setInteractivity(self) {
 		if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'
 		if (!hide) delete tw.q.hiddenValues[key]
 		else tw.q.hiddenValues[key] = value
-	}
-
-	self.onColorClick = function (e, key, category) {
-		const color = rgb(category.color)
-		const menu = new Menu()
-		const input = menu.d
-			.append('input')
-			.attr('type', 'color')
-			.attr('value', color.formatHex())
-			.on('change', () => {
-				// ok to not await here, since no returned value is required
-				// and menu.hide() does not need to wait for the dispatch to finish
-				self.changeColor(key, input.node().value)
-				menu.hide()
-			})
-		menu.show(e.clientX, e.clientY, false)
 	}
 
 	self.changeColor = async function (key, color) {
