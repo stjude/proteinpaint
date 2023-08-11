@@ -50,7 +50,8 @@ export default <Genome>{
 		},
 		{
 			__isgene: true,
-			file: 'anno/gencode.v41.hg38.gz',
+			name: 'GENCODE v43',
+			file: 'anno/gencode.v43.hg38.gz',
 			translatecoding: true,
 			categories: {
 				coding: { color: '#004D99', label: 'Coding gene' },
@@ -59,7 +60,6 @@ export default <Genome>{
 				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
 			},
 			type: 'bedj',
-			name: 'GENCODE v41',
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4
