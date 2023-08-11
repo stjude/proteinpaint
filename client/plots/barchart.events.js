@@ -327,6 +327,7 @@ function handleLegendClick(event, self) {
 		const input = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.style('padding', '0px 10px')
 			.text('Color:')
 			.append('input')
 			.attr('type', 'color')
