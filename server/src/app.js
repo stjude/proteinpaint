@@ -104,7 +104,8 @@ const express = require('express'),
 	authApi = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
 	minimatch = require('minimatch'),
-	{ versionInfo } = require('../routes/healthcheck')
+	{ versionInfo } = require('../routes/healthcheck'),
+	augents = require('../augents/augents')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -275,14 +276,8 @@ authApi.maySetAuthRoutes(app, basepath, serverconfig)
 {
 	// start moving migrated route handler code here
 	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-	for (const f of files) {
-		console.log(f)
-		const { api } = require(`../routes/${f}`)
-		for (const method in api.methods) {
-			const m = api.methods[method]
-			app[method](`${basepath}/${api.endpoint}`, m.init({ app, genomes }))
-		}
-	}
+	const routes = files.map(f => require(`../routes/${f}`))
+	augents.setRoutes(app, routes, basepath, { app, genomes })
 }
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)

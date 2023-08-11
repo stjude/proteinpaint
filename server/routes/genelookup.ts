@@ -1,14 +1,4 @@
-import { getResult } from '#src/gene'
-
-export type GeneLookupRequest = {
-	input: string
-	genome: string
-}
-
-export type GeneLookupResponse = {
-	error?: string
-	hits: string[]
-}
+import { getResult } from '#src/gene.js'
 
 export const api = {
 	endpoint: 'genelookup',
@@ -55,4 +45,14 @@ export const api = {
 			]
 		}
 	}
+}
+
+export type GeneLookupRequest = {
+	input: string
+	genome: string
+}
+
+export type GeneLookupResponse = {
+	error?: string
+	hits: string[]
 }
