@@ -176,8 +176,8 @@ class Scatter {
 			configKey: 'scaleDotTW',
 			chartType: 'sampleScatter',
 			usecase: { target: 'sampleScatter', detail: 'numeric' },
-			title: 'Scale dot by term value',
-			label: 'Scale dot by',
+			title: 'Scale sample by term value',
+			label: 'Scale by',
 			vocabApi: this.app.vocabApi,
 			numericEditMenuVersion: ['continuous']
 		}
@@ -191,31 +191,31 @@ class Scatter {
 			vocabApi: this.app.vocabApi
 		}
 		const dotSizeOption = {
-			label: 'Dot area',
+			label: 'Sample area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
-			title: 'Dot size or area, in square pixels',
+			title: 'Sample area, in square pixels',
 			min: 0
 		}
 		const minDotSizeOption = {
-			label: 'Min dot area',
+			label: 'Min sample area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'minDotSize',
-			title: 'Minimum dot size or area, in square pixels',
+			title: 'Minimum area, in square pixels',
 			min: 0
 		}
 		const maxDotSizeOption = {
-			label: 'Max dot area',
+			label: 'Max sample area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'maxDotSize',
-			title: 'Maximum dot size or area, in square pixels',
+			title: 'Maximum area, in square pixels',
 			min: 0
 		}
 		const orientation = {
-			label: 'Scale dot order',
+			label: 'Scale order',
 			type: 'radio',
 			chartType: 'sampleScatter',
 			settingsKey: 'scaleDotOrder',
