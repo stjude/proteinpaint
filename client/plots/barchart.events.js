@@ -170,7 +170,7 @@ export default function getHandlers(self) {
 			}
 		},
 		legend: {
-			//onColorClick: (e, color) => handleColorClick(e, self, color),
+			onColorClick: e => handleLegendClick(e, self),
 			click: e => handleLegendClick(e, self),
 			mouseover: event => {
 				event.stopPropagation()
@@ -305,7 +305,7 @@ function handleLegendClick(event, self) {
 				}
 			})
 		})
-	if (Object.keys(term.q.hiddenValues).length > 1)
+	if (term.q.hiddenValues && Object.keys(term.q.hiddenValues).length > 0 && Object.keys(term.term.values).length > 1)
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -323,15 +323,15 @@ function handleLegendClick(event, self) {
 				})
 			})
 	const color = rgb(d.color).formatHex()
-	if (d.color != '#fff') {
+	if (color != '#ffffff') {
 		const input = div
 			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('class', 'sja_sharp_border')
 			.style('padding', '0px 10px')
 			.text('Color:')
 			.append('input')
 			.attr('type', 'color')
-			.attr('value', rgb(d.color).formatHex())
+			.attr('value', color)
 			.on('change', () => {
 				handleColorClick(d, self, input.node().value)
 				menu.hide()
