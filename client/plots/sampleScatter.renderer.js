@@ -783,9 +783,9 @@ export function setRenderers(self) {
 						const name = key
 						const hidden = self.config.colorTW.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
 						const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
-						circleG.on('click', e => self.onColorClick(e, key, category))
+						circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
 						offsetY += step
-						itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event))
+						itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event, category))
 					}
 				}
 			}
@@ -811,7 +811,7 @@ export function setRenderers(self) {
 					.attr('d', symbol)
 					.style('stroke', rgb(colorRefCategory.color).darker())
 
-				refColorG.on('click', e => self.onColorClick(e, 'Ref', colorRefCategory))
+				refColorG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', 'Ref', e, colorRefCategory))
 				const refText = legendG
 					.append('g')
 					.append('text')
@@ -823,18 +823,7 @@ export function setRenderers(self) {
 					.attr('alignment-baseline', 'middle')
 					.style('font-size', '0.8em')
 
-				refText.on('click', () => {
-					refText.style('text-decoration', !self.settings.showRef ? 'none' : 'line-through')
-					self.settings.showRef = !self.settings.showRef
-
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: {
-							settings: { sampleScatter: self.settings }
-						}
-					})
-				})
+				refText.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', 'Ref', e, colorRefCategory))
 			}
 		}
 		if (self.config.scaleDotTW) {
@@ -907,7 +896,7 @@ export function setRenderers(self) {
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 
-			circleG.on('click', e => self.onColorClick(e, key, category))
+			circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
 			const itemG = g.append('g')
 			itemG
 				.append('text')
@@ -1154,7 +1143,7 @@ export function setRenderers(self) {
 						.attr('r', 5)
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
-					itemG.on('click', e => self.onColorClick(e, key, category))
+					itemG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
 				}
 				const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 				G.append('g')
@@ -1165,7 +1154,9 @@ export function setRenderers(self) {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(mkey)
 					.style('font-size', '0.8em')
-					.on('click', event => self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
+					.on('click', event =>
+						self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
+					)
 
 				const assay = key.split(',')[1]
 				if (key.includes(dtlabel))

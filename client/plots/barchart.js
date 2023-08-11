@@ -59,8 +59,8 @@ class Barchart {
 			this.dom.legendDiv,
 			{
 				settings: {
-					legendOrientation: 'vertical',
-					hiddenStyle: 'line-through'
+					legendOrientation: 'vertical'
+					//hiddenStyle: 'line-through'
 				},
 				handlers: this.handlers
 			},
