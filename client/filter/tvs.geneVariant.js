@@ -222,6 +222,7 @@ async function fillMenu(self, _div, tvs) {
 						.append('input')
 						.attr('type', 'checkbox')
 						.attr('name', 'sja_filter_isnot_input')
+						.attr('id', grp.name + d.label)
 						.property('disabled', radioInput.property('checked') ? false : true)
 						.property(
 							'checked',
@@ -252,10 +253,10 @@ async function fillMenu(self, _div, tvs) {
 							multiGrpWarningDiv.style('display', modifiedMultiGrps ? 'block' : 'none')
 						})
 					itemDiv
-						.append('div')
-						.style('display', 'inline-block')
+						.append('label')
 						.style('margin-left', '3px')
-						.text(`${d.label} (n=${d.num})`)
+						.html(`${d.label} (n=${d.num})`)
+						.attr('for', grp.name + d.label)
 				})
 		})
 }
