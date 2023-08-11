@@ -170,7 +170,7 @@ export default function getHandlers(self) {
 			}
 		},
 		legend: {
-			onColorClick: (e, color) => handleColorClick(e, self, color),
+			//onColorClick: (e, color) => handleColorClick(e, self, color),
 			click: e => handleLegendClick(e, self),
 			mouseover: event => {
 				event.stopPropagation()
@@ -241,10 +241,7 @@ export default function getHandlers(self) {
 	}
 }
 
-function handleColorClick(event, self, color) {
-	event.stopPropagation()
-	const d = event.target.__data__
-	if (d === undefined) return
+function handleColorClick(d, self, color) {
 	const termNum = d.type == 'col' ? 'term' : 'term2'
 	const term = self.config[termNum]
 	let dataId = d.dataId
@@ -325,6 +322,20 @@ function handleLegendClick(event, self) {
 					config: { [termNum]: tw }
 				})
 			})
+	const color = rgb(d.color).formatHex()
+	if (d.color != '#fff') {
+		const input = div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Color:')
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', rgb(d.color).formatHex())
+			.on('change', () => {
+				handleColorClick(d, self, input.node().value)
+				menu.hide()
+			})
+	}
 }
 
 function getUpdatedQfromClick(d, term, isHidden = false, binColored = null) {
