@@ -5,6 +5,7 @@ const helpers = require('../../test/front.helpers.js')
 const { sleep, detectLst, detectOne } = require('../../test/test.helpers.js')
 const getFilterItemByTag = require('../../filter/filter').getFilterItemByTag
 const vocabData = require('../../termdb/test/vocabData')
+const hideCategory = require('../../plots/barchart.events.js').hideCategory
 
 /*
 Tests:
@@ -49,12 +50,12 @@ const runpp = helpers.getRunPp('mass', {
 /**************
  test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- plots/barchart -***-')
 	test.end()
 })
 
-tape('single barchart, categorical bars', function(test) {
+tape('single barchart, categorical bars', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -100,7 +101,7 @@ tape('single barchart, categorical bars', function(test) {
 	}
 })
 
-tape('single chart, with overlay', function(test) {
+tape('single chart, with overlay', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
 	const termfilter = { filter: [] }
@@ -202,7 +203,7 @@ tape('single chart, with overlay', function(test) {
 			.selectAll('.sjpp-htmlLegend')
 			.filter(d => d.dataId == legendDataId)
 			.node()
-		item.dispatchEvent(new Event('click', { bubbles: true }))
+		hideCategory(item.__data__, barchart.Inner, true)
 	}
 
 	async function testHiddenOverlayData(barchart) {
@@ -216,7 +217,7 @@ tape('single chart, with overlay', function(test) {
 	}
 })
 
-tape('multiple charts', function(test) {
+tape('multiple charts', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -253,7 +254,7 @@ tape('multiple charts', function(test) {
 	}
 })
 
-tape('series visibility - q.hiddenValues', function(test) {
+tape('series visibility - q.hiddenValues', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 
@@ -296,7 +297,7 @@ tape('series visibility - q.hiddenValues', function(test) {
 	}
 })
 
-tape('series visibility - numeric', function(test) {
+tape('series visibility - numeric', function (test) {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -359,11 +360,11 @@ tape('series visibility - numeric', function(test) {
 	let numHiddenLegendBeforeClick
 	function triggerHiddenLegendClick(barchart) {
 		numHiddenLegendBeforeClick = barchart.Inner.settings.exclude.cols.length
-		barchart.Inner.dom.legendDiv
+		const node = barchart.Inner.dom.legendDiv
 			.selectAll('.sjpp-htmlLegend')
 			.filter(d => d?.isHidden == true)
 			.node()
-			.click()
+		hideCategory(node.__data__, barchart.Inner, false)
 	}
 
 	function testRevealedBar(barchart) {
@@ -383,12 +384,11 @@ tape('series visibility - numeric', function(test) {
 	}
 
 	function triggerMenuClickToHide(barchart) {
-		barchart.Inner.dom.holder
+		const node = barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
 			.filter(d => d.seriesId == 'not exposed')
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
-
 		barchart.Inner.app.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('Hide'))
@@ -400,7 +400,7 @@ tape('series visibility - numeric', function(test) {
 		test.equal(
 			barchart.Inner.dom.legendDiv
 				.selectAll('.sjpp-htmlLegend')
-				.filter(function() {
+				.filter(function () {
 					return this.innerHTML.includes('not exposed')
 				})
 				.size(),
@@ -410,7 +410,7 @@ tape('series visibility - numeric', function(test) {
 	}
 })
 
-tape('series visibility and order - condition', function(test) {
+tape('series visibility and order - condition', function (test) {
 	test.timeoutAfter(5000)
 
 	const conditionHiddenValues = { '1: Mild': 1 }
@@ -453,7 +453,7 @@ tape('series visibility and order - condition', function(test) {
 	}
 })
 
-tape('single barchart, filtered', function(test) {
+tape('single barchart, filtered', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -514,7 +514,7 @@ tape('single barchart, filtered', function(test) {
 	}
 })
 
-tape('click non-group bar to add filter', function(test) {
+tape('click non-group bar to add filter', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(3)
 
@@ -569,10 +569,7 @@ tape('click non-group bar to add filter', function(test) {
 
 	let clickedData, currData
 	function triggerBarClick(barchart) {
-		const elem = barDiv
-			.node()
-			.querySelector('.bars-cell')
-			.querySelector('rect')
+		const elem = barDiv.node().querySelector('.bars-cell').querySelector('rect')
 		clickedData = elem.__data__
 		currData = barchart.Inner.currServerData
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
@@ -638,7 +635,7 @@ tape('click non-group bar to add filter', function(test) {
 	}
 })
 
-tape('click custom categorical group bar to add filter', function(test) {
+tape('click custom categorical group bar to add filter', function (test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { filter: [] }
@@ -720,10 +717,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 
 	let clickedData
 	function triggerBarClick(barchart) {
-		const elem = barDiv
-			.node()
-			.querySelector('.bars-cell')
-			.querySelector('rect')
+		const elem = barDiv.node().querySelector('.bars-cell').querySelector('rect')
 		clickedData = elem.__data__
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
@@ -902,7 +896,7 @@ tape.skip('click custom subcondition group bar to add filter', function(test) {
 })
 */
 
-tape('numeric exclude range', function(test) {
+tape('numeric exclude range', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -971,7 +965,7 @@ tape('numeric exclude range', function(test) {
 	}
 })
 
-tape.skip('numeric filter - only special value', function(test) {
+tape.skip('numeric filter - only special value', function (test) {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -1022,10 +1016,7 @@ tape.skip('numeric filter - only special value', function(test) {
 	}
 
 	function triggerHiddenLegendClick(barchart) {
-		barchart.Inner.dom.legendDiv
-			.node()
-			.querySelector('.legend-row')
-			.click()
+		barchart.Inner.dom.legendDiv.node().querySelector('.legend-row').click()
 	}
 
 	function testHasBar(barchart) {
@@ -1243,7 +1234,7 @@ tape('max number of bins: exceeded', test => {
 	}
 })
 
-tape.skip('no visible series data, no overlay', function(test) {
+tape.skip('no visible series data, no overlay', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -1332,7 +1323,7 @@ tape.skip('no visible series data, no overlay', function(test) {
 	}
 })
 
-tape.skip('all hidden + with overlay, legend click', function(test) {
+tape.skip('all hidden + with overlay, legend click', function (test) {
 	test.timeoutAfter(9000)
 
 	runpp({
@@ -1399,10 +1390,7 @@ tape.skip('all hidden + with overlay, legend click', function(test) {
 
 	let clickedData
 	function triggerBarClick(barchart) {
-		const elem = barDiv
-			.node()
-			.querySelector('.bars-cell')
-			.querySelector('rect')
+		const elem = barDiv.node().querySelector('.bars-cell').querySelector('rect')
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
@@ -1517,10 +1505,7 @@ tape.skip('unhidden chart and legend', test => {
 	function triggerShowChart(barchart) {
 		// issue to fix: clicking the view button will cause the stat table
 		// to overlap from the bottom of the chart
-		barchart.Inner.dom.holder
-			.node()
-			.parentNode.querySelector('.termview')
-			.click()
+		barchart.Inner.dom.holder.node().parentNode.querySelector('.termview').click()
 
 		// same result when using dispatch
 		/*barchart.Inner.app.dispatch({
@@ -1599,10 +1584,7 @@ tape.skip('customized bins', test => {
 		dom.input.property('value', 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)')
 		dom.input.on('input')()
 		await sleep(500)
-		dom.holder
-			.select('.sja_menuoption')
-			.node()
-			.dispatchEvent(new Event('click'))
+		dom.holder.select('.sja_menuoption').node().dispatchEvent(new Event('click'))
 	}
 
 	function testReversion(barchart) {

@@ -170,8 +170,8 @@ export default function getHandlers(self) {
 			}
 		},
 		legend: {
-			onColorClick: e => handleLegendClick(e, self),
-			click: e => handleLegendClick(e, self),
+			onColorClick: e => handleLegendClick(e.target, self),
+			click: e => handleLegendClick(e.target, self),
 			mouseover: event => {
 				event.stopPropagation()
 				const d = event.target.__data__
@@ -271,9 +271,8 @@ function handleColorClick(d, self, color) {
 	})
 }
 
-function handleLegendClick(event, self) {
-	event.stopPropagation()
-	const d = event.target.__data__
+function handleLegendClick(target, self) {
+	const d = target.__data__
 	if (d === undefined) return
 	if (!('type' in d)) return
 	const termNum = d.type == 'col' ? 'term' : 'term2'
@@ -284,7 +283,7 @@ function handleLegendClick(event, self) {
 			: !(term.q && term.q.hiddenValues && term.q.hiddenValues['dataId' in d ? d.dataId : d.id])
 
 	const menu = new Menu({ padding: '0px' })
-	menu.showunder(event.target)
+	menu.showunder(target)
 	const div = menu.d.append('div')
 	div
 		.append('div')
@@ -292,18 +291,7 @@ function handleLegendClick(event, self) {
 		.text(!isHidden ? 'Show' : 'Hide')
 		.on('click', () => {
 			menu.hide()
-			self.app.dispatch({
-				type: 'plot_edit',
-				id: self.id,
-				config: {
-					[termNum]: {
-						isAtomic: true,
-						id: term.id,
-						term: term.term,
-						q: getUpdatedQfromClick(d, term, isHidden)
-					}
-				}
-			})
+			hideCategory(d, self, isHidden)
 		})
 	if (term.q.hiddenValues && Object.keys(term.q.hiddenValues).length > 0 && Object.keys(term.term.values).length > 1)
 		div
@@ -337,6 +325,23 @@ function handleLegendClick(event, self) {
 				menu.hide()
 			})
 	}
+}
+
+export function hideCategory(d, self, isHidden) {
+	const termNum = d.type == 'col' ? 'term' : 'term2'
+	const term = self.config[termNum]
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: {
+			[termNum]: {
+				isAtomic: true,
+				id: term.id,
+				term: term.term,
+				q: getUpdatedQfromClick(d, term, isHidden)
+			}
+		}
+	})
 }
 
 function getUpdatedQfromClick(d, term, isHidden = false, binColored = null) {
