@@ -26,16 +26,12 @@ async function fillMenu(self, _div, tvs) {
 	for (const l of data.lst) {
 		dtClassMap.set(l.dt, l.classes)
 	}
-	const div = _div
-		.append('div')
-		.style('padding', '5px')
-		.style('cursor', 'pointer')
+	const div = _div.append('div').style('padding', '5px').style('cursor', 'pointer')
 
-	div
-		.append('div')
-		.style('font-size', '1.2rem')
-		.text(self.tvs.term.name)
-	const applyBtn = div
+	div.append('div').style('font-size', '1.2rem').text(self.tvs.term.name)
+
+	const btnAndWarningDiv = div.append('div').style('display', 'flex').style('align-items', 'center')
+	const applyBtn = btnAndWarningDiv
 		.append('button')
 		.property('disabled', true)
 		.style('margin-top', '3px')
@@ -77,6 +73,21 @@ async function fillMenu(self, _div, tvs) {
 			}
 			self.opts.callback(newTvs)
 		})
+
+	const multiGrpWarningDiv = btnAndWarningDiv
+		.append('div')
+		.html('cannot filter for multiple groups')
+		.style('margin', '0px 20px')
+		.style('color', 'red')
+		.style('font-size', '0.8em')
+		.style('font-style', 'italic')
+		.style('display', 'none')
+
+	const noteDiv = div
+		.append('div')
+		.style('font-weight', 'bold')
+		.style('margin', '10px 5px 5px 10px')
+		.text('Filter by only one group within which select 1 or more categories for INCLUSION')
 
 	const groups = []
 	for (const [dt, classes] of dtClassMap) {
@@ -156,6 +167,14 @@ async function fillMenu(self, _div, tvs) {
     ]
     */
 
+	// defaultGrp is the default selected group when users first open a new gene filter. It is the group with the highest number of  mclass
+	const defaultGrp = exclude.length
+		? null
+		: groups.reduce((maxObject, currentObject) => {
+				if (currentObject.items.length > maxObject.items.length) return currentObject
+				return maxObject
+		  }, groups[0])
+
 	const dtDiv = div
 		.append('div')
 		.selectAll(':scope>div')
@@ -166,56 +185,78 @@ async function fillMenu(self, _div, tvs) {
 		.style('margin', '10px')
 		.style('padding-left', '10px')
 		.style('text-align', 'left')
-		.each(function(grp) {
+		.style('opacity', 0.5)
+		.each(function (grp) {
 			const div = select(this)
-			div
-				.append('div')
-				.style('font-weight', 600)
-				.html(grp.name)
-			//.on('click', )
+			const dtTitleDiv = div.append('div').style('display', 'flex')
+			// grpEdited indicates if the group was used as filter when the filter was created. Should be checked when editting the filter
+			const grpEdited = exclude.some(e => grp.items.some(i => i.dt == e.dt && (i.origin ? i.origin == e.origin : true)))
+			const radioInput = dtTitleDiv
+				.append('input')
+				.attr('type', 'radio')
+				.attr('name', 'radioGroup')
+				.attr('id', grp.name)
+				.property('checked', grpEdited || defaultGrp == grp)
+				.on('click', () => {
+					dtDiv.style('opacity', 0.5)
+					div.style('opacity', 1)
+					dtDiv.selectAll('input[type="checkbox"]').property('disabled', true)
+					mClassDiv.selectAll('input[type="checkbox"]').property('disabled', false)
+				})
+			div.style('opacity', grpEdited || defaultGrp == grp ? 1 : 0.5)
 
-			div
+			const dtTitle = dtTitleDiv.append('label').style('font-weight', 600).html(grp.name).attr('for', grp.name)
+
+			const mClassDiv = div
 				.selectAll(':scope>div')
 				.data(grp.items, d => d.label)
 				.enter()
 				.append('div')
 				.style('margin', '5px')
+				.style('margin-left', '20px')
 				.style('display', 'inline-block')
-				.on('click', function(event, d) {
-					const i = exclude.findIndex(e => e.key == d.key && e.dt == d.dt && (d.origin ? d.origin == e.origin : true))
-					if (i == -1) exclude.push(d)
-					else exclude.splice(i, 1)
-					select(this.lastChild).style('text-decoration', i == -1 ? 'line-through' : '')
-					select(this.lastChild).style('text-decoration-thickness', i == -1 ? '3px' : '')
-					applyBtn.property('disabled', JSON.stringify(exclude) === origExclude)
-				})
-				.each(function(d) {
+				.each(function (d) {
 					const itemDiv = select(this)
-					itemDiv
-						.append('div')
-						.style('display', 'inline-block')
-						.style('width', '1rem')
-						.style('height', '1rem')
-						.style('border', '1px solid #ccc')
-						.style('background-color', d.color)
-						.html('&nbsp;')
-
-					itemDiv
-						.append('div')
-						.style('display', 'inline-block')
-						.style('margin-left', '3px')
-						.style(
-							'text-decoration',
+					itemDiv.attr('class', 'sjpp_row_wrapper')
+					const checkboxDiv = itemDiv
+						.append('input')
+						.attr('type', 'checkbox')
+						.attr('name', 'sja_filter_isnot_input')
+						.attr('id', grp.name + d.label)
+						.property('disabled', radioInput.property('checked') ? false : true)
+						.property(
+							'checked',
 							exclude.some(e => e.key == d.key && e.dt == d.dt && (d.origin ? d.origin == e.origin : true))
-								? 'line-through'
-								: ''
+								? false
+								: true
 						)
-						.style(
-							'text-decoration-thickness',
-							exclude.some(e => e.key == d.key && e.dt == d.dt && (d.origin ? d.origin == e.origin : true)) ? '3px' : ''
-						)
-						.style('cursor', 'pointer')
-						.text(`${d.label} (n=${d.num})`)
+						.style('vertical-align', 'top')
+						.style('margin-right', '3px')
+						.on('change', function (event, d) {
+							const i = exclude.findIndex(
+								e => e.key == d.key && e.dt == d.dt && (d.origin ? d.origin == e.origin : true)
+							)
+							if (i == -1) exclude.push(d)
+							else exclude.splice(i, 1)
+							let modifiedMultiGrps = false
+							if (exclude.length > 1) {
+								const firstExclude = exclude[0].origin ? `${exclude[0].origin} ${exclude[0].dt}` : exclude[0].dt
+								for (const v of exclude.slice(1)) {
+									const e = v.origin ? `${v.origin} ${v.dt}` : v.dt
+									if (e !== firstExclude) {
+										modifiedMultiGrps = true
+										break
+									}
+								}
+							}
+							applyBtn.property('disabled', JSON.stringify(exclude) === origExclude || modifiedMultiGrps)
+							multiGrpWarningDiv.style('display', modifiedMultiGrps ? 'block' : 'none')
+						})
+					itemDiv
+						.append('label')
+						.style('margin-left', '3px')
+						.html(`${d.label} (n=${d.num})`)
+						.attr('for', grp.name + d.label)
 				})
 		})
 }
@@ -226,9 +267,16 @@ function term_name_gen(d) {
 }
 
 function get_pill_label(tvs) {
-	return {
-		txt: tvs.values?.reduce((accumulator, currentValue) => accumulator + currentValue.mclassLst.length, 0) + ' groups'
+	const modifiedGrp = tvs.values.filter(v => v.mclassExcludeLst.length > 0)[0]
+	const mGroup = dt2label[modifiedGrp.dt]
+
+	if (modifiedGrp.mclassLst.length == 1) {
+		// single
+		const m = modifiedGrp.mclassLst[0]
+		return { txt: `${mGroup}:${m}` }
 	}
+	// multiple
+	return { txt: `${mGroup}:${modifiedGrp.mclassLst.length} groups` }
 }
 
 function getSelectRemovePos(j) {
