@@ -167,6 +167,14 @@ async function fillMenu(self, _div, tvs) {
     ]
     */
 
+	// defaultGrp is the default selected group when users first open a new gene filter. It is the group with the highest number of  mclass
+	const defaultGrp = exclude.length
+		? null
+		: groups.reduce((maxObject, currentObject) => {
+				if (currentObject.items.length > maxObject.items.length) return currentObject
+				return maxObject
+		  }, groups[0])
+
 	const dtDiv = div
 		.append('div')
 		.selectAll(':scope>div')
@@ -181,22 +189,23 @@ async function fillMenu(self, _div, tvs) {
 		.each(function (grp) {
 			const div = select(this)
 			const dtTitleDiv = div.append('div').style('display', 'flex')
+			// grpEdited indicates if the group was used as filter when the filter was created. Should be checked when editting the filter
 			const grpEdited = exclude.some(e => grp.items.some(i => i.dt == e.dt && (i.origin ? i.origin == e.origin : true)))
 			const radioInput = dtTitleDiv
 				.append('input')
 				.attr('type', 'radio')
 				.attr('name', 'radioGroup')
-				.attr('value', grp.name)
-				.property('checked', grpEdited)
+				.attr('id', grp.name)
+				.property('checked', grpEdited || defaultGrp == grp)
 				.on('click', () => {
 					dtDiv.style('opacity', 0.5)
 					div.style('opacity', 1)
 					dtDiv.selectAll('input[type="checkbox"]').property('disabled', true)
 					mClassDiv.selectAll('input[type="checkbox"]').property('disabled', false)
 				})
-			div.style('opacity', grpEdited ? 1 : 0.5)
+			div.style('opacity', grpEdited || defaultGrp == grp ? 1 : 0.5)
 
-			const dtTitle = dtTitleDiv.append('div').style('font-weight', 600).html(grp.name)
+			const dtTitle = dtTitleDiv.append('label').style('font-weight', 600).html(grp.name).attr('for', grp.name)
 
 			const mClassDiv = div
 				.selectAll(':scope>div')
@@ -208,6 +217,7 @@ async function fillMenu(self, _div, tvs) {
 				.style('display', 'inline-block')
 				.each(function (d) {
 					const itemDiv = select(this)
+					itemDiv.attr('class', 'sjpp_row_wrapper')
 					const checkboxDiv = itemDiv
 						.append('input')
 						.attr('type', 'checkbox')
