@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const augent = require('./augents.js')
+const augent = require('./augen.js')
 const fs = require('fs')
 const path = require('path')
 
