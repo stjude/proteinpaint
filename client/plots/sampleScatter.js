@@ -199,7 +199,7 @@ class Scatter {
 			min: 0
 		}
 		const minDotSizeOption = {
-			label: 'Min sample area',
+			label: 'Min area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'minDotSize',
@@ -207,7 +207,7 @@ class Scatter {
 			min: 0
 		}
 		const maxDotSizeOption = {
-			label: 'Max sample area',
+			label: 'Max area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'maxDotSize',
