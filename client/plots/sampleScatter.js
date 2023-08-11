@@ -191,7 +191,7 @@ class Scatter {
 			vocabApi: this.app.vocabApi
 		}
 		const dotSizeOption = {
-			label: 'Dot size',
+			label: 'Dot area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
@@ -199,7 +199,7 @@ class Scatter {
 			min: 0
 		}
 		const minDotSizeOption = {
-			label: 'Min dot size',
+			label: 'Min dot area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'minDotSize',
@@ -207,7 +207,7 @@ class Scatter {
 			min: 0
 		}
 		const maxDotSizeOption = {
-			label: 'Max dot size',
+			label: 'Max dot area',
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'maxDotSize',
