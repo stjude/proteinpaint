@@ -308,7 +308,7 @@ function handleLegendClick(event, self) {
 				}
 			})
 		})
-	if (Object.keys(term.q.hiddenValues).length > 0)
+	if (Object.keys(term.q.hiddenValues).length > 1)
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
