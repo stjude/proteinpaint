@@ -89,27 +89,27 @@ async function init() {
     {label: 'prp1', url: 'https://proteinpaint.stjude.org'}
   ]
   
-  for(const r of routes) {
-    r.id = r.endpoint.replace('/', '.')
+  for(const api of routes) {
+    api.id = api.endpoint.replace('/', '-')
     const section = contentDiv.append('div').attr('class', 'sjpp-endpoint-div')
 
-    sidebarLinks.append('li').append('a').attr('href', `#${r.id}`).html(r.endpoint)
+    sidebarLinks.append('li').append('a').attr('href', `#${api.id}`).html(api.endpoint)
     
     section.append('h2')
-      .attr('id', r.id)
+      .attr('id', api.id)
       .attr('class', 'tsd-page-title')
       .style('cursor', 'pointer')
-      .html(`<span style='color:#aaa; font-weight: 200; margin-right: 3px'>/</span>${r.endpoint}`)
-      .on('click', ()=>{window.location.hash = `#${r.id}`})
+      .html(`<span style='color:#aaa; font-weight: 200; margin-right: 3px'>/</span>${api.endpoint}`)
+      .on('click', ()=>{window.location.hash = `#${api.id}`})
 
     
-    if (r.test) {
+    if (api.test) {
       section.append('div').html(`CLI test: from the <span class='code-snippet'>proteinpaint/server</span> dir, `
-        + `<span class='code-snippet'>exportsFilename=${r.test} npm run test:unit</span>`)
+        + `<span class='code-snippet'>exportsFilename=${api.test} npm run test:unit</span>`)
     }
     
-    for(const method in r.byMethod) {
-      const m = r.byMethod[method]
+    for(const method in api.methods) {
+      const m = api.methods[method]
       const Method = method.toUpperCase()
       if (m.description) {
         section.append('h3').html(`${Method}`)
@@ -118,8 +118,8 @@ async function init() {
       for(const s of service) {
         const serv = m[s]
         if (!serv) continue
-        const title = serv.type
-        const x = title in extracts ? extracts[title] : serv.type
+        const title = serv.typeId
+        const x = title in extracts ? extracts[title] : {}
         const h3 = section.append('h3')
         h3.append('span').html(Method + ' ' + s[0].toUpperCase() + s.slice(1))
         if (title in extracts) {
@@ -131,24 +131,24 @@ async function init() {
         serv.signatureWrapper = mainDiv.append('div').attr('class', 'sjpp-signature-wrapper')
         const toggle = setBtns(serv.signatureWrapper)
         serv.signature = serv.signatureWrapper.append('div')
-        if (title in extracts) {
+        if (title in extracts) { //console.log(134, title)
           serv.signature.html(x.signature)
           toggle.clickables = serv.signature
             .selectAll('.tsd-kind-type-alias')
-            .attr('href', `#${title}`)
+            //.attr('href', `#${title}`)
             .filter(function(){return this.innerHTML != title})
             .datum(toggle)
             .on('click', mayExpand)
           serv.signature.selectAll('.tsd-kind-property').style('cursor', 'pointer').on('click', handlePropClick)
         } else {
-          serv.signature.append('div').attr('class', 'tsd-signature').append('div').html(JSON.stringify(serv.type, null, '   '))
+          serv.signature.append('div').attr('class', 'tsd-signature').append('div').html(JSON.stringify(serv.typeId, null, '   '))
         }
 
         serv.payloadWrapper = mainDiv.append('div').attr('class', 'sjpp-payload-wrapper')
         serv.payloadPre = serv.payloadWrapper.append('pre').attr('contentEditable', true)
       }
 
-      setHostSelection(r, method, m, section)
+      setHostSelection(api, method, m, section)
     }
 
     detectCopyable(section)
@@ -197,7 +197,7 @@ async function init() {
     return false
   }
 
-  async function setHostSelection(r, method, m, section) {
+  async function setHostSelection(api, method, m, section) {
     const hostDivs = section.selectAll('.sjpp-service-div')
       .selectAll('.sjpp-host-div')
       .data([
@@ -224,7 +224,7 @@ async function init() {
           section.selectAll('.sjpp-payload-wrapper').style('display', 'none')
           section.selectAll('.sjpp-signature-wrapper').style('width', '').style('display', 'block')
         } else {
-          await fetchData(r, d, method, m, section)
+          await fetchData(api, d, method, m, section)
           section.selectAll('.sjpp-signature-wrapper').style('width', '450px').style('display', 'inline-block')
           section.selectAll('.sjpp-payload-wrapper').style('display', 'inline-block')
         }
@@ -258,7 +258,7 @@ async function init() {
       .on('click', function(selectData) {
         const d = selectData.selected
         if (d?.url == 'spec') return
-        fetchData(r, d, method, m, section)
+        fetchData(api, d, method, m, section)
       })
 
     m.hostBtnsDiv
@@ -270,12 +270,12 @@ async function init() {
       .on('click', function(selectData) {
         const d = selectData.selected
         if (d?.url == 'spec') return
-        fetchData(r, d, method, m, section, window.ppcheckers[`valid${m.response.type}`])
+        fetchData(api, d, method, m, section, window.ppcheckers[`valid${m.response.typeId}`])
       })
   }
 
-  async function fetchData(r, d, method, m, section, validate=null) {
-    const url = d.url + '/' + r.endpoint
+  async function fetchData(api, d, method, m, section, validate=null) {
+    const url = d.url + '/' + api.endpoint
     const reqOpts = {method}
     const params = method == 'get' ? constructUrlParams(m.request.example || {}) : ''
     if (m.method == 'POST') reqOpts.body = m.request.example
@@ -329,7 +329,7 @@ async function init() {
         + ' You may also click on individual signature IDs (red text) to toggle each type separately.')
       .attr('class', 'btn-sm')
       .html('expand')
-      .on('click', d => {
+      .on('click', () => {
         toggle.inprogress = toggleBtn.text()
         if (toggle.clickables) toggle.clickables.each(simulateClick)
         toggle.inprogress = ''

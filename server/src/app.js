@@ -104,7 +104,7 @@ const express = require('express'),
 	authApi = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
 	minimatch = require('minimatch'),
-	{ versionInfo } = require('../routes/healthcheck'),
+	{ versionInfo } = require('./health'),
 	augents = require('../augents/augents')
 
 //////////////////////////////

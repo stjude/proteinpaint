@@ -10,7 +10,7 @@ exports.setRoutes = function setRoutes(app, routes, basepath, opts = {}) {
 	}
 }
 
-exports.genTypeCheckers = function genTypeCheckers(fileRoutes, fromPath) {
+exports.typeCheckers = function typeCheckers(fileRoutes, fromPath) {
 	const typeIdsByFile = {}
 	const reqres = ['request', 'response']
 	for (const { file, route } of fileRoutes) {
@@ -26,11 +26,18 @@ exports.genTypeCheckers = function genTypeCheckers(fileRoutes, fromPath) {
 	const createLines = []
 	for (const file in typeIdsByFile) {
 		const typeIds = Array.from(typeIdsByFile[file])
-		importLines.push(`import { ${typeIds.join(',')} } from '${fromPath}${file}'`)
+		importLines.push(`import { ${typeIds.join(',')} } from '${fromPath}/${file}'`)
 		for (const typeId of typeIds) {
 			createLines.push(`export const valid${typeId} = createValidate<${typeId}>()`)
 		}
 	}
 	const content = importLines.join('\n') + '\n\n' + createLines.join('\n')
 	return content
+}
+
+exports.apiJson = function apiJson(fileRoutes) {
+	const typeIdsByFile = {}
+	const reqres = ['request', 'response'] //; console.log(fileRoutes)
+	const routes = fileRoutes.map(fr => fr.route.api)
+	return JSON.stringify(routes, null, '  ')
 }
