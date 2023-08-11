@@ -1,34 +1,56 @@
 [
   {
-    "endpoint": "healthcheck",
-    "test": "/src/test/healthcheck.unit.spec.ts",
-    "byMethod": {
+    "endpoint": "genelookup",
+    "methods": {
       "get": {
         "request": {
-          "type": {}
+          "typeId": "GeneLookupRequest"
         },
         "response": {
-          "type": "HealthCheckResponse"
-        }
-      } 
+          "typeId": "GeneLookupResponse"
+        },
+        "examples": [
+          {
+            "request": {},
+            "response": {
+              "status": 200
+            }
+          },
+          {
+            "request": {},
+            "response": {
+              "status": 400
+            }
+          }
+        ]
+      }
     }
   },
   {
-    "endpoint": "genelookup",
-    "test": "/src/test/genelookup.unit.spec.ts",
-    "byMethod": {
+    "endpoint": "healthcheck",
+    "methods": {
       "get": {
         "request": {
-          "type": "GeneLookupRequest",
-          "example": {
-            "input": "kra",
-            "genome": "hg38"
-          }
+          "typeId": null
         },
         "response": {
-          "type": "GeneLookupResponse"
-        }
-      } 
+          "typeId": "HealthCheckResponse"
+        },
+        "examples": [
+          {
+            "request": {},
+            "response": {
+              "status": 200
+            }
+          },
+          {
+            "request": {},
+            "response": {
+              "status": 400
+            }
+          }
+        ]
+      }
     }
   }
 ]

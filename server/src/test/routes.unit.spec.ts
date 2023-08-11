@@ -11,7 +11,8 @@ import fs from 'fs'
 const genomefile = serverconfig.genomes.find(g => g.name == 'hg38-test').file
 const genomefilepath = path.join(serverconfig.binpath, genomefile)
 const genomes = {
-	'hg38-test': __non_webpack_require__(genomefilepath)
+	'hg38-test':
+		typeof __non_webpack_require__ === 'function' ? __non_webpack_require__(genomefilepath) : require(genomefilepath)
 }
 
 type AnyFunction = (res: any, req: any) => any
