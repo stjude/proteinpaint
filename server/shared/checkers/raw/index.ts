@@ -1,7 +1,7 @@
-import { createIs, createValidate } from 'typia'
-import { HealthCheckResponse } from '../../types/healthcheck'
-import { GeneLookupRequest, GeneLookupResponse } from '../../../src/routes/genelookup'
+import { createValidate } from 'typia'
+import { GeneLookupRequest, GeneLookupResponse } from '../../..genelookup.ts'
+import { HealthCheckResponse } from '../../..healthcheck.ts'
 
-export const validHealthCheckResponse = createValidate<HealthCheckResponse>()
 export const validGeneLookupRequest = createValidate<GeneLookupRequest>()
 export const validGeneLookupResponse = createValidate<GeneLookupResponse>()
+export const validHealthCheckResponse = createValidate<HealthCheckResponse>()

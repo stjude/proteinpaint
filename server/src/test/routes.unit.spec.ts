@@ -37,7 +37,7 @@ function getApp({ api }) {
 	}
 	for (const method in api.methods) {
 		const m = api.methods[method]
-		app[method](api.endpoint, m.init({app, genomes }))
+		app[method](api.endpoint, m.init({ app, genomes }))
 	}
 	return app
 }
@@ -58,11 +58,11 @@ for (const f of files) {
 	for (const method in api.methods) {
 		const m = api.methods[method]
 		tape(api.endpoint, async test => {
-			const app = getApp({api})
+			const app = getApp({ api })
 			const req = { query: { input: 'kras', genome: 'hg38' } }
 			const res = {
 				send(r) {
-					// TODO: use the second test instead of first (to be replaced)
+					// TODO: should use examples
 					test.deepEqual(
 						checkers[`valid${m.response.typeId}`](r)?.errors,
 						[],

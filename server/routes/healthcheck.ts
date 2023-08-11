@@ -1,4 +1,4 @@
-import { getStat } from '#src/health'
+import { getStat } from '#src/health.ts'
 
 export const api = {
 	endpoint: 'healthcheck',
@@ -15,7 +15,7 @@ export const api = {
 				}
 			},
 			request: {
-				typeId: 'null'
+				typeId: null
 				//valid: default to type checker
 			},
 			response: {
