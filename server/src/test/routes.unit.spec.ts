@@ -57,23 +57,18 @@ for (const f of files) {
 		test.end()
 	})
 
-	// do not retest aliases for the same method, such as when using app.all(...)
-	// where app.get(), .post() to be the same
-	const testedMethods = new WeakMap()
 	for (const method in api.methods) {
 		const m = api.methods[method]
-		if (testedMethods.has(m)) continue
 		const METHOD = method.toUpperCase()
 		if (!m.examples) m.examples = [{ request: {}, response: {} }]
 
 		for (const x of m.examples) {
 			tape(`${api.endpoint} ${METHOD}`, async test => {
-				if (testedMethods.has(m)) {
-					console.log(`${METHOD} method tested previously as '${testedMethods.get(m)}'`)
+				if (m.duplicateOf) {
+					console.log(`${METHOD} method tested previously as '${m.duplicateOf.toUpperCase()}'`)
 					test.end()
 					return
 				}
-				testedMethods.set(m, method)
 				const app = getApp({ api })
 				const req = {
 					query: x.request?.body || {}

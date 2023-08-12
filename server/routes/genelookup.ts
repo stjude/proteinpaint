@@ -40,7 +40,10 @@ export const api: any = {
 	}
 }
 
-api.methods.post = api.methods.get
+api.methods.post = {
+	duplicateOf: 'get',
+	init: api.methods.get.init
+}
 
 export type GeneLookupRequest = {
 	input: string
