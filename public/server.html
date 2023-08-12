@@ -108,10 +108,15 @@ async function init() {
     for(const method in api.methods) {
       const m = api.methods[method]
       const Method = method.toUpperCase()
-      if (m.description) {
+      if (m.description) { 
         section.append('h3').html(`${Method}`)
         section.append('div').html(m.description)
-      } 
+      }
+      if (m.duplicateOf) {
+        section.append('p').html(`Alias of ${m.duplicateOf.toUpperCase()}`)
+        continue
+      }
+      if (!m.examples) m.examples = [{ request: {}, response: {} }]
       for(const s of service) {
         const serv = m[s]
         if (!serv) continue
@@ -200,7 +205,7 @@ async function init() {
       .data([
         // TODO: enable the left side select, to compare host responses instead of against the spec    
         // {hostOptions: structuredClone(hostOptions), x: 200, side: 'left'},
-        {hostOptions: structuredClone(hostOptions), x: 600, side: 'right'}
+        {hostOptions: structuredClone(hostOptions), x: 540, side: 'right'}
       ])
       .enter()
       .insert('div', 'div')
@@ -211,7 +216,7 @@ async function init() {
       .style('left', d => d.x)
       .style('z-index', 20)
 
-    const selects = hostDivs
+    const hostSelects = hostDivs
       .append('select')
       .attr('class', 'sjpp-host-select')
       .on('change', async function(selectData) { //console.log(211, d) //console.log(d, signatureWrapper.node(), payloadWrapper.node())
@@ -220,10 +225,12 @@ async function init() {
         if (d.url == 'spec') {
           section.selectAll('.sjpp-payload-wrapper').style('display', 'none')
           section.selectAll('.sjpp-signature-wrapper').style('width', '').style('display', 'block')
+          m.exampleSelect.style('display', 'none')
         } else {
           await fetchData(api, d, method, m, section)
           section.selectAll('.sjpp-signature-wrapper').style('width', '450px').style('display', 'inline-block')
           section.selectAll('.sjpp-payload-wrapper').style('display', 'inline-block')
+          m.exampleSelect.style('display', 'inline')
         }
 
         d3.selectAll('.sjpp-host-select').each(function (sd) {
@@ -234,8 +241,7 @@ async function init() {
         m.hostBtnsDiv.style('display', d.url == 'spec' ? 'none' : 'inline-block')
       })
 
-
-    selects
+    hostSelects
       .selectAll('option')
       .data(d => d.hostOptions)
       .enter()
@@ -244,8 +250,15 @@ async function init() {
       .attr('value', d => d.url)
       .html(d => d.label)
 
-    m.hostBtnsDiv = hostDivs.append('div').style('display', 'none')
+    m.exampleSelect = hostDivs.append('select').style('display', 'none')
+    m.exampleSelect.selectAll('option')
+      .data(m.examples)
+      .enter()
+      .append('option')
+      .attr('value', (d,i)=>i)
+      .html((d,i)=>`Example #${i}`)
 
+    m.hostBtnsDiv = hostDivs.append('div').style('display', 'none')
     m.hostBtnsDiv
       .append('button')
       .attr('class', 'btn-sm')
@@ -257,7 +270,6 @@ async function init() {
         if (d?.url == 'spec') return
         fetchData(api, d, method, m, section)
       })
-
     m.hostBtnsDiv
       .append('button')
       .attr('class', 'btn-sm')
@@ -274,14 +286,15 @@ async function init() {
   async function fetchData(api, d, method, m, section, validate=null) {
     const url = d.url + '/' + api.endpoint
     const reqOpts = {method}
-    const params = method == 'get' ? constructUrlParams(m.request.example || {}) : ''
-    if (m.method == 'POST') reqOpts.body = m.request.example
-    const reqPayload = reqOpts.body || m.request.example
+    const currExample = m.examples?.[Number(m.exampleSelect.property('value'))]
+    const params = method == 'get' ? constructUrlParams(currExample.request.body || {}) : ''
+    if (m.method == 'POST') reqOpts.body = currExample.request.body
+    const reqPayload = reqOpts.body //|| m.request.example
     await fetch(url + params, reqOpts)
       .then(r => r.json())
       .then(r => {
         section.selectAll('.sjpp-payload-wrapper pre').each(function(d, i) {
-          const data = i === 0 ? reqPayload : validate ? validate(r) : r
+          const data = i % 2 === 0 ? reqPayload : validate ? validate(r) : r
           this.innerText = JSON.stringify(data, null, '  ')
           const sib = this.parentNode.previousSibling
           if (!sib) return

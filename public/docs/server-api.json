@@ -11,18 +11,27 @@
         },
         "examples": [
           {
-            "request": {},
+            "request": {
+              "body": {
+                "input": "kr",
+                "genome": "hg38-test"
+              }
+            },
             "response": {
-              "status": 200
-            }
-          },
-          {
-            "request": {},
-            "response": {
-              "status": 400
+              "header": {
+                "status": 200
+              },
+              "body": {
+                "hits": [
+                  "KRAS"
+                ]
+              }
             }
           }
         ]
+      },
+      "post": {
+        "duplicateOf": "get"
       }
     }
   },
@@ -35,21 +44,7 @@
         },
         "response": {
           "typeId": "HealthCheckResponse"
-        },
-        "examples": [
-          {
-            "request": {},
-            "response": {
-              "status": 200
-            }
-          },
-          {
-            "request": {},
-            "response": {
-              "status": 400
-            }
-          }
-        ]
+        }
       }
     }
   }
