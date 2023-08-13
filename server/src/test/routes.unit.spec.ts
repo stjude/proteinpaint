@@ -64,8 +64,8 @@ for (const f of files) {
 
 		for (const x of m.examples) {
 			tape(`${api.endpoint} ${METHOD}`, async test => {
-				if (m.duplicateOf) {
-					console.log(`${METHOD} method tested previously as '${m.duplicateOf.toUpperCase()}'`)
+				if (m.alternativeFor) {
+					console.log(`${METHOD} method tested previously as '${m.alternativeFor.toUpperCase()}'`)
 					test.end()
 					return
 				}
