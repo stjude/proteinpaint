@@ -1,21 +1,23 @@
 import { getResult } from '#src/gene.js'
 
+function init({ genomes }) {
+	return (req: any, res: any): void => {
+		try {
+			const g = genomes[req.query.genome]
+			if (!g) throw 'invalid genome name'
+			res.send(getResult(g, req.query))
+		} catch (e: any) {
+			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
+		}
+	}
+}
+
 export const api: any = {
 	endpoint: 'genelookup',
 	methods: {
 		get: {
-			init({ genomes }) {
-				return (req: any, res: any): void => {
-					try {
-						const g = genomes[req.query.genome]
-						if (!g) throw 'invalid genome name'
-						res.send(getResult(g, req.query))
-					} catch (e: any) {
-						res.send({ error: e.message || e })
-						if (e.stack) console.log(e.stack)
-					}
-				}
-			},
+			init,
 			request: {
 				typeId: 'GeneLookupRequest'
 				//valid: default to type checker
@@ -36,13 +38,12 @@ export const api: any = {
 					}
 				}
 			]
+		},
+		post: {
+			alternativeFor: 'get',
+			init
 		}
 	}
-}
-
-api.methods.post = {
-	duplicateOf: 'get',
-	init: api.methods.get.init
 }
 
 export type GeneLookupRequest = {

@@ -112,8 +112,9 @@ async function init() {
         section.append('h3').html(`${Method}`)
         section.append('div').html(m.description)
       }
-      if (m.duplicateOf) {
-        section.append('p').html(`Alias of ${m.duplicateOf.toUpperCase()}`)
+      if (m.alternativeFor) {
+        section.append('h3').html(`${Method}`)
+        section.append('div').html(`Alternative method for ${m.alternativeFor.toUpperCase()}, for larger request payloads.`)
         continue
       }
       if (!m.examples) m.examples = [{ request: {}, response: {} }]

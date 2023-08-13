@@ -17,7 +17,7 @@ exports.typeCheckers = function typeCheckers(fileRoutes, fromPath) {
 		const api = route.api
 		for (const method in api.methods) {
 			const m = api.methods[method]
-			if (m.duplicateOf) continue
+			if (m.alternativeFor) continue
 			if (!typeIdsByFile[file]) typeIdsByFile[file] = new Set()
 			if (m.request.typeId) typeIdsByFile[file].add(m.request.typeId)
 			if (m.response.typeId) typeIdsByFile[file].add(m.response.typeId)
