@@ -50,7 +50,12 @@ function getApp({ api }) {
 
 const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
 for (const f of files) {
-	const { api } = require(`../../routes/${f}`)
+	testApi(f)
+}
+
+// f: a filename under the server/routes dir
+async function testApi(f) {
+	const { api } = await import(`../../routes/${f}`)
 
 	tape('\n', function (test) {
 		test.pass(`-***- server/${f} specs -***-`)
