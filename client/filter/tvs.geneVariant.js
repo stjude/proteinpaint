@@ -74,15 +74,6 @@ async function fillMenu(self, _div, tvs) {
 			self.opts.callback(newTvs)
 		})
 
-	const multiGrpWarningDiv = btnAndWarningDiv
-		.append('div')
-		.html('cannot filter for multiple groups')
-		.style('margin', '0px 20px')
-		.style('color', 'red')
-		.style('font-size', '0.8em')
-		.style('font-style', 'italic')
-		.style('display', 'none')
-
 	const noteDiv = div
 		.append('div')
 		.style('font-weight', 'bold')
@@ -175,6 +166,7 @@ async function fillMenu(self, _div, tvs) {
 				return maxObject
 		  }, groups[0])
 
+	const radioName = Math.random().toString()
 	const dtDiv = div
 		.append('div')
 		.selectAll(':scope>div')
@@ -188,41 +180,45 @@ async function fillMenu(self, _div, tvs) {
 		.style('opacity', 0.5)
 		.each(function (grp) {
 			const div = select(this)
-			const dtTitleDiv = div.append('div').style('display', 'flex')
+			const dtTitleDiv = div.append('label').style('display', 'flex')
 			// grpEdited indicates if the group was used as filter when the filter was created. Should be checked when editting the filter
 			const grpEdited = exclude.some(e => grp.items.some(i => i.dt == e.dt && (i.origin ? i.origin == e.origin : true)))
 			const radioInput = dtTitleDiv
 				.append('input')
 				.attr('type', 'radio')
-				.attr('name', 'radioGroup')
-				.attr('id', grp.name)
+				.attr('name', radioName)
 				.property('checked', grpEdited || defaultGrp == grp)
 				.on('click', () => {
 					dtDiv.style('opacity', 0.5)
 					div.style('opacity', 1)
 					dtDiv.selectAll('input[type="checkbox"]').property('disabled', true)
 					mClassDiv.selectAll('input[type="checkbox"]').property('disabled', false)
+					dtDiv.selectAll('.sjpp_row_wrapper').style('display', 'none')
+					mClassDiv.style('display', 'inline-block')
+					dtDiv.selectAll('input[type="checkbox"]').property('checked', true)
+					exclude.splice(0, exclude.length)
+					applyBtn.property('disabled', JSON.stringify(exclude) === origExclude || exclude.length == 0)
 				})
 			div.style('opacity', grpEdited || defaultGrp == grp ? 1 : 0.5)
 
-			const dtTitle = dtTitleDiv.append('label').style('font-weight', 600).html(grp.name).attr('for', grp.name)
+			const dtTitle = dtTitleDiv.append('span').style('font-weight', 600).html(grp.name)
 
+			const checkboxName = Math.random().toString()
 			const mClassDiv = div
 				.selectAll(':scope>div')
 				.data(grp.items, d => d.label)
 				.enter()
-				.append('div')
+				.append('label')
 				.style('margin', '5px')
 				.style('margin-left', '20px')
-				.style('display', 'inline-block')
+				.style('display', radioInput.property('checked') ? 'inline-block' : 'none')
 				.each(function (d) {
 					const itemDiv = select(this)
 					itemDiv.attr('class', 'sjpp_row_wrapper')
 					const checkboxDiv = itemDiv
 						.append('input')
 						.attr('type', 'checkbox')
-						.attr('name', 'sja_filter_isnot_input')
-						.attr('id', grp.name + d.label)
+						.attr('name', checkboxName)
 						.property('disabled', radioInput.property('checked') ? false : true)
 						.property(
 							'checked',
@@ -249,14 +245,9 @@ async function fillMenu(self, _div, tvs) {
 									}
 								}
 							}
-							applyBtn.property('disabled', JSON.stringify(exclude) === origExclude || modifiedMultiGrps)
-							multiGrpWarningDiv.style('display', modifiedMultiGrps ? 'block' : 'none')
+							applyBtn.property('disabled', JSON.stringify(exclude) === origExclude || exclude.length == 0)
 						})
-					itemDiv
-						.append('label')
-						.style('margin-left', '3px')
-						.html(`${d.label} (n=${d.num})`)
-						.attr('for', grp.name + d.label)
+					itemDiv.append('span').style('margin-left', '3px').html(`${d.label} (n=${d.num})`)
 				})
 		})
 }
