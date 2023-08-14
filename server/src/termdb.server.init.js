@@ -393,7 +393,7 @@ export function server_init_db_queries(ds) {
 		const numericTypeCount = {}
 		// key: subcohort combinations, comma-joined, alphabetically sorted, as in the subcohort_terms table
 		// value: array of chart types allowed by term types
-
+		console.log(396, ds.cohort.allowedChartTypes)
 		for (const r of ds.cohort.termdb.termtypeByCohort) {
 			if (!r.type) continue // skip ungraphable parent terms
 
@@ -402,6 +402,7 @@ export function server_init_db_queries(ds) {
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
+				if (ds.cohort.allowedChartTypes?.includes('hierCluster')) supportedChartTypes[r.cohort].add('hierCluster')
 				if (!cred || cred.embedders?.[embedder]) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 				}

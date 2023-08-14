@@ -440,7 +440,7 @@ function validatePlot(p, vocabApi) {
 	try {
 		if (p.chartType == 'regression') {
 			validateRegressionPlot(p, vocabApi)
-		} else if (p.chartType == 'matrix') {
+		} else if (p.chartType == 'matrix' || p.chartType == 'hierCluster') {
 			if (!p.termgroups) throw `plot error: missing the config.termgroups for '${p.chartType}'`
 			if (!Array.isArray(p.termgroups)) `plot error: config.termgroups must be an array '${p.chartType}'`
 			if (!p.samplegroups) throw `plot error: missing the config.samplegroups for '${p.chartType}'`

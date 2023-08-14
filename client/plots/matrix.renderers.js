@@ -336,6 +336,9 @@ export function setRenderers(self) {
 
 	self.adjustSvgDimensions = async function (prevTranspose) {
 		const s = self.settings.matrix
+		const hc = self.settings.hierCluster || {}
+		const hcHeight = hc.yDendrogramHeight || 0
+		const hcWidth = hc.xDendrogramHeight || 0
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
 
@@ -352,16 +355,16 @@ export function setRenderers(self) {
 
 		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
 		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
-		d.svgw = d.mainw + d.extraWidth
-		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20 + s.scrollHeight
+		d.svgw = d.mainw + d.extraWidth + hcWidth
+		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20 + s.scrollHeight + hcHeight
 		self.dom.svg
 			//.transition()
 			//.duration(duration)
 			.attr('width', d.svgw)
 			.attr('height', d.svgh)
 
-		const x = leftBox.width - self.layout.left.offset
-		const y = topBox.height - self.layout.top.offset
+		const x = leftBox.width - self.layout.left.offset + hcWidth
+		const y = topBox.height - self.layout.top.offset + hcHeight
 		self.dom.mainG
 			//.transition()
 			//.duration(duration)
@@ -382,6 +385,12 @@ export function setRenderers(self) {
 			//.transition()
 			//.duration(duration)
 			.attr('transform', `translate(${legendX},${legendY})`)
+
+		if (hc.xDendrogramHeight) {
+			const dendroX = x - hcWidth + d.xOffset
+			self.dom.topDendrogram.attr('transform', `translate(${dendroX},0)`)
+			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, 2)`)
+		}
 	}
 }
 

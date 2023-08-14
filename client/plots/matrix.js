@@ -16,9 +16,10 @@ import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.s
 import { dofetch3 } from '../common/dofetch'
 export { getPlotConfig } from './matrix.config'
 
-class Matrix {
+export class Matrix {
 	constructor(opts) {
 		this.type = 'matrix'
+		this.holderTitle = 'Sample Matrix'
 		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures')).matrix || []
 		this.prevState = { config: { settings: {} } }
 		setInteractivity(this)
@@ -32,7 +33,7 @@ class Matrix {
 
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
-		if (this.dom.header) this.dom.header.html('Sample Matrix')
+		if (this.dom.header) this.dom.header.html(this.holderTitle)
 
 		this.setControls(appState)
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app, parent: this })
@@ -151,11 +152,15 @@ class Matrix {
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'absolute').style('left', '45%')
 
 			// skip data requests when changes are not expected to affect the request payload
+
 			if (this.stateDiff.nonsettings) {
+				const promises = []
 				// get the data
-				const reqOpts = await this.getDataRequestOpts()
-				this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+				if (this.setHierClusterData) promises.push(this.setHierClusterData())
+				promises.push(this.setData())
 				this.dom.loadingDiv.html('Processing data ...')
+				await Promise.all(promises)
+				this.combineData()
 				// tws in the config may be filled-in based on applicable server response data;
 				// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
 				// the corresponding tracked state values in the app store, without causing unnecessary
@@ -163,10 +168,9 @@ class Matrix {
 				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
 			}
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
-
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
 				this.termOrder = this.getTermOrder(this.data)
-				this.sampleGroups = this.getSampleGroups(this.data)
+				this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 				this.sampleOrder = this.getSampleOrder(this.data)
 			}
 
@@ -181,6 +185,7 @@ class Matrix {
 
 			// render the data
 			this.dom.loadingDiv.html('Rendering ...')
+			if (this.renderDendrogram) this.renderDendrogram()
 			this.render()
 			this.dom.loadingDiv.style('display', 'none')
 			this.dom.svg.style('display', '')
@@ -302,18 +307,42 @@ class Matrix {
 	}
 
 	// creates an opts object for the vocabApi.getNestedChartsData()
-	async getDataRequestOpts() {
+	async setData(_data) {
 		const terms = []
 		for (const grp of this.config.termgroups) {
 			terms.push(...grp.lst)
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
 		this.numTerms = terms.length
-		return {
+		const opts = {
 			terms,
 			filter: this.state.filter,
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
+		}
+		this.data = await this.app.vocabApi.getAnnotatedSampleData(opts, _data)
+		this.sampleIdMap = {}
+		for (const d of this.data.lst) {
+			// mapping of sample string name to integer id
+			// TODO: not able to find matching sample names between ASH and termdb?
+			const name = d.sampleName.split('_')[0]
+			this.sampleIdMap[name] = d.sample
+		}
+	}
+
+	combineData() {
+		if (!this.hierClusterSamples) return
+		const { lst, refs, samples } = this.data
+		for (const sampleName in this.hierClusterSamples) {
+			if (!(sampleName in this.sampleIdMap)) continue
+			const id = this.sampleIdMap[sampleName]
+			const hcs = this.hierClusterSamples[sampleName]
+			if (!samples[id]) {
+				samples[id] = hcs
+				lst.unshift(hcs)
+			} else {
+				Object.assign(samples[id], hcs)
+			}
 		}
 	}
 
@@ -429,7 +458,10 @@ class Matrix {
 	getTermOrder(data) {
 		const s = this.settings.matrix
 		this.termSorter = getTermSorter(this, s)
-		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
+		const termgroups = []
+		if (this.hierClusterTermGrp) termgroups.push(this.hierClusterTermGrp)
+		termgroups.push(...this.config.termgroups)
+		this.termGroups = JSON.parse(JSON.stringify(termgroups))
 		const termOrder = []
 		let totalIndex = 0,
 			visibleGrpIndex = 0
@@ -536,9 +568,9 @@ class Matrix {
 		const renderedValues = []
 		if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)
 		else {
-			// dt=1 are SNVindels, dt=4 CNV
+			// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
 			// will render only one matching value per dt
-			for (const dt of [4, 1]) {
+			for (const dt of [4, 1, 3]) {
 				const v = filteredValues.find(v => v.dt === dt)
 				if (v) renderedValues.push(v)
 			}

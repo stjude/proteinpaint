@@ -50,7 +50,10 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
 						options: Object.values(s.sortOptions).sort((a, b) => a.order - b.order),
-						labelDisplay: 'block'
+						labelDisplay: 'block',
+						getDisplayStyle(plot) {
+							return plot.hierCluster ? 'none' : 'table-row'
+						}
 					},
 					{
 						label: `Maximum # ${l.Samples}`,
@@ -106,7 +109,7 @@ export class MatrixControls {
 							}
 						],
 						getDisplayStyle(plot) {
-							return plot.divideBy ? 'block' : 'none'
+							return plot.divideBy ? 'table-row' : 'none'
 						}
 					},
 					{

@@ -416,7 +416,9 @@ function setRadioInput(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.row.style('table-row')
+			const display = opts.getDisplayStyle?.(plot) || 'table-row'
+			self.dom.row.style('display', display)
+			if (display == 'none') return
 			for (const settingsKey in self.inputs) {
 				const radio = self.inputs[settingsKey]
 				radio.main(plot.settings[opts.chartType][settingsKey])

@@ -6,7 +6,6 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
 	validateSettings(s)
 	if (s.sortSamplesBy == 'asListed' || self.config.chartType == 'hierCluster') {
-		//no additional logic required
 		return (a, b) => {
 			return self.asListedSampleOrder.indexOf(a.sample) - self.asListedSampleOrder.indexOf(b.sample)
 		}
