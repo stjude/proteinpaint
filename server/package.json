@@ -90,7 +90,7 @@
     "src/mds3.gdc.filter.js",
     "src/checkReadingFrame.js",
     "src/bedj.parseBed.js",
-    "src/routes/*",
+    "routes/*",
     "cards/*",
     "server.js*",
     "start.js",
