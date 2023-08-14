@@ -370,10 +370,7 @@ async function makeheader(app, obj, jwt) {
 		})
 	// input.node().focus() Causes app drawer to unsmoothly open and close
 
-	const genome_select_div = headbox
-		.append('div')
-		.attr('class', 'sjpp-genome-select-div')
-		.style('padding', padw_sm)
+	const genome_select_div = headbox.append('div').attr('class', 'sjpp-genome-select-div').style('padding', padw_sm)
 
 	app.selectgenome = genome_select_div
 		.append('select')
@@ -402,10 +399,7 @@ async function makeheader(app, obj, jwt) {
 			.style('overflow-x', 'visible')
 			.style('overflow-y', 'hidden')
 			.classed('sjpp-drawer-row', true),
-		sandboxDiv: app.holder
-			.append('div')
-			.style('margin-top', '15px')
-			.classed('sjpp-drawer-sandbox', true),
+		sandboxDiv: app.holder.append('div').style('margin-top', '15px').classed('sjpp-drawer-sandbox', true),
 		genome_browser_btn: app.genome_browser_btn,
 		debugmode: app.debugmode,
 		headbox,
@@ -524,11 +518,7 @@ async function findgenelst(app, str, genome, tip, jwt) {
 				})
 		}
 	} catch (err) {
-		tip.d
-			.append('div')
-			.style('border', 'solid 1px red')
-			.style('padding', '10px')
-			.text(err)
+		tip.d.append('div').style('border', 'solid 1px red').style('padding', '10px').text(err)
 	}
 }
 
@@ -1477,7 +1467,9 @@ async function launch_genefusion(arg, app) {
 		const genome = app.genomes[arg.genome]
 		if (!genome) throw 'Invalid genome: ' + arg.genome
 
-		const m = await (await import('./fusion.parse')).parseFusion({
+		const m = await (
+			await import('./fusion.parse')
+		).parseFusion({
 			line: arg.genefusion.text,
 			genome,
 			positionType: arg.genefusion.positionType
@@ -1527,9 +1519,11 @@ async function launchmass(arg, app) {
 	}
 	opts.getDatasetAccessToken = arg.getDatasetAccessToken
 	opts.addLoginCallback = arg.addLoginCallback
-	import('../mass/app').then(_ => {
-		_.appInit(opts)
-	})
+	// import('../mass/app').then(_ => {
+	// 	_.appInit(opts)
+	// })
+	const _ = await import('../mass/app')
+	return await _.appInit(opts)
 }
 
 function initgenome(g) {
