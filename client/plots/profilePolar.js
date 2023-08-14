@@ -3,16 +3,25 @@ import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
+import { Menu } from '#dom/menu'
 
 class profilePolar extends profilePlot {
 	constructor() {
 		super()
 		this.type = 'profilePolar'
+		this.radius = 250
 	}
 	async init(appState) {
 		await super.init(appState)
 		this.opts.header.text('Polar plot')
 		this.arcGenerator = d3.arc().innerRadius(0)
+		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
+		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.plotDiv.on('mouseleave', event => {
+			if (event.target.tagName == 'path') this.tip.hide()
+		})
+
+		this.tip = new Menu({ padding: '4px', offsetX: 1, offsetY: 1 })
 	}
 
 	async main() {
@@ -29,6 +38,7 @@ class profilePolar extends profilePlot {
 			filter
 		})
 		this.sampleData = this.data.lst[0]
+		this.angle = (Math.PI * 2) / this.config.terms.length
 
 		this.region = this.config.region || this.regions[0].key
 		this.income = this.config.income || this.incomes[0]
@@ -40,6 +50,16 @@ class profilePolar extends profilePlot {
 		this.plot()
 	}
 
+	onMouseOver(event) {
+		if (event.target.tagName == 'path') {
+			const path = event.target
+			const d = path.__data__
+			const menu = this.tip.clear()
+			menu.d.text(d.term.name)
+			menu.show(event.clientX, event.clientY, true, true)
+		} else this.tip.hide()
+	}
+
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
@@ -49,7 +69,7 @@ class profilePolar extends profilePlot {
 		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 600)
 
 		// Create a polar grid.
-		const radius = 250
+		const radius = this.radius
 		const x = 400
 		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
@@ -57,15 +77,19 @@ class profilePolar extends profilePlot {
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
-		const angle = (Math.PI * 2) / config.terms.length
+		const angle = this.angle
 		let i = 0
-		for (const d of config.terms) {
+
+		for (let d of config.terms) {
+			d.i = i
 			const percentage = this.sampleData[d.$id]?.value
 
-			polarG
+			const path = polarG
 				.append('g')
 				.append('path')
+				.datum(d)
 				.attr('fill', d.term.color)
+				.attr('stroke', 'white')
 				.attr(
 					'd',
 					this.arcGenerator({
@@ -74,6 +98,7 @@ class profilePolar extends profilePlot {
 						endAngle: (i + 1) * angle
 					})
 				)
+
 			i++
 		}
 

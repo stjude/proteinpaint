@@ -92,7 +92,7 @@ export class profilePlot {
 		div
 			.append('button')
 			.style('margin-left', '15px')
-			.text('Download SVG')
+			.text('Download Image')
 			.on('click', () => downloadSingleSVG(this.svg, this.filename))
 	}
 }
