@@ -1518,9 +1518,6 @@ async function launchmass(arg, app) {
 	}
 	opts.getDatasetAccessToken = arg.getDatasetAccessToken
 	opts.addLoginCallback = arg.addLoginCallback
-	// import('../mass/app').then(_ => {
-	// 	_.appInit(opts)
-	// })
 	const _ = await import('../mass/app')
 	return await _.appInit(opts)
 }
