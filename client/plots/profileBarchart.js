@@ -149,14 +149,8 @@ class profileBarchart extends profilePlot {
 			y += step + 20
 			for (const row of group.rows) {
 				const g = svg.append('g')
-
-				x = 400
-				for (const [i, tw] of row.twlst.entries()) {
-					drawRect(x, y, row, i, g)
-					x += stepx
-				}
 				g.append('rect')
-					.attr('transform', `translate(${40}, ${y})`)
+					.attr('transform', `translate(${20}, ${y})`)
 
 					.attr('x', 0)
 					.attr('y', 0)
@@ -164,6 +158,12 @@ class profileBarchart extends profilePlot {
 					.attr('height', 20)
 					.attr('fill', '#f8d335')
 					.attr('fill-opacity', 0)
+				x = 400
+				for (const [i, tw] of row.twlst.entries()) {
+					drawRect(x, y, row, i, g)
+					x += stepx
+				}
+
 				y += step
 			}
 		}
