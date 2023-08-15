@@ -17,9 +17,8 @@ class profilePolar extends profilePlot {
 		this.arcGenerator = d3.arc().innerRadius(0)
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
-		this.dom.plotDiv.on('mouseleave', event => {
-			if (event.target.tagName == 'path') this.tip.hide()
-		})
+		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
+		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
@@ -50,6 +49,15 @@ class profilePolar extends profilePlot {
 		this.plot()
 	}
 
+	onMouseOut(event) {
+		if (event.target.tagName == 'path') {
+			const path = event.target
+			path.setAttribute('stroke', 'white')
+			this.tip.hide()
+			if (path.getAttribute('stroke') == 'black') path.remove()
+		}
+	}
+
 	onMouseOver(event) {
 		if (event.target.tagName == 'path') {
 			const path = event.target
@@ -57,8 +65,22 @@ class profilePolar extends profilePlot {
 			const menu = this.tip.clear()
 			const percentage = this.sampleData[d.$id]?.value
 			menu.d.text(`${d.term.name} ${percentage}%`)
-
 			menu.show(event.clientX, event.clientY, true, true)
+
+			this.polarG
+				.append('g')
+				.append('path')
+				.datum(d)
+				.attr('fill', d.term.color)
+				.attr('stroke', 'black')
+				.attr(
+					'd',
+					this.arcGenerator({
+						outerRadius: (percentage / 100) * this.radius,
+						startAngle: d.i * this.angle,
+						endAngle: (d.i + 1) * this.angle
+					})
+				)
 		} else this.tip.hide()
 	}
 
@@ -75,6 +97,7 @@ class profilePolar extends profilePlot {
 		const x = 400
 		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
+		this.polarG = polarG
 		const legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
