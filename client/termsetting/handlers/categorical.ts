@@ -36,7 +36,6 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 */
 
 export async function getHandler(self: CategoricalTermSettingInstance) {
-	await new GroupSettingMethods(self).main()
 	setCategoryMethods(self)
 
 	return {
@@ -146,10 +145,10 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 			? tgs?.lst?.[qgs?.predefined_groupset_idx]
 			: qgs?.inuse && qgs.customset
 
-		if (!activeGroup) await self.showDraggables()
+		if (!activeGroup) await new GroupSettingMethods(self).main()
 		else {
 			const valGrp = self.grpSet2valGrp(activeGroup)
-			await self.showDraggables()
+			await new GroupSettingMethods(self).main()
 		}
 	}
 
