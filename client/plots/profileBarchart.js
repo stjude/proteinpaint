@@ -75,7 +75,7 @@ class profileBarchart extends profilePlot {
 	}
 
 	onMouseOut(event) {
-		if (event.target.tagName == 'rect' && event.target.getAttribute('fill-opacity') == 0.5) {
+		if (event.target.tagName == 'rect' && event.target.getAttribute('fill-opacity') == 0.3) {
 			const rect = event.target
 			rect.setAttribute('fill-opacity', 0)
 		}
@@ -84,7 +84,7 @@ class profileBarchart extends profilePlot {
 	onMouseOver(event) {
 		if (event.target.tagName == 'rect' && event.target.getAttribute('fill-opacity') == 0) {
 			const rect = event.target
-			rect.setAttribute('fill-opacity', 0.5)
+			rect.setAttribute('fill-opacity', 0.3)
 		}
 	}
 
@@ -162,7 +162,7 @@ class profileBarchart extends profilePlot {
 					.attr('y', 0)
 					.attr('width', 1500)
 					.attr('height', 20)
-					.attr('fill', 'rgb(245,245,245)')
+					.attr('fill', '#f8d335')
 					.attr('fill-opacity', 0)
 				y += step
 			}
