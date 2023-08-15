@@ -21,7 +21,7 @@ class profilePolar extends profilePlot {
 			if (event.target.tagName == 'path') this.tip.hide()
 		})
 
-		this.tip = new Menu({ padding: '4px', offsetX: 1, offsetY: 1 })
+		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
 	async main() {
