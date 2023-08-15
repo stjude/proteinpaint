@@ -54,34 +54,20 @@ class profilePolar extends profilePlot {
 			const path = event.target
 			path.setAttribute('stroke', 'white')
 			this.tip.hide()
-			if (path.getAttribute('stroke') == 'black') path.remove()
+			if (path.getAttribute('stroke-opacity') == 0) path.setAttribute('stroke-opacity', 1)
 		}
 	}
 
 	onMouseOver(event) {
 		if (event.target.tagName == 'path') {
 			const path = event.target
+			path.setAttribute('stroke-opacity', 0)
 			const d = path.__data__
 			const menu = this.tip.clear()
 			const percentage = this.sampleData[d.$id]?.value
 			menu.d.text(`${d.term.name} ${percentage}%`)
 			menu.show(event.clientX, event.clientY, true, true)
-
-			this.polarG
-				.append('g')
-				.append('path')
-				.datum(d)
-				.attr('fill', 'transparent')
-				.attr('stroke', 'black')
-				.attr(
-					'd',
-					this.arcGenerator({
-						outerRadius: (percentage / 100) * this.radius,
-						startAngle: d.i * this.angle,
-						endAngle: (d.i + 1) * this.angle
-					})
-				)
-		} else this.tip.hide()
+		} else this.onMouseOut(event)
 	}
 
 	plot() {
