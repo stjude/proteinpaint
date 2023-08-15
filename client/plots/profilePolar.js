@@ -55,7 +55,9 @@ class profilePolar extends profilePlot {
 			const path = event.target
 			const d = path.__data__
 			const menu = this.tip.clear()
-			menu.d.text(d.term.name)
+			const percentage = this.sampleData[d.$id]?.value
+			menu.d.text(`${d.term.name} ${percentage}%`)
+
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.tip.hide()
 	}
