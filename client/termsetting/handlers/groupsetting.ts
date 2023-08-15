@@ -28,6 +28,7 @@ Refactor notes:
 	- keep cap at 4
 
 - Future plans: 
+	- Make available for subconditions
 	- Toggle at the top: switch between drag UI and text UI
 		- for long list of categories, create a text change with tab delimited UI
 			0	Acute...
@@ -38,7 +39,7 @@ Refactor notes:
 		- maybe increase the cap? but only from this UI
 */
 
-type GrpEntry = { label: string; group_idx: number; sampleCount: any }
+type GrpEntry = { label: string; group_idx: number; count: any }
 type DataInput = { [index: string]: GrpEntry }
 
 export class GroupSettingMethods {
@@ -63,7 +64,10 @@ export class GroupSettingMethods {
 			if (!d.group_idx) d.group_idx = 1 //default to group 1
 			if (d.group_idx > 4)
 				throw `The maximum number of groups is 4. The group index for value = ${d.label} is ${d.group_idx}`
-			// if(!d.sampleCount) d.sampleCount = opts.category2samplecount ? opts.category2samplecount.find(v => v.key == d.label) : 'n/a'
+			if (!d.count)
+				d.count = this.opts.category2samplecount
+					? this.opts.category2samplecount.find(v => v.key == d.label).count
+					: 'n/a'
 
 			grpIdxes.add(d.group_idx)
 		}
@@ -120,10 +124,9 @@ function setRenderers(self: any) {
 
 		// new Tabs({holder: self.dom.tip.d, tabs}).main()
 
-		// self.opts.showDraggables()
+		self.showDraggables()
 	}
-	//Attach to termsetting instance to use in categorical.ts
-	self.opts.showDraggables = async function () {
+	self.showDraggables = async function () {
 		self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
 		self.dom.menuWrapper = self.opts.dom.tip.d.append('div')
 		self.dom.actionDiv = self.dom.menuWrapper.append('div')
@@ -196,6 +199,9 @@ function setRenderers(self: any) {
 			.append('div')
 			.classed('sjpp-drag-drop-div', true) //unit testing
 			.style('border', '1px solid #efefef')
+			.style('display', 'block')
+			.style('padding', '10px')
+			.style('vertical-align', 'top')
 			.each(async function (this: any, group: any) {
 				group.wrapper = select(this)
 				await initGroupDiv(group)
@@ -211,17 +217,27 @@ function setRenderers(self: any) {
 				.append('div')
 				.classed('sjpp-drag-drop-div', true)
 				.style('border', '1px solid #efefef')
-				.on('dragover', (event: DragEvent) => {
+				.style('display', 'block')
+				.style('padding', '10px')
+				.style('vertical-align', 'top')
+				.on('dragover', function (this: any, event: DragEvent) {
 					event.preventDefault()
 					event.stopPropagation()
 				})
-				.on('dragover', (event: DragEvent) => {
+				.on('dragenter', function (this: any, event: DragEvent) {
 					event.preventDefault()
 					event.stopPropagation()
+					// select(this).style('background-color', '#fff')
 				})
-				.on('dragover', (event: DragEvent) => {
+				.on('dragleave', function (this: any, event: DragEvent) {
 					event.preventDefault()
 					event.stopPropagation()
+					select(this).style('background-color', '#fff')
+				})
+				.on('dragend', function (this: any, event: DragEvent) {
+					event.preventDefault()
+					event.stopPropagation()
+					select(this).style('background-color', '#fff')
 				})
 
 		group.title = group.wrapper
@@ -239,6 +255,7 @@ function setRenderers(self: any) {
 				.append('button')
 				.style('float', 'right')
 				.style('display', 'inline-block')
+				.style('padding', '0px 4px')
 				// .property('disabled', self.data.groups.length > 2 ? false : true)
 				.text('x')
 				.on('click', (event: MouseEvent) => {
@@ -277,8 +294,8 @@ function setRenderers(self: any) {
 			.style('cursor', 'default')
 			.style('padding', '3px 10px')
 			.style('border-radius', '5px')
-			// .style('color', count == 0 ? '#777' : 'black')
-			.text(d => d.label)
+			.style('color', d => (d.count == 0 ? '#777' : 'black'))
+			.html(d => (d.label || d.key) + (d.count !== undefined ? ' (n=' + d.count + ')' : ''))
 			.style('background-color', '#eee')
 			.on('mouseover', function (this: Element) {
 				select(this).style('background-color', '#fff2cc')
