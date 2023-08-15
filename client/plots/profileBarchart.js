@@ -154,7 +154,7 @@ class profileBarchart extends profilePlot {
 
 					.attr('x', 0)
 					.attr('y', 0)
-					.attr('width', 1500)
+					.attr('width', hasSubjectiveData ? 1500 : 850)
 					.attr('height', 30)
 					.attr('fill', '#f8d335')
 					.attr('fill-opacity', 0)
