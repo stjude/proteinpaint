@@ -782,7 +782,7 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.mass) {
-		await launchmass(arg, app)
+		return await launchmass(arg, app)
 	}
 
 	if (arg.testInternals && app.debugmode) {
