@@ -1467,7 +1467,7 @@ async function launch_genefusion(arg, app) {
 		const genome = app.genomes[arg.genome]
 		if (!genome) throw 'Invalid genome: ' + arg.genome
 
-		const fusionParse = await await import('./fusion.parse')
+		const fusionParse = await import('./fusion.parse')
 		const m = await fusionParse.parseFusion({
 			line: arg.genefusion.text,
 			genome,
