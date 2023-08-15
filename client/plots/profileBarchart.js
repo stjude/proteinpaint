@@ -30,6 +30,9 @@ class profileBarchart extends profilePlot {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 		})
 		this.opts.header.text('Barchart plot')
+		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
+		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 	}
 
 	async main() {
@@ -69,6 +72,20 @@ class profileBarchart extends profilePlot {
 			.split(' ')
 			.join('_')
 		this.plot()
+	}
+
+	onMouseOut(event) {
+		if (event.target.tagName == 'rect' && event.target.getAttribute('fill-opacity') == 0.5) {
+			const rect = event.target
+			rect.setAttribute('fill-opacity', 0)
+		}
+	}
+
+	onMouseOver(event) {
+		if (event.target.tagName == 'rect' && event.target.getAttribute('fill-opacity') == 0) {
+			const rect = event.target
+			rect.setAttribute('fill-opacity', 0.5)
+		}
 	}
 
 	plot() {
@@ -124,18 +141,29 @@ class profileBarchart extends profilePlot {
 		for (const group of this.component.groups) {
 			svg
 				.append('text')
-				.attr('transform', `translate(${50}, ${y + 20})`)
+				.attr('transform', `translate(${50}, ${y + 40})`)
 				.attr('text-anchor', 'start')
 				.text(`${group.label}`)
 				.style('font-weight', 'bold')
 
 			y += step + 20
 			for (const row of group.rows) {
+				const g = svg.append('g')
+
 				x = 400
 				for (const [i, tw] of row.twlst.entries()) {
-					drawRect(x, y, row, i)
+					drawRect(x, y, row, i, g)
 					x += stepx
 				}
+				g.append('rect')
+					.attr('transform', `translate(${40}, ${y})`)
+
+					.attr('x', 0)
+					.attr('y', 0)
+					.attr('width', 1500)
+					.attr('height', 20)
+					.attr('fill', 'rgb(245,245,245)')
+					.attr('fill-opacity', 0)
 				y += step
 			}
 		}
@@ -152,7 +180,7 @@ class profileBarchart extends profilePlot {
 		x += 300
 		drawLegendRect(x, y, 'or', color)
 
-		function drawRect(x, y, row, i) {
+		function drawRect(x, y, row, i, g) {
 			const tw = row.twlst[i]
 			let subjectiveTerm = false
 			if (row.subjective) subjectiveTerm = true
@@ -163,10 +191,10 @@ class profileBarchart extends profilePlot {
 			const width = value ? (value / 100) * barwidth : 0
 
 			if (value) {
-				const rect = svg
-					.append('g')
-					.attr('transform', `translate(${x + 10}, ${y})`)
+				const rect = g
 					.append('rect')
+					.attr('transform', `translate(${x + 10}, ${y})`)
+					.attr('pointer-events', 'none')
 					.attr('x', 0)
 					.attr('y', 0)
 					.attr('width', width)
@@ -174,8 +202,7 @@ class profileBarchart extends profilePlot {
 				if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
 				else {
 					const id = tw.term.name.replace(/[^a-zA-Z0-9]/g, '')
-					svg
-						.append('defs')
+					g.append('defs')
 						.append('pattern')
 						.attr('id', id)
 						.attr('patternUnits', 'userSpaceOnUse')
@@ -188,8 +215,10 @@ class profileBarchart extends profilePlot {
 					rect.attr('fill', `url(#${id})`)
 				}
 			}
-			const text = svg
+			const text = g
 				.append('text')
+				.attr('pointer-events', 'none')
+
 				.attr('text-anchor', 'end')
 				.text(`${value || 0}%`)
 			if (width > 0) text.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
@@ -197,11 +226,11 @@ class profileBarchart extends profilePlot {
 			//else text.attr('transform', `translate(${x + 35}, ${y + 15})`)
 
 			if (isFirst)
-				svg
-					.append('text')
+				g.append('text')
 					.attr('transform', `translate(${x}, ${y + 15})`)
 					.attr('text-anchor', 'end')
 					.text(row.name)
+					.attr('pointer-events', 'none')
 		}
 
 		function drawAxes(x, y) {
