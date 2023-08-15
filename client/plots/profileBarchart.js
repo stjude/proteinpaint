@@ -150,7 +150,7 @@ class profileBarchart extends profilePlot {
 			for (const row of group.rows) {
 				const g = svg.append('g')
 				g.append('rect')
-					.attr('transform', `translate(${20}, ${y - 5})`)
+					.attr('transform', `translate(${20}, ${y - 6})`)
 
 					.attr('x', 0)
 					.attr('y', 0)
