@@ -71,7 +71,7 @@ class profilePolar extends profilePlot {
 				.append('g')
 				.append('path')
 				.datum(d)
-				.attr('fill', d.term.color)
+				.attr('fill', 'transparent')
 				.attr('stroke', 'black')
 				.attr(
 					'd',
