@@ -115,6 +115,7 @@ class profilePolar extends profilePlot {
 				.attr('text-anchor', 'end')
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
+				.attr('pointer-events', 'none')
 		}
 		legendG
 			.append('text')
@@ -144,6 +145,7 @@ class profilePolar extends profilePlot {
 					.text(text)
 					.style('font-weight', 'bold')
 					.style('font-size', '24px')
+					.attr('pointer-events', 'none')
 			}
 		}
 
