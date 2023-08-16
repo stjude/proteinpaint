@@ -315,7 +315,7 @@ class TdbSurvival {
 						v.label === series.seriesId
 				)
 				const c = {
-					orig: v?.color || this.colorScale(series.seriesId)
+					orig: v?.color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 				}
 				c.rgb = rgb(c.orig)
 				c.adjusted = c.rgb.toString()
@@ -999,13 +999,14 @@ function setInteractivity(self) {
 		const header = `<div style='padding-bottom:8px'><b>${seriesLabel}</b></div>`
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 		if (!data.seriesId && !data.dataId) {
+			console.log(self.settings)
 			if (!term2) {
-				const label = self.dom.legendTip.d.append('label')
+				const label = self.dom.legendTip.clear().d.append('label')
 				label.append('span').style('vertical-align', 'middle').style('line-height', '25px').html('Edit color ')
 				const input = label
 					.append('input')
 					.attr('type', 'color')
-					.attr('value', rgb(self.term2toColor[''].adjusted).formatHex())
+					.attr('value', self.settings.defaultColor)
 					.style('vertical-align', 'top')
 					.on('change', () => self.adjustColor(input.property('value'), d))
 				self.dom.legendTip.show(event.clientX, event.clientY)
@@ -1136,19 +1137,27 @@ function setInteractivity(self) {
 	}
 
 	self.adjustColor = (value, d) => {
+		const color = rgb(value).formatHex()
 		const t2 = self.state.config.term2
-		const values = structuredClone(t2?.term.values || self.legendValues)
-		const term2 = structuredClone(t2)
-		term2.term.values = values
-		const color = rgb(value)
-		values[d.seriesId].color = color
-		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: {
-				term2
-			}
-		})
+		if (!t2) {
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: { settings: { survival: { defaultColor: color } } }
+			})
+		} else {
+			const values = structuredClone(t2?.term.values || self.legendValues)
+			const term2 = structuredClone(t2)
+			term2.term.values = values
+			values[d.seriesId].color = color
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					term2
+				}
+			})
+		}
 
 		self.app.tip.hide()
 	}
@@ -1215,7 +1224,8 @@ export async function getPlotConfig(opts, app) {
 				axisTitleFontSize: 16,
 				xAxisOffset: 5,
 				yAxisOffset: -5,
-				hiddenPvalues: []
+				hiddenPvalues: [],
+				defaultColor: '#2077b4'
 			}
 		}
 	}

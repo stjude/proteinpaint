@@ -92,13 +92,11 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 		const titleg = g
 			.append('text')
 			.attr('class', 'sjpp-cuminc-atrisk-title')
-			.attr(
-				'transform',
-				`translate(${s.atRiskLabelOffset}, ${addYoffset ? 2 * s.axisTitleFontSize : 0})`
-			)
+			.attr('transform', `translate(${s.atRiskLabelOffset}, ${addYoffset ? 2 * s.axisTitleFontSize : 0})`)
 			.attr('text-anchor', 'end')
 			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 			.text('Number at risk')
+		if (term2toColor['']) titleg.style('fill', s.defaultColor)
 		titleg
 			.append('tspan')
 			.attr('x', 0)
@@ -118,7 +116,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 
 	sg.exit().remove()
 
-	sg.each(function(seriesId, i) {
+	sg.each(function (seriesId, i) {
 		const y = (i + 1) * (2 * s.axisTitleFontSize)
 		const g = select(this)
 			.attr('transform', `translate(0,${y})`)
@@ -129,7 +127,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 
 	sg.enter()
 		.append('g')
-		.each(function(seriesId, i) {
+		.each(function (seriesId, i) {
 			const y = (i + 1) * (2 * s.axisTitleFontSize)
 			const g = select(this)
 				.attr('transform', `translate(0,${y})`)
@@ -180,14 +178,13 @@ function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
 
 		tspans.exit().remove()
 
-		tspans
-			.attr('y', (d,i) => i === 0 ? 0 : i * (s.axisTitleFontSize - 4))
-			.text(d => d)
+		tspans.attr('y', (d, i) => (i === 0 ? 0 : i * (s.axisTitleFontSize - 4))).text(d => d)
 
-		tspans.enter()
+		tspans
+			.enter()
 			.append('tspan')
 			.attr('x', 0)
-			.attr('y', (d,i) => i === 0 ? 0 : i * (s.axisTitleFontSize - 4))
+			.attr('y', (d, i) => (i === 0 ? 0 : i * (s.axisTitleFontSize - 4)))
 			.text(d => d)
 	}
 }
