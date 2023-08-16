@@ -2,14 +2,13 @@ import { unlink } from 'fs'
 import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
 import lines2R from './lines2R'
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-//const fs = require('fs')
+// const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 import path from 'path'
 import utils from './utils'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
-import { violinBinsObj } from '../../server/shared/violin.bins'
-import { summaryStats } from '../../server/shared/descriptive.stats'
+import { violinBinsObj } from '../shared/violin.bins'
+import { summaryStats } from '../shared/descriptive.stats'
 import roundValue from '../shared/roundValue'
 
 /*

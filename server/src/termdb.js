@@ -99,7 +99,7 @@ supports both dataset-based and genome-based sources
 given q.dslabel, try to find a match in both places
 it's curator's responsibility to ensure not to use the same dslabel in these two places
 */
-function get_ds_tdb(genome, q) {
+export function get_ds_tdb(genome, q) {
 	{
 		const ds = genome.datasets[q.dslabel]
 		if (ds) {
