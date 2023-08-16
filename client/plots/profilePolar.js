@@ -13,7 +13,7 @@ class profilePolar extends profilePlot {
 	}
 	async init(appState) {
 		await super.init(appState)
-		this.opts.header.text('Polar plot')
+		this.opts.header.text('Polar Graph')
 		this.arcGenerator = d3.arc().innerRadius(0)
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))

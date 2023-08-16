@@ -29,7 +29,7 @@ class profileBarchart extends profilePlot {
 			this.config.componentIndex = this.selectComp.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 		})
-		this.opts.header.text('Barchart plot')
+		this.opts.header.text('Barchart Graph')
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
@@ -133,7 +133,7 @@ class profileBarchart extends profilePlot {
 				.attr('text-anchor', 'start')
 				.style('font-weight', 'bold')
 				.text(`${c}%`)
-			drawAxes(x, y + 50)
+			drawAxes(x, y + 40)
 
 			x += stepx
 		}
