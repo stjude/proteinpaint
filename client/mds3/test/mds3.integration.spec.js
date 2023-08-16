@@ -355,17 +355,17 @@ tape('Numeric mode custom dataset, with mode change', test => {
 	]
 
 	const custom_variants = [
-		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, lpv: 1, value2: 4 },
-		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, lpv: 2, value2: 5 },
-		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, lpv: 3, value2: 6 },
-		{ chr: 'chr8', pos: 128750754, mname: 'data point', class: 'I', dt: 1 }
+		{ chr: 'chr17', pos: 7676228, mname: 'P75', class: 'M', dt: 1, lpv: 1, value2: 4 },
+		{ chr: 'chr17', pos: 7675208, mname: 'T73', class: 'M', dt: 1, lpv: 2, value2: 5 },
+		{ chr: 'chr17', pos: 7674922, mname: 'WTPinsP75', class: 'I', dt: 1, lpv: 3, value2: 6 },
+		{ chr: 'chr17', pos: 7674225, mname: 'data point', class: 'I', dt: 1 }
 	]
 
 	runproteinpaint({
 		holder,
 		noheader: true,
-		genome: 'hg19',
-		gene: 'NM_002467',
+		genome: 'hg38-test',
+		gene: 'NM_000546',
 		tracks: [
 			{
 				type: 'mds3',
