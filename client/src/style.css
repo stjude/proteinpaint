@@ -211,6 +211,12 @@ h2 {
     border-radius: 5px;
 }
 
+.sja_menuoption_not_interactive {
+    padding: 5px 10px;
+    cursor: default;
+    margin: 1px;
+}
+
 .sja_sharp_border {
     border-radius: 0px;
 }
