@@ -44,7 +44,7 @@ export function handle_request_closure(genomes) {
 			if (q.term2_q) {
 				//term2 is present
 				//compute pvalues using Fisher's exact/Chi-squared test
-				await computePvalues(results.data, ds)
+				await computePvalues(results.data, ds, q.hiddenValues)
 			}
 			res.send(results)
 		} catch (e) {
@@ -634,9 +634,20 @@ Output: The function has no return but appends the statistical results to the pr
 	]
 }
 */
-async function computePvalues(data, ds) {
+async function computePvalues(data, ds, hiddenValues) {
+	// remove hidden values from deep copy of data
+	const charts = JSON.parse(JSON.stringify(data.charts))
+	for (const chart of charts) {
+		chart.serieses = chart.serieses.filter(s => !hiddenValues.term1.includes(s.seriesId))
+		for (const s of chart.serieses) {
+			s.data = s.data.filter(d => !hiddenValues.term2.includes(d.dataId))
+			s.total = s.data.reduce((sum, curr) => sum + curr.total, 0)
+		}
+		chart.total = chart.serieses.reduce((sum, curr) => sum + curr.total, 0)
+		chart.maxSeriesTotal = chart.serieses.reduce((max, curr) => (max < curr.total ? curr.total : max), 0)
+	}
 	data.tests = {}
-	for (const chart of data.charts) {
+	for (const chart of charts) {
 		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
 		const colSums = {}
 		for (const row of chart.serieses) {

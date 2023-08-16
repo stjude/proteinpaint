@@ -172,6 +172,17 @@ export class TermdbVocab extends Vocab {
 		if ('grade' in opts) params.push(`grade=${opts.grade}`)
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
 
+		if (opts.term2) {
+			const hiddenValues = {
+				term1: opts.term.q.hiddenValues
+					? Object.keys(opts.term.q.hiddenValues).map(h => opts.term.term.values?.[h]?.label || h)
+					: [],
+				term2: opts.term2.q.hiddenValues
+					? Object.keys(opts.term2.q.hiddenValues).map(h => opts.term2.term.values?.[h]?.label || h)
+					: []
+			}
+			params.push(`hiddenValues=${encodeURIComponent(JSON.stringify(hiddenValues))}`)
+		}
 		// start of mds3 parameters for variant2sample query
 		if (opts.get) params.push('get=' + opts.get)
 		// end of mds3 parameters
