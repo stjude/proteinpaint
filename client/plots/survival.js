@@ -1003,6 +1003,7 @@ function setInteractivity(self) {
 		options.push({
 			label: 'Hide',
 			callback: () => {
+				menu.hide()
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
