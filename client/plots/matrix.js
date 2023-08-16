@@ -398,7 +398,7 @@ export class Matrix {
 		for (const grp of sampleGrpsArr) {
 			this.asListedSampleOrder.push(...grp.lst.map(s => s.sample))
 		}
-
+		
 		const selectedDictTerms = this.termOrder.filter(t => t.tw.sortSamples && t.tw.term.type != 'geneVariant')
 		// initial sorting for ungrouped samples, prioritizes grouping by gene variant, skippin other sorters at this step
 		const noGrpSampleSorter = getSampleSorter(this, s, data.lst, {
@@ -414,7 +414,6 @@ export class Matrix {
 		const countHits = (total, d) => total + (Object.values(d).reduce(hitsPerSample, 0) ? 1 : 0)
 		// this second sorter will be applied within each group of samples
 		const grpLstSampleSorter = getSampleSorter(this, s, data.lst)
-		console.log(411, this.sampleOrder)
 		for (const grp of sampleGrpsArr) {
 			grp.lst = grp.lst.filter(dataFilter)
 			grp.totalCountedValues = grp.lst.reduce(countHits, 0)

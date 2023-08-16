@@ -30,19 +30,12 @@ class HierCluster extends Matrix {
 		this.hierClusterData = await dofetch3('mds3', { body })
 
 		const c = this.hierClusterData.clustering
-		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
-		this.hierClusterTermGrp = {
-			name: '',
-			// TODO: are duplicate term entries, with different q{} objects, allowed?
-			// if yes, should use tw.$id to disambiguate
-			lst: orderedTw
-		}
-
 		this.setHierColorScale(c)
 		const samples = {}
 		for (const [i, sample] of c.sampleNameLst.entries()) {
 			samples[sample] = { sample }
-			for (const [j, tw] of orderedTw.entries()) {
+			for (const [j, name] of c.geneNameLst.entries()) {
+				const tw = twlst.find(tw => tw.term.name === name)
 				const value = c.matrix[j][i]
 				const { min, range, scale } = this.hierClusterColor[j]
 				samples[sample][tw.$id] = {
@@ -64,6 +57,17 @@ class HierCluster extends Matrix {
 				}
 			}
 		}
+
+		c.sampleNameLst = c.col_names_index.map(i => c.sampleNameLst[i - 1])
+		c.geneNameLst = c.row_names_index.map(i => c.geneNameLst[i - 1])
+		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
+		this.hierClusterTermGrp = {
+			name: '',
+			// TODO: are duplicate term entries, with different q{} objects, allowed?
+			// if yes, should use tw.$id to disambiguate
+			lst: orderedTw
+		}
+
 		this.hierClusterSamples = {
 			refs: { byTermId: {} },
 			lst: c.sampleNameLst.map(sample => samples[sample])
@@ -140,6 +144,7 @@ class HierCluster extends Matrix {
 			const height = d.mainh
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
+			ctx.scale(pxr, pxr)
 			ctx.imageSmoothingEnabled = false
 			ctx.imageSmoothingQuality = 'high'
 			ctx.strokeStyle = 'black'
@@ -188,6 +193,7 @@ class HierCluster extends Matrix {
 			const height = obj.d.yDendrogramHeight
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
+			ctx.scale(pxr, pxr)
 			ctx.imageSmoothingEnabled = false
 			ctx.imageSmoothingQuality = 'high'
 			ctx.strokeStyle = 'black'
