@@ -132,7 +132,10 @@ class TdbSurvival {
 							type: 'radio',
 							chartType: 'survival',
 							settingsKey: 'symbol',
-							options: [{ label: 'X', value: 'x' }, { label: 'Tick', value: 'vtick' }]
+							options: [
+								{ label: 'X', value: 'x' },
+								{ label: 'Tick', value: 'vtick' }
+							]
 						},
 						{
 							label: 'Time Factor',
@@ -421,7 +424,7 @@ export const survivalInit = getCompInit(TdbSurvival)
 export const componentInit = survivalInit
 
 function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		const data = self.pj.tree.charts || [{ chartId: 'No survival data' }]
 		const chartDivs = self.dom.chartsDiv.selectAll('.pp-survival-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
@@ -455,7 +458,7 @@ function setRenderers(self) {
 
 	const setActiveMenu = bool => (self.activeMenu = bool)
 
-	self.addCharts = function(chart) {
+	self.addCharts = function (chart) {
 		const s = self.settings
 		setVisibleSerieses(chart, s)
 
@@ -497,10 +500,7 @@ function setRenderers(self) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
 			renderSVG(svg, chart, s, 0)
 
-			div
-				.transition()
-				.duration(s.duration)
-				.style('opacity', 1)
+			div.transition().duration(s.duration).style('opacity', 1)
 
 			// div for chart-specific legends
 			div
@@ -512,10 +512,7 @@ function setRenderers(self) {
 
 			// p-values legend
 			if (self.tests && chart.rawChartId in self.tests) {
-				const holder = div
-					.select('.pp-survival-chartLegends')
-					.style('display', 'inline-block')
-					.append('div')
+				const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
 				renderPvalues({
 					title: 'Group comparisons (log-rank test)',
 					holder,
@@ -542,16 +539,13 @@ function setRenderers(self) {
 			: 0
 	}
 
-	self.updateCharts = function(chart) {
+	self.updateCharts = function (chart) {
 		if (!chart.serieses) return
 		const s = self.settings
 		setVisibleSerieses(chart, s)
 
 		const div = select(this)
-		div
-			.transition()
-			.duration(s.duration)
-			.style('width', 'fit-content')
+		div.transition().duration(s.duration).style('width', 'fit-content')
 
 		div
 			.select('.sjpp-survival-title')
@@ -567,17 +561,11 @@ function setRenderers(self) {
 		renderSVG(div.select('svg'), chart, s, s.duration)
 
 		// div for chart-specific legends
-		div
-			.select('.pp-survival-chartLegends')
-			.selectAll('*')
-			.remove()
+		div.select('.pp-survival-chartLegends').selectAll('*').remove()
 
 		// p-values legend
 		if (self.tests && chart.rawChartId in self.tests) {
-			const holder = div
-				.select('.pp-survival-chartLegends')
-				.style('display', 'inline-block')
-				.append('div')
+			const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
 			renderPvalues({
 				title: 'Group comparisons (log-rank test)',
 				holder,
@@ -616,14 +604,14 @@ function setRenderers(self) {
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
-		serieses.each(function(series, i) {
+		serieses.each(function (series, i) {
 			renderSeries(select(this), chart, series, i, s, s.duration)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpp-survival-series')
-			.each(function(series, i) {
+			.each(function (series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
 
@@ -683,10 +671,7 @@ function setRenderers(self) {
 				.attr('class', 'sjpcb-plot-tip-line')
 				.attr('stroke', '#000')
 				.attr('stroke-width', '1px')
-			plotRect = mainG
-				.append('rect')
-				.attr('class', 'sjpcb-plot-tip-rect')
-				.style('fill', 'transparent')
+			plotRect = mainG.append('rect').attr('class', 'sjpcb-plot-tip-rect').style('fill', 'transparent')
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			seriesesG = mainG.select('.sjpcb-survival-seriesesG')
@@ -865,13 +850,9 @@ function setRenderers(self) {
 			)
 			.call(xTicks)
 
-		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(
-			axisLeft(
-				scaleLinear()
-					.domain(chart.yScale.domain())
-					.range(chart.yScale.range())
-			).ticks(5)
-		)
+		yAxis
+			.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`)
+			.call(axisLeft(scaleLinear().domain(chart.yScale.domain()).range(chart.yScale.range())).ticks(5))
 
 		xTitle.select('text, title').remove()
 		const xText = xTitle
@@ -905,7 +886,7 @@ function setRenderers(self) {
 			.text(yTitleLabel)
 	}
 
-	self.getSymbol = function(size) {
+	self.getSymbol = function (size) {
 		const s = size,
 			h = s / 2
 
@@ -928,7 +909,7 @@ function setInteractivity(self) {
 		lower: 'Lower 95% CI',
 		upper: 'Upper 95% CI'
 	}
-	self.download = function() {
+	self.download = function () {
 		if (!self.state) return
 		downloadChart(
 			self.dom.chartsDiv.selectAll('.sjpp-survival-mainG'),
@@ -937,7 +918,7 @@ function setInteractivity(self) {
 		)
 	}
 
-	self.mouseover = function(event) {
+	self.mouseover = function (event) {
 		const d = event.target.__data__
 		/*if (event.target.tagName == 'circle') {
 			const label = labels[d.seriesName]
@@ -965,12 +946,12 @@ function setInteractivity(self) {
 		}*/
 	}
 
-	self.mouseout = function() {
+	self.mouseout = function () {
 		if (self.activeMenu) return
 		self.app.tip.hide()
 	}
 
-	self.legendClick = function(event) {
+	self.legendClick = function (event) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
@@ -995,7 +976,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.showLegendItemMenu = function(d, hidden) {
+	self.showLegendItemMenu = function (d, hidden) {
 		const term1 = self.state.config.term.term
 		const term2 = self.state.config.term2?.term || null
 		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
@@ -1005,6 +986,7 @@ function setInteractivity(self) {
 		const seriesLabel =
 			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
 			term1unit
+
 		const dataLabel =
 			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
 			term2unit
@@ -1013,15 +995,12 @@ function setInteractivity(self) {
 			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
 			  d.color +
 			  "'>&nbsp;</div>"
-		const header =
-			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
-			(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
-
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
+		if (!data.seriesId && !data.dataId) return
 
 		const options = []
 		options.push({
-			label: 'Hide "' + seriesLabel,
+			label: 'Hide',
 			callback: () => {
 				self.app.dispatch({
 					type: 'plot_edit',
@@ -1061,46 +1040,19 @@ function setInteractivity(self) {
 			//callback: d => {}
 			setInput: holder => {
 				const label = holder.append('label')
-				label
-					.append('span')
-					.style('vertical-align', 'middle')
-					.style('line-height', '25px')
-					.html('Edit color ')
+				label.append('span').style('vertical-align', 'middle').style('line-height', '25px').html('Edit color ')
 				const input = label
 					.append('input')
 					.attr('type', 'color')
 					.attr('value', self.term2toColor[d.seriesId].hex)
 					.style('vertical-align', 'top')
 					.on('change', () => self.adjustColor(input.property('value'), d))
-
-				holder
-					.append('span')
-					.style('vertical-align', 'middle')
-					.style('line-height', '25px')
-					.html(' OR ')
-
-				holder
-					.append('button')
-					.style('margin-left', '5px')
-					.style('background-color', self.term2toColor[d.seriesId].rgb.darker())
-					.style('vertical-align', 'top')
-					.html('darken')
-					.on('click', () => self.adjustColor(input.property('value'), d, 'darker'))
-
-				holder
-					.append('button')
-					.style('margin-left', '5px')
-					.style('background-color', self.term2toColor[d.seriesId].rgb.brighter())
-					.style('vertical-align', 'top')
-					.html('brighten')
-					.on('click', () => self.adjustColor(input.property('value'), d, 'brighter'))
 			}
 		})
 
 		if (!options.length) return
 		self.activeMenu = true
 		self.app.tip.clear()
-		self.app.tip.d.append('div').html(header)
 		self.app.tip.d
 			.append('div')
 			.selectAll('div')
@@ -1113,19 +1065,13 @@ function setInteractivity(self) {
 				self.app.tip.hide()
 				c.callback(d)
 			})
-			.each(function(d) {
+			.each(function (d) {
 				const div = select(this)
-				if (d.label)
-					div
-						.append('div')
-						.style('display', 'inline-block')
-						.html(d.label)
+				if (d.label) div.append('div').style('display', 'inline-block').html(d.label)
 				if (d.setInput)
 					d.setInput(
-						div
-							.append('div')
-							.style('display', 'inline-block')
-							.style('margin-left', '10px')
+						div.append('div').style('display', 'inline-block')
+						//.style('margin-left', '10px')
 					)
 			})
 
@@ -1186,7 +1132,7 @@ function setInteractivity(self) {
 		self.app.tip.hide()
 	}
 
-	self.showMenuForSelectedChart = function() {
+	self.showMenuForSelectedChart = function () {
 		self.dom.tip.clear()
 		self.activeMenu = true
 		self.dom.tip
