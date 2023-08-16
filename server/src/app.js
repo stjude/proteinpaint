@@ -7813,7 +7813,7 @@ async function mds_init(ds, genome, _servconfig) {
 			ds.gene2mutcount.db = utils.connect_db(ds.gene2mutcount.dbfile)
 			console.log('DB connected for ' + ds.label + ': ' + ds.gene2mutcount.dbfile)
 		} catch (e) {
-			throw 'Error connecting db at ds.gene2mutcount.dbfile'
+			throw `Error connecting db at ${ds.gene2mutcount.dbfile}` //fix for inspecific error message
 		}
 	}
 
