@@ -40,7 +40,8 @@ class TdbSurvival {
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
-			tip: new Menu({ padding: '5px' })
+			tip: new Menu({ padding: '5px' }),
+			legendTip: new Menu({ padding: '5px' })
 		}
 		this.dom.tip.onHide = () => {
 			this.activeMenu = false
@@ -1059,7 +1060,7 @@ function setInteractivity(self) {
 		})
 
 		if (!options.length) return
-		const menu = new Menu()
+		const menu = self.dom.legendTip.clear()
 		menu.d.append('div').html(header)
 		menu.d
 			.append('div')
