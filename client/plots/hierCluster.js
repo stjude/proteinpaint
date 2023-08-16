@@ -14,8 +14,8 @@ class HierCluster extends Matrix {
 
 	async init(appState) {
 		await super.init(appState)
-		this.dom.topDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram')
-		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram')
+		this.dom.topDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
+		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
 	}
 
 	async setHierClusterData(_data = {}) {
@@ -70,7 +70,8 @@ class HierCluster extends Matrix {
 
 		this.hierClusterSamples = {
 			refs: { byTermId: {} },
-			lst: c.sampleNameLst.map(sample => samples[sample])
+			lst: c.sampleNameLst.map(sample => samples[sample]),
+			samples
 		}
 	}
 
@@ -94,7 +95,7 @@ class HierCluster extends Matrix {
 		const obj = this.hierClusterData.clustering
 		obj.d = {
 			rowHeight: this.settings.matrix.rowh,
-			colWidth: this.settings.matrix.colw,
+			colWidth: this.dimensions.colw,
 			xDendrogramHeight: this.settings.hierCluster.xDendrogramHeight,
 			yDendrogramHeight: this.settings.hierCluster.yDendrogramHeight,
 			minColor: '#0c306b',
@@ -117,6 +118,11 @@ class HierCluster extends Matrix {
 
 	plotDendrogram_R(obj) {
 		const d = this.dimensions
+		console.log(d)
+		const zoomLevel = this.config.settings.matrix.zoomLevel
+		const { xMin, xMax } = d
+		const xOffset = d.seriesXoffset
+		console.log(123, { xOffset }) // could be negative when zoomed
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
 		{
 			// hardcoding gene to be on rows, swap x/y for row dendrogram
@@ -140,8 +146,8 @@ class HierCluster extends Matrix {
 				r.y2 *= obj.d.rowHeight
 			}
 
-			const width = obj.d.xDendrogramHeight
-			const height = d.mainh
+			const width = obj.d.xDendrogramHeight + 0.0000001
+			const height = d.mainh + 0.0000001
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
@@ -180,17 +186,28 @@ class HierCluster extends Matrix {
 		{
 			// replace node x/y values with on-screen #pixel for plotting
 			let max = 0
-			for (const r of obj.col_dendro) max = Math.max(max, r.y1, r.y2)
-			const sf = obj.d.yDendrogramHeight / max
+			const visible = []
 			for (const r of obj.col_dendro) {
+				const x1 = r.x1 * d.colw + xOffset
+				const x2 = r.x2 * d.colw + xOffset
+				if (x2 < x1) {
+					if (x1 < 0 || x2 > d.mainw) continue
+				} else if (x2 < 0 || x1 > d.mainw) continue
+				r.scaled = { x1, x2 }
+				visible.push(r)
+				//r.scaled = {x1: zoomLevel*r.x1, x2: zoomLevel*r.x2}
+				max = Math.max(max, r.y1, r.y2)
+			}
+			const sf = obj.d.yDendrogramHeight / max
+			for (const r of visible) {
 				r.y1 = sf * (max - r.y1) // for col dendrogram, y is depth
 				r.y2 = sf * (max - r.y2)
-				r.x1 *= obj.d.colWidth // x is number of column items
-				r.x2 *= obj.d.colWidth
 			}
+			console.log(204, visible.slice(0, 5))
 
-			const width = d.imgW //
-			const height = obj.d.yDendrogramHeight
+			const width = d.imgW + 0.0000001
+			console.log(d.imgW, d.mainw, d)
+			const height = obj.d.yDendrogramHeight + 0.0000001
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
@@ -199,10 +216,10 @@ class HierCluster extends Matrix {
 			ctx.strokeStyle = 'black'
 			// plot row dendrogram
 			// plot column dendrogram
-			for (const r of obj.col_dendro) {
+			for (const r of visible) {
 				ctx.beginPath()
-				const x1 = Math.min(r.x1, r.x2),
-					x2 = Math.max(r.x1, r.x2),
+				const x1 = Math.min(r.scaled.x1, r.scaled.x2),
+					x2 = Math.max(r.scaled.x1, r.scaled.x2),
 					y1 = Math.min(r.y1, r.y2),
 					y2 = Math.max(r.y1, r.y2)
 				ctx.moveTo(x1, y1)
@@ -250,8 +267,8 @@ class HierCluster extends Matrix {
 				g.selectAll('*').remove()
 
 				g.append('image') //.attr('transform', `translate(${x},${y})`)
-					.attr('x', x)
-					.attr('y', y)
+					.attr('x', x + 0.0000000001)
+					.attr('y', y + 0.0000000001)
 					.attr('xlink:href', reader.result)
 					.attr('width', width)
 					.attr('height', height)
@@ -259,6 +276,10 @@ class HierCluster extends Matrix {
 			false
 		)
 		reader.readAsDataURL(await canvas.convertToBlob({ quality: 1 }))
+		// g.selectAll('*').remove()
+		// const foCanvas = g.append('foreignObject').append('canvas').attr('width', width).attr('height', height).node()
+		// const bitmap = canvas.transferToImageBitmap();
+		// foCanvas.getContext("bitmaprenderer").transferFromImageBitmap(bitmap);
 	}
 }
 
@@ -297,7 +318,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 }
 
 export async function getPlotConfig(opts = {}, app) {
-	const config = await getMatrixPlotConfig({ chartType: 'hierCluster' }, app)
+	opts.chartType = 'hierCluster'
+	const config = await getMatrixPlotConfig(opts, app)
 	// hardcode for testing only
 	// TODO: replace with controls/menu, etc
 	const genes = [

@@ -335,13 +335,13 @@ export class Matrix {
 		const d = this.data
 		const samples = {}
 		const lst = []
-		for (const sampleName in this.hierClusterSamples) {
-			const s = this.hierClusterSamples[sampleName]
-			samples[sampleName] = s
+		// the gene expression samples will be used as a filter for the matrix samples
+		for (const sampleId in this.hierClusterSamples.samples) {
+			const s = this.hierClusterSamples.samples[sampleId]
+			samples[sampleId] = s
 			lst.push(s)
-			if (!(sampleName in this.sampleIdMap)) continue
-			const id = this.sampleIdMap[sampleName]
-			Object.assign(s, d.samples[id])
+			if (!(sampleId in d.samples)) continue
+			Object.assign(s, d.samples[sampleId])
 		}
 		this.data = { samples, lst, refs: d.refs }
 	}
@@ -461,6 +461,7 @@ export class Matrix {
 		const termgroups = []
 		if (this.hierClusterTermGrp) termgroups.push(this.hierClusterTermGrp)
 		termgroups.push(...this.config.termgroups)
+		console.log(475, this.config.termgroups)
 		this.termGroups = JSON.parse(JSON.stringify(termgroups))
 		const termOrder = []
 		let totalIndex = 0,
@@ -621,8 +622,8 @@ export class Matrix {
 			// const labelOffset = !s.transpose
 			// 	? s.termLabelOffset + s.termGrpLabelOffset
 			// 	: s.sampleLabelOffset + s.sampleGrpLabelOffset
-
-			this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset //- 0.5*labelOffset
+			const hcw = this.state.config.settings.hierCluster?.xDendrogramHeight || 0
+			this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset - hcw //- 0.5*labelOffset
 		}
 
 		if (this.autoDimensions.has('colw')) {
@@ -922,6 +923,7 @@ export class Matrix {
 		// since they will be outside the computed allowed image width
 		const xMin = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : imgLeftMin
 		const xMax = imgW + xMin
+		console.log(933, xMin, xMax)
 		// console.log({ imgW, mainw, xMin, xMax, seriesXoffset, imgLeftMin, xOffset, centerCellX, zoomedMainW, imgWMax: s.imgWMax })
 
 		this.dimensions = {
