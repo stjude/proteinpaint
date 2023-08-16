@@ -173,6 +173,7 @@ export class TermdbVocab extends Vocab {
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
 
 		if (opts.term2) {
+			//send the hidden group labels to server to ignore them when computing association test pvalues
 			const hiddenValues = {
 				term1: opts.term.q.hiddenValues
 					? Object.keys(opts.term.q.hiddenValues).map(h => opts.term.term.values?.[h]?.label || h)
