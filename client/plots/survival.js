@@ -998,7 +998,20 @@ function setInteractivity(self) {
 			  "'>&nbsp;</div>"
 		const header = `<div style='padding-bottom:8px'><b>${seriesLabel}</b></div>`
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
-		if (!data.seriesId && !data.dataId) return
+		if (!data.seriesId && !data.dataId) {
+			if (!term2) {
+				const label = self.dom.legendTip.d.append('label')
+				label.append('span').style('vertical-align', 'middle').style('line-height', '25px').html('Edit color ')
+				const input = label
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', rgb(self.term2toColor[''].adjusted).formatHex())
+					.style('vertical-align', 'top')
+					.on('change', () => self.adjustColor(input.property('value'), d))
+				self.dom.legendTip.show(event.clientX, event.clientY)
+			}
+			return
+		}
 
 		const options = []
 		options.push({
@@ -1021,7 +1034,7 @@ function setInteractivity(self) {
 
 		if (self.legendData[0]?.items.length > 1) {
 			options.push({
-				label: 'Move',
+				label: 'Move&nbsp;',
 				setInput: holder => {
 					const legendIndex = self.legendValues[d.seriesId].order
 					if (legendIndex != 0)
