@@ -332,18 +332,18 @@ export class Matrix {
 
 	combineData() {
 		if (!this.hierClusterSamples) return
-		const { lst, refs, samples } = this.data
+		const d = this.data
+		const samples = {}
+		const lst = []
 		for (const sampleName in this.hierClusterSamples) {
+			const s = this.hierClusterSamples[sampleName]
+			samples[sampleName] = s
+			lst.push(s)
 			if (!(sampleName in this.sampleIdMap)) continue
 			const id = this.sampleIdMap[sampleName]
-			const hcs = this.hierClusterSamples[sampleName]
-			if (!samples[id]) {
-				samples[id] = hcs
-				lst.unshift(hcs)
-			} else {
-				Object.assign(samples[id], hcs)
-			}
+			Object.assign(s, d.samples[id])
 		}
+		this.data = { samples, lst, refs: d.refs }
 	}
 
 	getSampleGroups(data) {
@@ -414,6 +414,7 @@ export class Matrix {
 		const countHits = (total, d) => total + (Object.values(d).reduce(hitsPerSample, 0) ? 1 : 0)
 		// this second sorter will be applied within each group of samples
 		const grpLstSampleSorter = getSampleSorter(this, s, data.lst)
+		console.log(411, this.sampleOrder)
 		for (const grp of sampleGrpsArr) {
 			grp.lst = grp.lst.filter(dataFilter)
 			grp.totalCountedValues = grp.lst.reduce(countHits, 0)

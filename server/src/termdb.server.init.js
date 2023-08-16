@@ -393,7 +393,6 @@ export function server_init_db_queries(ds) {
 		const numericTypeCount = {}
 		// key: subcohort combinations, comma-joined, alphabetically sorted, as in the subcohort_terms table
 		// value: array of chart types allowed by term types
-		console.log(396, ds.cohort.allowedChartTypes)
 		for (const r of ds.cohort.termdb.termtypeByCohort) {
 			if (!r.type) continue // skip ungraphable parent terms
 
