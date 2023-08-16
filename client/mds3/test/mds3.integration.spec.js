@@ -5,10 +5,13 @@ const { runproteinpaint } = require('../../test/front.helpers.js')
 
 /*
 Tests:  
-    TP53 with hg38-test and custom data
-    Custom variants, missing or invalid mclass
-    Custom dataset with custom variants, WITH samples
-	Custom data with samples and sample selection
+
+TP53 with hg38-test and custom data
+Custom variants, missing or invalid mclass
+Custom dataset with custom variants, WITH samples
+Custom data with samples and sample selection
+Numeric mode custom dataset, with mode change
+
 */
 
 /*************************
@@ -29,7 +32,7 @@ function getHolder() {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- mds3 -***-')
 	test.end()
 })
@@ -338,6 +341,81 @@ tape('Custom data with samples and sample selection', test => {
 			tk.menutip.d.remove()
 			holder.remove()
 		}
+		test.end()
+	}
+})
+
+tape('Numeric mode custom dataset, with mode change', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const skewerModes = [
+		{ type: 'numeric', byAttribute: 'lpv', label: '-log10(p-value)', inuse: true, axisheight: 100 },
+		{ type: 'numeric', byAttribute: 'value2', label: 'other numbers', axisheight: 200 }
+	]
+
+	const custom_variants = [
+		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, lpv: 1, value2: 4 },
+		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, lpv: 2, value2: 5 },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, lpv: 3, value2: 6 },
+		{ chr: 'chr8', pos: 128750754, mname: 'data point', class: 'I', dt: 1 }
+	]
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg19',
+		gene: 'NM_002467',
+		tracks: [
+			{
+				type: 'mds3',
+				skewerModes,
+				name: 'AA sites with numbers',
+				custom_variants,
+				callbackOnRender
+			}
+		]
+	})
+
+	// TODO all data points should be rendered in svg
+
+	function callbackOnRender(tk, bb) {
+		// verify that all custom data points are present in tk
+		for (const m of custom_variants) {
+			const m2 = tk.skewer.rawmlst.find(i => i.mname == m.mname)
+			test.ok(m2, `custom variant "${m.mname}" exists in tk`)
+		}
+
+		// tricky: tk.skewer.viewModes[] is the same array as skewerModes[] (by pointer)
+		// thus no need to test that all elements in skewerModes are present in tk.skewer.viewModes
+		// also a new element has been auto added to the array
+		// [0] pvalue, [1] other number, [2] skewer (not numeric)
+
+		// get the numericmode axis label
+		const n = tk.g.select('.sjpp-mds3-nm-axislabel')
+		test.equal(
+			tk.skewer.viewModes.find(i => i.inuse).label,
+			n.text(),
+			`numericmode axis label "${n.text()}" matches with view mode obj`
+		)
+
+		// switch to a new numeric mode
+		// quick fix: assume the 2nd mode is not in use yet
+		tk.skewer.viewModes[0].inuse = false
+		tk.skewer.viewModes[1].inuse = true
+
+		tk.callbackOnRender = viewModeChange
+		tk.load()
+	}
+
+	function viewModeChange(tk, bb) {
+		const n = tk.g.select('.sjpp-mds3-nm-axislabel')
+		test.equal(
+			tk.skewer.viewModes.find(i => i.inuse).label,
+			n.text(),
+			`numericmode axis label "${n.text()}" matches with view mode obj after switching mode`
+		)
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
