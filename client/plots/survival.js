@@ -999,7 +999,6 @@ function setInteractivity(self) {
 		const header = `<div style='padding-bottom:8px'><b>${seriesLabel}</b></div>`
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 		if (!data.seriesId && !data.dataId) {
-			console.log(self.settings)
 			if (!term2) {
 				const label = self.dom.legendTip.clear().d.append('label')
 				label.append('span').style('vertical-align', 'middle').style('line-height', '25px').html('Edit color ')
