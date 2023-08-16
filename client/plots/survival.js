@@ -995,6 +995,7 @@ function setInteractivity(self) {
 			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
 			  d.color +
 			  "'>&nbsp;</div>"
+		const header = `<div style='padding-bottom:8px'><b>${seriesLabel}</b></div>`
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 		if (!data.seriesId && !data.dataId) return
 
@@ -1025,12 +1026,18 @@ function setInteractivity(self) {
 						holder
 							.append('button')
 							.html('up')
-							.on('click', () => self.adjustValueOrder(d, -1))
+							.on('click', () => {
+								menu.hide()
+								self.adjustValueOrder(d, -1)
+							})
 					if (legendIndex < self.legendData[0]?.items.length - 1)
 						holder
 							.append('button')
 							.html('down')
-							.on('click', () => self.adjustValueOrder(d, 1))
+							.on('click', () => {
+								menu.hide()
+								self.adjustValueOrder(d, 1)
+							})
 				}
 			})
 		}
@@ -1051,20 +1058,21 @@ function setInteractivity(self) {
 		})
 
 		if (!options.length) return
-		self.activeMenu = true
-		self.app.tip.clear()
-		self.app.tip.d
+		const menu = new Menu()
+		menu.d.append('div').html(header)
+		menu.d
 			.append('div')
 			.selectAll('div')
 			.data(options)
 			.enter()
 			.append('div')
-			.attr('class', 'sja_menuoption')
+			.attr('class', d => (d.label == 'Hide' ? 'sja_menuoption' : 'sja_menuoption_not_interactive'))
 			.on('click', (event, c) => {
 				if (c.setInput) return
 				self.app.tip.hide()
 				c.callback(d)
 			})
+
 			.each(function (d) {
 				const div = select(this)
 				if (d.label) div.append('div').style('display', 'inline-block').html(d.label)
@@ -1075,7 +1083,7 @@ function setInteractivity(self) {
 					)
 			})
 
-		self.app.tip.show(event.clientX, event.clientY)
+		menu.show(event.clientX, event.clientY)
 	}
 
 	self.adjustValueOrder = (d, increment) => {
@@ -1112,15 +1120,13 @@ function setInteractivity(self) {
 		self.app.tip.hide()
 	}
 
-	self.adjustColor = (value, d, adjust = '') => {
-		if (adjust && adjust != 'darker' && adjust != 'brighter') throw 'invalid color adjustment option'
+	self.adjustColor = (value, d) => {
 		const t2 = self.state.config.term2
 		const values = structuredClone(t2?.term.values || self.legendValues)
 		const term2 = structuredClone(t2)
 		term2.term.values = values
 		const color = rgb(value)
-		const adjustedColor = !adjust ? color : adjust == 'darker' ? color.darker() : color.brighter()
-		values[d.seriesId].color = adjustedColor.toString()
+		values[d.seriesId].color = color
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
