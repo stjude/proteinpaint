@@ -44,7 +44,7 @@ export function handle_request_closure(genomes) {
 			if (q.term2_q) {
 				//term2 is present
 				//compute pvalues using Fisher's exact/Chi-squared test
-				await computePvalues(results.data, ds)
+				await computePvalues(results.data, ds, q.hiddenValues)
 			}
 			res.send(results)
 		} catch (e) {
@@ -615,6 +615,10 @@ input parameter:
 				.data=[]
 					.dataId=str // key of term2 category, '' if no term2
 					.total=int // size of this term1-term2 combination
+
+	hiddenValues: an object contains hidden term1 and term2 group labels
+			.term1=[str]
+			.term2=[str]
 }
 
 Output: The function has no return but appends the statistical results to the provided data object as data.tests:
@@ -634,9 +638,28 @@ Output: The function has no return but appends the statistical results to the pr
 	]
 }
 */
-async function computePvalues(data, ds) {
-	data.tests = {}
+async function computePvalues(data, ds, hiddenValues) {
+	// create new charts without hidden values
+	const charts = []
 	for (const chart of data.charts) {
+		const newChart = {}
+		newChart.chartId = chart.chartId
+		newChart.serieses = []
+		const filteredSerieses = chart.serieses.filter(s => !hiddenValues.term1.includes(s.seriesId))
+		for (const s of filteredSerieses) {
+			const newS = {}
+			newS.seriesId = s.seriesId
+			newS.data = s.data.filter(d => !hiddenValues.term2.includes(d.dataId))
+			newS.total = newS.data.reduce((sum, curr) => sum + curr.total, 0)
+			newChart.serieses.push(newS)
+		}
+		newChart.total = newChart.serieses.reduce((sum, curr) => sum + curr.total, 0)
+		newChart.maxSeriesTotal = newChart.serieses.reduce((max, curr) => (max < curr.total ? curr.total : max), 0)
+		charts.push(newChart)
+	}
+
+	data.tests = {}
+	for (const chart of charts) {
 		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
 		const colSums = {}
 		for (const row of chart.serieses) {
