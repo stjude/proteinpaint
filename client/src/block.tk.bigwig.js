@@ -2,6 +2,7 @@ import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import * as client from './client'
 import { format as d3format } from 'd3-format'
+import { makeNumericAxisConfig } from '#dom/numericAxis'
 
 /*
 FIXME
@@ -84,14 +85,9 @@ export function bigwigload(tk, block) {
 			}
 
 			// update axis
-			const scale = scaleLinear()
-				.domain([tk.scale.min, tk.scale.max])
-				.range([tk.barheight, 0])
+			const scale = scaleLinear().domain([tk.scale.min, tk.scale.max]).range([tk.barheight, 0])
 
-			const axis = d3axis
-				.axisLeft()
-				.scale(scale)
-				.tickValues([tk.scale.min, tk.scale.max])
+			const axis = d3axis.axisLeft().scale(scale).tickValues([tk.scale.min, tk.scale.max])
 
 			if (tk.integer4axis) {
 				axis.tickFormat(d3format('d'))
@@ -201,10 +197,7 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 
 	// pcolor
 	config.pcolor.row = holder.append('div').style('margin-bottom', '15px')
-	config.pcolor.lab = config.pcolor.row
-		.append('span')
-		.text('Positive value color')
-		.style('padding-right', '10px')
+	config.pcolor.lab = config.pcolor.row.append('span').text('Positive value color').style('padding-right', '10px')
 	config.pcolor.row
 		.append('input')
 		.attr('type', 'color')
@@ -216,10 +209,7 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 
 	// ncolor
 	config.ncolor.row = holder.append('div').style('margin-bottom', '15px')
-	config.ncolor.lab = config.ncolor.row
-		.append('span')
-		.text('Negative value color')
-		.style('padding-right', '10px')
+	config.ncolor.lab = config.ncolor.row.append('span').text('Negative value color').style('padding-right', '10px')
 	config.ncolor.row
 		.append('input')
 		.attr('type', 'color')
@@ -232,10 +222,7 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 	if (!tk.scale.auto) {
 		// pcolor2
 		config.pcolor2.row = holder.append('div').style('margin-bottom', '15px')
-		config.pcolor2.lab = config.pcolor2.row
-			.append('span')
-			.html('&ge;Max color')
-			.style('padding-right', '10px')
+		config.pcolor2.lab = config.pcolor2.row.append('span').html('&ge;Max color').style('padding-right', '10px')
 		config.pcolor2.row
 			.append('input')
 			.attr('type', 'color')
@@ -246,10 +233,7 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 			})
 		// ncolor2
 		config.ncolor2.row = holder.append('div').style('margin-bottom', '15px')
-		config.ncolor2.lab = config.ncolor2.row
-			.append('span')
-			.html('&le;Min color')
-			.style('padding-right', '10px')
+		config.ncolor2.lab = config.ncolor2.row.append('span').html('&le;Min color').style('padding-right', '10px')
 		config.ncolor2.row
 			.append('input')
 			.attr('type', 'color')
@@ -262,136 +246,36 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 
 	// y-scale
 	{
-		const row = holder.append('div').style('margin-bottom', '15px')
-		row.append('span').html('Y scale&nbsp;&nbsp;')
-		const ss = row.append('select')
-		const ssop1 = ss.append('option').text('automatic')
-		const ssop2 = ss.append('option').text('fixed')
-		const ssop3 = ss.append('option').text('percentile')
-		ss.on('change', event => {
-			const si = event.target.selectedIndex
-			if (si == 0) {
-				fixed.style('display', 'none')
-				percentile.style('display', 'none')
-				tk.scale.auto = 1
-				loader(client.bwSetting.autoscale)
-				return
-			}
-			if (si == 1) {
-				fixed.style('display', 'block')
-				percentile.style('display', 'none')
-				return
-			}
-			fixed.style('display', 'none')
-			percentile.style('display', 'block')
-		})
-		let usingfixed = false,
-			usingperc = false
+		const setting = {}
 		if (tk.scale.auto) {
-			ssop1.property('selected', 1)
+			setting.auto = 1
+		} else if (tk.scale.percentile) {
+			setting.percentile = tk.scale.percentile
 		} else {
-			if (tk.scale.percentile) {
-				usingperc = true
-				ssop3.property('selected', 1)
-			} else {
-				usingfixed = true
-				ssop2.property('selected', 1)
-			}
+			setting.fixed = { min: tk.scale.min, max: tk.scale.max }
 		}
-		// y-scale fixed
-		const fixed = row
-			.append('div')
-			.style('margin', '10px')
-			.style('display', usingfixed ? 'block' : 'none')
-		{
-			const row1 = fixed.append('div')
-			row1
-				.append('span')
-				.html('Max&nbsp;')
-				.style('font-family', 'Courier')
-				.style('font-size', '.9em')
-			const max = row1.append('input').attr('size', 5)
-			if (usingfixed) {
-				max.property('value', tk.scale.max)
-			}
-			const row2 = fixed.append('div')
-			row2
-				.append('span')
-				.html('Min&nbsp;')
-				.style('font-family', 'Courier')
-				.style('font-size', '.9em')
-			const min = row2.append('input').attr('size', 5)
-			if (usingfixed) {
-				min.property('value', tk.scale.min)
-			}
-			row2
-				.append('button')
-				.text('Set')
-				.style('margin-left', '5px')
-				.on('click', () => {
-					const s1 = max.property('value')
-					if (s1 == '') {
-						return
-					}
-					const v1 = Number.parseFloat(s1)
-					if (Number.isNaN(v1)) {
-						alert('invalid max value')
-						return
-					}
-					const s2 = min.property('value')
-					if (s2 == '') {
-						return
-					}
-					const v2 = Number.parseFloat(s2)
-					if (Number.isNaN(v2)) {
-						alert('invalid min value')
-						return
-					}
+		makeNumericAxisConfig({
+			holder: holder.append('div').style('margin-bottom', '15px'),
+			setting,
+			callback: s => {
+				if (s.auto) {
+					tk.scale.auto = 1
+					loader(client.bwSetting.autoscale)
+					return
+				}
+				if (s.fixed) {
 					delete tk.scale.auto
 					delete tk.scale.percentile
-					tk.scale.max = v1
-					tk.scale.min = v2
+					tk.scale.max = s.fixed.max
+					tk.scale.min = s.fixed.min
 					loader(client.bwSetting.fixedscale)
-				})
-		}
-		// y-scale percentile
-		const percentile = row
-			.append('div')
-			.style('margin-top', '6px')
-			.style('display', usingperc ? 'block' : 'none')
-		{
-			percentile
-				.append('span')
-				.html('Percentile&nbsp;')
-				.style('font-family', 'Courier')
-				.style('font-size', '.9em')
-			const input = percentile.append('input').attr('size', 5)
-			if (usingperc) {
-				input.property('value', tk.scale.percentile)
-			}
-			const setpercentile = s => {
-				if (s == '') return
-				const v = Number.parseInt(s)
-				if (Number.isNaN(v) || v <= 0 || v > 100) {
-					alert('percentile should be integer within range 0-100')
 					return
 				}
 				delete tk.scale.auto
-				tk.scale.percentile = v
+				tk.scale.percentile = s.percentile
 				loader(client.bwSetting.percentilescale)
 			}
-			input.on('keyup', event => {
-				if (event.code != 'Enter') return
-				setpercentile(input.property('value'))
-			})
-			percentile
-				.append('button')
-				.text('Set')
-				.style('margin-left', '5px')
-				.on('click', () => {
-					setpercentile(input.property('value'))
-				})
-		}
+		})
 	}
 
 	// dot plot
@@ -434,17 +318,11 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 	//.style('margin-bottom','15px')
 	{
 		const id = Math.random().toString()
-		const input = config.dividefactor.row
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('id', id)
+		const input = config.dividefactor.row.append('input').attr('type', 'checkbox').attr('id', id)
 		if (!tk.normalize.disable) {
 			input.property('checked', 1)
 		}
-		config.dividefactor.row
-			.append('label')
-			.html('&nbsp;Apply normalization')
-			.attr('for', id)
+		config.dividefactor.row.append('label').html('&nbsp;Apply normalization').attr('for', id)
 
 		const folder = config.dividefactor.row
 			.append('div')
@@ -466,11 +344,7 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 				tk.normalize.dividefactor = v
 				loader(client.bwSetting.usedividefactor)
 			})
-		folder
-			.append('div')
-			.text('Enter a value above zero')
-			.style('font-size', '.7em')
-			.style('color', '#858585')
+		folder.append('div').text('Enter a value above zero').style('font-size', '.7em').style('color', '#858585')
 		input.on('change', event => {
 			if (event.target.checked) {
 				client.appear(folder)
