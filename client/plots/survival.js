@@ -978,24 +978,9 @@ function setInteractivity(self) {
 	}
 
 	self.showLegendItemMenu = function (d, hidden) {
-		const term1 = self.state.config.term.term
 		const term2 = self.state.config.term2?.term || null
-		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
-		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
-		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
-		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
-		const seriesLabel =
-			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
-			term1unit
+		const seriesLabel = term2?.values?.[d.seriesId]?.label || d.seriesId
 
-		const dataLabel =
-			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
-			term2unit
-		const icon = !term2
-			? ''
-			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-			  d.color +
-			  "'>&nbsp;</div>"
 		const header = `<div style='padding-bottom:8px'><b>${seriesLabel}</b></div>`
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 		if (!data.seriesId && !data.dataId) {
