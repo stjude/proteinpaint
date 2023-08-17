@@ -346,10 +346,11 @@ export function setRenderers(self) {
 		// the label rotation to end before measuring the label height and width
 		await sleep(prevTranspose == s.transpose ? duration : s.duration)
 
-		const topBox = self.layout.top.box.node().getBBox()
-		const btmBox = self.layout.btm.box.node().getBBox()
-		const leftBox = self.layout.left.box.node().getBBox()
-		const rtBox = self.layout.right.box.node().getBBox()
+		const l = self.layout
+		const topBox = l.top.box.node().getBBox()
+		const btmBox = l.btm.box.node().getBBox()
+		const leftBox = l.left.box.node().getBBox()
+		const rtBox = l.right.box.node().getBBox()
 		const legendBox = self.dom.legendG.node().getBBox()
 		const seriesBox = self.dom.seriesesG.node().getBBox()
 
@@ -363,8 +364,8 @@ export function setRenderers(self) {
 			.attr('width', d.svgw)
 			.attr('height', d.svgh)
 
-		const x = leftBox.width - self.layout.left.offset + hcWidth
-		const y = topBox.height - self.layout.top.offset + hcHeight
+		const x = leftBox.width - l.left.offset + hcWidth
+		const y = (l.top.display == 'none' ? 0 : topBox.height) - l.top.offset + hcHeight
 		self.dom.mainG
 			//.transition()
 			//.duration(duration)
@@ -379,7 +380,7 @@ export function setRenderers(self) {
 
 		// this position is based on layout.btm.attr.boxTransform, plus box height and margins
 		const legendX = d.xOffset + (s.transpose ? 20 : 0)
-		const legendY = d.yOffset + d.mainh + s.collabelgap + btmBox.height + 20
+		const legendY = d.yOffset + d.mainh + s.collabelgap + (l.btm.display == 'none' ? 0 : btmBox.height) + 20
 
 		self.dom.legendG
 			//.transition()
@@ -387,7 +388,7 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${legendX},${legendY})`)
 
 		if (hc.xDendrogramHeight) {
-			const dendroX = leftBox.width - self.layout.left.offset + d.xOffset
+			const dendroX = leftBox.width - l.left.offset + d.xOffset
 			self.dom.hcClipRect
 				.attr('x', dendroX + hcWidth) //d.xOffset + d.seriesXoffset - 30)
 				.attr('y', 0)
@@ -398,7 +399,8 @@ export function setRenderers(self) {
 			// for easy reference when scrolling interactively
 			self.topDendroX = dendroX + d.seriesXoffset
 			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX},0)`)
-			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, ${-0.5 * s.rowh})`)
+			const y = -0.5 * s.rowh + (l.top.display == 'none' ? 0 : topBox.height)
+			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, ${y})`)
 		}
 	}
 }

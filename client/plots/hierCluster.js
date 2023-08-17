@@ -327,6 +327,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
+	opts.settings.matrix.collabelpos = 'top'
 	const config = await getMatrixPlotConfig(opts, app)
 	// hardcode for testing only
 	// TODO: replace with controls/menu, etc
