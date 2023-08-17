@@ -1033,6 +1033,9 @@ export class MatrixControls {
 					p.clusterRenderer.translateElems(-dx, s, d)
 					p.layout.top.attr.adjustBoxTransform(-dx)
 					p.layout.btm.attr.adjustBoxTransform(-dx)
+					if (p.dom.topDendrogram) {
+						p.dom.topDendrogram.attr('transform', `translate(${p.topDendroX - dx},0)`)
+					}
 				} else if (eventType == 'up') {
 					const c = p.getVisibleCenterCell(-dx)
 					p.app.dispatch({

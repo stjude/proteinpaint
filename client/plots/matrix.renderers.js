@@ -387,9 +387,18 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${legendX},${legendY})`)
 
 		if (hc.xDendrogramHeight) {
-			const dendroX = x - hcWidth + d.xOffset
-			self.dom.topDendrogram.attr('transform', `translate(${dendroX},0)`)
-			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, 2)`)
+			const dendroX = leftBox.width - self.layout.left.offset + d.xOffset
+			self.dom.hcClipRect
+				.attr('x', dendroX + hcWidth) //d.xOffset + d.seriesXoffset - 30)
+				.attr('y', 0)
+				.attr('width', d.mainw + 3)
+				// add 500 so that the column labels are not clipped
+				.attr('height', d.mainh + 500)
+
+			// for easy reference when scrolling interactively
+			self.topDendroX = dendroX + d.seriesXoffset
+			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX},0)`)
+			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, ${-0.5 * s.rowh})`)
 		}
 	}
 }

@@ -14,7 +14,20 @@ class HierCluster extends Matrix {
 
 	async init(appState) {
 		await super.init(appState)
-		this.dom.topDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
+		this.hcClipId = this.seriesClipId + '-hc'
+		this.dom.hcClipRect = this.dom.svg
+			.select('defs')
+			.append('clipPath')
+			.attr('id', this.hcClipId)
+			//.attr('clipPathUnits', 'objectBoundingBox')
+			.attr('clipPathUnits', 'userSpaceOnUse')
+			.append('rect')
+			.attr('display', 'block')
+		this.dom.topDendrogram = this.dom.svg
+			.insert('g', 'g')
+			.attr('clip-path', `url(#${this.hcClipId})`)
+			.append('g')
+			.attr('class', 'sjpp-matrix-dendrogram')
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
 	}
 
@@ -118,34 +131,31 @@ class HierCluster extends Matrix {
 
 	plotDendrogram_R(obj) {
 		const d = this.dimensions
-		console.log(d)
 		const zoomLevel = this.config.settings.matrix.zoomLevel
 		const { xMin, xMax } = d
-		const xOffset = d.seriesXoffset
-		console.log(123, { xOffset }) // could be negative when zoomed
+		const xOffset = d.seriesXoffset // could be negative when zoomed
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
 		{
-			// hardcoding gene to be on rows, swap x/y for row dendrogram
-			for (const r of obj.row_dendro) {
-				let t = r.x1
-				r.x1 = r.y1
-				r.y1 = t
-				t = r.x2
-				r.x2 = r.y2
-				r.y2 = t
-			}
-
-			// replace node x/y values with on-screen #pixel for plotting
 			let max = 0
-			for (const r of obj.row_dendro) max = Math.max(max, r.x1, r.x2)
+			for (const r of obj.row_dendro) {
+				max = Math.max(max, r.y1, r.y2)
+				// hardcoding gene to be on rows, swap x/y for row dendrogram
+				const t = {
+					x1: r.y1,
+					x2: r.y2,
+					y1: r.x1,
+					y2: r.x2
+				}
+				r.transformed = t
+			}
 			const sf = obj.d.xDendrogramHeight / max
 			for (const r of obj.row_dendro) {
-				r.x1 = sf * (max - r.x1) // for row dendrogram, x is now depth
-				r.x2 = sf * (max - r.x2)
-				r.y1 *= obj.d.rowHeight // y is number of row items
-				r.y2 *= obj.d.rowHeight
+				const t = r.transformed
+				t.x1 = sf * (max - t.x1) // for row dendrogram, x is now depth
+				t.x2 = sf * (max - t.x2)
+				t.y1 *= obj.d.rowHeight // y is number of row items
+				t.y2 *= obj.d.rowHeight
 			}
-
 			const width = obj.d.xDendrogramHeight + 0.0000001
 			const height = d.mainh + 0.0000001
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
@@ -157,19 +167,18 @@ class HierCluster extends Matrix {
 			// plot row dendrogram
 			for (const r of obj.row_dendro) {
 				ctx.beginPath()
-
+				const t = r.transformed
 				// r is a line between two points. get extreme x/y
-				const x1 = Math.min(r.x1, r.x2),
-					x2 = Math.max(r.x1, r.x2),
-					y1 = Math.min(r.y1, r.y2),
-					y2 = Math.max(r.y1, r.y2)
+				const x1 = Math.min(t.x1, t.x2),
+					x2 = Math.max(t.x1, t.x2),
+					y1 = Math.min(t.y1, t.y2),
+					y2 = Math.max(t.y1, t.y2)
 
 				// always one way to plot vertical line
 				ctx.moveTo(x1, y1)
 				ctx.lineTo(x1, y2)
-
 				// two ways to plot horizontal line
-				if ((r.x1 > r.x2 && r.y1 > r.y2) || (r.x1 < r.x2 && r.y1 < r.y2)) {
+				if ((t.x1 > t.x2 && t.y1 > t.y2) || (t.x1 < t.x2 && t.y1 < t.y2)) {
 					// one point is on lower right of another, the horizontal line is based on *max y*
 					ctx.lineTo(x2, y2)
 				} else {
@@ -188,25 +197,22 @@ class HierCluster extends Matrix {
 			let max = 0
 			const visible = []
 			for (const r of obj.col_dendro) {
-				const x1 = r.x1 * d.colw + xOffset
-				const x2 = r.x2 * d.colw + xOffset
+				max = Math.max(max, r.y1, r.y2)
+				const x1 = r.x1 * d.dx //+ xOffset
+				const x2 = r.x2 * d.dx //+ xOffset
 				if (x2 < x1) {
-					if (x1 < 0 || x2 > d.mainw) continue
-				} else if (x2 < 0 || x1 > d.mainw) continue
+					if (x1 < xMin || x2 > xMax) continue
+				} else if (x2 < xMin || x1 > xMax) continue
 				r.scaled = { x1, x2 }
 				visible.push(r)
-				//r.scaled = {x1: zoomLevel*r.x1, x2: zoomLevel*r.x2}
-				max = Math.max(max, r.y1, r.y2)
 			}
 			const sf = obj.d.yDendrogramHeight / max
 			for (const r of visible) {
-				r.y1 = sf * (max - r.y1) // for col dendrogram, y is depth
-				r.y2 = sf * (max - r.y2)
+				r.scaled.y1 = sf * (max - r.y1) // for col dendrogram, y is depth
+				r.scaled.y2 = sf * (max - r.y2)
 			}
-			console.log(204, visible.slice(0, 5))
 
 			const width = d.imgW + 0.0000001
-			console.log(d.imgW, d.mainw, d)
 			const height = obj.d.yDendrogramHeight + 0.0000001
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
@@ -218,13 +224,14 @@ class HierCluster extends Matrix {
 			// plot column dendrogram
 			for (const r of visible) {
 				ctx.beginPath()
-				const x1 = Math.min(r.scaled.x1, r.scaled.x2),
-					x2 = Math.max(r.scaled.x1, r.scaled.x2),
-					y1 = Math.min(r.y1, r.y2),
-					y2 = Math.max(r.y1, r.y2)
+				const s = r.scaled
+				const x1 = Math.min(s.x1, s.x2),
+					x2 = Math.max(s.x1, s.x2),
+					y1 = Math.min(s.y1, s.y2),
+					y2 = Math.max(s.y1, s.y2)
 				ctx.moveTo(x1, y1)
 				ctx.lineTo(x2, y1) // hline
-				if ((r.x1 > r.x2 && r.y1 > r.y2) || (r.x1 < r.x2 && r.y1 < r.y2)) {
+				if ((r.x1 > r.x2 && s.y1 > s.y2) || (r.x1 < r.x2 && s.y1 < s.y2)) {
 					// vline at max x
 					ctx.lineTo(x2, y2)
 				} else {
@@ -240,6 +247,7 @@ class HierCluster extends Matrix {
 	}
 
 	validateRline(r) {
+		return
 		// a line between parent and child, {id1,x1,y1, id2,x2,y2}
 
 		// r1/2 is node id, 0-based, currently not used

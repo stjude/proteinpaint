@@ -461,7 +461,6 @@ export class Matrix {
 		const termgroups = []
 		if (this.hierClusterTermGrp) termgroups.push(this.hierClusterTermGrp)
 		termgroups.push(...this.config.termgroups)
-		console.log(475, this.config.termgroups)
 		this.termGroups = JSON.parse(JSON.stringify(termgroups))
 		const termOrder = []
 		let totalIndex = 0,
@@ -923,7 +922,6 @@ export class Matrix {
 		// since they will be outside the computed allowed image width
 		const xMin = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : imgLeftMin
 		const xMax = imgW + xMin
-		console.log(933, xMin, xMax)
 		// console.log({ imgW, mainw, xMin, xMax, seriesXoffset, imgLeftMin, xOffset, centerCellX, zoomedMainW, imgWMax: s.imgWMax })
 
 		this.dimensions = {
