@@ -34,6 +34,8 @@ export default interface Settings {
 		fontSize: number
 		animationDuration: number
 		overlapAngleFactor: number
+		showPrioritizeCancerGenes: boolean
+		prioritizeCancerGenes: boolean
 	}
 	legend: {
 		snvTitle: string

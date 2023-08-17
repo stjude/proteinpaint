@@ -7,7 +7,7 @@ export default class DownloadButtonRenderer {
 
 	render(holder: any) {
 		holder
-			.append('div')
+			.append('span')
 			.append('button')
 			.style('margin', '2px 0 2px 30px')
 			.text('Download')
