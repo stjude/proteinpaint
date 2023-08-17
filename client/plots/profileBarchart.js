@@ -53,7 +53,7 @@ class profileBarchart extends profilePlot {
 			}
 		twLst.push(this.config.typeTW)
 
-		const sampleName = this.config.region || this.config.income || 'Global'
+		const sampleName = this.config.region != null ? this.config.region : this.config.income || 'Global'
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst,

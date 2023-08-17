@@ -30,7 +30,7 @@ class profilePolar extends profilePlot {
 			if (tw.id) this.twLst.push(tw)
 		}
 		this.twLst.push(this.config.typeTW)
-		const sampleName = this.config.region || this.config.income || 'Global'
+		const sampleName = this.config.region != null ? this.config.region : this.config.income || 'Global'
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
@@ -40,7 +40,7 @@ class profilePolar extends profilePlot {
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
 		this.income = this.config.income || this.incomes[0]
-		this.region = this.config.region || this.income == '' ? 'Global' : ''
+		this.region = this.config.region !== null ? this.config.region : this.income == '' ? 'Global' : ''
 
 		this.setFilter()
 
