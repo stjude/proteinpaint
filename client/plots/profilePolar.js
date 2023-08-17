@@ -31,7 +31,7 @@ class profilePolar extends profilePlot {
 		}
 		this.twLst.push(this.config.typeTW)
 		const sampleName = this.config.region || this.config.income || 'Global'
-		const filter = getSampleFilter(this.sampleidmap[sampleName])
+		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
 			filter
