@@ -309,7 +309,8 @@ export class Matrix {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	async setData(_data) {
 		const terms = []
-		for (const grp of this.config.termgroups) {
+		const termgroups = this.chartType == 'geneExpression' ? this.config.termgroups.slice(1) : this.config.termgroups
+		for (const grp of termgroups) {
 			terms.push(...grp.lst)
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
@@ -458,10 +459,7 @@ export class Matrix {
 	getTermOrder(data) {
 		const s = this.settings.matrix
 		this.termSorter = getTermSorter(this, s)
-		const termgroups = []
-		if (this.hierClusterTermGrp) termgroups.push(this.hierClusterTermGrp)
-		termgroups.push(...this.config.termgroups)
-		this.termGroups = JSON.parse(JSON.stringify(termgroups))
+		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		const termOrder = []
 		let totalIndex = 0,
 			visibleGrpIndex = 0

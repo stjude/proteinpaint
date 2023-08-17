@@ -32,7 +32,7 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		const twlst = this.state.config.hierCluster.twlst
+		const twlst = this.config.termgroups[0].lst
 		const body = {
 			genome: this.app.opts.state.vocab.genome,
 			dslabel: this.app.opts.state.vocab.dslabel,
@@ -74,13 +74,7 @@ class HierCluster extends Matrix {
 		c.sampleNameLst = c.col_names_index.map(i => c.sampleNameLst[i - 1])
 		c.geneNameLst = c.row_names_index.map(i => c.geneNameLst[i - 1])
 		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
-		this.hierClusterTermGrp = {
-			name: '',
-			// TODO: are duplicate term entries, with different q{} objects, allowed?
-			// if yes, should use tw.$id to disambiguate
-			lst: orderedTw
-		}
-
+		this.config.termgroups[0].lst = orderedTw
 		this.hierClusterSamples = {
 			refs: { byTermId: {} },
 			lst: c.sampleNameLst.map(sample => samples[sample]),
@@ -360,8 +354,14 @@ export async function getPlotConfig(opts = {}, app) {
 		return tw
 	})
 
+	config.termgroups.unshift({
+		name: 'Gene Expression',
+		// TODO: are duplicate term entries, with different q{} objects, allowed?
+		// if yes, should use tw.$id to disambiguate
+		lst: twlst
+	})
+
 	config.settings.matrix.maxSample = 100000
-	config.hierCluster = { twlst }
 	config.settings.hierCluster = {
 		clusterMethod: 'average',
 		xDendrogramHeight: 100,

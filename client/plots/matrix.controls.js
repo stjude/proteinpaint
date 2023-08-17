@@ -73,6 +73,9 @@ export class MatrixControls {
 							vocab: this.opts.vocab
 							//activeCohort: appState.activeCohort
 						},
+						getDisplayStyle(plot) {
+							return plot.hierCluster ? 'none' : 'table-row'
+						},
 						processInput: tw => {
 							if (tw) fillTermWrapper(tw)
 							return tw
@@ -109,7 +112,7 @@ export class MatrixControls {
 							}
 						],
 						getDisplayStyle(plot) {
-							return plot.divideBy ? 'table-row' : 'none'
+							return plot.divideBy && !plot.hierCluster ? 'table-row' : 'none'
 						}
 					},
 					{
@@ -119,7 +122,7 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'sampleGrpLabelMaxChars',
 						getDisplayStyle(plot) {
-							return plot.divideBy ? 'block' : 'none'
+							return plot.divideBy && !plot.hierCluster ? 'block' : 'none'
 						}
 					},
 					{

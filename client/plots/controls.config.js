@@ -214,6 +214,8 @@ function setNumberInput(opts) {
 
 	const api = {
 		main(plot) {
+			const display = opts.getDisplayStyle?.(plot) || 'table-row'
+			opts.holder.style('display', display)
 			for (const settingsKey in self.dom.inputs) {
 				self.dom.inputs[settingsKey].property('value', plot.settings[opts.chartType][settingsKey])
 			}
@@ -468,6 +470,7 @@ function setDropdownInput(opts) {
 
 	const api = {
 		main(plot) {
+			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
 			self.dom.select.property('value', plot.settings[opts.chartType][opts.settingsKey])
 		}
 	}
@@ -570,6 +573,8 @@ async function setTermInput(opts) {
 	const api = {
 		usestate: true,
 		main(plot) {
+			const display = opts.getDisplayStyle?.(plot) || 'table-row'
+			opts.holder.style('display', display)
 			const { config, activeCohort, termfilter } = JSON.parse(JSON.stringify(plot))
 			const tw = plot[opts.configKey] || (config && config[opts.configKey]) || {}
 			const arg = {
