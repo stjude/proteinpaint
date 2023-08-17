@@ -3,6 +3,7 @@ import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '#dom/axisstyle'
+import { makeNumericAxisConfig } from '#dom/numericAxis'
 import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
 import { positionLeftlabelg } from './leftlabel'
@@ -125,9 +126,7 @@ function numeric_make(nm, tk, block) {
 
 	setup_axis_scale(data, nm, tk)
 
-	const numscale = scaleLinear()
-		.domain([nm.minvalue, nm.maxvalue])
-		.range([0, nm.axisheight])
+	const numscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([0, nm.axisheight])
 
 	// set m._y
 	for (const d of data) {
@@ -170,7 +169,7 @@ function numeric_make(nm, tk, block) {
 				.text(tk.mnamegetter(m))
 				.attr('font-family', font)
 				.attr('font-size', m.radius * 2 - 2)
-				.each(function() {
+				.each(function () {
 					m.labwidth = this.getBBox().width
 				})
 				.remove()
@@ -261,7 +260,7 @@ function numeric_make(nm, tk, block) {
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg2')
-		.each(function(d) {
+		.each(function (d) {
 			// compute radius for each group
 			d.g = this
 		})
@@ -294,7 +293,7 @@ function numeric_make(nm, tk, block) {
 		.enter()
 		.append('g')
 		.attr('class', 'sja_aa_discg')
-		.each(function(m) {
+		.each(function (m) {
 			m.g = this
 		})
 
@@ -383,7 +382,7 @@ function numeric_make(nm, tk, block) {
 	const textlabels = discg
 		.filter(m => m.labattop || m.labatbottom)
 		.append('text')
-		.each(function(m) {
+		.each(function (m) {
 			m.__svg_textlabel = this
 		})
 		.text(m => tk.mnamegetter(m))
@@ -680,7 +679,7 @@ function m_mouseover(m, nm, tk) {
 			.attr('font-size', fontsize)
 			.attr('font-family', font)
 			.text(w)
-			.each(function() {
+			.each(function () {
 				textw = Math.max(textw, this.getBBox().width)
 			})
 			.remove()
@@ -808,13 +807,9 @@ function render_axis(tk, nm, block) {
 		.remove()
 
 	// axis is inverse of numscale
-	const thisscale = scaleLinear()
-		.domain([nm.minvalue, nm.maxvalue])
-		.range([nm.axisheight, 0])
+	const thisscale = scaleLinear().domain([nm.minvalue, nm.maxvalue]).range([nm.axisheight, 0])
 
-	const thisaxis = axisLeft()
-		.scale(thisscale)
-		.ticks(4)
+	const thisaxis = axisLeft().scale(thisscale).ticks(4)
 	if (nm.isinteger) {
 		thisaxis.tickFormat(d3format('d'))
 		if (nm.maxvalue - nm.minvalue < 3) {
@@ -834,7 +829,7 @@ function render_axis(tk, nm, block) {
 	// axis label, text must wrap
 	// read the max tick label width at nm.axisWidth, so axis label won't overlap with them
 	nm.axisWidth = 0
-	nm.axisg.selectAll('text').each(function() {
+	nm.axisg.selectAll('text').each(function () {
 		nm.axisWidth = Math.max(nm.axisWidth, this.getBBox().width)
 	})
 	nm.axisWidth += 15
@@ -873,7 +868,7 @@ function render_axis(tk, nm, block) {
 		.attr('y', nm.axisheight / 2)
 		.attr('x', -nm.axisWidth)
 		.text(nm.label || defaultLabel) // if too long can use ellipsis, hover to show full
-		.each(function() {
+		.each(function () {
 			w = this.getBBox().width
 		})
 		.on('click', event => {
@@ -891,6 +886,18 @@ function render_axis(tk, nm, block) {
 					positionLeftlabelg(tk, block)
 					tk._finish()
 				})
+
+			/*
+			makeNumericAxisConfig({
+				holder: tk.menutip.d.append('div').style('margin','10px'),
+				noPercentile:true,
+				callback:s=>{
+					nm.axisSetting = s
+					// TODO
+				},
+				setting: nm.axisSetting
+			})
+			*/
 		})
 
 	tk.skewer.maxwidth = nm.axisWidth + w

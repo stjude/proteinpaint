@@ -24,10 +24,11 @@ arg{}
 	optional
 	one of the 3 callback() parameters to populate the ui
 
-- noPercentile:true, may use later
+- noPercentile:true
+	if set, do not allow setting percentile
 */
 
-export function makeNumericAxisConfig({ holder, callback, setting }) {
+export function makeNumericAxisConfig({ holder, callback, setting, noPercentile }) {
 	if (!holder) throw 'no holder'
 	if (typeof callback != 'function') throw 'callback not function'
 
@@ -48,7 +49,8 @@ export function makeNumericAxisConfig({ holder, callback, setting }) {
 	const ss = row.append('select')
 	const op1 = ss.append('option').text('Automatic')
 	const op2 = ss.append('option').text('Fixed')
-	const op3 = ss.append('option').text('Percentile')
+	let op3
+	if (!noPercentile) op3 = ss.append('option').text('Percentile')
 
 	ss.on('change', event => {
 		const si = event.target.selectedIndex
