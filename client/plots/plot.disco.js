@@ -73,7 +73,12 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj)
 					{
 						chartType: 'Disco',
 						subfolder: 'disco',
-						extension: 'ts'
+						extension: 'ts',
+						overrides: {
+							label: {
+								showPrioritizeCancerGenes: !!genomeObj.geneset
+							}
+						}
 					}
 				]
 			}

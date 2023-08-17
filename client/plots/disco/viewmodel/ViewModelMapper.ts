@@ -54,7 +54,10 @@ export class ViewModelMapper {
 
 		const sampleName = opts.args.sampleName
 
-		const cancerGenes = opts.args.cancerGenes ? opts.args.cancerGenes : []
+		const genome = opts.args.genome
+
+		const cancerGenes =
+			genome && genome.geneset[0] && this.settings.label.prioritizeCancerGenes ? genome.geneset[0].lst : []
 
 		const data: Array<any> = opts.args.data
 
