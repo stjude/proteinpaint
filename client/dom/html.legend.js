@@ -1,5 +1,4 @@
 import { select } from 'd3-selection'
-import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 
 export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {} }, barDiv) {

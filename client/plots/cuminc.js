@@ -13,6 +13,7 @@ import Partjson from 'partjson'
 import { getSeriesTip } from '#dom/svgSeriesTips'
 import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
+import { Menu } from '#dom/menu'
 
 /*
 class Cuminc
@@ -43,7 +44,7 @@ export class Cuminc {
 			legendDiv: holder.append('div').style('margin', '5px'),
 			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-
+		self.tip = new Menu({ padding: '5px' })
 		this.lineFxn = line()
 			.curve(curveStepAfter)
 			.x(c => c.scaledX)
@@ -57,7 +58,11 @@ export class Cuminc {
 			settings: {
 				legendOrientation: 'vertical'
 			},
-			handlers: {}
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
 		})
 	}
 
@@ -1114,20 +1119,30 @@ function setInteractivity(self) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
-		const hidden = self.settings.hidden.slice()
-		const i = hidden.indexOf(d.seriesId)
-		i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
-		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: {
-				settings: {
-					cuminc: {
-						customHidden: hidden
+		console.log(self)
+		const menu = new Menu({ padding: '1px' })
+		menu.d
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`Hide`)
+			.on('click', async e => {
+				menu.hide()
+				const hidden = self.settings.hidden.slice()
+				const i = hidden.indexOf(d.seriesId)
+				i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						settings: {
+							cuminc: {
+								customHidden: hidden
+							}
+						}
 					}
-				}
-			}
-		})
+				})
+			})
+		menu.show(event.clientX, event.clientY)
 	}
 }
 

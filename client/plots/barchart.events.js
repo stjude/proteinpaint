@@ -282,7 +282,7 @@ function handleLegendClick(target, self) {
 			? !d.isHidden
 			: !(term.q && term.q.hiddenValues && term.q.hiddenValues['dataId' in d ? d.dataId : d.id])
 
-	const menu = new Menu({ padding: '0px' })
+	const menu = tip.clear()
 	menu.showunder(target)
 	const div = menu.d.append('div')
 	div
