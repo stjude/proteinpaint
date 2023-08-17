@@ -61,7 +61,7 @@ class profileBarchart extends profilePlot {
 		})
 		this.sampleData = this.data.lst[0]
 
-		this.region = this.config.region || this.regions[0].key
+		this.region = this.config.region || 'Global'
 		this.income = this.config.income || this.incomes[0]
 		this.componentIndex = this.config.componentIndex || 0
 		this.setFilter()

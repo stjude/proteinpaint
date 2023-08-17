@@ -39,7 +39,7 @@ class profilePolar extends profilePlot {
 		this.sampleData = this.data.lst[0]
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
-		this.region = this.config.region || this.regions[0].key
+		this.region = this.config.region || 'Global'
 		this.income = this.config.income || this.incomes[0]
 		this.setFilter()
 
