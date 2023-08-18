@@ -714,7 +714,7 @@ export function setRenderers(self) {
 			.style('font-weight', 'bold')
 		offsetY += step + 10
 		if (self.config.colorTW) {
-			title = `${getTitle(self.config.colorTW)}`
+			title = `${getTitle(self.config.colorTW, self.config.shapeTW == undefined)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
 
 			if (self.config.colorTW.term.type == 'geneVariant')
@@ -878,9 +878,9 @@ export function setRenderers(self) {
 			}
 		}
 
-		function getTitle(tw) {
+		function getTitle(tw, complete = false) {
 			let name = tw.term.name
-			if (name.length > 25) name = name.slice(0, 25) + '...'
+			if (name.length > 25 && !complete) name = name.slice(0, 25) + '...'
 			return name
 		}
 

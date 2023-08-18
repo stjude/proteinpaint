@@ -129,7 +129,8 @@ export class Cuminc {
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const series of chart.serieses) {
-			const c = { orig: this.colorScale(series.seriesId) }
+			const color = this.config.term2?.term.values[series.seriesId]?.color
+			const c = { orig: color || this.colorScale(series.seriesId) }
 			c.rgb = rgb(c.orig)
 			c.adjusted = c.rgb.toString()
 			this.term2toColor[series.seriesId] = c
@@ -583,7 +584,8 @@ class MassCumInc {
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				const c = { orig: this.colorScale(series.seriesId) }
+				const color = this.config.term2?.term.values[series.seriesId]?.color
+				const c = { orig: color || this.colorScale(series.seriesId) }
 				c.rgb = rgb(c.orig)
 				c.adjusted = c.rgb.toString()
 				this.term2toColor[series.seriesId] = c
@@ -1118,8 +1120,7 @@ function setInteractivity(self) {
 	self.legendClick = function (event) {
 		event.stopPropagation()
 		const d = event.target.__data__
-		if (d === undefined) return
-		console.log(self)
+		if (d === undefined || !('seriesId' in d || 'dataId' in d)) return
 		const menu = new Menu({ padding: '1px' })
 		menu.d
 			.append('div')
@@ -1142,6 +1143,31 @@ function setInteractivity(self) {
 					}
 				})
 			})
+		let color = self.term2toColor[d.seriesId]?.adjusted
+		if (color) {
+			color = rgb(color).formatHex()
+			const colorDiv = menu.d
+				.append('div')
+				.attr('class', 'sja_sharp_border')
+				.style('padding', '0px 10px')
+				.text('Color:')
+			const input = colorDiv
+				.append('input')
+				.attr('type', 'color')
+				.attr('value', color)
+				.on('change', () => {
+					const term2 = structuredClone(self.config.term2)
+					term2.term.values[d.seriesId].color = input.node().value
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							term2
+						}
+					})
+					menu.hide()
+				})
+		}
 		menu.show(event.clientX, event.clientY)
 	}
 }
