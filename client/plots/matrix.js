@@ -403,6 +403,10 @@ class Matrix {
 			if ('order' in b) return 1
 			if (s.sortSampleGrpsBy == 'sampleCount' && a.lst.length != b.lst.length) return b.lst.length - a.lst.length
 			if (s.sortSampleGrpsBy == 'hits') return b.totalCountedValues - a.totalCountedValues
+			if (Object.values(term.values).every(x => x.order !== undefined)) {
+				// when the varialbe used to divide the matrix has predefined order
+				return term.values[a.id].order - term.values[b.id].order
+			}
 			return a.name < b.name ? -1 : 1
 		})
 	}
