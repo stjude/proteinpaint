@@ -227,7 +227,7 @@ class MassCumInc {
 			},
 			handlers: {
 				legend: {
-					click: this.legendClick
+					click: e => this.hideLegendItem(e.target.__data__)
 				}
 			}
 		})
@@ -1128,20 +1128,7 @@ function setInteractivity(self) {
 			.text(`Hide`)
 			.on('click', async e => {
 				menu.hide()
-				const hidden = self.settings.hidden.slice()
-				const i = hidden.indexOf(d.seriesId)
-				i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: {
-						settings: {
-							cuminc: {
-								customHidden: hidden
-							}
-						}
-					}
-				})
+				self.hideLegendItem(d)
 			})
 		let color = self.term2toColor[d.seriesId]?.adjusted
 		if (color) {
@@ -1169,6 +1156,23 @@ function setInteractivity(self) {
 				})
 		}
 		menu.show(event.clientX, event.clientY)
+	}
+
+	self.hideLegendItem = function (d) {
+		const hidden = self.settings.hidden.slice()
+		const i = hidden.indexOf(d.seriesId)
+		i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					cuminc: {
+						customHidden: hidden
+					}
+				}
+			}
+		})
 	}
 }
 
