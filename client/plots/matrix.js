@@ -363,8 +363,8 @@ class Matrix {
 
 		if (defaultSampleGrp.lst.length && !sampleGroups.size) {
 			sampleGroups.set(undefined, defaultSampleGrp)
+			sampleGrpsArr.push(...sampleGroups.values())
 		}
-
 		this.asListedSampleOrder = []
 		for (const grp of sampleGrpsArr) {
 			this.asListedSampleOrder.push(...grp.lst.map(s => s.sample))
