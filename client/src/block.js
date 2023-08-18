@@ -358,10 +358,7 @@ export class Block {
 				div2.style('display', 'none')
 			}
 
-			this.legend.holder = div2
-				.append('table')
-				.style('border-spacing', '15px')
-				.style('border-collapse', 'separate')
+			this.legend.holder = div2.append('table').style('border-spacing', '15px').style('border-collapse', 'separate')
 
 			const [tr1, td1] = Legend.legend_newrow(
 				this,
@@ -459,10 +456,7 @@ export class Block {
 		} else {
 			makecoordinput(this, butrow)
 
-			this.coordwidthsays = butrow
-				.append('span')
-				.style('padding', '0px 10px 0px 5px')
-				.style('font-size', '80%')
+			this.coordwidthsays = butrow.append('span').style('padding', '0px 10px 0px 5px').style('font-size', '80%')
 
 			butrow
 				.append('div') // duplicated
@@ -523,10 +517,7 @@ export class Block {
 		*/
 
 		{
-			const button = butrow
-				.append('button')
-				.text('Tracks')
-				.style('margin-left', '10px')
+			const button = butrow.append('button').text('Tracks').style('margin-left', '10px')
 			const tip = new Menu({ padding: 'none' })
 			button.on('click', event => {
 				// remove past state for refreshing tk data
@@ -935,11 +926,7 @@ export class Block {
 			return
 		}
 		let fold = true
-		const img = div
-			.append('img')
-			.attr('class', 'sja_clbb')
-			.attr('src', data.src)
-			.style('height', '80px')
+		const img = div.append('img').attr('class', 'sja_clbb').attr('src', data.src).style('height', '80px')
 		img.on('click', () => {
 			if (fold) {
 				fold = false
@@ -1123,9 +1110,7 @@ export class Block {
 							: [Math.floor(exoncumbp / 3) + 1, Math.floor((exoncumbp + exonlen) / 3) + 1]
 					)
 					.range([0, this.width])
-				const axis = axisTop()
-					.scale(scale)
-					.tickFormat(d3format('d'))
+				const axis = axisTop().scale(scale).tickFormat(d3format('d'))
 				const __g = this.coord.axesg.append('g').attr('transform', 'translate(0,0)')
 				client.axisstyle({
 					axis: __g.call(axis),
@@ -1173,12 +1158,8 @@ export class Block {
 					this.error('unknown gmmode for making single ruler: ' + this.gmmode)
 					return
 				}
-				const scale = scaleLinear()
-					.domain(domain)
-					.range(range)
-				const axis = axisTop()
-					.scale(scale)
-					.tickFormat(tickformat)
+				const scale = scaleLinear().domain(domain).range(range)
+				const axis = axisTop().scale(scale).tickFormat(tickformat)
 				const __g = this.coord.axesg.append('g').attr('transform', 'translate(0,0)')
 				client.axisstyle({
 					axis: __g.call(axis),
@@ -1337,13 +1318,8 @@ export class Block {
 
 		const r = this.rglst[this.startidx]
 
-		const scale = scaleLinear()
-			.domain(domain)
-			.range(range)
-		const axis = axisTop()
-			.scale(scale)
-			.tickSize(this.rulerticksize)
-			.ticks(maxticknumber)
+		const scale = scaleLinear().domain(domain).range(range)
+		const axis = axisTop().scale(scale).tickSize(this.rulerticksize).ticks(maxticknumber)
 
 		if (r.stop - r.start > 1000000) {
 			axis.tickFormat(d3format('s'))
@@ -1383,11 +1359,7 @@ export class Block {
 				.style('display', 'block')
 				.style('position', 'absolute')
 				.style('z-index', rulergrabzindex)
-			const rect = svg
-				.append('rect')
-				.attr('fill', color)
-				.attr('fill-opacity', 0.2)
-				.attr('stroke', color)
+			const rect = svg.append('rect').attr('fill', color).attr('fill-opacity', 0.2).attr('stroke', color)
 			const text0 = svg
 				.append('text')
 				.attr('text-anchor', 'middle')
@@ -1967,9 +1939,7 @@ reverseorient() {
 
 		const p2 = sec1.append('div').style('margin-top', '10px')
 
-		p2.append('span')
-			.text(gm.isoform)
-			.style('padding-right', '10px')
+		p2.append('span').text(gm.isoform).style('padding-right', '10px')
 
 		p2.append('a')
 			.attr('target', '_blank')
@@ -2382,11 +2352,7 @@ seekrange(chr,start,stop) {
 					.classed('sja_opaque8', true)
 					.text(1)
 					.on('click', event => {
-						const div = this.tip
-							.clear()
-							.showunder(event.target)
-							.d.append('div')
-							.style('padding', '20px')
+						const div = this.tip.clear().showunder(event.target).d.append('div').style('padding', '20px')
 						div
 							.append('div')
 							.text('Click to remove')
@@ -2395,10 +2361,7 @@ seekrange(chr,start,stop) {
 							.style('margin-bottom', '10px')
 						for (const tk of this.tklst) {
 							if (!tk.ds || tk.ds.parentname != paname) continue
-							const row = div
-								.append('div')
-								.classed('sja_menuoption', true)
-								.text(tk.ds.label)
+							const row = div.append('div').classed('sja_menuoption', true).text(tk.ds.label)
 							row.on('click', () => {
 								row.remove()
 								this.deletecustomdsbyname(tk.ds.label)
@@ -2610,24 +2573,16 @@ seekrange(chr,start,stop) {
 
 		tk.gmiddle = tk.g.append('g').attr('transform', 'translate(' + (this.leftheadw + this.lpad) + ',0)')
 
-		tk.tkbodybgrect = tk.gmiddle
-			.append('rect')
-			.attr('fill', 'white')
-			.attr('fill-opacity', 0)
+		tk.tkbodybgrect = tk.gmiddle.append('rect').attr('fill', 'white').attr('fill-opacity', 0)
 
-		tk.glider = tk.gmiddle
-			.append('g')
-			.attr('transform', 'translate(0,0)')
-			.style('cursor', 'default')
+		tk.glider = tk.gmiddle.append('g').attr('transform', 'translate(0,0)').style('cursor', 'default')
 
 		tk.gleft = tk.g.append('g').attr('transform', 'translate(' + this.leftheadw + ',0)')
 		tk.gright = tk.g
 			.append('g')
 			.attr('transform', 'translate(' + (this.leftheadw + this.lpad + this.width + this.rpad) + ',0)')
 
-		tk.tklabel = this.maketklefthandle(tk)
-			.attr('class', null)
-			.attr('font-weight', 'bold')
+		tk.tklabel = this.maketklefthandle(tk).attr('class', null).attr('font-weight', 'bold')
 
 		// tk name may be available now or will be defined later
 		if (tk.name) {
@@ -2693,10 +2648,7 @@ seekrange(chr,start,stop) {
 			g: tk.gmiddle.append('g')
 		}
 		tk.cloak = tk.gmiddle.append('g').attr('transform', 'scale(0)')
-		tk.cloakbox = tk.cloak
-			.append('rect')
-			.attr('fill', 'white')
-			.attr('fill-opacity', 0)
+		tk.cloakbox = tk.cloak.append('rect').attr('fill', 'white').attr('fill-opacity', 0)
 		tk.cloaktext = tk.cloak
 			.append('text')
 			.text('Loading ...')
@@ -2706,10 +2658,7 @@ seekrange(chr,start,stop) {
 			.attr('font-size', '18px')
 			.attr('text-anchor', 'middle')
 			.attr('dominant-baseline', 'middle')
-		tk.cloakline = tk.cloak
-			.append('line')
-			.attr('stroke', common.defaultcolor)
-			.attr('stroke-width', '2px')
+		tk.cloakline = tk.cloak.append('line').attr('stroke', common.defaultcolor).attr('stroke-width', '2px')
 		// set default if missing from template
 		switch (tk.type) {
 			case client.tkt.bampile:
@@ -3150,12 +3099,7 @@ seekrange(chr,start,stop) {
 		const w = Number(this.svg.attr('width')),
 			h = Number(this.svg.attr('height'))
 		this.gCloak.attr('transform', 'scale(1)')
-		this.gCloakRect
-			.attr('width', w)
-			.attr('height', h)
-			.transition()
-			.duration(600)
-			.attr('fill-opacity', 0.5)
+		this.gCloakRect.attr('width', w).attr('height', h).transition().duration(600).attr('fill-opacity', 0.5)
 		this.gCloakWord
 			.attr('x', w / 2)
 			.attr('y', h / 2)
@@ -3171,22 +3115,14 @@ seekrange(chr,start,stop) {
 		tk.busy = true
 		this.busy = true
 		tk.cloak.attr('transform', 'scale(1)')
-		tk.cloakbox
-			.attr('width', this.width)
-			.attr('height', tk.height)
-			.transition()
-			.duration(600)
-			.attr('fill-opacity', 0.5)
+		tk.cloakbox.attr('width', this.width).attr('height', tk.height).transition().duration(600).attr('fill-opacity', 0.5)
 		tk.cloaktext
 			.attr('x', this.width / 2)
 			.attr('y', tk.height / 2)
 			.transition()
 			.duration(600)
 			.attr('fill-opacity', 1)
-		tk.cloakline
-			.attr('y1', tk.height)
-			.attr('y2', tk.height)
-			.attr('x2', 0)
+		tk.cloakline.attr('y1', tk.height).attr('y2', tk.height).attr('x2', 0)
 		if (tk.gerror) {
 			tk.gerror.remove()
 		}
@@ -3346,6 +3282,7 @@ seekrange(chr,start,stop) {
 
 	bedj_tooltip(tk, data, panel) {
 		// process data loaded from main tk and subpanel
+		// TODO move this to bedj.js as this is type-specific logic
 		let tipnum = 0
 		if (data.mapisoform) tipnum += data.mapisoform.length
 		if (data.mapexon) tipnum += data.mapexon.length
@@ -3453,26 +3390,32 @@ seekrange(chr,start,stop) {
 					if (tk.__isgene) {
 						// this flag is true for native gene tracks
 						// only allow this menu option for these tracks, and won't show it for custom gene tracks
-						img.on('click', event => {
-							const p = pointer(event, img.node())
-							for (const i of data.mapisoform) {
-								const y = (i.y - 1) * (tk.stackheight + tk.stackspace)
-								if (i.x1 < p[0] && i.x2 > p[0] && y < p[1] && y + tk.stackheight > p[1] && i.isoform) {
-									// hit an isoform
-									tk.tkconfigtip
-										.clear()
-										.show(event.clientX - 40, event.clientY)
-										.d.append('div')
-										.attr('class', 'sja_menuoption')
-										.text('Gene/protein view for ' + i.isoform)
-										.on('click', () => {
-											tk.tkconfigtip.hide()
-											this.to_proteinview(i.isoform, tk)
-										})
-									return
+
+						if (this.tklst.find(i => i.type == 'bam')) {
+							// currently there's a bam tk showing in block; as it does not work for protein view yet, disable this option
+							// this check can be deleted with a fix e.g. when bam tk is able to properly show pileup-only and no alignment over whole gene
+						} else {
+							img.on('click', event => {
+								const p = pointer(event, img.node())
+								for (const i of data.mapisoform) {
+									const y = (i.y - 1) * (tk.stackheight + tk.stackspace)
+									if (i.x1 < p[0] && i.x2 > p[0] && y < p[1] && y + tk.stackheight > p[1] && i.isoform) {
+										// hit an isoform
+										tk.tkconfigtip
+											.clear()
+											.show(event.clientX - 40, event.clientY)
+											.d.append('div')
+											.attr('class', 'sja_menuoption')
+											.text('Gene/protein view for ' + i.isoform)
+											.on('click', () => {
+												tk.tkconfigtip.hide()
+												this.to_proteinview(i.isoform, tk)
+											})
+										return
+									}
 								}
-							}
-						})
+							})
+						}
 					}
 				} else {
 					img.on('click', null)
@@ -3807,10 +3750,7 @@ seekrange(chr,start,stop) {
 				}
 			})
 		client.sketchGene(
-			row1
-				.append('div')
-				.style('vertical-align', 'middle')
-				.style('display', 'inline-block'),
+			row1.append('div').style('vertical-align', 'middle').style('display', 'inline-block'),
 			this.usegm,
 			width,
 			20,
@@ -3820,11 +3760,7 @@ seekrange(chr,start,stop) {
 			true,
 			this.usegm.strand == '-'
 		)
-		row1
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '13px')
-			.text(client.gmmode.genomic)
+		row1.append('div').style('display', 'inline-block').style('padding', '13px').text(client.gmmode.genomic)
 		// 2 - splicing rna
 		if (this.usegm.exon.length > 1) {
 			row2 = holder
@@ -3844,20 +3780,12 @@ seekrange(chr,start,stop) {
 					}
 				})
 			client.sketchSplicerna(
-				row2
-					.append('div')
-					.style('vertical-align', 'middle')
-					.style('display', 'inline-block')
-					.style('padding', '0px'),
+				row2.append('div').style('vertical-align', 'middle').style('display', 'inline-block').style('padding', '0px'),
 				this.usegm,
 				width,
 				common.exoncolor
 			)
-			row2
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '13px')
-				.text(client.gmmode.splicingrna)
+			row2.append('div').style('display', 'inline-block').style('padding', '13px').text(client.gmmode.splicingrna)
 		}
 		// 3 - whole rna
 		row3 = holder
@@ -3877,11 +3805,7 @@ seekrange(chr,start,stop) {
 				this.setgmmode(client.gmmode.exononly, true)
 			})
 		client.sketchRna(
-			row3
-				.append('div')
-				.style('vertical-align', 'middle')
-				.style('display', 'inline-block')
-				.style('padding', '0px'),
+			row3.append('div').style('vertical-align', 'middle').style('display', 'inline-block').style('padding', '0px'),
 			this.usegm,
 			width,
 			common.exoncolor
@@ -3910,19 +3834,11 @@ seekrange(chr,start,stop) {
 					this.setgmmode(client.gmmode.protein, true)
 				})
 			client.sketchProtein2(
-				row4
-					.append('div')
-					.style('vertical-align', 'middle')
-					.style('display', 'inline-block')
-					.style('padding', '0px'),
+				row4.append('div').style('vertical-align', 'middle').style('display', 'inline-block').style('padding', '0px'),
 				this.usegm,
 				width
 			)
-			row4
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '13px')
-				.text(client.gmmode.protein)
+			row4.append('div').style('display', 'inline-block').style('padding', '13px').text(client.gmmode.protein)
 		}
 		if (this.allgm.length > 1) {
 			row5 = holder
@@ -4279,10 +4195,7 @@ seekrange(chr,start,stop) {
 				})
 		})
 
-		obj.subpaneltkbgrect = obj.gtksubpanel
-			.append('rect')
-			.attr('fill', 'white')
-			.attr('fill-opacity', 0)
+		obj.subpaneltkbgrect = obj.gtksubpanel.append('rect').attr('fill', 'white').attr('fill-opacity', 0)
 
 		obj.glider = obj.gtksubpanel.append('g')
 
@@ -4304,10 +4217,7 @@ seekrange(chr,start,stop) {
 		}
 
 		obj.cloak = obj.gtksubpanel.append('g').attr('transform', 'scale(0)')
-		obj.cloakbox = obj.cloak
-			.append('rect')
-			.attr('fill', 'white')
-			.attr('fill-opacity', 0)
+		obj.cloakbox = obj.cloak.append('rect').attr('fill', 'white').attr('fill-opacity', 0)
 		obj.cloaktext = obj.cloak
 			.append('text')
 			.text('Loading ...')
@@ -4569,20 +4479,15 @@ seekrange(chr,start,stop) {
 					.text(pos > 1000000 ? d3format('s')(pos) : d3format(',d')(pos))
 					.attr('font-size', this.rulerfontsize)
 					.attr('font-family', client.font)
-					.each(function() {
+					.each(function () {
 						w = this.getBBox().width
 					})
 					.remove()
 				maxticknumber = Math.floor(panel.width / (w + 60))
 			}
 
-			const scale = scaleLinear()
-				.domain(domain)
-				.range(range)
-			const axis = axisTop()
-				.scale(scale)
-				.tickSize(this.rulerticksize)
-				.ticks(maxticknumber)
+			const scale = scaleLinear().domain(domain).range(range)
+			const axis = axisTop().scale(scale).tickSize(this.rulerticksize).ticks(maxticknumber)
 			if (panel.stop - panel.start > 1000000) {
 				axis.tickFormat(d3format('s'))
 			} else {
@@ -4653,11 +4558,7 @@ seekrange(chr,start,stop) {
 				.style('padding', '10px')
 				.style('margin', '20px 0px 20px 0px')
 			const row = div.append('div')
-			row
-				.append('span')
-				.text('Highlight')
-				.style('opacity', 0.5)
-				.style('padding-right', '10px')
+			row.append('span').text('Highlight').style('opacity', 0.5).style('padding-right', '10px')
 			row
 				.append('button')
 				.text('Select a region')
@@ -4672,10 +4573,7 @@ seekrange(chr,start,stop) {
 				.text('Enter regions')
 				.on('click', () => {
 					tip.clear()
-					const ta = tip.d
-						.append('textarea')
-						.attr('rows', 5)
-						.attr('cols', 30)
+					const ta = tip.d.append('textarea').attr('rows', 5).attr('cols', 30)
 					const row = tip.d.append('div').style('margin-top', '3px')
 					row
 						.append('button')
@@ -4862,10 +4760,7 @@ seekrange(chr,start,stop) {
 						const tr = table.append('tr')
 						const td1 = tr.append('td')
 						if (findtkindex != -1) {
-							td1
-								.html('&nbsp;&nbsp;SHOWN')
-								.style('color', '#858585')
-								.style('font-size', '.8em')
+							td1.html('&nbsp;&nbsp;SHOWN').style('color', '#858585').style('font-size', '.8em')
 						}
 
 						tr.append('td')
@@ -5346,10 +5241,7 @@ function init_cursorhlbar(block) {
 			}
 
 			if (barx) {
-				block.cursorhlbar
-					.attr('x', barx)
-					.attr('width', barw)
-					.attr('height', block.totalheight())
+				block.cursorhlbar.attr('x', barx).attr('width', barw).attr('height', block.totalheight())
 			}
 		})
 		.on('mouseout', () => {
