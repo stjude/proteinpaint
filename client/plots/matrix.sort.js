@@ -5,14 +5,10 @@
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
 	validateSettings(s)
-	if (s.sortSamplesBy == 'asListed') {
+	if (s.sortSamplesBy == 'asListed' || self.config.chartType == 'hierCluster') {
 		//no additional logic required
 		return (a, b) => {
-			for (const s of self.sampleOrder) {
-				if (s.row.sample === a.sample) return -1
-				if (s.row.sample === b.sample) return 1
-				return 0
-			}
+			return self.asListedSampleOrder.indexOf(a.sample) - self.asListedSampleOrder.indexOf(b.sample)
 		}
 	}
 
@@ -278,7 +274,7 @@ function findMatchingValue(annoValues, filterValues) {
 }
 
 export function getTermSorter(self, s) {
-	if (s.sortTermsBy == 'asListed') {
+	if (s.sortTermsBy == 'asListed' || self.config.heirCluster) {
 		//no additional logic required
 		return (a, b) => a.index - b.index
 	}
