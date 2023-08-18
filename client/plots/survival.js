@@ -1135,7 +1135,8 @@ function setInteractivity(self) {
 			const values = structuredClone(t2?.term.values || self.legendValues)
 			const term2 = structuredClone(t2)
 			term2.term.values = values
-			values[d.seriesId].color = color
+			if (!values) term2.term.values = { [d.seriesId]: {} }
+			term2.term.values[d.seriesId].color = color
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.id,

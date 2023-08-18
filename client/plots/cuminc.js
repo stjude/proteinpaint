@@ -129,7 +129,7 @@ export class Cuminc {
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const series of chart.serieses) {
-			const color = this.config.term2?.term.values[series.seriesId]?.color
+			const color = this.config.term2?.term.values?.[series.seriesId]?.color
 			const c = {
 				orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 			}
@@ -594,7 +594,7 @@ class MassCumInc {
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				const color = this.config.term2?.term.values[series.seriesId]?.color
+				const color = this.config.term2?.term.values?.[series.seriesId]?.color
 				const c = {
 					orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 				}
@@ -1179,7 +1179,10 @@ function setInteractivity(self) {
 				.attr('type', 'color')
 				.attr('value', color)
 				.on('change', () => {
-					const term2 = structuredClone(self.config.term2)
+					const t2 = self.config.term2
+					const term2 = structuredClone(t2)
+					if (!term2.term.values) term2.term.values = { [d.seriesId]: {} }
+					else if (!term2.term.values[d.seriesId]) term2.term.values[d.seriesId] = {}
 					term2.term.values[d.seriesId].color = input.node().value
 					self.app.dispatch({
 						type: 'plot_edit',
