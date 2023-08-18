@@ -188,6 +188,7 @@ tape('\n', function (test) {
 
 tape('sortSamplesBy = asListed', test => {
 	const { self, settings, rows } = getArgs({ sortSamplesBy: 'asListed' })
+	self.asListedSampleOrder = [1, 2, 3, 4, 5]
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
 	test.deepEqual(
