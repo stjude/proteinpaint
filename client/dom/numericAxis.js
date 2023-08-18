@@ -114,6 +114,10 @@ export function makeNumericAxisConfig({ holder, callback, setting, noPercentile 
 					alert('invalid min value')
 					return
 				}
+				if (min >= max) {
+					alert('Min must be smaller than max')
+					return
+				}
 				callback({ fixed: { min, max } })
 			})
 	}

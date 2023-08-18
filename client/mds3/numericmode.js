@@ -69,10 +69,7 @@ export function renderNumericMode(nm, data, tk, block) {
 	if (!nm.axisg) nm.axisg = tk.gleft.append('g')
 	if (!nm.axisheight) nm.axisheight = 150
 
-	// skewer.g <g> is always there. will create nm plot into it
-	// new d3 group selection is registered at skewer.nmg
-	tk.skewer.g.selectAll('*').remove()
-	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
+	clearTk(tk)
 
 	numeric_make(nm, tk, block)
 
@@ -90,9 +87,21 @@ export function renderNumericMode(nm, data, tk, block) {
 	)
 }
 
+function clearTk(tk) {
+	// skewer.g <g> is always there. will create nm plot into it
+	// new d3 group selection is registered at skewer.nmg
+	tk.skewer.g.selectAll('*').remove()
+	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
+}
+
 function numeric_make(nm, tk, block) {
 	/*
 	 */
+
+	if (!nm.axisSetting) {
+		// should be fine to create default setting when missing
+		nm.axisSetting = { auto: 1 }
+	}
 
 	const data = nm.data
 
@@ -136,7 +145,13 @@ function numeric_make(nm, tk, block) {
 				m._y = 0
 			} else {
 				// has valid value, map to axis
-				m._y = numscale(m.__value_use)
+				if (m.__value_use < nm.minvalue) {
+					m._y = 0
+				} else if (m.__value_use > nm.maxvalue) {
+					m._y = nm.axisheight
+				} else {
+					m._y = numscale(m.__value_use)
+				}
 			}
 		}
 	}
@@ -756,23 +771,19 @@ function m_mouseout(m, tk) {
 	tk.pica.g.selectAll('*').remove()
 }
 
-function setup_axis_scale(data, nm, tk) {
-	/*
-based on the source of axis scaling,
-decide following things about the y axis:
-- scale range, by different types of scales
-- name label
+/*
+based on numeric datatype selector, determine numeric value for each m
+
+if axisSetting.auto=1, determine min/max range
 */
-
-	nm.minvalue = 0
-	nm.maxvalue = 0
-
+function setup_axis_scale(data, nm, tk) {
 	for (const g of data) {
 		for (const m of g.mlst) {
 			delete m.__value_use
 			delete m.__value_missing
 		}
 	}
+
 	if (nm.byAttribute) {
 		for (const g of data) {
 			for (const m of g.mlst) {
@@ -784,17 +795,33 @@ decide following things about the y axis:
 				}
 			}
 		}
+		// TODO info field
 	} else {
 		throw 'unknown method of getting value'
 	}
 
-	for (const g of data) {
-		for (const m of g.mlst) {
-			if ('__value_use' in m) {
-				nm.minvalue = Math.min(nm.minvalue, m.__value_use)
-				nm.maxvalue = Math.max(nm.maxvalue, m.__value_use)
+	if (nm.axisSetting.auto) {
+		nm.minvalue = null
+		nm.maxvalue = null
+
+		for (const g of data) {
+			for (const m of g.mlst) {
+				if ('__value_use' in m) {
+					if (nm.minvalue == null) {
+						nm.minvalue = m.__value_use
+						nm.maxvalue = m.__value_use
+					} else {
+						nm.minvalue = Math.min(nm.minvalue, m.__value_use)
+						nm.maxvalue = Math.max(nm.maxvalue, m.__value_use)
+					}
+				}
 			}
 		}
+	} else if (nm.axisSetting.fixed) {
+		nm.minvalue = nm.axisSetting.fixed.min
+		nm.maxvalue = nm.axisSetting.fixed.max
+	} else {
+		throw 'unknown axisSetting'
 	}
 }
 
@@ -864,7 +891,7 @@ function render_axis(tk, nm, block) {
 		.attr('font-size', nm.dotwidth)
 		.attr('dominant-baseline', 'central')
 		.attr('text-anchor', 'end')
-		.attr('class', 'sjpp-mds3-nm-axislabel') // for testing
+		.attr('class', 'sjpp-mds3-nm-axislabel sja_clbtext2') // for testing
 		.attr('y', nm.axisheight / 2)
 		.attr('x', -nm.axisWidth)
 		.text(nm.label || defaultLabel) // if too long can use ellipsis, hover to show full
@@ -887,17 +914,16 @@ function render_axis(tk, nm, block) {
 					tk._finish()
 				})
 
-			/*
 			makeNumericAxisConfig({
-				holder: tk.menutip.d.append('div').style('margin','10px'),
-				noPercentile:true,
-				callback:s=>{
+				holder: tk.menutip.d.append('div').style('margin', '10px'),
+				noPercentile: true,
+				callback: s => {
 					nm.axisSetting = s
-					// TODO
+					clearTk(tk)
+					numeric_make(nm, tk, block)
 				},
 				setting: nm.axisSetting
 			})
-			*/
 		})
 
 	tk.skewer.maxwidth = nm.axisWidth + w
