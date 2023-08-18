@@ -3,3 +3,4 @@ Features:
 Fixes:
 - Update gene filter to restrict filtering for multiple alteration groups.
 - Ignore hidden values when conducting association tests.
+- For matrix plot, when "Group Samples By" a variable that has predefined order, use that order for subgroups. 
