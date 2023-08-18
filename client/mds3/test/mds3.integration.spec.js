@@ -372,6 +372,7 @@ tape('Numeric mode custom dataset, with mode change', test => {
 				skewerModes,
 				name: 'AA sites with numbers',
 				custom_variants,
+				axisSetting: { auto: 1 },
 				callbackOnRender
 			}
 		]
@@ -404,17 +405,31 @@ tape('Numeric mode custom dataset, with mode change', test => {
 		tk.skewer.viewModes[0].inuse = false
 		tk.skewer.viewModes[1].inuse = true
 
-		tk.callbackOnRender = viewModeChange
+		tk.callbackOnRender = changeNM_autoScale
 		tk.load()
 	}
 
-	function viewModeChange(tk, bb) {
+	function changeNM_autoScale(tk, bb) {
+		const nm = tk.skewer.viewModes.find(i => i.inuse)
 		const n = tk.g.select('.sjpp-mds3-nm-axislabel')
 		test.equal(
-			tk.skewer.viewModes.find(i => i.inuse).label,
+			nm.label,
 			n.text(),
 			`numericmode axis label "${n.text()}" matches with view mode obj after switching mode`
 		)
+		test.equal(nm.minvalue, 4, '(auto) min=4')
+		test.equal(nm.maxvalue, 6, '(auto) max=6')
+
+		// change axis to fixed, and rerender
+		nm.axisSetting = { fixed: { min: 0.5, max: 2.5 } }
+		tk.callbackOnRender = changeNM_fixedScale
+		tk.load()
+	}
+
+	function changeNM_fixedScale(tk, bb) {
+		const nm = tk.skewer.viewModes.find(i => i.inuse)
+		test.equal(nm.minvalue, 0.5, '(fixed) min=0.5')
+		test.equal(nm.maxvalue, 2.5, '(fixed) max=2.5')
 		if (test._ok) holder.remove()
 		test.end()
 	}
