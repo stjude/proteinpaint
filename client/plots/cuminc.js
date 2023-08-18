@@ -44,7 +44,7 @@ export class Cuminc {
 			legendDiv: holder.append('div').style('margin', '5px'),
 			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-		self.tip = new Menu({ padding: '5px' })
+		this.tip = new Menu({ padding: '5px' })
 		this.lineFxn = line()
 			.curve(curveStepAfter)
 			.x(c => c.scaledX)
@@ -130,7 +130,9 @@ export class Cuminc {
 		const legendItems = []
 		for (const series of chart.serieses) {
 			const color = this.config.term2?.term.values[series.seriesId]?.color
-			const c = { orig: color || this.colorScale(series.seriesId) }
+			const c = {
+				orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
+			}
 			c.rgb = rgb(c.orig)
 			c.adjusted = c.rgb.toString()
 			this.term2toColor[series.seriesId] = c
@@ -201,6 +203,8 @@ class MassCumInc {
 			legendDiv: holder.append('div').style('margin', '5px'),
 			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
+		this.tip = new Menu({ padding: '5px' })
+
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
 		this.settings = Object.assign({}, this.opts.settings)
@@ -355,6 +359,12 @@ class MassCumInc {
 							type: 'checkbox',
 							chartType: 'cuminc',
 							settingsKey: 'ciVisible'
+						},
+						{
+							label: 'Default color',
+							type: 'color',
+							chartType: 'cuminc',
+							settingsKey: 'defaultColor'
 						}
 					]
 				})
@@ -585,7 +595,9 @@ class MassCumInc {
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				const color = this.config.term2?.term.values[series.seriesId]?.color
-				const c = { orig: color || this.colorScale(series.seriesId) }
+				const c = {
+					orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
+				}
 				c.rgb = rgb(c.orig)
 				c.adjusted = c.rgb.toString()
 				this.term2toColor[series.seriesId] = c
@@ -973,7 +985,7 @@ function setRenderers(self) {
 			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
 			atRiskG = mainG.append('g').attr('class', 'sjpp-cuminc-atrisk')
-			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
+			atRiskG.on('click', self.legendClick)
 
 			line = mainG
 				.append('line')
@@ -990,7 +1002,6 @@ function setRenderers(self) {
 			xTitle = axisG.select('.sjpcb-cuminc-x-title')
 			yTitle = axisG.select('.sjpcb-cuminc-y-title')
 			atRiskG = mainG.select('.sjpp-cuminc-atrisk')
-			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
 			plotRect = mainG.select('.sjpcb-plot-tip-rect')
 			line = mainG.select('.sjpcb-plot-tip-line')
 		}
@@ -1120,8 +1131,33 @@ function setInteractivity(self) {
 	self.legendClick = function (event) {
 		event.stopPropagation()
 		const d = event.target.__data__
-		if (d === undefined || !('seriesId' in d || 'dataId' in d)) return
-		const menu = new Menu({ padding: '1px' })
+		if (d === undefined) return
+		const menu = self.tip.clear()
+		if (self.config.term2 == null) {
+			const color = rgb(self.settings.defaultColor).formatHex()
+			const colorDiv = menu.d
+				.append('div')
+				.attr('class', 'sja_sharp_border')
+				.style('padding', '0px 10px')
+				.text('Edit color:')
+			const input = colorDiv
+				.append('input')
+				.attr('type', 'color')
+				.attr('value', color)
+				.on('change', () => {
+					const color = input.node().value
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: { settings: { cuminc: { defaultColor: color } } }
+					})
+					menu.hide()
+				})
+			menu.show(event.clientX, event.clientY)
+			return
+		}
+		if (!d.seriesId) return
+
 		menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -1137,7 +1173,7 @@ function setInteractivity(self) {
 				.append('div')
 				.attr('class', 'sja_sharp_border')
 				.style('padding', '0px 10px')
-				.text('Color:')
+				.text('Edit color:')
 			const input = colorDiv
 				.append('input')
 				.attr('type', 'color')
@@ -1204,7 +1240,8 @@ const defaultSettings = JSON.stringify({
 		},
 		axisTitleFontSize: 16,
 		xAxisOffset: 5,
-		yAxisOffset: -5
+		yAxisOffset: -5,
+		defaultColor: '#2077b4'
 	}
 })
 
