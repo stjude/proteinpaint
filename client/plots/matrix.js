@@ -12,8 +12,9 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin } from '#shared/common'
+import { sample_match_termvaluesetting } from '#shared/filter'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.sort'
-import { dofetch3 } from '../common/dofetch'
+import { dofetch3 } from '#common/dofetch'
 export { getPlotConfig } from './matrix.config'
 
 export class Matrix {
@@ -309,7 +310,7 @@ export class Matrix {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	async setData(_data) {
 		const terms = []
-		const termgroups = this.chartType == 'geneExpression' ? this.config.termgroups.slice(1) : this.config.termgroups
+		const termgroups = this.chartType == 'hierCluster' ? this.config.termgroups.slice(1) : this.config.termgroups
 		for (const grp of termgroups) {
 			terms.push(...grp.lst)
 		}
@@ -546,22 +547,16 @@ export class Matrix {
 		const values = 'value' in anno ? [anno.value] : anno.values
 		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
-		const filteredValues = values.filter(v => {
-			if (!valueFilter) return true
-			if (valueFilter.type == 'tvs') {
-				const matched = true
-				// quick fix: assume tvs values are joined by "and", not "or"
-				// TODO: reuse the filter.js code/data format for a more flexible filter configuration
-				for (const vf of valueFilter.tvs.values) {
-					if (v[vf.key] === vf.value && valueFilter.isnot) return false
-					else if (v[vf.key] !== vf.value && !valueFilter.isnot) return false
-				}
-				return matched
-			} else {
-				// TODO: handle non-tvs type value filter
-				throw `unknown matrix value filter type='${valueFilter.type}'`
-			}
-		})
+		const filteredValues = !valueFilter
+			? values
+			: values.filter(v => {
+					if (valueFilter.type == 'tvs') {
+						return sample_match_termvaluesetting(v, valueFilter, tw.term)
+					} else {
+						// TODO: handle non-tvs type value filter
+						throw `unknown matrix value filter type='${valueFilter.type}'`
+					}
+			  })
 
 		const renderedValues = []
 		if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)

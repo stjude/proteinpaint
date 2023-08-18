@@ -113,7 +113,8 @@ export function setRenderers(self) {
 				},
 				false
 			)
-			const dataURL = reader.readAsDataURL(await canvas.convertToBlob({ quality: 1 }))
+			const blob = await canvas.convertToBlob({ quality: 1 })
+			const dataURL = reader.readAsDataURL(blob)
 		} else {
 			_g?.remove()
 			self.dom.seriesesG
@@ -388,17 +389,17 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${legendX},${legendY})`)
 
 		if (hc.xDendrogramHeight) {
-			const dendroX = leftBox.width - l.left.offset + d.xOffset
+			const dendroX = leftBox.width - l.left.offset + d.xOffset - d.dx / 2
 			self.dom.hcClipRect
-				.attr('x', dendroX + hcWidth) //d.xOffset + d.seriesXoffset - 30)
+				.attr('x', dendroX + hcWidth + d.dx / 2)
 				.attr('y', 0)
 				.attr('width', d.mainw + 3)
 				// add 500 so that the column labels are not clipped
-				.attr('height', d.mainh + 500)
+				.attr('height', d.mainh + hc.yDendrogramHeight + 500)
 
 			// for easy reference when scrolling interactively
 			self.topDendroX = dendroX + d.seriesXoffset
-			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX},0)`)
+			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, -5)`)
 			const y = -0.5 * s.rowh + (l.top.display == 'none' ? 0 : topBox.height)
 			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, ${y})`)
 		}
