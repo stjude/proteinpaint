@@ -167,8 +167,14 @@ class TdbSurvival {
 							chartType: 'survival',
 							settingsKey: 'atRiskVisible',
 							title: 'Display the at-risk counts'
-						}
+						},
 						//{label: 'At-risk label offset', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskLabelOffset'},
+						{
+							label: 'Default color',
+							type: 'color',
+							chartType: 'survival',
+							settingsKey: 'defaultColor'
+						}
 					]
 				})
 			}
@@ -666,7 +672,7 @@ function setRenderers(self) {
 			xTitle = axisG.append('g').attr('class', 'sjpp-survival-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpp-survival-y-title')
 			atRiskG = mainG.append('g').attr('class', 'sjpp-survival-atrisk')
-			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
+			atRiskG.on('click', self.legendClick)
 			line = mainG
 				.append('line')
 				.attr('class', 'sjpcb-plot-tip-line')
@@ -682,7 +688,6 @@ function setRenderers(self) {
 			xTitle = axisG.select('.sjpp-survival-x-title')
 			yTitle = axisG.select('.sjpp-survival-y-title')
 			atRiskG = mainG.select('.sjpp-survival-atrisk')
-			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
 			plotRect = mainG.select('.sjpcb-plot-tip-rect')
 			line = mainG.select('.sjpcb-plot-tip-line')
 		}
@@ -985,13 +990,11 @@ function setInteractivity(self) {
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 		if (!data.seriesId && !data.dataId) {
 			if (!term2) {
-				const label = self.dom.legendTip.clear().d.append('label')
-				label.append('span').style('vertical-align', 'middle').style('line-height', '25px').html('Edit color ')
+				const label = self.dom.legendTip.clear().d.append('div').html('Edit color: ')
 				const input = label
 					.append('input')
 					.attr('type', 'color')
 					.attr('value', self.settings.defaultColor)
-					.style('vertical-align', 'top')
 					.on('change', () => self.adjustColor(input.property('value'), d))
 				self.dom.legendTip.show(event.clientX, event.clientY)
 			}
@@ -1046,13 +1049,12 @@ function setInteractivity(self) {
 			//label: 'Color',
 			//callback: d => {}
 			setInput: holder => {
-				const label = holder.append('label')
-				label.append('span').style('vertical-align', 'middle').style('line-height', '25px').html('Edit color ')
+				const label = holder.append('div')
+				label.html('Edit color: ')
 				const input = label
 					.append('input')
 					.attr('type', 'color')
 					.attr('value', self.term2toColor[d.seriesId].hex)
-					.style('vertical-align', 'top')
 					.on('change', () => self.adjustColor(input.property('value'), d))
 			}
 		})
