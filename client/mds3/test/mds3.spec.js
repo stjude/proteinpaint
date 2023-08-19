@@ -11,6 +11,7 @@ GDC - GENCODE transcript ENST00000407796
 GDC - GENCODE gene ENSG00000133703
 GDC - RefSeq NM_005163
 GDC - KRAS SSM ID
+GDC - ssm by range
 geneSearch4GDCmds3
 
 ### ash dataset is based on bcf file with samples
@@ -167,6 +168,30 @@ tape('GDC - KRAS SSM ID', test => {
 		test.ok(tk.skewer.hlssmid.has(ssm_id), 'highlighted ssm id is in tk.skewer.hlssmid{}')
 		const hlbox = tk.skewer.g.select('.sja_mds3_skewer_ssmhlbox')?._groups?.[0]?.[0]?.tagName
 		test.equal(hlbox, 'rect', '<rect> is rendered for ssm highlight box')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('GDC - ssm by range', test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38',
+		block: 1,
+		nobox: 1,
+		position: 'chr14:104769348-104795751', // akt1
+		tracks: [
+			{ type: 'mds3', dslabel: 'GDC', callbackOnRender }
+			//{type:'bedj',file:'anno/refGene.hg38.gz',name:'RefGene',__isgene:true}
+		]
+	})
+
+	function callbackOnRender(tk, bb) {
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
+		// FIXME click sample left label breaks
 		if (test._ok) holder.remove()
 		test.end()
 	}

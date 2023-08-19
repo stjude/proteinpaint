@@ -67,25 +67,14 @@ type GenomicPositionEntry = {
 	stop: number
 }
 
-type VariablesRange2VariantsArgs = {
-	set_id: string
-	rglst: GenomicPositionEntry[]
-}
-
 type Chr2bcffile = { [index: string]: string }
-
-type GDCRangeEntry = {
-	query: string
-	variables: (p: VariablesRange2VariantsArgs) => void
-}
 
 type ByRangeEntry = {
 	bcffile?: string
 	file?: string
 	infoFields?: InfoFieldsEntry[]
 	chr2bcffile?: Chr2bcffile
-	//GDC
-	gdcapi?: GDCRangeEntry
+	gdcapi?: boolean
 }
 
 type VariantUrl = {
