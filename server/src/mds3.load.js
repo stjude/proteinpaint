@@ -319,7 +319,9 @@ async function query_geneCnv(q, ds) {
 		if (!ds.queries.geneCnv.bygene) throw 'q.gene provided but geneCnv.bygene missing'
 		return await ds.queries.geneCnv.bygene.get(q)
 	}
-	throw 'insufficient query parameters for geneCnv'
+
+	// do not throw here, so not to disable range query
+	//throw 'insufficient query parameters for geneCnv'
 }
 
 // not in use
@@ -357,7 +359,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -443,7 +445,7 @@ async function geneExpressionClustering(data, q) {
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
 		cluster_method: q.clusterMethod,
-		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
@@ -490,15 +492,15 @@ async function geneExpressionClustering(data, q) {
 			row_names_index = line
 				.replace('rownames\t', '')
 				.split('\t')
-				.map((i) => parseInt(i))
-				.filter((n) => n)
+				.map(i => parseInt(i))
+				.filter(n => n)
 		} else if (line.includes('colnames')) {
 			//console.log('colnames:', line)
 			col_names_index = line
 				.replace('colnames\t', '')
 				.split('\t')
-				.map((i) => parseInt(i))
-				.filter((n) => n)
+				.map(i => parseInt(i))
+				.filter(n => n)
 		} else if (line.includes('"Done"')) {
 			col_coordinate_start = false
 		} else if (row_coordinate_start == true) {
@@ -554,18 +556,18 @@ async function geneExpressionClustering(data, q) {
 		row_names_index: row_names_index,
 		col_dendro: col_output.dendrogram,
 		col_children: col_output.children,
-		col_names_index: col_names_index,
+		col_names_index: col_names_index
 	}
 }
 function zscore(lst) {
 	let total = 0
 	for (const v of lst) total += v
 	const mean = total / lst.length
-	const sd = Math.sqrt(lst.map((x) => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
+	const sd = Math.sqrt(lst.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
 	if (sd == 0) {
 		return lst
 	}
-	return lst.map((i) => (i - mean) / sd)
+	return lst.map(i => (i - mean) / sd)
 }
 
 async function run_clustering(Rscript, args = []) {
@@ -581,10 +583,10 @@ async function run_clustering(Rscript, args = []) {
 		console.log('Rscript:', Rscript)
 		console.log('args:', ...args)
 		const sp = spawn(serverconfig.Rscript, [Rscript, ...args])
-		sp.stdout.on('data', (data) => stdout.push(data))
-		sp.stderr.on('data', (data) => stderr.push(data))
-		sp.on('error', (err) => reject(err))
-		sp.on('close', (code) => {
+		sp.stdout.on('data', data => stdout.push(data))
+		sp.stderr.on('data', data => stderr.push(data))
+		sp.on('error', err => reject(err))
+		sp.on('close', code => {
 			//if (code !== 0) {
 			//	// handle non-zero exit status
 			//	let errmsg = `R process exited with non-zero status code=${code}`
@@ -761,10 +763,10 @@ async function parseclust(coordinates, names_index) {
 async function update_leaf_node(depth_first_branch, given_node, node_children, node_id) {
 	//console.log('given_node:', given_node)
 	let current_node = given_node // Initialize the current node to the given_node
-	let node_result = node_children.find((i) => i.id == current_node) // Search if the node is already been entered in node_children
+	let node_result = node_children.find(i => i.id == current_node) // Search if the node is already been entered in node_children
 	if (node_result) {
 		// If already present add current node to its children field
-		let node_index = node_children.findIndex((i) => i.id == current_node)
+		let node_index = node_children.findIndex(i => i.id == current_node)
 		node_children[node_index].children.push(node_id)
 	} else {
 		// If not present create an object with id = current_node and in children intitialize children array with node_id
@@ -774,7 +776,7 @@ async function update_leaf_node(depth_first_branch, given_node, node_children, n
 	// Find branch of current node
 	while (current_node != 0) {
 		// Top node. This loop will continue until top node is reached
-		let node_connector1 = depth_first_branch.find((i) => i.id1 == current_node) // Find id1 with current_node
+		let node_connector1 = depth_first_branch.find(i => i.id1 == current_node) // Find id1 with current_node
 		let current_node1
 		let current_node2
 		if (node_connector1) {
@@ -788,7 +790,7 @@ async function update_leaf_node(depth_first_branch, given_node, node_children, n
 			}
 		}
 
-		let node_connector2 = depth_first_branch.find((i) => i.id2 == current_node) // Find id2 with current_node
+		let node_connector2 = depth_first_branch.find(i => i.id2 == current_node) // Find id2 with current_node
 		if (node_connector2) {
 			if (node_connector2.y1 >= node_connector2.y2) {
 				// If y-coordinate of id2 is less than that of id1 then current_node2 = id1
@@ -817,12 +819,12 @@ async function update_leaf_node(depth_first_branch, given_node, node_children, n
 
 		// Adding node_id to current_node
 
-		let node_result = node_children.find((i) => i.id == current_node) // Search if the node is already been entered in node_children
+		let node_result = node_children.find(i => i.id == current_node) // Search if the node is already been entered in node_children
 		//console.log('node_result:', node_result)
 		//console.log('given_node2:', given_node)
 		if (node_result) {
 			// If already present add current node to its children field
-			let node_index = node_children.findIndex((i) => i.id == current_node)
+			let node_index = node_children.findIndex(i => i.id == current_node)
 			node_children[node_index].children.push(node_id)
 		} else {
 			// If not present create an object with id = current_node and in children intitialize children array with node_id

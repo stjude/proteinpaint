@@ -96,30 +96,18 @@ export function validate_variant2sample(a) {
 }
 
 export function validate_query_snvindel_byrange(ds) {
-	const api = ds.queries.snvindel.byrange.gdcapi
-	if (!api.query) throw '.query missing for byrange.gdcapi'
-	if (typeof api.query != 'string') throw '.query not string in byrange.gdcapi'
-	if (typeof api.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
 	ds.queries.snvindel.byrange.get = async opts => {
 		const response = await got.post(apihostGraphql, {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify({ query: api.query, variables: api.variables(opts) })
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, // xxx
+			body: JSON.stringify({ query: query_range2ssm, variables: variables_range2ssm(opts) })
 		})
 		let re
 		try {
 			re = JSON.parse(response.body)
 		} catch (e) {
-			throw 'invalid JSON from GDC'
+			throw 'invalid JSON from GDC range2ssm'
 		}
-		if (
-			!re.data ||
-			!re.data.explore ||
-			!re.data.explore.ssms ||
-			!re.data.explore.ssms.hits ||
-			!re.data.explore.ssms.hits.edges
-		)
-			throw 'returned structure not data.explore.ssms.hits.edges'
-		if (!Array.isArray(re.data.explore.ssms.hits.edges)) throw 'data.explore.ssms.hits.edges not array'
+		if (!Array.isArray(re?.data?.explore?.ssms?.hits?.edges)) throw 'data.explore.ssms.hits.edges not array'
 		const mlst = []
 		for (const h of re.data.explore.ssms.hits.edges) {
 			const m = {
@@ -2148,4 +2136,102 @@ const isoform2ssm_query2_getcase = {
 		}
 		return f
 	}
+}
+
+/*
+GRAPHQL  query ssm by range
+
+TODO if can be done in protein_mutations
+query list of variants by genomic range (of a gene/transcript)
+does not include info on individual tumors
+the "filter" name is hardcoded and used in app.js
+*/
+const query_range2ssm = `query range2variants($filters: FiltersArgument) {
+  explore {
+    ssms {
+      hits(first: 100000, filters: $filters) {
+        total
+        edges {
+          node {
+            ssm_id
+            chromosome
+            start_position
+            end_position
+            genomic_dna_change
+			reference_allele
+            tumor_allele
+            occurrence {
+              hits {
+                total
+				edges {
+				  node {
+				    case {
+					  case_id
+					  project {
+					    project_id
+					  }
+					  primary_site
+					  disease_type
+					}
+				  }
+				}
+              }
+            }
+			consequence{
+              hits{
+                total
+                edges{
+                  node{
+                    transcript{
+                      transcript_id
+					  aa_change
+					  consequence_type
+					  gene{
+					  	symbol
+					  }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`
+function variables_range2ssm(p) {
+	// p:{}
+	// .rglst[{chr/start/stop}]
+	// .set_id
+	if (!p.rglst) throw '.rglst missing'
+	const r = p.rglst[0]
+	if (!r) throw '.rglst[0] missing'
+	if (typeof r.chr != 'string') throw '.rglst[0].chr not string'
+	if (!Number.isInteger(r.start)) throw '.rglst[0].start not integer'
+	if (!Number.isInteger(r.stop)) throw '.rglst[0].stop not integer'
+	const f = {
+		filters: {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'chromosome', value: [r.chr] } },
+				{ op: '>=', content: { field: 'start_position', value: [r.start] } },
+				{ op: '<=', content: { field: 'end_position', value: [r.stop] } }
+			]
+		}
+	}
+	if (p.set_id) {
+		if (typeof p.set_id != 'string') throw '.set_id value not string'
+		f.filters.content.push({
+			op: 'in',
+			content: { field: 'cases.case_id', value: [p.set_id] }
+		})
+	}
+	if (p.filter0) {
+		f.filters.content.push(p.filter0)
+	}
+	if (p.filterObj) {
+		f.filters.content.push(filter2GDCfilter(p.filterObj))
+	}
+	return f
 }
