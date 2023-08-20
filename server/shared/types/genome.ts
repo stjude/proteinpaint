@@ -71,13 +71,9 @@ type DefaultCoord = {
 	gene?: string
 }
 
-type GeneSetEntry = {
-	name: string
-}
-
 type GeneSet = {
 	name: string
-	lst: GeneSetEntry[]
+	lst: string[]
 }
 
 type HicEnzymeFragment = {

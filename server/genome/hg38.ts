@@ -1,5 +1,6 @@
 import { clinsig } from '../dataset/clinvar'
 import { Genome } from '../shared/types'
+import { CancerGeneCensusLst } from './cgc.js'
 
 export default <Genome>{
 	species: 'human',
@@ -105,6 +106,13 @@ export default <Genome>{
 		{
 			enzyme: 'NcoI',
 			file: 'anno/hicFragment/hic.NcoI.hg38.gz'
+		}
+	],
+
+	geneset: [
+		{
+			name: 'Cancer Gene Census',
+			lst: CancerGeneCensusLst
 		}
 	],
 

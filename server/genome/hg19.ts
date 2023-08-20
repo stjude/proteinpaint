@@ -75,6 +75,8 @@ export default <Genome>{
 			}
 		}
 	],
+
+	/*
 	geneset: [
 		{
 			name: 'Signaling',
@@ -127,6 +129,8 @@ export default <Genome>{
 			]
 		}
 	],
+	*/
+
 	defaultcoord: {
 		chr: 'chr17',
 		start: 7568451,
