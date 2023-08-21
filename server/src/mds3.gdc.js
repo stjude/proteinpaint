@@ -1794,24 +1794,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 			// for each hit, create an element
 			// from list of consequences, find one from canonical isoform
 
-			// quick code to get canonical isoform of this gene
-			let gene
-			for (const c of hit.consequence) {
-				if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
-					gene = c.transcript.gene.symbol
-					break
-				}
-			}
-			if (!gene) {
-				// no gene?
-				continue
-			}
-			const data = genome.genedb.get_gene2canonicalisoform.get(gene)
-			if (!data?.isoform) {
-				// no canonical isoform
-				continue
-			}
-			let c = hit.consequence.find(i => i.transcript.transcript_id == data.isoform)
+			let c = hit.consequence.find(i => i.transcript.is_canonical == true)
 			if (!c) {
 				// no consequence match with given isoform, just use the first one
 				c = hit.consequence[0]
@@ -1969,7 +1952,8 @@ const isoform2ssm_query1_getvariant = {
 		'consequence.transcript.consequence_type',
 		'consequence.transcript.aa_change',
 		// gene symbol is not required for mds3 tk, but is used in gdc bam slicing ui
-		'consequence.transcript.gene.symbol'
+		'consequence.transcript.gene.symbol',
+		'consequence.transcript.is_canonical'
 	],
 
 	/*
