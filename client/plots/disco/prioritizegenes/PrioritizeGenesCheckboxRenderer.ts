@@ -1,4 +1,4 @@
-export default class CancerGenesCheckboxRenderer {
+export default class PrioritizeGenesCheckboxRenderer {
 	private checkBoxClickListener: (checked: boolean) => void
 
 	constructor(checkBoxClickListener: (checked: boolean) => void) {

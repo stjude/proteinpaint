@@ -4,14 +4,14 @@ import LegendRenderer from './legend/LegendRenderer.ts'
 import { RingType } from './ring/RingType.ts'
 import FusionRenderer from './fusion/FusionRenderer.ts'
 import DownloadButtonRenderer from './download/DownloadButtonRenderer.ts'
-import CancerGenesCheckboxRenderer from '#plots/disco/cancergenescheckbox/CancerGenesCheckboxRenderer.ts'
+import PrioritizeGenesCheckboxRenderer from '#plots/disco/prioritizegenes/PrioritizeGenesCheckboxRenderer.ts'
 
 export class DiscoRenderer {
 	private renders: Map<RingType, IRenderer>
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 	private downloadButtonRenderer: DownloadButtonRenderer
-	private cancerGenesCheckboxRenderer: CancerGenesCheckboxRenderer
+	private cancerGenesCheckboxRenderer: PrioritizeGenesCheckboxRenderer
 
 	constructor(
 		renders: Map<RingType, IRenderer>,
@@ -23,7 +23,7 @@ export class DiscoRenderer {
 		this.legendRenderer = legendRenderer
 		this.fusionRenderer = new FusionRenderer()
 		this.downloadButtonRenderer = new DownloadButtonRenderer(downloadClickListener)
-		this.cancerGenesCheckboxRenderer = new CancerGenesCheckboxRenderer(cancerGenesCheckboxListener)
+		this.cancerGenesCheckboxRenderer = new PrioritizeGenesCheckboxRenderer(cancerGenesCheckboxListener)
 	}
 
 	render(holder: any, viewModel: ViewModel) {
@@ -34,8 +34,8 @@ export class DiscoRenderer {
 		this.downloadButtonRenderer.render(svgDiv)
 		this.cancerGenesCheckboxRenderer.render(
 			svgDiv,
-			viewModel.settings.label.prioritizeCancerGenes,
-			viewModel.settings.label.showPrioritizeCancerGenes
+			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
+			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets
 		)
 
 		const svg = svgDiv
