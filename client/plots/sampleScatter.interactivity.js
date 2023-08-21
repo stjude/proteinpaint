@@ -139,9 +139,8 @@ export function setInteractivity(self) {
 						.on('click', async event => {
 							const sandbox = newSandboxDiv(self.opts.plotDiv)
 							sandbox.header.text(sample.sample_id)
-							await (
-								await import('./plot.ssgq.js')
-							).plotSingleSampleGenomeQuantification(
+							const ssgqImport = await import('./plot.ssgq.js')
+							await ssgqImport.plotSingleSampleGenomeQuantification(
 								self.state.termdbConfig,
 								self.state.vocab.dslabel,
 								k,
@@ -160,9 +159,16 @@ export function setInteractivity(self) {
 					.text('Disco plot')
 					.on('click', async event => {
 						const sandbox = newSandboxDiv(self.opts.plotDiv)
-						sandbox.header
-							.text(sample.sample_id)(await import('./plot.disco.js'))
-							.default(self.state.termdbConfig, self.state.vocab.dslabel, sample, sandbox.body, self.app.opts.genome)
+						sandbox.header.text(sample.sample_id)
+						const discoPlotImport = await import('./plot.disco.js')
+						discoPlotImport.default(
+							self.state.termdbConfig,
+							self.state.vocab.dslabel,
+							sample,
+							sandbox.body,
+							self.app.opts.genome
+						)
+
 						self.dom.tip.hide()
 					})
 			}
