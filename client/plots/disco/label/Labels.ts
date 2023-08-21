@@ -39,9 +39,9 @@ export default class Labels extends Ring<Label> {
 			hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
 			this.filteredPrioritizedGenesList = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
 
-			const hasPrioritizedGenesGenes = this.elements.filter(label => !label.isPrioritized)
+			const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
 
-			const combinedAndSortedList = hasPrioritizedGenesGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
+			const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
 				return a.startAngle < b.startAngle ? -1 : a.startAngle > b.startAngle ? 1 : 0
 			})
 
