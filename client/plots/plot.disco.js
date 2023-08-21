@@ -76,7 +76,7 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj)
 						extension: 'ts',
 						overrides: {
 							label: {
-								showPrioritizeCancerGenes: !!genomeObj.geneset
+								showPrioritizeGeneLabelsByGeneSets: !!genomeObj.geneset
 							}
 						}
 					}

@@ -80,7 +80,7 @@ export class DiscoInteractions {
 				config: {
 					settings: {
 						label: {
-							prioritizeCancerGenes: checked
+							prioritizeGeneLabelsByGeneSets: checked
 						}
 					}
 				}
