@@ -2,11 +2,11 @@ import Data from './Data.ts'
 
 export default class DataObjectMapper {
 	private sampleName: string
-	private cancerGenes: Array<string>
+	private prioritizedGenes: Array<string>
 
-	constructor(sampleName: string, cancerGenes: Array<string>) {
+	constructor(sampleName: string, prioritizedGenes: Array<string>) {
 		this.sampleName = sampleName
-		this.cancerGenes = cancerGenes
+		this.prioritizedGenes = prioritizedGenes
 	}
 
 	map(dObject: any): Data {
@@ -30,7 +30,7 @@ export default class DataObjectMapper {
 			stop: dObject.stop,
 			value: dObject.value,
 			segmean: dObject.segmean,
-			isPrioritized: this.cancerGenes.some(cancerGene => cancerGene == dObject.gene),
+			isPrioritized: this.prioritizedGenes.some(cancerGene => cancerGene == dObject.gene),
 			chrA: dObject.chrA,
 			chrB: dObject.chrB,
 			geneA: dObject.geneA,

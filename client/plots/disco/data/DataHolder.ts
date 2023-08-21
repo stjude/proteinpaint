@@ -23,7 +23,7 @@ export interface DataHolder {
 	fusionData: Array<Data>
 	fusionRadius: number
 
-	hasCancerGenes: boolean
+	hasPrioritizedGenes: boolean
 
 	cnvMaxValue?: number
 	cnvMinValue?: number

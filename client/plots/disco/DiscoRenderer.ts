@@ -11,19 +11,19 @@ export class DiscoRenderer {
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 	private downloadButtonRenderer: DownloadButtonRenderer
-	private cancerGenesCheckboxRenderer: PrioritizeGenesCheckboxRenderer
+	private prioritizeGenesCheckboxRenderer: PrioritizeGenesCheckboxRenderer
 
 	constructor(
 		renders: Map<RingType, IRenderer>,
 		legendRenderer: LegendRenderer,
 		downloadClickListener: (d: any) => void,
-		cancerGenesCheckboxListener: (checked: boolean) => void
+		prioritizedGenesCheckboxListener: (checked: boolean) => void
 	) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
 		this.fusionRenderer = new FusionRenderer()
 		this.downloadButtonRenderer = new DownloadButtonRenderer(downloadClickListener)
-		this.cancerGenesCheckboxRenderer = new PrioritizeGenesCheckboxRenderer(cancerGenesCheckboxListener)
+		this.prioritizeGenesCheckboxRenderer = new PrioritizeGenesCheckboxRenderer(prioritizedGenesCheckboxListener)
 	}
 
 	render(holder: any, viewModel: ViewModel) {
@@ -32,7 +32,7 @@ export class DiscoRenderer {
 		const svgDiv = rootDiv.append('div').style('display', 'inline-block').style('font-family', 'Arial')
 
 		this.downloadButtonRenderer.render(svgDiv)
-		this.cancerGenesCheckboxRenderer.render(
+		this.prioritizeGenesCheckboxRenderer.render(
 			svgDiv,
 			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
 			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets

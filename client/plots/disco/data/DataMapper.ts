@@ -67,7 +67,7 @@ export default class DataMapper {
 		return aPos - bPos
 	}
 
-	constructor(settings: Settings, reference: Reference, sample: string, cancerGenes: Array<string> = []) {
+	constructor(settings: Settings, reference: Reference, sample: string, prioritizedGenes: Array<string> = []) {
 		this.settings = settings
 		this.reference = reference
 		this.sample = sample
@@ -77,7 +77,7 @@ export default class DataMapper {
 			settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
 		this.snvRingFilter = (data: Data) =>
 			settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
-		this.dataObjectMapper = new DataObjectMapper(sample, cancerGenes)
+		this.dataObjectMapper = new DataObjectMapper(sample, prioritizedGenes)
 	}
 
 	map(data: any) {
@@ -167,7 +167,7 @@ export default class DataMapper {
 			fusionData: this.fusionData,
 			fusionRadius: this.fusionRadius,
 
-			hasCancerGenes: this.hasPrioritizedGenes,
+			hasPrioritizedGenes: this.hasPrioritizedGenes,
 
 			cnvMaxValue: this.cnvMaxValue,
 			cnvMinValue: this.cnvMinValue,
