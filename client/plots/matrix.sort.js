@@ -467,3 +467,46 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 
 	return sortOptions
 }
+
+export function getSampleGroupSorter(self) {
+	const s = self.settings.matrix
+	if (s.sortSampleGrpsBy == 'hits')
+		return (a, b) => {
+			if (a.lst.length && !b.lst.length) return -1
+			if (!a.lst.length && b.lst.length) return 1
+			return b.totalCountedValues - a.totalCountedValues
+		}
+	if (s.sortSampleGrpsBy == 'sampleCount')
+		return (a, b) => {
+			if (a.lst.length && !b.lst.length) return -1
+			if (!a.lst.length && b.lst.length) return 1
+			if (a.lst.length == b.lst.length) {
+				return defaultSorter(a, b)
+			}
+			return b.lst.length - a.lst.length
+		}
+
+	if (!self.config.divideBy?.$id) return defaultSorter
+	const ref = self.data.refs.byTermId[self.config.divideBy.$id]
+	if (ref && !ref.keyOrder) ref.keyOrder = ref.bins ? ref.bins.map(b => b.name) : []
+
+	const predefinedKeyOrder = self.data.refs.byTermId[self.config.divideBy.$id]?.keyOrder
+	if (!predefinedKeyOrder) return defaultSorter
+	return (a, b) => {
+		// NOTE: should not reorder by isExcluded, in order to maintain the assigned legend item order, colors, etc
+		//if (a.isExcluded && !b.isExcluded) return 1
+		//if (!a.isExcluded && b.isExcluded) return -1
+		a.order = predefinedKeyOrder.indexOf(a.id)
+		if (a.order == -1) delete a.order
+		b.order = predefinedKeyOrder.indexOf(b.id)
+		if (b.order == -1) delete b.order
+		if ('order' in a && 'order' in b) return a.order - b.order
+		if ('order' in a) return -1
+		if ('order' in b) return 1
+		return defaultSorter(a, b)
+	}
+}
+
+function defaultSorter(a, b) {
+	return a.name < b.name ? -1 : 1
+}
