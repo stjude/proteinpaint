@@ -2,6 +2,7 @@ import { keyupEnter } from '#src/client'
 import { select, selectAll } from 'd3-selection'
 import { CategoricalTermSettingInstance } from '#shared/types'
 import { Tabs } from '#dom/toggleButtons'
+import { disappear } from '#src/client'
 
 /*
 Refactor notes:
@@ -32,9 +33,17 @@ Future plans:
 
 */
 
-type ItemEntry = { label: string; group_idx: number; count: any }
+type ItemEntry = {
+	label: string //Drag label
+	groupIdx: number //Current group index for item
+	count: any //Sample count
+}
 type DataInput = { [index: string]: ItemEntry }
-type GrpEntry = { currentIdx: number; name: string } //Scoped for file, maybe merge with GroupEntry type in future??
+type GrpEntry = {
+	//Scoped for file, maybe merge with GroupEntry type in future??
+	currentIdx: number //Current index of group
+	name: string //Mutable group name, default .currentIdx
+}
 type GrpEntryWithDom = GrpEntry & {
 	wrapper: any
 	title: any
@@ -81,15 +90,15 @@ export class GroupSettingMethods {
 		//these three groups should always appear in the menu
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
 		for (const d of this.data.values) {
-			if (!d.group_idx) d.group_idx = 1 //default to group 1
-			if (d.group_idx > 4)
-				throw `The maximum number of groups is 4. The group index for value = ${d.label} is ${d.group_idx}`
+			if (!d.groupIdx) d.groupIdx = 1 //default to group 1
+			if (d.groupIdx > 4)
+				throw `The maximum number of groups is 4. The group index for value = ${d.label} is ${d.groupIdx}`
 			if (!d.count)
 				d.count = this.opts.category2samplecount
 					? this.opts.category2samplecount.find(v => v.key == d.label).count
 					: 'n/a'
 
-			grpIdxes.add(d.group_idx)
+			grpIdxes.add(d.groupIdx)
 		}
 		for (const g of Array.from(grpIdxes).sort((a, b) => a - b)) {
 			this.data.groups.push({
@@ -223,7 +232,8 @@ function setRenderers(self: any) {
 
 		self.update()
 	}
-
+	let draggedItem: any
+	// const dragTransfer = new DataTransfer()
 	async function initGroupDiv(group: GrpEntryWithDom) {
 		//Create the parent group div with user actions on the top
 		const wrapper = group.currentIdx === 0 ? self.dom.excludedWrapper : self.dom.includedWrapper
@@ -236,42 +246,48 @@ function setRenderers(self: any) {
 				.style('padding', '10px')
 				.style('vertical-align', 'top')
 
-		let draggedItem: any
 		group.wrapper
-			.on('drop', function (this: Element, event: DragEvent) {
-				console.log(231, group.currentIdx, draggedItem.group_idx)
-				if (group.currentIdx == draggedItem.group_idx) return
-				else group.wrapper.appendChild(draggedItem.node())
-				event.preventDefault()
-			})
-			//.on('dragover', function (this: Element, event: DragEvent) {
+			.on('drop', function (event: DragEvent) {
+				const itemData = draggedItem.node().__data__
+				if (itemData.groupIdx === group.currentIdx) return
+				group.draggables.node().appendChild(draggedItem.node())
 
-			// const draggedData = draggedItem.node().__data__
-			// if (group.currentIdx == draggedData.group_idx) {
-			// 	return draggedItem
-			// 		.style('transition-property', 'background-color')
-			// 		.style('transition-duration', '1s')
-			// 		.style('background-color', '#eee')
-			// }
-			// event.preventDefault()
-			// event.stopPropagation()
-			// group.wrapper.style('background-color', group.currentIdx !== draggedData.group_idx ? '#cfe2f3' : '#fff')
-			//})
-			.on('dragenter', function (this: Element, event: DragEvent) {
-				const draggedData = draggedItem?.node().__data__ || undefined
+				draggedItem
+					.style('transition-property', 'background-color')
+					.style('transition-duration', '1s')
+					.style('background-color', '#fff2cc')
+
+				self.data.values.find(v => v === itemData).groupIdx = group.currentIdx
+
 				event.preventDefault()
 				event.stopPropagation()
-				select(this).style('background-color', '#fff')
 			})
-			.on('dragleave', function (this: Element, event: DragEvent) {
+			.on('dragleave', function (event: DragEvent) {
 				event.preventDefault()
 				event.stopPropagation()
-				select(this).style('background-color', '#fff')
+				group.wrapper.style('background-color', '#fff')
 			})
-			.on('dragend', function (this: Element, event: DragEvent) {
+			.on('dragend', function (event: DragEvent) {
 				event.preventDefault()
 				event.stopPropagation()
-				select(this).style('background-color', '#fff')
+				group.wrapper.style('background-color', '#fff')
+			})
+			.on('dragover', function (event: DragEvent) {
+				event.preventDefault()
+				event.stopPropagation()
+				group.wrapper.style(
+					'background-color',
+					group.currentIdx !== draggedItem.node().__data__.groupIdx ? '#cfe2f3' : '#fff'
+				)
+			})
+			.on('dragenter', function (event: DragEvent) {
+				if (draggedItem.node().__data__.groupIdx === group.currentIdx) return
+				event.preventDefault()
+				event.stopPropagation()
+				group.wrapper.style(
+					'background-color',
+					group.currentIdx !== draggedItem.node().__data__.groupIdx ? '#cfe2f3' : '#fff'
+				)
 			})
 
 		group.title = group.wrapper
@@ -294,8 +310,8 @@ function setRenderers(self: any) {
 				.text('x')
 				.on('click', (event: MouseEvent) => {
 					if (self.data.groups.length <= 3) return
-					group.wrapper.remove()
 					self.data.groups = self.data.groups.filter((d: GrpEntry) => d.currentIdx != group.currentIdx)
+					self.removeGroup(group)
 					self.update(group.currentIdx)
 				}) as Element
 
@@ -316,10 +332,11 @@ function setRenderers(self: any) {
 		}
 
 		group.draggables = group.wrapper.append('div').classed('sjpp-drag-list-div', true)
-		;(await group.draggables
+
+		await group.draggables
 			//add draggable items to group div
 			.selectAll('div')
-			.data(self.data.values.filter((d: ItemEntry) => d.group_idx == group.currentIdx))
+			.data(self.data.values.filter((d: ItemEntry) => d.groupIdx == group.currentIdx))
 			.enter()
 			.append('div')
 			.attr('draggable', 'true')
@@ -331,20 +348,26 @@ function setRenderers(self: any) {
 			.style('color', (d: ItemEntry) => (d.count == 0 ? '#777' : 'black'))
 			.html((d: ItemEntry) => d.label + (d.count !== undefined ? ' (n=' + d.count + ')' : ''))
 			.style('background-color', '#eee')
-			.each(async function (this: any, item: any, d: any) {
-				//console.log(self.data.values.find(v => v.group_idx == d))
-				item = select(this)
-					.on('mouseover', function (this: Element) {
-						select(this).style('background-color', '#fff2cc')
+			.each(function (this: Element, item: any, d: ItemEntry | number) {
+				// d = self.data.values.find((v: ItemEntry, i: number) => i == d)
+				const itemNode = select(this)
+					.on('dragstart', function (event: DragEvent, d: any) {
+						itemNode.style('background-color', '#fff2cc')
+						draggedItem = itemNode
 					})
-					.on('mouseout', function (this: Element) {
-						select(this).style('background-color', '#eee')
+					.on('mouseover', function () {
+						itemNode.style('background-color', '#fff2cc')
 					})
-					.on('dragstart', function (this: Element) {
-						select(this).style('background-color', '#fff2cc')
-						draggedItem = item
+					.on('mouseout', function () {
+						itemNode.style('background-color', '#eee')
 					})
-			})) as HTMLDivElement
+			})
+	}
+
+	self.removeGroup = function (group: any) {
+		disappear(group.title)
+		disappear(group.destroyBtn)
+		disappear(group.input)
 	}
 
 	self.update = function (idx: number) {
