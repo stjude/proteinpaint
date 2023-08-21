@@ -1,5 +1,7 @@
 import { getPillNameDefault } from '#termsetting'
 import { NumericTermSettingInstance, PillData, Term } from '#shared/types'
+import { makeDensityPlot } from '#filter/densityplot'
+import { convertViolinData } from '#filter/tvs.numeric'
 
 /*
 ********************** EXPORTED
@@ -30,9 +32,34 @@ export function getHandler(self: NumericTermSettingInstance) {
 		async showEditMenu(div: any) {
 			setqDefaults(self)
 
-			div.style('padding', '10px').selectAll('*').remove()
+			div.style('padding', '5px').selectAll('*').remove()
 
-			div.append('div').style('padding', '10px')
+			const densityDiv = div.append('div')
+			const plot_size = {
+				width: 500,
+				height: 100,
+				xpad: 10,
+				ypad: 20
+			}
+			const d = await self.vocabApi.getViolinPlotData({
+				termid: self.term.id,
+				filter: self.filter,
+				svgw: plot_size.width,
+				orientation: 'horizontal',
+				datasymbol: 'bean',
+				radius: 5,
+				strokeWidth: 0.2,
+				currentGeneNames: self.opts.getCurrentGeneNames?.()
+			})
+			const density_data = convertViolinData(d)
+			const svg = densityDiv.append('svg')
+			const density_plot_opts = {
+				svg: svg,
+				data: density_data,
+				term: self.term,
+				plot_size: plot_size
+			}
+			makeDensityPlot(density_plot_opts)
 
 			div.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
