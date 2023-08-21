@@ -42,7 +42,8 @@ class Polar {
 		this.sampleidmap = {}
 		for (const key in data.samples) {
 			const sample = data.samples[key]
-			this.sampleidmap[sample.sampleName] = sample.sample
+			const id = sample.sampleName || sample.sample
+			this.sampleidmap[id] = sample.sample
 		}
 		this.samples = Object.keys(this.sampleidmap)
 		this.select = div.append('select').style('margin-left', '5px')
@@ -55,7 +56,6 @@ class Polar {
 			.html((d, i) => d)
 		this.select.on('change', e => {
 			this.config.sampleName = this.select.node().value
-			console.log(this.con)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 		})
 	}
@@ -67,7 +67,6 @@ class Polar {
 			if (tw.id) this.twLst.push(tw)
 		}
 		const sampleName = this.config.sampleName || this.samples[0]
-		console.log(sampleName)
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
@@ -92,7 +91,7 @@ class Polar {
 			path.setAttribute('stroke-opacity', 0)
 			const d = path.__data__
 			const menu = this.tip.clear()
-			const percentage = this.sampleData[d.$id]?.value * 100
+			const percentage = this.sampleData[d.$id]?.value * this.config.scale
 			menu.d.text(`${d.term.name} ${percentage}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
@@ -127,8 +126,8 @@ class Polar {
 		for (let d of validTerms) {
 			d.i = i
 			let percentage = this.sampleData[d.$id]?.value
-			if (!percentage) continue
-			percentage = percentage * 100
+			percentage = percentage * this.config.scale
+
 			const color = d.term.color || colors(i)
 			const path = polarG
 				.append('g')
@@ -147,30 +146,16 @@ class Polar {
 
 			i++
 		}
-
-		addCircle(50, 'C')
-		addCircle(75, 'B')
-		addCircle(100, 'A')
 		for (let i = 0; i <= 10; i++) {
 			const percent = i * 10
 			polarG
 				.append('text')
-				.attr('transform', `translate(-10, ${(-percent / 100) * radius + 5})`)
+				.attr('transform', `translate(-10, ${(-percent / this.config.scale) * radius + 5})`)
 				.attr('text-anchor', 'end')
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		legendG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text('Overall Score')
-			.attr('transform', `translate(0, -10)`)
-
-		addLegendItem('A', 'More than 75% of possible scorable items', 1)
-		addLegendItem('B', '50-75% of possible scorable items', 2)
-		addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 
 		function addCircle(percent, text = null) {
 			const circle = polarG
@@ -191,15 +176,6 @@ class Polar {
 					.style('font-size', '24px')
 					.attr('pointer-events', 'none')
 			}
-		}
-
-		function addLegendItem(category, description, index) {
-			const text = legendG
-				.append('text')
-				.attr('transform', `translate(0, ${index * 20})`)
-				.attr('text-anchor', 'left')
-			text.append('tspan').attr('font-weight', 'bold').text(category)
-			text.append('tspan').text(`: ${description}`)
 		}
 	}
 }
