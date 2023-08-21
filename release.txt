@@ -3,3 +3,5 @@ Features:
 Fixes:
 - Update gene filter to restrict filtering for multiple alteration groups.
 - Ignore hidden values when conducting association tests.
+- Do not force a matrix barplot min scale to 0;
+- Fix the missing tooltip when mousing over second+ continuous matrix barplot rows
