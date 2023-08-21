@@ -132,10 +132,11 @@ export function setInteractivity(self) {
 			if ('sample' in sample) self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
 			if (drawMethylationArrayPlot) {
 				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
 					const menuDiv = self.dom.tip.d
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
-						.text(k)
+						.text(label)
 						.on('click', async event => {
 							const sandbox = newSandboxDiv(self.opts.plotDiv)
 							sandbox.header.text(sample.sample_id)
