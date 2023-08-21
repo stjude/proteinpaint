@@ -118,6 +118,7 @@ class Polar {
 		const validTerms = []
 		for (let d of config.terms) {
 			let percentage = this.sampleData[d.$id]?.value
+			console.log(d.term.name, percentage)
 			if (percentage) validTerms.push(d)
 		}
 		let i = 0
@@ -150,7 +151,7 @@ class Polar {
 			const percent = i * 10
 			polarG
 				.append('text')
-				.attr('transform', `translate(-10, ${(-percent / this.config.scale) * radius + 5})`)
+				.attr('transform', `translate(-10, ${(-percent / 100) * radius + 5})`)
 				.attr('text-anchor', 'end')
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
