@@ -5,8 +5,8 @@ export default class PrioritizeGenesCheckboxRenderer {
 		this.checkBoxClickListener = checkBoxClickListener
 	}
 
-	render(holder: any, checked: boolean, showPrioritizeCancerGenes) {
-		if (showPrioritizeCancerGenes) {
+	render(holder: any, checked: boolean, showPrioritizeGenesCheckbox: boolean) {
+		if (showPrioritizeGenesCheckbox) {
 			const checkbox = holder
 				.append('span')
 				.append('input')
