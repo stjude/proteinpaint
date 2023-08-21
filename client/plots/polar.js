@@ -91,7 +91,9 @@ class Polar {
 			path.setAttribute('stroke-opacity', 0)
 			const d = path.__data__
 			const menu = this.tip.clear()
-			const percentage = this.sampleData[d.$id]?.value * this.config.scale
+			let percentage = this.sampleData[d.$id]?.value * this.config.scale
+			percentage = percentage.toFixed(2)
+
 			menu.d.text(`${d.term.name} ${percentage}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
@@ -118,7 +120,6 @@ class Polar {
 		const validTerms = []
 		for (let d of config.terms) {
 			let percentage = this.sampleData[d.$id]?.value
-			console.log(d.term.name, percentage)
 			if (percentage) validTerms.push(d)
 		}
 		let i = 0
