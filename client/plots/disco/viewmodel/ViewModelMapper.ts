@@ -56,14 +56,14 @@ export class ViewModelMapper {
 
 		const genome = opts.args.genome
 
-		const cancerGenes =
+		const prioritizedGenes =
 			genome && genome.geneset[0] && this.settings.label.prioritizeGeneLabelsByGeneSets ? genome.geneset[0].lst : []
 
 		const data: Array<any> = opts.args.data
 
 		const reference = new Reference(this.settings, chrSizes, chromosomesOverride)
 
-		const dataMapper = new DataMapper(this.settings, reference, sampleName, cancerGenes)
+		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes)
 
 		return new ViewModelProvider(this.settings, dataMapper, reference, sampleName).map(data)
 	}

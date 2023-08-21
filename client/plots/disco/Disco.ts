@@ -49,7 +49,7 @@ export default class Disco {
 			this.getRingRenderers(settings, this.discoInteractions.geneClickListener),
 			legendRenderer,
 			this.discoInteractions.downloadClickListener,
-			this.discoInteractions.cancerGenesCheckboxListener
+			this.discoInteractions.prioritizeGenesCheckboxListener
 		)
 
 		discoRenderer.render(holder, viewModel)
