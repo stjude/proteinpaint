@@ -395,13 +395,16 @@ function setTermActions(self) {
 					{
 						icon: 'corner',
 						title: `Sort ${l.samples} against this ${vartype} positioned at the top left corner`,
-						disabled: t.grp.lst.length < 1 || (t.index === 0 && t.tw.sortSamples?.priority === 0),
+						disabled:
+							t.grp.lst.length < 1 ||
+							(t.index === 0 && t.tw.sortSamples?.priority === 0) ||
+							(self.chartType == 'hierCluster' && t.grpIndex === 0),
 						handler: self.sortSamplesAgainstCornerTerm
 					},
 					{
 						icon: 'left',
 						title: `Sort ${l.samples} against this ${vartype}`,
-						disabled: t.tw.sortSamples?.priority === 0,
+						disabled: t.tw.sortSamples?.priority === 0 || (self.chartType == 'hierCluster' && t.grpIndex === 0),
 						handler: self.sortSamplesAgainstTerm
 					},
 					{
@@ -410,14 +413,14 @@ function setTermActions(self) {
 					{
 						icon: 'up',
 						title: `Move this ${vartype} up`,
-						disabled: t.index === 0,
+						disabled: t.index === 0 || (self.chartType == 'hierCluster' && t.grpIndex === 0),
 						handler: self.moveTermUp
 					},
 
 					{
 						icon: 'down',
 						title: `Move this ${vartype} down`,
-						disabled: t.index === t.grp.lst.length - 1,
+						disabled: t.index === t.grp.lst.length - 1 || (self.chartType == 'hierCluster' && t.grpIndex === 0),
 						handler: self.moveTermDown
 					}
 				],

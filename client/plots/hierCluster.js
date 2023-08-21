@@ -33,11 +33,13 @@ class HierCluster extends Matrix {
 
 	async setHierClusterData(_data = {}) {
 		const twlst = this.config.termgroups[0].lst
+		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
+		if (!genes.length) return
 		const body = {
 			genome: this.app.opts.state.vocab.genome,
 			dslabel: this.app.opts.state.vocab.dslabel,
 			geneExpression: 1,
-			genes: twlst.map(tw => tw.term),
+			genes,
 			clusterMethod: this.state.config.settings.hierCluster.clusterMethod
 		}
 		this.hierClusterData = await dofetch3('mds3', { body })

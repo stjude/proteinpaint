@@ -400,7 +400,7 @@ export class Matrix {
 		for (const grp of sampleGrpsArr) {
 			this.asListedSampleOrder.push(...grp.lst.map(s => s.sample))
 		}
-		
+
 		const selectedDictTerms = this.termOrder.filter(t => t.tw.sortSamples && t.tw.term.type != 'geneVariant')
 		// initial sorting for ungrouped samples, prioritizes grouping by gene variant, skippin other sorters at this step
 		const noGrpSampleSorter = getSampleSorter(this, s, data.lst, {
@@ -726,11 +726,9 @@ export class Matrix {
 				const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
 				t.counts.posMaxHt = ratio * barh
 				const tickValues = //[t.counts.minval, t.counts.maxval]
-					rangeSpansZero
+					rangeSpansZero || t.counts.maxval <= 0
 						? [t.counts.minval, t.counts.maxval]
-						: t.counts.maxval > 0
-						? [t.counts.maxval, t.counts.minval]
-						: [t.counts.minval, t.counts.maxval]
+						: [t.counts.maxval, t.counts.minval]
 
 				t.scales = {
 					tickValues,

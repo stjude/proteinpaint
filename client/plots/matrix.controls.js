@@ -52,7 +52,7 @@ export class MatrixControls {
 						options: Object.values(s.sortOptions).sort((a, b) => a.order - b.order),
 						labelDisplay: 'block',
 						getDisplayStyle(plot) {
-							return plot.hierCluster ? 'none' : 'table-row'
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
 						}
 					},
 					{
@@ -74,7 +74,7 @@ export class MatrixControls {
 							//activeCohort: appState.activeCohort
 						},
 						getDisplayStyle(plot) {
-							return plot.hierCluster ? 'none' : 'table-row'
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
 						},
 						processInput: tw => {
 							if (tw) fillTermWrapper(tw)
@@ -754,7 +754,7 @@ export class MatrixControls {
 
 	appendDictInputs(self, app, parent, table) {
 		tip.clear()
-		if (!parent.selectedGroup) parent.selectedGroup = 0
+		if (!parent.selectedGroup) parent.selectedGroup = self.chartType == 'hierCluster' ? 1 : 0
 		app.tip.d.append('hr')
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
@@ -900,7 +900,7 @@ export class MatrixControls {
 			})
 		} else {
 			const grp = { name: 'Variables', lst: newterms }
-			termgroups.unshift(grp)
+			termgroups.push(grp)
 			this.parent.app.dispatch({
 				type: 'plot_edit',
 				id: this.parent.id,
