@@ -257,6 +257,11 @@ function twDisplayValueFromSample(s, tw) {
 	if (!(tw.id in s)) return ''
 	const v = s[tw.id]
 	if (tw.term.values?.[v]?.label) return tw.term.values[v].label
+
+	if (tw.term.printDays2years) {
+		return `${Math.ceil(v / 365)} years, ${v % 365} days`
+	}
+
 	return v
 }
 
