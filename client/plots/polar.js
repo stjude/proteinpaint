@@ -22,11 +22,9 @@ class Polar {
 	async init(appState) {
 		const holder = this.opts.holder.append('div')
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
-		const firstDiv = div.append('div').style('display', 'inline-block')
 		const plotDiv = holder.append('div')
 		this.dom = {
 			holder,
-			firstDiv,
 			filterDiv: div,
 			plotDiv
 		}
@@ -46,6 +44,20 @@ class Polar {
 			const sample = data.samples[key]
 			this.sampleidmap[sample.sampleName] = sample.sample
 		}
+		this.samples = Object.keys(this.sampleidmap)
+		this.select = div.append('select').style('margin-left', '5px')
+		this.select
+			.selectAll('option')
+			.data(this.samples)
+			.enter()
+			.append('option')
+			.attr('value', d => d)
+			.html((d, i) => d)
+		this.select.on('change', e => {
+			this.config.sampleName = this.select.node().value
+			console.log(this.con)
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+		})
 	}
 
 	async main() {
@@ -54,7 +66,8 @@ class Polar {
 		for (const [i, tw] of this.config.terms.entries()) {
 			if (tw.id) this.twLst.push(tw)
 		}
-		const sampleName = 'SJALL047540'
+		const sampleName = this.config.sampleName || this.samples[0]
+		console.log(sampleName)
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
@@ -106,7 +119,6 @@ class Polar {
 		const validTerms = []
 		for (let d of config.terms) {
 			let percentage = this.sampleData[d.$id]?.value
-			console.log(d.term.name, percentage)
 			if (percentage) validTerms.push(d)
 		}
 		let i = 0
