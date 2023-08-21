@@ -459,7 +459,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'geneExpression') {
 		} else if (p.chartType == 'Disco') {
 		} else if (p.chartType == 'profileBarchart') {
-		} else if (p.chartType == 'profilePolar') {
+		} else if (p.chartType == 'profilePolar' || p.chartType == 'polar') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
