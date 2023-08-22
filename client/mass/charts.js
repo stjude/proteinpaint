@@ -166,7 +166,7 @@ function getChartTypeList(self) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Genome browser',
+			label: 'Genome Browser',
 			chartType: 'genomeBrowser',
 			clickTo: self.loadChartSpecificMenu
 		},
@@ -176,14 +176,14 @@ function getChartTypeList(self) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Hierarchical Cluster',
+			label: 'Hierarchical Clustering',
 			chartType: 'hierCluster',
 			clickTo: self.loadChartSpecificMenu
 		},
 
 		// adhoc chart, temporary fix for prototyping a specific ds
 		{
-			label: 'Profile bar plot',
+			label: 'Profile Bar Plot',
 			chartType: 'profileBarchart',
 			clickTo: self.showTree_select1term,
 			usecase: { detail: 'term' }
