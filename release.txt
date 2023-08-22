@@ -1,4 +1,8 @@
 Features:
+Added polar plot to the MASS plots with example using ALL-Pharmacotyping data.
+Added/updated legend menus for cuminc and survival plots
+Displayed density plot when editing continuous numeric terms
+Displayed years instead of days in the lollipop age density plot
 
 Fixes:
 - Update gene filter to restrict filtering for multiple alteration groups.
