@@ -107,8 +107,8 @@ class HierCluster extends Matrix {
 	async renderDendrogram() {
 		const obj = this.hierClusterData.clustering
 		obj.d = {
-			rowHeight: this.settings.matrix.rowh,
-			colWidth: this.dimensions.colw,
+			rowHeight: this.dimensions.dy,
+			colWidth: this.dimensions.dx,
 			xDendrogramHeight: this.settings.hierCluster.xDendrogramHeight,
 			yDendrogramHeight: this.settings.hierCluster.yDendrogramHeight,
 			minColor: '#0c306b',
