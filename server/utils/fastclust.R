@@ -104,7 +104,7 @@ colnames(m) <- SortedColumnNames
 rownames(m) <- SortedRowNames
 cat("rownames",RowDend$order,"\n",sep="\t")
 cat("colnames",ColumnDend$order,"\n",sep="\t")
-cat ("OutputMatrix",normalized_matrix,"\n",sep="\t")
+cat ("OutputMatrix",normalized_matrix,"\n",sep="\t") # This outputs the 2D array in 1D column-wise. This is later converted to 2D array in nodejs.
 
 
 #df  <- melt(m)

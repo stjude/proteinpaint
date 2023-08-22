@@ -481,7 +481,7 @@ async function geneExpressionClustering(data, q) {
 	let matrix_start = true
 	let row_names_index
 	let col_names_index
-	let matrix_1d
+	let matrix_1d // Getting matrix output from R in 1D. This will later be converted back into 2D array
 	for (const line of Routput) {
 		if (line.includes('OutputMatrix')) {
 			matrix_1d = line
@@ -526,6 +526,7 @@ async function geneExpressionClustering(data, q) {
 	let row_output = await parseclust(row_coordinates, row_names_index)
 	let col_output = await parseclust(col_coordinates, col_names_index)
 
+	// Converting the 1D array to 2D array column-wise
 	let output_matrix = []
 	for (let i = 0; i < inputData.matrix.length; i++) {
 		if (inputData.matrix[0]) {
