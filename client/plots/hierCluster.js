@@ -42,7 +42,9 @@ class HierCluster extends Matrix {
 			dslabel: this.app.opts.state.vocab.dslabel,
 			geneExpression: 1,
 			genes,
-			clusterMethod: this.state.config.settings.hierCluster.clusterMethod
+			clusterMethod: this.state.config.settings.hierCluster.clusterMethod,
+			filter: this.state.filter,
+			filter0: this.state.filter0
 		}
 		this.hierClusterData = await dofetch3('mds3', { body })
 
@@ -88,8 +90,13 @@ class HierCluster extends Matrix {
 
 	setHierColorScale(c) {
 		const hc = this.settings.hierCluster
+		const globalMinMaxes = []
 		const minMaxes = []
 		const scale = hc.colors?.length ? interpolateRgbBasis(hc.colors) : interpolateRdBu
+		// for (const row of c.matrix) {
+		// 	globalMinMaxes.push(...extent(row))
+		// }
+		//const [min, max] = extent(globalMinMaxes)
 		for (const row of c.matrix) {
 			const [min, max] = extent(row)
 			minMaxes.push({
