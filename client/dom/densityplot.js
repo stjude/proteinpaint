@@ -13,7 +13,7 @@ make_densityplot
     required
 */
 
-export async function make_densityplot(holder, data, callabck) {
+export async function make_densityplot(holder, data, callabck, term) {
 	const width = 500,
 		height = 150,
 		xpad = 25,
@@ -22,19 +22,34 @@ export async function make_densityplot(holder, data, callabck) {
 		default_ticks = 10
 	const svg = holder.append('svg')
 	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
+	//density data, add first and last values to array
+
+	const density_data = data.density_data.density
 
 	//density data, add first and last values to array
-	const density_data = data.density_data.density
 	density_data.unshift([data.density_data.minvalue, 0])
 	density_data.push([data.density_data.maxvalue, 0])
 
-	// x-axis
+	let min = data.density_data.minvalue
+	let max = data.density_data.maxvalue
 	const xscale = scaleLinear()
-		.domain([data.density_data.minvalue, data.density_data.maxvalue])
+		.domain([min, max])
 		.range([xpad, width - xpad])
 
-	const x_axis = axisBottom().scale(xscale)
-	x_axis.tickFormat(format(''))
+	const days2years = term.printDays2years
+	if (days2years) {
+		min = min / 365
+		max = max / 365
+	}
+
+	// x-axis
+	const xscaleTicks = scaleLinear()
+		.domain([min, max])
+		.range([xpad, width - xpad])
+
+	const x_axis = axisBottom().scale(xscaleTicks)
+
+	x_axis
 
 	// y-scale
 	const yscale = scaleLinear()
@@ -73,7 +88,7 @@ export async function make_densityplot(holder, data, callabck) {
 		.call(x_axis)
 
 	g.append('text')
-		.text(data.termname)
+		.text(`${data.termname} ${days2years ? '(years)' : '(days)'}`)
 		.attr('fill', 'black')
 		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 		.attr('font-size', '13px')
