@@ -111,7 +111,6 @@ export default class LabelsRenderer implements IRenderer {
 		}
 
 		if (label.cnvTooltip) {
-			// CNV: <value> <color> chr:start-stop
 			label.cnvTooltip.forEach((cnv: CnvTooltip) => {
 				tooltipHtml += `CNV: <span style="color: ${cnv.color}">${cnv.value}</span> ${cnv.chr}:${cnv.start}-${cnv.stop}`
 			})
