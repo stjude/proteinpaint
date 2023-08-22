@@ -1265,9 +1265,10 @@ async function validate_query_geneExpression(ds, genome) {
 				// quick fix: newly added gene from client will lack chr/start/stop
 				const lst = genome.genedb.getjsonbyname.all(g.gene)
 				if (lst.length == 0) continue
-				g.start = lst[0].start
-				g.stop = lst[0].stop
-				g.chr = lst[0].chr
+				const j = JSON.parse(lst.find(i => i.isdefault).genemodel || lst[0].genemodel)
+				g.start = j.start
+				g.stop = j.stop
+				g.chr = j.chr
 			}
 
 			gene2sample2value.set(g.gene, {})
