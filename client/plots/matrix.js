@@ -7,7 +7,7 @@ import { MatrixControls } from './matrix.controls'
 import { setCellProps, getEmptyCell, maySetEmptyCell } from './matrix.cells'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
-import { interpolateRgb } from 'd3-interpolate'
+import { interpolateRgbBasis } from 'd3-interpolate'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
@@ -645,7 +645,6 @@ export class Matrix {
 	setLabelsAndScales() {
 		const s = this.settings.matrix
 		this.cnvValues = {}
-		this.geneExpValues = {}
 		// ht: standard cell dimension for term row or column
 		const ht = s.transpose ? s.colw : s.rowh
 		const grpTotals = {}
@@ -703,10 +702,6 @@ export class Matrix {
 								const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
 								if (!(minKey in this.cnvValues) || this.cnvValues[minKey] > v) this.cnvValues[minKey] = v
 								if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
-							} else if (val.dt == 3 && !this.geneExpValues?.scale && t.grp.name == 'Gene Expression') {
-								const v = val.value
-								if (!('min' in this.geneExpValues) || this.geneExpValues.min > v) this.geneExpValues.min = v
-								if (!('max' in this.geneExpValues) || this.geneExpValues.max > v) this.geneExpValues.max = v
 							}
 						}
 					}
@@ -761,15 +756,6 @@ export class Matrix {
 						gain: interpolateReds,
 						max: Math.max(...maxVals)
 					}
-				}
-				if ('min' in this.geneExpValues && t.grp.name == 'Gene Expression') {
-					if (!this.geneExpValues.scale) {
-						this.geneExpValues.scale = interpolateRgb(
-							this.settings.hierCluster.minColor,
-							this.settings.hierCluster.maxColor
-						)
-					}
-					t.scale = this.geneExpValues.scale
 				}
 			}
 
@@ -1139,6 +1125,7 @@ export class Matrix {
 						const item = legend.values[key]
 						const count = item.samples?.size
 						if (item.scale) {
+							console.log(1131, 'item.scale')
 							return {
 								termid: $id,
 								key,

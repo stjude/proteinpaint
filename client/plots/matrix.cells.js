@@ -141,7 +141,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				key: value.class,
 				label: '',
 				scale: self.geneExpValues.scale,
-				domain: [0, 1],
+				domain: [0, 0.5, 1],
 				minLabel: 'Min',
 				maxLabel: 'Max',
 				order

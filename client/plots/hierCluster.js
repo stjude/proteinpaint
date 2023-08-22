@@ -4,7 +4,8 @@ import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
 import { dofetch3 } from '#common/dofetch'
 import { fillTermWrapper } from '#termsetting'
 import { extent } from 'd3-array'
-import { interpolateRgb } from 'd3-interpolate'
+import { interpolateRgbBasis } from 'd3-interpolate'
+import { interpolateRdBu } from 'd3-scale-chromatic'
 
 class HierCluster extends Matrix {
 	constructor(opts) {
@@ -33,6 +34,7 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
+		console.log('setHierClusterData()')
 		const twlst = this.config.termgroups[0].lst
 		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
 		if (!genes.length) return
@@ -67,7 +69,7 @@ class HierCluster extends Matrix {
 							chr: tw.term.chr,
 							pos: `${tw.term.start}-${tw.term.stop}`,
 							value,
-							color: scale((value - min) / range)
+							color: scale(1 - (value - min) / range)
 						}
 					]
 				}
@@ -88,7 +90,7 @@ class HierCluster extends Matrix {
 	setHierColorScale(c) {
 		const hc = this.settings.hierCluster
 		const minMaxes = []
-		const scale = interpolateRgb(hc.minColor, hc.maxColor)
+		const scale = hc.colors?.length ? interpolateRgbBasis(hc.colors) : interpolateRdBu
 		for (const row of c.matrix) {
 			const [min, max] = extent(row)
 			minMaxes.push({
@@ -380,8 +382,7 @@ export async function getPlotConfig(opts = {}, app) {
 		clusterMethod: 'average',
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
-		minColor: '#0000ff',
-		maxColor: '#ff0000'
+		colors: []
 	}
 
 	return config

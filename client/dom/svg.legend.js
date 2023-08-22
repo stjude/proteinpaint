@@ -187,10 +187,10 @@ export default function svgLegend(opts) {
 				.attr('y1', '0%')
 				.attr('y2', '0%')
 				.selectAll('stop')
-				.data(d.domain[0] < d.domain[1] ? [0, 1] : [1, 0])
+				.data(d.domain.length > 2 ? d.domain : d.domain[0] < d.domain[1] ? [0, 1] : [1, 0])
 				.enter()
 				.append('stop')
-				.attr('offset', (c, i) => `${i * 100}%`)
+				.attr('offset', (c, i) => `${c * 100}%`)
 				.attr('stop-color', c => d.scale(c))
 				.attr('stop-opacity', 1)
 
