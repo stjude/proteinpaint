@@ -224,8 +224,14 @@ class TdbTree {
 		for (const tw of twLst) {
 			const key = sampleData[tw.$id].key
 			let value = sampleData[tw.$id].value
-			if (value == undefined) value = tw.term.values[key].label || tw.term.values[key].key
-			else if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
+			if (tw.term.values) {
+				for (const key2 in tw.term.values) {
+					const value2 = tw.term.values[key2]
+					if (value2.label && key == key2) value = value2.label
+				}
+			}
+			if (!value) value = key
+			if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
 			this.sampleData[tw.id || tw.term.name] = value
 		}
 	}
