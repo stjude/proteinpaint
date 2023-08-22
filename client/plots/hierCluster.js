@@ -34,7 +34,6 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		console.log('setHierClusterData()')
 		const twlst = this.config.termgroups[0].lst
 		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
 		if (!genes.length) return
