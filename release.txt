@@ -5,3 +5,4 @@ Fixes:
 - Ignore hidden values when conducting association tests.
 - Do not force a matrix barplot min scale to 0;
 - Fix the missing tooltip when mousing over second+ continuous matrix barplot rows
+- For matrix plot, when "Group Samples By" a variable that has predefined order, use that order for subgroups. 

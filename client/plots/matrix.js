@@ -12,7 +12,7 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin } from '#shared/common'
-import { getSampleSorter, getTermSorter } from './matrix.sort'
+import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
 export { getPlotConfig } from './matrix.config'
 
@@ -390,21 +390,8 @@ class Matrix {
 			grp.totalCountedValues = grp.lst.reduce(countHits, 0)
 			grp.lst.sort(grpLstSampleSorter)
 		}
-
-		// TODO: sort sample groups, maybe by sample count, value order, etc
-		return sampleGrpsArr.sort((a, b) => {
-			// NOTE: should not reorder by isExcluded, in order to maintain the assigned legend item order, colors, etc
-			//if (a.isExcluded && !b.isExcluded) return 1
-			//if (!a.isExcluded && b.isExcluded) return -1
-			if (a.lst.length && !b.lst.length) return -1
-			if (!a.lst.length && b.lst.length) return 1
-			if ('order' in a && 'order' in b) return a.order - b.order
-			if ('order' in a) return -1
-			if ('order' in b) return 1
-			if (s.sortSampleGrpsBy == 'sampleCount' && a.lst.length != b.lst.length) return b.lst.length - a.lst.length
-			if (s.sortSampleGrpsBy == 'hits') return b.totalCountedValues - a.totalCountedValues
-			return a.name < b.name ? -1 : 1
-		})
+		const sampleGrpSorter = getSampleGroupSorter(this)
+		return sampleGrpsArr.sort(sampleGrpSorter)
 	}
 
 	getSampleOrder(data) {
