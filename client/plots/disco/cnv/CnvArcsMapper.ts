@@ -4,11 +4,12 @@ import CnvArc from './CnvArc.ts'
 import CnvLegend from './CnvLegend.ts'
 import { CnvType } from './CnvType.ts'
 import Settings from '#plots/disco/Settings.ts'
+import CnvColorProvider from '#plots/disco/cnv/CnvColorProvider.ts'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()
 
-	private settings: any
+	private settings: Settings
 	private sampleName: string
 	private reference: Reference
 	private cnvMaxValue: number
@@ -129,16 +130,7 @@ export default class CnvArcsMapper {
 	}
 
 	getColor(value: number) {
-		const cnv = this.settings.cnv
-		if (value < this.lossCapped) {
-			return cnv.cappedLossColor
-		} else if (value >= this.lossCapped && value <= 0) {
-			return cnv.lossColor
-		} else if (value > 0 && value <= this.gainCapped) {
-			return cnv.ampColor
-		} else if (value > this.gainCapped) {
-			return cnv.cappedAmpColor
-		}
+		return CnvColorProvider.getColor(value, this.settings)
 	}
 
 	private calculateInnerRadius(data: Data) {

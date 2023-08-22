@@ -5,6 +5,7 @@ import Label from './Label.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
 import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
+import CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
@@ -106,6 +107,13 @@ export default class LabelsRenderer implements IRenderer {
 					`${fusionTooltip.geneB ? fusionTooltip.geneB : ''} ${fusionTooltip.chrB}:${fusionTooltip.posB} ${
 						fusionTooltip.strandB == '+' ? 'forward' : 'reverse'
 					} <br /> `
+			})
+		}
+
+		if (label.cnvTooltip) {
+			// CNV: <value> <color> chr:start-stop
+			label.cnvTooltip.forEach((cnv: CnvTooltip) => {
+				tooltipHtml += `CNV: <span style="color: ${cnv.color}">${cnv.value}</span> ${cnv.chr}:${cnv.start}-${cnv.stop}`
 			})
 		}
 
