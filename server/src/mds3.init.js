@@ -969,6 +969,7 @@ param={}
 	.tid2value = { term1id: v1, term2id:v2, ... }
 		if present, return list of samples matching the given k/v pairs, assuming AND
 	.filterObj = pp filter
+	.filter = pp filter
 allSamples=[]
 	whole list of samples, each ele: {name: int}
 	presumably the set of samples from a bcf file or tabix file
@@ -1003,13 +1004,16 @@ async function mayLimitSamples(param, allSamples, ds) {
 }
 
 function param2filter(param, ds) {
-	if (param.filterObj) {
-		if (!Array.isArray(param.filterObj.lst)) throw 'filterObj.lst is not array'
-		if (param.filterObj.lst.length == 0) {
-			// blank filter, do not return obj as that will break get_samples()
-			return null
+	{
+		const f = param.filter || param.filterObj
+		if (f) {
+			if (!Array.isArray(f.lst)) throw 'filterObj.lst is not array'
+			if (f.lst.length == 0) {
+				// blank filter, do not return obj as that will break get_samples()
+				return null
+			}
+			return f
 		}
-		return param.filterObj
 	}
 	if (param.tid2value) {
 		if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
@@ -1235,6 +1239,18 @@ async function validate_query_geneExpression(ds, genome) {
 	await utils.validate_tabixfile(q.file)
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+	}
+
+	mayValidateSampleHeader(ds, q.samples, 'geneExpression')
+
 	/*
 	query exp data one gene at a time
 	param{}
@@ -1246,7 +1262,7 @@ async function validate_query_geneExpression(ds, genome) {
 	.filterObj{}
 	*/
 	q.get = async param => {
-		const limitSamples = await mayLimitSamples(param, null, ds)
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
 			return new Map()
@@ -1284,7 +1300,9 @@ async function validate_query_geneExpression(ds, genome) {
 						//console.log('svfusion json err')
 						return
 					}
-					if (j.gene != g.gene) return
+
+					// case-insensitive match!
+					if (j.gene.toLowerCase() != g.gene.toLowerCase()) return
 					if (limitSamples && !limitSamples.has(j.sample)) return
 					gene2sample2value.get(g.gene)[j.sample] = j.value
 				}
