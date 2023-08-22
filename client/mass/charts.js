@@ -171,11 +171,6 @@ function getChartTypeList(self) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Gene expression',
-			chartType: 'geneExpression',
-			clickTo: self.loadChartSpecificMenu
-		},
-		{
 			label: 'Hierarchical Clustering',
 			chartType: 'hierCluster',
 			clickTo: self.loadChartSpecificMenu

@@ -401,7 +401,6 @@ export function server_init_db_queries(ds) {
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
-				if (ds.cohort.allowedChartTypes?.includes('hierCluster')) supportedChartTypes[r.cohort].add('hierCluster')
 				if (!cred || cred.embedders?.[embedder]) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 				}
@@ -447,7 +446,8 @@ export function server_init_db_queries(ds) {
 				}
 			}
 			if (ds.queries.geneExpression) {
-				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('geneExpression')
+				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('hierCluster')
+				// TODO support clustering on dict terms
 			}
 		}
 
