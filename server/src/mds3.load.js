@@ -456,10 +456,10 @@ async function geneExpressionClustering(data, q) {
 		for (const s of inputData.col_names) {
 			row.push(o[s] || 0)
 		}
-		const row2 = zscore(row)
-		inputData.matrix.push(row2)
+		//const row2 = zscore(row)
+		inputData.matrix.push(row)
 	}
-
+	console.log('inputData.matrix:', inputData.matrix.length, inputData.matrix[0].length)
 	//console.log('input_data:', inputData)
 	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
 	//	// For catching input to rust pipeline, in case of an error
@@ -478,11 +478,18 @@ async function geneExpressionClustering(data, q) {
 	let col_coordinates = []
 	let row_coordinate_start = false
 	let col_coordinate_start = false
+	let matrix_start = true
 	let row_names_index
 	let col_names_index
+	let matrix_1d
 	for (const line of Routput) {
-		//console.log(line)
-		if (line.includes('[1] "RowCoordinates"')) {
+		if (line.includes('OutputMatrix')) {
+			matrix_1d = line
+				.replace('OutputMatrix\t', '')
+				.split('\t')
+				.map(i => parseFloat(i))
+				.filter(n => n)
+		} else if (line.includes('[1] "RowCoordinates"')) {
 			row_coordinate_start = true
 		} else if (line.includes('"ColumnCoordinates"')) {
 			//console.log(line)
@@ -508,6 +515,9 @@ async function geneExpressionClustering(data, q) {
 		} else if (col_coordinate_start == true) {
 			col_coordinates.push(line)
 		}
+		//else {
+		//	console.log(line)
+		//}
 	}
 
 	//console.log('row_coordinates:', row_coordinates)
@@ -515,6 +525,18 @@ async function geneExpressionClustering(data, q) {
 
 	let row_output = await parseclust(row_coordinates, row_names_index)
 	let col_output = await parseclust(col_coordinates, col_names_index)
+
+	let output_matrix = []
+	for (let i = 0; i < inputData.matrix.length; i++) {
+		if (inputData.matrix[0]) {
+			let row = []
+			for (let j = 0; j < inputData.matrix[0].length; j++) {
+				row.push(matrix_1d[j * inputData.matrix.length + i])
+			}
+			output_matrix.push(row)
+		}
+	}
+	//console.log('output_matrix:', output_matrix)
 	//console.log('row_dendro:', row_output.dendrogram)
 	//console.log('row_children:', row_output.children)
 	//console.log('row_names_index:', JSON.stringify(row_names_index))
@@ -549,7 +571,7 @@ async function geneExpressionClustering(data, q) {
 	return {
 		geneNameLst: inputData.row_names,
 		sampleNameLst: inputData.col_names,
-		matrix: inputData.matrix,
+		matrix: output_matrix,
 
 		row_dendro: row_output.dendrogram,
 		row_children: row_output.children,
