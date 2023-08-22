@@ -42,7 +42,7 @@ args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript test.R in.json > results")
 infile <- args[1]
 input <- fromJSON(infile)
-normalized_matrix <- scale(input$matrix) # Applying z-score normalization
+normalized_matrix <- t(scale(t(input$matrix))) # Applying z-score normalization
 # For columns (i.e samples)
 RowDist <- dist(normalized_matrix, method = "euclidean") # Transposing the matrix
 
