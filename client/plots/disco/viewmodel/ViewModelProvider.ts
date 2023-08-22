@@ -42,7 +42,7 @@ export default class ViewModelProvider {
 
 		const labelsMapper = new LabelsMapper(this.settings, this.sampleName, this.reference)
 
-		const labelsData = labelsMapper.map(dataHolder.labelData)
+		const labelsData = labelsMapper.map(dataHolder.labelData, dataHolder.cnvData)
 
 		const labelsRing = new Labels(this.settings, labelsData, dataHolder.hasPrioritizedGenes)
 

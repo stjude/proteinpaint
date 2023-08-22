@@ -31,9 +31,11 @@ export class DiscoRenderer {
 
 		const svgDiv = rootDiv.append('div').style('display', 'inline-block').style('font-family', 'Arial')
 
-		this.downloadButtonRenderer.render(svgDiv)
+		const controlsDiv = svgDiv.append('div')
+
+		this.downloadButtonRenderer.render(controlsDiv)
 		this.prioritizeGenesCheckboxRenderer.render(
-			svgDiv,
+			controlsDiv,
 			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
 			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets
 		)

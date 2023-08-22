@@ -8,9 +8,11 @@ import Settings from '#plots/disco/Settings.ts'
 import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 import { MutationTypes } from '#plots/disco/data/MutationTypes.ts'
 import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
+import CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
+import CnvColorProvider from '#plots/disco/cnv/CnvColorProvider.ts'
 
 export default class LabelsMapper {
-	private settings: any
+	private settings: Settings
 	private sampleName: string
 	private reference: Reference
 
@@ -22,7 +24,7 @@ export default class LabelsMapper {
 		this.reference = reference
 	}
 
-	map(data: Array<Data>): Array<Label> {
+	map(data: Array<Data>, cnvData: Array<Data> = []): Array<Label> {
 		const innerRadius = this.settings.rings.labelLinesInnerRadius
 		const outerRadius = innerRadius + this.settings.rings.labelsToLinesDistance
 
@@ -52,16 +54,55 @@ export default class LabelsMapper {
 					const startAngleSource = this.calculateStartAngle(data.chrA, data.posA)
 					const endAngleSource = this.calculateEndAngle(data.chrA, data.posA)
 
-					this.addLabelOrFusion(data, data.geneA, startAngleSource, endAngleSource, innerRadius, outerRadius, color)
+					this.addLabelOrFusion(
+						data,
+						data.geneA,
+						data.posA,
+						startAngleSource,
+						endAngleSource,
+						innerRadius,
+						outerRadius,
+						color
+					)
 				}
 
 				if (data.geneB && data.geneA != data.geneB) {
 					const startAngleTarget = this.calculateStartAngle(data.chrB, data.posB)
 					const endAngleTarget = this.calculateEndAngle(data.chrB, data.posB)
 
-					this.addLabelOrFusion(data, data.geneB, startAngleTarget, endAngleTarget, innerRadius, outerRadius, color)
+					this.addLabelOrFusion(
+						data,
+						data.geneB,
+						data.posB,
+						startAngleTarget,
+						endAngleTarget,
+						innerRadius,
+						outerRadius,
+						color
+					)
 				}
 			}
+		})
+
+		const labelsArray = Array.from(this.labelMap.values())
+		labelsArray.forEach((label: Label) => {
+			cnvData.forEach((cnv: Data) => {
+				if (label.stop >= cnv.start && cnv.stop >= label.start && label.chr == cnv.chr) {
+					const mutation: CnvTooltip = {
+						value: cnv.value,
+						color: CnvColorProvider.getColor(cnv.value, this.settings),
+						chr: cnv.chr,
+						start: cnv.start,
+						stop: cnv.stop
+					}
+					if (label.cnvTooltip) {
+						label.cnvTooltip.push(mutation)
+					} else {
+						label.cnvTooltip = []
+						label.cnvTooltip.push(mutation)
+					}
+				}
+			})
 		})
 
 		return Array.from(this.labelMap.values())
@@ -107,9 +148,13 @@ export default class LabelsMapper {
 			)
 		} else {
 			if (label.mutationsTooltip) {
+				label.start = Math.min(label.start, data.position)
+				label.stop = Math.max(label.stop, data.position)
 				label.mutationsTooltip.push(mutation)
 			} else {
 				label.mutationsTooltip = []
+				label.start = Math.min(label.start, data.position)
+				label.stop = Math.max(label.stop, data.position)
 				label.mutationsTooltip.push(mutation)
 			}
 		}
@@ -118,6 +163,7 @@ export default class LabelsMapper {
 	private addLabelOrFusion(
 		data: Data,
 		gene: string,
+		position: number,
 		startAngle: number,
 		endAngle: number,
 		innerRadius,
@@ -158,9 +204,13 @@ export default class LabelsMapper {
 			)
 		} else {
 			if (label.fusionTooltip) {
+				label.start = Math.min(label.start, position)
+				label.stop = Math.max(label.stop, position)
 				label.fusionTooltip.push(fusionTooltip)
 			} else {
 				label.fusionTooltip = []
+				label.start = Math.min(label.start, position)
+				label.stop = Math.max(label.stop, position)
 				label.fusionTooltip.push(fusionTooltip)
 			}
 		}

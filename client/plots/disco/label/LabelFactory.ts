@@ -59,6 +59,9 @@ export default class LabelFactory {
 			ccAngle,
 			line,
 			isPrioritized,
+			start: position,
+			stop: position,
+			chr: chr,
 			mutationsTooltip: mutationTooltip ? [mutationTooltip] : undefined,
 			fusionTooltip: fusionTooltip ? [fusionTooltip] : undefined
 		}
@@ -139,6 +142,9 @@ export default class LabelFactory {
 			color: color,
 			line: line,
 			isPrioritized: element.isPrioritized,
+			start: element.start,
+			stop: element.stop,
+			chr: element.chr,
 			mutationsTooltip: element.mutationsTooltip,
 			fusionTooltip: element.fusionTooltip
 		}
