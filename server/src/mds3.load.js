@@ -459,7 +459,7 @@ async function geneExpressionClustering(data, q) {
 		//const row2 = zscore(row)
 		inputData.matrix.push(row)
 	}
-	console.log('inputData.matrix:', inputData.matrix.length, inputData.matrix[0].length)
+	//console.log('inputData.matrix:', inputData.matrix.length, inputData.matrix[0].length)
 	//console.log('input_data:', inputData)
 	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
 	//	// For catching input to rust pipeline, in case of an error
@@ -602,9 +602,8 @@ async function run_clustering(Rscript, args = []) {
 	const stdout = []
 	const stderr = []
 	return new Promise((resolve, reject) => {
-		console.log('serverconfig.Rscript:', serverconfig.Rscript)
-		console.log('Rscript:', Rscript)
-		console.log('args:', ...args)
+		//console.log('Rscript:', Rscript)
+		//console.log('args:', ...args)
 		const sp = spawn(serverconfig.Rscript, [Rscript, ...args])
 		sp.stdout.on('data', data => stdout.push(data))
 		sp.stderr.on('data', data => stderr.push(data))
