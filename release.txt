@@ -6,6 +6,7 @@ Features:
 - Mds3 numeric axis (e.g. occurrence) y scale can be edited.
 - PrOFILE polar and barchart bug fixes and improvements.
 - Implemented at-risk count filter in mass cuminc plot
+- GDC "Age at diagnosis" value by day is shown as "X years, Y days" in mds3 sample table.
 
 Fixes:
 - Ignore hidden values when conducting association tests for mass barchart.
