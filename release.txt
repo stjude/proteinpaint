@@ -19,3 +19,4 @@ Fixes:
 - GDC SSM range query by graphql appropriately accounts for sample filtering from a subtk.
 - In GDC bam slicing block display, clicking on a transcript from native gene tk will disable the "View in protein" option.
 - Hierarchical clustering R script is improve to include scaling step.
+- Add CNV information to label tooltips in disco plot.
