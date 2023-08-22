@@ -1413,7 +1413,7 @@ function setLabelDragEvents(self, prefix) {
 		//if (!this.dragged) return
 	}
 
-	self[`${prefix}LabelMousemove`] = () => {
+	self[`${prefix}LabelMousemove`] = (event, data) => {
 		const s = self.config.settings.matrix
 		if (self.clicked && !self.dragged) {
 			self.dom[`${prefix}LabelG`]
@@ -1424,6 +1424,8 @@ function setLabelDragEvents(self, prefix) {
 				.style('user-select', 'none')
 
 			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
+			const t = label.__data__
+			if (self.type == 'hierCluster' && t.tw && t.grp?.name == 'Gene Expression') return
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label).attr('transform').split('translate(')[1].split(')')[0].split(',').map(Number)
 			const node = label.cloneNode(true)
