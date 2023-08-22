@@ -8,11 +8,11 @@ export default class Labels extends Ring<Label> {
 	settings: any
 	elementsToDisplay: Array<Label> = []
 
-	private hasCancerGenes: boolean
-	private filteredHasCancerGenesList: Array<Label> = []
+	private hasPrioritizedGenes: boolean
+	private filteredPrioritizedGenesList: Array<Label> = []
 	private overlapAngle: number
 
-	constructor(settings: Settings, elements: Array<Label>, hasCancerGenes: boolean) {
+	constructor(settings: Settings, elements: Array<Label>, hasPrioritizedGenes: boolean) {
 		super(
 			settings.rings.labelLinesInnerRadius,
 			settings.rings.labelsToLinesDistance,
@@ -22,7 +22,7 @@ export default class Labels extends Ring<Label> {
 		)
 
 		this.settings = settings
-		this.hasCancerGenes = hasCancerGenes
+		this.hasPrioritizedGenes = hasPrioritizedGenes
 
 		const circumference = 2 * Math.PI * (settings.rings.labelLinesInnerRadius + settings.rings.labelsToLinesDistance)
 		this.overlapAngle = (this.settings.label.overlapAngleFactor * this.settings.label.fontSize) / circumference
@@ -33,25 +33,25 @@ export default class Labels extends Ring<Label> {
 	private calculateCollisions() {
 		this.collisions = []
 
-		let hasCancerGenesList: Array<Label> = []
+		let hasPrioritizedGenesList: Array<Label> = []
 
-		if (this.hasCancerGenes) {
-			hasCancerGenesList = this.elements.filter(label => label.isPrioritized)
-			this.filteredHasCancerGenesList = this.getLabelsWithoutCancerGenes(hasCancerGenesList)
+		if (this.hasPrioritizedGenes) {
+			hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
+			this.filteredPrioritizedGenesList = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
 
-			const hasNoCancerGenes = this.elements.filter(label => !label.isPrioritized)
+			const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
 
-			const combinedAndSortedList = hasNoCancerGenes.concat(this.filteredHasCancerGenesList).sort((a, b) => {
+			const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
 				return a.startAngle < b.startAngle ? -1 : a.startAngle > b.startAngle ? 1 : 0
 			})
 
 			this.elementsToDisplay = this.getAllLabels(combinedAndSortedList)
 		} else {
-			this.elementsToDisplay = this.getLabelsWithoutCancerGenes(this.elements)
+			this.elementsToDisplay = this.getLabelsWithoutPrioritizedGenes(this.elements)
 		}
 	}
 
-	private getLabelsWithoutCancerGenes(elemenets: Array<Label>) {
+	private getLabelsWithoutPrioritizedGenes(elemenets: Array<Label>) {
 		const filteredList: Array<Label> = []
 
 		let prev = { endAngle: 0 }

@@ -34,6 +34,8 @@ export default interface Settings {
 		fontSize: number
 		animationDuration: number
 		overlapAngleFactor: number
+		showPrioritizeGeneLabelsByGeneSets: boolean
+		prioritizeGeneLabelsByGeneSets: boolean
 	}
 	legend: {
 		snvTitle: string

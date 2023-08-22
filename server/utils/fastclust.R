@@ -42,9 +42,9 @@ args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript test.R in.json > results")
 infile <- args[1]
 input <- fromJSON(infile)
-
+normalized_matrix <- scale(input$matrix) # Applying z-score normalization
 # For columns (i.e samples)
-RowDist <- dist(input$matrix, method = "euclidean") # Transposing the matrix
+RowDist <- dist(normalized_matrix, method = "euclidean") # Transposing the matrix
 
 # Hierarchical clustering
 print (input$cluster_method)
@@ -76,7 +76,7 @@ print ("RowCoordinates")
 print (row_node_coordinates)
 
 # For columns (i.e samples)
-ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matrix
+ColumnDist <- dist(t(normalized_matrix), method = "euclidean") # Transposing the matrix
 
 # Hierarchical clustering
 
@@ -95,7 +95,7 @@ print (col_node_coordinates)
 print ("Done")
 # Sorting the matrix
 
-SortedMatrix  <- input$matrix[RowDend$order, ColumnDend$order]
+SortedMatrix  <- normalized_matrix[RowDend$order, ColumnDend$order]
 SortedRowNames <- input$row_names[RowDend$order]
 SortedColumnNames <- input$col_names[ColumnDend$order]
 
@@ -104,9 +104,11 @@ colnames(m) <- SortedColumnNames
 rownames(m) <- SortedRowNames
 cat("rownames",RowDend$order,"\n",sep="\t")
 cat("colnames",ColumnDend$order,"\n",sep="\t")
+cat ("OutputMatrix",normalized_matrix,"\n",sep="\t") # This outputs the 2D array in 1D column-wise. This is later converted to 2D array in nodejs.
 
-df  <- melt(m)
-colnames(df) <- c("Genes", "Samples", "value")
+
+#df  <- melt(m)
+#colnames(df) <- c("Genes", "Samples", "value")
 
 #ggplot(df, aes(x = Genes, y = Samples, fill = value)) + geom_tile() + scale_fill_gradient(low="blue", high="red") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 

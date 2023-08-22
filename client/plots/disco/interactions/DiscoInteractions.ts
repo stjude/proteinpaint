@@ -2,6 +2,7 @@ export class DiscoInteractions {
 	cappingClickCallback: (d: any, t: any) => void
 	downloadClickListener: (d: any) => void
 	geneClickListener: (gene: string, mnames: Array<string>) => void
+	prioritizeGenesCheckboxListener: (checked: boolean) => void
 
 	constructor(app: any) {
 		this.cappingClickCallback = (d: any, t: any) => {
@@ -70,6 +71,20 @@ export class DiscoInteractions {
 			}
 			const _ = await import('#src/block.init')
 			await _.default(arg)
+		}
+
+		this.prioritizeGenesCheckboxListener = (checked: boolean) => {
+			app.app.dispatch({
+				type: 'plot_edit',
+				id: app.opts.id,
+				config: {
+					settings: {
+						label: {
+							prioritizeGeneLabelsByGeneSets: checked
+						}
+					}
+				}
+			})
 		}
 	}
 }

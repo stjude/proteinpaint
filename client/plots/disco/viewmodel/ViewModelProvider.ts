@@ -44,7 +44,7 @@ export default class ViewModelProvider {
 
 		const labelsData = labelsMapper.map(dataHolder.labelData)
 
-		const labelsRing = new Labels(this.settings, labelsData, dataHolder.hasCancerGenes)
+		const labelsRing = new Labels(this.settings, labelsData, dataHolder.hasPrioritizedGenes)
 
 		const chromosomesRing = new Ring(
 			this.settings.rings.chromosomeInnerRadius,

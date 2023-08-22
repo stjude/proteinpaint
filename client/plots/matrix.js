@@ -12,7 +12,7 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin } from '#shared/common'
-import { getSampleSorter, getTermSorter } from './matrix.sort'
+import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
 export { getPlotConfig } from './matrix.config'
 
@@ -390,21 +390,8 @@ class Matrix {
 			grp.totalCountedValues = grp.lst.reduce(countHits, 0)
 			grp.lst.sort(grpLstSampleSorter)
 		}
-
-		// TODO: sort sample groups, maybe by sample count, value order, etc
-		return sampleGrpsArr.sort((a, b) => {
-			// NOTE: should not reorder by isExcluded, in order to maintain the assigned legend item order, colors, etc
-			//if (a.isExcluded && !b.isExcluded) return 1
-			//if (!a.isExcluded && b.isExcluded) return -1
-			if (a.lst.length && !b.lst.length) return -1
-			if (!a.lst.length && b.lst.length) return 1
-			if ('order' in a && 'order' in b) return a.order - b.order
-			if ('order' in a) return -1
-			if ('order' in b) return 1
-			if (s.sortSampleGrpsBy == 'sampleCount' && a.lst.length != b.lst.length) return b.lst.length - a.lst.length
-			if (s.sortSampleGrpsBy == 'hits') return b.totalCountedValues - a.totalCountedValues
-			return a.name < b.name ? -1 : 1
-		})
+		const sampleGrpSorter = getSampleGroupSorter(this)
+		return sampleGrpsArr.sort(sampleGrpSorter)
 	}
 
 	getSampleOrder(data) {
@@ -710,25 +697,28 @@ class Matrix {
 				if (!('gap' in t.tw.settings)) t.tw.settings.gap = 4
 				const barh = t.tw.settings.barh
 				const absMin = Math.abs(t.counts.minval)
+				const rangeSpansZero = t.counts.minVal < 0 && t.counts.maxval
 				const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
 				t.counts.posMaxHt = ratio * barh
-				const tickValues =
-					t.counts.minVal < 0 && t.counts.maxval > 0
+				const tickValues = //[t.counts.minval, t.counts.maxval]
+					rangeSpansZero
 						? [t.counts.minval, t.counts.maxval]
-						: t.counts.maxval <= 0
-						? [0, t.counts.minval]
-						: [t.counts.maxval, 0]
+						: t.counts.maxval > 0
+						? [t.counts.maxval, t.counts.minval]
+						: [t.counts.minval, t.counts.maxval]
 
 				t.scales = {
 					tickValues,
 					full: scaleLinear().domain(tickValues).range([1, barh])
 				}
 				if (t.counts.maxval >= 0) {
-					t.scales.pos = scaleLinear().domain([0, t.counts.maxval]).range([1, t.counts.posMaxHt])
+					const domainMin = rangeSpansZero ? 0 : t.counts.minval
+					t.scales.pos = scaleLinear().domain([domainMin, t.counts.maxval]).range([1, t.counts.posMaxHt])
 				}
 				if (t.counts.minval < 0) {
+					const domainMax = rangeSpansZero ? 0 : t.counts.maxval
 					t.scales.neg = scaleLinear()
-						.domain([0, t.counts.minval])
+						.domain([domainMax, t.counts.minval])
 						.range([1, barh - t.counts.posMaxHt - 5])
 				}
 			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
@@ -938,7 +928,7 @@ class Matrix {
 			const isDivideByTerm = termid === divideByTermId
 			const emptyGridCells = []
 			const y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
-			const hoverY0 = t.tw.settings?.gap || y
+			const hoverY0 = (t.tw.settings?.gap || 0) + y
 			const series = {
 				t,
 				tw: t.tw,

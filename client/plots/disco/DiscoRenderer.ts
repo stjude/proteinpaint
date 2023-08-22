@@ -4,22 +4,26 @@ import LegendRenderer from './legend/LegendRenderer.ts'
 import { RingType } from './ring/RingType.ts'
 import FusionRenderer from './fusion/FusionRenderer.ts'
 import DownloadButtonRenderer from './download/DownloadButtonRenderer.ts'
+import PrioritizeGenesCheckboxRenderer from '#plots/disco/prioritizegenes/PrioritizeGenesCheckboxRenderer.ts'
 
 export class DiscoRenderer {
 	private renders: Map<RingType, IRenderer>
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 	private downloadButtonRenderer: DownloadButtonRenderer
+	private prioritizeGenesCheckboxRenderer: PrioritizeGenesCheckboxRenderer
 
 	constructor(
 		renders: Map<RingType, IRenderer>,
 		legendRenderer: LegendRenderer,
-		downloadClickListener: (d: any) => void
+		downloadClickListener: (d: any) => void,
+		prioritizedGenesCheckboxListener: (checked: boolean) => void
 	) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
 		this.fusionRenderer = new FusionRenderer()
 		this.downloadButtonRenderer = new DownloadButtonRenderer(downloadClickListener)
+		this.prioritizeGenesCheckboxRenderer = new PrioritizeGenesCheckboxRenderer(prioritizedGenesCheckboxListener)
 	}
 
 	render(holder: any, viewModel: ViewModel) {
@@ -28,6 +32,11 @@ export class DiscoRenderer {
 		const svgDiv = rootDiv.append('div').style('display', 'inline-block').style('font-family', 'Arial')
 
 		this.downloadButtonRenderer.render(svgDiv)
+		this.prioritizeGenesCheckboxRenderer.render(
+			svgDiv,
+			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
+			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets
+		)
 
 		const svg = svgDiv
 			.append('svg')

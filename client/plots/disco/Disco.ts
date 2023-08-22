@@ -28,11 +28,9 @@ export default class Disco {
 		this.opts = opts
 		this.discoInteractions = new DiscoInteractions(this)
 	}
-
 	getState(appState: any) {
 		return appState.plots.find(p => p.id === this.id)
 	}
-
 	async main(): Promise<void> {
 		const settings: Settings = this.state.settings
 		const stateViewModelMapper = new ViewModelMapper(settings)
@@ -50,7 +48,8 @@ export default class Disco {
 		const discoRenderer = new DiscoRenderer(
 			this.getRingRenderers(settings, this.discoInteractions.geneClickListener),
 			legendRenderer,
-			this.discoInteractions.downloadClickListener
+			this.discoInteractions.downloadClickListener,
+			this.discoInteractions.prioritizeGenesCheckboxListener
 		)
 
 		discoRenderer.render(holder, viewModel)

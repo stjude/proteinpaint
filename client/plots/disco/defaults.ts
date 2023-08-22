@@ -32,7 +32,9 @@ export default function discoDefaults(overrides = {}): Settings {
 			fontSize: 12,
 			maxDeltaAngle: 0.05,
 			animationDuration: 1000,
-			overlapAngleFactor: 5 // 5 is set by testing, because label height is not known before rendering
+			overlapAngleFactor: 5, // 5 is set by testing, because label height is not known before rendering
+			prioritizeGeneLabelsByGeneSets: false,
+			showPrioritizeGeneLabelsByGeneSets: false
 		},
 
 		cnv: {
