@@ -9,6 +9,7 @@ Features:
 - GDC "Age at diagnosis" value by day is shown as "X years, Y days" in mds3 sample table.
 - Prototype a hierarchical cluster plot using the matrix plot
 
+
 Fixes:
 - Ignore hidden values when conducting association tests for mass barchart.
 - Do not force a matrix barplot min scale to 0;
