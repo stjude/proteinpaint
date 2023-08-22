@@ -332,8 +332,8 @@ export async function getPlotConfig(opts = {}, app) {
 	config.settings.matrix.collabelpos = 'top'
 
 	// hardcode for testing only
-	// TODO: replace with controls/menu, etc
-	const genes = [
+	// TODO: if no genes, show gene set edit ui (this assumes the app is only for gene...)
+	const genes = opts.genes || [
 		{
 			gene: 'BCR',
 			chr: 'chr22',
@@ -353,8 +353,6 @@ export async function getPlotConfig(opts = {}, app) {
 			stop: 27096000
 		}
 	]
-
-	//const genes = [{"gene":"JAG1","chr":"chr20","start":10637683,"stop":10673999},{"gene":"NOTCH3","chr":"chr19","start":15159037,"stop":15200995},{"gene":"NOTCH2","chr":"chr1","start":119911552,"stop":120069662},{"gene":"APH1A","chr":"chr1","start":150265403,"stop":150269016},{"gene":"HES1","chr":"chr3","start":194136147,"stop":194138732},{"gene":"CCND1","chr":"chr11","start":69641155,"stop":69654474},{"gene":"FZD1","chr":"chr7","start":91264432,"stop":91271326},{"gene":"PSEN2","chr":"chr1","start":226870615,"stop":226896098},{"gene":"FZD7","chr":"chr2","start":202033854,"stop":202038441},{"gene":"DTX1","chr":"chr12","start":113056729,"stop":113098025},{"gene":"DLL1","chr":"chr6","start":170282205,"stop":170291078},{"gene":"FZD5","chr":"chr2","start":207762597,"stop":207769906},{"gene":"MAML2","chr":"chr11","start":95976597,"stop":96343195},{"gene":"NOTCH1","chr":"chr9","start":136494432,"stop":136546048},{"gene":"PSENEN","chr":"chr19","start":35745650,"stop":35747519},{"gene":"WNT5A","chr":"chr3","start":55465714,"stop":55481398},{"gene":"CUL1","chr":"chr7","start":148697755,"stop":148801110},{"gene":"WNT2","chr":"chr7","start":117275450,"stop":117323058},{"gene":"DTX4","chr":"chr11","start":59171429,"stop":59208588},{"gene":"SAP30","chr":"chr4","start":173370953,"stop":173377532},{"gene":"PPARD","chr":"chr6","start":35342557,"stop":35425400},{"gene":"KAT2A","chr":"chr17","start":42113110,"stop":42121367},{"gene":"HEYL","chr":"chr1","start":39623434,"stop":39639643},{"gene":"SKP1","chr":"chr5","start":134148934,"stop":134176950},{"gene":"RBX1","chr":"chr22","start":40951377,"stop":40973309},{"gene":"TCF7L2","chr":"chr10","start":112950246,"stop":113167678},{"gene":"ARRB1","chr":"chr11","start":75260121,"stop":75351661},{"gene":"LFNG","chr":"chr7","start":2512528,"stop":2528429},{"gene":"PRKCA","chr":"chr17","start":66302612,"stop":66810743},{"gene":"DTX2","chr":"chr7","start":76461708,"stop":76505991},{"gene":"ST3GAL6","chr":"chr3","start":98732261,"stop":98795852},{"gene":"FBXW11","chr":"chr5","start":171861548,"stop":172006638}]
 
 	const twlst = genes.map(term => {
 		term.type = 'geneVariant'
