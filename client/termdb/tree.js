@@ -180,32 +180,15 @@ class TdbTree {
 			terms.push(copy)
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
-			const twLst = []
 
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
-				for (const term of copy.terms) {
-					let tw = { id: term.id }
-					tw = await fillTermWrapper(tw, this.app.vocabApi)
-					twLst.push(tw)
-				}
-				const filter = getSampleFilter(this.sampleId)
-				let sampleData = await this.app.vocabApi.getAnnotatedSampleData({
-					terms: twLst,
-					filter
-				})
-				sampleData = sampleData.lst[0]
-
-				for (const tw of twLst) {
-					const key = sampleData[tw.$id].key
-					let value = sampleData[tw.$id].value
-					if (value == undefined) value = tw.term.values[key].label || tw.term.values[key].key
-					this.sampleData[tw.id] = value
-				}
+				if (this.sampleId) await this.fillSampleData(copy.terms)
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
+				if (this.sampleId && copy.isleaf) await this.fillSampleData([copy])
 				const t0 = this.termsById[copy.id]
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
@@ -219,6 +202,32 @@ class TdbTree {
 
 	bindKey(term) {
 		return term.id
+	}
+
+	async fillSampleData(terms) {
+		const twLst = []
+
+		for (const term of terms) {
+			let tw = { id: term.id }
+			tw = await fillTermWrapper(tw, this.app.vocabApi)
+			twLst.push(tw)
+		}
+
+		const filter = getSampleFilter(this.sampleId)
+		let sampleData = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: twLst,
+			filter
+		})
+
+		sampleData = sampleData.lst[0]
+
+		for (const tw of twLst) {
+			const key = sampleData[tw.$id].key
+			let value = sampleData[tw.$id].value
+			if (value == undefined) value = tw.term.values[key].label || tw.term.values[key].key
+			else if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
+			this.sampleData[tw.id || tw.term.name] = value
+		}
 	}
 }
 

@@ -182,7 +182,7 @@ export function setInteractivity(self) {
 					self.app.dispatch({
 						type: 'plot_create',
 						id: getId(),
-						config: { chartType: 'dictionary', sampleId: sample.sample_id }
+						config: { chartType: 'dictionary', sampleId: sample.sampleId }
 					})
 					self.dom.tip.hide()
 				})
