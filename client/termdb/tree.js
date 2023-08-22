@@ -3,6 +3,8 @@ import { select, selectAll } from 'd3-selection'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
+import { getSampleFilter } from '#termsetting/handlers/samplelst'
+import { fillTermWrapper } from '#termsetting'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -70,9 +72,10 @@ class TdbTree {
 		this.termsByCohort = {}
 		this.expandAll = 'expandAll' in opts ? opts.expandAll : false
 		//getCompInit(TdbTree) will set this.id, .app, .opts, .api
+		this.sampleData = {}
 	}
 
-	init() {
+	init(opts) {
 		this.dom = {
 			holder: this.opts.holder.append('div')
 		}
@@ -95,7 +98,8 @@ class TdbTree {
 			expandedTermIds: appState.tree.expandedTermIds,
 			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
-			usecase: appState.tree.usecase
+			usecase: appState.tree.usecase,
+			sampleId: appState.sampleId
 		}
 
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
@@ -116,7 +120,7 @@ class TdbTree {
 			this.dom.holder.style('display', 'none')
 			return
 		}
-
+		this.sampleId = this.state.sampleId
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
 			if (!this.state.cohortValuelst) {
@@ -176,8 +180,28 @@ class TdbTree {
 			terms.push(copy)
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
+			const twLst = []
+
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
+				for (const term of copy.terms) {
+					let tw = { id: term.id }
+					tw = await fillTermWrapper(tw, this.app.vocabApi)
+					twLst.push(tw)
+				}
+				const filter = getSampleFilter(this.sampleId)
+				let sampleData = await this.app.vocabApi.getAnnotatedSampleData({
+					terms: twLst,
+					filter
+				})
+				sampleData = sampleData.lst[0]
+
+				for (const tw of twLst) {
+					const key = sampleData[tw.$id].key
+					let value = sampleData[tw.$id].value
+					if (value == undefined) value = tw.term.values[key].label || tw.term.values[key].key
+					this.sampleData[tw.id] = value
+				}
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
@@ -187,6 +211,7 @@ class TdbTree {
 					copy.terms = t0.terms
 				}
 			}
+
 			this.termsById[copy.id] = copy
 		}
 		return terms
@@ -286,10 +311,7 @@ function setRenderers(self) {
 
 		divs.each(self.updateTerm)
 
-		divs
-			.enter()
-			.append('div')
-			.each(self.addTerm)
+		divs.enter().append('div').each(self.addTerm)
 
 		for (const child of term.terms) {
 			if (expandedTermIds.includes(child.id)) {
@@ -303,12 +325,12 @@ function setRenderers(self) {
 	}
 
 	// this == the d3 selected DOM node
-	self.hideTerm = function(term) {
+	self.hideTerm = function (term) {
 		if (term.id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
-	self.updateTerm = function(term) {
+	self.updateTerm = function (term) {
 		const div = select(this)
 		if (!(term.id in self.termsById)) {
 			div.style('display', 'none')
@@ -336,7 +358,7 @@ function setRenderers(self) {
 			.style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
 	}
 
-	self.addTerm = async function(term) {
+	self.addTerm = async function (term) {
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
 
@@ -362,13 +384,15 @@ function setRenderers(self) {
 		}
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
+		let text = term.name
+		if (term.isleaf && self.sampleData[term.id]) text += ` (${self.sampleData[term.id]})`
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
-			.text(term.name)
+			.text(text)
 
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
@@ -428,10 +452,7 @@ function setRenderers(self) {
 		}
 
 		if (!term.isleaf) {
-			div
-				.append('div')
-				.attr('class', cls_termchilddiv)
-				.style('padding-left', childterm_indent)
+			div.append('div').attr('class', cls_termchilddiv).style('padding-left', childterm_indent)
 		}
 	}
 }
@@ -448,7 +469,7 @@ function setInteractivity(self) {
 	// !!! no free-floating variable declarations here !!!
 	// use self in TdbTree constructor to create properties
 
-	self.toggleBranch = function(term) {
+	self.toggleBranch = async function (term) {
 		//event.stopPropagation()
 		if (term.isleaf) return
 		const t0 = self.termsById[term.id]

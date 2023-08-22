@@ -6,6 +6,7 @@ import { rgb } from 'd3-color'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 import { newSandboxDiv } from '#dom/sandbox'
+import { getId } from '#mass/nav'
 
 export function setInteractivity(self) {
 	self.mouseover = function (event, chart) {
@@ -113,7 +114,8 @@ export function setInteractivity(self) {
 		if (!self.lassoOn) self.dom.tip.hide()
 		tip2.hide()
 		const target = event.target
-
+		const sample = target.__data__
+		sample.sample_id = sample.sample
 		const drawMethylationArrayPlot =
 			self.state.termdbConfig.queries?.singleSampleGenomeQuantification &&
 			target.tagName == 'path' &&
@@ -125,8 +127,7 @@ export function setInteractivity(self) {
 
 		if (drawMethylationArrayPlot || drawDiscoPlot) {
 			self.dom.tooltip.hide()
-			const sample = event.target.__data__
-			sample.sample_id = sample.sample
+
 			self.dom.tip.clear()
 			self.dom.tip.show(event.clientX, event.clientY, true, true)
 			if ('sample' in sample) self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
@@ -173,6 +174,18 @@ export function setInteractivity(self) {
 						self.dom.tip.hide()
 					})
 			}
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Open dictionary')
+				.on('click', async event => {
+					self.app.dispatch({
+						type: 'plot_create',
+						id: getId(),
+						config: { chartType: 'dictionary', sampleId: sample.sample_id }
+					})
+					self.dom.tip.hide()
+				})
 		}
 	}
 

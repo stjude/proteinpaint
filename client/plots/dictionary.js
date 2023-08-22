@@ -11,6 +11,8 @@ class MassDict {
 	}
 
 	async init(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		this.sampleId = config.sampleId
 		this.tree = await appInit({
 			vocabApi: this.app.vocabApi,
 			holder: this.dom.holder,
@@ -41,7 +43,8 @@ class MassDict {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			selectdTerms: appState.selectedTerms,
-			customTerms: appState.customTerms
+			customTerms: appState.customTerms,
+			sampleId: this.sampleId
 		}
 	}
 
