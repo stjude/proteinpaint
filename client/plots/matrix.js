@@ -1125,7 +1125,6 @@ export class Matrix {
 						const item = legend.values[key]
 						const count = item.samples?.size
 						if (item.scale) {
-							console.log(1131, 'item.scale')
 							return {
 								termid: $id,
 								key,
