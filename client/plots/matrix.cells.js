@@ -83,7 +83,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * 0.33333
-	} else if (value.dt == 4) {
+	} else if (value.dt == 4 || value.dt == 3) {
 		cell.height = s.rowh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
@@ -129,6 +129,22 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				value: value.class,
 				order: -1,
 				entry: { key: value.class, label: cell.label, fill: cell.fill, order }
+			}
+		}
+	} else if (value.dt == 3) {
+		return {
+			ref: t.ref,
+			group: 'Gene Expression',
+			value: value.class,
+			order: -1,
+			entry: {
+				key: value.class,
+				label: '',
+				scale: self.geneExpValues.scale,
+				domain: [0, 1],
+				minLabel: 'Min',
+				maxLabel: 'Max',
+				order
 			}
 		}
 	} else {

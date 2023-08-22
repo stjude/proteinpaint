@@ -1256,6 +1256,20 @@ async function validate_query_geneExpression(ds, genome) {
 
 		for (const g of param.genes) {
 			// g = {gene/chr/start/stop}
+
+			// FIXME newly added geneVariant terms from client to be changed to {gene} but not {name}
+			if (!g.gene) g.gene = g.name
+			if (!g.gene) continue
+
+			if (!g.chr) {
+				// quick fix: newly added gene from client will lack chr/start/stop
+				const lst = genome.genedb.getjsonbyname.all(g.gene)
+				if (lst.length == 0) continue
+				g.start = lst[0].start
+				g.stop = lst[0].stop
+				g.chr = lst[0].chr
+			}
+
 			gene2sample2value.set(g.gene, {})
 			await utils.get_lines_bigfile({
 				args: [q.file, (q.nochr ? g.chr.replace('chr', '') : g.chr) + ':' + g.start + '-' + g.stop],

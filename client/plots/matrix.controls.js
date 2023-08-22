@@ -50,7 +50,10 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
 						options: Object.values(s.sortOptions).sort((a, b) => a.order - b.order),
-						labelDisplay: 'block'
+						labelDisplay: 'block',
+						getDisplayStyle(plot) {
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+						}
 					},
 					{
 						label: `Maximum # ${l.Samples}`,
@@ -69,6 +72,9 @@ export class MatrixControls {
 						state: {
 							vocab: this.opts.vocab
 							//activeCohort: appState.activeCohort
+						},
+						getDisplayStyle(plot) {
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
 						},
 						processInput: tw => {
 							if (tw) fillTermWrapper(tw)
@@ -106,7 +112,7 @@ export class MatrixControls {
 							}
 						],
 						getDisplayStyle(plot) {
-							return plot.divideBy ? 'block' : 'none'
+							return plot.divideBy && !plot.hierCluster ? 'table-row' : 'none'
 						}
 					},
 					{
@@ -116,7 +122,7 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'sampleGrpLabelMaxChars',
 						getDisplayStyle(plot) {
-							return plot.divideBy ? 'block' : 'none'
+							return plot.divideBy && !plot.hierCluster ? 'block' : 'none'
 						}
 					},
 					{
@@ -748,7 +754,7 @@ export class MatrixControls {
 
 	appendDictInputs(self, app, parent, table) {
 		tip.clear()
-		if (!parent.selectedGroup) parent.selectedGroup = 0
+		if (!parent.selectedGroup) parent.selectedGroup = self.chartType == 'hierCluster' ? 1 : 0
 		app.tip.d.append('hr')
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
@@ -894,7 +900,7 @@ export class MatrixControls {
 			})
 		} else {
 			const grp = { name: 'Variables', lst: newterms }
-			termgroups.unshift(grp)
+			termgroups.push(grp)
 			this.parent.app.dispatch({
 				type: 'plot_edit',
 				id: this.parent.id,
@@ -1030,6 +1036,9 @@ export class MatrixControls {
 					p.clusterRenderer.translateElems(-dx, s, d)
 					p.layout.top.attr.adjustBoxTransform(-dx)
 					p.layout.btm.attr.adjustBoxTransform(-dx)
+					if (p.dom.topDendrogram) {
+						p.dom.topDendrogram.attr('transform', `translate(${p.topDendroX - dx},0)`)
+					}
 				} else if (eventType == 'up') {
 					const c = p.getVisibleCenterCell(-dx)
 					p.app.dispatch({

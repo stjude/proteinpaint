@@ -22,7 +22,7 @@ export function getFilteredSamples(sampleAnno, filter) {
 	return samples // return as a Set, or maybe as an array later
 }
 
-export function sample_match_termvaluesetting(row, filter) {
+export function sample_match_termvaluesetting(row, filter, _term = null) {
 	const lst = filter.type == 'tvslst' ? filter.lst : [filter]
 	let numberofmatchedterms = 0
 
@@ -33,8 +33,9 @@ export function sample_match_termvaluesetting(row, filter) {
 				numberofmatchedterms++
 			}
 		} else {
+			if (_term) item.tvs.term = _term
 			const t = item.tvs
-			const samplevalue = row[t.term.id]
+			const samplevalue = t.term.id in row ? row[t.term.id] : row
 
 			let thistermmatch
 
@@ -86,6 +87,34 @@ export function sample_match_termvaluesetting(row, filter) {
 						? t.values.find(d => anno.includes(d.key))
 						: t.values.find(d => d.key == anno)
 				}
+			} else if (t.term.type == 'geneVariant') {
+				/*
+				samplevalue.values here can be an array or only one of the entries 
+				[
+					{ dt: 1, class: 'WT', _SAMPLEID_: 21, origin: 'germline' },
+					{ dt: 1, class: 'WT', _SAMPLEID_: 21, origin: 'somatic' },
+					{ dt: 2, class: 'Blank', _SAMPLEID_: 21 },
+					{ dt: 4, class: 'WT', _SAMPLEID_: 21 }
+				]
+				*/
+				/* tvs.values is an array that stores classes (for each available dt) that have/haven't been crossed out by the user at this round of edit-and-apply, e.g.
+          [
+            {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'germline'}
+            {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'somatic'},
+            {dt: 2, mclassLst: ['Blank', 'WT'], mclassExcludeLst:[]}
+            {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
+          ]
+        */
+				const svalues = samplevalue.values || [samplevalue]
+				for (const sv of svalues) {
+					thistermmatch =
+						t.values.find(
+							v =>
+								v.dt == sv.dt &&
+								(!v.origin || sv.origin == v.origin) &&
+								(!v.mclasslst || v.mclasslst.includes(sv.mclass))
+						) && true //; console.log(114, t.values[0].dt, samplevalue.dt, thistermmatch)
+				}
 			} else {
 				throw 'unknown term type'
 			}
@@ -102,8 +131,8 @@ export function sample_match_termvaluesetting(row, filter) {
 			if (!numberofmatchedterms && !filter.in) return true
 		}
 	}
-
 	// for join="and" (Set intersection)
+	if (!('in' in filter)) filter.in = true
 	return filter.in == (numberofmatchedterms == lst.length)
 	// if (filter.in && numberofmatchedterms == lst.length) return true
 	// if (!filter.in && numberofmatchedterms != lst.length) return true

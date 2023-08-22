@@ -113,7 +113,8 @@ export function setRenderers(self) {
 				},
 				false
 			)
-			const dataURL = reader.readAsDataURL(await canvas.convertToBlob({ quality: 1 }))
+			const blob = await canvas.convertToBlob({ quality: 1 })
+			const dataURL = reader.readAsDataURL(blob)
 		} else {
 			_g?.remove()
 			self.dom.seriesesG
@@ -336,6 +337,9 @@ export function setRenderers(self) {
 
 	self.adjustSvgDimensions = async function (prevTranspose) {
 		const s = self.settings.matrix
+		const hc = self.settings.hierCluster || {}
+		const hcHeight = hc.yDendrogramHeight || 0
+		const hcWidth = hc.xDendrogramHeight || 0
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
 
@@ -343,25 +347,26 @@ export function setRenderers(self) {
 		// the label rotation to end before measuring the label height and width
 		await sleep(prevTranspose == s.transpose ? duration : s.duration)
 
-		const topBox = self.layout.top.box.node().getBBox()
-		const btmBox = self.layout.btm.box.node().getBBox()
-		const leftBox = self.layout.left.box.node().getBBox()
-		const rtBox = self.layout.right.box.node().getBBox()
+		const l = self.layout
+		const topBox = l.top.box.node().getBBox()
+		const btmBox = l.btm.box.node().getBBox()
+		const leftBox = l.left.box.node().getBBox()
+		const rtBox = l.right.box.node().getBBox()
 		const legendBox = self.dom.legendG.node().getBBox()
 		const seriesBox = self.dom.seriesesG.node().getBBox()
 
 		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
 		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
-		d.svgw = d.mainw + d.extraWidth
-		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20 + s.scrollHeight
+		d.svgw = d.mainw + d.extraWidth + hcWidth
+		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20 + s.scrollHeight + hcHeight
 		self.dom.svg
 			//.transition()
 			//.duration(duration)
 			.attr('width', d.svgw)
 			.attr('height', d.svgh)
 
-		const x = leftBox.width - self.layout.left.offset
-		const y = topBox.height - self.layout.top.offset
+		const x = leftBox.width - l.left.offset + hcWidth
+		const y = (l.top.display == 'none' ? 0 : topBox.height) - l.top.offset + hcHeight
 		self.dom.mainG
 			//.transition()
 			//.duration(duration)
@@ -376,12 +381,28 @@ export function setRenderers(self) {
 
 		// this position is based on layout.btm.attr.boxTransform, plus box height and margins
 		const legendX = d.xOffset + (s.transpose ? 20 : 0)
-		const legendY = d.yOffset + d.mainh + s.collabelgap + btmBox.height + 20
+		const legendY = d.yOffset + d.mainh + s.collabelgap + (l.btm.display == 'none' ? 0 : btmBox.height) + 20
 
 		self.dom.legendG
 			//.transition()
 			//.duration(duration)
 			.attr('transform', `translate(${legendX},${legendY})`)
+
+		if (hc.xDendrogramHeight) {
+			const dendroX = leftBox.width - l.left.offset + d.xOffset - d.dx / 2
+			self.dom.hcClipRect
+				.attr('x', dendroX + hcWidth + d.dx / 2)
+				.attr('y', 0)
+				.attr('width', d.mainw + 3)
+				// add 500 so that the column labels are not clipped
+				.attr('height', d.mainh + hc.yDendrogramHeight + 500)
+
+			// for easy reference when scrolling interactively
+			self.topDendroX = dendroX + d.seriesXoffset
+			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, -5)`)
+			const y = -0.5 * s.rowh + (l.top.display == 'none' ? 0 : topBox.height)
+			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, ${y})`)
+		}
 	}
 }
 

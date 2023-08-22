@@ -7,18 +7,21 @@ import { MatrixControls } from './matrix.controls'
 import { setCellProps, getEmptyCell, maySetEmptyCell } from './matrix.cells'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { interpolateRgb } from 'd3-interpolate'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin } from '#shared/common'
+import { sample_match_termvaluesetting } from '#shared/filter'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.sort'
-import { dofetch3 } from '../common/dofetch'
+import { dofetch3 } from '#common/dofetch'
 export { getPlotConfig } from './matrix.config'
 
-class Matrix {
+export class Matrix {
 	constructor(opts) {
 		this.type = 'matrix'
+		this.holderTitle = 'Sample Matrix'
 		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures')).matrix || []
 		this.prevState = { config: { settings: {} } }
 		setInteractivity(this)
@@ -32,7 +35,7 @@ class Matrix {
 
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
-		if (this.dom.header) this.dom.header.html('Sample Matrix')
+		if (this.dom.header) this.dom.header.html(this.holderTitle)
 
 		this.setControls(appState)
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app, parent: this })
@@ -151,11 +154,15 @@ class Matrix {
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'absolute').style('left', '45%')
 
 			// skip data requests when changes are not expected to affect the request payload
+
 			if (this.stateDiff.nonsettings) {
+				const promises = []
 				// get the data
-				const reqOpts = await this.getDataRequestOpts()
-				this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+				if (this.setHierClusterData) promises.push(this.setHierClusterData())
+				promises.push(this.setData())
 				this.dom.loadingDiv.html('Processing data ...')
+				await Promise.all(promises)
+				this.combineData()
 				// tws in the config may be filled-in based on applicable server response data;
 				// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
 				// the corresponding tracked state values in the app store, without causing unnecessary
@@ -163,10 +170,9 @@ class Matrix {
 				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
 			}
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
-
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
 				this.termOrder = this.getTermOrder(this.data)
-				this.sampleGroups = this.getSampleGroups(this.data)
+				this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 				this.sampleOrder = this.getSampleOrder(this.data)
 			}
 
@@ -181,6 +187,7 @@ class Matrix {
 
 			// render the data
 			this.dom.loadingDiv.html('Rendering ...')
+			if (this.renderDendrogram) this.renderDendrogram()
 			this.render()
 			this.dom.loadingDiv.style('display', 'none')
 			this.dom.svg.style('display', '')
@@ -302,19 +309,44 @@ class Matrix {
 	}
 
 	// creates an opts object for the vocabApi.getNestedChartsData()
-	async getDataRequestOpts() {
+	async setData(_data) {
 		const terms = []
-		for (const grp of this.config.termgroups) {
+		const termgroups = this.chartType == 'hierCluster' ? this.config.termgroups.slice(1) : this.config.termgroups
+		for (const grp of termgroups) {
 			terms.push(...grp.lst)
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
 		this.numTerms = terms.length
-		return {
+		const opts = {
 			terms,
 			filter: this.state.filter,
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
 		}
+		this.data = await this.app.vocabApi.getAnnotatedSampleData(opts, _data)
+		this.sampleIdMap = {}
+		for (const d of this.data.lst) {
+			// mapping of sample string name to integer id
+			// TODO: not able to find matching sample names between ASH and termdb?
+			const name = d.sampleName.split('_')[0]
+			this.sampleIdMap[name] = d.sample
+		}
+	}
+
+	combineData() {
+		if (!this.hierClusterSamples) return
+		const d = this.data
+		const samples = {}
+		const lst = []
+		// the gene expression samples will be used as a filter for the matrix samples
+		for (const sampleId in this.hierClusterSamples.samples) {
+			const s = this.hierClusterSamples.samples[sampleId]
+			samples[sampleId] = s
+			lst.push(s)
+			if (!(sampleId in d.samples)) continue
+			Object.assign(s, d.samples[sampleId])
+		}
+		this.data = { samples, lst, refs: d.refs }
 	}
 
 	getSampleGroups(data) {
@@ -516,29 +548,23 @@ class Matrix {
 		const values = 'value' in anno ? [anno.value] : anno.values
 		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
-		const filteredValues = values.filter(v => {
-			if (!valueFilter) return true
-			if (valueFilter.type == 'tvs') {
-				const matched = true
-				// quick fix: assume tvs values are joined by "and", not "or"
-				// TODO: reuse the filter.js code/data format for a more flexible filter configuration
-				for (const vf of valueFilter.tvs.values) {
-					if (v[vf.key] === vf.value && valueFilter.isnot) return false
-					else if (v[vf.key] !== vf.value && !valueFilter.isnot) return false
-				}
-				return matched
-			} else {
-				// TODO: handle non-tvs type value filter
-				throw `unknown matrix value filter type='${valueFilter.type}'`
-			}
-		})
+		const filteredValues = !valueFilter
+			? values
+			: values.filter(v => {
+					if (valueFilter.type == 'tvs') {
+						return sample_match_termvaluesetting(v, valueFilter, tw.term)
+					} else {
+						// TODO: handle non-tvs type value filter
+						throw `unknown matrix value filter type='${valueFilter.type}'`
+					}
+			  })
 
 		const renderedValues = []
 		if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)
 		else {
-			// dt=1 are SNVindels, dt=4 CNV
+			// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
 			// will render only one matching value per dt
-			for (const dt of [4, 1]) {
+			for (const dt of [4, 1, 3]) {
 				const v = filteredValues.find(v => v.dt === dt)
 				if (v) renderedValues.push(v)
 			}
@@ -589,8 +615,8 @@ class Matrix {
 			// const labelOffset = !s.transpose
 			// 	? s.termLabelOffset + s.termGrpLabelOffset
 			// 	: s.sampleLabelOffset + s.sampleGrpLabelOffset
-
-			this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset //- 0.5*labelOffset
+			const hcw = this.state.config.settings.hierCluster?.xDendrogramHeight || 0
+			this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset - hcw //- 0.5*labelOffset
 		}
 
 		if (this.autoDimensions.has('colw')) {
@@ -619,6 +645,7 @@ class Matrix {
 	setLabelsAndScales() {
 		const s = this.settings.matrix
 		this.cnvValues = {}
+		this.geneExpValues = {}
 		// ht: standard cell dimension for term row or column
 		const ht = s.transpose ? s.colw : s.rowh
 		const grpTotals = {}
@@ -670,12 +697,17 @@ class Matrix {
 					}
 					if (t.tw.term.type == 'geneVariant' && anno.values) {
 						for (const val of anno.values) {
-							if (val.dt != 4 || !('value' in val) || s.ignoreCnvValues) continue
-							const v = val.value
-							const minKey = v < 0 ? 'minLoss' : 'minGain'
-							const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
-							if (!(minKey in this.cnvValues) || this.cnvValues[minKey] > v) this.cnvValues[minKey] = v
-							if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
+							if (val.dt == 4 && 'value' in val && !s.ignoreCnvValues) {
+								const v = val.value
+								const minKey = v < 0 ? 'minLoss' : 'minGain'
+								const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
+								if (!(minKey in this.cnvValues) || this.cnvValues[minKey] > v) this.cnvValues[minKey] = v
+								if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
+							} else if (val.dt == 3 && !this.geneExpValues?.scale && t.grp.name == 'Gene Expression') {
+								const v = val.value
+								if (!('min' in this.geneExpValues) || this.geneExpValues.min > v) this.geneExpValues.min = v
+								if (!('max' in this.geneExpValues) || this.geneExpValues.max > v) this.geneExpValues.max = v
+							}
 						}
 					}
 				}
@@ -701,11 +733,9 @@ class Matrix {
 				const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
 				t.counts.posMaxHt = ratio * barh
 				const tickValues = //[t.counts.minval, t.counts.maxval]
-					rangeSpansZero
+					rangeSpansZero || t.counts.maxval <= 0
 						? [t.counts.minval, t.counts.maxval]
-						: t.counts.maxval > 0
-						? [t.counts.maxval, t.counts.minval]
-						: [t.counts.minval, t.counts.maxval]
+						: [t.counts.maxval, t.counts.minval]
 
 				t.scales = {
 					tickValues,
@@ -721,14 +751,25 @@ class Matrix {
 						.domain([domainMax, t.counts.minval])
 						.range([1, barh - t.counts.posMaxHt - 5])
 				}
-			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
-				const maxVals = []
-				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
-				if ('maxGain' in this.cnvValues) maxVals.push(this.cnvValues.maxGain)
-				t.scales = {
-					loss: interpolateBlues,
-					gain: interpolateReds,
-					max: Math.max(...maxVals)
+			} else if (t.tw.term.type == 'geneVariant') {
+				if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
+					const maxVals = []
+					if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
+					if ('maxGain' in this.cnvValues) maxVals.push(this.cnvValues.maxGain)
+					t.scales = {
+						loss: interpolateBlues,
+						gain: interpolateReds,
+						max: Math.max(...maxVals)
+					}
+				}
+				if ('min' in this.geneExpValues && t.grp.name == 'Gene Expression') {
+					if (!this.geneExpValues.scale) {
+						this.geneExpValues.scale = interpolateRgb(
+							this.settings.hierCluster.minColor,
+							this.settings.hierCluster.maxColor
+						)
+					}
+					t.scale = this.geneExpValues.scale
 				}
 			}
 
@@ -984,7 +1025,8 @@ class Matrix {
 							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
 							const lg = l[legend.group]
 							if (!lg.values[legend.value]) {
-								lg.values[legend.value] = structuredClone(legend.entry)
+								lg.values[legend.value] = JSON.parse(JSON.stringify(legend.entry))
+								if (legend.entry.scale) lg.values[legend.value].scale = legend.entry.scale
 							}
 							if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
 							lg.values[legend.value].samples.add(row.sample)
