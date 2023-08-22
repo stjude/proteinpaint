@@ -131,6 +131,22 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				entry: { key: value.class, label: cell.label, fill: cell.fill, order }
 			}
 		}
+	} else if (value.dt == 3) {
+		return {
+			ref: t.ref,
+			group: 'Gene Expression',
+			value: value.class,
+			order: -1,
+			entry: {
+				key: value.class,
+				label: '',
+				scale: self.geneExpValues.scale,
+				domain: [0, 1],
+				minLabel: 'Min',
+				maxLabel: 'Max',
+				order
+			}
+		}
 	} else {
 		const group = tw.legend?.group || 'Mutation Types'
 		return {

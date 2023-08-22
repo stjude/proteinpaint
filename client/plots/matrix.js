@@ -7,6 +7,7 @@ import { MatrixControls } from './matrix.controls'
 import { setCellProps, getEmptyCell, maySetEmptyCell } from './matrix.cells'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { interpolateRgb } from 'd3-interpolate'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
@@ -644,6 +645,7 @@ export class Matrix {
 	setLabelsAndScales() {
 		const s = this.settings.matrix
 		this.cnvValues = {}
+		this.geneExpValues = {}
 		// ht: standard cell dimension for term row or column
 		const ht = s.transpose ? s.colw : s.rowh
 		const grpTotals = {}
@@ -695,12 +697,17 @@ export class Matrix {
 					}
 					if (t.tw.term.type == 'geneVariant' && anno.values) {
 						for (const val of anno.values) {
-							if (val.dt != 4 || !('value' in val) || s.ignoreCnvValues) continue
-							const v = val.value
-							const minKey = v < 0 ? 'minLoss' : 'minGain'
-							const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
-							if (!(minKey in this.cnvValues) || this.cnvValues[minKey] > v) this.cnvValues[minKey] = v
-							if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
+							if (val.dt == 4 && 'value' in val && !s.ignoreCnvValues) {
+								const v = val.value
+								const minKey = v < 0 ? 'minLoss' : 'minGain'
+								const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
+								if (!(minKey in this.cnvValues) || this.cnvValues[minKey] > v) this.cnvValues[minKey] = v
+								if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
+							} else if (val.dt == 3 && !this.geneExpValues?.scale && t.grp.name == 'Gene Expression') {
+								const v = val.value
+								if (!('min' in this.geneExpValues) || this.geneExpValues.min > v) this.geneExpValues.min = v
+								if (!('max' in this.geneExpValues) || this.geneExpValues.max > v) this.geneExpValues.max = v
+							}
 						}
 					}
 				}
@@ -744,14 +751,25 @@ export class Matrix {
 						.domain([domainMax, t.counts.minval])
 						.range([1, barh - t.counts.posMaxHt - 5])
 				}
-			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
-				const maxVals = []
-				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
-				if ('maxGain' in this.cnvValues) maxVals.push(this.cnvValues.maxGain)
-				t.scales = {
-					loss: interpolateBlues,
-					gain: interpolateReds,
-					max: Math.max(...maxVals)
+			} else if (t.tw.term.type == 'geneVariant') {
+				if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
+					const maxVals = []
+					if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
+					if ('maxGain' in this.cnvValues) maxVals.push(this.cnvValues.maxGain)
+					t.scales = {
+						loss: interpolateBlues,
+						gain: interpolateReds,
+						max: Math.max(...maxVals)
+					}
+				}
+				if ('min' in this.geneExpValues && t.grp.name == 'Gene Expression') {
+					if (!this.geneExpValues.scale) {
+						this.geneExpValues.scale = interpolateRgb(
+							this.settings.hierCluster.minColor,
+							this.settings.hierCluster.maxColor
+						)
+					}
+					t.scale = this.geneExpValues.scale
 				}
 			}
 
@@ -1007,7 +1025,8 @@ export class Matrix {
 							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
 							const lg = l[legend.group]
 							if (!lg.values[legend.value]) {
-								lg.values[legend.value] = structuredClone(legend.entry)
+								lg.values[legend.value] = JSON.parse(JSON.stringify(legend.entry))
+								if (legend.entry.scale) lg.values[legend.value].scale = legend.entry.scale
 							}
 							if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
 							lg.values[legend.value].samples.add(row.sample)

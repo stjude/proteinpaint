@@ -9,6 +9,7 @@ import { interpolateRgb } from 'd3-interpolate'
 class HierCluster extends Matrix {
 	constructor(opts) {
 		super(opts)
+		this.type = 'hierCluster'
 		this.chartType = 'hierCluster'
 	}
 
@@ -98,6 +99,7 @@ class HierCluster extends Matrix {
 			})
 		}
 		this.hierClusterColor = minMaxes
+		this.geneExpValues = { scale }
 	}
 
 	async renderDendrogram() {
@@ -378,8 +380,8 @@ export async function getPlotConfig(opts = {}, app) {
 		clusterMethod: 'average',
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
-		minColor: '#0c306b',
-		maxColor: '#ffcc00'
+		minColor: '#0000ff',
+		maxColor: '#ff0000'
 	}
 
 	return config
