@@ -4,8 +4,12 @@ import { appInit } from '#termdb/app'
 class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
+		const div = opts.holder.append('div').style('display', 'flex')
+		const holder = div.append('div').style('padding', '20px')
+		const contentDiv = div.append('div').style('width', '70%')
 		this.dom = {
-			holder: opts.holder.style('padding', '20px'),
+			holder,
+			contentDiv,
 			header: opts.header
 		}
 	}
@@ -35,6 +39,9 @@ class MassDict {
 				}
 			}
 		})
+		if (this.sample) {
+			this.dom.holder.style('width', '30%').style('border-right', '1px solid gray')
+		}
 	}
 
 	getState(appState) {
@@ -44,16 +51,29 @@ class MassDict {
 			termfilter: appState.termfilter,
 			selectdTerms: appState.selectedTerms,
 			customTerms: appState.customTerms,
+			termdbConfig: appState.termdbConfig,
 			sampleId: this.sample?.sampleId
 		}
 	}
 
-	main() {
+	async main() {
 		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sample} Dictionary` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
 		})
+		if (this.sample) {
+			if (this.state.termdbConfig.queries?.singleSampleMutation) {
+				const discoPlotImport = await import('./plot.disco.js')
+				discoPlotImport.default(
+					this.state.termdbConfig,
+					this.state.vocab.dslabel,
+					this.sample,
+					this.dom.contentDiv,
+					this.app.opts.genome
+				)
+			}
+		}
 	}
 }
 

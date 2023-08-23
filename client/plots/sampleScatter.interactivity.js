@@ -142,8 +142,8 @@ export function setInteractivity(self) {
 						config: { chartType: 'dictionary', sample }
 					})
 					self.dom.tip.hide()
-					show = true
 				})
+			show = true
 		}
 		if (drawMethylationArrayPlot || drawDiscoPlot) {
 			if (drawMethylationArrayPlot) {
