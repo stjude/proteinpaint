@@ -139,7 +139,7 @@ export function setInteractivity(self) {
 					self.app.dispatch({
 						type: 'plot_create',
 						id: getId(),
-						config: { chartType: 'dictionary', sampleId: sample.sampleId }
+						config: { chartType: 'dictionary', sample }
 					})
 					self.dom.tip.hide()
 					show = true

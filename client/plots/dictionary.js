@@ -12,7 +12,7 @@ class MassDict {
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		this.sampleId = config.sampleId
+		this.sample = config.sample
 		this.tree = await appInit({
 			vocabApi: this.app.vocabApi,
 			holder: this.dom.holder,
@@ -44,12 +44,12 @@ class MassDict {
 			termfilter: appState.termfilter,
 			selectdTerms: appState.selectedTerms,
 			customTerms: appState.customTerms,
-			sampleId: this.sampleId
+			sampleId: this.sample?.sampleId
 		}
 	}
 
 	main() {
-		if (this.dom.header) this.dom.header.html('Dictionary')
+		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sample} Dictionary` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
