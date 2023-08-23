@@ -507,7 +507,7 @@ function setInteractivity(self) {
 	// !!! no free-floating variable declarations here !!!
 	// use self in TdbTree constructor to create properties
 
-	self.toggleBranch = async function (term) {
+	self.toggleBranch = function (term) {
 		//event.stopPropagation()
 		if (term.isleaf) return
 		const t0 = self.termsById[term.id]
