@@ -13,7 +13,7 @@ export const root_ID = 'root'
 // this only count immediate children, not counting grandchildren
 const minTermCount2scroll = 20
 // max height of aforementioned scrolling <div>
-const scrollDivMaxHeight = '400px'
+let scrollDivMaxHeight = '400px'
 
 // class names TODO they should be shared between test/tree.spec.js
 const cls_termdiv = 'termdiv',
@@ -121,6 +121,7 @@ class TdbTree {
 			return
 		}
 		this.sampleId = this.state.sampleId
+
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
 			if (!this.state.cohortValuelst) {
@@ -223,7 +224,7 @@ class TdbTree {
 		sampleData = sampleData.lst[0]
 
 		for (const tw of twLst) {
-			const key = sampleData?.[tw.$id].key
+			const key = sampleData?.[tw.$id]?.key
 			if (!key) continue
 			let value = sampleData?.[tw.$id].value
 			if (tw.term.values) {
@@ -236,6 +237,20 @@ class TdbTree {
 			if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
 			this.sampleData[tw.id || tw.term.name] = value
 		}
+	}
+
+	downloadData() {
+		const filename = `${this.sampleId}.json`
+		const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.sampleData))
+
+		const link = document.createElement('a')
+		link.setAttribute('href', dataStr)
+		// If you don't know the name or want to use
+		// the webserver default set name = ''
+		link.setAttribute('download', filename)
+		document.body.appendChild(link)
+		link.click()
+		link.remove()
 	}
 }
 
@@ -271,11 +286,9 @@ function setRenderers(self) {
 			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
-				div
-					.style('max-height', scrollDivMaxHeight)
-					.style('padding', '10px')
-					.style('resize', 'vertical')
-					.classed('sjpp_hide_scrollbar', true)
+				if (!self.sampleId) div.style('max-height', scrollDivMaxHeight)
+
+				div.style('padding', '10px').style('resize', 'vertical').classed('sjpp_hide_scrollbar', true)
 
 				/***************************
 				remaining issues
@@ -339,6 +352,14 @@ function setRenderers(self) {
 				)
 			}
 		}
+		self.dom.holder
+			.append('div')
+			.style('margin-top', '20px')
+			.append('button')
+			.text('Download')
+			.on('click', e => {
+				self.downloadData()
+			})
 	}
 
 	// this == the d3 selected DOM node

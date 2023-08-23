@@ -40,6 +40,7 @@ class MassDict {
 				}
 			}
 		})
+
 		if (this.sample && this.showContent) {
 			this.dom.holder
 				.style('border-right', '1px solid gray')
