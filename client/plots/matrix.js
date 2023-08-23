@@ -137,7 +137,8 @@ export class Matrix {
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
 			vocab: appState.vocab,
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
+			clusterMethod: config.settings.hierCluster.clusterMethod
 		}
 	}
 
@@ -240,6 +241,8 @@ export class Matrix {
 		delete currState.isVisible
 		const p = this.prevState.config.settings?.matrix || {}
 		const c = this.state.config.settings.matrix
+		const phc = this.prevState.config.settings.hierCluster || {}
+		const chc = this.state.config.settings.hierCluster || {}
 		this.stateDiff = {
 			nonsettings: !deepEqual(prevState, currState),
 			sorting: !deepEqual(
@@ -253,7 +256,8 @@ export class Matrix {
 					sortTermsBy: p.sortTermsBy,
 					// TODO: take out dimension related computations in setTermOrder,
 					// so that sorting is not affected by rowh
-					rowh: p.rowh
+					rowh: p.rowh,
+					clusterMethod: phc.clusterMethod
 				},
 				{
 					maxSample: c.maxSample,
@@ -265,7 +269,8 @@ export class Matrix {
 					sortTermsBy: c.sortTermsBy,
 					// TODO: take out dimension related computations in setTermOrder,
 					// so that sorting is not affected by rowh
-					rowh: c.rowh
+					rowh: c.rowh,
+					clusterMethod: chc.clusterMethod
 				}
 			),
 			cellDimensions: !deepEqual(
