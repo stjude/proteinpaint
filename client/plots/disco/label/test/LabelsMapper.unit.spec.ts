@@ -137,3 +137,58 @@ test('When there is a fusion event with two genes LabelsMapper.map() should retu
 
 	t.end()
 })
+
+test('When there is a cnv event which position intercepts gene position should return label with cnv info in tooltip', t => {
+	const rawData = [
+		{
+			dt: 1,
+			mname: 'Mutation1',
+			class: 'M',
+			gene: 'Gene1',
+			chr: 'chr1',
+			pos: 50,
+			ref: 'G',
+			alt: 'A',
+			position: 50
+		},
+		{
+			dt: 1,
+			mname: 'Mutation2',
+			class: 'M',
+			gene: 'Gene2',
+			chr: 'chr2',
+			pos: 150,
+			ref: 'G',
+			alt: 'T',
+			position: 150
+		},
+		{
+			dt: 4,
+			chr: 'chr2',
+			value: 2,
+			start: 149,
+			stop: 150
+		},
+		{
+			dt: 4,
+			chr: 'chr2',
+			value: 2,
+			start: 139,
+			stop: 149
+		}
+	]
+	const dataHolder = new DataMapper(settings, reference, sampleName, []).map(rawData)
+
+	const labelsMapper = new LabelsMapper(settings, sampleName, reference)
+
+	const labels = labelsMapper.map(dataHolder.labelData, dataHolder.cnvData)
+
+	t.equal(labels.length, 2, 'Should create two labels')
+
+	if (labels[1].cnvTooltip) {
+		t.equal(labels[1].cnvTooltip.length, 1, 'Second label should have one cnv mutation')
+	} else {
+		t.error('No cnv mutation tooltip')
+	}
+	t.end()
+})
