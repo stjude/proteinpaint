@@ -128,21 +128,23 @@ export function setInteractivity(self) {
 		self.dom.tooltip.hide()
 		self.dom.tip.clear()
 		let show = false
-		if ('sample' in sample) self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
+		if ('sample' in sample) {
+			self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
 
-		self.dom.tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Open dictionary')
-			.on('click', async event => {
-				self.app.dispatch({
-					type: 'plot_create',
-					id: getId(),
-					config: { chartType: 'dictionary', sampleId: sample.sampleId }
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Open dictionary')
+				.on('click', async event => {
+					self.app.dispatch({
+						type: 'plot_create',
+						id: getId(),
+						config: { chartType: 'dictionary', sampleId: sample.sampleId }
+					})
+					self.dom.tip.hide()
+					show = true
 				})
-				self.dom.tip.hide()
-				show = true
-			})
+		}
 		if (drawMethylationArrayPlot || drawDiscoPlot) {
 			if (drawMethylationArrayPlot) {
 				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
