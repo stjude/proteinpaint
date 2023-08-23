@@ -107,6 +107,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 	}
 
 	mayValidateAssayAvailability(ds)
+	mayValidateViewModes(ds)
 
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
@@ -121,6 +122,8 @@ export function client_copy(ds) {
 		isMds3: true,
 		label: ds.label
 	}
+
+	if (ds.viewModes) ds2_client.skewerModes = ds.viewModes
 
 	copy_queries(ds, ds2_client)
 	// .queries{} may be set
@@ -2300,6 +2303,30 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 		return await ds.queries.geneCnv.bygene.get(arg)
 	}
 	throw 'unknown queries.geneCnv method'
+}
+
+function mayValidateViewModes(ds) {
+	if (!ds.viewModes) return
+	if (!Array.isArray(ds.viewModes)) throw 'ds.viewModes[] not array'
+	for (const v of ds.viewModes) {
+		if (v.byInfo) {
+			if (!ds?.queries?.snvindel?.info) throw 'view mode byInfo but queries.snvindel.info missing'
+			const i = ds.queries.snvindel.info[v.byInfo]
+			if (!i) throw 'unknown INFO field for viewmode byInfo'
+			// set view mode type based on info Type
+			if (i.Type == 'Float' || i.Type == 'Integer') {
+				v.type = 'numeric'
+			} else {
+				throw 'viewmode byInfo Type is not numeric'
+			}
+
+			v.label = v.byInfo
+		} else if (v.byAttribute) {
+			// TODO
+		} else {
+			throw 'view mode not byInfo or byAttribute'
+		}
+	}
 }
 
 function mayValidateAssayAvailability(ds) {

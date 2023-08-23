@@ -795,7 +795,17 @@ function setup_axis_scale(data, nm, tk) {
 				}
 			}
 		}
-		// TODO info field
+	} else if (nm.byInfo) {
+		for (const g of data) {
+			for (const m of g.mlst) {
+				const v = m?.info?.[nm.byInfo]
+				if (Number.isFinite(v)) {
+					m.__value_use = v
+				} else {
+					m.__value_missing = true
+				}
+			}
+		}
 	} else {
 		throw 'unknown method of getting value'
 	}

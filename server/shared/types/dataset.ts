@@ -817,6 +817,12 @@ type LocusAttribute = {
 	attributes: Attributes
 }
 
+type ViewMode = {
+	byAttribute?: string
+	byInfo?: string
+	inuse: boolean
+}
+
 /*** types supporting Mds Dataset types ***/
 type BaseMds = {
 	genome?: string //Not declared in TermdbTest
@@ -840,6 +846,7 @@ export type Mds = BaseMds & {
 
 export type Mds3 = BaseMds & {
 	isMds3: boolean
+	viewModes?: ViewMode[]
 	dsinfo?: KeyVal[]
 	queries?: Queries
 	cohort?: Cohort

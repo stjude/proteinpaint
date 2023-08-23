@@ -1,7 +1,7 @@
 import { clinsig } from './clinvar.js'
 import { Mds3 } from '../shared/types'
 
-export default <Mds3> {
+export default <Mds3>{
 	isMds3: true,
 	dsinfo: [
 		{ k: 'Source', v: '<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>' },
@@ -10,6 +10,14 @@ export default <Mds3> {
 		{ k: 'Download date', v: 'July 2022' }
 	],
 	genome: 'hg38',
+
+	viewModes: [
+		{
+			byInfo: 'AF_EXAC',
+			inuse: true
+		}
+	],
+
 	queries: {
 		snvindel: {
 			forTrack: true,
@@ -22,6 +30,10 @@ export default <Mds3> {
 						key: 'CLNSIG',
 						categories: clinsig,
 						separator: '|'
+					},
+					{
+						name: 'AF_EXAC',
+						key: 'AF_EXAC'
 					}
 				]
 			},
