@@ -428,18 +428,20 @@ export async function getPlotConfig(opts = {}, app) {
 		return tw
 	})
 
-	config.termgroups.unshift({
-		name: 'Gene Expression',
-		// TODO: are duplicate term entries, with different q{} objects, allowed?
-		// if yes, should use tw.$id to disambiguate
-		lst: twlst,
-		valueFilter: {
-			type: 'tvs',
-			tvs: {
-				values: [{ dt: 3 }]
+	if (!config.termgroups.find(g => g.name == 'Gene Expression')) {
+		config.termgroups.unshift({
+			name: 'Gene Expression',
+			// TODO: are duplicate term entries, with different q{} objects, allowed?
+			// if yes, should use tw.$id to disambiguate
+			lst: twlst,
+			valueFilter: {
+				type: 'tvs',
+				tvs: {
+					values: [{ dt: 3 }]
+				}
 			}
-		}
-	})
+		})
+	}
 
 	config.settings.matrix.maxSample = 100000
 	config.settings.hierCluster = {
