@@ -90,15 +90,15 @@ class HierCluster extends Matrix {
 
 	setHierColorScale(c) {
 		const hc = this.settings.hierCluster
-		const globalMinMaxes = []
-		const minMaxes = []
 		const scale = hc.colors?.length ? interpolateRgbBasis(hc.colors) : interpolateRdBu
-		// for (const row of c.matrix) {
-		// 	globalMinMaxes.push(...extent(row))
-		// }
-		//const [min, max] = extent(globalMinMaxes)
+		const globalMinMaxes = []
 		for (const row of c.matrix) {
-			const [min, max] = extent(row)
+			globalMinMaxes.push(...extent(row))
+		}
+		const [min, max] = extent(globalMinMaxes)
+		const minMaxes = []
+		for (const row of c.matrix) {
+			//const [min, max] = extent(row)
 			minMaxes.push({
 				min,
 				max,
