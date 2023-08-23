@@ -142,8 +142,8 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				label: '',
 				scale: self.geneExpValues.scale,
 				domain: [0, 0.5, 1],
-				minLabel: 'Min',
-				maxLabel: 'Max',
+				minLabel: self.geneExpValues.min,
+				maxLabel: self.geneExpValues.max,
 				order
 			}
 		}
