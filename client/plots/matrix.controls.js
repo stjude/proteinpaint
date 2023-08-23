@@ -18,6 +18,8 @@ export class MatrixControls {
 		this.opts.holder.style('margin', '10px 10px 20px 10px').style('white-space', 'nowrap')
 		const state = this.parent.getState(appState)
 		const s = state.config.settings.matrix
+		if (this.parent.setClusteringBtn)
+			this.parent.setClusteringBtn(this.opts.holder, (event, data) => this.callback(event, data))
 		this.setSamplesBtn(s)
 		this.setGenesBtn(s)
 		this.setVariablesBtn(s)

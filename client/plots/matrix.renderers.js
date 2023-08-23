@@ -105,6 +105,7 @@ export function setRenderers(self) {
 						//.duration(duration)
 						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
+					g.selectAll('image').remove()
 					g.append('image')
 						.attr('xlink:href', reader.result)
 						.attr('x', d.xMin) //d.seriesXoffset + d.xMin) //d.xMin) // + d.xOffset) //d.seriesXoffset - d.xMin)

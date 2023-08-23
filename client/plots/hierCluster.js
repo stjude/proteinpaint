@@ -33,6 +33,66 @@ class HierCluster extends Matrix {
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
 	}
 
+	setClusteringBtn(holder, callback) {
+		const hc = this.settings.hierCluster
+		holder
+			.append('button')
+			//.property('disabled', d => d.disabled)
+			.datum({
+				label: `Clustering`,
+				rows: [
+					{
+						label: `Clustering Method`,
+						title: `Sets which clustering method to use`,
+						type: 'radio',
+						chartType: 'hierCluster',
+						settingsKey: 'clusterMethod',
+						options: [
+							{
+								label: 'Average',
+								value: 'average',
+								title: `Cluster by average value`
+							},
+							{
+								label: `Complete`,
+								value: 'complete',
+								title: `Use the complete clustering method`
+							}
+							/*{
+								label: `Mcquity`,
+								value: 'mcquity',
+								title: `Use the Mcquity clustering method`
+							}*/
+						]
+					},
+					{
+						label: `Column dendrogram height`,
+						title: `The maximum height to render the column dendrogram`,
+						type: 'number',
+						chartType: 'hierCluster',
+						settingsKey: 'yDendrogramHeight'
+					},
+					{
+						label: `Row dendrogram width`,
+						title: `The maximum width to render the row dendrogram`,
+						type: 'number',
+						chartType: 'hierCluster',
+						settingsKey: 'xDendrogramHeight'
+					},
+					{
+						label: `Z-score cap`,
+						title: `Cap the z-score scale to not exceed this absolute value`,
+						type: 'number',
+						chartType: 'hierCluster',
+						settingsKey: 'zScoreCap'
+					}
+				]
+			})
+			.html(d => d.label)
+			.style('margin', '2px 0')
+			.on('click', callback)
+	}
+
 	async setHierClusterData(_data = {}) {
 		const twlst = this.config.termgroups[0].lst
 		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
@@ -95,7 +155,7 @@ class HierCluster extends Matrix {
 		for (const row of c.matrix) {
 			globalMinMaxes.push(...extent(row))
 		}
-		const absMax = Math.min(5, Math.max(...extent(globalMinMaxes).map(Math.abs)))
+		const absMax = Math.min(hc.zScoreCap, Math.max(...extent(globalMinMaxes).map(Math.abs)))
 		const [min, max] = [-absMax, absMax]
 		const minMaxes = []
 		for (const row of c.matrix) {
@@ -133,7 +193,6 @@ class HierCluster extends Matrix {
 		}
 
 		this.plotDendrogram_R(obj)
-		const g = this.dom.dendrogram
 	}
 
 	plotDendrogram_R(obj) {
@@ -385,6 +444,7 @@ export async function getPlotConfig(opts = {}, app) {
 	config.settings.matrix.maxSample = 100000
 	config.settings.hierCluster = {
 		clusterMethod: 'average',
+		zScoreCap: 5,
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
 		colors: []
