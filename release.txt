@@ -8,6 +8,8 @@ Features:
 - Implemented at-risk count filter in mass cuminc plot
 - GDC "Age at diagnosis" value by day is shown as "X years, Y days" in mds3 sample table.
 - Prototype a hierarchical cluster plot using the matrix plot
+- New Info fields from gnomAD added to clinvar datasets for mds3 track
+- CancerHotspot hg19 data added for mds3 track
 
 
 Fixes:
