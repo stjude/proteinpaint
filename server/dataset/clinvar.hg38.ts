@@ -26,7 +26,7 @@ export default <Mds3>{
 		snvindel: {
 			forTrack: true,
 			byrange: {
-				bcffile: 'hg38/clinvar.hg38.TOPmed.short.vep.bcf.gz',
+				bcffile: 'hg38/clinvar.hg38.bcf.gz',
 				// list of info fields with special configurations
 				infoFields: [
 					{

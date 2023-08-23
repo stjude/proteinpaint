@@ -14,7 +14,7 @@ export default <Mds3> {
 		snvindel: {
 			forTrack: true,
 			byrange: {
-				bcffile: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz',
+				bcffile: 'hg19/clinvar.hg19.bcf.gz',
 				infoFields: [
 					{
 						name: 'Clinical Significance',
