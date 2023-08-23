@@ -139,7 +139,7 @@ export function setInteractivity(self) {
 					self.app.dispatch({
 						type: 'plot_create',
 						id: getId(),
-						config: { chartType: 'dictionary', sample }
+						config: { chartType: 'dictionary', sample, showContent: drawMethylationArrayPlot || drawDiscoPlot }
 					})
 					self.dom.tip.hide()
 				})

@@ -223,8 +223,9 @@ class TdbTree {
 		sampleData = sampleData.lst[0]
 
 		for (const tw of twLst) {
-			const key = sampleData[tw.$id].key
-			let value = sampleData[tw.$id].value
+			const key = sampleData?.[tw.$id].key
+			if (!key) continue
+			let value = sampleData?.[tw.$id].value
 			if (tw.term.values) {
 				for (const key2 in tw.term.values) {
 					const value2 = tw.term.values[key2]

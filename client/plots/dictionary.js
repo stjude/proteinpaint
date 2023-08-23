@@ -5,8 +5,8 @@ class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
 		const div = opts.holder.append('div').style('display', 'flex')
-		const holder = div.append('div').style('padding', '20px')
-		const contentDiv = div.append('div').style('width', '70%').style('min-height', '500px')
+		const holder = div.append('div').style('padding', '20px').style('width', '30%')
+		const contentDiv = div.append('div')
 		this.dom = {
 			holder,
 			contentDiv,
@@ -17,6 +17,7 @@ class MassDict {
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		this.sample = config.sample
+		this.showContent = config.showContent
 		this.tree = await appInit({
 			vocabApi: this.app.vocabApi,
 			holder: this.dom.holder,
@@ -39,8 +40,12 @@ class MassDict {
 				}
 			}
 		})
-		if (this.sample) {
-			this.dom.holder.style('width', '30%').style('border-right', '1px solid gray')
+		if (this.sample && this.showContent) {
+			this.dom.holder
+				.style('border-right', '1px solid gray')
+				.style('overflow', 'scroll')
+				.attr('class', 'sjpp_hide_scrollbar')
+			this.dom.contentDiv.style('width', '60%').style('min-height', '500px')
 		}
 	}
 
@@ -62,7 +67,7 @@ class MassDict {
 			type: 'app_refresh',
 			state: this.state
 		})
-		if (this.sample) {
+		if (this.sample && this.showContent) {
 			if (this.state.termdbConfig.queries?.singleSampleMutation) {
 				const discoPlotImport = await import('./plot.disco.js')
 				discoPlotImport.default(
