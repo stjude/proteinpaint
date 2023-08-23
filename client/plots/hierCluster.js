@@ -108,7 +108,7 @@ class HierCluster extends Matrix {
 			})
 		}
 		this.hierClusterColor = minMaxes
-		this.geneExpValues = { scale }
+		this.geneExpValues = { scale, min, max }
 	}
 
 	async renderDendrogram() {
