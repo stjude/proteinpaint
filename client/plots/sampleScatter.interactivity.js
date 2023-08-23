@@ -127,9 +127,23 @@ export function setInteractivity(self) {
 			target.getAttribute('name') == 'serie'
 		self.dom.tooltip.hide()
 		self.dom.tip.clear()
-		self.dom.tip.show(event.clientX, event.clientY, true, true)
+		let show = false
+		if ('sample' in sample) self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
+
+		self.dom.tip.d
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Open dictionary')
+			.on('click', async event => {
+				self.app.dispatch({
+					type: 'plot_create',
+					id: getId(),
+					config: { chartType: 'dictionary', sampleId: sample.sampleId }
+				})
+				self.dom.tip.hide()
+				show = true
+			})
 		if (drawMethylationArrayPlot || drawDiscoPlot) {
-			if ('sample' in sample) self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
 			if (drawMethylationArrayPlot) {
 				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
@@ -173,19 +187,9 @@ export function setInteractivity(self) {
 						self.dom.tip.hide()
 					})
 			}
+			show = true
 		}
-		self.dom.tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Open dictionary')
-			.on('click', async event => {
-				self.app.dispatch({
-					type: 'plot_create',
-					id: getId(),
-					config: { chartType: 'dictionary', sampleId: sample.sampleId }
-				})
-				self.dom.tip.hide()
-			})
+		if (show) self.dom.tip.show(event.clientX, event.clientY, true, true)
 	}
 
 	self.onLegendClick = function (chart, legendG, name, key, e, category) {
