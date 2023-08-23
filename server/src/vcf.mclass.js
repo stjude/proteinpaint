@@ -75,6 +75,15 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 				info[key] = lst
 			}
 		}
+
+		if (tk.info[key].Type == 'Float' || tk.info[key].Type == 'Integer') {
+			if (Array.isArray(info[key])) {
+				const t = info[key].map(Number)
+				info[key] = t
+			} else {
+				info[key] = Number(info[key])
+			}
+		}
 	}
 
 	variant.mlst = altAlleles.map(i => {

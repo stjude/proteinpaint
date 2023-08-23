@@ -278,6 +278,7 @@ function setSkewerMode(tk) {
 			// data method
 			if (n.byAttribute) {
 				if (!n.label) n.label = n.byAttribute
+			} else if (n.byInfo) {
 			} else {
 				// support info fields etc
 				throw 'unknown data method for a type=numeric mode'
