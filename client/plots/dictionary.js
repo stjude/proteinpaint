@@ -89,7 +89,7 @@ class MassDict {
 				for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 					const div = this.dom.contentDiv.append('div').style('padding', '20px')
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-					div.append('div').style('font-weight', 'bold').text(label)
+					div.append('div').style('padding-bottom', '20px').style('font-weight', 'bold').text(label)
 
 					const ssgqImport = await import('./plot.ssgq.js')
 					await ssgqImport.plotSingleSampleGenomeQuantification(
@@ -97,7 +97,7 @@ class MassDict {
 						this.state.vocab.dslabel,
 						k,
 						this.sample,
-						div,
+						div.append('div'),
 						this.app.opts.genome
 					)
 				}
