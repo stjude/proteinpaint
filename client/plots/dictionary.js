@@ -45,7 +45,12 @@ class MassDict {
 				.style('border-right', '1px solid gray')
 				.style('overflow', 'scroll')
 				.attr('class', 'sjpp_hide_scrollbar')
-			this.dom.contentDiv.style('width', '60%').style('min-height', '500px')
+			this.dom.contentDiv
+				.style('width', '60%')
+				.style('min-height', '500px')
+				.style('display', 'flex')
+				.style('flex-direction', 'column')
+				.style('justify-content', 'center')
 		}
 	}
 
@@ -69,14 +74,33 @@ class MassDict {
 		})
 		if (this.sample && this.showContent) {
 			if (this.state.termdbConfig.queries?.singleSampleMutation) {
+				const div = this.dom.contentDiv.append('div')
+				div.style('font-weight', 'bold').style('padding', '20px').text('Disco plot')
 				const discoPlotImport = await import('./plot.disco.js')
 				discoPlotImport.default(
 					this.state.termdbConfig,
 					this.state.vocab.dslabel,
 					this.sample,
-					this.dom.contentDiv,
+					this.dom.contentDiv.append('div'),
 					this.app.opts.genome
 				)
+			}
+			if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					const div = this.dom.contentDiv.append('div').style('padding', '20px')
+					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
+					div.append('div').style('font-weight', 'bold').text(label)
+
+					const ssgqImport = await import('./plot.ssgq.js')
+					await ssgqImport.plotSingleSampleGenomeQuantification(
+						this.state.termdbConfig,
+						this.state.vocab.dslabel,
+						k,
+						this.sample,
+						div,
+						this.app.opts.genome
+					)
+				}
 			}
 		}
 	}
