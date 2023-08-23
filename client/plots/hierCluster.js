@@ -95,7 +95,7 @@ class HierCluster extends Matrix {
 		for (const row of c.matrix) {
 			globalMinMaxes.push(...extent(row))
 		}
-		const absMax = Math.max(...extent(globalMinMaxes).map(Math.abs))
+		const absMax = Math.min(5, Math.max(...extent(globalMinMaxes).map(Math.abs)))
 		const [min, max] = [-absMax, absMax]
 		const minMaxes = []
 		for (const row of c.matrix) {
