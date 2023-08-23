@@ -6,14 +6,18 @@ export default <Mds3>{
 	dsinfo: [
 		{ k: 'Source', v: '<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>' },
 		{ k: 'Data type', v: 'SNV/Indel' },
-		{ k: 'Gene annotation', v: 'VEP version 107' },
-		{ k: 'Download date', v: 'July 2022' }
+		{ k: 'Gene annotation', v: 'VEP version 100' },
+		{ k: 'Download date', v: 'May 2023' }
 	],
 	genome: 'hg38',
 
 	viewModes: [
 		{
-			byInfo: 'AF_EXAC',
+			byInfo: 'gnomAD_AF',
+			inuse: true
+		},
+		{
+			byInfo: 'gnomAD_AF_afr',
 			inuse: true
 		}
 	],
@@ -22,7 +26,7 @@ export default <Mds3>{
 		snvindel: {
 			forTrack: true,
 			byrange: {
-				bcffile: 'hg38/clinvar.hg38.hgvs_short.vep.bcf.gz',
+				bcffile: 'hg38/clinvar.hg38.TOPmed.short.vep.bcf.gz',
 				// list of info fields with special configurations
 				infoFields: [
 					{
@@ -32,8 +36,12 @@ export default <Mds3>{
 						separator: '|'
 					},
 					{
-						name: 'AF_EXAC',
-						key: 'AF_EXAC'
+						name: 'gnomAD_AF',
+						key: 'gnomAD_AF'
+					},
+					{
+						name: 'gnomAD_AF_afr',
+						key: 'gnomAD_AF_afr'
 					}
 				]
 			},
