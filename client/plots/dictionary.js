@@ -6,7 +6,7 @@ class MassDict {
 		this.type = 'tree'
 		const div = opts.holder.append('div').style('display', 'flex')
 		const holder = div.append('div').style('padding', '20px')
-		const contentDiv = div.append('div').style('width', '70%')
+		const contentDiv = div.append('div').style('width', '70%').style('min-height', '500px')
 		this.dom = {
 			holder,
 			contentDiv,

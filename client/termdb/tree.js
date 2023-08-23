@@ -209,6 +209,7 @@ class TdbTree {
 
 		for (const term of terms) {
 			let tw = { id: term.id }
+			if (!term.isleaf) continue
 			tw = await fillTermWrapper(tw, this.app.vocabApi)
 			twLst.push(tw)
 		}
