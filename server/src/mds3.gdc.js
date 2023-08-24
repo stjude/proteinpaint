@@ -121,11 +121,15 @@ export function validate_query_snvindel_byrange(ds) {
 			}
 			if (h.node.consequence && h.node.consequence.hits && h.node.consequence.hits.edges) {
 				m.csqcount = h.node.consequence.hits.edges.length
-				let c
-				if (opts.isoform) c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
+				let c // consequence
+				if (opts.isoform) {
+					c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
+				} else {
+					c = h.node.consequence.hits.edges.find(i => i.node.transcript.is_canonical)
+				}
 				const c2 = c || h.node.consequence.hits.edges[0]
 				// c2: { node: {consequence} }
-				snvindel_addclass(m, c2.node)
+				snvindel_addclass(m, (c || h.node.consequence.hits.edges[0]).node)
 			}
 			if (h.node.occurrence.hits.edges) {
 				for (const c of h.node.occurrence.hits.edges) {
@@ -2151,11 +2155,6 @@ const query_range2ssm = `query range2variants($filters: FiltersArgument) {
 				  node {
 				    case {
 					  case_id
-					  project {
-					    project_id
-					  }
-					  primary_site
-					  disease_type
 					}
 				  }
 				}
@@ -2170,6 +2169,7 @@ const query_range2ssm = `query range2variants($filters: FiltersArgument) {
                       transcript_id
 					  aa_change
 					  consequence_type
+					  is_canonical
 					  gene{
 					  	symbol
 					  }
