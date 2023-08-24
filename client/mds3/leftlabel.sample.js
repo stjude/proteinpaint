@@ -1,6 +1,6 @@
 import { makelabel } from './leftlabel'
 import { Tabs } from '#dom/toggleButtons'
-import { displaySampleTable } from './sampletable'
+import { displaySampleTable, printDays2years } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
 import { filterInit, getNormalRoot } from '#filter'
@@ -110,13 +110,22 @@ function getFilterName(f) {
 			if (tvs.ranges.length == 1) {
 				// single range
 				const r = tvs.ranges[0]
-				if (r.startunbounded)
-					return 'x' + (r.stopinclusive ? '&le;' : '<') + (ttype == 'integer' ? Math.floor(r.stop) : r.stop)
-				if (r.stopunbounded)
-					return 'x' + (r.startinclusive ? '&ge;' : '>') + (ttype == 'integer' ? Math.floor(r.start) : r.start)
-				return `${ttype == 'integer' ? Math.floor(r.start) : r.start}${r.startinclusive ? '&le;' : '<'}x${
-					r.stopinclusive ? '&ge;' : '<'
-				}${ttype == 'integer' ? Math.floor(r.stop) : r.stop}`
+
+				let startName, stopName // logic to compute print name and use if needed
+				if (tvs.term.printDays2years) {
+					if ('start' in r) startName = printDays2years(r.start, true)
+					if ('stop' in r) stopName = printDays2years(r.stop, true)
+				} else if (ttype == 'integer') {
+					if ('start' in r) startName = Math.floor(r.start)
+					if ('stop' in r) stopName = Math.floor(r.stop)
+				} else {
+					if ('start' in r) startName = r.start
+					if ('stop' in r) stopName = r.stop
+				}
+
+				if (r.startunbounded) return `x ${r.stopinclusive ? '&le;' : '<'} ${stopName}`
+				if (r.stopunbounded) return `x ${r.startinclusive ? '&ge;' : '>'} ${startName}`
+				return `${startName}${r.startinclusive ? '&le;' : '<'}x${r.stopinclusive ? '&ge;' : '<'}${stopName}`
 			}
 			// multiple ranges
 		} else {
