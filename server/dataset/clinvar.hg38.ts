@@ -17,8 +17,7 @@ export default <Mds3>{
 			inuse: true
 		},
 		{
-			byInfo: 'gnomAD_AF_afr',
-			inuse: true
+			byInfo: 'gnomAD_AF_afr'
 		}
 	],
 
