@@ -1,9 +1,10 @@
 import { select } from 'd3-selection'
 import { scaleLinear } from 'd3'
-import { keyupEnter } from '../src/client'
+import { keyupEnter } from '#src/client'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { makeDensityPlot } from './densityplot'
-import { NumericRangeInput } from '../dom/numericRangeInput'
+import { NumericRangeInput } from '#dom/numericRangeInput'
+import { printDays2years } from '../mds3/sampletable'
 
 /*
 ********************** EXPORTED
@@ -53,37 +54,37 @@ function get_pill_label(tvs) {
 			return { txt: v.value }
 		}
 		// numeric range
-		return { txt: format_val_text(v) }
+		return { txt: format_val_text(v, tvs.term) }
 	}
 	// multiple
 	return { txt: tvs.ranges.length + ' intervals' }
 }
 
-function format_val_text(range) {
-	let range_txt
+function format_val_text(range, term) {
 	const x = '<span style="font-family:Times;font-style:italic;font-size:1em; vertical-align:top">x</span>'
 	if (range.startunbounded && range.stopunbounded) {
 		const inf = (sign = '') =>
 			`<span style='vertical-align: middle; font-size:1.1em; line-height: 0.9em'>${sign}∞</span>`
 		const lt = `<span style='vertical-align: top; font-size: 0.9em'>&lt;</span>`
-		range_txt = `<span>${inf('﹣')} ${lt} ${x} ${lt} ${inf('﹢')}</span>`
-	} else if (range.startunbounded) {
-		range_txt = x + ' ' + (range.stopinclusive ? '&le;' : '&lt;') + ' ' + range.stop
-	} else if (range.stopunbounded) {
-		range_txt = x + ' ' + (range.startinclusive ? '&ge;' : '&gt;') + ' ' + range.start
-	} else {
-		range_txt =
-			range.start +
-			' ' +
-			(range.startinclusive ? '&le;' : '&lt;') +
-			' ' +
-			x +
-			' ' +
-			(range.stopinclusive ? '&le;' : '&lt;') +
-			' ' +
-			range.stop
+		return `<span>${inf('﹣')} ${lt} ${x} ${lt} ${inf('﹢')}</span>`
 	}
-	return range_txt
+	let startName, stopName
+	if (term.printDays2years) {
+		if ('start' in range) startName = printDays2years(range.start)
+		if ('stop' in range) stopName = printDays2years(range.stop)
+	} else {
+		startName = range.start
+		stopName = range.stop
+	}
+	if (range.startunbounded) return `${x} ${range.stopinclusive ? '&le;' : '&lt;'} ${stopName}`
+
+	if (range.stopunbounded) return `${x} ${range.startinclusive ? '&ge;' : '&gt;'} ${startName}`
+
+	return `${startName} 
+			${range.startinclusive ? '&le;' : '&lt;'}
+			${x}
+			${range.stopinclusive ? '&le;' : '&lt;'}
+			${stopName}`
 }
 
 function getSelectRemovePos(j, tvs) {
@@ -231,11 +232,7 @@ function addRangeTableNoDensity(self, tvs) {
 	const range = tvs.ranges && tvs.ranges[0] ? tvs.ranges[0] : termrange
 	const num_div = self.num_obj.num_div
 	num_div.selectAll('*').remove()
-	num_div
-		.append('div')
-		.style('padding', '5px')
-		.style('font-weight', 600)
-		.html(tvs.term.name)
+	num_div.append('div').style('padding', '5px').style('font-weight', 600).html(tvs.term.name)
 
 	const brush = {}
 	const table = num_div.append('table')
@@ -276,13 +273,8 @@ function addRangeTable(self) {
 
 	const range_divs = self.num_obj.range_table.selectAll('.range_div').data(brushes) //, d => brushes.indexOf(d))
 
-	range_divs.exit().each(function() {
-		select(this)
-			.style('opacity', 1)
-			.transition()
-			.duration(100)
-			.style('opacity', 0)
-			.remove()
+	range_divs.exit().each(function () {
+		select(this).style('opacity', 1).transition().duration(100).style('opacity', 0).remove()
 	})
 
 	range_divs
@@ -293,7 +285,7 @@ function addRangeTable(self) {
 		.style('padding', '2px')
 		.transition()
 		.duration(200)
-		.each(function(brush, i) {
+		.each(function (brush, i) {
 			enterRange(self, this, brush, i)
 		})
 }
@@ -484,11 +476,7 @@ async function showCheckList_numeric(self, tvs, div) {
 	})
 
 	// other categories div	(only appear if unannotated categories present)
-	const unanno_div = div
-
-		.append('div')
-		.style('padding', '5px')
-		.style('color', '#000')
+	const unanno_div = div.append('div').style('padding', '5px').style('color', '#000')
 
 	// 'Apply' button
 	const callback = indexes => {

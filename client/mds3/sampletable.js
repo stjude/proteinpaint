@@ -258,11 +258,16 @@ function twDisplayValueFromSample(s, tw) {
 	const v = s[tw.id]
 	if (tw.term.values?.[v]?.label) return tw.term.values[v].label
 
-	if (tw.term.printDays2years) {
-		return `${Math.ceil(v / 365)} years, ${v % 365} days`
-	}
+	if (tw.term.printDays2years) return printDays2years(v)
 
 	return v
+}
+
+export function printDays2years(v, compact) {
+	// do floor() on year
+	// do ceil() on day, in case v is decimal (from violin range selection) and to keep showing integer days
+	if (compact) return `${Math.floor(v / 365)}y${Math.ceil(v % 365)}d`
+	return `${Math.floor(v / 365)} years, ${Math.ceil(v % 365)} days`
 }
 
 /*
