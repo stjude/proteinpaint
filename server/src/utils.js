@@ -156,7 +156,7 @@ exports.file_is_readable = async file => {
 }
 
 // set "isbcf" to true when tk.file points to a bcf file
-exports.init_one_vcf = async function(tk, genome, isbcf) {
+exports.init_one_vcf = async function (tk, genome, isbcf) {
 	let filelocation
 	if (tk.file) {
 		if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
@@ -191,7 +191,7 @@ file is full path
 url not accepted
 also works for bcf
 */
-exports.validate_tabixfile = async function(file) {
+exports.validate_tabixfile = async function (file) {
 	if (!file.endsWith('.gz')) throw 'tabix file not ending with .gz'
 	if (await file_not_exist(file)) throw file + ' file not exist'
 	if (await file_not_readable(file)) throw '.gz file not readable'
@@ -208,7 +208,7 @@ exports.validate_tabixfile = async function(file) {
 	}
 }
 
-exports.tabix_is_nochr = async function(file, dir, genome) {
+exports.tabix_is_nochr = async function (file, dir, genome) {
 	// also works for bcf file!
 	const lines = []
 	await exports.get_lines_bigfile({
@@ -260,14 +260,7 @@ exports.get_header_bcf = (file, dir) => {
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.on('close', () => {
-			resolve(
-				vcf.vcfparsemeta(
-					out
-						.join('')
-						.trim()
-						.split('\n')
-				)
-			)
+			resolve(vcf.vcfparsemeta(out.join('').trim().split('\n')))
 		})
 	})
 }
@@ -299,7 +292,7 @@ exports.get_header_vcf = async (file, dir) => {
 	function to process the line
 	ps as the second arg so callback may choose to kill the process e.g. too many lines returned
 */
-exports.get_lines_bigfile = function({ args, dir, callback, isbcf, isbam }) {
+exports.get_lines_bigfile = function ({ args, dir, callback, isbcf, isbam }) {
 	if (!args) throw 'args is missing'
 	if (!Array.isArray(args)) throw 'args[] is not array'
 	if (args.length == 0) throw 'args[] empty array'
@@ -377,7 +370,7 @@ override={}
 returns:
 	db connector
 */
-exports.connect_db = function(file, override = {}) {
+exports.connect_db = function (file, override = {}) {
 	const dbfile = file[0] == '/' ? file : path.join(serverconfig.tpmasterdir, file)
 	try {
 		return new bettersqlite(dbfile, Object.assign({ readonly: true, fileMustExist: true }, override))
@@ -395,7 +388,7 @@ const genotype_types = {
 exports.genotype_type_set = genotype_type_set
 exports.genotype_types = genotype_types
 
-exports.loadfile_ssid = async function(id, samplefilterset) {
+exports.loadfile_ssid = async function (id, samplefilterset) {
 	/*
 samplefilterset:
 	optional Set of samples to restrict to
@@ -420,7 +413,7 @@ samplefilterset:
 	return [sample2gt, genotype2sample]
 }
 
-exports.run_fdr = async function(plst) {
+exports.run_fdr = async function (plst) {
 	// list of pvalues
 	const infile = path.join(serverconfig.cachedir, Math.random().toString())
 	const outfile = infile + '.out'
@@ -429,10 +422,7 @@ exports.run_fdr = async function(plst) {
 	const text = await read_file(outfile)
 	fs.unlink(infile, () => {})
 	fs.unlink(outfile, () => {})
-	return text
-		.trim()
-		.split('\n')
-		.map(Number)
+	return text.trim().split('\n').map(Number)
 }
 
 function run_fdr_2(infile, outfile) {
@@ -484,7 +474,7 @@ exports.bam_ifnochr = async (file, genome, dir) => {
 	return common.contigNameNoChr(genome, chrlst)
 }
 
-exports.query_bigbed_by_coord = function(bigbed, chr, start, end) {
+exports.query_bigbed_by_coord = function (bigbed, chr, start, end) {
 	// input coordinates need to be 0-based
 	// output data is in bed format and output lines are split into an array
 	return new Promise((resolve, reject) => {
@@ -504,7 +494,7 @@ exports.query_bigbed_by_coord = function(bigbed, chr, start, end) {
 	})
 }
 
-exports.query_bigbed_by_name = function(bigbed, name) {
+exports.query_bigbed_by_name = function (bigbed, name) {
 	// query bigbed by name field
 	// output data is in bed format and output lines are split into an array
 	return new Promise((resolve, reject) => {
@@ -530,7 +520,7 @@ function tabixnoterror(s) {
 // get random integer between two values
 // both min and max are inclusive
 // used for creating test data for test scripts
-exports.getRandomInt = function(min, max) {
+exports.getRandomInt = function (min, max) {
 	min = Math.ceil(min)
 	max = Math.floor(max)
 	return Math.floor(Math.random() * (max - min + 1) + min)
@@ -546,7 +536,7 @@ output:
 	boolean
 	TODO change to resolve({isbb:boolean, message:str, index:...})
 */
-exports.testIfFileIsBigbed = async function(file) {
+exports.testIfFileIsBigbed = async function (file) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(bigBedInfo, [file])
 		const out = []
@@ -575,4 +565,12 @@ exports.testIfFileIsBigbed = async function(file) {
 			// TODO also test extraIndexCount. return object but not true/false
 		})
 	})
+}
+
+exports.mayCopyFromCookie = function (q, cookies) {
+	if (cookies.sessionid) {
+		if ('sessionid' in q) throw 'q.sessionid already exists so cannot copy from cookies.sessionid'
+		// sessionid is available after user logs into gdc portal
+		q.sessionid = cookies.sessionid
+	}
 }
