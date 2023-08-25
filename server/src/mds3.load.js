@@ -73,10 +73,6 @@ function init_q(req, genome) {
 		// user token may be provided from request header, the logic could be specific to gdc or another dataset
 		query.token = req.get('X-Auth-Token')
 	}
-	if (req.cookies.sessionid) {
-		// sessionid is available after user logs into gdc portal
-		query.sessionid = req.cookies.sessionid
-	}
 
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
