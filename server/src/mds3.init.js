@@ -2032,10 +2032,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			const lst = await getCnvByTw(ds, tw, genome, q)
 			mlst.push(...lst)
 		}
-		if (ds.queries.probe2cnv) {
-			const lst = await getProbe2cnvByTw(ds, tw, genome, q)
-			mlst.push(...lst)
-		}
+		//if (ds.queries.probe2cnv) { const lst = await getProbe2cnvByTw(ds, tw, genome, q) mlst.push(...lst) }
 
 		if (ds.queries.geneCnv) {
 			const lst = await getGenecnvByTerm(ds, tw.term, genome, q)
@@ -2215,6 +2212,9 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 	}
+	if (q.cookies?.sessionid) {
+		arg.cookies = { sessionid: q.cookies.sessionid }
+	}
 
 	if (ds.queries.geneCnv) {
 		// FIXME !!!!!!!!
@@ -2246,6 +2246,9 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 	}
+	if (q.cookies?.sessionid) {
+		arg.cookies = { sessionid: q.cookies.sessionid }
+	}
 	if (ds.queries.svfusion.byrange) {
 		await mayMapGeneName2coord(term, genome)
 		// tw.term.chr/start/stop are set
@@ -2265,6 +2268,9 @@ async function getCnvByTw(ds, tw, genome, q) {
 		cnvMaxLength: tw?.q?.cnvMaxLength,
 		cnvGainCutoff: tw?.q?.cnvGainCutoff,
 		cnvLossCutoff: tw?.q?.cnvLossCutoff
+	}
+	if (q.cookies?.sessionid) {
+		arg.cookies = { sessionid: q.cookies.sessionid }
 	}
 	if (ds.queries.cnv.byrange) {
 		await mayMapGeneName2coord(tw.term, genome)
@@ -2291,6 +2297,9 @@ async function getProbe2cnvByTw(ds, tw, genome, q) {
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
 		filter0: q.filter0
+	}
+	if (q.cookies?.sessionid) {
+		arg.cookies = { sessionid: q.cookies.sessionid }
 	}
 
 	if (ds.queries.geneCnv.bygene) {
