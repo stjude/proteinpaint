@@ -74,6 +74,11 @@ function init_q(req, genome) {
 		query.token = req.get('X-Auth-Token')
 	}
 
+	if (req.cookies.sessionid) {
+		// sessionid is available after user logs into gdc portal
+		query.sessionid = req.cookies.sessionid
+	}
+
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))

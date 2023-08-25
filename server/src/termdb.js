@@ -36,6 +36,11 @@ export function handle_request_closure(genomes) {
 	return async (req, res) => {
 		const q = req.query
 
+		if (req.cookies.sessionid) {
+			// (same as mds3.load.js) sessionid is available after user logs into gdc portal
+			q.sessionid = req.cookies.sessionid
+		}
+
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
