@@ -15,7 +15,7 @@ const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
 const get_mds3variantData = require('./mds3.variant').get_mds3variantData
 import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
-import { get_lines_bigfile } from './utils'
+import { get_lines_bigfile, mayCopyFromCookie } from './utils'
 import authApi from './auth'
 import { getResult as geneSearch } from './gene'
 
@@ -36,10 +36,7 @@ export function handle_request_closure(genomes) {
 	return async (req, res) => {
 		const q = req.query
 
-		if (req.cookies.sessionid) {
-			// (same as mds3.load.js) sessionid is available after user logs into gdc portal
-			q.sessionid = req.cookies.sessionid
-		}
+		mayCopyFromCookie(q, req.cookies)
 
 		try {
 			const genome = genomes[q.genome]

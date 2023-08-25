@@ -2,7 +2,7 @@ const app = require('./app')
 const fs = require('fs')
 const path = require('path')
 const spawn = require('child_process').spawn
-const utils = require('./utils')
+import { write_file, mayCopyFromCookie } from './utils'
 const serverconfig = require('./serverconfig')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
 const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
@@ -74,10 +74,7 @@ function init_q(req, genome) {
 		query.token = req.get('X-Auth-Token')
 	}
 
-	if (req.cookies.sessionid) {
-		// sessionid is available after user logs into gdc portal
-		query.sessionid = req.cookies.sessionid
-	}
+	mayCopyFromCookie(query, req.cookies)
 
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
@@ -469,7 +466,7 @@ async function geneExpressionClustering(data, q) {
 
 	const time1 = new Date()
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(Rinputfile, JSON.stringify(inputData))
+	await write_file(Rinputfile, JSON.stringify(inputData))
 	const Routput = await run_clustering(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [Rinputfile])
 	fs.unlink(Rinputfile, () => {})
 	//const r_output_lines = Routput.trim().split('\n')
