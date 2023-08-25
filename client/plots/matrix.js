@@ -659,14 +659,12 @@ export class Matrix {
 		for (const t of this.termOrder) {
 			const countedSamples = new Set()
 			t.counts = { samples: 0, hits: 0 }
-			if (t.tw.term.type == 'geneVariant' || t.grp.name == 'Cytogenetics') {
-				t.counts.subGroupCounts = {}
-				for (const group of this.sampleGroups) {
-					t.counts.subGroupCounts[group.name] = {
-						samplesTotal: 0,
-						hitsTotal: 0,
-						classes: {}
-					}
+			t.counts.subGroupCounts = {}
+			for (const group of this.sampleGroups) {
+				t.counts.subGroupCounts[group.name] = {
+					samplesTotal: 0,
+					hitsTotal: 0,
+					classes: {}
 				}
 			}
 			if (!processedLabels.termGrpByName[t.grp.name || '']) {
@@ -711,7 +709,7 @@ export class Matrix {
 							if (!(countedValue.class in subGroup.classes)) subGroup.classes[countedValue.class] = 1
 							else subGroup.classes[countedValue.class] += 1
 						}
-					} else if (t.grp.name == 'Cytogenetics') {
+					} else {
 						subGroup.samplesTotal += 1
 						subGroup.hitsTotal += anno.countedValues.length
 						for (const countedValue of anno.countedValues) {
