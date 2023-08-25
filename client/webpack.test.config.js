@@ -2,6 +2,7 @@ const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 const { merge } = require('webpack-merge')
+const webpack = require('webpack')
 
 babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
 babelrc = JSON.parse(babelrc)
@@ -10,7 +11,12 @@ const commonConfig = {
 	mode: 'development',
 	devtool: 'source-map',
 	target: 'web',
-	plugins: [new NodePolyfillPlugin()],
+	plugins: [
+		new NodePolyfillPlugin(),
+		new webpack.IgnorePlugin({
+			resourceRegExp: /test\/internals.js$/
+		})
+	],
 
 	module: {
 		strictExportPresence: true,
