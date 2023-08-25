@@ -2,6 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '#dom/sandbox'
+import { mclass } from '#shared/common'
 
 let inputIndex = 0
 
@@ -341,7 +342,8 @@ function setTermActions(self) {
 
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
 		//self.showTermGroupInputs(self.dom.grpMenuDiv)
-		self.dom.tip.showunder(clickedElem)
+		//self.dom.tip.showunder(clickedElem)
+		self.dom.tip.show(event.clientX - 20, event.clientY - 20)
 	}
 
 	self.launchGB = async t => {
@@ -1400,6 +1402,106 @@ function setLabelDragEvents(self, prefix) {
 	}
 
 	self[`${prefix}LabelMouseover`] = (event, t) => {
+		if (prefix == 'term' && event.target.__data__?.tw) {
+			//show counts in each subgroup when hover over term label
+			self.dom.menutop.selectAll('*').remove()
+			self.dom.menubody.selectAll('*').remove()
+			const groupName = event.target.__data__.grp.name
+			const termName = event.target.__data__.tw.term.name
+
+			self.dom.menubody
+				.append('div')
+				.style('text-align', 'center')
+				.html(groupName && groupName !== '' ? `<b>${groupName}: ${termName}</b>` : `<b>${termName}</b>`)
+
+			const div = self.dom.menubody.append('div').style('max-width', '400px').style('padding', '5px')
+
+			const data = event.target.__data__
+
+			if (data.tw.term.type == 'geneVariant') {
+				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
+					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
+					div
+						.append('div')
+						.style('padding-top', '10px')
+						.html(
+							grpName !== ''
+								? `<b>${grpName}</b>: mutated samples (${counts.samplesTotal} of ${groupSampleTotal})`
+								: `<b>mutated samples (${counts.samplesTotal} of ${groupSampleTotal})`
+						)
+					const t = div.append('table').style('margin-left', '15px')
+					for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
+						const tr = t.append('tr')
+						// icon
+						tr.append('td')
+							.append('div')
+							.style('width', '12px')
+							.style('height', '12px')
+							.style('background-color', mclass[classType].color)
+						tr.append('td').html(`${mclass[classType].label}: ${num}`)
+					}
+				}
+			} else if (groupName == 'Cytogenetics') {
+				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
+					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
+					div
+						.append('div')
+						.style('padding-top', '10px')
+						.html(
+							grpName !== ''
+								? `<b>${grpName}</b>: tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+								: `<b>tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+						)
+					const t = div.append('table').style('margin-left', '15px')
+					for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
+						const classColor = data.tw.term.values[classType].color
+						const tr = t.append('tr')
+						// icon
+						tr.append('td')
+							.append('div')
+							.style('width', '12px')
+							.style('height', '12px')
+							.style('background-color', classColor)
+						tr.append('td').html(`${classType}: ${num}`)
+					}
+				}
+			} else if (!self.config.divideBy) {
+				const termLegend = self.legendData.find(t => t.name == data.label)
+				if (termLegend && termLegend.items) {
+					const t = div.append('table').style('margin-left', '15px')
+					for (const classType of termLegend.items) {
+						const tr = t.append('tr')
+						// icon
+						tr.append('td')
+							.append('div')
+							.style('width', '12px')
+							.style('height', '12px')
+							.style('background-color', classType.color)
+						tr.append('td').html(`${classType.key}: ${classType.count}`)
+					}
+				}
+			} else {
+				for (const subGrp of self.sampleGroups) {
+					div.append('div').style('padding-top', '10px').html(`<b>${subGrp.name}</b>:(${subGrp.totalCountedValues})`)
+
+					const termLegend = subGrp.legendData.find(t => t.name == data.label)
+					if (termLegend && termLegend.items) {
+						const t = div.append('table').style('margin-left', '15px')
+						for (const classType of termLegend.items) {
+							const tr = t.append('tr')
+							// icon
+							tr.append('td')
+								.append('div')
+								.style('width', '12px')
+								.style('height', '12px')
+								.style('background-color', classType.color)
+							tr.append('td').html(`${classType.key}: ${classType.count}`)
+						}
+					}
+				}
+			}
+			self.dom.tip.show(event.clientX, event.clientY)
+		}
 		const cls = event.target.className?.baseVal || event.target.parentNode.className?.baseVal || ''
 		if (cls.includes('divide-by')) return
 		if (event.target.tagName === 'text') select(event.target).style('fill', 'blue')

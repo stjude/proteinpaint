@@ -659,6 +659,16 @@ export class Matrix {
 		for (const t of this.termOrder) {
 			const countedSamples = new Set()
 			t.counts = { samples: 0, hits: 0 }
+			if (t.tw.term.type == 'geneVariant' || t.grp.name == 'Cytogenetics') {
+				t.counts.subGroupCounts = {}
+				for (const group of this.sampleGroups) {
+					t.counts.subGroupCounts[group.name] = {
+						samplesTotal: 0,
+						hitsTotal: 0,
+						classes: {}
+					}
+				}
+			}
 			if (!processedLabels.termGrpByName[t.grp.name || '']) {
 				const name = t.grp.name || ''
 				t.grp.label = name.length < s.termGrpLabelMaxChars ? name : name.slice(0, s.termGrpLabelMaxChars) + '...'
@@ -692,6 +702,24 @@ export class Matrix {
 				if (anno.countedValues?.length) {
 					t.counts.samples += 1
 					t.counts.hits += anno.countedValues.length
+
+					const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
+					if (t.tw.term.type == 'geneVariant') {
+						subGroup.samplesTotal += 1
+						subGroup.hitsTotal += anno.countedValues.length
+						for (const countedValue of anno.countedValues) {
+							if (!(countedValue.class in subGroup.classes)) subGroup.classes[countedValue.class] = 1
+							else subGroup.classes[countedValue.class] += 1
+						}
+					} else if (t.grp.name == 'Cytogenetics') {
+						subGroup.samplesTotal += 1
+						subGroup.hitsTotal += anno.countedValues.length
+						for (const countedValue of anno.countedValues) {
+							if (!(countedValue in subGroup.classes)) subGroup.classes[countedValue] = 1
+							else subGroup.classes[countedValue] += 1
+						}
+					}
+
 					if (t.tw.q?.mode == 'continuous') {
 						const v = anno.value
 						if (!t.tw.term.values?.[v]?.uncomputable) {
