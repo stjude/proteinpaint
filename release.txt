@@ -10,6 +10,7 @@ Features:
 - Prototype a hierarchical cluster plot using the matrix plot
 - New Info fields from gnomAD added to clinvar datasets for mds3 track
 - CancerHotspot hg19 data added for mds3 track
+- Display sample and catergory numbers in each subgroup when hovering over term label in matrix plot
 
 
 Fixes:
