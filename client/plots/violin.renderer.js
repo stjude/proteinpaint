@@ -211,7 +211,10 @@ export default function violinRenderer(self) {
 			.classed(settings.unit === 'log' ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
 		const ticks =
-			settings.unit === 'log' ? svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0) : svg.axisScale.ticks()
+			settings.unit === 'log'
+				? svg.axisScale.ticks(15)
+				: // svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0)
+				  svg.axisScale.ticks()
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
