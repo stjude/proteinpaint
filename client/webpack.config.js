@@ -3,6 +3,7 @@ const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 const SpecHelpersWpPlugin = require('./test/specHelpers.js').SpecHelpersWpPlugin
+const webpack = require('webpack')
 //const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 let babelrc
@@ -48,10 +49,11 @@ module.exports = function (env = {}) {
 			extensions: ['*', '.js', '.jsx', '.tsx', '.ts']
 		},
 		plugins: [
-			new NodePolyfillPlugin()
-			/*new HtmlWebpackPlugin({
-				title: 'Caching'
-			})*/
+			new NodePolyfillPlugin(),
+			// ignore spec files by default
+			new webpack.IgnorePlugin({
+				resourceRegExp: /\.spec.js$/
+			})
 		],
 		module: {
 			strictExportPresence: true,
@@ -85,13 +87,29 @@ module.exports = function (env = {}) {
 
 	/*** OVERRIDES ***/
 	if (config.mode == 'development') {
-		config.plugins.push(new WebpackNotifierPlugin(), new SpecHelpersWpPlugin())
 		// allow react to be bundled
 		delete config.externals
+
+		config.plugins.push(new WebpackNotifierPlugin(), new SpecHelpersWpPlugin())
+		// delete the ignore plugin for spec files
+		{
+			const i = config.plugins.findIndex(p => p && p instanceof webpack.IgnorePlugin)
+			if (i !== -1) config.plugins.splice(i, 1)
+			console.log(i)
+		}
+
 		// delete the rule that empties the ./test/internals.js code,
 		// so that the app.testInternals() function will be functional
-		config.module.rules.splice(1, 1)
-		delete config.module.rules[1].exclude
+		{
+			const i = config.module.rules.findIndex(
+				r =>
+					(typeof r.test == 'string' && r.test.includes('internals.js')) ||
+					(r.test instanceof RegExp && r.test.test('internals.js'))
+			)
+			if (i !== -1) config.module.rules.splice(i, 1)
+			const babelLoader = config.module.rules.find(r => r.use?.[0]?.loader == 'babel-loader')
+			if (babelLoader) delete babelLoader.exclude
+		}
 	}
 	if (config.mode != 'production') {
 		// do not minify
