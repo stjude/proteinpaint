@@ -1404,6 +1404,7 @@ function setLabelDragEvents(self, prefix) {
 	self[`${prefix}LabelMouseover`] = (event, t) => {
 		if (prefix == 'term' && event.target.__data__?.tw) {
 			//show counts in each subgroup when hover over term label
+			if (self.activeLabel || self.zoomArea) return
 			self.dom.menutop.selectAll('*').remove()
 			self.dom.menubody.selectAll('*').remove()
 			const groupName = event.target.__data__.grp.name
