@@ -11,6 +11,8 @@ makeSampleLabel()
 	click label to view summaries about samples that have mutation data in the view range
 
 makeSampleFilterLabel()
+
+getFilterName
 */
 
 export function makeSampleLabel(data, tk, block, laby) {
@@ -78,7 +80,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 	})
 }
 
-function getFilterName(f) {
+export function getFilterName(f) {
 	// try to provide a meaningful name based on filter content
 
 	if (f.lst.length == 0) {
