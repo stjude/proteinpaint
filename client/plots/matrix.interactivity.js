@@ -1441,30 +1441,6 @@ function setLabelDragEvents(self, prefix) {
 						tr.append('td').html(`${mclass[classType].label}: ${num}`)
 					}
 				}
-			} else if (groupName == 'Cytogenetics') {
-				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
-					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
-					div
-						.append('div')
-						.style('padding-top', '10px')
-						.html(
-							grpName !== ''
-								? `<b>${grpName}</b>: tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
-								: `<b>tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
-						)
-					const t = div.append('table').style('margin-left', '15px')
-					for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
-						const classColor = data.tw.term.values[classType].color
-						const tr = t.append('tr')
-						// icon
-						tr.append('td')
-							.append('div')
-							.style('width', '12px')
-							.style('height', '12px')
-							.style('background-color', classColor)
-						tr.append('td').html(`${classType}: ${num}`)
-					}
-				}
 			} else if (!self.config.divideBy) {
 				const termLegend = self.legendData.find(t => t.name == data.label)
 				if (termLegend && termLegend.items) {
@@ -1479,12 +1455,46 @@ function setLabelDragEvents(self, prefix) {
 							.style('background-color', classType.color)
 						tr.append('td').html(`${classType.key}: ${classType.count}`)
 					}
+				} else {
+					for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
+						const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
+						div
+							.append('div')
+							.style('padding-top', '10px')
+							.html(
+								grpName !== ''
+									? `<b>${grpName}</b>: tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+									: `<b>tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+							)
+						const t = div.append('table').style('margin-left', '15px')
+						for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
+							const classColor = data.tw.term.values[classType]?.color
+							if (!classColor) continue
+							const tr = t.append('tr')
+							// icon
+							tr.append('td')
+								.append('div')
+								.style('width', '12px')
+								.style('height', '12px')
+								.style('background-color', classColor)
+							tr.append('td').html(`${classType}: ${num}`)
+						}
+					}
 				}
 			} else {
-				for (const subGrp of self.sampleGroups) {
-					div.append('div').style('padding-top', '10px').html(`<b>${subGrp.name}</b>:(${subGrp.totalCountedValues})`)
-
+				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
+					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
+					div
+						.append('div')
+						.style('padding-top', '10px')
+						.html(
+							grpName !== ''
+								? `<b>${grpName}</b>: tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+								: `<b>tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+						)
+					const subGrp = self.sampleGroups.find(g => g.name == grpName)
 					const termLegend = subGrp.legendData.find(t => t.name == data.label)
+
 					if (termLegend && termLegend.items) {
 						const t = div.append('table').style('margin-left', '15px')
 						for (const classType of termLegend.items) {
@@ -1496,6 +1506,20 @@ function setLabelDragEvents(self, prefix) {
 								.style('height', '12px')
 								.style('background-color', classType.color)
 							tr.append('td').html(`${classType.key}: ${classType.count}`)
+						}
+					} else {
+						const t = div.append('table').style('margin-left', '15px')
+						for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
+							const classColor = data.tw.term.values[classType]?.color
+							if (!classColor) continue
+							const tr = t.append('tr')
+							// icon
+							tr.append('td')
+								.append('div')
+								.style('width', '12px')
+								.style('height', '12px')
+								.style('background-color', classColor)
+							tr.append('td').html(`${classType}: ${num}`)
 						}
 					}
 				}
