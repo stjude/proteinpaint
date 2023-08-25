@@ -905,7 +905,7 @@ function getheaders(q) {
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	if (q) {
 		if (q.token) h['X-Auth-Token'] = q.token
-		if (q.cookies?.sessionid) h['Cookie'] = 'sessionid=' + q.cookies.sessionid
+		if (q.sessionid) h['Cookie'] = 'sessionid=' + q.sessionid
 	}
 	return h
 }

@@ -2210,10 +2210,8 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
-		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-	}
-	if (q.cookies?.sessionid) {
-		arg.cookies = { sessionid: q.cookies.sessionid }
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		sessionid: q.sessionid
 	}
 
 	if (ds.queries.geneCnv) {
@@ -2244,10 +2242,8 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
-		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-	}
-	if (q.cookies?.sessionid) {
-		arg.cookies = { sessionid: q.cookies.sessionid }
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		sessionid: q.sessionid
 	}
 	if (ds.queries.svfusion.byrange) {
 		await mayMapGeneName2coord(term, genome)
@@ -2267,10 +2263,8 @@ async function getCnvByTw(ds, tw, genome, q) {
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		cnvMaxLength: tw?.q?.cnvMaxLength,
 		cnvGainCutoff: tw?.q?.cnvGainCutoff,
-		cnvLossCutoff: tw?.q?.cnvLossCutoff
-	}
-	if (q.cookies?.sessionid) {
-		arg.cookies = { sessionid: q.cookies.sessionid }
+		cnvLossCutoff: tw?.q?.cnvLossCutoff,
+		sessionid: q.sessionid
 	}
 	if (ds.queries.cnv.byrange) {
 		await mayMapGeneName2coord(tw.term, genome)
@@ -2296,10 +2290,8 @@ async function getProbe2cnvByTw(ds, tw, genome, q) {
 }
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
-		filter0: q.filter0
-	}
-	if (q.cookies?.sessionid) {
-		arg.cookies = { sessionid: q.cookies.sessionid }
+		filter0: q.filter0,
+		sessionid: q.sessionid
 	}
 
 	if (ds.queries.geneCnv.bygene) {
