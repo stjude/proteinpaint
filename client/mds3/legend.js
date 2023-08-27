@@ -46,14 +46,12 @@ run only once, called by makeTk
 	if (!tk.legend) tk.legend = {}
 	tk.legend.tip = new Menu({ padding: '0px' })
 
-	const [tr, td] = legend_newrow(block, tk.name)
+	const [tr, td, td0] = legend_newrow(block, tk.name)
+	tk.legend.headTd = td0 // for updating tk name in legend when filterObj updates
 
 	tk.tr_legend = tr // to be compatible with block.tk_remove()
 
-	const table = td
-		.append('table')
-		.style('border-spacing', '5px')
-		.style('border-collapse', 'separate')
+	const table = td.append('table').style('border-spacing', '5px').style('border-collapse', 'separate')
 
 	tk.legend.table = table
 
@@ -90,10 +88,7 @@ function create_mclass(tk, block) {
 
 function may_create_variantShapeName(tk) {
 	if (!tk.variantShapeName) return
-	const holder = tk.legend.table
-		.append('tr')
-		.append('td')
-		.attr('colspan', 2)
+	const holder = tk.legend.table.append('tr').append('td').attr('colspan', 2)
 	const vl = (tk.legend.variantShapeName = {})
 	{
 		const d = holder.append('div')
@@ -178,11 +173,7 @@ function may_create_formatFilter(tk) {
 		// this row will have two columns, just like mclass
 
 		// column 1 <td>: format field name
-		row
-			.append('td')
-			.style('text-align', 'right')
-			.style('opacity', 0.3)
-			.text(tk.mds.bcf.format[key].Description)
+		row.append('td').style('text-align', 'right').style('opacity', 0.3).text(tk.mds.bcf.format[key].Description)
 
 		tk.legend.formatFilter[key] = {
 			hiddenvalues: new Set(),
@@ -277,10 +268,7 @@ function may_update_formatFilter(data, tk) {
 				.style('background', '#aaa')
 				.style('margin-right', '5px')
 				.html(count > 1 ? count : '&nbsp;')
-			cell
-				.append('div')
-				.style('display', 'inline-block')
-				.text(category)
+			cell.append('div').style('display', 'inline-block').text(category)
 		}
 
 		// hidden ones
@@ -738,10 +726,7 @@ function may_create_ld(tk, block) {
 	const R = (tk.legend.ld = {})
 	R.row = tk.legend.table.append('tr')
 	// contents are filled in dynamically
-	R.headerTd = R.row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.3)
+	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.3)
 	R.holder = R.row.append('td')
 	R.showHolder = R.holder.append('div').style('display', 'none')
 	showLDlegend(R.showHolder, tk.mds.queries.ld.colorScale)

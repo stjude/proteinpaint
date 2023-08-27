@@ -20,7 +20,8 @@ const tip = new client.Menu({ padding: '0px' })
 
 export function legend_newrow(block, label) {
 	const tr = block.legend.holder.append('tr')
-	tr.append('td')
+	const td0 = tr
+		.append('td')
 		.text(label)
 		.style('padding-right', '10px')
 		.style('text-align', 'right')
@@ -30,7 +31,7 @@ export function legend_newrow(block, label) {
 		.style('color', '#555')
 		.style('border-right', 'solid 1px ' + block.legend.legendcolor)
 	const td = tr.append('td')
-	return [tr, td]
+	return [tr, td, td0]
 }
 
 export function legend_mclass(block) {

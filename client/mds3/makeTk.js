@@ -5,6 +5,7 @@ import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
 import { mclass } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
+import { getFilterName } from './leftlabel.sample'
 
 /*
 this script exports one function "makeTk()" that will be called just once
@@ -206,6 +207,10 @@ export async function makeTk(tk, block) {
 
 function loadTk_finish_closure(tk, block) {
 	return data => {
+		// update legend name in case filter has changed
+		// tk.legend{} is missing if tk is not initiated (wrong ds name)
+		tk.legend?.headTd.text(tk.name + (tk.filterObj ? ' - ' + getFilterName(tk.filterObj) : ''))
+
 		// derive tk height
 		tk.height_main = 0
 		for (const k in tk.subtk2height) {
