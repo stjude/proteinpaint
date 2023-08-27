@@ -4,6 +4,8 @@ import { sayerror } from '#dom/error'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm, nonDictionaryTermTypes } from '#shared/termdb.usecase'
+import { keyupEnter } from '#src/client'
+
 /*
 steps:
 user input at <input> will call doSearch()
@@ -67,13 +69,14 @@ class TermSearch {
 		this.renderSelectedNonDictTerms()
 	}
 
-	async doSearch(str) {
+	// targetType optional, see vocab.findTerm()
+	async doSearch(str, targetType) {
 		if (!str) {
 			this.clear()
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.usecase)
+		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.usecase, targetType)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {
@@ -100,6 +103,7 @@ function setRenderers(self) {
 			.style('margin', '10px')
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
+			.on('keyup', self.onKeyup)
 
 		self.dom.input.node().focus()
 
@@ -151,7 +155,13 @@ function setRenderers(self) {
 	self.noResult = () => {
 		self.clear()
 		self.dom.resultDiv.style('display', 'inline-grid')
-		self.dom.resultDiv_terms.append('div').text('No match').style('padding', '3px 3px 3px 0px').style('opacity', 0.5)
+		self.dom.resultDiv_terms
+			.append('div')
+			.style('padding', '3px 3px 3px 0px')
+			.style('opacity', 0.5)
+			.text(
+				'No match' + (self.app.vocabApi.termdbConfig?.queries?.snvindel?.allowSNPs ? '. Press ENTER to search SNP' : '')
+			)
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
@@ -300,12 +310,19 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.onInput = async () => {
+	self.onKeyup = event => {
+		// to search snp upon hitting enter
+		if (!keyupEnter(event)) return // not pressing enter
+		if (!self.app.vocabApi.termdbConfig?.queries?.snvindel?.allowSNPs) return // snp search not enabled on this ds
+		self.onInput(event, 'snp') // targetType=snp
+	}
+
+	self.onInput = async (event, targetType) => {
 		const str = self.dom.input.property('value')
 		// do not trim space from input so that 'age ' will not match with 'agent'
 		try {
 			//await self.main({ str })
-			await self.doSearch(str)
+			await self.doSearch(str, targetType)
 		} catch (e) {
 			self.clear()
 			self.dom.resultDiv.style('display', 'inline-grid')

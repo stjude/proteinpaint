@@ -18,6 +18,7 @@ import computePercentile from '../shared/compute.percentile.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils'
 import authApi from './auth'
 import { getResult as geneSearch } from './gene'
+import { searchSNP } from './app'
 
 /*
 ********************** EXPORTED
@@ -186,54 +187,86 @@ do not directly hand over the term object to client; many attr to be kept on ser
 	return t2
 }
 
+/*
+q.targetType
+	"snp"
+	"category" TODO
+*/
 async function trigger_findterm(q, res, termdb, ds, genome) {
-	// TODO also search categories
+	// TODO improve logic
 
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 
 	// to allow search to work, must unescape special char, e.g. %20 to space
 	const str = decodeURIComponent(q.findterm).toUpperCase()
-	const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')
-	if (ds.mayGetMatchingGeneNames && mayUseGeneVariant) {
-		// presence of this getter indicates dataset uses text file to supply mutation data
-		// only allow searching for gene names present in the text files
-		// check this first before dict terms is convenient as to showing matching genes for a text-file based dataset that's usually small
-
-		// harcoded gene name length limit to exclude fusion/comma-separated gene names
-		/* TODO: improve the logic for excluding concatenated gene names */
-		await ds.mayGetMatchingGeneNames(matches, str, q)
-	}
 
 	const terms = []
 
-	if (ds.queries?.defaultBlock2GeneMode && mayUseGeneVariant) {
-		/* has queries for genomic data types, search gene from whole genome
-		not checking on presence of queries.snvindel{} as it's used for both wgs/germline and somatic data,
-		for now do not show gene search for wgs data
-		checking on this flag as it's enabled for ds with somatic data
-		same logic applied in termdb.config.js
-		*/
-		const re = geneSearch(genome, { input: str })
-		if (Array.isArray(re.hits)) {
-			for (let i = 0; i < 7; i++) {
-				if (!re.hits[i]) break
-				terms.push({ name: re.hits[i], type: 'geneVariant' })
+	try {
+		if (q.targetType == 'snp') {
+			if (!ds.queries?.snvindel?.allowSNPs) throw 'this dataset does not support snp search'
+			// must convert to lowercase e.g. "rs" but not "RS" for bigbed file search to work
+			const lst = await searchSNP({ byName: true, lst: [str.toLowerCase()] }, genome)
+			for (const s of lst) {
+				terms.push({
+					type: 'geneVariant',
+					name: s.name,
+					subtype: 'snp',
+					chr: s.chrom,
+					start: s.chromStart,
+					stop: s.chromEnd,
+					alleles: s.alleles
+				})
+			}
+		} else {
+			const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')
+
+			if (ds.mayGetMatchingGeneNames && mayUseGeneVariant) {
+				////////////////////////////
+				// TODO
+				// if to remove bulk support on backend and use client vocab, then this should be deleted
+				////////////////////////////
+
+				// presence of this getter indicates dataset uses text file to supply mutation data
+				// only allow searching for gene names present in the text files
+				// check this first before dict terms is convenient as to showing matching genes for a text-file based dataset that's usually small
+
+				// harcoded gene name length limit to exclude fusion/comma-separated gene names
+				await ds.mayGetMatchingGeneNames(matches, str, q)
+			}
+
+			if (ds.queries?.defaultBlock2GeneMode && mayUseGeneVariant) {
+				/* has queries for genomic data types, search gene from whole genome
+				not checking on presence of queries.snvindel{} as it's used for both wgs/germline and somatic data,
+				for now do not show gene search for wgs data
+				checking on this flag as it's enabled for ds with somatic data
+				same logic applied in termdb.config.js
+				*/
+				const re = geneSearch(genome, { input: str })
+				if (Array.isArray(re.hits)) {
+					for (let i = 0; i < 7; i++) {
+						if (!re.hits[i]) break
+						terms.push({ name: re.hits[i], type: 'geneVariant' })
+					}
+				}
 			}
 		}
+
+		const _terms = await termdb.q.findTermByName(str, limitSearchTermTo, q.cohortStr, q.treeFilter, q.usecase, matches)
+
+		terms.push(..._terms.map(copy_term))
+
+		const id2ancestors = {}
+		terms.forEach(term => {
+			if (term.type == 'geneVariant') return
+			term.__ancestors = termdb.q.getAncestorIDs(term.id)
+			term.__ancestorNames = termdb.q.getAncestorNames(term.id)
+		})
+		res.send({ lst: terms })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
-
-	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	const _terms = await termdb.q.findTermByName(str, limitSearchTermTo, q.cohortStr, q.treeFilter, q.usecase, matches)
-
-	terms.push(..._terms.map(copy_term))
-
-	const id2ancestors = {}
-	terms.forEach(term => {
-		if (term.type == 'geneVariant') return
-		term.__ancestors = termdb.q.getAncestorIDs(term.id)
-		term.__ancestorNames = termdb.q.getAncestorNames(term.id)
-	})
-	res.send({ lst: terms })
 }
 
 /*

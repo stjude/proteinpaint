@@ -2012,31 +2012,46 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
 		if (typeof tw.term.name != 'string') throw 'tw.term.name is not string'
-		if (!tw.term.name) throw 'tw.term.name should be gene symbol but is empty string'
+		if (!tw.term.name) throw 'tw.term.name should be gene symbol but is empty string' // TODO term.gene if subtype='gene'
 
 		const mlst = [] // collect raw data points
 
-		// has some code duplication with mds3.load.js query_snvindel() etc
-		// primary concern is tw.term may be missing coord/isoform to perform essential query
-
-		if (ds.queries.snvindel) {
+		if (tw.term.subtype == 'snp') {
+			// query term is one snp; it should only work for snvindel
+			if (!ds.queries.snvindel?.allowSNPs) throw 'snvindel does not allow snp'
 			const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
-			mlst.push(...lst)
-		}
+			const hit = lst.find(i => tw.term.alleles.includes(i.ref) && tw.term.alleles.includes(i.alt))
+			if (hit) {
+				for (const s of hit.samples) {
+					//console.log(s.sample_id, s.formatK2v.GT)
+					// to create data element
+				}
+			}
+		} else {
+			// query term is not snp
+			// should be either gene or region, and will work for all data types
+			// has some code duplication with mds3.load.js query_snvindel() etc
+			// primary concern is tw.term may be missing coord/isoform to perform essential query
 
-		if (ds.queries.svfusion) {
-			const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
-			mlst.push(...lst)
-		}
-		if (ds.queries.cnv) {
-			const lst = await getCnvByTw(ds, tw, genome, q)
-			mlst.push(...lst)
-		}
-		//if (ds.queries.probe2cnv) { const lst = await getProbe2cnvByTw(ds, tw, genome, q) mlst.push(...lst) }
+			if (ds.queries.snvindel) {
+				const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
+				mlst.push(...lst)
+			}
 
-		if (ds.queries.geneCnv) {
-			const lst = await getGenecnvByTerm(ds, tw.term, genome, q)
-			mlst.push(...lst)
+			if (ds.queries.svfusion) {
+				const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
+				mlst.push(...lst)
+			}
+			if (ds.queries.cnv) {
+				const lst = await getCnvByTw(ds, tw, genome, q)
+				mlst.push(...lst)
+			}
+			//if (ds.queries.probe2cnv) { const lst = await getProbe2cnvByTw(ds, tw, genome, q) mlst.push(...lst) }
+
+			if (ds.queries.geneCnv) {
+				const lst = await getGenecnvByTerm(ds, tw.term, genome, q)
+				mlst.push(...lst)
+			}
 		}
 
 		const bySampleId = new Map()
