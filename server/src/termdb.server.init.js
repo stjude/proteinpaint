@@ -456,9 +456,9 @@ export function server_init_db_queries(ds) {
 
 	q.getSingleSampleData = function (sampleId) {
 		const sql = cn.prepare(
-			`select term_id, value from anno_categorical where sample=? union all select term_id, value from anno_float where sample=?`
+			`select term_id, value from anno_categorical where sample=? union all select term_id, value from anno_float where sample=? union all  select term_id, value from anno_integer where sample=?`
 		)
-		const rows = sql.all([sampleId, sampleId])
+		const rows = sql.all([sampleId, sampleId, sampleId])
 		return rows
 	}
 	console.log(q)

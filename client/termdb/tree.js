@@ -362,8 +362,15 @@ function setRenderers(self) {
 			.style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
 	}
 
+	self.getTermValue = function (term) {
+		let value = self.sampleByTermId[term.id]
+		if (term.type == 'float' || term.type == 'integer') return value
+		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
+		return null
+	}
+
 	self.addTerm = async function (term) {
-		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
+		const termIsDisabled = self.opts.disable_terms?.includes(term.id) || (term.isleaf && self.sampleId)
 		const uses = isUsableTerm(term, self.state.usecase)
 
 		const div = select(this)
@@ -389,7 +396,10 @@ function setRenderers(self) {
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		let text = term.name
-		if (term.isleaf && self.sampleByTermId[term.id]) text += ` (${self.sampleByTermId[term.id]})`
+		if (term.isleaf && self.sampleId) {
+			const value = self.getTermValue(term)
+			text += `..........${value || 'Missing'}`
+		}
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
@@ -402,7 +412,6 @@ function setRenderers(self) {
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
-
 		if (uses.size > 0) {
 			if (termIsDisabled) {
 				labeldiv
@@ -413,14 +422,14 @@ function setRenderers(self) {
 			} else if (uses.has('plot')) {
 				labeldiv
 					// need better css class
-					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
-					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
 					.style('margin', '1px 0px')
 					.style('cursor', 'default')
 					.on('click', () => self.clickTerm(term))
+					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
+					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
 			}
 
 			//show sample count for a term

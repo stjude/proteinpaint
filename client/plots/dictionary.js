@@ -47,7 +47,7 @@ class MassDict {
 				.style('overflow', 'scroll')
 				.attr('class', 'sjpp_hide_scrollbar')
 			this.dom.contentDiv
-				.style('width', '60%')
+				.style('width', '50%')
 				.style('min-height', '500px')
 				.style('display', 'flex')
 				.style('flex-direction', 'column')
