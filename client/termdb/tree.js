@@ -75,13 +75,13 @@ class TdbTree {
 		this.sampleData = {}
 	}
 
-	init(opts) {
+	async init(opts) {
 		const holder = this.opts.holder.append('div')
 		this.opts.holder
 			.insert('button')
-			.text('Download')
+			.text('Download data')
 			.on('click', e => {
-				self.downloadData()
+				this.downloadData()
 			})
 		this.dom = {
 			holder
@@ -128,7 +128,10 @@ class TdbTree {
 			return
 		}
 		this.sampleId = this.state.sampleId
-
+		if (this.sampleId) {
+			const opts = { sampleId: this.sampleId }
+			this.sampleByTermId = await this.app.vocabApi.getSingleSampleData(opts)
+		}
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
 			if (!this.state.cohortValuelst) {
@@ -191,12 +194,10 @@ class TdbTree {
 
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
-				if (this.sampleId) await this.fillSampleData(copy.terms)
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
-				if (this.sampleId && copy.isleaf) await this.fillSampleData([copy])
 				const t0 = this.termsById[copy.id]
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
@@ -212,43 +213,9 @@ class TdbTree {
 		return term.id
 	}
 
-	async fillSampleData(terms) {
-		const twLst = []
-
-		for (const term of terms) {
-			let tw = { id: term.id }
-			if (!term.isleaf) continue
-			tw = await fillTermWrapper(tw, this.app.vocabApi)
-			twLst.push(tw)
-		}
-
-		const filter = getSampleFilter(this.sampleId)
-		let sampleData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: twLst,
-			filter
-		})
-
-		sampleData = sampleData.lst[0]
-
-		for (const tw of twLst) {
-			const key = sampleData?.[tw.$id]?.key
-			if (!key) continue
-			let value = sampleData?.[tw.$id].value
-			if (tw.term.values) {
-				for (const key2 in tw.term.values) {
-					const value2 = tw.term.values[key2]
-					if (value2.label && key == key2) value = value2.label
-				}
-			}
-			if (!value) value = key
-			if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
-			this.sampleData[tw.id || tw.term.name] = value
-		}
-	}
-
 	downloadData() {
 		const filename = `${this.sampleId}.json`
-		const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.sampleData))
+		const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.sampleByTermId))
 
 		const link = document.createElement('a')
 		link.setAttribute('href', dataStr)
@@ -422,7 +389,7 @@ function setRenderers(self) {
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		let text = term.name
-		if (term.isleaf && self.sampleData[term.id]) text += ` (${self.sampleData[term.id]})`
+		if (term.isleaf && self.sampleByTermId[term.id]) text += ` (${self.sampleByTermId[term.id]})`
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)

@@ -134,7 +134,7 @@ export function setInteractivity(self) {
 			self.dom.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Open dictionary')
+				.text('Show sample')
 				.on('click', async event => {
 					self.app.dispatch({
 						type: 'plot_create',

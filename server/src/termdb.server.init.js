@@ -453,6 +453,15 @@ export function server_init_db_queries(ds) {
 
 		return supportedChartTypes
 	}
+
+	q.getSingleSampleData = function (sampleId) {
+		const sql = cn.prepare(
+			`select term_id, value from anno_categorical where sample=? union all select term_id, value from anno_float where sample=?`
+		)
+		const rows = sql.all([sampleId, sampleId])
+		return rows
+	}
+	console.log(q)
 }
 
 export function listDbTables(cn) {

@@ -83,6 +83,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'validateToken') {
 			}
 			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
+			if (q.for == 'singleSampleData') return get_singleSampleData(q, res, tdb)
 
 			throw "termdb: doesn't know what to do"
 		} catch (e) {
@@ -562,6 +563,10 @@ async function get_matrix(q, req, res, ds, genome) {
 		}
 	}
 	res.send(data)
+}
+
+async function get_singleSampleData(q, res, tdb) {
+	res.send(tdb.q.getSingleSampleData(q.sampleId))
 }
 
 function get_mds3queryDetails(res, ds) {
