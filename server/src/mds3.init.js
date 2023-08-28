@@ -2020,12 +2020,30 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			// query term is one snp; it should only work for snvindel
 			if (!ds.queries.snvindel?.allowSNPs) throw 'snvindel does not allow snp'
 			const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
-			const hit = lst.find(i => tw.term.alleles.includes(i.ref) && tw.term.alleles.includes(i.alt))
-			if (hit) {
-				for (const s of hit.samples) {
-					//console.log(s.sample_id, s.formatK2v.GT)
-					// to create data element
+			const m = lst.find(m => tw.term.alleles.includes(m.ref) && tw.term.alleles.includes(m.alt))
+			if (m) {
+				const samples = []
+				for (const s of m.samples) {
+					if (!s.formatK2v?.GT) {
+						//console.log('formatK2v.GT missing')
+						continue
+					}
+					const alleles = []
+					for (const i of s.formatK2v.GT.split('/')) {
+						if (i == 0) alleles.push(m.ref)
+						else if (i == 1) alleles.push(m.alt)
+						else console.log('unknown allele idx')
+					}
+					const _s = {
+						key: alleles.join('/'),
+						value: alleles.join('/')
+					}
+					samples.push(_s)
 				}
+				const _m = {
+					samples
+				}
+				mlst.push(_m)
 			}
 		} else {
 			// query term is not snp
