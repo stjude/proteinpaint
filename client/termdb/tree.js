@@ -76,8 +76,15 @@ class TdbTree {
 	}
 
 	init(opts) {
+		const holder = this.opts.holder.append('div')
+		this.opts.holder
+			.insert('button')
+			.text('Download')
+			.on('click', e => {
+				self.downloadData()
+			})
 		this.dom = {
-			holder: this.opts.holder.append('div')
+			holder
 		}
 	}
 
@@ -352,14 +359,6 @@ function setRenderers(self) {
 				)
 			}
 		}
-		self.dom.holder
-			.append('div')
-			.style('margin-top', '20px')
-			.append('button')
-			.text('Download')
-			.on('click', e => {
-				self.downloadData()
-			})
 	}
 
 	// this == the d3 selected DOM node
