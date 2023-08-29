@@ -549,6 +549,12 @@ export class Matrix {
 		return termOrder
 	}
 
+	/*
+	Given the anno of a term for a sample, generate the 
+		filteredValues (values matched the filter)
+		countedValues (values counted, Class = Blank or WT are not counted)
+		renderedValues (values rendered on matrix)
+	*/
 	classifyValues(anno, tw, grp, s, sample) {
 		const values = 'value' in anno ? [anno.value] : anno.values
 		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
