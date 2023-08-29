@@ -469,9 +469,9 @@ function getLegendGrps(termNum, self) {
 		t2 = self.config.term2,
 		headingStyle = 'color: #aaa; font-weight: 400'
 
-	addDescriptiveStats(t1, legendGrps, headingStyle)
+	addDescriptiveStats(t1, legendGrps, headingStyle, self)
 	if (t2?.term.type === 'float' || t2?.q.mode === 'continuous' || t2?.term.type === 'integer')
-		addDescriptiveStats(t2, legendGrps, headingStyle)
+		addDescriptiveStats(t2, legendGrps, headingStyle, self)
 
 	addUncomputableValues(
 		t1?.q.mode === 'continuous' && Object.keys(t1?.q.hiddenValues).length > 0
@@ -492,7 +492,7 @@ function getLegendGrps(termNum, self) {
 	return legendGrps
 }
 
-function addDescriptiveStats(term, legendGrps, headingStyle) {
+function addDescriptiveStats(term, legendGrps, headingStyle, self) {
 	if (term?.q.descrStats) {
 		const items = term.q.descrStats.map(stat => {
 			return {
@@ -500,7 +500,11 @@ function addDescriptiveStats(term, legendGrps, headingStyle) {
 				noIcon: true
 			}
 		})
-		const title = `Descriptive statistics: ${term.term.name}`
+
+		const title =
+			self.config.term2?.term.type === 'float' || self.config.term2?.term.type === 'integer'
+				? `Descriptive statistics: ${term.term.name}`
+				: `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`
 		legendGrps.push({ name, items })
 	}
@@ -513,12 +517,17 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 			if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
 				items.push({
 					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
-					noIcon: true
+					noIcon: true,
+					isHidden: true,
+					hiddenOpacity: 1
 				})
 			}
 		}
 		if (items.length) {
-			const name = `<span style="${headingStyle}">${term.term.name}</span>`
+			const name =
+				self.config.term2?.term.type === 'float' || self.config.term2?.term.type === 'integer'
+					? `<span style="${headingStyle}">${term.term.name}</span>`
+					: `<span style="${headingStyle}">Other categories</span>`
 			legendGrps.push({ name, items })
 		}
 	}

@@ -23,3 +23,4 @@ Fixes:
 - In GDC bam slicing block display, clicking on a transcript from native gene tk will disable the "View in protein" option.
 - Hierarchical clustering R script is improve to include scaling step.
 - Add CNV information to label tooltips in disco plot.
+- Fixed legend labels for continuous term and uncomputable categories in violin plot

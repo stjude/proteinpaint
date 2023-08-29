@@ -133,7 +133,6 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 		const s = viz.settings
 		const div = select(this)
 		const color = d.fill ? d.fill : d.stroke ? d.stroke : d.color
-
 		div
 			//.style('opacity', !d.isHidden ? 1 : d.hiddenOpacity ? d.hiddenOpacity : 0.3)
 			.attr('class', 'legend-row')
