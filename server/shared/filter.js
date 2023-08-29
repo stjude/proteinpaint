@@ -22,21 +22,31 @@ export function getFilteredSamples(sampleAnno, filter) {
 	return samples // return as a Set, or maybe as an array later
 }
 
-export function sample_match_termvaluesetting(row, filter, _term = null) {
+export function sample_match_termvaluesetting(row, filter, _term = null, sample = null) {
 	const lst = filter.type == 'tvslst' ? filter.lst : [filter]
 	let numberofmatchedterms = 0
 
 	/* for AND, require all terms to match */
 	for (const item of lst) {
 		if (item.type == 'tvslst') {
-			if (sample_match_termvaluesetting(row, item)) {
+			if (sample_match_termvaluesetting(row, item, _term, sample)) {
 				numberofmatchedterms++
 			}
 		} else {
-			if (_term) item.tvs.term = _term
-			const t = item.tvs
-			const samplevalue = t.term.id in row ? row[t.term.id] : row
+			const itemCopy = JSON.parse(JSON.stringify(item))
+			const t = itemCopy.tvs
 
+			let samplevalue
+			if (_term && !t.term) {
+				if (t.term$type && t.term$type !== _term.type) return !t.isnot
+				t.term = _term
+				samplevalue = typeof row === 'object' && t.term.id in row ? row[t.term.id] : row //'tumorWES'
+			} else if (sample && t.term$id) {
+				samplevalue = sample[t.term$id]
+			} else {
+				samplevalue = row
+			}
+			setDatasetAnnotations(itemCopy)
 			let thistermmatch
 
 			if (t.term.type == 'categorical') {
@@ -112,7 +122,7 @@ export function sample_match_termvaluesetting(row, filter, _term = null) {
 							v =>
 								v.dt == sv.dt &&
 								(!v.origin || sv.origin == v.origin) &&
-								(!v.mclasslst || v.mclasslst.includes(sv.mclass))
+								(!v.mclasslst || v.mclasslst.includes(sv.class))
 						) && true //; console.log(114, t.values[0].dt, samplevalue.dt, thistermmatch)
 				}
 			} else {
