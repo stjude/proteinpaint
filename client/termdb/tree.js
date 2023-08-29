@@ -83,13 +83,23 @@ class TdbTree {
 			headerDiv: opts.headerDiv
 		}
 		if (opts.sampleId) {
+			this.opts.headerDiv.insert('label').text('Sample:')
+			const input = this.opts.headerDiv
+				.insert('input')
+				.property('disabled', true)
+				.attr('value', opts.sampleName)
+				.on('change', e => {
+					const sampleId = Number(input.node.value)
+					this.sampleDataByTermId = {}
+					//do something
+				})
 			this.opts.headerDiv
 				.insert('button')
 				.text('Download data')
 				.on('click', e => {
 					this.downloadData()
 				})
-		}
+		} else this.opts.headerDiv.style('display', 'none')
 	}
 
 	reactsTo(action) {
@@ -110,7 +120,8 @@ class TdbTree {
 			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
 			usecase: appState.tree.usecase,
-			sampleId: appState.sampleId
+			sampleId: appState.sampleId,
+			sampleName: appState.sampleName
 		}
 
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
@@ -132,6 +143,7 @@ class TdbTree {
 			return
 		}
 		this.sampleId = this.state.sampleId
+		this.sampleName = this.state.sampleName
 
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
@@ -226,7 +238,7 @@ class TdbTree {
 	}
 
 	downloadData() {
-		const filename = `${this.sampleId}.tsv`
+		const filename = `${this.sampleName}.tsv`
 		let data = ''
 		for (const field in this.sampleDataByTermId) {
 			const term = this.termsById[field]

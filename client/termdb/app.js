@@ -45,6 +45,7 @@ class TdbApp {
 			submitDiv,
 			submitBtn,
 			topbar,
+			headerDiv: topbar.append('div').style('display', 'inline-block').style('margin-left', '12px'),
 			searchDiv: topbar.append('div').style('display', 'inline-block'),
 			filterDiv: topbar.append('div').style('display', 'none'),
 			errdiv: opts.holder.append('div'),
@@ -159,7 +160,6 @@ class TdbApp {
 	async setComponents() {
 		try {
 			const header_mode = this.state.nav?.header_mode
-			const headerDiv = this.dom.searchDiv.append('div').style('display', 'inline-block').style('float', 'right')
 			const compPromises = {
 				/*
 			 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
@@ -176,7 +176,7 @@ class TdbApp {
 				tree: treeInit({
 					app: this.api,
 					holder: this.dom.treeDiv,
-					headerDiv,
+					headerDiv: this.dom.headerDiv,
 					expandAll: header_mode == 'hide_search'
 				})
 			}

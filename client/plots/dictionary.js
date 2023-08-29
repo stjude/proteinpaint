@@ -66,12 +66,13 @@ class MassDict {
 			selectdTerms: appState.selectedTerms,
 			customTerms: appState.customTerms,
 			termdbConfig: appState.termdbConfig,
-			sampleId: this.sample?.sampleId
+			sampleId: this.sample?.sampleId,
+			sampleName: this.sample?.sample
 		}
 	}
 
 	async main() {
-		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sample} Dictionary` : 'Dictionary')
+		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sample} Sample View` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
