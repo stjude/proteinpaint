@@ -364,7 +364,8 @@ function setRenderers(self) {
 
 	self.getTermValue = function (term) {
 		let value = self.sampleByTermId[term.id]
-		if (term.type == 'float' || term.type == 'integer') return value
+		if (term.type == 'float' || term.type == 'integer')
+			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
 		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
 		return null
 	}
@@ -396,10 +397,7 @@ function setRenderers(self) {
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		let text = term.name
-		if (term.isleaf && self.sampleId) {
-			const value = self.getTermValue(term)
-			text += `..........${value || 'Missing'}`
-		}
+
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
@@ -407,7 +405,16 @@ function setRenderers(self) {
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(text)
-
+		if (term.isleaf && self.sampleId) {
+			let value = self.getTermValue(term) || 'Missing'
+			div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('float', 'right')
+				.style('padding', '5px')
+				.style('opacity', termIsDisabled ? 0.4 : null)
+				.text(value)
+		}
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')

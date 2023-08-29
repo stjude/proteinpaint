@@ -5,7 +5,7 @@ class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
 		const div = opts.holder.append('div').style('display', 'flex')
-		const holder = div.append('div').style('padding', '20px').style('width', '30%')
+		const holder = div.append('div').style('padding', '20px')
 		const contentDiv = div.append('div')
 		this.dom = {
 			holder,
@@ -44,10 +44,11 @@ class MassDict {
 		if (this.sample && this.showContent) {
 			this.dom.holder
 				.style('border-right', '1px solid gray')
+				.style('min-width', '500px')
 				.style('overflow', 'scroll')
 				.attr('class', 'sjpp_hide_scrollbar')
 			this.dom.contentDiv
-				.style('width', '50%')
+				.style('width', '60%')
 				.style('min-height', '500px')
 				.style('display', 'flex')
 				.style('flex-direction', 'column')
