@@ -22,6 +22,9 @@ export function getFilteredSamples(sampleAnno, filter) {
 	return samples // return as a Set, or maybe as an array later
 }
 
+/*
+given a value from a sample's anno of a term, return true if a value matches the filter
+*/
 export function sample_match_termvaluesetting(row, filter, _term = null, sample = null) {
 	const lst = filter.type == 'tvslst' ? filter.lst : [filter]
 	let numberofmatchedterms = 0
