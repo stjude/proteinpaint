@@ -2038,7 +2038,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 						key: alleles.join('/'),
 						value: alleles.join('/')
 					}
-					samples.push(_s)
+					samples.push({ sample_id: s.sample_id, GT: alleles.join('/') })
 				}
 				const _m = {
 					samples
@@ -2125,19 +2125,24 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					_SAMPLENAME_: s.sample_id
 				}
 
-				/*
-				optional __sampleName may be returned by mds3 query, if so, assign to m2{}
+				if (s.__sampleName) {
+					/*
+					optional __sampleName may be returned by mds3 query, if so, assign to m2{}
 
-				*** tricky use case ***
-				mayGetGeneVariantData() is used for gdc matrix
-				in which the useCaseid4sample=true flag is set to inform mds3.gdc to return both uuid and submitter id
-				e.g. s.sample_id=uuid, and s.__sampleName=submitter id
-				as gdc matrix aligns data on case uuid (unique), while must display case submitter id (not unique)
-				later m2._SAMPLENAME_ will not be overriden because gdc has no termdb.q.id2sampleName()
-				*/
-				if (s.__sampleName) m2._SAMPLENAME_ = s.__sampleName
+					*** tricky use case ***
+					mayGetGeneVariantData() is used for gdc matrix
+					in which the useCaseid4sample=true flag is set to inform mds3.gdc to return both uuid and submitter id
+					e.g. s.sample_id=uuid, and s.__sampleName=submitter id
+					as gdc matrix aligns data on case uuid (unique), while must display case submitter id (not unique)
+					later m2._SAMPLENAME_ will not be overriden because gdc has no termdb.q.id2sampleName()
+					*/
+					m2._SAMPLENAME_ = s.__sampleName
+				}
 
-				if ('value' in m) m2.value = m.value
+				if ('value' in m) {
+					// for what?
+					m2.value = m.value
+				}
 
 				if (s.formatK2v) {
 					// this sample have format values, flatten those
@@ -2148,6 +2153,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				// can supply dt specific attributes
 				if (m.dt == dtsnvindel) {
+					if (s.GT) {
+						// is sample genotype from snp query
+						m2.value = s.GT
+						m2.key = s.GT
+					}
 				} else if (m.dt == dtfusionrna || m.dt == dtsv) {
 					m2.pairlst = m.pairlst
 				}

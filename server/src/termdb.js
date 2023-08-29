@@ -225,6 +225,10 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 				////////////////////////////
 				// TODO
 				// if to remove bulk support on backend and use client vocab, then this should be deleted
+				//
+				// still, may keep this method to support dataset with data on limit gene set
+				// so that term search only return genes from this set, rather than any gene in genome, allow it to be user friendly
+				//
 				////////////////////////////
 
 				// presence of this getter indicates dataset uses text file to supply mutation data
