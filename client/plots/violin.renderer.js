@@ -503,7 +503,7 @@ function addDescriptiveStats(term, legendGrps, headingStyle, self) {
 
 		const title =
 			self.config.term2?.term.type === 'float' || self.config.term2?.term.type === 'integer'
-				? `Descriptive statistics:${term.term.name}`
+				? `Descriptive statistics: ${term.term.name}`
 				: `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`
 		legendGrps.push({ name, items })
