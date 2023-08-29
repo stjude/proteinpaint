@@ -11,7 +11,7 @@ ln -s $PPDIR/utils/hooks/post-commit .
 ln -s $PPDIR/utils/hooks/pre-push .
 cd $PPDIR
 
-STATUS=which pre-commit
+STATUS="$(which pre-commit)"
 if [[ "$STATUS" == "" || "$STATUS" == "pre-commit not found" ]]; then 
     echo "installing the pre-commit utility using pip3"
     pip3 install pre-commit
