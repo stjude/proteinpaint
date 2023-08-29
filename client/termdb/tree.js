@@ -202,6 +202,8 @@ class TdbTree {
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
 				const t0 = this.termsById[copy.id]
+				if (this.sampleId) await this.fillSampleData([copy])
+
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
 				}
