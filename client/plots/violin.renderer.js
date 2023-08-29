@@ -500,7 +500,7 @@ function addDescriptiveStats(term, legendGrps, headingStyle) {
 				noIcon: true
 			}
 		})
-		const title = `Descriptive statistics: ${term.term.name}`
+		const title = `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`
 		legendGrps.push({ name, items })
 	}
@@ -513,12 +513,14 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 			if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
 				items.push({
 					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
-					noIcon: true
+					noIcon: true,
+					isHidden: true,
+					hiddenOpacity: 1
 				})
 			}
 		}
 		if (items.length) {
-			const name = `<span style="${headingStyle}">${term.term.name}</span>`
+			const name = `<span style="${headingStyle}">Other categories</span>`
 			legendGrps.push({ name, items })
 		}
 	}
