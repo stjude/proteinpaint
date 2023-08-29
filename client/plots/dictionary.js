@@ -4,7 +4,7 @@ import { appInit } from '#termdb/app'
 class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
-		const div = opts.holder.append('div').style('display', 'flex')
+		const div = opts.holder.append('div').style('display', 'flex').style('align-items', 'start')
 		const holder = div.append('div').style('padding', '20px')
 		const contentDiv = div.append('div')
 		this.dom = {
@@ -43,16 +43,18 @@ class MassDict {
 
 		if (this.sample && this.showContent) {
 			this.dom.holder
-				.style('border-right', '1px solid gray')
 				.style('min-width', '500px')
 				.style('overflow', 'scroll')
 				.attr('class', 'sjpp_hide_scrollbar')
+				.style('border-right', '1px solid gray')
+
 			this.dom.contentDiv
 				.style('width', '60%')
 				.style('min-height', '500px')
 				.style('display', 'flex')
 				.style('flex-direction', 'column')
 				.style('justify-content', 'center')
+				.style('border-left', '1px solid gray')
 		}
 	}
 

@@ -77,12 +77,13 @@ class TdbTree {
 
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
-		this.opts.holder
-			.insert('button')
-			.text('Download data')
-			.on('click', e => {
-				this.downloadData()
-			})
+		if (opts.sampleId)
+			this.opts.headerDiv
+				.insert('button')
+				.text('Download data')
+				.on('click', e => {
+					this.downloadData()
+				})
 		this.dom = {
 			holder
 		}
