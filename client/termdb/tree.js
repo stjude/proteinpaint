@@ -72,20 +72,23 @@ class TdbTree {
 		this.termsByCohort = {}
 		this.expandAll = 'expandAll' in opts ? opts.expandAll : false
 		//getCompInit(TdbTree) will set this.id, .app, .opts, .api
-		this.sampleData = {}
+		this.sampleDataByTermId = {}
 	}
 
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
-		if (opts.sampleId)
+
+		this.dom = {
+			holder,
+			headerDiv: opts.headerDiv
+		}
+		if (opts.sampleId) {
 			this.opts.headerDiv
 				.insert('button')
 				.text('Download data')
 				.on('click', e => {
 					this.downloadData()
 				})
-		this.dom = {
-			holder
 		}
 	}
 
@@ -129,10 +132,7 @@ class TdbTree {
 			return
 		}
 		this.sampleId = this.state.sampleId
-		if (this.sampleId) {
-			const opts = { sampleId: this.sampleId }
-			this.sampleByTermId = await this.app.vocabApi.getSingleSampleData(opts)
-		}
+
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
 			if (!this.state.cohortValuelst) {
@@ -142,6 +142,7 @@ class TdbTree {
 		}
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
+
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.dom.holder.style('display', 'block')
@@ -195,6 +196,7 @@ class TdbTree {
 
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
+				if (this.sampleId) await this.fillSampleData(copy.terms)
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
@@ -210,13 +212,27 @@ class TdbTree {
 		return terms
 	}
 
+	async fillSampleData(terms) {
+		const term_ids = []
+		for (const term of terms) term_ids.push(term.id)
+		const data = await this.app.vocabApi.getSingleSampleData({ sampleId: this.sampleId, term_ids })
+		for (const id in data) this.sampleDataByTermId[id] = data[id]
+	}
+
 	bindKey(term) {
 		return term.id
 	}
 
 	downloadData() {
-		const filename = `${this.sampleId}.json`
-		const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.sampleByTermId))
+		const filename = `${this.sampleId}.tsv`
+		let data = ''
+		for (const field in this.sampleDataByTermId) {
+			const term = this.termsById[field]
+			let value = this.getTermValue(term)
+			if (value == null) continue
+			data += `${field}\t${value}\n`
+		}
+		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(data)
 
 		const link = document.createElement('a')
 		link.setAttribute('href', dataStr)
@@ -364,7 +380,8 @@ function setRenderers(self) {
 	}
 
 	self.getTermValue = function (term) {
-		let value = self.sampleByTermId[term.id]
+		let value = self.sampleDataByTermId[term.id]
+		if (value == null) return null
 		if (term.type == 'float' || term.type == 'integer')
 			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
 		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
@@ -372,7 +389,7 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = async function (term) {
-		const termIsDisabled = self.opts.disable_terms?.includes(term.id) || (term.isleaf && self.sampleId)
+		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
 
 		const div = select(this)
@@ -427,7 +444,7 @@ function setRenderers(self) {
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else if (uses.has('plot')) {
+			} else if (uses.has('plot') && !self.sampleId) {
 				labeldiv
 					// need better css class
 					.style('color', 'black')

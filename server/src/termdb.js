@@ -566,7 +566,7 @@ async function get_matrix(q, req, res, ds, genome) {
 }
 
 async function get_singleSampleData(q, res, tdb) {
-	res.send(tdb.q.getSingleSampleData(q.sampleId))
+	res.send(tdb.q.getSingleSampleData(q.sampleId, q.term_ids))
 }
 
 function get_mds3queryDetails(res, ds) {

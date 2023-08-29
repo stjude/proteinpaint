@@ -889,6 +889,7 @@ export class TermdbVocab extends Vocab {
 		const body = {
 			for: 'singleSampleData',
 			sampleId: opts.sampleId,
+			term_ids: opts.term_ids,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname

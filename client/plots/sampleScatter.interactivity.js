@@ -129,7 +129,7 @@ export function setInteractivity(self) {
 		self.dom.tip.clear()
 		let show = false
 		if ('sample' in sample) {
-			self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
+			self.dom.tip.d.append('div').style('padding', '4px').html(`<b>&nbsp;${sample.sample}</b>`)
 
 			self.dom.tip.d
 				.append('div')

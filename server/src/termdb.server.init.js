@@ -454,10 +454,14 @@ export function server_init_db_queries(ds) {
 		return supportedChartTypes
 	}
 
-	q.getSingleSampleData = function (sampleId) {
-		const sql = cn.prepare(
-			`select term_id, value from anno_categorical where sample=? union all select term_id, value from anno_float where sample=? union all  select term_id, value from anno_integer where sample=?`
-		)
+	q.getSingleSampleData = function (sampleId, term_ids) {
+		const ids = `('${term_ids.join("','")}')`
+
+		const query = `select term_id, value from anno_categorical where sample=? and term_id in ${ids}
+		union all select term_id, value from anno_float where sample=? and term_id in ${ids}
+		union all  select term_id, value from anno_integer where sample=? and term_id in ${ids} `
+
+		const sql = cn.prepare(query)
 		const rows = sql.all([sampleId, sampleId, sampleId])
 		return rows
 	}
