@@ -315,7 +315,8 @@ export class TermdbVocab extends Vocab {
 	usecase
 	targetType
 		snp = find if str matches with dbsnp
-		category = TODO match with catgory of a term
+		category = match with catgory of a term (not implemented yet)
+		blank string for default behavior of matching with dict term or gene names
 	*/
 	async findTerm(str, cohortStr = '', usecase = null, targetType = '') {
 		const body = {
