@@ -333,19 +333,20 @@ export function setRenderers(self) {
 				data.push({ x, y })
 			})
 			let regressionCurve
-			if (regressionType == 'Loess') {
-				regression = regressionLoess()
-					.x(c => c.x)
-					.y(c => c.y)
-					.bandwidth(0.25)
-				regressionCurve = regression(data)
-			} else if (regressionType == 'Polynomial') {
+			// if (regressionType == 'Loess') {
+			// 	regression = regressionLoess()
+			// 		.x(c => c.x)
+			// 		.y(c => c.y)
+			// 		.bandwidth(0.25)
+			// 	regressionCurve = regression(data)
+			// } else
+			if (regressionType == 'Polynomial') {
 				regression = regressionPoly()
 					.x(c => c.x)
 					.y(c => c.y)
 					.order(3)
 				regressionCurve = regression(data)
-			} else if (regressionType == 'Lowess-R') {
+			} else if (regressionType == 'Lowess') {
 				const X = [],
 					Y = []
 				for (const sample of data) {
