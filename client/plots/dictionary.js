@@ -39,10 +39,10 @@ class MassDict {
 				.html((d, i) => d[1])
 			this.select.on('change', e => {
 				const sampleId = this.select.node().value
-				const sample = this.sampleId2Name[sampleId]
+				const sampleName = this.sampleId2Name[sampleId]
 				this.sampleDataByTermId = {}
 				this.dataDownloaded = false
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: { sampleId, sample } } })
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: { sampleId, sampleName } } })
 			})
 
 			div
@@ -105,14 +105,14 @@ class MassDict {
 			customTerms: appState.customTerms,
 			termdbConfig: appState.termdbConfig,
 			sampleId: config.sample.sampleId,
-			sampleName: config.sample.sample
+			sampleName: config.sample.sampleName
 		}
 	}
 
 	async main() {
 		if (this.dom.header)
 			this.dom.header.html(this.state.sampleName ? `${this.state.sampleName} Sample View` : 'Dictionary')
-		this.sample = { sample_id: this.state.sampleId, sample: this.state.sampleName }
+		this.sample = { sampleId: this.state.sampleId, sample_id: this.state.sampleName }
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
@@ -121,7 +121,7 @@ class MassDict {
 			this.dom.contentDiv.selectAll('*').remove()
 			if (this.state.termdbConfig.queries?.singleSampleMutation) {
 				const div = this.dom.contentDiv
-				div.append('div').style('font-weight', 'bold').style('padding', '20px').text('Disco plot')
+				div.append('div').style('font-weight', 'bold').style('padding-left', '20px').text('Disco plot')
 				const discoPlotImport = await import('./plot.disco.js')
 				discoPlotImport.default(
 					this.state.termdbConfig,
