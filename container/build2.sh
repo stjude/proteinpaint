@@ -132,7 +132,8 @@ echo "building $IMGNAME image"
 
 docker buildx build . \
 	--file ./$SUBDIR/Dockerfile \
-	--tag "$IMGNAME:$IMGVER-$HASH" $PLATFORM \
+	--tag "$IMGNAME:$IMGVER-$HASH" \
+	--tag "$IMGNAME:latest" $PLATFORM \
 	--build-arg IMGVER=$IMGVER \
 	--build-arg IMGREV=$IMGREV \
 	--build-arg CROSSENV="$CROSSENV" $BUILDARGS \
