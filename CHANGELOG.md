@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.26.1
+
+Fix
+- add a latest tag to the docker build
+ 
 ## 2.26.0
 
 Features:
