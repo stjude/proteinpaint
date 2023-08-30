@@ -77,24 +77,7 @@ class TdbTree {
 
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
-		if (opts.sampleId) {
-			this.opts.headerDiv.insert('label').text('Sample:')
-			const input = this.opts.headerDiv
-				.insert('input')
-				.property('disabled', true)
-				.attr('value', opts.sampleName)
-				.on('change', e => {
-					const sampleId = Number(input.node.value)
-					this.sampleDataByTermId = {}
-					//do something
-				})
-			this.opts.headerDiv
-				.insert('button')
-				.text('Download')
-				.on('click', e => {
-					this.downloadData()
-				})
-		} else this.opts.headerDiv.style('display', 'none')
+
 		const loadingDiv = this.opts.headerDiv.append('div').style('display', 'inline-block').style('margin-left', '10px')
 		this.dom = {
 			holder,
@@ -123,7 +106,6 @@ class TdbTree {
 			sampleId: appState.sampleId,
 			sampleName: appState.sampleName
 		}
-
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
 			state.toSelectCohort = true
@@ -138,6 +120,8 @@ class TdbTree {
 	}
 
 	async main() {
+		if (this.dom.header) this.dom.header.html(this.sampleName ? `${this.sampleName} Sample View` : 'Dictionary')
+
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
@@ -241,7 +225,7 @@ class TdbTree {
 		this.dom.loadingDiv.text('Downloading data ...')
 		for (const id in this.termsById) {
 			const term = this.termsById[id]
-			if (term.isleaf) continue
+			//if (term.isleaf) continue
 			let terms = [term]
 			while (terms.length) for (const term of terms) terms = await this.requestTermRecursive(term)
 		}
@@ -384,6 +368,7 @@ function setRenderers(self) {
 			div.style('display', 'none')
 			return
 		}
+		console.log('updateTerm')
 
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
@@ -391,6 +376,8 @@ function setRenderers(self) {
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
+		div.select('.' + cls_termlabel + 'Value').text(self.getTermValue(term) || 'Missing')
+
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
@@ -454,6 +441,7 @@ function setRenderers(self) {
 			let value = self.getTermValue(term) || 'Missing'
 			div
 				.append('div')
+				.attr('class', cls_termlabel + 'Value')
 				.style('display', 'inline-block')
 				.style('float', 'right')
 				.style('padding', '5px')

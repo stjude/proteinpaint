@@ -4,11 +4,14 @@ import { appInit } from '#termdb/app'
 class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
-		const div = opts.holder.append('div').style('display', 'flex').style('align-items', 'start')
-		const holder = div.append('div').style('padding', '20px')
-		const contentDiv = div.append('div')
+		const div = opts.holder.append('div')
+		const sampleDiv = div.append('div').style('padding', '20px').style('display', 'none')
+		const treeDiv = div.append('div').style('padding', '20px')
+
+		const contentDiv = div.append('div').style('display', 'flex').style('align-items', 'start')
 		this.dom = {
-			holder,
+			sampleDiv,
+			treeDiv,
 			contentDiv,
 			header: opts.header
 		}
@@ -17,10 +20,44 @@ class MassDict {
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		this.sample = config.sample
+
+		if (this.sample.sampleId) {
+			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
+			const samples = Object.entries(this.sampleId2Name)
+			const div = this.dom.sampleDiv.style('display', 'block')
+			div.insert('label').text('Sample:')
+
+			this.select = div.append('select').style('margin', '0px 5px')
+			this.select
+				.selectAll('option')
+				.data(samples)
+				.enter()
+				.append('option')
+				.attr('value', d => d[0])
+				.property('selected', d => d[0] == appState.sampleId)
+				.html((d, i) => d[1])
+			this.select.on('change', e => {
+				const sampleId = this.select.property('value')
+				const sample = this.sampleId2Name[sampleId]
+				console.log(sampleId, sample)
+				this.sampleDataByTermId = {}
+				this.dataDownloaded = false
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: { sampleId, sample } } })
+			})
+
+			div
+				.insert('button')
+				.text('Download')
+				.on('click', e => {
+					console.log(this.tree)
+					this.downloadData()
+				})
+		}
+
 		this.showContent = config.showContent
 		this.tree = await appInit({
 			vocabApi: this.app.vocabApi,
-			holder: this.dom.holder,
+			holder: this.dom.treeDiv,
 			state: this.getState(appState),
 			tree: {
 				click_term: _term => {
@@ -59,6 +96,7 @@ class MassDict {
 	}
 
 	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
 		return {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
@@ -66,13 +104,14 @@ class MassDict {
 			selectdTerms: appState.selectedTerms,
 			customTerms: appState.customTerms,
 			termdbConfig: appState.termdbConfig,
-			sampleId: this.sample?.sampleId,
-			sampleName: this.sample?.sample
+			sampleId: config.sample.sampleId,
+			sampleName: config.sample.sample
 		}
 	}
 
 	async main() {
-		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sample} Sample View` : 'Dictionary')
+		if (this.dom.header)
+			this.dom.header.html(this.state.sampleName ? `${this.state.sampleName} Sample View` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state

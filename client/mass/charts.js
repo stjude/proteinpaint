@@ -121,6 +121,15 @@ function getChartTypeList(self) {
 			}
 		},
 		{
+			label: 'Sample View',
+			clickTo: self.prepPlot,
+			chartType: 'dictionary',
+			config: {
+				chartType: 'dictionary',
+				sampleViewer: true
+			}
+		},
+		{
 			label: 'Summary Plots',
 			chartType: 'summary',
 			clickTo: self.showTree_select1term,
