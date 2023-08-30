@@ -665,12 +665,14 @@ export class Matrix {
 		for (const t of this.termOrder) {
 			const countedSamples = new Set()
 			t.counts = { samples: 0, hits: 0 }
+
+			// store counts for each subGroup in subGroupCounts
 			t.counts.subGroupCounts = {}
 			for (const group of this.sampleGroups) {
 				t.counts.subGroupCounts[group.name] = {
-					samplesTotal: 0,
-					hitsTotal: 0,
-					classes: {}
+					samplesTotal: 0, // number of counted samples
+					hitsTotal: 0, // sum of classes in counted samples
+					classes: {} // number of each class
 				}
 			}
 			if (!processedLabels.termGrpByName[t.grp.name || '']) {
@@ -708,6 +710,7 @@ export class Matrix {
 					t.counts.samples += 1
 					t.counts.hits += anno.countedValues.length
 
+					//count the samples and classes in each subGroup
 					const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
 					if (t.tw.term.type == 'geneVariant') {
 						subGroup.samplesTotal += 1

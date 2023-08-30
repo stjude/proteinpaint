@@ -1404,12 +1404,16 @@ function setLabelDragEvents(self, prefix) {
 	self[`${prefix}LabelMouseover`] = (event, t) => {
 		if (prefix == 'term' && event.target.__data__?.tw) {
 			//show counts in each subgroup when hover over term label
-			if (self.activeLabel || self.zoomArea) return
+			if (self.activeLabel || self.zoomArea) {
+				// when an edit menu is open or when users are selecting a portion of matrix to zoom
+				return
+			}
 			self.dom.menutop.selectAll('*').remove()
 			self.dom.menubody.selectAll('*').remove()
 			const groupName = event.target.__data__.grp.name
 			const termName = event.target.__data__.tw.term.name
 
+			//Add subGroup name
 			self.dom.menubody
 				.append('div')
 				.style('text-align', 'center')
@@ -1420,6 +1424,8 @@ function setLabelDragEvents(self, prefix) {
 			const data = event.target.__data__
 
 			if (data.tw.term.type == 'geneVariant') {
+				// for geneVariant term, use subGroupCounts to show number of counted samples (WT and Blank are not counted)
+				// and number of each class in the subGroup
 				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
 					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
 					div
@@ -1443,8 +1449,10 @@ function setLabelDragEvents(self, prefix) {
 					}
 				}
 			} else if (!self.config.divideBy) {
+				// non-geneVariant term, when matrix is divided into multiple subGorups
 				const termLegend = self.legendData.find(t => t.name == data.label)
 				if (termLegend && termLegend.items) {
+					// when legend data is available
 					const t = div.append('table').style('margin-left', '15px')
 					for (const classType of termLegend.items) {
 						const tr = t.append('tr')
@@ -1457,6 +1465,7 @@ function setLabelDragEvents(self, prefix) {
 						tr.append('td').html(`${classType.key}: ${classType.count}`)
 					}
 				} else {
+					// when legend data is not available, use subGroupCounts
 					for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
 						const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
 						div
@@ -1483,6 +1492,7 @@ function setLabelDragEvents(self, prefix) {
 					}
 				}
 			} else {
+				// non-geneVariant term, when matrix is not divided into multiple subGorups
 				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
 					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
 					div
@@ -1497,6 +1507,7 @@ function setLabelDragEvents(self, prefix) {
 					const termLegend = subGrp.legendData.find(t => t.name == data.label)
 
 					if (termLegend && termLegend.items) {
+						// when legend data is available
 						const t = div.append('table').style('margin-left', '15px')
 						for (const classType of termLegend.items) {
 							const tr = t.append('tr')
@@ -1509,6 +1520,7 @@ function setLabelDragEvents(self, prefix) {
 							tr.append('td').html(`${classType.key}: ${classType.count}`)
 						}
 					} else {
+						// when legend data is not available, use subGroupCounts
 						const t = div.append('table').style('margin-left', '15px')
 						for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
 							const classColor = data.tw.term.values?.[classType]?.color
