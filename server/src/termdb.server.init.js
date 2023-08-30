@@ -455,12 +455,22 @@ export function server_init_db_queries(ds) {
 	}
 
 	q.getSingleSampleData = function (sampleId, term_ids) {
+		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
+
 		let ids = '?,'.repeat(term_ids.length)
 		if (term_ids.length) ids = ids.slice(0, ids.length - 1)
 		else ids = ''
-		const query = `select term_id, value from anno_categorical where sample=? and term_id in (${ids})
-		union all select term_id, value from anno_float where sample=? and term_id in (${ids})
-		union all  select term_id, value from anno_integer where sample=? and term_id in (${ids}) `
+		const query = `select term_id, value 
+		from anno_categorical 
+		where sample=? ${termClause}
+		union all 
+		select term_id, 
+		value from anno_float 
+		where sample=? ${termClause}
+		union all  
+		select term_id, value 
+		from anno_integer 
+		where sample=? ${termClause}`
 		const sql = cn.prepare(query)
 		const rows = sql.all([sampleId, ...term_ids, sampleId, ...term_ids, sampleId, ...term_ids])
 		return rows
