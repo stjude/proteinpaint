@@ -171,6 +171,35 @@ type VariantFilter = {
 	terms: FilterTermEntry[]
 }
 
+// one set of AC and AN info fields to retrieve data for this population
+type PopulationINFOset = {
+	key?: string // optional name for identifying this set, when the population is ancestry-stratified and a population has multiple sets
+	infokey_AC: string // required info field
+	infokey_AN: string // required info field
+	termfilter_value?: string // optional ...
+}
+
+/* define method to retrieve allele AC/AN in a population, by using bcf INFO fields; population could be ancestry-stratified
+two types of population are supported:
+- ancestry-stratified
+  allowto_adjust_race can be set to true
+  sets[] has >1 elements
+- not stratified
+  allowto_adjust_race cannot be set to true
+  sets[] has only 1 element
+*/
+type Population = {
+	key: string // for identifying this element
+	label: string // display, in fact it can replace key since label should also be unique
+	// allow to set to true for race-stratified population, will adjust population AC/AN values based on admix coefficient for the dataset's cohort variants
+	// supposed to be "read-only" attribute and not modifiable in runtime
+	allowto_adjust_race?: boolean
+	adjust_race?: boolean // when above is true, this flag is flip switch for this adjustion
+	termfilter?: string // optional term id used for race adjusting, must correspond to a term in dataset db
+	sets: PopulationINFOset[] // if AC/AN of the population is ancestry-stratified, will be multiple elements of this array; otherwise just one
+}
+
+// a data type under ds.queries{}
 type SnvIndel = {
 	forTrack?: boolean
 	byrange: ByRangeEntry
@@ -182,6 +211,7 @@ type SnvIndel = {
 	m2csp?: M2Csq
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter
+	populations?: Population[]
 }
 
 type SvFusion = {
