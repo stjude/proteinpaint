@@ -331,8 +331,8 @@ class Scatter {
 					settingsKey: 'regression',
 					options: [
 						{ label: 'None', value: 'None' },
-						{ label: 'Loess', value: 'Loess' },
-						{ label: 'Lowess-R', value: 'Lowess-R' },
+						//{ label: 'Loess', value: 'Loess' },
+						{ label: 'Lowess', value: 'Lowess' },
 						{ label: 'Polynomial', value: 'Polynomial' }
 					]
 				})
