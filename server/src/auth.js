@@ -59,7 +59,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			// since some data may still be returned for those, except controlled access
 			// data like sample names, which should not be included in the response payload
 			// if auth is required and not in session
-			(creds[q.dslabel].type != 'jwt' || (req.path == '/termdb' && q.for == 'matrix'))
+			(creds[q.dslabel].type != 'jwt' || (req.path == '/termdb' && (q.for == 'matrix' || q.for == 'singleSampleData')))
 		) {
 			// will do the session check below
 		} else {
@@ -180,7 +180,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	/*
 		will return a list of dslabels that require credentials
 	*/
-	authApi.getDsAuth = function(req) {
+	authApi.getDsAuth = function (req) {
 		return Object.keys(creds || {}).map(dslabel => {
 			try {
 				const cred = creds[dslabel]
