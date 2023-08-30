@@ -20,11 +20,10 @@ class MassDict {
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		this.sample = config.sample
-
-		if (this.sample) {
+		if (config.showSamples || config.sample) {
 			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
 			const samples = Object.entries(this.sampleId2Name)
+			this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
 			const div = this.dom.sampleDiv.style('display', 'block')
 			div.insert('label').html('&nbsp;Sample:')
 
@@ -35,14 +34,15 @@ class MassDict {
 				.enter()
 				.append('option')
 				.attr('value', d => d[0])
-				.property('selected', d => d[0] == appState.sampleId)
+				.property('selected', d => d[0] == this.sample.sampleId)
 				.html((d, i) => d[1])
 			this.select.on('change', e => {
 				const sampleId = this.select.node().value
 				const sampleName = this.sampleId2Name[sampleId]
+				this.sample = { sampleId, sampleName }
 				this.sampleDataByTermId = {}
 				this.dataDownloaded = false
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: { sampleId, sampleName } } })
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
 			})
 
 			div
@@ -104,19 +104,18 @@ class MassDict {
 			selectdTerms: appState.selectedTerms,
 			customTerms: appState.customTerms,
 			termdbConfig: appState.termdbConfig,
-			sample: config.sample
+			sample: config.sample || this.sample
 		}
 	}
 
 	async main() {
-		if (this.dom.header)
-			this.dom.header.html(this.state.sample ? `${this.state.sample.sampleName} Sample View` : 'Dictionary')
+		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sampleName} Sample View` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
 		})
 		if (this.state.sample && this.showContent) {
-			const sample = { sampleId: this.state.sample.sampleId, sample_id: this.state.sample.sampleName }
+			this.sample.sample_id = this.sample.sampleName
 
 			this.dom.contentDiv.selectAll('*').remove()
 			if (this.state.termdbConfig.queries?.singleSampleMutation) {
@@ -126,7 +125,7 @@ class MassDict {
 				discoPlotImport.default(
 					this.state.termdbConfig,
 					this.state.vocab.dslabel,
-					sample,
+					this.sample,
 					div.append('div'),
 					this.app.opts.genome
 				)
@@ -141,7 +140,7 @@ class MassDict {
 						this.state.termdbConfig,
 						this.state.vocab.dslabel,
 						k,
-						sample,
+						this.sample,
 						div.append('div'),
 						this.app.opts.genome
 					)
