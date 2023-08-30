@@ -43,7 +43,7 @@ class MassDict {
 
 		if (this.sample && this.showContent) {
 			this.dom.holder
-				.style('min-width', '500px')
+				.style('min-width', '550px')
 				.style('overflow', 'scroll')
 				.attr('class', 'sjpp_hide_scrollbar')
 				.style('border-right', '1px solid gray')
