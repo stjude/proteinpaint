@@ -1,5 +1,5 @@
 Features:
-- For hg38-based datasets, Disco plot allows to prioritize gene labels by Cancer Gene Census genes.
+- For hg38-based datasets, Disco plot may prioritize gene labels by Cancer Gene Census genes.
 - Numeric termsetting edit UI shows density curve at mode=continuous.
 - Update gene filter to restrict filtering for multiple alteration groups.
 - Unify click behavior for survival and cuminc legend items.
@@ -17,10 +17,11 @@ Fixes:
 - Ignore hidden values when conducting association tests for mass barchart.
 - Do not force a matrix barplot min scale to 0;
 - Fix the missing tooltip when mousing over second+ continuous matrix barplot rows
-- For matrix plot, when "Group Samples By" a variable that has predefined order, use that order for subgroups. 
+- For matrix plot, when the "Group Samples By" variable has a predefined order, use that order for subgroups. 
+- Fix the sessionid handling to allow more OncoMatrix data to be shown for a signed-in user.
 - For SSM from GDC API, use consequence from canonical transcript designated by GDC.
-- GDC SSM range query by graphql appropriately accounts for sample filtering from a subtk.
+- GDC SSM range query by graphql appropriately accounts for sample filtering from a subtrack.
 - In GDC bam slicing block display, clicking on a transcript from native gene tk will disable the "View in protein" option.
-- Hierarchical clustering R script is improve to include scaling step.
+- Improve the hierarchical clustering R script to include the scaling step.
 - Add CNV information to label tooltips in disco plot.
 - Fixed legend labels for continuous term and uncomputable categories in violin plot
