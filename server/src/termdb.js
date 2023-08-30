@@ -85,6 +85,7 @@ export function handle_request_closure(genomes) {
 			}
 			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
 			if (q.for == 'singleSampleData') return get_singleSampleData(q, res, tdb)
+			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
 
 			throw "termdb: doesn't know what to do"
 		} catch (e) {
@@ -604,6 +605,13 @@ async function get_matrix(q, req, res, ds, genome) {
 
 async function get_singleSampleData(q, res, tdb) {
 	res.send(tdb.q.getSingleSampleData(q.sampleId, q.term_ids))
+}
+
+async function get_AllSamples(q, req, res, ds) {
+	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+	let result = []
+	if (canDisplay) result = Object.fromEntries(ds.sampleId2Name)
+	res.send(result)
 }
 
 function get_mds3queryDetails(res, ds) {
