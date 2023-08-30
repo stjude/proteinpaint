@@ -515,7 +515,7 @@ export function getOrderedLabels(term, bins, events, q) {
 			)
 			.map(i => term.values[i].key)
 	}
-	return bins.map(bin => (bin.name ? bin.name : bin.label))
+	return bins?.map(bin => (bin.name ? bin.name : bin.label))
 }
 
 function getTermDetails(q, tdb, index) {

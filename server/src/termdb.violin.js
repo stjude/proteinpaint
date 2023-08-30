@@ -2,7 +2,7 @@ import { unlink } from 'fs'
 import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
 import lines2R from './lines2R'
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
+import run_rust from '@sjcrh/proteinpaint-rust'
 //const fs = require('fs')
 import path from 'path'
 import utils from './utils'
@@ -10,7 +10,7 @@ import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
 import { violinBinsObj } from '../../server/shared/violin.bins'
 import { summaryStats } from '../../server/shared/descriptive.stats'
-import roundValue from '../shared/roundValue'
+import { getOrderedLabels } from './termdb.barchart'
 
 /*
 q = {
@@ -75,6 +75,16 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
+
+	//get ordered labels to sort keys in key2values
+	if (q.divideTw && data.refs.byTermId[q.divideTw?.id]) {
+		data.refs.byTermId[q.divideTw?.id].orderedLabels = getOrderedLabels(
+			q.divideTw,
+			data.refs.byTermId[q.divideTw?.id]?.bins,
+			undefined,
+			q.divideTw.q
+		)
+	}
 
 	if (q.scale) scaleData(q, data, term)
 
@@ -217,12 +227,12 @@ function sortObj(object) {
 }
 
 function sortKey2values(data, key2values, overlayTerm) {
-	const keyOrder = data.refs.byTermId[overlayTerm?.term?.id]?.keyOrder
+	const orderedLabels = data.refs.byTermId[overlayTerm?.term?.id]?.orderedLabels
 
 	key2values = new Map(
 		[...key2values].sort(
-			keyOrder
-				? (a, b) => keyOrder.indexOf(a[0]) - keyOrder.indexOf(b[0])
+			orderedLabels
+				? (a, b) => orderedLabels.indexOf(a[0]) - orderedLabels.indexOf(b[0])
 				: overlayTerm?.term?.type === 'categorical'
 				? (a, b) => b[1].length - a[1].length
 				: overlayTerm?.term?.type === 'condition'
