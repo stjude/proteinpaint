@@ -368,7 +368,6 @@ function setRenderers(self) {
 			div.style('display', 'none')
 			return
 		}
-		console.log('updateTerm')
 
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
