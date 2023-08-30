@@ -4,13 +4,20 @@ import { appInit } from '#termdb/app'
 class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
+		const div = opts.holder.append('div').style('display', 'flex').style('align-items', 'start')
+		const holder = div.append('div').style('padding', '20px')
+		const contentDiv = div.append('div')
 		this.dom = {
-			holder: opts.holder.style('padding', '20px'),
+			holder,
+			contentDiv,
 			header: opts.header
 		}
 	}
 
 	async init(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		this.sample = config.sample
+		this.showContent = config.showContent
 		this.tree = await appInit({
 			vocabApi: this.app.vocabApi,
 			holder: this.dom.holder,
@@ -33,6 +40,22 @@ class MassDict {
 				}
 			}
 		})
+
+		if (this.sample && this.showContent) {
+			this.dom.holder
+				.style('min-width', '550px')
+				.style('overflow', 'scroll')
+				.attr('class', 'sjpp_hide_scrollbar')
+				.style('border-right', '1px solid gray')
+
+			this.dom.contentDiv
+				.style('width', '60%')
+				.style('min-height', '500px')
+				.style('display', 'flex')
+				.style('flex-direction', 'column')
+				.style('justify-content', 'center')
+				.style('border-left', '1px solid gray')
+		}
 	}
 
 	getState(appState) {
@@ -41,16 +64,50 @@ class MassDict {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			selectdTerms: appState.selectedTerms,
-			customTerms: appState.customTerms
+			customTerms: appState.customTerms,
+			termdbConfig: appState.termdbConfig,
+			sampleId: this.sample?.sampleId,
+			sampleName: this.sample?.sample
 		}
 	}
 
-	main() {
-		if (this.dom.header) this.dom.header.html('Dictionary')
+	async main() {
+		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sample} Sample View` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
 		})
+		if (this.sample && this.showContent) {
+			if (this.state.termdbConfig.queries?.singleSampleMutation) {
+				const div = this.dom.contentDiv.append('div')
+				div.style('font-weight', 'bold').style('padding', '20px').text('Disco plot')
+				const discoPlotImport = await import('./plot.disco.js')
+				discoPlotImport.default(
+					this.state.termdbConfig,
+					this.state.vocab.dslabel,
+					this.sample,
+					this.dom.contentDiv.append('div'),
+					this.app.opts.genome
+				)
+			}
+			if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					const div = this.dom.contentDiv.append('div').style('padding', '20px')
+					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
+					div.append('div').style('padding-bottom', '20px').style('font-weight', 'bold').text(label)
+
+					const ssgqImport = await import('./plot.ssgq.js')
+					await ssgqImport.plotSingleSampleGenomeQuantification(
+						this.state.termdbConfig,
+						this.state.vocab.dslabel,
+						k,
+						this.sample,
+						div.append('div'),
+						this.app.opts.genome
+					)
+				}
+			}
+		}
 	}
 }
 

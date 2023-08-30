@@ -28,9 +28,8 @@ export class DiscoRenderer {
 
 	render(holder: any, viewModel: ViewModel) {
 		const rootDiv = holder.append('div')
-
+		const headerDiv = rootDiv.append('div')
 		const svgDiv = rootDiv.append('div').style('display', 'inline-block').style('font-family', 'Arial')
-
 		const controlsDiv = svgDiv.append('div')
 
 		this.downloadButtonRenderer.render(controlsDiv)

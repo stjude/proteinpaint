@@ -36,7 +36,7 @@ const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 
-function getId() {
+export function getId() {
 	return idPrefix + '_' + id++
 }
 
@@ -64,7 +64,7 @@ class TdbNav {
 				search: searchInit({
 					app: this.app,
 					holder: this.dom.searchDiv,
-					usecase: { target: 'barchart', detail: 'term' },
+					usecase: { target: 'barchart', detail: 'term' }
 				}),
 				filter: filterRxCompInit({
 					app: this.app,
@@ -72,31 +72,31 @@ class TdbNav {
 					holder: this.dom.subheader.filter.append('div'),
 					hideLabel: this.opts.header_mode === 'with_tabs',
 					emptyLabel: '+Add new filter',
-					callback: (filter) => {
+					callback: filter => {
 						this.app.dispatch({
 							type: 'filter_replace',
-							filter,
+							filter
 						})
-					},
+					}
 				}),
 				charts: chartsInit({
 					app: this.app,
 					holder: this.dom.subheader.charts,
-					vocab: this.opts.vocab,
+					vocab: this.opts.vocab
 				}),
 				groups: groupsInit({
 					app: this.app,
 					holder: this.dom.subheader.groups,
-					vocab: this.opts.vocab,
+					vocab: this.opts.vocab
 				}),
 				recover: recoverInit({
 					app: this.app,
 					holder: this.dom.recoverDiv,
 					// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
-					getState: (appState) => appState,
-					reactsTo: (action) => action.type != 'plot_edit',
-					maxHistoryLen: 5,
-				}),
+					getState: appState => appState,
+					reactsTo: action => action.type != 'plot_edit',
+					maxHistoryLen: 5
+				})
 			})
 			this.mayShowMessage_sessionDaysLeft()
 		} catch (e) {
@@ -124,7 +124,7 @@ class TdbNav {
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter,
 			plots: appState.plots,
-			groups: appState.groups,
+			groups: appState.groups
 		}
 	}
 
@@ -165,7 +165,7 @@ class TdbNav {
 export const navInit = getCompInit(TdbNav)
 
 function setRenderers(self) {
-	self.initUI = (appState) => {
+	self.initUI = appState => {
 		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
@@ -194,7 +194,7 @@ function setRenderers(self) {
 				.style('padding-top', '5px')
 				.style('border-bottom', '1px solid #000'),
 			messageDiv: self.opts.holder.append('div').style('margin', '30px').style('display', 'none'),
-			tip: new Menu({ padding: '5px' }),
+			tip: new Menu({ padding: '5px' })
 		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
@@ -217,7 +217,7 @@ function setRenderers(self) {
 				.append('option')
 				.attr('value', (d, i) => i)
 				.property('selected', (d, i) => i === appState.activeCohort)
-				.html((d) => d.shortLabel)
+				.html(d => d.shortLabel)
 		}
 
 		self.dom.subheader = Object.freeze({
@@ -229,7 +229,7 @@ function setRenderers(self) {
 			cart: self.dom.subheaderDiv
 				.append('div')
 				.style('display', 'none')
-				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
+				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
 		})
 
 		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
@@ -256,18 +256,18 @@ function setRenderers(self) {
 			// hide the cohort tab until there is termdbConfig.selectCohort
 			.style('display', 'none') // d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('width', '100px')
-			.style('padding', (d) => (d.rowNum === 0 ? '12px 12px 3px 12px' : '3px 12px'))
+			.style('padding', d => (d.rowNum === 0 ? '12px 12px 3px 12px' : '3px 12px'))
 			.style('text-align', 'center')
 			.style('border-left', '1px solid #ccc')
 			.style('border-right', '1px solid #ccc')
 			.style('color', '#aaa')
 			.style('cursor', 'pointer')
-			.html((d) => d.label)
+			.html(d => d.label)
 			.on('click', self.setTab)
 
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
-		self.subheaderKeys = self.tabs.map((d) => d.subheader)
+		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
 		self.dom.saveBtn = self.dom.sessionDiv
 			.append('button')
@@ -281,7 +281,7 @@ function setRenderers(self) {
 				.append('button')
 				.style('margin', '10px')
 				.text('Export Session')
-				.on('click', (event) => {
+				.on('click', event => {
 					self.getSessionFile(event)
 				})
 		}
@@ -294,7 +294,7 @@ function setRenderers(self) {
 				.append('button')
 				.style('margin', '10px')
 				.html('Help &#9660;')
-				.on('click', (event) => {
+				.on('click', event => {
 					const p = event.target.getBoundingClientRect()
 					const div = headtip
 						.clear()
@@ -349,8 +349,8 @@ function setRenderers(self) {
 		self.dom.header.style('border-bottom', self.state.nav.header_mode === 'with_tabs' ? '1px solid #000' : '')
 		self.dom.tds
 			.style('display', '')
-			.style('color', (d) => (d.colNum == self.activeTab ? '#000' : '#aaa'))
-			.style('background-color', (d) => (d.colNum == self.activeTab ? '#ececec' : 'transparent'))
+			.style('color', d => (d.colNum == self.activeTab ? '#000' : '#aaa'))
+			.style('background-color', d => (d.colNum == self.activeTab ? '#ececec' : 'transparent'))
 			.html(function (d, i) {
 				if (d.key == 'top') return this.innerHTML
 
@@ -412,7 +412,7 @@ function setRenderers(self) {
 		for (const cohort of result.cohorts) {
 			columns.push({ label: cohort.cohort ? `${cohort.name} (${cohort.cohort})` : cohort.name })
 			for (const [i, feature] of result.features.entries()) {
-				const cf = result.cfeatures.find((cf) => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
+				const cf = result.cfeatures.find(cf => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
 				if (cf) rows[i].push({ value: cf.value })
 			}
 		}
@@ -422,7 +422,7 @@ function setRenderers(self) {
 			columns,
 			div: self.dom.cohortTable,
 			showLines: false,
-			maxHeight: '60vh',
+			maxHeight: '60vh'
 		})
 
 		self.dom.cohortTable.select('table').style('border-collapse', 'collapse')
@@ -434,7 +434,7 @@ function setRenderers(self) {
 		if (combined) {
 			selector = ''
 			for (const key of keys) {
-				const i = result.cohorts.map((c) => c.cohort).indexOf(key)
+				const i = result.cohorts.map(c => c.cohort).indexOf(key)
 				if (selector !== '') selector += ','
 				selector += `tbody > tr > td:nth-child(${i + 2})`
 			}
@@ -444,11 +444,11 @@ function setRenderers(self) {
 		self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
 	}
 
-	self.initCohort = async (appState) => {
+	self.initCohort = async appState => {
 		const selectCohort = appState.termdbConfig.selectCohort
 		if (!selectCohort) return
-		self.dom.tds.filter((d) => d.colNum === 0).style('display', '')
-		self.cohortNames = selectCohort.values.map((d) => d.keys.slice().sort().join(','))
+		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
+		self.cohortNames = selectCohort.values.map(d => d.keys.slice().sort().join(','))
 
 		if (selectCohort.title) {
 			self.dom.cohortTitle = self.dom.subheader.cohort
@@ -508,7 +508,7 @@ function setRenderers(self) {
 					.attr('for', radioId)
 					.attr('colspan', 2)
 					.style('cursor', 'pointer')
-					.html((d) => d.label)
+					.html(d => d.label)
 
 				tr.selectAll('td')
 					.style('max-width', '600px')
@@ -551,7 +551,7 @@ function setInteractivity(self) {
 			self.app.dispatch({
 				type: 'plot_create',
 				id: getId(),
-				config: { chartType: 'dictionary' },
+				config: { chartType: 'dictionary' }
 			})
 		}
 	}
@@ -560,7 +560,7 @@ function setInteractivity(self) {
 		self.dom.saveBtn.property('disabled', true)
 		const res = await dofetch3('/massSession', {
 			method: 'POST',
-			body: JSON.stringify(self.app.getState()),
+			body: JSON.stringify(self.app.getState())
 		})
 		const host = sessionStorage.getItem('hostURL') || `${window.location.protocol}//${window.location.host}`
 		const url = `${host}/?mass-session-id=${res.id}&noheader=1`
@@ -576,7 +576,7 @@ function setInteractivity(self) {
 		}, 1000)
 	}
 
-	self.getSessionFile = async (event) => {
+	self.getSessionFile = async event => {
 		//Download mass-session-id file
 		const res = await dofetch3(`/massSession?id=${self.sessionId}`)
 		const a = document.createElement('a')

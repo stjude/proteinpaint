@@ -453,6 +453,26 @@ export function server_init_db_queries(ds) {
 
 		return supportedChartTypes
 	}
+
+	q.getSingleSampleData = function (sampleId, term_ids = []) {
+		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
+
+		const query = `select term_id, value 
+		from anno_categorical 
+		where sample=? ${termClause}
+		union all 
+		select term_id, 
+		value from anno_float 
+		where sample=? ${termClause}
+		union all  
+		select term_id, value 
+		from anno_integer 
+		where sample=? ${termClause}`
+		const sql = cn.prepare(query)
+		const rows = sql.all([sampleId, ...term_ids, sampleId, ...term_ids, sampleId, ...term_ids])
+		return rows
+	}
+	console.log(q)
 }
 
 export function listDbTables(cn) {

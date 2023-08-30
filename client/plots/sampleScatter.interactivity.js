@@ -6,6 +6,7 @@ import { rgb } from 'd3-color'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 import { newSandboxDiv } from '#dom/sandbox'
+import { getId } from '#mass/nav'
 
 export function setInteractivity(self) {
 	self.mouseover = function (event, chart) {
@@ -113,7 +114,9 @@ export function setInteractivity(self) {
 		if (!self.lassoOn) self.dom.tip.hide()
 		tip2.hide()
 		const target = event.target
+		const sample = target.__data__
 
+		sample.sample_id = sample.sample
 		const drawMethylationArrayPlot =
 			self.state.termdbConfig.queries?.singleSampleGenomeQuantification &&
 			target.tagName == 'path' &&
@@ -122,14 +125,27 @@ export function setInteractivity(self) {
 			self.state.termdbConfig.queries?.singleSampleMutation &&
 			target.tagName == 'path' &&
 			target.getAttribute('name') == 'serie'
+		self.dom.tooltip.hide()
+		self.dom.tip.clear()
+		let show = false
+		if ('sample' in sample) {
+			self.dom.tip.d.append('div').style('padding', '4px').html(`<b>&nbsp;${sample.sample}</b>`)
 
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show sample')
+				.on('click', async event => {
+					self.app.dispatch({
+						type: 'plot_create',
+						id: getId(),
+						config: { chartType: 'dictionary', sample, showContent: drawMethylationArrayPlot || drawDiscoPlot }
+					})
+					self.dom.tip.hide()
+				})
+			show = true
+		}
 		if (drawMethylationArrayPlot || drawDiscoPlot) {
-			self.dom.tooltip.hide()
-			const sample = event.target.__data__
-			sample.sample_id = sample.sample
-			self.dom.tip.clear()
-			self.dom.tip.show(event.clientX, event.clientY, true, true)
-			if ('sample' in sample) self.dom.tip.d.append('div').style('padding', '4px').html(`<b>${sample.sample}</b>`)
 			if (drawMethylationArrayPlot) {
 				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
@@ -173,7 +189,9 @@ export function setInteractivity(self) {
 						self.dom.tip.hide()
 					})
 			}
+			show = true
 		}
+		if (show) self.dom.tip.show(event.clientX, event.clientY, true, true)
 	}
 
 	self.onLegendClick = function (chart, legendG, name, key, e, category) {

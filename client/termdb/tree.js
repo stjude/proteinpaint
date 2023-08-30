@@ -3,6 +3,8 @@ import { select, selectAll } from 'd3-selection'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
+import { getSampleFilter } from '#termsetting/handlers/samplelst'
+import { fillTermWrapper } from '#termsetting'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -11,7 +13,7 @@ export const root_ID = 'root'
 // this only count immediate children, not counting grandchildren
 const minTermCount2scroll = 20
 // max height of aforementioned scrolling <div>
-const scrollDivMaxHeight = '400px'
+let scrollDivMaxHeight = '400px'
 
 // class names TODO they should be shared between test/tree.spec.js
 const cls_termdiv = 'termdiv',
@@ -70,11 +72,33 @@ class TdbTree {
 		this.termsByCohort = {}
 		this.expandAll = 'expandAll' in opts ? opts.expandAll : false
 		//getCompInit(TdbTree) will set this.id, .app, .opts, .api
+		this.sampleDataByTermId = {}
 	}
 
-	init() {
+	async init(opts) {
+		const holder = this.opts.holder.append('div')
+		if (opts.sampleId) {
+			this.opts.headerDiv.insert('label').text('Sample:')
+			const input = this.opts.headerDiv
+				.insert('input')
+				.property('disabled', true)
+				.attr('value', opts.sampleName)
+				.on('change', e => {
+					const sampleId = Number(input.node.value)
+					this.sampleDataByTermId = {}
+					//do something
+				})
+			this.opts.headerDiv
+				.insert('button')
+				.text('Download')
+				.on('click', e => {
+					this.downloadData()
+				})
+		} else this.opts.headerDiv.style('display', 'none')
+		const loadingDiv = this.opts.headerDiv.append('div').style('display', 'inline-block').style('margin-left', '10px')
 		this.dom = {
-			holder: this.opts.holder.append('div')
+			holder,
+			loadingDiv
 		}
 	}
 
@@ -95,7 +119,9 @@ class TdbTree {
 			expandedTermIds: appState.tree.expandedTermIds,
 			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
-			usecase: appState.tree.usecase
+			usecase: appState.tree.usecase,
+			sampleId: appState.sampleId,
+			sampleName: appState.sampleName
 		}
 
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
@@ -116,6 +142,8 @@ class TdbTree {
 			this.dom.holder.style('display', 'none')
 			return
 		}
+		this.sampleId = this.state.sampleId
+		this.sampleName = this.state.sampleName
 
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
@@ -126,6 +154,7 @@ class TdbTree {
 		}
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
+
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.dom.holder.style('display', 'block')
@@ -176,24 +205,70 @@ class TdbTree {
 			terms.push(copy)
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
+
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
+				if (this.sampleId) await this.fillSampleData(copy.terms)
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
 				const t0 = this.termsById[copy.id]
+				if (this.sampleId) await this.fillSampleData([copy])
+
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
 				}
 			}
+
 			this.termsById[copy.id] = copy
 		}
 		return terms
 	}
 
+	async fillSampleData(terms) {
+		const term_ids = []
+		for (const term of terms) term_ids.push(term.id)
+		const data = await this.app.vocabApi.getSingleSampleData({ sampleId: this.sampleId, term_ids })
+		for (const id in data) this.sampleDataByTermId[id] = data[id]
+	}
+
 	bindKey(term) {
 		return term.id
+	}
+
+	async requestAllTerms() {
+		this.dom.loadingDiv.text('Downloading data ...')
+		for (const id in this.termsById) {
+			const term = this.termsById[id]
+			if (term.isleaf) continue
+			let terms = [term]
+			while (terms.length) for (const term of terms) terms = await this.requestTermRecursive(term)
+		}
+		this.dataDownloaded = true
+		this.dom.loadingDiv.text('')
+	}
+
+	async downloadData() {
+		if (!this.dataDownloaded) await this.requestAllTerms()
+		const filename = `${this.sampleName}.tsv`
+		let data = ''
+		for (const field in this.sampleDataByTermId) {
+			const term = this.termsById[field]
+			let value = this.getTermValue(term)
+			if (value == null) continue
+			data += `${field}\t${value}\n`
+		}
+		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(data)
+
+		const link = document.createElement('a')
+		link.setAttribute('href', dataStr)
+		// If you don't know the name or want to use
+		// the webserver default set name = ''
+		link.setAttribute('download', filename)
+		document.body.appendChild(link)
+		link.click()
+		link.remove()
 	}
 }
 
@@ -229,11 +304,9 @@ function setRenderers(self) {
 			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
-				div
-					.style('max-height', scrollDivMaxHeight)
-					.style('padding', '10px')
-					.style('resize', 'vertical')
-					.classed('sjpp_hide_scrollbar', true)
+				if (!self.sampleId) div.style('max-height', scrollDivMaxHeight)
+
+				div.style('padding', '10px').style('resize', 'vertical').classed('sjpp_hide_scrollbar', true)
 
 				/***************************
 				remaining issues
@@ -286,10 +359,7 @@ function setRenderers(self) {
 
 		divs.each(self.updateTerm)
 
-		divs
-			.enter()
-			.append('div')
-			.each(self.addTerm)
+		divs.enter().append('div').each(self.addTerm)
 
 		for (const child of term.terms) {
 			if (expandedTermIds.includes(child.id)) {
@@ -303,12 +373,12 @@ function setRenderers(self) {
 	}
 
 	// this == the d3 selected DOM node
-	self.hideTerm = function(term) {
+	self.hideTerm = function (term) {
 		if (term.id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
-	self.updateTerm = function(term) {
+	self.updateTerm = function (term) {
 		const div = select(this)
 		if (!(term.id in self.termsById)) {
 			div.style('display', 'none')
@@ -336,7 +406,16 @@ function setRenderers(self) {
 			.style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
 	}
 
-	self.addTerm = async function(term) {
+	self.getTermValue = function (term) {
+		let value = self.sampleDataByTermId[term.id]
+		if (value == null) return null
+		if (term.type == 'float' || term.type == 'integer')
+			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
+		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
+		return null
+	}
+
+	self.addTerm = async function (term) {
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
 
@@ -362,19 +441,29 @@ function setRenderers(self) {
 		}
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
+		let text = term.name
+
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
-			.text(term.name)
-
+			.text(text)
+		if (term.isleaf && self.sampleId) {
+			let value = self.getTermValue(term) || 'Missing'
+			div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('float', 'right')
+				.style('padding', '5px')
+				.style('opacity', termIsDisabled ? 0.4 : null)
+				.text(value)
+		}
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
-
 		if (uses.size > 0) {
 			if (termIsDisabled) {
 				labeldiv
@@ -382,17 +471,17 @@ function setRenderers(self) {
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else if (uses.has('plot')) {
+			} else if (uses.has('plot') && !self.sampleId) {
 				labeldiv
 					// need better css class
-					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
-					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
 					.style('margin', '1px 0px')
 					.style('cursor', 'default')
 					.on('click', () => self.clickTerm(term))
+					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
+					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
 			}
 
 			//show sample count for a term
@@ -428,10 +517,7 @@ function setRenderers(self) {
 		}
 
 		if (!term.isleaf) {
-			div
-				.append('div')
-				.attr('class', cls_termchilddiv)
-				.style('padding-left', childterm_indent)
+			div.append('div').attr('class', cls_termchilddiv).style('padding-left', childterm_indent)
 		}
 	}
 }
@@ -448,7 +534,7 @@ function setInteractivity(self) {
 	// !!! no free-floating variable declarations here !!!
 	// use self in TdbTree constructor to create properties
 
-	self.toggleBranch = function(term) {
+	self.toggleBranch = function (term) {
 		//event.stopPropagation()
 		if (term.isleaf) return
 		const t0 = self.termsById[term.id]

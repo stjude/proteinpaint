@@ -888,6 +888,27 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb', { headers, body })
 	}
 
+	async getSingleSampleData(opts) {
+		// the scatter plot may still render when not in session,
+		// but not have an option to list samples
+		const headers = this.mayGetAuthHeaders()
+
+		// dofetch* mayAdjustRequest() will automatically
+		// convert to GET query params or POST body, as needed
+		const body = {
+			for: 'singleSampleData',
+			sampleId: opts.sampleId,
+			term_ids: opts.term_ids,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			embedder: window.location.hostname
+		}
+		const data = await dofetch3('termdb', { headers, body })
+		const byTermId = {}
+		for (const row of data) byTermId[row.term_id] = row.value
+		return byTermId
+	}
+
 	async getLowessCurve(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples

@@ -45,6 +45,7 @@ class TdbApp {
 			submitDiv,
 			submitBtn,
 			topbar,
+			headerDiv: topbar.append('div').style('display', 'inline-block').style('margin-left', '12px'),
 			searchDiv: topbar.append('div').style('display', 'inline-block'),
 			filterDiv: topbar.append('div').style('display', 'none'),
 			errdiv: opts.holder.append('div'),
@@ -175,6 +176,7 @@ class TdbApp {
 				tree: treeInit({
 					app: this.api,
 					holder: this.dom.treeDiv,
+					headerDiv: this.dom.headerDiv,
 					expandAll: header_mode == 'hide_search'
 				})
 			}
