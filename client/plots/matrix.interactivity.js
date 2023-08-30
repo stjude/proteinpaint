@@ -1469,7 +1469,7 @@ function setLabelDragEvents(self, prefix) {
 							)
 						const t = div.append('table').style('margin-left', '15px')
 						for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
-							const classColor = data.tw.term.values[classType]?.color
+							const classColor = data.tw.term.values?.[classType]?.color
 							if (!classColor) continue
 							const tr = t.append('tr')
 							// icon
@@ -1511,7 +1511,7 @@ function setLabelDragEvents(self, prefix) {
 					} else {
 						const t = div.append('table').style('margin-left', '15px')
 						for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
-							const classColor = data.tw.term.values[classType]?.color
+							const classColor = data.tw.term.values?.[classType]?.color
 							if (!classColor) continue
 							const tr = t.append('tr')
 							// icon

@@ -118,7 +118,11 @@ function addGenomicQueries(c, ds, genome) {
 	const q2 = c.queries
 	// copy from q{} to q2{}
 	if (q.defaultBlock2GeneMode) q2.defaultBlock2GeneMode = q.defaultBlock2GeneMode
-	if (q.snvindel) q2.snvindel = true
+	if (q.snvindel) {
+		q2.snvindel = {
+			allowSNPs: q.snvindel.allowSNPs
+		}
+	}
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
 	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes.arguments
 	if (q.singleSampleMutation) {

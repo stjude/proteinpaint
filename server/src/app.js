@@ -1084,7 +1084,18 @@ function handle_pdomain(req, res) {
 }
 
 async function handle_snp(req, res) {
-	/*
+	// TODO move to routes
+	try {
+		const n = req.query.genome
+		if (!n) throw 'no genome'
+		res.send({ results: await searchSNP(req.query, genomes[n]) })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		return res.send({ error: e.message || e })
+	}
+}
+
+/*
 .byCoord
 	if true, query bigbed file by coordinate
 .byName
@@ -1100,68 +1111,62 @@ async function handle_snp(req, res) {
 .lst[ str ]
 	used for byName
 */
-	try {
-		const n = req.query.genome
-		if (!n) throw 'no genome'
-		const g = genomes[n]
-		if (!g) throw 'invalid genome'
-		if (!g.snp) throw 'snp is not configured for this genome'
-		const hits = []
-		if (req.query.byCoord) {
-			// query dbSNP bigbed file by coordinate
-			// input query coordinates need to be 0-based
-			// output snp coordinates are 0-based
-			if (g.genomicNameRegexp.test(req.query.chr)) throw 'invalid chr name'
-			if (!Array.isArray(req.query.ranges)) throw 'ranges not an array'
-			for (const r of req.query.ranges) {
-				// require start/stop of a range to be non-neg integers, as a measure against attack
-				if (!Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start < 0 || r.stop < r.start)
-					throw 'invalid start/stop'
-				if (r.stop - r.start >= 100) {
-					// quick fix!
-					// as this function only works as spot checking snps
-					// guard against big range and avoid retrieving snps from whole chromosome that will overwhelm server
-					throw 'range too big'
-				}
-				const snps = await utils.query_bigbed_by_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
-				for (const snp of snps) {
-					const hit = snp2hit(snp)
-					if (req.query.alleleLst) {
-						// given alleles must be found in a snp for it to be returned
-						let missing = false
-						for (const i of req.query.alleleLst) {
-							// only test on non-empty strings
-							if (i && !hit.alleles.includes(i)) {
-								missing = true
-								break
-							}
+async function searchSNP(q, genome) {
+	if (!genome) throw 'invalid genome'
+	if (!genome.snp) throw 'snp is not configured for this genome'
+	const hits = []
+	if (q.byCoord) {
+		// query dbSNP bigbed file by coordinate
+		// input query coordinates need to be 0-based
+		// output snp coordinates are 0-based
+		if (genome.genomicNameRegexp.test(q.chr)) throw 'invalid chr name'
+		if (!Array.isArray(q.ranges)) throw 'ranges not an array'
+		for (const r of q.ranges) {
+			// require start/stop of a range to be non-neg integers, as a measure against attack
+			if (!Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start < 0 || r.stop < r.start)
+				throw 'invalid start/stop'
+			if (r.stop - r.start >= 100) {
+				// quick fix!
+				// as this function only works as spot checking snps
+				// guard against big range and avoid retrieving snps from whole chromosome that will overwhelm server
+				throw 'range too big'
+			}
+			const snps = await utils.query_bigbed_by_coord(genome.snp.bigbedfile, q.chr, r.start, r.stop)
+			for (const snp of snps) {
+				const hit = snp2hit(snp)
+				if (req.query.alleleLst) {
+					// given alleles must be found in a snp for it to be returned
+					let missing = false
+					for (const i of q.alleleLst) {
+						// only test on non-empty strings
+						if (i && !hit.alleles.includes(i)) {
+							missing = true
+							break
 						}
-						if (missing) continue
 					}
-					hits.push(hit)
+					if (missing) continue
 				}
+				hits.push(hit)
 			}
-		} else if (req.query.byName) {
-			if (!Array.isArray(req.query.lst)) throw '.lst[] missing'
-			for (const n of req.query.lst) {
-				// query dbSNP bigbed file by rsID
-				// see above for description of output snp fields
-				if (g.genomicNameRegexp.test(n)) continue
-				const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
-				for (const snp of snps) {
-					const hit = snp2hit(snp)
-					hits.push(hit)
-				}
-			}
-		} else {
-			throw 'unknown query method'
 		}
-		res.send({ results: hits })
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		return res.send({ error: e.message || e })
+	} else if (q.byName) {
+		if (!Array.isArray(q.lst)) throw '.lst[] missing'
+		for (const n of q.lst) {
+			// query dbSNP bigbed file by rsID
+			// see above for description of output snp fields
+			if (genome.genomicNameRegexp.test(n)) continue
+			const snps = await utils.query_bigbed_by_name(genome.snp.bigbedfile, n)
+			for (const snp of snps) {
+				const hit = snp2hit(snp)
+				hits.push(hit)
+			}
+		}
+	} else {
+		throw 'unknown query method'
 	}
+	return hits
 }
+exports.searchSNP = searchSNP
 
 function snp2hit(snp) {
 	// snp must be non-empty string

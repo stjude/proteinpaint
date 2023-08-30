@@ -2012,31 +2012,64 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
 		if (typeof tw.term.name != 'string') throw 'tw.term.name is not string'
-		if (!tw.term.name) throw 'tw.term.name should be gene symbol but is empty string'
+		if (!tw.term.name) throw 'tw.term.name should be gene symbol but is empty string' // TODO term.gene if subtype='gene'
 
 		const mlst = [] // collect raw data points
 
-		// has some code duplication with mds3.load.js query_snvindel() etc
-		// primary concern is tw.term may be missing coord/isoform to perform essential query
-
-		if (ds.queries.snvindel) {
+		if (tw.term.subtype == 'snp') {
+			// query term is one snp; it should only work for snvindel
+			if (!ds.queries.snvindel?.allowSNPs) throw 'snvindel does not allow snp'
 			const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
-			mlst.push(...lst)
-		}
+			const m = lst.find(m => tw.term.alleles.includes(m.ref) && tw.term.alleles.includes(m.alt))
+			if (m) {
+				const samples = []
+				for (const s of m.samples) {
+					if (!s.formatK2v?.GT) {
+						//console.log('formatK2v.GT missing')
+						continue
+					}
+					const alleles = []
+					for (const i of s.formatK2v.GT.split('/')) {
+						if (i == 0) alleles.push(m.ref)
+						else if (i == 1) alleles.push(m.alt)
+						else console.log('unknown allele idx')
+					}
+					const _s = {
+						key: alleles.join('/'),
+						value: alleles.join('/')
+					}
+					samples.push({ sample_id: s.sample_id, GT: alleles.join('/') })
+				}
+				const _m = {
+					samples
+				}
+				mlst.push(_m)
+			}
+		} else {
+			// query term is not snp
+			// should be either gene or region, and will work for all data types
+			// has some code duplication with mds3.load.js query_snvindel() etc
+			// primary concern is tw.term may be missing coord/isoform to perform essential query
 
-		if (ds.queries.svfusion) {
-			const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
-			mlst.push(...lst)
-		}
-		if (ds.queries.cnv) {
-			const lst = await getCnvByTw(ds, tw, genome, q)
-			mlst.push(...lst)
-		}
-		//if (ds.queries.probe2cnv) { const lst = await getProbe2cnvByTw(ds, tw, genome, q) mlst.push(...lst) }
+			if (ds.queries.snvindel) {
+				const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
+				mlst.push(...lst)
+			}
 
-		if (ds.queries.geneCnv) {
-			const lst = await getGenecnvByTerm(ds, tw.term, genome, q)
-			mlst.push(...lst)
+			if (ds.queries.svfusion) {
+				const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
+				mlst.push(...lst)
+			}
+			if (ds.queries.cnv) {
+				const lst = await getCnvByTw(ds, tw, genome, q)
+				mlst.push(...lst)
+			}
+			//if (ds.queries.probe2cnv) { const lst = await getProbe2cnvByTw(ds, tw, genome, q) mlst.push(...lst) }
+
+			if (ds.queries.geneCnv) {
+				const lst = await getGenecnvByTerm(ds, tw.term, genome, q)
+				mlst.push(...lst)
+			}
 		}
 
 		const bySampleId = new Map()
@@ -2092,19 +2125,24 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					_SAMPLENAME_: s.sample_id
 				}
 
-				/*
-				optional __sampleName may be returned by mds3 query, if so, assign to m2{}
+				if (s.__sampleName) {
+					/*
+					optional __sampleName may be returned by mds3 query, if so, assign to m2{}
 
-				*** tricky use case ***
-				mayGetGeneVariantData() is used for gdc matrix
-				in which the useCaseid4sample=true flag is set to inform mds3.gdc to return both uuid and submitter id
-				e.g. s.sample_id=uuid, and s.__sampleName=submitter id
-				as gdc matrix aligns data on case uuid (unique), while must display case submitter id (not unique)
-				later m2._SAMPLENAME_ will not be overriden because gdc has no termdb.q.id2sampleName()
-				*/
-				if (s.__sampleName) m2._SAMPLENAME_ = s.__sampleName
+					*** tricky use case ***
+					mayGetGeneVariantData() is used for gdc matrix
+					in which the useCaseid4sample=true flag is set to inform mds3.gdc to return both uuid and submitter id
+					e.g. s.sample_id=uuid, and s.__sampleName=submitter id
+					as gdc matrix aligns data on case uuid (unique), while must display case submitter id (not unique)
+					later m2._SAMPLENAME_ will not be overriden because gdc has no termdb.q.id2sampleName()
+					*/
+					m2._SAMPLENAME_ = s.__sampleName
+				}
 
-				if ('value' in m) m2.value = m.value
+				if ('value' in m) {
+					// for what?
+					m2.value = m.value
+				}
 
 				if (s.formatK2v) {
 					// this sample have format values, flatten those
@@ -2115,6 +2153,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				// can supply dt specific attributes
 				if (m.dt == dtsnvindel) {
+					if (s.GT) {
+						// is sample genotype from snp query
+						m2.value = s.GT
+						m2.key = s.GT
+					}
 				} else if (m.dt == dtfusionrna || m.dt == dtsv) {
 					m2.pairlst = m.pairlst
 				}

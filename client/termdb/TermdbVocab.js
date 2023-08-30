@@ -309,16 +309,25 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	async findTerm(str, cohortStr, usecase = null, type = '') {
+	/*
+	str: search phrase
+	cohorStr
+	usecase
+	targetType
+		snp = find if str matches with dbsnp
+		category = match with catgory of a term (not implemented yet)
+		blank string for default behavior of matching with dict term or gene names
+	*/
+	async findTerm(str, cohortStr = '', usecase = null, targetType = '') {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			findterm: encodeURIComponent(str),
-			cohortStr: cohortStr
+			cohortStr
 		}
 		if (usecase) body.usecase = usecase
 		if (this.state.treeFilter) body.treeFilter = this.state.treeFilter
-		if (type) body.type = type
+		if (targetType) body.targetType = targetType
 		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
 		return data

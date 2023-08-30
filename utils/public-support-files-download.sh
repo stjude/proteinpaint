@@ -30,8 +30,8 @@ curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz.tbi -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz.tbi -O
+curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz -O
+curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/genes.hg19.db -O
 curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -O
 
@@ -57,13 +57,13 @@ cd ../msigdb/
 curl https://proteinpaint.stjude.org/ppSupport/msigdb/db -O
 
 cd ../../hg19/
-curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg19.hgvs_short.vep.bcf.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg19.hgvs_short.vep.bcf.gz.csi -O
+curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg19.bcf.gz -O
+curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg19.bcf.gz.csi -O
 
 
 cd ../hg38/
-curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.hgvs_short.vep.bcf.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.hgvs_short.vep.bcf.gz.csi -O
+curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.bcf.gz -O
+curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.bcf.gz.csi -O
 
 
 cd ../utils/meme/motif_databases/HUMAN/

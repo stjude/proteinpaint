@@ -1,26 +1,6 @@
 Features:
-- For hg38-based datasets, Disco plot allows to prioritize gene labels by Cancer Gene Census genes.
-- Numeric termsetting edit UI shows density curve at mode=continuous.
-- Update gene filter to restrict filtering for multiple alteration groups.
-- Unify click behavior for survival and cuminc legend items.
-- Mds3 numeric axis (e.g. occurrence) y scale can be edited.
-- PrOFILE polar and barchart bug fixes and improvements.
-- Implemented at-risk count filter in mass cuminc plot
-- GDC "Age at diagnosis" value by day is shown as "X years, Y days" in mds3 sample table.
-- Prototype a hierarchical cluster plot using the matrix plot
-- New Info fields from gnomAD added to clinvar datasets for mds3 track
-- CancerHotspot hg19 data added for mds3 track
-- Display sample and catergory numbers in each subgroup when hovering over term label in matrix plot
-- Added single sample viewer
+- Prototyped single sample viewer
 
 
 Fixes:
-- Ignore hidden values when conducting association tests for mass barchart.
-- Do not force a matrix barplot min scale to 0;
-- Fix the missing tooltip when mousing over second+ continuous matrix barplot rows
-- For matrix plot, when "Group Samples By" a variable that has predefined order, use that order for subgroups. 
-- For SSM from GDC API, use consequence from canonical transcript designated by GDC.
-- GDC SSM range query by graphql appropriately accounts for sample filtering from a subtk.
-- In GDC bam slicing block display, clicking on a transcript from native gene tk will disable the "View in protein" option.
-- Hierarchical clustering R script is improve to include scaling step.
-- Add CNV information to label tooltips in disco plot.
+

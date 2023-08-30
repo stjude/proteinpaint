@@ -481,7 +481,7 @@ export class Matrix {
 					countedSamples.add(sd.sample)
 					const anno = sd[tw.$id]
 					if (anno) {
-						const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, tw, grp, s)
+						const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, tw, grp, s, sd)
 						anno.filteredValues = filteredValues
 						anno.countedValues = countedValues
 						anno.renderedValues = renderedValues
@@ -549,15 +549,21 @@ export class Matrix {
 		return termOrder
 	}
 
-	classifyValues(anno, tw, grp, s) {
+	/*
+	Given the anno of a term for a sample, generate the 
+		filteredValues (values matched the filter)
+		countedValues (values counted, Class = Blank or WT are not counted)
+		renderedValues (values rendered on matrix)
+	*/
+	classifyValues(anno, tw, grp, s, sample) {
 		const values = 'value' in anno ? [anno.value] : anno.values
 		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
 		const filteredValues = !valueFilter
 			? values
 			: values.filter(v => {
-					if (valueFilter.type == 'tvs') {
-						return sample_match_termvaluesetting(v, valueFilter, tw.term)
+					if (valueFilter.type == 'tvs' || valueFilter.type == 'tvslst') {
+						return sample_match_termvaluesetting(v, valueFilter, tw.term, sample)
 					} else {
 						// TODO: handle non-tvs type value filter
 						throw `unknown matrix value filter type='${valueFilter.type}'`
@@ -692,7 +698,8 @@ export class Matrix {
 					anno,
 					t.tw,
 					t.grp,
-					this.settings.matrix
+					this.settings.matrix,
+					sample.row
 				)
 				anno.filteredValues = filteredValues
 				anno.countedValues = countedValues
