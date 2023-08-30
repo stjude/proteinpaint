@@ -126,7 +126,7 @@ function getChartTypeList(self) {
 			chartType: 'dictionary',
 			config: {
 				chartType: 'dictionary',
-				sampleViewer: true
+				showSamples: true
 			}
 		},
 		{
