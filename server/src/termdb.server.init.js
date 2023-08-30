@@ -472,7 +472,6 @@ export function server_init_db_queries(ds) {
 		const rows = sql.all([sampleId, ...term_ids, sampleId, ...term_ids, sampleId, ...term_ids])
 		return rows
 	}
-	console.log(q)
 }
 
 export function listDbTables(cn) {
