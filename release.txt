@@ -3,4 +3,5 @@ Features:
 
 
 Fixes:
+- fix for sorting labels for custom binning on numeric terms in violin plot
 
