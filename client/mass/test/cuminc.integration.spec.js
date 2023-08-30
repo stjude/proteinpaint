@@ -680,7 +680,10 @@ tape('skipped series', function (test) {
 		const skippedDivs = cuminc.Inner.dom.chartsDiv
 			.select('.pp-cuminc-chartLegends')
 			.selectAll('.pp-cuminc-chartLegends-skipped')
-		test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
+
+		// db rebuilt on 8/30/23 no longer shows Asian skipped for "No event"
+		//test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
+		test.equal(skippedDivs && skippedDivs.size(), 1, 'should render 1 skipped series')
 
 		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
