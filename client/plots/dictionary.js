@@ -22,7 +22,7 @@ class MassDict {
 		const config = appState.plots.find(p => p.id === this.id)
 		this.sample = config.sample
 
-		if (this.sample.sampleId) {
+		if (this.sample) {
 			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
 			const samples = Object.entries(this.sampleId2Name)
 			const div = this.dom.sampleDiv.style('display', 'block')
@@ -104,20 +104,20 @@ class MassDict {
 			selectdTerms: appState.selectedTerms,
 			customTerms: appState.customTerms,
 			termdbConfig: appState.termdbConfig,
-			sampleId: config.sample.sampleId,
-			sampleName: config.sample.sampleName
+			sample: config.sample
 		}
 	}
 
 	async main() {
 		if (this.dom.header)
-			this.dom.header.html(this.state.sampleName ? `${this.state.sampleName} Sample View` : 'Dictionary')
-		this.sample = { sampleId: this.state.sampleId, sample_id: this.state.sampleName }
+			this.dom.header.html(this.state.sample ? `${this.state.sample.sampleName} Sample View` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
 		})
-		if (this.sample && this.showContent) {
+		if (this.state.sample && this.showContent) {
+			const sample = { sampleId: this.state.sample.sampleId, sample_id: this.state.sample.sampleName }
+
 			this.dom.contentDiv.selectAll('*').remove()
 			if (this.state.termdbConfig.queries?.singleSampleMutation) {
 				const div = this.dom.contentDiv
@@ -126,7 +126,7 @@ class MassDict {
 				discoPlotImport.default(
 					this.state.termdbConfig,
 					this.state.vocab.dslabel,
-					this.sample,
+					sample,
 					div.append('div'),
 					this.app.opts.genome
 				)
@@ -141,7 +141,7 @@ class MassDict {
 						this.state.termdbConfig,
 						this.state.vocab.dslabel,
 						k,
-						this.sample,
+						sample,
 						div.append('div'),
 						this.app.opts.genome
 					)

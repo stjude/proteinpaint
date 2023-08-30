@@ -103,8 +103,7 @@ class TdbTree {
 			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
 			usecase: appState.tree.usecase,
-			sampleId: appState.sampleId,
-			sampleName: appState.sampleName
+			sample: appState.sample
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -120,14 +119,10 @@ class TdbTree {
 	}
 
 	async main() {
-		if (this.dom.header) this.dom.header.html(this.sampleName ? `${this.sampleName} Sample View` : 'Dictionary')
-
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
-		this.sampleId = this.state.sampleId
-		this.sampleName = this.state.sampleName
 
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
@@ -192,13 +187,13 @@ class TdbTree {
 
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
-				if (this.sampleId) await this.fillSampleData(copy.terms)
+				if (this.state.sample) await this.fillSampleData(copy.terms)
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
 				const t0 = this.termsById[copy.id]
-				if (this.sampleId) await this.fillSampleData([copy])
+				if (this.state.sample) await this.fillSampleData([copy])
 
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
@@ -213,7 +208,7 @@ class TdbTree {
 	async fillSampleData(terms) {
 		const term_ids = []
 		for (const term of terms) term_ids.push(term.id)
-		const data = await this.app.vocabApi.getSingleSampleData({ sampleId: this.sampleId, term_ids })
+		const data = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId, term_ids })
 		for (const id in data) this.sampleDataByTermId[id] = data[id]
 	}
 
@@ -235,7 +230,7 @@ class TdbTree {
 
 	async downloadData() {
 		if (!this.dataDownloaded) await this.requestAllTerms()
-		const filename = `${this.sampleName}.tsv`
+		const filename = `${this.state.sample.sampleName}.tsv`
 		let data = ''
 		for (const field in this.sampleDataByTermId) {
 			const term = this.termsById[field]
@@ -288,7 +283,7 @@ function setRenderers(self) {
 			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
-				if (!self.sampleId) div.style('max-height', scrollDivMaxHeight)
+				if (!self.sample) div.style('max-height', scrollDivMaxHeight)
 
 				div.style('padding', '10px').style('resize', 'vertical').classed('sjpp_hide_scrollbar', true)
 
@@ -375,7 +370,7 @@ function setRenderers(self) {
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
-		div.select('.' + cls_termlabel + 'Value').text(self.getTermValue(term) || 'Missing')
+		if (self.state.sample) div.select('.' + cls_termlabel + 'Value').text(self.getTermValue(term) || 'Missing')
 
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
@@ -436,7 +431,7 @@ function setRenderers(self) {
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(text)
-		if (term.isleaf && self.sampleId) {
+		if (term.isleaf && self.state.sample) {
 			let value = self.getTermValue(term) || 'Missing'
 			div
 				.append('div')
@@ -458,7 +453,7 @@ function setRenderers(self) {
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else if (uses.has('plot') && !self.sampleId) {
+			} else if (uses.has('plot') && !self.sample) {
 				labeldiv
 					// need better css class
 					.style('color', 'black')
