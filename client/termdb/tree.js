@@ -77,11 +77,6 @@ class TdbTree {
 
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
-
-		this.dom = {
-			holder,
-			headerDiv: opts.headerDiv
-		}
 		if (opts.sampleId) {
 			this.opts.headerDiv.insert('label').text('Sample:')
 			const input = this.opts.headerDiv
@@ -95,11 +90,16 @@ class TdbTree {
 				})
 			this.opts.headerDiv
 				.insert('button')
-				.text('Download data')
+				.text('Download')
 				.on('click', e => {
 					this.downloadData()
 				})
 		} else this.opts.headerDiv.style('display', 'none')
+		const loadingDiv = this.opts.headerDiv.append('div').style('display', 'inline-block').style('margin-left', '10px')
+		this.dom = {
+			holder,
+			loadingDiv
+		}
 	}
 
 	reactsTo(action) {
@@ -237,7 +237,20 @@ class TdbTree {
 		return term.id
 	}
 
-	downloadData() {
+	async requestAllTerms() {
+		this.dom.loadingDiv.text('Downloading data ...')
+		for (const id in this.termsById) {
+			const term = this.termsById[id]
+			if (term.isleaf) continue
+			let terms = [term]
+			while (terms.length) for (const term of terms) terms = await this.requestTermRecursive(term)
+		}
+		this.dataDownloaded = true
+		this.dom.loadingDiv.text('')
+	}
+
+	async downloadData() {
+		if (!this.dataDownloaded) await this.requestAllTerms()
 		const filename = `${this.sampleName}.tsv`
 		let data = ''
 		for (const field in this.sampleDataByTermId) {

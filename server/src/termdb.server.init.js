@@ -454,7 +454,7 @@ export function server_init_db_queries(ds) {
 		return supportedChartTypes
 	}
 
-	q.getSingleSampleData = function (sampleId, term_ids) {
+	q.getSingleSampleData = function (sampleId, term_ids = []) {
 		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
 
 		let ids = '?,'.repeat(term_ids.length)
