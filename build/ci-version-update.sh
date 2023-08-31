@@ -29,17 +29,18 @@ if [[ "$UPDATED" == "" ]]; then
 fi
 
 
-######################
-# Generate change log
-######################
+########################
+# Update the change log
+########################
 
-node build/changeLogGenerator.js
+VERSION="$(node -p "require('./package.json').version")"
+TAG="v$VERSION"
+sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 
 #################
 # COMMIT CHANGES
 #################
 
-TAG="v$(node -p "require('./package.json').version")"
 # tag first to detect conflict
 git tag $TAG
 git push origin $TAG
