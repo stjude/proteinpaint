@@ -109,7 +109,8 @@ class MassDict {
 	}
 
 	async main() {
-		if (this.dom.header) this.dom.header.html(this.sample ? `${this.sample.sampleName} Sample View` : 'Dictionary')
+		if (this.dom.header)
+			this.dom.header.html(this.state.sample ? `${this.state.sample.sampleName} Sample View` : 'Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
@@ -147,6 +148,39 @@ class MassDict {
 				}
 			}
 		}
+	}
+
+	getTermValue(term) {
+		let value = this.sampleData[term.id]?.value
+
+		if (value == null || value == undefined) return null
+		if (term.type == 'float' || term.type == 'integer')
+			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
+		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
+		return null
+	}
+
+	async downloadData() {
+		const filename = `${this.state.sample.sampleName}.tsv`
+		this.sampleData = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId })
+		console.log(this.sampleData)
+		let lines = ''
+		for (const id in this.sampleData) {
+			const term = this.sampleData[id].term
+			let value = this.getTermValue(term)
+			if (value == null) continue
+			lines += `${id}\t${value}\n`
+		}
+		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
+
+		const link = document.createElement('a')
+		link.setAttribute('href', dataStr)
+		// If you don't know the name or want to use
+		// the webserver default set name = ''
+		link.setAttribute('download', filename)
+		document.body.appendChild(link)
+		link.click()
+		link.remove()
 	}
 }
 

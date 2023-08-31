@@ -209,45 +209,11 @@ class TdbTree {
 		const term_ids = []
 		for (const term of terms) term_ids.push(term.id)
 		const data = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId, term_ids })
-		for (const id in data) this.sampleDataByTermId[id] = data[id]
+		for (const id in data) this.sampleDataByTermId[id] = data[id].value
 	}
 
 	bindKey(term) {
 		return term.id
-	}
-
-	async requestAllTerms() {
-		this.dom.loadingDiv.text('Downloading data ...')
-		for (const id in this.termsById) {
-			const term = this.termsById[id]
-			//if (term.isleaf) continue
-			let terms = [term]
-			while (terms.length) for (const term of terms) terms = await this.requestTermRecursive(term)
-		}
-		this.dataDownloaded = true
-		this.dom.loadingDiv.text('')
-	}
-
-	async downloadData() {
-		if (!this.dataDownloaded) await this.requestAllTerms()
-		const filename = `${this.state.sample.sampleName}.tsv`
-		let data = ''
-		for (const field in this.sampleDataByTermId) {
-			const term = this.termsById[field]
-			let value = this.getTermValue(term)
-			if (value == null) continue
-			data += `${field}\t${value}\n`
-		}
-		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(data)
-
-		const link = document.createElement('a')
-		link.setAttribute('href', dataStr)
-		// If you don't know the name or want to use
-		// the webserver default set name = ''
-		link.setAttribute('download', filename)
-		document.body.appendChild(link)
-		link.click()
-		link.remove()
 	}
 }
 
