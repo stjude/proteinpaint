@@ -1,5 +1,7 @@
 /*
 	test by running a commit 
+
+	usage: node releaseNoteGenerator.js [releaseTxtFileName="release.txt"] [commitFile]
 */
 
 const fs = require('fs')
@@ -9,27 +11,40 @@ const GenTitle = 'General:'
 const FeatTitle = 'Features:'
 const FixTitle = 'Fixes:'
 
+let commitLines = []
 const commitFile = process.argv[3]
-const commitMsg = fs.readFileSync(commitFile).toString('utf-8').trim()
-const commitLines = commitMsg
-	.split('\n')
-	.map(l => l.trim())
-	.filter(l => l.startsWith('feat: ') || l.startsWith('fix: '))
-if (!commitLines.length) process.exit()
+if (commitFile) {
+	const commitMsg = fs.readFileSync(commitFile).toString('utf-8').trim()
+	commitLines = commitMsg
+		.split('\n')
+		.map(l => l.trim())
+		.filter(l => l.startsWith('feat: ') || l.startsWith('fix: '))
+	// exit early if a commit file option is provided but
+	// there are not detected release notes from the commit message
+	if (!commitLines.length) process.exit()
+}
 
+const releaseTxtFileName = process.argv[2] || 'release.txt'
 // use the release.txt from origin/master to help minimize merge conflict
-const ps = spawnSync('curl', ['-s', 'https://raw.githubusercontent.com/stjude/proteinpaint/master/release.txt'], {
-	encoding: 'utf-8'
-})
+const ps = spawnSync(
+	'curl',
+	['-s', `https://raw.githubusercontent.com/stjude/proteinpaint/master/${releaseTxtFileName}`],
+	{
+		encoding: 'utf-8'
+	}
+)
 if (ps.stderr) throw remoteReleaseTxt.stderr
 const remoteReleaseTxt = ps.stdout
 const remoteSections = getSections(remoteReleaseTxt)
 
 // reading from files instead of as string arguments to avoid escaping
-const localReleaseTxtFile = process.argv[2]
+const localReleaseTxtFile = releaseTxtFileName
 const localReleaseTxt = fs.readFileSync(localReleaseTxtFile).toString('utf-8').trim()
 const currSections = getSections(localReleaseTxt, remoteSections)
 
+// if commit lines with relevant keywords is empty,
+// then this is being used to reconcile the release.txt contents from 2 branches,
+// for example to avoid merge conflicts
 for (const line of commitLines) {
 	if (line.startsWith('feat: ')) currSections[FeatTitle].push('- ' + line.slice(6).trim())
 	if (line.startsWith('fix: ')) currSections[FixTitle].push('- ' + line.slice(5).trim())
