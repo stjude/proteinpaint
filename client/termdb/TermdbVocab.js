@@ -905,6 +905,7 @@ export class TermdbVocab extends Vocab {
 		}
 		const data = await dofetch3('termdb', { headers, body })
 		const byTermId = {}
+		if ('error' in data) return data
 		for (const row of data) {
 			const term = JSON.parse(row.jsondata)
 			byTermId[row.term_id] = { value: row.value, term }
