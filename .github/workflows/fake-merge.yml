@@ -58,4 +58,6 @@ jobs:
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
             git commit -m "append release notes to change log"
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            git push origin $BRANCH
           fi
