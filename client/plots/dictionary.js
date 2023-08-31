@@ -116,7 +116,7 @@ class MassDict {
 			state: this.state
 		})
 		if (this.state.sample && this.showContent) {
-			this.sample.sample_id = this.sample.sampleName
+			const sample = { sample_id: this.sample.sampleName }
 
 			this.dom.contentDiv.selectAll('*').remove()
 			if (this.state.termdbConfig.queries?.singleSampleMutation) {
@@ -126,7 +126,7 @@ class MassDict {
 				discoPlotImport.default(
 					this.state.termdbConfig,
 					this.state.vocab.dslabel,
-					this.sample,
+					sample,
 					div.append('div'),
 					this.app.opts.genome
 				)
@@ -141,7 +141,7 @@ class MassDict {
 						this.state.termdbConfig,
 						this.state.vocab.dslabel,
 						k,
-						this.sample,
+						sample,
 						div.append('div'),
 						this.app.opts.genome
 					)
@@ -163,7 +163,6 @@ class MassDict {
 	async downloadData() {
 		const filename = `${this.state.sample.sampleName}.tsv`
 		this.sampleData = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId })
-		console.log(this.sampleData)
 		let lines = ''
 		for (const id in this.sampleData) {
 			const term = this.sampleData[id].term

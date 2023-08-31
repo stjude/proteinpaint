@@ -59,7 +59,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			// since some data may still be returned for those, except controlled access
 			// data like sample names, which should not be included in the response payload
 			// if auth is required and not in session
-			(creds[q.dslabel].type != 'jwt' || (req.path == '/termdb' && (q.for == 'matrix' || q.for == 'singleSampleData')))
+			(creds[q.dslabel].type != 'jwt' ||
+				(req.path == '/termdb' && (q.for == 'matrix' || q.for == 'singleSampleData' || q.for == 'getAllSamples')))
 		) {
 			// will do the session check below
 		} else {
