@@ -19,10 +19,35 @@ class MassDict {
 	}
 
 	async init(appState) {
+		this.tree = await appInit({
+			vocabApi: this.app.vocabApi,
+			holder: this.dom.treeDiv,
+			state: this.getState(appState),
+			tree: {
+				click_term: _term => {
+					const term = _term.term || _term
+					this.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: term.type == 'survival' ? 'survival' : 'summary',
+							term: _term.term ? _term : 'id' in term ? { id: term.id, term } : { term }
+						}
+					})
+
+					this.app.dispatch({
+						type: 'plot_delete',
+						id: this.id
+					})
+				}
+			}
+		})
+
 		const config = appState.plots.find(p => p.id === this.id)
 		if (config.showSamples || config.sample) {
 			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
+			if ('error' in this.sampleId2Name) return
 			const samples = Object.entries(this.sampleId2Name)
+			if (samples.length == 0) return
 			this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
 			const div = this.dom.sampleDiv.style('display', 'block')
 			div.insert('label').html('&nbsp;Sample:')
@@ -55,28 +80,6 @@ class MassDict {
 		}
 
 		this.showContent = config.showContent
-		this.tree = await appInit({
-			vocabApi: this.app.vocabApi,
-			holder: this.dom.treeDiv,
-			state: this.getState(appState),
-			tree: {
-				click_term: _term => {
-					const term = _term.term || _term
-					this.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: _term.term ? _term : 'id' in term ? { id: term.id, term } : { term }
-						}
-					})
-
-					this.app.dispatch({
-						type: 'plot_delete',
-						id: this.id
-					})
-				}
-			}
-		})
 
 		if (this.sample && this.showContent) {
 			this.dom.treeDiv
