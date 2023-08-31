@@ -431,6 +431,7 @@ export function server_init_db_queries(ds) {
 			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
 		}
 
+		ds.cohort.allowedChartTypes.push('sampleView')
 		// may restrict the visible chart options
 		if (ds.cohort.allowedChartTypes) {
 			for (const cohort in supportedChartTypes) {
