@@ -1,26 +1,43 @@
-const fs = require('fs')
+/*
+	call from the proteinpaint project dir
+	usage: node changeLogGenerator.js [-u]
+	
+	-u output only the unreleased change notes 
+*/
 
+const fs = require('fs')
+const rp = require('./releaseParser')
+
+const options = process.argv[2] || ''
+const releaseTxtFile = './release.txt'
+const releaseLogText = fs.readFileSync(releaseTxtFile).toString('utf-8')
+if (releaseLogText === '') process.exit() // ok to not have new release notes when merging a PR, but required for release
+
+const version = require('../package.json').version
 const changeLogFile = './CHANGELOG.md'
 const oldChangeLogText = fs.readFileSync(changeLogFile).toString('utf-8')
 
-const releaseTextFile = './release.txt'
-const releaseLogText = fs.readFileSync(releaseTextFile).toString('utf-8')
+const start = oldChangeLogText.indexOf('Unreleased')
+const stop = oldChangeLogText.indexOf('\n##', start)
+const unreleasedText = oldChangeLogText.slice(start, stop)
 
-if (releaseLogText === '') {
-	throw Error(`Release text in ${releaseTextFile} is empty`)
+const unreleasedSections = rp.getSections(unreleasedText)
+const currSections = rp.getSections(releaseLogText, unreleasedSections)
+
+const notes = [
+	'# Change Log',
+	'',
+	'All notable changes to this project will be documented in this file.',
+	'',
+	'## Unreleased',
+	''
+]
+
+for (const title in currSections) {
+	const lines = currSections[title]
+	if (lines.length) notes.push(title, ...lines, '')
 }
 
-const header = '# Change Log\n' + '\n' + 'All notable changes to this project will be documented in this file.'
+if (!options.includes('u')) notes.push(oldChangeLogText.slice(stop))
 
-const changeLogWithoutHeader = oldChangeLogText.replace(header, '')
-
-const version = require('../package.json').version
-
-const newChangeLog = `${header} 
-## ${version}
-
-${releaseLogText}
-${changeLogWithoutHeader}`
-
-fs.writeFileSync(changeLogFile, newChangeLog)
-fs.writeFileSync(releaseTextFile, '')
+console.log(notes.join('\n'))
