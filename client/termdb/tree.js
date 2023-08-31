@@ -3,8 +3,6 @@ import { select, selectAll } from 'd3-selection'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
-import { getSampleFilter } from '#termsetting/handlers/samplelst'
-import { fillTermWrapper } from '#termsetting'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -249,7 +247,7 @@ function setRenderers(self) {
 			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
-				if (!self.sample) div.style('max-height', scrollDivMaxHeight)
+				if (!self.state.sample) div.style('max-height', scrollDivMaxHeight)
 
 				div.style('padding', '10px').style('resize', 'vertical').classed('sjpp_hide_scrollbar', true)
 
@@ -337,16 +335,19 @@ function setRenderers(self) {
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		if (self.state.sample) div.select('.' + cls_termlabel + 'Value').text(self.getTermValue(term) || 'Missing')
-
 		// update other parts if needed, e.g. label
-		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
+		else div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		div
 			.select('.' + cls_termlabel)
 			.style(
 				'background-color',
-				!uses.has('plot') || termIsDisabled ? '' : isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3'
+				!uses.has('plot') || termIsDisabled || self.state.sample
+					? ''
+					: isSelected
+					? 'rgba(255, 194, 10,0.5)'
+					: '#cfe2f3'
 			)
 		div
 			.select('.' + cls_termcheck)
@@ -419,7 +420,7 @@ function setRenderers(self) {
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else if (uses.has('plot') && !self.sample) {
+			} else if (uses.has('plot') && !self.state.sample) {
 				labeldiv
 					// need better css class
 					.style('color', 'black')

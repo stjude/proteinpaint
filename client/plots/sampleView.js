@@ -51,7 +51,7 @@ class SampleView extends MassDict {
 				this.downloadData()
 			})
 
-		super.init(appState)
+		await super.init(appState)
 
 		if (this.sample && this.showContent) {
 			this.dom.treeDiv
