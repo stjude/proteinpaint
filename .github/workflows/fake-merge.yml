@@ -1,0 +1,23 @@
+name: "Fake Merge"
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect changes
+      - run: |
+          NOTES=$(node ./build/setReleaseText.js release.txt)
+          echo "$NOTES" > CHANGELOG.md
+          
+          if [[ "$(git diff --name-only CHANGELOG.md)" == "CHANGELOG.md" ]]; then
+            echo '' > release.txt
+            git add release.txt
+            git commit -m "append branch release notes to avoid merge conflicts"
+          fi
