@@ -1,15 +1,20 @@
 on:
-  pull_request_review:
-    types: [submitted]
+  pull_request_target:
+    types:
+      - closed
 
 jobs:
-  approved:
-    if: github.event.review.state == 'approved'
+  if_merged:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - run: 
-        node ./build/releaseNotesGenerator.js release.txt
-        if [[ "$(git diff --name-only release.txt)" == "release.txt" ]]; then
-          git add release.txt
-          git commit -m "append branch release notes to avoid merge conflicts"
+    - run: |
+        if [[ -f ./build/setReleaseText.js ]]; then
+          NOTES=$(node ./build/setReleaseText.js release.txt)
+          echo "$NOTES" > CHANGELOG.md
+          if [[ "$(git diff --name-only CHANGELOG.md)" == "CHANGELOG.md" ]]; then
+            echo '' > release.txt
+            git add release.txt
+            git commit -m "append branch release notes to avoid merge conflicts"
+          fi
         fi
