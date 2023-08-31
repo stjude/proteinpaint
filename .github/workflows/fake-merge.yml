@@ -48,8 +48,10 @@ jobs:
 
       - name: Detect changes
         run: |
-          NOTES=$(node ./build/setReleaseText.js release.txt)
-          echo "$NOTES" > CHANGELOG.md
+          NOTES=$(node ./build/changeLogGenerator.js)
+          if [[ "$NOTES" != "" ]]; then
+            echo "$NOTES" > CHANGELOG.md
+          fi
           
           if [[ "$(git diff --name-only CHANGELOG.md)" == "CHANGELOG.md" ]]; then
             git add CHANGELOG.md
