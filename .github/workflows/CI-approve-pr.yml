@@ -1,0 +1,15 @@
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  approved:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+      - run: 
+        node ./build/releaseNotesGenerator.js release.txt
+        if [[ "$(git diff --name-only release.txt)" == "release.txt" ]]; then
+          git add release.txt
+          git commit -m "append branch release notes to avoid merge conflicts"
+        fi
