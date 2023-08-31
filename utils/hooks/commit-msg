@@ -11,7 +11,8 @@ NOTES="$(cat release.txt)"
 
 if [[ "$MSG" == *"fix: "* || "$MSG" == *"feat: "* ]]; then
   echo "adding release notes ..."  
-  node ./build/releaseNotesGenerator.js release.txt "$1"
+  NOTES=$(node ./build/setReleaseText.js release.txt "$1")
+  echo -e "$NOTES" > release.txt
   if [[ "$(git diff --name-only release.txt)" == 'release.txt' ]]; then
     git add release.txt
   fi
