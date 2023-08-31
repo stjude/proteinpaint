@@ -8,7 +8,6 @@ class SampleView extends MassDict {
 		this.type = 'sampleView'
 		const treeDiv = this.dom.treeDiv
 		const sampleDiv = treeDiv.insert('div').style('display', 'none')
-
 		let contentDiv = this.dom.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		contentDiv = contentDiv.insert('div').style('display', 'flex')
 		this.dom = {
@@ -73,13 +72,16 @@ class SampleView extends MassDict {
 
 	getState(appState) {
 		let state = super.getState(appState)
-		console.log(appState.plots, this.id)
 		const config = appState.plots?.find(p => p.id === this.id)
 		state.sample = config?.sample || this.sample
+		state.hasVerifiedToken = this.app.vocabApi.hasVerifiedToken()
+		state.tokenVerificationPayload = this.app.vocabApi.tokenVerificationPayload
+
 		return state
 	}
 
 	async main() {
+		if (this.mayRequireToken()) return
 		super.main()
 		if (this.dom.header)
 			this.dom.header.html(this.state.sample ? `${this.state.sample.sampleName} Sample View` : 'Dictionary')
@@ -149,6 +151,27 @@ class SampleView extends MassDict {
 		document.body.appendChild(link)
 		link.click()
 		link.remove()
+	}
+
+	mayRequireToken() {
+		if (this.state.hasVerifiedToken) {
+			this.dom.mainDiv.style('display', 'block')
+			return false
+		} else {
+			const e = this.state.tokenVerificationPayload
+			const missingAccess = e?.error == 'Missing access' && this.state.termdbConfig.dataDownloadCatch?.missingAccess
+			const message = missingAccess?.message?.replace('MISSING-ACCESS-LINK', missingAccess?.links[e?.linkKey])
+			const helpLink = this.state.termdbConfig.dataDownloadCatch?.helpLink
+			this.dom.mainDiv
+				.style('color', '#e44')
+				.html(
+					message ||
+						(this.state.tokenVerificationMessage || 'Requires sign-in') +
+							(helpLink ? ` <a href='${helpLink}' target=_blank>Tutorial</a>` : '')
+				)
+
+			return true
+		}
 	}
 }
 
