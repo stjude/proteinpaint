@@ -81,7 +81,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 	}
 
 	let data
-	g.selectAll('.sjpp-cuminc-atrisk-title').remove()
+	g.selectAll('.sjpp-atrisk-title').remove()
 	if (s.atRiskVisible) {
 		// at-risk counts are visible
 		// sort the data
@@ -91,12 +91,11 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 		const addYoffset = chart.serieses.length == 1 && !chart.serieses[0].seriesId
 		const titleg = g
 			.append('text')
-			.attr('class', 'sjpp-cuminc-atrisk-title')
+			.attr('class', 'sjpp-atrisk-title')
 			.attr('transform', `translate(${s.atRiskLabelOffset}, ${addYoffset ? 2 * s.axisTitleFontSize : 0})`)
 			.attr('text-anchor', 'end')
 			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 			.text('Number at risk')
-		if (term2toColor['']) titleg.style('fill', s.defaultColor)
 		titleg
 			.append('tspan')
 			.attr('x', 0)
