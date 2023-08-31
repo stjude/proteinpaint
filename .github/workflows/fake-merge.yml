@@ -1,20 +1,20 @@
-name: "Detect changes"
+name: "Fake Merge"
 
 on:
-  pull_request_target:
-    types:
-      - closed
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
 
 jobs:
-  if_merged:
-    if: github.event.pull_request.merged
+  build:
     runs-on: ubuntu-latest
     steps:
+      - name: Detect changes
       - run: |
-          if [[ -f ./build/setReleaseText.js ]]; then
-            NOTES=$(node ./build/setReleaseText.js release.txt)
-            echo "$NOTES" > CHANGELOG.md
-          fi
+          NOTES=$(node ./build/setReleaseText.js release.txt)
+          echo "$NOTES" > CHANGELOG.md
           
           if [[ "$(git diff --name-only CHANGELOG.md)" == "CHANGELOG.md" ]]; then
             echo '' > release.txt
