@@ -457,7 +457,7 @@ export function server_init_db_queries(ds) {
 	q.getSingleSampleData = function (sampleId, term_ids = []) {
 		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(t => '?').join(',')})`
 
-		const query = `select term_id, value 
+		const query = `select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 
 		where sample=? ${termClause}
 		union all 
@@ -467,7 +467,7 @@ export function server_init_db_queries(ds) {
 		union all  
 		select term_id, value 
 		from anno_integer 
-		where sample=? ${termClause}`
+		where sample=? ${termClause} ) join terms on terms.id = term_id`
 		const sql = cn.prepare(query)
 		const rows = sql.all([sampleId, ...term_ids, sampleId, ...term_ids, sampleId, ...term_ids])
 		return rows
