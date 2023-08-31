@@ -42,6 +42,7 @@ class MassCharts {
 			// TODO: may want the server to decide this, and as defined for a dataset
 			state.supportedChartTypes.push('dictionary')
 		}
+
 		return state
 	}
 
@@ -123,10 +124,9 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample View',
 			clickTo: self.prepPlot,
-			chartType: 'dictionary',
+			chartType: 'sampleView',
 			config: {
-				chartType: 'dictionary',
-				showSamples: true
+				chartType: 'sampleView'
 			}
 		},
 		{

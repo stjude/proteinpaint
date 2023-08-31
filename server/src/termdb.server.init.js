@@ -403,6 +403,7 @@ export function server_init_db_queries(ds) {
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
 				if (!cred || cred.embedders?.[embedder]) {
 					supportedChartTypes[r.cohort].add('dataDownload')
+					supportedChartTypes[r.cohort].add('sampleView')
 				}
 			}
 			if (serverconfig.features?.draftChartTypes) {

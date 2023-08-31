@@ -140,7 +140,7 @@ export function setInteractivity(self) {
 						type: 'plot_create',
 						id: getId(),
 						config: {
-							chartType: 'dictionary',
+							chartType: 'sampleView',
 							sample: { sampleId: sample.sampleId, sampleName: sample.sample },
 							showContent: drawMethylationArrayPlot || drawDiscoPlot
 						}
