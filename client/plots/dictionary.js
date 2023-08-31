@@ -13,7 +13,6 @@ export class MassDict {
 	}
 
 	async init(appState) {
-		console.log(appState)
 		this.tree = await appInit({
 			vocabApi: this.app.vocabApi,
 			holder: this.dom.treeDiv,
