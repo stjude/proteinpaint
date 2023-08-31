@@ -139,7 +139,7 @@ class SampleView extends MassDict {
 			const term = this.sampleData[id].term
 			let value = this.getTermValue(term)
 			if (value == null) continue
-			lines += `${id}\t${value}\n`
+			lines += `${term.name}\t${value}\n`
 		}
 		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 
