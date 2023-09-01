@@ -69,6 +69,7 @@ canvas/*
 pixman-*/*
 **/serverconfig*.json
 !/server/test/serverconfig.json
+!/container/ci/serverconfig.json
 **/server.js*
 !client/rx/server.js
 setup/*gz*

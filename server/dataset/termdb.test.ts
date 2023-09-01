@@ -247,7 +247,11 @@ function copyDataFilesFromRepo2Tp() {
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 
 	if (!targetDir.endsWith(datadir)) {
-		if (existsSync(datadir)) unlinkSync(datadir)
-		symlinkSync(targetDir, datadir)
+		try {
+			if (existsSync(datadir)) unlinkSync(datadir)
+			symlinkSync(targetDir, datadir)
+		} catch (error) {
+			console.error('Error while coping data files from Repo to Tp: ' + error)
+		}
 	}
 }
