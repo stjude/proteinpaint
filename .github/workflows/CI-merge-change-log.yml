@@ -1,13 +1,13 @@
 name: "Merge Change Log"
 
 on:
-  push:
-    branches:
-      - master
-      - fake-master
+  pull_request_target:
+    types:
+      - closed
 
 jobs:
-  build:
+  if_merged:
+    if: github.event.pull_request.merged
     runs-on: ubuntu-latest
 
     steps:
@@ -31,11 +31,22 @@ jobs:
           
           if [[ "$(git diff --name-only CHANGELOG.md)" == "CHANGELOG.md" ]]; then
             git add CHANGELOG.md
-            echo '' > release.txt
-            git add release.txt
+            
+            if [[ -f release.txt && ! -s release.txt ]]; then
+              echo '' > release.txt
+              git add release.txt
+            fi
+            
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
             git commit -m "append release notes to change log"
             BRANCH=$(git rev-parse --abbrev-ref HEAD)
             git push origin $BRANCH
           fi
+
+  not_merged:
+    if: github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Not merged
+        run: echo "no changes were merged to the log" 
