@@ -1151,7 +1151,7 @@ function setInteractivity(self) {
 					})
 					menu.hide()
 				})
-			menu.show(event.clientX, event.clientY)
+			menu.show(x, y)
 			return
 		}
 		if (!d.seriesId) return
