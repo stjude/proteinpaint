@@ -471,9 +471,13 @@ export function server_init_db_queries(ds) {
 		union all  
 		select term_id, value 
 		from anno_integer 
-		where sample=? ${termClause} ) join terms on terms.id = term_id`
+		where sample=? ${termClause}
+		union all 
+		select term_id, value 
+		from precomputed_chc_grade 
+		where max_grade=1 and sample=? ${termClause}) join terms on terms.id = term_id`
 		const sql = cn.prepare(query)
-		const rows = sql.all([sampleId, ...term_ids, sampleId, ...term_ids, sampleId, ...term_ids])
+		const rows = sql.all([sampleId, ...term_ids, sampleId, ...term_ids, sampleId, ...term_ids, sampleId, ...term_ids])
 		return rows
 	}
 }
