@@ -46,14 +46,17 @@ class SampleView extends MassDict {
 
 		div
 			.insert('button')
-			.text('Download')
+			.text('Download data')
 			.on('click', e => {
 				this.downloadData()
 			})
 
 		await super.init(appState)
+		const showContent =
+			appState.termdbConfig.queries?.singleSampleGenomeQuantification ||
+			appState.termdbConfig.queries?.singleSampleMutation
 
-		if (this.sample && this.showContent) {
+		if (showContent) {
 			this.dom.treeDiv
 				.style('min-width', '550px')
 				.style('overflow', 'scroll')
@@ -74,8 +77,11 @@ class SampleView extends MassDict {
 		let state = super.getState(appState)
 		const config = appState.plots?.find(p => p.id === this.id)
 		state.sample = config?.sample || this.sample
+		state.singleSampleGenomeQuantification = state.termdbConfig.queries?.singleSampleGenomeQuantification
+		state.singleSampleMutation = state.termdbConfig.queries?.singleSampleMutation
 		state.hasVerifiedToken = this.app.vocabApi.hasVerifiedToken()
 		state.tokenVerificationPayload = this.app.vocabApi.tokenVerificationPayload
+		state.showContent = state.singleSampleGenomeQuantification || state.singleSampleMutation
 
 		return state
 	}
@@ -86,7 +92,7 @@ class SampleView extends MassDict {
 		if (this.dom.header)
 			this.dom.header.html(this.state.sample ? `${this.state.sample.sampleName} Sample View` : 'Dictionary')
 
-		if (this.state.sample && this.showContent) {
+		if (this.state.showContent) {
 			const sample = { sample_id: this.sample.sampleName }
 
 			this.dom.contentDiv.selectAll('*').remove()
