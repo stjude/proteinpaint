@@ -89,15 +89,15 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor, onSerieC
 		// render the title
 		// add a y offset to title if there is no series id
 		const addYoffset = chart.serieses.length == 1 && !chart.serieses[0].seriesId
-		if (chart.serieses.length == 1) g.on('click', e => onSerieClick({ seriesId: '' }, e.clientX, e.clientY))
 		const titleg = g
 			.append('text')
 			.attr('class', 'sjpp-atrisk-title')
 			.attr('transform', `translate(${s.atRiskLabelOffset}, ${addYoffset ? 2 * s.axisTitleFontSize : 0})`)
 			.attr('text-anchor', 'end')
 			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-			.attr('cursor', 'pointer')
+			.attr('cursor', chart.serieses.length == 1 ? 'pointer' : 'default')
 			.text('Number at risk')
+			.on('click', chart.serieses.length == 1 ? e => onSerieClick({ seriesId: '' }, e.clientX, e.clientY) : null)
 		if (term2toColor['']) titleg.style('fill', s.defaultColor)
 		titleg
 			.append('tspan')
