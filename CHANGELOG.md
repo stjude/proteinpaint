@@ -1,6 +1,17 @@
 # Change Log
 
-All notable changes to this project will be documented in this file. 
+All notable changes to this project will be documented in this file.
+
+## Unreleased
+
+Features:
+- Prototyped single sample viewer
+- improve the release text detection and generator, to minimize potential conflicts when merging
+
+Fixes:
+- fix for sorting labels for custom binning on numeric terms in violin plot
+
+
 ## 2.26.1
 
 Fix
