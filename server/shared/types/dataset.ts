@@ -260,6 +260,7 @@ type CnvSegmentByRange = {
 }
 
 /*
+no longer used!!
 file content is a probe-by-sample matrix, values are signals
 for a given region, the median signal from probes in the region is used to make a gain/loss call for each sample
 this is alternative to CnvSegment
@@ -268,16 +269,22 @@ type Probe2Cnv = {
 	file: string
 }
 
+type RnaseqGeneCount = {
+	file: string
+}
+
 type Queries = {
 	defaultBlock2GeneMode?: boolean
 	snvindel?: SnvIndel
 	svfusion?: SvFusion
-	probe2cnv?: Probe2Cnv
+	probe2cnv?: Probe2Cnv // this is no longer used
 	cnv?: CnvSegment
 	singleSampleMutation?: SingleSampleMutation
 	geneExpression?: FileObj
+	rnaseqGeneCount?: RnaseqGeneCount
 	topMutatedGenes?: TopMutatedGenes
 	trackLst?: TrackLstEntry[]
+	// TODO singleSampleGbtk
 }
 
 /*** types supporting Termdb ***/
