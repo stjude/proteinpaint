@@ -473,7 +473,7 @@ export function server_init_db_queries(ds) {
 		from anno_integer 
 		where sample=? ${termClause}
 		union all 
-		select term_id, value 
+		select term_id, (min_years_to_event || ' ' || value) as value 
 		from precomputed_chc_grade 
 		where max_grade=1 and sample=? ${termClause}
 		union all 
