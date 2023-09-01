@@ -29,17 +29,22 @@ if [[ "$UPDATED" == "" ]]; then
 fi
 
 
-######################
-# Generate change log
-######################
+########################
+# Update the change log
+########################
 
-node build/changeLogGenerator.js
+VERSION="$(node -p "require('./package.json').version")"
+if [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
+  echo "No unreleased changes to publish"
+  exit 1
+fi
+sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 
 #################
 # COMMIT CHANGES
 #################
 
-TAG="v$(node -p "require('./package.json').version")"
+TAG="v$VERSION"
 # tag first to detect conflict
 git tag $TAG
 git push origin $TAG
