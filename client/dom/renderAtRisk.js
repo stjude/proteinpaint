@@ -15,7 +15,7 @@ input parameter:
 }
 */
 
-export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
+export function renderAtRiskG({ g, s, chart, term2values, term2toColor, onSerieClick }) {
 	const bySeries = {}
 
 	// do not compute at-risk counts of tick values that are
@@ -89,6 +89,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 		// render the title
 		// add a y offset to title if there is no series id
 		const addYoffset = chart.serieses.length == 1 && !chart.serieses[0].seriesId
+		if (chart.serieses.length == 1) g.on('click', e => onSerieClick({ seriesId: '' }, e.clientX, e.clientY))
 		const titleg = g
 			.append('text')
 			.attr('class', 'sjpp-atrisk-title')
@@ -122,7 +123,6 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 		const g = select(this)
 			.attr('transform', `translate(0,${y})`)
 			.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
-
 		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
 	})
 
@@ -133,6 +133,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 			const g = select(this)
 				.attr('transform', `translate(0,${y})`)
 				.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted)
+				.on('click', e => onSerieClick({ seriesId }, e.clientX, e.clientY))
 
 			const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 			g.append('text')
