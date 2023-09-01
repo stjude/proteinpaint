@@ -480,7 +480,6 @@ export function server_init_db_queries(ds) {
 		select term_id, (tte || ' ' || exit_code) as value 
 		from survival 
 		where sample=? ${termClause}) join terms on terms.id = term_id`
-		console.log(query)
 		const sql = cn.prepare(query)
 		const rows = sql.all([
 			sampleId,
