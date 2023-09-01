@@ -170,7 +170,7 @@ tape('term1=Cardiovascular System, term2=agedx', function (test) {
 		const numRiskRowLabels = div
 			.selectAll('.sjpp-cuminc-atrisk text')
 			.nodes()
-			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
+			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
 
 		//Test legend and risk table match legend data
 		for (const [i, d] of legend.__data__.visibleSerieses.entries()) {
@@ -330,7 +330,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 		const numRiskRowLabels = div
 			.selectAll('.sjpp-cuminc-atrisk text')
 			.nodes()
-			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
+			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
 		const foundNewLabels = numRiskRowLabels.filter(l => cuminc.Inner.uniqueSeriesIds.has(l.__data__.seriesId))
 		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
 
@@ -503,7 +503,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 		const numRiskRowLabels = div
 			.selectAll('.sjpp-cuminc-atrisk text')
 			.nodes()
-			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
+			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
 		const foundNewLabels = numRiskRowLabels.filter(l => inner.uniqueSeriesIds.has(l.__data__.seriesId))
 		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
 
@@ -776,7 +776,7 @@ tape('term1 = Cardiovascular System, term2 = samplelst', function (test) {
 		const numRiskRowLabels = cuminc.Inner.dom.chartsDiv
 			.selectAll('.sjpp-cuminc-atrisk text')
 			.nodes()
-			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
+			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
 
 		for (const grp of Object.values(cuminc.Inner.config.term2.term.values)) {
 			const findGrpLabel = numRiskRowLabels.some(d => d.__data__.seriesId == grp.key && d.innerHTML == grp.label)

@@ -15,7 +15,7 @@ input parameter:
 }
 */
 
-export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
+export function renderAtRiskG({ g, s, chart, term2values, term2toColor, onSerieClick }) {
 	const bySeries = {}
 
 	// do not compute at-risk counts of tick values that are
@@ -81,7 +81,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 	}
 
 	let data
-	g.selectAll('.sjpp-cuminc-atrisk-title').remove()
+	g.selectAll('.sjpp-atrisk-title').remove()
 	if (s.atRiskVisible) {
 		// at-risk counts are visible
 		// sort the data
@@ -91,11 +91,13 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 		const addYoffset = chart.serieses.length == 1 && !chart.serieses[0].seriesId
 		const titleg = g
 			.append('text')
-			.attr('class', 'sjpp-cuminc-atrisk-title')
+			.attr('class', 'sjpp-atrisk-title')
 			.attr('transform', `translate(${s.atRiskLabelOffset}, ${addYoffset ? 2 * s.axisTitleFontSize : 0})`)
 			.attr('text-anchor', 'end')
 			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
+			.attr('cursor', chart.serieses.length == 1 ? 'pointer' : 'default')
 			.text('Number at risk')
+			.on('click', chart.serieses.length == 1 ? e => onSerieClick({ seriesId: '' }, e.clientX, e.clientY) : null)
 		if (term2toColor['']) titleg.style('fill', s.defaultColor)
 		titleg
 			.append('tspan')
@@ -120,8 +122,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 		const y = (i + 1) * (2 * s.axisTitleFontSize)
 		const g = select(this)
 			.attr('transform', `translate(0,${y})`)
-			.attr('fill', chart.serieses.length == 1 ? '#000' : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
-
+			.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
 		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
 	})
 
@@ -131,14 +132,15 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 			const y = (i + 1) * (2 * s.axisTitleFontSize)
 			const g = select(this)
 				.attr('transform', `translate(0,${y})`)
-				.attr('fill', chart.serieses.length == 1 ? '#000' : term2toColor[seriesId].adjusted)
+				.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted)
+				.on('click', e => onSerieClick({ seriesId }, e.clientX, e.clientY))
 
 			const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 			g.append('text')
 				.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 				.attr('text-anchor', 'end')
 				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-				.attr('cursor', chart.visibleSerieses.length == 1 ? 'auto' : 'pointer')
+				.attr('cursor', 'pointer')
 				.datum({ seriesId })
 				.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : '')
 
@@ -160,7 +162,7 @@ function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
 		.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-		.attr('cursor', chart.visibleSerieses.length == 1 ? 'auto' : 'pointer')
+		.attr('cursor', 'pointer')
 		.each(renderAtRiskLabel)
 	text
 		.enter()
@@ -168,7 +170,7 @@ function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
 		.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-		.attr('cursor', chart.visibleSerieses.length == 1 ? 'auto' : 'pointer')
+		.attr('cursor', 'pointer')
 		.each(renderAtRiskLabel)
 
 	function renderAtRiskLabel(d) {

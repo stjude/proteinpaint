@@ -62,7 +62,7 @@ class TdbSurvival {
 			},
 			handlers: {
 				legend: {
-					click: this.legendClick
+					click: e => this.legendClick(e.target.data, e.clientX, e.clientY)
 				}
 			}
 		})
@@ -72,7 +72,7 @@ class TdbSurvival {
 			},
 			handlers: {
 				legend: {
-					click: this.legendClick
+					click: e => this.legendClick(e.target.data, e.clientX, e.clientY)
 				}
 			}
 		})
@@ -628,7 +628,8 @@ function setRenderers(self) {
 			s,
 			chart,
 			term2values: self.state.config.term2?.values,
-			term2toColor: self.term2toColor
+			term2toColor: self.term2toColor,
+			onSerieClick: self.legendClick
 		})
 
 		plotRect
@@ -672,7 +673,6 @@ function setRenderers(self) {
 			xTitle = axisG.append('g').attr('class', 'sjpp-survival-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpp-survival-y-title')
 			atRiskG = mainG.append('g').attr('class', 'sjpp-survival-atrisk')
-			atRiskG.on('click', self.legendClick)
 			line = mainG
 				.append('line')
 				.attr('class', 'sjpcb-plot-tip-line')
@@ -957,15 +957,13 @@ function setInteractivity(self) {
 		self.app.tip.hide()
 	}
 
-	self.legendClick = function (event) {
-		event.stopPropagation()
-		const d = event.target.__data__
+	self.legendClick = function (d, x, y) {
 		if (d === undefined) return
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
 		if (i == -1) {
 			hidden.push(d.seriesId)
-			self.showLegendItemMenu(d, hidden)
+			self.showLegendItemMenu(d, hidden, x, y)
 		} else {
 			hidden.splice(i, 1)
 			self.app.dispatch({
@@ -982,7 +980,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.showLegendItemMenu = function (d, hidden) {
+	self.showLegendItemMenu = function (d, hidden, x, y) {
 		const term2 = self.state.config.term2?.term || null
 		const seriesLabel = term2?.values?.[d.seriesId]?.label || d.seriesId
 
@@ -996,7 +994,7 @@ function setInteractivity(self) {
 					.attr('type', 'color')
 					.attr('value', self.settings.defaultColor)
 					.on('change', () => self.adjustColor(input.property('value'), d))
-				self.dom.legendTip.show(event.clientX, event.clientY)
+				self.dom.legendTip.show(x, y)
 			}
 			return
 		}

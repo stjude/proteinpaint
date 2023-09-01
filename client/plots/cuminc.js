@@ -60,7 +60,7 @@ export class Cuminc {
 			},
 			handlers: {
 				legend: {
-					click: this.legendClick
+					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
 				}
 			}
 		})
@@ -221,7 +221,7 @@ class MassCumInc {
 			},
 			handlers: {
 				legend: {
-					click: this.legendClick
+					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
 				}
 			}
 		})
@@ -915,7 +915,8 @@ function setRenderers(self) {
 			s,
 			chart,
 			term2values: self.config.term2?.values,
-			term2toColor: self.term2toColor
+			term2toColor: self.term2toColor,
+			onSerieClick: self.legendClick
 		})
 
 		plotRect
@@ -985,7 +986,6 @@ function setRenderers(self) {
 			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
 			atRiskG = mainG.append('g').attr('class', 'sjpp-cuminc-atrisk')
-			atRiskG.on('click', self.legendClick)
 
 			line = mainG
 				.append('line')
@@ -1128,9 +1128,7 @@ function setInteractivity(self) {
 		self.app.tip.hide()
 	}
 
-	self.legendClick = function (event) {
-		event.stopPropagation()
-		const d = event.target.__data__
+	self.legendClick = function (d, x, y) {
 		if (d === undefined) return
 		const menu = self.tip.clear()
 		if (self.config.term2 == null) {
@@ -1153,7 +1151,7 @@ function setInteractivity(self) {
 					})
 					menu.hide()
 				})
-			menu.show(event.clientX, event.clientY)
+			menu.show(x, y)
 			return
 		}
 		if (!d.seriesId) return
