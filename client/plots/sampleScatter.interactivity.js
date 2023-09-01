@@ -141,8 +141,7 @@ export function setInteractivity(self) {
 						id: getId(),
 						config: {
 							chartType: 'sampleView',
-							sample: { sampleId: sample.sampleId, sampleName: sample.sample },
-							showContent: drawMethylationArrayPlot || drawDiscoPlot
+							sample: { sampleId: sample.sampleId, sampleName: sample.sample }
 						}
 					})
 					self.dom.tip.hide()
