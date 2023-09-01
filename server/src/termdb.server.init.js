@@ -450,6 +450,9 @@ export function server_init_db_queries(ds) {
 				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('hierCluster')
 				// TODO support clustering on dict terms
 			}
+			if (ds.queries.rnaseqGeneCount) {
+				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('DEanalysis')
+			}
 		}
 
 		return supportedChartTypes

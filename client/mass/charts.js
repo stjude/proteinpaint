@@ -184,6 +184,11 @@ function getChartTypeList(self) {
 			chartType: 'hierCluster',
 			clickTo: self.loadChartSpecificMenu
 		},
+		{
+			label: 'Differential Expression',
+			chartType: 'DEanalysis',
+			clickTo: self.loadChartSpecificMenu
+		},
 
 		// adhoc chart, temporary fix for prototyping a specific ds
 		{

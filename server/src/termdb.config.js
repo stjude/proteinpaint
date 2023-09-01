@@ -145,6 +145,9 @@ function addGenomicQueries(c, ds, genome) {
 			delete q2.singleSampleGbtk[k].folder
 		}
 	}
+	if (q.rnaseqGeneCount) {
+		q2.rnaseqGeneCount = true
+	}
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset

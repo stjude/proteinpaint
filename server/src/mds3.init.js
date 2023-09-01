@@ -58,6 +58,7 @@ validate_query_cnv
 validate_query_probe2cnv
 validate_query_ld
 validate_query_geneExpression
+validate_query_rnaseqGeneCount
 validate_query_singleSampleMutation
 validate_query_singleSampleGenomeQuantification
 validate_query_singleSampleGbtk
@@ -93,6 +94,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_cnv(ds, genome)
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
+		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
 		await validate_query_singleSampleGbtk(ds, genome)
@@ -1225,6 +1227,44 @@ async function validate_query_ld(ds, genome) {
 	if (!q.overlay) throw 'ld.overlay{} missing'
 	if (!q.overlay.color_0) throw 'ld.overlay.color_0 missing'
 	if (!q.overlay.color_1) throw 'ld.overlay.color_1 missing'
+}
+
+async function validate_query_rnaseqGeneCount(ds, genome) {
+	const q = ds.queries.rnaseqGeneCount
+	if (!q) return
+	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
+
+	/*
+	param{}
+		samplelst{}
+			groups[]
+				values[] // using integer sample id
+	*/
+	q.get = async function (param) {
+		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
+		if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
+		if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
+		// txt file uses string sample name, must convert integer sample id to string
+		const group1names = []
+		for (const s of param.samplelst.groups[0].values) {
+			if (!Number.isInteger(s.sampleId)) continue
+			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
+			if (!n) continue
+			group1names.push(n)
+		}
+		const group2names = []
+		for (const s of param.samplelst.groups[1].values) {
+			if (!Number.isInteger(s.sampleId)) continue
+			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
+			if (!n) continue
+			group2names.push(n)
+		}
+		if (group1names.length < 1) throw 'group1names.length<1'
+		if (group2names.length < 1) throw 'group2names.length<1'
+		// pass group names and txt file to rust
+
+		// return result
+	}
 }
 
 async function validate_query_geneExpression(ds, genome) {
