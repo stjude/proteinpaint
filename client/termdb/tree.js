@@ -362,6 +362,11 @@ function setRenderers(self) {
 			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
 		if (term.type == 'categorical' || term.type == 'condition')
 			return term.values[value].label || term.values[value].key
+		if (term.type == 'survival') {
+			let [years, status] = value.split(' ')
+			status = term.values[status].label || term.values[status].key
+			return `${status} after ${Number(years).toFixed(1)} years`
+		}
 		return null
 	}
 
