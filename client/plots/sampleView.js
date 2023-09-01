@@ -129,7 +129,6 @@ class SampleView extends MassDict {
 
 	getTermValue(term) {
 		let value = this.sampleData[term.id]?.value
-
 		if (value == null || value == undefined) return null
 		if (term.type == 'float' || term.type == 'integer')
 			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()

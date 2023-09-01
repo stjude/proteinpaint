@@ -356,10 +356,12 @@ function setRenderers(self) {
 
 	self.getTermValue = function (term) {
 		let value = self.sampleDataByTermId[term.id]
+
 		if (value == null) return null
 		if (term.type == 'float' || term.type == 'integer')
 			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
-		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
+		if (term.type == 'categorical' || term.type == 'condition')
+			return term.values[value].label || term.values[value].key
 		return null
 	}
 
