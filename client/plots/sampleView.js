@@ -133,6 +133,16 @@ class SampleView extends MassDict {
 		if (term.type == 'float' || term.type == 'integer')
 			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
 		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
+		if (term.type == 'condition') {
+			let [years, status] = value.split(' ')
+			status = term.values[status].label || term.values[status].key
+			return `${status} after ${Number(years).toFixed(1)} years`
+		}
+		if (term.type == 'survival') {
+			let [years, status] = value.split(' ')
+			status = term.values[status].label || term.values[status].key
+			return `${status} after ${Number(years).toFixed(1)} years`
+		}
 		return null
 	}
 
