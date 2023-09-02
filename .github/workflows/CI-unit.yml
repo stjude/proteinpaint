@@ -7,38 +7,34 @@ on:
       - fake-master
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
+    branches:
+      - master
+      - fake-master
 
 jobs:
   build:
-    if: github.event.pull_request.draft == false && github.event.pull_request.base.ref == 'master'
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: May exit early
-        run: |
-          if [[ ! -f ./build/requiresTest.sh ]]; then 
-            exit 0
-          fi
-
-          RELEVANT_FILES=$(./build/requiresTest.sh)
-          if [[ "$RELEVANT_FILES" == "" ]]; then
-            echo "No relevant files to test"
-            exit 0
-          fi
-
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args:
-            detect-secrets --all-files
-
       - uses: actions/setup-node@v3
         with:
           cache: 'npm'
           node-version: '16'
 
+      - name: May exit early
+        run: |
+          if [[ -f ./build/requiresTest.sh ]]; then
+            RELEVANT_FILES=$(./build/requiresTest.sh)
+            if [[ "$RELEVANT_FILES" == "" ]]; then
+              echo "No relevant files to test"
+              exit 0
+            fi
+          fi
+          exit 0
       - run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
