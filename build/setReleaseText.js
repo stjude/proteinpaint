@@ -10,12 +10,15 @@ const rp = require('./releaseParser')
 
 let commitLines = []
 const commitFile = process.argv[3]
+
+// note that a `: ` (colon + space) is expected after the keyword
+const keywords = Object.keys(rp.keywordsToTitle).map(kw => `${kw}: `)
 if (commitFile) {
 	const commitMsg = fs.readFileSync(commitFile).toString('utf-8').trim()
 	commitLines = commitMsg
 		.split('\n')
 		.map(l => l.trim())
-		.filter(l => l.startsWith('feat: ') || l.startsWith('fix: '))
+		.filter(l => keywords.find(kw => l.startsWith(kw)))
 	// exit early if a commit file option is provided but
 	// there are not detected release notes from the commit message
 	if (!commitLines.length) process.exit()
@@ -39,12 +42,15 @@ const localReleaseTxtFile = releaseTxtFileName
 const localReleaseTxt = fs.readFileSync(localReleaseTxtFile).toString('utf-8').trim()
 const currSections = rp.getSections(localReleaseTxt, remoteSections)
 
-// if commit lines with relevant keywords is empty,
-// then this is being used to reconcile the release.txt contents from 2 branches,
-// for example to avoid merge conflicts
 for (const line of commitLines) {
-	if (line.startsWith('feat: ')) currSections[rp.FeatTitle].push('- ' + line.slice(6).trim())
-	if (line.startsWith('fix: ')) currSections[rp.FixTitle].push('- ' + line.slice(5).trim())
+	for (const kw of keywords) {
+		if (line.toLowerCase().startsWith(kw)) {
+			// need to remove `: ` from the keyword for mapping to title
+			const title = rp.keywordsToTitle[kw.slice(0, -2)]
+			const entry = '- ' + line.slice(kw.length).trim()
+			if (!currSections[title].includes(entry)) currSections[title].push(entry)
+		}
+	}
 }
 
 const notes = []
