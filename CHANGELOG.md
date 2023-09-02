@@ -11,6 +11,9 @@ Features:
 Fixes:
 - fix for sorting labels for custom binning on numeric terms in violin plot
 
+DevOps:
+- support more release note section titles and their corresponding commit keywords
+
 
 ## 2.26.1
 
