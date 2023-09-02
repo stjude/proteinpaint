@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - fake-master
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
 
@@ -15,6 +16,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: May exit early
+        run: |
+          if [[ ! -f ./build/requiresTest.sh ]]; then 
+            exit 0
+          fi
+
+          RELEVANT_FILES=$(./build/requiresTest.sh)
+          if [[ "$RELEVANT_FILES" == "" ]]; then
+            echo "No relevant files to test"
+            exit 0
+          fi
 
       - uses: pre-commit/action@v3.0.0
         with:
