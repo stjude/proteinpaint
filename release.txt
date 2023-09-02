@@ -1,1 +1,2 @@
-
+DevOps:
+- do not run unit tests when there are no relevant code or configuration file changes 
