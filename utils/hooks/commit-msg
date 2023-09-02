@@ -1,20 +1,21 @@
 #!/bin/bash
 
-STAGEDFILES="$(git diff --name-only --cached)"
-if [[ "$STAGEDFILES" == *"release.txt"* ]]; then
-  echo "skipped release note detection since release.txt is already staged"
-  exit 0
-fi
+# STAGEDFILES="$(git diff --name-only --cached)"
+# if [[ "$STAGEDFILES" == *"release.txt"* ]]; then
+#   echo "skipped release note detection since release.txt is already staged"
+#   exit 0
+# fi
 
 MSG="$(cat $1)"
 NOTES="$(cat release.txt)"
-
-if [[ "$MSG" == *"fix: "* || "$MSG" == *"feat: "* ]]; then
-  echo "adding release notes ..."  
-  node ./build/releaseNotesGenerator.js release.txt "$1"
-  if [[ "$(git diff --name-only release.txt)" == 'release.txt' ]]; then
-    git add release.txt
-  fi
+  
+NOTES=$(node ./build/setReleaseText.js release.txt "$1")
+if [[ "$NOTES" != "" ]]; then
+  echo -e "$NOTES" > release.txt
+fi
+if [[ "$(git diff --name-only release.txt)" == 'release.txt' ]]; then
+  echo "updating release notes ..."
+  git add release.txt
 fi
 
 exit 0

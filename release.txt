@@ -1,1 +1,2 @@
-
+DevOps:
+- support more release note section titles and their corresponding commit keywords
