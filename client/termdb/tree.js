@@ -364,7 +364,7 @@ function setRenderers(self) {
 		if (term.type == 'condition') {
 			let [years, status] = value.split(' ')
 			status = term.values[status].label || term.values[status].key
-			return `${status} after ${Number(years).toFixed(1)} years`
+			return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
 		}
 		if (term.type == 'survival') {
 			let [years, status] = value.split(' ')
