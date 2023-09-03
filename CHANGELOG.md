@@ -7,9 +7,11 @@ All notable changes to this project will be documented in this file.
 Features:
 - Prototyped single sample viewer
 - improve the release text detection and generator, to minimize potential conflicts when merging
+- test only
 
 Fixes:
 - fix for sorting labels for custom binning on numeric terms in violin plot
+- something else
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
