@@ -7,9 +7,6 @@ on:
       - fake-master
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
-    branches:
-      - master
-      - fake-master
 
 jobs:
   build:
@@ -48,17 +45,17 @@ jobs:
         run: echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
 
       - name: Run client tests
-        if: contains(env.WS_TO_TEST, 'client')
+        if: contains(env.WS_TO_TEST, 'client') || (github.event_name == 'push' && github.event.pusher.name != 'PPTeam CI')
         run: |
           sudo apt-get install xvfb
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: Server unit tests
-        if: github.event_name == 'push' || contains(env.WS_TO_TEST, 'server')
+        if: contains(env.WS_TO_TEST, 'server') || (github.event_name == 'push' && github.event.pusher.name != 'PPTeam CI') 
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: Rust unit tests
-        if: contains(env.WS_TO_TEST, 'rust')
+        if: contains(env.WS_TO_TEST, 'rust') || (github.event_name == 'push' && github.event.pusher.name != 'PPTeam CI')
         run: |
           npm run build --workspace="rust"
           npm run test:unit --workspace="rust"
