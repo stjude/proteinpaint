@@ -42,20 +42,25 @@ jobs:
         run: mkdir server/cache
 
       - name: Detect workspaces to test
-        run: echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
+        run: |
+          echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
+          email=$(git log -n 1 --format='%ae' HEAD)
+          if [[ github.event_name == 'push' && "$email" != 'PPTeam@stjude.org' ]]; then
+            echo "pushedByUser=true" >> $GITHUB_ENV
+          fi
 
       - name: Run client tests
-        if: contains(env.WS_TO_TEST, 'client') || (github.event_name == 'push' && github.event.pusher.name != 'PPTeam CI')
+        if: contains(env.WS_TO_TEST, 'client') || env.pushedByUser == 'true'
         run: |
           sudo apt-get install xvfb
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: Server unit tests
-        if: contains(env.WS_TO_TEST, 'server') || (github.event_name == 'push' && github.event.pusher.name != 'PPTeam CI') 
+        if: contains(env.WS_TO_TEST, 'server') || env.pushedByUser == 'true'
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: Rust unit tests
-        if: contains(env.WS_TO_TEST, 'rust') || (github.event_name == 'push' && github.event.pusher.name != 'PPTeam CI')
+        if: contains(env.WS_TO_TEST, 'rust') || env.pushedByUser == 'true'
         run: |
           npm run build --workspace="rust"
           npm run test:unit --workspace="rust"
