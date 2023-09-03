@@ -19,22 +19,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 10
 
       - uses: actions/setup-node@v3
         with:
           cache: 'npm'
           node-version: '16'
-
-      - name: May exit early
-        run: |
-          if [[ -f ./build/requiresTest.sh ]]; then
-            RELEVANT_FILES=$(./build/requiresTest.sh)
-            if [[ "$RELEVANT_FILES" == "" ]]; then
-              echo "No relevant files to test"
-              exit 0
-            fi
-          fi
-          exit 0
+          
       - run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,16 +44,21 @@ jobs:
       - name: Create cache folder
         run: mkdir server/cache
 
-      - name: install xvfb
-        run: sudo apt-get install xvfb
+      - name: Detect workspaces to test
+        run: echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
 
       - name: Run client tests
-        run: xvfb-run --auto-servernum npm run test:unit --workspace="client"
+        if: contains(env.WS_TO_TEST, 'client')
+        run: |
+          sudo apt-get install xvfb
+          xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: Server unit tests
+        if: github.event_name == 'push' || contains(env.WS_TO_TEST, 'server')
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: Rust unit tests
+        if: contains(env.WS_TO_TEST, 'rust')
         run: |
           npm run build --workspace="rust"
           npm run test:unit --workspace="rust"

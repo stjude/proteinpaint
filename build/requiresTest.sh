@@ -2,13 +2,29 @@
 
 URLRUNS="https://api.github.com/repos/stjude/proteinpaint/actions/runs?status=success&branch=master&event=push"
 UNITRUNS=$(curl -sL -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "$URLRUNS" > ./runs.json)
-SHATESTED=$(node -p "(require('./runs.json')).workflow_runs?.find(r => r.display_title != 'append release notes to change log')?.head_sha")
+SHA_IN_COMMIT=$(git rev-list -n20 HEAD)
+SHA_TESTED_LIST=$(node -p "(require('./runs.json')).workflow_runs?.filter(r => r.display_title != 'append release notes to change log').map(r => r.head_sha).join(' ')")
 rm runs.json
-CHANGEDFILES="$(git diff --name-only HEAD $SHATESTED)"
+for SHA in $SHA_TESTED_LIST; do
+	if [[ "$SHA_IN_COMMIT" ==  *"$SHA"* ]]; then
+		SHATESTED=$SHA
+		break
+	fi
+done
+
 if [[ "$SHATESTED" == "" ]]; then
-	echo "$CHANGEDFILES"
-else 
-	IS_CODE_OR_CONFIG="f => !f.endsWith('.md') && !f.endsWith('.txt') && !f.endsWith('ignore') && f != 'LICENSE' && f != 'DESCRIPTION'"
-	RELEVANTFILES=$(node -p "(\`$CHANGEDFILES\`).split('\n').filter($IS_CODE_OR_CONFIG).join('\n')")
-	echo "$RELEVANTFILES"
+	SHATESTED=$(git rev-parse HEAD~7)
 fi
+CHANGEDFILES="$(git diff --name-only HEAD $SHATESTED)"
+
+IS_CODE_OR_CONFIG="f => !f.endsWith('.md') && !f.endsWith('.txt') && !f.endsWith('ignore') && f != 'LICENSE' && f != 'DESCRIPTION'"
+RELEVANTFILES=$(node -p "(\`$CHANGEDFILES\`).split('\n').filter($IS_CODE_OR_CONFIG).join('\n')")
+# patch is used only to satisfy the version type argument, can be any other allowed value  
+CHANGEDWS="$(./build/bump.js patch -c=$SHATESTED)"
+WS_TO_TEST=""
+for ws in $CHANGEDWS; do
+	if [[ "$RELEVANTFILES" == *"$ws/"* ]]; then
+		WS_TO_TEST="$WS_TO_TEST $ws"
+	fi
+done
+echo "$WS_TO_TEST"

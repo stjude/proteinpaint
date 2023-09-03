@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 'use strict'
 
+/*
+ The allowed arguments and command-line options are listed in the ARGUMENTS section below  
+*/
+
 const glob = require('glob')
 const path = require('path')
 const fs = require('fs')
@@ -19,16 +23,27 @@ if (!verType) {
 	throw `Missing version type argument, must be one of the allowed 'npm version [type]'`
 }
 
+// root package version
+const rootPkg = require(path.join(cwd, '/package.json'))
+
+// command-line options, `-${single_letter}=value`
 const defaults = {
+	verType,
+	// -o
 	output: 'oneline',
-	// oneline: new version + list of changed workspaces,
+	// oneline: list of changed workspaces,
 	//          e.g., "client front server"
-	// vline: new version + online, may be useful as a commit message
+	// vline: new version + oneline, may be useful as a commit message
 	//          e.g., "v2.2.0 client front server"
 	// minjson: minimized object copy as JSON
 	// detailed: log errors/warnings and detailed object copy as JSON
+	// -w
 	write: false, // if true, update package.json as needed
-	exclude: [] // list of workspace name patterns to exclude from processing
+	// -x
+	exclude: [], // list of workspace name patterns to exclude from processing,
+	// -c
+	refCommit: `v${rootPkg.version}^{commit}`,
+	// 
 }
 const opts = JSON.parse(JSON.stringify(defaults))
 for (const k of process.argv.slice(3)) {
@@ -45,6 +60,11 @@ for (const k of process.argv.slice(3)) {
 			if (!pattern) throw `Empty exclude -x value`
 			opts.exclude.push(pattern)
 		}
+		if (k[1] == 'c') {
+			const [o, refCommit] = k.split('=')
+			if (!refCommit) throw `Empty commit sha/reference`
+			opts.refCommit = refCommit
+		}
 	}
 }
 
@@ -52,21 +72,22 @@ for (const k of process.argv.slice(3)) {
 // * WORKSPACE VERSIONS, DEPS, CHANGE STATUS
 // ******************************************
 
-// root package version
-const rootPkg = require(path.join(cwd, '/package.json'))
-const commitMsg = ex(`git log --format=%B -n 1 v${rootPkg.version}`, {
-	message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot diff for changes`
-})
+if (opts.refCommit.endsWith('^{commit}')) {
+	const commitMsg = ex(`git log --format=%B -n 1 v${rootPkg.version}`, {
+		message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot diff for changes`
+	})
+}
 const newVersion = semver.inc(rootPkg.version, verType)
 
 const pkgs = {}
+const changedFiles = ex(`git diff --name-only ${opts.refCommit} HEAD`).split('\n')
 for (const w of rootPkg.workspaces) {
 	if (opts.exclude.find(s => w.includes(s))) continue
 	const paths = glob.sync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
 		const pkg = require(path.join(cwd, pkgPath))
 		const pkgDir = pkgPath.replace('/package.json', '')
-		const wsHashOnRelease = ex(`git rev-parse --verify -q v${rootPkg.version}^{commit}:"${pkgDir}"`, {
+		const wsHashOnRelease = ex(`git rev-parse --verify -q ${opts.refCommit}:"${pkgDir}"`, {
 			handler(e) {
 				gitRevParseErrHandler(pkgDir)
 			}
@@ -81,7 +102,7 @@ for (const w of rootPkg.workspaces) {
 			pkgDir,
 			// TODO: should also check for non-empty workspace/release.txt???
 			// so that a package releases is created only if there are notable changes
-			selfChanged: wsHashOnRelease != wsHashCurrent,
+			selfChanged: wsHashOnRelease != wsHashCurrent && changedFiles.find(f => f.startsWith(w) && fileAffectsVersion),
 			changedDeps: new Set()
 		}
 	}
@@ -194,4 +215,8 @@ function ex(cmd, opts = {}) {
 function gitRevParseErrHandler(pkgDir) {
 	if (opts.output != 'detailed') return
 	console.log(`package='${pkgDir}': git-rev-parse error is assumed to be for a new package dir with no commit history`)
+}
+
+function fileAffectsVersion(f) {
+	return !f.endsWith('.md') && !f.endsWith('.txt') && !f.endsWith('ignore')
 }
