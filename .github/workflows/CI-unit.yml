@@ -45,7 +45,8 @@ jobs:
         run: |
           echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
           email=$(git log -n 1 --format='%ae' HEAD)
-          if [[ github.event_name == 'push' && "$email" != 'PPTeam@stjude.org' ]]; then
+          echo "email=[$e] event_name=[${{ github.event_name }}]"
+          if [[ "${{ github.event_name }}" == "push" && "$email" != "PPTeam@stjude.org" ]]; then
             echo "pushedBy=user" >> $GITHUB_ENV
           fi
 

@@ -9,7 +9,7 @@ import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 import { isUsableTerm } from '#shared/termdb.usecase'
-// change something in code to test unit test ci filtering
+
 /*
 opts{}
 .state{}
