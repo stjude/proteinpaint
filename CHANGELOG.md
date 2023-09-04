@@ -16,6 +16,7 @@ Fixes:
 DevOps:
 - support more release note section titles and their corresponding commit keywords
 - improve the unit test filtering to avoid unnecessary runs
+- cache the Rust toolchain in the unit test workflow
 
 
 ## 2.26.1
