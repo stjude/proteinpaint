@@ -18,6 +18,7 @@ DevOps:
 - improve the unit test filtering to avoid unnecessary runs
 - cache the Rust toolchain in the unit test workflow
 - test what is the event push email
+- fix the email for detecting automated push in the unit test workflow
 
 
 ## 2.26.1
