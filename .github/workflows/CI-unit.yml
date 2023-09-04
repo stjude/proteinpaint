@@ -5,8 +5,18 @@ on:
     branches:
       - master
       - fake-master
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
 
 jobs:
   build:
@@ -43,10 +53,15 @@ jobs:
 
       - name: Detect workspaces to test
         run: |
-          echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # NOTE: the build job filters out automated push 
+            echo "WS_TO_TEST=client server rust" >> $GITHUB_ENV
+          else 
+            echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
+          fi
 
       - name: 🔎 Run client tests
-        if: contains(env.WS_TO_TEST, 'client') || github.event_name == 'push'
+        if: contains(env.WS_TO_TEST, 'client')
         run: |
           sudo apt-get install xvfb
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
@@ -56,7 +71,7 @@ jobs:
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: ⚡ Cache
-        if: contains(env.WS_TO_TEST, 'rust') || github.event_name == 'push'
+        if: contains(env.WS_TO_TEST, 'rust')
         uses: actions/cache@v2
         with:
           path: |
@@ -71,7 +86,7 @@ jobs:
           toolchain: stable
 
       - name: 🔎 Rust unit tests
-        if: contains(env.WS_TO_TEST, 'rust') || github.event_name == 'push'
+        if: contains(env.WS_TO_TEST, 'rust')
         run: |
           npm run build --workspace="rust"
           npm run test:unit --workspace="rust"
