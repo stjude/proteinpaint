@@ -63,6 +63,7 @@ jobs:
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: ⚡ Cache
+        if: contains(env.WS_TO_TEST, 'rust') || env.pushedBy == 'user'
         uses: actions/cache@v2
         with:
           path: |
@@ -70,10 +71,6 @@ jobs:
             ~/.cargo/git
             ./rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
 
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust') || env.pushedBy == 'user'
