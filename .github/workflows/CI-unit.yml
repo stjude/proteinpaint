@@ -38,7 +38,7 @@ jobs:
           TPMASTERDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
           mv serverconfig.json ../../
 
-      - name: Create cache folder
+      - name: Create server cache folder
         run: mkdir server/cache
 
       - name: Detect workspaces to test
