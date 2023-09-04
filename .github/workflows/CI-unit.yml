@@ -52,13 +52,13 @@ jobs:
             echo "pushedBy=user" >> $GITHUB_ENV
           fi
 
-      - name: Run client tests
+      - name: 🔎 Run client tests
         if: contains(env.WS_TO_TEST, 'client') || env.pushedBy == 'user'
         run: |
           sudo apt-get install xvfb
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
-      - name: Server unit tests
+      - name: 🔎 Server unit tests
         if: contains(env.WS_TO_TEST, 'server') || env.pushedBy == 'user'
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
@@ -75,7 +75,7 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Rust unit tests
+      - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust') || env.pushedBy == 'user'
         run: |
           npm run build --workspace="rust"
