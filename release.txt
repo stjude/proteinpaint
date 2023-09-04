@@ -1,1 +1,2 @@
-
+DevOps:
+- earlier exit when the push event is automated for the unit test workflow

@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    if: (github.event_name == 'push' && github.event.head_commit.author.email != 'PPTeam@STJUDE.ORG') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -44,14 +44,6 @@ jobs:
       - name: Detect workspaces to test
         run: |
           echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
-          
-          email=$(git log -n 1 --format='%ae' HEAD)
-          echo "email=[$email]"
-          if [[ "${{ github.event_name }}" == "push" && "$email" != "PPTeam@STJUDE.ORG" ]]; then
-            # pushes by PPTeam are assumed to automated, and should not trigger
-            # another unit test after completing workflows such as automated merging of change log
-            echo "pushedBy=user" >> $GITHUB_ENV
-          fi
 
       - name: 🔎 Run client tests
         if: contains(env.WS_TO_TEST, 'client') || env.pushedBy == 'user'
@@ -60,7 +52,7 @@ jobs:
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: 🔎 Server unit tests
-        if: contains(env.WS_TO_TEST, 'server') || env.pushedBy == 'user'
+        if: contains(env.WS_TO_TEST, 'server')
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
       - name: ⚡ Cache
@@ -74,7 +66,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions-rs/toolchain@v1
-        if: contains(env.WS_TO_TEST, 'rust') || env.pushedBy == 'user'
+        if: contains(env.WS_TO_TEST, 'rust')
         with:
           toolchain: stable
 
