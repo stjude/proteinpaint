@@ -1,1 +1,2 @@
-
+DevOps:
+- fix the email for detecting automated push in the unit test workflow

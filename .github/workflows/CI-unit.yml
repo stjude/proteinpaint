@@ -47,7 +47,7 @@ jobs:
           
           email=$(git log -n 1 --format='%ae' HEAD)
           echo "email=[$email]"
-          if [[ "${{ github.event_name }}" == "push" && "$email" != "PPTeam@stjude.org" ]]; then
+          if [[ "${{ github.event_name }}" == "push" && "$email" != "PPTeam@STJUDE.ORG" ]]; then
             # pushes by PPTeam are assumed to automated, and should not trigger
             # another unit test after completing workflows such as automated merging of change log
             echo "pushedBy=user" >> $GITHUB_ENV
