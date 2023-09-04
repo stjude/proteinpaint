@@ -72,6 +72,11 @@ jobs:
             ./rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - uses: actions-rs/toolchain@v1
+        if: contains(env.WS_TO_TEST, 'rust') || env.pushedBy == 'user'
+        with:
+          toolchain: stable
+
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust') || env.pushedBy == 'user'
         run: |
