@@ -73,9 +73,9 @@ class TdbTree {
 		this.sampleDataByTermId = {}
 	}
 
-	async init(opts) {
+	async init(appState) {
 		const holder = this.opts.holder.append('div')
-
+		for (const sample of appState.samples) this.sampleDataByTermId[sample.sampleId] = {}
 		this.dom = {
 			holder
 		}
@@ -99,7 +99,7 @@ class TdbTree {
 			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
 			usecase: appState.tree.usecase,
-			sample: appState.sample
+			samples: appState.samples
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -183,13 +183,13 @@ class TdbTree {
 
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
-				if (this.state.sample) await this.fillSampleData(copy.terms)
+				if (this.state.samples) await this.fillSampleData(copy.terms)
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
 				const t0 = this.termsById[copy.id]
-				if (this.state.sample) await this.fillSampleData([copy])
+				if (this.state.samples) await this.fillSampleData([copy])
 
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
@@ -204,8 +204,10 @@ class TdbTree {
 	async fillSampleData(terms) {
 		const term_ids = []
 		for (const term of terms) term_ids.push(term.id)
-		const data = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId, term_ids })
-		for (const id in data) this.sampleDataByTermId[id] = data[id]
+		for (const sample of this.state.samples) {
+			const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
+			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
+		}
 	}
 
 	bindKey(term) {
@@ -245,8 +247,7 @@ function setRenderers(self) {
 			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
-				if (!self.state.sample) div.style('max-height', scrollDivMaxHeight)
-
+				div.style('max-height', scrollDivMaxHeight)
 				div.style('padding', '10px').style('resize', 'vertical').classed('sjpp_hide_scrollbar', true)
 
 				/***************************
@@ -332,8 +333,7 @@ function setRenderers(self) {
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
-		if (self.state.sample)
-			div.select('.' + cls_termlabel + 'Value').text(getTermValue(term, self.sampleDataByTermId) || 'Missing')
+		if (self.state.samples) div.select('.' + cls_termlabel + 'Value').html(self.getTermValue(term) || 'Missing')
 		// update other parts if needed, e.g. label
 		else div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
@@ -342,7 +342,7 @@ function setRenderers(self) {
 			.select('.' + cls_termlabel)
 			.style(
 				'background-color',
-				!uses.has('plot') || termIsDisabled || self.state.sample
+				!uses.has('plot') || termIsDisabled || self.state.samples
 					? ''
 					: isSelected
 					? 'rgba(255, 194, 10,0.5)'
@@ -388,8 +388,8 @@ function setRenderers(self) {
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(text)
-		if (term.isleaf && self.state.sample) {
-			let value = getTermValue(term, self.sampleDataByTermId) || 'Missing'
+		if (term.isleaf && self.state.samples) {
+			let value = self.getTermValue(term) || 'Missing'
 			div
 				.append('div')
 				.attr('class', cls_termlabel + 'Value')
@@ -398,7 +398,7 @@ function setRenderers(self) {
 				.style('padding', '5px')
 				.style('opacity', termIsDisabled ? 0.4 : null)
 				.style('color', 'gray')
-				.text(value)
+				.html(value)
 		}
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
@@ -411,7 +411,7 @@ function setRenderers(self) {
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else if (uses.has('plot') && !self.state.sample) {
+			} else if (uses.has('plot') && !self.state.samples) {
 				labeldiv
 					// need better css class
 					.style('color', 'black')
@@ -459,6 +459,15 @@ function setRenderers(self) {
 		if (!term.isleaf) {
 			div.append('div').attr('class', cls_termchilddiv).style('padding-left', childterm_indent)
 		}
+	}
+
+	self.getTermValue = function (term) {
+		let values = ''
+		for (const sample of self.state.samples) {
+			const value = getTermValue(term, this.sampleDataByTermId[sample.sampleId]) || 'Missing'
+			values += '&nbsp;'.repeat(50 - value.length) + value
+		}
+		return values
 	}
 }
 

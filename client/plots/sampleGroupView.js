@@ -2,51 +2,17 @@ import { getCompInit, copyMerge } from '#rx'
 import { appInit } from '#termdb/app'
 import { MassDict } from './dictionary.js'
 
-class SampleGroupView {
+class SampleGroupView extends MassDict {
 	constructor(opts) {
+		super(opts)
 		this.type = 'sampleGroupView'
-		const mainDiv = opts.holder.append('div').style('padding', '20px')
-		const treeDiv = mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		this.dom = {
-			mainDiv,
-			treeDiv,
-			header: opts.header
-		}
 	}
 
 	async init(appState) {
+		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.sampleId2Name = await this.app.vocabApi.getAllSamples()
-		this.trees = []
 		const allSamples = Object.entries(this.sampleId2Name)
-		for (const sample of config.samples) {
-			const div = this.dom.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-			const state = this.getState(appState)
-			state.sample = sample
-			const tree = await appInit({
-				vocabApi: this.app.vocabApi,
-				holder: div,
-				state,
-				tree: {
-					click_term: _term => {
-						const term = _term.term || _term
-						this.app.dispatch({
-							type: 'plot_create',
-							config: {
-								chartType: term.type == 'survival' ? 'survival' : 'summary',
-								term: _term.term ? _term : 'id' in term ? { id: term.id, term } : { term }
-							}
-						})
-
-						this.app.dispatch({
-							type: 'plot_delete',
-							id: this.id
-						})
-					}
-				}
-			})
-			this.trees.push(tree)
-		}
 	}
 
 	getState(appState) {
