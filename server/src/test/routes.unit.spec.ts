@@ -48,9 +48,13 @@ function getApp({ api }) {
  test sections
 ***************/
 
-const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-for (const f of files) {
-	testApi(f)
+const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes')) //.filter(f => f.includes('violin'))
+runTests(files)
+
+async function runTests(files) {
+	for (const f of files) {
+		await testApi(f)
+	}
 }
 
 // f: a filename under the server/routes dir

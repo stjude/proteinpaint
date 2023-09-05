@@ -574,3 +574,31 @@ exports.mayCopyFromCookie = function (q, cookies) {
 		q.sessionid = cookies.sessionid
 	}
 }
+
+exports.getOrderedLabels = function (term, bins, events, q) {
+	if (events) return events.map(e => e.label)
+	if (term.type == 'condition') {
+		if (q?.groups?.length) return q.groups.map(g => g.name)
+		if (term.values) {
+			return Object.keys(term.values)
+				.map(Number)
+				.sort((a, b) => a - b)
+				.map(i => term.values[i].label)
+		}
+	}
+	const firstVal = Object.values(term.values || {})[0]
+	if (firstVal && 'order' in firstVal) {
+		return Object.keys(term.values)
+			.sort((a, b) =>
+				'order' in term.values[a] && 'order' in term.values[b]
+					? term.values[a].order - term.values[b].order
+					: 'order' in term.values[a]
+					? term.values[a].order
+					: 'order' in term.values[b]
+					? term.values[b].order
+					: 0
+			)
+			.map(i => term.values[i].key)
+	}
+	return bins?.map(bin => (bin.name ? bin.name : bin.label))
+}

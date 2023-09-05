@@ -10,15 +10,14 @@ exports.setRoutes = function setRoutes(app, routes, basepath, opts = {}) {
 		}
 	}
 
-	if (opts.debugmode) {
-		// dev bundling with typescript and mixed cjs/esm transpiles correctly,
-		// for convenience generate the docs and test inputs here
-		// TODO: separate this code when ts-node can be configured to support mixed cjs/esm
+	if (opts.apiJson) {
 		const apis = JSON.stringify(routes.map(r => r.api))
-		fs.writeFileSync(path.join(__dirname, '../../public/docs/server-api.json'), apis)
+		fs.writeFileSync(opts.apiJson, apis)
+	}
+	if (opts.types) {
 		const fileRoutes = routes.map(route => ({ file: route.file, route }))
-		const rawImports = typeCheckers(fileRoutes, '../../../routes')
-		fs.writeFileSync(path.join(__dirname, '../server/shared/checkers/raw/index.ts'), rawImports)
+		const rawImports = typeCheckers(fileRoutes, opts.types.routesDir)
+		fs.writeFileSync(opts.types.outputFile, rawImports)
 	}
 }
 

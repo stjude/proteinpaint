@@ -3,14 +3,12 @@ import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
 import lines2R from './lines2R'
 import run_rust from '@sjcrh/proteinpaint-rust'
-//const fs = require('fs')
 import path from 'path'
 import utils from './utils'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
 import { violinBinsObj } from '../../server/shared/violin.bins'
 import { summaryStats } from '../../server/shared/descriptive.stats'
-import { getOrderedLabels } from './termdb.barchart'
 
 /*
 q = {
@@ -78,7 +76,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	//get ordered labels to sort keys in key2values
 	if (q.divideTw && data.refs.byTermId[q.divideTw?.id]) {
-		data.refs.byTermId[q.divideTw?.id].orderedLabels = getOrderedLabels(
+		data.refs.byTermId[q.divideTw?.id].orderedLabels = utils.getOrderedLabels(
 			q.divideTw,
 			data.refs.byTermId[q.divideTw?.id]?.bins,
 			undefined,

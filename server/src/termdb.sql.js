@@ -1,4 +1,3 @@
-const app = require('./app')
 const binsmodule = require('#shared/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const numericSql = require('./termdb.sql.numeric')
@@ -6,6 +5,7 @@ const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
 const sampleLstSql = require('./termdb.sql.samplelst').sampleLstSql
 const serverconfig = require('./serverconfig')
+const { boxplot_getvalue } = require('../shared/descriptive.stats')
 
 /*
 
@@ -647,7 +647,7 @@ at a numeric barchart
 	if (!result.length) return null
 	result.sort((i, j) => i.value - j.value)
 
-	const stat = app.boxplot_getvalue(result)
+	const stat = boxplot_getvalue(result)
 	stat.mean = result.length ? result.reduce((s, i) => s + i.value, 0) / result.length : 0
 
 	let sd = 0
