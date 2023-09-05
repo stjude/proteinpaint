@@ -1,5 +1,5 @@
 import tape from 'tape'
-import * as checkers from '../../shared/checkers/transformed/index.ts'
+import * as checkers from '../../shared/types/routes/checkers/transformed/index.ts'
 import serverconfig from '../serverconfig'
 import path from 'path'
 import fs from 'fs'
@@ -53,7 +53,7 @@ runTests(files)
 
 async function runTests(files) {
 	for (const f of files) {
-		await testApi(f)
+		if (f.endsWith('.ts')) await testApi(f)
 	}
 }
 

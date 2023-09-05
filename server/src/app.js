@@ -104,8 +104,7 @@ const express = require('express'),
 	authApi = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
 	minimatch = require('minimatch'),
-	{ versionInfo } = require('./health'),
-	augen = require('../augen/augen')
+	{ versionInfo } = require('./health')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -273,20 +272,6 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 authApi.maySetAuthRoutes(app, basepath, serverconfig)
-{
-	// start moving migrated route handler code here
-	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-	const routes = files.map(file => Object.assign(require(`../routes/${file}`), { file }))
-	const opts = {}
-	if (serverconfig.debugmode) {
-		opts.apiJson = path.join(__dirname, '../public/docs/server-api.json')
-		opts.types = {
-			routesDir: '../../../routes',
-			outputFile: path.join(__dirname, './shared/checkers/raw/index.ts')
-		}
-	}
-	augen.setRoutes(app, routes, basepath, opts)
-}
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -386,6 +371,8 @@ function log(req) {
 	)
 }
 
+exports.app = app
+exports.basepath = basepath
 exports.phewas = phewas
 exports.genomes = genomes
 exports.startServer = startServer

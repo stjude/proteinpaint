@@ -14,10 +14,11 @@ dist/*
 server/dataset/*.js
 server/genome/*.js
 server/shared/doc.js
-server/shared/checkers/transformed/*
-server/shared/checkers/bin/*
+server/**/checkers/transformed/*
+server/**/checkers/bin/*
 server/shared/types/docs.json
-server/shared/types/*.js
+server/shared/types/**/*.js
+!server/shared/types/**/webpack*.js
 !server/shared/types/typedoc.js
 server/shared/types/terms/*.js
 
