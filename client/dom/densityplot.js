@@ -36,10 +36,10 @@ export async function make_densityplot(holder, data, callabck, term) {
 		.domain([min, max])
 		.range([xpad, width - xpad])
 
-	const days2years = term.printDays2years
-	if (days2years) {
-		min = min / 365
-		max = max / 365
+	const vc = term.valueConversion
+	if (vc) {
+		min = min * vc.scaleFactor
+		max = max * vc.scaleFactor
 	}
 
 	// x-axis

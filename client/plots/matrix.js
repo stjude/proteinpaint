@@ -17,7 +17,6 @@ import { sample_match_termvaluesetting } from '#shared/filter'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.sort'
 import { dofetch3 } from '#common/dofetch'
 export { getPlotConfig } from './matrix.config'
-import { format as d3format } from 'd3-format'
 
 export class Matrix {
 	constructor(opts) {
@@ -785,8 +784,7 @@ export class Matrix {
 
 				t.scales = {
 					tickValues,
-					full: scaleLinear().domain(tickValues).range([1, barh]),
-					format: vc ? d3format(vc.rounding) : null
+					full: scaleLinear().domain(tickValues).range([1, barh])
 				}
 				if (t.counts.maxval >= 0) {
 					const domainMin = rangeSpansZero ? 0 : t.counts.minval
