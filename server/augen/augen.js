@@ -1,4 +1,5 @@
 const fs = require('fs')
+const path = require('path')
 
 exports.setRoutes = function setRoutes(app, routes, basepath, opts = {}) {
 	for (const route of routes) {
@@ -8,9 +9,20 @@ exports.setRoutes = function setRoutes(app, routes, basepath, opts = {}) {
 			app[method](`${basepath}/${api.endpoint}`, m.init(opts))
 		}
 	}
+
+	if (opts.debugmode) {
+		// dev bundling with typescript and mixed cjs/esm transpiles correctly,
+		// for convenience generate the docs and test inputs here
+		// TODO: separate this code when ts-node can be configured to support mixed cjs/esm
+		const apis = JSON.stringify(routes.map(r => r.api))
+		fs.writeFileSync(path.join(__dirname, '../../public/docs/server-api.json'), apis)
+		const fileRoutes = routes.map(route => ({ file: route.file, route }))
+		const rawImports = typeCheckers(fileRoutes, '../../../routes')
+		fs.writeFileSync(path.join(__dirname, '../server/shared/checkers/raw/index.ts'), rawImports)
+	}
 }
 
-exports.typeCheckers = function typeCheckers(fileRoutes, fromPath) {
+function typeCheckers(fileRoutes, fromPath) {
 	const typeIdsByFile = {}
 	const reqres = ['request', 'response']
 	for (const { file, route } of fileRoutes) {
@@ -35,6 +47,8 @@ exports.typeCheckers = function typeCheckers(fileRoutes, fromPath) {
 	const content = importLines.join('\n') + '\n\n' + createLines.join('\n')
 	return content
 }
+
+exports.typeCheckers = typeCheckers
 
 exports.apiJson = function apiJson(fileRoutes) {
 	const typeIdsByFile = {}
