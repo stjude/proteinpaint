@@ -539,24 +539,24 @@ export function setRenderers(self) {
 					const tw = getSamplelstTW([group])
 					self.addToFilter(tw)
 				})
-
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Show samples')
-				.on('click', async event => {
-					const groupSamples = []
-					for (const sample of samples) groupSamples.push({ sampleId: sample.sampleId, sampleName: sample.sample })
-					self.app.dispatch({
-						type: 'plot_create',
-						id: getId(),
-						config: {
-							chartType: 'sampleGroupView',
-							samples: groupSamples
-						}
+			if ('sample' in samples[0])
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Show samples')
+					.on('click', async event => {
+						const groupSamples = []
+						for (const sample of samples) groupSamples.push({ sampleId: sample.sampleId, sampleName: sample.sample })
+						self.app.dispatch({
+							type: 'plot_create',
+							id: getId(),
+							config: {
+								chartType: 'sampleGroupView',
+								samples: groupSamples
+							}
+						})
+						self.dom.tip.hide()
 					})
-					self.dom.tip.hide()
-				})
 		}
 
 		if (self.lassoOn) {
