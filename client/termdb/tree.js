@@ -76,10 +76,8 @@ class TdbTree {
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
 
-		const loadingDiv = this.opts.headerDiv.append('div').style('display', 'inline-block').style('margin-left', '10px')
 		this.dom = {
-			holder,
-			loadingDiv
+			holder
 		}
 	}
 
