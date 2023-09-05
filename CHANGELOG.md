@@ -17,6 +17,7 @@ Fixes:
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
+- avoid unnecessarily running unit test CI, for pull requests with unaffected workspaces and on automated push
 
 
 ## 2.26.1
