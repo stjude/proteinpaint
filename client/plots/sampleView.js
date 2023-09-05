@@ -90,8 +90,7 @@ class SampleView extends MassDict {
 	async main() {
 		if (this.mayRequireToken()) return
 		super.main()
-		if (this.dom.header)
-			this.dom.header.html(this.state.sample ? `${this.state.sample.sampleName} Sample View` : 'Dictionary')
+		if (this.dom.header) this.dom.header.html(`Sample View`)
 
 		if (this.state.showContent) {
 			const sample = { sample_id: this.sample.sampleName }
