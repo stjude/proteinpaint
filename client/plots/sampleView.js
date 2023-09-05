@@ -78,6 +78,7 @@ class SampleView extends MassDict {
 		let state = super.getState(appState)
 		const config = appState.plots?.find(p => p.id === this.id)
 		state.sample = config?.sample || this.sample
+		state.samples = [state.sample] //for the tree
 		state.singleSampleGenomeQuantification = state.termdbConfig.queries?.singleSampleGenomeQuantification
 		state.singleSampleMutation = state.termdbConfig.queries?.singleSampleMutation
 		state.hasVerifiedToken = this.app.vocabApi.hasVerifiedToken()
