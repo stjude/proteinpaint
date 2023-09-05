@@ -1,6 +1,23 @@
 const serverconfig = require('./serverconfig')
-const { genomes, phewas, startServer, pp_init } = require('./app')
+const { basepath, app, genomes, phewas, startServer, pp_init } = require('./app')
+const augen = require('../augen/augen')
 const fs = require('fs')
+const path = require('path')
+
+{
+	// start moving migrated route handler code here
+	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes')).filter(f => f.endsWith('.ts'))
+	const routes = files.map(file => Object.assign(require(`../routes/${file}`), { file }))
+	const opts = {}
+	if (serverconfig.debugmode) {
+		opts.apiJson = path.join(__dirname, '../public/docs/server-api.json')
+		opts.types = {
+			importDir: '../..',
+			outputFile: path.join(__dirname, './shared/types/routes/checkers/raw/index.ts')
+		}
+	}
+	augen.setRoutes(app, routes, basepath, opts)
+}
 
 pp_init()
 	.then(async () => {

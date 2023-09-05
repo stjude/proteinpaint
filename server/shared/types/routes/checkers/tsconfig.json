@@ -1,0 +1,32 @@
+{
+  "compilerOptions": { 
+    "esModuleInterop": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "allowImportingTsExtensions": true,
+    "plugins": [{
+      "transform": "typia/lib/transform"
+    }],
+    "paths": {
+      "#src/*": [
+        "../../src/*"
+      ],
+      "#shared/*": [
+        "../../shared/*"
+      ],
+      "#routes/*": [
+        "../../routes/*"
+      ]
+    },
+  },
+  "include": [
+    "transformed/index.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*+(.spec|.e2e).ts",
+    "**/Point.ts",
+    "**/routes/*.ts"
+  ]
+}

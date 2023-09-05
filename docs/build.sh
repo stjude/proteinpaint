@@ -2,7 +2,7 @@
 
 # call from the proteinpaint project root dir
 ./docs/readme.sh > public/docs/readme.json
-# npx ts-node ./server/augen/cli.js apiJson $PWD/server/routes > public/docs/server-api.json
+npx tsc --project server/shared/types/routes/checkers/tsconfig.json
 
 rm -rf ./public/docs/server/*
 npm run doc --workspaces --if-present
@@ -18,4 +18,4 @@ rm -rf ./public/docs/server/**/.*-e
 rm -rf ./public/docs/server/.*-e
 
 ./docs/extractTypesFromHtml.js > public/docs/server/extracts.json
-npx webpack --config=server/shared/checkers/webpack.config.js
+npx webpack --config=server/shared/types/routes/checkers/webpack.config.js

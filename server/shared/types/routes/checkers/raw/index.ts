@@ -1,7 +1,7 @@
 import { createValidate } from 'typia'
-import { GeneLookupRequest, GeneLookupResponse } from '../../../routes/genelookup.ts'
-import { HealthCheckResponse } from '../../../routes/healthcheck.ts'
-import { getViolinDataRequest, getViolinDataResponse } from '../../../routes/termdb.violin.ts'
+import { GeneLookupRequest, GeneLookupResponse } from '../../genelookup.ts'
+import { HealthCheckResponse } from '../../healthcheck.ts'
+import { getViolinDataRequest, getViolinDataResponse } from '../../termdb.violin.ts'
 
 export const validGeneLookupRequest = createValidate<GeneLookupRequest>()
 export const validGeneLookupResponse = createValidate<GeneLookupResponse>()

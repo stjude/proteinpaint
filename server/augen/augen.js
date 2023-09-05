@@ -16,7 +16,7 @@ exports.setRoutes = function setRoutes(app, routes, basepath, opts = {}) {
 	}
 	if (opts.types) {
 		const fileRoutes = routes.map(route => ({ file: route.file, route }))
-		const rawImports = typeCheckers(fileRoutes, opts.types.routesDir)
+		const rawImports = typeCheckers(fileRoutes, opts.types.importDir)
 		fs.writeFileSync(opts.types.outputFile, rawImports)
 	}
 }
