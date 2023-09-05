@@ -37,7 +37,31 @@ export function server_init_db_queries(ds) {
 	ds.cohort.db.connection = cn
 
 	const tables = listDbTables(cn)
-
+	const schema_tables = [
+		'cohorts',
+		'sampleidmap',
+		'terms',
+		'ancestry',
+		'alltermsbyorder',
+		'termhtmldef',
+		'category2vcfsample',
+		'chronicevents',
+		'precomputed_chc_grade',
+		'precomputed_chc_child',
+		'precomputed_cuminc',
+		'precomputed_cox',
+		'subcohort_terms',
+		'subcohort_samples',
+		'survival',
+		'features',
+		'cohort_features',
+		'anno_integer',
+		'anno_float',
+		'anno_categorical',
+		'buildDate'
+	]
+	for (const table of schema_tables) if (!tables.has(table)) console.log(`${table} table missing!!!!!!!!!!!!!!!!!!!!`)
+	//throw `${table} table missing`
 	if (!tables.has('terms')) throw 'terms table missing'
 	if (!tables.has('ancestry')) throw 'ancestry table missing'
 	if (ds.cohort.termdb.selectCohort && !tables.has('subcohort_terms'))
