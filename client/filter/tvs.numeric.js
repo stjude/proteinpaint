@@ -71,8 +71,8 @@ function format_val_text(range, term) {
 	let startName, stopName
 	const vc = term.valueConversion
 	if (vc) {
-		if ('start' in range) startName = convertUnits(range.start, vc.fromUnit.vc.toUnit, vc.scaleFactor)
-		if ('stop' in range) stopName = convertUnits(range.stop, vc.fromUnit.vc.toUnit, vc.scaleFactor)
+		if ('start' in range) startName = convertUnits(range.start, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+		if ('stop' in range) stopName = convertUnits(range.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor)
 	} else {
 		startName = range.start
 		stopName = range.stop
