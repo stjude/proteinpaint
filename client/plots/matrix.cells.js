@@ -40,7 +40,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 			cell.x = tw.settings.gap // - cell.width
 		} else {
 			const vc = cell.term.valueConversion
-			const renderV = vc ? cell.key * vc.scaler : cell.key
+			const renderV = vc ? cell.key * vc.scaleFactor : cell.key
 			cell.height = cell.key >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =

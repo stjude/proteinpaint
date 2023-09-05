@@ -773,8 +773,8 @@ export class Matrix {
 				const vc = t.tw.term.valueConversion
 				if (vc) {
 					// convert values
-					t.counts.minval *= vc.scaler
-					t.counts.maxval *= vc.scaler
+					t.counts.minval *= vc.scaleFactor
+					t.counts.maxval *= vc.scaleFactor
 				}
 
 				const tickValues =

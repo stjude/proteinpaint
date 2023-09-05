@@ -353,7 +353,7 @@ function mayAddTermAttribute(t) {
 		t.printDays2years = true // print 25868 as '70 years, 318 days'
 		//show the term by other units
 		t.valueConversion = {
-			scaler: 1 / 365,
+			scaleFactor: 1 / 365,
 			unit: 'year',
 			rounding: 'd'
 		}
