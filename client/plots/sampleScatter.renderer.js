@@ -545,12 +545,14 @@ export function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Show samples')
 				.on('click', async event => {
+					const groupSamples = []
+					for (const sample of samples) groupSamples.push({ sampleId: sample.sampleId, sampleName: sample.sample })
 					self.app.dispatch({
 						type: 'plot_create',
 						id: getId(),
 						config: {
 							chartType: 'sampleGroupView',
-							samples
+							samples: groupSamples
 						}
 					})
 					self.dom.tip.hide()

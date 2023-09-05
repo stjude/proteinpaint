@@ -22,7 +22,7 @@ class SampleGroupView {
 		for (const sample of config.samples) {
 			const div = this.dom.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 			const state = this.getState(appState)
-			state.sample = { sampleId: sample.sampleId, sampleName: sample.sample }
+			state.sample = sample
 			const tree = await appInit({
 				vocabApi: this.app.vocabApi,
 				holder: div,
@@ -69,7 +69,8 @@ class SampleGroupView {
 	async main() {
 		if (this.mayRequireToken()) return
 		if (this.dom.header) {
-			let title = 'Samples ' + this.state.samples.map(s => s.sample).join(', ')
+			let title = 'Samples ' + this.state.samples.map(s => s.sampleName).join(', ')
+			if (title.length > 100) title = title.substring(0, 100) + '...'
 			this.dom.header.html(title)
 		}
 	}
