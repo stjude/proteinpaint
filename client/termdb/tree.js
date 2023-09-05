@@ -399,6 +399,7 @@ function setRenderers(self) {
 				.style('float', 'right')
 				.style('padding', '5px')
 				.style('opacity', termIsDisabled ? 0.4 : null)
+				.style('color', 'gray')
 				.text(value)
 		}
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
