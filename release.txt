@@ -1,1 +1,2 @@
-
+Fixes:
+- gracefully handle a hic file with no frag resolutions
