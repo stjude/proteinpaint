@@ -6,7 +6,7 @@ const fs = require('fs')
 module.exports = function getPortalConfig(env = {}) {
 	const config = {
 		mode: 'development', //env.NODE_ENV ? env.NODE_ENV : 'production',
-		target: 'web',
+		target: 'node',
 		entry: path.join(__dirname, 'transformed/index.js'),
 		output: {
 			path: path.join(__dirname, 'bin'),

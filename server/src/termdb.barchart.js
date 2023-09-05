@@ -11,7 +11,6 @@ const { mclass, dt2label } = require('#shared/common')
 /*
 ********************** EXPORTED
 handle_request_closure
-getOrderedLabels
 barchart_data
 **********************
 */
@@ -369,7 +368,7 @@ function getPj(q, data, tdb, ds) {
 			nval: 'nval' + i,
 			bins,
 			q: d.q,
-			orderedLabels: getOrderedLabels(d.term, bins, undefined, d.q)
+			orderedLabels: utils.getOrderedLabels(d.term, bins, undefined, d.q)
 		})
 	})
 
@@ -417,7 +416,7 @@ function getPj(q, data, tdb, ds) {
 				const values = context.self.values
 				if (!values || !values.length) return
 				values.sort((i, j) => i - j)
-				const stat = app.boxplot_getvalue(
+				const stat = utils.boxplot_getvalue(
 					values.map(v => {
 						return { value: +v }
 					})
@@ -488,34 +487,6 @@ function getPj(q, data, tdb, ds) {
 			}
 		}
 	})
-}
-
-export function getOrderedLabels(term, bins, events, q) {
-	if (events) return events.map(e => e.label)
-	if (term.type == 'condition') {
-		if (q?.groups?.length) return q.groups.map(g => g.name)
-		if (term.values) {
-			return Object.keys(term.values)
-				.map(Number)
-				.sort((a, b) => a - b)
-				.map(i => term.values[i].label)
-		}
-	}
-	const firstVal = Object.values(term.values || {})[0]
-	if (firstVal && 'order' in firstVal) {
-		return Object.keys(term.values)
-			.sort((a, b) =>
-				'order' in term.values[a] && 'order' in term.values[b]
-					? term.values[a].order - term.values[b].order
-					: 'order' in term.values[a]
-					? term.values[a].order
-					: 'order' in term.values[b]
-					? term.values[b].order
-					: 0
-			)
-			.map(i => term.values[i].key)
-	}
-	return bins?.map(bin => (bin.name ? bin.name : bin.label))
 }
 
 function getTermDetails(q, tdb, index) {

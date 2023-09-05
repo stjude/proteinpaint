@@ -5,7 +5,6 @@ const cuminc = require('./termdb.cuminc')
 const survival = require('./termdb.survival')
 const regression = require('./termdb.regression')
 const termdbsnp = require('./termdb.snp')
-const getOrderedLabels = require('./termdb.barchart').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
 const trigger_getLowessCurve = require('./termdb.scatter').trigger_getLowessCurve
@@ -15,7 +14,7 @@ const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
 const get_mds3variantData = require('./mds3.variant').get_mds3variantData
 import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
-import { get_lines_bigfile, mayCopyFromCookie } from './utils'
+import { get_lines_bigfile, mayCopyFromCookie, getOrderedLabels } from './utils'
 import authApi from './auth'
 import { getResult as geneSearch } from './gene'
 import { searchSNP } from './app'
