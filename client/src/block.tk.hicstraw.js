@@ -155,8 +155,8 @@ function setResolution(tk, block) {
 
 	/*
 	following is only for hic straw file
-	which resolution? bp or frag
-	the same resolution will be shared across all regions
+	determine which resolution to use, "bp" for zoomd out to low res, or "frag" for zoomed in at high res
+	the same resolution will be shared across all block regions
 	find biggest region by bp span, use it's pixel width to determine resolution
 	*/
 	const maxbpwidth = Math.max(...regions.map(i => i.stop - i.start))
@@ -168,14 +168,17 @@ function setResolution(tk, block) {
 			break
 		}
 	}
+	// if cannot find the finest bp resolution for current zoom, then check available fragment resolution
 
 	return Promise.resolve()
 		.then(() => {
 			if (resolution_bp) {
 				return
 			}
-			if (!tk.hic.enzymefile) {
-				// no enzyme fragment data, allowed, use finest bp resolution
+			// cannot find bp resolution
+			if (!tk.hic.enzymefile || !tk.hic.fragresolution?.length > 0) {
+				// no enzyme fragment data (missing enzyme, or fragresolution array is blank)
+				// just use finest bp resolution
 				resolution_bp = tk.hic.bpresolution[tk.hic.bpresolution.length - 1]
 				return
 			}
@@ -591,7 +594,8 @@ function parseStrawData(datalst, resolution_bp, resolution_frag, tk, block) {
 				if (
 					coord1 > r_left.start - span1 &&
 					coord1 < r_left.stop &&
-					(coord2 > r_right.start - span2 && coord2 < r_right.stop)
+					coord2 > r_right.start - span2 &&
+					coord2 < r_right.stop
 				) {
 					const left1 = r_left.x + fs_left * (coord1 - r_left.start)
 					const left2 = left1 + fs_left * span1
@@ -600,11 +604,7 @@ function parseStrawData(datalst, resolution_bp, resolution_frag, tk, block) {
 					tk.data.push([left1, left2, right1, right2, v, insidedomain])
 				}
 
-				if (
-					coord2 > r_left.start - span2 &&
-					coord2 < r_left.stop &&
-					(coord1 > r_right.start && coord1 < r_right.stop)
-				) {
+				if (coord2 > r_left.start - span2 && coord2 < r_left.stop && coord1 > r_right.start && coord1 < r_right.stop) {
 					const left1 = r_left.x + fs_left * (coord2 - r_left.start)
 					const left2 = left1 + fs_left * span2
 					const right1 = r_right.x + fs_right * (coord1 - r_right.start)
@@ -651,7 +651,10 @@ function drawCanvas(tk, block) {
 		/*
 		at tiny region the span from data may be huge, limit it
 		*/
-		canvasheight = Math.min(canvaswidth, tk.data.reduce((i, j) => Math.max(i, (j[3] - j[0]) / 2), 0))
+		canvasheight = Math.min(
+			canvaswidth,
+			tk.data.reduce((i, j) => Math.max(i, (j[3] - j[0]) / 2), 0)
+		)
 	} else if (tk.mode_arc) {
 		for (const i of tk.data) {
 			const arcxspan = (i[2] + i[3]) / 2 - (i[0] + i[1]) / 2
@@ -771,31 +774,21 @@ function drawCanvas(tk, block) {
 		}
 	}
 
-	tk.img
-		.attr('width', canvaswidth)
-		.attr('height', canvasheight)
-		.attr('xlink:href', canvas.toDataURL())
+	tk.img.attr('width', canvaswidth).attr('height', canvasheight).attr('xlink:href', canvas.toDataURL())
 
 	// update colorscale
 	tk.colorscale.g.attr('transform', 'scale(1) ' + tk.colorscale.positionstr)
 	tk.colorscale.scale.domain([0, maxv])
 	if (tk.mincutoff != undefined && tk.mincutoff != 0) {
 		const x = Math.min(tk.colorscale.barwidth, tk.colorscale.scale(tk.mincutoff))
-		tk.colorscale.tick_mincutoff
-			.attr('x1', x)
-			.attr('x2', x)
-			.attr('stroke', 'black')
+		tk.colorscale.tick_mincutoff.attr('x1', x).attr('x2', x).attr('stroke', 'black')
 		tk.colorscale.label_mincutoff.attr('x', x).text(tk.mincutoff)
 	} else {
 		tk.colorscale.tick_mincutoff.attr('stroke', 'none')
 		tk.colorscale.label_mincutoff.text('')
 	}
 	client.axisstyle({
-		axis: tk.colorscale.axisg.call(
-			axisBottom()
-				.scale(tk.colorscale.scale)
-				.tickValues([0, maxv])
-		),
+		axis: tk.colorscale.axisg.call(axisBottom().scale(tk.colorscale.scale).tickValues([0, maxv])),
 		showline: 1,
 		color: 'black'
 	})
@@ -805,11 +798,11 @@ function drawCanvas(tk, block) {
 
 function resize_label(tk, block) {
 	tk.leftLabelMaxwidth = tk.colorscale.barwidth
-	tk.tklabel.each(function() {
+	tk.tklabel.each(function () {
 		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 	})
 	if (tk.label_resolution) {
-		tk.label_resolution.each(function() {
+		tk.label_resolution.each(function () {
 			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
 	}
@@ -892,10 +885,7 @@ function makeTk(tk, block) {
 		const defs = g.append('defs')
 		const id = Math.random().toString()
 		const gradient = defs.append('linearGradient').attr('id', id)
-		gradient
-			.append('stop')
-			.attr('offset', 0)
-			.attr('stop-color', 'white')
+		gradient.append('stop').attr('offset', 0).attr('stop-color', 'white')
 		tk.colorscale.gradientstop = gradient.append('stop').attr('offset', 1)
 
 		updatetkcolor_client(tk)
@@ -1107,11 +1097,7 @@ function configPanel(tk, block) {
 			.attr('for', id + '2')
 			.attr('class', 'sja_clbtext')
 			.html('&nbsp;Arc')
-		row
-			.append('span')
-			.style('margin-left', '10px')
-			.style('opacity', 0.5)
-			.text('for showing interactions.')
+		row.append('span').style('margin-left', '10px').style('opacity', 0.5).text('for showing interactions.')
 	}
 
 	// point up down
@@ -1134,10 +1120,7 @@ function textdata_editUI(tk, block) {
 	tk.tkconfigtip.clear()
 	const d = tk.tkconfigtip.d.append('div')
 
-	const ta = d
-		.append('textarea')
-		.attr('cols', 50)
-		.attr('rows', 10)
+	const ta = d.append('textarea').attr('cols', 50).attr('rows', 10)
 	ta.property('value', tk.textdata.raw)
 
 	const row2 = d.append('div').style('margin-top', '10px')
