@@ -207,7 +207,7 @@ class TdbTree {
 		const term_ids = []
 		for (const term of terms) term_ids.push(term.id)
 		const data = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId, term_ids })
-		for (const id in data) this.sampleDataByTermId[id] = data[id].value
+		for (const id in data) this.sampleDataByTermId[id] = data[id]
 	}
 
 	bindKey(term) {
@@ -334,7 +334,8 @@ function setRenderers(self) {
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
-		if (self.state.sample) div.select('.' + cls_termlabel + 'Value').text(self.getTermValue(term) || 'Missing')
+		if (self.state.sample)
+			div.select('.' + cls_termlabel + 'Value').text(getTermValue(term, self.sampleDataByTermId) || 'Missing')
 		// update other parts if needed, e.g. label
 		else div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
@@ -352,26 +353,6 @@ function setRenderers(self) {
 		div
 			.select('.' + cls_termcheck)
 			.style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
-	}
-
-	self.getTermValue = function (term) {
-		let value = self.sampleDataByTermId[term.id]
-
-		if (value == null) return null
-		if (term.type == 'float' || term.type == 'integer')
-			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
-		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
-		if (term.type == 'condition') {
-			let [years, status] = value.split(' ')
-			status = term.values[status].label || term.values[status].key
-			return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
-		}
-		if (term.type == 'survival') {
-			let [years, status] = value.split(' ')
-			status = term.values[status].label || term.values[status].key
-			return `${status} after ${Number(years).toFixed(1)} years`
-		}
-		return null
 	}
 
 	self.addTerm = async function (term) {
@@ -410,7 +391,7 @@ function setRenderers(self) {
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(text)
 		if (term.isleaf && self.state.sample) {
-			let value = self.getTermValue(term) || 'Missing'
+			let value = getTermValue(term, self.sampleDataByTermId) || 'Missing'
 			div
 				.append('div')
 				.attr('class', cls_termlabel + 'Value')
@@ -480,6 +461,28 @@ function setRenderers(self) {
 			div.append('div').attr('class', cls_termchilddiv).style('padding-left', childterm_indent)
 		}
 	}
+}
+
+export function getTermValue(term, data) {
+	let value = data[term.id]?.value
+
+	if (value == null) return null
+	if (term.type == 'float' || term.type == 'integer')
+		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
+	if (term.type == 'categorical') return term.values[value]?.label || term.values[value]?.key
+	if (term.type == 'condition') {
+		const values = value.toString().split(' ')
+		let [years, status] = values
+		status = term.values[status].label || term.values[status].key
+		return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
+	}
+	if (term.type == 'survival') {
+		const values = value.split(' ')
+		let [years, status] = values
+		status = term.values[status].label || term.values[status].key
+		return `${status} after ${Number(years).toFixed(1)} years`
+	}
+	return null
 }
 
 function setInteractivity(self) {

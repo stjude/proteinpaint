@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { appInit } from '#termdb/app'
 import { MassDict } from './dictionary.js'
+import { getTermValue } from '../termdb/tree.js'
 
 class SampleView extends MassDict {
 	constructor(opts) {
@@ -127,32 +128,13 @@ class SampleView extends MassDict {
 		}
 	}
 
-	getTermValue(term) {
-		let value = this.sampleData[term.id]?.value
-		if (value == null || value == undefined) return null
-		if (term.type == 'float' || term.type == 'integer')
-			return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
-		if (term.type == 'categorical') return term.values[value].label || term.values[value].key
-		if (term.type == 'condition') {
-			let [years, status] = value.split(' ')
-			status = term.values[status].label || term.values[status].key
-			return `${status} after ${Number(years).toFixed(1)} years`
-		}
-		if (term.type == 'survival') {
-			let [years, status] = value.split(' ')
-			status = term.values[status].label || term.values[status].key
-			return `${status} after ${Number(years).toFixed(1)} years`
-		}
-		return null
-	}
-
 	async downloadData() {
 		const filename = `${this.state.sample.sampleName}.tsv`
 		this.sampleData = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId })
 		let lines = ''
 		for (const id in this.sampleData) {
 			const term = this.sampleData[id].term
-			let value = this.getTermValue(term)
+			let value = getTermValue(term, this.sampleData)
 			if (value == null) continue
 			lines += `${term.name}\t${value}\n`
 		}
