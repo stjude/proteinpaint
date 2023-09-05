@@ -11,6 +11,9 @@ Features:
 Fixes:
 - fix for sorting labels for custom binning on numeric terms in violin plot
 - gracefully handle a hic file with no frag resolutions
+- Gracefully handle a hic file with no frag resolutions
+- Display Age at diagnosis in years instead of days for GDC
+- Fix GDC Days to birth axis issue
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
