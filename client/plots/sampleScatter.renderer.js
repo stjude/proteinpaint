@@ -10,6 +10,7 @@ import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { regressionLoess, regressionPoly } from 'd3-regression'
 import { line, arc } from 'd3'
+import { getId } from '#mass/nav'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -491,6 +492,7 @@ export function setRenderers(self) {
 		}
 
 		function showLassoMenu(event) {
+			const samples = self.selectedItems.map(item => item.__data__)
 			self.dom.tip.clear().hide()
 			if (self.selectedItems.length == 0) return
 			self.dom.tip.show(event.clientX, event.clientY)
@@ -505,7 +507,7 @@ export function setRenderers(self) {
 					self.showTable(
 						{
 							name: 'Group ' + (self.config.groups.length + 1),
-							items: self.selectedItems.map(item => item.__data__)
+							items: samples
 						},
 						event.clientX,
 						event.clientY,
@@ -520,7 +522,7 @@ export function setRenderers(self) {
 				.on('click', async () => {
 					const group = {
 						name: 'Group',
-						items: self.selectedItems.map(item => item.__data__)
+						items: samples
 					}
 					self.addGroup(group)
 				})
@@ -531,11 +533,27 @@ export function setRenderers(self) {
 				.on('click', () => {
 					const group = {
 						name: 'Group',
-						items: self.selectedItems.map(item => item.__data__)
+						items: samples
 					}
 					self.addGroup(group)
 					const tw = getSamplelstTW([group])
 					self.addToFilter(tw)
+				})
+
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show samples')
+				.on('click', async event => {
+					self.app.dispatch({
+						type: 'plot_create',
+						id: getId(),
+						config: {
+							chartType: 'sampleGroupView',
+							samples
+						}
+					})
+					self.dom.tip.hide()
 				})
 		}
 
