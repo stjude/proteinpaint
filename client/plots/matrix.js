@@ -17,6 +17,7 @@ import { sample_match_termvaluesetting } from '#shared/filter'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter } from './matrix.sort'
 import { dofetch3 } from '#common/dofetch'
 export { getPlotConfig } from './matrix.config'
+import { format as d3format } from 'd3-format'
 
 export class Matrix {
 	constructor(opts) {
@@ -765,17 +766,27 @@ export class Matrix {
 				if (!('gap' in t.tw.settings)) t.tw.settings.gap = 4
 				const barh = t.tw.settings.barh
 				const absMin = Math.abs(t.counts.minval)
-				const rangeSpansZero = t.counts.minVal < 0 && t.counts.maxval
+				const rangeSpansZero = t.counts.minval < 0 && t.counts.maxval > 0
 				const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
 				t.counts.posMaxHt = ratio * barh
-				const tickValues = //[t.counts.minval, t.counts.maxval]
-					rangeSpansZero || t.counts.maxval <= 0
-						? [t.counts.minval, t.counts.maxval]
-						: [t.counts.maxval, t.counts.minval]
+
+				const vc = t.tw.term.valueConversion
+				if (vc) {
+					// convert values
+					t.counts.minval *= vc.scaler
+					t.counts.maxval *= vc.scaler
+				}
+
+				const tickValues =
+					// rangeSpansZero || t.counts.maxval <= 0
+					// 	? [t.counts.minval, t.counts.maxval]
+					// 	: [t.counts.maxval, t.counts.minval]
+					[t.counts.maxval, t.counts.minval]
 
 				t.scales = {
 					tickValues,
-					full: scaleLinear().domain(tickValues).range([1, barh])
+					full: scaleLinear().domain(tickValues).range([1, barh]),
+					format: vc ? d3format(vc.rounding) : null
 				}
 				if (t.counts.maxval >= 0) {
 					const domainMin = rangeSpansZero ? 0 : t.counts.minval
@@ -785,7 +796,7 @@ export class Matrix {
 					const domainMax = rangeSpansZero ? 0 : t.counts.maxval
 					t.scales.neg = scaleLinear()
 						.domain([domainMax, t.counts.minval])
-						.range([1, barh - t.counts.posMaxHt - 5])
+						.range([1, barh - t.counts.posMaxHt - t.tw.settings.gap])
 				}
 			} else if (t.tw.term.type == 'geneVariant') {
 				if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
