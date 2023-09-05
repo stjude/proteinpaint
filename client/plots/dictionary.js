@@ -8,7 +8,8 @@ export class MassDict {
 		const treeDiv = mainDiv.insert('div').style('display', 'inline-block')
 		this.dom = {
 			mainDiv,
-			treeDiv
+			treeDiv,
+			header: opts.header
 		}
 	}
 

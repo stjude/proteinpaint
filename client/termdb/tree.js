@@ -466,7 +466,6 @@ function setRenderers(self) {
 
 export function getTermValue(term, data) {
 	let value = data[term.id]?.value
-
 	if (value == null) return null
 	if (term.type == 'float' || term.type == 'integer')
 		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
@@ -480,7 +479,7 @@ export function getTermValue(term, data) {
 	if (term.type == 'survival') {
 		const values = value.split(' ')
 		let [years, status] = values
-		status = term.values[status].label || term.values[status].key
+		status = term.values?.[status]?.label || term.values?.[status]?.key || status
 		return `${status} after ${Number(years).toFixed(1)} years`
 	}
 	return null
