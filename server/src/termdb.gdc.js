@@ -350,12 +350,12 @@ export async function initGDCdictionary(ds) {
 
 function mayAddTermAttribute(t) {
 	if (t.id == 'case.diagnoses.age_at_diagnosis') {
-		t.printDays2years = true // print 25868 as '70 years, 318 days'
 		//show the term by other units
+		// print 25868 as '70 years, 318 days'
 		t.valueConversion = {
 			scaleFactor: 1 / 365,
-			unit: 'year',
-			rounding: 'd'
+			fromUnit: 'day',
+			toUnit: 'year'
 		}
 		return
 	}

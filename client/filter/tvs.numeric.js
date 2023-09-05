@@ -4,7 +4,7 @@ import { keyupEnter } from '#src/client'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { makeDensityPlot } from './densityplot'
 import { NumericRangeInput } from '#dom/numericRangeInput'
-import { printDays2years } from '../mds3/sampletable'
+import { convertUnits } from '../mds3/sampletable'
 
 /*
 ********************** EXPORTED
@@ -69,9 +69,10 @@ function format_val_text(range, term) {
 		return `<span>${inf('﹣')} ${lt} ${x} ${lt} ${inf('﹢')}</span>`
 	}
 	let startName, stopName
-	if (term.printDays2years) {
-		if ('start' in range) startName = printDays2years(range.start)
-		if ('stop' in range) stopName = printDays2years(range.stop)
+	const vc = term.valueConversion
+	if (vc) {
+		if ('start' in range) startName = convertUnits(range.start, vc.fromUnit.vc.toUnit, vc.scaleFactor)
+		if ('stop' in range) stopName = convertUnits(range.stop, vc.fromUnit.vc.toUnit, vc.scaleFactor)
 	} else {
 		startName = range.start
 		stopName = range.stop

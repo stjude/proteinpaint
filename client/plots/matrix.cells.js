@@ -1,3 +1,4 @@
+import { convertUnits } from '../mds3/sampletable'
 /*
 	cell: a matrix cell data
 	tw: termwrapper
@@ -45,7 +46,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y =
 				cell.key >= 0 ? t.counts.posMaxHt + t.tw.settings.gap - cell.height : t.counts.posMaxHt + t.tw.settings.gap
-			cell.convertedValueLabel = vc && t.scales.format ? t.scales.format(renderV) + ' ' + vc.unit : ''
+			cell.convertedValueLabel = vc ? convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor) : ''
 		}
 	} else {
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace

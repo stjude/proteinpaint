@@ -1,6 +1,6 @@
 import { makelabel } from './leftlabel'
 import { Tabs } from '#dom/toggleButtons'
-import { displaySampleTable, printDays2years } from './sampletable'
+import { displaySampleTable, convertUnits } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
 import { filterInit, getNormalRoot } from '#filter'
@@ -114,9 +114,10 @@ export function getFilterName(f) {
 				const r = tvs.ranges[0]
 
 				let startName, stopName // logic to compute print name and use if needed
-				if (tvs.term.printDays2years) {
-					if ('start' in r) startName = printDays2years(r.start, true)
-					if ('stop' in r) stopName = printDays2years(r.stop, true)
+				const vc = tvs.term.valueConversion
+				if (vc) {
+					if ('start' in r) startName = convertUnits(r.start, vc.fromUnit, vc.toUnit, vc.scaleFactor, true)
+					if ('stop' in r) stopName = convertUnits(r.stop, vc.fromUnit, vc.toUnit, vc.scaleFactor, true)
 				} else if (ttype == 'integer') {
 					if ('start' in r) startName = Math.floor(r.start)
 					if ('stop' in r) stopName = Math.floor(r.stop)
