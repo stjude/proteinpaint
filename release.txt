@@ -1,2 +1,4 @@
 Fixes:
 - Gracefully handle a hic file with no frag resolutions
+- Display Age at diagnosis in years instead of days for GDC
+- Fix GDC Days to birth axis issue
