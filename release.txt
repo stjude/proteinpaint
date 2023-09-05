@@ -1,1 +1,2 @@
-
+DevOps:
+- avoid unnecessarily running unit test CI, for pull requests with unaffected workspaces and on automated push

@@ -4,22 +4,30 @@ on:
   push:
     branches:
       - master
+      - fake-master
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
 
 jobs:
   build:
-    if: github.event.pull_request.draft == false
+    if: (github.event_name == 'push' && github.event.head_commit.author.email != 'PPTeam@STJUDE.ORG') || (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v3
-
-      - uses: pre-commit/action@v3.0.0
         with:
-          extra_args:
-            detect-secrets --all-files
+          fetch-depth: 10
 
       - uses: actions/setup-node@v3
         with:
@@ -40,19 +48,45 @@ jobs:
           TPMASTERDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
           mv serverconfig.json ../../
 
-      - name: Create cache folder
+      - name: Create server cache folder
         run: mkdir server/cache
 
-      - name: install xvfb
-        run: sudo apt-get install xvfb
+      - name: Detect workspaces to test
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # NOTE: the build job filters out automated push 
+            echo "WS_TO_TEST=client server rust" >> $GITHUB_ENV
+          else 
+            echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
+          fi
 
-      - name: Run client tests
-        run: xvfb-run --auto-servernum npm run test:unit --workspace="client"
+      - name: 🔎 Run client tests
+        if: contains(env.WS_TO_TEST, 'client')
+        run: |
+          sudo apt-get install xvfb
+          xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
-      - name: Server unit tests
+      - name: 🔎 Server unit tests
+        if: contains(env.WS_TO_TEST, 'server')
         run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
 
-      - name: Rust unit tests
+      - name: ⚡ Cache
+        if: contains(env.WS_TO_TEST, 'rust')
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ./rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions-rs/toolchain@v1
+        if: contains(env.WS_TO_TEST, 'rust')
+        with:
+          toolchain: stable
+
+      - name: 🔎 Rust unit tests
+        if: contains(env.WS_TO_TEST, 'rust')
         run: |
           npm run build --workspace="rust"
           npm run test:unit --workspace="rust"

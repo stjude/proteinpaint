@@ -22,7 +22,7 @@ fi
 # CONTEXT
 ##########
 
-UPDATED=$(./build/jump.js "$@")
+UPDATED=$(./build/bump.js "$@")
 if [[ "$UPDATED" == "" ]]; then
   echo "No workspace package updates, exiting script with code 1"
   exit 1
