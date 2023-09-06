@@ -6,6 +6,7 @@ class SampleGroupView extends MassDict {
 	constructor(opts) {
 		super(opts)
 		this.type = 'sampleGroupView'
+		this.dom.treeDiv.style('position', 'relative')
 	}
 
 	async init(appState) {

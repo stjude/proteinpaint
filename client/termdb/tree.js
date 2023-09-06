@@ -385,6 +385,7 @@ function setRenderers(self) {
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		let text = term.name
+		if (self.state.samples && text.length > 50) text = text.slice(0, 50) + '...'
 
 		const labeldiv = div
 			.insert('div')
@@ -395,12 +396,11 @@ function setRenderers(self) {
 			.text(text)
 
 		if (self.state.samples) {
-			labeldiv.style('min-width', '400px')
 			const valuesDiv = div
 				.insert('div')
 				.attr('id', term.id)
 				.style('display', 'inline-block')
-				.style('vertical-align', 'bottom')
+				.style('vertical-align', 'top')
 				.style('padding', 0)
 			self.addTermValueDiv(valuesDiv, term)
 		}
@@ -468,18 +468,17 @@ function setRenderers(self) {
 	self.addTermValueDiv = function (div, term) {
 		if (!term.isleaf && self.samplesAdded) return
 		self.samplesAdded = true
-		let values = term.isleaf ? self.getTermValues(term) : self.state.samples.map(s => s.sampleName)
+		let values = term.isleaf ? self.getTermValues(term) : self.state.samples.map(s => `<b>${s.sampleName}</b>`)
+		let i = 1
 		for (const value of values) {
 			div
 				.insert('div')
-				.style('display', 'inline-block')
-				.style('float', 'right')
-
-				.style('padding', '5px')
+				.style('position', 'absolute')
+				.style('left', 300 + 300 * i + 'px')
+				.style('padding-bottom', '30px')
 				.style('color', 'gray')
-				.style('width', '200px')
-				.style('text-align', 'right')
 				.html(value)
+			i++
 		}
 	}
 
