@@ -6,6 +6,7 @@ import serverconfig from './serverconfig'
 /*
 ******************** functions *************
 initGDCdictionary
+	assignDefaultBins
 	makeTermdbQueries
 	getOpenProjects
 	testGDCapi
@@ -38,19 +39,8 @@ const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/grap
 const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
 
 /*
-*** handling of default bin configurations ***
-
-bin configs for gdc numeric terms are hardcoded in hardcodeBinconfigs()
-we should hardcode this for all gdc numeric terms known to us
-since bin config is required for numeric terms by our code
-
-on pp server start, this script will identify all numeric terms
-for those terms that are not found in termId2bins{}:
-- it will print an alert message
-- it will query on the fly to retrieve some datapoints of this term and compute min/max
-- it assigns dummy bin to this term, so the code won't break
-- a new commit should be made to add the new term(s) to hardcodeBinconfigs(),
-  by electing some reasonable bin config based on its min/max
+default bin configs are auto-determined based on distribution of each term (min/max/..), retrieved on the fly from api
+dummy bin is used when a valid distribution is not available
 */
 const dummyBins = {
 	default: {
@@ -69,8 +59,6 @@ const dummyBins = {
 		}
 	}
 }
-
-const termId2bins = hardcodeBinconfigs()
 
 /* 
 
@@ -245,20 +233,12 @@ export async function initGDCdictionary(ds) {
 						categoricalCount++
 					} else if (t.type == 'long') {
 						termObj.type = 'integer'
-						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
 						integerCount++
 					} else if (t.type == 'double') {
 						termObj.type = 'float'
-						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
 						floatCount++
 					} else {
 						console.log('GDC !!! ERR !!! Unknown variable type: ' + t.type)
-					}
-					if ((termObj.type == 'integer' || termObj.type == 'float') && !termId2bins[termObj.id]) {
-						console.log(`GDC !!! Lack bin config for ${termObj.type} ${termObj.id}`)
-						await getNumericTermRange_graphql(termObj.id)
-						// print out min/max for this term to assist manual curation of binconfig,
-						// a new commit should be made to hardcode config of this term in termId2bins
 					}
 				}
 
@@ -303,6 +283,8 @@ export async function initGDCdictionary(ds) {
 			id2term.set(currentId, termObj)
 		}
 	}
+
+	await assignDefaultBins(id2term)
 
 	for (const t of id2term.values()) {
 		if (!t.type) parentCount++
@@ -361,15 +343,16 @@ function mayAddTermAttribute(t) {
 	}
 }
 
-async function getNumericTermRange_graphql(id) {
-	const queriedFacet = id.replace('case.', '').replace('.', '__')
-	const query = `
-	  query ContinuousAggregationQuery($caseFilters: FiltersArgument, $filters: FiltersArgument, $filters2: FiltersArgument) {
-	  viewer {
-		explore {
-		  cases {
-			aggregations(case_filters: $caseFilters, filters: $filters) {
-			  ${queriedFacet} {
+async function assignDefaultBins(id2term) {
+	const queryStrings = []
+	const facet2termid = new Map() // term id is converted to facet for query, this maps it back
+	for (const t of id2term.values()) {
+		if (t.type == 'integer' || t.type == 'float') {
+			const facet = t.id.replace('case.', '').replace(/\./g, '__')
+			facet2termid.set(facet, t.id)
+			queryStrings.push(
+				facet +
+					` {
 			   stats {
 					Min : min
 					Max: max
@@ -383,7 +366,18 @@ async function getNumericTermRange_graphql(id) {
 					key
 				  }
 				}
-			  }
+			}`
+			)
+		}
+	}
+	if (queryStrings.length == 0) throw 'GDC: no numeric terms'
+	const query = `
+	  query ContinuousAggregationQuery($caseFilters: FiltersArgument, $filters: FiltersArgument, $filters2: FiltersArgument) {
+	  viewer {
+		explore {
+		  cases {
+			aggregations(case_filters: $caseFilters, filters: $filters) {
+				${queryStrings.join('\n')}
 			}
 		  }
 		}
@@ -397,29 +391,80 @@ async function getNumericTermRange_graphql(id) {
 	}
 
 	try {
+		let assignedCount = 0,
+			unassignedCount = 0
+
 		const response = await got.post(apihostGraphql, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query, variables })
 		})
 		const re = JSON.parse(response.body)
-		const s = re.data.viewer.explore.cases.aggregations[queriedFacet].stats
-		/*
-		{
-		  diagnoses__days_to_recurrence: {
-			range: { buckets: [Array] },
-			stats: {
-			  Max: 3782,
-			  Mean: 819.9636363636364,
-			  Min: 58,
-			  SD: 715.6613630457312,
-			  count: 165
+		if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
+			throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
+		for (const [facet, termid] of facet2termid) {
+			const term = id2term.get(termid)
+			if (!(facet in re.data.viewer.explore.cases.aggregations)) {
+				console.log('GDC: no stats object returned for numeric term', termid)
+				term.bins = dummyBins
+				unassignedCount++
+				continue
 			}
-		  }
+			const s = re.data.viewer.explore.cases.aggregations[facet].stats
+			if (typeof s != 'object') {
+				console.log('GDC: aggregations[facet].stats{} is not object')
+				// allow some terms to have no info
+				// assign dummy bin so not to break
+				term.bins = dummyBins
+				unassignedCount++
+				continue
+			}
+			/*
+			{
+			  diagnoses__days_to_recurrence: {
+				range: { buckets: [Array] },
+				stats: {
+				  Max: 3782,
+				  Mean: 819.9636363636364,
+				  Min: 58,
+				  SD: 715.6613630457312,
+				  count: 165
+				}
+			  }
+			}
+			*/
+			if (!Number.isFinite(s.Max) || !Number.isFinite(s.Min)) {
+				//console.log('GDC numeric term min/max not numeric '+termid)
+				term.bins = dummyBins
+				unassignedCount++
+				continue
+			}
+
+			if (s.Max <= s.Min) {
+				// unable to calculate bin
+				term.bins = dummyBins
+				unassignedCount++
+				continue
+			}
+			const x = (s.Max - s.Min) / 5
+			const binsize = term.type == 'integer' ? Math.ceil(x) : x
+			term.bins = {
+				default: {
+					mode: 'discrete',
+					type: 'regular-bin',
+					bin_size: binsize,
+					startinclusive: false,
+					stopinclusive: true,
+					first_bin: {
+						startunbounded: true,
+						stop: s.Min + binsize
+					}
+				}
+			}
+			assignedCount++
 		}
-		*/
-		console.log(`${id} Min=${s.Min} Max=${s.Max} Mean=${s.Mean} Median=${s.Median} SD=${s.SD} Count=${s.count}`)
+		console.log(`GDC default binning: ${assignedCount} assigned, ${unassignedCount} unassigned`)
 	} catch (e) {
-		console.log(`${id} ??? ERR ???`)
+		console.log(e.message || e)
 	}
 }
 
@@ -899,81 +944,4 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 		}
 	}
 	return re.data?.pagination?.total
-}
-
-// hardcode bin configs for *all* numeric terms
-function hardcodeBinconfigs() {
-	// this provides a concise way to declare bin config for each term
-	const id2binStat = {
-		'case.demographic.age_at_index': { bin_size: 10, first_bin_stop: 30 },
-		'case.demographic.days_to_birth': { bin_size: 1000, first_bin_stop: -3000 },
-		'case.diagnoses.circumferential_resection_margin': null,
-		'case.demographic.days_to_death': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.demographic.year_of_birth': { bin_size: 10, first_bin_stop: 1930 },
-		'case.demographic.year_of_death': { bin_size: 5, first_bin_stop: 1995 },
-		'case.diagnoses.age_at_diagnosis': { bin_size: 3000, first_bin_stop: 10000 },
-		'case.diagnoses.days_to_diagnosis': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.diagnoses.days_to_hiv_diagnosis': null,
-		'case.diagnoses.days_to_last_follow_up': { bin_size: 1000, first_bin_stop: 1500 },
-		'case.diagnoses.days_to_last_known_disease_status': { bin_size: 500, first_bin_stop: 1500 },
-		'case.diagnoses.days_to_new_event': null,
-		'case.diagnoses.days_to_recurrence': { bin_size: 100, first_bin_stop: 200 },
-		'case.diagnoses.ldh_level_at_diagnosis': null,
-		'case.diagnoses.ldh_normal_range_upper': null,
-		'case.diagnoses.lymph_nodes_positive': null,
-		'case.diagnoses.lymph_nodes_tested': null,
-		'case.diagnoses.pathology_details.breslow_thickness': null,
-		'case.diagnoses.pathology_details.circumferential_resection_margin': null,
-		'case.diagnoses.pathology_details.greatest_tumor_dimension': null,
-		'case.diagnoses.pathology_details.gross_tumor_weight': null,
-		'case.diagnoses.pathology_details.lymph_nodes_positive': { bin_size: 10, first_bin_stop: 10 },
-		'case.diagnoses.pathology_details.lymph_nodes_tested': { bin_size: 10, first_bin_stop: 25 },
-		'case.diagnoses.pathology_details.number_proliferating_cells': null,
-		'case.diagnoses.pathology_details.percent_tumor_invasion': null,
-		'case.diagnoses.pathology_details.peripancreatic_lymph_nodes_tested': { bin_size: 10, first_bin_stop: 35 },
-		'case.diagnoses.pathology_details.prostatic_chips_positive_count': null,
-		'case.diagnoses.pathology_details.prostatic_chips_total_count': null,
-		'case.diagnoses.pathology_details.prostatic_involvement_percent': null,
-		'case.diagnoses.pathology_details.tumor_largest_dimension_diameter': { bin_size: 10, first_bin_stop: 20 },
-		'case.diagnoses.peripancreatic_lymph_nodes_tested': null,
-		'case.diagnoses.treatments.days_to_treatment_end': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.diagnoses.treatments.days_to_treatment_start': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.diagnoses.treatments.number_of_cycles': null,
-		'case.diagnoses.treatments.treatment_dose': { bin_size: 1000, first_bin_stop: 1000 },
-		'case.diagnoses.tumor_largest_dimension_diameter': null,
-		'case.diagnoses.year_of_diagnosis': { bin_size: 10, first_bin_stop: 1995 },
-		'case.exposures.alcohol_days_per_week': { bin_size: 1, first_bin_stop: 2 },
-		'case.exposures.bmi': null,
-		'case.exposures.cigarettes_per_day': { bin_size: 50, first_bin_stop: 20 },
-		'case.exposures.height': null,
-		'case.exposures.pack_years_smoked': { bin_size: 50, first_bin_stop: 40 },
-		'case.exposures.tobacco_smoking_onset_year': { bin_size: 100, first_bin_stop: 1998 },
-		'case.exposures.tobacco_smoking_quit_year': { bin_size: 100, first_bin_stop: 2000 },
-		'case.exposures.weight': null,
-		'case.exposures.years_smoked': { bin_size: 10, first_bin_stop: 30 },
-		'case.family_histories.relationship_age_at_diagnosis': null
-		//'': {bin_size:, first_bin_stop:},
-	}
-	const termId2bins = {}
-	for (const id in id2binStat) {
-		const c = id2binStat[id]
-		if (c) {
-			termId2bins[id] = {
-				default: {
-					mode: 'discrete',
-					type: 'regular-bin',
-					bin_size: c.bin_size,
-					startinclusive: false,
-					stopinclusive: true,
-					first_bin: {
-						startunbounded: true,
-						stop: c.first_bin_stop
-					}
-				}
-			}
-		} else {
-			termId2bins[id] = dummyBins
-		}
-	}
-	return termId2bins
 }
