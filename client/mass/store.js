@@ -459,7 +459,8 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'Disco') {
 		} else if (p.chartType == 'profileBarchart') {
 		} else if (p.chartType == 'profilePolar' || p.chartType == 'polar') {
-		} else if (p.chartType == 'sampleGroupView' || p.chartType == 'DEanalysis') {
+		} else if (p.chartType == 'DEanalysis') {
+		} else if (p.chartType == 'sampleGroupView' || p.chartType == 'sampleView') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
