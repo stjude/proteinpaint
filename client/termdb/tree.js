@@ -483,9 +483,8 @@ function setRenderers(self) {
 	}
 
 	self.addTermValueDiv = function (div, term) {
-		let values = term.isleaf
-			? self.getTermValues(term)
-			: self.state.samples.map(s => `<b>${!self.isExpanded ? s.sampleName : '&nbsp;'}</b>`)
+		if (!term.isleaf) return
+		let values = self.getTermValues(term)
 
 		let i = 1
 		for (const value of values) {
