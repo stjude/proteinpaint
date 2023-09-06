@@ -1,19 +1,61 @@
 import { getCompInit, copyMerge } from '#rx'
-import { appInit } from '#termdb/app'
 import { MassDict } from './dictionary.js'
+import { getTermValue } from '../termdb/tree.js'
 
 class SampleGroupView extends MassDict {
 	constructor(opts) {
 		super(opts)
 		this.type = 'sampleGroupView'
 		this.dom.treeDiv.style('position', 'relative')
+		this.dom.sampleDiv = this.dom.treeDiv.insert('div')
 	}
 
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.sampleId2Name = await this.app.vocabApi.getAllSamples()
-		const allSamples = Object.entries(this.sampleId2Name)
+		const samples = Object.entries(this.sampleId2Name)
+		this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
+
+		const label = this.dom.sampleDiv
+			.insert('label')
+			.attr('for', 'select')
+			.style('vertical-align', 'top')
+			.html('&nbsp;Samples:')
+
+		this.select = this.dom.sampleDiv
+			.append('select')
+			.property('multiple', true)
+			.style('margin', '0px 5px')
+			.attr('id', 'select')
+		this.select
+			.selectAll('option')
+			.data(samples)
+			.enter()
+			.append('option')
+			.attr('value', d => d[0])
+			.property('selected', d => config.samples.find(s => s.sampleId == d[0]) != null)
+			.html((d, i) => d[1])
+		this.select.on('change', e => {
+			const options = this.select.node().options
+			const samples = []
+			for (const option of options)
+				if (option.selected) {
+					const sampleId = option.value
+					const sample = { sampleId, sampleName: this.sampleId2Name[this.sampleId] }
+					console.log(samples)
+					samples.push(sample)
+				}
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
+		})
+
+		this.dom.sampleDiv
+			.insert('button')
+			.text('Download data')
+			.style('vertical-align', 'top')
+			.on('click', e => {
+				this.downloadData()
+			})
 	}
 
 	getState(appState) {
@@ -43,14 +85,17 @@ class SampleGroupView extends MassDict {
 	}
 
 	async downloadData() {
-		const filename = `${this.state.sample.sampleName}.tsv`
-		this.sampleData = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId })
+		const filename = `samples.tsv`
 		let lines = ''
-		for (const id in this.sampleData) {
-			const term = this.sampleData[id].term
-			let value = this.getTermValue(term)
-			if (value == null) continue
-			lines += `${term.name}\t${value}\n`
+		for (const sample of this.state.samples) {
+			lines += `Sample ${sample.sampleName}\n\n`
+			this.sampleData = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId })
+			for (const id in this.sampleData) {
+				const term = this.sampleData[id].term
+				let value = getTermValue(term, this.sampleData)
+				if (value == null) continue
+				lines += `${term.name}\t${value}\n`
+			}
 		}
 		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 
