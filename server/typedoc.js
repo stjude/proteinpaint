@@ -10,6 +10,7 @@ module.exports = {
 	categorizeByGroup: true,
 	plugin: ['typedoc-plugin-replace-text', 'typedoc-plugin-missing-exports'],
 	excludeExternals: true,
+	disableSources: true,
 	replaceText: {
 		inCodeCommentText: true,
 		inCodeCommentTags: true,

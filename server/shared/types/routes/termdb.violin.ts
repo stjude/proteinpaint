@@ -24,7 +24,7 @@ export type getViolinDataResponse = {
 	min: number
 	max: number
 	plots: any
-	pvalues: number[]
+	pvalues?: number[]
 	plotThickness: number
 	uncomputableValueObj: any
 }

@@ -8,7 +8,7 @@ const path = require('path')
 	// start moving migrated route handler code here
 	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes')).filter(f => f.endsWith('.ts'))
 	const routes = files.map(file => Object.assign(require(`../routes/${file}`), { file }))
-	const opts = {}
+	const opts = { app, genomes }
 	if (serverconfig.debugmode) {
 		opts.apiJson = path.join(__dirname, '../public/docs/server-api.json')
 		opts.types = {

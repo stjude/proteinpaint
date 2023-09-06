@@ -11,18 +11,46 @@ export const api: any = {
 			},
 			response: {
 				typeId: 'getViolinDataResponse'
-			}
-			// examples:[
-			//     // {
-			//     //     request: {
-			//     //         body: { input: 'kr', genome: 'hg38-test' }
-			//     //     },
-			//     //     response: {
-			//     //         header: { status: 200 },
-
-			//     //     }
-			//     // }
-			// ]
+			},
+			examples: [
+				{
+					request: {
+						body: {
+							genome: 'hg38-test',
+							dslabel: 'TermdbTest',
+							embedder: 'localhost',
+							devicePixelRatio: 2.200000047683716,
+							maxThickness: 150,
+							screenThickness: 1218,
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										tag: 'cohortFilter',
+										type: 'tvs',
+										tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'ABC', label: 'ABC' }] }
+									}
+								]
+							},
+							svgw: 227.27272234672367,
+							orientation: 'horizontal',
+							datasymbol: 'bean',
+							radius: 5,
+							strokeWidth: 0.2,
+							axisHeight: 60,
+							rightMargin: 50,
+							unit: 'abs',
+							plotThickness: 150,
+							termid: 'agedx'
+						}
+					},
+					response: {
+						header: { status: 200 }
+					}
+				}
+			]
 		},
 		post: {
 			alternativeFor: 'get',

@@ -2,7 +2,7 @@
 
 # call from the proteinpaint project root dir
 ./docs/readme.sh > public/docs/readme.json
-npx tsc --project server/shared/types/routes/checkers/tsconfig.json
+# npx ts-node ./server/augen/cli.js apiJson $PWD/server/routes > public/docs/server-api.json
 
 rm -rf ./public/docs/server/*
 npm run doc --workspaces --if-present
