@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Prototyped single sample viewer
 - improve the release text detection and generator, to minimize potential conflicts when merging
+- Default bin configs for GDC numeric variables are determined on the fly and no longer hardcoded
 
 Fixes:
 - fix for sorting labels for custom binning on numeric terms in violin plot

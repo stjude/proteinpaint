@@ -1,2 +1,1 @@
-Features:
-- Default bin configs for GDC numeric variables are determined on the fly and no longer hardcoded
+
