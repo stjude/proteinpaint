@@ -172,18 +172,11 @@ function renderContent(ppcalls, div, card, pageArgs) {
 	addArrowBtns(ppcalls, 'call', buttonsDiv, buttonsContentDiv, pageArgs)
 
 	if (!card.disableTopTabs) {
-		div
-			.append('hr')
-			.style('border', '0')
-			.style('border-top', '1px dashed #e3e3e6')
-			.style('width', '100%')
+		div.append('hr').style('border', '0').style('border-top', '1px dashed #e3e3e6').style('width', '100%')
 	}
 
 	const runpp_arg = {
-		holder: div
-			.append('div')
-			.style('margin', '20px')
-			.node(),
+		holder: div.append('div').style('margin', '20px').node(),
 		host: window.location.origin
 	}
 
@@ -206,10 +199,7 @@ function makeTopTabs(ppcalls, card, sandboxDiv, pageArgs) {
 			callback: async (event, tab) => {
 				try {
 					const runpp_arg = {
-						holder: tab.contentHolder
-							.append('div')
-							.style('margin', '20px')
-							.node(),
+						holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 						sandbox_header: tab.contentHolder,
 						host: window.location.origin
 					}
@@ -303,10 +293,7 @@ async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv
 		.style('grid-template-columns', 'minmax(min-content, 10vw) minmax(60vw, 1fr)')
 		.classed('sjpp-vertical-tab-menu', true)
 		.style('word-break', 'break-word')
-	const tabsDiv = wrapper
-		.append('div')
-		.classed('sjpp-tabs-div', true)
-		.style('border-right', '1px solid lightgray')
+	const tabsDiv = wrapper.append('div').classed('sjpp-tabs-div', true).style('border-right', '1px solid lightgray')
 	// .style('min-width', '150px') //Fixes the unsightly problem of tabs dramatically changing size on click.
 	const tabsContentDiv = wrapper.append('div').classed('sjpp-content-div', true)
 
@@ -327,7 +314,7 @@ function addHtmlText(text, div, ribbon) {
 	if (ribbon && ribbon.expireDate) {
 		const today = new Date()
 		const expire = new Date(ribbon.expireDate)
-		if (expire > today && (text != undefined && text)) {
+		if (expire > today && text != undefined && text) {
 			function boldedText() {
 				const str = ribbon.text.toLowerCase()
 				return str[0].toUpperCase() + str.slice(1)
@@ -339,10 +326,7 @@ function addHtmlText(text, div, ribbon) {
 		}
 	} else if (text != undefined && text) {
 		//For simple messages
-		div
-			.append('div')
-			.style('margin', '20px')
-			.html(text)
+		div.append('div').style('margin', '20px').html(text)
 	}
 }
 
@@ -466,8 +450,9 @@ function showURLLaunch(urlparam, div, section) {
 	if (urlparam) {
 		const URLbtn = utils.makeButton({ div, text: section == 'apps' ? 'Run app from URL' : 'Run track from URL' })
 		URLbtn.on('click', event => {
+			const hostURL = getHostURL()
 			event.stopPropagation()
-			window.open(`${urlparam}`, '_blank')
+			window.open(`${hostURL}${urlparam}`, '_blank')
 		})
 	}
 }
@@ -526,10 +511,7 @@ async function showCode(ppcalls, btns) {
 						.append('div')
 						.style('display', 'block')
 						.html(runppHeader + runppContents)
-					grid
-						.append('div')
-						.style('display', 'block')
-						.html(includeJson)
+					grid.append('div').style('display', 'block').html(includeJson)
 				} else {
 					rdiv.append('div').html(runppContents)
 				}
@@ -676,21 +658,13 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 
 	// Introduction div
 	if (par.intro) {
-		mainDiv
-			.append('div')
-			.style('line-height', '1.5em')
-			.style('padding', '0.5em 0.5em 1em 0.5em')
-			.html(par.intro)
+		mainDiv.append('div').style('line-height', '1.5em').style('padding', '0.5em 0.5em 1em 0.5em').html(par.intro)
 	}
 
 	if (par.searchBar == 'none') {
 		// Call mass UI without search bar
 		const runppArg = {
-			holder: sandboxDiv.body
-				.append('div')
-				.style('margin', '20px')
-				.style('overflow-x', 'auto')
-				.node(),
+			holder: sandboxDiv.body.append('div').style('margin', '20px').style('overflow-x', 'auto').node(),
 			host: window.location.origin
 		}
 
@@ -702,10 +676,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 
 	addDatasetGenomeBtns(mainDiv, genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
-	const searchBarDiv = mainDiv
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '0.5em')
+	const searchBarDiv = mainDiv.append('div').style('display', 'inline-block').style('padding', '0.5em')
 
 	const allResultsDiv = sandboxDiv.body.append('div').style('max-width', '90vw')
 
@@ -717,10 +688,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		focusOff: true,
 		callback: async div => {
 			//Creates search results as tracks, last to first
-			const resultDiv = allResultsDiv
-				.insert('div', ':first-child')
-				.style('max-width', '90vw')
-				.style('margin', '1vw')
+			const resultDiv = allResultsDiv.insert('div', ':first-child').style('max-width', '90vw').style('margin', '1vw')
 			resultDiv
 				// Destroy track on `x` button click
 				.append('div')
@@ -738,10 +706,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 			makeURLbutton(resultDiv, coords, par)
 			// Render the search parameters as a track
 			const runppArg = {
-				holder: resultDiv
-					.append('div')
-					.style('margin', '20px')
-					.node(),
+				holder: resultDiv.append('div').style('margin', '20px').node(),
 				host: window.location.origin,
 				genome: par.genome.name
 			}
@@ -757,10 +722,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 	})
 
 	function addDatasetGenomeBtns(div, genomes) {
-		div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '10px 10px 0px 20px')
+		div.append('div').style('display', 'inline-block').style('padding', '10px 10px 0px 20px')
 
 		const btns = []
 		if (par.availableGenomes.length == 1) {
@@ -791,6 +753,23 @@ function makeURLbutton(div, coords, par) {
 		par.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
 	URLbtn.on('click', event => {
 		event.stopPropagation()
-		window.open(`?genome=${par.genome.name}&${blockOn}&${par.dsURLparam}`, '_blank')
+		const hostURL = getHostURL()
+		window.open(`${hostURL}/?genome=${par.genome.name}&${blockOn}&${par.dsURLparam}`, '_blank')
 	})
+}
+
+function getHostURL() {
+	/*
+	 - Genomes, datasets, etc. are different on internal and external proteinpaint servers
+	but consistent on external servers (e.g. vizcom, embedded sites). 
+	 - Return the domain for dev and SJ servers. All other sites, query against proteinpaint.stjude.org
+	*/
+	const hostURL = sessionStorage.getItem('hostURL')
+	if (
+		hostURL.startsWith('http://localhost') ||
+		hostURL.startsWith('https://ppr') ||
+		hostURL.startsWith('https://proteinpaint')
+	) {
+		return hostURL
+	} else return 'https://proteinpaint.stjude.org'
 }
