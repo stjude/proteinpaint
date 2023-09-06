@@ -14,7 +14,6 @@ make_densityplot
 */
 
 export async function make_densityplot(holder, data, callabck, term) {
-	console.log('what is term', term)
 	const width = 500,
 		height = 150,
 		xpad = 25,
