@@ -2,7 +2,7 @@
 
 URLRUNS="https://api.github.com/repos/stjude/proteinpaint/actions/runs?status=success&branch=master&event=push"
 UNITRUNS=$(curl -sL -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "$URLRUNS" > ./runs.json)
-SHA_IN_COMMIT=$(git rev-list -n20 HEAD)
+SHA_IN_COMMIT=$(git rev-list -n10 HEAD)
 SHA_TESTED_LIST=$(node -p "(require('./runs.json')).workflow_runs?.filter(r => r.display_title != 'append release notes to change log').map(r => r.head_sha).join(' ')")
 rm runs.json
 for SHA in $SHA_TESTED_LIST; do
