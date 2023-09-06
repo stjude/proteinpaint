@@ -41,7 +41,7 @@ const eventCallbacks = {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- server/src/cards -***-')
 	test.end()
 })
@@ -52,7 +52,7 @@ tape('\n', function(test) {
 */
 tape('cards', test => {
 	const dataMessage = "should download and parse each app drawer card's json"
-	fetch('/cardsjson')
+	fetch('/cards/index.json')
 		.then(r => r.json())
 		.then(data => {
 			test.pass(dataMessage)
@@ -69,7 +69,7 @@ async function runTests(data, test) {
 	const testable = [],
 		notTested = { hidden: [], nonCards: [] }
 	let numPlannedTests = 1 // including the cardsjson download
-	for (const x of data.json.elements) {
+	for (const x of data.elements) {
 		if (x.type != 'card') {
 			notTested.nonCards.push(x.name)
 			continue
@@ -79,8 +79,8 @@ async function runTests(data, test) {
 			continue
 		}
 
-		const cardJson = await dofetch3(`/cardsjson?jsonfile=${x.sandboxJson}`)
-		const ppcalls = cardJson.jsonfile.ppcalls
+		const cardJson = await dofetch3(`/cards/${x.sandboxJson}.json`)
+		const ppcalls = cardJson.ppcalls
 
 		// to limit to a particular test, uncomment the line below
 		// if (!['RNA splice junction of one sample'].includes(x.name)) continue
