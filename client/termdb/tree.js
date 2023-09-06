@@ -242,7 +242,7 @@ function setRenderers(self) {
 	self.renderBranch = (term, div, button) => {
 		if (!term || !term.terms) return
 
-		if (term.terms.length >= minTermCount2scroll) {
+		if (term.terms.length >= minTermCount2scroll && !self.state.samples) {
 			// too many children. scroll
 			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
@@ -334,7 +334,7 @@ function setRenderers(self) {
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		if (self.state.samples && term.isleaf) {
-			const valueDiv = div.select(`#${term.id}`)
+			const valueDiv = div.select(`#${term.id.replace(/[^a-zA-Z0-9]/g, '')}`)
 			valueDiv.selectAll('*').remove()
 			self.addTermValueDiv(valueDiv, term)
 		}
@@ -398,7 +398,7 @@ function setRenderers(self) {
 		if (self.state.samples) {
 			const valuesDiv = div
 				.insert('div')
-				.attr('id', term.id)
+				.attr('id', term.id.replace(/[^a-zA-Z0-9]/g, ''))
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
 				.style('padding', 0)
@@ -466,20 +466,24 @@ function setRenderers(self) {
 	}
 
 	self.addTermValueDiv = function (div, term) {
-		if (!term.isleaf && self.samplesAdded) return
-		self.samplesAdded = true
-		let values = term.isleaf ? self.getTermValues(term) : self.state.samples.map(s => `<b>${s.sampleName}</b>`)
+		let values = term.isleaf
+			? self.getTermValues(term)
+			: self.state.samples.map(s => `<b>${!self.isExpanded ? s.sampleName : '&nbsp;'}</b>`)
+
 		let i = 1
 		for (const value of values) {
-			div
+			const valueDiv = div
 				.insert('div')
 				.style('position', 'absolute')
 				.style('left', 300 + 300 * i + 'px')
-				.style('padding-bottom', '30px')
 				.style('color', 'gray')
+				.style('width', '280px')
+				.style('background-color', '#fafafa')
 				.html(value)
+			if (!self.isExpanded) valueDiv.style('top', '0px')
 			i++
 		}
+		self.isExpanded = true
 	}
 
 	self.getTermValues = function (term) {
