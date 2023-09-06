@@ -52,6 +52,37 @@ testIfFileIsBigbed
    await cache_index(bam_url, indexURL || bam_url+'.bai')
 
 */
+exports.boxplot_getvalue = function (lst) {
+	/* ascending order
+    each element: {value}
+    */
+	const l = lst.length
+	if (l < 5) {
+		// less than 5 items, won't make boxplot
+		return { out: lst }
+	}
+	const p50 = lst[Math.floor(l / 2)].value
+	const p25 = lst[Math.floor(l / 4)].value
+	const p75 = lst[Math.floor((l * 3) / 4)].value
+	const p05 = lst[Math.floor(l * 0.05)].value
+	const p95 = lst[Math.floor(l * 0.95)].value
+	const p01 = lst[Math.floor(l * 0.01)].value
+	const iqr = p75 - p25
+
+	let w1, w2
+	if (iqr == 0) {
+		w1 = 0
+		w2 = 0
+	} else {
+		const i = lst.findIndex(i => i.value > p25 - iqr * 1.5)
+		w1 = lst[i == -1 ? 0 : i].value
+		const j = lst.findIndex(i => i.value > p75 + iqr * 1.5)
+		w2 = lst[j == -1 ? l - 1 : j - 1].value
+	}
+	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
+	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
+}
+
 exports.cache_index = async (gzurl, indexurl) => {
 	if (!gzurl) throw '.gz file URL missing'
 	if (typeof gzurl != 'string') throw '.gz file URL not string'
