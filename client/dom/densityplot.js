@@ -14,6 +14,7 @@ make_densityplot
 */
 
 export async function make_densityplot(holder, data, callabck, term) {
+	console.log('what is term', term)
 	const width = 500,
 		height = 150,
 		xpad = 25,
@@ -88,7 +89,7 @@ export async function make_densityplot(holder, data, callabck, term) {
 		.call(x_axis)
 
 	g.append('text')
-		.text(`${data.termname} ${days2years ? '(years)' : '(days)'}`)
+		.text(`${data.termname} ${vc ? `(${vc.toUnit}s)` : '(days)'}`)
 		.attr('fill', 'black')
 		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 		.attr('font-size', '13px')
