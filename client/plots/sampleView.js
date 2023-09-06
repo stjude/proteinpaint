@@ -59,7 +59,7 @@ class SampleView extends MassDict {
 
 		if (showContent) {
 			this.dom.treeDiv
-				.style('min-width', '550px')
+				.style('min-width', '700px')
 				.style('overflow', 'scroll')
 				.attr('class', 'sjpp_hide_scrollbar')
 				.style('border-right', '1px solid gray')

@@ -76,8 +76,10 @@ class TdbTree {
 	async init(appState) {
 		const holder = this.opts.holder.append('div')
 		if (appState.samples) for (const sample of appState.samples) this.sampleDataByTermId[sample.sampleId] = {}
+		const header = holder.insert('div')
 		this.dom = {
-			holder
+			holder,
+			header
 		}
 	}
 
@@ -115,6 +117,21 @@ class TdbTree {
 	}
 
 	async main() {
+		this.sampleDataByTermId = {}
+		this.dom.header.selectAll('*').remove()
+		for (const [i, sample] of Object.entries(this.state.samples)) {
+			this.dom.header
+				.insert('div')
+				.style('position', 'absolute')
+				.style('left', 450 + 300 * i + 'px')
+				.style('color', 'gray')
+				.style('width', '280px')
+				.style('background-color', '#fafafa')
+				.style('text-align', 'right')
+				.style('top', '0px')
+				.html(sample.sampleName)
+			this.sampleDataByTermId[sample.sampleId] = {}
+		}
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
@@ -475,12 +492,13 @@ function setRenderers(self) {
 			const valueDiv = div
 				.insert('div')
 				.style('position', 'absolute')
-				.style('left', 300 + 300 * i + 'px')
+				.style('left', 150 + 300 * i + 'px')
 				.style('color', 'gray')
 				.style('width', '280px')
 				.style('background-color', '#fafafa')
+				.style('z-index', 0)
+				.style('text-align', 'right')
 				.html(value)
-			if (!self.isExpanded) valueDiv.style('top', '0px')
 			i++
 		}
 		self.isExpanded = true

@@ -41,9 +41,8 @@ class SampleGroupView extends MassDict {
 			const samples = []
 			for (const option of options)
 				if (option.selected) {
-					const sampleId = option.value
-					const sample = { sampleId, sampleName: this.sampleId2Name[this.sampleId] }
-					console.log(samples)
+					const sampleId = Number(option.value)
+					const sample = { sampleId, sampleName: this.sampleId2Name[sampleId] }
 					samples.push(sample)
 				}
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
@@ -59,14 +58,7 @@ class SampleGroupView extends MassDict {
 	}
 
 	getState(appState) {
-		let state = {
-			vocab: appState.vocab,
-			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
-			selectdTerms: appState.selectedTerms,
-			customTerms: appState.customTerms,
-			termdbConfig: appState.termdbConfig
-		}
+		let state = super.getState(appState)
 		const config = appState.plots?.find(p => p.id === this.id)
 		state.samples = config?.samples
 		state.hasVerifiedToken = this.app.vocabApi.hasVerifiedToken()
@@ -76,6 +68,7 @@ class SampleGroupView extends MassDict {
 	}
 
 	async main() {
+		super.main()
 		if (this.mayRequireToken()) return
 		if (this.dom.header) {
 			let title = 'Samples ' + this.state.samples.map(s => s.sampleName).join(', ')
