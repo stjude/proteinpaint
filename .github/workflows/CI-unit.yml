@@ -53,10 +53,9 @@ jobs:
 
       - name: Detect workspaces to test
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            # NOTE: the build job filters out automated push 
-            echo "WS_TO_TEST=client server rust" >> $GITHUB_ENV
-          else 
+          # default to running tests on all workspaces, in case there is an error in requiresTest
+          echo "WS_TO_TEST=client server rust" >> $GITHUB_ENV
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
           fi
 
