@@ -75,7 +75,7 @@ class TdbTree {
 
 	async init(appState) {
 		const holder = this.opts.holder.append('div')
-		for (const sample of appState.samples) this.sampleDataByTermId[sample.sampleId] = {}
+		if (appState.samples) for (const sample of appState.samples) this.sampleDataByTermId[sample.sampleId] = {}
 		this.dom = {
 			holder
 		}
@@ -333,7 +333,11 @@ function setRenderers(self) {
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
-		if (self.state.samples) div.select('.' + cls_termlabel + 'Value').html(self.getTermValue(term) || 'Missing')
+		if (self.state.samples && term.isleaf) {
+			const valueDiv = div.select(`#${term.id}`)
+			valueDiv.selectAll('*').remove()
+			self.addTermValueDiv(valueDiv, term)
+		}
 		// update other parts if needed, e.g. label
 		else div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
@@ -361,10 +365,11 @@ function setRenderers(self) {
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
+		if (self.state.samples) div.style('width', (self.state.samples.length + 1) * 200 + 'px')
 
 		if (uses.has('branch')) {
 			div
-				.append('div')
+				.insert('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
 				.style('display', 'inline-block')
 				.style('padding', '4px 9px')
@@ -382,23 +387,22 @@ function setRenderers(self) {
 		let text = term.name
 
 		const labeldiv = div
-			.append('div')
+			.insert('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(text)
-		if (term.isleaf && self.state.samples) {
-			let value = self.getTermValue(term) || 'Missing'
-			div
-				.append('div')
-				.attr('class', cls_termlabel + 'Value')
+
+		if (self.state.samples) {
+			labeldiv.style('min-width', '400px')
+			const valuesDiv = div
+				.insert('div')
+				.attr('id', term.id)
 				.style('display', 'inline-block')
-				.style('float', 'right')
-				.style('padding', '5px')
-				.style('opacity', termIsDisabled ? 0.4 : null)
-				.style('color', 'gray')
-				.html(value)
+				.style('vertical-align', 'bottom')
+				.style('padding', 0)
+			self.addTermValueDiv(valuesDiv, term)
 		}
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
@@ -461,11 +465,29 @@ function setRenderers(self) {
 		}
 	}
 
-	self.getTermValue = function (term) {
-		let values = ''
+	self.addTermValueDiv = function (div, term) {
+		if (!term.isleaf && self.samplesAdded) return
+		self.samplesAdded = true
+		let values = term.isleaf ? self.getTermValues(term) : self.state.samples.map(s => s.sampleName)
+		for (const value of values) {
+			div
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('float', 'right')
+
+				.style('padding', '5px')
+				.style('color', 'gray')
+				.style('width', '200px')
+				.style('text-align', 'right')
+				.html(value)
+		}
+	}
+
+	self.getTermValues = function (term) {
+		let values = []
 		for (const sample of self.state.samples) {
 			const value = getTermValue(term, this.sampleDataByTermId[sample.sampleId]) || 'Missing'
-			values += '&nbsp;'.repeat(50 - value.length) + value
+			values.push(value)
 		}
 		return values
 	}
@@ -474,8 +496,12 @@ function setRenderers(self) {
 export function getTermValue(term, data) {
 	let value = data[term.id]?.value
 	if (value == null) return null
-	if (term.type == 'float' || term.type == 'integer')
+	if (term.type == 'float' || term.type == 'integer') {
+		value = term.values?.[value]?.label || term.values?.[value]?.key || value
+		if (isNaN(value)) return value
 		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
+	}
+
 	if (term.type == 'categorical') return term.values[value]?.label || term.values[value]?.key
 	if (term.type == 'condition') {
 		const values = value.toString().split(' ')
