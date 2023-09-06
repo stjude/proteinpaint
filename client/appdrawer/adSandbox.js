@@ -37,8 +37,8 @@ export async function openSandbox(element, pageArgs) {
 	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv, pageArgs)
 
 	const res = element.sandboxJson
-		? await dofetch3(`/${pageArgs.app.cardsPath}/${element.sandboxJson}.json`)
-		: await dofetch3(`/${pageArgs.app.cardsPath}/${element.sandboxHtml}.txt`)
+		? await dofetch3(`${pageArgs.app.cardsPath}/${element.sandboxJson}.json`)
+		: await dofetch3(`${pageArgs.app.cardsPath}/${element.sandboxHtml}.txt`)
 
 	if (res.error) {
 		sayerror(sandboxDiv.body.insert('div', 'div'), res.error)
@@ -82,8 +82,8 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 				ucList.selectAll('*').remove()
 
 				const res = child.sandboxJson
-					? await dofetch3(`/${pageArgs.app.cardsPath}/${child.sandboxJson}.json`)
-					: await dofetch3(`/${pageArgs.app.cardsPath}/${child.sandboxHtml}.txt`)
+					? await dofetch3(`${pageArgs.app.cardsPath}/${child.sandboxJson}.json`)
+					: await dofetch3(`${pageArgs.app.cardsPath}/${child.sandboxHtml}.txt`)
 
 				if (res.error) {
 					sayerror(sandboxDiv.body.insert('div', 'div'), res.error)
@@ -765,11 +765,7 @@ function getHostURL() {
 	 - Return the domain for dev and SJ servers. All other sites, query against proteinpaint.stjude.org
 	*/
 	const hostURL = sessionStorage.getItem('hostURL')
-	if (
-		hostURL.startsWith('http://localhost') ||
-		hostURL.startsWith('https://ppr') ||
-		hostURL.startsWith('https://proteinpaint')
-	) {
+	if (hostURL.startsWith('http://localhost') || hostURL.startsWith('https://pp')) {
 		return hostURL
 	} else return 'https://proteinpaint.stjude.org'
 }
