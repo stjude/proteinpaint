@@ -428,6 +428,7 @@ export function server_init_db_queries(ds) {
 				if (!cred || cred.embedders?.[embedder]) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 					supportedChartTypes[r.cohort].add('sampleView')
+					supportedChartTypes[r.cohort].add('sampleGroupView')
 				}
 			}
 			if (serverconfig.features?.draftChartTypes) {
