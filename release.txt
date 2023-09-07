@@ -1,1 +1,2 @@
-
+Features:
+- Display average admix coefficient for filter-vs-population comparison in genome browser

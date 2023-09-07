@@ -51,7 +51,7 @@ export async function get_mds3variantData(q, res, ds, genome) {
 		// single group
 		compute_1group(ds, results.mlst, q.details.groups[0])
 	} else if (q.details.groups.length == 2) {
-		await compute_2groups(ds, q.details, results.mlst)
+		await compute_2groups(ds, q.details, results)
 	} else {
 		throw 'q.details.groups.length not 1 or 2'
 	}
@@ -181,7 +181,10 @@ function mergeMlstFromTwoFilterGroups(lst1, lst2, q) {
 	for (const m2 of lst2) {
 		const m1 = lst1.find(i => i.chr == m2.chr && i.pos == m2.pos && i.ref == m2.ref && i.alt == m2.alt)
 		if (m1) continue // already added
-		m2.groupData = [{ refCount: 0, altCount: 0 }, { refCount: m2._refCount, altCount: m2._altCount }]
+		m2.groupData = [
+			{ refCount: 0, altCount: 0 },
+			{ refCount: m2._refCount, altCount: m2._altCount }
+		]
 		mlst.push(m2)
 	}
 	return mlst
@@ -292,29 +295,34 @@ function getAllelicCount(m) {
 	return [A, T]
 }
 
-async function compute_2groups(ds, details, mlst) {
+async function compute_2groups(ds, details, results) {
 	const [g1, g2] = details.groups // two groups from query parameter created on frontend
 
 	if (g1.type == 'filter' && g2.type == 'filter') {
 		// both groups are filters. only do fisher?
-		await compute_2groups_bothFilter(ds, details, mlst)
+		await compute_2groups_bothFilter(ds, details, results.mlst)
 		return
 	}
 
 	if ((g1.type == 'population' && g2.type == 'filter') || (g2.type == 'population' && g1.type == 'filter')) {
 		// filter vs population
-		await compute_2groups_filterPopulation(ds, details, mlst)
+		await compute_2groups_filterPopulation(ds, details, results)
 		return
 	}
 	// for the rest, always value diff
-	compute_2groups_valueDiff(ds, details, mlst)
+	compute_2groups_valueDiff(ds, details, results.mlst)
 }
 
-// one group is filter, the other is population
-async function compute_2groups_filterPopulation(ds, details, mlst) {
-	const pop2average = await mayGet_pop2average(ds, details, mlst) // undefined if not used
+/*
+ds
+details
+	one group is filter, the other is population
+results{}
+*/
+async function compute_2groups_filterPopulation(ds, details, results) {
+	const pop2average = await mayGet_pop2average(ds, details, results) // undefined if not used; also attached to results{}
 
-	for (const m of mlst) {
+	for (const m of results.mlst) {
 		m.groupData = getGroupsData(ds, details, m, pop2average)
 	}
 	// data from mlst is ready for testing
@@ -324,10 +332,10 @@ async function compute_2groups_filterPopulation(ds, details, mlst) {
 	// method={name,axisLabel}
 	switch (method.name) {
 		case 'Allele frequency difference':
-			compute_2groups_valueDiff(ds, details, mlst)
+			compute_2groups_valueDiff(ds, details, results.mlst)
 			return
 		case "Fisher's exact test":
-			await may_apply_fishertest(mlst)
+			await may_apply_fishertest(results.mlst)
 			return
 		default:
 			throw 'unknown value from groupTestMethods[]'
@@ -432,13 +440,13 @@ function AFtest_adjust_race(set2value, pop2average) {
 	return [ANadj - ACadj, ACadj]
 }
 
-async function mayGet_pop2average(ds, details, mlst) {
-	/*
+/*
+if applicable, do following computation to generate "pop2average" object, and attach to results{}
 using adjust race, when combining a population and a termdb group
 for the set of samples defined by termdb,
 get population admix average, initiate 0 for each population
 */
-
+async function mayGet_pop2average(ds, details, results) {
 	const populationGroup = details.groups.find(g => g.type == 'population')
 	if (!populationGroup) return
 	if (!populationGroup.adjust_race) return
@@ -446,7 +454,7 @@ get population admix average, initiate 0 for each population
 	if (!population) throw 'invalid group.key for population'
 
 	const sampleSet = new Set() // set of all samples from mlst[]
-	for (const m of mlst) {
+	for (const m of results.mlst) {
 		for (const s of m.samples) sampleSet.add(s.sample_id)
 	}
 
@@ -477,6 +485,11 @@ get population admix average, initiate 0 for each population
 	for (const [k, v] of pop2average) {
 		v.average /= poptotal
 	}
+
+	// add average value per ancestry to results, to shown on control ui
+	results.pop2average = {}
+	for (const [k, v] of pop2average) results.pop2average[k] = v.average
+
 	return pop2average
 }
 
