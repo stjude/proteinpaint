@@ -123,13 +123,17 @@ export async function wilcoxon(term, result) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
 	//})
-
-	//const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await write_file(tmpfile, JSON.stringify(wilcoxInput))
 	const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
 	unlink(tmpfile, () => {})
 	const wilcoxOutput = JSON.parse(out)
+	// const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+	//const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	//await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	//const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	//unlink(tmpfile, () => {})
+	//const wilcoxOutput = JSON.parse(out)
 	for (const test of wilcoxOutput) {
 		if (test.pvalue == null || test.pvalue == 'null') {
 			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
