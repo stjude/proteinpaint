@@ -1257,7 +1257,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
-	q.file = path.join(serverconfig.tpmasterdir, q.file)
+        q.file = path.join(serverconfig.tpmasterdir, q.file)
 	/*
 	param{}
 		samplelst{}
@@ -1291,7 +1291,11 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	        const controls_string = group2names.map(i => i).join(',')
 	        const expression_input = {case: cases_string, control: controls_string, input_file: q.file}
 	        console.log("expression_input:",expression_input)
-	    
+
+	    	const time1 = new Date()
+	        const rust_output = await run_rust('expression', JSON.stringify(expression_input))
+	        const time2 = new Date()
+	        console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
 		// return result
 	}
 }
@@ -1307,6 +1311,7 @@ async function validate_query_geneExpression(ds, genome) {
 	}
 
 	if (!q.file) throw '.file missing from queries.geneExpression'
+	q.file = path.join(serverconfig.tpmasterdir, q.file)
 	await utils.validate_tabixfile(q.file)
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 
