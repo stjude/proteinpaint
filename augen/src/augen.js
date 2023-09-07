@@ -1,12 +1,13 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
 
-exports.setRoutes = function setRoutes(app, routes, basepath, opts = {}) {
+export function setRoutes(app, routes, _opts = {}) {
+	const opts = Object.assign({basepath: ''}, _opts)
 	for (const route of routes) {
 		const api = route.api
 		for (const method in api.methods) {
 			const m = api.methods[method]
-			app[method](`${basepath}/${api.endpoint}`, m.init(opts))
+			app[method](`${opts.basepath}/${api.endpoint}`, m.init(opts))
 		}
 	}
 
@@ -21,7 +22,7 @@ exports.setRoutes = function setRoutes(app, routes, basepath, opts = {}) {
 	}
 }
 
-function typeCheckers(fileRoutes, fromPath) {
+export function typeCheckers(fileRoutes, fromPath) {
 	const typeIdsByFile = {}
 	const reqres = ['request', 'response']
 	for (const { file, route } of fileRoutes) {
@@ -47,9 +48,7 @@ function typeCheckers(fileRoutes, fromPath) {
 	return content
 }
 
-exports.typeCheckers = typeCheckers
-
-exports.apiJson = function apiJson(fileRoutes) {
+export function apiJson(fileRoutes) {
 	const typeIdsByFile = {}
 	const reqres = ['request', 'response'] //; console.log(fileRoutes)
 	const routes = fileRoutes.map(fr => fr.route.api)
