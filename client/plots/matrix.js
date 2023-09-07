@@ -753,10 +753,10 @@ export class Matrix {
 						}
 					}
 				}
-				if (anno.filteredValues?.length == 1 && t.tw.term.type == 'geneVariant') {
-					const notTested = anno.filteredValues[0].class == 'Blank'
+				if (anno.filteredValues?.length && t.tw.term.type == 'geneVariant') {
+					const notTested = anno.filteredValues.every(v => v.class == 'Blank')
 					if (notTested) {
-						// sample not tested
+						// sample not tested for all assays
 						subGroup.samplesNotTested += 1
 					}
 				}

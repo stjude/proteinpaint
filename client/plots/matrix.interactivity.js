@@ -1441,7 +1441,7 @@ function setLabelDragEvents(self, prefix) {
 					.html(`(tested ${self.samples.length - notTestedSum} of ${self.samples.length})`)
 
 				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
-					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
+					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).lst.length
 					const mRate =
 						groupSampleTotal - counts.samplesNotTested
 							? counts.samplesTotal / (groupSampleTotal - counts.samplesNotTested)
