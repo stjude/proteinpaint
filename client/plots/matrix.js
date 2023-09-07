@@ -670,9 +670,13 @@ export class Matrix {
 			t.counts.subGroupCounts = {}
 			for (const group of this.sampleGroups) {
 				t.counts.subGroupCounts[group.name] = {
-					samplesTotal: 0, // number of counted samples
+					samplesTotal: 0, // number of counted (not Blank or WT) samples
 					hitsTotal: 0, // sum of classes in counted samples
 					classes: {} // number of each class
+				}
+				if (t.tw.term.type == 'geneVariant') {
+					// for a geneVariant term, the number of samples not tested
+					t.counts.subGroupCounts[group.name].samplesNotTested = 0 //number of samples not tested
 				}
 			}
 			if (!processedLabels.termGrpByName[t.grp.name || '']) {
@@ -706,12 +710,14 @@ export class Matrix {
 				anno.filteredValues = filteredValues
 				anno.countedValues = countedValues
 				anno.renderedValues = renderedValues
+
+				const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
+
 				if (anno.countedValues?.length) {
 					t.counts.samples += 1
 					t.counts.hits += anno.countedValues.length
 
 					//count the samples and classes in each subGroup
-					const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
 					if (t.tw.term.type == 'geneVariant') {
 						subGroup.samplesTotal += 1
 						subGroup.hitsTotal += anno.countedValues.length
@@ -745,6 +751,13 @@ export class Matrix {
 								if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
 							}
 						}
+					}
+				}
+				if (anno.filteredValues?.length == 1 && t.tw.term.type == 'geneVariant') {
+					const notTested = anno.filteredValues[0].class == 'Blank'
+					if (notTested) {
+						// sample not tested
+						subGroup.samplesNotTested += 1
 					}
 				}
 			}

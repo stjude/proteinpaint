@@ -1,1 +1,2 @@
-
+Features:
+- For matrix plot, when hovering over gene label, show the percentage of mutation (#mutated samples / #tested sample) 

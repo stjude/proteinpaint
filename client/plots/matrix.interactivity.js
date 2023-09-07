@@ -3,6 +3,7 @@ import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '#dom/sandbox'
 import { mclass } from '#shared/common'
+import { format as d3format } from 'd3-format'
 
 let inputIndex = 0
 
@@ -1414,10 +1415,10 @@ function setLabelDragEvents(self, prefix) {
 			const termName = event.target.__data__.tw.term.name
 
 			//Add subGroup name
-			self.dom.menubody
+			const titleDiv = self.dom.menubody
 				.append('div')
 				.style('text-align', 'center')
-				.html(groupName && groupName !== '' ? `<b>${groupName}: ${termName}</b>` : `<b>${termName}</b>`)
+				.html(groupName ? `<b>${groupName}: ${termName}</b>` : `<b>${termName}</b>`)
 
 			const div = self.dom.menubody.append('div').style('max-width', '400px').style('padding', '5px')
 
@@ -1426,15 +1427,36 @@ function setLabelDragEvents(self, prefix) {
 			if (data.tw.term.type == 'geneVariant') {
 				// for geneVariant term, use subGroupCounts to show number of counted samples (WT and Blank are not counted)
 				// and number of each class in the subGroup
+
+				//Sum of not tested samples in all group
+				const notTestedSum = Object.values(data.counts.subGroupCounts).reduce(
+					(sum, curr) => sum + curr.samplesNotTested,
+					0
+				)
+
+				//Add number of tested samples
+				titleDiv
+					.append('div')
+					.style('text-align', 'center')
+					.html(`(tested ${self.samples.length - notTestedSum} of ${self.samples.length})`)
+
 				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
 					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
+					const mRate =
+						groupSampleTotal - counts.samplesNotTested
+							? counts.samplesTotal / (groupSampleTotal - counts.samplesNotTested)
+							: 0
 					div
 						.append('div')
 						.style('padding-top', '10px')
 						.html(
-							grpName !== ''
-								? `<b>${grpName}</b>: mutated samples (${counts.samplesTotal} of ${groupSampleTotal})`
-								: `<b>mutated samples (${counts.samplesTotal} of ${groupSampleTotal})`
+							grpName
+								? `<b>${grpName}</b>: mutated samples (${counts.samplesTotal} of ${
+										groupSampleTotal - counts.samplesNotTested
+								  }, ${d3format('.1%')(mRate)})`
+								: `<b>mutated samples (${counts.samplesTotal} of ${
+										groupSampleTotal - counts.samplesNotTested
+								  }, ${d3format('.1%')(mRate)})`
 						)
 					const t = div.append('table').style('margin-left', '15px')
 					for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
