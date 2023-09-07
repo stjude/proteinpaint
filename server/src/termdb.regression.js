@@ -9,6 +9,7 @@ import * as utils from './utils'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import termdbsql from './termdb.sql'
 import { runCumincR } from './termdb.cuminc'
+//import { run_rust } from '@sjcrh/proteinpaint-rust'
 /*
 
 **************** q{} object
@@ -840,12 +841,12 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 		})
 		snpid2scale.set(snpid, { minv, maxv })
 	}
-	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
-	//const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	//await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
-	//const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-	//fs.unlink(tmpfile, () => {})
-	//const wilcoxOutput = JSON.parse(out)
+	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	fs.unlink(tmpfile, () => {})
+	const wilcoxOutput = JSON.parse(out)
+	// const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 	for (const test of wilcoxOutput) {
 		const snpid = test.group1_id.replace('_hasEffAllele', '')
 		const hasEffAlleleValues = test.group1_values
