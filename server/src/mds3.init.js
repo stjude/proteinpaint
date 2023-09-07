@@ -3,6 +3,7 @@ import readline from 'readline'
 import path from 'path'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import * as gdc from './mds3.gdc'
 import { initGDCdictionary } from './termdb.gdc'
 import { validate_variant2samples, ssmIdFieldsSeparator } from './mds3.variant2samples'
@@ -1256,7 +1257,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
-
+	q.file = path.join(serverconfig.tpmasterdir, q.file)
 	/*
 	param{}
 		samplelst{}
@@ -1286,6 +1287,11 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		if (group2names.length < 1) throw 'group2names.length<1'
 		// pass group names and txt file to rust
 
+	        const cases_string = group1names.map(i => i).join(',')
+	        const controls_string = group2names.map(i => i).join(',')
+	        const expression_input = {case: cases_string, control: controls_string, input_file: q.file}
+	        console.log("expression_input:",expression_input)
+	    
 		// return result
 	}
 }
@@ -1301,7 +1307,6 @@ async function validate_query_geneExpression(ds, genome) {
 	}
 
 	if (!q.file) throw '.file missing from queries.geneExpression'
-	q.file = path.join(serverconfig.tpmasterdir, q.file)
 	await utils.validate_tabixfile(q.file)
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 
