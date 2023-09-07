@@ -40,9 +40,9 @@ this{}
 					groupTypes[]
 					groups:[]
 						// each element is a group object
-						{type=info, infoKey=str}
-						{type=filter, filter={}}
-						{type=population, key, label, ..}
+						{type='info', infoKey=str}
+						{type='filter', filter={}}
+						{type='population', key, label, ..}
 					groupTestMethod{}
 					groupTestMethodsIdx
 				populations [{key,label}] // might not be part of state
@@ -162,7 +162,10 @@ class genomeBrowser {
 			t2.custom_variants = data.mlst
 
 			// details.groups[] may have changed. update label and tooltip callback etc, of tk numeric axis view mode object
-			furbishViewModeWithSnvindelComputeDetails(this, t2.skewer.viewModes.find(i => i.type == 'numeric'))
+			furbishViewModeWithSnvindelComputeDetails(
+				this,
+				t2.skewer.viewModes.find(i => i.type == 'numeric')
+			)
 
 			t2.load()
 			return
@@ -199,7 +202,8 @@ class genomeBrowser {
 						{
 							id: this.components.gbControls.id,
 							_partialData: {
-								groupSampleCounts: [data.totalSampleCount_group1, data.totalSampleCount_group2]
+								groupSampleCounts: [data.totalSampleCount_group1, data.totalSampleCount_group2],
+								pop2average: data.pop2average
 							}
 						}
 					]

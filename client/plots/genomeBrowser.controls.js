@@ -46,6 +46,10 @@ class GbControls {
 			this._partialData = config._partialData
 			return
 		}
+
+		// must not delete it if not available from config{}
+		//delete this._partialData
+
 		return {
 			config,
 			termdbConfig: appState.termdbConfig,
@@ -136,19 +140,11 @@ class GbControls {
 			return
 		}
 
-		div
-			.append('span')
-			.text('TEST METHOD')
-			.style('font-size', '.8em')
-			.style('opacity', 0.6)
+		div.append('span').text('TEST METHOD').style('font-size', '.8em').style('opacity', 0.6)
 
 		if (g1.type != 'filter' && g2.type != 'filter') {
 			// neither group is filter, test method can only be value diff and also not configurable
-			div
-				.append('span')
-				.style('padding-left', '10px')
-				.text('Value difference')
-				.style('opacity', 0.6)
+			div.append('span').style('padding-left', '10px').text('Value difference').style('opacity', 0.6)
 			return
 		}
 
@@ -201,10 +197,7 @@ class GbControls {
 		}
 
 		const toggles = new Tabs({
-			holder: this.opts.holder
-				.append('div')
-				.style('border-bottom', 'solid 1px #ccc')
-				.style('padding-bottom', '20px'),
+			holder: this.opts.holder.append('div').style('border-bottom', 'solid 1px #ccc').style('padding-bottom', '20px'),
 			tabs
 		})
 		toggles.main()
@@ -233,10 +226,7 @@ class GbControls {
 			const tracks = structuredClone(state.config.ld.tracks)
 
 			const div = tabs[tabsIdx++].contentHolder.append('div')
-			div
-				.append('div')
-				.text('Show/hide linkage disequilibrium map from an ancestry:')
-				.style('opacity', 0.5)
+			div.append('div').text('Show/hide linkage disequilibrium map from an ancestry:').style('opacity', 0.5)
 			for (const [i, t] of tracks.entries()) {
 				make_one_checkbox({
 					labeltext: t.name,
@@ -266,11 +256,7 @@ function render1group_info(self, groupIdx, group, div) {
 		if (f && f.name) name = f.name
 	}
 	div.append('span').text(name)
-	div
-		.append('span')
-		.text('INFO FIELD')
-		.style('font-size', '.5em')
-		.style('margin-left', '10px')
+	div.append('span').text('INFO FIELD').style('font-size', '.5em').style('margin-left', '10px')
 }
 
 function render1group_population(self, groupIdx, group, div) {
@@ -279,8 +265,40 @@ function render1group_population(self, groupIdx, group, div) {
 	div
 		.append('span')
 		.text(`POPULATION${group.adjust_race ? ', RACE ADJUSTED' : ''}`)
-		.style('font-size', '.5em')
+		.style('font-size', '.7em')
 		.style('margin-left', '10px')
+		.style('opacity', 0.5)
+
+	if (self._partialData?.pop2average) {
+		// info available, computed for the other group comparing against this population, display here
+		if (self.state.config.snvindel.details.groups[groupIdx == 1 ? 0 : 1]?.type == 'filter') {
+			/*
+			!!poor fix!!
+			only render the text when the other group is "filter",
+			so that when the other group is no longer type=filter, the admix text will disappear from this group
+			this is because self._partialData is *sticky* and is never deleted, due to the way parent passing it to child
+			and assume that pop2average must be from comparison between 2 groups of filter-vs-population
+			e.g. when info-vs-population, despite the _partialData is still there, must not render it
+			*/
+			const lst = []
+			for (const k in self._partialData.pop2average) {
+				lst.push(`${k}=${self._partialData.pop2average[k].toFixed(2)}`)
+			}
+			div
+				.append('span')
+				.text(`Average admixture: ${lst.join(', ')}`)
+				.style('margin-left', '20px')
+				.attr('class', 'sja_clbtext')
+				.on('click', event => {
+					groupTip.clear().showunder(event.target).d.append('div').style('margin', '10px').style('width', '400px')
+						.html(`These are average of admix coefficients based on current Group ${groupIdx == 1 ? 1 : 2} samples.
+					They are used to adjust variant allele counts of matching ancestries from ${group.label},
+					so that the adjusted allele counts are compared against Group ${groupIdx == 1 ? 1 : 2} allele counts.
+					This allows to account for ancestry composition difference between the two groups.
+					`)
+				})
+		}
+	}
 }
 
 async function render1group_filter(self, groupIdx, group, div) {
