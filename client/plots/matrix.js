@@ -710,30 +710,9 @@ export class Matrix {
 				anno.filteredValues = filteredValues
 				anno.countedValues = countedValues
 				anno.renderedValues = renderedValues
-
-				const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
-
 				if (anno.countedValues?.length) {
 					t.counts.samples += 1
 					t.counts.hits += anno.countedValues.length
-
-					//count the samples and classes in each subGroup
-					if (t.tw.term.type == 'geneVariant') {
-						subGroup.samplesTotal += 1
-						subGroup.hitsTotal += anno.countedValues.length
-						for (const countedValue of anno.countedValues) {
-							if (!(countedValue.class in subGroup.classes)) subGroup.classes[countedValue.class] = 1
-							else subGroup.classes[countedValue.class] += 1
-						}
-					} else {
-						subGroup.samplesTotal += 1
-						subGroup.hitsTotal += anno.countedValues.length
-						for (const countedValue of anno.countedValues) {
-							if (!(countedValue in subGroup.classes)) subGroup.classes[countedValue] = 1
-							else subGroup.classes[countedValue] += 1
-						}
-					}
-
 					if (t.tw.q?.mode == 'continuous') {
 						const v = anno.value
 						if (!t.tw.term.values?.[v]?.uncomputable) {
@@ -753,7 +732,38 @@ export class Matrix {
 						}
 					}
 				}
+				const subGroup = t.counts.subGroupCounts?.[sample.grp.name]
+
+				const countedValuesNoSkip = anno.filteredValues.filter(v => {
+					// doesn't consider geneVariantCountSamplesSkipMclass as countedValues does
+					if (t.tw.term.type == 'geneVariant') {
+						// do not count wildtype and not tested as hits
+						if (v.class == 'WT' || v.class == 'Blank') return false
+					}
+					return true
+				})
+
+				if (countedValuesNoSkip.length) {
+					//count the samples and classes in each subGroup
+					if (t.tw.term.type == 'geneVariant') {
+						subGroup.samplesTotal += 1
+						subGroup.hitsTotal += countedValuesNoSkip.length
+						for (const countedValue of countedValuesNoSkip) {
+							if (!(countedValue.class in subGroup.classes)) subGroup.classes[countedValue.class] = 1
+							else subGroup.classes[countedValue.class] += 1
+						}
+					} else {
+						subGroup.samplesTotal += 1
+						subGroup.hitsTotal += countedValuesNoSkip.length
+						for (const countedValue of countedValuesNoSkip) {
+							if (!(countedValue in subGroup.classes)) subGroup.classes[countedValue] = 1
+							else subGroup.classes[countedValue] += 1
+						}
+					}
+				}
+
 				if (anno.filteredValues?.length && t.tw.term.type == 'geneVariant') {
+					//count the samples that are not tested in each subGroup
 					const notTested = anno.filteredValues.every(v => v.class == 'Blank')
 					if (notTested) {
 						// sample not tested for all assays
