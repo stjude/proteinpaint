@@ -453,7 +453,7 @@ function mayaddGetter_variant2samples(tk, block) {
 						samples.push(s2)
 					}
 				}
-				return samples
+				return { samples }
 			}
 			if (arg.querytype == tk.mds.variant2samples.type_summary) {
 				throw 'todo: summary'
@@ -478,7 +478,7 @@ function mayaddGetter_variant2samples(tk, block) {
 					}
 				}
 			}
-			return [...id2sample.values()]
+			return { samples: [...id2sample.values()] }
 		}
 		return
 	}
@@ -570,8 +570,18 @@ function mayaddGetter_variant2samples(tk, block) {
 
 		const data = await dofetch3('mds3', { body: par, headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
-		if (!data.variant2samples) throw 'result error'
-		return data.variant2samples
+		const r = data.variant2samples
+		if (!r) throw 'result error'
+		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+			if (!Array.isArray(r.nodes)) throw 'nodes[] not array from return'
+		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
+			if (!Array.isArray(r.samples)) throw 'samples[] not array from return'
+		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
+			if (!Array.isArray(r.summary)) throw 'summary[] not array from return'
+		} else {
+			throw 'unknown querytype'
+		}
+		return r
 	}
 
 	/*

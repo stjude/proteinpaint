@@ -47,6 +47,11 @@ Returns:
 		}
 	
 	byTermId:{}
+		<term id>:
+			bins: CTE.bins
+			events: CTE.events
+				these info are not available in term object and is computed during run time, and 
+
 	bySampleId:{}
 		key: stringified integer id
 		value: sample name
@@ -282,6 +287,7 @@ async function mayQueryMutatedSamples(q) {
 
 /*
 using mds3 dataset, that's without server-side sqlite db
+only gdc runs it
 */
 async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
@@ -299,12 +305,14 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		}
 	}
 
-	const sampleLst = await q.ds.variant2samples.get(q2)
+	const data = await q.ds.variant2samples.get(q2)
 
 	const samples = {}
-	const refs = { byTermId: {} }
+	const refs = {
+		byTermId: data.byTermId
+	}
 
-	for (const s of sampleLst) {
+	for (const s of data.samples) {
 		const s2 = {
 			sample: s.sample_id
 		}

@@ -1149,7 +1149,9 @@ function mayApplyGroupsetting(v, tw) {
 	}
 }
 
+// returns byTermId{} with computed bin labels
 function mayApplyBinning(samples, twLst) {
+	const byTermId = {}
 	for (const tw of twLst) {
 		if (tw.term.type != 'integer' && tw.term.type != 'float') continue
 		if (!tw.q?.mode) continue // numeric q.mode missing, this
@@ -1171,6 +1173,13 @@ function mayApplyBinning(samples, twLst) {
 			}
 			const bins = compute_bins(tw.q, p => summary)
 
+			/* sql CTE returns {name,label}, where compute_bins does not return name
+			client seems to use name to sort. when client changes to use label, can delete this
+			*/
+			for (const b of bins) b.name = b.label
+
+			byTermId[tw.term.id] = { bins }
+
 			// uncomment to allow to see term range and assist hardcoding binconfig in termdb.gdc.js
 			//console.log(summary,bins)
 
@@ -1186,6 +1195,7 @@ function mayApplyBinning(samples, twLst) {
 			throw 'mayApplyBinning: unknown numeric q.mode'
 		}
 	}
+	return byTermId
 }
 
 function getBin(bins, v) {
@@ -1246,9 +1256,16 @@ geneTwLst[]
 	if provided, query samples with alterations on these genes
 	tw.q{} determines required datatype, e.g. snvindel and cnv
 
-returns a list of sample objects:
-	sample.sample_id is the unique identifier of a sample
-	value is variable, dependens on context
+returns:
+
+{
+	byTermId{}
+		contains computed bin labels to assist client rendering
+	samples[]
+		list of sample objects:
+		sample.sample_id is the unique identifier of a sample
+		value is variable, dependens on context
+}
 */
 
 export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
@@ -1448,7 +1465,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		samples.push(sample)
 	}
 
-	mayApplyBinning(samples, dictTwLst)
+	const byTermId = mayApplyBinning(samples, dictTwLst)
 
 	if (geneTwLst) {
 		const param = {
@@ -1468,9 +1485,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		combineSamplesById([s], id2samples, s.ssm_id)
 	}
 
-	const returnSamples = [...id2samples.values()]
-
-	return returnSamples
+	return { byTermId, samples: [...id2samples.values()] }
 }
 
 /*

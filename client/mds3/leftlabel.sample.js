@@ -150,10 +150,10 @@ async function mayShowSummary(tk, block) {
 	const wait = div.append('div').text('Loading...')
 
 	try {
-		const data = await tk.mds.getSamples({ isSummary: true })
-		tk.leftlabels.__samples_data = data // for testing
+		const { summary } = await tk.mds.getSamples({ isSummary: true })
+		tk.leftlabels.__samples_data = summary // for testing
 		wait.remove()
-		await showSummary4terms(data, div.append('div').attr('class', 'sja_mds3samplesummarydiv'), tk, block)
+		await showSummary4terms(summary, div.append('div').attr('class', 'sja_mds3samplesummarydiv'), tk, block)
 	} catch (e) {
 		wait.text(`Error: ${e.message || e}`)
 		if (e.stack) console.log(e.stack)
@@ -351,7 +351,7 @@ function menu_listSamples(buttonrow, data, tk, block) {
 			tk.menutip.clear()
 			const wait = tk.menutip.d.append('div').text('Loading...').style('margin', '15px')
 			try {
-				const samples = await tk.mds.getSamples()
+				const { samples } = await tk.mds.getSamples()
 				await displaySampleTable(samples, {
 					div: tk.menutip.d,
 					tk,
