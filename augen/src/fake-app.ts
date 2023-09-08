@@ -1,6 +1,6 @@
 type AnyFunction = (res: any, req: any) => any
 
-function getApp({ api }) {
+function getApp({ api }, getHandlerInitArg = null) {
 	const app = {
 		routes: {},
 		get(path: string, handler: AnyFunction) {
@@ -21,7 +21,7 @@ function getApp({ api }) {
 	}
 	for (const method in api.methods) {
 		const m = api.methods[method]
-		app[method](api.endpoint, m.init({ app, genomes }))
+		app[method](api.endpoint, m.init(getHandlerInitArg))
 	}
 	return app
 }

@@ -5,9 +5,11 @@
   "type": "module",
   "main": "src/augen.js",
   "scripts": {
+    "predev": "ts-node-esm test/prep.js",
     "dev": "ts-node-esm test/app.js",
     "pretest": "ts-node-esm test/prep.js && typia generate --input test/checkers/raw --output test/checkers/transformed",
-    "test": "ts-node-esm test/unit.spec.js"
+    "test": "ts-node-esm test/unit.spec.js",
+    "doc": "typedoc --json ../public/docs.json"
   },
   "author": "",
   "license": "ISC",
