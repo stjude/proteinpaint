@@ -74,12 +74,16 @@ class TdbTree {
 	}
 
 	async init(appState) {
-		const holder = this.opts.holder.append('div')
+		const header = this.opts.holder.append('div')
 		if (appState.samples) for (const sample of appState.samples) this.sampleDataByTermId[sample.sampleId] = {}
-		const header = holder.insert('div')
+		const mainDiv = this.opts.holder.append('div')
+		const left = mainDiv.insert('div').style('display', 'inline-block')
+		const right = mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const samplesTable = right.append('table').style('position', `relative`).style('top', `-25px`)
 		this.dom = {
-			holder,
-			header
+			holder: left.insert('div'),
+			header,
+			samplesTable
 		}
 	}
 
@@ -119,18 +123,14 @@ class TdbTree {
 	async main() {
 		this.sampleDataByTermId = {}
 		this.dom.header.selectAll('*').remove()
-		for (const [i, sample] of Object.entries(this.state.samples)) {
-			this.dom.header
-				.insert('div')
-				.style('position', 'absolute')
-				.style('left', 450 + 300 * i + 'px')
-				.style('color', 'gray')
-				.style('width', '280px')
-				.style('background-color', '#fafafa')
-				.style('text-align', 'right')
-				.style('top', '0px')
-				.html(sample.sampleName)
-			this.sampleDataByTermId[sample.sampleId] = {}
+		if (this.state.samples) {
+			this.dom.samplesTable.selectAll('thead').remove()
+			const thead = this.dom.samplesTable.append('thead').style('text-align', 'right').style('color', 'gray')
+
+			for (const [i, sample] of Object.entries(this.state.samples)) {
+				thead.append('th').style('padding', '3px').text(sample.sampleName)
+				this.sampleDataByTermId[sample.sampleId] = {}
+			}
 		}
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
@@ -286,6 +286,7 @@ function setRenderers(self) {
 		if (self.state.usecase) {
 			for (const t of term.terms) {
 				if (isUsableTerm(t, self.state.usecase).size) {
+					t.parent = term
 					self.included_terms.push(t)
 				}
 			}
@@ -333,8 +334,13 @@ function setRenderers(self) {
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function (term) {
-		if (term.id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
-		select(this).style('display', 'none')
+		const expand = term.id in self.termsById && self.state.expandedTermIds.includes(term.id)
+		if (!expand) select(this).style('display', 'none')
+		if (self.state.samples) {
+			const id = term.id.replace(/[^a-zA-Z]/g, '')
+			const tr = self.dom.samplesTable.select(`#${id}`)
+			tr.style('display', self.state.expandedTermIds.includes(term.parent.id) ? '' : 'none')
+		}
 	}
 
 	self.updateTerm = function (term) {
@@ -343,17 +349,19 @@ function setRenderers(self) {
 			div.style('display', 'none')
 			return
 		}
-
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
 
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
-		if (self.state.samples && term.isleaf) {
-			const valueDiv = div.select(`#${term.id.replace(/[^a-zA-Z0-9]/g, '')}`)
-			valueDiv.selectAll('*').remove()
-			self.addTermValueDiv(valueDiv, term)
+		if (self.state.samples) {
+			const id = term.id.replace(/[^a-zA-Z]/g, '')
+			const tr = self.dom.samplesTable.select(`#${id}`)
+			if (term.isleaf) {
+				tr.selectAll('*').remove()
+				self.addTermValues(tr, term)
+			}
 		}
 		// update other parts if needed, e.g. label
 		else div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
@@ -373,7 +381,6 @@ function setRenderers(self) {
 			.select('.' + cls_termcheck)
 			.style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
 	}
-
 	self.addTerm = async function (term) {
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
@@ -382,7 +389,6 @@ function setRenderers(self) {
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
-		if (self.state.samples) div.style('width', (self.state.samples.length + 1) * 200 + 'px')
 
 		if (uses.has('branch')) {
 			div
@@ -392,6 +398,7 @@ function setRenderers(self) {
 				.style('padding', '4px 9px')
 				.style('font-family', 'courier')
 				.text('+')
+
 				// always allow show/hide children even this term is already in use
 				.on('click', event => {
 					event.stopPropagation()
@@ -402,7 +409,6 @@ function setRenderers(self) {
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		let text = term.name
-		if (self.state.samples && text.length > 50) text = text.slice(0, 50) + '...'
 
 		const labeldiv = div
 			.insert('div')
@@ -413,13 +419,12 @@ function setRenderers(self) {
 			.text(text)
 
 		if (self.state.samples) {
-			const valuesDiv = div
-				.insert('div')
-				.attr('id', term.id.replace(/[^a-zA-Z0-9]/g, ''))
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top')
-				.style('padding', 0)
-			self.addTermValueDiv(valuesDiv, term)
+			let tr
+			const id = self.getInsertBeforeId(term)
+			if (id) tr = self.dom.samplesTable.insert('tr', `#${id}`).attr('id', term.id.replace(/[^a-zA-Z]/g, ''))
+			else tr = self.dom.samplesTable.append('tr').attr('id', term.id.replace(/[^a-zA-Z]/g, ''))
+
+			self.addTermValues(tr, term)
 		}
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
@@ -482,25 +487,37 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addTermValueDiv = function (div, term) {
-		if (!term.isleaf) return
-		let values = self.getTermValues(term)
+	self.getInsertBeforeId = function (term) {
+		const parentId = term.parent.id.replace(/[^a-zA-Z]/g, '')
+		const trs = self.dom.samplesTable.selectAll('tr').nodes()
+		const index = trs.findIndex(tr => tr.getAttribute('id') == parentId)
+		const index2 = term.parent.terms.findIndex(t => t.id == term.id)
 
-		let i = 1
-		for (const value of values) {
-			const valueDiv = div
-				.insert('div')
-				.style('position', 'absolute')
-				.style('left', 150 + 300 * i + 'px')
-				.style('color', 'gray')
-				.style('width', '280px')
+		if (index == -1 || index2 == -1) return null
+		const id = trs[index + index2 + 1]?.getAttribute('id')
+		if (id) return id
+		return null
+	}
+
+	self.addTermValues = async function (tr, term) {
+		if (term.isleaf) {
+			let values = self.getTermValues(term)
+			let i = 1
+			for (const value of values) {
+				tr.append('td')
+					.style('padding', '5px 4px 4px 4px')
+					.style('color', 'gray')
+					.style('background-color', '#fafafa')
+					.style('text-align', 'right')
+					.html(value)
+				i++
+			}
+		} else
+			tr.append('td')
+				.attr('colspan', self.state.samples.length)
+				.style('padding', '5px')
 				.style('background-color', '#fafafa')
-				.style('z-index', 0)
-				.style('text-align', 'right')
-				.html(value)
-			i++
-		}
-		self.isExpanded = true
+				.html('&nbsp;')
 	}
 
 	self.getTermValues = function (term) {
