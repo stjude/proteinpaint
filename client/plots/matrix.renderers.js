@@ -208,7 +208,7 @@ export function setRenderers(self) {
 
 				if (!Array.isArray(labelText)) {
 					text.text(labelText)
-					if (lab.tw?.q?.mode == 'continuous') text.attr('y', 10)
+					text.attr('y', lab.tw?.q?.mode == 'continuous' ? 10 : 0)
 				} else {
 					const tspan = text.selectAll('tspan').data(labelText)
 					tspan.exit().remove()
