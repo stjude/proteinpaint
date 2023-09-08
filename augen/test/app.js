@@ -21,7 +21,10 @@ async function init(opts = {}) {
 	//console.log(endpoints, endpoints, routes)
 
 	const app = express()
+	const staticService = express.static(join(__dirname, '../public'))
+	app.use(staticService)
 	setRoutes(app, routes)
+
 	const port = opts.port || 8999
 	console.log(`STANDBY PORT ${port}`)
 	app.listen(port)

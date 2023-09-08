@@ -1,1 +1,3 @@
 test/checkers
+public/docs/*
+public/server-api.json
