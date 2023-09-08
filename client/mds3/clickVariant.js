@@ -66,7 +66,7 @@ async function click2sunburst(d, tk, block, tippos) {
 	})
 	tk.glider.style('cursor', 'auto')
 	const arg = {
-		nodes: data,
+		nodes: data.nodes,
 		occurrence: d.occurrence,
 		boxyoff: tk.yoff,
 		boxheight: tk.height,

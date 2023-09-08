@@ -1,1 +1,2 @@
-
+Fixes:
+- mds3 variant2samples.get() returns an object to wrap the optional bin labels

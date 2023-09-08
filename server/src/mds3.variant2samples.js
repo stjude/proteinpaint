@@ -143,25 +143,28 @@ q{}
 async function variant2samples_getresult(q, ds) {
 	mayAllow2returnFormatValues(q, ds)
 
-	const mutatedSamples = await queryMutatedSamples(q, ds)
+	const out = await queryMutatedSamples(q, ds)
 
 	if (q.get == ds.variant2samples.type_samples) {
 		// return list of samples
 		if (!q.useIntegerSampleId && ds?.cohort?.termdb?.q?.id2sampleName) {
 			// dataset can map integer to string sample name, and query does not ask to keep integer id, thus convert to string id
 			// this is default behavior for client display
-			mutatedSamples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
+			out.samples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
 		}
-		return mutatedSamples
+		return out
 	}
 
 	if (q.get == ds.variant2samples.type_sunburst) {
-		return await make_sunburst(mutatedSamples, ds, q)
+		out.nodes = await make_sunburst(out.samples, ds, q)
+		delete out.samples
+		return out
 	}
 
 	if (q.get == ds.variant2samples.type_summary) {
-		const summary = await make_summary(mutatedSamples, ds, q)
-		return summary
+		out.summary = await make_summary(out.samples, ds, q)
+		delete out.samples
+		return out
 	}
 
 	throw 'unknown get type'
@@ -183,10 +186,16 @@ function mayAllow2returnFormatValues(q, ds) {
 /*
 input:
 	same as main function
-output:
-	list of mutated samples as basis for further processing
-	these samples all harbor mutation of certain specification (see q{})
-	depending on q.get=?, the samples may be summarized (to barchart), or returned without summary
+
+output: (output is an object to be easily extendable of adding additional attr, compared to an array)
+{
+	samples[]
+		list of mutated samples as basis for further processing
+		these samples all harbor mutation of certain specification (see q{})
+		depending on q.get=?, the samples may be summarized (to barchart), or returned without summary
+	byTermId{}
+		only from gdc,
+}
 */
 async function queryMutatedSamples(q, ds) {
 	/*
@@ -203,7 +212,8 @@ async function queryMutatedSamples(q, ds) {
 		return await querySamples_gdcapi(q, twLst, ds, q.geneTwLst)
 	}
 
-	/* from server-side files
+	/*
+	from server-side files
 	action depends on details:
 	- file type (gz or db perhaps)
 	- data type (snv or sv)
@@ -229,9 +239,9 @@ async function queryMutatedSamples(q, ds) {
 				}
 			}
 		}
-		const out = await queryServerFileByRglst(q, twLst, ds)
+		const samples = await queryServerFileByRglst(q, twLst, ds)
 		delete q.rglst
-		return out
+		return { samples }
 	}
 
 	///////////////////////////////
@@ -260,7 +270,7 @@ async function queryMutatedSamples(q, ds) {
 		}
 		samples.push(s)
 	}
-	return samples
+	return { samples }
 }
 
 /*
@@ -333,7 +343,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 
 	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
 
-	return [...samples.values()]
+	return { samples: [...samples.values()] }
 }
 
 /*
@@ -401,7 +411,7 @@ async function queryServerFileByRglst(q, twLst, ds) {
 
 	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
 
-	return [...samples.values()]
+	return { samples: [...samples.values()] }
 }
 
 async function make_sunburst(mutatedSamples, ds, q) {

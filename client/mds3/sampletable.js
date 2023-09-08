@@ -58,8 +58,8 @@ export async function init_sampletable(arg) {
 
 	try {
 		arg.querytype = arg.tk.mds.variant2samples.type_samples
-		const samples = await arg.tk.mds.variant2samples.get(arg) // returns list of samples
-		await displaySampleTable(samples, arg)
+		const out = await arg.tk.mds.variant2samples.get(arg) // returns list of samples
+		await displaySampleTable(out.samples, arg)
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
