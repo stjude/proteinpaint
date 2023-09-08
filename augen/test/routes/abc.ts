@@ -1,3 +1,5 @@
+import { AbcResponse, AbcRequest }  from '../types/abc.ts'
+
 function init() {
 	return (req, res) => {
 		res.send({ status: 'ok' })
@@ -18,7 +20,12 @@ export const api = {
 				// will combine this with type checker
 				//valid: (t) => {}
 			},
-			examples: []
+			examples: [{
+				request: null,
+				response: {
+					header: { status: 200 }
+				}
+			}]
 		},
 		post: {
 			alternativeFor: 'get',

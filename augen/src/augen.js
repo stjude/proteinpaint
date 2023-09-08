@@ -11,6 +11,10 @@ export function setRoutes(app, routes, _opts = {}) {
 		}
 	}
 
+	emitFiles(routes, opts)
+}
+
+export function emitFiles(routes, opts) {
 	if (opts.apiJson) {
 		const apis = JSON.stringify(routes.map(r => r.api))
 		fs.writeFileSync(opts.apiJson, apis)
