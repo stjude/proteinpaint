@@ -826,6 +826,10 @@ export class Matrix {
 			t.rowHt = t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht
 			const adjustment = t.rowHt - ht
 			totalHtAdjustments += adjustment
+
+			// adjustment when last row is in continous mode
+			t.lastAdjustment = totalHtAdjustments
+
 			if (!(t.visibleGrpIndex in grpTotals)) grpTotals[t.visibleGrpIndex] = { htAdjustment: 0 }
 			grpTotals[t.visibleGrpIndex].htAdjustment += adjustment
 			t.grpTotals = grpTotals[t.visibleGrpIndex]
@@ -882,8 +886,8 @@ export class Matrix {
 			(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 		const mainw = Math.min(mainwByColDimensions, this.availContentWidth)
 
-		const mainh =
-			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + (this[`${row}s`].slice(-1)[0]?.totalHtAdjustments || 0)
+		const lastRow = this[`${row}s`].slice(-1)[0]
+		const mainh = ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + (lastRow?.lastAdjustment || 0)
 
 		const colLabelFontSize = Math.min(
 			Math.max(colw + s.colspace - 2 * s.collabelpad - s.colspace, s.minLabelFontSize),
