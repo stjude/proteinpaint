@@ -46,7 +46,8 @@ type GrpEntry = {
 }
 type GrpEntryWithDom = GrpEntry & {
 	wrapper: any
-	title: any
+	dragActionDiv: any
+	// title: any
 	destroyBtn: any
 	input: any
 	draggables: any
@@ -290,31 +291,19 @@ function setRenderers(self: any) {
 				)
 			})
 
-		group.title = group.wrapper
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '3px 10px')
-			.style('text-align', 'left')
-			.style('font-size', '.6em')
-			.style('text-transform', 'uppercase')
-			.style('color', '#999')
-			.text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
+		// group.title = group.wrapper
+		// .append('div')
+		// .style('display', 'inline-block')
+		// .style('padding', '3px 10px')
+		// .style('text-align', 'left')
+		// .style('font-size', '.6em')
+		// .style('text-transform', 'uppercase')
+		// .style('color', '#999')
+		// .text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
 
 		if (group.currentIdx !== 0) {
-			group.destroyBtn = group.wrapper
-				.append('button')
-				.style('float', 'right')
-				.style('display', 'inline-block')
-				.style('padding', '0px 4px')
-				// .property('disabled', self.data.groups.length > 2 ? false : true)
-				.text('x')
-				.on('click', async (event: MouseEvent) => {
-					if (self.data.groups.length <= 3) return
-					self.data.groups = self.data.groups.filter((d: GrpEntry) => d.currentIdx != group.currentIdx)
-					await self.removeGroup(group)
-				}) as Element
-
-			group.input = group.wrapper
+			group.dragActionDiv = group.wrapper.append('div').style('display', 'flex')
+			group.input = group.dragActionDiv
 				.append('input')
 				.attr('size', 12)
 				.attr('value', group.currentIdx.toString() == group.name ? group.name : group.currentIdx)
@@ -328,6 +317,19 @@ function setRenderers(self: any) {
 					if (!keyupEnter(event)) return
 					group.name = group.input.node().value
 				}) as HTMLInputElement
+
+			group.destroyBtn = group.dragActionDiv
+				.append('button')
+				// .style('float', 'right')
+				.style('display', 'inline-block')
+				.style('padding', '0px 4px')
+				// .property('disabled', self.data.groups.length > 2 ? false : true)
+				.text('x')
+				.on('click', async (event: MouseEvent) => {
+					if (self.data.groups.length <= 3) return
+					self.data.groups = self.data.groups.filter((d: GrpEntry) => d.currentIdx != group.currentIdx)
+					await self.removeGroup(group)
+				}) as Element
 		}
 
 		group.draggables = group.wrapper.append('div').classed('sjpp-drag-list-div', true)
@@ -358,10 +360,10 @@ function setRenderers(self: any) {
 						itemNode.style('background-color', '#fff2cc')
 						draggedItem = itemNode
 					})
-					.on('mouseover', function () {
+					.on('mouseenter', function () {
 						itemNode.style('background-color', '#fff2cc')
 					})
-					.on('mouseout', function () {
+					.on('mouseleave', function () {
 						itemNode.style('background-color', '#eee')
 					})
 			})
@@ -378,38 +380,39 @@ function setRenderers(self: any) {
 			}, defaultDuration * 3)
 		}
 
-		async function collapseAnimation(defaultDuration) {
-			group.wrapper.style('background-color', '#fb9a99')
+		async function collapseAnimation(defaultDuration: number) {
 			//Remove user action divs
-			group.title.remove()
+			// group.title.remove()
 			group.input.remove()
 
-			const { x, y } = getCollapsedScale(group.destroyBtn.node(), group.wrapper.node())
+			// const { x, y } = getCollapsedScale(self.dom.excludedWrapper.node(), group.wrapper.node())
+			// console.log(x, y)
+			// 	const collapsedX = 0
+			// 	const collapsedY = 0
 
-			const collapsedX = x + (1 - x) * 100
-			const collapsedY = 0
+			// 	const collapseEffect = [
+			// 		{ transform: 'none' },
+			// 		// { transform: 'none', offset: 0.2 },
+			// 		{ transform: `translate(${collapsedX}px, ${collapsedY}px)` }
+			// 	]
 
-			const collapseEffect = [
-				{ transform: 'none' },
-				{ transform: 'none', offset: 0.2 },
-				{ transform: `translate(${collapsedX}px, ${collapsedY}px) scale(0.25)`, offset: 1.0 }
-			]
+			// 	const collapseTime = {
+			// 		duration: defaultDuration,
+			// 		iterations: 1
+			// 	}
 
-			const collapseTime = {
-				duration: defaultDuration,
-				iterations: 1
-			}
+			// 	await group.draggables.each(function (this: HTMLElement) {
+			// 		const item = select(this).node()
+			// 		if (!(item instanceof HTMLElement)) return
+			// 		item.animate(collapseEffect, collapseTime)
+			// 	})
 
-			await group.draggables.each(function (this: HTMLElement) {
-				const item = select(this).node()
-				if (!(item instanceof HTMLElement)) return
-				item.animate(collapseEffect, collapseTime)
-			})
-
-			const values2Exclude = self.data.values.filter((d: ItemEntry) => d.groupIdx == group.currentIdx)
-			values2Exclude.forEach((d: ItemEntry) => (d.groupIdx = 0))
-			group.destroyBtn.text(itemsNum.length)
-			group.draggables.style('transform', `translate(${collapsedX}px, ${collapsedY}px) scale(0)`)
+			// 	const values2Exclude = self.data.values.filter((d: ItemEntry) => d.groupIdx == group.currentIdx)
+			// 	values2Exclude.forEach((d: ItemEntry) => (d.groupIdx = 0))
+			// 	// group.destroyBtn
+			// 	// 	.style('padding', '5px')
+			// 	// 	.text(itemsNum.length)
+			// 	group.draggables.style('transform', `translate(${collapsedX}px, ${collapsedY}px) scale(0)`)
 		}
 		self.update(0)
 	}
@@ -426,9 +429,9 @@ function setRenderers(self: any) {
 		}
 	}
 
-	self.update = function (idx: number) {
+	self.update = function (idx = 0) {
 		self.data.groups.forEach((group: GrpEntry) => {
-			if (group.currentIdx > idx && idx != 0) {
+			if (group.currentIdx > idx && idx !== 0) {
 				group.currentIdx = group.currentIdx - 1
 				group.name = (group.currentIdx + 1).toString() == group.name ? group.currentIdx.toString() : group.name
 			}
@@ -437,7 +440,7 @@ function setRenderers(self: any) {
 			.selectAll('.sjpp-drag-drop-div')
 			.data(self.data.groups)
 			.each(async (group: GrpEntryWithDom) => {
-				group.title.text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
+				// group.title.text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
 				if (group.currentIdx !== 0) group.input.node().value = group.name
 				self.addItems(group)
 			})
