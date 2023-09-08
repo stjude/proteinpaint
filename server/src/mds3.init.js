@@ -1290,13 +1290,22 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	        const cases_string = group1names.map(i => i).join(',')
 	        const controls_string = group2names.map(i => i).join(',')
 	        const expression_input = {case: cases_string, control: controls_string, input_file: q.file}
-	        console.log("expression_input:",expression_input)
+	        //console.log("expression_input:",expression_input)
 
 	    	const time1 = new Date()
 	        const rust_output = await run_rust('expression', JSON.stringify(expression_input))
-	        const time2 = new Date()
+                const time2 = new Date()
+	    
+	        let result
+	        for (const line of rust_output.split('\n')) {
+                    if (line.startsWith("adjusted_p_values:")) {
+			result=JSON.parse(line.replace("adjusted_p_values:",""))
+		    } else {
+                        console.log(line)
+		    }	
+	        }
 	        console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
-		// return result
+		return result
 	}
 }
 
