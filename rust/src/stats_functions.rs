@@ -331,7 +331,7 @@ pub fn wilcoxon_rank_sum_test(
             if alternative == 'g' {
                 // Alternative "greater"
                 correction = 0.5;
-            } else if alternative == 'g' {
+            } else if alternative == 'l' {
                 // Alternative "lesser"
                 correction = -0.5;
             } else {
