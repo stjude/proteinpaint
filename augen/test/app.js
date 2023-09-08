@@ -11,19 +11,19 @@ const endpoints = files.filter(f => f.endsWith('.ts') || f.endsWith('.js'))
 init()
 
 async function init(opts = {}) {
+	const basepath = '/api'
 	const routes = await Promise.all(
-		endpoints.map(file => {
-			const route = import(join(__dirname, `./routes/${file}`))
-			route.file = file
-			return route
+		endpoints.map(async file => {
+			const route = await import(join(__dirname, `./routes/${file}`))
+			return Object.assign({ file, basepath }, route)
 		})
 	)
-	//console.log(endpoints, endpoints, routes)
+	//console.log(endpoints, routes)
 
 	const app = express()
 	const staticService = express.static(join(__dirname, '../public'))
 	app.use(staticService)
-	setRoutes(app, routes)
+	setRoutes(app, routes, { basepath })
 
 	const port = opts.port || 8999
 	console.log(`STANDBY PORT ${port}`)

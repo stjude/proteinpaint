@@ -1,0 +1,86 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC1YmyruXifcj/KFRWoC561YpHpc5Jtzgvbuzx5VozKpWvQ+4nXhPdFgmx8xqexRcpAglTj9sIBWINXa8x5w==" crossorigin="anonymous" referrerpolicy="no-referrer" /><!-- pragma: allowlist secret -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js" integrity="sha512-FHsFVKQ/T1KWJDGSbrUhTJyS1ph3eRrxI228ND0EGaEp6v4a/vGwPWd3Dtd/+9cI7ccofZvl/wulICEurHN1pg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- pragma: allowlist secret -->
+  <link rel="stylesheet" href="/docs/assets/style.css"/>
+  <link rel="stylesheet" href="/docs/assets/highlight.css"/>
+  <!--<script src='/docs/checkers/bin/checkers.js' type='module'></script>-->
+  <style>
+    .sjpp-endpoint-div {
+      margin: 20px 10px 44px 10px;
+    }
+    .sjpp-h3link {
+      margin-left: 12px;
+      font-size: 16px;
+      font-weight: 300;
+      color: #1f70c2;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .sjpp-service-div {
+      position: relative;
+    }
+    .sjpp-signature-wrapper {
+      position: relative;
+      display: block;
+      white-space: nowrap;
+      overflow: auto;
+      vertical-align: top;
+    }
+    .sjpp-payload-wrapper {
+      position: relative;
+      width: 450px;
+      display: none;
+      resize: both;
+    }
+    .sjpp-payload-wrapper pre {
+      padding: 3px;
+      overflow: auto;
+      resize: both;
+      border-radius: 0;
+    }
+    .sjpp-host-select {
+      /*background-color: #eee;*/
+    }
+    .sjpp-tip {
+      position: absolute;
+      padding: 16px;
+      max-width: 400px;
+      background-color: #fff;
+      z-index: 100;
+    }
+    .btn-sm {
+      padding: 2px;
+      font-size:  12px;
+    }
+  </style>
+  <script src='/js/server-docs.js'></script>
+</head>
+<body>
+<div class='docs-subheader'>
+  <span class='code-snippet'>./build.sh</span> # to regenerate
+</div>
+<div id='output' style='padding: 10px'>
+<div class='container container-main'>
+  <div class="col-content">
+  </div>
+  <div class='col-sidebar'>
+    <div class='site-menu'>
+      <ul class='tsd-small-nested-navigation' style='font-size: 20px;'></ul>
+    </div>
+  </div>
+</div>
+<script>
+
+serverDocsInit({
+  extractsJson: 'docs/extracts.json',
+  apiJson: '/server-api.json',
+  port: 8999,
+  basepath: '/api'
+})
+
+</script>
+
+<script src='/js/nav.js'></script>
+</body>
+</html>
