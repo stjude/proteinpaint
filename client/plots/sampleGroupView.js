@@ -13,10 +13,6 @@ class SampleGroupView extends MassDict {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
-		this.sampleId2Name = await this.app.vocabApi.getAllSamples()
-		const samples = Object.entries(this.sampleId2Name)
-		this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
-
 		const label = this.dom.sampleDiv
 			.insert('label')
 			.attr('for', 'select')
@@ -30,19 +26,19 @@ class SampleGroupView extends MassDict {
 			.attr('id', 'select')
 		this.select
 			.selectAll('option')
-			.data(samples)
+			.data(config.samples)
 			.enter()
 			.append('option')
-			.attr('value', d => d[0])
-			.property('selected', d => config.samples.find(s => s.sampleId == d[0]) != null)
-			.html((d, i) => d[1])
+			.attr('value', d => d.sampleId)
+			.html((d, i) => d.sampleName)
 		this.select.on('change', e => {
 			const options = this.select.node().options
 			const samples = []
 			for (const option of options)
 				if (option.selected) {
 					const sampleId = Number(option.value)
-					const sample = { sampleId, sampleName: this.sampleId2Name[sampleId] }
+					const sampleName = config.samples.find(s => s.sampleId == sampleId).sampleName
+					const sample = { sampleId, sampleName }
 					samples.push(sample)
 				}
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
