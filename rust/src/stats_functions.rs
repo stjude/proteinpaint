@@ -1,5 +1,5 @@
 use fishers_exact::fishers_exact;
-use r_stats;
+use r_mathlib;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 use std::panic;
 
@@ -352,16 +352,16 @@ pub fn wilcoxon_rank_sum_test(
             // Alternative "greater"
             //println!("greater:{}", n.cdf(weight_y));
             //1.0 - n.cdf(z) // Applying continuity correction
-            r_stats::normal_cdf(z, 0.0, 1.0, false, false)
+            r_mathlib::normal_cdf(z, 0.0, 1.0, false, false)
         } else if alternative == 'l' {
             // Alternative "lesser"
             //println!("lesser:{}", n.cdf(weight_x));
             //n.cdf(z) // Applying continuity coorection
-            r_stats::normal_cdf(z, 0.0, 1.0, true, false)
+            r_mathlib::normal_cdf(z, 0.0, 1.0, true, false)
         } else {
             // Alternative "two-sided"
-            let p_g = r_stats::normal_cdf(z, 0.0, 1.0, false, false); // Applying continuity correction
-            let p_l = r_stats::normal_cdf(z, 0.0, 1.0, true, false); // Applying continuity correction
+            let p_g = r_mathlib::normal_cdf(z, 0.0, 1.0, false, false); // Applying continuity correction
+            let p_l = r_mathlib::normal_cdf(z, 0.0, 1.0, true, false); // Applying continuity correction
             let mut p_value;
             if p_g < p_l {
                 p_value = 2.0 * p_g;
@@ -384,17 +384,17 @@ fn calculate_exact_probability(weight: f64, x: usize, y: usize, alternative: cha
     let mut p_value;
     if alternative == 't' {
         if weight > ((x * y) as f64) / 2.0 {
-            p_value = 2.0 * r_stats::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
+            p_value = 2.0 * r_mathlib::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
         } else {
-            p_value = 2.0 * r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
+            p_value = 2.0 * r_mathlib::wilcox_cdf(weight, x as f64, y as f64, true, false);
         }
         if p_value > 1.0 {
             p_value = 1.0;
         }
     } else if alternative == 'g' {
-        p_value = r_stats::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
+        p_value = r_mathlib::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
     } else if alternative == 'l' {
-        p_value = r_stats::wilcox_cdf(weight, x as f64, y as f64, true, false);
+        p_value = r_mathlib::wilcox_cdf(weight, x as f64, y as f64, true, false);
     } else {
         // Should not happen
         panic!("Unknown alternative option given, please check!");
