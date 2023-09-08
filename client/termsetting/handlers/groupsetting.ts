@@ -47,7 +47,7 @@ type GrpEntry = {
 type GrpEntryWithDom = GrpEntry & {
 	wrapper: any
 	dragActionDiv: any
-	// title: any
+	title: any
 	destroyBtn: any
 	input: any
 	draggables: any
@@ -166,7 +166,7 @@ function setRenderers(self: any) {
 			.style('text-transform', 'uppercase')
 			.style('cursor', 'pointer')
 			.text('Add Group')
-			.on('click', () => {
+			.on('click', async () => {
 				//cap the number of groups at 4, including excluded categories
 				if (self.data.groups.length === 5) return
 
@@ -176,7 +176,8 @@ function setRenderers(self: any) {
 				})
 
 				const group = self.data.groups[self.data.groups.length - 1]
-				initGroupDiv(group)
+				await initGroupDiv(group)
+				self.update(group.currentIdx)
 			})
 
 		//Apply button
@@ -291,17 +292,17 @@ function setRenderers(self: any) {
 				)
 			})
 
-		// group.title = group.wrapper
-		// .append('div')
-		// .style('display', 'inline-block')
-		// .style('padding', '3px 10px')
-		// .style('text-align', 'left')
-		// .style('font-size', '.6em')
-		// .style('text-transform', 'uppercase')
-		// .style('color', '#999')
-		// .text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
-
-		if (group.currentIdx !== 0) {
+		if (group.currentIdx === 0) {
+			group.title = group.wrapper
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '3px 10px')
+				.style('text-align', 'left')
+				.style('font-size', '.6em')
+				.style('text-transform', 'uppercase')
+				.style('color', '#999')
+				.text(group.name)
+		} else {
 			group.dragActionDiv = group.wrapper.append('div').style('display', 'flex')
 			group.input = group.dragActionDiv
 				.append('input')
@@ -320,10 +321,9 @@ function setRenderers(self: any) {
 
 			group.destroyBtn = group.dragActionDiv
 				.append('button')
-				// .style('float', 'right')
 				.style('display', 'inline-block')
 				.style('padding', '0px 4px')
-				// .property('disabled', self.data.groups.length > 2 ? false : true)
+				.property('disabled', self.data.groups.length <= 3)
 				.text('x')
 				.on('click', async (event: MouseEvent) => {
 					if (self.data.groups.length <= 3) return
@@ -334,7 +334,7 @@ function setRenderers(self: any) {
 
 		group.draggables = group.wrapper.append('div').classed('sjpp-drag-list-div', true)
 
-		self.addItems(group)
+		await self.addItems(group)
 	}
 
 	self.addItems = async function (group: GrpEntryWithDom) {
@@ -375,26 +375,34 @@ function setRenderers(self: any) {
 		else {
 			const defaultDuration = 300
 			await collapseAnimation(defaultDuration)
-			setTimeout(() => {
-				disappear(group.wrapper, true)
-			}, defaultDuration * 3)
+			// setTimeout(() => {
+			// 	disappear(group.wrapper, true)
+			// }, defaultDuration * 3)
+			self.update(0)
 		}
 
 		async function collapseAnimation(defaultDuration: number) {
 			//Remove user action divs
 			// group.title.remove()
 			group.input.remove()
+			group.destroyBtn.remove()
+
+			const z = self.dom.excludedWrapper.node().getBoundingClientRect()
+			console.log(z)
+			const a = group.draggables.selectAll('.sjpp-drag-item')
+			console.log(a)
+			a.transition().duration(defaultDuration).attr(`transform`, `translate(0, -7)`)
 
 			// const { x, y } = getCollapsedScale(self.dom.excludedWrapper.node(), group.wrapper.node())
 			// console.log(x, y)
 			// 	const collapsedX = 0
 			// 	const collapsedY = 0
 
-			// 	const collapseEffect = [
-			// 		{ transform: 'none' },
-			// 		// { transform: 'none', offset: 0.2 },
-			// 		{ transform: `translate(${collapsedX}px, ${collapsedY}px)` }
-			// 	]
+			// const collapseEffect = [
+			// 	{ transform: 'none' },
+			// 	// { transform: 'none', offset: 0.2 },
+			// 	{ transform: `translate(${collapsedX}px, ${collapsedY}px)` }
+			// ]
 
 			// 	const collapseTime = {
 			// 		duration: defaultDuration,
@@ -414,22 +422,21 @@ function setRenderers(self: any) {
 			// 	// 	.text(itemsNum.length)
 			// 	group.draggables.style('transform', `translate(${collapsedX}px, ${collapsedY}px) scale(0)`)
 		}
-		self.update(0)
 	}
 
 	//TODO: when animations.js is converted to ts, move there
 	function getCollapsedScale(anchor: any, div: Element) {
 		//anchor: constant element appearing on expand and collapse
 		//div: the whole div, items and all, to collapse and expand
-		const collapsed = anchor.getBoundingClientRect()
-		const expanded = div.getBoundingClientRect()
-		return {
-			x: collapsed.width / expanded.width,
-			y: collapsed.height / expanded.height
-		}
+		//const collapsed = anchor.getBoundingClientRect()
+		// const expanded = div.getBoundingClientRect()
+		// return {
+		// 	x: collapsed.width / expanded.width,
+		// 	y: collapsed.height / expanded.height
+		// }
 	}
 
-	self.update = function (idx = 0) {
+	self.update = async function (idx = 0) {
 		self.data.groups.forEach((group: GrpEntry) => {
 			if (group.currentIdx > idx && idx !== 0) {
 				group.currentIdx = group.currentIdx - 1
@@ -441,8 +448,11 @@ function setRenderers(self: any) {
 			.data(self.data.groups)
 			.each(async (group: GrpEntryWithDom) => {
 				// group.title.text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
-				if (group.currentIdx !== 0) group.input.node().value = group.name
-				self.addItems(group)
+				if (group.currentIdx !== 0) {
+					group.input.node().value = group.name
+					group.destroyBtn.property('disabled', self.data.groups.length <= 3)
+				}
+				await self.addItems(group)
 			})
 	}
 }
