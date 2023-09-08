@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     timeout-minutes: 20
     steps:
       - name: Check secret
@@ -47,6 +47,7 @@ jobs:
 
       - name: Install PP packages
         run: |
+          rustup toolchain list
           npm ci
           cd rust && npm run build
 
