@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "es6",
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "baseUrl": "./",
+    "allowImportingTsExtensions": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false
+  },
+  "exclude": [
+    "node_modules",
+    "**/*+(.spec|.e2e).ts"
+  ]
+}

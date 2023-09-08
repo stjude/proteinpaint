@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-const augent = require('./src/augen.js')
-const fs = require('fs')
-const path = require('path')
+import augent from './src/augen.js'
+import fs from 'fs'
 
 const cmd = process.argv[2]
 if (!['typeCheckers', 'apiJson'].includes(cmd)) throw `cmd='${cmd}' not supported`
