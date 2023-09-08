@@ -17,6 +17,7 @@ Fixes:
 - Gracefully handle a hic file with no frag resolutions
 - Display Age at diagnosis in years instead of days for GDC
 - Fix GDC Days to birth axis issue
+- mds3 variant2samples.get() returns an object to wrap the optional bin labels
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
