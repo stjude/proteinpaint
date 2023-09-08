@@ -18,6 +18,7 @@ Fixes:
 - Display Age at diagnosis in years instead of days for GDC
 - Fix GDC Days to birth axis issue
 - mds3 variant2samples.get() returns an object to wrap the optional bin labels
+- Fix the issues results from term conversion between continous and discrete mode
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
