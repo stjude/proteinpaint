@@ -122,12 +122,11 @@ function getChartTypeList(self) {
 			}
 		},
 		{
-			label: 'Samples View',
+			label: 'Sample View',
 			clickTo: self.prepPlot,
-			chartType: 'sampleGroupView',
+			chartType: 'sampleView',
 			config: {
-				chartType: 'sampleGroupView',
-				samples: []
+				chartType: 'sampleView'
 			}
 		},
 		{
