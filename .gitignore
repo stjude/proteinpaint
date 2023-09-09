@@ -20,6 +20,7 @@ server/shared/types/docs.json
 server/shared/types/*.js
 !server/shared/types/typedoc.js
 server/shared/types/terms/*.js
+server/shared/types/routes/checkers/*
 
 **/public/bin/*
 public/tmp/*

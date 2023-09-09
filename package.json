@@ -11,7 +11,8 @@
     "client",
     "front",
     "container/server",
-    "container/full"
+    "container/full",
+    "augen"
   ],
   "scripts": {
     "reset": "rm -rf ./node_modules && rm -rf ./**/node_modules && npm install",
