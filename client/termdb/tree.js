@@ -79,7 +79,8 @@ class TdbTree {
 		const mainDiv = this.opts.holder.append('div')
 		const left = mainDiv.insert('div').style('display', 'inline-block')
 		const right = mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const samplesTable = right.append('table').style('position', `relative`).style('top', `-25px`)
+		const samplesTable = right.append('table').style('position', `relative`).style('top', `-26px`)
+
 		this.dom = {
 			holder: left.insert('div'),
 			header,
@@ -389,13 +390,14 @@ function setRenderers(self) {
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
+		if (self.state.samples) div.style('margin', '0px').style('background-color', '#fafafa')
 
 		if (uses.has('branch')) {
 			div
 				.insert('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
 				.style('display', 'inline-block')
-				.style('padding', '4px 9px')
+				.style('padding', '5px 9px')
 				.style('font-family', 'courier')
 				.text('+')
 
@@ -415,6 +417,7 @@ function setRenderers(self) {
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
+			.style('margin', '1.4px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(text)
 
@@ -435,7 +438,7 @@ function setRenderers(self) {
 				labeldiv
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 					.style('padding', '5px 8px')
-					.style('margin', '1px 0px')
+					.style('margin', '2px 0px')
 					.style('opacity', 0.4)
 			} else if (uses.has('plot') && !self.state.samples) {
 				labeldiv
@@ -443,7 +446,7 @@ function setRenderers(self) {
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
-					.style('margin', '1px 0px')
+					.style('margin', '2px 0px')
 					.style('cursor', 'default')
 					.on('click', () => self.clickTerm(term))
 					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
@@ -505,7 +508,8 @@ function setRenderers(self) {
 			let i = 1
 			for (const value of values) {
 				tr.append('td')
-					.style('padding', '5px 4px 4px 4px')
+					.style('padding', '5px')
+					.style('border', '1px solid white')
 					.style('color', 'gray')
 					.style('background-color', '#fafafa')
 					.style('text-align', 'right')
@@ -516,6 +520,7 @@ function setRenderers(self) {
 			tr.append('td')
 				.attr('colspan', self.state.samples.length)
 				.style('padding', '5px')
+				.style('border', '1px solid white')
 				.style('background-color', '#fafafa')
 				.html('&nbsp;')
 	}
