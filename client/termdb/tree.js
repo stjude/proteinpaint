@@ -338,10 +338,20 @@ function setRenderers(self) {
 		const expand = term.id in self.termsById && self.state.expandedTermIds.includes(term.id)
 		if (!expand) select(this).style('display', 'none')
 		if (self.state.samples) {
-			const id = term.id.replace(/[^a-zA-Z]/g, '')
-			const tr = self.dom.samplesTable.select(`#${id}`)
+			const tr = self.getRow(term)
 			tr.style('display', self.state.expandedTermIds.includes(term.parent.id) ? '' : 'none')
 		}
+	}
+
+	self.getRow = function (term) {
+		const id = self.getId(term)
+		const tr = self.dom.samplesTable.select(`#${id}`)
+		return tr
+	}
+
+	self.getId = function (term) {
+		const id = 'id_' + term.id.replace(/[^A-Za-z0-9]/g, '')
+		return id
 	}
 
 	self.updateTerm = function (term) {
@@ -357,8 +367,7 @@ function setRenderers(self) {
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		if (self.state.samples) {
-			const id = term.id.replace(/[^a-zA-Z]/g, '')
-			const tr = self.dom.samplesTable.select(`#${id}`)
+			const tr = self.getRow(term)
 			if (term.isleaf) {
 				tr.selectAll('*').remove()
 				self.addTermValues(tr, term)
@@ -423,9 +432,9 @@ function setRenderers(self) {
 
 		if (self.state.samples) {
 			let tr
-			const id = self.getInsertBeforeId(term)
-			if (id) tr = self.dom.samplesTable.insert('tr', `#${id}`).attr('id', term.id.replace(/[^a-zA-Z]/g, ''))
-			else tr = self.dom.samplesTable.append('tr').attr('id', term.id.replace(/[^a-zA-Z]/g, ''))
+			const beforeId = self.getInsertBeforeId(term)
+			if (beforeId) tr = self.dom.samplesTable.insert('tr', `#${beforeId}`).attr('id', self.getId(term))
+			else tr = self.dom.samplesTable.append('tr').attr('id', self.getId(term))
 
 			self.addTermValues(tr, term)
 		}
@@ -491,7 +500,7 @@ function setRenderers(self) {
 	}
 
 	self.getInsertBeforeId = function (term) {
-		const parentId = term.parent.id.replace(/[^a-zA-Z]/g, '')
+		const parentId = self.getId(term.parent)
 		const trs = self.dom.samplesTable.selectAll('tr').nodes()
 		const index = trs.findIndex(tr => tr.getAttribute('id') == parentId)
 		const index2 = term.parent.terms.findIndex(t => t.id == term.id)
@@ -513,7 +522,7 @@ function setRenderers(self) {
 					.style('color', 'gray')
 					.style('background-color', '#fafafa')
 					.style('text-align', 'right')
-					.html(value)
+					.html(value == '' ? '&nbsp;' : value)
 				i++
 			}
 		} else
