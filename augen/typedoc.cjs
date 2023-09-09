@@ -1,3 +1,4 @@
+/** @type {import('typedoc').TypeDocOptions} */
 module.exports = {
 	entryPoints: ['./test/checkers/transformed/index.ts'],
 	out: './public/docs',

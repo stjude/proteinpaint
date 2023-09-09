@@ -1,6 +1,6 @@
 const serverconfig = require('./serverconfig')
 const { basepath, app, genomes, phewas, startServer, pp_init } = require('./app')
-const augen = require('../augen/augen')
+const augen = require('@sjcrh/augen')
 const fs = require('fs')
 const path = require('path')
 

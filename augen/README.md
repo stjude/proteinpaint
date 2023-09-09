@@ -10,9 +10,12 @@ npm install
 
 ## Develop
 
-```
-
+```bash
+npm run dev
 ```
 
 ## Test
 
+```bash
+npm test
+```
