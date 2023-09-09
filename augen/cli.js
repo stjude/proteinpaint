@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import augent from './src/augen.js'
+import * as augent from './src/augen.js'
 import fs from 'fs'
 
 const cmd = process.argv[2]
@@ -12,9 +12,14 @@ if (!fs.existsSync(dir)) throw `Not found: dir='${dir}'`
 
 const fromPath = process.argv[4]
 
-const files = fs.readdirSync(dir)
+const files = fs.readdirSync(dir).filter(f => f.endsWith('.ts') || f.endsWith('.js'))
 ;(async () => {
-	const fileRoutes = files.map(file => ({ file, route: require(`${dir}/${file}`) }))
+	const fileRoutes = await Promise.all(
+		files.map(async file => {
+			const route = await import(`${dir}/${file}`)
+			return { file, route }
+		})
+	)
 	if (cmd == 'typeCheckers') {
 		if (!fromPath) throw `missing fromPath`
 		const content = augent[cmd](fileRoutes, fromPath)
