@@ -6,6 +6,8 @@ import { write_file, mayCopyFromCookie } from './utils'
 const serverconfig = require('./serverconfig')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
 const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
+import { fileSize } from '../shared/fileSize'
+import got from 'got'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -177,6 +179,11 @@ async function get_ds(q, genome) {
 async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
+
+	if (q.gdcMaf) {
+		// quick fix! to avoid modify app.js and wait for augen refactor
+		return { files: await listMafFiles(q) }
+	}
 
 	if (q.singleSampleMutation) {
 		if (!ds.queries.singleSampleMutation?.get) throw 'not supported on this dataset'
@@ -853,4 +860,68 @@ async function update_leaf_node(depth_first_branch, given_node, node_children, n
 		//console.log('node_children:', node_children)
 	}
 	return node_children
+}
+
+async function listMafFiles(q) {
+	const filters = {
+		op: 'and',
+		content: [
+			{
+				op: '=',
+				content: { field: 'data_format', value: 'MAF' }
+			}
+		]
+	}
+
+	if (q.filter0) {
+		filters.content.push(q.filter0)
+	}
+
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+
+	const data = {
+		filters,
+		size: 1000,
+		fields: [
+			'id',
+			'file_size',
+			'experimental_strategy',
+			'cases.submitter_id', // used when listing all cases & files
+			//'associated_entities.entity_submitter_id', // semi human readable
+			//'associated_entities.case_id', // case uuid
+			'cases.samples.sample_type',
+			'analysis.workflow_type' // to drop out those as skip_workflow_type
+		].join(',')
+	}
+
+	const response = await got.post('https://api.gdc.cancer.gov/files', { headers, body: JSON.stringify(data) })
+
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from ' + api.end_point
+	}
+	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+
+	// flatten api return to table row objects
+	// it is possible to set a max size limit to limit the number of files passed to client
+	const files = []
+	for (const h of re.data.hits) {
+		const file = {
+			id: h.id,
+			workflow_type: h.analysis?.workflow_type,
+			experimental_strategy: h.experimental_strategy,
+			file_size: fileSize(h.file_size)
+		}
+		const c = h.cases?.[0]
+		if (c) {
+			file.case_submitter_id = c.submitter_id
+			if (c.samples) {
+				file.sample_types = c.samples.map(i => i.sample_type).join(', ')
+			}
+		}
+		files.push(file)
+	}
+	return files
 }
