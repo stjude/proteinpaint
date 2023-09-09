@@ -67,6 +67,15 @@ upon error, throw err message as a string
 		return
 	}
 
+	if (urlp.has('gdcmaf')) {
+		const _ = await import('./gdc.maf')
+		_.gdcMAFui({
+			holder: arg.holder,
+			debugmode: arg.debugmode
+		})
+		return
+	}
+
 	//////////// to delete
 	if (urlp.has('mdsjsonform')) {
 		const _ = await import('./mdsjsonform')

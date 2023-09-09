@@ -1,5 +1,6 @@
 const got = require('got')
 const path = require('path')
+import { fileSize } from '../shared/fileSize'
 
 /*
 exports one function
@@ -45,6 +46,7 @@ gdc_bam_request
 export async function gdc_bam_request(req, res) {
 	try {
 		if (req.query.gdc_id) {
+			// has user input, test on which id it is and any bam file associated with it
 			const bamdata = await get_gdc_data(
 				req.query.gdc_id,
 				req.query.filter0 // optional gdc cohort filter
@@ -54,6 +56,7 @@ export async function gdc_bam_request(req, res) {
 
 			res.send(bamdata)
 		} else {
+			// no user input, list all available bam files from current cohort
 			const re = await getCaseFiles(req.query.filter0)
 			res.send(re)
 		}
@@ -143,7 +146,7 @@ async function get_gdc_data(gdc_id, filter0) {
 
 		const file = {}
 		file.file_uuid = s.id
-		file.file_size = (Number.parseFloat(s.file_size) / 10e8).toFixed(2) + ' GB'
+		file.file_size = fileSize(s.file_size)
 		file.experimental_strategy = s.experimental_strategy
 		file.entity_id = s.associated_entities[0].entity_submitter_id
 		file.case_id = s.associated_entities[0].case_id
