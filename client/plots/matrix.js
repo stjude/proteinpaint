@@ -671,7 +671,6 @@ export class Matrix {
 			for (const group of this.sampleGroups) {
 				t.counts.subGroupCounts[group.name] = {
 					samplesTotal: 0, // number of counted (not Blank or WT) samples
-					hitsTotal: 0, // sum of classes in counted samples
 					classes: {} // number of each class
 				}
 				if (t.tw.term.type == 'geneVariant') {
@@ -746,15 +745,29 @@ export class Matrix {
 				if (countedValuesNoSkip.length) {
 					//count the samples and classes in each subGroup
 					if (t.tw.term.type == 'geneVariant') {
-						subGroup.samplesTotal += 1
-						subGroup.hitsTotal += countedValuesNoSkip.length
+						let sampleCounted = false
 						for (const countedValue of countedValuesNoSkip) {
-							if (!(countedValue.class in subGroup.classes)) subGroup.classes[countedValue.class] = 1
-							else subGroup.classes[countedValue.class] += 1
+							if (s.geneVariantCountSamplesSkipMclass.includes(countedValue.class)) {
+								if (!subGroup.notTestedClasses) subGroup.notTestedClasses = {}
+								if (!(countedValue.class in subGroup.notTestedClasses))
+									subGroup.notTestedClasses[countedValue.class] = 1
+								else subGroup.notTestedClasses[countedValue.class] += 1
+							} else if (!(countedValue.class in subGroup.classes)) {
+								if (!sampleCounted) {
+									subGroup.samplesTotal += 1
+									sampleCounted = true
+								}
+								subGroup.classes[countedValue.class] = 1
+							} else {
+								if (!sampleCounted) {
+									subGroup.samplesTotal += 1
+									sampleCounted = true
+								}
+								subGroup.classes[countedValue.class] += 1
+							}
 						}
 					} else {
 						subGroup.samplesTotal += 1
-						subGroup.hitsTotal += countedValuesNoSkip.length
 						for (const countedValue of countedValuesNoSkip) {
 							if (!(countedValue in subGroup.classes)) subGroup.classes[countedValue] = 1
 							else subGroup.classes[countedValue] += 1

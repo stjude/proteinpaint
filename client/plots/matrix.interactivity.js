@@ -1451,10 +1451,10 @@ function setLabelDragEvents(self, prefix) {
 						.style('padding-top', '10px')
 						.html(
 							grpName
-								? `<b>${grpName}</b>: mutated samples (${counts.samplesTotal} of ${
+								? `<b>${grpName}</b>: Mutated samples (${counts.samplesTotal} of ${
 										groupSampleTotal - counts.samplesNotTested
 								  }, ${d3format('.1%')(mRate)})`
-								: `<b>mutated samples (${counts.samplesTotal} of ${
+								: `<b>Mutated samples (${counts.samplesTotal} of ${
 										groupSampleTotal - counts.samplesNotTested
 								  }, ${d3format('.1%')(mRate)})`
 						)
@@ -1468,6 +1468,20 @@ function setLabelDragEvents(self, prefix) {
 							.style('height', '12px')
 							.style('background-color', mclass[classType].color)
 						tr.append('td').html(`${mclass[classType].label}: ${num}`)
+					}
+					if (counts.notTestedClasses) {
+						div.append('div').style('margin-left', '15px').style('padding-top', '12px').html('<b> Not counted:</b>')
+						const t = div.append('table').style('margin-left', '15px')
+						for (const [classType, num] of Object.entries(counts.notTestedClasses).sort((a, b) => b[1] - a[1])) {
+							const tr = t.append('tr')
+							// icon
+							tr.append('td')
+								.append('div')
+								.style('width', '12px')
+								.style('height', '12px')
+								.style('background-color', mclass[classType].color)
+							tr.append('td').html(`${mclass[classType].label}: ${num}`)
+						}
 					}
 				}
 			} else if (!self.config.divideBy) {
