@@ -337,8 +337,25 @@ function setRenderers(self) {
 
 	self.renderSampleTable = function () {
 		const openBranches = [self.state.samples]
+		const closedBranches = []
 		this.dom.holder.selectAll('.termdiv').each(function (d) {
-			if (select(this).style('display') != 'none') openBranches.push(d)
+			if (select(this).style('display') == 'none') {
+				closedBranches.push(this)
+			} else {
+				const childdivs = this.querySelectorAll('.termchilddiv')
+				for (const div of childdivs) {
+					if (div.style.display == 'none') closedBranches.push(div)
+				}
+				let hasClosedAncestor = false
+				for (const closed of closedBranches) {
+					if (closed.contains(this)) {
+						hasClosedAncestor = true
+						closedBranches.push(this)
+						break
+					}
+				}
+				if (!hasClosedAncestor) openBranches.push(d)
+			}
 			select(this).style('background-color', '#fafafa')
 		})
 		const trs = this.dom.samplesTable
