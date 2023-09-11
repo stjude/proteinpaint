@@ -3,7 +3,7 @@
 //const test = require('./shared/doc').test
 
 module.exports = {
-	entryPoints: ['./shared/types/routes/checkers/transformed/index.ts'],
+	entryPoints: ['./shared/checkers/index.ts'],
 	out: '../public/docs/server',
 	groupOrder: ['Termdb', 'Termdb - TW', 'TW', '*'],
 	categoryOrder: ['Termdb', 'Termdb - TW', 'TW', '*'],

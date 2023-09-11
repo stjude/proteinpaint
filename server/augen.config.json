@@ -1,0 +1,6 @@
+{
+	"routesDir": "routes",
+	"typesDir": "shared/types/routes",
+	"checkersDir": "shared/types/checkers",
+	"docsDir": "public/docs/server"
+}

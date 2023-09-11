@@ -1,6 +1,6 @@
 /** @type {import('typedoc').TypeDocOptions} */
 module.exports = {
-	entryPoints: ['./test/checkers/transformed/index.ts'],
+	entryPoints: ['./test/checkers/index.ts'],
 	out: './public/docs',
 	categorizeByGroup: true,
 	plugin: ['typedoc-plugin-replace-text', 'typedoc-plugin-missing-exports'],
