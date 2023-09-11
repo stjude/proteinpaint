@@ -77,7 +77,7 @@ class TdbTree {
 		const header = this.opts.holder.append('div')
 		if (appState.samples) for (const sample of appState.samples) this.sampleDataByTermId[sample.sampleId] = {}
 		const mainDiv = this.opts.holder.append('div')
-		const left = mainDiv.insert('div').style('display', 'inline-block')
+		const left = mainDiv.insert('div').style('display', 'inline-block').style('min-width', '300px')
 		const right = mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const samplesTable = right.append('table').style('position', `relative`).style('top', `-26px`)
 
@@ -224,6 +224,8 @@ class TdbTree {
 		for (const term of terms) term_ids.push(term.id)
 		for (const sample of this.state.samples) {
 			const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
+			console.log(data)
+			if ('error' in data) throw data.error
 			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
 		}
 	}

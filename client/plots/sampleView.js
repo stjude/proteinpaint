@@ -58,19 +58,13 @@ class SampleView extends MassDict {
 			appState.termdbConfig.queries?.singleSampleMutation
 
 		if (showContent) {
-			this.dom.treeDiv
-				.style('min-width', '700px')
-				.style('overflow', 'scroll')
-				.attr('class', 'sjpp_hide_scrollbar')
-				.style('border-right', '1px solid gray')
-
 			this.dom.contentDiv
 				//.style('width', '60%')
 				.style('min-height', '500px')
 				.style('flex-direction', 'column')
 				.style('justify-content', 'center')
 				.style('align-items', 'start')
-				.style('border-left', '1px solid gray')
+			//.style('border-left', '1px solid gray')
 		}
 	}
 
