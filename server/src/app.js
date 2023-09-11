@@ -6991,7 +6991,7 @@ and load all datasets supported in each genome
 as encoded in file "serverconfig.json"
 at the end it will 
 */
-async function pp_init() {
+async function pp_init(serverconfig) {
 	// verify if tp directory is readable
 	// ppr has this situation where its tp/ is from a nfs mount and can go down...
 	try {

@@ -4,6 +4,7 @@ import serverconfig from '../serverconfig'
 import path from 'path'
 import fs from 'fs'
 import { initdb } from '../genome.initdb'
+import { init as mds3_init } from '../mds3.init.js'
 
 /****************************************
  reusable constants and helper functions
@@ -62,6 +63,19 @@ async function testApi(f) {
 		test.end()
 	})
 
+	if (!g.datasets) {
+		g.datasets = {}
+		try {
+			g.datasets.TermdbTest = await setDataset(g, {
+				name: 'TermdbTest',
+				jsfile: './dataset/termdb.test.js'
+			})
+		} catch (e) {
+			console.log(`Error in setDataset(): `, e)
+			process.exit(1)
+		}
+	}
+
 	for (const method in api.methods) {
 		const m = api.methods[method]
 		const METHOD = method.toUpperCase()
@@ -76,8 +90,9 @@ async function testApi(f) {
 				}
 				const app = getApp({ api })
 				const req = {
-					query: x.request?.body || {}
+					query: x.request?.query || x.request?.body || {}
 				}
+				console.log(80, req)
 				const res = {
 					statusNum: 200,
 					send(payload) {
@@ -90,7 +105,7 @@ async function testApi(f) {
 						test.deepEqual(
 							checkers[`valid${m.response.typeId}`](payload)?.errors,
 							[],
-							'validation should have an empty array for type check errors'
+							'validation should have an empty array for type check errors: ' + JSON.stringify(payload)
 						)
 					},
 					status(num) {
@@ -103,6 +118,48 @@ async function testApi(f) {
 				await route.get(req, res)
 				test.end()
 			})
+		}
+	}
+}
+
+async function setDataset(g, d) {
+	/*
+	for each raw dataset
+	*/
+	const genomename = g.name
+	if (!d.name) throw 'a nameless dataset from ' + genomename
+	if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
+	if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
+
+	/*
+		When using a Docker container, the mounted app directory
+		may have an optional dataset directory, which if present
+		will be symlinked to the app directory and potentially override any
+		similarly named dataset js file that are part of the standard
+		Proteinpaint packaged files[] 
+	*/
+	const jsfile = path.join(process.cwd(), d.jsfile)
+	console.log(139, jsfile)
+	console.log(141, fs.existsSync(jsfile))
+	const _ds = __non_webpack_require__(jsfile)
+	const ds =
+		typeof _ds == 'function'
+			? _ds(common)
+			: typeof _ds?.default == 'function'
+			? _ds.default(common)
+			: _ds.default || _ds
+
+	ds.noHandleOnClient = d.noHandleOnClient
+	ds.label = d.name
+	ds.genomename = genomename
+	g.datasets[ds.label] = ds
+
+	if (ds.isMds3) {
+		try {
+			await mds3_init(ds, g, d, null, '')
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			throw 'Error with mds3 dataset ' + ds.label + ': ' + e
 		}
 	}
 }
