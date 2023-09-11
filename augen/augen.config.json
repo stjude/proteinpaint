@@ -1,0 +1,6 @@
+{
+	"routesDir": "test/routes",
+	"typesDir": "test/types",
+	"checkersDir": "test/checkers",
+	"docsDir": "public/docs"
+}
