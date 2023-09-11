@@ -129,7 +129,6 @@ class TdbTree {
 			const thead = this.dom.samplesTable.append('thead').style('text-align', 'right').style('color', 'gray')
 
 			for (const [i, sample] of Object.entries(this.state.samples)) {
-				thead.append('th').style('padding', '3px').text(sample.sampleName)
 				this.sampleDataByTermId[sample.sampleId] = {}
 			}
 		}
@@ -152,6 +151,7 @@ class TdbTree {
 		root.terms = await this.requestTermRecursive(root)
 		this.dom.holder.style('display', 'block')
 		this.renderBranch(root, this.dom.holder)
+		this.renderSampleTable()
 	}
 
 	getTermsById() {
@@ -336,23 +336,45 @@ function setRenderers(self) {
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function (term) {
-		const expand = term.id in self.termsById && self.state.expandedTermIds.includes(term.id)
-		if (!expand) select(this).style('display', 'none')
-		if (self.state.samples) {
-			const tr = self.getRow(term)
-			tr.style('display', expand ? '' : 'none')
-		}
+		if (term.id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
+		select(this).style('display', 'none')
 	}
 
-	self.getRow = function (term) {
-		const id = self.getId(term)
-		const tr = self.dom.samplesTable.select(`#${id}`)
-		return tr
+	self.renderSampleTable = function () {
+		const openBranches = [self.state.samples]
+		this.dom.holder.selectAll('.termdiv').each(function (d) {
+			if (select(this).style('display') != 'none') openBranches.push(d)
+		})
+		const trs = this.dom.samplesTable
+			.style('display', openBranches.length ? 'inline-block' : 'none')
+			.selectAll('tr')
+			.data(openBranches)
+		trs.exit().remove()
+		trs.each(self.renderTr)
+		trs.enter().append('tr').each(self.renderTr)
 	}
 
-	self.getId = function (term) {
-		const id = 'id_' + term.id.replace(/[^A-Za-z0-9]/g, '')
-		return id
+	self.renderTr = function (branchData, trIndex) {
+		const tds = select(this)
+			.selectAll('td')
+			.data(self.state.samples.map(sample => ({ sample, branchData, trIndex })))
+		tds.exit().remove()
+		tds.each(self.renderTd)
+		const height = self.dom.holder.select('.termlabel').node().getBoundingClientRect().height //; console.log(495, height)
+		tds
+			.enter()
+			.append('td')
+			.style('height', `${height}px`)
+			.style('padding', '0 16px')
+			.style('text-align', 'end')
+			.each(self.renderTd)
+	}
+
+	self.renderTd = function (d, i) {
+		const sampleId = Number(d.sample.sampleId)
+		const data = self.sampleDataByTermId[sampleId]
+		const term = d.branchData
+		select(this).html(d.trIndex === 0 ? d.sample.sampleName : getTermValue(term, data))
 	}
 
 	self.updateTerm = function (term) {
@@ -367,15 +389,9 @@ function setRenderers(self) {
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
-		if (self.state.samples) {
-			const tr = self.getRow(term)
-			if (term.isleaf) {
-				tr.selectAll('*').remove()
-				self.addTermValues(tr, term)
-			}
-		}
+
 		// update other parts if needed, e.g. label
-		else div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
+		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		div
@@ -400,7 +416,7 @@ function setRenderers(self) {
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
-		if (self.state.samples) div.style('margin', '0px').style('background-color', '#fafafa')
+		if (self.state.samples) div.style('margin', '0px')
 
 		if (uses.has('branch')) {
 			div
@@ -431,14 +447,6 @@ function setRenderers(self) {
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(text)
 
-		if (self.state.samples) {
-			let tr
-			const beforeId = self.getInsertBeforeId(term)
-			if (beforeId) tr = self.dom.samplesTable.insert('tr', `#${beforeId}`).attr('id', self.getId(term))
-			else tr = self.dom.samplesTable.append('tr').attr('id', self.getId(term))
-
-			self.addTermValues(tr, term)
-		}
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
@@ -538,7 +546,7 @@ function setRenderers(self) {
 	self.getTermValues = function (term) {
 		let values = []
 		for (const sample of self.state.samples) {
-			const value = getTermValue(term, this.sampleDataByTermId[sample.sampleId]) || 'Missing'
+			const value = getTermValue(term, self.sampleDataByTermId[sample.sampleId]) || 'Missing'
 			values.push(value)
 		}
 		return values
