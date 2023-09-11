@@ -24,7 +24,7 @@ const path = require('path')
 	})
 }
 
-pp_init()
+pp_init(serverconfig)
 	.then(async () => {
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)

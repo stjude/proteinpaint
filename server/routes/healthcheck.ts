@@ -1,13 +1,15 @@
 import { getStat } from '#src/health.ts'
+import { HealthCheckResponse } from '#shared/types/routes/healthcheck.ts'
 
 export const api = {
 	endpoint: 'healthcheck',
 	methods: {
 		get: {
 			init({ genomes }) {
-				return async (req: any, res: any): Promise<void> => {
+				return async (req: undefined, res: any): Promise<void> => {
+					console.log(10, req)
 					try {
-						const health = await getStat(genomes)
+						const health = (await getStat(genomes)) as HealthCheckResponse
 						res.send(health)
 					} catch (e: any) {
 						res.send({ status: 'error', error: e.message || e })

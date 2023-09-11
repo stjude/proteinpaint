@@ -1,11 +1,14 @@
 import { getResult } from '#src/gene.js'
+import { GeneLookupRequest, GeneLookupResponse } from '#shared/types/routes/genelookup.ts'
 
 function init({ genomes }) {
 	return (req: any, res: any): void => {
 		try {
+			const q = req.query as GeneLookupRequest
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
-			res.send(getResult(g, req.query))
+			const result = getResult(g, req.query) as GeneLookupResponse
+			res.send(result)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
