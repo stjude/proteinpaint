@@ -125,12 +125,7 @@ class TdbTree {
 		this.sampleDataByTermId = {}
 		this.dom.header.selectAll('*').remove()
 		if (this.state.samples) {
-			this.dom.samplesTable.selectAll('thead').remove()
-			const thead = this.dom.samplesTable.append('thead').style('text-align', 'right').style('color', 'gray')
-
-			for (const [i, sample] of Object.entries(this.state.samples)) {
-				this.sampleDataByTermId[sample.sampleId] = {}
-			}
+			for (const sample of this.state.samples) this.sampleDataByTermId[sample.sampleId] = {}
 		}
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
@@ -511,18 +506,6 @@ function setRenderers(self) {
 		if (!term.isleaf) {
 			div.append('div').attr('class', cls_termchilddiv).style('padding-left', childterm_indent)
 		}
-	}
-
-	self.getInsertBeforeId = function (term) {
-		const parentId = self.getId(term.parent)
-		const trs = self.dom.samplesTable.selectAll('tr').nodes()
-		const index = trs.findIndex(tr => tr.getAttribute('id') == parentId)
-		const index2 = term.parent.terms.findIndex(t => t.id == term.id)
-
-		if (index == -1 || index2 == -1) return null
-		const id = trs[index + index2 + 1]?.getAttribute('id')
-		if (id) return id
-		return null
 	}
 }
 
