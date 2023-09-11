@@ -340,7 +340,7 @@ function setRenderers(self) {
 		if (!expand) select(this).style('display', 'none')
 		if (self.state.samples) {
 			const tr = self.getRow(term)
-			tr.style('display', self.state.expandedTermIds.includes(term.parent.id) ? '' : 'none')
+			tr.style('display', expand ? '' : 'none')
 		}
 	}
 
