@@ -79,7 +79,7 @@ class TdbTree {
 		const mainDiv = this.opts.holder.append('div')
 		const left = mainDiv.insert('div').style('display', 'inline-block').style('min-width', '300px')
 		const right = mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const samplesTable = right.append('table').style('position', `relative`).style('top', `-26px`)
+		const samplesTable = right.append('table').style('position', `relative`).style('top', `-32px`)
 
 		this.dom = {
 			holder: left.insert('div'),
@@ -344,6 +344,7 @@ function setRenderers(self) {
 		const openBranches = [self.state.samples]
 		this.dom.holder.selectAll('.termdiv').each(function (d) {
 			if (select(this).style('display') != 'none') openBranches.push(d)
+			select(this).style('background-color', '#fafafa')
 		})
 		const trs = this.dom.samplesTable
 			.style('display', openBranches.length ? 'inline-block' : 'none')
@@ -365,8 +366,12 @@ function setRenderers(self) {
 			.enter()
 			.append('td')
 			.style('height', `${height}px`)
+			.style('color', 'gray')
+			.style('background-color', '#fafafa')
 			.style('padding', '0 16px')
 			.style('text-align', 'end')
+			.style('border', '1px solid white')
+
 			.each(self.renderTd)
 	}
 
@@ -518,38 +523,6 @@ function setRenderers(self) {
 		const id = trs[index + index2 + 1]?.getAttribute('id')
 		if (id) return id
 		return null
-	}
-
-	self.addTermValues = async function (tr, term) {
-		if (term.isleaf) {
-			let values = self.getTermValues(term)
-			let i = 1
-			for (const value of values) {
-				tr.append('td')
-					.style('padding', '5px')
-					.style('border', '1px solid white')
-					.style('color', 'gray')
-					.style('background-color', '#fafafa')
-					.style('text-align', 'right')
-					.html(value == '' ? '&nbsp;' : value)
-				i++
-			}
-		} else
-			tr.append('td')
-				.attr('colspan', self.state.samples.length)
-				.style('padding', '5px')
-				.style('border', '1px solid white')
-				.style('background-color', '#fafafa')
-				.html('&nbsp;')
-	}
-
-	self.getTermValues = function (term) {
-		let values = []
-		for (const sample of self.state.samples) {
-			const value = getTermValue(term, self.sampleDataByTermId[sample.sampleId]) || 'Missing'
-			values.push(value)
-		}
-		return values
 	}
 }
 
