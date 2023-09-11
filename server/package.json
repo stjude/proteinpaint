@@ -22,7 +22,7 @@
     "prepack": "tsc --esModuleInterop genome/*.ts dataset/*.ts && webpack --env NODE_ENV=production",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js",
-    "doc": "../augen/build.sh routes shared/types/routes shared/checkers ../public/docs/server"
+    "doc": "../augen/build.sh routes shared/types/routes shared/checkers public/docs/server"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",

@@ -17,11 +17,19 @@ export function setRoutes(app, routes, _opts = {}) {
 export function emitFiles(routes, opts) {
 	if (opts.apiJson) {
 		const apis = JSON.stringify(routes.map(r => r.api))
+		const outdir = path.dirname(opts.apiJson)
+		if (!fs.existsSync(outdir)) {
+			fs.mkdirSync(outdir, { recursive: true, mode: 'rwxr-xr-x' })
+		}
 		fs.writeFileSync(opts.apiJson, apis)
 	}
 	if (opts.types) {
 		const fileRoutes = routes.map(route => ({ file: route.file, route }))
 		const rawImports = typeCheckers(fileRoutes, opts.types.importDir)
+		const outdir = path.dirname(opts.types.outputFile)
+		if (!fs.existsSync(outdir)) {
+			fs.mkdirSync(outdir, { recursive: true, mode: 'rwxr-xr-x' })
+		}
 		fs.writeFileSync(opts.types.outputFile, rawImports)
 	}
 }
