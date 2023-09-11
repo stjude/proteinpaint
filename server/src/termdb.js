@@ -84,7 +84,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'validateToken') {
 			}
 			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
-			if (q.for == 'singleSampleData') return get_singleSampleData(q, res, tdb)
+			if (q.for == 'singleSampleData') return get_singleSampleData(q, req, res, ds, tdb)
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
 			if (q.for == 'DEanalysis') return await get_DEanalysis(q, res, ds)
 
@@ -604,8 +604,18 @@ async function get_matrix(q, req, res, ds, genome) {
 	res.send(data)
 }
 
-async function get_singleSampleData(q, res, tdb) {
-	res.send(tdb.q.getSingleSampleData(q.sampleId, q.term_ids))
+async function get_singleSampleData(q, req, res, ds, tdb) {
+	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+	let result = []
+	if (canDisplay) {
+		try {
+			result = tdb.q.getSingleSampleData(q.sampleId, q.term_ids)
+			console.log(result)
+			res.send(result)
+		} catch (e) {
+			res.send({ error: e.message || e })
+		}
+	} else res.send({ error: 'Requires sign in to access the sample data' })
 }
 
 async function get_AllSamples(q, req, res, ds) {
