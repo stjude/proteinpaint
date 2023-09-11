@@ -276,8 +276,21 @@ authApi.maySetAuthRoutes(app, basepath, serverconfig)
 {
 	// start moving migrated route handler code here
 	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-	const routes = files.map(f => require(`../routes/${f}`))
-	augen.setRoutes(app, routes, { app, genomes, basepath })
+	const routes = files.map(file => {
+		const route = require(`../routes/${file}`)
+		route.file = file
+		return route
+	})
+	augen.setRoutes(app, routes, {
+		app,
+		genomes,
+		basepath,
+		apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
+		types: {
+			importDir: '../types/routes',
+			outputFile: path.join(__dirname, './shared/checkers-raw/index.ts')
+		}
+	})
 }
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)

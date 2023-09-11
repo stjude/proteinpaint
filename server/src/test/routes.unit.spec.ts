@@ -1,5 +1,5 @@
 import tape from 'tape'
-import * as checkers from '../../shared/checkers/transformed/index.ts'
+import * as checkers from '../../shared/checkers/index.ts'
 import serverconfig from '../serverconfig'
 import path from 'path'
 import fs from 'fs'
