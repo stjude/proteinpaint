@@ -19,6 +19,7 @@ Fixes:
 - Fix GDC Days to birth axis issue
 - mds3 variant2samples.get() returns an object to wrap the optional bin labels
 - Fix the issues results from term conversion between continous and discrete mode
+- Indicate original value unit in termsetting UI if the term value is converted; safety check on bin size to avoid crashes
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords

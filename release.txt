@@ -1,2 +1,1 @@
-Fixes:
-- Indicate original value unit in termsetting UI if the term value is converted; safety check on bin size to avoid crashes
+
