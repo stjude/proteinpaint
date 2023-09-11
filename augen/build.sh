@@ -1,42 +1,33 @@
 #!/bin/bash
 
-ROUTESDIR=$PWD/test/routes
-if [[ "$1" != "" ]]; then
-	ROUTESDIR=$1
-	if [[ ! -d $ROUTESDIR ]]; then
-		echo "invalid routes directory"
-		exit 1
-	fi
+# call from the project root
+#
+
+ROUTESDIR=$1
+if [[ ! -d $ROUTESDIR ]]; then
+	echo "invalid routes directory"
+	exit 1
 fi
 
-TYPESDIR=$PWD/test/types
-if [[ "$2" != "" ]]; then
-	TYPESDIR=$2
-	if [[ ! -d $TYPESDIR ]]; then
-		echo "invalid types directory"
-		exit 1
-	fi
+TYPESDIR=$2
+if [[ ! -d $TYPESDIR ]]; then
+	echo "invalid types directory"
+	exit 1
 fi
 
-CHECKERSDIR=$PWD/test/checkers
-if [[ "$3" != "" ]]; then
-	CHECKERSDIR=$3
-	if [[ ! -d $CHECKERSDIR ]]; then
-		echo "invalid checkers directory"
-		exit 1
-	fi
+CHECKERSDIR=$3
+if [[ ! -d $CHECKERSDIR ]]; then
+	echo "invalid checkers directory"
+	exit 1
 fi
 CHECKERSRAW=$CHECKERSDIR-raw
 rm -rf $CHECKERSRAW
 mkdir $CHECKERSRAW
 
-DOCSDIR=$PWD/public/docs
-if [[ "$4" != "" ]]; then
-	DOCSDIR=$4
-	if [[ ! -d $DOCSDIR ]]; then
-		echo "invalid output directory"
-		exit 1
-	fi
+DOCSDIR=$4
+if [[ ! -d $DOCSDIR ]]; then
+	echo "invalid output directory"
+	exit 1
 fi
 
 IMPORTRELPATH=$(python3 -c "import os.path; print(os.path.relpath('$TYPESDIR', '$CHECKERSDIR'))")
@@ -44,7 +35,7 @@ IMPORTRELPATH=$(python3 -c "import os.path; print(os.path.relpath('$TYPESDIR', '
 echo "creating type checker code at $CHECKERSDIR, for routes in $ROUTESDIR ..."
 # echo "[$ROUTESDIR] [$TYPESDIR] [$CHECKERSDIR] [$DOCSDIR]"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-echo "SCRIPT_DIR=[$SCRIPT_DIR]"
+# echo "SCRIPT_DIR=[$SCRIPT_DIR]"
 npx ts-node-esm $SCRIPT_DIR/cli.js typeCheckers $ROUTESDIR $IMPORTRELPATH > $CHECKERSRAW/index.ts
 npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR # --project ./shared/checkers/tsconfig.json
 

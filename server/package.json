@@ -22,10 +22,13 @@
     "prepack": "tsc --esModuleInterop genome/*.ts dataset/*.ts && webpack --env NODE_ENV=production",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js",
+    
     "predoc": "npm run checkers",
     "doc": "typedoc --json ../public/docs/server.json",
     "precheckers": "npx ts-node ./augen/cli.js typeCheckers $PWD/routes ../../../routes > shared/checkers/raw/index.ts",
-    "checkers": "typia generate --input shared/checkers/raw --output shared/checkers/transformed --project ./shared/checkers/tsconfig.json"
+    "checkers": "typia generate --input shared/checkers/raw --output shared/checkers/transformed --project ./shared/checkers/tsconfig.json",
+
+    "doc": "npx @sjcrh/augen build ..."
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",
