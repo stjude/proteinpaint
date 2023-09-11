@@ -19,7 +19,7 @@ export function emitFiles(routes, opts) {
 		const apis = JSON.stringify(routes.map(r => r.api))
 		const outdir = path.dirname(opts.apiJson)
 		if (!fs.existsSync(outdir)) {
-			fs.mkdirSync(outdir, { recursive: true, mode: 'rwxr-xr-x' })
+			fs.mkdirSync(outdir, { recursive: true })
 		}
 		fs.writeFileSync(opts.apiJson, apis)
 	}
@@ -28,7 +28,7 @@ export function emitFiles(routes, opts) {
 		const rawImports = typeCheckers(fileRoutes, opts.types.importDir)
 		const outdir = path.dirname(opts.types.outputFile)
 		if (!fs.existsSync(outdir)) {
-			fs.mkdirSync(outdir, { recursive: true, mode: 'rwxr-xr-x' })
+			fs.mkdirSync(outdir, { recursive: true })
 		}
 		fs.writeFileSync(opts.types.outputFile, rawImports)
 	}
