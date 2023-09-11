@@ -1,4 +1,3 @@
-const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
 const Partjson = require('partjson')
@@ -417,7 +416,7 @@ function getPj(q, data, tdb, ds) {
 				const values = context.self.values
 				if (!values || !values.length) return
 				values.sort((i, j) => i - j)
-				const stat = app.boxplot_getvalue(
+				const stat = utils.boxplot_getvalue(
 					values.map(v => {
 						return { value: +v }
 					})

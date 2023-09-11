@@ -20,8 +20,8 @@ async function prep() {
 	emitFiles(routes, {
 		apiJson: join(__dirname, '../public/server-api.json'),
 		types: {
-			importDir: '../../types',
-			outputFile: join(__dirname, './checkers/raw/index.ts')
+			importDir: '../types',
+			outputFile: join(__dirname, './checkers-raw/index.ts')
 		}
 	})
 }

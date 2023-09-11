@@ -8,7 +8,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const files = readdirSync(join(__dirname, './routes'))
 const endpoints = files.filter(f => f.endsWith('.ts') || f.endsWith('.js'))
-init()
+const port = 'PORT' in process.env ? Number(process.env.PORT) : 8999
+init({ port })
 
 async function init(opts = {}) {
 	const basepath = '/api'
@@ -27,12 +28,14 @@ async function init(opts = {}) {
 		basepath,
 		apiJson: join(__dirname, '../public/docs/server-api.json'),
 		types: {
-			importDir: '..',
+			importDir: '../types',
 			outputFile: join(__dirname, 'checkers-raw/index.ts')
 		}
 	})
 
-	const port = opts.port || 8999
-	console.log(`STANDBY PORT ${port}`)
-	app.listen(port)
+	if (opts.port) {
+		const port = opts.port
+		console.log(`STANDBY PORT ${port}`)
+		app.listen(port)
+	}
 }
