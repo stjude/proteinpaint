@@ -3,7 +3,7 @@ import fs from 'fs'
 import child_process from 'child_process'
 import util from 'util'
 import pkg from '../package.json'
-import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../routes/healthcheck.js'
+import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/routes/healthcheck.js'
 
 const execPromise = util.promisify(child_process.exec)
 

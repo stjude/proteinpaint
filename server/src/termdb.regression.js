@@ -9,8 +9,6 @@ const utils = require('./utils')
 const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 const termdbsql = require('./termdb.sql')
 const runCumincR = require('./termdb.cuminc').runCumincR
-const app = require('./app')
-
 /*
 
 **************** q{} object
@@ -860,7 +858,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 		}
 		const { minv, maxv } = snpid2scale.get(snpid)
 
-		const box1 = app.boxplot_getvalue(
+		const box1 = utils.boxplot_getvalue(
 			hasEffAlleleValues
 				.sort((a, b) => a - b)
 				.map(i => {
@@ -868,7 +866,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 				})
 		)
 		box1.label = `Carry ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${hasEffAlleleValues.length}`
-		const box2 = app.boxplot_getvalue(
+		const box2 = utils.boxplot_getvalue(
 			noEffAlleleValues
 				.sort((a, b) => a - b)
 				.map(i => {

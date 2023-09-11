@@ -67,7 +67,7 @@ module.exports = env => {
 		case 'production':
 			return merge(commonConfig, {
 				mode: 'production',
-				entry: path.join(__dirname, './src/app.js'),
+				entry: path.join(__dirname, './src/run.js'),
 				output: {
 					path: path.join(__dirname, './'),
 					filename: 'server.js'
@@ -89,7 +89,7 @@ module.exports = env => {
 		case 'development':
 			return merge(commonConfig, {
 				mode: 'development',
-				entry: path.join(__dirname, './src/app.js'),
+				entry: path.join(__dirname, './src/run.js'),
 				output: {
 					path: path.join(__dirname, './'),
 					filename: 'server.js'
