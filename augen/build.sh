@@ -16,27 +16,27 @@ if [[ ! -d $TYPESDIR ]]; then
 fi
 
 CHECKERSDIR=$3
-if [[ ! -d $CHECKERSDIR ]]; then
-	echo "invalid checkers directory"
-	exit 1
-fi
 CHECKERSRAW=$CHECKERSDIR-raw
 rm -rf $CHECKERSRAW
 mkdir $CHECKERSRAW
 
 DOCSDIR=$4
-if [[ ! -d $DOCSDIR ]]; then
-	echo "invalid output directory"
-	exit 1
-fi
 
 IMPORTRELPATH=$(python3 -c "import os.path; print(os.path.relpath('$TYPESDIR', '$CHECKERSDIR'))")
 
 echo "creating type checker code at $CHECKERSDIR, for routes in $ROUTESDIR ..."
-# echo "[$ROUTESDIR] [$TYPESDIR] [$CHECKERSDIR] [$DOCSDIR]"
+echo "[$PWD] [$ROUTESDIR] [$TYPESDIR] [$CHECKERSDIR] [$DOCSDIR]"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # echo "SCRIPT_DIR=[$SCRIPT_DIR]"
-npx ts-node-esm $SCRIPT_DIR/cli.js typeCheckers $ROUTESDIR $IMPORTRELPATH > $CHECKERSRAW/index.ts
+
+# 
+# skipping the typeChecker step since ts-node(-esm) sometimes breaks on mixed esm import/cjs require between files 
+# the current solution is to use the opts.apiJSON + types.{importDir, outputFile} to augen.setRoutes()
+#
+# CHECKERSRAW_OUTPUT=$(npx ts-node-esm $SCRIPT_DIR/cli.js typeCheckers $ROUTESDIR $IMPORTRELPATH)
+# echo "$CHECKERSRAW_OUTPUT" > $CHECKERSRAW/index.ts
+# 
+
 npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR # --project ./shared/checkers/tsconfig.json
 
 echo "building documentation at $DOCSDIR ..."
@@ -55,4 +55,4 @@ rm -rf $DOCSDIR/**/.*-e
 rm -rf $DOCSDIR/.*-e
 
 $SCRIPT_DIR/src/extractTypesFromHtml.js > $DOCSDIR/extracts.json
-# npx webpack --config=server/shared/checkers/webpack.config.js
+# npx webpack --config=$SCRIPT_DIR/webpack.config.js 

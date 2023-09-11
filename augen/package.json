@@ -4,7 +4,7 @@
   "description": "Automatic generator of server routes, unit tests, and API documentation",
   "type": "module",
   "main": "src/augen.js",
-  "bin": "cli.j",
+  "bin": "cli.js",
   "scripts": {
     "predev": "ts-node-esm test/prep.js",
     "dev": "ts-node-esm test/app.js",

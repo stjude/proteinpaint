@@ -23,7 +23,14 @@ async function init(opts = {}) {
 	const app = express()
 	const staticService = express.static(join(__dirname, '../public'))
 	app.use(staticService)
-	setRoutes(app, routes, { basepath })
+	setRoutes(app, routes, {
+		basepath,
+		apiJson: join(__dirname, '../public/docs/server-api.json'),
+		types: {
+			importDir: '..',
+			outputFile: join(__dirname, 'checkers-raw/index.ts')
+		}
+	})
 
 	const port = opts.port || 8999
 	console.log(`STANDBY PORT ${port}`)
