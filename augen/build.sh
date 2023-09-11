@@ -54,7 +54,7 @@ rm -rf $DOCSDIR/*.*-e
 rm -rf $DOCSDIR/**/.*-e
 rm -rf $DOCSDIR/.*-e
 
-$SCRIPT_DIR/src/extractTypesFromHtml.js > $DOCSDIR/extracts.json
+$SCRIPT_DIR/src/extractTypesFromHtml.js $DOCSDIR > $DOCSDIR/extracts.json
 npx tsc $CHECKERSDIR/index.ts
 # echo "npx webpack --config=$SCRIPT_DIR/webpack.config.cjs --env entry=$PWD/$CHECKERSDIR/index.js --env outdir=$PWD/$DOCSDIR"
 npx webpack --config=$SCRIPT_DIR/webpack.config.cjs --env entry=$PWD/$CHECKERSDIR/index.js --env outdir=$PWD/$DOCSDIR
