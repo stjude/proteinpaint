@@ -224,7 +224,6 @@ class TdbTree {
 		for (const term of terms) term_ids.push(term.id)
 		for (const sample of this.state.samples) {
 			const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
-			console.log(data)
 			if ('error' in data) throw data.error
 			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
 		}

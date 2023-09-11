@@ -610,7 +610,6 @@ async function get_singleSampleData(q, req, res, ds, tdb) {
 	if (canDisplay) {
 		try {
 			result = tdb.q.getSingleSampleData(q.sampleId, q.term_ids)
-			console.log(result)
 			res.send(result)
 		} catch (e) {
 			res.send({ error: e.message || e })
