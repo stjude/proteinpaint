@@ -3,11 +3,10 @@ import fs from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
+const docsdir = process.argv[2]
 const extracts = {}
 for (const t of ['types', 'interfaces']) {
-	const dir = join(__dirname, `../public/docs/${t}`)
+	const dir = join(docsdir, t)
 	if (!fs.existsSync(dir)) continue
 	const files = fs.readdirSync(dir)
 	for (const fname of files) {
