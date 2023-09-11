@@ -10,10 +10,10 @@ const path = require('path')
 	const routes = files.map(file => Object.assign(require(`../routes/${file}`), { file }))
 	const opts = { app, genomes }
 	if (serverconfig.debugmode) {
-		opts.apiJson = path.join(__dirname, '../public/docs/server-api.json')
+		opts.apiJson = path.join(__dirname, '../../public/docs/server-api.json')
 		opts.types = {
 			importDir: '../..',
-			outputFile: path.join(__dirname, './shared/types/routes/checkers/raw/index.ts')
+			outputFile: path.join(__dirname, './shared/checkers/index.ts')
 		}
 	}
 	augen.setRoutes(app, routes, basepath, opts)

@@ -15,6 +15,7 @@
     "start": "tsc --esModuleInterop genome/*.ts dataset/*.ts && nodemon --enable-source-maps server.js --watch ./server*.js* --watch dataset/*.ts --watch genome/*.ts",
     "pretest": "tsc --esModuleInterop genome/*.ts dataset/*.ts && ./test/pretest.js",
     "test": "webpack --env NODE_ENV=test exportsFilename=all-test-context.js && node --enable-source-maps test/serverTests.js",
+    "checkers": "webpack --env NODE_ENV=development && node server.js validate && npx typia generate --input shared/checkers-raw --output shared/checkers",
     "pretest:unit": "npm run checkers && tsc genome/hg38.test.ts",
     "test:unit": "webpack --env NODE_ENV=test exportsFilename=unit-test-context.js && tsc --esModuleInterop dataset/*.ts && node --enable-source-maps test/serverTests.js",
     "pretest:integration": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
