@@ -357,7 +357,16 @@ function renderTypeInputs(self: NumericTermSettingInstance) {
 }
 
 /******************* Functions for Numerical Fixed size bins *******************/
+function mayShowValueconversionMsg(self: NumericTermSettingInstance, tablediv: any) {
+	if (!self.term.valueConversion) return
+	tablediv
+		.append('div')
+		.style('margin-bottom', '5px')
+		.style('opacity', 0.6)
+		.text(`Note: using values by the unit of ${self.term.valueConversion.fromUnit}.`)
+}
 function renderFixedBinsInputs(self: NumericTermSettingInstance, tablediv: any) {
+	mayShowValueconversionMsg(self, tablediv)
 	self.dom.bins_table = tablediv.append('table')
 	renderBinSizeInput(self, self.dom.bins_table.append('tr'))
 	renderFirstBinInput(self, self.dom.bins_table.append('tr'))
@@ -379,31 +388,32 @@ function renderBinSizeInput(self: NumericTermSettingInstance, tr: any) {
 		.style('width', '100px')
 		.style('color', () => (self.q.bin_size! > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
 		.on('change', handleChange)
-		.on('keyup', function (this: any, event: any) {
-			if (!keyupEnter(event)) return
-			handleChange.call(this)
-		})
 
-	function handleChange(this: any) {
-		self.q.bin_size = +this.value
-		select(this).style(
+	function handleChange(event) {
+		const newValue = Number(event.target.value)
+		// must validate input value
+		if (newValue <= 0) {
+			window.alert('Please enter non-negative bin size.')
+			// must reset value in <input>, otherwise the wrong value will be recorded in self.q upon clicking Submit
+			event.target.value = origBinSize
+			return
+		}
+		if ((dd.maxvalue - dd.minvalue) / newValue > 100) {
+			// avoid rendering too many svg lines and lock up browser
+			window.alert('Bin size too small. Try setting a larger one.')
+			event.target.value = origBinSize
+			return
+		}
+		self.q.bin_size = newValue
+		self.dom.bin_size_input.style(
 			'color',
-			self.q.bin_size > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : +this.value != origBinSize ? 'green' : ''
+			self.q.bin_size > dd.maxvalue - dd.minvalue ? 'red' : newValue != origBinSize ? 'green' : ''
 		)
 		setDensityPlot(self)
 	}
-
-	tr.append('td')
-		.append('div')
-		.style('font-size', '.6em')
-		.style('margin-left', '1px')
-		.style('color', '#858585')
-		.style('display', self.num_obj.no_density_data ? 'none' : 'block')
-		.text('Green text indicates an edited value, red indicates size larger than the current term value range')
 }
 
 function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
-	//const brush = self.num_obj.brushes[0]
 	if (!self.q.first_bin) self.q.first_bin = {} as NumericQ['first_bin']
 	tr.append('td').style('margin', '5px').style('color', 'rgb(136, 136, 136)').html('First Bin Stop')
 
@@ -427,10 +437,9 @@ function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
 	tr.append('td')
 		.append('div')
 		.style('font-size', '.6em')
-		.style('margin-left', '1px')
-		.style('color', '#858585')
+		.style('opacity', 0.5)
 		.style('display', self.num_obj.no_density_data ? 'none' : 'block')
-		.html('<b>Left most</b>red line indicates the first bin stop. <br> Drag that line to edit this value.')
+		.text('Indicated by left-most red line. Drag to change.')
 
 	function handleChange() {
 		if (!self.q.first_bin) throw `Missing self.q.first_bin [numeric.binary handleChange()]`
@@ -545,7 +554,7 @@ function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
 
 /******************* Functions for Numerical Custom size bins *******************/
 function renderCustomBinInputs(self: NumericTermSettingInstance, tablediv: any) {
-	if (!self.q) throw `Missing .q{} [numeric.discrete renderCustomBinInputs()]`
+	mayShowValueconversionMsg(self, tablediv)
 	self.dom.bins_table = tablediv.append('div').style('display', 'flex').style('width', '100%')
 
 	// boundaryDiv for entering bin boundaries

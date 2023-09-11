@@ -106,6 +106,14 @@ export type Subconditions = {
 	}
 }
 
+type ValueConversion = {
+	scaleFactor: number
+	fromUnit: string // name of unit for the original value
+	toUnit: string // name of converted unit.
+	// when converting day to year, resulting value will be `X year Y day`, that the fromUnit is used to indicate residue days from the last year; it's also printed in termsetting ui
+	// this logic does not hold if converting from year to day, should detect if scaleFactor is >1 or <1
+}
+
 export type Term = {
 	id?: string
 	type?:
@@ -132,6 +140,7 @@ export type Term = {
 	tvs?: Tvs
 	values?: TermValues
 	unit?: string
+	valueConversion?: ValueConversion
 }
 
 export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
