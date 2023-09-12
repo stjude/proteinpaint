@@ -26,6 +26,7 @@
     "client": "npm run dev -w @sjcrh/proteinpaint-client",
     "ci-pp-server": "tsc --esModuleInterop server/genome/*.ts server/dataset/*.ts && ./build/dev/resetBundles.sh && node server/server.js &",
     "test:integration": "webpack --config=./webpack.config.js && npm run ci-pp-server && sleep 10 && npm run test:integration --workspace=client",
+    "test:integration-ci": "npm run test:integration --workspace=client",
     "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
     "local:integration": "cd client; npm run test:integration",
     "lint": "eslint . --ext .ts",

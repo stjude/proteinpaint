@@ -55,7 +55,7 @@ docker ps -aq --filter "name=$CONTAINER_NAME" | xargs -r docker rm -f
 set -e
 
 # may need to create an empty dataset/ dir for mounting
-if [[ ! -d ./dataset ]]; then 
+if [[ ! -d ./dataset ]]; then
 	mkdir dataset
 fi
 
