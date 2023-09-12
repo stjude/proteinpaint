@@ -28,12 +28,12 @@ renderBoundaryInputDivs() //custom bin name inputs
 
 ********************** INTERNAL
 	applyEdits() // when apply button clicked
-**** Functions for Numerical Fixed size bins ****
-	renderFixedBinsInputs() // render Fixed Bins Inputs
-		renderBinSizeInput() // render BinSize Input
+**** Functions for regular-sized bins ****
+	renderRegularSizedBinsInputs()
+		renderBinSizeInput() // render Bin Size Input
 		renderFirstBinInput() // render First Bin Input
 		renderLastBinInputs() // render Last Bin Inputs
-**** Functions for Numerical Custom size bins ****
+**** Functions for Custom size bins ****
 	renderCustomBinInputs() // render Custom Bin Inputs
 		handleChange() // update self.q if custom inputs changed
 		binsChanged() // check if bins changed from input or return
@@ -113,14 +113,15 @@ function applyEdits(self: NumericTermSettingInstance) {
 		} else {
 			self.q.rounding = '.0f'
 		}
+
 		// don't forward scaling factor from continuous termsetting
 		if (self.q.scale) delete self.q.scale
-		if (self.dom.last_radio_auto.property('checked')) {
-			delete self.q.last_bin
+
+		if (Number.isFinite(self.q.last_bin?.start)) {
+			// has valid last_bin.start, it's using fixed last bin
 		} else {
-			if (!self.q.last_bin) self.q.last_bin = {}
-			self.q.last_bin.start = +self.dom.last_start_input.property('value')
-			self.q.last_bin.stopunbounded = true
+			// no valid value, delete the optional attribute to indicate last bin is automatic
+			delete self.q.last_bin
 		}
 		if (!self.term.id) throw `Missing tw.id [numeric.binary applyEdits()]`
 		self.numqByTermIdModeType[self.term.id].discrete['regular-bin'] = JSON.parse(JSON.stringify(self.q))
@@ -333,7 +334,7 @@ function renderTypeInputs(self: NumericTermSettingInstance) {
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[0].isInitialized) {
-					renderFixedBinsInputs(self, tab.contentHolder)
+					renderRegularSizedBinsInputs(self, tab.contentHolder)
 					tabs[0].isInitialized = true
 				}
 			}
@@ -365,7 +366,7 @@ function mayShowValueconversionMsg(self: NumericTermSettingInstance, tablediv: a
 		.style('opacity', 0.6)
 		.text(`Note: using values by the unit of ${self.term.valueConversion.fromUnit}.`)
 }
-function renderFixedBinsInputs(self: NumericTermSettingInstance, tablediv: any) {
+function renderRegularSizedBinsInputs(self: NumericTermSettingInstance, tablediv: any) {
 	mayShowValueconversionMsg(self, tablediv)
 	self.dom.bins_table = tablediv.append('table')
 	renderBinSizeInput(self, self.dom.bins_table.append('tr'))
@@ -374,7 +375,7 @@ function renderFixedBinsInputs(self: NumericTermSettingInstance, tablediv: any) 
 }
 
 function renderBinSizeInput(self: NumericTermSettingInstance, tr: any) {
-	tr.append('td').style('margin', '5px').style('color', 'rgb(136, 136, 136)').html('Bin Size')
+	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('Bin Size')
 
 	const dd = self.num_obj.density_data as DensityData
 	const origBinSize = self.q.bin_size
@@ -387,51 +388,54 @@ function renderBinSizeInput(self: NumericTermSettingInstance, tr: any) {
 		.style('margin-left', '15px')
 		.style('width', '100px')
 		.style('color', () => (self.q.bin_size! > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
-		.on('change', handleChange)
-
-	function handleChange(event) {
-		const newValue = Number(event.target.value)
-		// must validate input value
-		if (newValue <= 0) {
-			window.alert('Please enter non-negative bin size.')
-			// must reset value in <input>, otherwise the wrong value will be recorded in self.q upon clicking Submit
-			event.target.value = origBinSize
-			return
-		}
-		if ((dd.maxvalue - dd.minvalue) / newValue > 100) {
-			// avoid rendering too many svg lines and lock up browser
-			window.alert('Bin size too small. Try setting a larger one.')
-			event.target.value = origBinSize
-			return
-		}
-		self.q.bin_size = newValue
-		self.dom.bin_size_input.style(
-			'color',
-			self.q.bin_size > dd.maxvalue - dd.minvalue ? 'red' : newValue != origBinSize ? 'green' : ''
-		)
-		setDensityPlot(self)
-	}
+		.on('change', event => {
+			const newValue = Number(event.target.value)
+			// must validate input value
+			if (newValue <= 0) {
+				window.alert('Please enter non-negative bin size.')
+				// must reset value in <input>, otherwise the wrong value will be recorded in self.q upon clicking Submit
+				event.target.value = origBinSize
+				return
+			}
+			if ((dd.maxvalue - dd.minvalue) / newValue > 100) {
+				// avoid rendering too many svg lines and lock up browser
+				window.alert('Bin size too small. Try setting a bigger value.')
+				event.target.value = origBinSize
+				return
+			}
+			self.q.bin_size = newValue
+			self.dom.bin_size_input.style(
+				'color',
+				self.q.bin_size > dd.maxvalue - dd.minvalue ? 'red' : newValue != origBinSize ? 'green' : ''
+			)
+			setDensityPlot(self)
+		})
 }
 
 function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
-	if (!self.q.first_bin) self.q.first_bin = {} as NumericQ['first_bin']
-	tr.append('td').style('margin', '5px').style('color', 'rgb(136, 136, 136)').html('First Bin Stop')
+	if (!self.q.first_bin) self.q.first_bin = {} as NumericQ['first_bin'] // is this needed and safe?
+
+	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('First Bin Stop')
+
+	const dd = self.num_obj.density_data as DensityData
+	const origValue = self.q.first_bin.stop
 
 	self.dom.first_stop_input = tr
 		.append('td')
 		.append('input')
 		.attr('type', 'number')
-		.property('value', 'stop' in self.q.first_bin! ? self.q.first_bin.stop : '')
+		.property('value', origValue)
 		.style('width', '100px')
 		.style('margin-left', '15px')
-		.style(
-			'color',
-			self.q.first_bin && self.q.first_bin.stop! < (self.num_obj.density_data as DensityData).minvalue ? 'red' : ''
-		)
-		.on('change', handleChange)
-		.on('keyup', function (this: any, event: any) {
-			if (!keyupEnter(event)) return
-			handleChange.call(this)
+		.on('change', event => {
+			const newValue = Number(event.target.value)
+			if (newValue < dd.minvalue || newValue > dd.maxvalue) {
+				window.alert('First bin stop value out of bound.')
+				event.target.value = origValue
+				return
+			}
+			self.q.first_bin.stop = newValue
+			self.renderBinLines(self, self.q as NumericQ)
 		})
 
 	tr.append('td')
@@ -440,31 +444,15 @@ function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
 		.style('opacity', 0.5)
 		.style('display', self.num_obj.no_density_data ? 'none' : 'block')
 		.text('Indicated by left-most red line. Drag to change.')
-
-	function handleChange() {
-		if (!self.q.first_bin) throw `Missing self.q.first_bin [numeric.binary handleChange()]`
-		self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
-		self.dom.first_stop_input.restyle()
-		self.renderBinLines(self, self.q as NumericQ)
-	}
-
-	const origFirstStop = self.q.first_bin!.stop
-	self.dom.first_stop_input.restyle = () => {
-		self.dom.first_stop_input.style(
-			'color',
-			self.q.first_bin!.stop! < self.num_obj.density_data!.minvalue
-				? 'red'
-				: self.q.first_bin?.stop != origFirstStop
-				? 'green'
-				: ''
-		)
-	}
 }
 
 function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
-	const isAuto = !self.q.last_bin || Object.keys(self.q.last_bin).length === 0
+	// tell if last bin is automatic (not fixed)
+	const isAuto = !self.q.last_bin || !Number.isFinite(self.q.last_bin.start)
 
-	tr.append('td').style('margin', '5px').style('color', 'rgb(136, 136, 136)').html('Last Bin Start')
+	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('Last Bin Start')
+
+	const dd = self.num_obj.density_data as DensityData
 
 	const td1 = tr.append('td').style('padding-left', '15px').style('vertical-align', 'top')
 	const radio_div = td1.append('div')
@@ -479,27 +467,22 @@ function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
 			if (v == 'auto') {
 				delete self.q.last_bin!.start
 				edit_div.style('display', 'none')
-			} else if (v == 'fixed') {
-				if (!self.q.last_bin) self.q.last_bin = {}
-				if (!('start' in self.q.last_bin)) {
-					// default to setting the last bin start to max value,
-					// so that it will be dragged to the left by default
-					self.q.last_bin.start = (self.num_obj.density_data as DensityData).maxvalue
-				}
-				self.dom.last_start_input.property('value', self.q.last_bin.start)
-				const value = +self.dom.last_start_input.property('value')
-				self.q.last_bin.start = value
-				edit_div.style('display', 'inline-block')
+				self.renderBinLines(self, self.q as NumericQ)
+				setDensityPlot(self)
+				return
 			}
-			handleChange()
+			// v is "fixed", to assign a number to self.q.last_bin.start
+			edit_div.style('display', 'inline-block')
+			if (!self.q.last_bin) self.q.last_bin = {}
+
+			if (self.dom.last_start_input.property('value') == '') {
+				// blank input, fill max
+				self.dom.last_start_input.property('value', dd.maxvalue)
+			}
+			setLastBinStart()
 			setDensityPlot(self)
-		},
-		styles: {
-			padding: '0 10px'
 		}
 	})
-
-	self.dom.last_radio_auto = select(inputs.nodes()[0])
 
 	const edit_div = tr
 		.append('td')
@@ -511,44 +494,25 @@ function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
 		.attr('type', 'number')
 		.property('value', self.q.last_bin ? self.q.last_bin.start : '')
 		.style('width', '100px')
-		.style('margin-left', '15px')
-		.on('change', handleChange)
-		.on('keyup', function (this: any, event: any) {
-			if (!keyupEnter(event)) return
-			handleChange.call(this)
-		})
+		.on('change', setLastBinStart)
 
-	// note div
-	tr.append('td')
-		.style('display', 'none')
+	edit_div
 		.append('div')
 		.style('font-size', '.6em')
-		.style('margin-left', '1px')
-		.style('padding-top', '30px')
-		.style('color', '#858585')
+		.style('opacity', 0.5)
 		.style('display', self.num_obj.no_density_data ? 'none' : 'block')
-		.html('<b>Right</b>most red line indicates the last bin start. <br> Drag that line to edit this value.')
+		.text('Indicated by right-most red line. Drag to change.')
 
-	function handleChange() {
-		self.q.last_bin!.start = +self.dom.last_start_input.property('value')
-		self.dom.last_start_input.restyle()
-		self.renderBinLines(self, self.q as NumericQ)
-		if (self.dom.last_radio_auto.property('checked')) {
-			delete self.q.last_bin?.start
-			edit_div.style('display', 'none')
+	function setLastBinStart() {
+		// only get value from <input>
+		const inputValue = Number(self.dom.last_start_input.property('value'))
+		if (inputValue <= self.q.first_bin.stop || inputValue > dd.maxvalue) {
+			window.alert('Last bin start value out of bound.')
+			self.dom.last_start_input.property('value', dd.maxvalue)
+			return
 		}
-	}
-
-	const origLastStart = self.q.last_bin ? self.q.last_bin.start : null
-	self.dom.last_start_input.restyle = () => {
-		self.dom.last_start_input.style(
-			'color',
-			self.q.last_bin!.start! > self.num_obj.density_data!.maxvalue
-				? 'red'
-				: self.q.last_bin!.start != origLastStart
-				? 'green'
-				: ''
-		)
+		self.q.last_bin.start = inputValue
+		self.renderBinLines(self, self.q as NumericQ)
 	}
 }
 

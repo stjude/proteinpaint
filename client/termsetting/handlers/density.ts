@@ -243,7 +243,6 @@ function renderBinLines(self: NumericTermSettingInstance, data: any) {
 			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
-				self.dom.first_stop_input.restyle()
 				const maxX = self.q.last_bin ? lastScaledX : scaledMaxX
 				const diff = d.draggedX - d.scaledX
 				middleLines.each(function (this: Element, c: LineData) {
@@ -258,7 +257,6 @@ function renderBinLines(self: NumericTermSettingInstance, data: any) {
 				self.q.first_bin!.stop = value as number
 			} else {
 				self.dom.last_start_input.property('value', value)
-				self.dom.last_start_input.restyle()
 				self.q.last_bin!.start = value as number
 				middleLines.style('display', (c: any) => (d.draggedX && c.scaledX >= d.draggedX ? 'none' : ''))
 			}

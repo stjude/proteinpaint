@@ -14,32 +14,38 @@ NumericTermSettingInstance
 
 /**
  * .q{} for numeric terms
+ FIXME regular-sized bin and knots (spline) are mixed in this definition and they shouldn't
+ 	e.g. first_bin is only required for regular-sized, and knots[] is only required for the other
  */
 export type NumericQ = BaseQ & {
 	// termType: 'float' | 'integer' -- converts to 'numeric'
 	preferredBins?: 'median' | 'less' | 'default'
+
 	//regular-sized bins
 	bin_size: number
 	startinclusive?: boolean
 	stopinclusive?: boolean
-	first_bin?: {
-		start?: number
-		start_percentile?: number
+
+	// first_bin.stop is always required
+	first_bin: {
 		startunbounded?: boolean
-		stop?: number
-		stop_percentile?: number
+		stop: number
+		//stop_percentile?: number // percentile value is not used right now
 	}
+
+	// if last_bin?.start is set, then fixed last bin is used; otherwise it's not fixed and automatic
 	last_bin?: {
 		start?: number
 		stopunbounded?: boolean
 	}
+
 	modeBinaryCutoffType: 'normal' | 'percentile'
 	modeBinaryCutoffPercentile?: number
-	//density
-	knots: any //[]?
-	//binary
+
+	knots?: any //[]?
+
 	scale?: number //0.1 | 0.01 | 0.001
-	//discrete
+
 	rounding: string
 }
 
