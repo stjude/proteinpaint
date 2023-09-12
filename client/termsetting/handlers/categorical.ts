@@ -148,7 +148,7 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 		if (!activeGroup) await new GroupSettingMethods(self).main()
 		else {
 			const valGrp = self.grpSet2valGrp(activeGroup)
-			await new GroupSettingMethods(self).main()
+			await new GroupSettingMethods(Object.assign(self, { inputValues: valGrp })).main()
 		}
 	}
 

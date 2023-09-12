@@ -42,6 +42,13 @@ export type CategoricalTW = TermWrapper & {
 
 type Cat2SampleCntEntry = { key: string; count: number }
 
+export type GroupSetInputValues = {
+	[index: string]: {
+		label?: string | number //value's label on client
+		group?: number //value's current group index
+	}
+}
+
 /**
  * @group Termdb
  * @category TW
@@ -52,8 +59,7 @@ export type CategoricalTermSettingInstance = TermSettingInstance & {
 	q: CategoricalQ
 	//Methods
 	getQlst: () => void
-	grpSet2valGrp: (f: any) => void
-	regroupMenu: (x?: any, y?: any) => void //Not defined
+	grpSet2valGrp: (f: any) => GroupSetInputValues
 	showGrpOpts: (div: any) => any
 	validateGroupsetting: () => void
 	showDraggables: () => void
