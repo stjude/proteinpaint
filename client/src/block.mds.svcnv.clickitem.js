@@ -62,10 +62,7 @@ export async function may_allow_samplesearch(tk, block) {
 	if (tk.singlesample) return
 
 	const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '15px')
-	const input = row
-		.append('input')
-		.attr('size', 20)
-		.attr('placeholder', 'Find sample')
+	const input = row.append('input').attr('size', 20).attr('placeholder', 'Find sample')
 	const showdiv = row.append('div').style('margin-top', '10px')
 
 	input.on('keyup', debounce(samplesearch, 300))
@@ -92,11 +89,7 @@ export async function may_allow_samplesearch(tk, block) {
 				cell.append('span').text(sample.name)
 
 				if (sample.grouplabel) {
-					cell
-						.append('span')
-						.style('margin-left', '10px')
-						.style('font-size', '.7em')
-						.text(sample.grouplabel)
+					cell.append('span').style('margin-left', '10px').style('font-size', '.7em').text(sample.grouplabel)
 				}
 
 				if (sample.num_assay_tracks) {
@@ -212,11 +205,7 @@ export function click_samplegroup_showmenu(samplegroup, tk, block) {
 	if (!tk.sampleAttribute) return printerror('tk.sampleAttribute missing')
 	if (!tk.sampleAttribute.attributes) return printerror('tk.sampleAttribute.attributes{} missing')
 
-	tk.tip2.d
-		.append('div')
-		.style('margin', '4px 10px')
-		.style('font-size', '.7em')
-		.text(samplegroup.name)
+	tk.tip2.d.append('div').style('margin', '4px 10px').style('font-size', '.7em').text(samplegroup.name)
 
 	tk.tip2.d
 		.append('div')
@@ -305,11 +294,7 @@ export function click_samplegroup_showmenu(samplegroup, tk, block) {
 function sampleset_showgrpmenu(grp, tk, block) {
 	// display menu for a group of sampleset
 	// for both official and custom tracks
-	tk.tip2.d
-		.append('div')
-		.style('margin', '4px 10px')
-		.style('font-size', '.7em')
-		.text(grp.name)
+	tk.tip2.d.append('div').style('margin', '4px 10px').style('font-size', '.7em').text(grp.name)
 	tk.tip2.d
 		.append('div')
 		.attr('class', 'sja_menuoption')
@@ -491,11 +476,7 @@ export function tooltip_samplegroup(g, tk) {
 			html.push(s.samples.length + ' samples total, ' + Math.ceil((100 * g.samples.length) / s.samples.length) + '%')
 		}
 	}
-	tk.tktip.d
-		.append('div')
-		.style('margin-top', '10px')
-		.style('color', '#858585')
-		.html(html.join('<br>'))
+	tk.tktip.d.append('div').style('margin-top', '10px').style('color', '#858585').html(html.join('<br>'))
 
 	tk.tktip.show(event.clientX, event.clientY)
 }
@@ -514,44 +495,25 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 
 		const sample = samplegroup.samples[0]
 
-		const table = pane.body
-			.append('table')
-			.style('margin', '10px')
-			.style('border-spacing', '4px')
+		const table = pane.body.append('table').style('margin', '10px').style('border-spacing', '4px')
 
 		{
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('Sample')
-				.style('opacity', 0.5)
+			tr.append('td').text('Sample').style('opacity', 0.5)
 			tr.append('td').text(sample.samplename)
 		}
 		if (sample.sampletype) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('Sample type')
-				.style('opacity', 0.5)
+			tr.append('td').text('Sample type').style('opacity', 0.5)
 			tr.append('td').text(sample.sampletype)
 		}
 
-		const [
-			cnvlst,
-			svlst,
-			lohlst,
-			itdlst,
-			vcflst,
-			cnvlst0,
-			svlst0,
-			lohlst0,
-			itdlst0,
-			vcflst0
-		] = sortitemsbytype_onesample(sample.samplename, sample.items, tk)
+		const [cnvlst, svlst, lohlst, itdlst, vcflst, cnvlst0, svlst0, lohlst0, itdlst0, vcflst0] =
+			sortitemsbytype_onesample(sample.samplename, sample.items, tk)
 
 		if (cnvlst.length) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('CNV')
-				.style('opacity', 0.5)
+			tr.append('td').text('CNV').style('opacity', 0.5)
 			const td = tr.append('td')
 			for (let i = 0; i < cnvlst.length; i++) {
 				td.append('div')
@@ -582,9 +544,7 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 		}
 		if (svlst.length) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('SV')
-				.style('opacity', 0.5)
+			tr.append('td').text('SV').style('opacity', 0.5)
 			const td = tr.append('td')
 			for (let i = 0; i < svlst.length; i++) {
 				td.append('div')
@@ -615,9 +575,7 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 		}
 		if (lohlst.length) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('LOH')
-				.style('opacity', 0.5)
+			tr.append('td').text('LOH').style('opacity', 0.5)
 			const td = tr.append('td')
 			for (let i = 0; i < lohlst.length; i++) {
 				td.append('div')
@@ -648,9 +606,7 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 		}
 		if (itdlst.length) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('ITD')
-				.style('opacity', 0.5)
+			tr.append('td').text('ITD').style('opacity', 0.5)
 			const td = tr.append('td')
 			for (let i = 0; i < itdlst.length; i++) {
 				td.append('div')
@@ -681,9 +637,7 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 		}
 		if (vcflst.length) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('SNV/indel')
-				.style('opacity', 0.5)
+			tr.append('td').text('SNV/indel').style('opacity', 0.5)
 			const td = tr.append('td')
 
 			for (let i = 0; i < vcflst.length; i++) {
@@ -721,40 +675,23 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 	}
 
 	// multiple samples
-	const table = pane.body
-		.append('table')
-		.style('border-spacing', '2px')
-		.style('margin', '20px')
+	const table = pane.body.append('table').style('border-spacing', '2px').style('margin', '20px')
 
 	const hassampletype = samplegroup.samples.find(i => i.sampletype)
 
 	// header
 	const tr = table.append('tr')
-	tr.append('td')
-		.text('Sample')
-		.style('opacity', 0.5)
+	tr.append('td').text('Sample').style('opacity', 0.5)
 	if (hassampletype) {
-		tr.append('td')
-			.text('Sample type')
-			.style('opacity', 0.5)
+		tr.append('td').text('Sample type').style('opacity', 0.5)
 	}
-	tr.append('td')
-		.text('CNV')
-		.style('opacity', 0.5)
-	tr.append('td')
-		.text('SV')
-		.style('opacity', 0.5)
-	tr.append('td')
-		.text('LOH')
-		.style('opacity', 0.5)
-	tr.append('td')
-		.text('ITD')
-		.style('opacity', 0.5)
+	tr.append('td').text('CNV').style('opacity', 0.5)
+	tr.append('td').text('SV').style('opacity', 0.5)
+	tr.append('td').text('LOH').style('opacity', 0.5)
+	tr.append('td').text('ITD').style('opacity', 0.5)
 
 	if (tk.data_vcf) {
-		tr.append('td')
-			.text('SNV/indel')
-			.style('opacity', 0.5)
+		tr.append('td').text('SNV/indel').style('opacity', 0.5)
 	}
 
 	for (const [i, sample] of samplegroup.samples.entries()) {
@@ -770,18 +707,8 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 			tr.append('td').text(sample.sampletype || '')
 		}
 
-		const [
-			cnvlst,
-			svlst,
-			lohlst,
-			itdlst,
-			vcflst,
-			cnvlst0,
-			svlst0,
-			lohlst0,
-			itdlst0,
-			vcflst0
-		] = sortitemsbytype_onesample(sample.samplename, sample.items, tk)
+		const [cnvlst, svlst, lohlst, itdlst, vcflst, cnvlst0, svlst0, lohlst0, itdlst0, vcflst0] =
+			sortitemsbytype_onesample(sample.samplename, sample.items, tk)
 
 		{
 			const td = tr.append('td')
@@ -1023,24 +950,12 @@ export function click_multi_svdense(g, tk, block) {
 		}
 	}
 
-	const table = pane.body
-		.append('table')
-		.style('border-spacing', '2px')
-		.style('margin', '10px')
+	const table = pane.body.append('table').style('border-spacing', '2px').style('margin', '10px')
 
 	const tr = table.append('tr')
-	tr.append('td')
-		.text('Sample')
-		.style('font-size', '.8em')
-		.style('opacity', 0.5)
-	tr.append('td')
-		.text('SV')
-		.style('font-size', '.8em')
-		.style('opacity', 0.5)
-	tr.append('td')
-		.text('RNA fusion')
-		.style('font-size', '.8em')
-		.style('opacity', 0.5)
+	tr.append('td').text('Sample').style('font-size', '.8em').style('opacity', 0.5)
+	tr.append('td').text('SV').style('font-size', '.8em').style('opacity', 0.5)
+	tr.append('td').text('RNA fusion').style('font-size', '.8em').style('opacity', 0.5)
 
 	let j = 0
 	for (const [sample, so] of sample2lst) {
@@ -1179,10 +1094,7 @@ export function click_multi_vcfdense(g, tk, block) {
 			const lst = printer_snvindel(m, tk)
 			const table = client.make_table_2col(pane.body, lst)
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('Samples')
-				.style('opacity', 0.5)
-				.attr('colspan', 2)
+			tr.append('td').text('Samples').style('opacity', 0.5).attr('colspan', 2)
 
 			const td = tr.append('td')
 			for (const sm of m.sampledata) {
@@ -1221,7 +1133,6 @@ export function click_multi_vcfdense(g, tk, block) {
 					})
 			}
 			may_findmatchingsnp_printintable(m, block, table)
-			may_findmatchingclinvar_printintable(m, block, table)
 		} else {
 			throw 'Unknown dt: ' + m.dt
 		}
@@ -1232,10 +1143,7 @@ export function click_multi_vcfdense(g, tk, block) {
 	list samples for each variant
 	*/
 
-	const table = pane.body
-		.append('table')
-		.style('margin-top', '10px')
-		.style('border-spacing', '4px')
+	const table = pane.body.append('table').style('margin-top', '10px').style('border-spacing', '4px')
 
 	for (const m of g.items) {
 		const tr = table.append('tr')
@@ -1357,7 +1265,6 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 
 			// mds may indicate whether to perform snp/clinvar checking
 			may_findmatchingsnp_printintable(m, block, table)
-			may_findmatchingclinvar_printintable(m, block, table)
 
 			tk.tktip.show(event.clientX, event.clientY)
 		} else {
@@ -1375,10 +1282,7 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 	const table = tk.tktip.d.append('table').style('border-spacing', '3px')
 	for (const m of g.items) {
 		const tr = table.append('tr')
-		tr.append('td')
-			.style('color', common.mclass[m.class].color)
-			.style('font-weight', 'bold')
-			.text(m.mname)
+		tr.append('td').style('color', common.mclass[m.class].color).style('font-weight', 'bold').text(m.mname)
 
 		tr.append('td')
 			.style('font-size', '.7em')
@@ -1771,7 +1675,6 @@ export function detailtable_singlesample(p) {
 
 	if (m.dt == common.dtsnvindel) {
 		may_findmatchingsnp_printintable(m, p.block, table)
-		may_findmatchingclinvar_printintable(m, p.block, table)
 	}
 }
 
@@ -2493,11 +2396,7 @@ function getisoform(p, chr, pos) {
 async function may_findmatchingsnp_printintable(m, block, table) {
 	if (!block || !block.genome || !block.genome.hasSNP) return
 	const tr = table.append('tr')
-	tr.append('td')
-		.attr('colspan', 2)
-		.text('dbSNP')
-		.style('opacity', 0.4)
-		.style('padding', '3px')
+	tr.append('td').attr('colspan', 2).text('dbSNP').style('opacity', 0.4).style('padding', '3px')
 	const td = tr.append('td')
 	const wait = td.append('div').text('Loading...')
 	try {
@@ -2511,29 +2410,6 @@ async function may_findmatchingsnp_printintable(m, block, table) {
 			const row = td.append('div')
 			client.snp_printhtml(s, row)
 		}
-	} catch (e) {
-		wait.text(e.message || e)
-	}
-}
-
-async function may_findmatchingclinvar_printintable(m, block, table) {
-	if (!block || !block.genome || !block.genome.hasClinvarVCF) return
-	const tr = table.append('tr')
-	tr.append('td')
-		.attr('colspan', 2)
-		.text('ClinVar')
-		.style('opacity', 0.4)
-		.style('padding', '3px')
-	const td = tr.append('td')
-	const wait = td.append('div').text('Loading...')
-	try {
-		const hit = await client.may_findmatchingclinvar(m.chr, m.pos, m.ref, m.alt, block.genome)
-		if (!hit) {
-			wait.text('No match')
-			return
-		}
-		wait.remove()
-		client.clinvar_printhtml(hit, td)
 	} catch (e) {
 		wait.text(e.message || e)
 	}
@@ -2783,9 +2659,7 @@ function mayaddtab_mutationsignature(tabs, samplename, tk, block) {
 					const maxv = s.annotation[0].v
 					//const minv = s.annotation[s.annotation.length-1].v
 					const minv = 0 // hardcode the #mutation per mb minimum value as 0
-					const scale = scaleLinear()
-						.domain([minv, maxv])
-						.range([0, barw])
+					const scale = scaleLinear().domain([minv, maxv]).range([0, barw])
 					let labelw = 0
 					for (const i of s.annotation) {
 						svg
@@ -2793,7 +2667,7 @@ function mayaddtab_mutationsignature(tabs, samplename, tk, block) {
 							.attr('font-family', client.font)
 							.attr('font-size', fontsize)
 							.text(ss.signatures[i.k].name)
-							.each(function() {
+							.each(function () {
 								labelw = Math.max(labelw, this.getBBox().width)
 							})
 							.remove()
@@ -2824,11 +2698,7 @@ function mayaddtab_mutationsignature(tabs, samplename, tk, block) {
 						axis: g
 							.append('g')
 							.attr('transform', 'translate(0,-' + rowspace + ')')
-							.call(
-								axisTop()
-									.scale(scale)
-									.ticks(4)
-							),
+							.call(axisTop().scale(scale).ticks(4)),
 						showline: 1,
 						fontsize: fontsize - 2
 					})
@@ -3168,10 +3038,7 @@ function may_createbutton_assayAvailability(tk, block, holder, samplegroup) {
 		.attr('class', 'sja_menuoption')
 		.on('click', async () => {
 			tk.tip2.clear()
-			const wait = tk.tip2.d
-				.append('div')
-				.style('margin', '10px')
-				.text('Loading...')
+			const wait = tk.tip2.d.append('div').style('margin', '10px').text('Loading...')
 			const par = {
 				genome: block.genome.name,
 				dslabel: tk.mds.label,
@@ -3204,10 +3071,7 @@ function may_createbutton_assayAvailability(tk, block, holder, samplegroup) {
 				.text('Drag and move a sequencing type label up/down to change order.')
 			if (samplegroup.attributes) {
 				// quick fix to show full labels
-				const d = tk.tip2.d
-					.append('div')
-					.style('margin', '20px 10px 10px 10px')
-					.style('opacity', 0.7)
+				const d = tk.tip2.d.append('div').style('margin', '20px 10px 10px 10px').style('opacity', 0.7)
 				for (const a of samplegroup.attributes) {
 					d.append('div').text(a.kvalue + (a.fullvalue ? ': ' + a.fullvalue : ''))
 				}
@@ -3230,10 +3094,7 @@ function initui_partition(opts) {
 	plot_partition(plot, opts.data)
 
 	// make one checkbox for each term
-	const div = opts.div
-		.append('div')
-		.append('div')
-		.style('display', 'inline')
+	const div = opts.div.append('div').append('div').style('display', 'inline')
 	for (const term of opts.data.terms) {
 		const cell = div
 			.append('div')
@@ -3258,10 +3119,7 @@ function initui_partition(opts) {
 				const data = await client.dofetch('mdssvcnv', plot.par)
 				plot_partition(plot, data)
 			})
-		label
-			.append('span')
-			.text(term.name)
-			.style('padding-left', '5px')
+		label.append('span').text(term.name).style('padding-left', '5px')
 	}
 }
 
@@ -3303,7 +3161,7 @@ function plot_partition(plot, data) {
 			.attr('font-size', fontsize - 2)
 			.attr('y', -5)
 			.text((plot.headlabel ? plot.headlabel + ', ' : '') + 'n=' + data.totalsample)
-			.each(function() {
+			.each(function () {
 				headlabw = this.getBBox().width
 			})
 		text.attr('x', termwidth / 2 - (headlabw > termwidth ? (headlabw - termwidth) / 2 : 0))
@@ -3334,7 +3192,7 @@ function plot_partition(plot, data) {
 			.attr('y', rowheight / 2)
 			.attr('dominant-baseline', 'middle')
 			.attr('text-anchor', 'end')
-			.each(function() {
+			.each(function () {
 				maxlabelw = Math.max(maxlabelw, this.getBBox().width)
 			})
 			.on('mousedown', event => {
@@ -3400,7 +3258,7 @@ function plot_partition(plot, data) {
 						.append('text')
 						.text(b.samplecount)
 						.attr('font-size', fontsize - 2)
-						.each(function() {
+						.each(function () {
 							numwidth = this.getBBox().width
 						})
 					if (numwidth < w) {
@@ -3434,12 +3292,7 @@ function plot_partition(plot, data) {
 				const w = b.symbolwidth * symbolpxwidth
 				const x = b.x * symbolpxwidth
 				if (!b.isgap) {
-					const box = rowg
-						.append('rect')
-						.attr('fill', b.color)
-						.attr('x', x)
-						.attr('width', w)
-						.attr('height', rowheight)
+					const box = rowg.append('rect').attr('fill', b.color).attr('x', x).attr('width', w).attr('height', rowheight)
 					rowg
 						.append('text')
 						.text(b.samplecount)
