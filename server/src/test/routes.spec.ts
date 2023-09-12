@@ -5,9 +5,6 @@ import path from 'path'
 import fs from 'fs'
 import { initdb } from '../genome.initdb'
 import { init as mds3_init } from '../mds3.init.js'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /****************************************
  reusable constants and helper functions

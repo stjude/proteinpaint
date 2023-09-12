@@ -17,7 +17,7 @@
     "test": "webpack --env NODE_ENV=test exportsFilename=all-test-context.js && node --enable-source-maps test/serverTests.js",
     "precheckers": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
     "checkers": "webpack --config=./test/webpack.config.js && node test/emitPrepFiles.bundle.js && typia generate --input shared/checkers-raw --output shared/checkers",
-    "pretest:unit": "npm run checkers",
+    "pretest:unit": "npm run precheckers",
     "test:unit": "webpack --env NODE_ENV=test exportsFilename=unit-test-context.js && node --enable-source-maps test/serverTests.js",
     "pretest:integration": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
     "test:integration": "echo 'TODO: server integration tests'",
