@@ -57,7 +57,6 @@ function getApp({ api }) {
 runTests()
 
 async function runTests() {
-	console.log(54, genomes['hg38-test'])
 	g.datasets = {}
 	try {
 		g.datasets.TermdbTest = await setDataset(g, {
