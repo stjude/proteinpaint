@@ -42,6 +42,7 @@ public/static/*.pdf
 **/rev.txt
 public/docs/*/*
 public/docs/readme.json
+public/docs/server-api.json
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html
