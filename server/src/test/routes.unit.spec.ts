@@ -148,7 +148,8 @@ async function setDataset(g, d) {
 		Proteinpaint packaged files[] 
 	*/
 	const jsfile = path.join(process.cwd(), d.jsfile)
-	// @ts-expect-error
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-ignore
 	const _ds = __non_webpack_require__(jsfile)
 	const ds = _ds.default || _ds
 
