@@ -5,6 +5,9 @@ import path from 'path'
 import fs from 'fs'
 import { initdb } from '../genome.initdb'
 import { init as mds3_init } from '../mds3.init.js'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /****************************************
  reusable constants and helper functions
@@ -12,7 +15,9 @@ import { init as mds3_init } from '../mds3.init.js'
 
 const genomes = {
 	// test genome js location can be hardcoded for testing
-	'hg38-test': require('../../genome/hg38.test.js')
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-ignore
+	'hg38-test': __non_webpack_require__(path.join(__dirname, '../../genome/hg38.test.js'))
 }
 const g = genomes['hg38-test']
 initdb(g)
