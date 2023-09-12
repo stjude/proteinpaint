@@ -97,7 +97,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	createCanvasImg(q, result, ds)
 
-	res.send(result)
+	if (res) res.send(result)
+	else return result
 }
 
 // compute pvalues using wilcoxon rank sum test
