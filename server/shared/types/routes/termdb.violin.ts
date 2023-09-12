@@ -1,6 +1,6 @@
 import { Filter } from '../filter.ts'
 
-export type getViolinDataRequest = {
+export type getViolinRequest = {
 	genome: string
 	dslabel: string
 	embedder: string
@@ -20,7 +20,7 @@ export type getViolinDataRequest = {
 	termid: string
 }
 
-export type getViolinDataResponse = {
+export type getViolinResponse = {
 	min: number
 	max: number
 	plots: any

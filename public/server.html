@@ -57,7 +57,7 @@
 </head>
 <body>
 <div class='docs-subheader'>
-  <span class='code-snippet'>./docs/build.sh</span> # to regenerate
+  <span class='code-snippet'>npm run doc</span> # to regenerate
 </div>
 <div id='output' style='padding: 10px'>
 <div class='container container-main'>
@@ -290,7 +290,7 @@ async function init() {
     const currExample = m.examples?.[Number(m.exampleSelect.property('value'))]
     const params = method == 'get' ? constructUrlParams(currExample.request.body || {}) : ''
     if (m.method == 'POST') reqOpts.body = currExample.request.body
-    const reqPayload = reqOpts.body //|| m.request.example
+    const reqPayload = reqOpts.body || currExample.request.body
     await fetch(url + params, reqOpts)
       .then(r => r.json())
       .then(r => {
