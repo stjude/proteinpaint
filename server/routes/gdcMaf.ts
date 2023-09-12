@@ -1,4 +1,4 @@
-import { GdcMafResponse, File } from '../shared/types/routes/gdcMaf'
+import { GdcMafResponse, File } from '../shared/types/routes/gdcMaf.js'
 import { fileSize } from '../shared/fileSize'
 import path from 'path'
 import got from 'got'

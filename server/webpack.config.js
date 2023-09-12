@@ -3,6 +3,7 @@ const { merge } = require('webpack-merge')
 const nodeExternals = require('webpack-node-externals')
 const fs = require('fs')
 const TerserPlugin = require('terser-webpack-plugin')
+const webpack = require('webpack')
 
 let babelrc
 try {
@@ -72,6 +73,12 @@ module.exports = env => {
 					path: path.join(__dirname, './'),
 					filename: 'server.js'
 				},
+				plugins: [
+					// ignore spec files by default
+					new webpack.IgnorePlugin({
+						resourceRegExp: /\.(spec|md)$/gi
+					})
+				],
 				optimization: {
 					minimizer: [
 						new TerserPlugin({
@@ -94,6 +101,12 @@ module.exports = env => {
 					path: path.join(__dirname, './'),
 					filename: 'server.js'
 				},
+				plugins: [
+					// ignore spec files by default
+					new webpack.IgnorePlugin({
+						resourceRegExp: /\.md$/gi
+					})
+				],
 				// see https://v4.webpack.js.org/configuration/devtool/ for option details
 				//
 				// devtool: 'eval' is fastest to build/rebuild, no files are written,

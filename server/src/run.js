@@ -6,10 +6,9 @@ const path = require('path')
 
 {
 	// start moving migrated route handler code here
-	const files = fs
-		.readdirSync(path.join(serverconfig.binpath, '/routes'))
-		.filter(f => f.endsWith('.ts') || f.endsWith('.js'))
-	const routes = files.map(file => {
+	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
+	const routeFiles = files.filter(f => f.endsWith('.ts'))
+	const routes = routeFiles.map(file => {
 		const route = require(`../routes/${file}`)
 		route.file = file
 		return route
