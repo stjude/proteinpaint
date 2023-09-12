@@ -94,10 +94,7 @@ function mayMoveTipDiv2left(arg) {
 display full details (and samples) for one item
 */
 async function itemtable_oneItem(arg) {
-	const grid = arg.div
-		.append('div')
-		.style('display', 'inline-grid')
-		.style('overflow-y', 'scroll')
+	const grid = arg.div.append('div').style('display', 'inline-grid').style('overflow-y', 'scroll')
 
 	grid
 		.style('grid-template-columns', 'auto auto')
@@ -144,10 +141,7 @@ mlst table has optional columns, only the first column is clickable menu option,
 async function itemtable_multiItems(arg) {
 	// upon clicking an option for a variant
 	// hide tableDiv and display go-back button allowing to go back to tableDiv
-	const goBackButton = arg.div
-		.append('div')
-		.style('margin-bottom', '10px')
-		.style('display', 'none')
+	const goBackButton = arg.div.append('div').style('margin-bottom', '10px').style('display', 'none')
 	goBackButton
 		.append('span')
 		.html('&#8810; Back to list')
@@ -237,10 +231,7 @@ async function itemtable_multiItems(arg) {
 			.on('click', () => {
 				tableDiv.style('display', 'none')
 				goBackButton.style('display', '')
-				singleVariantDiv
-					.style('display', '')
-					.selectAll('*')
-					.remove()
+				singleVariantDiv.style('display', '').selectAll('*').remove()
 				const a2 = Object.assign({}, arg)
 				a2.mlst = [m]
 				a2.div = singleVariantDiv
@@ -262,11 +253,7 @@ async function itemtable_multiItems(arg) {
 				.style('font-size', '.8em')
 				.style('margin-left', '10px')
 		} else if (m.dt == dtsv || m.dt == dtfusionrna) {
-			div
-				.append('span')
-				.text(mclass[m.class].label)
-				.style('font-size', '.7em')
-				.style('margin-right', '8px')
+			div.append('span').text(mclass[m.class].label).style('font-size', '.7em').style('margin-right', '8px')
 
 			printSvPair(m.pairlst[0], div)
 		} else {
@@ -368,16 +355,23 @@ function table_snvindel_mayInsertNumericValueRow(m, tk, grid) {
 	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
 	if (currentMode.type != 'numeric' || currentMode.byAttribute == 'occurrence') return
 	// current mode is numeric and is not occurrence, as occurrence has already been shown in the table
-	const [td1, td2] = get_list_cells(grid)
 	if (currentMode.tooltipPrintValue) {
 		const tmp = currentMode.tooltipPrintValue(m)
-		if (tmp.indexOf(' = ')) {
-			const [k, v] = tmp.split(' = ')
-			td1.text(k)
-			td2.text(v)
-			return
+
+		if (Array.isArray(tmp)) {
+			for (const s of tmp) {
+				// s should be {k,v}
+				const [td1, td2] = get_list_cells(grid)
+				td1.text(s.k)
+				td2.text(s.v)
+			}
+		} else {
+			console.log('unknown return value')
 		}
+		return
 	}
+
+	const [td1, td2] = get_list_cells(grid)
 	td1.text(currentMode.label)
 	td2.text(m.__value_missing ? 'NA' : m.__value_use)
 }
@@ -494,10 +488,7 @@ function add_csqButton(m, tk, td, table) {
 				if (data.error) throw data.error
 				wait.remove()
 				const table = td2.append('table').style('margin-bottom', '10px')
-				const tr = table
-					.append('tr')
-					.style('font-size', '.7em')
-					.style('opacity', 0.5)
+				const tr = table.append('tr').style('font-size', '.7em').style('opacity', 0.5)
 				tr.append('td').text('AA change')
 				tr.append('td').text('Isoform')
 				tr.append('td').text('Consequence')
@@ -541,12 +532,7 @@ async function table_svfusion(arg, grid) {
 }
 
 export function printSvPair(pair, div) {
-	if (pair.a.name)
-		div
-			.append('span')
-			.text(pair.a.name)
-			.style('font-weight', 'bold')
-			.style('margin-right', '5px')
+	if (pair.a.name) div.append('span').text(pair.a.name).style('font-weight', 'bold').style('margin-right', '5px')
 	div
 		.append('span')
 		.text(
@@ -554,12 +540,7 @@ export function printSvPair(pair, div) {
 				pair.b.strand == '+' ? 'forward' : 'reverse'
 			}`
 		)
-	if (pair.b.name)
-		div
-			.append('span')
-			.text(pair.b.name)
-			.style('font-weight', 'bold')
-			.style('margin-left', '5px')
+	if (pair.b.name) div.append('span').text(pair.b.name).style('font-weight', 'bold').style('margin-left', '5px')
 }
 
 async function makeSvgraph(m, div, block) {

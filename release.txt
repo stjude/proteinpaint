@@ -1,1 +1,2 @@
-
+Fixes:
+- Bug fix for broken single variant panel from mds3 tk, by requiring tooltipPrintValue() to return [{k,v}]

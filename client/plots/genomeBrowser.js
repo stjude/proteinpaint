@@ -459,9 +459,9 @@ function furbishViewModeWithSnvindelComputeDetails(self, viewmode) {
 		viewmode.label = testMethod.axisLabel || testMethod.name
 		if (testMethod.name == 'Allele frequency difference') {
 			// callback returns value separated by ' = ', which allows this to be also displayed in itemtable.js
-			viewmode.tooltipPrintValue = m => 'AF diff = ' + m.nm_axis_value
+			viewmode.tooltipPrintValue = m => [{ k: 'AF diff', v: m.nm_axis_value }]
 		} else if (testMethod.name == "Fisher's exact test") {
-			viewmode.tooltipPrintValue = m => 'p-value = ' + m.p_value
+			viewmode.tooltipPrintValue = m => [{ k: 'p-value', v: m.p_value }]
 		} else {
 		}
 		return
@@ -471,17 +471,17 @@ function furbishViewModeWithSnvindelComputeDetails(self, viewmode) {
 	if (g1.type == 'info') {
 		const f = self.state.config.variantFilter?.terms?.find(i => i.id == g1.infoKey)
 		viewmode.label = f?.name || g1.infoKey
-		viewmode.tooltipPrintValue = m => viewmode.label + ' = ' + m.info[g1.infoKey]
+		viewmode.tooltipPrintValue = m => [{ k: viewmode.label, v: m.info[g1.infoKey] }]
 		return
 	}
 	if (g1.type == 'filter') {
 		viewmode.label = 'Allele frequency'
-		viewmode.tooltipPrintValue = m => 'Allele frequency = ' + m.nm_axis_value
+		viewmode.tooltipPrintValue = m => [{ k: 'Allele frequency', v: m.nm_axis_value }]
 		return
 	}
 	if (g1.type == 'population') {
 		viewmode.label = 'Allele frequency'
-		viewmode.tooltipPrintValue = m => 'Allele frequency = ' + m.nm_axis_value
+		viewmode.tooltipPrintValue = m => [{ k: 'Allele frequency', v: m.nm_axis_value }]
 		return
 	}
 	throw 'unknown type of the only group'
