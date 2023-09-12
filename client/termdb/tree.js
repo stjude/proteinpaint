@@ -335,63 +335,6 @@ function setRenderers(self) {
 		select(this).style('display', 'none')
 	}
 
-	self.renderSampleTable = function () {
-		const openBranches = [self.state.samples]
-		const closedBranches = []
-		this.dom.holder.selectAll('.termdiv').each(function (d) {
-			if (select(this).style('display') == 'none') {
-				closedBranches.push(this)
-			} else {
-				const childdivs = this.querySelectorAll('.termchilddiv')
-				for (const div of childdivs) {
-					if (div.style.display == 'none') closedBranches.push(div)
-				}
-				let hasClosedAncestor = false
-				for (const closed of closedBranches) {
-					if (closed.contains(this)) {
-						hasClosedAncestor = true
-						closedBranches.push(this)
-						break
-					}
-				}
-				if (!hasClosedAncestor) openBranches.push(d)
-			}
-		})
-		const trs = this.dom.samplesTable
-			.style('display', openBranches.length ? 'inline-block' : 'none')
-			.selectAll('tr')
-			.data(openBranches)
-		trs.exit().remove()
-		trs.each(self.renderTr)
-		trs.enter().append('tr').each(self.renderTr)
-	}
-
-	self.renderTr = function (branchData, trIndex) {
-		const tds = select(this)
-			.selectAll('td')
-			.data(self.state.samples.map(sample => ({ sample, branchData, trIndex })))
-		tds.exit().remove()
-		tds.each(self.renderTd)
-		const height = self.dom.holder.select('.termlabel').node().getBoundingClientRect().height //; console.log(495, height)
-		tds
-			.enter()
-			.append('td')
-			.style('height', `${height}px`)
-			.style('color', 'gray')
-			.style('padding', '0 16px')
-			.style('text-align', 'end')
-			.style('border', '1px solid white')
-
-			.each(self.renderTd)
-	}
-
-	self.renderTd = function (d, i) {
-		const sampleId = Number(d.sample.sampleId)
-		const data = self.sampleDataByTermId[sampleId]
-		const term = d.branchData
-		select(this).html(d.trIndex === 0 ? d.sample.sampleName : getTermValue(term, data))
-	}
-
 	self.updateTerm = function (term) {
 		const div = select(this)
 		if (!(term.id in self.termsById)) {
@@ -521,6 +464,63 @@ function setRenderers(self) {
 		if (!term.isleaf) {
 			div.append('div').attr('class', cls_termchilddiv).style('padding-left', childterm_indent)
 		}
+	}
+
+	self.renderSampleTable = function () {
+		const openBranches = [self.state.samples]
+		const closedBranches = []
+		this.dom.holder.selectAll('.termdiv').each(function (d) {
+			if (select(this).style('display') == 'none') {
+				closedBranches.push(this)
+			} else {
+				const childdivs = this.querySelectorAll('.termchilddiv')
+				for (const div of childdivs) {
+					if (div.style.display == 'none') closedBranches.push(div)
+				}
+				let hasClosedAncestor = false
+				for (const closed of closedBranches) {
+					if (closed.contains(this)) {
+						hasClosedAncestor = true
+						closedBranches.push(this)
+						break
+					}
+				}
+				if (!hasClosedAncestor) openBranches.push(d)
+			}
+		})
+		const trs = this.dom.samplesTable
+			.style('display', openBranches.length ? 'inline-block' : 'none')
+			.selectAll('tr')
+			.data(openBranches)
+		trs.exit().remove()
+		trs.each(self.renderTr)
+		trs.enter().append('tr').each(self.renderTr)
+	}
+
+	self.renderTr = function (branchData, trIndex) {
+		const tds = select(this)
+			.selectAll('td')
+			.data(self.state.samples.map(sample => ({ sample, branchData, trIndex })))
+		tds.exit().remove()
+		tds.each(self.renderTd)
+		const height = self.dom.holder.select('.termlabel').node().getBoundingClientRect().height //; console.log(495, height)
+		tds
+			.enter()
+			.append('td')
+			.style('height', `${height}px`)
+			.style('color', 'gray')
+			.style('padding', '0 16px')
+			.style('text-align', 'end')
+			.style('border', '1px solid white')
+
+			.each(self.renderTd)
+	}
+
+	self.renderTd = function (d, i) {
+		const sampleId = Number(d.sample.sampleId)
+		const data = self.sampleDataByTermId[sampleId]
+		const term = d.branchData
+		select(this).html(d.trIndex === 0 ? d.sample.sampleName : getTermValue(term, data))
 	}
 }
 

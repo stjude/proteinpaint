@@ -7,7 +7,13 @@ class SampleGroupView extends MassDict {
 		super(opts)
 		this.type = 'sampleGroupView'
 		this.dom.treeDiv.style('position', 'relative')
-		this.dom.sampleDiv = this.dom.treeDiv.insert('div')
+		const headerDiv = this.dom.treeDiv.insert('div')
+		this.dom.sampleDiv = headerDiv.insert('div').style('display', 'inline-block')
+		this.dom.messageDiv = headerDiv
+			.insert('div')
+			.style('display', 'none')
+			.style('vertical-align', 'top')
+			.html('&nbsp;&nbsp;Downloading data ...')
 	}
 
 	async init(appState) {
@@ -74,17 +80,27 @@ class SampleGroupView extends MassDict {
 	}
 
 	async downloadData() {
+		this.dom.messageDiv.style('display', 'inline-block')
 		const filename = `samples.tsv`
-		let lines = ''
+		const sampleData = {}
+		let lines = 'Sample'
 		for (const sample of this.state.samples) {
-			lines += `Sample ${sample.sampleName}\n\n`
-			this.sampleData = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId })
-			for (const id in this.sampleData) {
-				const term = this.sampleData[id].term
-				let value = getTermValue(term, this.sampleData)
-				if (value == null) continue
-				lines += `${term.name}\t${value}\n`
+			sampleData[sample.sampleId] = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId })
+			lines += `\t${sample.sampleName}`
+		}
+		lines += '\n'
+
+		const sampleId = this.state.samples[0].sampleId
+		for (const termId in sampleData[sampleId]) {
+			const term = sampleData[sampleId][termId].term
+			lines += `${term.name}`
+			for (const sampleId in sampleData) {
+				const data = sampleData[sampleId]
+				let value = getTermValue(term, data)
+				if (value == null) value = 'Missing'
+				lines += `\t${value}`
 			}
+			lines += '\n'
 		}
 		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 
@@ -96,6 +112,7 @@ class SampleGroupView extends MassDict {
 		document.body.appendChild(link)
 		link.click()
 		link.remove()
+		this.dom.messageDiv.style('display', 'none')
 	}
 
 	mayRequireToken() {
