@@ -1,4 +1,4 @@
-import { Filter } from '../filter.ts'
+import { Filter } from '../filter'
 
 export type getViolinRequest = {
 	genome: string

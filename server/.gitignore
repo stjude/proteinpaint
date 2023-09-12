@@ -3,3 +3,4 @@ node_modules/*
 test/*serverTests.js
 shared/checkers*/*
 shared/types/**/**.js
+routes/*

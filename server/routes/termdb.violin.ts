@@ -1,6 +1,6 @@
-import { trigger_getViolinPlotData } from '#src/termdb.violin.js'
-import { Filter } from '#shared/types/filter.ts'
-// import { getViolinRequest, getViolinResponse } from '#shared/types/routes/termdb.violin.ts'
+import { trigger_getViolinPlotData } from '#src/termdb.violin'
+import { Filter } from '#shared/types/filter'
+// import { getViolinRequest, getViolinResponse } from '#shared/types/routes/termdb.violin'
 
 export const api: any = {
 	endpoint: 'termdb/violin',

@@ -1,5 +1,5 @@
-import { GdcMafResponse } from '#shared/types/routes/gdcMaf.ts'
-import { fileSize } from '#shared/fileSize'
+import { GdcMafResponse, File } from '../shared/types/routes/gdcMaf'
+import { fileSize } from '../shared/fileSize'
 import path from 'path'
 import got from 'got'
 
@@ -15,8 +15,9 @@ export const api = {
 
 				return async (req: any, res: any): Promise<void> => {
 					try {
-						const files = (await listMafFiles(req)) as GdcMafResponse
-						res.send({ files })
+						const files = await listMafFiles(req)
+						const payload = { files } as GdcMafResponse
+						res.send(payload)
 					} catch (e: any) {
 						res.send({ status: 'error', error: e.message || e })
 					}
@@ -78,20 +79,20 @@ async function listMafFiles(req: any) {
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from ' + api.end_point
+		throw 'invalid JSON from ' + api.endpoint
 	}
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
-	const files = []
+	const files = [] as File[]
 	for (const h of re.data.hits) {
 		const file = {
 			id: h.id,
 			workflow_type: h.analysis?.workflow_type,
 			experimental_strategy: h.experimental_strategy,
 			file_size: fileSize(h.file_size)
-		}
+		} as File
 		const c = h.cases?.[0]
 		if (c) {
 			file.case_submitter_id = c.submitter_id

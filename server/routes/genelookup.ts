@@ -1,5 +1,5 @@
 import { getResult } from '#src/gene.js'
-import { GeneLookupRequest, GeneLookupResponse } from '#shared/types/routes/genelookup.ts'
+import { GeneLookupRequest, GeneLookupResponse } from '#shared/types/routes/genelookup'
 
 function init({ genomes }) {
 	return (req: any, res: any): void => {
