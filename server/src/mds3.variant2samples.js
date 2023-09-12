@@ -1,11 +1,12 @@
 const { stratinput } = require('#shared/tree')
 const { querySamples_gdcapi } = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
-const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
 const { dtfusionrna, dtsv } = require('#shared/common')
 const geneDbSearch = require('./gene')
 const { getSampleData_dictionaryTerms_termdb } = require('./termdb.matrix')
+
+export const ssmIdFieldsSeparator = '.'
 
 /*
 validate_variant2samples()
