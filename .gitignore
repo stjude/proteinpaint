@@ -21,6 +21,7 @@ server/shared/types/*.js
 !server/shared/types/typedoc.js
 server/shared/types/terms/*.js
 server/shared/types/routes/checkers/*
+server/test/*.bundle.js
 
 **/public/bin/*
 public/tmp/*
