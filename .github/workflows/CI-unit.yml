@@ -34,8 +34,36 @@ jobs:
           cache: 'npm'
           node-version: '16'
 
-      - run: npm ci
-        env:
+      - name: Set up Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install BCFTools and Tabix Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake make gcc perl zlib1g-dev libbz2-dev liblzma-dev libcurl4-gnutls-dev libssl-dev libncurses5-dev
+
+      - name: Install BCFTools
+        run: |
+          wget https://github.com/samtools/bcftools/releases/download/1.14/bcftools-1.14.tar.bz2
+          tar -xjf bcftools-1.14.tar.bz2
+          cd bcftools-1.14
+          make
+          sudo make install
+
+      - name: Install Tabix
+        run: |
+          wget https://github.com/samtools/htslib/releases/download/1.14/htslib-1.14.tar.bz2
+          tar -xjf htslib-1.14.tar.bz2
+          cd htslib-1.14
+          make
+          sudo make install    
+
+      - name: Install PP packages
+        run: |
+          npm ci
+          cd rust && npm run build
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run ESLint
@@ -68,7 +96,7 @@ jobs:
 
       - name: 🔎 Server unit tests
         if: contains(env.WS_TO_TEST, 'server')
-        run: npx tsc --esModuleInterop server/dataset/*.ts && npm run test:unit --workspace="server"
+        run: npm run test:unit --workspace="server"
 
       - name: ⚡ Cache
         if: contains(env.WS_TO_TEST, 'rust')
