@@ -1,6 +1,6 @@
 import { keyupEnter } from '#src/client'
 import { select, selectAll } from 'd3-selection'
-import { CategoricalTermSettingInstance } from '#shared/types'
+import { CategoricalTermSettingInstance, GroupSetInputValues } from '#shared/types'
 import { Tabs } from '#dom/toggleButtons'
 import { disappear } from '#src/client'
 
@@ -34,14 +34,17 @@ Future plans:
 */
 
 type ItemEntry = {
+	key: string
 	label: string //Drag label
-	groupIdx: number //Current group index for item
-	count: any //Sample count
+	group: number //Current group index for item. .group maybe calculated or returned from categorical.ts.
+	count: number | string //Sample count number or 'n/a'
+	uncomputable?: boolean
 }
 type DataInput = { [index: string]: ItemEntry }
 type GrpEntry = {
 	//Scoped for file, maybe merge with GroupEntry type in future??
 	currentIdx: number //Current index of group
+	type: 'values' //always 'values'. Possible this key/val no longer needed
 	name: string //Mutable group name, default .currentIdx
 }
 type GrpEntryWithDom = GrpEntry & {
@@ -60,50 +63,60 @@ type GrpSetDom = {
 	excludedWrapper: HTMLElement
 }
 
+type GroupSettingInstance = CategoricalTermSettingInstance & {
+	inputValues?: GroupSetInputValues //the values calculated after the user created the groupset. Use when user intends to edit a previously created groupset
+}
+
 export class GroupSettingMethods {
 	opts: any
 	dom: Partial<GrpSetDom>
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
+	inputValues: any
 	initGrpSetUI: any
 
-	constructor(opts: CategoricalTermSettingInstance) {
+	constructor(opts: GroupSettingInstance) {
 		this.opts = opts
 		// const menuWrapper = this.opts.dom.tip.d.append('div')
 		// const actionDiv = menuWrapper.append('div')
 		// const grpsWrapper = menuWrapper.append('div')
-		this.dom = {
+		;(this.dom = {
 			// menuWrapper,
 			// actionDiv,
 			// grpsWrapper,
 			// includedWrapper: grpsWrapper.append('div'),
 			// excludedWrapper: grpsWrapper.append('div')
-		}
-		this.data = {
-			groups: [],
-			values: []
-		}
+		}),
+			(this.data = {
+				groups: [],
+				values: []
+			})
+		if (opts.inputValues) this.inputValues = opts.inputValues
 		setRenderers(this)
 	}
 
 	async processInput(data: DataInput) {
-		this.data.values = structuredClone(Object.values(data))
+		const input = structuredClone(data)
 		//add excluded categories, group 1, and group 2 indexes by default
 		//these three groups should always appear in the menu
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
-		for (const d of this.data.values) {
-			if (!d.groupIdx) d.groupIdx = 1 //default to group 1
-			if (d.groupIdx > 4)
-				throw `The maximum number of groups is 4. The group index for value = ${d.label} is ${d.groupIdx}`
-			if (!d.count)
-				d.count = this.opts.category2samplecount
-					? this.opts.category2samplecount.find(v => v.key == d.label).count
+		for (const [k, v] of Object.entries(input)) {
+			if (v.uncomputable) return
+			if (v?.group > 4) throw `The maximum number of groups is 4. The group index for value = ${v.label} is ${v.group}`
+			const value = {
+				key: k,
+				label: v.label,
+				group: v.group || 1,
+				count: this.opts.category2samplecount
+					? this.opts.category2samplecount.find((d: { key: string; count: number }) => d.key == k).count
 					: 'n/a'
-
-			grpIdxes.add(d.groupIdx)
+			}
+			this.data.values.push(value)
+			grpIdxes.add(value.group)
 		}
 		for (const g of Array.from(grpIdxes).sort((a, b) => a - b)) {
 			this.data.groups.push({
 				currentIdx: g,
+				type: 'values',
 				name: g == 0 ? `Excluded categories` : g.toString()
 			})
 		}
@@ -111,7 +124,11 @@ export class GroupSettingMethods {
 
 	async main() {
 		try {
-			const input = this.opts.q.bar_by_children ? this.opts.term.subconditions : this.opts.term.values
+			const input = this.inputValues
+				? this.inputValues
+				: this.opts.q.bar_by_children
+				? this.opts.term.subconditions
+				: this.opts.term.values
 			await this.processInput(input)
 			this.initGrpSetUI()
 		} catch (e: any) {
@@ -129,7 +146,7 @@ function setRenderers(self: any) {
 		//	//TODO: move apply button up
 		// 	const tabs = [
 		// 		{
-		// 			label: 'UI',
+		// 			label: 'Drag',
 		// 			callback:  async (event, tab) => {
 		// 				try {
 		// 					self.opts.showDraggables()
@@ -141,7 +158,7 @@ function setRenderers(self: any) {
 		// 			}
 		// 		},
 		// 		{
-		// 			label: 'Text Input',
+		// 			label: 'Text',
 		// 			callback: () => {console.log('Under Development')}
 		// 		}
 		// 	]
@@ -193,7 +210,28 @@ function setRenderers(self: any) {
 			.style('cursor', 'pointer')
 			.text('Apply')
 			.on('click', () => {
-				//submit
+				const customset: any = { groups: [] }
+				for (const group of self.data.groups) {
+					if (group.currentIdx === 0) continue
+					const groupValues = self.data.values
+						.filter((v: ItemEntry) => v.group == group.currentIdx)
+						.map((v: ItemEntry) => {
+							return { key: v.key, label: v.label }
+						})
+					if (groupValues.length == 0) continue
+					customset.groups.push({
+						name: group.name,
+						type: group.type,
+						values: groupValues
+					})
+				}
+				self.opts.q.type = 'custom-groupset'
+				self.opts.q.groupsetting = {
+					inuse: true,
+					customset: customset
+				}
+				self.opts.dom.tip.hide()
+				self.opts.runCallback()
 			})
 
 		//Top message
@@ -251,7 +289,7 @@ function setRenderers(self: any) {
 		group.wrapper
 			.on('drop', function (event: DragEvent) {
 				const itemData = draggedItem.node().__data__
-				if (itemData.groupIdx === group.currentIdx) return
+				if (itemData.group === group.currentIdx) return
 				group.draggables.node().appendChild(draggedItem.node())
 
 				draggedItem
@@ -259,7 +297,7 @@ function setRenderers(self: any) {
 					.style('transition-duration', '1s')
 					.style('background-color', '#fff2cc')
 
-				self.data.values.find((v: ItemEntry) => v === itemData).groupIdx = group.currentIdx
+				self.data.values.find((v: ItemEntry) => v === itemData).group = group.currentIdx
 
 				event.preventDefault()
 				event.stopPropagation()
@@ -279,16 +317,16 @@ function setRenderers(self: any) {
 				event.stopPropagation()
 				group.wrapper.style(
 					'background-color',
-					group.currentIdx !== draggedItem.node().__data__.groupIdx ? '#cfe2f3' : '#fff'
+					group.currentIdx !== draggedItem.node().__data__.group ? '#cfe2f3' : '#fff'
 				)
 			})
 			.on('dragenter', function (event: DragEvent) {
-				if (draggedItem.node().__data__.groupIdx === group.currentIdx) return
+				if (draggedItem.node().__data__.group === group.currentIdx) return
 				event.preventDefault()
 				event.stopPropagation()
 				group.wrapper.style(
 					'background-color',
-					group.currentIdx !== draggedItem.node().__data__.groupIdx ? '#cfe2f3' : '#fff'
+					group.currentIdx !== draggedItem.node().__data__.group ? '#cfe2f3' : '#fff'
 				)
 			})
 
@@ -341,7 +379,7 @@ function setRenderers(self: any) {
 		await group.draggables
 			//add draggable items to group div
 			.selectAll('div')
-			.data(self.data.values.filter((d: ItemEntry) => d.groupIdx == group.currentIdx))
+			.data(self.data.values.filter((d: ItemEntry) => d.group == group.currentIdx))
 			.enter()
 			.append('div')
 			.attr('draggable', 'true')
@@ -373,26 +411,31 @@ function setRenderers(self: any) {
 		const itemsNum = group.wrapper.selectAll('.sjpp-drag-item').nodes()
 		if (itemsNum.length === 0) group.wrapper.remove()
 		else {
-			const defaultDuration = 300
+			const defaultDuration = 1000
 			await collapseAnimation(defaultDuration)
+			for (const v of self.data.values) {
+				if (v.group == group.currentIdx) v.group = 0
+			}
 			// setTimeout(() => {
 			// 	disappear(group.wrapper, true)
 			// }, defaultDuration * 3)
-			self.update(0)
 		}
+		self.update(0)
 
 		async function collapseAnimation(defaultDuration: number) {
 			//Remove user action divs
 			// group.title.remove()
 			group.input.remove()
 			group.destroyBtn.remove()
+			group.wrapper.remove()
 
-			const z = self.dom.excludedWrapper.node().getBoundingClientRect()
-			console.log(z)
-			const a = group.draggables.selectAll('.sjpp-drag-item')
-			console.log(a)
-			a.transition().duration(defaultDuration).attr(`transform`, `translate(0, -7)`)
+			// const z = self.dom.excludedWrapper.node().getBoundingClientRect()
+			// const a = group.draggables.selectAll('.sjpp-drag-item')
+			// a
+			// .style('transform', `translate(${z.x}px, ${z.y}px)`)
+			// .style('transtition', `transform ${defaultDuration}ms ease-in-out`)
 
+			// a.transition().duration(defaultDuration).attr(`transform`, `translate(${z.x}, ${z.y})`)
 			// const { x, y } = getCollapsedScale(self.dom.excludedWrapper.node(), group.wrapper.node())
 			// console.log(x, y)
 			// 	const collapsedX = 0
@@ -415,8 +458,8 @@ function setRenderers(self: any) {
 			// 		item.animate(collapseEffect, collapseTime)
 			// 	})
 
-			// 	const values2Exclude = self.data.values.filter((d: ItemEntry) => d.groupIdx == group.currentIdx)
-			// 	values2Exclude.forEach((d: ItemEntry) => (d.groupIdx = 0))
+			// 	const values2Exclude = self.data.values.filter((d: ItemEntry) => d.group == group.currentIdx)
+			// 	values2Exclude.forEach((d: ItemEntry) => (d.group = 0))
 			// 	// group.destroyBtn
 			// 	// 	.style('padding', '5px')
 			// 	// 	.text(itemsNum.length)
@@ -424,17 +467,18 @@ function setRenderers(self: any) {
 		}
 	}
 
-	//TODO: when animations.js is converted to ts, move there
-	function getCollapsedScale(anchor: any, div: Element) {
-		//anchor: constant element appearing on expand and collapse
-		//div: the whole div, items and all, to collapse and expand
-		//const collapsed = anchor.getBoundingClientRect()
-		// const expanded = div.getBoundingClientRect()
-		// return {
-		// 	x: collapsed.width / expanded.width,
-		// 	y: collapsed.height / expanded.height
-		// }
-	}
+	// function getCollapsedScale(anchor: any, div: Element) {
+	// 	//anchor: constant element appearing on expand and collapse
+	// 	//div: the whole div, items and all, to collapse and expand
+	// 	const collapsed = anchor.getBoundingClientRect()
+	// 	const expanded = div.getBoundingClientRect()
+	// 	console.log(collapsed, expanded)
+	// 	return{ x: 0, y: 0}
+	// 	// return {
+	// 	// 	x: collapsed.width / expanded.width,
+	// 	// 	y: collapsed.height / expanded.height
+	// 	// }
+	// }
 
 	self.update = async function (idx = 0) {
 		self.data.groups.forEach((group: GrpEntry) => {
