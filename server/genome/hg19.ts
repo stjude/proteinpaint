@@ -1,4 +1,3 @@
-import { clinsig } from '../dataset/clinvar'
 import { Genome } from '../shared/types'
 
 export default <Genome>{
@@ -21,11 +20,6 @@ export default <Genome>{
 	fimo_motif: {
 		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
 		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
-	},
-	clinvarVCF: {
-		file: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz',
-		infokey: 'CLNSIG',
-		categories: clinsig
 	},
 	tracks: [
 		{
