@@ -657,9 +657,7 @@ function m_mouseover(m, nm, tk) {
 	if (nm.tooltipPrintValue) {
 		const out = nm.tooltipPrintValue(m)
 		if (Array.isArray(out)) {
-			words.push(...out)
-		} else {
-			words.push(out)
+			words.push(...out.map(i => `${i.k} = ${i.v}`))
 		}
 	} else {
 		words.push(nm.label + ' = ' + (m.__value_missing ? 'NA' : m.__value_use))

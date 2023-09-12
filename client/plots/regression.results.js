@@ -1248,18 +1248,18 @@ export function showLDlegend(div, colorScale) {
 }
 
 function getMtooltipValues(m, regressionType) {
-	const lst = ['p-value=' + m.regressionPvalue]
+	const lst = [{ k: 'p-value', v: m.regressionPvalue }]
 	if (m.regressionResult.AFstr) {
-		lst.push('AF=' + m.regressionResult.AFstr)
+		lst.push({ k: 'AF', v: m.regressionResult.AFstr })
 	}
 	if (m.regressionEstimate) {
-		if (regressionType == 'linear') lst.push('beta=' + m.regressionEstimate)
-		else if (regressionType == 'logistic') lst.push('odds ratio=' + m.regressionEstimate)
-		else if (regressionType == 'cox') lst.push('hazard ratio=' + m.regressionEstimate)
+		if (regressionType == 'linear') lst.push({ k: 'beta', v: m.regressionEstimate })
+		else if (regressionType == 'logistic') lst.push({ k: 'odds ratio', v: m.regressionEstimate })
+		else if (regressionType == 'cox') lst.push({ k: 'hazard ratio', v: m.regressionEstimate })
 		else throw 'unknown regression type'
 	}
 	if (m.regressionR2) {
-		lst.push('LD r2=' + m.regressionR2)
+		lst.push({ k: 'LD r2', v: m.regressionR2 })
 	}
 	return lst
 }
