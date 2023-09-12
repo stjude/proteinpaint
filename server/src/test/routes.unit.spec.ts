@@ -49,9 +49,25 @@ function getApp({ api }) {
  test sections
 ***************/
 
-const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-for (const f of files) {
-	testApi(f)
+runTests()
+
+async function runTests() {
+	console.log(54, genomes['hg38-test'])
+	g.datasets = {}
+	try {
+		g.datasets.TermdbTest = await setDataset(g, {
+			name: 'TermdbTest',
+			jsfile: './dataset/termdb.test.js'
+		})
+	} catch (e) {
+		console.log(`Error in setDataset(): `, e)
+		process.exit(1)
+	}
+
+	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
+	for (const f of files) {
+		await testApi(f)
+	}
 }
 
 // f: a filename under the server/routes dir
@@ -61,19 +77,6 @@ async function testApi(f) {
 		test.pass(`-***- server/${f} specs -***-`)
 		test.end()
 	})
-
-	if (!g.datasets) {
-		g.datasets = {}
-		try {
-			g.datasets.TermdbTest = await setDataset(g, {
-				name: 'TermdbTest',
-				jsfile: './dataset/termdb.test.js'
-			})
-		} catch (e) {
-			console.log(`Error in setDataset(): `, e)
-			process.exit(1)
-		}
-	}
 
 	for (const method in api.methods) {
 		const m = api.methods[method]
@@ -94,12 +97,12 @@ async function testApi(f) {
 				const res = {
 					statusNum: 200,
 					send(payload) {
+						if (!payload) {
+							test.fail('empty response payload for request: ')
+							return
+						}
 						if (payload.error) {
-							console.log(
-								'TODO: use test.fail() once `await mds3_init()` is predictable and re-enabled in routes.unit.spec.ts'
-							)
-							console.log(payload.error)
-							//test.fail(payload.error)
+							test.fail(payload?.error)
 							return
 						}
 						if (x.response.header?.status) {
@@ -160,8 +163,8 @@ async function setDataset(g, d) {
 
 	if (ds.isMds3) {
 		try {
-			// TODO: re-enable
-			// await mds3_init(ds, g, d, null, '')
+			await mds3_init(ds, g, d, null, '')
+			return ds
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			throw 'Error with mds3 dataset ' + ds.label + ': ' + e
