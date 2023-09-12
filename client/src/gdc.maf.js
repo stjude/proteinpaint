@@ -58,11 +58,7 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 }
 
 async function getFileList(filter0) {
-	const body = {
-		genome: 'hg38',
-		dslabel: 'GDC',
-		gdcMaf: 1
-	}
+	const body = {}
 	if (filter0) body.filter0 = filter0
-	return await dofetch3('mds3', { body })
+	return await dofetch3('gdcMaf', { body })
 }
