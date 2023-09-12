@@ -283,7 +283,6 @@ function setRenderers(self) {
 		if (self.state.usecase) {
 			for (const t of term.terms) {
 				if (isUsableTerm(t, self.state.usecase).size) {
-					t.parent = term
 					self.included_terms.push(t)
 				}
 			}
