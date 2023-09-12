@@ -70,7 +70,8 @@ function init({ genomes }) {
 			const data = await trigger_getViolinPlotData(req.query, null, ds, g) // as getViolinResponse
 			res.send(data)
 		} catch (e) {
-			// @ts-expect-error
+			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+			// @ts-ignore
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
