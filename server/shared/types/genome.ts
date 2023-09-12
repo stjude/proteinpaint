@@ -1,4 +1,4 @@
-import { Cohort, ClinvarClinsig } from './dataset'
+import { Cohort } from './dataset'
 
 /********* server/genome ********
  
@@ -33,12 +33,6 @@ type Snp = {
 type FimoMotif = {
 	db: string
 	annotationfile: string
-}
-
-type ClinVarVCF = {
-	file: string
-	infokey: string
-	categories: ClinvarClinsig
 }
 
 type TrackCategoryEntry = {
@@ -121,7 +115,6 @@ export type Genome = MinGenome & {
 	repeatmasker?: DbStatement
 	snp?: Snp
 	fimo_motif?: FimoMotif
-	clinvarVCF?: ClinVarVCF
 	tracks: Track[]
 	geneset?: GeneSet[]
 	hicdomain?: HicDomain

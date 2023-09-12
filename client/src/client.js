@@ -92,10 +92,7 @@ export function axisstyle(p) {
 	if (!p.color) {
 		p.color = '#545454'
 	}
-	p.axis
-		.selectAll('line')
-		.attr('stroke', p.color)
-		.attr('shape-rendering', 'crispEdges')
+	p.axis.selectAll('line').attr('stroke', p.color).attr('shape-rendering', 'crispEdges')
 	p.axis
 		.selectAll('path')
 		.attr('fill', 'none')
@@ -158,10 +155,7 @@ export function newpane(pm) {
 		pp.pane.style('z-index', base_zindex)
 	}
 
-	pp.pane
-		.transition()
-		.duration(dur)
-		.style('opacity', 1)
+	pp.pane.transition().duration(dur).style('opacity', 1)
 
 	const toprow = pp.pane.append('div').on('mousedown', event => {
 		event.preventDefault()
@@ -173,7 +167,7 @@ export function newpane(pm) {
 		body.on('mousemove', event => {
 			pp.pane.style('left', oldx + event.clientX - x0 + 'px').style('top', oldy + event.clientY - y0 + 'px')
 		})
-		body.on('mouseup', function() {
+		body.on('mouseup', function () {
 			body.on('mouseup', null).on('mousemove', null)
 		})
 		// order of precedence, among all panes
@@ -273,9 +267,7 @@ export function getdomaintypes(gm) {
 	for (const [key, domaintype] of types) {
 		domaintype.key = key
 		domaintype.fill = domaintype.color
-		domaintype.stroke = d3rgb(domaintype.color)
-			.darker(1)
-			.toString()
+		domaintype.stroke = d3rgb(domaintype.color).darker(1).toString()
 		delete domaintype.color
 		lst.push(domaintype)
 	}
@@ -673,7 +665,7 @@ export function to_svg(svg, name, opts = {}) {
 
 	a.addEventListener(
 		'click',
-		function() {
+		function () {
 			const serializer = new XMLSerializer()
 			const svg_blob = new Blob([serializer.serializeToString(opts.svgClone ? opts.svgClone : svg)], {
 				type: 'image/svg+xml'
@@ -719,17 +711,9 @@ export function export_data(title, lst, posx = 1, posy = 1, rows = 10, cols = 10
 	for (const w of lst) {
 		const div = body.append('div').style('margin-top', '10px')
 		if (w.label) {
-			div
-				.append('div')
-				.text(w.label)
-				.style('margin', '5px')
+			div.append('div').text(w.label).style('margin', '5px')
 		}
-		body
-			.append('textarea')
-			.text(w.text)
-			.attr('readonly', 1)
-			.attr('rows', rows)
-			.attr('cols', cols)
+		body.append('textarea').text(w.text).attr('readonly', 1).attr('rows', rows).attr('cols', cols)
 	}
 	body
 		.append('p')
@@ -812,11 +796,7 @@ export function category2legend(categories, holder) {
 			.style('margin-right', '5px')
 			.style('padding', '0px 4px')
 			.html('&nbsp;')
-		div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('color', c.color)
-			.text(c.label)
+		div.append('div').style('display', 'inline-block').style('color', c.color).text(c.label)
 	}
 }
 
@@ -840,10 +820,7 @@ export function bulk_badline(header, lines) {
 					const n2 = newpane({ x: 500, y: 60 })
 					n2.header.text('Line ' + number)
 					n2.body.style('margin', '10px')
-					const t = n2.body
-						.append('table')
-						.style('border-spacing', '1px')
-						.style('border-collapse', 'separate')
+					const t = n2.body.append('table').style('border-spacing', '1px').style('border-collapse', 'separate')
 					let fl = true
 					for (let i = 0; i < header.length; i++) {
 						const tr = t.append('tr')
@@ -960,18 +937,10 @@ export function mclasscolorchangeui(tip) {
 }
 
 export function mclasscolor2table(table, snvonly) {
-	table
-		.style('border-spacing', '3px')
-		.selectAll('*')
-		.remove()
-	const tr = table
-		.append('tr')
-		.style('color', '#858585')
-		.style('font-size', '.7em')
+	table.style('border-spacing', '3px').selectAll('*').remove()
+	const tr = table.append('tr').style('color', '#858585').style('font-size', '.7em')
 	tr.append('td').text('CLASS')
-	tr.append('td')
-		.attr('colspan', 2)
-		.text('LABEL, COLOR')
+	tr.append('td').attr('colspan', 2).text('LABEL, COLOR')
 	for (const k in common.mclass) {
 		const c = common.mclass[k]
 		if (snvonly && c.dt != common.dtsnvindel) continue
@@ -1108,30 +1077,8 @@ m{}
 		.text(m.name)
 		.attr('href', 'https://www.ncbi.nlm.nih.gov/snp/' + m.name)
 		.attr('target', '_blank')
-	d.append('div')
-		.attr('class', 'sja_tinylogo_body')
-		.text(m.observed)
-	d.append('div')
-		.attr('class', 'sja_tinylogo_head')
-		.text('ALLELE')
-}
-
-export async function may_findmatchingclinvar(chr, pos, ref, alt, genome) {
-	/*
-chr: string
-pos
-	int, or {start, stop}
-genome{ name }
-*/
-	if (!genome || !genome.hasClinvarVCF) return
-	if (!Number.isInteger(pos)) throw 'pos is not integer'
-	const _c = genome.chrlookup[chr.toUpperCase()]
-	if (_c.len < pos) throw 'position out of bound: ' + pos
-	const p = { genome: genome.name, chr, pos, ref, alt }
-	const lst = ['genome=' + genome.name, 'chr=' + chr, 'pos=' + pos, 'ref=' + ref, 'alt=' + alt]
-	const data = await dofetch2('clinvarVCF?' + lst.join('&'))
-	if (data.error) throw data.error
-	return data.hit
+	d.append('div').attr('class', 'sja_tinylogo_body').text(m.observed)
+	d.append('div').attr('class', 'sja_tinylogo_head').text('ALLELE')
 }
 
 export function clinvar_printhtml(m, d) {
@@ -1190,15 +1137,8 @@ tabs[ tab{} ]
 this function attaches .box (d3 dom) to each tab of tabs[]
 
 */
-	const tr = holder
-		.append('table')
-		.style('border-spacing', '0px')
-		.style('border-collapse', 'separate')
-		.append('tr')
-	const tdleft = tr
-		.append('td')
-		.style('vertical-align', 'top')
-		.style('padding', '10px 0px 10px 10px')
+	const tr = holder.append('table').style('border-spacing', '0px').style('border-collapse', 'separate').append('tr')
+	const tdleft = tr.append('td').style('vertical-align', 'top').style('padding', '10px 0px 10px 10px')
 	const tdright = tr
 		.append('td')
 		.style('vertical-align', 'top')
@@ -1261,8 +1201,5 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 }
 
 export function tab_wait(d) {
-	return d
-		.append('div')
-		.style('margin', '30px')
-		.text('Loading...')
+	return d.append('div').style('margin', '30px').text('Loading...')
 }

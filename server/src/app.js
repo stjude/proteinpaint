@@ -293,7 +293,6 @@ app.post(basepath + '/tkbigwig', handle_tkbigwig)
 app.post(basepath + '/tkld', handle_tkld(genomes))
 app.get(basepath + '/tabixheader', handle_tabixheader)
 app.all(basepath + '/snp', handle_snp)
-app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
 app.post(basepath + '/isoformlst', handle_isoformlst)
 app.post(basepath + '/dbdata', handle_dbdata)
 app.get(basepath + '/img', handle_img)
@@ -607,7 +606,6 @@ function clientcopy_genome(genomename) {
 		name: genomename,
 		hasSNP: g.snp ? true : false,
 		hasIdeogram: g.genedb.hasIdeogram,
-		hasClinvarVCF: g.clinvarVCF ? true : false,
 		fimo_motif: g.fimo_motif ? true : false,
 		blat: g.blat ? true : false,
 		geneset: g.geneset,
@@ -1127,54 +1125,6 @@ function snp2hit(snp) {
 		alleles: [ref, ...alts]
 	}
 	return hit
-}
-
-async function handle_clinvarVCF(req, res) {
-	log(req)
-	try {
-		const g = genomes[req.query.genome]
-		if (!g) throw 'unknown genome'
-		if (!g.clinvarVCF) throw 'no clinvar for this genome'
-		const pos = Number(req.query.pos)
-		if (!Number.isInteger(pos)) throw 'pos is not integer'
-		if (pos < 0) throw 'pos is not positive integer'
-		if (!req.query.chr) throw 'chr missing'
-		{
-			const c = g.chrlookup[req.query.chr.toUpperCase()]
-			if (!c) throw 'invalid chr'
-			if (pos > c.len) throw 'pos out of bound'
-		}
-		let m
-		await utils.get_lines_bigfile({
-			args: [
-				g.clinvarVCF.file,
-				(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + pos + '-' + (pos + 1)
-			],
-			callback: line => {
-				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, g.clinvarVCF)
-				for (const m0 of mlst) {
-					if (m0.pos == pos && m0.ref == req.query.ref && m0.alt == req.query.alt) {
-						// match
-						m = m0
-					}
-				}
-			}
-		})
-		if (!m) return res.send({})
-		const k = m.info[g.clinvarVCF.infokey]
-		const v = g.clinvarVCF.categories[k]
-		res.send({
-			hit: {
-				id: m.vcf_ID,
-				value: v ? v.label : k,
-				bg: v ? v.color : '#858585',
-				textcolor: v && v.textcolor ? v.textcolor : 'black'
-			}
-		})
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		res.send({ error: e.message || e })
-	}
 }
 
 async function handle_dsdata(req, res) {
@@ -7309,34 +7259,6 @@ async function pp_init(serverconfig) {
 			if (!g.snp.bigbedfile) throw genomename + '.snp: missing bigBed file'
 			g.snp.bigbedfile = path.join(serverconfig.tpmasterdir, g.snp.bigbedfile)
 			await utils.file_is_readable(g.snp.bigbedfile)
-		}
-
-		if (g.clinvarVCF) {
-			if (!g.clinvarVCF.file) throw genomename + '.clinvarVCF: VCF file missing'
-			g.clinvarVCF.file = path.join(serverconfig.tpmasterdir, g.clinvarVCF.file)
-			try {
-				await utils.validate_tabixfile(g.clinvarVCF.file)
-			} catch (e) {
-				throw 'Error with ' + g.clinvarVCF.file + ': ' + e
-			}
-
-			if (!g.clinvarVCF.infokey) throw genomename + '.clinvarVCF.infokey missing'
-			if (!g.clinvarVCF.categories) throw genomename + '.clinvarVCF.categories{} missing'
-
-			{
-				const tmp = child_process.execSync(tabix + ' -H ' + g.clinvarVCF.file, { encoding: 'utf8' }).trim()
-				if (!tmp) throw genomename + '.clinvarVCF: no meta/header lines'
-				const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
-				if (errs) throw genomename + '.clinvarVCF: error parsing vcf meta: ' + errs.join('\n')
-				if (!info[g.clinvarVCF.infokey]) throw genomename + '.clinvarVCF: unknown INFO key for ' + g.clinvarVCF.infokey
-				g.clinvarVCF.info = info
-				g.clinvarVCF.format = format
-			}
-			{
-				const tmp = child_process.execSync(tabix + ' -l ' + g.clinvarVCF.file, { encoding: 'utf8' }).trim()
-				if (tmp == '') throw genomename + '.clinvarVCF: no chr listing'
-				g.clinvarVCF.nochr = common.contigNameNoChr(g, tmp.split('\n'))
-			}
 		}
 
 		if (g.fimo_motif) {
