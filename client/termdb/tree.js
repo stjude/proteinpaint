@@ -146,7 +146,7 @@ class TdbTree {
 		root.terms = await this.requestTermRecursive(root)
 		this.dom.holder.style('display', 'block')
 		this.renderBranch(root, this.dom.holder)
-		this.renderSampleTable()
+		if (this.state.samples) this.renderSampleTable()
 	}
 
 	getTermsById() {
@@ -356,7 +356,6 @@ function setRenderers(self) {
 				}
 				if (!hasClosedAncestor) openBranches.push(d)
 			}
-			select(this).style('background-color', '#fafafa')
 		})
 		const trs = this.dom.samplesTable
 			.style('display', openBranches.length ? 'inline-block' : 'none')
@@ -379,7 +378,6 @@ function setRenderers(self) {
 			.append('td')
 			.style('height', `${height}px`)
 			.style('color', 'gray')
-			.style('background-color', '#fafafa')
 			.style('padding', '0 16px')
 			.style('text-align', 'end')
 			.style('border', '1px solid white')
