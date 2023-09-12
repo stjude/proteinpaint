@@ -7,7 +7,6 @@ export const api = {
 		get: {
 			init({ genomes }) {
 				return async (req: undefined, res: any): Promise<void> => {
-					console.log(10, req)
 					try {
 						const health = (await getStat(genomes)) as HealthCheckResponse
 						res.send(health)

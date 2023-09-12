@@ -5,7 +5,7 @@ import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import * as gdc from './mds3.gdc'
 import { initGDCdictionary } from './termdb.gdc'
-import { validate_variant2samples } from './mds3.variant2samples'
+import { validate_variant2samples, ssmIdFieldsSeparator } from './mds3.variant2samples'
 import * as utils from './utils'
 import { compute_mclass } from './vcf.mclass'
 import computePercentile from '#shared/compute.percentile'
@@ -77,7 +77,6 @@ mayAdd_mayGetGeneVariantData
 */
 
 // in case chr name may contain '.', can change to __
-export const ssmIdFieldsSeparator = '.'
 const pc_termid_prefix = 'Ancestry_PC_' // may define in ds, must avoid conflicting with dictionary term ids
 const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/legend.js
 
@@ -100,20 +99,20 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_singleSampleGbtk(ds, genome)
 		await validate_query_probe2cnv(ds, genome)
 
-		validate_variant2samples(ds)
-		validate_ssm2canonicalisoform(ds)
+		await validate_variant2samples(ds)
+		await validate_ssm2canonicalisoform(ds)
 
-		mayAdd_refseq2ensembl(ds, genome)
+		await mayAdd_refseq2ensembl(ds, genome)
 
-		mayAdd_mayGetGeneVariantData(ds, genome)
+		await mayAdd_mayGetGeneVariantData(ds, genome)
 	}
 
-	mayValidateAssayAvailability(ds)
-	mayValidateViewModes(ds)
+	await mayValidateAssayAvailability(ds)
+	await mayValidateViewModes(ds)
 
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
-	if (ds.cohort?.db?.refresh && app) setDbRefreshRoute(ds, app, basepath)
+	if (ds.cohort?.db?.refresh && app) await setDbRefreshRoute(ds, app, basepath)
 }
 
 export function client_copy(ds) {
