@@ -4,7 +4,7 @@ import serverconfig from '../serverconfig'
 import path from 'path'
 import fs from 'fs'
 import { initdb } from '../genome.initdb'
-import { ssmIdFieldsSeparator, init as mds3_init } from '../mds3.init.js'
+import { init as mds3_init } from '../mds3.init.js'
 
 /****************************************
  reusable constants and helper functions
@@ -148,13 +148,9 @@ async function setDataset(g, d) {
 		Proteinpaint packaged files[] 
 	*/
 	const jsfile = path.join(process.cwd(), d.jsfile)
+	// @ts-expect-error
 	const _ds = __non_webpack_require__(jsfile)
-	const ds =
-		typeof _ds == 'function'
-			? _ds(common)
-			: typeof _ds?.default == 'function'
-			? _ds.default(common)
-			: _ds.default || _ds
+	const ds = _ds.default || _ds
 
 	ds.noHandleOnClient = d.noHandleOnClient
 	ds.label = d.name
@@ -163,10 +159,10 @@ async function setDataset(g, d) {
 
 	if (ds.isMds3) {
 		try {
-			await mds3_init(ds, g, d, null, '')
+			await mds3_init(ds, g, d, null)
 			return ds
 		} catch (e) {
-			if (e.stack) console.log(e.stack)
+			if (e instanceof Error && e.stack) console.log(e.stack)
 			throw 'Error with mds3 dataset ' + ds.label + ': ' + e
 		}
 	}

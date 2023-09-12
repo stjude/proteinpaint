@@ -1,6 +1,6 @@
 import { trigger_getViolinPlotData } from '#src/termdb.violin.js'
 import { Filter } from '#shared/types/filter.ts'
-import { ViolinRequest, ViolinResponse } from '#shared/types/routes/termdb.violin.ts'
+// import { getViolinRequest, getViolinResponse } from '#shared/types/routes/termdb.violin.ts'
 
 export const api: any = {
 	endpoint: 'termdb/violin',
@@ -8,10 +8,10 @@ export const api: any = {
 		get: {
 			init,
 			request: {
-				typeId: 'getViolinDataRequest'
+				typeId: 'getViolinRequest'
 			},
 			response: {
-				typeId: 'getViolinDataResponse'
+				typeId: 'getViolinResponse'
 			},
 			examples: [
 				{
@@ -62,16 +62,17 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as ViolinRequest
+		const q = req.query // as getViolinRequest
 		try {
 			const g = genomes[req.query.genome]
 			const ds = g.datasets[req.query.dslabel]
 			if (!g) throw 'invalid genome name'
-			const data = (await trigger_getViolinPlotData(req.query, null, ds, g)) as ViolinResponse
+			const data = await trigger_getViolinPlotData(req.query, null, ds, g) // as getViolinResponse
 			res.send(data)
-		} catch (e: any) {
-			res.send({ error: e.message || e })
-			if (e.stack) console.log(e)
+		} catch (e) {
+			// @ts-expect-error
+			res.send({ error: e?.message || e })
+			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}
 }
