@@ -1,5 +1,5 @@
 import { GdcMafResponse, File } from '#shared/types/routes/gdcMaf.ts'
-import { fileSize } from '#shared/fileSize'
+import { fileSize } from '#shared/fileSize.js'
 import path from 'path'
 import got from 'got'
 
