@@ -1,4 +1,4 @@
-import { getResult } from '#src/gene'
+import { getResult } from '#src/gene.js'
 import { GeneLookupRequest, GeneLookupResponse } from '#shared/types/routes/genelookup.ts'
 
 function init({ genomes }) {

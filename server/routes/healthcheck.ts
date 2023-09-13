@@ -1,4 +1,4 @@
-import { getStat } from '#src/health'
+import { getStat } from '#src/health.ts'
 import { HealthCheckResponse } from '#shared/types/routes/healthcheck.ts'
 
 export const api = {

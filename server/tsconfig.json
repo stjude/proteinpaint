@@ -1,31 +1,7 @@
 {
   "extends": "../tsconfig.json",
-  "compilerOptions": { 
-    "esModuleInterop": true,
-    "module": "node16",
-    "moduleResolution": "node16",
+  "compilerOptions": {
     "baseUrl": "./",
-    "paths": {
-      "#src/*": [
-        "./src/*"
-      ],
-      "#shared/*": [
-        "./shared/*"
-      ],
-      "#routes/*": [
-        "./routes/*"
-      ]
-    },
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "strictNullChecks": true,
-    "skipLibCheck": true,
-    "noImplicitAny": false,
-    "resolveJsonModule": true
   },
-  "include": ["**/*.ts"],
-  "exclude": [
-    "node_modules",
-    "**/*+(.spec|.e2e).ts"
-  ]
+  "include": ["./**/*.ts"]
 }
