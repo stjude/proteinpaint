@@ -101,9 +101,11 @@ async function showBinsMenu(self: NumericTermSettingInstance, div: any) {
 
 function applyEdits(self: NumericTermSettingInstance) {
 	if (self.q.type == 'regular-bin') {
-		if (!self.q.first_bin) self.q.first_bin = {}
-		self.q.first_bin.startunbounded = true
-		self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
+		if (!self.q.first_bin) {
+			self.q.first_bin = {
+				stop: Number(self.dom.first_stop_input.property('value'))
+			}
+		}
 		self.q.startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 		self.q.stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 		const bin_size = self.dom.bin_size_input.property('value')
@@ -434,7 +436,9 @@ function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
 				event.target.value = origValue
 				return
 			}
-			self.q.first_bin.stop = newValue
+
+			// first_bin should have already been set; adding the check just to skip the tsc error...
+			if (self.q.first_bin) self.q.first_bin.stop = newValue
 			self.renderBinLines(self, self.q as NumericQ)
 		})
 
@@ -506,11 +510,19 @@ function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
 	function setLastBinStart() {
 		// only get value from <input>
 		const inputValue = Number(self.dom.last_start_input.property('value'))
-		if (inputValue <= self.q.first_bin.stop || inputValue > dd.maxvalue) {
+
+		// TODO first_bin should be required
+		if (self.q.first_bin && inputValue <= self.q.first_bin.stop) {
+			window.alert('Last bin start cannot be smaller than first bin stop.')
+			self.dom.last_start_input.property('value', dd.maxvalue)
+			return
+		}
+		if (inputValue > dd.maxvalue) {
 			window.alert('Last bin start value out of bound.')
 			self.dom.last_start_input.property('value', dd.maxvalue)
 			return
 		}
+		if (!self.q.last_bin) self.q.last_bin = {} // this should be fine since it's optional
 		self.q.last_bin.start = inputValue
 		self.renderBinLines(self, self.q as NumericQ)
 	}

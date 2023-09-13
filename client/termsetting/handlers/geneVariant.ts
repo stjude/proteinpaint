@@ -94,11 +94,13 @@ function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const exclude = self.q?.exclude?.slice().sort() || []
 	const origExclude = JSON.stringify(exclude)
 	const mclasses = Object.values(mclass)
-	const dtNums = [...new Set(mclasses.map(c => c.dt))].sort() as number[]
+
+	const dtNums = [...new Set(mclasses.map((c: any) => c.dt))].sort() as number[] // must add type "any" to avoid tsc err
 
 	const groups: GroupsEntry[] = []
 	for (const dt of dtNums) {
-		const items = mclasses.filter(c => c.dt === dt)
+		const items = mclasses.filter((c: any) => c.dt === dt) as MClassEntry[] // must add type "any" to avoid tsc err
+
 		if (items.length) {
 			groups.push({
 				name: dt2label[dt],

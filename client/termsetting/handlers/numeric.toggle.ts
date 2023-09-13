@@ -173,6 +173,8 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null)
 	set_hiddenvalues(tw.q, tw.term)
 }
 
+// return false for failed validation
+// TODO this may not be needed as checks are auto-done by ts?
 function valid_binscheme(q: NumericQ) {
 	/*if (q.mode == 'continuous') { console.log(472, q)
 		// only expect a few keys for now "mode", "scale", "transform" keys for now
@@ -188,15 +190,7 @@ function valid_binscheme(q: NumericQ) {
 		return true
 	}
 	if (Number.isFinite(q.bin_size) && q.first_bin) {
-		if (q.first_bin.startunbounded) {
-			if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
-				return true
-			}
-		} else {
-			if (Number.isInteger(q.first_bin.start_percentile) || Number.isFinite(q.first_bin.start)) {
-				return true
-			}
-		}
+		if (Number.isFinite(q.first_bin.stop)) return true
 	}
 	return false
 }
