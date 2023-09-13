@@ -424,8 +424,11 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 		if (tw.q.mode == 'discrete' || tw.q.mode == 'binary') {
 			// only assign groups to discrete and binary terms
 			// for cuminc and cox terms, groups will be determined in sql query
+
+			// term.values is treated optional so tsc won't complain
+
 			const grades = Object.keys(tw.term.values)
-				.filter(g => (tw.q.mode == 'discrete' ? !tw.term.values[g].uncomputable : g))
+				.filter(g => (tw.q.mode == 'discrete' ? !tw.term.values?.[g].uncomputable : g))
 				.map(Number)
 				.sort((a, b) => a - b)
 
