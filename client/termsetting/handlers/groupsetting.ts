@@ -1,6 +1,6 @@
 import { keyupEnter } from '#src/client'
 import { select, selectAll, Selection } from 'd3-selection'
-import { CategoricalTermSettingInstance, GroupSetInputValues } from '#shared/types'
+import { CategoricalTermSettingInstance, GroupSetInputValues } from '#shared/types/index'
 import { Tabs } from '#dom/toggleButtons'
 import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
