@@ -1,16 +1,16 @@
 import { keyupEnter } from '#src/client'
-import { select, selectAll } from 'd3-selection'
+import { select, selectAll, Selection } from 'd3-selection'
 import { CategoricalTermSettingInstance, GroupSetInputValues } from '#shared/types'
 import { Tabs } from '#dom/toggleButtons'
 import { disappear } from '#src/client'
+import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 
 /*
-Refactor notes:
- - Rm 'number of groups' drop down
-	- Replace with '+' or 'Add' button on the right and '-' or 'x' button to each group.
-	- any group can be removed, provided >2 groups are present, except excluded categories
+---------Exported---------
+class GroupSettingMethods
+
+Refactor notes/TODOs:
  - Items in a removed group is sent to excluded
-	- keeps groups, specifically group 1, already defined 'clean' from removed items
 	- visual reference items moved, such as a collapsed div with animation
  - Technical concerns: 
 	- don't add to the app state - create a 'state' within
@@ -37,7 +37,7 @@ type ItemEntry = {
 	key: string
 	label: string //Drag label
 	group: number //Current group index for item. .group maybe calculated or returned from categorical.ts.
-	count: number | string //Sample count number or 'n/a'
+	count?: number | string //Sample count number or 'n/a'
 	uncomputable?: boolean
 }
 type DataInput = { [index: string]: ItemEntry }
@@ -48,7 +48,7 @@ type GrpEntry = {
 	name: string //Mutable group name, default .currentIdx
 }
 type GrpEntryWithDom = GrpEntry & {
-	wrapper: any
+	wrapper: Selection<Element, any, any, any>
 	dragActionDiv: any
 	title: any
 	destroyBtn: any
@@ -63,9 +63,7 @@ type GrpSetDom = {
 	excludedWrapper: HTMLElement
 }
 
-type GroupSettingInstance = CategoricalTermSettingInstance & {
-	inputValues?: GroupSetInputValues //the values calculated after the user created the groupset. Use when user intends to edit a previously created groupset
-}
+type GroupSettingInstance = CategoricalTermSettingInstance //Will change to accommodate conditional termsetting later
 
 export class GroupSettingMethods {
 	opts: any
@@ -79,41 +77,52 @@ export class GroupSettingMethods {
 		// const menuWrapper = this.opts.dom.tip.d.append('div')
 		// const actionDiv = menuWrapper.append('div')
 		// const grpsWrapper = menuWrapper.append('div')
-		;(this.dom = {
+		this.dom = {
 			// menuWrapper,
 			// actionDiv,
 			// grpsWrapper,
 			// includedWrapper: grpsWrapper.append('div'),
 			// excludedWrapper: grpsWrapper.append('div')
-		}),
-			(this.data = {
-				groups: [],
-				values: []
-			})
-		if (opts.inputValues) this.inputValues = opts.inputValues
+		}
+		this.data = {
+			groups: [],
+			values: []
+		}
 		setRenderers(this)
 	}
 
-	async processInput(data: DataInput) {
-		const input = structuredClone(data)
+	processInput(data: DataInput) {
 		//add excluded categories, group 1, and group 2 indexes by default
 		//these three groups should always appear in the menu
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
-		for (const [k, v] of Object.entries(input)) {
-			if (v.uncomputable) return
-			if (v?.group > 4) throw `The maximum number of groups is 4. The group index for value = ${v.label} is ${v.group}`
-			const value = {
-				key: k,
-				label: v.label,
-				group: v.group || 1,
-				count: this.opts.category2samplecount
-					? this.opts.category2samplecount.find((d: { key: string; count: number }) => d.key == k).count
-					: 'n/a'
+		const input = structuredClone(data)
+		if (this.opts.q.groupsetting.customset) {
+			//customset created when user applies groupsetting
+			this.formatCustomset(grpIdxes, input)
+		} else {
+			for (const [k, v] of Object.entries(input)) {
+				if (v.uncomputable) return
+				if (v?.group > 4)
+					throw `The maximum number of groups is 4. The group index for value = ${v.label} is ${v.group}`
+				const value = {
+					key: k,
+					label: v.label,
+					group: v.group || 1
+				}
+				this.data.values.push(value)
+				grpIdxes.add(value.group)
 			}
-			this.data.values.push(value)
-			grpIdxes.add(value.group)
 		}
+
+		this.data.values.forEach(v => {
+			//find sample counts for each value once added to array
+			v.count = this.opts.category2samplecount
+				? this.opts.category2samplecount.find((d: { key: string; count: number }) => d.key == v.key).count
+				: 'n/a'
+		})
+
 		for (const g of Array.from(grpIdxes).sort((a, b) => a - b)) {
+			//add any required groups, specifically exclude categories and group 2
 			this.data.groups.push({
 				currentIdx: g,
 				type: 'values',
@@ -122,14 +131,42 @@ export class GroupSettingMethods {
 		}
 	}
 
+	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
+		//this might be overkill but need processing for non-categorical terms in the future
+		for (const [i, group] of this.opts.q.groupsetting.customset.groups.entries()) {
+			if (group.uncomputable) return
+			this.data.groups.push({
+				currentIdx: Number(i) + 1,
+				type: 'values',
+				name: group.name
+			})
+			grpIdxes.delete(i + 1)
+			for (const value of group.values) {
+				this.data.values.push({
+					key: value.key,
+					label: value.label,
+					group: i + 1
+				})
+			}
+		}
+		if (this.data.values.length !== Object.keys(input).length) {
+			//Find excluded values not returned in customset
+			Object.entries(input)
+				.filter((v: any) => !this.data.values.some(d => d.key == v[1].label))
+				.forEach(v => {
+					this.data.values.push({
+						key: v[0],
+						label: v[1].label,
+						group: 0
+					})
+				})
+		}
+	}
+
 	async main() {
 		try {
-			const input = this.inputValues
-				? this.inputValues
-				: this.opts.q.bar_by_children
-				? this.opts.term.subconditions
-				: this.opts.term.values
-			await this.processInput(input)
+			const input = this.opts.q.bar_by_children ? this.opts.term.subconditions : this.opts.term.values
+			this.processInput(input)
 			this.initGrpSetUI()
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -277,6 +314,7 @@ function setRenderers(self: any) {
 	async function initGroupDiv(group: GrpEntryWithDom) {
 		//Create the parent group div with user actions on the top
 		const wrapper = group.currentIdx === 0 ? self.dom.excludedWrapper : self.dom.includedWrapper
+		group.type = 'values'
 		if (!group.wrapper)
 			group.wrapper = wrapper
 				.append('div')
@@ -345,7 +383,7 @@ function setRenderers(self: any) {
 			group.input = group.dragActionDiv
 				.append('input')
 				.attr('size', 12)
-				.attr('value', group.currentIdx.toString() == group.name ? group.name : group.currentIdx)
+				.attr('value', group.name)
 				.style('margin', '5px')
 				.style('margin-left', '8px')
 				.style('display', 'inline-block')
@@ -354,9 +392,8 @@ function setRenderers(self: any) {
 				.on('keyup', (event: KeyboardEvent) => {
 					//Must hit enter to save. Problematic for UX?
 					if (!keyupEnter(event)) return
-					group.name = group.input.node().value
-				}) as HTMLInputElement
-
+					self.data.groups[group.currentIdx].name = group.input.node().value
+				})
 			group.destroyBtn = group.dragActionDiv
 				.append('button')
 				.style('display', 'inline-block')
@@ -484,7 +521,6 @@ function setRenderers(self: any) {
 		self.data.groups.forEach((group: GrpEntry) => {
 			if (group.currentIdx > idx && idx !== 0) {
 				group.currentIdx = group.currentIdx - 1
-				group.name = (group.currentIdx + 1).toString() == group.name ? group.currentIdx.toString() : group.name
 			}
 		})
 		self.dom.grpsWrapper
