@@ -6,7 +6,7 @@
     "allowJs": true, /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */
     "esModuleInterop": true, /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
     "types": ["node", "d3"], /* Ensures that TypeScript has access to the Node.js type definitions*/
-    "moduleResolution": "node",/* Enables Node.js module resolution.*/
+    "moduleResolution": "nodenext",/* Enables Node.js module resolution.*/
     "forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
     "strict": true, /* Enable all strict type-checking options. */
     "allowImportingTsExtensions": true,

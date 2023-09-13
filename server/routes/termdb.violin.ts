@@ -1,5 +1,5 @@
 import { trigger_getViolinPlotData } from '#src/termdb.violin'
-import { Filter } from '#shared/types/filter.js'
+import { Filter } from '../shared/types/filter.js'
 // import { getViolinRequest, getViolinResponse } from '#shared/types/routes/termdb.violin'
 
 export const api: any = {
