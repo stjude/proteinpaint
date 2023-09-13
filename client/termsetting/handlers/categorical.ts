@@ -11,7 +11,7 @@ import {
 	GroupEntry,
 	CategoricalTermSettingInstance,
 	CategoricalTW
-} from '#shared/types'
+} from '#shared/types/index'
 
 /*
 ********************** EXPORTED

@@ -2,7 +2,7 @@ import { keyupEnter } from '#src/client'
 import { select } from 'd3-selection'
 import { filterInit } from '#filter'
 // import { make_radios } from '#dom/radiobutton'
-import { GroupSetEntry, GroupEntry, TermValues, Subconditions } from '#shared/types'
+import { GroupSetEntry, GroupEntry, TermValues, Subconditions } from '#shared/types/index'
 
 /*
 Arguments

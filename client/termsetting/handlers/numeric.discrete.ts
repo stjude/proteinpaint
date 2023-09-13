@@ -7,7 +7,7 @@ import { Tabs } from '#dom/toggleButtons'
 import { make_radios } from '#dom/radiobutton'
 import { getPillNameDefault } from '#termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
-import { NumericTermSettingInstance, PillData, RangeEntry, NumericQ, DensityData } from '#shared/types'
+import { NumericTermSettingInstance, PillData, RangeEntry, NumericQ, DensityData } from '#shared/types/index'
 
 /*
 ********************** EXPORTED

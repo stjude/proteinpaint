@@ -1,7 +1,7 @@
 import test from 'tape'
 import LabelsMapper from '#plots/disco/label/LabelsMapper.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
-import discoDefaults from '#plots/disco/defaults'
+import discoDefaults from '#plots/disco/defaults.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 
 // Create test data

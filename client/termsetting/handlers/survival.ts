@@ -1,5 +1,5 @@
 import { getPillNameDefault } from '#termsetting'
-import { TermWrapper, VocabApi, TermSettingInstance, PillData } from '#shared/types'
+import { TermWrapper, VocabApi, TermSettingInstance, PillData } from '#shared/types/index'
 
 export function getHandler(self: TermSettingInstance) {
 	return {
