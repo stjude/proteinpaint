@@ -35,7 +35,8 @@
     "sethooks": "./utils/hooks/init.sh",
     "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
     "clean": "git add -A; git stash --staged",
-    "doc": "npm run doc --workspace=server"
+    "doc": "npm run doc --workspace=server",
+    "readme": "./augen/readme.sh > public/docs/readme.json"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",

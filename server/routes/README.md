@@ -20,7 +20,7 @@ Use the code from other files in this directory as examples
 
 TODO: define the `api` type
 
-```ts
+```typescript
 // work-in-progress
 type RouteApi {
 	[key as methods]: RouteApiMethod

@@ -25,5 +25,8 @@
   "devDependencies": {
     "express": "^4.17.1",
     "tape": "^5.2.2"
-  }
+  },
+  "files": [
+    "src"
+  ]
 }
