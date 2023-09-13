@@ -1,5 +1,5 @@
 import { getPillNameDefault } from '#termsetting'
-import { NumericTermSettingInstance, PillData, Term } from '#shared/types'
+import { NumericTermSettingInstance, PillData, Term } from '#shared/types/index'
 import { makeDensityPlot } from '#filter/densityplot'
 import { convertViolinData } from '#filter/tvs.numeric'
 

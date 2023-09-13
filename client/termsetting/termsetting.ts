@@ -18,7 +18,7 @@ import {
 	Handler,
 	Filter,
 	SampleCountsEntry
-} from '#shared/types'
+} from '#shared/types/index'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes

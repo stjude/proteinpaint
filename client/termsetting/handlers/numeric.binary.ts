@@ -4,7 +4,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { make_one_checkbox } from '#dom/checkbox'
 import { getPillNameDefault } from '#termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
-import { PillData, RangeEntry, NumericTermSettingInstance } from '#shared/types'
+import { PillData, RangeEntry, NumericTermSettingInstance } from '#shared/types/index'
 
 /*
 ********************** EXPORTED

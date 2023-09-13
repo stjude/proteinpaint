@@ -24,36 +24,12 @@
     // "moduleDetection": "auto",                        /* Control what method is used to detect module-format JS files. */
 
     /* Modules */
-    "module": "commonjs",                                /* Specify what module code is generated. */
+    "module": "node16",                                /* Specify what module code is generated. */
     // "rootDir": "./",                                  /* Specify the root folder within your source files. */
-    "moduleResolution": "nodenext",                     /* Specify how TypeScript looks up a file from a given module specifier. */
-     "baseUrl": "./",                                  /* Specify the base directory to resolve non-relative module names. */
-     "paths": {
-        "#src/*": [
-          "./server/src/*"
-        ],
-        "#shared/*": [
-          "./server/shared/*"
-        ],
-        "#routes/*": [
-          "./server/routes/*"
-        ],
-        //
-        "#src/*": ["./client/src/*.js"],
-        "#common/*": ["./client/common/*.js"],
-        "#dom/*": ["./client/dom/*.js"],
-        "#filter": ["./client/filter/filter.js"],
-        "#filter/*": ["./client/filter/*.js"],
-        "#mass/*": ["./client/mass/*.js"],
-        "#plots/*": ["./client/plots/*"],
-        "#plotsts/*": ["./client/plots/*.js"],
-        "#rx": ["./client/rx/index.js"],
-        "#shared/*": ["./client/shared/*.js"],
-        "#termdb/*": ["./client/termdb/*.js"],
-        "#termsetting": ["./client/termsetting/termsetting.ts"],
-        "#termsetting/handlers/*": ["./client/termsetting/handlers/*.ts"]
-
-     },                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
+    "moduleResolution": "node16",                     /* Specify how TypeScript looks up a file from a given module specifier. */
+    "baseUrl": "./",                                  /* Specify the base directory to resolve non-relative module names. */
+    // "paths": {},                                      /* Specify a set of entries that re-map imports to additional lookup locations*/
+                                                         /* paths are not needed when "moduleResolution": "mode16 || nodenext" and there is package.imports
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
     // "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */
     // "types": [],                                      /* Specify type package names to be included without being referenced in a source file. */

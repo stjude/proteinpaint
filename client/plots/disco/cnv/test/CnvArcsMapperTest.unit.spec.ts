@@ -1,5 +1,5 @@
 import test from 'tape'
-import discoDefaults from '#plots/disco/defaults'
+import discoDefaults from '#plots/disco/defaults.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
 import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'

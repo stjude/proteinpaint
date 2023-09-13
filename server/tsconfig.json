@@ -2,6 +2,8 @@
   "extends": "../tsconfig.json",
   "compilerOptions": { 
     "esModuleInterop": true,
+    "module": "node16",
+    "moduleResolution": "node16",
     "baseUrl": "./",
     "paths": {
       "#src/*": [
@@ -17,7 +19,8 @@
     "allowImportingTsExtensions": true,
     "strictNullChecks": true,
     "skipLibCheck": true,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "resolveJsonModule": true
   },
   "include": ["**/*.ts"],
   "exclude": [

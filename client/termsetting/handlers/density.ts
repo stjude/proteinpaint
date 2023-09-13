@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { makeDensityPlot } from '#filter/densityplot'
-import { BrushEntry, NumberObj, NumericTermSettingInstance } from '#shared/types'
+import { BrushEntry, NumberObj, NumericTermSettingInstance } from '#shared/types/index'
 import { BaseType } from 'd3-selection'
 /*
 ********************** IMPORTED

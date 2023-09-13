@@ -1,7 +1,7 @@
 import { Tabs } from '#dom/toggleButtons'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { copyMerge } from '#rx'
-import { PillData, NumericTW, NumericTermSettingInstance, VocabApi, NumericQ } from '#shared/types'
+import { PillData, NumericTW, NumericTermSettingInstance, VocabApi, NumericQ } from '#shared/types/index'
 
 /*
 ********************** EXPORTED

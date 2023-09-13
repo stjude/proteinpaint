@@ -13,8 +13,10 @@
     "#mass/*": "./mass/*.js",
     "#plots/*": "./plots/*",
     "#plotsts/*": "./plots/*.js",
+    "#plots/disco/*": "./plots/disco/*",
     "#rx": "./rx/index.js",
-    "#shared/*": "./shared/*.js",
+    "#shared/*": "@sjcrh/proteinpaint-server/shared/*",
+    "#shared/types/*": "@sjcrh/proteinpaint-server/shared/types/*",
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/termsetting.ts",
     "#termsetting/handlers/*": "./termsetting/handlers/*.ts"
