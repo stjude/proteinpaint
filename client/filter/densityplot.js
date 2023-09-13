@@ -47,7 +47,19 @@ export function makeDensityPlot(opts) {
 		.domain([data.minvalue, data.maxvalue])
 		.range([xpad, width - xpad])
 
-	const x_axis = axisBottom().scale(xscale)
+	let min = data.minvalue
+	let max = data.maxvalue
+	const vc = term?.valueConversion
+	if (vc) {
+		min = min * vc.scaleFactor
+		max = max * vc.scaleFactor
+	}
+
+	const xscaleTicks = scaleLinear()
+		.domain([min, max])
+		.range([xpad, width - xpad])
+
+	const x_axis = axisBottom().scale(xscaleTicks)
 	if (term && term.type == 'integer') x_axis.tickFormat(format('')) //'.4r'))
 
 	// y-scale
@@ -59,10 +71,10 @@ export function makeDensityPlot(opts) {
 
 	// SVG line generator
 	const line = d3line()
-		.x(function(d) {
+		.x(function (d) {
 			return xscale(d[0])
 		})
-		.y(function(d) {
+		.y(function (d) {
 			return yscale(d[1])
 		})
 		.curve(curveMonotoneX)
@@ -78,6 +90,16 @@ export function makeDensityPlot(opts) {
 	g.append('g')
 		.attr('transform', `translate(0, ${ypad + height})`)
 		.call(x_axis)
+
+	if (vc) {
+		g.append('text')
+			.text(vc.toUnit)
+			.attr('fill', 'black')
+			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
+			.attr('font-size', '13px')
+			.attr('text-anchor', 'middle')
+			.classed('sjpp-mds3-xlabel', true)
+	}
 
 	if (term && term.unit)
 		g.append('text')

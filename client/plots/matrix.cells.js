@@ -1,4 +1,4 @@
-import { convertUnits } from '../mds3/sampletable'
+import { convertUnits } from '#shared/helpers'
 /*
 	cell: a matrix cell data
 	tw: termwrapper

@@ -1,9 +1,10 @@
 import { makelabel } from './leftlabel'
 import { Tabs } from '#dom/toggleButtons'
-import { displaySampleTable, convertUnits } from './sampletable'
+import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
 import { filterInit, getNormalRoot } from '#filter'
+import { convertUnits } from '#shared/helpers'
 
 /*
 makeSampleLabel()

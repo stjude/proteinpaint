@@ -165,7 +165,7 @@ function processCustomBinInputs(self: NumericTermSettingInstance) {
 				delete prevBin.stopunbounded
 				prevBin.stop = bin.start
 				const label = inputs[i].value
-				prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+				prevBin.label = label ? label : get_bin_label(prevBin, self.q, self.term.valueConversion)
 				prevBin.range = get_bin_range_equation(prevBin, self.q)
 			}
 			prevBin = bin
@@ -174,7 +174,7 @@ function processCustomBinInputs(self: NumericTermSettingInstance) {
 	if (data.length == 0) return
 	prevBin.stopunbounded = true
 	const label = inputs[data.length]?.value
-	prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+	prevBin.label = label ? label : get_bin_label(prevBin, self.q, self.term.valueConversion)
 	prevBin.range = get_bin_range_equation(prevBin, self.q)
 
 	data.unshift({
@@ -184,7 +184,7 @@ function processCustomBinInputs(self: NumericTermSettingInstance) {
 		stopinclusive,
 		label: inputs[0].value
 	})
-	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
+	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q, self.term.valueConversion)
 	if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
 	return data
 }
@@ -260,7 +260,7 @@ function setqDefaults(self: NumericTermSettingInstance) {
 	}
 	if (self.q.lst) {
 		self.q.lst.forEach(bin => {
-			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q, self.term.valueConversion)
 			if (!('range' in bin)) bin.range = get_bin_range_equation(bin, self.q)
 		})
 	}
@@ -292,7 +292,7 @@ export function renderBoundaryInclusionInput(self: NumericTermSettingInstance) {
 			} else {
 				c.lst.forEach(bin => {
 					setBinsInclusion(bin)
-					bin.label = get_bin_label(bin, self.q)
+					bin.label = get_bin_label(bin, self.q, self.term.valueConversion)
 					bin.range = get_bin_range_equation(bin, self.q)
 				})
 				renderBoundaryInputDivs(self, c.lst)

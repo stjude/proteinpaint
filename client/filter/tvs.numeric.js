@@ -4,7 +4,7 @@ import { keyupEnter } from '#src/client'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { makeDensityPlot } from './densityplot'
 import { NumericRangeInput } from '#dom/numericRangeInput'
-import { convertUnits } from '../mds3/sampletable'
+import { convertUnits } from '#shared/helpers'
 
 /*
 ********************** EXPORTED
