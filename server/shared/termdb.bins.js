@@ -1,6 +1,6 @@
 import { format } from 'd3-format'
 import { getColors } from '#shared/common'
-import { isNumeric } from './helpers'
+import { isNumeric, convertUnits } from './helpers'
 
 export function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -103,7 +103,7 @@ export function validate_bins(binconfig) {
 	}
 }
 
-export function compute_bins(binconfig, summaryfxn) {
+export function compute_bins(binconfig, summaryfxn, valueConversion) {
 	/*
   Bins generator
   
@@ -212,7 +212,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 				delete currBin.stop
 			}
 		}
-		currBin.label = get_bin_label(currBin, bc)
+		currBin.label = get_bin_label(currBin, bc, valueConversion)
 		if (currBin.stopunbounded) break
 
 		const upper = currBin.stop + bc.bin_size
@@ -261,9 +261,9 @@ function getNumDecimalsFormatter(bc) {
 	return 'rounding' in bc ? format(bc.rounding) : d => d // default to labeling using the start/stop value as-is
 }
 
-export function get_bin_label(bin, binconfig) {
+export function get_bin_label(bin, binconfig, valueConversion) {
 	/*
-  Generate a numeric bin label given a bin configuration
+  Generate a numeric bin label given a bin configuration and an optional term valueConversion object
 */
 	const bc = binconfig
 	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
@@ -287,13 +287,17 @@ export function get_bin_label(bin, binconfig) {
 	// label will be ">v" or "<v"
 	if (bin.startunbounded) {
 		const oper = bin.stopinclusive ? '≤' : '<' // \u2264
-		const v1 = bc.binLabelFormatter(stop) //bin.startinclusive && label_offset ? stop - label_offset : stop)
+		const v1 = valueConversion
+			? convertUnits(stop, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
+			: bc.binLabelFormatter(stop) //bin.startinclusive && label_offset ? stop - label_offset : stop)
 		return oper + v1
 	}
 	// a data value may coincide with the last bin's start
 	if (bin.stopunbounded || start === stop) {
 		const oper = bin.startinclusive /*|| label_offset*/ ? '≥' : '>' // \u2265
-		const v0 = bc.binLabelFormatter(start) //bin.startinclusive || start == min ? start : start + label_offset)
+		const v0 = valueConversion
+			? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
+			: bc.binLabelFormatter(start) //bin.startinclusive || start == min ? start : start + label_offset)
 		return oper + v0
 	}
 
@@ -301,10 +305,25 @@ export function get_bin_label(bin, binconfig) {
 	if (label_offset && bin.startinclusive && !bin.stopinclusive) {
 		if (Number.isInteger(bc.bin_size) && Math.abs(start - stop) === label_offset) {
 			// make a simpler label when the range simply spans the bin_size
-			return '' + bc.binLabelFormatter(start)
+			return (
+				'' +
+				(valueConversion
+					? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
+					: bc.binLabelFormatter(start))
+			)
 		} else {
-			const v0 = bc.binLabelFormatter(start)
-			const v1 = bc.binLabelFormatter(stop - label_offset)
+			const v0 = valueConversion
+				? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
+				: bc.binLabelFormatter(start)
+			const v1 = valueConversion
+				? convertUnits(
+						stop - label_offset,
+						valueConversion.fromUnit,
+						valueConversion.toUnit,
+						valueConversion.scaleFactor,
+						true
+				  )
+				: bc.binLabelFormatter(stop - label_offset)
 			// ensure that last two bin labels make sense (the last is stopunbounded)
 			return +v0 >= +v1 ? v0.toString() : v0 + ' to ' + v1
 		}
@@ -312,8 +331,16 @@ export function get_bin_label(bin, binconfig) {
 		// stop_inclusive || label_offset == 0
 		const oper0 = bin.startinclusive ? '' : '>'
 		const oper1 = bin.stopinclusive ? '' : '<'
-		const v0 = Number.isInteger(start) ? start : bc.binLabelFormatter(start)
-		const v1 = Number.isInteger(stop) ? stop : bc.binLabelFormatter(stop)
+		const v0 = valueConversion
+			? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
+			: Number.isInteger(start)
+			? start
+			: bc.binLabelFormatter(start)
+		const v1 = valueConversion
+			? convertUnits(stop, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
+			: Number.isInteger(stop)
+			? stop
+			: bc.binLabelFormatter(stop)
 		// after rounding the bin labels, the bin start may equal the last bin stop as derived from actual data
 		if (+v0 >= +v1) {
 			const oper = bin.startinclusive ? '≥' : '>' // \u2265

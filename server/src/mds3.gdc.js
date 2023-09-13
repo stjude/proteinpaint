@@ -1171,7 +1171,7 @@ function mayApplyBinning(samples, twLst) {
 					}
 				}
 			}
-			const bins = compute_bins(tw.q, p => summary)
+			const bins = compute_bins(tw.q, p => summary, tw.term.valueConversion)
 
 			/* sql CTE returns {name,label}, where compute_bins does not return name
 			client seems to use name to sort. when client changes to use label, can delete this
