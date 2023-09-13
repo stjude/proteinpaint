@@ -5,10 +5,10 @@
   "main": "server.js",
   "bin": "start.js",
   "imports": {
-    "#shared/*": "./shared/*.js",
+    "#shared/*": "./shared/*",
     "#shared/types/*": "./shared/types/*",
-    "#src/*": "./src/*.js",
-    "#routes/*": "./routes/*.js"
+    "#src/*": "./src/*",
+    "#routes/*": "./routes/*"
   },
   "scripts": {
     "prepare": "ts-patch install",
@@ -38,7 +38,6 @@
     "@babel/register": "^7.14.5",
     "@typescript-eslint/eslint-plugin": "^5.60.0",
     "babel-loader": "^8.2.2",
-    "fork-ts-checker-webpack-plugin": "^8.0.0",
     "node-watch": "^0.7.1",
     "nodemon": "^2.0.19",
     "prettier": "^2.8.8",
