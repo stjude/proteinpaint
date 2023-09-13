@@ -20,6 +20,7 @@ Fixes:
 - mds3 variant2samples.get() returns an object to wrap the optional bin labels
 - Fix the issues results from term conversion between continous and discrete mode
 - Indicate original value unit in termsetting UI if the term value is converted; safety check on bin size to avoid crashes
+- add safety check for first bin stop and last bin start in numeric discrete termsetting, make the ui actually usable
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords

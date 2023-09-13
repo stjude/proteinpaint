@@ -1,2 +1,1 @@
-Fixes:
-- add safety check for first bin stop and last bin start in numeric discrete termsetting, make the ui actually usable
+
