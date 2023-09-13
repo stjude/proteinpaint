@@ -163,7 +163,8 @@ async function fillMenu(self, div, tvs) {
 	const density_plot_opts = {
 		svg: self.num_obj.svg,
 		data: self.num_obj.density_data,
-		plot_size: self.num_obj.plot_size
+		plot_size: self.num_obj.plot_size,
+		term: self.tvs.term
 	}
 
 	makeDensityPlot(density_plot_opts)
@@ -322,7 +323,24 @@ function enterRange(self, tr, brush, i) {
 			.style('margin-left', '20px')
 			.style('font-style', 'italic')
 			.style('color', '#888')
-			.html('Note: Drag the rectangle to select a range. Overlapping ranges will be merged')
+			.html('Option 1: Drag the rectangle to select a range. Overlapping ranges will be merged')
+	}
+
+	// A note showing the unit of values to type in
+	if (i == 0 && self.tvs.term.valueConversion) {
+		self.num_obj.range_table
+			.append('tr')
+			.attr('class', 'note_tr')
+			.append('td')
+			.attr('colspan', '3')
+			.append('div')
+			.style('font-size', '.8em')
+			.style('margin-left', '20px')
+			.style('font-style', 'italic')
+			.style('color', '#888')
+			.html(
+				`Option 2: Type in values to select a range. Values are in the unit of ${self.tvs.term.valueConversion.fromUnit}.`
+			)
 	}
 
 	async function apply(new_range) {
