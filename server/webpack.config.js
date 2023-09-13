@@ -4,6 +4,7 @@ const nodeExternals = require('webpack-node-externals')
 const fs = require('fs')
 const TerserPlugin = require('terser-webpack-plugin')
 const webpack = require('webpack')
+const TsChecker = require('fork-ts-checker-webpack-plugin')
 
 let babelrc
 try {
@@ -62,6 +63,12 @@ const commonConfig = {
 	}
 }
 
+const TsCheckerOpts = {
+	typescript: {
+		memoryLimit: 8192
+	}
+}
+
 module.exports = env => {
 	const NODE_ENV = env.NODE_ENV || 'production'
 	switch (NODE_ENV) {
@@ -77,7 +84,8 @@ module.exports = env => {
 					// ignore spec files by default
 					new webpack.IgnorePlugin({
 						resourceRegExp: /\.(spec|md)$/gi
-					})
+					}),
+					new TsChecker(TsCheckerOpts)
 				],
 				optimization: {
 					minimizer: [
@@ -105,8 +113,12 @@ module.exports = env => {
 					// ignore spec files by default
 					new webpack.IgnorePlugin({
 						resourceRegExp: /\.md$/gi
-					})
+					}),
+					new TsChecker(TsCheckerOpts)
 				],
+				optimization: {
+					emitOnErrors: true
+				},
 				// see https://v4.webpack.js.org/configuration/devtool/ for option details
 				//
 				// devtool: 'eval' is fastest to build/rebuild, no files are written,

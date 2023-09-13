@@ -19,6 +19,7 @@
     "skipLibCheck": true,
     "noImplicitAny": false
   },
+  "include": ["**/*.ts"],
   "exclude": [
     "node_modules",
     "**/*+(.spec|.e2e).ts"
