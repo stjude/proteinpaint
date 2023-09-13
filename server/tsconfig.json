@@ -17,6 +17,7 @@
       ]
     },
     "allowImportingTsExtensions": true,
+    "noEmit": true,
     "strictNullChecks": true,
     "skipLibCheck": true,
     "noImplicitAny": false,

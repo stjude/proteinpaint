@@ -35,7 +35,7 @@
     "sethooks": "./utils/hooks/init.sh",
     "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
     "clean": "git add -A; git stash --staged",
-    "doc": "cd server && npm run doc && cd .."
+    "doc": "npm run doc --workspace=server"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",

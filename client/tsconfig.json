@@ -9,6 +9,7 @@
     //"types": ["node", "d3"], /* Ensures that TypeScript has access to the Node.js type definitions*/
     "forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
     "strict": true, /* Enable all strict type-checking options. */
+    "noEmit": true,
     "allowImportingTsExtensions": true,
     "noImplicitAny": false,
     "baseUrl": "./"
