@@ -259,7 +259,7 @@ class SampleView {
 		for (const sample of this.state.samples) {
 			const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
 			if ('error' in data) throw data.error
-			if (!this.sampleDataByTermId[sample.sampleId]) this.sampleDataByTermId[sample.sampleId] = structuredClone(sample)
+			if (!this.sampleDataByTermId[sample.sampleId]) this.sampleDataByTermId[sample.sampleId] = {}
 			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
 		}
 	}
