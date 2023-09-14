@@ -204,7 +204,7 @@ class SampleView {
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
 
-			if (this.config.expandedTermIds.includes(copy.id)) {
+			if (!copy.isleaf && this.config.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy, [...ancestry, t.id])
 				if (this.state.samples) await this.fillSampleData(copy.terms)
 			} else {
@@ -260,13 +260,8 @@ class SampleView {
 		const term_ids = []
 		for (const term of terms) term_ids.push(term.id)
 		for (const sample of this.state.samples) {
-			// const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
-			// if ('error' in data) throw data.error;
-
-			// TODO: uncomment the above to use actual data
-			const data = {}
-			term_ids.forEach(id => (data[id] = { key: 'test', label: 'test' }))
-
+			const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
+			if ('error' in data) throw data.error
 			if (!this.sampleDataByTermId[sample.sampleId]) this.sampleDataByTermId[sample.sampleId] = structuredClone(sample)
 			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
 		}
