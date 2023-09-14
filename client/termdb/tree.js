@@ -11,7 +11,7 @@ export const root_ID = 'root'
 // this only count immediate children, not counting grandchildren
 const minTermCount2scroll = 20
 // max height of aforementioned scrolling <div>
-let scrollDivMaxHeight = '400px'
+const scrollDivMaxHeight = '400px'
 
 // class names TODO they should be shared between test/tree.spec.js
 const cls_termdiv = 'termdiv',
@@ -70,21 +70,11 @@ class TdbTree {
 		this.termsByCohort = {}
 		this.expandAll = 'expandAll' in opts ? opts.expandAll : false
 		//getCompInit(TdbTree) will set this.id, .app, .opts, .api
-		this.sampleDataByTermId = {}
 	}
 
-	async init(appState) {
-		const header = this.opts.holder.append('div')
-		if (appState.samples) for (const sample of appState.samples) this.sampleDataByTermId[sample.sampleId] = {}
-		const mainDiv = this.opts.holder.append('div')
-		const left = mainDiv.insert('div').style('display', 'inline-block').style('min-width', '300px')
-		const right = mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const samplesTable = right.append('table').style('position', `relative`).style('top', `-32px`)
-
+	init() {
 		this.dom = {
-			holder: left.insert('div'),
-			header,
-			samplesTable
+			holder: this.opts.holder.append('div')
 		}
 	}
 
@@ -105,9 +95,9 @@ class TdbTree {
 			expandedTermIds: appState.tree.expandedTermIds,
 			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
-			usecase: appState.tree.usecase,
-			samples: appState.samples
+			usecase: appState.tree.usecase
 		}
+
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
 			state.toSelectCohort = true
@@ -122,11 +112,6 @@ class TdbTree {
 	}
 
 	async main() {
-		this.sampleDataByTermId = {}
-		this.dom.header.selectAll('*').remove()
-		if (this.state.samples) {
-			for (const sample of this.state.samples) this.sampleDataByTermId[sample.sampleId] = {}
-		}
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
@@ -141,12 +126,10 @@ class TdbTree {
 		}
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
-
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.dom.holder.style('display', 'block')
 		this.renderBranch(root, this.dom.holder)
-		if (this.state.samples) this.renderSampleTable()
 	}
 
 	getTermsById() {
@@ -193,35 +176,20 @@ class TdbTree {
 			terms.push(copy)
 			// rehydrate expanded terms as needed
 			// fills in termsById, for recovering tree
-
 			if (this.state.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy)
-				if (this.state.samples) await this.fillSampleData(copy.terms)
 			} else {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
 				const t0 = this.termsById[copy.id]
-				if (this.state.samples) await this.fillSampleData([copy])
-
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
 				}
 			}
-
 			this.termsById[copy.id] = copy
 		}
 		return terms
-	}
-
-	async fillSampleData(terms) {
-		const term_ids = []
-		for (const term of terms) term_ids.push(term.id)
-		for (const sample of this.state.samples) {
-			const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
-			if ('error' in data) throw data.error
-			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
-		}
 	}
 
 	bindKey(term) {
@@ -256,13 +224,16 @@ function setRenderers(self) {
 	self.renderBranch = (term, div, button) => {
 		if (!term || !term.terms) return
 
-		if (term.terms.length >= minTermCount2scroll && !self.state.samples) {
+		if (term.terms.length >= minTermCount2scroll) {
 			// too many children. scroll
 			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
-				div.style('max-height', scrollDivMaxHeight)
-				div.style('padding', '10px').style('resize', 'vertical').classed('sjpp_hide_scrollbar', true)
+				div
+					.style('max-height', scrollDivMaxHeight)
+					.style('padding', '10px')
+					.style('resize', 'vertical')
+					.classed('sjpp_hide_scrollbar', true)
 
 				/***************************
 				remaining issues
@@ -340,13 +311,13 @@ function setRenderers(self) {
 			div.style('display', 'none')
 			return
 		}
+
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
 
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
-
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
@@ -355,16 +326,13 @@ function setRenderers(self) {
 			.select('.' + cls_termlabel)
 			.style(
 				'background-color',
-				!uses.has('plot') || termIsDisabled || self.state.samples
-					? ''
-					: isSelected
-					? 'rgba(255, 194, 10,0.5)'
-					: '#cfe2f3'
+				!uses.has('plot') || termIsDisabled ? '' : isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3'
 			)
 		div
 			.select('.' + cls_termcheck)
 			.style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
 	}
+
 	self.addTerm = async function (term) {
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 		const uses = isUsableTerm(term, self.state.usecase)
@@ -373,17 +341,15 @@ function setRenderers(self) {
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
-		if (self.state.samples) div.style('margin', '0px')
 
 		if (uses.has('branch')) {
 			div
-				.insert('div')
+				.append('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
 				.style('display', 'inline-block')
-				.style('padding', '5px 9px')
+				.style('padding', '4px 9px')
 				.style('font-family', 'courier')
 				.text('+')
-
 				// always allow show/hide children even this term is already in use
 				.on('click', event => {
 					event.stopPropagation()
@@ -393,39 +359,37 @@ function setRenderers(self) {
 		}
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
-		let text = term.name
-
 		const labeldiv = div
-			.insert('div')
+			.append('div')
 			.attr('class', cls_termlabel)
 			.style('display', 'inline-block')
 			.style('padding', '5px')
-			.style('margin', '1.4px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
-			.text(text)
+			.text(term.name)
 
 		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
+
 		if (uses.size > 0) {
 			if (termIsDisabled) {
 				labeldiv
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 					.style('padding', '5px 8px')
-					.style('margin', '2px 0px')
+					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else if (uses.has('plot') && !self.state.samples) {
+			} else if (uses.has('plot')) {
 				labeldiv
 					// need better css class
+					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
-					.style('margin', '2px 0px')
+					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
+					.style('margin', '1px 0px')
 					.style('cursor', 'default')
 					.on('click', () => self.clickTerm(term))
-					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
-					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
 			}
 
 			//show sample count for a term
@@ -464,88 +428,6 @@ function setRenderers(self) {
 			div.append('div').attr('class', cls_termchilddiv).style('padding-left', childterm_indent)
 		}
 	}
-
-	self.renderSampleTable = function () {
-		const openBranches = [self.state.samples]
-		const closedBranches = []
-		this.dom.holder.selectAll('.termdiv').each(function (d) {
-			if (select(this).style('display') == 'none') {
-				closedBranches.push(this)
-			} else {
-				const childdivs = this.querySelectorAll('.termchilddiv')
-				for (const div of childdivs) {
-					if (div.style.display == 'none') closedBranches.push(div)
-				}
-				let hasClosedAncestor = false
-				for (const closed of closedBranches) {
-					if (closed.contains(this)) {
-						hasClosedAncestor = true
-						closedBranches.push(this)
-						break
-					}
-				}
-				if (!hasClosedAncestor) openBranches.push(d)
-			}
-		})
-		const trs = this.dom.samplesTable
-			.style('display', openBranches.length ? 'inline-block' : 'none')
-			.selectAll('tr')
-			.data(openBranches)
-		trs.exit().remove()
-		trs.each(self.renderTr)
-		trs.enter().append('tr').each(self.renderTr)
-	}
-
-	self.renderTr = function (branchData, trIndex) {
-		const tds = select(this)
-			.selectAll('td')
-			.data(self.state.samples.map(sample => ({ sample, branchData, trIndex })))
-		tds.exit().remove()
-		tds.each(self.renderTd)
-		const height = self.dom.holder.select('.termlabel').node().getBoundingClientRect().height //; console.log(495, height)
-		tds
-			.enter()
-			.append('td')
-			.style('height', `${height}px`)
-			.style('color', 'gray')
-			.style('padding', '0 16px')
-			.style('text-align', 'end')
-			.style('border', '1px solid white')
-
-			.each(self.renderTd)
-	}
-
-	self.renderTd = function (d, i) {
-		const sampleId = Number(d.sample.sampleId)
-		const data = self.sampleDataByTermId[sampleId]
-		const term = d.branchData
-		select(this).html(d.trIndex === 0 ? d.sample.sampleName : getTermValue(term, data))
-	}
-}
-
-export function getTermValue(term, data) {
-	let value = data[term.id]?.value
-	if (value == null) return null
-	if (term.type == 'float' || term.type == 'integer') {
-		value = term.values?.[value]?.label || term.values?.[value]?.key || value
-		if (isNaN(value)) return value
-		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
-	}
-
-	if (term.type == 'categorical') return term.values[value]?.label || term.values[value]?.key
-	if (term.type == 'condition') {
-		const values = value.toString().split(' ')
-		let [years, status] = values
-		status = term.values[status].label || term.values[status].key
-		return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
-	}
-	if (term.type == 'survival') {
-		const values = value.split(' ')
-		let [years, status] = values
-		status = term.values?.[status]?.label || term.values?.[status]?.key || status
-		return `${status} after ${Number(years).toFixed(1)} years`
-	}
-	return null
 }
 
 function setInteractivity(self) {
