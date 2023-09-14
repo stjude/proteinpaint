@@ -21,6 +21,7 @@ Fixes:
 - Fix the issues results from term conversion between continous and discrete mode
 - Indicate original value unit in termsetting UI if the term value is converted; safety check on bin size to avoid crashes
 - add safety check for first bin stop and last bin start in numeric discrete termsetting, make the ui actually usable
+- Bug fix for broken single variant panel from mds3 tk, by requiring tooltipPrintValue() to return [{k,v}]
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
