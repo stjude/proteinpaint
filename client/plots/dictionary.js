@@ -1,14 +1,11 @@
 import { getCompInit, copyMerge } from '#rx'
 import { appInit } from '#termdb/app'
 
-export class MassDict {
+class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
-		const mainDiv = opts.holder.append('div').style('padding', '20px')
-		const treeDiv = mainDiv.insert('div').style('display', 'inline-block')
 		this.dom = {
-			mainDiv,
-			treeDiv,
+			holder: opts.holder.style('padding', '20px'),
 			header: opts.header
 		}
 	}
@@ -16,7 +13,7 @@ export class MassDict {
 	async init(appState) {
 		this.tree = await appInit({
 			vocabApi: this.app.vocabApi,
-			holder: this.dom.treeDiv,
+			holder: this.dom.holder,
 			state: this.getState(appState),
 			tree: {
 				click_term: _term => {
@@ -44,12 +41,11 @@ export class MassDict {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			selectdTerms: appState.selectedTerms,
-			customTerms: appState.customTerms,
-			termdbConfig: appState.termdbConfig
+			customTerms: appState.customTerms
 		}
 	}
 
-	async main() {
+	main() {
 		if (this.dom.header) this.dom.header.html('Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
