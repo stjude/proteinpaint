@@ -177,13 +177,14 @@ class SampleView {
 		e.g. to show number of samples for each term that can change based on filters
 		where the same child terms already loaded must be re-requested with the updated filter parameters to update
 
-		TODO determine when to re-request cached server response as needed
-
 		CAUTION
 		will be great if tree_collapse will not trigger this function
 		but hard to do given that main() has no way of telling what action was dispatched
 		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
 		need to add it back TERMS_ADD_BACK
+ 
+		NOTE: !!!! sortVisibleTerms() assumes that the child terms in the response.lst[]
+					are returned in order. If not, a term.order can be used to sort the child terms array
 		*/
 		const data = await this.app.vocabApi.getTermChildren(
 			term,
@@ -195,8 +196,9 @@ class SampleView {
 			return []
 		}
 		const terms = []
+		const parent_id = _ancestry.slice(-1)[0]
 		for (const t of data.lst) {
-			t.parent_id = _ancestry.slice(-1)[0]
+			t.parent_id = parent_id
 			const ancestry = [..._ancestry]
 			const copy = structuredClone(t)
 			copy.ancestry = ancestry
@@ -223,12 +225,14 @@ class SampleView {
 
 	getOrderedVisibleTerms(root) {
 		const visibleTerms = Object.values(this.termsById).filter(this.isVisibleTermId.bind(this))
-		const orderedTerms = this.sortVisibleTerms(this.termsById[root_ID], visibleTerms)
-		return orderedTerms
+		const orderedVisibleTerms = []
+		this.sortVisibleTerms(this.termsById[root_ID], visibleTerms, orderedVisibleTerms)
+		return orderedVisibleTerms
 	}
 
 	isVisibleTermId(term) {
-		if (term.parent_id == root_ID || !term.ancestry) return true
+		if (term.parent_id == root_ID) return true
+		if (!term.ancestry) return false
 		for (const pid of term.ancestry) {
 			if (pid === root_ID) continue
 			if (!this.config.expandedTermIds.includes(pid)) return false
@@ -240,20 +244,22 @@ class SampleView {
 		const unorderedTerms = []
 		const orderedTerms = []
 		for (const term of remainingTerms) {
-			//console.log(288, term.id, term.parent_id, currParent.id)
 			if (term.parent_id == currParent.id) {
 				orderedTerms.push(term)
 			} else unorderedTerms.push(term)
 		}
-		if (unorderedTerms.length) {
+		// remove ordered terms from the remainingTerms array
+		remainingTerms.splice(0, remainingTerms.length, ...unorderedTerms)
+		if (remainingTerms.length) {
 			for (const term of orderedTerms) {
 				currOrder.push(term)
-				this.sortVisibleTerms(term, unorderedTerms, currOrder)
+				if (!term.isleaf && remainingTerms.length) {
+					this.sortVisibleTerms(term, remainingTerms, currOrder)
+				}
 			}
 		} else {
 			currOrder.push(...orderedTerms)
 		}
-		return currOrder
 	}
 
 	async fillSampleData(terms) {
