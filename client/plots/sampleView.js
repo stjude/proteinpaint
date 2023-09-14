@@ -17,7 +17,7 @@ class SampleView {
 		const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Sample:')
 
 		const tableDiv = mainDiv.insert('div').style('padding', '10px')
-		const table = tableDiv.append('table')
+		const table = tableDiv.append('table').style('border-collapse', 'collapse')
 		const thead = table.append('thead')
 		this.dom = {
 			header: opts.header,
@@ -436,7 +436,7 @@ function setRenderers(self) {
 		tds
 			.enter()
 			.append('td')
-			//.style('border', 'solid 1px #aaa')
+			.style('border-bottom', 'solid 2px rgb(245,245,245)')
 			.style('text-align', (d, i) => (i === 0 ? 'left' : 'center'))
 			.style('padding', '5px 10px')
 			.each(self.renderTd)
