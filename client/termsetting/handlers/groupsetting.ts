@@ -1,6 +1,6 @@
 import { keyupEnter } from '#src/client'
 import { select, selectAll, Selection } from 'd3-selection'
-import { CategoricalTermSettingInstance, GroupSetInputValues } from '#shared/types/index'
+import { CategoricalTermSettingInstance } from '#shared/types/index'
 import { Tabs } from '#dom/toggleButtons'
 import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
@@ -10,13 +10,7 @@ import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 class GroupSettingMethods
 
 Refactor notes/TODOs:
- - Items in a removed group is sent to excluded
-	- visual reference items moved, such as a collapsed div with animation
- - Technical concerns: 
-	- don't add to the app state - create a 'state' within
-	- rm current exclude/include separation for adding items.
-		- exclude is group 0; items added by isHidden
-	- keep cap at 4
+ - Visual reference items moved, such as a collapsed div with animation
 
 Future plans: 
 	- Make available for subconditions, ie. condition terms
@@ -66,10 +60,10 @@ type GrpSetDom = {
 type GroupSettingInstance = CategoricalTermSettingInstance //Will change to accommodate conditional termsetting later
 
 export class GroupSettingMethods {
-	opts: any
+	opts: any //a termsetting instance
 	dom: Partial<GrpSetDom>
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
-	inputValues: any
+	newGrpNum: any //Number for naming new groups
 	initGrpSetUI: any
 
 	constructor(opts: GroupSettingInstance) {
@@ -97,13 +91,16 @@ export class GroupSettingMethods {
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
 		const input = structuredClone(data)
 		if (this.opts.q.groupsetting.customset) {
-			//customset created when user applies groupsetting
+			//customset created after user applies groupsetting
+			//returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
 		} else {
 			for (const [k, v] of Object.entries(input)) {
 				if (v.uncomputable) return
 				if (v?.group > 4)
-					throw `The maximum number of groups is 4. The group index for value = ${v.label} is ${v.group}`
+					throwMsgWithFilePathAndFnName(
+						`The maximum number of groups is 4. The group index for value = ${v.label} is ${v.group}`
+					)
 				const value = {
 					key: k,
 					label: v.label,
@@ -113,7 +110,7 @@ export class GroupSettingMethods {
 				grpIdxes.add(value.group)
 			}
 		}
-
+		if (this.data.values.length == 0) throwMsgWithFilePathAndFnName(`Missing values`)
 		this.data.values.forEach(v => {
 			//find sample counts for each value once added to array
 			v.count = this.opts.category2samplecount
@@ -121,18 +118,19 @@ export class GroupSettingMethods {
 				: 'n/a'
 		})
 
-		for (const g of Array.from(grpIdxes).sort((a, b) => a - b)) {
-			//add any required groups, specifically exclude categories and group 2
+		for (const g of Array.from(grpIdxes)) {
+			//add any required groups, specifically Excluded Categories and Group 2
 			this.data.groups.push({
 				currentIdx: g,
 				type: 'values',
-				name: g == 0 ? `Excluded categories` : g.toString()
+				name: g === 0 ? `Excluded categories` : `Group ${g.toString()}`
 			})
 		}
+		this.data.groups.sort((a: GrpEntry, b: GrpEntry) => a.currentIdx - b.currentIdx)
 	}
 
 	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
-		//this might be overkill but need processing for non-categorical terms in the future
+		//this might be overkill but needed processing for non-categorical terms in the future?
 		for (const [i, group] of this.opts.q.groupsetting.customset.groups.entries()) {
 			if (group.uncomputable) return
 			this.data.groups.push({
@@ -170,7 +168,7 @@ export class GroupSettingMethods {
 			this.initGrpSetUI()
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
-			else throw e
+			else throwMsgWithFilePathAndFnName(e)
 		}
 	}
 }
@@ -210,8 +208,9 @@ function setRenderers(self: any) {
 		self.dom.actionDiv = self.dom.menuWrapper.append('div').attr('class', 'sjpp-group-actions').style('padding', '10px')
 
 		//Add Group button
-		self.dom.actionDiv
-			.append('div')
+		let newGrpNum = 0
+		self.dom.actionDiv.addGroup = self.dom.actionDiv
+			.append('button')
 			.attr('class', 'sjpp_apply_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
@@ -219,19 +218,19 @@ function setRenderers(self: any) {
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
 			.style('cursor', 'pointer')
+			.style('background', '#d0e0e3')
+			.property('disabled', self.data.groups.length >= 5) //cap the number of groups at 4, including excluded categories
 			.text('Add Group')
 			.on('click', async () => {
-				//cap the number of groups at 4, including excluded categories
-				if (self.data.groups.length === 5) return
-
+				newGrpNum++
 				self.data.groups.push({
 					currentIdx: self.data.groups.length,
-					name: self.data.groups.length.toString()
+					type: 'values',
+					name: `New Group${newGrpNum != 1 ? ` ${newGrpNum}` : ''}`
 				})
-
 				const group = self.data.groups[self.data.groups.length - 1]
 				await initGroupDiv(group)
-				self.update(group.currentIdx)
+				await self.update()
 			})
 
 		//Apply button
@@ -396,6 +395,7 @@ function setRenderers(self: any) {
 				})
 			group.destroyBtn = group.dragActionDiv
 				.append('button')
+				.attr('class', 'sjpp_apply_btn')
 				.style('display', 'inline-block')
 				.style('padding', '0px 4px')
 				.property('disabled', self.data.groups.length <= 3)
@@ -413,8 +413,8 @@ function setRenderers(self: any) {
 	}
 
 	self.addItems = async function (group: GrpEntryWithDom) {
+		//add draggable items to group div
 		await group.draggables
-			//add draggable items to group div
 			.selectAll('div')
 			.data(self.data.values.filter((d: ItemEntry) => d.group == group.currentIdx))
 			.enter()
@@ -426,12 +426,11 @@ function setRenderers(self: any) {
 			.style('padding', '3px 10px')
 			.style('border-radius', '5px')
 			.style('color', (d: ItemEntry) => (d.count == 0 ? '#777' : 'black'))
-			.html((d: ItemEntry) => d.label + (d.count !== undefined ? ' (n=' + d.count + ')' : ''))
+			.text((d: ItemEntry) => `${d.label}${d.count !== undefined ? ` (n= ${d.count})` : ''}`)
 			.style('background-color', '#eee')
-			.each(function (this: Element, item: any, d: ItemEntry | number) {
-				// d = self.data.values.find((v: ItemEntry, i: number) => i == d)
+			.each(function (this: Element) {
 				const itemNode = select(this)
-					.on('dragstart', function (event: DragEvent, d: any) {
+					.on('dragstart', function () {
 						itemNode.style('background-color', '#fff2cc')
 						draggedItem = itemNode
 					})
@@ -457,11 +456,10 @@ function setRenderers(self: any) {
 			// 	disappear(group.wrapper, true)
 			// }, defaultDuration * 3)
 		}
-		self.update(0)
+		await self.update()
 
 		async function collapseAnimation(defaultDuration: number) {
 			//Remove user action divs
-			// group.title.remove()
 			group.input.remove()
 			group.destroyBtn.remove()
 			group.wrapper.remove()
@@ -517,17 +515,19 @@ function setRenderers(self: any) {
 	// 	// }
 	// }
 
-	self.update = async function (idx = 0) {
-		self.data.groups.forEach((group: GrpEntry) => {
-			if (group.currentIdx > idx && idx !== 0) {
-				group.currentIdx = group.currentIdx - 1
+	self.update = async function () {
+		self.dom.actionDiv.addGroup.property('disabled', self.data.groups.length === 5)
+		for (const [i, grp] of self.data.groups.entries()) {
+			if (i === 0) continue
+			if (grp.currentIdx != i) {
+				self.data.values.filter((v: ItemEntry) => v.group == grp.currentIdx).forEach((v: ItemEntry) => (v.group = i))
+				grp.currentIdx = i
 			}
-		})
+		}
 		self.dom.grpsWrapper
 			.selectAll('.sjpp-drag-drop-div')
 			.data(self.data.groups)
 			.each(async (group: GrpEntryWithDom) => {
-				// group.title.text(group.currentIdx.toString() == group.name ? `Group ${group.currentIdx}` : group.name)
 				if (group.currentIdx !== 0) {
 					group.input.node().value = group.name
 					group.destroyBtn.property('disabled', self.data.groups.length <= 3)
