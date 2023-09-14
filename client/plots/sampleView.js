@@ -399,19 +399,7 @@ function setRenderers(self) {
 				.style('width', '24px')
 				.style('cursor', 'pointer')
 			span.append('span').style('margin-left', `3px`).style('cursor', 'pointer')
-			td.on('click', function () {
-				const d = select(this).datum()
-				if (d.term.isleaf) return
-				const expandedTermIds = self.config.expandedTermIds.slice() // create a copy
-				const i = expandedTermIds.indexOf(d.term.id)
-				if (i == -1) expandedTermIds.push(d.term.id)
-				else expandedTermIds.splice(i, 1)
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: { expandedTermIds }
-				})
-			})
+			td.on('click', self.toggleTerm)
 		}
 		const leftIndent = d.term.ancestry.length * 24
 		const span = td.select(':scope>span').style('margin-left', `${leftIndent}px`)
@@ -424,7 +412,21 @@ function setRenderers(self) {
 	}
 }
 
-function setInteractivity(self) {}
+function setInteractivity(self) {
+	self.toggleTerm = function () {
+		const d = select(this).datum()
+		if (d.term.isleaf) return
+		const expandedTermIds = self.config.expandedTermIds.slice() // create a copy
+		const i = expandedTermIds.indexOf(d.term.id)
+		if (i == -1) expandedTermIds.push(d.term.id)
+		else expandedTermIds.splice(i, 1)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: { expandedTermIds }
+		})
+	}
+}
 
 export async function getPlotConfig(opts) {
 	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID] }
