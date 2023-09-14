@@ -144,49 +144,7 @@ class SampleView {
 		root.terms = await this.requestTermRecursive(root)
 		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
 		this.render()
-		this.dom.contentDiv.selectAll('*').remove()
-		if (this.state.showContent) {
-			for (const sample1 of this.state.samples) {
-				let sample = JSON.parse(JSON.stringify(sample1))
-				sample.sample_id = sample.sampleName
-				if (this.state.termdbConfig?.queries?.singleSampleMutation) {
-					const div = this.dom.contentDiv
-					div
-						.append('div')
-						.style('font-weight', 'bold')
-						.style('padding-left', '20px')
-						.text(`${sample.sampleName} Disco plot`)
-					const discoPlotImport = await import('./plot.disco.js')
-					discoPlotImport.default(
-						this.state.termdbConfig,
-						this.state.vocab.dslabel,
-						sample,
-						div.append('div'),
-						this.app.opts.genome
-					)
-				}
-				if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-					for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-						const div = this.dom.contentDiv.append('div').style('padding', '20px')
-						const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-						div
-							.append('div')
-							.style('padding-bottom', '20px')
-							.style('font-weight', 'bold')
-							.text(`${sample.sampleName} ${label}`)
-						const ssgqImport = await import('./plot.ssgq.js')
-						await ssgqImport.plotSingleSampleGenomeQuantification(
-							this.state.termdbConfig,
-							this.state.vocab.dslabel,
-							k,
-							sample,
-							div.append('div'),
-							this.app.opts.genome
-						)
-					}
-				}
-			}
-		}
+		this.drawPlots()
 	}
 
 	getTermsById(state) {
@@ -362,6 +320,52 @@ class SampleView {
 			return true
 		}
 	}
+
+	async drawPlots() {
+		this.dom.contentDiv.selectAll('*').remove()
+		if (this.state.showContent) {
+			for (const sample1 of this.state.samples) {
+				let sample = JSON.parse(JSON.stringify(sample1))
+				sample.sample_id = sample.sampleName
+				if (this.state.termdbConfig?.queries?.singleSampleMutation) {
+					const div = this.dom.contentDiv
+					div
+						.append('div')
+						.style('font-weight', 'bold')
+						.style('padding-left', '20px')
+						.text(`${sample.sampleName} Disco plot`)
+					const discoPlotImport = await import('./plot.disco.js')
+					discoPlotImport.default(
+						this.state.termdbConfig,
+						this.state.vocab.dslabel,
+						sample,
+						div.append('div'),
+						this.app.opts.genome
+					)
+				}
+				if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+						const div = this.dom.contentDiv.append('div').style('padding', '20px')
+						const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
+						div
+							.append('div')
+							.style('padding-bottom', '20px')
+							.style('font-weight', 'bold')
+							.text(`${sample.sampleName} ${label}`)
+						const ssgqImport = await import('./plot.ssgq.js')
+						await ssgqImport.plotSingleSampleGenomeQuantification(
+							this.state.termdbConfig,
+							this.state.vocab.dslabel,
+							k,
+							sample,
+							div.append('div'),
+							this.app.opts.genome
+						)
+					}
+				}
+			}
+		}
+	}
 }
 
 export function getTermValue(term, data) {
@@ -432,8 +436,7 @@ function setRenderers(self) {
 		tds
 			.enter()
 			.append('td')
-			.style('border', 'solid 1px #aaa')
-			.style('color', 'gray')
+			//.style('border', 'solid 1px #aaa')
 			.style('text-align', (d, i) => (i === 0 ? 'left' : 'center'))
 			.style('padding', '5px 10px')
 			.each(self.renderTd)
