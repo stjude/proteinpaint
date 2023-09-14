@@ -240,7 +240,6 @@ TdbStore.prototype.actions = {
 		if (!action.config) throw '.config{} missing for plot_prep'
 		if (action.config.chartType && Object.keys(action.config).length == 1) {
 			const _ = await import(`../plots/${action.config.chartType}.js`)
-			console.log(246, action.config)
 			const config = await _.getPlotConfig(action.config, this.app)
 			action.config = Object.assign(config, action.config)
 		}
@@ -467,7 +466,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'profileBarchart') {
 		} else if (p.chartType == 'profilePolar' || p.chartType == 'polar') {
 		} else if (p.chartType == 'DEanalysis') {
-		} else if (p.chartType == 'sampleGroupView' || p.chartType == 'sampleView') {
+		} else if (p.chartType == 'sampleView') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
