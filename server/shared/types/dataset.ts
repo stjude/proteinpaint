@@ -273,6 +273,12 @@ type RnaseqGeneCount = {
 	file: string
 }
 
+// the geneExpression query. if file is set, it loads data from local file; otherwise gdcapi should be set to true
+type GeneExpressionQuery = {
+	file?: string
+	gdcapi?: boolean
+}
+
 type Queries = {
 	defaultBlock2GeneMode?: boolean
 	snvindel?: SnvIndel
@@ -280,7 +286,7 @@ type Queries = {
 	probe2cnv?: Probe2Cnv // this is no longer used
 	cnv?: CnvSegment
 	singleSampleMutation?: SingleSampleMutation
-	geneExpression?: FileObj
+	geneExpression?: GeneExpressionQuery
 	rnaseqGeneCount?: RnaseqGeneCount
 	topMutatedGenes?: TopMutatedGenes
 	trackLst?: TrackLstEntry[]

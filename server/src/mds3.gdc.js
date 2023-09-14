@@ -23,6 +23,7 @@ validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
+validate_query_geneExpression
 querySamples_gdcapi
 	flattenCaseByFields
 		mayApplyGroupsetting
@@ -144,8 +145,117 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
-export function validate_query_geneExpression(ds) {
-	// TODO
+export function validate_query_geneExpression(ds, genome) {
+	/* q{}
+	.filter0
+		optional, gdc hidden filter
+	.filter
+		optional, pp filter
+	.genes[ {gene} ]
+		required. list of genes
+	*/
+	ds.queries.geneExpression.get = async q => {
+		if (!Array.isArray(q.genes)) throw 'q.genes[] not array'
+
+		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
+
+		const ensgLst = []
+		const ensg2symbol = new Map()
+		for (const g of q.genes) {
+			if (typeof g.gene != 'string') continue
+			if (g.gene.startsWith('ENSG') && g.gene.length == 15) {
+				ensgLst.push(g.gene)
+				ensg2symbol.set(g.gene, g.gene)
+				continue
+			}
+			const lst = genome.genedb.getAliasByName.all(g.gene)
+			if (Array.isArray(lst)) {
+				for (const a of lst) {
+					if (a.alias.startsWith('ENSG')) {
+						ensgLst.push(a.alias)
+						ensg2symbol.set(a.alias, g.gene)
+						break
+					}
+				}
+			}
+			if (ensgLst.length > 100) break // max 100 genes
+		}
+		if (ensgLst.length == 0) {
+			// no valid genes
+			return new Map()
+		}
+		for (const g of ensgLst) {
+			gene2sample2value.set(ensg2symbol.get(g), new Map())
+		}
+
+		// get all cases from current filter
+		const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
+		if (caseLst.length == 0) {
+			// no cases with exp data, return blank
+			return new Map()
+		}
+
+		await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
+		return gene2sample2value
+	}
+}
+
+async function getCasesWithExressionDataFromCohort(q, ds) {
+	const f = { op: 'and', content: [] }
+	if (q.filter0) {
+		f.content.push(q.filter0)
+	}
+	if (q.filterObj) {
+		f.content.push(filter2GDCfilter(q.filterObj))
+	}
+	const body = { size: 10000, fields: 'case_id' }
+	if (f.content.length) body.filters = f
+	const response = await got.post(path.join(apihost, 'cases'), { headers: getheaders(q), body: JSON.stringify(body) })
+	const re = JSON.parse(response.body)
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
+	const lst = []
+	for (const h of re.data.hits) {
+		if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
+			lst.push(h.id)
+			if (lst.length > 1000) {
+				// max 1000 samples
+				break
+			}
+		}
+	}
+	return lst
+}
+
+async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
+	const response = await got.post('https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/values', {
+		headers: getheaders(q),
+		body: JSON.stringify({
+			case_ids,
+			gene_ids,
+			format: 'tsv',
+			tsv_units: 'median_centered_log2_uqfpkm'
+		})
+	})
+	if (typeof response.body != 'string') throw 'response.body is not tsv text'
+	const lines = response.body.trim().split('\n')
+	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
+	const caseLst = lines[0].split('\t').slice(1)
+	if (caseLst.length != case_ids.length) throw 'caseLst.length != case_ids.length'
+
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+		if (l.length != caseLst.length + 1) throw 'l.length!= caseLst.length+1'
+		const ensg = l[0]
+		if (!ensg) throw 'ensg l[0] missing from a line'
+		const symbol = ensg2symbol.get(ensg)
+		if (!symbol) throw 'symbol missing for ' + ensg
+		for (const [j, caseid] of caseLst.entries()) {
+			const v = Number(l[j + 1])
+			if (!Number.isFinite(v)) throw 'non-numeric exp value'
+			const sample = ds.__gdc.caseid2submitter.get(caseid)
+			gene2sample2value.get(symbol)[sample] = v
+		}
+	}
 }
 
 /* tandem rest api query

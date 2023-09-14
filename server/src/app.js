@@ -7193,6 +7193,7 @@ async function pp_init(serverconfig) {
 			const tables = listDbTables(g.genedb.db)
 			if (tables.has('genealias')) {
 				g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
+				g.genedb.getAliasByName = g.genedb.db.prepare('select alias from genealias where name=?') // quick fix!! convert symbol to ENSG, to be used for gdc api query
 				g.genedb.tableSize = g.genedb.db.prepare('select count(*) from genealias where alias=?')
 			}
 			if (tables.has('gene2coord')) {

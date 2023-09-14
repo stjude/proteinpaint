@@ -34,7 +34,7 @@ initGDCdictionary
   ds.__gdc {
   	aliquot2submitter{ get() }
   	map2caseid{ get() }
-	caseIds
+	casesWithExpData Set
   }
 */
 
@@ -856,6 +856,7 @@ async function cacheSampleIdMapping(ds) {
 				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
 			}
 		},
+		caseid2submitter: new Map(), // k: case uuid, v: case submitter id
 		caseIds: new Set(), //
 		casesWithExpData: new Set()
 	}
@@ -901,8 +902,9 @@ async function cacheSampleIdMapping(ds) {
 		await checkExpressionAvailability(ds)
 
 		console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
-		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id')
-		console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid.')
+		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
+		console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
+		console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 		console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
 	} catch (e) {
 		console.log('Error at caching: ' + e)
@@ -980,6 +982,8 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 
 		const case_submitter_id = h.submitter_id
 		if (!case_submitter_id) throw 'h.submitter_id missing'
+
+		ds.__gdc.caseid2submitter.set(case_id, case_submitter_id)
 
 		/*
 		below shows different uuids mapping to same submitter id
