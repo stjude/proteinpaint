@@ -19,12 +19,38 @@ export type getViolinRequest = {
 	plotThickness: number
 	termid: string
 }
+interface binsEntries {
+	x0: number
+	x1: number
+	binValueCount: number
+}
+interface valuesEntries {
+	id: string
+	label: string
+	value: number
+}
+
+interface pvalueEntries {
+	value?: string
+	html?: string
+}
 
 export type getViolinResponse = {
 	min: number
 	max: number
-	plots: any
-	pvalues?: number[]
+	plots: [
+		{
+			label: string
+			plotValueCount: number
+			src: string
+			bins: binsEntries[]
+			biggestBin: number
+			summaryStats: {
+				values: valuesEntries[]
+			}
+		}
+	]
+	pvalues?: pvalueEntries[][]
 	plotThickness: number
 	uncomputableValueObj: any
 }
