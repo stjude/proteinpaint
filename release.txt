@@ -1,1 +1,2 @@
-
+Fixes:
+- Allow a sample to be missing files for disco and singleSampleGenomeQuantification data types and do not break server

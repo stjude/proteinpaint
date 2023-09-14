@@ -97,7 +97,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
 		await validate_query_singleSampleGbtk(ds, genome)
-		await validate_query_probe2cnv(ds, genome)
+		//await validate_query_probe2cnv(ds, genome)
 
 		await validate_variant2samples(ds)
 		await validate_ssm2canonicalisoform(ds)
@@ -1376,7 +1376,17 @@ async function validate_query_singleSampleMutation(ds, genome) {
 					return []
 				}
 			}
-			const data = await utils.read_file(path.join(serverconfig.tpmasterdir, q.folder, fileName.toString()))
+
+			const file = path.join(serverconfig.tpmasterdir, q.folder, fileName.toString())
+			try {
+				await fs.promises.stat(file)
+			} catch (e) {
+				if (e.code == 'EACCES') throw 'cannot read file, permission denied'
+				if (e.code == 'ENOENT') throw 'no data for this sample'
+				throw 'failed to load data'
+			}
+
+			const data = await utils.read_file(file)
 			return JSON.parse(data)
 		}
 	} else {
@@ -1384,6 +1394,7 @@ async function validate_query_singleSampleMutation(ds, genome) {
 	}
 }
 
+// no longer used
 async function validate_query_probe2cnv(ds, genome) {
 	const q = ds.queries.probe2cnv
 	if (!q) return
@@ -1497,12 +1508,19 @@ async function validate_query_singleSampleGenomeQuantification(ds, genome) {
 						return []
 					}
 				}
-				const result = await plotSampleGenomeQuantification(
-					path.join(serverconfig.tpmasterdir, q[key].folder, fileName.toString()),
-					genome,
-					q[key],
-					devicePixelRatio
-				)
+
+				// TODO use string sample name but not id
+				const file = path.join(serverconfig.tpmasterdir, q[key].folder, fileName.toString())
+
+				try {
+					await fs.promises.stat(file)
+				} catch (e) {
+					if (e.code == 'EACCES') throw 'cannot read file, permission denied'
+					if (e.code == 'ENOENT') throw 'no data for this sample'
+					throw 'failed to load data'
+				}
+
+				const result = await plotSampleGenomeQuantification(file, genome, q[key], devicePixelRatio)
 				return result
 			}
 		} else {
