@@ -1,27 +1,53 @@
 import { getCompInit, copyMerge } from '#rx'
-import { appInit } from '#termdb/app'
 import { MassDict } from './dictionary.js'
 import { getTermValue } from '../termdb/tree.js'
+import { select } from 'd3-selection'
 
-class SampleView extends MassDict {
+const root_ID = 'root'
+
+class SampleView {
 	constructor(opts) {
-		super(opts)
 		this.type = 'sampleView'
-		const treeDiv = this.dom.treeDiv
-		const sampleDiv = treeDiv.insert('div').style('display', 'none')
-		let contentDiv = this.dom.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		contentDiv = contentDiv.insert('div').style('display', 'flex')
+		this.setDom(opts)
+		setInteractivity(this)
+		setRenderers(this)
+	}
+
+	setDom(opts) {
+		const mainDiv = opts.holder.append('div')
+		const sampleDiv = mainDiv.insert('div') //.style('display', 'none')
+		const tableDiv = mainDiv.insert('div').style('padding', '10px')
+		const table = tableDiv.append('table')
+		const thead = table.append('thead')
 		this.dom = {
-			mainDiv: this.dom.mainDiv,
+			header: opts.header,
+			holder: opts.holder,
+			mainDiv,
 			sampleDiv,
-			treeDiv,
-			contentDiv,
-			header: opts.header
+			tableDiv,
+			table,
+			thead,
+			theadrow: thead.append('tr'),
+			tbody: table.append('tbody'),
+			contentDiv: mainDiv
+				.insert('div')
+				.style('display', 'none')
+				.style('vertical-align', 'top')
+				.insert('div')
+				//.style('width', '60%')
+				.style('display', 'flex')
+				.style('min-height', '500px')
+				.style('flex-direction', 'column')
+				.style('justify-content', 'center')
+				.style('align-items', 'start')
+			//.style('border-left', '1px solid gray')
 		}
 	}
 
 	async init(appState) {
+		const state = this.getState(appState)
 		const config = appState.plots.find(p => p.id === this.id)
+		this.termsByCohort = {}
 		this.sampleId2Name = await this.app.vocabApi.getAllSamples()
 		const samples = Object.entries(this.sampleId2Name)
 		this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
@@ -52,73 +78,203 @@ class SampleView extends MassDict {
 				this.downloadData()
 			})
 
-		await super.init(appState)
-		const showContent =
-			appState.termdbConfig.queries?.singleSampleGenomeQuantification ||
-			appState.termdbConfig.queries?.singleSampleMutation
-
-		if (showContent) {
-			this.dom.contentDiv
-				//.style('width', '60%')
-				.style('min-height', '500px')
-				.style('flex-direction', 'column')
-				.style('justify-content', 'center')
-				.style('align-items', 'start')
-			//.style('border-left', '1px solid gray')
-		}
+		if (state.showContent) this.dom.contentDiv.style('display', 'inline-block')
 	}
 
 	getState(appState) {
-		let state = super.getState(appState)
 		const config = appState.plots?.find(p => p.id === this.id)
-		state.sample = config?.sample || this.sample
-		state.samples = [state.sample] //for the tree
-		state.singleSampleGenomeQuantification = state.termdbConfig.queries?.singleSampleGenomeQuantification
-		state.singleSampleMutation = state.termdbConfig.queries?.singleSampleMutation
-		state.hasVerifiedToken = this.app.vocabApi.hasVerifiedToken()
-		state.tokenVerificationPayload = this.app.vocabApi.tokenVerificationPayload
-		state.showContent = state.singleSampleGenomeQuantification || state.singleSampleMutation
+		const q = appState.termdbConfig.queries
+		console.log(85, config.expandedTermIds)
+		const state = {
+			config,
+			// TODO: use state.config drectly, instead of having to extract
+			// selected config.key-values into the component state
+			activeCohort: config.activeCohort,
+			sample: config?.sample || this.sample,
+			terms: config.terms,
+			expandedTermIds: config.expandedTermIds,
+			samples: [this.sample], //for the tree
+			singleSampleGenomeQuantification: q?.singleSampleGenomeQuantification,
+			singleSampleMutation: q?.singleSampleMutation,
+			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
+			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
+			showContent: q.singleSampleGenomeQuantification || q.singleSampleMutation
+		}
+		if (appState.termdbConfig.selectCohort) {
+			state.toSelectCohort = true
+			const choice = appState.termdbConfig.selectCohort.values[state.activeCohort]
+			if (choice) {
+				// a selection has been made
+				state.cohortValuelst = choice.keys
+			}
+		}
 
 		return state
 	}
 
 	async main() {
 		if (this.mayRequireToken()) return
-		super.main()
+		this.config = structuredClone(this.state.config)
 		if (this.dom.header) this.dom.header.html(`Sample View`)
+		this.termsById = this.getTermsById(this.state)
+		this.sampleDataByTermId = {}
+		const root = this.termsById[root_ID]
+		root.terms = await this.requestTermRecursive(root)
+		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
+		this.render()
+		// if (this.state.showContent) {
+		// 	const sample = { sample_id: this.sample.sampleName }
 
-		if (this.state.showContent) {
-			const sample = { sample_id: this.sample.sampleName }
+		// 	this.dom.contentDiv.selectAll('*').remove()
+		// 	if (this.state.termdbConfig.queries?.singleSampleMutation) {
+		// 		const div = this.dom.contentDiv
+		// 		div.append('div').style('font-weight', 'bold').style('padding-left', '20px').text('Disco plot')
+		// 		const discoPlotImport = await import('./plot.disco.js')
+		// 		discoPlotImport.default(
+		// 			this.state.termdbConfig,
+		// 			this.state.vocab.dslabel,
+		// 			sample,
+		// 			div.append('div'),
+		// 			this.app.opts.genome
+		// 		)
+		// 	}
+		// 	if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+		// 		for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+		// 			const div = this.dom.contentDiv.append('div').style('padding', '20px')
+		// 			const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
+		// 			div.append('div').style('padding-bottom', '20px').style('font-weight', 'bold').text(label)
+		// 			const ssgqImport = await import('./plot.ssgq.js')
+		// 			await ssgqImport.plotSingleSampleGenomeQuantification(
+		// 				this.state.termdbConfig,
+		// 				this.state.vocab.dslabel,
+		// 				k,
+		// 				sample,
+		// 				div.append('div'),
+		// 				this.app.opts.genome
+		// 			)
+		// 		}
+		// 	}
+		// }
+	}
 
-			this.dom.contentDiv.selectAll('*').remove()
-			if (this.state.termdbConfig.queries?.singleSampleMutation) {
-				const div = this.dom.contentDiv
-				div.append('div').style('font-weight', 'bold').style('padding-left', '20px').text('Disco plot')
-				const discoPlotImport = await import('./plot.disco.js')
-				discoPlotImport.default(
-					this.state.termdbConfig,
-					this.state.vocab.dslabel,
-					sample,
-					div.append('div'),
-					this.app.opts.genome
-				)
-			}
-			if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-				for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-					const div = this.dom.contentDiv.append('div').style('padding', '20px')
-					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-					div.append('div').style('padding-bottom', '20px').style('font-weight', 'bold').text(label)
-					const ssgqImport = await import('./plot.ssgq.js')
-					await ssgqImport.plotSingleSampleGenomeQuantification(
-						this.state.termdbConfig,
-						this.state.vocab.dslabel,
-						k,
-						sample,
-						div.append('div'),
-						this.app.opts.genome
-					)
+	getTermsById(state) {
+		if (!(state.activeCohort in this.termsByCohort)) {
+			this.termsByCohort[state.activeCohort] = {
+				[root_ID]: {
+					id: root_ID,
+					__tree_isroot: true // must not delete this flag
 				}
 			}
+		}
+		return this.termsByCohort[state.activeCohort]
+	}
+
+	async requestTermRecursive(term, _ancestry = [root_ID]) {
+		/* will request child terms for this entire branch recursively
+
+		must synthesize request string (dataName) for every call
+		and get cached result for the same dataName which has been requested before
+		this is to support future features
+		e.g. to show number of samples for each term that can change based on filters
+		where the same child terms already loaded must be re-requested with the updated filter parameters to update
+
+		TODO determine when to re-request cached server response as needed
+
+		CAUTION
+		will be great if tree_collapse will not trigger this function
+		but hard to do given that main() has no way of telling what action was dispatched
+		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
+		need to add it back TERMS_ADD_BACK
+		*/
+		const data = await this.app.vocabApi.getTermChildren(
+			term,
+			this.state.toSelectCohort ? this.state.cohortValuelst : null
+		)
+		if (data.error) throw data.error
+		if (!data.lst || data.lst.length == 0) {
+			// do not throw exception; its children terms may have been filtered out
+			return []
+		}
+		const terms = []
+		for (const t of data.lst) {
+			t.parent_id = _ancestry.slice(-1)[0]
+			const ancestry = [..._ancestry]
+			const copy = structuredClone(t)
+			copy.ancestry = ancestry
+			terms.push(copy)
+			// rehydrate expanded terms as needed
+			// fills in termsById, for recovering tree
+
+			if (this.config.expandedTermIds.includes(copy.id)) {
+				console.log(206, '!!! expanded=', copy.id)
+				copy.terms = await this.requestTermRecursive(copy, [...ancestry, t.id])
+				if (this.state.samples) await this.fillSampleData(copy.terms)
+			} else {
+				console.log(209, 'not expanded=', copy.id)
+				// not an expanded term
+				// if it's collapsing this term, must add back its children terms for toggle button to work
+				// see flag TERMS_ADD_BACK
+				const t0 = this.termsById[copy.id]
+				if (this.state.samples) await this.fillSampleData([copy])
+
+				if (t0 && t0.terms) {
+					copy.terms = t0.terms
+				}
+			}
+
+			this.termsById[copy.id] = copy
+		}
+		return terms
+	}
+
+	getOrderedVisibleTerms(root) {
+		const visibleTerms = Object.values(this.termsById).filter(this.isVisibleTermId.bind(this))
+		const orderedTerms = this.sortVisibleTerms(this.termsById[root_ID], visibleTerms)
+		return orderedTerms
+	}
+
+	isVisibleTermId(term) {
+		if (term.parent_id == root_ID || !term.ancestry) return true
+		for (const pid of term.ancestry) {
+			if (pid === root_ID) continue
+			if (!this.config.expandedTermIds.includes(pid)) return false
+		}
+		return true
+	}
+
+	sortVisibleTerms(currParent, remainingTerms, currOrder = []) {
+		const unorderedTerms = []
+		const orderedTerms = []
+		for (const term of remainingTerms) {
+			//console.log(288, term.id, term.parent_id, currParent.id)
+			if (term.parent_id == currParent.id) {
+				orderedTerms.push(term)
+			} else unorderedTerms.push(term)
+		}
+		if (unorderedTerms.length) {
+			for (const term of orderedTerms) {
+				currOrder.push(term)
+				this.sortVisibleTerms(term, unorderedTerms, currOrder)
+			}
+		} else {
+			currOrder.push(...orderedTerms)
+		}
+		return currOrder
+	}
+
+	async fillSampleData(terms) {
+		const term_ids = []
+		for (const term of terms) term_ids.push(term.id)
+		for (const sample of this.state.samples) {
+			// const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
+			// if ('error' in data) throw data.error;
+
+			// TODO: uncomment the above to use actual data
+			const data = {}
+			term_ids.forEach(id => (data[id] = { key: 'test', label: 'test' }))
+
+			if (!this.sampleDataByTermId[sample.sampleId]) this.sampleDataByTermId[sample.sampleId] = structuredClone(sample)
+			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
 		}
 	}
 
@@ -169,10 +325,108 @@ class SampleView extends MassDict {
 export const sampleViewInit = getCompInit(SampleView)
 export const componentInit = sampleViewInit
 
-export function getPlotConfig(opts, app) {
-	// currently, there are no configurations options for
-	// the dictionary tree; may add appearance, styling options later
-	const config = {}
-	// may apply overrides to the default configuration
+function setRenderers(self) {
+	self.render = function () {
+		const activeSample = self.sampleDataByTermId[this.state.sample.sampleId] //console.log(321, activeSample)
+		self.renderTHead([{ name: 'Variable' }, activeSample])
+		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [{ term }, { term, sample: activeSample }]) // console.log(322, tBodyData)
+		self.renderTBody(tBodyData)
+	}
+
+	self.renderTHead = function (data) {
+		const trs = self.dom.theadrow.selectAll('th').data(data)
+		trs.exit().remove()
+		trs.html(self.getThHtml)
+		trs.enter().append('th').style('padding', '10px').html(self.getThHtml)
+	}
+
+	self.getThHtml = d => d.sampleName || d.name
+
+	self.renderTBody = function (data) {
+		//console.log(326, data, self.dom.tbody.node())
+		const trs = self.dom.tbody.selectAll('tr').data(data)
+		trs.exit().remove()
+		trs.each(self.renderTr)
+		trs.enter().append('tr').each(self.renderTr)
+	}
+
+	self.renderTr = function (trData, trIndex) {
+		//console.log(338, trData)
+		const tds = select(this)
+			.selectAll('td')
+			.data(trData, d => d)
+		tds.exit().remove()
+		tds.each(self.renderTd)
+		tds
+			.enter()
+			.append('td')
+			.style('color', 'gray')
+			.style('padding', '0 16px')
+			.style('text-align', 'end')
+			.style('border', '1px solid white')
+			.style('text-align', (d, i) => (i === 0 ? 'left' : 'center'))
+			.each(self.renderTd)
+	}
+
+	self.renderTd = function (d, i) {
+		//console.log(354, d)
+		if (!d.sample) {
+			// first column for tree dict variables
+			self.renderTerm(select(this))
+			return
+		}
+		//const sampleId = Number(d.sample.sampleId)
+
+		const data = d.sample
+		const term = d.term
+		select(this)
+			.datum(d)
+			.html(d.sample[d.term.id]?.label || getTermValue(d.term, d.sample))
+	}
+
+	self.renderTerm = function (td) {
+		// must get the current data, since each row's data gets replaced
+		// as child terms get inserted between each row
+		const d = td.datum() // current data
+		if (!td.select('span').size()) {
+			const span = td.append('span')
+			span
+				.append('button')
+				.style('display', 'none')
+				.style('padding', '0 3px')
+				.style('width', '24px')
+				.style('cursor', 'pointer')
+			span.append('span').style('margin-left', `3px`).style('cursor', 'pointer')
+			if (!d.term.isleaf) {
+				console.log(383, 'not leaf', d.term.id)
+				td.on('click', function () {
+					const d = select(this).datum()
+					const expandedTermIds = self.config.expandedTermIds.slice() // create a copy
+					const i = expandedTermIds.indexOf(d.term.id)
+					if (i == -1) expandedTermIds.push(d.term.id)
+					else expandedTermIds.splice(i, 1)
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: { expandedTermIds }
+					})
+				})
+			}
+		}
+		const leftIndent = d.term.ancestry.length * 24
+		const span = td.select(':scope>span').style('margin-left', `${leftIndent}px`)
+		const btn = span
+			.select('button')
+			.style('display', d.term.isleaf ? 'none' : '')
+			.html(self.config.expandedTermIds.includes(d.term.id) ? '-' : '+')
+		span.select('span').html(d.term.name)
+		return
+	}
+}
+
+function setInteractivity(self) {}
+
+export async function getPlotConfig(opts) {
+	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID] }
 	return copyMerge(config, opts)
 }

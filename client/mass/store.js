@@ -238,12 +238,19 @@ TdbStore.prototype.actions = {
 			id: 'id' in action ? action.id : getId()
 		}
 		if (!action.config) throw '.config{} missing for plot_prep'
+		if (action.config.chartType && Object.keys(action.config).length == 1) {
+			const _ = await import(`../plots/${action.config.chartType}.js`)
+			console.log(246, action.config)
+			const config = await _.getPlotConfig(action.config, this.app)
+			action.config = Object.assign(config, action.config)
+		}
 		Object.assign(plot, action.config)
 		this.state.plots.push(plot)
 	},
 
 	async plot_create(action) {
 		const _ = await import(`../plots/${action.config.chartType}.js`)
+		console.log(246, action.config)
 		const plot = await _.getPlotConfig(action.config, this.app)
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
