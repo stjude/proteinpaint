@@ -1,6 +1,4 @@
 import { getCompInit, copyMerge } from '#rx'
-import { MassDict } from './dictionary.js'
-import { getTermValue } from '../termdb/tree.js'
 import { select } from 'd3-selection'
 
 const root_ID = 'root'
@@ -15,7 +13,9 @@ class SampleView {
 
 	setDom(opts) {
 		const mainDiv = opts.holder.append('div')
-		const sampleDiv = mainDiv.insert('div') //.style('display', 'none')
+		const sampleDiv = mainDiv.insert('div').style('padding', '20px')
+		const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Sample:')
+
 		const tableDiv = mainDiv.insert('div').style('padding', '10px')
 		const table = tableDiv.append('table')
 		const thead = table.append('thead')
@@ -29,56 +29,76 @@ class SampleView {
 			thead,
 			theadrow: thead.append('tr'),
 			tbody: table.append('tbody'),
-			contentDiv: mainDiv
-				.insert('div')
-				.style('display', 'none')
-				.style('vertical-align', 'top')
-				.insert('div')
-				//.style('width', '60%')
-				.style('display', 'flex')
-				.style('min-height', '500px')
-				.style('flex-direction', 'column')
-				.style('justify-content', 'center')
-				.style('align-items', 'start')
-			//.style('border-left', '1px solid gray')
+			contentDiv: mainDiv.insert('div'),
+			sampleLabel,
+			select: sampleDiv.insert('select').style('margin', '0px 5px')
 		}
+		sampleDiv
+			.insert('button')
+			.style('vertical-align', 'top')
+			.text('Download data')
+			.on('click', e => {
+				this.downloadData()
+			})
+		this.dom.messageDiv = sampleDiv
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('display', 'none')
+			.style('vertical-align', 'top')
+			.html('&nbsp;&nbsp;Downloading data ...')
 	}
 
 	async init(appState) {
 		const state = this.getState(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.termsByCohort = {}
-		this.sampleId2Name = await this.app.vocabApi.getAllSamples()
-		const samples = Object.entries(this.sampleId2Name)
-		this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
 
-		const div = this.dom.sampleDiv.style('display', 'block')
-		div.insert('label').html('&nbsp;Sample:')
+		const div = this.dom.sampleDiv
+		if (config.samples) this.dom.sampleLabel.html('Samples:')
+		await this.setSampleSelect(config, div)
+	}
 
-		this.select = div.append('select').style('margin', '0px 5px')
-		this.select
-			.selectAll('option')
-			.data(samples)
-			.enter()
-			.append('option')
-			.attr('value', d => d[0])
-			.property('selected', d => d[0] == this.sample.sampleId)
-			.html((d, i) => d[1])
-		this.select.on('change', e => {
-			const sampleId = this.select.node().value
-			const sampleName = this.sampleId2Name[sampleId]
-			this.sample = { sampleId, sampleName }
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
-		})
-
-		div
-			.insert('button')
-			.text('Download data')
-			.on('click', e => {
-				this.downloadData()
+	async setSampleSelect(config, div) {
+		if (config.samples) {
+			const select = this.dom.select.property('multiple', true).attr('id', 'select')
+			select
+				.selectAll('option')
+				.data(config.samples)
+				.enter()
+				.append('option')
+				.attr('value', d => d.sampleId)
+				.html((d, i) => d.sampleName)
+			select.on('change', e => {
+				const options = select.node().options
+				const samples = []
+				for (const option of options)
+					if (option.selected) {
+						const sampleId = Number(option.value)
+						const sampleName = config.samples.find(s => s.sampleId == sampleId).sampleName
+						const sample = { sampleId, sampleName }
+						samples.push(sample)
+					}
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
-
-		if (state.showContent) this.dom.contentDiv.style('display', 'inline-block')
+		} else {
+			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
+			const samples = Object.entries(this.sampleId2Name)
+			this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
+			this.dom.select
+				.selectAll('option')
+				.data(samples)
+				.enter()
+				.append('option')
+				.attr('value', d => d[0])
+				.property('selected', d => d[0] == this.sample.sampleId)
+				.html((d, i) => d[1])
+			this.dom.select.on('change', e => {
+				const sampleId = this.dom.select.node().value
+				const sampleName = this.sampleId2Name[sampleId]
+				this.sample = { sampleId, sampleName }
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
+			})
+		}
 	}
 
 	getState(appState) {
@@ -92,12 +112,14 @@ class SampleView {
 			sample: config?.sample || this.sample,
 			terms: config.terms,
 			expandedTermIds: config.expandedTermIds,
-			samples: [this.sample], //for the tree
+			samples: config.samples || [this.sample],
 			singleSampleGenomeQuantification: q?.singleSampleGenomeQuantification,
 			singleSampleMutation: q?.singleSampleMutation,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
-			showContent: q.singleSampleGenomeQuantification || q.singleSampleMutation
+			showContent: q.singleSampleGenomeQuantification || q.singleSampleMutation,
+			termdbConfig: appState.termdbConfig,
+			vocab: appState.vocab
 		}
 		if (appState.termdbConfig.selectCohort) {
 			state.toSelectCohort = true
@@ -121,39 +143,49 @@ class SampleView {
 		root.terms = await this.requestTermRecursive(root)
 		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
 		this.render()
-		// if (this.state.showContent) {
-		// 	const sample = { sample_id: this.sample.sampleName }
-
-		// 	this.dom.contentDiv.selectAll('*').remove()
-		// 	if (this.state.termdbConfig.queries?.singleSampleMutation) {
-		// 		const div = this.dom.contentDiv
-		// 		div.append('div').style('font-weight', 'bold').style('padding-left', '20px').text('Disco plot')
-		// 		const discoPlotImport = await import('./plot.disco.js')
-		// 		discoPlotImport.default(
-		// 			this.state.termdbConfig,
-		// 			this.state.vocab.dslabel,
-		// 			sample,
-		// 			div.append('div'),
-		// 			this.app.opts.genome
-		// 		)
-		// 	}
-		// 	if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-		// 		for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-		// 			const div = this.dom.contentDiv.append('div').style('padding', '20px')
-		// 			const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-		// 			div.append('div').style('padding-bottom', '20px').style('font-weight', 'bold').text(label)
-		// 			const ssgqImport = await import('./plot.ssgq.js')
-		// 			await ssgqImport.plotSingleSampleGenomeQuantification(
-		// 				this.state.termdbConfig,
-		// 				this.state.vocab.dslabel,
-		// 				k,
-		// 				sample,
-		// 				div.append('div'),
-		// 				this.app.opts.genome
-		// 			)
-		// 		}
-		// 	}
-		// }
+		this.dom.contentDiv.selectAll('*').remove()
+		if (this.state.showContent) {
+			for (const sample1 of this.state.samples) {
+				let sample = JSON.parse(JSON.stringify(sample1))
+				sample.sample_id = sample.sampleName
+				if (this.state.termdbConfig?.queries?.singleSampleMutation) {
+					const div = this.dom.contentDiv
+					div
+						.append('div')
+						.style('font-weight', 'bold')
+						.style('padding-left', '20px')
+						.text(`${sample.sampleName} Disco plot`)
+					const discoPlotImport = await import('./plot.disco.js')
+					discoPlotImport.default(
+						this.state.termdbConfig,
+						this.state.vocab.dslabel,
+						sample,
+						div.append('div'),
+						this.app.opts.genome
+					)
+				}
+				if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+						const div = this.dom.contentDiv.append('div').style('padding', '20px')
+						const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
+						div
+							.append('div')
+							.style('padding-bottom', '20px')
+							.style('font-weight', 'bold')
+							.text(`${sample.sampleName} ${label}`)
+						const ssgqImport = await import('./plot.ssgq.js')
+						await ssgqImport.plotSingleSampleGenomeQuantification(
+							this.state.termdbConfig,
+							this.state.vocab.dslabel,
+							k,
+							sample,
+							div.append('div'),
+							this.app.opts.genome
+						)
+					}
+				}
+			}
+		}
 	}
 
 	getTermsById(state) {
@@ -274,14 +306,27 @@ class SampleView {
 	}
 
 	async downloadData() {
-		const filename = `${this.state.sample.sampleName}.tsv`
-		this.sampleData = await this.app.vocabApi.getSingleSampleData({ sampleId: this.state.sample.sampleId })
-		let lines = ''
-		for (const id in this.sampleData) {
-			const term = this.sampleData[id].term
-			let value = getTermValue(term, this.sampleData)
-			if (value == null) continue
-			lines += `${term.name}\t${value}\n`
+		this.dom.messageDiv.style('display', 'inline-block')
+		const filename = `samples.tsv`
+		const sampleData = {}
+		let lines = 'Sample'
+		for (const sample of this.state.samples) {
+			sampleData[sample.sampleId] = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId })
+			lines += `\t${sample.sampleName}`
+		}
+		lines += '\n'
+
+		const sampleId = this.state.samples[0].sampleId
+		for (const termId in sampleData[sampleId]) {
+			const term = sampleData[sampleId][termId].term
+			lines += `${term.name}`
+			for (const sampleId in sampleData) {
+				const data = sampleData[sampleId]
+				let value = getTermValue(term, data)
+				if (value == null) value = 'Missing'
+				lines += `\t${value}`
+			}
+			lines += '\n'
 		}
 		const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 
@@ -293,6 +338,7 @@ class SampleView {
 		document.body.appendChild(link)
 		link.click()
 		link.remove()
+		this.dom.messageDiv.style('display', 'none')
 	}
 
 	mayRequireToken() {
@@ -317,6 +363,31 @@ class SampleView {
 	}
 }
 
+export function getTermValue(term, data) {
+	let value = data[term.id]?.value
+	if (value == null) return null
+	if (term.type == 'float' || term.type == 'integer') {
+		value = term.values?.[value]?.label || term.values?.[value]?.key || value
+		if (isNaN(value)) return value
+		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
+	}
+
+	if (term.type == 'categorical') return term.values[value]?.label || term.values[value]?.key
+	if (term.type == 'condition') {
+		const values = value.toString().split(' ')
+		let [years, status] = values
+		status = term.values[status].label || term.values[status].key
+		return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
+	}
+	if (term.type == 'survival') {
+		const values = value.split(' ')
+		let [years, status] = values
+		status = term.values?.[status]?.label || term.values?.[status]?.key || status
+		return `${status} after ${Number(years).toFixed(1)} years`
+	}
+	return null
+}
+
 export const sampleViewInit = getCompInit(SampleView)
 export const componentInit = sampleViewInit
 
@@ -324,7 +395,7 @@ function setRenderers(self) {
 	self.render = function () {
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
-		const visibleSamples = [self.sampleDataByTermId[this.state.sample.sampleId]]
+		const visibleSamples = Object.values(self.sampleDataByTermId)
 		// for the column names, just need the first column name + sample data
 		self.renderTHead([{ name: 'Variable' }, ...visibleSamples])
 		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [
@@ -339,13 +410,12 @@ function setRenderers(self) {
 		const trs = self.dom.theadrow.selectAll('th').data(data)
 		trs.exit().remove()
 		trs.html(self.getThHtml)
-		trs.enter().append('th').style('padding', '10px').html(self.getThHtml)
+		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').html(self.getThHtml)
 	}
 
-	self.getThHtml = d => d.sampleName || d.name
+	self.getThHtml = d => d.sampleName || ''
 
 	self.renderTBody = function (data) {
-		//console.log(326, data, self.dom.tbody.node())
 		const trs = self.dom.tbody.selectAll('tr').data(data)
 		trs.exit().remove()
 		trs.each(self.renderTr)
@@ -353,7 +423,6 @@ function setRenderers(self) {
 	}
 
 	self.renderTr = function (trData, trIndex) {
-		//console.log(338, trData)
 		const tds = select(this)
 			.selectAll('td')
 			.data(trData, d => d)
@@ -362,16 +431,14 @@ function setRenderers(self) {
 		tds
 			.enter()
 			.append('td')
+			.style('border', 'solid 1px #aaa')
 			.style('color', 'gray')
-			.style('padding', '0 16px')
-			.style('text-align', 'end')
-			.style('border', '1px solid white')
 			.style('text-align', (d, i) => (i === 0 ? 'left' : 'center'))
+			.style('padding', '5px 10px')
 			.each(self.renderTd)
 	}
 
 	self.renderTd = function (d, i) {
-		//console.log(354, d)
 		if (!d.sample) {
 			// first column for tree dict variables
 			self.renderTerm(select(this))
@@ -382,6 +449,7 @@ function setRenderers(self) {
 		const term = d.term
 		select(this)
 			.datum(d)
+			.style('text-align', 'end')
 			// !!! TODO: use getTermValue only for actual data !!!
 			.html(d.sample[d.term.id]?.label || getTermValue(d.term, d.sample))
 	}
@@ -392,6 +460,7 @@ function setRenderers(self) {
 		const d = td.datum() // current data
 		if (!td.select('span').size()) {
 			const span = td.append('span')
+
 			span
 				.append('button')
 				.style('display', 'none')
@@ -401,7 +470,7 @@ function setRenderers(self) {
 			span.append('span').style('margin-left', `3px`).style('cursor', 'pointer')
 			td.on('click', self.toggleTerm)
 		}
-		const leftIndent = d.term.ancestry.length * 24
+		const leftIndent = (d.term.ancestry.length - 1) * 24
 		const span = td.select(':scope>span').style('margin-left', `${leftIndent}px`)
 		const btn = span
 			.select('button')

@@ -551,7 +551,7 @@ export function setRenderers(self) {
 							type: 'plot_create',
 							id: getId(),
 							config: {
-								chartType: 'sampleGroupView',
+								chartType: 'sampleView',
 								samples: groupSamples
 							}
 						})
