@@ -104,6 +104,7 @@ class SampleView {
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
 		const q = appState.termdbConfig.queries
+		const showContent = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
 		const state = {
 			config,
 			// TODO: use state.config drectly, instead of having to extract
@@ -117,7 +118,7 @@ class SampleView {
 			singleSampleMutation: q?.singleSampleMutation,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
-			showContent: q.singleSampleGenomeQuantification || q.singleSampleMutation,
+			showContent,
 			termdbConfig: appState.termdbConfig,
 			vocab: appState.vocab
 		}
