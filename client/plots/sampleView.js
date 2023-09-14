@@ -144,7 +144,7 @@ class SampleView {
 		root.terms = await this.requestTermRecursive(root)
 		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
 		this.render()
-		this.drawPlots()
+		this.renderPlots()
 	}
 
 	getTermsById(state) {
@@ -321,11 +321,11 @@ class SampleView {
 		}
 	}
 
-	async drawPlots() {
+	async renderPlots() {
 		this.dom.contentDiv.selectAll('*').remove()
 		if (this.state.showContent) {
-			for (const sample1 of this.state.samples) {
-				let sample = JSON.parse(JSON.stringify(sample1))
+			for (const stateSample of this.state.samples) {
+				let sample = JSON.parse(JSON.stringify(stateSample))
 				sample.sample_id = sample.sampleName
 				if (this.state.termdbConfig?.queries?.singleSampleMutation) {
 					const div = this.dom.contentDiv
@@ -436,9 +436,9 @@ function setRenderers(self) {
 		tds
 			.enter()
 			.append('td')
-			.style('border-bottom', 'solid 2px rgb(245,245,245)')
+			.style('border-bottom', 'solid 1px rgb(245,245,245)')
 			.style('text-align', (d, i) => (i === 0 ? 'left' : 'center'))
-			.style('padding', '5px 10px')
+			.style('padding', '2px 10px')
 			.each(self.renderTd)
 	}
 
@@ -454,6 +454,8 @@ function setRenderers(self) {
 		select(this)
 			.datum(d)
 			.style('text-align', 'end')
+			.style('padding', '5px 10px')
+
 			// !!! TODO: use getTermValue only for actual data !!!
 			.html(d.sample[d.term.id]?.label || getTermValue(d.term, d.sample))
 	}
@@ -467,9 +469,10 @@ function setRenderers(self) {
 
 			span
 				.append('button')
-				.style('display', 'none')
-				.style('padding', '0 3px')
-				.style('width', '24px')
+				.style('border-width', 0)
+				.style('border-radius', '5px')
+				.style('width', '28px')
+				.style('height', '28px')
 				.style('cursor', 'pointer')
 			span.append('span').style('margin-left', `3px`).style('cursor', 'pointer')
 			td.on('click', self.toggleTerm)
