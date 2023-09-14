@@ -1271,7 +1271,7 @@ async function validate_query_geneExpression(ds, genome) {
 	if (!q) return
 
 	if (q.gdcapi) {
-		gdc.validate_query_geneExpression(ds)
+		gdc.validate_query_geneExpression(ds, genome)
 		// .get() added, same behavior as below
 		return
 	}
