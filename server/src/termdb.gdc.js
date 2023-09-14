@@ -22,6 +22,7 @@ initGDCdictionary
   standard termdb "interface" functions are added to ds.cohort.termdb.q{}
 
 - determine default binconfig for all numeric terms
+  added to term json objects
 
 - querying list of open-access projects
   stores at: ds.gdcOpenProjects = set of project ids that are open-access
@@ -29,7 +30,12 @@ initGDCdictionary
 - test gdc api, make sure they're all online
 
 - cache sample/case name/uuid mapping
-  stores at ds
+  creates these new dataset-level attributes
+  ds.__gdc {
+  	aliquot2submitter{ get() }
+  	map2caseid{ get() }
+	caseIds
+  }
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -37,28 +43,6 @@ const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/grap
 
 // TODO switch to https://api.gdc.cancer.gov/cases/_mapping
 const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
-
-/*
-default bin configs are auto-determined based on distribution of each term (min/max/..), retrieved on the fly from api
-dummy bin is used when a valid distribution is not available
-*/
-const dummyBins = {
-	default: {
-		mode: 'discrete',
-		type: 'regular-bin',
-		bin_size: 1,
-		startinclusive: false,
-		stopinclusive: true,
-		first_bin: {
-			startunbounded: true,
-			stop: 0
-		},
-		last_bin: {
-			start: 1,
-			stopunbounded: true
-		}
-	}
-}
 
 /* 
 
@@ -343,6 +327,27 @@ function mayAddTermAttribute(t) {
 	}
 }
 
+/*
+default bin configs are auto-determined based on distribution of each term (min/max/..), retrieved on the fly from api
+dummy bin is used when a valid distribution is not available
+*/
+const dummyBins = {
+	default: {
+		mode: 'discrete',
+		type: 'regular-bin',
+		bin_size: 1,
+		startinclusive: false,
+		stopinclusive: true,
+		first_bin: {
+			startunbounded: true,
+			stop: 0
+		},
+		last_bin: {
+			start: 1,
+			stopunbounded: true
+		}
+	}
+}
 async function assignDefaultBins(id2term) {
 	const queryStrings = []
 	const facet2termid = new Map() // term id is converted to facet for query, this maps it back
@@ -715,15 +720,15 @@ async function getOpenProjects(ds) {
 
 	ds.gdcOpenProjects = new Set()
 
-	if (re?.data?.aggregations?.['cases.project.project_id']?.buckets) {
-		for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
-			// key is project_id value
-			if (b.key) ds.gdcOpenProjects.add(b.key)
-		}
-		console.log('GDC open-access projects:', ds.gdcOpenProjects.size)
-	} else {
-		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets")
+	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
+		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
+		return
 	}
+	for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
+		// key is project_id value
+		if (b.key) ds.gdcOpenProjects.add(b.key)
+	}
+	console.log('GDC open-access projects:', ds.gdcOpenProjects.size)
 }
 
 /* this function is called when the gdc mds3 dataset is initiated on a pp instance
@@ -733,11 +738,34 @@ thus do not halt process if api is down
 */
 async function testGDCapi() {
 	try {
-		await testRestApi(apihost + '/ssms')
-		await testRestApi(apihost + '/ssm_occurrences')
-		await testRestApi(apihost + '/cases')
-		await testRestApi(apihost + '/files')
-		await testRestApi(apihost + '/analysis/top_mutated_genes_by_project')
+		// all these apis are available on gdc production and are publicly available
+		// if any returns an error code, will abort
+		{
+			const u = path.join(apihost, 'ssms')
+			const c = await testRestApi(u)
+			if (c) throw `${u}: ${c}`
+		}
+		{
+			const u = path.join(apihost, 'ssm_occurrences')
+			const c = await testRestApi(u)
+			if (c) throw `${u}: ${c}`
+		}
+		{
+			const u = path.join(apihost, 'cases')
+			const c = await testRestApi(u)
+			if (c) throw `${u}: ${c}`
+		}
+		{
+			const u = path.join(apihost, 'files')
+			const c = await testRestApi(u)
+			if (c) throw `${u}: ${c}`
+		}
+		{
+			const u = path.join(apihost, 'analysis/top_mutated_genes_by_project')
+			const c = await testRestApi(u)
+			if (c) throw `${u}: ${c}`
+		}
+
 		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
 		await testGraphqlApi(apihostGraphql)
 	} catch (e) {
@@ -752,12 +780,19 @@ async function testGDCapi() {
 	}
 }
 
+/*
+if url is accessible, do not return
+if gets error:
+	return error code if available, so downstream logic can further act on the code
+	if no error code, throw and abort
+*/
 async function testRestApi(url) {
 	try {
 		const t = new Date()
 		await got(url)
 		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
 	} catch (e) {
+		if (e.code) return e.code
 		throw 'gdc api down: ' + url
 	}
 }
@@ -787,45 +822,61 @@ async function testGraphqlApi(url) {
 /*
 cache gdc sample id mappings
 this is an optional step and can be skipped on dev machines
-this creates two new attributes on ds{} with getter:
-- aliquot2submitter: only used for gdc specific code
-- map2caseid: supports tdb.convertSampleId.get() which is a generic feature and can later be used for non-gdc datasets
+- create a map from sample aliquot id to sample submitter id, for displaying in mds3 tk
+- create a map from differet ids to case uuid, for creating gdc cohort with selected samples
+- cache list of case uuids with expression data
 */
 async function cacheSampleIdMapping(ds) {
 	// create new attr to map to sample submitter id; it will only map from aliquot id to this id,
 	// as this mapping is only used in mds3 tk, which shows ssm on samples but not cases
-	ds.aliquot2submitter = {
-		cache: new Map(),
-		get: async aliquot_id => {
-			if (ds.aliquot2submitter.cache.has(aliquot_id)) return ds.aliquot2submitter.cache.get(aliquot_id)
+	ds.__gdc = {
+		// gather these arbitrary gdc stuff under __gdc{} to be safe
+		aliquot2submitter: {
+			cache: new Map(),
+			get: async aliquot_id => {
+				if (ds.__gdc.aliquot2submitter.cache.has(aliquot_id)) return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
 
-			/* 
-			as on the fly api query is still slow, especially to query one at a time for hundreds of ids
-			simply return unconverted id to preserve performance
-			*/
-			return aliquot_id
+				/* 
+				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
+				simply return unconverted id to preserve performance
+				*/
+				return aliquot_id
 
-			// converts one id on the fly while the cache is still loading
-			//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
-			//return ds.aliquot2submitter.cache.get(aliquot_id)
-		}
+				// converts one id on the fly while the cache is still loading
+				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
+				//return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+			}
+		},
+		// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
+		// this mapping serves case selection from mds3 and matrix, where input can be one of these different types
+		map2caseid: {
+			cache: new Map(),
+			get: input => {
+				return ds.__gdc.map2caseid.cache.get(input)
+				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
+			}
+		},
+		caseIds: new Set(), //
+		casesWithExpData: new Set()
 	}
-	// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
-	// this mapping serves case selection from mds3 and matrix, where input can be one of these different types
-	ds.map2caseid = {
-		cache: new Map(),
-		get: input => {
-			return ds.map2caseid.cache.get(input)
-			// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
+
+	if ('stopGdcCacheAliquot' in serverconfig.features) {
+		// flag is set
+		if (Number.isInteger(serverconfig.features.stopGdcCacheAliquot)) {
+			// flag value is integer (suppose to be positive integer)
+			// allow to test on dev machine
+			console.log('GDC: running limited sample ID caching')
+		} else {
+			// flag value is not integer, do not run this function at all
+			console.log('GDC sample IDs are not cached!')
+			return
 		}
+	} else {
+		// flag not set; this should be on prod server
+		console.log('GDC: caching complete sample ID mapping')
 	}
 
 	try {
-		if (serverconfig.features.stopGdcCacheAliquot) {
-			// caching is skipped. this allows to speed up dev machine launch but should never happen on gdc server
-			return console.log('GDC aliquot2submitter not cached!')
-		}
-
 		// key: aliquot uuid
 		// value: submitter id
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
@@ -837,11 +888,21 @@ async function cacheSampleIdMapping(ds) {
 		const size = 1000 // fetch 1000 ids at a time
 		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
 			await fetchIdsFromGdcApi(ds, size, i * 1000)
+			if (
+				Number.isInteger(serverconfig.features.stopGdcCacheAliquot) &&
+				i >= serverconfig.features.stopGdcCacheAliquot
+			) {
+				// stop caching after this number of loops, to speed up testing
+				break
+			}
 		}
 
+		await checkExpressionAvailability(ds)
+
 		console.log('GDC: Done caching sample IDs', Math.ceil((new Date() - begin) / 1000), 's')
-		console.log('\t', ds.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id')
-		console.log('\t', ds.map2caseid.cache.size, 'different ids to case uuid.')
+		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id')
+		console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid.')
+		console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with exp data.')
 	} catch (e) {
 		console.log('Error at caching: ' + e)
 	}
@@ -914,19 +975,28 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 	for (const h of re.data.hits) {
 		const case_id = h.id
 		if (!case_id) throw 'h.id (case uuid) missing'
+		ds.__gdc.caseIds.add(case_id)
+
 		const case_submitter_id = h.submitter_id
 		if (!case_submitter_id) throw 'h.submitter_id missing'
 
-		// uncomment to detect different uuids mapping to same submitter id
-		//if(ds.map2caseid.cache.has(case_submitter_id)) console.log(case_submitter_id, case_id, ds.map2caseid.cache.get(case_submitter_id))
-		ds.map2caseid.cache.set(case_submitter_id, case_id)
+		/*
+		below shows different uuids mapping to same submitter id
+		this is the reason case submitter id must not be used to align data in oncomatrix, as it's not unique across Projects
+
+		if(ds.__gdc.map2caseid.cache.has(case_submitter_id)) {
+			console.log(case_submitter_id, case_id, ds.__gdc.map2caseid.cache.get(case_submitter_id))
+		}
+		*/
+
+		ds.__gdc.map2caseid.cache.set(case_submitter_id, case_id)
 
 		if (!Array.isArray(h.samples)) continue //throw 'hit.samples[] not array'
 		for (const sample of h.samples) {
 			const sample_submitter_id = sample.submitter_id
 			if (!sample_submitter_id) throw 'sample.submitter_id missing'
 
-			ds.map2caseid.cache.set(sample_submitter_id, case_id)
+			ds.__gdc.map2caseid.cache.set(sample_submitter_id, case_id)
 
 			if (!Array.isArray(sample.portions)) continue // throw 'sample.portions[] not array'
 			for (const portion of sample.portions) {
@@ -936,12 +1006,45 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 					for (const aliquot of analyte.aliquots) {
 						const aliquot_id = aliquot.aliquot_id
 						if (!aliquot_id) throw 'aliquot.aliquot_id missing'
-						ds.aliquot2submitter.cache.set(aliquot_id, sample_submitter_id)
-						ds.map2caseid.cache.set(aliquot_id, case_id)
+						ds.__gdc.aliquot2submitter.cache.set(aliquot_id, sample_submitter_id)
+						ds.__gdc.map2caseid.cache.set(aliquot_id, case_id)
 					}
 				}
 			}
 		}
 	}
 	return re.data?.pagination?.total
+}
+
+async function checkExpressionAvailability(ds) {
+	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
+	const url = 'https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/availability'
+
+	{
+		/*
+		when the api is released in production, delete this check and move it into testGDCapi()
+		exp api is only available on uat now, thus it works if the pp server ip is whitelisted, otherwise won't work and will skip this function
+		*/
+		const c = await testRestApi(url)
+		if (c == 'ERR_NON_2XX_3XX_RESPONSE') {
+			// this is expected code that this instance has access to the uat but the request lacks parameters
+		} else {
+			// this instance does not have access to uat. quit this function and do not abort
+			return
+		}
+	}
+
+	const idLst = [...ds.__gdc.caseIds]
+	const response = await got.post(url, {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({ case_ids: idLst })
+	})
+	const re = JSON.parse(response.body)
+	// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
+	if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
+	for (const c of re.cases.details) {
+		if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
+	}
+
+	delete ds.__gdc.caseIds
 }
