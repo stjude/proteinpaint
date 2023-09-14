@@ -84,7 +84,6 @@ class SampleView {
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
 		const q = appState.termdbConfig.queries
-		console.log(85, config.expandedTermIds)
 		const state = {
 			config,
 			// TODO: use state.config drectly, instead of having to extract
@@ -206,14 +205,9 @@ class SampleView {
 			// fills in termsById, for recovering tree
 
 			if (this.config.expandedTermIds.includes(copy.id)) {
-				console.log(206, '!!! expanded=', copy.id)
 				copy.terms = await this.requestTermRecursive(copy, [...ancestry, t.id])
 				if (this.state.samples) await this.fillSampleData(copy.terms)
 			} else {
-				console.log(209, 'not expanded=', copy.id)
-				// not an expanded term
-				// if it's collapsing this term, must add back its children terms for toggle button to work
-				// see flag TERMS_ADD_BACK
 				const t0 = this.termsById[copy.id]
 				if (this.state.samples) await this.fillSampleData([copy])
 
@@ -327,9 +321,16 @@ export const componentInit = sampleViewInit
 
 function setRenderers(self) {
 	self.render = function () {
-		const activeSample = self.sampleDataByTermId[this.state.sample.sampleId] //console.log(321, activeSample)
-		self.renderTHead([{ name: 'Variable' }, activeSample])
-		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [{ term }, { term, sample: activeSample }]) // console.log(322, tBodyData)
+		// use an array to support multiple visible samples,
+		// but prototyping with just one sample for now
+		const visibleSamples = [self.sampleDataByTermId[this.state.sample.sampleId]]
+		// for the column names, just need the first column name + sample data
+		self.renderTHead([{ name: 'Variable' }, ...visibleSamples])
+		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [
+			{ term }, // first column, no sample data
+			// create data to bind for each sample column
+			...visibleSamples.map(sample => ({ term, sample }))
+		])
 		self.renderTBody(tBodyData)
 	}
 
@@ -376,11 +377,11 @@ function setRenderers(self) {
 			return
 		}
 		//const sampleId = Number(d.sample.sampleId)
-
 		const data = d.sample
 		const term = d.term
 		select(this)
 			.datum(d)
+			// !!! TODO: use getTermValue only for actual data !!!
 			.html(d.sample[d.term.id]?.label || getTermValue(d.term, d.sample))
 	}
 
@@ -397,21 +398,19 @@ function setRenderers(self) {
 				.style('width', '24px')
 				.style('cursor', 'pointer')
 			span.append('span').style('margin-left', `3px`).style('cursor', 'pointer')
-			if (!d.term.isleaf) {
-				console.log(383, 'not leaf', d.term.id)
-				td.on('click', function () {
-					const d = select(this).datum()
-					const expandedTermIds = self.config.expandedTermIds.slice() // create a copy
-					const i = expandedTermIds.indexOf(d.term.id)
-					if (i == -1) expandedTermIds.push(d.term.id)
-					else expandedTermIds.splice(i, 1)
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: { expandedTermIds }
-					})
+			td.on('click', function () {
+				const d = select(this).datum()
+				if (d.term.isleaf) return
+				const expandedTermIds = self.config.expandedTermIds.slice() // create a copy
+				const i = expandedTermIds.indexOf(d.term.id)
+				if (i == -1) expandedTermIds.push(d.term.id)
+				else expandedTermIds.splice(i, 1)
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { expandedTermIds }
 				})
-			}
+			})
 		}
 		const leftIndent = d.term.ancestry.length * 24
 		const span = td.select(':scope>span').style('margin-left', `${leftIndent}px`)
