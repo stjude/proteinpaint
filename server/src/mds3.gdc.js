@@ -63,7 +63,7 @@ export function convertSampleId_addGetter(tdb, ds) {
 	tdb.convertSampleId.get = inputs => {
 		const old2new = {}
 		for (const old of inputs) {
-			old2new[old] = ds.map2caseid.get(old) || old
+			old2new[old] = ds.__gdc.map2caseid.get(old) || old
 		}
 		return old2new
 	}
@@ -1500,7 +1500,7 @@ async function decideSampleId(c, ds, useCaseid4sample) {
 
 	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
 		// hardcoded logic to return sample submitter id when aliquot id is present
-		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
+		return await ds.__gdc.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
 	}
 
 	return c.case_id || c.submitter_id
@@ -1725,7 +1725,7 @@ export function validate_query_singleSampleMutation(ds, genome) {
 		do the conversion here on the fly so that no need for client to manage these extra, arbitrary ids that's specific for gdc
 		beyond sample.sample_id for display
 		*/
-		q.case_id = ds.map2caseid.get(sampleName)
+		q.case_id = ds.__gdc.map2caseid.get(sampleName)
 		if (!q.case_id) {
 			// not mapped to case id
 			// this is possible when the server just started and hasn't finished caching. thus must call this method to map
