@@ -860,15 +860,16 @@ async function cacheSampleIdMapping(ds) {
 		casesWithExpData: new Set()
 	}
 
+	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
 	if ('stopGdcCacheAliquot' in serverconfig.features) {
 		// flag is set
 		if (Number.isInteger(serverconfig.features.stopGdcCacheAliquot)) {
 			// flag value is integer (suppose to be positive integer)
-			// allow to test on dev machine
+			// allow to run a short test on dev machine
 			console.log('GDC: running limited sample ID caching')
 		} else {
 			// flag value is not integer, do not run this function at all
-			console.log('GDC sample IDs are not cached!')
+			console.log('GDC: sample IDs are not cached!')
 			return
 		}
 	} else {
@@ -899,10 +900,10 @@ async function cacheSampleIdMapping(ds) {
 
 		await checkExpressionAvailability(ds)
 
-		console.log('GDC: Done caching sample IDs', Math.ceil((new Date() - begin) / 1000), 's')
+		console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
 		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id')
 		console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid.')
-		console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with exp data.')
+		console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
 	} catch (e) {
 		console.log('Error at caching: ' + e)
 	}
