@@ -30,7 +30,7 @@ suppressWarnings({
 
 infile <- file("stdin")
 input <- fromJSON(infile)
-
+print (input$output_path)
 cases <- unlist(strsplit(input$case, ","))
 controls <- unlist(strsplit(input$control, ","))
 combined <- c("geneID","geneSymbol",cases,controls)
@@ -75,10 +75,12 @@ names(output)[2] <- "gene_symbol"
 names(output)[3] <- "fold_change"
 names(output)[4] <- "original_p_value"
 names(output)[5] <- "adjusted_p_value"
+
 output_json <- toJSON(output)
-#print ("output_json")
-#print (output_json)
-cat(paste0("output_json:",output_json))
+print ("output_json")
+output_file <- paste0(input$output_path,"/r_output.txt")
+print (output_file)
+cat(output_json, file = output_file)
 #top_degs = topTags(object = et, n = "Inf")
 #print ("top_degs")
 #print (top_degs)
