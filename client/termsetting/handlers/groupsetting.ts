@@ -1,6 +1,6 @@
 import { keyupEnter } from '#src/client'
 import { select, selectAll, Selection } from 'd3-selection'
-import { CategoricalTermSettingInstance } from '#shared/types/index'
+import { CategoricalTermSettingInstance, ConditionTermSettingInstance } from '#shared/types/index'
 import { Tabs } from '#dom/toggleButtons'
 import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
@@ -57,7 +57,7 @@ type GrpSetDom = {
 	excludedWrapper: HTMLElement
 }
 
-type GroupSettingInstance = CategoricalTermSettingInstance //Will change to accommodate conditional termsetting later
+type GroupSettingInstance = CategoricalTermSettingInstance | ConditionTermSettingInstance //Will change to accommodate conditional termsetting later
 
 export class GroupSettingMethods {
 	opts: any //a termsetting instance
@@ -69,20 +69,8 @@ export class GroupSettingMethods {
 
 	constructor(opts: GroupSettingInstance) {
 		this.opts = opts
-		// const menuWrapper = this.opts.dom.tip.d.append('div')
-		// const actionDiv = menuWrapper.append('div')
-		// const grpsWrapper = menuWrapper.append('div')
-		this.dom = {
-			// menuWrapper,
-			// actionDiv,
-			// grpsWrapper,
-			// includedWrapper: grpsWrapper.append('div'),
-			// excludedWrapper: grpsWrapper.append('div')
-		}
-		;(this.data = {
-			groups: [],
-			values: []
-		}),
+		;(this.dom = {}),
+			(this.data = { groups: [], values: [] }),
 			(this.minGrpNum = 3), //excluded categories + 2 groups
 			(this.maxGrpNum = 6) //no more than 5 groups + excluded categories
 		setRenderers(this)
@@ -120,7 +108,8 @@ export class GroupSettingMethods {
 			if (!v.count) {
 				//find sample counts for each value once added to array
 				v.count = this.opts.category2samplecount
-					? this.opts.category2samplecount.find((d: { key: string; count: number }) => d.key == v.key).count
+					? this.opts.category2samplecount.find((d: { key: string; label?: string; count: number }) => d.key == v.key)
+							.count
 					: 'n/a'
 			}
 		})

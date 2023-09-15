@@ -1,4 +1,4 @@
-import { TermSettingInstance } from 'termsetting'
+import { TermSettingInstance } from '../termsetting'
 import { TermWrapper, BaseQ } from '../termdb'
 
 /*
@@ -15,7 +15,7 @@ export type ConditionQ = BaseQ & {
 	// termType: 'conditional'
 	bar_by_children?: boolean
 	bar_by_grade?: boolean
-	breaks: number[]
+	breaks?: number[]
 	timeScale: 'age' | 'time'
 	value_by_max_grade?: boolean
 	value_by_most_recent?: boolean
@@ -36,4 +36,6 @@ export type ConditionTW = TermWrapper & {
  */
 export type ConditionTermSettingInstance = TermSettingInstance & {
 	q: ConditionQ
+	category2samplecount: { key: string; label: string; count: number }[]
+	refGrp: any
 }

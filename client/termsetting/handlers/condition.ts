@@ -4,6 +4,8 @@ import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
 import { PillData, ConditionTW, ConditionQ, VocabApi, ConditionTermSettingInstance } from '#shared/types/index'
 import { GroupSettingMethods } from './groupsetting'
+import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
+import { TermValues } from 'shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
@@ -36,25 +38,28 @@ export function getHandler(self: ConditionTermSettingInstance) {
 
 		async postMain() {
 			const body = self.opts.getBodyParams?.() || {}
-			if (self.q.bar_by_children) {
-				const data = await self.vocabApi.getCategories(self.term, self.filter, body)
-				//not really sure this is necessary but it's consistent across other handlers
-				self.category2samplecount = []
-				for (const d of data.lst) {
-					self.category2samplecount.push({
-						key: d.key,
-						label: d.label,
-						count: d.samplecount
-					})
-				}
+			// if (self.q.bar_by_children) {
+			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
+			//not really sure this is necessary but it's consistent across other handlers
+			self.category2samplecount = []
+			for (const d of data.lst) {
+				self.category2samplecount.push({
+					key: d.key,
+					label: d.label,
+					count: d.samplecount
+				})
+				// }
 			}
 		}
 	}
 }
 
 function getPillStatus(self: ConditionTermSettingInstance) {
-	const text: string = self.q?.name || self.q?.reuseId
+	const text: string | undefined = self.q?.name || self.q?.reuseId
 	if (text) return { text }
+	if (self.q.groupsetting?.inuse) {
+		validateGroupsetting(self)
+	}
 	if (self.q.mode == 'discrete') {
 		if (self.q.breaks?.length) {
 			return { text: self.q.breaks.length + 1 + ' groups' }
@@ -68,8 +73,33 @@ function getPillStatus(self: ConditionTermSettingInstance) {
 			if (self.q.bar_by_children) return { text: 'Sub-condition' }
 		}
 	}
-	if (self.q.mode == 'cuminc') return { text: 'Grades ' + self.q.breaks[0] + '-5' }
+	if (self.q.mode == 'cuminc') {
+		if (!self.q.breaks || self.q.breaks.length == 0) throwMsgWithFilePathAndFnName('Missing q.breaks')
+		return { text: `Grades ${self.q.breaks![0]} -5` }
+	}
 	return {}
+}
+
+function validateGroupsetting(self: ConditionTermSettingInstance) {
+	if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+	const text = self.q.name || self.q.reuseId
+	// if (text) return { text }
+	// if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+	// 	if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
+	// 	if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
+	// 	const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+	// 	if (!i)
+	// 		return {
+	// 			text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
+	// 			bgcolor: 'red'
+	// 		}
+	// 	return { text: i.name }
+	// }
+	// if (self.q.groupsetting.customset) {
+	// 	const n = self.q.groupsetting.customset.groups.length
+	// 	return { text: 'Divided into ' + n + ' groups' }
+	// }
+	// return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
 }
 
 async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
@@ -185,8 +215,9 @@ async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 		// use only computable grades
 		// uncomputable grades (i.e. not tested) will be
 		// be displayed as excluded categories
-		const grades = Object.keys(self.term.values)
-			.filter(g => !self.term.values[g].uncomputable)
+		if (!self.term.values) throwMsgWithFilePathAndFnName(`Missing term values`)
+		const grades = Object.keys(self.term.values as TermValues)
+			.filter(g => !self.term.values?.[g].uncomputable)
 			.map(Number)
 			.sort((a, b) => a - b)
 
@@ -263,10 +294,10 @@ function showMenu_cutoff(self: ConditionTermSettingInstance, div: any) {
 	const sd = holder.append('div')
 	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
 	for (const i of cutoffGrades) {
-		gradeSelect.append('option').text(self.term.values[i].label)
+		gradeSelect.append('option').text(self.term.values?.[i].label)
 	}
 	// breaks[0] must have already been set
-	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
+	gradeSelect.property('selectedIndex', self.q.breaks![0] - 1)
 
 	// row 2
 	holder
@@ -288,21 +319,21 @@ function showMenu_cutoff(self: ConditionTermSettingInstance, div: any) {
 		const grade = gradeSelect.property('selectedIndex') + 1
 		g1n.selectAll('*').remove()
 		g2n.selectAll('*').remove()
-		const grades = Object.keys(self.term.values)
+		const grades = Object.keys(self.term.values as TermValues)
 			.map(Number)
 			.sort((a, b) => a - b)
 		for (const i of grades) {
 			if (i < grade) {
-				g1n.append('div').text(self.term.values[i].label)
+				g1n.append('div').text(self.term.values?.[i].label)
 			} else {
-				g2n.append('div').text(self.term.values[i].label)
+				g2n.append('div').text(self.term.values?.[i].label)
 			}
 		}
 	}
 
 	// row 4: time scale toggle (for cox outcome)
 	const timeUnit = self.vocabApi.termdbConfig.timeUnit
-	let timeScaleChoice: string
+	let timeScaleChoice: 'age' | 'time'
 	if (self.q.mode == 'cox') {
 		timeScaleChoice = self.q.timeScale
 		holder.append('div').text('Time axis').style('opacity', 0.4)
@@ -322,7 +353,7 @@ function showMenu_cutoff(self: ConditionTermSettingInstance, div: any) {
 			holder: holder.append('div'),
 			options,
 			styles: { margin: '' },
-			callback: (v: string) => (timeScaleChoice = v)
+			callback: (v: 'age' | 'time') => (timeScaleChoice = v)
 		})
 	}
 
@@ -332,15 +363,16 @@ function showMenu_cutoff(self: ConditionTermSettingInstance, div: any) {
 		.text('Apply')
 		.style('margin', '10px')
 		.on('click', (event: any) => {
+			if (!self.q.breaks || self.q.breaks.length == 0) throwMsgWithFilePathAndFnName('Missing q.breaks')
 			const grade = gradeSelect.property('selectedIndex') + 1
-			self.q.breaks[0] = grade
+			self.q.breaks![0] = grade
 			if (self.q.mode == 'binary') {
 				// split grades into groups based on breaks
 				// include both tested and not tested grades
-				const grades = Object.keys(self.term.values)
+				const grades = Object.keys(self.term.values as TermValues)
 					.map(Number)
 					.sort((a, b) => a - b)
-				self.q.groups = getGroups(grades, self.q.breaks)
+				self.q.groups = getGroups(grades, self.q.breaks!)
 				self.refGrp = self.q.groups[0].name
 			}
 			if (self.q.mode == 'cox') self.q.timeScale = timeScaleChoice
