@@ -168,24 +168,24 @@ class SampleView {
 				holder: this.dom.controlsDiv,
 				inputs: [
 					{
-						boxLabel: 'Show dictionary',
-						label: '',
+						boxLabel: 'Visible',
+						label: 'Samples dictionary',
 						type: 'checkbox',
 						chartType: 'sampleView',
 						settingsKey: 'showDictionary',
 						title: `Option to show/hide dictionary table with sample values`
 					},
 					{
-						boxLabel: 'Show disco',
-						label: '',
+						boxLabel: 'Visible',
+						label: 'Disco plot',
 						type: 'checkbox',
 						chartType: 'sampleView',
 						settingsKey: 'showDisco',
 						title: `Option to show/hide disco plots`
 					},
 					{
-						boxLabel: 'Show single sample',
-						label: '',
+						boxLabel: 'Visible',
+						label: 'Single sample plots',
 						type: 'checkbox',
 						chartType: 'sampleView',
 						settingsKey: 'showSingleSample',
