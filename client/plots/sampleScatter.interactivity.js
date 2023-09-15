@@ -223,7 +223,13 @@ export function setInteractivity(self) {
 			.text('Show only')
 			.on('click', () => {
 				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
-				for (const mapKey of map.keys()) self.hideCategory(legendG, tw, mapKey, !mapKey.startsWith(key))
+				for (const mapKey of map.keys())
+					self.hideCategory(
+						legendG,
+						tw,
+						mapKey,
+						tw.term.type == 'geneVariant' ? !mapKey.startsWith(key) : mapKey != key
+					)
 
 				menu.hide()
 				const config = {}
