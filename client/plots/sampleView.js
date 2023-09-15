@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 
 const root_ID = 'root'
-
+const samplesLimit = 15
 class SampleView {
 	constructor(opts) {
 		this.opts = opts
@@ -47,8 +47,20 @@ class SampleView {
 			.on('click', e => {
 				this.downloadData()
 			})
+		this.dom.noteDiv = sampleDiv
+			.insert('div')
+			.style('display', 'none')
+			.style('vertical-align', 'top')
+			.style('font-size', '0.8em')
+			.style('color', '#aaa')
+			.style('margin-left', '10px')
+			.html(
+				`*Note that only ${samplesLimit} samples can be selected simultaneously. <br/>&nbsp;Please navigate through the list to view all the samples.`
+			)
 		this.dom.messageDiv = sampleDiv
 			.insert('div')
+			.style('position', 'absolute')
+			.style('left', '45%')
 			.style('display', 'inline-block')
 			.style('display', 'none')
 			.style('vertical-align', 'top')
@@ -61,7 +73,10 @@ class SampleView {
 		this.termsByCohort = {}
 
 		const div = this.dom.sampleDiv
-		if (config.samples) this.dom.sampleLabel.html('Samples:')
+		if (config.samples) {
+			this.dom.sampleLabel.html('Samples:')
+			if (config.samples.length > samplesLimit) this.dom.noteDiv.style('display', 'inline-block')
+		}
 		await this.setSampleSelect(config, div)
 	}
 
@@ -74,18 +89,23 @@ class SampleView {
 				.enter()
 				.append('option')
 				.attr('value', d => d.sampleId)
-				.property('selected', (d, i) => i < 15)
+				.property('selected', (d, i) => i < samplesLimit)
 				.html((d, i) => d.sampleName)
 			select.on('change', e => {
 				const options = select.node().options
 				const samples = []
-				for (const option of options)
+				let count = 0
+				for (const option of options) {
 					if (option.selected) {
-						const sampleId = Number(option.value)
-						const sampleName = config.samples.find(s => s.sampleId == sampleId).sampleName
-						const sample = { sampleId, sampleName }
-						samples.push(sample)
+						if (count < samplesLimit) {
+							const sampleId = Number(option.value)
+							const sampleName = config.samples.find(s => s.sampleId == sampleId).sampleName
+							const sample = { sampleId, sampleName }
+							samples.push(sample)
+							count++
+						} else option.selected = false
 					}
+				}
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
 			if (config.samples.length > 15)
