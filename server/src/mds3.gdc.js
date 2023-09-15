@@ -145,22 +145,33 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
+/*
+q{}
+.filter0
+	optional, gdc hidden filter
+.filter
+	optional, pp filter
+.genes[ {gene} ]
+	required. list of genes
+
+compose the gene-by-sample fpkm matrix
+genes are given from query parameter
+samples are determined based on filter/filter0:
+	all cases based on current filter are retrieved
+	then, up to 1000 of those with exp data are kept
+*/
 export function validate_query_geneExpression(ds, genome) {
-	/* q{}
-	.filter0
-		optional, gdc hidden filter
-	.filter
-		optional, pp filter
-	.genes[ {gene} ]
-		required. list of genes
-	*/
 	ds.queries.geneExpression.get = async q => {
 		if (!Array.isArray(q.genes)) throw 'q.genes[] not array'
 
-		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
+		// this data structure is returned
+		const gene2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
 
+		// convert given gene symbols to ENSG for api query
 		const ensgLst = []
+		// convert ensg back to symbol for using in data structure
 		const ensg2symbol = new Map()
+
 		for (const g of q.genes) {
 			if (typeof g.gene != 'string') continue
 			if (g.gene.startsWith('ENSG') && g.gene.length == 15) {
@@ -180,19 +191,15 @@ export function validate_query_geneExpression(ds, genome) {
 			}
 			if (ensgLst.length > 100) break // max 100 genes
 		}
-		if (ensgLst.length == 0) {
-			// no valid genes
-			return new Map()
-		}
-		for (const g of ensgLst) {
-			gene2sample2value.set(ensg2symbol.get(g), new Map())
-		}
+
+		if (ensgLst.length == 0) return gene2sample2value // no valid genes
 
 		// get all cases from current filter
 		const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
-		if (caseLst.length == 0) {
-			// no cases with exp data, return blank
-			return new Map()
+		if (caseLst.length == 0) return gene2sample2value // no cases with exp data
+
+		for (const g of ensgLst) {
+			gene2sample2value.set(ensg2symbol.get(g), new Map())
 		}
 
 		await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
@@ -227,6 +234,7 @@ async function getCasesWithExressionDataFromCohort(q, ds) {
 }
 
 async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
+	// when api is on prod, switch to path.join(apihost, 'gene_expression/values')
 	const response = await got.post('https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/values', {
 		headers: getheaders(q),
 		body: JSON.stringify({
@@ -239,20 +247,29 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 	if (typeof response.body != 'string') throw 'response.body is not tsv text'
 	const lines = response.body.trim().split('\n')
 	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
-	const caseLst = lines[0].split('\t').slice(1)
-	if (caseLst.length != case_ids.length) throw 'caseLst.length != case_ids.length'
 
+	// header line:
+	// gene \t case1 \t case 2 \t ...
+	const caseHeader = lines[0].split('\t').slice(1) // order of case uuid in tsv header
+	if (caseHeader.length != case_ids.length) throw 'sample column length != case_ids.length'
+	const submitterHeader = [] // convert case ids from header into submitter ids, for including in data structure
+	for (const c of caseHeader) {
+		const s = ds.__gdc.caseid2submitter.get(c)
+		if (!s) throw 'case submitter id unknown for a uuid'
+		submitterHeader.push(s)
+	}
+
+	// each line is data from one gene
 	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
-		if (l.length != caseLst.length + 1) throw 'l.length!= caseLst.length+1'
+		if (l.length != submitterHeader.length + 1) throw 'number of fields in gene line does not equal header'
 		const ensg = l[0]
 		if (!ensg) throw 'ensg l[0] missing from a line'
 		const symbol = ensg2symbol.get(ensg)
 		if (!symbol) throw 'symbol missing for ' + ensg
-		for (const [j, caseid] of caseLst.entries()) {
+		for (const [j, sample] of submitterHeader.entries()) {
 			const v = Number(l[j + 1])
 			if (!Number.isFinite(v)) throw 'non-numeric exp value'
-			const sample = ds.__gdc.caseid2submitter.get(caseid)
 			gene2sample2value.get(symbol)[sample] = v
 		}
 	}
