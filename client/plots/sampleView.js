@@ -1,10 +1,12 @@
 import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
+import { controlsInit } from './controls'
 
 const root_ID = 'root'
 
 class SampleView {
 	constructor(opts) {
+		this.opts = opts
 		this.type = 'sampleView'
 		this.setDom(opts)
 		setInteractivity(this)
@@ -12,8 +14,10 @@ class SampleView {
 	}
 
 	setDom(opts) {
-		const mainDiv = opts.holder.append('div')
-		const sampleDiv = mainDiv.insert('div').style('padding', '20px')
+		const div = opts.holder.append('div')
+		const controlsDiv = div.insert('div').style('display', 'inline-block')
+		const mainDiv = div.insert('div').style('display', 'inline-block')
+		const sampleDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
 		const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Sample:')
 
 		const tableDiv = mainDiv.insert('div').style('padding', '10px')
@@ -22,6 +26,7 @@ class SampleView {
 		this.dom = {
 			header: opts.header,
 			holder: opts.holder,
+			controlsDiv,
 			mainDiv,
 			sampleDiv,
 			tableDiv,
@@ -137,14 +142,58 @@ class SampleView {
 	async main() {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
+		this.settings = this.state.config.settings.sampleView
+
+		await this.setControls()
 		if (this.dom.header) this.dom.header.html(`Sample View`)
 		this.termsById = this.getTermsById(this.state)
 		this.sampleDataByTermId = {}
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
-		this.render()
+		this.dom.table.style('display', this.settings.showDictionary ? 'block' : 'none')
+
+		if (this.settings.showDictionary) this.renderSampleDictionary()
+
 		this.renderPlots()
+	}
+
+	async setControls() {
+		this.dom.controlsDiv.selectAll('*').remove()
+
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs: [
+					{
+						boxLabel: 'Show dictionary',
+						label: '',
+						type: 'checkbox',
+						chartType: 'sampleView',
+						settingsKey: 'showDictionary',
+						title: `Option to show/hide dictionary table with sample values`
+					},
+					{
+						boxLabel: 'Show disco',
+						label: '',
+						type: 'checkbox',
+						chartType: 'sampleView',
+						settingsKey: 'showDisco',
+						title: `Option to show/hide disco plots`
+					},
+					{
+						boxLabel: 'Show single sample',
+						label: '',
+						type: 'checkbox',
+						chartType: 'sampleView',
+						settingsKey: 'showSingleSample',
+						title: `Option to show/hide single sample plots`
+					}
+				]
+			})
+		}
 	}
 
 	getTermsById(state) {
@@ -302,7 +351,7 @@ class SampleView {
 
 	mayRequireToken() {
 		if (this.state.hasVerifiedToken) {
-			this.dom.mainDiv.style('display', 'block')
+			this.dom.holder.style('display', 'block')
 			return false
 		} else {
 			const e = this.state.tokenVerificationPayload
@@ -325,7 +374,7 @@ class SampleView {
 		this.dom.contentDiv.selectAll('*').remove()
 		if (this.state.showContent) {
 			const table = this.dom.contentDiv.style('display', 'table')
-			if (this.state.termdbConfig?.queries?.singleSampleMutation) {
+			if (this.settings.showDisco && this.state.termdbConfig?.queries?.singleSampleMutation) {
 				const div = this.dom.contentDiv.append('div').style('display', 'table-row')
 
 				for (const sample of this.state.samples) {
@@ -346,7 +395,7 @@ class SampleView {
 					)
 				}
 			}
-			if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+			if (this.settings.showSingleSample && this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 				for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 					let div = this.dom.contentDiv.append('div').style('padding', '20px').style('display', 'table-row')
 					for (const sample of this.state.samples) {
@@ -398,7 +447,7 @@ export const sampleViewInit = getCompInit(SampleView)
 export const componentInit = sampleViewInit
 
 function setRenderers(self) {
-	self.render = function () {
+	self.renderSampleDictionary = function () {
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
 		const visibleSamples = Object.values(self.sampleDataByTermId)
@@ -506,6 +555,10 @@ function setInteractivity(self) {
 }
 
 export async function getPlotConfig(opts) {
-	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID] }
+	const settings = {
+		controls: { isOpen: false },
+		sampleView: { showDictionary: true, showDisco: true, showSingleSample: true }
+	}
+	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }
 	return copyMerge(config, opts)
 }
