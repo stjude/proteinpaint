@@ -372,10 +372,7 @@ async function get_data(obj) {
 						.attr('r', d => (obj.filteredSamples.has(d.sample) ? radius : 0))
 						.style('opacity', d => (obj.filteredSamples.has(d.sample) ? 1 : 0))
 				} else {
-					obj.dotselection
-						.transition()
-						.attr('r', radius)
-						.style('opacity', 1)
+					obj.dotselection.transition().attr('r', radius).style('opacity', 1)
 				}
 				update_dotcolor_legend(obj)
 			}
@@ -533,12 +530,7 @@ function init_plot(obj) {
 	//const yaxisg = svg.append('g')
 	const dotg = (obj.dotg = svg.append('g').attr('transform', 'translate(' + (leftpad + vpad) + ',' + toppad + ')'))
 
-	const dots = dotg
-		.selectAll()
-		.data(obj.dots)
-		.enter()
-		.append('g')
-		.attr('class', 'sample_dot')
+	const dots = dotg.selectAll().data(obj.dots).enter().append('g').attr('class', 'sample_dot')
 
 	const circles = dots
 		.append('circle')
@@ -574,12 +566,7 @@ function init_plot(obj) {
 	let userdots, usercircles, userlabelg, userlabels, userlabel_borders
 	const userlabel_grp = (obj.userlabel_grp = { userlabels, userlabel_borders })
 	if (obj.dots_user) {
-		userdots = dotg
-			.selectAll()
-			.data(obj.dots_user)
-			.enter()
-			.append('g')
-			.attr('class', 'sample_dot')
+		userdots = dotg.selectAll().data(obj.dots_user).enter().append('g').attr('class', 'sample_dot')
 		usercircles = userdots
 			.append('circle')
 			.attr('stroke', 'none')
@@ -609,12 +596,7 @@ function init_plot(obj) {
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
 				)
 			})
-		userlabelg = dotg
-			.selectAll()
-			.data(obj.dots_user)
-			.enter()
-			.append('g')
-			.attr('class', 'userlabelg')
+		userlabelg = dotg.selectAll().data(obj.dots_user).enter().append('g').attr('class', 'userlabelg')
 
 		userlabel_grp.userlabel_borders = userlabelg
 			.append('text')
@@ -727,7 +709,7 @@ function init_plot(obj) {
 					Object.values(userlabel_grp).forEach(labels =>
 						labels
 							.filter(i => i.sample == d.sample)
-							.each(function() {
+							.each(function () {
 								lw = this.getBBox().width
 							})
 							.attr('text-anchor', x + lw >= width ? 'end' : 'start')
@@ -792,10 +774,7 @@ function makeConfigPanel(obj) {
 	const svg = obj.scattersvg
 
 	// settings buttons
-	obj.scattersvg_buttons
-		.style('position', 'absolute')
-		.style('right', '0px')
-		.style('top', '0px')
+	obj.scattersvg_buttons.style('position', 'absolute').style('right', '0px').style('top', '0px')
 
 	// zoom button
 	obj.zoom_active = false
@@ -837,26 +816,13 @@ function makeConfigPanel(obj) {
 		.style('font-size', '70%')
 		.html('<p style="margin:1px;">Mouse wheel </br>or use these buttons</p>')
 
-	const zoom_in_btn = zoom_inout_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 7px')
-		.text('+')
+	const zoom_in_btn = zoom_inout_div.append('button').style('margin', '1px').style('padding', '2px 7px').text('+')
 
-	const zoom_out_btn = zoom_inout_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 8px')
-		.text('-')
+	const zoom_out_btn = zoom_inout_div.append('button').style('margin', '1px').style('padding', '2px 8px').text('-')
 
 	const pan_div = zoom_menu.append('div').style('margin', '5px 2px')
 
-	pan_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px')
-		.style('font-size', '80%')
-		.text('Pan')
+	pan_div.append('div').style('display', 'block').style('padding', '2px').style('font-size', '80%').text('Pan')
 
 	pan_div
 		.append('div')
@@ -867,11 +833,7 @@ function makeConfigPanel(obj) {
 
 	const reset_div = zoom_menu.append('div').style('margin', '5px 2px')
 
-	const reset_btn = reset_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 8px')
-		.text('Reset')
+	const reset_btn = reset_div.append('button').style('margin', '1px').style('padding', '2px 8px').text('Reset')
 
 	function zoomToggle() {
 		obj.zoom_active = obj.zoom_active ? false : true
@@ -915,10 +877,7 @@ function makeConfigPanel(obj) {
 		})
 
 		reset_btn.on('click', () => {
-			svg
-				.transition()
-				.duration(750)
-				.call(zoom.transform, zoomIdentity)
+			svg.transition().duration(750).call(zoom.transform, zoomIdentity)
 		})
 	}
 
@@ -1044,11 +1003,7 @@ level 1 is not colored
 level 2 is colored and based on sample_attributes[L2key].values{}
 */
 function legend_attr_levels(obj) {
-	const staydiv = obj.legendtable
-		.append('tr')
-		.append('td')
-		.append('div')
-		.style('position', 'relative')
+	const staydiv = obj.legendtable.append('tr').append('td').append('div').style('position', 'relative')
 	const scrolldiv = staydiv.append('div')
 	const L1 = obj.attr_levels[0]
 	L1.v2c = new Map()
@@ -1069,10 +1024,7 @@ function legend_attr_levels(obj) {
 	// multiple ways to decide order of L1values
 	for (const L1value of get_itemOrderList(L1, obj)) {
 		const L1o = L1.v2c.get(L1value)
-		const L1div = scrolldiv
-			.append('div')
-			.style('margin-top', '20px')
-			.attr('class', 'sja_lb_div')
+		const L1div = scrolldiv.append('div').style('margin-top', '20px').attr('class', 'sja_lb_div')
 		L1div.append('div')
 			.attr('class', 'sja_l1lb')
 			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
@@ -1179,10 +1131,7 @@ function legend_attr_levels(obj) {
 		d.append('div').html('Unannotated for "' + L1.key + '": ' + L1.unannotated)
 	}
 	if (L1.v2c.size > 10) {
-		scrolldiv
-			.style('overflow-y', 'scroll')
-			.style('height', '800px')
-			.style('resize', 'vertical')
+		scrolldiv.style('overflow-y', 'scroll').style('height', '800px').style('resize', 'vertical')
 	}
 }
 
@@ -1316,10 +1265,10 @@ function update_dotcolor_legend(obj) {
 	const filterd_dots = obj.dots.filter(d => obj.filteredSamples.has(d.sample))
 	const attrs_list = Array.from(filterd_dots, d => d.s)
 
-	const key1 = obj.attr_levels[0].label || obj.attr_levels[0].key
+	const key1 = obj.attr_levels?.[0].label || obj.attr_levels?.[0].key
 	const l1_labs = [...new Set(Array.from(attrs_list, a => a[key1]))]
 
-	const key2 = obj.attr_levels[1].label || obj.attr_levels[1].key
+	const key2 = obj.attr_levels?.[1].label || obj.attr_levels?.[1].key
 	const l2_labs = [...new Set(Array.from(attrs_list, a => a[key2]))]
 
 	const legend_divs = obj.legendtable.node().querySelectorAll('.sja_lb_div')
@@ -1333,13 +1282,9 @@ function update_dotcolor_legend(obj) {
 		else {
 			d3select(div1).style('display', 'block')
 			// render secondary labels for level2
-			const l2_divs = d3select(div1)
-				.node()
-				.querySelectorAll('.sja_clb')
+			const l2_divs = d3select(div1).node().querySelectorAll('.sja_clb')
 			for (const div2 of l2_divs) {
-				const clab = d3select(div2)
-					.node()
-					.querySelectorAll('div')[1]
+				const clab = d3select(div2).node().querySelectorAll('div')[1]
 				if (!l2_labs.includes(clab.innerText)) d3select(div2).style('display', 'none')
 				else d3select(div2).style('display', 'inline-block')
 			}
@@ -1412,10 +1357,7 @@ function click_dot_mdsview(dot, obj, event) {
 	const pane = client.newpane({ x: event.clientX, y: event.clientY })
 	pane.header.text(dot.sample)
 
-	const wait = pane.body
-		.append('div')
-		.style('margin', '20px')
-		.text('Loading ...')
+	const wait = pane.body.append('div').style('margin', '20px').text('Loading ...')
 
 	client
 		.dofetch('/mdssvcnv', {
@@ -1441,14 +1383,9 @@ function lasso_select(obj, dots) {
 	let lasso
 
 	if (obj.lasso_active) {
-		lasso = d3lasso()
-			.items(dots.selectAll('circle'))
-			.targetArea(svg)
+		lasso = d3lasso().items(dots.selectAll('circle')).targetArea(svg)
 
-		lasso
-			.on('start', scatterplot_lasso_start)
-			.on('draw', scatterplot_lasso_draw)
-			.on('end', scatterplot_lasso_end)
+		lasso.on('start', scatterplot_lasso_start).on('draw', scatterplot_lasso_draw).on('end', scatterplot_lasso_end)
 
 		svg.call(lasso)
 	} else {
@@ -1459,12 +1396,7 @@ function lasso_select(obj, dots) {
 	// Lasso custom functions
 	function scatterplot_lasso_start() {
 		if (!obj.lasso_active) return
-		lasso
-			.items()
-			.attr('r', 2)
-			.style('fill-opacity', '.5')
-			.classed('not_possible', true)
-			.classed('selected', false)
+		lasso.items().attr('r', 2).style('fill-opacity', '.5').classed('not_possible', true).classed('selected', false)
 	}
 
 	function scatterplot_lasso_draw() {
@@ -1499,10 +1431,7 @@ function lasso_select(obj, dots) {
 		// Reset classes of all items (.possible and .not_possible are useful
 		// only while drawing lasso. At end of drawing, only selectedItems()
 		// should be used)
-		lasso
-			.items()
-			.classed('not_possible', false)
-			.classed('possible', false)
+		lasso.items().classed('not_possible', false).classed('possible', false)
 
 		// Style the selected dots
 		lasso.selectedItems().attr('r', radius)
@@ -1663,20 +1592,11 @@ function init_mutation_type_control(obj, samples) {
 
 		// mutation type selection
 		const mut_div = criteria_div.append('div')
-		const mut_label_div = mut_div
-			.append('div')
-			.style('display', 'table-cell')
-			.style('width', '110px')
+		const mut_label_div = mut_div.append('div').style('display', 'table-cell').style('width', '110px')
 
-		mut_label_div
-			.append('div')
-			.text('Mutation Types')
-			.style('padding-right', '15px')
+		mut_label_div.append('div').text('Mutation Types').style('padding-right', '15px')
 
-		const mut_types_div = mut_div
-			.append('div')
-			.style('display', 'table-cell')
-			.style('border-left', 'solid 1px #ededed')
+		const mut_types_div = mut_div.append('div').style('display', 'table-cell').style('border-left', 'solid 1px #ededed')
 
 		non_cnv_types.forEach(type => {
 			const m_div = mut_types_div.append('div')
@@ -1697,10 +1617,7 @@ function init_mutation_type_control(obj, samples) {
 				}
 			})
 
-			m_div
-				.append('label')
-				.attr('for', type.db_col)
-				.html(type.label)
+			m_div.append('label').attr('for', type.db_col).html(type.label)
 		})
 
 		const cnv_checkbox = mut_types_div
@@ -1721,64 +1638,38 @@ function init_mutation_type_control(obj, samples) {
 				}
 			})
 
-		mut_types_div
-			.append('label')
-			.attr('for', 'cnv')
-			.text('CNV')
+		mut_types_div.append('label').attr('for', 'cnv').text('CNV')
 
-		const cnv_options_div = mut_types_div
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '3px 15px')
+		const cnv_options_div = mut_types_div.append('div').style('display', 'block').style('padding', '3px 15px')
 
 		const cnv_size_cutoff = [...new Set(cnv_types.map(t => t.sizecutoff))]
 		const cnv_ratio_cutoff = [...new Set(cnv_types.map(t => t.log2cutoff))]
 
-		cnv_options_div
-			.append('label')
-			.attr('for', 'cnv_size')
-			.style('margin', '2px 10px')
-			.text('Size cutoff')
+		cnv_options_div.append('label').attr('for', 'cnv_size').style('margin', '2px 10px').text('Size cutoff')
 
 		const size_select = cnv_options_div.append('select').attr('name', 'cnv_size')
 
 		cnv_size_cutoff.forEach(size => {
-			size_select
-				.append('option')
-				.attr('value', size)
-				.text(size)
+			size_select.append('option').attr('value', size).text(size)
 		})
 
 		size_select.property('selectedIndex', default_cnv.sizecutoff == '1Mb' ? 0 : default_cnv.sizecutoff == '2Mb' ? 1 : 2)
 
-		cnv_options_div
-			.append('label')
-			.attr('for', 'log2_ratio')
-			.style('margin', '2px 10px')
-			.text('log2(ratio) cutoff')
+		cnv_options_div.append('label').attr('for', 'log2_ratio').style('margin', '2px 10px').text('log2(ratio) cutoff')
 
 		const ratio_select = cnv_options_div.append('select').attr('name', 'log2_ratio')
 
 		cnv_ratio_cutoff.forEach(ratio => {
-			ratio_select
-				.append('option')
-				.attr('value', ratio.toFixed(1))
-				.text(ratio.toFixed(1))
+			ratio_select.append('option').attr('value', ratio.toFixed(1)).text(ratio.toFixed(1))
 		})
 
 		ratio_select.property('selectedIndex', default_cnv.log2cutoff == 0.1 ? 0 : default_cnv.log2cutoff == 0.2 ? 1 : 2)
 
 		// gene # selection for sample matrix
 		const gene_div = criteria_div.append('div').style('padding-top', '10px')
-		const gene_label_div = gene_div
-			.append('div')
-			.style('display', 'table-cell')
-			.style('width', '110px')
+		const gene_label_div = gene_div.append('div').style('display', 'table-cell').style('width', '110px')
 
-		gene_label_div
-			.append('div')
-			.text('No. of Genes')
-			.style('padding-right', '15px')
+		gene_label_div.append('div').text('No. of Genes').style('padding-right', '15px')
 
 		const gene_n_select_div = gene_div
 			.append('div')
@@ -1791,13 +1682,13 @@ function init_mutation_type_control(obj, samples) {
 		const gene_n_select = gene_n_select_div.append('select').attr('name', 'gene_n')
 
 		gene_n.forEach(n => {
-			gene_n_select
-				.append('option')
-				.attr('value', n)
-				.text(n)
+			gene_n_select.append('option').attr('value', n).text(n)
 		})
 
-		gene_n_select.property('selectedIndex', gene_n.findIndex(n => n == nGenes))
+		gene_n_select.property(
+			'selectedIndex',
+			gene_n.findIndex(n => n == nGenes)
+		)
 
 		const calc_btn = criteria_div
 			.append('button')

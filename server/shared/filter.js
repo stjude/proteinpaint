@@ -47,7 +47,7 @@ export function sample_match_termvaluesetting(row, filter, _term = null, sample 
 			} else if (sample && t.term$id) {
 				samplevalue = sample[t.term$id]
 			} else {
-				samplevalue = row
+				samplevalue = t.term.id in row ? row[t.term.id] : row
 			}
 			setDatasetAnnotations(itemCopy)
 			let thistermmatch
