@@ -324,13 +324,15 @@ class SampleView {
 	async renderPlots() {
 		this.dom.contentDiv.selectAll('*').remove()
 		if (this.state.showContent) {
-			for (const stateSample of this.state.samples) {
-				let sample = JSON.parse(JSON.stringify(stateSample))
-				sample.sample_id = sample.sampleName
-				if (this.state.termdbConfig?.queries?.singleSampleMutation) {
-					const div = this.dom.contentDiv
-					div
-						.append('div')
+			const table = this.dom.contentDiv.style('display', 'table')
+			if (this.state.termdbConfig?.queries?.singleSampleMutation) {
+				const div = this.dom.contentDiv.append('div').style('display', 'table-row')
+
+				for (const sample of this.state.samples) {
+					const cellDiv = div.append('div').style('display', 'table-cell')
+
+					cellDiv
+						.insert('div')
 						.style('font-weight', 'bold')
 						.style('padding-left', '20px')
 						.text(`${sample.sampleName} Disco plot`)
@@ -338,27 +340,26 @@ class SampleView {
 					discoPlotImport.default(
 						this.state.termdbConfig,
 						this.state.vocab.dslabel,
-						sample,
-						div.append('div'),
+						{ sample_id: sample.sampleName },
+						cellDiv,
 						this.app.opts.genome
 					)
 				}
-				if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-					for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-						const div = this.dom.contentDiv.append('div').style('padding', '20px')
+			}
+			if (this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+					let div = this.dom.contentDiv.append('div').style('padding', '20px').style('display', 'table-row')
+					for (const sample of this.state.samples) {
 						const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-						div
-							.append('div')
-							.style('padding-bottom', '20px')
-							.style('font-weight', 'bold')
-							.text(`${sample.sampleName} ${label}`)
+						const plotDiv = div.insert('div').style('display', 'table-cell')
+						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
 						const ssgqImport = await import('./plot.ssgq.js')
 						await ssgqImport.plotSingleSampleGenomeQuantification(
 							this.state.termdbConfig,
 							this.state.vocab.dslabel,
 							k,
-							sample,
-							div.append('div'),
+							{ sample_id: sample.sampleName },
+							plotDiv.insert('div'),
 							this.app.opts.genome
 						)
 					}

@@ -24,7 +24,7 @@ export default class ViewModel {
 		this.fusions = fusions
 
 		this.width =
-			2 *
+			1.5 *
 			(this.settings.horizontalPadding +
 				this.settings.rings.labelLinesInnerRadius +
 				this.settings.rings.labelsToLinesDistance)
