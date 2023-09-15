@@ -451,7 +451,7 @@ function setRenderers(self) {
 		// but prototyping with just one sample for now
 		const visibleSamples = Object.values(self.sampleDataByTermId)
 		// for the column names, just need the first column name + sample data
-		self.renderTHead([{ name: 'Variable' }, ...visibleSamples])
+		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)])
 		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [
 			{ term }, // first column, no sample data
 			// create data to bind for each sample column
@@ -461,13 +461,14 @@ function setRenderers(self) {
 	}
 
 	self.renderTHead = function (data) {
+		console.log(data)
 		const trs = self.dom.theadrow.selectAll('th').data(data)
 		trs.exit().remove()
 		trs.html(self.getThHtml)
 		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').html(self.getThHtml)
 	}
 
-	self.getThHtml = d => d.sampleName || ''
+	self.getThHtml = d => d
 
 	self.renderTBody = function (data) {
 		const trs = self.dom.tbody.selectAll('tr').data(data)
