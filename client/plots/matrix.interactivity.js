@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '#dom/sandbox'
-import { mclass } from '#shared/common'
+import { mclass, dt2label } from '#shared/common'
 import { format as d3format } from 'd3-format'
 
 let inputIndex = 0
@@ -37,25 +37,27 @@ export function setInteractivity(self) {
 				}</td></tr>`
 			)
 		} else if (d.term.type == 'geneVariant' && d.value) {
-			rows.push(
-				`<tr><td colspan='2' style='text-align: center'>${l.Sample}: ${
-					d._SAMPLENAME_ || d.value._SAMPLENAME_ || d.value.sample
-				}</td></tr>`
-			)
-			rows.push(`<tr><td colspan='2' style='text-align: center'>${d.term.name}</td></tr>`)
+			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.value._SAMPLENAME_ || d.value.sample}</td></tr>`)
+			rows.push(`<tr><td>Gene:</td><td>${d.term.name}</td></tr>`)
+
 			for (const c of d.siblingCells) {
 				if (c.$id != d.$id) continue
 				const v = c.value
 				const p = v.pairlst
+				const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
 				// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
 				// list that label only once but with a hit count, instead of listing that same label
 				// as multiple table rows in the mouseover
-				let label = p
-					? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
-					: v.mname
-					? `${v.mname} ${c.label}`
-					: c.label
-				if (label == 'Gene Expression') label += `: ${v.value}`
+				const label =
+					c.label == 'Gene Expression'
+						? c.label + `: ${v.value}`
+						: p
+						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+						: v.mname
+						? `${v.mname} ${mclass[v.class].label}`
+						: mclass[v.class].label
+
+				/* display as two column tabel, do not display these info and do not show gradient CNV anymore
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
 				if ('value' in v) info.push(`${s.cnvUnit}=${v.value}`)
@@ -64,13 +66,12 @@ export function setInteractivity(self) {
 					info.push(`${v.chr}${pos}`)
 				}
 				if (v.alt) info.push(`${v.ref}>${v.alt}`)
-				/*
-				do not use gradient CNV anymore
+
 				const tds = !info.length
 					? `<td colspan='2' style='text-align: center'>${label}</td>`
 					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
 				*/
-				const tds = `<td colspan='2' style='text-align: center'>${label}</td>`
+				const tds = `<td>${label}</td>`
 				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
 				/*
 				do not use gradient CNV anymore
@@ -83,7 +84,7 @@ export function setInteractivity(self) {
 					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
 				}
 				*/
-				rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
+				rows.push(`<tr style='color: ${color}'><td>${dtLabel}:</td>${tds}</tr>`)
 			}
 		}
 		self.dom.menutop.selectAll('*').remove()
@@ -1417,10 +1418,11 @@ function setLabelDragEvents(self, prefix) {
 			//Add subGroup name
 			const titleDiv = self.dom.menubody
 				.append('div')
-				.style('text-align', 'center')
+				.style('text-align', 'left')
+				.style('font-size', '1.1em')
 				.html(groupName ? `<b>${groupName}: ${termName}</b>` : `<b>${termName}</b>`)
 
-			const div = self.dom.menubody.append('div').style('max-width', '400px').style('padding', '5px')
+			const div = self.dom.menubody.append('div').style('max-width', '400px')
 
 			const data = event.target.__data__
 
@@ -1437,7 +1439,8 @@ function setLabelDragEvents(self, prefix) {
 				//Add number of tested samples
 				titleDiv
 					.append('div')
-					.style('text-align', 'center')
+					.style('text-align', 'left')
+					.style('font-size', '0.9em')
 					.html(`(tested ${self.samples.length - notTestedSum} of ${self.samples.length})`)
 
 				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
@@ -1485,11 +1488,11 @@ function setLabelDragEvents(self, prefix) {
 					}
 				}
 			} else if (!self.config.divideBy) {
-				// non-geneVariant term, when matrix is divided into multiple subGorups
+				// non-geneVariant term, when matrix is not divided into multiple subGorups
 				const termLegend = self.legendData.find(t => t.name == data.label)
 				if (termLegend && termLegend.items) {
 					// when legend data is available
-					const t = div.append('table').style('margin-left', '15px')
+					const t = div.append('table')
 					for (const classType of termLegend.items) {
 						const tr = t.append('tr')
 						// icon
@@ -1509,8 +1512,8 @@ function setLabelDragEvents(self, prefix) {
 							.style('padding-top', '10px')
 							.html(
 								grpName !== ''
-									? `<b>${grpName}</b>: tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
-									: `<b>tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+									? `<b>${grpName}</b>: ${counts.samplesTotal} of ${groupSampleTotal}`
+									: `<b>${counts.samplesTotal} of ${groupSampleTotal}`
 							)
 						const t = div.append('table').style('margin-left', '15px')
 						for (const [classType, num] of Object.entries(counts.classes).sort((a, b) => b[1] - a[1])) {
@@ -1528,7 +1531,7 @@ function setLabelDragEvents(self, prefix) {
 					}
 				}
 			} else {
-				// non-geneVariant term, when matrix is not divided into multiple subGorups
+				// non-geneVariant term, when matrix is divided into multiple subGorups
 				for (const [grpName, counts] of Object.entries(data.counts.subGroupCounts)) {
 					const groupSampleTotal = self.sampleGroups.find(g => g.name == grpName).totalCountedValues
 					div
@@ -1536,8 +1539,8 @@ function setLabelDragEvents(self, prefix) {
 						.style('padding-top', '10px')
 						.html(
 							grpName !== ''
-								? `<b>${grpName}</b>: tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
-								: `<b>tested samples (${counts.samplesTotal} of ${groupSampleTotal})`
+								? `<b>${grpName}</b>: ${counts.samplesTotal} of ${groupSampleTotal}`
+								: `<b>${counts.samplesTotal} of ${groupSampleTotal}`
 						)
 					const subGrp = self.sampleGroups.find(g => g.name == grpName)
 					const termLegend = subGrp.legendData.find(t => t.name == data.label)
