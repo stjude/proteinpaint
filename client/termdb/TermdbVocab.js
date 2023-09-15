@@ -4,6 +4,7 @@ import { dofetch3, isInSession } from '../common/dofetch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
+import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -559,7 +560,7 @@ export class TermdbVocab extends Vocab {
 
 		try {
 			const data = await dofetch3('/termdb', { body })
-			if (data.error) throw data.error
+			if (data.error) throwMsgWithFilePathAndFnName(`${data.error}`)
 			return data
 		} catch (e) {
 			window.alert(e.message || e)

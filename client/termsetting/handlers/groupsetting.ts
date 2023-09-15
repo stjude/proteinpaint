@@ -63,7 +63,8 @@ export class GroupSettingMethods {
 	opts: any //a termsetting instance
 	dom: Partial<GrpSetDom>
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
-	newGrpNum: any //Number for naming new groups
+	minGrpNum: number //minimum num of groups rendered, including excluded categories
+	maxGrpNum: number //max num of groups rendered
 	initGrpSetUI: any
 
 	constructor(opts: GroupSettingInstance) {
@@ -78,10 +79,12 @@ export class GroupSettingMethods {
 			// includedWrapper: grpsWrapper.append('div'),
 			// excludedWrapper: grpsWrapper.append('div')
 		}
-		this.data = {
+		;(this.data = {
 			groups: [],
 			values: []
-		}
+		}),
+			(this.minGrpNum = 3), //excluded categories + 2 groups
+			(this.maxGrpNum = 6) //no more than 5 groups + excluded categories
 		setRenderers(this)
 	}
 
@@ -90,7 +93,7 @@ export class GroupSettingMethods {
 		//these three groups should always appear in the menu
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
 		const input = structuredClone(data)
-		if (this.opts.q.groupsetting.customset) {
+		if (this.opts.q?.groupsetting?.customset) {
 			//customset created after user applies groupsetting
 			//returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
@@ -104,7 +107,8 @@ export class GroupSettingMethods {
 				const value = {
 					key: k,
 					label: v.label,
-					group: v.group || 1
+					group: v.group || 1,
+					count: v.count
 				}
 				this.data.values.push(value)
 				grpIdxes.add(value.group)
@@ -112,10 +116,13 @@ export class GroupSettingMethods {
 		}
 		if (this.data.values.length == 0) throwMsgWithFilePathAndFnName(`Missing values`)
 		this.data.values.forEach(v => {
-			//find sample counts for each value once added to array
-			v.count = this.opts.category2samplecount
-				? this.opts.category2samplecount.find((d: { key: string; count: number }) => d.key == v.key).count
-				: 'n/a'
+			//subconditions formated with count, categorical term values do not have a count
+			if (!v.count) {
+				//find sample counts for each value once added to array
+				v.count = this.opts.category2samplecount
+					? this.opts.category2samplecount.find((d: { key: string; count: number }) => d.key == v.key).count
+					: 'n/a'
+			}
 		})
 
 		for (const g of Array.from(grpIdxes)) {
@@ -163,9 +170,11 @@ export class GroupSettingMethods {
 
 	async main() {
 		try {
-			const input = this.opts.q.bar_by_children ? this.opts.term.subconditions : this.opts.term.values
+			const input = this.opts.q.bar_by_children //Is this subconditions or term.valus?
+				? this.opts.category2samplecount //subconditions already formated in condition handler
+				: this.opts.term.values // categorical terms need formating
 			this.processInput(input)
-			this.initGrpSetUI()
+			await this.initGrpSetUI()
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			else throwMsgWithFilePathAndFnName(e)
@@ -174,7 +183,7 @@ export class GroupSettingMethods {
 }
 
 function setRenderers(self: any) {
-	self.initGrpSetUI = function () {
+	self.initGrpSetUI = async function () {
 		self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
 		// if (self.data.values.length > 10) {
 		// 	//Tabs functionality for later - leave it for layout testing
@@ -200,7 +209,7 @@ function setRenderers(self: any) {
 
 		// 	new Tabs({holder: self.dom.tip.d, tabs}).main()
 		// } else {
-		self.showDraggables()
+		await self.showDraggables()
 		// }
 	}
 	self.showDraggables = async function () {
@@ -219,7 +228,7 @@ function setRenderers(self: any) {
 			.style('text-transform', 'uppercase')
 			.style('cursor', 'pointer')
 			.style('background', '#d0e0e3')
-			.property('disabled', self.data.groups.length >= 5) //cap the number of groups at 4, including excluded categories
+			.property('disabled', self.data.groups.length === self.maxGrpNum)
 			.text('Add Group')
 			.on('click', async () => {
 				newGrpNum++
@@ -398,10 +407,10 @@ function setRenderers(self: any) {
 				.attr('class', 'sjpp_apply_btn')
 				.style('display', 'inline-block')
 				.style('padding', '0px 4px')
-				.property('disabled', self.data.groups.length <= 3)
+				.property('disabled', self.data.groups.length <= self.minGrpNum)
 				.text('x')
 				.on('click', async (event: MouseEvent) => {
-					if (self.data.groups.length <= 3) return
+					if (self.data.groups.length <= self.minGrpNum) return
 					self.data.groups = self.data.groups.filter((d: GrpEntry) => d.currentIdx != group.currentIdx)
 					await self.removeGroup(group)
 				}) as Element
@@ -516,7 +525,7 @@ function setRenderers(self: any) {
 	// }
 
 	self.update = async function () {
-		self.dom.actionDiv.addGroup.property('disabled', self.data.groups.length === 5)
+		self.dom.actionDiv.addGroup.property('disabled', self.data.groups.length === self.maxGrpNum)
 		for (const [i, grp] of self.data.groups.entries()) {
 			if (i === 0) continue
 			if (grp.currentIdx != i) {
@@ -530,7 +539,7 @@ function setRenderers(self: any) {
 			.each(async (group: GrpEntryWithDom) => {
 				if (group.currentIdx !== 0) {
 					group.input.node().value = group.name
-					group.destroyBtn.property('disabled', self.data.groups.length <= 3)
+					group.destroyBtn.property('disabled', self.data.groups.length <= self.minGrpNum)
 				}
 				await self.addItems(group)
 			})

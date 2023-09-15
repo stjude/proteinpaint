@@ -419,10 +419,10 @@ function getDefaultQ(term, q) {
 			mode: q.mode,
 			breaks: q.breaks,
 			bar_by_grade: q.bar_by_grade,
-			bar_by_children: q.bar_by_children,
+			bar_by_children: term.subconditions || q.bar_by_children,
 			value_by_max_grade: q.value_by_max_grade,
 			value_by_most_recent: q.value_by_most_recent,
-			value_by_computable_grade: q.value_by_computable_grade
+			value_by_computable_grade: term.subconditions || q.value_by_computable_grade
 		}
 	}
 	if (term.type == 'geneVariant') return {}
