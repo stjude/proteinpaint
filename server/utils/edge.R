@@ -1,4 +1,6 @@
-# json='{"case":"SJMB066856,SJMB069601,SJMB030827,SJMB030838,SJMB031131,SJMB031227,SJMB077221,SJMB077223","control":"SJMB069596,SJMB069587,SJMB074736,SJMB030488,SJMB030825,SJMB031110,SJMB032998,SJMB033002","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | Rscript edge_test.R
+# json='{"case":"SJMB066856,SJMB069601,SJMB030827,SJMB030838,SJMB031131,SJMB031227,SJMB077221,SJMB077223","control":"SJMB069596,SJMB069587,SJMB074736,SJMB030488,SJMB030825,SJMB031110,SJMB032998,SJMB033002","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | Rscript edge.R
+
+# json='{"case":"SJMB030827,SJMB030838,SJMB064540,SJMB064538,SJMB064520,SJMB064535,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB064537,SJMB064510,SJMB064533,SJMB064534,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | Rscript edge.R
 
 # Checking if all R packages are installed or not, if not installing each one of them
 
@@ -74,8 +76,9 @@ names(output)[3] <- "fold_change"
 names(output)[4] <- "original_p_value"
 names(output)[5] <- "adjusted_p_value"
 output_json <- toJSON(output)
-print ("output_json")
-print (output_json)
+#print ("output_json")
+#print (output_json)
+cat(paste0("output_json:",output_json))
 #top_degs = topTags(object = et, n = "Inf")
 #print ("top_degs")
 #print (top_degs)

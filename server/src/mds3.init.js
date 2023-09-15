@@ -1,6 +1,8 @@
 import fs from 'fs'
 import readline from 'readline'
-import path from 'path'
+const path = require('path'),
+	spawn = require('child_process').spawn,
+	Readable = require('stream').Readable
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -1286,28 +1288,87 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		if (group1names.length < 1) throw 'group1names.length<1'
 		if (group2names.length < 1) throw 'group2names.length<1'
 		// pass group names and txt file to rust
-
 	        const cases_string = group1names.map(i => i).join(',')
 	        const controls_string = group2names.map(i => i).join(',')
 	        const expression_input = {case: cases_string, control: controls_string, input_file: q.file}
 	        //console.log("expression_input:",expression_input)
-
-	    	const time1 = new Date()
-	        const rust_output = await run_rust('expression', JSON.stringify(expression_input))
-                const time2 = new Date()
 	    
+                const sample_size_limit = 3 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 	        let result
-	        for (const line of rust_output.split('\n')) {
-                    if (line.startsWith("adjusted_p_values:")) {
-			result=JSON.parse(line.replace("adjusted_p_values:",""))
-		    } else {
-                        console.log(line)
-		    }	
-	        }
-	        console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+                if (group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) { // edgeR will be used for DE analysis
+		    const time1 = new Date() 
+                    const r_output = await run_edgeR(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
+		    const time2 = new Date()
+		    console.log('Time taken to run edgeR:', time2 - time1, 'ms')
+		    //console.log("r_output:",r_output)
+
+		    for (const line of r_output.split('\n')) {
+                        //console.log("line:",line.substring(0,1000))	
+                        if (line.includes("output_json:")) {
+			     //console.log(line.replace(",output_json:",""))
+		      	     result=JSON.parse(line.replace(",output_json:",""))
+		          } else {
+                              //console.log(line)
+		          }	
+	            }
+		    //console.log("result:",result)
+	        } else { // Wilcoxon test will be used for DE analysis	   
+	    	      const time1 = new Date()
+	              const rust_output = await run_rust('expression', JSON.stringify(expression_input))
+                      const time2 = new Date()
+	              for (const line of rust_output.split('\n')) {
+                          if (line.startsWith("adjusted_p_values:")) {
+		      	result=JSON.parse(line.replace("adjusted_p_values:",""))
+		          } else {
+                              //console.log(line)
+		          }	
+	              }
+	              console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+		}    
 		return result
 	}
 }
+
+async function run_edgeR(Rscript, input_data) {
+	return new Promise((resolve, reject) => {
+	    const binpath = path.join(serverconfig.Rscript, Rscript)
+	        console.log("serverconfig.Rscript:",serverconfig.Rscript)
+	        console.log("binpath:",binpath)
+		const ps = spawn(serverconfig.Rscript, [Rscript])
+		const stdout = []
+		const stderr = []
+
+		try {
+			Readable.from(input_data).pipe(ps.stdin)
+		} catch (error) {
+			ps.kill()
+			let errmsg = error
+			if (stderr.length) errmsg += `killed edgeR('${Rscript}'), stderr: ${stderr.join('').trim()}`
+			reject(errmsg)
+		}
+
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			if (stderr.length) console.log(`edgeR('${Rscript}') ps.on('error') stderr:`, stderr)
+			reject(err)
+		})
+		ps.on('close', code => {
+			if (code !== 0) reject(`spawned '${Rscript}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
+			//else if (stderr.length) {
+			//	// handle rust stderr
+			//	const err = stderr.join('').trim()
+			//	const errmsg = `edgeR('${Rscript}') emitted standard error\n stderr: ${err}`
+			//	//reject(errmsg)
+			//}
+		        else {
+			        //console.log("stdout:",stdout)
+			        resolve(stdout.toString())
+			}
+		})
+	})
+}
+
 
 async function validate_query_geneExpression(ds, genome) {
 	const q = ds.queries.geneExpression
