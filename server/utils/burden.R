@@ -3,12 +3,20 @@
 
 rm(list=ls())
 
-library(dplyr)  ### Qi changed to load plyr first, due to R message: If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
-library(survival)
+suppressPackageStartupMessages(library(dplyr))  ### Qi changed to load plyr first, due to R message: If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
+suppressPackageStartupMessages(library(survival))
 library(jsonlite)
 
+options(warn=-1)
+
 # Input from lines2R
-args <- commandArgs(trailingOnly = T)
+# args <- commandArgs(trailingOnly = T)
+args <- c(
+	'/Users/esioson/gb/cachedir/0.14859190704410774.json', 
+	'/Users/esioson/gb/tp/files/hg38/sjlife/burden/cphfits2.RData', 
+	'/Users/esioson/gb/tp/files/hg38/sjlife/burden/surv.RData', 
+	'/Users/esioson/gb/tp/files/hg38/sjlife/burden/nchcsampledsex0age0steroid0bleo0vcr0etop0itmt0.RData'
+)
 if (length(args) != 4) stop("Usage: Rscript cuminc.R in.json > results")
 infile <- args[1]
 fitsData <- args[2]
@@ -23,7 +31,7 @@ sampleData <- args[4]
 
 load(fitsData)
 load(survData)
-survs[[1]]
+invisible(survs[[1]])
 
 ############################ These are the input values in APP that users can change. Edgar, these should be the same as the APP before, variable names and units. #############
 ### Input the primary DX. 
@@ -60,8 +68,7 @@ agecut=40   ##### Edgar, This is not an user input paramter, but we input this. 
 #	steroidval=0; bleoval=0; 	vcrval=0; 	etopval=0;	itmtval=0; 	cedval=0; cispval=0; brainval=0; 
 #	doxval=0; chestval=0; abdval=0;
 
-
-survs[[1]]
+invisible(survs[[1]])
 
 ############### no TX
 #	steroidval=0;  bleoval=0; vcrval=0; etopval=0; itmtval=0; cedval=0; cispval=0; brainval=0;  doxval=0; chestval=0; abdval=0; heartval=0; pelvisval=0; carboval=0; hdmtxval=0
@@ -120,7 +127,7 @@ newdata_chc_sampled = newdata_chc_sampled %>%
 	group_by(mrn) %>%
 	mutate(sumN_obs = cumsum(sumN_tmp)) %>%
 	as.data.frame()
-	
+
 ##Qi: the sumN here depends on all the 26 grouped conditions. So the input X's all matter. That is, if sex is not in a CHC of interest, it would make a difference here on sumN (becuase sex was on some CHCs), and hence make a difference on burden of that CHC even that it is not in the cphfits of that CHC.
 newdata_chc_sampled = newdata_chc_sampled %>%
 	group_by(mrn) %>%
@@ -147,29 +154,28 @@ newdata_chc_sampled$survprob = exp(-predict(survs[[1]],newdata=data.frame(newdat
 newdata_chc_sampled$survprob4=cumprod(newdata_chc_sampled$survprob)
 newdata_chc_sampled$survprob=newdata_chc_sampled$survprob4
 
-
 #	plot(c(0,90),c(0,1),type="n")
 survspline=smooth.spline(newdata_chc_sampled$t.endage[newdata_chc_sampled$t.endage<=agecut],newdata_chc_sampled$survprob[newdata_chc_sampled$t.endage<=agecut],spar=0.5)
 predsurv=predict(survspline,seq(0,95,1))
+
 #	lines(predsurv$x,predsurv$y,col=3,lty=2)
 
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
 
 ###### get rid of the est_chcXX and "sumN"columns which were used to calculate the survival probability only.
-dim(newdata_chc_sampled)
+invisible(dim(newdata_chc_sampled))
 newdata_chc_sampled=newdata_chc_sampled[,-grep("est_chc", colnames(newdata_chc_sampled))]
 newdata_chc_sampled=newdata_chc_sampled[,-grep("sumN", colnames(newdata_chc_sampled))]
-dim(newdata_chc_sampled)
-
+invisible(dim(newdata_chc_sampled))
 
 ### Add rows  t.startage from 60 to 94, and t.endage from 65 to 95; so we can get burden 60-90.
 add=newdata_chc_sampled[newdata_chc_sampled$t.startage<=39,]
-table(add$t.startage)
-table(add$t.endage)
+invisible(table(add$t.startage))
+invisible(table(add$t.endage))
 add$t.startage=add$t.startage+55
 add$t.endage=add$t.endage+55
-table(add$t.startage)
-table(add$t.endage)
+invisible(table(add$t.startage))
+invisible(table(add$t.endage))
 newdata_chc_sampled=rbind(newdata_chc_sampled,add)
 newdata_chc_sampled=newdata_chc_sampled[order(newdata_chc_sampled$mrn,newdata_chc_sampled$t.startage),]
 ### replace the survival prob with the calculated/extrapolated survival probability
@@ -206,7 +212,7 @@ newdata_chc_sampled1=newdata_chc_sampled ## do this so each run on chc_num loops
 person_burden=NULL
 
 for(chc_num in c(1:32)[-c(2,5,14,20,23,26)]){  #### Edgar, you may make this in separate runs to save time.
-print(chc_num)
+# print(chc_num)
 newdata_chc_sampled=newdata_chc_sampled1
 
 # linear predictor
@@ -306,7 +312,7 @@ person_burden=rbind(person_burden,for_web_BCCT)
 
 } #end of chc_num loop
 
-person_burden[,30:31]
+# person_burden[,30:31]
 # sum(person_burden[,31])  ## total burden at 50 years old. 8.971574 for this example.
 
 #### The predicated burden for 26 grouped CHCs from age 20 to 95.
