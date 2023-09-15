@@ -17,6 +17,7 @@ class SampleView {
 		const div = opts.holder.append('div')
 		const controlsDiv = div.insert('div').style('display', 'inline-block')
 		const mainDiv = div.insert('div').style('display', 'inline-block')
+		const rightDiv = div.append('div').style('display', 'inline-block')
 		const sampleDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
 		const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Sample:')
 
@@ -35,6 +36,7 @@ class SampleView {
 			theadrow: thead.append('tr'),
 			tbody: table.append('tbody'),
 			contentDiv: mainDiv.insert('div'),
+			rightDiv,
 			sampleLabel,
 			select: sampleDiv.insert('select').style('margin', '0px 5px')
 		}
@@ -371,13 +373,17 @@ class SampleView {
 
 	async renderPlots() {
 		this.dom.contentDiv.selectAll('*').remove()
+		this.dom.rightDiv.selectAll('*').remove()
 		if (this.state.hasPlots) {
 			const table = this.dom.contentDiv.style('display', 'table')
 			if (this.settings.showDisco && this.state.termdbConfig?.queries?.singleSampleMutation) {
 				const div = this.dom.contentDiv.append('div').style('display', 'table-row')
 
 				for (const sample of this.state.samples) {
-					const cellDiv = div.append('div').style('display', 'table-cell')
+					let cellDiv
+					if (this.state.samples.length == 1)
+						cellDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+					else cellDiv = div.append('div').style('display', 'table-cell')
 
 					cellDiv
 						.insert('div')
@@ -399,7 +405,10 @@ class SampleView {
 					let div = this.dom.contentDiv.append('div').style('padding', '20px').style('display', 'table-row')
 					for (const sample of this.state.samples) {
 						const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-						const plotDiv = div.insert('div').style('display', 'table-cell')
+						let plotDiv
+						if (this.state.samples.length == 1)
+							plotDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+						else plotDiv = div.insert('div').style('display', 'table-cell')
 						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
 						const ssgqImport = await import('./plot.ssgq.js')
 						await ssgqImport.plotSingleSampleGenomeQuantification(
@@ -461,7 +470,6 @@ function setRenderers(self) {
 	}
 
 	self.renderTHead = function (data) {
-		console.log(data)
 		const trs = self.dom.theadrow.selectAll('th').data(data)
 		trs.exit().remove()
 		trs.html(self.getThHtml)
