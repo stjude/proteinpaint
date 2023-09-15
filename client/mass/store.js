@@ -248,7 +248,6 @@ TdbStore.prototype.actions = {
 
 	async plot_create(action) {
 		const _ = await import(`../plots/${action.config.chartType}.js`)
-		console.log(246, action.config)
 		const plot = await _.getPlotConfig(action.config, this.app)
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
