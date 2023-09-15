@@ -109,7 +109,7 @@ class SampleView {
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
 		const q = appState.termdbConfig.queries
-		const showContent = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
+		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
 		const state = {
 			config,
 			// TODO: use state.config drectly, instead of having to extract
@@ -123,7 +123,7 @@ class SampleView {
 			singleSampleMutation: q?.singleSampleMutation,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
-			showContent,
+			hasPlots,
 			termdbConfig: appState.termdbConfig,
 			vocab: appState.vocab
 		}
@@ -143,8 +143,7 @@ class SampleView {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
-
-		await this.setControls()
+		if (this.state.hasPlots) await this.setControls()
 		if (this.dom.header) this.dom.header.html(`Sample View`)
 		this.termsById = this.getTermsById(this.state)
 		this.sampleDataByTermId = {}
@@ -372,7 +371,7 @@ class SampleView {
 
 	async renderPlots() {
 		this.dom.contentDiv.selectAll('*').remove()
-		if (this.state.showContent) {
+		if (this.state.hasPlots) {
 			const table = this.dom.contentDiv.style('display', 'table')
 			if (this.settings.showDisco && this.state.termdbConfig?.queries?.singleSampleMutation) {
 				const div = this.dom.contentDiv.append('div').style('display', 'table-row')
