@@ -8,8 +8,8 @@ import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
-import { regressionLoess, regressionPoly } from 'd3-regression'
-import { line, arc } from 'd3'
+import { regressionPoly } from 'd3-regression'
+import { line } from 'd3'
 import { getId } from '#mass/nav'
 
 export function setRenderers(self) {
@@ -93,13 +93,13 @@ export function setRenderers(self) {
 		const svg = chart.svg
 		let colorLegends = chart.colorLegend.size * 30
 		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
-		const legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + 100 //legend step and header
+		self.legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + 100 //legend step and header
 		const width = self.charts.length == 1 ? s.svgw + 800 : s.svgw + (self.config.shapeTW ? 600 : 350)
 		svg
 			.transition()
 			.duration(s.duration)
 			.attr('width', width)
-			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
+			.attr('height', Math.max(s.svgh + 100, self.legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
 		fillSvgSubElems(chart)
@@ -713,7 +713,7 @@ export function setRenderers(self) {
 		let offsetY = 25
 		if (!self.config.colorTW && !self.config.shapeTW) {
 			if (self.config.scaleDotTW) {
-				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${offsetY + 30})`)
+				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 100})`)
 				self.drawScaleDotLegend(chart)
 			}
 			return
@@ -847,7 +847,7 @@ export function setRenderers(self) {
 			}
 		}
 		if (self.config.scaleDotTW) {
-			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${offsetY + 30})`)
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 100})`)
 			self.drawScaleDotLegend(chart)
 		}
 		if (self.config.shapeTW) {
