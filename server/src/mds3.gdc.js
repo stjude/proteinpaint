@@ -269,7 +269,11 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 		if (!symbol) throw 'symbol missing for ' + ensg
 		for (const [j, sample] of submitterHeader.entries()) {
 			const v = Number(l[j + 1])
-			if (!Number.isFinite(v)) throw 'non-numeric exp value'
+			if (!Number.isFinite(v)) {
+				console.log(ensg, sample, l[j + 1])
+				continue
+				//throw 'non-numeric exp value'
+			}
 			gene2sample2value.get(symbol)[sample] = v
 		}
 	}
