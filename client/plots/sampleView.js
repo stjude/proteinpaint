@@ -74,6 +74,7 @@ class SampleView {
 				.enter()
 				.append('option')
 				.attr('value', d => d.sampleId)
+				.property('selected', (d, i) => i < 15)
 				.html((d, i) => d.sampleName)
 			select.on('change', e => {
 				const options = select.node().options
@@ -87,6 +88,12 @@ class SampleView {
 					}
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
+			if (config.samples.length > 15)
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { samples: config.samples.filter((s, i) => i < 15) }
+				})
 		} else {
 			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
 			const samples = Object.entries(this.sampleId2Name)
