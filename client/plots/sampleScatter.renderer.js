@@ -364,7 +364,7 @@ export function setRenderers(self) {
 
 	self.mayRenderRegression = async function () {
 		for (const chart of self.charts) {
-			chart.regressionG.selectAll('*').remove()
+			chart.regressionG?.selectAll('*').remove()
 			if (chart.regressionCurve) {
 				const l = line()
 					.x(d => d[0])
