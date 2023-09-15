@@ -26,7 +26,7 @@ export function throwMsgWithFilePathAndFnName(message) {
 		throw new Error()
 	} catch (error) {
 		const stackLines = error.stack.split('\n')
-		const callerLine = stackLines[1].trim()
+		const callerLine = stackLines[2].trim()
 
 		// Extract the file name and function name
 		const regex = /\s*at\s+(.*)\s+\((.*).proteinpaint.js:(\d+):(\d+)\)/

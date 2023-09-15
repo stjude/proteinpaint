@@ -3,6 +3,7 @@ import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
 import { PillData, ConditionTW, ConditionQ, VocabApi, ConditionTermSettingInstance } from '#shared/types/index'
+import { GroupSettingMethods } from './groupsetting'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
@@ -31,6 +32,22 @@ export function getHandler(self: ConditionTermSettingInstance) {
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
+		},
+
+		async postMain() {
+			const body = self.opts.getBodyParams?.() || {}
+			if (self.q.bar_by_children) {
+				const data = await self.vocabApi.getCategories(self.term, self.filter, body)
+				//not really sure this is necessary but it's consistent across other handlers
+				self.category2samplecount = []
+				for (const d of data.lst) {
+					self.category2samplecount.push({
+						key: d.key,
+						label: d.label,
+						count: d.samplecount
+					})
+				}
+			}
 		}
 	}
 }
@@ -55,7 +72,7 @@ function getPillStatus(self: ConditionTermSettingInstance) {
 	return {}
 }
 
-function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
+async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 	// div for selecting type of grade
 	const value_type_div = div
 		.append('div')
@@ -98,9 +115,8 @@ function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 		'selectedIndex',
 		self.q.bar_by_children ? 3 : self.q.value_by_computable_grade ? 2 : self.q.value_by_most_recent ? 1 : 0
 	)
-
 	if (self.q.bar_by_children) {
-		// do not show grade cutoff input
+		await new GroupSettingMethods(self).main()
 		return
 	}
 
