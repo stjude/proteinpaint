@@ -1,14 +1,12 @@
 import { dofetch3 } from '#common/dofetch'
-import { make_one_checkbox } from '#dom/checkbox'
 import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
 
 /*
-
 test with http://localhost:3000/example.gdc.matrix.html
 runpp({ launchGdcMatrix:true })
 
-designed to work for Oncoprint app in GDC Analysis Tools Framework
+designed to work for OncoMatrix app in GDC Analysis Tools Framework
 
 initiates a "plot" app instance that wraps around the matrix component
 and returns the plot app API
@@ -16,15 +14,29 @@ and returns the plot app API
 
 ********* parameters
 
+holder
+genomes = { hg38 : {} }
 arg = {}
 	runpp() argument object
 
 	.filter0{}
-		the filter object from GDC Cohort Builder
+		the filter object from GDC Cohort Builder, for restricting cases in oncomatrix
 		{"op":"and","content":[{"op":"in","content":{"field":"cases.primary_site","value":["breast","bronchus and lung"]}}]}
+		not visualized on pp (invisible) and read only, passed to backend -> gdc api
+		// NOTE 6/29/2023: this is the default only in the OncoMatrix demo mode,
+		// and is supplied by the OncoMatrixWrapper in the GFF repo, no need to supply here
+		// return { op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }
 
 	.genes[]
 		future: list of genes to launch matrix
+
+	.termgroups[]
+		TODO 
+	
+	.settings{}
+		.matrix{}
+			.maxGenes
+			.maxSamples
 
 	.opts{}
 		.matrix{}
@@ -60,8 +72,6 @@ arg = {}
 					siblingCells: cell data for the same matrix sample/term, but excluding this cell 
 				}
 
-holder
-genomes = { hg38 : {} }
 
 
 ********* returns
@@ -87,24 +97,25 @@ export async function init(arg, holder, genomes) {
 	if (!genome) throw gdcGenome + ' missing'
 
 	// these options will allow session recovery by an embedder
-	const m = arg.settings?.matrix || {}
-	const geneFilter = m.geneFilter || 'CGC'
-	let CGConly = geneFilter === 'CGC'
-	let maxGenes = m.maxGenes || 50
-	// per discussion on Dec 6, 2022, restrict to cancer gene census genes by default and allow user to change
-	const gdcCohort = getGdcCohort(arg)
-	const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
 	const settings = arg.settings || {}
+	if (typeof settings != 'object') throw 'arg.settings{} not object'
 	if (!settings.matrix) settings.matrix = {}
-	settings.matrix.geneFilter = geneFilter
-	settings.matrix.maxGenes = maxGenes
+	if (typeof settings.matrix != 'object') throw 'arg.settings.matrix{} not object'
+	// set defaults
+	if (!settings.matrix.geneFilter) settings.matrix.geneFilter = 'CGC' // filter to only use CGC genes by default
+	if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 50
+
+	if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
+
+	const genes = await getGenes(arg, arg.filter0, settings.matrix)
+
 	const opts = {
 		holder,
 		genome,
 		state: {
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
-			termfilter: { filter0: gdcCohort },
+			termfilter: { filter0: arg.filter0 },
 			plots: [
 				{
 					chartType: 'matrix',
@@ -137,14 +148,11 @@ export async function init(arg, holder, genomes) {
 							chartType: 'matrix',
 							settingsKey: 'maxGenes',
 							callback: async value => {
-								maxGenes = value
-								const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
+								const genes = await getGenes(arg, arg.filter0, { maxGenes: value })
 								api.update({
 									termgroups: [{ lst: genes }],
 									settings: {
-										matrix: {
-											maxGenes
-										}
+										matrix: { maxGenes: value }
 									}
 								})
 							}
@@ -179,33 +187,13 @@ export async function init(arg, holder, genomes) {
 	return api
 }
 
-function getGdcCohort(arg) {
-	if (arg.filter0) {
-		// already given a filter, return without validation
-		if (typeof arg.filter0 != 'object') throw 'filter0 not object'
-		return arg.filter0
-	}
-	// no filter. as discussed Dec/6, 2022, use GBM as a default
-	// NOTE 6/29/2023: this is the default only in the OncoMatrix demo mode,
-	// and is supplied by the OncoMatrixWrapper in the GFF repo, no need to supply here
-	// return { op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }
-	return undefined
-	/*
-	{
-		op: 'and',
-		content: [
-		{ op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }]
-	}
-	*/
-}
-
 /*
 arg={}
 	.genes=[ str, ... ]
-gdcCohort={}
-CGConly=boolean
+filter0={}
+matrix{}
 */
-async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
+async function getGenes(arg, filter0, matrix) {
 	if (arg.genes) {
 		// genes are predefined
 		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw '.genes[] is not non-empty array'
@@ -219,16 +207,16 @@ async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
 		genome: gdcGenome,
-		filter0: gdcCohort,
-		maxGenes
+		filter0,
+		maxGenes: matrix.maxGenes,
+		geneFilter: matrix.geneFilter
 	}
-	if (CGConly) body.CGConly = 1
 	const data = await dofetch3('gdc_filter2topGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) throw 'no top genes found using the cohort filter'
 	return await Promise.all(
 		// do tempfix of "data.genes.slice(0,3).map" for faster testing
-		data.genes.map(async i => {
+		data.genes.slice(0, 3).map(async i => {
 			return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
 		})
 	)
