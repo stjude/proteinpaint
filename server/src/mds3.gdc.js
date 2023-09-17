@@ -1979,7 +1979,7 @@ export function handle_filter2topGenes(genomes) {
 		/* query{}
 		.genome: required
 		.filter0: required
-		.CGConly: boolean
+		.geneFilter: str, required
 		*/
 		try {
 			const genome = genomes[req.query.genome]
@@ -1987,7 +1987,7 @@ export function handle_filter2topGenes(genomes) {
 			res.send({
 				genes: await get_filter2topGenes({
 					filter: req.query.filter0,
-					CGConly: parseInt(req.query.CGConly),
+					geneFilter: req.query.geneFilter,
 					maxGenes: req.query.maxGenes
 				})
 			})
@@ -2003,7 +2003,7 @@ get_filter2topGenes() and mayAddCGC2filter() are copied to
 /utils/gdc/topSSMgenes.js
 and hosted on https://proteinpaint.stjude.org/GDC/
 */
-async function get_filter2topGenes({ filter, CGConly, maxGenes }) {
+async function get_filter2topGenes({ filter, geneFilter, maxGenes }) {
 	let _f = { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
 	if (filter) {
 		if (typeof filter != 'object') throw 'filter not object'
@@ -2014,7 +2014,7 @@ async function get_filter2topGenes({ filter, CGConly, maxGenes }) {
 		body: JSON.stringify({
 			size: maxGenes || 50,
 			fields: 'symbol',
-			filters: mayAddCGC2filter(_f, CGConly)
+			filters: mayAddCGC2filter(_f, geneFilter)
 		})
 	})
 	const re = JSON.parse(response.body)
@@ -2029,8 +2029,8 @@ async function get_filter2topGenes({ filter, CGConly, maxGenes }) {
 /*
 str:
 	stringified gdc filter object, should not include the "genes.is_cancer_gene_census" filter element
-CGConly: boolean
-	if true, insert following element into the filter and return stringified obj
+geneFilter: str
+	if = 'CGC', insert following element into the filter and return stringified obj
 
 	{
 		"op":"and",
@@ -2042,7 +2042,7 @@ CGConly: boolean
 		]
 	}
 */
-function mayAddCGC2filter(f, CGConly) {
+function mayAddCGC2filter(f, geneFilter) {
 	// reformulate f into f2
 	// f may be "in" or "and". f2 is always "and", in order to join in additional filters
 	let f2
@@ -2073,7 +2073,7 @@ function mayAddCGC2filter(f, CGConly) {
 		}
 	})
 
-	if (CGConly) {
+	if (geneFilter == 'CGC') {
 		// using CGC genes, add in filter
 		f2.content.push({ op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } })
 	}

@@ -229,11 +229,11 @@ type ArgumentsEntry = {
 	id: string
 	label: string
 	type: string
-	value: boolean
+	value: string
 }
 
 type TopMutatedGenes = {
-	arguments: ArgumentsEntry[]
+	arguments?: ArgumentsEntry[]
 }
 
 type TklstEntry = {
