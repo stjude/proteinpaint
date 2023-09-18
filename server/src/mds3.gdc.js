@@ -1981,6 +1981,7 @@ export function handle_filter2topGenes(genomes) {
 		.filter0: required
 		.geneFilter: str, required
 		*/
+		console.log(req.query)
 		try {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
@@ -2004,6 +2005,7 @@ get_filter2topGenes() and mayAddCGC2filter() are copied to
 and hosted on https://proteinpaint.stjude.org/GDC/
 */
 async function get_filter2topGenes({ filter, geneFilter, maxGenes }) {
+	console.log(geneFilter)
 	let _f = { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
 	if (filter) {
 		if (typeof filter != 'object') throw 'filter not object'

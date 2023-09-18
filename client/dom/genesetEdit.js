@@ -56,9 +56,9 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
 				}
-				for (const input of api.params) {
+				for (const { param, input } of api.params) {
 					const id = input.attr('id')
-					args[id] = getInputValue(input)
+					args[id] = getInputValue({ param, input })
 				}
 				const result = await vocabApi.getTopMutatedGenes(args)
 				geneList = []
@@ -211,7 +211,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 
 	function addParameter(param) {
 		let input
-		if (param.type == 'boolean') {
+		if (param.type == 'boolean' || param.type == 'string') {
 			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
 			if (param.value) input.property('checked', param.value)
 			rightDiv.append('label').html(param.label).attr('for', param.id)
@@ -220,13 +220,13 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 			if (param.value) input.attr('value', param.value)
 			rightDiv.append('span').html(param.label)
 		}
-		api.params.push(input)
+		api.params.push({ param, input })
 	}
 
-	function getInputValue(input) {
+	function getInputValue({ param, input }) {
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
-		if (input.attr('type') == 'checkbox') return input.node().checked ? 1 : 0
+		if (input.attr('type') == 'checkbox') return input.node().checked ? param.value : ''
 	}
 
 	renderGenes()
