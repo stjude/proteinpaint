@@ -40,6 +40,7 @@ export function setInteractivity(self) {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.value._SAMPLENAME_ || d.value.sample}</td></tr>`)
 			rows.push(`<tr><td>Gene:</td><td>${d.term.name}</td></tr>`)
 
+			const siblingCellLabels = {}
 			for (const c of d.siblingCells) {
 				if (c.$id != d.$id) continue
 				const v = c.value
@@ -50,7 +51,7 @@ export function setInteractivity(self) {
 				// as multiple table rows in the mouseover
 				const label =
 					c.label == 'Gene Expression'
-						? c.label + `: ${v.value}`
+						? v.value
 						: p
 						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
 						: v.mname
@@ -71,8 +72,13 @@ export function setInteractivity(self) {
 					? `<td colspan='2' style='text-align: center'>${label}</td>`
 					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
 				*/
-				const tds = `<td>${label}</td>`
 				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+
+				if (!siblingCellLabels[dtLabel]) {
+					siblingCellLabels[dtLabel] = [{ label, color }]
+				} else {
+					siblingCellLabels[dtLabel].push({ label, color })
+				}
 				/*
 				do not use gradient CNV anymore
 				if (v.dt == 4 && 'value' in v) {
@@ -84,7 +90,12 @@ export function setInteractivity(self) {
 					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
 				}
 				*/
-				rows.push(`<tr style='color: ${color}'><td>${dtLabel}:</td>${tds}</tr>`)
+			}
+			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
+				rows.push(`<tr style='color: ${classArray[0].color}'><td>${dtLabel}:</td><td>${classArray[0].label}</td></tr>`)
+				for (const classType of classArray.slice(1)) {
+					rows.push(`<tr style='color: ${classType.color}'><td></td><td>${classType.label}</td></tr>`)
+				}
 			}
 		}
 		self.dom.menutop.selectAll('*').remove()
