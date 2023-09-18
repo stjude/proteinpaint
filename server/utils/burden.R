@@ -10,14 +10,8 @@ library(jsonlite)
 options(warn=-1)
 
 # Input from lines2R
-# args <- commandArgs(trailingOnly = T)
-args <- c(
-	'/Users/esioson/gb/cachedir/0.14859190704410774.json', 
-	'/Users/esioson/gb/tp/files/hg38/sjlife/burden/cphfits2.RData', 
-	'/Users/esioson/gb/tp/files/hg38/sjlife/burden/surv.RData', 
-	'/Users/esioson/gb/tp/files/hg38/sjlife/burden/nchcsampledsex0age0steroid0bleo0vcr0etop0itmt0.RData'
-)
-if (length(args) != 4) stop("Usage: Rscript cuminc.R in.json > results")
+args <- commandArgs(trailingOnly = T)
+if (length(args) != 4) stop("Usage: Rscript burden.R in.json > results")
 infile <- args[1]
 fitsData <- args[2]
 survData <- args[3]
@@ -31,14 +25,14 @@ sampleData <- args[4]
 
 load(fitsData)
 load(survData)
-invisible(survs[[1]])
+# survs[[1]]
 
 ############################ These are the input values in APP that users can change. Edgar, these should be the same as the APP before, variable names and units. #############
 ### Input the primary DX. 
 # pr=5
 agecut=40   ##### Edgar, This is not an user input paramter, but we input this. This depends on the DX. For example, here for CNS we use 40. For HL DX, it is 55. I will give this value for each DX.
 
-# # Input person's values, 18 input X's , plus the input primary DX
+# # # Input person's values, 18 input X's , plus the input primary DX
 # 	sexval=1  #sex, take value 1 for male and 0 for female
 # 	whiteval=1	# Race white or not, 1 for white, 0 for non-white
 # 	agedxval=6  # age at primary cancer DX
@@ -68,7 +62,7 @@ agecut=40   ##### Edgar, This is not an user input paramter, but we input this. 
 #	steroidval=0; bleoval=0; 	vcrval=0; 	etopval=0;	itmtval=0; 	cedval=0; cispval=0; brainval=0; 
 #	doxval=0; chestval=0; abdval=0;
 
-invisible(survs[[1]])
+# survs[[1]]
 
 ############### no TX
 #	steroidval=0;  bleoval=0; vcrval=0; etopval=0; itmtval=0; cedval=0; cispval=0; brainval=0;  doxval=0; chestval=0; abdval=0; heartval=0; pelvisval=0; carboval=0; hdmtxval=0
@@ -83,6 +77,7 @@ newdata_chc_sampled$t.endage=seq(6,71,1)
 newdata_chc_sampled=newdata_chc_sampled[newdata_chc_sampled$t.endage<=60,]
 
 input <- fromJSON(infile)
+# paste(names(input), input, sep = ":", collapse = ",")
 pr=input$diaggrp
 sexval=input$sex
 newdata_chc_sampled$sex=input$sex # sexval
@@ -103,6 +98,25 @@ newdata_chc_sampled$heartradboth2=input$heart # heartval
 newdata_chc_sampled$pelvisrad2=input$pelvis # pelvisval
 newdata_chc_sampled$carboplatdose=input$carbo # carboval
 newdata_chc_sampled$hdmtxdose=input$hdmtx # hdmtxval
+
+# newdata_chc_sampled$sex=sexval
+# newdata_chc_sampled$white=whiteval
+# newdata_chc_sampled$agedx2=agedxval
+# newdata_chc_sampled$steroid=steroidval
+# newdata_chc_sampled$bleodose=bleoval
+# newdata_chc_sampled$vcrdose=vcrval
+# newdata_chc_sampled$etopdose=etopval
+# newdata_chc_sampled$itmtxdose=itmtval
+# newdata_chc_sampled$ced_sum2=cedval
+# newdata_chc_sampled$cisplatdose=cispval
+# newdata_chc_sampled$brainrad2=brainval
+# newdata_chc_sampled$doxed_sum2=doxval
+# newdata_chc_sampled$chestrad2=chestval
+# newdata_chc_sampled$abdrad2=abdval
+# newdata_chc_sampled$heartradboth2=heartval
+# newdata_chc_sampled$pelvisrad2=pelvisval
+# newdata_chc_sampled$carboplatdose=carboval
+# newdata_chc_sampled$hdmtxdose=hdmtxval
 
 #	1="Acute lymphoblastic leukemia"
 #	2="AML"
@@ -163,19 +177,19 @@ predsurv=predict(survspline,seq(0,95,1))
 ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
 
 ###### get rid of the est_chcXX and "sumN"columns which were used to calculate the survival probability only.
-invisible(dim(newdata_chc_sampled))
+# invisible(dim(newdata_chc_sampled))
 newdata_chc_sampled=newdata_chc_sampled[,-grep("est_chc", colnames(newdata_chc_sampled))]
 newdata_chc_sampled=newdata_chc_sampled[,-grep("sumN", colnames(newdata_chc_sampled))]
-invisible(dim(newdata_chc_sampled))
+# invisible(dim(newdata_chc_sampled))
 
 ### Add rows  t.startage from 60 to 94, and t.endage from 65 to 95; so we can get burden 60-90.
 add=newdata_chc_sampled[newdata_chc_sampled$t.startage<=39,]
-invisible(table(add$t.startage))
-invisible(table(add$t.endage))
+# table(add$t.startage)
+# table(add$t.endage)
 add$t.startage=add$t.startage+55
 add$t.endage=add$t.endage+55
-invisible(table(add$t.startage))
-invisible(table(add$t.endage))
+# table(add$t.startage)
+# table(add$t.endage)
 newdata_chc_sampled=rbind(newdata_chc_sampled,add)
 newdata_chc_sampled=newdata_chc_sampled[order(newdata_chc_sampled$mrn,newdata_chc_sampled$t.startage),]
 ### replace the survival prob with the calculated/extrapolated survival probability
