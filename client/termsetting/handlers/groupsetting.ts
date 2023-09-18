@@ -4,6 +4,7 @@ import { CategoricalTermSettingInstance, ConditionTermSettingInstance } from '#s
 import { Tabs } from '#dom/toggleButtons'
 import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
+import { debounce } from 'debounce'
 
 /*
 ---------Exported---------
@@ -22,9 +23,6 @@ Future plans:
 			3	Other...
 			User can simply change the group number. Switch back to the drag UI and see the updated list and change group names
 		- maybe increase the cap? but only from this UI, not drag and drop
-	- Spitball ideas: 
-		- Hit enter required for group name change. Add visual cue group name changed, such as the green check mark or error-style message to hit enter. Maybe instruction are the top (excessive option)? 
-
 */
 
 type ItemEntry = {
@@ -47,6 +45,7 @@ type GrpEntryWithDom = GrpEntry & {
 	title: any
 	destroyBtn: any
 	input: any
+	inputMessage: any
 	draggables: any
 }
 type GrpSetDom = {
@@ -57,23 +56,27 @@ type GrpSetDom = {
 	excludedWrapper: HTMLElement
 }
 
-type GroupSettingInstance = CategoricalTermSettingInstance | ConditionTermSettingInstance //Will change to accommodate conditional termsetting later
+type GroupSettingInstance = (CategoricalTermSettingInstance | ConditionTermSettingInstance) & {
+	newMenu: boolean //launch a new menu (true) or show within a open menu (false)
+}
 
 export class GroupSettingMethods {
 	opts: any //a termsetting instance
 	dom: Partial<GrpSetDom>
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
-	minGrpNum: number //minimum num of groups rendered, including excluded categories
-	maxGrpNum: number //max num of groups rendered
 	initGrpSetUI: any
 
 	constructor(opts: GroupSettingInstance) {
-		this.opts = opts
-		;(this.dom = {}),
+		;(this.opts = opts),
+			(this.dom = {
+				menuWrapper: opts.dom.tip.d.append('div')
+			}),
 			(this.data = { groups: [], values: [] }),
-			(this.minGrpNum = 3), //excluded categories + 2 groups
-			(this.maxGrpNum = 6) //no more than 5 groups + excluded categories
-		setRenderers(this)
+			setRenderers(this)
+	}
+
+	validateOpts(opts: GroupSettingInstance) {
+		if (!opts.newMenu) opts.newMenu = true
 	}
 
 	processInput(data: DataInput) {
@@ -159,7 +162,7 @@ export class GroupSettingMethods {
 
 	async main() {
 		try {
-			const input = this.opts.q.bar_by_children //Is this subconditions or term.valus?
+			const input = this.opts.q.bar_by_children //Detect if for subconditions from condition term or term.values
 				? this.opts.category2samplecount //subconditions already formated in condition handler
 				: this.opts.term.values // categorical terms need formating
 			this.processInput(input)
@@ -172,8 +175,13 @@ export class GroupSettingMethods {
 }
 
 function setRenderers(self: any) {
+	const minGrpNum = 3 //minimum num of groups rendered, excluded categories + 2 groups
+	let maxGrpNum: number
 	self.initGrpSetUI = async function () {
-		self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
+		/*max num of groups rendered + excluded categories
+		Only allow adding the max feasible groups with cutoff of 5 + excluded categories*/
+		maxGrpNum = self.data.values.length >= 5 ? 6 : self.data.values.length
+		if (self.newMenu == true) self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
 		// if (self.data.values.length > 10) {
 		// 	//Tabs functionality for later - leave it for layout testing
 		//	//TODO: move apply button up
@@ -202,7 +210,6 @@ function setRenderers(self: any) {
 		// }
 	}
 	self.showDraggables = async function () {
-		self.dom.menuWrapper = self.opts.dom.tip.d.append('div')
 		self.dom.actionDiv = self.dom.menuWrapper.append('div').attr('class', 'sjpp-group-actions').style('padding', '10px')
 
 		//Add Group button
@@ -217,7 +224,7 @@ function setRenderers(self: any) {
 			.style('text-transform', 'uppercase')
 			.style('cursor', 'pointer')
 			.style('background', '#d0e0e3')
-			.property('disabled', self.data.groups.length === self.maxGrpNum)
+			.property('disabled', self.data.groups.length >= maxGrpNum)
 			.text('Add Group')
 			.on('click', async () => {
 				newGrpNum++
@@ -232,8 +239,8 @@ function setRenderers(self: any) {
 			})
 
 		//Apply button
-		self.dom.actionDiv
-			.append('div')
+		self.dom.actionDiv.applyBtn = self.dom.actionDiv
+			.append('button')
 			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
@@ -376,7 +383,7 @@ function setRenderers(self: any) {
 				.style('color', '#999')
 				.text(group.name)
 		} else {
-			group.dragActionDiv = group.wrapper.append('div').style('display', 'flex')
+			group.dragActionDiv = group.wrapper.append('div').style('display', 'flex').style('align-items', 'center')
 			group.input = group.dragActionDiv
 				.append('input')
 				.attr('size', 12)
@@ -387,19 +394,40 @@ function setRenderers(self: any) {
 				.style('font-size', '.8em')
 				.style('width', '87%')
 				.on('keyup', (event: KeyboardEvent) => {
-					//Must hit enter to save. Problematic for UX?
-					if (!keyupEnter(event)) return
-					self.data.groups[group.currentIdx].name = group.input.node().value
+					debounce(onKeyUp(), 1000)
 				})
+
+			function onKeyUp() {
+				//Detect unique name on change. If not a unique name, alert user and disable apply button
+				if (group.name == group.input.node().value) return
+				const match = self.data.groups.filter((g: GrpEntryWithDom) => g.name == group.input.node().value)
+				console.log(match)
+				if (match.length > 0) {
+					self.dom.actionDiv.applyBtn.property('disabled', true)
+					group.inputMessage.style('display', 'block')
+				} else {
+					self.dom.actionDiv.applyBtn.property('disabled', false)
+					group.inputMessage.style('display', 'none')
+					self.data.groups[group.currentIdx].name = group.input.node().value.trim()
+				}
+			}
+
+			group.inputMessage = group.dragActionDiv
+				.append('span')
+				.style('color', 'red')
+				.style('font-size', '0.7em')
+				.text('NOT unique')
+				.style('display', 'none')
+
 			group.destroyBtn = group.dragActionDiv
 				.append('button')
 				.attr('class', 'sjpp_apply_btn')
 				.style('display', 'inline-block')
 				.style('padding', '0px 4px')
-				.property('disabled', self.data.groups.length <= self.minGrpNum)
+				.property('disabled', self.data.groups.length <= minGrpNum)
 				.text('x')
 				.on('click', async (event: MouseEvent) => {
-					if (self.data.groups.length <= self.minGrpNum) return
+					if (self.data.groups.length <= minGrpNum) return
 					self.data.groups = self.data.groups.filter((d: GrpEntry) => d.currentIdx != group.currentIdx)
 					await self.removeGroup(group)
 				}) as Element
@@ -514,7 +542,7 @@ function setRenderers(self: any) {
 	// }
 
 	self.update = async function () {
-		self.dom.actionDiv.addGroup.property('disabled', self.data.groups.length === self.maxGrpNum)
+		self.dom.actionDiv.addGroup.property('disabled', self.data.groups.length >= maxGrpNum)
 		for (const [i, grp] of self.data.groups.entries()) {
 			if (i === 0) continue
 			if (grp.currentIdx != i) {
@@ -528,7 +556,7 @@ function setRenderers(self: any) {
 			.each(async (group: GrpEntryWithDom) => {
 				if (group.currentIdx !== 0) {
 					group.input.node().value = group.name
-					group.destroyBtn.property('disabled', self.data.groups.length <= self.minGrpNum)
+					group.destroyBtn.property('disabled', self.data.groups.length <= minGrpNum)
 				}
 				await self.addItems(group)
 			})
