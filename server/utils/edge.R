@@ -16,7 +16,7 @@ if (nchar(edgeR_path) == 0) {
 
 readr_path <- system.file(package='readr')
 if (nchar(readr_path) == 0) {
-  install.packages("jsonlite", repos='https://cran.case.edu/')
+  install.packages("readr", repos='https://cran.case.edu/')
 }
 
 
@@ -69,7 +69,7 @@ geneids <- unlist(genes_matrix[,1])
 genesymbols <- unlist(genes_matrix[,2])
 adjust_p_values <- p.adjust(pvalues, method = "fdr")
 
-output <- data.frame(geneids,genesymbols,logfc,pvalues,adjust_p_values)
+output <- data.frame(geneids,genesymbols,logfc,-log10(pvalues),-log10(adjust_p_values))
 names(output)[1] <- "gene_name"
 names(output)[2] <- "gene_symbol"
 names(output)[3] <- "fold_change"
