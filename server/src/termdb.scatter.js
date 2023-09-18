@@ -189,7 +189,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const results = {}
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
-		if (!dbSample && q.colorTW) {
+		if (!dbSample) {
 			console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}

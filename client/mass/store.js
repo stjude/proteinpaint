@@ -215,7 +215,6 @@ TdbStore.prototype.actions = {
 
 		for (const plot in this.state.plots) {
 			if (plot.mayAdjustConfig && !subactionPlotIds.has(plot.id)) {
-				// console.log('mayAdjustConfig() used by mass store in dispatched action=app_refresh')
 				plot.mayAdjustConfig(plot, action.config)
 			}
 		}
@@ -249,12 +248,10 @@ TdbStore.prototype.actions = {
 
 	async plot_create(action) {
 		const _ = await import(`../plots/${action.config.chartType}.js`)
-		console.log(246, action.config)
 		const plot = await _.getPlotConfig(action.config, this.app)
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
 		if (plot.mayAdjustConfig) {
-			// console.log('mayAdjustConfig() used by mass store in dispatched action=plot_create')
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		this.state.plots.push(plot)
@@ -265,7 +262,6 @@ TdbStore.prototype.actions = {
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		if (plot.mayAdjustConfig) {
-			// console.log('mayAdjustConfig() used by mass store in dispatched action=plot_edit')
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		validatePlot(plot, this.app.vocabApi)
