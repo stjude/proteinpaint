@@ -92,9 +92,9 @@ export function setInteractivity(self) {
 				*/
 			}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
-				rows.push(`<tr style='color: ${classArray[0].color}'><td>${dtLabel}:</td><td>${classArray[0].label}</td></tr>`)
+				rows.push(`<tr><td>${dtLabel}:</td><td  style='color: ${classArray[0].color}'>${classArray[0].label}</td></tr>`)
 				for (const classType of classArray.slice(1)) {
-					rows.push(`<tr style='color: ${classType.color}'><td></td><td>${classType.label}</td></tr>`)
+					rows.push(`<tr><td></td><td style='color: ${classType.color}'>${classType.label}</td></tr>`)
 				}
 			}
 		}
