@@ -45,7 +45,7 @@ export type RangeEntry = {
 
 export type GroupEntry = {
 	name: string
-	type?: 'values' | 'filter'
+	type?: 'values' | 'filter' //filter is no longer used. Only use values
 	color?: string
 	values: { key: number | string; label: string }[]
 	filter?: Filter

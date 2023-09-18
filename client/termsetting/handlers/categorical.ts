@@ -141,17 +141,17 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 	}
 
 	self.showGrpOpts = async function () {
-		const tgs = self.term.groupsetting
-		const qgs = self.q?.groupsetting as GroupSetting
-		const activeGroup = qgs?.predefined_groupset_idx
-			? tgs?.lst?.[qgs?.predefined_groupset_idx]
-			: qgs?.inuse && qgs.customset
+		// const tgs = self.term.groupsetting
+		// const qgs = self.q?.groupsetting as GroupSetting
+		// const activeGroup = qgs?.predefined_groupset_idx
+		// 	? tgs?.lst?.[qgs?.predefined_groupset_idx]
+		// 	: qgs?.inuse && qgs.customset
 
-		if (!activeGroup) await new GroupSettingMethods(self).main()
-		else {
-			//const valGrp = self.grpSet2valGrp(activeGroup)
-			await new GroupSettingMethods(self).main()
-		}
+		// if (!activeGroup) await new GroupSettingMethods(Object.assign(self, {newMenu: true})).main()
+		// else {
+		//const valGrp = self.grpSet2valGrp(activeGroup)
+		await new GroupSettingMethods(Object.assign(self, { newMenu: true })).main()
+		// }
 	}
 
 	self.getQlst = () => {

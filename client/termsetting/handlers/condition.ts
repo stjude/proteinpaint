@@ -37,8 +37,7 @@ export function getHandler(self: ConditionTermSettingInstance) {
 		},
 
 		async postMain() {
-			const body = self.opts.getBodyParams?.() || {}
-			// if (self.q.bar_by_children) {
+			const body = self.opts.getBodyParams?.() || {} //make sure term1_q is added
 			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
 			//not really sure this is necessary but it's consistent across other handlers
 			self.category2samplecount = []
@@ -146,7 +145,7 @@ async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 		self.q.bar_by_children ? 3 : self.q.value_by_computable_grade ? 2 : self.q.value_by_most_recent ? 1 : 0
 	)
 	if (self.q.bar_by_children) {
-		await new GroupSettingMethods(self).main()
+		await new GroupSettingMethods(Object.assign(self, { newMenu: false })).main()
 		return
 	}
 
