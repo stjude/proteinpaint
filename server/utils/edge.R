@@ -11,7 +11,7 @@ if (nchar(jsonlite_path) == 0) {
 
 edgeR_path <- system.file(package='edgeR')
 if (nchar(edgeR_path) == 0) {
-  install.packages("ggplot2", repos='https://cran.case.edu/')
+  BiocManager::install("edgeR")
 }
 
 readr_path <- system.file(package='readr')
