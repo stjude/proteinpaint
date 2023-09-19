@@ -33,7 +33,8 @@ NOTE
 "sample" and "category" attributes here are hardcoded
 
 */
-
+export const minDotSize = 9
+export const maxDotSize = 300
 class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
@@ -204,8 +205,8 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'minDotSize',
 			title: 'Minimum area, in square pixels',
-			min: 9,
-			max: 3000
+			min: minDotSize,
+			max: maxDotSize
 		}
 		const maxDotSizeOption = {
 			label: 'Max area',
@@ -213,8 +214,8 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'maxDotSize',
 			title: 'Maximum area, in square pixels',
-			min: 9,
-			max: 3000
+			min: minDotSize,
+			max: maxDotSize
 		}
 		const orientation = {
 			label: 'Scale order',

@@ -11,7 +11,7 @@ import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 import { getId } from '#mass/nav'
-
+import { minDotSize, maxDotSize } from './sampleScatter.js'
 export function setRenderers(self) {
 	self.render = function () {
 		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
@@ -163,10 +163,7 @@ export function setRenderers(self) {
 
 			chart.mainG.attr('clip-path', `url(#${idclip})`)
 
-			chart.legendG = svg
-				.append('g')
-				.attr('class', 'sjpcb-scatter-legend')
-				.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
+			chart.legendG = svg.append('g').attr('class', 'sjpcb-scatter-legend')
 		} else {
 			chart.mainG = svg.select('.sjpcb-scatter-mainG')
 			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
@@ -175,12 +172,11 @@ export function setRenderers(self) {
 			labelsG = svg.select('.sjpcb-scatter-labelsG')
 			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			chart.yAxis = axisG.select('.sjpcb-scatter-y-axis')
-			chart.legendG = svg
-				.select('.sjpcb-scatter-legend')
-				.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
+			chart.legendG = svg.select('.sjpcb-scatter-legend')
 
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
+		chart.legendG.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
 		if (chart.axisBottom) {
 			chart.xAxis.call(chart.axisBottom)
 			chart.yAxis.call(chart.axisLeft)
@@ -719,7 +715,7 @@ export function setRenderers(self) {
 		let offsetY = 25
 		if (!self.config.colorTW && !self.config.shapeTW) {
 			if (self.config.scaleDotTW) {
-				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 100})`)
+				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 120})`)
 				self.drawScaleDotLegend(chart)
 			}
 			return
@@ -853,7 +849,7 @@ export function setRenderers(self) {
 			}
 		}
 		if (self.config.scaleDotTW) {
-			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 100})`)
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 120})`)
 			self.drawScaleDotLegend(chart)
 		}
 		if (self.config.shapeTW) {
@@ -956,23 +952,25 @@ export function setRenderers(self) {
 		if (end % 1 != 0) end = end.toFixed(1)
 		const minG = scaleG.append('g').attr('transform', `translate(${40},${30})`)
 		const shift = 5 + start.toString().length * 7
-
+		const y = 20
 		minG
 			.append('circle')
 			.attr('r', order == 'Ascending' ? minRadius : maxRadius)
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
+			.attr('transform', `translate(0,${y})`)
+
 		minG
 			.append('text')
 			.attr('x', order == 'Ascending' ? -minRadius - shift : -maxRadius - shift)
-			.attr('y', 5)
+			.attr('y', y + 5)
 			.style('font-size', '.8em')
 			.attr('text-anchor', 'start')
 			.text(start)
 
 		const maxG = scaleG.append('g')
 		maxG
-			.attr('transform', `translate(${width + 40},${30})`)
+			.attr('transform', `translate(${width + 40},${y + 30})`)
 			.append('circle')
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
@@ -987,31 +985,31 @@ export function setRenderers(self) {
 			minG
 				.append('line')
 				.attr('x1', 0)
-				.attr('y1', -minRadius)
+				.attr('y1', y - minRadius)
 				.attr('x2', width)
-				.attr('y2', -maxRadius)
+				.attr('y2', y - maxRadius)
 				.style('stroke', '#aaa')
 			minG
 				.append('line')
 				.attr('x1', 0)
-				.attr('y1', minRadius)
+				.attr('y1', y + minRadius)
 				.attr('x2', width)
-				.attr('y2', maxRadius)
+				.attr('y2', y + maxRadius)
 				.style('stroke', '#aaa')
 		} else {
 			minG
 				.append('line')
 				.attr('x1', 0)
-				.attr('y1', -maxRadius)
+				.attr('y1', y - maxRadius)
 				.attr('x2', width)
-				.attr('y2', -minRadius)
+				.attr('y2', y - minRadius)
 				.style('stroke', '#aaa')
 			minG
 				.append('line')
 				.attr('x1', 0)
-				.attr('y1', maxRadius)
+				.attr('y1', y + maxRadius)
 				.attr('x2', width)
-				.attr('y2', minRadius)
+				.attr('y2', y + minRadius)
 				.style('stroke', '#aaa')
 		}
 
@@ -1032,7 +1030,12 @@ export function setRenderers(self) {
 					.style('width', '50px')
 					.attr('value', self.settings.minDotSize)
 					.on('change', () => {
-						self.config.settings.sampleScatter.minDotSize = parseFloat(minInput.node().value)
+						let value = parseFloat(minInput.node().value)
+						if (value < minDotSize) {
+							value = minDotSize
+							minInput.node().value = minDotSize
+						}
+						self.config.settings.sampleScatter.minDotSize = value
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -1048,7 +1051,12 @@ export function setRenderers(self) {
 					.style('width', '50px')
 					.attr('value', self.settings.maxDotSize)
 					.on('change', () => {
-						self.config.settings.sampleScatter.maxDotSize = parseFloat(maxInput.node().value)
+						let value = parseFloat(maxInput.node().value)
+						if (value > maxDotSize) {
+							value = maxDotSize
+							maxInput.node().value = maxDotSize
+						}
+						self.config.settings.sampleScatter.maxDotSize = value
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
