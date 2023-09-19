@@ -25,6 +25,7 @@ Fixes:
 - Bug fix for broken single variant panel from mds3 tk, by requiring tooltipPrintValue() to return [{k,v}]
 - Allow a sample to be missing files for disco and singleSampleGenomeQuantification data types and do not break server
 - Display matrix cell tooltip as two column table, and group events of same dt under same heading
+- bug fix to not to print text when average admix value is missing; improve population item UI in genomebrowser controls
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
