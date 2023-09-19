@@ -1,2 +1,1 @@
-Fixes:
-- Improve INFO field UI in genome browser group selection
+
