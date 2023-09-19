@@ -1,1 +1,2 @@
-
+Fixes:
+- bug fix to not to print text when average admix value is missing; improve population item UI in genomebrowser controls
