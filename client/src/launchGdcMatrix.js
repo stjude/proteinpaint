@@ -216,7 +216,7 @@ async function getGenes(arg, filter0, matrix) {
 	if (!data.genes) throw 'no top genes found using the cohort filter'
 	return await Promise.all(
 		// do tempfix of "data.genes.slice(0,3).map" for faster testing
-		data.genes.slice(0, 3).map(async i => {
+		data.genes.map(async i => {
 			return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
 		})
 	)
