@@ -23,6 +23,7 @@ Fixes:
 - add safety check for first bin stop and last bin start in numeric discrete termsetting, make the ui actually usable
 - Bug fix for broken single variant panel from mds3 tk, by requiring tooltipPrintValue() to return [{k,v}]
 - Allow a sample to be missing files for disco and singleSampleGenomeQuantification data types and do not break server
+- Display matrix cell tooltip as two column table, and group events of same dt under same heading
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
