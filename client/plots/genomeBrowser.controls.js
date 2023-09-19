@@ -331,8 +331,8 @@ function render1group_population(self, groupIdx, group, div) {
 					.style('margin-left', '20px')
 					.attr('class', 'sja_clbtext')
 					.on('click', event => {
-						groupTip.clear().showunder(event.target).d.append('div').style('margin', '10px').style('width', '400px')
-							.html(`These are average of admix coefficients based on current Group ${groupIdx == 1 ? 1 : 2} samples.
+						groupTip.clear().showunder(event.target).d.append('div').style('margin', '10px').style('width', '500px')
+							.html(`These are average admixture coefficients based on current Group ${groupIdx == 1 ? 1 : 2} samples.
 						They are used to adjust variant allele counts of matching ancestries from <span class=sja_menuoption style="padding:2px 5px">${
 							group.label
 						}</span>,
