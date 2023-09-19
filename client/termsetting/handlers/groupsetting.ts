@@ -1,5 +1,4 @@
-import { keyupEnter } from '#src/client'
-import { select, selectAll, Selection } from 'd3-selection'
+import { select, Selection } from 'd3-selection'
 import { CategoricalTermSettingInstance, ConditionTermSettingInstance } from '#shared/types/index'
 import { Tabs } from '#dom/toggleButtons'
 import { disappear } from '#src/client'
@@ -67,12 +66,12 @@ export class GroupSettingMethods {
 	initGrpSetUI: any
 
 	constructor(opts: GroupSettingInstance) {
-		;(this.opts = opts),
-			(this.dom = {
-				menuWrapper: opts.dom.tip.d.append('div')
-			}),
-			(this.data = { groups: [], values: [] }),
-			setRenderers(this)
+		this.opts = opts
+		this.dom = {
+			menuWrapper: opts.dom.tip.d.append('div')
+		}
+		this.data = { groups: [], values: [] }
+		setRenderers(this)
 	}
 
 	validateOpts(opts: GroupSettingInstance) {
@@ -106,13 +105,17 @@ export class GroupSettingMethods {
 			}
 		}
 		if (this.data.values.length == 0) throwMsgWithFilePathAndFnName(`Missing values`)
+
+		/*TODO: Logic below accounts for reformating data between getCategories and category2samplecount
+		in categorical.ts and condition.ts. This is probably unncessary in which case this section, including 
+		parts of main(), will be rewritten.*/
 		this.data.values.forEach(v => {
 			//subconditions formated with count, categorical term values do not have a count
 			if (!v.count) {
 				//find sample counts for each value once added to array
 				v.count = this.opts.category2samplecount
 					? this.opts.category2samplecount.find((d: { key: string; label?: string; count: number }) => d.key == v.key)
-							.count
+							?.count
 					: 'n/a'
 			}
 		})
@@ -129,7 +132,6 @@ export class GroupSettingMethods {
 	}
 
 	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
-		//this might be overkill but needed processing for non-categorical terms in the future?
 		for (const [i, group] of this.opts.q.groupsetting.customset.groups.entries()) {
 			if (group.uncomputable) return
 			this.data.groups.push({
@@ -216,14 +218,12 @@ function setRenderers(self: any) {
 		let newGrpNum = 0
 		self.dom.actionDiv.addGroup = self.dom.actionDiv
 			.append('button')
-			.attr('class', 'sjpp_apply_btn')
+			.classed('sjpp_apply_btn', true)
 			.style('display', 'inline-block')
-			.style('border-radius', '13px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
 			.style('cursor', 'pointer')
-			.style('background', '#d0e0e3')
 			.property('disabled', self.data.groups.length >= maxGrpNum)
 			.text('Add Group')
 			.on('click', async () => {
@@ -241,9 +241,8 @@ function setRenderers(self: any) {
 		//Apply button
 		self.dom.actionDiv.applyBtn = self.dom.actionDiv
 			.append('button')
-			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+			.classed('sjpp_apply_btn', true)
 			.style('display', 'inline-block')
-			.style('border-radius', '13px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('float', 'right')
@@ -314,9 +313,8 @@ function setRenderers(self: any) {
 	}
 
 	let draggedItem: any
-	// const dragTransfer = new DataTransfer()
 	async function initGroupDiv(group: GrpEntryWithDom) {
-		//Create the parent group div with user actions on the top
+		//Create the parent group div on load and with user actions on the top
 		const wrapper = group.currentIdx === 0 ? self.dom.excludedWrapper : self.dom.includedWrapper
 		group.type = 'values'
 		if (!group.wrapper)
@@ -398,10 +396,9 @@ function setRenderers(self: any) {
 				})
 
 			function onKeyUp() {
-				//Detect unique name on change. If not a unique name, alert user and disable apply button
+				//Detect unique name on change. If not a unique name, alert the user and disable apply button
 				if (group.name == group.input.node().value) return
 				const match = self.data.groups.filter((g: GrpEntryWithDom) => g.name == group.input.node().value)
-				console.log(match)
 				if (match.length > 0) {
 					self.dom.actionDiv.applyBtn.property('disabled', true)
 					group.inputMessage.style('display', 'block')
@@ -421,10 +418,10 @@ function setRenderers(self: any) {
 
 			group.destroyBtn = group.dragActionDiv
 				.append('button')
-				.attr('class', 'sjpp_apply_btn')
+				.style('border-radius', '13px')
 				.style('display', 'inline-block')
 				.style('padding', '0px 4px')
-				.property('disabled', self.data.groups.length <= minGrpNum)
+				.property('disabled', self.data.groups.length <= minGrpNum) //Each appears disabled/enabled based on the number of groups
 				.text('x')
 				.on('click', async (event: MouseEvent) => {
 					if (self.data.groups.length <= minGrpNum) return
@@ -452,7 +449,7 @@ function setRenderers(self: any) {
 			.style('padding', '3px 10px')
 			.style('border-radius', '5px')
 			.style('color', (d: ItemEntry) => (d.count == 0 ? '#777' : 'black'))
-			.text((d: ItemEntry) => `${d.label}${d.count !== undefined ? ` (n= ${d.count})` : ''}`)
+			.text((d: ItemEntry) => `${d.label}${d.count !== undefined ? ` (n=${d.count})` : ''}`)
 			.style('background-color', '#eee')
 			.each(function (this: Element) {
 				const itemNode = select(this)
@@ -473,9 +470,10 @@ function setRenderers(self: any) {
 		const itemsNum = group.wrapper.selectAll('.sjpp-drag-item').nodes()
 		if (itemsNum.length === 0) group.wrapper.remove()
 		else {
-			const defaultDuration = 1000
-			await collapseAnimation(defaultDuration)
+			// const defaultDuration = 1000
+			// await collapseAnimation(defaultDuration)
 			for (const v of self.data.values) {
+				//Reassign all values to excluded categories group
 				if (v.group == group.currentIdx) v.group = 0
 			}
 			// setTimeout(() => {
@@ -484,62 +482,62 @@ function setRenderers(self: any) {
 		}
 		await self.update()
 
-		async function collapseAnimation(defaultDuration: number) {
-			//Remove user action divs
-			group.input.remove()
-			group.destroyBtn.remove()
-			group.wrapper.remove()
+		// 	async function collapseAnimation(defaultDuration: number) {
+		// 		//Remove user action divs
+		// 		group.input.remove()
+		// 		group.destroyBtn.remove()
+		// 		group.wrapper.remove()
 
-			// const z = self.dom.excludedWrapper.node().getBoundingClientRect()
-			// const a = group.draggables.selectAll('.sjpp-drag-item')
-			// a
-			// .style('transform', `translate(${z.x}px, ${z.y}px)`)
-			// .style('transtition', `transform ${defaultDuration}ms ease-in-out`)
+		// 		// const z = self.dom.excludedWrapper.node().getBoundingClientRect()
+		// 		// const a = group.draggables.selectAll('.sjpp-drag-item')
+		// 		// a
+		// 		// .style('transform', `translate(${z.x}px, ${z.y}px)`)
+		// 		// .style('transtition', `transform ${defaultDuration}ms ease-in-out`)
 
-			// a.transition().duration(defaultDuration).attr(`transform`, `translate(${z.x}, ${z.y})`)
-			// const { x, y } = getCollapsedScale(self.dom.excludedWrapper.node(), group.wrapper.node())
-			// console.log(x, y)
-			// 	const collapsedX = 0
-			// 	const collapsedY = 0
+		// 		// a.transition().duration(defaultDuration).attr(`transform`, `translate(${z.x}, ${z.y})`)
+		// 		// const { x, y } = getCollapsedScale(self.dom.excludedWrapper.node(), group.wrapper.node())
+		// 		// console.log(x, y)
+		// 		// 	const collapsedX = 0
+		// 		// 	const collapsedY = 0
 
-			// const collapseEffect = [
-			// 	{ transform: 'none' },
-			// 	// { transform: 'none', offset: 0.2 },
-			// 	{ transform: `translate(${collapsedX}px, ${collapsedY}px)` }
-			// ]
+		// 		// const collapseEffect = [
+		// 		// 	{ transform: 'none' },
+		// 		// 	// { transform: 'none', offset: 0.2 },
+		// 		// 	{ transform: `translate(${collapsedX}px, ${collapsedY}px)` }
+		// 		// ]
 
-			// 	const collapseTime = {
-			// 		duration: defaultDuration,
-			// 		iterations: 1
-			// 	}
+		// 		// 	const collapseTime = {
+		// 		// 		duration: defaultDuration,
+		// 		// 		iterations: 1
+		// 		// 	}
 
-			// 	await group.draggables.each(function (this: HTMLElement) {
-			// 		const item = select(this).node()
-			// 		if (!(item instanceof HTMLElement)) return
-			// 		item.animate(collapseEffect, collapseTime)
-			// 	})
+		// 		// 	await group.draggables.each(function (this: HTMLElement) {
+		// 		// 		const item = select(this).node()
+		// 		// 		if (!(item instanceof HTMLElement)) return
+		// 		// 		item.animate(collapseEffect, collapseTime)
+		// 		// 	})
 
-			// 	const values2Exclude = self.data.values.filter((d: ItemEntry) => d.group == group.currentIdx)
-			// 	values2Exclude.forEach((d: ItemEntry) => (d.group = 0))
-			// 	// group.destroyBtn
-			// 	// 	.style('padding', '5px')
-			// 	// 	.text(itemsNum.length)
-			// 	group.draggables.style('transform', `translate(${collapsedX}px, ${collapsedY}px) scale(0)`)
-		}
+		// 		// 	const values2Exclude = self.data.values.filter((d: ItemEntry) => d.group == group.currentIdx)
+		// 		// 	values2Exclude.forEach((d: ItemEntry) => (d.group = 0))
+		// 		// 	// group.destroyBtn
+		// 		// 	// 	.style('padding', '5px')
+		// 		// 	// 	.text(itemsNum.length)
+		// 		// 	group.draggables.style('transform', `translate(${collapsedX}px, ${collapsedY}px) scale(0)`)
+		// 	}
+		// }
+
+		// function getCollapsedScale(anchor: any, div: Element) {
+		// 	//anchor: constant element appearing on expand and collapse
+		// 	//div: the whole div, items and all, to collapse and expand
+		// 	const collapsed = anchor.getBoundingClientRect()
+		// 	const expanded = div.getBoundingClientRect()
+		// 	console.log(collapsed, expanded)
+		// 	return{ x: 0, y: 0}
+		// 	// return {
+		// 	// 	x: collapsed.width / expanded.width,
+		// 	// 	y: collapsed.height / expanded.height
+		// 	// }
 	}
-
-	// function getCollapsedScale(anchor: any, div: Element) {
-	// 	//anchor: constant element appearing on expand and collapse
-	// 	//div: the whole div, items and all, to collapse and expand
-	// 	const collapsed = anchor.getBoundingClientRect()
-	// 	const expanded = div.getBoundingClientRect()
-	// 	console.log(collapsed, expanded)
-	// 	return{ x: 0, y: 0}
-	// 	// return {
-	// 	// 	x: collapsed.width / expanded.width,
-	// 	// 	y: collapsed.height / expanded.height
-	// 	// }
-	// }
 
 	self.update = async function () {
 		self.dom.actionDiv.addGroup.property('disabled', self.data.groups.length >= maxGrpNum)

@@ -1,20 +1,10 @@
-const tape = require('tape')
-const d3s = require('d3-selection')
-const vocabData = require('../../termdb/test/vocabData')
-const vocabInit = require('../../termdb/vocabulary').vocabInit
-const termjson = require('../../test/testdata/termjson').termjson
-const { termsettingInit, termsetting_fill_q } = require('#termsetting')
-const {
-	sleep,
-	detectLst,
-	detectOne,
-	detectZero,
-	detectGte,
-	whenGone,
-	whenHidden,
-	whenVisible,
-	testAppInit
-} = require('../../test/test.helpers')
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { getExample } from '../../termdb/test/vocabData'
+import { vocabInit } from '../../termdb/vocabulary'
+import { termjson } from '../../test/testdata/termjson'
+import { termsettingInit, termsetting_fill_q } from '#termsetting'
+import { sleep, detectLst, detectGte, whenGone } from '../../test/test.helpers'
 /*
 Tests:
 	menuOptions
@@ -89,7 +79,7 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
 		numericEditMenuVersion: opts.numericEditMenuVersion,
 		debug: true,
-		callback: function(termsetting) {
+		callback: function (termsetting) {
 			opts.tsData = termsetting
 			opts.pill.main(opts.tsData)
 		}
@@ -346,44 +336,35 @@ tape('Categorical term', async test => {
 
 	//check menu buttons on first menu
 	test.equal(tip.d.selectAll('.sja_menuoption.sja_sharp_border').size(), 2, 'Should have 2 buttons for group config')
-	// test.equal(tip.d.selectAll('.replace_btn').size(), 1, 'Should have 1 button to replce the term')
-	// test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 
 	// check menu buttons on category menu
-	tip.d.selectAll('.sja_menuoption.sja_sharp_border')._groups[0][0].click()
+	const dragItems = await detectGte({
+		elem: tip.d.node(),
+		selector: 'div > div > div > .sjpp-drag-item',
+		async trigger() {
+			tip.d.selectAll('.sja_menuoption.sja_sharp_border')._groups[0][0].click()
+		}
+	})
+	test.equal(dragItems.length, Object.keys(opts.tsData.term.values).length, 'Should have rows for each category')
 	test.equal(
-		tip.d.selectAll('.sj-drag-item').size(),
-		Object.keys(opts.tsData.term.values).length,
-		'Should have rows for each category'
+		tip.d.selectAll('div > div > div > .sjpp_apply_btn').size(),
+		2,
+		'Should have "Add Group" and "Apply" button to apply group changes'
 	)
-	test.equal(tip.d.selectAll('.sjpp_apply_btn').size(), 1, 'Should have "Apply" button to apply group changes')
-	test.equal(
-		tip.d.selectAll('.group_edit_div > label').html(),
-		'Number of groups',
-		'Should have "Number of groups" as dropdown label'
-	)
-	test.equal(tip.d.selectAll('.group_edit_div > select').size(), 1, 'Should have dropdown for group count change')
-
-	test.equal(
-		tip.d.selectAll('.sj-drag-item')._groups[0][0].innerText,
-		'Acute lymphoblastic leukemia (n=44)',
-		'Should have first cateogry as "ALL"'
-	)
+	test.equal(dragItems[0].innerHTML, 'Acute lymphoblastic leukemia (n=44)', 'Should have first cateogry as "ALL"')
 
 	//Test drag functionality
-	const grpInputs = await detectLst({ elem: tip.d.node(), selector: '.group_edit_div > input', count: 2 })
-
+	const grpInputs = await detectLst({ elem: tip.d.node(), selector: 'input', count: 2 })
 	//Change group names
-	grpInputs[0].value = 'Group 1'
+	grpInputs[0].value = 'New Group 1'
 	grpInputs[0].dispatchEvent(new KeyboardEvent('keyup'))
-	grpInputs[1].value = 'Group 2'
+	grpInputs[1].value = 'New Group 2'
 	grpInputs[1].dispatchEvent(new KeyboardEvent('keyup'))
 
-	test.notEqual(grpInputs[0].defaultValue, grpInputs[0].value, `Should display new 'Group 1' title`)
-	test.notEqual(grpInputs[1].defaultValue, grpInputs[1].value, `Should display new 'Group 2' title`)
+	test.notEqual(grpInputs[0].defaultValue, grpInputs[0].value, `Should display changed 'New Group 1' title`)
+	test.notEqual(grpInputs[1].defaultValue, grpInputs[1].value, `Should display changed 'New Group 2' title`)
 
 	const dragDivs = tip.d.selectAll('.sjpp-drag-drop-div').nodes()
-	const dragItems = tip.d.selectAll('.sj-drag-item').nodes()
 
 	//First item in list
 	dragItems[0].dispatchEvent(new Event('dragstart'))
@@ -392,12 +373,14 @@ tape('Categorical term', async test => {
 	dragDivs[1].dispatchEvent(new Event('drop'))
 	dragItems[0].dispatchEvent(new Event('dragend'))
 
+	const secondGrpItems = dragDivs[1].__data__.draggables.node().childNodes
+
 	test.equal(
-		dragDivs[1].childNodes[2].childNodes[0].innerHTML,
+		secondGrpItems[0].innerHTML,
 		dragItems[0].innerHTML,
 		`Should display the first item ('${dragItems[0].innerHTML}') as dragged to second group`
 	)
-	test.equal(dragDivs[1].childNodes.length, 3, `Should display only one item in second group`)
+	test.equal(secondGrpItems.length, 1, `Should display only one item in second group`)
 
 	test.end()
 })
@@ -476,10 +459,7 @@ tape('Numerical term: fixed bins', async test => {
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
 
-	const lines = tip.d
-		.select('.binsize_g')
-		.node()
-		.querySelectorAll('line')
+	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 8, 'should have 8 lines')
 	// first line should be draggable
 	// other lines should not be draggable if there is no q.last_bin
@@ -536,11 +516,7 @@ tape('Numerical term: fixed bins', async test => {
 	d3s.select(last_bin_custom_radio).property('checked', true)
 	last_bin_custom_radio.dispatchEvent(new Event('change'))
 
-	const last_bin_input = tip.d
-		.node()
-		.querySelectorAll('tr')[2]
-		.querySelectorAll('div')[1]
-		.querySelectorAll('input')[0]
+	const last_bin_input = tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0]
 
 	last_bin_input.value = 20
 
@@ -548,11 +524,7 @@ tape('Numerical term: fixed bins', async test => {
 	last_bin_input.dispatchEvent(new Event('change'))
 
 	test.equal(
-		tip.d
-			.node()
-			.querySelectorAll('tr')[2]
-			.querySelectorAll('div')[1]
-			.querySelectorAll('input')[0].value,
+		tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0].value,
 		'20',
 		'Should change "last bin" from input'
 	)
@@ -566,10 +538,7 @@ tape('Numerical term: fixed bins', async test => {
 	await opts.pillMenuClick('Edit')
 
 	test.equal(
-		tip.d
-			.node()
-			.querySelectorAll('tr')[0]
-			.querySelectorAll('input')[0].value,
+		tip.d.node().querySelectorAll('tr')[0].querySelectorAll('input')[0].value,
 		'5',
 		'Should apply the change by "Apply" button'
 	)
@@ -585,10 +554,7 @@ tape('Numerical term: fixed bins', async test => {
 	await sleep(100)
 	await opts.pillMenuClick('Edit')
 	test.equal(
-		tip.d
-			.node()
-			.querySelectorAll('tr')[0]
-			.querySelectorAll('input')[0].value,
+		tip.d.node().querySelectorAll('tr')[0].querySelectorAll('input')[0].value,
 		'3',
 		'Should reset the bins by "Reset" button'
 	)
@@ -670,10 +636,7 @@ tape('Numerical term: float custom bins', async test => {
 
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d
-		.select('.binsize_g')
-		.node()
-		.querySelectorAll('line')
+	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
 	tip.hide()
 })
@@ -701,10 +664,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	test.equal(toggleButtons[0].innerText, 'Continuous', 'Should have title for first tab as Continuous')
 
 	test.equal(
-		tip.d
-			.node()
-			.querySelector('select')
-			.querySelectorAll('option')[0].innerText,
+		tip.d.node().querySelector('select').querySelectorAll('option')[0].innerText,
 		'No Scaling',
 		'Should have rendered UI for Continuous menu'
 	)
@@ -715,10 +675,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	test.equal(toggleButtons[1].innerText, 'Discrete', 'Should have title for 2nd tab as Discrete')
 
 	test.equal(
-		tip.d
-			.node()
-			.querySelector('tr')
-			.querySelector('td').innerText,
+		tip.d.node().querySelector('tr').querySelector('td').innerText,
 		'Bin Size',
 		'Should have rendered UI for Discrete menu'
 	)
@@ -729,10 +686,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	test.equal(toggleButtons[2].innerText, 'Cubic spline', 'Should have title for 3nd tab as Cubic spline')
 
 	test.equal(
-		tip.d
-			.node()
-			.querySelector('textarea')
-			.value.split('\n').length,
+		tip.d.node().querySelector('textarea').value.split('\n').length,
 		parseInt(tip.d.node().querySelectorAll('select')[2].value),
 		'Should have rendered UI for Continuous menu'
 	)
@@ -742,10 +696,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 
 	test.equal(toggleButtons[3].innerText, 'Binary', 'Should have title for 4nd tab as Binary')
 
-	const binary_lines = tip.d
-		.node()
-		.querySelectorAll('.binsize_g')[2]
-		.querySelectorAll('line')
+	const binary_lines = tip.d.node().querySelectorAll('.binsize_g')[2].querySelectorAll('line')
 	test.equal(binary_lines.length, 1, 'Should have rendered UI for Binary menu')
 	tip.hide()
 })
@@ -841,18 +792,12 @@ tape('Numerical term: integer custom bins', async test => {
 
 	await sleep(300)
 	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d
-		.select('.binsize_g')
-		.node()
-		.querySelectorAll('line')
+	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
-	const tickTexts = tip.d
-		.select('svg')
-		.selectAll('.tick')
-		.selectAll('text')
+	const tickTexts = tip.d.select('svg').selectAll('.tick').selectAll('text')
 	test.equal(
 		tickTexts
-			.filter(function() {
+			.filter(function () {
 				return this.innerHTML.includes('.')
 			})
 			.size(),
@@ -861,7 +806,7 @@ tape('Numerical term: integer custom bins', async test => {
 	)
 	test.equal(
 		tickTexts
-			.filter(function() {
+			.filter(function () {
 				return this.innerHTML.includes(',')
 			})
 			.size(),
@@ -1047,7 +992,7 @@ tape('Conditional term', async test => {
 tape('Custom vocabulary', async test => {
 	test.timeoutAfter(5000)
 	test.plan(6)
-	const vocab = vocabData.getExample()
+	const vocab = getExample()
 	const opts = await getOpts(
 		{
 			menuOptions: 'all',
@@ -1073,7 +1018,7 @@ tape('Custom vocabulary', async test => {
 
 	const replaceBtn = tipd
 		.selectAll('.sja_menuoption')
-		.filter(function() {
+		.filter(function () {
 			return this.innerText.toLowerCase() == 'replace'
 		})
 		.node()
@@ -1218,13 +1163,20 @@ tape('samplelst term', async test => {
 						key: 'Group 1',
 						label: 'Test 1',
 						inuse: true,
-						list: [{ sampleId: 1, sample: 1 }, { sampleId: 2, sample: 2 }]
+						list: [
+							{ sampleId: 1, sample: 1 },
+							{ sampleId: 2, sample: 2 }
+						]
 					},
 					'Group 2': {
 						key: 'Group 2',
 						label: 'Test 2',
 						inuse: false,
-						list: [{ sampleId: 3, sample: 3 }, { sampleId: 4, sample: 4 }, { sampleId: 5, sample: 5 }]
+						list: [
+							{ sampleId: 3, sample: 3 },
+							{ sampleId: 4, sample: 4 },
+							{ sampleId: 5, sample: 5 }
+						]
 					},
 					'Group 3': { key: 'Group 3', label: 'Test 3', inuse: false, list: [{ sampleId: 6, sample: 6 }] }
 				}
@@ -1234,12 +1186,19 @@ tape('samplelst term', async test => {
 					{
 						name: 'Group 1',
 						in: true,
-						values: [{ sampleId: 1, sample: 1 }, { sampleId: 2, sample: 2 }]
+						values: [
+							{ sampleId: 1, sample: 1 },
+							{ sampleId: 2, sample: 2 }
+						]
 					},
 					{
 						name: 'Group 2',
 						in: false,
-						values: [{ sampleId: 3, sample: 3 }, { sampleId: 4, sample: 4 }, { sampleId: 5, sample: 5 }]
+						values: [
+							{ sampleId: 3, sample: 3 },
+							{ sampleId: 4, sample: 4 },
+							{ sampleId: 5, sample: 5 }
+						]
 					},
 					{
 						name: 'Group 3',
