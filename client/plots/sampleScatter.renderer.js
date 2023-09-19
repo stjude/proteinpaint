@@ -417,13 +417,15 @@ export function setRenderers(self) {
 			if (self.settings.scaleDotOrder == 'Ascending')
 				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
-
-			return self.symbols[index].size((size * factor) / self.k)()
+			const scaledSize = (size * factor) / self.k
+			return self.symbols[index].size(scaledSize)()
 		}
 	}
 
 	function translate(chart, c) {
-		const transform = `translate(${chart.xAxisScale(c.x)},${chart.yAxisScale(c.y)})`
+		const x = chart.xAxisScale(c.x)
+		const y = chart.yAxisScale(c.y)
+		const transform = `translate(${x},${y})`
 		return transform
 	}
 
@@ -618,13 +620,13 @@ export function setRenderers(self) {
 
 		const mainG = self.charts[0].mainG
 		const zoom = d3zoom()
-			.scaleExtent([0.5, 10])
+			.scaleExtent([0.5, self.config.scaleDotTW ? 4 : 10])
 			.on('zoom', handleZoom)
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-
+		if (self.config.scaleDotTW && self.k > 4) resetToIdentity()
 		mainG.call(zoom)
 		for (const chart of self.charts) {
 			chart.lasso = d3lasso()
