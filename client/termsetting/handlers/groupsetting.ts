@@ -221,8 +221,6 @@ function setRenderers(self: any) {
 			.classed('sjpp_apply_btn', true)
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
 			.style('cursor', 'pointer')
 			.property('disabled', self.data.groups.length >= maxGrpNum)
 			.text('Add Group')
@@ -244,9 +242,7 @@ function setRenderers(self: any) {
 			.classed('sjpp_apply_btn', true)
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
-			.style('font-size', '.8em')
 			.style('float', 'right')
-			.style('text-transform', 'uppercase')
 			.style('cursor', 'pointer')
 			.text('Apply')
 			.on('click', () => {
