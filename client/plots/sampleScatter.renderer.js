@@ -91,9 +91,10 @@ export function setRenderers(self) {
 
 	function renderSVG(chart, s) {
 		const svg = chart.svg
-		let colorLegends = chart.colorLegend.size * 30
+		let colorLegends = chart.colorLegend.size * 25
 		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
-		self.legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + 100 //legend step and header
+		const scaleHeight = self.config.scaleDotTW ? 200 : 100
+		self.legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
 		const width = self.charts.length == 1 ? s.svgw + 800 : s.svgw + (self.config.shapeTW ? 600 : 350)
 		svg
 			.transition()
@@ -174,7 +175,10 @@ export function setRenderers(self) {
 			labelsG = svg.select('.sjpcb-scatter-labelsG')
 			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			chart.yAxis = axisG.select('.sjpcb-scatter-y-axis')
-			chart.legendG = svg.select('.sjpcb-scatter-legend')
+			chart.legendG = svg
+				.select('.sjpcb-scatter-legend')
+				.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
+
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
 		if (chart.axisBottom) {
