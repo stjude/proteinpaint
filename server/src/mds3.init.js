@@ -28,6 +28,7 @@ import { setDbRefreshRoute } from './dsUpdateAttr.js'
 import { mayInitiateScatterplots } from './termdb.scatter'
 import { mayInitiateMatrixplots } from './termdb.matrix'
 import { add_bcf_variant_filter } from './termdb.snp'
+import { spawnSync } from 'child_process'
 
 /*
 init
@@ -83,6 +84,7 @@ const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/
 export async function init(ds, genome, _servconfig, app = null, basepath = null) {
 	// must validate termdb first
 	await validate_termdb(ds)
+	await validate_cumburden(ds)
 
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
@@ -443,6 +445,23 @@ function combineFilterAndTid2value(q, ds) {
 	if (lst.length == 0) return
 	if (lst.length == 1) return lst[0]
 	return filterJoin(lst)
+}
+
+export async function validate_cumburden(ds) {
+	if (!ds.cohort.cumburden) return
+	if (!ds.cohort.cumburden.files) `missing ds.cohort.cumburden.files`
+	const inputFiles = ds.cohort.cumburden.files
+	for (const name of ['fit', 'surv', 'sample']) {
+		const f = inputFiles[name]
+		if (!f) throw `missing ds.cohort.burden.files.${name}`
+		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${serverconfig.tpmasterdir}/${f}')`], {
+			encoding: 'utf-8'
+		})
+		if (out?.status || out?.stderr) {
+			console.log(out)
+			throw `error with ds.cohort.cumburden.files.${name}`
+		}
+	}
 }
 
 function copy_queries(ds, dscopy) {
