@@ -204,7 +204,8 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'minDotSize',
 			title: 'Minimum area, in square pixels',
-			min: 0
+			min: 9,
+			max: 3000
 		}
 		const maxDotSizeOption = {
 			label: 'Max area',
@@ -212,7 +213,8 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'maxDotSize',
 			title: 'Maximum area, in square pixels',
-			min: 0
+			min: 9,
+			max: 3000
 		}
 		const orientation = {
 			label: 'Scale order',

@@ -177,7 +177,9 @@ function setNumberInput(opts) {
 		}
 
 		function dispatchChange() {
-			const value = Number(self.dom.inputs[input.settingsKey].property('value'))
+			let value = Number(self.dom.inputs[input.settingsKey].property('value'))
+			if (input.max && input.max < value) value = input.max
+			if (input.min && input.min > value) value = input.min
 			if (opts.callback) opts.callback(value)
 			else {
 				opts.dispatch({
