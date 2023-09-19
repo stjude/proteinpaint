@@ -336,7 +336,7 @@ function render1group_population(self, groupIdx, group, div) {
 						They are used to adjust variant allele counts of matching ancestries from <span class=sja_menuoption style="padding:2px 5px">${
 							group.label
 						}</span>,
-						so that the adjusted allele counts are compared against Group ${groupIdx == 1 ? 1 : 2} allele counts.
+						so that the adjusted allele counts can be compared against Group ${groupIdx == 1 ? 1 : 2} allele counts.
 						This allows to account for ancestry composition difference between the two groups.
 						`)
 					})
