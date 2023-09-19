@@ -8,10 +8,16 @@ export const api = {
 	endpoint: 'burden',
 	methods: {
 		get: {
-			init() {
+			init({ genomes }) {
 				return async (req: undefined, res: any): Promise<void> => {
 					try {
-						const estimates = await getBurdenEstimates(req)
+						const genome = genomes[req.query.genome]
+						if (!genome) throw `invalid q.genome=${req.query.genome}`
+						const ds = genome.datasets[req.query.dslabel]
+						if (!ds) throw `invalid q.genome=${req.query.dslabel}`
+						if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
+
+						const estimates = await getBurdenEstimates(req, ds)
 						const { keys, rows } = formatPayload(estimates)
 						res.send({ status: 'ok', keys, rows })
 					} catch (e: any) {
@@ -59,7 +65,7 @@ export const api = {
 	}
 }
 
-async function getBurdenEstimates(q) {
+async function getBurdenEstimates(q, ds) {
 	const infile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	for (const k in q.query) {
 		q.query[k] = Number(q.query[k])
@@ -68,12 +74,13 @@ async function getBurdenEstimates(q) {
 	//console.log(40, data, JSON.stringify(data))
 	await write_file(infile, JSON.stringify(data))
 	// TODO: use the dataset location
-	const dsDataDir = `${serverconfig.tpmasterdir}/files/hg38/sjlife/burden`
+	const { fit, surv, sample } = ds.cohort.cumburden.files
+	if (!fit || !surv || !sample) throw `missing one or more of ds.cohort.burden.files.{fit, surv, sample}`
 	const args = [
 		infile,
-		`${dsDataDir}/cphfits2.RData`,
-		`${dsDataDir}/surv.RData`,
-		`${dsDataDir}/nchcsampledsex0age0steroid0bleo0vcr0etop0itmt0.RData`
+		`${serverconfig.tpmasterdir}/${fit}`,
+		`${serverconfig.tpmasterdir}/${surv}`,
+		`${serverconfig.tpmasterdir}/${sample}`
 	]
 	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/burden.R'), [], args)
 	const estimates = JSON.parse(Routput[0])
