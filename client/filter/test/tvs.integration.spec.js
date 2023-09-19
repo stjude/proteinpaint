@@ -1,17 +1,8 @@
-const tape = require('tape')
-const d3s = require('d3')
-const filterInit = require('../filter').filterInit
-const { parseRange } = require('../../dom/numericRangeInput')
-const {
-	sleep,
-	detectLst,
-	detectOne,
-	detectZero,
-	detectGte,
-	detectChildText,
-	whenHidden,
-	whenVisible
-} = require('../../test/test.helpers')
+import tape from 'tape'
+import * as d3s from 'd3-selection'
+import { filterInit } from '../filter'
+import { parseRange } from '../../dom/numericRangeInput'
+import { detectLst, detectOne, detectZero, detectGte, detectChildText, whenHidden } from '../../test/test.helpers'
 
 /*********
 Tests: 
@@ -71,7 +62,7 @@ function getOpts(_opts = {}) {
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
 		debug: true,
-		callback: function(filter) {
+		callback: function (filter) {
 			let stop = false
 			if (opts.testCallback) {
 				stop = opts.testCallback(filter)
@@ -153,10 +144,7 @@ tape('tvs (common): buttons', async test => {
 		)
 
 		test.equal(
-			opts.holder
-				.node()
-				.querySelector('.value_btn')
-				.innerHTML.split('<')[0],
+			opts.holder.node().querySelector('.value_btn').innerHTML.split('<')[0],
 			opts.filterData.lst[0].tvs.values[0].label,
 			'should label the pill with the correct value label'
 		)
@@ -291,10 +279,7 @@ tape('tvs: Categorical', async test => {
 		test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Wilms tumor')
 
 		//trigger and test addition of new value
-		tipd
-			.node()
-			.querySelectorAll("input[name^='select']")[0]
-			.click()
+		tipd.node().querySelectorAll("input[name^='select']")[0].click()
 
 		// defer the execution of the next step to the next process loop "tick"
 		const valueBtn = await detectChildText({
@@ -332,7 +317,7 @@ tape.skip('tvs: Numeric', async test => {
 							unit: 'mg/m²',
 							type: 'float',
 							values: {
-								'0': { label: 'Not exposed', uncomputable: true },
+								0: { label: 'Not exposed', uncomputable: true },
 								'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 								'-9999': { label: 'Unknown treatment record', uncomputable: true }
 							}
@@ -361,10 +346,7 @@ tape.skip('tvs: Numeric', async test => {
 	// --- test common bluepill components ---
 	{
 		test.equal(
-			filternode
-				.querySelector('.term_name_btn')
-				.querySelector('label')
-				.innerHTML.split(' ')[0],
+			filternode.querySelector('.term_name_btn').querySelector('label').innerHTML.split(' ')[0],
 			opts.filterData.lst[0].tvs.term.name.split(' ')[0],
 			'should label the pill with the correct term name'
 		)
@@ -591,10 +573,7 @@ tape('tvs: Condition', async test => {
 		)
 
 		test.equal(
-			opts.holder
-				.node()
-				.querySelectorAll('.value_btn')[0]
-				.innerHTML.split('<')[0],
+			opts.holder.node().querySelectorAll('.value_btn')[0].innerHTML.split('<')[0],
 			opts.filterData.lst[0].tvs.values[0].label,
 			'should label the pill with the correct value label'
 		)
@@ -624,10 +603,7 @@ tape('tvs: Condition', async test => {
 
 	// --- trigger and test grade change ---
 	{
-		tipd
-			.node()
-			.querySelectorAll("input[name^='select']")[1]
-			.click()
+		tipd.node().querySelectorAll("input[name^='select']")[1].click()
 
 		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 		const valueBtn = await detectChildText({
@@ -755,10 +731,7 @@ tape('tvs: Cohort + Numeric', async test => {
 
 			// change the cohort
 			const selectElem = opts.filter.Inner.dom.holder.select('select')
-			selectElem
-				.property('value', 1)
-				.on('change')
-				.call(selectElem.node())
+			selectElem.property('value', 1).on('change').call(selectElem.node())
 
 			await whenHidden(controlTipd.node())
 			pill.click()
