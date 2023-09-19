@@ -255,8 +255,52 @@ function render1group_info(self, groupIdx, group, div) {
 		const f = self.state.config.variantFilter.terms.find(i => i.id == group.infoKey)
 		if (f && f.name) name = f.name
 	}
-	div.append('span').text(name)
-	div.append('span').text('INFO FIELD').style('font-size', '.5em').style('margin-left', '10px')
+	div
+		.append('span')
+		.text(name)
+		.attr('class', 'sja_menuoption')
+		.on('click', event => {
+			if (self.state.config.variantFilter.terms.length <= 1) {
+				// only 1, no other option to switch to
+				return
+			}
+			// multiple options, allow to replace
+			groupTip
+				.clear()
+				.showunder(event.target)
+				.d.append('div')
+				.text('Replace with:')
+				.style('margin', '10px')
+				.style('font-size', '.8em')
+			for (const f of self.state.config.variantFilter.terms) {
+				if (f.type != 'integer' && f.type != 'float') continue // only allow numeric fields
+				if (f.id == group.infoKey) continue // same one
+
+				groupTip.d
+					.append('div')
+					.text(f.name)
+					.attr('class', 'sja_menuoption')
+					.on('click', () => {
+						/////////////////////////////////
+						// create a new group using this info field
+						groupTip.hide()
+						const groups = structuredClone(self.state.config.snvindel.details.groups)
+						groups[groupIdx].infoKey = f.id
+						groups[groupIdx].type = 'info'
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: { snvindel: { details: { groups } } }
+						})
+					})
+			}
+		})
+	div
+		.append('span')
+		.text('PER-VARIANT NUMERICAL VALUES')
+		.style('font-size', '.7em')
+		.style('opacity', 0.6)
+		.style('margin-left', '10px')
 }
 
 function render1group_population(self, groupIdx, group, div) {
