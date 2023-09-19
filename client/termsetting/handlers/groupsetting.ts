@@ -388,22 +388,8 @@ function setRenderers(self: any) {
 				.style('font-size', '.8em')
 				.style('width', '87%')
 				.on('keyup', () => {
-					debounce(onKeyUp(), 1000)
+					debounce(self.onKeyUp(group), 1000)
 				})
-
-			function onKeyUp() {
-				//Detect unique name on change. If not a unique name, alert the user and disable apply button
-				if (group.name == group.input.node().value) return
-				const match = self.data.groups.filter((g: GrpEntryWithDom) => g.name == group.input.node().value)
-				if (match.length > 0) {
-					self.dom.actionDiv.applyBtn.property('disabled', true)
-					group.inputMessage.style('display', 'block')
-				} else {
-					self.dom.actionDiv.applyBtn.property('disabled', false)
-					group.inputMessage.style('display', 'none')
-					self.data.groups[group.currentIdx].name = group.input.node().value.trim()
-				}
-			}
 
 			group.inputMessage = group.dragActionDiv
 				.append('span')
@@ -429,6 +415,20 @@ function setRenderers(self: any) {
 		group.draggables = group.wrapper.append('div').classed('sjpp-drag-list-div', true)
 
 		await self.addItems(group)
+	}
+
+	self.onKeyUp = async function (group: GrpEntryWithDom) {
+		//Detect unique name on change. If not a unique name, alert the user and disable apply button
+		if (group.name == group.input.node().value) return
+		const match = self.data.groups.filter((g: GrpEntryWithDom) => g.name == group.input.node().value)
+		if (match.length > 0) {
+			self.dom.actionDiv.applyBtn.property('disabled', true)
+			group.inputMessage.style('display', 'block')
+		} else {
+			self.dom.actionDiv.applyBtn.property('disabled', false)
+			group.inputMessage.style('display', 'none')
+			self.data.groups[group.currentIdx].name = group.input.node().value.trim()
+		}
 	}
 
 	self.addItems = async function (group: GrpEntryWithDom) {
