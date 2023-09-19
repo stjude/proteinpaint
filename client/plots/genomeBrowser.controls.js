@@ -208,7 +208,7 @@ class GbControls {
 			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
 			this.dom.group1div = div.append('div')
 			this.dom.group2div = div.append('div')
-			this.dom.testMethodDiv = div.append('div')
+			this.dom.testMethodDiv = div.append('div').style('margin-top', '3px')
 		}
 
 		let tabsIdx = 1 // tabs[] array index, to handle optional tabs
@@ -261,13 +261,49 @@ function render1group_info(self, groupIdx, group, div) {
 
 function render1group_population(self, groupIdx, group, div) {
 	// this group is a predefined population
-	div.append('span').text(group.label)
+	div
+		.append('span')
+		.text(group.label)
+		.attr('class', 'sja_menuoption')
+		.on('click', event => {
+			if (self.state.config.snvindel.populations.length <= 1) {
+				// only 1, no other option to switch to
+				return
+			}
+			// multiple options, allow to replace
+			groupTip
+				.clear()
+				.showunder(event.target)
+				.d.append('div')
+				.text('Replace with:')
+				.style('margin', '10px')
+				.style('font-size', '.8em')
+
+			for (const p of self.state.config.snvindel.populations) {
+				if (p.key == group.key) continue
+				groupTip.d
+					.append('div')
+					.text(p.label)
+					.attr('class', 'sja_menuoption')
+					.on('click', () => {
+						groupTip.hide()
+						const groups = structuredClone(self.state.config.snvindel.details.groups)
+						groups[groupIdx] = structuredClone(p)
+						groups[groupIdx].type = 'population'
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: { snvindel: { details: { groups } } }
+						})
+					})
+			}
+		})
 	div
 		.append('span')
 		.text(`POPULATION${group.adjust_race ? ', RACE ADJUSTED' : ''}`)
 		.style('font-size', '.7em')
 		.style('margin-left', '10px')
-		.style('opacity', 0.5)
+		.style('opacity', 0.6)
 
 	if (self._partialData?.pop2average) {
 		// info available, computed for the other group comparing against this population, display here
@@ -282,21 +318,29 @@ function render1group_population(self, groupIdx, group, div) {
 			*/
 			const lst = []
 			for (const k in self._partialData.pop2average) {
-				lst.push(`${k}=${self._partialData.pop2average[k].toFixed(2)}`)
+				const value = self._partialData.pop2average[k]
+				if (!Number.isFinite(value)) continue // if there are no samples involved in current view, admix value is null
+				lst.push(`${k}=${value.toFixed(2)}`)
 			}
-			div
-				.append('span')
-				.text(`Average admixture: ${lst.join(', ')}`)
-				.style('margin-left', '20px')
-				.attr('class', 'sja_clbtext')
-				.on('click', event => {
-					groupTip.clear().showunder(event.target).d.append('div').style('margin', '10px').style('width', '400px')
-						.html(`These are average of admix coefficients based on current Group ${groupIdx == 1 ? 1 : 2} samples.
-					They are used to adjust variant allele counts of matching ancestries from ${group.label},
-					so that the adjusted allele counts are compared against Group ${groupIdx == 1 ? 1 : 2} allele counts.
-					This allows to account for ancestry composition difference between the two groups.
-					`)
-				})
+
+			if (lst.length) {
+				// has valid admix values to display
+				div
+					.append('span')
+					.text(`Group ${groupIdx == 1 ? 1 : 2} average admixture: ${lst.join(', ')}`)
+					.style('margin-left', '20px')
+					.attr('class', 'sja_clbtext')
+					.on('click', event => {
+						groupTip.clear().showunder(event.target).d.append('div').style('margin', '10px').style('width', '400px')
+							.html(`These are average of admix coefficients based on current Group ${groupIdx == 1 ? 1 : 2} samples.
+						They are used to adjust variant allele counts of matching ancestries from <span class=sja_menuoption style="padding:2px 5px">${
+							group.label
+						}</span>,
+						so that the adjusted allele counts are compared against Group ${groupIdx == 1 ? 1 : 2} allele counts.
+						This allows to account for ancestry composition difference between the two groups.
+						`)
+					})
+			}
 		}
 	}
 }
