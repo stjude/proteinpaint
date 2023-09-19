@@ -9,17 +9,18 @@ export const api = {
 	methods: {
 		get: {
 			init({ genomes }) {
-				return async (req: undefined, res: any): Promise<void> => {
+				return async (req: any, res: any): Promise<void> => {
 					try {
 						const genome = genomes[req.query.genome]
 						if (!genome) throw `invalid q.genome=${req.query.genome}`
-						const ds = genome.datasets[req.query.dslabel]
+						const q = req.query as BurdenRequest
+						const ds = genome.datasets[q.dslabel]
 						if (!ds) throw `invalid q.genome=${req.query.dslabel}`
 						if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
 
 						const estimates = await getBurdenEstimates(req, ds)
 						const { keys, rows } = formatPayload(estimates)
-						res.send({ status: 'ok', keys, rows })
+						res.send({ status: 'ok', keys, rows } as BurdenResponse)
 					} catch (e: any) {
 						res.send({ status: 'error', error: e.message || e })
 					}
@@ -35,6 +36,9 @@ export const api = {
 				{
 					request: {
 						body: {
+							genome: 'hg38',
+							// TODO: !!! use hg38-test and TermdbTest !!!
+							dslabel: 'SJLife',
 							diaggrp: 5,
 							sex: 1,
 							white: 1,

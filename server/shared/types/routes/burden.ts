@@ -1,4 +1,6 @@
 export type BurdenRequest = {
+	genome: string
+	dslabel: string
 	diaggrp: number
 	sex: number
 	white: number
@@ -21,6 +23,7 @@ export type BurdenRequest = {
 }
 
 export type BurdenResponse = {
+	status: string
 	keys: string[]
 	rows: number[][]
 }
