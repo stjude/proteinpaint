@@ -10,6 +10,7 @@ Features:
 - Default bin configs for GDC numeric variables are determined on the fly and no longer hardcoded
 - For matrix plot, when hovering over gene label, show the percentage of mutation (#mutated samples / #tested sample)
 - Display average admix coefficient for filter-vs-population comparison in genome browser
+- prototype a serve route for cumulative burden estimates
 
 Fixes:
 - fix for sorting labels for custom binning on numeric terms in violin plot
