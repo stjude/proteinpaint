@@ -560,7 +560,7 @@ export class TermdbVocab extends Vocab {
 
 		try {
 			const data = await dofetch3('/termdb', { body })
-			if (data.error) throwMsgWithFilePathAndFnName(`${data.error}`)
+			if (data.error) throwMsgWithFilePathAndFnName(data.error)
 			return data
 		} catch (e) {
 			window.alert(e.message || e)
