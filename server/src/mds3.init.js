@@ -40,6 +40,7 @@ validate_termdb
 	mayValidateRestrictAcestries
 	call_barchart_data
 		barchart_data
+	validate_cumburden
 validate_query_snvindel
 	gdc.validate_query_snvindel_byisoform
 	gdc.validate_query_snvindel_byrange
@@ -84,7 +85,6 @@ const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/
 export async function init(ds, genome, _servconfig, app = null, basepath = null) {
 	// must validate termdb first
 	await validate_termdb(ds)
-	await validate_cumburden(ds)
 
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
@@ -269,6 +269,9 @@ export async function validate_termdb(ds) {
 			throw 'unknown implementation of tdb.convertSampleId'
 		}
 	}
+
+	// since burden data is nested under ds.cohort, only validate it when ds.cohort is set
+	await validate_cumburden(ds)
 
 	//////////////////////////////////////////////////////
 	//
