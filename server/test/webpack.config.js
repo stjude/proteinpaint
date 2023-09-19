@@ -3,6 +3,7 @@ const { merge } = require('webpack-merge')
 const nodeExternals = require('webpack-node-externals')
 const fs = require('fs')
 const TerserPlugin = require('terser-webpack-plugin')
+const webpack = require('webpack')
 
 let babelrc
 try {
@@ -60,7 +61,12 @@ const commonConfig = {
 	},
 	resolve: {
 		extensions: ['.js', '.jsx', '.ts', '.tsx']
-	}
+	},
+	plugins: [
+		new webpack.IgnorePlugin({
+			resourceRegExp: /\.md$/gi
+		})
+	]
 }
 
 module.exports = env => {
