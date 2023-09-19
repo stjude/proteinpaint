@@ -211,9 +211,15 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 
 	function addParameter(param) {
 		let input
-		if (param.type == 'boolean' || param.type == 'string') {
+		if (param.type == 'boolean') {
 			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
 			if (param.value) input.property('checked', param.value)
+			rightDiv.append('label').html(param.label).attr('for', param.id)
+		}
+		//The parameter value will be used as the input value if the option is checked
+		else if (param.type == 'string' && param.value) {
+			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
+			input.property('checked', true)
 			rightDiv.append('label').html(param.label).attr('for', param.id)
 		} else if (param.type == 'number') {
 			input = rightDiv.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
@@ -226,7 +232,10 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 	function getInputValue({ param, input }) {
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
-		if (input.attr('type') == 'checkbox') return input.node().checked ? param.value : ''
+		if (input.attr('type') == 'checkbox') {
+			if (param.type == 'string') return input.node().checked ? param.value : ''
+			if (param.type == 'boolean') return input.node().checked ? 1 : 0
+		}
 	}
 
 	renderGenes()
