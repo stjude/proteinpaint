@@ -3,7 +3,7 @@ import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
 import { PillData, ConditionTW, ConditionQ, VocabApi, ConditionTermSettingInstance } from '#shared/types/index'
-import { GroupSettingMethods } from './groupsetting'
+//import { GroupSettingMethods } from './groupsetting'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { TermValues } from 'shared/types'
 
@@ -79,27 +79,27 @@ function getPillStatus(self: ConditionTermSettingInstance) {
 	return {}
 }
 
-function validateGroupsetting(self: ConditionTermSettingInstance) {
-	if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
-	const text = self.q.name || self.q.reuseId
-	// if (text) return { text }
-	// if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-	// 	if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
-	// 	if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
-	// 	const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-	// 	if (!i)
-	// 		return {
-	// 			text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
-	// 			bgcolor: 'red'
-	// 		}
-	// 	return { text: i.name }
-	// }
-	// if (self.q.groupsetting.customset) {
-	// 	const n = self.q.groupsetting.customset.groups.length
-	// 	return { text: 'Divided into ' + n + ' groups' }
-	// }
-	// return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
-}
+// function validateGroupsetting(self: ConditionTermSettingInstance) {
+// 	if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+// 	const text = self.q.name || self.q.reuseId
+// if (text) return { text }
+// if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+// 	if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
+// 	if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
+// 	const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+// 	if (!i)
+// 		return {
+// 			text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
+// 			bgcolor: 'red'
+// 		}
+// 	return { text: i.name }
+// }
+// if (self.q.groupsetting.customset) {
+// 	const n = self.q.groupsetting.customset.groups.length
+// 	return { text: 'Divided into ' + n + ' groups' }
+// }
+// return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
+// }
 
 async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 	// div for selecting type of grade
