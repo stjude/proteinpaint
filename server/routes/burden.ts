@@ -29,7 +29,30 @@ export const api = {
 			examples: [
 				{
 					request: {
-						body: {}
+						body: {
+							diaggrp: 5,
+							sex: 1,
+							white: 1,
+							agedx: 1,
+							bleo: 0,
+							etop: 0,
+							cisp: 0,
+							carbo: 0,
+							steriod: 0,
+							vcr: 0,
+							hdmtx: 0,
+							itmt: 0,
+							ced: 0,
+							dox: 0,
+							heart: 0,
+							brain: 0,
+							abd: 0,
+							pelvis: 0,
+							chest: 0
+						}
+					},
+					response: {
+						header: { status: 200 }
 					}
 				}
 			]
@@ -43,7 +66,7 @@ async function getBurdenEstimates(q) {
 		q.query[k] = Number(q.query[k])
 	}
 	const data = Object.assign({}, defaults, q.query)
-	console.log(40, data, JSON.stringify(data))
+	//console.log(40, data, JSON.stringify(data))
 	await write_file(infile, JSON.stringify(data))
 	// TODO: use the dataset location
 	const dsDataDir = `${serverconfig.tpmasterdir}/files/hg38/sjlife/burden`
@@ -60,8 +83,8 @@ async function getBurdenEstimates(q) {
 
 function formatPayload(estimates) {
 	const rawKeys = Object.keys(estimates[0])
-	const outKeys = []
-	const keys = []
+	const outKeys = [] as string[]
+	const keys = [] as string[]
 	for (const k of rawKeys) {
 		if (k == 'chc') {
 			keys.push(k)
@@ -74,7 +97,7 @@ function formatPayload(estimates) {
 			}
 		}
 	}
-	const rows = []
+	const rows = [] as number[][]
 	// v = an array of objects with age as keys as cumulative burden as value for a given CHC
 	for (const v of estimates) {
 		rows.push(keys.map(k => v[k]))

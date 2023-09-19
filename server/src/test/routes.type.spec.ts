@@ -14,7 +14,7 @@ const genomes = {
 	// test genome js location can be hardcoded for testing
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore
-	'hg38-test': __non_webpack_require__(path.join(__dirname, '../../genome/hg38.test.js'))
+	'hg38-test': __non_webpack_require__(path.join(__dirname, '../../server/genome/hg38.test.js'))
 }
 const g = genomes['hg38-test']
 initdb(g)
@@ -65,7 +65,8 @@ async function runTests() {
 		process.exit(1)
 	}
 
-	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
+	const files = fs.readdirSync(
+		path.join(serverconfig.binpath, '/routes')).filter(f => f.endsWith('.ts'))
 	for (const f of files) {
 		await testApi(f)
 	}
@@ -73,7 +74,11 @@ async function runTests() {
 
 // f: a filename under the server/routes dir
 async function testApi(f) {
-	const { api } = await import(`../../routes/${f}`)
+	const { api } = await import(
+		/* webpackInclude: /\.(ts|js)$/ */
+  	/* webpackExclude: /\.md$/ */
+		`../../routes/${f}`
+	)
 	tape('\n', function (test) {
 		test.pass(`-***- server/${f} specs -***-`)
 		test.end()
