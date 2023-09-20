@@ -15,7 +15,7 @@ type API = {
 	destroy: (_obj) => void
 }
 
-type Gene = { [name: string]: string }
+type Gene = { name: string }
 
 export function showGenesetEdit({
 	holder,
