@@ -288,7 +288,7 @@ function setTermActions(self) {
 
 	self.showTermMenu = async function (event) {
 		const t = event.target.__data__
-		if (!t || !t.tw) return
+		if (!t || !t.tw || !t.grp) return
 		const s = self.settings.matrix
 		const l = s.controlLabels
 		self.activeLabel = t
@@ -1415,7 +1415,7 @@ function setLabelDragEvents(self, prefix) {
 	}
 
 	self[`${prefix}LabelMouseover`] = (event, t) => {
-		if (prefix == 'term' && event.target.__data__?.tw) {
+		if (prefix == 'term' && event.target.__data__?.tw && event.target.__data__.grp) {
 			//show counts in each subgroup when hover over term label
 			if (self.activeLabel || self.zoomArea) {
 				// when an edit menu is open or when users are selecting a portion of matrix to zoom
@@ -1589,8 +1589,8 @@ function setLabelDragEvents(self, prefix) {
 			}
 			self.dom.tip.show(event.clientX, event.clientY)
 		}
-		const cls = event.target.className?.baseVal || event.target.parentNode.className?.baseVal || ''
-		if (cls.includes('divide-by')) return
+		//const cls = event.target.className?.baseVal || event.target.parentNode.className?.baseVal || ''
+		if (event.target.innerHTML.includes('grouped by')) return
 		if (event.target.tagName === 'text') select(event.target).style('fill', 'blue')
 		if (!self.dragged) return
 		// TODO: why is the element-bound __data__ (t) not provided as a second argument by d3??
@@ -1613,7 +1613,8 @@ function setLabelDragEvents(self, prefix) {
 				.style('user-select', 'none')
 
 			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
-			const t = label.__data__
+			const t = label?.__data__
+			if (!t) return
 			if (self.type == 'hierCluster' && t.tw && t.grp?.name == 'Gene Expression') return
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label).attr('transform').split('translate(')[1].split(')')[0].split(',').map(Number)

@@ -124,7 +124,7 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'sampleGrpLabelMaxChars',
 						getDisplayStyle(plot) {
-							return plot.divideBy && !plot.hierCluster ? 'block' : 'none'
+							return plot.divideBy && !plot.hierCluster ? 'table-row' : 'none'
 						}
 					},
 					{
