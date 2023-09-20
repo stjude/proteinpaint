@@ -1,24 +1,41 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
-import { select,  } from 'd3-selection'
+import { select } from 'd3-selection'
 
-type API = 
-{
+type API = {
 	dom: {
-			tdbBtns: { [key: string]: any }
-			holder: any
-			loadBt: any ,
-			clearBtn: any,
-			submitBtn: any,
-			genesDiv: any | null
+		tdbBtns: { [key: string]: any }
+		holder: any
+		loadBt: any
+		clearBtn: any
+		submitBtn: any
+		genesDiv: any | null
 	}
-	params: any[],
+	params: any[]
 	destroy: (_obj) => void
 }
 
-type Gene = {[name: string]: string}
+type Gene = { [name: string]: string }
 
-export function showGenesetEdit({ holder, menu, genome, callback, geneList = [], vocabApi, group, showGroup }: {holder: any, menu: Menu, genome: any, geneList: Array<Gene>, callback: (group, geneList)=> void, vocabApi: any, group: any, showGroup: boolean}) {
+export function showGenesetEdit({
+	holder,
+	menu,
+	genome,
+	callback,
+	geneList = [],
+	vocabApi,
+	group,
+	showGroup
+}: {
+	holder: any
+	menu: Menu
+	genome: any
+	geneList: Array<Gene>
+	callback: (group, geneList) => void
+	vocabApi: any
+	group: any
+	showGroup: boolean
+}) {
 	menu.clear()
 	const tip2 = new Menu({ padding: '0px' })
 	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')
@@ -37,8 +54,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 		destroy(_obj) {
 			const obj = _obj || api.dom
 			for (const key in obj) {
-				if(obj[key] == null)
-					continue
+				if (obj[key] == null) continue
 				if (key == 'holder') continue
 				else if (key == 'tdbBtns') {
 					api.destroy(obj[key])
@@ -50,7 +66,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 			if (obj.holder) obj.holder.remove()
 		}
 	}
-	
+
 	api.dom.holder = div
 
 	const headerDiv = div.append('div')
@@ -80,12 +96,12 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
 				}
-				for (const input of api.params) {
+				for (const { param, input } of api.params) {
 					const id = input.attr('id')
-					args[id] = getInputValue(input)
+					args[id] = getInputValue({ param, input })
 				}
 				const result = await vocabApi.getTopMutatedGenes(args)
-				const geneList: Array<Gene> = []
+				geneList = []
 				for (const gene of result.genes) geneList.push({ name: gene })
 				renderGenes()
 			})
@@ -117,7 +133,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 						},
 						tree: {
 							click_term: term => {
-								const geneList: Array<Gene> = []
+								geneList = []
 								const geneset = term._geneset
 								if (geneset) {
 									for (const gene of geneset) geneList.push({ name: gene.symbol })
@@ -240,18 +256,27 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
 			if (param.value) input.property('checked', param.value)
 			rightDiv.append('label').html(param.label).attr('for', param.id)
+		}
+		//The parameter value will be used as the input value if the option is checked
+		else if (param.type == 'string' && param.value) {
+			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
+			input.property('checked', true)
+			rightDiv.append('label').html(param.label).attr('for', param.id)
 		} else if (param.type == 'number') {
 			input = rightDiv.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
 			if (param.value) input.attr('value', param.value)
 			rightDiv.append('span').html(param.label)
 		}
-		api.params.push(input)
+		api.params.push({ param, input })
 	}
 
-	function getInputValue(input) {
+	function getInputValue({ param, input }) {
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
-		if (input.attr('type') == 'checkbox') return input.node().checked ? 1 : 0
+		if (input.attr('type') == 'checkbox') {
+			if (param.type == 'string') return input.node().checked ? param.value : ''
+			if (param.type == 'boolean') return input.node().checked ? 1 : 0
+		}
 	}
 
 	renderGenes()
