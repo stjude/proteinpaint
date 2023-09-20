@@ -1,4 +1,4 @@
-const { showGenesetEdit } = require('../genesetEdit')
+const { showGenesetEdit } = require('../genesetEdit.ts')
 const tape = require('tape')
 const { select } = require('d3-selection')
 const { hg38, hg19 } = require('../../test/testdata/genomes')
