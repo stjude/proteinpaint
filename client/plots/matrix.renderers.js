@@ -1,4 +1,5 @@
 import { select } from 'd3-selection'
+import { fillTermWrapper, termsettingInit } from '#termsetting'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -314,7 +315,7 @@ export function setRenderers(self) {
 		return `translate(${x},${y})`
 	}
 
-	self.renderDivideByLabel = (s, l, d) => {
+	self.renderDivideByLabel = async (s, l, d) => {
 		self.dom.mainG.selectAll('.sjpp-matrix-divide-by-label').remove()
 		if (!self.config.divideBy) return
 		const name = self.config.divideBy?.term.name || ''
@@ -324,16 +325,77 @@ export function setRenderers(self) {
 		const y = (s.collabelpos == 'top' ? d.mainh + s.collabelmaxchars : -s.collabelmaxchars) + 8
 		const anchor = s.rowlabelpos == 'left' ? 'end' : 'start'
 		const cl = s.controlLabels
-		const g = box.append('g').attr('class', 'sjpp-matrix-divide-by-label').attr('transform', `translate(0, ${y})`)
-		g.append('text')
+
+		const gNote = box.append('g').attr('class', 'sjpp-matrix-divide-by-label').attr('transform', `translate(0, ${y})`)
+
+		gNote
+			.append('text')
 			.attr('text-anchor', anchor)
 			.attr('font-style', 'italic')
 			.attr('y', -20)
 			.text(`${cl.Samples} grouped by`)
-		g.append('text').attr('text-anchor', anchor).attr('font-weight', 600).text(text)
+
+		gNote
+			.append('title')
+			.text(
+				`${cl.Samples} are grouped by this gene or variable. Use the Samples -> 'Group Samples By' input in the controls bar to edit.`
+			)
+
+		const g = box
+			.datum({ tw: self.config.divideBy })
+			.append('g')
+			.attr('class', 'sjpp-matrix-divide-by-label')
+			.attr('transform', `translate(0, ${y})`)
+
+		const textElem = g
+			.append('text')
+			.attr('text-anchor', anchor)
+			.attr('font-weight', 600)
+			.text(text)
+			.on('click', (event, d) => {
+				pill.showMenu(event, textElem.node())
+			})
+
 		g.append('title').text(
 			`${cl.Samples} are grouped by this gene or variable. Use the Samples -> 'Group Samples By' input in the controls bar to edit.`
 		)
+
+		const pill = await termsettingInit({
+			menuOptions: '{edit,replace,remove}',
+			//numericEditMenuVersion: opts.numericEditMenuVersion,
+			vocabApi: self.app.vocabApi,
+			vocab: self.state.vocab,
+			//activeCohort: opts.state?.activeCohort,
+			holder: g,
+			debug: self.opts.debug,
+			usecase: { target: 'matrix' },
+			getBodyParams: () => {
+				const currentGeneNames = self.termOrder
+					.filter(t => t.tw.term.type === 'geneVariant')
+					.map(t => t.tw.term.name)
+					.sort()
+				return { currentGeneNames }
+			},
+			callback: tw => {
+				// data is object with only one needed attribute: q, never is null
+				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
+				if (tw) fillTermWrapper(tw)
+				//if (opts.processInput) opts.processInput(tw)
+				pill.main(tw ? tw : { term: null, q: null })
+				box.datum({ tw })
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						divideBy: tw
+					}
+				})
+			}
+		})
+		pill.main({
+			term: self.config.divideBy.term,
+			q: self.config.divideBy.q
+		})
 	}
 
 	self.adjustSvgDimensions = async function (prevTranspose) {

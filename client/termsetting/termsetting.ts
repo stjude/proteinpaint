@@ -564,7 +564,7 @@ function setInteractivity(self: TermSettingInstance) {
 		// handler showEditMenu() use if for tip.showunder(self.dom.holder)
 		if (self.opts.renderAs == 'none' && clickedElem) self.dom.holder = select(clickedElem)
 		if (self.dom.holder) {
-			const elem = self.dom.holder.node()
+			const elem = self.dom.holder?.node()
 			if (elem) tip.showunder(elem)
 			else tip.show(event.clientX, event.clientY)
 		}
