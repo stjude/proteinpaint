@@ -1,4 +1,4 @@
-import { GroupSettingMethods } from './groupsetting'
+import { GroupSettingMethods } from './groupsetting.ts'
 // import { filterInit } from '#filter'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import {
