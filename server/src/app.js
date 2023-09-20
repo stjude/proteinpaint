@@ -1369,7 +1369,6 @@ function handle_svmr(req, res) {
 }
 
 async function handle_hicstat(req, res) {
-	log(req)
 	try {
 		const [e, file, isurl] = fileurl(req)
 		if (e) throw 'illegal file name'
