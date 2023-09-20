@@ -92,6 +92,7 @@ export function showGenesetEdit({
 			.append('button')
 			.html(`Load top mutated genes`)
 			.on('click', async () => {
+				api.dom.loadBt.property('disabled', true)
 				const args = {
 					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
@@ -101,9 +102,11 @@ export function showGenesetEdit({
 					args[id] = getInputValue({ param, input })
 				}
 				const result = await vocabApi.getTopMutatedGenes(args)
+
 				geneList = []
 				for (const gene of result.genes) geneList.push({ name: gene })
 				renderGenes()
+				api.dom.loadBt.property('disabled', false)
 			})
 	} else if (vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 		for (const param of vocabApi.termdbConfig.topVariablyExpressedGenes.arguments) addParameter(param)
