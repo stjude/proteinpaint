@@ -5,7 +5,7 @@ import { sayerror } from '#dom/error'
 import { PillData, ConditionTW, ConditionQ, VocabApi, ConditionTermSettingInstance } from '#shared/types/index'
 //import { GroupSettingMethods } from './groupsetting'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
-import { TermValues } from 'shared/types'
+import { TermValues } from '#shared/types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
