@@ -50,8 +50,7 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 			div: holder.append('div')
 		})
 	} catch (e) {
-		sayerror(holder, e.message || e)
-		if (e.stack) console.log(e)
+		sayerror(holder, e)
 	}
 
 	return publicApi

@@ -9,21 +9,24 @@ throwMsgWithFilePathAndFnName()
 	- Generic throw message that includes the file and function name in this format: `Message [fileName functionName()]
 */
 
-export function sayerror(holder, msg) {
-	if (typeof msg == 'object') {
-		if (msg.stack) console.log(msg.stack)
-		holder.append('div').text(msg.message || msg.error)
+export function sayerror(holder, o) {
+	// 2nd argument is a string or an Error object
+	let msg // string message for display
+	if (typeof o == 'string') {
+		msg = o
 	} else {
-		const div = holder.append('div').attr('class', 'sja_errorbar')
-		// msg can contain injected XSS, so never do .html(msg)
-		div.append('div').text(msg)
-		div
-			.append('div')
-			.html('&#10005;')
-			.on('click', () => {
-				disappear(div, true)
-			})
+		msg = o.message || o.error
+		if (o.stack) console.log(o.stack) // print out stack
 	}
+	const div = holder.append('div').attr('class', 'sja_errorbar')
+	// msg can contain injected XSS, so never do .html(msg)
+	div.append('div').text(msg)
+	div
+		.append('div')
+		.html('&#10005;')
+		.on('click', () => {
+			disappear(div, true)
+		})
 }
 
 export function throwMsgWithFilePathAndFnName(message) {
