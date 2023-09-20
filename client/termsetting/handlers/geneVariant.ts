@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { mclass, dt2label } from '#shared/common'
-import { PillData, VocabApi, GeneVariantTermSettingInstance, GeneVariantTW } from '#shared/types/index'
+import { VocabApi, GeneVariantTermSettingInstance, GeneVariantTW } from '#shared/types/index'
 
 /* 
 instance attributes
