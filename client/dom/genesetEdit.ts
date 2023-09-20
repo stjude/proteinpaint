@@ -1,16 +1,44 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
-import { select } from 'd3-selection'
+import { select,  } from 'd3-selection'
 
-export function showGenesetEdit({ holder, menu, genome, callback, geneList = [], vocabApi, group, showGroup }) {
-	const api = {
+type API = 
+{
+	dom: {
+			tdbBtns: { [key: string]: any }
+			holder: any
+			loadBt: any ,
+			clearBtn: any,
+			submitBtn: any,
+			genesDiv: any | null
+	}
+	params: any[],
+	destroy: (_obj) => void
+}
+
+type Gene = {[name: string]: string}
+
+export function showGenesetEdit({ holder, menu, genome, callback, geneList = [], vocabApi, group, showGroup }: {holder: any, menu: Menu, genome: any, geneList: Array<Gene>, callback: (group, geneList)=> void, vocabApi: any, group: any, showGroup: boolean}) {
+	menu.clear()
+	const tip2 = new Menu({ padding: '0px' })
+	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')
+	if (showGroup) div.append('div').style('padding', '5px').append('span').style('color', '#aaa').text(group.name)
+
+	const api: API = {
 		dom: {
-			tdbBtns: {}
+			tdbBtns: {},
+			holder: div,
+			loadBt: null,
+			clearBtn: null,
+			genesDiv: null,
+			submitBtn: null
 		},
 		params: [],
 		destroy(_obj) {
 			const obj = _obj || api.dom
 			for (const key in obj) {
+				if(obj[key] == null)
+					continue
 				if (key == 'holder') continue
 				else if (key == 'tdbBtns') {
 					api.destroy(obj[key])
@@ -22,11 +50,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 			if (obj.holder) obj.holder.remove()
 		}
 	}
-	menu.clear()
-	const tip2 = new Menu({ padding: '0px' })
-	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')
-	if (showGroup) div.append('div').style('padding', '5px').append('span').style('color', '#aaa').text(group.name)
-
+	
 	api.dom.holder = div
 
 	const headerDiv = div.append('div')
@@ -56,12 +80,12 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
 				}
-				for (const { param, input } of api.params) {
+				for (const input of api.params) {
 					const id = input.attr('id')
-					args[id] = getInputValue({ param, input })
+					args[id] = getInputValue(input)
 				}
 				const result = await vocabApi.getTopMutatedGenes(args)
-				geneList = []
+				const geneList: Array<Gene> = []
 				for (const gene of result.genes) geneList.push({ name: gene })
 				renderGenes()
 			})
@@ -81,7 +105,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 				.html(`Load ${tdb.label} gene set &#9660;`)
 				.on('click', async event => {
 					tip2.clear()
-					const termdb = await import('../termdb/app')
+					const termdb = await import('../termdb/app.js')
 					termdb.appInit({
 						holder: tip2.d,
 						state: {
@@ -93,7 +117,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 						},
 						tree: {
 							click_term: term => {
-								geneList = []
+								const geneList: Array<Gene> = []
 								const geneset = term._geneset
 								if (geneset) {
 									for (const gene of geneset) geneList.push({ name: gene.symbol })
@@ -163,15 +187,16 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 			.text(gene => gene.name)
 			.on('click', deleteGene)
 			.on('mouseover', function (event) {
-				const div = select(this)
+				const div = select(event.target)
 				div
 					.append('div')
 					.style('margin-left', '4px')
 					.classed('sjpp_deletebt', true)
-					.style('vertical-align', 'middle')
 					.style('display', 'inline-block')
 					.style('position', 'absolute')
 					.style('right', '0px')
+					.style('top', '0px')
+
 					.style('transform', 'scale(0.6)')
 					.style('pointer-events', 'none')
 					.html(
@@ -181,7 +206,7 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 					)
 			})
 			.on('mouseout', function (event) {
-				select(this).select('.sjpp_deletebt').remove()
+				select(event.target).select('.sjpp_deletebt').remove()
 			})
 
 		api.dom.submitBtn.property('disabled', !geneList.length)
@@ -215,27 +240,18 @@ export function showGenesetEdit({ holder, menu, genome, callback, geneList = [],
 			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
 			if (param.value) input.property('checked', param.value)
 			rightDiv.append('label').html(param.label).attr('for', param.id)
-		}
-		//The parameter value will be used as the input value if the option is checked
-		else if (param.type == 'string' && param.value) {
-			input = rightDiv.append('input').attr('type', 'checkbox').attr('id', param.id)
-			input.property('checked', true)
-			rightDiv.append('label').html(param.label).attr('for', param.id)
 		} else if (param.type == 'number') {
 			input = rightDiv.append('input').attr('type', 'number').style('width', '40px').attr('id', param.id)
 			if (param.value) input.attr('value', param.value)
 			rightDiv.append('span').html(param.label)
 		}
-		api.params.push({ param, input })
+		api.params.push(input)
 	}
 
-	function getInputValue({ param, input }) {
+	function getInputValue(input) {
 		const value = input.node().value
 		if (input.attr('type') == 'number') return Number(value)
-		if (input.attr('type') == 'checkbox') {
-			if (param.type == 'string') return input.node().checked ? param.value : ''
-			if (param.type == 'boolean') return input.node().checked ? 1 : 0
-		}
+		if (input.attr('type') == 'checkbox') return input.node().checked ? 1 : 0
 	}
 
 	renderGenes()

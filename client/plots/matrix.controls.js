@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
-import { showGenesetEdit } from '#dom/genesetEdit'
+import { showGenesetEdit } from '../dom/genesetEdit.ts'
 
 const tip = new Menu({ padding: '' })
 
