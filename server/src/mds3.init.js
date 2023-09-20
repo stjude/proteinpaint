@@ -128,6 +128,8 @@ export function client_copy(ds) {
 
 	if (ds.viewModes) ds2_client.skewerModes = ds.viewModes
 
+	if (ds.noGenomicMode4lollipopTk) ds2_client.noGenomicMode4lollipopTk = true
+
 	copy_queries(ds, ds2_client)
 	// .queries{} may be set
 
