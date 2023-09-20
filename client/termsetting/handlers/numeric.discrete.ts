@@ -1,5 +1,4 @@
 import { keyupEnter } from '#src/client'
-import { select } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
