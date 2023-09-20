@@ -347,9 +347,14 @@ tape('Categorical term', async test => {
 	})
 	test.equal(dragItems.length, Object.keys(opts.tsData.term.values).length, 'Should have rows for each category')
 	test.equal(
-		tip.d.selectAll('div > div > div > .sjpp_apply_btn').size(),
-		2,
-		'Should have "Add Group" and "Apply" button to apply group changes'
+		tip.d.selectAll('div > div > div > .sjpp_grpset_addGrp_btn').size(),
+		1,
+		'Should have "Add Group" button to add groups to the menu'
+	)
+	test.equal(
+		tip.d.selectAll('div > div > div > .sjpp_grpset_apply_btn').size(),
+		1,
+		'Should have "Apply" button to apply group changes'
 	)
 	test.equal(dragItems[0].innerHTML, 'Acute lymphoblastic leukemia (n=44)', 'Should have first cateogry as "ALL"')
 
