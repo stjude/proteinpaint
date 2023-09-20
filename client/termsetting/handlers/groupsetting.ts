@@ -218,7 +218,7 @@ function setRenderers(self: any) {
 		let newGrpNum = 0
 		self.dom.actionDiv.addGroup = self.dom.actionDiv
 			.append('button')
-			.classed('sjpp_apply_btn', true)
+			.classed('sjpp_grpset_addGrp_btn', true)
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
@@ -239,7 +239,7 @@ function setRenderers(self: any) {
 		//Apply button
 		self.dom.actionDiv.applyBtn = self.dom.actionDiv
 			.append('button')
-			.classed('sjpp_apply_btn', true)
+			.classed('sjpp_grpset_apply_btn', true)
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
 			.style('float', 'right')
@@ -400,7 +400,6 @@ function setRenderers(self: any) {
 
 			group.destroyBtn = group.dragActionDiv
 				.append('button')
-				.style('border-radius', '13px')
 				.style('display', 'inline-block')
 				.style('padding', '0px 4px')
 				.property('disabled', self.data.groups.length <= minGrpNum) //Each appears disabled/enabled based on the number of groups
