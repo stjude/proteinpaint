@@ -27,6 +27,7 @@ Fixes:
 - Display matrix cell tooltip as two column table, and group events of same dt under same heading
 - bug fix to not to print text when average admix value is missing; improve population item UI in genomebrowser controls
 - Improve INFO field UI in genome browser group selection
+- Allow to disable switching GDC SSM lollipop track to genomic mode, due to issues with api query
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords
