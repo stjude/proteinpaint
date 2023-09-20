@@ -1,8 +1,8 @@
-const { filterJoin } = require('../shared/filter')
-const { get_rows_by_one_key } = require('./termdb.sql')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const path = require('path')
-const serverconfig = require('./serverconfig')
+import { filterJoin } from '../shared/filter'
+import { get_rows_by_one_key } from './termdb.sql'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import path from 'path'
+import serverconfig from './serverconfig'
 
 /*
 
@@ -520,8 +520,8 @@ async function may_apply_fishertest(mlst) {
 
 			input.push({
 				index: j,
-				n1: d[0].altCount,
-				n2: d[0].refCount,
+				n1: Math.floor(d[0].altCount), // must convert to integer for fisher binary to work
+				n2: Math.floor(d[0].refCount),
 				n3: Math.floor(d[1].altCount),
 				n4: Math.floor(d[1].refCount)
 			})
