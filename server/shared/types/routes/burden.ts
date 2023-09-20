@@ -1,43 +1,57 @@
 export type BurdenRequest = {
+	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
+	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
-	/** A number representing the diagnostic group. It is a specific identifier for a diagnostic group */
+	/** the diagnosis group:
+	 * 1="Acute lymphoblastic leukemia"
+	 * 2="AML"
+	 * 3="Hodgkin lymphoma"
+	 * 4="Non-Hodgkin lymphoma"
+	 * 5="Central nervous system"
+	 * 6="Bone tumor"
+	 * 7="STS"
+	 * 8="Wilms tumor"
+	 * 9="Neuroblastoma"
+	 * 10="Retinoblastoma"
+	 * 11="Germ cell tumor"
+	 */
 	diaggrp: number
-	/** A number representing sex, used to specify gender-related criteria in the burden analysis */
+	/** sex: 0=Female, 1=Male */
 	sex: number
-	/** A number, possibly indicating a specific attribute related to race or ethnicity, such as whether the individual is White */
+	/** race or ethnicity: 1=Yes, 0=No */
 	white: number
-	/** A number representing the age at diagnosis, which is an important parameter in the analysis */
+	/** Age of diagnosis, in years */
 	agedx: number
-	/** A number related to a medical treatment or drug called "bleomycin" */
+	/** bleomycin: a chemotherapy treatment drug, mg/m^2 */
 	bleo: number
-	/** A number related to a medical treatment or drug called "etoposide" */
+	/** Etoposide: a chemotherapy treatment drug, mg/m^2 */
 	etop: number
-	/** A number related to a medical treatment or drug called "cisplatin" */
+	/** Cisplatin: a chemotherapy treatment drug, mg/m^2 */
 	cisp: number
-	/** A number related to a medical treatment or drug called "carboplatin" */
+	/** Carboplatin: a class of chemotherapy treatment drugs, mg/m^2 */
 	carbo: number
-	/** A number related to the use of steroids as part of the analysis */
+	/** Steriods: a class of chemotherapy treatment drugs, mg/m^2 */
 	steriod: number
-	/** A number related to a medical treatment or drug called "vincristine" */
+	/** Vincristine: a chemotherapy treatment drug, mg/m^2 */
 	vcr: number
-	/** A number related to a medical treatment or drug called "High dose methotrexate" */
+	/** High-dose methothrexate: a chemotherapy treatment drug, mg/m^2 */
 	hdmtx: number
-	/** A number possibly related to early diagnosis/changes to track cognitive decline/impairment using the iTMT approach as part of the burden analysis */
+	/** Intrathecal methothrexate: a chemotherapy treatment drug, mg/m^2 */
 	itmt: number
-	/** A number related to Convection Enhanced Delivery, a technique designed to deliver drugs directly into the tumor */
+	/** Cyclophosphamide: a chemotherapy treatment drug, mg/m^2 */
 	ced: number
-	/** A number related to a medical treatment or drug called "doxycyline" or "doxorubicin" */
+	/** Anthracycline: a chemotherapy treatment drug, mg/m^2 */
 	dox: number
-	/** A number, possibly indicating an attribute related to the heart */
+	/** Heart radiation, Gy */
 	heart: number
-	/** A number, possibly indicating an attribute related to the brain */
+	/** Brrain radiation, Gy */
 	brain: number
-	/** A number, possibly indicating an attribute related to the abdomen */
+	/** Abdominal radiation, Gy */
 	abd: number
-	/** A number, possibly indicating an attribute related to the pelvis */
+	/** Pelvic radiation, Gy */
 	pelvis: number
-	/** A number, possibly indicating an attribute related to the chest */
+	/** Chest radiation, Gy */
 	chest: number
 }
 

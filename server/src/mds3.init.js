@@ -451,7 +451,7 @@ function combineFilterAndTid2value(q, ds) {
 }
 
 export async function validate_cumburden(ds) {
-	if (!ds.cohort.cumburden) return
+	if (!ds.cohort?.cumburden) return
 	if (!ds.cohort.cumburden.files) `missing ds.cohort.cumburden.files`
 	const inputFiles = ds.cohort.cumburden.files
 	for (const name of ['fit', 'surv', 'sample']) {
