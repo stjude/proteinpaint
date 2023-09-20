@@ -1596,22 +1596,25 @@ function initgenome(g) {
 }
 
 async function launchDisco(arg, app) {
-	console.log(arg, app)
 	if (!arg.genome) throw '"genome" parameter missing'
 	const genomeObj = app.genomes[arg.genome]
 	if (!genomeObj) throw 'unknown genome'
 	if (!Array.isArray(arg.disco.mlst)) throw 'arg.disco.mlst[] not array'
-	/*
 	const opts = {
 		holder: app.holder0,
+		vocabApi: {
+			vocab: { terms: [] },
+			main: () => {},
+			getTermdbConfig: () => {
+				return {}
+			}
+		},
 		state: {
-			genome: genomeObj.name,
 			args: {
 				sampleName: 'test',
 				data: arg.disco.mlst,
 				genome: genomeObj
 			},
-
 			plots: [
 				{
 					chartType: 'Disco',
@@ -1628,8 +1631,4 @@ async function launchDisco(arg, app) {
 	}
 	const plot = await import('#plots/plot.app.js')
 	const plotAppApi = await plot.appInit(opts)
-	*/
-
-	const _ = await import('#plots/disco/Disco.ts')
-	//await _.discoInit()
 }
