@@ -94,7 +94,6 @@ async function init() {
     const section = contentDiv.append('div').attr('class', 'sjpp-endpoint-div')
 
     sidebarLinks.append('li').append('a').attr('href', `#${api.id}`).html(api.endpoint)
-    
     section.append('h2')
       .attr('id', api.id)
       .attr('class', 'tsd-page-title')
@@ -129,6 +128,7 @@ async function init() {
           const url = `/docs/server/types/${title}.html`
           h3.append('span').attr('class', 'sjpp-h3link').html('typedoc').on('click', ()=>{window.location = url})
         }
+
         if (x.comment) section.append('div').html(x.comment)
         const mainDiv = section.append('div').attr('class', 'sjpp-service-div').style('height', 'fit-content')
         serv.signatureWrapper = mainDiv.append('div').attr('class', 'sjpp-signature-wrapper')
@@ -376,7 +376,7 @@ function getTip() {
   const tip = d3.select('body').append('div').attr('class', 'sjpp-tip')
   
   tip.head = tip.append('button')
-    .style('position', 'absolute')
+    .style('position', 'fixed')
     .style('top', '1px')
     .style('right', '1px')
     .style('padding', '1px')
@@ -391,8 +391,8 @@ function getTip() {
   
   tip.show = (html) => {
     tip.style('display', '')
-      .style('top', event.clientY + 8)
-      .style('left', event.clientX + 8)
+      .style('top', (window.scrollY + event.clientY) + 'px')
+      .style('left', (window.scrollX + event.clientX) + 'px')
     tip.body.selectAll('*').remove()
     tip.body.html(html)
     tip.body.selectAll('p').style('margin', '0.5rem 0.25rem')

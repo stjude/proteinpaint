@@ -32,7 +32,7 @@ type DbInfo = {
 }
 
 /**
- * Server sttus and data related to it's health
+ * Server status and data related to it's health
  */
 export type HealthCheckResponse = {
 	status: 'ok' | 'error'
