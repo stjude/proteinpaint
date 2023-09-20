@@ -1,6 +1,6 @@
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
-import { dofetch3, setAuth } from '../common/dofetch'
+import { dofetch3, setAuth } from '#common/dofetch'
 import { findgenemodel_bysymbol } from './gene'
 import './style.css'
 import * as common from '#shared/common'
@@ -13,9 +13,11 @@ import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import { appDrawerInit } from '../appdrawer/app'
-import urlmap from '../common/urlmap'
-import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
-import { first_genetrack_tolist } from '../common/1stGenetk'
+import urlmap from '#common/urlmap'
+import { renderSandboxFormDiv, newSandboxDiv } from '#dom/sandbox'
+import { sayerror } from '#dom/sayerror'
+import { Menu } from '#dom/menu'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 
 /*
 
@@ -58,7 +60,7 @@ geneSearch4GDCmds3
 launchGdcMatrix
 */
 
-const headtip = new client.Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
+const headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
 headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
@@ -334,7 +336,7 @@ async function makeheader(app, obj, jwt) {
 		.style('font-weight', 'bold')
 
 	// 2, search box
-	const tip = new client.Menu({ border: '', padding: '0px' })
+	const tip = new Menu({ border: '', padding: '0px' })
 
 	function entersearch() {
 		app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
@@ -566,8 +568,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 		import('./block')
 			.then(b => new b.Block(par))
 			.catch(err => {
-				app.error0(err.message)
-				console.log(err)
+				app.error0(err)
 			})
 		return
 	}
@@ -734,6 +735,10 @@ async function parseEmbedThenUrl(arg, app) {
 		return
 	}
 
+	if (arg.disco) {
+		return await launchDisco(arg, app)
+	}
+
 	if (arg.geneSearch4GDCmds3) {
 		/* can generalize by changing to geneSearch4tk:{tkobj}
 		so it's no longer hardcoded for one dataset of one track type
@@ -762,8 +767,7 @@ async function parseEmbedThenUrl(arg, app) {
 				debugmode: app.debugmode
 			})
 		} catch (e) {
-			app.error0(e.message || e)
-			if (e.stack) console.log(e.stack)
+			app.error0(e)
 		}
 	}
 
@@ -930,8 +934,7 @@ async function launchmdssamplescatterplot(arg, app) {
 			if (data.error) throw tmp.error
 			else if (data.text) arg.analysisdata = JSON.parse(data.text)
 		} catch (e) {
-			if (e.stack) console.log(e.stack)
-			app.error0(e.message || e)
+			app.error0(e)
 			return
 		}
 	} else {
@@ -1158,7 +1161,7 @@ async function launchblock(arg, app) {
 					arg.tracks = arg.tracks.filter(tk => tk != t)
 					arg.tracks.push(...tks)
 				} catch (e) {
-					client.sayerror(app.holder0, e.message || e)
+					sayerror(app.holder0, e)
 				}
 			}
 			t.iscustom = true
@@ -1487,8 +1490,7 @@ async function launch_genefusion(arg, app) {
 			holder: app.holder
 		})
 	} catch (e) {
-		app.error0(e.message || e)
-		if (e.stack) console.log(e.stack)
+		app.error0(e)
 	}
 }
 
@@ -1591,4 +1593,43 @@ function initgenome(g) {
 		}
 	}
 	return null
+}
+
+async function launchDisco(arg, app) {
+	console.log(arg, app)
+	if (!arg.genome) throw '"genome" parameter missing'
+	const genomeObj = app.genomes[arg.genome]
+	if (!genomeObj) throw 'unknown genome'
+	if (!Array.isArray(arg.disco.mlst)) throw 'arg.disco.mlst[] not array'
+	/*
+	const opts = {
+		holder: app.holder0,
+		state: {
+			genome: genomeObj.name,
+			args: {
+				sampleName: 'test',
+				data: arg.disco.mlst,
+				genome: genomeObj
+			},
+
+			plots: [
+				{
+					chartType: 'Disco',
+					subfolder: 'disco',
+					extension: 'ts',
+					overrides: {
+						label: {
+							showPrioritizeGeneLabelsByGeneSets: !!genomeObj.geneset
+						}
+					}
+				}
+			]
+		}
+	}
+	const plot = await import('#plots/plot.app.js')
+	const plotAppApi = await plot.appInit(opts)
+	*/
+
+	const _ = await import('#plots/disco/Disco.ts')
+	//await _.discoInit()
 }
