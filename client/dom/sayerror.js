@@ -3,22 +3,27 @@ import { disappear } from './animation'
 /*
 ---------Exported---------
 sayerror()
-	- Displays error message in new, closable, red div 
+	- Displays error message in new, closable, red div OR error message.
 
 throwMsgWithFilePathAndFnName()
 	- Generic throw message that includes the file and function name in this format: `Message [fileName functionName()]
 */
 
 export function sayerror(holder, msg) {
-	const div = holder.append('div').attr('class', 'sja_errorbar')
-	// msg can contain injected XSS, so never do .html(msg)
-	div.append('div').text(msg)
-	div
-		.append('div')
-		.html('&#10005;')
-		.on('click', () => {
-			disappear(div, true)
-		})
+	if (typeof msg == 'object') {
+		if (msg.stack) console.log(msg.stack)
+		holder.append('div').text(msg.message || msg.error)
+	} else {
+		const div = holder.append('div').attr('class', 'sja_errorbar')
+		// msg can contain injected XSS, so never do .html(msg)
+		div.append('div').text(msg)
+		div
+			.append('div')
+			.html('&#10005;')
+			.on('click', () => {
+				disappear(div, true)
+			})
+	}
 }
 
 export function throwMsgWithFilePathAndFnName(message) {
