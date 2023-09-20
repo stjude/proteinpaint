@@ -91,8 +91,8 @@ export function showGenesetEdit({
 		api.dom.loadBt = rightDiv
 			.append('button')
 			.html(`Load top mutated genes`)
-			.on('click', async event => {
-				let args = {
+			.on('click', async () => {
+				const args = {
 					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
 				}
@@ -107,10 +107,8 @@ export function showGenesetEdit({
 			})
 	} else if (vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 		for (const param of vocabApi.termdbConfig.topVariablyExpressedGenes.arguments) addParameter(param)
-		rightDiv
-			.append('button')
-			.html(`Load top expressed genes`)
-			.on('click', async event => {})
+		rightDiv.append('button').html(`Load top expressed genes`)
+		//.on('click', async () => {})
 	}
 	if (genome?.termdbs?.msigdb) {
 		for (const key in genome.termdbs) {
@@ -119,7 +117,7 @@ export function showGenesetEdit({
 				.append('button')
 				.attr('name', 'msigdbBt')
 				.html(`Load ${tdb.label} gene set &#9660;`)
-				.on('click', async event => {
+				.on('click', async () => {
 					tip2.clear()
 					const termdb = await import('../termdb/app.js')
 					termdb.appInit({
