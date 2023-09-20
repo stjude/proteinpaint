@@ -110,6 +110,7 @@
   "exclude": [
     "node_modules",
     "./**/tmpbuild",
+    "./**/tmppack",
     "./**/public"
   ]
 }

@@ -608,6 +608,13 @@ export type Cohort = {
 	db: FileObj
 	termdb?: Termdb
 	scatterplots?: Scatterplots
+	cumburden?: {
+		files: {
+			fit: string
+			surv: string
+			sample: string
+		}
+	}
 }
 /*** types supporting MdsCohort type ***/
 type SampleAttribute = {
