@@ -214,11 +214,16 @@ function setRenderers(self: any) {
 	self.showDraggables = async function () {
 		self.dom.actionDiv = self.dom.menuWrapper.append('div').attr('class', 'sjpp-group-actions').style('padding', '10px')
 
+		/*A goal when refactoring groupsetting was to ~not~ attach any variable or 
+		function to a termsetting instance. Must find all previous `New Group #`s 
+		and create a counter.*/
+		const findNewGrps = self.data.groups.filter((g: GrpEntryWithDom) => g.name.startsWith('New Group'))
+		let newGrpNum = findNewGrps.length > 0 ? findNewGrps[findNewGrps.length - 1].name.replace(`New Group `, '') : 0
+
 		//Add Group button
-		let newGrpNum = 0
 		self.dom.actionDiv.addGroup = self.dom.actionDiv
 			.append('button')
-			.classed('sjpp_grpset_addGrp_btn', true)
+			.classed('sjpp_grpset_addGrp_btn', true) //for integration testing
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
@@ -239,7 +244,7 @@ function setRenderers(self: any) {
 		//Apply button
 		self.dom.actionDiv.applyBtn = self.dom.actionDiv
 			.append('button')
-			.classed('sjpp_grpset_apply_btn', true)
+			.classed('sjpp_grpset_apply_btn', true) //for integration testing
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
 			.style('float', 'right')
@@ -297,7 +302,7 @@ function setRenderers(self: any) {
 			.data(self.data.groups.filter((d: GrpEntry) => d.currentIdx != 0))
 			.enter()
 			.append('div')
-			.classed('sjpp-drag-drop-div', true) //unit testing
+			.classed('sjpp-drag-drop-div', true) //for unit testing
 			.style('border', '1px solid #efefef')
 			.style('display', 'block')
 			.style('padding', '10px')
