@@ -3732,35 +3732,39 @@ seekrange(chr,start,stop) {
 		let row1, row2, row3, row4, row5
 
 		const width = 400
-		// 1 - genomic
-		row1 = holder
-			.append('div')
-			.style('margin', '1px')
-			.attr('class', this.gmmode == client.gmmode.genomic ? 'sja_inset_a' : 'sja_menuoption')
-			.on('click', () => {
-				this.setgmmode(client.gmmode.genomic, true)
-				if (hideuponselect) {
-					this.usegmtip.fadeout()
-				} else {
-					row1.attr('class', 'sja_inset_a')
-					if (row2) row2.attr('class', 'sja_menuoption')
-					if (row3) row3.attr('class', 'sja_menuoption')
-					if (row4) row4.attr('class', 'sja_menuoption')
-					if (row5) row5.attr('class', 'sja_menuoption')
-				}
-			})
-		client.sketchGene(
-			row1.append('div').style('vertical-align', 'middle').style('display', 'inline-block'),
-			this.usegm,
-			width,
-			20,
-			this.usegm.start,
-			this.usegm.stop,
-			common.exoncolor,
-			true,
-			this.usegm.strand == '-'
-		)
-		row1.append('div').style('display', 'inline-block').style('padding', '13px').text(client.gmmode.genomic)
+
+		if (this.allowGenomeMode()) {
+			// 1 - genomic
+			row1 = holder
+				.append('div')
+				.style('margin', '1px')
+				.attr('class', this.gmmode == client.gmmode.genomic ? 'sja_inset_a' : 'sja_menuoption')
+				.on('click', () => {
+					this.setgmmode(client.gmmode.genomic, true)
+					if (hideuponselect) {
+						this.usegmtip.fadeout()
+					} else {
+						row1.attr('class', 'sja_inset_a')
+						if (row2) row2.attr('class', 'sja_menuoption')
+						if (row3) row3.attr('class', 'sja_menuoption')
+						if (row4) row4.attr('class', 'sja_menuoption')
+						if (row5) row5.attr('class', 'sja_menuoption')
+					}
+				})
+			client.sketchGene(
+				row1.append('div').style('vertical-align', 'middle').style('display', 'inline-block'),
+				this.usegm,
+				width,
+				20,
+				this.usegm.start,
+				this.usegm.stop,
+				common.exoncolor,
+				true,
+				this.usegm.strand == '-'
+			)
+			row1.append('div').style('display', 'inline-block').style('padding', '13px').text(client.gmmode.genomic)
+		}
+
 		// 2 - splicing rna
 		if (this.usegm.exon.length > 1) {
 			row2 = holder
@@ -3863,6 +3867,16 @@ seekrange(chr,start,stop) {
 				.style('text-align', 'center')
 				.text('Aggregation of ' + this.allgm.length + ' isoforms')
 		}
+	}
+
+	allowGenomeMode() {
+		/*
+		allow some mds3 tk to disable genomic view mode, due to gdc ssm genomic range query is not working yet
+		*/
+		for (const t of this.tklst) {
+			if (t.type == 'mds3' && t.mds?.noGenomicMode4lollipopTk) return false
+		}
+		return true
 	}
 
 	showisoform4switch(holder, hideuponselect) {

@@ -1,1 +1,2 @@
-
+Fixes:
+- Allow to disable switching GDC SSM lollipop track to genomic mode, due to issues with api query
