@@ -1,2 +1,1 @@
-Features:
-- Prototype support for disco plot to show adhoc data.
+

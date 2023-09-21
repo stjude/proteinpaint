@@ -11,6 +11,7 @@ Features:
 - For matrix plot, when hovering over gene label, show the percentage of mutation (#mutated samples / #tested sample)
 - Display average admix coefficient for filter-vs-population comparison in genome browser
 - prototype a serve route for cumulative burden estimates
+- Prototype support for disco plot to show adhoc data.
 
 Fixes:
 - fix for sorting labels for custom binning on numeric terms in violin plot
