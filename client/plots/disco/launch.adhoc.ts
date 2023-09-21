@@ -1,6 +1,22 @@
 import { Genome } from '#shared/types/index'
 
-export async function launch(arg: any, genomeObj: Genome, holder: Element) {
+//Move these types to shared/server if used across multiple files
+type MutationList = []
+
+type DiscoPlotArgs = {
+	mlst: MutationList
+	snvText: string
+	snvFile: string
+	snvUrl: string
+	svText: string
+	svFile: string
+	svUrl: string
+	cnvText: string
+	cnvFile: string
+	cnvUrl: string
+}
+
+export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Element) {
 	const mlst = await getMlst(arg)
 	const opts = {
 		holder,
@@ -94,7 +110,8 @@ while the "File" and "Url" can come from url parameters e.g. host?disco=1&snvFil
 
 ... more datatypes can be added later
 */
-async function getMlst(arg: any) {
+
+async function getMlst(arg: DiscoPlotArgs) {
 	if (Array.isArray(arg.mlst)) {
 		// has preformatted in
 		return arg.mlst
