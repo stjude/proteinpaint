@@ -1,8 +1,6 @@
-/*
-TODO convert to ts
-*/
+import { Genome } from '#shared/types/index'
 
-export async function launch(arg, genomeObj, holder) {
+export async function launch(arg: any, genomeObj: Genome, holder: Element) {
 	const mlst = await getMlst(arg)
 	const opts = {
 		holder,
@@ -94,7 +92,7 @@ while the "File" and "Url" can come from url parameters e.g. host?disco=1&snvFil
 
 ... more datatypes can be added later
 */
-async function getMlst(arg) {
+async function getMlst(arg: any) {
 	if (Array.isArray(arg.mlst)) {
 		// has preformatted in
 		return arg.mlst
