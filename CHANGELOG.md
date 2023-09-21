@@ -8,7 +8,7 @@ Features:
 - Prototyped single sample viewer
 - Default bin configs for GDC numeric variables are determined on the fly and no longer hardcoded
 - For matrix plot, when hovering over gene label, show the percentage of mutation (#mutated samples / #tested sample)
-- Click the divide-by term at the top left corner of matrix plot to edit, replace, or delete  
+- Click the divide-by term at the top left corner of matrix plot to edit, replace, or delete
 - Display average admix coefficient for filter-vs-population comparison in genome browser
 - Prototyped a server route for cumulative burden estimates
 - Prototyped support for disco plot to show adhoc data
