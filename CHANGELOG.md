@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.27.0
 
 Features:
 - Prototyped single sample viewer
