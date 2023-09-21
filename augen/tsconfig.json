@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "es6",
-    "moduleResolution": "nodenext",
+    "module": "node16",
+    "moduleResolution": "node16",
     "esModuleInterop": true,
     "baseUrl": "./",
     "allowImportingTsExtensions": true,

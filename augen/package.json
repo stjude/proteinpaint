@@ -25,5 +25,12 @@
   "devDependencies": {
     "express": "^4.17.1",
     "tape": "^5.2.2"
-  }
+  },
+  "files": [
+    "src",
+    "build.sh",
+    "cli.js",
+    "readme.sh",
+    "webpack.config.cjs"
+  ]
 }
