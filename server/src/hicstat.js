@@ -29,7 +29,6 @@ export async function do_hicstat(file, isurl) {
 
 	while (attr_i !== attr_n) {
 		const str = getString()
-		console.log(str)
 		attributes[str] = getString()
 		attr_i++
 	}
@@ -41,7 +40,6 @@ export async function do_hicstat(file, isurl) {
 	let Chr_i = 0
 	while (Chr_i !== nChrs) {
 		const chr = getString()
-		console.log('chro', chr)
 		out_data.chrorder.push(chr)
 		out_data.Chromosomes[chr] = version == 8 ? getInt() : getLong()
 		Chr_i++
@@ -49,17 +47,18 @@ export async function do_hicstat(file, isurl) {
 	// basepair resolutions
 	out_data['Base pair-delimited resolutions'] = []
 	let bpRes_n = getInt()
-	console.log(`Reading ${bpRes_n} base pair resolutions...`)
+	//console.log(`Reading ${bpRes_n} base pair resolutions...`)
 
 	let bpRes_i = 0
 	while (bpRes_i !== bpRes_n) {
 		out_data['Base pair-delimited resolutions'].push(getInt())
 		bpRes_i++
 	}
-	console.log('Reading fragment resolutions...')
 	// fragment resolutions
 	out_data['Fragment-delimited resolutions'] = []
 	let FragRes_n = getInt()
+	//console.log(`Reading ${FragRes_n} fragment resolutions...`)
+
 	let FragRes_i = 0
 	while (FragRes_i !== FragRes_n) {
 		out_data['Fragment-delimited resolutions'].push(getInt())
@@ -73,7 +72,7 @@ export async function do_hicstat(file, isurl) {
 				return () => String(this)
 			}
 		})
-	console.log('Reading matrix ...')
+	//console.log('Reading matrix ...')
 	const output = JSON.stringify(out_data)
 	return output
 
