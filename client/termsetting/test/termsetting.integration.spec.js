@@ -318,7 +318,7 @@ tape('use_bins_less', async test => {
 	test.end()
 })
 
-tape.only('Categorical term', async test => {
+tape('Categorical term', async test => {
 	const opts = await getOpts({
 		tsData: {
 			q: {
