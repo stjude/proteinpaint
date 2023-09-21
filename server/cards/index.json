@@ -307,6 +307,16 @@
             "ribbon": {"text":"beta"},
             "sandboxJson": "databrowser",
             "searchterms": ["clinical", "dictionary"]
+        },
+        {
+            "type": "card",
+            "name": "Disco Plot",
+            "section": "apps",
+            "description": "Expression data arranged by genomic position",
+            "image": "https://proteinpaint.stjude.org/ppdemo/images/disco-square.png",
+            "ribbon": { "text":"new", "expireDate": "2023-31-10" },
+            "sandboxJson": "disco",
+            "searchterms": ["disco"]
         }
     ]
 }
