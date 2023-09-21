@@ -1599,38 +1599,6 @@ async function launchDisco(arg, app) {
 	if (!arg.genome) throw '"genome" parameter missing'
 	const genomeObj = app.genomes[arg.genome]
 	if (!genomeObj) throw 'unknown genome'
-	if (!Array.isArray(arg.disco.mlst)) throw 'arg.disco.mlst[] not array'
-	const opts = {
-		holder: app.holder0,
-		vocabApi: {
-			// api is required by plot.app.js, so create a mock one for the adhoc data
-			vocab: { terms: [] },
-			main: () => {},
-			getTermdbConfig: () => {
-				return {}
-			}
-		},
-		state: {
-			args: {
-				data: arg.disco.mlst,
-				genome: genomeObj
-			},
-			plots: [
-				{
-					chartType: 'Disco',
-					subfolder: 'disco',
-					extension: 'ts'
-					/*
-					overrides: {
-						label: {
-							showPrioritizeGeneLabelsByGeneSets: !!genomeObj.geneset
-						}
-					}
-					*/
-				}
-			]
-		}
-	}
-	const plot = await import('#plots/plot.app.js')
-	const plotAppApi = await plot.appInit(opts)
+	const _ = await import('#plots/disco/launch.adhoc.js')
+	return await _.launch(arg.disco, genomeObj, app.holder0)
 }
