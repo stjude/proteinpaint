@@ -3,21 +3,12 @@ const util = require('util')
 const got = require('got')
 
 export async function do_hicstat(file, isurl) {
-	if (!BigInt.prototype.toJSON)
-		Object.defineProperty(BigInt.prototype, 'toJSON', {
-			get() {
-				'use strict'
-				return () => String(this)
-			}
-		})
-
 	const out_data = {}
 	const data = isurl ? await readHicUrlHeader(file, 0, 32000) : await readHicFileHeader(file, 0, 32000)
 	const view = new DataView(data)
 
 	let position = 0
 	const magic = getString()
-	console.log('magic', magic)
 	if (magic !== 'HIC') {
 		throw Error('Unsupported hic file')
 	}
@@ -28,14 +19,12 @@ export async function do_hicstat(file, isurl) {
 	out_data['Hic Version'] = version
 	position += 8 // skip unwatnted part
 	const genomeId = getString()
-	console.log('genome', genomeId)
 	out_data['Genome ID'] = genomeId
 	if (version == 9) position += 16 //skip header values normVectorIndexPosition and normVectorIndexLength
 
 	// skip unwatnted attributes
 	let attributes = {}
 	const attr_n = getInt()
-	console.log('attr_n', attr_n)
 	let attr_i = 0
 
 	while (attr_i !== attr_n) {
@@ -76,7 +65,14 @@ export async function do_hicstat(file, isurl) {
 		out_data['Fragment-delimited resolutions'].push(getInt())
 		FragRes_i++
 	}
-
+	//This is needed to support the conversion of a BigInt to json
+	if (!BigInt.prototype.toJSON)
+		Object.defineProperty(BigInt.prototype, 'toJSON', {
+			get() {
+				'use strict'
+				return () => String(this)
+			}
+		})
 	console.log('Reading matrix ...')
 	const output = JSON.stringify(out_data)
 	return output
