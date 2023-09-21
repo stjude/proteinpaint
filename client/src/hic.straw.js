@@ -174,19 +174,11 @@ export function hicparsefile(hic, debugmode) {
 	const tr2 = table.append('tr')
 
 	if (hic.enzyme) {
-		tr1
-			.append('td')
-			.style('color', '#858585')
-			.style('font-size', '.7em')
-			.text('ENZYME')
+		tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('ENZYME')
 		tr2.append('td').text(hic.enzyme)
 	}
 
-	tr1
-		.append('td')
-		.style('color', '#858585')
-		.style('font-size', '.7em')
-		.text('NORMALIZATION')
+	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('NORMALIZATION')
 	hic.nmethselect = tr2
 		.append('td')
 		.style('margin-right', '10px')
@@ -200,11 +192,7 @@ export function hicparsefile(hic, debugmode) {
 	hic.nmethselect.append('option').text('VC_SQRT')
 	hic.nmethselect.append('option').text('KR')
 
-	tr1
-		.append('td')
-		.style('color', '#858585')
-		.style('font-size', '.7em')
-		.text('CUTOFF')
+	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('CUTOFF')
 	hic.inputbpmaxv = tr2
 		.append('td')
 		.append('input')
@@ -218,18 +206,10 @@ export function hicparsefile(hic, debugmode) {
 			setmaxv(hic, v)
 		})
 
-	tr1
-		.append('td')
-		.style('color', '#858585')
-		.style('font-size', '.7em')
-		.text('RESOLUTION')
+	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('RESOLUTION')
 	hic.ressays = tr2.append('td').append('span')
 
-	tr1
-		.append('td')
-		.style('color', '#858585')
-		.style('font-size', '.7em')
-		.text('VIEW')
+	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('VIEW')
 	const td = tr2.append('td')
 	hic.wholegenomebutton = td
 		.append('button')
@@ -311,6 +291,8 @@ export function hicparsestat(hic, txt) {
 	} catch (e) {
 		return 'Invalid JSON from hic file stat'
 	}
+
+	hic.version = j['Hic Version']
 
 	if (!j.Chromosomes) return 'Chromosomes not found in file stat'
 	if (!Array.isArray(j.chrorder)) return '.chrorder[] missing'
@@ -535,10 +517,7 @@ function makewholegenome_chrleadfollow(hic, lead, follow) {
 	const xbins = Math.ceil(leadchrlen / hic.wholegenome.resolution)
 	const ybins = Math.ceil(followchrlen / hic.wholegenome.resolution)
 
-	obj.canvas = hic.holder
-		.append('canvas')
-		.style('display', 'none')
-		.node()
+	obj.canvas = hic.holder.append('canvas').style('display', 'none').node()
 
 	obj.ctx = obj.canvas.getContext('2d')
 
@@ -559,10 +538,7 @@ function makewholegenome_chrleadfollow(hic, lead, follow) {
 		})
 
 	if (lead != follow) {
-		obj.canvas2 = hic.holder
-			.append('canvas')
-			.style('display', 'none')
-			.node()
+		obj.canvas2 = hic.holder.append('canvas').style('display', 'none').node()
 
 		obj.ctx2 = obj.canvas2.getContext('2d')
 
@@ -855,11 +831,7 @@ function init_chrpair(hic, chrx, chry) {
 				.attr('transform', 'translate(1,' + axispad + ')')
 				.call(
 					axisRight()
-						.scale(
-							scaleLinear()
-								.domain([0, chrylen])
-								.range([0, h])
-						)
+						.scale(scaleLinear().domain([0, chrylen]).range([0, h]))
 						.tickFormat(d3format('.2s'))
 				),
 			showline: true
@@ -887,11 +859,7 @@ function init_chrpair(hic, chrx, chry) {
 				.attr('transform', 'translate(' + axispad + ',1)')
 				.call(
 					axisBottom()
-						.scale(
-							scaleLinear()
-								.domain([0, chrxlen])
-								.range([0, w])
-						)
+						.scale(scaleLinear().domain([0, chrxlen]).range([0, w]))
 						.tickFormat(d3format('.2s'))
 				),
 			showline: true
@@ -1244,11 +1212,7 @@ function init_detail(hic, chrx, chry, x, y) {
 	global zoom buttons
 	*/
 	{
-		const row = canvasholder
-			.append('div')
-			.style('position', 'absolute')
-			.style('right', '100px')
-			.style('top', '20px')
+		const row = canvasholder.append('div').style('position', 'absolute').style('right', '100px').style('top', '20px')
 		row
 			.append('button')
 			.text('Zoom in')
@@ -1737,7 +1701,7 @@ function getdata_detail(hic) {
 				maxv = Math.max(v, maxv)
 
 				if (isintrachr) {
-					if (coord1 > xstart - span1 && coord1 < xstop && (coord2 > ystart - span2 && coord2 < ystop)) {
+					if (coord1 > xstart - span1 && coord1 < xstop && coord2 > ystart - span2 && coord2 < ystop) {
 						lst.push([
 							Math.floor((coord1 - xstart) * xpxbp),
 							Math.floor((coord2 - ystart) * ypxbp),
@@ -1746,7 +1710,7 @@ function getdata_detail(hic) {
 							v
 						])
 					}
-					if (coord2 > xstart - span2 && coord2 < xstop && (coord1 > ystart && coord1 < ystop)) {
+					if (coord2 > xstart - span2 && coord2 < xstop && coord1 > ystart && coord1 < ystop) {
 						lst.push([
 							Math.floor((coord2 - xstart) * xpxbp),
 							Math.floor((coord1 - ystart) * ypxbp),

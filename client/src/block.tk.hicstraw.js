@@ -1104,7 +1104,7 @@ function configPanel(tk, block) {
 	{
 		const row = tk.tkconfigtip.d
 			.append('div')
-			.style('margin', '20px 0px 10px 0px')
+			.style('margin', '20px 0px')
 			.append('button')
 			.text('Point ' + (tk.pyramidup ? 'down' : 'up'))
 			.on('click', event => {
@@ -1112,6 +1112,13 @@ function configPanel(tk, block) {
 				drawCanvas(tk, block)
 				tk.tkconfigtip.hide()
 			})
+	}
+
+	if (tk.hic.version) {
+		tk.tkconfigtip.d
+			.append('div')
+			.style('opacity', 0.5)
+			.text('HiC file version: ' + tk.hic.version)
 	}
 }
 
