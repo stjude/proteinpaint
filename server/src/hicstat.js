@@ -13,7 +13,7 @@ const got = require('got')
  */
 export async function do_hicstat(file, isurl) {
 	const out_data = {}
-	const data = isurl ? await readHicUrlHeader(file, 0, 32000) : await readHicFileHeader(file, 0, 32000)
+	const data = isurl ? await readHicUrl(file, 0, 32000) : await readHicFile(file, 0, 32000)
 	const view = new DataView(data)
 
 	let position = 0
@@ -29,7 +29,25 @@ export async function do_hicstat(file, isurl) {
 	position += 8 // skip unwatnted part
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
-	if (version == 9) position += 16 //skip header values normVectorIndexPosition and normVectorIndexLength
+	if (version == 9) {
+		const normVectorIndexPosition = Number(getLong())
+		const normVectorIndexLength = Number(getLong())
+		const vectorData = isurl
+			? await readHicUrl(file, normVectorIndexPosition, normVectorIndexLength)
+			: await readHicFile(file, normVectorIndexPosition, normVectorIndexLength)
+		const vectorView = new DataView(vectorData)
+		const nvectors = vectorView.getInt32(0, true)
+		let pos = 4,
+			result
+		for (let i = 1; i <= nvectors; i++) {
+			result = getViewString(vectorView, pos)
+			console.log(result.str)
+
+			//skip chromosome index
+			result = getViewString(vectorView, result.pos + 4)
+			pos = result.pos + 20 //skip other attributes
+		}
+	} else position += 16
 
 	// skip unwatnted attributes
 	let attributes = {}
@@ -85,7 +103,7 @@ export async function do_hicstat(file, isurl) {
 	const output = JSON.stringify(out_data)
 	return output
 
-	async function readHicFileHeader(file, position, length) {
+	async function readHicFile(file, position, length) {
 		const fsOpen = util.promisify(fs.open)
 		const fsRead = util.promisify(fs.read)
 
@@ -103,7 +121,7 @@ export async function do_hicstat(file, isurl) {
 		return arrayBuffer
 	}
 
-	async function readHicUrlHeader(url, position, length) {
+	async function readHicUrl(url, position, length) {
 		try {
 			const response = await got(url, {
 				headers: { Range: 'bytes=' + position + '-' + (length - 1) }
@@ -117,11 +135,22 @@ export async function do_hicstat(file, isurl) {
 		}
 	}
 
+	function getViewString(view, position) {
+		let str = ''
+		let chr
+		while ((chr = view.getUint8(position++)) != 0) {
+			const charStr = String.fromCharCode(chr)
+			str += charStr
+		}
+		return { str, pos: position }
+	}
+
 	function getString() {
 		let str = ''
 		let chr
 		while ((chr = view.getUint8(position++)) != 0) {
-			str += String.fromCharCode(chr)
+			const charStr = String.fromCharCode(chr)
+			str += charStr
 		}
 		return str
 	}
