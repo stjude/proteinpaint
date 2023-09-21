@@ -7,7 +7,9 @@ export async function launch(arg: any, genomeObj: Genome, holder: Element) {
 		vocabApi: {
 			// api is required by plot.app.js, so create a mock one for the adhoc data
 			vocab: { terms: [] },
-			main: () => {},
+			main: () => {
+				return //fix so linter doesn't yell while this is in development
+			},
 			getTermdbConfig: () => {
 				return {}
 			}
