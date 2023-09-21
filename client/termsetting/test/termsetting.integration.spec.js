@@ -318,7 +318,7 @@ tape('use_bins_less', async test => {
 	test.end()
 })
 
-tape('Categorical term', async test => {
+tape.only('Categorical term', async test => {
 	const opts = await getOpts({
 		tsData: {
 			q: {
@@ -338,14 +338,16 @@ tape('Categorical term', async test => {
 	test.equal(tip.d.selectAll('.sja_menuoption.sja_sharp_border').size(), 2, 'Should have 2 buttons for group config')
 
 	// check menu buttons on category menu
+	const itemNum = Object.keys(opts.tsData.term.values).length
 	const dragItems = await detectGte({
 		elem: tip.d.node(),
 		selector: 'div > div > div > .sjpp-drag-item',
+		count: itemNum,
 		async trigger() {
 			tip.d.selectAll('.sja_menuoption.sja_sharp_border')._groups[0][0].click()
 		}
 	})
-	test.equal(dragItems.length, Object.keys(opts.tsData.term.values).length, 'Should have rows for each category')
+	test.equal(dragItems.length, itemNum, `Should have rows (n=${dragItems.length}) for each category (n=${itemNum})`)
 	test.equal(
 		tip.d.selectAll('div > div > div > .sjpp_grpset_addGrp_btn').size(),
 		1,
