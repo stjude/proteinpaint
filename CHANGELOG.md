@@ -6,34 +6,33 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Prototyped single sample viewer
-- improve the release text detection and generator, to minimize potential conflicts when merging
 - Default bin configs for GDC numeric variables are determined on the fly and no longer hardcoded
 - For matrix plot, when hovering over gene label, show the percentage of mutation (#mutated samples / #tested sample)
+- Click the divide-by term at the top left corner of matrix plot to edit, replace, or delete  
 - Display average admix coefficient for filter-vs-population comparison in genome browser
-- prototype a serve route for cumulative burden estimates
-- Prototype support for disco plot to show adhoc data.
+- Prototyped a server route for cumulative burden estimates
+- Prototyped support for disco plot to show adhoc data
 
 Fixes:
-- fix for sorting labels for custom binning on numeric terms in violin plot
-- gracefully handle a hic file with no frag resolutions
-- Gracefully handle a hic file with no frag resolutions
+- Fix for sorting the custom bin labels on numeric terms in violin plot
+- Gracefully handle a Hi-C file with no frag resolutions
 - Display Age at diagnosis in years instead of days for GDC
-- Fix GDC Days to birth axis issue
-- mds3 variant2samples.get() returns an object to wrap the optional bin labels
+- Fix the GDC Days to birth axis issue
 - Fix the issues results from term conversion between continous and discrete mode
-- Indicate original value unit in termsetting UI if the term value is converted; safety check on bin size to avoid crashes
-- add safety check for first bin stop and last bin start in numeric discrete termsetting, make the ui actually usable
-- Bug fix for broken single variant panel from mds3 tk, by requiring tooltipPrintValue() to return [{k,v}]
+- Indicate the original value unit in termsetting UI if the term value is converted; safety check on bin size to avoid crashes
+- Add a safety check for the first bin stop and last bin start in numeric discrete termsetting, make the ui actually usable
+- Bug fix for the broken single variant panel from mds3 tk, by requiring tooltipPrintValue() to return [{k,v}]
+- Mds3 variant2samples.get() returns an object to wrap the optional bin labels
 - Allow a sample to be missing files for disco and singleSampleGenomeQuantification data types and do not break server
 - Display matrix cell tooltip as two column table, and group events of same dt under same heading
-- bug fix to not to print text when average admix value is missing; improve population item UI in genomebrowser controls
+- Bug fix to not to print text when average admix value is missing; improve population item UI in genomebrowser controls
 - Improve INFO field UI in genome browser group selection
-- Allow to disable switching GDC SSM lollipop track to genomic mode, due to issues with api query
-- Allow to edit, remove and delete divideby term indicated at the top left corner of matrix.
+- Option to disable switching GDC SSM lollipop track to genomic mode, due to issues with api query
 
 DevOps:
-- support more release note section titles and their corresponding commit keywords
-- avoid unnecessarily running unit test CI, for pull requests with unaffected workspaces and on automated push
+- Support more release note section titles and their corresponding commit keywords
+- Avoid unnecessarily running unit test CI, for pull requests with unaffected workspaces and on automated push
+- Improve the release text detection and generator, to minimize potential conflicts when merging
 
 
 ## 2.26.1
