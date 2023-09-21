@@ -12,7 +12,6 @@ async function prep() {
 
 	const routes = await Promise.all(
 		endpoints.map(async file => {
-			console.log(14, join(__dirname, `./routes/${file}`))
 			const route = await import(join(__dirname, `./routes/${file}`))
 			return Object.assign({ file }, route)
 		})
