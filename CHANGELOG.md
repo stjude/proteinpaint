@@ -28,6 +28,7 @@ Fixes:
 - bug fix to not to print text when average admix value is missing; improve population item UI in genomebrowser controls
 - Improve INFO field UI in genome browser group selection
 - Allow to disable switching GDC SSM lollipop track to genomic mode, due to issues with api query
+- Allow to edit, remove and delete divideby term indicated at the top left corner of matrix.
 
 DevOps:
 - support more release note section titles and their corresponding commit keywords

@@ -1,2 +1,1 @@
-Fixes:
-- Allow to edit, remove and delete divideby term indicated at the top left corner of matrix.
+
