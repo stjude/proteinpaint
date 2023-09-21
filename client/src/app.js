@@ -1603,6 +1603,7 @@ async function launchDisco(arg, app) {
 	const opts = {
 		holder: app.holder0,
 		vocabApi: {
+			// api is required by plot.app.js, so create a mock one for the adhoc data
 			vocab: { terms: [] },
 			main: () => {},
 			getTermdbConfig: () => {
@@ -1611,7 +1612,6 @@ async function launchDisco(arg, app) {
 		},
 		state: {
 			args: {
-				sampleName: 'test',
 				data: arg.disco.mlst,
 				genome: genomeObj
 			},
@@ -1619,12 +1619,14 @@ async function launchDisco(arg, app) {
 				{
 					chartType: 'Disco',
 					subfolder: 'disco',
-					extension: 'ts',
+					extension: 'ts'
+					/*
 					overrides: {
 						label: {
 							showPrioritizeGeneLabelsByGeneSets: !!genomeObj.geneset
 						}
 					}
+					*/
 				}
 			]
 		}
