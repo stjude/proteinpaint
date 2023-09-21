@@ -1599,6 +1599,6 @@ async function launchDisco(arg, app) {
 	if (!arg.genome) throw '"genome" parameter missing'
 	const genomeObj = app.genomes[arg.genome]
 	if (!genomeObj) throw 'unknown genome'
-	const _ = await import('#plots/disco/launch.adhoc.js')
+	const _ = await import('#plots/disco/launch.adhoc.ts')
 	return await _.launch(arg.disco, genomeObj, app.holder0)
 }
