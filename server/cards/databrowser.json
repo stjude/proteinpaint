@@ -1,5 +1,5 @@
 {
-  "intro": "<b>We're excited to announce our newest app!</b> By uploading a dictionary in the Data Browser, one can explore the structure of their custom data. <br><br>Options to upload sample annotation and other data types are in development.", 
+  "intro": "By uploading a dictionary in the Data Browser, one can explore the structure of their custom data. <br><br>Options to upload sample annotation and other data types are in development.", 
   "ppcalls":[
     {
         "isUi": true,

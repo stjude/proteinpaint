@@ -1,6 +1,8 @@
 {
+    "ribbonMessage": "We're excited to announce our newest app, the <b>Disco Plot!</b>",
     "ppcalls": [
         {
+            "message": "In this example, snv, cnv, and sv data are plotted along a loop by genomic position. The snv data appears as a green line on chr1, inside the black circle. The cnv data appears as the thick, orange block also on chromsome 1. The sv data appears as the line between chromosomes 6 and 12. Hover over any of the data elements to see more information",
             "runargs": {
                 "noheader": true,
                 "nobox":true,
