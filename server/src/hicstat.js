@@ -1,7 +1,16 @@
 const fs = require('fs')
 const util = require('util')
 const got = require('got')
+/**
+ * 
+ * @param {*} file 
+ * @param {*} isurl 
+ * @returns {*} string
+ * 
+ * For details about the hic format v9 see https://github.com/aidenlab/hic-format/blob/master/HiCFormatV9.md
+ * For v8 see https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md
 
+ */
 export async function do_hicstat(file, isurl) {
 	const out_data = {}
 	const data = isurl ? await readHicUrlHeader(file, 0, 32000) : await readHicFileHeader(file, 0, 32000)
