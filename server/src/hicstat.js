@@ -3,30 +3,45 @@ const util = require('util')
 const got = require('got')
 
 export async function do_hicstat(file, isurl) {
+	if (!BigInt.prototype.toJSON)
+		Object.defineProperty(BigInt.prototype, 'toJSON', {
+			get() {
+				'use strict'
+				return () => String(this)
+			}
+		})
+
 	const out_data = {}
 	const data = isurl ? await readHicUrlHeader(file, 0, 32000) : await readHicFileHeader(file, 0, 32000)
 	const view = new DataView(data)
+
 	let position = 0
 	const magic = getString()
+	console.log('magic', magic)
 	if (magic !== 'HIC') {
 		throw Error('Unsupported hic file')
 	}
 	const version = getInt()
-	if (version !== 8) {
+	if (version !== 8 && version != 9) {
 		throw Error('Unsupported hic version: ' + version)
 	}
 	out_data['Hic Version'] = version
 	position += 8 // skip unwatnted part
 	const genomeId = getString()
+	console.log('genome', genomeId)
 	out_data['Genome ID'] = genomeId
+	if (version == 9) position += 16 //skip header values normVectorIndexPosition and normVectorIndexLength
 
 	// skip unwatnted attributes
 	let attributes = {}
 	const attr_n = getInt()
+	console.log('attr_n', attr_n)
 	let attr_i = 0
 
 	while (attr_i !== attr_n) {
-		attributes[getString()] = getString()
+		const str = getString()
+		console.log(str)
+		attributes[str] = getString()
 		attr_i++
 	}
 
@@ -37,20 +52,22 @@ export async function do_hicstat(file, isurl) {
 	let Chr_i = 0
 	while (Chr_i !== nChrs) {
 		const chr = getString()
+		console.log('chro', chr)
 		out_data.chrorder.push(chr)
-		out_data.Chromosomes[chr] = getInt()
+		out_data.Chromosomes[chr] = version == 8 ? getInt() : getLong()
 		Chr_i++
 	}
-
 	// basepair resolutions
 	out_data['Base pair-delimited resolutions'] = []
 	let bpRes_n = getInt()
+	console.log(`Reading ${bpRes_n} base pair resolutions...`)
+
 	let bpRes_i = 0
 	while (bpRes_i !== bpRes_n) {
 		out_data['Base pair-delimited resolutions'].push(getInt())
 		bpRes_i++
 	}
-
+	console.log('Reading fragment resolutions...')
 	// fragment resolutions
 	out_data['Fragment-delimited resolutions'] = []
 	let FragRes_n = getInt()
@@ -60,6 +77,7 @@ export async function do_hicstat(file, isurl) {
 		FragRes_i++
 	}
 
+	console.log('Reading matrix ...')
 	const output = JSON.stringify(out_data)
 	return output
 
@@ -71,7 +89,7 @@ export async function do_hicstat(file, isurl) {
 		const fd = await fsOpen(file, 'r')
 		const result = await fsRead(fd, buffer, 0, length, position)
 
-		fs.close(fd, function(error) {
+		fs.close(fd, function (error) {
 			return error
 		})
 
@@ -108,5 +126,11 @@ export async function do_hicstat(file, isurl) {
 		const IntVal = view.getInt32(position, true)
 		position += 4
 		return IntVal
+	}
+
+	function getLong() {
+		const val = view.getBigInt64(position, true)
+		position += 8
+		return val
 	}
 }
