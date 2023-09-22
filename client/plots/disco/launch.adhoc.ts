@@ -1,33 +1,30 @@
 import { Genome } from '#shared/types/index'
 
-type MutationListEntry = {
-	/**json list of alteration events, each element is an event with "dt:int" and ready to be used by disco
-	FIXME different dt elements require different attributes but this design merge all into one type, can improve later
-	dt=1 {chr, position, gene, class}
-	dt=2 {chrA, posA, chrB, posB}
-	dt=4 {chr, start, stop}
-	*/
+type SnvEntry = {
 	dt: number
-	chr?: string
-	position?: number
-	gene?: string
-	class?: string
-
-	// cnv
-	start?: number
-	stop?: number
-
-	// svfusion
-	chrA?: string
-	chrB?: string
-	posA?: number
-	posB?: number
+	chr: string
+	position: number
+	gene: string
+	class: string
+}
+type CnvEntry = {
+	chr: string
+	start: number
+	stop: number
+	value: number
+}
+type SvEntry = {
+	chrA: string
+	chrB: string
+	posA: number
+	posB: number
 	geneA?: string
 	geneB?: string
 }
 
 type DiscoPlotArgs = {
-	mlst?: MutationListEntry[]
+	/**optional array of preparsed mutation events, from runpp() */
+	mlst?: (SnvEntry | CnvEntry | SvEntry)[]
 
 	/**tabular text of snv data, with follow columns.
 	1. chr
@@ -135,11 +132,11 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Elem
 async function getMlst(arg: DiscoPlotArgs) {
 	if (Array.isArray(arg.mlst)) {
 		// has preformatted in runpp()
-		return [arg.mlst as MutationListEntry[], null]
+		return [arg.mlst, null]
 	}
 
 	// parse data from text and files and append to one mlst[] array
-	const mlst = [] as MutationListEntry[]
+	const mlst = []
 	const errors = []
 
 	if (arg.snvText) parseSnvText(arg.snvText, mlst, errors)
@@ -164,7 +161,7 @@ async function getMlst(arg: DiscoPlotArgs) {
 	return [mlst, errors]
 }
 
-function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseSnvText(text: string, mlst: any[], errors: string[]) {
 	// TODO share a parser for snvindel text file with samples (with header line and non-fixed columns), but should not require sample here
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -183,7 +180,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 				gene: l[2],
 				mname: l[3],
 				class: l[4]
-			} as MutationListEntry
+			} as SnvEntry
 		} catch (e) {
 			continue
 		}
@@ -191,7 +188,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 	}
 }
 
-function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseSvText(text: string, mlst: any[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 6) {
@@ -208,7 +205,7 @@ function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) 
 				chrB: l[3],
 				posB: Number(l[4]),
 				geneB: l[5]
-			} as MutationListEntry
+			} as SvEntry
 		} catch (e) {
 			continue
 		}
@@ -216,7 +213,7 @@ function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) 
 	}
 }
 
-function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseCnvText(text: string, mlst: any[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 4) {
@@ -231,7 +228,7 @@ function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[])
 				start: Number(l[1]),
 				stop: Number(l[2]),
 				value: Number(l[3])
-			} as MutationListEntry
+			} as CnvEntry
 		} catch (e) {
 			continue
 		}
