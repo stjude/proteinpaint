@@ -25,7 +25,7 @@ export async function do_hicstat(file, isurl) {
 	if (version !== 8 && version != 9) {
 		throw Error('Unsupported hic version: ' + version)
 	}
-	out_data['Hic Version'] = version
+	out_data['version'] = version
 	position += 8 // skip unwatnted part
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
@@ -102,8 +102,9 @@ export async function do_hicstat(file, isurl) {
 			}
 		})
 	//console.log('Reading matrix ...')
-	const out = JSON.stringify(out_data)
-	return { out, normalization }
+	out_data['normalization'] = normalization
+	console.log(out_data)
+	return out_data
 
 	async function readHicFile(file, position, length) {
 		const fsOpen = util.promisify(fs.open)
