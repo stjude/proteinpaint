@@ -14,11 +14,12 @@ init_discoplotUI()
 
 */
 
-type DiscoPlotArgs = {
+type DiscoUIArgs = {
 	genome: Genome
 	dataType: string
 	inputType: string
-	data: any
+	data: string
+	htmlHint: any
 }
 
 export function init_discoplotUI(
@@ -37,7 +38,7 @@ export function init_discoplotUI(
 		.style('overflow', 'hidden')
 		.classed('sjpp-app-ui', true)
 
-	const obj: Partial<DiscoPlotArgs> = {}
+	const obj: Partial<DiscoUIArgs> = {}
 
 	//Genome drop down
 	uiutils
@@ -47,14 +48,6 @@ export function init_discoplotUI(
 		.style('color', '#003366')
 	genomeSelection(wrapper, genomes, obj)
 
-	//Data type (i.e. snv, cv, sv, etc.) drop down
-	uiutils
-		.makePrompt(wrapper, 'Choose Data Type')
-		.style('font-size', '1.15em')
-		.style('padding', '10px 0px')
-		.style('color', '#003366')
-	dataTypeSelection(wrapper, obj)
-
 	//User provides data via tp file path, copy and paste, or adding a file
 	uiutils
 		.makePrompt(wrapper, 'Provide Data')
@@ -62,7 +55,7 @@ export function init_discoplotUI(
 		.style('padding', '10px 0px')
 		.style('color', '#003366')
 	const tabs_div = wrapper.append('div').style('margin-left', '2vw')
-	makeDataInputTabs(tabs_div, obj)
+	makeDataTypeTabs(tabs_div, obj)
 
 	//Submit and reset button at the bottom.
 	const controlBtns_div = wrapper
@@ -79,25 +72,81 @@ export function init_discoplotUI(
 	return obj
 }
 
-function genomeSelection(div: Selection<HTMLDivElement, any, any, any>, genomes: Genome, obj: Partial<DiscoPlotArgs>) {
+function genomeSelection(div: Selection<HTMLDivElement, any, any, any>, genomes: Genome, obj: Partial<DiscoUIArgs>) {
 	const genome_div = div.append('div').style('margin-left', '40px')
 	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
 	obj.genome = g.node()
 }
 
-function dataTypeSelection(div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoPlotArgs>) {
-	const data_div = div.append('div').style('margin-left', '40px')
-	const options = ['SNV', 'CNV', 'SV']
-	const dataType = uiutils.makeDropDown(data_div, options).style('border', '1px solid rgb(138, 177, 212)')
-	obj.dataType = dataType.node().value
-}
-
 type Tab = {
+	label: string
 	contentHolder: Selection<HTMLDivElement, any, any, any>
 	callback?: () => void
 }
 
-function makeDataInputTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, obj = {}) {
+function makeDataTypeTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoUIArgs>) {
+	const tabs = [
+		{
+			label: 'SNV',
+			active: true,
+			callback: async (event: MouseEvent, tab: Tab) => {
+				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste SNV data in tab delimited format. the columns should include
+				<ol style="margin-left: 10px; opacity: 0.65;">
+					<li>chr</li>
+					<li>position</li>
+					<li>gene</li>
+					<li>aachange</li>
+					<li>class</li>
+				</ol> </p>`
+				mainTabCallback(tab, obj, htmlHint)
+			}
+		},
+		{
+			label: 'SV',
+			active: true,
+			callback: async (event: MouseEvent, tab: Tab) => {
+				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste CNV data in tab delimited format. the columns should include
+				<ol style="margin-left: 10px; opacity: 0.65;">
+					<li>chrA</li>
+					<li>posA</li>
+					<li>chrB</li>
+					<li>posB</li>
+					<li>geneA</li>
+					<li>geneB</li>
+				</ol></p>`
+				mainTabCallback(tab, obj, htmlHint)
+			}
+		},
+		{
+			label: 'CNV',
+			active: true,
+			callback: async (event: MouseEvent, tab: Tab) => {
+				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste CNV data in tab delimited format. the columns should include
+				<ol style="margin-left: 10px; opacity: 0.65;">
+					<li>chr</li>
+					<li>start</li>
+					<li>stop</li>
+					<li>value</li>
+				</ol></p>`
+				mainTabCallback(tab, obj, htmlHint)
+			}
+		}
+	]
+
+	new Tabs({ holder: tabs_div, tabs, tabsPosition: 'vertical', linePosition: 'right' }).main()
+}
+
+function mainTabCallback(tab: Tab, obj: Partial<DiscoUIArgs>, htmlHint: any) {
+	tab.contentHolder.style('border', 'none').style('display', 'block').style('padding', '0px 20px')
+	makeDataInputTabs(tab.contentHolder, obj, htmlHint)
+	delete tab.callback
+}
+
+function makeDataInputTabs(
+	tabs_div: Selection<HTMLDivElement, any, any, any>,
+	obj: Partial<DiscoUIArgs>,
+	htmlHint: any
+) {
 	const tabs = [
 		{
 			label: 'Select File',
@@ -140,11 +189,7 @@ function makeDataInputTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, o
 				tab.contentHolder.style('border', 'none').style('display', 'block')
 				appear(tab.contentHolder)
 
-				tab.contentHolder
-					.append('div')
-					.html(
-						`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary or phenotree in a tab delimited format.</p>`
-					)
+				tab.contentHolder.append('div').html(htmlHint)
 				makeCopyPasteInput(tab.contentHolder, obj)
 				delete tab.callback
 			}
@@ -153,7 +198,7 @@ function makeDataInputTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, o
 	new Tabs({ holder: tabs_div, tabs }).main()
 }
 
-function makeTextEntryFilePathInput(div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoPlotArgs>) {
+function makeTextEntryFilePathInput(div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoUIArgs>) {
 	// Renders the file path input div and callback.
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
@@ -175,7 +220,7 @@ function makeTextEntryFilePathInput(div: Selection<HTMLDivElement, any, any, any
 		})
 }
 
-function makeFileUpload(div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoPlotArgs>) {
+function makeFileUpload(div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoUIArgs>) {
 	// Renders the select file div and callback.
 	const upload_div = div.append('div').style('display', 'inline-block')
 	const upload = uiutils.makeFileUpload(upload_div).classed('disco_input', true)
@@ -190,7 +235,7 @@ function makeFileUpload(div: Selection<HTMLDivElement, any, any, any>, obj: Part
 	})
 }
 
-function makeCopyPasteInput(div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoPlotArgs>) {
+function makeCopyPasteInput(div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoUIArgs>) {
 	// Renders the copy/paste div and callback.
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
@@ -206,7 +251,7 @@ function makeCopyPasteInput(div: Selection<HTMLDivElement, any, any, any>, obj: 
 
 function submitButton(
 	div: Selection<HTMLDivElement, any, any, any>,
-	obj: Partial<DiscoPlotArgs>,
+	obj: Partial<DiscoUIArgs>,
 	wrapper: Selection<HTMLDivElement, any, any, any>,
 	holder: Selection<HTMLDivElement, any, any, any>
 ) {
@@ -224,7 +269,7 @@ function submitButton(
 				setTimeout(() => sayerrorDiv.remove(), 3000)
 			} else {
 				wrapper.remove()
-				const newProp = obj.dataType?.toLowerCase()! + obj.inputType!
+				const newProp = obj.dataType! + obj.inputType!
 				//Can add more args later
 				const discoArg = { [newProp]: obj.data }
 				launch(discoArg, obj.genome!, holder)
