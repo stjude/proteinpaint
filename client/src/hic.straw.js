@@ -265,7 +265,6 @@ export function hicparsefile(hic, debugmode) {
 
 		.then(data => {
 			if (data.error) throw { message: data.error }
-			hic.normalization = data.out.normalization
 			const err = hicparsestat(hic, data.out)
 			if (err) throw { message: err }
 
@@ -281,17 +280,12 @@ export function hicparsefile(hic, debugmode) {
 		})
 }
 
-export function hicparsestat(hic, data) {
+export function hicparsestat(hic, j) {
 	/*
 	output by read_hic_header.py
 	*/
-	if (!data) return 'cannot stat hic file'
-	let j
-	try {
-		j = data
-	} catch (e) {
-		return 'Invalid JSON from hic file stat'
-	}
+	if (!j) return 'cannot stat hic file'
+	hic.normalization = j.normalization
 
 	hic.version = j.version
 
