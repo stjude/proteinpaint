@@ -2,7 +2,7 @@
     "ribbonMessage": "We're excited to announce our newest app, the <b>Disco Plot!</b>",
     "ppcalls": [
         {
-            "message": "In this example, snv, cnv, and sv data are plotted along a loop by genomic position. The snv data appears as a green line on chr1, inside the black circle. The cnv data appears as the thick, orange block also on chromsome 1. The sv data appears as the line between chromosomes 6 and 12. Hover over any of the data elements to see more information",
+            "message": "In this plot, all chromosomes of the genome are arranged in a circle. Multiple rings along the circle indicates example data points of mutation, copy number change, and structural variation/fusion events. Gene labels are based on mutation and sv/fusion events.",
             "runargs": {
                 "noheader": true,
                 "nobox":true,
@@ -17,15 +17,22 @@
                             "gene": "H3F3A",
                             "isoform": "NM_002107",
                             "mname": "K28M",
-                            "pos": 226252135,
+                            "position": 226252135,
                             "ref": "A"
                         },
                         {
                             "dt": 4,
                             "chr": "chr1",
                             "start": 1,
-                            "stop": 70000000,
+                            "stop": 100000000,
                             "value": 0.5
+                        },
+                        {
+                            "dt": 4,
+                            "chr": "chr1",
+                            "start": 100000000,
+                            "stop":  200000000,
+                            "value": -0.5
                         },
                         {
                             "chrA": "chr6",

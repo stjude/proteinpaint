@@ -311,7 +311,7 @@
             "type": "card",
             "name": "Disco Plot",
             "section": "apps",
-            "description": "Expression data arranged by genomic position",
+            "description": "Circos-like plot of genome-wide mutational events",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/disco-square.png",
             "ribbon": { "text":"new", "expireDate": "2023-10-31" },
             "sandboxJson": "disco",
