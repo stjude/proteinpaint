@@ -106,6 +106,7 @@
             "section": "tracks",
             "description": "Chromatin interaction at a locus",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/hic-square.png",
+            "ribbon": { "text": "updated", "expireDate": "2023-10-31" },
             "sandboxJson": "hic",
             "searchterms": ["hic", "hicstraw", "chromatin interaction", "conformation"]
         },
