@@ -12,10 +12,10 @@ Features:
 - Display average admix coefficient for filter-vs-population comparison in genome browser
 - prototype a serve route for cumulative burden estimates
 - Prototype support for disco plot to show adhoc data.
-- Disco plot UI with an example on the app drawer. Users can provide SNV, SV, and CNV data to create a disco plot.
 
 Fixes:
 - fix for sorting labels for custom binning on numeric terms in violin plot
+- gracefully handle a hic file with no frag resolutions
 - Gracefully handle a hic file with no frag resolutions
 - Display Age at diagnosis in years instead of days for GDC
 - Fix GDC Days to birth axis issue

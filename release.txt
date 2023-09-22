@@ -1,1 +1,2 @@
-
+Features:
+- Disco plot UI with an example on the app drawer. Users can provide SNV, SV, and CNV data to create a disco plot.
