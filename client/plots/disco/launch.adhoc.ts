@@ -2,19 +2,21 @@ import { Genome } from '#shared/types/index'
 import { Selection } from 'd3-selection'
 
 type SnvEntry = {
-	dt: number
+	dt: 1
 	chr: string
 	position: number
 	gene: string
 	class: string
 }
 type CnvEntry = {
+	dt: 4
 	chr: string
 	start: number
 	stop: number
 	value: number
 }
 type SvEntry = {
+	dt: number
 	chrA: string
 	chrB: string
 	posA: number
