@@ -2,10 +2,19 @@
     "ribbonMessage": "We're excited to announce our newest app, the <b>Disco Plot!</b>",
     "ppcalls": [
         {
+            "isUi": true,
+            "runargs": {
+                "noheader": true,
+                "nobox": 1,
+                "parseurl": false,
+                "tkui": "disco"
+            }
+        },
+        {
             "message": "In this plot, all chromosomes of the genome are arranged in a circle. Multiple rings along the circle indicates example data points of mutation, copy number change, and structural variation/fusion events. Gene labels are based on mutation and sv/fusion events.",
             "runargs": {
                 "noheader": true,
-                "nobox":true,
+                "nobox": true,
                 "genome": "hg38",
                 "disco": {
                     "mlst": [
@@ -31,7 +40,7 @@
                             "dt": 4,
                             "chr": "chr1",
                             "start": 100000000,
-                            "stop":  200000000,
+                            "stop": 200000000,
                             "value": -0.5
                         },
                         {
@@ -48,7 +57,13 @@
                     ]
                 }
             },
-            "testSpec": { "button": 1, "expected": { "svg": 1, "g": 2} }
+            "testSpec": {
+                "button": 1,
+                "expected": {
+                    "svg": 1,
+                    "g": 2
+                }
+            }
         }
     ]
 }

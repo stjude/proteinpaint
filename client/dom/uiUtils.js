@@ -10,6 +10,11 @@ isURL()
     - path: STR
 
 makeGenomeDropDown()
+	Creates general dropdwon from a provided array of options
+	- div
+	- options: []
+
+makeGenomeDropDown()
 	Creates genomes dropdown from available genomes 
     - div
     - genomes: *genomes must be an arg in the ui init() and passed to this fn
@@ -63,6 +68,24 @@ export function isURL(path) {
 	if (checkpath.startsWith('https://') || checkpath.startsWith('http://') || checkpath.startsWith('ftp://')) return true
 }
 
+export function makeDropDown(div, options) {
+	/**
+	 * div: node
+	 * options: []
+	 */
+	const row = div.append('div')
+
+	const select = row
+		.append('select')
+		.style('border-radius', '5px')
+		.style('padding', '5px 10px')
+		.style('margin', '1px 20px 1px 10px')
+	options.forEach(n => {
+		select.append('option').text(n)
+	})
+	return select
+}
+
 export function makeGenomeDropDown(div, genomes) {
 	const g_row = div.append('div')
 
@@ -81,7 +104,7 @@ export function makeTextInput(div, placeholder, size) {
 	const text = div
 		.append('input')
 		.attr('type', 'text')
-		.attr('size', size ? size : 50)
+		.attr('size', size || 50)
 		.style('border-radius', '5px')
 		.style('padding', '5px 20px')
 		.style('margin', '1px 20px 1px 10px')
@@ -95,10 +118,10 @@ export function makeTextInput(div, placeholder, size) {
 export function makeTextAreaInput(args) {
 	const textarea = args.div
 		.append('textarea')
-		.attr('rows', args.rows ? args.rows : '5')
-		.attr('cols', args.cols ? args.cols : '70')
+		.attr('rows', args.rows || '5')
+		.attr('cols', args.cols || '70')
 		.style('border-radius', '5px')
-		.attr('placeholder', args.placeholder ? args.placeholder : '')
+		.attr('placeholder', args.placeholder || '')
 
 	return textarea
 }
@@ -118,10 +141,10 @@ export function makeBtn(args) {
 	const btn = args.div
 		.append('button')
 		.html(args.text)
-		.style('color', args.color ? args.color : 'black')
-		.style('background-color', args.backgroundColor ? args.backgroundColor : '#F2F2F2')
-		.style('border', args.border ? args.border : '2px solid #999')
-		.style('padding', args.padding ? args.padding : '5px 10px')
+		.style('color', args.color || 'black')
+		.style('background-color', args.backgroundColor || '#F2F2F2')
+		.style('border', args.border || '2px solid #999')
+		.style('padding', args.padding || '5px 10px')
 		.style('cursor', 'pointer')
 
 	return btn

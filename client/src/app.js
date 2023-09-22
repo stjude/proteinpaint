@@ -1459,6 +1459,10 @@ async function launch_tkUIs(arg, app) {
 		const p = await import('./genefusion/genefusion.ui')
 		p.init_geneFusionUI(app.holder, app.genomes, app.debugmode)
 	}
+	if (arg.tkui == 'disco') {
+		const p = await import('../plots/disco/Disco.UI')
+		p.init_discoplotUI(app.holder, app.genomes, app.debugmode)
+	}
 }
 
 async function launchtermdb(opts, app) {
