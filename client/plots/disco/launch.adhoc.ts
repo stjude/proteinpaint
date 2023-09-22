@@ -69,10 +69,8 @@ type DiscoPlotArgs = {
 //... more datatypes can be added later
 
 /**
- * from multiple possible data sources, parse mutation events and put everything into one array and return, for disco rendering
- * app drawer will supply data for "snvText, svText, cnvText"
- * while the "File" and "Url" can come from url parameters e.g. host?disco=1&snvFile=path/to/file
- * TODO collect data error and display on ui
+ * parse input data into mlst[] and pass to disco
+ * TODO display data error on ui
  * TODO later make this script a native part of disco, so that runpp() directly invokes plot.app.js...
  * @param arg
  * @param genomeObj
@@ -126,7 +124,10 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
 }
 
 /**
- * TODO add description about func
+ * from multiple possible data sources, parse mutation events and put everything into one array and return, for disco rendering
+ * app drawer will supply data for "snvText, svText, cnvText"
+ * while the "File" and "Url" can come from url parameters e.g. host?disco=1&snvFile=path/to/file
+ * TODO collect errors
  * @param arg
  * @returns
  */
@@ -162,7 +163,7 @@ async function getMlst(arg: DiscoPlotArgs) {
 	return [mlst, errors]
 }
 
-function parseSnvText(text: string, mlst: any[], errors: string[]) {
+function parseSnvText(text: string, mlst: SnvEntry[], errors: string[]) {
 	// TODO share a parser for snvindel text file with samples (with header line and non-fixed columns), but should not require sample here
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -189,7 +190,7 @@ function parseSnvText(text: string, mlst: any[], errors: string[]) {
 	}
 }
 
-function parseSvText(text: string, mlst: any[], errors: string[]) {
+function parseSvText(text: string, mlst: SvEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 6) {
@@ -214,7 +215,7 @@ function parseSvText(text: string, mlst: any[], errors: string[]) {
 	}
 }
 
-function parseCnvText(text: string, mlst: any[], errors: string[]) {
+function parseCnvText(text: string, mlst: CnvEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 4) {
