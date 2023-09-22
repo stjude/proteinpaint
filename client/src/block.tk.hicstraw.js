@@ -72,7 +72,7 @@ export function loadTk(tk, block) {
 
 			return client.dofetch2('hicstat?' + (tk.file ? 'file=' + tk.file : 'url=' + tk.url)).then(data => {
 				if (data.error) throw data.error
-				tk.hic.normalization = data.out['normalization']
+				tk.hic.normalization = data.out.normalization
 				const err = hicstraw.hicparsestat(tk.hic, data.out)
 				if (err) throw err
 			})
