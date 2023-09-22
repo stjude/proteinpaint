@@ -144,23 +144,24 @@ async function getMlst(arg: DiscoPlotArgs) {
 	const errors = []
 
 	if (arg.snvText) parseSnvText(arg.snvText, mlst, errors)
+	if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
+	if (arg.svText) parseSvText(arg.svText, mlst, errors)
 
+	/*
 	if (arg.snvFile) {
 	}
 	if (arg.snvUrl) {
 	}
 
-	if (arg.svText) parseSvText(arg.svText, mlst, errors)
 	if (arg.svFile) {
 	}
 	if (arg.svUrl) {
 	}
-
-	if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
 	if (arg.cnvFile) {
 	}
 	if (arg.cnvUrl) {
 	}
+	*/
 
 	return [mlst, errors]
 }
