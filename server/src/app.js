@@ -1375,8 +1375,8 @@ async function handle_hicstat(req, res) {
 		if (!isurl) {
 			await utils.file_is_readable(file)
 		}
-		const out = await do_hicstat(file, isurl)
-		res.send({ out })
+		const { out, normalization } = await do_hicstat(file, isurl)
+		res.send({ out, normalization })
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
