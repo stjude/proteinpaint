@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Disco plot UI with an example on the app drawer. Users can provide SNV, SV, and CNV data to create a disco plot.
+
+
 ## 2.27.0
 
 Features:
