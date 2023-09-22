@@ -265,7 +265,7 @@ export function hicparsefile(hic, debugmode) {
 
 		.then(data => {
 			if (data.error) throw { message: data.error }
-			hic.normalization = data.normalization
+			hic.normalization = data.out['normalization']
 			const err = hicparsestat(hic, data.out)
 			if (err) throw { message: err }
 
@@ -281,19 +281,19 @@ export function hicparsefile(hic, debugmode) {
 		})
 }
 
-export function hicparsestat(hic, txt) {
+export function hicparsestat(hic, data) {
 	/*
 	output by read_hic_header.py
 	*/
-	if (!txt) return 'cannot stat hic file'
+	if (!data) return 'cannot stat hic file'
 	let j
 	try {
-		j = JSON.parse(txt)
+		j = data
 	} catch (e) {
 		return 'Invalid JSON from hic file stat'
 	}
 
-	hic.version = j['Hic Version']
+	hic.version = j['version']
 
 	if (!j.Chromosomes) return 'Chromosomes not found in file stat'
 	if (!Array.isArray(j.chrorder)) return '.chrorder[] missing'
