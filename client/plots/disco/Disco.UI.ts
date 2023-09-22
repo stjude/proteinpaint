@@ -14,8 +14,13 @@ init_discoplotUI()
 
 */
 
+type ScopedGenomes = Genome & {
+	options: any
+	selectedIndex: number
+}
+
 type DiscoUIArgs = {
-	genome: Genome
+	genome: ScopedGenomes
 	dataType: string
 	inputType: string
 	data: string
@@ -24,7 +29,7 @@ type DiscoUIArgs = {
 
 export function init_discoplotUI(
 	holder: Selection<HTMLDivElement, any, any, any>,
-	genomes: Genome,
+	genomes: ScopedGenomes,
 	debugmode: boolean
 ) {
 	const wrapper = holder
@@ -64,7 +69,7 @@ export function init_discoplotUI(
 		.style('align-items', 'center')
 		.style('margin', '40px 0px 40px 130px')
 
-	submitButton(controlBtns_div, obj, wrapper, holder)
+	submitButton(controlBtns_div, obj, genomes, wrapper, holder)
 	uiutils.makeResetBtn(controlBtns_div, obj, '.disco_input')
 
 	//Remove after testing
@@ -72,7 +77,11 @@ export function init_discoplotUI(
 	return obj
 }
 
-function genomeSelection(div: Selection<HTMLDivElement, any, any, any>, genomes: Genome, obj: Partial<DiscoUIArgs>) {
+function genomeSelection(
+	div: Selection<HTMLDivElement, any, any, any>,
+	genomes: ScopedGenomes,
+	obj: Partial<DiscoUIArgs>
+) {
 	const genome_div = div.append('div').style('margin-left', '40px')
 	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
 	obj.genome = g.node()
@@ -252,6 +261,7 @@ function makeCopyPasteInput(div: Selection<HTMLDivElement, any, any, any>, obj: 
 function submitButton(
 	div: Selection<HTMLDivElement, any, any, any>,
 	obj: Partial<DiscoUIArgs>,
+	genomes: any,
 	wrapper: Selection<HTMLDivElement, any, any, any>,
 	holder: Selection<HTMLDivElement, any, any, any>
 ) {
@@ -268,11 +278,14 @@ function submitButton(
 				sayerror(sayerrorDiv, 'Please provide data')
 				setTimeout(() => sayerrorDiv.remove(), 3000)
 			} else {
-				wrapper.remove()
-				const newProp = obj.dataType! + obj.inputType!
+				const dataType = wrapper.select('.sj-toggle-button.sjpp-active').node()!.childNodes[0].innerHTML.toLowerCase()
+				const newProp = dataType! + obj.inputType!
 				//Can add more args later
 				const discoArg = { [newProp]: obj.data }
-				launch(discoArg, obj.genome!, holder)
+				const genomeObj = genomes[obj.genome!.options[obj.genome!.selectedIndex].text]
+
+				wrapper.remove()
+				launch(discoArg, genomeObj, holder)
 			}
 		})
 }

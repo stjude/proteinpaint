@@ -1,4 +1,5 @@
 import { Genome } from '#shared/types/index'
+import { Selection } from 'd3-selection'
 
 type SnvEntry = {
 	dt: number
@@ -79,7 +80,7 @@ type DiscoPlotArgs = {
  * @returns
  */
 
-export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Element) {
+export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Selection<HTMLDivElement, any, any, any>) {
 	const [mlst, errors] = await getMlst(arg)
 
 	if (errors?.length) {
