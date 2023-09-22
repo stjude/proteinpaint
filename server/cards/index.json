@@ -285,7 +285,6 @@
             "section": "apps",
             "description": "2D scatter plot of samples & metadata",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/scatterplot-square.png",
-            "ribbon": { "text": "updated", "expireDate": "2023-03-01" },
             "sandboxJson": "scatterplot",
             "searchterms": ["tSNE", "lasso"]
         },
@@ -307,6 +306,16 @@
             "ribbon": {"text":"beta"},
             "sandboxJson": "databrowser",
             "searchterms": ["clinical", "dictionary"]
+        },
+        {
+            "type": "card",
+            "name": "Disco Plot",
+            "section": "apps",
+            "description": "Circos-like plot of genome-wide mutational events",
+            "image": "https://proteinpaint.stjude.org/ppdemo/images/disco-square.png",
+            "ribbon": { "text":"new", "expireDate": "2023-10-31" },
+            "sandboxJson": "disco",
+            "searchterms": ["disco"]
         }
     ]
 }

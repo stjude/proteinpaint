@@ -1,0 +1,69 @@
+{
+    "ribbonMessage": "We're excited to announce our newest app, the <b>Disco Plot!</b>",
+    "ppcalls": [
+        {
+            "isUi": true,
+            "runargs": {
+                "noheader": true,
+                "nobox": 1,
+                "parseurl": false,
+                "tkui": "disco"
+            }
+        },
+        {
+            "message": "In this plot, all chromosomes of the genome are arranged in a circle. Multiple rings along the circle indicates example data points of mutation, copy number change, and structural variation/fusion events. Gene labels are based on mutation and sv/fusion events.",
+            "runargs": {
+                "noheader": true,
+                "nobox": true,
+                "genome": "hg38",
+                "disco": {
+                    "mlst": [
+                        {
+                            "alt": "T",
+                            "chr": "chr1",
+                            "class": "M",
+                            "dt": 1,
+                            "gene": "H3F3A",
+                            "isoform": "NM_002107",
+                            "mname": "K28M",
+                            "position": 226252135,
+                            "ref": "A"
+                        },
+                        {
+                            "dt": 4,
+                            "chr": "chr1",
+                            "start": 1,
+                            "stop": 100000000,
+                            "value": 0.5
+                        },
+                        {
+                            "dt": 4,
+                            "chr": "chr1",
+                            "start": 100000000,
+                            "stop": 200000000,
+                            "value": -0.5
+                        },
+                        {
+                            "chrA": "chr6",
+                            "posA": 3067605,
+                            "geneA": "MDC1",
+                            "chrB": "chr12",
+                            "posB": 61521661,
+                            "geneB": "KMT2D",
+                            "dt": 2,
+                            "strandA": "+",
+                            "strandB": "-"
+                        }
+                    ]
+                }
+            },
+            "testSpec": {
+                "button": 1,
+                "expected": {
+                    "svg": 1,
+                    "g": 2
+                }
+            }
+        }
+    ]
+}
