@@ -14,17 +14,18 @@ init_discoplotUI()
 
 */
 
+/** Genome with dom attributes scoped for this file */
 type ScopedGenomes = Genome & {
 	options: any
 	selectedIndex: number
 }
 
+/** Stored values for creating the args for launch() */
 type DiscoUIArgs = {
 	genome: ScopedGenomes
-	dataType: string
-	inputType: string
+	/** Dependent on how the user inputs their data. Creates the second half the disco plot arg for launch() */
+	inputType: 'Text' | 'File' | 'Url'
 	data: string
-	htmlHint: any
 }
 
 export function init_discoplotUI(
@@ -53,7 +54,8 @@ export function init_discoplotUI(
 		.style('color', '#003366')
 	genomeSelection(wrapper, genomes, obj)
 
-	//User provides data via tp file path, copy and paste, or adding a file
+	//Data type vertical tabs followed by input type horizontal tabs in the content holder
+	//User clicks the data type (e.g. 'CNV'), then the input type (e.g. 'Paste')
 	uiutils
 		.makePrompt(wrapper, 'Provide Data')
 		.style('font-size', '1.15em')
@@ -84,6 +86,7 @@ function genomeSelection(
 ) {
 	const genome_div = div.append('div').style('margin-left', '40px')
 	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
+	//dom genome options, not the genome obj
 	obj.genome = g.node()
 }
 
@@ -99,14 +102,16 @@ function makeDataTypeTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, ob
 			label: 'SNV',
 			active: true,
 			callback: async (event: MouseEvent, tab: Tab) => {
-				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste SNV data in tab delimited format. the columns should include
+				/**values for htmlHints are used as prompts for the pasting data tab. 
+				 Each one is specific to the data type (i.e. tab.label) */
+				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste SNV data in tab delimited format. the columns should include:</p>
 				<ol style="margin-left: 10px; opacity: 0.65;">
 					<li>chr</li>
 					<li>position</li>
 					<li>gene</li>
 					<li>aachange</li>
 					<li>class</li>
-				</ol> </p>`
+				</ol>`
 				mainTabCallback(tab, obj, htmlHint)
 			}
 		},
@@ -114,7 +119,7 @@ function makeDataTypeTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, ob
 			label: 'SV',
 			active: true,
 			callback: async (event: MouseEvent, tab: Tab) => {
-				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste CNV data in tab delimited format. the columns should include
+				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste SV data in tab delimited format. the columns should include:</p>
 				<ol style="margin-left: 10px; opacity: 0.65;">
 					<li>chrA</li>
 					<li>posA</li>
@@ -122,7 +127,7 @@ function makeDataTypeTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, ob
 					<li>posB</li>
 					<li>geneA</li>
 					<li>geneB</li>
-				</ol></p>`
+				</ol>`
 				mainTabCallback(tab, obj, htmlHint)
 			}
 		},
@@ -130,13 +135,13 @@ function makeDataTypeTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, ob
 			label: 'CNV',
 			active: true,
 			callback: async (event: MouseEvent, tab: Tab) => {
-				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste CNV data in tab delimited format. the columns should include
+				const htmlHint = `<p style="margin-left: 10px; opacity: 0.65;">Paste CNV data in tab delimited format. the columns should include:</p>
 				<ol style="margin-left: 10px; opacity: 0.65;">
 					<li>chr</li>
 					<li>start</li>
 					<li>stop</li>
 					<li>value</li>
-				</ol></p>`
+				</ol>`
 				mainTabCallback(tab, obj, htmlHint)
 			}
 		}
@@ -146,7 +151,7 @@ function makeDataTypeTabs(tabs_div: Selection<HTMLDivElement, any, any, any>, ob
 }
 
 function mainTabCallback(tab: Tab, obj: Partial<DiscoUIArgs>, htmlHint: any) {
-	tab.contentHolder.style('border', 'none').style('display', 'block').style('padding', '0px 20px')
+	tab.contentHolder.style('border', 'none').style('display', 'block').style('padding', '5px 0px 0px 30px')
 	makeDataInputTabs(tab.contentHolder, obj, htmlHint)
 	delete tab.callback
 }
@@ -234,7 +239,7 @@ function makeFileUpload(div: Selection<HTMLDivElement, any, any, any>, obj: Part
 	const upload_div = div.append('div').style('display', 'inline-block')
 	const upload = uiutils.makeFileUpload(upload_div).classed('disco_input', true)
 	upload.on('change', (event: KeyboardEvent) => {
-		const file = event.target?.files?.[0]
+		const file = (event.target as any).files[0]
 		const reader = new FileReader()
 		reader.onload = (event: any) => {
 			obj.data = event.target.result
@@ -276,9 +281,12 @@ function submitButton(
 			if (!obj.data || obj.data == undefined) {
 				const sayerrorDiv = errorMessage_div.append('div').style('display', 'inline-block').style('max-width', '20vw')
 				sayerror(sayerrorDiv, 'Please provide data')
-				setTimeout(() => sayerrorDiv.remove(), 3000)
+				setTimeout(() => sayerrorDiv.remove(), 2000)
 			} else {
-				const dataType = wrapper.select('.sj-toggle-button.sjpp-active').node()!.childNodes[0].innerHTML.toLowerCase()
+				const dataType = (wrapper as any)
+					.select('.sj-toggle-button.sjpp-active')
+					.node()!
+					.childNodes[0].innerHTML.toLowerCase()
 				const newProp = dataType! + obj.inputType!
 				//Can add more args later
 				const discoArg = { [newProp]: obj.data }
