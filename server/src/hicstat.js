@@ -29,6 +29,8 @@ export async function do_hicstat(file, isurl) {
 	position += 8 // skip unwatnted part
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
+	let normalization = []
+
 	if (version == 9) {
 		const normVectorIndexPosition = Number(getLong())
 		const normVectorIndexLength = Number(getLong())
@@ -41,13 +43,13 @@ export async function do_hicstat(file, isurl) {
 			result
 		for (let i = 1; i <= nvectors; i++) {
 			result = getViewString(vectorView, pos)
-			console.log(result.str)
-
+			normalization.push(result.str)
 			//skip chromosome index
 			result = getViewString(vectorView, result.pos + 4)
 			pos = result.pos + 20 //skip other attributes
 		}
-	} else position += 16
+		normalization = [...new Set(normalization)]
+	}
 
 	// skip unwatnted attributes
 	let attributes = {}
@@ -100,8 +102,8 @@ export async function do_hicstat(file, isurl) {
 			}
 		})
 	//console.log('Reading matrix ...')
-	const output = JSON.stringify(out_data)
-	return output
+	const out = JSON.stringify(out_data)
+	return { out, normalization }
 
 	async function readHicFile(file, position, length) {
 		const fsOpen = util.promisify(fs.open)

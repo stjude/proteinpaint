@@ -265,6 +265,7 @@ export function hicparsefile(hic, debugmode) {
 
 		.then(data => {
 			if (data.error) throw { message: data.error }
+			hic.normalization = data.normalization
 			const err = hicparsestat(hic, data.out)
 			if (err) throw { message: err }
 

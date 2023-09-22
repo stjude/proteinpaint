@@ -72,6 +72,7 @@ export function loadTk(tk, block) {
 
 			return client.dofetch2('hicstat?' + (tk.file ? 'file=' + tk.file : 'url=' + tk.url)).then(data => {
 				if (data.error) throw data.error
+				tk.hic.normalization = data.normalization
 				const err = hicstraw.hicparsestat(tk.hic, data.out)
 				if (err) throw err
 			})
@@ -1019,10 +1020,8 @@ function configPanel(tk, block) {
 			tk.normalizationmethod = ss.options[ss.selectedIndex].innerHTML
 			loadTk(tk, block)
 		})
-		s.append('option').text(defaultnmeth)
-		s.append('option').text('VC')
-		s.append('option').text('VC_SQRT')
-		s.append('option').text('KR')
+		const normalization = tk.hic.normalization.length > 0 ? tk.hic.normalization : [defaultnmeth, 'VC', 'VC_SQRT', 'KR']
+		for (const method of normalization) s.append('option').text(method)
 		for (const o of s.node().options) {
 			if (o.innerHTML == tk.normalizationmethod) {
 				o.selected = true
