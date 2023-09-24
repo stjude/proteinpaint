@@ -2,12 +2,197 @@ const fs = require('fs').promises
 const existsSync = require('fs').existsSync
 const path = require('path')
 const jsonwebtoken = require('jsonwebtoken')
+const micromatch = require('micromatch')
 // TODO: may use this once babel is configured to transpile es6 node_modules
 //const sleep = require('./utils').sleep
 
 // TODO: may use utils.sleep
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+// serverconfig.dsCredentials
+//
+// DsCredentials = {
+// 	/** optional filepath of a secrets json file
+//   *  the default is to use the secrets object if provided
+//   */
+// 	secrets: string
+
+// 	// NOTES:
+// 	// 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
+// 	// 2. glob pattern: '*', '!', etc
+
+// 	// the dslabel can be a glob pattern, to find any matching dslabel
+// 	[dslabel: string]: {
+// 		// the hostName can be a glob pattern, to find any matching embedder host name
+// 		[serverRoute: string]: {
+// 			// serverRoute can be a glob pattern, to find any matching server route name/path
+// 			[hostName: string]:
+//         'secrets-object-key' |
+//         { type: 'basic', password: '...'} |
+//         {
+//            type: 'jwt',
+//            secret: string,
+//            // optional list of cohort(s) that a user must have access to,
+//            // to be matched against the jwt payload as signed by the embedder
+//            dsnames: [{id, label}]
+//         } |
+//         // TODO: support other credential types
+// 		}
+// 	}
+// }
+
+// Examples:
+
+// dsCredentials: {
+// 	secrets: 'secrets', // pragma: allowlist secret
+// 	SJLife: {
+// 		termdb: {
+// 			'viz.stjude.cloud': 'vizcomJwt',
+// 		},
+// 		burden: {
+// 			'*: 'burdenDemo'
+// 		}
+// 	},
+// 	PNET: {
+// 		'*': { // equivalent to /**/*
+// 			'*': {
+//         type: 'basic',
+//         password: '...'
+//      }
+// 		}
+// 	},
+//
+//  NOTE: if none of the above patterns were matched against the current request,
+// 	then any credential with wildcards may be applied instead,
+// 	but only if these 'default' protections are specified as a dsCredential (sub)entry
+// 	'*': { // apply the following creds to all datasets
+// 		'*': { // apply the following creds for all server routes
+// 			'*': 'defaultCred'
+// 		}
+// 	}
+// }
+
+// secrets: {
+// 	vizcomJwt: {
+// 		type: "jwt"
+// 	},
+// 	burdenDemo: {
+// 		type: 'basic',
+//    password: '...'
+// 	}
+// }
+
+function matchedDslabelPattern(key) {
+	for (const pattern of this.__dslabels__) {
+		if (micromatch.isMatch(key, pattern)) return pattern
+	}
+}
+
+function matchedRoutePattern(key) {
+	for (const pattern of this.__routes__) {
+		if (micromatch.isMatch(key, pattern)) return pattern
+	}
+}
+
+function matchedEmbedderPattern(key) {
+	for (const pattern of this.__embedders__) {
+		if (micromatch.isMatch(key, pattern)) return pattern
+	}
+}
+
+async function validateDsCredentials(creds, serverconfig) {
+	mayReshapeDsCredentials(creds)
+	const key = 'secrets' // to prevent a detect secrets issue
+	if (typeof creds[key] == 'string') {
+		const json = await fs.readFile(sessionsFile, 'utf8')
+		creds[key] = JSON.parse(json)
+	}
+
+	for (const dslabel in creds) {
+		const ds = creds[dslabel]
+		if (ds['*']) {
+			ds['/**'] = ds['*']
+			delete ds['*']
+		}
+		// if (ds.termdb) {
+		// 	ds['termdb/for=(matrix|singleSampleData|getAllSamples)'] = ds.termdb
+		// 	delete ds.termdb
+		// }
+		for (const serverRoute in ds) {
+			const route = ds[serverRoute]
+			for (const embedderHost in route) {
+				const c = route[embedderHost]
+				const cred = typeof c == 'string' ? creds.secrets[c] : c
+				// copy the server route pattern to easily obtain it from within the cred
+				if (cred.type == 'basic') {
+					// NOTE: an empty password will be considered as forbidden
+					//if (!cred.password)
+					//throw `missing password for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}], type: '${cred.type}'`
+				} else if (cred.type == 'jwt') {
+					// NOTE: an empty secret will be considered as forbidden
+					//if (!cred.secret)
+					//throw `missing secret for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}], type: '${cred.type}'`
+					// TODO: this headerKey should be unique to a dslabel + route, to avoid conflicts
+					if (!cred.headerKey) cred.headerKey = 'x-ds-access-token'
+				} else if (cred.type) {
+					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
+				}
+				cred.route = serverRoute
+				cred.authRoute = authRouteByCredType[cred.type]
+			}
+			route.__embedders__ = Object.keys(route)
+			route.matchedEmbedderPattern = matchedEmbedderPattern
+		}
+		ds.__routes__ = Object.keys(ds)
+		ds.matchedRoutePattern = matchedRoutePattern
+	}
+	creds.__dslabels__ = Object.keys(creds).filter(k => k != 'secrets')
+	creds.matchedDslabelPattern = matchedDslabelPattern
+}
+
+function mayReshapeDsCredentials(creds) {
+	// reshape legacy
+	for (const dslabel in creds) {
+		const cred = creds[dslabel]
+		if (cred.type == 'login') {
+			if (cred.embedders) throw `unexpected 'embedders' property`
+			// known format where type: 'login' does not have the jwt-type properties below
+			cred['*'] = {
+				'*': {
+					type: 'basic',
+					password: cred.password
+				}
+			}
+			delete cred.type
+			delete cred.password
+		} else if (cred.type == 'jwt') {
+			// known format where type: 'jwt' does not have the login properties above
+			for (const hostName in cred.embedders) {
+				cred.termdb = {
+					[hostName]: Object.assign({ type: cred.type }, cred.embedders[hostName])
+				}
+				if (cred.headerKey) {
+					cred.termdb[hostName].headerKey = cred.headerKey
+				}
+			}
+			delete cred.type
+			delete cred.embedders
+			delete cred.headerKey
+		} else if (cred.type) {
+			throw `unknown legacy credentials type='${cred.type}'`
+		}
+	}
+}
+
+const protectedTermdbRoutes = {
+	termdb: ['matrix', 'singleSampleData', 'getAllSamples']
+}
+
+const authRouteByCredType = {
+	basic: '/dslogin',
+	jwt: '/jwt-status'
 }
 
 /*
@@ -43,6 +228,47 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// no need to setup additional middlewares and routes
 	// if there are no protected datasets
 	if (!creds || !Object.keys(creds).length) return
+	try {
+		validateDsCredentials(creds, serverconfig)
+	} catch (e) {
+		throw e
+	}
+
+	function getRequiredCred(q, path) {
+		// faster exact matching, based on known protected routes
+		const ds0 = creds[q.dslabel] || creds['*']
+		if (ds0) {
+			// const route = ds0.termdb || ds0.burden || ds0['/**']
+			// if (!route) return; console.log(242, path, route)
+			if (path == '/jwt-status') {
+				const route = ds0[q.route] || ds0['termdb'] || ds0['/**']
+				return route && (route[q.embedder] || route['*'])
+			} else if (path == '/login') {
+				const route = ds0[q.route || '*']
+				return route && (route[q.embedder] || route['*'])
+			} else if (path.startsWith('/termdb') && ds0.termdb) {
+				const route = ds0.termdb
+				// okay to return an undefined embedder[route]
+				return protectedTermdbRoutes.termdb.includes(q.for) && (route[q.embedder] || route['*'])
+			} else if (path.startsWith('/burden') && ds0.burden) {
+				// okay to return an undefined embedder[route]
+				return ds0.burden[q.embedder] || ds0.burden['*']
+			} /*else { console.log(249, route)
+				// okay to return an undefined embedder[route]
+				return route[q.embedder] || route['*']
+			}*/
+		}
+		// wildcard matching
+		const matchedDslabel = creds.matchedDslabelPattern(q.dslabel)
+		if (!matchedDslabel) return
+		const ds = creds[matchedDslabel]
+		const matchedRoute = ds.matchedRoutePattern(path)
+		if (!matchedRoute) return
+		const route = ds[matchedRoute]
+		const matchedEmbedder = route.matchedEmbedderPattern(q.embedder)
+		if (!matchedEmbedder) return
+		return route[matchedEmbedder]
+	}
 
 	/* !!! app.use() must be called before route setters and await !!! */
 
@@ -50,30 +276,22 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// credentials and if yes, if there is already a valid session
 	// for a ds label
 	app.use((req, res, next) => {
-		const q = req.query
-		if (
-			q.dslabel &&
-			q.dslabel in creds &&
-			req.path != '/dslogin' &&
-			// note: NOT adding a check for q.getSampleScatter || q.getViolinPlotData
-			// since some data may still be returned for those, except controlled access
-			// data like sample names, which should not be included in the response payload
-			// if auth is required and not in session
-			(creds[q.dslabel].type != 'jwt' ||
-				(req.path == '/termdb' && (q.for == 'matrix' || q.for == 'singleSampleData' || q.for == 'getAllSamples')))
-		) {
-			// will do the session check below
-		} else {
-			//console.log([64, '----- AUTH MIDDLEWARE -----', req.path, req.for])
+		if (req.path == '/login' || req.path == '/jwt-status') {
 			next()
 			return
 		}
-
+		const q = req.query
+		const cred = getRequiredCred(q, req.path)
+		if (!cred) {
+			next()
+			return
+		}
 		try {
 			const id = getSessionId(req)
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
 			if (!session) throw `unestablished or expired browser session`
+			//if (!session.email) throw `missing session details: please login again through a supported portal`
 			checkIPaddress(req, session.ip)
 
 			const time = Date.now()
@@ -82,7 +300,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
 			*/
 			if (time - session.time > maxSessionAge) {
-				const { iat } = checkDsSecret(q, req.headers, creds, session)
+				const { iat } = getJwtPayload(q, req.headers, cred, session)
 				const elapsedSinceIssue = time - iat
 				if (elapsedSinceIssue > maxSessionAge) {
 					delete sessions[q.dslabel][id]
@@ -123,16 +341,20 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		let code = 401
 		try {
 			const q = req.query
-			if (!q.dslabel || !(q.dslabel in creds)) {
+			const cred = getRequiredCred(q, req.path)
+			if (!cred) {
 				code = 400
 				throw `No login required for dataset='${q.dslabel}'`
 			}
-
+			if (cred.authRoute != '/dslogin') {
+				code = 400
+				throw `Incorrect authorization route, use ${cred.authRoute}'`
+			}
 			if (!req.headers.authorization) throw 'missing authorization header'
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
-			if (Buffer.from(pwd, 'base64').toString() != creds[q.dslabel].password) throw 'invalid password'
-			await setSession(q, res, sessions, sessionsFile, '', req, creds[q.dslabel]?.embedders?.[q.embedder]?.cookieMode)
+			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
+			await setSession(q, res, sessions, sessionsFile, '', req, cred)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(code)
@@ -144,17 +366,15 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		let code = 401
 		try {
 			const q = req.query
-			const { email, ip } = await checkDsSecret(q, req.headers, creds)
+			const cred = getRequiredCred(q, req.path)
+			if (!cred) return
+			if (cred.authRoute != '/jwt-status') {
+				code = 400
+				throw `Incorrect authorization route, use ${cred.authRoute}'`
+			}
+			const { email, ip } = await getJwtPayload(q, req.headers, cred)
 			checkIPaddress(req, ip)
-			const id = await setSession(
-				q,
-				res,
-				sessions,
-				sessionsFile,
-				email,
-				req,
-				creds[q.dslabel].embedders[q.embedder].cookieMode
-			)
+			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
 			res.send({ status: 'ok', 'x-sjppds-sessionid': id })
 		} catch (e) {
@@ -186,7 +406,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			try {
 				const cred = creds[dslabel]
 				const id = getSessionId(req)
-				const sessionStart = sessions[dslabel]?.[id]?.time || 0
+				const activeSession = sessions[dslabel]?.[id]
+				const sessionStart = activeSession?.time || 0
 				return {
 					dslabel,
 					// type='jwt' will require a token in the initial runpp call
@@ -237,14 +458,14 @@ async function getSessions(creds, sessionsFile, maxSessionAge) {
 	}
 }
 
-async function setSession(q, res, sessions, sessionsFile, email, req, cookieMode = 'set-cookie') {
+async function setSession(q, res, sessions, sessionsFile, email, req, cred) {
 	const time = Date.now()
 	const id = Math.random().toString() + '.' + time.toString().slice(4)
 	const ip = req.ip // may use req.ips?
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
 	sessions[q.dslabel][id] = { id, time, email, ip }
-	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\t${ip}\n`)
-	if (!cookieMode || cookieMode == 'set-cookie') {
+	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\t${ip}\t${q.embedder}\t{cred.route}\n`)
+	if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
 		res.header('Set-Cookie', `${q.dslabel}SessionId=${id}; HttpOnly; SameSite=None; Secure`)
 	}
 	return id
@@ -252,26 +473,30 @@ async function setSession(q, res, sessions, sessionsFile, email, req, cookieMode
 
 /*
 	Arguments
-	creds: serverconfig.dsCredentials
+	cred: object returned by getRequiredCred
 
 	NOTE: see public/example.mass.html to test using a token generated by
 	./server/test/fake-jwt.js [dslabel=TermdbTest]
 */
-function checkDsSecret(q, headers, creds = {}, _time, session = null) {
-	const cred = creds[q.dslabel]
+function getJwtPayload(q, headers, cred, _time, session = null) {
 	if (!cred) return
 	if (!q.embedder) throw `missing q.embedder`
-	const embedder = cred.embedders[q.embedder]
-	if (!embedder) throw `unknown q.embedder='${q.embedder}'`
-	const secret = embedder.secret
-	if (!secret) throw `missing embedder setting`
+	// const embedder = cred.embedders[q.embedder]
+	// if (!embedder) throw `unknown q.embedder='${q.embedder}'`
+	const secret = cred.secret
+	if (!secret)
+		throw {
+			status: 'error',
+			error: `no credentials set up for this embedder`,
+			code: 403
+		}
 	const time = Math.floor((_time || Date.now()) / 1000)
 
 	const rawToken = headers[cred.headerKey]
 	if (!rawToken) throw `missing header['${cred.headerKey}']`
 
-	// the embedder may supply a processor functions
-	const processor = embedder.processor ? __non_webpack_require__(embedder.processor) : {}
+	// the embedder may supply a processor function
+	const processor = cred.processor ? __non_webpack_require__(cred.processor) : {}
 
 	// use a handleToken() if available for an embedder, for example to decrypt a fully encrypted jwt
 	const token = processor.handleToken?.(rawToken) || rawToken
@@ -284,7 +509,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	// optionally transform, translate, reformat the payload
 	if (processor.handlePayload) {
 		try {
-			processor.handlePayload(embedder, payload, time)
+			processor.handlePayload(cred, payload, time)
 		} catch (e) {
 			//console.log(e)
 			if (e.reason == 'bad decrypt') throw `Please login again to access this feature. (${e.reason})`
@@ -294,7 +519,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 
 	if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
 
-	const dsnames = embedder.dsnames || [q.dslabel]
+	const dsnames = cred.dsnames || [q.dslabel]
 	const missingAccess = dsnames.filter(d => !payload.datasets.includes(d.id)).map(d => d.id)
 	if (missingAccess.length) {
 		throw { error: 'Missing access', linkKey: missingAccess.join(',') }
@@ -318,7 +543,7 @@ function userCanAccess(req, ds) {
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
 const authApi = {
 	maySetAuthRoutes,
-	checkDsSecret,
+	getJwtPayload,
 	// this may be replaced
 	getDsAuth: () => [],
 	canDisplaySampleIds: (req, ds) => {

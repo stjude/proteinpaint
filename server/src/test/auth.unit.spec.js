@@ -11,7 +11,17 @@ const cachedir = serverconfig.cachedir
 const headerKey = 'x-ds-token'
 const secret = 'abc123' // pragma: allowlist secret
 const time = Math.floor(Date.now() / 1000)
-const validToken = jsonwebtoken.sign({ iat: time, exp: time + 300, datasets: ['ds0'], ip: '127.0.0.1' }, secret)
+const validToken = jsonwebtoken.sign(
+	{ iat: time, exp: time + 300, datasets: ['ds0'], ip: '127.0.0.1', email: 'user@test.abc' },
+	secret
+)
+const secrets = {
+	dataDownloadDemo: {
+		type: 'jwt',
+		secret,
+		dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+	}
+}
 
 function appInit() {
 	// mock the express router api
@@ -50,7 +60,7 @@ function sleep(ms) {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- server/auth specs -***-')
 	test.end()
 })
@@ -72,7 +82,7 @@ tape(`initialization`, async test => {
 
 	{
 		const app = appInit()
-		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials: {} })
+		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials: {}, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual([], middlewares, 'should NOT set a global middleware when dsCredentials is empty')
 		const routes = Object.keys(app.routes)
@@ -82,7 +92,17 @@ tape(`initialization`, async test => {
 
 	{
 		const app = appInit()
-		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials: { testds: {} } })
+		const dsCredentials = {
+			testds: {
+				'*': {
+					'*': {
+						type: 'basic',
+						password: '...'
+					}
+				}
+			}
+		}
+		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			['*'],
@@ -101,6 +121,67 @@ tape(`initialization`, async test => {
 	test.end()
 })
 
+tape('legacy reshape', async test => {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const app = appInit()
+	const serverconfig = {
+		dsCredentials: {
+			ds0: {
+				type: 'jwt',
+				embedders: {
+					localhost: {
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+					}
+				},
+				headerKey
+			},
+			ds1: {
+				type: 'login',
+				password: '...'
+			}
+		},
+		cachedir
+	}
+
+	await auth.maySetAuthRoutes(app, '', serverconfig)
+	test.deepEqual(
+		JSON.parse(JSON.stringify(serverconfig.dsCredentials)),
+		{
+			ds0: {
+				termdb: {
+					localhost: {
+						type: 'jwt',
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }],
+						headerKey: 'x-ds-token',
+						route: 'termdb',
+						authRoute: '/jwt-status'
+					},
+					__embedders__: ['localhost']
+				},
+				__routes__: ['termdb']
+			},
+			ds1: {
+				'/**': {
+					'*': {
+						type: 'basic',
+						password: '...',
+						route: '/**',
+						authRoute: '/dslogin'
+					},
+					__embedders__: ['*']
+				},
+				__routes__: ['/**']
+			},
+			__dslabels__: ['ds0', 'ds1']
+		},
+		`should transform a legacy dsCredentials format to the current shape`
+	)
+})
+
 tape(`a valid request`, async test => {
 	test.timeoutAfter(500)
 	test.plan(2)
@@ -109,13 +190,13 @@ tape(`a valid request`, async test => {
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
-				embedders: {
+				'*': {
 					localhost: {
+						type: 'jwt',
 						secret,
 						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
 					}
-				},
-				headerKey
+				}
 			}
 		},
 		cachedir
@@ -126,9 +207,10 @@ tape(`a valid request`, async test => {
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
-				[headerKey]: validToken
+				'x-ds-access-token': validToken
 			},
-			ip: '127.0.0.1'
+			ip: '127.0.0.1',
+			path: '/jwt-status'
 		}
 		const res = {
 			send(data) {
@@ -138,7 +220,7 @@ tape(`a valid request`, async test => {
 				test.equal(key, 'Set-Cookie', 'should set a session cookie')
 			},
 			status(num) {
-				test.fail('should not set a status')
+				test.fail(`should not set a status (${num})`)
 			},
 			headers: {}
 		}
@@ -154,13 +236,14 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
-				embedders: {
+				'*': {
 					localhost: {
+						type: 'jwt',
 						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }],
+						headerKey
 					}
-				},
-				headerKey
+				}
 			}
 		},
 		cachedir
@@ -173,7 +256,8 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 			headers: {
 				[headerKey]: validToken
 			},
-			ip: 'invalid-127.0.0.1'
+			ip: 'invalid-127.0.0.1',
+			path: '/jwt-status'
 		}
 		const res = {
 			send(data) {
@@ -205,31 +289,37 @@ tape(`invalid embedder`, async test => {
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
-				embedders: {
+				'*': {
 					localhost: {
+						type: 'jwt',
 						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }],
+						headerKey
+					},
+					'*': {
+						type: 'jwt'
 					}
-				},
-				headerKey
+				}
 			}
 		},
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(308, app.routes)
+
 	{
 		const req = {
 			query: { embedder: 'unknown-host', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: validToken
-			}
+			},
+			path: '/jwt-status'
 		}
 		const res = {
 			send(data) {
 				test.deepEqual(
 					data,
-					{ error: `unknown q.embedder='${req.query.embedder}'` },
+					{ status: 'error', error: 'no credentials set up for this embedder', code: 403 },
 					'should send an unknown embedder error'
 				)
 			},
@@ -256,25 +346,27 @@ tape(`invalid dataset access`, async test => {
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
-				embedders: {
+				'*': {
 					localhost: {
+						type: 'jwt',
 						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }],
+						headerKey
 					}
-				},
-				headerKey
+				}
 			}
 		},
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await auth.maySetAuthRoutes(app, '', serverconfig)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: jsonwebtoken.sign({ iat: time, exp: time + 300, datasets: ['NOT-ds0'] }, secret)
-			}
+			},
+			path: '/jwt-status'
 		}
 		const res = {
 			send(data) {
@@ -307,13 +399,14 @@ tape(`invalid jwt`, async test => {
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
-				embedders: {
+				'*': {
 					localhost: {
+						type: 'jwt',
 						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }],
+						headerKey
 					}
-				},
-				headerKey
+				}
 			}
 		},
 		cachedir
@@ -326,7 +419,8 @@ tape(`invalid jwt`, async test => {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: 'invalid-token-abccccc'
-			}
+			},
+			path: '/jwt-status'
 		}
 		const res = {
 			send(data) {
@@ -352,7 +446,8 @@ tape(`invalid jwt`, async test => {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: jsonwebtoken.sign({ iat: time, exp: time + 300, datasets: ['ds0'] }, 'wrong-secret')
-			}
+			},
+			path: '/jwt-status'
 		}
 		const res = {
 			send(data) {
@@ -378,7 +473,8 @@ tape(`invalid jwt`, async test => {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: jsonwebtoken.sign({ iat: time, exp: time - 1, datasets: ['ds0'] }, secret)
-			}
+			},
+			path: '/jwt-status'
 		}
 		const res = {
 			send(data) {
@@ -405,20 +501,20 @@ tape(`invalid jwt`, async test => {
 })
 
 tape(`session-handling by the middleware`, async test => {
-	test.timeoutAfter(400)
-	test.plan(6)
+	test.timeoutAfter(1000)
+	test.plan(5)
 
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
-				type: 'jwt',
-				embedders: {
+				termdb: {
 					localhost: {
+						type: 'jwt',
 						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }],
+						headerKey
 					}
-				},
-				headerKey
+				}
 			}
 		},
 		cachedir
@@ -448,6 +544,7 @@ tape(`session-handling by the middleware`, async test => {
 		}
 
 		await app.middlewares['*'](req, res, next)
+		await sleep(100)
 	}
 
 	let sessionId
@@ -458,6 +555,7 @@ tape(`session-handling by the middleware`, async test => {
 				[headerKey]: validToken
 			},
 			path: '/jwt-status',
+			email: 'user@test.abc',
 			ip: '127.0.0.1'
 		}
 		//let sessionId
@@ -471,13 +569,15 @@ tape(`session-handling by the middleware`, async test => {
 			},
 			headers: {}
 		}
-		async function next() {
-			test.pass('should call the next() function for jwt-login')
-			app.routes['/jwt-status'].post(req, res)
-		}
-
-		await app.middlewares['*'](req, res, next)
+		console.log('triggering jwt-status post')
+		app.routes['/jwt-status'].post(req, res)
+		// Why would a /jwt-status need to call the next function?????
+		// async function next() {
+		// 	test.pass('should call the next() function for jwt-login'); console.log(572)
+		// }
+		//await app.middlewares['*'](req, res, next)
 		await sleep(100)
+
 		/*** valid session ***/
 		const req1 = {
 			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
@@ -501,6 +601,7 @@ tape(`session-handling by the middleware`, async test => {
 			test.pass(message1)
 		}
 		await app.middlewares['*'](req1, res1, next1)
+		await sleep(100)
 
 		// **** invalid session id ***/
 		const req2 = {
@@ -563,4 +664,28 @@ tape(`session-handling by the middleware`, async test => {
 
 		await app.middlewares['*'](req3, res3, next3)
 	}
+})
+
+tape.skip(`/dslogin`, async test => {
+	test.timeoutAfter(400)
+	test.plan(6)
+
+	const serverconfig = {
+		dsCredentials: {
+			ds0: {
+				type: 'jwt',
+				embedders: {
+					localhost: {
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+					}
+				},
+				headerKey
+			}
+		},
+		cachedir
+	}
+
+	const app = appInit()
+	await auth.maySetAuthRoutes(app, '', serverconfig)
 })
