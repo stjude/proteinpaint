@@ -1012,19 +1012,21 @@ function configPanel(tk, block) {
 
 	if (tk.file || tk.url) {
 		// hic straw normalization method
-		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
-		row.append('span').html('Normalization&nbsp;')
-		const s = row.append('select').on('change', event => {
-			const ss = s.node()
-			tk.normalizationmethod = ss.options[ss.selectedIndex].innerHTML
-			loadTk(tk, block)
-		})
-		const normalization = tk.hic.normalization.length > 0 ? tk.hic.normalization : [defaultnmeth, 'VC', 'VC_SQRT', 'KR']
-		for (const method of normalization) s.append('option').text(method)
-		for (const o of s.node().options) {
-			if (o.innerHTML == tk.normalizationmethod) {
-				o.selected = true
-				break
+		const normalization = tk.hic.normalization
+		if (tk.hic.normalization.length > 0) {
+			const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
+			row.append('span').html('Normalization&nbsp;')
+			const s = row.append('select').on('change', event => {
+				const ss = s.node()
+				tk.normalizationmethod = ss.options[ss.selectedIndex].innerHTML
+				loadTk(tk, block)
+			})
+			for (const method of normalization) s.append('option').text(method)
+			for (const o of s.node().options) {
+				if (o.innerHTML == tk.normalizationmethod) {
+					o.selected = true
+					break
+				}
 			}
 		}
 	}
