@@ -54,7 +54,8 @@ export function setInteractivity(self) {
 					}
 				}
 
-				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
+				if (self.config.colorTW)
+					addCategoryInfo(self.config.colorTW?.term, 'category', d, table, self.config.shapeTW ? false : true)
 				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table, true)
 				if (self.config.term) addCategoryInfo(self.config.term.term, 'x', d, table)
 				if (self.config.term2) addCategoryInfo(self.config.term2?.term, 'y', d, table)
@@ -72,7 +73,7 @@ export function setInteractivity(self) {
 			self.dom.tooltip.show(event.clientX, event.clientY, true, true)
 		} else self.dom.tooltip.hide()
 
-		function addCategoryInfo(term, category, d, table, showShape = false) {
+		function addCategoryInfo(term, category, d, table, showColor = false) {
 			if (!term) return
 			if (d[category] == 'Ref') return
 			let row = table.append('tr')
@@ -99,7 +100,7 @@ export function setInteractivity(self) {
 				if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
 				const td = row.append('td')
 
-				if (showShape) {
+				if (showColor) {
 					const color = self.getColor(d, chart)
 					const width = value.length * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '35px')
