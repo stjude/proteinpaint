@@ -159,10 +159,8 @@ tape('legacy reshape', async test => {
 						headerKey: 'x-ds-token',
 						route: 'termdb',
 						authRoute: '/jwt-status'
-					},
-					__embedders__: ['localhost']
-				},
-				__routes__: ['termdb']
+					}
+				}
 			},
 			ds1: {
 				'/**': {
@@ -171,12 +169,9 @@ tape('legacy reshape', async test => {
 						password: '...',
 						route: '/**',
 						authRoute: '/dslogin'
-					},
-					__embedders__: ['*']
-				},
-				__routes__: ['/**']
-			},
-			__dslabels__: ['ds0', 'ds1']
+					}
+				}
+			}
 		},
 		`should transform a legacy dsCredentials format to the current shape`
 	)
