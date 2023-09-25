@@ -25,7 +25,7 @@ export class Vocab {
 		if (this.state.vocab) this.vocab = this.state.vocab
 		// may or may not need a verified token for a dslabel, based on genome response.dsAuth
 		const dslabel = this.state.dslabel || this.state.vocab.dslabel
-		this.verifiedToken = !this.state.termdbConfig?.requiredAuth || isInSession(dslabel)
+		this.verifiedToken = !this.state.termdbConfig?.requiredAuth?.length || isInSession(dslabel, 'termdb')
 		// secured plots need to confirm that a verified token exists
 		if (dslabel) await this.maySetVerifiedToken(dslabel)
 	}
@@ -36,7 +36,8 @@ export class Vocab {
 		const token = this.opts.getDatasetAccessToken?.()
 		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
 		try {
-			const auth = this.state.termdbConfig?.requiredAuth
+			// TODO: do not hardcode 'termdb' here, assume that Vocab is only called within a termdb or mass app
+			const auth = this.state.termdbConfig?.requiredAuth.find(a => a.route == 'termdb')
 			if (!auth) {
 				this.verifiedToken = true
 				return

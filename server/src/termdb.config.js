@@ -1,5 +1,6 @@
 const serverconfig = require('./serverconfig.js')
 const { mayComputeTermtypeByCohort } = require('./termdb.server.init')
+const { isMatch } = require('micromatch')
 
 /*
 the "termdbConfig" object is returned to client side that uses vocabApi
@@ -75,13 +76,25 @@ export function make(q, res, ds, genome) {
 //////// helpers
 
 function addRequiredAuth(c, q) {
-	const cred = serverconfig.dsCredentials?.[q.dslabel]
-	if (!cred) return
-	// TODO: may restrict required auth by chart type???
-	// currently, the client code assumes that it will only apply to the dataDownload MASS app
-	c.requiredAuth = {
-		type: cred.type || 'login',
-		headerKey: cred.headerKey
+	const dsAuth = []
+	const creds = serverconfig.dsCredentials
+	for (const dslabelPattern in creds) {
+		if (!isMatch(q.dslabel, dslabelPattern)) continue
+		for (const routePattern in creds[dslabelPattern]) {
+			for (const embedderHostPattern in creds[dslabelPattern][routePattern]) {
+				if (!isMatch(q.embedder, embedderHostPattern)) continue
+				const cred = creds[dslabelPattern][routePattern][embedderHostPattern]
+				dsAuth.push({
+					route: routePattern,
+					type: cred.type,
+					headerKey: cred.headerKey
+				})
+			}
+		}
+	}
+
+	if (dsAuth.length) {
+		c.requiredAuth = dsAuth
 	}
 }
 

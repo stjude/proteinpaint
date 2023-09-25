@@ -235,6 +235,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	}
 
 	function getRequiredCred(q, path) {
+		if (!q.dslabel) return
 		// faster exact matching, based on known protected routes
 		const ds0 = creds[q.dslabel] || creds['*']
 		if (ds0) {
@@ -276,7 +277,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// credentials and if yes, if there is already a valid session
 	// for a ds label
 	app.use((req, res, next) => {
-		if (req.path == '/login' || req.path == '/jwt-status') {
+		if (req.path == '/dslogin' || req.path == '/jwt-status') {
 			next()
 			return
 		}
@@ -328,6 +329,15 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	try {
 		// 1. Get an empty or rehydrated sessions tracker object
 		sessions = await getSessions(creds, sessionsFile, maxSessionAge)
+		const unexpiredSessions = []
+		for (const dslabel in sessions) {
+			for (const id in sessions[dslabel]) {
+				const q = sessions[dslabel][id]
+				unexpiredSessions.push(`${q.dslabel}\t${q.id}\t${q.time}\t${q.email}\t${q.ip}\t${q.embedder}\t{q.route}`)
+			}
+		}
+		// update the sessionsFile content so only unexpiredSessions are recorded
+		await fs.writeFile(sessionsFile, unexpiredSessions.join('\n'))
 	} catch (e) {
 		throw e
 	}
@@ -355,6 +365,27 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
 			await setSession(q, res, sessions, sessionsFile, '', req, cred)
+			res.send({ status: 'ok' })
+		} catch (e) {
+			res.status(code)
+			res.send({ error: e })
+		}
+	})
+
+	// creates a session ID that is returned
+	app.post(basepath + '/dslogout', async (req, res) => {
+		let code = 401
+		try {
+			const q = req.query
+			const id = getSessionId(req)
+			if (!id) throw 'missing session cookie'
+			const session = sessions[q.dslabel][id]
+			delete sessions[q.dslabel][id]
+			const ip = req.ip
+			await fs.appendFile(
+				sessionsFile,
+				`${q.dslabel}\t${id}\t0\t\t${session.ip}\t${session.embedder}\t{session.route}\n`
+			)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(code)
@@ -402,22 +433,31 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		will return a list of dslabels that require credentials
 	*/
 	authApi.getDsAuth = function (req) {
-		return Object.keys(creds || {}).map(dslabel => {
-			try {
-				const cred = creds[dslabel]
-				const id = getSessionId(req)
-				const activeSession = sessions[dslabel]?.[id]
-				const sessionStart = activeSession?.time || 0
-				return {
-					dslabel,
-					// type='jwt' will require a token in the initial runpp call
-					insession: (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge,
-					type: cred.type || 'login'
+		const dsAuth = []
+		const embedder = req.get('host').split(':')[0]
+		for (const dslabelPattern in creds) {
+			if (dslabelPattern.startsWith('__')) continue
+			const ds = creds[dslabelPattern]
+			for (const routePattern in ds) {
+				const route = ds[routePattern]
+				for (const embedderHostPattern in route) {
+					if (!micromatch.isMatch(embedder, embedderHostPattern)) continue
+					const cred = route[embedderHostPattern]
+					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
+					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies })
+					const activeSession = sessions[dslabelPattern]?.[id]
+					const sessionStart = activeSession?.time || 0
+					dsAuth.push({
+						dslabel: dslabelPattern,
+						route: routePattern,
+						type: cred.type || 'basic',
+						insession:
+							cred.type == 'basic' ? false : (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge
+					})
 				}
-			} catch (e) {
-				throw e
 			}
-		})
+		}
+		return dsAuth
 	}
 }
 
@@ -425,7 +465,9 @@ function getSessionId(req) {
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// using all lowercase is compatible for both http 1 and 2
 	return (
-		req.cookies[`${req.query.dslabel}SessionId`] || req.headers['x-sjppds-sessionid'] || req.query['x-sjppds-sessionid']
+		req.cookies?.[`${req.query.dslabel}SessionId`] ||
+		req.headers['x-sjppds-sessionid'] ||
+		req.query['x-sjppds-sessionid']
 	)
 }
 

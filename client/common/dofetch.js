@@ -182,11 +182,14 @@ const urlMaxLength = 2000 // if a GET url is longer than this, will be converted
 		see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
 */
 function mayAdjustRequest(url, init) {
+	const hostname = window.location.hostname
 	const method = (init.method && init.method.toUpperCase()) || 'GET'
 	if (method == 'POST') {
 		// assume a minimal URL path + parameters for a POST request
 		// since the payload will be in the request body
-		if (typeof init.body == 'object') init.body = JSON.stringify(init.body)
+		if (typeof init.body == 'string') init.body = JSON.parse(init.body)
+		if (!init.body.embedder) init.body.embedder = hostname
+		init.body = JSON.stringify(init.body)
 		return url
 	}
 
@@ -198,6 +201,8 @@ function mayAdjustRequest(url, init) {
 		// init.body should be an object, to be converted to either
 		// (a) GET URL search parameter strings, OR
 		// (b) POST body, JSON-encoded
+		if (!init.body.embedder) init.body.embedder = hostname
+
 		const params = []
 		for (const key in init.body) {
 			const value = init.body[key]
@@ -213,6 +218,11 @@ function mayAdjustRequest(url, init) {
 		url += params.join('&')
 		// TODO: may use paramEncoding later to indicate all the other parameter values are json-encoded
 		//url += '&paramEncoding=json'
+	}
+
+	if (!url.includes('embedder=')) {
+		const sep = url.includes('?') ? '&' : '?'
+		url += `${sep}embedder=${hostname}`
 	}
 
 	if (url.length < urlMaxLength) {
@@ -243,6 +253,7 @@ function mayAdjustRequest(url, init) {
 					params[k] = decodedVal
 				}
 			})
+		if (!params.embedder) params.embedder = hostname
 		init.body = JSON.stringify(params)
 	}
 
@@ -265,12 +276,12 @@ export function setAuth(opts) {
 	for (const auth of dsAuth) {
 		// fillin all the dslabels that has an active session
 		// so that an unnecessary login form will not be shown
-		if (auth.insession) dsAuthOk.add(auth.dslabel)
+		if (auth.insession) dsAuthOk.add(auth)
 	}
 }
 
-export function isInSession(dslabel) {
-	return dslabel && dsAuthOk.has(dslabel)
+export function isInSession(dslabel, route) {
+	return dslabel && [...dsAuthOk].find(d => d.dslabel == dslabel && d.route == route)
 }
 
 /* 
@@ -281,9 +292,18 @@ async function mayShowAuthUi(init, path) {
 	const ok = { status: 'ok' }
 	if (!dsAuth) return ok
 	for (const a of dsAuth) {
-		if (init.body?.includes(`"dslabel":${a.dslabel}`) || path.includes(`dslabel=${a.dslabel}`)) {
-			if (dsAuthOk.has(a.dslabel)) return ok
-			else if (a.type == 'login') return await authUi(a.dslabel)
+		const body = JSON.parse(init.body || `{}`)
+		const params = (path.split('?')[1] || '').split('&').reduce((obj, kv) => {
+			const [key, value] = kv.split('=')
+			obj[key] = value
+			return obj
+		}, {})
+		const q = Object.assign({}, body, params)
+		const route = path.split('?')[0].split('//')[1].split('/').slice(1).join('/')
+		if (q.dslabel == a.dslabel && (a.route == '/**' || route == a.route)) {
+			if (dsAuthOk.has(a)) return ok
+			else if (a.route != '/**') return ok
+			else if (a.type == 'basic') return await authUi(a.dslabel, a)
 			else if (a.type == 'jwt') {
 				// assume the embedder/portal provides the login UI
 				// so do not need to do anything here
@@ -298,7 +318,7 @@ async function mayShowAuthUi(init, path) {
 	by an optional different form, for example if PP 
 	is embedded in another portal
 */
-async function defaultAuthUi(dslabel) {
+async function defaultAuthUi(dslabel, auth) {
 	const mask = authUiHolder
 		.append('div')
 		.style('position', 'fixed')
@@ -325,13 +345,13 @@ async function defaultAuthUi(dslabel) {
 				headers: {
 					authorization: `Basic ${btoa(pwd.property('value'))}`
 				},
-				body: JSON.stringify({ dslabel })
+				body: JSON.stringify({ dslabel, route: auth.route, embedder: window.location.hostname })
 			})
 				.then(res => res.json())
 				.then(res => {
 					if (res.error) throw res.error
 					mask.remove()
-					dsAuthOk.add(dslabel)
+					dsAuthOk.add(auth)
 					resolve(dslabel)
 				})
 				.catch(e => {
