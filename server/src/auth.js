@@ -2,7 +2,7 @@ const fs = require('fs').promises
 const existsSync = require('fs').existsSync
 const path = require('path')
 const jsonwebtoken = require('jsonwebtoken')
-const micromatch = require('micromatch')
+const { isMatch } = require('micromatch')
 // TODO: may use this once babel is configured to transpile es6 node_modules
 //const sleep = require('./utils').sleep
 
@@ -84,24 +84,6 @@ function sleep(ms) {
 // 	}
 // }
 
-function matchedDslabelPattern(key) {
-	for (const pattern of this.__dslabels__) {
-		if (micromatch.isMatch(key, pattern)) return pattern
-	}
-}
-
-function matchedRoutePattern(key) {
-	for (const pattern of this.__routes__) {
-		if (micromatch.isMatch(key, pattern)) return pattern
-	}
-}
-
-function matchedEmbedderPattern(key) {
-	for (const pattern of this.__embedders__) {
-		if (micromatch.isMatch(key, pattern)) return pattern
-	}
-}
-
 async function validateDsCredentials(creds, serverconfig) {
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect secrets issue
@@ -127,10 +109,12 @@ async function validateDsCredentials(creds, serverconfig) {
 				const cred = typeof c == 'string' ? creds.secrets[c] : c
 				// copy the server route pattern to easily obtain it from within the cred
 				if (cred.type == 'basic') {
+					cred.authRoute = '/dslogin'
 					// NOTE: an empty password will be considered as forbidden
 					//if (!cred.password)
 					//throw `missing password for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}], type: '${cred.type}'`
 				} else if (cred.type == 'jwt') {
+					cred.authRoute = '/jwt-status'
 					// NOTE: an empty secret will be considered as forbidden
 					//if (!cred.secret)
 					//throw `missing secret for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}], type: '${cred.type}'`
@@ -140,16 +124,9 @@ async function validateDsCredentials(creds, serverconfig) {
 					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
 				}
 				cred.route = serverRoute
-				cred.authRoute = authRouteByCredType[cred.type]
 			}
-			route.__embedders__ = Object.keys(route)
-			route.matchedEmbedderPattern = matchedEmbedderPattern
 		}
-		ds.__routes__ = Object.keys(ds)
-		ds.matchedRoutePattern = matchedRoutePattern
 	}
-	creds.__dslabels__ = Object.keys(creds).filter(k => k != 'secrets')
-	creds.matchedDslabelPattern = matchedDslabelPattern
 }
 
 function mayReshapeDsCredentials(creds) {
@@ -239,13 +216,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		// faster exact matching, based on known protected routes
 		const ds0 = creds[q.dslabel] || creds['*']
 		if (ds0) {
-			// const route = ds0.termdb || ds0.burden || ds0['/**']
-			// if (!route) return; console.log(242, path, route)
 			if (path == '/jwt-status') {
 				const route = ds0[q.route] || ds0['termdb'] || ds0['/**']
 				return route && (route[q.embedder] || route['*'])
-			} else if (path == '/login') {
-				const route = ds0[q.route || '*']
+			} else if (path == '/dslogin') {
+				const route = ds0[q.route] || ds0['/**']
 				return route && (route[q.embedder] || route['*'])
 			} else if (path.startsWith('/termdb') && ds0.termdb) {
 				const route = ds0.termdb
@@ -254,21 +229,22 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			} else if (path.startsWith('/burden') && ds0.burden) {
 				// okay to return an undefined embedder[route]
 				return ds0.burden[q.embedder] || ds0.burden['*']
-			} /*else { console.log(249, route)
-				// okay to return an undefined embedder[route]
-				return route[q.embedder] || route['*']
-			}*/
+			}
 		}
-		// wildcard matching
-		const matchedDslabel = creds.matchedDslabelPattern(q.dslabel)
-		if (!matchedDslabel) return
-		const ds = creds[matchedDslabel]
-		const matchedRoute = ds.matchedRoutePattern(path)
-		if (!matchedRoute) return
-		const route = ds[matchedRoute]
-		const matchedEmbedder = route.matchedEmbedderPattern(q.embedder)
-		if (!matchedEmbedder) return
-		return route[matchedEmbedder]
+
+		for (const dslabel in creds) {
+			if (dslabel != q.dslabel && dslabel != '*') continue
+			const ds = creds[dslabel]
+			for (const routeName in ds) {
+				const routePattern = ds[routeName].routePattern || routeName
+				if (!isMatch(path, routePattern)) continue
+				const route = ds[routeName]
+				for (const embedderHost in route) {
+					if (embedderHost != q.embedder && embedderHost != '*') continue
+					return route[embedderHost]
+				}
+			}
+		}
 	}
 
 	/* !!! app.use() must be called before route setters and await !!! */
@@ -358,10 +334,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			}
 			if (cred.authRoute != '/dslogin') {
 				code = 400
-				throw `Incorrect authorization route, use ${cred.authRoute}'`
+				throw `Incorrect authorization route, use '${cred.authRoute}'`
 			}
 			if (!req.headers.authorization) throw 'missing authorization header'
 			const [type, pwd] = req.headers.authorization.split(' ')
+			console.log(type, pwd, cred.password, Buffer.from(pwd, 'base64').toString())
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
 			await setSession(q, res, sessions, sessionsFile, '', req, cred)
@@ -398,6 +375,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		try {
 			const q = req.query
 			const cred = getRequiredCred(q, req.path)
+			console.log(376, cred)
 			if (!cred) return
 			if (cred.authRoute != '/jwt-status') {
 				code = 400
@@ -441,7 +419,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			for (const routePattern in ds) {
 				const route = ds[routePattern]
 				for (const embedderHostPattern in route) {
-					if (!micromatch.isMatch(embedder, embedderHostPattern)) continue
+					if (!isMatch(embedder, embedderHostPattern)) continue
 					const cred = route[embedderHostPattern]
 					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
 					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies })
