@@ -26,29 +26,21 @@ export async function do_hicstat(file, isurl) {
 		throw Error('Unsupported hic version: ' + version)
 	}
 	out_data.version = version
-	position += 8 // skip unwatnted part
+	const footerPosition = Number(getLong())
+	let normalization = []
+	if (version == 8) {
+		const fileSize = getFileSize(file)
+		const vectorView = await getVectorView(file, footerPosition, fileSize - footerPosition)
+		const nbytesV5 = vectorView.getInt32(0, true)
+		normalization = getNormalization(vectorView, nbytesV5 + 4)
+	}
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
-	let normalization = []
-
 	if (version == 9) {
 		const normVectorIndexPosition = Number(getLong())
 		const normVectorIndexLength = Number(getLong())
-		const vectorData = isurl
-			? await readHicUrl(file, normVectorIndexPosition, normVectorIndexLength)
-			: await readHicFile(file, normVectorIndexPosition, normVectorIndexLength)
-		const vectorView = new DataView(vectorData)
-		const nvectors = vectorView.getInt32(0, true)
-		let pos = 4,
-			result
-		for (let i = 1; i <= nvectors; i++) {
-			result = getViewString(vectorView, pos)
-			normalization.push(result.str)
-			//skip chromosome index
-			result = getViewString(vectorView, result.pos + 4)
-			pos = result.pos + 20 //skip other attributes
-		}
-		normalization = [...new Set(normalization)]
+		const vectorView = await getVectorView(file, normVectorIndexPosition, normVectorIndexLength)
+		normalization = getNormalization(vectorView, 0)
 	}
 
 	// skip unwatnted attributes
@@ -103,8 +95,43 @@ export async function do_hicstat(file, isurl) {
 		})
 	//console.log('Reading matrix ...')
 	out_data.normalization = normalization
-	console.log(out_data)
 	return out_data
+
+	async function getVectorView(file, position, length) {
+		const vectorData = isurl ? await readHicUrl(file, position, length) : await readHicFile(file, position, length)
+		const view = new DataView(vectorData)
+		return view
+	}
+
+	function getNormalization(vectorView, position) {
+		let normalization = []
+
+		const nvectors = vectorView.getInt32(position, true)
+		let pos = position + 4,
+			result
+		for (let i = 1; i <= nvectors; i++) {
+			result = getViewString(vectorView, pos)
+			normalization.push(result.str)
+			console.log(result.str)
+			//skip chromosome index
+			let shift
+			if (version == 8) {
+				result = getViewString(vectorView, result.pos)
+
+				//skip bin size (int), read nvalues
+				const nvalues = vectorView.getInt32(result.pos + 4, true)
+
+				pos = result.pos + 8 + nvalues * 8
+				const nChrScaleFactors = vectorView.getInt32(pos, true)
+				pos = pos + 4 + nChrScaleFactors * 12
+			} else if (version == 9) {
+				result = getViewString(vectorView, result.pos + 4)
+				pos = result.pos + 20
+			}
+		}
+		normalization = [...new Set(normalization)]
+		return normalization
+	}
 
 	async function readHicFile(file, position, length) {
 		const fsOpen = util.promisify(fs.open)
@@ -122,6 +149,11 @@ export async function do_hicstat(file, isurl) {
 		const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
 
 		return arrayBuffer
+	}
+
+	function getFileSize(path) {
+		const stats = fs.statSync(path)
+		return stats.size
 	}
 
 	async function readHicUrl(url, position, length) {
