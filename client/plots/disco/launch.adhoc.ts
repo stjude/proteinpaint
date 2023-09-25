@@ -25,9 +25,11 @@ type SvEntry = {
 	geneB?: string
 }
 
-type DiscoPlotArgs = {
+type MutationListEntry = SnvEntry | CnvEntry | SvEntry
+
+export type DiscoPlotArgs = {
 	/**optional array of preparsed mutation events, from runpp() */
-	mlst?: (SnvEntry | CnvEntry | SvEntry)[]
+	mlst?: MutationListEntry[]
 
 	/**tabular text of snv data, with follow columns.
 	1. chr
@@ -166,7 +168,7 @@ async function getMlst(arg: DiscoPlotArgs) {
 	return [mlst, errors]
 }
 
-function parseSnvText(text: string, mlst: SnvEntry[], errors: string[]) {
+function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	// TODO share a parser for snvindel text file with samples (with header line and non-fixed columns), but should not require sample here
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -193,7 +195,7 @@ function parseSnvText(text: string, mlst: SnvEntry[], errors: string[]) {
 	}
 }
 
-function parseSvText(text: string, mlst: SvEntry[], errors: string[]) {
+function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 6) {
@@ -218,7 +220,7 @@ function parseSvText(text: string, mlst: SvEntry[], errors: string[]) {
 	}
 }
 
-function parseCnvText(text: string, mlst: CnvEntry[], errors: string[]) {
+function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 4) {
