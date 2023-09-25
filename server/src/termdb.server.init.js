@@ -412,7 +412,6 @@ export function server_init_db_queries(ds) {
 		// ds.cohort.termdb.termtypeByCohort[] is set
 
 		const cred = serverconfig.dsCredentials?.[ds.label]
-
 		const supportedChartTypes = {}
 		const numericTypeCount = {}
 		// key: subcohort combinations, comma-joined, alphabetically sorted, as in the subcohort_terms table
@@ -425,7 +424,8 @@ export function server_init_db_queries(ds) {
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
-				if (!cred || cred.embedders?.[embedder]) {
+				// TODO: should use an embedderHostPattern
+				if (!cred || cred.termdb?.[embedder] || cred.termdb?.['*']) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 					supportedChartTypes[r.cohort].add('sampleView')
 				}
