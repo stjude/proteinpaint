@@ -69,8 +69,13 @@ export function init_discoplotUI(
 	uiutils
 		.makePrompt(wrapper, 'Provide Data')
 		.style('font-size', '1.15em')
-		.style('padding', '10px 0px')
+		.style('padding', '10px 0px 5px 0px')
 		.style('color', '#003366')
+	wrapper
+		.append('div')
+		.style('opacity', 0.65)
+		.style('padding', '10px 10px 15px 20px')
+		.text('The plot accepts multiple data types. Paste data in for SNV Indel, SV, and CNV in each tab and submit.')
 	const dataTypeTabs_div = wrapper.append('div').style('margin-left', '2vw')
 	makeDataTypeTabs(dataTypeTabs_div, obj)
 
@@ -79,7 +84,7 @@ export function init_discoplotUI(
 		.append('div')
 		.style('display', 'flex')
 		.style('align-items', 'center')
-		.style('margin', '40px 0px 40px 130px')
+		.style('margin', '0px 0px 40px 130px')
 
 	submitButton(controlBtns_div, obj, genomes, wrapper, holder)
 	uiutils.makeResetBtn(controlBtns_div, obj, '.disco_input')
@@ -281,7 +286,7 @@ function submitButton(
 		.classed('sjpp-ui-submitBtn', true)
 		.attr('type', 'submit')
 		.on('click', () => {
-			if (obj.data == undefined || obj.data.length == 0) {
+			if (!obj.data || obj.data == undefined) {
 				const sayerrorDiv = errorMessage_div.append('div').style('display', 'inline-block').style('max-width', '20vw')
 				sayerror(sayerrorDiv, 'Please provide data')
 				setTimeout(() => sayerrorDiv.remove(), 2000)
