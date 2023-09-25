@@ -112,9 +112,9 @@ export async function do_hicstat(file, isurl) {
 		for (let i = 1; i <= nvectors; i++) {
 			result = getViewString(vectorView, pos)
 			normalization.push(result.str)
-			console.log(result.str)
 			//skip chromosome index
 			let shift
+			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md#normalized-expected-value-vectors
 			if (version == 8) {
 				result = getViewString(vectorView, result.pos)
 
@@ -124,7 +124,9 @@ export async function do_hicstat(file, isurl) {
 				pos = result.pos + 8 + nvalues * 8
 				const nChrScaleFactors = vectorView.getInt32(pos, true)
 				pos = pos + 4 + nChrScaleFactors * 12
-			} else if (version == 9) {
+			}
+			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV9.md#normalization-vector-index
+			else if (version == 9) {
 				result = getViewString(vectorView, result.pos + 4)
 				pos = result.pos + 20
 			}
