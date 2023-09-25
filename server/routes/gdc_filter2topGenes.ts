@@ -41,7 +41,7 @@ export const api = {
 
 /*
 req.query {
-	filter // optional gdc GFF cohort filter, invisible and read only
+	filter0 // optional gdc GFF cohort filter, invisible and read only
 		FIXME should there be pp filter too?
 	geneFilter?: str
 	maxGenes: int
@@ -53,9 +53,9 @@ and hosted on https://proteinpaint.stjude.org/GDC/
 */
 async function getGenes(q: any) {
 	let _f = { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
-	if (q.filter) {
-		if (typeof q.filter != 'object') throw 'filter not object'
-		_f = q.filter
+	if (q.filter0) {
+		if (typeof q.filter0 != 'object') throw 'filter0 not object'
+		_f = q.filter0
 	}
 	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

@@ -206,7 +206,6 @@ async function getGenes(arg, filter0, matrix) {
 
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
-		genome: gdcGenome,
 		filter0,
 		maxGenes: matrix.maxGenes,
 		geneFilter: matrix.geneFilter
