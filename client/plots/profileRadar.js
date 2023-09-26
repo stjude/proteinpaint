@@ -59,7 +59,7 @@ class profileRadar extends profilePlot {
 		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		const legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
+		const legendG = this.svg.append('g').attr('transform', `translate(${x + 550},${y + 150})`)
 		const angle = this.angle
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
@@ -68,9 +68,18 @@ class profileRadar extends profilePlot {
 		const data = []
 		for (let d of config.terms) {
 			d.i = i
+			const iangle = i * angle - Math.PI / 2
 			const percentage = this.sampleData[d.$id]?.value
-			data.push([i * angle, (percentage / 100) * radius])
+			data.push([iangle, (percentage / 100) * radius])
 			i++
+			const leftSide = iangle >= Math.PI / 2 && iangle <= (3 / 2) * Math.PI
+			const x = radius * 1.1 * Math.cos(iangle)
+			const y = radius * 1.1 * Math.sin(iangle)
+			const text = polarG.append('text').attr('x', `${x}px`).attr('y', `${y}px`).text(d.term.name)
+			const texts = d.term.name.split(' ')
+			//for(const texti of texts)
+			//	text.append('tspan').attr('x', `${x}px`).attr('y', `${5*i}px`).text(texti)
+			if (leftSide) text.attr('text-anchor', 'end')
 		}
 		data.push(data[0])
 		const path = polarG
