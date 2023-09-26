@@ -7,6 +7,20 @@ import { extent } from 'd3-array'
 import { interpolateRgbBasis } from 'd3-interpolate'
 import { interpolateRdBu } from 'd3-scale-chromatic'
 
+/*
+FIXME items
+
+1. do not hardcode this.config.termgroups[0] to be the list of items for clustering analysis
+	this prevents showing a non-clustering group of terms at the first position, right under the sample dendrogram, which is common
+	need a way to designate which element of termgroups[] is to run clustering analysis
+
+2. do not hardcode to force tw.type='geneVariant'
+	caller should supply well-formed twlst[] that can include gene and non-gene terms
+	to be able to run clustering analysis on everything
+
+3. replace dofetch with vocabApi call with support for (2)
+*/
+
 class HierCluster extends Matrix {
 	constructor(opts) {
 		super(opts)
@@ -95,6 +109,7 @@ class HierCluster extends Matrix {
 
 	async setHierClusterData(_data = {}) {
 		const twlst = this.config.termgroups[0].lst
+
 		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
 		if (!genes.length) return
 		const body = {
@@ -106,7 +121,9 @@ class HierCluster extends Matrix {
 			filter: this.state.filter,
 			filter0: this.state.filter0
 		}
-		this.hierClusterData = await dofetch3('mds3', { body })
+		const d = await dofetch3('mds3', { body })
+		if (d.error) throw d.error
+		this.hierClusterData = d
 
 		const c = this.hierClusterData.clustering
 		this.setHierColorScale(c)
@@ -397,36 +414,26 @@ export async function getPlotConfig(opts = {}, app) {
 	const config = await getMatrixPlotConfig(opts, app)
 	config.settings.matrix.collabelpos = 'top'
 
-	// hardcode for testing only
-	// TODO: if no genes, show gene set edit ui (this assumes the app is only for gene...)
-	const genes = opts.genes || [
-		{
-			gene: 'BCR',
-			chr: 'chr22',
-			start: 23180509,
-			stop: 23318037
-		},
-		{
-			gene: 'ABL1',
-			chr: 'chr9',
-			start: 130835254,
-			stop: 130887675
-		},
-		{
-			gene: 'HOXA1',
-			chr: 'chr7',
-			start: 27092993,
-			stop: 27096000
-		}
-	]
+	if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
-	const twlst = genes.map(term => {
-		term.type = 'geneVariant'
-		term.name = term.gene
-		const tw = { term }
-		fillTermWrapper(tw)
-		return tw
-	})
+	const twlst = []
+	for (const i of opts.genes) {
+		let tw
+		if (typeof i.term == 'object' && i.term.type == 'geneVariant') {
+			// i is already well-formed tw object
+			tw = i
+		} else {
+			// shape i into term{} and nest into tw{}
+			i.type = 'geneVariant'
+			if (i.name) {
+			} else if (i.gene) {
+				i.name = i.gene // TODO
+			}
+			tw = { term: i }
+		}
+		await fillTermWrapper(tw)
+		twlst.push(tw)
+	}
 
 	if (!config.termgroups.find(g => g.name == 'Gene Expression')) {
 		config.termgroups.unshift({

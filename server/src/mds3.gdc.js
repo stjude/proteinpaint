@@ -171,18 +171,19 @@ export function validate_query_geneExpression(ds, genome) {
 		const ensg2symbol = new Map()
 
 		for (const g of q.genes) {
-			if (typeof g.gene != 'string') continue
-			if (g.gene.startsWith('ENSG') && g.gene.length == 15) {
-				ensgLst.push(g.gene)
-				ensg2symbol.set(g.gene, g.gene)
+			const name = g.gene || g.name // TODO should be only g.gene
+			if (typeof name != 'string') continue // TODO report skipped ones
+			if (name.startsWith('ENSG') && name.length == 15) {
+				ensgLst.push(name)
+				ensg2symbol.set(name, name)
 				continue
 			}
-			const lst = genome.genedb.getAliasByName.all(g.gene)
+			const lst = genome.genedb.getAliasByName.all(name)
 			if (Array.isArray(lst)) {
 				for (const a of lst) {
 					if (a.alias.startsWith('ENSG')) {
 						ensgLst.push(a.alias)
-						ensg2symbol.set(a.alias, g.gene)
+						ensg2symbol.set(a.alias, name)
 						break
 					}
 				}

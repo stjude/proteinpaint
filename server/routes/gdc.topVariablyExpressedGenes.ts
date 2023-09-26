@@ -2,9 +2,11 @@ import { GdcTopVariablyExpressedGenesResponse } from '#shared/types/routes/gdc.t
 import { getCasesWithExressionDataFromCohort } from '../src/mds3.gdc.js'
 //import path from 'path'
 import got from 'got'
+import serverconfig from '../src/serverconfig.js'
 
+// TODO change when api is released to prod
 //const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const apihost = 'https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/gene_selection' // TODO change when api is released to prod
+const apihost = 'https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/gene_selection'
 
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
@@ -14,9 +16,6 @@ export const api = {
 	methods: {
 		get: {
 			init({ genomes }) {
-				/*
-				 */
-
 				return async (req: any, res: any): Promise<void> => {
 					try {
 						// following logic requires hg38 gdc dataset
@@ -24,7 +23,7 @@ export const api = {
 						if (!genome) throw 'hg38 genome missing'
 						const ds = genome.datasets?.[gdcDslabel]
 						if (!ds) throw 'gdc dataset missing'
-						const genes = await getGenes(req.query, ds, genome)
+						const genes = await getGenes(req.query, ds)
 						const payload = { genes } as GdcTopVariablyExpressedGenesResponse
 						res.send(payload)
 					} catch (e: any) {
@@ -55,7 +54,12 @@ req.query {
 ds { } // server-side ds object
 
 */
-async function getGenes(q: any, ds: any, genome: any) {
+async function getGenes(q: any, ds: any) {
+	if (serverconfig.features.gdcGenes) {
+		// for testing only; delete when api issue is resolved
+		return serverconfig.features.gdcGenes as string[]
+	}
+
 	// based on current cohort, get list of cases with exp data, as input of next api query
 	const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
 	if (caseLst.length == 0) {
@@ -70,7 +74,7 @@ async function getGenes(q: any, ds: any, genome: any) {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
 			case_ids: caseLst,
-			gene_ids: getFullGenelist(genome), // XXX should not be required
+			//gene_ids: [] // this should not be a required parameter
 			size: q.maxGenes || 100
 		})
 	})
@@ -86,16 +90,8 @@ async function getGenes(q: any, ds: any, genome: any) {
 		} else if (i.symbol && typeof i.symbol == 'string') {
 			genes.push(i.symbol)
 		} else {
-			throw 'a return is missing both gene_id and symbol'
+			throw 'one of re.gene_selection[] is missing both gene_id and symbol'
 		}
 	}
 	return genes
-}
-
-function getFullGenelist(genome) {
-	// just for testing only! should not be required. pending discussion with Phil
-	// cannot send all 60k ENSG to api, it errors out. can only send 200 or less
-	const re = genome.genedb.getAllENSG.all()
-	const lst = re.slice(0, 200).map(i => i.alias)
-	return lst
 }

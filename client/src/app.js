@@ -748,6 +748,9 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.launchGdcMatrix) {
 		return await launchGdcMatrix(arg, app)
 	}
+	if (arg.launchGdcHierCluster) {
+		return await launchGdcHierCluster(arg, app)
+	}
 
 	if (arg.parseurl && location.search.length) {
 		/*
@@ -1362,6 +1365,10 @@ async function launchGeneSearch4GDCmds3(arg, app) {
 }
 async function launchGdcMatrix(arg, app) {
 	const _ = await import('./launchGdcMatrix')
+	return await _.init(arg, app.holder0, app.genomes)
+}
+async function launchGdcHierCluster(arg, app) {
+	const _ = await import('./launchGdcHierCluster')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 
