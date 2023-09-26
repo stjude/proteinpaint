@@ -31,15 +31,15 @@ arg = {}
 		future: list of genes to launch matrix
 
 	.termgroups[]
-		TODO 
+		list of terms to be added to the matrix by default
 	
-	.settings{}
-		.matrix{}
-			.maxGenes
-			.maxSamples
+	.settings{matrix{}}
+		any state that can be JSON-encoded/hydrated as part of getPlotConfig().settings.matrix. This is meant to hold plot-instance-specific state that only affects rendering and not data requests, but that distinction is not as clear with plots that use server-side rendering like violin plot.
+		.maxGenes
+		.maxSamples
 
-	.opts{}
-		.matrix{}
+	.opts{matrix{}}
+		any options that cannot be JSON-stringified, like callbacks. These options will also be applied to all rehydrated or new plots of the same type, so not plot-instance-specific. this way of adding callback allows to work with an external portal, e.g. a callback from gdc to collect cases
 			.allow2selectSamples: 
 				{
 				  buttonText: "Create Cohort",
