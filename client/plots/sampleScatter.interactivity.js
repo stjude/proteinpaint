@@ -54,8 +54,8 @@ export function setInteractivity(self) {
 					}
 				}
 
-				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table, true)
-				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)
+				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table, true, true)
+				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table, false, true)
 				if (self.config.term) addCategoryInfo(self.config.term.term, 'x', d, table)
 				if (self.config.term2) addCategoryInfo(self.config.term2?.term, 'y', d, table)
 				if (self.config.scaleDotTW) addCategoryInfo(self.config.scaleDotTW?.term, 'scale', d, table)
@@ -72,7 +72,7 @@ export function setInteractivity(self) {
 			self.dom.tooltip.show(event.clientX, event.clientY, true, true)
 		} else self.dom.tooltip.hide()
 
-		function addCategoryInfo(term, category, d, table, showColor = false) {
+		function addCategoryInfo(term, category, d, table, showColor = false, showShape = false) {
 			if (!term) return
 			if (d[category] == 'Ref') return
 			let row = table.append('tr')
@@ -98,12 +98,13 @@ export function setInteractivity(self) {
 				let value = d[category]
 				if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
 				const td = row.append('td')
-				if (showColor) {
-					const color = self.getColor(d, chart)
+				if (showShape) {
+					const color = showColor ? self.getColor(d, chart) : self.config.colorTW ? 'gray' : self.settings.defaultColor
+					const shape = showColor ? self.getShape(chart, d, 1, true) : self.getShape(chart, d)
 					const width = value.length * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '35px')
 					const g = svg.append('g').attr('transform', 'translate(10, 16)')
-					g.append('path').attr('d', self.getShape(chart, d)).attr('fill', color)
+					g.append('path').attr('d', shape).attr('fill', color)
 					g.append('text').attr('x', 18).attr('y', 6).text(value)
 				} else td.append('span').text(value)
 			}
