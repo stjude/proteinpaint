@@ -94,7 +94,6 @@ export function showGenesetEdit({
 			.on('click', async () => {
 				api.dom.loadBt.property('disabled', true)
 				const args = {
-					genome: genome.name,
 					filter0: vocabApi.state.termfilter.filter0
 				}
 				for (const { param, input } of api.params) {

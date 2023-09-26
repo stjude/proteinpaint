@@ -210,7 +210,7 @@ async function getGenes(arg, filter0, matrix) {
 		maxGenes: matrix.maxGenes,
 		geneFilter: matrix.geneFilter
 	}
-	const data = await dofetch3('gdc_filter2topGenes', { body })
+	const data = await dofetch3('gdc/topMutatedGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) throw 'no top genes found using the cohort filter'
 	return await Promise.all(

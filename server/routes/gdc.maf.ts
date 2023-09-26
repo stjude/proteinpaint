@@ -1,4 +1,4 @@
-import { GdcMafResponse, File } from '#shared/types/routes/gdcMaf.ts'
+import { GdcMafResponse, File } from '#shared/types/routes/gdc.maf.ts'
 import { fileSize } from '#shared/fileSize.js'
 import path from 'path'
 import got from 'got'
@@ -6,7 +6,7 @@ import got from 'got'
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 export const api = {
-	endpoint: 'gdcMaf',
+	endpoint: 'gdc/maf',
 	methods: {
 		get: {
 			init({ genomes }) {

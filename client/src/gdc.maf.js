@@ -59,5 +59,5 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 async function getFileList(filter0) {
 	const body = {}
 	if (filter0) body.filter0 = filter0
-	return await dofetch3('gdcMaf', { body })
+	return await dofetch3('gdc/maf', { body })
 }
