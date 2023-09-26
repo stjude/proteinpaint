@@ -73,13 +73,26 @@ class profileRadar extends profilePlot {
 			data.push([iangle, (percentage / 100) * radius])
 			i++
 			const leftSide = iangle >= Math.PI / 2 && iangle <= (3 / 2) * Math.PI
+			const upSide = iangle <= Math.PI / 2 || iangle >= (Math.PI * 3) / 2
+
 			const x = radius * 1.1 * Math.cos(iangle)
-			const y = radius * 1.1 * Math.sin(iangle)
-			const text = polarG.append('text').attr('x', `${x}px`).attr('y', `${y}px`).text(d.term.name)
+			let y = radius * 1.1 * Math.sin(iangle) + (upSide ? -10 : 0)
+			const textElem = polarG.append('text').attr('x', `${x}px`).attr('y', `${y}px`)
+
 			const texts = d.term.name.split(' ')
-			//for(const texti of texts)
-			//	text.append('tspan').attr('x', `${x}px`).attr('y', `${5*i}px`).text(texti)
-			if (leftSide) text.attr('text-anchor', 'end')
+			let span
+			texts.forEach((text, j) => {
+				if (text != 'and') {
+					y += 15
+					span = textElem
+						.append('tspan')
+						.attr('x', `${x}px`)
+						.attr('y', `${y}px`)
+						.text(text + '')
+				} else span.append('tspan').text(' and')
+			})
+
+			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
 		data.push(data[0])
 		const path = polarG
