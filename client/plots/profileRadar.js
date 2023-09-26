@@ -60,17 +60,16 @@ class profileRadar extends profilePlot {
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		const legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
-
-		for (let i = 0; i <= 10; i++) addCircle(i * 10)
-
 		const angle = this.angle
+
+		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
+
 		let i = 0
 		const data = []
 		for (let d of config.terms) {
 			d.i = i
 			const percentage = this.sampleData[d.$id]?.value
 			data.push([i * angle, (percentage / 100) * radius])
-
 			i++
 		}
 		data.push(data[0])
@@ -80,11 +79,12 @@ class profileRadar extends profilePlot {
 			.style('stroke', '#aaa')
 			.attr('fill', 'none')
 			.attr('stroke', 'black')
+			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
 
-		addCircle(50, 'C')
-		addCircle(75, 'B')
-		addCircle(100, 'A')
+		this.addPoligon(50, 'C')
+		this.addPoligon(75, 'B')
+		this.addPoligon(100, 'A')
 		for (let i = 0; i <= 10; i++) {
 			const percent = i * 10
 			polarG
@@ -106,27 +106,6 @@ class profileRadar extends profilePlot {
 		addLegendItem('B', '50-75% of possible scorable items', 2)
 		addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 
-		function addCircle(percent, text = null) {
-			const circle = polarG
-				.append('circle')
-				.attr('r', (percent / 100) * radius)
-				.style('fill', 'none')
-				.style('opacity', '0.5')
-			if (percent != 50) circle.style('stroke', '#aaa')
-			if (text) {
-				if (percent != 100) circle.style('stroke-dasharray', '5, 5').style('stroke-width', '2').style('stroke', 'black')
-
-				polarG
-					.append('text')
-					.attr('transform', `translate(15, ${-(percent / 100 - 0.125) * radius + 10})`)
-					.attr('text-anchor', 'middle')
-					.text(text)
-					.style('font-weight', 'bold')
-					.style('font-size', '24px')
-					.attr('pointer-events', 'none')
-			}
-		}
-
 		function addLegendItem(category, description, index) {
 			const text = legendG
 				.append('text')
@@ -134,6 +113,34 @@ class profileRadar extends profilePlot {
 				.attr('text-anchor', 'left')
 			text.append('tspan').attr('font-weight', 'bold').text(category)
 			text.append('tspan').text(`: ${description}`)
+		}
+	}
+
+	addPoligon(percent, text = null) {
+		const data = []
+		for (let i = 0; i < this.config.terms.length; i++) data.push([i * this.angle, (percent / 100) * this.radius])
+
+		data.push(data[0])
+		const poligon = this.polarG
+			.append('g')
+			.append('path')
+			.style('stroke', '#aaa')
+			.attr('fill', 'none')
+			.attr('stroke', 'black')
+			.attr('d', this.lineGenerator(data))
+			.style('opacity', '0.5')
+		if (percent != 50) poligon.style('stroke', '#aaa')
+		if (text) {
+			if (percent != 100) poligon.style('stroke-dasharray', '5, 5').style('stroke-width', '2').style('stroke', 'black')
+
+			this.polarG
+				.append('text')
+				.attr('transform', `translate(15, ${-(percent / 100 - 0.125) * this.radius + 10})`)
+				.attr('text-anchor', 'middle')
+				.text(text)
+				.style('font-weight', 'bold')
+				.style('font-size', '24px')
+				.attr('pointer-events', 'none')
 		}
 	}
 }
