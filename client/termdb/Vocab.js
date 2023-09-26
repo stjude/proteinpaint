@@ -54,6 +54,7 @@ export class Vocab {
 					},
 					body: {
 						dslabel,
+						route: 'termdb',
 						embedder: location.hostname
 					}
 				})
