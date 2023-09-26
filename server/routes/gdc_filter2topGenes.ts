@@ -31,7 +31,7 @@ export const api = {
 				//valid: default to type checker
 			},
 			response: {
-				typeId: 'gdc_filter2topGenes'
+				typeId: 'GdcTopMutatedGeneResponse'
 				// will combine this with type checker
 				//valid: (t) => {}
 			}
@@ -66,7 +66,7 @@ async function getGenes(q: any) {
 		})
 	})
 	const re = JSON.parse(response.body)
-	const genes = []
+	const genes = [] as string[]
 	for (const hit of re.data.hits) {
 		if (!hit.symbol) continue
 		genes.push(hit.symbol)
