@@ -86,7 +86,7 @@ function sleep(ms) {
 
 async function validateDsCredentials(creds, serverconfig) {
 	mayReshapeDsCredentials(creds)
-	const key = 'secrets' // to prevent a detect secrets issue
+	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
 		const json = await fs.readFile(sessionsFile, 'utf8')
 		creds[key] = JSON.parse(json)
@@ -105,6 +105,9 @@ async function validateDsCredentials(creds, serverconfig) {
 		for (const serverRoute in ds) {
 			const route = ds[serverRoute]
 			for (const embedderHost in route) {
+				// create a copy from the original in case it's shared across different dslabels/routes/embedders,
+				// since additional properties may be added to the object that is specific to a dslabel/route/embedder
+				route[embedderHost] = JSON.parse(JSON.stringify(route[embedderHost]))
 				const c = route[embedderHost]
 				const cred = typeof c == 'string' ? creds.secrets[c] : c
 				// copy the server route pattern to easily obtain it from within the cred
@@ -124,6 +127,7 @@ async function validateDsCredentials(creds, serverconfig) {
 					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
 				}
 				cred.route = serverRoute
+				cred.cookieId = cred.headerKey || `${dslabel}-${serverRoute}-${embedderHost}-Id`
 			}
 		}
 	}
@@ -163,6 +167,7 @@ function mayReshapeDsCredentials(creds) {
 	}
 }
 
+// TODO: should create a checker function for each route that may be protected
 const protectedTermdbRoutes = {
 	termdb: ['matrix', 'singleSampleData', 'getAllSamples']
 }
@@ -210,6 +215,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	} catch (e) {
 		throw e
 	}
+
+	// const secrets = creds.secrets
+	// // do not expose the secrets object as part of serverconfig,
+	// // which is imported and read by many other code
+	// delete creds.secrets
 
 	function getRequiredCred(q, path) {
 		if (!q.dslabel) return
@@ -264,7 +274,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			return
 		}
 		try {
-			const id = getSessionId(req)
+			const id = getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
 			if (!session) throw `unestablished or expired browser session`
@@ -338,7 +348,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			}
 			if (!req.headers.authorization) throw 'missing authorization header'
 			const [type, pwd] = req.headers.authorization.split(' ')
-			console.log(type, pwd, cred.password, Buffer.from(pwd, 'base64').toString())
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
 			await setSession(q, res, sessions, sessionsFile, '', req, cred)
@@ -354,7 +363,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		let code = 401
 		try {
 			const q = req.query
-			const id = getSessionId(req)
+			const cred = getRequiredCred(q, req.path)
+			const id = getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
 			delete sessions[q.dslabel][id]
@@ -375,7 +385,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		try {
 			const q = req.query
 			const cred = getRequiredCred(q, req.path)
-			console.log(376, cred)
 			if (!cred) return
 			if (cred.authRoute != '/jwt-status') {
 				code = 400
@@ -385,7 +394,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			checkIPaddress(req, ip)
 			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
-			res.send({ status: 'ok', 'x-sjppds-sessionid': id })
+			res.send({ status: 'ok', [cred.cookieId]: id })
 		} catch (e) {
 			console.log(e)
 			res.status(code)
@@ -422,7 +431,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 					if (!isMatch(embedder, embedderHostPattern)) continue
 					const cred = route[embedderHostPattern]
 					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
-					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies })
+					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies }, cred)
 					const activeSession = sessions[dslabelPattern]?.[id]
 					const sessionStart = activeSession?.time || 0
 					dsAuth.push({
@@ -439,10 +448,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	}
 }
 
-function getSessionId(req) {
+function getSessionId(req, cred) {
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// using all lowercase is compatible for both http 1 and 2
 	return (
+		req.cookies?.[`${cred.cookieId}`] ||
 		req.cookies?.[`${req.query.dslabel}SessionId`] ||
 		req.headers['x-sjppds-sessionid'] ||
 		req.query['x-sjppds-sessionid']
@@ -486,7 +496,7 @@ async function setSession(q, res, sessions, sessionsFile, email, req, cred) {
 	sessions[q.dslabel][id] = { id, time, email, ip }
 	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\t${ip}\t${q.embedder}\t{cred.route}\n`)
 	if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
-		res.header('Set-Cookie', `${q.dslabel}SessionId=${id}; HttpOnly; SameSite=None; Secure`)
+		res.header('Set-Cookie', `${cred.cookieId}=${id}; HttpOnly; SameSite=None; Secure`)
 	}
 	return id
 }

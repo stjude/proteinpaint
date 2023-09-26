@@ -1,1 +1,2 @@
-
+Features
+- Support different auth methods for the same dataset, by server route and app embedder.
