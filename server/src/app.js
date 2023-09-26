@@ -7191,8 +7191,10 @@ async function pp_init(serverconfig) {
 			const tables = listDbTables(g.genedb.db)
 			if (tables.has('genealias')) {
 				g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
-				g.genedb.getAliasByName = g.genedb.db.prepare('select alias from genealias where name=?') // quick fix!! convert symbol to ENSG, to be used for gdc api query
-				g.genedb.tableSize = g.genedb.db.prepare('select count(*) from genealias where alias=?')
+				// quick fix -- convert symbol to ENSG, to be used for gdc api query
+				g.genedb.getAliasByName = g.genedb.db.prepare('select alias from genealias where name=?')
+				// quick fix -- required by gdc api /gene_expression/gene_selection, one input is all ensg
+				g.genedb.getAllENSG = g.genedb.db.prepare("select alias from genealias where alias like 'ENSG%'")
 			}
 			if (tables.has('gene2coord')) {
 				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')

@@ -205,7 +205,7 @@ export function validate_query_geneExpression(ds, genome) {
 	}
 }
 
-async function getCasesWithExressionDataFromCohort(q, ds) {
+export async function getCasesWithExressionDataFromCohort(q, ds) {
 	const f = { op: 'and', content: [] }
 	if (q.filter0) {
 		f.content.push(q.filter0)
