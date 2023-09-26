@@ -14,7 +14,7 @@ class profileRadar extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		this.opts.header.text('Radar Graph')
-		this.lineGenerator = d3.lineRadial()
+		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
@@ -70,28 +70,31 @@ class profileRadar extends profilePlot {
 			d.i = i
 			const iangle = i * angle - Math.PI / 2
 			const percentage = this.sampleData[d.$id]?.value
-			data.push([iangle, (percentage / 100) * radius])
+			const iradius = (percentage / 100) * radius
+
+			let dx = iradius * Math.cos(iangle)
+			let dy = iradius * Math.sin(iangle)
+			data.push([dx, dy])
+			polarG.append('g').attr('transform', `translate(${dx}, ${dy})`).append('circle').attr('r', 5).attr('fill', 'gray')
+
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
-			const upSide = iangle <= 0 || iangle >= Math.PI
-
-			const x = radius * 1.1 * Math.cos(iangle)
-			let y = radius * 1.1 * Math.sin(iangle) - 10
-			const textElem = polarG.append('text').attr('x', `${x}px`).attr('y', `${y}px`)
+			dx = radius * 1.1 * Math.cos(iangle)
+			dy = radius * 1.1 * Math.sin(iangle) - 10
+			const textElem = polarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
 
 			const texts = d.term.name.split(' ')
 			let span
 			texts.forEach((text, j) => {
 				if (text != 'and') {
-					y += 15
+					dy += 15
 					span = textElem
 						.append('tspan')
-						.attr('x', `${x}px`)
-						.attr('y', `${y}px`)
+						.attr('x', `${dx}px`)
+						.attr('y', `${dy}px`)
 						.text(text + '')
 				} else span.append('tspan').text(' and')
 			})
-
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
 		data.push(data[0])
@@ -140,7 +143,13 @@ class profileRadar extends profilePlot {
 
 	addPoligon(percent, text = null) {
 		const data = []
-		for (let i = 0; i < this.config.terms.length; i++) data.push([i * this.angle, (percent / 100) * this.radius])
+		for (let i = 0; i < this.config.terms.length; i++) {
+			const iangle = i * this.angle
+			const iradius = (percent / 100) * this.radius
+			const x = iradius * Math.cos(iangle)
+			const y = iradius * Math.sin(iangle)
+			data.push([x, y])
+		}
 
 		data.push(data[0])
 		const poligon = this.polarG
