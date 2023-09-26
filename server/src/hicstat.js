@@ -22,13 +22,13 @@ export async function do_hicstat(file, isurl) {
 		throw Error('Unsupported hic file')
 	}
 	const version = getInt()
-	if (version !== 8 && version != 9) {
+	if (version !== 7 && version !== 8 && version != 9) {
 		throw Error('Unsupported hic version: ' + version)
 	}
 	out_data.version = version
 	const footerPosition = Number(getLong())
 	let normalization = []
-	if (version == 8) {
+	if (version == 8 || version == 7) {
 		const fileSize = getFileSize(file)
 		const vectorView = await getVectorView(file, footerPosition, fileSize - footerPosition)
 		const nbytesV5 = vectorView.getInt32(0, true)
@@ -62,7 +62,7 @@ export async function do_hicstat(file, isurl) {
 	while (Chr_i !== nChrs) {
 		const chr = getString()
 		out_data.chrorder.push(chr)
-		out_data.Chromosomes[chr] = version == 8 ? getInt() : getLong()
+		out_data.Chromosomes[chr] = version == 7 || version == 8 ? getInt() : getLong()
 		Chr_i++
 	}
 	// basepair resolutions
@@ -72,7 +72,8 @@ export async function do_hicstat(file, isurl) {
 
 	let bpRes_i = 0
 	while (bpRes_i !== bpRes_n) {
-		out_data['Base pair-delimited resolutions'].push(getInt())
+		const resBP = getInt()
+		out_data['Base pair-delimited resolutions'].push(resBP)
 		bpRes_i++
 	}
 	// fragment resolutions
@@ -82,7 +83,8 @@ export async function do_hicstat(file, isurl) {
 
 	let FragRes_i = 0
 	while (FragRes_i !== FragRes_n) {
-		out_data['Fragment-delimited resolutions'].push(getInt())
+		const resFrag = getInt()
+		out_data['Fragment-delimited resolutions'].push(resFrag)
 		FragRes_i++
 	}
 	//This is needed to support the conversion of a BigInt to json
