@@ -5,7 +5,7 @@ import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 
-class profilePolar extends profilePlot {
+class profileRadar extends profilePlot {
 	constructor() {
 		super()
 		this.type = 'profileRadar'
@@ -15,11 +15,6 @@ class profilePolar extends profilePlot {
 		await super.init(appState)
 		this.opts.header.text('Radar Graph')
 		this.lineGenerator = d3.lineRadial()
-		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
-		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
-		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
-		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
-
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
@@ -50,27 +45,6 @@ class profilePolar extends profilePlot {
 		this.plot()
 	}
 
-	onMouseOut(event) {
-		if (event.target.tagName == 'path') {
-			const path = event.target
-			path.setAttribute('stroke', 'white')
-			this.tip.hide()
-			if (path.getAttribute('stroke-opacity') == 0) path.setAttribute('stroke-opacity', 1)
-		}
-	}
-
-	onMouseOver(event) {
-		if (event.target.tagName == 'path') {
-			const path = event.target
-			path.setAttribute('stroke-opacity', 0)
-			const d = path.__data__
-			const menu = this.tip.clear()
-			const percentage = this.sampleData[d.$id]?.value
-			menu.d.text(`${d.term.name} ${percentage}%`)
-			menu.show(event.clientX, event.clientY, true, true)
-		} else this.onMouseOut(event)
-	}
-
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
@@ -99,7 +73,7 @@ class profilePolar extends profilePlot {
 
 			i++
 		}
-		console.log(data)
+		data.push(data[0])
 		const path = polarG
 			.append('g')
 			.append('path')
@@ -166,7 +140,7 @@ class profilePolar extends profilePlot {
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
+		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
 		const config = copyMerge(structuredClone(defaults), opts)
 		for (const t of config.terms) {
@@ -175,10 +149,10 @@ export async function getPlotConfig(opts, app) {
 		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
 		return config
 	} catch (e) {
-		throw `${e} [profilePolar getPlotConfig()]`
+		throw `${e} [profileRadar getPlotConfig()]`
 	}
 }
 
-export const profilePolarInit = getCompInit(profilePolar)
+export const profileRadarInit = getCompInit(profileRadar)
 // this alias will allow abstracted dynamic imports
-export const componentInit = profilePolarInit
+export const componentInit = profileRadarInit
