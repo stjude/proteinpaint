@@ -1,11 +1,13 @@
 import { Genome } from '#shared/types/index'
 import { Selection } from 'd3-selection'
+import { appInit } from '#plots/plot.app.js'
 
 type SnvEntry = {
 	dt: 1
 	chr: string
 	position: number
 	gene: string
+	mname: string
 	class: string
 }
 type CnvEntry = {
@@ -122,8 +124,8 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
 			]
 		}
 	}
-	const plot = await import('#plots/plot.app.js')
-	const plotAppApi = await plot.appInit(opts)
+
+	const plotAppApi = await appInit(opts)
 	return plotAppApi
 }
 
@@ -178,7 +180,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 			continue
 		}
 
-		let m
+		let m: SnvEntry
 		try {
 			m = {
 				dt: 1,
@@ -187,7 +189,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 				gene: l[2],
 				mname: l[3],
 				class: l[4]
-			} as SnvEntry
+			}
 		} catch (e) {
 			continue
 		}
@@ -202,7 +204,7 @@ function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) 
 			// TODO collect err
 			continue
 		}
-		let m
+		let m: SvEntry
 		try {
 			m = {
 				dt: 2,
@@ -212,7 +214,7 @@ function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) 
 				chrB: l[3],
 				posB: Number(l[4]),
 				geneB: l[5]
-			} as SvEntry
+			}
 		} catch (e) {
 			continue
 		}
@@ -227,7 +229,7 @@ function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[])
 			// TODO err
 			continue
 		}
-		let m
+		let m: CnvEntry
 		try {
 			m = {
 				dt: 4,
@@ -235,7 +237,7 @@ function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[])
 				start: Number(l[1]),
 				stop: Number(l[2]),
 				value: Number(l[3])
-			} as CnvEntry
+			}
 		} catch (e) {
 			continue
 		}
