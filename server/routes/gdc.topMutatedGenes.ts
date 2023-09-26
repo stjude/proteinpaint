@@ -1,11 +1,11 @@
-import { GdcTopMutatedGeneResponse } from '#shared/types/routes/gdc_filter2topGenes.ts'
+import { GdcTopMutatedGeneResponse } from '#shared/types/routes/gdc.topMutatedGenes.ts'
 import path from 'path'
 import got from 'got'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 export const api = {
-	endpoint: 'gdc_filter2topGenes',
+	endpoint: 'gdc/topMutatedGenes',
 	methods: {
 		get: {
 			init({ genomes }) {
