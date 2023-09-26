@@ -463,6 +463,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'profilePolar' || p.chartType == 'polar') {
 		} else if (p.chartType == 'DEanalysis') {
 		} else if (p.chartType == 'sampleView') {
+		} else if (p.chartType == 'profileRadar') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
