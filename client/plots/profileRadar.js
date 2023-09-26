@@ -8,13 +8,13 @@ import { Menu } from '#dom/menu'
 class profilePolar extends profilePlot {
 	constructor() {
 		super()
-		this.type = 'profilePolar'
+		this.type = 'profileRadar'
 		this.radius = 250
 	}
 	async init(appState) {
 		await super.init(appState)
-		this.opts.header.text('Polar Graph')
-		this.arcGenerator = d3.arc().innerRadius(0)
+		this.opts.header.text('Radar Graph')
+		this.lineGenerator = d3.lineRadial()
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
@@ -91,28 +91,22 @@ class profilePolar extends profilePlot {
 
 		const angle = this.angle
 		let i = 0
-
+		const data = []
 		for (let d of config.terms) {
 			d.i = i
 			const percentage = this.sampleData[d.$id]?.value
-
-			const path = polarG
-				.append('g')
-				.append('path')
-				.datum(d)
-				.attr('fill', d.term.color)
-				.attr('stroke', 'white')
-				.attr(
-					'd',
-					this.arcGenerator({
-						outerRadius: (percentage / 100) * radius,
-						startAngle: i * angle,
-						endAngle: (i + 1) * angle
-					})
-				)
+			data.push([i * angle, (percentage / 100) * radius])
 
 			i++
 		}
+		console.log(data)
+		const path = polarG
+			.append('g')
+			.append('path')
+			.style('stroke', '#aaa')
+			.attr('fill', 'none')
+			.attr('stroke', 'black')
+			.attr('d', this.lineGenerator(data))
 
 		addCircle(50, 'C')
 		addCircle(75, 'B')
@@ -173,7 +167,7 @@ class profilePolar extends profilePlot {
 export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
-		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
+		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
 		const config = copyMerge(structuredClone(defaults), opts)
 		for (const t of config.terms) {
 			if (t.id) await fillTermWrapper(t, app.vocabApi)
