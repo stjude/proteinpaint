@@ -158,7 +158,8 @@ tape('legacy reshape', async test => {
 						dsnames: [{ id: 'ds0', label: 'Dataset 0' }],
 						headerKey: 'x-ds-token',
 						route: 'termdb',
-						authRoute: '/jwt-status'
+						authRoute: '/jwt-status',
+						cookieId: 'x-ds-token'
 					}
 				}
 			},
@@ -168,7 +169,8 @@ tape('legacy reshape', async test => {
 						type: 'basic',
 						password: '...',
 						route: '/**',
-						authRoute: '/dslogin'
+						authRoute: '/dslogin',
+						cookieId: 'ds1-/**-*-Id'
 					}
 				}
 			}
