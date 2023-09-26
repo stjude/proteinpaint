@@ -39,7 +39,7 @@ class profileRadar extends profilePlot {
 
 		this.setFilter()
 
-		this.filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
+		this.filename = `radar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
 			.split(' ')
 			.join('_')
 		this.plot()
@@ -72,11 +72,11 @@ class profileRadar extends profilePlot {
 			const percentage = this.sampleData[d.$id]?.value
 			data.push([iangle, (percentage / 100) * radius])
 			i++
-			const leftSide = iangle >= Math.PI / 2 && iangle <= (3 / 2) * Math.PI
-			const upSide = iangle <= Math.PI / 2 || iangle >= (Math.PI * 3) / 2
+			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
+			const upSide = iangle <= 0 || iangle >= Math.PI
 
 			const x = radius * 1.1 * Math.cos(iangle)
-			let y = radius * 1.1 * Math.sin(iangle) + (upSide ? -10 : 0)
+			let y = radius * 1.1 * Math.sin(iangle) - 10
 			const textElem = polarG.append('text').attr('x', `${x}px`).attr('y', `${y}px`)
 
 			const texts = d.term.name.split(' ')
