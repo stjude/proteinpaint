@@ -421,7 +421,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	*/
 	authApi.getDsAuth = function (req) {
 		const dsAuth = []
-		const embedder = req.get('host').split(':')[0]
+		const embedder = req.query.embedder || req.get('host').split(':')[0]
 		for (const dslabelPattern in creds) {
 			if (dslabelPattern.startsWith('__')) continue
 			const ds = creds[dslabelPattern]
