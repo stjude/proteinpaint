@@ -6,12 +6,13 @@ rm(list=ls())
 suppressPackageStartupMessages(library(dplyr))  ### Qi changed to load plyr first, due to R message: If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
 suppressPackageStartupMessages(library(survival))
 library(jsonlite)
+library(parallel)
 
 options(warn=-1)
 
 # Input from lines2R
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 4) stop("Usage: Rscript burden.R in.json > results")
+if (length(args) != 4) stop("Usage: Rscript burden.R in.json fitsData survData sampleData > results")
 infile <- args[1]
 fitsData <- args[2]
 survData <- args[3]
@@ -225,110 +226,127 @@ newdata_chc_sampled1=newdata_chc_sampled ## do this so each run on chc_num loops
 ##########################################################################
 person_burden=NULL
 
-for(chc_num in c(1:32)[-c(2,5,14,20,23,26)]){  #### Edgar, you may make this in separate runs to save time.
-# print(chc_num)
-newdata_chc_sampled=newdata_chc_sampled1
+get_estimate <- function(chc_num) {  #### Edgar, you may make this in separate runs to save time.
+	# print(chc_num)
+	newdata_chc_sampled=newdata_chc_sampled1
 
-# linear predictor
-newdata_chc_sampled$exp_lp = predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='risk',reference="zero")
+	# linear predictor
+	newdata_chc_sampled$exp_lp = predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='risk',reference="zero")
 
-# Baseline nelson-aalan est
-# https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-j=chc_num
-base = basehaz(cphfits2[[chc_num]],centered = F) # this is a cumulative hazard, so need to convert it into non-cumulative version
-#centered,	if TRUE return data from a predicted survival curve at the mean values of the covariates fit$mean, if FALSE return a prediction for all covariates equal to zero.
-#request the hazard for that covariate combination from the survfit() function that is called by basehaz(). https://stats.stackexchange.com/questions/565210/about-getting-baseline-survival-probability-for-a-piecewise-cox-model-with-inter
-
-
-### Max time in the data is 70.42. We need to estimate up to 90. 
-#Yutaka: I think we should smooth the cumulative hazard and then take the derivative to get the hazard.
-#One thread I found on Web is: "As an approximation you can smooth the fitted baseline cumulative hazard (e.g. by package pspline) and ask for its derivative."  Can you try using smooth.spline and smooth the cumulative hazard and then get the derivative?  https://cran.r-project.org/web/packages/pspline/pspline.pdf
+	# Baseline nelson-aalan est
+	# https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
+	j=chc_num
+	base = basehaz(cphfits2[[chc_num]],centered = F) # this is a cumulative hazard, so need to convert it into non-cumulative version
+	#centered,	if TRUE return data from a predicted survival curve at the mean values of the covariates fit$mean, if FALSE return a prediction for all covariates equal to zero.
+	#request the hazard for that covariate combination from the survfit() function that is called by basehaz(). https://stats.stackexchange.com/questions/565210/about-getting-baseline-survival-probability-for-a-piecewise-cox-model-with-inter
 
 
-#### Qi added: base is for different DX. Now we run within each pr, so neeed cumulaive hazrd for that pr only
-base=base[base$strata==paste("primary=",pr,sep=""),] #cumulative hazard
-base=base[base$time<=agecut,]  ### shouldn't we use the same age cutoff as the survival function splines? Yes, do so.
-
-##### study the smooth parameter. I think spar=1 is the best one to use (most smoothest)
-cumHspline=smooth.spline(base$time,base$hazard,spar=1)
-predcumhz=predict(cumHspline,seq(0,95,1))  ### predicted cumulative hazard
+	### Max time in the data is 70.42. We need to estimate up to 90. 
+	#Yutaka: I think we should smooth the cumulative hazard and then take the derivative to get the hazard.
+	#One thread I found on Web is: "As an approximation you can smooth the fitted baseline cumulative hazard (e.g. by package pspline) and ask for its derivative."  Can you try using smooth.spline and smooth the cumulative hazard and then get the derivative?  https://cran.r-project.org/web/packages/pspline/pspline.pdf
 
 
-##### In order to use the above way to get dN0, do Daisuke's original way using cumhz difference. But the  difference is that: we fit cumhz with smooth.spline and can extend it to 90 years old.
-base=data.frame(time=predcumhz$x,hazard=predcumhz$y)  ##Daisuke used the cumHz, here we smoothed it and then use it.
-#### fitted values had <0 values in age 0-8 or so. change to 0 cumulative hazard.
-base$hazard[base$hazard<0]=0
-base2 = base %>% 
-	mutate(hazard2 = hazard - c(0,hazard[-length(hazard)])) %>%
-	ungroup() %>% as.data.frame()
+	#### Qi added: base is for different DX. Now we run within each pr, so neeed cumulaive hazrd for that pr only
+	base=base[base$strata==paste("primary=",pr,sep=""),] #cumulative hazard
+	base=base[base$time<=agecut,]  ### shouldn't we use the same age cutoff as the survival function splines? Yes, do so.
 
-base2 = base2 %>%
-	mutate(time_cat = cut(time,breaks=seq(0,95,1),right = FALSE, include.lowest = TRUE)) %>% 
-	ungroup()
-	
-base3 = base2 %>%
-	group_by(time_cat) %>%
-	dplyr::summarize(dN0 = sum(hazard2)) %>%
-	filter(!is.na(time_cat))	
+	##### study the smooth parameter. I think spar=1 is the best one to use (most smoothest)
+	cumHspline=smooth.spline(base$time,base$hazard,spar=1)
+	predcumhz=predict(cumHspline,seq(0,95,1))  ### predicted cumulative hazard
 
-###############
-# BCCT
-###############
-newdata_chc_sampled$time_cat = cut(newdata_chc_sampled$t.startage,breaks=seq(0,95,1),right = FALSE, include.lowest = TRUE)
 
-#newdata_chc_sampled$time_cat = cut(newdata_chc_sampled$t.startage,breaks=seq(0,90,5),right = FALSE, include.lowest = TRUE) this won't work, because the input donors file had "t.startage" up to 55 only
+	##### In order to use the above way to get dN0, do Daisuke's original way using cumhz difference. But the  difference is that: we fit cumhz with smooth.spline and can extend it to 90 years old.
+	base=data.frame(time=predcumhz$x,hazard=predcumhz$y)  ##Daisuke used the cumHz, here we smoothed it and then use it.
+	#### fitted values had <0 values in age 0-8 or so. change to 0 cumulative hazard.
+	base$hazard[base$hazard<0]=0
+	base2 = base %>% 
+		mutate(hazard2 = hazard - c(0,hazard[-length(hazard)])) %>%
+		ungroup() %>% as.data.frame()
 
-newdata_chc_sampled = newdata_chc_sampled %>% 
-	left_join(base3,by="time_cat")
-newdata_chc_sampled$dN0 = ifelse(is.na(newdata_chc_sampled$dN0),0,newdata_chc_sampled$dN0)
+	base2 = base2 %>%
+		mutate(time_cat = cut(time,breaks=seq(0,95,1),right = FALSE, include.lowest = TRUE)) %>% 
+		ungroup()
+		
+	base3 = base2 %>%
+		group_by(time_cat) %>%
+		dplyr::summarize(dN0 = sum(hazard2)) %>%
+		filter(!is.na(time_cat))	
 
-BCCT = newdata_chc_sampled %>% 
-	group_by(mrn) %>%
-	mutate(BCCT_tmp = exp_lp*survprob*dN0) %>%
-	mutate(BCCT = cumsum(BCCT_tmp)) %>%
-	filter(t.startage>=20) %>%
-	ungroup() %>%
-	as.data.frame()
+	###############
+	# BCCT
+	###############
+	newdata_chc_sampled$time_cat = cut(newdata_chc_sampled$t.startage,breaks=seq(0,95,1),right = FALSE, include.lowest = TRUE)
 
-for_web_BCCT = as.data.frame(tidyr::pivot_wider(BCCT,id_cols = mrn, names_from=time_cat,values_from=BCCT))
-for_web_BCCT =for_web_BCCT[,-1]
+	#newdata_chc_sampled$time_cat = cut(newdata_chc_sampled$t.startage,breaks=seq(0,90,5),right = FALSE, include.lowest = TRUE) this won't work, because the input donors file had "t.startage" up to 55 only
 
-#### for non-recurrent ones, maximum burden is 1 if the grouped conditions had only 1 condition. (11, 19,29) had only 1 conditons non-recurrent. (15,17,25) had 2 conditons. Take 25 as an example, it had obesity/underweight where underweight was so rare. So max 1 is still good. 
-#### non-recurrent CHCs are 11, 15, 17, 19, 25, 29. ==I think making it maximum 1 is not good always, becuase these are grouped conditions. For example, chc=10 contains 3 non-recurrent events, so one person could have each of these once, making it maximum 3 in this person for chc=10. 
-ncoltmp=75  ## from 20 to 94
-if(chc_num %in% c(11, 15, 17, 19, 25, 29)){
-for_web_BCCT2=apply(for_web_BCCT,c(1,2),function(x) min(x,1))
-for_web_BCCT=as.data.frame(for_web_BCCT2)
-colnames(for_web_BCCT)=colnames(person_burden[1:ncoltmp])
+	newdata_chc_sampled = newdata_chc_sampled %>% 
+		left_join(base3,by="time_cat")
+	newdata_chc_sampled$dN0 = ifelse(is.na(newdata_chc_sampled$dN0),0,newdata_chc_sampled$dN0)
+
+	BCCT = newdata_chc_sampled %>% 
+		group_by(mrn) %>%
+		mutate(BCCT_tmp = exp_lp*survprob*dN0) %>%
+		mutate(BCCT = cumsum(BCCT_tmp)) %>%
+		filter(t.startage>=20) %>%
+		ungroup() %>%
+		as.data.frame()
+
+	for_web_BCCT = as.data.frame(tidyr::pivot_wider(BCCT,id_cols = mrn, names_from=time_cat,values_from=BCCT))
+	for_web_BCCT =for_web_BCCT[,-1]
+
+	#### for non-recurrent ones, maximum burden is 1 if the grouped conditions had only 1 condition. (11, 19,29) had only 1 conditons non-recurrent. (15,17,25) had 2 conditons. Take 25 as an example, it had obesity/underweight where underweight was so rare. So max 1 is still good. 
+	#### non-recurrent CHCs are 11, 15, 17, 19, 25, 29. ==I think making it maximum 1 is not good always, becuase these are grouped conditions. For example, chc=10 contains 3 non-recurrent events, so one person could have each of these once, making it maximum 3 in this person for chc=10. 
+	ncoltmp=75  ## from 20 to 94
+	if(chc_num %in% c(11, 15, 17, 19, 25, 29)){
+	for_web_BCCT2=apply(for_web_BCCT,c(1,2),function(x) min(x,1))
+	for_web_BCCT=as.data.frame(for_web_BCCT2)
+	colnames(for_web_BCCT)=colnames(person_burden[1:ncoltmp])
+	}
+	#For example, chc=10 contains 3 non-recurrent events, so one person could have each of these once, making it maximum 3 in this person for chc=10. 
+	if(chc_num %in% c(10)){
+	for_web_BCCT2=apply(for_web_BCCT,c(1,2),function(x) min(x,3))
+	for_web_BCCT=as.data.frame(for_web_BCCT2)
+	colnames(for_web_BCCT)=colnames(person_burden[1:ncoltmp])
+	}
+	##### if female condition 6, then it is 0 for males.
+	if(chc_num %in% c(6) & sexval==1){
+		for_web_BCCT2=matrix(0,nrow=1,ncol=ncoltmp)
+	for_web_BCCT=as.data.frame(for_web_BCCT2)
+	colnames(for_web_BCCT)=colnames(person_burden[1:75])
+	}
+	##### if male condition 7, then it is 0 for females.d
+	if(chc_num %in% c(7) & sexval==0){
+		for_web_BCCT2=matrix(0,nrow=1,ncol=ncoltmp)
+	for_web_BCCT=as.data.frame(for_web_BCCT2)
+	colnames(for_web_BCCT)=colnames(person_burden[1:ncoltmp])
+	}
+
+	for_web_BCCT$chc=chc_num
+
+	return(for_web_BCCT)
 }
-#For example, chc=10 contains 3 non-recurrent events, so one person could have each of these once, making it maximum 3 in this person for chc=10. 
-if(chc_num %in% c(10)){
-for_web_BCCT2=apply(for_web_BCCT,c(1,2),function(x) min(x,3))
-for_web_BCCT=as.data.frame(for_web_BCCT2)
-colnames(for_web_BCCT)=colnames(person_burden[1:ncoltmp])
+
+# this serial loop works
+# for(chc_num in c(1:32)[-c(2,5,14,20,23,26)]) {
+# 	person_burden=rbind(person_burden, get_estimate(chc_num))
+# }
+
+# perform cumulative incidence analysis
+dat <- list()
+for (x in c(1:32)[-c(2,5,14,20,23,26)]) {
+  dat[[paste(x)]] <- x
 }
-##### if female condition 6, then it is 0 for males.
-if(chc_num %in% c(6) & sexval==1){
-	for_web_BCCT2=matrix(0,nrow=1,ncol=ncoltmp)
-for_web_BCCT=as.data.frame(for_web_BCCT2)
-colnames(for_web_BCCT)=colnames(person_burden[1:75])
-}
-##### if male condition 7, then it is 0 for females.d
-if(chc_num %in% c(7) & sexval==0){
-	for_web_BCCT2=matrix(0,nrow=1,ncol=ncoltmp)
-for_web_BCCT=as.data.frame(for_web_BCCT2)
-colnames(for_web_BCCT)=colnames(person_burden[1:ncoltmp])
-}
-
-for_web_BCCT$chc=chc_num
-
-person_burden=rbind(person_burden,for_web_BCCT)
-
-} #end of chc_num loop
-
+# parallelize the analysis across charts/variants
+availCores <- detectCores()
+if (is.na(availCores)) stop("unable to detect number of available cores")
+cores <- ifelse(length(dat) < availCores, length(dat), availCores)
+results <- mclapply(X = dat, FUN = get_estimate, mc.cores = cores)
+# for(x in 1:length(results)) {
+# 	person_burden=rbind(person_burden, results[[x]])
+# }
 # person_burden[,30:31]
 # sum(person_burden[,31])  ## total burden at 50 years old. 8.971574 for this example.
 
 #### The predicated burden for 26 grouped CHCs from age 20 to 95.
 # write.csv(person_burden,file=paste("primary",pr,".csv"),row.names=F)
-toJSON(person_burden, digits = NA, na = "string")
+toJSON(results, digits = NA, na = "string")
