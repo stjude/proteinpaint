@@ -1,2 +1,1 @@
-Features:
-- We can support now reading hic files for versions 7, 8 and 9
+

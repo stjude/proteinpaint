@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Disco plot UI with an example on the app drawer. Users can provide SNV, SV, and CNV data to create a disco plot.
+- We can support now reading hic files for versions 7, 8 and 9
 
 
 ## 2.27.0
