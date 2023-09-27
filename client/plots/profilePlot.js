@@ -32,14 +32,8 @@ export class profilePlot {
 			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
-		const tw = structuredClone(config.terms?.[0] || config.plotByComponent[0].groups[0].rows[0].twlst[0])
 
-		const data = await this.app.vocabApi.getAnnotatedSampleData({ terms: [tw] })
-		this.sampleidmap = {}
-		for (const key in data.samples) {
-			const sample = data.samples[key]
-			this.sampleidmap[sample.sampleName] = sample.sample
-		}
+		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 		this.regions = [
 			{ key: '', label: '' },
 			{ key: 'Global', label: 'Global' }

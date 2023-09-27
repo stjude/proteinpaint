@@ -86,6 +86,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
 			if (q.for == 'singleSampleData') return get_singleSampleData(q, req, res, ds, tdb)
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
+			if (q.for == 'getAllSamplesByName') return get_AllSamplesByName(q, req, res, ds)
 			if (q.for == 'DEanalysis') return await get_DEanalysis(q, res, ds)
 
 			throw "termdb: doesn't know what to do"
@@ -624,7 +625,14 @@ async function get_singleSampleData(q, req, res, ds, tdb) {
 async function get_AllSamples(q, req, res, ds) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	let result = []
-	if (canDisplay) result = Object.fromEntries(ds.sampleId2Name)
+	if (canDisplay) result = Object.fromEntries(ds.id2sampleName)
+	res.send(result)
+}
+
+async function get_AllSamplesByName(q, req, res, ds) {
+	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+	let result = []
+	if (canDisplay) result = Object.fromEntries(ds.sampleName2Id)
 	res.send(result)
 }
 
