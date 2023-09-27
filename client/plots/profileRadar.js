@@ -21,10 +21,11 @@ class profileRadar extends profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.twLst = []
-		for (const { parent, sc, staff } of this.config.terms) {
+		this.terms = this.config[this.config.plot].terms
+		for (const { parent, term1, term2 } of this.terms) {
 			this.twLst.push(parent)
-			this.twLst.push(sc)
-			this.twLst.push(staff)
+			this.twLst.push(term1)
+			this.twLst.push(term2)
 		}
 		this.twLst.push(this.config.typeTW)
 		const sampleName = this.config.region !== undefined ? this.config.region : this.config.income || 'Global'
@@ -34,7 +35,7 @@ class profileRadar extends profilePlot {
 			filter
 		})
 		this.sampleData = this.data.lst[0]
-		this.angle = (Math.PI * 2) / this.config.terms.length
+		this.angle = (Math.PI * 2) / this.terms.length
 
 		this.income = this.config.income || this.incomes[0]
 		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
@@ -68,11 +69,11 @@ class profileRadar extends profilePlot {
 		let i = 0
 		const data = [],
 			data2 = []
-		for (let { parent, sc, staff } of config.terms) {
+		for (let { parent, term1, term2 } of this.terms) {
 			const d = parent
 			const iangle = i * this.angle - Math.PI / 2
-			this.addData('sc', iangle, i, data)
-			this.addData('staff', iangle, i, data2)
+			this.addData('term1', iangle, i, data)
+			this.addData('term2', iangle, i, data2)
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
@@ -123,25 +124,25 @@ class profileRadar extends profilePlot {
 				.attr('pointer-events', 'none')
 		}
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		this.addLegendItem('SC', '#aaa', 0)
-		this.addLegendItem('Staff', 'blue', 1)
+		this.addLegendItem(config[config.plot].term1, '#aaa', 0)
+		this.addLegendItem(config[config.plot].term2, 'blue', 1)
 	}
 
 	addData(field, iangle, i, data) {
-		const tw = this.config.terms[i][field]
+		const tw = this.terms[i][field]
 		const percentage = this.sampleData[tw.$id]?.value
 		const iradius = (percentage / 100) * this.radius
 
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
-		const color = field == 'sc' ? '#aaa' : 'blue'
+		const color = field == 'term1' ? '#aaa' : 'blue'
 		this.polarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 5).attr('fill', color)
 		data.push([x, y])
 	}
 
 	addPoligon(percent, text = null) {
 		const data = []
-		for (let i = 0; i < this.config.terms.length; i++) {
+		for (let i = 0; i < this.terms.length; i++) {
 			const iangle = i * this.angle - Math.PI / 2
 			const iradius = (percent / 100) * this.radius
 			const x = iradius * Math.cos(iangle)
@@ -180,6 +181,7 @@ class profileRadar extends profilePlot {
 			.append('path')
 			.attr('stroke', color)
 			.attr('stroke-width', '2px')
+
 			.attr(
 				'd',
 				this.lineGenerator([
@@ -197,11 +199,12 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
-		const config = copyMerge(structuredClone(defaults), opts)
-		for (const { parent, sc, staff } of config.terms) {
+		let config = copyMerge(structuredClone(defaults), opts)
+		const terms = config[opts.plot].terms
+		for (const { parent, term1, term2 } of terms) {
 			await fillTermWrapper(parent, app.vocabApi)
-			await fillTermWrapper(sc, app.vocabApi)
-			await fillTermWrapper(staff, app.vocabApi)
+			await fillTermWrapper(term1, app.vocabApi)
+			await fillTermWrapper(term2, app.vocabApi)
 		}
 		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
 		return config
