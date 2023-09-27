@@ -21,8 +21,10 @@ class profileRadar extends profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.twLst = []
-		for (const [i, tw] of this.config.terms.entries()) {
-			if (tw.id) this.twLst.push(tw)
+		for (const { parent, sc, staff } of this.config.terms) {
+			this.twLst.push(parent)
+			this.twLst.push(sc)
+			this.twLst.push(staff)
 		}
 		this.twLst.push(this.config.typeTW)
 		const sampleName = this.config.region !== undefined ? this.config.region : this.config.income || 'Global'
@@ -60,27 +62,21 @@ class profileRadar extends profilePlot {
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		const legendG = this.svg.append('g').attr('transform', `translate(${x + 550},${y + 150})`)
-		const angle = this.angle
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
 		let i = 0
-		const data = []
-		for (let d of config.terms) {
-			d.i = i
-			const iangle = i * angle - Math.PI / 2
-			const percentage = this.sampleData[d.$id]?.value
-			const iradius = (percentage / 100) * radius
-
-			let dx = iradius * Math.cos(iangle)
-			let dy = iradius * Math.sin(iangle)
-			data.push([dx, dy])
-			polarG.append('g').attr('transform', `translate(${dx}, ${dy})`).append('circle').attr('r', 5).attr('fill', 'gray')
-
+		const data = [],
+			data2 = []
+		for (let { parent, sc, staff } of config.terms) {
+			const d = parent
+			const iangle = i * this.angle - Math.PI / 2
+			this.addData('sc', iangle, i, data)
+			this.addData('staff', iangle, i, data2)
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
-			dx = radius * 1.1 * Math.cos(iangle)
-			dy = radius * 1.1 * Math.sin(iangle) - 10
+			let dx = radius * 1.1 * Math.cos(iangle)
+			let dy = radius * 1.1 * Math.sin(iangle) - 10
 			const textElem = polarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
 
 			const texts = d.term.name.split(' ')
@@ -98,7 +94,8 @@ class profileRadar extends profilePlot {
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
 		data.push(data[0])
-		const path = polarG
+		data2.push(data2[0])
+		polarG
 			.append('g')
 			.append('path')
 			.style('stroke', '#aaa')
@@ -107,9 +104,14 @@ class profileRadar extends profilePlot {
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
 
-		this.addPoligon(50, 'C')
-		this.addPoligon(75, 'B')
-		this.addPoligon(100, 'A')
+		polarG
+			.append('g')
+			.append('path')
+			.style('stroke', 'blue')
+			.attr('fill', 'none')
+			.attr('stroke-width', '2px')
+			.attr('d', this.lineGenerator(data2))
+
 		for (let i = 0; i <= 10; i++) {
 			const percent = i * 10
 			polarG
@@ -120,25 +122,18 @@ class profileRadar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		legendG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text('Overall Score')
-			.attr('transform', `translate(0, -10)`)
+	}
 
-		addLegendItem('A', 'More than 75% of possible scorable items', 1)
-		addLegendItem('B', '50-75% of possible scorable items', 2)
-		addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+	addData(field, iangle, i, data) {
+		const tw = this.config.terms[i][field]
+		const percentage = this.sampleData[tw.$id]?.value
+		const iradius = (percentage / 100) * this.radius
 
-		function addLegendItem(category, description, index) {
-			const text = legendG
-				.append('text')
-				.attr('transform', `translate(0, ${index * 20})`)
-				.attr('text-anchor', 'left')
-			text.append('tspan').attr('font-weight', 'bold').text(category)
-			text.append('tspan').text(`: ${description}`)
-		}
+		let x = iradius * Math.cos(iangle)
+		let y = iradius * Math.sin(iangle)
+		const color = field == 'sc' ? '#aaa' : 'blue'
+		this.polarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 5).attr('fill', color)
+		data.push([x, y])
 	}
 
 	addPoligon(percent, text = null) {
@@ -181,8 +176,10 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
 		const config = copyMerge(structuredClone(defaults), opts)
-		for (const t of config.terms) {
-			if (t.id) await fillTermWrapper(t, app.vocabApi)
+		for (const { parent, sc, staff } of config.terms) {
+			await fillTermWrapper(parent, app.vocabApi)
+			await fillTermWrapper(sc, app.vocabApi)
+			await fillTermWrapper(staff, app.vocabApi)
 		}
 		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
 		return config
