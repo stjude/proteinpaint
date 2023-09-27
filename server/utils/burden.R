@@ -331,22 +331,31 @@ get_estimate <- function(chc_num) {  #### Edgar, you may make this in separate r
 # 	person_burden=rbind(person_burden, get_estimate(chc_num))
 # }
 
-# perform cumulative incidence analysis
-dat <- list()
-for (x in c(1:32)[-c(2,5,14,20,23,26)]) {
-  dat[[paste(x)]] <- x
-}
-# parallelize the analysis across charts/variants
+# get estimates
+# parallelize across chc_nums
+chc_nums <- c(1:32)[-c(2,5,14,20,23,26)]
 availCores <- detectCores()
 if (is.na(availCores)) stop("unable to detect number of available cores")
-cores <- ifelse(length(dat) < availCores, length(dat), availCores)
-results <- mclapply(X = dat, FUN = get_estimate, mc.cores = cores)
-# for(x in 1:length(results)) {
-# 	person_burden=rbind(person_burden, results[[x]])
-# }
+cores <- ifelse(length(chc_nums) < availCores, length(chc_nums), availCores)
+results <- mclapply(X = chc_nums, FUN = get_estimate, mc.cores = cores)
+
+# combine rows into person_burden data frame
+for (n in 1:length(results)) {
+  row <- results[[n]]
+  if (!identical(names(row), names(results[[1]]))) {
+    # some rows may have empty column names because they
+    # used the columns names from the person_burden table, which
+    # is NULL when get_estimate() is run in parallel (see the
+    # if() statements in get_estimate())
+    # in this situation, use the column names from the first row
+    names(row) <- names(results[[1]])
+  }
+  person_burden <- rbind(person_burden, row)
+}
+
 # person_burden[,30:31]
 # sum(person_burden[,31])  ## total burden at 50 years old. 8.971574 for this example.
 
 #### The predicated burden for 26 grouped CHCs from age 20 to 95.
 # write.csv(person_burden,file=paste("primary",pr,".csv"),row.names=F)
-toJSON(results, digits = NA, na = "string")
+toJSON(person_burden, digits = NA, na = "string")
