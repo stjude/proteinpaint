@@ -53,15 +53,15 @@ class profileRadar extends profilePlot {
 
 		if (!this.sampleData) return
 
-		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 600)
+		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 650)
 
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 400
-		const y = 300
+		const y = 320
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		const legendG = this.svg.append('g').attr('transform', `translate(${x + 550},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 550},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -122,6 +122,9 @@ class profileRadar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
+		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
+		this.addLegendItem('SC', '#aaa', 0)
+		this.addLegendItem('Staff', 'blue', 1)
 	}
 
 	addData(field, iangle, i, data) {
@@ -139,7 +142,7 @@ class profileRadar extends profilePlot {
 	addPoligon(percent, text = null) {
 		const data = []
 		for (let i = 0; i < this.config.terms.length; i++) {
-			const iangle = i * this.angle
+			const iangle = i * this.angle - Math.PI / 2
 			const iradius = (percent / 100) * this.radius
 			const x = iradius * Math.cos(iangle)
 			const y = iradius * Math.sin(iangle)
@@ -168,6 +171,25 @@ class profileRadar extends profilePlot {
 				.style('font-size', '24px')
 				.attr('pointer-events', 'none')
 		}
+	}
+
+	addLegendItem(text, color, index) {
+		const step = 25
+		const y = step + index * step
+		this.legendG
+			.append('path')
+			.attr('stroke', color)
+			.attr('stroke-width', '2px')
+			.attr(
+				'd',
+				this.lineGenerator([
+					[0, y - 5],
+					[10, y - 5]
+				])
+			)
+
+		const textElem = this.legendG.append('text').attr('transform', `translate(20, ${y})`).attr('text-anchor', 'left')
+		textElem.append('tspan').text(text)
 	}
 }
 
