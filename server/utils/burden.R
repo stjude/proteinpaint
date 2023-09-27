@@ -19,8 +19,9 @@ survData <- args[3]
 sampleData <- args[4]
 
 chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
-availCores <- detectCores() # number of available cores for parallelization
-if (is.na(availCores)) stop("unable to detect number of available cores")
+availCores <- detectCores()
+if (is.na(availCores)) stop("cannot detect number of available cores")
+cores <- ifelse(length(chc_nums) < availCores, length(chc_nums), availCores)
 
 #####################
 # Functions for our method
@@ -135,7 +136,7 @@ newdata_chc_sampled$hdmtxdose=input$hdmtx # hdmtxval
 #	10="Retinoblastoma"
 #	11="Germ cell tumor";
 
-results <- mclapply(X = chc_nums, FUN = function(chc_num) predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='expected'), mc.cores = availCores)
+results <- mclapply(X = chc_nums, FUN = function(chc_num) predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='expected'), mc.cores = cores)
 for(n in 1:length(results)){
 	newdata_chc_sampled = data.frame(newdata_chc_sampled,results[[n]])
 }
@@ -336,7 +337,7 @@ get_estimate <- function(chc_num) {  #### Edgar, you may make this in separate r
 
 # get estimates
 # parallelize across chc_nums
-results <- mclapply(X = chc_nums, FUN = get_estimate, mc.cores = availCores)
+results <- mclapply(X = chc_nums, FUN = get_estimate, mc.cores = cores)
 
 # combine rows into person_burden data frame
 for (n in 1:length(results)) {
