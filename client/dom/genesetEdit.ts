@@ -38,7 +38,6 @@ export function showGenesetEdit({
 	group: any
 	showGroup: boolean
 }) {
-	console.log('mode', mode)
 	menu.clear()
 	const tip2 = new Menu({ padding: '0px' })
 	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')
@@ -83,14 +82,50 @@ export function showGenesetEdit({
 		hideHelp: true
 	})
 
+	// a holder to render optional buttons
 	const rightDiv = headerDiv
 		.append('div')
 		.style('display', 'inline-flex')
 		.style('align-items', 'center')
 		.style('float', 'right')
 		.style('gap', '5px')
-	if (vocabApi.termdbConfig?.queries?.topMutatedGenes) {
-		for (const param of vocabApi.termdbConfig.queries.topMutatedGenes.arguments) addParameter(param)
+
+	/*
+
+	logic on optional buttons
+
+	- there are two buttons, click one to load: 1) top mutated genes, 2) top variably expressed genes
+	- first detect if "top variably expressed" button should be rendered
+	- current assumption is that only one button should be rendered, not both
+	  this is primarily based on how matrix gene groups operate; a group is either for mutation data, or exp data, but not both
+	  when this ui is used elsewhere outside of matrix, this assumption can subject to change
+	*/
+
+	if (mode == 'expression' && vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
+		if (vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
+			for (const param of vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) addParameter(param)
+		}
+		rightDiv
+			.append('button')
+			.text('Load top variably expressed genes')
+			.on('click', async event => {
+				event.target.disabled = true
+				const args = {
+					filter0: vocabApi.state.termfilter.filter0
+				}
+				// TODO process args from api.topVariablyExpressedGeneParams
+				const result = await vocabApi.getTopVariablyExpressedGenes(args)
+
+				geneList = []
+				for (const gene of result.genes) geneList.push({ name: gene })
+				renderGenes()
+				event.target.disabled = false
+			})
+	} else if (vocabApi.termdbConfig?.queries?.topMutatedGenes) {
+		// only render this button when the first is not rendered
+		if (vocabApi.termdbConfig.queries.topMutatedGenes.arguments) {
+			for (const param of vocabApi.termdbConfig.queries.topMutatedGenes.arguments) addParameter(param)
+		}
 		api.dom.loadBt = rightDiv
 			.append('button')
 			.html(`Load top mutated genes`)
@@ -99,6 +134,9 @@ export function showGenesetEdit({
 				const args = {
 					filter0: vocabApi.state.termfilter.filter0
 				}
+				// TODO rename api.params[] as api.topMutatedParams[]
+				// as topMutatedGenes and topVariablyExpressedGenes can both come with arguments.
+				// renaming to api.topMutatedGeneParams[] and api.topVariablyExpressedGeneParams[] will help this
 				for (const { param, input } of api.params) {
 					const id = input.attr('id')
 					args[id] = getInputValue({ param, input })
@@ -110,10 +148,6 @@ export function showGenesetEdit({
 				renderGenes()
 				api.dom.loadBt.property('disabled', false)
 			})
-	} else if (vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
-		for (const param of vocabApi.termdbConfig.topVariablyExpressedGenes.arguments) addParameter(param)
-		rightDiv.append('button').html(`Load top expressed genes`)
-		//.on('click', async () => {})
 	}
 	if (genome?.termdbs?.msigdb) {
 		for (const key in genome.termdbs) {

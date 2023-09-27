@@ -1,1 +1,2 @@
-
+Features:
+- New button in geneset edit UI allowing to load top variably expressed genes in hierarchical clustering, for eligible datasets

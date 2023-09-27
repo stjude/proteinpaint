@@ -137,7 +137,7 @@ function addGenomicQueries(c, ds, genome) {
 		}
 	}
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
-	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes.arguments
+	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes
 	if (q.singleSampleMutation) {
 		q2.singleSampleMutation = {
 			sample_id_key: q.singleSampleMutation.sample_id_key,
