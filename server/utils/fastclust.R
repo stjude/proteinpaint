@@ -42,9 +42,16 @@ args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript test.R in.json > results")
 infile <- args[1]
 input <- fromJSON(infile)
-normalized_matrix <- t(scale(t(input$matrix))) # Applying z-score normalization
+
+if (length(input$valueIsTransformed) == 0 || input$valueIsTransformed == FALSE) {
+ normalized_matrix <- t(scale(t(input$matrix))) # Applying z-score normalization
+} else { # No normalization
+ normalized_matrix <- input$matrix
+}
+
 # For columns (i.e samples)
 RowDist <- dist(normalized_matrix, method = "euclidean") # Transposing the matrix
+
 
 # Hierarchical clustering
 print (input$cluster_method)
