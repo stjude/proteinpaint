@@ -18,6 +18,10 @@ fitsData <- args[2]
 survData <- args[3]
 sampleData <- args[4]
 
+chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
+availCores <- detectCores() # number of available cores for parallelization
+if (is.na(availCores)) stop("unable to detect number of available cores")
+
 #####################
 # Functions for our method
 # Ref: https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
@@ -131,12 +135,11 @@ newdata_chc_sampled$hdmtxdose=input$hdmtx # hdmtxval
 #	10="Retinoblastoma"
 #	11="Germ cell tumor";
 
-
-for(j in c(1:32)[-c(2,5,14,20,23,26)]){ ## CHCs. 6 out of 32 CHCs not used.
-	tmp_Nj = predict(cphfits2[[j]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='expected')
-	newdata_chc_sampled = data.frame(newdata_chc_sampled,tmp_Nj)
+results <- mclapply(X = chc_nums, FUN = function(chc_num) predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='expected'), mc.cores = availCores)
+for(n in 1:length(results)){
+	newdata_chc_sampled = data.frame(newdata_chc_sampled,results[[n]])
 }
-names(newdata_chc_sampled)[25:50]=paste0("est_chc",c(1:32)[-c(2,5,14,20,23,26)])
+names(newdata_chc_sampled)[25:50]=paste0("est_chc",chc_nums)
 newdata_chc_sampled = newdata_chc_sampled %>%
 	mutate(sumN_tmp = rowSums(dplyr::select(.,starts_with("est_chc"))))%>%
 	group_by(mrn) %>%
@@ -327,17 +330,13 @@ get_estimate <- function(chc_num) {  #### Edgar, you may make this in separate r
 }
 
 # this serial loop works
-# for(chc_num in c(1:32)[-c(2,5,14,20,23,26)]) {
+# for(chc_num in chc_nums) {
 # 	person_burden=rbind(person_burden, get_estimate(chc_num))
 # }
 
 # get estimates
 # parallelize across chc_nums
-chc_nums <- c(1:32)[-c(2,5,14,20,23,26)]
-availCores <- detectCores()
-if (is.na(availCores)) stop("unable to detect number of available cores")
-cores <- ifelse(length(chc_nums) < availCores, length(chc_nums), availCores)
-results <- mclapply(X = chc_nums, FUN = get_estimate, mc.cores = cores)
+results <- mclapply(X = chc_nums, FUN = get_estimate, mc.cores = availCores)
 
 # combine rows into person_burden data frame
 for (n in 1:length(results)) {
