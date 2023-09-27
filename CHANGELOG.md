@@ -8,6 +8,7 @@ Features:
 - Disco plot UI with an example on the app drawer. Users can provide SNV, SV, and CNV data to create a disco plot.
 - We can support now reading hic files for versions 7, 8 and 9
 - Support different auth methods for the same dataset, by server route and app embedder.
+- New button in geneset edit UI allowing to load top variably expressed genes in hierarchical clustering, for eligible datasets
 
 
 ## 2.27.0
