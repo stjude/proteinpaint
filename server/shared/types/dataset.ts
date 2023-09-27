@@ -61,11 +61,13 @@ type InfoFieldsEntry = {
 	separator: string
 }
 
+/*
 type GenomicPositionEntry = {
 	chr: string
 	start: number
 	stop: number
 }
+*/
 
 type Chr2bcffile = { [index: string]: string }
 
@@ -225,7 +227,9 @@ type SingleSampleMutation = GdcApi & {
 	discoSkipChrM?: boolean
 }
 
-type TopVariablyExpressedGenes = {} // to add arguments
+type TopVariablyExpressedGenes = {
+	args?: any
+}
 
 type TopMutatedGenes = {
 	arguments?: {
