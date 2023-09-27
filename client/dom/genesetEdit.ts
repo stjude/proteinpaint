@@ -23,6 +23,7 @@ export function showGenesetEdit({
 	genome,
 	callback,
 	geneList = [],
+	mode,
 	vocabApi,
 	group,
 	showGroup
@@ -31,11 +32,13 @@ export function showGenesetEdit({
 	menu: Menu
 	genome: any
 	geneList: Array<Gene>
+	mode?: string
 	callback: (group, geneList) => void
 	vocabApi: any
 	group: any
 	showGroup: boolean
 }) {
+	console.log('mode', mode)
 	menu.clear()
 	const tip2 = new Menu({ padding: '0px' })
 	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')

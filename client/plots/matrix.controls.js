@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
 import { svgScroll } from '#dom/svg.scroll'
-import { showGenesetEdit } from '../dom/genesetEdit.ts'
+import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 
 const tip = new Menu({ padding: '' })
 
@@ -793,20 +793,24 @@ export class MatrixControls {
 				const group = parent.config.termgroups[selectedGroup]
 				app.tip.clear().hide()
 
-				const geneList = []
-				for (const tw of group.lst) if (tw.term.type == 'geneVariant') geneList.push({ name: tw.term.name })
-				showGenesetEdit({
+				const gsArg = {
 					holder: event.target,
 					menu: app.tip,
 					genome: app.opts.genome,
-					geneList,
+					geneList: [],
 					callback,
 					vocabApi: this.opts.app.vocabApi,
-					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
-					//mode: 'expression',
 					group,
 					showGroup: parent.config.termgroups > 1
-				})
+				}
+
+				if (this.parent.chartType == 'hierCluster' && selectedGroup == 0) {
+					// TODO comment
+					gsArg.mode = 'expression'
+				}
+
+				for (const tw of group.lst) if (tw.term.type == 'geneVariant') gsArg.geneList.push({ name: tw.term.name })
+				showGenesetEdit(gsArg)
 			})
 	}
 
@@ -833,6 +837,9 @@ export class MatrixControls {
 					overrides: false,
 					lst: []
 				}
+				/* no need to detect the condition and assign mode=expression. 
+				it is expected that a newly added gene term group will not trigger clustering analysis
+				*/
 				showGenesetEdit({
 					holder: event.target,
 					menu: app.tip,
@@ -840,8 +847,6 @@ export class MatrixControls {
 					geneList: [],
 					callback,
 					vocabApi: this.opts.app.vocabApi,
-					// TODO later when the gene exp plot is launched via matrix, will set mode:expression
-					//mode: 'expression',
 					group,
 					showGroup: true
 				})
