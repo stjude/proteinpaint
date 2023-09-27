@@ -271,7 +271,7 @@ async function load_driver(q, ds) {
 			return { gene2sample2value }
 		}
 		// have data for multiple genes, run clustering
-		return { clustering: await geneExpressionClustering(gene2sample2value, q) }
+		return { clustering: await geneExpressionClustering(gene2sample2value, q, ds) }
 	}
 
 	// other query type
@@ -430,7 +430,7 @@ function may_validate_filters(q, ds) {
 	}
 }
 
-async function geneExpressionClustering(data, q) {
+async function geneExpressionClustering(data, q, ds) {
 	// get set of uniq sample names, to generate col_names dimension
 	const sampleSet = new Set()
 	for (const o of data.values()) {
@@ -445,6 +445,8 @@ async function geneExpressionClustering(data, q) {
 		cluster_method: q.clusterMethod,
 		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
+
+	if (ds.queries.geneExpression.valueIsTransformed) inputData.valueIsTransformed = true // to not to do scale() in R
 
 	// compose "data{}" into a matrix
 	//console.log('data:', data)
