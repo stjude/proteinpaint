@@ -128,10 +128,10 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 				const listHTML = `
 					<li>chrA</li>
 					<li>posA</li>
+					<li>geneA (optional)</li>
 					<li>chrB</li>
 					<li>posB</li>
-					<li>geneA</li>
-					<li>geneB</li>`
+					<li>geneB (optional)</li>`
 				mainTabCallback(dataTypeTab, obj, listHTML)
 			}
 		},
@@ -153,9 +153,12 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 	new Tabs({ holder: dataTypeTabs_div, tabs, tabsPosition: 'vertical', linePosition: 'right' }).main()
 }
 
-function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML) {
+function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: any) {
 	dataTypeTab.contentHolder.style('border', 'none').style('display', 'block').style('padding-left', '30px')
-	makeDataInputTabs(dataTypeTab, obj)
+	//On hold until other input types added to launch.adhoc.js
+	//makeDataInputTabs(dataTypeTab, obj)
+	makeCopyPasteInput(dataTypeTab, obj, dataTypeTab.key)
+
 	dataTypeTab.contentHolder
 		.append('div')
 		.style('margin-left', '10px')
@@ -262,7 +265,7 @@ function makeCopyPasteInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
 	// Renders the copy/paste div and callback.
 	const paste_div = tab.contentHolder.append('div').style('display', 'block')
 	const paste = uiutils
-		.makeTextAreaInput({ div: paste_div, rows: 10 })
+		.makeTextAreaInput({ div: paste_div, rows: 5 })
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.classed('disco_input', true)

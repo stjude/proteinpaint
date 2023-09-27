@@ -20,10 +20,10 @@ type CnvEntry = {
 type SvEntry = {
 	dt: number
 	chrA: string
-	chrB: string
 	posA: number
-	posB: number
 	geneA?: string
+	chrB: string
+	posB: number
 	geneB?: string
 }
 
@@ -200,20 +200,31 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
-		if (l.length != 6) {
+		if (l.length != 4) {
 			// TODO collect err
 			continue
 		}
 		let m: SvEntry
 		try {
-			m = {
-				dt: 2,
-				chrA: l[0],
-				posA: Number(l[1]),
-				geneA: l[2],
-				chrB: l[3],
-				posB: Number(l[4]),
-				geneB: l[5]
+			const length: number = l.length
+			if (length == 4) {
+				m = {
+					dt: 2,
+					chrA: l[0],
+					posA: Number(l[1]),
+					chrB: l[2],
+					posB: Number(l[3])
+				}
+			} else {
+				m = {
+					dt: 2,
+					chrA: l[0],
+					posA: Number(l[1]),
+					geneA: l[2],
+					chrB: l[3],
+					posB: Number(l[4]),
+					geneB: l[5]
+				}
 			}
 		} catch (e) {
 			continue
