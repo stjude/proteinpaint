@@ -153,7 +153,7 @@ q{}
 	required. list of genes
 
 compose the gene-by-sample fpkm matrix
-genes are given from query parameter
+genes are given from query parameter, and are double-checked by gene_selection API
 samples are determined based on filter/filter0:
 	all cases based on current filter are retrieved
 	then, up to 1000 of those with exp data are kept
@@ -162,40 +162,16 @@ export function validate_query_geneExpression(ds, genome) {
 	ds.queries.geneExpression.get = async q => {
 		if (!Array.isArray(q.genes)) throw 'q.genes[] not array'
 
-		// this data structure is returned
+		// getter returns this data structure
 		const gene2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
-
-		// convert given gene symbols to ENSG for api query
-		const ensgLst = []
-		// convert ensg back to symbol for using in data structure
-		const ensg2symbol = new Map()
-
-		for (const g of q.genes) {
-			const name = g.gene || g.name // TODO should be only g.gene
-			if (typeof name != 'string') continue // TODO report skipped ones
-			if (name.startsWith('ENSG') && name.length == 15) {
-				ensgLst.push(name)
-				ensg2symbol.set(name, name)
-				continue
-			}
-			const lst = genome.genedb.getAliasByName.all(name)
-			if (Array.isArray(lst)) {
-				for (const a of lst) {
-					if (a.alias.startsWith('ENSG')) {
-						ensgLst.push(a.alias)
-						ensg2symbol.set(a.alias, name)
-						break
-					}
-				}
-			}
-			if (ensgLst.length > 100) break // max 100 genes
-		}
-
-		if (ensgLst.length == 0) return gene2sample2value // no valid genes
 
 		// get all cases from current filter
 		const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
 		if (caseLst.length == 0) return gene2sample2value // no cases with exp data
+
+		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst)
+
+		if (ensgLst.length == 0) return gene2sample2value // no valid genes
 
 		for (const g of ensgLst) {
 			gene2sample2value.set(ensg2symbol.get(g), new Map())
@@ -204,6 +180,65 @@ export function validate_query_geneExpression(ds, genome) {
 		await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
 		return gene2sample2value
 	}
+}
+
+/*
+genes: []
+	list of gene coming from client query
+genome:
+	for converting symbol to ensg
+case_ids:[]
+	required for hitting /gene_selection to screen ensg list before returning
+*/
+async function geneExpression_getGenes(genes, genome, case_ids) {
+	// convert given gene symbols to ENSG for api query
+	const ensgLst = []
+	// convert ensg back to symbol for using in data structure
+	const ensg2symbol = new Map()
+
+	for (const g of genes) {
+		const name = g.gene || g.name // TODO should be only g.gene
+		if (typeof name != 'string') continue // TODO report skipped ones
+		if (name.startsWith('ENSG') && name.length == 15) {
+			ensgLst.push(name)
+			ensg2symbol.set(name, name)
+			continue
+		}
+		const lst = genome.genedb.getAliasByName.all(name)
+		if (Array.isArray(lst)) {
+			for (const a of lst) {
+				if (a.alias.startsWith('ENSG')) {
+					ensgLst.push(a.alias)
+					ensg2symbol.set(a.alias, name)
+					break
+				}
+			}
+		}
+		if (ensgLst.length > 100) break // max 100 genes
+	}
+
+	// per Zhenyu 9/26/23, user-elected genes must be screened so those with 0 value cross all samples will be left out
+	// so that valid SD-transformed value can be returned from /values api
+	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
+	const response = await got.post('https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/gene_selection', {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({
+			case_ids,
+			gene_ids: ensgLst,
+			size: ensgLst.length
+		})
+	})
+	const re = JSON.parse(response.body)
+	if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] not array'
+	const ensgLst2 = []
+	for (const i of re.gene_selection) {
+		if (typeof i.gene_id != 'string') throw '.gene_id missing from one of re.gene_selection[]'
+		ensgLst2.push(i.gene_id)
+	}
+	// some genes from ensgLst may be left out ensgLst2, e.g. HOXA1 from test example;
+	// later can comment above code to double-check as /values is able to return data for HOXA1 so why is it left out here?
+	//console.log(ensgLst, ensgLst2)
+	return [ensgLst2, ensg2symbol]
 }
 
 export async function getCasesWithExressionDataFromCohort(q, ds) {
