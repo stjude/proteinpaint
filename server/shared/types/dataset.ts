@@ -277,6 +277,11 @@ type RnaseqGeneCount = {
 type GeneExpressionQuery = {
 	file?: string
 	gdcapi?: boolean
+	/* set to true if the value is already transformed across samples
+	e.g. gdc data returned by /values endpoint is transformed as "(expression - median) / stdev"
+	and should not be further transformed during clustering analysis
+	*/
+	valueIsTransformed?: boolean
 }
 
 type Queries = {
