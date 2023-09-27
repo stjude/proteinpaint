@@ -200,7 +200,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
-		if (l.length != 4) {
+		if (l.length < 4) {
 			// TODO collect err
 			continue
 		}
