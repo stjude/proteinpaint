@@ -108,7 +108,11 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		const twlst = this.config.termgroups[0].lst
+		// TODO: do not rely on the hardcoded grp.name for finding the hier cluster term group
+		this.hcTermGroup =
+			this.termOrder?.find(t => t.grp.name == 'Gene Expression')?.grp ||
+			this.config.termgroups.find(grp => grp.name == 'Gene Expression')
+		const twlst = this.hcTermGroup.lst
 
 		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
 		if (!genes.length) return
@@ -157,7 +161,7 @@ class HierCluster extends Matrix {
 		c.sampleNameLst = c.col_names_index.map(i => c.sampleNameLst[i - 1])
 		c.geneNameLst = c.row_names_index.map(i => c.geneNameLst[i - 1])
 		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
-		this.config.termgroups[0].lst = orderedTw
+		this.hcTermGroup.lst = orderedTw
 		this.hierClusterSamples = {
 			refs: { byTermId: {} },
 			lst: c.sampleNameLst.map(sample => samples[sample]),
@@ -214,7 +218,8 @@ class HierCluster extends Matrix {
 
 	plotDendrogram_R(obj) {
 		const d = this.dimensions
-		const zoomLevel = this.config.settings.matrix.zoomLevel
+		const s = this.config.settings.matrix
+		const zoomLevel = s.zoomLevel
 		const { xMin, xMax } = d
 		const xOffset = d.seriesXoffset // could be negative when zoomed
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
@@ -272,7 +277,17 @@ class HierCluster extends Matrix {
 				ctx.stroke()
 				ctx.closePath()
 			}
-			this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, obj.d.yDendrogramHeight + obj.d.rowHeight)
+			// find the first term in the gene expression group
+			const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
+			const ty = t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy + (t.labelOffset || 0) + t.totalHtAdjustments
+			this.renderImage(
+				this.dom.leftDendrogram,
+				canvas,
+				width,
+				height,
+				0,
+				ty + obj.d.yDendrogramHeight + obj.d.rowHeight
+			)
 		}
 
 		{
@@ -414,28 +429,28 @@ export async function getPlotConfig(opts = {}, app) {
 	const config = await getMatrixPlotConfig(opts, app)
 	config.settings.matrix.collabelpos = 'top'
 
-	if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
-
-	const twlst = []
-	for (const i of opts.genes) {
-		let tw
-		if (typeof i.term == 'object' && i.term.type == 'geneVariant') {
-			// i is already well-formed tw object
-			tw = i
-		} else {
-			// shape i into term{} and nest into tw{}
-			i.type = 'geneVariant'
-			if (i.name) {
-			} else if (i.gene) {
-				i.name = i.gene // TODO
-			}
-			tw = { term: i }
-		}
-		await fillTermWrapper(tw)
-		twlst.push(tw)
-	}
-
 	if (!config.termgroups.find(g => g.name == 'Gene Expression')) {
+		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
+
+		const twlst = []
+		for (const i of opts.genes) {
+			let tw
+			if (typeof i.term == 'object' && i.term.type == 'geneVariant') {
+				// i is already well-formed tw object
+				tw = i
+			} else {
+				// shape i into term{} and nest into tw{}
+				i.type = 'geneVariant'
+				if (i.name) {
+				} else if (i.gene) {
+					i.name = i.gene // TODO
+				}
+				tw = { term: i }
+			}
+			await fillTermWrapper(tw)
+			twlst.push(tw)
+		}
+
 		config.termgroups.unshift({
 			name: 'Gene Expression',
 			// TODO: are duplicate term entries, with different q{} objects, allowed?

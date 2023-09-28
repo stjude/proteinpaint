@@ -324,6 +324,7 @@ export class Matrix {
 		this.numTerms = terms.length
 		const opts = {
 			terms,
+			currentGeneNames: this.chartType == 'hierCluster' && this.config.termgroups[0]?.lst.map(tw => tw.term.name),
 			filter: this.state.filter,
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
