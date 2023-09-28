@@ -77,7 +77,7 @@ export function init_discoplotUI(
 		.append('div')
 		.style('opacity', 0.75)
 		.style('padding', '10px 10px 15px 20px')
-		.text('The plot accepts multiple data types. Paste data in for SNV Indel, SV, and CNV in each tab and submit.')
+		.text('The plot accepts multiple data types. Paste data for SNV Indel, SV, and CNV in each tab and submit.')
 	const dataTypeTabs_div = wrapper.append('div').style('margin-left', '2vw')
 	makeDataTypeTabs(dataTypeTabs_div, obj)
 
@@ -186,7 +186,7 @@ function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: 
 
 	dataTypeTab.contentHolder
 		.append('div')
-		.style('margin-left', '10px')
+		.style('margin', '10px 0px 0px 10px')
 		.style('opacity', 0.75)
 		.text(`Provide ${dataTypeTab.label} data in tab delimited format with the following columns:`)
 		.append('span')
@@ -289,7 +289,7 @@ function makeCopyPasteInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
 	// Renders the copy/paste div and callback.
 	const paste_div = tab.contentHolder.append('div').style('display', 'block')
 	const paste = uiutils
-		.makeTextAreaInput({ div: paste_div, rows: 5 })
+		.makeTextAreaInput({ div: paste_div, cols: 50 })
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.classed('disco_input', true)
