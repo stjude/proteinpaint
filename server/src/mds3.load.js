@@ -456,15 +456,11 @@ async function geneExpressionClustering(data, q, ds) {
 		for (const s of inputData.col_names) {
 			row.push(o[s] || 0)
 		}
-		//const row2 = zscore(row)
 		inputData.matrix.push(row)
 	}
 	//console.log('inputData.matrix:', inputData.matrix.length, inputData.matrix[0].length)
 	//console.log('input_data:', inputData)
-	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
+	//await write_file('test.json', JSON.stringify(inputData))
 
 	const time1 = new Date()
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
@@ -581,16 +577,6 @@ async function geneExpressionClustering(data, q, ds) {
 		col_children: col_output.children,
 		col_names_index: col_names_index
 	}
-}
-function zscore(lst) {
-	let total = 0
-	for (const v of lst) total += v
-	const mean = total / lst.length
-	const sd = Math.sqrt(lst.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
-	if (sd == 0) {
-		return lst
-	}
-	return lst.map(i => (i - mean) / sd)
 }
 
 async function run_clustering(Rscript, args = []) {
