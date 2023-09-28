@@ -96,19 +96,21 @@ class profileRadar extends profilePlot {
 		}
 		data.push(data[0])
 		data2.push(data2[0])
+		const color1 = 'gray',
+			color2 = 'blue'
 		polarG
 			.append('g')
 			.append('path')
-			.style('stroke', '#aaa')
+			.style('stroke', color1)
 			.attr('fill', 'none')
-			.attr('stroke', 'black')
+			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
 
 		polarG
 			.append('g')
 			.append('path')
-			.style('stroke', 'blue')
+			.style('stroke', color2)
 			.attr('fill', 'none')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data2))
@@ -124,23 +126,22 @@ class profileRadar extends profilePlot {
 				.attr('pointer-events', 'none')
 		}
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		this.addLegendItem(config[config.plot].term1, '#aaa', 0)
-		this.addLegendItem(config[config.plot].term2, 'blue', 1)
+		this.addLegendItem(config[config.plot].term1, color1, 0, '5, 5')
+		this.addLegendItem(config[config.plot].term2, color2, 1, 'none')
 	}
 
 	addData(field, iangle, i, data) {
 		const tw = this.terms[i][field]
 		const percentage = this.sampleData[tw.$id]?.value
 		const iradius = (percentage / 100) * this.radius
-
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
 		const color = field == 'term1' ? '#aaa' : 'blue'
-		this.polarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 5).attr('fill', color)
+		this.polarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 4).attr('fill', color)
 		data.push([x, y])
 	}
 
-	addPoligon(percent, text = null) {
+	addPoligon(percent) {
 		const data = []
 		for (let i = 0; i < this.terms.length; i++) {
 			const iangle = i * this.angle - Math.PI / 2
@@ -151,46 +152,42 @@ class profileRadar extends profilePlot {
 		}
 
 		data.push(data[0])
-		const poligon = this.polarG
+		this.polarG
 			.append('g')
 			.append('path')
 			.style('stroke', '#aaa')
 			.attr('fill', 'none')
-			.attr('stroke', 'black')
 			.attr('d', this.lineGenerator(data))
 			.style('opacity', '0.5')
-		if (percent != 50) poligon.style('stroke', '#aaa')
-		if (text) {
-			if (percent != 100) poligon.style('stroke-dasharray', '5, 5').style('stroke-width', '2').style('stroke', 'black')
-
-			this.polarG
-				.append('text')
-				.attr('transform', `translate(15, ${-(percent / 100 - 0.125) * this.radius + 10})`)
-				.attr('text-anchor', 'middle')
-				.text(text)
-				.style('font-weight', 'bold')
-				.style('font-size', '24px')
-				.attr('pointer-events', 'none')
-		}
 	}
 
-	addLegendItem(text, color, index) {
+	addLegendItem(text, color, index, strokeDash) {
 		const step = 25
 		const y = step + index * step
+		const x = 35
 		this.legendG
 			.append('path')
 			.attr('stroke', color)
+			.style('stroke-dasharray', strokeDash)
 			.attr('stroke-width', '2px')
-
 			.attr(
 				'd',
 				this.lineGenerator([
 					[0, y - 5],
-					[10, y - 5]
+					[x, y - 5]
 				])
 			)
+		this.legendG
+			.append('g')
+			.attr('transform', `translate(${x / 2}, ${y - 5})`)
+			.append('circle')
+			.attr('r', 4)
+			.attr('fill', color)
 
-		const textElem = this.legendG.append('text').attr('transform', `translate(20, ${y})`).attr('text-anchor', 'left')
+		const textElem = this.legendG
+			.append('text')
+			.attr('transform', `translate(${x + 5}, ${y})`)
+			.attr('text-anchor', 'left')
 		textElem.append('tspan').text(text)
 	}
 }
