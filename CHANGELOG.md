@@ -9,6 +9,7 @@ Features:
 - We can support now reading hic files for versions 7, 8 and 9
 - Support different auth methods for the same dataset, by server route and app embedder.
 - New button in geneset edit UI allowing to load top variably expressed genes in hierarchical clustering, for eligible datasets
+- Support clicking matrix legends to use as filters.
 
 
 ## 2.27.0
