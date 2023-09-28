@@ -1420,6 +1420,10 @@ function setLabelDragEvents(self, prefix) {
 
 	self[`${prefix}LabelMouseover`] = (event, t) => {
 		if (prefix == 'term' && event.target.__data__?.tw && event.target.__data__.grp) {
+			if (self.chartType == 'hierCluster') {
+				// do not show term label hover over tooltip for hier claster
+				return
+			}
 			//show counts in each subgroup when hover over term label
 			if (self.activeLabel || self.zoomArea) {
 				// when an edit menu is open or when users are selecting a portion of matrix to zoom
@@ -2004,7 +2008,11 @@ function setZoomPanActions(self) {
 
 function setLengendActions(self) {
 	self.legendLabelMouseover = event => {
-		select(event.target).style('fill', 'blue').style('cursor', 'pointer')
+		const targetData = event.target.__data__
+		if (targetData.isLegendItem && targetData.dt !== 3) {
+			// for gene expression don't use legend as filter
+			select(event.target).style('fill', 'blue').style('cursor', 'pointer')
+		}
 	}
 
 	self.legendLabelMouseout = event => {
@@ -2013,7 +2021,7 @@ function setLengendActions(self) {
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
-
+		if (!targetData.isLegendItem || targetData.dt == 3) return
 		//legendFilterIndex is the index of the filter that is already in self.config.legendValueFilter.lst
 		// All the filters in self.config.legendValueFilter.lst is joined by 'and' and for all of them the isnot is true.
 		let legendFilterIndex
