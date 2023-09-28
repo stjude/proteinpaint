@@ -1667,15 +1667,26 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 /*
 offshoot of querySamples_gdcapi()!
 should make identical return but different, due to the data format returned by mds3.load.js. should look into it further
+
+** this only works for dict terms!! but not geneVariant aiming to load mutations
+
 */
 async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 	const filters = {
 		op: 'in',
 		content: { field: 'case_id', value: [...ds.__gdc.casesWithExpData] } // FIXME too many to add for every query, find alternative approach with UC
 	}
+
+	const dictTwLst = [] // get all dictionary terms from twLst, for querying /cases API
+	// TODO if there are gene terms to pull mutations??
+	for (const tw of twLst) {
+		const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+		if (t) dictTwLst.push({ term: t, q: tw.q })
+	}
+
 	const fields = ['case_id']
 	const field2termid = new Map()
-	for (const t of twLst) {
+	for (const t of dictTwLst) {
 		/* term id is "case.disease_type"
 		(can term id ever be "cases.xx"?)
 		in /cases, must use "disease_type" as field value
@@ -1684,6 +1695,7 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 		fields.push(field)
 		field2termid.set(field, t.term.id)
 	}
+
 	const response = await got.post(path.join(apihost, 'cases'), {
 		headers: getheaders(q),
 		body: JSON.stringify({
@@ -1720,13 +1732,17 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 			//__sampleName: h.case_id,
 			//sample_URLid: h.case_id,
 		}
-		for (const [f, i] of field2termid) {
-			sample[i] = h[f]
+
+		for (const tw of dictTwLst) {
+			flattenCaseByFields(sample, h, tw) // helper to transfer term values to sample{}
 		}
+
 		samples.push(sample)
 	}
 
-	return { byTermId: {}, samples }
+	const byTermId = mayApplyBinning(samples, dictTwLst)
+
+	return { byTermId, samples }
 }
 
 /*
