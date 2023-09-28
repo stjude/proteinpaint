@@ -143,7 +143,8 @@ export class GroupSettingMethods {
 			for (const value of group.values) {
 				this.data.values.push({
 					key: value.key,
-					label: value.label,
+					/** If label not in q.groupsetting.customset, use key */
+					label: value.label || value.key,
 					group: i + 1
 				})
 			}
