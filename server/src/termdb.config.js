@@ -1,6 +1,7 @@
 const serverconfig = require('./serverconfig.js')
 const { mayComputeTermtypeByCohort } = require('./termdb.server.init')
 const { isMatch } = require('micromatch')
+const auth = require('./auth')
 
 /*
 the "termdbConfig" object is returned to client side that uses vocabApi
@@ -64,38 +65,13 @@ export function make(q, res, ds, genome) {
 
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
-	addRequiredAuth(c, q)
+	c.requiredAuth = auth.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addGenomicQueries(c, ds, genome)
 
 	res.send({ termdbConfig: c })
-}
-
-//////// helpers
-
-function addRequiredAuth(c, q) {
-	const dsAuth = []
-	const creds = serverconfig.dsCredentials
-	for (const dslabelPattern in creds) {
-		if (!isMatch(q.dslabel, dslabelPattern)) continue
-		for (const routePattern in creds[dslabelPattern]) {
-			for (const embedderHostPattern in creds[dslabelPattern][routePattern]) {
-				if (!isMatch(q.embedder, embedderHostPattern)) continue
-				const cred = creds[dslabelPattern][routePattern][embedderHostPattern]
-				dsAuth.push({
-					route: routePattern,
-					type: cred.type,
-					headerKey: cred.headerKey
-				})
-			}
-		}
-	}
-
-	if (dsAuth.length) {
-		c.requiredAuth = dsAuth
-	}
 }
 
 function addRestrictAncestries(c, tdb) {

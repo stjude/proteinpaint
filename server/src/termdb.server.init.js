@@ -1,6 +1,7 @@
 import serverconfig from './serverconfig'
 import { connect_db } from './utils'
 import { isUsableTerm } from '../shared/termdb.usecase'
+import auth from './auth'
 
 /*
 server_init_db_queries()
@@ -424,8 +425,8 @@ export function server_init_db_queries(ds) {
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
-				// TODO: should use an embedderHostPattern
-				if (!cred || cred.termdb?.[embedder] || cred.termdb?.['*']) {
+				const forbiddenRoutes = auth.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
+				if (!forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 					supportedChartTypes[r.cohort].add('sampleView')
 				}
