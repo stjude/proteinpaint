@@ -109,9 +109,10 @@ class HierCluster extends Matrix {
 
 	async setHierClusterData(_data = {}) {
 		// TODO: do not rely on the hardcoded grp.name for finding the hier cluster term group
+		const s = this.settings.hierCluster
 		this.hcTermGroup =
-			this.termOrder?.find(t => t.grp.name == 'Gene Expression')?.grp ||
-			this.config.termgroups.find(grp => grp.name == 'Gene Expression')
+			this.config.termgroups.find(grp => grp.name == s.termGroupName) ||
+			this.termOrder?.find(t => t.grp.name == s.termGroupName)?.grp
 		const twlst = this.hcTermGroup.lst
 
 		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
@@ -146,7 +147,7 @@ class HierCluster extends Matrix {
 							dt: 3,
 							class: 'geneexpression',
 							// TODO: use the assigned label from common.js
-							label: 'Gene Expression',
+							label: s.termGroupName,
 							gene: tw.term.name,
 							chr: tw.term.chr,
 							pos: `${tw.term.start}-${tw.term.stop}`,
@@ -428,10 +429,11 @@ export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
 	const config = await getMatrixPlotConfig(opts, app)
 	config.settings.matrix.collabelpos = 'top'
+	const termGroupName = config.settings.hierCluster?.termGroupName || 'Gene Expression'
 
 	// TODO: should compose the term group in launchGdcHierCluster.js, since this handling is customized to only that dataset?
 	// the opts{} object should be standard, should pre-process the opts outside of this getPlotConfig()
-	if (!config.termgroups.find(g => g.name == 'Gene Expression')) {
+	if (!config.termgroups.find(g => g.name == termGroupName)) {
 		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
@@ -468,15 +470,18 @@ export async function getPlotConfig(opts = {}, app) {
 	}
 
 	config.settings.matrix.maxSample = 100000
-	config.settings.hierCluster = {
-		// TODO: may adjust the default grour name based on the detected term types
-		hcTermGroupName: 'Gene Expression',
-		clusterMethod: 'average',
-		zScoreCap: 5,
-		xDendrogramHeight: 100,
-		yDendrogramHeight: 200,
-		colors: []
-	}
+	config.settings.hierCluster = Object.assign(
+		{
+			// TODO: may adjust the default grour name based on the detected term types
+			termGroupName,
+			clusterMethod: 'average',
+			zScoreCap: 5,
+			xDendrogramHeight: 100,
+			yDendrogramHeight: 200,
+			colors: []
+		},
+		config.settings.hierCluster || {}
+	)
 
 	return config
 }

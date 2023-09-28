@@ -804,7 +804,7 @@ export class MatrixControls {
 					showGroup: parent.config.termgroups > 1
 				}
 
-				if (this.parent.chartType == 'hierCluster' && selectedGroup == 0) {
+				if (this.parent.chartType == 'hierCluster' && selectedGroup == parent.hcTermGroup) {
 					// TODO comment
 					gsArg.mode = 'expression'
 				}
