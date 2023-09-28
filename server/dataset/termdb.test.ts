@@ -251,7 +251,7 @@ function copyDataFilesFromRepo2Tp() {
 			if (existsSync(datadir)) unlinkSync(datadir)
 			symlinkSync(targetDir, datadir)
 		} catch (error) {
-			console.error('Error while coping data files from Repo to Tp: ' + error)
+			console.warn('Error while coping data files from Repo to Tp: ' + error)
 		}
 	}
 }
