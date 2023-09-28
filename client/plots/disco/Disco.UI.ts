@@ -11,7 +11,9 @@ import { launch, DiscoPlotArgs } from './launch.adhoc'
 init_discoplotUI()
 
 -------Internal-------
-
+makeDataTypeTabs(): Creates the main tabs labeled by data type (e.g. SNV indel, SV, CNV, etc.)
+	- mainTabCallback()
+submitButton(): Calls launch.adhoc to open the disco plot in the sandbox
 */
 
 /** Genome with dom attributes scoped for this file */
@@ -73,7 +75,7 @@ export function init_discoplotUI(
 		.style('color', '#003366')
 	wrapper
 		.append('div')
-		.style('opacity', 0.65)
+		.style('opacity', 0.75)
 		.style('padding', '10px 10px 15px 20px')
 		.text('The plot accepts multiple data types. Paste data in for SNV Indel, SV, and CNV in each tab and submit.')
 	const dataTypeTabs_div = wrapper.append('div').style('margin-left', '2vw')
@@ -112,11 +114,19 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 			active: true,
 			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
 				dataTypeTab.key = 'snv'
-				const listHTML = `<li>chr</li>
+				/**Leave the weird spacing for <pre>! Otherwise it doesn't display properly on the client
+				 * and the user can't copy and paste the example data.*/
+				const listHTML = `<ol>
+					<li>chr</li>
 					<li>position</li>
 					<li>gene</li>
 					<li>aachange</li>
-					<li>class</li>`
+					<li>class</li></ol>
+					<p>Example:</p>
+<pre style="margin-left: 10px;">
+chr1	226252135	H3F3A	K28M	M
+chr2	98765432	TestGene	TestMutation	F
+</pre>`
 				mainTabCallback(dataTypeTab, obj, listHTML)
 			}
 		},
@@ -125,13 +135,22 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 			active: true,
 			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
 				dataTypeTab.key = 'sv'
-				const listHTML = `
+				const listHTML = `<ol>
 					<li>chrA</li>
 					<li>posA</li>
 					<li>geneA (optional)</li>
 					<li>chrB</li>
 					<li>posB</li>
-					<li>geneB (optional)</li>`
+					<li>geneB (optional)</li>
+				</ol>
+				<p>Example (with genes):</p>
+<pre style="margin-left: 10px;">
+chr6	3067605	MDC1	chr12	61521661	KMT2D
+</pre>
+				<p>Example (without genes):</p>
+<pre style="margin-left: 10px;">
+chr6	3067605	chr12	61521661
+</pre>`
 				mainTabCallback(dataTypeTab, obj, listHTML)
 			}
 		},
@@ -140,11 +159,17 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 			active: true,
 			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
 				dataTypeTab.key = 'cnv'
-				const listHTML = `
+				const listHTML = `<ol>
 				<li>chr</li>
 				<li>start</li>
 				<li>stop</li>
-				<li>value</li>`
+				<li>value</li>
+				</ol>
+				<p>Example:</p>
+<pre style="margin-left: 10px;">
+chr1	1	100000000	0.5
+chr1	100000000	200000000	-0.5
+</pre>`
 				mainTabCallback(dataTypeTab, obj, listHTML)
 			}
 		}
@@ -162,10 +187,9 @@ function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: 
 	dataTypeTab.contentHolder
 		.append('div')
 		.style('margin-left', '10px')
-		.style('opacity', 0.65)
+		.style('opacity', 0.75)
 		.text(`Provide ${dataTypeTab.label} data in tab delimited format with the following columns:`)
-		.append('ol')
-		.style('margin-left', '10px')
+		.append('span')
 		.html(listHTML)
 	delete dataTypeTab.callback
 }
