@@ -313,9 +313,13 @@ export class Matrix {
 		}
 	}
 
-	// creates an opts object for the vocabApi.getNestedChartsData()
 	async setData(_data) {
+		/* requests data for all terms shown in matrix,
+		by creating request argument for getAnnotatedSampleData and run it
+		NOTE this excludes the term group used for hierCluster, as its data request is done separately
+		*/
 		const terms = []
+
 		const termgroups =
 			this.chartType == 'hierCluster'
 				? this.config.termgroups.filter(grp => grp != this.hcTermGroup)
@@ -325,13 +329,22 @@ export class Matrix {
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
 		this.numTerms = terms.length
+
 		const opts = {
 			terms,
-			currentGeneNames: this.chartType == 'hierCluster' && this.hcTermGroup?.lst.map(tw => tw.term.name),
 			filter: this.state.filter,
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
 		}
+
+		if (this.chartType == 'hierCluster') {
+			/* quick fix, only needed for gdc
+			so backend case query will know this context and pull cases with gene exp data
+			is ignored by non-gdc datasets
+			*/
+			opts.isHierCluster = 1
+		}
+
 		this.data = await this.app.vocabApi.getAnnotatedSampleData(opts, _data)
 		this.sampleIdMap = {}
 		for (const d of this.data.lst) {

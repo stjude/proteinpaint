@@ -680,12 +680,10 @@ export class TermdbVocab extends Vocab {
         so that a dictionary term will only retrieve samples mutated on this gene list, rather than whole cohort (e.g. gdc)
         NOTE: sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
         */
-		const currentGeneNames =
-			opts.currentGeneNames ||
-			opts.terms
-				.filter(tw => tw.term.type === 'geneVariant')
-				.map(tw => tw.term.name)
-				.sort()
+		const currentGeneNames = opts.terms
+			.filter(tw => tw.term.type === 'geneVariant')
+			.map(tw => tw.term.name)
+			.sort()
 
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
@@ -707,10 +705,16 @@ export class TermdbVocab extends Vocab {
 				}
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
+			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 
-			// quick fix TODO do this via some settings via this.termdbConfig, replace hardcoded logic
-			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)
+			/////////////////////////////////////////
+			// !!!!!!!! FIXME !!!!!!!!!!!
+			// do this via some settings via this.termdbConfig, replace hardcoded logic
+			/////////////////////////////////////////
+			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length) {
 				init.body.currentGeneNames = currentGeneNames
+			}
+
 			promises.push(
 				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error

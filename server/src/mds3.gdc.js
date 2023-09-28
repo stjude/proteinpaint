@@ -24,6 +24,7 @@ validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
 validate_query_geneExpression
+	getCasesWithExressionDataFromCohort
 querySamples_gdcapi
 	flattenCaseByFields
 		mayApplyGroupsetting
@@ -31,6 +32,7 @@ querySamples_gdcapi
 	may_add_projectAccess
 	mayApplyBinning
 		getBin
+querySamplesTwlst4hierCluster
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
@@ -1434,6 +1436,15 @@ returns:
 */
 
 export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
+	if (q.isHierCluster) {
+		/*
+		running gene exp clustering
+		must only restrict to cases with exp data
+		but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
+		*/
+		return await querySamplesTwlst4hierCluster(q, twLst, ds)
+	}
+
 	prepTwLst(twLst)
 
 	if (geneTwLst) {
@@ -1651,6 +1662,71 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	}
 
 	return { byTermId, samples: [...id2samples.values()] }
+}
+
+/*
+offshoot of querySamples_gdcapi()!
+should make identical return but different, due to the data format returned by mds3.load.js. should look into it further
+*/
+async function querySamplesTwlst4hierCluster(q, twLst, ds) {
+	const filters = {
+		op: 'in',
+		content: { field: 'case_id', value: [...ds.__gdc.casesWithExpData] } // FIXME too many to add for every query, find alternative approach with UC
+	}
+	const fields = ['case_id']
+	const field2termid = new Map()
+	for (const t of twLst) {
+		/* term id is "case.disease_type"
+		(can term id ever be "cases.xx"?)
+		in /cases, must use "disease_type" as field value
+		*/
+		const field = t.term.id.replace(/^case\./, '')
+		fields.push(field)
+		field2termid.set(field, t.term.id)
+	}
+	const response = await got.post(path.join(apihost, 'cases'), {
+		headers: getheaders(q),
+		body: JSON.stringify({
+			size: 10000,
+			fields: fields.join(','),
+			filters
+		})
+	})
+	const re = JSON.parse(response.body)
+	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
+
+	const samples = []
+	for (const h of re.data.hits) {
+		/*
+		{
+			sample_id, // uuid
+			__sampleName, // submitter id for display
+			sample_URLid // uuid
+			<tid>:<v>
+		}
+		*/
+		if (typeof h.case_id != 'string') throw 'h.case_id missing'
+		/*
+		const sample = {
+			__sampleName: ds.__gdc.caseid2submitter.get(h.case_id), // display
+			sample_id: h.case_id,
+			sample_URLid: h.case_id,
+		}
+		*/
+		// FIXME unable to pass case uuid due to exp data format, solve later
+		const sample = {
+			sample_id: ds.__gdc.caseid2submitter.get(h.case_id), // display
+			__sampleName: ds.__gdc.caseid2submitter.get(h.case_id) // display
+			//__sampleName: h.case_id,
+			//sample_URLid: h.case_id,
+		}
+		for (const [f, i] of field2termid) {
+			sample[i] = h[f]
+		}
+		samples.push(sample)
+	}
+
+	return { byTermId: {}, samples }
 }
 
 /*

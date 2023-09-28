@@ -296,7 +296,8 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		genome: q.genome,
 		get: 'samples',
 		twLst: termWrappers,
-		useIntegerSampleId: true // ask v2s.get() to return integer sample id
+		useIntegerSampleId: true, // ask v2s.get() to return integer sample id
+		isHierCluster: q.isHierCluster // optional flag required for gdc dataset
 	}
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
