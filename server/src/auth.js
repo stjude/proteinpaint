@@ -88,7 +88,7 @@ async function validateDsCredentials(creds, serverconfig) {
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
-		const json = await fs.readFile(sessionsFile, 'utf8')
+		const json = await fs.readFile(creds[key], 'utf8')
 		creds[key] = JSON.parse(json)
 	}
 
@@ -98,10 +98,9 @@ async function validateDsCredentials(creds, serverconfig) {
 			ds['/**'] = ds['*']
 			delete ds['*']
 		}
-		// if (ds.termdb) {
-		// 	ds['termdb/for=(matrix|singleSampleData|getAllSamples)'] = ds.termdb
-		// 	delete ds.termdb
-		// }
+		const headerKey = ds.headerKey || 'x-ds-access-token'
+		delete ds.headerKey
+
 		for (const serverRoute in ds) {
 			const route = ds[serverRoute]
 			for (const embedderHost in route) {
@@ -122,12 +121,12 @@ async function validateDsCredentials(creds, serverconfig) {
 					//if (!cred.secret)
 					//throw `missing secret for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}], type: '${cred.type}'`
 					// TODO: this headerKey should be unique to a dslabel + route, to avoid conflicts
-					if (!cred.headerKey) cred.headerKey = 'x-ds-access-token'
-				} else if (cred.type) {
+					if (!cred.headerKey) cred.headerKey = headerKey
+				} else if (cred.type != 'forbidden' && cred.type != 'open') {
 					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
 				}
 				cred.route = serverRoute
-				cred.cookieId = cred.headerKey || `${dslabel}-${serverRoute}-${embedderHost}-Id`
+				cred.cookieId = (serverRoute == 'termdb' && cred.headerKey) || `${dslabel}-${serverRoute}-${embedderHost}-Id`
 			}
 		}
 	}
@@ -203,6 +202,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	const sessionsFile = path.join(serverconfig.cachedir, 'dsSessions')
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 	const creds = serverconfig.dsCredentials
+	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
+	delete serverconfig.dsCredentials
 
 	const maxSessionAge = serverconfig.maxSessionAge || 1000 * 3600 * 16
 	let sessions
@@ -215,11 +216,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	} catch (e) {
 		throw e
 	}
-
-	// const secrets = creds.secrets
-	// // do not expose the secrets object as part of serverconfig,
-	// // which is imported and read by many other code
-	// delete creds.secrets
 
 	function getRequiredCred(q, path) {
 		if (!q.dslabel) return
@@ -385,7 +381,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		try {
 			const q = req.query
 			const cred = getRequiredCred(q, req.path)
-			if (!cred) return
+			if (!cred) {
+				res.send({ status: 'ok' })
+				return
+			}
 			if (cred.authRoute != '/jwt-status') {
 				code = 400
 				throw `Incorrect authorization route, use ${cred.authRoute}'`
@@ -439,12 +438,58 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 						route: routePattern,
 						type: cred.type || 'basic',
 						insession:
-							cred.type == 'basic' ? false : (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge
+							cred.type == 'basic' && req.path.startsWith('/genomes')
+								? false
+								: (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge
 					})
 				}
 			}
 		}
 		return dsAuth
+	}
+
+	authApi.getForbiddenRoutesForDsEmbedder = function (dslabel, embedder) {
+		const forbiddenRoutes = []
+		const ds = creds[dslabel] || creds['*']
+		if (!ds) return forbiddenRoutes
+		for (const k in ds) {
+			const cred = ds[k][embedder] || ds[k]['*']
+			if (cred.type == 'forbidden') {
+				forbiddenRoutes.push('*')
+			}
+		}
+		return forbiddenRoutes
+	}
+
+	authApi.getRequiredCredForDsEmbedder = function (dslabel, embedder) {
+		const requiredCred = []
+		let alreadyMatched = false
+		for (const dslabelPattern in creds) {
+			if (!isMatch(dslabel, dslabelPattern)) continue
+			for (const routePattern in creds[dslabelPattern]) {
+				for (const embedderHostPattern in creds[dslabelPattern][routePattern]) {
+					if (!isMatch(embedder, embedderHostPattern)) continue
+					const cred = creds[dslabelPattern][routePattern][embedderHostPattern]
+					requiredCred.push({
+						route: routePattern,
+						type: cred.type,
+						headerKey: cred.headerKey
+					})
+				}
+			}
+		}
+		return requiredCred
+	}
+
+	authApi.userCanAccess = function (req, ds) {
+		const cred = getRequiredCred(req.query, req.path)
+		if (!cred) return true
+		// for 'basic' auth type, always require a login when runpp() is first called
+		if (cred.type == 'basic' && req.path.startsWith('/genomes')) return false
+		const id = getSessionId(req, cred)
+		const activeSession = sessions[ds.label]?.[id]
+		const sessionStart = activeSession?.time || 0
+		return Date.now() - sessionStart < maxSessionAge
 	}
 }
 
@@ -454,8 +499,8 @@ function getSessionId(req, cred) {
 	return (
 		req.cookies?.[`${cred.cookieId}`] ||
 		req.cookies?.[`${req.query.dslabel}SessionId`] ||
-		req.headers['x-sjppds-sessionid'] ||
-		req.query['x-sjppds-sessionid']
+		req.headers?.['x-sjppds-sessionid'] ||
+		req.query?.['x-sjppds-sessionid']
 	)
 }
 
@@ -564,12 +609,6 @@ function checkIPaddress(req, ip) {
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
-function userCanAccess(req, ds) {
-	const authds = authApi.getDsAuth(req).find(d => d.dslabel == ds.label)
-	if (!authds) return true
-	return authds.insession
-}
-
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
 const authApi = {
 	maySetAuthRoutes,
@@ -578,8 +617,7 @@ const authApi = {
 	getDsAuth: () => [],
 	canDisplaySampleIds: (req, ds) => {
 		if (!ds.cohort.termdb.displaySampleIds) return false
-		return userCanAccess(req, ds)
-	},
-	userCanAccess
+		return authApi.userCanAccess(req, ds)
+	}
 }
 module.exports = authApi

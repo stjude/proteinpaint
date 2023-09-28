@@ -126,29 +126,30 @@ tape('legacy reshape', async test => {
 	test.plan(1)
 
 	const app = appInit()
-	const serverconfig = {
-		dsCredentials: {
-			ds0: {
-				type: 'jwt',
-				embedders: {
-					localhost: {
-						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
-					}
-				},
-				headerKey
+	const dsCredentials = {
+		ds0: {
+			type: 'jwt',
+			embedders: {
+				localhost: {
+					secret,
+					dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+				}
 			},
-			ds1: {
-				type: 'login',
-				password: '...'
-			}
+			headerKey
 		},
+		ds1: {
+			type: 'login',
+			password: '...'
+		}
+	}
+	const serverconfig = {
+		dsCredentials,
 		cachedir
 	}
 
 	await auth.maySetAuthRoutes(app, '', serverconfig)
 	test.deepEqual(
-		JSON.parse(JSON.stringify(serverconfig.dsCredentials)),
+		JSON.parse(JSON.stringify(dsCredentials)),
 		{
 			ds0: {
 				termdb: {

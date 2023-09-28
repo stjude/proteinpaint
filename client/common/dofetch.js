@@ -307,6 +307,9 @@ async function mayShowAuthUi(init, path) {
 			else if (a.type == 'jwt') {
 				// assume the embedder/portal provides the login UI
 				// so do not need to do anything here
+			} else if (a.type == 'forbidden') {
+				alert('Forbidden access')
+				// don't do anything
 			} else throw `unsupported dsAuth type='${a.type}'`
 		}
 	}
