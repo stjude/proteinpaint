@@ -4,6 +4,7 @@ import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '#dom/sandbox'
 import { mclass, dt2label } from '#shared/common'
 import { format as d3format } from 'd3-format'
+import { Menu } from '#dom/menu'
 
 let inputIndex = 0
 
@@ -15,7 +16,7 @@ export function setInteractivity(self) {
 			const grp = d?.grp
 			if (grp?.legendData) {
 				if (event.target.closest('.sjpp-matrix-series-group-label-g')) self.displaySampleGroupInfo(event, grp)
-			} else if (d?.isLegendItem) self.handleLegendMouseover(event, d)
+			} //else if (d?.isLegendItem) self.handleLegendMouseover(event, d)
 			return
 		}
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
@@ -221,6 +222,7 @@ export function setInteractivity(self) {
 	setSampleGroupActions(self)
 	setZoomPanActions(self)
 	setResizeHandler(self)
+	setLengendActions(self)
 }
 
 function setResizeHandler(self) {
@@ -410,7 +412,7 @@ function setTermActions(self) {
 				[
 					{
 						icon: 'corner',
-						title: `Sort ${l.samples} against this ${vartype} positioned at the top left corner`,
+						title: `Sort ${l.samples} against this ${vartype}, and position this ${vartype} at the top left corner`,
 						disabled:
 							t.grp.lst.length < 1 ||
 							(t.index === 0 && t.tw.sortSamples?.priority === 0) ||
@@ -1339,7 +1341,9 @@ function setTermGroupActions(self) {
 		const l = self.settings.matrix.controlLabels
 		label
 			.append('span')
-			.html(`Minimum # ${l.samples} for visible ${l.term}`)
+			.html(
+				`Minimum # of mutated ${l.samples} for the ${l.term.charAt(0).toLowerCase() + l.term.slice(1)} to be visible `
+			)
 			.attr('title', `May be overridden by a row-specific minNumSamples`)
 		const minNumSampleInput = label
 			.append('input')
@@ -1995,5 +1999,222 @@ function setZoomPanActions(self) {
 		})
 
 		self.resetInteractions()
+	}
+}
+
+function setLengendActions(self) {
+	self.legendLabelMouseover = event => {
+		select(event.target).style('fill', 'blue').style('cursor', 'pointer')
+	}
+
+	self.legendLabelMouseout = event => {
+		select(event.target).style('fill', '')
+	}
+
+	self.legendLabelMouseup = event => {
+		const targetData = event.target.__data__
+
+		//legendFilterIndex is the index of the filter that is already in self.config.legendValueFilter.lst
+		// All the filters in self.config.legendValueFilter.lst is joined by 'and' and for all of them the isnot is true.
+		let legendFilterIndex
+		if (targetData.dt) {
+			// when its geneVariant term
+			legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
+				l =>
+					l.legendGrpName == targetData.termid &&
+					l.tvs.values.find(v => v.dt == targetData.dt && v.mclasslst[0] == targetData.key)
+			)
+		} else {
+			// when its non-geneVariant term
+			const legendTerm = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+			if (legendTerm.type == 'categorical') {
+				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
+					l => l.legendGrpName == targetData.termid && l.tvs.values.find(v => v.key == targetData.key)
+				)
+			} else if (legendTerm.type == 'integer' || legendTerm.type == 'float') {
+				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
+					l => l.legendGrpName == targetData.termid && l.tvs.ranges.find(r => r.name == targetData.key)
+				)
+			}
+		}
+		const menu = new Menu({ padding: '0px' })
+		const div = menu.d.append('div')
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(legendFilterIndex == -1 ? 'Hide' : 'Show')
+			.on('click', () => {
+				menu.hide()
+				if (legendFilterIndex == -1) {
+					// when its shown and now hide it
+					// add a new filter to filter out the legend's dt + legend's class
+					if (targetData.dt) {
+						// for a geneVariant term
+						const filterNew = {
+							legendGrpName: targetData.termid,
+							type: 'tvs',
+							tvs: {
+								isnot: true,
+								term$type: 'geneVariant',
+								values: [{ dt: targetData.dt, mclasslst: [targetData.key] }]
+							}
+						}
+						self.config.legendValueFilter.lst.push(filterNew)
+					} else {
+						// for a non-geneVariant term
+						const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+						if (term.type == 'categorical') {
+							term.$id = targetData.$id
+							const filterNew = {
+								legendGrpName: targetData.termid,
+								type: 'tvs',
+								tvs: {
+									isnot: true,
+									term,
+									values: [{ key: targetData.key, label: targetData.key }]
+								}
+							}
+							self.config.legendValueFilter.lst.push(filterNew)
+						} else if (term.type == 'integer' || term.type == 'float') {
+							term.$id = targetData.$id
+							const filterNew = {
+								legendGrpName: targetData.termid,
+								type: 'tvs',
+								tvs: {
+									isnot: true,
+									term,
+									ranges: [self.data.refs.byTermId[targetData.$id].bins.find(b => targetData.key == b.name)]
+								}
+							}
+							self.config.legendValueFilter.lst.push(filterNew)
+						}
+					}
+				} else {
+					// when the legend is crossed-out, either by clicking hide or by clicking another legend and show-only,
+					// A filter to filter out the legend's dt + legend's class exist in self.config.legendValueFilter
+					// So remove the filter that filters out the legend's dt + legend's class
+					self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
+				}
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { legendValueFilter: self.config.legendValueFilter }
+				})
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show only')
+			.on('click', () => {
+				menu.hide()
+				const term = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
+				const legendGrp =
+					self.legendData.find(lg => lg.name == targetData.termid) || self.legendData.find(lg => lg.name == term?.name)
+
+				// reset self.config.legendValueFilter.lst to remove all the filters in the lst that's in the same legendGrp
+				self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+					l => l.legendGrpName !== targetData.termid
+				)
+
+				if (targetData.dt) {
+					// for a geneVariant term
+					for (const l of legendGrp.items) {
+						if (l.dt == targetData.dt && l.key == targetData.key) continue
+						const filterNew = {
+							legendGrpName: targetData.termid,
+							type: 'tvs',
+							tvs: {
+								isnot: true,
+								term$type: 'geneVariant',
+								values: [{ dt: l.dt, mclasslst: [l.key] }]
+							}
+						}
+						if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
+						else self.config.legendValueFilter.lst.push(filterNew)
+					}
+				} else {
+					// for a non-geneVariant term
+					const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+					if (term.type == 'categorical') {
+						term.$id = targetData.$id
+						for (const l of legendGrp.items) {
+							if (l.key == targetData.key) continue
+							const filterNew = {
+								legendGrpName: targetData.termid,
+								type: 'tvs',
+								tvs: {
+									isnot: true,
+									term,
+									values: [{ key: l.key }]
+								}
+							}
+							if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
+							else self.config.legendValueFilter.lst.push(filterNew)
+						}
+					} else if (term.type == 'integer' || term.type == 'float') {
+						term.$id = targetData.$id
+						for (const l of legendGrp.items) {
+							if (l.key == targetData.key) continue
+							const filterNew = {
+								legendGrpName: targetData.termid,
+								type: 'tvs',
+								tvs: {
+									isnot: true,
+									term,
+									ranges: [self.data.refs.byTermId[targetData.$id].bins.find(b => l.key == b.name)]
+								}
+							}
+							if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
+							else self.config.legendValueFilter.lst.push(filterNew)
+						}
+					}
+				}
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: self.config
+				})
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show all')
+			.on('click', () => {
+				menu.hide()
+				self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+					l => l.legendGrpName !== targetData.termid
+				)
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: self.config
+				})
+			})
+		menu.showunder(event.target)
+
+		const dvt = structuredClone(self.config.divideBy || {})
+		const id = 'id' in dvt ? dvt.id : dvt.name
+		if (targetData.termid == id) {
+			if (!dvt.exclude) dvt.exclude = []
+			const i = dvt.exclude?.indexOf(targetData.key)
+
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(i == -1 ? 'Hide subGroup' : 'Show subGroup')
+				.on('click', () => {
+					menu.hide()
+					if (i == -1) dvt.exclude.push(targetData.key)
+					else dvt.exclude.splice(i, 1)
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							divideBy: dvt
+						}
+					})
+				})
+			menu.showunder(event.target)
+		}
 	}
 }

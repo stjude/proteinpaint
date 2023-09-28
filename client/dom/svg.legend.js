@@ -129,7 +129,9 @@ export default function svgLegend(opts) {
 			.style('cursor', 'default')
 			.style(
 				'text-decoration',
-				settings.exclude && settings.exclude.classes && settings.exclude.classes.includes(d.class) ? 'line-through' : ''
+				(settings.exclude && settings.exclude.classes && settings.exclude.classes.includes(d.class)) || d.crossedOut
+					? 'line-through'
+					: ''
 			)
 
 		itemlabel.each(function (d) {

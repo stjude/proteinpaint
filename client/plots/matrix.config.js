@@ -19,6 +19,12 @@ export async function getPlotConfig(opts = {}, app) {
 		termgroups: [],
 		samplegroups: [],
 		divideBy: null,
+		legendValueFilter: {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		},
 
 		// rendering options
 		settings: {

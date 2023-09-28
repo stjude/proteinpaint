@@ -123,7 +123,8 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 					domain: value.class == 'CNV_loss' ? [max, 0] : [0, max],
 					minLabel: value.class == 'CNV_loss' ? -max : 0,
 					maxLabel: value.class == 'CNV_loss' ? 0 : max,
-					order
+					order,
+					dt: value.dt
 				}
 			}
 		} else {
@@ -133,7 +134,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				group,
 				value: value.class,
 				order: -1,
-				entry: { key: value.class, label: cell.label, fill: cell.fill, order }
+				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt }
 			}
 		}
 	} else if (value.dt == 3) {
@@ -149,17 +150,18 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				domain: [0, 0.5, 1],
 				minLabel: self.geneExpValues.min,
 				maxLabel: self.geneExpValues.max,
-				order
+				order,
+				dt: value.dt
 			}
 		}
 	} else {
-		const group = tw.legend?.group || 'Mutation Types'
+		const group = tw.legend?.group || 'Consequences'
 		return {
 			ref: t.ref,
 			group,
 			value: value.class,
 			order: -2,
-			entry: { key: value.class, label: cell.label, fill: cell.fill, order }
+			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt }
 		}
 	}
 }
