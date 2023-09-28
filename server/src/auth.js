@@ -201,7 +201,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	const serverconfig = _serverconfig || require('./serverconfig')
 	const sessionsFile = path.join(serverconfig.cachedir, 'dsSessions')
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
-	const creds = serverconfig.dsCredentials
+	const creds = serverconfig.dsCredentials || {}
 	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
 	delete serverconfig.dsCredentials
 
@@ -210,7 +210,14 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	// no need to setup additional middlewares and routes
 	// if there are no protected datasets
-	if (!creds || !Object.keys(creds).length) return
+	if (!creds || !Object.keys(creds).length) {
+		// open-access methods
+		authApi.getDsAuth = () => []
+		authApi.getForbiddenRoutesForDsEmbedder = () => []
+		authApi.userCanAccess = () => true
+		authApi.getRequiredCredForDsEmbedder = () => undefined
+		return
+	}
 	try {
 		validateDsCredentials(creds, serverconfig)
 	} catch (e) {
@@ -454,8 +461,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		if (!ds) return forbiddenRoutes
 		for (const k in ds) {
 			const cred = ds[k][embedder] || ds[k]['*']
-			if (cred.type == 'forbidden') {
-				forbiddenRoutes.push('*')
+			if (cred?.type == 'forbidden') {
+				forbiddenRoutes.push(k)
 			}
 		}
 		return forbiddenRoutes
@@ -609,15 +616,17 @@ function checkIPaddress(req, ip) {
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
-/* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
 const authApi = {
 	maySetAuthRoutes,
 	getJwtPayload,
-	// this may be replaced
-	getDsAuth: () => [],
 	canDisplaySampleIds: (req, ds) => {
 		if (!ds.cohort.termdb.displaySampleIds) return false
 		return authApi.userCanAccess(req, ds)
-	}
+	},
+	// these open-acces, default methods may be replaced by maySetAuthRoutes()
+	getDsAuth: () => [],
+	getForbiddenRoutesForDsEmbedder: () => [],
+	userCanAccess: () => true,
+	getRequiredCredForDsEmbedder: () => undefined
 }
 module.exports = authApi

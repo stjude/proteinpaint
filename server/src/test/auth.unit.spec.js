@@ -118,6 +118,44 @@ tape(`initialization`, async test => {
 		)
 	}
 
+	{
+		const app = appInit()
+		await auth.maySetAuthRoutes(app, '', { cachedir })
+		test.deepEqual(
+			[
+				'canDisplaySampleIds',
+				'getDsAuth',
+				'getForbiddenRoutesForDsEmbedder',
+				'getJwtPayload',
+				'getRequiredCredForDsEmbedder',
+				'maySetAuthRoutes',
+				'userCanAccess'
+			],
+			Object.keys(auth).sort(),
+			'should set the expected methods with an empty dsCredentials'
+		)
+		test.deepEqual(
+			auth.getDsAuth({ query: {}, get() {} }),
+			[],
+			'should return open-access dsAuth with an empty dsCredentials'
+		)
+		test.deepEqual(
+			auth.getForbiddenRoutesForDsEmbedder(),
+			[],
+			'should return open-access getForbiddenRoutesForDsEmbedder with an empty dsCredentials'
+		)
+		test.deepEqual(
+			auth.getRequiredCredForDsEmbedder(),
+			undefined,
+			'should return open-access getRequiredCredForDsEmbedder with an empty dsCredentials'
+		)
+		test.deepEqual(
+			auth.userCanAccess({ query: {} }),
+			true,
+			'should return open-access userCanAccess with an empty dsCredentials'
+		)
+	}
+
 	test.end()
 })
 
@@ -177,6 +215,57 @@ tape('legacy reshape', async test => {
 			}
 		},
 		`should transform a legacy dsCredentials format to the current shape`
+	)
+})
+
+tape(`auth methods`, async test => {
+	test.timeoutAfter(500)
+	test.plan(4)
+
+	const app = appInit()
+	const serverconfig = {
+		dsCredentials: {
+			ds100: {
+				termdb: {
+					localhost: {
+						type: 'jwt',
+						secret
+					}
+				},
+				burden: {
+					notlocalhost: {
+						type: 'basic',
+						password: '...'
+					},
+					'*': {
+						type: 'forbidden'
+					}
+				}
+			}
+		},
+		cachedir
+	}
+
+	await auth.maySetAuthRoutes(app, '', serverconfig)
+	test.deepEqual(
+		auth.getDsAuth({ query: { embedder: 'some.domain' }, get: () => 'localhost' }),
+		[{ dslabel: 'ds100', route: 'burden', type: 'forbidden', insession: false }],
+		`should return the expected dsAuth array for a specified embedder`
+	)
+	test.deepEqual(
+		auth.getForbiddenRoutesForDsEmbedder('ds100', 'localhost'),
+		['burden'],
+		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
+	)
+	test.deepEqual(
+		auth.getForbiddenRoutesForDsEmbedder('ds100', 'notlocalhost'),
+		[],
+		`should return the expected forbidden routes for a non-wildcard embedder`
+	)
+	test.deepEqual(
+		auth.userCanAccess({ query: { embedder: 'localhost' } }, { label: 'ds100' }),
+		true,
+		`should return false for userCanAccess() for a non-logged in user`
 	)
 })
 
