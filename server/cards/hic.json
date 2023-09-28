@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "Both version 9 and version 8 HiC files are accepted.",
+    "ribbonMessage": "Versions 7, 8 and 9 Hi-C files are accepted.",
     "ppcalls": [
         {
             "label": "Hi-C",
