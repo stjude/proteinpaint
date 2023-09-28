@@ -481,10 +481,17 @@ export class Matrix {
 					countedSamples.add(sd.sample)
 					const anno = sd[tw.$id]
 					if (anno) {
-						const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, tw, grp, s, sd)
+						const { filteredValues, countedValues, renderedValues, crossedOutValues } = this.classifyValues(
+							anno,
+							tw,
+							grp,
+							s,
+							sd
+						)
 						anno.filteredValues = filteredValues
 						anno.countedValues = countedValues
 						anno.renderedValues = renderedValues
+						anno.crossedOutValues = crossedOutValues
 						if (anno.countedValues?.length) {
 							const v = tw.term.values?.[anno.value]
 							if (v?.uncountable) continue
@@ -554,21 +561,26 @@ export class Matrix {
 		filteredValues (values matched the filter)
 		countedValues (values counted, Class = Blank or WT are not counted)
 		renderedValues (values rendered on matrix)
+		crossedOutValues (values crossed out by clicking legend)
 	*/
 	classifyValues(anno, tw, grp, s, sample) {
 		const values = 'value' in anno ? [anno.value] : anno.values
 		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
-		const valueFilter = tw.valueFilter || grp.valueFilter
-		const filteredValues = !valueFilter
+
+		// isSpecific is the filter that is specific to the term
+		const isSpecific = [tw.valueFilter || grp.valueFilter].filter(v => v && true)
+		if (isSpecific.length && isSpecific[0].type !== 'tvs' && isSpecific[0].type !== 'tvslst')
+			throw `unknown matrix value filter type='${isSpecific.type}'`
+
+		// initialFilteredValues are the values passed the isSpecific filter
+		const initialFilteredValues = !isSpecific.length
 			? values
-			: values.filter(v => {
-					if (valueFilter.type == 'tvs' || valueFilter.type == 'tvslst') {
-						return sample_match_termvaluesetting(v, valueFilter, tw.term, sample)
-					} else {
-						// TODO: handle non-tvs type value filter
-						throw `unknown matrix value filter type='${valueFilter.type}'`
-					}
-			  })
+			: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
+
+		// filteredValues are the values passed both isSpecific filter and the filters in this.config.legendValueFilter
+		const filteredValues = initialFilteredValues.filter(v =>
+			sample_match_termvaluesetting(v, this.config.legendValueFilter, tw.term, sample, true)
+		)
 
 		const renderedValues = []
 		if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)
@@ -583,6 +595,9 @@ export class Matrix {
 		// group stacked cell values to avoid striped pattern
 		if (tw.term.type == 'geneVariant') renderedValues.sort(this.stackSiblingCellsByClass)
 
+		// crossedOutValues are the values passed the isSpecific filter but not the filters in this.config.legendValueFilter
+		const crossedOutValues = initialFilteredValues.filter(v => !filteredValues.includes(v))
+
 		return {
 			filteredValues,
 			countedValues: filteredValues.filter(v => {
@@ -593,7 +608,8 @@ export class Matrix {
 				}
 				return true
 			}),
-			renderedValues
+			renderedValues,
+			crossedOutValues
 		}
 	}
 
@@ -699,7 +715,7 @@ export class Matrix {
 
 				const anno = sample.row[t.tw.$id]
 				if (!anno) continue
-				const { filteredValues, countedValues, renderedValues } = this.classifyValues(
+				const { filteredValues, countedValues, renderedValues, crossedOutValues } = this.classifyValues(
 					anno,
 					t.tw,
 					t.grp,
@@ -709,6 +725,7 @@ export class Matrix {
 				anno.filteredValues = filteredValues
 				anno.countedValues = countedValues
 				anno.renderedValues = renderedValues
+				anno.crossedOutValues = crossedOutValues
 				if (anno.countedValues?.length) {
 					t.counts.samples += 1
 					t.counts.hits += anno.countedValues.length
@@ -1074,7 +1091,7 @@ export class Matrix {
 					t
 				}
 
-				if (!anno || !anno.renderedValues?.length) {
+				if (!anno) {
 					if (!so.grp.isExcluded && (s.useCanvas || so.grp)) {
 						const cell = getEmptyCell(cellTemplate, s, this.dimensions)
 						series.cells.push(cell)
@@ -1083,11 +1100,47 @@ export class Matrix {
 				}
 
 				const key = anno.key
-				const values = anno.renderedValues || anno.values || [anno.value]
+				const values = anno.filteredValues || anno.values || [anno.value]
 				const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
 				const height = !s.transpose ? s.rowh / numRects : colw
 				const width = !s.transpose ? colw : colw / values.length
 				const siblingCells = []
+
+				//generate the crossedOut legend data and put them inside of legendGroups
+				for (const value of anno.crossedOutValues) {
+					const cell = Object.assign({ key, siblingCells: [] }, cellTemplate)
+					// will assign x, y, width, height, fill, label, order, etc
+					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, 0)
+
+					if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
+					if (legend) {
+						legend.entry.crossedOut = true
+						for (const l of [legendGroups, so.grp.legendGroups]) {
+							if (!l) continue
+							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
+							const lg = l[legend.group]
+							if (!lg.values[legend.value]) {
+								lg.values[legend.value] = JSON.parse(JSON.stringify(legend.entry))
+								lg.values[legend.value].samples = new Set()
+								if (legend.entry.scale) lg.values[legend.value].scale = legend.entry.scale
+							}
+							//if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
+							lg.values[legend.value].samples.add(row.sample)
+							if (isDivideByTerm) {
+								lg.values[legend.value].isExcluded = so.grp.isExcluded
+							}
+						}
+					}
+				}
+
+				if (!anno || !anno.renderedValues?.length) {
+					if (!so.grp.isExcluded && (s.useCanvas || so.grp)) {
+						const cell = getEmptyCell(cellTemplate, s, this.dimensions)
+						series.cells.push(cell)
+					}
+					continue
+				}
+
 				for (const [i, value] of values.entries()) {
 					const cell = Object.assign({ key, siblingCells }, cellTemplate)
 					cell.valueIndex = i
@@ -1113,7 +1166,7 @@ export class Matrix {
 					}
 
 					if (!so.grp.isExcluded) {
-						series.cells.push(cell)
+						if (anno.renderedValues.includes(value)) series.cells.push(cell)
 						siblingCells.push(cell)
 					}
 				}
@@ -1173,28 +1226,32 @@ export class Matrix {
 		const dvtId = dvt && 'id' in dvt ? dvt.id : dvt.name
 		for (const $id in legendGroups) {
 			const legend = legendGroups[$id]
-
-			if ($id == 'Mutation Types') {
+			if ($id == 'Consequences') {
 				const keys = Object.keys(legend.values)
 				if (!keys.length) continue
 				legendData.unshift({
-					name: 'Mutation Types',
+					name: 'Consequences',
 					order: legend.order,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						const count = item.samples.size
 						return {
-							termid: 'Mutation Types',
+							termid: 'Consequences',
 							key,
 							text: this.getLegendItemText(item, count, {}, s),
 							color: item.fill,
 							order: i,
 							border: '1px solid #ccc',
 							count,
-							isLegendItem: true
+							isLegendItem: true,
+							dt: item.dt,
+							crossedOut: item.crossedOut
 						}
 					})
 				})
+
+				// sort the legend by name
+				legendData[0].items.sort((a, b) => (a.text < b.text ? -1 : 1))
 				continue
 			}
 
@@ -1226,7 +1283,9 @@ export class Matrix {
 								maxLabel: item.maxLabel,
 								order: 'order' in item ? item.order : i,
 								count,
-								isLegendItem: true
+								isLegendItem: true,
+								dt: item.dt,
+								crossedOut: item.crossedOut
 							}
 						} else {
 							return {
@@ -1236,7 +1295,9 @@ export class Matrix {
 								color: item.fill || this.colorScaleByTermId[$id](key),
 								order: 'order' in item ? item.order : i,
 								count,
-								isLegendItem: true
+								isLegendItem: true,
+								dt: item.dt,
+								crossedOut: item.crossedOut
 							}
 						}
 					})
@@ -1261,6 +1322,7 @@ export class Matrix {
 						const item = legend.values[key]
 						const count = item.samples?.size
 						return {
+							$id,
 							termid: term.id,
 							key,
 							text: this.getLegendItemText(item, count, t, s),
@@ -1268,8 +1330,10 @@ export class Matrix {
 							order: 'order' in item ? item.order : i,
 							count,
 							isExcluded: item.isExcluded,
-							onClickCallback: this.handleLegendItemClick,
-							isLegendItem: true
+							//onClickCallback: this.handleLegendItemClick,
+							isLegendItem: true,
+							dt: item.dt,
+							crossedOut: item.crossedOut
 						}
 					})
 				})

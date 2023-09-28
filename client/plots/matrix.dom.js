@@ -100,7 +100,12 @@ export function setMatrixDom(opts) {
 			.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
 		scroll: mainG.append('g'),
 		//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
-		legendG: mainG.append('g'),
+		legendG: mainG
+			.append('g')
+			.attr('class', 'sjpp-matrix-legend-g')
+			.on('mouseover', this.legendLabelMouseover)
+			.on('mouseout', this.legendLabelMouseout)
+			.on('mouseup', this.legendLabelMouseup),
 		// !!! Do NOT use self.dom.tip.clear(), since it will also get rid of menutop and menubody
 		tip,
 		menutop: tip.d.append('div'),

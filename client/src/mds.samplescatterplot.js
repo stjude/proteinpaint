@@ -1594,7 +1594,7 @@ function init_mutation_type_control(obj, samples) {
 		const mut_div = criteria_div.append('div')
 		const mut_label_div = mut_div.append('div').style('display', 'table-cell').style('width', '110px')
 
-		mut_label_div.append('div').text('Mutation Types').style('padding-right', '15px')
+		mut_label_div.append('div').text('Consequences').style('padding-right', '15px')
 
 		const mut_types_div = mut_div.append('div').style('display', 'table-cell').style('border-left', 'solid 1px #ededed')
 

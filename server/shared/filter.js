@@ -39,13 +39,26 @@ export function sample_match_termvaluesetting(row, filter, _term = null, sample 
 			const itemCopy = JSON.parse(JSON.stringify(item))
 			const t = itemCopy.tvs
 
+			if (_term && t.term) {
+				if (!(_term.name == t.term.name && _term.type == t.term.type)) {
+					// for an filter from "this.config.legendValueFilter", if the filter is not for the tw
+					// (not the same type and name), ignore the filter.
+					numberofmatchedterms++
+					continue
+				}
+			}
+
 			let samplevalue
 			if (_term && !t.term) {
-				if (t.term$type && t.term$type !== _term.type) return !t.isnot
+				if (t.term$type && t.term$type !== _term.type) {
+					//when the filter is not for the term being tested, ignore the filter
+					numberofmatchedterms++
+					continue
+				}
 				t.term = _term
 				samplevalue = typeof row === 'object' && t.term.id in row ? row[t.term.id] : row //'tumorWES'
-			} else if (sample && t.term$id) {
-				samplevalue = sample[t.term$id]
+			} else if (sample && t.term.$id) {
+				samplevalue = sample[t.term.$id].value
 			} else {
 				samplevalue = t.term.id in row ? row[t.term.id] : row
 			}
@@ -61,6 +74,9 @@ export function sample_match_termvaluesetting(row, filter, _term = null, sample 
 					if ('value' in range) {
 						thistermmatch = samplevalue === range.value // || ""+samplevalue == range.value || samplevalue == ""+range.value //; if (thistermmatch) console.log(i++)
 						if (thistermmatch) break
+					} else if (samplevalue == range.name) {
+						thistermmatch = true
+						break
 					} else {
 						// actual range
 						if (t.term.values) {
