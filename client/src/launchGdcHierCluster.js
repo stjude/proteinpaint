@@ -80,7 +80,7 @@ export async function init(arg, holder, genomes) {
 			plots: [
 				{
 					chartType: 'hierCluster',
-					//termgroups: [...(arg.termgroups || []), { lst: genes }],
+					termgroups: arg.termgroups,
 					genes,
 					settings
 				}
@@ -94,35 +94,6 @@ export async function init(arg, holder, genomes) {
 			redoHtml: 'Redo',
 			resetHtml: 'Restore'
 		}
-		/*
-		matrix: Object.assign(
-			{
-				// these will display the inputs together in the Genes menu,
-				// instead of being rendered outside of the matrix holder
-				customInputs: {
-					genes: [
-						{
-							label: `Maximum # Genes`,
-							title: 'Limit the number of displayed genes',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'maxGenes',
-							callback: async value => {
-								const genes = await getGenes(arg, arg.filter0, { maxGenes: value })
-								api.update({
-									termgroups: [{ lst: genes }],
-									settings: {
-										matrix: { maxGenes: value }
-									}
-								})
-							}
-						}
-					]
-				}
-			},
-			arg.opts?.matrix || {}
-		)
-		*/
 	}
 
 	const plotAppApi = await appInit(opts)
