@@ -429,6 +429,8 @@ export async function getPlotConfig(opts = {}, app) {
 	const config = await getMatrixPlotConfig(opts, app)
 	config.settings.matrix.collabelpos = 'top'
 
+	// TODO: should compose the term group in launchGdcHierCluster.js, since this handling is customized to only that dataset?
+	// the opts{} object should be standard, should pre-process the opts outside of this getPlotConfig()
 	if (!config.termgroups.find(g => g.name == 'Gene Expression')) {
 		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
@@ -467,6 +469,8 @@ export async function getPlotConfig(opts = {}, app) {
 
 	config.settings.matrix.maxSample = 100000
 	config.settings.hierCluster = {
+		// TODO: may adjust the default grour name based on the detected term types
+		hcTermGroupName: 'Gene Expression',
 		clusterMethod: 'average',
 		zScoreCap: 5,
 		xDendrogramHeight: 100,

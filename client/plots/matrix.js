@@ -316,7 +316,10 @@ export class Matrix {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	async setData(_data) {
 		const terms = []
-		const termgroups = this.chartType == 'hierCluster' ? this.config.termgroups.slice(1) : this.config.termgroups
+		const termgroups =
+			this.chartType == 'hierCluster'
+				? this.config.termgroups.filter(grp => grp != this.hcTermGroup)
+				: this.config.termgroups
 		for (const grp of termgroups) {
 			terms.push(...grp.lst)
 		}
@@ -324,7 +327,7 @@ export class Matrix {
 		this.numTerms = terms.length
 		const opts = {
 			terms,
-			currentGeneNames: this.chartType == 'hierCluster' && this.config.termgroups[0]?.lst.map(tw => tw.term.name),
+			currentGeneNames: this.chartType == 'hierCluster' && this.hcTermGroup?.lst.map(tw => tw.term.name),
 			filter: this.state.filter,
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
