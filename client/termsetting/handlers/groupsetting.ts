@@ -228,7 +228,12 @@ function setRenderers(self: any) {
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
-			.property('disabled', self.opts.usecase?.target == 'regression' ? true : self.data.groups.length >= maxGrpNum)
+			.property(
+				'disabled',
+				self.opts.usecase?.regressionType == 'logistic' && self.opts.usecase?.detail == 'outcome'
+					? true
+					: self.data.groups.length >= maxGrpNum
+			)
 			.text('Add Group')
 			.on('click', async () => {
 				newGrpNum++
@@ -544,7 +549,9 @@ function setRenderers(self: any) {
 	self.update = async function () {
 		self.dom.actionDiv.addGroup.property(
 			'disabled',
-			self.opts.usecase?.target == 'regression' ? true : self.data.groups.length >= maxGrpNum
+			self.opts.usecase?.regressionType == 'logistic' && self.opts.usecase?.detail == 'outcome'
+				? true
+				: self.data.groups.length >= maxGrpNum
 		)
 		for (const [i, grp] of self.data.groups.entries()) {
 			if (i === 0) continue
