@@ -1117,7 +1117,20 @@ export class Matrix {
 				}
 
 				const key = anno.key
-				const values = anno.filteredValues || anno.values || [anno.value]
+
+				let values
+				if (anno.filteredValues) {
+					if (t.tw.term.type !== 'geneVariant' || s.cellEncoding != 'oncoprint') values = anno.filteredValues
+					else {
+						const sortedFilteredValues = []
+						for (const dt of [4, 1, 3]) {
+							const v = anno.filteredValues.filter(v => v.dt === dt)
+							sortedFilteredValues.push(...v)
+						}
+						values = sortedFilteredValues
+					}
+				} else values = anno.values || [anno.value]
+
 				const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
 				const height = !s.transpose ? s.rowh / numRects : colw
 				const width = !s.transpose ? colw : colw / values.length
