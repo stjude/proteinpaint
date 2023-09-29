@@ -804,7 +804,7 @@ export class MatrixControls {
 					showGroup: parent.config.termgroups > 1
 				}
 
-				if (this.parent.chartType == 'hierCluster' && parent.config.termgroups[selectedGroup] == parent.hcTermGroup) {
+				if (this.parent.chartType == 'hierCluster' && group == parent.hcTermGroup) {
 					/* running hier clustering and the editing group is the group used for clustering
 					pass this mode value to inform ui to support the optional button "top variably exp gene"
 					this is hardcoded for the purpose of gene expression and should be improved
