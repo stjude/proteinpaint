@@ -101,15 +101,10 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 		},
 
 		async postMain() {
+			//for rendering groupsetting menu
 			const body = self.opts.getBodyParams?.() || {}
 			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
-			self.category2samplecount = []
-			for (const i of data.lst) {
-				//Is restructuring here necessary? If category2samplecount is only used for
-				//groupsetting, then this is unnecessary.
-				self.category2samplecount.push({ key: i.key, count: i.samplecount })
-				//
-			}
+			self.category2samplecount = data.lst
 			if (!self.term.values) {
 				self.q = {}
 			} // ...
