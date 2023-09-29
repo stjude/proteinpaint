@@ -132,6 +132,7 @@ export function setInteractivity(self) {
 		if (!q.singleSampleGenomeQuantification && !q.singleSampleMutation) return // only works for these queries
 
 		self.dom.mainG.on('mouseout', null)
+		delete self.imgBox
 		const sampleData = data || event.target.__data__
 
 		if (!sampleData) return // !!! it's undefined when dragging on the sample names
