@@ -25,10 +25,10 @@ Future plans:
 */
 
 type ItemEntry = {
-	key: string
-	label: string //Drag label
-	group: number //Current group index for item. .group maybe calculated or returned from categorical.ts.
-	count?: number | string //Sample count number or 'n/a'
+	key: string //key returned from vocab.getCategories()
+	label: string //Text label of drag item
+	group: number //Current group index for item.
+	samplecount: number | string | null //Sample count number or 'n/a'
 	uncomputable?: boolean
 }
 type DataInput = { [index: string]: ItemEntry }
@@ -61,15 +61,19 @@ type GroupSettingInstance = (CategoricalTermSettingInstance | ConditionTermSetti
 
 export class GroupSettingMethods {
 	opts: any //a termsetting instance
-	dom: Partial<GrpSetDom>
+	dom: Partial<GrpSetDom> //main menu dom elements before drag and drop divs are added
+	minGrpNum: number //minimum num of groups rendered (excluded categories + 2 groups)
+	defaultMaxGrpNum: number //default cutoff for num of groups. Used to calculate the actual max group num later
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
-	initGrpSetUI: any
+	initGrpSetUI: any //func init for groupsetting UI
 
 	constructor(opts: GroupSettingInstance) {
 		this.opts = opts
 		this.dom = {
 			menuWrapper: opts.dom.tip.d.append('div')
 		}
+		this.minGrpNum = 3
+		this.defaultMaxGrpNum = 5
 		this.data = { groups: [], values: [] }
 		setRenderers(this)
 	}
@@ -88,17 +92,17 @@ export class GroupSettingMethods {
 			//returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
 		} else {
-			for (const [k, v] of Object.entries(input)) {
-				if (v.uncomputable) return
-				if (v?.group > 4)
+			for (const v of Object.values(input)) {
+				if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
+				if (v?.group > this.defaultMaxGrpNum)
 					throwMsgWithFilePathAndFnName(
-						`The maximum number of groups is 4. The group index for value = ${v.label} is ${v.group}`
+						`The maximum number of groups is ${this.defaultMaxGrpNum}. The group index for value = ${v.label} is ${v.group}`
 					)
 				const value = {
-					key: k,
+					key: v.key,
 					label: v.label,
 					group: v.group || 1,
-					count: v.count
+					samplecount: v.samplecount
 				}
 				this.data.values.push(value)
 				grpIdxes.add(value.group)
@@ -111,11 +115,12 @@ export class GroupSettingMethods {
 		parts of main(), will be rewritten.*/
 		this.data.values.forEach(v => {
 			//subconditions formated with count, categorical term values do not have a count
-			if (!v.count) {
+			if (!v.samplecount) {
 				//find sample counts for each value once added to array
-				v.count = this.opts.category2samplecount
-					? this.opts.category2samplecount.find((d: { key: string; label?: string; count: number }) => d.key == v.key)
-							?.count
+				v.samplecount = this.opts.category2samplecount
+					? this.opts.category2samplecount.find(
+							(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
+					  )?.samplecount
 					: 'n/a'
 			}
 		})
@@ -145,7 +150,8 @@ export class GroupSettingMethods {
 					key: value.key,
 					/** If label not in q.groupsetting.customset, use key */
 					label: value.label || value.key,
-					group: i + 1
+					group: i + 1,
+					samplecount: null
 				})
 			}
 		}
@@ -157,7 +163,12 @@ export class GroupSettingMethods {
 					this.data.values.push({
 						key: v[0],
 						label: v[1].label,
-						group: 0
+						group: 0,
+						samplecount: this.opts.category2samplecount
+							? this.opts.category2samplecount.find(
+									(d: { key: string; label?: string; samplecount: number }) => d.key == v[0]
+							  )?.samplecount
+							: 'n/a'
 					})
 				})
 		}
@@ -165,9 +176,7 @@ export class GroupSettingMethods {
 
 	async main() {
 		try {
-			const input = this.opts.q.bar_by_children //Detect if for subconditions from condition term or term.values
-				? this.opts.category2samplecount //subconditions already formated in condition handler
-				: this.opts.term.values // categorical terms need formating
+			const input = this.opts.category2samplecount || this.opts.term.values
 			this.processInput(input)
 			await this.initGrpSetUI()
 		} catch (e: any) {
@@ -178,12 +187,12 @@ export class GroupSettingMethods {
 }
 
 function setRenderers(self: any) {
-	const minGrpNum = 3 //minimum num of groups rendered, excluded categories + 2 groups
 	let maxGrpNum: number
 	self.initGrpSetUI = async function () {
 		/*max num of groups rendered + excluded categories
 		Only allow adding the max feasible groups with cutoff of 5 + excluded categories*/
-		maxGrpNum = self.data.values.length >= 5 ? 6 : self.data.values.length
+		self.maxGrpNum =
+			self.data.values.length >= self.defaultMaxGrpNum ? self.defaultMaxGrpNum + 1 : self.data.values.length
 		if (self.newMenu == true) self.opts.dom.tip.clear().showunder(self.opts.dom.holder.node())
 		// if (self.data.values.length > 10) {
 		// 	//Tabs functionality for later - leave it for layout testing
@@ -216,7 +225,7 @@ function setRenderers(self: any) {
 		self.dom.actionDiv = self.dom.menuWrapper.append('div').attr('class', 'sjpp-group-actions').style('padding', '10px')
 
 		/*A goal when refactoring groupsetting was to ~not~ attach any variable or 
-		function to a termsetting instance. Must find all previous `New Group #`s 
+		function to the termsetting instance. Must find all previous `New Group #`s 
 		and create a counter.*/
 		const findNewGrps = self.data.groups.filter((g: GrpEntryWithDom) => g.name.startsWith('New Group'))
 		let newGrpNum = findNewGrps.length > 0 ? findNewGrps[findNewGrps.length - 1].name.replace(`New Group `, '') : 0
@@ -232,7 +241,7 @@ function setRenderers(self: any) {
 				'disabled',
 				self.opts.usecase?.regressionType == 'logistic' && self.opts.usecase?.detail == 'outcome'
 					? true
-					: self.data.groups.length >= maxGrpNum
+					: self.data.groups.length >= self.maxGrpNum
 			)
 			.text('Add Group')
 			.on('click', async () => {
@@ -413,10 +422,10 @@ function setRenderers(self: any) {
 				.append('button')
 				.style('display', 'inline-block')
 				.style('padding', '0px 4px')
-				.property('disabled', self.data.groups.length <= minGrpNum) //Each appears disabled/enabled based on the number of groups
+				.property('disabled', self.data.groups.length <= self.minGrpNum) //Each appears disabled/enabled based on the number of groups
 				.text('x')
 				.on('click', async () => {
-					if (self.data.groups.length <= minGrpNum) return
+					if (self.data.groups.length <= self.minGrpNum) return
 					self.data.groups = self.data.groups.filter((d: GrpEntry) => d.currentIdx != group.currentIdx)
 					await self.removeGroup(group)
 				}) as Element
@@ -454,8 +463,8 @@ function setRenderers(self: any) {
 			.style('cursor', 'default')
 			.style('padding', '3px 10px')
 			.style('border-radius', '5px')
-			.style('color', (d: ItemEntry) => (d.count == 0 ? '#777' : 'black'))
-			.text((d: ItemEntry) => `${d.label}${d.count !== undefined ? ` (n=${d.count})` : ''}`)
+			.style('color', (d: ItemEntry) => (d.samplecount == 0 ? '#777' : 'black'))
+			.text((d: ItemEntry) => `${d.label}${d.samplecount !== undefined ? ` (n=${d.samplecount})` : ''}`)
 			.style('background-color', '#eee')
 			.each(function (this: Element) {
 				const itemNode = select(this)
@@ -551,7 +560,7 @@ function setRenderers(self: any) {
 			'disabled',
 			self.opts.usecase?.regressionType == 'logistic' && self.opts.usecase?.detail == 'outcome'
 				? true
-				: self.data.groups.length >= maxGrpNum
+				: self.data.groups.length >= self.maxGrpNum
 		)
 		for (const [i, grp] of self.data.groups.entries()) {
 			if (i === 0) continue
@@ -566,7 +575,7 @@ function setRenderers(self: any) {
 			.each(async (group: GrpEntryWithDom) => {
 				if (group.currentIdx !== 0) {
 					group.input.node().value = group.name
-					group.destroyBtn.property('disabled', self.data.groups.length <= minGrpNum)
+					group.destroyBtn.property('disabled', self.data.groups.length <= self.minGrpNum)
 				}
 				await self.addItems(group)
 			})
