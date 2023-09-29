@@ -167,19 +167,31 @@ export function validate_query_geneExpression(ds, genome) {
 		// getter returns this data structure
 		const gene2sample2value = new Map() // k: gene symbol, v: { <case submitter id>: value }
 
+		const t1 = new Date()
+
 		// get all cases from current filter
 		const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
 		if (caseLst.length == 0) return gene2sample2value // no cases with exp data
 
+		const t2 = new Date()
+		console.log(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
+
 		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst)
 
 		if (ensgLst.length == 0) return gene2sample2value // no valid genes
+
+		const t3 = new Date()
+		console.log(ensgLst.length, 'out of', q.genes.length, 'genes selected for exp:', t3 - t2, 'ms')
 
 		for (const g of ensgLst) {
 			gene2sample2value.set(ensg2symbol.get(g), new Map())
 		}
 
 		await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
+
+		const t4 = new Date()
+		console.log('gene-case matrix built:', t4 - t3, 'ms')
+
 		return gene2sample2value
 	}
 }
@@ -218,6 +230,8 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 		}
 		if (ensgLst.length > 100) break // max 100 genes
 	}
+
+	//return [ensgLst, ensg2symbol]
 
 	// per Zhenyu 9/26/23, user-elected genes must be screened so those with 0 value cross all samples will be left out
 	// so that valid SD-transformed value can be returned from /values api
@@ -277,6 +291,7 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 			case_ids,
 			gene_ids,
 			format: 'tsv',
+			//tsv_units: 'uqfpkm'
 			tsv_units: 'median_centered_log2_uqfpkm'
 		})
 	})

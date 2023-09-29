@@ -270,8 +270,12 @@ async function load_driver(q, ds) {
 			// get data for only 1 gene; may create violin plot
 			return { gene2sample2value }
 		}
+
 		// have data for multiple genes, run clustering
-		return { clustering: await geneExpressionClustering(gene2sample2value, q, ds) }
+		const t = new Date()
+		const clustering = await geneExpressionClustering(gene2sample2value, q, ds)
+		console.log('clustering done:', new Date() - t, 'ms')
+		return { clustering }
 	}
 
 	// other query type
