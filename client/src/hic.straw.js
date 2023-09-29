@@ -169,7 +169,7 @@ export function hicparsefile(hic, debugmode) {
 
 	// controls
 
-	const table = hic.holder.append('table').style('border-spacing', '3px')
+	const table = hic.holder.append('table').style('border-spacing', '3px').style('margin', '5px')
 	const tr1 = table.append('tr')
 	const tr2 = table.append('tr')
 
@@ -337,7 +337,7 @@ async function init_wholegenome(hic) {
 		hic.x = {}
 	}
 	hic.c = {}
-	const table = hic.holder.append('table')
+	const table = hic.holder.append('table').style('margin', '5px')
 	const tr1 = table.append('tr')
 	hic.c.td = tr1.append('td').style('vertical-align', 'top')
 	hic.y.td = tr1.append('td').style('vertical-align', 'top')
@@ -364,11 +364,12 @@ async function init_wholegenome(hic) {
 	const fontsize = 15 // chr labels
 	const borderwidth = 1
 	const spacecolor = '#ccc'
+	const headerHeight = 50
 
 	// heatmap layer underneath sv
 	const layer_map = hic.wholegenome.svg
 		.append('g')
-		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
+		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + (fontsize + headerHeight) + ')')
 	hic.wholegenome.layer_map = layer_map
 	const layer_sv = hic.wholegenome.svg
 		.append('g')
@@ -394,17 +395,17 @@ async function init_wholegenome(hic) {
 				.append('rect')
 				.attr('x', xoff)
 				.attr('width', chrw)
-				.attr('height', fontsize)
-				.attr('y', -fontsize)
+				.attr('height', fontsize + headerHeight)
+				.attr('y', -fontsize - headerHeight)
 				.attr('fill', checker_fill)
 		}
 		checker_row = !checker_row
 		layer_map
 			.append('text')
 			.attr('font-family', client.font)
-			.attr('text-anchor', 'middle')
 			.attr('font-size', 12)
-			.attr('x', xoff + chrw / 2)
+			//.attr('x', xoff + chrw / 2)
+			.attr('transform', `translate(${xoff + chrw / 2}, -10) rotate(-90)`)
 			.text(chr)
 
 		xoff += chrw
