@@ -595,22 +595,30 @@ export class Matrix {
 			: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
 
 		// filteredValues are the values passed both isSpecific filter and the filters in this.config.legendValueFilter
-		const filteredValues = initialFilteredValues.filter(v =>
+		let filteredValues = initialFilteredValues.filter(v =>
 			sample_match_termvaluesetting(v, this.config.legendValueFilter, tw.term, sample, true)
 		)
 
 		const renderedValues = []
 		if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)
 		else {
+			const sortedFilteredValues = []
 			// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
 			// will render only one matching value per dt
 			for (const dt of [4, 1, 3]) {
 				const v = filteredValues.find(v => v.dt === dt)
 				if (v) renderedValues.push(v)
+
+				const oneDtV = filteredValues.filter(v => v.dt === dt)
+				sortedFilteredValues.push(...oneDtV)
 			}
+			filteredValues = sortedFilteredValues
 		}
 		// group stacked cell values to avoid striped pattern
-		if (tw.term.type == 'geneVariant') renderedValues.sort(this.stackSiblingCellsByClass)
+		if (tw.term.type == 'geneVariant') {
+			renderedValues.sort(this.stackSiblingCellsByClass)
+			filteredValues.sort(this.stackSiblingCellsByClass)
+		}
 
 		// crossedOutValues are the values passed the isSpecific filter but not the filters in this.config.legendValueFilter
 		const crossedOutValues = initialFilteredValues.filter(v => !filteredValues.includes(v))
@@ -1118,18 +1126,7 @@ export class Matrix {
 
 				const key = anno.key
 
-				let values
-				if (anno.filteredValues) {
-					if (t.tw.term.type !== 'geneVariant' || s.cellEncoding != 'oncoprint') values = anno.filteredValues
-					else {
-						const sortedFilteredValues = []
-						for (const dt of [4, 1, 3]) {
-							const v = anno.filteredValues.filter(v => v.dt === dt)
-							sortedFilteredValues.push(...v)
-						}
-						values = sortedFilteredValues
-					}
-				} else values = anno.values || [anno.value]
+				const values = anno.filteredValues || anno.values || [anno.value]
 
 				const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
 				const height = !s.transpose ? s.rowh / numRects : colw
