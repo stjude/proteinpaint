@@ -441,7 +441,7 @@ async function geneExpressionClustering(data, q, ds) {
 		// {sampleId: value}
 		for (const s in o) sampleSet.add(s)
 	}
-
+    
 	const inputData = {
 		matrix: [],
 		row_names: [], // genes
@@ -470,7 +470,7 @@ async function geneExpressionClustering(data, q, ds) {
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await write_file(Rinputfile, JSON.stringify(inputData))
 	const Routput = await run_clustering(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [Rinputfile])
-	fs.unlink(Rinputfile, () => {})
+	//fs.unlink(Rinputfile, () => {})
 	//const r_output_lines = Routput.trim().split('\n')
 	//console.log('r_output_lines:', r_output_lines)
 
@@ -480,7 +480,9 @@ async function geneExpressionClustering(data, q, ds) {
 	let col_coordinate_start = false
 	let matrix_start = true
 	let row_names_index
-	let col_names_index
+        let col_names_index
+	let row_names
+	let col_names    
 	let matrix_1d // Getting matrix output from R in 1D. This will later be converted back into 2D array
 	for (const line of Routput) {
 		if (line.includes('OutputMatrix')) {
@@ -495,19 +497,30 @@ async function geneExpressionClustering(data, q, ds) {
 			//console.log(line)
 			col_coordinate_start = true
 			row_coordinate_start = false
-		} else if (line.includes('rownames')) {
+		} else if (line.includes('rowindexes')) {
 			row_names_index = line
-				.replace('rownames\t', '')
+				.replace('rowindexes\t', '')
 				.split('\t')
 				.map(i => parseInt(i))
 				.filter(n => n)
-		} else if (line.includes('colnames')) {
+		} else if (line.includes('colindexes')) {
 			//console.log('colnames:', line)
 			col_names_index = line
-				.replace('colnames\t', '')
+				.replace('colindexes\t', '')
 				.split('\t')
 				.map(i => parseInt(i))
 				.filter(n => n)
+		} else if (line.includes('rownames')) {
+			row_names = line
+				.replace('rownames\t', '')
+			        .split('\t')
+		    		.filter(function(entry) { return entry.trim() != ''})
+		} else if (line.includes('colnames')) {
+			//console.log('colnames:', line)
+			col_names = line
+				.replace('colnames\t', '')
+			        .split('\t')
+		    		.filter(function(entry) { return entry.trim() != ''})
 		} else if (line.includes('"Done"')) {
 			col_coordinate_start = false
 		} else if (row_coordinate_start == true) {
@@ -519,7 +532,8 @@ async function geneExpressionClustering(data, q, ds) {
 		//	console.log(line)
 		//}
 	}
-
+        //console.log("row_names:",row_names)
+        //console.log("col_names:",col_names)
 	//console.log('row_coordinates:', row_coordinates)
 	//console.log('col_coordinates:', col_coordinates)
 
@@ -570,10 +584,9 @@ async function geneExpressionClustering(data, q, ds) {
 	*/
 
 	return {
-		geneNameLst: inputData.row_names,
-		sampleNameLst: inputData.col_names,
+		geneNameLst: row_names,
+		sampleNameLst: col_names,
 		matrix: output_matrix,
-
 		row_dendro: row_output.dendrogram,
 		row_children: row_output.children,
 		row_names_index: row_names_index,
