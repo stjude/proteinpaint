@@ -29,6 +29,7 @@ export class profilePlot {
 			holder,
 			firstDiv,
 			filterDiv: div,
+			facilityDiv: div.insert('div').style('display', 'inline-block'),
 			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
