@@ -187,7 +187,7 @@ COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY ./app-full.js ./
-COPY public ./public
+COPY ../public ./public
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-full.js"]
 # CMD ["sleep", "3600"]
