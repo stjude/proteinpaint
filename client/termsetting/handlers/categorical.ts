@@ -104,6 +104,11 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 			//for rendering groupsetting menu
 			const body = self.opts.getBodyParams?.() || {}
 			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
+			/** Original code created a separate array (self.category2samplecount) and pushed only the key and label.
+			 * The new self.category2samplecount was used to create the groupsetting menu items. That logic was removed
+			 * as groupsetting.ts handles formating the data. However category2samplecount = [] is still used
+			 * in other client side code. The data shape may differ until all the code is refactored.
+			 */
 			self.category2samplecount = data.lst
 			if (!self.term.values) {
 				self.q = {}

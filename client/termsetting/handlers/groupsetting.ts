@@ -187,7 +187,6 @@ export class GroupSettingMethods {
 }
 
 function setRenderers(self: any) {
-	let maxGrpNum: number
 	self.initGrpSetUI = async function () {
 		/*max num of groups rendered + excluded categories
 		Only allow adding the max feasible groups with cutoff of 5 + excluded categories*/
