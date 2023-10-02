@@ -108,11 +108,13 @@ SortedMatrix  <- normalized_matrix[RowDend$order, ColumnDend$order]
 SortedRowNames <- rownames(normalized_matrix)[RowDend$order]
 SortedColumnNames <- colnames(normalized_matrix)[ColumnDend$order]
 
-m <- matrix(SortedMatrix,length(SortedRowNames),length(SortedColumnNames))
-colnames(m) <- SortedColumnNames
-rownames(m) <- SortedRowNames
-cat("rownames",RowDend$order,"\n",sep="\t")
-cat("colnames",ColumnDend$order,"\n",sep="\t")
+#m <- matrix(SortedMatrix,length(SortedRowNames),length(SortedColumnNames))
+#colnames(m) <- SortedColumnNames
+#rownames(m) <- SortedRowNames
+cat("rowindexes",RowDend$order,"\n",sep="\t") # Prints out row indices
+cat("colindexes",ColumnDend$order,"\n",sep="\t") # Prints out column indicies
+cat("rownames",SortedRowNames,"\n",sep="\t") # Prints out row names
+cat("colnames",SortedColumnNames,"\n",sep="\t") # Prints out column names
 cat ("OutputMatrix",normalized_matrix,"\n",sep="\t") # This outputs the 2D array in 1D column-wise. This is later converted to 2D array in nodejs.
 
 
