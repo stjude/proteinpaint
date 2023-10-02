@@ -2,63 +2,115 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
-import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
-class profileRadarFacility extends profilePlot {
+class profileRadarFacility {
 	constructor() {
-		super()
 		this.type = 'profileRadarFacility'
 		this.radius = 250
 	}
+
 	async init(appState) {
-		await super.init(appState)
+		const holder = this.opts.holder.append('div')
+		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
+		const firstDiv = div.append('div').style('display', 'inline-block')
+		const plotDiv = holder.append('div')
+		this.dom = {
+			holder,
+			firstDiv,
+			filterDiv: div,
+			facilityDiv: div.insert('div').style('display', 'inline-block'),
+			plotDiv
+		}
+		const config = appState.plots.find(p => p.id === this.id)
+
+		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
+		this.regions = [
+			{ key: '', label: '' },
+			{ key: 'Global', label: 'Global' }
+		]
+		for (const region of config.regions) {
+			this.regions.push({ key: region.name, label: region.name })
+			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
+		}
+
+		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
+		this.regionSelect = div.append('select').style('margin-left', '5px')
+		this.regionSelect
+			.selectAll('option')
+			.data(this.regions)
+			.enter()
+			.append('option')
+			.attr('value', d => d.key)
+			.html((d, i) => d.label)
+
+		this.regionSelect.on('change', () => {
+			const config = this.config
+			config.region = this.regionSelect.node().value
+			config.income = ''
+			const sampleId = parseInt(this.sampleidmap[config.region])
+			config.filter = getSampleFilter(sampleId)
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
 		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('Facility:').style('font-weight', 'bold')
+		this.facilities = await this.app.vocabApi.getProfileFacilities()
+
 		this.facilitySelect = this.dom.facilityDiv.insert('select').style('margin-left', '5px')
 		this.facilitySelect
 			.selectAll('option')
-			.data(['AF034'])
+			.data(this.facilities)
 			.enter()
 			.append('option')
 			.attr('value', d => d)
 			.html((d, i) => d)
+		this.facilitySelect.on('change', () => {
+			const config = this.config
+			config.facility = this.facilitySelect.node().value
+			config.income = ''
+			const sampleId = parseInt(this.sampleidmap[config.facility])
+			config.filter = getSampleFilter(sampleId)
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
+
+		div
+			.append('button')
+			.style('margin-left', '15px')
+			.text('Download Image')
+			.on('click', () => downloadSingleSVG(this.svg, this.filename))
+
 		this.opts.header.text('Radar Graph')
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-	}
-
-	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.terms = config[config.plot].terms
 		this.twLst = []
-		this.terms = this.config[this.config.plot].terms
 		for (const { parent, term } of this.terms) {
 			this.twLst.push(parent)
 			this.twLst.push(term)
 		}
-		this.twLst.push(this.config.typeTW)
-		const sampleName = this.config.region !== undefined ? this.config.region : this.config.income || 'Global'
-		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst,
-			filter
+			terms: this.twLst
 		})
-		this.facility = 'AF034'
-		const filter2 = this.config.filter2 || getSampleFilter(this.sampleidmap[this.facility])
-		this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst,
-			filter2
-		})
+		this.samplesData = {}
+		for (const sample of this.data.lst) this.samplesData[sample.sampleName] = sample
+	}
 
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) throw `No plot with id='${this.id}' found`
+		return {
+			config
+		}
+	}
+
+	async main() {
+		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.facility = this.state.config.facility || this.facilities[0]
 		this.angle = (Math.PI * 2) / this.terms.length
-
-		this.income = this.config.income || this.incomes[0]
 		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
-		this.sampleData = {}
-		this.sampleData[this.region] = this.data.lst[0]
-		this.sampleData[this.facility] = this.data2.lst[0]
-		this.setFilter()
+		this.regionSelect.selectAll('option').property('selected', d => d.key == this.region)
 
-		this.filename = `radar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
+		this.filename = `radar_plot${this.region ? '_' + this.region : ''}${this.facility ? '_' + this.facility : ''}.svg`
 			.split(' ')
 			.join('_')
 		this.plot()
@@ -67,8 +119,6 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-
-		if (!this.sampleData) return
 
 		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 650)
 
@@ -148,7 +198,7 @@ class profileRadarFacility extends profilePlot {
 
 	addData(sampleName, iangle, i, data) {
 		const tw = this.terms[i].term
-		const percentage = this.sampleData[sampleName][tw.$id]?.value
+		const percentage = this.samplesData[sampleName][tw.$id]?.value
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)

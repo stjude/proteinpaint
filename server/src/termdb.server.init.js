@@ -520,6 +520,15 @@ export function server_init_db_queries(ds) {
 		])
 		return rows
 	}
+
+	q.getProfileFacilities = function () {
+		const query = `select name from sampleidmap join 
+		anno_categorical on sampleidmap.id = anno_categorical.sample
+		where term_id = 'sampleType' and value = 'Facility'`
+		const sql = cn.prepare(query)
+		const rows = sql.all()
+		return rows
+	}
 }
 
 export function listDbTables(cn) {
