@@ -28,8 +28,6 @@ export const groupset = {
 		- groupset: the active groupset, such as returned by get_active_groupset()
 		- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
 		- ds: dataset with db connection
-		- value_for: required for condition terms, "grade" or "child"
-		- restriction: required for condition terms, "computable_grade" | "max_grade" | "most_recent_grade"
 		
 		Return
 		- a series of "SELECT name, value" statements that are joined by UNION ALL
@@ -49,7 +47,7 @@ export const groupset = {
 				`)
 				values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
 			} else if (g.type == 'filter') {
-				// TODO: create filter sql for group.type == 'filter'
+				/** type = 'filter' no longer in use since groupsetting.customset was implemented */
 				if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
 					const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
 

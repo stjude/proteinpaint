@@ -140,6 +140,45 @@ export const cox = {
 	}
 }
 
+export const groupset = {
+	/*
+		Arguments
+		- tablename: string name for this CTE
+		- term{}
+		- groupset: the active groupset, such as returned by get_active_groupset()
+		- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
+		- ds: dataset with db connection
+		
+		Return
+		- a series of "SELECT name, value" statements that are joined by UNION ALL
+		- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
+	*/
+	async getCTE(tablename, term, ds, q, values, groupset) {
+		if (!groupset.groups) throw `.groups[] missing from a group-set, term.id='${term.id}'`
+		const categories = []
+		for (const g of groupset.groups) {
+			/** type='filter' no longer in use since customset was implemented. */
+			categories.push(`
+				SELECT 
+					sample, 
+					? as key, 
+					value
+				FROM 
+					precomputed_chc_child
+				WHERE term_id=?
+					AND value IN (${g.values.map(v => '?').join(',')})
+			`)
+			values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
+		}
+		return {
+			sql: `${tablename} AS (
+				${categories.join('\nUNION ALL\n')}
+			)`,
+			tablename
+		}
+	}
+}
+
 function validateQ(q) {
 	const value_for = q.bar_by_children ? 'child' : q.bar_by_grade ? 'grade' : ''
 	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'

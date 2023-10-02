@@ -1,11 +1,16 @@
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
-import { sayerror } from '#dom/error'
-import { PillData, ConditionTW, ConditionQ, VocabApi, ConditionTermSettingInstance } from '#shared/types/index'
-//import { GroupSettingMethods } from './groupsetting'
-import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
-import { TermValues } from '#shared/types'
+import { sayerror, throwMsgWithFilePathAndFnName } from '#dom/sayerror'
+import {
+	PillData,
+	ConditionTW,
+	ConditionQ,
+	VocabApi,
+	ConditionTermSettingInstance,
+	TermValues
+} from '#shared/types/index'
+import { GroupSettingMethods } from './groupsetting'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
@@ -34,31 +39,27 @@ export function getHandler(self: ConditionTermSettingInstance) {
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
-		}
+		},
 
-		// async postMain() {
-		// 	const body = self.opts.getBodyParams?.() || {} //make sure term1_q is added
-		// 	const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
-		// 	//not really sure this is necessary but it's consistent across other handlers
-		// 	self.category2samplecount = []
-		// 	for (const d of data.lst) {
-		// 		self.category2samplecount.push({
-		// 			key: d.key,
-		// 			label: d.label,
-		// 			count: d.samplecount
-		// 		})
-		// 		// }
-		// 	}
-		// }
+		async postMain() {
+			if (!self?.category2samplecount) {
+				/** Prevent firing multiple times with nonsense return values */
+				const body = self.opts.getBodyParams?.() || {}
+				if (!body.term1) body.term1 = self.term
+				if (!body.term1_q) body.term1_q = self.q
+				const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
+				self.category2samplecount = data.lst
+			}
+		}
 	}
 }
 
 function getPillStatus(self: ConditionTermSettingInstance) {
 	const text: string | undefined = self.q?.name || self.q?.reuseId
 	if (text) return { text }
-	// if (self.q.groupsetting?.inuse) {
-	// 	validateGroupsetting(self)
-	// }
+	if (self.q.groupsetting?.inuse) {
+		validateGroupsetting(self)
+	}
 	if (self.q.mode == 'discrete') {
 		if (self.q.breaks?.length) {
 			return { text: self.q.breaks.length + 1 + ' groups' }
@@ -79,27 +80,27 @@ function getPillStatus(self: ConditionTermSettingInstance) {
 	return {}
 }
 
-// function validateGroupsetting(self: ConditionTermSettingInstance) {
-// 	if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
-// 	const text = self.q.name || self.q.reuseId
-// if (text) return { text }
-// if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-// 	if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
-// 	if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
-// 	const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-// 	if (!i)
-// 		return {
-// 			text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
-// 			bgcolor: 'red'
-// 		}
-// 	return { text: i.name }
-// }
-// if (self.q.groupsetting.customset) {
-// 	const n = self.q.groupsetting.customset.groups.length
-// 	return { text: 'Divided into ' + n + ' groups' }
-// }
-// return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
-// }
+function validateGroupsetting(self: ConditionTermSettingInstance) {
+	if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+	const text = self.q.name || self.q.reuseId
+	if (text) return { text }
+	if (self.q.groupsetting.predefined_groupset_idx && Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+		if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
+		if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
+		const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+		if (!i)
+			return {
+				text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
+				bgcolor: 'red'
+			}
+		return { text: i.name }
+	}
+	if (self.q.groupsetting.customset) {
+		const n = self.q.groupsetting.customset.groups.length
+		return { text: 'Divided into ' + n + ' groups' }
+	}
+	return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
+}
 
 async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 	// div for selecting type of grade
@@ -126,7 +127,7 @@ async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 			self.q.value_by_max_grade = i == 0
 			self.q.value_by_most_recent = i == 1
 			self.q.value_by_computable_grade = i == 2 || i == 3
-			self.dom.tip.hide()
+			//self.dom.tip.hide()
 			self.runCallback()
 		})
 	// 0
@@ -145,7 +146,7 @@ async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 		self.q.bar_by_children ? 3 : self.q.value_by_computable_grade ? 2 : self.q.value_by_most_recent ? 1 : 0
 	)
 	if (self.q.bar_by_children) {
-		//await new GroupSettingMethods(Object.assign(self, { newMenu: false })).main()
+		await new GroupSettingMethods(Object.assign(self, { newMenu: false })).main()
 		return
 	}
 
