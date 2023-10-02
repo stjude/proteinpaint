@@ -166,6 +166,7 @@ app.use((req, res, next) => {
 		for (const key in req.query) {
 			const value = req.query[key]
 			if (
+				value == 'null' ||
 				(value.startsWith('"') && value.endsWith('"')) ||
 				(value.startsWith('{') && value.endsWith('}')) ||
 				(value.startsWith('[') && value.endsWith(']'))

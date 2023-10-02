@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Correctly parse a null URL parameter value
+
 ## 2.27.1
 
 Features:

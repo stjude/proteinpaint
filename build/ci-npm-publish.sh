@@ -14,14 +14,14 @@ for WS in ${WORKSPACES}; do
     echo "not publishing '$WS': private package"
     continue
   fi
-  PKGNAME==$(node -p "require('./$WS/package.json').name")
+  PKGNAME=$(node -p "require('./$WS/package.json').name")
   PUBLISHEDVER=$(npm view $PKGNAME version | tail -n1)
   CURRENTVER=$(node -p "require('./$WS/package.json').version")
   echo "$WS [$PUBLISHEDVER] [$CURRENTVER]"
   if [[ "$PUBLISHEDVER" != "$CURRENTVER" ]]; then
     cd $WS
     echo "publishing $WS-$CURRENTVER"
-     npm publish --access public
+    npm publish --access public
     cd ..
   fi
 done
