@@ -329,7 +329,6 @@ tape('Categorical term', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	pilldiv.click()
 	const tip = opts.pill.Inner.dom.tip
@@ -338,16 +337,17 @@ tape('Categorical term', async test => {
 	test.equal(tip.d.selectAll('.sja_menuoption.sja_sharp_border').size(), 2, 'Should have 2 buttons for group config')
 
 	// check menu buttons on category menu
-	const itemNum = Object.keys(opts.tsData.term.values).length
+	/** Although 27 values, annotations only available for 10. */
+	//const itemNum = Object.keys(opts.tsData.term.values).length
 	const dragItems = await detectGte({
 		elem: tip.d.node(),
 		selector: 'div > div > div > .sjpp-drag-item',
-		count: itemNum,
+		count: 10,
 		async trigger() {
 			tip.d.selectAll('.sja_menuoption.sja_sharp_border')._groups[0][0].click()
 		}
 	})
-	test.equal(dragItems.length, itemNum, `Should have rows (n=${dragItems.length}) for each category (n=${itemNum})`)
+	test.equal(dragItems.length, 10, `Should have rows (n=${dragItems.length}) for each category (n=10)`)
 	test.equal(
 		tip.d.selectAll('div > div > div > .sjpp_grpset_addGrp_btn').size(),
 		1,
@@ -358,7 +358,11 @@ tape('Categorical term', async test => {
 		1,
 		'Should have "Apply" button to apply group changes'
 	)
-	test.equal(dragItems[0].innerHTML, 'Acute lymphoblastic leukemia (n=44)', 'Should have first cateogry as "ALL"')
+	test.equal(
+		dragItems[0].innerHTML,
+		'Non-Hodgkin lymphoma (n=16)',
+		'Should have first cateogry as "Non-Hodgkin lymphoma (n=16)"'
+	)
 
 	//Test drag functionality
 	const grpInputs = await detectLst({ elem: tip.d.node(), selector: 'input', count: 2 })
