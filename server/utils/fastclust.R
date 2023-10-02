@@ -48,8 +48,9 @@ if (length(input$valueIsTransformed) == 0 || input$valueIsTransformed == FALSE) 
 } else { # No normalization
  normalized_matrix <- input$matrix
 }
+rownames(normalized_matrix) <- input$row_names
+colnames(normalized_matrix) <- input$col_names
 normalized_matrix <- na.omit(normalized_matrix) # Removes rows with NA values
-
 # For columns (i.e samples)
 RowDist <- dist(normalized_matrix, method = "euclidean") # Transposing the matrix
 
@@ -104,8 +105,8 @@ print ("Done")
 # Sorting the matrix
 
 SortedMatrix  <- normalized_matrix[RowDend$order, ColumnDend$order]
-SortedRowNames <- input$row_names[RowDend$order]
-SortedColumnNames <- input$col_names[ColumnDend$order]
+SortedRowNames <- rownames(normalized_matrix)[RowDend$order]
+SortedColumnNames <- colnames(normalized_matrix)[ColumnDend$order]
 
 m <- matrix(SortedMatrix,length(SortedRowNames),length(SortedColumnNames))
 colnames(m) <- SortedColumnNames
