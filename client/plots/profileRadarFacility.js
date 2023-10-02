@@ -26,10 +26,7 @@ class profileRadarFacility {
 		const config = appState.plots.find(p => p.id === this.id)
 
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
-		this.regions = [
-			{ key: '', label: '' },
-			{ key: 'Global', label: 'Global' }
-		]
+		this.regions = [{ key: 'Global', label: 'Global' }]
 		for (const region of config.regions) {
 			this.regions.push({ key: region.name, label: region.name })
 			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
@@ -107,7 +104,7 @@ class profileRadarFacility {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.facility = this.state.config.facility || this.facilities[0]
 		this.angle = (Math.PI * 2) / this.terms.length
-		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
+		this.region = this.config.region || 'Global'
 		this.regionSelect.selectAll('option').property('selected', d => d.key == this.region)
 
 		this.filename = `radar_plot${this.region ? '_' + this.region : ''}${this.facility ? '_' + this.facility : ''}.svg`
