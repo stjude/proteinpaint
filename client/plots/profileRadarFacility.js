@@ -189,8 +189,8 @@ class profileRadarFacility {
 				.attr('pointer-events', 'none')
 		}
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		this.addLegendItem(config[config.plot].poligon1, color1, 0, '5, 5')
-		this.addLegendItem(config[config.plot].poligon2, color2, 1, 'none')
+		this.addLegendItem(`${this.region} ${config[config.plot].poligon1}`, color1, 0, '5, 5')
+		this.addLegendItem(`${this.facility} ${config[config.plot].poligon2}`, color2, 1, 'none')
 	}
 
 	addData(sampleName, iangle, i, data) {
