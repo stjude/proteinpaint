@@ -141,6 +141,7 @@ async function getGenes(arg, filter0, config) {
 		filter0,
 		maxGenes: config.maxGenes
 	}
+	if (filter0) body.filter0 = filter0 // to avoid causing a "null" parameter value for backend
 	const data = await dofetch3('gdc/topVariablyExpressedGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) throw 'no top genes found using the cohort filter'
