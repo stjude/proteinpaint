@@ -462,15 +462,25 @@ async function geneExpressionClustering(data, q, ds) {
 		}
 		inputData.matrix.push(row)
 	}
+
+        /*
+        // For testing
+        inputData.row_names.push("fakegene")
+        const row = []
+        for (const s of inputData.col_names) {
+           row.push(0)
+        }
+        inputData.matrix.push(row)
+        */ 
+
 	//console.log('inputData.matrix:', inputData.matrix.length, inputData.matrix[0].length)
 	//console.log('input_data:', inputData)
-	//await write_file('test.json', JSON.stringify(inputData))
-
-	const time1 = new Date()
+        //await write_file('test.json', JSON.stringify(inputData))
+    
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await write_file(Rinputfile, JSON.stringify(inputData))
 	const Routput = await run_clustering(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [Rinputfile])
-	//fs.unlink(Rinputfile, () => {})
+	fs.unlink(Rinputfile, () => {})
 	//const r_output_lines = Routput.trim().split('\n')
 	//console.log('r_output_lines:', r_output_lines)
 
@@ -541,16 +551,17 @@ async function geneExpressionClustering(data, q, ds) {
 	let col_output = await parseclust(col_coordinates, col_names_index)
 
 	// Converting the 1D array to 2D array column-wise
-	let output_matrix = []
-	for (let i = 0; i < inputData.matrix.length; i++) {
-		if (inputData.matrix[0]) {
+        let output_matrix = []
+	for (let i = 0; i < row_names.length; i++) {
+		if (col_names.length > 0) {
 			let row = []
-			for (let j = 0; j < inputData.matrix[0].length; j++) {
-				row.push(matrix_1d[j * inputData.matrix.length + i])
+			for (let j = 0; j < col_names.length; j++) {
+				row.push(matrix_1d[j * row_names.length + i])
 			}
 			output_matrix.push(row)
 		}
 	}
+    
 	//console.log('output_matrix:', output_matrix)
 	//console.log('row_dendro:', row_output.dendrogram)
 	//console.log('row_children:', row_output.children)
@@ -562,8 +573,6 @@ async function geneExpressionClustering(data, q, ds) {
 	/* rust is no longer used
 
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
-	const time2 = new Date()
-	console.log('Time taken to run rust gene clustering script:', time2 - time1, 'ms')
 	//console.log('result:', result)
 
         sorted_sample_elements: List of indices of samples in sorted matrix

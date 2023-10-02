@@ -48,9 +48,14 @@ if (length(input$valueIsTransformed) == 0 || input$valueIsTransformed == FALSE) 
 } else { # No normalization
  normalized_matrix <- input$matrix
 }
+
 rownames(normalized_matrix) <- input$row_names
 colnames(normalized_matrix) <- input$col_names
 normalized_matrix <- na.omit(normalized_matrix) # Removes rows with NA values
+
+#print ("normalized_matrix")
+#print (dim(normalized_matrix))
+
 # For columns (i.e samples)
 RowDist <- dist(normalized_matrix, method = "euclidean") # Transposing the matrix
 
