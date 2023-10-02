@@ -26,7 +26,10 @@ class profileRadarFacility {
 		const config = appState.plots.find(p => p.id === this.id)
 
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
-		this.regions = [{ key: 'Global', label: 'Global' }]
+		this.regions = [
+			{ key: '', label: '' },
+			{ key: 'Global', label: 'Global' }
+		]
 		for (const region of config.regions) {
 			this.regions.push({ key: region.name, label: region.name })
 			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
@@ -46,8 +49,8 @@ class profileRadarFacility {
 			const config = this.config
 			config.region = this.regionSelect.node().value
 			config.income = ''
-			const sampleId = parseInt(this.sampleidmap[config.region])
-			config.filter = getSampleFilter(sampleId)
+			config.sampleName = config.region
+
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('Facility:').style('font-weight', 'bold')
@@ -64,12 +67,27 @@ class profileRadarFacility {
 		this.facilitySelect.on('change', () => {
 			const config = this.config
 			config.facility = this.facilitySelect.node().value
-			config.income = ''
-			const sampleId = parseInt(this.sampleidmap[config.facility])
-			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
+		this.incomes = ['']
+		this.incomes.push(...config.incomes)
+		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
+		this.incomeSelect = div.append('select').style('margin-left', '5px')
+		this.incomeSelect
+			.selectAll('option')
+			.data(this.incomes)
+			.enter()
+			.append('option')
+			.html((d, i) => d)
+
+		this.incomeSelect.on('change', () => {
+			const config = this.config
+			config.income = this.incomeSelect.node().value
+			config.sampleName = config.income
+			config.region = ''
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
 		div
 			.append('button')
 			.style('margin-left', '15px')
@@ -102,10 +120,16 @@ class profileRadarFacility {
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+		const config = this.config
+		if (this.config.sampleName == undefined) this.config.sampleName = 'Global' //By default compare with Global region
+
 		this.facility = this.state.config.facility || this.facilities[0]
 		this.angle = (Math.PI * 2) / this.terms.length
-		this.region = this.config.region || 'Global'
+		this.income = this.config.income || this.incomes[0]
+		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
+
 		this.regionSelect.selectAll('option').property('selected', d => d.key == this.region)
+		this.incomeSelect.selectAll('option').property('selected', d => d == this.income)
 
 		this.filename = `radar_plot${this.region ? '_' + this.region : ''}${this.facility ? '_' + this.facility : ''}.svg`
 			.split(' ')
@@ -114,7 +138,6 @@ class profileRadarFacility {
 	}
 
 	plot() {
-		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 
 		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 650)
@@ -135,7 +158,7 @@ class profileRadarFacility {
 		for (let { parent, term } of this.terms) {
 			const d = parent
 			const iangle = i * this.angle - Math.PI / 2
-			this.addData(this.region, iangle, i, data)
+			if (this.config.sampleName) this.addData(this.config.sampleName, iangle, i, data)
 			this.addData(this.facility, iangle, i, data2)
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
@@ -161,15 +184,15 @@ class profileRadarFacility {
 		data2.push(data2[0])
 		const color1 = 'gray',
 			color2 = 'blue'
-		polarG
-			.append('g')
-			.append('path')
-			.style('stroke', color1)
-			.attr('fill', 'none')
-			.style('stroke-dasharray', '5, 5')
-			.attr('stroke-width', '2px')
-			.attr('d', this.lineGenerator(data))
-
+		if (this.config.sampleName)
+			polarG
+				.append('g')
+				.append('path')
+				.style('stroke', color1)
+				.attr('fill', 'none')
+				.style('stroke-dasharray', '5, 5')
+				.attr('stroke-width', '2px')
+				.attr('d', this.lineGenerator(data))
 		polarG
 			.append('g')
 			.append('path')
@@ -189,8 +212,14 @@ class profileRadarFacility {
 				.attr('pointer-events', 'none')
 		}
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		this.addLegendItem(`${this.region} ${config[config.plot].poligon1}`, color1, 0, '5, 5')
-		this.addLegendItem(`${this.facility} ${config[config.plot].poligon2}`, color2, 1, 'none')
+		if (this.config.sampleName)
+			this.addLegendItem(
+				`${this.config.sampleName} ${this.config.sampleName == this.region ? 'region' : ''}`,
+				color1,
+				0,
+				'5, 5'
+			)
+		this.addLegendItem(`${this.facility} facility`, color2, 1, 'none')
 	}
 
 	addData(sampleName, iangle, i, data) {
@@ -199,7 +228,7 @@ class profileRadarFacility {
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
-		const color = sampleName == this.region ? '#aaa' : 'blue'
+		const color = sampleName == this.facility ? 'blue' : '#aaa'
 		this.polarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 4).attr('fill', color)
 		data.push([x, y])
 	}
