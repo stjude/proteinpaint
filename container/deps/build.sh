@@ -69,7 +69,6 @@ fi
 # Docker build
 #########################
 
-cd deps
 IMGVER="$(node -p "require('./package.json').version")"
 # assumes that the branch head is currently checked out
 IMGREV="head"
@@ -106,5 +105,3 @@ if [[ "$MODE" != "" ]]; then
 		done
 	fi
 fi
-
-cd ..
