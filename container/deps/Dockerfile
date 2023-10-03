@@ -3,7 +3,7 @@
 ARG registry=docker.io/library
 
 # need to manually bump the base version periodically
-FROM ${registry}/node:16.20.0-buster-slim AS ppbase
+FROM ${registry}/node:16-buster-slim AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
