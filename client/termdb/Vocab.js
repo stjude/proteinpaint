@@ -89,7 +89,8 @@ export class Vocab {
 			this.tokenVerificationMessage = `requires login for this data`
 			return
 		}
-		const headers = { [auth.headerKey]: this.verifiedToken }
+		const headers = {}
+		if (auth.headerKey) headers[auth.headerKey] = this.verifiedToken
 		// in cases where CORS prevents an http-domain based session cookie from being passed to the PP server,
 		// then this header will be used by the PP server
 		if (this.sessionId) headers['x-sjppds-sessionid'] = this.sessionId
