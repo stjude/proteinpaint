@@ -63,9 +63,9 @@ path="src/sv.rs"
 name="cluster"
 path="src/cluster.rs"
 
-[[bin]]
-name="wilcoxon"
-path="src/wilcoxon.rs"
+#[[bin]]
+#name="wilcoxon"
+#path="src/wilcoxon.rs"
 
 [[bin]]
 name="expression"
