@@ -107,7 +107,7 @@ supports both dataset-based and genome-based sources
 given q.dslabel, try to find a match in both places
 it's curator's responsibility to ensure not to use the same dslabel in these two places
 */
-function get_ds_tdb(genome, q) {
+export function get_ds_tdb(genome, q) {
 	{
 		const ds = genome.datasets[q.dslabel]
 		if (ds) {
@@ -302,7 +302,7 @@ Returns:
 		list of string names
 }
 */
-async function trigger_getcategories(q, res, tdb, ds, genome) {
+export async function trigger_getcategories(q, res, tdb, ds, genome) {
 	// thin wrapper of get_summary
 	// works for all types of terms
 	if (!q.tid) throw '.tid missing'
@@ -404,7 +404,6 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 	if (orderedLabels.length) {
 		lst.sort((a, b) => orderedLabels.indexOf(a.label) - orderedLabels.indexOf(b.label))
 	}
-
 	res.send({
 		lst,
 		orderedLabels

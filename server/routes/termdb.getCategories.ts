@@ -1,16 +1,16 @@
-// import { getViolinRequest, getViolinResponse } from '#shared/types/routes/termdb.violin'
-import { trigger_getViolinPlotData } from '#src/termdb.violin.js'
+// import { getgetCategoriesRequest, getgetCategoriesResponse } from '#shared/types/routes/termdb.getCategories'
+import { trigger_getcategories } from '#src/termdb.js'
 
 export const api: any = {
-	endpoint: 'termdb/violin',
+	endpoint: 'termdb/getCategories',
 	methods: {
 		get: {
 			init,
 			request: {
-				typeId: 'getViolinRequest'
+				typeId: 'getgetCategoriesRequest'
 			},
 			response: {
-				typeId: 'getViolinResponse'
+				typeId: 'getgetCategoriesResponse'
 			},
 			examples: [
 				{
@@ -19,9 +19,8 @@ export const api: any = {
 							genome: 'hg38-test',
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
-							devicePixelRatio: 2.200000047683716,
-							maxThickness: 150,
-							screenThickness: 1218,
+							getcategories: 1,
+							tid: 'diaggrp',
 							filter: {
 								type: 'tvslst',
 								in: true,
@@ -30,20 +29,20 @@ export const api: any = {
 									{
 										tag: 'cohortFilter',
 										type: 'tvs',
-										tvs: { term: { id: 'subcohort', type: 'categorical' }, values: [{ key: 'ABC', label: 'ABC' }] }
+										tvs: {
+											term: {
+												name: 'Cohort',
+												type: 'categorical',
+												values: { ABC: { label: 'ABC' }, XYZ: { label: 'XYZ' } },
+												id: 'subcohort',
+												isleaf: false,
+												groupsetting: { disabled: true }
+											},
+											values: [{ key: 'ABC', label: 'ABC' }]
+										}
 									}
 								]
-							},
-							svgw: 227.27272234672367,
-							orientation: 'horizontal',
-							datasymbol: 'bean',
-							radius: 5,
-							strokeWidth: 0.2,
-							axisHeight: 60,
-							rightMargin: 50,
-							unit: 'abs',
-							plotThickness: 150,
-							termid: 'agedx'
+							}
 						}
 					},
 					response: {
@@ -61,12 +60,16 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query // as getViolinRequest
+		const q = req.query // as getgetCategoriesRequest
 		try {
 			const g = genomes[req.query.genome]
 			const ds = g.datasets[req.query.dslabel]
+			const tdb = ds.cohort.termdb
+
 			if (!g) throw 'invalid genome name'
-			await trigger_getViolinPlotData(req.query, res, ds, g) // as getViolinResponse
+			if (!ds) throw 'invalid dataset name'
+			if (!tdb) throw 'invalid termdb object'
+			await trigger_getcategories(q, res, tdb, ds, g) // as getgetCategoriesResponse
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore
