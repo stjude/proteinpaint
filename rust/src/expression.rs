@@ -6,6 +6,7 @@ use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
 use nalgebra::ViewStorage;
+use r_mathlib;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use statrs::statistics::Data;
@@ -18,7 +19,7 @@ use std::time::Instant;
 //use std::cmp::Ordering;
 //use std::env;
 use std::io;
-mod stats_functions; // Importing Wilcoxon function from stats_functions.rs
+//mod stats_functions; // Importing Wilcoxon function from stats_functions.rs
 
 fn input_data(
     filename: &String,
@@ -248,7 +249,7 @@ fn main() {
                         }
                         //println!("treated{:?}", treated);
                         //println!("control{:?}", control);
-                        let p_value = stats_functions::wilcoxon_rank_sum_test(
+                        let p_value = wilcoxon_rank_sum_test(
                             treated.clone(),
                             control.clone(),
                             THRESHOLD,
@@ -522,7 +523,7 @@ fn rank_vector(input_vector: &Vec<f64>) -> Vec<f64> {
                     rank: i as f64 + 1.0,
                 });
             } else {
-                frac_rank = stats_functions::calculate_frac_rank(i as f64 + 1.0, num_repeats);
+                frac_rank = calculate_frac_rank(i as f64 + 1.0, num_repeats);
                 ranks.push(RankOutput {
                     orig_index: input_vector_sorted[i].orig_index,
                     rank: frac_rank,
@@ -734,4 +735,275 @@ fn cpm(
     }
     //println!("output_matrix:{:?}", output_matrix);
     output_matrix
+}
+
+pub fn wilcoxon_rank_sum_test(
+    mut group1: Vec<f64>,
+    mut group2: Vec<f64>,
+    threshold: usize,
+    alternative: char,
+    correct: bool,
+) -> f64 {
+    // Check if there are any ties between the two groups
+
+    let mut combined = group1.clone();
+    combined.extend(group2.iter().cloned());
+    combined.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    //println!("combined:{:?}", combined);
+
+    group1.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    group2.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    //println!("group1:{:?}", group1);
+    //println!("group2:{:?}", group2);
+
+    let mut group1_iter = 0;
+    let mut group2_iter = 0;
+    let mut xy: Vec<char> = Vec::with_capacity(combined.len()); // Stores X-Y classification
+    let mut ranks: Vec<f64> = Vec::with_capacity(combined.len()); // Stores the rank of each element
+    let mut is_repeat = false;
+    let mut repeat_present = false;
+    let mut frac_rank: f64 = 0.0;
+    let mut num_repeats: f64 = 1.0;
+    let mut repeat_iter: f64 = 1.0;
+    #[allow(unused_variables)]
+    let mut weight_x: f64 = 0.0;
+    let mut weight_y: f64 = 0.0;
+    let mut group_char: char = 'X';
+    let mut rank_frequencies: Vec<f64> = Vec::with_capacity(combined.len());
+    for i in 0..combined.len() {
+        //println!("group1_iter:{}", group1_iter);
+        //println!("group2_iter:{}", group2_iter);
+        //println!("item1:{}", combined[i]);
+        //println!("is_repeat:{}", is_repeat);
+        if group1_iter < group1.len() && combined[i] == group1[group1_iter] {
+            xy.push('X');
+            group1_iter += 1;
+            group_char = 'X';
+        } else if group2_iter < group2.len() && combined[i] == group2[group2_iter] {
+            xy.push('Y');
+            group2_iter += 1;
+            group_char = 'Y';
+        }
+
+        // Computing ranks
+        if is_repeat == false {
+            // Check if current element has other occurences
+            num_repeats = 1.0;
+            for j in i + 1..combined.len() {
+                if combined[i] == combined[j] {
+                    is_repeat = true;
+                    repeat_present = true;
+                    repeat_iter = 1.0;
+                    num_repeats += 1.0;
+                } else {
+                    break;
+                }
+            }
+            //println!("num_repeats:{}", num_repeats);
+            if is_repeat == false {
+                ranks.push(i as f64 + 1.0);
+                if group_char == 'X' {
+                    weight_x += i as f64 + 1.0;
+                } else if group_char == 'Y' {
+                    weight_y += i as f64 + 1.0;
+                }
+                //rank_frequencies.push(RankFreq {
+                //    rank: i as f64 + 1.0,
+                //    freq: 1,
+                //});
+                rank_frequencies.push(1.0);
+            } else {
+                frac_rank = calculate_frac_rank(i as f64 + 1.0, num_repeats);
+                ranks.push(frac_rank);
+                if group_char == 'X' {
+                    weight_x += frac_rank;
+                } else if group_char == 'Y' {
+                    weight_y += frac_rank
+                }
+                //rank_frequencies.push(RankFreq {
+                //    rank: frac_rank,
+                //    freq: num_repeats as usize,
+                //});
+                rank_frequencies.push(num_repeats);
+            }
+        } else if repeat_iter < num_repeats {
+            // Repeat case
+            ranks.push(frac_rank);
+            repeat_iter += 1.0;
+            if group_char == 'X' {
+                weight_x += frac_rank;
+            } else if group_char == 'Y' {
+                weight_y += frac_rank
+            }
+            if repeat_iter == num_repeats {
+                is_repeat = false;
+            }
+        } else {
+            //println!("i:{}", i);
+            ranks.push(i as f64 + 1.0);
+            repeat_iter = 1.0;
+            num_repeats = 1.0;
+            if group_char == 'X' {
+                weight_x += i as f64 + 1.0;
+            } else if group_char == 'Y' {
+                weight_y += i as f64 + 1.0;
+            }
+        }
+    }
+    //println!("rank_frequencies:{:?}", rank_frequencies);
+    //println!("xy:{:?}", xy);
+    //println!("ranks:{:?}", ranks);
+    //println!("weight_x:{}", weight_x);
+    //println!("weight_y:{}", weight_y);
+
+    //u_dash (calculated below) calculates the "W Statistic" in wilcox.test function in R
+
+    let u_y = weight_y - (group2.len() as f64 * (group2.len() as f64 + 1.0) / 2.0) as f64;
+    let u_dash_y = (u_y - (group1.len() * group2.len()) as f64).abs();
+    //println!("u_dash_y:{}", u_dash_y);
+
+    let u_x = weight_x - (group1.len() as f64 * (group1.len() as f64 + 1.0) / 2.0) as f64;
+    let _u_dash_x = (u_x - (group1.len() * group2.len()) as f64).abs();
+    //println!("u_dash_x:{}", u_dash_x);
+
+    // Calculate test_statistic
+
+    //let t1 = weight_x - ((group1.len() as f64) * (group1.len() as f64 + 1.0)) / 2.0;
+    //let t2 = weight_y - ((group2.len() as f64) * (group2.len() as f64 + 1.0)) / 2.0;
+    //
+    //let mut test_statistic = t1;
+    //if t2 < t1 {
+    //    test_statistic = t2;
+    //}
+
+    //println!("test_statistic:{}", test_statistic);
+
+    if group1.len() < threshold && group2.len() < threshold && repeat_present == false {
+        // Compute exact p-values
+
+        // Calculate conditional probability for weight_y
+
+        if alternative == 'g' {
+            // Alternative "greater"
+            //if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
+            //    iterate_exact_p_values(ranks, weight_y, group2.len())
+            //} else {
+            calculate_exact_probability(u_dash_y, group1.len(), group2.len(), alternative)
+            //}
+        } else if alternative == 'l' {
+            // Alternative "lesser"
+            //if group1.len() <= low_cutoff && group2.len() <= low_cutoff {
+            //    iterate_exact_p_values(ranks, weight_x, group1.len())
+            //} else {
+            calculate_exact_probability(u_dash_y, group1.len(), group2.len(), alternative)
+            //}
+        } else {
+            // Two-sided distribution
+            calculate_exact_probability(u_dash_y, group1.len(), group2.len(), alternative)
+        }
+    } else {
+        // Compute p-values from a normal distribution
+        //println!("group1 length:{}", group1.len());
+        //println!("group2 length:{}", group2.len());
+
+        let mut z = u_dash_y - ((group1.len() * group2.len()) as f64) / 2.0;
+        //println!("z_original:{}", z);
+        let mut nties_sum: f64 = 0.0;
+        for i in 0..rank_frequencies.len() {
+            nties_sum += rank_frequencies[i] * rank_frequencies[i] * rank_frequencies[i]
+                - rank_frequencies[i];
+        }
+
+        let sigma = (((group1.len() * group2.len()) as f64) / 12.0
+            * ((group1.len() + group2.len() + 1) as f64
+                - nties_sum
+                    / (((group1.len() + group2.len()) as f64)
+                        * ((group1.len() + group2.len() - 1) as f64))))
+            .sqrt();
+        //println!("sigma:{}", sigma);
+        let mut correction: f64 = 0.0;
+        if correct == true {
+            if alternative == 'g' {
+                // Alternative "greater"
+                correction = 0.5;
+            } else if alternative == 'l' {
+                // Alternative "lesser"
+                correction = -0.5;
+            } else {
+                // Alternative "two-sided"
+                if z > 0.0 {
+                    correction = 0.5;
+                } else if z < 0.0 {
+                    correction = -0.5;
+                } else {
+                    // z=0
+                    correction = 0.0;
+                }
+            }
+        }
+        z = (z - correction) / sigma;
+        //println!("z:{}", z);
+        if alternative == 'g' {
+            // Alternative "greater"
+            //println!("greater:{}", n.cdf(weight_y));
+            //1.0 - n.cdf(z) // Applying continuity correction
+            r_mathlib::normal_cdf(z, 0.0, 1.0, false, false)
+        } else if alternative == 'l' {
+            // Alternative "lesser"
+            //println!("lesser:{}", n.cdf(weight_x));
+            //n.cdf(z) // Applying continuity coorection
+            r_mathlib::normal_cdf(z, 0.0, 1.0, true, false)
+        } else {
+            // Alternative "two-sided"
+            let p_g = r_mathlib::normal_cdf(z, 0.0, 1.0, false, false); // Applying continuity correction
+            let p_l = r_mathlib::normal_cdf(z, 0.0, 1.0, true, false); // Applying continuity correction
+            let mut p_value;
+            if p_g < p_l {
+                p_value = 2.0 * p_g;
+            } else {
+                p_value = 2.0 * p_l;
+            }
+            //println!("p_value:{}", p_value);
+            if p_value > 1.0 {
+                p_value = 1.0;
+            }
+            p_value
+        }
+    }
+}
+
+// To be used only when there are no ties in the input data
+#[allow(dead_code)]
+fn calculate_exact_probability(weight: f64, x: usize, y: usize, alternative: char) -> f64 {
+    //println!("Using Wilcoxon CDF");
+    let mut p_value;
+    if alternative == 't' {
+        if weight > ((x * y) as f64) / 2.0 {
+            p_value = 2.0 * r_mathlib::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
+        } else {
+            p_value = 2.0 * r_mathlib::wilcox_cdf(weight, x as f64, y as f64, true, false);
+        }
+        if p_value > 1.0 {
+            p_value = 1.0;
+        }
+    } else if alternative == 'g' {
+        p_value = r_mathlib::wilcox_cdf(weight - 1.0, x as f64, y as f64, false, false);
+    } else if alternative == 'l' {
+        p_value = r_mathlib::wilcox_cdf(weight, x as f64, y as f64, true, false);
+    } else {
+        // Should not happen
+        panic!("Unknown alternative option given, please check!");
+    }
+    //println!("p_value:{}", p_value);
+    p_value
+}
+
+#[allow(dead_code)]
+pub fn calculate_frac_rank(current_rank: f64, num_repeats: f64) -> f64 {
+    let mut sum = 0.0;
+    for i in 0..num_repeats as usize {
+        let rank = current_rank + i as f64;
+        sum += rank;
+    }
+    sum / num_repeats
 }

@@ -39,7 +39,7 @@ class DEanalysis {
 
 	async main() {
 	        const data = await this.app.vocabApi.runDEanalysis(this.state.config)	        
-	        console.log(data)
+	        //console.log(data)
 	        render_volcano(this.dom.holder,data)
 	}
 }
