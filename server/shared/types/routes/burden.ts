@@ -4,17 +4,17 @@ export type BurdenRequest = {
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
 	/** the diagnosis group:
-	 * 1="Acute lymphoblastic leukemia"
-	 * 2="AML"
-	 * 3="Hodgkin lymphoma"
-	 * 4="Non-Hodgkin lymphoma"
-	 * 5="Central nervous system"
-	 * 6="Bone tumor"
-	 * 7="STS"
-	 * 8="Wilms tumor"
-	 * 9="Neuroblastoma"
-	 * 10="Retinoblastoma"
-	 * 11="Germ cell tumor"
+	 * 1= "Acute lymphoblastic leukemia (ALL)"
+	 * 2= "Acute Myeloid Leukemia (AML)"
+	 * 3= "Hodgkin lymphoma (HL)"
+	 * 4= "Non-Hodgkin lymphoma (NHL)"
+	 * 5= "Central nervous system (CNS)"
+	 * 6= "Bone tumor (BT)"
+	 * 7= "Soft Tissue Sarcoma (STS)"
+	 * 8= "Wilms tumor (WT)"
+	 * 9= "Neuroblastoma (NB)"
+	 * 10= "Retinoblastoma (Rb)"
+	 * 11= "Germ cell tumor (GCT)"
 	 */
 	diaggrp: number
 	/** sex: 0=Female, 1=Male */
@@ -45,7 +45,7 @@ export type BurdenRequest = {
 	dox: number
 	/** Heart radiation, Gy */
 	heart: number
-	/** Brrain radiation, Gy */
+	/** Brain radiation, Gy */
 	brain: number
 	/** Abdominal radiation, Gy */
 	abd: number
