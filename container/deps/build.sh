@@ -103,7 +103,7 @@ if [[ "$MODE" != "" ]]; then
 
 	if [[ "$HASH" != "" ]]; then
 		for target in base rust server full; do
-			docker tag "${MODE}pp${target}:latest" "${MODE}pp${target}:$HASH"
+			docker tag "${MODE}pp${target}:latest" "${MODE}pp${target}:$IMGVER-$HASH"
 		done
 	fi
 fi
