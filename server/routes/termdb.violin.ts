@@ -66,7 +66,8 @@ function init({ genomes }) {
 			const g = genomes[req.query.genome]
 			const ds = g.datasets[req.query.dslabel]
 			if (!g) throw 'invalid genome name'
-			await trigger_getViolinPlotData(req.query, res, ds, g) // as getViolinResponse
+			const data = await trigger_getViolinPlotData(req.query, null, ds, g) // as getViolinResponse
+			res.send(data)
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore
