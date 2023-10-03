@@ -16,6 +16,28 @@ class profileRadar extends profilePlot {
 		this.opts.header.text('Radar Graph')
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
+		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('Facility:').style('font-weight', 'bold')
+		this.facilities = ['']
+		this.facilities.push(...(await this.app.vocabApi.getProfileFacilities()))
+
+		this.facilitySelect = this.dom.facilityDiv.insert('select').style('margin-left', '5px')
+		this.facilitySelect
+			.selectAll('option')
+			.data(this.facilities)
+			.enter()
+			.append('option')
+			.attr('value', d => d)
+			.html((d, i) => d)
+		this.facilitySelect.on('change', () => {
+			const config = this.config
+			config.facility = this.facilitySelect.node().value
+			config.sampleName = config.facility
+			config.income = ''
+			config.region = ''
+			const sampleId = parseInt(this.sampleidmap[config.facility])
+			config.filter = getSampleFilter(sampleId)
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		})
 	}
 
 	async main() {
@@ -28,8 +50,9 @@ class profileRadar extends profilePlot {
 			this.twLst.push(term2)
 		}
 		this.twLst.push(this.config.typeTW)
-		const sampleName = this.config.region !== undefined ? this.config.region : this.config.income || 'Global'
-		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
+		if (this.config.sampleName == undefined) this.config.sampleName = 'Global' //Global region
+
+		const filter = this.config.filter || getSampleFilter(this.sampleidmap[this.config.sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
 			filter
@@ -39,12 +62,9 @@ class profileRadar extends profilePlot {
 
 		this.income = this.config.income || this.incomes[0]
 		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
-
 		this.setFilter()
 
-		this.filename = `radar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
-			.split(' ')
-			.join('_')
+		this.filename = `radar_plot_${this.config.sampleName}.svg`.split(' ').join('_')
 		this.plot()
 	}
 
