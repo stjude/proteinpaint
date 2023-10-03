@@ -17,6 +17,9 @@ export class profilePlot {
 	setFilter() {
 		this.regionSelect.selectAll('option').property('selected', d => d.key == this.region)
 		this.incomeSelect.selectAll('option').property('selected', d => d == this.income)
+		if (this.facilitySelect)
+			this.facilitySelect.selectAll('option').property('selected', d => d == this.config.facility)
+
 		if (this.selectComp) this.selectComp.selectAll('option').property('selected', (d, i) => i == this.componentIndex)
 	}
 
@@ -59,9 +62,11 @@ export class profilePlot {
 
 		this.regionSelect.on('change', () => {
 			const config = this.config
+			config.facility = ''
 			config.region = this.regionSelect.node().value
 			config.income = ''
 			const sampleId = parseInt(this.sampleidmap[config.region])
+			config.sampleName = config.region
 			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
@@ -77,9 +82,11 @@ export class profilePlot {
 
 		this.incomeSelect.on('change', () => {
 			const config = this.config
+			config.facility = ''
 			config.income = this.incomeSelect.node().value
 			config.region = ''
 			const sampleId = parseInt(this.sampleidmap[config.income])
+			config.sampleName = config.income
 			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
