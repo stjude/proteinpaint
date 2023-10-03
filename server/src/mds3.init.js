@@ -1315,7 +1315,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		    result = JSON.parse(fs.readFileSync(path.join(serverconfig.binpath, 'utils', 'r_output.txt'), 'utf8'));
 	        } else { // Wilcoxon test will be used for DE analysis	   
 	    	      const time1 = new Date()
-	              const rust_output = await run_rust('expression', JSON.stringify(expression_input))
+	              const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
                       const time2 = new Date()
 	              for (const line of rust_output.split('\n')) {
                           if (line.startsWith("adjusted_p_values:")) {
