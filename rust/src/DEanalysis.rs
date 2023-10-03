@@ -1,4 +1,5 @@
 // cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/expression
+#![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Const;
 use nalgebra::base::dimension::Dyn;

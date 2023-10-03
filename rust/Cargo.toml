@@ -68,5 +68,5 @@ path="src/cluster.rs"
 #path="src/wilcoxon.rs"
 
 [[bin]]
-name="expression"
-path="src/expression.rs"
+name="DEanalysis"
+path="src/DEanalysis.rs"
