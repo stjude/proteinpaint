@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added radar plots to the profile
+
 
 ## 2.27.2
 
