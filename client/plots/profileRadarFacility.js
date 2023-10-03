@@ -12,6 +12,8 @@ class profileRadarFacility {
 	}
 
 	async init(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		this.opts.header.text(config[config.plot].name)
 		const holder = this.opts.holder.append('div')
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
 		const firstDiv = div.append('div').style('display', 'inline-block')
@@ -23,7 +25,6 @@ class profileRadarFacility {
 			facilityDiv: div.insert('div').style('display', 'inline-block'),
 			plotDiv
 		}
-		const config = appState.plots.find(p => p.id === this.id)
 
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 		this.regions = [
@@ -94,7 +95,6 @@ class profileRadarFacility {
 			.text('Download Image')
 			.on('click', () => downloadSingleSVG(this.svg, this.filename))
 
-		this.opts.header.text('Radar Graph')
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		this.terms = config[config.plot].terms
