@@ -1144,7 +1144,7 @@ export class Matrix {
 						legend.entry.crossedOut = true
 						for (const l of [legendGroups, so.grp.legendGroups]) {
 							if (!l) continue
-							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
+							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order, $id }
 							const lg = l[legend.group]
 							if (!lg.values[legend.value]) {
 								lg.values[legend.value] = JSON.parse(JSON.stringify(legend.entry))
@@ -1178,7 +1178,7 @@ export class Matrix {
 					if (legend) {
 						for (const l of [legendGroups, so.grp.legendGroups]) {
 							if (!l) continue
-							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
+							if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order, $id }
 							const lg = l[legend.group]
 							if (!lg.values[legend.value]) {
 								lg.values[legend.value] = JSON.parse(JSON.stringify(legend.entry))
@@ -1259,6 +1259,7 @@ export class Matrix {
 				legendData.unshift({
 					name: 'Consequences',
 					order: legend.order,
+					$id: legend.$id,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						const count = item.samples.size
@@ -1272,7 +1273,8 @@ export class Matrix {
 							count,
 							isLegendItem: true,
 							dt: item.dt,
-							crossedOut: item.crossedOut
+							crossedOut: item.crossedOut,
+							origin: item.origin
 						}
 					})
 				})
@@ -1294,6 +1296,7 @@ export class Matrix {
 				legendData.push({
 					name: $id,
 					order: legend.order,
+					$id: legend.$id,
 					hasScale,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
@@ -1312,7 +1315,8 @@ export class Matrix {
 								count,
 								isLegendItem: true,
 								dt: item.dt,
-								crossedOut: item.crossedOut
+								crossedOut: item.crossedOut,
+								origin: item.origin
 							}
 						} else {
 							return {
@@ -1324,7 +1328,8 @@ export class Matrix {
 								count,
 								isLegendItem: true,
 								dt: item.dt,
-								crossedOut: item.crossedOut
+								crossedOut: item.crossedOut,
+								origin: item.origin
 							}
 						}
 					})
@@ -1345,6 +1350,7 @@ export class Matrix {
 				legendData.push({
 					name: name.length < s.rowlabelmaxchars ? name : name.slice(0, s.rowlabelmaxchars) + '...',
 					order: legend.order,
+					$id: legend.$id,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						const count = item.samples?.size
@@ -1360,7 +1366,8 @@ export class Matrix {
 							//onClickCallback: this.handleLegendItemClick,
 							isLegendItem: true,
 							dt: item.dt,
-							crossedOut: item.crossedOut
+							crossedOut: item.crossedOut,
+							origin: item.origin
 						}
 					})
 				})
