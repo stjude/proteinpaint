@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
-import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { Menu } from '#dom/menu'
 import { downloadSingleSVG } from '../common/svg.download.js'
 
@@ -294,7 +293,6 @@ export async function getPlotConfig(opts, app) {
 			await fillTermWrapper(parent, app.vocabApi)
 			await fillTermWrapper(term, app.vocabApi)
 		}
-		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadarFacility getPlotConfig()]`

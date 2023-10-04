@@ -107,7 +107,7 @@ class profileBarchart extends profilePlot {
 		this.svg
 			.append('defs')
 			.append('pattern')
-			.attr('id', 'diagonalHatch')
+			.attr('id', `${this.id}_diagonalHatch`)
 			.attr('patternUnits', 'userSpaceOnUse')
 			.attr('width', 4)
 			.attr('height', 4)
@@ -177,9 +177,9 @@ class profileBarchart extends profilePlot {
 		drawLine(910, 120, 75, y, 'A')
 		y += 40
 		x = 50
-		drawLegendRect(x, y, 'and', color)
+		this.drawLegendRect(x, y, 'and', color)
 		x += 300
-		drawLegendRect(x, y, 'or', color)
+		this.drawLegendRect(x, y, 'or', color)
 
 		function drawRect(x, y, row, i, g) {
 			const tw = row.twlst[i]
@@ -240,29 +240,6 @@ class profileBarchart extends profilePlot {
 			svg.append('g').attr('transform', `translate(${x}, ${y})`).call(axisTop(xAxisScale))
 		}
 
-		function drawLegendRect(x, y, operator, color) {
-			const rect = svg
-				.append('g')
-				.attr('transform', `translate(${x}, ${y})`)
-				.append('rect')
-				.attr('x', 0)
-				.attr('y', 0)
-				.attr('width', 20)
-				.attr('height', 20)
-			if (operator == 'and') rect.attr('fill', color)
-			else {
-				rect.attr('fill', 'url(#diagonalHatch)')
-			}
-
-			const text = svg
-				.append('text')
-				.attr('transform', `translate(${x + 25}, ${y + 15})`)
-				.attr('text-anchor', 'start')
-				.text('Objective ')
-			text.append('tspan').attr('font-weight', 'bold').text(operator)
-			text.append('tspan').text(' Subjective data')
-		}
-
 		function drawLine(x, y, percent, y2, text) {
 			const x1 = x + (percent / 100) * barwidth
 			svg
@@ -288,6 +265,29 @@ class profileBarchart extends profilePlot {
 					.text('C')
 					.style('font-weight', 'bold')
 		}
+	}
+
+	drawLegendRect(x, y, operator, color) {
+		const rect = this.svg
+			.append('g')
+			.attr('transform', `translate(${x}, ${y})`)
+			.append('rect')
+			.attr('x', 0)
+			.attr('y', 0)
+			.attr('width', 20)
+			.attr('height', 20)
+		if (operator == 'and') rect.attr('fill', color)
+		else {
+			rect.attr('fill', `url(#${this.id}_diagonalHatch)`)
+		}
+
+		const text = this.svg
+			.append('text')
+			.attr('transform', `translate(${x + 25}, ${y + 15})`)
+			.attr('text-anchor', 'start')
+			.text('Objective ')
+		text.append('tspan').attr('font-weight', 'bold').text(operator)
+		text.append('tspan').text(' Subjective data')
 	}
 }
 
