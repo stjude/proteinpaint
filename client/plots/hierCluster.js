@@ -170,6 +170,22 @@ class HierCluster extends Matrix {
 		}
 	}
 
+	combineData() {
+		if (!this.hierClusterSamples) return
+		const d = this.data
+		const samples = {}
+		const lst = []
+		// the gene expression samples will be used as a filter for the matrix samples
+		for (const sampleId in this.hierClusterSamples.samples) {
+			const s = this.hierClusterSamples.samples[sampleId]
+			samples[sampleId] = s
+			lst.push(s)
+			if (!(sampleId in d.samples)) continue
+			Object.assign(s, d.samples[sampleId])
+		}
+		this.data = { samples, lst, refs: d.refs }
+	}
+
 	setHierColorScale(c) {
 		const hc = this.settings.hierCluster
 		const scale = hc.colors?.length ? interpolateRgbBasis(hc.colors) : interpolateRdBu
