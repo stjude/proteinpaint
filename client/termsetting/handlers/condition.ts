@@ -74,7 +74,7 @@ function getPillStatus(self: ConditionTermSettingInstance) {
 	}
 	if (self.q.mode == 'cuminc') {
 		if (!self.q.breaks || self.q.breaks.length == 0) throwMsgWithFilePathAndFnName('Missing q.breaks')
-		return { text: `Grades ${self.q.breaks![0]} -5` }
+		return { text: `Grades ${self.q.breaks![0]}-5` }
 	}
 	return {}
 }
