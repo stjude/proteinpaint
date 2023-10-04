@@ -2031,11 +2031,17 @@ function setLengendActions(self) {
 			legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 				l =>
 					l.legendGrpName == targetData.termid &&
-					l.tvs.values.find(v => v.dt == targetData.dt && v.mclasslst[0] == targetData.key)
+					l.tvs.values.find(
+						v =>
+							v.dt == targetData.dt &&
+							(v.origin ? v.origin == targetData.origin : true) &&
+							v.mclasslst[0] == targetData.key
+					)
 			)
 		} else {
 			// when its non-geneVariant term
-			const legendTerm = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+			const legendTerm = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
+			if (!legendTerm) return
 			if (legendTerm.type == 'categorical') {
 				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 					l => l.legendGrpName == targetData.termid && l.tvs.values.find(v => v.key == targetData.key)
@@ -2065,7 +2071,7 @@ function setLengendActions(self) {
 							tvs: {
 								isnot: true,
 								term$type: 'geneVariant',
-								values: [{ dt: targetData.dt, mclasslst: [targetData.key] }]
+								values: [{ dt: targetData.dt, origin: targetData.origin, mclasslst: [targetData.key] }]
 							}
 						}
 						self.config.legendValueFilter.lst.push(filterNew)
@@ -2074,16 +2080,23 @@ function setLengendActions(self) {
 						const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
 						if (term.type == 'categorical') {
 							term.$id = targetData.$id
-							const filterNew = {
-								legendGrpName: targetData.termid,
-								type: 'tvs',
-								tvs: {
-									isnot: true,
-									term,
-									values: [{ key: targetData.key, label: targetData.key }]
+							const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
+								l => l.legendGrpName == targetData.termid
+							)
+							if (filterGrpIndex == -1) {
+								const filterNew = {
+									legendGrpName: targetData.termid,
+									type: 'tvs',
+									tvs: {
+										isnot: true,
+										term,
+										values: [{ key: targetData.key }]
+									}
 								}
+								self.config.legendValueFilter.lst.push(filterNew)
+							} else {
+								self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: targetData.key })
 							}
-							self.config.legendValueFilter.lst.push(filterNew)
 						} else if (term.type == 'integer' || term.type == 'float') {
 							term.$id = targetData.$id
 							const filterNew = {
@@ -2102,7 +2115,19 @@ function setLengendActions(self) {
 					// when the legend is crossed-out, either by clicking hide or by clicking another legend and show-only,
 					// A filter to filter out the legend's dt + legend's class exist in self.config.legendValueFilter
 					// So remove the filter that filters out the legend's dt + legend's class
-					self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
+					if (targetData.dt) self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
+					else {
+						const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+						if (term.type == 'categorical') {
+							const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
+								l => l.legendGrpName == targetData.termid
+							)
+							const filterIndex = self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.findIndex(
+								v => v.key == targetData.key
+							)
+							self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.splice(filterIndex, 1)
+						} else self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
+					}
 				}
 				self.app.dispatch({
 					type: 'plot_edit',
@@ -2118,7 +2143,8 @@ function setLengendActions(self) {
 				menu.hide()
 				const term = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
 				const legendGrp =
-					self.legendData.find(lg => lg.name == targetData.termid) || self.legendData.find(lg => lg.name == term?.name)
+					self.legendData.find(lg => lg.name == targetData.termid) ||
+					self.legendData.find(lg => lg.$id == targetData.$id)
 
 				// reset self.config.legendValueFilter.lst to remove all the filters in the lst that's in the same legendGrp
 				self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
@@ -2128,14 +2154,15 @@ function setLengendActions(self) {
 				if (targetData.dt) {
 					// for a geneVariant term
 					for (const l of legendGrp.items) {
-						if (l.dt == targetData.dt && l.key == targetData.key) continue
+						if (l.dt == targetData.dt && (l.origin ? l.origin == targetData.origin : true) && l.key == targetData.key)
+							continue
 						const filterNew = {
 							legendGrpName: targetData.termid,
 							type: 'tvs',
 							tvs: {
 								isnot: true,
 								term$type: 'geneVariant',
-								values: [{ dt: l.dt, mclasslst: [l.key] }]
+								values: [{ dt: l.dt, origin: l.origin, mclasslst: [l.key] }]
 							}
 						}
 						if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
@@ -2148,17 +2175,23 @@ function setLengendActions(self) {
 						term.$id = targetData.$id
 						for (const l of legendGrp.items) {
 							if (l.key == targetData.key) continue
-							const filterNew = {
-								legendGrpName: targetData.termid,
-								type: 'tvs',
-								tvs: {
-									isnot: true,
-									term,
-									values: [{ key: l.key }]
+							const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
+								l => l.legendGrpName == targetData.termid
+							)
+							if (filterGrpIndex == -1) {
+								const filterNew = {
+									legendGrpName: targetData.termid,
+									type: 'tvs',
+									tvs: {
+										isnot: true,
+										term,
+										values: [{ key: l.key }]
+									}
 								}
+								self.config.legendValueFilter.lst.push(filterNew)
+							} else {
+								self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: l.key })
 							}
-							if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
-							else self.config.legendValueFilter.lst.push(filterNew)
 						}
 					} else if (term.type == 'integer' || term.type == 'float') {
 						term.$id = targetData.$id

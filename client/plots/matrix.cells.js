@@ -124,7 +124,8 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 					minLabel: value.class == 'CNV_loss' ? -max : 0,
 					maxLabel: value.class == 'CNV_loss' ? 0 : max,
 					order,
-					dt: value.dt
+					dt: value.dt,
+					origin: value.origin
 				}
 			}
 		} else {
@@ -134,7 +135,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				group,
 				value: value.class,
 				order: -1,
-				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt }
+				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 			}
 		}
 	} else if (value.dt == 3) {
@@ -151,7 +152,8 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				minLabel: self.geneExpValues.min,
 				maxLabel: self.geneExpValues.max,
 				order,
-				dt: value.dt
+				dt: value.dt,
+				origin: value.origin
 			}
 		}
 	} else {
@@ -161,7 +163,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 			group,
 			value: value.class,
 			order: -2,
-			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt }
+			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 		}
 	}
 }
