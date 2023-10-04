@@ -271,7 +271,7 @@ class profileRadarFacility {
 			)
 		this.legendG
 			.append('g')
-			.attr('transform', `translate(${x / 2}, ${y - 5})`)
+			.attr('transform', `translate(${0}, ${y - 5})`)
 			.append('circle')
 			.attr('r', 4)
 			.attr('fill', color)
