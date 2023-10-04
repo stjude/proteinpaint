@@ -71,7 +71,7 @@ export const versionInfo: VersionInfo = {
 
 function get_codedate() {
 	const date1 =
-		(fs.existsSync('public/bin/proteinpaint.js') && fs.statSync(serverconfig.binpath + '/server.js').mtime) ||
+		(fs.existsSync(serverconfig.binpath + '/server.js') && fs.statSync(serverconfig.binpath + '/server.js').mtime) ||
 		new Date(0)
 	const date2 =
 		(fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || new Date(0)
