@@ -85,7 +85,7 @@ class profilePolar extends profilePlot {
 		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		const legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
@@ -127,16 +127,16 @@ class profilePolar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		legendG
+		this.legendG
 			.append('text')
 			.attr('text-anchor', 'left')
 			.style('font-weight', 'bold')
 			.text('Overall Score')
-			.attr('transform', `translate(0, -10)`)
+			.attr('transform', `translate(0, -5)`)
 
-		addLegendItem('A', 'More than 75% of possible scorable items', 1)
-		addLegendItem('B', '50-75% of possible scorable items', 2)
-		addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+		this.addLegendItem(this.legendG, 'A', 'More than 75% of possible scorable items', 1)
+		this.addLegendItem(this.legendG, 'B', '50-75% of possible scorable items', 2)
+		this.addLegendItem(this.legendG, 'C', 'Less than 50% of possible scorable items', 3)
 
 		function addCircle(percent, text = null) {
 			const circle = polarG
@@ -157,15 +157,6 @@ class profilePolar extends profilePlot {
 					.style('font-size', '24px')
 					.attr('pointer-events', 'none')
 			}
-		}
-
-		function addLegendItem(category, description, index) {
-			const text = legendG
-				.append('text')
-				.attr('transform', `translate(0, ${index * 20})`)
-				.attr('text-anchor', 'left')
-			text.append('tspan').attr('font-weight', 'bold').text(category)
-			text.append('tspan').text(`: ${description}`)
 		}
 	}
 }

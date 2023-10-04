@@ -97,4 +97,13 @@ export class profilePlot {
 			.text('Download Image')
 			.on('click', () => downloadSingleSVG(this.svg, this.filename))
 	}
+
+	addLegendItem(legendG, category, description, index) {
+		const text = legendG
+			.append('text')
+			.attr('transform', `translate(0, ${index * 20})`)
+			.attr('text-anchor', 'left')
+		text.append('tspan').attr('font-weight', 'bold').text(category)
+		text.append('tspan').text(`: ${description}`)
+	}
 }
