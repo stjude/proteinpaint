@@ -1,5 +1,6 @@
 import serverconfig from './serverconfig'
 import fs from 'fs'
+import path from 'path'
 import child_process from 'child_process'
 import util from 'util'
 import pkg from '../package.json'
@@ -8,6 +9,8 @@ import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/typ
 const execPromise = util.promisify(child_process.exec)
 
 export async function getStat(genomes) {
+	if (!versionInfo.deps) setVersionInfoDeps()
+
 	const health = {
 		status: 'ok',
 		genomes: {},
@@ -67,6 +70,27 @@ export const versionInfo: VersionInfo = {
 	pkgver: pkg.version,
 	codedate: get_codedate(),
 	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' ')
+}
+
+async function setVersionInfoDeps() {
+	// this assumes that the package.json in the process.cwd() is the embedder package
+	// that may have >=1 @sjcrh packages as dependencies
+	const targetPkgJson = `${process.cwd()}/package.json`
+	try {
+		if (!fs.existsSync(targetPkgJson)) versionInfo.deps = {}
+		else {
+			const targetPkgContent = fs.readFileSync(targetPkgJson, { encoding: 'utf8' })
+			const targetPkg = JSON.parse(targetPkgContent)
+			versionInfo.deps = {
+				'@sjcrh/proteinpaint-server': targetPkg?.dependencies['@sjcrh/proteinpaint-server'],
+				'@sjcrh/proteinpaint-client': targetPkg?.dependencies['@sjcrh/proteinpaint-client']
+			}
+		}
+	} catch (e) {
+		console.log(e)
+		// avoid repeated errors related to reading the target package.json
+		versionInfo.deps = {}
+	}
 }
 
 function get_codedate() {

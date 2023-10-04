@@ -11,6 +11,9 @@ export type VersionInfo = {
 	pkgver: string
 	codedate: string
 	launchdate: string
+	deps?: {
+		[pkgName: string]: string
+	}
 }
 
 type BuildByGenome = {
