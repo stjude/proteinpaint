@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "Versions 7, 8 and 9 Hi-C files are accepted.",
+    "ribbonMessage": "Versions 7, 8 and 9 Hi-C files are accepted.<br> See the new example for displaying a hic data across two chromosomes.",
     "ppcalls": [
         {
             "label": "Hi-C",
@@ -12,19 +12,61 @@
                 "genome": "hg19",
                 "position": "chr7:13749862-20841903",
                 "nativetracks": "RefGene",
-                "tracks": [{
-                    "type": "hicstraw",
-                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
-                    "name": "Hi-C Demo",
-                    "percentile_max": 95,
-                    "mincutoff": 1,
-                    "pyramidup": 1,
-                    "enzyme": "MboI",
-					"normalizationmethod":"VC"
-                }]
+                "tracks": [
+                    {
+                        "type": "hicstraw",
+                        "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                        "name": "Hi-C Demo",
+                        "percentile_max": 95,
+                        "mincutoff": 1,
+                        "pyramidup": 1,
+                        "enzyme": "MboI",
+                        "normalizationmethod": "VC"
+                    }
+                ]
             },
             "testSpec": {
-                "expected": {"image": 1 }
+                "expected": {
+                    "image": 1
+                }
+            }
+        },
+        {
+            "label": "Two chromosome view",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": true,
+                "noheader": true,
+                "genome": "hg19",
+                "position": "chr8:128688997-128888997",
+                "nativetracks": "RefGene",
+                "width": 300,
+                "subpanels": [
+                    {
+                        "chr": "chr4",
+                        "start": 174408608,
+                        "stop": 175268609,
+                        "width": 600,
+                        "leftborder": "rgba(200,0,0,.1)"
+                    }
+                ],
+                "tracks": [
+                    {
+                        "type": "hicstraw",
+                        "file": "files/hg19/nbl-hic/hic_NB69.inter.hic",
+                        "name": "SJNBL046418_C1/NB69 Hi-C",
+                        "percentile_max": 95,
+                        "mincutoff": 1,
+                        "pyramidup": 1,
+                        "enzyme": "MboI"
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": {
+                    "image": 1
+                }
             }
         }
     ],
