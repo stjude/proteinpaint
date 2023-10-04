@@ -121,6 +121,7 @@ class profileBarchart extends profilePlot {
 		let stepx = 500
 		let step = 30
 		const barwidth = 400
+
 		const hasSubjectiveData = this.component.hasSubjectiveData
 		for (const [i, c] of config.columnNames.entries()) {
 			if (i == 1 && !hasSubjectiveData) break
@@ -172,11 +173,24 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 50, y, 'B')
 		drawLine(410, 120, 75, y, 'A')
 
+		this.legendG = this.svg.append('g').attr('transform', `translate(${70},${y + 60})`)
+
+		this.legendG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text('Overall Score')
+			.attr('transform', `translate(0, -5)`)
+
+		this.addLegendItem(this.legendG, 'A', 'More than 75% of possible scorable items', 1)
+		this.addLegendItem(this.legendG, 'B', '50-75% of possible scorable items', 2)
+		this.addLegendItem(this.legendG, 'C', 'Less than 50% of possible scorable items', 3)
+
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
 		drawLine(910, 120, 75, y, 'A')
 		y += 40
-		x = 50
+		x = 600
 		this.drawLegendRect(x, y, 'and', color)
 		x += 300
 		this.drawLegendRect(x, y, 'or', color)
