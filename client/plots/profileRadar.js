@@ -39,6 +39,9 @@ class profileRadar extends profilePlot {
 			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
+		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 	}
 
 	async main() {
@@ -83,7 +86,7 @@ class profileRadar extends profilePlot {
 		const y = 320
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 550},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 500},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -152,13 +155,20 @@ class profileRadar extends profilePlot {
 	}
 
 	addData(field, iangle, i, data) {
-		const tw = this.terms[i][field]
+		const item = this.terms[i]
+		const tw = item[field]
 		const percentage = this.sampleData[tw.$id]?.value
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
 		const color = field == 'term1' ? '#aaa' : 'blue'
-		this.polarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 4).attr('fill', color)
+		const circle = this.polarG
+			.append('g')
+			.attr('transform', `translate(${x}, ${y})`)
+			.append('circle')
+			.attr('r', 4)
+			.attr('fill', color)
+		circle.datum({ module: item.parent.term.name, percentage })
 		data.push([x, y])
 	}
 
@@ -210,6 +220,23 @@ class profileRadar extends profilePlot {
 			.attr('transform', `translate(${x + 5}, ${y})`)
 			.attr('text-anchor', 'left')
 		textElem.append('tspan').text(text)
+	}
+
+	onMouseOver(event) {
+		if (event.target.tagName == 'circle') {
+			const circle = event.target
+			const d = circle.__data__
+			const menu = this.tip.clear()
+			const percentage = d.percentage
+			menu.d.text(`${d.module} ${percentage}%`)
+			menu.show(event.clientX, event.clientY, true, true)
+		} else this.onMouseOut(event)
+	}
+
+	onMouseOut(event) {
+		if (event.target.tagName == 'circle') {
+			this.tip.hide()
+		}
 	}
 }
 

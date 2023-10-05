@@ -107,6 +107,9 @@ class profileRadarFacility {
 		})
 		this.samplesData = {}
 		for (const sample of this.data.lst) this.samplesData[sample.sampleName] = sample
+		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
+		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 	}
 
 	getState(appState) {
@@ -222,14 +225,21 @@ class profileRadarFacility {
 	}
 
 	addData(sampleName, iangle, i, data) {
-		const tw = this.terms[i].term
+		const item = this.terms[i]
+		const tw = item.term
 		const percentage = this.samplesData[sampleName][tw.$id]?.value
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
 		const color = sampleName == this.facility ? 'blue' : '#aaa'
-		this.polarG.append('g').attr('transform', `translate(${x}, ${y})`).append('circle').attr('r', 4).attr('fill', color)
+		const circle = this.polarG
+			.append('g')
+			.attr('transform', `translate(${x}, ${y})`)
+			.append('circle')
+			.attr('r', 4)
+			.attr('fill', color)
 		data.push([x, y])
+		circle.datum({ module: item.parent.term.name, percentage })
 	}
 
 	addPoligon(percent) {
@@ -280,6 +290,23 @@ class profileRadarFacility {
 			.attr('transform', `translate(${x + 5}, ${y})`)
 			.attr('text-anchor', 'left')
 		textElem.append('tspan').text(text)
+	}
+
+	onMouseOver(event) {
+		if (event.target.tagName == 'circle') {
+			const circle = event.target
+			const d = circle.__data__
+			const menu = this.tip.clear()
+			const percentage = d.percentage
+			menu.d.text(`${d.module} ${percentage}%`)
+			menu.show(event.clientX, event.clientY, true, true)
+		} else this.onMouseOut(event)
+	}
+
+	onMouseOut(event) {
+		if (event.target.tagName == 'circle') {
+			this.tip.hide()
+		}
 	}
 }
 
