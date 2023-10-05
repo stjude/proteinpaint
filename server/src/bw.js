@@ -1,10 +1,9 @@
-const app = require('./app')
-const createCanvas = require('canvas').createCanvas
-const utils = require('./utils')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const serverconfig = require('./serverconfig')
-const spawn = require('child_process').spawn
-const { rgb } = require('d3-color')
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
+import { createCanvas } from 'canvas'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { rgb } from 'd3-color'
 
 /*
 
@@ -25,7 +24,7 @@ export async function handle_tkbigwig(req, res) {
 			isbedgraph = false,
 			bedgraphdir
 
-		const [e, file, isurl] = app.fileurl(req)
+		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw e
 
 		if (file.endsWith('.gz')) {
@@ -74,10 +73,7 @@ export async function handle_tkbigwig(req, res) {
 			}
 
 			if (out) {
-				r.values = out
-					.trim()
-					.split('\t')
-					.map(Number.parseFloat)
+				r.values = out.trim().split('\t').map(Number.parseFloat)
 				if (req.query.dividefactor) {
 					r.values = r.values.map(i => i / req.query.dividefactor)
 				}
@@ -182,10 +178,7 @@ export async function handle_tkbigwig(req, res) {
 			/*
 			barplot
 			*/
-			const hscale = makeyscale()
-				.height(req.query.barheight)
-				.min(minv)
-				.max(maxv)
+			const hscale = makeyscale().height(req.query.barheight).min(minv).max(maxv)
 			let x = 0
 			for (const r of req.query.rglst) {
 				if (r.values) {
@@ -247,10 +240,7 @@ async function getBedgraph(req, res, minv, maxv, file, bedgraphdir) {
 }
 
 async function bedgraphRegion(req, r, xoff, minv, maxv, file, bedgraphdir, ctx) {
-	const hscale = makeyscale()
-		.height(req.query.barheight)
-		.min(minv)
-		.max(maxv)
+	const hscale = makeyscale().height(req.query.barheight).min(minv).max(maxv)
 	const sf = r.width / (r.stop - r.start)
 
 	await utils.get_lines_bigfile({
@@ -312,15 +302,15 @@ function makeyscale() {
 		var h = (barheight * (v - minv)) / (maxv - minv)
 		return { y: barheight - h, h: h }
 	}
-	yscale.height = function(h) {
+	yscale.height = function (h) {
 		barheight = h
 		return yscale
 	}
-	yscale.min = function(v) {
+	yscale.min = function (v) {
 		minv = v
 		return yscale
 	}
-	yscale.max = function(v) {
+	yscale.max = function (v) {
 		maxv = v
 		return yscale
 	}

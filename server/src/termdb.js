@@ -16,7 +16,7 @@ import { get_mds3variantData } from './mds3.variant'
 import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils'
-import authApi from './auth'
+import { authApi } from './auth'
 import { getResult as geneSearch } from './gene'
 import { searchSNP } from './app'
 

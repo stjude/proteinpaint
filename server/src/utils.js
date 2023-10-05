@@ -11,12 +11,7 @@ import { Readable } from 'stream'
 
 export const serverconfig = _serverconfig
 
-const tabix = serverconfig.tabix
-const samtools = serverconfig.samtools
-const bcftools = serverconfig.bcftools
-const bigBedToBed = serverconfig.bigBedToBed
-const bigBedNamedItems = serverconfig.bigBedNamedItems
-const bigBedInfo = serverconfig.bigBedInfo
+const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 
 /*********************** EXPORTED
 cache_index
@@ -105,6 +100,64 @@ export async function cache_index(gzurl, indexurl) {
 		return dir
 	}
 }
+
+export function fileurl(req, checkWhiteList = true) {
+	// must use it to scrutinize every requested file path
+	let file = null,
+		isurl = false
+	if (req.query.file) {
+		file = req.query.file
+		if (illegalpath(file, checkWhiteList, false)) return ['illegal file path']
+		file = path.join(serverconfig.tpmasterdir, file)
+	} else if (req.query.url) {
+		file = req.query.url
+		// avoid whitespace in case the url is supplied as an argument
+		// to an exec script and thus execute arbitrary space-separated
+		// commands within the url
+		if (file.includes(' ')) return ['url must not contain whitespace']
+		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
+		isurl = true
+	}
+	if (!file) return ['file unspecified']
+	return [null, file, isurl]
+}
+
+const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
+
+export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
+	if (s[0] == '/') return true // must not be relative to mount root
+	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
+	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
+	if (s.includes(' ')) return true // must not include whitespace
+	if (s.indexOf('..') != -1) return true
+	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
+
+	if (checkWhiteList && serverconfig.whiteListPaths) {
+		// as /textfile route is dangerous, this server whitelists path pattern for it.
+		// only if the req.query.file begins with or glob-matches any of the path pattern then it's allowed
+		let nomatch = true
+		for (const p of serverconfig.whiteListPaths) {
+			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p))) {
+				nomatch = false
+				break
+			}
+			if (p[0] == '!' && !minimatch(s, p)) {
+				nomatch = true
+				break
+			}
+		}
+		if (nomatch) return true
+	}
+	/*** disable for now ***/
+	if (checkBlackList) {
+		for (const ext of fileExtensionBlackList) {
+			if (ext === path.extname(s).toLowerCase()) return true
+		}
+	}
+
+	return false
+}
+
 function test_url(u) {
 	const tmp = u.split('://')
 	if (tmp.length != 2) return ['improper url']

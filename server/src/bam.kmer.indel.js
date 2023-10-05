@@ -1,14 +1,15 @@
-const jStat = require('jstat').jStat
-const path = require('path')
-const features = require('./app').features
-const utils = require('./utils')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const spawn = require('child_process').spawn
-const Readable = require('stream').Readable
-const readline = require('readline')
-const bamcommon = require('./bam.common')
-const fs = require('fs')
-const serverconfig = require('./serverconfig')
+import { jStat } from 'jstat'
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
+import { Readable } from 'stream'
+import { readline } from 'readline'
+import * as bamcommon from './bam.common'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+
+const features = serverconfig.features
 const clustalo_read_alignment = serverconfig.clustalo
 
 export async function match_complexvariant_rust(q, templates_info, region_widths) {
@@ -92,23 +93,24 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		}
 		variant_idx = 0
 		for (const variant of q.variant) {
-			const leftflankseq = (await utils.get_fasta(
-				q.genome,
-				variant.chr + ':' + variant_start_global + '-' + ref_positions[variant_idx]
-			))
+			const leftflankseq = (
+				await utils.get_fasta(q.genome, variant.chr + ':' + variant_start_global + '-' + ref_positions[variant_idx])
+			)
 
 				.split('\n')
 				.slice(1)
 				.join('')
 				.toUpperCase()
-			const rightflankseq = (await utils.get_fasta(
-				q.genome,
-				variant.chr +
-					':' +
-					(ref_positions[variant_idx] + refalleles[variant_idx].length + 1) +
-					'-' +
-					variant_stop_global
-			))
+			const rightflankseq = (
+				await utils.get_fasta(
+					q.genome,
+					variant.chr +
+						':' +
+						(ref_positions[variant_idx] + refalleles[variant_idx].length + 1) +
+						'-' +
+						variant_stop_global
+				)
+			)
 				.split('\n')
 				.slice(1)
 				.join('')

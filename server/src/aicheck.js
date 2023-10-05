@@ -1,11 +1,10 @@
-const app = require('./app')
-const path = require('path')
-const fs = require('fs')
-const utils = require('./utils')
-const createCanvas = require('canvas').createCanvas
-const serverconfig = require('./serverconfig')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { createCanvas } from 'canvas'
 
-module.exports = genomes => {
+export default function (genomes) {
 	return async (req, res) => {
 		try {
 			res.send(await do_query(req))
@@ -22,7 +21,7 @@ async function do_query(req) {
 	do not try to estimate marker size, determined by client
 	*/
 
-	const [e, file, isurl] = app.fileurl(req)
+	const [e, file, isurl] = utils.fileurl(req)
 	if (e) throw e
 	const coveragemax = Number(req.query.coveragemax) || 100
 	if (!Number.isInteger(coveragemax)) throw 'invalid coveragemax'

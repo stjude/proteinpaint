@@ -1,16 +1,15 @@
-const app = require('./app')
-const path = require('path')
-const fs = require('fs')
-const utils = require('./utils')
-const createCanvas = require('canvas').createCanvas
-const serverconfig = require('./serverconfig')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { createCanvas } from 'canvas'
 
 /*
  ********************** EXPORTED
  ********************** INTERNAL
  */
 
-module.exports = genomes => {
+export default function (genomes) {
 	return async (req, res) => {
 		try {
 			const q = req.query
@@ -68,11 +67,7 @@ async function run_request(q, dir, nochr) {
 		maxv = q.maxv
 	}
 
-	const hscale = app
-		.makeyscale()
-		.height(q.barheight)
-		.min(minv)
-		.max(maxv)
+	const hscale = app.makeyscale().height(q.barheight).min(minv).max(maxv)
 
 	for (const r of q.rglst) {
 		const r2 = {

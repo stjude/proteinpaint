@@ -1,15 +1,16 @@
-const bulk = require('#shared/bulk'),
-	bulksnv = require('#shared/bulk.snv'),
-	bulkcnv = require('#shared/bulk.cnv'),
-	bulkdel = require('#shared/bulk.del'),
-	bulkitd = require('#shared/bulk.itd'),
-	bulksv = require('#shared/bulk.sv'),
-	bulksvjson = require('#shared/bulk.svjson'),
-	bulktrunc = require('#shared/bulk.trunc'),
-	path = require('path'),
-	fs = require('fs'),
-	serverconfig = require('./serverconfig')
-const { get_samples } = require('./termdb.sql')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { get_samples } from './termdb.sql'
+import * as bulk from '#shared/bulk'
+import * as bulksnv from '#shared/bulk.snv'
+import * as bulkcnv from '#shared/bulk.cnv'
+import * as bulkdel from '#shared/bulk.del'
+import * as bulkitd from '#shared/bulk.itd'
+import * as bulksv from '#shared/bulk.sv'
+import * as bulksvjson from '#shared/bulk.svjson'
+import * as bulktrunc from '#shared/bulk.trunc'
 
 const handlers = {
 	snvindel: bulksnv,
@@ -37,7 +38,7 @@ const handlers = {
 
 
 */
-exports.mayGetGeneVariantData = async function(tw, q) {
+exports.mayGetGeneVariantData = async function (tw, q) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
 	//console.log('what is tw in mayGetGeneVariantData', tw)
 	//console.log('what is q in mayGetGeneVariantData', q)
@@ -171,7 +172,7 @@ exports.getTermTypes = async function getData(q) {
 
 	maxGeneNameLength: optional, useful to avoid long fused gene strings
 */
-exports.mayGetMatchingGeneNames = async function(matches, str, q, maxGeneNameLength = 25) {
+exports.mayGetMatchingGeneNames = async function (matches, str, q, maxGeneNameLength = 25) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
 	const ds = this
 	let unmatched = 0

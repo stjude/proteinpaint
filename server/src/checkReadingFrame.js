@@ -16,7 +16,7 @@ str:
 if the first coding exon has a frame of 1/2 but not 0, the "startCodonFrame" attribute will be added to obj
 so that it can be properly translatec
 */
-exports.default = (obj, str) => {
+export default function (obj, str) {
 	if (!obj.codingstart) {
 		// not coding
 		return

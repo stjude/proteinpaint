@@ -1,11 +1,11 @@
-const app = require('./app')
-const utils = require('./utils')
-const fs = require('fs')
-const readline = require('readline')
+import fs from 'fs'
+import * as utils from './utils'
+import readline from 'readline'
+import serverconfig from './serverconfig'
 
-module.exports = async (req, res) => {
+export default async function (req, res) {
 	try {
-		const [e, file, isurl] = app.fileurl(req)
+		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw e
 		if (!req.query.rglst) throw 'rglst[] missing'
 		if (typeof req.query.rglst == 'string') req.query.rglst = JSON.parse(req.query.rglst)
@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
 
 		let lst // list of junctions
 		if (req.query.isrnapeg) {
-			if (!app.features.junctionrnapeg) throw 'rnapeg not supported on this server'
+			if (!serverconfig.features.junctionrnapeg) throw 'rnapeg not supported on this server'
 			if (isurl) throw 'rnapeg file from url is not supported'
 			lst = await get_rnapeg(req.query, file)
 		} else {

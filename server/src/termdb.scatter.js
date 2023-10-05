@@ -6,7 +6,7 @@ import { schemeCategory20, getColors } from '#shared/common'
 import { interpolateSqlValues } from './termdb.sql'
 import { mclass, dt2label, morigin } from '#shared/common'
 import { getFilterCTEs } from './termdb.filter'
-import authApi from './auth'
+import { authApi } from './auth'
 import lines2R from './lines2R'
 import { write_file, read_file } from './utils'
 

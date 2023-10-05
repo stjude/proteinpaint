@@ -1,12 +1,12 @@
-const app = require('./app')
-const fs = require('fs')
-const utils = require('./utils')
-const spawn = require('child_process').spawn
-const path = require('path')
-const serverconfig = require('./serverconfig')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
+
 const fimo = serverconfig.fimo || 'fimo'
 
-exports.handle_closure = genomes => {
+export function handle_closure(genomes) {
 	return async (req, res) => {
 		try {
 			const q = req.query
@@ -36,11 +36,7 @@ function fimo_may_updateallele(q, start, ref_fasta) {
 	if (q.m.ref == '-') return
 
 	// remove fasta header
-	const seq = ref_fasta
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
+	const seq = ref_fasta.split('\n').slice(1).join('').toUpperCase()
 
 	// nt string at m.pos matching length of m.ref
 	const forward = seq.substring(q.m.pos - start, q.m.pos - start + q.m.ref.length)
@@ -184,10 +180,7 @@ then find motif change
 		valuemax,
 		refstart,
 		refstop,
-		refseq: ref_fasta
-			.split('\n')
-			.slice(1)
-			.join('')
+		refseq: ref_fasta.split('\n').slice(1).join('')
 	}
 }
 

@@ -69,12 +69,12 @@ to parse line as gene file, require following:
 
 */
 
-const checkReadingFrame = require('./checkReadingFrame')
+import checkReadingFrame from './checkReadingFrame'
 
 //a valid exonFrames field can only contain members of validFrames, names -1, 0, 1, or 2
 const validFrames = new Set(['-1', '0', '1', '2'])
 
-exports.parseBedLine = function parseBedLine(l, enst2desc) {
+export function parseBedLine(l, enst2desc) {
 	const chr = l[0],
 		chromstart = Number(l[2 - 1]),
 		chromstop = l[3 - 1],
@@ -264,7 +264,7 @@ exports.parseBedLine = function parseBedLine(l, enst2desc) {
 	}
 	if (!tmp3.some(i => !validFrames.has(i))) {
 		/* all fields are valid frames, reject values that are not -1, 0, 1, or 2 */
-		checkReadingFrame.default(obj, exonframes)
+		checkReadingFrame(obj, exonframes)
 	}
 	return obj
 }

@@ -1,5 +1,5 @@
-const got = require('got')
-const path = require('path')
+import got from 'got'
+import path from 'path'
 import { fileSize } from '../shared/fileSize'
 
 /*

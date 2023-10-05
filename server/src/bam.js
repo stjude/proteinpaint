@@ -1,24 +1,23 @@
-const app = require('./app')
-const stream = require('stream')
-const crypto = require('crypto')
-const { promisify } = require('util')
-const got = require('got')
-const pipeline = promisify(stream.pipeline)
-const path = require('path')
-const fs = require('fs')
-const Readable = require('stream').Readable
-const utils = require('./utils')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const createCanvas = require('canvas').createCanvas
-const spawn = require('child_process').spawn
-const readline = require('readline')
-const interpolateRgb = require('d3-interpolate').interpolateRgb
-const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
-const bamcommon = require('./bam.common')
-const { basecolor, bplen } = require('#shared/common')
-const { gdcCheckPermission } = require('./bam.gdc')
-const serverconfig = require('./serverconfig')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
+import { Readable, pipeline } from 'stream'
+import { createCanvas } from 'canvas'
+import { readline } from 'readline'
+import * as bamcommon from './bam.common'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import crypto from 'crypto'
+import got from 'got'
+import { interpolateRgb } from 'd3-interpolate'
+import { match_complexvariant_rust } from './bam.kmer.indel'
+import { basecolor, bplen } from '#shared/common'
+import { gdcCheckPermission } from './bam.gdc'
+import { promisify } from 'util'
+
 const clustalo_read_alignment = serverconfig.clustalo
+const pipelineProm = promisify(pipeline)
 
 /*
 XXX quick fix to be removed/disabled later
@@ -251,7 +250,7 @@ const bases = new Set(['A', 'T', 'C', 'G'])
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const gdcHashSecret = Math.random.toString()
 
-module.exports = genomes => {
+export default function (genomes) {
 	return async (req, res) => {
 		try {
 			// isFileSlice:true can only be set after verifying access on a gdc file
@@ -667,7 +666,7 @@ async function get_q(genome, req) {
 
 		await mayReSliceFile(req, q.file)
 	} else {
-		const [e, _file, isurl] = app.fileurl(req)
+		const [e, _file, isurl] = utils.fileurl(req)
 		if (e) throw e
 
 		// a query object to collect all the bits
@@ -1165,11 +1164,7 @@ function run_clustalo(
 						} else {
 							if (
 								nuc_count > 0 &&
-								nuc_count <
-									read
-										.replace(/-/g, '')
-										.replace(/,/g, '')
-										.replace('seq      ', '').length
+								nuc_count < read.replace(/-/g, '').replace(/,/g, '').replace('seq      ', '').length
 							) {
 								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
 								aligned_read += nucl
@@ -1508,7 +1503,7 @@ async function divide_reads_togroups(q) {
 
 	if (q.variant) {
 		if (q.regions.length == 1) {
-			return await rust_match_complexvariant(q, templates_info, widths)
+			return await match_complexvariant_rust(q, templates_info, widths)
 		} else {
 			// Should not happen as indel works only in single region
 			console.log('Indel pipeline works only in single region. Please check!')
@@ -2998,7 +2993,7 @@ async function query_oneread(req, r) {
 		_file = path.join(serverconfig.cachedir_bam, req.query.file)
 		await mayReSliceFile(req, _file)
 	} else {
-		;[e, _file, isurl] = app.fileurl(req)
+		;[e, _file, isurl] = utils.fileurl(req)
 		if (e) throw e
 		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
@@ -3426,7 +3421,7 @@ async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename, se
 	try {
 		if (await utils.file_not_exist(fullpath)) {
 			// bam file not found. download
-			await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
+			await pipelineProm(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
 			// file is supposed to be downloaded
 			if (await utils.file_not_exist(fullpath)) {
 				throw 'BAM file slice is not found after downloading'

@@ -1,13 +1,12 @@
-const fs = require('fs'),
-	path = require('path'),
-	spawn = require('child_process').spawn,
-	readline = require('readline'),
-	app = require('./app'),
-	utils = require('./utils'),
-	common = require('#shared/common'),
-	serverconfig = require('./serverconfig'),
-	vcf = require('#shared/vcf'),
-	lines2R = require('./lines2R')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
+import readline from 'readline'
+import * as common from '#shared/common'
+import * as vcf from '#shared/vcf'
+import lines2R from './lines2R'
 
 /*
 function cascade
@@ -27,7 +26,7 @@ pvalue_may4expquartile
 do_plot
 */
 
-exports.handle_mdssurvivalplot = genomes => {
+export function handle_mdssurvivalplot(genomes) {
 	return async (req, res) => {
 		try {
 			const q = req.query

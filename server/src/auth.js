@@ -1,8 +1,7 @@
-const fs = require('fs').promises
-const existsSync = require('fs').existsSync
-const path = require('path')
-const jsonwebtoken = require('jsonwebtoken')
-const { isMatch } = require('micromatch')
+import { existsSync, promises as fs } from 'fs'
+import path from 'path'
+import jsonwebtoken from 'jsonwebtoken'
+import { isMatch } from 'micromatch'
 // TODO: may use this once babel is configured to transpile es6 node_modules
 //const sleep = require('./utils').sleep
 
@@ -616,7 +615,7 @@ function checkIPaddress(req, ip) {
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
-const authApi = {
+export const authApi = {
 	maySetAuthRoutes,
 	getJwtPayload,
 	canDisplaySampleIds: (req, ds) => {
@@ -629,4 +628,3 @@ const authApi = {
 	userCanAccess: () => true,
 	getRequiredCredForDsEmbedder: () => undefined
 }
-module.exports = authApi

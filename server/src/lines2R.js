@@ -9,13 +9,13 @@ Arguments:
 Given an R script and a JavaScript array of input data lines, the data lines are streamed into the standard input of the R script. The standard output of the R script is then returned as a JavaScript array of output data lines.
 */
 
-const path = require('path')
-const fs = require('fs')
-const spawn = require('child_process').spawn
-const Readable = require('stream').Readable
-const serverconfig = require('./serverconfig')
+import fs from 'fs'
+import path from 'path'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
+import { Readable } from 'stream'
 
-module.exports = async function lines2R(Rscript, lines, args = []) {
+export default async function lines2R(Rscript, lines, args = []) {
 	try {
 		await fs.promises.stat(Rscript)
 	} catch (e) {
@@ -55,10 +55,7 @@ module.exports = async function lines2R(Rscript, lines, args = []) {
 				const errmsg = `R process emitted standard error\nR stderr: ${err}`
 				reject(errmsg)
 			}
-			const out = stdout
-				.join('')
-				.trim()
-				.split('\n')
+			const out = stdout.join('').trim().split('\n')
 			resolve(out)
 		})
 	})
