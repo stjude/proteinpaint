@@ -137,6 +137,7 @@ export class GroupSettingMethods {
 	}
 
 	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
+		let countValues = 0
 		for (const [i, group] of this.opts.q.groupsetting.customset.groups.entries()) {
 			if (group.uncomputable) return
 			this.data.groups.push({
@@ -146,16 +147,28 @@ export class GroupSettingMethods {
 			})
 			grpIdxes.delete(i + 1)
 			for (const value of group.values) {
+				/** label may not be provided in groupsetting.customset.
+				 * If missing, find the label from category2samplecout or
+				 * use the last ditch effort to use the key.
+				 */
+				++countValues
+				const label = value.label
+					? value.label
+					: this.opts.category2samplecount
+					? this.opts.category2samplecount.find(
+							(d: { key: string; label?: string; samplecount: number }) => d.key == value.key
+					  )?.label
+					: value.key
 				this.data.values.push({
 					key: value.key,
-					/** If label not in q.groupsetting.customset, use key */
-					label: value.label || value.key,
+					label: label,
 					group: i + 1,
 					samplecount: null
 				})
 			}
 		}
-		if (this.data.values.length !== Object.keys(input).length) {
+
+		if (this.data.values.length !== countValues) {
 			//Find excluded values not returned in customset
 			Object.entries(input)
 				.filter((v: any) => !this.data.values.some(d => d.key == v[1].label))
@@ -176,7 +189,7 @@ export class GroupSettingMethods {
 
 	async main() {
 		try {
-			const input = this.opts.category2samplecount || this.opts.term.values
+			const input = this.opts.q?.groupsetting?.customset || this.opts.category2samplecount || this.opts.term.values
 			this.processInput(input)
 			await this.initGrpSetUI()
 		} catch (e: any) {
