@@ -1,10 +1,10 @@
-const { stratinput } = require('#shared/tree')
-const { querySamples_gdcapi } = require('./mds3.gdc')
-const { get_densityplot } = require('./mds3.densityPlot')
-const utils = require('./utils')
-const { dtfusionrna, dtsv } = require('#shared/common')
-const geneDbSearch = require('./gene')
-const { getSampleData_dictionaryTerms_termdb } = require('./termdb.matrix')
+import { stratinput } from '#shared/tree'
+import { querySamples_gdcapi } from './mds3.gdc'
+import { get_densityplot } from './mds3.densityPlot'
+import * as utils from './utils'
+import { dtfusionrna, dtsv } from '#shared/common'
+import * as geneDbSearch from './gene'
+import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix'
 
 export const ssmIdFieldsSeparator = '.'
 

@@ -1,9 +1,9 @@
-const fs = require('fs')
-const path = require('path')
-const spawn = require('child_process').spawn
-const utils = require('./utils')
-const createCanvas = require('canvas').createCanvas
-const bplen = require('#shared/common').bplen
+import fs from 'fs'
+import path from 'path'
+import { spawn } from 'child_process'
+import * as utils from './utils'
+import { createCanvas } from 'canvas'
+import { bplen } from '#shared/common'
 
 /*
 ********************** EXPORTED

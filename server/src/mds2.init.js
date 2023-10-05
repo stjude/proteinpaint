@@ -1,12 +1,11 @@
-const app = require('./app')
-const path = require('path')
-const fs = require('fs').promises
-const spawn = require('child_process').spawn
-const utils = require('./utils')
-const server_init_db_queries = require('./termdb.server.init').server_init_db_queries
-const validate_single_numericrange = require('#shared/mds.termdb.termvaluesetting').validate_single_numericrange
-const serverconfig = require('./serverconfig')
-const { setDbRefreshRoute } = require('./dsUpdateAttr.js')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import { spawn } from 'child_process'
+import { server_init_db_queries } from './termdb.server.init'
+import { validate_single_numericrange } from '#shared/mds.termdb.termvaluesetting'
+import serverconfig from './serverconfig'
+import { setDbRefreshRoute } from './dsUpdateAttr.js'
 
 /*
 ********************** EXPORTED

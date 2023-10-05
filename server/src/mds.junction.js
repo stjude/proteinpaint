@@ -1,7 +1,6 @@
-const app = require('./app')
-const serverconfig = require('./serverconfig')
-const utils = require('./utils')
-const path = require('path')
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
 
 /*
 get all junctions in view range, make stats for:
@@ -47,7 +46,7 @@ v: cutoff {side,value}
 // this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
 const infoFilter_unannotated = 'Unannotated'
 
-module.exports = genomes => {
+export function mdsjunction_request_closure(genomes) {
 	return async (req, res) => {
 		try {
 			const [q, ds, dsquery] = await get_q(req, genomes)

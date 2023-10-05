@@ -1,5 +1,5 @@
-const scaleLinear = require('d3-scale').scaleLinear
-const { violinBinsObj } = require('../../server/shared/violin.bins')
+import { scaleLinear } from 'd3-scale'
+import { violinBinsObj } from '../../server/shared/violin.bins'
 
 /*
 ********************** EXPORTED
@@ -19,9 +19,8 @@ export async function get_densityplot(term, samples) {
 	let minvalue = null,
 		maxvalue = null
 	for (const value of samples.map(s => s[term.id])) {
-
 		// skip uncomputable values, as declared in term.values{ "-999":{uncomputable:true} }
-		if(term.values?.[value]?.uncomputable) continue
+		if (term.values?.[value]?.uncomputable) continue
 
 		const v = Number(value)
 		if (!Number.isFinite(v)) {

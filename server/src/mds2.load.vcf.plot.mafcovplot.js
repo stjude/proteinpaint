@@ -1,7 +1,8 @@
-const utils = require('./utils')
-const vcf = require('#shared/vcf')
-const d3scale = require('d3-scale')
-const termdbsql = require('./termdb.sql')
+import * as utils from './utils'
+import * as vcf from '#shared/vcf'
+import { scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import * as termdbsql from './termdb.sql'
 
 /*
 ********************** EXPORTED
@@ -72,7 +73,7 @@ export async function plot(q, genome, ds, result) {
 				anysample2category.set(i.sample, i.key1)
 			}
 
-			const colorfunc = d3scale.scaleOrdinal(d3scale.schemeCategory10)
+			const colorfunc = scaleOrdinal(schemeCategory10)
 			const categories = new Map()
 			let unannotated_samplecount = 0 // vcf sample may be unannotated, e.g. ctcae
 			// plot groups contain only a subset of all samples
