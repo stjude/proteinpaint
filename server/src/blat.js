@@ -1,12 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
+import { get_lines_bigfile, read_file, write_tmpfile } from './utils'
 import serverconfig from './serverconfig'
 import { spawn } from 'child_process'
-
-const tabix = serverconfig.tabix || 'tabix'
-const gfClient = serverconfig.gfClient || 'gfClient'
-const gfServer = serverconfig.gfServer || 'gfServer'
 
 export function request_closure(genomes) {
 	return async (req, res) => {
@@ -27,7 +23,6 @@ export function request_closure(genomes) {
 			if (!genome) throw 'invalid genome'
 			if (!genome.blat) throw 'blat not enabled'
 			if (!req.query.seq) throw '.seq missing'
-			//console.log('req.query:', req.query)
 			res.send(await do_blat(genome, req.query.seq, req.query.soft_starts, req.query.soft_stops))
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -38,7 +33,7 @@ export function request_closure(genomes) {
 
 function server_stat(name, g) {
 	return new Promise((resolve, reject) => {
-		const ps = spawn(gfServer, ['status', g.blat.host, g.blat.port])
+		const ps = spawn(serverconfig.gfServer, ['status', g.blat.host, g.blat.port])
 		const out = [],
 			out2 = []
 		ps.stdout.on('data', i => out.push(i))
@@ -59,9 +54,9 @@ function server_stat(name, g) {
 }
 
 async function do_blat(genome, seq, soft_starts, soft_stops) {
-	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
+	const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + seq + '\n'))
 	const outfile = await run_blat2(genome, infile)
-	const outputstr = (await utils.read_file(outfile)).trim()
+	const outputstr = (await read_file(outfile)).trim()
 	fs.unlink(outfile, () => {})
 	fs.unlink(infile, () => {})
 	if (outputstr == '') return { nohit: 1 }
@@ -93,12 +88,12 @@ async function do_blat(genome, seq, soft_starts, soft_stops) {
 	return { hits }
 }
 
+// not in use! for parsing maf format
 async function do_blat2(genome, seq, soft_starts, soft_stops) {
-	// for parsing maf format
-	const infile = path.join(serverconfig.cachedir, await utils.write_tmpfile('>query\n' + seq + '\n'))
+	const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + seq + '\n'))
 	//console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
 	const outfile = await run_blat2(genome, infile)
-	const outputstr = (await utils.read_file(outfile)).trim()
+	const outputstr = (await read_file(outfile)).trim()
 	fs.unlink(outfile, () => {})
 	fs.unlink(infile, () => {})
 	if (outputstr == '') return { nohit: 1 }
@@ -181,7 +176,7 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_alignment = l[6]
 				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
 				if (genome.repeatmasker) {
-					await utils.get_lines_bigfile({
+					await get_lines_bigfile({
 						args: [
 							path.join(serverconfig.tpmasterdir, genome.repeatmasker.dbfile),
 							h.ref_chr + ':' + h.ref_startpos + '-' + h.ref_stoppos
@@ -206,40 +201,13 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 	return { hits }
 }
 
-function run_blat(genome, infile) {
-	const outfile = path.join(serverconfig.cachedir, Math.random().toString())
-	return new Promise((resolve, reject) => {
-		const ps = spawn(gfClient, [
-			genome.blat.host,
-			genome.blat.port,
-			'', // works with /full/path/to/2bit in blat server
-			infile,
-			outfile,
-			'-q=dna',
-			'-nohead',
-			'-minScore=20',
-			'-minIdentity=0'
-		])
-		const out2 = []
-		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', code => {
-			const e = out2.join('')
-			if (e) {
-				console.log('BLAT error', e)
-				reject('blat server problem')
-			}
-			resolve(outfile)
-		})
-	})
-}
-
 function run_blat2(genome, infile) {
 	const outfile = path.join(serverconfig.cachedir, Math.random().toString())
 	return new Promise((resolve, reject) => {
-		const ps = spawn(gfClient, [
+		const ps = spawn(serverconfig.gfClient, [
 			genome.blat.host,
 			genome.blat.port,
-			'', // works with /full/path/to/2bit in blat server
+			genome.blat.seqDir,
 			infile,
 			outfile,
 			'-q=dna',
@@ -248,7 +216,6 @@ function run_blat2(genome, infile) {
 			'-minIdentity=0',
 			'-out=psl'
 		])
-		//console.log("ps:",ps)
 		const out2 = []
 		ps.stderr.on('data', i => out2.push(i))
 		ps.on('close', code => {

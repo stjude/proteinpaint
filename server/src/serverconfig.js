@@ -52,6 +52,8 @@ if (!serverconfig.bigBedInfo) serverconfig.bigBedInfo = 'bigBedInfo'
 if (!serverconfig.bigBedNamedItems) serverconfig.bigBedNamedItems = 'bigBedNamedItems'
 if (!serverconfig.clustalo) serverconfig.clustalo = 'clustalo'
 if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
+if (!serverconfig.gfServer) serverconfig.gfServer = 'gfServer'
+if (!serverconfig.gfClient) serverconfig.gfClient = 'gfClient'
 
 /******************
 	APPLY OVERRIDES 
