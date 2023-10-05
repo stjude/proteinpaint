@@ -69,6 +69,7 @@ class profileRadarFacility {
 			config.facility = this.facilitySelect.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+		this.dom.facilityDiv.append('label').style('margin-left', '15px').html('versus').style('font-weight', 'bold')
 
 		this.incomes = ['']
 		this.incomes.push(...config.incomes)
@@ -142,7 +143,7 @@ class profileRadarFacility {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 
-		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 650)
+		this.svg = this.dom.plotDiv.append('svg').attr('width', 1600).attr('height', 650)
 
 		// Create a polar grid.
 		const radius = this.radius
@@ -214,14 +215,10 @@ class profileRadarFacility {
 				.attr('pointer-events', 'none')
 		}
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		if (this.config.sampleName)
-			this.addLegendItem(
-				`${this.config.sampleName} ${this.config.sampleName == this.region ? 'region' : ''}`,
-				color1,
-				0,
-				'5, 5'
-			)
-		this.addLegendItem(`${this.facility} facility`, color2, 1, 'none')
+		const score = this.config[this.config.plot].score
+		console.log(this.config)
+		if (this.config.sampleName) this.addLegendItem(`${this.config.sampleName} ${score}`, color1, 0, '5, 5')
+		this.addLegendItem(`${this.facility} facility ${score}`, color2, 1, 'none')
 	}
 
 	addData(sampleName, iangle, i, data) {

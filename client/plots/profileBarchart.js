@@ -134,7 +134,7 @@ class profileBarchart extends profilePlot {
 				.attr('transform', `translate(${x}, ${y})`)
 				.attr('text-anchor', 'start')
 				.style('font-weight', 'bold')
-				.text(`${c}%`)
+				.text(c)
 			drawAxes(x, y + 40)
 
 			x += stepx
