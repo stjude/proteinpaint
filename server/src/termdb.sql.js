@@ -1,11 +1,11 @@
-const binsmodule = require('#shared/termdb.bins')
-const getFilterCTEs = require('./termdb.filter').getFilterCTEs
-const numericSql = require('./termdb.sql.numeric')
-const categoricalSql = require('./termdb.sql.categorical')
-const conditionSql = require('./termdb.sql.condition')
-const sampleLstSql = require('./termdb.sql.samplelst').sampleLstSql
-const serverconfig = require('./serverconfig')
-const { boxplot_getvalue } = require('./utils')
+import * as binsmodule from '#shared/termdb.bins'
+import { getFilterCTEs } from './termdb.filter'
+import * as numericSql from './termdb.sql.numeric'
+import * as categoricalSql from './termdb.sql.categorical'
+import * as conditionSql from './termdb.sql.condition'
+import { sampleLstSql } from './termdb.sql.samplelst'
+import * as serverconfig from './serverconfig'
+import { boxplot_getvalue } from './utils'
 /*
 
 ********************** EXPORTED

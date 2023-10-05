@@ -1,9 +1,9 @@
-const path = require('path')
-const { getData } = require('./termdb.matrix')
-const write_file = require('./utils').write_file
-const fs = require('fs')
-const serverconfig = require('./serverconfig')
-const lines2R = require('./lines2R')
+import path from 'path'
+import { getData } from './termdb.matrix'
+import { write_file } from './utils'
+import fs from 'fs'
+import serverconfig from './serverconfig'
+import lines2R from './lines2R'
 
 export async function get_survival(q, ds) {
 	try {

@@ -8,7 +8,7 @@ import { mclass, dt2label, morigin } from '#shared/common'
 import { getFilterCTEs } from './termdb.filter'
 import authApi from './auth'
 import lines2R from './lines2R'
-const write_file = require('./utils').write_file
+import { write_file } from './utils'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)

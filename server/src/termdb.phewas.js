@@ -1,12 +1,12 @@
-const fs = require('fs')
-const path = require('path')
-const utils = require('./utils')
-const termdbsql = require('./termdb.sql')
-const createCanvas = require('canvas').createCanvas
-const termdb = require('./termdb')
-const readline = require('readline')
-const serverconfig = require('./serverconfig')
-const lines2R = require('./lines2R')
+import fs from 'fs'
+import path from 'path'
+import utils from './utils'
+import * as termdbsql from './termdb.sql'
+import { createCanvas } from 'canvas'
+import * as termdb from './termdb'
+import readline from 'readline'
+import serverconfig from './serverconfig'
+import lines2R from './lines2R'
 
 /*
 ********************** EXPORTED
