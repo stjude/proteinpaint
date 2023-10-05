@@ -19,6 +19,16 @@ export function getTermOrder(data) {
 				countedSamples.add(sd.sample)
 				const anno = sd[tw.$id]
 				if (anno) {
+					// This is the first time classifyValues(), to help sort
+					// terms by sample counts (to the top) and samples by hits
+					// (if applicable, to the left)
+					//
+					// This call will determine what is considered "visible",
+					// even when columns are out-of-view when zoomed-in.
+					//
+					// NOTE: the displayed case counts or variant hits are determined
+					// not in this call, but in the second call to
+					// classifyValues(), + in getSerieses() and getLegendData()
 					const { filteredValues, countedValues, renderedValues, crossedOutValues } = this.classifyValues(
 						anno,
 						tw,
