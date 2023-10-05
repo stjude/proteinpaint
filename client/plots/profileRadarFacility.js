@@ -216,7 +216,6 @@ class profileRadarFacility {
 		}
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const score = this.config[this.config.plot].score
-		console.log(this.config)
 		if (this.config.sampleName) this.addLegendItem(`${this.config.sampleName} ${score}`, color1, 0, '5, 5')
 		this.addLegendItem(`${this.facility} facility ${score}`, color2, 1, 'none')
 	}
