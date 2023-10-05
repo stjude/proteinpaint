@@ -1,18 +1,18 @@
-const termdbConfig = require('./termdb.config')
-const termdbsql = require('./termdb.sql')
-const phewas = require('./termdb.phewas')
-const cuminc = require('./termdb.cuminc')
-const survival = require('./termdb.survival')
-const regression = require('./termdb.regression')
-const termdbsnp = require('./termdb.snp')
-const getOrderedLabels = require('./termdb.barchart').getOrderedLabels
-const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
-const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
-const trigger_getLowessCurve = require('./termdb.scatter').trigger_getLowessCurve
-const trigger_getViolinPlotData = require('./termdb.violin').trigger_getViolinPlotData
-const getData = require('./termdb.matrix').getData
-const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
-const get_mds3variantData = require('./mds3.variant').get_mds3variantData
+import * as termdbConfig from './termdb.config'
+import * as termdbsql from './termdb.sql'
+import * as phewas from './termdb.phewas'
+import { get_incidence } from './termdb.cuminc'
+import { get_survival } from './termdb.survival'
+import { get_regression } from './termdb.regression'
+import { validate as snpValidate } from './termdb.snp'
+import { getOrderedLabels } from './termdb.barchart'
+import { isUsableTerm } from '#shared/termdb.usecase'
+import { trigger_getSampleScatter } from './termdb.scatter'
+import { trigger_getLowessCurve } from './termdb.scatter'
+import { trigger_getViolinPlotData } from './termdb.violin'
+import { getData } from './termdb.matrix'
+import { trigger_getCohortsData } from './termdb.cohort'
+import { get_mds3variantData } from './mds3.variant'
 import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils'
@@ -67,7 +67,7 @@ export function handle_request_closure(genomes) {
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
 			if (q.getregression) return await trigger_getregression(q, res, ds)
-			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
+			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return getvariantfilter(res, ds)
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
@@ -456,17 +456,17 @@ rightnow only few conditional terms have grade info
 }
 
 async function trigger_getincidence(q, res, ds) {
-	const data = await cuminc.get_incidence(q, ds)
+	const data = await get_incidence(q, ds)
 	res.send(data)
 }
 
 async function trigger_getsurvival(q, res, ds) {
-	const data = await survival.get_survival(q, ds)
+	const data = await get_survival(q, ds)
 	res.send(data)
 }
 
 async function trigger_getregression(q, res, ds) {
-	const data = await regression.get_regression(q, ds)
+	const data = await get_regression(q, ds)
 	res.send(data)
 }
 

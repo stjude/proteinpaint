@@ -1,13 +1,13 @@
-const path = require('path')
-const { get_samples, get_term_cte, interpolateSqlValues } = require('./termdb.sql')
-const { getFilterCTEs } = require('./termdb.filter')
-const lines2R = require('./lines2R')
-const fs = require('fs')
-const imagesize = require('image-size')
-const serverconfig = require('./serverconfig')
-const utils = require('./utils')
-const termdbsql = require('./termdb.sql')
-const { getSampleData_snplstOrLocus } = require('./termdb.regression')
+import path from 'path'
+import { get_samples, get_term_cte, interpolateSqlValues } from './termdb.sql'
+import { getFilterCTEs } from './termdb.filter'
+import lines2R from './lines2R'
+import fs from 'fs'
+import imagesize from 'image-size'
+import serverconfig from './serverconfig'
+import utils from './utils'
+import * as termdbsql from './termdb.sql'
+import { getSampleData_snplstOrLocus } from './termdb.regression'
 
 /*
 

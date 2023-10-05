@@ -1,11 +1,11 @@
-const fs = require('fs')
-const path = require('path')
-const utils = require('./utils')
-const termdbsql = require('./termdb.sql')
-const termdb = require('./termdb')
-const readline = require('readline')
-const serverconfig = require('./serverconfig')
-const { compute_mclass } = require('./vcf.mclass')
+import fs from 'fs'
+import path from 'path'
+import utils from './utils'
+import * as termdbsql from './termdb.sql'
+import termdb from './termdb'
+import readline from 'readline'
+import serverconfig from './serverconfig'
+import { compute_mclass } from './vcf.mclass'
 
 /*
 cache file has a header line, with one line per valid snp. columns: 

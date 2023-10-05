@@ -1,11 +1,12 @@
-const path = require('path')
-const utils = require('./utils')
-const Partjson = require('partjson')
-const d3format = require('d3-format')
-const binLabelFormatter = d3format.format('.3r')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const { getData } = require('./termdb.matrix')
-const { mclass, dt2label } = require('#shared/common')
+import path from 'path'
+import utils from './utils'
+import Partjson from 'partjson'
+import { format } from 'd3-format'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { getData } from './termdb.matrix'
+import { mclass, dt2label } from '#shared/common'
+
+const binLabelFormatter = format('.3r')
 
 /*
 ********************** EXPORTED

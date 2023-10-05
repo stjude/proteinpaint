@@ -1,9 +1,9 @@
-const path = require('path')
-const get_rows = require('./termdb.sql').get_rows
-const write_file = require('./utils').write_file
-const fs = require('fs')
-const lines2R = require('./lines2R')
-const serverconfig = require('./serverconfig')
+import path from 'path'
+import { get_rows } from './termdb.sql'
+import { write_file } from './utils'
+import fs from 'fs'
+import lines2R from './lines2R'
+import serverconfig from './serverconfig'
 
 /*********** EXPORT
 get_incidence()

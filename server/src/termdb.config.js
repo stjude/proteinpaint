@@ -1,7 +1,7 @@
-const serverconfig = require('./serverconfig.js')
-const { mayComputeTermtypeByCohort } = require('./termdb.server.init')
-const { isMatch } = require('micromatch')
-const auth = require('./auth')
+import serverconfig from './serverconfig.js'
+import { mayComputeTermtypeByCohort } from './termdb.server.init'
+import { isMatch } from 'micromatch'
+import auth from './auth'
 
 /*
 the "termdbConfig" object is returned to client side that uses vocabApi

@@ -15,7 +15,7 @@ A superCTE is made to cap this level, with name "CTEname"
 
 */
 
-async function getFilterCTEs(filter, ds, CTEname = 'f') {
+export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 	if (!filter) return
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
 	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
@@ -94,8 +94,6 @@ async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		CTEname
 	}
 }
-
-exports.getFilterCTEs = getFilterCTEs
 
 // makesql_by_tvsfilter helpers
 // put here instead of inside makesql_by_tvsfilter

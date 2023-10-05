@@ -1,14 +1,14 @@
-const path = require('path')
-const { get_term_cte } = require('./termdb.sql')
-const { getFilterCTEs } = require('./termdb.filter')
-const lines2R = require('./lines2R')
-const fs = require('fs')
-const imagesize = require('image-size')
-const serverconfig = require('./serverconfig')
-const utils = require('./utils')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const termdbsql = require('./termdb.sql')
-const runCumincR = require('./termdb.cuminc').runCumincR
+import path from 'path'
+import { get_term_cte } from './termdb.sql'
+import { getFilterCTEs } from './termdb.filter'
+import lines2R from './lines2R'
+import fs from 'fs'
+import imagesize from 'image-size'
+import serverconfig from './serverconfig'
+import utils from './utils'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import termdbsql from './termdb.sql'
+import { runCumincR } from './termdb.cuminc'
 /*
 
 **************** q{} object
