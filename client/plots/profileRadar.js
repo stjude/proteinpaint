@@ -78,7 +78,7 @@ class profileRadar extends profilePlot {
 
 		if (!this.sampleData) return
 
-		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 650)
+		this.svg = this.dom.plotDiv.append('svg').attr('width', 1600).attr('height', 650)
 
 		// Create a polar grid.
 		const radius = this.radius
