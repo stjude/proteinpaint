@@ -165,7 +165,7 @@ export class GroupSettingMethods {
 				})
 			}
 		}
-		console.log(this.opts)
+
 		//Find excluded values not returned in customset
 		if (this.data.values.length !== Object.keys(input).length && !this.opts.q.groupsetting.inuse) {
 			Object.entries(input)
