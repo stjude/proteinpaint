@@ -1,11 +1,11 @@
-const app = require('./app')
-const fs = require('fs')
-const path = require('path')
-const spawn = require('child_process').spawn
+import app from './app'
+import fs from 'fs'
+import path from 'path'
+import { spawn } from 'child_process'
 import { write_file, mayCopyFromCookie } from './utils'
-const serverconfig = require('./serverconfig')
-const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
+import serverconfig from './serverconfig'
+import { snvindelByRangeGetter_bcf } from './mds3.init'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -441,7 +441,7 @@ async function geneExpressionClustering(data, q, ds) {
 		// {sampleId: value}
 		for (const s in o) sampleSet.add(s)
 	}
-    
+
 	const inputData = {
 		matrix: [],
 		row_names: [], // genes
@@ -463,7 +463,7 @@ async function geneExpressionClustering(data, q, ds) {
 		inputData.matrix.push(row)
 	}
 
-        /*
+	/*
         // For testing
         inputData.row_names.push("fakegene")
         const row = []
@@ -471,12 +471,12 @@ async function geneExpressionClustering(data, q, ds) {
            row.push(0)
         }
         inputData.matrix.push(row)
-        */ 
+        */
 
 	//console.log('inputData.matrix:', inputData.matrix.length, inputData.matrix[0].length)
 	//console.log('input_data:', inputData)
-        //await write_file('test.json', JSON.stringify(inputData))
-    
+	//await write_file('test.json', JSON.stringify(inputData))
+
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await write_file(Rinputfile, JSON.stringify(inputData))
 	const Routput = await run_clustering(path.join(serverconfig.binpath, 'utils', 'fastclust.R'), [Rinputfile])
@@ -490,9 +490,9 @@ async function geneExpressionClustering(data, q, ds) {
 	let col_coordinate_start = false
 	let matrix_start = true
 	let row_names_index
-        let col_names_index
+	let col_names_index
 	let row_names
-	let col_names    
+	let col_names
 	let matrix_1d // Getting matrix output from R in 1D. This will later be converted back into 2D array
 	for (const line of Routput) {
 		if (line.includes('OutputMatrix')) {
@@ -523,14 +523,18 @@ async function geneExpressionClustering(data, q, ds) {
 		} else if (line.includes('rownames')) {
 			row_names = line
 				.replace('rownames\t', '')
-			        .split('\t')
-		    		.filter(function(entry) { return entry.trim() != ''})
+				.split('\t')
+				.filter(function (entry) {
+					return entry.trim() != ''
+				})
 		} else if (line.includes('colnames')) {
 			//console.log('colnames:', line)
 			col_names = line
 				.replace('colnames\t', '')
-			        .split('\t')
-		    		.filter(function(entry) { return entry.trim() != ''})
+				.split('\t')
+				.filter(function (entry) {
+					return entry.trim() != ''
+				})
 		} else if (line.includes('"Done"')) {
 			col_coordinate_start = false
 		} else if (row_coordinate_start == true) {
@@ -542,8 +546,8 @@ async function geneExpressionClustering(data, q, ds) {
 		//	console.log(line)
 		//}
 	}
-        //console.log("row_names:",row_names)
-        //console.log("col_names:",col_names)
+	//console.log("row_names:",row_names)
+	//console.log("col_names:",col_names)
 	//console.log('row_coordinates:', row_coordinates)
 	//console.log('col_coordinates:', col_coordinates)
 
@@ -551,7 +555,7 @@ async function geneExpressionClustering(data, q, ds) {
 	let col_output = await parseclust(col_coordinates, col_names_index)
 
 	// Converting the 1D array to 2D array column-wise
-        let output_matrix = []
+	let output_matrix = []
 	for (let i = 0; i < row_names.length; i++) {
 		if (col_names.length > 0) {
 			let row = []
@@ -561,7 +565,7 @@ async function geneExpressionClustering(data, q, ds) {
 			output_matrix.push(row)
 		}
 	}
-    
+
 	//console.log('output_matrix:', output_matrix)
 	//console.log('row_dendro:', row_output.dendrogram)
 	//console.log('row_children:', row_output.children)

@@ -1,7 +1,7 @@
-const serverconfig = require('./serverconfig'),
-	path = require('path'),
-	fs = require('fs'),
-	utils = require('./utils')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
 
 export async function save(req, res) {
 	// POST

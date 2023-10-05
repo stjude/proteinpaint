@@ -1,11 +1,11 @@
-const fs = require('fs')
-const path = require('path')
-const spawn = require('child_process').spawn
-const utils = require('./utils')
-const vcf = require('#shared/vcf')
-const common = require('#shared/common')
-const termdbsql = require('./termdb.sql')
-const lines2R = require('./lines2R')
+import fs from 'fs'
+import path from 'path'
+import { spawn } from 'child_process'
+import * as utils from './utils'
+import * as vcf from '#shared/vcf'
+import * as common from '#shared/common'
+import * as termdbsql from './termdb.sql'
+import * as lines2R from './lines2R'
 
 /*
 ********************** EXPORTED
@@ -626,7 +626,10 @@ return an array of same length and group typing of AFtest.groups[]
 			let refcount = 0,
 				altcount = 0
 			if (g.adjust_race) {
-				;[refcount, altcount] = AFtest_adjust_race(set2value, q.AFtest.groups.find(i => i.is_termdb))
+				;[refcount, altcount] = AFtest_adjust_race(
+					set2value,
+					q.AFtest.groups.find(i => i.is_termdb)
+				)
 			} else {
 				// not adjust race, add up AC AN
 				for (const v of set2value.values()) {

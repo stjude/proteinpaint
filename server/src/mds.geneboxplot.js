@@ -1,7 +1,6 @@
-const app = require('./app')
-const utils = require('./utils')
-const serverconfig = require('./serverconfig')
-const path = require('path')
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
 
 /*
 2nd-gen epaint
@@ -252,7 +251,7 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 
 	if (req.query.getgroup2boxplot) {
 		getgroupdata.sort((i, j) => i.value - j.value)
-		const { w1, w2, p25, p50, p75, out } = app.boxplot_getvalue(getgroupdata)
+		const { w1, w2, p25, p50, p75, out } = utils.boxplot_getvalue(getgroupdata)
 		return {
 			n: getgroupdata.length,
 			min: getgroupdata[0].value,
@@ -344,7 +343,7 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 			max = Math.max(max, group.values[l - 1].value)
 		}
 
-		const { w1, w2, p25, p50, p75, out } = app.boxplot_getvalue(group.values)
+		const { w1, w2, p25, p50, p75, out } = utils.boxplot_getvalue(group.values)
 
 		const boxplots = [{ isall: 1, w1: w1, w2: w2, p25: p25, p50: p50, p75: p75, out: out }]
 
@@ -352,7 +351,7 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 			if (req.query.svcnv.usegain) {
 				const lst = group.values.filter(i => sample2event.has(i.sample) && sample2event.get(i.sample).gain)
 				if (lst.length) {
-					const { w1, w2, p25, p50, p75, out } = app.boxplot_getvalue(lst)
+					const { w1, w2, p25, p50, p75, out } = utils.boxplot_getvalue(lst)
 					boxplots.push({
 						iscnvgain: 1,
 						samplecount: lst.length,
@@ -368,7 +367,7 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 			if (req.query.svcnv.useloss) {
 				const lst = group.values.filter(i => sample2event.has(i.sample) && sample2event.get(i.sample).loss)
 				if (lst.length) {
-					const { w1, w2, p25, p50, p75, out } = app.boxplot_getvalue(lst)
+					const { w1, w2, p25, p50, p75, out } = utils.boxplot_getvalue(lst)
 					boxplots.push({
 						iscnvloss: 1,
 						samplecount: lst.length,
@@ -384,7 +383,7 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 			if (req.query.svcnv.usesv) {
 				const lst = group.values.filter(i => sample2event.has(i.sample) && sample2event.get(i.sample).sv)
 				if (lst.length) {
-					const { w1, w2, p25, p50, p75, out } = app.boxplot_getvalue(lst)
+					const { w1, w2, p25, p50, p75, out } = utils.boxplot_getvalue(lst)
 					boxplots.push({
 						issv: 1,
 						samplecount: lst.length,

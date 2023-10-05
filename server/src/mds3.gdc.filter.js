@@ -4,7 +4,7 @@ f{}
 returns a GDC filter object
 TODO support nested filter
 */
-exports.filter2GDCfilter = f => {
+export function filter2GDCfilter(f) {
 	// gdc filter
 	const obj = {
 		op: 'and',

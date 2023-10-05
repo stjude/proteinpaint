@@ -1,11 +1,10 @@
-const app = require('./app')
-const fs = require('fs')
-const path = require('path')
-const utils = require('./utils')
-const common = require('#shared/common')
-const loader_vcf = require('./mds2.load.vcf')
-const loader_vcf_mafcov = require('./mds2.load.vcf.plot.mafcovplot')
-const loader_ld = require('./mds2.load.ld')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import * as common from '#shared/common'
+import * as loader_vcf from './mds2.load.vcf'
+import * as loader_vcf_mafcov from './mds2.load.vcf.plot.mafcovplot'
+import * as loader_ld from './mds2.load.ld'
 // add loaders for other file types and requests
 
 /*
@@ -14,7 +13,7 @@ handle_request
 ********************** INTERNAL
 */
 
-exports.handle_request = genomes => {
+export function handle_request(genomes) {
 	// dispatcher of trigger handlers
 
 	return async (req, res) => {
