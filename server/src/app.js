@@ -26,89 +26,82 @@ when launching:
   both name and label are the same "name" from serverconfig
 */
 
-const tabixnoterror = s => {
+import serverconfig from './serverconfig'
+import express from 'express'
+import util from 'util'
+import url from 'url'
+import http from 'http'
+import https from 'https'
+import fs from 'fs'
+import path from 'path'
+import got from 'got'
+import lazy from 'lazy'
+import compression from 'compression'
+import child_process from 'child_process'
+import { spawn } from 'child_process'
+import { createCanvas } from 'canvas'
+import { stratinput } from '#shared/tree'
+import bodyParser from 'body-parser'
+import imagesize from 'image-size'
+import readline from 'readline'
+import jsonwebtoken from 'jsonwebtoken'
+import * as utils from './utils'
+import * as common from '#shared/common'
+import * as vcf from '#shared/vcf'
+import handle_study from './handle_study'
+import d3color from 'd3-color'
+import { stratify as d3stratify } from 'd3-hierarchy'
+import * as d3scale from 'd3-scale'
+import * as d3dsv from 'd3-dsv'
+import basicAuth from 'express-basic-auth'
+import * as termdb from './termdb'
+import { handle_tkbigwig } from './bw'
+import { handle_tkld } from './ld'
+import * as termdbbarsql from './termdb.barchart'
+import bedgraphdot_request_closure from './bedgraphdot'
+import bam_request_closure from './bam'
+import { mdsjunction_request_closure } from './mds.junction'
+import { gdc_bam_request } from './bam.gdc'
+import * as mds3Gdc from './mds3.gdc'
+import aicheck_request_closure from './aicheck'
+import bampile_request from './bampile'
+import junction_request from './junction'
+import bedj_request_closure from './bedj'
+import { request_closure as blat_request_closure } from './blat'
+import { mds3_request_closure } from './mds3.load'
+import { handle_mdssvcnv_expression } from './handle_mdssvcnv_expression'
+import { server_updateAttr } from './dsUpdateAttr'
+import * as mds2_init from './mds2.init'
+import * as mds3_init from './mds3.init'
+import * as mds2_load from './mds2.load'
+import * as massSession from './massSession'
+import * as singlecell from './singlecell'
+import * as fimo from './fimo'
+import { draw_partition } from './partitionmatrix'
+import { do_hicstat } from './hicstat'
+import mdsgeneboxplot_closure from './mds.geneboxplot'
+import { handle_mdssurvivalplot } from './km'
+import * as validator from './validator'
+import cookieParser from 'cookie-parser'
+import { authApi } from './auth.js'
+import { server_init_db_queries, listDbTables } from './termdb.server.init'
+import minimatch from 'minimatch'
+import { versionInfo } from './health'
+export * as phewas from './termdb.phewas'
+
+export const tabixnoterror = s => {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
-exports.tabixnoterror = tabixnoterror
 
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-const serverconfig = require('./serverconfig')
-exports.features = Object.freeze(serverconfig.features || {})
-
-const express = require('express'),
-	util = require('util'),
-	url = require('url'),
-	http = require('http'),
-	https = require('https'),
-	fs = require('fs'),
-	path = require('path'),
-	got = require('got'),
-	lazy = require('lazy'),
-	compression = require('compression'),
-	child_process = require('child_process'),
-	spawn = child_process.spawn,
-	createCanvas = require('canvas').createCanvas,
-	stratinput = require('#shared/tree').stratinput,
-	bodyParser = require('body-parser'),
-	imagesize = require('image-size'),
-	readline = require('readline'),
-	jsonwebtoken = require('jsonwebtoken'),
-	utils = require('./utils'),
-	common = require('#shared/common'),
-	vcf = require('#shared/vcf'),
-	bulk = require('#shared/bulk'),
-	bulksnv = require('#shared/bulk.snv'),
-	bulkcnv = require('#shared/bulk.cnv'),
-	bulkdel = require('#shared/bulk.del'),
-	bulkitd = require('#shared/bulk.itd'),
-	bulksv = require('#shared/bulk.sv'),
-	bulksvjson = require('#shared/bulk.svjson'),
-	bulktrunc = require('#shared/bulk.trunc'),
-	d3color = require('d3-color'),
-	d3stratify = require('d3-hierarchy').stratify,
-	d3scale = require('d3-scale'),
-	d3dsv = require('d3-dsv'),
-	basicAuth = require('express-basic-auth'),
-	termdb = require('./termdb'),
-	handle_tkbigwig = require('./bw').handle_tkbigwig,
-	handle_tkld = require('./ld').handle_tkld,
-	termdbbarsql = require('./termdb.barchart'),
-	bedgraphdot_request_closure = require('./bedgraphdot').default,
-	bam_request_closure = require('./bam').default,
-	{ mdsjunction_request_closure } = require('./mds.junction'),
-	gdc_bam_request = require('./bam.gdc').gdc_bam_request,
-	mds3Gdc = require('./mds3.gdc'),
-	aicheck_request_closure = require('./aicheck').default,
-	bampile_request = require('./bampile').default,
-	junction_request = require('./junction').default,
-	bedj_request_closure = require('./bedj').default,
-	blat_request_closure = require('./blat').request_closure,
-	mds3_request_closure = require('./mds3.load').mds3_request_closure,
-	server_updateAttr = require('./dsUpdateAttr').server_updateAttr,
-	mds2_init = require('./mds2.init'),
-	mds3_init = require('./mds3.init'),
-	mds2_load = require('./mds2.load'),
-	massSession = require('./massSession'),
-	singlecell = require('./singlecell'),
-	fimo = require('./fimo'),
-	draw_partition = require('./partitionmatrix').draw_partition,
-	do_hicstat = require('./hicstat').do_hicstat,
-	mdsgeneboxplot_closure = require('./mds.geneboxplot').default,
-	phewas = require('./termdb.phewas'),
-	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
-	validator = require('./validator'),
-	cookieParser = require('cookie-parser'),
-	{ authApi } = require('./auth.js'),
-	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
-	minimatch = require('minimatch'),
-	{ versionInfo } = require('./health')
+export const features = Object.freeze(serverconfig.features || {})
 
 //////////////////////////////
 // Global variable (storing things in memory)
-const genomes = {} // { hg19: {...}, ... }
+export const genomes = {} // { hg19: {...}, ... }
 const tabix = serverconfig.tabix
 const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
@@ -120,7 +113,7 @@ const hicstraw = serverconfig.hicstraw
     */
 const infoFilter_unannotated = 'Unannotated'
 
-const app = express()
+export const app = express()
 app.disable('x-powered-by')
 
 if (serverconfig.users) {
@@ -132,7 +125,7 @@ if (serverconfig.users) {
 app.use(express.static(__dirname+'/public'))
 */
 
-const basepath = serverconfig.basepath || ''
+export const basepath = serverconfig.basepath || ''
 
 function setHeaders(res) {
 	res.header('Access-Control-Allow-Origin', '*')
@@ -227,6 +220,7 @@ app.use((req, res, next) => {
 	next()
 })
 
+app.catch = validator.floodCatch
 app.use(validator.middleware)
 
 // NOTE: The error handling middleware should be used after all other app.use() middlewares
@@ -356,7 +350,7 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function log(req) {
+export function log(req) {
 	const j = {}
 	for (const k in req.query) {
 		if (k != 'jwt') j[k] = req.query[k]
@@ -370,15 +364,7 @@ function log(req) {
 	)
 }
 
-exports.app = app
-exports.basepath = basepath
-exports.phewas = phewas
-exports.genomes = genomes
-exports.startServer = startServer
-exports.pp_init = pp_init
-exports.log = log
-
-async function startServer() {
+export async function startServer() {
 	// uses the global express "app"
 	try {
 		if (serverconfig.preListenScript) {
@@ -483,7 +469,7 @@ async function handle_cards(req, res) {
 }
 
 async function handle_mdsjsonform(req, res) {
-	if (!exports.features.mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
+	if (!features.mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query.deposit) {
 		const id = Math.random().toString()
 		const folder = await maymakefolder()
@@ -591,7 +577,7 @@ async function handle_genomes(req, res) {
 		codedate: versionInfo.codedate,
 		launchdate: versionInfo.launchdate,
 		hasblat,
-		features: exports.features,
+		features,
 		dsAuth: authApi.getDsAuth(req),
 		commonOverrides: serverconfig.commonOverrides,
 		targetPortal: serverconfig.targetPortal, //sending target portal to the client
@@ -1052,7 +1038,7 @@ async function handle_snp(req, res) {
 .lst[ str ]
 	used for byName
 */
-async function searchSNP(q, genome) {
+export async function searchSNP(q, genome) {
 	if (!genome) throw 'invalid genome'
 	if (!genome.snp) throw 'snp is not configured for this genome'
 	const hits = []
@@ -1107,7 +1093,6 @@ async function searchSNP(q, genome) {
 	}
 	return hits
 }
-exports.searchSNP = searchSNP
 
 function snp2hit(snp) {
 	// snp must be non-empty string
@@ -1436,126 +1421,6 @@ function handle_hicdata(req, res) {
 		res.send({ items: items })
 		return
 	})
-}
-
-async function handle_study(req, res) {
-	try {
-		if (utils.illegalpath(req.query.file)) throw 'invalid file path'
-		const file = path.join(
-			serverconfig.tpmasterdir,
-			req.query.file.endsWith('.json') ? req.query.file : req.query.file + '.json'
-		)
-
-		const cohort = JSON.parse(await utils.read_file(file))
-		if (!cohort.genome) throw 'genome missing'
-		const flagset = {}
-		let nameless = 0
-		for (const mset of cohort.mutationset || []) {
-			const flag = bulk.init_bulk_flag(cohort.genome)
-			if (!flag) throw 'init_bulk_flag() failed'
-			if (cohort.mutationset.length > 1) {
-				flag.tpsetname = mset.name ? mset.name : 'set' + ++nameless
-			}
-			flagset[Math.random()] = flag
-			if (mset.snvindel) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.snvindel))
-				const lines = text.trim().split(/\r?\n/)
-				const herr = bulksnv.parseheader(lines[0], flag)
-				if (herr) throw 'snvindel header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulksnv.parseline(i, lines[i], flag)
-				}
-			}
-			if (mset.sv) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.sv))
-				const lines = text.trim().split(/\r?\n/)
-				const herr = bulksv.parseheader(lines[0], flag, true)
-				if (herr) throw 'sv header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulksv.parseline(i, lines[i], flag, true)
-				}
-			}
-			if (mset.fusion) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.fusion))
-				const lines = text.trim().split(/\r?\n/)
-				const herr = bulksv.parseheader(lines[0], flag, false)
-				if (herr) throw 'fusion header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulksv.parseline(i, lines[i], flag, false)
-				}
-			}
-			if (mset.svjson) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.svjson))
-				const lines = text.trim().split(/\r?\n/)
-				const [herr, header] = bulksvjson.parseheader(lines[0], flag)
-				if (herr) throw 'svjson header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulksvjson.parseline(i, lines[i], flag, header)
-				}
-			}
-			if (mset.cnv) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.cnv))
-				const lines = text.trim().split(/\r?\n/)
-				const herr = bulkcnv.parseheader(lines[0], flag)
-				if (herr) throw 'cnv header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulkcnv.parseline(i, lines[i], flag)
-				}
-			}
-			if (mset.itd) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.itd))
-				const lines = text.trim().split(/\r?\n/)
-				const herr = bulkitd.parseheader(lines[0], flag)
-				if (herr) throw 'itd header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulkitd.parseline(i, lines[i], flag)
-				}
-			}
-			if (mset.deletion) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.deletion))
-				const lines = text.trim().split(/\r?\n/)
-				const herr = bulkdel.parseheader(lines[0], flag)
-				if (herr) throw 'deletion header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulkdel.parseline(i, lines[i], flag)
-				}
-			}
-			if (mset.truncation) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.truncation))
-				const lines = text.trim().split(/\r?\n/)
-				const herr = bulktrunc.parseheader(lines[0], flag)
-				if (herr) throw 'Truncation header line error: ' + herr
-				for (let i = 1; i < lines.length; i++) {
-					bulktrunc.parseline(i, lines[i], flag)
-				}
-			}
-		}
-		if (cohort.annotations) {
-			const idkey = cohort.annotations.idkey ? cohort.annotations.idkey : 'sample'
-			cohort.annotations.data = {}
-			for (const filename of cohort.annotations.files) {
-				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, filename))
-				d3dsv.tsvParse(text).forEach(d => {
-					const id = d[idkey].trim()
-					if (!cohort.annotations.data[id]) {
-						cohort.annotations.data[id] = []
-					}
-					cohort.annotations.data[id].push(d)
-				})
-			}
-		}
-		for (const k in flagset) {
-			local_end_flag(flagset[k])
-		}
-		delete cohort.mutationset
-		res.send({
-			cohort: cohort,
-			flagset: flagset
-		})
-	} catch (e) {
-		res.send({ error: e.message || e })
-		return
-	}
 }
 
 function handle_textfile(req, res) {
@@ -3034,7 +2899,7 @@ async function handle_mdssvcnv_vcf(
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track
-		if (exports.features.customMdsSingleSampleVcfNoRangeLimit) {
+		if (features.customMdsSingleSampleVcfNoRangeLimit) {
 			// this server has no range limit
 			viewrangeupperlimit = 0
 		} else {
@@ -3573,125 +3438,6 @@ bad repetition
 	return Promise.all(tasks).then(() => {
 		return [null, variants]
 	})
-}
-
-function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
-	if (req.query.singlesample) {
-		// no expression rank check in single-sample: will be handled in a separate track
-		return []
-	}
-
-	// multi-sample
-	// expression data?
-	let expressionquery
-	if (dsquery.iscustom) {
-		expressionquery = dsquery.checkexpressionrank
-	} else {
-		// official
-		if (dsquery.expressionrank_querykey) {
-			if (ds.queries[dsquery.expressionrank_querykey]) {
-				expressionquery = ds.queries[dsquery.expressionrank_querykey]
-			}
-		}
-	}
-	if (!expressionquery) {
-		// no expression query
-		return []
-	}
-
-	let viewrangeupperlimit = expressionquery.viewrangeupperlimit
-	if (!viewrangeupperlimit && dsquery.iscustom) {
-		// no limit set for custom track, set a hard limit
-		viewrangeupperlimit = 5000000
-	}
-	if (viewrangeupperlimit) {
-		const len = req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0)
-		if (len >= viewrangeupperlimit) {
-			return [viewrangeupperlimit]
-		}
-	}
-
-	return Promise.resolve()
-		.then(() => {
-			// cache expression index
-
-			if (expressionquery.file) return ''
-			return utils.cache_index(expressionquery.url, expressionquery.indexURL)
-		})
-		.then(dir => {
-			// get expression data
-
-			const gene2sample2obj = new Map()
-			// k: gene
-			// v: { chr, start, stop, samples:Map }
-			//    sample : { value:V, outlier:{}, ase:{} }
-
-			const tasks = []
-			for (const r of req.query.rglst) {
-				const task = new Promise((resolve, reject) => {
-					const data = []
-					const ps = spawn(
-						tabix,
-						[
-							expressionquery.file ? path.join(serverconfig.tpmasterdir, expressionquery.file) : expressionquery.url,
-							r.chr + ':' + r.start + '-' + r.stop
-						],
-						{ cwd: dir }
-					)
-					const rl = readline.createInterface({
-						input: ps.stdout
-					})
-					rl.on('line', line => {
-						const l = line.split('\t')
-						let j
-						try {
-							j = JSON.parse(l[3])
-						} catch (e) {
-							// invalid json
-							return
-						}
-						if (!j.gene) return
-						if (!j.sample) return
-						if (!Number.isFinite(j.value)) return
-
-						/* hiddenmattr hiddensampleattr are not applied here
-					cnv/vcf data from those samples will be dropped, so their expression won't show
-					but their expression will still be used in calculating rank of visible samples
-					*/
-
-						if (!gene2sample2obj.has(j.gene)) {
-							gene2sample2obj.set(j.gene, {
-								chr: l[0],
-								start: Number.parseInt(l[1]),
-								stop: Number.parseInt(l[2]),
-								samples: new Map()
-							})
-						}
-						gene2sample2obj.get(j.gene).samples.set(j.sample, {
-							value: j.value,
-							ase: j.ase
-							// XXX OHE is temporarily disabled!!!
-							//outlier: j.outlier
-						})
-					})
-					const errout = []
-					ps.stderr.on('data', i => errout.push(i))
-					ps.on('close', code => {
-						const e = errout.join('')
-						if (e && !tabixnoterror(e)) {
-							reject(e)
-							return
-						}
-						resolve()
-					})
-				})
-				tasks.push(task)
-			}
-
-			return Promise.all(tasks).then(() => {
-				return [false, gene2sample2obj]
-			})
-		})
 }
 
 function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hiddenmattr, filter_sampleset) {
@@ -5522,7 +5268,7 @@ async function handle_mdsgenevalueonesample(req, res) {
 	}
 }
 
-function boxplot_getvalue(lst) {
+export function boxplot_getvalue(lst) {
 	/* ascending order
     each element: {value}
     */
@@ -5552,7 +5298,6 @@ function boxplot_getvalue(lst) {
 	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
-exports.boxplot_getvalue = boxplot_getvalue
 
 function mds_tkquery_parse_permanentHierarchy(query, ds) {
 	/*
@@ -6816,19 +6561,8 @@ function validate_tabixfile(file) {
 
 var binOffsets = [512 + 64 + 8 + 1, 64 + 8 + 1, 8 + 1, 1, 0]
 
-function local_init_bulk_flag() {
-	var flag = common.init_bulk_flag()
-	return flag
-}
-
-function local_end_flag(flag) {
-	delete flag.mclasslabel2key
-	delete flag.sample2disease
-	delete flag.patient2ori2sample
-}
-
-exports.illegalpath = utils.illegalpath
-exports.fileurl = utils.fileurl
+export const illegalpath = utils.illegalpath
+export const fileurl = utils.fileurl
 
 function downloadFile(url, tofile, cb) {
 	const f = fs.createWriteStream(tofile)
@@ -6884,7 +6618,7 @@ and load all datasets supported in each genome
 as encoded in file "serverconfig.json"
 at the end it will 
 */
-async function pp_init(serverconfig) {
+export async function pp_init(serverconfig) {
 	// verify if tp directory is readable
 	// ppr has this situation where its tp/ is from a nfs mount and can go down...
 	try {
@@ -7171,7 +6905,7 @@ async function pp_init(serverconfig) {
 		// termdbs{} is optional
 		if (g.termdbs) {
 			for (const key in g.termdbs) {
-				server_init_db_queries(g.termdbs[key], exports.features)
+				server_init_db_queries(g.termdbs[key], features)
 				console.log(`${key} initiated as ${genomename}-level termdb`)
 			}
 		}

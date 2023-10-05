@@ -560,7 +560,7 @@ export function query_bigbed_by_name(bigbed, name) {
 	})
 }
 
-function tabixnoterror(s) {
+export function tabixnoterror(s) {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
 

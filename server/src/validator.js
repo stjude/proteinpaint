@@ -1,8 +1,6 @@
-import app from './app'
-
 const byIpAddr = {}
 
-app.catch = function (req, res, error) {
+export function floodCatch(req, res, error) {
 	const time = +new Date()
 	if (!(req.ip in byIpAddr)) {
 		byIpAddr[req.ip] = { time, count: 0 }
@@ -32,7 +30,7 @@ export function middleware(req, res, next) {
 		// TODO log out request here to eliminate repeating log(req) in handlers; may skip the bundle-loading lines?
 		next()
 	} catch (e) {
-		app.catch(req, res, e.message || e)
+		floodCatch(req, res, e.message || e)
 	}
 }
 

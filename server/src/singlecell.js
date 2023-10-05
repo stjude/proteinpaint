@@ -1,4 +1,3 @@
-import app from './app'
 import fs from 'fs'
 import readline from 'readline'
 import * as d3scale from 'd3-scale'
@@ -88,7 +87,7 @@ may attach coloring scheme to result{} for returning to client
 
 	if (!q.textfile) throw '.textfile missing'
 	{
-		const [e, file, isurl] = app.fileurl({ query: { file: q.textfile } })
+		const [e, file, isurl] = utils.fileurl({ query: { file: q.textfile } })
 		if (e) throw '.textfile error: ' + e
 
 		if (!isurl) {
@@ -124,7 +123,7 @@ may attach coloring scheme to result{} for returning to client
 		const ge = q.getpcd.gene_expression
 		if (!ge.file) throw 'gene_expression.file missing'
 		{
-			const [e, file, isurl] = app.fileurl({ query: { file: ge.file } })
+			const [e, file, isurl] = utils.fileurl({ query: { file: ge.file } })
 			if (e) throw e
 			ge.file = file
 		}
@@ -333,7 +332,7 @@ async function get_geneboxplot(q, gn, res) {
 
 	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
 	{
-		const [e, file, isurl] = app.fileurl({ query: { file: ge.expfile } })
+		const [e, file, isurl] = utils.fileurl({ query: { file: ge.expfile } })
 		if (e) throw 'getgeneboxplot.expfile error: ' + e
 		ge.expfile = file
 	}
@@ -390,7 +389,7 @@ async function get_geneboxplot(q, gn, res) {
 	for (const [category, values] of category2values) {
 		values.sort((i, j) => i.value - j.value)
 
-		const b = app.boxplot_getvalue(values)
+		const b = utils.boxplot_getvalue(values)
 		delete b.out // remove outliers
 		const co = categorical_color_function(category)
 
@@ -464,7 +463,7 @@ async function get_heatmap(q, gn, res) {
 
 	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
 	{
-		const [e, file, isurl] = app.fileurl({ query: { file: ge.expfile } })
+		const [e, file, isurl] = utils.fileurl({ query: { file: ge.expfile } })
 		if (e) throw 'getgeneboxplot.expfile error: ' + e
 		ge.expfile = file
 	}
@@ -546,7 +545,7 @@ v: { category, expvalue }
 */
 	if (!p.cellfile) throw 'cellfile missing'
 	{
-		const [e, file, isurl] = app.fileurl({ query: { file: p.cellfile } })
+		const [e, file, isurl] = utils.fileurl({ query: { file: p.cellfile } })
 		if (e) throw 'cellfile error: ' + e
 		p.cellfile = file
 	}
