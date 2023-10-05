@@ -2,6 +2,12 @@ import { getCompInit, copyMerge, deepEqual } from '../rx'
 
 // track state diff to be able to skip server data request
 // and term/sample order recomputation, as needed
+//
+// !!! NOTE !!!
+// May have to add properties in getState() or
+// in one of the "diffs" below, if the matrix does not react
+// to data, ordering, sorting changes
+//
 export function computeStateDiff() {
 	const s = this.settings.matrix
 	const prevState = structuredClone(this.prevState)
@@ -15,7 +21,9 @@ export function computeStateDiff() {
 	const phc = this.prevState.config.settings.hierCluster || {}
 	const chc = this.state.config.settings.hierCluster || {}
 	this.stateDiff = {
+		// state diff that should trigger a different server request
 		nonsettings: !deepEqual(prevState, currState),
+		// state/config/settings diffs that trigger re-sorting
 		sorting: !deepEqual(
 			{
 				maxSample: p.maxSample,
@@ -44,6 +52,7 @@ export function computeStateDiff() {
 				clusterMethod: chc.clusterMethod
 			}
 		),
+		// state/config/settings that trigger canvas re-rendering
 		cellDimensions: !deepEqual(
 			{
 				transpose: p.transpose,

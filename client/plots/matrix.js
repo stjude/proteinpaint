@@ -152,11 +152,11 @@ export class Matrix {
 			// controlsRenderer.getSettings() supplies settings that are not tracked in the global app and plot state
 			Object.assign(this.settings, this.config.settings, this.controlsRenderer.getSettings())
 
+			// see matrix.data for logic to be able to skip server data request or re-ordering
 			this.computeStateDiff()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'absolute').style('left', '45%')
 
-			// skip data requests when changes are not expected to affect the request payload
-
+			// may skip data requests when changes are not expected to affect the request payload
 			if (this.stateDiff.nonsettings) {
 				const promises = []
 				// get the data
@@ -172,6 +172,8 @@ export class Matrix {
 				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
 			}
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
+			// may skip term or sample ordering when there are
+			// no relevant state/config/setting changes
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
 				this.termOrder = this.getTermOrder(this.data)
 				this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
