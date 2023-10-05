@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import utils from './utils'
+import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import termdb from './termdb'
 import readline from 'readline'

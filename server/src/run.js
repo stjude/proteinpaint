@@ -1,8 +1,8 @@
-const serverconfig = require('./serverconfig')
-const { basepath, app, genomes, phewas, startServer, pp_init } = require('./app')
-const augen = require('@sjcrh/augen')
-const fs = require('fs')
-const path = require('path')
+import serverconfig from './serverconfig'
+import { basepath, app, genomes, phewas, startServer, pp_init } from './app'
+import * as augen from '@sjcrh/augen'
+import fs from 'fs'
+import path from 'path'
 
 {
 	// start moving migrated route handler code here

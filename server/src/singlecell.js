@@ -1,12 +1,12 @@
-const app = require('./app')
-const fs = require('fs')
-const readline = require('readline')
-const d3scale = require('d3-scale')
-const d3color = require('d3-color')
-const d3interpolate = require('d3-interpolate')
-const utils = require('./utils')
-const { schemeCategory10 } = require('d3-scale-chromatic')
-const { schemeCategory20 } = require('../../client/common/legacy-d3-polyfill')
+import app from './app'
+import fs from 'fs'
+import readline from 'readline'
+import * as d3scale from 'd3-scale'
+import * as d3color from 'd3-color'
+import * as d3interpolate from 'd3-interpolate'
+import * as utils from './utils'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { schemeCategory20 } from '../../client/common/legacy-d3-polyfill'
 
 /*
 ********************** EXPORTED
@@ -25,7 +25,7 @@ cellfile_get_barcode2category() // k: barcode, v: {category, expvalue}
 TODO need to test the existence of the json file
 */
 
-exports.handle_singlecell_closure = genomes => {
+export function handle_singlecell_closure(genomes) {
 	return async (req, res) => {
 		try {
 			const q = req.query
@@ -380,10 +380,7 @@ async function get_geneboxplot(q, gn, res) {
 	const boxplots_ = []
 	// each element is one category
 
-	const scaleticks = d3scale
-		.scaleLinear()
-		.domain([minexpvalue, maxexpvalue])
-		.ticks(20)
+	const scaleticks = d3scale.scaleLinear().domain([minexpvalue, maxexpvalue]).ticks(20)
 
 	// kde doesn't work -- using the wrong kernel??
 	//const kde = kernelDensityEstimator( kernelEpanechnikov(7), scaleticks )

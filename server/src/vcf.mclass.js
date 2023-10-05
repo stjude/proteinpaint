@@ -1,7 +1,7 @@
-const { dissect_INFO } = require('#shared/vcf.info')
-const { parse_CSQ } = require('#shared/vcf.csq')
-const { getVariantType } = require('#shared/vcf.type')
-const { vcfcopymclass } = require('#shared/common')
+import { dissect_INFO } from '#shared/vcf.info'
+import { parse_CSQ } from '#shared/vcf.csq'
+import { getVariantType } from '#shared/vcf.type'
+import { vcfcopymclass } from '#shared/common'
 
 /*
 do not anticipate to share this function with client

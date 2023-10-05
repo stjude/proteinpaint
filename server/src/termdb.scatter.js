@@ -8,7 +8,7 @@ import { mclass, dt2label, morigin } from '#shared/common'
 import { getFilterCTEs } from './termdb.filter'
 import authApi from './auth'
 import lines2R from './lines2R'
-import { write_file } from './utils'
+import { write_file, read_file } from './utils'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -43,7 +43,7 @@ export async function mayInitiateScatterplots(ds) {
 	for (const p of ds.cohort.scatterplots.plots) {
 		if (!p.name) throw '.name missing from one of scatterplots.plots[]'
 		if (p.file) {
-			const lines = (await utils.read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
+			const lines = (await read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
 
 			const headerFields = lines[0].split('\t')
 

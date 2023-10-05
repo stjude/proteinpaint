@@ -29,7 +29,7 @@ termlst[{}]
 		.children[] // available for all blocks
 */
 
-exports.draw_partition = opts => {
+export function draw_partition(opts) {
 	validateOpts(opts)
 	const termlst = get_termlst(opts)
 
