@@ -137,7 +137,6 @@ export class GroupSettingMethods {
 	}
 
 	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
-		let countValues = 0
 		for (const [i, group] of this.opts.q.groupsetting.customset.groups.entries()) {
 			if (group.uncomputable) return
 			this.data.groups.push({
@@ -151,7 +150,6 @@ export class GroupSettingMethods {
 				 * If missing, find the label from category2samplecout or
 				 * use the last ditch effort to use the key.
 				 */
-				++countValues
 				const label = value.label
 					? value.label
 					: this.opts.category2samplecount
@@ -167,9 +165,9 @@ export class GroupSettingMethods {
 				})
 			}
 		}
-
-		if (this.data.values.length !== countValues) {
-			//Find excluded values not returned in customset
+		console.log(this.opts)
+		//Find excluded values not returned in customset
+		if (this.data.values.length !== Object.keys(input).length && !this.opts.q.groupsetting.inuse) {
 			Object.entries(input)
 				.filter((v: any) => !this.data.values.some(d => d.key == v[1].label))
 				.forEach(v => {
@@ -182,6 +180,17 @@ export class GroupSettingMethods {
 									(d: { key: string; label?: string; samplecount: number }) => d.key == v[0]
 							  )?.samplecount
 							: 'n/a'
+					})
+				})
+		} else if (this.data.values.length !== this.opts.category2samplecount.length) {
+			this.opts.category2samplecount
+				.filter((v: ItemEntry) => !this.data.values.some(d => d.key == v.key))
+				.forEach((v: ItemEntry) => {
+					this.data.values.push({
+						key: v.key,
+						label: v.label,
+						group: 0,
+						samplecount: v.samplecount
 					})
 				})
 		}
