@@ -1,8 +1,7 @@
-import app from './app'
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
-import { write_file, mayCopyFromCookie } from './utils'
+import { write_file, mayCopyFromCookie, fileurl } from './utils'
 import serverconfig from './serverconfig'
 import { snvindelByRangeGetter_bcf } from './mds3.init'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -157,7 +156,7 @@ async function get_ds(q, genome) {
 	// may cache index files from url, thus the await
 	const ds = { queries: {} }
 	if (q.bcffile || q.bcfurl) {
-		const [e, file, isurl] = app.fileurl({ query: { file: q.bcffile, url: q.bcfurl } })
+		const [e, file, isurl] = fileurl({ query: { file: q.bcffile, url: q.bcfurl } })
 		if (e) throw e
 		const _tk = {}
 		if (isurl) {
