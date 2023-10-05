@@ -76,15 +76,15 @@ const express = require('express'),
 	handle_tkbigwig = require('./bw').handle_tkbigwig,
 	handle_tkld = require('./ld').handle_tkld,
 	termdbbarsql = require('./termdb.barchart'),
-	bedgraphdot_request_closure = require('./bedgraphdot'),
-	bam_request_closure = require('./bam'),
+	bedgraphdot_request_closure = require('./bedgraphdot').default,
+	bam_request_closure = require('./bam').default,
 	{ mdsjunction_request_closure } = require('./mds.junction'),
 	gdc_bam_request = require('./bam.gdc').gdc_bam_request,
 	mds3Gdc = require('./mds3.gdc'),
-	aicheck_request_closure = require('./aicheck'),
-	bampile_request = require('./bampile'),
-	junction_request = require('./junction'),
-	bedj_request_closure = require('./bedj'),
+	aicheck_request_closure = require('./aicheck').default,
+	bampile_request = require('./bampile').default,
+	junction_request = require('./junction').default,
+	bedj_request_closure = require('./bedj').default,
 	blat_request_closure = require('./blat').request_closure,
 	mds3_request_closure = require('./mds3.load').mds3_request_closure,
 	server_updateAttr = require('./dsUpdateAttr').server_updateAttr,
@@ -101,7 +101,7 @@ const express = require('express'),
 	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
-	authApi = require('./auth.js'),
+	{ authApi } = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
 	minimatch = require('minimatch'),
 	{ versionInfo } = require('./health')
@@ -455,9 +455,9 @@ function handle_gene2canonicalisoform(req, res) {
 async function handle_cards(req, res) {
 	try {
 		if (req.query.datafile && req.query.tabixCoord) {
-			// does not return the raw contents of a file, so okay not to use illegalpath() ???
+			// does not return the raw contents of a file, so okay not to use utils.illegalpath() ???
 			// may also be too strict with file extensions that tabix expects
-			// if (illegalpath(req.query.datafile)) throw 'Invalid file'
+			// if (utils.illegalpath(req.query.datafile)) throw 'Invalid file'
 			return new Promise((resolve, reject) => {
 				const sp = spawn(tabix, [path.join(serverconfig.tpmasterdir, req.query.datafile), req.query.tabixCoord])
 				const output = [],
@@ -534,7 +534,7 @@ function maymakefolder() {
 async function handle_tabixheader(req, res) {
 	log(req)
 	try {
-		const [e, file, isurl] = fileurl(req)
+		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw e
 		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		const lines = await utils.get_header_tabix(file, dir)
@@ -963,7 +963,7 @@ function mds_clientcopy(ds) {
 
 async function handle_img(req, res) {
 	log(req)
-	const [e, file, isurl] = fileurl(req) // fileurl({ query: { file: req.query.file } })
+	const [e, file, isurl] = utils.fileurl(req) // utils.fileurl({ query: { file: req.query.file } })
 	try {
 		if (e) throw 'invalid image file'
 		const data = await fs.promises.readFile(file)
@@ -1331,7 +1331,7 @@ function handle_dbdata(req, res) {
 		query()
 	} else {
 		const config = {}
-		const [e, file, isurl] = fileurl({ query: { file: req.query.db } })
+		const [e, file, isurl] = utils.fileurl({ query: { file: req.query.db } })
 		if (e) {
 			res.send({ error: 'db file error: ' + e })
 			return
@@ -1350,7 +1350,7 @@ function handle_dbdata(req, res) {
 
 function handle_svmr(req, res) {
 	if (req.query.file) {
-		const [e, file, isurl] = fileurl(req)
+		const [e, file, isurl] = utils.fileurl(req)
 		if (e) {
 			res.send({ error: 'illegal file name' })
 			return
@@ -1370,7 +1370,7 @@ function handle_svmr(req, res) {
 
 async function handle_hicstat(req, res) {
 	try {
-		const [e, file, isurl] = fileurl(req)
+		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw 'illegal file name'
 		if (!isurl) {
 			await utils.file_is_readable(file)
@@ -1384,7 +1384,7 @@ async function handle_hicstat(req, res) {
 }
 
 function handle_hicdata(req, res) {
-	const [e, file, isurl] = fileurl(req)
+	const [e, file, isurl] = utils.fileurl(req)
 	if (e) {
 		res.send({ error: 'illegal file name' })
 		return
@@ -1440,7 +1440,7 @@ function handle_hicdata(req, res) {
 
 async function handle_study(req, res) {
 	try {
-		if (illegalpath(req.query.file)) throw 'invalid file path'
+		if (utils.illegalpath(req.query.file)) throw 'invalid file path'
 		const file = path.join(
 			serverconfig.tpmasterdir,
 			req.query.file.endsWith('.json') ? req.query.file : req.query.file + '.json'
@@ -1569,7 +1569,7 @@ function handle_textfile(req, res) {
     	optional, if present, will get range [from to] 1-based, else will get the entire file
     */
 	if (!req.query.file) return res.send({ error: 'no file' })
-	if (illegalpath(req.query.file)) return res.send({ error: 'invalid file name' })
+	if (utils.illegalpath(req.query.file)) return res.send({ error: 'invalid file name' })
 	const file = path.join(serverconfig.tpmasterdir, req.query.file)
 
 	if (req.query.from != undefined) {
@@ -5178,7 +5178,7 @@ function mdssvcnv_exit_getsample4disco(req, res, gn, ds) {
 		return res.send({ error: 'singlesamplemutationjson not available for this dataset' })
 	const samplename = req.query.getsample4disco
 	// NOTE: this acts as a whitelist for samplename, will not allow loading
-	// arbitrary file paths so no need to check with illegalpath()
+	// arbitrary file paths so no need to check with utils.illegalpath()
 	const f0 = ds.singlesamplemutationjson.samples[samplename]
 	if (!f0) return res.send({ error: 'no data' })
 	const file = path.join(serverconfig.tpmasterdir, f0)
@@ -6738,7 +6738,7 @@ async function handle_vcfheader(req, res) {
 		if (!req.query.genome) throw 'genome missing'
 		const g = genomes[req.query.genome]
 		if (!g) throw 'invalid genome'
-		const [e, file, isurl] = fileurl(req)
+		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw e
 		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		res.send({
@@ -6754,7 +6754,7 @@ async function handle_vcfheader(req, res) {
 async function handle_vcf(req, res) {
 	// single vcf
 	try {
-		const [e, file, isurl] = fileurl(req)
+		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw e
 		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		if (!req.query.rglst) throw 'rglst missing'
@@ -6827,64 +6827,8 @@ function local_end_flag(flag) {
 	delete flag.patient2ori2sample
 }
 
-const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
-
-function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
-	if (s[0] == '/') return true // must not be relative to mount root
-	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
-	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
-	if (s.includes(' ')) return true // must not include whitespace
-	if (s.indexOf('..') != -1) return true
-	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
-
-	if (checkWhiteList && serverconfig.whiteListPaths) {
-		// as /textfile route is dangerous, this server whitelists path pattern for it.
-		// only if the req.query.file begins with or glob-matches any of the path pattern then it's allowed
-		let nomatch = true
-		for (const p of serverconfig.whiteListPaths) {
-			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p))) {
-				nomatch = false
-				break
-			}
-			if (p[0] == '!' && !minimatch(s, p)) {
-				nomatch = true
-				break
-			}
-		}
-		if (nomatch) return true
-	}
-	/*** disable for now ***/
-	if (checkBlackList) {
-		for (const ext of fileExtensionBlackList) {
-			if (ext === path.extname(s).toLowerCase()) return true
-		}
-	}
-
-	return false
-}
-exports.illegalpath = illegalpath
-
-function fileurl(req, checkWhiteList = true) {
-	// must use it to scrutinize every requested file path
-	let file = null,
-		isurl = false
-	if (req.query.file) {
-		file = req.query.file
-		if (illegalpath(file, checkWhiteList, false)) return ['illegal file path']
-		file = path.join(serverconfig.tpmasterdir, file)
-	} else if (req.query.url) {
-		file = req.query.url
-		// avoid whitespace in case the url is supplied as an argument
-		// to an exec script and thus execute arbitrary space-separated
-		// commands within the url
-		if (file.includes(' ')) return ['url must not contain whitespace']
-		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
-		isurl = true
-	}
-	if (!file) return ['file unspecified']
-	return [null, file, isurl]
-}
-exports.fileurl = fileurl
+exports.illegalpath = utils.illegalpath
+exports.fileurl = utils.fileurl
 
 function downloadFile(url, tofile, cb) {
 	const f = fs.createWriteStream(tofile)

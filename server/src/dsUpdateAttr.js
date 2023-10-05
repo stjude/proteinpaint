@@ -1,9 +1,9 @@
-const path = require('path')
-const fs = require('fs').promises
-const serverconfig = require('./serverconfig')
-const validate_termdb = require('./mds3.init').validate_termdb
+import fs from 'fs'
+import path from 'path'
+import serverconfig from './serverconfig'
+import { validate_termdb } from './mds3.init'
 
-exports.server_updateAttr = function(ds, sds) {
+export function server_updateAttr(ds, sds) {
 	/*
 	ds: 
 		an entry in genomes[{datasets:[ ... ]}]
@@ -48,7 +48,7 @@ exports.server_updateAttr = function(ds, sds) {
 			  http://sub.domain.ext:port/termdb-refresh.html?route=pnet-refresh-r4Nd0m-5tr1n8
 */
 
-exports.setDbRefreshRoute = function(ds, app, basepath) {
+export function setDbRefreshRoute(ds, app, basepath) {
 	if (!ds.cohort?.db?.refresh) return
 	const r = ds.cohort.db.refresh
 	// delete the optional 'refresh' attribute
@@ -82,8 +82,10 @@ exports.setDbRefreshRoute = function(ds, app, basepath) {
 				console.log(`copying ${source} to ${target}`)
 				await fs.copyFile(source, target)
 			} else {
-				throw `Updating input text files via the termdb-refresh page has been deprecated.` +
+				throw (
+					`Updating input text files via the termdb-refresh page has been deprecated.` +
 					`Please use the buildTermdb.bundle.js. pipeline before triggering this route to replace the db file.`
+				)
 			}
 			await validate_termdb(ds)
 			res.send({ status: 'ok' })

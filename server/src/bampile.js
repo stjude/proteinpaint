@@ -1,11 +1,10 @@
-const app = require('./app')
-const utils = require('./utils')
-const createCanvas = require('canvas').createCanvas
-const basecolor = require('#shared/common').basecolor
+import * as utils from './utils'
+import { createCanvas } from 'canvas'
+import { basecolor } from '#shared/common'
 
-module.exports = async (req, res) => {
+export default async function (req, res) {
 	try {
-		const [e, tkfile, isurl] = app.fileurl(req)
+		const [e, tkfile, isurl] = utils.fileurl(req)
 		if (e) throw e
 		let usegrade = req.query.usegrade
 		const allheight = Number(req.query.allheight),

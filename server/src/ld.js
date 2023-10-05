@@ -1,10 +1,10 @@
-const app = require('./app')
-const fs = require('fs')
-const path = require('path')
-const spawn = require('child_process').spawn
-const utils = require('./utils')
-const createCanvas = require('canvas').createCanvas
-const bplen = require('#shared/common').bplen
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
+import { createCanvas } from 'canvas'
+import { bplen } from '#shared/common'
 
 /*
 req.query{}
@@ -27,7 +27,7 @@ export function handle_tkld(genomes) {
 }
 
 async function loadTk(req, genome) {
-	const [e, tkfile, isurl] = app.fileurl(req)
+	const [e, tkfile, isurl] = utils.fileurl(req)
 	if (e) throw e
 	let dir
 	if (isurl) {

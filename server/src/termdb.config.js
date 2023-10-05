@@ -1,7 +1,7 @@
 import serverconfig from './serverconfig.js'
 import { mayComputeTermtypeByCohort } from './termdb.server.init'
 import { isMatch } from 'micromatch'
-import auth from './auth'
+import { authApi } from './auth'
 
 /*
 the "termdbConfig" object is returned to client side that uses vocabApi
@@ -65,7 +65,7 @@ export function make(q, res, ds, genome) {
 
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
-	c.requiredAuth = auth.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
+	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)

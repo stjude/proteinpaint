@@ -1,7 +1,7 @@
-const tape = require('tape')
-const auth = require('../auth')
-const jsonwebtoken = require('jsonwebtoken')
-const serverconfig = require('../serverconfig')
+import tape from 'tape'
+import { authApi } from '../auth'
+import jsonwebtoken from 'jsonwebtoken'
+import serverconfig from '../serverconfig'
 
 /*************************
  reusable constants and helper functions
@@ -68,7 +68,7 @@ tape('\n', function (test) {
 tape(`initialization`, async test => {
 	{
 		const app = appInit()
-		await auth.maySetAuthRoutes(app, '', { cachedir })
+		await authApi.maySetAuthRoutes(app, '', { cachedir })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			[],
@@ -82,7 +82,7 @@ tape(`initialization`, async test => {
 
 	{
 		const app = appInit()
-		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials: {}, secrets })
+		await authApi.maySetAuthRoutes(app, '', { cachedir, dsCredentials: {}, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual([], middlewares, 'should NOT set a global middleware when dsCredentials is empty')
 		const routes = Object.keys(app.routes)
@@ -102,7 +102,7 @@ tape(`initialization`, async test => {
 				}
 			}
 		}
-		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials, secrets })
+		await authApi.maySetAuthRoutes(app, '', { cachedir, dsCredentials, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			['*'],
@@ -120,7 +120,7 @@ tape(`initialization`, async test => {
 
 	{
 		const app = appInit()
-		await auth.maySetAuthRoutes(app, '', { cachedir })
+		await authApi.maySetAuthRoutes(app, '', { cachedir })
 		test.deepEqual(
 			[
 				'canDisplaySampleIds',
@@ -131,26 +131,26 @@ tape(`initialization`, async test => {
 				'maySetAuthRoutes',
 				'userCanAccess'
 			],
-			Object.keys(auth).sort(),
+			Object.keys(authApi).sort(),
 			'should set the expected methods with an empty dsCredentials'
 		)
 		test.deepEqual(
-			auth.getDsAuth({ query: {}, get() {} }),
+			authApi.getDsAuth({ query: {}, get() {} }),
 			[],
 			'should return open-access dsAuth with an empty dsCredentials'
 		)
 		test.deepEqual(
-			auth.getForbiddenRoutesForDsEmbedder(),
+			authApi.getForbiddenRoutesForDsEmbedder(),
 			[],
 			'should return open-access getForbiddenRoutesForDsEmbedder with an empty dsCredentials'
 		)
 		test.deepEqual(
-			auth.getRequiredCredForDsEmbedder(),
+			authApi.getRequiredCredForDsEmbedder(),
 			undefined,
 			'should return open-access getRequiredCredForDsEmbedder with an empty dsCredentials'
 		)
 		test.deepEqual(
-			auth.userCanAccess({ query: {} }),
+			authApi.userCanAccess({ query: {} }),
 			true,
 			'should return open-access userCanAccess with an empty dsCredentials'
 		)
@@ -185,7 +185,7 @@ tape('legacy reshape', async test => {
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, '', serverconfig)
 	test.deepEqual(
 		JSON.parse(JSON.stringify(dsCredentials)),
 		{
@@ -246,24 +246,24 @@ tape(`auth methods`, async test => {
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, '', serverconfig)
 	test.deepEqual(
-		auth.getDsAuth({ query: { embedder: 'some.domain' }, get: () => 'localhost' }),
+		authApi.getDsAuth({ query: { embedder: 'some.domain' }, get: () => 'localhost' }),
 		[{ dslabel: 'ds100', route: 'burden', type: 'forbidden', insession: false }],
 		`should return the expected dsAuth array for a specified embedder`
 	)
 	test.deepEqual(
-		auth.getForbiddenRoutesForDsEmbedder('ds100', 'localhost'),
+		authApi.getForbiddenRoutesForDsEmbedder('ds100', 'localhost'),
 		['burden'],
 		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
 	)
 	test.deepEqual(
-		auth.getForbiddenRoutesForDsEmbedder('ds100', 'notlocalhost'),
+		authApi.getForbiddenRoutesForDsEmbedder('ds100', 'notlocalhost'),
 		[],
 		`should return the expected forbidden routes for a non-wildcard embedder`
 	)
 	test.deepEqual(
-		auth.userCanAccess({ query: { embedder: 'localhost' } }, { label: 'ds100' }),
+		authApi.userCanAccess({ query: { embedder: 'localhost' } }, { label: 'ds100' }),
 		true,
 		`should return false for userCanAccess() for a non-logged in user`
 	)
@@ -289,7 +289,7 @@ tape(`a valid request`, async test => {
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -336,7 +336,7 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -392,7 +392,7 @@ tape(`invalid embedder`, async test => {
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(308, app.routes)
+	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(308, app.routes)
 
 	{
 		const req = {
@@ -446,7 +446,7 @@ tape(`invalid dataset access`, async test => {
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, '', serverconfig)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -499,7 +499,7 @@ tape(`invalid jwt`, async test => {
 		cachedir
 	}
 
-	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
 
 	{
 		const req = {
@@ -608,7 +608,7 @@ tape(`session-handling by the middleware`, async test => {
 	}
 
 	const app = appInit()
-	await auth.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, '', serverconfig)
 	{
 		const message = 'should call the next function on a non-protected route'
 		const req = {
@@ -774,5 +774,5 @@ tape.skip(`/dslogin`, async test => {
 	}
 
 	const app = appInit()
-	await auth.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, '', serverconfig)
 })

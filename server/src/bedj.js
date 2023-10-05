@@ -1,10 +1,9 @@
-const app = require('./app')
-const path = require('path')
-const fs = require('fs')
-const utils = require('./utils')
-const createCanvas = require('canvas').createCanvas
-const nt2aa = require('#shared/common').nt2aa
-const parseBedLine = require('./bedj.parseBed').parseBedLine
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import { nt2aa } from '#shared/common'
+import { createCanvas } from 'canvas'
+import { parseBedLine } from './bedj.parseBed'
 
 /*
 should guard against file content error e.g. two tabs separating columns
@@ -118,7 +117,7 @@ const altcolor = 'rgba(122,103,44,.7)',
 	stopcolor = 'rgba(255,0,0,.5)',
 	skippedBpColor = '#ccc'
 
-module.exports = genomes => {
+export default function (genomes) {
 	return async (req, res) => {
 		try {
 			res.send(await do_query(req, genomes))
@@ -130,7 +129,7 @@ module.exports = genomes => {
 }
 
 async function do_query(req, genomes) {
-	const [e, tkfile, isurl] = app.fileurl(req)
+	const [e, tkfile, isurl] = utils.fileurl(req)
 	if (e) throw e
 
 	// append new boolean flag to req.query{}

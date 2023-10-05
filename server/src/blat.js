@@ -1,15 +1,14 @@
-const fs = require('fs'),
-	path = require('path'),
-	spawn = require('child_process').spawn,
-	utils = require('./utils'),
-	app = require('./app')
+import fs from 'fs'
+import path from 'path'
+import * as utils from './utils'
+import serverconfig from './serverconfig'
+import { spawn } from 'child_process'
 
-const serverconfig = require('./serverconfig')
 const tabix = serverconfig.tabix || 'tabix'
 const gfClient = serverconfig.gfClient || 'gfClient'
 const gfServer = serverconfig.gfServer || 'gfServer'
 
-exports.request_closure = genomes => {
+export function request_closure(genomes) {
 	return async (req, res) => {
 		try {
 			if (req.query.serverstat) {
@@ -49,10 +48,7 @@ function server_stat(name, g) {
 			if (e) {
 				resolve(name + ' OFF')
 			}
-			const lines = out
-				.join('')
-				.trim()
-				.split('\n')
+			const lines = out.join('').trim().split('\n')
 			let c = 0
 			for (const line of lines) {
 				if (line.startsWith('blat requests')) c = line.split(' ')[2]
@@ -72,7 +68,7 @@ async function do_blat(genome, seq, soft_starts, soft_stops) {
 	const lines = outputstr.split('\n')
 	const hits = []
 	for (const line of lines) {
-		const l = line.split(' ').filter(function(el) {
+		const l = line.split(' ').filter(function (el) {
 			return el != ''
 		})
 		const h = {}
@@ -110,7 +106,7 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 	const hits = []
 	let h = {}
 	for (const line of lines) {
-		const l = line.split(' ').filter(function(el) {
+		const l = line.split(' ').filter(function (el) {
 			return el != ''
 		})
 		//console.log(l)
