@@ -5,7 +5,7 @@ import lines2R from './lines2R'
 import fs from 'fs'
 import imagesize from 'image-size'
 import serverconfig from './serverconfig'
-import utils from './utils'
+import * as utils from './utils'
 import * as termdbsql from './termdb.sql'
 import { getSampleData_snplstOrLocus } from './termdb.regression'
 

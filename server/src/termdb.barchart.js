@@ -1,5 +1,5 @@
 import path from 'path'
-import utils from './utils'
+import * as utils from './utils'
 import Partjson from 'partjson'
 import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'

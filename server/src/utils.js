@@ -1,15 +1,16 @@
-const fs = require('fs'),
-	path = require('path'),
-	spawn = require('child_process').spawn,
-	readline = require('readline'),
-	common = require('#shared/common'),
-	vcf = require('#shared/vcf'),
-	fetch = require('node-fetch').default, // adding .default allows webpack bundle to work
-	bettersqlite = require('better-sqlite3'),
-	serverconfig = require('./serverconfig'),
-	Readable = require('stream').Readable
+import fs from 'fs'
+import path from 'path'
+import { spawn } from 'child_process'
+import readline from 'readline'
+import * as common from '#shared/common'
+import * as vcf from '#shared/vcf'
+import fetch from 'node-fetch' // adding .default allows webpack bundle to work
+import bettersqlite from 'better-sqlite3'
+import _serverconfig from './serverconfig'
+import { Readable } from 'stream'
 
-exports.serverconfig = serverconfig
+export const serverconfig = _serverconfig
+
 const tabix = serverconfig.tabix
 const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
@@ -52,7 +53,7 @@ testIfFileIsBigbed
    await cache_index(bam_url, indexURL || bam_url+'.bai')
 
 */
-exports.cache_index = async (gzurl, indexurl) => {
+export async function cache_index(gzurl, indexurl) {
 	if (!gzurl) throw '.gz file URL missing'
 	if (typeof gzurl != 'string') throw '.gz file URL not string'
 	if (indexurl) {
@@ -140,7 +141,7 @@ function stream2file(from, file) {
 	})
 }
 
-exports.file_is_readable = async file => {
+export async function file_is_readable(file) {
 	// need full path to the file
 	// see if file exists and readable
 	// to replace file_not_exist file_not_readable
@@ -156,14 +157,14 @@ exports.file_is_readable = async file => {
 }
 
 // set "isbcf" to true when tk.file points to a bcf file
-exports.init_one_vcf = async function (tk, genome, isbcf) {
+export async function init_one_vcf(tk, genome, isbcf) {
 	let filelocation
 	if (tk.file) {
 		if (!tk.file.startsWith(serverconfig.tpmasterdir)) {
 			tk.file = path.join(serverconfig.tpmasterdir, tk.file)
 		}
 		filelocation = tk.file
-		await exports.validate_tabixfile(tk.file)
+		await validate_tabixfile(tk.file)
 	} else if (tk.url) {
 		filelocation = tk.url
 		tk.dir = await utils.cache_index(tk.url, tk.indexURL)
@@ -172,8 +173,8 @@ exports.init_one_vcf = async function (tk, genome, isbcf) {
 	}
 
 	const [info, format, samples, errors] = isbcf
-		? await exports.get_header_bcf(filelocation, tk.dir)
-		: await exports.get_header_vcf(filelocation, tk.dir)
+		? await get_header_bcf(filelocation, tk.dir)
+		: await get_header_vcf(filelocation, tk.dir)
 	if (errors) {
 		console.log(errors.join('\n'))
 		throw 'got above errors parsing vcf'
@@ -181,7 +182,7 @@ exports.init_one_vcf = async function (tk, genome, isbcf) {
 	tk.info = info
 	tk.format = format
 	tk.samples = samples
-	if (await exports.tabix_is_nochr(filelocation, tk.dir, genome)) {
+	if (await tabix_is_nochr(filelocation, tk.dir, genome)) {
 		tk.nochr = true
 	}
 }
@@ -191,7 +192,7 @@ file is full path
 url not accepted
 also works for bcf
 */
-exports.validate_tabixfile = async function (file) {
+export async function validate_tabixfile(file) {
 	if (!file.endsWith('.gz')) throw 'tabix file not ending with .gz'
 	if (await file_not_exist(file)) throw file + ' file not exist'
 	if (await file_not_readable(file)) throw '.gz file not readable'
@@ -208,10 +209,10 @@ exports.validate_tabixfile = async function (file) {
 	}
 }
 
-exports.tabix_is_nochr = async function (file, dir, genome) {
+export async function tabix_is_nochr(file, dir, genome) {
 	// also works for bcf file!
 	const lines = []
-	await exports.get_lines_bigfile({
+	await get_lines_bigfile({
 		args: ['-l', file],
 		dir,
 		callback: line => {
@@ -221,7 +222,7 @@ exports.tabix_is_nochr = async function (file, dir, genome) {
 	return common.contigNameNoChr(genome, lines)
 }
 
-function file_not_exist(file) {
+export function file_not_exist(file) {
 	return new Promise((resolve, reject) => {
 		fs.access(file, fs.constants.F_OK, err => {
 			if (err) resolve(true)
@@ -230,7 +231,7 @@ function file_not_exist(file) {
 	})
 }
 
-function file_not_readable(file) {
+export function file_not_readable(file) {
 	return new Promise((resolve, reject) => {
 		fs.access(file, fs.constants.R_OK, err => {
 			if (err) resolve(true)
@@ -238,13 +239,11 @@ function file_not_readable(file) {
 		})
 	})
 }
-exports.file_not_readable = file_not_readable
-exports.file_not_exist = file_not_exist
 
-exports.get_header_tabix = async (file, dir) => {
+export async function get_header_tabix(file, dir) {
 	// file is full path file or url
 	const lines = []
-	await exports.get_lines_bigfile({
+	await get_lines_bigfile({
 		args: ['-H', file],
 		dir,
 		callback: line => {
@@ -253,7 +252,7 @@ exports.get_header_tabix = async (file, dir) => {
 	})
 	return lines
 }
-exports.get_header_bcf = (file, dir) => {
+export function get_header_bcf(file, dir) {
 	// file is full path or url
 	return new Promise((resolve, reject) => {
 		const ps = spawn(bcftools, ['view', '-h', file], { cwd: dir })
@@ -264,8 +263,8 @@ exports.get_header_bcf = (file, dir) => {
 		})
 	})
 }
-exports.get_header_vcf = async (file, dir) => {
-	return vcf.vcfparsemeta(await exports.get_header_tabix(file, dir))
+export async function get_header_vcf(file, dir) {
+	return vcf.vcfparsemeta(await get_header_tabix(file, dir))
 }
 
 /*
@@ -292,7 +291,7 @@ exports.get_header_vcf = async (file, dir) => {
 	function to process the line
 	ps as the second arg so callback may choose to kill the process e.g. too many lines returned
 */
-exports.get_lines_bigfile = function ({ args, dir, callback, isbcf, isbam }) {
+export function get_lines_bigfile({ args, dir, callback, isbcf, isbam }) {
 	if (!args) throw 'args is missing'
 	if (!Array.isArray(args)) throw 'args[] is not array'
 	if (args.length == 0) throw 'args[] empty array'
@@ -314,7 +313,7 @@ exports.get_lines_bigfile = function ({ args, dir, callback, isbcf, isbam }) {
 	})
 }
 
-function write_file(file, text) {
+export function write_file(file, text) {
 	return new Promise((resolve, reject) => {
 		fs.writeFile(file, text, err => {
 			if (err) reject('cannot write')
@@ -322,16 +321,14 @@ function write_file(file, text) {
 		})
 	})
 }
-exports.write_file = write_file
 
-async function write_tmpfile(text) {
+export async function write_tmpfile(text) {
 	const tmp = Math.random().toString()
 	await write_file(path.join(serverconfig.cachedir, tmp), text)
 	return tmp
 }
-exports.write_tmpfile = write_tmpfile
 
-function read_file(file) {
+export function read_file(file) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(file, { encoding: 'utf8' }, (err, txt) => {
 			// must use reject in callback, not throw
@@ -340,9 +337,8 @@ function read_file(file) {
 		})
 	})
 }
-exports.read_file = read_file
 
-exports.get_fasta = async (gn, pos) => {
+export async function get_fasta(gn, pos) {
 	if (gn.genomefile == 'NA') {
 		// not using a real fasta file, return Ns by the length of region
 		const tmp = pos.split(/[:-]/)
@@ -353,7 +349,7 @@ exports.get_fasta = async (gn, pos) => {
 
 	// chr:start-stop, positions are 1-based
 	const lines = []
-	await exports.get_lines_bigfile({
+	await get_lines_bigfile({
 		isbam: true, // so that samtools will be used for querying
 		args: ['faidx', gn.genomefile, pos],
 		callback: line => lines.push(line)
@@ -370,7 +366,7 @@ override={}
 returns:
 	db connector
 */
-exports.connect_db = function (file, override = {}) {
+export function connect_db(file, override = {}) {
 	const dbfile = file[0] == '/' ? file : path.join(serverconfig.tpmasterdir, file)
 	try {
 		return new bettersqlite(dbfile, Object.assign({ readonly: true, fileMustExist: true }, override))
@@ -379,16 +375,14 @@ exports.connect_db = function (file, override = {}) {
 	}
 }
 
-const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])
-const genotype_types = {
+export const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])
+export const genotype_types = {
 	href: 'Homozygous reference',
 	halt: 'Homozygous alternative',
 	het: 'Heterozygous'
 }
-exports.genotype_type_set = genotype_type_set
-exports.genotype_types = genotype_types
 
-exports.loadfile_ssid = async function (id, samplefilterset) {
+export async function loadfile_ssid(id, samplefilterset) {
 	/*
 samplefilterset:
 	optional Set of samples to restrict to
@@ -413,7 +407,7 @@ samplefilterset:
 	return [sample2gt, genotype2sample]
 }
 
-exports.run_fdr = async function (plst) {
+export async function run_fdr(plst) {
 	// list of pvalues
 	const infile = path.join(serverconfig.cachedir, Math.random().toString())
 	const outfile = infile + '.out'
@@ -433,7 +427,7 @@ function run_fdr_2(infile, outfile) {
 	})
 }
 
-exports.stripJsScript = function stripJsScript(text) {
+export function stripJsScript(text) {
 	return text.replace(/\<script|\bon[\w]{1,38}\b[\ \t\n]*\=/gi, ' _')
 	/*
     Explanation:
@@ -452,9 +446,9 @@ exports.stripJsScript = function stripJsScript(text) {
 	*/
 }
 
-exports.bam_ifnochr = async (file, genome, dir) => {
+export async function bam_ifnochr(file, genome, dir) {
 	const lines = []
-	await exports.get_lines_bigfile({
+	await get_lines_bigfile({
 		isbam: true,
 		args: ['view', '-H', file],
 		dir,
@@ -474,7 +468,7 @@ exports.bam_ifnochr = async (file, genome, dir) => {
 	return common.contigNameNoChr(genome, chrlst)
 }
 
-exports.query_bigbed_by_coord = function (bigbed, chr, start, end) {
+export function query_bigbed_by_coord(bigbed, chr, start, end) {
 	// input coordinates need to be 0-based
 	// output data is in bed format and output lines are split into an array
 	return new Promise((resolve, reject) => {
@@ -494,7 +488,7 @@ exports.query_bigbed_by_coord = function (bigbed, chr, start, end) {
 	})
 }
 
-exports.query_bigbed_by_name = function (bigbed, name) {
+export function query_bigbed_by_name(bigbed, name) {
 	// query bigbed by name field
 	// output data is in bed format and output lines are split into an array
 	return new Promise((resolve, reject) => {
@@ -520,13 +514,13 @@ function tabixnoterror(s) {
 // get random integer between two values
 // both min and max are inclusive
 // used for creating test data for test scripts
-exports.getRandomInt = function (min, max) {
+export function getRandomInt(min, max) {
 	min = Math.ceil(min)
 	max = Math.floor(max)
 	return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
-exports.sleep = function sleep(ms) {
+export function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
@@ -536,7 +530,7 @@ output:
 	boolean
 	TODO change to resolve({isbb:boolean, message:str, index:...})
 */
-exports.testIfFileIsBigbed = async function (file) {
+export async function testIfFileIsBigbed(file) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(bigBedInfo, [file])
 		const out = []
@@ -567,7 +561,7 @@ exports.testIfFileIsBigbed = async function (file) {
 	})
 }
 
-exports.mayCopyFromCookie = function (q, cookies) {
+export function mayCopyFromCookie(q, cookies) {
 	if (cookies.sessionid) {
 		if ('sessionid' in q) throw 'q.sessionid already exists so cannot copy from cookies.sessionid'
 		// sessionid is available after user logs into gdc portal
@@ -575,7 +569,7 @@ exports.mayCopyFromCookie = function (q, cookies) {
 	}
 }
 
-exports.boxplot_getvalue = function (lst) {
+export function boxplot_getvalue(lst) {
 	/* ascending order
     each element: {value}
     */

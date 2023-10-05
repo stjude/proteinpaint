@@ -1,8 +1,8 @@
-const app = require('./app')
+import app from './app'
 
 const byIpAddr = {}
 
-app.catch = function(req, res, error) {
+app.catch = function (req, res, error) {
 	const time = +new Date()
 	if (!(req.ip in byIpAddr)) {
 		byIpAddr[req.ip] = { time, count: 0 }
