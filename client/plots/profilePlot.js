@@ -71,7 +71,7 @@ export class profilePlot {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 
-		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
+		div.append('label').style('margin-left', '15px').html(' or Income Group:').style('font-weight', 'bold')
 		this.incomeSelect = div.append('select').style('margin-left', '5px')
 		this.incomeSelect
 			.selectAll('option')

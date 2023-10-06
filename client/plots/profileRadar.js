@@ -39,6 +39,8 @@ class profileRadar extends profilePlot {
 			config.filter = getSampleFilter(sampleId)
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
+		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('or').style('font-weight', 'bold')
+
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
@@ -149,7 +151,11 @@ class profileRadar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
+		this.legendG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text(`${this.config.sampleName} Legend`)
 		this.addLegendItem(config[config.plot].term1, color1, 0, '5, 5')
 		this.addLegendItem(config[config.plot].term2, color2, 1, 'none')
 	}
