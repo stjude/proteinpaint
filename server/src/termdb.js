@@ -502,7 +502,10 @@ async function get_singleSampleData(q, req, res, ds, tdb) {
 async function get_AllSamples(q, req, res, ds) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	let result = []
-	if (canDisplay) result = Object.fromEntries(ds.sampleId2Name)
+	if (canDisplay) {
+		if (q.ids.length == 0) result = Object.fromEntries(ds.sampleId2Name)
+		else for (const id of q.ids) result.push([id, ds.sampleId2Name[id]])
+	}
 	res.send(result)
 }
 
