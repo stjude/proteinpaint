@@ -133,7 +133,7 @@ export async function barchart_data(q, ds, tdb) {
 					if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
 					else if (!samplesMap.has(sampleId)) {
 						const intSampleId = parseInt(sampleId)
-						item = { sample: intSampleId, name: ds.sampleId2Name.get(intSampleId) }
+						item = { sample: intSampleId }
 						samplesMap.set(sampleId, item)
 					}
 					if (!item) continue
@@ -164,7 +164,7 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	return { data: pj.tree.results, samples: q.results.lst, bins }
+	return { data: pj.tree.results, bins }
 }
 
 //used by barchart_data
