@@ -74,7 +74,7 @@
     "micromatch": "^4.0.5",
     "minimatch": "^3.1.2",
     "node-fetch": "^2.6.1",
-    "partjson": "^0.58.1",
+    "partjson": "^0.58.2",
     "tiny-async-pool": "^1.2.0",
     "typedoc-plugin-missing-exports": "^2.0.1"
   },
