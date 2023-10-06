@@ -21,7 +21,7 @@ export function getLegendData(legendGroups, refs) {
 					const count = item.samples.size
 					return {
 						termid: 'Consequences',
-						key,
+						key: item.key,
 						text: this.getLegendItemText(item, count, {}, s),
 						color: item.fill,
 						order: i,
@@ -60,7 +60,7 @@ export function getLegendData(legendGroups, refs) {
 					if (item.scale) {
 						return {
 							termid: $id,
-							key,
+							key: item.key,
 							text: this.getLegendItemText(item, count, t, s),
 							width: 100,
 							scale: item.scale,
@@ -77,7 +77,7 @@ export function getLegendData(legendGroups, refs) {
 					} else {
 						return {
 							termid: $id,
-							key,
+							key: item.key,
 							text: this.getLegendItemText(item, count, t, s),
 							color: item.fill || this.colorScaleByTermId[$id](key),
 							order: 'order' in item ? item.order : i,
@@ -113,7 +113,7 @@ export function getLegendData(legendGroups, refs) {
 					return {
 						$id,
 						termid: term.id,
-						key,
+						key: item.key,
 						text: this.getLegendItemText(item, count, t, s),
 						color: t.scale || item.fill || this.colorScaleByTermId[grp](key),
 						order: 'order' in item ? item.order : i,
