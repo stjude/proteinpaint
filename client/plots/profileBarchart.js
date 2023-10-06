@@ -29,7 +29,11 @@ class profileBarchart extends profilePlot {
 			this.config.componentIndex = this.selectComp.node().value
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 		})
-		this.opts.header.text('Barchart Graph')
+		this.opts.header
+			.style('font-weight', 'bold')
+			.text(
+				'Barchart Graph: Score-based Results for the Component by Module and Domain Compared with End-User Impression'
+			)
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
@@ -99,7 +103,7 @@ class profileBarchart extends profilePlot {
 		this.svg = this.dom.plotDiv
 			.append('svg')
 			.attr('width', 1400)
-			.attr('height', this.rowCount * 30 + 400)
+			.attr('height', this.rowCount * 30 + 420)
 
 		const svg = this.svg
 
@@ -185,7 +189,18 @@ class profileBarchart extends profilePlot {
 		this.addLegendItem(this.legendG, 'A', 'More than 75% of possible scorable items', 1)
 		this.addLegendItem(this.legendG, 'B', '50-75% of possible scorable items', 2)
 		this.addLegendItem(this.legendG, 'C', 'Less than 50% of possible scorable items', 3)
+		const textElem = this.legendG.append('text').attr('transform', `translate(0, 90)`)
+		textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression:')
+		textElem
+			.append('tspan')
+			.text(
+				'It is provided by the local liaison who completed the assessment in consultation with the PHO medical director or directly by the PHO medical director.'
+			)
 
+		this.legendG
+			.append('text')
+			.attr('transform', `translate(0, 110)`)
+			.text('The end-user was asked to rate the current status of the domains and subdomains included for this module.')
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
 		drawLine(910, 120, 75, y, 'A')

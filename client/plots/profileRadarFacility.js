@@ -12,7 +12,7 @@ class profileRadarFacility {
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		this.opts.header.text(config[config.plot].name)
+		this.opts.header.style('font-weight', 'bold').text(config[config.plot].name)
 		const holder = this.opts.holder.append('div')
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
 		const firstDiv = div.append('div').style('display', 'inline-block')
@@ -217,7 +217,7 @@ class profileRadarFacility {
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const score = this.config[this.config.plot].score
 		if (this.config.sampleName) this.addLegendItem(`${this.config.sampleName} ${score}`, color1, 0, '5, 5')
-		this.addLegendItem(`${this.facility} facility ${score}`, color2, 1, 'none')
+		this.addLegendItem(`${this.facility} Facility ${score}`, color2, 1, 'none')
 	}
 
 	addData(sampleName, iangle, i, data) {
