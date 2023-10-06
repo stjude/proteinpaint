@@ -74,13 +74,16 @@ export function getSerieses(data) {
 						if (!l) continue
 						if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order, $id }
 						const lg = l[legend.group]
-						if (!lg.values[legend.value]) {
-							lg.values[legend.value] = JSON.parse(JSON.stringify(legend.entry))
-							lg.values[legend.value].samples = new Set()
-							if (legend.entry.scale) lg.values[legend.value].scale = legend.entry.scale
+						const legendK = legend.entry.origin ? legend.entry.origin + legend.value : legend.value
+
+						if (!lg.values[legendK]) {
+							lg.values[legendK] = JSON.parse(JSON.stringify(legend.entry))
+							lg.values[legendK].samples = new Set()
+							if (legend.entry.scale) lg.values[legendK].scale = legend.entry.scale
 						}
-						//if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
-						lg.values[legend.value].samples.add(row.sample)
+						if (!lg.values[legendK].samples) lg.values[legendK].samples = new Set()
+						lg.values[legendK].samples.add(row.sample)
+
 						if (isDivideByTerm) {
 							lg.values[legend.value].isExcluded = so.grp.isExcluded
 						}
@@ -108,12 +111,15 @@ export function getSerieses(data) {
 						if (!l) continue
 						if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order, $id }
 						const lg = l[legend.group]
-						if (!lg.values[legend.value]) {
-							lg.values[legend.value] = JSON.parse(JSON.stringify(legend.entry))
-							if (legend.entry.scale) lg.values[legend.value].scale = legend.entry.scale
+						const legendK = legend.entry.origin ? legend.entry.origin + legend.value : legend.value
+
+						if (!lg.values[legendK]) {
+							lg.values[legendK] = JSON.parse(JSON.stringify(legend.entry))
+							if (legend.entry.scale) lg.values[legendK].scale = legend.entry.scale
 						}
-						if (!lg.values[legend.value].samples) lg.values[legend.value].samples = new Set()
-						lg.values[legend.value].samples.add(row.sample)
+						if (!lg.values[legendK].samples) lg.values[legendK].samples = new Set()
+						lg.values[legendK].samples.add(row.sample)
+
 						if (isDivideByTerm) {
 							lg.values[legend.value].isExcluded = so.grp.isExcluded
 						}
