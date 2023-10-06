@@ -493,6 +493,8 @@ function handle_click(event, self, chart) {
 }
 
 function listSamples(event, self, seriesLabel, dataLabel, chart) {
+	// TODO call vocabApi.getAnnotatedSampleData() to get list of samples
+	return
 	const names = new Set()
 	for (const sample of self.samples) {
 		if (self.config.term0 && !isLabel(sample.key0, self.config.term0.term, chart.chartId)) continue
