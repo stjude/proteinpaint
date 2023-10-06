@@ -85,7 +85,6 @@ import * as validator from './validator'
 import cookieParser from 'cookie-parser'
 import { authApi } from './auth.js'
 import { server_init_db_queries, listDbTables } from './termdb.server.init'
-import minimatch from 'minimatch'
 import { versionInfo } from './health'
 export * as phewas from './termdb.phewas'
 

@@ -8,6 +8,7 @@ import fetch from 'node-fetch' // adding .default allows webpack bundle to work
 import bettersqlite from 'better-sqlite3'
 import _serverconfig from './serverconfig'
 import { Readable } from 'stream'
+import minimatch from 'minimatch'
 
 export const serverconfig = _serverconfig
 
