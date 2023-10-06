@@ -14,7 +14,7 @@ class profileRadar extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
-		this.opts.header.text(config[config.plot].name)
+		this.opts.header.style('font-weight', 'bold').text(config[config.plot].name)
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('Facility:').style('font-weight', 'bold')
