@@ -1,6 +1,6 @@
 import { Filter } from '../filter'
 
-export type getgetCategoriesRequest = {
+export type getcategoriesRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
@@ -18,7 +18,7 @@ interface entries {
 	label: string
 }
 
-export type getgetCategoriesResponse = {
+export type getcategoriesResponse = {
 	lst: entries[]
 	orderedLabels?: []
 }

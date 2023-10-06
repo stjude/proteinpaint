@@ -442,7 +442,7 @@ export class TermdbVocab extends Vocab {
 		)
 
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const d = await dofetch3('termdb', { headers, body })
+		const d = await dofetch3('termdb/violin', { headers, body })
 
 		return d
 	}
@@ -527,7 +527,7 @@ export class TermdbVocab extends Vocab {
 			if (filter) {
 				body.filter = getNormalRoot(filter)
 			}
-			return await dofetch3('/termdb', { body })
+			return await dofetch3('/termdb/categories', { body })
 		}
 		if (term.category2samplecount) {
 			// grab directly from term and not the server
@@ -559,7 +559,7 @@ export class TermdbVocab extends Vocab {
 		}
 
 		try {
-			const data = await dofetch3('/termdb', { body })
+			const data = await dofetch3('/termdb/categories', { body })
 			if (data.error) throwMsgWithFilePathAndFnName(data.error)
 			return data
 		} catch (e) {
