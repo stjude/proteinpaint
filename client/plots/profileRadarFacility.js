@@ -70,6 +70,7 @@ class profileRadarFacility {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 		})
 		this.dom.facilityDiv.append('label').style('margin-left', '15px').html('versus').style('font-weight', 'bold')
+		div.append('label').style('margin-left', '15px').html('or').style('font-weight', 'bold')
 
 		this.incomes = ['']
 		this.incomes.push(...config.incomes)
