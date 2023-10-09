@@ -1,5 +1,6 @@
 import path from 'path'
 import serverconfig from './serverconfig'
+import * as utils from './utils'
 import * as common from '#shared/common'
 import * as vcf from '#shared/vcf'
 import * as bulk from '#shared/bulk'
