@@ -26,7 +26,7 @@ serde = {version = "^1.0.147", features = ["derive"]}
 serde_json="^1.0.88"
 num = "^0.4.1"
 csv = "^1.2.2"
-r_mathlib="^0.2.0"
+#r_mathlib="^0.2.0" # Uncomment this line to activate DE expression app for high sample sizes
 
 
 [profile.release]
@@ -67,6 +67,7 @@ path="src/cluster.rs"
 #name="wilcoxon"
 #path="src/wilcoxon.rs"
 
-[[bin]]
-name="DEanalysis"
-path="src/DEanalysis.rs"
+# Uncomment the lines below to use DE app for higher sample sizes
+#[[bin]]
+#name="DEanalysis"
+#path="src/DEanalysis.rs"
