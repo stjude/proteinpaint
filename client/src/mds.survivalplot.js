@@ -82,6 +82,16 @@ thus to be made into samplerule.set{}
 	obj.plotdiv = holder.append('div').style('margin', '20px')
 	obj.legendtable = holder.append('table').style('border-spacing', '5px')
 
+	/* quick fix button to download svg
+-- the legend are not included in svg
+*/
+	holder
+		.append('button')
+		.text('SVG')
+		.on('click', () => {
+			client.to_svg(obj.plotlist[0].svg.node(), 'Survival')
+		})
+
 	try {
 		await init_dataset_config(obj)
 		/* got:
@@ -148,9 +158,7 @@ push button to re-render
 				p.type = event.target.options[event.target.selectedIndex].value
 			})
 		for (const [i, t] of obj.plottypes.entries()) {
-			s.append('option')
-				.text(t.name)
-				.property('value', t.key)
+			s.append('option').text(t.name).property('value', t.key)
 			if (t.key == p.type) {
 				s.node().selectedIndex = i
 			}
@@ -171,10 +179,7 @@ push button to re-render
 
 		const row = div.append('div').style('margin-bottom', '20px')
 		const custom_input_row = div.append('div').style('display', 'none')
-		row
-			.append('span')
-			.html('Choose samples from&nbsp;')
-			.style('opacity', 0.5)
+		row.append('span').html('Choose samples from&nbsp;').style('opacity', 0.5)
 
 		// generate controls and set <select> according to what's defined in samplerule.full{}
 
@@ -213,9 +218,7 @@ push button to re-render
 			})
 
 		for (const [i, attr] of obj.samplegroupings.entries()) {
-			s.append('option')
-				.text(attr.label)
-				.property('key', attr.key)
+			s.append('option').text(attr.label).property('key', attr.key)
 
 			const usingthisattr = p.samplerule.full.byattr && p.samplerule.full.key == attr.key
 			if (usingthisattr) {
@@ -242,17 +245,13 @@ push button to re-render
 		}
 
 		// option of using all samples
-		s.append('option')
-			.text('all samples')
-			.property('useall', 1)
+		s.append('option').text('all samples').property('useall', 1)
 		if (p.samplerule.full.useall) {
 			s.node().selectedIndex = obj.samplegroupings.length
 		}
 
 		// option of slecting custom samples set
-		s.append('option')
-			.text('custom sampleset')
-			.property('usesampleset', 1)
+		s.append('option').text('custom sampleset').property('usesampleset', 1)
 	}
 
 	show_dividerules(p, div)
@@ -358,24 +357,15 @@ function doPlot(plot, obj) {
 	// curves
 	const curves_g = plot.svg.append('g')
 	for (const curve of plot.samplesets) {
-		curve.path = curves_g
-			.append('path')
-			.attr('stroke', curve.color)
-			.attr('fill', 'none')
-		curve.ticks = curves_g
-			.append('path')
-			.attr('stroke', curve.color)
-			.attr('fill', 'none')
+		curve.path = curves_g.append('path').attr('stroke', curve.color).attr('fill', 'none')
+		curve.ticks = curves_g.append('path').attr('stroke', curve.color).attr('fill', 'none')
 	}
 
 	// y axis
 	const yaxis_g = plot.svg.append('g')
 	const yaxis_scale = scaleLinear().domain([0, 1])
 	const yaxis_lab_g = plot.svg.append('g')
-	const yaxis_lab = yaxis_lab_g
-		.append('text')
-		.text('Survival')
-		.attr('transform', 'rotate(-90)')
+	const yaxis_lab = yaxis_lab_g.append('text').text('Survival').attr('transform', 'rotate(-90)')
 
 	// x axis
 	const xaxis_g = plot.svg.append('g')
@@ -449,7 +439,7 @@ function doPlot(plot, obj) {
 			.append('text')
 			.text(maxx)
 			.attr('font-size', plot.tickfontsize)
-			.each(function() {
+			.each(function () {
 				xticknumber = Math.floor(plot.width / (this.getBBox().width + 30))
 			})
 			.remove()
@@ -585,19 +575,12 @@ TODO allow config for each rule, e.g. mutation filters
 			}
 		})
 
-		s.append('option')
-			.text('median (group=2)')
-			.property('median', 1)
-		s.append('option')
-			.text('quartile (group=4)')
-			.property('quartile', 1)
+		s.append('option').text('median (group=2)').property('median', 1)
+		s.append('option').text('quartile (group=4)').property('quartile', 1)
 
 		// fix: <select> for quartile
 		const span_quartilecompare = row.append('span').style('margin-left', '10px')
-		span_quartilecompare
-			.append('span')
-			.html('Compare each quartile against&nbsp;')
-			.style('opacity', 0.5)
+		span_quartilecompare.append('span').html('Compare each quartile against&nbsp;').style('opacity', 0.5)
 		{
 			const s = span_quartilecompare.append('select').on('change', event => {
 				delete p.samplerule.set.against1st
@@ -651,9 +634,7 @@ TODO allow config for each rule, e.g. mutation filters
 				row.append('span').html('SNV/indel&nbsp;')
 
 				const s = row.append('select')
-				s.append('option')
-					.text(st.snvindel.name)
-					.property('named', 1)
+				s.append('option').text(st.snvindel.name).property('named', 1)
 				s.append('option').text('any mutation at ' + st.chr + ':' + st.start)
 			} else {
 				// no mutation name
