@@ -1,8 +1,8 @@
 import fs from 'fs'
 import readline from 'readline'
-const path = require('path'),
-	spawn = require('child_process').spawn,
-	Readable = require('stream').Readable
+import path from 'path'
+import { spawn } from 'child_process'
+import { Readable } from 'stream'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
