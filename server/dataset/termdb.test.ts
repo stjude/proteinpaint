@@ -8,10 +8,7 @@ the "test mule" for the type of termdb dataset using server-side sqlite3 db
 follows the mds3 specification
 and is used to power many integration tests
 
-- later the mds3 genomic/molecular stuff shoud be added to the mule
-- to achieve complete coverage of mds3 features
-
-to enable this dataset on your pp instance, have this entry in hg38 datasets array of your "serverconfig.json":
+to enable this dataset on your pp instance, have this entry in hg38-test datasets array of your "serverconfig.json":
 
  { "name": "TermdbTest", "jsfile": "./dataset/termdb.test.js" }
 
@@ -20,9 +17,9 @@ upon loading this script, directories under tp/ are auto-created if missing
 data files already committed in the repo are copied over to tp/ locations for the dataset to work
 
 reason:
-- db2 file is anonymized and unindentifiable
-- allow continuous integration test (future todo)
-- ensure TermdbTest/db2 to be fully static and recoverable, to ensure tests work as expected
+- db file is anonymized and unindentifiable
+- allow continuous integration test
+- ensure TermdbTest/db to be fully static and recoverable, to ensure tests work as expected
 
 */
 
@@ -58,28 +55,28 @@ export default <Mds3>{
 					id: 'subcohort',
 					type: 'categorical'
 				},
-				prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+				prompt: 'Select a cohort and test the plots.',
 				values: [
 					// <ul><li> for items, with a radio button for each.
 					{
 						keys: ['ABC'],
-						label: 'ABC Lifetime Cohort (ABC)',
+						label: 'ABC Cohort (ABC)',
 						shortLabel: 'ABC',
 						isdefault: true
 					},
 					{
 						keys: ['XYZ'],
-						label: 'XYZ Cancer Survivor Study (XYZ)',
+						label: 'XYZ cohort (XYZ)',
 						shortLabel: 'XYZ'
 					},
 					{
 						keys: ['ABC', 'XYZ'],
-						label: 'Combined ABC+XYZ',
-						shortLabel: 'ABC+XYZ',
+						label: 'Combined ABC+XYZ*',
+						shortLabel: 'ABC+XYZ'
 						// show note under label in smaller text size
-						note: 'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
 					}
-				]
+				],
+				asterisk: '*fineprint on an item'
 			},
 
 			dataDownloadCatch: {
