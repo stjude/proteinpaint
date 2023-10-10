@@ -67,6 +67,13 @@ export class Vocab {
 					this.sessionId = data['x-sjppds-sessionid']
 					delete this.tokenVerificationMessage
 					delete this.tokenVerificationPayload
+					if (data.jwt) {
+						const jwtByDsRouteStr = sessionStorage.getItem('jwtByDsRoute') || `{}`
+						const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+						if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
+						jwtByDsRoute[dslabel][data.route] = data.jwt
+						sessionStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
+					}
 				}
 			} else {
 				throw `unsupported requiredAuth='${auth.type}'`
@@ -98,12 +105,16 @@ export class Vocab {
 	}
 
 	async trackDsAction({ action, details }) {
+		const headers = { 'x-sjppds-sessionid': this.sessionId }
+		const jwtByDsRouteStr = sessionStorage.getItem('jwtByDsRoute') || `{}`
+		const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+		// NOTE: do not hardcode the .termdb route here, there may be more tracked actions later
+		const jwt = jwtByDsRoute[this.vocab.dslabel]?.termdb
+		if (jwt) headers.authorization = 'Bearer ' + btoa(jwt)
 		await dofetch3('/authorizedActions', {
 			method: 'POST',
 			credentials: 'include',
-			header: {
-				'x-sjppds-sessionid': this.sessionId
-			},
+			headers,
 			body: Object.assign({
 				dslabel: this.vocab.dslabel,
 				action,

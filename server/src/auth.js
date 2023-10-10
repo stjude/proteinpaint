@@ -282,8 +282,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				code = 401
 				throw 'missing session cookie'
 			}
-			mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
-			const session = sessions[q.dslabel]?.[id]
+			// a previous /dslogin to a particular server process may have set a session id that has since expired or become stale,
+			// in that case use, the Bearer jwt from the authorization header
+			const altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
+			const session = sessions[q.dslabel]?.[id] || sessions[q.dslabel]?.[altId]
 			if (!session) {
 				code = 401
 				throw `unestablished or expired browser session`
@@ -363,22 +365,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
 			const id = await setSession(q, res, sessions, sessionsFile, '', req, cred)
-			const time = Math.floor(Date.now() / 1000)
 			code = 401 // in case of jwt processing error
-			const jwt =
-				cred.secret &&
-				jsonwebtoken.sign(
-					{
-						dslabel: q.dslabel,
-						id,
-						iat: time,
-						ip: req.ip,
-						embedder: q.embedder,
-						route: cred.route,
-						exp: time + Math.floor(maxSessionAge / 1000)
-					},
-					cred.secret
-				)
+			const jwt = getSignedJwt(req, q, id, cred, maxSessionAge)
 			res.send({ status: 'ok', jwt, route: cred.route })
 		} catch (e) {
 			res.status(code)
@@ -427,8 +415,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const { email, ip } = await getJwtPayload(q, req.headers, cred)
 			checkIPaddress(req, ip)
 			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
+			code = 401 // in case of jwt processing error
+			const jwt = getSignedJwt(req, q, id, cred, maxSessionAge, email)
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
-			res.send({ status: 'ok', [cred.cookieId]: id })
+			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id })
 		} catch (e) {
 			console.log(e)
 			res.status(code)
@@ -439,8 +429,13 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	app.post(basepath + '/authorizedActions', async (req, res) => {
 		const q = req.query
 		try {
+			// TODO: later, other routes besides /termdb may require tracking
+			const cred = getRequiredCred(q, 'termdb')
+			if (!cred) res.send({ status: 'ok' })
 			const id = getSessionId(req)
-			const { email } = sessions[q.dslabel][id]
+			const altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
+			const session = sessions[q.dslabel]?.[id] || sessions[q.dslabel]?.[altId]
+			const { email } = session.email
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })
@@ -533,10 +528,30 @@ function getSessionId(req, cred) {
 	// using all lowercase is compatible for both http 1 and 2
 	return (
 		req.cookies?.[`${cred?.cookieId}`] ||
-		req.cookies?.[`${req.query.dslabel}SessionId`] ||
+		//req.cookies?.[`${req.query.dslabel}SessionId`] ||
 		req.headers?.['x-sjppds-sessionid'] ||
 		req.query?.['x-sjppds-sessionid']
 	)
+}
+
+function getSignedJwt(req, q, id, cred, maxSessionAge, email = '') {
+	if (!cred.secret) return
+	const time = Math.floor(Date.now() / 1000)
+	const jwt = jsonwebtoken.sign(
+		{
+			dslabel: q.dslabel,
+			id,
+			iat: time,
+			ip: req.ip,
+			embedder: q.embedder,
+			route: cred.route,
+			exp: time + Math.floor(maxSessionAge / 1000),
+			email
+		},
+		cred.secret
+	)
+
+	return jwt
 }
 
 // in a server farm, where the session state is not shared by all active PP servers,
@@ -556,8 +571,10 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	// do not overwrite existing
 	if (!sessions[dslabel]) sessions[dslabel] = {}
 	//if (sessions[dslabel][payload.id]) throw `session conflict`
-	if (isMatch(req.path, cred.route)) {
+	const path = req.path[0] == '/' ? req.path.slice(1) : req.path
+	if (isMatch(path, cred.route) || path == 'authorizedActions') {
 		sessions[dslabel][payload.id] = payload
+		return payload.id
 	}
 }
 

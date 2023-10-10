@@ -673,7 +673,7 @@ tape(`session-handling by the middleware`, async test => {
 			},
 			path: '/termdb',
 			cookies: {
-				ds0SessionId: sessionId
+				[headerKey]: sessionId
 			},
 			ip: '127.0.0.1'
 		}
@@ -682,7 +682,8 @@ tape(`session-handling by the middleware`, async test => {
 		const res1 = {
 			send(data) {
 				if (data.error) test.fail(message1 + ': ' + data.error)
-			}
+			},
+			status() {}
 		}
 		function next1() {
 			test.pass(message1)
@@ -698,7 +699,7 @@ tape(`session-handling by the middleware`, async test => {
 			},
 			path: '/termdb',
 			cookies: {
-				ds0SessionId: 'Invalid-Session-Id'
+				[headerKey]: 'Invalid-Session-Id'
 			}
 		}
 		const res2 = {
@@ -727,7 +728,7 @@ tape(`session-handling by the middleware`, async test => {
 			},
 			path: '/termdb',
 			cookies: {
-				ds0SessionId: sessionId
+				[headerKey]: sessionId
 			},
 			ip: '127.0.0.x'
 		}
