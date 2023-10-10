@@ -440,7 +440,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		try {
 			// TODO: later, other routes besides /termdb may require tracking
 			const cred = getRequiredCred(q, 'termdb')
-			if (!cred) res.send({ status: 'ok' })
+			if (!cred) {
+				res.send({ status: 'ok' })
+				return
+			}
 			const id = getSessionId(req)
 			const altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
 			const session = sessions[q.dslabel]?.[id] || sessions[q.dslabel]?.[altId]
