@@ -64,12 +64,12 @@ function init({ genomes }) {
 		const q = req.query // as getcategoriesRequest
 		try {
 			const g = genomes[req.query.genome]
-			const ds = g.datasets[req.query.dslabel]
-			const tdb = ds.cohort.termdb
-
 			if (!g) throw 'invalid genome name'
+			const ds = g.datasets[req.query.dslabel]
 			if (!ds) throw 'invalid dataset name'
+			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'invalid termdb object'
+
 			await trigger_getcategories(q, res, tdb, ds, g) // as getcategoriesResponse
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment

@@ -1,1 +1,2 @@
-
+Fixes:
+- Bug fix to revert termdb/category route usage.
