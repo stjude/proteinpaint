@@ -45,6 +45,8 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .CTEs: [] list of individual CTE string
 			// .values: []
 			// .CTEname: str
+		} else if (!item.tvs) {
+			throw `filter item should have a 'tvs' or 'lst' property`
 		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i)
 			// .CTEs: []

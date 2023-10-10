@@ -742,8 +742,8 @@ export class TermdbVocab extends Vocab {
 								if (data.refs.bySampleId?.[sampleId]) row.sampleName = data.refs.bySampleId[sampleId]
 								else if ('sampleName' in sample) row.sampleName = sample.sampleName
 								else {
-									const v = sample[idn].values?.find(v => v._SAMPLENAME_ && true)
-									if (v._SAMPLENAME_) row.sampleName = v._SAMPLENAME_
+									const v = sample[idn].values?.find(v => v._SAMPLENAME_)
+									if (v?._SAMPLENAME_) row.sampleName = v._SAMPLENAME_
 								}
 							}
 						}
