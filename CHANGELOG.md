@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Bug fix to revert termdb/category route usage.
+
+
 ## 2.29.2
 
 Fixes:
