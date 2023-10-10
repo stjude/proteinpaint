@@ -114,7 +114,7 @@ function getChartTypeList(self) {
 	*/
 	return [
 		{
-			label: 'Dictionary',
+			label: 'Data Dictionary',
 			clickTo: self.prepPlot,
 			chartType: 'dictionary',
 			config: {
@@ -134,6 +134,11 @@ function getChartTypeList(self) {
 			chartType: 'summary',
 			clickTo: self.showTree_select1term,
 			usecase: { detail: 'term' }
+		},
+		{
+			label: 'Scatter Plot',
+			chartType: 'sampleScatter',
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			// should only show for official dataset, but not custom
@@ -161,20 +166,6 @@ function getChartTypeList(self) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Data Download',
-			clickTo: self.prepPlot,
-			chartType: 'dataDownload',
-			config: {
-				chartType: 'dataDownload',
-				terms: []
-			}
-		},
-		{
-			label: 'Scatter Plot',
-			chartType: 'sampleScatter',
-			clickTo: self.loadChartSpecificMenu
-		},
-		{
 			label: 'Genome Browser',
 			chartType: 'genomeBrowser',
 			clickTo: self.loadChartSpecificMenu
@@ -196,6 +187,15 @@ function getChartTypeList(self) {
 			chartType: 'profileBarchart',
 			clickTo: self.showTree_select1term,
 			usecase: { detail: 'term' }
+		},
+		{
+			label: 'Data Download',
+			clickTo: self.prepPlot,
+			chartType: 'dataDownload',
+			config: {
+				chartType: 'dataDownload',
+				terms: []
+			}
 		}
 	]
 }

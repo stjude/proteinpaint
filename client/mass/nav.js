@@ -272,7 +272,7 @@ function setRenderers(self) {
 		self.dom.saveBtn = self.dom.sessionDiv
 			.append('button')
 			.style('margin', '10px')
-			.text('New Session')
+			.text('Save Session')
 			.on('click', self.getSessionUrl)
 
 		if (self.sessionDaysLeft != null) {
@@ -324,7 +324,7 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.style('opacity', '0.65')
 			.html(
-				`<u>${self.sessionDaysLeft} days</u> left till this session is removed. Click the New Session button to create a new one.`
+				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Click the "Save Session" button to create a new one.`
 			)
 	}
 
