@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Use a jwt bearer auth to propagate basic session state to multiple PP server processes, beyond the server process that processed the /dslogin request
+- Bug fix.
 
 
 ## 2.29.1
