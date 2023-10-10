@@ -278,13 +278,23 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		let code
 		try {
 			const id = getSessionId(req, cred)
+			let altId
 			if (!id) {
-				code = 401
-				throw 'missing session cookie'
+				if (req.method.toUpperCase() == 'OPTIONS') {
+					res.status(204)
+					res.send()
+					return
+				} else {
+					altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
+					if (!altId) {
+						code = 401
+						throw 'missing session cookie'
+					}
+				}
 			}
 			// a previous /dslogin to a particular server process may have set a session id that has since expired or become stale,
 			// in that case use, the Bearer jwt from the authorization header
-			const altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
+			if (!altId) altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
 			const session = sessions[q.dslabel]?.[id] || sessions[q.dslabel]?.[altId]
 			if (!session) {
 				code = 401
@@ -420,7 +430,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
 			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id })
 		} catch (e) {
-			console.log(e)
 			res.status(code)
 			res.send(e instanceof Error || typeof e != 'object' ? { error: e } : e)
 		}
