@@ -390,7 +390,6 @@ async function defaultAuthUi(dslabel, auth) {
 }
 
 function mayAddJwtToRequest(init, body, url) {
-	//console.log(393, 'mayAddJwtToRequest()', init.headers.authorization, body?.dslabel)
 	if (init.headers.authorization) return
 	let dslabel = body?.dslabel // || body.mass?.vocab.dslabel || body.tracks?.find(t => t.dslabel)?.dslabel
 	if (!dslabel) {
@@ -408,7 +407,8 @@ function mayAddJwtToRequest(init, body, url) {
 		}
 	}
 	if (!dslabel || !jwtByDsRoute[dslabel]) return
-	const route = window.location.pathname
+	const h = url.split('//')
+	const route = (h[1] || h[0]).split('/')[1].split('?')[0]
 	const jwt = jwtByDsRoute[dslabel][route] || jwtByDsRoute[dslabel]['/**']
 	if (jwt) init.headers.authorization = 'Bearer ' + btoa(jwt)
 }
