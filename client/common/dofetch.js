@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 
-const jwtByDsRouteStr = sessionStorage.getItem('jwtByDsRoute') || `{}`
+const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
 const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
 
 /*
@@ -373,7 +373,7 @@ async function defaultAuthUi(dslabel, auth) {
 					if (res.jwt) {
 						if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
 						jwtByDsRoute[dslabel][res.route] = res.jwt
-						sessionStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
+						localStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
 					}
 					resolve(dslabel)
 				})

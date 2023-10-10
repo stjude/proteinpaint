@@ -15,6 +15,9 @@ export class Vocab {
             - instead of this workaround, should query all available values in getterm()
         */
 		this.missingCatValsByTermId = {}
+		const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
+		const dslabel = this.vocab?.dslabel || this.state?.dslabel
+		this.jwtByRoute = JSON.parse(jwtByDsRouteStr)[dslabel] || {}
 	}
 
 	async main(stateOverride = null) {
@@ -68,11 +71,9 @@ export class Vocab {
 					delete this.tokenVerificationMessage
 					delete this.tokenVerificationPayload
 					if (data.jwt) {
-						const jwtByDsRouteStr = sessionStorage.getItem('jwtByDsRoute') || `{}`
-						const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
-						if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
-						jwtByDsRoute[dslabel][data.route] = data.jwt
-						sessionStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
+						if (!this.jwtByRoute[dslabel]) this.jwtByRoute[dslabel] = {}
+						this.jwtByRoute[dslabel][data.route] = data.jwt
+						localStorage.setItem('jwtByRoute', JSON.stringify(this.jwtByRoute))
 					}
 				}
 			} else {
@@ -89,7 +90,7 @@ export class Vocab {
 		return this.verifiedToken && true
 	}
 
-	mayGetAuthHeaders() {
+	mayGetAuthHeaders(route = '') {
 		const auth = this.state.termdbConfig?.requiredAuth
 		if (!auth) return {}
 		if (!this.verifiedToken) {
@@ -101,15 +102,18 @@ export class Vocab {
 		// in cases where CORS prevents an http-domain based session cookie from being passed to the PP server,
 		// then this header will be used by the PP server
 		if (this.sessionId) headers['x-sjppds-sessionid'] = this.sessionId
+		// may use jwt to verify against a random server process in a farm
+		if (route && this.jwtByRoute[route]) {
+			const jwt = this.jwtByRoute[route]
+			headers.authorization = `Bearer ${btoa(jwt)}`
+		}
 		return headers
 	}
 
 	async trackDsAction({ action, details }) {
 		const headers = { 'x-sjppds-sessionid': this.sessionId }
-		const jwtByDsRouteStr = sessionStorage.getItem('jwtByDsRoute') || `{}`
-		const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
 		// NOTE: do not hardcode the .termdb route here, there may be more tracked actions later
-		const jwt = jwtByDsRoute[this.vocab.dslabel]?.termdb
+		const jwt = this.jwtByRoute.termdb
 		if (jwt) headers.authorization = 'Bearer ' + btoa(jwt)
 		await dofetch3('/authorizedActions', {
 			method: 'POST',

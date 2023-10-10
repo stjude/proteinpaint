@@ -376,7 +376,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
 			const id = await setSession(q, res, sessions, sessionsFile, '', req, cred)
 			code = 401 // in case of jwt processing error
-			const jwt = getSignedJwt(req, q, id, cred, maxSessionAge)
+			const jwt = await getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile)
 			res.send({ status: 'ok', jwt, route: cred.route })
 		} catch (e) {
 			res.status(code)
@@ -426,7 +426,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			checkIPaddress(req, ip)
 			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
 			code = 401 // in case of jwt processing error
-			const jwt = getSignedJwt(req, q, id, cred, maxSessionAge, email)
+			const jwt = await getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email)
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
 			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id })
 		} catch (e) {
@@ -546,24 +546,33 @@ function getSessionId(req, cred) {
 	)
 }
 
-function getSignedJwt(req, q, id, cred, maxSessionAge, email = '') {
+async function getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email = '') {
 	if (!cred.secret) return
-	const time = Math.floor(Date.now() / 1000)
-	const jwt = jsonwebtoken.sign(
-		{
-			dslabel: q.dslabel,
-			id,
-			iat: time,
-			ip: req.ip,
-			embedder: q.embedder,
-			route: cred.route,
-			exp: time + Math.floor(maxSessionAge / 1000),
-			email
-		},
-		cred.secret
-	)
-
-	return jwt
+	try {
+		const time = Date.now()
+		const iat = Math.floor(time / 1000)
+		console.log(iat)
+		const jwt = jsonwebtoken.sign(
+			{
+				dslabel: q.dslabel,
+				id,
+				iat,
+				ip: req.ip,
+				embedder: q.embedder,
+				route: cred.route,
+				exp: iat + Math.floor(maxSessionAge / 1000),
+				email
+			},
+			cred.secret
+		)
+		await fs.appendFile(
+			sessionsFile,
+			`${q.dslabel}\t${id}\t${time}\t${email}\t${req.ip}\t${q.embedder}\t${cred.route}\n`
+		)
+		return jwt
+	} catch (e) {
+		throw e
+	}
 }
 
 // in a server farm, where the session state is not shared by all active PP servers,
