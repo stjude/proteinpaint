@@ -535,7 +535,7 @@ export class TermdbVocab extends Vocab {
 			if (filter) {
 				body.filter = getNormalRoot(filter)
 			}
-			return await dofetch3('/termdb', { body })
+			return await dofetch3('/termdb/categories', { body })
 		}
 		if (term.category2samplecount) {
 			// grab directly from term and not the server
