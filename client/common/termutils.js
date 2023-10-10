@@ -22,7 +22,13 @@ export async function getterm(termid, dslabel = null, genome = null) {
 	}
 	if (!dslabel) throw 'getterm: dslabel missing'
 	if (!genome) throw 'getterm: genome missing'
-	const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`)
+	const body = {
+		genome,
+		dslabel,
+		gettermbyid: termid,
+		embedder: window.location.hostname
+	}
+	const data = await dofetch3(`termdb/termbyid`, { body })
 	if (data.error) throw 'getterm: ' + data.error
 	if (!data.term) throw 'no term found for ' + termid
 	return data.term

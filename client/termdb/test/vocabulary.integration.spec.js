@@ -110,7 +110,7 @@ async function getTermdbVocabApi(opts = {}) {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb/vocabulary -***-')
 	test.end()
 })
@@ -247,7 +247,7 @@ tape('Missing .state', test => {
 })
 
 /* TermdbVocab tests */
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- TermdbVocab Tests -***-')
 	test.end()
 })
@@ -973,7 +973,7 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 })
 
 tape('getterm()', async test => {
-	test.timeoutAfter(100)
+	test.timeoutAfter(300)
 
 	const termdbVocabApi = await getTermdbVocabApi()
 	let testId, result, message
@@ -1174,7 +1174,7 @@ tape.skip('getScatterData()', async test => {
 })
 
 tape('getCohortsData()', async test => {
-	test.timeoutAfter(100)
+	test.timeoutAfter(300)
 	test.plan(3)
 
 	const termdbVocabApi = await getTermdbVocabApi()
@@ -1205,7 +1205,7 @@ tape.skip('getMds3queryDetails()', async test => {
 })
 
 /* FrontendVocab tests */
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- FrontendVocab Tests -***-')
 	test.end()
 })

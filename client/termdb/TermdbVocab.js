@@ -487,7 +487,15 @@ export class TermdbVocab extends Vocab {
 		}
 		if (!dslabel) throw 'getterm: dslabel missing'
 		if (!genome) throw 'getterm: genome missing'
-		const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${encodeURIComponent(termid)}`)
+
+		const body = {
+			genome,
+			dslabel,
+			gettermbyid: termid,
+			embedder: window.location.hostname
+		}
+
+		const data = await dofetch3(`termdb/termbyid`, { body })
 		if (data.error) throw 'getterm: ' + data.error
 		if (!data.term) throw 'no term found for ' + termid
 		if (data.term.type == 'categorical' && !data.term.values && !data.term.groupsetting?.inuse) {
