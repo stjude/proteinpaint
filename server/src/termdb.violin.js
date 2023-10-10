@@ -124,7 +124,7 @@ export async function wilcoxon(term, result) {
 	//})
 	//const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	await write_file(tmpfile, JSON.stringify(wilcoxInput))
 	const out = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
 	unlink(tmpfile, () => {})
 	const wilcoxOutput = JSON.parse(out)
