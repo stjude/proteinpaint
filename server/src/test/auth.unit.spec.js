@@ -753,21 +753,21 @@ tape(`session-handling by the middleware`, async test => {
 	}
 })
 
-tape.skip(`/dslogin`, async test => {
+tape(`/dslogin`, async test => {
 	test.timeoutAfter(400)
-	test.plan(6)
+	test.plan(9)
 
+	const password = '...' /* pragma: allowlist secret */
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
-				type: 'jwt',
-				embedders: {
-					localhost: {
-						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+				'*': {
+					'*': {
+						type: 'basic',
+						password,
+						secret
 					}
-				},
-				headerKey
+				}
 			}
 		},
 		cachedir
@@ -775,4 +775,146 @@ tape.skip(`/dslogin`, async test => {
 
 	const app = appInit()
 	await authApi.maySetAuthRoutes(app, '', serverconfig)
+
+	let cookie
+	/*** valid /dslogin request ***/
+	{
+		const req = {
+			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			headers: {
+				authorization: 'Basic ' + Buffer.from(password).toString('base64')
+			},
+			method: 'POST',
+			path: '/dslogin',
+			ip: '127.0.0.1'
+		}
+
+		let jwt
+		const res = {
+			send(data) {
+				if (data.error) test.fail('should not have an error on a valid /dslogin request')
+				if (data.jwt) {
+					test.equal(typeof data.jwt, 'string', 'should respond with a string jwt')
+					const minChars = 100
+					test.true(data.jwt?.length > minChars, `should have a jwt string with >${minChars} characters`)
+					jwt = data.jwt
+					delete data.jwt
+				}
+				test.deepEqual(
+					data,
+					{
+						status: 'ok',
+						route: '/**'
+					},
+					`should have the expected response payload`
+				)
+			},
+			header(key, val) {
+				test.true(
+					key.toLowerCase() == 'set-cookie' && val.toLowerCase().includes('httponly'),
+					'should respond with an http-only header cookie on a valid /dslogin request'
+				)
+				cookie = val.split(';')[0].trim()
+			},
+			status(code) {
+				test.fail(`should not set the status code='' on a valid /dslogin request`)
+			},
+			headers: {}
+		}
+
+		await app.routes['/dslogin'].post(req, res)
+
+		{
+			// middleware test when there is a valid logged-in user via /dslogin
+			const [cookieId, cookieVal] = cookie.split('=').map(str => str.trim())
+			const req = {
+				query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+				cookies: {
+					[cookieId]: cookieVal
+				},
+				headers: {
+					cookie,
+					authorization: 'Bearer ' + Buffer.from(jwt).toString('base64')
+				},
+				path: '/termdb',
+				ip: '127.0.0.1'
+			}
+
+			const res = {
+				send(data) {
+					test.equal(data.error, undefined, `should not respond with an error for a logged in user`)
+				},
+				status(code) {
+					test.fail(`should not set a response status code for logged in user`)
+				}
+			}
+
+			function next() {
+				test.pass(`the middleware should call next() for a logged in user`)
+			}
+
+			await app.middlewares['*'](req, res, next)
+		}
+	}
+
+	{
+		const req = {
+			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			headers: {
+				[headerKey]: validToken,
+				authorization: 'Basic ' + Buffer.from('wrong-password').toString('base64')
+			},
+			method: 'POST',
+			path: '/dslogin',
+			ip: '127.0.0.1'
+		}
+
+		const res = {
+			send(data) {
+				if (data.error) test.pass('should have an error on an invalid /dslogin request')
+				test.equal(typeof data.jwt, 'undefined', 'should respond without a jwt')
+			},
+			header(key, val) {
+				test.fail('should NOT set a session cookie')
+			},
+			status(code) {
+				test.equal(code, 401, 'should respond with the expected header status code for an invalid /dslogin request')
+			},
+			headers: {}
+		}
+
+		await app.routes['/dslogin'].post(req, res)
+
+		{
+			// middleware test when there is an invalid logged-in user via /dslogin
+			const [cookieId, cookieVal] = cookie.split('=').map(str => str.trim())
+			const req = {
+				query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+				cookies: {
+					[cookieId]: 'invalid-cookie-value'
+				},
+				headers: {
+					cookie,
+					authorization: 'Bearer ' + Buffer.from('invalid-jwt').toString('base64')
+				},
+				path: '/termdb',
+				ip: '127.0.0.1'
+			}
+
+			const res = {
+				send(data) {
+					test.equal(data.error, undefined, `should respond with an error for a non-logged in user`)
+				},
+				status(code) {
+					test.equal(code, 401, `should set the expected response status code for non-logged in user`)
+				}
+			}
+
+			function next() {
+				test.fail(`the middleware should NOT call next() for a non-logged in user`)
+			}
+
+			await app.middlewares['*'](req, res, next)
+		}
+	}
 })
