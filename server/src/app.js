@@ -1060,7 +1060,7 @@ export async function searchSNP(q, genome) {
 			const snps = await utils.query_bigbed_by_coord(genome.snp.bigbedfile, q.chr, r.start, r.stop)
 			for (const snp of snps) {
 				const hit = snp2hit(snp)
-				if (req.query.alleleLst) {
+				if (q.alleleLst) {
 					// given alleles must be found in a snp for it to be returned
 					let missing = false
 					for (const i of q.alleleLst) {
