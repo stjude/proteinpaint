@@ -571,7 +571,7 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	// do not overwrite existing
 	if (!sessions[dslabel]) sessions[dslabel] = {}
 	//if (sessions[dslabel][payload.id]) throw `session conflict`
-	const path = req.path[0] == '/' ? req.path.slice(1) : req.path
+	const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
 	if (isMatch(path, cred.route) || path == 'authorizedActions') {
 		sessions[dslabel][payload.id] = payload
 		return payload.id
