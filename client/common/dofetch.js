@@ -1,5 +1,8 @@
 import { select } from 'd3-selection'
 
+const jwtByDsRouteStr = sessionStorage.getItem('jwtByDsRoute') || `{}`
+const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+
 /*
 	path: URL
 	arg: HTTP request body
@@ -91,6 +94,9 @@ export function dofetch2(path, init = {}, opts = {}) {
 		}
 	}
 
+	// create a reference to be able to detect body params, easier than
+	// getting params once converted to a URL
+	const body = init.body || {}
 	// this may convert a GET into a POST method, and
 	// encode the payload either in the URL or request body
 	url = mayAdjustRequest(url, init)
@@ -103,10 +109,11 @@ export function dofetch2(path, init = {}, opts = {}) {
 		init.headers['content-type'] = 'application/json'
 	}
 
+	// this jwt is site-wide for a particular PP host, not dslabel-specific
 	const jwt = sessionStorage.getItem('jwt')
 	if (jwt) {
 		init.headers.authorization = 'Bearer ' + jwt
-	}
+	} else mayAddJwtToRequest(init, body, url)
 
 	/*
 		this is client-side "gatekeeper", will not proceed
@@ -119,7 +126,15 @@ export function dofetch2(path, init = {}, opts = {}) {
 		if (opts.serverData) {
 			if (!(dataName in opts.serverData)) {
 				// to-do: support opt.freeze to enforce Object.freeze(data.json())
-				opts.serverData[dataName] = fetch(url, init)
+				opts.serverData[dataName] = fetch(url, init).then(res => {
+					const d = processResponse(res.clone())
+					if (typeof d != 'object') return res
+					if (d.error || (d.status && d.status != 'ok')) {
+						delete opts.serverData[dataName]
+						throw d.error || d
+					}
+					return res
+				})
 			}
 
 			// manage the number of stored keys in serverData
@@ -355,6 +370,11 @@ async function defaultAuthUi(dslabel, auth) {
 					if (res.error) throw res.error
 					mask.remove()
 					dsAuthOk.add(auth)
+					if (res.jwt) {
+						if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
+						jwtByDsRoute[dslabel][res.route] = res.jwt
+						sessionStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
+					}
 					resolve(dslabel)
 				})
 				.catch(e => {
@@ -367,4 +387,28 @@ async function defaultAuthUi(dslabel, auth) {
 		btn.on('click', login)
 		pwd.on('change', login)
 	})
+}
+
+function mayAddJwtToRequest(init, body, url) {
+	//console.log(393, 'mayAddJwtToRequest()', init.headers.authorization, body?.dslabel)
+	if (init.headers.authorization) return
+	let dslabel = body?.dslabel // || body.mass?.vocab.dslabel || body.tracks?.find(t => t.dslabel)?.dslabel
+	if (!dslabel) {
+		const param = url
+			.split('?')[1]
+			?.split('&')
+			.find(kv => kv.includes('dslabel'))
+		if (!param) return
+		let value = decodeURIComponent(param.split('=')[1])
+		if (value.startsWith('{') && value.endsWith('}')) {
+			value = JSON.parse(value)
+			dslabel = value.dslabel || value.mass?.vocab.dslabel || value.tracks?.find(t => t.dslabel)?.dslabel
+		} else {
+			dslabel = value
+		}
+	}
+	if (!dslabel || !jwtByDsRoute[dslabel]) return
+	const route = window.location.pathname
+	const jwt = jwtByDsRoute[dslabel][route] || jwtByDsRoute[dslabel]['/**']
+	if (jwt) init.headers.authorization = 'Bearer ' + btoa(jwt)
 }

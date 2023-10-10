@@ -275,11 +275,19 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			next()
 			return
 		}
+		let code
 		try {
 			const id = getSessionId(req, cred)
-			if (!id) throw 'missing session cookie'
-			const session = sessions[q.dslabel][id]
-			if (!session) throw `unestablished or expired browser session`
+			if (!id) {
+				code = 401
+				throw 'missing session cookie'
+			}
+			mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
+			const session = sessions[q.dslabel]?.[id]
+			if (!session) {
+				code = 401
+				throw `unestablished or expired browser session`
+			}
 			//if (!session.email) throw `missing session details: please login again through a supported portal`
 			checkIPaddress(req, session.ip)
 
@@ -308,11 +316,13 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (session.time - time < 900) session.time = time
 			next()
 		} catch (e) {
+			const _code = e.code || code
+			if (_code) res.status(_code)
 			res.send(typeof e == 'object' ? e : { error: e })
 		}
 	})
 
-	/*** call app.use() before setting routes ***/
+	/*** call app.use() before any await lines ***/
 
 	try {
 		// 1. Get an empty or rehydrated sessions tracker object
@@ -321,7 +331,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		for (const dslabel in sessions) {
 			for (const id in sessions[dslabel]) {
 				const q = sessions[dslabel][id]
-				unexpiredSessions.push(`${q.dslabel}\t${q.id}\t${q.time}\t${q.email}\t${q.ip}\t${q.embedder}\t{q.route}`)
+				unexpiredSessions.push(`${q.dslabel}\t${q.id}\t${q.time}\t${q.email}\t${q.ip}\t${q.embedder}\t${q.route}`)
 			}
 		}
 		// update the sessionsFile content so only unexpiredSessions are recorded
@@ -352,15 +362,30 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
-			await setSession(q, res, sessions, sessionsFile, '', req, cred)
-			res.send({ status: 'ok' })
+			const id = await setSession(q, res, sessions, sessionsFile, '', req, cred)
+			const time = Math.floor(Date.now() / 1000)
+			code = 401 // in case of jwt processing error
+			const jwt =
+				cred.secret &&
+				jsonwebtoken.sign(
+					{
+						dslabel: q.dslabel,
+						id,
+						iat: time,
+						ip: req.ip,
+						embedder: q.embedder,
+						route: cred.route,
+						exp: time + Math.floor(maxSessionAge / 1000)
+					},
+					cred.secret
+				)
+			res.send({ status: 'ok', jwt, route: cred.route })
 		} catch (e) {
 			res.status(code)
 			res.send({ error: e })
 		}
 	})
 
-	// creates a session ID that is returned
 	app.post(basepath + '/dslogout', async (req, res) => {
 		let code = 401
 		try {
@@ -368,12 +393,16 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const cred = getRequiredCred(q, req.path)
 			const id = getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
-			const session = sessions[q.dslabel][id]
+			const session = sessions[q.dslabel]?.[id]
+			if (!session) {
+				res.send({ status: 'ok' })
+				return
+			}
 			delete sessions[q.dslabel][id]
 			const ip = req.ip
 			await fs.appendFile(
 				sessionsFile,
-				`${q.dslabel}\t${id}\t0\t\t${session.ip}\t${session.embedder}\t{session.route}\n`
+				`${q.dslabel}\t${id}\t0\t\t${session.ip}\t${session.embedder}\t${session.route}\n`
 			)
 			res.send({ status: 'ok' })
 		} catch (e) {
@@ -503,11 +532,33 @@ function getSessionId(req, cred) {
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// using all lowercase is compatible for both http 1 and 2
 	return (
-		req.cookies?.[`${cred.cookieId}`] ||
+		req.cookies?.[`${cred?.cookieId}`] ||
 		req.cookies?.[`${req.query.dslabel}SessionId`] ||
 		req.headers?.['x-sjppds-sessionid'] ||
 		req.query?.['x-sjppds-sessionid']
 	)
+}
+
+// in a server farm, where the session state is not shared by all active PP servers,
+// the login details that is created by one server can be obtained from the JWT payload
+function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
+	if (!req.headers.authorization || (id && sessions[dslabel][id])) return
+	if (!cred.secret)
+		throw {
+			status: 'error',
+			error: `no credentials set up for this embedder='${q.embedder}'`,
+			code: 403
+		}
+	const [type, b64token] = req.headers.authorization.split(' ')
+	if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
+	const token = Buffer.from(b64token, 'base64').toString()
+	const payload = jsonwebtoken.verify(token, cred.secret)
+	// do not overwrite existing
+	if (!sessions[dslabel]) sessions[dslabel] = {}
+	//if (sessions[dslabel][payload.id]) throw `session conflict`
+	if (isMatch(req.path, cred.route)) {
+		sessions[dslabel][payload.id] = payload
+	}
 }
 
 /*
@@ -545,7 +596,7 @@ async function setSession(q, res, sessions, sessionsFile, email, req, cred) {
 	const ip = req.ip // may use req.ips?
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
 	sessions[q.dslabel][id] = { id, time, email, ip }
-	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\t${ip}\t${q.embedder}\t{cred.route}\n`)
+	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\t${ip}\t${q.embedder}\t${cred.route}\n`)
 	if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
 		res.header('Set-Cookie', `${cred.cookieId}=${id}; HttpOnly; SameSite=None; Secure`)
 	}
