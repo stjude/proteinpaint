@@ -71,7 +71,7 @@ export class TermdbVocab extends Vocab {
     */
 	async getNestedChartSeriesData(opts) {
 		const url = this.getTdbDataUrl(opts)
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termdb')
 		const data = await dofetch3(url, { headers }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 
@@ -425,7 +425,7 @@ export class TermdbVocab extends Vocab {
 	async getViolinPlotData(arg, _body = {}) {
 		// the violin plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termdb')
 		const body = Object.assign(
 			{
 				getViolinPlotData: 1,
@@ -663,7 +663,7 @@ export class TermdbVocab extends Vocab {
     */
 	async getAnnotatedSampleData(opts) {
 		// may check against required auth credentials for the server route
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termdb')
 		// unlike scatter and violin, the matrix plot will NOT display anything
 		// if sample names are not allowed to be displayed
 		// TODO: may allow a request to proceed, but not display sampleNames???
@@ -874,7 +874,7 @@ export class TermdbVocab extends Vocab {
 	async getScatterData(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termdb')
 
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
@@ -898,7 +898,7 @@ export class TermdbVocab extends Vocab {
 	async getSingleSampleData(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termdb')
 
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
@@ -923,7 +923,7 @@ export class TermdbVocab extends Vocab {
 	async getAllSamples() {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termdb')
 
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
@@ -940,7 +940,7 @@ export class TermdbVocab extends Vocab {
 	async getAllSamplesByName() {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termb')
 
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
@@ -957,7 +957,7 @@ export class TermdbVocab extends Vocab {
 	async getProfileFacilities() {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termb')
 
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
@@ -976,7 +976,7 @@ export class TermdbVocab extends Vocab {
 	async getLowessCurve(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders()
+		const headers = this.mayGetAuthHeaders('termb')
 
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
