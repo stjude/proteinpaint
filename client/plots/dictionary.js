@@ -46,7 +46,7 @@ class MassDict {
 	}
 
 	main() {
-		if (this.dom.header) this.dom.header.html('Dictionary')
+		if (this.dom.header) this.dom.header.html('Data Dictionary')
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
