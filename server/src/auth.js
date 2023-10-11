@@ -198,6 +198,7 @@ const authRouteByCredType = {
 */
 async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	const serverconfig = _serverconfig || require('./serverconfig')
+	const sessionTracking = serverconfig.features?.sessionTracking || ''
 	const sessionsFile = path.join(serverconfig.cachedir, 'dsSessions')
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 	const creds = serverconfig.dsCredentials || {}
@@ -265,7 +266,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// credentials and if yes, if there is already a valid session
 	// for a ds label
 	app.use((req, res, next) => {
-		if (req.path == '/dslogin' || req.path == '/jwt-status') {
+		if (req.path == '/dslogin' || req.path == '/jwt-status' || req.path == '/dslogout') {
 			next()
 			return
 		}
@@ -276,6 +277,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			return
 		}
 		let code
+		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
+		if (sessionTracking == 'jwt-only') sessions = {}
 		try {
 			const id = getSessionId(req, cred)
 			let altId
@@ -328,6 +331,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (session.time - time < 900) session.time = time
 			next()
 		} catch (e) {
+			console.log(e)
 			const _code = e.code || code
 			if (_code) res.status(_code)
 			res.send(typeof e == 'object' ? e : { error: e })
@@ -530,7 +534,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		// for 'basic' auth type, always require a login when runpp() is first called
 		if (cred.type == 'basic' && req.path.startsWith('/genomes')) return false
 		const id = getSessionId(req, cred)
-		const activeSession = sessions[ds.label]?.[id]
+		const altId = mayAddSessionFromJwt(sessions, ds.label, id, req, cred)
+		const activeSession = sessions[ds.label]?.[id] || sessions[ds.label]?.[altId]
 		const sessionStart = activeSession?.time || 0
 		return Date.now() - sessionStart < maxSessionAge
 	}
@@ -556,6 +561,7 @@ async function getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email
 			dslabel: q.dslabel,
 			id,
 			iat,
+			time,
 			ip: req.ip,
 			embedder: q.embedder,
 			route: cred.route,
@@ -577,7 +583,7 @@ async function getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email
 // in a server farm, where the session state is not shared by all active PP servers,
 // the login details that is created by one server can be obtained from the JWT payload
 function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
-	if (!req.headers.authorization || (id && sessions[dslabel][id])) return
+	if (!req.headers.authorization || (id && sessions[dslabel]?.[id])) return
 	if (!cred.secret)
 		throw {
 			status: 'error',
@@ -588,6 +594,7 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 	const token = Buffer.from(b64token, 'base64').toString()
 	const payload = jsonwebtoken.verify(token, cred.secret)
+	if (payload.id != id) return
 	// do not overwrite existing
 	if (!sessions[dslabel]) sessions[dslabel] = {}
 	//if (sessions[dslabel][payload.id]) throw `session conflict`
@@ -689,7 +696,6 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
 
 	const dsnames = cred.dsnames || [q.dslabel]
-	console.log(691, payload)
 	const missingAccess = dsnames.filter(d => !payload.datasets?.includes(d.id)).map(d => d.id)
 	if (missingAccess.length) {
 		throw { error: 'Missing access', linkKey: missingAccess.join(',') }

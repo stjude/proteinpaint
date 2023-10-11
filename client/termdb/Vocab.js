@@ -56,7 +56,6 @@ export class Vocab {
 				}
 				const route = 'termdb'
 				if (this.jwtByRoute[route]) headers.authorization = `Bearer ${btoa(this.jwtByRoute[route])}`
-				console.log(58, headers)
 				const data = await dofetch3('/jwt-status', {
 					method: 'POST',
 					headers,
