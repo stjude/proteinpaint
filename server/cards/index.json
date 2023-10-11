@@ -4,9 +4,6 @@
             "gridarea": "col1",
             "sections": [
                 {
-                    "id": "nestedCards"
-                },
-                {
                     "id": "tracks",
                     "name": "Tracks"
                 }
@@ -22,6 +19,9 @@
                 {
                     "id": "apps",
                     "name": "Launch Apps"
+                },
+                {
+                    "id": "nestedCards"
                 }
             ]
         }
