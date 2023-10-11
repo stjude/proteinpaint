@@ -546,7 +546,7 @@ function getSessionId(req, cred) {
 	// using all lowercase is compatible for both http 1 and 2
 	return (
 		req.cookies?.[`${cred?.cookieId}`] ||
-		//req.cookies?.[`${req.query.dslabel}SessionId`] ||
+		req.cookies?.[`${req.query.dslabel}SessionId`] ||
 		req.headers?.['x-sjppds-sessionid'] ||
 		req.query?.['x-sjppds-sessionid']
 	)
@@ -594,6 +594,7 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 	const token = Buffer.from(b64token, 'base64').toString()
 	const payload = jsonwebtoken.verify(token, cred.secret)
+	//if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)} else console.log('--- !!! id match !!! ---')
 	if (payload.id != id) return
 	// do not overwrite existing
 	if (!sessions[dslabel]) sessions[dslabel] = {}

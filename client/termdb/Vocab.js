@@ -71,7 +71,9 @@ export class Vocab {
 					this.tokenVerificationPayload = data
 					throw data.error
 				} else {
-					this.sessionId = data['x-sjppds-sessionid']
+					// TODO: remove the need for legacy support of hardcoded session names
+					this.sessionId =
+						(auth.headerKey && data[auth.headerKey]) || data['x-sjppds-sessionid'] || data['x-ds-access-token']
 					delete this.tokenVerificationMessage
 					delete this.tokenVerificationPayload
 					if (data.jwt) {
