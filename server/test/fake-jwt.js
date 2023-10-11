@@ -13,7 +13,7 @@ console.log(
 		{
 			iat: time,
 			exp: time + 3600,
-			datasets: ['TermdbTest', 'SJLife', 'PNET', 'sjlife', 'ccss'],
+			datasets: ['TermdbTest', 'SJLife', 'PNET', 'sjlife', 'ccss', 'ABC', 'XYZ', 'abc', 'xyz'],
 			email: 'username@test.tld',
 			ip: '127.0.0.1'
 		},
