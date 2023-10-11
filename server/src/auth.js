@@ -430,6 +430,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
 			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id })
 		} catch (e) {
+			console.log(e)
 			res.status(code)
 			res.send(e instanceof Error || typeof e != 'object' ? { error: e } : e)
 		}
@@ -551,20 +552,18 @@ async function getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email
 	try {
 		const time = Date.now()
 		const iat = Math.floor(time / 1000)
-		console.log(iat)
-		const jwt = jsonwebtoken.sign(
-			{
-				dslabel: q.dslabel,
-				id,
-				iat,
-				ip: req.ip,
-				embedder: q.embedder,
-				route: cred.route,
-				exp: iat + Math.floor(maxSessionAge / 1000),
-				email
-			},
-			cred.secret
-		)
+		const payload = {
+			dslabel: q.dslabel,
+			id,
+			iat,
+			ip: req.ip,
+			embedder: q.embedder,
+			route: cred.route,
+			exp: iat + Math.floor(maxSessionAge / 1000),
+			email
+		}
+		if (cred.dsnames) payload.datasets = cred.dsnames.map(d => d.id)
+		const jwt = jsonwebtoken.sign(payload, cred.secret)
 		await fs.appendFile(
 			sessionsFile,
 			`${q.dslabel}\t${id}\t${time}\t${email}\t${req.ip}\t${q.embedder}\t${cred.route}\n`
@@ -690,7 +689,8 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
 
 	const dsnames = cred.dsnames || [q.dslabel]
-	const missingAccess = dsnames.filter(d => !payload.datasets.includes(d.id)).map(d => d.id)
+	console.log(691, payload)
+	const missingAccess = dsnames.filter(d => !payload.datasets?.includes(d.id)).map(d => d.id)
 	if (missingAccess.length) {
 		throw { error: 'Missing access', linkKey: missingAccess.join(',') }
 	}
