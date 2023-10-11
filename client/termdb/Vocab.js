@@ -16,8 +16,9 @@ export class Vocab {
         */
 		this.missingCatValsByTermId = {}
 		const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
+		this.jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
 		const dslabel = this.vocab?.dslabel || this.state?.dslabel
-		this.jwtByRoute = JSON.parse(jwtByDsRouteStr)[dslabel] || {}
+		this.jwtByRoute = this.jwtByDsRoute[dslabel] || {}
 	}
 
 	async main(stateOverride = null) {
@@ -50,14 +51,18 @@ export class Vocab {
 					delete this.verifiedToken
 					return
 				}
+				const headers = {
+					[auth.headerKey]: token
+				}
+				const route = 'termdb'
+				if (this.jwtByRoute[route]) headers.authorization = `Bearer ${btoa(this.jwtByRoute[route])}`
+				console.log(58, headers)
 				const data = await dofetch3('/jwt-status', {
 					method: 'POST',
-					headers: {
-						[auth.headerKey]: token
-					},
+					headers,
 					body: {
 						dslabel,
-						route: 'termdb',
+						route,
 						embedder: location.hostname
 					}
 				})
@@ -71,9 +76,12 @@ export class Vocab {
 					delete this.tokenVerificationMessage
 					delete this.tokenVerificationPayload
 					if (data.jwt) {
-						if (!this.jwtByRoute[dslabel]) this.jwtByRoute[dslabel] = {}
-						this.jwtByRoute[dslabel][data.route] = data.jwt
-						localStorage.setItem('jwtByRoute', JSON.stringify(this.jwtByRoute))
+						if (!this.jwtByDsRoute[dslabel]) {
+							this.jwtByDsRoute[dslabel] = {}
+							this.jwtByRoute = this.jwtByDsRoute[dslabel]
+						}
+						this.jwtByDsRoute[dslabel][data.route] = data.jwt
+						localStorage.setItem('jwtByDsRoute', JSON.stringify(this.jwtByDsRoute))
 					}
 				}
 			} else {
