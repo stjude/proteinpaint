@@ -239,18 +239,26 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 			}
 
 			if (ds.queries?.defaultBlock2GeneMode && mayUseGeneVariant) {
-				/* has queries for genomic data types, search gene from whole genome
+				/*
+				has queries for genomic data types, search gene from whole genome
 				not checking on presence of queries.snvindel{} as it's used for both wgs/germline and somatic data,
 				for now do not show gene search for wgs data
 				checking on this flag as it's enabled for ds with somatic data
 				same logic applied in termdb.config.js
+
+				must enclose in try/catch as term match allows characters including space, that are prohibited in gene search
+				when exception is thrown because of that, ignore and continue term match
 				*/
-				const re = geneSearch(genome, { input: str })
-				if (Array.isArray(re.hits)) {
-					for (let i = 0; i < 7; i++) {
-						if (!re.hits[i]) break
-						terms.push({ name: re.hits[i], type: 'geneVariant' })
+				try {
+					const re = geneSearch(genome, { input: str })
+					if (Array.isArray(re.hits)) {
+						for (let i = 0; i < 7; i++) {
+							if (!re.hits[i]) break
+							terms.push({ name: re.hits[i], type: 'geneVariant' })
+						}
 					}
+				} catch (e) {
+					// err is likely "invalid character in gene name". ignore and continue
 				}
 			}
 		}

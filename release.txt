@@ -1,1 +1,2 @@
-
+Fixes:
+- search term with space character for genomic-equipped dataset should not break by gene search msg
