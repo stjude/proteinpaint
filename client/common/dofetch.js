@@ -113,7 +113,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 	const jwt = sessionStorage.getItem('jwt')
 	if (jwt) {
 		init.headers.authorization = 'Bearer ' + jwt
-	} else mayAddJwtToRequest(init, body, url)
+	}
 
 	/*
 		this is client-side "gatekeeper", will not proceed
@@ -121,6 +121,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 		are required or a valid session has already been established
 	*/
 	return mayShowAuthUi(init, url).then(() => {
+		if (!jwt) mayAddJwtToRequest(init, body, url)
 		const dataName = url + ' | ' + init.method + ' | ' + init.body
 
 		if (opts.serverData) {
@@ -317,11 +318,14 @@ async function mayShowAuthUi(init, path) {
 		const route = path.split('?')[0].split('//')[1].split('/').slice(1).join('/')
 		if (q.dslabel == a.dslabel && (a.route == '/**' || route == a.route)) {
 			if (dsAuthOk.has(a)) return ok
+			// dofetch should show the authUi only when all routes ('/**') are protected
+			// otherwise, the authUi should be opened only when requesting data from a protected route,
+			// that will be determined within feature code such as for 'termdb', 'burden', etc
 			else if (a.route != '/**') return ok
 			else if (a.type == 'basic') return await authUi(a.dslabel, a)
 			else if (a.type == 'jwt') {
 				// assume the embedder/portal provides the login UI
-				// so do not need to do anything here
+				// so no need to do anything here
 			} else if (a.type == 'forbidden') {
 				alert('Forbidden access')
 				// don't do anything

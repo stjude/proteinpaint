@@ -124,6 +124,7 @@ async function validateDsCredentials(creds, serverconfig) {
 				} else if (cred.type != 'forbidden' && cred.type != 'open') {
 					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
 				}
+				cred.dslabel = dslabel
 				cred.route = serverRoute
 				cred.cookieId = (serverRoute == 'termdb' && cred.headerKey) || `${dslabel}-${serverRoute}-${embedderHost}-Id`
 			}
@@ -138,10 +139,12 @@ function mayReshapeDsCredentials(creds) {
 		if (cred.type == 'login') {
 			if (cred.embedders) throw `unexpected 'embedders' property`
 			// known format where type: 'login' does not have the jwt-type properties below
+			// apply to all routes and embedders
 			cred['*'] = {
 				'*': {
 					type: 'basic',
-					password: cred.password
+					password: cred.password,
+					secret: cred.password
 				}
 			}
 			delete cred.type
@@ -587,15 +590,20 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	if (!cred.secret)
 		throw {
 			status: 'error',
-			error: `no credentials set up for this embedder='${q.embedder}'`,
+			error: `no credentials set up for this embedder='${req.query.embedder}'`,
 			code: 403
 		}
 	const [type, b64token] = req.headers.authorization.split(' ')
 	if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 	const token = Buffer.from(b64token, 'base64').toString()
 	const payload = jsonwebtoken.verify(token, cred.secret)
-	//if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)} else console.log('--- !!! id match !!! ---')
-	if (payload.id != id) return
+	// if (id) {
+	// 	if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)}
+	// 	else console.log('--- !!! id match !!! ---')
+	// }
+	// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
+	// otherwise an expired header.auth jwt may be reused even when a user has already logged out
+	if (id && payload.id != id) return
 	// do not overwrite existing
 	if (!sessions[dslabel]) sessions[dslabel] = {}
 	//if (sessions[dslabel][payload.id]) throw `session conflict`

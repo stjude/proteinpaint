@@ -37,7 +37,8 @@ export class Vocab {
 	async maySetVerifiedToken(dslabel) {
 		// strict true boolean value means no auth required
 		if (this.verifiedToken === true) return this.verifiedToken
-		const token = this.opts.getDatasetAccessToken?.()
+		let token = this.opts.getDatasetAccessToken?.()
+		if (!token) token = this.jwtByRoute['termdb']
 		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
 		try {
 			// TODO: do not hardcode 'termdb' here, assume that Vocab is only called within a termdb or mass app
@@ -55,7 +56,8 @@ export class Vocab {
 					[auth.headerKey]: token
 				}
 				const route = 'termdb'
-				if (this.jwtByRoute[route]) headers.authorization = `Bearer ${btoa(this.jwtByRoute[route])}`
+				if (!headers.authorization && this.jwtByRoute[route])
+					headers.authorization = `Bearer ${btoa(this.jwtByRoute[route])}`
 				const data = await dofetch3('/jwt-status', {
 					method: 'POST',
 					headers,
