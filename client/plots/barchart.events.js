@@ -436,24 +436,13 @@ function handle_click(event, self, chart) {
 			})
 		}
 	}
-	if (self.config.displaySampleIds) {
-		options.push({
-			label: 'List samples',
-			callback: () => listSamples(event, self, seriesLabel, dataLabel, chart)
-		})
-	}
-
-	// list samples for a category
-	// this option is always added
-	/*
-	// after discussing with yutaka this is disabled for now
-
-
-	options.push({
-		label: 'List samples',
-		callback: menuoption_listsamples
-	})
-	*/
+	//disable sample listing temporarily
+	// if (self.config.displaySampleIds) {
+	// 	options.push({
+	// 		label: 'List samples',
+	// 		callback: () => listSamples(event, self, seriesLabel, dataLabel, chart)
+	// 	})
+	// }
 
 	if (self.opts.bar_click_opts.includes('select_to_gp')) {
 		options.push({
