@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Bug fix to revert termdb/category route usage.
+- search term with space character for genomic-equipped dataset should not break by gene search msg
 
 
 ## 2.29.2
