@@ -10,8 +10,10 @@ import {
 	BaseGroupSet,
 	GroupEntry,
 	CategoricalTermSettingInstance,
-	CategoricalTW
+	CategoricalTW,
+	VocabApi
 } from '#shared/types/index'
+import { copyMerge } from '#rx'
 
 /*
 ********************** EXPORTED
@@ -45,7 +47,12 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 			return getPillNameDefault(self, d)
 		},
 
-		getPillStatus: self.usecase?.target == 'regression' ? () => ({ text: 'categorical' }) : self.validateGroupsetting,
+		getPillStatus() {
+			if (self.usecase?.target == 'regression') {
+				return self.q.mode == 'binary' ? { text: 'binary' } : { text: 'categorical' }
+			}
+			return self.validateGroupsetting()
+		},
 
 		validateQ(data: PillData) {
 			const t = data.term as Term
@@ -359,8 +366,7 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 	// }
 }
 
-export function fillTW(tw: CategoricalTW) {
-	set_hiddenvalues(tw.q, tw.term)
+export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
 	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
 	if (!tw.q.groupsetting) tw.q.groupsetting = {}
 	if (!tw.term.groupsetting) tw.term.groupsetting = {}
@@ -384,4 +390,13 @@ export function fillTW(tw: CategoricalTW) {
 			tw.q.groupsetting.predefined_groupset_idx = tw.term.groupsetting.useIndex
 		}
 	}
+
+	if (defaultQ) {
+		//TODO change when Q objects separated out
+		;(defaultQ as CategoricalQ).isAtomic = true
+		// merge defaultQ into tw.q
+		copyMerge(tw.q, defaultQ)
+	}
+
+	set_hiddenvalues(tw.q, tw.term)
 }

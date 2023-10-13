@@ -181,6 +181,10 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 	// numeric term
 	defaultQ['numeric'] = regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
 
+	// categorical term
+	defaultQ['categorical'] =
+		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
+
 	// condition term
 	if (useCase == 'outcome') {
 		if (regressionType == 'cox') {
