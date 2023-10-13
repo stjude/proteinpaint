@@ -33,7 +33,7 @@ upon error, throw err message as a string
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cards/index.json')
 		arg.app.drawer.opts.genomes = arg.genomes
-		arg.app.drawer.opts.fromURL = true
+		arg.app.drawer.opts.fromApp = true
 		//Quick fix to launch the sandbox within the current openSandbox code
 		arg.app.drawer.opts.app = {
 			cardsPath: 'cards'

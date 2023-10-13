@@ -18,6 +18,7 @@ import { renderSandboxFormDiv, newSandboxDiv } from '#dom/sandbox'
 import { sayerror } from '#dom/sayerror'
 import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
+import { openSandbox } from '../appdrawer/adSandbox'
 
 /*
 
@@ -356,12 +357,121 @@ async function makeheader(app, obj, jwt) {
 		tip.hide()
 	}
 
-	function genesearch() {
-		// any other key typing
+	const help = [
+		{
+			label: 'Embed in your website',
+			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
+		},
+		{
+			label: 'Make a Study View',
+			link: 'https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE'
+		},
+		{
+			label: 'URL parameters',
+			link: 'https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing'
+		},
+		{
+			label: 'All tutorials',
+			link: 'https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing'
+		},
+		{
+			label: 'User community',
+			link: 'https://groups.google.com/g/proteinpaint'
+		}
+	]
+
+	async function searchResults() {
+		/*Create a menu of search results in the header*/
+
+		if (!input.property('value')) {
+			tip.hide()
+			return
+		}
 		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt)
+		const userInput = input.property('value').trim()
+
+		const data = {
+			/* Add more 'types' (e.g. genes, SNPs, etc.) of results here.
+			Update showResultsList with desired behavior
+			*/
+			genes: await findgenelst(app, userInput, app.selectgenome.property('value'), tip, jwt)
+		}
+		/** Returns arrs for cards and datasets */
+		await findAppDrawerElements(app, userInput, data)
+		//Always show help section last
+		data.help = help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase()))
+
+		const resultsWrapper = tip.d.append('div')
+		await resultsWrapper
+			.append('div')
+			.style('display', 'flex')
+			.selectAll()
+			.data(Object.entries(data).filter(arr => arr.length >= 1))
+			.enter()
+			.append('div')
+			.style('display', 'block')
+			.style('border-left', '0.5px solid lightgrey')
+			.each(showResultsList)
 	}
-	const debouncer = debounce(genesearch, 300)
+
+	function showResultsList(results) {
+		/*
+		results = [data[type], arr]
+		*/
+		if (results[1].length == 0) return
+		results.wrapper = d3select(this)
+		results.wrapper.style('padding', '5px')
+		results.title = results.wrapper
+			.append('div')
+			.style('padding', '3px 0px 5px')
+			.style('opacity', 0.65)
+			.style('font-size', '0.8em')
+
+		if (results[0] == 'genes') {
+			results.title.text('Genes')
+			for (const gene of results[1]) {
+				results.wrapper
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.style('display', 'block')
+					.style('padding-left', '10px')
+					.attr('isgene', '1')
+					.text(gene)
+					.on('click', () => {
+						app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+						tip.hide()
+						findgene2paint(app, gene, app.selectgenome.property('value'), jwt)
+					})
+			}
+		} else if (results[0] == 'cards' || results[0] == 'datasets') {
+			results.title.text(results[0] == 'cards' ? 'Tracks and Apps' : 'Datasets')
+			console.log(app.drawer.opts)
+			const opts = {
+				app: app.drawer.opts,
+				sandboxDiv: app.drawer.opts.sandboxDiv,
+				genomes: app.genomes,
+				fromApp: true
+			}
+			for (const element of results[1]) {
+				results.wrapper
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.style('background-color', results[0] == 'cards' ? '#e1edf7' : '#e5f5e4')
+					.style('padding-left', '10px')
+					.text(element.name)
+					.on('click', () => {
+						app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+						tip.hide()
+						openSandbox(element, opts)
+					})
+			}
+		} else if (results[0] == 'help') {
+			results.title.text('Help')
+			for (const d of results[1]) results.wrapper.append('p').html(`<a href=${d.link} target=_blank>${d.label}</a>`)
+		}
+	}
+
+	const debouncer = debounce(searchResults, 300)
 	const input = headbox
 		.append('div')
 		.attr('class', 'sjpp-input-div-gene-pos')
@@ -420,34 +530,18 @@ async function makeheader(app, obj, jwt) {
 		.classed('sja_menuoption', true)
 		.style('padding', padw_sm)
 		.text('Help')
-		.on('click', event => {
+		.on('click', async event => {
 			const p = event.target.getBoundingClientRect()
-			const div = headtip
-				.clear()
-				.show(p.left - 0, p.top + p.height + 5)
-				.d.append('div')
+			const div = headtip.clear().show(p.left - 0, p.top + p.height + 5)
+
+			await div.d
+				.append('div')
 				.style('padding', '5px 20px')
-			div
+				.selectAll('p')
+				.data(help)
+				.enter()
 				.append('p')
-				.html(
-					'<a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing target=_blank>Embed in your website</a>'
-				)
-			div
-				.append('p')
-				.html(
-					'<a href=https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE target=_blank>Make a Study View</a>'
-				)
-			div
-				.append('p')
-				.html(
-					'<a href=https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing target=_blank>URL parameters</a>'
-				)
-			div
-				.append('p')
-				.html(
-					'<a href=https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing target=_blank>All tutorials</a>'
-				)
-			div.append('p').html('<a href=https://groups.google.com/g/proteinpaint target=_blank>User community</a>')
+				.html(d => `<a href=${d.link} target=_blank>${d.label}</a>`)
 		})
 }
 
@@ -463,13 +557,12 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', (event, genomename) => {
-			let sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
-
 			const g = app.genomes[genomename]
 			if (!g) {
 				alert('Invalid genome name: ' + genomename)
 				return
 			}
+			const sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
 			sandbox_div.header.text(genomename + ' genome browser')
 
 			const par = {
@@ -497,11 +590,26 @@ function update_genome_browser_btn(app) {
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
 }
 
+async function findAppDrawerElements(app, input, data) {
+	const re = await dofetch3(app.cardsPath + '/index.json')
+	if (re.error) throw `Problem retrieving cards index.json`
+	const userInput = input.toLowerCase()
+	const filteredElements = re.elements
+		.filter(elem => {
+			if (elem.hidden) return false
+			let searchTermFound = (elem.searchterms || []).reduce((searchTermFound, searchTerm) => {
+				if (searchTermFound) return true
+				return searchTerm.toLowerCase().includes(userInput)
+			}, false)
+			return searchTermFound || elem.name.toLowerCase().includes(userInput)
+		})
+		.sort((a, b) => a.name.localeCompare(b.name))
+	data.cards = filteredElements.filter(c => c.type == 'card')
+	data.datasets = filteredElements.filter(c => c.type == 'dsButton')
+	return
+}
+
 async function findgenelst(app, str, genome, tip, jwt) {
-	if (str.length <= 1) {
-		tip.d.selectAll('*').remove()
-		return
-	}
 	try {
 		const data = await dofetch3('/genelookup', {
 			body: {
@@ -513,32 +621,20 @@ async function findgenelst(app, str, genome, tip, jwt) {
 
 		if (data.error) throw data.error
 		if (!data.hits) throw '.hits[] missing'
-		for (const name of data.hits) {
-			tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.attr('isgene', '1')
-				.text(name)
-				.on('click', () => {
-					app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-					tip.hide()
-					findgene2paint(app, name, genome, jwt)
-				})
-		}
+		return data.hits
 	} catch (err) {
-		tip.d.append('div').style('border', 'solid 1px red').style('padding', '10px').text(err)
+		if (err.stack) console.log(err.stack)
+		throw err
 	}
 }
 
 async function findgene2paint(app, str, genomename, jwt) {
-	let sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
-
 	const g = app.genomes[genomename]
 	if (!g) {
 		console.error('unknown genome ' + genomename)
 		return
 	}
-
+	const sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
 	sandbox_div.header.html(
 		'<div style="display:inline-block;">' +
 			str +
@@ -838,7 +934,6 @@ async function parseEmbedThenUrl(arg, app) {
 				method: 'POST',
 				body: JSON.stringify({ url })
 			})
-			console.log(jsonURL)
 			if (jsonURL.error) throw jsonURL.error
 			state = JSON.parse(jsonURL.text)
 		}
