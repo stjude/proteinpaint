@@ -1,7 +1,7 @@
 import { Mds3 } from '../shared/types'
 import * as serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
-import { existsSync, unlinkSync, symlinkSync } from 'fs'
+import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'
 
 /*
 the "test mule" for the type of termdb dataset using server-side sqlite3 db
@@ -244,11 +244,17 @@ function copyDataFilesFromRepo2Tp() {
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 
 	if (!targetDir.endsWith(datadir)) {
-		try {
-			if (existsSync(datadir)) unlinkSync(datadir)
-			symlinkSync(targetDir, datadir)
-		} catch (error) {
-			console.warn('Error while coping data files from Repo to Tp: ' + error)
-		}
+		access(datadir, constants.R_OK | constants.W_OK, err => {
+			if (!err) {
+				try {
+					if (existsSync(datadir)) unlinkSync(datadir)
+					symlinkSync(targetDir, datadir)
+				} catch (error) {
+					console.warn('Error while coping data files from Repo to Tp: ' + error)
+				}
+			} else {
+				console.warn(`user doesn't have sufficient permissions for `)
+			}
+		})
 	}
 }
