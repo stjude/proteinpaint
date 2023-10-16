@@ -10,6 +10,7 @@ export type getcategoriesRequest = {
 	/** term id string */
 	tid: string
 	filter: Filter
+	term1_q?: { isAtomic: boolean; hiddenValues: object; type: string; groupsetting: { disabled: boolean }; mode: string }
 }
 
 interface entries {

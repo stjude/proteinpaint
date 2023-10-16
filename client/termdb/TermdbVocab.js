@@ -487,7 +487,15 @@ export class TermdbVocab extends Vocab {
 		}
 		if (!dslabel) throw 'getterm: dslabel missing'
 		if (!genome) throw 'getterm: genome missing'
-		const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${encodeURIComponent(termid)}`)
+
+		const body = {
+			genome,
+			dslabel,
+			gettermbyid: termid,
+			embedder: window.location.hostname
+		}
+
+		const data = await dofetch3(`termdb/termbyid`, { body })
 		if (data.error) throw 'getterm: ' + data.error
 		if (!data.term) throw 'no term found for ' + termid
 		if (data.term.type == 'categorical' && !data.term.values && !data.term.groupsetting?.inuse) {
@@ -512,7 +520,7 @@ export class TermdbVocab extends Vocab {
 		// return number of samples per category/bin/grade/group etc
 		// optionally, caller can supply a {term1_q: {...}} key-object value in _body
 		// as this function does not deal with q by default
-
+		const headers = this.mayGetAuthHeaders()
 		if (term.type == 'snplst' || term.type == 'snplocus') {
 			const body = Object.assign(
 				{
@@ -527,7 +535,7 @@ export class TermdbVocab extends Vocab {
 			if (filter) {
 				body.filter = getNormalRoot(filter)
 			}
-			return await dofetch3('/termdb', { body })
+			return await dofetch3('/termdb', { headers, body })
 		}
 		if (term.category2samplecount) {
 			// grab directly from term and not the server
@@ -559,7 +567,7 @@ export class TermdbVocab extends Vocab {
 		}
 
 		try {
-			const data = await dofetch3('/termdb/categories', { body })
+			const data = await dofetch3('termdb/categories', { headers, body })
 			if (data.error) throwMsgWithFilePathAndFnName(data.error)
 			return data
 		} catch (e) {
