@@ -7,12 +7,14 @@ on:
         type: choice
         description: Release type
         options:
-          - prerelease
+          - patch
+          - minor
+          - major
           - prepatch
           - preminor
           - premajor
-          - minor
-          - patch
+          - prerelease
+
       include:
         type: choice
         description: Include
