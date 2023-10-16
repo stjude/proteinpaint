@@ -1,4 +1,4 @@
-// cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/expression
+// cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Const;
@@ -53,15 +53,17 @@ fn input_data(
     let mut control_indexes_original: Vec<usize> = Vec::with_capacity(control_list.len());
     let gene_name_index = headers.iter().position(|r| r == &"geneID");
     let gene_symbol_index = headers.iter().position(|r| r == &"geneSymbol");
-
+    let mut case_samples_not_found: Vec<&str> = Vec::with_capacity(case_list.len());
+    let mut control_samples_not_found: Vec<&str> = Vec::with_capacity(control_list.len());    
+    
     for item in case_list {
         //println!("item:{}", item);
         let index = headers.iter().position(|r| r == item);
         match index {
             Some(n) => case_indexes_original.push(n),
             None => {
-                // When sample not found, give error stating the sample name is not found
-                panic!("Case sample not found:{}", item);
+                //panic!("Case sample not found:{}", item);
+		case_samples_not_found.push(item);
             }
         }
     }
@@ -72,8 +74,8 @@ fn input_data(
         match index {
             Some(n) => control_indexes_original.push(n),
             None => {
-                // When sample not found, give error stating the sample name is not found
-                panic!("Control sample not found:{}", item);
+                //panic!("Control sample not found:{}", item);
+		control_samples_not_found.push(item);
             }
         }
     }
