@@ -343,21 +343,6 @@ async function makeheader(app, obj, jwt) {
 	// 2, search box
 	const tip = new Menu({ border: '', padding: '0px' })
 
-	function entersearch() {
-		app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-		// by pressing enter, if not gene will search snp
-		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
-		let str = input.property('value').trim()
-		if (!str) return
-		const hitgene = tip.d.select('.sja_menuoption')
-		if (hitgene.size() > 0 && hitgene.attr('isgene')) {
-			str = hitgene.text()
-		}
-		findgene2paint(app, str, app.selectgenome.property('value'), jwt)
-		input.property('value', '')
-		tip.hide()
-	}
-
 	const searchItems = async () => {
 		const userInput = d3select('input').property('value').trim()
 
@@ -368,19 +353,21 @@ async function makeheader(app, obj, jwt) {
 				callback: gene => {
 					app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
 					tip.hide()
-					findgene2paint(app, gene, app.selectgenome.property('value'), jwt)
-				}
-			},
-			{
-				title: 'Help',
-				items: help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase())),
-				color: '#faebd9',
-				callback: d => {
-					window.open(d.link, d.label)
+					findgene2paint(gene, app, app.selectgenome.property('value'), jwt)
 				}
 			}
 		]
 		await findAppDrawerElements(app, userInput, data, tip)
+		//Keep 'Help' section last
+		data.push({
+			title: 'Help',
+			items: help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase())),
+			color: '#faebd9',
+			callback: d => {
+				window.open(d.link, d.label)
+			}
+		})
+
 		return data
 	}
 
@@ -587,7 +574,7 @@ async function findgenelst(app, str, genome, tip, jwt) {
 	}
 }
 
-async function findgene2paint(app, str, genomename, jwt) {
+async function findgene2paint(str, app, genomename, jwt) {
 	const g = app.genomes[genomename]
 	if (!g) {
 		console.error('unknown genome ' + genomename)
