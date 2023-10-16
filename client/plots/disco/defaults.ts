@@ -52,7 +52,7 @@ export default function discoDefaults(overrides = {}): Settings {
 			fusionTitle: 'SV', // Structural Variants (color by co-location)
 			lohLegendEnabled: true,
 			fontSize: 12,
-			rowHeight: 40
+			rowHeight: 48
 		},
 
 		menu: {
