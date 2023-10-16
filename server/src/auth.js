@@ -110,6 +110,7 @@ async function validateDsCredentials(creds, serverconfig) {
 				const cred = typeof c == 'string' ? creds.secrets[c] : c
 				// copy the server route pattern to easily obtain it from within the cred
 				if (cred.type == 'basic') {
+					if (!cred.secret) cred.secret = cred.password
 					cred.authRoute = '/dslogin'
 					// NOTE: an empty password will be considered as forbidden
 					//if (!cred.password)
@@ -144,7 +145,7 @@ function mayReshapeDsCredentials(creds) {
 				'*': {
 					type: 'basic',
 					password: cred.password,
-					secret: cred.password
+					secret: cred.secret
 				}
 			}
 			delete cred.type
