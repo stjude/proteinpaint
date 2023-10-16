@@ -572,7 +572,7 @@ function setInteractivity(self: TermSettingInstance) {
 		type opt = { label: string; callback: (f?: any) => void }
 		const options: opt[] = []
 
-		if (self.term?.type == 'categorical' && self.q?.groupsetting?.inuse) {
+		if (self.q?.groupsetting?.inuse && self.q?.mode != 'binary') {
 			// this instance is using a categorical term doing groupsetting; add option to cancel it
 			// as categorical edit menu cannot do the canceling
 			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
