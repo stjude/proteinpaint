@@ -25,6 +25,15 @@
             "pmid": "32466770",
             "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/32466770/",
             "doi": "https://doi.org/10.1186/s13059-020-02043-x"
+        },
+        {
+            "id": 1004,
+            "title": "ppBAM: ProteinPaint BAM track for read alignment visualization and variant genotyping",
+            "year": "2023",
+            "journal": "Bioinformatics",
+            "pmid": "37140547",
+            "pmidURL": "https://ncbi.nlm.nih.gov/pmc/articles/PMC10182850/",
+            "doi": "https://doi.org/10.1093/bioinformatics/btad300"
         }
     ]
 }
