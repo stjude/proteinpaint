@@ -29,30 +29,16 @@ export function renderSandboxFormDiv(holder, genomes) {
 		gselect.append('option').text(n)
 	}
 	//For file select, pathway input, etc.
-	const filediv = inputdiv
-		.append('div')
-		.style('margin', '20px 0px')
-		.classed('sjpp-sandbox-form-fileDiv', true)
+	const filediv = inputdiv.append('div').style('margin', '20px 0px').classed('sjpp-sandbox-form-fileDiv', true)
 	//For error messages
-	const saydiv = holder
-		.append('div')
-		.style('margin', '10px 20px')
-		.classed('sjpp-sandbox-form-sayDiv', true)
+	const saydiv = holder.append('div').style('margin', '10px 20px').classed('sjpp-sandbox-form-sayDiv', true)
 	//For displaying output
-	const visualdiv = holder
-		.append('div')
-		.style('margin', '20px')
-		.classed('sjpp-sandbox-form-visualDiv', true)
+	const visualdiv = holder.append('div').style('margin', '20px').classed('sjpp-sandbox-form-visualDiv', true)
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
 const plotIdToSandboxId = {}
-const sandboxIdStr =
-	Math.random()
-		.toString()
-		.slice(-6) +
-	'-' +
-	(+new Date()).toString().slice(-8)
+const sandboxIdStr = Math.random().toString().slice(-6) + '-' + (+new Date()).toString().slice(-8)
 let sandboxIdSuffix = 0
 
 /*
@@ -75,6 +61,10 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 
 	const header_row = app_div
 		.append('div')
+		//fix for buttons not expanding to the height of the div and appearing on hover
+		.style('display', 'flex')
+		.style('align-content', 'center')
+		.style('justify-contents', 'center')
 		.attr('class', 'sjpp-output-sandbox-header')
 		.style('width', opts.style?.width || '95vw')
 
@@ -83,7 +73,7 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.append('div')
 		.classed('sjpp-output-sandbox-close-bt', true)
 		.classed('sja_menuoption', true)
-		.style('vertical-align', 'middle')
+		// .style('vertical-align', 'middle')
 		.html(
 			`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
 		  <path stroke='#000' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
@@ -105,20 +95,17 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.append('div')
 		.classed('sjpp-output-sandbox-collapse-btn', true)
 		.classed('sja_menuoption', true)
-		.style('vertical-align', 'middle')
+	// .style('vertical-align', 'middle')
 
 	// placeholder for expand btn
 	const expandBtnDiv = header_row
 		.append('div')
 		.classed('sjpp-output-sandbox-expand-btn', true)
 		.classed('sja_menuoption', true)
-		.style('display', 'none')
-		.style('vertical-align', 'sub')
+	// .style('display', 'none')
+	// .style('vertical-align', 'sub')
 
-	const header = header_row
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '5px 10px')
+	const header = header_row.append('div').style('display', 'inline-block').style('padding', '5px 10px')
 
 	const body = app_div
 		.append('div')
@@ -137,6 +124,7 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 	// Expand btn
 	icons['expand'](expandBtnDiv, {
 		fontSize: '1.5em',
+		height: 'auto',
 		padding: '4px 10px',
 		color: 'black',
 		display: 'none',

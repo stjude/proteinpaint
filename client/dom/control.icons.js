@@ -67,7 +67,7 @@ export const icons = {
 		return (
 			elem
 				.attr('title', o.title)
-				.style('height', '16px')
+				.style('height', 'height' in o ? o.height : '16px')
 				.style('color', color)
 				.style('opacity', 0.9)
 				.style('font-size', 'fontSize' in o ? o.fontSize : '16px')
@@ -407,9 +407,7 @@ export const icons = {
 		}
 	},
 	html: (elem, o) => {
-		select(elem.node().parentNode)
-			.append('span')
-			.html(o.html)
+		select(elem.node().parentNode).append('span').html(o.html)
 		if (o.styles) {
 			for (const s in styles) {
 				elem.style(s, styles[s])
@@ -424,10 +422,7 @@ export const icons = {
 		<path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
 		<path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
 	  </svg>`
-		elem
-			.html(svg)
-			.on('click', opts.handler)
-			.style('cursor', 'pointer')
+		elem.html(svg).on('click', opts.handler).style('cursor', 'pointer')
 	},
 	zoomIn: (elem, opts) => {
 		const _opts = { color: 'black', width: 18, height: 18 }
@@ -437,10 +432,7 @@ export const icons = {
 	<path d="M10.344 11.742c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1 6.538 6.538 0 0 1-1.398 1.4z"/>
 	<path fill-rule="evenodd" d="M6.5 3a.5.5 0 0 1 .5.5V6h2.5a.5.5 0 0 1 0 1H7v2.5a.5.5 0 0 1-1 0V7H3.5a.5.5 0 0 1 0-1H6V3.5a.5.5 0 0 1 .5-.5z"/>
 	</svg>`
-		elem
-			.html(svg)
-			.on('click', opts.handler)
-			.style('cursor', 'pointer')
+		elem.html(svg).on('click', opts.handler).style('cursor', 'pointer')
 	},
 	zoomOut: (elem, opts) => {
 		const _opts = { color: 'black', width: 18, height: 18 }
@@ -450,10 +442,7 @@ export const icons = {
 		<path d="M10.344 11.742c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1 6.538 6.538 0 0 1-1.398 1.4z"/>
 		<path fill-rule="evenodd" d="M3 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
 	  </svg>`
-		elem
-			.html(svg)
-			.on('click', opts.handler)
-			.style('cursor', 'pointer')
+		elem.html(svg).on('click', opts.handler).style('cursor', 'pointer')
 	},
 	lasso: (elem, opts) => {
 		const _opts = { color: 'black', width: 18, height: 18 }
@@ -471,10 +460,7 @@ export const icons = {
 		<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
 		<path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
 	  </svg>`
-		elem
-			.html(svg)
-			.on('click', opts.handler)
-			.style('cursor', 'pointer')
+		elem.html(svg).on('click', opts.handler).style('cursor', 'pointer')
 	},
 	help: (elem, opts) => {
 		const _opts = { color: 'black', width: 18, height: 18 }
@@ -483,10 +469,7 @@ export const icons = {
 		<path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 		<path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
 	  </svg>`
-		elem
-			.html(svg)
-			.on('click', opts.handler)
-			.style('cursor', 'pointer')
+		elem.html(svg).on('click', opts.handler).style('cursor', 'pointer')
 	},
 	search: (elem, opts) => {
 		const _opts = { color: 'black', width: 18, height: 18 }
@@ -494,10 +477,7 @@ export const icons = {
 		const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${_opts.width}" height="${_opts.height}" fill="${_opts.color}" class="bi bi-search" viewBox="0 0 16 16">
 		<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
 	  </svg>`
-		elem
-			.html(svg)
-			.on('click', opts.handler)
-			.style('cursor', 'pointer')
+		elem.html(svg).on('click', opts.handler).style('cursor', 'pointer')
 	},
 	crosshair: (elem, opts = {}) => {
 		const _opts = { color: 'black', width: 18, height: 18, d: 2 }
@@ -512,10 +492,7 @@ export const icons = {
 		<path d="M${w / 2},${d}L${w / 2},${h - d}Z" stroke='${_opts.color}'/>
 		<path d="M${d},${h / 2}L${w - d},${h / 2}Z" stroke='${_opts.color}'/>
 		</svg>`
-		elem
-			.html(svg)
-			.on('click', opts.handler)
-			.style('cursor', 'pointer')
+		elem.html(svg).on('click', opts.handler).style('cursor', 'pointer')
 	},
 	grab: (elem, opts = {}) => {
 		const _opts = { color: 'black', width: 18, height: 18, transform: '' }
