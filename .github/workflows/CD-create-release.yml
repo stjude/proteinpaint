@@ -17,8 +17,8 @@ on:
         type: choice
         description: Include
         options:
-          - core only
-          - core + Docker image
+          - npm packages + Docker image
+          - npm packages only
 
       build_secret:
         type: string
@@ -75,7 +75,7 @@ jobs:
         run: |
           exclude="";
 
-          if [ "${{ github.event.inputs.include }}" = "core only" ]; then
+          if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
             exclude="-x=container";
           fi
 
@@ -95,7 +95,7 @@ jobs:
         run: 
           sleep 90;
           
-          if [ "${{ github.event.inputs.include }}" = "core + Docker image" ]; then
+          if [ "${{ github.event.inputs.include }}" = "npm packages + Docker image" ]; then
             cd container;
             ./build2.sh -r "ghcr.io/stjude/" server;
             TAG="$(node -p "require('./server/package.json').version")";
