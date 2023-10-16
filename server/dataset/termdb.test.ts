@@ -243,7 +243,9 @@ function copyDataFilesFromRepo2Tp() {
 	const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 
-	if (!targetDir.endsWith(datadir)) {
+	// no need to set the symlink when the target TermdbTest dir
+	// already equals the datadir under serverconfig.tpmasterdir
+	if (targetDir != datadir) {
 		access(datadir, constants.R_OK | constants.W_OK, err => {
 			if (!err) {
 				try {
