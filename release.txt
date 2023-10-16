@@ -1,1 +1,2 @@
-
+Fixes:
+- Supply the svg element as argument to the disco plot download handler
