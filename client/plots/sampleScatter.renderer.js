@@ -268,6 +268,7 @@ export function setRenderers(self) {
 	}
 
 	self.render3DSerie = async function (chart) {
+		console.log('render3D')
 		const THREE = await import('three')
 		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
@@ -275,37 +276,49 @@ export function setRenderers(self) {
 		self.canvas.width = self.settings.svgw * 1.5
 		self.canvas.height = self.settings.svgh * 1.5
 		chart.chartDiv.style('margin', '20px 20px')
-		const fov = 30
+		const fov = 60
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
 		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 		controls.update()
-		camera.position.set(2, 1, 5)
+		camera.position.set(0, 0, 1)
 		camera.lookAt(scene.position)
-		const axesHelper = new THREE.AxesHelper(3)
-		scene.add(axesHelper)
+		//const axesHelper = new THREE.AxesHelper(3)
+		//scene.add(axesHelper)
 		camera.updateMatrix()
 		const whiteColor = new THREE.Color('rgb(255,255,255)')
 		scene.background = whiteColor
 
 		const light = new THREE.DirectionalLight(whiteColor, 2)
-		light.position.set(2, 1, 5)
-		scene.add(light)
-
+		//light.position.set(2, 1, 5)
+		//scene.add(light)
+		const geometry = new THREE.BufferGeometry()
+		const vertices = []
+		const colors = []
 		for (const sample of chart.data.samples) {
 			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
-			let y = (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
+			let y = (chart.yAxisScale(sample.y) - chart.yScaleMax) / -self.canvas.height
 			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
+			vertices.push(x - 0.5, y + 0.5, z)
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
-			const geometry = new THREE.SphereGeometry(0.015, 32)
-			const material = new THREE.MeshLambertMaterial({ color })
-			const circle = new THREE.Mesh(geometry, material)
-			scene.add(circle)
-			circle.position.set(x, y, z)
-			scene.add(circle)
+			colors.push(color.r, color.g, color.b)
 		}
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+		const tex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png')
+
+		const material = new THREE.PointsMaterial({
+			size: 0.01,
+			sizeAttenuation: true,
+			alphaTest: 0.5,
+			map: tex,
+			vertexColors: true
+		})
+
+		const particles = new THREE.Points(geometry, material)
+		scene.add(particles)
 
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas })
 

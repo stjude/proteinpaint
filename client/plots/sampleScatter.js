@@ -152,7 +152,7 @@ class Scatter {
 			if (data.isLast) this.createChart(key, data, i)
 			else this.createChart(key, data, 0)
 		}
-		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
+		this.is3D = true //this.config.term && this.config.term0?.q.mode == 'continuous'
 		await this.setControls()
 		await this.processData()
 		this.render()
