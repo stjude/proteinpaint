@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Supply the svg element as argument to the disco plot download handler
+
 
 ## 2.29.3
 
