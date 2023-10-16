@@ -1266,20 +1266,21 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			groups[]
 				values[] // using integer sample id
 	*/
-	q.get = async function (param) {
+        console.log("q:",q)
+        q.get = async function (param) {
 		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
-		if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
-		if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
+		if (param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[0].values.length<1'
+		if (param.samplelst.groups[1].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[1].values.length<1'
 		// txt file uses string sample name, must convert integer sample id to string
 		const group1names = []
-		for (const s of param.samplelst.groups[0].values) {
-			if (!Number.isInteger(s.sampleId)) continue
+	        for (const s of param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list) {
+		        if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
-			if (!n) continue
+		        if (!n) continue
 			group1names.push(n)
 		}
 		const group2names = []
-		for (const s of param.samplelst.groups[1].values) {
+		for (const s of param.samplelst.groups[1].filter.lst[0].tvs.term.values.Group.list) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 			if (!n) continue
