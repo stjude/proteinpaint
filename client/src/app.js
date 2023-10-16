@@ -19,6 +19,7 @@ import { sayerror } from '#dom/sayerror'
 import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { openSandbox } from '../appdrawer/adSandbox'
+import { InputSearch } from '../dom/search'
 
 /*
 
@@ -355,136 +356,43 @@ async function makeheader(app, obj, jwt) {
 		tip.hide()
 	}
 
-	const help = [
-		{
-			label: 'Embed in your website',
-			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
-		},
-		{
-			label: 'Make a Study View',
-			link: 'https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE'
-		},
-		{
-			label: 'URL parameters',
-			link: 'https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing'
-		},
-		{
-			label: 'All tutorials',
-			link: 'https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing'
-		},
-		{
-			label: 'User community',
-			link: 'https://groups.google.com/g/proteinpaint'
-		}
-	]
+	const searchItems = async () => {
+		const userInput = d3select('input').property('value').trim()
 
-	async function searchResults() {
-		/*Create a menu of search results in the header*/
-
-		if (!input.property('value')) {
-			tip.hide()
-			return
-		}
-		tip.clear().showunder(input.node())
-		const userInput = input.property('value').trim()
-
-		const data = {
-			/* Add more 'types' (e.g. genes, SNPs, etc.) of results here.
-			Update showResultsList with desired behavior
-			*/
-			genes: await findgenelst(app, userInput, app.selectgenome.property('value'), tip, jwt)
-		}
-		/** Returns arrs for cards and datasets */
-		await findAppDrawerElements(app, userInput, data)
-		//Always show help section last
-		data.help = help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase()))
-
-		const resultsWrapper = tip.d.append('div')
-		await resultsWrapper
-			.append('div')
-			.style('display', 'flex')
-			.selectAll()
-			.data(Object.entries(data).filter(arr => arr.length >= 1))
-			.enter()
-			.append('div')
-			.style('display', 'block')
-			.style('border-left', '0.5px solid lightgrey')
-			.each(showResultsList)
+		const data = [
+			{
+				title: 'Genes',
+				items: await findgenelst(app, userInput, app.selectgenome.property('value'), tip, jwt),
+				callback: gene => {
+					app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+					tip.hide()
+					findgene2paint(app, gene, app.selectgenome.property('value'), jwt)
+				}
+			},
+			{
+				title: 'Help',
+				items: help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase())),
+				color: '#faebd9',
+				callback: d => {
+					window.open(d.link, d.label)
+				}
+			}
+		]
+		await findAppDrawerElements(app, userInput, data, tip)
+		return data
 	}
 
-	function showResultsList(results) {
-		/*
-		results = [data[type], arr]
-		*/
-		if (results[1].length == 0) return
-		results.wrapper = d3select(this)
-		results.wrapper.style('padding', '5px')
-		results.title = results.wrapper
-			.append('div')
-			.style('padding', '3px 0px 5px')
-			.style('opacity', 0.65)
-			.style('font-size', '0.8em')
-
-		if (results[0] == 'genes') {
-			results.title.text('Genes')
-			for (const gene of results[1]) {
-				results.wrapper
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('display', 'block')
-					.style('padding-left', '10px')
-					.attr('isgene', '1')
-					.text(gene)
-					.on('click', () => {
-						app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-						tip.hide()
-						findgene2paint(app, gene, app.selectgenome.property('value'), jwt)
-					})
-			}
-		} else if (results[0] == 'cards' || results[0] == 'datasets') {
-			results.title.text(results[0] == 'cards' ? 'Tracks and Apps' : 'Datasets')
-			console.log(app.drawer.opts)
-			const opts = {
-				app: app.drawer.opts,
-				sandboxDiv: app.drawer.opts.sandboxDiv,
-				genomes: app.genomes,
-				fromApp: true
-			}
-			for (const element of results[1]) {
-				results.wrapper
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('background-color', results[0] == 'cards' ? '#e1edf7' : '#e5f5e4')
-					.style('padding-left', '10px')
-					.text(element.name)
-					.on('click', () => {
-						app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-						tip.hide()
-						openSandbox(element, opts)
-					})
-			}
-		} else if (results[0] == 'help') {
-			results.title.text('Help')
-			for (const d of results[1]) results.wrapper.append('p').html(`<a href=${d.link} target=_blank>${d.label}</a>`)
-		}
-	}
-
-	const debouncer = debounce(searchResults, 300)
-	const input = headbox
-		.append('div')
-		.attr('class', 'sjpp-input-div-gene-pos')
-		.style('padding', padw_sm)
-		.append('input')
-		.attr('class', 'sjpp-input-gene-pos')
-		.style('border', 'solid 1px ' + common.defaultcolor)
-		.attr('size', 20)
-		.attr('placeholder', 'Gene, position, or SNP')
-		.attr('title', 'Search by gene, SNP, or position')
-		.on('keyup', event => {
-			if (client.keyupEnter(event)) entersearch()
-			else debouncer()
-		})
-	// input.node().focus() Causes app drawer to unsmoothly open and close
+	new InputSearch({
+		holder: headbox,
+		tip,
+		style: {
+			padding: padw_sm,
+			border: `'solid 1px ${common.defaultcolor}`
+		},
+		placeholder: 'Gene, position, or SNP',
+		title: 'Search by gene, SNP, or position',
+		searchItems: searchItems
+	}).initUI()
 
 	const genome_select_div = headbox.append('div').attr('class', 'sjpp-genome-select-div').style('padding', padw_sm)
 
@@ -522,6 +430,29 @@ async function makeheader(app, obj, jwt) {
 		padw_sm,
 		cardsPath: app.cardsPath
 	})
+
+	const help = [
+		{
+			label: 'Embed in your website',
+			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
+		},
+		{
+			label: 'Make a Study View',
+			link: 'https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE'
+		},
+		{
+			label: 'URL parameters',
+			link: 'https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing'
+		},
+		{
+			label: 'All tutorials',
+			link: 'https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing'
+		},
+		{
+			label: 'User community',
+			link: 'https://groups.google.com/g/proteinpaint'
+		}
+	]
 
 	headbox
 		.append('span')
@@ -588,7 +519,7 @@ function update_genome_browser_btn(app) {
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
 }
 
-async function findAppDrawerElements(app, input, data) {
+async function findAppDrawerElements(app, input, data, tip) {
 	const re = await dofetch3(app.cardsPath + '/index.json')
 	if (re.error) throw `Problem retrieving cards index.json`
 	const userInput = input.toLowerCase()
@@ -602,9 +533,37 @@ async function findAppDrawerElements(app, input, data) {
 			return searchTermFound || elem.name.toLowerCase().includes(userInput)
 		})
 		.sort((a, b) => a.name.localeCompare(b.name))
-	data.cards = filteredElements.filter(c => c.type == 'card')
-	data.datasets = filteredElements.filter(c => c.type == 'dsButton')
-	return
+
+	const opts = {
+		app: app.drawer.opts,
+		sandboxDiv: app.drawer.opts.sandboxDiv,
+		genomes: app.genomes,
+		fromApp: true
+	}
+
+	data.push(
+		{
+			title: 'Tracks and Apps',
+			items: filteredElements.filter(c => c.type == 'card'),
+			color: '#e1edf7',
+			callback: element => {
+				app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+				tip.hide()
+				openSandbox(element, opts)
+			}
+		},
+		{
+			title: 'Datasets',
+			items: filteredElements.filter(c => c.type == 'dsButton'),
+			color: '#e5f5e4',
+			callback: element => {
+				app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+				tip.hide()
+				openSandbox(element, opts)
+			}
+		}
+	)
+	return data
 }
 
 async function findgenelst(app, str, genome, tip, jwt) {
