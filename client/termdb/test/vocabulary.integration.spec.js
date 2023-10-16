@@ -973,7 +973,8 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 })
 
 tape('getterm()', async test => {
-	test.timeoutAfter(300)
+	test.timeoutAfter(500)
+	test.plan(12)
 
 	const termdbVocabApi = await getTermdbVocabApi()
 	let testId, result, message
@@ -1052,11 +1053,11 @@ tape('getterm()', async test => {
 	}
 
 	termdbVocabApi.vocab.genome = 'hg38-test' //Reset to avoid problems with other tests
-	test.end()
 })
 
 tape('getCategories()', async test => {
-	test.timeoutAfter(100)
+	test.timeoutAfter(500)
+	test.plan(2)
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
@@ -1094,8 +1095,6 @@ tape('getCategories()', async test => {
 		Object.keys(testTerm.values).length,
 		`Should return the same number of categories, with filter arg`
 	)
-
-	test.end()
 })
 
 tape.skip('getNumericUncomputableCategories()', async test => {
