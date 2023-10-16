@@ -7,11 +7,11 @@ export class InputSearch {
 	constructor(opts) {
 		this.holder = opts.holder
 		this.tip = opts.tip || new Menu({ border: '', padding: '0px' })
-		this.style = opts.style
-		this.placeholder = opts.placeholder
-		this.title = opts.title
+		this.style = opts.style || {}
+		this.placeholder = opts.placeholder || ''
+		this.title = opts.title || ''
 		this.searchItems = opts.searchItems
-		this.initUI
+		this.app = opts.app
 	}
 
 	initUI() {
@@ -24,7 +24,7 @@ export class InputSearch {
 			.attr('placeholder', this.placeholder || '')
 			.attr('title', this.title || '')
 			.on('keyup', async event => {
-				// if (keyupEnter(event))
+				if (keyupEnter(event)) this.enterSearch()
 				debounce(this.addSearchItems(), 400)
 			})
 	}
@@ -55,23 +55,36 @@ export class InputSearch {
 		result.wrapper = select(this)
 		result.wrapper.style('padding', '5px')
 		result.titleDiv = result.wrapper
-			.append('div')
+			.append('span')
 			.style('padding', '3px 0px 5px')
 			.style('opacity', 0.65)
 			.style('font-size', '0.8em')
 			.text(result.title)
-		for (const item of result.items) {
-			result.wrapper
-				.append('div')
-				.classed('sja_menuoption', true)
-				.classed('sjpp-search-result', true)
-				.style('display', 'block')
-				.style('padding-left', '10px')
-				.style('background-color', result.color || '')
-				.text(item.name || item.label || item)
-				.on('click', () => {
-					result.callback(item)
-				})
-		}
+
+		await result.wrapper
+			.append('div')
+			.classed('sjpp-result-wrapper', true)
+			.selectAll('div')
+			.data(result.items)
+			.enter()
+			.append('div')
+			.classed('sja_menuoption', true)
+			.classed('sjpp-search-result', true)
+			.style('display', 'block')
+			.style('padding-left', '10px')
+			.style('background-color', result.color || '')
+			.text(d => d.name || d.label || d)
+			.on('click', item => {
+				result.callback(item)
+			})
+	}
+
+	enterSearch() {
+		if (!this.input.property('value').trim()) return
+		const wrapper = this.tip.d.select('.sjpp-result-wrapper').node()
+		const result = this.tip.d.select('.sjpp-search-result').node()
+		wrapper.__data__.callback(result.__data__)
+		this.input.property('value', '')
+		this.tip.hide()
 	}
 }
