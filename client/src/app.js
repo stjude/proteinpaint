@@ -109,9 +109,9 @@ export function runproteinpaint(arg) {
 	app.holder = d3select(arg.holder ? arg.holder : document.body)
 		.append('div')
 		.attr('class', 'sja_root_holder')
+		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
 		.style('font', '1em Arial, sans-serif')
 		.style('color', 'black')
-		.datum({ clientVersion: `___current-proteinpaint-client-version___` })
 
 	app.sandbox_header = arg.sandbox_header || undefined
 
