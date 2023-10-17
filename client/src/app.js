@@ -106,9 +106,11 @@ export function runproteinpaint(arg) {
 		return
 	}
 	// parse embedding arguments
+
 	app.holder = d3select(arg.holder ? arg.holder : document.body)
 		.append('div')
 		.attr('class', 'sja_root_holder')
+		//must not use the method of ".datum({ clientVersion })", as d3 propagates bound data custom property to all descendents and are accidentally passed to event listeners
 		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
 		.style('font', '1em Arial, sans-serif')
 		.style('color', 'black')
