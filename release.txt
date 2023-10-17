@@ -1,1 +1,2 @@
-
+Fixes:
+- in termsetting constructor option, getBodyParams() replaces getCurrentGeneNames() as a general and flexible solution

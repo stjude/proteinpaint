@@ -41,16 +41,18 @@ export function getHandler(self: NumericTermSettingInstance) {
 				xpad: 10,
 				ypad: 20
 			}
-			const d = await self.vocabApi.getViolinPlotData({
-				termid: self.term.id,
-				filter: self.filter,
-				svgw: plot_size.width,
-				orientation: 'horizontal',
-				datasymbol: 'bean',
-				radius: 5,
-				strokeWidth: 0.2,
-				currentGeneNames: self.opts.getCurrentGeneNames?.()
-			})
+			const d = await self.vocabApi.getViolinPlotData(
+				{
+					termid: self.term.id,
+					filter: self.filter,
+					svgw: plot_size.width,
+					orientation: 'horizontal',
+					datasymbol: 'bean',
+					radius: 5,
+					strokeWidth: 0.2
+				},
+				self.opts.getBodyParams?.()
+			)
 			const density_data = convertViolinData(d)
 			const svg = densityDiv.append('svg')
 			const density_plot_opts = {

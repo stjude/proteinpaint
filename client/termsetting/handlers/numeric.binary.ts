@@ -51,21 +51,19 @@ export function getHandler(self: NumericTermSettingInstance) {
 				.style('padding', '10px')
 				.style('text-align', 'center')
 				.html('Getting distribution data ...<br/>')
-			// try {
-			const d = await self.vocabApi.getViolinPlotData({
-				termid: self.term.id,
-				filter: self.filter,
-				svgw: self.num_obj.plot_size.width,
-				orientation: 'horizontal',
-				datasymbol: 'bean',
-				radius: 5,
-				strokeWidth: 0.2,
-				currentGeneNames: self.opts.getCurrentGeneNames?.()
-			})
+			const d = await self.vocabApi.getViolinPlotData(
+				{
+					termid: self.term.id,
+					filter: self.filter,
+					svgw: self.num_obj.plot_size.width,
+					orientation: 'horizontal',
+					datasymbol: 'bean',
+					radius: 5,
+					strokeWidth: 0.2
+				},
+				self.opts.getBodyParams?.()
+			)
 			self.num_obj.density_data = convertViolinData(d)
-			// } catch (e) {
-			// 	throw e
-			// }
 			self.dom.num_holder = div
 			div.selectAll('*').remove()
 			self.dom.bins_div = div.append('div').style('padding', '5px')
