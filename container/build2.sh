@@ -36,6 +36,7 @@ set -x
 while getopts "zr:b:c:h" opt; do
 	case "${opt}" in
 	z)
+    # install proteinpaint-* builds from tarballs, not published packages
 		PKGPATH=/home/root/pp/tmppack
 		;;
 	r)
@@ -116,10 +117,12 @@ elif [[ ! -f "./tmppack/$SERVERTGZFILE" ]]; then
 fi
 
 if [[ "$SERVERTGZ" != "" ]]; then
+	cd $SUBDIR # so that the correct package.json is updated
 	npm pkg set dependencies.@sjcrh/proteinpaint-server=$SERVERTGZ
 	if [[ "$SUBDIR" == "full" ]]; then
 		npm pkg set dependencies.@sjcrh/proteinpaint-front=$SERVERTGZ
 	fi
+	cd ..
 fi
 
 ###############
