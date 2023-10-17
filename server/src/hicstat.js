@@ -31,10 +31,8 @@ export async function do_hicstat(file, isurl) {
 	let normalization = []
 	if (version == 8 || version == 7) {
 		const fileSize = isurl ? await getUrlSize(file) : getFileSize(file)
-		console.log(fileSize - footerPosition)
 		const vectorView = await getVectorView(file, footerPosition, fileSize - footerPosition)
 		const nbytesV5 = vectorView.getInt32(0, true)
-		console.log(nbytesV5)
 		normalization = getNormalization(vectorView, nbytesV5 + 4)
 	}
 	const genomeId = getString()
@@ -176,7 +174,6 @@ export async function do_hicstat(file, isurl) {
 	async function readHicUrl(url, position, length) {
 		try {
 			const range = position + '-' + (position + length - 1)
-			console.log(range)
 			const response = await got(url, {
 				headers: { Range: 'bytes=' + range }
 			}).buffer()
