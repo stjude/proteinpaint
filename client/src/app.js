@@ -9,7 +9,6 @@ import { string2pos, invalidcoord } from './coord'
 import { loadstudycohort } from './tp.init'
 import { rgb as d3rgb } from 'd3-color'
 import blockinit from './block.init'
-import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import { appDrawerInit } from '../appdrawer/app'
@@ -19,7 +18,7 @@ import { sayerror } from '#dom/sayerror'
 import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { openSandbox } from '../appdrawer/adSandbox'
-import { InputSearch } from '../dom/search'
+import { InputSearch } from '../dom/search.ts'
 
 /*
 
@@ -343,7 +342,6 @@ async function makeheader(app, obj, jwt) {
 
 	const searchItems = async () => {
 		const userInput = d3select('input').property('value').trim()
-
 		const data = [
 			{
 				title: 'Genes',
@@ -567,8 +565,9 @@ async function findgenelst(app, str, genome, tip, jwt) {
 		if (!data.hits) throw '.hits[] missing'
 		return data.hits
 	} catch (err) {
-		if (err.stack) console.log(err.stack)
-		throw err
+		// err is likely "invalid character in gene name". ignore and continue
+		// if (err.stack) console.log(err.stack)
+		// throw err
 	}
 }
 
