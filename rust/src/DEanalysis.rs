@@ -53,9 +53,9 @@ fn input_data(
     let mut control_indexes_original: Vec<usize> = Vec::with_capacity(control_list.len());
     let gene_name_index = headers.iter().position(|r| r == &"geneID");
     let gene_symbol_index = headers.iter().position(|r| r == &"geneSymbol");
-    let mut case_samples_not_found: Vec<&str> = Vec::with_capacity(case_list.len());
-    let mut control_samples_not_found: Vec<&str> = Vec::with_capacity(control_list.len());    
-    
+    //let mut case_samples_not_found: Vec<&str> = Vec::with_capacity(case_list.len());
+    //let mut control_samples_not_found: Vec<&str> = Vec::with_capacity(control_list.len());
+
     for item in case_list {
         //println!("item:{}", item);
         let index = headers.iter().position(|r| r == item);
@@ -63,7 +63,7 @@ fn input_data(
             Some(n) => case_indexes_original.push(n),
             None => {
                 //panic!("Case sample not found:{}", item);
-		case_samples_not_found.push(item);
+                //case_samples_not_found.push(item);
             }
         }
     }
@@ -75,7 +75,7 @@ fn input_data(
             Some(n) => control_indexes_original.push(n),
             None => {
                 //panic!("Control sample not found:{}", item);
-		control_samples_not_found.push(item);
+                //control_samples_not_found.push(item);
             }
         }
     }
