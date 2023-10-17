@@ -65,8 +65,6 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
-	if (arg.versionOnly) return `___current-proteinpaint-client-version___`
-
 	// polyfill
 	if (!window.structuredClone) window.structuredClone = val => JSON.parse(JSON.stringify(val))
 	/*
@@ -113,6 +111,8 @@ export function runproteinpaint(arg) {
 		.attr('class', 'sja_root_holder')
 		.style('font', '1em Arial, sans-serif')
 		.style('color', 'black')
+		.datum({ clientVersion: `___current-proteinpaint-client-version___` })
+
 	app.sandbox_header = arg.sandbox_header || undefined
 
 	if (arg.jwt) {
