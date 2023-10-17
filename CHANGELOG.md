@@ -8,6 +8,9 @@ Fixes:
 - Supply the svg element as argument to the disco plot download handler
 - in termsetting constructor option, getBodyParams() replaces getCurrentGeneNames() as a general and flexible solution
 
+DevOps:
+- fix the tp dir setup and package.json deps update for the integration test CI
+
 
 ## 2.29.3
 
