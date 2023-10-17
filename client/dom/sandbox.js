@@ -61,9 +61,9 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 
 	const header_row = app_div
 		.append('div')
-		//fix for buttons not expanding to the height of the div and appearing on hover
+		//fix for buttons not expanding to the height of the div and noticeable on hover
 		.style('display', 'flex')
-		.style('align-content', 'center')
+		.style('align-items', 'center')
 		.style('justify-contents', 'center')
 		.attr('class', 'sjpp-output-sandbox-header')
 		.style('width', opts.style?.width || '95vw')
@@ -71,11 +71,13 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 	// close_btn
 	header_row
 		.append('div')
+		.style('display', 'flex')
+		.style('align-self', 'center')
 		.classed('sjpp-output-sandbox-close-bt', true)
 		.classed('sja_menuoption', true)
 		// .style('vertical-align', 'middle')
 		.html(
-			`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
+			`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="20" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
 		  <path stroke='#000' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
 		</svg>`
 		)
@@ -102,7 +104,6 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.append('div')
 		.classed('sjpp-output-sandbox-expand-btn', true)
 		.classed('sja_menuoption', true)
-	// .style('display', 'none')
 	// .style('vertical-align', 'sub')
 
 	const header = header_row.append('div').style('display', 'inline-block').style('padding', '5px 10px')
