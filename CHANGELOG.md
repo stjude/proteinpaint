@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Supply the svg element as argument to the disco plot download handler
+- in termsetting constructor option, getBodyParams() replaces getCurrentGeneNames() as a general and flexible solution
 
 
 ## 2.29.3
