@@ -152,7 +152,7 @@ class Scatter {
 			if (data.isLast) this.createChart(key, data, i)
 			else this.createChart(key, data, 0)
 		}
-		this.is3D = true //this.config.term && this.config.term0?.q.mode == 'continuous'
+		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
 		await this.setControls()
 		await this.processData()
 		this.render()
@@ -164,6 +164,7 @@ class Scatter {
 
 	createChart(id, data, i) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
+		if (cohortSamples.length > 10000) this.is2DThree = true
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
