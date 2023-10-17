@@ -12,6 +12,8 @@ type SearchGroupEntry = {
 	 * or as item, if item is a string
 	 */
 	items: any[]
+	/** Set the default callback behavior */
+	default: boolean
 	/** Default color for buttons is light grey. Specify color for the group */
 	color?: string
 	/** Callback for onclick or onenter */
@@ -61,7 +63,7 @@ export class InputSearch {
 			.attr('placeholder', this.placeholder)
 			.attr('title', this.title)
 			.on('keyup', async (event: KeyboardEvent) => {
-				if (keyupEnter(event)) this.enterSearch()
+				if (keyupEnter(event)) await this.enterSearch()
 				debounce(this.addSearchItems(), 400)
 			})
 	}
@@ -128,11 +130,16 @@ export class InputSearch {
 			})
 	}
 
-	enterSearch() {
+	async enterSearch() {
 		if (!this.input.property('value')) return
 		const wrapper = this.tip.d.select('.sjpp-result-wrapper').node()
 		const result = this.tip.d.select('.sjpp-search-result').node()
-		wrapper.__data__.callback(result.__data__)
+		if (result != null && result.__data__) wrapper.__data__.callback(result.__data__)
+		else {
+			const results = await this.searchItems()
+			const defaultCallback = results.filter(d => d.default)
+			defaultCallback[0].callback(this.input.property('value'))
+		}
 		this.input.property('value', '')
 		this.tip.hide()
 	}
