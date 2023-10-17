@@ -52,10 +52,7 @@ jobs:
 
       - name: Copy serverconfig.json to root
         run: |
-          cd container/ci
-          node -e 'const fs = require("fs"); const serverconfig = JSON.parse(fs.readFileSync("serverconfig.json")); tpmasterdir = "/home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}/server/test/tp"; fs.writeFileSync("data.json", JSON.stringify(serverconfig));'
-          TPMASTERDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
-          mv serverconfig.json ../
+          cp container/ci/serverconfig.json container/
 
       - name: Create cache folder
         run: mkdir cache
@@ -74,7 +71,7 @@ jobs:
       - name: Run local server and integration tests
         run: |
           cd container
-          cp ci/ci-run.sh ci-run.sh 
+          cp ci/ci-run.sh .
           ./ci-run.sh
           sleep 10 
           xvfb-run --auto-servernum npm run test:integration-ci
