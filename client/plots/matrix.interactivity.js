@@ -250,17 +250,24 @@ function setTermActions(self) {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			numericEditMenuVersion: ['discrete', 'continuous'],
-			getCurrentGeneNames: () => {
-				const tws = []
-				for (const grp of self.config.termgroups) {
-					tws.push(...grp.lst)
+
+			getBodyParams: () => {
+				const currentGeneNames = []
+				for (const g of self.config.termgroups) {
+					for (const t of g.lst) {
+						if (t.term.type == 'geneVariant') {
+							if (t.term.gene) {
+								currentGeneNames.push(t.term.gene)
+							} else if (t.term.name) {
+								currentGeneNames.push(t.term.name)
+							}
+						}
+					}
 				}
-				const termNames = tws
-					.filter(tw => tw.term.type === 'geneVariant')
-					.map(tw => tw.term.name)
-					.sort()
-				return termNames.length ? termNames : undefined
+				if (currentGeneNames.length) return { currentGeneNames }
+				return {}
 			},
+
 			//holder: {}, //self.dom.inputTd.append('div'),
 			//debug: opts.debug,
 			renderAs: 'none',
