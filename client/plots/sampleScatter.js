@@ -370,6 +370,7 @@ class Scatter {
 				inputs.splice(4, 0, dotSizeOption)
 				if (hasRef) inputs.splice(5, 0, refSizeOption)
 			}
+			inputs.push(showAxes)
 		}
 
 		this.components = {
