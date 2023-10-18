@@ -12,7 +12,7 @@ type SearchGroupEntry = {
 	 * or as item, if item is a string
 	 */
 	items: any[]
-	/** Set the default callback behavior */
+	/** Set the default callback behavior if no item(s) appear*/
 	default: boolean
 	/** Default color for buttons is light grey. Specify color for the group */
 	color?: string
@@ -28,6 +28,8 @@ type InputSearchOpts = {
 	tip?: any
 	/** Add any css style here */
 	style?: any
+	/**Size of the input field */
+	size?: number
 	placeholder?: string
 	title?: string
 }
@@ -38,6 +40,7 @@ export class InputSearch {
 	tip: any
 	searchItems: () => SearchGroupEntry[]
 	style: any
+	size: number
 	placeholder: string
 	/** Title for input, not title above each group */
 	title: string
@@ -48,6 +51,7 @@ export class InputSearch {
 		this.input = opts.holder.append('input')
 		this.tip = opts.tip || new Menu({ border: '', padding: '0px' })
 		this.style = opts.style || {}
+		this.size = opts.size || 20
 		this.placeholder = opts.placeholder || ''
 		this.title = opts.title || ''
 		this.searchItems = opts.searchItems
@@ -59,7 +63,7 @@ export class InputSearch {
 		this.input
 			.attr('class', 'sjpp-input-search')
 			.style('border', 'border' in this.style ? this.style.border : '5px')
-			.attr('size', 20)
+			.attr('size', this.size)
 			.attr('placeholder', this.placeholder)
 			.attr('title', this.title)
 			.on('keyup', async (event: KeyboardEvent) => {
