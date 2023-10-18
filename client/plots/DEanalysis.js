@@ -90,7 +90,7 @@ add:
 		.attr('text-anchor', 'middle')
 	const ylab = svg
 		.append('text')
-		.text('-log(P value)')
+		.text('-log10(adjusted P value)')
 		.attr('fill', 'black')
 		.attr('text-anchor', 'middle')
 
@@ -183,9 +183,7 @@ add:
 	}
 	resize(400, 400)
 
-        console.log("mavb:",mavb[0].adjusted_p_value)
         if (mavb[0].adjusted_p_value != undefined) {
-	        console.log("Hello")
 		// enable pvalue switching between adjusted and unadjusted
 		const row = holder.append('div').style('margin', '20px')
 		row.append('span').text('Select P value for Volcano plot:')
@@ -212,7 +210,7 @@ add:
 					const pv = useun ? d.adjusted_p_value : d.original_p_value 
 					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv == 0 ? maxlogpv : pv) + ')'
 				})
-				ylab.text(useun ? '-log10(adjusted P value)' : '-log10(P value)')
+				ylab.text(useun ? '-log10(adjusted P value)' : '-log10(original P value)')
 			})
 	                select.append('option').text('Adjusted P value')
 	    		select.append('option').text('Original P value')
