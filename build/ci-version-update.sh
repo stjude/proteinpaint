@@ -11,11 +11,9 @@
 
 set -euxo pipefail
 
-# see the allowed version types in https://docs.npmjs.com/cli/v8/commands/npm-version
-# e.g., <newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git
-TYPE=prerelease
-if [[ "$1" != "" ]]; then
-  TYPE=$1
+if [[ "$1" == "" ]]; then
+  echo "missing the version type value"
+  exit 1
 fi
 
 ##########
@@ -44,7 +42,13 @@ sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 # COMMIT CHANGES
 #################
 
+npm i --package-lock-only
 TAG="v$VERSION"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$BRANCH" == "release" || "$BRANCH" == "stage" ]]; then
+  HASH=$(git rev-parse --short HEAD)
+  TAG="$TAG-$HASH"
+fi
 COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
 echo "committing version change ..."
