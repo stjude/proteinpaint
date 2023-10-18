@@ -18,7 +18,7 @@ import { sayerror } from '#dom/sayerror'
 import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { InputSearch } from '../dom/search.ts'
-import { findAppDrawerElements, findgenelst } from './omniSearch'
+import { findAppDrawerElements, findgenelst, findgene2paint } from './omniSearch'
 
 /*
 
@@ -37,8 +37,6 @@ internal "app{}"
 .instanceTrackers{}
 
 ********** INTERNAL
-
-findgene2paint
 
 ********** loaders from parseEmbedThenUrl()
 
@@ -343,6 +341,7 @@ async function makeheader(app, obj, jwt) {
 	const tip = new Menu({ border: '', padding: '0px' })
 
 	const searchItems = async () => {
+		//TODO eventually move to omniSearch.js
 		const userInput = d3select('input').property('value').trim()
 		const data = [
 			{
@@ -366,10 +365,9 @@ async function makeheader(app, obj, jwt) {
 				window.open(d.link, d.label)
 			}
 		})
-
 		return data
 	}
-
+	//TODO eventually move to omniSearch.js
 	new InputSearch({
 		holder: headbox,
 		tip,
@@ -377,8 +375,9 @@ async function makeheader(app, obj, jwt) {
 			padding: padw_sm,
 			border: `'solid 1px ${common.defaultcolor}`
 		},
-		placeholder: 'Gene, position, or SNP',
-		title: 'Search by gene, SNP, or position',
+		size: 32,
+		placeholder: 'Gene, position, SNP, app, or dataset',
+		title: 'Search by gene, SNP, position, app, or dataset',
 		searchItems: searchItems
 	}).initUI()
 
@@ -420,6 +419,7 @@ async function makeheader(app, obj, jwt) {
 	})
 
 	const help = [
+		/** Used in both the Help button and omni search */
 		{
 			label: 'Embed in your website',
 			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
@@ -439,6 +439,16 @@ async function makeheader(app, obj, jwt) {
 		{
 			label: 'User community',
 			link: 'https://groups.google.com/g/proteinpaint'
+		},
+		{
+			label: 'License ProteinPaint',
+			link: 'https://www.stjude.org/research/why-st-jude/shared-resources/technology-licensing/technologies/proteinpaint-web-application-for-visualizing-genomic-data-sj-15-0021.html',
+			onlySearch: true
+		},
+		{
+			label: 'Our Team',
+			link: 'https://proteinpaint.stjude.org/team/',
+			onlySearch: true
 		}
 	]
 
@@ -455,7 +465,7 @@ async function makeheader(app, obj, jwt) {
 				.append('div')
 				.style('padding', '5px 20px')
 				.selectAll('p')
-				.data(help)
+				.data(help.filter(d => !d.onlySearch))
 				.enter()
 				.append('p')
 				.html(d => `<a href=${d.link} target=_blank>${d.label}</a>`)
@@ -505,75 +515,6 @@ function make_genome_browser_btn(app, headbox, jwt) {
 function update_genome_browser_btn(app) {
 	app.genome_browser_btn.text(app.selectgenome.node().value + ' genome browser')
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
-}
-
-async function findgene2paint(str, app, genomename, jwt) {
-	const g = app.genomes[genomename]
-	if (!g) {
-		console.error('unknown genome ' + genomename)
-		return
-	}
-	const sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
-	sandbox_div.header.html(
-		'<div style="display:inline-block;">' +
-			str +
-			'</div><div class="sjpp-output-sandbox-title">' +
-			genomename +
-			'</div>'
-	)
-	// may yield tklst from url parameters
-	const urlp = urlmap()
-	const tklst = await parseurl.get_tklst(urlp, g)
-
-	const pos = string2pos(str, g)
-	if (pos) {
-		// input is coordinate, launch block
-		const par = {
-			hostURL: app.hostURL,
-			jwt,
-			holder: sandbox_div.body,
-			genome: g,
-			nobox: true,
-			chr: pos.chr,
-			start: pos.start,
-			stop: pos.stop,
-			dogtag: genomename,
-			tklst,
-			debugmode: app.debugmode
-		}
-		first_genetrack_tolist(g, par.tklst)
-
-		import('./block')
-			.then(b => new b.Block(par))
-			.catch(err => {
-				app.error0(err)
-			})
-		return
-	}
-
-	// input string is not coordinate, find gene match
-	const par = {
-		hostURL: app.hostURL,
-		jwt,
-		query: str,
-		genome: g,
-		holder: sandbox_div.body,
-		variantPageCall_snv: app.variantPageCall_snv,
-		samplecart: app.samplecart,
-		tklst,
-		debugmode: app.debugmode
-	}
-
-	// add svcnv tk from url param
-	const tmp = sessionStorage.getItem('urlp_mds')
-	if (tmp) {
-		const l = tmp.split(',')
-		if (l.length == 2) {
-			par.datasetqueries = [{ dataset: l[0], querykey: l[1] }]
-		}
-	}
-
-	await blockinit(par)
 }
 
 async function parseEmbedThenUrl(arg, app) {

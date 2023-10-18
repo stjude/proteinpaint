@@ -62,7 +62,8 @@
             "section": "tracks",
             "description": "Quantitative data at genomic positions",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/bigwig-square.png",
-            "sandboxJson": "bigwig"
+            "sandboxJson": "bigwig",
+            "searchterms": []
         },
         {
             "type": "card",
@@ -163,7 +164,7 @@
             "description": " ",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/genefusion-square.png",
             "sandboxJson": "genefusion",
-            "searchterms": [""]
+            "searchterms": []
         },
         {
             "type": "card",
