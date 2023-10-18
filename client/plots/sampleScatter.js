@@ -236,6 +236,14 @@ class Scatter {
 			title: 'It represents the area of the reference symbol in square pixels',
 			min: 0
 		}
+		const showAxes = {
+			boxLabel: 'Visible',
+			label: 'Show axes',
+			type: 'checkbox',
+			chartType: 'sampleScatter',
+			settingsKey: 'showAxes',
+			title: `Option to show/hide plot axes`
+		}
 		const inputs = [
 			{
 				type: 'term',
@@ -258,14 +266,7 @@ class Scatter {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete']
 			},
-			{
-				boxLabel: 'Visible',
-				label: 'Show axes',
-				type: 'checkbox',
-				chartType: 'sampleScatter',
-				settingsKey: 'showAxes',
-				title: `Option to show/hide plot axes`
-			},
+
 			{
 				label: 'Opacity',
 				type: 'number',
@@ -288,6 +289,7 @@ class Scatter {
 				settingsKey: 'svgh'
 			}
 		]
+
 		if (this.config.term) {
 			inputs.unshift(
 				...[
@@ -348,13 +350,15 @@ class Scatter {
 					settingsKey: 'svgd'
 				})
 			}
+			inputs.push(showAxes)
+
 			inputs.push({
 				label: 'Default color',
 				type: 'color',
 				chartType: 'sampleScatter',
 				settingsKey: 'defaultColor'
 			})
-		} else {
+		} else if (!this.is2DLarge) {
 			inputs.splice(2, 0, shapeOption)
 			inputs.splice(3, 0, scaleDotOption)
 			if (this.config.scaleDotTW) {
