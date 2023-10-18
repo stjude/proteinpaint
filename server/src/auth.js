@@ -308,7 +308,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				throw `unestablished or expired browser session`
 			}
 			//if (!session.email) throw `missing session details: please login again through a supported portal`
-			checkIPaddress(req, session.ip)
+			checkIPaddress(req, session.ip, cred)
 
 			const time = Date.now()
 			/* !!! TODO: may rethink the following assumption !!!
@@ -431,7 +431,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				throw `Incorrect authorization route, use ${cred.authRoute}'`
 			}
 			const { email, ip } = await getJwtPayload(q, req.headers, cred)
-			checkIPaddress(req, ip)
+			checkIPaddress(req, ip, cred)
 			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred)
 			code = 401 // in case of jwt processing error
 			const jwt = await getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile, email)
@@ -713,8 +713,10 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	return { iat: payload.iat, email: payload.email, ip: payload.ip }
 }
 
-function checkIPaddress(req, ip) {
-	// must have a serverconfig.appEnable: ['trust proxy'] entry
+function checkIPaddress(req, ip, cred) {
+	// !!! must have a serverconfig.appEnable: ['trust proxy'] entry !!!
+	// may loosen the IP address check, if IPv6 or missing
+	if (cred.looseIpCheck && (req.ip?.includes(':') || !ip)) return
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
