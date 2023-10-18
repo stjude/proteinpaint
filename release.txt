@@ -1,1 +1,2 @@
-fix: Bug fix for HiC track to support remote files for versions 7,8 and 9
+Fixes:
+- In GDC disco and bam slicing UI, detect when total number of SSM exceeds view limit and indicate such

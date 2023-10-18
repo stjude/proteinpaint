@@ -2056,7 +2056,7 @@ export function handle_gdc_ssms(genomes) {
 			const ds = genome.datasets[req.query.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			if (!req.query.case_id) throw '.case_id missing'
-			res.send({ mlst: await getSingleSampleMutations(req.query, ds, genome) })
+			res.send(await getSingleSampleMutations(req.query, ds, genome))
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
@@ -2067,20 +2067,31 @@ export function handle_gdc_ssms(genomes) {
 async function getSingleSampleMutations(query, ds, genome) {
 	// query = {case_id}
 
-	// collect all data types
-	const mlst = []
+	// object is returned, can add any other attr e.g. total number of events exceeding view limit
+	const result = {
+		mlst: [], // collect events of all types into one array, identified by dt
+		dt2total: [] // for any dt, if total number exceeds view limit, report here
+	}
 
 	// ssm
 	{
 		const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
 			headers: getheaders(query),
 			body: JSON.stringify({
-				size: 1000,
+				size: 10000, // ssm max!
 				fields: isoform2ssm_query1_getvariant.fields.join(','),
 				filters: isoform2ssm_query1_getvariant.filters(query)
 			})
 		})
 		const re = JSON.parse(response.body)
+		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total not integer'
+		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+
+		if (re.data.hits.length < re.data.pagination.total) {
+			// total exceeds view limit, let client know
+			result.dt2total.push({ dt: 1, total: re.data.pagination.total }) // 1=snvindel
+		}
+
 		for (const hit of re.data.hits) {
 			// for each hit, create an element
 			// from list of consequences, find one from canonical isoform
@@ -2093,7 +2104,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 			// no aa change for utr variants
 			const aa = c.transcript.aa_change || c.transcript.consequence_type
 			const [dt, mclass, rank] = common.vepinfo(c.transcript.consequence_type)
-			mlst.push({
+			result.mlst.push({
 				dt: common.dtsnvindel,
 				mname: aa,
 				class: mclass,
@@ -2107,12 +2118,12 @@ async function getSingleSampleMutations(query, ds, genome) {
 	}
 
 	{
-		// cnv
+		// cnv TODO total
 		const tmp = await getCnvFusion4oneCase(query)
-		mlst.push(...tmp)
+		result.mlst.push(...tmp)
 	}
 
-	return mlst
+	return result
 }
 
 /*

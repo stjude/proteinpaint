@@ -120,19 +120,13 @@ export async function bamsliceui({
 	// each row is for a ui input
 	// formdiv will be cleared upon submission
 
-	const backBtnDiv = holder
-		.append('div')
-		.style('margin-left', '30px')
-		.style('display', 'none')
+	const backBtnDiv = holder.append('div').style('margin-left', '30px').style('display', 'none')
 	backBtnDiv
 		.append('button')
 		.html('&#171; Back to input form')
 		.on('click', () => {
 			backBtnDiv.style('display', 'none')
-			blockHolder
-				.style('display', 'none')
-				.selectAll('*')
-				.remove()
+			blockHolder.style('display', 'none').selectAll('*').remove()
 			formdiv.style('display', 'block')
 		})
 
@@ -156,10 +150,7 @@ export async function bamsliceui({
 
 	// hold toggle ui for ssm list and gene search
 	// contents are only rendered here after a case/file is found via gdc_search()
-	const ssmGeneDiv = formdiv
-		.append('div')
-		.style('padding', '3px 10px')
-		.style('display', 'none')
+	const ssmGeneDiv = formdiv.append('div').style('padding', '3px 10px').style('display', 'none')
 
 	// submit button, "no permission" alert
 	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
@@ -169,10 +160,7 @@ export async function bamsliceui({
 	}
 
 	if (urlp.has('gdc_id')) {
-		gdcid_input
-			.property('value', urlp.get('gdc_id'))
-			.node()
-			.dispatchEvent(new Event('keyup'))
+		gdcid_input.property('value', urlp.get('gdc_id')).node().dispatchEvent(new Event('keyup'))
 	}
 
 	//////////////////////// helper functions
@@ -182,22 +170,13 @@ export async function bamsliceui({
 		const tr = formDiv.insert('div')
 
 		// cell 1
-		tr.insert('div')
-			.style('display', 'inline-block')
-			.style('width', '15vw')
-			.text('GDC token file')
+		tr.insert('div').style('display', 'inline-block').style('width', '15vw').text('GDC token file')
 
 		// cell 2
 		const td = tr.insert('div').style('display', 'inline-block')
-		const input = td
-			.append('input')
-			.attr('type', 'file')
-			.attr('aria-label', 'GDC token file')
+		const input = td.append('input').attr('type', 'file').attr('aria-label', 'GDC token file')
 
-		const file_error_div = td
-			.append('span')
-			.style('margin-left', '20px')
-			.style('display', 'none')
+		const file_error_div = td.append('span').style('margin-left', '20px').style('display', 'none')
 		input.on('change', event => {
 			const file = event.target.files[0]
 			if (!file) {
@@ -224,7 +203,7 @@ export async function bamsliceui({
 				}
 				gdc_args.gdc_token = text
 			}
-			reader.onerror = function() {
+			reader.onerror = function () {
 				input.property('value', '')
 				show_input_check(file_error_div, 'Error reading file ' + file.name)
 				return
@@ -271,10 +250,7 @@ export async function bamsliceui({
 			.style('display', 'none')
 			.html('loading...')
 
-		const gdcid_error_div = td
-			.append('span')
-			.style('display', 'none')
-			.style('padding', '2px 5px')
+		const gdcid_error_div = td.append('span').style('display', 'none').style('padding', '2px 5px')
 
 		td.append('br') // add line break from input box
 		const listCaseFileHandle = td
@@ -293,17 +269,11 @@ export async function bamsliceui({
 
 		//////////////////////////
 		// row 2, to display details of case/file
-		const baminfo_div = formdiv
-			.append('div')
-			.style('display', 'none')
-			.style('margin', '20px 20px 20px 40px')
+		const baminfo_div = formdiv.append('div').style('display', 'none').style('margin', '20px 20px 20px 40px')
 		// either baminfo_table or bamselection_table is displayed
 		// baminfo_table is a static table showing details about one bam file
 		// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
-		const baminfo_table = baminfo_div
-			.append('div')
-			.attr('class', 'sja-gdcbam-onefiletable')
-			.style('display', 'none')
+		const baminfo_table = baminfo_div.append('div').attr('class', 'sja-gdcbam-onefiletable').style('display', 'none')
 		const bamselection_table = baminfo_div
 			.append('div')
 			.attr('class', 'sja-gdcbam-multifiletable')
@@ -414,10 +384,7 @@ export async function bamsliceui({
 		function update_singlefile_table(data, gdc_id) {
 			// will update table display, and also insert element into gdc_args.bam_files[]
 			baminfo_div.style('display', 'block')
-			baminfo_table
-				.style('display', 'block')
-				.selectAll('*')
-				.remove()
+			baminfo_table.style('display', 'block').selectAll('*').remove()
 			bamselection_table.style('display', 'none')
 
 			const onebam = data.file_metadata[0]
@@ -457,10 +424,7 @@ export async function bamsliceui({
 			}
 
 			baminfo_div.style('display', 'block')
-			bamselection_table
-				.style('display', 'block')
-				.selectAll('*')
-				.remove()
+			bamselection_table.style('display', 'block').selectAll('*').remove()
 			baminfo_table.style('display', 'none')
 			renderTable({
 				rows,
@@ -518,10 +482,7 @@ export async function bamsliceui({
 			tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
 			for (const caseName in data.case2files) {
 				const tr = table.append('tr').attr('class', 'sja_clb_gray')
-				tr.append('td')
-					.style('vertical-align', 'top')
-					.style('color', '#888')
-					.text(caseName)
+				tr.append('td').style('vertical-align', 'top').style('color', '#888').text(caseName)
 				const td2 = tr.append('td')
 				for (const f of data.case2files[caseName]) {
 					// f { sample_type, experimental_strategy, file_size, file_uuid }
@@ -531,10 +492,7 @@ export async function bamsliceui({
 						.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
 						.on('click', () => {
 							tip.hide()
-							gdcid_input
-								.property('value', f.file_uuid)
-								.node()
-								.dispatchEvent(new Event('keyup'))
+							gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('keyup'))
 						})
 				}
 			}
@@ -576,7 +534,7 @@ export async function bamsliceui({
 		// display toggle between ssm list and gene search
 		const tabs = [
 			{
-				label: ssmLst.length + ' variants',
+				label: `${ssmLst.length} variants${data.dt2total?.[0] ? ' (' + data.dt2total[0].total + ' total)' : ''}`,
 				callback: event => {
 					gdc_args.useSsmOrGene = 'ssm'
 				}
@@ -654,10 +612,7 @@ export async function bamsliceui({
 		}
 	}
 	async function temp_renderGeneSearch(div) {
-		const geneSearchRow = div
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', '300px auto')
+		const geneSearchRow = div.append('div').style('display', 'grid').style('grid-template-columns', '300px auto')
 		geneSearchRow.append('div').text('Enter gene, position, SNP, or variant')
 
 		// create gene search box
@@ -728,15 +683,8 @@ export async function bamsliceui({
 
 		// 2nd <td> as notification holder
 		const saydiv = div.insert('div').style('display', 'inline-block')
-		const noPermissionDiv = div
-			.insert('div')
-			.style('display', 'none')
-			.style('margin', '20px')
-		noPermissionDiv
-			.append('div')
-			.text('Access Alert')
-			.style('font-size', '1.5em')
-			.style('opacity', 0.4)
+		const noPermissionDiv = div.insert('div').style('display', 'none').style('margin', '20px')
+		noPermissionDiv.append('div').text('Access Alert').style('font-size', '1.5em').style('opacity', 0.4)
 		noPermissionDiv
 			.append('div')
 			.style('border-top', 'solid 1px #eee')
