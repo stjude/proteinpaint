@@ -183,7 +183,9 @@ add:
 	}
 	resize(400, 400)
 
-	if (mavb[0].adjusted_p_value != undefined) {
+        console.log("mavb:",mavb[0].adjusted_p_value)
+        if (mavb[0].adjusted_p_value != undefined) {
+	        console.log("Hello")
 		// enable pvalue switching between adjusted and unadjusted
 		const row = holder.append('div').style('margin', '20px')
 		row.append('span').text('Select P value for Volcano plot:')
@@ -195,7 +197,7 @@ add:
 				maxlogpv = 0
 				const useun = select.node().selectedIndex == 0
 				for (const d of mavb) {
-					const pv = useun ? d.original_p_value : d.adjusted_p_value
+				        const pv = useun ? d.adjusted_p_value : d.original_p_value
 					if (pv == 0) continue
 					minlogpv = Math.min(minlogpv, pv)
 					maxlogpv = Math.max(maxlogpv, pv)
@@ -207,13 +209,13 @@ add:
 					showline: true
 				})
 				dotg.attr('transform', d => {
-					const pv = useun ? d.original_p_value : d.adjusted_p_value
+					const pv = useun ? d.adjusted_p_value : d.original_p_value 
 					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv == 0 ? maxlogpv : pv) + ')'
 				})
-				ylab.text(useun ? '-log10(P value)' : '-log10(adjusted P value)')
+				ylab.text(useun ? '-log10(adjusted P value)' : '-log10(P value)')
 			})
-		select.append('option').text('Original P value')
-		select.append('option').text('Adjusted P value')
+	                select.append('option').text('Adjusted P value')
+	    		select.append('option').text('Original P value')
 	}
 
 	// add lasso for volcano plot
