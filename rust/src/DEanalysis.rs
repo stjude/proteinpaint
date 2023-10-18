@@ -1,4 +1,5 @@
 // cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
+// cd .. && cargo build --release && cat ~/sjpp/test.txt | target/release/DEanalysis
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Const;
@@ -200,8 +201,8 @@ fn main() {
                     let (filtered_matrix, lib_sizes, filtered_genes, filtered_gene_symbols) =
                         filter_by_expr(
                             &input_matrix,
-                            case_list.len(),
-                            control_list.len(),
+                            case_indexes.len(),
+                            control_indexes.len(),
                             gene_names,
                             gene_symbols,
                         );
