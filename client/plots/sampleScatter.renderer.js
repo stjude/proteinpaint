@@ -755,6 +755,7 @@ export function setRenderers(self) {
 			for (const chart of self.charts)
 				if (self.is2DLarge) self.k = 1
 				else chart.mainG.transition().duration(750).call(zoom.transform, zoomIdentity)
+			self.render()
 		}
 
 		function toggle_lasso() {
