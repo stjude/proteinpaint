@@ -30,7 +30,7 @@ export async function do_hicstat(file, isurl) {
 	const footerPosition = Number(getLong())
 	let normalization = []
 	if (version == 8 || version == 7) {
-		const fileSize = isurl ? await getUrlSize(file) : getFileSize(file)
+		const fileSize = isurl ? await getUrlSize(file) : await getFileSize(file)
 		const vectorView = await getVectorView(file, footerPosition, fileSize - footerPosition)
 		const nbytesV5 = vectorView.getInt32(0, true)
 		normalization = getNormalization(vectorView, nbytesV5 + 4)
@@ -156,8 +156,8 @@ export async function do_hicstat(file, isurl) {
 		return arrayBuffer
 	}
 
-	function getFileSize(path) {
-		const stats = fs.statSync(path)
+	async function getFileSize(path) {
+		const stats = await fs.promises.stat(path)
 		return stats.size
 	}
 
