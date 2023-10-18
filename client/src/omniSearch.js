@@ -95,6 +95,7 @@ function getFilteredElements(elements, userInput) {
 
 export async function findgenelst(str, genome, jwt) {
 	//TODO - including something here about if user input includes a special character to return rather than comment out catch
+	if (str.length == 0) return
 	try {
 		const data = await dofetch3('/genelookup', {
 			body: {

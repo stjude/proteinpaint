@@ -135,7 +135,7 @@ export class InputSearch {
 	}
 
 	async enterSearch() {
-		if (!this.input.property('value')) return
+		if (!this.input.property('value').trim()) return
 		const wrapper = this.tip.d.select('.sjpp-result-wrapper').node()
 		const result = this.tip.d.select('.sjpp-search-result').node()
 		if (result != null && result.__data__) wrapper.__data__.callback(result.__data__)
