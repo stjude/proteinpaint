@@ -1260,32 +1260,62 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
         q.file = path.join(serverconfig.tpmasterdir, q.file)
+        if (!q.samplesFile) throw 'missing samples file for gene count'
+        q.samplesFile = path.join(serverconfig.tpmasterdir, q.samplesFile)
+   
 	/*
 	param{}
 		samplelst{}
 			groups[]
 				values[] // using integer sample id
 	*/
-        console.log("q:",q)
         q.get = async function (param) {
+	        let raw_samples = fs.readFileSync(q.samplesFile, 'utf8', (err, data) => { // Reading file to determine which samples have rnaseq data
+                if (err) {
+                   console.error(err);
+                   return;
+                }
+		return data    
+                });
+	        const samples_with_rnaseq_counts=[]
+                for (const sample of raw_samples.split('\t')) {
+                    if (sample == 'geneID' || sample == 'geneSymbol' || sample == 'bioType' || sample == 'annotationLevel') {continue} // List of keywords in q.samplesFile which do not correspond to any particular sample
+		    else {
+                       samples_with_rnaseq_counts.push(sample)
+		    } 	
+	        }
+	        //console.log("samples_with_rnaseq_counts:",samples_with_rnaseq_counts)
+	    
 		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 		if (param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[0].values.length<1'
 		if (param.samplelst.groups[1].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[1].values.length<1'
 		// txt file uses string sample name, must convert integer sample id to string
-		const group1names = []
+	        const group1names = []
+	        let group1names_not_found = 0
 	        for (const s of param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list) {
 		        if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		        if (!n) continue
-			group1names.push(n)
+		        if (samples_with_rnaseq_counts.includes(n)) {
+			  group1names.push(n)
+		        } else {
+                          group1names_not_found += 1
+			}    
 		}
-		const group2names = []
+	        const group2names = []
+	        let group2names_not_found = 0
 		for (const s of param.samplelst.groups[1].filter.lst[0].tvs.term.values.Group.list) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
-			if (!n) continue
-			group2names.push(n)
+		        if (!n) continue
+		        if (samples_with_rnaseq_counts.includes(n)) {
+			    group2names.push(n)
+			} else {
+                          group2names_not_found += 1
+			}    
 		}
+	        console.log("Number of group1 names not found:", group1names_not_found)
+	        console.log("Number of group2 names not found:", group2names_not_found)
 		if (group1names.length < 1) throw 'group1names.length<1'
 		if (group2names.length < 1) throw 'group2names.length<1'
 		// pass group names and txt file to rust
@@ -1293,6 +1323,10 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	        const controls_string = group2names.map(i => i).join(',')
 	        const expression_input = {case: cases_string, control: controls_string, input_file: q.file, output_path: path.join(serverconfig.binpath, 'utils')}
 	        //console.log("expression_input:",expression_input)
+	        //fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+	        //	// For catching input to rust pipeline, in case of an error
+	        //	if (err) return console.log(err)
+	        //})
 	    
                 const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 	        let result

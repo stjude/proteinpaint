@@ -212,7 +212,6 @@ function addDEPlot(div, app, state) {
 		samplelst: { groups: state.groups }
 	}
 
-	console.log(state)
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
