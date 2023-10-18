@@ -73,7 +73,7 @@ export class InputSearch {
 	}
 
 	async addSearchItems() {
-		if (!this.input.property('value')) {
+		if (!this.input.property('value').trim()) {
 			this.tip.hide()
 			return
 		}
