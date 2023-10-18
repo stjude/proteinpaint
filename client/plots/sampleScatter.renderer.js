@@ -298,7 +298,8 @@ export function setRenderers(self) {
 		const material = new THREE.PointsMaterial({
 			size: 0.001,
 			sizeAttenuation: true,
-			alphaTest: 0.5,
+			transparent: true,
+			opacity: self.settings.opacity,
 			map: tex,
 			vertexColors: true
 		})
