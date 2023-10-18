@@ -310,7 +310,7 @@ export function setRenderers(self) {
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 
 		document.addEventListener('mousewheel', event => {
-			camera.position.z += event.deltaY / 500
+			if (event.ctrlKey) camera.position.z += event.deltaY / 500
 		})
 
 		function getVertices() {
