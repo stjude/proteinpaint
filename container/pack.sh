@@ -22,7 +22,8 @@ CLIENTDEPNAME="@sjcrh/proteinpaint-client"
 npm pkg set "devDependencies.$CLIENTDEPNAME"=/home/root/pp/tmppack/$CLIENTTGZ
 echo "packing front ..."
 npm pack
-FRONTTGZ=sjcrh-proteinpaint-front-*.tgz
+FRONTPKGVER=$(node -p "require('./package.json').version")
+FRONTTGZ=sjcrh-proteinpaint-front-$FRONTPKGVER.tgz
 mv $FRONTTGZ ../container/tmppack/
 git restore package.json
 
@@ -40,7 +41,20 @@ RUSTDEPNAME="@sjcrh/proteinpaint-rust"
 npm pkg set "dependencies.$RUSTDEPNAME"=/home/root/pp/tmppack/$RUSTTGZ
 echo "packing server ..."
 npm pack
-SERVERTGZ=sjcrh-proteinpaint-server-*.tgz
+SERVERTPKGVER=$(node -p "require('./package.json').version")
+SERVERTGZ=sjcrh-proteinpaint-server-$SERVERTPKGVER.tgz
 mv $SERVERTGZ ../container/tmppack/
 git restore package.json
+
+FRONTTDEPNAME="@sjcrh/proteinpaint-front"
+SERVERTDEPNAME="@sjcrh/proteinpaint-server"
+
+cd ../container/full/
+echo "update dependencies in container/full/package.json to point to server and front tarball inside of tmppack dir ..."
+npm pkg set "dependencies.$FRONTTDEPNAME"=/home/root/pp/tmppack/$FRONTTGZ
+npm pkg set "dependencies.$SERVERTDEPNAME"=/home/root/pp/tmppack/$SERVERTGZ
+
+cd ../server/
+echo "update dependencies in container/server/package.json to point to server tarball inside of tmppack dir ..."
+npm pkg set "dependencies.$SERVERTDEPNAME"=/home/root/pp/tmppack/$SERVERTGZ
 
