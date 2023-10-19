@@ -76,10 +76,9 @@ jobs:
             docker push ghcr.io/stjude/ppserver:latest
             docker push ghcr.io/stjude/ppfull:latest
 
-            # TODO: !!! fix merging back to master !!!
             echo "merging to master"
             git fetch --depth=10 origin master:master
             git switch master
-            git merge deps-image
+            git merge $BRANCH
             git push
           fi

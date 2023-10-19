@@ -3,7 +3,7 @@ name: "Release Packages"
 on:
   push:
     branches:
-      - release
+      - pkg-release
       - fake-release
     paths-ignore:
       - '**.md'
@@ -21,7 +21,16 @@ on:
         description: Build secret
 
 jobs:
+  unit_test:
+    uses: ./.github/workflows/CI-unit.yml
+    secrets: inherit # pragma: allowlist secret
+
+  integration_test:
+    uses: ./.github/workflows/CI-integration.yml
+    secrets: inherit # pragma: allowlist secret
+
   build:
+    needs: [unit_test, integration_test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -67,7 +76,7 @@ jobs:
           node-version: '16'
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
-          
+
       - name: ⚡ Cache
         uses: actions/cache@v2
         with:
@@ -92,11 +101,21 @@ jobs:
       - name: Publish packages
         run: |
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [[ "$BRANCH" != "release" && "$BRANCH" != "master" ]]; then 
+          if [[ "$BRANCH" != "pkg-release" && "$BRANCH" != "master" ]]; then 
             echo "skipping publishing"
-          else 
+          else
+            # ./build/bump.js is called from within `ci-version-update.sh`, 
+            # get the same updated workspaces but don't edit the package.json's (no -w option)
+            UPDATED=$(./build/bump.js prerelease)
             ./build/ci-npm-publish.sh "$UPDATED"
-            # !!! ---- merge back to master --- !!!
+
+            if [[ "$BRANCH" != "master" ]]; then
+              echo "merging to master"
+              git fetch --depth=10 origin master:master
+              git switch master
+              git merge $BRANCH
+              git push
+            fi
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}

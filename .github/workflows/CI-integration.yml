@@ -8,6 +8,7 @@ on:
       build_secret:
         type: string
         description: Build secret
+  workflow_call: {}
 
 jobs:
   build:
@@ -16,13 +17,15 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check secret
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
+          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
             echo "Wrong build secret."
             exit 1
           fi 
 
       - name: Check user permission
+        if: github.event_name == 'workflow_dispatch'
         id: check
         uses: scherermichael-oss/action-has-permission@master
         with:
@@ -31,9 +34,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Exit if user doesn't have write permission
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ steps.check.outputs.has-permission }}" = "false" ]
-            then
+          if [ "${{ steps.check.outputs.has-permission }}" = "false" ]; then
             echo "Only users with write permission are allowed to execute this workflow."
             exit 1
           fi

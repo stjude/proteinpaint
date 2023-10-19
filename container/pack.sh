@@ -6,26 +6,24 @@ set -euxo pipefail
 # - will pack workspaces 
 # - replace each workspace package.json's dependency versions
 #   with the tarball location as copied into the Docker build
+#
+# call from the proteinpaint/container dir
 
-# from the proteinpaint/container dir
+# defaults
+PKGPATH=/home/root/pp/tmppack
+TMPDIR=/home/root/pp/tmppack/
 
-WORKSPACES="rust server client front"
-if [[ "$1" != "" ]]; then
-	WORKSPACES="$1"
+if (( $# == 1 )); then
+	PKGPATH="$1"
 fi
 
-TMPDIR=/home/root/pp/tmppack/
-if [[ "$2" != "" ]]; then
+if (( $# == 2 )); then
+	PKGPATH="$1"
 	TMPDIR="$2"
 fi
 
 rm -rf tmppack
 mkdir tmppack
-
-PKGPATH=/home/root/pp/tmppack
-if (( $# == 1 )); then
-	PKGPATH="$1"
-fi
 
 FRONTTDEPNAME="@sjcrh/proteinpaint-front"
 SERVERTDEPNAME="@sjcrh/proteinpaint-server"
