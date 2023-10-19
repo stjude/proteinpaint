@@ -168,10 +168,13 @@ export async function do_hicstat(file, isurl) {
 		const out = await execPromise(`curl -I -L ${path}`)
 		const match = out.stdout.match(/content-length: ([0-9]*)/)
 		const fileSize = Number(match[1])
+
 		return fileSize
 	}
 
 	async function readHicUrl(url, position, length) {
+		const start = Date.now()
+
 		try {
 			const range = position + '-' + (position + length - 1)
 			const response = await got(url, {
@@ -179,6 +182,8 @@ export async function do_hicstat(file, isurl) {
 			}).buffer()
 			// convert buffer to arrayBuffer
 			const arrayBuffer = response.buffer //.slice(position, position + length)
+			let timeTaken = Date.now() - start
+			console.log(`Read ${length} bytes on file ${url} from ${position} on ${timeTaken / 1000} seconds`)
 			return arrayBuffer
 		} catch (error) {
 			console.log(error.response)
