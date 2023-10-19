@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.29.5
 
 Fixes:
 - In GDC disco and bam slicing UI, detect when total number of SSM exceeds view limit and indicate such
