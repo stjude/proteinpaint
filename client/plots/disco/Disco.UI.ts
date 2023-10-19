@@ -40,8 +40,8 @@ type Tab = {
 
 export function init_discoplotUI(
 	holder: Selection<HTMLDivElement, any, any, any>,
-	genomes: ScopedGenomes,
-	debugmode: boolean
+	genomes: ScopedGenomes
+	// debugmode: boolean
 ) {
 	const wrapper = holder
 		.append('div')
@@ -91,8 +91,8 @@ export function init_discoplotUI(
 	submitButton(controlBtns_div, obj, genomes, wrapper, holder)
 	uiutils.makeResetBtn(controlBtns_div, obj, '.disco_input')
 
-	//Remove after testing
-	if (debugmode) (window as any).doms = obj
+	// //Remove after testing
+	// if (debugmode) (window as any).doms = obj
 	return obj
 }
 
@@ -320,6 +320,10 @@ function submitButton(
 			} else {
 				const genomeObj = genomes[obj.genome!.options[obj.genome!.selectedIndex].text]
 				wrapper.remove()
+				uiutils.makeBackBtn(holder, () => {
+					holder.selectAll('*').remove()
+					init_discoplotUI(holder, genomes)
+				})
 				launch(obj.data as DiscoPlotArgs, genomeObj, holder)
 			}
 		})

@@ -141,10 +141,11 @@ export function makeBtn(args) {
 	const btn = args.div
 		.append('button')
 		.html(args.text)
-		.style('color', args.color || 'black')
-		.style('background-color', args.backgroundColor || '#F2F2F2')
-		.style('border', args.border || '2px solid #999')
-		.style('padding', args.padding || '5px 10px')
+		.style('color', 'color' in args ? args.color : 'black')
+		.style('background-color', 'backgroundColor' in args ? args.backgroundColor : '#F2F2F2')
+		.style('border', 'border' in args ? args.border : '2px solid #999')
+		.style('padding', 'padding' in args ? args.padding : '5px 10px')
+		.style('margin', 'margin' in args ? args.margin : '0px')
 		.style('cursor', 'pointer')
 
 	return btn
@@ -181,6 +182,17 @@ export function makeResetBtn(div, obj, selector) {
 		})
 
 	return reset
+}
+
+export function makeBackBtn(holder, callback) {
+	const back = makeBtn({
+		div: holder,
+		text: 'Back &#8617;',
+		backgroundColor: 'white',
+		color: 'grey',
+		padding: '4px 6px 0px 6px'
+	})
+	back.on('click', callback)
 }
 
 export function detectDelimiter(fileName) {
