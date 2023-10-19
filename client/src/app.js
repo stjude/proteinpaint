@@ -1386,7 +1386,11 @@ async function launch_tkUIs(arg, app) {
 	}
 	if (arg.tkui == 'disco') {
 		const p = await import('../plots/disco/Disco.UI')
-		p.init_discoplotUI(app.holder, app.genomes, app.debugmode)
+		p.init_discoplotUI(app.holder, app.genomes)
+	}
+	if (arg.tkui == 'hic') {
+		const p = await import('./hic.UI')
+		p.init_hicUI(app.holder, app.genomes, app.debugmode)
 	}
 }
 

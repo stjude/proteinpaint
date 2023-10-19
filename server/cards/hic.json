@@ -2,6 +2,15 @@
     "ribbonMessage": "Versions 7, 8 and 9 Hi-C files are accepted.<br> See the new example for displaying a hic data across two chromosomes.",
     "ppcalls": [
         {
+            "isUi": true, 
+            "runargs": {
+                "noheader": true,
+                "nobox": 1, 
+                "parseurl": false, 
+                "tkui": "hic"
+            }
+        },
+        {
             "label": "Hi-C",
             "urlparam": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic&&hictknorm=VC",
             "runargs": {
