@@ -108,16 +108,17 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	debug?: boolean | number //true or 1
 	//'snplocus' types
 	genomeObj?: any
-	//getBodyParams used but not documented??
+
 	//vocab??
-	//Methods
 
-	// optional method supplied by matrix, to work with geneVariant terms with gdc api
-	getCurrentGeneNames?: () => void
+	// required callback function. argument is the updated termwrapper object
+	callback: (f: TermWrapper | null) => void
 
-	callback?: (f: TermWrapper | null) => void
+	// ?
 	customFillTw?: (f: TermWrapper) => void
-	getBodyParams: () => any
+
+	// to pass in purpose and context-specific arguments that will be merged to client request parameters
+	getBodyParams?: () => any
 }
 
 /*** types supporting TermSettingInstance type ***/

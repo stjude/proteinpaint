@@ -22,6 +22,13 @@ export const api: any = {
 							embedder: 'localhost',
 							getcategories: 1,
 							tid: 'diaggrp',
+							term1_q: {
+								isAtomic: true,
+								hiddenValues: {},
+								type: 'values',
+								groupsetting: { disabled: true },
+								mode: 'discrete'
+							},
 							filter: {
 								type: 'tvslst',
 								in: true,

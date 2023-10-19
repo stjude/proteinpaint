@@ -9,7 +9,6 @@ import { string2pos, invalidcoord } from './coord'
 import { loadstudycohort } from './tp.init'
 import { rgb as d3rgb } from 'd3-color'
 import blockinit from './block.init'
-import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import { appDrawerInit } from '../appdrawer/app'
@@ -18,6 +17,8 @@ import { renderSandboxFormDiv, newSandboxDiv } from '#dom/sandbox'
 import { sayerror } from '#dom/sayerror'
 import { Menu } from '#dom/menu'
 import { first_genetrack_tolist } from '#common/1stGenetk'
+import { InputSearch } from '../dom/search.ts'
+import { findAppDrawerElements, findgenelst, findgene2paint } from './omniSearch'
 
 /*
 
@@ -36,8 +37,6 @@ internal "app{}"
 .instanceTrackers{}
 
 ********** INTERNAL
-
-findgene2paint
 
 ********** loaders from parseEmbedThenUrl()
 
@@ -65,8 +64,6 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
-	if (arg.versionOnly) return `___current-proteinpaint-client-version___`
-
 	// polyfill
 	if (!window.structuredClone) window.structuredClone = val => JSON.parse(JSON.stringify(val))
 	/*
@@ -108,11 +105,15 @@ export function runproteinpaint(arg) {
 		return
 	}
 	// parse embedding arguments
+
 	app.holder = d3select(arg.holder ? arg.holder : document.body)
 		.append('div')
 		.attr('class', 'sja_root_holder')
+		//must not use the method of ".datum({ clientVersion })", as d3 propagates bound data custom property to all descendents and are accidentally passed to event listeners
+		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
 		.style('font', '1em Arial, sans-serif')
 		.style('color', 'black')
+
 	app.sandbox_header = arg.sandbox_header || undefined
 
 	if (arg.jwt) {
@@ -339,42 +340,46 @@ async function makeheader(app, obj, jwt) {
 	// 2, search box
 	const tip = new Menu({ border: '', padding: '0px' })
 
-	function entersearch() {
-		app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-		// by pressing enter, if not gene will search snp
-		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
-		let str = input.property('value').trim()
-		if (!str) return
-		const hitgene = tip.d.select('.sja_menuoption')
-		if (hitgene.size() > 0 && hitgene.attr('isgene')) {
-			str = hitgene.text()
-		}
-		findgene2paint(app, str, app.selectgenome.property('value'), jwt)
-		input.property('value', '')
-		tip.hide()
-	}
-
-	function genesearch() {
-		// any other key typing
-		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt)
-	}
-	const debouncer = debounce(genesearch, 300)
-	const input = headbox
-		.append('div')
-		.attr('class', 'sjpp-input-div-gene-pos')
-		.style('padding', padw_sm)
-		.append('input')
-		.attr('class', 'sjpp-input-gene-pos')
-		.style('border', 'solid 1px ' + common.defaultcolor)
-		.attr('size', 20)
-		.attr('placeholder', 'Gene, position, or SNP')
-		.attr('title', 'Search by gene, SNP, or position')
-		.on('keyup', event => {
-			if (client.keyupEnter(event)) entersearch()
-			else debouncer()
+	const searchItems = async () => {
+		//TODO eventually move to omniSearch.js
+		const userInput = d3select('input').property('value').trim()
+		const data = [
+			{
+				title: 'Genes',
+				default: true,
+				items: await findgenelst(userInput, app.selectgenome.property('value'), jwt),
+				callback: gene => {
+					app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
+					tip.hide()
+					findgene2paint(gene, app, app.selectgenome.property('value'), jwt)
+				}
+			}
+		]
+		await findAppDrawerElements(app, userInput, data, tip)
+		//Keep 'Help' section last
+		data.push({
+			title: 'Help',
+			items: help.filter(d => d.label.toLowerCase().includes(userInput.toLowerCase())),
+			color: '#faebd9',
+			callback: d => {
+				window.open(d.link, d.label)
+			}
 		})
-	// input.node().focus() Causes app drawer to unsmoothly open and close
+		return data
+	}
+	//TODO eventually move to omniSearch.js
+	new InputSearch({
+		holder: headbox,
+		tip,
+		style: {
+			padding: padw_sm,
+			border: `'solid 1px ${common.defaultcolor}`
+		},
+		size: 32,
+		placeholder: 'Gene, position, SNP, app, or dataset',
+		title: 'Search by gene, SNP, position, app, or dataset',
+		searchItems: searchItems
+	}).initUI()
 
 	const genome_select_div = headbox.append('div').attr('class', 'sjpp-genome-select-div').style('padding', padw_sm)
 
@@ -413,39 +418,57 @@ async function makeheader(app, obj, jwt) {
 		cardsPath: app.cardsPath
 	})
 
+	const help = [
+		/** Used in both the Help button and omni search */
+		{
+			label: 'Embed in your website',
+			link: 'https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing'
+		},
+		{
+			label: 'Make a Study View',
+			link: 'https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE'
+		},
+		{
+			label: 'URL parameters',
+			link: 'https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing'
+		},
+		{
+			label: 'All tutorials',
+			link: 'https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing'
+		},
+		{
+			label: 'User community',
+			link: 'https://groups.google.com/g/proteinpaint'
+		},
+		{
+			label: 'License ProteinPaint',
+			link: 'https://www.stjude.org/research/why-st-jude/shared-resources/technology-licensing/technologies/proteinpaint-web-application-for-visualizing-genomic-data-sj-15-0021.html',
+			onlySearch: true
+		},
+		{
+			label: 'Our Team',
+			link: 'https://proteinpaint.stjude.org/team/',
+			onlySearch: true
+		}
+	]
+
 	headbox
 		.append('span')
 		.classed('sja_menuoption', true)
 		.style('padding', padw_sm)
 		.text('Help')
-		.on('click', event => {
+		.on('click', async event => {
 			const p = event.target.getBoundingClientRect()
-			const div = headtip
-				.clear()
-				.show(p.left - 0, p.top + p.height + 5)
-				.d.append('div')
+			const div = headtip.clear().show(p.left - 0, p.top + p.height + 5)
+
+			await div.d
+				.append('div')
 				.style('padding', '5px 20px')
-			div
+				.selectAll('p')
+				.data(help.filter(d => !d.onlySearch))
+				.enter()
 				.append('p')
-				.html(
-					'<a href=https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit?usp=sharing target=_blank>Embed in your website</a>'
-				)
-			div
-				.append('p')
-				.html(
-					'<a href=https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE target=_blank>Make a Study View</a>'
-				)
-			div
-				.append('p')
-				.html(
-					'<a href=https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit?usp=sharing target=_blank>URL parameters</a>'
-				)
-			div
-				.append('p')
-				.html(
-					'<a href=https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing target=_blank>All tutorials</a>'
-				)
-			div.append('p').html('<a href=https://groups.google.com/g/proteinpaint target=_blank>User community</a>')
+				.html(d => `<a href=${d.link} target=_blank>${d.label}</a>`)
 		})
 }
 
@@ -461,13 +484,12 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', (event, genomename) => {
-			let sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
-
 			const g = app.genomes[genomename]
 			if (!g) {
 				alert('Invalid genome name: ' + genomename)
 				return
 			}
+			const sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
 			sandbox_div.header.text(genomename + ' genome browser')
 
 			const par = {
@@ -493,110 +515,6 @@ function make_genome_browser_btn(app, headbox, jwt) {
 function update_genome_browser_btn(app) {
 	app.genome_browser_btn.text(app.selectgenome.node().value + ' genome browser')
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
-}
-
-async function findgenelst(app, str, genome, tip, jwt) {
-	if (str.length <= 1) {
-		tip.d.selectAll('*').remove()
-		return
-	}
-	try {
-		const data = await dofetch3('/genelookup', {
-			body: {
-				input: str,
-				genome,
-				jwt
-			}
-		})
-
-		if (data.error) throw data.error
-		if (!data.hits) throw '.hits[] missing'
-		for (const name of data.hits) {
-			tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.attr('isgene', '1')
-				.text(name)
-				.on('click', () => {
-					app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
-					tip.hide()
-					findgene2paint(app, name, genome, jwt)
-				})
-		}
-	} catch (err) {
-		tip.d.append('div').style('border', 'solid 1px red').style('padding', '10px').text(err)
-	}
-}
-
-async function findgene2paint(app, str, genomename, jwt) {
-	let sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
-
-	const g = app.genomes[genomename]
-	if (!g) {
-		console.error('unknown genome ' + genomename)
-		return
-	}
-
-	sandbox_div.header.html(
-		'<div style="display:inline-block;">' +
-			str +
-			'</div><div class="sjpp-output-sandbox-title">' +
-			genomename +
-			'</div>'
-	)
-	// may yield tklst from url parameters
-	const urlp = urlmap()
-	const tklst = await parseurl.get_tklst(urlp, g)
-
-	const pos = string2pos(str, g)
-	if (pos) {
-		// input is coordinate, launch block
-		const par = {
-			hostURL: app.hostURL,
-			jwt,
-			holder: sandbox_div.body,
-			genome: g,
-			nobox: true,
-			chr: pos.chr,
-			start: pos.start,
-			stop: pos.stop,
-			dogtag: genomename,
-			tklst,
-			debugmode: app.debugmode
-		}
-		first_genetrack_tolist(g, par.tklst)
-
-		import('./block')
-			.then(b => new b.Block(par))
-			.catch(err => {
-				app.error0(err)
-			})
-		return
-	}
-
-	// input string is not coordinate, find gene match
-	const par = {
-		hostURL: app.hostURL,
-		jwt,
-		query: str,
-		genome: g,
-		holder: sandbox_div.body,
-		variantPageCall_snv: app.variantPageCall_snv,
-		samplecart: app.samplecart,
-		tklst,
-		debugmode: app.debugmode
-	}
-
-	// add svcnv tk from url param
-	const tmp = sessionStorage.getItem('urlp_mds')
-	if (tmp) {
-		const l = tmp.split(',')
-		if (l.length == 2) {
-			par.datasetqueries = [{ dataset: l[0], querykey: l[1] }]
-		}
-	}
-
-	await blockinit(par)
 }
 
 async function parseEmbedThenUrl(arg, app) {
@@ -836,7 +754,6 @@ async function parseEmbedThenUrl(arg, app) {
 				method: 'POST',
 				body: JSON.stringify({ url })
 			})
-			console.log(jsonURL)
 			if (jsonURL.error) throw jsonURL.error
 			state = JSON.parse(jsonURL.text)
 		}

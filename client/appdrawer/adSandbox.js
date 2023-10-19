@@ -633,11 +633,11 @@ async function showViewData(btns, data, pageArgs) {
 /********** Dataset Button Functions  **********/
 
 async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
-	const genome = pageArgs?.fromURL
+	const genome = pageArgs?.fromApp
 		? pageArgs.genomes[res.button.availableGenomes[0]]
 		: pageArgs.app.opts.genomes[res.button.availableGenomes[0]]
 
-	const genomes = pageArgs?.fromURL ? pageArgs.genomes : pageArgs.app.opts.genomes
+	const genomes = pageArgs?.fromApp ? pageArgs.genomes : pageArgs.app.opts.genomes
 
 	const par = {
 		// First genome in .availableGenomes is the default

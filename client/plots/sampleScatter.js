@@ -164,6 +164,7 @@ class Scatter {
 
 	createChart(id, data, i) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
+		if (cohortSamples.length > 10000) this.is2DLarge = true
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
@@ -235,6 +236,14 @@ class Scatter {
 			title: 'It represents the area of the reference symbol in square pixels',
 			min: 0
 		}
+		const showAxes = {
+			boxLabel: 'Visible',
+			label: 'Show axes',
+			type: 'checkbox',
+			chartType: 'sampleScatter',
+			settingsKey: 'showAxes',
+			title: `Option to show/hide plot axes`
+		}
 		const inputs = [
 			{
 				type: 'term',
@@ -257,14 +266,7 @@ class Scatter {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete']
 			},
-			{
-				boxLabel: 'Visible',
-				label: 'Show axes',
-				type: 'checkbox',
-				chartType: 'sampleScatter',
-				settingsKey: 'showAxes',
-				title: `Option to show/hide plot axes`
-			},
+
 			{
 				label: 'Opacity',
 				type: 'number',
@@ -287,6 +289,7 @@ class Scatter {
 				settingsKey: 'svgh'
 			}
 		]
+
 		if (this.config.term) {
 			inputs.unshift(
 				...[
@@ -347,13 +350,15 @@ class Scatter {
 					settingsKey: 'svgd'
 				})
 			}
+			inputs.push(showAxes)
+
 			inputs.push({
 				label: 'Default color',
 				type: 'color',
 				chartType: 'sampleScatter',
 				settingsKey: 'defaultColor'
 			})
-		} else {
+		} else if (!this.is2DLarge) {
 			inputs.splice(2, 0, shapeOption)
 			inputs.splice(3, 0, scaleDotOption)
 			if (this.config.scaleDotTW) {
@@ -365,6 +370,7 @@ class Scatter {
 				inputs.splice(4, 0, dotSizeOption)
 				if (hasRef) inputs.splice(5, 0, refSizeOption)
 			}
+			inputs.push(showAxes)
 		}
 
 		this.components = {

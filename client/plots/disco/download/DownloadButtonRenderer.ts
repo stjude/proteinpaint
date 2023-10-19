@@ -5,14 +5,14 @@ export default class DownloadButtonRenderer {
 		this.downloadClickListener = downloadClickListener
 	}
 
-	render(holder: any) {
+	render(holder: any, svgDiv: any) {
 		holder
 			.append('span')
 			.append('button')
 			.style('margin', '2px 0 2px 30px')
 			.text('Download image')
 			.on('click', () => {
-				const svg = holder.selectAll('svg').node()
+				const svg = svgDiv.select('svg').node()
 				this.downloadClickListener(svg)
 			})
 	}

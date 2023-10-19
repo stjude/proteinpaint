@@ -44,7 +44,6 @@ export function handle_request_closure(genomes) {
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
 			// process triggers
-			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getpercentile) return trigger_getpercentile(q, res, ds)
 			if (q.getdescrstats) return trigger_getdescrstats(q, res, ds)
 			if (q.getnumericcategories) return await trigger_getnumericcategories(q, res, tdb, ds)
@@ -147,13 +146,6 @@ async function getSampleCount(req, q, ds) {
 		return samples
 	}
 	return await termdbsql.get_samplecount(q, ds)
-}
-
-function trigger_gettermbyid(q, res, tdb) {
-	const t = tdb.q.termjsonByOneid(q.gettermbyid)
-	res.send({
-		term: t ? copy_term(t) : undefined
-	})
 }
 
 async function trigger_rootterm(q, res, tdb) {

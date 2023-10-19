@@ -373,8 +373,7 @@ export function setRenderers(self) {
 			getBodyParams: () => {
 				const currentGeneNames = self.termOrder
 					.filter(t => t.tw.term.type === 'geneVariant')
-					.map(t => t.tw.term.name)
-					.sort()
+					.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
 				return { currentGeneNames }
 			},
 			callback: tw => {

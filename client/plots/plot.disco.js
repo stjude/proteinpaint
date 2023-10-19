@@ -1,4 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
+import { dt2label } from '#shared/common'
 
 /*
 make a disco plot for the "singleSampleMutation" directive, as well as the subsequent block-launching from clicking the image
@@ -41,6 +42,18 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj)
 		const data = await dofetch3('mds3', { body })
 		if (data.error) throw data.error
 		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
+
+		if (data.dt2total?.length) {
+			// array element: {dt:int, total:int}
+			// may pass this to disco argument to display it in legend
+			for (const o of data.dt2total) {
+				holder
+					.append('div')
+					.style('margin', '20px 20px 0px 40px')
+					.text(`(Displaying ${data.mlst.filter(i => i.dt == o.dt).length} out of total ${o.total} ${dt2label[o.dt]})`)
+			}
+		}
+
 		const mlst = data.mlst
 
 		for (const i of mlst) i.position = i.pos

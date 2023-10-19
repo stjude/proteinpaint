@@ -1,7 +1,7 @@
 import { Mds3 } from '../shared/types'
 import * as serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
-import { existsSync, unlinkSync, symlinkSync } from 'fs'
+import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'
 
 /*
 the "test mule" for the type of termdb dataset using server-side sqlite3 db
@@ -240,15 +240,28 @@ export default <Mds3>{
 }
 
 function copyDataFilesFromRepo2Tp() {
+	// when running tests in a CI environment, the workflow script should copy
+	// the server/test/tp dir as serverconfig.tpmasterdir, and do not trigger
+	// the symlinks below
+	if (existsSync('/home/root/pp')) return
+
 	const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 
-	if (!targetDir.endsWith(datadir)) {
-		try {
-			if (existsSync(datadir)) unlinkSync(datadir)
-			symlinkSync(targetDir, datadir)
-		} catch (error) {
-			console.warn('Error while coping data files from Repo to Tp: ' + error)
-		}
+	// no need to set the symlink when the target TermdbTest dir
+	// already equals the datadir under serverconfig.tpmasterdir
+	if (datadir == `${serverconfig.binpath}/test/tp`) {
+		access(datadir, constants.R_OK | constants.W_OK, err => {
+			if (!err) {
+				try {
+					if (!existsSync(datadir)) unlinkSync(datadir)
+					symlinkSync(targetDir, datadir)
+				} catch (error) {
+					console.warn('Error while coping data files from Repo to Tp: ' + error)
+				}
+			} else {
+				console.warn(`user doesn't have sufficient permissions for `)
+			}
+		})
 	}
 }

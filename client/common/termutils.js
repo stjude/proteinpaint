@@ -14,20 +14,6 @@ otherwise, do:
 
 const cache = { serverData: {} }
 
-export async function getterm(termid, dslabel = null, genome = null) {
-	if (!termid) throw 'getterm: termid missing'
-	if (this && this.state && this.state.vocab) {
-		if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
-		if (this.state.vocab.genome) genome = this.state.vocab.genome
-	}
-	if (!dslabel) throw 'getterm: dslabel missing'
-	if (!genome) throw 'getterm: genome missing'
-	const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`)
-	if (data.error) throw 'getterm: ' + data.error
-	if (!data.term) throw 'no term found for ' + termid
-	return data.term
-}
-
 export function sample_match_termvaluesetting(row, filter) {
 	// console.log(row, filter)
 	const lst = !filter ? [] : filter.type == 'tvslst' ? filter.lst : [filter]

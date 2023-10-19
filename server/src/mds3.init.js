@@ -1262,7 +1262,6 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
         q.file = path.join(serverconfig.tpmasterdir, q.file)
         if (!q.samplesFile) throw 'missing samples file for gene count'
         q.samplesFile = path.join(serverconfig.tpmasterdir, q.samplesFile)
-   
 	/*
 	param{}
 		samplelst{}
@@ -1318,7 +1317,8 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	        console.log("Number of group2 names not found:", group2names_not_found)
 		if (group1names.length < 1) throw 'group1names.length<1'
 		if (group2names.length < 1) throw 'group2names.length<1'
-		// pass group names and txt file to rust
+	        // pass group names and txt file to rust
+	    
 	        const cases_string = group1names.map(i => i).join(',')
 	        const controls_string = group2names.map(i => i).join(',')
 	        const expression_input = {case: cases_string, control: controls_string, input_file: q.file, output_path: path.join(serverconfig.binpath, 'utils')}
@@ -1327,47 +1327,52 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	        //	// For catching input to rust pipeline, in case of an error
 	        //	if (err) return console.log(err)
 	        //})
-	    
-                const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
-	        let result
-                if (group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) { // edgeR will be used for DE analysis
-		    const time1 = new Date() 
-                    const r_output = await run_edgeR(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
-		    const time2 = new Date()
-		    console.log('Time taken to run edgeR:', time2 - time1, 'ms')
-		    //console.log("r_output:",r_output)
 
-		    //for (const line of r_output.split('\n')) {
-                    //    console.log("line:",line)	
-                    //    if (line.includes("output_json:")) {
-		    //	     //console.log(line.replace(",output_json:",""))
-		    //  	     result=JSON.parse(line.replace(",output_json:",""))
-		    //      } else {
-                    //          //console.log(line)
-		    //      }	
-	            //}
+		const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
+		let result
+		if (group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) {
+			// edgeR will be used for DE analysis
+			const time1 = new Date()
+			const r_output = await run_edgeR(
+				path.join(serverconfig.binpath, 'utils', 'edge.R'),
+				JSON.stringify(expression_input)
+			)
+			const time2 = new Date()
+			console.log('Time taken to run edgeR:', time2 - time1, 'ms')
+			//console.log("r_output:",r_output)
 
-		    result = JSON.parse(fs.readFileSync(path.join(serverconfig.binpath, 'utils', 'r_output.txt'), 'utf8'));
-	        } else { // Wilcoxon test will be used for DE analysis	   
-	    	      const time1 = new Date()
-	              const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
-                      const time2 = new Date()
-	              for (const line of rust_output.split('\n')) {
-                          if (line.startsWith("adjusted_p_values:")) {
-		      	result=JSON.parse(line.replace("adjusted_p_values:",""))
-		          } else {
-                              //console.log(line)
-		          }	
-	              }
-	              console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
-		}    
+			//for (const line of r_output.split('\n')) {
+			//    console.log("line:",line)
+			//    if (line.includes("output_json:")) {
+			//	     //console.log(line.replace(",output_json:",""))
+			//  	     result=JSON.parse(line.replace(",output_json:",""))
+			//      } else {
+			//          //console.log(line)
+			//      }
+			//}
+
+			result = JSON.parse(fs.readFileSync(path.join(serverconfig.binpath, 'utils', 'r_output.txt'), 'utf8'))
+		} else {
+			// Wilcoxon test will be used for DE analysis
+			const time1 = new Date()
+			const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
+			const time2 = new Date()
+			for (const line of rust_output.split('\n')) {
+				if (line.startsWith('adjusted_p_values:')) {
+					result = JSON.parse(line.replace('adjusted_p_values:', ''))
+				} else {
+					//console.log(line)
+				}
+			}
+			console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+		}
 		return result
 	}
 }
 
 async function run_edgeR(Rscript, input_data) {
 	return new Promise((resolve, reject) => {
-	    const binpath = path.join(serverconfig.Rscript, Rscript)
+		const binpath = path.join(serverconfig.Rscript, Rscript)
 		const ps = spawn(serverconfig.Rscript, [Rscript])
 		const stdout = []
 		const stderr = []
@@ -1395,14 +1400,13 @@ async function run_edgeR(Rscript, input_data) {
 			//	const errmsg = `edgeR('${Rscript}') emitted standard error\n stderr: ${err}`
 			//	//reject(errmsg)
 			//}
-		        else {
-			        //console.log("stdout:",stdout)
-			        resolve(stdout.toString())
+			else {
+				//console.log("stdout:",stdout)
+				resolve(stdout.toString())
 			}
 		})
 	})
 }
-
 
 async function validate_query_geneExpression(ds, genome) {
 	const q = ds.queries.geneExpression
@@ -1525,7 +1529,8 @@ async function validate_query_singleSampleMutation(ds, genome) {
 			}
 
 			const data = await utils.read_file(file)
-			return JSON.parse(data)
+			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
+			return { mlst: JSON.parse(data) }
 		}
 	} else {
 		throw 'unknown query method for singleSampleMutation'

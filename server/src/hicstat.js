@@ -30,7 +30,7 @@ export async function do_hicstat(file, isurl) {
 	const footerPosition = Number(getLong())
 	let normalization = []
 	if (version == 8 || version == 7) {
-		const fileSize = getFileSize(file)
+		const fileSize = isurl ? await getUrlSize(file) : await getFileSize(file)
 		const vectorView = await getVectorView(file, footerPosition, fileSize - footerPosition)
 		const nbytesV5 = vectorView.getInt32(0, true)
 		normalization = getNormalization(vectorView, nbytesV5 + 4)
@@ -156,18 +156,29 @@ export async function do_hicstat(file, isurl) {
 		return arrayBuffer
 	}
 
-	function getFileSize(path) {
-		const stats = fs.statSync(path)
+	async function getFileSize(path) {
+		const stats = await fs.promises.stat(path)
 		return stats.size
+	}
+
+	async function getUrlSize(path) {
+		const response = await got(path, {
+			method: 'head',
+			followRedirect: true // Default is true anyway.
+		})
+		const headers = response.headers
+		const fileSize = Number(headers['content-length'])
+		return fileSize
 	}
 
 	async function readHicUrl(url, position, length) {
 		try {
+			const range = position + '-' + (position + length - 1)
 			const response = await got(url, {
-				headers: { Range: 'bytes=' + position + '-' + (length - 1) }
+				headers: { Range: 'bytes=' + range }
 			}).buffer()
 			// convert buffer to arrayBuffer
-			const arrayBuffer = response.buffer.slice(position, position + length)
+			const arrayBuffer = response.buffer //.slice(position, position + length)
 			return arrayBuffer
 		} catch (error) {
 			console.log(error.response)

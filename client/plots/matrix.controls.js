@@ -1,6 +1,6 @@
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
-import { fillTermWrapper, termsettingInit, get$id } from '#termsetting'
+import { fillTermWrapper, get$id } from '#termsetting'
 import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
@@ -85,8 +85,7 @@ export class MatrixControls {
 						getBodyParams: () => {
 							const currentGeneNames = this.parent.termOrder
 								.filter(t => t.tw.term.type === 'geneVariant')
-								.map(t => t.tw.term.name)
-								.sort()
+								.map(t => t.tw.term.gene || t.tw.term.name) // TODO term.gene replaces term.name
 							return { currentGeneNames }
 						}
 					},

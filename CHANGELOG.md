@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- In GDC disco and bam slicing UI, detect when total number of SSM exceeds view limit and indicate such
+
+
+## 2.29.4
+
+Fixes:
+- Supply the svg element as argument to the disco plot download handler
+- in termsetting constructor option, getBodyParams() replaces getCurrentGeneNames() as a general and flexible solution
+
+DevOps:
+- fix the tp dir setup and package.json deps update for the integration test CI
+
 
 ## 2.29.3
 
