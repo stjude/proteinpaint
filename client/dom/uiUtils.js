@@ -9,7 +9,7 @@ isURL()
 	Checks if str input is URL and returns boolean
     - path: STR
 
-makeGenomeDropDown()
+makeDropDown()
 	Creates general dropdwon from a provided array of options
 	- div
 	- options: []
