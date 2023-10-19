@@ -21,7 +21,16 @@ on:
         description: Build secret
 
 jobs:
+  unit_test:
+    uses: ./.github/workflows/CI-unit.yml
+    secrets: inherit # pragma: allowlist secret
+
+  integration_test:
+    uses: ./.github/workflows/CI-integration.yml
+    secrets: inherit # pragma: allowlist secret
+
   build:
+    needs: [unit_test, integration_test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -67,7 +76,7 @@ jobs:
           node-version: '16'
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
-          
+
       - name: ⚡ Cache
         uses: actions/cache@v2
         with:
