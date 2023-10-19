@@ -83,6 +83,7 @@ const pkgs = {}
 const changedFiles = ex(`git diff --name-only ${opts.refCommit} HEAD`).split('\n')
 for (const w of rootPkg.workspaces) {
 	if (opts.exclude.find(s => w.includes(s))) continue
+	const hasRelevantChangedFiles = changedFiles.find(f => f.startsWith(w) && fileAffectsVersion(f))
 	const paths = glob.sync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
 		const pkg = require(path.join(cwd, pkgPath))
@@ -101,8 +102,8 @@ for (const w of rootPkg.workspaces) {
 			pkgPath,
 			pkgDir,
 			// TODO: should also check for non-empty workspace/release.txt???
-			// so that a package releases is created only if there are notable changes
-			selfChanged: wsHashOnRelease != wsHashCurrent && changedFiles.find(f => f.startsWith(w) && fileAffectsVersion),
+			// so that a package release is created only if there are notable changes
+			selfChanged: wsHashOnRelease != wsHashCurrent && hasRelevantChangedFiles,
 			changedDeps: new Set()
 		}
 	}
