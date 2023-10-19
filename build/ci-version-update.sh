@@ -45,7 +45,7 @@ sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 npm i --package-lock-only
 TAG="v$VERSION"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$BRANCH" == "release" || "$BRANCH" == "stage" ]]; then
+if [[ "$BRANCH" != "release" && "$BRANCH" != "master" ]]; then
   HASH=$(git rev-parse --short HEAD)
   TAG="$TAG-$HASH"
 fi
