@@ -10,6 +10,8 @@ on:
       - '**.txt'
       - '.**ignore'
       - 'docs/**'
+      # TODO: what if package.dependencies, files were updated?
+      # this is meant to avoid triggering the on.push event for the version bump
       - '**package*.json'
 
   workflow_dispatch:
@@ -65,12 +67,20 @@ jobs:
           node-version: '16'
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
-      
-      - run: npm ci
+          
+      - name: ⚡ Cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.OS }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.OS }}-npm-cache-
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run version bump
         run: |
-          VERTYPE=prerelease
+          VERTYPE=prerelease # default
           NOTES=$(node ./build/changeLogGenerator.js -u)
           if [[ "$NOTES" == *"Features:"* ]]; then
             VERTYPE=minor
@@ -81,9 +91,12 @@ jobs:
 
       - name: Publish packages
         run: |
-          echo "Publishing updated packages ..."
-          # !!! --- TODO: uncomment when ready --- !!!
-          # ./build/ci-npm-publish.sh "$UPDATED"
-          # !!! ---- merge back to master --- !!!
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [[ "$BRANCH" != "release" && "$BRANCH" != "master" ]]; then 
+            echo "skipping publishing"
+          else 
+            ./build/ci-npm-publish.sh "$UPDATED"
+            # !!! ---- merge back to master --- !!!
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}

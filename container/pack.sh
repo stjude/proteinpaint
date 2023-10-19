@@ -8,6 +8,17 @@ set -euxo pipefail
 #   with the tarball location as copied into the Docker build
 
 # from the proteinpaint/container dir
+
+WORKSPACES="rust server client front"
+if [[ "$1" != "" ]]; then
+	WORKSPACES="$1"
+fi
+
+TMPDIR=/home/root/pp/tmppack/
+if [[ "$2" != "" ]]; then
+	TMPDIR="$2"
+fi
+
 rm -rf tmppack
 mkdir tmppack
 
