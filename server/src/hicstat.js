@@ -1,6 +1,8 @@
 import fs from 'fs'
 import util from 'util'
 import got from 'got'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 
 /**
  * 
@@ -162,12 +164,10 @@ export async function do_hicstat(file, isurl) {
 	}
 
 	async function getUrlSize(path) {
-		const response = await got(path, {
-			method: 'head',
-			followRedirect: true // Default is true anyway.
-		})
-		const headers = response.headers
-		const fileSize = Number(headers['content-length'])
+		const execPromise = util.promisify(exec)
+		const out = await execPromise(`curl -I -L ${path}`)
+		const match = out.stdout.match(/content-length: ([0-9]*)/)
+		const fileSize = Number(match[1])
 		return fileSize
 	}
 
