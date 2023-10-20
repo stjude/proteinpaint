@@ -4,7 +4,7 @@ import path from 'path'
 import got from 'got'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-
+const maxFileNumber = 1000
 const onlyAllowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
 
 export const api = {
@@ -69,7 +69,7 @@ async function listMafFiles(req: any, ds: any) {
 
 	const data = {
 		filters,
-		size: 1000,
+		size: maxFileNumber,
 		fields: [
 			'id',
 			'file_size',
