@@ -2,7 +2,6 @@ import fs from 'fs'
 import util from 'util'
 import got from 'got'
 import { exec } from 'child_process'
-import { promisify } from 'util'
 
 /**
  * 
@@ -36,7 +35,6 @@ export async function do_hicstat(file, isurl) {
 		let vectorView = await getVectorView(file, footerPosition, shunk)
 		const nbytesV5 = vectorView.getInt32(0, true)
 		vectorView = await getVectorView(file, footerPosition + nbytesV5 + 4, shunk)
-
 		normalization = await getNormalization(vectorView, footerPosition + nbytesV5 + 4)
 	}
 	const genomeId = getString()
@@ -119,6 +117,7 @@ export async function do_hicstat(file, isurl) {
 			result
 		for (let i = 1; i <= nvectors; i++) {
 			let str = await getViewValue('string') //type
+			//console.log(str)
 			normalization.push(str)
 			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md#normalized-expected-value-vectors
 			if (version == 8) {
