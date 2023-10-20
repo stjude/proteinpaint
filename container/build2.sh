@@ -7,7 +7,7 @@ set -euo pipefail
 ###############
 
 USAGE="Usage:
-	./build.sh [subdir] [-z] [-m] [-r] [-b] [-c]
+	./build2.sh [subdir] [-z] [-m] [-r] [-b] [-c]
 	
 	subdir: 'server' | 'full', the subdirectory to build
 
@@ -65,15 +65,6 @@ if [[ "$1" != "" ]]; then
 	SUBDIR=$1
 fi
 
-if [[ "$PKGPATH" != "" ]]; then
-	PKGSCOPE=sjcrh-proteinpaint
-	SERVERPKGVER="$(node -p "require('./$SUBDIR/package.json').dependencies['@sjcrh/proteinpaint-server']")"
-	SERVERTGZFILE=$PKGSCOPE-server-$SERVERPKGVER.tgz
-	SERVERTGZ="$PKGPATH/$SERVERTGZFILE"
-	FRONTPKGVER="$(node -p "require('./$SUBDIR/package.json').dependencies['@sjcrh/proteinpaint-front']")"
-	FRONTTGZ="$PKGPATH/$PKGSCOPE-front-$FRONTPKGVER.tgz"
-fi
-
 ################
 # DETECTED ARGS
 ################
@@ -110,19 +101,10 @@ if [[ ! -d ./tmppack ]]; then
 	mkdir tmppack
 fi
 
-if [[ "$SERVERTGZ" == "" ]]; then
+if [[ "$PKGPATH" != "" ]]; then
   rm -f tmppack/* 
-elif [[ ! -f "./tmppack/$SERVERTGZFILE" ]]; then
-	./pack.sh
-fi
-
-if [[ "$SERVERTGZ" != "" ]]; then
-	cd $SUBDIR # so that the correct package.json is updated
-	npm pkg set dependencies.@sjcrh/proteinpaint-server=$SERVERTGZ
-	if [[ "$SUBDIR" == "full" ]]; then
-		npm pkg set dependencies.@sjcrh/proteinpaint-front=$SERVERTGZ
-	fi
-	cd ..
+else
+	./pack.sh $PKGPATH
 fi
 
 ###############
