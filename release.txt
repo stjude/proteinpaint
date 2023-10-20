@@ -1,2 +1,1 @@
-Fixes:
-- Restore yellow highlight line when moving cursor over a genome browser block
+
