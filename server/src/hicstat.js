@@ -31,11 +31,13 @@ export async function do_hicstat(file, isurl) {
 	out_data.version = version
 	const footerPosition = Number(getLong())
 	let normalization = []
+	const shunk = 100000
 	if (version == 8 || version == 7) {
-		const fileSize = isurl ? await getUrlSize(file) : await getFileSize(file)
-		const vectorView = await getVectorView(file, footerPosition, fileSize - footerPosition)
+		let vectorView = await getVectorView(file, footerPosition, shunk)
 		const nbytesV5 = vectorView.getInt32(0, true)
-		normalization = getNormalization(vectorView, nbytesV5 + 4)
+		vectorView = await getVectorView(file, footerPosition + nbytesV5 + 4, shunk)
+
+		normalization = await getNormalization(vectorView, footerPosition + nbytesV5 + 4)
 	}
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
@@ -43,7 +45,7 @@ export async function do_hicstat(file, isurl) {
 		const normVectorIndexPosition = Number(getLong())
 		const normVectorIndexLength = Number(getLong())
 		const vectorView = await getVectorView(file, normVectorIndexPosition, normVectorIndexLength)
-		normalization = getNormalization(vectorView, 0)
+		normalization = await getNormalization(vectorView, 0)
 	}
 
 	// skip unwatnted attributes
@@ -108,36 +110,68 @@ export async function do_hicstat(file, isurl) {
 		return view
 	}
 
-	function getNormalization(vectorView, position) {
-		let normalization = []
+	async function getNormalization(vectorView, position) {
+		const start = Date.now()
 
-		const nvectors = vectorView.getInt32(position, true)
-		let pos = position + 4,
+		let normalization = []
+		const nvectors = vectorView.getInt32(0, true)
+		let pos = 4,
 			result
 		for (let i = 1; i <= nvectors; i++) {
-			result = getViewString(vectorView, pos)
-			normalization.push(result.str)
-			//skip chromosome index
-			let shift
+			let str = await getViewValue('string') //type
+			normalization.push(str)
 			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md#normalized-expected-value-vectors
 			if (version == 8) {
-				result = getViewString(vectorView, result.pos)
-
-				//skip bin size (int), read nvalues
-				const nvalues = vectorView.getInt32(result.pos + 4, true)
-
-				pos = result.pos + 8 + nvalues * 8
-				const nChrScaleFactors = vectorView.getInt32(pos, true)
-				pos = pos + 4 + nChrScaleFactors * 12
+				str = await getViewValue('string') //unit
+				addToPos(4) //skip bin size (int)
+				const nvalues = await getViewValue('int32')
+				addToPos(nvalues * 8)
+				const nChrScaleFactors = await getViewValue('int32')
+				addToPos(nChrScaleFactors * 12)
 			}
 			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV9.md#normalization-vector-index
 			else if (version == 9) {
-				result = getViewString(vectorView, result.pos + 4)
-				pos = result.pos + 20
+				pos += 4
+				str = await getViewValue('string')
+				pos += 20
 			}
 		}
 		normalization = [...new Set(normalization)]
+		let timeTaken = Date.now() - start
+		console.log(`Read normalization on ${file} on ${timeTaken / 1000} seconds`)
 		return normalization
+
+		async function addToPos(number) {
+			if (pos + number > shunk) readShunk()
+			pos += number
+		}
+
+		async function readShunk() {
+			vectorView = await getVectorView(file, position + pos, shunk)
+			position = position + pos
+			pos = 0
+			//console.log(position, pos)
+		}
+
+		async function getViewValue(type) {
+			let value
+			if (type == 'string') {
+				let str = ''
+				let chr
+				while ((chr = vectorView.getUint8(pos++)) != 0) {
+					if (pos > shunk) await readShunk()
+					const charStr = String.fromCharCode(chr)
+					str += charStr
+				}
+				value = str
+			} else if (type == 'int32') {
+				if (pos + 4 > shunk) await readShunk()
+				value = vectorView.getInt32(pos, true)
+				pos += 4
+			}
+			//console.log(pos, value)
+			return value
+		}
 	}
 
 	async function readHicFile(file, position, length) {
@@ -173,8 +207,6 @@ export async function do_hicstat(file, isurl) {
 	}
 
 	async function readHicUrl(url, position, length) {
-		const start = Date.now()
-
 		try {
 			const range = position + '-' + (position + length - 1)
 			const response = await got(url, {
@@ -182,23 +214,12 @@ export async function do_hicstat(file, isurl) {
 			}).buffer()
 			// convert buffer to arrayBuffer
 			const arrayBuffer = response.buffer //.slice(position, position + length)
-			let timeTaken = Date.now() - start
-			console.log(`Read ${length} bytes on file ${url} from ${position} on ${timeTaken / 1000} seconds`)
+
 			return arrayBuffer
 		} catch (error) {
 			console.log(error.response)
 			throw 'error reading file, check file details'
 		}
-	}
-
-	function getViewString(view, position) {
-		let str = ''
-		let chr
-		while ((chr = view.getUint8(position++)) != 0) {
-			const charStr = String.fromCharCode(chr)
-			str += charStr
-		}
-		return { str, pos: position }
 	}
 
 	function getString() {
