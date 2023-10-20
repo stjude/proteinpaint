@@ -1,5 +1,6 @@
 import { GdcMafBuildResponse } from '#shared/types/routes/gdc.mafBuild.ts'
 import path from 'path'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
@@ -39,7 +40,11 @@ req.query {
 async function buildMaf(req: any) {
 	if (!Array.isArray(req.query.fileIdLst) || req.query.fileIdLst.length == 0) throw 'fileIdLst[] not array or blank'
 
-	// call rust with fileIdLst
+	const arg = {
+		fileIdLst: req.query.fileIdLst
+	}
+
+	// const file = await run_rust('maf', JSON.stringify(arg))
 
 	return { fileSize: 1000 }
 }
