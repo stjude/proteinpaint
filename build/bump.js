@@ -73,9 +73,21 @@ for (const k of process.argv.slice(3)) {
 // ******************************************
 
 if (opts.refCommit.endsWith('^{commit}')) {
-	const commitMsg = ex(`git log --format=%B -n 1 v${rootPkg.version}`, {
-		message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot diff for changes`
-	})
+	const tagExists = ex(`git tag -l v2.29.4`)
+	if (!tagExists) {
+		const errorMsg = ex(`git fetch --depth 1 origin tag v${rootPkg.version}`, {
+			message: `Error fetching the tag v${rootPkg.version}: cannot diff for changes`
+		})
+		if (errorMsg) process.exit(1)
+		const commitMsg = ex(`git tag -l --format='%(contents)' v${rootPkg.version}`, {
+			message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot verify tag`
+		})
+		if (!commitMsg) process.exit(1)
+		if (!commitMsg.startsWith(`v${rootPkg.version} `)) {
+			console.error(`the reference tag's commit message does not start with v${rootPkg.version}`)
+			process.exit(1)
+		}
+	}
 }
 const newVersion = semver.inc(rootPkg.version, verType)
 
