@@ -32,8 +32,10 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 		callbackOnRender(publicApi)
 	}
 
+	let result // for it to be accessible by submitSelectedFiles()
+
 	try {
-		const result = await getFileList(filter0)
+		result = await getFileList(filter0)
 		const rows = []
 		for (const f of result.files) {
 			const row = [
@@ -58,10 +60,26 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 			rows,
 			columns,
 			resize: true,
-			div: holder.append('div')
+			div: holder.append('div'),
+			selectAll: true,
+			buttons: [
+				{
+					text: 'Submit',
+					callback: submitSelectedFiles
+				}
+			]
 		})
 	} catch (e) {
 		sayerror(holder, e)
+	}
+
+	async function submitSelectedFiles(lst) {
+		const fileIdLst = []
+		for (const i of lst) {
+			fileIdLst.push(result.files[i].id)
+		}
+		const buildResult = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
+		console.log(buildResult)
 	}
 
 	return publicApi
