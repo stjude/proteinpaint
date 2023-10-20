@@ -120,7 +120,7 @@ export async function do_hicstat(file, isurl) {
 			//console.log(str)
 			normalization.push(str)
 			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md#normalized-expected-value-vectors
-			if (version == 8) {
+			if (version == 8 || version == 7) {
 				str = await getViewValue('string') //unit
 				addToPos(4) //skip bin size (int)
 				const nvalues = await getViewValue('int32')
