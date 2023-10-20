@@ -1,2 +1,2 @@
-feat: In addition to genomic features, search for tracks, apps, datasets, and information from header searchbar
-fix: HiC track now supports remote files of all versions (9, 8, 7)
+Fixes:
+- Restore yellow highlight line when moving cursor over a genome browser block

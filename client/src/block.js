@@ -5196,24 +5196,16 @@ async function maygetdna(block, tip) {
 }
 
 function init_cursorhlbar(block) {
-	// cursor highlight bar
+	// highlight bar under the cursor
+	// default fill color is registered on block, as the bar can be changed by actions in certain tracks
+	// eg hover over splice junction. this allows the style to be restored to the bar
 	block.cursorhlbarFillColor = '#FFFF99'
 	block.cursorhlbar = block.gbase.append('rect').attr('fill', block.cursorhlbarFillColor)
 
 	block.gbase
-		.on('mousemove', () => {
-			let x // cursor x distance relative to the block tkheader
-
-			if (block.rotated) {
-				// vertical, tk header at bottom
-				// as returned by pointer(), the x position (vertical offset from left end of block) is negative, absolute value increases as moving up
-				x = -pointer(event, block.gbase.node())[1]
-			} else {
-				// horizontal, tk header at left
-				x = pointer(block.gbase.node())[0]
-			}
-
-			// rest is independent of block rotation
+		.on('mousemove', event => {
+			// pointer() accounts for whether block is rotated or not
+			const x = pointer(event, block.gbase.node())[0]
 
 			let xoffset = block.leftheadw + block.lpad
 
