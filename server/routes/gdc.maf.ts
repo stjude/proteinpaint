@@ -5,17 +5,20 @@ import got from 'got'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
+const onlyAllowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
+
 export const api = {
 	endpoint: 'gdc/maf',
 	methods: {
 		get: {
 			init({ genomes }) {
-				// genomes parameter is not used
-				// could be used later to verify hg38/GDC is on this instance and otherwise disable this route..
-
 				return async (req: any, res: any): Promise<void> => {
 					try {
-						const files = await listMafFiles(req)
+						const g = genomes.hg38
+						if (!g) throw 'hg38 missing'
+						const ds = g.datasets.GDC
+						if (!ds) throw 'hg38 GDC missing'
+						const files = await listMafFiles(req, ds)
 						const payload = { files } as GdcMafResponse
 						res.send(payload)
 					} catch (e: any) {
@@ -40,8 +43,14 @@ export const api = {
 req.query {
 	filter0 // optional gdc GFF cohort filter, invisible and read only
 }
+
+ds {
+	__gdc {
+		gdcOpenProjects
+	}
+}
 */
-async function listMafFiles(req: any) {
+async function listMafFiles(req: any, ds: any) {
 	const filters = {
 		op: 'and',
 		content: [
@@ -65,6 +74,7 @@ async function listMafFiles(req: any) {
 			'id',
 			'file_size',
 			'experimental_strategy',
+			'cases.project.project_id',
 			'cases.submitter_id', // used when listing all cases & files
 			//'associated_entities.entity_submitter_id', // semi human readable
 			//'associated_entities.case_id', // case uuid
@@ -87,18 +97,62 @@ async function listMafFiles(req: any) {
 	// it is possible to set a max size limit to limit the number of files passed to client
 	const files = [] as File[]
 	for (const h of re.data.hits) {
+		/*
+		{
+		  "id": "39768777-fec5-4a79-9515-65712c002b19",
+		  "cases": [
+			{
+			  "submitter_id": "HTMCP-03-06-02104",
+			  "project": {
+			  	"project_id":"xx"
+			  },
+			  "samples": [
+				{
+				  "sample_type": "Blood Derived Normal"
+				},
+				{
+				  "sample_type": "Primary Tumor"
+				}
+			  ]
+			}
+		  ],
+		  "analysis": {
+			"workflow_type": "MuSE Annotation"
+		  },
+		  "experimental_strategy": "Targeted Sequencing",
+		  "file_size": 146038
+		}
+		*/
+
+		const c = h.cases?.[0]
+		if (!c) throw 'h.cases[0] missing'
+
+		// only keep files from open access projects for now
+		if (c.project?.project_id) {
+			if (ds.__gdc.gdcOpenProjects.has(c.project.project_id)) {
+				// open-access project, keep
+			} else {
+				// not open access
+				continue
+			}
+		} else {
+			throw 'h.cases[0].project.project_id missing'
+		}
+
+		if (!h.analysis?.workflow_type) throw 'h.analysis.workflow_type missing'
+		if (h.analysis.workflow_type != onlyAllowedWorkflowType) continue
+
 		const file = {
 			id: h.id,
+			project_id: c.project.project_id,
 			workflow_type: h.analysis?.workflow_type,
 			experimental_strategy: h.experimental_strategy,
 			file_size: fileSize(h.file_size)
 		} as File
-		const c = h.cases?.[0]
-		if (c) {
-			file.case_submitter_id = c.submitter_id
-			if (c.samples) {
-				file.sample_types = c.samples.map(i => i.sample_type).join(', ')
-			}
+
+		file.case_submitter_id = c.submitter_id
+		if (c.samples) {
+			file.sample_types = c.samples.map(i => i.sample_type)
 		}
 		files.push(file)
 	}
