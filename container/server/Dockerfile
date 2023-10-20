@@ -21,7 +21,7 @@ WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY ./server/package.json  ./
 
-RUN npm install
+RUN npm install --omit=dev
 COPY ./server/app-server.js  ./
 
 EXPOSE 3000

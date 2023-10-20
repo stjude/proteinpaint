@@ -21,7 +21,7 @@ WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY ./full/package.json .
 
-RUN npm install
+RUN npm install --omit=dev
 COPY ./full/app-full.js .
 COPY ./public .
 

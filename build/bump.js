@@ -73,7 +73,7 @@ for (const k of process.argv.slice(3)) {
 // ******************************************
 
 if (opts.refCommit.endsWith('^{commit}')) {
-	const tagExists = ex(`git tag -l v2.29.4`)
+	const tagExists = ex(`git tag -l v${rootPkg.version}`)
 	if (!tagExists) {
 		const errorMsg = ex(`git fetch --depth 1 origin tag v${rootPkg.version}`, {
 			message: `Error fetching the tag v${rootPkg.version}: cannot diff for changes`
