@@ -1795,7 +1795,7 @@ function may_add_readdepth(acase, sample) {
 function may_add_projectAccess(sample, ds) {
 	const projectId = sample['case.project.project_id']
 	if (!projectId) return
-	sample.caseIsOpenAccess = ds.gdcOpenProjects?.has(projectId)
+	sample.caseIsOpenAccess = ds.__gdc.gdcOpenProjects?.has(projectId)
 }
 
 /*

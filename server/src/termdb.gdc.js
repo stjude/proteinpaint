@@ -305,7 +305,43 @@ export async function initGDCdictionary(ds) {
 
 	/**********************************
 	       additional prepping
+	       fill in various attr
+		   in ds.__gdc{}
+		   gather these arbitrary gdc stuff under __gdc{} to be safe
 	**********************************/
+
+	ds.__gdc = {
+		aliquot2submitter: {
+			cache: new Map(),
+			get: async aliquot_id => {
+				if (ds.__gdc.aliquot2submitter.cache.has(aliquot_id)) return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+
+				/* 
+				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
+				simply return unconverted id to preserve performance
+				*/
+				return aliquot_id
+
+				// converts one id on the fly while the cache is still loading
+				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
+				//return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
+			}
+		},
+		// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
+		// this mapping serves case selection from mds3 and matrix, where input can be one of these different types
+		map2caseid: {
+			cache: new Map(),
+			get: input => {
+				return ds.__gdc.map2caseid.cache.get(input)
+				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
+			}
+		},
+		caseid2submitter: new Map(), // k: case uuid, v: case submitter id
+		caseIds: new Set(), //
+		casesWithExpData: new Set(),
+		gdcOpenProjects: new Set() // names of open-access projects
+	}
+
 	await getOpenProjects(ds)
 
 	// Important!
@@ -718,17 +754,15 @@ async function getOpenProjects(ds) {
 
 	const re = JSON.parse(tmp.body)
 
-	ds.gdcOpenProjects = new Set()
-
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
 		return
 	}
 	for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
 		// key is project_id value
-		if (b.key) ds.gdcOpenProjects.add(b.key)
+		if (b.key) ds.__gdc.gdcOpenProjects.add(b.key)
 	}
-	console.log('GDC open-access projects:', ds.gdcOpenProjects.size)
+	console.log('GDC open-access projects:', ds.__gdc.gdcOpenProjects.size)
 }
 
 /* this function is called when the gdc mds3 dataset is initiated on a pp instance
@@ -821,46 +855,12 @@ async function testGraphqlApi(url) {
 
 /*
 cache gdc sample id mappings
-this is an optional step and can be skipped on dev machines
+** this is an optional step and can be skipped on dev machines **
 - create a map from sample aliquot id to sample submitter id, for displaying in mds3 tk
 - create a map from differet ids to case uuid, for creating gdc cohort with selected samples
 - cache list of case uuids with expression data
 */
 async function cacheSampleIdMapping(ds) {
-	// create new attr to map to sample submitter id; it will only map from aliquot id to this id,
-	// as this mapping is only used in mds3 tk, which shows ssm on samples but not cases
-	ds.__gdc = {
-		// gather these arbitrary gdc stuff under __gdc{} to be safe
-		aliquot2submitter: {
-			cache: new Map(),
-			get: async aliquot_id => {
-				if (ds.__gdc.aliquot2submitter.cache.has(aliquot_id)) return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
-
-				/* 
-				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
-				simply return unconverted id to preserve performance
-				*/
-				return aliquot_id
-
-				// converts one id on the fly while the cache is still loading
-				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
-				//return ds.__gdc.aliquot2submitter.cache.get(aliquot_id)
-			}
-		},
-		// create new attr to map to case uuid, from 3 kinds of ids: aliquot, sample submitter, and case submitter
-		// this mapping serves case selection from mds3 and matrix, where input can be one of these different types
-		map2caseid: {
-			cache: new Map(),
-			get: input => {
-				return ds.__gdc.map2caseid.cache.get(input)
-				// NOTE if mapping is not found, do not return input, caller will call convert2caseId() to map on demand
-			}
-		},
-		caseid2submitter: new Map(), // k: case uuid, v: case submitter id
-		caseIds: new Set(), //
-		casesWithExpData: new Set()
-	}
-
 	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
 	if ('stopGdcCacheAliquot' in serverconfig.features) {
 		// flag is set

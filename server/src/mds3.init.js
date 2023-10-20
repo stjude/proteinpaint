@@ -200,9 +200,6 @@ export async function validate_termdb(ds) {
 		*****************************
 		*   clandestine gdc stuff   *
 		*****************************
-		- apis tested
-		- ds.gdcOpenProjects
-		- aliquot-submitter cached
 		*/
 	} else if (tdb?.dictionary?.dbFile) {
 		ds.cohort.db = { file: tdb.dictionary.dbFile }
