@@ -2,7 +2,7 @@ import { GdcTopVariablyExpressedGenesResponse } from '#shared/types/routes/gdc.t
 import { getCasesWithExressionDataFromCohort } from '../src/mds3.gdc.js'
 //import path from 'path'
 import got from 'got'
-import serverconfig from '../src/serverconfig.js'
+import serverconfig from '#src/serverconfig.js'
 
 // TODO change when api is released to prod
 //const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
