@@ -1284,6 +1284,8 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		    } 	
 	        }
 	        //console.log("samples_with_rnaseq_counts:",samples_with_rnaseq_counts)
+
+                // IMPORTANT: Need to add a clause later to check if all sample in the genecounts file are unique. If not, it should throw an error. 
 	    
 		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 		if (param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[0].values.length<1'
@@ -1313,6 +1315,9 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
                           group2names_not_found += 1
 			}    
 		}
+	    
+	        console.log("Sample size of group1:",group1names.length)
+	    	console.log("Sample size of group2:",group2names.length)
 	        console.log("Number of group1 names not found:", group1names_not_found)
 	        console.log("Number of group2 names not found:", group2names_not_found)
 		if (group1names.length < 1) throw 'group1names.length<1'
