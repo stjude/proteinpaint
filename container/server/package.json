@@ -1,13 +1,13 @@
 {
 	"private": true,
 	"name": "@sjcrh/ppserver",
-	"version": "2.29.4",
+	"version": "2.29.5",
 	"bin": "app-server.js",
 	"scripts": {
 		"release": ""
 	},
 	"dependencies": {
-		"@sjcrh/proteinpaint-server": "2.29.4"
+		"@sjcrh/proteinpaint-server": "2.29.5"
 	},
 	"files": [
 		"app-server.js"
