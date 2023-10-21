@@ -19,9 +19,9 @@ WORKDIR /home/root/pp
 COPY ./tmppack ./tmppack
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-RUN cp -r ~/.npm /home/root/ && npm i --package-lock-only
+RUN npm i --package-lock-only
 COPY ./full/package.json  ./
-RUN npm install --omit=dev --prefer-offline
+RUN npm install --omit=dev --prefer-offline --cache=/root/.npm
 COPY ./full/app-full.js .
 COPY ./public .
 
