@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euxo pipefail
+
 # this script:
 # - will pack workspaces 
 # - replace each workspace package.json's dependency versions
@@ -10,7 +12,7 @@ rm -rf tmppack
 mkdir tmppack
 
 PKGPATH=/home/root/pp/tmppack
-if [[ "$1" != "" ]]; then
+if (( $# == 1 )); then
 	PKGPATH="$1"
 fi
 
@@ -63,7 +65,7 @@ if [[ "$CHANGEDWS" == *"rust"* ]]; then
 	RUSTDEPNAME="@sjcrh/proteinpaint-rust"
 	# may reset the dep new version temporarily, for package testing 
 	npm pkg set "dependencies.$RUSTDEPNAME"=$PKGPATH/$RUSTTGZ
-	cd ..
+	cd ../container
 fi
 
 if [[ "$CHANGEDWS" == *"rust"* || "$CHANGEDWS" == *"server"* ]]; then

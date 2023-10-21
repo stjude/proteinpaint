@@ -31,8 +31,6 @@ PKGPATH=""
 # PROCESSED ARGS
 #################
 
-set -x
-
 while getopts "zr:b:c:h" opt; do
 	case "${opt}" in
 	z)
@@ -61,7 +59,8 @@ done
 IMGNAME="${PREFIX}pp$SUBDIR"
 
 shift $(($OPTIND-1))
-if [[ "$1" != "" ]]; then
+
+if (( $# == 1 )); then
 	SUBDIR=$1
 fi
 
