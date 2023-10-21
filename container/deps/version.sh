@@ -14,5 +14,5 @@ if [[ "$MODE" == "-c" ]]; then
 	echo "committing version changes"
 	git add package.json
 	git commit -m "dep image v$ROOTPKGVER front=$FRONTPKGVER server=$SERVERPKGVER"
-	# this will trigger the CI-publish-deps-image action
+	git push
 fi

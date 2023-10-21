@@ -10,6 +10,14 @@ on:
   push:
     branches:
       - deps-image
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
+      # TODO: what if package.dependencies, files were updated?
+      # this is meant to avoid triggering the on.push event for the version bump
+      - '**package*.json'
 
 jobs:
   build:
@@ -51,7 +59,6 @@ jobs:
 
       - name: Build image
         run: |
-          # npm ci
           cd container/deps
           ./version.sh -c
 
@@ -69,8 +76,10 @@ jobs:
             docker push ghcr.io/stjude/ppserver:latest
             docker push ghcr.io/stjude/ppfull:latest
 
+            # TODO: !!! fix merging back to master !!!
             echo "merging to master"
-            git checkout master
-            git merge release
+            git fetch --depth=10 origin master:master
+            git switch master
+            git merge deps-image
             git push
           fi
