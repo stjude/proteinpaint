@@ -38,7 +38,7 @@ if (($# < 1)); then
 	exit 1
 fi
 
-echo "[$TPDIR] [$HOSTPORT] [$IMAGE_NAME] [$CONTAINER_NAME]"
+echo "[$TPDIR] [$HOSTPORT:$EXPOSED_PORT] [$IMAGE_NAME] [$CONTAINER_NAME]"
 
 #################
 # Docker process

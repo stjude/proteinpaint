@@ -7,12 +7,17 @@ on:
         type: string
         description: Build secret
 
+  push:
+    branches:
+      - deps-image
+
 jobs:
   build:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - name: Check secret
+        if: github.event_name == 'workflow_dispatch'
         run: |
           if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
             echo "Wrong build secret."
@@ -20,6 +25,7 @@ jobs:
           fi
 
       - name: Check user permission
+        if: github.event_name == 'workflow_dispatch'
         id: check
         uses: scherermichael-oss/action-has-permission@master
         with:
@@ -43,14 +49,28 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
 
-      - run: |
-          npm ci
+      - name: Build image
+        run: |
+          # npm ci
           cd container/deps
-          ./build.sh -m "ghcr.io/stjude/"
-          TAG="$(node -p "require('./package.json').version")"
-          HASH=$(git rev-parse --short HEAD)
-          docker push ghcr.io/stjude/ppserver:$TAG-$HASH
-          docker push ghcr.io/stjude/ppfull:$TAG-$HASH
-          docker push ghcr.io/stjude/ppserver:latest
-          docker push ghcr.io/stjude/ppfull:latest
-          
+          ./version.sh -c
+
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [[ "$BRANCH" != "deps-image" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then 
+            echo "skipping build and publishing"
+          else
+            ./build.sh -m "ghcr.io/stjude/"
+
+            HASH=$(git rev-parse --short HEAD 2>/dev/null)
+            TAG="$(node -p "require('./package.json').version")"
+            HASH=$(git rev-parse --short HEAD)
+            docker push ghcr.io/stjude/ppserver:$TAG
+            docker push ghcr.io/stjude/ppfull:$TAG
+            docker push ghcr.io/stjude/ppserver:latest
+            docker push ghcr.io/stjude/ppfull:latest
+
+            echo "merging to master"
+            git checkout master
+            git merge release
+            git push
+          fi
