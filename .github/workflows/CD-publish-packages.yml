@@ -1,10 +1,10 @@
-name: "Release Packages"
+name: "Publish Packages"
 
 on:
   push:
     branches:
-      - pkg-release
-      - fake-release
+      - TMP-pkg-release
+      - TMP-fake-release
     paths-ignore:
       - '**.md'
       - '**.txt'
@@ -21,16 +21,7 @@ on:
         description: Build secret
 
 jobs:
-  unit_test:
-    uses: ./.github/workflows/CI-unit.yml
-    secrets: inherit # pragma: allowlist secret
-
-  integration_test:
-    uses: ./.github/workflows/CI-integration.yml
-    secrets: inherit # pragma: allowlist secret
-
-  build:
-    needs: [unit_test, integration_test]
+  publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
