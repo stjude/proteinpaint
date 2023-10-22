@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.29.6
 
 Fixes:
 - Restore yellow highlight line when moving cursor over a genome browser block
