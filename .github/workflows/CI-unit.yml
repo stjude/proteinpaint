@@ -79,7 +79,7 @@ jobs:
 
       - name: ⚡ Cache
         if: contains(env.WS_TO_TEST, 'rust')
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
