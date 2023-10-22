@@ -11,8 +11,16 @@
 
 set -euxo pipefail
 
-if [[ "$1" == "" ]]; then
-  echo "missing the version type value"
+if (( $# == 0 )); then
+  VERTYPE=prerelease # default
+  NOTES=$(node ./build/changeLogGenerator.js -u)
+  if [[ "$NOTES" == *"Features:"* ]]; then
+    VERTYPE=minor
+  elif [[ "$NOTES" == *"Fixes:"* ]]; then
+    VERTYPE=patch
+  fi
+else
+  VERTYPE="$1"
   exit 1
 fi
 
@@ -20,7 +28,7 @@ fi
 # CONTEXT
 ##########
 
-UPDATED=$(./build/bump.js "$@")
+UPDATED=$(./build/bump.js $VERTYPE "$@")
 if [[ "$UPDATED" == "" ]]; then
   echo "No workspace package updates, exiting script with code 1"
   exit 1

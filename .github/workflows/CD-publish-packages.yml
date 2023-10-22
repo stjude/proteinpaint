@@ -82,13 +82,6 @@ jobs:
 
       - name: Run version bump
         run: |
-          VERTYPE=prerelease # default
-          NOTES=$(node ./build/changeLogGenerator.js -u)
-          if [[ "$NOTES" == *"Features:"* ]]; then
-            VERTYPE=minor
-          elif [[ "$NOTES" == *"Fixes:"* ]]; then
-            VERTYPE=patch
-          fi
           # initial dot makes the variables of the call script in-scope
           . ./build/ci-version-update.sh $VERTYPE -w -x=container
           echo "UPDATED=$UPDATED" >> $GITHUB_ENV
