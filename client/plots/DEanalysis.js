@@ -113,11 +113,20 @@ add:
 			d.vo_g = this
 		})
         let fold_change_cutoff = 2
-        let p_value_cutoff = 3 
+        let p_value_cutoff = 3
+        let num_significant_genes = 0
+        let num_non_significant_genes = 0    
 	const circle = dotg
 	        .append('circle')
 	        .attr('stroke', d => {
-		    let color = d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff ? 'red' : 'black'
+		    let color  
+		    if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
+			color = 'red'
+			num_significant_genes += 1
+		    } else {
+                        color = 'black'
+			num_non_significant_genes += 1
+		    }	
 		    return color
 	        })
 		.attr('stroke-opacity', 0.2)
@@ -132,7 +141,8 @@ add:
 		//.on('click', (event, d) => {
 		//	circleclick(d, mavb, event.clientX, event.clientY)
 		//})
-
+        console.log("Percentage of significant genes:", (num_significant_genes*100)/(num_significant_genes + num_non_significant_genes))
+    
 	const logfc0line = mavb.vo_dotarea
 		.append('line')
 		.attr('stroke', '#ccc')
