@@ -100,7 +100,7 @@ add:
 		.append('rect')
 		.attr('stroke', '#ededed')
 		.attr('fill', 'none')
-	      .attr('shape-rendering', 'crispEdges')
+	        .attr('shape-rendering', 'crispEdges')
 	const xscale = scaleLinear().domain([minlogfc, maxlogfc])
 	const yscale = scaleLinear().domain([minlogpv, maxlogpv])
         let radiusscale
@@ -163,7 +163,7 @@ add:
 		yscale.range([height, 0])
 		dotg.attr('transform', d => {
 			return (
-				'translate(' + xscale(d.fold_change) + ',' + yscale(d.adjusted_p_value == 0 ? maxlogpv : d.adjusted_p_value, 10) + ')'
+				'translate(' + xscale(d.fold_change) + ',' + yscale(d.adjusted_p_value) + ')'
 			)
 		})
 		circle.attr('r', d => {
