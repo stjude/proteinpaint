@@ -43,7 +43,7 @@ async function buildMaf(req: any) {
 
 	const arg = {
 		fileIdLst: req.query.fileIdLst,
-		host: apihost,
+		host: path.join(apihost, 'data'), // must use the /data/ endpoint from current host
 		outFile: path.join(serverconfig.cachedir, 'gdcMaf.' + Math.random().toString())
 	}
 
