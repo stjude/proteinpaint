@@ -1,10 +1,11 @@
 use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
 use serde_json::Value;
 use std::fs::File;
 use std::path::Path;
 use futures::StreamExt;
 use std::io;
-use std::io::Read;
+use std::io::{Read, BufWriter};
 use std::sync::mpsc;
 use std::collections::HashMap;
 use polars::prelude::*;
@@ -114,9 +115,11 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     };
     df_maf = df_maf.sort(&["Chromosome","Start_Position"],vec![false,false],false).unwrap();
 
-    //write dataframe to file
-    let mut file = File::create(out_file).expect("could not create file");
-    CsvWriter::new(&mut file)
+    //write dataframe to file in binary
+    let file = File::create(out_file).expect("could not create file");
+    let buf_writer = BufWriter::new(file);
+    let encoder = GzEncoder::new(buf_writer, Default::default());
+    CsvWriter::new(encoder)
         .has_header(true)
         .with_delimiter(b'\t')
         .finish(&mut df_maf)
