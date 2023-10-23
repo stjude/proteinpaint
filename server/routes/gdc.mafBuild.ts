@@ -15,7 +15,7 @@ export const api = {
 						const result = await buildMaf(req)
 						const payload = { result } as GdcMafBuildResponse
 						res.send(payload)
-					} catch (e: any) {
+					} catch (e) {
 						res.send({ status: 'error', error: e.message || e })
 					}
 				}
@@ -47,7 +47,7 @@ async function buildMaf(req: any) {
 		outFile: path.join(serverconfig.cachedir, 'gdcMaf.' + Math.random().toString())
 	}
 
-	//await run_rust('maf', JSON.stringify(arg))
+	await run_rust('gdcmaf', JSON.stringify(arg))
 	console.log(arg.outFile)
 
 	return { fileSize: 1000 }
