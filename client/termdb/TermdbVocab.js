@@ -188,7 +188,7 @@ export class TermdbVocab extends Vocab {
 		// start of mds3 parameters for variant2sample query
 		if (opts.get) params.push('get=' + opts.get)
 		// end of mds3 parameters
-
+		if (opts.includeSamples) params.push('includeSamples=true')
 		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
 		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
 	}

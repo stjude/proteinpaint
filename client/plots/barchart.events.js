@@ -437,12 +437,12 @@ function handle_click(event, self, chart) {
 		}
 	}
 	//disable sample listing temporarily
-	// if (self.config.displaySampleIds) {
-	// 	options.push({
-	// 		label: 'List samples',
-	// 		callback: () => listSamples(event, self, seriesLabel, dataLabel, chart)
-	// 	})
-	// }
+	if (self.config.displaySampleIds) {
+		options.push({
+			label: 'List samples',
+			callback: async () => await listSamples(event, self, seriesLabel, dataLabel, chart)
+		})
+	}
 
 	if (self.opts.bar_click_opts.includes('select_to_gp')) {
 		options.push({
@@ -474,18 +474,21 @@ function handle_click(event, self, chart) {
 		.append('div')
 		.attr('class', 'sja_menuoption')
 		.html(d => d.label)
-		.on('click', (event, d) => {
+		.on('click', async (event, d) => {
 			self.app.tip.hide()
-			d.callback(self, tvslst)
+			await d.callback(self, tvslst)
 		})
 	self.app.tip.show(event.clientX, event.clientY)
 }
 
-function listSamples(event, self, seriesLabel, dataLabel, chart) {
+async function listSamples(event, self, seriesLabel, dataLabel, chart) {
 	// TODO call vocabApi.getAnnotatedSampleData() to get list of samples
-	return
 	const names = new Set()
-	for (const sample of self.samples) {
+	const opts = self.getDataRequestOpts()
+	opts.includeSamples = true
+	const result = await self.app.vocabApi.getNestedChartSeriesData(opts)
+
+	for (const sample of result.samples) {
 		if (self.config.term0 && !isLabel(sample.key0, self.config.term0.term, chart.chartId)) continue
 		//if term or term2 is a gene there is going to be always divideBy, filter by key0
 		if (
