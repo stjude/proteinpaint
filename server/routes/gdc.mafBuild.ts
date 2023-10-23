@@ -1,5 +1,6 @@
-import { GdcMafBuildResponse } from '#shared/types/routes/gdc.mafBuild.ts'
+//import { GdcMafBuildResponse } from '#shared/types/routes/gdc.mafBuild.ts'
 import path from 'path'
+import fs from 'fs'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 
@@ -12,9 +13,12 @@ export const api = {
 			init({ genomes }) {
 				return async (req: any, res: any): Promise<void> => {
 					try {
+						await buildMaf(req, res)
+						/*
 						const result = await buildMaf(req)
 						const payload = { result } as GdcMafBuildResponse
 						res.send(payload)
+						*/
 					} catch (e) {
 						res.send({ status: 'error', error: e.message || e })
 					}
@@ -37,18 +41,28 @@ export const api = {
 req.query {
 	fileIdLst []  // list of maf file uuids
 }
+
+res{}
 */
-async function buildMaf(req: any) {
+async function buildMaf(req: any, res: any) {
 	if (!Array.isArray(req.query.fileIdLst) || req.query.fileIdLst.length == 0) throw 'fileIdLst[] not array or blank'
+
+	const outFile = path.join(serverconfig.cachedir, 'gdcMaf.' + Math.random().toString()) // should be a gzipped file. does it need to end with '.gz' or it's auto-added?
 
 	const arg = {
 		fileIdLst: req.query.fileIdLst,
 		host: path.join(apihost, 'data'), // must use the /data/ endpoint from current host
-		outFile: path.join(serverconfig.cachedir, 'gdcMaf.' + Math.random().toString())
+		outFile
 	}
 
 	await run_rust('gdcmaf', JSON.stringify(arg))
-	console.log(arg.outFile)
 
-	return { fileSize: 1000 }
+	const data = await fs.promises.readFile(outFile)
+
+	res.writeHead(200, {
+		'Content-Type': 'application/octet-stream',
+		'Content-Disposition': 'attachment; filename=cohort.maf.gz',
+		'Content-Length': data.length
+	})
+	res.end(Buffer.from(data, 'binary'))
 }

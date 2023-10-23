@@ -78,8 +78,15 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 		for (const i of lst) {
 			fileIdLst.push(result.files[i].id)
 		}
-		const buildResult = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
-		console.log(buildResult)
+		const data = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
+
+		const a = document.createElement('a')
+		a.href = URL.createObjectURL(data)
+		a.download = 'cohort.maf.gz'
+		a.style.display = 'none'
+		document.body.appendChild(a)
+		a.click()
+		document.body.removeChild(a)
 	}
 
 	return publicApi
