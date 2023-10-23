@@ -73,11 +73,10 @@ async function listMafFiles(req: any, ds: any) {
 		fields: [
 			'id',
 			'file_size',
+			'access', // to limit to only open-access
 			'experimental_strategy',
 			'cases.project.project_id',
 			'cases.submitter_id', // used when listing all cases & files
-			//'associated_entities.entity_submitter_id', // semi human readable
-			//'associated_entities.case_id', // case uuid
 			'cases.samples.sample_type',
 			'analysis.workflow_type' // to drop out those as skip_workflow_type
 		].join(',')
@@ -116,6 +115,7 @@ async function listMafFiles(req: any, ds: any) {
 			  ]
 			}
 		  ],
+		  "access": open/controlled
 		  "analysis": {
 			"workflow_type": "MuSE Annotation"
 		  },
@@ -123,6 +123,9 @@ async function listMafFiles(req: any, ds: any) {
 		  "file_size": 146038
 		}
 		*/
+
+		if (typeof h.access != 'string') throw 'h.access value not string'
+		if (h.access != 'open') continue // skip files that are not open
 
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
