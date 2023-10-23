@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - publish-packages
-      - fake-release
+      - fake-publish
     paths-ignore:
       - '**.md'
       - '**.txt'
@@ -82,8 +82,8 @@ jobs:
 
       - name: Run version bump
         run: |
-          # initial dot makes the variables of the call script in-scope
-          . ./build/ci-version-update.sh -w -x=container
+          UPDATED=$(./build/bump.js -x=container)
+          ./build/ci-version-update.sh -w -x=container
           echo "UPDATED=$UPDATED" >> $GITHUB_ENV
 
       - name: Publish packages
@@ -92,23 +92,22 @@ jobs:
           if [[ "$BRANCH" != "publish-packages" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && ${{ github.event_name }} != 'workflow_dispatch' ]]; then 
             echo "skipping publishing"
           else
-            ./build/ci-npm-publish.sh "$UPDATED"
+            TAG=v$(node -p "require('./package.json').version")
+            REMOTETAG=$(git ls-remote origin refs/tags/$TAG)
+            if [[ "$REMOTETAG" != "" ]]; then
+              echo "Tag $TAG already exists on remote='origin' and may have been published already"
+              exit 1
+            fi
 
+            ./build/ci-npm-publish.sh "$UPDATED"
             if [[ "$BRANCH" != "master" ]]; then
-              TAG=v$(node -p "require('./package.json').version")
-              REMOTETAG=$(git ls-remote origin refs/tags/$TAG)
-              if [[ "$REMOTETAG" != "" ]]; then
-                echo "Tag $TAG already exists on remote='origin'"
-                exit 1
-              fi
               echo "merging to master"
               N=$(git rev-list master.. --count)
               git fetch --depth=N origin $BRANCH:$BRANCH
               git fetch --depth=1 origin master:master
               git switch master
               git merge $BRANCH
-              git push 
-              git tag $TAG
+              git push
               git push origin $TAG
             fi
           fi

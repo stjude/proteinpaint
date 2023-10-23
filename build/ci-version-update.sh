@@ -19,6 +19,11 @@ elif [[ "$NOTES" == *"Fixes:"* ]]; then
   VERTYPE=patch
 fi
 
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$VERTYPE" != "pre"* && "$BRANCH" != "publish-"* && "$BRANCH" != "release-chain"* && "$BRANCH" != "master" ]]; then
+  VERTYPE="pre$VERTYPE"
+fi
+
 ##########
 # CONTEXT
 ##########
@@ -29,17 +34,20 @@ if [[ "$UPDATED" == "" ]]; then
   exit 1
 fi
 
-
 ########################
 # Update the change log
 ########################
 
 VERSION="$(node -p "require('./package.json').version")"
-if [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
-  echo "No unreleased changes to publish"
-  exit 1
+if [[ "$VERTYPE" != "pre"* ]]; then
+  if [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
+    echo "No unreleased changes to publish"
+    exit 1
+  fi
+
+  # only update the change log if the version type is not prepatch, preminor, prerelease, pre*
+  sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 fi
-sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 
 #################
 # COMMIT CHANGES
@@ -47,11 +55,6 @@ sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 
 npm i --package-lock-only
 TAG="v$VERSION"
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$BRANCH" != "release" && "$BRANCH" != "master" ]]; then
-  HASH=$(git rev-parse --short HEAD)
-  TAG="$TAG-$HASH"
-fi
 COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
 echo "committing version change ..."
@@ -59,6 +62,20 @@ git config --global user.email "PPTeam@STJUDE.ORG"
 git config --global user.name "PPTeam CI"
 git add --all
 git commit -m "$COMMITMSG"
+echo "VERTYPE=[$VERTYPE]"
+
+EXISTINGTAG=$(git tag -l "$TAG")
+if [[ "$VERTYPE" == "pre"* ]]; then
+  # delete existing tags that match
+  if [[ "$EXISTINGTAG" != "" ]]; then
+    git tag -d $TAG
+  fi
+  git push origin :refs/tags/$TAG
+elif [[ "$EXISTINGTAG" != "" ]]; then
+  echo "Tag='$TAG' already exists"
+  exit 1
+fi
+
 git tag $TAG
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git push origin $BRANCH

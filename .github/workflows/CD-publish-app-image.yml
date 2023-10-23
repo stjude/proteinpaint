@@ -69,7 +69,7 @@ jobs:
 
       - name: Run version bump
         run: |
-          . ./build/ci-version-update.sh $VERTYPE -w
+          ./build/ci-version-update.sh $VERTYPE -w
           # !!! --- merge back to master --- !!!
 
       - name: Login to GitHub Container Registry
