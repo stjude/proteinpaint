@@ -83,7 +83,7 @@ jobs:
       - name: Run version bump
         run: |
           # initial dot makes the variables of the call script in-scope
-          . ./build/ci-version-update.sh $VERTYPE -w -x=container
+          . ./build/ci-version-update.sh -w -x=container
           echo "UPDATED=$UPDATED" >> $GITHUB_ENV
 
       - name: Publish packages
@@ -95,11 +95,21 @@ jobs:
             ./build/ci-npm-publish.sh "$UPDATED"
 
             if [[ "$BRANCH" != "master" ]]; then
+              TAG=v$(node -p "require('./package.json').version")
+              REMOTETAG=$(git ls-remote origin refs/tags/$TAG)
+              if [[ "$REMOTETAG" != "" ]]; then
+                echo "Tag $TAG already exists on remote='origin'"
+                exit 1
+              fi
               echo "merging to master"
-              git fetch --depth=10 origin master:master
+              N=$(git rev-list master.. --count)
+              git fetch --depth=N origin $BRANCH:$BRANCH
+              git fetch --depth=1 origin master:master
               git switch master
               git merge $BRANCH
-              git push
+              git push 
+              git tag $TAG
+              git push origin $TAG
             fi
           fi
         env:

@@ -11,17 +11,12 @@
 
 set -euxo pipefail
 
-if (( $# == 0 )); then
-  VERTYPE=prerelease # default
-  NOTES=$(node ./build/changeLogGenerator.js -u)
-  if [[ "$NOTES" == *"Features:"* ]]; then
-    VERTYPE=minor
-  elif [[ "$NOTES" == *"Fixes:"* ]]; then
-    VERTYPE=patch
-  fi
-else
-  VERTYPE="$1"
-  exit 1
+VERTYPE=prerelease # default
+NOTES=$(node ./build/changeLogGenerator.js -u)
+if [[ "$NOTES" == *"Features:"* ]]; then
+  VERTYPE=minor
+elif [[ "$NOTES" == *"Fixes:"* ]]; then
+  VERTYPE=patch
 fi
 
 ##########
