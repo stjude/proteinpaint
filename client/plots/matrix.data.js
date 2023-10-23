@@ -1,4 +1,5 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx'
+import { sample_match_termvaluesetting } from '../common/termutils'
 
 // track state diff to be able to skip server data request
 // and term/sample order recomputation, as needed
@@ -127,6 +128,7 @@ export async function setData(_data) {
 	}
 
 	this.data = await this.app.vocabApi.getAnnotatedSampleData(opts, _data)
+	this.origData = structuredClone(this.data)
 	this.sampleIdMap = {}
 	for (const d of this.data.lst) {
 		// mapping of sample string name to integer id
@@ -134,4 +136,143 @@ export async function setData(_data) {
 		const name = d.sampleName.split('_')[0]
 		this.sampleIdMap[name] = d.sample
 	}
+}
+
+export function applyLegendValueFilter(self) {
+	if (!self.config.legendValueFilter.lst.length && !self.config.legendGrpFilter.lst.length) return
+
+	for (const grpFilter of self.config.legendGrpFilter.lst) {
+		if (grpFilter.dt) {
+			for (const oneSampleData of self.origData.lst) {
+				for (const annoForOneTerm of Object.values(oneSampleData)) {
+					if (annoForOneTerm.values)
+						annoForOneTerm.values = annoForOneTerm.values.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+					if (annoForOneTerm.countedValues)
+						annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+					if (annoForOneTerm.filteredValues)
+						annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+					if (annoForOneTerm.renderedValues)
+						annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+				}
+			}
+
+			for (const oneSampleData of Object.values(self.origData.samples)) {
+				for (const annoForOneTerm of Object.values(oneSampleData)) {
+					if (annoForOneTerm.values)
+						annoForOneTerm.values = annoForOneTerm.values.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+					if (annoForOneTerm.countedValues)
+						annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+					if (annoForOneTerm.filteredValues)
+						annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+					if (annoForOneTerm.renderedValues)
+						annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
+							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+						)
+				}
+			}
+		} else {
+			for (const oneSampleData of self.origData.lst) {
+				delete oneSampleData[grpFilter.$id]
+			}
+			for (const oneSampleData of Object.values(self.origData.samples)) {
+				delete oneSampleData[grpFilter.$id]
+			}
+		}
+	}
+
+	const geneVariant$ids = Object.values(self.data.refs.byTermId)
+		.filter(v => v.term.type == 'geneVariant')
+		.map(v => v.$id)
+	const data = { samples: {}, lst: [], refs: self.data.refs }
+
+	for (const row of self.origData.lst) {
+		const include = sample_match_termvaluesetting(row, self.config.legendValueFilter, geneVariant$ids)
+		if (include) {
+			data.samples[row.sample] = row
+			data.lst.push(row)
+		}
+	}
+
+	for (const valFilter of self.config.legendValueFilter.lst) {
+		// after applying each soft filter, hide the remaining targetted mclass
+		if (valFilter.tvs.legendFilterType !== 'geneVariant_soft') continue
+		const tvsV = valFilter.tvs.values[0]
+
+		for (const oneSampleData of data.lst) {
+			for (const annoForOneTerm of Object.values(oneSampleData)) {
+				if (annoForOneTerm.values)
+					annoForOneTerm.values = annoForOneTerm.values.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+				if (annoForOneTerm.countedValues)
+					annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+				if (annoForOneTerm.filteredValues)
+					annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+				if (annoForOneTerm.renderedValues)
+					annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+			}
+		}
+		for (const oneSampleData of Object.values(data.samples)) {
+			for (const annoForOneTerm of Object.values(oneSampleData)) {
+				if (annoForOneTerm.values)
+					annoForOneTerm.values = annoForOneTerm.values.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+				if (annoForOneTerm.countedValues)
+					annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+				if (annoForOneTerm.filteredValues)
+					annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+				if (annoForOneTerm.renderedValues)
+					annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
+						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
+					)
+			}
+		}
+	}
+	remove_empty_sample(data)
+	self.data = data
+}
+
+// each time gene legend soft filter or gene legend group filter is applied (when cell gene values updated), remove
+// the samples that have empty cells (not even WT or BLANK)
+function remove_empty_sample(data) {
+	console.log('what is data', data)
+	for (const oneSampleData of data.lst) {
+		let removeSample = true
+		for (const [key, annoForOneTerm] of Object.entries(oneSampleData)) {
+			if (!annoForOneTerm.values) continue
+			const annoType = data.refs.byTermId[key].term.type
+			if (annoType != 'geneVariant') continue
+			if (annoForOneTerm.values.length) removeSample = false
+		}
+		if (removeSample) {
+			data.lst = data.lst.filter(dl => dl.sample !== oneSampleData.sample)
+			delete data.samples[parseInt(oneSampleData.sample)]
+		}
+	}
+	return data
 }

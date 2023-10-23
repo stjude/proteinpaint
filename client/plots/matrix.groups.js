@@ -29,17 +29,10 @@ export function getTermOrder(data) {
 					// NOTE: the displayed case counts or variant hits are determined
 					// not in this call, but in the second call to
 					// classifyValues(), + in getSerieses() and getLegendData()
-					const { filteredValues, countedValues, renderedValues, crossedOutValues } = this.classifyValues(
-						anno,
-						tw,
-						grp,
-						s,
-						sd
-					)
+					const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, tw, grp, s, sd)
 					anno.filteredValues = filteredValues
 					anno.countedValues = countedValues
 					anno.renderedValues = renderedValues
-					anno.crossedOutValues = crossedOutValues
 					if (anno.countedValues?.length) {
 						const v = tw.term.values?.[anno.value]
 						if (v?.uncountable) continue
@@ -218,7 +211,6 @@ Given the anno of a term for a sample, generate the
     filteredValues (values matched the filter)
     countedValues (values counted, Class = Blank or WT are not counted)
     renderedValues (values rendered on matrix)
-    crossedOutValues (values crossed out by clicking legend)
 */
 export function classifyValues(anno, tw, grp, s, sample) {
 	const values = 'value' in anno ? [anno.value] : anno.values
@@ -229,15 +221,10 @@ export function classifyValues(anno, tw, grp, s, sample) {
 	if (isSpecific.length && isSpecific[0].type !== 'tvs' && isSpecific[0].type !== 'tvslst')
 		throw `unknown matrix value filter type='${isSpecific.type}'`
 
-	// initialFilteredValues are the values passed the isSpecific filter
-	const initialFilteredValues = !isSpecific.length
+	// filteredValues are the values passed the isSpecific filter
+	let filteredValues = !isSpecific.length
 		? values
 		: values.filter(v => sample_match_termvaluesetting(v, isSpecific[0], tw.term, sample))
-
-	// filteredValues are the values passed both isSpecific filter and the filters in this.config.legendValueFilter
-	let filteredValues = initialFilteredValues.filter(v =>
-		sample_match_termvaluesetting(v, this.config.legendValueFilter, tw.term, sample, true)
-	)
 
 	const renderedValues = []
 	if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)
@@ -260,9 +247,6 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		filteredValues.sort(this.stackSiblingCellsByClass)
 	}
 
-	// crossedOutValues are the values passed the isSpecific filter but not the filters in this.config.legendValueFilter
-	const crossedOutValues = initialFilteredValues.filter(v => !filteredValues.includes(v))
-
 	return {
 		filteredValues,
 		countedValues: filteredValues.filter(v => {
@@ -273,8 +257,7 @@ export function classifyValues(anno, tw, grp, s, sample) {
 			}
 			return true
 		}),
-		renderedValues,
-		crossedOutValues
+		renderedValues
 	}
 }
 

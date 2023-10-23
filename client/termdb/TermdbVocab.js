@@ -760,8 +760,9 @@ export class TermdbVocab extends Vocab {
 						refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
 					}
 
+					refs.byTermId[tw.$id] = tw
 					if (idn in data.refs.byTermId) {
-						refs.byTermId[tw.$id] = data.refs.byTermId[idn]
+						refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[idn])
 					}
 
 					numResponses++
