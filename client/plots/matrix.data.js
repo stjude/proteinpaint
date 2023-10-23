@@ -260,7 +260,6 @@ export function applyLegendValueFilter(self) {
 // each time gene legend soft filter or gene legend group filter is applied (when cell gene values updated), remove
 // the samples that have empty cells (not even WT or BLANK)
 function remove_empty_sample(data) {
-	console.log('what is data', data)
 	for (const oneSampleData of data.lst) {
 		let removeSample = true
 		for (const [key, annoForOneTerm] of Object.entries(oneSampleData)) {
