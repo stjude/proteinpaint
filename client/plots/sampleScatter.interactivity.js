@@ -100,7 +100,7 @@ export function setInteractivity(self) {
 				const td = row.append('td')
 				if (showShape) {
 					const color = showColor ? self.getColor(d, chart) : self.config.colorTW ? 'gray' : self.settings.defaultColor
-					const shape = showColor ? self.getShape(chart, d, 1, true) : self.getShape(chart, d)
+					const shape = showColor ? self.getShape(chart, d, 1, true, true) : self.getShape(chart, d, 1, false, true)
 					const width = value.length * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '35px')
 					const g = svg.append('g').attr('transform', 'translate(10, 18)')
