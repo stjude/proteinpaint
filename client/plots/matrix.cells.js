@@ -101,7 +101,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	if (value.class == 'Blank' || value.class == 'WT') {
 		cell.label = `${self.dt2label[value.dt]} ${cell.label}`
 	}
-	if (value.origin) cell.label = `${self.morigin[value.origin].label} ${cell.label}`
+	//if (value.origin) cell.label = `${self.morigin[value.origin].label} ${cell.label}`
 
 	// return the corresponding legend item data
 	const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
@@ -138,6 +138,15 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 			}
 		}
+	} else if (value.dt == 2) {
+		const group = 'Structural Variants'
+		return {
+			ref: t.ref,
+			group,
+			value: value.class,
+			order: -1,
+			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
+		}
 	} else if (value.dt == 3) {
 		return {
 			ref: t.ref,
@@ -157,7 +166,12 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 			}
 		}
 	} else {
-		const group = tw.legend?.group || 'Consequences'
+		const controlLabels = self.settings.matrix.controlLabels
+		const group =
+			tw.legend?.group ||
+			(value.origin
+				? `${value.origin[0].toUpperCase() + value.origin.slice(1)} ${controlLabels.Mutations}`
+				: controlLabels.Mutations)
 		return {
 			ref: t.ref,
 			group,

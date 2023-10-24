@@ -1,1 +1,2 @@
-
+Features
+- Support clicking matrix legends and matrix legend group names to use as filters.

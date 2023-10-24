@@ -10,7 +10,7 @@ export { getPlotConfig } from './matrix.config'
 import { getLegendData, getLegendItemText } from './matrix.legend'
 import { getSerieses } from './matrix.serieses'
 import { setAutoDimensions, setLabelsAndScales, setLayout } from './matrix.layout'
-import { computeStateDiff, mayRequireToken, setData } from './matrix.data'
+import { computeStateDiff, mayRequireToken, setData, applyLegendValueFilter } from './matrix.data'
 import {
 	getTermOrder,
 	getSampleGroups,
@@ -175,6 +175,7 @@ export class Matrix {
 			// may skip term or sample ordering when there are
 			// no relevant state/config/setting changes
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
+				applyLegendValueFilter(this)
 				this.termOrder = this.getTermOrder(this.data)
 				this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 				this.sampleOrder = this.getSampleOrder(this.data)
@@ -280,6 +281,7 @@ Matrix.prototype.setLayout = setLayout
 Matrix.prototype.computeStateDiff = computeStateDiff
 Matrix.prototype.mayRequireToken = mayRequireToken
 Matrix.prototype.setData = setData
+Matrix.prototype.applyLegendValueFilter = applyLegendValueFilter
 
 // from matrix.groups
 Matrix.prototype.getTermOrder = getTermOrder
