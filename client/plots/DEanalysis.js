@@ -224,7 +224,7 @@ add:
 				})
 				dotg.attr('transform', d => {
 				        const pv = useun ? d.adjusted_p_value : d.original_p_value
-					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv == 0 ? maxlogpv : pv) + ')'
+					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv) + ')'
 				})
 				ylab.text(useun ? '-log10(adjusted P value)' : '-log10(original P value)')
 			})
