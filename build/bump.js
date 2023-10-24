@@ -85,7 +85,11 @@ if (opts.refCommit.endsWith('^{commit}')) {
 			})
 			if (!commitMsg) throw `error in finding commit message`
 			if (!commitMsg.startsWith(`v${rootPkg.version} `)) {
-				throw `the reference tag's commit message does not start with v${rootPkg.version}`
+				const commitMsgTag = commitMsg.split(' ')[0]
+				if (!commitMsgTag.startsWith(`v${rootPkg.version}-`)) {
+					// allow a back-applied unique tag to be matched against a tag with the same version, but having a SHA suffix
+					throw `the reference tag's commit message does not start with v${rootPkg.version}`
+				}
 			}
 		}
 	} catch (e) {
