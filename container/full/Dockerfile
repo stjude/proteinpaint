@@ -1,7 +1,7 @@
 # Default to Docker Hub, but enable the base image to be pulled from a
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
-ARG VERSION=2.27.2-4ab805b
+ARG VERSION=2.29.5
 
 #########################
 # Full app update
@@ -19,9 +19,9 @@ WORKDIR /home/root/pp
 COPY ./tmppack ./tmppack
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./full/package.json .
-
-RUN npm install
+RUN npm i --package-lock-only
+COPY ./full/package.json  ./
+RUN npm install --omit=dev --prefer-offline --cache=/root/.npm
 COPY ./full/app-full.js .
 COPY ./public .
 

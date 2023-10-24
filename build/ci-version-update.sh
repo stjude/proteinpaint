@@ -11,39 +11,49 @@
 
 set -euxo pipefail
 
-# see the allowed version types in https://docs.npmjs.com/cli/v8/commands/npm-version
-# e.g., <newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git
-TYPE=prerelease
-if [[ "$1" != "" ]]; then
-  TYPE=$1
+VERTYPE=prerelease # default
+NOTES=$(node ./build/changeLogGenerator.js -u)
+if [[ "$NOTES" == *"Features:"* ]]; then
+  VERTYPE=minor
+elif [[ "$NOTES" == *"Fixes:"* ]]; then
+  VERTYPE=patch
+fi
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$VERTYPE" != "pre"* && "$BRANCH" != "publish-"* && "$BRANCH" != "release-chain"* && "$BRANCH" != "master" ]]; then
+  VERTYPE="pre$VERTYPE"
 fi
 
 ##########
 # CONTEXT
 ##########
 
-UPDATED=$(./build/bump.js "$@")
+UPDATED=$(./build/bump.js $VERTYPE "$@")
 if [[ "$UPDATED" == "" ]]; then
   echo "No workspace package updates, exiting script with code 1"
   exit 1
 fi
-
 
 ########################
 # Update the change log
 ########################
 
 VERSION="$(node -p "require('./package.json').version")"
-if [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
-  echo "No unreleased changes to publish"
-  exit 1
+if [[ "$VERTYPE" != "pre"* ]]; then
+  if [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
+    echo "No unreleased changes to publish"
+    exit 1
+  fi
+
+  # only update the change log if the version type is not prepatch, preminor, prerelease, pre*
+  sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 fi
-sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 
 #################
 # COMMIT CHANGES
 #################
 
+npm i --package-lock-only
 TAG="v$VERSION"
 COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
@@ -52,6 +62,20 @@ git config --global user.email "PPTeam@STJUDE.ORG"
 git config --global user.name "PPTeam CI"
 git add --all
 git commit -m "$COMMITMSG"
+echo "VERTYPE=[$VERTYPE]"
+
+EXISTINGTAG=$(git tag -l "$TAG")
+if [[ "$VERTYPE" == "pre"* ]]; then
+  # delete existing tags that match
+  if [[ "$EXISTINGTAG" != "" ]]; then
+    git tag -d $TAG
+  fi
+  git push origin :refs/tags/$TAG
+elif [[ "$EXISTINGTAG" != "" ]]; then
+  echo "Tag='$TAG' already exists"
+  exit 1
+fi
+
 git tag $TAG
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git push origin $BRANCH

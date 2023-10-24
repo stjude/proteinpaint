@@ -73,9 +73,28 @@ for (const k of process.argv.slice(3)) {
 // ******************************************
 
 if (opts.refCommit.endsWith('^{commit}')) {
-	const commitMsg = ex(`git log --format=%B -n 1 v${rootPkg.version}`, {
-		message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot diff for changes`
-	})
+	try {
+		const tagExists = ex(`git tag -l v${rootPkg.version}`)
+		if (!tagExists) {
+			const errorMsg = ex(`git fetch --depth 1 origin tag v${rootPkg.version}`, {
+				message: `Error fetching the tag v${rootPkg.version}: cannot diff for changes`
+			})
+			if (errorMsg) throw errorMsg
+			const commitMsg = ex(`git tag -l --format='%(contents)' v${rootPkg.version}`, {
+				message: `Error finding a commit message prefixed with v${rootPkg.version}: cannot verify tag`
+			})
+			if (!commitMsg) throw `error in finding commit message`
+			if (!commitMsg.startsWith(`v${rootPkg.version} `)) {
+				const commitMsgTag = commitMsg.split(' ')[0]
+				if (!commitMsgTag.startsWith(`v${rootPkg.version}-`)) {
+					// allow a back-applied unique tag to be matched against a tag with the same version, but having a SHA suffix
+					throw `the reference tag's commit message does not start with v${rootPkg.version}`
+				}
+			}
+		}
+	} catch (e) {
+		throw e
+	}
 }
 const newVersion = semver.inc(rootPkg.version, verType)
 
@@ -83,6 +102,7 @@ const pkgs = {}
 const changedFiles = ex(`git diff --name-only ${opts.refCommit} HEAD`).split('\n')
 for (const w of rootPkg.workspaces) {
 	if (opts.exclude.find(s => w.includes(s))) continue
+	const hasRelevantChangedFiles = changedFiles.find(f => f.startsWith(w) && fileAffectsVersion(f))
 	const paths = glob.sync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
 		const pkg = require(path.join(cwd, pkgPath))
@@ -101,8 +121,8 @@ for (const w of rootPkg.workspaces) {
 			pkgPath,
 			pkgDir,
 			// TODO: should also check for non-empty workspace/release.txt???
-			// so that a package releases is created only if there are notable changes
-			selfChanged: wsHashOnRelease != wsHashCurrent && changedFiles.find(f => f.startsWith(w) && fileAffectsVersion),
+			// so that a package release is created only if there are notable changes
+			selfChanged: wsHashOnRelease != wsHashCurrent && hasRelevantChangedFiles,
 			changedDeps: new Set()
 		}
 	}

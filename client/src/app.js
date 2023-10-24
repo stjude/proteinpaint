@@ -210,6 +210,21 @@ export function runproteinpaint(arg) {
 		})
 }
 
+runproteinpaint.getStatus = async function getStatus(outputAs = '') {
+	return await fetch('/healthcheck')
+		.then(res => res.json())
+		.then(res => {
+			const status = {
+				clientVersion: document.querySelector('.sja_root_holder')?.dataset.ppclientversion,
+				versionInfo: res.versionInfo
+			}
+			if (outputAs == 'log') console.info(status)
+			else if (outputAs == 'json') return JSON.stringify(status)
+			else return status
+		})
+		.catch(console.error)
+}
+
 // KEEP THIS ppsrc DECLARATION AT THE TOP SCOPE !!!
 // need to know the script src when pp is first loaded
 // the source context may be lost after the pp script is loaded

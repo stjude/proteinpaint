@@ -1,0 +1,115 @@
+name: "Publish Packages"
+
+on:
+  push:
+    branches:
+      - publish-packages
+      - fake-publish
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
+      # TODO: what if package.dependencies, files were updated?
+      # this is meant to avoid triggering the on.push event for the version bump
+      - '**package*.json'
+
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+
+  workflow_call: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 20
+    steps:
+      - name: Check secret
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
+            echo "Wrong build secret."
+            exit 1
+          fi 
+
+      - name: Check user permission
+        if: github.event_name == 'workflow_dispatch'
+        id: check
+        uses: scherermichael-oss/action-has-permission@master
+        with:
+          required-permission: write
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Exit if user doesn't have write permission
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ steps.check.outputs.has-permission }}" = "false" ]; then
+            echo "Only users with write permission are allowed to execute this workflow."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Fetch All Tags
+        run: git fetch --all --tags
+
+      # Setup .npmrc file to publish to GitHub Packages
+      - uses: actions/setup-node@v3
+        with:
+          cache: 'npm'
+          node-version: '16'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@sjcrh'
+
+      - name: ⚡ Cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.OS }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.OS }}-npm-cache-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run version bump
+        run: |
+          UPDATED=$(./build/bump.js -x=container)
+          ./build/ci-version-update.sh -w -x=container
+          echo "UPDATED=$UPDATED" >> $GITHUB_ENV
+
+      - name: Publish packages
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [[ "$BRANCH" != "publish-packages" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && ${{ github.event_name }} != 'workflow_dispatch' ]]; then 
+            echo "skipping publishing"
+          else
+            TAG=v$(node -p "require('./package.json').version")
+            REMOTETAG=$(git ls-remote origin refs/tags/$TAG)
+            if [[ "$REMOTETAG" != "" ]]; then
+              echo "Tag $TAG already exists on remote='origin' and may have been published already"
+              exit 1
+            fi
+
+            ./build/ci-npm-publish.sh "$UPDATED"
+            if [[ "$BRANCH" != "master" ]]; then
+              echo "merging to master"
+              N=$(git rev-list master.. --count)
+              git fetch --depth=N origin $BRANCH:$BRANCH
+              git fetch --depth=1 origin master:master
+              git switch master
+              git merge $BRANCH
+              git push
+              git push origin $TAG
+            fi
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}

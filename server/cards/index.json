@@ -212,7 +212,7 @@
             "description": "Review CICERO output",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/fusion-editor-square.png",
             "sandboxJson": "fusioneditor",
-            "searchterms": []
+            "searchterms": ["CICERO"]
         },
         {
             "type": "card",
@@ -230,7 +230,7 @@
             "description": "Mutation heatmap",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/heatmap-square.png",
             "sandboxJson": "study",
-            "searchterms": ["heat map"]
+            "searchterms": ["heat map", "oncoprint"]
         },
         {
             "type": "card",
@@ -255,19 +255,22 @@
             "type": "dsButton",
             "name": "Pediatric Cancer Mutation",
             "section": "datasetButtons",
-            "sandboxJson": "pcmBtn"
+            "sandboxJson": "pcmBtn",
+            "searchterms": ["pcgp", "Pan-TARGET", "T-ALL cohort"]
         },
         {
             "type": "dsButton",
             "name": "Pediatric2 GenomePaint",
             "section": "datasetButtons",
-            "sandboxJson": "ped2Btn"
+            "sandboxJson": "ped2Btn",
+            "searchterms": ["relapsed ALL cohort", "Genome for Kids", "g4k", "Pan-neuroblastoma analysis"]
         },
         {
             "type": "dsButton",
             "name": "NCI GDC",
             "section": "datasetButtons",
-            "sandboxJson": "nciGdcBtn"
+            "sandboxJson": "nciGdcBtn",
+            "searchterms": ["TCGA", "CPTAC", "TARGET"]
         },
         {
             "type": "dsButton",
@@ -279,7 +282,8 @@
             "type": "dsButton",
             "name": "Survivorship Study",
             "section": "datasetButtons",
-            "sandboxJson": "survivorBtn"
+            "sandboxJson": "survivorBtn",
+            "searchterms": ["sjlife", "ccss", "St Jude Life", "Childhood Cancer Survivor Study"]
         },
         {
             "type": "card",
@@ -297,7 +301,7 @@
             "description": "Single-cell omics viewer",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/singlecell-square.png",
             "sandboxJson": "singlecell",
-            "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
+            "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot", "umap"]
         },
         {
             "type": "card",
