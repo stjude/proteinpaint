@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.30.0
 
 Features:
 - Support clicking matrix legends and matrix legend group names to use as filters.
