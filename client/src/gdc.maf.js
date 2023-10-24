@@ -5,7 +5,8 @@ import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 
 /*
-generate an aggregated maf file from a cohort
+a UI to list open-access maf files from current cohort
+let user selects some, for the backend to generate an aggregated maf file and download to user
 
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
@@ -20,7 +21,7 @@ const columns = [
 	{ label: 'Project' },
 	{ label: 'Samples' },
 	{ label: 'Experimental Strategy' },
-	{ label: 'Workflow Type' },
+	//{ label: 'Workflow Type' },
 	{ label: 'File Size' }
 ]
 export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = false }) {
@@ -36,6 +37,11 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 
 	try {
 		result = await getFileList(filter0)
+
+		holder.append('div').style('margin', '20px').html(`${result.skipControlled} controlled-access files skipped.<br>
+				${result.skipWorkflow} files skipped for unwanted workflow type.<br>
+				All files have the workflow type of "Aliquot Ensemble Somatic Variant Merging and Masking".
+			`)
 		const rows = []
 		for (const f of result.files) {
 			const row = [
@@ -51,8 +57,8 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 						.join(' ')
 				},
 				{ value: f.experimental_strategy },
-				{ value: f.workflow_type },
-				{ value: f.file_size }
+				//{ value: f.workflow_type },
+				{ value: f.file_size, url: 'https://portal.gdc.cancer.gov/files/' + f.id }
 			]
 			rows.push(row)
 		}
