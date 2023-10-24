@@ -516,6 +516,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		maxHeight: '40vh',
 		resize: true
 	})
+	menu.show(event.clientX, event.clientY, false)
 
 	function getTvs(termIndex, value) {
 		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
@@ -532,8 +533,6 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		}
 		return tvs
 	}
-
-	menu.show(event.clientX, event.clientY, false)
 }
 
 function menuoption_add_filter(self, tvslst) {
