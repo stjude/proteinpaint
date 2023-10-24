@@ -34,8 +34,7 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 			const t = item.tvs
 			let samplevalue
 			if (t.term.type == 'geneVariant') {
-				samplevalue = geneVariant$ids.map(g => row[g])
-				samplevalue = samplevalue.filter(s => s) // filter out the genes that are not annotated for the sample
+				samplevalue = geneVariant$ids.map(g => row[g]).filter(s => s) // filter out the genes that are not annotated for the sample
 			} else if (t.term.type == 'integer' || t.term.type == 'float') {
 				samplevalue = row[t.term.id] || row[t.term.$id]?.key
 			} else {
@@ -116,7 +115,7 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 				thistermmatch =
 					samplevalue.find(s => {
 						for (const v of s.values) {
-							if (v.dt == f.dt && (v.origin ? v.origin == f.origin : true) && f.mclasslst.includes(v.class)) return true
+							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
 						}
 					}) && true
 			} else if (t.term.type == 'geneVariant' && t.legendFilterType == 'geneVariant_soft') {
@@ -125,7 +124,7 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 				thistermmatch =
 					samplevalue.find(s => {
 						for (const v of s.values) {
-							if (v.dt == f.dt && (v.origin ? v.origin == f.origin : true) && f.mclasslst.includes(v.class)) return true
+							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
 						}
 					}) && true
 
@@ -134,7 +133,7 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 					for (const sv of samplevalue) {
 						for (const v of sv.values) {
 							if (v.class == 'WT' || v.class == 'Blank') continue
-							if (!(v.dt == f.dt && (v.origin ? v.origin == f.origin : true) && f.mclasslst.includes(v.class))) {
+							if (!(v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class))) {
 								thistermmatch = false
 								break
 							}
