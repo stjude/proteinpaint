@@ -1,2 +1,1 @@
-Fixes:
-- Revert prev change that cause hic genome view to misalign
+

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Revert prev change that cause hic genome view to misalign
+
+
 ## 2.29.6
 
 Fixes:
