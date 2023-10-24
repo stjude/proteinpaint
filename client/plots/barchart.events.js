@@ -440,7 +440,7 @@ function handle_click(event, self, chart) {
 	if (self.config.displaySampleIds) {
 		options.push({
 			label: 'List samples',
-			callback: async () => await listSamples(event, self, seriesLabel, dataLabel, chart)
+			callback: async () => await listSamples(event, self, d.seriesId, d.dataId, chart.chartId)
 		})
 	}
 
@@ -481,30 +481,29 @@ function handle_click(event, self, chart) {
 	self.app.tip.show(event.clientX, event.clientY)
 }
 
-async function listSamples(event, self, seriesLabel, dataLabel, chart) {
-	// TODO call vocabApi.getAnnotatedSampleData() to get list of samples
-	const names = new Set()
-	const opts = self.getDataRequestOpts()
-	opts.includeSamples = true
-	const result = await self.app.vocabApi.getNestedChartSeriesData(opts)
-
-	for (const sample of result.samples) {
-		if (self.config.term0 && !isLabel(sample.key0, self.config.term0.term, chart.chartId)) continue
-		//if term or term2 is a gene there is going to be always divideBy, filter by key0
-		if (
-			(self.config.term2?.term.type == 'geneVariant' || self.config.term.term.type == 'geneVariant') &&
-			sample.key0 !== chart.chartId
-		)
-			continue
-		if (isLabel(sample.key1, self.config.term.term, seriesLabel)) {
-			const name = sample.name
-			if (self.config.term2) {
-				if (isLabel(sample.key2, self.config.term2.term, dataLabel)) names.add(name)
-			} else names.add(name)
-		}
+async function listSamples(event, self, seriesId, dataId, chartId) {
+	const tvslst = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [getTvs(1, seriesId)]
 	}
+	const terms = [self.config.term]
+	if (self.config.term2) {
+		terms.push(self.config.term2)
+		tvslst.lst.push(getTvs(2, dataId))
+	}
+	if (self.config.term0) {
+		terms.push(self.config.term0)
+		tvslst.lst.push(getTvs(0, chartId))
+	}
+	const opts = {
+		terms,
+		filter: filterJoin([self.state.termfilter.filter, tvslst])
+	}
+	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 	const rows = []
-	for (const name of names) rows.push([{ value: name }])
+	for (const sample of data.lst) rows.push([{ value: sample.sampleName }])
 	const columns = [{ label: 'Sample' }]
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')
@@ -518,12 +517,23 @@ async function listSamples(event, self, seriesLabel, dataLabel, chart) {
 		resize: true
 	})
 
-	menu.show(event.clientX, event.clientY, false)
-
-	function isLabel(key, term, label) {
-		const value = term.type == 'categorical' ? term.values[key].label : key
-		return label == value
+	function getTvs(termIndex, value) {
+		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
+		const tvs = {
+			type: 'tvs',
+			tvs: {
+				term: term.term,
+				values: [{ key: value }]
+			}
+		}
+		if (term.term.type == 'integer' || term.term.type == 'float') {
+			const bins = self.bins[termIndex]
+			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
+		}
+		return tvs
 	}
+
+	menu.show(event.clientX, event.clientY, false)
 }
 
 function menuoption_add_filter(self, tvslst) {
@@ -562,7 +572,7 @@ function wrapTvs(tvs) {
 
 /* 			TODO: add to cart and gp          */
 
-export function menuoption_listsamples(self, tvslst) {
+function menuoption_listsamples(self, tvslst) {
 	const filterRoot = getNormalRoot({
 		type: 'tvslst',
 		join: 'and',
