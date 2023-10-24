@@ -119,7 +119,8 @@ add:
 	const circle = dotg
 	        .append('circle')
 	        .attr('stroke', d => {
-		    let color  
+		    let color
+		    //console.log("Gene name:", d.gene_name, " Gene Symbol:", d.gene_symbol, " original p-value:", d.original_p_value, " adjusted p-value:", d.adjusted_p_value)
 		    if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
 			color = 'red'
 			num_significant_genes += 1
