@@ -1,7 +1,5 @@
-import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '#dom/error'
-import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 
 /*
@@ -14,16 +12,15 @@ filter0=str
 
 */
 
-const tip = new Menu({ padding: '' })
-
+// list of columns to show in MAF file table
 const columns = [
 	{ label: 'Case' },
 	{ label: 'Project' },
 	{ label: 'Samples' },
 	{ label: 'Experimental Strategy' },
-	//{ label: 'Workflow Type' },
 	{ label: 'File Size' }
 ]
+
 export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = false }) {
 	// public api obj to be returned
 	const publicApi = {}
@@ -57,7 +54,6 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 						.join(' ')
 				},
 				{ value: f.experimental_strategy },
-				//{ value: f.workflow_type },
 				{ value: f.file_size, url: 'https://portal.gdc.cancer.gov/files/' + f.id }
 			]
 			rows.push(row)
@@ -70,7 +66,7 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 			selectAll: true,
 			buttons: [
 				{
-					text: 'Submit',
+					text: 'Aggregate selected MAF files and download',
 					callback: submitSelectedFiles
 				}
 			]
@@ -84,8 +80,19 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 		for (const i of lst) {
 			fileIdLst.push(result.files[i].id)
 		}
-		const data = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
 
+		// may disable the "Aggregate" button here and re-enable later
+
+		let data
+		try {
+			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
+		} catch (e) {
+			// do not proceed upon err
+			sayerror(holder, e)
+			return
+		}
+
+		// download the file to client
 		const a = document.createElement('a')
 		a.href = URL.createObjectURL(data)
 		a.download = 'cohort.maf.gz'
