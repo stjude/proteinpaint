@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Support clicking matrix legends and matrix legend group names to use as filters.
+
 Fixes:
 - Revert prev change that cause hic genome view to misalign
 
