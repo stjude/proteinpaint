@@ -35,10 +35,20 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 	try {
 		result = await getFileList(filter0)
 
-		holder.append('div').style('margin', '20px').html(`${result.skipControlled} controlled-access files skipped.<br>
-				${result.skipWorkflow} files skipped for unwanted workflow type.<br>
-				All files have the workflow type of "Aliquot Ensemble Somatic Variant Merging and Masking".
-			`)
+		{
+			const row = holder.append('div').style('margin', '20px')
+			row.append('div').text('Only showing open-access files.')
+			if (result.filesTotal > result.files.length) {
+				row.append('div').text(`Showing first ${result.files.length} files out of ${result.filesTotal} total.`)
+			} else {
+				row.append('div').text(`Showing ${result.files.length} files.`)
+			}
+			row.append('div').text(`${result.skipWorkflow} files skipped for unwanted workflow type.`)
+			row
+				.append('div')
+				.text('All files have the workflow type of "Aliquot Ensemble Somatic Variant Merging and Masking".')
+		}
+
 		const rows = []
 		for (const f of result.files) {
 			const row = [

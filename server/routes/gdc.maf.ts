@@ -4,7 +4,7 @@ import path from 'path'
 import got from 'got'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const maxFileNumber = 5000
+const maxFileNumber = 1000
 const onlyAllowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
 
 export const api = {
@@ -18,7 +18,7 @@ export const api = {
 						if (!g) throw 'hg38 missing'
 						const ds = g.datasets.GDC
 						if (!ds) throw 'hg38 GDC missing'
-						const payload = (await listMafFiles(req, ds)) as GdcMafResponse
+						const payload = await listMafFiles(req)
 						//	const payload = { files }
 						res.send(payload)
 					} catch (e: any) {
@@ -50,14 +50,12 @@ ds {
 	}
 }
 */
-async function listMafFiles(req: any, ds: any) {
+async function listMafFiles(req: any) {
 	const filters = {
 		op: 'and',
 		content: [
-			{
-				op: '=',
-				content: { field: 'data_format', value: 'MAF' }
-			}
+			{ op: '=', content: { field: 'data_format', value: 'MAF' } },
+			{ op: '=', content: { field: 'access', value: 'open' } } // delete if later to support controlled files
 		]
 	}
 
@@ -73,7 +71,6 @@ async function listMafFiles(req: any, ds: any) {
 		fields: [
 			'id',
 			'file_size',
-			'access', // to limit to only open-access
 			'experimental_strategy',
 			'cases.project.project_id', // for display only
 			'cases.submitter_id', // used when listing all cases & files
@@ -90,14 +87,14 @@ async function listMafFiles(req: any, ds: any) {
 	} catch (e) {
 		throw 'invalid JSON from ' + api.endpoint
 	}
+	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
 	const files = [] as File[]
 
-	let skipControlled = 0, // count number of skipped files by reason
-		skipWorkflow = 0
+	let skipWorkflow = 0 // count number of skipped files by reason
 	//skipExperiment=0
 
 	for (const h of re.data.hits) {
@@ -120,7 +117,6 @@ async function listMafFiles(req: any, ds: any) {
 			  ]
 			}
 		  ],
-		  "access": open/controlled
 		  "analysis": {
 			"workflow_type": "MuSE Annotation"
 		  },
@@ -128,12 +124,6 @@ async function listMafFiles(req: any, ds: any) {
 		  "file_size": 146038
 		}
 		*/
-
-		if (typeof h.access != 'string') throw 'h.access value not string'
-		if (h.access != 'open') {
-			skipControlled++
-			continue // skip files that are not open
-		}
 
 		//if (!h.experimental_strategy) throw 'h.experimental_strategy missing'
 		// probably not to restrict only to wxs and target, should include wgs as well
@@ -164,7 +154,6 @@ async function listMafFiles(req: any, ds: any) {
 		const file = {
 			id: h.id,
 			project_id: c.project.project_id,
-			//workflow_type: h.analysis?.workflow_type,
 			experimental_strategy: h.experimental_strategy,
 			file_size: fileSize(h.file_size)
 		} as File
@@ -174,14 +163,15 @@ async function listMafFiles(req: any, ds: any) {
 			file.sample_types = c.samples.map(i => i.sample_type).sort()
 			// sort to show sample type names in consistent alphabetical order
 			// otherwise one file shows 'Blood, Primary' and another shows 'Primary, Blood'
+			// FIXME this includes samples not associated with current maf file
 		}
 		files.push(file)
 	}
 
 	const result = {
-		skipControlled,
 		skipWorkflow,
-		files
+		files,
+		filesTotal: re.data.pagination.total
 	} as GdcMafResponse
 
 	return result

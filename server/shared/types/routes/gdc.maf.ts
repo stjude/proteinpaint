@@ -18,10 +18,10 @@ export type File = {
 }
 
 export type GdcMafResponse = {
-	/** Number of controlled maf files that are skipped */
-	skipControlled: number
 	/** Number of maf files due to unwanted workflow type */
 	skipWorkflow: number
 	/** List of file objects passing filter and to be displayed on client */
 	files: File[]
+	/** Total number of files found by API (in case bigger than files.length) */
+	filesTotal: number
 }
