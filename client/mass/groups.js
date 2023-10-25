@@ -169,7 +169,7 @@ class MassGroups {
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
-		if (this.state.supportedChartTypes.includes('DEanalysis')) addDEPlot(menuDiv, this.app, this.state)
+	        if (this.state.supportedChartTypes.includes('DEanalysis')) addDEPlot(menuDiv, this.app, this.state, samplelstTW)
 
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -205,12 +205,16 @@ class MassGroups {
 
 export const groupsInit = getCompInit(MassGroups)
 
-function addDEPlot(div, app, state) {
+function addDEPlot(div, app, state, samplelstTW) {
+        const samplelst = state.groups.filter(g => samplelstTW.q.groups.find(v => g.name == v.name))
+        //console.log("samplelst:",samplelst)
 	const config = {
 		chartType: 'DEanalysis',
 		state,
-		samplelst: { groups: state.groups }
+		samplelst: { groups: samplelst }
 	}
+        //console.log("state:",state)
+        //console.log("config:", config)
 
 	const itemDiv = div
 		.append('div')

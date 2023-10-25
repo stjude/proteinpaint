@@ -1286,7 +1286,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	        //console.log("samples_with_rnaseq_counts:",samples_with_rnaseq_counts)
 
                 // IMPORTANT: Need to add a clause later to check if all sample in the genecounts file are unique. If not, it should throw an error. 
-	    
+                //console.log("param:",param.samplelst.groups)	    
 		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 		if (param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[0].values.length<1'
 		if (param.samplelst.groups[1].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[1].values.length<1'
