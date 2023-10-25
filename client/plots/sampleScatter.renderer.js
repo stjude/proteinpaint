@@ -490,10 +490,8 @@ export function setRenderers(self) {
 		return refOpacity
 	}
 
-	self.getShape = function (chart, c, factor = 1, showDefault = false) {
-		let index
-		if (!showDefault) index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
-		else index = chart.shapeLegend.get('Ref').shape % self.symbols.length
+	self.getShape = function (chart, c, factor = 1) {
+		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
 		const isRef = !('sampleId' in c)
 		if (!self.config.scaleDotTW || isRef) {
 			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
