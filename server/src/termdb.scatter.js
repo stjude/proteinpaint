@@ -190,7 +190,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
 		if (!dbSample) {
-			console.log(JSON.stringify(sample) + ' not in the database or filtered')
+			//console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}
 		let isLast = false
@@ -200,12 +200,15 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			sample.z = 0
 			if (q.divideByTW.term.type == 'geneVariant') {
 				divideBy = getMutation(true, dbSample, q.divideByTW)
+				console.log(divideBy)
 				if (divideBy == null) {
 					divideBy = getMutation(false, dbSample, q.divideByTW)
 					isLast = true
 				}
 			} else {
-				const key = dbSample[q.divideByTW.term.id || q.divideByTW.term.name]?.key
+				const field = q.divideByTW.term.id || q.divideByTW.term.name
+				const key = dbSample[field]?.key
+				if (key == null) continue
 				divideBy = q.divideByTW.term.values?.[key]?.label || key
 			}
 		}
@@ -350,6 +353,7 @@ function getMutation(strict, dbSample, tw) {
 		const notImportant = mutation.class == 'WT' || mutation.class == 'Blank'
 		if (strict && notImportant) continue
 		const value = getCategory(mutation)
+		console.log(value)
 		return value
 	}
 }
