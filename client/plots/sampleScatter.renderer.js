@@ -490,12 +490,23 @@ export function setRenderers(self) {
 		return refOpacity
 	}
 
-	self.getShape = function (chart, c, factor = 1, showDefault = false, useDefaultSize = false) {
+	self.getShape = function (chart, c, factor = 1, showDefault = false) {
 		let index
 		if (!showDefault) index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
 		else index = chart.shapeLegend.get('Ref').shape % self.symbols.length
-		const size = useDefaultSize ? defaultSize : 'sampleId' in c ? self.settings.size : self.settings.refSize
-		return self.symbols[index].size(size * factor)()
+		const isRef = !('sampleId' in c)
+		if (!self.config.scaleDotTW || isRef) {
+			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
+			return self.symbols[index].size((size * factor) / self.k)()
+		} else {
+			const range = self.settings.maxDotSize - self.settings.minDotSize
+			let size
+			if (self.settings.scaleDotOrder == 'Ascending')
+				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+			const scaledSize = (size * factor) / self.k
+			return self.symbols[index].size(scaledSize)()
+		}
 	}
 
 	function translate(chart, c) {
