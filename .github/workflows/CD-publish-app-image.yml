@@ -3,7 +3,7 @@ name: "Publish Application Image"
 on:
   push:
     branches:
-      - image
+      - app-image
       - fake-image
     paths-ignore:
       - '**.md'
@@ -35,7 +35,7 @@ jobs:
           fi 
 
       - name: Check user permission
-        if: github.event_name == "workflow_dispatch"
+        if: github.event_name == 'workflow_dispatch'
         id: check
         uses: scherermichael-oss/action-has-permission@master
         with:
@@ -44,7 +44,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Exit if user doesn't have write permission
-        if: github.event_name == "workflow_dispatch"
+        if: github.event_name == 'workflow_dispatch'
         run: |
           if [ "${{ steps.check.outputs.has-permission }}" = "false" ]; then
             echo "Only users with write permission are allowed to execute this workflow."
@@ -65,12 +65,6 @@ jobs:
           node-version: '16'
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
-      - run: npm ci
-
-      - name: Run version bump
-        run: |
-          ./build/ci-version-update.sh $VERTYPE -w
-          # !!! --- merge back to master --- !!!
 
       - name: Login to GitHub Container Registry
         run: |
@@ -79,16 +73,14 @@ jobs:
           CR_PAT: ${{ secrets.PAT }}
 
       - name: Build and Publish Docker Images
-        run: 
-          sleep 90;
-          cd container;
-          ./build2.sh -r "ghcr.io/stjude/" server;
-          TAG="$(node -p "require('./server/package.json').version")";
-          HASH="$(git rev-parse --short HEAD)";
-          docker push ghcr.io/stjude/ppserver:$TAG-$HASH;
-          docker push ghcr.io/stjude/ppserver:latest;
+        run: |
+          BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+          MODE="-w"
+          if [[ "$BRANCH" != "app-image" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && ${{ github.event_name }} != "workflow_dispatch" ]]; then
+            MODE=""
+          fi
 
-          ./build2.sh -r "ghcr.io/stjude/" full;
-          TAG="$(node -p "require('./full/package.json').version")";
-          docker push ghcr.io/stjude/ppfull:$TAG-$HASH;
-          docker push ghcr.io/stjude/ppfull:latest;
+          cd container
+          npm install glob
+          ./release.sh "$MODE"
+
