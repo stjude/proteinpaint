@@ -5,11 +5,9 @@ use std::fs::File;
 use std::path::Path;
 use futures::StreamExt;
 use std::io;
-use std::io::{Read, BufWriter};
+use std::io::{Read,Write};
 use std::sync::mpsc;
 use std::collections::HashMap;
-use polars::prelude::*;
-use std::collections::HashSet;
 
 
 fn gen_map(d:String) -> HashMap<String,Vec<String>> {
@@ -34,18 +32,13 @@ fn gen_map(d:String) -> HashMap<String,Vec<String>> {
     map
 }
 
-fn map2df(d:&HashMap<String,Vec<String>>) -> DataFrame {
-    let mut series_vec: Vec<Series> = Vec::new();
-
-    for (col_name,values) in d.iter() {
-        let padded_values: Vec<Option<&str>> = values.iter()
-            .map(|s| Some(s as &str))
-            .collect();
-        let series = Series::new(&col_name.clone(),padded_values);
-        series_vec.push(series)
-    }
-    let df = DataFrame::new(series_vec).unwrap();
-    df
+fn get_sorted_indices(lst: &Vec<String>) -> Vec<usize>{
+    let mut indices = (0..lst.len()).collect::<Vec<usize>>();
+    indices.sort_by(|a,b| {
+        lst[*a].split('\t').collect::<Vec<&str>>()[0].cmp(lst[*b].split('\t').collect::<Vec<&str>>()[0])
+            .then(lst[*a].split('\t').collect::<Vec<&str>>()[1].cmp(lst[*b].split('\t').collect::<Vec<&str>>()[1]))
+        });
+    indices
 }
 
 #[tokio::main]
@@ -78,7 +71,6 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                         decoder.read_to_end(&mut decompressed_content).unwrap();
                         let text = String::from_utf8_lossy(&decompressed_content);
                         txt.send(text.to_string()).unwrap();
-                        //println!("{:?}",text);
                     }
                     Err(_) => println!("ERROR downloading {}", url),
                 }
@@ -91,39 +83,61 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     // write downloaded maf into variable received_values
     let mut received_values: Vec<String> = Vec::new();
     for value in rx {
-        //println!("{:?}",&value);
         received_values.push(value);
-    };
+    }
 
-    // convert downloaded maf to polars dataframe and merge 
+    // store downloaed mafs into one HashMap data sturcture based on the common column names
     let mut maf = HashMap::new();
-    let mut df_maf = DataFrame::default();
     for maf_data in received_values {
         if maf.is_empty() {
             maf = gen_map(maf_data);
-            df_maf = map2df(&maf);
         } else {
             let maf1 = gen_map(maf_data);
-            let df_maf1 = map2df(&maf1);
-            let col_name: HashSet<_> = df_maf.get_column_names().into_iter().collect();
-            let col_name1: HashSet<_> = df_maf1.get_column_names().into_iter().collect();
-            let col_com: Vec<_> = col_name.intersection(&col_name1).collect();
-            let df_maf_col_name = df_maf.select(&col_com).unwrap();
-            let df_maf1_col_name = df_maf1.select(&col_com).unwrap();
-            df_maf = df_maf_col_name.vstack(&df_maf1_col_name).unwrap();
+            //println!("{:?}",maf1);
+            let mut keys_to_remove_in_maf: Vec<String> = Vec::new();
+            for key in maf.keys() {
+                if !(maf1.contains_key(key)) {
+                    //println!("{}",&key);
+                    keys_to_remove_in_maf.push(key.to_string());
+                }
+            }
+            for key in keys_to_remove_in_maf {
+                maf.remove(&key);
+            }
+            let keys_in_maf1: Vec<String> = maf1.keys().cloned().collect();
+            for key in keys_in_maf1 {
+                if maf.contains_key(&key) {
+                    //println!("{}",&key);
+                    let key_value = maf1[&key].clone();
+                    maf.get_mut(&key).map(|val| val.extend(key_value));
+                }
+            }
         }
     };
-    df_maf = df_maf.sort(&["Chromosome","Start_Position"],vec![false,false],false).unwrap();
 
-    //write dataframe to file in binary
+
+    // generate a Vec with "chrom\tpos" for sorting
+    // generated indices after sorting 
+    let mut lst_chrom_pos: Vec<String> = Vec::new();
+    for (i,v) in maf["Chromosome"].iter().enumerate() {
+         lst_chrom_pos.push(v.to_owned()+"\t"+&maf["Start_Position"][i]);
+    };
+    let idx_sorted = get_sorted_indices(&lst_chrom_pos);
+
+    // write to file
     let file = File::create(out_file).expect("could not create file");
-    let buf_writer = BufWriter::new(file);
-    let encoder = GzEncoder::new(buf_writer, Default::default());
-    CsvWriter::new(encoder)
-        .has_header(true)
-        .with_delimiter(b'\t')
-        .finish(&mut df_maf)
-        .expect("failed to write output");
+    let mut encoder = GzEncoder::new(file, Default::default());
+    let maf_key: Vec<_> = maf.keys().cloned().collect();
+    encoder.write_all(&maf_key.join("\t").as_bytes())?;
+    encoder.write_all("\n".as_bytes())?;
+    for i in idx_sorted.iter() {
+        let mut val_lst: Vec<String> = Vec::new();
+        for k in &maf_key {
+            val_lst.push(maf[k][*i].to_owned());
+        };
+        let val_out = val_lst.join("\t")+"\n";
+        encoder.write_all(val_out.as_bytes())?;
+    };
+    encoder.finish()?;
     Ok(())
 }
-
