@@ -155,7 +155,7 @@ class profileRadarFacility {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '40px')
+			.style('margin-top', '45px')
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 400
