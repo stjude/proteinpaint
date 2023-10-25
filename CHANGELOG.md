@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- use a more specific class selector for detecting pill divs in the data download app
+
 
 ## 2.30.0
 
