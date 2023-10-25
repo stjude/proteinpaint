@@ -127,5 +127,5 @@ docker buildx build . \
 # Clean up
 #############
 
-git restore server/package.json
-git restore full/package.json
+# git restore server/package.json
+# git restore full/package.json

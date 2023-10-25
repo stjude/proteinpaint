@@ -6,7 +6,7 @@ const serverconfigFile = path.join(__dirname, './serverconfig.json')
 if (!fs.existsSync(serverconfigFile)) {
 	throw `missing serverconfig.json: did you forget to mount?`
 }
-
+console.log('test')
 const serverconfig = require(serverconfigFile)
 if (!serverconfig.genomes) {
 	serverconfig.genomes = [
