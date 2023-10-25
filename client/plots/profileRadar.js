@@ -91,7 +91,7 @@ class profileRadar extends profilePlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '40px')
+			.style('margin-top', '45px')
 		const rows = []
 		const columns = [
 			{ label: 'Module' },
