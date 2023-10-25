@@ -4,6 +4,7 @@ import * as d3 from 'd3'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
+import { renderTable } from '#dom/table'
 
 class profileRadar extends profilePlot {
 	constructor() {
@@ -80,15 +81,31 @@ class profileRadar extends profilePlot {
 
 		if (!this.sampleData) return
 
-		this.svg = this.dom.plotDiv.append('svg').attr('width', 1600).attr('height', 650)
+		this.svg = this.dom.plotDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.append('svg')
+			.attr('width', 1100)
+			.attr('height', 650)
+		this.tableDiv = this.dom.plotDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin-top', '40px')
+		const rows = []
+		const columns = [
+			{ label: 'Module' },
+			{ label: config[config.plot].term1.abbrev },
+			{ label: config[config.plot].term2.abbrev }
+		]
 
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 400
+		const x = 380
 		const y = 320
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 500},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 400},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -100,6 +117,12 @@ class profileRadar extends profilePlot {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData('term1', iangle, i, data)
 			this.addData('term2', iangle, i, data2)
+			rows.push([
+				{ value: parent.term.name },
+				{ value: this.sampleData[term1.$id]?.value },
+				{ value: this.sampleData[term2.$id]?.value }
+			])
+
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
@@ -120,6 +143,16 @@ class profileRadar extends profilePlot {
 			})
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
+
+		renderTable({
+			rows,
+			columns,
+			div: this.tableDiv,
+			showLines: true,
+			resize: true,
+			maxHeight: '60vh'
+		})
+
 		data.push(data[0])
 		data2.push(data2[0])
 		const color1 = 'gray',
@@ -156,8 +189,10 @@ class profileRadar extends profilePlot {
 			.attr('text-anchor', 'left')
 			.style('font-weight', 'bold')
 			.text(`${this.config.sampleName} Legend`)
-		this.addLegendItem(config[config.plot].term1, color1, 0, '5, 5')
-		this.addLegendItem(config[config.plot].term2, color2, 1, 'none')
+		const item1 = `${config[config.plot].term1.name} (${config[config.plot].term1.abbrev})`
+		this.addLegendItem(item1, color1, 0, '5, 5')
+		const item2 = `${config[config.plot].term2.name} (${config[config.plot].term2.abbrev})`
+		this.addLegendItem(item2, color2, 1, 'none')
 	}
 
 	addData(field, iangle, i, data) {
