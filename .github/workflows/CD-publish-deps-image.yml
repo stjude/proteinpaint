@@ -59,11 +59,11 @@ jobs:
 
       - name: Build image
         run: |
-          cd container/deps
-          ./version.sh -c
+          cd container
+          ./version.sh deps
 
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [[ "$BRANCH" != "deps-image" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then 
+          if [[ "$BRANCH" != "publish-image" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && ${{ github.event_name }} != "workflow_dispatch" ]]; then
             echo "skipping build and publishing"
           else
             ./build.sh -m "ghcr.io/stjude/"
