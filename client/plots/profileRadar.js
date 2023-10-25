@@ -101,7 +101,7 @@ class profileRadar extends profilePlot {
 
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 380
+		const x = 400
 		const y = 320
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
