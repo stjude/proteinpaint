@@ -116,7 +116,7 @@ export function getLegendData(legendGroups, refs, self) {
 			}
 		}
 
-		const keys = Object.keys(legend.values).sort((a, b) => legend.values[a].order - legend.values[b].order)
+		const keys = Object.keys(legend.values).sort()
 		const hasScale = Object.values(legend.values).find(v => v.scale)
 		if (hasScale) {
 			legendData.push({
