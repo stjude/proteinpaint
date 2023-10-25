@@ -3,6 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
 import { Menu } from '#dom/menu'
 import { downloadSingleSVG } from '../common/svg.download.js'
+import { renderTable } from '#dom/table'
 
 class profileRadarFacility {
 	constructor() {
@@ -144,15 +145,26 @@ class profileRadarFacility {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 
-		this.svg = this.dom.plotDiv.append('svg').attr('width', 1600).attr('height', 650)
-
+		this.svg = this.dom.plotDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.append('svg')
+			.attr('width', 1100)
+			.attr('height', 650)
+		this.tableDiv = this.dom.plotDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin-top', '40px')
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 400
 		const y = 320
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 550},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 400},${y + 150})`)
+		const rows = []
+		const columns = [{ label: 'Module' }, { label: `Facility ${this.facility}` }, { label: this.config.sampleName }]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -162,8 +174,15 @@ class profileRadarFacility {
 		for (let { parent, term } of this.terms) {
 			const d = parent
 			const iangle = i * this.angle - Math.PI / 2
-			if (this.config.sampleName) this.addData(this.config.sampleName, iangle, i, data)
 			this.addData(this.facility, iangle, i, data2)
+			const row = [{ value: parent.term.name }, { value: this.samplesData[this.facility][term.$id]?.value }]
+
+			if (this.config.sampleName) {
+				this.addData(this.config.sampleName, iangle, i, data)
+				row.push({ value: this.samplesData[this.config.sampleName][term.$id]?.value })
+			}
+			rows.push(row)
+
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
@@ -184,6 +203,14 @@ class profileRadarFacility {
 			})
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
+		renderTable({
+			rows,
+			columns,
+			div: this.tableDiv,
+			showLines: true,
+			resize: true,
+			maxHeight: '60vh'
+		})
 		data.push(data[0])
 		data2.push(data2[0])
 		const color1 = 'gray',
