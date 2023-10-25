@@ -84,3 +84,10 @@ jobs:
           npm install glob
           ./release.sh "$MODE"
 
+          if [[ "$MODE" == "-w" ]]; then
+            echo "merging to master"
+            git fetch --depth=10 origin master:master
+            git switch master
+            git merge $BRANCH
+            git push
+          fi
