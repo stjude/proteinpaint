@@ -181,7 +181,11 @@ export class Matrix {
 				this.sampleOrder = this.getSampleOrder(this.data)
 			}
 
-			if (!this.sampleOrder.length) {
+			if (
+				!this.sampleOrder.length &&
+				!this.config.legendGrpFilter.lst.length &&
+				!this.config.legendValueFilter.lst.length
+			) {
 				this.dom.loadingDiv.html('No matching sample data').style('display', '')
 				this.dom.svg.style('display', 'none')
 				return

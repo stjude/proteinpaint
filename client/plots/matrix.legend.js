@@ -24,7 +24,8 @@ export function getLegendData(legendGroups, refs, self) {
 							label: v.label || self.mclass[key].label,
 							fill: v.color || self.mclass[key]?.color,
 							order: key == 'CNV_loss' ? -2 : key.startsWith('CNV_') ? -1 : 0,
-							crossedOut: true
+							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
+							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
 						}
 					}
 				}
@@ -52,6 +53,7 @@ export function getLegendData(legendGroups, refs, self) {
 						isLegendItem: true,
 						dt: item.dt,
 						crossedOut: item.crossedOut,
+						greyedOut: item.greyedOut,
 						origin: item.origin
 					}
 				})
@@ -84,7 +86,8 @@ export function getLegendData(legendGroups, refs, self) {
 							label: v.label || self.mclass[key].label,
 							fill: v.color || self.mclass[key]?.color,
 							order: key == 'CNV_loss' ? -2 : key.startsWith('CNV_') ? -1 : 0,
-							crossedOut: true
+							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
+							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
 						}
 					}
 				}
@@ -113,7 +116,7 @@ export function getLegendData(legendGroups, refs, self) {
 			}
 		}
 
-		const keys = Object.keys(legend.values).sort((a, b) => legend.values[a].order - legend.values[b].order)
+		const keys = Object.keys(legend.values).sort()
 		const hasScale = Object.values(legend.values).find(v => v.scale)
 		if (hasScale) {
 			legendData.push({
@@ -141,6 +144,7 @@ export function getLegendData(legendGroups, refs, self) {
 							isLegendItem: true,
 							dt: item.dt,
 							crossedOut: item.crossedOut,
+							greyedOut: item.greyedOut,
 							origin: item.origin
 						}
 					} else {
@@ -154,6 +158,7 @@ export function getLegendData(legendGroups, refs, self) {
 							isLegendItem: true,
 							dt: item.dt,
 							crossedOut: item.crossedOut,
+							greyedOut: item.greyedOut,
 							origin: item.origin
 						}
 					}
@@ -194,6 +199,7 @@ export function getLegendData(legendGroups, refs, self) {
 						isLegendItem: true,
 						dt: item.dt,
 						crossedOut: item.crossedOut,
+						greyedOut: item.greyedOut,
 						origin: item.origin
 					}
 				})
@@ -209,7 +215,7 @@ export function getLegendData(legendGroups, refs, self) {
 }
 
 export function getLegendItemText(item, count, t, s) {
-	if (item.crossedOut) {
+	if (item.crossedOut || item.greyedOut) {
 		// when the legend is crossed out
 		return item.label
 	}

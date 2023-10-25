@@ -119,9 +119,39 @@ export function getSerieses(data) {
 		if (series.cells.length) serieses.push(series)
 	}
 
+	addAllHiddenLegendGroups(legendGroups, this)
 	this.legendData = this.getLegendData(legendGroups, data.refs, this)
 	for (const grp of this.sampleGroups) {
 		grp.legendData = this.getLegendData(grp.legendGroups, data.refs, this)
 	}
 	return serieses
+}
+
+// Add a legendGroup for the a legend group whose legends are all hidden
+function addAllHiddenLegendGroups(legendGroups, self) {
+	for (const valueFilter of self.config.legendValueFilter.lst) {
+		if (valueFilter.tvs.term.type == 'categorical' && !legendGroups[valueFilter.tvs.term.$id]) {
+			legendGroups[valueFilter.tvs.term.$id] = {
+				ref: {},
+				values: {},
+				$id: valueFilter.tvs.term.$id
+			}
+		} else if (valueFilter.tvs.term.type == 'geneVariant' && !legendGroups[valueFilter.legendGrpName]) {
+			legendGroups[valueFilter.legendGrpName] = {
+				ref: {},
+				values: {},
+				dt: valueFilter.tvs.values[0].dt,
+				origin: valueFilter.tvs.values[0].origin
+			}
+		} else if (
+			(valueFilter.tvs.term.type == 'integer' || valueFilter.tvs.term.type == 'float') &&
+			!legendGroups[valueFilter.tvs.term.$id]
+		) {
+			legendGroups[valueFilter.tvs.term.$id] = {
+				ref: {},
+				values: {},
+				$id: valueFilter.tvs.term.$id
+			}
+		}
+	}
 }

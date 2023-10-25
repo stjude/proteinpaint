@@ -121,6 +121,7 @@ export default function svgLegend(opts) {
 		const g = select(this)
 			.attr('transform', 'translate(' + currlinex + ',' + currliney + ')')
 			.style('opacity', settings.itemOpacity)
+			.style('opacity', d.greyedOut ? '0.3' : 1)
 
 		const itemlabel = g
 			.append('text')
