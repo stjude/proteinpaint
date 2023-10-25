@@ -168,8 +168,8 @@ class MassGroups {
 		const id = this?.lastId
 		let row = menuDiv.append('div')
 
-		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
-	        if (this.state.supportedChartTypes.includes('DEanalysis')) addDEPlot(menuDiv, this.app, this.state, samplelstTW)
+	        addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+	        if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) addDEPlot(menuDiv, this.app, this.state, samplelstTW)
 
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
