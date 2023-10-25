@@ -236,7 +236,7 @@ add:
 
 
 export async function getPlotConfig(opts, app) {
-	try {
+    try {
 		if (opts.samplelst.groups?.length != 2) throw 'opts.samplelst.groups[].length!=2'
 		if (opts.samplelst.groups[0].values?.length < 1) throw 'group 1 not having >1 samples'
 		if (opts.samplelst.groups[1].values?.length < 1) throw 'group 2 not having >1 samples'

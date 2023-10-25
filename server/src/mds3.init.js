@@ -1285,15 +1285,15 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	        }
 	        //console.log("samples_with_rnaseq_counts:",samples_with_rnaseq_counts)
 
-                // IMPORTANT: Need to add a clause later to check if all sample in the genecounts file are unique. If not, it should throw an error. 
-                //console.log("param:",param.samplelst.groups)	    
-		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
-		if (param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[0].values.length<1'
-		if (param.samplelst.groups[1].filter.lst[0].tvs.term.values.Group.list.length < 1) throw 'samplelst.groups[1].values.length<1'
+                // IMPORTANT: Need to add a clause later to check if all sample in the genecounts file are unique. If not, it should throw an error.
+	        if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
+		if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
+		if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
+		// txt file uses string sample name, must convert integer sample id to string
 		// txt file uses string sample name, must convert integer sample id to string
 	        const group1names = []
 	        let group1names_not_found = 0
-	        for (const s of param.samplelst.groups[0].filter.lst[0].tvs.term.values.Group.list) {
+	        for (const s of param.samplelst.groups[0].values) {
 		        if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		        if (!n) continue
@@ -1305,7 +1305,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		}
 	        const group2names = []
 	        let group2names_not_found = 0
-		for (const s of param.samplelst.groups[1].filter.lst[0].tvs.term.values.Group.list) {
+		for (const s of param.samplelst.groups[1].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		        if (!n) continue

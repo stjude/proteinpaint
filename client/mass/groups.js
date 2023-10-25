@@ -206,7 +206,22 @@ class MassGroups {
 export const groupsInit = getCompInit(MassGroups)
 
 function addDEPlot(div, app, state, samplelstTW) {
-        const samplelst = state.groups.filter(g => samplelstTW.q.groups.find(v => g.name == v.name))
+        const samplelst = []
+        for (const group2 of samplelstTW.q.groups) {
+	   const group = {}
+           for (const group1 of state.groups) {
+               if (group1.name == group2.name) { 
+		   group.name = group1.name
+		   group.in = group2.in
+		   group.values = group1.filter.lst[0].tvs.term.values.Group.list
+	       }	   
+           }
+	   if (group.values && group.values.length > 0) { 
+	       samplelst.push(group)
+	   } else {
+               throw 'group not found for DE analysis'
+	   }    
+        }
         //console.log("samplelst:",samplelst)
 	const config = {
 		chartType: 'DEanalysis',
