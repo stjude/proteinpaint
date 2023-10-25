@@ -6,8 +6,6 @@ export type File = {
 	/** A string representing a submitter ID for the case associated with this file */
 	case_submitter_id: string
 	/** A string representing the experimental strategy (scientific method) used for generating this file */
-	experimental_strategy: string
-	/** A string representing the file size */
 	file_size: string // todo
 	/** Array of strings, each is a sample type, for all samples involved in generating the maf file */
 	sample_types: string[]
@@ -18,8 +16,6 @@ export type File = {
 }
 
 export type GdcMafResponse = {
-	/** Number of maf files due to unwanted workflow type */
-	skipWorkflow: number
 	/** List of file objects passing filter and to be displayed on client */
 	files: File[]
 	/** Total number of files found by API (in case bigger than files.length) */
