@@ -5,7 +5,8 @@ import got from 'got'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const maxFileNumber = 1000
-const onlyAllowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
+const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
+const allowedExpStrategy = new Set(['WXS', 'Targeted Sequencing'])
 
 export const api = {
 	endpoint: 'gdc/maf',
@@ -19,7 +20,6 @@ export const api = {
 						const ds = g.datasets.GDC
 						if (!ds) throw 'hg38 GDC missing'
 						const payload = await listMafFiles(req)
-						//	const payload = { files }
 						res.send(payload)
 					} catch (e: any) {
 						res.send({ status: 'error', error: e.message || e })
@@ -42,6 +42,7 @@ export const api = {
 /*
 req.query {
 	filter0 // optional gdc GFF cohort filter, invisible and read only
+	experimentalStrategy: WXS/Targeted Sequencing
 }
 
 ds {
@@ -51,10 +52,14 @@ ds {
 }
 */
 async function listMafFiles(req: any) {
+	if (!allowedExpStrategy.has(req.query.experimentalStrategy)) throw 'invalid req.query.experimentalStrategy'
+
 	const filters = {
 		op: 'and',
 		content: [
 			{ op: '=', content: { field: 'data_format', value: 'MAF' } },
+			{ op: '=', content: { field: 'experimental_strategy', value: req.query.experimentalStrategy } },
+			{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
 			{ op: '=', content: { field: 'access', value: 'open' } } // delete if later to support controlled files
 		]
 	}
@@ -71,11 +76,10 @@ async function listMafFiles(req: any) {
 		fields: [
 			'id',
 			'file_size',
-			'experimental_strategy',
 			'cases.project.project_id', // for display only
 			'cases.submitter_id', // used when listing all cases & files
-			'cases.samples.sample_type',
-			'analysis.workflow_type' // to drop out those as skip_workflow_type, not used for display
+			'cases.samples.sample_type'
+			// may add diagnosis and primary site
 		].join(',')
 	}
 
@@ -93,9 +97,6 @@ async function listMafFiles(req: any) {
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
 	const files = [] as File[]
-
-	let skipWorkflow = 0 // count number of skipped files by reason
-	//skipExperiment=0
 
 	for (const h of re.data.hits) {
 		/*
@@ -125,15 +126,6 @@ async function listMafFiles(req: any) {
 		}
 		*/
 
-		//if (!h.experimental_strategy) throw 'h.experimental_strategy missing'
-		// probably not to restrict only to wxs and target, should include wgs as well
-
-		if (!h.analysis?.workflow_type) throw 'h.analysis.workflow_type missing'
-		if (h.analysis.workflow_type != onlyAllowedWorkflowType) {
-			skipWorkflow++
-			continue
-		}
-
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
 
@@ -154,7 +146,6 @@ async function listMafFiles(req: any) {
 		const file = {
 			id: h.id,
 			project_id: c.project.project_id,
-			experimental_strategy: h.experimental_strategy,
 			file_size: fileSize(h.file_size)
 		} as File
 
@@ -169,7 +160,6 @@ async function listMafFiles(req: any) {
 	}
 
 	const result = {
-		skipWorkflow,
 		files,
 		filesTotal: re.data.pagination.total
 	} as GdcMafResponse

@@ -1,6 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '#dom/error'
 import { renderTable } from '#dom/table'
+import { make_radios } from '#dom/radiobutton'
 
 /*
 a UI to list open-access maf files from current cohort
@@ -13,13 +14,7 @@ filter0=str
 */
 
 // list of columns to show in MAF file table
-const columns = [
-	{ label: 'Case' },
-	{ label: 'Project' },
-	{ label: 'Samples' },
-	{ label: 'Experimental Strategy' },
-	{ label: 'File Size' }
-]
+const columns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Samples' }, { label: 'File Size' }]
 
 export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = false }) {
 	// public api obj to be returned
@@ -30,60 +25,120 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 		callbackOnRender(publicApi)
 	}
 
-	let result // for it to be accessible by submitSelectedFiles()
-
-	try {
-		result = await getFileList(filter0)
-
-		{
-			const row = holder.append('div').style('margin', '20px')
-			row.append('div').text('Only showing open-access files.')
-			if (result.filesTotal > result.files.length) {
-				row.append('div').text(`Showing first ${result.files.length} files out of ${result.filesTotal} total.`)
-			} else {
-				row.append('div').text(`Showing ${result.files.length} files.`)
-			}
-			row.append('div').text(`${result.skipWorkflow} files skipped for unwanted workflow type.`)
-			row
-				.append('div')
-				.text('All files have the workflow type of "Aliquot Ensemble Somatic Variant Merging and Masking".')
+	const obj = {
+		// old habit of wrapping everything
+		controlDiv: holder.append('div'),
+		tableDiv: holder.append('div'),
+		opts: {
+			filter0,
+			experimentalStrategy: 'WXS'
 		}
-
-		const rows = []
-		for (const f of result.files) {
-			const row = [
-				{ value: f.case_submitter_id },
-				{ value: f.project_id },
-				{
-					html: f.sample_types
-						.map(i => {
-							return (
-								'<span class="sja_mcdot" style="padding:1px 8px;background:grey;white-space:nowrap">' + i + '</span>'
-							)
-						})
-						.join(' ')
-				},
-				{ value: f.experimental_strategy },
-				{ value: f.file_size, url: 'https://portal.gdc.cancer.gov/files/' + f.id }
-			]
-			rows.push(row)
-		}
-		renderTable({
-			rows,
-			columns,
-			resize: true,
-			div: holder.append('div'),
-			selectAll: true,
-			buttons: [
-				{
-					text: 'Aggregate selected MAF files and download',
-					callback: submitSelectedFiles
-				}
-			]
-		})
-	} catch (e) {
-		sayerror(holder, e)
 	}
+	makeControls(obj)
+	await getFilesAndShowTable(obj)
+
+	return publicApi // ?
+}
+
+function makeControls(obj) {
+	const table = obj.controlDiv.append('table')
+	{
+		const tr = table.append('tr')
+		tr.append('td').style('opacity', 0.5).text('Access')
+		tr.append('td').text('Open')
+	}
+	{
+		const tr = table.append('tr')
+		tr.append('td').style('opacity', 0.5).text('Workflow Type')
+		tr.append('td').text('Aliquot Ensemble Somatic Variant Merging and Masking')
+	}
+	{
+		const tr = table.append('tr')
+		tr.append('td').style('opacity', 0.5).text('Experimental Strategy')
+		const td = tr.append('td')
+		make_radios({
+			holder: td,
+			options: [
+				{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' },
+				{
+					label: 'Targeted Sequencing',
+					value: 'Targeted Sequencing',
+					checked: obj.opts.experimentalStrategy == 'Targeted Sequencing'
+				}
+			],
+			styles: { display: 'inline' },
+			callback: async value => {
+				obj.opts.experimentalStrategy = value
+				await getFilesAndShowTable(obj)
+			}
+		})
+	}
+}
+
+async function getFilesAndShowTable(obj) {
+	obj.tableDiv.selectAll('*').remove()
+	const wait = obj.tableDiv.append('div').text('Loading...')
+
+	let result
+	{
+		const body = {
+			experimentalStrategy: obj.opts.experimentalStrategy
+		}
+		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
+		try {
+			result = await dofetch3('gdc/maf', { body })
+			if (result.error) throw data.error
+		} catch (e) {
+			wait.remove()
+			sayerror(obj.tableDiv, e)
+			return
+		}
+	}
+	wait.remove()
+
+	// render
+	{
+		const row = obj.tableDiv.append('div').style('margin', '20px')
+		if (result.filesTotal > result.files.length) {
+			row.append('div').text(`Showing first ${result.files.length} files out of ${result.filesTotal} total.`)
+		} else {
+			row.append('div').text(`Showing ${result.files.length} files.`)
+		}
+	}
+
+	const rows = []
+	for (const f of result.files) {
+		const row = [
+			{ value: f.case_submitter_id },
+			{ value: f.project_id },
+			{
+				html: f.sample_types
+					.map(i => {
+						return (
+							'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
+							i +
+							'</span>'
+						)
+					})
+					.join(' ')
+			},
+			{ value: f.file_size, url: 'https://portal.gdc.cancer.gov/files/' + f.id }
+		]
+		rows.push(row)
+	}
+	renderTable({
+		rows,
+		columns,
+		resize: true,
+		div: obj.tableDiv.append('div'),
+		selectAll: true,
+		buttons: [
+			{
+				text: 'Aggregate selected MAF files and download',
+				callback: submitSelectedFiles
+			}
+		]
+	})
 
 	async function submitSelectedFiles(lst) {
 		const fileIdLst = []
@@ -111,14 +166,4 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 		a.click()
 		document.body.removeChild(a)
 	}
-
-	return publicApi
-}
-
-async function getFileList(filter0) {
-	const body = {}
-	if (filter0) body.filter0 = filter0
-	const data = await dofetch3('gdc/maf', { body })
-	if (data.error) throw data.error
-	return data
 }
