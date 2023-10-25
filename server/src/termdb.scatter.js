@@ -200,7 +200,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			sample.z = 0
 			if (q.divideByTW.term.type == 'geneVariant') {
 				divideBy = getMutation(true, dbSample, q.divideByTW)
-				console.log(divideBy)
 				if (divideBy == null) {
 					divideBy = getMutation(false, dbSample, q.divideByTW)
 					isLast = true
@@ -353,7 +352,6 @@ function getMutation(strict, dbSample, tw) {
 		const notImportant = mutation.class == 'WT' || mutation.class == 'Blank'
 		if (strict && notImportant) continue
 		const value = getCategory(mutation)
-		console.log(value)
 		return value
 	}
 }
