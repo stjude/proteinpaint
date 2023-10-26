@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - In mass sampleview, expanding tree branch everytime no longer triggers rerendering of disco/ssgq plots
+- Disco: file name of downloaded svg preserves context including sample name and gene.
+- Disco: by default it now prioritize CGC genes in hg38.
+- Various scatterplot fixes: tooltip dot scale, divideBy bug
 
 
 ## 2.30.1
