@@ -40,16 +40,26 @@ class DEanalysis {
 
 	async main() {
 		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
-		const headerText = this.opts.app.opts.state.customTerms[0].name
+		//const state = this.app.getState()
+		//console.log('state:', state) // state.customTerms[0].name
+		//if (state.customTerms[0].name) {
+		//	const headerText = state.customTerms[0].name
+		//	this.dom.header
+		//		.append('span')
+		//		.style('color', '#999999')
+		//		.text(headerText)
+		//		.append('span')
+		//		.style('font-size', '0.75em')
+		//		.style('opacity', 0.6)
+		//		.style('padding-left', '10px')
+		//		.text('DIFFERENTIAL EXPRESSION')
+		//} else {
 		this.dom.header
-			.append('span')
-			.style('color', '#999999')
-			.text(headerText)
-			.append('span')
-			.style('font-size', '0.75em')
 			.style('opacity', 0.6)
 			.style('padding-left', '10px')
+			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
+		//}
 		render_volcano(this.dom.holder, data)
 	}
 }
