@@ -16,8 +16,8 @@ class SampleView {
 	setDom(opts) {
 		const div = opts.holder.append('div')
 		const controlsDiv = div.insert('div').style('display', 'inline-block')
-		const mainDiv = div.insert('div').style('display', 'inline-block')
-		const rightDiv = div.append('div').style('display', 'inline-block')
+		const mainDiv = div.insert('div').style('display', 'inline-block') //div besides controls, with dictionary
+		const rightDiv = div.append('div').style('display', 'inline-block') //div with plots
 		const sampleDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
 		const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Sample:')
 
@@ -68,7 +68,6 @@ class SampleView {
 	}
 
 	async init(appState) {
-		const state = this.getState(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.termsByCohort = {}
 
@@ -78,6 +77,11 @@ class SampleView {
 			if (config.samples.length > samplesLimit) this.dom.noteDiv.style('display', 'inline-block')
 		}
 		await this.setSampleSelect(config, div)
+		const state = this.getState(appState)
+		console.log(state)
+		const q = state.termdbConfig.queries
+		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
+		if (hasPlots) await this.renderPlots(state)
 	}
 
 	async setSampleSelect(config, div) {
@@ -172,7 +176,10 @@ class SampleView {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
-		if (this.state.hasPlots) await this.setControls()
+		if (this.state.hasPlots) {
+			await this.setControls()
+			this.showVisiblePlots()
+		}
 		if (this.dom.header) this.dom.header.html(`Sample View`)
 		this.termsById = this.getTermsById(this.state)
 		this.sampleDataByTermId = {}
@@ -182,8 +189,6 @@ class SampleView {
 		this.dom.table.style('display', this.settings.showDictionary ? 'block' : 'none')
 
 		if (this.settings.showDictionary) this.renderSampleDictionary()
-
-		this.renderPlots()
 	}
 
 	async setControls() {
@@ -197,7 +202,7 @@ class SampleView {
 				inputs: [
 					{
 						boxLabel: 'Visible',
-						label: 'Samples dictionary',
+						label: 'Dictionary',
 						type: 'checkbox',
 						chartType: 'sampleView',
 						settingsKey: 'showDictionary',
@@ -213,7 +218,7 @@ class SampleView {
 					},
 					{
 						boxLabel: 'Visible',
-						label: 'Single sample plots',
+						label: 'Single sample',
 						type: 'checkbox',
 						chartType: 'sampleView',
 						settingsKey: 'showSingleSample',
@@ -398,55 +403,66 @@ class SampleView {
 		}
 	}
 
-	async renderPlots() {
+	showVisiblePlots() {
+		for (const div of this.discoPlots)
+			if (this.settings.showDisco) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
+			else div.style('display', 'none')
+		for (const div of this.singleSamplePlots)
+			if (this.settings.showSingleSample)
+				div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
+			else div.style('display', 'none')
+	}
+
+	async renderPlots(state) {
 		this.dom.contentDiv.selectAll('*').remove()
 		this.dom.rightDiv.selectAll('*').remove()
-		if (this.state.hasPlots) {
-			const table = this.dom.contentDiv.style('display', 'table')
-			if (this.settings.showDisco && this.state.termdbConfig?.queries?.singleSampleMutation) {
-				const div = this.dom.contentDiv.append('div').style('display', 'table-row')
+		this.discoPlots = []
+		this.singleSamplePlots = []
+		const table = this.dom.contentDiv.style('display', 'table')
+		if (state.termdbConfig?.queries?.singleSampleMutation) {
+			const div = this.dom.contentDiv.append('div').style('display', 'table-row')
 
-				for (const sample of this.state.samples) {
-					let cellDiv
-					if (this.state.samples.length == 1)
-						cellDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-					else cellDiv = div.append('div').style('display', 'table-cell')
-
-					cellDiv
-						.insert('div')
-						.style('font-weight', 'bold')
-						.style('padding-left', '20px')
-						.text(`${sample.sampleName} Disco plot`)
-					const discoPlotImport = await import('./plot.disco.js')
-					discoPlotImport.default(
-						this.state.termdbConfig,
-						this.state.vocab.dslabel,
+			for (const sample of state.samples) {
+				let cellDiv
+				if (state.samples.length == 1)
+					cellDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+				else cellDiv = div.append('div').style('display', 'table-cell')
+				this.discoPlots.push(cellDiv)
+				cellDiv
+					.insert('div')
+					.style('font-weight', 'bold')
+					.style('padding-left', '20px')
+					.text(`${sample.sampleName} Disco plot`)
+				const discoPlotImport = await import('./plot.disco.js')
+				discoPlotImport.default(
+					state.termdbConfig,
+					state.vocab.dslabel,
+					{ sample_id: sample.sampleName },
+					cellDiv,
+					this.app.opts.genome
+				)
+			}
+		}
+		if (state.termdbConfig.queries.singleSampleGenomeQuantification) {
+			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
+				let div = this.dom.contentDiv.append('div').style('padding', '20px').style('display', 'table-row')
+				for (const sample of state.samples) {
+					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
+					let plotDiv
+					if (state.samples.length == 1)
+						plotDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+					else plotDiv = div.insert('div').style('display', 'table-cell')
+					this.singleSamplePlots.push(plotDiv)
+					plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
+					const ssgqImport = await import('./plot.ssgq.js')
+					await ssgqImport.plotSingleSampleGenomeQuantification(
+						state.termdbConfig,
+						state.vocab.dslabel,
+						k,
 						{ sample_id: sample.sampleName },
-						cellDiv,
+						plotDiv.insert('div'),
 						this.app.opts.genome
 					)
-				}
-			}
-			if (this.settings.showSingleSample && this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-				for (const k in this.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-					let div = this.dom.contentDiv.append('div').style('padding', '20px').style('display', 'table-row')
-					for (const sample of this.state.samples) {
-						const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-						let plotDiv
-						if (this.state.samples.length == 1)
-							plotDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-						else plotDiv = div.insert('div').style('display', 'table-cell')
-						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
-						const ssgqImport = await import('./plot.ssgq.js')
-						await ssgqImport.plotSingleSampleGenomeQuantification(
-							this.state.termdbConfig,
-							this.state.vocab.dslabel,
-							k,
-							{ sample_id: sample.sampleName },
-							plotDiv.insert('div'),
-							this.app.opts.genome
-						)
-					}
 				}
 			}
 		}
