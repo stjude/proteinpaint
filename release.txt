@@ -1,1 +1,4 @@
+Fixes:
+- File name of svg downloaded from disco preserves context including sample name and gene.
+- Various scatterplot fixes: tooltip dot scale, divideBy bug
 
