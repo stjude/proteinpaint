@@ -1,1 +1,2 @@
-
+Fixes:
+- In mass sampleview, expanding tree branch everytime no longer triggers rerendering of disco/ssgq plots
