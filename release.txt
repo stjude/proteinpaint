@@ -1,4 +1,5 @@
 Fixes:
-- File name of svg downloaded from disco preserves context including sample name and gene.
+- Disco: file name of downloaded svg preserves context including sample name and gene.
+- Disco: by default it now prioritize CGC genes in hg38.
 - Various scatterplot fixes: tooltip dot scale, divideBy bug
 
