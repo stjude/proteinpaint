@@ -168,8 +168,9 @@ class MassGroups {
 		const id = this?.lastId
 		let row = menuDiv.append('div')
 
-	        addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
-	        if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) addDEPlot(menuDiv, this.app, this.state, samplelstTW)
+		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+		if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
+			addDEPlotMenuItem(menuDiv, this.app, this.state, samplelstTW)
 
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -205,38 +206,25 @@ class MassGroups {
 
 export const groupsInit = getCompInit(MassGroups)
 
-function addDEPlot(div, app, state, samplelstTW) {
-        const samplelst = []
-        for (const group2 of samplelstTW.q.groups) {
-	   const group = {}
-           for (const group1 of state.groups) {
-               if (group1.name == group2.name) { 
-		   group.name = group1.name
-		   group.in = group2.in
-		   group.values = group1.filter.lst[0].tvs.term.values.Group.list
-	       }	   
-           }
-	   if (group.values && group.values.length > 0) { 
-	       samplelst.push(group)
-	   } else {
-               throw 'group not found for DE analysis'
-	   }    
-        }
-        //console.log("samplelst:",samplelst)
-	const config = {
-		chartType: 'DEanalysis',
-		state,
-		samplelst: { groups: samplelst }
-	}
-        //console.log("state:",state)
-        //console.log("config:", config)
-
-	const itemDiv = div
+function addDEPlotMenuItem(div, app, state, samplelstTW) {
+	div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		//.html('Compare survival&nbsp;&nbsp;›')
-		.text('Differential Expression')
+		.text('Differential expression')
 		.on('click', e => {
+			const groups = []
+			for (const group of samplelstTW.q.groups) {
+				if (group.values && group.values.length > 0) {
+					groups.push(group)
+				} else {
+					throw 'group does not contain samples for DE analysis'
+				}
+			}
+			const config = {
+				chartType: 'DEanalysis',
+				state,
+				samplelst: { groups }
+			}
 			app.dispatch({
 				type: 'plot_create',
 				config
