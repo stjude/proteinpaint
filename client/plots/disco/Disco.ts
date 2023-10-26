@@ -15,10 +15,11 @@ import { RingType } from './ring/RingType.ts'
 import Settings from './Settings.ts'
 
 export default class Disco {
-	private type: string // what are these and where are they used??
 	private discoInteractions: DiscoInteractions
-	private opts: any
 
+	// following attributes are required by rx
+	private type: string
+	private opts: any
 	private state: any
 	private id: any
 	private app: any
@@ -26,12 +27,16 @@ export default class Disco {
 	constructor(opts: any) {
 		this.type = 'Disco'
 		this.opts = opts
-		this.discoInteractions = new DiscoInteractions(this)
 	}
+
 	getState(appState: any) {
 		return appState.plots.find(p => p.id === this.id)
 	}
+
 	async main(): Promise<void> {
+		// run this only when this.state{} is set; cannot do this step in constructor()
+		this.discoInteractions = new DiscoInteractions(this)
+
 		const settings: Settings = this.state.settings
 		const stateViewModelMapper = new ViewModelMapper(settings)
 		const viewModel = stateViewModelMapper.map(this.app.getState())

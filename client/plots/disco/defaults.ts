@@ -3,6 +3,8 @@ import { copyMerge } from '#rx'
 
 export default function discoDefaults(overrides = {}): Settings {
 	const defaults = {
+		downloadImgName: 'disco.plot',
+
 		rings: {
 			nonExonicRingWidth: 20,
 			snvRingWidth: 20,
