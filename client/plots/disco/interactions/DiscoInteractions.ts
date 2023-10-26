@@ -4,7 +4,14 @@ export class DiscoInteractions {
 	geneClickListener: (gene: string, mnames: Array<string>) => void
 	prioritizeGenesCheckboxListener: (checked: boolean) => void
 
+	downloadImgName: string // is this needed?
+
 	constructor(app: any) {
+		console.log(app) // this shows app.opts.state.args.downloadImgName is found
+		console.log(app.app) // this gives undefined. why?
+
+		this.downloadImgName = app.opts?.state?.args?.downloadImgName || 'disco.plot'
+
 		this.cappingClickCallback = (d: any, t: any) => {
 			const tip = app.app.tip
 			tip.clear()
@@ -41,12 +48,13 @@ export class DiscoInteractions {
 
 			a.addEventListener(
 				'click',
-				function () {
+				() => {
+					// must use arrow function but not "function()", so this.downloadImgName is accessible
 					const serializer = new XMLSerializer()
 					const svg_blob = new Blob([serializer.serializeToString(svg)], {
 						type: 'image/svg+xml'
 					})
-					a.download = 'disco' + '.svg'
+					a.download = this.downloadImgName + '.svg'
 					a.href = URL.createObjectURL(svg_blob)
 					document.body.removeChild(a)
 				},

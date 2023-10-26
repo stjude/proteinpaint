@@ -15,7 +15,7 @@ import { RingType } from './ring/RingType.ts'
 import Settings from './Settings.ts'
 
 export default class Disco {
-	private type: string
+	private type: string // what are these and where are they used??
 	private discoInteractions: DiscoInteractions
 	private opts: any
 

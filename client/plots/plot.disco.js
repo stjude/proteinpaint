@@ -21,8 +21,11 @@ holder
 
 genomeObj={}
 	client side genome obj
+
+downloadImgName=str
+	optional file name for downloaded svg, to preserve contexts where this disco plot was originated from
 */
-export default async function (termdbConfig, dslabel, sample, holder, genomeObj) {
+export default async function (termdbConfig, dslabel, sample, holder, genomeObj, downloadImgName = 'disco.plot') {
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -61,7 +64,8 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj)
 		const disco_arg = {
 			sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
 			data: mlst,
-			genome: genomeObj
+			genome: genomeObj,
+			downloadImgName
 		}
 
 		if (termdbConfig.queries.singleSampleMutation.discoSkipChrM) {
