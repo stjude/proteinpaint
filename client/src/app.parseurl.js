@@ -150,6 +150,22 @@ upon error, throw err message as a string
 		const id = urlp.get('mass-session-id')
 		const res = await client.dofetch3(`/massSession?id=${id}`)
 		if (res.error) throw res.error
+		const embedder = res.state?.embedder
+		if (embedder && embedder.origin != window.location.origin) {
+			const messageListener = event => {
+				if (event.origin !== embedder.origin) return
+				console.log(event?.data, event)
+				window.removeEventListener('message', messageListener)
+				if (event.data == 'getActiveMassSession') {
+					child.postMessage({ state: res.state }, embedder.origin)
+					setTimeout(window.close, 500)
+				}
+			}
+			window.addEventListener('message', messageListener, false)
+			const child = window.open(embedder.href)
+			return
+		}
+
 		const opts = {
 			holder: arg.holder,
 			state: res.state,
