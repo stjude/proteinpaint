@@ -404,6 +404,7 @@ class SampleView {
 	}
 
 	showVisiblePlots() {
+		this.dom.sampleDiv.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
 		for (const div of this.discoPlots)
 			if (this.settings.showDisco) div.style('display', this.state.samples.length == 1 ? 'inline-block' : 'table-cell')
 			else div.style('display', 'none')
@@ -445,13 +446,13 @@ class SampleView {
 		}
 		if (state.termdbConfig.queries.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
-				let div = this.dom.contentDiv.append('div').style('padding', '20px').style('display', 'table-row')
+				let div = this.dom.contentDiv.append('div').style('display', 'table-row')
 				for (const sample of state.samples) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
 					let plotDiv
 					if (state.samples.length == 1)
 						plotDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-					else plotDiv = div.insert('div').style('display', 'table-cell')
+					else plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
 					this.singleSamplePlots.push(plotDiv)
 					plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
 					const ssgqImport = await import('./plot.ssgq.js')
