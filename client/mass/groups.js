@@ -170,7 +170,7 @@ class MassGroups {
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 		if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
-			addDEPlot(menuDiv, this.app, this.state, samplelstTW)
+			addDEPlotMenuItem(menuDiv, this.app, this.state, samplelstTW)
 
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -206,7 +206,7 @@ class MassGroups {
 
 export const groupsInit = getCompInit(MassGroups)
 
-function addDEPlot(div, app, state, samplelstTW) {
+function addDEPlotMenuItem(div, app, state, samplelstTW) {
 	div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
