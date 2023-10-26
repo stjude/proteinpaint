@@ -14,8 +14,13 @@ otherwise, do:
 
 const cache = { serverData: {} }
 
-export function sample_match_termvaluesetting(row, filter) {
-	// console.log(row, filter)
+/*
+	Given data of a sample and a filter, return if the sample match the filter
+		row:{} data of a sample
+		filter
+		geneVariant$ids: [] array of $id of the geneVariant terms (in the matrix)
+*/
+export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 	const lst = !filter ? [] : filter.type == 'tvslst' ? filter.lst : [filter]
 	let numberofmatchedterms = 0
 
@@ -27,22 +32,41 @@ export function sample_match_termvaluesetting(row, filter) {
 			}
 		} else {
 			const t = item.tvs
-			const samplevalue = row[t.term.id]
-
+			let samplevalue
+			if (t.term.type == 'geneVariant') {
+				samplevalue = geneVariant$ids.map(g => row[g]).filter(s => s) // filter out the genes that are not annotated for the sample
+			} else if (t.term.type == 'integer' || t.term.type == 'float') {
+				samplevalue = row[t.term.id] || row[t.term.$id]?.key
+			} else {
+				samplevalue = row[t.term.id] || row[t.term.$id]?.value
+			}
 			let thistermmatch
 
 			if (t.term.type == 'categorical') {
-				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
-				// t may be frozen, should not modify to attach valueset if missing
+				if (samplevalue === undefined) {
+					// this sample has no anno for this term, check isnot
+					if (t.isnot) thistermmatch = !thistermmatch
+					if (thistermmatch) numberofmatchedterms++
+					continue
+					// t may be frozen, should not modify to attach valueset if missing
+				}
 				const valueset = t.valueset ? t.valueset : new Set(t.values.map(i => i.key))
 				thistermmatch = valueset.has(samplevalue)
 			} else if (t.term.type == 'integer' || t.term.type == 'float') {
-				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
+				if (samplevalue === undefined) {
+					// this sample has no anno for this term, check isnot
+					if (t.isnot) thistermmatch = !thistermmatch
+					if (thistermmatch) numberofmatchedterms++
+					continue
+				}
 
 				for (const range of t.ranges) {
 					if ('value' in range) {
 						thistermmatch = samplevalue === range.value // || ""+samplevalue == range.value || samplevalue == ""+range.value //; if (thistermmatch) console.log(i++)
 						if (thistermmatch) break
+					} else if (samplevalue == range.name) {
+						thistermmatch = true
+						break
 					} else {
 						// actual range
 						if (t.term.values) {
@@ -84,6 +108,39 @@ export function sample_match_termvaluesetting(row, filter) {
 				}
 			} else if (t.term.type == 'survival') {
 				// don't do anything?
+			} else if (t.term.type == 'geneVariant' && t.legendFilterType == 'geneVariant_hard') {
+				// handle a matrix legend hard filter
+				// values: [{ dt, origin, mclasslst:[key] }]
+				const f = t.values[0] //matrix geneVariant legend filter only has one item in tvs.values
+				thistermmatch =
+					samplevalue.find(s => {
+						for (const v of s.values) {
+							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
+						}
+					}) && true
+			} else if (t.term.type == 'geneVariant' && t.legendFilterType == 'geneVariant_soft') {
+				// handle a matrix legend soft filter
+				const f = t.values[0] //matrix geneVariant legend filter only has one item in tvs.values
+				thistermmatch =
+					samplevalue.find(s => {
+						for (const v of s.values) {
+							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
+						}
+					}) && true
+
+				if (thistermmatch) {
+					// check if there's another type of mutation (not WT or BLANK) in the sample
+					for (const sv of samplevalue) {
+						for (const v of sv.values) {
+							if (v.class == 'WT' || v.class == 'Blank') continue
+							if (!(v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class))) {
+								thistermmatch = false
+								break
+							}
+						}
+						if (!thistermmatch) break
+					}
+				}
 			} else {
 				throw 'unknown term type'
 			}

@@ -100,10 +100,14 @@ export function setInteractivity(self) {
 				const td = row.append('td')
 				if (showShape) {
 					const color = showColor ? self.getColor(d, chart) : self.config.colorTW ? 'gray' : self.settings.defaultColor
-					const shape = showColor ? self.getShape(chart, d, 1, true) : self.getShape(chart, d)
+					const index = showColor
+						? chart.shapeLegend.get('Ref').shape % self.symbols.length
+						: chart.shapeLegend.get(d.shape).shape % self.symbols.length
+					const shape = self.symbols[index].size(64)()
+
 					const width = value.length * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '35px')
-					const g = svg.append('g').attr('transform', 'translate(10, 16)')
+					const g = svg.append('g').attr('transform', 'translate(10, 18)')
 					g.append('path').attr('d', shape).attr('fill', color)
 					g.append('text').attr('x', 18).attr('y', 6).text(value)
 				} else td.append('span').text(value)

@@ -1,8 +1,9 @@
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
+import { mclass, dt2label, morigin } from '#shared/common'
 
-export function getLegendData(legendGroups, refs) {
+export function getLegendData(legendGroups, refs, self) {
 	const s = this.settings.matrix
 	const legendData = []
 	const dvt = this.config.divideBy || {}
@@ -10,15 +11,37 @@ export function getLegendData(legendGroups, refs) {
 	for (const $id in legendGroups) {
 		const legend = legendGroups[$id]
 		if ($id == 'Consequences') {
+			for (const f of this.config.legendValueFilter.lst) {
+				if (f.tvs.term.type !== 'geneVariant') continue
+				if (f.legendGrpName != $id) continue
+				for (const v of f.tvs.values) {
+					for (const key of v.mclasslst) {
+						const legendk = v.origin ? v.origin + key : key
+						legend.values[legendk] = {
+							key,
+							dt: v.dt,
+							origin: v.origin,
+							label: v.label || self.mclass[key].label,
+							fill: v.color || self.mclass[key]?.color,
+							order: key == 'CNV_loss' ? -2 : key.startsWith('CNV_') ? -1 : 0,
+							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
+							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
+						}
+					}
+				}
+			}
+
 			const keys = Object.keys(legend.values)
 			if (!keys.length) continue
 			legendData.unshift({
 				name: 'Consequences',
 				order: legend.order,
 				$id: legend.$id,
+				dt: legend.dt,
+				origin: legend.origin,
 				items: keys.map((key, i) => {
 					const item = legend.values[key]
-					const count = item.samples.size
+					const count = item.samples?.size
 					return {
 						termid: 'Consequences',
 						key: item.key,
@@ -30,6 +53,7 @@ export function getLegendData(legendGroups, refs) {
 						isLegendItem: true,
 						dt: item.dt,
 						crossedOut: item.crossedOut,
+						greyedOut: item.greyedOut,
 						origin: item.origin
 					}
 				})
@@ -46,13 +70,61 @@ export function getLegendData(legendGroups, refs) {
 				: this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id) || {
 						tw: { term: { id: $id, name: $id, type: $id === 'CNV' ? 'geneVariant' : '' } }
 				  }
-		const keys = Object.keys(legend.values).sort((a, b) => legend.values[a].order - legend.values[b].order)
+
+		for (const f of this.config.legendValueFilter.lst) {
+			const name = t.tw.legend?.group || t.tw.label || t.tw.term.name
+
+			if (f.legendGrpName != $id && f.legendGrpName != name && f.tvs.term.name != name) continue
+			if (f.tvs.term.type == 'geneVariant') {
+				for (const v of f.tvs.values) {
+					for (const key of v.mclasslst) {
+						const legendk = v.origin ? v.origin + key : key
+						legend.values[legendk] = {
+							key,
+							dt: v.dt,
+							origin: v.origin,
+							label: v.label || self.mclass[key].label,
+							fill: v.color || self.mclass[key]?.color,
+							order: key == 'CNV_loss' ? -2 : key.startsWith('CNV_') ? -1 : 0,
+							crossedOut: f.tvs.legendFilterType == 'geneVariant_hard' ? true : false,
+							greyedOut: f.tvs.legendFilterType == 'geneVariant_soft' ? true : false
+						}
+					}
+				}
+			} else {
+				if (f.tvs.term.type == 'integer' || f.tvs.term.type == 'float') {
+					for (const v of f.tvs.ranges) {
+						const termValues = Object.values(t.ref.bins)
+						legend.values[v.name] = {
+							key: v.name,
+							label: termValues.find(vl => vl.name == v.name).name,
+							fill: termValues.find(vl => vl.name == v.name).color,
+							crossedOut: true
+						}
+					}
+				} else {
+					for (const v of f.tvs.values) {
+						const termValues = Object.values(t.tw.term.values)
+						legend.values[v.key] = {
+							key: v.key,
+							label: termValues.find(vl => vl.key == v.key).label,
+							fill: termValues.find(vl => vl.key == v.key).color,
+							crossedOut: true
+						}
+					}
+				}
+			}
+		}
+
+		const keys = Object.keys(legend.values).sort()
 		const hasScale = Object.values(legend.values).find(v => v.scale)
 		if (hasScale) {
 			legendData.push({
 				name: $id,
 				order: legend.order,
 				$id: legend.$id,
+				dt: legend.dt,
+				origin: legend.origin,
 				hasScale,
 				items: keys.map((key, i) => {
 					const item = legend.values[key]
@@ -72,6 +144,7 @@ export function getLegendData(legendGroups, refs) {
 							isLegendItem: true,
 							dt: item.dt,
 							crossedOut: item.crossedOut,
+							greyedOut: item.greyedOut,
 							origin: item.origin
 						}
 					} else {
@@ -85,6 +158,7 @@ export function getLegendData(legendGroups, refs) {
 							isLegendItem: true,
 							dt: item.dt,
 							crossedOut: item.crossedOut,
+							greyedOut: item.greyedOut,
 							origin: item.origin
 						}
 					}
@@ -107,6 +181,8 @@ export function getLegendData(legendGroups, refs) {
 				name: name.length < s.rowlabelmaxchars ? name : name.slice(0, s.rowlabelmaxchars) + '...',
 				order: legend.order,
 				$id: legend.$id,
+				dt: legend.dt,
+				origin: legend.origin,
 				items: keys.map((key, i) => {
 					const item = legend.values[key]
 					const count = item.samples?.size
@@ -123,6 +199,7 @@ export function getLegendData(legendGroups, refs) {
 						isLegendItem: true,
 						dt: item.dt,
 						crossedOut: item.crossedOut,
+						greyedOut: item.greyedOut,
 						origin: item.origin
 					}
 				})
@@ -130,10 +207,18 @@ export function getLegendData(legendGroups, refs) {
 		}
 	}
 
+	for (const f of this.config.legendGrpFilter.lst) {
+		legendData.push(f.legendData)
+	}
+
 	return legendData.sort((a, b) => (a.order && b.order ? a.order - b.order : a.order ? -1 : b.order ? 1 : 0))
 }
 
 export function getLegendItemText(item, count, t, s) {
+	if (item.crossedOut || item.greyedOut) {
+		// when the legend is crossed out
+		return item.label
+	}
 	let text = item.label
 	const notes = [count]
 	if (item.isExcluded) notes.push('hidden')

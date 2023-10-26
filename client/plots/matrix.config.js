@@ -11,7 +11,8 @@ export async function getPlotConfig(opts = {}, app) {
 		Terms: 'Variables',
 		terms: 'variables',
 		Term: 'Variable',
-		term: 'Variable'
+		term: 'Variable',
+		Mutations: 'Mutations'
 	}
 
 	const config = {
@@ -20,6 +21,12 @@ export async function getPlotConfig(opts = {}, app) {
 		samplegroups: [],
 		divideBy: null,
 		legendValueFilter: {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		},
+		legendGrpFilter: {
 			type: 'tvslst',
 			in: true,
 			join: 'and',

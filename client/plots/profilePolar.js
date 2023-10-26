@@ -4,6 +4,7 @@ import * as d3 from 'd3'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
+import { renderTable } from '#dom/table'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -77,15 +78,27 @@ class profilePolar extends profilePlot {
 
 		if (!this.sampleData) return
 
-		this.svg = this.dom.plotDiv.append('svg').attr('width', 1200).attr('height', 600)
+		this.svg = this.dom.plotDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.append('svg')
+			.attr('width', 1000)
+			.attr('height', 600)
+		this.tableDiv = this.dom.plotDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin-top', '45px')
+		const rows = []
+		const columns = [{ label: 'Module' }, { label: 'Score' }]
 
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 400
+		const x = 300
 		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 250},${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
@@ -95,7 +108,7 @@ class profilePolar extends profilePlot {
 		for (let d of config.terms) {
 			d.i = i
 			const percentage = this.sampleData[d.$id]?.value
-
+			rows.push([{ value: d.term.name }, { value: percentage }])
 			const path = polarG
 				.append('g')
 				.append('path')
@@ -113,6 +126,15 @@ class profilePolar extends profilePlot {
 
 			i++
 		}
+
+		renderTable({
+			rows,
+			columns,
+			div: this.tableDiv,
+			showLines: true,
+			resize: true,
+			maxHeight: '60vh'
+		})
 
 		addCircle(50, 'C')
 		addCircle(75, 'B')

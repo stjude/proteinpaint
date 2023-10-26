@@ -361,7 +361,8 @@ export function getSortOptions(termdbConfig, controlLabels = {}) {
 							'Utr3',
 							'Utr5',
 							'S',
-							'Intron'
+							'Intron',
+							'noncoding'
 						]
 					},
 					// NOTE: nested CNV filter causes sorting samples by cnv+ssm > ssm-only > cnv-only

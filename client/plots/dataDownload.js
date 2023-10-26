@@ -38,15 +38,9 @@ class DataDownload {
 			submitDiv: this.opts.holder.append('div').style('margin', '10px')
 		}
 
-		this.dom.submitBtn = this.dom.submitDiv
-			.append('button')
-			.html('Download')
-			.on('click', this.download)
+		this.dom.submitBtn = this.dom.submitDiv.append('button').html('Download').on('click', this.download)
 
-		this.dom.submitNote = this.dom.submitDiv
-			.append('span')
-			.style('margin-left', '5px')
-			.style('font-style', 'italic')
+		this.dom.submitNote = this.dom.submitDiv.append('span').style('margin-left', '5px').style('font-style', 'italic')
 	}
 
 	getState(appState, sub) {
@@ -153,7 +147,10 @@ class DataDownload {
 			noTermPromptOptions: this.getNoTermPromptOptions(),
 			genomeObj: this.genomeObj,
 			abbrCutoff: 50,
-			defaultQ4fillTW: { condition: { mode: 'cuminc' } },
+			defaultQ4fillTW: {
+				condition: { mode: 'cuminc' },
+				numeric: { mode: 'continuous' }
+			},
 			callback: tw => {
 				const termsCopy = this.config.terms.slice(0)
 				const i = this.config.terms.findIndex(tw => tw.$id === d.tw.$id)
@@ -161,6 +158,9 @@ class DataDownload {
 					termsCopy.splice(i, 1)
 				} else if (i === -1) {
 					tw.$id = d.tw.$id
+					if (!tw.q?.mode && (tw.term.type == 'integer' || tw.term.type == 'float')) {
+						tw.q.mode = 'continuous'
+					}
 					termsCopy.push(tw)
 				} else {
 					tw.$id = d.tw.$id
@@ -214,16 +214,14 @@ export const dataDownloadInit = getCompInit(DataDownload)
 // this alias will allow abstracted dynamic imports
 export const componentInit = dataDownloadInit
 
-const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}_${Math.random()
-	.toString()
-	.slice(-6)}`
+const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}_${Math.random().toString().slice(-6)}`
 let $id = 0
 function getTw$id() {
 	return `${$id++}${idSuffix}`
 }
 
 function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		// duplicate the array, so as to insert blank term into array
 		const data = self.config.terms.map(tw => {
 			return { tw, pill: self.pillBy$id[tw.$id] }
@@ -231,36 +229,35 @@ function setRenderers(self) {
 
 		// terms[] from state will not contain blank tw
 		// insert an element without a tw, to show the blank prompt for selecting new terms
-		// tw.$id is needed for ...
+		// tw.$id is needed to know which pill div needs to be re-rendered once a term is selected or replaced,
+		// this helps maintain the visual order of the pills
 		data.push({ tw: { $id: getTw$id() } })
 
-		const terms = self.dom.terms.selectAll(':scope>div').data(data, d => d.tw.$id)
+		const terms = self.dom.terms.selectAll(':scope>.sja-data-download-term').data(data, d => d.tw?.$id)
 		terms.exit().remove()
 		terms.each(self.renderTerm)
-		terms
-			.enter()
-			.append('div')
-			.each(self.addTerm)
+		terms.enter().append('div').attr('class', 'sja-data-download-term').each(self.addTerm)
 	}
 
-	self.addTerm = async function(d) {
+	self.addTerm = async function (d) {
 		const div = select(this)
 			// allow to show blank prompt in a new line, where all selected terms are in one row
-			.style('display', d.tw.term ? 'inline-block' : 'block')
+			.style('display', d.tw?.term ? 'inline-block' : 'block')
 			.style('width', 'fit-content')
 			.style('margin', '10px')
 			.style('padding', '5px')
 
 		d.pill = await self.getNewPill(div, d)
 		await d.pill.main({
-			term: d.tw.term,
-			q: d.tw.q,
+			term: d.tw?.term,
+			q: d.tw?.q,
 			filter: self.state.termfilter.filter,
-			activeCohort: self.state.activeCohort
+			activeCohort: self.state.activeCohort,
+			numericEditMenuVersion: ['continuous', 'discrete']
 		})
 	}
 
-	self.renderTerm = async function(d) {
+	self.renderTerm = async function (d) {
 		// this should not happen, even empty terms have a pill
 		if (!d.pill) throw `no pill on update renderTerm()`
 
@@ -321,7 +318,7 @@ function setInteractivity(self) {
 		document.body.appendChild(a)
 		a.addEventListener(
 			'click',
-			function() {
+			function () {
 				a.download = 'cohortData.txt'
 				a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
 				document.body.removeChild(a)

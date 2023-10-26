@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 2.30.1
+
+Fixes:
+- use a more specific class selector for detecting pill divs in the data download app
+
+
+## 2.30.0
+
+Features:
+- Support clicking matrix legends and matrix legend group names to use as filters.
+
+Fixes:
+- Revert prev change that cause hic genome view to misalign
 
 ## 2.29.6
 

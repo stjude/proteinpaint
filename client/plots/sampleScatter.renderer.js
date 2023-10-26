@@ -12,6 +12,8 @@ import { regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 import { getId } from '#mass/nav'
 import { minDotSize, maxDotSize } from './sampleScatter.js'
+
+const defaultSize = 64
 export function setRenderers(self) {
 	self.render = function () {
 		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
@@ -488,10 +490,8 @@ export function setRenderers(self) {
 		return refOpacity
 	}
 
-	self.getShape = function (chart, c, factor = 1, showDefault = false) {
-		let index
-		if (!showDefault) index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
-		else index = chart.shapeLegend.get('Ref').shape % self.symbols.length
+	self.getShape = function (chart, c, factor = 1) {
+		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
 		const isRef = !('sampleId' in c)
 		if (!self.config.scaleDotTW || isRef) {
 			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
@@ -964,7 +964,7 @@ export function setRenderers(self) {
 				for (const [key, shape] of chart.shapeLegend) {
 					if (key == 'Ref') continue
 					const index = shape.shape % self.symbols.length
-					const symbol = self.symbols[index].size(64)()
+					const symbol = self.symbols[index].size(defaultSize)()
 					const name = key
 					const count = shape.sampleCount
 					const hidden = self.config.shapeTW.q.hiddenValues ? key in self.config.shapeTW.q.hiddenValues : false

@@ -2017,10 +2017,21 @@ function setZoomPanActions(self) {
 function setLengendActions(self) {
 	self.legendLabelMouseover = event => {
 		const targetData = event.target.__data__
-		if (targetData.isLegendItem && targetData.dt !== 3) {
+		if (targetData.dt == 3) {
 			// for gene expression don't use legend as filter
-			select(event.target).style('fill', 'blue').style('cursor', 'pointer')
+			return
 		}
+		if (!targetData.isLegendItem && !targetData.dt) {
+			// when its a non-genevariant legend group name
+			return
+		}
+
+		const legendGrpHidden = self.config.legendGrpFilter.lst.find(f => f.legendData.name == targetData.termid) && true
+		if (targetData.isLegendItem && legendGrpHidden) {
+			// when the legend's group is hidden
+			return
+		}
+		select(event.target).style('fill', 'blue').style('cursor', 'pointer')
 	}
 
 	self.legendLabelMouseout = event => {
@@ -2029,7 +2040,65 @@ function setLengendActions(self) {
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
-		if (!targetData.isLegendItem || targetData.dt == 3) return
+		if (targetData.dt == 3) {
+			// for gene expression don't use legend as filter
+			return
+		}
+		if (!targetData.isLegendItem) {
+			// for legend group name
+			if (!targetData.dt) {
+				// when its a non-genevariant legend group name
+				return
+			}
+
+			//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
+			const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
+				f => f.dt == targetData.dt && (!f.origin || f.origin == targetData.origin)
+			)
+			const menuGrp = new Menu({ padding: '0px' })
+			const div = menuGrp.d.append('div')
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(legendGrpFilterIndex == -1 ? 'Do not show events' : 'Show events')
+				.on('click', () => {
+					menuGrp.hide()
+					if (legendGrpFilterIndex == -1) {
+						// when the legend group is shown and now hide it
+						// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
+						const legendData = structuredClone(targetData)
+						legendData.crossedOut = true
+						const filterNew = { dt: targetData.dt, legendData }
+						if (self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin) {
+							// when distinguish between germline and somatic for the dt
+							filterNew.origin = targetData.origin
+						}
+						// when the legend group is hidden, remove the individual legend filter in the group
+						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+							f => f.legendGrpName != legendData.name
+						)
+
+						self.config.legendGrpFilter.lst.push(filterNew)
+					} else {
+						// when the legend group is alcrossed-out and now show it
+						self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
+					}
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: self.config
+					})
+				})
+			menuGrp.showunder(event.target)
+			return
+		}
+
+		const legendGrpHidden = self.config.legendGrpFilter.lst.find(f => f.legendData.name == targetData.termid) && true
+		if (targetData.isLegendItem && legendGrpHidden) {
+			// when the legend's group is hidden
+			return
+		}
+
 		//legendFilterIndex is the index of the filter that is already in self.config.legendValueFilter.lst
 		// All the filters in self.config.legendValueFilter.lst is joined by 'and' and for all of them the isnot is true.
 		let legendFilterIndex
@@ -2040,15 +2109,16 @@ function setLengendActions(self) {
 					l.legendGrpName == targetData.termid &&
 					l.tvs.values.find(
 						v =>
-							v.dt == targetData.dt &&
-							(v.origin ? v.origin == targetData.origin : true) &&
-							v.mclasslst[0] == targetData.key
+							v.dt == targetData.dt && (!v.origin || v.origin == targetData.origin) && v.mclasslst[0] == targetData.key
 					)
 			)
 		} else {
 			// when its non-geneVariant term
-			const legendTerm = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
-			if (!legendTerm) return
+			const legendTerm = self.termOrder.find(to => to.tw.$id == targetData.$id)?.tw?.term
+			if (!legendTerm) {
+				// legend value filter works for the terms in self.termOrder
+				return
+			}
 			if (legendTerm.type == 'categorical') {
 				legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 					l => l.legendGrpName == targetData.termid && l.tvs.values.find(v => v.key == targetData.key)
@@ -2064,20 +2134,29 @@ function setLengendActions(self) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(legendFilterIndex == -1 ? 'Hide' : 'Show')
+			.text(
+				targetData.dt
+					? legendFilterIndex == -1
+						? 'Hide samples with event'
+						: 'Show samples with event'
+					: legendFilterIndex == -1
+					? 'Hide'
+					: 'Show'
+			)
 			.on('click', () => {
 				menu.hide()
 				if (legendFilterIndex == -1) {
 					// when its shown and now hide it
-					// add a new filter to filter out the legend's dt + legend's class
 					if (targetData.dt) {
 						// for a geneVariant term
+						// add a new "hard filter" to filter out samples that have genes' values match with the legend's origin + legend's dt + legend's class
 						const filterNew = {
 							legendGrpName: targetData.termid,
 							type: 'tvs',
 							tvs: {
 								isnot: true,
-								term$type: 'geneVariant',
+								legendFilterType: 'geneVariant_hard', // indicates this matrix legend filter is hard filter
+								term: { type: 'geneVariant' },
 								values: [{ dt: targetData.dt, origin: targetData.origin, mclasslst: [targetData.key] }]
 							}
 						}
@@ -2102,6 +2181,7 @@ function setLengendActions(self) {
 								}
 								self.config.legendValueFilter.lst.push(filterNew)
 							} else {
+								// the filter for the categorical term exist, but the current legend key is not there.
 								self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: targetData.key })
 							}
 						} else if (term.type == 'integer' || term.type == 'float') {
@@ -2142,125 +2222,150 @@ function setLengendActions(self) {
 					config: { legendValueFilter: self.config.legendValueFilter }
 				})
 			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Show only')
-			.on('click', () => {
-				menu.hide()
-				const term = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
-				const legendGrp =
-					self.legendData.find(lg => lg.name == targetData.termid) ||
-					self.legendData.find(lg => lg.$id == targetData.$id)
 
-				// reset self.config.legendValueFilter.lst to remove all the filters in the lst that's in the same legendGrp
-				self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-					l => l.legendGrpName !== targetData.termid
-				)
+		if (targetData.isLegendItem) {
+			// not for the legend group names
+			if (targetData.dt && legendFilterIndex == -1) {
+				// only when filtering a not already hidden geneVariant legend, show the soft filter
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Do not show event')
+					.on('click', () => {
+						menu.hide()
+						// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+						// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+						// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
 
-				if (targetData.dt) {
-					// for a geneVariant term
-					for (const l of legendGrp.items) {
-						if (l.dt == targetData.dt && (l.origin ? l.origin == targetData.origin : true) && l.key == targetData.key)
-							continue
 						const filterNew = {
 							legendGrpName: targetData.termid,
 							type: 'tvs',
 							tvs: {
 								isnot: true,
-								term$type: 'geneVariant',
-								values: [{ dt: l.dt, origin: l.origin, mclasslst: [l.key] }]
+								legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+								term: { type: 'geneVariant' },
+								values: [{ dt: targetData.dt, origin: targetData.origin, mclasslst: [targetData.key] }]
 							}
 						}
-						if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
-						else self.config.legendValueFilter.lst.push(filterNew)
-					}
-				} else {
-					// for a non-geneVariant term
-					const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
-					if (term.type == 'categorical') {
-						term.$id = targetData.$id
-						for (const l of legendGrp.items) {
-							if (l.key == targetData.key) continue
-							const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
-								l => l.legendGrpName == targetData.termid
-							)
-							if (filterGrpIndex == -1) {
+						self.config.legendValueFilter.lst.push(filterNew)
+
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: { legendValueFilter: self.config.legendValueFilter }
+						})
+					})
+			}
+
+			if (!targetData.dt) {
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Show only') // show only option only exist for non-genevariant legend
+					.on('click', () => {
+						menu.hide()
+						const term = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
+						const legendGrp =
+							self.legendData.find(lg => lg.name == targetData.termid) ||
+							self.legendData.find(lg => lg.$id == targetData.$id)
+
+						// reset self.config.legendValueFilter.lst to remove all the filters in the lst that's in the same legendGrp
+						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+							l => l.legendGrpName !== targetData.termid
+						)
+
+						/*
+						if (targetData.dt) {
+							// for a geneVariant term
+							for (const l of legendGrp.items) {
+								if (l.dt == targetData.dt && (l.origin ? l.origin == targetData.origin : true) && l.key == targetData.key)
+									continue
+								const filterNew = {
+									legendGrpName: targetData.termid,
+									type: 'tvs',
+									tvs: {
+										isnot: true,
+										legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+										term: { type: 'geneVariant' },
+										values: [{ dt: l.dt, origin: l.origin, mclasslst: [l.key] }]
+									}
+								}
+								if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
+								else self.config.legendValueFilter.lst.push(filterNew)
+							}
+						} else {
+							const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+						*/
+
+						// for a non-geneVariant term
+						if (term.type == 'categorical') {
+							term.$id = targetData.$id
+							for (const l of legendGrp.items) {
+								if (l.key == targetData.key) continue
+								const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
+									l => l.legendGrpName == targetData.termid
+								)
+								if (filterGrpIndex == -1) {
+									const filterNew = {
+										legendGrpName: targetData.termid,
+										type: 'tvs',
+										tvs: {
+											isnot: true,
+											term,
+											values: [{ key: l.key }]
+										}
+									}
+									self.config.legendValueFilter.lst.push(filterNew)
+								} else {
+									self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: l.key })
+								}
+							}
+						} else if (term.type == 'integer' || term.type == 'float') {
+							term.$id = targetData.$id
+							for (const l of legendGrp.items) {
+								if (l.key == targetData.key) continue
 								const filterNew = {
 									legendGrpName: targetData.termid,
 									type: 'tvs',
 									tvs: {
 										isnot: true,
 										term,
-										values: [{ key: l.key }]
+										ranges: [self.data.refs.byTermId[targetData.$id].bins.find(b => l.key == b.name)]
 									}
 								}
-								self.config.legendValueFilter.lst.push(filterNew)
-							} else {
-								self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: l.key })
+								if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
+								else self.config.legendValueFilter.lst.push(filterNew)
 							}
 						}
-					} else if (term.type == 'integer' || term.type == 'float') {
-						term.$id = targetData.$id
-						for (const l of legendGrp.items) {
-							if (l.key == targetData.key) continue
-							const filterNew = {
-								legendGrpName: targetData.termid,
-								type: 'tvs',
-								tvs: {
-									isnot: true,
-									term,
-									ranges: [self.data.refs.byTermId[targetData.$id].bins.find(b => l.key == b.name)]
-								}
-							}
-							if (!self.config.legendValueFilter.lst.length) self.config.legendValueFilter.lst = [filterNew]
-							else self.config.legendValueFilter.lst.push(filterNew)
-						}
-					}
-				}
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: self.config
-				})
-			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Show all')
-			.on('click', () => {
-				menu.hide()
-				self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-					l => l.legendGrpName !== targetData.termid
-				)
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: self.config
-				})
-			})
-		menu.showunder(event.target)
-
-		const dvt = structuredClone(self.config.divideBy || {})
-		const id = 'id' in dvt ? dvt.id : dvt.name
-		if (targetData.termid == id) {
-			if (!dvt.exclude) dvt.exclude = []
-			const i = dvt.exclude?.indexOf(targetData.key)
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+			}
 
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(i == -1 ? 'Hide subGroup' : 'Show subGroup')
+				.text('Show all')
 				.on('click', () => {
-					menu.hide()
-					if (i == -1) dvt.exclude.push(targetData.key)
-					else dvt.exclude.splice(i, 1)
+					if (targetData.dt) {
+						menu.hide()
+						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+							l => l.legendGrpName !== targetData.termid
+						)
+					} else {
+						menu.hide()
+						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+							l => l.legendGrpName !== targetData.termid
+						)
+					}
+
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: {
-							divideBy: dvt
-						}
+						config: self.config
 					})
 				})
 			menu.showunder(event.target)

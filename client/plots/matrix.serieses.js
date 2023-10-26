@@ -61,36 +61,6 @@ export function getSerieses(data) {
 			const width = !s.transpose ? colw : colw / values.length
 			const siblingCells = []
 
-			//generate the crossedOut legend data and put them inside of legendGroups
-			for (const value of anno.crossedOutValues) {
-				const cell = Object.assign({ key, siblingCells: [] }, cellTemplate)
-				// will assign x, y, width, height, fill, label, order, etc
-				const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, 0)
-
-				if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
-				if (legend) {
-					legend.entry.crossedOut = true
-					for (const l of [legendGroups, so.grp.legendGroups]) {
-						if (!l) continue
-						if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order, $id }
-						const lg = l[legend.group]
-						const legendK = legend.entry.origin ? legend.entry.origin + legend.value : legend.value
-
-						if (!lg.values[legendK]) {
-							lg.values[legendK] = JSON.parse(JSON.stringify(legend.entry))
-							lg.values[legendK].samples = new Set()
-							if (legend.entry.scale) lg.values[legendK].scale = legend.entry.scale
-						}
-						if (!lg.values[legendK].samples) lg.values[legendK].samples = new Set()
-						lg.values[legendK].samples.add(row.sample)
-
-						if (isDivideByTerm) {
-							lg.values[legend.value].isExcluded = so.grp.isExcluded
-						}
-					}
-				}
-			}
-
 			if (!anno || !anno.renderedValues?.length) {
 				if (!so.grp.isExcluded && (s.useCanvas || so.grp)) {
 					const cell = getEmptyCell(cellTemplate, s, this.dimensions)
@@ -109,7 +79,15 @@ export function getSerieses(data) {
 				if (legend) {
 					for (const l of [legendGroups, so.grp.legendGroups]) {
 						if (!l) continue
-						if (!l[legend.group]) l[legend.group] = { ref: legend.ref, values: {}, order: legend.order, $id }
+						if (!l[legend.group])
+							l[legend.group] = {
+								ref: legend.ref,
+								values: {},
+								order: legend.order,
+								$id,
+								dt: legend.entry.dt,
+								origin: legend.entry.origin
+							}
 						const lg = l[legend.group]
 						const legendK = legend.entry.origin ? legend.entry.origin + legend.value : legend.value
 
@@ -141,9 +119,39 @@ export function getSerieses(data) {
 		if (series.cells.length) serieses.push(series)
 	}
 
-	this.legendData = this.getLegendData(legendGroups, data.refs)
+	addAllHiddenLegendGroups(legendGroups, this)
+	this.legendData = this.getLegendData(legendGroups, data.refs, this)
 	for (const grp of this.sampleGroups) {
-		grp.legendData = this.getLegendData(grp.legendGroups, data.refs)
+		grp.legendData = this.getLegendData(grp.legendGroups, data.refs, this)
 	}
 	return serieses
+}
+
+// Add a legendGroup for the a legend group whose legends are all hidden
+function addAllHiddenLegendGroups(legendGroups, self) {
+	for (const valueFilter of self.config.legendValueFilter.lst) {
+		if (valueFilter.tvs.term.type == 'categorical' && !legendGroups[valueFilter.tvs.term.$id]) {
+			legendGroups[valueFilter.tvs.term.$id] = {
+				ref: {},
+				values: {},
+				$id: valueFilter.tvs.term.$id
+			}
+		} else if (valueFilter.tvs.term.type == 'geneVariant' && !legendGroups[valueFilter.legendGrpName]) {
+			legendGroups[valueFilter.legendGrpName] = {
+				ref: {},
+				values: {},
+				dt: valueFilter.tvs.values[0].dt,
+				origin: valueFilter.tvs.values[0].origin
+			}
+		} else if (
+			(valueFilter.tvs.term.type == 'integer' || valueFilter.tvs.term.type == 'float') &&
+			!legendGroups[valueFilter.tvs.term.$id]
+		) {
+			legendGroups[valueFilter.tvs.term.$id] = {
+				ref: {},
+				values: {},
+				$id: valueFilter.tvs.term.$id
+			}
+		}
+	}
 }

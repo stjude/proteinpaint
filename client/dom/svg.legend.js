@@ -73,7 +73,7 @@ export default function svgLegend(opts) {
 		currlinex = 0
 		currliney += settings.lineh
 
-		let g = select(this)
+		let g = select(this).style('opacity', d.crossedOut ? '0.3' : 1)
 		const leftdist = settings.hangleft ? settings.padleft + settings.hangleft - settings.padx : settings.padleft
 
 		const grplabel = g
@@ -84,6 +84,7 @@ export default function svgLegend(opts) {
 			.attr('font-size', settings.fontsize)
 			.attr('dominant-baseline', 'central')
 			.text(d.name)
+			.style('text-decoration', d.crossedOut ? 'line-through' : '')
 
 		if (settings.linesep) {
 			currlinex = settings.padleft
@@ -120,6 +121,7 @@ export default function svgLegend(opts) {
 		const g = select(this)
 			.attr('transform', 'translate(' + currlinex + ',' + currliney + ')')
 			.style('opacity', settings.itemOpacity)
+			.style('opacity', d.greyedOut ? '0.3' : 1)
 
 		const itemlabel = g
 			.append('text')

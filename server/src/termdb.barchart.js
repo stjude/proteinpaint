@@ -164,7 +164,8 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	return { data: pj.tree.results, bins }
+	const result = { data: pj.tree.results, bins }
+	return result
 }
 
 //used by barchart_data

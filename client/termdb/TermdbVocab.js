@@ -188,7 +188,6 @@ export class TermdbVocab extends Vocab {
 		// start of mds3 parameters for variant2sample query
 		if (opts.get) params.push('get=' + opts.get)
 		// end of mds3 parameters
-
 		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
 		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
 	}
@@ -760,8 +759,9 @@ export class TermdbVocab extends Vocab {
 						refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
 					}
 
+					refs.byTermId[tw.$id] = tw
 					if (idn in data.refs.byTermId) {
-						refs.byTermId[tw.$id] = data.refs.byTermId[idn]
+						refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[idn])
 					}
 
 					numResponses++

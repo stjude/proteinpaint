@@ -101,7 +101,7 @@ export function setLabelsAndScales() {
 			const anno = sample.row[t.tw.$id]
 			if (!anno) continue
 			// This is the second call to classifyValues(), to determine case/hit counts for row labels
-			const { filteredValues, countedValues, renderedValues, crossedOutValues } = this.classifyValues(
+			const { filteredValues, countedValues, renderedValues } = this.classifyValues(
 				anno,
 				t.tw,
 				t.grp,
@@ -111,7 +111,6 @@ export function setLabelsAndScales() {
 			anno.filteredValues = filteredValues
 			anno.countedValues = countedValues
 			anno.renderedValues = renderedValues
-			anno.crossedOutValues = crossedOutValues
 			if (anno.countedValues?.length) {
 				t.counts.samples += 1
 				t.counts.hits += anno.countedValues.length
