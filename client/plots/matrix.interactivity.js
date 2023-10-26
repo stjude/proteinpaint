@@ -186,7 +186,8 @@ export function setInteractivity(self) {
 						self.state.vocab.dslabel,
 						sample,
 						sandbox.body,
-						self.app.opts.genome
+						self.app.opts.genome,
+						{ label: { prioritizeGeneLabelsByGeneSets: true } }
 					)
 				})
 		}

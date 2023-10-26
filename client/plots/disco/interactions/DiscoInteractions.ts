@@ -3,14 +3,12 @@ export class DiscoInteractions {
 	downloadClickListener: (d: any) => void
 	geneClickListener: (gene: string, mnames: Array<string>) => void
 	prioritizeGenesCheckboxListener: (checked: boolean) => void
-
-	downloadImgName: string // is this needed?
+	downloadImgName: string
 
 	constructor(app: any) {
-		console.log(app) // this shows app.opts.state.args.downloadImgName is found
-		console.log(app.app) // this gives undefined. why?
+		// note! only call this constructor then app.state{} is created
 
-		this.downloadImgName = app.opts?.state?.args?.downloadImgName || 'disco.plot'
+		this.downloadImgName = app.state.settings.downloadImgName || 'disco.plot'
 
 		this.cappingClickCallback = (d: any, t: any) => {
 			const tip = app.app.tip
