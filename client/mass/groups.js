@@ -217,7 +217,7 @@ function addDEPlotMenuItem(div, app, state, samplelstTW) {
 				if (group.values && group.values.length > 0) {
 					groups.push(group)
 				} else {
-					throw 'group not found for DE analysis'
+					throw 'group does not contain samples for DE analysis'
 				}
 			}
 			const config = {
