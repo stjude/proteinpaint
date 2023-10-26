@@ -187,7 +187,11 @@ export function setInteractivity(self) {
 						sample,
 						sandbox.body,
 						self.app.opts.genome,
-						{ label: { prioritizeGeneLabelsByGeneSets: true } }
+						{
+							label: {
+								prioritizeGeneLabelsByGeneSets: true // TODO control this at dataset-level
+							}
+						}
 					)
 				})
 		}
