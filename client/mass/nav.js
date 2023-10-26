@@ -558,12 +558,15 @@ function setInteractivity(self) {
 
 	self.getSessionUrl = async () => {
 		self.dom.saveBtn.property('disabled', true)
+		const state = structuredClone(self.app.getState())
+		const { protocol, host, search, origin, href } = window.location
+		state.embedder = { protocol, host, search, origin, href }
 		const res = await dofetch3('/massSession', {
 			method: 'POST',
-			body: JSON.stringify(self.app.getState())
+			body: JSON.stringify(state)
 		})
-		const host = sessionStorage.getItem('hostURL') || `${window.location.protocol}//${window.location.host}`
-		const url = `${host}/?mass-session-id=${res.id}&noheader=1`
+		const hostURL = sessionStorage.getItem('hostURL') || origin
+		const url = `${hostURL}/?mass-session-id=${res.id}&noheader=1`
 		self.dom.tip.clear().showunder(self.dom.saveBtn.node())
 		self.dom.tip.d
 			.append('div')

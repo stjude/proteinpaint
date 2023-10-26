@@ -1467,6 +1467,25 @@ async function launchmass(arg, app) {
 	}
 	opts.getDatasetAccessToken = arg.getDatasetAccessToken
 	opts.addLoginCallback = arg.addLoginCallback
+	const hostURL = sessionStorage.getItem('hostURL')
+	if (window.opener && hostURL != window.location.origin) {
+		opts.embeddedSessionState = {}
+		const messageListener = event => {
+			if (event.origin !== hostURL) return
+			// !!! Potential race-condition
+			// - assumes that the message event from the window.opener will be received
+			//   before the storeInit() is triggered within the storeInit() call in mass/app.js
+			// - low-risk(?) since the postMessage() between browser tabs should be faster than
+			//   the dynamic code loading below and in mass/app
+			// !!!
+			if (event.data.state) {
+				window.removeEventListener('message', messageListener)
+				Object.assign(opts.embeddedSessionState, event.data.state)
+			}
+		}
+		window.addEventListener('message', messageListener, false)
+		window.opener.postMessage('getActiveMassSession', hostURL)
+	}
 	const _ = await import('../mass/app')
 	return await _.appInit(opts)
 }
