@@ -4,6 +4,7 @@ import path from 'path'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 import { scaleLinear } from 'd3-scale'
+import { unlink } from 'fs'
 import { createCanvas } from 'canvas'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import * as gdc from './mds3.gdc'
@@ -1259,79 +1260,87 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
-        q.file = path.join(serverconfig.tpmasterdir, q.file)
-        if (!q.samplesFile) throw 'missing samples file for gene count'
-        q.samplesFile = path.join(serverconfig.tpmasterdir, q.samplesFile)
+	q.file = path.join(serverconfig.tpmasterdir, q.file)
+	if (!q.samplesFile) throw 'missing samples file for gene count'
+	q.samplesFile = path.join(serverconfig.tpmasterdir, q.samplesFile)
 	/*
 	param{}
 		samplelst{}
 			groups[]
 				values[] // using integer sample id
 	*/
-        q.get = async function (param) {
-	        let raw_samples = fs.readFileSync(q.samplesFile, 'utf8', (err, data) => { // Reading file to determine which samples have rnaseq data
-                if (err) {
-                   console.error(err);
-                   return;
-                }
-		return data    
-                });
-	        const samples_with_rnaseq_counts=[]
-                for (const sample of raw_samples.split('\t')) {
-                    if (sample == 'geneID' || sample == 'geneSymbol' || sample == 'bioType' || sample == 'annotationLevel') {continue} // List of keywords in q.samplesFile which do not correspond to any particular sample
-		    else {
-                       samples_with_rnaseq_counts.push(sample)
-		    } 	
-	        }
-	        //console.log("samples_with_rnaseq_counts:",samples_with_rnaseq_counts)
+	q.get = async function (param) {
+		let raw_samples = fs.readFileSync(q.samplesFile, 'utf8', (err, data) => {
+			// Reading file to determine which samples have rnaseq data
+			if (err) {
+				console.error(err)
+				return
+			}
+			return data
+		})
+		const samples_with_rnaseq_counts = []
+		for (const sample of raw_samples.split('\t')) {
+			if (sample == 'geneID' || sample == 'geneSymbol' || sample == 'bioType' || sample == 'annotationLevel') {
+				continue
+			} // List of keywords in q.samplesFile which do not correspond to any particular sample
+			else {
+				samples_with_rnaseq_counts.push(sample)
+			}
+		}
+		//console.log("samples_with_rnaseq_counts:",samples_with_rnaseq_counts)
 
-                // IMPORTANT: Need to add a clause later to check if all sample in the genecounts file are unique. If not, it should throw an error.
-	        if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
+		// IMPORTANT: Need to add a clause later to check if all sample in the genecounts file are unique. If not, it should throw an error.
+		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 		if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 		if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 		// txt file uses string sample name, must convert integer sample id to string
 		// txt file uses string sample name, must convert integer sample id to string
-	        const group1names = []
-	        let group1names_not_found = 0
-	        for (const s of param.samplelst.groups[0].values) {
-		        if (!Number.isInteger(s.sampleId)) continue
+		const group1names = []
+		let group1names_not_found = 0
+		for (const s of param.samplelst.groups[0].values) {
+			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
-		        if (!n) continue
-		        if (samples_with_rnaseq_counts.includes(n)) {
-			  group1names.push(n)
-		        } else {
-                          group1names_not_found += 1
-			}    
+			if (!n) continue
+			if (samples_with_rnaseq_counts.includes(n)) {
+				group1names.push(n)
+			} else {
+				group1names_not_found += 1
+			}
 		}
-	        const group2names = []
-	        let group2names_not_found = 0
+		const group2names = []
+		let group2names_not_found = 0
 		for (const s of param.samplelst.groups[1].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
-		        if (!n) continue
-		        if (samples_with_rnaseq_counts.includes(n)) {
-			    group2names.push(n)
+			if (!n) continue
+			if (samples_with_rnaseq_counts.includes(n)) {
+				group2names.push(n)
 			} else {
-                          group2names_not_found += 1
-			}    
+				group2names_not_found += 1
+			}
 		}
-	    
-	        console.log("Sample size of group1:",group1names.length)
-	    	console.log("Sample size of group2:",group2names.length)
-	        console.log("Number of group1 names not found:", group1names_not_found)
-	        console.log("Number of group2 names not found:", group2names_not_found)
+
+		console.log('Sample size of group1:', group1names.length)
+		console.log('Sample size of group2:', group2names.length)
+		console.log('Number of group1 names not found:', group1names_not_found)
+		console.log('Number of group2 names not found:', group2names_not_found)
 		if (group1names.length < 1) throw 'group1names.length<1'
 		if (group2names.length < 1) throw 'group2names.length<1'
-	        // pass group names and txt file to rust
-	    
-	        const cases_string = group1names.map(i => i).join(',')
-	        const controls_string = group2names.map(i => i).join(',')
-	        const expression_input = {case: cases_string, control: controls_string, input_file: q.file, output_path: path.join(serverconfig.binpath, 'utils')}
-	        //console.log("expression_input:",expression_input)
-	        //fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
-	        //	// For catching input to rust pipeline, in case of an error
-	        //	if (err) return console.log(err)
-	        //})
+		// pass group names and txt file to rust
+
+		const cases_string = group1names.map(i => i).join(',')
+		const controls_string = group2names.map(i => i).join(',')
+		const expression_input = {
+			case: cases_string,
+			control: controls_string,
+			input_file: q.file,
+			output_path: path.join(serverconfig.binpath, 'utils')
+		}
+		//console.log("expression_input:",expression_input)
+		//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+		//	// For catching input to rust pipeline, in case of an error
+		//	if (err) return console.log(err)
+		//})
 
 		const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 		let result
@@ -1356,7 +1365,9 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			//      }
 			//}
 
-			result = JSON.parse(fs.readFileSync(path.join(serverconfig.binpath, 'utils', 'r_output.txt'), 'utf8'))
+			const tmpfile = path.join(serverconfig.binpath, 'utils', 'r_output.txt')
+			result = JSON.parse(fs.readFileSync(tmpfile, 'utf8'))
+			unlink(tmpfile, () => {})
 		} else {
 			// Wilcoxon test will be used for DE analysis
 			const time1 = new Date()
