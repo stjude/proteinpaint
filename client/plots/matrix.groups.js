@@ -232,8 +232,11 @@ export function classifyValues(anno, tw, grp, s, sample) {
 		const sortedFilteredValues = []
 		// dt=1 are SNVindels, dt=4 CNV, dt=3 Gene Expression
 		// will render only one matching value per dt
-		for (const dt of [4, 1, 3]) {
-			const v = filteredValues.find(v => v.dt === dt)
+		for (const dt of [4, 1, 2, 3]) {
+			const v =
+				dt == 3
+					? filteredValues.find(v => v.dt === dt)
+					: filteredValues.find(v => v.dt === dt && v.class !== 'WT' && v.class !== 'Blank')
 			if (v) renderedValues.push(v)
 
 			const oneDtV = filteredValues.filter(v => v.dt === dt)
