@@ -262,13 +262,23 @@ fn main() {
                         ); // Setting continuity correction to true in case of normal approximation
                         let treated_mean = Data::new(treated).mean();
                         let control_mean = Data::new(control).mean();
-                        p_values.push(PValueIndexes {
-                            index: i,
-                            gene_name: filtered_genes[i].to_owned(),
-                            gene_symbol: filtered_gene_symbols[i].to_owned(),
-                            fold_change: (treated_mean.unwrap() / control_mean.unwrap()).log2(),
-                            p_value: p_value,
-                        });
+                        if (treated_mean.unwrap() / control_mean.unwrap())
+                            .log2()
+                            .is_nan()
+                            == false
+                            && (treated_mean.unwrap() / control_mean.unwrap())
+                                .log2()
+                                .is_infinite()
+                                == false
+                        {
+                            p_values.push(PValueIndexes {
+                                index: i,
+                                gene_name: filtered_genes[i].to_owned(),
+                                gene_symbol: filtered_gene_symbols[i].to_owned(),
+                                fold_change: (treated_mean.unwrap() / control_mean.unwrap()).log2(),
+                                p_value: p_value,
+                            });
+                        }
                     }
                     //println!("p_values:{:?}", p_values);
                     println!(
