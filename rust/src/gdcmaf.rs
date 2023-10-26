@@ -36,10 +36,31 @@ fn get_sorted_indices(lst: &Vec<String>) -> Vec<usize>{
     let mut indices = (0..lst.len()).collect::<Vec<usize>>();
     indices.sort_by(|a,b| {
         lst[*a].split('\t').collect::<Vec<&str>>()[0].cmp(lst[*b].split('\t').collect::<Vec<&str>>()[0])
-            .then(lst[*a].split('\t').collect::<Vec<&str>>()[1].cmp(lst[*b].split('\t').collect::<Vec<&str>>()[1]))
+            .then(lst[*a].split('\t').collect::<Vec<&str>>()[1].parse::<u32>().unwrap().cmp(&lst[*b].split('\t').collect::<Vec<&str>>()[1].parse::<u32>().unwrap()))
         });
     indices
 }
+
+// GDC MAF columns (96)
+const MAF_COL: [&str;96] = ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", 
+                            "Start_Position", "End_Position", "Strand", "Variant_Classification", 
+                            "Variant_Type", "Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2", 
+                            "dbSNP_RS", "dbSNP_Val_Status", "Tumor_Sample_Barcode", "Matched_Norm_Sample_Barcode", 
+                            "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2", "Tumor_Validation_Allele1", 
+                            "Tumor_Validation_Allele2", "Match_Norm_Validation_Allele1", "Match_Norm_Validation_Allele2", 
+                            "Verification_Status", "Validation_Status", "Mutation_Status", "Sequencing_Phase", 
+                            "Sequence_Source", "Validation_Method", "Score", "BAM_File", "Sequencer", 
+                            "Tumor_Sample_UUID", "Matched_Norm_Sample_UUID", "HGVSc", "HGVSp", "HGVSp_Short", 
+                            "Transcript_ID", "Exon_Number", "t_depth", "t_ref_count", "t_alt_count", "n_depth", 
+                            "n_ref_count", "n_alt_count", "all_effects", "Allele", "Gene", "Feature", "Feature_type", 
+                            "One_Consequence", "Consequence", "cDNA_position", "CDS_position", "Protein_position", 
+                            "Amino_acids", "Codons", "Existing_variation", "DISTANCE", "TRANSCRIPT_STRAND", "SYMBOL", 
+                            "SYMBOL_SOURCE", "HGNC_ID", "BIOTYPE", "CANONICAL", "CCDS", "ENSP", "SWISSPROT", "TREMBL", 
+                            "UNIPARC", "RefSeq", "SIFT", "PolyPhen", "EXON", "INTRON", "DOMAINS", "CLIN_SIG", "SOMATIC", 
+                            "PUBMED", "MOTIF_NAME", "MOTIF_POS", "HIGH_INF_POS", "MOTIF_SCORE_CHANGE", "IMPACT", "PICK", 
+                            "VARIANT_CLASS", "TSL", "HGVS_OFFSET", "PHENO", "GENE_PHENO", "CONTEXT", "tumor_bam_uuid", 
+                            "normal_bam_uuid", "case_id", "GDC_FILTER", "COSMIC"];
+
 
 #[tokio::main]
 async fn main() -> Result<(),Box<dyn std::error::Error>> {
@@ -91,23 +112,21 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     for maf_data in received_values {
         if maf.is_empty() {
             maf = gen_map(maf_data);
-        } else {
-            let maf1 = gen_map(maf_data);
-            //println!("{:?}",maf1);
+            // remove columns if column name is found from MAF_COL
             let mut keys_to_remove_in_maf: Vec<String> = Vec::new();
             for key in maf.keys() {
-                if !(maf1.contains_key(key)) {
-                    //println!("{}",&key);
+                if !(MAF_COL.contains(&key.as_str())) {
                     keys_to_remove_in_maf.push(key.to_string());
                 }
-            }
+            };
             for key in keys_to_remove_in_maf {
                 maf.remove(&key);
             }
+        } else {
+            let maf1 = gen_map(maf_data);
             let keys_in_maf1: Vec<String> = maf1.keys().cloned().collect();
             for key in keys_in_maf1 {
                 if maf.contains_key(&key) {
-                    //println!("{}",&key);
                     let key_value = maf1[&key].clone();
                     maf.get_mut(&key).map(|val| val.extend(key_value));
                 }
@@ -127,12 +146,11 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     // write to file
     let file = File::create(out_file).expect("could not create file");
     let mut encoder = GzEncoder::new(file, Default::default());
-    let maf_key: Vec<_> = maf.keys().cloned().collect();
-    encoder.write_all(&maf_key.join("\t").as_bytes())?;
+    encoder.write_all(MAF_COL.join("\t").as_bytes())?;
     encoder.write_all("\n".as_bytes())?;
     for i in idx_sorted.iter() {
         let mut val_lst: Vec<String> = Vec::new();
-        for k in &maf_key {
+        for k in MAF_COL {
             val_lst.push(maf[k][*i].to_owned());
         };
         let val_out = val_lst.join("\t")+"\n";
