@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix the session recovery within an embedder portal

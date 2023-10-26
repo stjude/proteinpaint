@@ -162,7 +162,13 @@ upon error, throw err message as a string
 				}
 			}
 			window.addEventListener('message', messageListener, false)
-			const child = window.open(embedder.href)
+			confirm(
+				`Another window will open to recover the saved session. When the next window opens,` +
+					`\n- You may need to allow popups.` +
+					`\n- You may have to refresh it.` +
+					`\n- After the session is recovered, this browser window will automatically close.`
+			)
+			const child = window.open(embedder.href, 'Visualization')
 			return
 		}
 
