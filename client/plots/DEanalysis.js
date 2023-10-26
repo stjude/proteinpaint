@@ -25,6 +25,7 @@ class DEanalysis {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder,
+			header: this.opts.header,
 			controlsDiv: holder.append('div')
 		}
 	}
@@ -38,12 +39,20 @@ class DEanalysis {
 	}
 
 	async main() {
-	        const data = await this.app.vocabApi.runDEanalysis(this.state.config)	        
-	        //console.log(data)
-	        render_volcano(this.dom.holder,data)
+		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
+		const headerText = this.opts.app.opts.state.customTerms[0].name
+		this.dom.header
+			.append('span')
+			.style('color', '#999999')
+			.text(headerText)
+			.append('span')
+			.style('font-size', '0.75em')
+			.style('opacity', 0.6)
+			.style('padding-left', '10px')
+			.text('DIFFERENTIAL EXPRESSION')
+		render_volcano(this.dom.holder, data)
 	}
 }
-
 
 function render_volcano(holder, mavb) {
 	/*
@@ -82,17 +91,9 @@ add:
 		radius
 	const svg = holder.append('svg')
 	const yaxisg = svg.append('g')
-        const xaxisg = svg.append('g')
-	const xlab = svg
-		.append('text')
-		.text('log2(fold change)')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
-	const ylab = svg
-		.append('text')
-		.text('-log10(adjusted P value)')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
+	const xaxisg = svg.append('g')
+	const xlab = svg.append('text').text('log2(fold change)').attr('fill', 'black').attr('text-anchor', 'middle')
+	const ylab = svg.append('text').text('-log10(adjusted P value)').attr('fill', 'black').attr('text-anchor', 'middle')
 
 	mavb.vo_dotarea = svg.append('g')
 
@@ -100,54 +101,54 @@ add:
 		.append('rect')
 		.attr('stroke', '#ededed')
 		.attr('fill', 'none')
-	        .attr('shape-rendering', 'crispEdges')
+		.attr('shape-rendering', 'crispEdges')
 	const xscale = scaleLinear().domain([minlogfc, maxlogfc])
 	const yscale = scaleLinear().domain([minlogpv, maxlogpv])
-        let radiusscale
+	let radiusscale
 	const dotg = mavb.vo_dotarea
 		.selectAll()
 		.data(mavb)
 		.enter()
 		.append('g')
-	        .each(function(d) {
+		.each(function (d) {
 			d.vo_g = this
 		})
-        let fold_change_cutoff = 2
-        let p_value_cutoff = 3
-        let num_significant_genes = 0
-        let num_non_significant_genes = 0    
+	let fold_change_cutoff = 2
+	let p_value_cutoff = 3
+	let num_significant_genes = 0
+	let num_non_significant_genes = 0
 	const circle = dotg
-	        .append('circle')
-	        .attr('stroke', d => {
-		    let color
-		    //console.log("Gene name:", d.gene_name, " Gene Symbol:", d.gene_symbol, " original p-value:", d.original_p_value, " adjusted p-value:", d.adjusted_p_value)
-		    if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
-			color = 'red'
-			num_significant_genes += 1
-		    } else {
-                        color = 'black'
-			num_non_significant_genes += 1
-		    }	
-		    return color
-	        })
+		.append('circle')
+		.attr('stroke', d => {
+			let color
+			//console.log("Gene name:", d.gene_name, " Gene Symbol:", d.gene_symbol, " original p-value:", d.original_p_value, " adjusted p-value:", d.adjusted_p_value)
+			if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
+				color = 'red'
+				num_significant_genes += 1
+			} else {
+				color = 'black'
+				num_non_significant_genes += 1
+			}
+			return color
+		})
 		.attr('stroke-opacity', 0.2)
 		.attr('stroke-width', 1)
 		.attr('fill', hlcolor)
 		.attr('fill-opacity', 0)
-	        .each(function(d) {
+		.each(function (d) {
 			d.vo_circle = this
 		})
 		.on('mouseover', circlemouseover)
 		.on('mouseout', circlemouseout)
-		//.on('click', (event, d) => {
-		//	circleclick(d, mavb, event.clientX, event.clientY)
-		//})
-        console.log("Percentage of significant genes:", (num_significant_genes*100)/(num_significant_genes + num_non_significant_genes))
-    
-	const logfc0line = mavb.vo_dotarea
-		.append('line')
-		.attr('stroke', '#ccc')
-		.attr('shape-rendering', 'crispEdges')
+	//.on('click', (event, d) => {
+	//	circleclick(d, mavb, event.clientX, event.clientY)
+	//})
+	console.log(
+		'Percentage of significant genes:',
+		(num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)
+	)
+
+	const logfc0line = mavb.vo_dotarea.append('line').attr('stroke', '#ccc').attr('shape-rendering', 'crispEdges')
 
 	function resize(w, h) {
 		width = w
@@ -173,17 +174,12 @@ add:
 		xscale.range([0, width])
 		yscale.range([height, 0])
 		dotg.attr('transform', d => {
-			return (
-				'translate(' + xscale(d.fold_change) + ',' + yscale(d.adjusted_p_value) + ')'
-			)
+			return 'translate(' + xscale(d.fold_change) + ',' + yscale(d.adjusted_p_value) + ')'
 		})
 		circle.attr('r', d => {
 			return d.vo_radius
 		})
-		logfc0line
-			.attr('x1', xscale(0))
-			.attr('x2', xscale(0))
-			.attr('y2', height)
+		logfc0line.attr('x1', xscale(0)).attr('x2', xscale(0)).attr('y2', height)
 
 		svg.attr('width', yaxisw + xpad + width + rightpad).attr('height', toppad + height + ypad + xaxish)
 		client.axisstyle({
@@ -199,7 +195,7 @@ add:
 	}
 	resize(400, 400)
 
-        if (mavb[0].adjusted_p_value != undefined) {
+	if (mavb[0].adjusted_p_value != undefined) {
 		// enable pvalue switching between adjusted and unadjusted
 		const row = holder.append('div').style('margin', '20px')
 		row.append('span').text('Select P value for Volcano plot:')
@@ -208,10 +204,10 @@ add:
 			.style('margin-left', '5px')
 			.on('change', event => {
 				minlogpv = 0
-			        maxlogpv = 0
-			        const useun = select.node().selectedIndex == 0
+				maxlogpv = 0
+				const useun = select.node().selectedIndex == 0
 				for (const d of mavb) {
-				        const pv = useun ? d.adjusted_p_value : d.original_p_value
+					const pv = useun ? d.adjusted_p_value : d.original_p_value
 					if (pv == 0) continue
 					minlogpv = Math.min(minlogpv, pv)
 					maxlogpv = Math.max(maxlogpv, pv)
@@ -223,24 +219,26 @@ add:
 					showline: true
 				})
 				dotg.attr('transform', d => {
-				        const pv = useun ? d.adjusted_p_value : d.original_p_value
+					const pv = useun ? d.adjusted_p_value : d.original_p_value
 					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv) + ')'
 				})
 				ylab.text(useun ? '-log10(adjusted P value)' : '-log10(original P value)')
 			})
-	                select.append('option').text('Adjusted P value')
-	    		select.append('option').text('Original P value')
+		select.append('option').text('Adjusted P value')
+		select.append('option').text('Original P value')
 	}
 	return svg
 }
 
-
 export async function getPlotConfig(opts, app) {
-    try {
-		if (opts.samplelst.groups?.length != 2) throw 'opts.samplelst.groups[].length!=2'
+	try {
+		if (opts.samplelst.groups.length != 2) throw 'opts.samplelst.groups[].length!=2'
 		if (opts.samplelst.groups[0].values?.length < 1) throw 'group 1 not having >1 samples'
 		if (opts.samplelst.groups[1].values?.length < 1) throw 'group 2 not having >1 samples'
-		const config = {}
+		const config = {
+			//idea for fixing nav button
+			//samplelst: { groups: app.opts.state.groups}
+		}
 		return copyMerge(config, opts)
 	} catch (e) {
 		throw `${e} [DEanalysis getPlotConfig()]`
@@ -268,15 +266,14 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	})
 }
 
-
 function circlemouseover(event, d) {
 	tip.clear().show(event.clientX, event.clientY)
-    const lst = [
+	const lst = [
 		{ k: 'gene_name', v: d.gene_name },
 		{ k: 'gene_symbol', v: d.gene_symbol },
 		{ k: 'log fold change', v: d.fold_change },
-	        { k: 'log original p-value', v: d.original_p_value },
-		{ k: 'log adjusted p-value', v: d.adjusted_p_value }	
+		{ k: 'log original p-value', v: d.original_p_value },
+		{ k: 'log adjusted p-value', v: d.adjusted_p_value }
 	]
 	client.make_table_2col(tip.d, lst)
 
