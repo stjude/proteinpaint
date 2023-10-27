@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import { brushX } from 'd3-brush'
+import roundValue from '#shared/roundValue'
 
 /*
 ********************** EXPORTED
@@ -82,10 +83,10 @@ function applyBrush(self, elem, brush) {
 				return
 			}
 			//update temp_ranges
-			range.start = Number(xscale.invert(s[0]).toFixed(2))
-			range.stop = Number(xscale.invert(s[1]).toFixed(2))
-			const min = Number(minvalue.toFixed(1))
-			const max = Number(maxvalue.toFixed(1))
+			range.start = roundValue(xscale.invert(s[0]), 2)
+			range.stop = roundValue(xscale.invert(s[1]), 2)
+			const min = roundValue(minvalue, 2)
+			const max = roundValue(maxvalue, 2)
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
