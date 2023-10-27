@@ -150,6 +150,28 @@ upon error, throw err message as a string
 		const id = urlp.get('mass-session-id')
 		const res = await client.dofetch3(`/massSession?id=${id}`)
 		if (res.error) throw res.error
+		const embedder = res.state?.embedder
+		if (embedder && embedder.origin != window.location.origin) {
+			const messageListener = event => {
+				if (event.origin !== embedder.origin) return
+				console.log(event?.data, event)
+				window.removeEventListener('message', messageListener)
+				if (event.data == 'getActiveMassSession') {
+					child.postMessage({ state: res.state }, embedder.origin)
+					setTimeout(window.close, 500)
+				}
+			}
+			window.addEventListener('message', messageListener, false)
+			confirm(
+				`Another window will open to recover the saved session. When the next window opens,` +
+					`\n- You may need to allow popups.` +
+					`\n- You may have to refresh it.` +
+					`\n- After the session is recovered, this browser window will automatically close.`
+			)
+			const child = window.open(embedder.href, 'Visualization')
+			return
+		}
+
 		const opts = {
 			holder: arg.holder,
 			state: res.state,

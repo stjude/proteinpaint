@@ -82,7 +82,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
-	} else if (value.dt == 1) {
+	} else if (value.dt == 1 || value.dt == 2) {
 		const divisor = 3
 		cell.height = s.rowh / divisor
 		cell.width = colw

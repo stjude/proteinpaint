@@ -21,8 +21,13 @@ holder
 
 genomeObj={}
 	client side genome obj
+
+_overrides={}
+	optional override parameters to pass to disco
 */
-export default async function (termdbConfig, dslabel, sample, holder, genomeObj) {
+export default async function (termdbConfig, dslabel, sample, holder, genomeObj, _overrides = {}) {
+	const overrides = computeOverrides(_overrides, termdbConfig, genomeObj, sample)
+
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -87,11 +92,7 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj)
 						chartType: 'Disco',
 						subfolder: 'disco',
 						extension: 'ts',
-						overrides: {
-							label: {
-								showPrioritizeGeneLabelsByGeneSets: !!genomeObj.geneset
-							}
-						}
+						overrides
 					}
 				]
 			}
@@ -102,4 +103,16 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj)
 	} catch (e) {
 		loadingDiv.text('Error: ' + (e.message || e))
 	}
+}
+
+function computeOverrides(o, termdbConfig, genomeObj, sample) {
+	// parameter is duplicated into a new object; this script computes new attributes and add to the new obj
+	const overrides = structuredClone(o)
+	if (!overrides.label) overrides.label = {}
+	overrides.label.showPrioritizeGeneLabelsByGeneSets = !!genomeObj.geneset
+	if (!overrides.downloadImgName) {
+		overrides.downloadImgName =
+			sample[termdbConfig.queries.singleSampleMutation.sample_id_key || 'sample_id'] + ' Disco'
+	}
+	return overrides
 }

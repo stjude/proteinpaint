@@ -127,6 +127,7 @@ app.use(express.static(__dirname+'/public'))
 export const basepath = serverconfig.basepath || ''
 
 function setHeaders(res) {
+	res.header('Vary', 'Origin')
 	res.header('Access-Control-Allow-Origin', '*')
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// must support mixed casing and all lowercased for compatibility

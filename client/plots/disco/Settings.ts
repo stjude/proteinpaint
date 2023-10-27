@@ -2,6 +2,8 @@ export default interface Settings {
 	verticalPadding: number
 	horizontalPadding: number
 
+	downloadImgName: string // file name of downloaded svg
+
 	rings: {
 		snvRingFilters: Array<string>
 
@@ -35,7 +37,7 @@ export default interface Settings {
 		animationDuration: number
 		overlapAngleFactor: number
 		showPrioritizeGeneLabelsByGeneSets: boolean
-		prioritizeGeneLabelsByGeneSets: boolean
+		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
 	}
 	legend: {
 		snvTitle: string

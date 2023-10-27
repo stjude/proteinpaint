@@ -73,7 +73,7 @@ class MassApp {
 				fetchOpts: this.opts.fetchOpts,
 				getDatasetAccessToken: this.opts.getDatasetAccessToken
 			})
-			api.hasWebGL = function() {
+			api.hasWebGL = function () {
 				//Copied from static/js/WEBGL.js
 				try {
 					var canvas = document.createElement('canvas')
@@ -97,6 +97,11 @@ class MassApp {
 		try {
 			// TODO: may default later to having a debouncer ???
 			const debounceInterval = 'debounceInterval' in this.opts ? this.opts.debounceInterval : 0
+			if (this.opts.embeddedSessionState) {
+				// may assume session state recovery for an embedder portal
+				// see the comment about potential race-condition in launchmass() in src/app.js
+				Object.assign(this.opts.state, this.opts.embeddedSessionState)
+			}
 			this.store = await storeInit({ app: this.api, state: this.opts.state, debounceInterval })
 			this.state = await this.store.copyState()
 			this.components = {}
