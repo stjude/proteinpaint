@@ -2,17 +2,37 @@ import fs from 'fs'
 import path from 'path'
 import * as utils from './utils'
 import serverconfig from './serverconfig'
+import { authApi } from './auth'
 
 export async function save(req, res) {
 	// POST
 	try {
-		const sessionID = makeID()
+		const q = req.body.__sessionFor__
+		const { filename, route, dslabel, embedder } = q || {}
+		let payload
+		if (filename) {
+			const reqExtract = { headers: req.headers, query: q } //; console.log(13, reqExtract)
+			payload = authApi.getPayloadFromHeaderAuth(reqExtract, route)
+			console.log(14, payload)
+			if (!payload.email) throw `invalid credentials: no jwt.email`
+			if (payload.dslabel != dslabel || payload.route != route || payload.embedder != embedder)
+				throw `invalid credentials: mismatched payload`
+			delete req.body.__sessionFor__
+		}
+		const sessionID = filename || makeID()
 		// not checking duplicating id
 
 		// req.body is some string data, save it to file named by the session id
 		const content = JSON.stringify(req.body)
-		await utils.write_file(path.join(serverconfig.cachedir_massSession, sessionID), content)
-
+		const dir = filename ? getSessionPath(q, payload) : serverconfig.cachedir_massSession
+		const dirExists = await fs.promises
+			.access(dir)
+			.then(() => true)
+			.catch(() => false)
+		if (!dirExists) {
+			fs.mkdirSync(dir, { recursive: true })
+		}
+		await utils.write_file(path.join(dir, sessionID), content)
 		res.send({
 			id: sessionID
 		})
@@ -25,8 +45,12 @@ export async function get(req, res) {
 	// GET
 
 	try {
-		if (!req.query.id) throw 'session id missing'
-		const file = path.join(serverconfig.cachedir_massSession, req.query.id)
+		const id = req.query.id
+		if (!id) throw 'session id missing'
+		const { route, dslabel, embedder } = req.query
+		const payload = req.query.route ? authApi.getPayloadFromHeaderAuth(req, req.query.route) : null //; console.log(14, payload)
+		const dir = req.query.route ? getSessionPath(req.query, payload) : serverconfig.cachedir_massSession
+		const file = path.join(dir, id)
 		let sessionCreationDate
 		try {
 			const s = await fs.promises.stat(file)
@@ -34,7 +58,12 @@ export async function get(req, res) {
 		} catch (e) {
 			throw 'invalid session'
 		}
-		const state = await utils.read_file(file)
+		const stateStr = await utils.read_file(file)
+		const state = JSON.parse(stateStr)
+		if (req.query.route) {
+			res.send({ state })
+			return
+		}
 
 		//Calculate the remaining number of days before session files will be deleted
 		const today = new Date()
@@ -44,10 +73,36 @@ export async function get(req, res) {
 			massSessionDuration - Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
 
 		res.send({
-			state: JSON.parse(state),
+			state,
 			sessionDaysLeft,
 			massSessionDuration
 		})
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
+}
+
+export async function getSessionIdsByCred(req, res) {
+	try {
+		const { filename, route, dslabel, embedder } = req.query
+		const payload = authApi.getPayloadFromHeaderAuth(req, route)
+		console.log(14, payload)
+		if (!payload.email) {
+			res.status(401)
+			throw `invalid credentials: no jwt.email`
+		}
+		if (payload.dslabel != dslabel || payload.route != route || payload.embedder != embedder) {
+			res.status(401)
+			throw `invalid credentials: mismatched payload`
+		}
+		const dir = getSessionPath(req.query, payload)
+		const dirExists = await fs.promises
+			.access(dir)
+			.then(() => true)
+			.catch(() => false)
+		if (!dirExists) res.send({ status: 'ok', sessionIds: [] })
+		const files = await fs.promises.readdir(dir)
+		res.send({ status: 'ok', sessionIds: files })
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
@@ -69,4 +124,10 @@ function makeID() {
 		}
 	}
 	return lst.join('')
+}
+
+function getSessionPath(query, payload) {
+	const { filename, route, dslabel, embedder } = query
+	const email = payload.email.replace('@', '_at_')
+	return `${serverconfig.cachedir}/sessionsByCred/${embedder}/${email}/${route}/${dslabel}`
 }

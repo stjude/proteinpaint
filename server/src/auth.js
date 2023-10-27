@@ -220,6 +220,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		authApi.getForbiddenRoutesForDsEmbedder = () => []
 		authApi.userCanAccess = () => true
 		authApi.getRequiredCredForDsEmbedder = () => undefined
+		authApi.getPayloadFromHeaderAuth = () => ({})
 		return
 	}
 	try {
@@ -543,6 +544,17 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		const sessionStart = activeSession?.time || 0
 		return Date.now() - sessionStart < maxSessionAge
 	}
+
+	authApi.getPayloadFromHeaderAuth = function (req, route) {
+		if (!req.headers?.authorization) return {}
+		const cred = getRequiredCred(req.query, route)
+		if (!cred) return {}
+		const [type, b64token] = req.headers.authorization.split(' ')
+		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
+		const token = Buffer.from(b64token, 'base64').toString()
+		const payload = jsonwebtoken.verify(token, cred.secret)
+		return payload || {}
+	}
 }
 
 function getSessionId(req, cred) {
@@ -733,5 +745,6 @@ export const authApi = {
 	getDsAuth: () => [],
 	getForbiddenRoutesForDsEmbedder: () => [],
 	userCanAccess: () => true,
-	getRequiredCredForDsEmbedder: () => undefined
+	getRequiredCredForDsEmbedder: () => undefined,
+	getPayloadFromHeaderAuth: () => ({})
 }

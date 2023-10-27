@@ -3,6 +3,7 @@ import { recoverInit } from '../rx/src/recover'
 import { searchInit } from './search'
 import { chartsInit } from './charts'
 import { groupsInit } from './groups'
+import { sessionBtnInit } from './sessionBtn'
 import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { Menu } from '#dom/menu'
@@ -96,6 +97,12 @@ class TdbNav {
 					getState: appState => appState,
 					reactsTo: action => action.type != 'plot_edit',
 					maxHistoryLen: 5
+				}),
+				sessionBtn: sessionBtnInit({
+					app: this.app,
+					button: this.dom.saveBtn,
+					massSessionDuration: this.opts.massSessionDuration,
+					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
 				})
 			})
 			this.mayShowMessage_sessionDaysLeft()
@@ -269,11 +276,9 @@ function setRenderers(self) {
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
-		self.dom.saveBtn = self.dom.sessionDiv
-			.append('button')
-			.style('margin', '10px')
-			.text('Save Session')
-			.on('click', self.getSessionUrl)
+		self.dom.saveBtn = self.dom.sessionDiv.append('button').style('margin', '10px').text('Session ▼')
+
+		//.on('click', self.getSessionUrl)
 
 		if (self.sessionDaysLeft != null) {
 			//Only show if called from `mass-session-id` URL
@@ -554,29 +559,6 @@ function setInteractivity(self) {
 				config: { chartType: 'dictionary' }
 			})
 		}
-	}
-
-	self.getSessionUrl = async () => {
-		self.dom.saveBtn.property('disabled', true)
-		const state = structuredClone(self.app.getState())
-		const { protocol, host, search, origin, href } = window.location
-		state.embedder = { protocol, host, search, origin, href }
-		const res = await dofetch3('/massSession', {
-			method: 'POST',
-			body: JSON.stringify(state)
-		})
-		const hostURL = sessionStorage.getItem('hostURL') || origin
-		const url = `${hostURL}/?mass-session-id=${res.id}&noheader=1`
-		self.dom.tip.clear().showunder(self.dom.saveBtn.node())
-		self.dom.tip.d
-			.append('div')
-			.style('margin', '10px')
-			.html(
-				`<a href='${url}' target=_blank>${res.id}</a><br><div style="font-size:.8em;opacity:.6"><span>Click the link to recover this session. Bookmark or share this link.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
-			)
-		setTimeout(() => {
-			self.dom.saveBtn.property('disabled', false)
-		}, 1000)
 	}
 
 	self.getSessionFile = async event => {
