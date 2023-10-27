@@ -62,6 +62,7 @@ export function addBrushes(self, new_brush_location) {
 }
 
 function applyBrush(self, elem, brush) {
+	console.log(self)
 	if (!brush.elem) brush.elem = select(elem)
 	const range = brush.range
 	const plot_size = self.num_obj.plot_size
@@ -83,10 +84,20 @@ function applyBrush(self, elem, brush) {
 				return
 			}
 			//update temp_ranges
-			range.start = roundValue(xscale.invert(s[0]), 2)
-			range.stop = roundValue(xscale.invert(s[1]), 2)
-			const min = roundValue(minvalue, 2)
-			const max = roundValue(maxvalue, 2)
+
+			range.start = Number(xscale.invert(s[0]))
+			range.stop = Number(xscale.invert(s[1]))
+			let min = Number(minvalue)
+			let max = Number(maxvalue)
+			let digits = 0
+			if (self.tvs.term.type == 'float')
+				digits = Math.max(getDecimalPlaces(range.start, min, max), getDecimalPlaces(range.stop, min, max))
+
+			range.start = range.start.toFixed(digits)
+			range.stop = range.stop.toFixed(digits)
+			min = min.toFixed(digits)
+			max = max.toFixed(digits)
+
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
@@ -116,6 +127,16 @@ function applyBrush(self, elem, brush) {
 				? '#23cba7'
 				: '#777777'
 		)
+
+	function getDecimalPlaces(value, min, max) {
+		let digits = 2
+		let round = value.toFixed(digits)
+		while (round < min || round > max) {
+			digits++
+			round = value.toFixed(digits)
+		}
+		return digits
+	}
 }
 
 //Add new blank range temporary, save after entering values
