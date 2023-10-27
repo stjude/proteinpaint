@@ -127,6 +127,7 @@ tape(`initialization`, async test => {
 				'getDsAuth',
 				'getForbiddenRoutesForDsEmbedder',
 				'getJwtPayload',
+				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
 				'maySetAuthRoutes',
 				'userCanAccess'
