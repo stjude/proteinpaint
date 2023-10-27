@@ -123,8 +123,8 @@ add:
 		.each(function (d) {
 			d.vo_g = this
 		})
-	let fold_change_cutoff = 2
-	let p_value_cutoff = 3
+	let fold_change_cutoff = 2 // Will build UI later so that this parameter can be adjusted by the user
+	let p_value_cutoff = 3 // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
 	const circle = dotg
