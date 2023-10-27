@@ -4,7 +4,7 @@ export class NumericRangeInput {
 			.append('input')
 			.attr('name', 'rangeInput')
 			.attr('title', `leave blank for the allowed minimum value`)
-			.style('width', '180px')
+			.style('width', '250px')
 			.style('margin', '3px 5px')
 			//.style('font-size', '20px')
 			.on('change', () => {

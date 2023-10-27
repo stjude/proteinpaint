@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import { brushX } from 'd3-brush'
+import roundValue from '#shared/roundValue'
 
 /*
 ********************** EXPORTED
@@ -47,17 +48,15 @@ export function addBrushes(self, new_brush_location) {
 	range_brushes.exit().remove()
 
 	// add update to brush if required
-	range_brushes.each(function(d, i) {
-		select(this)
-			.selectAll('.overlay')
-			.style('pointer-events', 'all')
+	range_brushes.each(function (d, i) {
+		select(this).selectAll('.overlay').style('pointer-events', 'all')
 	})
 
 	range_brushes
 		.enter()
 		.append('g')
 		.attr('class', 'range_brush')
-		.each(function(brush, i) {
+		.each(function (brush, i) {
 			applyBrush(self, this, brush, i)
 		})
 }
@@ -71,8 +70,11 @@ function applyBrush(self, elem, brush) {
 	const minvalue = self.num_obj.density_data.minvalue
 
 	brush.d3brush = brushX()
-		.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
-		.on('brush', function(event, d) {
+		.extent([
+			[plot_size.xpad, 0],
+			[plot_size.width - plot_size.xpad, plot_size.height]
+		])
+		.on('brush', function (event, d) {
 			const s = event.selection
 			if (!s) return // not an event triggered by brush dragging
 			const inputRange = brush.rangeInput.getRange()
@@ -81,10 +83,15 @@ function applyBrush(self, elem, brush) {
 				return
 			}
 			//update temp_ranges
-			range.start = Number(xscale.invert(s[0]).toFixed(1))
-			range.stop = Number(xscale.invert(s[1]).toFixed(1))
-			const min = Number(minvalue.toFixed(1))
-			const max = Number(maxvalue.toFixed(1))
+			range.start = Number(xscale.invert(s[0]))
+			range.stop = Number(xscale.invert(s[1]))
+			let min = Number(minvalue)
+			let max = Number(maxvalue)
+			const digits = self.tvs.term.type == 'float' ? 2 : 0 // need to specify 0 digits for integer term so that values are rounded to integer when brushing
+			range.start = roundValue(range.start, digits)
+			range.stop = roundValue(range.stop, digits)
+			min = roundValue(min, digits)
+			max = roundValue(max, digits)
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
@@ -92,7 +99,7 @@ function applyBrush(self, elem, brush) {
 			// update inputs from brush move
 			brush.rangeInput.getInput().node().value = `${start} x ${stop}`
 		})
-		.on('end', function() {
+		.on('end', function () {
 			//diable pointer-event for multiple brushes
 			brush.elem.selectAll('.overlay').style('pointer-events', 'none')
 		})
