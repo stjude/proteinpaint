@@ -1,8 +1,6 @@
-const tape = require('tape')
-const parseDictionary = require('../dictionary.parse').parseDictionary
-const d3s = require('d3-selection')
-const init_dictionaryUI = require('../databrowser.ui').init_databrowserUI
-const helpers = require('../../../test/front.helpers.js')
+import tape from 'tape'
+import { parseDictionary } from '../dictionary.parse'
+import * as d3s from 'd3-selection'
 
 /***********************************
  reusable helper vars and functions
@@ -17,20 +15,16 @@ function getHolder() {
 		.style('margin', '5px')
 }
 
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 /****************
  Dictionary Tests
 *****************/
 
-tape('\n', function(test) {
-	test.pass('-***- dictionary.ui, phenotree parsing -***-')
+tape('\n', function (test) {
+	test.pass('-***- dictionary, phenotree parsing -***-')
 	test.end()
 })
 
-tape('levels before variable, type, and categories - no gaps', function(test) {
+tape('levels before variable, type, and categories - no gaps', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
@@ -47,8 +41,9 @@ tape('levels before variable, type, and categories - no gaps', function(test) {
 			id: 'A1a',
 			name: 'A.1.a',
 			type: 'categorical',
-			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -57,8 +52,9 @@ tape('levels before variable, type, and categories - no gaps', function(test) {
 			id: 'A1b',
 			name: 'A.1.b',
 			type: 'categorical',
-			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 2,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -67,8 +63,9 @@ tape('levels before variable, type, and categories - no gaps', function(test) {
 			id: 'A2a',
 			name: 'A.2.a',
 			type: 'categorical',
-			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.2'
@@ -77,8 +74,9 @@ tape('levels before variable, type, and categories - no gaps', function(test) {
 			id: 'B1a',
 			name: 'B.1.a',
 			type: 'categorical',
-			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'B.1'
@@ -94,7 +92,7 @@ tape('levels before variable, type, and categories - no gaps', function(test) {
 	test.end()
 })
 
-tape('levels after variable, type, categories - with gap', function(test) {
+tape('levels after variable, type, categories - with gap', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`variable\ttype\tcategories\tlevel_1\tlevel_2\tlevel_3\tlevel_4`,
@@ -113,8 +111,9 @@ tape('levels after variable, type, categories - with gap', function(test) {
 				id: 'A1ai',
 				name: 'A.1.a.i',
 				type: 'categorical',
-				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.1.a'
@@ -123,8 +122,9 @@ tape('levels after variable, type, categories - with gap', function(test) {
 				id: 'A1b',
 				name: 'A.1.b',
 				type: 'categorical',
-				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 2,
 				isleaf: true,
 				parent_id: 'A.1'
@@ -133,8 +133,9 @@ tape('levels after variable, type, categories - with gap', function(test) {
 				id: 'A2a',
 				name: 'A.2.a',
 				type: 'categorical',
-				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.2'
@@ -143,8 +144,9 @@ tape('levels after variable, type, categories - with gap', function(test) {
 				id: 'B1a',
 				name: 'B.1.a',
 				type: 'categorical',
-				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'B.1'
@@ -164,7 +166,7 @@ tape('levels after variable, type, categories - with gap', function(test) {
 	test.end()
 })
 
-tape('empty variable', function(test) {
+tape('empty variable', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
@@ -181,8 +183,9 @@ tape('empty variable', function(test) {
 			id: 'A1a',
 			name: 'A.1.a',
 			type: 'categorical',
-			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -191,8 +194,9 @@ tape('empty variable', function(test) {
 			id: 'A1b',
 			name: 'A.1.b',
 			type: 'categorical',
-			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+			values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 2,
 			isleaf: true,
 			parent_id: 'A.1'
@@ -201,8 +205,9 @@ tape('empty variable', function(test) {
 			id: 'A2a',
 			name: 'A.2.a',
 			type: 'categorical',
-			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.2'
@@ -211,8 +216,9 @@ tape('empty variable', function(test) {
 			id: 'B1a',
 			name: 'B.1.a',
 			type: 'categorical',
-			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+			values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			additionalAttributes: {},
 			child_order: 1,
 			isleaf: true,
 			parent_id: 'B.1'
@@ -228,7 +234,7 @@ tape('empty variable', function(test) {
 	test.end()
 })
 
-tape('extra, non essential column', function(test) {
+tape('extra, non essential column', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tabsolute nonsense\tvariable\ttype\tcategories`,
@@ -247,8 +253,9 @@ tape('extra, non essential column', function(test) {
 				id: 'A1a',
 				name: 'A.1.a',
 				type: 'categorical',
-				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.1'
@@ -257,8 +264,9 @@ tape('extra, non essential column', function(test) {
 				id: 'A1b',
 				name: 'A.1.b',
 				type: 'categorical',
-				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 2,
 				isleaf: true,
 				parent_id: 'A.1'
@@ -267,8 +275,9 @@ tape('extra, non essential column', function(test) {
 				id: 'A2a',
 				name: 'A.2.a',
 				type: 'categorical',
-				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.2'
@@ -277,8 +286,9 @@ tape('extra, non essential column', function(test) {
 				id: 'B1a',
 				name: 'B.1.a',
 				type: 'categorical',
-				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: 'B.1'
@@ -297,7 +307,7 @@ tape('extra, non essential column', function(test) {
 	test.end()
 })
 
-tape('no level columns', function(test) {
+tape('no level columns', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`variable\ttype\tcategories`,
@@ -316,8 +326,9 @@ tape('no level columns', function(test) {
 				id: 'A1a',
 				name: 'A1a',
 				type: 'categorical',
-				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 1,
 				isleaf: true,
 				parent_id: null
@@ -326,8 +337,9 @@ tape('no level columns', function(test) {
 				id: 'A1b',
 				name: 'A1b',
 				type: 'categorical',
-				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				values: { 0: { label: 'No' }, 1: { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 2,
 				isleaf: true,
 				parent_id: null
@@ -336,8 +348,9 @@ tape('no level columns', function(test) {
 				id: 'A2a',
 				name: 'A2a',
 				type: 'categorical',
-				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 3,
 				isleaf: true,
 				parent_id: null
@@ -346,8 +359,9 @@ tape('no level columns', function(test) {
 				id: 'B1a',
 				name: 'B1a',
 				type: 'categorical',
-				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				values: { 0: { label: 'Not treated' }, 1: { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				additionalAttributes: {},
 				child_order: 4,
 				isleaf: true,
 				parent_id: null
@@ -361,7 +375,7 @@ tape('no level columns', function(test) {
 	test.end()
 })
 
-tape('repeated level names, same line', function(test) {
+tape('repeated level names, same line', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
@@ -382,7 +396,7 @@ tape('repeated level names, same line', function(test) {
 	test.end()
 })
 
-tape('dash between levels', function(test) {
+tape('dash between levels', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
@@ -402,7 +416,7 @@ tape('dash between levels', function(test) {
 	test.end()
 })
 
-tape('missing type', function(test) {
+tape('missing type', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
@@ -422,7 +436,7 @@ tape('missing type', function(test) {
 	test.end()
 })
 
-tape('repeated intermediate terms for diff branches, whole dataset', function(test) {
+tape('repeated intermediate terms for diff branches, whole dataset', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
@@ -442,7 +456,7 @@ tape('repeated intermediate terms for diff branches, whole dataset', function(te
 	test.end()
 })
 
-tape('missing Variable header', function(test) {
+tape('missing Variable header', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvar\ttype\tcategories`,
@@ -463,7 +477,7 @@ tape('missing Variable header', function(test) {
 	test.end()
 })
 
-tape('missing Type header', function(test) {
+tape('missing Type header', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable\tt\tcategories`,
@@ -483,12 +497,12 @@ tape('missing Type header', function(test) {
 	test.end()
 })
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- dictionary.ui, data dictionary parsing-***-')
 	test.end()
 })
 
-tape('missing parent_id header', function(test) {
+tape('missing parent_id header', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`term_id\tname\ttype\tvalues`,
@@ -509,7 +523,7 @@ tape('missing parent_id header', function(test) {
 	test.end()
 })
 
-tape('missing name header', function(test) {
+tape('missing name header', function (test) {
 	test.timeoutAfter(100)
 
 	const tsv = [
@@ -531,7 +545,7 @@ tape('missing name header', function(test) {
 	test.end()
 })
 
-tape('missing type header', function(test) {
+tape('missing type header', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`term_id\tparent_id\tname\tt\tvalues`,
@@ -552,7 +566,7 @@ tape('missing type header', function(test) {
 	test.end()
 })
 
-tape('missing values header', function(test) {
+tape('missing values header', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`term_id\tparent_id\tname\ttype\tvalue`,
@@ -572,7 +586,7 @@ tape('missing values header', function(test) {
 	test.end()
 })
 
-tape('blank or dash in required data column', function(test) {
+tape('blank or dash in required data column', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`term_id\tparent_id\tname\ttype\tvalues`,
@@ -592,7 +606,7 @@ tape('blank or dash in required data column', function(test) {
 	test.end()
 })
 
-tape('missing k=v in values (dictionary format)', function(test) {
+tape('missing k=v in values (dictionary format)', function (test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`term_id\tparent_id\tname\ttype\tvalues`,
@@ -609,88 +623,5 @@ tape('missing k=v in values (dictionary format)', function(test) {
 	} catch (e) {
 		test.pass(message + ': ' + e)
 	}
-	test.end()
-})
-
-/**************
- 	UI tests
-***************/
-
-tape('\n', function(test) {
-	test.pass('-***- databrowser UI -***-')
-	test.end()
-})
-
-tape('Render Databrowser UI from runpp()', async test => {
-	test.timeoutAfter(300)
-	const holder = getHolder().node()
-
-	await runproteinpaint({
-		holder,
-		noheader: true,
-		parseurl: true,
-		nobox: true,
-		tkui: 'databrowser'
-	})
-
-	await sleep(100)
-	const uiFound = [...holder.querySelectorAll('.sjpp-databrowser-section-header')].some(
-		elem => elem.innerText == 'Data Dictionary'
-	)
-	test.true(uiFound, `Should databrowser UI`)
-	if (test._ok) holder.remove()
-
-	test.end()
-})
-
-tape('Click submit with no data', test => {
-	test.timeoutAfter(3000)
-	const holder = getHolder()
-
-	init_dictionaryUI(holder)
-
-	const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
-		elem => elem.innerText == 'Create Data Browser'
-	)
-	submitBtn.dispatchEvent(new Event('click'))
-	test.equal(holder.selectAll('.sja_errorbar').size(), 1, "should display 'no data' error")
-
-	if (test._ok) holder.remove()
-	test.end()
-})
-
-tape('Render Databrowser from copy/paste data', async test => {
-	test.timeoutAfter(3000)
-	const holder = getHolder()
-
-	const tsv = [
-		`variable\ttype\tcategories`,
-		`A1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
-		`A1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
-		`A2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
-		`B1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
-	]
-		.join('\n')
-		.trim()
-
-	init_dictionaryUI(holder)
-
-	await sleep(100)
-	const pasteBtn = [...holder.node().querySelectorAll('.sj-toggle-button')].find(elem => elem.innerText == 'Paste Data')
-	pasteBtn.dispatchEvent(new Event('click'))
-
-	const textArea = d3s.select('textarea')._groups[0][0]
-	textArea.value = tsv
-	textArea.dispatchEvent(new Event('keyup'))
-
-	const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
-		elem => elem.innerText == 'Create Data Browser'
-	)
-	submitBtn.dispatchEvent(new Event('click'))
-
-	await sleep(100)
-	test.equal([...holder.node().querySelectorAll('.ts_pill')].length, 4, 'Should render four pills')
-	// if (test._ok) holder.remove()
-
 	test.end()
 })
