@@ -4,7 +4,6 @@ import path from 'path'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 import { scaleLinear } from 'd3-scale'
-import { unlink } from 'fs'
 import { createCanvas } from 'canvas'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import * as gdc from './mds3.gdc'
@@ -1260,9 +1259,21 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
+	// the gene count matrix tabular text file
 	q.file = path.join(serverconfig.tpmasterdir, q.file)
-	if (!q.samplesFile) throw 'missing samples file for gene count'
-	q.samplesFile = path.join(serverconfig.tpmasterdir, q.samplesFile)
+	/*
+	first line of matrix must be sample header, samples start from 5th column
+	read the first line to get all samples, and save at q.allSampleSet
+	so that samples from analysis request will be screened against q.allSampleSet
+	also require that there's no duplicate samples in header line, so rust/r won't break
+	*/
+	{
+		const samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
+		q.allSampleSet = new Set(samples)
+		//if(q.allSampleSet.size < samples.length) throw 'rnaseqGeneCount.file header contains duplicate samples'
+		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
+	}
+
 	/*
 	param{}
 		samplelst{}
@@ -1270,26 +1281,6 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 				values[] // using integer sample id
 	*/
 	q.get = async function (param) {
-		let raw_samples = fs.readFileSync(q.samplesFile, 'utf8', (err, data) => {
-			// Reading file to determine which samples have rnaseq data
-			if (err) {
-				console.error(err)
-				return
-			}
-			return data
-		})
-		const samples_with_rnaseq_counts = []
-		for (const sample of raw_samples.split('\t')) {
-			if (sample == 'geneID' || sample == 'geneSymbol' || sample == 'bioType' || sample == 'annotationLevel') {
-				continue
-			} // List of keywords in q.samplesFile which do not correspond to any particular sample
-			else {
-				samples_with_rnaseq_counts.push(sample)
-			}
-		}
-		//console.log("samples_with_rnaseq_counts:",samples_with_rnaseq_counts)
-
-		// IMPORTANT: Need to add a clause later to check if all sample in the genecounts file are unique. If not, it should throw an error.
 		if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 		if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 		if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
@@ -1301,7 +1292,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 			if (!n) continue
-			if (samples_with_rnaseq_counts.includes(n)) {
+			if (q.allSampleSet.has(n)) {
 				group1names.push(n)
 			} else {
 				group1names_not_found += 1
@@ -1313,7 +1304,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 			if (!n) continue
-			if (samples_with_rnaseq_counts.includes(n)) {
+			if (q.allSampleSet.has(n)) {
 				group2names.push(n)
 			} else {
 				group2names_not_found += 1
@@ -1367,7 +1358,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 
 			const tmpfile = path.join(serverconfig.binpath, 'utils', 'r_output.txt')
 			result = JSON.parse(fs.readFileSync(tmpfile, 'utf8'))
-			unlink(tmpfile, () => {})
+			fs.unlink(tmpfile, () => {})
 		} else {
 			// Wilcoxon test will be used for DE analysis
 			const time1 = new Date()
@@ -1386,6 +1377,14 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	}
 }
 
+function getFirstLine(file) {
+	// TODO now requires "head" command on the system
+	return new Promise((resolve, reject) => {
+		const ps = spawn('head', ['-1', file])
+		ps.stdout.on('data', data => resolve(data.toString()))
+		ps.stderr.on('data', data => reject(data.toString()))
+	})
+}
 async function run_edgeR(Rscript, input_data) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(serverconfig.Rscript, Rscript)
