@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { init_databrowserUI } from '../databrowser.ui'
 import { detectGte } from '../../../test/test.helpers'
+import { runproteinpaint } from '../../../test/front.helpers.js'
 
 function getHolder() {
 	return d3s
@@ -37,7 +38,7 @@ tape('Render Databrowser UI from runpp()', async test => {
 	const headersFound = sectionFound.filter(elem => headers.some(h => h == elem.innerText))
 	test.equal(headersFound.length, sectionFound.length, `Should render all sections`)
 
-	if (test._ok) holder.remove()
+	// if (test._ok) holder.remove()
 	test.end()
 })
 
