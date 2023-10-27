@@ -87,13 +87,11 @@ function applyBrush(self, elem, brush) {
 			range.stop = Number(xscale.invert(s[1]))
 			let min = Number(minvalue)
 			let max = Number(maxvalue)
-			if (self.tvs.term.type == 'float') {
-				const digits = 2
-				range.start = roundValue(range.start, digits)
-				range.stop = roundValue(range.stop, digits)
-				min = roundValue(min, digits)
-				max = roundValue(max, digits)
-			}
+			const digits = self.tvs.term.type == 'float' ? 2 : 0 // need to specify 0 digits for integer term so that values are rounded to integer when brushing
+			range.start = roundValue(range.start, digits)
+			range.stop = roundValue(range.stop, digits)
+			min = roundValue(min, digits)
+			max = roundValue(max, digits)
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
