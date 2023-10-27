@@ -83,10 +83,17 @@ function applyBrush(self, elem, brush) {
 				return
 			}
 			//update temp_ranges
-			range.start = roundValue(xscale.invert(s[0]), 2)
-			range.stop = roundValue(xscale.invert(s[1]), 2)
-			const min = roundValue(minvalue, 2)
-			const max = roundValue(maxvalue, 2)
+			range.start = Number(xscale.invert(s[0]))
+			range.stop = Number(xscale.invert(s[1]))
+			let min = Number(minvalue)
+			let max = Number(maxvalue)
+			if (self.tvs.term.type == 'float') {
+				const digits = 2
+				range.start = roundValue(range.start, digits)
+				range.stop = roundValue(range.stop, digits)
+				min = roundValue(min, digits)
+				max = roundValue(max, digits)
+			}
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
