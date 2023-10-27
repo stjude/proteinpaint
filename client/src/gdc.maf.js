@@ -151,8 +151,8 @@ async function getFilesAndShowTable(obj) {
 		let data
 		try {
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
+			if (data.error) throw data.error
 		} catch (e) {
-			// do not proceed upon err
 			sayerror(holder, e)
 			return
 		}
