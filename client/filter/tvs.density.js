@@ -62,7 +62,6 @@ export function addBrushes(self, new_brush_location) {
 }
 
 function applyBrush(self, elem, brush) {
-	console.log(self)
 	if (!brush.elem) brush.elem = select(elem)
 	const range = brush.range
 	const plot_size = self.num_obj.plot_size
