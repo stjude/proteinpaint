@@ -128,7 +128,7 @@ function applyBrush(self, elem, brush) {
 
 	function getDecimalPlaces(value, min, max) {
 		let digits = 2
-		if (Math.abs(Math.trunc(value)) == 0) {
+		if (Math.trunc(value) == 0) {
 			//integer part is 0
 			const log = Math.floor(Math.log10(Math.abs(value)) + 1) //may be 0 or a negative value
 			digits = log * -1 + 2
