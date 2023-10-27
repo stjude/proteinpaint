@@ -1259,7 +1259,21 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
+	// the gene count matrix tabular text file
 	q.file = path.join(serverconfig.tpmasterdir, q.file)
+	/*
+	first line of matrix must be sample header, samples start from 5th column
+	read the first line to get all samples, and save at q.allSampleSet
+	so that samples from analysis request will be screened against q.allSampleSet
+	also require that there's no duplicate samples in header line, so rust/r won't break
+	*/
+	{
+		const samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
+		q.allSampleSet = new Set(samples)
+		//if(q.allSampleSet.size < samples.length) throw 'rnaseqGeneCount.file header contains duplicate samples'
+		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
+	}
+
 	/*
 	param{}
 		samplelst{}
@@ -1271,23 +1285,40 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 		if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 		// txt file uses string sample name, must convert integer sample id to string
+		// txt file uses string sample name, must convert integer sample id to string
 		const group1names = []
+		let group1names_not_found = 0
 		for (const s of param.samplelst.groups[0].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 			if (!n) continue
-			group1names.push(n)
+			if (q.allSampleSet.has(n)) {
+				group1names.push(n)
+			} else {
+				group1names_not_found += 1
+			}
 		}
 		const group2names = []
+		let group2names_not_found = 0
 		for (const s of param.samplelst.groups[1].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 			if (!n) continue
-			group2names.push(n)
+			if (q.allSampleSet.has(n)) {
+				group2names.push(n)
+			} else {
+				group2names_not_found += 1
+			}
 		}
+
+		console.log('Sample size of group1:', group1names.length)
+		console.log('Sample size of group2:', group2names.length)
+		console.log('Number of group1 names not found:', group1names_not_found)
+		console.log('Number of group2 names not found:', group2names_not_found)
 		if (group1names.length < 1) throw 'group1names.length<1'
 		if (group2names.length < 1) throw 'group2names.length<1'
 		// pass group names and txt file to rust
+
 		const cases_string = group1names.map(i => i).join(',')
 		const controls_string = group2names.map(i => i).join(',')
 		const expression_input = {
@@ -1297,6 +1328,10 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			output_path: path.join(serverconfig.binpath, 'utils')
 		}
 		//console.log("expression_input:",expression_input)
+		//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+		//	// For catching input to rust pipeline, in case of an error
+		//	if (err) return console.log(err)
+		//})
 
 		const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 		let result
@@ -1321,7 +1356,9 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			//      }
 			//}
 
-			result = JSON.parse(fs.readFileSync(path.join(serverconfig.binpath, 'utils', 'r_output.txt'), 'utf8'))
+			const tmpfile = path.join(serverconfig.binpath, 'utils', 'r_output.txt')
+			result = JSON.parse(fs.readFileSync(tmpfile, 'utf8'))
+			fs.unlink(tmpfile, () => {})
 		} else {
 			// Wilcoxon test will be used for DE analysis
 			const time1 = new Date()
@@ -1340,6 +1377,14 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 	}
 }
 
+function getFirstLine(file) {
+	// TODO now requires "head" command on the system
+	return new Promise((resolve, reject) => {
+		const ps = spawn('head', ['-1', file])
+		ps.stdout.on('data', data => resolve(data.toString()))
+		ps.stderr.on('data', data => reject(data.toString()))
+	})
+}
 async function run_edgeR(Rscript, input_data) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(serverconfig.Rscript, Rscript)

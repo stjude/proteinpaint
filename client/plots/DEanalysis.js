@@ -25,6 +25,7 @@ class DEanalysis {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder,
+			header: this.opts.header,
 			controlsDiv: holder.append('div')
 		}
 	}
@@ -38,12 +39,30 @@ class DEanalysis {
 	}
 
 	async main() {
-	        const data = await this.app.vocabApi.runDEanalysis(this.state.config)	        
-	        //console.log(data)
-	        render_volcano(this.dom.holder,data)
+		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
+		//const state = this.app.getState()
+		//console.log('state:', state) // state.customTerms[0].name
+		//if (state.customTerms[0].name) {
+		//	const headerText = state.customTerms[0].name
+		//	this.dom.header
+		//		.append('span')
+		//		.style('color', '#999999')
+		//		.text(headerText)
+		//		.append('span')
+		//		.style('font-size', '0.75em')
+		//		.style('opacity', 0.6)
+		//		.style('padding-left', '10px')
+		//		.text('DIFFERENTIAL EXPRESSION')
+		//} else {
+		this.dom.header
+			.style('opacity', 0.6)
+			.style('padding-left', '10px')
+			.style('font-size', '0.75em')
+			.text('DIFFERENTIAL EXPRESSION')
+		//}
+		render_volcano(this.dom.holder, data)
 	}
 }
-
 
 function render_volcano(holder, mavb) {
 	/*
@@ -83,16 +102,8 @@ add:
 	const svg = holder.append('svg')
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
-	const xlab = svg
-		.append('text')
-		.text('log2(fold change)')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
-	const ylab = svg
-		.append('text')
-		.text('-log(P value)')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
+	const xlab = svg.append('text').text('log2(fold change)').attr('fill', 'black').attr('text-anchor', 'middle')
+	const ylab = svg.append('text').text('-log10(adjusted P value)').attr('fill', 'black').attr('text-anchor', 'middle')
 
 	mavb.vo_dotarea = svg.append('g')
 
@@ -100,38 +111,54 @@ add:
 		.append('rect')
 		.attr('stroke', '#ededed')
 		.attr('fill', 'none')
-	      .attr('shape-rendering', 'crispEdges')
+		.attr('shape-rendering', 'crispEdges')
 	const xscale = scaleLinear().domain([minlogfc, maxlogfc])
 	const yscale = scaleLinear().domain([minlogpv, maxlogpv])
-        let radiusscale
+	let radiusscale
 	const dotg = mavb.vo_dotarea
 		.selectAll()
 		.data(mavb)
 		.enter()
 		.append('g')
-		.each(function(d) {
+		.each(function (d) {
 			d.vo_g = this
 		})
+	let fold_change_cutoff = 2 // Will build UI later so that this parameter can be adjusted by the user
+	let p_value_cutoff = 3 // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
+	let num_significant_genes = 0
+	let num_non_significant_genes = 0
 	const circle = dotg
 		.append('circle')
-		.attr('stroke', 'black')
+		.attr('stroke', d => {
+			let color
+			//console.log("Gene name:", d.gene_name, " Gene Symbol:", d.gene_symbol, " original p-value:", d.original_p_value, " adjusted p-value:", d.adjusted_p_value)
+			if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
+				color = 'red'
+				num_significant_genes += 1
+			} else {
+				color = 'black'
+				num_non_significant_genes += 1
+			}
+			return color
+		})
 		.attr('stroke-opacity', 0.2)
 		.attr('stroke-width', 1)
 		.attr('fill', hlcolor)
 		.attr('fill-opacity', 0)
-		.each(function(d) {
+		.each(function (d) {
 			d.vo_circle = this
 		})
 		.on('mouseover', circlemouseover)
 		.on('mouseout', circlemouseout)
-		.on('click', (event, d) => {
-			circleclick(d, mavb, event.clientX, event.clientY)
-		})
+	//.on('click', (event, d) => {
+	//	circleclick(d, mavb, event.clientX, event.clientY)
+	//})
+	console.log(
+		'Percentage of significant genes:',
+		(num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)
+	)
 
-	const logfc0line = mavb.vo_dotarea
-		.append('line')
-		.attr('stroke', '#ccc')
-		.attr('shape-rendering', 'crispEdges')
+	const logfc0line = mavb.vo_dotarea.append('line').attr('stroke', '#ccc').attr('shape-rendering', 'crispEdges')
 
 	function resize(w, h) {
 		width = w
@@ -157,17 +184,12 @@ add:
 		xscale.range([0, width])
 		yscale.range([height, 0])
 		dotg.attr('transform', d => {
-			return (
-				'translate(' + xscale(d.fold_change) + ',' + yscale(d.adjusted_p_value == 0 ? maxlogpv : d.adjusted_p_value, 10) + ')'
-			)
+			return 'translate(' + xscale(d.fold_change) + ',' + yscale(d.adjusted_p_value) + ')'
 		})
 		circle.attr('r', d => {
 			return d.vo_radius
 		})
-		logfc0line
-			.attr('x1', xscale(0))
-			.attr('x2', xscale(0))
-			.attr('y2', height)
+		logfc0line.attr('x1', xscale(0)).attr('x2', xscale(0)).attr('y2', height)
 
 		svg.attr('width', yaxisw + xpad + width + rightpad).attr('height', toppad + height + ypad + xaxish)
 		client.axisstyle({
@@ -195,7 +217,7 @@ add:
 				maxlogpv = 0
 				const useun = select.node().selectedIndex == 0
 				for (const d of mavb) {
-					const pv = useun ? d.original_p_value : d.adjusted_p_value
+					const pv = useun ? d.adjusted_p_value : d.original_p_value
 					if (pv == 0) continue
 					minlogpv = Math.min(minlogpv, pv)
 					maxlogpv = Math.max(maxlogpv, pv)
@@ -207,28 +229,26 @@ add:
 					showline: true
 				})
 				dotg.attr('transform', d => {
-					const pv = useun ? d.original_p_value : d.adjusted_p_value
-					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv == 0 ? maxlogpv : pv) + ')'
+					const pv = useun ? d.adjusted_p_value : d.original_p_value
+					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv) + ')'
 				})
-				ylab.text(useun ? '-log10(P value)' : '-log10(adjusted P value)')
+				ylab.text(useun ? '-log10(adjusted P value)' : '-log10(original P value)')
 			})
-		select.append('option').text('Original P value')
 		select.append('option').text('Adjusted P value')
+		select.append('option').text('Original P value')
 	}
-
-	// add lasso for volcano plot
-	// TODO: remove follow line after testing
-	add_lasso(dotg.selectAll('circle'), svg, 'ma_circle')
 	return svg
 }
 
-
 export async function getPlotConfig(opts, app) {
 	try {
-		if (opts.samplelst.groups?.length != 2) throw 'opts.samplelst.groups[].length!=2'
+		if (opts.samplelst.groups.length != 2) throw 'opts.samplelst.groups[].length!=2'
 		if (opts.samplelst.groups[0].values?.length < 1) throw 'group 1 not having >1 samples'
 		if (opts.samplelst.groups[1].values?.length < 1) throw 'group 2 not having >1 samples'
-		const config = {}
+		const config = {
+			//idea for fixing nav button
+			//samplelst: { groups: app.opts.state.groups}
+		}
 		return copyMerge(config, opts)
 	} catch (e) {
 		throw `${e} [DEanalysis getPlotConfig()]`
@@ -256,15 +276,14 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	})
 }
 
-
 function circlemouseover(event, d) {
 	tip.clear().show(event.clientX, event.clientY)
-    const lst = [
+	const lst = [
 		{ k: 'gene_name', v: d.gene_name },
 		{ k: 'gene_symbol', v: d.gene_symbol },
 		{ k: 'log fold change', v: d.fold_change },
-	        { k: 'log original p-value', v: d.original_p_value },
-		{ k: 'log adjusted p-value', v: d.adjusted_p_value }	
+		{ k: 'log original p-value', v: d.original_p_value },
+		{ k: 'log adjusted p-value', v: d.adjusted_p_value }
 	]
 	client.make_table_2col(tip.d, lst)
 
@@ -280,60 +299,4 @@ function circlemouseout(event, d) {
 		d3select(d.ma_circle).attr('fill-opacity', 0)
 		d3select(d.vo_circle).attr('fill-opacity', 0)
 	}
-}
-
-
-// example of lasso function and usage
-function add_lasso(selectable_items, svg, other_svg_item_key) {
-	const lasso = d3lasso()
-		.items(selectable_items)
-		.targetArea(svg)
-
-	function mavb_lasso_start() {
-		// set all dots to initial state when lasso starts
-		svg
-			.selectAll('.possible')
-			.style('fill-opacity', 0)
-			.classed('not_possible', true)
-			.classed('selected', false)
-			.each(d => {
-				d3select(d[other_svg_item_key]).attr('fill-opacity', 0)
-			})
-
-		// TODO: remove following commented code after review
-		// here, there are many circles, so rather than applying style to add circles,
-		// only previously selected circles are reverted back to normal
-		// can use like following as well, for detail example see mds.scatterplot.js
-		// lasso.items()
-		// 	.style('fill-opacity', 0)
-		// 	.classed('not_possible', true)
-		// 	.classed('selected', false)
-		// 	.each((d) =>{
-		// 		d3select(d[other_svg_item_key]).attr('fill-opacity', 0)
-		// 	})
-	}
-
-	function mavb_lasso_draw() {
-		// Style the possible dots, when selected using lasso
-		lasso
-			.possibleItems()
-			.style('fill-opacity', 0.9)
-			.classed('not_possible', false)
-			.classed('possible', true)
-			.each(d => {
-				d3select(d[other_svg_item_key]).attr('fill-opacity', 0.9)
-			})
-	}
-
-	function mavb_lasso_end() {
-		// do something, like show menu or open info panel for selected samples
-	}
-
-	// perform following custom drag events after original lasso drag events finish in lasso.js
-	lasso
-		.on('start', mavb_lasso_start)
-		.on('draw', mavb_lasso_draw)
-		.on('end', mavb_lasso_end)
-
-	svg.call(lasso)
 }

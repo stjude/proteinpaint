@@ -1,4 +1,5 @@
-// cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/expression
+// cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
+// cd .. && cargo build --release && cat ~/sjpp/test.txt | target/release/DEanalysis
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Const;
@@ -53,6 +54,8 @@ fn input_data(
     let mut control_indexes_original: Vec<usize> = Vec::with_capacity(control_list.len());
     let gene_name_index = headers.iter().position(|r| r == &"geneID");
     let gene_symbol_index = headers.iter().position(|r| r == &"geneSymbol");
+    //let mut case_samples_not_found: Vec<&str> = Vec::with_capacity(case_list.len());
+    //let mut control_samples_not_found: Vec<&str> = Vec::with_capacity(control_list.len());
 
     for item in case_list {
         //println!("item:{}", item);
@@ -60,8 +63,8 @@ fn input_data(
         match index {
             Some(n) => case_indexes_original.push(n),
             None => {
-                // When sample not found, give error stating the sample name is not found
-                panic!("Case sample not found:{}", item);
+                //panic!("Case sample not found:{}", item);
+                //case_samples_not_found.push(item);
             }
         }
     }
@@ -72,8 +75,8 @@ fn input_data(
         match index {
             Some(n) => control_indexes_original.push(n),
             None => {
-                // When sample not found, give error stating the sample name is not found
-                panic!("Control sample not found:{}", item);
+                //panic!("Control sample not found:{}", item);
+                //control_samples_not_found.push(item);
             }
         }
     }
@@ -198,8 +201,8 @@ fn main() {
                     let (filtered_matrix, lib_sizes, filtered_genes, filtered_gene_symbols) =
                         filter_by_expr(
                             &input_matrix,
-                            case_list.len(),
-                            control_list.len(),
+                            case_indexes.len(),
+                            control_indexes.len(),
                             gene_names,
                             gene_symbols,
                         );
@@ -259,13 +262,23 @@ fn main() {
                         ); // Setting continuity correction to true in case of normal approximation
                         let treated_mean = Data::new(treated).mean();
                         let control_mean = Data::new(control).mean();
-                        p_values.push(PValueIndexes {
-                            index: i,
-                            gene_name: filtered_genes[i].to_owned(),
-                            gene_symbol: filtered_gene_symbols[i].to_owned(),
-                            fold_change: (treated_mean.unwrap() / control_mean.unwrap()).log2(),
-                            p_value: p_value,
-                        });
+                        if (treated_mean.unwrap() / control_mean.unwrap())
+                            .log2()
+                            .is_nan()
+                            == false
+                            && (treated_mean.unwrap() / control_mean.unwrap())
+                                .log2()
+                                .is_infinite()
+                                == false
+                        {
+                            p_values.push(PValueIndexes {
+                                index: i,
+                                gene_name: filtered_genes[i].to_owned(),
+                                gene_symbol: filtered_gene_symbols[i].to_owned(),
+                                fold_change: (treated_mean.unwrap() / control_mean.unwrap()).log2(),
+                                p_value: p_value,
+                            });
+                        }
                     }
                     //println!("p_values:{:?}", p_values);
                     println!(

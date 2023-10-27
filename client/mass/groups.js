@@ -169,6 +169,9 @@ class MassGroups {
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+		if (this.state.supportedChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
+			addDEPlotMenuItem(menuDiv, this.app, this.state, samplelstTW)
+
 		if (this.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
 
@@ -202,6 +205,32 @@ class MassGroups {
 }
 
 export const groupsInit = getCompInit(MassGroups)
+
+function addDEPlotMenuItem(div, app, state, samplelstTW) {
+	div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Differential expression')
+		.on('click', e => {
+			const groups = []
+			for (const group of samplelstTW.q.groups) {
+				if (group.values && group.values.length > 0) {
+					groups.push(group)
+				} else {
+					throw 'group does not contain samples for DE analysis'
+				}
+			}
+			const config = {
+				chartType: 'DEanalysis',
+				state,
+				samplelst: { groups }
+			}
+			app.dispatch({
+				type: 'plot_create',
+				config
+			})
+		})
+}
 
 function initUI(self) {
 	self.dom.filterTableDiv = self.dom.holder.append('div').style('margin-bottom', '10px')
