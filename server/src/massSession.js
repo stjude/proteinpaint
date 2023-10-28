@@ -13,7 +13,6 @@ export async function save(req, res) {
 		if (filename) {
 			const reqExtract = { headers: req.headers, query: q } //; console.log(13, reqExtract)
 			payload = authApi.getPayloadFromHeaderAuth(reqExtract, route)
-			console.log(14, payload)
 			if (!payload.email) throw `invalid credentials: no jwt.email`
 			if (payload.dslabel != dslabel || payload.route != route || payload.embedder != embedder)
 				throw `invalid credentials: mismatched payload`
@@ -86,13 +85,10 @@ export async function getSessionIdsByCred(req, res) {
 	try {
 		const { filename, route, dslabel, embedder } = req.query
 		const payload = authApi.getPayloadFromHeaderAuth(req, route)
-		console.log(14, payload)
 		if (!payload.email) {
-			res.status(401)
 			throw `invalid credentials: no jwt.email`
 		}
 		if (payload.dslabel != dslabel || payload.route != route || payload.embedder != embedder) {
-			res.status(401)
 			throw `invalid credentials: mismatched payload`
 		}
 		const dir = getSessionPath(req.query, payload)
@@ -100,10 +96,14 @@ export async function getSessionIdsByCred(req, res) {
 			.access(dir)
 			.then(() => true)
 			.catch(() => false)
-		if (!dirExists) res.send({ status: 'ok', sessionIds: [] })
+		if (!dirExists) {
+			res.send({ status: 'ok', sessionIds: [] })
+			return
+		}
 		const files = await fs.promises.readdir(dir)
 		res.send({ status: 'ok', sessionIds: files })
 	} catch (e) {
+		res.status(401)
 		res.send({ error: e.message || e })
 	}
 }

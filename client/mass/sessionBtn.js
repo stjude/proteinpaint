@@ -65,6 +65,7 @@ class MassSessionBtn {
 		const select = tr0
 			.append('td')
 			.append('select')
+			.style('min-width', '180px')
 			.on('change', event => {
 				const name = select.property('value')
 				if (!name) return
@@ -125,6 +126,7 @@ class MassSessionBtn {
 				const select = tr2
 					.append('td')
 					.append('select')
+					.style('min-width', '180px')
 					.on('change', async event => {
 						const id = select.property('value')
 						if (!id) return
@@ -198,7 +200,7 @@ class MassSessionBtn {
 				this.sessionName = input.property('value') || placeholder
 				this.savedSessions[this.sessionName] = this.app.getState()
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
-				this.confirmAction(`Cached '<b>${this.sessionName}</b>'`)
+				this.confirmAction(`Cached '<b>${this.sessionName}</b>' in browser`)
 			})
 
 		submitDiv
@@ -229,7 +231,7 @@ class MassSessionBtn {
 					const res = await this.getSessionUrl(name)
 					if (res.id != name) throw `error saving ${name}`
 					// this.download(name)
-					this.confirmAction(`Saved '<b>${name}</b>'`)
+					this.confirmAction(`Saved '<b>${name}</b>' on the server`)
 				})
 		}
 	}

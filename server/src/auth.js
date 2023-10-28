@@ -616,7 +616,8 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	// }
 	// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
 	// otherwise an expired header.auth jwt may be reused even when a user has already logged out
-	if (id && payload.id != id) return
+	if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) return
+
 	// do not overwrite existing
 	if (!sessions[dslabel]) sessions[dslabel] = {}
 	//if (sessions[dslabel][payload.id]) throw `session conflict`
