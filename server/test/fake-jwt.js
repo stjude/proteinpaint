@@ -5,7 +5,8 @@ const jsonwebtoken = require('jsonwebtoken')
 
 const time = Math.floor(Date.now() / 1000)
 const dslabel = process.argv[2] || 'TermdbTest'
-const secret = serverconfig.dsCredentials[dslabel].termdb.localhost.secret
+const embedder = process.argv[3] || 'localhost'
+const secret = serverconfig.dsCredentials[dslabel].termdb[embedder].secret
 //for testing only
 console.log(
 	//secret,
