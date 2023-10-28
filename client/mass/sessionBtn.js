@@ -2,6 +2,7 @@ import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { to_textfile } from '#dom/downloadTextfile'
 import { dofetch3 } from '#common/dofetch'
+import { corsMessage } from '#common/embedder-helpers'
 
 class MassSessionBtn {
 	constructor() {
@@ -55,9 +56,22 @@ class MassSessionBtn {
 	}
 
 	async open() {
-		this.dom.tip.d.append('div').style('padding', '3px 5px').style('font-weight', 600).html('Open a session from')
-		const table = this.dom.tip.d.append('table')
+		const radioName = `sjpp-session-open-radio-` + Math.random().toString().slice(-6)
+		this.dom.tip.d.append('div').style('padding', '3px 5px').style('font-weight', 600).html(`
+			<span>Open in</span>
+			<label>
+				<input type='radio' name='${radioName}' value='new' checked=checked style='margin-right: 0; vertical-align: bottom'/>
+				<span>a new tab</span>
+			</label>
+			<label style='margin-left: 5px'>
+				<input type='radio' name='${radioName}' value='current' style='margin-right: 0; vertical-align: bottom'/>
+				<span>current tab</span>
+			</label>
+		`)
 
+		this.dom.tip.d.append('div').style('padding', '3px 5px').style('font-weight', 600).html('Open from')
+
+		const table = this.dom.tip.d.append('table')
 		const tr0 = table.append('tr')
 		tr0.append('td').style('padding', '3px 5px').html('Browser cache:')
 		const sessionNames = Object.keys(this.savedSessions)
@@ -69,9 +83,14 @@ class MassSessionBtn {
 			.on('change', event => {
 				const name = select.property('value')
 				if (!name) return
-				this.sessionName = name
-				const state = this.savedSessions[name]
-				this.app.dispatch({ type: 'app_refresh', state })
+				const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+				if (targetWindow == 'new') {
+					window.open(`/?mass-session-id=${name}&src=browser`)
+				} else {
+					this.sessionName = name
+					const state = this.savedSessions[name]
+					this.app.dispatch({ type: 'app_refresh', state })
+				}
 				this.dom.tip.hide()
 			})
 
@@ -110,8 +129,14 @@ class MassSessionBtn {
 				}
 				this.sessionName = sessionName
 				const state = JSON.parse(json)
-				this.savedSessions[file.name] = state
-				this.app.dispatch({ type: 'app_refresh', state })
+				this.savedSessions[sessionName] = state
+				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
+				const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+				if (targetWindow == 'new') {
+					window.open(`/?mass-session-id=${sessionName}&src=browser`)
+				} else {
+					this.app.dispatch({ type: 'app_refresh', state })
+				}
 				this.dom.tip.hide()
 			})
 
@@ -130,13 +155,22 @@ class MassSessionBtn {
 					.on('change', async event => {
 						const id = select.property('value')
 						if (!id) return
-						console.log(133, id)
 						const headers = this.app.vocabApi.mayGetAuthHeaders(this.route)
 						const body = { id, route: this.route, dslabel: state.vocab.dslabel, embedder: window.location.hostname }
 						const res = await dofetch3(`/massSession?`, { headers, body })
 						if (!res.state) throw res.error || 'unable to get the cached session from the server'
 						this.savedSessions[id] = res.state
-						this.app.dispatch({ type: 'app_refresh', state: res.state })
+
+						const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+						if (targetWindow == 'current') {
+							this.app.dispatch({ type: 'app_refresh', state: res.state })
+						} else if (window.location.host == this.hostURL) {
+							console.log(173)
+							window.open(`/?mass-session-id=${id}&src=cred&dslabel=${state.vocab.dslabel}&route=${this.route}`)
+						} else {
+							console.log(175)
+							corsMessage(res)
+						}
 						this.dom.tip.hide()
 					})
 
@@ -196,6 +230,10 @@ class MassSessionBtn {
 			.append('button')
 			.style('min-width', '80px')
 			.html('Browser')
+			.attr(
+				'title',
+				`Save the session in your current browser's cache. The session can be easily recovered, but not shared among your other devices`
+			)
 			.on('click', () => {
 				this.sessionName = input.property('value') || placeholder
 				this.savedSessions[this.sessionName] = this.app.getState()
@@ -207,6 +245,10 @@ class MassSessionBtn {
 			.append('button')
 			.style('min-width', '80px')
 			.html('File')
+			.attr(
+				'title',
+				`Save the session into a local file. The session can be easily recoved using the 'Open from local file' option.`
+			)
 			.on('click', () => {
 				const name = input.property('value') || placeholder
 				this.savedSessions[name] = this.app.getState()
@@ -221,6 +263,10 @@ class MassSessionBtn {
 				.append('button')
 				.style('min-width', '80px')
 				.html('Server')
+				.attr(
+					'title',
+					`Save the session into a remote server. The session can be easily shared across your different devices and recovered using the 'Open from server' option.`
+				)
 				.on('click', async () => {
 					if (!this.app.vocabApi.hasVerifiedToken()) {
 						alert('Requires sign-in')
@@ -307,7 +353,13 @@ class MassSessionBtn {
 				.append('div')
 				.style('margin', '10px')
 				.html(
-					`<a href='${url}' target=_blank>${res.id}</a><br><div style="font-size:.8em;opacity:.6"><span>Click the link to recover this session. Bookmark or share this link.</span><br><span>This session will be saved for ${this.opts.massSessionDuration} days.</span></div>`
+					`<a href='${url}' target=_blank>${res.id}</a>
+					<br>
+					<div style="font-size:.8em;opacity:.6">
+					<span>Click the link to recover this session. Bookmark or share this link.</span>
+					<br>
+					<span>This session will be saved for ${this.opts.massSessionDuration} days.</span>
+					</div>`
 				)
 			setTimeout(() => {
 				this.dom.button.property('disabled', false)

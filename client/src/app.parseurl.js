@@ -4,9 +4,9 @@ import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
 import * as mdsjson from './app.mdsjson'
-import urlmap from '../common/urlmap'
-import { first_genetrack_tolist } from '../common/1stGenetk'
-
+import urlmap from '#common/urlmap'
+import { first_genetrack_tolist } from '#common/1stGenetk'
+import { corsMessage } from '#common/embedder-helpers'
 /*
 ********************** EXPORTED
 parse()
@@ -148,30 +148,36 @@ upon error, throw err message as a string
 
 	if (urlp.has('mass-session-id')) {
 		const id = urlp.get('mass-session-id')
-		const res = await client.dofetch3(`/massSession?id=${id}`)
-		if (res.error) throw res.error
+		const src = urlp.get('src')
+		let res
+		if (src == 'browser') {
+			const json = localStorage.getItem('savedMassSessions')
+			const savedSessions = JSON.parse(json)
+			res = { state: savedSessions[id] }
+		} else {
+			const fetchOpts = { headers: {}, body: { id } }
+			if (src == 'cred') {
+				const dslabel = urlp.get('dslabel')
+				const route = urlp.get('route')
+				console.log(161, dslabel)
+				fetchOpts.body.dslabel = dslabel
+				fetchOpts.body.route = route
+				fetchOpts.body.route = route
+
+				const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
+				this.jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+				const jwt = this.jwtByDsRoute[dslabel][route]
+				console.log(168, jwt)
+				fetchOpts.headers.authorization = `Bearer ${btoa(jwt)}`
+			}
+			res = await client.dofetch3(`/massSession`, fetchOpts)
+			if (res.error) throw res.error
+		}
 		const embedder = res.state?.embedder
 		if (embedder && embedder.origin != window.location.origin) {
-			const messageListener = event => {
-				if (event.origin !== embedder.origin) return
-				console.log(event?.data, event)
-				window.removeEventListener('message', messageListener)
-				if (event.data == 'getActiveMassSession') {
-					child.postMessage({ state: res.state }, embedder.origin)
-					setTimeout(window.close, 500)
-				}
-			}
-			window.addEventListener('message', messageListener, false)
-			confirm(
-				`Another window will open to recover the saved session. When the next window opens,` +
-					`\n- You may need to allow popups.` +
-					`\n- You may have to refresh it.` +
-					`\n- After the session is recovered, this browser window will automatically close.`
-			)
-			const child = window.open(embedder.href, 'Visualization')
+			corsMessage(res)
 			return
 		}
-
 		const opts = {
 			holder: arg.holder,
 			state: res.state,
