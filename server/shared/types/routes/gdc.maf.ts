@@ -5,8 +5,8 @@ export type File = {
 	id: string
 	/** A string representing a submitter ID for the case associated with this file */
 	case_submitter_id: string
-	/** A string representing the experimental strategy (scientific method) used for generating this file */
-	file_size: string // todo
+	/** An integer as the byte size of this file, compressed */
+	file_size: number
 	/** Array of strings, each is a sample type, for all samples involved in generating the maf file */
 	sample_types: string[]
 	/** A string representing the type of workflow used to generate or process this file */

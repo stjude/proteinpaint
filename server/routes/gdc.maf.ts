@@ -1,5 +1,4 @@
 import { GdcMafResponse, File } from '#shared/types/routes/gdc.maf.ts'
-import { fileSize } from '#shared/fileSize.js'
 import path from 'path'
 import got from 'got'
 
@@ -146,7 +145,7 @@ async function listMafFiles(req: any) {
 		const file = {
 			id: h.id,
 			project_id: c.project.project_id,
-			file_size: fileSize(h.file_size)
+			file_size: h.file_size
 		} as File
 
 		file.case_submitter_id = c.submitter_id

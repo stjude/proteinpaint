@@ -2,6 +2,7 @@ import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '#dom/error'
 import { renderTable } from '#dom/table'
 import { make_radios } from '#dom/radiobutton'
+import { fileSize } from '#shared/fileSize'
 
 /*
 a UI to list open-access maf files from current cohort
@@ -122,7 +123,7 @@ async function getFilesAndShowTable(obj) {
 					})
 					.join(' ')
 			},
-			{ value: f.file_size, url: 'https://portal.gdc.cancer.gov/files/' + f.id }
+			{ value: fileSize(f.file_size), url: 'https://portal.gdc.cancer.gov/files/' + f.id }
 		]
 		rows.push(row)
 	}
@@ -135,16 +136,33 @@ async function getFilesAndShowTable(obj) {
 		buttons: [
 			{
 				text: 'Aggregate selected MAF files and download',
+				onChange: onFileSelectionChange,
 				callback: submitSelectedFiles
 			}
 		]
 	})
 
-	async function submitSelectedFiles(lst) {
+	function onFileSelectionChange(lst, button) {
+		let sum = 0
+		for (const i of lst) sum += result.files[i].file_size
+		if (sum == 0) {
+			button.innerHTML = 'No file selected'
+			button.disabled = true
+			return
+		}
+		button.disabled = false
+		button.innerHTML = `Aggregate ${fileSize(sum)} MAF data and download`
+	}
+
+	async function submitSelectedFiles(lst, button) {
 		const fileIdLst = []
 		for (const i of lst) {
 			fileIdLst.push(result.files[i].id)
 		}
+		if (fileIdLst.length == 0) return
+		const oldText = button.innerHTML
+		button.innerHTML = 'Loading... Please wait'
+		button.disabled = true
 
 		// may disable the "Aggregate" button here and re-enable later
 
@@ -154,8 +172,14 @@ async function getFilesAndShowTable(obj) {
 			if (data.error) throw data.error
 		} catch (e) {
 			sayerror(holder, e)
+			button.innerHTML = oldText
+			button.disabled = false
+
 			return
 		}
+
+		button.innerHTML = oldText
+		button.disabled = false
 
 		// download the file to client
 		const a = document.createElement('a')
