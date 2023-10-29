@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC maf ui indicates total size of selected files

@@ -47,11 +47,16 @@ columnButtons = [ {button} ]
 	callback: button callback
 	disabled: function, Optional. receives the row index and returns true if the button should be disabled for this row
 
-buttons = [ {button} ]
-	Each element is an object describing a button:
-	text: str, the text to show in the button
-	class: class to customize the button style
-	callback: button callback
+buttons = [ {} ]
+	Each element describes a button:
+	Required attr:
+		text: str, the text to show in the button
+		callback: called when button is clicked, has 2 arguments:
+			1st argument is lst of array index for selected items of rows[]
+			2nd argument is button dom object
+	Optional attr:
+		class: class to customize the button style
+		onChange: called when any row is checked/unchecked. same parameter as callback()
 
 noButtonCallback = (index, node) => {}
 	Function that will be called when a row is selected	
@@ -165,7 +170,7 @@ export function renderTable({
 				.on('change', () => {
 					const nodes = tbody.selectAll('input').nodes()
 					tbody.selectAll('input').property('checked', checkboxH.node().checked)
-					if (buttons) enableButtons()
+					if (buttons) updateButtons()
 					if (noButtonCallback) for (const [i, node] of nodes.entries()) noButtonCallback(i, node)
 				})
 			checkboxH.node().checked = selectAll
@@ -218,7 +223,7 @@ export function renderTable({
 				.attr('value', i)
 				.property('checked', selectAll || selectedRows.includes(i))
 				.on('change', () => {
-					if (buttons) enableButtons()
+					if (buttons) updateButtons()
 					else noButtonCallback(i, checkbox.node())
 
 					const checked = checkbox.property('checked')
@@ -313,25 +318,35 @@ export function renderTable({
 				.text(button.text)
 				.style('margin', '10px 10px 0 0')
 				.on('click', e => {
-					const checkboxs = tbody.selectAll('input:checked')
-					const values = []
-					if (!checkboxs.empty()) {
-						checkboxs.each((d, i, nodes) => {
-							const node = nodes[i]
-							values.push(parseInt(node.value))
-						})
-						button.callback(values)
-					}
+					button.callback(getCheckedRowIndex(), button.button.node())
 				})
 			if (button.class) button.button.attr('class', button.class)
 			//else button.button.attr('class', 'sjpp_apply_btn')
 			button.button.node().disabled = selectedRows.length == 0 && !selectAll
 		}
+
+		// call function to update those buttons with .onChange(), so their text can reflect default checkbox selection
+		updateButtons()
 	}
 
-	function enableButtons() {
-		const checkboxs = tbody.selectAll('input:checked')
-		for (const button of buttons) button.button.node().disabled = checkboxs.empty()
+	function updateButtons() {
+		const idxlst = getCheckedRowIndex()
+		for (const b of buttons) {
+			b.button.node().disabled = idxlst.length == 0
+			if (b.onChange) b.onChange(idxlst, b.button.node())
+		}
+	}
+
+	function getCheckedRowIndex() {
+		const checkboxes = tbody.selectAll('input:checked')
+		const idxlst = []
+		if (!checkboxes.empty()) {
+			checkboxes.each((d, i, nodes) => {
+				const node = nodes[i]
+				idxlst.push(Number.parseInt(node.value))
+			})
+		}
+		return idxlst
 	}
 
 	const api = {
