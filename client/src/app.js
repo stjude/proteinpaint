@@ -1495,9 +1495,19 @@ async function launchmass(arg, app) {
 		// - a proteinpaint site when clicking on a shared URL link
 		// accessing window.opener.location.origin may emit a CORS-related error,
 		// so safer to send the message twice to cover both possibilities
+		let origin
 		try {
-			window.opener.postMessage('getActiveMassSession', window.location.origin)
-			window.opener.postMessage('getActiveMassSession', hostURL)
+			if (window.opener.origin) {
+				origin = window.opener.origin
+			} else {
+				origin = hostURL
+			}
+		} catch (e) {
+			origin = hostURL
+		}
+
+		try {
+			window.opener.postMessage('getActiveMassSession', origin)
 		} catch (e) {
 			console.log(e)
 		}

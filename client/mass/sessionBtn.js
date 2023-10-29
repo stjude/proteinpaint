@@ -195,7 +195,7 @@ class MassSessionBtn {
 		const headers = this.app.vocabApi.mayGetAuthHeaders(this.route)
 		const body = { route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 		const res = await dofetch3('/sessionIds', { headers, body })
-		this.serverCachedSessions = res.sessionIds
+		this.serverCachedSessions = res.sessionIds || []
 	}
 
 	async save(d) {
@@ -297,20 +297,21 @@ class MassSessionBtn {
 	}
 
 	async share() {
-		this.dom.tip.d.append('div').style('max-width', '300px').html(`<b>Share this session:</b>`)
+		this.getSessionUrl()
+		// this.dom.tip.d.append('div').style('max-width', '300px').html(`<b>Share this session:</b>`)
 
-		this.dom.tip.d
-			.append('button')
-			.style('margin', '10px')
-			.html('Get URL link')
-			.on('click', () => this.getSessionUrl())
+		// this.dom.tip.d
+		// 	.append('button')
+		// 	.style('margin', '10px')
+		// 	.html('Get URL link')
+		// 	.on('click', () => this.getSessionUrl())
 
-		this.dom.tip.d
-			.append('div')
-			.style('max-width', '300px')
-			.html(
-				`NOTE: A recovered session may hide data or views to users that are not authorized to access the saved datasets or features.`
-			)
+		// this.dom.tip.d
+		// 	.append('div')
+		// 	.style('max-width', '300px')
+		// 	.html(
+		// 		`NOTE: A recovered session may hide data or views to users that are not authorized to access the saved datasets or features.`
+		// 	)
 
 		// TODO: should filter the targets based on various checks including signed-in status, etc;
 		// this can reuse the current /massSession route as applicable/appropriate
@@ -356,18 +357,35 @@ class MassSessionBtn {
 		} else {
 			const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
 			this.dom.tip.clear().showunder(this.dom.button.node())
-			this.dom.tip.d
-				.append('div')
-				.style('margin', '10px')
-				.html(
-					`<a href='${url}' target=_blank>${res.id}</a>
+			const linkDiv = this.dom.tip.d.append('div').style('margin', '10px')
+			const a = linkDiv.append('a').attr('href', url).attr('target', '_blank').html(res.id)
+
+			if (this.hostURL != window.location.origin) {
+				// Avoid the multi-window/tab sequence to recover the session:
+				// intercept the click on the URL link, so that the embedder URL is opened
+				// instead of the hostURL with mass session id, and this window will post
+				// a message to the child window with the link data instead
+				//
+				// NOTE: the multi-window/tab sequence is only necessary when the URL link
+				// was not opened by the embedder window
+				//
+				a.on('click', event => {
+					event.preventDefault()
+					corsMessage({ state }, window.location.origin)
+					return false
+				})
+			}
+
+			linkDiv.append('div').html(`
 					<br>
-					<div style="font-size:.8em;opacity:.6">
-					<span>Click the link to recover this session. Bookmark or share this link.</span>
-					<br>
-					<span>This session will be saved for ${this.opts.massSessionDuration} days.</span>
-					</div>`
-				)
+					<div style="max-width: 400px; font-size: 1em; opacity:.6">
+					<span>NOTES</span>
+					<ul>
+					<li>Click the link to recover this session. Bookmark or share this link.</li>
+					<li>A recovered session may hide data or views to users that are not authorized to access the saved datasets or features.</li>
+					<li>This session will be saved for ${this.opts.massSessionDuration} days.</li>
+					</ul>
+					</div>`)
 			setTimeout(() => {
 				this.dom.button.property('disabled', false)
 			}, 1000)
