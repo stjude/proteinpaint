@@ -129,6 +129,7 @@ export const basepath = serverconfig.basepath || ''
 function setHeaders(res) {
 	res.header('Vary', 'Origin')
 	res.header('Access-Control-Allow-Origin', '*')
+	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// must support mixed casing and all lowercased for compatibility
 	res.header(
@@ -321,6 +322,7 @@ app.all(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes
 app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
 app.post(basepath + '/massSession', massSession.save)
 app.get(basepath + '/massSession', massSession.get)
+app.delete(basepath + '/massSession', massSession._delete)
 app.get(basepath + '/sessionIds', massSession.getSessionIdsByCred)
 app.get(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
