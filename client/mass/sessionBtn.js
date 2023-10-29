@@ -177,7 +177,7 @@ class MassSessionBtn {
 						this.dom.tip.hide()
 					})
 
-				if (!this.serverCachedSessions) await this.setServerCachedSessions(state)
+				if (!this.serverCachedSessions) await this.setServerCachedSessions()
 
 				select
 					.selectAll('option')
@@ -191,18 +191,20 @@ class MassSessionBtn {
 		}
 	}
 
-	async setServerCachedSessions(state) {
+	async setServerCachedSessions() {
 		const headers = this.app.vocabApi.mayGetAuthHeaders(this.route)
 		const body = { route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 		const res = await dofetch3('/sessionIds', { headers, body })
 		this.serverCachedSessions = res.sessionIds
 	}
 
-	save(d) {
+	async save(d) {
 		const div = this.dom.tip.d
 		const inputDiv = div.append('div')
 		inputDiv.append('span').html('Save as')
 		const sessionNames = Object.keys(this.savedSessions)
+		if (!this.serverCachedSessions) await this.setServerCachedSessions()
+		sessionNames.push(...this.serverCachedSessions.filter(d => !sessionNames.includes(d)))
 		const placeholder = this.sessionName || 'unnamed-session'
 		const input = inputDiv
 			.append('input')
@@ -386,7 +388,7 @@ class MassSessionBtn {
 			.html(d => d)
 
 		const sessionIds = Object.keys(this.savedSessions).map(id => ({ loc: 'browser', id }))
-		if (!this.serverCachedSessions) await this.setServerCachedSessions(this.app.getState())
+		if (!this.serverCachedSessions) await this.setServerCachedSessions()
 		sessionIds.push(...this.serverCachedSessions.map(id => ({ loc: 'server', id })))
 
 		const trs = table

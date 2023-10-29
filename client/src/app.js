@@ -1471,7 +1471,7 @@ async function launchmass(arg, app) {
 	if (window.opener && hostURL != window.location.origin) {
 		// if this is a child window or tab, refreshing it will need previously hydrated session state,
 		// in case the window.opener has already removed its message listener
-		opts.embeddedSessionState = JSON.parse(sessionStorage.getItem('embeddedSessionState') || {})
+		opts.embeddedSessionState = JSON.parse(sessionStorage.getItem('embeddedSessionState') || `{}`)
 		const messageListener = event => {
 			if (event.origin != window.location.origin && event.origin !== hostURL) return
 			// !!! Potential race-condition
@@ -1489,7 +1489,7 @@ async function launchmass(arg, app) {
 		}
 		window.addEventListener('message', messageListener, false)
 		// limit the time to listen for the window.opener's message
-		setTimeout(() => window.removeEventListener('message', messageListener), 100)
+		setTimeout(() => window.removeEventListener('message', messageListener), 1000)
 		// the window.opener can be either
 		// - an embedder site when clicking on `Open Session`
 		// - a proteinpaint site when clicking on a shared URL link

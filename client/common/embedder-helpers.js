@@ -1,10 +1,7 @@
 export function corsMessage(res) {
 	const embedder = res.state?.embedder
-	console.log()
 	const messageListener = event => {
-		console.log(3, event.origin === embedder.origin, event.origin, embedder.origin)
 		if (event.origin !== embedder.origin) return
-		console.log(4, event)
 		if (event.data == 'getActiveMassSession') {
 			window.removeEventListener('message', messageListener)
 			child.postMessage({ state: res.state }, embedder.origin) //; console.log()
@@ -12,7 +9,7 @@ export function corsMessage(res) {
 		}
 	}
 	window.addEventListener('message', messageListener, false)
-	setTimeout(() => window.removeEventListener('message', messageListener), 1000)
+	setTimeout(() => window.removeEventListener('message', messageListener), 5000)
 	if (embedder.origin != window.location.origin) {
 		confirm(
 			`Another window will open to recover the saved session. When the next window opens,` +
