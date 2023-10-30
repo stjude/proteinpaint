@@ -42,7 +42,10 @@ req.query {
 res{}
 */
 async function buildMaf(req: any, res: any) {
+	const t0 = new Date()
+
 	const fileLst2 = (await getFileLstUnderSizeLimit(req.query.fileIdLst)) as string[]
+	console.log('test gdc maf sizes', new Date() - t0)
 
 	const outFile = path.join(serverconfig.cachedir, 'gdcMaf.' + Math.random().toString()) // should be a gzipped file. does it need to end with '.gz' or it's auto-added?
 
@@ -53,6 +56,8 @@ async function buildMaf(req: any, res: any) {
 	}
 
 	await run_rust('gdcmaf', JSON.stringify(arg))
+
+	console.log('rust gdcmaf', new Date() - t0)
 
 	const data = await fs.promises.readFile(outFile)
 
