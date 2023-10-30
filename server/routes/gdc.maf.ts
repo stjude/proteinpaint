@@ -1,11 +1,13 @@
 import { GdcMafResponse, File } from '#shared/types/routes/gdc.maf.ts'
 import path from 'path'
 import got from 'got'
+import serverconfig from '#src/serverconfig.js'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const maxFileNumber = 1000
 const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
 const allowedExpStrategy = new Set(['WXS', 'Targeted Sequencing'])
+const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 50000000 // 50Mb
 
 export const api = {
 	endpoint: 'gdc/maf',
@@ -160,7 +162,8 @@ async function listMafFiles(req: any) {
 
 	const result = {
 		files,
-		filesTotal: re.data.pagination.total
+		filesTotal: re.data.pagination.total,
+		maxTotalSizeCompressed
 	} as GdcMafResponse
 
 	return result
