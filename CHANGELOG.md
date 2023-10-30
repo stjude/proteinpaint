@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.30.2
 
 Fixes:
 - In mass sampleview, expanding tree branch everytime no longer triggers rerendering of disco/ssgq plots
