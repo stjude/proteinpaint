@@ -36,7 +36,7 @@ class MassSessionBtn {
 		const options = [
 			{ label: `Open ${gt}`, callback: this.open },
 			{ label: `Save ${gt}`, callback: this.save },
-			{ label: `Share ${gt}`, callback: this.share },
+			{ label: `Share ${gt}`, callback: this.getSessionUrl },
 			{ label: `Delete ${gt}`, callback: this.delete }
 			//{ label: 'Download', callback: this.download }
 		]
@@ -60,8 +60,8 @@ class MassSessionBtn {
 
 	async open() {
 		const radioName = `sjpp-session-open-radio-` + Math.random().toString().slice(-6)
-		this.dom.tip.d.append('div').style('padding', '3px 5px').style('font-weight', 600).html(`
-			<span>Open in</span>
+		this.dom.tip.d.append('div').style('padding', '3px 5px').html(`
+			<b>Open in</b>
 			<label>
 				<input type='radio' name='${radioName}' value='new' checked=checked style='margin-right: 0; vertical-align: bottom'/>
 				<span>a new tab</span>
@@ -72,46 +72,47 @@ class MassSessionBtn {
 			</label>
 		`)
 
-		this.dom.tip.d.append('div').style('padding', '3px 5px').style('font-weight', 600).html('Open from')
+		const t = await this.listSessions({
+			trClickHandler: async (event, d) => {
+				const { loc, id } = d
+				if (!id) return
+				if (loc.includes('browser')) {
+					const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+					if (targetWindow == 'new') {
+						window.open(`/?mass-session-id=${id}&src=browser`)
+					} else {
+						this.sessionName = id
+						const state = this.savedSessions[id]
+						this.app.dispatch({ type: 'app_refresh', state })
+					}
+					this.dom.tip.hide()
+				} else if (loc == 'server') {
+					const headers = this.app.vocabApi.mayGetAuthHeaders(this.route)
+					const body = { id, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
+					const res = await dofetch3(`/massSession?`, { headers, body })
+					if (!res.state) throw res.error || 'unable to get the cached session from the server'
+					this.savedSessions[id] = res.state
 
-		const table = this.dom.tip.d.append('table')
-		const tr0 = table.append('tr')
-		tr0.append('td').style('padding', '3px 5px').html('Browser cache:')
-		const sessionNames = Object.keys(this.savedSessions)
-		if (!this.sessionName) sessionNames.unshift('')
-		const select = tr0
-			.append('td')
-			.append('select')
-			.style('min-width', '180px')
-			.on('change', event => {
-				const name = select.property('value')
-				if (!name) return
-				const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
-				if (targetWindow == 'new') {
-					window.open(`/?mass-session-id=${name}&src=browser`)
-				} else {
-					this.sessionName = name
-					const state = this.savedSessions[name]
-					this.app.dispatch({ type: 'app_refresh', state })
+					const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+					if (targetWindow == 'current') {
+						this.app.dispatch({ type: 'app_refresh', state: res.state })
+					} else if (window.location.host == this.hostURL) {
+						window.open(`/?mass-session-id=${id}&src=cred&dslabel=${this.dslabel}&route=${this.route}`)
+					} else {
+						corsMessage(res)
+					}
+					this.dom.tip.hide()
 				}
-				this.dom.tip.hide()
-			})
+			}
+		})
 
-		select
-			.selectAll('option')
-			.data(sessionNames)
-			.enter()
-			.append('option')
-			.html(d => d)
-			.attr('value', d => d)
-			.property('selected', d => d === this.sessionName)
+		t.headtr.select('th').html('Open from')
 
-		const tr1 = table.append('tr')
-		tr1.append('td').style('padding', '3px 5px').html('Local file:')
-		const label = tr1.append('td').append('label')
-
+		// open session from a local file
+		const tr1 = t.tbody.insert('tr', 'tr')
+		tr1.append('td').style('text-align', 'center').html('Local file:')
+		const label = tr1.append('td').style('text-align', 'left').append('label')
 		label.append('span').style('text-decoration', 'underline').style('cursor', 'pointer').html('Choose File')
-
 		label
 			.append('input')
 			.attr('type', 'file')
@@ -142,56 +143,64 @@ class MassSessionBtn {
 				}
 				this.dom.tip.hide()
 			})
+	}
 
-		const state = this.app.getState()
-		this.requiredAuth = state.termdbConfig?.requiredAuth?.find(a => a.route == this.route && a.type == 'jwt')
-		if (this.requiredAuth) {
-			const tr2 = table.append('tr')
-			tr2.append('td').style('padding', '3px 5px').html('Server: ')
-			if (!this.app.vocabApi.hasVerifiedToken()) {
-				tr2.append('td').style('padding', '3px 5px').html('Requires sign-in')
-			} else {
-				const select = tr2
-					.append('td')
-					.append('select')
-					.style('min-width', '180px')
-					.on('change', async event => {
-						const id = select.property('value')
-						if (!id) return
-						const headers = this.app.vocabApi.mayGetAuthHeaders(this.route)
-						const body = { id, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
-						const res = await dofetch3(`/massSession?`, { headers, body })
-						if (!res.state) throw res.error || 'unable to get the cached session from the server'
-						this.savedSessions[id] = res.state
+	async listSessions(opts = {}) {
+		const table = this.dom.tip.d.append('table')
 
-						const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
-						if (targetWindow == 'current') {
-							this.app.dispatch({ type: 'app_refresh', state: res.state })
-						} else if (window.location.host == this.hostURL) {
-							console.log(173)
-							window.open(`/?mass-session-id=${id}&src=cred&dslabel=${this.dslabel}&route=${this.route}`)
-						} else {
-							console.log(175)
-							corsMessage(res)
-						}
-						this.dom.tip.hide()
-					})
+		const headtr = table.append('thead').append('tr')
+		headtr
+			.selectAll('th')
+			.data(['Cache Location', 'Session ID'])
+			.enter()
+			.append('th')
+			.style('text-align', 'center')
+			.html(d => d)
 
-				if (!this.serverCachedSessions) await this.setServerCachedSessions()
+		const sessionIds = Object.keys(this.savedSessions).map(id => ({ loc: 'browser', id }))
+		if (!this.serverCachedSessions) await this.setServerCachedSessions()
+		sessionIds.push(...this.serverCachedSessions.map(id => ({ loc: 'server', id })))
 
-				select
-					.selectAll('option')
-					.data(['', ...this.serverCachedSessions])
-					.enter()
-					.append('option')
-					.html(d => d)
-					.attr('value', d => d)
-					.property('selected', d => d === this.sessionName)
-			}
+		const tbody = table.append('tbody')
+		const trs = tbody
+			.selectAll('tr')
+			.data(sessionIds)
+			.enter()
+			.append('tr')
+			.on('click', opts.trClickHandler || null)
+
+		trs
+			.selectAll('td')
+			.data(d => [d, d])
+			.enter()
+			.append('td')
+			.style('text-align', (d, i) => (i === 0 ? 'center' : 'left'))
+			.style('padding', '3px 5px')
+			.style('cursor', 'pointer')
+			.html((d, i) => (i === 0 ? d.loc : d.id))
+
+		if (!this.serverCachedSessions.length && this.requiredAuth && !this.app.vocabApi.hasVerifiedToken()) {
+			const tbody2 = table
+				.append('tbody')
+				.append('tr')
+				.selectAll('td')
+				.data(['server', 'requires sign-in'])
+				.enter()
+				.append('td')
+				.style('text-align', (d, i) => (i === 0 ? 'center' : 'left'))
+				.style('padding', '3px 5px')
+				.html(d => d)
 		}
+		return { table, headtr, tbody, trs }
 	}
 
 	async setServerCachedSessions() {
+		const state = this.app.getState()
+		this.requiredAuth = state.termdbConfig?.requiredAuth?.find(a => a.route == this.route && a.type == 'jwt')
+		if (!this.requiredAuth) {
+			this.serverCachedSessions = []
+			return
+		}
 		const headers = this.app.vocabApi.mayGetAuthHeaders(this.route)
 		const body = { route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 		const res = await dofetch3('/sessionIds', { headers, body })
@@ -296,41 +305,6 @@ class MassSessionBtn {
 		to_textfile(filename, JSON.stringify(this.savedSessions[sessionName]))
 	}
 
-	async share() {
-		this.getSessionUrl()
-		// this.dom.tip.d.append('div').style('max-width', '300px').html(`<b>Share this session:</b>`)
-
-		// this.dom.tip.d
-		// 	.append('button')
-		// 	.style('margin', '10px')
-		// 	.html('Get URL link')
-		// 	.on('click', () => this.getSessionUrl())
-
-		// this.dom.tip.d
-		// 	.append('div')
-		// 	.style('max-width', '300px')
-		// 	.html(
-		// 		`NOTE: A recovered session may hide data or views to users that are not authorized to access the saved datasets or features.`
-		// 	)
-
-		// TODO: should filter the targets based on various checks including signed-in status, etc;
-		// this can reuse the current /massSession route as applicable/appropriate
-		// const targets = [window.location.hostname]
-		// if (targets[0].includes('localhost')) targets.push('ppr', 'pp-irt')
-		// if (targets[0].includes('proteinpaint.stjude.org')) targets.push('proteinpaint.stjude.org')
-		// this.dom.tip.d
-		// 	.append('ul')
-		// 	.selectAll('li')
-		// 	.data(targets)
-		// 	.enter()
-		// 	.append('li')
-		// 	.style('cursor', 'pointer')
-		// 	.html(d => d)
-		// 	.on('click', () => {
-		// 		alert('TODO!!!')
-		// 	})
-	}
-
 	async getSessionUrl(filename = '') {
 		const headers = this.app.vocabApi.mayGetAuthHeaders('termdb')
 		const state = structuredClone(this.app.getState())
@@ -358,6 +332,11 @@ class MassSessionBtn {
 			const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
 			this.dom.tip.clear().showunder(this.dom.button.node())
 			const linkDiv = this.dom.tip.d.append('div').style('margin', '10px')
+			linkDiv
+				.append('div')
+				.style('margin-bottom', '12px')
+				.html(`Click the link to recover this session. Bookmark or share this link.`)
+
 			const a = linkDiv.append('a').attr('href', url).attr('target', '_blank').html(res.id)
 
 			if (this.hostURL != window.location.origin) {
@@ -381,7 +360,6 @@ class MassSessionBtn {
 					<div style="max-width: 400px; font-size: 1em; opacity:.6">
 					<span>NOTES</span>
 					<ul>
-					<li>Click the link to recover this session. Bookmark or share this link.</li>
 					<li>A recovered session may hide data or views to users that are not authorized to access the saved datasets or features.</li>
 					<li>This session will be saved for ${this.opts.massSessionDuration} days.</li>
 					</ul>
@@ -393,42 +371,36 @@ class MassSessionBtn {
 	}
 
 	async delete() {
-		this.dom.tip.d.selectAll('*').remove()
-		const table = this.dom.tip.d.append('table')
+		const t = await this.listSessions({
+			trClickHandler: function (event) {
+				const input = this.lastChild.querySelector('input')
+				const checked = event.target == input ? input.checked : !input.checked
+				select(this).style('text-decoration', checked ? 'line-through' : '')
+				if (event.target != input) input.checked = checked
+				const checkedRows = t.table.node().querySelectorAll('input:checked')
+				submitBtn.property('disabled', checkedRows.length ? false : true)
+			}
+		})
 
-		const headtr = table.append('thead').append('tr')
-		headtr
-			.selectAll('th')
-			.data(['Cache Location', 'Session ID', 'Delete'])
-			.enter()
-			.append('th')
-			.style('text-align', 'center')
-			.html(d => d)
+		// add a 3rd column for the checkboxes
+		t.headtr.append('th').html('Delete')
+		t.trs.each(function (d) {
+			select(this)
+				.append('td')
+				.style('text-align', 'center')
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('value', d.id)
+		})
 
-		const sessionIds = Object.keys(this.savedSessions).map(id => ({ loc: 'browser', id }))
-		if (!this.serverCachedSessions) await this.setServerCachedSessions()
-		sessionIds.push(...this.serverCachedSessions.map(id => ({ loc: 'server', id })))
-
-		const trs = table
-			.append('tbody')
-			.selectAll('tr')
-			.data(sessionIds)
-			.enter()
-			.append('tr')
-			.each(function (d) {
-				const tr = select(this)
-				tr.append('td').style('text-align', 'center').html(d.loc)
-				tr.append('td').style('text-align', 'left').html(d.id)
-				tr.append('td').style('text-align', 'center').append('input').attr('type', 'checkbox').attr('value', d.id)
-			})
-
-		this.dom.tip.d
+		const submitBtn = this.dom.tip.d
 			.append('div')
 			.style('text-align', 'center')
 			.append('button')
-			.html('Submit')
+			.html('Delete selected sessions')
+			.property('disabled', true)
 			.on('click', async () => {
-				const inputs = table.node().querySelectorAll('input')
+				const inputs = t.table.node().querySelectorAll('input')
 				const sessionIdsDeletedFromServer = []
 				for (const input of inputs) {
 					if (select(input).property('checked')) {
@@ -442,8 +414,6 @@ class MassSessionBtn {
 					}
 				}
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
-				//console.log(424, Object.keys(this.savedSessions), sessionIdsDeletedFromServer)
-
 				try {
 					const headers = this.app.vocabApi.mayGetAuthHeaders('termdb')
 					const body = {
