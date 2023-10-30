@@ -73,7 +73,7 @@ export default function svgLegend(opts) {
 		currlinex = 0
 		currliney += settings.lineh
 
-		let g = select(this).style('opacity', d.crossedOut ? '0.3' : 1)
+		let g = select(this).style('opacity', d.crossedOut ? '0.6' : 1)
 		const leftdist = settings.hangleft ? settings.padleft + settings.hangleft - settings.padx : settings.padleft
 
 		const grplabel = g
