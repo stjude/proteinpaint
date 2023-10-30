@@ -44,7 +44,7 @@ class SampleView {
 		this.termsByCohort = {}
 
 		const div = this.dom.sampleDiv
-		await this.setSampleSelect(config, div)
+		await this.setSampleSelect(config)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
@@ -56,7 +56,6 @@ class SampleView {
 		if (this.dom.header) this.dom.header.html(`Sample View`)
 
 		if (config.samples) {
-			const sampleDiv = this.dom.sampleDiv
 			const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
 
 			const select = sampleDiv
@@ -73,33 +72,17 @@ class SampleView {
 				.property('selected', (d, i) => i < samplesLimit)
 				.html((d, i) => d.sampleName)
 
-			sampleDiv
-				.insert('button')
-				.style('vertical-align', 'top')
-				.text('Download data')
-				.on('click', e => {
-					this.downloadData()
-				})
 			this.dom.noteDiv = sampleDiv
 				.insert('div')
 				.style('display', 'none')
 				.style('vertical-align', 'top')
 				.style('font-size', '0.8em')
 				.style('color', '#aaa')
-				.style('margin-left', '10px')
 				.html(
-					`*Note that only ${samplesLimit} samples can be selected simultaneously. <br/>&nbsp;Please navigate through the list to view all the samples.`
+					`*Note that only ${samplesLimit} samples can be selected.<br/>&nbsp;Navigate through the list to view all the samples.`
 				)
 			if (config.samples.length > samplesLimit) this.dom.noteDiv.style('display', 'inline-block')
 
-			this.dom.messageDiv = sampleDiv
-				.insert('div')
-				.style('position', 'absolute')
-				.style('left', '45%')
-				.style('display', 'inline-block')
-				.style('display', 'none')
-				.style('vertical-align', 'top')
-				.html('&nbsp;&nbsp;Downloading data ...')
 			select.on('change', e => {
 				const options = select.node().options
 				const samples = []
@@ -117,13 +100,6 @@ class SampleView {
 				}
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
-
-			if (config.samples.length > 15)
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { samples: config.samples.filter((s, i) => i < 15) }
-				})
 		} else {
 			const limit = 10000
 			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName()
@@ -133,16 +109,14 @@ class SampleView {
 				return
 			const sampleName = allSamples[0]
 			this.sample = config.sample || { sampleId: sampleName2Id[sampleName], sampleName }
-
 			const input = this.dom.sampleDiv
 				.append('input')
-				.attr('list', 'sampleDatalist')
+				.attr('list', 'sampleOptions')
 				.attr('placeholder', sampleName)
-				.style('width', '400px')
-				.text(sampleName)
-
-			const datalist = this.dom.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
-			datalist
+				.style('width', '300px')
+			this.dom.sampleDiv
+				.append('datalist')
+				.attr('id', 'sampleOptions')
 				.selectAll('option')
 				.data(allSamples.filter((s, i) => i < limit))
 				.enter()
@@ -185,10 +159,27 @@ class SampleView {
 				}
 			})
 		}
+
+		this.dom.downloadbt = sampleDiv
+			.insert('button')
+			.style('margin-left', '10px')
+			.style('vertical-align', 'top')
+			.text('Download data')
+			.on('click', async e => {
+				await this.downloadData()
+			})
+		this.dom.messageDiv = sampleDiv
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('display', 'none')
+			.style('vertical-align', 'top')
+			.html('&nbsp;&nbsp;Downloading data ...')
 	}
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
+		let samples = config.samples || [this.sample]
+		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
 		const state = {
@@ -199,7 +190,7 @@ class SampleView {
 			sample: config?.sample || this.sample,
 			terms: config.terms,
 			expandedTermIds: config.expandedTermIds,
-			samples: config.samples || [this.sample],
+			samples,
 			singleSampleGenomeQuantification: q?.singleSampleGenomeQuantification,
 			singleSampleMutation: q?.singleSampleMutation,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
@@ -395,7 +386,8 @@ class SampleView {
 	}
 
 	async downloadData() {
-		this.dom.messageDiv.style('display', 'inline-block')
+		this.dom.messageDiv.style('display', 'block')
+		this.dom.downloadbt.style('display', 'none')
 		const filename = `samples.tsv`
 		const sampleData = {}
 		let lines = 'Sample'
@@ -428,6 +420,7 @@ class SampleView {
 		link.click()
 		link.remove()
 		this.dom.messageDiv.style('display', 'none')
+		this.dom.downloadbt.style('display', 'inline-block')
 	}
 
 	mayRequireToken() {
