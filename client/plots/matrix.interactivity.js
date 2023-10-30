@@ -11,6 +11,10 @@ let inputIndex = 0
 export function setInteractivity(self) {
 	self.showCellInfo = function (event) {
 		if (self.activeLabel || self.zoomArea) return
+		if (event.target.__data__?.isLegendItem) {
+			// do not show info for matrix legend
+			return
+		}
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) {
 			const d = event.target.__data__
 			const grp = d?.grp
