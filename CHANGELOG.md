@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - GDC maf ui indicates total size of selected files
+- Bin default age ranges by 30 and 60 years for GDC age_at_diagnosis
 
 
 ## 2.30.2
