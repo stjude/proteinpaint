@@ -2065,7 +2065,7 @@ function setLengendActions(self) {
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(legendGrpFilterIndex == -1 ? 'Do not show events' : 'Show events')
+				.text(legendGrpFilterIndex == -1 ? 'Do not show mutations' : 'Show mutations')
 				.on('click', () => {
 					menuGrp.hide()
 					if (legendGrpFilterIndex == -1) {
@@ -2134,6 +2134,7 @@ function setLengendActions(self) {
 				)
 			}
 		}
+		const controlLabels = self.settings.matrix.controlLabels
 		const menu = new Menu({ padding: '0px' })
 		const div = menu.d.append('div')
 		div
@@ -2142,8 +2143,8 @@ function setLengendActions(self) {
 			.text(
 				targetData.dt
 					? legendFilterIndex == -1
-						? 'Hide samples with event'
-						: 'Show samples with event'
+						? `Hide ${controlLabels.samples} with mutation`
+						: `Show ${controlLabels.samples} with mutation`
 					: legendFilterIndex == -1
 					? 'Hide'
 					: 'Show'
@@ -2235,7 +2236,7 @@ function setLengendActions(self) {
 				div
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text('Do not show event')
+					.text('Do not show mutation')
 					.on('click', () => {
 						menu.hide()
 						// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
