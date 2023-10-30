@@ -384,32 +384,54 @@ const dummyBins = {
 		}
 	}
 }
+
+const hardcodedBins = {
+	'case.diagnoses.age_at_diagnosis': {
+		default: {
+			type: 'custom-bin',
+			mode: 'discrete',
+			lst: [
+				{ startunbounded: true, stop: 10950, stopinclusive: true, label: '<=30 years' },
+				{ start: 10950, stop: 21900, stopinclusive: true, label: '30-60 years' },
+				{ start: 21900, stopunbounded: true, startinclusive: false, label: '>60years' }
+			]
+		}
+	}
+}
+
 async function assignDefaultBins(id2term) {
 	const queryStrings = []
 	const facet2termid = new Map() // term id is converted to facet for query, this maps it back
 	for (const t of id2term.values()) {
-		if (t.type == 'integer' || t.type == 'float') {
-			const facet = t.id.replace('case.', '').replace(/\./g, '__')
-			facet2termid.set(facet, t.id)
-			queryStrings.push(
-				facet +
-					` {
-			   stats {
-					Min : min
-					Max: max
-					Mean: avg
-					SD: std_deviation
-					count
-				}
-				range(ranges: $filters2) {
-				  buckets {
-					doc_count
-					key
-				  }
-				}
-			}`
-			)
+		if (t.type != 'integer' && t.type != 'float') continue
+
+		if (hardcodedBins[t.id]) {
+			// a hardcoded bin config is avaialble for this term, use it and skip api query
+			t.bins = hardcodedBins[t.id]
+			continue
 		}
+
+		// no binning for this term, to query api and compute the bins
+		const facet = t.id.replace('case.', '').replace(/\./g, '__')
+		facet2termid.set(facet, t.id)
+		queryStrings.push(
+			facet +
+				` {
+		   stats {
+				Min : min
+				Max: max
+				Mean: avg
+				SD: std_deviation
+				count
+			}
+			range(ranges: $filters2) {
+			  buckets {
+				doc_count
+				key
+			  }
+			}
+		}`
+		)
 	}
 	if (queryStrings.length == 0) throw 'GDC: no numeric terms'
 	const query = `
