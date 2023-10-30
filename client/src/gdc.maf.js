@@ -136,13 +136,13 @@ async function getFilesAndShowTable(obj) {
 		buttons: [
 			{
 				text: 'Aggregate selected MAF files and download',
-				onChange: onFileSelectionChange,
+				onChange: updateButtonBySelectionChange,
 				callback: submitSelectedFiles
 			}
 		]
 	})
 
-	function onFileSelectionChange(lst, button) {
+	function updateButtonBySelectionChange(lst, button) {
 		let sum = 0
 		for (const i of lst) sum += result.files[i].file_size
 		if (sum == 0) {
@@ -151,7 +151,10 @@ async function getFilesAndShowTable(obj) {
 			return
 		}
 		button.disabled = false
-		button.innerHTML = `Aggregate ${fileSize(sum)} MAF data and download`
+		button.innerHTML =
+			sum < result.maxTotalSizeCompressed
+				? `Download ${fileSize(sum)} compressed MAF data`
+				: `Download ${fileSize(result.maxTotalSizeCompressed)} compressed MAF data (${fileSize(sum)} selected)`
 	}
 
 	async function submitSelectedFiles(lst, button) {

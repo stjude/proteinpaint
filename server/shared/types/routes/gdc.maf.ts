@@ -20,4 +20,6 @@ export type GdcMafResponse = {
 	files: File[]
 	/** Total number of files found by API (in case bigger than files.length) */
 	filesTotal: number
+	/** Maximum total size of maf files allowed, for indicating on ui while selecting files */
+	maxTotalSizeCompressed: number
 }
