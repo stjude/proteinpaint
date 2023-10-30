@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- GDC maf ui indicates total size of selected files
+
 
 ## 2.30.2
 
