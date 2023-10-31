@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.30.4
 
 Fixes:
 - skip the GDC aliquot caching when validating the server  configuration, data, and startup
