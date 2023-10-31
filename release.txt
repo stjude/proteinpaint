@@ -1,1 +1,2 @@
 
+Feature: Sample view uses input with autocomplete to search samples instead of displaying the list of all the samples to select
