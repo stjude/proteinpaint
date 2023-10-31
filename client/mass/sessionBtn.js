@@ -60,7 +60,7 @@ class MassSessionBtn {
 
 	async open() {
 		const radioName = `sjpp-session-open-radio-` + Math.random().toString().slice(-6)
-		this.dom.tip.d.append('div').style('padding', '3px 5px').html(`
+		this.dom.tip.d.append('div').style('padding', '3px').html(`
 			<b>Open in</b>
 			<label>
 				<input type='radio' name='${radioName}' value='new' checked=checked style='margin-right: 0; vertical-align: bottom'/>
@@ -77,13 +77,20 @@ class MassSessionBtn {
 				const { loc, id } = d
 				if (!id) return
 				if (loc.includes('browser')) {
+					this.sessionName = id
+					const state = this.savedSessions[id]
 					const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
-					if (targetWindow == 'new') {
+					if (targetWindow == 'current') {
+						this.app.dispatch({ type: 'app_refresh', state })
+					} else if (window.location.origin == this.hostURL) {
 						window.open(`/?mass-session-id=${id}&src=browser`)
 					} else {
-						this.sessionName = id
-						const state = this.savedSessions[id]
-						this.app.dispatch({ type: 'app_refresh', state })
+						if (state.embedder) corsMessage({ state })
+						else {
+							const { protocol, host, search, origin, href } = window.location
+							const embedder = { protocol, host, search, origin, href }
+							corsMessage({ state: Object.assign({ embedder }, state) })
+						}
 					}
 					this.dom.tip.hide()
 				} else if (loc == 'server') {
@@ -96,7 +103,7 @@ class MassSessionBtn {
 					const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
 					if (targetWindow == 'current') {
 						this.app.dispatch({ type: 'app_refresh', state: res.state })
-					} else if (window.location.host == this.hostURL) {
+					} else if (window.location.origin == this.hostURL) {
 						window.open(`/?mass-session-id=${id}&src=cred&dslabel=${this.dslabel}&route=${this.route}`)
 					} else {
 						corsMessage(res)
@@ -110,9 +117,14 @@ class MassSessionBtn {
 
 		// open session from a local file
 		const tr1 = t.tbody.insert('tr', 'tr')
-		tr1.append('td').style('text-align', 'center').html('Local file:')
+		tr1.append('td').style('text-align', 'center').style('padding', '3px 9px').html('Local file')
 		const label = tr1.append('td').style('text-align', 'left').append('label')
-		label.append('span').style('text-decoration', 'underline').style('cursor', 'pointer').html('Choose File')
+		label
+			.append('span')
+			.style('padding', '3px 9px')
+			.style('text-decoration', 'underline')
+			.style('cursor', 'pointer')
+			.html('Choose File')
 		label
 			.append('input')
 			.attr('type', 'file')
@@ -146,7 +158,7 @@ class MassSessionBtn {
 	}
 
 	async listSessions(opts = {}) {
-		const table = this.dom.tip.d.append('table')
+		const table = this.dom.tip.d.append('table').attr('class', 'sjpp-controls-table')
 
 		const headtr = table.append('thead').append('tr')
 		headtr
@@ -154,7 +166,7 @@ class MassSessionBtn {
 			.data(['Cache Location', 'Session ID'])
 			.enter()
 			.append('th')
-			.style('text-align', 'center')
+			.style('text-align', (d, i) => (i === 0 ? 'center' : 'left'))
 			.html(d => d)
 
 		const sessionIds = Object.keys(this.savedSessions).map(id => ({ loc: 'browser', id }))
@@ -175,7 +187,7 @@ class MassSessionBtn {
 			.enter()
 			.append('td')
 			.style('text-align', (d, i) => (i === 0 ? 'center' : 'left'))
-			.style('padding', '3px 5px')
+			.style('padding', '3px 9px')
 			.style('cursor', 'pointer')
 			.html((d, i) => (i === 0 ? d.loc : d.id))
 
@@ -188,7 +200,7 @@ class MassSessionBtn {
 				.enter()
 				.append('td')
 				.style('text-align', (d, i) => (i === 0 ? 'center' : 'left'))
-				.style('padding', '3px 5px')
+				.style('padding', '3px 9px')
 				.html(d => d)
 		}
 		return { table, headtr, tbody, trs }
@@ -330,7 +342,7 @@ class MassSessionBtn {
 			return res
 		} else {
 			const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
-			this.dom.tip.clear().showunder(this.dom.button.node())
+			this.dom.tip.showunder(this.dom.button.node())
 			const linkDiv = this.dom.tip.d.append('div').style('margin', '10px')
 			linkDiv
 				.append('div')
@@ -433,6 +445,7 @@ class MassSessionBtn {
 	showBackBtn() {
 		this.dom.tip.d
 			.append('div')
+			.attr('class', 'sja_clbtext2')
 			.style('margin-bottom', '10px')
 			.style('cursor', 'pointer')
 			.html(`&lt; Session Menu`)

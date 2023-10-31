@@ -159,7 +159,6 @@ upon error, throw err message as a string
 			if (src == 'cred') {
 				const dslabel = urlp.get('dslabel')
 				const route = urlp.get('route')
-				console.log(161, dslabel)
 				fetchOpts.body.dslabel = dslabel
 				fetchOpts.body.route = route
 				fetchOpts.body.route = route
@@ -167,7 +166,6 @@ upon error, throw err message as a string
 				const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
 				this.jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
 				const jwt = this.jwtByDsRoute[dslabel][route]
-				console.log(168, jwt)
 				fetchOpts.headers.authorization = `Bearer ${btoa(jwt)}`
 			}
 			res = await client.dofetch3(`/massSession`, fetchOpts)
