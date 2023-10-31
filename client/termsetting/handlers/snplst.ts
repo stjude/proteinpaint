@@ -94,9 +94,11 @@ async function makeEditMenu(self, div0: any) {
 		.style('opacity', 0.8)
 		.style('font-size', '.8em')
 		.html(
-			'One variant per line. Max 500 allowed. Variant rsID in first column and optional effect allele in second column.' +
-				'<br>Effect allele is allele that will be used for testing in regression analysis.<br><br>Example:' +
-				'<br><br>rs1641548<br>rs1642793 C<br>rs1042522<br>rs1642782 G'
+			`Enter a list of variants (dbSNP accessions). One variant per line. Max 500 allowed. ${
+				self.usecase.target == 'dataDownload'
+					? '<br><br><span style="text-decoration: underline;">Example:</span><br>rs1641548<br>rs1642793<br>rs1042522<br>rs1642782'
+					: '<br>Variant accession in first column and optional effect allele in second column.<br>Effect allele is allele that will be used for testing in regression analysis.<br><br><span style="text-decoration: underline;">Example:</span><br>rs1641548<br>rs1642793 C<br>rs1042522<br>rs1642782 G'
+			}`
 		)
 
 	const validateBtn = inputUIholder
@@ -200,10 +202,13 @@ async function makeEditMenu(self, div0: any) {
 
 	const snplstTableDiv = editUIholder.append('div').style('margin-bottom', '25px')
 	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
-		editUIholder.append('div'),
+		editUIholder.append('div').attr('class', 'sjpp-snp-select'),
 		self,
 		'snplst'
 	)
+
+	// hide snp select for data download
+	if (self.usecase.target == 'dataDownload') editUIholder.select('.sjpp-snp-select').style('display', 'none')
 
 	// bottom row for submit button and message
 	const btnRow = editUIholder.append('div').style('margin-top', '15px')
@@ -263,7 +268,7 @@ async function makeEditMenu(self, div0: any) {
 		.style('padding-left', '15px')
 		.style('opacity', 0.8)
 		.style('font-size', '.8em')
-		.text('Must press Submit button to apply changes.')
+		.text('Must press submit button to apply changes.')
 
 	// both input and edit UIs are rendered
 	// decide visibility of edit and input UIs
@@ -291,6 +296,7 @@ function initSnpEditTable(div: any, self, select_alleleType: any) {
 		.append('p')
 		.style('opacity', 0.8)
 		.style('font-size', '.8em')
+		.style('display', self.usecase.target == 'dataDownload' ? 'none' : 'block')
 		.html('Effect alleles are highlighted in red. Click on an allele to set as the effect allele.')
 }
 
@@ -306,6 +312,7 @@ function renderSnpEditTable(self, select_alleleType: any) {
 		{ title: 'Genotype<br>(frequency)' },
 		{ title: 'Delete' }
 	]
+	if (self.usecase.target == 'dataDownload') col_titles.splice(4, 1)
 	col_titles.forEach(c => {
 		title_tr.append('td').html(c.title).style('font-size', '.8em').style('text-align', 'center').style('padding', '8px')
 	})
@@ -348,35 +355,52 @@ function renderSnpEditTable(self, select_alleleType: any) {
 			const refAllele = snp.alleles.find((s: any) => s.isRef)
 			const altAlleles = snp.alleles.filter((s: any) => !s.isRef)
 
-			// create reference allele button
-			createAlleleBtn(refAllele, ref_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
-			// create alternative allele buttons
-			for (const al of altAlleles.values()) {
-				createAlleleBtn(al, alt_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
+			if (self.usecase.target == 'dataDownload') {
+				// render ref allele
+				const allele_freq = ((refAllele.count * 100) / (sample_count * 2)).toFixed(2)
+				const refAlleleText = `${refAllele.allele} (${allele_freq}%)`
+				ref_allele_td.style('text-align', 'center').style('padding', '8px').text(refAlleleText)
+				// render alt alleles
+				const altAllelesText = altAlleles
+					.map(al => {
+						const allele_freq = ((al.count * 100) / (sample_count * 2)).toFixed(2)
+						return `${al.allele} (${allele_freq}%)`
+					})
+					.join(', ')
+				alt_allele_td.style('text-align', 'center').style('padding', '8px').text(altAllelesText)
+			} else {
+				// create reference allele button
+				createAlleleBtn(refAllele, ref_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
+				// create alternative allele buttons
+				for (const al of altAlleles.values()) {
+					createAlleleBtn(al, alt_allele_td, effectAllele, sample_count, snp, rowcolor, tr)
+				}
 			}
 		}
 
 		// col 5: genotype (frequency)
-		const gt_td = tr.append('td')
-		if (!invalid_snp) {
-			const refGT = self.q.snp2refGrp ? self.q.snp2refGrp[snp.rsid] : undefined
-			if (!snp.gt2count) throw `Missing gt2count for snp = ${snp} [snplst.ts renderSnpEditTable()]`
-			for (const [gt, freq] of Object.entries(snp.gt2count)) {
-				//const gt_freq = Math.round((freq * 100) / sample_count)
-				const gt_freq = (((freq as number) * 100) / sample_count).toFixed(2)
-				const gt_div = gt_td
-					.append('div')
-					.style('display', 'inline-block')
-					.style('border', gt == refGT ? '3px solid #ff0000' : `3px solid ${rowcolor}`)
+		if (self.usecase.target != 'dataDownload') {
+			const gt_td = tr.append('td')
+			if (!invalid_snp) {
+				const refGT = self.q.snp2refGrp ? self.q.snp2refGrp[snp.rsid] : undefined
+				if (!snp.gt2count) throw `Missing gt2count for snp = ${snp} [snplst.ts renderSnpEditTable()]`
+				for (const [gt, freq] of Object.entries(snp.gt2count)) {
+					//const gt_freq = Math.round((freq * 100) / sample_count)
+					const gt_freq = (((freq as number) * 100) / sample_count).toFixed(2)
+					const gt_div = gt_td
+						.append('div')
+						.style('display', 'inline-block')
+						.style('border', gt == refGT ? '3px solid #ff0000' : `3px solid ${rowcolor}`)
 
-				gt_div.append('div').style('display', 'inline-block').style('padding', '3px 5px').text(`${gt}`)
+					gt_div.append('div').style('display', 'inline-block').style('padding', '3px 5px').text(`${gt}`)
 
-				gt_div
-					.append('div')
-					.style('display', 'inline-block')
-					.style('padding', '0px 6px 0px 2px')
-					.style('font-size', '.8em')
-					.text('(' + `${gt_freq}%` + ')')
+					gt_div
+						.append('div')
+						.style('display', 'inline-block')
+						.style('padding', '0px 6px 0px 2px')
+						.style('font-size', '.8em')
+						.text('(' + `${gt_freq}%` + ')')
+				}
 			}
 		}
 
@@ -621,6 +645,8 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 			// default 0.05 to be shown when launching edit menu to create new term
 			// if value is set in self.q, will be overwritten later
 			.property('value', 5)
+			.style('border-color', '#858585')
+			.style('margin', '0px')
 		row.append('span').text('%')
 		let text: string
 		if (termtype == 'snplst') {
