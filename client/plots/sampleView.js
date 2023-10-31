@@ -136,7 +136,6 @@ class SampleView {
 						if (options.length == limit) break
 					}
 				if (options.length > 1 || (options.length == 1 && input.node().value != options[0]))
-
 					datalist
 						.selectAll('option')
 						.data(options)
