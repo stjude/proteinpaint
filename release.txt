@@ -1,1 +1,2 @@
-
+Fixes:
+- when validating the server configuration, data, and startup, skip the GDC aliquot caching
