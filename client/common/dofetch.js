@@ -209,8 +209,8 @@ function mayAdjustRequest(url, init) {
 		return url
 	}
 
-	if (method != 'GET') {
-		throw `unsupported init.method='${method}': must be undefined or GET or POST`
+	if (method != 'GET' && method != 'DELETE') {
+		throw `unsupported init.method='${method}': must be undefined or GET or POST or DELETE`
 	}
 
 	if (init.body) {

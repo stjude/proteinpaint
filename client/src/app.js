@@ -1469,9 +1469,11 @@ async function launchmass(arg, app) {
 	opts.addLoginCallback = arg.addLoginCallback
 	const hostURL = sessionStorage.getItem('hostURL')
 	if (window.opener && hostURL != window.location.origin) {
-		opts.embeddedSessionState = {}
+		// if this is a child window or tab, refreshing it will need previously hydrated session state,
+		// in case the window.opener has already removed its message listener
+		opts.embeddedSessionState = JSON.parse(sessionStorage.getItem('embeddedSessionState') || `{}`)
 		const messageListener = event => {
-			if (event.origin !== hostURL) return
+			if (event.origin != window.location.origin && event.origin !== hostURL) return
 			// !!! Potential race-condition
 			// - assumes that the message event from the window.opener will be received
 			//   before the storeInit() is triggered within the storeInit() call in mass/app.js
@@ -1481,10 +1483,34 @@ async function launchmass(arg, app) {
 			if (event.data.state) {
 				window.removeEventListener('message', messageListener)
 				Object.assign(opts.embeddedSessionState, event.data.state)
+				// see the comment above for when this stored embeddedState may be used
+				sessionStorage.setItem('embeddedSessionState', JSON.stringify(opts.embeddedSessionState))
 			}
 		}
 		window.addEventListener('message', messageListener, false)
-		window.opener.postMessage('getActiveMassSession', hostURL)
+		// limit the time to listen for the window.opener's message
+		setTimeout(() => window.removeEventListener('message', messageListener), 1000)
+		// the window.opener can be either
+		// - an embedder site when clicking on `Open Session`
+		// - a proteinpaint site when clicking on a shared URL link
+		// accessing window.opener.location.origin may emit a CORS-related error,
+		// so safer to send the message twice to cover both possibilities
+		let origin
+		try {
+			if (window.opener.origin) {
+				origin = window.opener.origin
+			} else {
+				origin = hostURL
+			}
+		} catch (e) {
+			origin = hostURL
+		}
+
+		try {
+			window.opener.postMessage('getActiveMassSession', origin)
+		} catch (e) {
+			console.log(e)
+		}
 	}
 	const _ = await import('../mass/app')
 	return await _.appInit(opts)

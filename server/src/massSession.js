@@ -81,6 +81,31 @@ export async function get(req, res) {
 	}
 }
 
+// NOTE: cannot use delete as a method name, since it's a reserver js keyword
+export async function _delete(req, res) {
+	try {
+		const ids = req.query.ids
+		if (!ids) throw 'session ids[] missing'
+		const { route, dslabel, embedder } = req.query
+		const payload = req.query.route ? authApi.getPayloadFromHeaderAuth(req, req.query.route) : null
+		if (!payload) throw 'missing credentials'
+		const dir = req.query.route ? getSessionPath(req.query, payload) : serverconfig.cachedir_massSession
+		const errors = []
+		for (const id of ids) {
+			const file = path.join(dir, id)
+			fs.unlink(file, err => {
+				if (err) {
+					errors.push(err)
+					throw err
+				}
+			})
+		}
+		if (!errors.length) res.send({ status: 'ok' })
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
+}
+
 export async function getSessionIdsByCred(req, res) {
 	try {
 		const { filename, route, dslabel, embedder } = req.query
