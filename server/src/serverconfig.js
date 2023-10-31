@@ -181,7 +181,12 @@ if (!serverconfig.features) {
 if (process.argv.find(a => a == 'validate')) {
 	// issues in the GDC API (like its servers being under maintenance) should not affect
 	// the ability of the PP server to launch itself, so skip GDC-caching during validation
-	// as the GDC API may come online later (and not require a PP server restart)
+	// as the GDC API may come online later (and not require a PP server restart).
+	// This allows `npx @sjcrh/proteinpaint-server validate` to finish faster.
+	//
+	// NOTE: The server validation waits for the nodejs main thread to finish, so any unfinished
+	// async methods will still block the validation. Only other async methods are not blocked
+	// by each other while executing.
 	serverconfig.features.stopGdcCacheAliquot = true
 }
 
