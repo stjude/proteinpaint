@@ -148,12 +148,11 @@ export function setInteractivity(self) {
 		//when clicking a cell in SV, CNV, mutation panels
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
-		self.dom.menubody.selectAll('*').remove()
-		self.dom.menutop.selectAll('*').remove()
-		self.dom.tip.show(event.clientX, event.clientY, false, true)
+		if (!self.dom.clickMenu) self.dom.clickMenu = new Menu({ padding: '0px' })
+		self.dom.clickMenu.d.selectAll('*').remove()
 		if (q.singleSampleGenomeQuantification) {
 			for (const k in q.singleSampleGenomeQuantification) {
-				const menuDiv = self.dom.menubody
+				const menuDiv = self.dom.clickMenu.d
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(k)
@@ -171,14 +170,13 @@ export function setInteractivity(self) {
 							self.app.opts.genome,
 							geneName
 						)
-						self.dom.tip.hide()
 						menuDiv.remove()
-						self.dom.menubody.selectAll('*').remove()
+						self.dom.clickMenu.d.selectAll('*').remove()
 					})
 			}
 		}
 		if (q?.singleSampleMutation) {
-			const menuDiv = self.dom.menubody
+			const menuDiv = self.dom.clickMenu.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Disco plot')
@@ -197,8 +195,11 @@ export function setInteractivity(self) {
 							}
 						}
 					)
+					menuDiv.remove()
+					self.dom.clickMenu.d.selectAll('*').remove()
 				})
 		}
+		self.dom.clickMenu.show(event.clientX, event.clientY, false, true)
 	}
 
 	self.legendClick = function () {}
