@@ -111,9 +111,9 @@ class SampleView {
 			this.sample = config.sample || { sampleId: sampleName2Id[sampleName], sampleName }
 			const input = this.dom.sampleDiv
 				.append('input')
-				.attr('list', 'sampleOptions')
+				.attr('list', 'sampleDatalist')
 				.attr('placeholder', sampleName)
-				.style('width', '300px')
+				.style('width', '400px')
 			this.dom.sampleDiv
 				.append('datalist')
 				.attr('id', 'sampleOptions')
@@ -136,6 +136,7 @@ class SampleView {
 						if (options.length == limit) break
 					}
 				if (options.length > 1 || (options.length == 1 && input.node().value != options[0]))
+
 					datalist
 						.selectAll('option')
 						.data(options)
@@ -148,14 +149,19 @@ class SampleView {
 				const sampleId = sampleName2Id[sampleName]
 				if (sampleId) {
 					this.dom.tableDiv.style('display', 'block')
-					this.showVisiblePlots()
 					this.sample = { sampleId, sampleName }
-					this.renderPlots(this.state, [this.sample])
+
+					if (this.state.hasPlots) {
+						this.showVisiblePlots()
+						this.renderPlots(this.state, [this.sample])
+					}
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
 				} else {
 					this.dom.tableDiv.style('display', 'none')
-					for (const div of this.discoPlots) div.style('display', 'none')
-					for (const div of this.singleSamplePlots) div.style('display', 'none')
+					if (this.state.hasPlots) {
+						for (const div of this.discoPlots) div.style('display', 'none')
+						for (const div of this.singleSamplePlots) div.style('display', 'none')
+					}
 				}
 			})
 		}
@@ -165,8 +171,8 @@ class SampleView {
 			.style('margin-left', '10px')
 			.style('vertical-align', 'top')
 			.text('Download data')
-			.on('click', async e => {
-				await this.downloadData()
+			.on('click', e => {
+				this.downloadData()
 			})
 		this.dom.messageDiv = sampleDiv
 			.insert('div')
