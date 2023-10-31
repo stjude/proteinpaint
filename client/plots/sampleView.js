@@ -123,6 +123,7 @@ class SampleView {
 				.append('option')
 				.attr('value', d => d)
 			input.on('keyup', e => {
+				const limit = 500
 				datalist.selectAll('*').remove()
 				const str = input.node().value.toLowerCase()
 				const options = []
