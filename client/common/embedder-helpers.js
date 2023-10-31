@@ -26,7 +26,7 @@ export function corsMessage(res, origin = '') {
 		}
 	}
 	window.addEventListener('message', messageListener, false)
-	setTimeout(() => window.removeEventListener('message', messageListener), 6000)
+	setTimeout(() => window.removeEventListener('message', messageListener), 8000)
 	if (embedder.origin != window.location.origin) {
 		confirm(
 			`Another window will open to recover the saved session. When the next window opens,` +

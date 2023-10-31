@@ -30,16 +30,19 @@ class MassSessionBtn {
 		this.requiredAuth = appState.termdbConfig?.requiredAuth?.find(a => a.route == this.route && a.type == 'jwt')
 	}
 
-	showMenu() {
+	async showMenu() {
 		this.dom.tip.clear().d.style('padding', 0)
 		const gt = `<span style='margin-left: 24px; float: right'>&gt;</span>`
 		const options = [
 			{ label: `Open ${gt}`, callback: this.open },
 			{ label: `Save ${gt}`, callback: this.save },
-			{ label: `Share ${gt}`, callback: this.getSessionUrl },
-			{ label: `Delete ${gt}`, callback: this.delete }
-			//{ label: 'Download', callback: this.download }
+			{ label: `Share ${gt}`, callback: this.getSessionUrl }
 		]
+
+		if (!this.serverCachedSessions) await this.setServerCachedSessions()
+		if (Object.keys(this.savedSessions).length || Object.keys(this.serverCachedSessions).length) {
+			options.push({ label: `Delete ${gt}`, callback: this.delete })
+		}
 
 		this.dom.tip
 			.clear()
@@ -60,7 +63,7 @@ class MassSessionBtn {
 
 	async open() {
 		const radioName = `sjpp-session-open-radio-` + Math.random().toString().slice(-6)
-		this.dom.tip.d.append('div').style('padding', '3px').html(`
+		this.dom.tip.d.append('div').style('padding', '3px 9px').html(`
 			<b>Open in</b>
 			<label>
 				<input type='radio' name='${radioName}' value='new' checked=checked style='margin-right: 0; vertical-align: bottom'/>
@@ -106,6 +109,7 @@ class MassSessionBtn {
 					} else if (window.location.origin == this.hostURL) {
 						window.open(`/?mass-session-id=${id}&src=cred&dslabel=${this.dslabel}&route=${this.route}`)
 					} else {
+						// server-cached sessions should have an state.embedder object, no need to check
 						corsMessage(res)
 					}
 					this.dom.tip.hide()
@@ -148,10 +152,17 @@ class MassSessionBtn {
 				this.savedSessions[sessionName] = state
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
 				const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
-				if (targetWindow == 'new') {
+				if (targetWindow == 'current') {
+					this.app.dispatch({ type: 'app_refresh', state })
+				} else if (window.location.origin == this.hostURL) {
 					window.open(`/?mass-session-id=${sessionName}&src=browser`)
 				} else {
-					this.app.dispatch({ type: 'app_refresh', state })
+					if (state.embedder) corsMessage({ state })
+					else {
+						const { protocol, host, search, origin, href } = window.location
+						const embedder = { protocol, host, search, origin, href }
+						corsMessage({ state: Object.assign({ embedder }, state) })
+					}
 				}
 				this.dom.tip.hide()
 			})
@@ -167,6 +178,7 @@ class MassSessionBtn {
 			.enter()
 			.append('th')
 			.style('text-align', (d, i) => (i === 0 ? 'center' : 'left'))
+			.style('padding', '3px 9px')
 			.html(d => d)
 
 		const sessionIds = Object.keys(this.savedSessions).map(id => ({ loc: 'browser', id }))
