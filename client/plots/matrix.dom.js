@@ -32,6 +32,7 @@ export function setMatrixDom(opts) {
 	const termLabelsPG = mainG.append('g')
 
 	const tip = new Menu({ padding: '5px' })
+	const clickMenu = new Menu({ padding: '0px' })
 	this.dom = {
 		header: opts.header,
 		holder,
@@ -109,7 +110,8 @@ export function setMatrixDom(opts) {
 		// !!! Do NOT use self.dom.tip.clear(), since it will also get rid of menutop and menubody
 		tip,
 		menutop: tip.d.append('div'),
-		menubody: tip.d.append('div')
+		menubody: tip.d.append('div'),
+		clickMenu
 	}
 
 	this.dom.tip.onHide = () => {

@@ -148,7 +148,6 @@ export function setInteractivity(self) {
 		//when clicking a cell in SV, CNV, mutation panels
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
-		if (!self.dom.clickMenu) self.dom.clickMenu = new Menu({ padding: '0px' })
 		self.dom.clickMenu.d.selectAll('*').remove()
 		if (q.singleSampleGenomeQuantification) {
 			for (const k in q.singleSampleGenomeQuantification) {
