@@ -82,7 +82,7 @@ class MassSessionBtn {
 				if (loc.includes('browser')) {
 					this.sessionName = id
 					const state = this.savedSessions[id]
-					const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+					const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
 					if (targetWindow == 'current') {
 						this.app.dispatch({ type: 'app_refresh', state })
 					} else if (window.location.origin == this.hostURL) {
@@ -103,7 +103,7 @@ class MassSessionBtn {
 					if (!res.state) throw res.error || 'unable to get the cached session from the server'
 					this.savedSessions[id] = res.state
 
-					const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+					const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
 					if (targetWindow == 'current') {
 						this.app.dispatch({ type: 'app_refresh', state: res.state })
 					} else if (window.location.origin == this.hostURL) {
@@ -151,7 +151,7 @@ class MassSessionBtn {
 				const state = JSON.parse(json)
 				this.savedSessions[sessionName] = state
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
-				const targetWindow = document.querySelector(`[name="${radioName}"]:checked`).value
+				const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
 				if (targetWindow == 'current') {
 					this.app.dispatch({ type: 'app_refresh', state })
 				} else if (window.location.origin == this.hostURL) {
