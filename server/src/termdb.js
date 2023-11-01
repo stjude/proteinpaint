@@ -67,10 +67,7 @@ export function handle_request_closure(genomes) {
 			if (q.getvariantfilter) return getvariantfilter(res, ds)
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
-			if (q.getSampleScatter) {
-				q.for = 'scatter'
-				return await trigger_getSampleScatter(req, q, res, ds, genome)
-			}
+			if ((q.for = 'scatter')) return await trigger_getSampleScatter(req, q, res, ds, genome)
 			if (q.getLowessCurve) return await trigger_getLowessCurve(req, q, res)
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.for == 'mds3queryDetails') return get_mds3queryDetails(res, ds)

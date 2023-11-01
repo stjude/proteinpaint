@@ -886,7 +886,7 @@ export class TermdbVocab extends Vocab {
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
 		const body = {
-			getSampleScatter: 1,
+			for: 'scatter',
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			plotName: opts.name,
