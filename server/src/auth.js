@@ -171,7 +171,7 @@ function mayReshapeDsCredentials(creds) {
 
 // TODO: should create a checker function for each route that may be protected
 const protectedTermdbRoutes = {
-	termdb: ['matrix', 'singleSampleData', 'getAllSamples']
+	termdb: ['matrix', 'singleSampleData', 'getAllSamples', 'scatter', 'convertSampleId', 'getAllSamplesByName']
 }
 
 const authRouteByCredType = {
@@ -609,22 +609,27 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	const [type, b64token] = req.headers.authorization.split(' ')
 	if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 	const token = Buffer.from(b64token, 'base64').toString()
-	const payload = jsonwebtoken.verify(token, cred.secret)
-	// if (id) {
-	// 	if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)}
-	// 	else console.log('--- !!! id match !!! ---')
-	// }
-	// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
-	// otherwise an expired header.auth jwt may be reused even when a user has already logged out
-	if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) return
+	try {
+		const payload = jsonwebtoken.verify(token, cred.secret)
+		// if (id) {
+		// 	if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)}
+		// 	else console.log('--- !!! id match !!! ---')
+		// }
+		// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
+		// otherwise an expired header.auth jwt may be reused even when a user has already logged out
+		if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) return
 
-	// do not overwrite existing
-	if (!sessions[dslabel]) sessions[dslabel] = {}
-	//if (sessions[dslabel][payload.id]) throw `session conflict`
-	const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
-	if (isMatch(path, cred.route) || path == 'authorizedActions') {
-		sessions[dslabel][payload.id] = payload
-		return payload.id
+		// do not overwrite existing
+		if (!sessions[dslabel]) sessions[dslabel] = {}
+		//if (sessions[dslabel][payload.id]) throw `session conflict`
+		const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
+		if (isMatch(path, cred.route) || path == 'authorizedActions') {
+			sessions[dslabel][payload.id] = payload
+			return payload.id
+		}
+	} catch (e) {
+		// ok to not add a session from bearer jwt
+		return
 	}
 }
 
