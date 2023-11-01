@@ -170,8 +170,9 @@ function mayReshapeDsCredentials(creds) {
 }
 
 // TODO: should create a checker function for each route that may be protected
-const protectedTermdbRoutes = {
-	termdb: ['matrix', 'singleSampleData', 'getAllSamples']
+const protectedRoutes = {
+	termdb: ['matrix'],
+	samples: ['singleSampleData', 'getAllSamples', 'scatter', 'convertSampleId', 'getAllSamplesByName']
 }
 
 const authRouteByCredType = {
@@ -229,7 +230,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		throw e
 	}
 
-	function getRequiredCred(q, path) {
+	function getRequiredCred(q, path, _protectedRoutes) {
 		if (!q.dslabel) return
 		// faster exact matching, based on known protected routes
 		const ds0 = creds[q.dslabel] || creds['*']
@@ -243,7 +244,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			} else if (path.startsWith('/termdb') && ds0.termdb) {
 				const route = ds0.termdb
 				// okay to return an undefined embedder[route]
-				return protectedTermdbRoutes.termdb.includes(q.for) && (route[q.embedder] || route['*'])
+				const protRoutes = _protectedRoutes || protectedRoutes.termdb
+				return protRoutes.includes(q.for) && (route[q.embedder] || route['*'])
 			} else if (path.startsWith('/burden') && ds0.burden) {
 				// okay to return an undefined embedder[route]
 				return ds0.burden[q.embedder] || ds0.burden['*']
@@ -534,7 +536,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	}
 
 	authApi.userCanAccess = function (req, ds) {
-		const cred = getRequiredCred(req.query, req.path)
+		const cred = getRequiredCred(req.query, req.path, protectedRoutes.samples)
 		if (!cred) return true
 		// for 'basic' auth type, always require a login when runpp() is first called
 		if (cred.type == 'basic' && req.path.startsWith('/genomes')) return false
@@ -609,22 +611,27 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	const [type, b64token] = req.headers.authorization.split(' ')
 	if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 	const token = Buffer.from(b64token, 'base64').toString()
-	const payload = jsonwebtoken.verify(token, cred.secret)
-	// if (id) {
-	// 	if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)}
-	// 	else console.log('--- !!! id match !!! ---')
-	// }
-	// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
-	// otherwise an expired header.auth jwt may be reused even when a user has already logged out
-	if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) return
+	try {
+		const payload = jsonwebtoken.verify(token, cred.secret)
+		// if (id) {
+		// 	if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)}
+		// 	else console.log('--- !!! id match !!! ---')
+		// }
+		// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
+		// otherwise an expired header.auth jwt may be reused even when a user has already logged out
+		if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) return
 
-	// do not overwrite existing
-	if (!sessions[dslabel]) sessions[dslabel] = {}
-	//if (sessions[dslabel][payload.id]) throw `session conflict`
-	const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
-	if (isMatch(path, cred.route) || path == 'authorizedActions') {
-		sessions[dslabel][payload.id] = payload
-		return payload.id
+		// do not overwrite existing
+		if (!sessions[dslabel]) sessions[dslabel] = {}
+		//if (sessions[dslabel][payload.id]) throw `session conflict`
+		const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
+		if (isMatch(path, cred.route) || path == 'authorizedActions') {
+			sessions[dslabel][payload.id] = payload
+			return payload.id
+		}
+	} catch (e) {
+		// ok to not add a session from bearer jwt
+		return
 	}
 }
 

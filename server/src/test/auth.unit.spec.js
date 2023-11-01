@@ -760,7 +760,7 @@ tape(`session-handling by the middleware`, async test => {
 
 tape(`/dslogin`, async test => {
 	test.timeoutAfter(400)
-	test.plan(9)
+	test.plan(10)
 
 	const password = '...' /* pragma: allowlist secret */
 	const serverconfig = {
@@ -908,7 +908,11 @@ tape(`/dslogin`, async test => {
 
 			const res = {
 				send(data) {
-					test.equal(data.error, undefined, `should respond with an error for a non-logged in user`)
+					test.equal(
+						data.error,
+						'unestablished or expired browser session',
+						`should respond with an error for a non-logged in user`
+					)
 				},
 				status(code) {
 					test.equal(code, 401, `should set the expected response status code for non-logged in user`)
