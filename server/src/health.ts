@@ -1,12 +1,7 @@
 import serverconfig from './serverconfig'
 import fs from 'fs'
-import path from 'path'
-import child_process from 'child_process'
-import util from 'util'
 import pkg from '../package.json'
 import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/routes/healthcheck.js'
-
-const execPromise = util.promisify(child_process.exec)
 
 export async function getStat(genomes) {
 	if (!versionInfo.deps) setVersionInfoDeps()
@@ -16,25 +11,6 @@ export async function getStat(genomes) {
 		genomes: {},
 		versionInfo
 	} as HealthCheckResponse
-
-	const keys = serverconfig.features.healthcheck_keys || []
-
-	if (keys.includes('w')) {
-		const { stdout, stderr } = await execPromise('w | head -n1')
-		if (stderr) throw stderr
-		health.w = stdout
-			.toString()
-			.trim()
-			.split(' ')
-			.slice(-3)
-			.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
-	}
-
-	if (keys.includes('rs')) {
-		const { stdout, stderr } = await execPromise('ps aux | grep rsync -w')
-		if (stderr) throw stderr
-		health.rs = stdout.toString().trim().split('\n').length - 1
-	}
 
 	// report status of every genome
 	for (const gn in genomes) {
