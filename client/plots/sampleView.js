@@ -78,7 +78,6 @@ class SampleView {
 		}
 		await this.setSampleSelect(config, div)
 		const state = this.getState(appState)
-		console.log(state)
 		const q = state.termdbConfig.queries
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
 		if (hasPlots) await this.renderPlots(state)
@@ -386,7 +385,6 @@ class SampleView {
 	}
 
 	mayRequireToken() {
-		console.log(this.state.hasVerifiedToken)
 		if (this.state.hasVerifiedToken) {
 			this.dom.holder.style('display', 'block')
 			return false
