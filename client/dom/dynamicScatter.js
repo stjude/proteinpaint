@@ -4,7 +4,7 @@ import { Menu } from '#dom/menu'
 export function addDynamicScatterForm(tip, app) {
 	const tip2 = new Menu({ padding: '5px' })
 	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
-	coordsDiv.append('div').html('Select variables to build a new plot').style('font-size', '0.9rem')
+	coordsDiv.append('div').html('Select variables to plot').style('font-size', '0.9rem')
 	let xterm, yterm
 	const xDiv = coordsDiv.append('div').style('padding-top', '5px').html('&nbsp;X&nbsp;&nbsp;')
 	const xtermDiv = xDiv
@@ -32,6 +32,9 @@ export function addDynamicScatterForm(tip, app) {
 		.text('Submit')
 		.property('disabled', true)
 		.on('click', () => {
+			xterm.q = { mode: 'continuous' }
+			yterm.q = { mode: 'continuous' }
+
 			app.dispatch({
 				type: 'plot_create',
 				config: {
