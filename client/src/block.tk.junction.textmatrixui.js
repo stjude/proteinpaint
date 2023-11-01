@@ -1,5 +1,5 @@
 import * as client from './client'
-import { renderSandboxFormDiv } from '../dom/sandbox'
+import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 
 /*
 copy-paste a junction-by-sample matrix and show data
@@ -8,7 +8,7 @@ data go into tk.fixeddata
 
 */
 
-export default function(genomes, hostURL, jwt, holder) {
+export default function (genomes, hostURL, jwt, holder) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
 	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
@@ -16,10 +16,7 @@ export default function(genomes, hostURL, jwt, holder) {
 		pane.header.text('Splice junctions by sample matrix visualization')
 	}
 	filediv.append('p').text('Enter junction-by-sample read count matrix data:')
-	const ul = filediv
-		.append('ul')
-		.style('color', '#858585')
-		.style('font-size', '.8em')
+	const ul = filediv.append('ul').style('color', '#858585').style('font-size', '.8em')
 	ul.append('li').text('The matrix is tab-delimited, junctions on rows, samples on columns.')
 	ul.append('li').text('First row lists sample names')
 	ul.append('li').text('Each row is one junction, with read count in each sample')

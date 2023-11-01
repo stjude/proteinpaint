@@ -1068,7 +1068,7 @@ h2 {
 }
 /* client/src/app.js end */
 
-/* client/dom/sandbox.js start */
+/* client/dom/sandbox.ts start */
 .sjpp-output-sandbox-header
 {
     display: inline-block;
@@ -1118,7 +1118,7 @@ sandbox header
 .sjpp-output-sandbox-close-bt {
     padding: 8px 10px;
 }
-/* client/dom/sandbox.js end */
+/* client/dom/sandbox.ts end */
 
 
 .sjpp_row_wrapper:hover {

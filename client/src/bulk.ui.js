@@ -10,7 +10,7 @@ import * as bulktrunc from '#shared/bulk.trunc'
 import { ProjectHandler } from './bulk.project'
 import * as common from '#shared/common'
 import { tpinit } from './tp.init'
-import { renderSandboxFormDiv } from '../dom/sandbox'
+import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 
 /*
 
