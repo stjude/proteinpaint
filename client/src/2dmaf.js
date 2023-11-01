@@ -15,7 +15,7 @@ import {
 } from 'd3-shape'
 import * as common from '#shared/common'
 import Anchors from './2dmaf.anchors'
-import { renderSandboxFormDiv } from '../dom/sandbox'
+import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 
 /*
 input file/data is 2dmaf format of 1 pair or multiple pairs

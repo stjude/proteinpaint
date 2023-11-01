@@ -6,7 +6,7 @@ import { select as d3select } from 'd3-selection'
 import { timeFormat, timeParse } from 'd3-time-format'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
-import { renderSandboxFormDiv } from '../dom/sandbox'
+import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 
 const zerovalue = 0.00001
 let showcircle = true
@@ -43,9 +43,7 @@ export default function maftimelineui(genomes, holder, sandbox_header) {
 			.on('change', () => {
 				maflogscale = !maflogscale
 			})
-		p.append('label')
-			.attr('for', id)
-			.text('Y axis (MAF) log10 scale')
+		p.append('label').attr('for', id).text('Y axis (MAF) log10 scale')
 	}
 
 	const fileui = () => {
@@ -109,7 +107,7 @@ export default function maftimelineui(genomes, holder, sandbox_header) {
 					}
 					render(data, header, visual_holder)
 				}
-				reader.onerror = function() {
+				reader.onerror = function () {
 					saydiv.text('Error reading file ' + file.name)
 					fileui()
 					return
@@ -241,10 +239,7 @@ function parseline(i, line, header, badlines, data) {
 function render(data, header, holder) {
 	const table = holder.append('table').style('margin', '20px')
 	const tr1 = table.append('tr')
-	let td = tr1
-		.append('td')
-		.style('vertical-align', 'top')
-		.attr('rowspan', 2)
+	let td = tr1.append('td').style('vertical-align', 'top').attr('rowspan', 2)
 	td.append('button')
 		.text('Toggle circle visibility')
 		.on('click', () => {
@@ -259,10 +254,7 @@ function render(data, header, holder) {
 	const patientholder = td.append('div').style('margin-top', '10px')
 	const td1 = tr1.append('td').style('vertical-align', 'top')
 	const graphholder = td1.append('div').style('display', 'inline-block')
-	const controlholder = td1
-		.append('div')
-		.style('display', 'inline-block')
-		.style('vertical-align', 'top')
+	const controlholder = td1.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 	const tr2 = table.append('tr')
 	const tiantable = tr2
 		.append('td')
@@ -271,25 +263,17 @@ function render(data, header, holder) {
 		.style('border-collapse', 'separate')
 	const gtr1 = tiantable.append('tr')
 	td = gtr1.append('td').style('vertical-align', 'top')
-	td.append('div')
-		.text('Shared')
-		.style('font-size', '2em')
+	td.append('div').text('Shared').style('font-size', '2em')
 	const graph1holder = td.append('div').style('border', 'solid 1px black')
 	td = gtr1.append('td').style('vertical-align', 'top')
-	td.append('div')
-		.text('Rising')
-		.style('font-size', '2em')
+	td.append('div').text('Rising').style('font-size', '2em')
 	const graph2holder = td.append('div').style('border', 'solid 1px black')
 	const gtr2 = tiantable.append('tr')
 	td = gtr2.append('td').style('vertical-align', 'top')
-	td.append('div')
-		.text('Falling')
-		.style('font-size', '2em')
+	td.append('div').text('Falling').style('font-size', '2em')
 	const graph3holder = td.append('div').style('border', 'solid 1px black')
 	td = gtr2.append('td').style('vertical-align', 'top')
-	td.append('div')
-		.text('R-only')
-		.style('font-size', '2em')
+	td.append('div').text('R-only').style('font-size', '2em')
 	const graph4holder = td.append('div').style('border', 'solid 1px black')
 	//const matrixholder=tr.append('td').style('vertical-align','top')
 	for (const patient in data) {
@@ -358,34 +342,22 @@ function makesubgraph(snvlst, g1, g2, g3, g4) {
 	if (l1.length) {
 		makegraph(l1, null, g1, true)
 	} else {
-		g1.append('div')
-			.style('padding', '60px')
-			.style('background-color', '#ededed')
-			.text('no data')
+		g1.append('div').style('padding', '60px').style('background-color', '#ededed').text('no data')
 	}
 	if (l2.length) {
 		makegraph(l2, null, g2, true)
 	} else {
-		g2.append('div')
-			.style('padding', '60px')
-			.style('background-color', '#ededed')
-			.text('no data')
+		g2.append('div').style('padding', '60px').style('background-color', '#ededed').text('no data')
 	}
 	if (l3.length) {
 		makegraph(l3, null, g3, true)
 	} else {
-		g3.append('div')
-			.style('padding', '60px')
-			.style('background-color', '#ededed')
-			.text('no data')
+		g3.append('div').style('padding', '60px').style('background-color', '#ededed').text('no data')
 	}
 	if (l4.length) {
 		makegraph(l4, null, g4, true)
 	} else {
-		g4.append('div')
-			.style('padding', '60px')
-			.style('background-color', '#ededed')
-			.text('no data')
+		g4.append('div').style('padding', '60px').style('background-color', '#ededed').text('no data')
 	}
 }
 
@@ -514,10 +486,7 @@ function makegraph(snvlst0, header, holder, issub) {
 		})
 		client.axisstyle({
 			axis: yaxisg.call(
-				axisLeft()
-					.scale(yscale)
-					.tickValues([1, 0.1, 0.01, 0.001, 0.0001, zerovalue])
-					.tickFormat(d3format(' '))
+				axisLeft().scale(yscale).tickValues([1, 0.1, 0.01, 0.001, 0.0001, zerovalue]).tickFormat(d3format(' '))
 			),
 			showline: true,
 			color: 'black',
@@ -542,12 +511,7 @@ function makegraph(snvlst0, header, holder, issub) {
 		legend.selectAll('*').remove()
 		let y = minradius
 		if (showcircle) {
-			legend
-				.append('circle')
-				.attr('r', minradius)
-				.attr('cx', minradius)
-				.attr('cy', y)
-				.attr('fill', '#ccc')
+			legend.append('circle').attr('r', minradius).attr('cx', minradius).attr('cy', y).attr('fill', '#ccc')
 			legend
 				.append('text')
 				.text(1)
@@ -556,12 +520,7 @@ function makegraph(snvlst0, header, holder, issub) {
 				.attr('font-size', 10)
 				.attr('dominant-baseline', 'central')
 			y += 5 + minradius + maxradius
-			legend
-				.append('circle')
-				.attr('r', maxradius)
-				.attr('cx', maxradius)
-				.attr('cy', y)
-				.attr('fill', '#ccc')
+			legend.append('circle').attr('r', maxradius).attr('cx', maxradius).attr('cy', y).attr('fill', '#ccc')
 			legend
 				.append('text')
 				.text(maxcoverage)
@@ -573,12 +532,7 @@ function makegraph(snvlst0, header, holder, issub) {
 		}
 		const fontsize = 12
 		for (const snv of snvlst) {
-			legend
-				.append('line')
-				.attr('x2', 30)
-				.attr('y1', y)
-				.attr('y2', y)
-				.attr('stroke', snv.color)
+			legend.append('line').attr('x2', 30).attr('y1', y).attr('y2', y).attr('stroke', snv.color)
 			if (showcircle) {
 				legend
 					.append('circle')
@@ -649,11 +603,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 		const td1 = tr.append('td')
 		td1.text(snv.gene).style('color', snv.color)
 		const td2 = tr.append('td')
-		const checkbox = td2
-			.append('input')
-			.attr('type', 'checkbox')
-			.style('zoom', '150%')
-			.property('checked', snv.show)
+		const checkbox = td2.append('input').attr('type', 'checkbox').style('zoom', '150%').property('checked', snv.show)
 		snv.checkbox = checkbox
 		checkbox.on('change', event => {
 			snv.show = event.target.checked
@@ -679,10 +629,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.attr('type', 'checkbox')
 			.attr('id', cname)
 			.on('change', event => cchange(1, event.target))
-		td11
-			.append('label')
-			.html('&nbsp;shared')
-			.attr('for', cname)
+		td11.append('label').html('&nbsp;shared').attr('for', cname)
 
 		cname = Math.random()
 		const td22 = tr.append('td')
@@ -691,10 +638,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.attr('type', 'checkbox')
 			.attr('id', cname)
 			.on('change', event => cchange(2, event.target))
-		td22
-			.append('label')
-			.html('&nbsp;rising')
-			.attr('for', cname)
+		td22.append('label').html('&nbsp;rising').attr('for', cname)
 
 		cname = Math.random()
 		const td33 = tr.append('td')
@@ -703,10 +647,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.attr('type', 'checkbox')
 			.attr('id', cname)
 			.on('change', event => cchange(3, event.target))
-		td33
-			.append('label')
-			.html('&nbsp;falling')
-			.attr('for', cname)
+		td33.append('label').html('&nbsp;falling').attr('for', cname)
 
 		cname = Math.random()
 		const td44 = tr.append('td')
@@ -715,10 +656,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.attr('type', 'checkbox')
 			.attr('id', cname)
 			.on('change', event => cchange(4, event.target))
-		td44
-			.append('label')
-			.html('&nbsp;R-only')
-			.attr('for', cname)
+		td44.append('label').html('&nbsp;R-only').attr('for', cname)
 
 		if (snv.subidx == 1) c1.property('checked', true)
 		if (snv.subidx == 2) c2.property('checked', true)

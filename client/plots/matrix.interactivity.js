@@ -1,7 +1,7 @@
 import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
-import { newSandboxDiv } from '#dom/sandbox'
+import { newSandboxDiv } from '../dom/sandbox.ts'
 import { mclass, dt2label } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'

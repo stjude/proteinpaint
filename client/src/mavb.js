@@ -1,6 +1,6 @@
 import { select as d3select } from 'd3-selection'
 import * as client from './client'
-import { renderSandboxFormDiv } from '../dom/sandbox'
+import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { format as d3format } from 'd3-format'
@@ -129,10 +129,7 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 		pane.header.text('Differential gene expression viewer')
 		pane.body.style('margin', '10px')
 	}
-	inputdiv
-		.append('div')
-		.style('margin-top', '30px')
-		.style('color', '#858585').html(`
+	inputdiv.append('div').style('margin-top', '30px').style('color', '#858585').html(`
 		<p>Interactive MA and Volcano plot for exploring differentially expressed genes.</p>
 		<a href=https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit?usp=sharing target=_blank>File format</a>
 		`)
@@ -177,7 +174,7 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 					}
 					if (pane) pane.pane.remove()
 				}
-				reader.onerror = function() {
+				reader.onerror = function () {
 					cmt('Error reading file ' + file.name, 1)
 					fileui()
 					return
@@ -508,16 +505,8 @@ add:
 	const svg = holder.append('svg')
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
-	const xlab = svg
-		.append('text')
-		.text('Average expression value')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
-	const ylab = svg
-		.append('text')
-		.text('log2(fold change)')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
+	const xlab = svg.append('text').text('Average expression value').attr('fill', 'black').attr('text-anchor', 'middle')
+	const ylab = svg.append('text').text('log2(fold change)').attr('fill', 'black').attr('text-anchor', 'middle')
 	mavb.ma_dotarea = svg.append('g')
 	const box = mavb.ma_dotarea
 		.append('rect')
@@ -538,7 +527,7 @@ add:
 		.data(mavb.data)
 		.enter()
 		.append('g')
-		.each(function(d) {
+		.each(function (d) {
 			d.ma_g = this
 		})
 	const circle = dotg
@@ -548,7 +537,7 @@ add:
 		.attr('stroke-width', 1)
 		.attr('fill', hlcolor)
 		.attr('fill-opacity', 0)
-		.each(function(d) {
+		.each(function (d) {
 			d.ma_circle = this
 		})
 		.on('mouseover', circlemouseover)
@@ -557,34 +546,15 @@ add:
 			circleclick(d, mavb, event.clientX, event.clientY)
 		})
 
-	const logfc0line = mavb.ma_dotarea
-		.append('line')
-		.attr('stroke', '#ccc')
-		.attr('shape-rendering', 'crispEdges')
+	const logfc0line = mavb.ma_dotarea.append('line').attr('stroke', '#ccc').attr('shape-rendering', 'crispEdges')
 
 	// boxplot
 	const bpg = svg.append('g')
-	const bpthroughline = bpg
-		.append('line')
-		.attr('stroke', hlcolor)
-		.attr('shape-rendering', 'crispEdges')
-	const percentile05line = bpg
-		.append('line')
-		.attr('stroke', hlcolor)
-		.attr('shape-rendering', 'crispEdges')
-	const percentile95line = bpg
-		.append('line')
-		.attr('stroke', hlcolor)
-		.attr('shape-rendering', 'crispEdges')
-	const bpbox = bpg
-		.append('rect')
-		.attr('fill', 'white')
-		.attr('stroke', hlcolor)
-		.attr('shape-rendering', 'crispEdges')
-	const bpmedianline = bpg
-		.append('line')
-		.attr('stroke', hlcolor)
-		.attr('shape-rendering', 'crispEdges')
+	const bpthroughline = bpg.append('line').attr('stroke', hlcolor).attr('shape-rendering', 'crispEdges')
+	const percentile05line = bpg.append('line').attr('stroke', hlcolor).attr('shape-rendering', 'crispEdges')
+	const percentile95line = bpg.append('line').attr('stroke', hlcolor).attr('shape-rendering', 'crispEdges')
+	const bpbox = bpg.append('rect').attr('fill', 'white').attr('stroke', hlcolor).attr('shape-rendering', 'crispEdges')
+	const bpmedianline = bpg.append('line').attr('stroke', hlcolor).attr('shape-rendering', 'crispEdges')
 	const avpercentile05 = avlst[Math.ceil(avlst.length * 0.05)]
 	const avpercentile95 = avlst[Math.ceil(avlst.length * 0.95)]
 	const avpercentile25 = avlst[Math.ceil(avlst.length * 0.25)]
@@ -623,10 +593,7 @@ add:
 		circle.attr('r', d => {
 			return d.ma_radius
 		})
-		logfc0line
-			.attr('x2', width)
-			.attr('y1', yscale(0))
-			.attr('y2', yscale(0))
+		logfc0line.attr('x2', width).attr('y1', yscale(0)).attr('y2', yscale(0))
 
 		bpg.attr('transform', 'translate(' + (yaxisw + xpad) + ',' + (toppad + height + ypad) + ')')
 		const p05 = xscale(avpercentile05),
@@ -634,18 +601,9 @@ add:
 			p50 = xscale(avmedian),
 			p75 = xscale(avpercentile75),
 			p95 = xscale(avpercentile95)
-		percentile05line
-			.attr('x1', p05)
-			.attr('x2', p05)
-			.attr('y2', boxh)
-		percentile95line
-			.attr('x1', p95)
-			.attr('x2', p95)
-			.attr('y2', boxh)
-		bpmedianline
-			.attr('x1', p50)
-			.attr('x2', p50)
-			.attr('y2', boxh)
+		percentile05line.attr('x1', p05).attr('x2', p05).attr('y2', boxh)
+		percentile95line.attr('x1', p95).attr('x2', p95).attr('y2', boxh)
+		bpmedianline.attr('x1', p50).attr('x2', p50).attr('y2', boxh)
 		bpbox
 			.attr('x', p25)
 			.attr('width', p75 - p25)
@@ -715,16 +673,8 @@ add:
 	const svg = holder.append('svg')
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
-	const xlab = svg
-		.append('text')
-		.text('log2(fold change)')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
-	const ylab = svg
-		.append('text')
-		.text('-log(P value)')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'middle')
+	const xlab = svg.append('text').text('log2(fold change)').attr('fill', 'black').attr('text-anchor', 'middle')
+	const ylab = svg.append('text').text('-log(P value)').attr('fill', 'black').attr('text-anchor', 'middle')
 
 	mavb.vo_dotarea = svg.append('g')
 
@@ -742,7 +692,7 @@ add:
 		.data(mavb.data)
 		.enter()
 		.append('g')
-		.each(function(d) {
+		.each(function (d) {
 			d.vo_g = this
 		})
 	const circle = dotg
@@ -752,7 +702,7 @@ add:
 		.attr('stroke-width', 1)
 		.attr('fill', hlcolor)
 		.attr('fill-opacity', 0)
-		.each(function(d) {
+		.each(function (d) {
 			d.vo_circle = this
 		})
 		.on('mouseover', circlemouseover)
@@ -761,10 +711,7 @@ add:
 			circleclick(d, mavb, event.clientX, event.clientY)
 		})
 
-	const logfc0line = mavb.vo_dotarea
-		.append('line')
-		.attr('stroke', '#ccc')
-		.attr('shape-rendering', 'crispEdges')
+	const logfc0line = mavb.vo_dotarea.append('line').attr('stroke', '#ccc').attr('shape-rendering', 'crispEdges')
 
 	function resize(w, h) {
 		width = w
@@ -797,10 +744,7 @@ add:
 		circle.attr('r', d => {
 			return d.vo_radius
 		})
-		logfc0line
-			.attr('x1', xscale(0))
-			.attr('x2', xscale(0))
-			.attr('y2', height)
+		logfc0line.attr('x1', xscale(0)).attr('x2', xscale(0)).attr('y2', height)
 
 		svg.attr('width', yaxisw + xpad + width + rightpad).attr('height', toppad + height + ypad + xaxish)
 		client.axisstyle({
@@ -858,9 +802,7 @@ add:
 
 // example of lasso function and usage
 function add_lasso(selectable_items, svg, other_svg_item_key) {
-	const lasso = d3lasso()
-		.items(selectable_items)
-		.targetArea(svg)
+	const lasso = d3lasso().items(selectable_items).targetArea(svg)
 
 	function mavb_lasso_start() {
 		// set all dots to initial state when lasso starts
@@ -903,10 +845,7 @@ function add_lasso(selectable_items, svg, other_svg_item_key) {
 	}
 
 	// perform following custom drag events after original lasso drag events finish in lasso.js
-	lasso
-		.on('start', mavb_lasso_start)
-		.on('draw', mavb_lasso_draw)
-		.on('end', mavb_lasso_end)
+	lasso.on('start', mavb_lasso_start).on('draw', mavb_lasso_draw).on('end', mavb_lasso_end)
 
 	svg.call(lasso)
 }

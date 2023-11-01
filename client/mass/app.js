@@ -7,7 +7,7 @@ import { plotInit } from './plot'
 import { summaryInit } from '#plots/summary.js'
 import { sayerror } from '#dom/error'
 import { Menu } from '#dom/menu'
-import { newSandboxDiv } from '#dom/sandbox'
+import { newSandboxDiv } from '../dom/sandbox.ts'
 import { dofetch3 } from '#common/dofetch'
 
 /*

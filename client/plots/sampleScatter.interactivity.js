@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
-import { newSandboxDiv } from '#dom/sandbox'
+import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 
 export function setInteractivity(self) {
