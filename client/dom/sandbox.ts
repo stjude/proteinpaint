@@ -31,30 +31,16 @@ export function renderSandboxFormDiv(holder: Selection<HTMLElement, any, any, an
 		gselect.append('option').text(n)
 	}
 	//For file select, pathway input, etc.
-	const filediv = inputdiv
-		.append('div')
-		.style('margin', '20px 0px')
-		.classed('sjpp-sandbox-form-fileDiv', true)
+	const filediv = inputdiv.append('div').style('margin', '20px 0px').classed('sjpp-sandbox-form-fileDiv', true)
 	//For error messages
-	const saydiv = holder
-		.append('div')
-		.style('margin', '10px 20px')
-		.classed('sjpp-sandbox-form-sayDiv', true)
+	const saydiv = holder.append('div').style('margin', '10px 20px').classed('sjpp-sandbox-form-sayDiv', true)
 	//For displaying output
-	const visualdiv = holder
-		.append('div')
-		.style('margin', '20px')
-		.classed('sjpp-sandbox-form-visualDiv', true)
+	const visualdiv = holder.append('div').style('margin', '20px').classed('sjpp-sandbox-form-visualDiv', true)
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
 const plotIdToSandboxId = {}
-const sandboxIdStr =
-	Math.random()
-		.toString()
-		.slice(-6) +
-	'-' +
-	(+new Date()).toString().slice(-8)
+const sandboxIdStr = Math.random().toString().slice(-6) + '-' + (+new Date()).toString().slice(-8)
 let sandboxIdSuffix = 0
 
 /*
@@ -63,12 +49,14 @@ let sandboxIdSuffix = 0
 
 type PlotOps = {
 	/**.beforePlotId: optional insertion position, a key in the plotIdToSandboxId tracker */
-	beforePlotId: string,
+	beforePlotId: string
 	/**.plotId: optional plot.id, for which a sandbox div ID will be assigned, should not be an 'empty' value (null , undefined, 0) */
-	plotId: string,
-	style: any
+	plotId: string
+	style: {
+		width: string
+	}
 	/**.close: optional callback to trigger when the sandbox is closed */
-	close: () =>  void
+	close: () => void
 }
 
 export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any, any>, opts: Partial<PlotOps> = {}) {
@@ -86,12 +74,16 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		.append('div')
 		.attr('class', 'sjpp-output-sandbox-header')
 		.style('width', opts.style?.width || '95vw')
+		.style('border', '1px solid #f2f2f2')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('justify-content', 'left')
 
 	// close_btn
 	header_row
 		.append('div')
 		.classed('sjpp-output-sandbox-close-bt', true)
-		.classed('sja_menuoption', true)
+		// .classed('sja_menuoption', true)
 		.style('vertical-align', 'middle')
 		.html(
 			`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
@@ -110,23 +102,23 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		})
 
 	// placeholder for collapse btn
-	const collapseBtnDiv = header_row
-		.append('div')
-		.classed('sjpp-output-sandbox-collapse-btn', true)
-		.classed('sja_menuoption', true)
-		.style('vertical-align', 'middle')
+	const collapseBtnDiv = header_row.append('div').classed('sjpp-output-sandbox-collapse-btn', true)
+	// .classed('sja_menuoption', true)
+	//.style('vertical-align', 'middle')
 
 	// placeholder for expand btn
 	const expandBtnDiv = header_row
 		.append('div')
 		.classed('sjpp-output-sandbox-expand-btn', true)
-		.classed('sja_menuoption', true)
+		// .classed('sja_menuoption', true)
 		.style('display', 'none')
-		.style('vertical-align', 'sub')
+	//.style('vertical-align', 'sub')
 
 	const header = header_row
 		.append('div')
-		.style('display', 'inline-block')
+		.style('display', 'inline-flex')
+		.style('align-items', 'center')
+		.style('justify-content', 'left')
 		.style('padding', '5px 10px')
 
 	const body = app_div
@@ -149,6 +141,7 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		padding: '4px 10px',
 		color: 'black',
 		display: 'none',
+		verticalAlign: 'super',
 		handler: expandCollapse
 	})
 
