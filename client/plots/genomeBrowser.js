@@ -76,6 +76,12 @@ class genomeBrowser {
 
 	async init() {
 		const holder = this.opts.holder.append('div')
+		this.opts.header
+			.append('div')
+			.style('opacity', 0.6)
+			.style('padding-left', '10px')
+			.style('font-size', '0.75em')
+			.text('GENOME BROWSER')
 		// layout rows from top to bottom
 		const errDiv = holder.append('div')
 		const messageRow = holder.append('div').style('margin-left', '25px')
