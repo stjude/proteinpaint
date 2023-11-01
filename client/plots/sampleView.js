@@ -121,6 +121,9 @@ class SampleView {
 		} else {
 			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
 			const samples = Object.entries(this.sampleId2Name)
+			if (samples.length == 0)
+				//Happens if it requires sign in first
+				return
 			this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
 			this.dom.select
 				.selectAll('option')
@@ -383,6 +386,7 @@ class SampleView {
 	}
 
 	mayRequireToken() {
+		console.log(this.state.hasVerifiedToken)
 		if (this.state.hasVerifiedToken) {
 			this.dom.holder.style('display', 'block')
 			return false
@@ -393,6 +397,7 @@ class SampleView {
 			const helpLink = this.state.termdbConfig.dataDownloadCatch?.helpLink
 			this.dom.mainDiv
 				.style('color', '#e44')
+				.style('padding', '10px')
 				.html(
 					message ||
 						(this.state.tokenVerificationMessage || 'Requires sign-in') +
