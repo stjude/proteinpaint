@@ -118,21 +118,7 @@ class SampleView {
 				.attr('placeholder', sampleName)
 				.style('width', '400px')
 			const datalist = this.dom.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
-			datalist
-				.selectAll('option')
-				.data(allSamples.filter((s, i) => i < limit))
-				.enter()
-				.append('option')
-				.attr('value', d => d)
-				.attr('label', (d, i) =>
-					i + 1 === limit
-						? isBigDataset
-							? `Showing first ${i + 1} hits`
-							: `Showing ${i + 1} of ${allSamples.length} hits`
-						: i + 1 === allSamples.length && i > 0
-						? `Found ${allSamples.length} hits`
-						: d
-				)
+			addOptions(allSamples)
 			input.on('keyup', e => {
 				datalist.selectAll('*').remove()
 				const str = input.node().value.toLowerCase()
@@ -145,23 +131,7 @@ class SampleView {
 					if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
 					if (options.length == limit && allSamples.length > 10000) break
 				}
-				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) {
-					datalist
-						.selectAll('option')
-						.data(options.filter((s, i) => i < limit))
-						.enter()
-						.append('option')
-						.attr('value', d => d)
-						.attr('label', (d, i) =>
-							i + 1 === limit
-								? isBigDataset
-									? `Showing first ${i + 1} hits`
-									: `Showing ${i + 1} of ${options.length} hits`
-								: i + 1 === options.length && i > 0
-								? `Found ${options.length} hits`
-								: d
-						)
-				}
+				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options)
 			})
 			input.on('change', e => {
 				const sampleName = input.node().value
@@ -183,6 +153,24 @@ class SampleView {
 					}
 				}
 			})
+
+			function addOptions(options) {
+				datalist
+					.selectAll('option')
+					.data(options.filter((s, i) => i < limit))
+					.enter()
+					.append('option')
+					.attr('value', d => d)
+					.attr('label', (d, i) =>
+						i + 1 === limit
+							? isBigDataset
+								? `Showing first ${i + 1} hits`
+								: `Showing ${i + 1} of ${options.length} hits`
+							: i + 1 === options.length && i > 0
+							? `Found ${options.length} hits`
+							: d
+					)
+			}
 		}
 
 		this.dom.downloadbt = sampleDiv
