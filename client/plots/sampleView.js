@@ -19,7 +19,6 @@ class SampleView {
 		const mainDiv = div.insert('div').style('display', 'inline-block') //div besides controls, with dictionary
 		const rightDiv = div.append('div').style('display', 'inline-block') //div with plots
 		const sampleDiv = mainDiv.insert('div').style('display', 'inline-block').style('padding', '20px')
-		const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Sample:')
 
 		const tableDiv = mainDiv.insert('div').style('padding', '10px')
 		const table = tableDiv.append('table').style('border-collapse', 'collapse')
@@ -36,35 +35,8 @@ class SampleView {
 			theadrow: thead.append('tr'),
 			tbody: table.append('tbody'),
 			contentDiv: mainDiv.insert('div'),
-			rightDiv,
-			sampleLabel,
-			select: sampleDiv.insert('select').style('margin', '0px 5px')
+			rightDiv
 		}
-		sampleDiv
-			.insert('button')
-			.style('vertical-align', 'top')
-			.text('Download data')
-			.on('click', e => {
-				this.downloadData()
-			})
-		this.dom.noteDiv = sampleDiv
-			.insert('div')
-			.style('display', 'none')
-			.style('vertical-align', 'top')
-			.style('font-size', '0.8em')
-			.style('color', '#aaa')
-			.style('margin-left', '10px')
-			.html(
-				`*Note that only ${samplesLimit} samples can be selected simultaneously. <br/>&nbsp;Please navigate through the list to view all the samples.`
-			)
-		this.dom.messageDiv = sampleDiv
-			.insert('div')
-			.style('position', 'absolute')
-			.style('left', '45%')
-			.style('display', 'inline-block')
-			.style('display', 'none')
-			.style('vertical-align', 'top')
-			.html('&nbsp;&nbsp;Downloading data ...')
 	}
 
 	async init(appState) {
@@ -72,20 +44,26 @@ class SampleView {
 		this.termsByCohort = {}
 
 		const div = this.dom.sampleDiv
-		if (config.samples) {
-			this.dom.sampleLabel.html('Samples:')
-			if (config.samples.length > samplesLimit) this.dom.noteDiv.style('display', 'inline-block')
-		}
 		await this.setSampleSelect(config, div)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
-		if (hasPlots) await this.renderPlots(state)
+		if (hasPlots) await this.renderPlots(state, state.samples)
 	}
 
-	async setSampleSelect(config, div) {
+	async setSampleSelect(config) {
+		const sampleDiv = this.dom.sampleDiv
+		if (this.dom.header) this.dom.header.html(`Sample View`)
+
 		if (config.samples) {
-			const select = this.dom.select.property('multiple', true).attr('id', 'select')
+			const sampleDiv = this.dom.sampleDiv
+			const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
+
+			const select = sampleDiv
+				.insert('select')
+				.style('margin', '0px 5px')
+				.property('multiple', true)
+				.attr('id', 'select')
 			select
 				.selectAll('option')
 				.data(config.samples)
@@ -94,6 +72,34 @@ class SampleView {
 				.attr('value', d => d.sampleId)
 				.property('selected', (d, i) => i < samplesLimit)
 				.html((d, i) => d.sampleName)
+
+			sampleDiv
+				.insert('button')
+				.style('vertical-align', 'top')
+				.text('Download data')
+				.on('click', e => {
+					this.downloadData()
+				})
+			this.dom.noteDiv = sampleDiv
+				.insert('div')
+				.style('display', 'none')
+				.style('vertical-align', 'top')
+				.style('font-size', '0.8em')
+				.style('color', '#aaa')
+				.style('margin-left', '10px')
+				.html(
+					`*Note that only ${samplesLimit} samples can be selected simultaneously. <br/>&nbsp;Please navigate through the list to view all the samples.`
+				)
+			if (config.samples.length > samplesLimit) this.dom.noteDiv.style('display', 'inline-block')
+
+			this.dom.messageDiv = sampleDiv
+				.insert('div')
+				.style('position', 'absolute')
+				.style('left', '45%')
+				.style('display', 'inline-block')
+				.style('display', 'none')
+				.style('vertical-align', 'top')
+				.html('&nbsp;&nbsp;Downloading data ...')
 			select.on('change', e => {
 				const options = select.node().options
 				const samples = []
@@ -111,6 +117,7 @@ class SampleView {
 				}
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
+
 			if (config.samples.length > 15)
 				this.app.dispatch({
 					type: 'plot_edit',
@@ -118,25 +125,64 @@ class SampleView {
 					config: { samples: config.samples.filter((s, i) => i < 15) }
 				})
 		} else {
-			this.sampleId2Name = await this.app.vocabApi.getAllSamples()
-			const samples = Object.entries(this.sampleId2Name)
-			if (samples.length == 0)
+			const limit = 10000
+			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName()
+			const allSamples = Object.keys(sampleName2Id)
+			if (allSamples.length == 0)
 				//Happens if it requires sign in first
 				return
-			this.sample = config.sample || { sampleId: samples[0][0], sampleName: samples[0][1] }
-			this.dom.select
+			const sampleName = allSamples[0]
+			this.sample = config.sample || { sampleId: sampleName2Id[sampleName], sampleName }
+
+			const input = this.dom.sampleDiv
+				.append('input')
+				.attr('list', 'sampleDatalist')
+				.attr('placeholder', sampleName)
+				.style('width', '400px')
+				.text(sampleName)
+
+			const datalist = this.dom.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
+			datalist
 				.selectAll('option')
-				.data(samples)
+				.data(allSamples.filter((s, i) => i < limit))
 				.enter()
 				.append('option')
-				.attr('value', d => d[0])
-				.property('selected', d => d[0] == this.sample.sampleId)
-				.html((d, i) => d[1])
-			this.dom.select.on('change', e => {
-				const sampleId = this.dom.select.node().value
-				const sampleName = this.sampleId2Name[sampleId]
-				this.sample = { sampleId, sampleName }
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
+				.attr('value', d => d)
+			input.on('keyup', e => {
+				datalist.selectAll('*').remove()
+				const str = input.node().value.toLowerCase()
+				const options = []
+				for (const sample of allSamples) {
+					if (sample.toLowerCase().startsWith(str)) options.push(sample)
+					if (options.length == limit) break
+				}
+				if (options.length < limit)
+					for (const sample of allSamples) {
+						if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
+						if (options.length == limit) break
+					}
+				if (options.length > 1 || (options.length == 1 && input.node().value != options[0]))
+					datalist
+						.selectAll('option')
+						.data(options)
+						.enter()
+						.append('option')
+						.attr('value', d => d)
+			})
+			input.on('change', e => {
+				const sampleName = input.node().value
+				const sampleId = sampleName2Id[sampleName]
+				if (sampleId) {
+					this.dom.tableDiv.style('display', 'block')
+					this.showVisiblePlots()
+					this.sample = { sampleId, sampleName }
+					this.renderPlots(this.state, [this.sample])
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
+				} else {
+					this.dom.tableDiv.style('display', 'none')
+					for (const div of this.discoPlots) div.style('display', 'none')
+					for (const div of this.singleSamplePlots) div.style('display', 'none')
+				}
 			})
 		}
 	}
@@ -178,11 +224,11 @@ class SampleView {
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
+		if (this.state.samples.length == 1 && this.state.sample == null) return
 		if (this.state.hasPlots) {
 			await this.setControls()
 			this.showVisiblePlots()
 		}
-		if (this.dom.header) this.dom.header.html(`Sample View`)
 		this.termsById = this.getTermsById(this.state)
 		this.sampleDataByTermId = {}
 		const root = this.termsById[root_ID]
@@ -417,7 +463,7 @@ class SampleView {
 			else div.style('display', 'none')
 	}
 
-	async renderPlots(state) {
+	async renderPlots(state, samples) {
 		this.dom.contentDiv.selectAll('*').remove()
 		this.dom.rightDiv.selectAll('*').remove()
 		this.discoPlots = []
@@ -426,7 +472,7 @@ class SampleView {
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			const div = this.dom.contentDiv.append('div').style('display', 'table-row')
 
-			for (const sample of state.samples) {
+			for (const sample of samples) {
 				let cellDiv
 				if (state.samples.length == 1)
 					cellDiv = this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -450,7 +496,7 @@ class SampleView {
 		if (state.termdbConfig.queries.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
 				let div = this.dom.contentDiv.append('div').style('display', 'table-row')
-				for (const sample of state.samples) {
+				for (const sample of samples) {
 					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
 					let plotDiv
 					if (state.samples.length == 1)
