@@ -302,7 +302,7 @@ class Scatter {
 						label: 'X',
 						vocabApi: this.app.vocabApi,
 						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous', 'discrete']
+						numericEditMenuVersion: ['continuous']
 					},
 					{
 						type: 'term',
@@ -313,7 +313,7 @@ class Scatter {
 						label: 'Y',
 						vocabApi: this.app.vocabApi,
 						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous', 'discrete']
+						numericEditMenuVersion: ['continuous']
 					}
 				]
 			)
