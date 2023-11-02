@@ -104,6 +104,8 @@ class SampleView {
 			const limit = 100
 			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName()
 			const allSamples = Object.keys(sampleName2Id)
+			const isBigDataset = allSamples.length > 10000
+
 			if (allSamples.length == 0)
 				//Happens if it requires sign in first
 				return
@@ -124,7 +126,9 @@ class SampleView {
 				.attr('value', d => d)
 				.attr('label', (d, i) =>
 					i + 1 === limit
-						? `Showing ${i + 1} of ${allSamples.length} hits`
+						? isBigDataset
+							? `Showing first ${i + 1} hits`
+							: `Showing ${i + 1} of ${allSamples.length} hits`
 						: i + 1 === allSamples.length && i > 0
 						? `Found ${allSamples.length} hits`
 						: d
@@ -135,9 +139,11 @@ class SampleView {
 				const options = []
 				for (const sample of allSamples) {
 					if (sample.toLowerCase().startsWith(str)) options.push(sample)
+					if (options.length == limit && allSamples.length > 10000) break
 				}
 				for (const sample of allSamples) {
 					if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
+					if (options.length == limit && allSamples.length > 10000) break
 				}
 				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) {
 					datalist
@@ -148,7 +154,9 @@ class SampleView {
 						.attr('value', d => d)
 						.attr('label', (d, i) =>
 							i + 1 === limit
-								? `Showing ${i + 1} of ${options.length} hits`
+								? isBigDataset
+									? `Showing first ${i + 1} hits`
+									: `Showing ${i + 1} of ${options.length} hits`
 								: i + 1 === options.length && i > 0
 								? `Found ${options.length} hits`
 								: d
