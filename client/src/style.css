@@ -1075,7 +1075,7 @@ h2 {
     margin: 5px 10px;
     padding-right: 8px;
     margin-bottom: 0px;
-    box-shadow:2px 0px 2px #f2f2f2;
+    /* box-shadow:2px 0px 2px #f2f2f2; */
     border-radius: 5px 5px 0 0;
     /* background-color: #f2f2f2; */
     z-index: 99;
@@ -1097,12 +1097,15 @@ h2 {
 .sjpp-output-sandbox-expand-btn,
 .sjpp-output-sandbox-close-bt
 {
-    display: inline-block;
-    margin: 0px;
-    border-right: solid 2px white;
-    border-radius: 5px 0 0 0;
+    /* display: inline-block; */
+    /* margin: 0px; */
+    /* border-right: solid 2px white; */
     font-size: 16px;
     cursor: default;
+}
+
+.sjpp-output-sandbox-close-bt {
+    border-radius: 5px 0 0 0;
 }
 
 /* 

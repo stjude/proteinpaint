@@ -67,7 +67,7 @@ export const icons = {
 		return (
 			elem
 				.attr('title', o.title)
-				.style('height', '16px')
+				.style('height', 'auto')
 				.style('color', color)
 				.style('opacity', 0.9)
 				.style('font-size', 'fontSize' in o ? o.fontSize : '16px')

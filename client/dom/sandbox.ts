@@ -11,7 +11,7 @@ Required:
 .genomes
 
 ****************
-    EXPORTED
+	EXPORTED
 ****************
 renderSandboxFormDiv
 newSandboxDiv
@@ -74,17 +74,35 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		.append('div')
 		.attr('class', 'sjpp-output-sandbox-header')
 		.style('width', opts.style?.width || '95vw')
-		.style('border', '1px solid #f2f2f2')
+		.style('border', '1px solid lightgrey')
 		.style('display', 'flex')
 		.style('align-items', 'center')
 		.style('justify-content', 'left')
 
+	const hoverInColor = 'lightgrey'
+	const hoverOutColor = 'transparent'
+
 	// close_btn
-	header_row
+	const closeBtn = header_row
 		.append('div')
 		.classed('sjpp-output-sandbox-close-bt', true)
 		// .classed('sja_menuoption', true)
+		.style('cursor', 'pointer')
 		.style('vertical-align', 'middle')
+		.on(
+			'mouseenter',
+			() => {
+				closeBtn.style('background-color', hoverInColor)
+			},
+			true
+		)
+		.on(
+			'mouseleave',
+			() => {
+				closeBtn.style('background-color', hoverOutColor)
+			},
+			true
+		)
 		.html(
 			`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
 		  <path stroke='#000' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
@@ -102,7 +120,15 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		})
 
 	// placeholder for collapse btn
-	const collapseBtnDiv = header_row.append('div').classed('sjpp-output-sandbox-collapse-btn', true)
+	const collapseBtnDiv = header_row
+		.append('div')
+		.classed('sjpp-output-sandbox-collapse-btn', true)
+		.on('mouseenter', () => {
+			collapseBtnDiv.style('background-color', hoverInColor)
+		})
+		.on('mouseleave', () => {
+			collapseBtnDiv.style('background-color', hoverOutColor)
+		})
 	// .classed('sja_menuoption', true)
 	//.style('vertical-align', 'middle')
 
@@ -112,7 +138,14 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		.classed('sjpp-output-sandbox-expand-btn', true)
 		// .classed('sja_menuoption', true)
 		.style('display', 'none')
-	//.style('vertical-align', 'sub')
+		//.style('vertical-align', 'sub')
+		.style('height', '100%')
+		.on('mouseenter', () => {
+			expandBtnDiv.style('background-color', hoverInColor)
+		})
+		.on('mouseleave', () => {
+			expandBtnDiv.style('background-color', hoverOutColor)
+		})
 
 	const header = header_row
 		.append('div')
@@ -141,7 +174,7 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		padding: '4px 10px',
 		color: 'black',
 		display: 'none',
-		verticalAlign: 'super',
+		// verticalAlign: 'super',
 		handler: expandCollapse
 	})
 
