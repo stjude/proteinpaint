@@ -1,5 +1,5 @@
 import { icons } from './control.icons'
-import { Selection } from 'd3-selection'
+import { Selection, select } from 'd3-selection'
 import { Genome } from '#shared/types/index'
 
 /*
@@ -79,8 +79,8 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		.style('align-items', 'center')
 		.style('justify-content', 'left')
 
-	const hoverInColor = 'lightgrey'
-	const hoverOutColor = 'transparent'
+	const hoverInColor = 'blue'
+	const hoverOutColor = 'black'
 
 	// close_btn
 	const closeBtn = header_row
@@ -89,20 +89,14 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		// .classed('sja_menuoption', true)
 		.style('cursor', 'pointer')
 		.style('vertical-align', 'middle')
-		.on(
-			'mouseenter',
-			() => {
-				closeBtn.style('background-color', hoverInColor)
-			},
-			true
-		)
-		.on(
-			'mouseleave',
-			() => {
-				closeBtn.style('background-color', hoverOutColor)
-			},
-			true
-		)
+		.on('mouseenter', () => {
+			const path = closeBtn.select('path')
+			path.attr('stroke', hoverInColor)
+		})
+		.on('mouseleave', () => {
+			const path = closeBtn.select('path')
+			path.attr('stroke', hoverOutColor)
+		})
 		.html(
 			`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-x-lg" viewBox="0 0 16 16">
 		  <path stroke='#000' d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
@@ -120,15 +114,7 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		})
 
 	// placeholder for collapse btn
-	const collapseBtnDiv = header_row
-		.append('div')
-		.classed('sjpp-output-sandbox-collapse-btn', true)
-		.on('mouseenter', () => {
-			collapseBtnDiv.style('background-color', hoverInColor)
-		})
-		.on('mouseleave', () => {
-			collapseBtnDiv.style('background-color', hoverOutColor)
-		})
+	const collapseBtnDiv = header_row.append('div').classed('sjpp-output-sandbox-collapse-btn', true)
 	// .classed('sja_menuoption', true)
 	//.style('vertical-align', 'middle')
 
@@ -138,14 +124,7 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		.classed('sjpp-output-sandbox-expand-btn', true)
 		// .classed('sja_menuoption', true)
 		.style('display', 'none')
-		//.style('vertical-align', 'sub')
-		.style('height', '100%')
-		.on('mouseenter', () => {
-			expandBtnDiv.style('background-color', hoverInColor)
-		})
-		.on('mouseleave', () => {
-			expandBtnDiv.style('background-color', hoverOutColor)
-		})
+	//.style('vertical-align', 'sub')
 
 	const header = header_row
 		.append('div')
@@ -174,9 +153,28 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		padding: '4px 10px',
 		color: 'black',
 		display: 'none',
-		// verticalAlign: 'super',
 		handler: expandCollapse
 	})
+
+	collapseBtnDiv
+		.on('mouseenter', () => {
+			const path = collapseBtnDiv.select('path')
+			path.attr('stroke', hoverInColor)
+		})
+		.on('mouseleave', () => {
+			const path = collapseBtnDiv.select('path')
+			path.attr('stroke', hoverOutColor)
+		})
+
+	expandBtnDiv
+		.on('mouseenter', () => {
+			const path = expandBtnDiv.select('path')
+			path.attr('stroke', hoverInColor)
+		})
+		.on('mouseleave', () => {
+			const path = expandBtnDiv.select('path')
+			path.attr('stroke', hoverOutColor)
+		})
 
 	function expandCollapse() {
 		isSandboxContentVisible = !isSandboxContentVisible
