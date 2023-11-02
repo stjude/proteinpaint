@@ -50,7 +50,9 @@ export function addDynamicScatterForm(tip, app) {
 	function getTreeTerm(div, callback) {
 		const state = { tree: { usecase: { detail: 'numeric', target: 'sampleScatter' } } }
 		//state.nav = {header_mode: 'hide_search'}
-
+		const disable_terms = []
+		if (xterm) disable_terms.push(xterm.id)
+		if (yterm) disable_terms.push(yterm.id)
 		showTermsTree(
 			div,
 			term => {
@@ -64,7 +66,8 @@ export function addDynamicScatterForm(tip, app) {
 			tip,
 			state,
 			false,
-			false
+			false,
+			disable_terms
 		)
 	}
 }

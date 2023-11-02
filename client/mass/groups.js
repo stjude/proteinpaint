@@ -497,7 +497,8 @@ export async function showTermsTree(
 	tip,
 	state = { tree: { usecase: { detail: 'term' } } },
 	closeParent = true,
-	shift = true
+	shift = true,
+	disable_terms = []
 ) {
 	tip2.clear()
 	if (shift) tip2.showunderoffset(div.node())
@@ -507,6 +508,7 @@ export async function showTermsTree(
 		vocabApi: app.vocabApi,
 		state,
 		tree: {
+			disable_terms,
 			click_term: term => {
 				callback(term)
 				tip2.hide()
