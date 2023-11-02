@@ -101,7 +101,7 @@ class SampleView {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
 		} else {
-			const limit = 10000
+			const limit = 1000
 			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName()
 			const allSamples = Object.keys(sampleName2Id)
 			if (allSamples.length == 0)
@@ -114,16 +114,15 @@ class SampleView {
 				.attr('list', 'sampleDatalist')
 				.attr('placeholder', sampleName)
 				.style('width', '400px')
-			this.dom.sampleDiv
+			const datalist = this.dom.sampleDiv
 				.append('datalist')
-				.attr('id', 'sampleOptions')
+				.attr('id', 'sampleDatalist')
 				.selectAll('option')
 				.data(allSamples.filter((s, i) => i < limit))
 				.enter()
 				.append('option')
 				.attr('value', d => d)
 			input.on('keyup', e => {
-				const limit = 10000
 				datalist.selectAll('*').remove()
 				const str = input.node().value.toLowerCase()
 				const options = []
