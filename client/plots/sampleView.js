@@ -101,7 +101,7 @@ class SampleView {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
 		} else {
-			const limit = 1000
+			const limit = 100
 			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName()
 			const allSamples = Object.keys(sampleName2Id)
 			if (allSamples.length == 0)
@@ -112,36 +112,48 @@ class SampleView {
 			const input = this.dom.sampleDiv
 				.append('input')
 				.attr('list', 'sampleDatalist')
+				.property('autocomplete', 'off')
 				.attr('placeholder', sampleName)
 				.style('width', '400px')
-			const datalist = this.dom.sampleDiv
-				.append('datalist')
-				.attr('id', 'sampleDatalist')
+			const datalist = this.dom.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
+			datalist
 				.selectAll('option')
 				.data(allSamples.filter((s, i) => i < limit))
 				.enter()
 				.append('option')
 				.attr('value', d => d)
+				.attr('label', (d, i) =>
+					i + 1 === limit
+						? `Showing ${i + 1} of ${allSamples.length} hits`
+						: i + 1 === allSamples.length && i > 0
+						? `Found ${allSamples.length} hits`
+						: d
+				)
 			input.on('keyup', e => {
 				datalist.selectAll('*').remove()
 				const str = input.node().value.toLowerCase()
 				const options = []
 				for (const sample of allSamples) {
 					if (sample.toLowerCase().startsWith(str)) options.push(sample)
-					if (options.length == limit) break
 				}
-				if (options.length < limit)
-					for (const sample of allSamples) {
-						if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
-						if (options.length == limit) break
-					}
-				if (options.length > 1 || (options.length == 1 && input.node().value != options[0]))
+				for (const sample of allSamples) {
+					if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
+				}
+				if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) {
 					datalist
 						.selectAll('option')
-						.data(options)
+						.data(options.filter((s, i) => i < limit))
 						.enter()
 						.append('option')
 						.attr('value', d => d)
+						.attr('label', (d, i) =>
+							i + 1 === limit
+								? `Showing ${i + 1} of ${options.length} hits`
+								: i + 1 === options.length && i > 0
+								? `Found ${options.length} hits`
+								: d
+						)
+				}
 			})
 			input.on('change', e => {
 				const sampleName = input.node().value
