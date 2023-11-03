@@ -31,7 +31,16 @@ export default <Mds3>{
 		db: {
 			file: 'files/hg38/TermdbTest/db'
 		},
-		allowedChartTypes: ['summary', 'survival', 'matrix', 'sampleScatter', 'cuminc', 'dataDownload', 'sampleView'],
+		allowedChartTypes: [
+			'summary',
+			'survival',
+			'matrix',
+			'sampleScatter',
+			'cuminc',
+			'dataDownload',
+			'sampleView',
+			'regression'
+		],
 		termdb: {
 			displaySampleIds: true, // allow to display sample-level data
 

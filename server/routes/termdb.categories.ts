@@ -87,7 +87,13 @@ function init({ genomes }) {
 	}
 }
 
-async function trigger_getcategories(q, res, tdb, ds, genome) {
+async function trigger_getcategories(
+	q: { tid: string | number; type: string; filter: any; term1_q: any; currentGeneNames: any },
+	res: { send: (arg0: { lst: never[]; orderedLabels: any }) => void },
+	tdb: { q: { termjsonByOneid: (arg0: any) => any } },
+	ds: { assayAvailability: { byDt: { [s: string]: unknown } | ArrayLike<unknown> } },
+	genome: any
+) {
 	// thin wrapper of get_summary
 	// works for all types of terms
 	if (!q.tid) throw '.tid missing'
@@ -175,7 +181,9 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 				samplecount: count,
 				key,
 				label:
-					data.refs?.byTermId?.[q.tid]?.events?.find(e => e.event === key).label || term?.values?.[key]?.label || key
+					data.refs?.byTermId?.[q.tid]?.events?.find((e: { event: any }) => e.event === key).label ||
+					term?.values?.[key]?.label ||
+					key
 			})
 		}
 	}
@@ -195,7 +203,18 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 	})
 }
 
-function getDefaultQ(term, q) {
+function getDefaultQ(
+	term: { type: string; bins: { default: any } },
+	q: {
+		mode: any
+		breaks: any
+		bar_by_grade: any
+		bar_by_children: any
+		value_by_max_grade: any
+		value_by_most_recent: any
+		value_by_computable_grade: any
+	}
+) {
 	if (term.type == 'categorical') return {}
 	if (term.type == 'survival') return {}
 	if (term.type == 'integer' || term.type == 'float') return term.bins.default

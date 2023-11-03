@@ -56,7 +56,11 @@ function init({ genomes }) {
 	}
 }
 
-async function trigger_gettermbyid(q, res, tdb) {
+async function trigger_gettermbyid(
+	q: { gettermbyid: any },
+	res: { send: (arg0: { term: any }) => void },
+	tdb: { q: { termjsonByOneid: (arg0: any) => any } }
+) {
 	const t = tdb.q.termjsonByOneid(q.gettermbyid)
 	res.send({
 		term: t ? copy_term(t) : undefined

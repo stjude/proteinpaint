@@ -152,7 +152,7 @@ async function listMafFiles(req: any) {
 
 		file.case_submitter_id = c.submitter_id
 		if (c.samples) {
-			file.sample_types = c.samples.map(i => i.sample_type).sort()
+			file.sample_types = c.samples.map((i: { sample_type: any }) => i.sample_type).sort()
 			// sort to show sample type names in consistent alphabetical order
 			// otherwise one file shows 'Blood, Primary' and another shows 'Primary, Blood'
 			// FIXME this includes samples not associated with current maf file

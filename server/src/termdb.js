@@ -44,7 +44,6 @@ export function handle_request_closure(genomes) {
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
 			// process triggers
-			if (q.getpercentile) return trigger_getpercentile(q, res, ds)
 			if (q.getdescrstats) return trigger_getdescrstats(q, res, ds)
 			if (q.getnumericcategories) return await trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
@@ -332,41 +331,6 @@ async function trigger_getsurvival(q, res, ds) {
 async function trigger_getregression(q, res, ds) {
 	const data = await get_regression(q, ds)
 	res.send(data)
-}
-
-async function trigger_getpercentile(q, res, ds) {
-	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
-	if (!term) throw 'invalid termid'
-	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
-	const percentile_lst = q.getpercentile
-	const perc_values = []
-	const values = []
-	const rows = await termdbsql.get_rows_by_one_key({
-		ds,
-		key: q.tid,
-		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
-	})
-	for (const { value } of rows) {
-		if (term.values && term.values[value] && term.values[value].uncomputable) {
-			// skip uncomputable values
-			continue
-		}
-
-		if (term.skip0forPercentile && value == 0) {
-			// quick fix: when the flag is true, will exclude 0 values from percentile computing
-			// to address an issue with computing knots
-			continue
-		}
-
-		values.push(Number(value))
-	}
-
-	// compute percentiles
-	for (const percentile of percentile_lst) {
-		const perc_value = computePercentile(values, percentile)
-		perc_values.push(perc_value)
-	}
-	res.send({ values: perc_values })
 }
 
 async function trigger_getdescrstats(q, res, ds) {

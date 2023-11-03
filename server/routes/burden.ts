@@ -69,7 +69,10 @@ export const api = {
 	}
 }
 
-async function getBurdenEstimates(q, ds) {
+async function getBurdenEstimates(
+	q: { query: { [x: string]: any } },
+	ds: { cohort: { cumburden: { files: { fit: any; surv: any; sample: any } } } }
+) {
 	const infile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	for (const k in q.query) {
 		q.query[k] = Number(q.query[k])
@@ -91,7 +94,7 @@ async function getBurdenEstimates(q, ds) {
 	return estimates
 }
 
-function formatPayload(estimates) {
+function formatPayload(estimates: {}[]) {
 	const rawKeys = Object.keys(estimates[0])
 	const outKeys = [] as string[]
 	const keys = [] as string[]
