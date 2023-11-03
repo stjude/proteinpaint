@@ -1,118 +1,208 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '#dom/table'
-import { mclass, morigin, dt2label } from '#shared/common'
+import { mclass } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
+import roundValue from '#shared/roundValue'
 
 export function setInteractivity(self) {
 	self.mouseover = function (event, chart) {
-		if (event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie') {
-			const s2 = event.target.__data__
-			const displaySample = 'sample' in s2
-			const shrink = self.opts.parent?.type == 'summary' && !displaySample
-			const threshold = 0.2 / self.k
-			const include = shrink ? dist => dist > 0 && dist < threshold : dist => dist < threshold
-			const overlapSamples = []
-			const samples = chart.data.samples.filter(s => {
-				const dist = distance(s.x, s.y, s2.x, s2.y)
-				if (dist == 0) overlapSamples.push(s)
-				return self.getOpacity(s) > 0 && include(dist)
-			})
-			if (shrink)
-				//filtered out s2, dist = 0
-				samples.push(s2)
-			if (samples.length == 0) return
-			samples.sort((a, b) => {
-				if (a.category < b.category) return -1
-				if (a.category > b.category) return 1
-				return 0
-			})
-
-			self.dom.tooltip.clear()
-			if (shrink)
-				self.dom.tooltip.d
-					.append('div')
-					.html(` ${overlapSamples.length} ${overlapSamples.length == 1 ? 'sample' : 'samples'}`)
-			const table = self.dom.tooltip.d.append('table').style('width', '100%')
-
-			for (const [i, d] of samples.entries()) {
-				if (i > 5) break
-				if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) continue
-				const row = table.append('tr').style('padding-top', '2px')
-				if (displaySample) {
-					if (d.sample == s2.sample) {
-						let title = ''
-						for (const os of overlapSamples) title += os.sample + ' '
-						row.append('td').style('color', '#aaa').html(`Sample`)
-						row.append('td').html(`${title}`)
-					} else {
-						row.append('td').style('color', '#aaa').html(`Sample`)
-						row.append('td').html(d.sample)
+		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
+			//self.dom.tooltip.hide()//dont hide current tooltip if mouse moved away, may want to scroll
+			return
+		}
+		const s2 = event.target.__data__
+		const displaySample = 'sample' in s2
+		const threshold = 0.2 / self.k //Distance limit to consider closest samples
+		const samples = chart.data.samples.filter(s => {
+			const dist = distance(s.x, s.y, s2.x, s2.y)
+			if (!('sampleId' in s) && (!self.settings.showRef || self.settings.refSize == 0)) return false
+			return self.getOpacity(s) > 0 && dist < threshold
+		})
+		if (samples.length == 0) return
+		const tree = []
+		const showCoords = self.config.term ? true : false
+		const getCoords = sample => `${sample.x.toPrecision(2)},${sample.y.toPrecision(2)}`
+		//Building tree
+		for (const sample of samples) {
+			const id = getCoords(sample)
+			let node = tree.find(item => item.id == id)
+			if (!node) {
+				node = { id, parentId: null, samples: [sample], level: 1, category: null, children: [] }
+				tree.push(node)
+				if (showCoords) {
+					const xvalue = getCategoryValue('x', sample)
+					const xnode = {
+						id: xvalue,
+						parentId: id,
+						samples: [sample],
+						level: 2,
+						category: 'X',
+						children: [],
+						value: xvalue
 					}
+					tree.push(xnode)
+					node.children.push(xnode)
+					const yvalue = getCategoryValue('y', sample)
+					const ynode = {
+						id: `${yvalue}${xvalue}`,
+						parent: xnode,
+						parentId: xvalue,
+						samples: [sample],
+						level: 3,
+						category: 'Y',
+						children: [],
+						value: yvalue
+					}
+					xnode.children.push(ynode)
+					tree.push(ynode)
 				}
+			} else node.samples.push(sample)
+		}
+		let level = showCoords ? 4 : 2
+		let parentCategories = showCoords ? ['y', 'x', ''] : ['']
+		if (self.config.colorTW) addNodes('category')
+		if (self.config.shapeTW) addNodes('shape')
+		if (self.config.scaleDotTW) addNodes('scale')
+		self.dom.tooltip.clear()
+		const div = self.dom.tooltip.d.style('padding', '5px')
+		//Rendering tooltip
+		if (samples.length > 1)
+			div
+				.append('div')
+				.style('color', '#aaa')
+				.style('padding', '3px')
+				.style('font-weight', 'bold')
+				.html(`${samples.length} Samples`)
+		const tableDiv = div.append('div').style('max-height', '400px').style('overflow', 'scroll')
+		if (samples.length > 3) tableDiv.attr('class', 'sjpp_show_scrollbar')
 
-				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table, true, true)
-				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table, false, true)
-				if (self.config.term) addCategoryInfo(self.config.term.term, 'x', d, table)
-				if (self.config.term2) addCategoryInfo(self.config.term2?.term, 'y', d, table)
-				if (self.config.scaleDotTW) addCategoryInfo(self.config.scaleDotTW?.term, 'scale', d, table)
-
-				if ('info' in d)
-					for (const [k, v] of Object.entries(d.info)) {
-						const row = table.append('tr')
-						row.append('td').style('color', '#aaa').text(k)
-						row.append('td').text(v)
-					}
+		const table = tableDiv.append('table').style('width', '100%')
+		const nodes = tree.filter(node => (showCoords ? node.level == 1 : node.level == 2))
+		if (showCoords)
+			for (const node of nodes) {
+				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 2).style('border-top', '1px solid #aaa')
+				for (const child of node.children) addCategory(child)
 			}
-			if (samples.length > 5) self.dom.tooltip.d.append('div').html(`<b>...(${samples.length - 5} more)</b>`)
+		else
+			for (const node of nodes) {
+				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 2).style('border-top', '1px solid #aaa')
+				addCategory(node)
+			}
 
-			self.dom.tooltip.show(event.clientX, event.clientY, true, true)
-		} else self.dom.tooltip.hide()
+		self.dom.tooltip.show(event.clientX, event.clientY, false, false)
 
-		function addCategoryInfo(term, category, d, table, showColor = false, showShape = false) {
-			if (!term) return
-			if (d[category] == 'Ref') return
-			let row = table.append('tr')
-			const ctd = row.append('td').style('color', '#aaa').html(`Sample`).text(term.name)
+		function addCategory(node) {
+			node.added = true
+			let row
+			const sample = node.samples[0]
 
-			if ('cat_info' in d && d.cat_info[category]) {
-				const mutations = d.cat_info[category]
-				ctd.attr('rowspan', mutations.length + 1)
-				// row.append('td').text('Mutation')
-				for (const mutation of mutations) {
-					const dt = mutation.dt
-					row = table.append('tr')
-					const class_info = mclass[mutation.class]
-					const clabel = 'mname' in mutation ? `${mutation.mname} ${class_info.label}` : class_info.label
-					const tdclass = row.append('td').text(clabel).style('color', '#aaa')
-					if (mutation.class != 'Blank') tdclass.style('color', class_info.color)
-					else tdclass.style('color', mclass['WT'].color)
-					const origin = morigin[mutation.origin]?.label
-					const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
-					row.append('td').text(dtlabel)
-				}
-			} else {
-				let value = d[category]
-				if (typeof value == 'number' && value % 1 != 0) value = value.toFixed(2)
+			if (sample.category != 'Ref') {
+				let row = table.append('tr')
+				const tw =
+					node.category == 'category'
+						? self.config.colorTW
+						: node.category == 'shape'
+						? self.config.shapeTW
+						: node.category == 'scale'
+						? self.config.scaleDotTW
+						: node.category == 'X' && self.config.term
+						? self.config.term
+						: node.category == 'Y' && self.config.term2
+						? self.config.term2
+						: null
+
+				const showIcon = tw != null && (tw == self.config.colorTW || tw == self.config.shapeTW)
+				let label = tw ? tw.term.name : node.category
+				if (samples.length > 1 && !displaySample) label = label + ` (${node.samples.length})`
+				row.append('td').style('color', '#aaa').text(label)
 				const td = row.append('td')
-				if (showShape) {
-					const color = showColor ? self.getColor(d, chart) : self.config.colorTW ? 'gray' : self.settings.defaultColor
-					const index = showColor
-						? chart.shapeLegend.get('Ref').shape % self.symbols.length
-						: chart.shapeLegend.get(d.shape).shape % self.symbols.length
+				if (showIcon) {
+					const color =
+						tw == self.config.colorTW
+							? self.getColor(sample, chart)
+							: self.config.colorTW
+							? 'gray'
+							: self.settings.defaultColor
+					const index =
+						tw == self.config.colorTW
+							? chart.shapeLegend.get('Ref').shape % self.symbols.length
+							: chart.shapeLegend.get(sample.shape).shape % self.symbols.length
 					const shape = self.symbols[index].size(64)()
-
-					const width = value.length * 9 + 60
-					const svg = td.append('svg').attr('width', width).attr('height', '35px')
-					const g = svg.append('g').attr('transform', 'translate(10, 18)')
+					let fontColor = 'black'
+					let mname = ''
+					if (tw?.term.type == 'geneVariant') {
+						fontColor = mclass['WT'].color
+						const mutation = node.value.split(' ')[0]
+						for (const id in mclass) {
+							const class_info = mclass[id]
+							const whiteColor = rgb(class_info.color).toString() == rgb('white').toString()
+							if (mutation == class_info.label) {
+								if (mutation == class_info.label) if (!whiteColor) fontColor = class_info.color
+								mname = sample.cat_info[node.category].find(m => m.class == class_info.key).mname
+							}
+						}
+					}
+					let chars = node.value.length
+					if (mname) chars += mname.length
+					const width = chars * 9 + 60
+					const svg = td.append('svg').attr('width', width).attr('height', '25px')
+					const g = svg.append('g').attr('transform', 'translate(10, 14)')
 					g.append('path').attr('d', shape).attr('fill', color)
-					g.append('text').attr('x', 18).attr('y', 6).text(value)
-				} else td.append('span').text(value)
+					const text = g.append('text').attr('x', 12).attr('y', 6)
+					if (mname)
+						text
+							.append('tspan')
+							.text(mname + ' ')
+							.attr('font-size', '0.9em')
+					text.append('tspan').text(node.value).attr('fill', fontColor)
+				} else td.style('padding', '2px').text(`${node.value}`)
+
+				for (const child of node.children) if (!child.added) addCategory(child)
 			}
+			if (node.children.length == 0 && displaySample) {
+				for (const sample of node.samples) {
+					if ('info' in sample)
+						for (const [k, v] of Object.entries(sample.info)) {
+							row = table.append('tr')
+							row.append('td').style('color', '#aaa').text(k)
+							row.append('td').text(v)
+						}
+					row = table.append('tr')
+					row.append('td').style('color', '#aaa').text('Sample')
+					row.append('td').style('padding', '2px').text(sample.sample)
+				}
+			}
+		}
+
+		function addNodes(category) {
+			for (const sample of samples) {
+				const value = getCategoryValue(category, sample)
+				let parentId = ''
+				for (const pc of parentCategories) parentId += getCategoryValue(pc, sample)
+				const id = value + parentId
+				let node = tree.find(item => item.id == id && item.parentId == parentId)
+				let parent = tree.find(item => item.id == parentId)
+				if (!node) {
+					node = { id: id, parentId, samples: [], level, category, children: [], value }
+					tree.push(node)
+				}
+				node.samples.push(sample)
+				if (parent) parent.children.push(node)
+			}
+			level++
+			parentCategories.push(category)
+		}
+
+		function getCategoryValue(category, d) {
+			if (category == '') return ''
+			let value = d[category]
+			if (typeof value == 'number' && value % 1 != 0) value = value.toPrecision(2)
+			return value
 		}
 	}
 

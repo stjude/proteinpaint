@@ -226,14 +226,14 @@ function setRenderers(self) {
 
 		if (term.terms.length >= minTermCount2scroll) {
 			// too many children. scroll
-			if (div.classed('sjpp_hide_scrollbar')) {
+			if (div.classed('sjpp_show_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
 				div
 					.style('max-height', scrollDivMaxHeight)
 					.style('padding', '10px')
 					.style('resize', 'vertical')
-					.classed('sjpp_hide_scrollbar', true)
+					.classed('sjpp_show_scrollbar', true)
 
 				/***************************
 				remaining issues
