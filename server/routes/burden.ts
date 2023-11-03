@@ -94,7 +94,7 @@ async function getBurdenEstimates(
 	return estimates
 }
 
-function formatPayload(estimates: {}[]) {
+function formatPayload(estimates: object[]) {
 	const rawKeys = Object.keys(estimates[0])
 	const outKeys = [] as string[]
 	const keys = [] as string[]
