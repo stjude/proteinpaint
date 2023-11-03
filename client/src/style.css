@@ -1145,27 +1145,27 @@ sandbox header
     text-align: left;
 }
 
-.sjpp_hide_scrollbar{
+.sjpp_show_scrollbar{
     overflow-y: scroll;
     overflow-x: scroll;
 
 }
 
-.sjpp_hide_scrollbar::-webkit-scrollbar{
+.sjpp_show_scrollbar::-webkit-scrollbar{
     background-color: white;
     border-radius: 10px;
     width: 18px;
 }
 
 /* This will handle the thumb (scrolling part) */
-.sjpp_hide_scrollbar::-webkit-scrollbar-thumb{
+.sjpp_show_scrollbar::-webkit-scrollbar-thumb{
     background-color: grey;
     border-radius: 10px;
     border: 5px solid white;
 
 }
 
-.sjpp_hide_scrollbar::-webkit-scrollbar-thumb:vertical{
+.sjpp_show_scrollbar::-webkit-scrollbar-thumb:vertical{
     height: 18px!important;
     width: 18px;
 }

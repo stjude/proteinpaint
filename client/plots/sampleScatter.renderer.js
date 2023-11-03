@@ -1251,7 +1251,7 @@ export function setRenderers(self) {
 			for (const [key, category] of map) {
 				if (key == 'Ref') continue
 				if (!key.includes(dtlabel)) continue
-				const mkey = key.split(',')[0]
+				const mkey = key.split(' ')[0]
 				const itemG = G.append('g')
 				if (cname == 'shape') {
 					const index = category.shape % self.symbols.length
@@ -1284,7 +1284,7 @@ export function setRenderers(self) {
 						self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
 					)
 
-				const assay = key.split(',')[1]
+				const assay = key.split(' ')[1]
 				if (key.includes(dtlabel))
 					G.append('text')
 						.attr('x', offsetX)

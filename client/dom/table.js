@@ -141,7 +141,7 @@ export function renderTable({
 		parentDiv.style('max-height', maxHeight).style('max-width', maxWidth)
 		if (columns.length > 2) parentDiv.style('resize', 'horizontal')
 	}
-	parentDiv.attr('class', 'sjpp_hide_scrollbar')
+	parentDiv.attr('class', 'sjpp_show_scrollbar')
 
 	const table = parentDiv.append('table').style('width', '100%')
 
