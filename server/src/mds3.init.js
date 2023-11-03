@@ -2432,6 +2432,10 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleFilter)
 	}
 }
 
+/*
+also returns isoform accession of the model that's used
+if the model is canonical, the isoform will be usable for screening csq annotation for mutations
+*/
 async function mayMapGeneName2coord(term, genome) {
 	if (term.chr && Number.isInteger(term.start) && Number.isInteger(term.stop)) return
 	// coord missing, fill in chr/start/stop by querying with name
@@ -2446,6 +2450,7 @@ async function mayMapGeneName2coord(term, genome) {
 	term.chr = gm.chr
 	term.start = gm.start
 	term.stop = gm.stop
+	return gm.isoform
 }
 async function mayMapGeneName2isoform(term, genome) {
 	if (term.isoform && typeof term.isoform == 'string') return
@@ -2486,7 +2491,8 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 		return await ds.queries.snvindel.byisoform.get(arg)
 	}
 	if (ds.queries.snvindel.byrange) {
-		await mayMapGeneName2coord(term, genome)
+		// returns canonical isoform (if any). assign to arg{} so byrange.get() will be able to return csq by canonical isoform
+		arg.isoform = await mayMapGeneName2coord(term, genome)
 		// tw.term.chr/start/stop are set
 		arg.rglst = [term]
 		return await ds.queries.snvindel.byrange.get(arg)
