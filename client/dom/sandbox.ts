@@ -74,7 +74,7 @@ export function newSandboxDiv(sandbox_holder: Selection<HTMLDivElement, any, any
 		.append('div')
 		.attr('class', 'sjpp-output-sandbox-header')
 		.style('width', opts.style?.width || '95vw')
-		.style('border', '1px solid grey')
+		.style('border', '1px solid #ccc')
 		.style('display', 'flex')
 		.style('align-items', 'center')
 		.style('justify-content', 'left')
