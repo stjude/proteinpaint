@@ -1,2 +1,2 @@
-
-Feature: Sample view uses input with autocomplete to search samples instead of displaying the list of all the samples to select
+Fixes:
+- After creating mds3 subtrack via filtering, term name may be printed with value if short enough
