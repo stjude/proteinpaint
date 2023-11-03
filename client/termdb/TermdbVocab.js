@@ -458,7 +458,7 @@ export class TermdbVocab extends Vocab {
 		if (filter) {
 			body.filter = getNormalRoot(filter)
 		}
-		return await dofetch3('/termdb', { body })
+		return await dofetch3('termdb/getpercentile', { body })
 	}
 
 	async getDescrStats(term_id, filter, settings) {
