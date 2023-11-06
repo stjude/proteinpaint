@@ -28,7 +28,7 @@ server/routes/*.js
 
 **/public/bin/*
 public/tmp/*
-**/public/cards
+/container/deps/public/cards/
 public/data/*
 public/stage/*
 public/prod/*

@@ -198,25 +198,6 @@ if (!serverconfig.backend_only && fs.existsSync(path.join(process.cwd(), './publ
 			path: 'cards'
 		}
 	}
-	const cards = serverconfig.cards
-	const cardsPath = path.join(process.cwd(), './public/', cards.path)
-
-	let cardsSymlink
-	try {
-		cardsSymlink = fs.lstatSync(cardsPath)
-	} catch (e) {
-		cardsSymlink = false
-	}
-
-	// only set up the symlink if the user doesn't already have a custom public/${cards.path} directory
-	// a user may also not specify cards.path for other reasons, in that case no need for symlink
-	if (cards.path && !fs.existsSync(cardsPath) && !cardsSymlink) {
-		// a user may only wish to use a different public path for the cards
-		// and keep the defaulf of using server/cards
-		if (!cards.target) cards.target = defaultTarget
-
-		fs.symlink(serverconfig.cards.target, cardsPath, 'dir', console.error)
-	}
 }
 
 if (fs.existsSync('./public/rev.txt')) {
