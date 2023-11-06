@@ -14,7 +14,8 @@ export function setInteractivity(self) {
 			const s2 = event.target.__data__
 			const displaySample = 'sample' in s2
 			const shrink = self.opts.parent?.type == 'summary' && !displaySample
-			const include = shrink ? dist => dist > 0 && dist < 0.2 : dist => dist < 0.2
+			const threshold = 0.2 / self.k
+			const include = shrink ? dist => dist > 0 && dist < threshold : dist => dist < threshold
 			const overlapSamples = []
 			const samples = chart.data.samples.filter(s => {
 				const dist = distance(s.x, s.y, s2.x, s2.y)
