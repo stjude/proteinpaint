@@ -1,4 +1,4 @@
-// import { gettermbyidRequest, gettermbyidResponse } from '#shared/types/routes/termdb.termbyid'
+import { HicdataRequest, HicdataResponse, Item } from '#shared/types/routes/hicdata.ts'
 import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -43,7 +43,7 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const payload = await handle_hicdata(req)
+			const payload = await handle_hicdata(req.query as HicdataRequest)
 			res.send(payload)
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -54,26 +54,26 @@ function init({ genomes }) {
 	}
 }
 
-function handle_hicdata(req) {
+function handle_hicdata(q: HicdataRequest) {
 	return new Promise((resolve, reject) => {
-		const [e, file, isurl] = fileurl(req)
+		const [e, file, isurl] = fileurl({ query: q })
 		if (e) reject({ error: 'illegal file name' })
 
 		const par = [
 			// TODO add option for observed/oe
-			req.query.nmeth || 'NONE',
+			q.nmeth || 'NONE',
 			file,
-			req.query.pos1,
-			req.query.pos2,
-			req.query.isfrag ? 'FRAG' : 'BP',
-			req.query.resolution
+			q.pos1,
+			q.pos2,
+			q.isfrag ? 'FRAG' : 'BP',
+			q.resolution
 		]
 
 		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })
 
-		const items = []
-		const erroutput = []
+		const items = [] as Item[]
+		const erroutput = [] as string[]
 		let linenot3fields = 0
 		let fieldnotnumerical = 0
 
@@ -91,10 +91,10 @@ function handle_hicdata(req) {
 				fieldnotnumerical++
 				return
 			}
-			if (req.query.mincutoff != undefined && v <= req.query.mincutoff) {
+			if (q.mincutoff != undefined && v <= q.mincutoff) {
 				return
 			}
-			items.push([n1, n2, v])
+			items.push([n1, n2, v] as Item)
 		})
 
 		ps.stderr.on('data', i => erroutput.push(i))
@@ -107,7 +107,7 @@ function handle_hicdata(req) {
 			if (fieldnotnumerical)
 				reject({ error: fieldnotnumerical + ' lines have non-numerical values in any of the 3 fields' })
 
-			resolve({ items: items })
+			resolve({ items })
 		})
 	})
 }
