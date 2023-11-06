@@ -311,7 +311,6 @@ app.get(basepath + '/vcfheader', handle_vcfheader)
 
 app.post(basepath + '/translategm', handle_translategm)
 app.get(basepath + '/hicstat', handle_hicstat)
-app.post(basepath + '/hicdata', handle_hicdata)
 app.post(basepath + '/samplematrix', handle_samplematrix)
 app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
 app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
@@ -1369,61 +1368,6 @@ async function handle_hicstat(req, res) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 	}
-}
-
-function handle_hicdata(req, res) {
-	const [e, file, isurl] = utils.fileurl(req)
-	if (e) {
-		res.send({ error: 'illegal file name' })
-		return
-	}
-	const par = [
-		req.query.nmeth || 'NONE',
-		file,
-		req.query.pos1,
-		req.query.pos2,
-		req.query.isfrag ? 'FRAG' : 'BP',
-		req.query.resolution
-	]
-
-	const ps = spawn(hicstraw, par)
-	const rl = readline.createInterface({ input: ps.stdout })
-
-	const items = []
-	const erroutput = []
-	let linenot3fields = 0
-	let fieldnotnumerical = 0
-
-	rl.on('line', line => {
-		// straw output: pos1 \t pos2 \t value
-		const l = line.split('\t')
-		if (l.length != 3) {
-			linenot3fields++
-			return
-		}
-		const n1 = Number.parseInt(l[0])
-		const n2 = Number.parseInt(l[1])
-		const v = Number.parseFloat(l[2])
-		if (Number.isNaN(n1) || Number.isNaN(n2) || Number.isNaN(v)) {
-			fieldnotnumerical++
-			return
-		}
-		if (req.query.mincutoff != undefined && v <= req.query.mincutoff) {
-			return
-		}
-		items.push([n1, n2, v])
-	})
-
-	ps.stderr.on('data', i => erroutput.push(i))
-	ps.on('close', () => {
-		const err = erroutput.join('')
-		if (err) return res.send({ error: err })
-		if (linenot3fields) return res.send({ error: linenot3fields + ' lines have other than 3 fields' })
-		if (fieldnotnumerical)
-			return res.send({ error: fieldnotnumerical + ' lines have non-numerical values in any of the 3 fields' })
-		res.send({ items: items })
-		return
-	})
 }
 
 function handle_textfile(req, res) {
