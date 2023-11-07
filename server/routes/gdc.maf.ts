@@ -20,7 +20,20 @@ export const api = {
 				typeId: 'GdcMafResponse'
 				// will combine this with type checker
 				//valid: (t) => {}
-			}
+			},
+			examples: [
+				{
+					request: {
+						body: {
+							experimentalStrategy: 'WXS',
+							embedder: 'localhost'
+						}
+					},
+					response: {
+						header: { status: 200 }
+					}
+				}
+			]
 		}
 	}
 }
