@@ -10,10 +10,10 @@ export const api: any = {
 		get: {
 			init,
 			request: {
-				typeId: 'hicdata'
+				typeId: 'HicdataRequest'
 			},
 			response: {
-				typeId: 'hicdata'
+				typeId: 'HicdataResponse'
 			}
 			/*
 			examples: [
