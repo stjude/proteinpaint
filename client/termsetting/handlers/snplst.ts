@@ -198,7 +198,7 @@ async function makeEditMenu(self: SnpsTermSettingInstance, div0: any) {
 			validateBtn.text('Validate variants').property('disabled', false)
 		})
 
-	const snplstTableDiv = editUIholder.append('div').style('margin-bottom', '20px')
+	const snplstTableDiv = editUIholder.append('div').style('margin-bottom', '25px')
 	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
 		editUIholder.append('div'),
 		self,
@@ -291,9 +291,7 @@ function initSnpEditTable(div: any, self: SnpsTermSettingInstance, select_allele
 		.append('p')
 		.style('opacity', 0.8)
 		.style('font-size', '.8em')
-		.html(
-			'<sup><b>*</b></sup> Number of samples with at least one valid genotype.<br><sup><b>**</b></sup>Effect alleles are highlighted in red. Click on an allele to set as the effect allele.'
-		)
+		.html('Effect alleles are highlighted in red. Click on an allele to set as the effect allele.')
 }
 
 function renderSnpEditTable(self: SnpsTermSettingInstance, select_alleleType: any) {
@@ -302,9 +300,9 @@ function renderSnpEditTable(self: SnpsTermSettingInstance, select_alleleType: an
 	const title_tr = self.dom.snplst_table.append('tr').style('opacity', 0.4)
 	const col_titles = [
 		{ title: 'Variants' },
-		{ title: 'No. samples<sup><b>*</b></sup>' },
-		{ title: 'Reference allele<sup><b>**</b></sup><br>(frequency)' },
-		{ title: 'Alternative allele(s)<sup><b>**</b></sup><br>(frequency)' },
+		{ title: '# genotyped<br>samples' },
+		{ title: 'Reference allele<br>(frequency)' },
+		{ title: 'Alternative allele(s)<br>(frequency)' },
 		{ title: 'Genotype<br>(frequency)' },
 		{ title: 'Delete' }
 	]
