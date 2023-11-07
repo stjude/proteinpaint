@@ -5,24 +5,23 @@ export class DiscoInteractions {
 	prioritizeGenesCheckboxListener: (checked: boolean) => void
 	downloadImgName: string
 
-	constructor(app: any) {
-		// note! only call this constructor then app.state{} is created
-
-		this.downloadImgName = app.state.settings.downloadImgName || 'disco.plot'
+	constructor(disco: any) {
+		// note! only call this constructor then disco.state{} is created
+		this.downloadImgName = disco.state.settings.downloadImgName || 'disco.plot'
 
 		this.cappingClickCallback = (d: any, t: any) => {
-			const tip = app.app.tip
+			const tip = disco.app.tip
 			tip.clear()
-			const body = app.app.tip.d
+			const body = disco.app.tip.d
 			const input = body
 				.append('span')
 				.html('Capping:')
 				.append('input')
 				.attr('type', 'number')
 				.on('change', () => {
-					app.app.dispatch({
+					disco.app.dispatch({
 						type: 'plot_edit',
-						id: app.opts.id,
+						id: disco.opts.id,
 						config: {
 							settings: {
 								cnv: {
@@ -63,14 +62,14 @@ export class DiscoInteractions {
 
 		this.geneClickListener = async (gene: string, mnames: Array<string>) => {
 			const arg = {
-				holder: app.app.opts.holder,
-				genome: app.app.opts.state.args.genome,
+				holder: disco.app.opts.holder,
+				genome: disco.app.opts.state.args.genome,
 				nobox: true,
 				query: gene,
 				tklst: [
 					{
 						type: 'mds3',
-						dslabel: app.app.opts.state.dslabel,
+						dslabel: disco.app.opts.state.dslabel,
 						hlaachange: mnames.join(',')
 					}
 				]
@@ -80,9 +79,9 @@ export class DiscoInteractions {
 		}
 
 		this.prioritizeGenesCheckboxListener = (checked: boolean) => {
-			app.app.dispatch({
+			disco.app.dispatch({
 				type: 'plot_edit',
-				id: app.opts.id,
+				id: disco.opts.id,
 				config: {
 					settings: {
 						label: {

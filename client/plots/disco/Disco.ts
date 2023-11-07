@@ -15,8 +15,6 @@ import { RingType } from './ring/RingType.ts'
 import Settings from './Settings.ts'
 
 export default class Disco {
-	private discoInteractions: DiscoInteractions
-
 	// following attributes are required by rx
 	private type: string
 	private opts: any
@@ -35,7 +33,7 @@ export default class Disco {
 
 	async main(): Promise<void> {
 		// run this only when this.state{} is set; cannot do this step in constructor()
-		this.discoInteractions = new DiscoInteractions(this)
+		const discoInteractions = new DiscoInteractions(this)
 
 		const settings: Settings = this.state.settings
 		const stateViewModelMapper = new ViewModelMapper(settings)
@@ -47,14 +45,14 @@ export default class Disco {
 		const legendRenderer = new LegendRenderer(
 			settings.cnv.capping,
 			settings.label.fontSize,
-			this.discoInteractions.cappingClickCallback
+			discoInteractions.cappingClickCallback
 		)
 
 		const discoRenderer = new DiscoRenderer(
-			this.getRingRenderers(settings, this.discoInteractions.geneClickListener),
+			this.getRingRenderers(settings, discoInteractions.geneClickListener),
 			legendRenderer,
-			this.discoInteractions.downloadClickListener,
-			this.discoInteractions.prioritizeGenesCheckboxListener
+			discoInteractions.downloadClickListener,
+			discoInteractions.prioritizeGenesCheckboxListener
 		)
 
 		discoRenderer.render(holder, viewModel)
