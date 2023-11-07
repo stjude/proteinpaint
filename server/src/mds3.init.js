@@ -355,14 +355,17 @@ async function mayValidateRestrictAcestries(tdb) {
 
 		// file path is from tp/; parse file, store pc values to pcs
 		if (!Number.isInteger(a.PCcount)) throw 'PCcount is not integer'
+		if (a.PCcount <= 1) throw 'PCcount must be greater than 1'
 
-		if (a.PCfile) {
-			// a single file for this ancestry, not by cohort
-			a.pcs = await read_PC_file(a.PCfile, a.PCcount)
-		} else if (a.PCfileBySubcohort) {
-			// pc file by subcohort
-			if (!tdb.selectCohort) throw 'PCfileBySubcohort is in use but selectCohort is not enabled'
-			for (const subcohort in a.PCfileBySubcohort) {
+		if (a.PCTermId) {
+			a.pcs = new Map() // k: pc ID, v: Map(sampleId:value)
+			for (let i = 1; i <= a.PCcount; i++) {
+				const s2v = tdb.q.getAllFloatValues(a.PCTermId + i)
+				if (!s2v || !s2v.size) throw 'no sample PC values are retrieved by restrictAncestries term: ' + a.PCTermId + i
+				a.pcs.set(pc_termid_prefix + i, s2v)
+			}
+		} else if (a.PCBySubcohort) {
+			for (const subcohort in a.PCBySubcohort) {
 				// subcohort is the identifier of a sub-cohort; verify it matches one in selectCohort
 				let missing = true
 				for (const v of tdb.selectCohort.values) {
@@ -371,36 +374,20 @@ async function mayValidateRestrictAcestries(tdb) {
 						break
 					}
 				}
-				if (missing) throw 'unknown subcohort from PCfileBySubcohort'
-
-				const b = a.PCfileBySubcohort[subcohort]
-				if (!b.file) throw '.file missing for a subcohort in PCfileBySubcohort'
-				b.pcs = await read_PC_file(b.file, a.PCcount)
+				if (missing) throw 'unknown subcohort from PCBySubcohort'
+				const b = a.PCBySubcohort[subcohort]
+				if (!b.termId) throw 'termId missing from a subcohort of PCBySubcohort'
+				b.pcs = new Map()
+				for (let i = 1; i <= a.PCcount; i++) {
+					const s2v = tdb.q.getAllFloatValues(b.termId + i)
+					if (!s2v || !s2v.size) throw 'no sample PC values are retrieved by restrictAncestries.PCBySubcohort.<>.termId'
+					b.pcs.set(pc_termid_prefix + i, s2v)
+				}
 			}
+		} else {
+			throw 'unknown PC source and configuration for restrictAncestries'
 		}
 	}
-}
-
-async function read_PC_file(file, PCcount) {
-	const pcs = new Map() // k: pc ID, v: Map(sampleId:value)
-	for (let i = 1; i <= PCcount; i++) pcs.set(pc_termid_prefix + i, new Map())
-
-	let samplecount = 0
-	for (const line of (await utils.read_file(path.join(serverconfig.tpmasterdir, file))).trim().split('\n')) {
-		samplecount++
-		// each line: sampleid \t pc1 \t pc2 \t ...
-		const l = line.split('\t')
-		const sampleid = Number(l[0])
-		if (!Number.isInteger(sampleid)) throw 'non-integer sample id from a line of restrictAncestries pc file'
-		for (let i = 1; i <= PCcount; i++) {
-			const pcid = pc_termid_prefix + i
-			const value = Number(l[i])
-			if (Number.isNaN(value)) throw 'non-numeric PC value from restrictAncestries file'
-			pcs.get(pcid).set(sampleid, value)
-		}
-	}
-	console.log(samplecount, 'samples loaded from ' + file)
-	return Object.freeze(pcs)
 }
 
 async function call_barchart_data(twLst, q, combination, ds) {
