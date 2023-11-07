@@ -507,9 +507,11 @@ type RestrictAncestriesEntry = {
 	tvs: Tvs
 	PCcount: number
 
-	// TODO declare that either PCTermId or PCBySubcohort is required
+	// TODO declare that either PCTermId or X is required
 	PCTermId?: string
-	PCBySubcohort?: {}
+	PCBySubcohort?: {
+		[subcohortId: string]: any
+	}
 }
 
 /*** types supporting Cohort type ***/
