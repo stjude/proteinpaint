@@ -1,4 +1,4 @@
-import { GdcMafResponse, File } from '#shared/types/routes/gdc.maf.ts'
+import { GdcMafRequest, GdcMafResponse, File } from '#shared/types/routes/gdc.maf.ts'
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
@@ -28,8 +28,7 @@ export const api = {
 				}
 			},
 			request: {
-				typeId: null
-				//valid: default to type checker
+				typeId: 'GdcMafRequest'
 			},
 			response: {
 				typeId: 'GdcMafResponse'

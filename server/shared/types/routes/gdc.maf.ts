@@ -15,6 +15,18 @@ export type File = {
 	project_id: string
 }
 
+enum ExperimentalStrategy {
+	targeted = 'Targeted Sequencing',
+	wxs = 'WXS'
+}
+
+export type GdcMafRequest = {
+	/** Name of exp strategy to get maf files for */
+	experimentalStrategy: ExperimentalStrategy
+	/** JSON, optional GDC cohort filter to restrict cases; if supplied, will only get maf files for these cases. the filter is readonly and pass to GDC API query */
+	filter0?: {}
+}
+
 export type GdcMafResponse = {
 	/** List of file objects passing filter and to be displayed on client */
 	files: File[]
