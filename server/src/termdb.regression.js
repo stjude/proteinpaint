@@ -1276,7 +1276,7 @@ tw{}
 		cacheid
 		alleleType: 0/1
 		geneticModel: 0/1/2/3
-		missingGenotype: 0/1/2
+		missingGenotype: 0/1
 		snp2effAle{}
 		snp2refGrp{}
 samples {Map}
@@ -1459,10 +1459,6 @@ function doImputation(snp2sample, tw, cachesampleheader, sampleinfilter) {
 		return
 	}
 	if (tw.q.missingGenotype == 1) {
-		// numerically as average value
-		throw 'not done'
-	}
-	if (tw.q.missingGenotype == 2) {
 		// drop sample
 		const incompleteSamples = new Set() // any samples with missing gt
 		for (const { samples } of snp2sample.values()) {

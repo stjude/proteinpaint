@@ -554,7 +554,7 @@ function validateQ(data: any) {
 	if (data.q.AFcutoff < 0 || data.q.AFcutoff > 100) throw 'AFcutoff is not within 0 to 100'
 	if (![0, 1, 2].includes(data.q.alleleType)) throw 'alleleType value is not one of 0/1'
 	if (![0, 1, 2, 3].includes(data.q.geneticModel)) throw 'geneticModel value is not one of 0/1'
-	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
+	if (![0, 1].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 }
 
 export async function fillTW(tw: SnpsTermWrapper, vocabApi: SnpsVocabApi) {
