@@ -89,9 +89,9 @@ function init({ genomes }) {
 
 async function trigger_getcategories(
 	q: { tid: string | number; type: string; filter: any; term1_q: any; currentGeneNames: any },
-	res: { send: (arg0: { lst: never[]; orderedLabels: any }) => void },
+	res: { send: (arg0: { lst: any[]; orderedLabels: any }) => void },
 	tdb: { q: { termjsonByOneid: (arg0: any) => any } },
-	ds: { assayAvailability: { byDt: { [s: string]: unknown } | ArrayLike<unknown> } },
+	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
 ) {
 	// thin wrapper of get_summary
@@ -111,9 +111,9 @@ async function trigger_getcategories(
 	const data = await getData(arg, ds, genome)
 	if (data.error) throw data.error
 
-	const lst = []
+	const lst = [] as any[]
 	if (q.type == 'geneVariant') {
-		const samples = data.samples
+		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
 		if (ds.assayAvailability?.byDt) {
 			for (const [dtType, dtValue] of Object.entries(ds.assayAvailability.byDt)) {
@@ -122,7 +122,7 @@ async function trigger_getcategories(
 				}
 			}
 		}
-		const sampleCountedFor = new Set() // if the sample is conunted for the
+		const sampleCountedFor = new Set() // if the sample is counted
 		for (const [sampleId, sampleData] of Object.entries(samples)) {
 			const values = sampleData[q.tid].values
 			sampleCountedFor.clear()
@@ -206,13 +206,18 @@ async function trigger_getcategories(
 function getDefaultQ(
 	term: { type: string; bins: { default: any } },
 	q: {
-		mode: any
-		breaks: any
-		bar_by_grade: any
-		bar_by_children: any
-		value_by_max_grade: any
-		value_by_most_recent: any
-		value_by_computable_grade: any
+		mode?: any
+		breaks?: any
+		bar_by_grade?: any
+		bar_by_children?: any
+		value_by_max_grade?: any
+		value_by_most_recent?: any
+		value_by_computable_grade?: any
+		tid?: string | number
+		type?: string
+		filter?: any
+		term1_q?: any
+		currentGeneNames?: any
 	}
 ) {
 	if (term.type == 'categorical') return {}

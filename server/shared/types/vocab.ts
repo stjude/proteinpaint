@@ -20,6 +20,6 @@ export type VocabApi = {
 	getPercentile: (term_id: string | number, percentile_lst: number[], filter?: Filter) => any
 	getterm: (f: any) => Term
 	getTermdbConfig: () => any
-	getViolinPlotData: (f: any) => void
+	getViolinPlotData: (f: any, params: any) => void
 	uncacheTermQ: (term: Term, q: Q) => any
 }
