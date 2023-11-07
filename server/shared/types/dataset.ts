@@ -502,15 +502,14 @@ type Tvs = {
 	values: TvsValues[]
 }
 
-type PCfileBySubcohort = {
-	[index: string]: FileObj
-}
-
 type RestrictAncestriesEntry = {
 	name: string
 	tvs: Tvs
 	PCcount: number
-	PCfileBySubcohort: PCfileBySubcohort
+
+	// TODO declare that either PCTermId or PCBySubcohort is required
+	PCTermId?: string
+	PCBySubcohort?: {}
 }
 
 /*** types supporting Cohort type ***/
