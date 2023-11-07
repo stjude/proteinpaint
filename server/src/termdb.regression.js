@@ -219,21 +219,21 @@ function checkTwAncestryRestriction(tw, q, ds) {
 		tw.q.restrictAncestry.pcs = a.pcs
 		return
 	}
-	if (a.PCfileBySubcohort) {
+	if (a.PCBySubcohort) {
 		// by subcohort, which is coded as a tvs in q.filter
-		if (!q.filter) throw 'q.filter missing while trying to access subcohort for PCfileBySubcohort'
+		if (!q.filter) throw 'q.filter missing while trying to access subcohort for PCBySubcohort'
 		const cohortFilterTvs = getFilterItemByTag(q.filter, 'cohortFilter')
 		if (!cohortFilterTvs)
-			throw 'tvs by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
+			throw 'tvs by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCBySubcohort'
 		// cohortFilterTvs.tvs.values[] contain elements e.g. {key:'ABC'}
-		// in which keys are joined in alphabetical order for lookup in a.PCfileBySubcohort{}
+		// in which keys are joined in alphabetical order for lookup in a.PCBySubcohort{}
 		const sortedKeys = cohortFilterTvs.tvs.values
 			.map(i => i.key)
 			.sort()
 			.join(',')
-		const b = a.PCfileBySubcohort[sortedKeys]
-		if (!b) throw 'unknown key for PCfileBySubcohort: ' + sortedKeys
-		if (!b.pcs) throw 'pcs Map() missing from PCfileBySubcohort[]: ' + sortedKeys
+		const b = a.PCBySubcohort[sortedKeys]
+		if (!b) throw 'unknown key for PCBySubcohort: ' + sortedKeys
+		if (!b.pcs) throw 'pcs Map() missing from PCBySubcohort[]: ' + sortedKeys
 		tw.q.restrictAncestry.pcs = b.pcs
 		return
 	}

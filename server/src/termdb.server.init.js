@@ -339,6 +339,21 @@ export function server_init_db_queries(ds) {
 			return undefined
 		}
 	}
+
+	{
+		const s = cn.prepare('SELECT sample,value FROM anno_float WHERE term_id=?')
+		// to work for getting per-sample pc/admix values; the terms are must be float
+		q.getAllFloatValues = id => {
+			const tmp = s.all(id)
+			if (!tmp || tmp.length == 0) return undefined
+			const s2v = new Map()
+			for (const a of tmp) {
+				s2v.set(a.sample, a.value)
+			}
+			return s2v
+		}
+	}
+
 	{
 		const s = cn.prepare('SELECT ancestor_id FROM ancestry WHERE term_id=?')
 		const cache = new Map()
