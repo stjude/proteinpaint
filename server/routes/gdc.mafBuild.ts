@@ -15,7 +15,7 @@ export const api = {
 				return async (req: any, res: any): Promise<void> => {
 					try {
 						await buildMaf(req, res)
-					} catch (e) {
+					} catch (e: any) {
 						if (e.stack) console.log(e.stack)
 						res.send({ status: 'error', error: e.message || e })
 					}
@@ -42,10 +42,10 @@ req.query {
 res{}
 */
 async function buildMaf(req: any, res: any) {
-	const t0 = new Date()
+	const t0 = Date.now()
 
 	const fileLst2 = (await getFileLstUnderSizeLimit(req.query.fileIdLst)) as string[]
-	console.log('test gdc maf sizes', new Date() - t0)
+	console.log('test gdc maf sizes', Date.now() - t0)
 
 	const outFile = path.join(serverconfig.cachedir, 'gdcMaf.' + Math.random().toString()) // should be a gzipped file. does it need to end with '.gz' or it's auto-added?
 
@@ -57,7 +57,7 @@ async function buildMaf(req: any, res: any) {
 
 	await run_rust('gdcmaf', JSON.stringify(arg))
 
-	console.log('rust gdcmaf', new Date() - t0)
+	console.log('rust gdcmaf', Date.now() - t0)
 
 	const data = await fs.promises.readFile(outFile)
 
@@ -68,7 +68,7 @@ async function buildMaf(req: any, res: any) {
 		'Content-Disposition': 'attachment; filename=cohort.maf.gz',
 		'Content-Length': data.length
 	})
-	res.end(Buffer.from(data, 'binary'))
+	res.end(Buffer.from(data as any, 'binary'))
 }
 
 /*

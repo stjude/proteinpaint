@@ -79,15 +79,15 @@ function init({ genomes }) {
 
 async function trigger_getpercentile(
 	q: { tid: string; getpercentile: number[]; filter: string },
-	res: { send: (arg0: { values: never[] }) => void },
+	res: { send: (arg0: { values: number[] }) => void },
 	ds: { cohort: { termdb: { q: { termjsonByOneid: (arg0: any) => any } } } }
 ) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
 	if (!term) throw 'invalid termid'
 	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
 	const percentile_lst = q.getpercentile
-	const perc_values = []
-	const values = []
+	const perc_values = [] as number[]
+	const values = [] as number[]
 	const rows = await termdbsql.get_rows_by_one_key({
 		ds,
 		key: q.tid,
