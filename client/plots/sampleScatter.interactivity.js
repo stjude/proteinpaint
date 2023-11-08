@@ -70,6 +70,8 @@ export function setInteractivity(self) {
 		if (self.config.scaleDotTW) addNodes('scale')
 		self.dom.tooltip.clear()
 		const div = self.dom.tooltip.d.style('padding', '5px')
+
+		console.log(tree)
 		//Rendering tooltip
 		if (samples.length > 1)
 			div
@@ -186,14 +188,14 @@ export function setInteractivity(self) {
 				let node = tree.find(item => item.id == id && item.parentId == parentId)
 				let parent = tree.find(item => item.id == parentId)
 				if (!node) {
-					node = { id: id, parentId, samples: [], level, category, children: [], value }
+					node = { id, parentId, samples: [], level, category, children: [], value }
 					tree.push(node)
 				}
 				node.samples.push(sample)
 				if (parent) parent.children.push(node)
 			}
 			level++
-			parentCategories.push(category)
+			parentCategories.unshift(category)
 		}
 
 		function getCategoryValue(category, d) {
