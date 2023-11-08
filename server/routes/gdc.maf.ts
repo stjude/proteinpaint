@@ -1,4 +1,4 @@
-import { GdcMafResponse, File } from '#shared/types/routes/gdc.maf.ts'
+import { GdcMafRequest, GdcMafResponse, File } from '#shared/types/routes/gdc.maf.ts'
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
@@ -6,36 +6,51 @@ import serverconfig from '#src/serverconfig.js'
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const maxFileNumber = 1000
 const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
-const allowedExpStrategy = new Set(['WXS', 'Targeted Sequencing'])
 const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 50000000 // 50Mb
 
 export const api = {
 	endpoint: 'gdc/maf',
 	methods: {
 		get: {
-			init({ genomes }) {
-				return async (req: any, res: any): Promise<void> => {
-					try {
-						const g = genomes.hg38
-						if (!g) throw 'hg38 missing'
-						const ds = g.datasets.GDC
-						if (!ds) throw 'hg38 GDC missing'
-						const payload = await listMafFiles(req)
-						res.send(payload)
-					} catch (e: any) {
-						res.send({ status: 'error', error: e.message || e })
-					}
-				}
-			},
+			init,
 			request: {
-				typeId: null
-				//valid: default to type checker
+				typeId: 'GdcMafRequest'
 			},
 			response: {
 				typeId: 'GdcMafResponse'
 				// will combine this with type checker
 				//valid: (t) => {}
-			}
+			},
+			examples: [
+				{
+					request: {
+						body: {
+							experimentalStrategy: 'WXS',
+							embedder: 'localhost'
+						}
+					},
+					response: {
+						header: { status: 200 }
+					}
+				}
+			]
+		}
+	}
+}
+
+function init({ genomes }) {
+	return async (req: any, res: any): Promise<void> => {
+		try {
+			// g and ds are not used right now, but could be later
+			const g = genomes.hg38
+			if (!g) throw 'hg38 missing'
+			const ds = g.datasets.GDC
+			if (!ds) throw 'hg38 GDC missing'
+
+			const payload = await listMafFiles(req.query as GdcMafRequest)
+			res.send(payload)
+		} catch (e: any) {
+			res.send({ status: 'error', error: e.message || e })
 		}
 	}
 }
@@ -52,21 +67,19 @@ ds {
 	}
 }
 */
-async function listMafFiles(req: any) {
-	if (!allowedExpStrategy.has(req.query.experimentalStrategy)) throw 'invalid req.query.experimentalStrategy'
-
+async function listMafFiles(q: GdcMafRequest) {
 	const filters = {
 		op: 'and',
 		content: [
 			{ op: '=', content: { field: 'data_format', value: 'MAF' } },
-			{ op: '=', content: { field: 'experimental_strategy', value: req.query.experimentalStrategy } },
+			{ op: '=', content: { field: 'experimental_strategy', value: q.experimentalStrategy } },
 			{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
 			{ op: '=', content: { field: 'access', value: 'open' } } // delete if later to support controlled files
 		]
 	}
 
-	if (req.query.filter0) {
-		filters.content.push(req.query.filter0)
+	if (q.filter0) {
+		filters.content.push(q.filter0)
 	}
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }

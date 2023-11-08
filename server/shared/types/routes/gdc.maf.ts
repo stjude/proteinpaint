@@ -15,6 +15,27 @@ export type File = {
 	project_id: string
 }
 
+enum ExperimentalStrategy {
+	targeted = 'Targeted Sequencing',
+	wxs = 'WXS'
+}
+
+type Filter0 = {
+	op: string
+	// TODO: this should allow an array of objects, and/or nesting ???
+	content: {
+		field: string
+		value: string
+	}
+}
+
+export type GdcMafRequest = {
+	/** Name of exp strategy to get maf files for */
+	experimentalStrategy: ExperimentalStrategy
+	/** JSON, optional GDC cohort filter to restrict cases; if supplied, will only get maf files for these cases. the filter is readonly and pass to GDC API query */
+	filter0?: Filter0
+}
+
 export type GdcMafResponse = {
 	/** List of file objects passing filter and to be displayed on client */
 	files: File[]

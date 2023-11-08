@@ -88,7 +88,7 @@ async function getFilesAndShowTable(obj) {
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
 		try {
 			result = await dofetch3('gdc/maf', { body })
-			if (result.error) throw data.error
+			if (result.error) throw result.error
 		} catch (e) {
 			wait.remove()
 			sayerror(obj.tableDiv, e)
