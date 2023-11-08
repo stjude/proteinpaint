@@ -12,15 +12,14 @@ import roundValue from '#shared/roundValue'
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
 		const onClick = event.type == 'click'
-		if (self.onClick && onClick) {
-			self.onClick = false
-			self.dom.tooltip.hide()
-			return
-		}
-
 		self.onClick = onClick
 
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
+			if (self.onClick && onClick) {
+				self.onClick = false
+				self.dom.tooltip.hide()
+				return
+			}
 			if (!onClick) self.dom.tooltip.hide() //dont hide current tooltip if mouse moved away, may want to scroll
 			return
 		}
