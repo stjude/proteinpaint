@@ -1,8 +1,8 @@
 import { fileurl, file_is_readable } from '#src/utils.js'
 import { do_hicstat } from '#src/hicstat.js'
-import { HicstatRequest } from '#shared/types/routes/hicstat.ts'
+import { HicstatRequest, HicstatResponse } from '#shared/types/routes/hicstat.ts'
 
-export const api: any = {
+export const api = {
 	endpoint: 'hicstat',
 	methods: {
 		get: {
@@ -11,17 +11,15 @@ export const api: any = {
 				typeId: 'HicstatRequest'
 			},
 			response: {
-				typeId: 'HicstatRequest'
-			}
-			/*
+				typeId: 'HicstatResponse'
+			},
 			examples: [
 				{
 					request: {
 						body: {
-							genome: 'hg38-test',
-							dslabel: 'TermdbTest',
-							embedder: 'localhost',
-							gettermbyid: 'subcohort'
+							genome: 'hg19',
+							file: 'proteinpaint_demo/hg19/hic/hic_demo.hic',
+							embedder: 'localhost'
 						}
 					},
 					response: {
@@ -29,7 +27,6 @@ export const api: any = {
 					}
 				}
 			]
-			*/
 		},
 		post: {
 			alternativeFor: 'get',
@@ -38,31 +35,29 @@ export const api: any = {
 	}
 }
 
-function init({ genomes }) {
-	return async (req: any, res: any): Promise<void> => {
+function init() {
+	return async (req: HicstatRequest, res: any): Promise<void> => {
 		try {
-			const payload = await handle_hicstat(req as HicstatRequest, res as any)
-			res.send(payload)
+			await handle_hicstat(req, res)
 		} catch (e) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			res.send({ error: e?.message || e })
-			if (e instanceof Error && e.stack) console.log(e)
+			console.log(`hicstat error: ${e} [server/routes/hicstat.ts handle_hicstat()]`)
 		}
 	}
 }
 
-async function handle_hicstat(req: any, res: any) {
+async function handle_hicstat(req: HicstatRequest, res: any) {
 	try {
 		const [e, file, isurl] = fileurl(req)
 		if (e) throw 'illegal file name'
 		if (!isurl) {
 			await file_is_readable(file)
 		}
-		const out = await do_hicstat(file, isurl)
+		const out = (await do_hicstat(file, isurl)) as Partial<HicstatResponse>
 		res.send({ out })
 	} catch (e: any) {
-		res.send({ error: e.message || e })
-		if (e.stack) console.log(e.stack)
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore
+		res.send({ error: e?.message || e })
+		if (e instanceof Error && e.stack) console.log(e)
 	}
 }
