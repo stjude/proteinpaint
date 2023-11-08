@@ -74,8 +74,10 @@ export function setInteractivity(self) {
 				}
 			} else {
 				node.samples.push(sample)
-				node.xnode.samples.push(sample)
-				node.ynode.samples.push(sample)
+				if (showCoords) {
+					node.xnode.samples.push(sample)
+					node.ynode.samples.push(sample)
+				}
 			}
 		}
 		let level = showCoords ? 4 : 2
