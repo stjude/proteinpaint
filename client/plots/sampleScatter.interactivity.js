@@ -10,9 +10,9 @@ import { getId } from '#mass/nav'
 import roundValue from '#shared/roundValue'
 
 export function setInteractivity(self) {
-	self.mouseover = function (event, chart) {
+	self.showTooltip = function (event, chart) {
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
-			//self.dom.tooltip.hide()//dont hide current tooltip if mouse moved away, may want to scroll
+			self.dom.tooltip.hide() //dont hide current tooltip if mouse moved away, may want to scroll
 			return
 		}
 		const s2 = event.target.__data__
@@ -69,10 +69,11 @@ export function setInteractivity(self) {
 		if (self.config.shapeTW) addNodes('shape')
 		if (self.config.scaleDotTW) addNodes('scale')
 		self.dom.tooltip.clear()
-		const div = self.dom.tooltip.d.style('padding', '5px')
 
-		console.log(tree)
 		//Rendering tooltip
+		const div = self.dom.tooltip.d.style('padding', '5px')
+		const hasMetArrayPlot = self.state.termdbConfig.queries?.singleSampleGenomeQuantification
+		const hasDiscoPlot = self.state.termdbConfig.queries?.singleSampleMutation
 		if (samples.length > 1)
 			div
 				.append('div')
@@ -175,6 +176,24 @@ export function setInteractivity(self) {
 					row = table.append('tr')
 					row.append('td').style('color', '#aaa').text('Sample')
 					row.append('td').style('padding', '2px').text(sample.sample)
+					row
+						.append('td')
+						.append('button')
+						.text('View')
+						.on('click', e => self.openSampleView(sample))
+					if (hasDiscoPlot)
+						row
+							.append('td')
+							.append('button')
+							.text('Disco')
+							.on('click', async e => await self.openDiscoPlot(sample))
+
+					if (hasMetArrayPlot)
+						row
+							.append('td')
+							.append('button')
+							.text('Met Array')
+							.on('click', async e => await self.openMetArray(sample))
 				}
 			}
 		}
@@ -206,91 +225,50 @@ export function setInteractivity(self) {
 		}
 	}
 
-	self.mouseclick = function (event) {
-		if (!self.lassoOn) self.dom.tip.hide()
-		tip2.hide()
-		const target = event.target
-		const sample = target.__data__
+	self.openSampleView = function (sample) {
+		self.app.dispatch({
+			type: 'plot_create',
+			id: getId(),
+			config: {
+				chartType: 'sampleView',
+				sample: { sampleId: sample.sampleId, sampleName: sample.sample }
+			}
+		})
+		self.dom.tip.hide()
+	}
 
+	self.openMetArray = async function (sample) {
 		sample.sample_id = sample.sample
-		const drawMethylationArrayPlot =
-			self.state.termdbConfig.queries?.singleSampleGenomeQuantification &&
-			target.tagName == 'path' &&
-			target.getAttribute('name') == 'serie'
-		const drawDiscoPlot =
-			self.state.termdbConfig.queries?.singleSampleMutation &&
-			target.tagName == 'path' &&
-			target.getAttribute('name') == 'serie'
-		self.dom.tooltip.hide()
-		self.dom.tip.clear()
-		let show = false
-		if ('sample' in sample) {
-			self.dom.tip.d.append('div').style('padding', '4px').html(`<b>&nbsp;${sample.sample}</b>`)
-
-			self.dom.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Show sample')
-				.on('click', async event => {
-					self.app.dispatch({
-						type: 'plot_create',
-						id: getId(),
-						config: {
-							chartType: 'sampleView',
-							sample: { sampleId: sample.sampleId, sampleName: sample.sample }
-						}
-					})
-					self.dom.tip.hide()
-				})
-			show = true
+		for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
+			const sandbox = newSandboxDiv(self.opts.plotDiv)
+			sandbox.header.text(sample.sample_id)
+			const ssgqImport = await import('./plot.ssgq.js')
+			await ssgqImport.plotSingleSampleGenomeQuantification(
+				self.state.termdbConfig,
+				self.state.vocab.dslabel,
+				k,
+				sample,
+				sandbox.body.append('div').style('margin', '20px'),
+				self.app.opts.genome
+			)
 		}
-		if (drawMethylationArrayPlot || drawDiscoPlot) {
-			if (drawMethylationArrayPlot) {
-				for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
-					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
-					const menuDiv = self.dom.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption sja_sharp_border')
-						.text(label)
-						.on('click', async event => {
-							const sandbox = newSandboxDiv(self.opts.plotDiv)
-							sandbox.header.text(sample.sample_id)
-							const ssgqImport = await import('./plot.ssgq.js')
-							await ssgqImport.plotSingleSampleGenomeQuantification(
-								self.state.termdbConfig,
-								self.state.vocab.dslabel,
-								k,
-								sample,
-								sandbox.body.append('div').style('margin', '20px'),
-								self.app.opts.genome
-							)
-							self.dom.tip.hide()
-						})
-				}
-			}
-			if (drawDiscoPlot) {
-				const menuDiv = self.dom.tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text('Disco plot')
-					.on('click', async event => {
-						const sandbox = newSandboxDiv(self.opts.plotDiv)
-						sandbox.header.text(sample.sample_id)
-						const discoPlotImport = await import('./plot.disco.js')
-						discoPlotImport.default(
-							self.state.termdbConfig,
-							self.state.vocab.dslabel,
-							sample,
-							sandbox.body,
-							self.app.opts.genome
-						)
+		self.dom.tip.hide()
+	}
 
-						self.dom.tip.hide()
-					})
-			}
-			show = true
-		}
-		if (show) self.dom.tip.show(event.clientX, event.clientY, true, true)
+	self.openDiscoPlot = async function (sample) {
+		sample.sample_id = sample.sample
+		const sandbox = newSandboxDiv(self.opts.plotDiv)
+		sandbox.header.text(sample.sample_id)
+		const discoPlotImport = await import('./plot.disco.js')
+		discoPlotImport.default(
+			self.state.termdbConfig,
+			self.state.vocab.dslabel,
+			sample,
+			sandbox.body,
+			self.app.opts.genome
+		)
+
+		self.dom.tip.hide()
 	}
 
 	self.onLegendClick = function (chart, legendG, name, key, e, category) {
