@@ -1,3 +1,3 @@
 
 Feature: Improved scatter tooltip to list all samples grouped by common categories. 
-Also for each sample buttons are added to open the sample view and the disco and methylation array plots if possible.
+If clicked for each sample buttons are added to open the sample view and the disco and methylation array plots if possible.
