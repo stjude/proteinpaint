@@ -78,7 +78,6 @@ import * as massSession from './massSession'
 import * as singlecell from './singlecell'
 import * as fimo from './fimo'
 import { draw_partition } from './partitionmatrix'
-import { do_hicstat } from './hicstat'
 import mdsgeneboxplot_closure from './mds.geneboxplot'
 import { handle_mdssurvivalplot } from './km'
 import * as validator from './validator'
@@ -310,7 +309,7 @@ app.post(basepath + '/vcf', handle_vcf) // for old ds/vcf and old junction
 app.get(basepath + '/vcfheader', handle_vcfheader)
 
 app.post(basepath + '/translategm', handle_translategm)
-app.get(basepath + '/hicstat', handle_hicstat)
+
 app.post(basepath + '/samplematrix', handle_samplematrix)
 app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
 app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
@@ -1352,21 +1351,6 @@ function handle_svmr(req, res) {
 		})
 	} else {
 		res.send({ error: 'missing file' })
-	}
-}
-
-async function handle_hicstat(req, res) {
-	try {
-		const [e, file, isurl] = utils.fileurl(req)
-		if (e) throw 'illegal file name'
-		if (!isurl) {
-			await utils.file_is_readable(file)
-		}
-		const out = await do_hicstat(file, isurl)
-		res.send({ out })
-	} catch (e) {
-		res.send({ error: e.message || e })
-		if (e.stack) console.log(e.stack)
 	}
 }
 
