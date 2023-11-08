@@ -85,6 +85,7 @@ export function setInteractivity(self) {
 		if (self.config.shapeTW) addNodes('shape')
 		if (self.config.scaleDotTW) addNodes('scale')
 		self.dom.tooltip.clear()
+		console.log(tree)
 		//Rendering tooltip
 		const div = self.dom.tooltip.d.style('padding', '5px')
 		const hasMetArrayPlot = self.state.termdbConfig.queries?.singleSampleGenomeQuantification
@@ -115,6 +116,7 @@ export function setInteractivity(self) {
 		self.dom.tooltip.show(event.clientX, event.clientY, true, false)
 
 		function addCategory(node) {
+			console.log(node)
 			node.added = true
 			let row
 			const sample = node.samples[0]
@@ -177,9 +179,8 @@ export function setInteractivity(self) {
 					const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
 					if (mname) span2.attr('font-size', '0.9em')
 				} else td.style('padding', '2px').text(`${node.value}`)
-
-				for (const child of node.children) if (!child.added) addCategory(child)
 			}
+			for (const child of node.children) if (!child.added) addCategory(child)
 			if (node.children.length == 0 && displaySample) {
 				for (const sample of node.samples) {
 					if ('info' in sample)
