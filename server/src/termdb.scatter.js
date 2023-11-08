@@ -361,7 +361,7 @@ function getCategory(mutation) {
 	const class_info = mclass[mutation.class]
 	const origin = morigin[mutation.origin]?.label
 	const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
-	return `${class_info.label} ${dtlabel}`
+	return `${class_info.label}, ${dtlabel}`
 }
 
 function order(map, tw, refs) {
