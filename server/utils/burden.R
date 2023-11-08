@@ -12,11 +12,12 @@ options(warn=-1)
 
 # Input from lines2R
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 4) stop("Usage: Rscript burden.R in.json fitsData survData sampleData > results")
+if (length(args) != 5) stop("Usage: Rscript burden.R in.json fitsData survData sampleData > results")
 infile <- args[1]
 fitsData <- args[2]
 survData <- args[3]
 sampleData <- args[4]
+agecut <- args[5]
 
 chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
 availCores <- detectCores()
@@ -35,8 +36,8 @@ load(survData)
 
 ############################ These are the input values in APP that users can change. Edgar, these should be the same as the APP before, variable names and units. #############
 ### Input the primary DX. 
-# pr=5
-agecut=40   ##### Edgar, This is not an user input paramter, but we input this. This depends on the DX. For example, here for CNS we use 40. For HL DX, it is 55. I will give this value for each DX.
+# pr=5 # query.diaggrp
+# agecut=40   ##### supplied by burden.R: Edgar, This is not an user input paramter, but we input this. This depends on the DX. For example, here for CNS we use 40. For HL DX, it is 55. I will give this value for each DX.
 
 # # # Input person's values, 18 input X's , plus the input primary DX
 # 	sexval=1  #sex, take value 1 for male and 0 for female
@@ -173,6 +174,18 @@ newdata_chc_sampled$survprob = exp(-predict(survs[[1]],newdata=data.frame(newdat
 newdata_chc_sampled$survprob4=cumprod(newdata_chc_sampled$survprob)
 newdata_chc_sampled$survprob=newdata_chc_sampled$survprob4
 
+####for some DXs, such as STS,  need to handle the data, when the survival is the same as the previous year, *0.99 or *0.985 or 0.97 depending on age. Refer to more details on comments I made in "Step3Qrev-STS1yr.R". === Qi self note and Edgar can ignore.
+#### Edgar, compared to the version I sent before, I added these lines.
+tpdata=newdata_chc_sampled[,c("t.endage","survprob")]
+tpdata$prev=lag(tpdata$survprob)
+tpdata$ind=0;tpdata$ind[tpdata$prev==tpdata$survprob]=1
+tpdata$ind[tpdata$t.endage<=25]=0 ## if before age 25 the survival is the same as previous year, ok
+tpdata$cumsum=cumsum(tpdata$ind)
+tpdata$survnew[tpdata$t.endage<40]=tpdata$survprob[tpdata$t.endage<40]*(0.99^tpdata$cumsum[tpdata$t.endage<40])
+tpdata$survnew[tpdata$t.endage>=40]=tpdata$survprob[tpdata$t.endage>=40]*(0.98^tpdata$cumsum[tpdata$t.endage>=40])
+newdata_chc_sampled$survprob=tpdata$survnew
+
+
 #	plot(c(0,90),c(0,1),type="n")
 survspline=smooth.spline(newdata_chc_sampled$t.endage[newdata_chc_sampled$t.endage<=agecut],newdata_chc_sampled$survprob[newdata_chc_sampled$t.endage<=agecut],spar=0.5)
 predsurv=predict(survspline,seq(0,95,1))
@@ -261,11 +274,13 @@ get_estimate <- function(chc_num) {  #### Edgar, you may make this in separate r
 
 	##### In order to use the above way to get dN0, do Daisuke's original way using cumhz difference. But the  difference is that: we fit cumhz with smooth.spline and can extend it to 90 years old.
 	base=data.frame(time=predcumhz$x,hazard=predcumhz$y)  ##Daisuke used the cumHz, here we smoothed it and then use it.
-	#### fitted values had <0 values in age 0-8 or so. change to 0 cumulative hazard.
-	base$hazard[base$hazard<0]=0
+	### Edgar, I made some changes here, compared to the version I sent earlier. i.e., I got rid of the line "base$hazard[base$hazard<0]=0", and added "base2$hazard2[base2$hazard2<0]=0" below.
 	base2 = base %>% 
 		mutate(hazard2 = hazard - c(0,hazard[-length(hazard)])) %>%
 		ungroup() %>% as.data.frame()
+
+	#### fitted values had <0 values. change to hazard=0 if the hazard<0. This implies no increase in cumulative hazard at that time point, so should be no increase in burden.
+	base2$hazard2[base2$hazard2<0]=0
 
 	base2 = base2 %>%
 		mutate(time_cat = cut(time,breaks=seq(0,95,1),right = FALSE, include.lowest = TRUE)) %>% 
@@ -274,7 +289,7 @@ get_estimate <- function(chc_num) {  #### Edgar, you may make this in separate r
 	base3 = base2 %>%
 		group_by(time_cat) %>%
 		dplyr::summarize(dN0 = sum(hazard2)) %>%
-		filter(!is.na(time_cat))	
+		filter(!is.na(time_cat))
 
 	###############
 	# BCCT
