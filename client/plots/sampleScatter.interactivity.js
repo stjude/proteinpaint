@@ -69,8 +69,14 @@ export function setInteractivity(self) {
 					}
 					xnode.children.push(ynode)
 					tree.push(ynode)
+					node.xnode = xnode
+					node.ynode = ynode
 				}
-			} else node.samples.push(sample)
+			} else {
+				node.samples.push(sample)
+				node.xnode.samples.push(sample)
+				node.ynode.samples.push(sample)
+			}
 		}
 		let level = showCoords ? 4 : 2
 		let parentCategories = showCoords ? ['y', 'x', ''] : ['']
@@ -78,7 +84,6 @@ export function setInteractivity(self) {
 		if (self.config.shapeTW) addNodes('shape')
 		if (self.config.scaleDotTW) addNodes('scale')
 		self.dom.tooltip.clear()
-
 		//Rendering tooltip
 		const div = self.dom.tooltip.d.style('padding', '5px')
 		const hasMetArrayPlot = self.state.termdbConfig.queries?.singleSampleGenomeQuantification
