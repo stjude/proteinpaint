@@ -10,7 +10,7 @@ import { getId } from '#mass/nav'
 import roundValue from '#shared/roundValue'
 
 export function setInteractivity(self) {
-	self.showTooltip = function (event, chart) {
+	self.showTooltip = function (event, chart, showButtons) {
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
 			self.dom.tooltip.hide() //dont hide current tooltip if mouse moved away, may want to scroll
 			return
@@ -88,12 +88,12 @@ export function setInteractivity(self) {
 		const nodes = tree.filter(node => (showCoords ? node.level == 1 : node.level == 2))
 		if (showCoords)
 			for (const node of nodes) {
-				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 2).style('border-top', '1px solid #aaa')
+				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 3).style('border-top', '1px solid #aaa')
 				for (const child of node.children) addCategory(child)
 			}
 		else
 			for (const node of nodes) {
-				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 2).style('border-top', '1px solid #aaa')
+				if (samples.length > 1) table.append('tr').append('td').attr('colspan', 3).style('border-top', '1px solid #aaa')
 				addCategory(node)
 			}
 
@@ -176,24 +176,26 @@ export function setInteractivity(self) {
 					row = table.append('tr')
 					row.append('td').style('color', '#aaa').text('Sample')
 					row.append('td').style('padding', '2px').text(sample.sample)
-					row
-						.append('td')
-						.append('button')
-						.text('View')
-						.on('click', e => self.openSampleView(sample))
-					if (hasDiscoPlot)
+					if ('sampleId' in sample && showButtons) {
 						row
 							.append('td')
 							.append('button')
-							.text('Disco')
-							.on('click', async e => await self.openDiscoPlot(sample))
+							.text('View')
+							.on('click', e => self.openSampleView(sample))
+						if (hasDiscoPlot)
+							row
+								.append('td')
+								.append('button')
+								.text('Disco')
+								.on('click', async e => await self.openDiscoPlot(sample))
 
-					if (hasMetArrayPlot)
-						row
-							.append('td')
-							.append('button')
-							.text('Met Array')
-							.on('click', async e => await self.openMetArray(sample))
+						if (hasMetArrayPlot)
+							row
+								.append('td')
+								.append('button')
+								.text('Met Array')
+								.on('click', async e => await self.openMetArray(sample))
+					}
 				}
 			}
 		}
