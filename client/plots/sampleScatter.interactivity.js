@@ -196,14 +196,14 @@ export function setInteractivity(self) {
 								.append('td')
 								.append('button')
 								.text('Disco')
-								.on('click', async e => await self.openDiscoPlot(sample))
+								.on('click', async e => self.openDiscoPlot(sample))
 
 						if (hasMetArrayPlot)
 							row
 								.append('td')
 								.append('button')
 								.text('Met Array')
-								.on('click', async e => await self.openMetArray(sample))
+								.on('click', async e => self.openMetArray(sample))
 					}
 				}
 			}
