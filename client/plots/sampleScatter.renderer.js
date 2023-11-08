@@ -26,8 +26,10 @@ export function setRenderers(self) {
 		chart.chartDiv = select(this)
 		const s = self.settings
 		chart.chartDiv.style('opacity', 0).style('display', 'inline-block')
-		chart.chartDiv.on('mouseover', event => self.showTooltip(event, chart, false))
-		chart.chartDiv.on('click', event => self.showTooltip(event, chart, true))
+		chart.chartDiv.on('mouseover', event => {
+			if (!self.onClick) self.showTooltip(event, chart)
+		})
+		chart.chartDiv.on('click', event => self.showTooltip(event, chart))
 
 		chart.svg = chart.chartDiv.select('svg').empty() ? chart.chartDiv.append('svg') : chart.chartDiv.select('svg')
 		renderSVG(chart, s, 0)
