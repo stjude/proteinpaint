@@ -10,9 +10,18 @@ import { getId } from '#mass/nav'
 import roundValue from '#shared/roundValue'
 
 export function setInteractivity(self) {
-	self.showTooltip = function (event, chart, showButtons) {
+	self.showTooltip = function (event, chart) {
+		const onClick = event.type == 'click'
+		if (self.onClick && onClick) {
+			self.onClick = false
+			self.dom.tooltip.hide()
+			return
+		}
+
+		self.onClick = onClick
+
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
-			self.dom.tooltip.hide() //dont hide current tooltip if mouse moved away, may want to scroll
+			if (!onClick) self.dom.tooltip.hide() //dont hide current tooltip if mouse moved away, may want to scroll
 			return
 		}
 		const s2 = event.target.__data__
@@ -97,7 +106,7 @@ export function setInteractivity(self) {
 				addCategory(node)
 			}
 
-		self.dom.tooltip.show(event.clientX, event.clientY, false, false)
+		self.dom.tooltip.show(event.clientX, event.clientY, true, false)
 
 		function addCategory(node) {
 			node.added = true
@@ -176,7 +185,7 @@ export function setInteractivity(self) {
 					row = table.append('tr')
 					row.append('td').style('color', '#aaa').text('Sample')
 					row.append('td').style('padding', '2px').text(sample.sample)
-					if ('sampleId' in sample && showButtons) {
+					if ('sampleId' in sample && onClick) {
 						row
 							.append('td')
 							.append('button')
@@ -228,6 +237,8 @@ export function setInteractivity(self) {
 	}
 
 	self.openSampleView = function (sample) {
+		self.dom.tooltip.hide()
+		self.onClick = false
 		self.app.dispatch({
 			type: 'plot_create',
 			id: getId(),
@@ -240,6 +251,9 @@ export function setInteractivity(self) {
 	}
 
 	self.openMetArray = async function (sample) {
+		self.dom.tooltip.hide()
+		self.onClick = false
+
 		sample.sample_id = sample.sample
 		for (const k in self.state.termdbConfig.queries.singleSampleGenomeQuantification) {
 			const sandbox = newSandboxDiv(self.opts.plotDiv)
@@ -258,6 +272,9 @@ export function setInteractivity(self) {
 	}
 
 	self.openDiscoPlot = async function (sample) {
+		self.dom.tooltip.hide()
+		self.onClick = false
+
 		sample.sample_id = sample.sample
 		const sandbox = newSandboxDiv(self.opts.plotDiv)
 		sandbox.header.text(sample.sample_id)
@@ -269,8 +286,6 @@ export function setInteractivity(self) {
 			sandbox.body,
 			self.app.opts.genome
 		)
-
-		self.dom.tip.hide()
 	}
 
 	self.onLegendClick = function (chart, legendG, name, key, e, category) {
