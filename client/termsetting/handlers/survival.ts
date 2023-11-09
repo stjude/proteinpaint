@@ -16,5 +16,11 @@ export function getHandler(self: TermSettingInstance) {
 }
 
 export function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
+	if (tw) {
+		//ignore: statement to prevent eslint warning
+	}
+	if (vocabApi) {
+		//ignore: statement to prevent eslint warning
+	}
 	//ignore
 }
