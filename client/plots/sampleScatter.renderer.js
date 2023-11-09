@@ -352,7 +352,7 @@ export function setRenderers(self) {
 
 		function animate() {
 			requestAnimationFrame(animate)
-			camera.zoom = self.k
+			camera.zoom = self.zoom
 			camera.updateProjectionMatrix()
 			renderer.render(scene, camera)
 		}
@@ -508,7 +508,7 @@ export function setRenderers(self) {
 			if (self.settings.scaleDotOrder == 'Ascending')
 				size = self.settings.minDotSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 			else size = self.settings.maxDotSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
-			const scaledSize = (size * factor) / self.k
+			const scaledSize = (size * factor) / self.zoom
 			return self.symbols[index].size(scaledSize)()
 		}
 	}
@@ -736,7 +736,7 @@ export function setRenderers(self) {
 				chart.xAxis.call(chart.axisBottom.scale(new_xScale))
 				chart.yAxis.call(chart.axisLeft.scale(new_yScale))
 				chart.serie.attr('transform', event.transform)
-				self.k = event.transform.scale(1).k
+				self.zoom = event.transform.scale(1).k
 				//on zoom in the particle size is kept
 				const symbols = chart.serie.selectAll('path[name="serie"')
 				symbols.attr('d', c => self.getShape(chart, c))
@@ -747,7 +747,7 @@ export function setRenderers(self) {
 
 		function zoomIn() {
 			for (const chart of self.charts)
-				if (self.is2DLarge) self.zoom = self.k + 0.25
+				if (self.is2DLarge) self.zoom = self.zoom + 0.25
 				else zoom.scaleBy(chart.mainG.transition().duration(750), 1.5)
 		}
 
@@ -1113,7 +1113,7 @@ export function setRenderers(self) {
 
 		scaleG
 			.append('rect')
-			.attr('width', 110 * self.k)
+			.attr('width', 110 * self.zoom)
 			.attr('height', 50)
 			.attr('fill', 'transparent')
 			.on('click', e => {
