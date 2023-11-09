@@ -1,20 +1,21 @@
 import fs from 'fs'
 import util from 'util'
 import got from 'got'
-import { exec } from 'child_process'
+// import { exec } from 'child_process'
+import { HicstatResponse } from '#shared/types/routes/hicstat.ts'
 
 /**
  * 
  * @param {*} file 
  * @param {*} isurl 
- * @returns {*} string
+ * @returns {*} HicstatResponse
  * 
  * For details about the hic format v9 see https://github.com/aidenlab/hic-format/blob/master/HiCFormatV9.md
  * For v8 see https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md
 
  */
-export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
-	const out_data:any = {}
+export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatResponse> {
+	const out_data: any = {}
 	const data = isurl ? await readHicUrl(file, 0, 32000) : await readHicFile(file, 0, 32000)
 	const view = new DataView(data)
 
@@ -29,7 +30,7 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 	}
 	out_data.version = version
 	const footerPosition = Number(getLong())
-	let normalization = []
+	let normalization = [] as string[]
 
 	const shunk = 100000
 
@@ -42,7 +43,6 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
 
-
 	if (version == 9) {
 		const normVectorIndexPosition = Number(getLong())
 		const normVectorIndexLength = Number(getLong())
@@ -51,7 +51,7 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 	}
 
 	// skip unwatnted attributes
-	let attributes:any = {}
+	let attributes: any = {}
 	const attr_n = getInt()
 	let attr_i = 0
 
@@ -97,45 +97,44 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 		FragRes_i++
 	}
 	//This is needed to support the conversion of a BigInt to json
-	if (!BigInt.prototype.toJSON){
+	if (!BigInt.prototype['toJSON'])
+		//For typescript: if a property may not exist on a constructor, use bracket notation to check
+		//Then add with either this method or with dot notation
 		Object.defineProperty(BigInt.prototype, 'toJSON', {
 			get() {
 				'use strict'
 				return () => String(this)
 			}
 		})
-	}
 	//console.log('Reading matrix ...')
 	out_data.normalization = normalization
-//	return out_data
-	return JSON.stringify(out_data)
+	return out_data
 
-	async function getVectorView(file:string, position:number, length:number): Promise<DataView> {
+	async function getVectorView(file: string, position: number, length: number) {
 		const vectorData = isurl ? await readHicUrl(file, position, length) : await readHicFile(file, position, length)
 		const view = new DataView(vectorData)
 		return view
 	}
 
-	async function getNormalization(vectorView:DataView, position:number): Promise<string[]> {
+	async function getNormalization(vectorView: DataView, position: number) {
 		const start = Date.now()
 
-		let normalization:string[] = []
+		let normalization: string[] = []
 		const nvectors = vectorView.getInt32(0, true)
 		let pos = 4
-			// result
+		// result
 		for (let i = 1; i <= nvectors; i++) {
 			let str = await getViewValue('string') //type
-			//console.log(str)
-			normalization.push(str)
+			normalization.push(str as string)
 			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md#normalized-expected-value-vectors
 			if (version == 8 || version == 7) {
 				str = await getViewValue('string') //unit
 				addToPos(4) //skip bin size (int)
 
-				const nvalues = await getViewValue('int32')
+				const nvalues = (await getViewValue('int32')) as number
 				addToPos(nvalues * 8)
 
-				const nChrScaleFactors = await getViewValue('int32')
+				const nChrScaleFactors = (await getViewValue('int32')) as number
 				addToPos(nChrScaleFactors * 12)
 			}
 			//Reading block https://github.com/aidenlab/hic-format/blob/master/HiCFormatV9.md#normalization-vector-index
@@ -146,11 +145,12 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 			}
 		}
 		normalization = [...new Set(normalization)]
+
 		let timeTaken = Date.now() - start
 		console.log(`Read normalization on ${file} on ${timeTaken / 1000} seconds`)
 		return normalization
 
-		async function addToPos(number:number) {
+		async function addToPos(number: number) {
 			if (pos + number > shunk) readShunk()
 			pos += number
 		}
@@ -159,16 +159,13 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 			vectorView = await getVectorView(file, position + pos, shunk)
 			position = position + pos
 			pos = 0
-			//console.log(position, pos)
 		}
-		
-		async function getViewValue(type: string): Promise<string | number> {
+
+		async function getViewValue(type: string) {
 			let value: string | number
-		// async function getViewValue(type) {
-		// 	let value
 			if (type == 'string') {
 				let str = ''
-				let chr
+				let chr: string | number
 
 				while ((chr = vectorView.getUint8(pos++)) != 0) {
 					if (pos > shunk) await readShunk()
@@ -180,15 +177,12 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 				if (pos + 4 > shunk) await readShunk()
 				value = vectorView.getInt32(pos, true)
 				pos += 4
-			}
-			//console.log(pos, value)
+			} else throw `No value assigned [server/src/hicstat.ts getViewValue()]`
 			return value
 		}
 	}
 
-	async function readHicFile(file: string, position: number, length: number): Promise<ArrayBuffer> {
-
-	// async function readHicFile(file, position, length) {
+	async function readHicFile(file: string, position: number, length: number) {
 		const fsOpen = util.promisify(fs.open)
 		const fsRead = util.promisify(fs.read)
 
@@ -205,24 +199,22 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 
 		return arrayBuffer
 	}
-	async function getFileSize(path: string): Promise<number> {
-	// async function getFileSize(path) {
-		const stats = await fs.promises.stat(path)
-		return stats.size
-	}
+	//***Unused funcs. Commented out to circumvent ts linter warnings
+	// async function getFileSize(path: string) {
+	// 	const stats = await fs.promises.stat(path)
+	// 	return stats.size
+	// }
 
-	async function getUrlSize(path: string): Promise<number> {
-	// async function getUrlSize(path) {
-		const execPromise = util.promisify(exec)
-		const out = await execPromise(`curl -I -L ${path}`)
-		const match = out.stdout.match(/content-length: ([0-9]*)/)
-		const fileSize = Number(match[1])
+	// async function getUrlSize(path: string) {
+	// 	const execPromise = util.promisify(exec)
+	// 	const out = await execPromise(`curl -I -L ${path}`)
+	// 	const match = out.stdout.match(/content-length: ([0-9]*)/)
+	// 	const fileSize = Number(match[1])
 
-		return fileSize
-	}
-	
-	async function readHicUrl(url: string, position: number, length: number): Promise<ArrayBuffer> {
-	// async function readHicUrl(url, position, length) {
+	// 	return fileSize
+	// }
+
+	async function readHicUrl(url: string, position: number, length: number) {
 		try {
 			const range = position + '-' + (position + length - 1)
 			const response = await got(url, {
@@ -232,16 +224,16 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 			const arrayBuffer = response.buffer //.slice(position, position + length)
 
 			return arrayBuffer
-		} catch (error) {
+		} catch (error: any) {
 			console.log(error.response)
 			throw 'error reading file, check file details'
 		}
 	}
 
-	function getString():string {
+	function getString(): string {
 		let str = ''
-		let chr
-		
+		let chr: string | number
+
 		while ((chr = view.getUint8(position++)) != 0) {
 			const charStr = String.fromCharCode(chr)
 			str += charStr
@@ -249,13 +241,13 @@ export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
 		return str
 	}
 
-	function getInt():number {
+	function getInt(): number {
 		const IntVal = view.getInt32(position, true)
 		position += 4
 		return IntVal
 	}
 
-	function getLong():bigint {
+	function getLong(): bigint {
 		const val = view.getBigInt64(position, true)
 		position += 8
 		return val
