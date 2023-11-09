@@ -72,8 +72,11 @@ export function setRenderers(self) {
 		chart.yMin = yMin
 		chart.yMax = yMax
 		chart.xScaleMin = chart.xAxisScale(xMin)
+		chart.xScaleMax = chart.xAxisScale(xMax)
+		chart.yScaleMin = chart.xAxisScale(yMin)
 		chart.yScaleMax = chart.yAxisScale(yMax)
-		chart.zScaleMin = chart.zAxisScale(zMin)
+		chart.zScaleMin = chart.xAxisScale(zMin)
+		chart.zScaleMax = chart.zAxisScale(zMax)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		const gradientColor = self.config.settings.sampleScatter.defaultColor

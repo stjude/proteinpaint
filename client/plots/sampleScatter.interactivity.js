@@ -25,10 +25,11 @@ export function setInteractivity(self) {
 		}
 		const s2 = event.target.__data__
 		const displaySample = 'sample' in s2
-		let threshold = distance(chart.xMin, chart.yMin, chart.xMax, chart.yMax) / 200
+		let threshold = 10 //min distance in pixels to be in the neighborhood
 		threshold = threshold / self.zoom //Distance limit to consider closest samples
 		const samples = chart.data.samples.filter(s => {
-			const dist = distance(s.x, s.y, s2.x, s2.y)
+			const dist = distance(s.x, s.y, s2.x, s2.y, chart)
+			console.log(dist)
 			if (!('sampleId' in s) && (!self.settings.showRef || self.settings.refSize == 0)) return false
 			return self.getOpacity(s) > 0 && dist < threshold
 		})
@@ -707,9 +708,9 @@ export function setInteractivity(self) {
 	}
 }
 
-function distance(x1, y1, x2, y2) {
-	const x = x2 - x1
-	const y = y2 - y1
+function distance(x1, y1, x2, y2, chart) {
+	const x = chart.xAxisScale(x2) - chart.xAxisScale(x1)
+	const y = chart.yAxisScale(y2) - chart.yAxisScale(y1)
 	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
 	return distance
 }
