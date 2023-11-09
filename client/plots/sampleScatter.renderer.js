@@ -498,7 +498,7 @@ export function setRenderers(self) {
 		const isRef = !('sampleId' in c)
 		if (!self.config.scaleDotTW || isRef) {
 			const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
-			return self.symbols[index].size((size * factor) / self.k)()
+			return self.symbols[index].size((size * factor) / self.zoom)()
 		} else {
 			const range = self.settings.maxDotSize - self.settings.minDotSize
 			let size
@@ -714,7 +714,7 @@ export function setRenderers(self) {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-		if (self.config.scaleDotTW && self.k > 4) resetToIdentity()
+		if (self.config.scaleDotTW && self.zoom > 4) resetToIdentity()
 		mainG.call(zoom)
 		for (const chart of self.charts) {
 			chart.lasso = d3lasso()
@@ -744,19 +744,19 @@ export function setRenderers(self) {
 
 		function zoomIn() {
 			for (const chart of self.charts)
-				if (self.is2DLarge) self.k = self.k + 0.25
+				if (self.is2DLarge) self.zoom = self.k + 0.25
 				else zoom.scaleBy(chart.mainG.transition().duration(750), 1.5)
 		}
 
 		function zoomOut() {
 			for (const chart of self.charts)
-				if (self.is2DLarge) self.k = self.k - 0.25
+				if (self.is2DLarge) self.zoom = self.k - 0.25
 				else zoom.scaleBy(chart.mainG.transition().duration(750), 0.5)
 		}
 
 		function resetToIdentity() {
 			for (const chart of self.charts)
-				if (self.is2DLarge) self.k = 1
+				if (self.is2DLarge) self.zoom = 1
 				else chart.mainG.transition().duration(750).call(zoom.transform, zoomIdentity)
 			self.render()
 		}
@@ -1033,9 +1033,9 @@ export function setRenderers(self) {
 	self.drawScaleDotLegend = function (chart) {
 		const scaleG = chart.scaleG
 		scaleG.selectAll('*').remove()
-		const minRadius = (Math.sqrt(self.settings.minDotSize) / 2) * self.k
+		const minRadius = (Math.sqrt(self.settings.minDotSize) / 2) * self.zoom
 		const maxRadius = (Math.sqrt(self.settings.maxDotSize) / 2) * self.k
-		const width = 30 * self.k
+		const width = 30 * self.zoom
 
 		const order = self.settings.scaleDotOrder
 		const titleG = scaleG.append('g')
