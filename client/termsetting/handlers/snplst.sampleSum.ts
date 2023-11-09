@@ -1,4 +1,4 @@
-import { SnpsTermSettingInstance, SnpsTermWrapper, SnpsQ, SnpsVocabApi } from '#shared/types/index'
+import { SnpsTermWrapper } from '#shared/types/index'
 
 /*
 if the "effect allele" is already set for a snp (by user), return it

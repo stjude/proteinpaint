@@ -1,5 +1,5 @@
 import { mayRunSnplstTask } from './snplst.sampleSum'
-import { SnpsTermSettingInstance, SnpsQ, SnpsTermWrapper, SnpsVocabApi, SnpsTerm, SnpsEntry } from '#shared/types/index'
+import { SnpsTermSettingInstance, SnpsQ, SnpsTermWrapper, SnpsVocabApi, SnpsTerm } from '#shared/types/index'
 
 /* 
 TODO clean up ui logic, may use table.js?
