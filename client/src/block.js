@@ -33,7 +33,7 @@ import {
 } from './block.tk.bigwigstranded'
 import { bedjfromtemplate, bedjmaketk, bedjload, bedjloadsubpanel } from './block.tk.bedj'
 import { gmtkfromtemplate, gmtkmaketk, gmtkrender } from './block.tk.usegm'
-import { hicstrawfromtemplate, hicstrawmaketk, hicstrawload } from './block.tk.hicstraw.adaptor'
+import { hicstrawfromtemplate, hicstrawmaketk, hicstrawload } from './block.tk.hicstraw.adaptor.ts'
 import { asefromtemplate, asemaketk, aseload } from './block.tk.ase.adaptor'
 
 import { mdsjunctionfromtemplate, mdsjunctionmaketk, mdsjunctionload } from './block.mds.junction.adaptor'
