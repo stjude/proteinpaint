@@ -29,7 +29,6 @@ export function setInteractivity(self) {
 		threshold = threshold / self.zoom //Distance limit to consider closest samples
 		const samples = chart.data.samples.filter(s => {
 			const dist = distance(s.x, s.y, s2.x, s2.y, chart)
-			console.log(dist)
 			if (!('sampleId' in s) && (!self.settings.showRef || self.settings.refSize == 0)) return false
 			return self.getOpacity(s) > 0 && dist < threshold
 		})
