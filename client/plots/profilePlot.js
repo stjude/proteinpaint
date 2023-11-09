@@ -24,11 +24,14 @@ export class profilePlot {
 	}
 
 	async init(appState) {
-		const holder = this.opts.holder.append('div')
+		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
+		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('display', 'inline-block')
+
 		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
 		const firstDiv = div.append('div').style('display', 'inline-block')
 		const plotDiv = holder.append('div')
 		this.dom = {
+			controlsDiv,
 			holder,
 			firstDiv,
 			filterDiv: div,
@@ -36,7 +39,7 @@ export class profilePlot {
 			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
-
+		this.settings = config.settings
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 		this.regions = [
 			{ key: '', label: '' },

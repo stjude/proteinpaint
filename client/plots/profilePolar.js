@@ -5,6 +5,7 @@ import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
+import { controlsInit } from './controls'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -24,8 +25,31 @@ class profilePolar extends profilePlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
+	async setControls() {
+		this.dom.controlsDiv.selectAll('*').remove()
+		const inputs = [
+			{
+				label: 'Show table',
+				type: 'checkbox',
+				chartType: 'profilePolar',
+				settingsKey: 'showTable',
+				boxLabel: 'Yes'
+			}
+		]
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs
+			})
+		}
+	}
+
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.settings = this.config.settings
+		await this.setControls()
 		this.twLst = []
 		for (const [i, tw] of this.config.terms.entries()) {
 			if (tw.id) this.twLst.push(tw)
@@ -126,15 +150,15 @@ class profilePolar extends profilePlot {
 
 			i++
 		}
-
-		renderTable({
-			rows,
-			columns,
-			div: this.tableDiv,
-			showLines: true,
-			resize: true,
-			maxHeight: '60vh'
-		})
+		if (this.settings.profilePolar.showTable)
+			renderTable({
+				rows,
+				columns,
+				div: this.tableDiv,
+				showLines: true,
+				resize: true,
+				maxHeight: '60vh'
+			})
 
 		addCircle(50, 'C')
 		addCircle(75, 'B')
@@ -188,6 +212,13 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
+		const settings = getDefaultProfilePolarSettings()
+		config.settings = {
+			controls: {
+				isOpen: false // control panel is hidden by default
+			},
+			profilePolar: settings
+		}
 		for (const t of config.terms) {
 			if (t.id) await fillTermWrapper(t, app.vocabApi)
 		}
@@ -201,3 +232,9 @@ export async function getPlotConfig(opts, app) {
 export const profilePolarInit = getCompInit(profilePolar)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profilePolarInit
+
+export function getDefaultProfilePolarSettings() {
+	return {
+		showTable: true
+	}
+}
