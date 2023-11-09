@@ -1,5 +1,5 @@
 import { icons } from './control.icons'
-import { Selection, select } from 'd3-selection'
+import { Selection } from 'd3-selection'
 import { Genome } from '#shared/types/index'
 
 /*
