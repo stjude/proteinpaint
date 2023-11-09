@@ -448,17 +448,20 @@ function setDropdownInput(opts) {
 	}
 
 	self.dom.select = self.dom.inputTd.append('select').on('change', () => {
-		opts.dispatch({
-			type: 'plot_edit',
-			id: opts.id,
-			config: {
-				settings: {
-					[opts.chartType]: {
-						[opts.settingsKey]: self.dom.select.property('value')
+		const value = self.dom.select.property('value')
+		if (opts.callback) opts.callback(value)
+		else
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: value
+						}
 					}
 				}
-			}
-		})
+			})
 	})
 
 	self.dom.select

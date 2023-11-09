@@ -6,6 +6,7 @@ import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 import { controlsInit } from './controls'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -34,6 +35,22 @@ class profilePolar extends profilePlot {
 				chartType: 'profilePolar',
 				settingsKey: 'showTable',
 				boxLabel: 'Yes'
+			},
+			{
+				label: 'Region',
+				type: 'dropdown',
+				chartType: 'profilePolar',
+				options: this.regions,
+				settingsKey: 'region',
+				callback: value => this.setRegion(value)
+			},
+			{
+				label: 'Income group',
+				type: 'dropdown',
+				chartType: 'profilePolar',
+				options: this.incomes,
+				settingsKey: 'income',
+				callback: value => this.setIncome(value)
 			}
 		]
 		this.components = {
@@ -44,19 +61,43 @@ class profilePolar extends profilePlot {
 				inputs
 			})
 		}
+		this.components.controls.on('downloadClick.profilePolar', () => downloadSingleSVG(this.svg, this.filename))
+	}
+
+	setRegion(region) {
+		const config = this.config
+		config.settings.profilePolar.facility = ''
+		config.settings.profilePolar.region = region
+		config.settings.profilePolar.income = ''
+		const sampleId = parseInt(this.sampleidmap[region])
+		config.sampleName = config.region
+		config.filter = getSampleFilter(sampleId)
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	setIncome(income) {
+		const config = this.config
+		config.settings.profilePolar.facility = ''
+		config.settings.profilePolar.income = income
+		config.settings.profilePolar.region = ''
+		const sampleId = parseInt(this.sampleidmap[income])
+		config.sampleName = config.income
+		config.filter = getSampleFilter(sampleId)
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.settings = this.config.settings
+		this.settings = this.config.settings.profilePolar
 		await this.setControls()
 		this.twLst = []
 		for (const [i, tw] of this.config.terms.entries()) {
 			if (tw.id) this.twLst.push(tw)
 		}
 		this.twLst.push(this.config.typeTW)
-		const sampleName = this.config.region !== undefined ? this.config.region : this.config.income || 'Global'
+		const sampleName = this.settings.region !== undefined ? this.settings.region : this.settings.income || 'Global'
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
+
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
 			filter
@@ -64,11 +105,8 @@ class profilePolar extends profilePlot {
 		this.sampleData = this.data.lst[0]
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
-		this.income = this.config.income || this.incomes[0]
-		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
-
-		this.setFilter()
-
+		this.income = this.settings.income || this.incomes[0].value
+		this.region = this.settings.region !== undefined ? this.settings.region : this.income == '' ? 'Global' : ''
 		this.filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
 			.split(' ')
 			.join('_')
@@ -122,7 +160,8 @@ class profilePolar extends profilePlot {
 		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 250},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 300},${y + 150})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 300}, ${y})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
@@ -150,7 +189,7 @@ class profilePolar extends profilePlot {
 
 			i++
 		}
-		if (this.settings.profilePolar.showTable)
+		if (this.settings.showTable)
 			renderTable({
 				rows,
 				columns,
@@ -180,9 +219,18 @@ class profilePolar extends profilePlot {
 			.text('Overall Score')
 			.attr('transform', `translate(0, -5)`)
 
-		this.addLegendItem(this.legendG, 'A', 'More than 75% of possible scorable items', 1)
-		this.addLegendItem(this.legendG, 'B', '50-75% of possible scorable items', 2)
-		this.addLegendItem(this.legendG, 'C', 'Less than 50% of possible scorable items', 3)
+		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
+		this.addLegendItem('B', '50-75% of possible scorable items', 2)
+		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+
+		this.filterG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text('Filters')
+			.attr('transform', `translate(0, -5)`)
+		this.addLegendFilter('region', this.settings.region, 1)
+		this.addLegendFilter('income', this.settings.income, 2)
 
 		function addCircle(percent, text = null) {
 			const circle = polarG
@@ -204,6 +252,15 @@ class profilePolar extends profilePlot {
 					.attr('pointer-events', 'none')
 			}
 		}
+	}
+
+	addLegendFilter(filter, value, index) {
+		const text = this.filterG
+			.append('text')
+			.attr('transform', `translate(0, ${index * 20})`)
+			.attr('text-anchor', 'left')
+		text.append('tspan').attr('font-weight', 'bold').text(filter)
+		text.append('tspan').text(`: ${value ? value : 'None'}`)
 	}
 }
 
