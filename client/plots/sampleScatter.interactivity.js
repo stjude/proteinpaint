@@ -25,7 +25,8 @@ export function setInteractivity(self) {
 		}
 		const s2 = event.target.__data__
 		const displaySample = 'sample' in s2
-		const threshold = 0.2 / self.zoom //Distance limit to consider closest samples
+		let threshold = distance(chart.xMin, chart.yMin, chart.xMax, chart.yMax) / 200
+		threshold = threshold / self.zoom //Distance limit to consider closest samples
 		const samples = chart.data.samples.filter(s => {
 			const dist = distance(s.x, s.y, s2.x, s2.y)
 			if (!('sampleId' in s) && (!self.settings.showRef || self.settings.refSize == 0)) return false

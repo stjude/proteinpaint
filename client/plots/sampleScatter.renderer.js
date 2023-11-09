@@ -67,7 +67,10 @@ export function setRenderers(self) {
 			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
 
 		chart.zAxisScale = d3Linear().domain([zMin, zMax]).range([0, self.settings.svgd])
-
+		chart.xMin = xMin
+		chart.xMax = xMax
+		chart.yMin = yMin
+		chart.yMax = yMax
 		chart.xScaleMin = chart.xAxisScale(xMin)
 		chart.yScaleMax = chart.yAxisScale(yMax)
 		chart.zScaleMin = chart.zAxisScale(zMin)
@@ -750,7 +753,7 @@ export function setRenderers(self) {
 
 		function zoomOut() {
 			for (const chart of self.charts)
-				if (self.is2DLarge) self.zoom = self.k - 0.25
+				if (self.is2DLarge) self.zoom = self.zoom - 0.25
 				else zoom.scaleBy(chart.mainG.transition().duration(750), 0.5)
 		}
 
@@ -1034,7 +1037,7 @@ export function setRenderers(self) {
 		const scaleG = chart.scaleG
 		scaleG.selectAll('*').remove()
 		const minRadius = (Math.sqrt(self.settings.minDotSize) / 2) * self.zoom
-		const maxRadius = (Math.sqrt(self.settings.maxDotSize) / 2) * self.k
+		const maxRadius = (Math.sqrt(self.settings.maxDotSize) / 2) * self.zoom
 		const width = 30 * self.zoom
 
 		const order = self.settings.scaleDotOrder
