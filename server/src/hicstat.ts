@@ -51,7 +51,7 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 	}
 
 	// skip unwatnted attributes
-	let attributes: any = {}
+	const attributes: any = {}
 	const attr_n = getInt()
 	let attr_i = 0
 
@@ -64,7 +64,7 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 	// Chromosomes
 	out_data.Chromosomes = {}
 	out_data.chrorder = [] // order of chromosomes in this hic file, for assigning chr to 1st/2nd column of straw output
-	let nChrs = getInt()
+	const nChrs = getInt()
 	let Chr_i = 0
 
 	while (Chr_i !== nChrs) {
@@ -75,7 +75,7 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 	}
 	// basepair resolutions
 	out_data['Base pair-delimited resolutions'] = []
-	let bpRes_n = getInt()
+	const bpRes_n = getInt()
 	//console.log(`Reading ${bpRes_n} base pair resolutions...`)
 
 	let bpRes_i = 0
@@ -87,7 +87,7 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 	}
 	// fragment resolutions
 	out_data['Fragment-delimited resolutions'] = []
-	let FragRes_n = getInt()
+	const FragRes_n = getInt()
 	//console.log(`Reading ${FragRes_n} fragment resolutions...`)
 
 	let FragRes_i = 0
@@ -146,7 +146,7 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 		}
 		normalization = [...new Set(normalization)]
 
-		let timeTaken = Date.now() - start
+		const timeTaken = Date.now() - start
 		console.log(`Read normalization on ${file} on ${timeTaken / 1000} seconds`)
 		return normalization
 
