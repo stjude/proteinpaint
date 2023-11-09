@@ -1,4 +1,4 @@
-export function hicstrawfromtemplate(tk,template) {
+export function hicstrawfromtemplate(tk: any, template: any) {
 	if(tk.textdata) {
 
 		if(!tk.textdata.raw) return '.textdata.raw missing'
@@ -30,13 +30,13 @@ export function hicstrawfromtemplate(tk,template) {
 }
 
 
-export function hicstrawmaketk(tk,block) {
+export function hicstrawmaketk(tk: any) {
 	tk.uninitialized=true
 }
 
 
-export function hicstrawload(tk,block) {
-	import('./block.tk.hicstraw').then(module=>{
+export function hicstrawload(tk: any, block: any) {
+	import('./block.tk.hicstraw.ts').then(module=>{
 		module.loadTk(tk,block)
 	})
 }
