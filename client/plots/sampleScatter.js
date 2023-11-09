@@ -52,7 +52,7 @@ class Scatter {
 			symbolSquare2
 		]
 		this.symbols = mySymbols.map(s => symbol(s))
-		this.k = 1
+		this.zoom = 1
 		this.startGradient = {}
 		this.stopGradient = {}
 	}
