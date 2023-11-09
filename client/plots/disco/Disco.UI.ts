@@ -194,96 +194,96 @@ function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: 
 	delete dataTypeTab.callback
 }
 
-function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
-	const width = 95
-	const tabs = [
-		// //TODO: implement file upload and file path input once launch.adhoc is ready
-		// {
-		// 	label: 'Select File',
-		// 	active: true,
-		// 	width,
-		// 	callback: async (event: MouseEvent, tab: Tab) => {
-		// 		const key = dataTypeTab.key
-		// 		tab.contentHolder.style('border', 'none').style('display', 'block')
-		// 		appear(tab.contentHolder)
+// function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
+// 	const width = 95
+// 	const tabs = [
+// 		// //TODO: implement file upload and file path input once launch.adhoc is ready
+// 		// {
+// 		// 	label: 'Select File',
+// 		// 	active: true,
+// 		// 	width,
+// 		// 	callback: async (event: MouseEvent, tab: Tab) => {
+// 		// 		const key = dataTypeTab.key
+// 		// 		tab.contentHolder.style('border', 'none').style('display', 'block')
+// 		// 		appear(tab.contentHolder)
 
-		// 		tab.contentHolder
-		// 			.append('div')
-		// 			.html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
-		// 		makeFileUpload(tab.contentHolder, obj, key)
+// 		// 		tab.contentHolder
+// 		// 			.append('div')
+// 		// 			.html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
+// 		// 		makeFileUpload(tab.contentHolder, obj, key)
 
-		// 		delete tab.callback
-		// 	}
-		// },
-		// {
-		// 	label: 'File Path',
-		// 	active: false,
-		// 	width,
-		// 	callback: async (event: MouseEvent, tab: Tab) => {
-		// 		const key = dataTypeTab.key
-		// 		tab.contentHolder.style('border', 'none').style('display', 'block')
-		// 		appear(tab.contentHolder)
+// 		// 		delete tab.callback
+// 		// 	}
+// 		// },
+// 		// {
+// 		// 	label: 'File Path',
+// 		// 	active: false,
+// 		// 	width,
+// 		// 	callback: async (event: MouseEvent, tab: Tab) => {
+// 		// 		const key = dataTypeTab.key
+// 		// 		tab.contentHolder.style('border', 'none').style('display', 'block')
+// 		// 		appear(tab.contentHolder)
 
-		// 		tab.contentHolder
-		// 			.append('div')
-		// 			.html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
-		// 		uiutils.makePrompt(tab.contentHolder, 'URL')
-		// 		makeTextEntryFilePathInput(tab.contentHolder, obj, key)
+// 		// 		tab.contentHolder
+// 		// 			.append('div')
+// 		// 			.html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
+// 		// 		uiutils.makePrompt(tab.contentHolder, 'URL')
+// 		// 		makeTextEntryFilePathInput(tab.contentHolder, obj, key)
 
-		// 		delete tab.callback
-		// 	}
-		// },
-		{
-			label: 'Paste Data',
-			active: false,
-			width,
-			callback: async (event: MouseEvent, tab: Tab) => {
-				const key = dataTypeTab.key
-				tab.contentHolder.style('border', 'none').style('display', 'block')
-				appear(tab.contentHolder)
+// 		// 		delete tab.callback
+// 		// 	}
+// 		// },
+// 		{
+// 			label: 'Paste Data',
+// 			active: false,
+// 			width,
+// 			callback: async (event: MouseEvent, tab: Tab) => {
+// 				const key = dataTypeTab.key
+// 				tab.contentHolder.style('border', 'none').style('display', 'block')
+// 				appear(tab.contentHolder)
 
-				makeCopyPasteInput(tab, obj, key)
-				delete tab.callback
-			}
-		}
-	]
-	new Tabs({ holder: dataTypeTab.contentHolder, tabs }).main()
-}
+// 				makeCopyPasteInput(tab, obj, key)
+// 				delete tab.callback
+// 			}
+// 		}
+// 	]
+// 	new Tabs({ holder: dataTypeTab.contentHolder, tabs }).main()
+// }
 
-function makeTextEntryFilePathInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
-	// Renders the file path input div and callback.
-	const filepath_div = tab.contentHolder.append('div').style('display', 'inline-block')
-	const filepath = uiutils
-		.makeTextInput(filepath_div)
-		.style('border', '1px solid rgb(138, 177, 212)')
-		.classed('disco_input', true)
-		.on('keyup', async () => {
-			const data = filepath.property('value').trim()
-			if (uiutils.isURL(data)) {
-				await fetch(data)
-					.then(req => req.text())
-					.then(text => {
-						obj.data![key + 'Url'] = text
-					})
-			} else {
-				//TODO: implement serverside filepaths(?)
-			}
-		})
-}
+// function makeTextEntryFilePathInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
+// 	// Renders the file path input div and callback.
+// 	const filepath_div = tab.contentHolder.append('div').style('display', 'inline-block')
+// 	const filepath = uiutils
+// 		.makeTextInput(filepath_div)
+// 		.style('border', '1px solid rgb(138, 177, 212)')
+// 		.classed('disco_input', true)
+// 		.on('keyup', async () => {
+// 			const data = filepath.property('value').trim()
+// 			if (uiutils.isURL(data)) {
+// 				await fetch(data)
+// 					.then(req => req.text())
+// 					.then(text => {
+// 						obj.data![key + 'Url'] = text
+// 					})
+// 			} else {
+// 				//TODO: implement serverside filepaths(?)
+// 			}
+// 		})
+// }
 
-function makeFileUpload(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
-	// Renders the select file div and callback.
-	const upload_div = tab.contentHolder.append('div').style('display', 'inline-block')
-	const upload = uiutils.makeFileUpload(upload_div).classed('disco_input', true)
-	upload.on('change', (event: KeyboardEvent) => {
-		const file = (event.target as any).files[0]
-		const reader = new FileReader()
-		reader.onload = (event: any) => {
-			obj.data![key + 'File'] = event.target.result
-		}
-		reader.readAsText(file, 'utf8')
-	})
-}
+// function makeFileUpload(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
+// 	// Renders the select file div and callback.
+// 	const upload_div = tab.contentHolder.append('div').style('display', 'inline-block')
+// 	const upload = uiutils.makeFileUpload(upload_div).classed('disco_input', true)
+// 	upload.on('change', (event: KeyboardEvent) => {
+// 		const file = (event.target as any).files[0]
+// 		const reader = new FileReader()
+// 		reader.onload = (event: any) => {
+// 			obj.data![key + 'File'] = event.target.result
+// 		}
+// 		reader.readAsText(file, 'utf8')
+// 	})
+// }
 
 function makeCopyPasteInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
 	// Renders the copy/paste div and callback.

@@ -145,11 +145,19 @@ async function getMlst(arg: DiscoPlotArgs) {
 
 	// parse data from text and files and append to one mlst[] array
 	const mlst = []
-	const errors = []
 
-	if (arg.snvText) parseSnvText(arg.snvText, mlst, errors)
-	if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
-	if (arg.svText) parseSvText(arg.svText, mlst, errors)
+	/**TODO in the future, collect errors and return to caller
+	 * preserved the work already completed to ease development later
+	 */
+	// const errors = []
+
+	if (arg.snvText) parseSnvText(arg.snvText, mlst)
+	if (arg.cnvText) parseCnvText(arg.cnvText, mlst)
+	if (arg.svText) parseSvText(arg.svText, mlst)
+
+	// if (arg.snvText) parseSnvText(arg.snvText, mlst, errors)
+	// if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
+	// if (arg.svText) parseSvText(arg.svText, mlst, errors)
 
 	/*
 	if (arg.snvFile) {
@@ -167,10 +175,11 @@ async function getMlst(arg: DiscoPlotArgs) {
 	}
 	*/
 
-	return [mlst, errors]
+	return [mlst]
 }
 
-function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseSnvText(text: string, mlst: MutationListEntry[]) {
+	//function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	// TODO share a parser for snvindel text file with samples (with header line and non-fixed columns), but should not require sample here
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
@@ -194,10 +203,12 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 			continue
 		}
 		mlst.push(m)
+		// mlst.push(m, errors)
 	}
 }
 
-function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseSvText(text: string, mlst: MutationListEntry[]) {
+	//function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length < 4) {
@@ -233,7 +244,8 @@ function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) 
 	}
 }
 
-function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseCnvText(text: string, mlst: MutationListEntry[]) {
+	//function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 4) {
