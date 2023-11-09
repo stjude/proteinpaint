@@ -462,7 +462,7 @@ function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
 	const td1 = tr.append('td').style('padding-left', '15px').style('vertical-align', 'top')
 	const radio_div = td1.append('div')
 
-	const { inputs } = make_radios({
+	make_radios({
 		holder: radio_div,
 		options: [
 			{ label: 'Automatic', value: 'auto', checked: isAuto },
