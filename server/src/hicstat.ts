@@ -13,8 +13,8 @@ import { exec } from 'child_process'
  * For v8 see https://github.com/aidenlab/hic-format/blob/master/HiCFormatV8.md
 
  */
-export async function do_hicstat(file, isurl) {
-	const out_data = {}
+export async function do_hicstat(file:string, isurl:boolean): Promise<string> {
+	const out_data:any = {}
 	const data = isurl ? await readHicUrl(file, 0, 32000) : await readHicFile(file, 0, 32000)
 	const view = new DataView(data)
 
@@ -30,7 +30,9 @@ export async function do_hicstat(file, isurl) {
 	out_data.version = version
 	const footerPosition = Number(getLong())
 	let normalization = []
+
 	const shunk = 100000
+
 	if (version == 8 || version == 7) {
 		let vectorView = await getVectorView(file, footerPosition, shunk)
 		const nbytesV5 = vectorView.getInt32(0, true)
@@ -39,6 +41,8 @@ export async function do_hicstat(file, isurl) {
 	}
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
+
+
 	if (version == 9) {
 		const normVectorIndexPosition = Number(getLong())
 		const normVectorIndexLength = Number(getLong())
@@ -47,7 +51,7 @@ export async function do_hicstat(file, isurl) {
 	}
 
 	// skip unwatnted attributes
-	let attributes = {}
+	let attributes:any = {}
 	const attr_n = getInt()
 	let attr_i = 0
 
@@ -62,6 +66,7 @@ export async function do_hicstat(file, isurl) {
 	out_data.chrorder = [] // order of chromosomes in this hic file, for assigning chr to 1st/2nd column of straw output
 	let nChrs = getInt()
 	let Chr_i = 0
+
 	while (Chr_i !== nChrs) {
 		const chr = getString()
 		out_data.chrorder.push(chr)
@@ -74,6 +79,7 @@ export async function do_hicstat(file, isurl) {
 	//console.log(`Reading ${bpRes_n} base pair resolutions...`)
 
 	let bpRes_i = 0
+
 	while (bpRes_i !== bpRes_n) {
 		const resBP = getInt()
 		out_data['Base pair-delimited resolutions'].push(resBP)
@@ -91,30 +97,32 @@ export async function do_hicstat(file, isurl) {
 		FragRes_i++
 	}
 	//This is needed to support the conversion of a BigInt to json
-	if (!BigInt.prototype.toJSON)
+	if (!BigInt.prototype.toJSON){
 		Object.defineProperty(BigInt.prototype, 'toJSON', {
 			get() {
 				'use strict'
 				return () => String(this)
 			}
 		})
+	}
 	//console.log('Reading matrix ...')
 	out_data.normalization = normalization
-	return out_data
+//	return out_data
+	return JSON.stringify(out_data)
 
-	async function getVectorView(file, position, length) {
+	async function getVectorView(file:string, position:number, length:number): Promise<DataView> {
 		const vectorData = isurl ? await readHicUrl(file, position, length) : await readHicFile(file, position, length)
 		const view = new DataView(vectorData)
 		return view
 	}
 
-	async function getNormalization(vectorView, position) {
+	async function getNormalization(vectorView:DataView, position:number): Promise<string[]> {
 		const start = Date.now()
 
-		let normalization = []
+		let normalization:string[] = []
 		const nvectors = vectorView.getInt32(0, true)
-		let pos = 4,
-			result
+		let pos = 4
+			// result
 		for (let i = 1; i <= nvectors; i++) {
 			let str = await getViewValue('string') //type
 			//console.log(str)
@@ -123,8 +131,10 @@ export async function do_hicstat(file, isurl) {
 			if (version == 8 || version == 7) {
 				str = await getViewValue('string') //unit
 				addToPos(4) //skip bin size (int)
+
 				const nvalues = await getViewValue('int32')
 				addToPos(nvalues * 8)
+
 				const nChrScaleFactors = await getViewValue('int32')
 				addToPos(nChrScaleFactors * 12)
 			}
@@ -140,7 +150,7 @@ export async function do_hicstat(file, isurl) {
 		console.log(`Read normalization on ${file} on ${timeTaken / 1000} seconds`)
 		return normalization
 
-		async function addToPos(number) {
+		async function addToPos(number:number) {
 			if (pos + number > shunk) readShunk()
 			pos += number
 		}
@@ -151,12 +161,15 @@ export async function do_hicstat(file, isurl) {
 			pos = 0
 			//console.log(position, pos)
 		}
-
-		async function getViewValue(type) {
-			let value
+		
+		async function getViewValue(type: string): Promise<string | number> {
+			let value: string | number
+		// async function getViewValue(type) {
+		// 	let value
 			if (type == 'string') {
 				let str = ''
 				let chr
+
 				while ((chr = vectorView.getUint8(pos++)) != 0) {
 					if (pos > shunk) await readShunk()
 					const charStr = String.fromCharCode(chr)
@@ -173,7 +186,9 @@ export async function do_hicstat(file, isurl) {
 		}
 	}
 
-	async function readHicFile(file, position, length) {
+	async function readHicFile(file: string, position: number, length: number): Promise<ArrayBuffer> {
+
+	// async function readHicFile(file, position, length) {
 		const fsOpen = util.promisify(fs.open)
 		const fsRead = util.promisify(fs.read)
 
@@ -190,13 +205,14 @@ export async function do_hicstat(file, isurl) {
 
 		return arrayBuffer
 	}
-
-	async function getFileSize(path) {
+	async function getFileSize(path: string): Promise<number> {
+	// async function getFileSize(path) {
 		const stats = await fs.promises.stat(path)
 		return stats.size
 	}
 
-	async function getUrlSize(path) {
+	async function getUrlSize(path: string): Promise<number> {
+	// async function getUrlSize(path) {
 		const execPromise = util.promisify(exec)
 		const out = await execPromise(`curl -I -L ${path}`)
 		const match = out.stdout.match(/content-length: ([0-9]*)/)
@@ -204,8 +220,9 @@ export async function do_hicstat(file, isurl) {
 
 		return fileSize
 	}
-
-	async function readHicUrl(url, position, length) {
+	
+	async function readHicUrl(url: string, position: number, length: number): Promise<ArrayBuffer> {
+	// async function readHicUrl(url, position, length) {
 		try {
 			const range = position + '-' + (position + length - 1)
 			const response = await got(url, {
@@ -221,9 +238,10 @@ export async function do_hicstat(file, isurl) {
 		}
 	}
 
-	function getString() {
+	function getString():string {
 		let str = ''
 		let chr
+		
 		while ((chr = view.getUint8(position++)) != 0) {
 			const charStr = String.fromCharCode(chr)
 			str += charStr
@@ -231,13 +249,13 @@ export async function do_hicstat(file, isurl) {
 		return str
 	}
 
-	function getInt() {
+	function getInt():number {
 		const IntVal = view.getInt32(position, true)
 		position += 4
 		return IntVal
 	}
 
-	function getLong() {
+	function getLong():bigint {
 		const val = view.getBigInt64(position, true)
 		position += 8
 		return val
