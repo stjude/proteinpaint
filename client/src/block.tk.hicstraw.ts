@@ -52,7 +52,7 @@ export function loadTk(tk: any, block: any) {
 
 	Promise.resolve()
 		.then(() => {
-			return import('./hic.straw.js').then(p => {
+			return import('./hic.straw.ts').then(p => {
 				hicstraw = p
 			})
 		})
@@ -283,7 +283,15 @@ function textdata_load(tk: any, block: any) {
 	}
 }
 
-function coordpair2plotpoint(chr1: string, start1: number, stop1: number, chr2: string, start2: number, stop2: number, block: any) {
+function coordpair2plotpoint(
+	chr1: string,
+	start1: number,
+	stop1: number,
+	chr2: string,
+	start2: number,
+	stop2: number,
+	block: any
+) {
 	let left1 = map_point(chr1, start1, block)
 	let left2 = map_point(chr1, stop1, block)
 	if (left1 == -1 && left2 == -1) return
@@ -390,9 +398,9 @@ function loadStrawdata(tk: any, block: any): Promise<string | undefined> {
 	const tasks = [] as any
 
 	type RegionPar = {
-		jwt: any,
+		jwt: any
 		file?: string
-		url?:  string
+		url?: string
 		pos1: number
 		pos2: number
 		nmeth: string
@@ -498,7 +506,7 @@ function parseStrawData(datalst: any, resolution_bp: number, resolution_frag: nu
 			fs_left, // # pixel per bp
 			fs_right
 
-		// using the same logic in hic.straw.js, inherently related to how straw generates data
+		// using the same logic in hic.straw.ts, inherently related to how straw generates data
 		let firstisleft = false
 
 		if (data.regionidx != undefined) {
