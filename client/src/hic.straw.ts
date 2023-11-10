@@ -68,8 +68,8 @@ const subpanel_bordercolor = 'rgba(200,0,0,.1)'
 
 type Pane = {
 	pain: Selection<HTMLDivElement, any, any, any>
-	mini: boolean;
-	header: Selection<HTMLDivElement, any, any, any>;
+	mini: boolean
+	header: Selection<HTMLDivElement, any, any, any>
 	body: Selection<any, any, any, any>
 }
 
@@ -96,7 +96,7 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 	*/
 
 	if (debugmode) {
-		window["hic"] = hic
+		window['hic'] = hic
 	}
 
 	{
@@ -371,7 +371,7 @@ async function init_wholegenome(hic: any) {
 	hic.ressays.text(common.bplen(resolution) + ' bp')
 
 	// # pixel per bin, may set according to resolution
-	let binpx = 1
+	const binpx = 1
 
 	// for each chr, a row as canvas container
 	hic.wholegenome.svg = hic.c.td.append('svg')
@@ -714,7 +714,7 @@ function tooltip_sv(event: any, hic: any, item: any): void {
 
 function click_sv(hic: any, item: any): void {
 	const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-	(pane.header as Pane["header"]).text(
+	;(pane.header as Pane['header']).text(
 		hic.name +
 			' ' +
 			(item.chr1 == item.chr2
@@ -841,10 +841,7 @@ function init_chrpair(hic: any, chrx: any, chry: any) {
 			axis: svg
 				.append('g')
 				.attr('transform', 'translate(1,' + axispad + ')')
-				.call(
-					axisRight(scaleLinear().domain([0, chrylen]).range([0, h]))
-						.tickFormat(d3format('.2s'))
-				),
+				.call(axisRight(scaleLinear().domain([0, chrylen]).range([0, h])).tickFormat(d3format('.2s'))),
 			showline: true
 		})
 		hic.chrpairview.axisy = svg
@@ -868,10 +865,7 @@ function init_chrpair(hic: any, chrx: any, chry: any) {
 			axis: svg
 				.append('g')
 				.attr('transform', 'translate(' + axispad + ',1)')
-				.call(
-					axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w]))
-						.tickFormat(d3format('.2s'))
-				),
+				.call(axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w])).tickFormat(d3format('.2s'))),
 			showline: true
 		})
 		hic.chrpairview.axisx = svg
@@ -883,7 +877,7 @@ function init_chrpair(hic: any, chrx: any, chry: any) {
 	const canvas = hic.c.td
 		.append('canvas')
 		.style('margin', axispad + 'px')
-		.on('click', function(this: any, event: any) {
+		.on('click', function (this: any, event: any) {
 			const [x, y] = pointer(event, this)
 			init_detail(hic, chrx, chry, x, y)
 		})
@@ -942,7 +936,7 @@ function getdata_chrpair(hic: any) {
 				return
 			}
 
-			let err = 0
+			const err = 0
 
 			hic.chrpairview.isintrachr = isintrachr
 			hic.chrpairview.data = []
@@ -1248,7 +1242,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 				const regiony = hic.detailview.yb.rglst[0]
 
 				const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-				(pane.header as Pane["header"]).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
+				;(pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
 
 				const tracks = [
 					{
