@@ -30,7 +30,6 @@ export class profilePlot {
 			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
-		this.settings = config.settings
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 		this.regions = [
 			{ value: '', label: '' },
@@ -47,6 +46,37 @@ export class profilePlot {
 			this.regions.push({ value: region.name, label: region.name })
 			for (const country of region.countries) this.regions.push({ value: country, label: `-- ${country}` })
 		}
+	}
+
+	setRegion(region) {
+		const config = this.config
+		this.settings.facility = ''
+		this.settings.region = region
+		this.settings.income = ''
+		const sampleId = parseInt(this.sampleidmap[region])
+		config.sampleName = config.region
+		config.filter = getSampleFilter(sampleId)
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	setIncome(income) {
+		const config = this.config
+		this.settings.facility = ''
+		this.settings.income = income
+		this.settings.region = ''
+		const sampleId = parseInt(this.sampleidmap[income])
+		config.sampleName = config.income
+		config.filter = getSampleFilter(sampleId)
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	addLegendFilter(filter, value, index) {
+		const text = this.filterG
+			.append('text')
+			.attr('transform', `translate(0, ${index * 20})`)
+			.attr('text-anchor', 'left')
+		text.append('tspan').attr('font-weight', 'bold').text(filter)
+		text.append('tspan').text(`: ${value ? value : 'None'}`)
 	}
 
 	addLegendItem(category, description, index) {

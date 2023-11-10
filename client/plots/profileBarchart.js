@@ -4,6 +4,8 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
+import { controlsInit } from './controls'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 class profileBarchart extends profilePlot {
 	constructor() {
@@ -14,21 +16,10 @@ class profileBarchart extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
-		this.components = config.plotByComponent.map(comp => comp.component.name)
-		const div = this.dom.firstDiv
-		div.insert('label').html('Component:').style('font-weight', 'bold')
-		this.selectComp = div.insert('select').style('margin-left', '5px')
-		this.selectComp
-			.selectAll('option')
-			.data(this.components)
-			.enter()
-			.append('option')
-			.attr('value', (d, i) => i)
-			.html((d, i) => d)
-		this.selectComp.on('change', () => {
-			this.config.componentIndex = this.selectComp.node().value
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+		this.componentNames = config.plotByComponent.map(elem => {
+			return { value: elem.component.name, label: elem.component.name }
 		})
+
 		this.opts.header
 			.style('font-weight', 'bold')
 			.text(
@@ -39,39 +30,83 @@ class profileBarchart extends profilePlot {
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 	}
 
+	setComponent(value) {
+		this.settings.component = value
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+	}
+
+	async setControls() {
+		this.dom.controlsDiv.selectAll('*').remove()
+		const inputs = [
+			{
+				label: 'Component',
+				type: 'dropdown',
+				chartType: 'profileBarchart',
+				options: this.componentNames,
+				settingsKey: 'component',
+				callback: value => this.setComponent(value)
+			},
+			{
+				label: 'Region',
+				type: 'dropdown',
+				chartType: 'profileBarchart',
+				options: this.regions,
+				settingsKey: 'region',
+				callback: value => this.setRegion(value)
+			},
+			{
+				label: 'Income group',
+				type: 'dropdown',
+				chartType: 'profileBarchart',
+				options: this.incomes,
+				settingsKey: 'income',
+				callback: value => this.setIncome(value)
+			}
+		]
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs
+			})
+		}
+		this.components.controls.on('downloadClick.profilePolar', () => downloadSingleSVG(this.svg, this.filename))
+	}
+
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.settings = this.config.settings.profileBarchart
+		this.setControls()
+
 		const twLst = []
-		this.component = this.config.plotByComponent[this.config.componentIndex || 0]
-		this.component.hasSubjectiveData = false
+		this.configComponent =
+			this.config.plotByComponent.find(comp => comp.component.name == this.settings.component) ||
+			this.config.plotByComponent[0]
+		this.configComponent.hasSubjectiveData = false
 		this.rowCount = 0
-		for (const group of this.component.groups)
+		for (const group of this.configComponent.groups)
 			for (const row of group.rows) {
 				this.rowCount++
 				for (const [i, tw] of row.twlst.entries()) {
 					if (tw.id) {
 						twLst.push(tw)
-						if (i == 1) this.component.hasSubjectiveData = true
+						if (i == 1) this.configComponent.hasSubjectiveData = true
 					}
 				}
 			}
 		twLst.push(this.config.typeTW)
-
-		const sampleName = this.config.region !== undefined ? this.config.region : this.config.income || 'Global'
+		const sampleName = this.settings.region !== undefined ? this.settings.region : this.settings.income || 'Global'
 		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst,
 			filter
 		})
 		this.sampleData = this.data.lst[0]
+		this.income = this.settings.income || this.incomes[0].value
+		this.region = this.settings.region !== undefined ? this.settings.region : this.income == '' ? 'Global' : ''
 
-		this.income = this.config.income || this.incomes[0]
-		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
-
-		this.componentIndex = this.config.componentIndex || 0
-		this.setFilter()
-
-		this.filename = `barchart_plot_${this.components[this.componentIndex]}${this.region ? '_' + this.region : ''}${
+		this.filename = `barchart_plot_${this.component}${this.region ? '_' + this.region : ''}${
 			this.income ? '_' + this.income : ''
 		}.svg`
 			.split(' ')
@@ -107,7 +142,7 @@ class profileBarchart extends profilePlot {
 
 		const svg = this.svg
 
-		const color = this.component.component.color
+		const color = this.configComponent.component.color
 		this.svg
 			.append('defs')
 			.append('pattern')
@@ -126,13 +161,13 @@ class profileBarchart extends profilePlot {
 		let step = 30
 		const barwidth = 400
 
-		const hasSubjectiveData = this.component.hasSubjectiveData
+		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		for (const [i, c] of config.columnNames.entries()) {
 			if (i == 1 && !hasSubjectiveData) break
 
 			x = i % 2 == 0 ? 400 : 900
 			x += 10
-			y = 50
+			y = 20
 			svg
 				.append('text')
 				.attr('transform', `translate(${x}, ${y})`)
@@ -144,7 +179,7 @@ class profileBarchart extends profilePlot {
 			x += stepx
 		}
 		y = 75
-		for (const group of this.component.groups) {
+		for (const group of this.configComponent.groups) {
 			svg
 				.append('text')
 				.attr('transform', `translate(${50}, ${y + 40})`)
@@ -186,9 +221,9 @@ class profileBarchart extends profilePlot {
 			.text('Overall Score')
 			.attr('transform', `translate(0, -5)`)
 
-		this.addLegendItem(this.legendG, 'A', 'More than 75% of possible scorable items', 1)
-		this.addLegendItem(this.legendG, 'B', '50-75% of possible scorable items', 2)
-		this.addLegendItem(this.legendG, 'C', 'Less than 50% of possible scorable items', 3)
+		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
+		this.addLegendItem('B', '50-75% of possible scorable items', 2)
+		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 		const textElem = this.legendG.append('text').attr('transform', `translate(0, 90)`)
 		textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression:')
 		textElem
@@ -325,6 +360,14 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileBarchart
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileBarchart'
 		const config = copyMerge(structuredClone(defaults), opts)
+		const settings = getDefaultProfileBarchartSettings()
+
+		config.settings = {
+			controls: {
+				isOpen: false // control panel is hidden by default
+			},
+			profileBarchart: settings
+		}
 		for (const component of config.plotByComponent)
 			for (const group of component.groups)
 				for (const row of group.rows) {
@@ -344,3 +387,7 @@ export async function getPlotConfig(opts, app) {
 export const profileBarchartInit = getCompInit(profileBarchart)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profileBarchartInit
+
+export function getDefaultProfileBarchartSettings() {
+	return {}
+}

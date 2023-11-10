@@ -463,7 +463,6 @@ function setDropdownInput(opts) {
 				}
 			})
 	})
-
 	self.dom.select
 		.selectAll('option')
 		.data(opts.options)
