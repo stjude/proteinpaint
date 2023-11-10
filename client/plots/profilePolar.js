@@ -64,32 +64,10 @@ class profilePolar extends profilePlot {
 		this.components.controls.on('downloadClick.profilePolar', () => downloadSingleSVG(this.svg, this.filename))
 	}
 
-	setRegion(region) {
-		const config = this.config
-		config.settings.profilePolar.facility = ''
-		config.settings.profilePolar.region = region
-		config.settings.profilePolar.income = ''
-		const sampleId = parseInt(this.sampleidmap[region])
-		config.sampleName = config.region
-		config.filter = getSampleFilter(sampleId)
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-	}
-
-	setIncome(income) {
-		const config = this.config
-		config.settings.profilePolar.facility = ''
-		config.settings.profilePolar.income = income
-		config.settings.profilePolar.region = ''
-		const sampleId = parseInt(this.sampleidmap[income])
-		config.sampleName = config.income
-		config.filter = getSampleFilter(sampleId)
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profilePolar
-		await this.setControls()
+		this.setControls()
 		this.twLst = []
 		for (const [i, tw] of this.config.terms.entries()) {
 			if (tw.id) this.twLst.push(tw)
@@ -252,15 +230,6 @@ class profilePolar extends profilePlot {
 					.attr('pointer-events', 'none')
 			}
 		}
-	}
-
-	addLegendFilter(filter, value, index) {
-		const text = this.filterG
-			.append('text')
-			.attr('transform', `translate(0, ${index * 20})`)
-			.attr('text-anchor', 'left')
-		text.append('tspan').attr('font-weight', 'bold').text(filter)
-		text.append('tspan').text(`: ${value ? value : 'None'}`)
 	}
 }
 
