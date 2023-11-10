@@ -5,6 +5,8 @@ import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
+import { controlsInit } from './controls'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 class profileRadar extends profilePlot {
 	constructor() {
@@ -12,43 +14,87 @@ class profileRadar extends profilePlot {
 		this.type = 'profileRadar'
 		this.radius = 250
 	}
+
+	async setControls() {
+		this.dom.controlsDiv.selectAll('*').remove()
+		const inputs = [
+			{
+				label: 'Show table',
+				type: 'checkbox',
+				chartType: 'profileRadar',
+				settingsKey: 'showTable',
+				boxLabel: 'Yes'
+			},
+			{
+				label: 'Region',
+				type: 'dropdown',
+				chartType: 'profileRadar',
+				options: this.regions,
+				settingsKey: 'region',
+				callback: value => this.setRegion(value)
+			},
+			{
+				label: 'Facility',
+				type: 'dropdown',
+				chartType: 'profileRadar',
+				options: this.facilities,
+				settingsKey: 'facility',
+				callback: value => this.setFacility(value)
+			},
+			{
+				label: 'Income group',
+				type: 'dropdown',
+				chartType: 'profileRadar',
+				options: this.incomes,
+				settingsKey: 'income',
+				callback: value => this.setIncome(value)
+			}
+		]
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs
+			})
+		}
+		this.components.controls.on('downloadClick.profileRadar', () => downloadSingleSVG(this.svg, this.filename))
+	}
+
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.opts.header.style('font-weight', 'bold').text(config[config.plot].name)
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('Facility:').style('font-weight', 'bold')
-		this.facilities = ['']
-		this.facilities.push(...(await this.app.vocabApi.getProfileFacilities()))
-
-		this.facilitySelect = this.dom.facilityDiv.insert('select').style('margin-left', '5px')
-		this.facilitySelect
-			.selectAll('option')
-			.data(this.facilities)
-			.enter()
-			.append('option')
-			.attr('value', d => d)
-			.html((d, i) => d)
-		this.facilitySelect.on('change', () => {
-			const config = this.config
-			config.facility = this.facilitySelect.node().value
-			config.sampleName = config.facility
-			config.income = ''
-			config.region = ''
-			const sampleId = parseInt(this.sampleidmap[config.facility])
-			config.filter = getSampleFilter(sampleId)
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('or').style('font-weight', 'bold')
+		this.facilities = [{ label: '', value: '' }]
+		const facilities = await this.app.vocabApi.getProfileFacilities()
+		this.facilities.push(
+			...facilities.map(facility => {
+				return { label: facility, value: facility }
+			})
+		)
 
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 	}
 
+	setFacility(facility) {
+		const config = this.config
+		this.settings.facility = facility
+		this.settings.income = ''
+		this.settings.region = ''
+		const sampleId = parseInt(this.sampleidmap[facility])
+		config.sampleName = config.facility
+		config.filter = getSampleFilter(sampleId)
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.settings = this.config.settings.profileRadar
+		this.setControls()
 		this.twLst = []
 		this.terms = this.config[this.config.plot].terms
 		for (const { parent, term1, term2 } of this.terms) {
@@ -67,9 +113,8 @@ class profileRadar extends profilePlot {
 		this.sampleData = this.data.lst[0]
 		this.angle = (Math.PI * 2) / this.terms.length
 
-		this.income = this.config.income || this.incomes[0]
+		this.income = this.config.income || this.incomes[0].value
 		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
-		this.setFilter()
 
 		this.filename = `radar_plot_${this.config.sampleName}.svg`.split(' ').join('_')
 		this.plot()
@@ -102,7 +147,7 @@ class profileRadar extends profilePlot {
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 400
-		const y = 320
+		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 400},${y + 150})`)
@@ -143,15 +188,15 @@ class profileRadar extends profilePlot {
 			})
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
-
-		renderTable({
-			rows,
-			columns,
-			div: this.tableDiv,
-			showLines: true,
-			resize: true,
-			maxHeight: '60vh'
-		})
+		if (this.settings.showTable)
+			renderTable({
+				rows,
+				columns,
+				div: this.tableDiv,
+				showLines: true,
+				resize: true,
+				maxHeight: '60vh'
+			})
 
 		data.push(data[0])
 		data2.push(data2[0])
@@ -286,6 +331,14 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadar'
 		let config = copyMerge(structuredClone(defaults), opts)
+		const settings = getDefaultProfileRadarSettings()
+
+		config.settings = {
+			controls: {
+				isOpen: false // control panel is hidden by default
+			},
+			profileRadar: settings
+		}
 		const terms = config[opts.plot].terms
 		for (const { parent, term1, term2 } of terms) {
 			await fillTermWrapper(parent, app.vocabApi)
@@ -302,3 +355,9 @@ export async function getPlotConfig(opts, app) {
 export const profileRadarInit = getCompInit(profileRadar)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profileRadarInit
+
+export function getDefaultProfileRadarSettings() {
+	return {
+		showTable: true
+	}
+}
