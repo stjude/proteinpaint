@@ -132,7 +132,7 @@ export async function loadTk(tk, block) {
 			start: r.start,
 			stop: r.stop,
 			width: r.width,
-			x: xoff,
+			x: xoff
 		})
 		xoff += r.width + block.regionspace
 	}
@@ -146,7 +146,7 @@ export async function loadTk(tk, block) {
 			width: r.width,
 			exonsf: r.exonsf,
 			subpanelidx: idx,
-			x: xoff,
+			x: xoff
 		})
 		xoff += r.width
 	}
@@ -247,7 +247,7 @@ async function getData(tk, block, additional = {}) {
 		regions: tk.regions,
 		nucleotide_length: block.exonsf,
 		pileupheight: tk.pileupheight,
-		...additional,
+		...additional
 	}
 
 	if (tk.gdcFile) {
@@ -256,7 +256,7 @@ async function getData(tk, block, additional = {}) {
 	}
 
 	if (tk.variants) {
-		body.variant = tk.variants.map((m) => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.')
+		body.variant = tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.')
 		body.strictness = tk.strictness
 		body.diff_score_plotwidth = tk.dom.diff_score_plotwidth
 		if (Number.isFinite(tk.max_diff_score)) {
@@ -276,7 +276,7 @@ async function getData(tk, block, additional = {}) {
 		}
 
 		body.sv = tk.sv
-			.map((m) => m.chrA + '.' + m.startA + '.' + m.strandA + '.' + m.chrB + '.' + m.startB + '.' + m.strandB)
+			.map(m => m.chrA + '.' + m.startA + '.' + m.strandA + '.' + m.chrB + '.' + m.startB + '.' + m.strandB)
 			.join('.')
 	}
 
@@ -345,7 +345,7 @@ or update existing groups, in which groupidx will be provided
 		axisstyle({
 			axis: tk.dom.pileup_axis.call(axisRight().scale(scale).ticks(5)), // at most 5 ticks
 			color: 'black',
-			showline: true,
+			showline: true
 		})
 	} else {
 		// pileup not returned when there's no visible reads (other cases?)
@@ -447,7 +447,7 @@ function setLeftlabelWidth(tk, block) {
 		tk.tklabel.node().getBBox().width,
 		tk.leftlabel_count.node().getBBox().width,
 		tk.leftlabel_skip.node().getBBox().width,
-		tk.leftlabel_about ? tk.leftlabel_about.node().getBBox().width : 0,
+		tk.leftlabel_about ? tk.leftlabel_about.node().getBBox().width : 0
 	]
 	if (tk.show_readnames) {
 		for (const g of tk.groups) lst.push(g.ReadNameMaxwidth)
@@ -623,7 +623,7 @@ function may_render_variant(data, tk, block) {
 		}
 
 		//Show information about FS in tooltip on click
-		tk.fs_string.on('click', (event) => {
+		tk.fs_string.on('click', event => {
 			tk.tktip.clear().showunder(event.target)
 			tk.tktip.d
 				.append('div')
@@ -804,7 +804,7 @@ function may_render_variant(data, tk, block) {
 
 		html_text +=
 			"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
-		diff_score_string.on('click', (event) => {
+		diff_score_string.on('click', event => {
 			tk.tktip.clear().showunder(event.target)
 			tk.tktip.d.append('div').style('width', '300px').style('font-size', '12px').html(html_text)
 		})
@@ -874,7 +874,7 @@ function updateExistingGroups(data, tk, block) {
 
 	// Check which group is missing in data.groups and deleting it
 	for (let i = 0; i < tk.groups.length; i++) {
-		const group = data.groups.find((g) => g.type == tk.groups[i].data.type)
+		const group = data.groups.find(g => g.type == tk.groups[i].data.type)
 		if (!group) {
 			tk.groups[i].dom.message_rowg.remove()
 			tk.groups[i].dom.img_fullstack.remove()
@@ -889,7 +889,7 @@ function updateExistingGroups(data, tk, block) {
 	}
 
 	for (const gd of data.groups) {
-		const group = tk.groups.find((g) => g.data.type == gd.type)
+		const group = tk.groups.find(g => g.data.type == gd.type)
 		if (!group) {
 			// Addition of extra group often take place when toggled to higher strictness. For e.g going from strictness 0 to 1 where the none category gets created
 			const g = makeGroup(gd, tk, block, data)
@@ -1023,7 +1023,7 @@ function makeTk(tk, block) {
 				}
 			}
 			tk.alignpane.pane.style('display', 'none')
-		},
+		}
 	}) // Panel for showing multi_read alignment to ref/alt allele
 	tk.alignpane.pane.style('display', 'none')
 
@@ -1036,7 +1036,7 @@ function makeTk(tk, block) {
 		pileup_axis: tk.glider.append('g'),
 		read_limit_height: 15,
 		read_limit_bottompad: 6,
-		read_limit_g: tk.glider.append('g'),
+		read_limit_g: tk.glider.append('g')
 	}
 	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
 
@@ -1084,7 +1084,7 @@ function makeTk(tk, block) {
 		tk.leftlabel_about = block
 			.maketklefthandle(tk, laby)
 			.text('About the BAM file')
-			.on('mouseover', (event) => {
+			.on('mouseover', event => {
 				tk.tktip.showunder(event.target).clear()
 				make_table_2col(tk.tktip.d, tk.aboutThisFile)
 			})
@@ -1101,17 +1101,19 @@ function may_add_urlparameter(tk, block) {
 		// Check if the variant is simple string "chr.pos.ref.alt" or a complex json object
 
 		tk.variants = []
-		const tmp = u2p.get('variant').split('.')
-		if (tmp.length == 4) {
-			// Simple variant i.e chr.pos.ref.alt
-			const pos = Number(tmp[1])
-			if (!Number.isInteger(pos)) throw 'urlparam variant pos is not integer'
-			if (!tmp[2]) throw 'ref allele missing'
-			if (!tmp[3]) throw 'alt allele missing'
-			tk.variants.push({ chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: tmp[3], strictness: 1 })
+		if (typeof u2p.get('variant') == 'string') {
+			const tmp = u2p.get('variant').split('.')
+			if (tmp.length == 4) {
+				// Simple variant i.e chr.pos.ref.alt
+				const pos = Number(tmp[1])
+				if (!Number.isInteger(pos)) throw 'urlparam variant pos is not integer'
+				if (!tmp[2]) throw 'ref allele missing'
+				if (!tmp[3]) throw 'alt allele missing'
+				tk.variants.push({ chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: tmp[3], strictness: 1 })
+			}
 		} else {
 			// json object like variant={chr:"chr1", variants:[ { pos:123, ref:A, alt:T }, {pos, ref, alt} ... ] }
-			const variant_json = JSON.parse(u2p.get('variant'))
+			const variant_json = u2p.get('variant')
 			for (const item of variant_json.variants) {
 				if (!Number.isInteger(item.pos)) throw 'urlparam variant pos is not integer'
 				if (!item.ref) throw 'ref allele missing'
@@ -1222,7 +1224,7 @@ function may_add_urlparameter(tk, block) {
 				chrB: tmp[3],
 				startB: tmp[4],
 				strandB: tmp[5],
-				contig: tmp[6],
+				contig: tmp[6]
 			})
 		} else if (tmp.length == 6) {
 			tk.sv.push({
@@ -1231,7 +1233,7 @@ function may_add_urlparameter(tk, block) {
 				strandA: tmp[2],
 				chrB: tmp[3],
 				startB: tmp[4],
-				strandB: tmp[5],
+				strandB: tmp[5]
 			})
 		}
 	}
@@ -1244,8 +1246,8 @@ function makeGroup(gd, tk, block, data) {
 		dom: {
 			groupg: tk.glider.append('g'),
 			rightg: tk.gright.append('g'),
-			leftg: tk.gleft.append('g'),
-		},
+			leftg: tk.gleft.append('g')
+		}
 	}
 	/*
 	groupg contains two <g>: message_rowg and imgg
@@ -1319,10 +1321,10 @@ function makeGroup(gd, tk, block, data) {
 		.attr('fill-opacity', 0)
 		.attr('width', group.data.width)
 		.attr('height', group.data.height)
-		.on('mousedown', (event) => {
+		.on('mousedown', event => {
 			mousedownx = event.clientX
 		})
-		.on('mousemove', (event) => {
+		.on('mousemove', event => {
 			if (group.data.allowpartstack) {
 				// TODO expand dom.box_move with full width and height to cover minimum expandable reads
 				return
@@ -1353,7 +1355,7 @@ function makeGroup(gd, tk, block, data) {
 				}
 			}
 		})
-		.on('click', (event) => {
+		.on('click', event => {
 			if (mousedownx != event.clientX) return
 			const [mx, my] = pointer(event, group.dom.img_cover.node())
 			group.my_partstack = my // Stores y-position of the mouse click in group
@@ -1396,7 +1398,7 @@ function makeGroup(gd, tk, block, data) {
 						// a different template or different read from the same template
 						// overwrite
 						group.clickedtemplate = {
-							qname: t.qname,
+							qname: t.qname
 						}
 						if (tk.asPaired) {
 							group.clickedtemplate.isfirst = true
@@ -1450,14 +1452,14 @@ function makeGroup(gd, tk, block, data) {
 		.append('rect')
 		.attr('fill', slider_color)
 		.attr('width', 40)
-		.on('mousedown', (event) => {
+		.on('mousedown', event => {
 			event.preventDefault()
 			group.dom.rightg.vslider.box.attr('fill', slider_color_dark)
 			const scrollableheight = group.data.height
 			const y0 = event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
-			b.on('mousemove', (event) => {
+			b.on('mousemove', event => {
 				const y1 = event.clientY
 				const d = y1 - y0
 				if (d < 0) {
@@ -1510,7 +1512,7 @@ function makeGroup(gd, tk, block, data) {
 				const _d = await getData(tk, block, {
 					stackstart: group.partstack.start,
 					stackstop: group.partstack.stop,
-					grouptype: group.data.type,
+					grouptype: group.data.type
 				})
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
@@ -1535,13 +1537,13 @@ function makeGroup(gd, tk, block, data) {
 		.attr('x2', 40)
 		.on('mouseover', () => group.dom.rightg.vslider.boxtopline.attr('stroke', slider_color_dark_line))
 		.on('mouseout', () => group.dom.rightg.vslider.boxtopline.attr('stroke', slider_color_dark))
-		.on('mousedown', (event) => {
+		.on('mousedown', event => {
 			event.preventDefault()
 			const scrollableheight = group.data.height
 			const y0 = event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
-			b.on('mousemove', (event) => {
+			b.on('mousemove', event => {
 				const y1 = event.clientY
 				const d = y1 - y0
 				if (d < 0) {
@@ -1566,7 +1568,7 @@ function makeGroup(gd, tk, block, data) {
 				const _d = await getData(tk, block, {
 					stackstart: group.partstack.start,
 					stackstop: group.partstack.stop,
-					grouptype: group.data.type,
+					grouptype: group.data.type
 				})
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
@@ -1590,13 +1592,13 @@ function makeGroup(gd, tk, block, data) {
 		.attr('x2', 40)
 		.on('mouseover', () => group.dom.rightg.vslider.boxbotline.attr('stroke', slider_color_dark_line))
 		.on('mouseout', () => group.dom.rightg.vslider.boxbotline.attr('stroke', slider_color_dark))
-		.on('mousedown', (event) => {
+		.on('mousedown', event => {
 			event.preventDefault()
 			const scrollableheight = group.data.height
 			const y0 = event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
-			b.on('mousemove', (event) => {
+			b.on('mousemove', event => {
 				const y1 = event.clientY
 				const d = y1 - y0
 				if (d < 0) {
@@ -1620,7 +1622,7 @@ function makeGroup(gd, tk, block, data) {
 				const _d = await getData(tk, block, {
 					stackstart: group.partstack.start,
 					stackstop: group.partstack.stop,
-					grouptype: group.data.type,
+					grouptype: group.data.type
 				})
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
@@ -1647,7 +1649,7 @@ async function align_reads_to_allele(tk, group, block) {
 		alignOneGroup: group.data.type,
 		genome: block.genome.name,
 		regions: tk.regions,
-		variant: tk.variants.map((m) => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.'),
+		variant: tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.')
 	}
 	if (tk.file) body.file = tk.file
 	if (tk.url) body.url = tk.url
@@ -1696,15 +1698,15 @@ function configPanel(tk, block) {
 			holder: row,
 			options: [
 				{ label: 'Single', value: false, checked: !tk.asPaired },
-				{ label: 'Paired', value: true, checked: tk.asPaired },
+				{ label: 'Paired', value: true, checked: tk.asPaired }
 			],
 			styles: { display: 'inline-block', margin: '10px 5px' },
-			callback: (v) => {
+			callback: v => {
 				tk.asPaired = v
 				loadTk(tk, block)
 			},
 			inputName: 'show-reads-radios' /* Fix for show reads and strictness radio 
-			buttons operating independently */,
+			buttons operating independently */
 		})
 	}
 	{
@@ -1716,7 +1718,7 @@ function configPanel(tk, block) {
 			callback: () => {
 				tk.drop_pcrduplicates = !tk.drop_pcrduplicates
 				loadTk(tk, block)
-			},
+			}
 		})
 	}
 	if (tk.variants) {
@@ -1728,7 +1730,7 @@ function configPanel(tk, block) {
 			callback: () => {
 				tk.show_readnames = !tk.show_readnames
 				loadTk(tk, block)
-			},
+			}
 		})
 
 		if (tk.variants[0].strictness == 0) {
@@ -1752,22 +1754,22 @@ function configPanel(tk, block) {
 				{
 					label: 'Lenient: "None group" is not generated.',
 					value: 0,
-					checked: tk.strictness == 0,
+					checked: tk.strictness == 0
 				},
 				{
 					label:
 						'Strict: "None group" is generated for reads with imperfect match to both reference and alternative alleles.',
 					value: 1,
-					checked: tk.strictness == 1,
-				},
+					checked: tk.strictness == 1
+				}
 			],
 			styles: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '30px' },
-			callback: (v) => {
+			callback: v => {
 				tk.strictness = v
 				loadTk(tk, block)
 			},
 			inputName: 'strictness-radios' /* Fix for show reads and strictness radio 
-			buttons operating independently */,
+			buttons operating independently */
 		})
 	}
 
@@ -1820,12 +1822,12 @@ function click_groupheader(tk, group, block) {
 
 function updateExistingMultiReadAligInfo(tk, read_number) {
 	const rows = tk.readAlignmentTable._groups[0][0].querySelectorAll('tr')
-	rows.forEach((row) => {
+	rows.forEach(row => {
 		if (row.rowIndex == read_number + 1 && !tk.is_align_gene) {
 			// 1 is added because the top in the HTML table consists of the variant box. So read index in the actual bam track is equal to read_number + 1 in the realignment panel
 			row.style.setProperty('font-weight', 'bold')
 			const cols = row.querySelectorAll('td')
-			cols.forEach((col) => {
+			cols.forEach(col => {
 				if (col.style.backgroundColor.toString() == 'rgb(255, 255, 255)') {
 					col.style.setProperty('background-color', 'yellow')
 				}
@@ -1834,7 +1836,7 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 			// 2 is added because the top in the HTML table consists of the variant box. In addition, when gene models are displayed after the reference/alternate sequence, the read index in the actual bam track is equal to read_number + 2 in the realignment panel
 			row.style.setProperty('font-weight', 'bold')
 			const cols = row.querySelectorAll('td')
-			cols.forEach((col) => {
+			cols.forEach(col => {
 				if (col.style.backgroundColor.toString() == 'rgb(255, 255, 255)') {
 					col.style.setProperty('background-color', 'yellow')
 				}
@@ -1843,7 +1845,7 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 			// When read_number does not match rowIndex then the background color for each cells in the row is turned to white
 			row.style.setProperty('font-weight', 'normal')
 			const cols = row.querySelectorAll('td')
-			cols.forEach((col) => {
+			cols.forEach(col => {
 				if (col.style.backgroundColor.toString() == 'yellow') {
 					col.style.setProperty('background-color', 'rgb(255, 255, 255)')
 				}
@@ -2187,7 +2189,7 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group,
 					src: gene_model_image.src,
 					width: local_alignment_width,
 					height: gene_model_image.height,
-					colspan: gm_nuc_count,
+					colspan: gm_nuc_count
 				}
 				gene_model_images.push(gm)
 				gene_model_order.push('gene_model')
@@ -2228,7 +2230,7 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group,
 				src: gene_model_image.src,
 				width: local_alignment_width,
 				height: gene_model_image.height,
-				colspan: gm_nuc_count,
+				colspan: gm_nuc_count
 			}
 			gene_model_images.push(gm)
 			gene_model_order.push('gene_model')
@@ -2257,7 +2259,7 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group,
 				src: gene_model_image.src,
 				width: local_alignment_width,
 				height: gene_model_image.height,
-				colspan: gm_nuc_count,
+				colspan: gm_nuc_count
 			}
 			gene_model_images.push(gm)
 			gene_model_order.push('gene_model')
@@ -2333,7 +2335,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 		for (let var_idx = 0; var_idx < tk.variants.length; var_idx++) {
 			ref_start_stops.push({
 				start: tk.variants[var_idx].pos,
-				stop: tk.variants[var_idx].pos + tk.variants[var_idx].ref.length,
+				stop: tk.variants[var_idx].pos + tk.variants[var_idx].ref.length
 			})
 		}
 		ref_start_stops.sort((i, j) => i.start - j.start)
@@ -2387,7 +2389,7 @@ async function getReadInfo(tk, block, box, ridx) {
 					chrom: tk.variants[0].chr,
 					ref_positions: tk.variants.ref_positions,
 					refalleles: tk.variants.refalleles,
-					altalleles: tk.variants.altalleles,
+					altalleles: tk.variants.altalleles
 			  }
 			: {}
 	)
@@ -2659,7 +2661,7 @@ async function getReadInfo(tk, block, box, ridx) {
 							src: gene_model.src,
 							width: local_alignment_width,
 							height: gene_model.height,
-							colspan: gm_nuc_count,
+							colspan: gm_nuc_count
 						}
 						gene_models.push(gm)
 
@@ -2688,7 +2690,7 @@ async function getReadInfo(tk, block, box, ridx) {
 							src: gene_model.src,
 							width: local_alignment_width,
 							height: gene_model.height,
-							colspan: gm_nuc_count,
+							colspan: gm_nuc_count
 						}
 						gene_models.push(gm)
 					}
@@ -2735,7 +2737,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			chr: r.chr,
 			start: r.start,
 			stop: r.stop,
-			...extra,
+			...extra
 		}
 		if (tk.gdcFile) {
 			body.gdcFileUUID = tk.gdcFile.uuid
@@ -2765,7 +2767,7 @@ async function getReadInfo(tk, block, box, ridx) {
 }
 
 async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) {
-	const genetk = block.genome.tracks.find((i) => i.__isgene)
+	const genetk = block.genome.tracks.find(i => i.__isgene)
 	const args = {
 		name: genetk.name,
 		genome: block.genome.name,
@@ -2774,8 +2776,8 @@ async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignm
 				chr: tk.variants[0].chr,
 				start: segstart,
 				stop: segstop,
-				width: local_alignment_width,
-			},
+				width: local_alignment_width
+			}
 		],
 		width: local_alignment_width,
 		stackheight: 16,
@@ -2786,12 +2788,12 @@ async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignm
 		color: genetk.color,
 		translatecoding: 1,
 		__isgene: true,
-		noNameHover: true,
+		noNameHover: true
 	}
 
 	{
 		// if the same gene tk is currently showing, apply its gene model filtering
-		const tk = block.tklst.find((i) => i.name == args.name && i.type == 'bedj')
+		const tk = block.tklst.find(i => i.name == args.name && i.type == 'bedj')
 		if (tk && tk.filterByName) {
 			args.filterByName = tk.filterByName
 		}
@@ -2802,7 +2804,7 @@ async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignm
 
 // FIXME may combine with get_gene_models_refalt?
 async function get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) {
-	const genetk = block.genome.tracks.find((i) => i.__isgene)
+	const genetk = block.genome.tracks.find(i => i.__isgene)
 	const args = {
 		name: genetk.name,
 		genome: block.genome.name,
@@ -2811,8 +2813,8 @@ async function get_gene_models_reads(block, ridx, segstart, segstop, local_align
 				chr: block.rglst[ridx].chr,
 				start: segstart,
 				stop: segstop,
-				width: local_alignment_width,
-			},
+				width: local_alignment_width
+			}
 		],
 		width: local_alignment_width,
 		stackheight: 16,
@@ -2823,11 +2825,11 @@ async function get_gene_models_reads(block, ridx, segstart, segstop, local_align
 		color: genetk.color,
 		translatecoding: 1,
 		__isgene: true,
-		noNameHover: true,
+		noNameHover: true
 	}
 	{
 		// if the same gene tk is currently showing, apply its gene model filtering
-		const tk = block.tklst.find((i) => i.name == args.name && i.type == 'bedj')
+		const tk = block.tklst.find(i => i.name == args.name && i.type == 'bedj')
 		if (tk && tk.filterByName) {
 			args.filterByName = tk.filterByName
 		}
@@ -2854,8 +2856,8 @@ function mayshow_blatbutton(read, div, tk, block) {
 						genome: block.genome.name,
 						seq: read.seq,
 						soft_starts: read.soft_starts,
-						soft_stops: read.soft_stops,
-					},
+						soft_stops: read.soft_stops
+					}
 				})
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'
@@ -3017,25 +3019,25 @@ async function enter_partstack(group, tk, block, y, data) {
 		// clicked too close to top
 		group.partstack = {
 			start: 0,
-			stop: stackpagesize,
+			stop: stackpagesize
 		}
 	} else if (clickstackidx > group.data_fullstack.stackcount - stackpagesize / 2) {
 		// clicked too close to bottom
 		group.partstack = {
 			start: group.data_fullstack.stackcount - stackpagesize,
-			stop: group.data_fullstack.stackcount,
+			stop: group.data_fullstack.stackcount
 		}
 	} else {
 		group.partstack = {
 			start: clickstackidx - stackpagesize / 2,
-			stop: clickstackidx + stackpagesize / 2,
+			stop: clickstackidx + stackpagesize / 2
 		}
 	}
 	block.tkcloakon(tk)
 	const _d = await getData(tk, block, {
 		stackstart: group.partstack.start,
 		stackstop: group.partstack.stop,
-		grouptype: group.data.type,
+		grouptype: group.data.type
 	})
 	if (tk.readAlignmentTable) {
 		delete tk.readAlignmentTable
