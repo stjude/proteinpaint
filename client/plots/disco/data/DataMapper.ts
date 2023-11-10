@@ -67,7 +67,15 @@ export default class DataMapper {
 		return aPos - bPos
 	}
 
-	constructor(settings: Settings, reference: Reference, sample: string, prioritizedGenes: Array<string> = []) {
+	private prioritizeGeneLabelsByGeneSets: boolean
+
+	constructor(
+		settings: Settings,
+		reference: Reference,
+		sample: string,
+		prioritizedGenes: Array<string> = [],
+		prioritizeGeneLabelsByGeneSets: boolean
+	) {
 		this.settings = settings
 		this.reference = reference
 		this.sample = sample
@@ -78,6 +86,8 @@ export default class DataMapper {
 		this.snvRingFilter = (data: Data) =>
 			settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
 		this.dataObjectMapper = new DataObjectMapper(sample, prioritizedGenes)
+
+		this.prioritizeGeneLabelsByGeneSets = prioritizeGeneLabelsByGeneSets
 	}
 
 	map(data: any) {
@@ -173,7 +183,9 @@ export default class DataMapper {
 			cnvMinValue: this.cnvMinValue,
 
 			lohMaxValue: this.lohMaxValue,
-			lohMinValue: this.lohMinValue
+			lohMinValue: this.lohMinValue,
+
+			prioritizeGeneLabelsByGeneSets: this.prioritizeGeneLabelsByGeneSets
 		}
 
 		return dataHolder

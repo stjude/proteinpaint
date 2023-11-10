@@ -25,6 +25,8 @@ export interface DataHolder {
 
 	hasPrioritizedGenes: boolean
 
+	prioritizeGeneLabelsByGeneSets: boolean
+
 	cnvMaxValue?: number
 	cnvMinValue?: number
 

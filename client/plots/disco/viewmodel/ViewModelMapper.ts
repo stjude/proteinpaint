@@ -63,7 +63,13 @@ export class ViewModelMapper {
 
 		const reference = new Reference(this.settings, chrSizes, chromosomesOverride)
 
-		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes)
+		const dataMapper = new DataMapper(
+			this.settings,
+			reference,
+			sampleName,
+			prioritizedGenes,
+			this.settings.label.prioritizeGeneLabelsByGeneSets
+		)
 
 		return new ViewModelProvider(this.settings, dataMapper, reference, sampleName).map(data)
 	}

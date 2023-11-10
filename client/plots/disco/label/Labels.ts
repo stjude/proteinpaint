@@ -11,8 +11,14 @@ export default class Labels extends Ring<Label> {
 	private hasPrioritizedGenes: boolean
 	private filteredPrioritizedGenesList: Array<Label> = []
 	private overlapAngle: number
+	private prioritizeGeneLabelsByGeneSets: boolean
 
-	constructor(settings: Settings, elements: Array<Label>, hasPrioritizedGenes: boolean) {
+	constructor(
+		settings: Settings,
+		elements: Array<Label>,
+		hasPrioritizedGenes: boolean,
+		prioritizeGeneLabelsByGeneSets: boolean
+	) {
 		super(
 			settings.rings.labelLinesInnerRadius,
 			settings.rings.labelsToLinesDistance,
@@ -23,6 +29,7 @@ export default class Labels extends Ring<Label> {
 
 		this.settings = settings
 		this.hasPrioritizedGenes = hasPrioritizedGenes
+		this.prioritizeGeneLabelsByGeneSets = prioritizeGeneLabelsByGeneSets
 
 		const circumference = 2 * Math.PI * (settings.rings.labelLinesInnerRadius + settings.rings.labelsToLinesDistance)
 		this.overlapAngle = (this.settings.label.overlapAngleFactor * this.settings.label.fontSize) / circumference
@@ -34,19 +41,20 @@ export default class Labels extends Ring<Label> {
 		this.collisions = []
 
 		let hasPrioritizedGenesList: Array<Label> = []
+		hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
+		this.filteredPrioritizedGenesList = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
+		const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
 
 		if (this.hasPrioritizedGenes) {
-			hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
-			this.filteredPrioritizedGenesList = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
-
-			const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
-
-			const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
-				return a.startAngle < b.startAngle ? -1 : a.startAngle > b.startAngle ? 1 : 0
-			})
-
-			this.elementsToDisplay = this.getAllLabels(combinedAndSortedList)
-		} else {
+			if (this.prioritizeGeneLabelsByGeneSets) {
+				this.elementsToDisplay = this.getAllLabels(hasPrioritizedGenes)
+			} else {
+				const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
+					return a.startAngle - b.startAngle
+				})
+				this.elementsToDisplay = this.getAllLabels(combinedAndSortedList)
+			}
+		} else if (!this.prioritizeGeneLabelsByGeneSets) {
 			this.elementsToDisplay = this.getLabelsWithoutPrioritizedGenes(this.elements)
 		}
 	}
