@@ -686,7 +686,7 @@ function drawCanvas(tk: any, block: any) {
 	canvas.width = canvaswidth
 	canvas.height = canvasheight
 
-	let ctx = canvas.getContext('2d')
+	const ctx = canvas.getContext('2d')
 	if (window.devicePixelRatio > 1) {
 		canvas.width = canvaswidth * window.devicePixelRatio
 		canvas.height = canvasheight * window.devicePixelRatio
