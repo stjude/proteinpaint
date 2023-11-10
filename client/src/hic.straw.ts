@@ -1,10 +1,11 @@
 import { axisRight, axisBottom } from 'd3-axis'
-import { select as d3select, selectAll as d3selectAll, pointer } from 'd3-selection'
+import { select as d3select, pointer, Selection } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { format as d3format } from 'd3-format'
 import * as common from '#shared/common'
 import blocklazyload from './block.lazyload'
+import { HicstrawArgs } from '../types/hic.ts'
 
 /*
 
@@ -65,7 +66,23 @@ const default_subpanelpxwidth = 600 // default px width of subpanels
 
 const subpanel_bordercolor = 'rgba(200,0,0,.1)'
 
-export function hicparsefile(hic, debugmode) {
+type Pane = {
+	pain: Selection<HTMLDivElement, any, any, any>
+	mini: boolean;
+	header: Selection<HTMLDivElement, any, any, any>;
+	body: Selection<any, any, any, any>
+}
+
+type Mutation = {
+	chr1: string
+	chr2: string
+	position1: string | number
+	position2: string | number
+	reads1: string | number
+	reads2: string | number
+}
+
+export function hicparsefile(hic: any, debugmode: boolean) {
 	/*
 	parse input file, initiate view
 	hic{}
@@ -79,7 +96,7 @@ export function hicparsefile(hic, debugmode) {
 	*/
 
 	if (debugmode) {
-		window.hic = hic
+		window["hic"] = hic
 	}
 
 	{
@@ -92,7 +109,7 @@ export function hicparsefile(hic, debugmode) {
 	}
 
 	if (hic.tklst) {
-		const lst = []
+		const lst = [] as any[]
 		for (const t of hic.tklst) {
 			if (!t.type) {
 				hic.error('type missing from one of the tracks accompanying HiC')
@@ -112,7 +129,7 @@ export function hicparsefile(hic, debugmode) {
 
 	if (hic.enzyme) {
 		if (hic.genome.hicenzymefragment) {
-			let frag = null
+			let frag: any = null
 			for (const f of hic.genome.hicenzymefragment) {
 				if (f.enzyme == hic.enzyme) {
 					frag = f
@@ -199,7 +216,7 @@ export function hicparsefile(hic, debugmode) {
 		.style('width', '70px')
 		.attr('type', 'number')
 		.property('value', hic.wholegenome.bpmaxv)
-		.on('keyup', event => {
+		.on('keyup', (event: any) => {
 			if (event.code != 'Enter') return
 			const v = event.target.value
 			if (v <= 0) return hic.error('invalid cutoff value')
@@ -280,7 +297,7 @@ export function hicparsefile(hic, debugmode) {
 		})
 }
 
-export function hicparsestat(hic, j) {
+export function hicparsestat(hic: any, j: any) {
 	/*
 	output by read_hic_header.py
 	*/
@@ -300,7 +317,7 @@ export function hicparsestat(hic, j) {
 	if (!Array.isArray(j['Fragment-delimited resolutions'])) return 'Fragment-delimited resolutions is not array'
 	hic.fragresolution = j['Fragment-delimited resolutions']
 
-	const chrlst = []
+	const chrlst = [] as any[]
 	for (const chr in j.Chromosomes) {
 		chrlst.push(chr)
 	}
@@ -323,7 +340,7 @@ export function hicparsestat(hic, j) {
 
 /////////// __whole genome
 
-async function init_wholegenome(hic) {
+async function init_wholegenome(hic: any) {
 	/*
 	launch wholegenome
 	*/
@@ -497,7 +514,7 @@ async function init_wholegenome(hic) {
 	return
 }
 
-function makewholegenome_chrleadfollow(hic, lead, follow) {
+function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any) {
 	/*
 	wholegenome for a pair of chr (lead - follow)
 	lead is on x
@@ -557,7 +574,7 @@ function makewholegenome_chrleadfollow(hic, lead, follow) {
 	}
 }
 
-function chrpair_mouseover(hic, img, x_chr, y_chr) {
+function chrpair_mouseover(hic: any, img: any, x_chr: any, y_chr: any) {
 	const p = img.node().getBoundingClientRect()
 	hic.wholegenome.pica_x
 		.clear()
@@ -573,7 +590,7 @@ function chrpair_mouseover(hic, img, x_chr, y_chr) {
 		.text(y_chr)
 }
 
-async function getdata_leadfollow(hic, lead, follow) {
+async function getdata_leadfollow(hic: any, lead: any, follow: any) {
 	const binpx = hic.wholegenome.binpx
 	const resolution = hic.wholegenome.resolution
 	const obj = hic.wholegenome.lead2follow.get(lead).get(follow)
@@ -618,13 +635,13 @@ async function getdata_leadfollow(hic, lead, follow) {
 		if (obj.canvas2) {
 			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
 		}
-	} catch (e) {
+	} catch (e: any) {
 		hic.error(e.message || e)
 		if (e.stack) console.log(e.stack)
 	}
 }
 
-function makewholegenome_sv(hic) {
+function makewholegenome_sv(hic: any) {
 	const unknownchr = new Set()
 
 	const radius = 8
@@ -651,8 +668,8 @@ function makewholegenome_sv(hic) {
 			.attr('cx', obj.x + p1)
 			.attr('cy', obj.y + p2)
 			.attr('r', radius)
-			.on('mouseover', () => {
-				tooltip_sv(hic, item)
+			.on('mouseover', (event: any) => {
+				tooltip_sv(event, hic, item)
 			})
 			.on('mouseout', () => {
 				hic.tip.hide()
@@ -683,7 +700,7 @@ function makewholegenome_sv(hic) {
 	}
 }
 
-function tooltip_sv(event, hic, item) {
+function tooltip_sv(event: any, hic: any, item: any): void {
 	hic.tip
 		.clear()
 		.show(event.clientX, event.clientY)
@@ -695,9 +712,9 @@ function tooltip_sv(event, hic, item) {
 		)
 }
 
-function click_sv(hic, item) {
-	const pane = client.newpane({ x: 100, y: 100 })
-	pane.header.text(
+function click_sv(hic: any, item: any): void {
+	const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
+	(pane.header as Pane["header"]).text(
 		hic.name +
 			' ' +
 			(item.chr1 == item.chr2
@@ -720,7 +737,7 @@ function click_sv(hic, item) {
 		}
 	}
 	client.first_genetrack_tolist(hic.genome, tracks)
-	const arg = {
+	const arg: any = {
 		holder: pane.body,
 		hostURL: hic.hostURL,
 		jwt: hic.jwt,
@@ -756,7 +773,7 @@ function click_sv(hic, item) {
 
 /////////// __whole genome ends
 
-function init_chrpair(hic, chrx, chry) {
+function init_chrpair(hic: any, chrx: any, chry: any) {
 	/*
 	by clicking a pair of chr on whole genome view
 	hide the whole genome view
@@ -825,8 +842,7 @@ function init_chrpair(hic, chrx, chry) {
 				.append('g')
 				.attr('transform', 'translate(1,' + axispad + ')')
 				.call(
-					axisRight()
-						.scale(scaleLinear().domain([0, chrylen]).range([0, h]))
+					axisRight(scaleLinear().domain([0, chrylen]).range([0, h]))
 						.tickFormat(d3format('.2s'))
 				),
 			showline: true
@@ -853,8 +869,7 @@ function init_chrpair(hic, chrx, chry) {
 				.append('g')
 				.attr('transform', 'translate(' + axispad + ',1)')
 				.call(
-					axisBottom()
-						.scale(scaleLinear().domain([0, chrxlen]).range([0, w]))
+					axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w]))
 						.tickFormat(d3format('.2s'))
 				),
 			showline: true
@@ -868,7 +883,7 @@ function init_chrpair(hic, chrx, chry) {
 	const canvas = hic.c.td
 		.append('canvas')
 		.style('margin', axispad + 'px')
-		.on('click', event => {
+		.on('click', function(this: any, event: any) {
 			const [x, y] = pointer(event, this)
 			init_detail(hic, chrx, chry, x, y)
 		})
@@ -882,12 +897,12 @@ function init_chrpair(hic, chrx, chry) {
 	getdata_chrpair(hic)
 }
 
-function tell_firstisx(hic, chrx, chry) {
+function tell_firstisx(hic: any, chrx: any, chry: any) {
 	if (chrx == chry) return true
 	return hic.chrorder.indexOf(chrx) < hic.chrorder.indexOf(chry)
 }
 
-function getdata_chrpair(hic) {
+function getdata_chrpair(hic: any) {
 	const chrx = hic.chrpairview.chrx
 	const chry = hic.chrpairview.chry
 	const isintrachr = chrx == chry
@@ -935,7 +950,7 @@ function getdata_chrpair(hic) {
 			/*
 		a percentile as cutoff for chrpairview
 		*/
-			const vlst = []
+			const vlst = [] as any
 
 			for (const [coord1, coord2, v] of data.items) {
 				vlst.push(v)
@@ -967,7 +982,7 @@ function getdata_chrpair(hic) {
 		})
 }
 
-async function setnmeth(hic, nmeth) {
+async function setnmeth(hic: any, nmeth: string) {
 	/*
 	set normalization method from <select>
 	*/
@@ -994,7 +1009,7 @@ async function setnmeth(hic, nmeth) {
 	}
 }
 
-function setmaxv(hic, maxv) {
+function setmaxv(hic: any, maxv: any) {
 	/*
 	setting max value from user input
 	*/
@@ -1044,7 +1059,7 @@ function setmaxv(hic, maxv) {
 	}
 }
 
-function switchview(hic) {
+function switchview(hic: any) {
 	/*
 	by clicking buttons
 	only for switching to
@@ -1095,7 +1110,7 @@ function nmeth2select(hic, v) {
 
 //////////////////// __detail
 
-function init_detail(hic, chrx, chry, x, y) {
+function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	/*
 	chrpairview is static
 	clicking on it to launch detail view
@@ -1133,7 +1148,7 @@ function init_detail(hic, chrx, chry, x, y) {
 		}
 	}
 
-	let resolution = null
+	let resolution: number | null = null
 	for (const res of hic.bpresolution) {
 		if (viewrangebpw / res > minimumbinnum_bp) {
 			resolution = res
@@ -1145,12 +1160,12 @@ function init_detail(hic, chrx, chry, x, y) {
 		resolution = hic.bpresolution[hic.bpresolution.length - 1]
 	}
 	let binpx = 2
-	while ((binpx * viewrangebpw) / resolution < mincanvassize_detail) {
+	while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
 		binpx += 2
 	}
 
 	// px width of x and y blocks
-	const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution)
+	const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
 	hic.detailview.xb.width = blockwidth
 	hic.detailview.yb.width = blockwidth
 
@@ -1232,8 +1247,8 @@ function init_detail(hic, chrx, chry, x, y) {
 				const regionx = hic.detailview.xb.rglst[0]
 				const regiony = hic.detailview.yb.rglst[0]
 
-				const pane = client.newpane({ x: 100, y: 100 })
-				pane.header.text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
+				const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
+				(pane.header as Pane["header"]).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
 
 				const tracks = [
 					{
@@ -1251,7 +1266,7 @@ function init_detail(hic, chrx, chry, x, y) {
 					}
 				}
 				client.first_genetrack_tolist(hic.genome, tracks)
-				const arg = {
+				const arg: any = {
 					holder: pane.body,
 					hostURL: hic.hostURL,
 					jwt: hic.jwt,
@@ -1289,7 +1304,7 @@ function init_detail(hic, chrx, chry, x, y) {
 
 	/******** common parameter for x/y block ********/
 
-	const arg = {
+	const arg: any = {
 		noresize: true,
 		nobox: true,
 		butrowbottom: true,
@@ -1306,7 +1321,7 @@ function init_detail(hic, chrx, chry, x, y) {
 	client.first_genetrack_tolist(hic.genome, arg.tklst)
 
 	// duplicate arg for y
-	const arg2 = {}
+	const arg2: any = {}
 	for (const k in arg) arg2[k] = arg[k]
 
 	/******************* x block ******************/
@@ -1397,13 +1412,13 @@ function init_detail(hic, chrx, chry, x, y) {
 	*/
 }
 
-function detailviewupdateregionfromblock(hic) {
+function detailviewupdateregionfromblock(hic: any) {
 	const rx = hic.detailview.xb.rglst[0]
 	const ry = hic.detailview.yb.rglst[0]
 	detailviewupdatehic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop)
 }
 
-function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
+function detailviewupdatehic(hic: any, chrx: any, xstart: any, xstop: any, chry: any, ystart: any, ystop: any) {
 	/*
 	call when coordinate changes
 
@@ -1467,8 +1482,8 @@ function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
 				hic.detailview.resolution = resolution
 				hic.ressays.text(common.bplen(resolution) + ' bp')
 				// fixed bin size only for bp bins
-				hic.detailview.xbinpx = hic.detailview.canvas.attr('width') / ((xstop - xstart) / resolution)
-				hic.detailview.ybinpx = hic.detailview.canvas.attr('height') / ((ystop - ystart) / resolution)
+				hic.detailview.xbinpx = hic.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
+				hic.detailview.ybinpx = hic.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
 				return
 			}
 
@@ -1533,7 +1548,7 @@ function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
 			if (resolution == null) {
 				resolution = hic.fragresolution[hic.fragresolution.length - 1]
 			}
-			hic.ressays.text(resolution > 1 ? resolution + ' fragments' : 'single fragment')
+			hic.ressays.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
 			hic.detailview.resolution = resolution
 			return
 		})
@@ -1548,7 +1563,7 @@ function detailviewupdatehic(hic, chrx, xstart, xstop, chry, ystart, ystop) {
 		})
 }
 
-function getdata_detail(hic) {
+function getdata_detail(hic: any) {
 	/*
 	x/y view range and resolution have all been set
 	request hic data and paint canvas
@@ -1567,7 +1582,7 @@ function getdata_detail(hic) {
 	const ystart = hic.detailview.ystart
 	const ystop = hic.detailview.ystop
 
-	const par = {
+	const par: HicstrawArgs = {
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
@@ -1621,7 +1636,7 @@ function getdata_detail(hic) {
 				//firstisx = hic.genome.chrlookup[chrx.toUpperCase()].len > hic.genome.chrlookup[chry.toUpperCase()].len
 			}
 
-			const lst = []
+			const lst: any = []
 			let err = 0
 			let maxv = 0
 
@@ -1757,10 +1772,10 @@ function getdata_detail(hic) {
 		})
 }
 
-export function hicparsefragdata(items) {
+export function hicparsefragdata(items: any) {
 	const id2coord = new Map()
-	let min = null,
-		max
+	let min: any = null,
+		max: any
 	for (const i of items) {
 		// id of first fragment
 		if (!i.rest || !i.rest[0]) {
@@ -1772,11 +1787,11 @@ export function hicparsefragdata(items) {
 		}
 		id2coord.set(id, [i.start, i.stop])
 		if (min == null) {
-			min = id
-			max = id
+			min = id as number
+			max = id as number
 		} else {
-			min = Math.min(min, id)
-			max = Math.max(max, id)
+			min = Math.min(min, id) as number
+			max = Math.max(max, id) as number
 		}
 	}
 	return [null, id2coord, min, max]
@@ -1784,12 +1799,12 @@ export function hicparsefragdata(items) {
 
 //////////////////// __detail ends
 
-function parseSV(txt) {
+function parseSV(txt: any) {
 	const lines = txt.trim().split(/\r?\n/)
 	const [err, header] = parseSVheader(lines[0])
 	if (err) return ['header error: ' + err]
 
-	const items = []
+	const items = [] as any
 	for (let i = 1; i < lines.length; i++) {
 		const line = lines[i]
 		if (line[0] == '#') continue
@@ -1800,7 +1815,7 @@ function parseSV(txt) {
 	return [null, header, items]
 }
 
-function parseSVheader(line) {
+function parseSVheader(line: any) {
 	const header = line.toLowerCase().split('\t')
 	if (header.length <= 1) return 'invalid file header for fusions'
 	const htry = (...lst) => {
@@ -1837,9 +1852,9 @@ function parseSVheader(line) {
 	return [null, header]
 }
 
-function parseSVline(line, header) {
+function parseSVline(line: string, header: any) {
 	const lst = line.split('\t')
-	const m = {}
+	const m: Partial<Mutation> = {}
 
 	for (let j = 0; j < header.length; j++) {
 		m[header[j]] = lst[j]
@@ -1853,20 +1868,20 @@ function parseSVline(line, header) {
 		m.chr2 = 'chr' + m.chr2
 	}
 	if (!m.position1) return ['missing position1']
-	let v = Number.parseInt(m.position1)
+	let v = Number.parseInt(m.position1 as string)
 	if (Number.isNaN(v) || v <= 0) return ['position1 invalid value']
 	m.position1 = v
 	if (!m.position2) return ['missing position2']
-	v = Number.parseInt(m.position2)
+	v = Number.parseInt(m.position2 as string)
 	if (Number.isNaN(v) || v <= 0) return ['position2 invalid value']
 	m.position2 = v
 	if (m.reads1) {
-		v = Number.parseInt(m.reads1)
+		v = Number.parseInt(m.reads1 as string)
 		if (Number.isNaN(v)) return ['reads1 invalid value']
 		m.reads1 = v
 	}
 	if (m.reads2) {
-		v = Number.parseInt(m.reads2)
+		v = Number.parseInt(m.reads2 as string)
 		if (Number.isNaN(v)) return ['reads2 invalid value']
 		m.reads2 = v
 	}
