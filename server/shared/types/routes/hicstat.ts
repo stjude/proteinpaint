@@ -22,7 +22,7 @@ type RequireFileOrUrl<T> = T extends HicstatRequestWithFile | HicstatRequestWith
 export type HicstatRequestWithValidation = RequireFileOrUrl<HicstatRequest>
 
 /** Normalization method for the queried data */
-type Normalization = 'VC' | 'VC_SQRT' | 'KR' | 'NONE'
+export type Normalization = 'VC' | 'VC_SQRT' | 'KR' | 'NONE'
 
 export type HicstatResponse = {
 	/** Version number pulled from the header. Only hic versions 7-9 are acceptable */
