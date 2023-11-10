@@ -9,7 +9,6 @@ export default class Labels extends Ring<Label> {
 	elementsToDisplay: Array<Label> = []
 
 	private hasPrioritizedGenes: boolean
-	private filteredPrioritizedGenesList: Array<Label> = []
 	private overlapAngle: number
 
 	constructor(settings: Settings, elements: Array<Label>, hasPrioritizedGenes: boolean) {
@@ -34,24 +33,27 @@ export default class Labels extends Ring<Label> {
 		this.collisions = []
 
 		let hasPrioritizedGenesList: Array<Label> = []
+		hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
 
-		if (this.hasPrioritizedGenes) {
-			hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
-			this.filteredPrioritizedGenesList = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
+		if (this.settings.label.prioritizeGeneLabelsByGeneSets) {
+			this.elementsToDisplay = this.getLabelsWithPrioritizedGenes(hasPrioritizedGenesList)
+		} else if (this.hasPrioritizedGenes) {
+			const prioritizedGenesList = this.elements.filter(label => label.isPrioritized)
+			const filteredPrioritizedGenesList = this.getLabelsWithPrioritizedGenes(prioritizedGenesList)
 
-			const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
+			const withoutPrioritizedGenesList = this.elements.filter(label => !label.isPrioritized)
 
-			const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
-				return a.startAngle < b.startAngle ? -1 : a.startAngle > b.startAngle ? 1 : 0
-			})
+			const combinedAndSortedList = [...withoutPrioritizedGenesList, ...filteredPrioritizedGenesList].sort(
+				(a, b) => a.startAngle - b.startAngle
+			)
 
 			this.elementsToDisplay = this.getAllLabels(combinedAndSortedList)
 		} else {
-			this.elementsToDisplay = this.getLabelsWithoutPrioritizedGenes(this.elements)
+			this.elementsToDisplay = this.getLabelsWithPrioritizedGenes(this.elements)
 		}
 	}
 
-	private getLabelsWithoutPrioritizedGenes(elemenets: Array<Label>) {
+	private getLabelsWithPrioritizedGenes(elemenets: Array<Label>) {
 		const filteredList: Array<Label> = []
 
 		let prev = { endAngle: 0 }

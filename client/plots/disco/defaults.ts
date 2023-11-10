@@ -47,6 +47,9 @@ export default function discoDefaults(overrides = {}): Settings {
 			cappedLossColor: '#00008B',
 			unit: 'Unit'
 		},
+		snv: {
+			maxMutationCount: 10000
+		},
 		legend: {
 			snvTitle: 'SNV',
 			cnvTitle: 'CNV',

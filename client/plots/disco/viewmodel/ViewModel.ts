@@ -16,8 +16,17 @@ export default class ViewModel {
 	fusions: Array<Fusion>
 
 	settings: Settings
+	svnDataLength: number
+	filteredSnvDataLength: number
 
-	constructor(settings: Settings, rings: Rings, legend: Legend, fusions: Array<Fusion>) {
+	constructor(
+		settings: Settings,
+		rings: Rings,
+		legend: Legend,
+		fusions: Array<Fusion>,
+		filteredSnvDataLength: number,
+		svnDataLength: number
+	) {
 		this.settings = settings
 		this.rings = rings
 		this.legend = legend
@@ -35,6 +44,8 @@ export default class ViewModel {
 				this.settings.verticalPadding)
 
 		this.legendHeight = this.calculateLegendHeight(legend)
+		this.svnDataLength = svnDataLength
+		this.filteredSnvDataLength = filteredSnvDataLength
 	}
 
 	getElements(ringType: RingType): Array<Arc> {

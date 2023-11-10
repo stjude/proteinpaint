@@ -23,6 +23,9 @@ export default interface Settings {
 
 		nonExonicFilterValues: Array<string>
 	}
+	snv: {
+		maxMutationCount: number
+	}
 	cnv: {
 		cappedAmpColor: string
 		ampColor: string
