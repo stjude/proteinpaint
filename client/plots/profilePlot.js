@@ -35,8 +35,8 @@ export class profilePlot {
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 	}
 
-	getList(tw) {
-		const samples = Object.values(this.data.lst)
+	getList(tw, data) {
+		const samples = Object.values(data.lst)
 		const sampleValues = Array.from(new Set(samples.map(sample => sample[tw.$id]?.value)))
 		const list = sampleValues.map(value => {
 			return { label: value, value }
@@ -46,15 +46,19 @@ export class profilePlot {
 	}
 
 	async setControls(chartType, twLst) {
-		twLst.push(this.config.countryTW)
-		twLst.push(this.config.regionTW)
-		twLst.push(this.config.incomeTW)
-
 		const filter = this.config.filter
-
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: twLst,
 			filter
+		})
+
+		const countriesData = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: [this.config.countryTW],
+			filter: this.getFilter(false, true)
+		})
+		const incomesData = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: [this.config.incomeTW],
+			filter: this.getFilter(true, false)
 		})
 
 		this.sampleData = this.settings.site ? this.data.lst.find(s => s.sample === this.settings.site) : this.data.lst[0]
@@ -66,8 +70,8 @@ export class profilePlot {
 			return { label: value, value }
 		})
 		this.regions.unshift({ label: '', value: '' })
-		if (!this.settings.country) this.countries = this.getList(this.config.countryTW)
-		if (!this.settings.income) this.incomes = this.getList(this.config.incomeTW)
+		this.countries = this.getList(this.config.countryTW, countriesData)
+		this.incomes = this.getList(this.config.incomeTW, incomesData)
 
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
@@ -153,7 +157,7 @@ export class profilePlot {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
-	getFilter() {
+	getFilter(hasCountry = true, hasIncome = true) {
 		let tvs
 		const lst = []
 		if (this.settings.region)
@@ -164,7 +168,7 @@ export class profilePlot {
 					values: [{ key: this.settings.region }]
 				}
 			})
-		if (this.settings.country)
+		if (this.settings.country && hasCountry)
 			lst.push({
 				type: 'tvs',
 				tvs: {
@@ -172,7 +176,7 @@ export class profilePlot {
 					values: [{ key: this.settings.country }]
 				}
 			})
-		if (this.settings.income)
+		if (this.settings.income && hasIncome)
 			lst.push({
 				type: 'tvs',
 				tvs: {
