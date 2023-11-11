@@ -5,8 +5,6 @@ import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
-import { controlsInit } from './controls'
-import { downloadSingleSVG } from '../common/svg.download.js'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -26,70 +24,18 @@ class profilePolar extends profilePlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
-	async setControls() {
-		this.dom.controlsDiv.selectAll('*').remove()
-		const inputs = [
-			{
-				label: 'Show table',
-				type: 'checkbox',
-				chartType: 'profilePolar',
-				settingsKey: 'showTable',
-				boxLabel: 'Yes'
-			},
-			{
-				label: 'Region',
-				type: 'dropdown',
-				chartType: 'profilePolar',
-				options: this.regions,
-				settingsKey: 'region',
-				callback: value => this.setRegion(value)
-			},
-			{
-				label: 'Country',
-				type: 'dropdown',
-				chartType: 'profilePolar',
-				options: this.countries,
-				settingsKey: 'country',
-				callback: value => this.setCountry(value)
-			},
-			{
-				label: 'Income group',
-				type: 'dropdown',
-				chartType: 'profilePolar',
-				options: this.incomes,
-				settingsKey: 'income',
-				callback: value => this.setIncome(value)
-			},
-			{
-				label: 'Site',
-				type: 'dropdown',
-				chartType: 'profilePolar',
-				options: this.sites,
-				settingsKey: 'site',
-				callback: value => this.setSample(value)
-			}
-		]
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs
-			})
-		}
-		this.components.controls.on('downloadClick.profilePolar', () => downloadSingleSVG(this.svg, this.filename))
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profilePolar
 		this.twLst = []
-		for (const [i, scores] of this.config.terms.entries()) {
-			for (const t in scores) {
-				const tw = scores[t]
-				if (tw.term) this.twLst.push(tw)
-			}
+		for (const [i, data] of this.config.terms.entries()) {
+			this.twLst.push(data.score)
+			this.twLst.push(data.maxScore)
 		}
+		this.twLst.push(this.config.countryTW)
+		this.twLst.push(this.config.regionTW)
+		this.twLst.push(this.config.incomeTW)
+
 		const filter = this.config.filter
 
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
@@ -100,7 +46,7 @@ class profilePolar extends profilePlot {
 			return { label: sample.sampleName, value: sample.sample }
 		})
 
-		this.setControls()
+		await this.setControls('profilePolar')
 
 		this.sampleData = this.data.lst[0]
 		this.angle = (Math.PI * 2) / this.config.terms.length
@@ -167,12 +113,10 @@ class profilePolar extends profilePlot {
 
 		const angle = this.angle
 		let i = 0
-		console.log(this.sampleData)
 		for (let d of config.terms) {
-			console.log(d)
 			const score = this.sampleData[d.score.$id]?.value
 			const maxScore = this.sampleData[d.maxScore.$id]?.value
-			const name = d.parent.term.name
+			const name = d.score.term.name
 			d.i = i
 			const percentage = (score * 100) / maxScore
 			rows.push([{ value: name }, { value: percentage }])
@@ -180,7 +124,7 @@ class profilePolar extends profilePlot {
 				.append('g')
 				.append('path')
 				.datum(d)
-				.attr('fill', d.term.color)
+				.attr('fill', d.score.term.color)
 				.attr('stroke', 'white')
 				.attr(
 					'd',
@@ -272,7 +216,6 @@ export async function getPlotConfig(opts, app) {
 			profilePolar: settings
 		}
 		for (const data of config.terms) {
-			console.log(data.parent)
 			const scoreTerm = data.score
 			const maxScoreTerm = data.maxScore
 			scoreTerm.q = { mode: 'continuous' }
@@ -280,13 +223,14 @@ export async function getPlotConfig(opts, app) {
 
 			await fillTermWrapper(scoreTerm, app.vocabApi)
 			await fillTermWrapper(maxScoreTerm, app.vocabApi)
-			await fillTermWrapper(data.parent, app.vocabApi)
 		}
+		config.countryTW = { id: 'country' }
+		config.regionTW = { id: 'WHO_region' }
+		config.incomeTW = { id: 'Income_group' }
 
-		await fillTermWrapper(config.regionTerm, app.vocabApi)
-		await fillTermWrapper(config.countryTerm, app.vocabApi)
-		await fillTermWrapper(config.incomeTerm, app.vocabApi)
-		config.terms.push(...[config.regionTerm, config.countryTerm, config.incomeTerm])
+		await fillTermWrapper(config.countryTW, app.vocabApi)
+		await fillTermWrapper(config.regionTW, app.vocabApi)
+		await fillTermWrapper(config.incomeTW, app.vocabApi)
 
 		return config
 	} catch (e) {

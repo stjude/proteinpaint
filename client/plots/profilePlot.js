@@ -1,6 +1,7 @@
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { filterJoin } from '#filter'
+import { controlsInit } from './controls'
 export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
@@ -31,9 +32,9 @@ export class profilePlot {
 			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
-		const regions = Object.keys(config.regionTerm.term.values)
-		const countries = Object.keys(config.countryTerm.term.values)
-		const incomes = Object.keys(config.incomeTerm.term.values)
+		const regions = Object.keys(config.regionTW.term.values)
+		const countries = Object.keys(config.countryTW.term.values)
+		const incomes = Object.keys(config.incomeTW.term.values)
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 		this.regions = regions.map(region => {
 			return { label: region, value: region }
@@ -52,6 +53,60 @@ export class profilePlot {
 		this.countries.unshift(emptyItem)
 		this.incomes.unshift(emptyItem)
 		this.sites = []
+	}
+
+	async setControls(chartType) {
+		this.dom.controlsDiv.selectAll('*').remove()
+		const inputs = [
+			{
+				label: 'Show table',
+				type: 'checkbox',
+				chartType,
+				settingsKey: 'showTable',
+				boxLabel: 'Yes'
+			},
+			{
+				label: 'Region',
+				type: 'dropdown',
+				chartType,
+				options: this.regions,
+				settingsKey: 'region',
+				callback: value => this.setRegion(value)
+			},
+			{
+				label: 'Country',
+				type: 'dropdown',
+				chartType,
+				options: this.countries,
+				settingsKey: 'country',
+				callback: value => this.setCountry(value)
+			},
+			{
+				label: 'Income group',
+				type: 'dropdown',
+				chartType,
+				options: this.incomes,
+				settingsKey: 'income',
+				callback: value => this.setIncome(value)
+			},
+			{
+				label: 'Site',
+				type: 'dropdown',
+				chartType,
+				options: this.sites,
+				settingsKey: 'site',
+				callback: value => this.setSample(value)
+			}
+		]
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs
+			})
+		}
+		this.components.controls.on(`downloadClick.${chartType}`, () => downloadSingleSVG(this.svg, this.filename))
 	}
 
 	setRegion(region) {
@@ -95,7 +150,7 @@ export class profilePlot {
 			lst.push({
 				type: 'tvs',
 				tvs: {
-					term: this.config.regionTerm.term,
+					term: this.config.regionTW.term,
 					values: [{ key: this.settings.region }]
 				}
 			})
@@ -103,7 +158,7 @@ export class profilePlot {
 			lst.push({
 				type: 'tvs',
 				tvs: {
-					term: this.config.countryTerm.term,
+					term: this.config.countryTW.term,
 					values: [{ key: this.settings.country }]
 				}
 			})
@@ -111,7 +166,7 @@ export class profilePlot {
 			lst.push({
 				type: 'tvs',
 				tvs: {
-					term: this.config.incomeTerm.term,
+					term: this.config.incomeTW.term,
 					values: [{ key: this.settings.income }]
 				}
 			})

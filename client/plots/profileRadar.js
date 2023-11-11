@@ -15,52 +15,6 @@ class profileRadar extends profilePlot {
 		this.radius = 250
 	}
 
-	async setControls() {
-		this.dom.controlsDiv.selectAll('*').remove()
-		const inputs = [
-			{
-				label: 'Show table',
-				type: 'checkbox',
-				chartType: 'profileRadar',
-				settingsKey: 'showTable',
-				boxLabel: 'Yes'
-			},
-			{
-				label: 'Region',
-				type: 'dropdown',
-				chartType: 'profileRadar',
-				options: this.regions,
-				settingsKey: 'region',
-				callback: value => this.setRegion(value)
-			},
-			{
-				label: 'Facility',
-				type: 'dropdown',
-				chartType: 'profileRadar',
-				options: this.facilities,
-				settingsKey: 'facility',
-				callback: value => this.setFacility(value)
-			},
-			{
-				label: 'Income group',
-				type: 'dropdown',
-				chartType: 'profileRadar',
-				options: this.incomes,
-				settingsKey: 'income',
-				callback: value => this.setIncome(value)
-			}
-		]
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs
-			})
-		}
-		this.components.controls.on('downloadClick.profileRadar', () => downloadSingleSVG(this.svg, this.filename))
-	}
-
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
@@ -94,7 +48,9 @@ class profileRadar extends profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profileRadar
-		this.setControls()
+		this.setControls('profileRadar')
+		this.components.controls.on('downloadClick.profileRadar', () => downloadSingleSVG(this.svg, this.filename))
+
 		this.twLst = []
 		this.terms = this.config[this.config.plot].terms
 		for (const { parent, term1, term2 } of this.terms) {

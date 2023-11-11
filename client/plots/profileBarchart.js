@@ -36,48 +36,21 @@ class profileBarchart extends profilePlot {
 	}
 
 	async setControls() {
-		this.dom.controlsDiv.selectAll('*').remove()
-		const inputs = [
-			{
-				label: 'Component',
-				type: 'dropdown',
-				chartType: 'profileBarchart',
-				options: this.componentNames,
-				settingsKey: 'component',
-				callback: value => this.setComponent(value)
-			},
-			{
-				label: 'Region',
-				type: 'dropdown',
-				chartType: 'profileBarchart',
-				options: this.regions,
-				settingsKey: 'region',
-				callback: value => this.setRegion(value)
-			},
-			{
-				label: 'Income group',
-				type: 'dropdown',
-				chartType: 'profileBarchart',
-				options: this.incomes,
-				settingsKey: 'income',
-				callback: value => this.setIncome(value)
-			}
-		]
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs
-			})
-		}
-		this.components.controls.on('downloadClick.profilePolar', () => downloadSingleSVG(this.svg, this.filename))
+		await super.setControls()
+		this.components.controls.inputs.unshift({
+			label: 'Component',
+			type: 'dropdown',
+			chartType: 'profileBarchart',
+			options: this.componentNames,
+			settingsKey: 'component',
+			callback: value => this.setComponent(value)
+		})
 	}
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profileBarchart
-		this.setControls()
+		this.setControls('profileBarchart')
 
 		const twLst = []
 		this.configComponent =
