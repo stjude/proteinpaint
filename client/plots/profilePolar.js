@@ -45,12 +45,28 @@ class profilePolar extends profilePlot {
 				callback: value => this.setRegion(value)
 			},
 			{
+				label: 'Country',
+				type: 'dropdown',
+				chartType: 'profilePolar',
+				options: this.countries,
+				settingsKey: 'country',
+				callback: value => this.setCountry(value)
+			},
+			{
 				label: 'Income group',
 				type: 'dropdown',
 				chartType: 'profilePolar',
 				options: this.incomes,
 				settingsKey: 'income',
 				callback: value => this.setIncome(value)
+			},
+			{
+				label: 'Site',
+				type: 'dropdown',
+				chartType: 'profilePolar',
+				options: this.sites,
+				settingsKey: 'site',
+				callback: value => this.setSample(value)
 			}
 		]
 		this.components = {
@@ -67,19 +83,25 @@ class profilePolar extends profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profilePolar
-		this.setControls()
 		this.twLst = []
-		for (const [i, tw] of this.config.terms.entries()) {
-			if (tw.id) this.twLst.push(tw)
+		for (const [i, scores] of this.config.terms.entries()) {
+			for (const t in scores) {
+				const tw = scores[t]
+				if (tw.term) this.twLst.push(tw)
+			}
 		}
-		this.twLst.push(this.config.typeTW)
-		const sampleName = this.settings.region !== undefined ? this.settings.region : this.settings.income || 'Global'
-		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
+		const filter = this.config.filter
 
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
 			filter
 		})
+		this.sites = this.data.lst.map(sample => {
+			return { label: sample.sampleName, value: sample.sample }
+		})
+
+		this.setControls()
+
 		this.sampleData = this.data.lst[0]
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
@@ -145,11 +167,15 @@ class profilePolar extends profilePlot {
 
 		const angle = this.angle
 		let i = 0
-
+		console.log(this.sampleData)
 		for (let d of config.terms) {
+			console.log(d)
+			const score = this.sampleData[d.score.$id]?.value
+			const maxScore = this.sampleData[d.maxScore.$id]?.value
+			const name = d.parent.term.name
 			d.i = i
-			const percentage = this.sampleData[d.$id]?.value
-			rows.push([{ value: d.term.name }, { value: percentage }])
+			const percentage = (score * 100) / maxScore
+			rows.push([{ value: name }, { value: percentage }])
 			const path = polarG
 				.append('g')
 				.append('path')
@@ -245,10 +271,23 @@ export async function getPlotConfig(opts, app) {
 			},
 			profilePolar: settings
 		}
-		for (const t of config.terms) {
-			if (t.id) await fillTermWrapper(t, app.vocabApi)
+		for (const data of config.terms) {
+			console.log(data.parent)
+			const scoreTerm = data.score
+			const maxScoreTerm = data.maxScore
+			scoreTerm.q = { mode: 'continuous' }
+			maxScoreTerm.q = { mode: 'continuous' }
+
+			await fillTermWrapper(scoreTerm, app.vocabApi)
+			await fillTermWrapper(maxScoreTerm, app.vocabApi)
+			await fillTermWrapper(data.parent, app.vocabApi)
 		}
-		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
+
+		await fillTermWrapper(config.regionTerm, app.vocabApi)
+		await fillTermWrapper(config.countryTerm, app.vocabApi)
+		await fillTermWrapper(config.incomeTerm, app.vocabApi)
+		config.terms.push(...[config.regionTerm, config.countryTerm, config.incomeTerm])
+
 		return config
 	} catch (e) {
 		throw `${e} [profilePolar getPlotConfig()]`

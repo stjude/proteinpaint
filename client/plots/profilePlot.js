@@ -1,6 +1,6 @@
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
-
+import { filterJoin } from '#filter'
 export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
@@ -10,7 +10,8 @@ export class profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
-			config
+			config,
+			termfilter: appState.termfilter
 		}
 	}
 
@@ -30,22 +31,27 @@ export class profilePlot {
 			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
+		const regions = Object.keys(config.regionTerm.term.values)
+		const countries = Object.keys(config.countryTerm.term.values)
+		const incomes = Object.keys(config.incomeTerm.term.values)
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
-		this.regions = [
-			{ value: '', label: '' },
-			{ value: 'Global', label: 'Global' }
-		]
-		this.incomes = [{ value: '', label: '' }]
-		this.incomes.push(
-			...config.incomes.map(elem => {
-				return { label: elem, value: elem }
-			})
-		)
-
-		for (const region of config.regions) {
-			this.regions.push({ value: region.name, label: region.name })
-			for (const country of region.countries) this.regions.push({ value: country, label: `-- ${country}` })
-		}
+		this.regions = regions.map(region => {
+			return { label: region, value: region }
+		})
+		this.countries = countries.map(country => {
+			return { label: country, value: country }
+		})
+		this.incomes = incomes.map(income => {
+			return { label: income, value: income }
+		})
+		const emptyItem = { value: '', label: '' }
+		const globalItem = { value: 'Global', label: 'Global' }
+		this.regions.unshift(globalItem)
+		this.regions.unshift(emptyItem)
+		this.countries.unshift(globalItem)
+		this.countries.unshift(emptyItem)
+		this.incomes.unshift(emptyItem)
+		this.sites = []
 	}
 
 	setRegion(region) {
@@ -53,9 +59,7 @@ export class profilePlot {
 		this.settings.facility = ''
 		this.settings.region = region
 		this.settings.income = ''
-		const sampleId = parseInt(this.sampleidmap[region])
-		config.sampleName = config.region
-		config.filter = getSampleFilter(sampleId)
+		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
@@ -64,10 +68,63 @@ export class profilePlot {
 		this.settings.facility = ''
 		this.settings.income = income
 		this.settings.region = ''
-		const sampleId = parseInt(this.sampleidmap[income])
-		config.sampleName = config.income
-		config.filter = getSampleFilter(sampleId)
+		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	setCountry(country) {
+		const config = this.config
+		this.settings.facility = ''
+		this.settings.country = country
+		this.settings.region = ''
+		this.settings.income = ''
+
+		config.filter = this.getFilter()
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	setSite(site) {
+		this.settings.site = site
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	getFilter() {
+		let tvs
+		const lst = []
+		if (this.settings.region)
+			lst.push({
+				type: 'tvs',
+				tvs: {
+					term: this.config.regionTerm.term,
+					values: [{ key: this.settings.region }]
+				}
+			})
+		if (this.settings.country)
+			lst.push({
+				type: 'tvs',
+				tvs: {
+					term: this.config.countryTerm.term,
+					values: [{ key: this.settings.country }]
+				}
+			})
+		if (this.settings.income)
+			lst.push({
+				type: 'tvs',
+				tvs: {
+					term: this.config.incomeTerm.term,
+					values: [{ key: this.settings.income }]
+				}
+			})
+		const tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst
+		}
+
+		const filter = filterJoin([this.state.termfilter.filter, tvslst])
+
+		return filter
 	}
 
 	addLegendFilter(filter, value, index) {
