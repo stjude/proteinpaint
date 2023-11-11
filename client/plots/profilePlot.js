@@ -56,12 +56,18 @@ export class profilePlot {
 			terms: twLst,
 			filter
 		})
+
+		this.sampleData = this.settings.site ? this.data.lst.find(s => s.sample === this.settings.site) : this.data.lst[0]
+
 		this.sites = this.data.lst.map(sample => {
 			return { label: sample.sampleName, value: sample.sample }
 		})
-		this.regions = this.getList(this.config.regionTW)
-		this.countries = this.getList(this.config.countryTW)
-		this.incomes = this.getList(this.config.incomeTW)
+		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
+			return { label: value, value }
+		})
+		this.regions.unshift({ label: '', value: '' })
+		if (!this.settings.country) this.countries = this.getList(this.config.countryTW)
+		if (!this.settings.income) this.incomes = this.getList(this.config.incomeTW)
 
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
@@ -102,7 +108,7 @@ export class profilePlot {
 				chartType,
 				options: this.sites,
 				settingsKey: 'site',
-				callback: value => this.setSample(value)
+				callback: value => this.setSite(value)
 			}
 		]
 		this.components = {
@@ -119,6 +125,9 @@ export class profilePlot {
 	setRegion(region) {
 		const config = this.config
 		this.settings.region = region
+		this.settings.country = ''
+		this.settings.income = ''
+		delete this.settings.site
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -126,6 +135,7 @@ export class profilePlot {
 	setIncome(income) {
 		const config = this.config
 		this.settings.income = income
+		delete this.settings.site
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -133,14 +143,14 @@ export class profilePlot {
 	setCountry(country) {
 		const config = this.config
 		this.settings.country = country
-
+		delete this.settings.site
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	setSite(site) {
 		this.settings.site = site
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
 	getFilter() {
@@ -170,6 +180,7 @@ export class profilePlot {
 					values: [{ key: this.settings.income }]
 				}
 			})
+
 		const tvslst = {
 			type: 'tvslst',
 			in: true,
@@ -182,10 +193,13 @@ export class profilePlot {
 		return filter
 	}
 
-	addLegendFilter(filter, value, index) {
+	addLegendFilter(filter, value) {
+		if (!value) return
+		this.filtersCount++
+
 		const text = this.filterG
 			.append('text')
-			.attr('transform', `translate(0, ${index * 20})`)
+			.attr('transform', `translate(0, ${this.filtersCount * 20})`)
 			.attr('text-anchor', 'left')
 		text.append('tspan').attr('font-weight', 'bold').text(filter)
 		text.append('tspan').text(`: ${value ? value : 'None'}`)

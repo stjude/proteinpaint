@@ -32,9 +32,8 @@ class profilePolar extends profilePlot {
 			twLst.push(data.score)
 			twLst.push(data.maxScore)
 		}
-		await this.setControls('profilePolar', twLst)
 
-		this.sampleData = this.data.lst[0]
+		await this.setControls('profilePolar', twLst)
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
 		this.income = this.settings.income || this.incomes[0].value
@@ -96,11 +95,11 @@ class profilePolar extends profilePlot {
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 300
-		const y = 300
+		const y = 260
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 300},${y + 150})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 300}, ${y})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 300},${y - 100})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 300}, ${y - 200})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
@@ -168,8 +167,12 @@ class profilePolar extends profilePlot {
 			.style('font-weight', 'bold')
 			.text('Filters')
 			.attr('transform', `translate(0, -5)`)
-		this.addLegendFilter('region', this.settings.region, 1)
-		this.addLegendFilter('income', this.settings.income, 2)
+		this.filtersCount = 0
+
+		this.addLegendFilter('region', this.settings.region)
+		this.addLegendFilter('country', this.settings.country)
+		this.addLegendFilter('income', this.settings.income)
+		this.addLegendFilter('site', this.sampleData.sampleName)
 
 		function addCircle(percent, text = null) {
 			const circle = polarG
