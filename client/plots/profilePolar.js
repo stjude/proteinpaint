@@ -74,10 +74,17 @@ class profilePolar extends profilePlot {
 			path.setAttribute('stroke-opacity', 0)
 			const d = path.__data__
 			const menu = this.tip.clear()
-			const percentage = this.sampleData[d.$id]?.value
-			menu.d.text(`${d.term.name} ${percentage}%`)
+			const percentage = this.getPercentage(d)
+			menu.d.text(`${d.score.term.name} ${percentage}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
+	}
+
+	getPercentage(d) {
+		const score = this.sampleData[d.score.$id]?.value
+		const maxScore = this.sampleData[d.maxScore.$id]?.value
+		const percentage = (score * 100) / maxScore
+		return percentage.toFixed(2)
 	}
 
 	plot() {
@@ -114,11 +121,9 @@ class profilePolar extends profilePlot {
 		const angle = this.angle
 		let i = 0
 		for (let d of config.terms) {
-			const score = this.sampleData[d.score.$id]?.value
-			const maxScore = this.sampleData[d.maxScore.$id]?.value
 			const name = d.score.term.name
 			d.i = i
-			const percentage = (score * 100) / maxScore
+			const percentage = this.getPercentage(d)
 			rows.push([{ value: name }, { value: percentage }])
 			const path = polarG
 				.append('g')
