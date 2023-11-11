@@ -27,26 +27,12 @@ class profilePolar extends profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profilePolar
-		this.twLst = []
+		const twLst = []
 		for (const [i, data] of this.config.terms.entries()) {
-			this.twLst.push(data.score)
-			this.twLst.push(data.maxScore)
+			twLst.push(data.score)
+			twLst.push(data.maxScore)
 		}
-		this.twLst.push(this.config.countryTW)
-		this.twLst.push(this.config.regionTW)
-		this.twLst.push(this.config.incomeTW)
-
-		const filter = this.config.filter
-
-		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst,
-			filter
-		})
-		this.sites = this.data.lst.map(sample => {
-			return { label: sample.sampleName, value: sample.sample }
-		})
-
-		await this.setControls('profilePolar')
+		await this.setControls('profilePolar', twLst)
 
 		this.sampleData = this.data.lst[0]
 		this.angle = (Math.PI * 2) / this.config.terms.length

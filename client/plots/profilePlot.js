@@ -32,30 +32,37 @@ export class profilePlot {
 			plotDiv
 		}
 		const config = appState.plots.find(p => p.id === this.id)
-		const regions = Object.keys(config.regionTW.term.values)
-		const countries = Object.keys(config.countryTW.term.values)
-		const incomes = Object.keys(config.incomeTW.term.values)
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
-		this.regions = regions.map(region => {
-			return { label: region, value: region }
-		})
-		this.countries = countries.map(country => {
-			return { label: country, value: country }
-		})
-		this.incomes = incomes.map(income => {
-			return { label: income, value: income }
-		})
-		const emptyItem = { value: '', label: '' }
-		const globalItem = { value: 'Global', label: 'Global' }
-		this.regions.unshift(globalItem)
-		this.regions.unshift(emptyItem)
-		this.countries.unshift(globalItem)
-		this.countries.unshift(emptyItem)
-		this.incomes.unshift(emptyItem)
-		this.sites = []
 	}
 
-	async setControls(chartType) {
+	getList(tw) {
+		const samples = Object.values(this.data.lst)
+		const sampleValues = Array.from(new Set(samples.map(sample => sample[tw.$id]?.value)))
+		const list = sampleValues.map(value => {
+			return { label: value, value }
+		})
+		list.unshift({ label: '', value: '' })
+		return list
+	}
+
+	async setControls(chartType, twLst) {
+		twLst.push(this.config.countryTW)
+		twLst.push(this.config.regionTW)
+		twLst.push(this.config.incomeTW)
+
+		const filter = this.config.filter
+
+		this.data = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: twLst,
+			filter
+		})
+		this.sites = this.data.lst.map(sample => {
+			return { label: sample.sampleName, value: sample.sample }
+		})
+		this.regions = this.getList(this.config.regionTW)
+		this.countries = this.getList(this.config.countryTW)
+		this.incomes = this.getList(this.config.incomeTW)
+
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
@@ -111,28 +118,21 @@ export class profilePlot {
 
 	setRegion(region) {
 		const config = this.config
-		this.settings.facility = ''
 		this.settings.region = region
-		this.settings.income = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	setIncome(income) {
 		const config = this.config
-		this.settings.facility = ''
 		this.settings.income = income
-		this.settings.region = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	setCountry(country) {
 		const config = this.config
-		this.settings.facility = ''
 		this.settings.country = country
-		this.settings.region = ''
-		this.settings.income = ''
 
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
