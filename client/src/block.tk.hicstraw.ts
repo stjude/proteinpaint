@@ -944,7 +944,7 @@ function makeTk(tk: any, block: any) {
 	// sneak canvas, render graph then copy to tk.img for showing
 	tk.hiddencanvas = block.holder.append('canvas').style('display', 'none')
 
-	tk.config_handle = block.maketkconfighandle(tk).on('click', event => {
+	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
 		configPanel(tk, block)
 	})
 }
@@ -963,7 +963,7 @@ function configPanel(tk: any, block: any) {
 			.attr('class', 'sja_menuoption')
 			.style('margin-bottom', '10px')
 			.text('Edit interaction data')
-			.on('click', event => {
+			.on('click', () => {
 				textdata_editUI(tk, block)
 			})
 	}
@@ -1036,7 +1036,7 @@ function configPanel(tk: any, block: any) {
 		if (tk.hic.normalization.length > 0) {
 			const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
 			row.append('span').html('Normalization&nbsp;')
-			const s = row.append('select').on('change', event => {
+			const s = row.append('select').on('change', () => {
 				const ss = s.node()
 				tk.normalizationmethod = ss.options[ss.selectedIndex].innerHTML
 				loadTk(tk, block)
@@ -1059,7 +1059,7 @@ function configPanel(tk: any, block: any) {
 		row
 			.append('button')
 			.text(tk.domainoverlay.inuse ? 'No' : 'Yes')
-			.on('click', event => {
+			.on('click', () => {
 				tk.tkconfigtip.hide()
 				tk.domainoverlay.inuse = !tk.domainoverlay.inuse
 				loadTk(tk, block)
@@ -1127,7 +1127,7 @@ function configPanel(tk: any, block: any) {
 			.style('margin', '20px 0px')
 			.append('button')
 			.text('Point ' + (tk.pyramidup ? 'down' : 'up'))
-			.on('click', event => {
+			.on('click', () => {
 				tk.pyramidup = !tk.pyramidup
 				drawCanvas(tk, block)
 				tk.tkconfigtip.hide()
@@ -1155,7 +1155,7 @@ function textdata_editUI(tk: any, block: any) {
 	row2
 		.append('button')
 		.text('Update')
-		.on('click', event => {
+		.on('click', () => {
 			const text = ta.property('value')
 			if (!text) {
 				window.alert('Enter text interaction data')
@@ -1180,7 +1180,7 @@ function textdata_editUI(tk: any, block: any) {
 		.append('button')
 		.style('margin-left', '30px')
 		.text('Cancel')
-		.on('click', event => tk.tkconfigtip.hide())
+		.on('click', () => tk.tkconfigtip.hide())
 }
 
 function textdata_parseraw(tk: any, block: any) {

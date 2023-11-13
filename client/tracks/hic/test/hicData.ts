@@ -1,0 +1,113 @@
+const v8 = {
+	bpresolution: [2500000, 1000000, 500000, 250000, 100000, 50000, 25000, 10000, 5000],
+	chrorder: [
+		'chrAll',
+		'chr1',
+		'chr2',
+		'chr3',
+		'chr4',
+		'chr5',
+		'chr6',
+		'chr7',
+		'chr8',
+		'chr9',
+		'chr10',
+		'chr11',
+		'chr12',
+		'chr13',
+		'chr14',
+		'chr15',
+		'chr16',
+		'chr17',
+		'chr18',
+		'chr19',
+		'chr20',
+		'chr22',
+		'chr21',
+		'chrX',
+		'chrY',
+		'chrM'
+	],
+	fragresolution: [1000000, 500000, 250000, 100000, 50000, 25000, 10000, 5000, 2500],
+	normalization: ['NONE', 'VC', 'VC_SQRT', 'KR'],
+	version: 8
+}
+
+export const hicData = {
+	hic: {
+		v8: {
+			bpresolution: v8.bpresolution,
+			chrlst: [
+				'chr1',
+				'chr2',
+				'chr3',
+				'chr4',
+				'chr5',
+				'chr6',
+				'chr7',
+				'chr8',
+				'chr9',
+				'chr10',
+				'chr11',
+				'chr12',
+				'chr13',
+				'chr14',
+				'chr15',
+				'chr16',
+				'chr17',
+				'chr18',
+				'chr19',
+				'chr20',
+				'chr21',
+				'chr22',
+				'chrX',
+				'chrY',
+				'chrM'
+			],
+			chrorder: v8.chrorder,
+			enzyme: 'MboI',
+			nochr: true,
+			fragresolution: v8.fragresolution,
+			normalization: v8.normalization,
+			version: v8.version
+		}
+	},
+	serverResponse: {
+		v8: {
+			'Base pair-delimited resolutions': v8.bpresolution,
+			Chromosomes: {
+				1: 249250621,
+				2: 243199373,
+				3: 198022430,
+				4: 191154276,
+				5: 180915260,
+				6: 171115067,
+				7: 159138663,
+				8: 146364022,
+				9: 141213431,
+				10: 135534747,
+				11: 135006516,
+				12: 133851895,
+				13: 115169878,
+				14: 107349540,
+				15: 102531392,
+				16: 90354753,
+				17: 81195210,
+				18: 78077248,
+				19: 59128983,
+				20: 63025520,
+				21: 48129895,
+				22: 51304566,
+				All: 3098789,
+				M: 16571,
+				X: 155270560,
+				Y: 59373566
+			},
+			'Fragment-delimited resolutions': v8.fragresolution,
+			'Genome ID': '/home/bxu2/data/hg19.sizes.clean.nochr',
+			chrorder: v8.fragresolution,
+			normalization: v8.normalization,
+			version: v8.version
+		}
+	}
+}
