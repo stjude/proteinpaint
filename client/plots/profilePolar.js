@@ -66,17 +66,28 @@ class profilePolar extends profilePlot {
 	}
 
 	getPercentage(d) {
-		const score = this.sampleData[d.score.$id]?.value
-		const maxScore = this.sampleData[d.maxScore.$id]?.value
-		const percentage = (score * 100) / maxScore
-		return percentage.toFixed(2)
+		if (this.sampleData) {
+			const score = this.sampleData[d.score.$id]?.value
+			const maxScore = this.sampleData[d.maxScore.$id]?.value
+			const percentage = (score * 100) / maxScore
+			return percentage.toFixed(2)
+		} else {
+			let score = 0
+			for (const sample of this.data.lst) {
+				score += sample[d.score.$id]?.value
+			}
+			score = score / this.data.lst.length
+			const maxScore = this.data.lst[0][d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+			const percentage = (score * 100) / maxScore
+			return percentage.toFixed(2)
+		}
 	}
 
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 
-		if (!this.sampleData) return
+		//if (!this.sampleData) return
 
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -172,7 +183,7 @@ class profilePolar extends profilePlot {
 		this.addLegendFilter('region', this.settings.region)
 		this.addLegendFilter('country', this.settings.country)
 		this.addLegendFilter('income', this.settings.income)
-		this.addLegendFilter('site', this.sampleData.sampleName)
+		if (this.sampleData) this.addLegendFilter('site', this.sampleData.sampleName)
 
 		function addCircle(percent, text = null) {
 			const circle = polarG
