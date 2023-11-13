@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - After creating mds3 subtrack via filtering, term name may be printed with value if short enough
 - Mutation AAchange showing in scatterplot and matrix are now based on canonical isoform
+- Darken selected colors for gencode and sandbox title, to address Section 508 contrast issues
 
 
 ## 2.30.4

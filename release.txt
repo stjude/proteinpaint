@@ -1,2 +1,1 @@
-Fixes:
-- Darken selected colors for gencode and sandbox title, to address Section 508 contrast issues
+
