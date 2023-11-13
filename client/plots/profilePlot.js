@@ -60,8 +60,8 @@ export class profilePlot {
 			terms: [this.config.incomeTW],
 			filter: this.getFilter(true, false)
 		})
-
-		this.sampleData = this.settings.site ? this.data.lst.find(s => s.sample === this.settings.site) : this.data.lst[0]
+		this.sampleData =
+			this.settings.site && this.settings.site != '' ? this.data.lst.find(s => s.sample === this.settings.site) : null
 
 		this.sites = this.data.lst.map(sample => {
 			return { label: sample.sampleName, value: sample.sample }
@@ -69,6 +69,8 @@ export class profilePlot {
 		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
 			return { label: value, value }
 		})
+		this.sites.unshift({ label: '', value: '' })
+
 		this.regions.unshift({ label: '', value: '' })
 		this.countries = this.getList(this.config.countryTW, countriesData)
 		this.incomes = this.getList(this.config.incomeTW, incomesData)
