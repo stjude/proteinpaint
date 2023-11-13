@@ -59,6 +59,9 @@ thus need to define the "apihost" as global variables in multiple places
 */
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
+// temporarily hardcode to use the direct API URL,
+// previously hardcoded to use 'https://uat-portal.gdc.cancer.gov/auth/api/v0/'
+const geneExpHost = 'https://uat-api.gdc.cancer.gov'
 
 export function convertSampleId_addGetter(tdb, ds) {
 	tdb.convertSampleId.get = inputs => {
@@ -236,25 +239,29 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 	// per Zhenyu 9/26/23, user-elected genes must be screened so those with 0 value cross all samples will be left out
 	// so that valid SD-transformed value can be returned from /values api
 	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
-	const response = await got.post('https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/gene_selection', {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			case_ids,
-			gene_ids: ensgLst,
-			size: ensgLst.length
+	try {
+		const response = await got.post(`${geneExpHost}/gene_expression/gene_selection`, {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({
+				case_ids,
+				gene_ids: ensgLst,
+				selection_size: ensgLst.length
+			})
 		})
-	})
-	const re = JSON.parse(response.body)
-	if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] not array'
-	const ensgLst2 = []
-	for (const i of re.gene_selection) {
-		if (typeof i.gene_id != 'string') throw '.gene_id missing from one of re.gene_selection[]'
-		ensgLst2.push(i.gene_id)
+		const re = JSON.parse(response.body)
+		if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] not array'
+		const ensgLst2 = []
+		for (const i of re.gene_selection) {
+			if (typeof i.gene_id != 'string') throw '.gene_id missing from one of re.gene_selection[]'
+			ensgLst2.push(i.gene_id)
+		}
+		// some genes from ensgLst may be left out ensgLst2, e.g. HOXA1 from test example;
+		// later can comment above code to double-check as /values is able to return data for HOXA1 so why is it left out here?
+		//console.log(ensgLst, ensgLst2)
+		return [ensgLst2, ensg2symbol]
+	} catch (e) {
+		throw e
 	}
-	// some genes from ensgLst may be left out ensgLst2, e.g. HOXA1 from test example;
-	// later can comment above code to double-check as /values is able to return data for HOXA1 so why is it left out here?
-	//console.log(ensgLst, ensgLst2)
-	return [ensgLst2, ensg2symbol]
 }
 
 export async function getCasesWithExressionDataFromCohort(q, ds) {
@@ -267,25 +274,31 @@ export async function getCasesWithExressionDataFromCohort(q, ds) {
 	}
 	const body = { size: 10000, fields: 'case_id' }
 	if (f.content.length) body.filters = f
-	const response = await got.post(path.join(apihost, 'cases'), { headers: getheaders(q), body: JSON.stringify(body) })
-	const re = JSON.parse(response.body)
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
-	const lst = []
-	for (const h of re.data.hits) {
-		if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
-			lst.push(h.id)
-			if (lst.length > 1000) {
-				// max 1000 samples
-				break
+
+	try {
+		const response = await got.post(path.join(apihost, 'cases'), { headers: getheaders(q), body: JSON.stringify(body) })
+		const re = JSON.parse(response.body)
+		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
+		const lst = []
+		for (const h of re.data.hits) {
+			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
+				lst.push(h.id)
+				if (lst.length > 1000) {
+					// max 1000 samples
+					break
+				}
 			}
 		}
+		return lst
+	} catch (e) {
+		console.log(e.stack || e)
+		throw e
 	}
-	return lst
 }
 
 async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
 	// when api is on prod, switch to path.join(apihost, 'gene_expression/values')
-	const response = await got.post('https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/values', {
+	const response = await got.post(`${geneExpHost}/gene_expression/values`, {
 		headers: getheaders(q),
 		body: JSON.stringify({
 			case_ids,

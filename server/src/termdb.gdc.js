@@ -40,6 +40,9 @@ initGDCdictionary
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
+// temporarily hardcode to use the direct API URL,
+// previously hardcoded to use 'https://uat-portal.gdc.cancer.gov/auth/api/v0/'
+const geneExpHost = 'https://uat-api.gdc.cancer.gov'
 
 // TODO switch to https://api.gdc.cancer.gov/cases/_mapping
 const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
@@ -1045,7 +1048,7 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 
 async function checkExpressionAvailability(ds) {
 	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
-	const url = 'https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/availability'
+	const url = `${geneExpHost}/gene_expression/availability`
 
 	{
 		/*
@@ -1055,23 +1058,27 @@ async function checkExpressionAvailability(ds) {
 		const c = await testRestApi(url)
 		if (c == 'ERR_NON_2XX_3XX_RESPONSE') {
 			// this is expected code that this instance has access to the uat but the request lacks parameters
-		} else {
+		} else if (c) {
 			// this instance does not have access to uat. quit this function and do not abort
 			return
 		}
 	}
 
-	const idLst = [...ds.__gdc.caseIds]
-	const response = await got.post(url, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({ case_ids: idLst })
-	})
-	const re = JSON.parse(response.body)
-	// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
-	if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
-	for (const c of re.cases.details) {
-		if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
-	}
+	try {
+		const idLst = [...ds.__gdc.caseIds]
+		const response = await got.post(url, {
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ case_ids: idLst, gene_ids: ['ENSG00000141510'] })
+		})
+		const re = JSON.parse(response.body)
+		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
+		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
+		for (const c of re.cases.details) {
+			if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
+		}
 
-	delete ds.__gdc.caseIds
+		delete ds.__gdc.caseIds
+	} catch (e) {
+		throw e
+	}
 }
