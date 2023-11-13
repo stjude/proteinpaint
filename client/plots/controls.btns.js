@@ -27,6 +27,12 @@ class TdbControlsTopBar {
 				holder: this.dom.holder.insert('div'),
 				callback: opts.downloadHandler,
 				debug
+			}),
+			helpbtn: helpBtnInit({
+				id: opts.id,
+				holder: this.dom.holder.insert('div'),
+				callback: opts.helpHandler,
+				debug
 			})
 		})
 	}
@@ -75,6 +81,29 @@ function burgerBtnInit(opts) {
 	const api = {
 		main(isOpen) {
 			self.dom.btn.style('display', isOpen ? 'inline-block' : 'block')
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function helpBtnInit(opts) {
+	const infoDiv = opts.holder.style('margin', '20px')
+
+	icon_functions['help'](infoDiv, { handler: opts.callback })
+
+	const self = {
+		plotTypes: ['profilePolar'],
+		dom: {
+			btn: infoDiv
+		}
+	}
+
+	const api = {
+		main(isOpen, plot) {
+			if (self.plotTypes.includes(plot.chartType)) self.dom.btn.style('display', isOpen ? 'inline-block' : 'block')
+			else self.dom.btn.style('display', 'none')
 		}
 	}
 

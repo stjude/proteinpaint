@@ -122,10 +122,12 @@ export class profilePlot {
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controlsDiv,
-				inputs
+				inputs,
+				showHelpIcon: true
 			})
 		}
 		this.components.controls.on(`downloadClick.${chartType}`, () => downloadSingleSVG(this.svg, this.filename))
+		this.components.controls.on(`helpClick.${chartType}`, () => window.open('', '_blank'))
 	}
 
 	setRegion(region) {
