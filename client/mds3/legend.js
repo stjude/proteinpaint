@@ -80,7 +80,7 @@ function create_mclass(tk, block) {
 	tk.legend.mclass.row
 		.append('td')
 		.style('text-align', 'right')
-		.style('opacity', 0.3)
+		.style('opacity', 0.7)
 		.text(block.mclassOverride ? block.mclassOverride.className || 'Mutation' : 'Mutation')
 
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
@@ -146,7 +146,7 @@ function may_create_infoFields(tk) {
 		row
 			.append('td')
 			.style('text-align', 'right')
-			.style('opacity', 0.3)
+			.style('opacity', 0.7)
 			.text(tk.mds.bcf.info[key].name || key)
 
 		tk.legend.bcfInfo[key] = {
@@ -173,7 +173,7 @@ function may_create_formatFilter(tk) {
 		// this row will have two columns, just like mclass
 
 		// column 1 <td>: format field name
-		row.append('td').style('text-align', 'right').style('opacity', 0.3).text(tk.mds.bcf.format[key].Description)
+		row.append('td').style('text-align', 'right').style('opacity', 0.7).text(tk.mds.bcf.format[key].Description)
 
 		tk.legend.formatFilter[key] = {
 			hiddenvalues: new Set(),
@@ -279,7 +279,7 @@ function may_update_formatFilter(data, tk) {
 				.style('display', 'inline-block')
 				.attr('class', 'sja_clb')
 				.style('text-decoration', 'line-through')
-				.style('opacity', 0.3)
+				.style('opacity', 0.7)
 				.text(c)
 				.on('click', async () => {
 					if (loading) return
@@ -451,7 +451,7 @@ function may_update_infoFields(data, tk) {
 					.style('display', 'inline-block')
 					.attr('class', 'sja_clb')
 					.style('text-decoration', 'line-through')
-					.style('opacity', 0.3)
+					.style('opacity', 0)
 					.text(c)
 					.on('click', async () => {
 						if (loading) return
@@ -594,7 +594,7 @@ function update_mclass(tk) {
 			.style('display', 'inline-block')
 			.attr('class', 'sja_clb')
 			.style('text-decoration', 'line-through')
-			.style('opacity', 0.3)
+			.style('opacity', 0.7)
 			.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
 			.on('click', async event => {
 				if (loading) return
@@ -617,7 +617,7 @@ function may_create_skewerRim(tk, block) {
 	R.headerTd = R.row // name of rim legend row is set on the fly, allows to change data type for rim
 		.append('td')
 		.style('text-align', 'right')
-		.style('opacity', 0.3)
+		.style('opacity', 0.7)
 
 	R.holder = R.row.append('td')
 }
@@ -694,7 +694,7 @@ function may_update_skewerRim(data, tk) {
 			.style('display', 'inline-block')
 			.attr('class', 'sja_clb')
 			.style('text-decoration', 'line-through')
-			.style('opacity', 0.3)
+			.style('opacity', 0.7)
 			.text(c)
 			.on('click', async event => {
 				if (loading) return
@@ -726,7 +726,7 @@ function may_create_ld(tk, block) {
 	const R = (tk.legend.ld = {})
 	R.row = tk.legend.table.append('tr')
 	// contents are filled in dynamically
-	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.3)
+	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7)
 	R.holder = R.row.append('td')
 	R.showHolder = R.holder.append('div').style('display', 'none')
 	showLDlegend(R.showHolder, tk.mds.queries.ld.colorScale)

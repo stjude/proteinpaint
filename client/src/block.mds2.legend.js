@@ -27,10 +27,7 @@ run only once, called by makeTk
 
 	tk.tr_legend = tr // to be compatible with block.tk_remove()
 
-	const table = td
-		.append('table')
-		.style('border-spacing', '5px')
-		.style('border-collapse', 'separate')
+	const table = td.append('table').style('border-spacing', '5px').style('border-collapse', 'separate')
 
 	tk.legend.table = table
 
@@ -55,11 +52,7 @@ legend.mclass{}
 
 	tk.legend.mclass.row = tk.legend.table.append('tr')
 
-	tk.legend.mclass.row
-		.append('td')
-		.style('text-align', 'right')
-		.style('opacity', 0.3)
-		.text('Mutation')
+	tk.legend.mclass.row.append('td').style('text-align', 'right').style('opacity', 0.8).text('Mutation')
 
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
@@ -260,12 +253,7 @@ data is data.info_fields{}
 function may_add_genotypeexportbutton(tk, block) {
 	if (tk.mds && tk.mds.hide_genotypedownload) return
 
-	const button = tk.legend.table
-		.append('tr')
-		.append('td')
-		.attr('colspan', 2)
-		.append('button')
-		.text('Export genotype')
+	const button = tk.legend.table.append('tr').append('td').attr('colspan', 2).append('button').text('Export genotype')
 
 	button.on('click', async () => {
 		button.property('disabled', true)
@@ -282,7 +270,7 @@ function may_add_genotypeexportbutton(tk, block) {
 		document.body.appendChild(a)
 		a.addEventListener(
 			'click',
-			function() {
+			function () {
 				a.download = 'genotype.txt'
 				const blob = new Blob([data.exportgenotype], { type: 'octet/stream' })
 				a.href = URL.createObjectURL(blob)
