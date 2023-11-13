@@ -108,7 +108,7 @@ function setRenderers(self) {
 				paneTitleDiv: holder.header
 					.append('div')
 					.style('display', 'inline-block')
-					.style('color', '#999')
+					.style('color', '#555')
 					.style('padding-left', '7px')
 					.style('vertical-align', 'sub'),
 

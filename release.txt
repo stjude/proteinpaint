@@ -1,3 +1,2 @@
-
-Feature: Improved scatter tooltip to list all samples grouped by common categories. 
-If clicked for each sample buttons are added to open the sample view and the disco and methylation array plots if possible.
+Fixes:
+- Darken selected colors for gencode and sandbox title, to address Section 508 contrast issues

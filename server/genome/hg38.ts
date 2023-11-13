@@ -50,9 +50,9 @@ export default <Genome>{
 			translatecoding: true,
 			categories: {
 				coding: { color: '#004D99', label: 'Coding gene' },
-				nonCoding: { color: '#009933', label: 'Noncoding gene' },
-				problem: { color: '#FF3300', label: 'Problem' },
-				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
+				nonCoding: { color: '#008833', label: 'Noncoding gene' },
+				problem: { color: '#CC3300', label: 'Problem' },
+				pseudo: { color: '#CC00CC', label: 'Pseudogene' }
 			},
 			type: 'bedj',
 			stackheight: 16,
