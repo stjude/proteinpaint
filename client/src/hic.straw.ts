@@ -101,7 +101,7 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 
 	{
 		const div = hic.holder.append('div')
-		hic.error = msg => client.sayerror(div, msg)
+		hic.error = (msg: string) => client.sayerror(div, msg)
 	}
 
 	if (!hic.name) {
@@ -200,8 +200,8 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 		.append('td')
 		.style('margin-right', '10px')
 		.append('select')
-		.on('change', event => {
-			const v = event.target.options[event.target.selectedIndex].innerHTML
+		.on('change', (event: Event) => {
+			const v = (event.target as HTMLSelectElement).options[(event.target as HTMLSelectElement).selectedIndex].innerHTML
 			setnmeth(hic, v)
 		})
 	hic.nmethselect.append('option').text('NONE')
@@ -216,9 +216,9 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 		.style('width', '70px')
 		.attr('type', 'number')
 		.property('value', hic.wholegenome.bpmaxv)
-		.on('keyup', (event: any) => {
+		.on('keyup', (event: KeyboardEvent) => {
 			if (event.code != 'Enter') return
-			const v = event.target.value
+			const v: any = (event.target as HTMLInputElement).value
 			if (v <= 0) return hic.error('invalid cutoff value')
 			setmaxv(hic, v)
 		})
@@ -313,7 +313,7 @@ export function hicparsestat(hic: any, j: any) {
 	if (!j['Base pair-delimited resolutions']) return 'Base pair-delimited resolutions not found in file stat'
 	if (!Array.isArray(j['Base pair-delimited resolutions'])) return 'Base pair-delimited resolutions should be array'
 	hic.bpresolution = j['Base pair-delimited resolutions']
-	if (!j['Fragment-delimited resolutions']) return 'Fragment-delimited resolutions is not array'
+	if (!j['Fragment-delimited resolutions']) return 'Fragment-delimited resolutions not found in file stat'
 	if (!Array.isArray(j['Fragment-delimited resolutions'])) return 'Fragment-delimited resolutions is not array'
 	hic.fragresolution = j['Fragment-delimited resolutions']
 
@@ -668,7 +668,7 @@ function makewholegenome_sv(hic: any) {
 			.attr('cx', obj.x + p1)
 			.attr('cy', obj.y + p2)
 			.attr('r', radius)
-			.on('mouseover', (event: any) => {
+			.on('mouseover', (event: MouseEvent) => {
 				tooltip_sv(event, hic, item)
 			})
 			.on('mouseout', () => {
@@ -687,7 +687,7 @@ function makewholegenome_sv(hic: any) {
 				.attr('cy', obj.x + p1)
 				.attr('cx', obj.y + p2)
 				.attr('r', radius)
-				.on('mouseover', event => {
+				.on('mouseover', (event: MouseEvent) => {
 					tooltip_sv(event, hic, item)
 				})
 				.on('mouseout', () => {
@@ -700,7 +700,7 @@ function makewholegenome_sv(hic: any) {
 	}
 }
 
-function tooltip_sv(event: any, hic: any, item: any): void {
+function tooltip_sv(event: MouseEvent, hic: any, item: any): void {
 	hic.tip
 		.clear()
 		.show(event.clientX, event.clientY)
@@ -877,7 +877,7 @@ function init_chrpair(hic: any, chrx: any, chry: any) {
 	const canvas = hic.c.td
 		.append('canvas')
 		.style('margin', axispad + 'px')
-		.on('click', function (this: any, event: any) {
+		.on('click', function (this: any, event: MouseEvent) {
 			const [x, y] = pointer(event, this)
 			init_detail(hic, chrx, chry, x, y)
 		})
@@ -1083,7 +1083,7 @@ function switchview(hic: any) {
 	}
 }
 
-function nmeth2select(hic, v) {
+function nmeth2select(hic: any, v: any) {
 	const options = hic.nmethselect.node().options
 	for (const o of options) o.selected = false
 	switch (v) {
@@ -1184,7 +1184,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 		.attr('height', blockwidth)
 		.attr('left', '10px')
 		.attr('top', '10px')
-		.on('mousedown', event => {
+		.on('mousedown', (event: MouseEvent) => {
 			const body = d3select(document.body)
 			const x = event.clientX
 			const y = event.clientY
@@ -1197,7 +1197,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 				hic.detailview.yb.panning(yoff)
 				canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
 			})
-			body.on('mouseup', event => {
+			body.on('mouseup', (event: MouseEvent) => {
 				body.on('mousemove', null).on('mouseup', null)
 				const xoff = event.clientX - x
 				const yoff = event.clientY - y
