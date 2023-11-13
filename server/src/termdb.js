@@ -473,8 +473,18 @@ async function get_AllSamples(q, req, res, ds) {
 
 async function get_AllSamplesByName(q, req, res, ds) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
-	let result = []
-	if (canDisplay) result = Object.fromEntries(ds.sampleName2Id)
+	let result = {} // key: sample name, value: id
+	if (canDisplay) {
+		if (ds.queries?.singleCell?.sampleIdSet) {
+			// this dataset has single cell data, only return samples, but not cells
+			// FIXME this excludes samples without such data
+			for (const i of ds.queries.singleCell.sampleIdSet) {
+				result[ds.cohort.termdb.q.id2sampleName(i)] = i
+			}
+		} else {
+			result = Object.fromEntries(ds.sampleName2Id)
+		}
+	}
 	res.send(result)
 }
 

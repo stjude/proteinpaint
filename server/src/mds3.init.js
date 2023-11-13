@@ -1845,6 +1845,18 @@ async function validate_query_singleSampleGbtk(ds, genome) {
 async function validate_query_singleCell(ds, genome) {
 	const q = ds.queries.singleCell
 	if (!q) return
+
+	// FIXME gdc should not require this
+	if (!q.isSampleTerm) throw 'singleCell.isSampleTerm missing'
+	// for now use this quick fix method to pull sample ids annotated by this term
+	q.sampleIdSet = new Set()
+	{
+		const s = ds.cohort.termdb.q.getAllFloatValues(q.isSampleTerm)
+		for (const id of s.keys()) q.sampleIdSet.add(id)
+		if (q.sampleIdSet?.size == 0) throw 'no sample found'
+		console.log(q.sampleIdSet.size, 'samples (not cells) from single cell data of ' + ds.label)
+	}
+
 	if (!Array.isArray(q.plots)) throw 'queries.singleCell.plots[] is not array'
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of q.plots) {
