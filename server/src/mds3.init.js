@@ -81,8 +81,6 @@ mayAdd_mayGetGeneVariantData
 		addDataAvailability
 */
 
-// in case chr name may contain '.', can change to __
-const pc_termid_prefix = 'Ancestry_PC_' // may define in ds, must avoid conflicting with dictionary term ids
 const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/legend.js
 
 export async function init(ds, genome, _servconfig, app = null, basepath = null) {
@@ -360,9 +358,12 @@ async function mayValidateRestrictAcestries(tdb) {
 		if (a.PCTermId) {
 			a.pcs = new Map() // k: pc ID, v: Map(sampleId:value)
 			for (let i = 1; i <= a.PCcount; i++) {
-				const s2v = tdb.q.getAllFloatValues(a.PCTermId + i)
-				if (!s2v || !s2v.size) throw 'no sample PC values are retrieved by restrictAncestries term: ' + a.PCTermId + i
-				a.pcs.set(pc_termid_prefix + i, s2v)
+				const pctid = a.PCTermId + i // pc term id
+				const pct = tdb.q.termjsonByOneid(pctid)
+				if (!pct) throw 'a PC term is not found in termdb'
+				const s2v = tdb.q.getAllFloatValues(pctid)
+				if (!s2v || !s2v.size) throw 'no sample PC values are retrieved by restrictAncestries term: ' + pctid
+				a.pcs.set(pct.name, s2v)
 			}
 		} else if (a.PCBySubcohort) {
 			for (const subcohort in a.PCBySubcohort) {
@@ -379,9 +380,12 @@ async function mayValidateRestrictAcestries(tdb) {
 				if (!b.termId) throw 'termId missing from a subcohort of PCBySubcohort'
 				b.pcs = new Map()
 				for (let i = 1; i <= a.PCcount; i++) {
-					const s2v = tdb.q.getAllFloatValues(b.termId + i)
+					const pctid = b.termId + i // pc term id
+					const pct = tdb.q.termjsonByOneid(pctid)
+					if (!pct) throw 'a PC term is not found in termdb'
+					const s2v = tdb.q.getAllFloatValues(pctid)
 					if (!s2v || !s2v.size) throw 'no sample PC values are retrieved by restrictAncestries.PCBySubcohort.<>.termId'
-					b.pcs.set(pc_termid_prefix + i, s2v)
+					b.pcs.set(pct.name, s2v)
 				}
 			}
 		} else {
