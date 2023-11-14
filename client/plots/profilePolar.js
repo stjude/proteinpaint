@@ -1,10 +1,10 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
-import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
+import { loadFilterTerms } from './profilePlot.js'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -14,6 +14,14 @@ class profilePolar extends profilePlot {
 	}
 	async init(appState) {
 		await super.init(appState)
+		const config = appState.plots.find(p => p.id === this.id)
+
+		this.twLst = []
+		for (const [i, data] of config.terms.entries()) {
+			this.twLst.push(data.score)
+			this.twLst.push(data.maxScore)
+		}
+
 		this.opts.header.text('Polar Graph: Score based results by PrOFILE module').style('font-weight', 'bold')
 		this.arcGenerator = d3.arc().innerRadius(0)
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
@@ -27,20 +35,10 @@ class profilePolar extends profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profilePolar
-		const twLst = []
-		for (const [i, data] of this.config.terms.entries()) {
-			twLst.push(data.score)
-			twLst.push(data.maxScore)
-		}
 
-		await this.setControls('profilePolar', twLst)
+		await this.setControls('profilePolar')
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
-		this.income = this.settings.income || this.incomes[0].value
-		this.region = this.settings.region !== undefined ? this.settings.region : this.income == '' ? 'Global' : ''
-		this.filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
-			.split(' ')
-			.join('_')
 		this.plot()
 	}
 
@@ -60,34 +58,14 @@ class profilePolar extends profilePlot {
 			const d = path.__data__
 			const menu = this.tip.clear()
 			const percentage = this.getPercentage(d)
-			menu.d.text(`${d.score.term.name} ${percentage}%`)
+			menu.d.text(`${d.module} ${percentage}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
-	}
-
-	getPercentage(d) {
-		if (this.sampleData) {
-			const score = this.sampleData[d.score.$id]?.value
-			const maxScore = this.sampleData[d.maxScore.$id]?.value
-			const percentage = (score * 100) / maxScore
-			return percentage.toFixed(2)
-		} else {
-			let score = 0
-			for (const sample of this.data.lst) {
-				score += sample[d.score.$id]?.value
-			}
-			score = score / this.data.lst.length
-			const maxScore = this.data.lst[0][d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
-			const percentage = (score * 100) / maxScore
-			return percentage.toFixed(2)
-		}
 	}
 
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-
-		//if (!this.sampleData) return
 
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -117,7 +95,7 @@ class profilePolar extends profilePlot {
 		const angle = this.angle
 		let i = 0
 		for (let d of config.terms) {
-			const name = d.score.term.name
+			const name = d.module
 			d.i = i
 			const percentage = this.getPercentage(d)
 			rows.push([{ value: name }, { value: percentage }])
@@ -176,7 +154,11 @@ class profilePolar extends profilePlot {
 			.append('text')
 			.attr('text-anchor', 'left')
 			.style('font-weight', 'bold')
-			.text('Filters')
+			.text(
+				this.settings.region || this.settings.country || this.settings.income || this.settings.site
+					? 'Filters'
+					: 'No filter applied'
+			)
 			.attr('transform', `translate(0, -5)`)
 		this.filtersCount = 0
 
@@ -216,7 +198,7 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePolarSettings()
 		config.settings = {
 			controls: {
-				isOpen: false // control panel is hidden by default
+				isOpen: true // control panel is hidden by default
 			},
 			profilePolar: settings
 		}
@@ -225,17 +207,10 @@ export async function getPlotConfig(opts, app) {
 			const maxScoreTerm = data.maxScore
 			scoreTerm.q = { mode: 'continuous' }
 			maxScoreTerm.q = { mode: 'continuous' }
-
 			await fillTermWrapper(scoreTerm, app.vocabApi)
 			await fillTermWrapper(maxScoreTerm, app.vocabApi)
 		}
-		config.countryTW = { id: 'country' }
-		config.regionTW = { id: 'WHO_region' }
-		config.incomeTW = { id: 'Income_group' }
-
-		await fillTermWrapper(config.countryTW, app.vocabApi)
-		await fillTermWrapper(config.regionTW, app.vocabApi)
-		await fillTermWrapper(config.incomeTW, app.vocabApi)
+		await loadFilterTerms(config, app)
 
 		return config
 	} catch (e) {

@@ -3,9 +3,9 @@ import { fillTermWrapper } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
-import { getSampleFilter } from '#termsetting/handlers/samplelst'
-import { controlsInit } from './controls'
-import { downloadSingleSVG } from '../common/svg.download.js'
+import { loadFilterTerms } from './profilePlot.js'
+let stepx = 500
+const barwidth = 400
 
 class profileBarchart extends profilePlot {
 	constructor() {
@@ -19,7 +19,14 @@ class profileBarchart extends profilePlot {
 		this.componentNames = config.plotByComponent.map(elem => {
 			return { value: elem.component.name, label: elem.component.name }
 		})
-
+		this.componentInput = {
+			label: 'Component',
+			type: 'dropdown',
+			chartType: 'profileBarchart',
+			options: this.componentNames,
+			settingsKey: 'component',
+			callback: value => this.setComponent(value)
+		}
 		this.opts.header
 			.style('font-weight', 'bold')
 			.text(
@@ -35,55 +42,29 @@ class profileBarchart extends profilePlot {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
-	async setControls() {
-		await super.setControls()
-		this.components.controls.inputs.unshift({
-			label: 'Component',
-			type: 'dropdown',
-			chartType: 'profileBarchart',
-			options: this.componentNames,
-			settingsKey: 'component',
-			callback: value => this.setComponent(value)
-		})
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profileBarchart
-		this.setControls('profileBarchart')
 
-		const twLst = []
 		this.configComponent =
 			this.config.plotByComponent.find(comp => comp.component.name == this.settings.component) ||
 			this.config.plotByComponent[0]
-		this.configComponent.hasSubjectiveData = false
+		this.twLst = []
 		this.rowCount = 0
 		for (const group of this.configComponent.groups)
 			for (const row of group.rows) {
 				this.rowCount++
-				for (const [i, tw] of row.twlst.entries()) {
-					if (tw.id) {
-						twLst.push(tw)
-						if (i == 1) this.configComponent.hasSubjectiveData = true
-					}
+				if (row.sc) {
+					this.twLst.push(row.sc.score)
+					this.twLst.push(row.sc.maxScore)
+				}
+				if (row.poc) {
+					this.twLst.push(row.poc.score)
+					this.twLst.push(row.poc.maxScore)
 				}
 			}
-		twLst.push(this.config.typeTW)
-		const sampleName = this.settings.region !== undefined ? this.settings.region : this.settings.income || 'Global'
-		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
-		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: twLst,
-			filter
-		})
-		this.sampleData = this.data.lst[0]
-		this.income = this.settings.income || this.incomes[0].value
-		this.region = this.settings.region !== undefined ? this.settings.region : this.income == '' ? 'Global' : ''
-
-		this.filename = `barchart_plot_${this.component}${this.region ? '_' + this.region : ''}${
-			this.income ? '_' + this.income : ''
-		}.svg`
-			.split(' ')
-			.join('_')
+		await this.setControls('profileBarchart', [this.componentInput])
+		this.component = this.settings.component || this.componentNames[0].value
 		this.plot()
 	}
 
@@ -104,14 +85,12 @@ class profileBarchart extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-
-		const sampleData = this.sampleData
-		if (!sampleData) return
+		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 
 		this.svg = this.dom.plotDiv
 			.append('svg')
 			.attr('width', 1400)
-			.attr('height', this.rowCount * 30 + 420)
+			.attr('height', this.rowCount * 32 + 420)
 
 		const svg = this.svg
 
@@ -130,11 +109,8 @@ class profileBarchart extends profilePlot {
 
 		let x
 		let y
-		let stepx = 500
 		let step = 30
-		const barwidth = 400
 
-		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		for (const [i, c] of config.columnNames.entries()) {
 			if (i == 1 && !hasSubjectiveData) break
 
@@ -147,11 +123,11 @@ class profileBarchart extends profilePlot {
 				.attr('text-anchor', 'start')
 				.style('font-weight', 'bold')
 				.text(c)
-			drawAxes(x, y + 40)
+			drawAxes(x, y + 30)
 
 			x += stepx
 		}
-		y = 75
+		y = 30
 		for (const group of this.configComponent.groups) {
 			svg
 				.append('text')
@@ -173,11 +149,8 @@ class profileBarchart extends profilePlot {
 					.attr('fill', '#f8d335')
 					.attr('fill-opacity', 0)
 				x = 400
-				for (const [i, tw] of row.twlst.entries()) {
-					drawRect(x, y, row, i, g)
-					x += stepx
-				}
-
+				if (row.sc) this.drawRect(x, y, row, 'sc', g)
+				if (row.poc) this.drawRect(x + stepx, y, row, 'poc', g)
 				y += step
 			}
 		}
@@ -218,59 +191,6 @@ class profileBarchart extends profilePlot {
 		x += 300
 		this.drawLegendRect(x, y, 'or', color)
 
-		function drawRect(x, y, row, i, g) {
-			const tw = row.twlst[i]
-			let subjectiveTerm = false
-			if (row.subjective) subjectiveTerm = true
-			const termColor = tw?.term?.color
-			const value = sampleData[tw.$id]?.value
-			const isFirst = i % 2 == 0
-			const pairValue = isFirst ? sampleData[row.twlst[1]?.$id]?.value : sampleData[row.twlst[0]?.$id]?.value
-			const width = value ? (value / 100) * barwidth : 0
-
-			if (value) {
-				const rect = g
-					.append('rect')
-					.attr('transform', `translate(${x + 10}, ${y})`)
-					.attr('pointer-events', 'none')
-					.attr('x', 0)
-					.attr('y', 0)
-					.attr('width', width)
-					.attr('height', 20)
-				if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
-				else {
-					const id = tw.term.name.replace(/[^a-zA-Z0-9]/g, '')
-					g.append('defs')
-						.append('pattern')
-						.attr('id', id)
-						.attr('patternUnits', 'userSpaceOnUse')
-						.attr('width', 4)
-						.attr('height', 4)
-						.append('path')
-						.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
-						.attr('stroke-width', 1)
-						.attr('stroke', termColor)
-					rect.attr('fill', `url(#${id})`)
-				}
-			}
-			const text = g
-				.append('text')
-				.attr('pointer-events', 'none')
-
-				.attr('text-anchor', 'end')
-				.text(`${value || 0}%`)
-			if (width > 0) text.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
-			else if (!pairValue && i == 0) text.attr('transform', `translate(${x + 35}, ${y + 15})`)
-			//else text.attr('transform', `translate(${x + 35}, ${y + 15})`)
-
-			if (isFirst)
-				g.append('text')
-					.attr('transform', `translate(${x}, ${y + 15})`)
-					.attr('text-anchor', 'end')
-					.text(row.name)
-					.attr('pointer-events', 'none')
-		}
-
 		function drawAxes(x, y) {
 			const xAxisScale = d3Linear().domain([0, 100]).range([0, barwidth])
 
@@ -302,6 +222,59 @@ class profileBarchart extends profilePlot {
 					.text('C')
 					.style('font-weight', 'bold')
 		}
+	}
+
+	drawRect(x, y, row, field, g) {
+		const hasSubjectiveData = this.configComponent.hasSubjectiveData
+		const d = row[field]
+		let subjectiveTerm = false
+		if (row.subjective) subjectiveTerm = true
+		const termColor = d.score.term.color
+		const value = this.getPercentage(d)
+		const isFirst = field == 'sc' || (field == 'poc' && !row.sc)
+		const pairValue = field == 'sc' ? this.getPercentage(row.poc) : this.getPercentage(row.sc)
+		const width = value ? (value / 100) * barwidth : 0
+
+		if (value) {
+			const rect = g
+				.append('rect')
+				.attr('transform', `translate(${x + 10}, ${y})`)
+				.attr('pointer-events', 'none')
+				.attr('x', 0)
+				.attr('y', 0)
+				.attr('width', width)
+				.attr('height', 20)
+			if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
+			else {
+				const id = d.score.term.name.replace(/[^a-zA-Z0-9]/g, '')
+				g.append('defs')
+					.append('pattern')
+					.attr('id', id)
+					.attr('patternUnits', 'userSpaceOnUse')
+					.attr('width', 4)
+					.attr('height', 4)
+					.append('path')
+					.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
+					.attr('stroke-width', 1)
+					.attr('stroke', termColor)
+				rect.attr('fill', `url(#${id})`)
+			}
+		}
+		const text = g
+			.append('text')
+			.attr('pointer-events', 'none')
+			.attr('text-anchor', 'end')
+			.text(`${value || 0}%`)
+		if (width > 0) text.attr('transform', `translate(${x + width + 55}, ${y + 15})`)
+		else if (!pairValue && field == 'sc') text.attr('transform', `translate(${x + 35}, ${y + 15})`)
+		//else text.attr('transform', `translate(${x + 35}, ${y + 15})`)
+
+		if (isFirst)
+			g.append('text')
+				.attr('transform', `translate(${field == 'sc' ? x : x - stepx}, ${y + 15})`)
+				.attr('text-anchor', 'end')
+				.text(row.name)
+				.attr('pointer-events', 'none')
 	}
 
 	drawLegendRect(x, y, operator, color) {
@@ -341,15 +314,25 @@ export async function getPlotConfig(opts, app) {
 			},
 			profileBarchart: settings
 		}
-		for (const component of config.plotByComponent)
+		for (const component of config.plotByComponent) {
+			component.hasSubjectiveData = false
 			for (const group of component.groups)
 				for (const row of group.rows) {
-					for (const t of row.twlst) {
-						if (t.id) await fillTermWrapper(t, app.vocabApi)
-						// allow empty cells, not all cells have a corresponding term
+					if (row.sc) {
+						row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
+						await fillTermWrapper(row.sc.score, app.vocabApi)
+						await fillTermWrapper(row.sc.maxScore, app.vocabApi)
 					}
+					if (row.poc) {
+						row.poc.score.q = row.poc.maxScore.q = { mode: 'continuous' }
+						await fillTermWrapper(row.poc.score, app.vocabApi)
+						await fillTermWrapper(row.poc.maxScore, app.vocabApi)
+					}
+					if (row.sc && row.poc) component.hasSubjectiveData = true
 				}
-		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
+		}
+
+		await loadFilterTerms(config, app)
 
 		return config
 	} catch (e) {

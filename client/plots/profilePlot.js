@@ -2,6 +2,8 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
+import { fillTermWrapper } from '#termsetting'
+
 export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
@@ -20,18 +22,15 @@ export class profilePlot {
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
 		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('display', 'inline-block')
 
-		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
-		const firstDiv = div.append('div').style('display', 'inline-block')
+		const div = holder.append('div').style('margin-left', '50px')
 		const plotDiv = holder.append('div')
 		this.dom = {
 			controlsDiv,
 			holder,
-			firstDiv,
 			filterDiv: div,
 			facilityDiv: div.insert('div').style('display', 'inline-block'),
 			plotDiv
 		}
-		const config = appState.plots.find(p => p.id === this.id)
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 	}
 
@@ -45,20 +44,24 @@ export class profilePlot {
 		return list
 	}
 
-	async setControls(chartType, twLst) {
+	async setControls(chartType, additionalInputs = []) {
 		const filter = this.config.filter
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: twLst,
+			terms: this.twLst,
 			filter
 		})
 
 		const countriesData = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: [this.config.countryTW],
-			filter: this.getFilter(false, true)
+			filter: this.getFilter([this.config.countryTW.id])
 		})
 		const incomesData = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: [this.config.incomeTW],
-			filter: this.getFilter(true, false)
+			filter: this.getFilter([this.config.incomeTW.id])
+		})
+		const typesData = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: [this.config.typeTW],
+			filter: this.getFilter([this.config.typeTW.id])
 		})
 		this.sampleData =
 			this.settings.site && this.settings.site != '' ? this.data.lst.find(s => s.sample === this.settings.site) : null
@@ -66,24 +69,23 @@ export class profilePlot {
 		this.sites = this.data.lst.map(sample => {
 			return { label: sample.sampleName, value: sample.sample }
 		})
+		this.sites.unshift({ label: '', value: '' })
+
 		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
 			return { label: value, value }
 		})
-		this.sites.unshift({ label: '', value: '' })
-
 		this.regions.unshift({ label: '', value: '' })
 		this.countries = this.getList(this.config.countryTW, countriesData)
 		this.incomes = this.getList(this.config.incomeTW, incomesData)
+		this.types = this.getList(this.config.typeTW, typesData)
+
+		this.income = this.settings.income || this.incomes[0].value
+		this.region = this.settings.region || this.regions[0].value
+		this.country = this.settings.coutry || this.countries[0].value
+		this.facilityType = this.settings.facilityType || this.types[0].value
 
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
-			{
-				label: 'Show table',
-				type: 'checkbox',
-				chartType,
-				settingsKey: 'showTable',
-				boxLabel: 'Yes'
-			},
 			{
 				label: 'Region',
 				type: 'dropdown',
@@ -109,24 +111,42 @@ export class profilePlot {
 				callback: value => this.setIncome(value)
 			},
 			{
-				label: 'Site',
+				label: 'Facility Type',
 				type: 'dropdown',
 				chartType,
-				options: this.sites,
-				settingsKey: 'site',
-				callback: value => this.setSite(value)
+				options: this.types,
+				settingsKey: 'facilityType',
+				callback: value => this.setFacilityType(value)
 			}
+			// {
+			// 	label: 'Site',
+			// 	type: 'dropdown',
+			// 	chartType,
+			// 	options: this.sites,
+			// 	settingsKey: 'site',
+			// 	callback: value => this.setSite(value)
+			// }
 		]
+		inputs.unshift(...additionalInputs)
+		if (this.type != 'profileBarchart')
+			inputs.push({
+				label: 'Show table',
+				type: 'checkbox',
+				chartType,
+				settingsKey: 'showTable',
+				boxLabel: 'Yes'
+			})
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controlsDiv,
-				inputs,
-				showHelpIcon: true
+				inputs
 			})
 		}
-		this.components.controls.on(`downloadClick.${chartType}`, () => downloadSingleSVG(this.svg, this.filename))
+		this.components.controls.on(`downloadClick.${chartType}`, () =>
+			downloadSingleSVG(this.svg, this.getDownloadFilename())
+		)
 		this.components.controls.on(`helpClick.${chartType}`, () => window.open('', '_blank'))
 	}
 
@@ -156,38 +176,25 @@ export class profilePlot {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
+	setFacilityType(type) {
+		const config = this.config
+		this.settings.facilityType = type
+		delete this.settings.site
+		config.filter = this.getFilter()
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
 	setSite(site) {
 		this.settings.site = site
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
-	getFilter(hasCountry = true, hasIncome = true) {
-		let tvs
+	getFilter(excluded = []) {
 		const lst = []
-		if (this.settings.region)
-			lst.push({
-				type: 'tvs',
-				tvs: {
-					term: this.config.regionTW.term,
-					values: [{ key: this.settings.region }]
-				}
-			})
-		if (this.settings.country && hasCountry)
-			lst.push({
-				type: 'tvs',
-				tvs: {
-					term: this.config.countryTW.term,
-					values: [{ key: this.settings.country }]
-				}
-			})
-		if (this.settings.income && hasIncome)
-			lst.push({
-				type: 'tvs',
-				tvs: {
-					term: this.config.incomeTW.term,
-					values: [{ key: this.settings.income }]
-				}
-			})
+		processTW(this.config.regionTW, this.settings.region)
+		processTW(this.config.countryTW, this.settings.country)
+		processTW(this.config.incomeTW, this.settings.income)
+		processTW(this.config.typeTW, this.settings.facilityType)
 
 		const tvslst = {
 			type: 'tvslst',
@@ -195,10 +202,20 @@ export class profilePlot {
 			join: 'and',
 			lst
 		}
-
 		const filter = filterJoin([this.state.termfilter.filter, tvslst])
 
 		return filter
+
+		function processTW(tw, value) {
+			if (value && !excluded.includes(tw.id))
+				lst.push({
+					type: 'tvs',
+					tvs: {
+						term: tw.term,
+						values: [{ key: value }]
+					}
+				})
+		}
 	}
 
 	addLegendFilter(filter, value) {
@@ -221,4 +238,41 @@ export class profilePlot {
 		text.append('tspan').attr('font-weight', 'bold').text(category)
 		text.append('tspan').text(`: ${description}`)
 	}
+
+	getDownloadFilename() {
+		let filename = `${this.type}${this.component ? '_' + this.component : ''}${this.region ? '_' + this.region : ''}${
+			this.country ? '_' + this.country : ''
+		}${this.income ? '_' + this.income : ''}${this.facilityType ? '_' + this.facilityType : ''}.svg`
+		filename = filename.split(' ').join('_')
+		return filename
+	}
+
+	getPercentage(d) {
+		if (!d) return null
+		if (this.sampleData) {
+			const score = this.sampleData[d.score.$id]?.value
+			const maxScore = this.sampleData[d.maxScore.$id]?.value
+			const percentage = (score * 100) / maxScore
+			return percentage.toFixed(0)
+		} else {
+			const scores = this.data.lst.map(sample => sample[d.score.$id]?.value).sort()
+			const middle = Math.floor(scores.length / 2)
+			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
+			const maxScore = this.data.lst[0][d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+			const percentage = (score * 100) / maxScore
+			return percentage.toFixed(0)
+		}
+	}
+}
+
+export async function loadFilterTerms(config, app) {
+	config.countryTW = { id: 'country' }
+	config.regionTW = { id: 'WHO_region' }
+	config.incomeTW = { id: 'Income_group' }
+	config.typeTW = { id: 'FC_TypeofFacility' }
+
+	await fillTermWrapper(config.countryTW, app.vocabApi)
+	await fillTermWrapper(config.regionTW, app.vocabApi)
+	await fillTermWrapper(config.incomeTW, app.vocabApi)
+	await fillTermWrapper(config.typeTW, app.vocabApi)
 }
