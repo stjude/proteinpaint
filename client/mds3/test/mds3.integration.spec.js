@@ -160,7 +160,7 @@ tape('Custom variants, missing or invalid mclass', test => {
 	}
 })
 
-tape.only('Custom dataset with custom variants, WITH samples', test => {
+tape('Custom dataset with custom variants, WITH samples', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -209,14 +209,13 @@ tape.only('Custom dataset with custom variants, WITH samples', test => {
 		// click firstM
 		firstM.dispatchEvent(new Event('click'))
 		await whenVisible(tk.itemtip.d)
-		test.pass('itemtip shows after clicking first m')
+		test.pass('Should show itemtip after clicking first m')
 
 		const span = await detectOne({ elem: tk.itemtip.dnode, selector: '.pp_mds3_singleSampleNameSpan' })
-		console.log(span)
-		test.ok(span, 'pp_mds3_singleSampleNameSpan <span> found')
-		test.equal(span.innerHTML, custom_variants[0].sample, 'correct sample name shows in <span>')
+		test.ok(span, 'Should render pp_mds3_singleSampleNameSpan <span>')
+		test.equal(span.innerHTML, custom_variants[0].samples[0].sample_id, 'Should render correct sample name in <span>')
 
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
