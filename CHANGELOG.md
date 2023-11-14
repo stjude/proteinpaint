@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- In genetic association analysis, principal component covariates now use actual term names from db, rather than hardcoded adhoc name
+
 
 ## 2.30.5
 

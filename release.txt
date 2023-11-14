@@ -1,2 +1,1 @@
-Fixes:
-- In genetic association analysis, principal component covariates now use actual term names from db, rather than hardcoded adhoc name
+
