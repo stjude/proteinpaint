@@ -1,1 +1,1 @@
-
+feat: profile plots now have filters to the left and the new data is loaded in the polar and barchart plots

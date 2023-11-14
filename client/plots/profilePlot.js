@@ -81,7 +81,7 @@ export class profilePlot {
 
 		this.income = this.settings.income || this.incomes[0].value
 		this.region = this.settings.region || this.regions[0].value
-		this.country = this.settings.coutry || this.countries[0].value
+		this.country = this.settings.country || this.countries[0].value
 		this.facilityType = this.settings.facilityType || this.types[0].value
 
 		this.dom.controlsDiv.selectAll('*').remove()
@@ -240,9 +240,7 @@ export class profilePlot {
 	}
 
 	getDownloadFilename() {
-		let filename = `${this.type}${this.component ? '_' + this.component : ''}${this.region ? '_' + this.region : ''}${
-			this.country ? '_' + this.country : ''
-		}${this.income ? '_' + this.income : ''}${this.facilityType ? '_' + this.facilityType : ''}.svg`
+		let filename = `${this.type}${this.component}${this.region}${this.country}${this.income}${this.facilityType}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}
