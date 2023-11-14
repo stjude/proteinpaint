@@ -174,7 +174,7 @@ async function make_singleSampleTable(s, arg) {
 	if (s.sample_id) {
 		// sample_id is hardcoded
 		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1.text(arg.tk.mds.termdbConfig.lollipop?.sample || 'Sample')
+		cell1.text(arg.tk.mds.termdbConfig?.lollipop?.sample || 'Sample')
 		printSampleName(s, arg.tk, cell2, arg.block, arg.mlst?.[0])
 	}
 
@@ -282,7 +282,8 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 		a.text(sample.sample_id)
 		a.style('word-break', 'break-word')
 	} else {
-		div.append('span').text(sample.sample_id)
+		// class name for testing
+		div.append('span').attr('class', 'pp_mds3_singleSampleNameSpan').text(sample.sample_id)
 	}
 
 	const extraRow = div.append('div') // row under sample name to show optional info about the sample
@@ -383,7 +384,7 @@ export async function samples2columnsRows(samples, tk) {
 	const displayedFormatKeySet = new Set() // set of format keys for display, to skip keys not in display
 
 	// to be returned by this function, as inputs for renderTable
-	const columns = [{ label: tk.mds.termdbConfig.lollipop?.sample || 'Sample' }],
+	const columns = [{ label: tk.mds.termdbConfig?.lollipop?.sample || 'Sample' }],
 		rows = [] // each row is an array of same length as columns
 
 	///////////////// fill in columns[]
