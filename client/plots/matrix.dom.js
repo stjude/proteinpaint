@@ -59,6 +59,9 @@ export function setMatrixDom(opts) {
 		seriesesG: rectsG.append('g').attr('class', 'sjpp-matrix-serieses-g').on('mousedown', this.seriesesGMousedown),
 		//.on('mousemove', this.seriesesGMousemove)
 		//.on('mouseup', this.seriesesGMouseup),
+
+		highlightBeamG: rectsG.append('g').attr('class', 'sjpp-matrix-highlight-beam'),
+
 		sampleLabelsPG,
 		sampleGrpLabelG: sampleLabelsPG
 			.append('g')
@@ -113,6 +116,20 @@ export function setMatrixDom(opts) {
 		menubody: tip.d.append('div'),
 		clickMenu
 	}
+
+	this.dom.colBeam = this.dom.highlightBeamG
+		.append('rect')
+		.style('display', 'none')
+		.style('stroke-width', '0.5px')
+		.style('fill', 'transparent')
+		.style('pointer-events', 'none')
+
+	this.dom.rowBeam = this.dom.highlightBeamG
+		.append('rect')
+		.style('display', 'none')
+		.style('stroke-width', '0.5px')
+		.style('fill', 'transparent')
+		.style('pointer-events', 'none')
 
 	this.dom.tip.onHide = () => {
 		this.lastActiveLabel = this.activeLabel

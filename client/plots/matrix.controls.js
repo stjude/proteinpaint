@@ -307,6 +307,16 @@ export class MatrixControls {
 								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
 							},
 							{
+								label: 'Beam Color',
+								title: 'Set a color for the beam highlighter',
+								type: 'color',
+								chartType: 'matrix',
+								settingsKey: 'beamStroke',
+								colspan: 2,
+								align: 'center'
+								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
+							},
+							{
 								label: 'Grid Line Color',
 								title: 'Set the grid color, equivalent to applying the same border color for each matrix cell',
 								type: 'color',

@@ -41,7 +41,8 @@ export function getSerieses(data) {
 				totalIndex,
 				grpIndex,
 				row,
-				t
+				t,
+				seriesY: y
 			}
 
 			if (!anno) {
