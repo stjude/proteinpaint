@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { detectOne, detectGte } = require('../../test/test.helpers')
+const { detectOne, detectGte, whenVisible } = require('../../test/test.helpers')
 const { runproteinpaint } = require('../../test/front.helpers.js')
 
 /*
@@ -160,13 +160,13 @@ tape('Custom variants, missing or invalid mclass', test => {
 	}
 })
 
-tape('Custom dataset with custom variants, WITH samples', test => {
+tape.only('Custom dataset with custom variants, WITH samples', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
 	const custom_variants = [
-		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, sample: 'sample 1' },
 		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, sample: 'sample 2' },
+		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, sample: 'sample 1' },
 		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, sample: 'sample 1' }
 	]
 
@@ -177,23 +177,14 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 		noheader: true,
 		genome: 'hg38-test',
 		gene: 'TP53',
-		tracks: [
-			{
-				type: 'mds3',
-				name: 'Test, with sample name',
-				custom_variants
-			}
-		],
-		onloadalltk_always: checkTrack
+		tracks: [{ type: 'mds3', name: 'Test, with sample name', custom_variants, callbackOnRender }]
 	})
 
-	function checkTrack(bb) {
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-
+	async function callbackOnRender(tk, bb) {
 		const variantNum = new Set()
 		for (const variant of custom_variants) {
 			//Test all custom variant entries successfully passed to block instance
-			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
+			const variantFound = tk.custom_variants.find(i => i.mname == variant.mname)
 			test.ok(variantFound, `Should render data point at ${variant.chr}-${variant.pos} for ${variant.mname}`)
 
 			variantNum.add(variant.mname)
@@ -209,12 +200,23 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 		}
 		//Confirm number of custom variants matches in block instance
 		test.equal(
-			mds3Track.custom_variants.length,
+			tk.custom_variants.length,
 			variantNum.size,
 			`Should render total # of custom variants = ${variantNum.size}`
 		)
 
-		if (test._ok) holder.remove()
+		const firstM = tk.skewer.g.selectAll('.sja_aa_disckick').nodes()[0]
+		// click firstM
+		firstM.dispatchEvent(new Event('click'))
+		await whenVisible(tk.itemtip.d)
+		test.pass('itemtip shows after clicking first m')
+
+		const span = await detectOne({ elem: tk.itemtip.dnode, selector: '.pp_mds3_singleSampleNameSpan' })
+		console.log(span)
+		test.ok(span, 'pp_mds3_singleSampleNameSpan <span> found')
+		test.equal(span.innerHTML, custom_variants[0].sample, 'correct sample name shows in <span>')
+
+		//if (test._ok) holder.remove()
 		test.end()
 	}
 })
