@@ -7,6 +7,8 @@ export default class Labels extends Ring<Label> {
 	collisions?: Array<Label>
 	settings: any
 	elementsToDisplay: Array<Label> = []
+	elementsToDisplayCount: number = 0
+	allElementsCount: number = 0
 
 	private hasPrioritizedGenes: boolean
 	private filteredPrioritizedGenesList: Array<Label> = []
@@ -46,16 +48,23 @@ export default class Labels extends Ring<Label> {
 		const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
 
 		if (this.hasPrioritizedGenes) {
+			const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
+				return a.startAngle - b.startAngle
+			})
+
+			this.allElementsCount = combinedAndSortedList.length
+
 			if (this.prioritizeGeneLabelsByGeneSets) {
 				this.elementsToDisplay = this.getAllLabels(hasPrioritizedGenes)
+				this.elementsToDisplayCount = this.elementsToDisplay.length
 			} else {
-				const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
-					return a.startAngle - b.startAngle
-				})
 				this.elementsToDisplay = this.getAllLabels(combinedAndSortedList)
+				this.elementsToDisplayCount = this.elementsToDisplay.length
 			}
 		} else if (!this.prioritizeGeneLabelsByGeneSets) {
 			this.elementsToDisplay = this.getLabelsWithoutPrioritizedGenes(this.elements)
+			this.allElementsCount = this.elementsToDisplay.length
+			this.elementsToDisplayCount = this.elementsToDisplay.length
 		}
 	}
 
