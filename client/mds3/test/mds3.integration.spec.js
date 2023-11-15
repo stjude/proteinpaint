@@ -221,6 +221,7 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 			'itemtip has correct single-sample name'
 		)
 
+		tk.itemtip.dnode.remove() //Remove so the tip does not persist into other tests
 		if (test._ok) holder.remove()
 		test.end()
 	}
