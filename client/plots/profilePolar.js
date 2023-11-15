@@ -160,7 +160,6 @@ class profilePolar extends profilePlot {
 					: 'No filter applied'
 			)
 			.attr('transform', `translate(0, -5)`)
-		this.filtersCount = 0
 
 		this.addLegendFilter('region', this.settings.region)
 		this.addLegendFilter('country', this.settings.country)

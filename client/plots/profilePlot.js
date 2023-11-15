@@ -148,6 +148,7 @@ export class profilePlot {
 			downloadSingleSVG(this.svg, this.getDownloadFilename())
 		)
 		this.components.controls.on(`helpClick.${chartType}`, () => window.open('', '_blank'))
+		this.filtersCount = 0
 	}
 
 	setRegion(region) {
