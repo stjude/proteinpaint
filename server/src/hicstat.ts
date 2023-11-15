@@ -37,8 +37,10 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 	if (version == 8 || version == 7) {
 		let vectorView = await getVectorView(file, footerPosition, shunk)
 		const nbytesV5 = vectorView.getInt32(0, true)
-		vectorView = await getVectorView(file, footerPosition + nbytesV5 + 4, shunk)
-		normalization = await getNormalization(vectorView, footerPosition + nbytesV5 + 4)
+		if (nbytesV5 > 0) {
+			vectorView = await getVectorView(file, footerPosition + nbytesV5 + 4, shunk)
+			normalization = await getNormalization(vectorView, footerPosition + nbytesV5 + 4)
+		}
 	}
 	const genomeId = getString()
 	out_data['Genome ID'] = genomeId
