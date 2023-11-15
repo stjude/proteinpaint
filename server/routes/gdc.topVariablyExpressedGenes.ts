@@ -1,12 +1,15 @@
 import { GdcTopVariablyExpressedGenesResponse } from '#shared/types/routes/gdc.topVariablyExpressedGenes.ts'
 import { getCasesWithExressionDataFromCohort } from '../src/mds3.gdc.js'
-//import path from 'path'
+import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 
 // TODO change when api is released to prod
 //const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const apihost = 'https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/gene_selection'
+// temporarily hardcode to use the direct API URL,
+// previously hardcoded to use 'https://uat-portal.gdc.cancer.gov/auth/api/v0/'
+const geneExpHost = 'https://uat-api.gdc.cancer.gov'
 
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
@@ -59,6 +62,9 @@ async function getGenes(q: any, ds: any) {
 		// for testing only; delete when api issue is resolved
 		return serverconfig.features.gdcGenes as string[]
 	}
+	if (!ds.__gdc.doneCaching) {
+		throw `The server has not finished caching the case IDs: try again in ~2 minutes`
+	}
 
 	// based on current cohort, get list of cases with exp data, as input of next api query
 	const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
@@ -68,30 +74,37 @@ async function getGenes(q: any, ds: any) {
 	}
 
 	// change to this when api is available on prod
-	// const url = path.join(apihost, '/gene_expression/gene_selection')
+	const url = path.join(geneExpHost, '/gene_expression/gene_selection')
 
-	const response = await got.post(apihost, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			case_ids: caseLst,
-			//gene_ids: [] // this should not be a required parameter
-			size: q.maxGenes || 100
+	try {
+		const response = await got.post(url, {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({
+				// !!! temporarily limit the case_ids length, otherwise the request times out !!!
+				case_ids: caseLst.slice(0, 20),
+				//gene_ids: [] // this should not be a required parameter
+				gene_type: 'protein_coding',
+				selection_size: Number(q.maxGenes || 100)
+			})
 		})
-	})
 
-	const re = JSON.parse(response.body)
-	// {"gene_selection":[{"gene_id":"ENSG00000141510","log2_uqfpkm_median":3.103430497010492,"log2_uqfpkm_stddev":0.8692021350485105,"symbol":"TP53"}, ... ]}
+		const re = JSON.parse(response.body)
+		// {"gene_selection":[{"gene_id":"ENSG00000141510","log2_uqfpkm_median":3.103430497010492,"log2_uqfpkm_stddev":0.8692021350485105,"symbol":"TP53"}, ... ]}
 
-	const genes = [] as string[]
-	if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] is not array'
-	for (const i of re.gene_selection) {
-		if (i.gene_id && typeof i.gene_id == 'string') {
-			genes.push(i.gene_id) // ensg
-		} else if (i.symbol && typeof i.symbol == 'string') {
-			genes.push(i.symbol)
-		} else {
-			throw 'one of re.gene_selection[] is missing both gene_id and symbol'
+		const genes = [] as string[]
+		if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] is not array'
+		for (const i of re.gene_selection) {
+			if (i.gene_id && typeof i.gene_id == 'string') {
+				genes.push(i.gene_id) // ensg
+			} else if (i.symbol && typeof i.symbol == 'string') {
+				genes.push(i.symbol)
+			} else {
+				throw 'one of re.gene_selection[] is missing both gene_id and symbol'
+			}
 		}
+		return genes
+	} catch (e) {
+		console.log(e.stack || e)
+		throw e
 	}
-	return genes
 }
