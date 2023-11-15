@@ -29,11 +29,27 @@ export function setInteractivity(self) {
 		// but the tooltip should still display info
 		if (!d || !d.term || !d.sample || !d.siblingCells?.length) {
 			self.dom.tip.hide()
+			self.mouseout()
 			return
 		}
+
+		const x = self.dimensions.xOffset + self.dimensions.seriesXoffset
+		const y = self.dimensions.yOffset
 		const s = self.settings.matrix
 		const l = s.controlLabels
 		const rows = []
+
+		self.dom.rowBeam
+			.attr('x', x)
+			.attr('y', y + d.seriesY)
+			.attr('height', d.tw.settings?.barh ? d.tw.settings.barh + 2 * d.tw.settings.gap : s.rowh)
+			.style('display', '')
+
+		self.dom.colBeam
+			.attr('x', x + d.x)
+			.attr('y', y)
+			.style('display', '')
+
 		if (d.term.type != 'geneVariant') {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
 			rows.push(
@@ -127,6 +143,8 @@ export function setInteractivity(self) {
 	self.mouseout = function () {
 		if (!self.activeLabel) self.dom.tip.hide()
 		delete self.imgBox
+		self.dom.colBeam.style('display', 'none')
+		self.dom.rowBeam.style('display', 'none')
 	}
 
 	self.mouseclick = function (event, data) {
@@ -354,6 +372,7 @@ function setTermActions(self) {
 				.html('Lollipop')
 				.on('click', async () => {
 					await self.launchGB(t)
+					self.dom.tip.hide()
 				})
 		}
 

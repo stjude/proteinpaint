@@ -19,6 +19,10 @@ export function setRenderers(self) {
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
 		self.renderDivideByLabel(s, l, d, duration)
+
+		self.dom.colBeam.attr('width', d.dx).attr('height', d.mainh).style('stroke', s.beamStroke)
+
+		self.dom.rowBeam.attr('width', d.zoomedMainW).attr('height', s.rowh).style('stroke', s.beamStroke)
 	}
 
 	self.renderSerieses = function (s, l, d, duration) {

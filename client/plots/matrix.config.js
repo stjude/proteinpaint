@@ -66,6 +66,7 @@ export async function getPlotConfig(opts = {}, app) {
 				showGrid: '', // false | 'pattern' | 'rect'
 				gridStroke: '#fff',
 				outlineStroke: '#ccc',
+				beamStroke: '#f00',
 				colw: 0,
 				colwMin: 0.1 / window.devicePixelRatio,
 				colwMax: 16,

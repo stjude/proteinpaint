@@ -10,7 +10,7 @@ export class MatrixCluster {
 			holder: opts.holder,
 			//clusterrowline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterrowline'),
 			//clustercolline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clustercolline'),
-			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg'),
+			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg').on('mouseover', this.mouseout),
 			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines')
 		}
 		setRenderers(this)
@@ -62,7 +62,7 @@ export class MatrixCluster {
 }
 
 function setRenderers(self) {
-	self.render = function(clusters) {
+	self.render = function (clusters) {
 		const s = self.settings
 		const d = self.currData.dimensions
 		const duration = self.dom.outlines.attr('transform') ? s.duration : 0
@@ -79,15 +79,13 @@ function setRenderers(self) {
 			const g = self.dom.outlines.selectAll('g').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
 			g.exit().remove()
 			g.each(renderCluster)
-			g.enter()
-				.append('g')
-				.each(addCluster)
+			g.enter().append('g').each(addCluster)
 		}
 
 		s.prevShowGrid = s.showGrid
 	}
 
-	self.translateElems = function(dx, s, d, duration = 0) {
+	self.translateElems = function (dx, s, d, duration = 0) {
 		const o = !duration ? self.dom.outlines : self.dom.outlines.transition().duration(duration)
 		o.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
 	}
@@ -96,10 +94,7 @@ function setRenderers(self) {
 		const outlines = self.dom.outlines.selectAll('rect').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
 		outlines.exit().remove()
 		outlines.each(render1Outline)
-		outlines
-			.enter()
-			.append('rect')
-			.each(render1Outline)
+		outlines.enter().append('rect').each(render1Outline)
 	}
 
 	function render1Outline(cluster) {
@@ -208,10 +203,7 @@ function setRenderers(self) {
 		const rects = g.selectAll('rect').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
 		rects.exit().remove()
 		rects.each(renderRect)
-		rects
-			.enter()
-			.append('rect')
-			.each(renderRect)
+		rects.enter().append('rect').each(renderRect)
 	}
 
 	function render1Rect(cluster, s) {
