@@ -117,15 +117,15 @@ export class profilePlot {
 				options: this.types,
 				settingsKey: 'facilityType',
 				callback: value => this.setFacilityType(value)
+			},
+			{
+				label: 'Site',
+				type: 'dropdown',
+				chartType,
+				options: this.sites,
+				settingsKey: 'site',
+				callback: value => this.setSite(value)
 			}
-			// {
-			// 	label: 'Site',
-			// 	type: 'dropdown',
-			// 	chartType,
-			// 	options: this.sites,
-			// 	settingsKey: 'site',
-			// 	callback: value => this.setSite(value)
-			// }
 		]
 		inputs.unshift(...additionalInputs)
 		if (this.type != 'profileBarchart')
@@ -147,7 +147,12 @@ export class profilePlot {
 		this.components.controls.on(`downloadClick.${chartType}`, () =>
 			downloadSingleSVG(this.svg, this.getDownloadFilename())
 		)
-		this.components.controls.on(`helpClick.${chartType}`, () => window.open('', '_blank'))
+		this.components.controls.on(`helpClick.${chartType}`, () =>
+			window.open(
+				'https://docs.google.com/document/d/1hsxqTrfHcDqhCjaYbOldz7kWffR_kM9KDk3Xrxa4glk/edit?usp=sharing',
+				'_blank'
+			)
+		)
 		this.filtersCount = 0
 	}
 
