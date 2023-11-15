@@ -1,2 +1,1 @@
-Features:
-- highlight the row and column of the matrix cell when hovering over it, allow the users to select color for the highlighter
+

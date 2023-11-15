@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- highlight the row and column of the matrix cell when hovering over it, allow the users to select color for the highlighter
+
 Fixes:
 - In genetic association analysis, principal component covariates now use actual term names from db, rather than hardcoded adhoc name
 
