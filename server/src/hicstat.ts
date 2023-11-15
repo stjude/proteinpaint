@@ -46,8 +46,10 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 	if (version == 9) {
 		const normVectorIndexPosition = Number(getLong())
 		const normVectorIndexLength = Number(getLong())
-		const vectorView = await getVectorView(file, normVectorIndexPosition, normVectorIndexLength)
-		normalization = await getNormalization(vectorView, 0)
+		if (normVectorIndexPosition > 0 && normVectorIndexLength > 0) {
+			const vectorView = await getVectorView(file, normVectorIndexPosition, normVectorIndexLength)
+			normalization = await getNormalization(vectorView, 0)
+		}
 	}
 
 	// skip unwatnted attributes
