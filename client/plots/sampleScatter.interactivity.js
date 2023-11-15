@@ -7,7 +7,6 @@ import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
-import roundValue from '#shared/roundValue'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -119,25 +118,30 @@ export function setInteractivity(self) {
 
 		self.dom.tooltip.show(event.clientX, event.clientY, true, false)
 
+		function getTW(category) {
+			const tw =
+				category == 'category'
+					? self.config.colorTW
+					: category == 'shape'
+					? self.config.shapeTW
+					: category == 'scale'
+					? self.config.scaleDotTW
+					: category == 'X' && self.config.term
+					? self.config.term
+					: category == 'Y' && self.config.term2
+					? self.config.term2
+					: null
+			return tw
+		}
+
 		function addCategory(node) {
+			const tw = getTW(node.category)
 			node.added = true
 			let row
 			const sample = node.samples[0]
 
 			if (sample.category != 'Ref') {
 				let row = table.append('tr')
-				const tw =
-					node.category == 'category'
-						? self.config.colorTW
-						: node.category == 'shape'
-						? self.config.shapeTW
-						: node.category == 'scale'
-						? self.config.scaleDotTW
-						: node.category == 'X' && self.config.term
-						? self.config.term
-						: node.category == 'Y' && self.config.term2
-						? self.config.term2
-						: null
 
 				const showIcon = tw != null && (tw == self.config.colorTW || tw == self.config.shapeTW)
 				let label = tw ? tw.term.name : node.category
@@ -157,7 +161,6 @@ export function setInteractivity(self) {
 							: chart.shapeLegend.get(sample.shape).shape % self.symbols.length
 					const shape = self.symbols[index].size(64)()
 					let fontColor = 'black'
-					let mname = ''
 					if (tw?.term.type == 'geneVariant') {
 						fontColor = mclass['WT'].color
 						const mutation = node.value.split(', ')[0]
@@ -166,21 +169,17 @@ export function setInteractivity(self) {
 							const whiteColor = rgb(class_info.color).toString() == rgb('white').toString()
 							if (mutation == class_info.label) {
 								if (mutation == class_info.label) if (!whiteColor) fontColor = class_info.color
-								mname = sample.cat_info[node.category].find(m => m.class == class_info.key).mname
 							}
 						}
 					}
 					let chars = node.value.length
-					if (mname) chars += mname.length
 					const width = chars * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')
 					g.append('path').attr('d', shape).attr('fill', color)
 					const text = g.append('text').attr('x', 12).attr('y', 6)
-					if (mname) text.append('tspan').text(mname + ' ')
 
 					const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
-					if (mname) span2.attr('font-size', '0.9em')
 				} else td.style('padding', '2px').text(`${node.value}`)
 			}
 			for (const child of node.children) if (!child.added) addCategory(child)
@@ -194,7 +193,20 @@ export function setInteractivity(self) {
 						}
 					row = table.append('tr')
 					row.append('td').style('color', '#aaa').text('Sample')
-					row.append('td').style('padding', '2px').text(sample.sample)
+					let mname = ''
+					if (tw?.term.type == 'geneVariant') {
+						const mutation = node.value.split(', ')[0]
+						for (const id in mclass) {
+							const class_info = mclass[id]
+							if (mutation == class_info.label) {
+								mname = sample.cat_info[node.category].find(m => m.class == class_info.key).mname
+							}
+						}
+					}
+					row
+						.append('td')
+						.style('padding', '2px')
+						.text(mname ? `${mname} ${sample.sample}` : sample.sample)
 					if ('sampleId' in sample && onClick) {
 						row
 							.append('td')
