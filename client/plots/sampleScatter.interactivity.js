@@ -32,6 +32,10 @@ export function setInteractivity(self) {
 			if (!('sampleId' in s) && (!self.settings.showRef || self.settings.refSize == 0)) return false
 			return self.getOpacity(s) > 0 && dist < threshold
 		})
+		samples.sort((s1, s2) => {
+			if ('sampleId' in s1) return -1
+			return 1
+		})
 		if (samples.length == 0) return
 		const tree = []
 		const showCoords = self.config.term ? true : false
