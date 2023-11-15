@@ -205,15 +205,21 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 			`Should render total # of custom variants = ${variantNum.size}`
 		)
 
-		const firstM = tk.skewer.g.selectAll('.sja_aa_disckick').nodes()[0]
-		// click firstM
-		firstM.dispatchEvent(new Event('click'))
+		// get the first skewer disc
+		const firstDisc = tk.skewer.g.selectAll('.sja_aa_disckick').nodes()[0]
+		// click the disc, trigger itemtip to display variant and single sample info
+		firstDisc.dispatchEvent(new Event('click'))
 		await whenVisible(tk.itemtip.d)
-		test.pass('Should show itemtip after clicking first m')
+		test.pass('Should show itemtip after clicking first skewer disc')
 
+		// check if sample name is printed in the itemtip
 		const span = await detectOne({ elem: tk.itemtip.dnode, selector: '.pp_mds3_singleSampleNameSpan' })
-		test.ok(span, 'Should render pp_mds3_singleSampleNameSpan <span>')
-		test.equal(span.innerHTML, custom_variants[0].samples[0].sample_id, 'Should render correct sample name in <span>')
+		test.ok(span, 'itemtip has <span class=pp_mds3_singleSampleNameSpan>')
+		test.equal(
+			span.innerHTML,
+			firstDisc.__data__.mlst[0].samples[0].sample_id,
+			'itemtip has correct single-sample name'
+		)
 
 		if (test._ok) holder.remove()
 		test.end()
