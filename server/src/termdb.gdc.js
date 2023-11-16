@@ -34,6 +34,7 @@ initGDCdictionary
   ds.__gdc {
   	aliquot2submitter{ get() }
   	map2caseid{ get() }
+  	doneCaching: boolean, falg to indicate when the sample ID caching is done
 	casesWithExpData Set
   }
 */
@@ -342,7 +343,8 @@ export async function initGDCdictionary(ds) {
 		caseid2submitter: new Map(), // k: case uuid, v: case submitter id
 		caseIds: new Set(), //
 		casesWithExpData: new Set(),
-		gdcOpenProjects: new Set() // names of open-access projects
+		gdcOpenProjects: new Set(), // names of open-access projects
+		doneCaching: 0
 	}
 
 	await getOpenProjects(ds)
@@ -925,6 +927,7 @@ async function cacheSampleIdMapping(ds) {
 		}
 
 		await checkExpressionAvailability(ds)
+		ds.__gdc.doneCaching = true
 
 		console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
 		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
