@@ -26,7 +26,7 @@ export const api = {
 						if (!genome) throw 'hg38 genome missing'
 						const ds = genome.datasets?.[gdcDslabel]
 						if (!ds) throw 'gdc dataset missing'
-						const genes = await getGenes(req.query, ds)
+						const genes = await getGenes(req.query, ds, genome)
 						const payload = { genes } as GdcTopVariablyExpressedGenesResponse
 						res.send(payload)
 					} catch (e: any) {
@@ -56,8 +56,9 @@ req.query {
 
 ds { } // server-side ds object
 
+genome {}
 */
-async function getGenes(q: any, ds: any) {
+async function getGenes(q: any, ds: any, genome: any) {
 	if (serverconfig.features.gdcGenes) {
 		// for testing only; delete when api issue is resolved
 		return serverconfig.features.gdcGenes as string[]
@@ -95,7 +96,9 @@ async function getGenes(q: any, ds: any) {
 		if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] is not array'
 		for (const i of re.gene_selection) {
 			if (i.gene_id && typeof i.gene_id == 'string') {
-				genes.push(i.gene_id) // ensg
+				// is ensg, convert to symbol
+				const t = genome.genedb.getNameByAlias.get(i.gene_id)
+				if (t) genes.push(t.name) // ensg
 			} else if (i.symbol && typeof i.symbol == 'string') {
 				genes.push(i.symbol)
 			} else {
