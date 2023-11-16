@@ -1,12 +1,10 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
-import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
-import { controlsInit } from './controls'
-import { downloadSingleSVG } from '../common/svg.download.js'
+import { loadFilterTerms } from './profilePlot.js'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -16,7 +14,15 @@ class profilePolar extends profilePlot {
 	}
 	async init(appState) {
 		await super.init(appState)
-		this.opts.header.text('Polar Graph: Score based results by PrOFILE module').style('font-weight', 'bold')
+		const config = appState.plots.find(p => p.id === this.id)
+
+		this.twLst = []
+		for (const [i, data] of config.terms.entries()) {
+			this.twLst.push(data.score)
+			this.twLst.push(data.maxScore)
+		}
+
+		this.opts.header.text(config.name).style('font-weight', 'bold')
 		this.arcGenerator = d3.arc().innerRadius(0)
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
@@ -26,68 +32,13 @@ class profilePolar extends profilePlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
-	async setControls() {
-		this.dom.controlsDiv.selectAll('*').remove()
-		const inputs = [
-			{
-				label: 'Show table',
-				type: 'checkbox',
-				chartType: 'profilePolar',
-				settingsKey: 'showTable',
-				boxLabel: 'Yes'
-			},
-			{
-				label: 'Region',
-				type: 'dropdown',
-				chartType: 'profilePolar',
-				options: this.regions,
-				settingsKey: 'region',
-				callback: value => this.setRegion(value)
-			},
-			{
-				label: 'Income group',
-				type: 'dropdown',
-				chartType: 'profilePolar',
-				options: this.incomes,
-				settingsKey: 'income',
-				callback: value => this.setIncome(value)
-			}
-		]
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs
-			})
-		}
-		this.components.controls.on('downloadClick.profilePolar', () => downloadSingleSVG(this.svg, this.filename))
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profilePolar
-		this.setControls()
-		this.twLst = []
-		for (const [i, tw] of this.config.terms.entries()) {
-			if (tw.id) this.twLst.push(tw)
-		}
-		this.twLst.push(this.config.typeTW)
-		const sampleName = this.settings.region !== undefined ? this.settings.region : this.settings.income || 'Global'
-		const filter = this.config.filter || getSampleFilter(this.sampleidmap[sampleName])
 
-		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst,
-			filter
-		})
-		this.sampleData = this.data.lst[0]
+		await this.setControls('profilePolar')
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
-		this.income = this.settings.income || this.incomes[0].value
-		this.region = this.settings.region !== undefined ? this.settings.region : this.income == '' ? 'Global' : ''
-		this.filename = `polar_plot${this.region ? '_' + this.region : ''}${this.income ? '_' + this.income : ''}.svg`
-			.split(' ')
-			.join('_')
 		this.plot()
 	}
 
@@ -106,8 +57,8 @@ class profilePolar extends profilePlot {
 			path.setAttribute('stroke-opacity', 0)
 			const d = path.__data__
 			const menu = this.tip.clear()
-			const percentage = this.sampleData[d.$id]?.value
-			menu.d.text(`${d.term.name} ${percentage}%`)
+			const percentage = this.getPercentage(d)
+			menu.d.text(`${d.module} ${percentage}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
@@ -115,46 +66,52 @@ class profilePolar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-
-		if (!this.sampleData) return
-
+		const width = 1100
+		const height = 600
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1000)
-			.attr('height', 600)
+			.attr('width', width)
+			.attr('height', height)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '45px')
+
+		this.svg
+			.append('text')
+			.attr('transform', `translate(130, ${height - 40})`)
+			.attr('font-weight', 'bold')
+			.text(config.title)
+
 		const rows = []
 		const columns = [{ label: 'Module' }, { label: 'Score' }]
 
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 300
-		const y = 300
+		const y = 280
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 300},${y + 150})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 300}, ${y})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 300}, ${y + 80})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 300},${y + 180})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
 		const angle = this.angle
 		let i = 0
-
 		for (let d of config.terms) {
+			const name = d.module
 			d.i = i
-			const percentage = this.sampleData[d.$id]?.value
-			rows.push([{ value: d.term.name }, { value: percentage }])
+			const percentage = this.getPercentage(d)
+			rows.push([{ value: name }, { value: percentage }])
 			const path = polarG
 				.append('g')
 				.append('path')
 				.datum(d)
-				.attr('fill', d.term.color)
+				.attr('fill', d.score.term.color)
 				.attr('stroke', 'white')
 				.attr(
 					'd',
@@ -201,15 +158,7 @@ class profilePolar extends profilePlot {
 		this.addLegendItem('B', '50-75% of possible scorable items', 2)
 		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 
-		this.filterG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text('Filters')
-			.attr('transform', `translate(0, -5)`)
-		this.addLegendFilter('region', this.settings.region, 1)
-		this.addLegendFilter('income', this.settings.income, 2)
-
+		this.addFilterLegend()
 		function addCircle(percent, text = null) {
 			const circle = polarG
 				.append('circle')
@@ -241,14 +190,20 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePolarSettings()
 		config.settings = {
 			controls: {
-				isOpen: false // control panel is hidden by default
+				isOpen: true // control panel is hidden by default
 			},
 			profilePolar: settings
 		}
-		for (const t of config.terms) {
-			if (t.id) await fillTermWrapper(t, app.vocabApi)
+		for (const data of config.terms) {
+			const scoreTerm = data.score
+			const maxScoreTerm = data.maxScore
+			scoreTerm.q = { mode: 'continuous' }
+			maxScoreTerm.q = { mode: 'continuous' }
+			await fillTermWrapper(scoreTerm, app.vocabApi)
+			await fillTermWrapper(maxScoreTerm, app.vocabApi)
 		}
-		config.typeTW = await fillTermWrapper({ id: 'sampleType' }, app.vocabApi)
+		await loadFilterTerms(config, app)
+
 		return config
 	} catch (e) {
 		throw `${e} [profilePolar getPlotConfig()]`

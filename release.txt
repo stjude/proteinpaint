@@ -1,2 +1,2 @@
-Features:
--Add options to show only truncating mutations, show only non-truncating protein-changing mutations, and show all mutations when clicking matrix legend group name
+
+feat: profile plots now have filters to the left and the new data model is plotted
