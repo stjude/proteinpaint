@@ -1,7 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { dofetch2 } from '../../../common/dofetch.js'
-
 import { hicData } from './hicData.ts'
 import { hicparsefile, hicparsestat } from '../../../src/hic.straw.ts'
 
@@ -49,15 +48,15 @@ tape('hicparsefile()', async test => {
 			hic.inlineview == false,
 		'Should add .wholegenome, .chrpairview, and .detailview objects as well as .inwholegenome, .inchrpair, .indetail, and .inlineview booleans to hic'
 	)
-
-	if (test._ok) holder.remove()
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
 tape('hicparsestat()', async test => {
 	test.plan(13)
 
-	let result: any, message: string
+	let result: string | undefined, message: string
+
 	const hic: any = { ...hicData.hic.v8 }
 	hic.genome = await getGenomes('hg19')
 	const j: any = { ...hicData.serverResponse.v8 }
