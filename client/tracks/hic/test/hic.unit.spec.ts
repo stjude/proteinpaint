@@ -8,6 +8,28 @@ Tests:
     hicstrawmaketk() from hicstraw.adaptor
  */
 
+/** Types are scoped to file. May move to client/types later*/
+type Tk = {
+	textdata?: {
+		/** number added to test logic but string is the only acceptable type */
+		raw?: string | number
+	}
+	hic?: {
+		enzyme?: string
+	}
+	enzyme?: string
+	uninitialized?: boolean
+}
+
+type Template = {
+	domainoverlay?: {
+		file?: string
+		url?: string
+	}
+	file?: string
+	enzyme?: string
+}
+
 tape('\n', test => {
 	test.pass('-***- tracks/hic unit-***-')
 	test.end()
@@ -16,16 +38,13 @@ tape('\n', test => {
 tape('hicstrawfromtemplate() from hicstraw.adaptor', test => {
 	test.plan(5)
 
-	//Defining types this way is not acceptable in typescript
-	//Must initialize with a value
-	//let tk: any, template: any, result: any, message: string
+	let tk: Tk, template: Template, result: string | null, message: string
 
 	//Blank .raw and no bedfile or bedurl or templatefile or templateurl
-	let message = `Should return for missing textdata.raw message`
-	//JSON.parse() allows other properties to be added to the object
-	let tk = JSON.parse('{ "textdata": {} }')
-	let template = JSON.parse('{}')
-	let result = hicstrawfromtemplate(tk, template)
+	message = `Should return for missing textdata.raw message`
+	tk = { textdata: {} }
+	template = {}
+	result = hicstrawfromtemplate(tk, template)
 	test.equal(result, '.textdata.raw missing', message)
 
 	//Wrong type
@@ -52,12 +71,12 @@ tape('hicstrawfromtemplate() from hicstraw.adaptor', test => {
 	template = { file: 'test/file/path', enzyme: 'MboI' }
 	tk = { hic: { enzyme: 'DpnII' }, enzyme: 'DpnII' }
 	result = hicstrawfromtemplate(tk, template)
-	test.ok(tk.hic.enzyme == 'MboI' && !tk.enzyme, message)
+	test.ok(tk.hic!.enzyme == 'MboI' && tk.enzyme, message)
 })
 
 tape('hicstrawmaketk() from hicstraw.adaptor', test => {
 	test.plan(1)
-	const tk = JSON.parse('{}')
+	const tk = {} as Tk
 	hicstrawmaketk(tk)
 	test.ok(tk.uninitialized, 'Should add uninitialized to tk')
 })
