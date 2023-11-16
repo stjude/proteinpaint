@@ -211,6 +211,18 @@ export function getLegendData(legendGroups, refs, self) {
 		legendData.push(f.legendData)
 	}
 
+	// sort the items in legend groups, put greyedOut and crossedOut items to the end
+	for (const itemsGrp of legendData) {
+		itemsGrp.items.sort((a, b) => {
+			const getStatusOrder = item => {
+				if (!item.greyedOut && !item.crossedOut) return 0
+				if (item.greyedOut && !item.crossedOut) return 1
+				if (item.crossedOut) return 2
+				return 3
+			}
+			return getStatusOrder(a) - getStatusOrder(b)
+		})
+	}
 	return legendData.sort((a, b) => (a.order && b.order ? a.order - b.order : a.order ? -1 : b.order ? 1 : 0))
 }
 
