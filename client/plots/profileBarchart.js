@@ -27,11 +27,7 @@ class profileBarchart extends profilePlot {
 			settingsKey: 'component',
 			callback: value => this.setComponent(value)
 		}
-		this.opts.header
-			.style('font-weight', 'bold')
-			.text(
-				'Barchart Graph: Score-based Results for the Component by Module and Domain Compared with End-User Impression'
-			)
+		this.opts.header.style('font-weight', 'bold').text(config.name)
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
@@ -86,12 +82,10 @@ class profileBarchart extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
-
-		this.svg = this.dom.plotDiv
-			.append('svg')
-			.attr('width', 1400)
-			.attr('height', this.rowCount * 32 + 420)
-
+		const width = 1400
+		const height = this.rowCount * 32 + 420
+		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
+		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(config.title)
 		const svg = this.svg
 
 		const color = this.configComponent.component.color
@@ -116,7 +110,7 @@ class profileBarchart extends profilePlot {
 
 			x = i % 2 == 0 ? 400 : 900
 			x += 10
-			y = 20
+			y = 70
 			svg
 				.append('text')
 				.attr('transform', `translate(${x}, ${y})`)
@@ -127,7 +121,7 @@ class profileBarchart extends profilePlot {
 
 			x += stepx
 		}
-		y = 30
+		y = 70
 		for (const group of this.configComponent.groups) {
 			svg
 				.append('text')
@@ -158,7 +152,7 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 50, y, 'B')
 		drawLine(410, 120, 75, y, 'A')
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${70},${y + 60})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 60})`)
 
 		this.legendG
 			.append('text')

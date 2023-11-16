@@ -60,22 +60,29 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-
+		const widht = 1200
+		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1200)
-			.attr('height', 650)
+			.attr('width', widht)
+			.attr('height', height)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '45px')
 		// Create a polar grid.
+
+		this.svg
+			.append('text')
+			.attr('transform', `translate(110, ${height - 30})`)
+			.attr('font-weight', 'bold')
+			.text(this.config[this.config.plot].title)
 		const radius = this.radius
 		const x = 370
-		const y = 290
+		const y = 300
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 

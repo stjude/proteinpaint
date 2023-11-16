@@ -51,13 +51,14 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-
+		const width = 1200
+		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1200)
-			.attr('height', 650)
+			.attr('width', width)
+			.attr('height', height)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -73,7 +74,13 @@ class profileRadar extends profilePlot {
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 370
-		const y = 250
+		const y = 290
+		this.svg
+			.append('text')
+			.attr('transform', `translate(60, ${height - 30})`)
+			.attr('font-weight', 'bold')
+			.text(config[config.plot].title)
+
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 390},${y + 100})`)

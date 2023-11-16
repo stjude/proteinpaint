@@ -22,13 +22,10 @@ export class profilePlot {
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
 		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('display', 'inline-block')
 
-		const div = holder.append('div').style('margin-left', '50px')
 		const plotDiv = holder.append('div')
 		this.dom = {
 			controlsDiv,
 			holder,
-			filterDiv: div,
-			facilityDiv: div.insert('div').style('display', 'inline-block'),
 			plotDiv
 		}
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
@@ -265,7 +262,9 @@ export class profilePlot {
 	}
 
 	getDownloadFilename() {
-		let filename = `${this.type}${this.component}${this.region}${this.country}${this.income}${this.facilityType}.svg`
+		let filename = `${this.type}${this.settings.component ? this.settings.component : ''}${this.settings.region}${
+			this.settings.country
+		}${this.settings.income}${this.settings.facilityType}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}

@@ -22,7 +22,7 @@ class profilePolar extends profilePlot {
 			this.twLst.push(data.maxScore)
 		}
 
-		this.opts.header.text('Polar Graph: Score based results by PrOFILE module').style('font-weight', 'bold')
+		this.opts.header.text(config.name).style('font-weight', 'bold')
 		this.arcGenerator = d3.arc().innerRadius(0)
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
@@ -66,29 +66,37 @@ class profilePolar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-
+		const width = 1100
+		const height = 600
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1200)
-			.attr('height', 600)
+			.attr('width', width)
+			.attr('height', height)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '45px')
+
+		this.svg
+			.append('text')
+			.attr('transform', `translate(130, ${height - 40})`)
+			.attr('font-weight', 'bold')
+			.text(config.title)
+
 		const rows = []
 		const columns = [{ label: 'Module' }, { label: 'Score' }]
 
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 300
-		const y = 260
+		const y = 280
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 300},${y - 100})`)
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 300}, ${y - 200})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 300}, ${y + 80})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 300},${y + 180})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
