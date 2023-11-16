@@ -101,6 +101,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
 		await validate_query_singleSampleGbtk(ds, genome)
 		//await validate_query_probe2cnv(ds, genome)
+		await validate_query_singleCell(ds, genome)
 
 		await validate_variant2samples(ds)
 		await validate_ssm2canonicalisoform(ds)
@@ -1837,6 +1838,68 @@ async function validate_query_singleSampleGbtk(ds, genome) {
 			}
 		} else {
 			throw 'unknown query method for singleSampleGbtk'
+		}
+	}
+}
+
+async function validate_query_singleCell(ds, genome) {
+	const q = ds.queries.singleCell
+	if (!q) return
+
+	if (!q.samples) throw 'singleCell.samples{} missing'
+	if (q.samples.gdcapi) {
+		//gdc.validate_query_singleCell_samples(ds, genome)
+		// samples.get() added
+	} else {
+		if (!q.samples.isSampleTerm) throw 'singleCell.samples.isSampleTerm missing'
+		// for now use this quick fix method to pull sample ids annotated by this term
+		// to support situation where not all samples from a dataset has sc data
+		const sampleIds = [] // list of sample ids with sc data
+		const s = ds.cohort.termdb.q.getAllFloatValues(q.samples.isSampleTerm)
+		for (const id of s.keys()) sampleIds.push(id)
+		if (sampleIds.length == 0) throw 'no sample with sc data'
+		const lst = sampleIds.map(i => ds.cohort.termdb.q.id2sampleName(i))
+		q.samples.get = () => lst
+	}
+
+	if (!Array.isArray(q.plots)) throw 'queries.singleCell.plots[] is not array'
+	const nameSet = new Set() // guard against duplicating plot names
+	for (const plot of q.plots) {
+		if (!plot.name) throw 'plot.name missing'
+		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
+		nameSet.add(plot.name)
+		if (plot.gdcapi) {
+			//gdc.validate_query_singleCell_oneplot(ds, genome)
+			// plot.get() added
+		} else if (plot.folder) {
+			// folder contains tsv files as per-sample maps
+			plot.get = async sample => {
+				// given a sample name, return available sc data for this sample
+				// if sample is int, may convert to string
+				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sample, plot.fileSuffix)
+				try {
+					await fs.promises.stat(tsvfile)
+				} catch (e) {
+					if (e.code == 'EACCES') return { error: 'cannot read file, permission denied' }
+					if (e.code == 'ENOENT') return {} // no file found for this sample
+					return { error: 'failed to load data' }
+				}
+				const lines = (await utils.read_file(tsvfile)).trim().split('\n')
+				// 1st line header
+				const data = []
+				for (let i = 1; i < lines.length; i++) {
+					const l = lines[i].split('\t')
+					const cid = l[0],
+						x = Number(l[4]), // FIXME standardize, or define idx in plot
+						y = Number(l[5])
+					if (!cid) throw 'cell id missing'
+					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
+					data.push({ cid, x, y })
+				}
+				return data
+			}
+		} else {
+			throw 'unknown data source for singleCell'
 		}
 	}
 }
