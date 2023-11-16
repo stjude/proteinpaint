@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { mclass, dt2label, truncatingMutations, nonTruncatingPCMutations } from '#shared/common'
+import { mclass, dt2label, truncatingMutations, nonTruncatingCodingMutations } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 
@@ -2185,9 +2185,10 @@ function setLengendActions(self) {
 								f => f.legendGrpName !== targetData.name
 							)
 
-							const nonTruncatingPCM = self.config.settings.matrix.nonTruncatingPCMutations || nonTruncatingPCMutations
+							const nonTruncatingCodingM =
+								self.config.settings.matrix.nonTruncatingCodingMutations || nonTruncatingCodingMutations
 							for (const item of targetData.items) {
-								if (nonTruncatingPCM.includes(item.key)) continue
+								if (nonTruncatingCodingM.includes(item.key)) continue
 								// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
 								// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
 								// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
