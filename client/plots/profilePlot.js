@@ -62,7 +62,6 @@ export class profilePlot {
 		this.countries = this.getList(this.config.countryTW, countriesData)
 		this.incomes = this.getList(this.config.incomeTW, incomesData)
 		this.types = this.getList(this.config.typeTW, typesData)
-		if (this.type == 'profileRadarFacility') this.types.shift()
 
 		if (!this.settings.income) this.settings.income = this.incomes[0].value
 		if (!this.settings.region) this.settings.region = this.regions[0].value
@@ -159,7 +158,8 @@ export class profilePlot {
 		this.settings.region = region
 		this.settings.country = ''
 		this.settings.income = ''
-		delete this.settings.site
+		this.settings.site = ''
+		this.settings.facilityType = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -167,7 +167,8 @@ export class profilePlot {
 	setIncome(income) {
 		const config = this.config
 		this.settings.income = income
-		delete this.settings.site
+		this.settings.site = ''
+		this.settings.facilityType = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -175,7 +176,8 @@ export class profilePlot {
 	setCountry(country) {
 		const config = this.config
 		this.settings.country = country
-		delete this.settings.site
+		this.settings.site = ''
+		this.settings.facilityType = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -183,7 +185,7 @@ export class profilePlot {
 	setFacilityType(type) {
 		const config = this.config
 		this.settings.facilityType = type
-		delete this.settings.site
+		this.settings.site = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -207,7 +209,6 @@ export class profilePlot {
 			lst
 		}
 		const filter = filterJoin([this.state.termfilter.filter, tvslst])
-
 		return filter
 
 		function processTW(tw, value) {
