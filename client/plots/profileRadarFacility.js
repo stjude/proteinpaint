@@ -268,7 +268,7 @@ export async function getPlotConfig(opts, app) {
 
 		config.settings = {
 			controls: {
-				isOpen: false // control panel is hidden by default
+				isOpen: true // control panel is hidden by default
 			},
 			profileRadarFacility: settings
 		}
