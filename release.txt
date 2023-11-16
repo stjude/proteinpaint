@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix for hic tracks not showing fragment resolutions
