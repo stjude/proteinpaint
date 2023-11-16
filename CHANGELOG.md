@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - highlight the row and column of the matrix cell when hovering over it, allow the users to select color for the highlighter
 - profile plots now have filters to the left and the new data model is plotted
-
+- Use the GDC gene expression API to request top variably expressed genes
 
 Fixes:
 - In genetic association analysis, principal component covariates now use actual term names from db, rather than hardcoded adhoc name
