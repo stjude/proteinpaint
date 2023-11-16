@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.31.0
 
 Features:
 - highlight the row and column of the matrix cell when hovering over it, allow the users to select color for the highlighter
