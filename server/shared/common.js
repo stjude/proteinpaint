@@ -13,9 +13,7 @@ const d3scale = require('d3-scale')
 const d3 = require('d3')
 
 export const defaultcolor = rgb('#8AB1D4').darker()
-export const default_text_color = rgb('#aaa')
-	.darker()
-	.darker()
+export const default_text_color = rgb('#aaa').darker().darker()
 
 export const exoncolor = '#4F8053'
 
@@ -81,8 +79,7 @@ export const mclass = {
 		label: 'PROTEINDEL',
 		color: '#7f7f7f',
 		dt: dtsnvindel,
-		desc:
-			'A deletion resulting in a loss of one or more codons from the product, but not altering the protein coding frame.',
+		desc: 'A deletion resulting in a loss of one or more codons from the product, but not altering the protein coding frame.',
 		key: 'D'
 	},
 	I: {
@@ -317,7 +314,7 @@ export function applyOverrides(overrides = {}) {
 	}
 }
 
-export const vepinfo = function(s) {
+export const vepinfo = function (s) {
 	const l = s.toLowerCase().split(',')
 	let rank = 1
 	if (l.indexOf('transcript_ablation') != -1) {
@@ -424,8 +421,7 @@ morigin[moriginsomatic] = {
 export const morigingermline = 'G'
 morigin[morigingermline] = {
 	label: 'Germline',
-	desc:
-		'A constitutional variant found in a normal sample. The proportion is indicated by the span of the solid arc within the whole circle.',
+	desc: 'A constitutional variant found in a normal sample. The proportion is indicated by the span of the solid arc within the whole circle.',
 	legend: germlinelegend
 }
 
@@ -435,8 +431,7 @@ morigin.somatic = morigin[moriginsomatic]
 export const moriginrelapse = 'R'
 morigin[moriginrelapse] = {
 	label: 'Relapse',
-	desc:
-		'A somatic variant found only in a relapse sample. The proportion is indicated by the span of the hollow arc within the whole circle.',
+	desc: 'A somatic variant found only in a relapse sample. The proportion is indicated by the span of the hollow arc within the whole circle.',
 	legend:
 		'<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle><path d="M6.735557395310443e-16,-11A11,11 0 0,1 11,0L9,0A9,9 0 0,0 5.51091059616309e-16,-9Z" transform="translate(7,12)" fill="none" stroke="#858585"></path>'
 }
@@ -1022,7 +1017,7 @@ export const not_annotated = 'Unannotated'
 // kernal density estimator as from https://www.d3-graph-gallery.com/graph/density_basic.html
 
 export function kernelDensityEstimator(kernel, X) {
-	return function(V) {
+	return function (V) {
 		return X.map(x => {
 			return [x, V.map(v => kernel(x - v)).reduce((i, j) => i + j, 0) / V.length]
 		})
@@ -1030,7 +1025,7 @@ export function kernelDensityEstimator(kernel, X) {
 }
 
 export function kernelEpanechnikov(k) {
-	return function(v) {
+	return function (v) {
 		return Math.abs((v /= k)) <= 1 ? (0.75 * (1 - v * v)) / k : 0
 	}
 }
@@ -1068,3 +1063,6 @@ export function getColorScheme(number) {
 export function getColors(number) {
 	return d3scale.scaleOrdinal(getColorScheme(number))
 }
+
+export const truncatingMutations = ['F', 'N', 'D', 'I', 'L']
+export const proteinChangingMutations = ['F', 'N', 'D', 'I', 'L', 'M', 'P']
