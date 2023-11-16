@@ -4,6 +4,7 @@ import fs from 'fs'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import Readable from 'stream'
+import { GdcMafBuildRequest } from '#shared/types/routes/gdc.mafBuild.ts'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 50000000 // 50Mb
@@ -12,40 +13,36 @@ export const api = {
 	endpoint: 'gdc/mafBuild',
 	methods: {
 		all: {
-			init({ genomes }) {
-				return async (req: any, res: any): Promise<void> => {
-					try {
-						await buildMaf(req, res)
-					} catch (e: any) {
-						if (e.stack) console.log(e.stack)
-						res.send({ status: 'error', error: e.message || e })
-					}
-				}
-			},
+			init,
 			request: {
-				typeId: null
-				//valid: default to type checker
+				typeId: 'GdcMafBuildRequest'
 			},
 			response: {
-				typeId: 'GdcMafBuildResponse'
-				// will combine this with type checker
-				//valid: (t) => {}
+				typeId: null // 'GdcMafBuildResponse'
 			}
 		}
 	}
 }
 
-/*
-req.query {
-	fileIdLst []  // list of maf file uuids
+function init({ genomes }) {
+	return async (req: any, res: any): Promise<void> => {
+		try {
+			await buildMaf(req.query as GdcMafBuildRequest, res)
+		} catch (e: any) {
+			if (e.stack) console.log(e.stack)
+			res.send({ status: 'error', error: e.message || e })
+		}
+	}
 }
 
+/*
+q{}
 res{}
 */
-async function buildMaf(req: any, res: any) {
+async function buildMaf(q: GdcMafBuildRequest, res: any) {
 	const t0 = Date.now()
 
-	const fileLst2 = (await getFileLstUnderSizeLimit(req.query.fileIdLst)) as string[]
+	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst)) as string[]
 	console.log('test gdc maf sizes', Date.now() - t0)
 
 	const arg = {

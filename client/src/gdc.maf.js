@@ -28,6 +28,7 @@ export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = 
 
 	const obj = {
 		// old habit of wrapping everything
+		errDiv: holder.append('div'),
 		controlDiv: holder.append('div'),
 		tableDiv: holder.append('div'),
 		opts: {
@@ -91,7 +92,7 @@ async function getFilesAndShowTable(obj) {
 			if (result.error) throw result.error
 		} catch (e) {
 			wait.remove()
-			sayerror(obj.tableDiv, e)
+			sayerror(obj.errDiv, e)
 			return
 		}
 	}
@@ -174,7 +175,7 @@ async function getFilesAndShowTable(obj) {
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
 			if (data.error) throw data.error
 		} catch (e) {
-			sayerror(holder, e)
+			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
 			button.disabled = false
 
