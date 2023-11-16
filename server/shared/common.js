@@ -1065,4 +1065,4 @@ export function getColors(number) {
 }
 
 export const truncatingMutations = ['F', 'N', 'D', 'I', 'L']
-export const nonTruncatingCodingMutations = ['M', 'P']
+export const proteinChangingMutations = ['F', 'N', 'D', 'I', 'L', 'M', 'P']

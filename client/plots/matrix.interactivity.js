@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { mclass, dt2label, truncatingMutations, nonTruncatingCodingMutations } from '#shared/common'
+import { mclass, dt2label, truncatingMutations, proteinChangingMutations } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 
@@ -2100,35 +2100,6 @@ function setLengendActions(self) {
 
 			// when the legend group is not hidden
 			if (legendGrpFilterIndex == -1) {
-				div
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(`Do not show ${targetData.name}`)
-					.on('click', () => {
-						menuGrp.hide()
-						// when the legend group is shown and now hide it
-						// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
-						const legendData = structuredClone(targetData)
-						legendData.crossedOut = true
-						const filterNew = { dt: targetData.dt, legendData }
-						if (byOrigin) {
-							// when distinguish between germline and somatic for the dt
-							filterNew.origin = targetData.origin
-						}
-						// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
-						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-							f => f.legendGrpName !== legendData.name
-						)
-
-						self.config.legendGrpFilter.lst.push(filterNew)
-
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: self.config
-						})
-					})
-
 				// for consequences/mutations legend group
 				if (targetData.dt == 1) {
 					div
@@ -2173,7 +2144,7 @@ function setLengendActions(self) {
 					div
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
-						.text(`Show only non-truncating protein-changing mutations`)
+						.text(`Show only protein-changing mutations`)
 						.on('click', () => {
 							menuGrp.hide()
 							// when the legend group is not hidden and show a "show only non-truncating protein-changing mutations" option
@@ -2185,10 +2156,9 @@ function setLengendActions(self) {
 								f => f.legendGrpName !== targetData.name
 							)
 
-							const nonTruncatingCodingM =
-								self.config.settings.matrix.nonTruncatingCodingMutations || nonTruncatingCodingMutations
+							const proteinChangingM = self.config.settings.matrix.proteinChangingMutations || proteinChangingMutations
 							for (const item of targetData.items) {
-								if (nonTruncatingCodingM.includes(item.key)) continue
+								if (proteinChangingM.includes(item.key)) continue
 								// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
 								// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
 								// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
@@ -2211,6 +2181,34 @@ function setLengendActions(self) {
 							})
 						})
 				}
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(`Do not show ${targetData.name}`)
+					.on('click', () => {
+						menuGrp.hide()
+						// when the legend group is shown and now hide it
+						// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
+						const legendData = structuredClone(targetData)
+						legendData.crossedOut = true
+						const filterNew = { dt: targetData.dt, legendData }
+						if (byOrigin) {
+							// when distinguish between germline and somatic for the dt
+							filterNew.origin = targetData.origin
+						}
+						// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
+						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+							f => f.legendGrpName !== legendData.name
+						)
+
+						self.config.legendGrpFilter.lst.push(filterNew)
+
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
 			}
 			// when the legend group is hidden or when a legend filter belongs to the legend group exist in legendValueFilter, show the "show all" option
 			if (legendGrpFilterIndex !== -1 || legendFilterIndex !== -1) {
