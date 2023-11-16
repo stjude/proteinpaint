@@ -117,10 +117,11 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                         let content = resp.bytes().await.unwrap();
                         let mut decoder = GzDecoder::new(&content[..]);
                         let mut decompressed_content = Vec::new();
-                        decoder.read_to_end(&mut decompressed_content).unwrap();
-                        let text = String::from_utf8_lossy(&decompressed_content);
-                        let (lst_chrom_pos,maf_bit) = gen_vec(text.to_string());
-                        txt.send((lst_chrom_pos,maf_bit)).unwrap();
+                        if let Ok(_) = decoder.read_to_end(&mut decompressed_content) {
+                            let text = String::from_utf8_lossy(&decompressed_content);
+                            let (lst_chrom_pos,maf_bit) = gen_vec(text.to_string());
+                            txt.send((lst_chrom_pos,maf_bit)).unwrap();
+                        }
                     }
                     Err(_) => println!("ERROR downloading {}", url),
                 }
