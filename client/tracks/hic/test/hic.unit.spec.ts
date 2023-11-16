@@ -1,4 +1,5 @@
 import tape from 'tape'
+import { Tape, Test } from '../../../types/tapeTest.ts'
 import { hicstrawfromtemplate } from '../../../src/block.tk.hicstraw.adaptor.ts'
 import { hicstrawmaketk } from '../../../src/block.tk.hicstraw.adaptor.ts'
 
@@ -8,7 +9,8 @@ Tests:
     hicstrawmaketk() from hicstraw.adaptor
  */
 
-/** Types are scoped to file. May move to client/types later*/
+/** Types are scoped to file. May move to client/types later when there's a plan
+ * in place for track and maybe block types*/
 type Tk = {
 	textdata?: {
 		/** number added to test logic but string is the only acceptable type */
@@ -30,12 +32,12 @@ type Template = {
 	enzyme?: string
 }
 
-tape('\n', test => {
+tape('\n', (test: Test) => {
 	test.pass('-***- tracks/hic unit-***-')
 	test.end()
 })
 
-tape('hicstrawfromtemplate() from hicstraw.adaptor', test => {
+tape('hicstrawfromtemplate() from hicstraw.adaptor', (test: Test) => {
 	test.plan(5)
 
 	let tk: Tk, template: Template, result: string | null, message: string
@@ -72,11 +74,11 @@ tape('hicstrawfromtemplate() from hicstraw.adaptor', test => {
 	tk = { hic: { enzyme: 'DpnII' }, enzyme: 'DpnII' }
 	result = hicstrawfromtemplate(tk, template)
 	test.ok(tk.hic!.enzyme == 'MboI' && tk.enzyme, message)
-})
+}) as Tape
 
-tape('hicstrawmaketk() from hicstraw.adaptor', test => {
+tape('hicstrawmaketk() from hicstraw.adaptor', (test: Test) => {
 	test.plan(1)
 	const tk = {} as Tk
 	hicstrawmaketk(tk)
 	test.ok(tk.uninitialized, 'Should add uninitialized to tk')
-})
+}) as Tape

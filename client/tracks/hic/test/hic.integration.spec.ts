@@ -1,8 +1,8 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { dofetch2 } from '../../../common/dofetch.js'
-
 import { hicData } from './hicData.ts'
+import { Tape, Test } from '../../../types/tapeTest.ts'
 import { hicparsefile, hicparsestat } from '../../../src/hic.straw.ts'
 
 /*
@@ -21,12 +21,12 @@ async function getGenomes(genome: string) {
 	return response.genomes[genome]
 }
 
-tape('\n', test => {
+tape('\n', (test: Test) => {
 	test.pass('-***- tracks/hic integration -***-')
 	test.end()
-})
+}) as Tape
 
-tape('hicparsefile()', async test => {
+tape.only('hicparsefile()', async (test: Test) => {
 	//test.plan()
 	const holder = getHolder()
 
@@ -49,15 +49,15 @@ tape('hicparsefile()', async test => {
 			hic.inlineview == false,
 		'Should add .wholegenome, .chrpairview, and .detailview objects as well as .inwholegenome, .inchrpair, .indetail, and .inlineview booleans to hic'
 	)
-
 	if (test._ok) holder.remove()
 	test.end()
-})
+}) as Tape
 
-tape('hicparsestat()', async test => {
+tape('hicparsestat()', async (test: Test) => {
 	test.plan(13)
 
-	let result: any, message: string
+	let result: string | undefined, message: string
+
 	const hic: any = { ...hicData.hic.v8 }
 	hic.genome = await getGenomes('hg19')
 	const j: any = { ...hicData.serverResponse.v8 }
@@ -144,9 +144,9 @@ tape('hicparsestat()', async test => {
 	j['Fragment-delimited resolutions'] = hicData.serverResponse.v8['Fragment-delimited resolutions']
 	result = hicparsestat(hic, j)
 	test.equal(hic.fragresolution, j['Fragment-delimited resolutions'], message)
-})
+}) as Tape
 
 tape.skip('hicparsefragdata()', test => {
 	//test.plan()
 	test.end()
-})
+}) as Tape
