@@ -1846,15 +1846,20 @@ async function validate_query_singleCell(ds, genome) {
 	const q = ds.queries.singleCell
 	if (!q) return
 
-	// FIXME gdc should not require this
-	if (!q.isSampleTerm) throw 'singleCell.isSampleTerm missing'
-	// for now use this quick fix method to pull sample ids annotated by this term
-	q.sampleIdSet = new Set()
-	{
-		const s = ds.cohort.termdb.q.getAllFloatValues(q.isSampleTerm)
-		for (const id of s.keys()) q.sampleIdSet.add(id)
-		if (q.sampleIdSet?.size == 0) throw 'no sample found'
-		console.log(q.sampleIdSet.size, 'samples (not cells) from single cell data of ' + ds.label)
+	if (!q.samples) throw 'singleCell.samples{} missing'
+	if (q.samples.gdcapi) {
+		//gdc.validate_query_singleCell_samples(ds, genome)
+		// samples.get() added
+	} else {
+		if (!q.samples.isSampleTerm) throw 'singleCell.samples.isSampleTerm missing'
+		// for now use this quick fix method to pull sample ids annotated by this term
+		// to support situation where not all samples from a dataset has sc data
+		const sampleIds = [] // list of sample ids with sc data
+		const s = ds.cohort.termdb.q.getAllFloatValues(q.samples.isSampleTerm)
+		for (const id of s.keys()) sampleIds.push(id)
+		if (sampleIds.length == 0) throw 'no sample with sc data'
+		const lst = sampleIds.map(i => ds.cohort.termdb.q.id2sampleName(i))
+		q.samples.get = () => lst
 	}
 
 	if (!Array.isArray(q.plots)) throw 'queries.singleCell.plots[] is not array'
@@ -1864,7 +1869,7 @@ async function validate_query_singleCell(ds, genome) {
 		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
 		nameSet.add(plot.name)
 		if (plot.gdcapi) {
-			//gdc.validate_query_singleCell(ds, genome)
+			//gdc.validate_query_singleCell_oneplot(ds, genome)
 			// plot.get() added
 		} else if (plot.folder) {
 			// folder contains tsv files as per-sample maps

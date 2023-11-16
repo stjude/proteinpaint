@@ -472,20 +472,35 @@ async function get_AllSamples(q, req, res, ds) {
 }
 
 async function get_AllSamplesByName(q, req, res, ds) {
-	const canDisplay = authApi.canDisplaySampleIds(req, ds)
-	let result = {} // key: sample name, value: id
-	if (canDisplay) {
-		if (ds.queries?.singleCell?.sampleIdSet) {
-			// this dataset has single cell data, only return samples, but not cells
-			// FIXME this excludes samples without such data
-			for (const i of ds.queries.singleCell.sampleIdSet) {
-				result[ds.cohort.termdb.q.id2sampleName(i)] = i
-			}
-		} else {
-			result = Object.fromEntries(ds.sampleName2Id)
+	// return {}, k: sample name, v: id
+
+	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
+
+	/* FIXME
+	for a dataset with only subset of samples having sc data, sample view plot should list all samples (not cells)
+	and sc view should only list samples with sc
+	still need work
+	*/
+
+	if (ds.queries?.singleCell?.samples?.get) {
+		/*
+		this dataset has single cell data, only return samples with sc data
+		this avoid issue of returning cells which are in sampleidmap table
+
+		!!this logic should only be used in sc-specific view on client!!
+		more fixes pending
+		*/
+		const lst = await ds.queries.singleCell.samples.get()
+		const result = {}
+		for (const sampleName of lst) {
+			result[sampleName] = ds.cohort.termdb.q.sampleName2id(sampleName)
 		}
+		res.send(result)
+		return
 	}
-	res.send(result)
+
+	// all samples
+	res.send(Object.fromEntries(ds.sampleName2Id))
 }
 
 async function get_DEanalysis(q, res, ds) {
