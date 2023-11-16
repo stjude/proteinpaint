@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
+import Readable from 'stream'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 50000000 // 50Mb
@@ -47,28 +48,24 @@ async function buildMaf(req: any, res: any) {
 	const fileLst2 = (await getFileLstUnderSizeLimit(req.query.fileIdLst)) as string[]
 	console.log('test gdc maf sizes', Date.now() - t0)
 
-	const outFile = path.join(serverconfig.cachedir, 'gdcMaf.' + Math.random().toString()) // should be a gzipped file. does it need to end with '.gz' or it's auto-added?
-
 	const arg = {
 		fileIdLst: fileLst2,
-		host: path.join(apihost, 'data'), // must use the /data/ endpoint from current host
-		outFile
+		host: path.join(apihost, 'data') // must use the /data/ endpoint from current host
 	}
 
-	await run_rust('gdcmaf', JSON.stringify(arg))
+	const dataGzipped = await run_rust('gdcmaf', JSON.stringify(arg))
 
 	console.log('rust gdcmaf', Date.now() - t0)
 
-	const data = await fs.promises.readFile(outFile)
+	const data = JSON.parse(dataGzipped)
 
 	// by directly returning a blob, it won't tell client how many files are used
-
 	res.writeHead(200, {
 		'Content-Type': 'application/octet-stream',
 		'Content-Disposition': 'attachment; filename=cohort.maf.gz',
 		'Content-Length': data.length
 	})
-	res.end(Buffer.from(data as any, 'binary'))
+	res.end(Buffer.from(data, 'binary'))
 }
 
 /*
