@@ -456,7 +456,7 @@ type MatrixSettings = {
 	ignoreCnvValues?: boolean
 	geneVariantCountSamplesSkipMclass?: Array<string>
 	truncatingMutations?: Array<string>
-	nonTruncatingPCMutations?: Array<string>
+	nonTruncatingCodingMutations?: Array<string>
 }
 
 type Mclass = {

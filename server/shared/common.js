@@ -1065,4 +1065,4 @@ export function getColors(number) {
 }
 
 export const truncatingMutations = ['F', 'N', 'D', 'I', 'L']
-export const nonTruncatingPCMutations = ['M', 'P']
+export const nonTruncatingCodingMutations = ['M', 'P']
