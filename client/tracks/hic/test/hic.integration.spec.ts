@@ -26,7 +26,7 @@ tape('\n', (test: Test) => {
 	test.end()
 }) as Tape
 
-tape.only('hicparsefile()', async (test: Test) => {
+tape('hicparsefile()', async (test: Test) => {
 	//test.plan()
 	const holder = getHolder()
 

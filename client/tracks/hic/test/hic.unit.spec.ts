@@ -73,7 +73,7 @@ tape('hicstrawfromtemplate() from hicstraw.adaptor', (test: Test) => {
 	template = { file: 'test/file/path', enzyme: 'MboI' }
 	tk = { hic: { enzyme: 'DpnII' }, enzyme: 'DpnII' }
 	result = hicstrawfromtemplate(tk, template)
-	test.ok(tk.hic!.enzyme == 'MboI' && tk.enzyme, message)
+	test.equal(tk.hic!.enzyme, template.enzyme, message)
 }) as Tape
 
 tape('hicstrawmaketk() from hicstraw.adaptor', (test: Test) => {
