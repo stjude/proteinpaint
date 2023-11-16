@@ -1,7 +1,7 @@
 import {
 	TermdbSinglecellsamplesRequest,
 	TermdbSinglecellsamplesResponse
-} from '#shared/types/routes/termdb.singlecellSamples'
+} from '#shared/types/routes/termdb.singlecellSamples.ts'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -37,9 +37,9 @@ function init({ genomes }) {
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
 			const result = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
 			res.send(result)
-		} catch (e) {
-			res.send({ error: e?.message || e })
+		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
+			res.send({ error: e.message || e })
 		}
 	}
 }
