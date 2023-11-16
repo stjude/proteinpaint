@@ -54,12 +54,20 @@ export default function svgLegend(opts) {
 		currliney = 0
 
 		opts.holder.selectAll('g').remove()
+		opts.holder.selectAll('text').remove()
 		const d = settings.dimensions
 		if (!opts.holder.attr('transform')) {
 			// d.yOffset should be used instead of settings.svgh ???
 			opts.holder.attr('transform', settings.ontop ? null : `translate(${d.xOffset},${settings.svgh})`)
 		}
-
+		if (opts.note) {
+			opts.holder
+				.append('text')
+				.style('font-size', '0.8em')
+				.text(opts.note)
+				.attr('transform', `translate(-135, 15)`)
+				.attr('font-style', 'italic')
+		}
 		const l = opts.holder.selectAll('g').data(data)
 
 		l.exit().remove()

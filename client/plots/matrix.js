@@ -51,7 +51,8 @@ export class Matrix {
 			},
 			settings: {
 				isExcludedAttr: 'isExcluded'
-			}
+			},
+			note: 'CLICK A ROW LABEL OR ITEM TO APPLY FILTERING'
 		})
 
 		// enable embedding of termsetting and tree menu inside self.dom.menu

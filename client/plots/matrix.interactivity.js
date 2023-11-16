@@ -2,7 +2,7 @@ import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons } from '#dom/control.icons'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { mclass, dt2label } from '#shared/common'
+import { mclass, dt2label, truncatingMutations, proteinChangingMutations } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 
@@ -2045,7 +2045,7 @@ function setZoomPanActions(self) {
 function setLengendActions(self) {
 	self.legendLabelMouseover = event => {
 		const targetData = event.target.__data__
-		if (targetData.dt == 3) {
+		if (!targetData || targetData.dt == 3) {
 			// for gene expression don't use legend as filter
 			return
 		}
@@ -2059,21 +2059,26 @@ function setLengendActions(self) {
 			// when the legend's group is hidden
 			return
 		}
-		select(event.target).style('fill', 'blue').style('cursor', 'pointer')
+		if (event.target.nodeName == 'rect') select(event.target).style('stroke', 'blue').style('cursor', 'pointer')
+		else select(event.target).style('fill', 'blue').style('cursor', 'pointer')
 	}
 
 	self.legendLabelMouseout = event => {
-		select(event.target).style('fill', '')
+		if (event.target.nodeName == 'rect') select(event.target).style('stroke', '#aaa')
+		else select(event.target).style('fill', '')
 	}
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
-		if (targetData.dt == 3) {
+		if (!targetData || targetData.dt == 3) {
 			// for gene expression don't use legend as filter
 			return
 		}
+
+		const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+
+		// When clicking a legend group name
 		if (!targetData.isLegendItem) {
-			// for legend group name
 			if (!targetData.dt) {
 				// when its a non-genevariant legend group name
 				return
@@ -2081,46 +2086,156 @@ function setLengendActions(self) {
 
 			//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
 			const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
-				f => f.dt == targetData.dt && (!f.origin || f.origin == targetData.origin)
+				f => f.dt == targetData.dt && (!byOrigin || f.origin == targetData.origin)
+			)
+
+			//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
+			const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
+				l =>
+					l.legendGrpName == targetData.name &&
+					l.tvs.values.find(v => v.dt == targetData.dt && (!byOrigin || v.origin == targetData.origin))
 			)
 			const menuGrp = new Menu({ padding: '0px' })
 			const div = menuGrp.d.append('div')
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(legendGrpFilterIndex == -1 ? `Do not show ${targetData.name}` : `Show ${targetData.name}`)
-				.on('click', () => {
-					menuGrp.hide()
-					if (legendGrpFilterIndex == -1) {
+
+			// when the legend group is not hidden
+			if (legendGrpFilterIndex == -1) {
+				// for consequences/mutations legend group
+				if (targetData.dt == 1) {
+					div
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text(`Show only truncating mutations`)
+						.on('click', () => {
+							menuGrp.hide()
+							// when the legend group is not hidden and show a "show only the truncating mutations" option
+							// add a new "soft legend filter" to for all the legends in the legend group whose mclass
+							// is not in the truncatingM
+
+							//remove the individual legend filter in the group
+							self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+								f => f.legendGrpName !== targetData.name
+							)
+							const truncatingM = self.config.settings.matrix.truncatingMutations || truncatingMutations
+							for (const item of targetData.items) {
+								if (truncatingM.includes(item.key)) continue
+								// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+								// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+								// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
+								const filterNew = {
+									legendGrpName: item.termid,
+									type: 'tvs',
+									tvs: {
+										isnot: true,
+										legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+										term: { type: 'geneVariant' },
+										values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+									}
+								}
+								self.config.legendValueFilter.lst.push(filterNew)
+							}
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.id,
+								config: self.config
+							})
+						})
+
+					div
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text(`Show only protein-changing mutations`)
+						.on('click', () => {
+							menuGrp.hide()
+							// when the legend group is not hidden and show a "show only non-truncating protein-changing mutations" option
+							// add a new "soft legend filter" for all the legends in the legend group (origin + dt) whose mclass
+							// is not in the nonTruncatingPCM
+
+							//remove the individual legend filter in the group
+							self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+								f => f.legendGrpName !== targetData.name
+							)
+
+							const proteinChangingM = self.config.settings.matrix.proteinChangingMutations || proteinChangingMutations
+							for (const item of targetData.items) {
+								if (proteinChangingM.includes(item.key)) continue
+								// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
+								// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
+								// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
+								const filterNew = {
+									legendGrpName: item.termid,
+									type: 'tvs',
+									tvs: {
+										isnot: true,
+										legendFilterType: 'geneVariant_soft', // indicates this matrix legend filter is soft filter
+										term: { type: 'geneVariant' },
+										values: [{ dt: item.dt, origin: item.origin, mclasslst: [item.key] }]
+									}
+								}
+								self.config.legendValueFilter.lst.push(filterNew)
+							}
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.id,
+								config: self.config
+							})
+						})
+				}
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(`Do not show ${targetData.name}`)
+					.on('click', () => {
+						menuGrp.hide()
 						// when the legend group is shown and now hide it
 						// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
 						const legendData = structuredClone(targetData)
 						legendData.crossedOut = true
 						const filterNew = { dt: targetData.dt, legendData }
-						if (self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin) {
+						if (byOrigin) {
 							// when distinguish between germline and somatic for the dt
 							filterNew.origin = targetData.origin
 						}
-						// when the legend group is hidden, remove the individual legend filter in the group
+						// when the legend group is hidden, need to remove the individual legend filter belongs to this legend group
 						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-							f => f.legendGrpName != legendData.name
+							f => f.legendGrpName !== legendData.name
 						)
 
 						self.config.legendGrpFilter.lst.push(filterNew)
-					} else {
-						// when the legend group is alcrossed-out and now show it
-						self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
-					}
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: self.config
+
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
 					})
-				})
+			}
+			// when the legend group is hidden or when a legend filter belongs to the legend group exist in legendValueFilter, show the "show all" option
+			if (legendGrpFilterIndex !== -1 || legendFilterIndex !== -1) {
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(`Show all ${targetData.name}`)
+					.on('click', () => {
+						menuGrp.hide()
+						if (legendGrpFilterIndex !== -1) self.config.legendGrpFilter.lst.splice(legendGrpFilterIndex, 1)
+						if (legendFilterIndex !== -1)
+							self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
+								f => f.legendGrpName != targetData.name
+							)
+
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+			}
 			menuGrp.showunder(event.target)
 			return
 		}
 
+		// when clicking a legend item
 		const legendGrpHidden = self.config.legendGrpFilter.lst.find(f => f.legendData.name == targetData.termid) && true
 		if (targetData.isLegendItem && legendGrpHidden) {
 			// when the legend's group is hidden
@@ -2137,7 +2252,7 @@ function setLengendActions(self) {
 					l.legendGrpName == targetData.termid &&
 					l.tvs.values.find(
 						v =>
-							v.dt == targetData.dt && (!v.origin || v.origin == targetData.origin) && v.mclasslst[0] == targetData.key
+							v.dt == targetData.dt && (!byOrigin || v.origin == targetData.origin) && v.mclasslst[0] == targetData.key
 					)
 			)
 		} else {
@@ -2160,6 +2275,8 @@ function setLengendActions(self) {
 		const controlLabels = self.settings.matrix.controlLabels
 		const menu = new Menu({ padding: '0px' })
 		const div = menu.d.append('div')
+
+		//Add the hard filter option
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -2253,7 +2370,7 @@ function setLengendActions(self) {
 			})
 
 		if (targetData.isLegendItem) {
-			// not for the legend group names
+			// Add the soft filter option only for the not already hidden geneVariant legend
 			if (targetData.dt && legendFilterIndex == -1) {
 				// only when filtering a not already hidden geneVariant legend, show the soft filter
 				div
@@ -2286,11 +2403,12 @@ function setLengendActions(self) {
 					})
 			}
 
+			//Add the show only option only for non-genevariant legend
 			if (!targetData.dt) {
 				div
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text('Show only') // show only option only exist for non-genevariant legend
+					.text('Show only')
 					.on('click', () => {
 						menu.hide()
 						const term = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
@@ -2374,29 +2492,25 @@ function setLengendActions(self) {
 					})
 			}
 
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Show all')
-				.on('click', () => {
-					if (targetData.dt) {
+			//Add the show all option only for non-genevariant legend
+			if (!targetData.dt) {
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Show all')
+					.on('click', () => {
 						menu.hide()
 						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
 							l => l.legendGrpName !== targetData.termid
 						)
-					} else {
-						menu.hide()
-						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
-							l => l.legendGrpName !== targetData.termid
-						)
-					}
 
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: self.config
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
 					})
-				})
+			}
 			menu.showunder(event.target)
 		}
 	}

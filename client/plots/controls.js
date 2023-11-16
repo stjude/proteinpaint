@@ -16,8 +16,9 @@ let i = 0 // track controls "instances" for assigning unambiguous unique input n
 
 class TdbPlotControls {
 	constructor(opts) {
+		this.opts = opts
 		this.type = 'plotControls'
-		this.customEvents = ['downloadClick', 'infoClick']
+		this.customEvents = ['downloadClick', 'infoClick', 'helpClick']
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -43,7 +44,8 @@ class TdbPlotControls {
 									}
 								}
 							}
-						})
+						}),
+					helpHandler: () => this.bus.emit('helpClick')
 				}),
 				config: configUiInit({
 					app: this.app,
@@ -97,7 +99,7 @@ class TdbPlotControls {
 export const controlsInit = getCompInit(TdbPlotControls)
 
 function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		self.dom.holder.style('background', self.isOpen ? panel_bg_color : '')
 	}
 }

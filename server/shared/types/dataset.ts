@@ -455,6 +455,8 @@ type MatrixSettings = {
 	sortPriority?: SortPriorityEntry[]
 	ignoreCnvValues?: boolean
 	geneVariantCountSamplesSkipMclass?: Array<string>
+	truncatingMutations?: Array<string>
+	proteinChangingMutations?: Array<string>
 }
 
 type Mclass = {
