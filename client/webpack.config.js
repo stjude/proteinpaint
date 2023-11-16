@@ -95,7 +95,6 @@ module.exports = function (env = {}) {
 		{
 			const i = config.plugins.findIndex(p => p && p instanceof webpack.IgnorePlugin)
 			if (i !== -1) config.plugins.splice(i, 1)
-			console.log(i)
 		}
 
 		// delete the rule that empties the ./test/internals.js code,
