@@ -45,12 +45,6 @@ export class profilePlot {
 	}
 
 	async setControls(chartType, additionalInputs = []) {
-		const filter = this.config.filter
-		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst,
-			filter
-		})
-
 		const countriesData = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: [this.config.countryTW],
 			filter: this.getFilter([this.config.countryTW.id])
@@ -63,13 +57,6 @@ export class profilePlot {
 			terms: [this.config.typeTW],
 			filter: this.getFilter([this.config.typeTW.id])
 		})
-		this.sampleData =
-			this.settings.site && this.settings.site != '' ? this.data.lst.find(s => s.sample === this.settings.site) : null
-
-		this.sites = this.data.lst.map(sample => {
-			return { label: sample.sampleName, value: sample.sample }
-		})
-		this.sites.unshift({ label: '', value: '' })
 
 		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
 			return { label: value, value }
@@ -78,11 +65,25 @@ export class profilePlot {
 		this.countries = this.getList(this.config.countryTW, countriesData)
 		this.incomes = this.getList(this.config.incomeTW, incomesData)
 		this.types = this.getList(this.config.typeTW, typesData)
+		if (this.type == 'profileRadarFacility') this.types.shift()
 
-		this.income = this.settings.income || this.incomes[0].value
-		this.region = this.settings.region || this.regions[0].value
-		this.country = this.settings.country || this.countries[0].value
-		this.facilityType = this.settings.facilityType || this.types[0].value
+		if (!this.settings.income) this.settings.income = this.incomes[0].value
+		if (!this.settings.region) this.settings.region = this.regions[0].value
+		if (!this.settings.country) this.settings.country = this.countries[0].value
+		if (!this.settings.facilityType) this.settings.facilityType = this.types[0].value
+
+		const filter = this.config.filter || this.getFilter()
+		this.data = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: this.twLst,
+			filter
+		})
+		this.sites = this.data.lst.map(sample => {
+			return { label: sample.sampleName, value: sample.sample }
+		})
+		this.sites.unshift({ label: '', value: '' })
+		this.site = this.settings.site || this.sites[0].value
+
+		this.sampleData = this.site && this.site != '' ? this.data.lst.find(s => s.sample === this.site) : null
 
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
@@ -111,7 +112,7 @@ export class profilePlot {
 				callback: value => this.setIncome(value)
 			},
 			{
-				label: 'Facility Type',
+				label: 'Facility type',
 				type: 'dropdown',
 				chartType,
 				options: this.types,
@@ -224,7 +225,25 @@ export class profilePlot {
 		}
 	}
 
-	addLegendFilter(filter, value) {
+	addFilterLegend() {
+		this.filterG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text(
+				this.settings.region || this.settings.country || this.settings.income || this.settings.facilityType
+					? 'Filters'
+					: 'No filter applied'
+			)
+			.attr('transform', `translate(0, -5)`)
+		this.addFilterLegendItem('Region', this.settings.region)
+		this.addFilterLegendItem('Country', this.settings.country)
+		this.addFilterLegendItem('Income', this.settings.income)
+		this.addFilterLegendItem('Facility type', this.settings.facilityType)
+		if (this.sampleData) this.addLegendFilter('site', this.sampleData.sampleName)
+	}
+
+	addFilterLegendItem(filter, value) {
 		if (!value) return
 		this.filtersCount++
 
@@ -262,7 +281,7 @@ export class profilePlot {
 			const scores = this.data.lst.map(sample => sample[d.score.$id]?.value).sort()
 			const middle = Math.floor(scores.length / 2)
 			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
-			const maxScore = this.data.lst[0][d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+			const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
 			const percentage = (score * 100) / maxScore
 			return percentage.toFixed(0)
 		}

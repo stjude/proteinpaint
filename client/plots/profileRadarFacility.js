@@ -38,18 +38,34 @@ class profileRadarFacility extends profilePlot {
 			}
 		}
 		await this.setControls('profileRadarFacility')
+		this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: this.twLst,
+			filter: this.getFilter([this.config.typeTW.id])
+		})
 		this.angle = (Math.PI * 2) / this.terms.length
 		this.plot()
 	}
 
+	getPercentage2(d) {
+		if (!d) return null
+
+		const scores = this.data2.lst.map(sample => sample[d.score.$id]?.value).sort()
+		const middle = Math.floor(scores.length / 2)
+		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
+		const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+		const percentage = (score * 100) / maxScore
+		return percentage.toFixed(0)
+	}
+
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
+		if (this.data.lst.length == 0) return
 
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1100)
+			.attr('width', 1200)
 			.attr('height', 650)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
@@ -58,15 +74,16 @@ class profileRadarFacility extends profilePlot {
 			.style('margin-top', '45px')
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 380
-		const y = 320
+		const x = 370
+		const y = 290
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280},${y + 180})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 440},${y - 140})`)
+
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 40})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 140})`)
 
 		const rows = []
-		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Filter' }]
+		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Total' }]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -79,7 +96,7 @@ class profileRadarFacility extends profilePlot {
 			const row = [{ value: module }, { value: this.getPercentage(sc) }]
 
 			this.addData(iangle, i, data, false)
-			row.push({ value: this.getPercentage(sc) })
+			row.push({ value: this.getPercentage2(sc) })
 			rows.push(row)
 
 			i++
@@ -102,19 +119,20 @@ class profileRadarFacility extends profilePlot {
 			})
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
-		renderTable({
-			rows,
-			columns,
-			div: this.tableDiv,
-			showLines: true,
-			resize: true,
-			maxHeight: '60vh'
-		})
+		if (this.settings.showTable)
+			renderTable({
+				rows,
+				columns,
+				div: this.tableDiv,
+				showLines: true,
+				resize: true,
+				maxHeight: '60vh'
+			})
 		data.push(data[0])
 		data2.push(data2[0])
 		const color1 = 'gray',
 			color2 = 'blue'
-		if (this.config.sampleName)
+		if (this.settings.facilityType)
 			polarG
 				.append('g')
 				.append('path')
@@ -141,36 +159,17 @@ class profileRadarFacility extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		this.filterG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text(
-				this.settings.region || this.settings.country || this.settings.income || this.settings.site
-					? 'Filters'
-					: 'No filter applied'
-			)
-			.attr('transform', `translate(0, -5)`)
-		this.addLegendFilter('region', this.settings.region)
-		this.addLegendFilter('country', this.settings.country)
-		this.addLegendFilter('income', this.settings.income)
-		if (this.sampleData) this.addLegendFilter('site', this.sampleData.sampleName)
 
-		this.legendG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text('Legend')
-			.attr('transform', `translate(0, 15)`)
+		this.addFilterLegend()
+		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 
-		const score = this.config[this.config.plot].score
-		if (this.config.sampleName) this.addLegendItem(`${this.config.sampleName} ${score}`, color1, 0, '5, 5')
-		this.addLegendItem(`${this.facilityType ? this.facilityType : ''}`, color2, 1, 'none')
+		this.addLegendItem('Facility Total Scores', color1, 0, '5, 5')
+		this.addLegendItem('Total Scores', color2, 1, 'none')
 	}
 
 	addData(iangle, i, data, isFacility) {
 		const item = this.terms[i]
-		const percentage = this.getPercentage(item.sc)
+		const percentage = isFacility ? this.getPercentage(item.sc) : this.getPercentage2(item.sc)
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)

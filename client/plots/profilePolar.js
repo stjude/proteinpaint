@@ -71,7 +71,7 @@ class profilePolar extends profilePlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1000)
+			.attr('width', 1200)
 			.attr('height', 600)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
@@ -150,22 +150,7 @@ class profilePolar extends profilePlot {
 		this.addLegendItem('B', '50-75% of possible scorable items', 2)
 		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 
-		this.filterG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text(
-				this.settings.region || this.settings.country || this.settings.income || this.settings.site
-					? 'Filters'
-					: 'No filter applied'
-			)
-			.attr('transform', `translate(0, -5)`)
-
-		this.addLegendFilter('region', this.settings.region)
-		this.addLegendFilter('country', this.settings.country)
-		this.addLegendFilter('income', this.settings.income)
-		if (this.sampleData) this.addLegendFilter('site', this.sampleData.sampleName)
-
+		this.addFilterLegend()
 		function addCircle(percent, text = null) {
 			const circle = polarG
 				.append('circle')

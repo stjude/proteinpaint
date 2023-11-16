@@ -44,19 +44,19 @@ class profileRadar extends profilePlot {
 		}
 		await this.setControls('profileRadar')
 		this.angle = (Math.PI * 2) / this.terms.length
-
 		this.plot()
 	}
 
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
+		if (this.data.lst.length == 0) return
 
 		this.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1300)
+			.attr('width', 1200)
 			.attr('height', 650)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
@@ -72,12 +72,12 @@ class profileRadar extends profilePlot {
 
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 380
-		const y = 300
+		const x = 370
+		const y = 250
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 420},${y - 200})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y - 100})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 390},${y + 100})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 390},${y + 200})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -151,20 +151,7 @@ class profileRadar extends profilePlot {
 				.attr('pointer-events', 'none')
 		}
 
-		this.filterG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text(
-				this.settings.region || this.settings.country || this.settings.income || this.settings.site
-					? 'Filters'
-					: 'No filter applied'
-			)
-			.attr('transform', `translate(0, -5)`)
-		this.addLegendFilter('region', this.settings.region)
-		this.addLegendFilter('country', this.settings.country)
-		this.addLegendFilter('income', this.settings.income)
-		if (this.sampleData) this.addLegendFilter('site', this.sampleData.sampleName)
+		this.addFilterLegend()
 
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
 		const item1 = `${config[config.plot].term1.name} (${config[config.plot].term1.abbrev})`
