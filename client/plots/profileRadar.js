@@ -5,7 +5,6 @@ import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
-import { downloadSingleSVG } from '../common/svg.download.js'
 import { loadFilterTerms } from './profilePlot.js'
 
 class profileRadar extends profilePlot {
@@ -57,7 +56,7 @@ class profileRadar extends profilePlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.append('svg')
-			.attr('width', 1200)
+			.attr('width', 1300)
 			.attr('height', 650)
 		this.tableDiv = this.dom.plotDiv
 			.append('div')
@@ -176,7 +175,6 @@ class profileRadar extends profilePlot {
 
 	addData(field, iangle, i, data) {
 		const item = this.terms[i]
-		const tw = item[field]
 		const percentage = this.getPercentage(item[field])
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)

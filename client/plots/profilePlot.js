@@ -117,15 +117,15 @@ export class profilePlot {
 				options: this.types,
 				settingsKey: 'facilityType',
 				callback: value => this.setFacilityType(value)
-			},
-			{
-				label: 'Site',
-				type: 'dropdown',
-				chartType,
-				options: this.sites,
-				settingsKey: 'site',
-				callback: value => this.setSite(value)
 			}
+			// {
+			// 	label: 'Site',
+			// 	type: 'dropdown',
+			// 	chartType,
+			// 	options: this.sites,
+			// 	settingsKey: 'site',
+			// 	callback: value => this.setSite(value)
+			// }
 		]
 		inputs.unshift(...additionalInputs)
 		if (this.type != 'profileBarchart')

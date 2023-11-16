@@ -2,143 +2,43 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
 import { Menu } from '#dom/menu'
-import { downloadSingleSVG } from '../common/svg.download.js'
 import { renderTable } from '#dom/table'
+import { profilePlot } from './profilePlot.js'
+import { loadFilterTerms } from './profilePlot.js'
 
-class profileRadarFacility {
+class profileRadarFacility extends profilePlot {
 	constructor() {
+		super()
 		this.type = 'profileRadarFacility'
 		this.radius = 250
 	}
 
 	async init(appState) {
+		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.opts.header.style('font-weight', 'bold').text(config[config.plot].name)
-		const holder = this.opts.holder.append('div')
-		const div = holder.append('div').style('margin-left', '50px').style('margin-top', '20px')
-		const firstDiv = div.append('div').style('display', 'inline-block')
-		const plotDiv = holder.append('div')
-		this.dom = {
-			holder,
-			firstDiv,
-			filterDiv: div,
-			facilityDiv: div.insert('div').style('display', 'inline-block'),
-			plotDiv
-		}
-
-		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
-		this.regions = [
-			{ key: '', label: '' },
-			{ key: 'Global', label: 'Global' }
-		]
-		for (const region of config.regions) {
-			this.regions.push({ key: region.name, label: region.name })
-			for (const country of region.countries) this.regions.push({ key: country, label: `-- ${country}` })
-		}
-
-		div.append('label').style('margin-left', '15px').html('Region:').style('font-weight', 'bold')
-		this.regionSelect = div.append('select').style('margin-left', '5px')
-		this.regionSelect
-			.selectAll('option')
-			.data(this.regions)
-			.enter()
-			.append('option')
-			.attr('value', d => d.key)
-			.html((d, i) => d.label)
-
-		this.regionSelect.on('change', () => {
-			const config = this.config
-			config.region = this.regionSelect.node().value
-			config.income = ''
-			config.sampleName = config.region
-
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-		this.dom.facilityDiv.insert('label').style('margin-left', '15px').html('Facility:').style('font-weight', 'bold')
-		this.facilities = await this.app.vocabApi.getProfileFacilities()
-
-		this.facilitySelect = this.dom.facilityDiv.insert('select').style('margin-left', '5px')
-		this.facilitySelect
-			.selectAll('option')
-			.data(this.facilities)
-			.enter()
-			.append('option')
-			.attr('value', d => d)
-			.html((d, i) => d)
-		this.facilitySelect.on('change', () => {
-			const config = this.config
-			config.facility = this.facilitySelect.node().value
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-		this.dom.facilityDiv.append('label').style('margin-left', '15px').html('versus').style('font-weight', 'bold')
-		div.append('label').style('margin-left', '15px').html('or').style('font-weight', 'bold')
-
-		this.incomes = ['']
-		this.incomes.push(...config.incomes)
-		div.append('label').style('margin-left', '15px').html('Income Group:').style('font-weight', 'bold')
-		this.incomeSelect = div.append('select').style('margin-left', '5px')
-		this.incomeSelect
-			.selectAll('option')
-			.data(this.incomes)
-			.enter()
-			.append('option')
-			.html((d, i) => d)
-
-		this.incomeSelect.on('change', () => {
-			const config = this.config
-			config.income = this.incomeSelect.node().value
-			config.sampleName = config.income
-			config.region = ''
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-		})
-		div
-			.append('button')
-			.style('margin-left', '15px')
-			.text('Download Image')
-			.on('click', () => downloadSingleSVG(this.svg, this.filename))
 
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-		this.terms = config[config.plot].terms
-		this.twLst = []
-		for (const { parent, term } of this.terms) {
-			this.twLst.push(parent)
-			this.twLst.push(term)
-		}
-		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst
-		})
-		this.samplesData = {}
-		for (const sample of this.data.lst) this.samplesData[sample.sampleName] = sample
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 	}
 
-	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		if (!config) throw `No plot with id='${this.id}' found`
-		return {
-			config
-		}
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		const config = this.config
-		if (this.config.sampleName == undefined) this.config.sampleName = 'Global' //By default compare with Global region
-
-		this.facility = this.state.config.facility || this.facilities[0]
+		this.settings = this.config.settings.profileRadarFacility
+		this.twLst = []
+		this.terms = this.config[this.config.plot].terms
+		for (const row of this.terms) {
+			this.rowCount++
+			if (row.sc) {
+				this.twLst.push(row.sc.score)
+				this.twLst.push(row.sc.maxScore)
+			}
+		}
+		await this.setControls('profileRadarFacility')
 		this.angle = (Math.PI * 2) / this.terms.length
-		this.income = this.config.income || this.incomes[0]
-		this.region = this.config.region !== undefined ? this.config.region : this.income == '' ? 'Global' : ''
-
-		this.regionSelect.selectAll('option').property('selected', d => d.key == this.region)
-		this.incomeSelect.selectAll('option').property('selected', d => d == this.income)
-
-		this.filename = `radar_plot${this.region ? '_' + this.region : ''}${this.facility ? '_' + this.facility : ''}.svg`
-			.split(' ')
-			.join('_')
 		this.plot()
 	}
 
@@ -158,29 +58,28 @@ class profileRadarFacility {
 			.style('margin-top', '45px')
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 400
+		const x = 380
 		const y = 320
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 400},${y + 150})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 280},${y + 180})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 440},${y - 140})`)
+
 		const rows = []
-		const columns = [{ label: 'Module' }, { label: `Facility ${this.facility}` }, { label: this.config.sampleName }]
+		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Filter' }]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
 		let i = 0
 		const data = [],
 			data2 = []
-		for (let { parent, term } of this.terms) {
-			const d = parent
+		for (let { module, sc } of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
-			this.addData(this.facility, iangle, i, data2)
-			const row = [{ value: parent.term.name }, { value: this.samplesData[this.facility][term.$id]?.value }]
+			this.addData(iangle, i, data2, true)
+			const row = [{ value: module }, { value: this.getPercentage(sc) }]
 
-			if (this.config.sampleName) {
-				this.addData(this.config.sampleName, iangle, i, data)
-				row.push({ value: this.samplesData[this.config.sampleName][term.$id]?.value })
-			}
+			this.addData(iangle, i, data, false)
+			row.push({ value: this.getPercentage(sc) })
 			rows.push(row)
 
 			i++
@@ -189,7 +88,7 @@ class profileRadarFacility {
 			let dy = radius * 1.1 * Math.sin(iangle) - 10
 			const textElem = polarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
 
-			const texts = d.term.name.split(' ')
+			const texts = module.split(' ')
 			let span
 			texts.forEach((text, j) => {
 				if (text != 'and') {
@@ -242,20 +141,40 @@ class profileRadarFacility {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
+		this.filterG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text(
+				this.settings.region || this.settings.country || this.settings.income || this.settings.site
+					? 'Filters'
+					: 'No filter applied'
+			)
+			.attr('transform', `translate(0, -5)`)
+		this.addLegendFilter('region', this.settings.region)
+		this.addLegendFilter('country', this.settings.country)
+		this.addLegendFilter('income', this.settings.income)
+		if (this.sampleData) this.addLegendFilter('site', this.sampleData.sampleName)
+
+		this.legendG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text('Legend')
+			.attr('transform', `translate(0, 15)`)
+
 		const score = this.config[this.config.plot].score
 		if (this.config.sampleName) this.addLegendItem(`${this.config.sampleName} ${score}`, color1, 0, '5, 5')
-		this.addLegendItem(`${this.facility} Facility ${score}`, color2, 1, 'none')
+		this.addLegendItem(`${this.facilityType ? this.facilityType : ''}`, color2, 1, 'none')
 	}
 
-	addData(sampleName, iangle, i, data) {
+	addData(iangle, i, data, isFacility) {
 		const item = this.terms[i]
-		const tw = item.term
-		const percentage = this.samplesData[sampleName][tw.$id]?.value
+		const percentage = this.getPercentage(item.sc)
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
-		const color = sampleName == this.facility ? 'blue' : '#aaa'
+		const color = isFacility ? 'blue' : '#aaa'
 		const circle = this.polarG
 			.append('g')
 			.attr('transform', `translate(${x}, ${y})`)
@@ -263,7 +182,7 @@ class profileRadarFacility {
 			.attr('r', 4)
 			.attr('fill', color)
 		data.push([x, y])
-		circle.datum({ module: item.parent.term.name, percentage })
+		circle.datum({ module: item.module, percentage })
 	}
 
 	addPoligon(percent) {
@@ -339,11 +258,24 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadarFacility
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadarFacility'
 		let config = copyMerge(structuredClone(defaults), opts)
-		const terms = config[opts.plot].terms
-		for (const { parent, term } of terms) {
-			await fillTermWrapper(parent, app.vocabApi)
-			await fillTermWrapper(term, app.vocabApi)
+		const settings = getDefaultProfileRadarSettings()
+
+		config.settings = {
+			controls: {
+				isOpen: false // control panel is hidden by default
+			},
+			profileRadarFacility: settings
 		}
+		const terms = config[opts.plot].terms
+
+		for (const row of terms) {
+			if (row.sc) {
+				row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
+				await fillTermWrapper(row.sc.score, app.vocabApi)
+				await fillTermWrapper(row.sc.maxScore, app.vocabApi)
+			}
+		}
+		await loadFilterTerms(config, app)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadarFacility getPlotConfig()]`
@@ -353,3 +285,9 @@ export async function getPlotConfig(opts, app) {
 export const profileRadarFacilityInit = getCompInit(profileRadarFacility)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profileRadarFacilityInit
+
+export function getDefaultProfileRadarSettings() {
+	return {
+		showTable: true
+	}
+}
