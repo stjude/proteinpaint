@@ -176,7 +176,7 @@ function setResolution(tk: any, block: any) {
 				return
 			}
 			// cannot find bp resolution
-			if (!tk.hic.enzymefile || !tk.hic.fragresolution?.length || !(tk.hic.fragresolution.length > 0)) {
+			if (!tk.hic.enzymefile || !tk.hic.fragresolution?.length) {
 				// no enzyme fragment data (missing enzyme, or fragresolution array is blank)
 				// just use finest bp resolution
 				resolution_bp = tk.hic.bpresolution[tk.hic.bpresolution.length - 1]
