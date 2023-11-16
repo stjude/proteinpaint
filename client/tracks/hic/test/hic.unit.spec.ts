@@ -1,5 +1,4 @@
 import tape from 'tape'
-import { Tape, Test } from '../../../types/tapeTest.ts'
 import { hicstrawfromtemplate } from '../../../src/block.tk.hicstraw.adaptor.ts'
 import { hicstrawmaketk } from '../../../src/block.tk.hicstraw.adaptor.ts'
 
@@ -32,12 +31,12 @@ type Template = {
 	enzyme?: string
 }
 
-tape('\n', (test: Test) => {
+tape('\n', test => {
 	test.pass('-***- tracks/hic unit-***-')
 	test.end()
 })
 
-tape('hicstrawfromtemplate() from hicstraw.adaptor', (test: Test) => {
+tape('hicstrawfromtemplate() from hicstraw.adaptor', test => {
 	test.plan(5)
 
 	let tk: Tk, template: Template, result: string | null, message: string
@@ -74,11 +73,11 @@ tape('hicstrawfromtemplate() from hicstraw.adaptor', (test: Test) => {
 	tk = { hic: { enzyme: 'DpnII' }, enzyme: 'DpnII' }
 	result = hicstrawfromtemplate(tk, template)
 	test.equal(tk.hic!.enzyme, template.enzyme, message)
-}) as Tape
+})
 
-tape('hicstrawmaketk() from hicstraw.adaptor', (test: Test) => {
+tape('hicstrawmaketk() from hicstraw.adaptor', test => {
 	test.plan(1)
 	const tk = {} as Tk
 	hicstrawmaketk(tk)
 	test.ok(tk.uninitialized, 'Should add uninitialized to tk')
-}) as Tape
+})
