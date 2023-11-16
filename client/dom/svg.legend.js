@@ -61,7 +61,12 @@ export default function svgLegend(opts) {
 			opts.holder.attr('transform', settings.ontop ? null : `translate(${d.xOffset},${settings.svgh})`)
 		}
 		if (opts.note) {
-			opts.holder.append('text').style('font-size', '0.8em').text(opts.note)
+			opts.holder
+				.append('text')
+				.style('font-size', '0.8em')
+				.text(opts.note)
+				.attr('transform', `translate(-135, 15)`)
+				.attr('font-style', 'italic')
 		}
 		const l = opts.holder.selectAll('g').data(data)
 
