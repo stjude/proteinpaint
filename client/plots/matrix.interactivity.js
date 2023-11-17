@@ -1978,8 +1978,9 @@ function setZoomPanActions(self) {
 							delete self.clickedSeriesCell
 							const startCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 							const endCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
+							console.log('what is startCell, endCell', startCell, endCell)
 							const samples = new Set()
-							for (let i = startCell.index; i <= endCell.index; i++) {
+							for (let i = startCell.totalIndex; i <= endCell.totalIndex; i++) {
 								samples.add(self.sampleOrder[i].row)
 							}
 							ss.callback({
