@@ -38,10 +38,7 @@ class profileRadarFacility extends profilePlot {
 			}
 		}
 		await this.setControls('profileRadarFacility')
-		this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst,
-			filter: this.getFilter([this.config.typeTW.id])
-		})
+
 		this.angle = (Math.PI * 2) / this.terms.length
 		this.plot()
 	}
@@ -49,7 +46,7 @@ class profileRadarFacility extends profilePlot {
 	getPercentage2(d) {
 		if (!d) return null
 
-		const scores = this.data2.lst.map(sample => sample[d.score.$id]?.value).sort()
+		const scores = this.data.lst.map(sample => sample[d.score.$id]?.value).sort()
 		const middle = Math.floor(scores.length / 2)
 		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
 		const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
@@ -139,15 +136,14 @@ class profileRadarFacility extends profilePlot {
 		data2.push(data2[0])
 		const color1 = 'gray',
 			color2 = 'blue'
-		if (this.settings.facilityType)
-			polarG
-				.append('g')
-				.append('path')
-				.style('stroke', color1)
-				.attr('fill', 'none')
-				.style('stroke-dasharray', '5, 5')
-				.attr('stroke-width', '2px')
-				.attr('d', this.lineGenerator(data))
+		polarG
+			.append('g')
+			.append('path')
+			.style('stroke', color1)
+			.attr('fill', 'none')
+			.style('stroke-dasharray', '5, 5')
+			.attr('stroke-width', '2px')
+			.attr('d', this.lineGenerator(data))
 		polarG
 			.append('g')
 			.append('path')
@@ -169,9 +165,9 @@ class profileRadarFacility extends profilePlot {
 
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-
-		this.addLegendItem('Facility Total Scores', color1, 0, '5, 5')
-		this.addLegendItem('Total Scores', color2, 1, 'none')
+		const facilityName = this.sampleData.sampleName
+		this.addLegendItem('Total Scores', color1, 0, '5, 5')
+		this.addLegendItem(`Facility ${facilityName} Total Scores`, color2, 1, 'none')
 	}
 
 	addData(iangle, i, data, isFacility) {
