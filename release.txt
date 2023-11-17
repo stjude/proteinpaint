@@ -1,1 +1,6 @@
 
+Features:
+- Support optional postRender and error callbacks from the embedded wrapper code
+
+Fixes:
+- Bug fix that creating mds3 subtrack with long filter name breaks

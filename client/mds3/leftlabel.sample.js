@@ -97,20 +97,20 @@ export function getFilterName(f) {
 		if (ttype == 'categorical') {
 			// tvs is categorical
 			if (!Array.isArray(tvs.values)) throw 'f.lst[0].tvs.values not array'
+
+			const catValue = tvs.values[0].key // only assess 1st category name
+
 			if (tvs.values.length == 1) {
 				// tvs uses only 1 category
-				const catValue = tvs.values[0].key
 				if ((tvs.term.name + catValue).length < 20) {
 					// term name plus category value has short length, show both
 					return tvs.term.name + ': ' + catValue
 				}
 				// only show cat value
-				return str.length < 15 ? str : str.substring(0, 13) + '...'
+				return catValue.length < 15 ? catValue : catValue.substring(0, 13) + '...'
 			}
-			// tvs uses more than 1 category
-			// set label of first category + (3)
-			const str = tvs.values[0].key
-			return `${str.length < 12 ? str : str.substring(0, 10) + '...'} (${tvs.values.length})`
+			// tvs uses more than 1 category, set label as "catValue (3)"
+			return `${catValue.length < 12 ? catValue : catValue.substring(0, 10) + '...'} (${tvs.values.length})`
 		}
 		if (ttype == 'integer' || ttype == 'float') {
 			// if tvs is numeric, may show numeric range
