@@ -73,13 +73,6 @@ export class profilePlot {
 			terms: this.twLst,
 			filter
 		})
-		this.sites = this.data.lst.map(sample => {
-			return { label: sample.sampleName, value: sample.sample }
-		})
-		this.sites.unshift({ label: '', value: '' })
-		this.site = this.settings.site || this.sites[0].value
-
-		this.sampleData = this.site && this.site != '' ? this.data.lst.find(s => s.sample === this.site) : null
 
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
@@ -115,16 +108,27 @@ export class profilePlot {
 				settingsKey: 'facilityType',
 				callback: value => this.setFacilityType(value)
 			}
-			// {
-			// 	label: 'Site',
-			// 	type: 'dropdown',
-			// 	chartType,
-			// 	options: this.sites,
-			// 	settingsKey: 'site',
-			// 	callback: value => this.setSite(value)
-			// }
 		]
 		inputs.unshift(...additionalInputs)
+		if (this.type == 'profileRadarFacility') {
+			this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
+				terms: this.twLst
+			})
+			this.sites = this.data2.lst.map(sample => {
+				return { label: sample.sampleName, value: sample.sample }
+			})
+			if (!this.settings.site) this.settings.site = this.sites[0].value
+
+			this.sampleData = this.data.lst.find(s => s.sample === this.settings.site)
+			inputs.unshift({
+				label: 'Site',
+				type: 'dropdown',
+				chartType,
+				options: this.sites,
+				settingsKey: 'site',
+				callback: value => this.setSite(value)
+			})
+		}
 		if (this.type != 'profileBarchart')
 			inputs.push({
 				label: 'Show table',
@@ -158,7 +162,6 @@ export class profilePlot {
 		this.settings.region = region
 		this.settings.country = ''
 		this.settings.income = ''
-		this.settings.site = ''
 		this.settings.facilityType = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
@@ -167,7 +170,6 @@ export class profilePlot {
 	setIncome(income) {
 		const config = this.config
 		this.settings.income = income
-		this.settings.site = ''
 		this.settings.facilityType = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
@@ -176,7 +178,6 @@ export class profilePlot {
 	setCountry(country) {
 		const config = this.config
 		this.settings.country = country
-		this.settings.site = ''
 		this.settings.facilityType = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
@@ -185,7 +186,6 @@ export class profilePlot {
 	setFacilityType(type) {
 		const config = this.config
 		this.settings.facilityType = type
-		this.settings.site = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -238,7 +238,6 @@ export class profilePlot {
 		this.addFilterLegendItem('Country', this.settings.country)
 		this.addFilterLegendItem('Income', this.settings.income)
 		this.addFilterLegendItem('Facility type', this.settings.facilityType)
-		if (this.sampleData) this.addLegendFilter('site', this.sampleData.sampleName)
 	}
 
 	addFilterLegendItem(filter, value) {
