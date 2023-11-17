@@ -95,12 +95,14 @@ export function positionLeftlabelg(tk, block) {
 			// need to prevent left label from overlapping with axis
 			// use y position of last label
 			const lly = tk.leftlabels.laby + labyspace + block.labelfontsize
-			if (lly > nm.toplabelheight - 10) {
+			if (lly > nm.toplabelheight + 5) {
+				// FIXME tentatively plus 5 here! was -10!
 				tk.leftlabels.xoff = nm.axisWidth
 			}
 		}
 	}
-	tk.leftlabels.g.attr('transform', `translate(-${tk.leftlabels.xoff},${labyspace + block.labelfontsize})`)
+	// transition for nice effect when switching skewer mode
+	tk.leftlabels.g.transition().attr('transform', `translate(-${tk.leftlabels.xoff},${labyspace + block.labelfontsize})`)
 }
 
 export function makelabel(tk, block, y) {

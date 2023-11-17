@@ -257,9 +257,10 @@ function mayInitSkewer(tk) {
 		// both skewer and numeric mode will render elements into tk.skewer.g
 		// will also attach skewer.discKickSelection
 		g: tk.glider.append('g'),
-
 		// border color of a box over a highlighted data
-		hlBoxColor: tk.mds.hlBoxColor || 'red'
+		hlBoxColor: tk.mds.hlBoxColor || 'red',
+		// default to show dot labels
+		hideDotLabels: false
 	}
 	setSkewerMode(tk) // adds skewer.viewModes[]
 }
