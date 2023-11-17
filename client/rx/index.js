@@ -309,6 +309,7 @@ export function getAppApi(self) {
 				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current)
 			} catch (e) {
+				if (self.bus) self.bus.emit('error')
 				if (self.printError) self.printError(e)
 				else console.log(e)
 			}
@@ -439,7 +440,14 @@ export function getComponentApi(self) {
 					await self.main(componentState)
 				} else {
 					self.state = componentState
-					if (self.main) await self.main()
+					if (self.main) {
+						try {
+							await self.main()
+						} catch (e) {
+							if (self.bus) self.bus.emit('error')
+							throw e
+						}
+					}
 				}
 			}
 			// notify children
@@ -485,7 +493,7 @@ export function getComponentApi(self) {
 	}
 
 	if (!self.bus) {
-		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender', 'postPrintError', 'firstRender']
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender', 'postPrintError', 'firstRender', 'error']
 		if (self.customEvents) self.eventTypes.push(...self.customEvents)
 		// set up a required event bus
 		self.bus = new Bus(api, self.eventTypes, (self.opts && self.opts.callbacks) || {})
