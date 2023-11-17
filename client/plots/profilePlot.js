@@ -119,7 +119,7 @@ export class profilePlot {
 			})
 			if (!this.settings.site) this.settings.site = this.sites[0].value
 
-			this.sampleData = this.data.lst.find(s => s.sample === this.settings.site)
+			this.sampleData = this.data2.lst.find(s => s.sample === this.settings.site)
 			inputs.unshift({
 				label: 'Site',
 				type: 'dropdown',
