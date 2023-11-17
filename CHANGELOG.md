@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- In mds3 track, new option allows to show/hide variant labels
+
 
 ## 2.31.0
 

@@ -1,2 +1,1 @@
-Features:
-- In mds3 track, new option allows to show/hide variant labels
+
