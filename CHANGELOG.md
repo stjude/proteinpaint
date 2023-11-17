@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Bug fix to allow mds3 track variant download to work again
+
 
 ## 2.32.0
 
