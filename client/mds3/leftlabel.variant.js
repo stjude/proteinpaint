@@ -114,7 +114,8 @@ function menu_variants(tk, block) {
 			})
 	}
 
-	if (tk.skewer.viewModes.find(n => n.inuse).type == 'skewer') {
+	const vm = tk.skewer.viewModes.find(n => n.inuse) // view mode that's in use. following menu options depends on it
+	if (vm.type == 'skewer') {
 		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
 		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
 		if (expandCount > 0) {
@@ -137,17 +138,19 @@ function menu_variants(tk, block) {
 					tk.menutip.hide()
 				})
 		}
-	}
+	} else if (vm.type == 'numeric') {
+		// only show this opt in numeric mode; delete when label hiding works for skewer mode
 
-	tk.menutip.d
-		.append('div')
-		.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
-		.attr('class', 'sja_menuoption')
-		.on('click', () => {
-			tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
-			tk.load()
-			tk.menutip.hide()
-		})
+		tk.menutip.d
+			.append('div')
+			.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
+				tk.load()
+				tk.menutip.hide()
+			})
+	}
 
 	if (!tk.custom_variants) {
 		// FIXME enable download for custom data
