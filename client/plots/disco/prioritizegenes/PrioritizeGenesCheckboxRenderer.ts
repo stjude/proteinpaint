@@ -9,7 +9,7 @@ export default class PrioritizeGenesCheckboxRenderer {
 		holder: any,
 		checked: boolean,
 		showPrioritizeGenesCheckbox: boolean,
-		elementsToDisplayCount: number,
+		displayedElementsCount: number,
 		allElementsCount: number
 	) {
 		if (showPrioritizeGenesCheckbox) {
@@ -23,7 +23,7 @@ export default class PrioritizeGenesCheckboxRenderer {
 			holder
 				.append('label')
 				.attr('for', 'genes-checkbox')
-				.text(`Prioritize Cancer Gene Census  ${elementsToDisplayCount} mutations out of ${allElementsCount} total`)
+				.text(`Prioritize Cancer Gene Census (${displayedElementsCount} mutations out of ${allElementsCount} total)`)
 
 			checkbox.on('change', () => {
 				this.checkBoxClickListener(checkbox.property('checked'))

@@ -7,8 +7,6 @@ export default class Labels extends Ring<Label> {
 	collisions?: Array<Label>
 	settings: any
 	elementsToDisplay: Array<Label> = []
-	elementsToDisplayCount: number = 0
-	allElementsCount: number = 0
 
 	private hasPrioritizedGenes: boolean
 	private filteredPrioritizedGenesList: Array<Label> = []
@@ -44,27 +42,25 @@ export default class Labels extends Ring<Label> {
 
 		let hasPrioritizedGenesList: Array<Label> = []
 		hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
-		this.filteredPrioritizedGenesList = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
-		const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
 
-		if (this.hasPrioritizedGenes) {
-			const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
-				return a.startAngle - b.startAngle
-			})
+		if (this.prioritizeGeneLabelsByGeneSets) {
+			this.elementsToDisplay = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
+		} else {
+			if (this.hasPrioritizedGenes) {
+				console.log('this.hasPrioritizedGenes', this.hasPrioritizedGenes)
+				hasPrioritizedGenesList = this.elements.filter(label => label.isPrioritized)
+				this.filteredPrioritizedGenesList = this.getLabelsWithoutPrioritizedGenes(hasPrioritizedGenesList)
 
-			this.allElementsCount = combinedAndSortedList.length
+				const hasPrioritizedGenes = this.elements.filter(label => !label.isPrioritized)
 
-			if (this.prioritizeGeneLabelsByGeneSets) {
-				this.elementsToDisplay = this.getAllLabels(hasPrioritizedGenes)
-				this.elementsToDisplayCount = this.elementsToDisplay.length
-			} else {
+				const combinedAndSortedList = hasPrioritizedGenes.concat(this.filteredPrioritizedGenesList).sort((a, b) => {
+					return a.startAngle < b.startAngle ? -1 : a.startAngle > b.startAngle ? 1 : 0
+				})
+
 				this.elementsToDisplay = this.getAllLabels(combinedAndSortedList)
-				this.elementsToDisplayCount = this.elementsToDisplay.length
+			} else {
+				this.elementsToDisplay = this.getLabelsWithoutPrioritizedGenes(this.elements)
 			}
-		} else if (!this.prioritizeGeneLabelsByGeneSets) {
-			this.elementsToDisplay = this.getLabelsWithoutPrioritizedGenes(this.elements)
-			this.allElementsCount = this.elementsToDisplay.length
-			this.elementsToDisplayCount = this.elementsToDisplay.length
 		}
 	}
 

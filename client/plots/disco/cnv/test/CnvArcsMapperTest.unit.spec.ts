@@ -33,7 +33,7 @@ test('CnvArcsMapper.map() should return an array of CnvArc objects', t => {
 		}
 	]
 
-	const dataHolder = new DataMapper(settings, reference, sampleName, []).map(rawData)
+	const dataHolder = new DataMapper(settings, reference, sampleName, [], false).map(rawData)
 
 	const data = dataHolder.cnvData
 	const cnvArcsMapper = new CnvArcsMapper(

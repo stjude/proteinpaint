@@ -37,8 +37,8 @@ export class DiscoRenderer {
 			controlsDiv,
 			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
 			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets,
-			viewModel.rings.labelsRing.elementsToDisplayCount,
-			viewModel.rings.labelsRing.allElementsCount
+			viewModel.filteredSnvDataLength,
+			viewModel.svnDataLength
 		)
 
 		const svg = svgDiv

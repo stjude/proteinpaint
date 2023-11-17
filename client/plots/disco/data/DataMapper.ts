@@ -83,8 +83,18 @@ export default class DataMapper {
 
 		this.nonExonicFilter = (data: Data) =>
 			settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
-		this.snvRingFilter = (data: Data) =>
-			settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
+
+		this.snvRingFilter = (data: Data) => {
+			if (prioritizeGeneLabelsByGeneSets) {
+				return (
+					prioritizedGenes.includes(data.gene) &&
+					settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
+				)
+			} else {
+				return settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
+			}
+		}
+
 		this.dataObjectMapper = new DataObjectMapper(sample, prioritizedGenes)
 
 		this.prioritizeGeneLabelsByGeneSets = prioritizeGeneLabelsByGeneSets

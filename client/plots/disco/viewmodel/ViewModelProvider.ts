@@ -142,6 +142,13 @@ export default class ViewModelProvider {
 			this.lohArcRing
 		)
 
-		return new ViewModel(this.settings, rings, legend, fusions)
+		return new ViewModel(
+			this.settings,
+			rings,
+			legend,
+			fusions,
+			dataHolder.filteredSnvData.length,
+			dataHolder.snvData.length - dataHolder.nonExonicSnvData.length
+		)
 	}
 }
