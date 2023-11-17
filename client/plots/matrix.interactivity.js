@@ -1976,17 +1976,11 @@ function setZoomPanActions(self) {
 						callback: async () => {
 							const c = self.clickedSeriesCell
 							delete self.clickedSeriesCell
-							const d = self.dimensions
-							const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
-							const xy = self.zoomArea.attr('transform').split('(')[1].split(')')[0].split(',').map(Number)
-							const xMin = xy[0]
-							const xMax = xMin + self.zoomWidth
-							const processed = new Set()
-							const filter = c => c.row && c.x >= xMin && c.x <= xMax
-							const addRow = c => samples.add(c.row)
+							const startCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
+							const endCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
 							const samples = new Set()
-							for (const series of self.serieses) {
-								series.cells.filter(filter).forEach(addRow)
+							for (let i = startCell.index; i <= endCell.index; i++) {
+								samples.add(self.sampleOrder[i].row)
 							}
 							ss.callback({
 								samples: await self.app.vocabApi.convertSampleId([...samples], ss.attributes),
