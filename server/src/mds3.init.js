@@ -1848,7 +1848,7 @@ async function validate_query_singleCell(ds, genome) {
 
 	if (!q.samples) throw 'singleCell.samples{} missing'
 	if (q.samples.gdcapi) {
-		//gdc.validate_query_singleCell_samples(ds, genome)
+		gdc.validate_query_singleCell_samples(ds, genome)
 		// samples.get() added
 	} else {
 		if (!q.samples.isSampleTerm) throw 'singleCell.samples.isSampleTerm missing'

@@ -25,6 +25,7 @@ validate_query_geneCnv2
 	filter2GDCfilter
 validate_query_geneExpression
 	getCasesWithExressionDataFromCohort
+validate_query_singleCell_samples
 querySamples_gdcapi
 	flattenCaseByFields
 		mayApplyGroupsetting
@@ -2052,9 +2053,82 @@ async function convert2caseId(n) {
 	throw 'cannot convert to case_id (uuid)'
 }
 
-/************************************************
-for gdc bam slicing UI
-*/
+export function validate_query_singleCell_samples(ds, genome) {
+	/*
+	q{}
+		filter0, optional
+	*/
+	ds.queries.singleCell.samples.get = async q => {
+		const filters = {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'data_format', value: 'tsv' } },
+				{ op: '=', content: { field: 'data_type', value: 'Single Cell Analysis' } },
+				{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
+			]
+		}
+
+		if (q.filter0) {
+			filters.content.push(q.filter0)
+		}
+
+		const body = {
+			filters,
+			size: 100,
+			fields: [
+				'id',
+				'cases.project.project_id', // for display only
+				'cases.submitter_id', // used when listing all cases & files
+				'cases.samples.sample_type'
+				// may add diagnosis and primary site
+			].join(',')
+		}
+
+		const response = await got.post(path.join(apihost, 'files'), {
+			headers: getheaders(q),
+			body: JSON.stringify(body)
+		})
+
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from ' + api.endpoint
+		}
+		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
+		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+
+		// api return is by file, getter return is by case
+		const case2files = new Map() // k: case submitter id, v: list of scrna tsv files
+
+		for (const h of re.data.hits) {
+			/*
+			{
+			  id: 'bb4126d8-1c68-4309-820e-8b8c2520688c',
+			  cases: [
+				{ submitter_id: 'C3L-00359', project: {project_id}, samples:[{sample_type}]  }
+			  ]
+			}
+			*/
+
+			const c = h.cases?.[0]
+			if (!c) throw 'h.cases[0] missing'
+			if (!case2files.has(c.submitter_id)) case2files.set(c.submitter_id, [])
+
+			case2files.get(c.submitter_id).push({
+				fileId: h.id,
+				project_id: c.project.project_id,
+				samples: c.samples // should be one?
+			})
+		}
+
+		const cases = [] // flatten map to array and return
+		for (const [c, a] of case2files) {
+			cases.push({ name: c, files: a })
+		}
+		return cases
+	}
+}
 
 export function handle_gdc_ssms(genomes) {
 	return async (req, res) => {
