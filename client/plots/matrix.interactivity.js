@@ -1801,10 +1801,7 @@ function setZoomPanActions(self) {
 			}
 		}
 		if (event.target.tagName == 'image' && s.useCanvas) {
-			// d.xMin is added because not all rects are rendered, sampleOrder
-			const width = event.clientX - event.target.getBoundingClientRect().x + d.xMin
-			const i = Math.floor(width / d.dx)
-			return self.sampleOrder[i]
+			return self.getImgCell(event)
 		}
 	}
 
@@ -1928,7 +1925,7 @@ function setZoomPanActions(self) {
 		} else if (!c.endCell || endCell === c.startCell) {
 			self.dom.mainG.on('mouseout', null)
 			self.dom.tip.hide()
-			const cell = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
+			const cell = event.target.tagName == 'rect' ? event.target.__data__ : c.startCell
 			if (cell) {
 				if (self.opts.cellClick) {
 					self.opts.cellClick(
@@ -1976,17 +1973,11 @@ function setZoomPanActions(self) {
 						callback: async () => {
 							const c = self.clickedSeriesCell
 							delete self.clickedSeriesCell
-							const d = self.dimensions
-							const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
-							const xy = self.zoomArea.attr('transform').split('(')[1].split(')')[0].split(',').map(Number)
-							const xMin = xy[0]
-							const xMax = xMin + self.zoomWidth
-							const processed = new Set()
-							const filter = c => c.row && c.x >= xMin && c.x <= xMax
-							const addRow = c => samples.add(c.row)
+							const startCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
+							const endCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
 							const samples = new Set()
-							for (const series of self.serieses) {
-								series.cells.filter(filter).forEach(addRow)
+							for (let i = startCell.totalIndex; i <= endCell.totalIndex; i++) {
+								samples.add(self.sampleOrder[i].row)
 							}
 							ss.callback({
 								samples: await self.app.vocabApi.convertSampleId([...samples], ss.attributes),
