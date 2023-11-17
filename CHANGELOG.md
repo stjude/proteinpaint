@@ -8,6 +8,9 @@ Features:
 - In mds3 track, new option allows to show/hide variant labels
 - Support optional postRender and error callbacks from the embedded wrapper code
 
+Fixes:
+- Bug fix that creating mds3 subtrack with long filter name breaks
+
 
 ## 2.31.0
 
