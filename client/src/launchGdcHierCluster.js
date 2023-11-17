@@ -55,68 +55,78 @@ const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
 
 export async function init(arg, holder, genomes) {
-	const genome = genomes[gdcGenome]
-	if (!genome) throw gdcGenome + ' missing'
+	try {
+		const genome = genomes[gdcGenome]
+		if (!genome) throw gdcGenome + ' missing'
 
-	// these options will allow session recovery by an embedder
-	const settings = arg.settings || {}
-	if (typeof settings != 'object') throw 'arg.settings{} not object'
-	if (!settings.hierCluster) settings.hierCluster = {}
-	if (typeof settings.hierCluster != 'object') throw 'arg.settings.hierCluster{} not object'
-	// set defaults
-	if (!Number.isInteger(settings.hierCluster.maxGenes)) settings.hierCluster.maxGenes = 100
+		// these options will allow session recovery by an embedder
+		const settings = arg.settings || {}
+		if (typeof settings != 'object') throw 'arg.settings{} not object'
+		if (!settings.hierCluster) settings.hierCluster = {}
+		if (typeof settings.hierCluster != 'object') throw 'arg.settings.hierCluster{} not object'
+		// set defaults
+		if (!Number.isInteger(settings.hierCluster.maxGenes)) settings.hierCluster.maxGenes = 100
 
-	if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
+		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
-	const genes = await getGenes(arg, arg.filter0, settings.hierCluster)
+		const genes = await getGenes(arg, arg.filter0, settings.hierCluster)
 
-	const opts = {
-		holder,
-		genome,
-		state: {
-			genome: gdcGenome,
-			dslabel: gdcDslabel,
-			termfilter: { filter0: arg.filter0 },
-			plots: [
-				{
-					chartType: 'hierCluster',
-					termgroups: arg.termgroups,
-					genes,
-					settings
-				}
-			]
-		},
-		app: {
-			features: ['recover']
-		},
-		recover: {
-			undoHtml: 'Undo',
-			redoHtml: 'Redo',
-			resetHtml: 'Restore'
+		const opts = {
+			holder,
+			genome,
+			state: {
+				genome: gdcGenome,
+				dslabel: gdcDslabel,
+				termfilter: { filter0: arg.filter0 },
+				plots: [
+					{
+						chartType: 'hierCluster',
+						termgroups: arg.termgroups,
+						genes,
+						settings
+					}
+				]
+			},
+			app: {
+				features: ['recover']
+			},
+			recover: {
+				undoHtml: 'Undo',
+				redoHtml: 'Redo',
+				resetHtml: 'Restore'
+			},
+			hierCluster: arg.opts?.hierCluster || {}
 		}
-	}
 
-	const plotAppApi = await appInit(opts)
-	const thisApi = plotAppApi.getComponents('plots.0')
+		const plotAppApi = await appInit(opts)
+		const thisApi = plotAppApi.getComponents('plots.0')
 
-	const api = {
-		update: arg => {
-			if ('filter0' in arg) {
-				plotAppApi.dispatch({
-					type: 'filter_replace',
-					filter0: arg.filter0
-				})
-			} else {
-				plotAppApi.dispatch({
-					type: 'plot_edit',
-					id: thisApi.id,
-					config: arg
-				})
+		const api = {
+			update: arg => {
+				if ('filter0' in arg) {
+					plotAppApi.dispatch({
+						type: 'filter_replace',
+						filter0: arg.filter0
+					})
+				} else {
+					plotAppApi.dispatch({
+						type: 'plot_edit',
+						id: thisApi.id,
+						config: arg
+					})
+				}
 			}
 		}
-	}
 
-	return api
+		return api
+	} catch (e) {
+		if (arg.opts?.hierCluster?.callbacks) {
+			for (const eventName in arg.opts.hierCluster.callbacks) {
+				if (eventName.startsWith('error')) arg.opts.hierCluster.callbacks[eventName]()
+			}
+		}
+		throw e
+	}
 }
 
 /*

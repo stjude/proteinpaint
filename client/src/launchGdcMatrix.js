@@ -94,97 +94,107 @@ const gdcDslabel = 'GDC'
 
 export async function init(arg, holder, genomes) {
 	const genome = genomes[gdcGenome]
-	if (!genome) throw gdcGenome + ' missing'
+	try {
+		if (!genome) throw gdcGenome + ' missing'
 
-	// these options will allow session recovery by an embedder
-	const settings = arg.settings || {}
-	if (typeof settings != 'object') throw 'arg.settings{} not object'
-	if (!settings.matrix) settings.matrix = {}
-	if (typeof settings.matrix != 'object') throw 'arg.settings.matrix{} not object'
-	// set defaults
-	if (!settings.matrix.geneFilter) settings.matrix.geneFilter = 'CGC' // filter to only use CGC genes by default
-	if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 50
+		// these options will allow session recovery by an embedder
+		const settings = arg.settings || {}
+		if (typeof settings != 'object') throw 'arg.settings{} not object'
+		if (!settings.matrix) settings.matrix = {}
+		if (typeof settings.matrix != 'object') throw 'arg.settings.matrix{} not object'
+		// set defaults
+		if (!settings.matrix.geneFilter) settings.matrix.geneFilter = 'CGC' // filter to only use CGC genes by default
+		if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 50
 
-	if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
+		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
-	const genes = await getGenes(arg, arg.filter0, settings.matrix)
+		const genes = await getGenes(arg, arg.filter0, settings.matrix)
 
-	const opts = {
-		holder,
-		genome,
-		state: {
-			genome: gdcGenome,
-			dslabel: gdcDslabel,
-			termfilter: { filter0: arg.filter0 },
-			plots: [
-				{
-					chartType: 'matrix',
-					termgroups: [...(arg.termgroups || []), { lst: genes }],
-					divideBy: arg.divideBy || undefined,
-					// moved default settings to gdc.hg38.js termdb.matrix.settings
-					// but can still override in the runpp() argument
-					settings
-				}
-			]
-		},
-		app: {
-			features: ['recover']
-		},
-		recover: {
-			undoHtml: 'Undo',
-			redoHtml: 'Redo',
-			resetHtml: 'Restore'
-		},
-		matrix: Object.assign(
-			{
-				// these will display the inputs together in the Genes menu,
-				// instead of being rendered outside of the matrix holder
-				customInputs: {
-					genes: [
-						{
-							label: `Maximum # Genes`,
-							title: 'Limit the number of displayed genes',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'maxGenes',
-							callback: async value => {
-								const genes = await getGenes(arg, arg.filter0, { maxGenes: value })
-								api.update({
-									termgroups: [{ lst: genes }],
-									settings: {
-										matrix: { maxGenes: value }
-									}
-								})
-							}
-						}
-					]
-				}
+		const opts = {
+			holder,
+			genome,
+			state: {
+				genome: gdcGenome,
+				dslabel: gdcDslabel,
+				termfilter: { filter0: arg.filter0 },
+				plots: [
+					{
+						chartType: 'matrix',
+						termgroups: [...(arg.termgroups || []), { lst: genes }],
+						divideBy: arg.divideBy || undefined,
+						// moved default settings to gdc.hg38.js termdb.matrix.settings
+						// but can still override in the runpp() argument
+						settings
+					}
+				]
 			},
-			arg.opts?.matrix || {}
-		)
-	}
+			app: {
+				features: ['recover'],
+				callbacks: arg.opts?.app?.callbacks || {}
+			},
+			recover: {
+				undoHtml: 'Undo',
+				redoHtml: 'Redo',
+				resetHtml: 'Restore'
+			},
+			matrix: Object.assign(
+				{
+					// these will display the inputs together in the Genes menu,
+					// instead of being rendered outside of the matrix holder
+					customInputs: {
+						genes: [
+							{
+								label: `Maximum # Genes`,
+								title: 'Limit the number of displayed genes',
+								type: 'number',
+								chartType: 'matrix',
+								settingsKey: 'maxGenes',
+								callback: async value => {
+									const genes = await getGenes(arg, arg.filter0, { maxGenes: value })
+									api.update({
+										termgroups: [{ lst: genes }],
+										settings: {
+											matrix: { maxGenes: value }
+										}
+									})
+								}
+							}
+						]
+					}
+				},
+				arg.opts?.matrix || {}
+			)
+		}
 
-	const plotAppApi = await appInit(opts)
-	const matrixApi = plotAppApi.getComponents('plots.0')
+		const plotAppApi = await appInit(opts)
+		const matrixApi = plotAppApi.getComponents('plots.0')
 
-	const api = {
-		update: arg => {
-			if ('filter0' in arg) {
-				plotAppApi.dispatch({
-					type: 'filter_replace',
-					filter0: arg.filter0
-				})
-			} else {
-				plotAppApi.dispatch({
-					type: 'plot_edit',
-					id: matrixApi.id,
-					config: arg
-				})
+		const api = {
+			update: arg => {
+				if ('filter0' in arg) {
+					plotAppApi.dispatch({
+						type: 'filter_replace',
+						filter0: arg.filter0
+					})
+				} else {
+					plotAppApi.dispatch({
+						type: 'plot_edit',
+						id: matrixApi.id,
+						config: arg
+					})
+				}
 			}
 		}
-	}
 
-	return api
+		return api
+	} catch (e) {
+		if (arg.opts?.matrix?.callbacks) {
+			for (const eventName in arg.opts.matrix.callbacks) {
+				if (eventName.startsWith('error')) arg.opts.matrix.callbacks[eventName]()
+			}
+		}
+		throw e
+	}
 }
 
 /*
