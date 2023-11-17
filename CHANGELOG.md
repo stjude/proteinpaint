@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - In mds3 track, new option allows to show/hide variant labels
+- Support optional postRender and error callbacks from the embedded wrapper code
 
 
 ## 2.31.0

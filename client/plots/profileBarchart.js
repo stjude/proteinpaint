@@ -222,7 +222,7 @@ class profileBarchart extends profilePlot {
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const d = row[field]
 		let subjectiveTerm = false
-		if (row.subjective) subjectiveTerm = true
+		if (row.name == 'Total Module' || row.name == 'End-user Impression') subjectiveTerm = true
 		const termColor = d.score.term.color
 		const value = this.getPercentage(d)
 		const isFirst = field == 'sc' || (field == 'poc' && !row.sc)
