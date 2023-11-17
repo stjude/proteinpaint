@@ -9,6 +9,11 @@ import { Menu } from '#dom/menu'
 let inputIndex = 0
 
 export function setInteractivity(self) {
+	let t
+	self.scrollStopHandler = () => {
+		if (t) clearTimeout(t)
+		t = setTimeout(self.mouseout, 500)
+	}
 	self.showCellInfo = function (event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (event.target.__data__?.isLegendItem) {
@@ -126,6 +131,7 @@ export function setInteractivity(self) {
 	}
 
 	self.getImgCell = function (event) {
+		if (!self.imgBox) return null
 		//const [x,y] = pointer(event, event.target)
 		const y = event.clientY - self.imgBox.y - event.target.clientTop
 		const d = event.target.__data__.find(series => series.hoverY0 <= y && y <= series.hoverY1)
@@ -1795,6 +1801,7 @@ function setZoomPanActions(self) {
 			}
 		}
 		if (event.target.tagName == 'image' && s.useCanvas) {
+			// d.xMin is added because not all rects are rendered, sampleOrder
 			const width = event.clientX - event.target.getBoundingClientRect().x + d.xMin
 			const i = Math.floor(width / d.dx)
 			return self.sampleOrder[i]
@@ -1921,27 +1928,29 @@ function setZoomPanActions(self) {
 		} else if (!c.endCell || endCell === c.startCell) {
 			self.dom.mainG.on('mouseout', null)
 			self.dom.tip.hide()
-			const cell = event.target.tagName == 'rect' ? event.target.__data__ : c.startCell
-			if (self.opts.cellClick) {
-				self.opts.cellClick(
-					structuredClone({
-						sampleData: cell.row,
-						term: cell.term,
-						value: cell.value,
-						s: cell.s,
-						t: cell.t,
-						siblingCells: cell.siblingCells
-							.filter(c => c !== cell)
-							.map(c => ({
-								term: c.term,
-								value: c.value,
-								s: c.s,
-								t: c.t
-							}))
-					})
-				)
-			} else {
-				self.mouseclick(event, cell)
+			const cell = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
+			if (cell) {
+				if (self.opts.cellClick) {
+					self.opts.cellClick(
+						structuredClone({
+							sampleData: cell.row,
+							term: cell.term,
+							value: cell.value,
+							s: cell.s,
+							t: cell.t,
+							siblingCells: cell.siblingCells
+								.filter(c => c !== cell)
+								.map(c => ({
+									term: c.term,
+									value: c.value,
+									s: c.s,
+									t: c.t
+								}))
+						})
+					)
+				} else {
+					self.mouseclick(event, cell)
+				}
 			}
 			delete self.clickedSeriesCell
 			delete self.zoomArea

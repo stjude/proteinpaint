@@ -135,4 +135,7 @@ export function setMatrixDom(opts) {
 		this.lastActiveLabel = this.activeLabel
 		delete this.activeLabel
 	}
+
+	window.onscroll = this.scrollStopHandler
+	this.dom.holder.node().closest('.sjpp-output-sandbox-content').onscroll = this.scrollStopHandler
 }
