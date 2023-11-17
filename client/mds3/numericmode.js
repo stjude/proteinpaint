@@ -199,29 +199,34 @@ function numeric_make(nm, tk, block) {
 			delete m.labatbottom
 		}
 	}
-	if (showstem) {
-		// show label for each disc, all rotated up
-		for (const d of data) {
-			if (d.mlst.length == 1) {
-				const m = d.mlst[0]
-				m.labattop = true
-			} else {
-				// cluster
-				if ((d.width - d.fixedgew) / (d.mlst.length - 1) < clustercrowdlimit) {
-					// too crowded, no label
+
+	if (!tk.skewer.hideDotLabels) {
+		// can show m label
+		if (showstem) {
+			// show label for each disc, all rotated up
+			for (const d of data) {
+				if (d.mlst.length == 1) {
+					const m = d.mlst[0]
+					m.labattop = true
 				} else {
-					// show label for all m
-					for (const m of d.mlst) {
-						m.labattop = true
+					// cluster
+					if ((d.width - d.fixedgew) / (d.mlst.length - 1) < clustercrowdlimit) {
+						// too crowded, no label
+					} else {
+						// show label for all m
+						for (const m of d.mlst) {
+							m.labattop = true
+						}
 					}
 				}
 			}
+		} else {
+			// no stem
+			// sort items by v
+			verticallabplace(data)
 		}
-	} else {
-		// no stem
-		// sort items by v
-		verticallabplace(data)
 	}
+
 	nm.toplabelheight = 0
 	nm.bottomlabelheight = 0
 

@@ -10,6 +10,7 @@ import { dt2label, mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
+(variant just refers to those dots!)
 
 for now data{} is no longer used! as mlst used for display is cached on client
 if type=skewer, cached at tk.skewer.data
@@ -40,11 +41,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 	}
 
 	if (totalcount == 0) {
-		tk.leftlabels.doms.variants
-			.text('No variants')
-			.attr('class', '')
-			.style('opacity', 0.5)
-			.on('click', null)
+		tk.leftlabels.doms.variants.text('No variants').attr('class', '').style('opacity', 0.5).on('click', null)
 		return
 	}
 
@@ -141,6 +138,16 @@ function menu_variants(tk, block) {
 				})
 		}
 	}
+
+	tk.menutip.d
+		.append('div')
+		.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
+		.attr('class', 'sja_menuoption')
+		.on('click', () => {
+			tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
+			tk.load()
+			tk.menutip.hide()
+		})
 
 	if (!tk.custom_variants) {
 		// FIXME enable download for custom data
