@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.32.0
 
 Features:
 - In mds3 track, new option allows to show/hide variant labels
