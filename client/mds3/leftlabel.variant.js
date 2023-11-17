@@ -284,7 +284,7 @@ async function downloadVariants(tk, block) {
 
 	// FIXME for custom_variants, somehow arg requries .mlst=[]
 
-	const samples = await tk.mds.variant2samples.get(arg)
+	const samples = (await tk.mds.variant2samples.get(arg)).samples
 	/*
 	array of sample objects
 	each sample will have 1 or more variants
