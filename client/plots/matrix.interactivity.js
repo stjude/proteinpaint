@@ -1801,10 +1801,7 @@ function setZoomPanActions(self) {
 			}
 		}
 		if (event.target.tagName == 'image' && s.useCanvas) {
-			// d.xMin is added because not all rects are rendered, sampleOrder
-			const width = event.clientX - event.target.getBoundingClientRect().x + d.xMin
-			const i = Math.floor(width / d.dx)
-			return self.sampleOrder[i]
+			return self.getImgCell(event)
 		}
 	}
 
@@ -1928,7 +1925,7 @@ function setZoomPanActions(self) {
 		} else if (!c.endCell || endCell === c.startCell) {
 			self.dom.mainG.on('mouseout', null)
 			self.dom.tip.hide()
-			const cell = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
+			const cell = event.target.tagName == 'rect' ? event.target.__data__ : c.startCell
 			if (cell) {
 				if (self.opts.cellClick) {
 					self.opts.cellClick(
@@ -1978,7 +1975,6 @@ function setZoomPanActions(self) {
 							delete self.clickedSeriesCell
 							const startCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 							const endCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
-							console.log('what is startCell, endCell', startCell, endCell)
 							const samples = new Set()
 							for (let i = startCell.totalIndex; i <= endCell.totalIndex; i++) {
 								samples.add(self.sampleOrder[i].row)
