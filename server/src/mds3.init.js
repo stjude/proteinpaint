@@ -1858,7 +1858,10 @@ async function validate_query_singleCell(ds, genome) {
 		const s = ds.cohort.termdb.q.getAllFloatValues(q.samples.isSampleTerm)
 		for (const id of s.keys()) sampleIds.push(id)
 		if (sampleIds.length == 0) throw 'no sample with sc data'
-		const lst = sampleIds.map(i => ds.cohort.termdb.q.id2sampleName(i))
+		const lst = sampleIds.map(i => {
+			return { name: ds.cohort.termdb.q.id2sampleName(i) }
+		})
+		// getter returns array of {name:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
 		q.samples.get = () => lst
 	}
 
