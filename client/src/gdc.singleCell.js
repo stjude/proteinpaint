@@ -65,28 +65,16 @@ async function getFilesAndShowTable(obj) {
 			return
 		}
 	}
+	console.log(result)
 	wait.remove()
 
 	// render
 	const rows = []
-	for (const f of result.samples) {
-		const row = [
-			{ value: f.case_submitter_id },
-			{ value: f.project_id },
-			{
-				html: f.sample_types
-					.map(i => {
-						return (
-							'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
-							i +
-							'</span>'
-						)
-					})
-					.join(' ')
-			},
-			{ value: fileSize(f.file_size), url: 'https://portal.gdc.cancer.gov/files/' + f.id }
-		]
-		rows.push(row)
+	for (const sample of result.samples) {
+		for (const f of sample.files) {
+			const row = [{ value: sample.name }]
+			rows.push(row)
+		}
 	}
 	renderTable({
 		rows,

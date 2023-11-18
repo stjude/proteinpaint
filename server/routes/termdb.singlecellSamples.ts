@@ -35,8 +35,8 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
-			const result = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
-			res.send(result)
+			const samples = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
+			res.send({ samples })
 		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
 			res.send({ error: e.message || e })
