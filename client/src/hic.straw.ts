@@ -614,7 +614,7 @@ async function getdata_leadfollow(hic: any, lead: any, follow: any) {
 			method: 'POST',
 			body: JSON.stringify(arg)
 		})
-		if (data.error) throw lead + ' - ' + follow + ': ' + data.error
+		if (data.error) throw lead + ' - ' + follow + ': ' + data.error.error //Fix for error message displaying [Object object] instead of error message
 		if (!data.items || data.items.length == 0) {
 			return
 		}
