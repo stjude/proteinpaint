@@ -1,5 +1,10 @@
 import { Term } from './term'
 
+/**
+ *
+ * @param start ....
+ * @params stop
+ */
 export type StartUnboundedBin = {
 	startunbounded: true
 	stop: number
@@ -81,9 +86,12 @@ export type DiscreteNumericQ = BinnedNumericQ & {
 	mode: 'discrete'
 }
 
-// TODO: how to specify exactly 2 bins for a binary q???
-export type BinaryNumericQ = BinnedNumericQ & {
+// TODO: test with live code that defines an actual binary q object
+export type BinaryNumericQ = {
 	mode: 'binary'
+	type: 'custom-bin'
+	// tuple type with 2 members
+	lst: [StartUnboundedBin | FullyBoundedBin, StopUnboundedBin | FullyBoundedBin]
 }
 
 export type ContinuousNumericQ = {
