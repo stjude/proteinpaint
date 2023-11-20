@@ -36,7 +36,9 @@ export class DiscoRenderer {
 		this.prioritizeGenesCheckboxRenderer.render(
 			controlsDiv,
 			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
-			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets
+			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets,
+			viewModel.filteredSnvDataLength,
+			viewModel.svnDataLength
 		)
 
 		const svg = svgDiv

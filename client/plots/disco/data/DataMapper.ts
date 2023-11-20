@@ -75,8 +75,18 @@ export default class DataMapper {
 
 		this.nonExonicFilter = (data: Data) =>
 			settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
-		this.snvRingFilter = (data: Data) =>
-			settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
+
+		this.snvRingFilter = (data: Data) => {
+			if (prioritizedGenes.length > 0 && this.settings.label.prioritizeGeneLabelsByGeneSets) {
+				return (
+					prioritizedGenes.includes(data.gene) &&
+					settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
+				)
+			} else {
+				return settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
+			}
+		}
+
 		this.dataObjectMapper = new DataObjectMapper(sample, prioritizedGenes)
 	}
 
@@ -89,7 +99,7 @@ export default class DataMapper {
 			const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
 
 			if (dObject.dt == MutationTypes.SNV) {
-				if (index != -1) {
+				if (index != -1 && this.snvData.length < this.settings.snv.maxMutationCount) {
 					this.addData(dObject, dataArray)
 				}
 			} else if (dObject.dt == MutationTypes.FUSION || dObject.dt == MutationTypes.SV) {

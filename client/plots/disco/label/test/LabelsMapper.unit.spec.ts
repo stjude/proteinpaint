@@ -3,6 +3,8 @@ import LabelsMapper from '#plots/disco/label/LabelsMapper.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
 import discoDefaults from '#plots/disco/defaults.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
+import _ from 'lodash'
+import Settings from '#plotsts/disco/Settings'
 
 // Create test data
 const overriders = { rings: { labelLinesInnerRadius: 10, labelsToLinesDistance: 5, labelsToLinesGap: 2 } }
@@ -189,6 +191,52 @@ test('When there is a cnv event which position intercepts gene position should r
 		t.equal(labels[1].cnvTooltip.length, 1, 'Second label should have one cnv mutation')
 	} else {
 		t.error('No cnv mutation tooltip')
+	}
+	t.end()
+})
+
+test('When Two mutations on two genes LabelsMapper.map() and only one gene is prioritized should return 1 label', t => {
+	const settingsOverride: Settings = _.cloneDeep(settings)
+	const prioritizedGenes = ['Gene1']
+	settingsOverride.label.prioritizeGeneLabelsByGeneSets = true
+	const rawData = [
+		{
+			dt: 1,
+			mname: 'Mutation1',
+			class: 'M',
+			gene: 'Gene1',
+			chr: 'chr1',
+			pos: 50,
+			ref: 'G',
+			alt: 'A',
+			position: 50
+		},
+		{
+			dt: 1,
+			mname: 'Mutation2',
+			class: 'M',
+			gene: 'Gene2',
+			chr: 'chr2',
+			pos: 150,
+			ref: 'G',
+			alt: 'T',
+			position: 150
+		}
+	]
+
+	const dataHolder = new DataMapper(settingsOverride, reference, sampleName, prioritizedGenes).map(rawData)
+
+	const labelsMapper = new LabelsMapper(settings, sampleName, reference)
+
+	const labels = labelsMapper.map(dataHolder.labelData)
+
+	t.equal(labels.length, 1, 'Should create one labels')
+	t.equal(labels[0].text, 'Gene1', 'Label1 should have correct gene')
+	if (labels[0].mutationsTooltip) {
+		t.equal(labels[0].mutationsTooltip.length, 1, 'Label1 should have one mutation')
+		t.equal(labels[0].mutationsTooltip[0].mname, 'Mutation1', 'Mutation 1 of Label 1 should have correct mname')
+	} else {
+		t.error('No mutations tooltip')
 	}
 	t.end()
 })
