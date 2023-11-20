@@ -272,18 +272,18 @@ async function getKnots(self: NumericTermSettingInstance, knot_count: any) {
 		percentile_lst.push(i * second_knot_perc)
 	}
 	percentile_lst.push(95)
-	const values: any = await getPercentile2Value(percentile_lst)
+	const values: any = await getPercentile2Value(self, percentile_lst)
 	for (const val of values) {
 		knots.push({ value: val.toFixed(t.type == 'integer' ? 0 : 2) })
 	}
+}
 
-	async function getPercentile2Value(percentile_lst: any) {
-		const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
-		if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
-			throw 'cannot get median value: ' + (data.error || 'no data')
-		const perc_values = [...new Set(data.values)]
-		return perc_values
-	}
+async function getPercentile2Value(self, percentile_lst: any) {
+	const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
+	if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
+		throw 'cannot get median value: ' + (data.error || 'no data')
+	const perc_values = [...new Set(data.values)]
+	return perc_values
 }
 
 function renderButtons(self: NumericTermSettingInstance) {

@@ -149,37 +149,6 @@ type ValueConversion = {
 	toUnit: string
 }
 
-export type Term = {
-	id?: string
-	type?:
-		| 'categorical'
-		| 'integer'
-		| 'float'
-		| 'condition'
-		| 'survival'
-		| 'samplelst'
-		| 'geneVariant'
-		| 'snplocus'
-		| 'snplst'
-	child_types?: string[]
-	groupsetting?: GroupSetting
-	/** Information to be displayed in the client-side UI. */
-	hashtmldetail?: boolean
-	included_types?: string[]
-	isleaf?: boolean
-	/** 2, 10, or e only */
-	logScale?: string | number
-	max?: number
-	min?: number
-	name?: string
-	skip0forPercentile?: boolean
-	subconditions?: Subconditions
-	tvs?: Tvs
-	values?: TermValues
-	unit?: string
-	valueConversion?: ValueConversion
-}
-
 export type DetermineQ<T extends Term['type']> = T extends 'numeric' | 'integer' | 'float'
 	? NumericQ
 	: T extends 'categorical'
