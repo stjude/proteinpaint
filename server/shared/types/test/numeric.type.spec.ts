@@ -142,22 +142,32 @@ type UselessBinType = {
 }
 
 // Example of better type declaration
+// TODO: Use these better types, which will require code changes
 type BetterStartUnboundedBin = {
 	stop: number
 	// by not using a flag, completely avoids unintentionally having
 	// `startinclusive: true && stopinclusive: true` at the same time
-	inclusive?: 'stop'
+	inclusive: 'stop'
 }
 
 type BetterStopUnboundedBin = {
 	start: number
-	inclusive?: 'start'
+	inclusive: 'start'
 }
 
 type BetterFullyBoundedBin = {
 	start: number
 	stop: number
-	inclusive: 'start' | 'stop' // can add 'both' if allowed and only for a standalone bin, for neighboring bins `inclusive: 'both'` will be a conflict
+	// for numeric bins that are NOT standalone, using `inclusive: 'both'` will lead to conflict,
+	// since adjoining bins can both contain the same boundary value
+	inclusive: 'start' | 'stop'
 }
 
-type BetterNumericBin = BetterStartUnboundedBin | BetterStopUnboundedBin | BetterFullyBoundedBin
+type StandaloneBin = {
+	start: number
+	stop: number
+	// for standalone bins, the option to include both start and stop values will not lead to conflict
+	inclusive: 'start' | 'stop' | 'both'
+}
+
+type BetterNumericBin = BetterStartUnboundedBin | BetterStopUnboundedBin | BetterFullyBoundedBin | StandaloneBin
