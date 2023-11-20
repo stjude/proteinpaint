@@ -72,6 +72,10 @@ path="src/cluster.rs"
 name="gdcmaf"
 path="src/gdcmaf.rs"
 
+[[bin]]
+name="gene_variance"
+path="src/gene_variance.rs"
+
 #[[bin]]
 #name="wilcoxon"
 #path="src/wilcoxon.rs"
