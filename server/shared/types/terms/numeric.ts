@@ -1,130 +1,104 @@
-import { TermWrapper, BaseQ, Term } from '../termdb'
-import { TermSettingInstance, InstanceDom } from '../termsetting'
+import { Term } from './term'
 
-/*
---------EXPORTED--------
-NumericQ
-BrushEntry
-DensityData
-NumberObj
-NumericTW
-NumericTermSettingInstance
+export type StartUnboundedBin = {
+	startunbounded: true
+	stop: number
+	stopinclusive?: boolean
+	stopunbounded?: false
+}
 
-*/
+export type StopUnboundedBin = {
+	start: number
+	stopunbounded: true
+	startinclusive?: boolean
+	startunbounded?: false
+}
 
-/**
- * .q{} for numeric terms
- FIXME regular-sized bin and knots (spline) are mixed in this definition and they shouldn't
- 	e.g. first_bin is only required for regular-sized, and knots[] is only required for the other
- */
-export type NumericQ = BaseQ & {
-	// termType: 'float' | 'integer' -- converts to 'numeric'
-	preferredBins?: 'median' | 'less' | 'default'
+// TODO??? should separate a fully bounded bin by startinclusive, stopinclusive
+// since neighboring bins must not contain the same boundary value
+export type FullyBoundedBin = {
+	startunbounded?: false
+	startinclusive?: boolean
+	start: number
+	stop: number
+	stopinclusive?: boolean
+	stopunbounded?: false
+}
 
+export type RegularNumericBinConfig = {
+	type: 'regular-bin'
 	//regular-sized bins
 	bin_size: number
-	startinclusive?: boolean
-	stopinclusive?: boolean
-
 	// first_bin.stop is always required
-	first_bin: {
-		startunbounded?: boolean
-		stop: number
-		//stop_percentile?: number // percentile value is not used right now
-	}
+	first_bin: StartUnboundedBin | FullyBoundedBin
 
-	// if last_bin?.start is set, then fixed last bin is used; otherwise it's not fixed and automatic
-	last_bin?: {
-		start?: number
-		stopunbounded?: boolean
-	}
+	// if last_bin?.start is set, then a fixed last bin is used; otherwise it's not fixed and computed from data
+	last_bin?: StopUnboundedBin | FullyBoundedBin
+}
 
+export type CustomNumericBinConfig = {
+	type: 'custom-bin'
+	lst: (StartUnboundedBin | FullyBoundedBin | StopUnboundedBin)[]
+}
+
+/*export type NumericQ = BaseQ & {
+	// termType: 'float' | 'integer' -- converts to 'numeric'
+	preferredBins?: 'median' | 'less' | 'default'
 	modeBinaryCutoffType: 'normal' | 'percentile'
 	modeBinaryCutoffPercentile?: number
-
 	knots?: any //[]?
-
 	scale?: number //0.1 | 0.01 | 0.001
-
 	rounding: string
-}
+}*/
 
-type NumObjRangeEntry = any //{}
-
-export type BrushEntry = {
-	//No documentation!
-	orig: string
-	range: {
-		start: number
-		stop: number
-	}
-	init: () => void
-}
-
-export type DensityData = {
-	maxvalue: number
-	minvalue: number
-}
-
-type PlotSize = {
-	width: number
-	height: number
-	xpad: number
-	ypad: number
-}
-
-export type NumberObj = {
-	binsize_g?: any //dom element??
-	brushes: BrushEntry[]
-	custom_bins_q: any
-	density_data: DensityData
-	no_density_data: true
-	plot_size: PlotSize
-	ranges?: NumObjRangeEntry[]
-	svg: any
-	xscale: any
-}
-
-type NumericalBins = {
+type PresetNumericBins = {
+	default: RegularNumericBinConfig | CustomNumericBinConfig
+	less: RegularNumericBinConfig | CustomNumericBinConfig
 	label_offset?: number
 	label_offset_ignored?: boolean
 	rounding?: string
-	default: NumericQ
-	less: NumericQ
 }
 
-type NumericTerm = Term & {
+export type NumericTerm = Term & {
 	id: string
-	bins: NumericalBins
-	densityNotAvailable?: boolean //Not used?
+	type: 'integer' | 'float'
+	bins: PresetNumericBins
+	/*densityNotAvailable?: boolean //Not used?
+	logScale?: string | number
+	max?: number
+	min?: number
+	name?: string
+	skip0forPercentile?: boolean
+	tvs?: Tvs
+	values?: TermValues
+	unit?: string
+	valueConversion?: ValueConversion*/
 }
 
-export type NumericTW = TermWrapper & {
-	q: NumericQ
+export type BinnedNumericQ = RegularNumericBinConfig | CustomNumericBinConfig
+
+export type DiscreteNumericQ = BinnedNumericQ & {
+	mode: 'discrete'
+}
+
+// TODO: how to specify exactly 2 bins for a binary q???
+export type BinaryNumericQ = BinnedNumericQ & {
+	mode: 'binary'
+}
+
+export type ContinuousNumericQ = {
+	mode: 'continuous'
+	//scale?: string
+}
+
+export type SplineNumericQ = {
+	mode: 'spline'
+	knots: {
+		value: number
+	}[]
+}
+
+export type NumericTW = {
 	term: NumericTerm
-}
-
-type NumericDom = InstanceDom & {
-	bins_div?: any
-	bin_size_input: any
-	bins_table?: any
-	boundaryInclusionDiv: any
-	boundaryInput?: any
-	custom_knots_div: any
-	customKnotsInput: any
-	first_stop_input: any
-	knots_div: any
-	knot_select_div: any
-	last_radio_auto: any
-	last_start_input: any
-}
-
-export type NumericTermSettingInstance = TermSettingInstance & {
-	dom: NumericDom
-	num_obj: Partial<NumberObj>
-	numqByTermIdModeType: any
-	q?: Partial<NumericQ>
-	term: NumericTerm
-	//Methods
-	renderBinLines: (self: any, q: NumericQ) => void
+	q: DiscreteNumericQ | BinaryNumericQ | ContinuousNumericQ | SplineNumericQ
 }

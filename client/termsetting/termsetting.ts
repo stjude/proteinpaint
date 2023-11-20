@@ -19,6 +19,7 @@ import {
 	Filter,
 	SampleCountsEntry
 } from '#shared/types/index'
+import { Selection } from '@types/d3'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -35,6 +36,79 @@ showTree
 opts{}
 
 */
+
+export type Dom = {
+	holder: Selection
+	tip: any //TODO Menu type??
+	tip2: any //same as above
+	nopilldiv?: Selection
+	pilldiv?: Selection
+	btnDiv?: Selection
+}
+
+export type NoTermPromptOptsEntry = {
+	isDictionary?: boolean
+	termtype?: string
+	text?: string
+	html?: string
+	q?: Q
+}
+
+export type TermSettingOpts = BaseTermSettingOpts & {
+	//Required
+	holder: any
+	vocabApi: VocabApi
+	//Optional
+	$id?: string
+	buttons?: string[] //replace, delete, info
+	defaultQ4fillTW?: DefaultQ4fillTW
+	menuOptions: string //all, edit, replace, remove
+	menuLayout?: string //horizonal, all
+	numericEditMenuVersion?: string[]
+	numericContinuousEditOptions?: NumericContEditOptsEntry[]
+	placeholder?: string
+	placeholderIcon?: string //default '+'
+	renderAs: string //none
+	tip?: any //TODO: Menu type?
+	use_bins_less?: boolean
+	usecase?: UseCase
+	debug?: boolean | number //true or 1
+	//'snplocus' types
+	genomeObj?: any
+
+	//vocab??
+
+	// required callback function. argument is the updated termwrapper object
+	callback: (f: TermWrapper | null) => void
+
+	// ?
+	customFillTw?: (f: TermWrapper) => void
+
+	// to pass in purpose and context-specific arguments that will be merged to client request parameters
+	getBodyParams?: () => any
+}
+
+/*** types supporting TermSettingInstance type ***/
+
+export type InstanceDom = {
+	//Separate from the Dom outlined in termsetting.ts?????
+	//Required
+	holder: any
+	tip: any //TODO Menu type??
+	tip2: any //same as above
+	nopilldiv?: any
+	pilldiv?: any
+	btnDiv?: any
+	//Optional
+	customBinBoundaryInput?: any
+	customBinBoundaryPercentileCheckbox?: any
+	customBinLabelInput?: any
+	customBinRanges?: any
+	cutoff_div?: any
+	num_holder?: any
+	pill_termname?: any
+	rangeAndLabelDiv?: any
+}
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable

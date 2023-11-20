@@ -1,4 +1,4 @@
-import { NumericQ, NumericTermSettingInstance, NumericTW, VocabApi } from '#shared/types/index'
+import { NumericTerm, NumericQ, NumericTW, VocabApi } from '#shared/types/index'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
@@ -14,6 +14,67 @@ importSubtype()
     - subtype: str - should match the end of one numeric subhandler file (e.g. toggle, discrete, etc.)
     resuable try/catch block for import statement
 */
+
+type NumObjRangeEntry = any //{}
+
+export type BrushEntry = {
+	//No documentation!
+	orig: string
+	range: {
+		start: number
+		stop: number
+	}
+	init: () => void
+}
+
+export type DensityData = {
+	maxvalue: number
+	minvalue: number
+}
+
+type PlotSize = {
+	width: number
+	height: number
+	xpad: number
+	ypad: number
+}
+
+export type NumberObj = {
+	binsize_g?: any //dom element??
+	brushes: BrushEntry[]
+	custom_bins_q: any
+	density_data: DensityData
+	no_density_data: true
+	plot_size: PlotSize
+	ranges?: NumObjRangeEntry[]
+	svg: any
+	xscale: any
+}
+
+type NumericDom = InstanceDom & {
+	bins_div?: any
+	bin_size_input: any
+	bins_table?: any
+	boundaryInclusionDiv: any
+	boundaryInput?: any
+	custom_knots_div: any
+	customKnotsInput: any
+	first_stop_input: any
+	knots_div: any
+	knot_select_div: any
+	last_radio_auto: any
+	last_start_input: any
+}
+
+export type NumericTermSettingInstance = TermSettingInstance & {
+	dom: NumericDom
+	num_obj: Partial<NumberObj>
+	numqByTermIdModeType: any
+	q?: Partial<NumericQ>
+	term: NumericTerm
+	//Methods
+	renderBinLines: (self: any, q: NumericQ) => void
+}
 
 export async function getHandler(self: NumericTermSettingInstance) {
 	const numEditVers = self.opts.numericEditMenuVersion as string[]

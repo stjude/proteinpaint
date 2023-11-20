@@ -25,6 +25,7 @@
     "pretest:integration": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
     "test:integration": "echo 'TODO: server integration tests'",
     "prepack": "tsc --esModuleInterop genome/*.ts dataset/*.ts && webpack --env NODE_ENV=production",
+    "test:tsc": "tsc --esModuleInterop --noEmit --allowImportingTsExtensions ./shared/types/test/*.type.spec.ts",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js",
     "doc": "../augen/build.sh routes shared/types/routes shared/checkers ../public/docs/server"

@@ -3,6 +3,13 @@ import { Term, Q, TermWrapper, DetermineQ } from './termdb'
 import { Filter } from './filter'
 
 /*
+
+!!! 
+	For shared/types: 
+	- Declare only the types that are used in the request and response payloads, or in *both* client and server-side code
+	- Do not track client or server-specific type declarations here, those belong in the corresponding workspace code 
+!!!
+
 --------EXPORTED--------
 Dom
 Api
