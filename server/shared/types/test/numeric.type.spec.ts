@@ -3,10 +3,14 @@
 	
 	For training only 
 	- these tests are not meant to be written for all declared types
+	
 	- meant for simple "sanity check", that a declaration makes sense and catches errors
-	- the // @ts-expect-error comment tells tsc to expect type errors on the next line,
-		where tsc should not emit a message, but if there are no detected type errors
-		then emit a message ("Unused '@ts-expect-error' directive")
+	
+	- quick tests on lines commented with @ts-expect-error 
+		- remove a // @ts-expect-error comment to see error message as emitted by the tsc compiler
+		- fix the variable declaration value to match the expected type, tsc should emit "Unused '@ts-expect-error' directive"
+	
+	- !!! see the UselessBinType below for an example on how NOT to declare types !!!
 */
 import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin } from '../terms/numeric.ts'
 
@@ -84,7 +88,9 @@ function correctlyTypedProcessBin(bin: NumericBin) {
 }
 
 // not declared as part of the NumericBin type
-type NonNumericBinType = { fake: true }
+type NonNumericBin = { fake: true }
+// even though has an extra property compared to FullyBoundedBin,
+// the tsc compiler would si
 type LikeFullyBoundedBin = {
 	start: number
 	stop: number
@@ -101,7 +107,7 @@ function incorrectProcessBin(bin: FullyBoundedBin) {
 		handlers.startUnbounded(bin as FullyBoundedBin)
 		// @ts-expect-error
 		handlers.stopUnbounded(bin as FullyBoundedBin)
-		// @ts-expect-error, since this function's argument type (NumericBin) does not include NonNumericBinType
+		// @ts-expect-error, since this function's argument type (NumericBin) does not include NonNumericBin
 		handlers.fullyBounded(bin as NonNumericBinType)
 		// !!! SHOULD WORK !!!
 		handlers.fullyBounded(bin as LikeFullyBoundedBin)
@@ -109,3 +115,49 @@ function incorrectProcessBin(bin: FullyBoundedBin) {
 		handlers.fullyBounded(bin as FullyBoundedBin)
 	}
 }
+
+// Example of a bad type declaration, where everything is optional.
+// Avoid declaring types with lots of optional properties, unless that's really expected.
+// In the PP codebase, a union of types is more likely to be the correct way to declare
+// a type when there are lots of optional properties that may conflict with each other.
+type UselessBinType = {
+	startunbounded?: boolean
+	startinclusive?: boolean
+	start?: number
+	stop?: number
+	stopinclusive?: boolean
+	stopunbounded?: boolean
+}
+
+{
+	// the UselesBinType matches objects with conflicting property values, which does not make sense
+	const A: UselessBinType = {
+		startunbounded: true,
+		startinclusive: true,
+		start: 0,
+		stop: 1,
+		stopinclusive: true,
+		stopunbounded: true
+	}
+}
+
+// Example of better type declaration
+type BetterStartUnboundedBin = {
+	stop: number
+	// by not using a flag, completely avoids unintentionally having
+	// `startinclusive: true && stopinclusive: true` at the same time
+	inclusive?: 'stop'
+}
+
+type BetterStopUnboundedBin = {
+	start: number
+	inclusive?: 'start'
+}
+
+type BetterFullyBoundedBin = {
+	start: number
+	stop: number
+	inclusive: 'start' | 'stop' // can add 'both' if allowed and only for a standalone bin, for neighboring bins `inclusive: 'both'` will be a conflict
+}
+
+type BetterNumericBin = BetterStartUnboundedBin | BetterStopUnboundedBin | BetterFullyBoundedBin
