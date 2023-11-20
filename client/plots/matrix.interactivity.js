@@ -131,7 +131,7 @@ export function setInteractivity(self) {
 	}
 
 	self.getImgCell = function (event) {
-		if (!self.imgBox) return null
+		if (!self.imgBox) self.imgBox = event.target.getBoundingClientRect()
 		//const [x,y] = pointer(event, event.target)
 		const y = event.clientY - self.imgBox.y - event.target.clientTop
 		const d = event.target.__data__.find(series => series.hoverY0 <= y && y <= series.hoverY1)
