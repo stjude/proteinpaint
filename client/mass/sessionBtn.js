@@ -63,14 +63,17 @@ class MassSessionBtn {
 
 	async open() {
 		const radioName = `sjpp-session-open-radio-` + Math.random().toString().slice(-6)
-		this.dom.tip.d.append('div').style('padding', '3px 9px').html(`
+		// always open in the current tab for now, to avoid the tricky part of the code
+		// that involves parent-child window messaging
+		// TODO: re-enable when the new tab option works reliably
+		this.dom.tip.d.append('div').style('display', 'none').style('padding', '3px 9px').html(`
 			<b>Open in</b>
 			<label>
-				<input type='radio' name='${radioName}' value='new' checked=checked style='margin-right: 0; vertical-align: bottom'/>
+				<input type='radio' name='${radioName}' value='new' style='margin-right: 0; vertical-align: bottom'/>
 				<span>a new tab</span>
 			</label>
 			<label style='margin-left: 5px'>
-				<input type='radio' name='${radioName}' value='current' style='margin-right: 0; vertical-align: bottom'/>
+				<input type='radio' name='${radioName}' value='current' checked=checked style='margin-right: 0; vertical-align: bottom'/>
 				<span>current tab</span>
 			</label>
 		`)
@@ -299,14 +302,16 @@ class MassSessionBtn {
 		// assume that a jwt-type credential will include the user email in the jwt payload,
 		// which could be trusted for saving sessions under cachedir/termdbSessions/[embedderHostName]/[email]
 		if (this.requiredAuth) {
+			const requiresSignIn = this.app.vocabApi.hasVerifiedToken() ? '' : 'Requires sign-in. '
 			submitDiv
 				.append('button')
 				.style('min-width', '80px')
 				.html('Server')
 				.attr(
 					'title',
-					`Save the session into a remote server. The session can be easily shared across your different devices and recovered using the 'Open from server' option.`
+					`${requiresSignIn}Save the session into a remote server. The session can be easily shared across your different devices and recovered using the 'Open from server' option.`
 				)
+				.property('disabled', !this.app.vocabApi.hasVerifiedToken())
 				.on('click', async () => {
 					if (!this.app.vocabApi.hasVerifiedToken()) {
 						alert('Requires sign-in')
