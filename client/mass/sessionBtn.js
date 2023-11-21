@@ -34,14 +34,14 @@ class MassSessionBtn {
 		this.dom.tip.clear().d.style('padding', 0)
 		const gt = `<span style='margin-left: 24px; float: right'>&gt;</span>`
 		const options = [
-			{ label: `Open ${gt}`, callback: this.open },
-			{ label: `Save ${gt}`, callback: this.save },
-			{ label: `Share ${gt}`, callback: this.getSessionUrl }
+			{ label: `Open`, title: 'Recover a saved session', callback: this.open },
+			{ label: `Save`, title: 'Save the current view', callback: this.save },
+			{ label: `Share`, title: 'Create a URL link to share this view', callback: this.getSessionUrl }
 		]
 
 		if (!this.serverCachedSessions) await this.setServerCachedSessions()
 		if (Object.keys(this.savedSessions).length || Object.keys(this.serverCachedSessions).length) {
-			options.push({ label: `Delete ${gt}`, callback: this.delete })
+			options.push({ label: `Delete`, title: 'Delete a saved session', callback: this.delete })
 		}
 
 		this.dom.tip
@@ -51,6 +51,7 @@ class MassSessionBtn {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('title', d => d.title)
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				this.dom.tip.clear().d.style('padding', '10px')
