@@ -18,11 +18,11 @@ export function svgScroll(_opts) {
 	function scrollMove(e) {
 		if (!('x' in ref)) return
 		const dx = e.clientX - ref.x
-		if (ref.sliderX + ref.sliderWidth + dx > opts.visibleWidth) {
+		if (ref.sliderX + ref.sliderWidth + dx > opts.visibleWidth - 1) {
 			// when the available space at the right side is less than the distance moved to the right
 			return
 		}
-		if (ref.sliderX <= -ref.minDx || ref.sliderX + dx < 0) {
+		if (ref.sliderX + dx < 0) {
 			// when the available space at the left side is less than the distance moved to the left
 			return
 		}
