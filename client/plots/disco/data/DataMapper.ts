@@ -277,7 +277,7 @@ export default class DataMapper {
 				this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)
 			]
 
-		const dataAnglePos = Math.floor(data.pos / this.bpx)
+		const dataAnglePos = Math.floor(data.position / this.bpx)
 
 		return currentChromosome.startAngle + dataAnglePos * this.onePxArcAngle
 	}
