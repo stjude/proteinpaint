@@ -7,6 +7,7 @@ import { Term } from './term'
  */
 export type StartUnboundedBin = {
 	startunbounded: true
+	startinclusive?: false // cannot include an infinite bound
 	stop: number
 	stopinclusive?: boolean
 	stopunbounded?: false
@@ -17,6 +18,7 @@ export type StopUnboundedBin = {
 	stopunbounded: true
 	startinclusive?: boolean
 	startunbounded?: false
+	stopinclusive?: false // cannot include an infinite bound
 }
 
 // TODO??? should separate a fully bounded bin by startinclusive, stopinclusive
@@ -45,7 +47,9 @@ export type RegularNumericBinConfig = {
 
 export type CustomNumericBinConfig = {
 	type: 'custom-bin'
-	lst: NumericBin[]
+	// since ts will allow NumericBin[] to be empty,
+	// use this workaround to define a non-empty array
+	lst: [NumericBin, ...NumericBin[]]
 }
 
 /*export type NumericQ = BaseQ & {
