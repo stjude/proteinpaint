@@ -1,7 +1,7 @@
-// TODO: will deprecate this code, should use client/termsetting/types.ts instead
-import { VocabApi } from './vocab'
-import { Term, Q, TermWrapper, DetermineQ } from './termdb'
-import { Filter } from './filter'
+import { VocabApi } from '../../server/shared/types/vocab.ts'
+import { Filter } from '../../server/shared/types/filter.ts'
+import { CategoricalTerm, CategoricalQ, CategoricalTW } from '../../server/shared/types/terms/categorical.ts'
+import { NumericTerm, NumericQ, NumericTW } from '../../server/shared/types/terms/numeric.ts'
 
 /*
 
@@ -27,6 +27,10 @@ TSInstanceWithDynamicQ
 */
 
 /*** types supporting TermSettingOpts & PillData types ***/
+
+export type Term = CategoricalTerm | NumericTerm
+export type Q = CategoricalQ | NumericQ
+export type TermWrapper = CategoricalTW | NumericTW
 
 export type Dom = {
 	holder: Selection
@@ -65,14 +69,6 @@ export type SampleCountsEntry = {
 	key: string
 	value: number //This maybe a string???
 	label?: string //Not documented?? in key or no?
-}
-
-export type Handler = {
-	getPillName: (d: any) => string
-	getPillStatus: (f?: any) => any
-	showEditMenu: (div: Selection) => void
-	validateQ?: (d: Q) => void
-	postMain?: () => void
 }
 
 type BaseTermSettingOpts = {
@@ -160,7 +156,7 @@ export type TermSettingInstance = {
 	durations: { exit: number }
 	filter?: Filter
 	handler?: Handler
-	handlerByType?: { [index: string]: Handler }
+	handlerByType?: { [TermType: string]: Handler }
 	hasError?: boolean
 	noTermPromptOptions?: NoTermPromptOptsEntry[]
 	opts: TermSettingOpts
@@ -191,6 +187,14 @@ export type TermSettingInstance = {
 	updateUI: () => void
 }
 
-export type TSInstanceWithDynamicQ = TermSettingInstance & {
-	q: DetermineQ<TermSettingInstance['term']['type']>
+export interface Handler {
+	getPillName: (d: any) => string
+	getPillStatus: (f?: any) => any
+	showEditMenu: (div: Selection) => void
+	validateQ?: (d: Q) => void
+	postMain?: () => void
+}
+
+export interface HandlerGenerator {
+	getHandler: (self: TermSettingInstance) => Handler
 }
