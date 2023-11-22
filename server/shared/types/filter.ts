@@ -1,6 +1,7 @@
 import { Term, BaseValue } from './terms/term'
 import { NumericTerm, NumericBin } from './terms/numeric'
 import { CategoricalTerm } from './terms/categorical'
+import { GeneVariantTerm } from './terms/geneVariant'
 
 /*
 --------EXPORTED--------
@@ -49,10 +50,30 @@ export type ConditionTvs = BaseTvs & {
 	value_by_computable_grade?: boolean
 	grade_and_child?: GradeAndChildEntry[]
 }
-
+*/
 type GeneVariantOrigin = 'somatic' | 'germline'
 
-type SNVIndelClasses = 'F' | 'M' | 'S' // ... 
+type SNVIndelClasses =
+	| 'M'
+	| 'E'
+	| 'F'
+	| 'N'
+	| 'S'
+	| 'D'
+	| 'I'
+	| 'P'
+	| 'L'
+	| 'Intron'
+	| 'Blank'
+	| 'WT'
+	| 'ITD'
+	| 'DEL'
+	| 'NLOSS'
+	| 'CLOSS'
+	| 'Utr3'
+	| 'Utr5'
+	| 'X'
+	| 'noncoding'
 type SNVIndelTvsValue = {
 	dt: 1
 	mclassLst: SNVIndelClasses[]
@@ -60,7 +81,7 @@ type SNVIndelTvsValue = {
 	origin?: GeneVariantOrigin
 }
 
-type CNVClasses = 'CNV_amp' | 'CNV_losss'
+type CNVClasses = 'CNV_amp' | 'CNV_losss' | 'CNV_loh' | 'Blank' | 'WT'
 type CNVTvsValue = {
 	dt: 4
 	mclassLst: CNVClasses[]
@@ -68,23 +89,28 @@ type CNVTvsValue = {
 	origin?: GeneVariantOrigin
 }
 
+type SVClasses = 'SV' | 'Blank' | 'WT'
 type SVTvsValue = {
 	dt: 5
-	// ... 
+	mclassLst: SVClasses[]
+	mclassExcludeLst: SVClasses[]
+	origin?: GeneVariantOrigin
 }
 
+type FusionRNAClasses = 'Fuserna' | 'Blank' | 'WT'
 type FusionTvsValue = {
 	dt: 2
-	// ...
+	mclassLst: FusionRNAClasses[]
+	mclassExcludeLst: FusionRNAClasses[]
+	origin?: GeneVariantOrigin
 }
 
 type GeneVariantTvsValue = SNVIndelTvsValue | CNVTvsValue | SVTvsValue | FusionTvsValue
 
-type GeneVariantTvs = {
+type GeneVariantTvs = BaseTvs & {
 	term: GeneVariantTerm
 	values: GeneVariantTvsValue[]
 }
-*/
 /*** types supporting Filter type ***/
 
 export type Tvs = CategoricalTvs | NumericTvs // | ConditionTvs | GeneVariantTvs // | SampleListTvs ...
