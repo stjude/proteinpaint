@@ -30,6 +30,8 @@ export type FullyBoundedBin = {
 	stopunbounded?: false
 }
 
+export type NumericBin = StartUnboundedBin | FullyBoundedBin | StopUnboundedBin
+
 export type RegularNumericBinConfig = {
 	type: 'regular-bin'
 	//regular-sized bins
@@ -43,7 +45,7 @@ export type RegularNumericBinConfig = {
 
 export type CustomNumericBinConfig = {
 	type: 'custom-bin'
-	lst: (StartUnboundedBin | FullyBoundedBin | StopUnboundedBin)[]
+	lst: NumericBin[]
 }
 
 /*export type NumericQ = BaseQ & {
@@ -106,7 +108,9 @@ export type SplineNumericQ = {
 	}[]
 }
 
+export type NumericQ = DiscreteNumericQ | BinaryNumericQ | ContinuousNumericQ | SplineNumericQ
+
 export type NumericTW = {
 	term: NumericTerm
-	q: DiscreteNumericQ | BinaryNumericQ | ContinuousNumericQ | SplineNumericQ
+	q: NumericQ
 }

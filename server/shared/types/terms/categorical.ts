@@ -1,6 +1,6 @@
-import { TermWrapper, BaseQ } from '../termdb'
+//import { TermWrapper, BaseQ } from '../termdb'
+import { Term, BaseValue, BaseQ } from './term'
 import { TermSettingInstance } from '../termsetting'
-import { doc } from '../../doc'
 
 /*
 --------EXPORTED--------
@@ -17,18 +17,34 @@ CategoricaTermSettingInstance
  *
  * @category TW
  */
-export type CategoricalQ = BaseQ & {
-	// termType: 'categorical'
-	//Not sure if separate categorical q is needed??
+
+export type CategoricalValuesObject = {
+	[key: string]: BaseValue
 }
 
-doc({
-	type: 'CategoricalQ',
-	test: t => {
-		if (!t.mode.includes('groupsetting')) throw `CategoricalQ must have a '*-groupsetting' mode`
-		return true
+export type ValuesGroup = {
+	name: string
+	values: {
+		key: string
+		label: string
+	}[]
+}
+
+export type GroupSet = {
+	name: string
+	groups: ValuesGroup[]
+}
+
+export type CategoricalTerm = Term & {
+	type: 'categorical'
+	values: CategoricalValuesObject
+	groupsetting: {
+		disabled: boolean
+		lst: GroupSet[]
 	}
-})
+}
+
+export type CategoricalQ = BaseQ & (CategoricalValuesObject | GroupSet)
 
 /**
  * A categorical term wrapper object
@@ -36,7 +52,8 @@ doc({
  * @group Termdb
  * @category TW
  */
-export type CategoricalTW = TermWrapper & {
+export type CategoricalTW = {
+	term: CategoricalTerm
 	q: CategoricalQ
 }
 
