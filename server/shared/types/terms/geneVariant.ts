@@ -23,7 +23,7 @@ export type GeneVariantTW = TermWrapper & {
 	term: GeneVariantTerm
 }
 
-type GeneVariantTerm = Term & {
+export type GeneVariantTerm = Term & {
 	isoform: string
 }
 
