@@ -4,7 +4,7 @@
 	For training only 
 	- these tests are not meant to be written for all declared types
 	
-	- meant for simple "sanity check", that a declaration makes sense and catches errors
+	- meant for simple "sanity check", that a declaration makes sense and CATCHES ERRORS
 	
 	- quick tests on lines commented with @ts-expect-error 
 		- remove a // @ts-expect-error comment to see error message as emitted by the tsc compiler
@@ -90,7 +90,7 @@ function correctlyTypedProcessBin(bin: NumericBin) {
 // not declared as part of the NumericBin type
 type NonNumericBin = { fake: true }
 // even though has an extra property compared to FullyBoundedBin,
-// the tsc compiler would si
+// the tsc compiler would consider this equivalent
 type LikeFullyBoundedBin = {
 	start: number
 	stop: number
@@ -130,7 +130,18 @@ type UselessBinType = {
 }
 
 {
-	// the UselesBinType matches objects with conflicting property values, which does not make sense
+	// The UselesBinType matches objects with conflicting property values, which does not make sense.
+	// We want tsc to emit an error when unallowed, non-sensical combination of properties exist.
+	//
+	// For example, it does not make sense for a bin to have these combinations of property-values:
+	// - startunbounded: true and startinclusive: true    // cannot "contain" infinity
+	// - startunbounded: true and start: 0                // conflict, start is supposed to be unbounded and yet is assigned a finite value
+	// - startunbounded: true and stopunbounded: true     // an infinite bin
+	//
+	// Many other pairing of the property-values below do not make sense.
+	// Note that running the tsc on this file does not emit an error, but it should for values that do not make sense.
+	// To get tsc to emit errors, we should use the bin types from server/shared/types/terms/numeric.ts,
+	// or from the 'better' bin type examples farther down below (which will require more code changes).
 	const A: UselessBinType = {
 		startunbounded: true,
 		startinclusive: true,
@@ -141,8 +152,13 @@ type UselessBinType = {
 	}
 }
 
-// Example of better type declaration
+// Example of better type declarations
+//
+// NOTE: The bin type declarations in server/shared/types/terms/numeric.ts are good for now,
+// the types below are meant to illustrate that there are different ways to write types that work.
+//
 // TODO: Use these better types, which will require code changes
+//
 type BetterStartUnboundedBin = {
 	stop: number
 	// by not using a flag, completely avoids unintentionally having
