@@ -1,3 +1,5 @@
+import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin, NumericTerm } from '../terms/numeric.ts'
+
 /*
 	Non-asserted type declaration tests 
 	
@@ -9,117 +11,71 @@
 	- quick tests on lines commented with @ts-expect-error 
 		- remove a // @ts-expect-error comment to see error message as emitted by the tsc compiler
 		- fix the variable declaration value to match the expected type, tsc should emit "Unused '@ts-expect-error' directive"
-	
-	- !!! see the UselessBinType below for an example on how NOT to declare types !!!
 */
-import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin } from '../terms/numeric.ts'
 
-// Start unbounded Bin
+/*****************
+ * Simple tests
+ ******************/
+
 {
-	// valid example
-	const A: StartUnboundedBin = {
-		startunbounded: true,
-		stop: 1
+	// in unit and integration spec files, use the numeric type definitions
+	// to make sure that test data matches expectations, otherwise incorrect
+	// test data can lead to false passing or failing tests.
+	const valid: NumericTerm = {
+		type: 'float',
+		id: 'someid',
+		name: 'Some Dosage',
+		bins: {
+			default: {
+				type: 'regular-bin',
+				bin_size: 1,
+				first_bin: {
+					startunbounded: true,
+					stop: 1
+				}
+			},
+			less: {
+				type: 'custom-bin',
+				lst: [{ start: 0, stop: 1 }]
+			}
+		}
 	}
 
-	// invalid examples
 	// @ts-expect-error
-	const B: StartUnboundedBin = { startunbounded: true, start: 0, stop: 1 }
-	// @ts-expect-error
-	const C: StartUnboundedBin = { startunbounded: true }
-	// @ts-expect-error
-	const D: StartUnboundedBin = { startunbounded: true, start: 0, stop: 1, stopunbounded: true }
-}
-
-// Stop unbounded bin
-{
-	// valid example
-	const A: StopUnboundedBin = {
-		stopunbounded: true,
-		start: 0
-	}
-
-	// invalid examples
-	// @ts-expect-error
-	const B: StopUnboundedBin = { stopunbounded: true, start: 0, stop: 1 }
-	// @ts-expect-error
-	const C: StopUnboundedBin = { stopunbounded: true }
-	// @ts-expect-error
-	const D: StopUnboundedBin = { startunbounded: true, start: 0, stop: 1, stopunbounded: true }
-}
-
-// Fully bounded bin
-{
-	// valid example
-	const A: FullyBoundedBin = {
-		startinclusive: true,
-		start: 0,
-		stop: 1
-	}
-
-	// invalid examples
-	// @ts-expect-error
-	const B: FullyBoundedBin = { stop: 1 }
-	// @ts-expect-error
-	const C: FullyBoundedBin = { start: 0 }
-}
-
-/*** test of union type being fed into a subtype-specific "handler" function ***/
-// to be used as a 'generic' argument
-type NumericBin = StartUnboundedBin | StopUnboundedBin | FullyBoundedBin
-
-const handlers = {
-	startUnbounded(bin: StartUnboundedBin) {
-		console.log(bin)
-	},
-	fullyBounded(bin: FullyBoundedBin) {
-		console.log(bin)
-	},
-	stopUnbounded(bin: StopUnboundedBin) {
-		console.log(bin)
+	const A: NumericTerm = { name: 'test', type: 'categorical' }
+	// @ts-expect-error, missing other required properties
+	const B: NumericTerm = { type: 'integer' }
+	const C: NumericTerm = {
+		// @ts-expect-error, should be string
+		name: 7,
+		type: 'integer',
+		bins: {
+			default: {
+				type: 'regular-bin',
+				bin_size: 1,
+				// tsc can detect type errors for deeply nested property values
+				// @ts-expect-error, does not match either StartUnboundedBin | FullyBoundedBin
+				first_bin: {
+					stop: 1
+				}
+			},
+			less: {
+				type: 'custom-bin',
+				// @ts-expect-error, empty lst array
+				lst: []
+			}
+		}
 	}
 }
 
-// these functions routes the bin argument to the correct handler function
-function correctlyTypedProcessBin(bin: NumericBin) {
-	if (bin.startunbounded) handlers.startUnbounded(bin as StartUnboundedBin)
-	else if (bin.stopunbounded) handlers.stopUnbounded(bin as StopUnboundedBin)
-	else handlers.fullyBounded(bin as FullyBoundedBin)
-}
-
-// not declared as part of the NumericBin type
-type NonNumericBin = { fake: true }
-// even though has an extra property compared to FullyBoundedBin,
-// the tsc compiler would consider this equivalent
-type LikeFullyBoundedBin = {
-	start: number
-	stop: number
-	test: boolean
-}
-
-function incorrectProcessBin(bin: FullyBoundedBin) {
-	// @ts-expect-error
-	if (bin.startunbounded) handlers.startUnbounded(bin as StartUnboundedBin)
-	// @ts-expect-error
-	else if (bin.stopunbounded) handlers.stopUnbounded(bin as StopUnboundedBin)
-	else {
-		// @ts-expect-error
-		handlers.startUnbounded(bin as FullyBoundedBin)
-		// @ts-expect-error
-		handlers.stopUnbounded(bin as FullyBoundedBin)
-		// @ts-expect-error, since this function's argument type (NumericBin) does not include NonNumericBin
-		handlers.fullyBounded(bin as NonNumericBinType)
-		// !!! SHOULD WORK !!!
-		handlers.fullyBounded(bin as LikeFullyBoundedBin)
-		// !!! SHOULD WORK !!!
-		handlers.fullyBounded(bin as FullyBoundedBin)
-	}
-}
+/*************************
+ * !!! How NOT to type !!!
+ **************************/
 
 // Example of a bad type declaration, where everything is optional.
 // Avoid declaring types with lots of optional properties, unless that's really expected.
 // In the PP codebase, a union of types is more likely to be the correct way to declare
-// a type when there are lots of optional properties that may conflict with each other.
+// a type with mutually exlusive properties based on, for example, term.type or gene variant value dt number.
 type UselessBinType = {
 	startunbounded?: boolean
 	startinclusive?: boolean
@@ -152,6 +108,123 @@ type UselessBinType = {
 	}
 }
 
+/********************************************
+ * Testing types that are able to catch errors
+ *********************************************/
+
+// Start unbounded Bin
+{
+	// valid example
+	const A: StartUnboundedBin = {
+		startunbounded: true,
+		stop: 1
+	}
+
+	// invalid examples
+	// @ts-expect-error, conflict between startunbounded and start values
+	const B: StartUnboundedBin = { startunbounded: true, start: 0, stop: 1 }
+	// @ts-expect-error, missing start value
+	const C: StartUnboundedBin = { startunbounded: true }
+	// @ts-expect-error, conflict between unbounded flags and assigned finite values for start, stop
+	const D: StartUnboundedBin = { startunbounded: true, start: 0, stop: 1, stopunbounded: true }
+}
+
+// Stop unbounded bin
+{
+	// valid example
+	const A: StopUnboundedBin = {
+		stopunbounded: true,
+		start: 0
+	}
+
+	// invalid examples
+	// @ts-expect-error, conflict between stopunbounded and stop values
+	const B: StopUnboundedBin = { stopunbounded: true, start: 0, stop: 1 }
+	// @ts-expect-error, missing stop value
+	const C: StopUnboundedBin = { stopunbounded: true }
+	// @ts-expect-error, conflict between unbounded flags and assigned finite values for start, stop
+	const D: StopUnboundedBin = { startunbounded: true, start: 0, stop: 1, stopunbounded: true }
+}
+
+// Fully bounded bin
+{
+	// valid example
+	const A: FullyBoundedBin = {
+		startinclusive: true,
+		start: 0,
+		stop: 1
+	}
+
+	// invalid examples
+	// @ts-expect-error, missing start value
+	const B: FullyBoundedBin = { stop: 1 }
+	// @ts-expect-error, missing stop value
+	const C: FullyBoundedBin = { start: 0 }
+}
+
+/*** test of union type being fed into a subtype-specific "handler" function ***/
+// to be used as a 'generic' argument
+type NumericBin = StartUnboundedBin | StopUnboundedBin | FullyBoundedBin
+
+const handlers = {
+	startUnbounded(bin: StartUnboundedBin) {
+		console.log(bin)
+	},
+	fullyBounded(bin: FullyBoundedBin) {
+		console.log(bin)
+	},
+	stopUnbounded(bin: StopUnboundedBin) {
+		console.log(bin)
+	}
+}
+
+/**********************************************************************
+ * Test that tsc can infer that a type can be derived from
+ * a union of types. This is important for the general approach
+ * in the PP codebase to route arguments to specific handler functions.
+ ***********************************************************************/
+
+// these functions routes the bin argument to the correct handler function
+function correctlyTypedProcessBin(bin: NumericBin) {
+	if (bin.startunbounded) handlers.startUnbounded(bin as StartUnboundedBin)
+	else if (bin.stopunbounded) handlers.stopUnbounded(bin as StopUnboundedBin)
+	else handlers.fullyBounded(bin as FullyBoundedBin)
+}
+
+// not declared as part of the NumericBin type
+type NonNumericBin = { fake: true }
+// even though has an extra property compared to FullyBoundedBin,
+// the tsc compiler would consider this equivalent
+type LikeFullyBoundedBin = {
+	start: number
+	stop: number
+	test: boolean
+}
+
+function incorrectProcessBin(bin: FullyBoundedBin) {
+	// @ts-expect-error, the argument type is not StartUnboundedBin
+	if (bin.startunbounded) handlers.startUnbounded(bin as StartUnboundedBin)
+	// @ts-expect-error, the argument type is not StopUnboundedBin
+	else if (bin.stopunbounded) handlers.stopUnbounded(bin as StopUnboundedBin)
+	else {
+		// @ts-expect-error
+		handlers.startUnbounded(bin as FullyBoundedBin)
+		// @ts-expect-error
+		handlers.stopUnbounded(bin as FullyBoundedBin)
+		// @ts-expect-error, since this function's argument type (NumericBin) does not include NonNumericBin
+		handlers.fullyBounded(bin as NonNumericBinType)
+		// !!! SHOULD WORK !!!
+		handlers.fullyBounded(bin as LikeFullyBoundedBin)
+		// !!! SHOULD WORK !!!
+		handlers.fullyBounded(bin as FullyBoundedBin)
+	}
+}
+
+/************************************************************************
+ * Examples of better ways to define data structures to proactively avoid
+ * any chance of having flag values that may conflict with each other
+ *************************************************************************/
+
 // Example of better type declarations
 //
 // NOTE: The bin type declarations in server/shared/types/terms/numeric.ts are good for now,
@@ -161,7 +234,7 @@ type UselessBinType = {
 //
 type BetterStartUnboundedBin = {
 	stop: number
-	// by not using a flag, completely avoids unintentionally having
+	// by not using a flag, the 'inclusive' property completely avoids unintentionally having
 	// `startinclusive: true && stopinclusive: true` at the same time
 	inclusive: 'stop'
 }
