@@ -1,5 +1,5 @@
 //import { TermWrapper, BaseQ } from '../termdb'
-import { Term, BaseValue, BaseQ, BaseTW } from './term'
+import { Term, BaseValue, TermValues, BaseQ, BaseTW, PredefinedGroupSetting, CustomGroupSetting } from './term'
 import { TermSettingInstance } from '../termsetting'
 
 /*
@@ -18,8 +18,18 @@ CategoricaTermSettingInstance
  * @category TW
  */
 
+type EmptyGroupSetting = {
+	inuse?: false
+	disabled?: true
+}
+
 export type CategoricalValuesObject = {
-	[key: string]: BaseValue
+	mode: 'binary' | 'discrete'
+	type?: 'values'
+	values: {
+		[key: string]: BaseValue
+	}
+	groupsetting?: EmptyGroupSetting
 }
 
 export type ValuesGroup = {
@@ -28,20 +38,26 @@ export type ValuesGroup = {
 		key: string
 		label: string
 	}[]
+	groupsetting?: EmptyGroupSetting
 }
 
 export type GroupSet = {
+	mode: 'binary' | 'discrete'
+	type?: 'predefined-groupset' | 'custom-groupset'
 	name: string
 	groups: ValuesGroup[]
+	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
 }
 
 export type CategoricalTerm = Term & {
 	type: 'categorical'
 	values: CategoricalValuesObject
-	groupsetting: {
-		disabled: boolean
-		lst: GroupSet[]
-	}
+	groupsetting:
+		| {
+				disabled: boolean
+				lst: GroupSet[]
+		  }
+		| { disabled?: boolean }
 }
 
 export type CategoricalQ = BaseQ & (CategoricalValuesObject | GroupSet)
@@ -64,20 +80,4 @@ export type GroupSetInputValues = {
 		label?: string | number //value's label on client
 		group?: number //value's current group index
 	}
-}
-
-/**
- * @group Termdb
- * @category TW
- */
-export type CategoricalTermSettingInstance = TermSettingInstance & {
-	category2samplecount: Cat2SampleCntEntry[]
-	error: string
-	q: CategoricalQ
-	//Methods
-	getQlst: () => void
-	grpSet2valGrp: (f: any) => GroupSetInputValues
-	showGrpOpts: (div: any) => any
-	validateGroupsetting: () => void
-	showDraggables: () => void
 }
