@@ -1,10 +1,10 @@
 import { setDensityPlot } from './density'
 import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './numeric.discrete'
-import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
-import { make_one_checkbox } from '#dom/checkbox'
-import { getPillNameDefault } from '#termsetting'
-import { convertViolinData } from '#filter/tvs.numeric'
-import { PillData, RangeEntry, NumericTermSettingInstance } from '#shared/types/index'
+import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
+import { make_one_checkbox } from '../../dom/checkbox'
+import { getPillNameDefault } from '../termsetting'
+import { convertViolinData } from '../../filter/tvs.numeric'
+import { PillData, RangeEntry } from '../../shared/types/index'
 
 /*
 ********************** EXPORTED
@@ -25,7 +25,7 @@ getHandler(self)
 	processCustomBinInputs()
 */
 
-export function getHandler(self: NumericTermSettingInstance) {
+export function getHandler(self) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -122,7 +122,7 @@ export function getHandler(self: NumericTermSettingInstance) {
 	}
 }
 
-function setqDefaults(self: NumericTermSettingInstance) {
+function setqDefaults(self) {
 	const dd = self.num_obj.density_data!
 	const boundry_value = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
 	const cache = self.numqByTermIdModeType
@@ -169,7 +169,7 @@ function setqDefaults(self: NumericTermSettingInstance) {
 	//*** validate self.q ***//
 }
 
-async function renderCuttoffInput(self: NumericTermSettingInstance) {
+async function renderCuttoffInput(self) {
 	// binary mode unqiue UI
 	self.dom.cutoff_div.append('span').style('margin-right', '5px').style('opacity', 0.5).text('Boundary value')
 
@@ -249,7 +249,7 @@ async function renderCuttoffInput(self: NumericTermSettingInstance) {
 	}
 }
 
-function processCustomBinInputs(self: NumericTermSettingInstance) {
+function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputDivs = self.dom.bins_table.node().querySelectorAll('input')

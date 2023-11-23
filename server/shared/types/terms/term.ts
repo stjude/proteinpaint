@@ -69,6 +69,11 @@ export type PredefinedGroupSetting = {
 	lst: GroupSetEntry[]
 }
 
+export type EmptyGroupSetting = {
+	inuse?: false
+	disabled?: true
+}
+
 export type Term = {
 	id: string
 	name: string
@@ -78,7 +83,7 @@ export type Term = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
-	groupsetting: PredefinedGroupSetting | CustomGroupSetting | {}
+	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
 }
 
 export type BaseQ = {

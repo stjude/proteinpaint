@@ -387,7 +387,7 @@ export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
 			gs.useIndex &&
 			//Fix checks if property is present
 			gs.useIndex >= 0 &&
-			gs.lst[(tw.term.groupsetting as PredefinedGroupSetting).useIndex]
+			gs.lst[gs.useIndex]
 		) {
 			gs.predefined_groupset_idx = gs.useIndex
 		}

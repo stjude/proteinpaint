@@ -145,6 +145,7 @@ export class TermSetting {
 		this.handlerByType = {
 			default: defaultHandler
 		}
+		this.handler = defaultHandler
 
 		this.hasError = false
 
@@ -384,7 +385,7 @@ function setRenderers(self) {
 
 				// TODO: modify termInfoInit() to display term info in tip rather than in div
 				// can be content_tip: self.dom.tip.d to separate it from content_holder
-				const termInfo = await import('../termdb/termInfo')
+				const termInfo = await import('../termdb/termInfo.js')
 				termInfo.termInfoInit({
 					vocabApi: self.opts.vocabApi,
 					icon_holder: infoIcon_div,
@@ -538,7 +539,7 @@ function setInteractivity(self) {
 			)
 		else self.dom.tip.show(event!.clientX, event!.clientY)
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('../termdb/app.js')
 		termdb.appInit({
 			holder: self.dom.tip.d,
 			vocabApi: self.vocabApi,
