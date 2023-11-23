@@ -1,7 +1,8 @@
-import { VocabApi } from '../../server/shared/types/vocab.ts'
-import { Filter } from '../../server/shared/types/filter.ts'
-import { CategoricalTerm, CategoricalQ, CategoricalTW } from '../../server/shared/types/terms/categorical.ts'
-import { NumericTerm, NumericQ, NumericTW } from '../../server/shared/types/terms/numeric.ts'
+import { VocabApi } from '../shared/types/vocab.ts'
+import { Filter } from '../shared/types/filter.ts'
+import { Term, Q, TermWrapper } from '../shared/types/terms/tw'
+import { CategoricalTerm, CategoricalQ, CategoricalTW } from '../shared/types/terms/categorical.ts'
+import { NumericTerm, NumericQ, NumericTW } from '../shared/types/terms/numeric.ts'
 
 /*
 
@@ -27,10 +28,6 @@ TSInstanceWithDynamicQ
 */
 
 /*** types supporting TermSettingOpts & PillData types ***/
-
-export type Term = CategoricalTerm | NumericTerm
-export type Q = CategoricalQ | NumericQ
-export type TermWrapper = CategoricalTW | NumericTW
 
 export type Dom = {
 	holder: Selection
@@ -147,54 +144,14 @@ export type InstanceDom = {
 	rangeAndLabelDiv?: any
 }
 
-export type TermSettingInstance = {
-	activeCohort?: number
-	clickNoPillDiv?: any
-	dom: InstanceDom
-	doNotHideTipInMain?: boolean
-	disable_terms?: string[]
-	durations: { exit: number }
-	filter?: Filter
-	handler?: Handler
-	handlerByType?: { [TermType: string]: Handler }
-	hasError?: boolean
-	noTermPromptOptions?: NoTermPromptOptsEntry[]
-	opts: TermSettingOpts
-	placeholder: string | undefined
-	q: Q
-	term: Term
-	usecase?: UseCase
-	vocabApi: VocabApi
-
-	//Methods
-	/*
-	TODOs: 
-		- Move specifc methods to their own intersection instance type within in termsetting/handler/*.ts, out of main type
-	*/
-	cancelGroupsetting?: () => void
-	enterPill?: () => void
-	exitPill?: () => void
-	initUI: () => void
-	removeTerm?: () => void
-	runCallback: (f?: any) => any
-	setHandler?: (f: string) => any
-	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
-	showMenu: (event: MouseEvent, clickedElem: string | null, menuHolder: any) => void
-	showReuseMenu?: (div: any) => void
-	showTree: (holder: Selection, event?: MouseEvent) => void
-	tabCallback?: (event: any, tab: any) => void
-	updatePill?: () => void
-	updateUI: () => void
-}
-
 export interface Handler {
 	getPillName: (d: any) => string
 	getPillStatus: (f?: any) => any
 	showEditMenu: (div: Selection) => void
-	validateQ?: (d: Q) => void
+	validateQ?: (d: PillData) => void
 	postMain?: () => void
 }
 
 export interface HandlerGenerator {
-	getHandler: (self: TermSettingInstance) => Handler
+	getHandler: (self: any) => Handler
 }

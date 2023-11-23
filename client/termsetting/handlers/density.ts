@@ -2,8 +2,8 @@ import { select, pointer } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { makeDensityPlot } from '#filter/densityplot'
-import { BrushEntry, NumberObj, NumericTermSettingInstance } from '#shared/types/index'
 import { BaseType } from 'd3-selection'
+import { NumericBin } from '../../shared/types/terms/numeric.ts'
 /*
 ********************** IMPORTED
 	makeDensityPlot(opts) // retrun svg densityplot for given density data
@@ -15,7 +15,39 @@ import { BaseType } from 'd3-selection'
 
 */
 
-export async function setDensityPlot(self: NumericTermSettingInstance) {
+export type DensityData = {
+	maxvalue: number
+	minvalue: number
+}
+
+type BrushEntry = {
+	//No documentation!
+	orig: string
+	range: {
+		start: number
+		stop: number
+	}
+	init: () => void
+}
+
+type NumberObj = {
+	binsize_g?: any //dom element??
+	brushes: BrushEntry[]
+	custom_bins_q: any
+	density_data: DensityData
+	no_density_data: true
+	plot_size: {
+		width: number
+		height: number
+		xpad: number
+		ypad: number
+	}
+	ranges?: NumericBin[]
+	svg: any
+	xscale: any
+}
+
+export async function setDensityPlot(self) {
 	if (!self.num_obj) throw `Missing density data [density.ts setDensityPlot()]`
 	const numObj = self.num_obj as NumberObj
 	if (numObj.density_data.maxvalue == numObj.density_data.minvalue) {

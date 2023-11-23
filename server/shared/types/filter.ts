@@ -113,7 +113,7 @@ type GeneVariantTvs = BaseTvs & {
 }
 /*** types supporting Filter type ***/
 
-export type Tvs = CategoricalTvs | NumericTvs // | ConditionTvs | GeneVariantTvs // | SampleListTvs ...
+export type Tvs = CategoricalTvs | NumericTvs // | ConditionTvs | GeneVariantTvs // | SampleLstTvs ...
 
 export type Filter = {
 	type: 'lst'

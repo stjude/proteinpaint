@@ -1,11 +1,8 @@
 import { GroupSettingMethods } from './groupsetting.ts'
 // import { filterInit } from '#filter'
-import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
+import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import {
-	PillData,
-	Term,
 	CategoricalQ,
-	TermValues,
 	GroupSetting,
 	BaseGroupSet,
 	GroupEntry,
@@ -13,7 +10,9 @@ import {
 	CategoricalTW,
 	VocabApi
 } from '#shared/types/index'
-import { copyMerge } from '#rx'
+import { Term, TermValues } from '../../shared/types/terms/term'
+import { PillData } from '../types'
+import { copyMerge } from '../../rx'
 
 /*
 ********************** EXPORTED
