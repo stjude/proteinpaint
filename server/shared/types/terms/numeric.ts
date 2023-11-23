@@ -1,4 +1,4 @@
-import { Term } from './term'
+import { Term, BaseQ, BaseTW, TermValues } from './term'
 
 /**
  *
@@ -6,11 +6,14 @@ import { Term } from './term'
  * @params stop
  */
 export type StartUnboundedBin = {
+	// where possible, assign a concrete value (true) when it is known in advance,
+	// in which case, do not use an abstract type (boolean) to startunbounded
 	startunbounded: true
 	startinclusive?: false // cannot include an infinite bound
 	stop: number
 	stopinclusive?: boolean
 	stopunbounded?: false
+	label?: string
 }
 
 export type StopUnboundedBin = {
@@ -19,6 +22,7 @@ export type StopUnboundedBin = {
 	startinclusive?: boolean
 	startunbounded?: false
 	stopinclusive?: false // cannot include an infinite bound
+	label?: string
 }
 
 // TODO??? should separate a fully bounded bin by startinclusive, stopinclusive
@@ -30,12 +34,13 @@ export type FullyBoundedBin = {
 	stop: number
 	stopinclusive?: boolean
 	stopunbounded?: false
+	label?: string
 }
 
 export type NumericBin = StartUnboundedBin | FullyBoundedBin | StopUnboundedBin
 
 export type RegularNumericBinConfig = {
-	type: 'regular-bin'
+	type: 'regular-bin' // another concrete value being assigned, instead of `string`
 	//regular-sized bins
 	bin_size: number
 	// first_bin.stop is always required
@@ -72,8 +77,11 @@ type PresetNumericBins = {
 
 export type NumericTerm = Term & {
 	id: string
+	// these concrete term.type values make it clear that only these are numeric,
+	// "categorical", "condition", and other term.types are not included in this union
 	type: 'integer' | 'float'
 	bins: PresetNumericBins
+	values?: TermValues
 	/*densityNotAvailable?: boolean //Not used?
 	logScale?: string | number
 	max?: number
@@ -88,24 +96,25 @@ export type NumericTerm = Term & {
 
 export type BinnedNumericQ = RegularNumericBinConfig | CustomNumericBinConfig
 
-export type DiscreteNumericQ = BinnedNumericQ & {
-	mode: 'discrete'
-}
+export type DiscreteNumericQ = BaseQ &
+	BinnedNumericQ & {
+		mode: 'discrete'
+	}
 
 // TODO: test with live code that defines an actual binary q object
-export type BinaryNumericQ = {
+export type BinaryNumericQ = BaseQ & {
 	mode: 'binary'
 	type: 'custom-bin'
 	// tuple type with 2 members
 	lst: [StartUnboundedBin | FullyBoundedBin, StopUnboundedBin | FullyBoundedBin]
 }
 
-export type ContinuousNumericQ = {
+export type ContinuousNumericQ = BaseQ & {
 	mode: 'continuous'
 	//scale?: string
 }
 
-export type SplineNumericQ = {
+export type SplineNumericQ = BaseQ & {
 	mode: 'spline'
 	knots: {
 		value: number
@@ -114,7 +123,24 @@ export type SplineNumericQ = {
 
 export type NumericQ = DiscreteNumericQ | BinaryNumericQ | ContinuousNumericQ | SplineNumericQ
 
-export type NumericTW = {
+export type NumericTW = BaseTW & {
 	term: NumericTerm
 	q: NumericQ
 }
+
+export type DefaultMedianQ = {
+	isAtomic?: true
+	mode: 'discrete'
+	type: 'custom-bin'
+	preferredBins: 'median'
+	lst: []
+}
+
+export type DefaultBinnedQ = {
+	isAtomic: true
+	mode: 'discrete'
+	type: 'regular-bin' | 'custom-bin'
+	preferredBins: 'default' | 'less'
+}
+
+export type DefaultNumericQ = NumericQ | DefaultBinnedQ | DefaultMedianQ

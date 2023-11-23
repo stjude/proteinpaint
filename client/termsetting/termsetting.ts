@@ -1,25 +1,20 @@
-import { getInitFxn, copyMerge, deepEqual } from '#rx'
-import { Menu } from '#dom/menu'
+import { getInitFxn, copyMerge, deepEqual } from '../rx/index'
+import { Menu } from '../dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
-import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
+import { nonDictionaryTermTypes } from '../shared/termdb.usecase'
+import { Term, Q, TermWrapper } from '../shared/types/terms/tw'
 import {
-	TermSettingInstance,
-	TermSettingOpts,
-	Term,
-	Q,
 	DetermineQ,
-	TermWrapper,
 	VocabApi,
-	PillData,
 	Dom,
 	UseCase,
 	NoTermPromptOptsEntry,
-	Handler,
 	Filter,
 	SampleCountsEntry
-} from '#shared/types/index'
-import { Selection } from '@types/d3'
+} from '../shared/types/index'
+import { TermSettingOpts, Handler, PillData } from './types'
+
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -37,79 +32,6 @@ opts{}
 
 */
 
-export type Dom = {
-	holder: Selection
-	tip: any //TODO Menu type??
-	tip2: any //same as above
-	nopilldiv?: Selection
-	pilldiv?: Selection
-	btnDiv?: Selection
-}
-
-export type NoTermPromptOptsEntry = {
-	isDictionary?: boolean
-	termtype?: string
-	text?: string
-	html?: string
-	q?: Q
-}
-
-export type TermSettingOpts = BaseTermSettingOpts & {
-	//Required
-	holder: any
-	vocabApi: VocabApi
-	//Optional
-	$id?: string
-	buttons?: string[] //replace, delete, info
-	defaultQ4fillTW?: DefaultQ4fillTW
-	menuOptions: string //all, edit, replace, remove
-	menuLayout?: string //horizonal, all
-	numericEditMenuVersion?: string[]
-	numericContinuousEditOptions?: NumericContEditOptsEntry[]
-	placeholder?: string
-	placeholderIcon?: string //default '+'
-	renderAs: string //none
-	tip?: any //TODO: Menu type?
-	use_bins_less?: boolean
-	usecase?: UseCase
-	debug?: boolean | number //true or 1
-	//'snplocus' types
-	genomeObj?: any
-
-	//vocab??
-
-	// required callback function. argument is the updated termwrapper object
-	callback: (f: TermWrapper | null) => void
-
-	// ?
-	customFillTw?: (f: TermWrapper) => void
-
-	// to pass in purpose and context-specific arguments that will be merged to client request parameters
-	getBodyParams?: () => any
-}
-
-/*** types supporting TermSettingInstance type ***/
-
-export type InstanceDom = {
-	//Separate from the Dom outlined in termsetting.ts?????
-	//Required
-	holder: any
-	tip: any //TODO Menu type??
-	tip2: any //same as above
-	nopilldiv?: any
-	pilldiv?: any
-	btnDiv?: any
-	//Optional
-	customBinBoundaryInput?: any
-	customBinBoundaryPercentileCheckbox?: any
-	customBinLabelInput?: any
-	customBinRanges?: any
-	cutoff_div?: any
-	num_holder?: any
-	pill_termname?: any
-	rangeAndLabelDiv?: any
-}
-
 // append the common ID substring,
 // so that the first characters of $id is more indexable
 const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
@@ -124,37 +46,46 @@ const defaultOpts: { menuOptions: string; menuLayout: string } = {
 	menuLayout: 'vertical'
 }
 
-type HandlerByType = { [index: string]: Handler }
-
-type Api = {
-	main: (d: PillData) => void
-	runCallback: () => void
-	showTree: (holder: Selection, event: MouseEvent) => boolean
-	showMenu: (event: MouseEvent, clickedElem: Selection | null, menuHolder: Selection | null) => void
-	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
-	hasError: () => boolean
-	validateQ: (d: Q) => void
+//type HandlerByType = { [index: string]: Handler }
+type HandlerByType = {
+	default: Handler
+	[termType: string]: Handler
+	//categorical: CategoricalHandler
+	//numeric: NumericHandler
 }
 
-class TermSetting {
+interface TermSettingApi {
+	main: (d: PillData) => void
+	runCallback: () => void
+	showTree: (holder, event: MouseEvent) => boolean
+	showMenu: (event: MouseEvent, clickedElem, menuHolder: Selection | null) => void
+	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
+	hasError: () => boolean
+	validateQ: (d: PillData) => void
+}
+
+export class TermSetting {
 	opts: TermSettingOpts
 	vocabApi: VocabApi
 	dom: Dom //opts.holder is required
+
 	//Optional opts, hence undefined type
-	activeCohort: number | undefined
-	placeholder: string | undefined
+	activeCohort?: number
+	placeholder?: string
 	durations: { exit: number }
-	disable_terms: string[] | undefined
-	usecase: UseCase | undefined
-	abbrCutoff: number | undefined
-	$id: string | undefined
-	sampleCounts: SampleCountsEntry[] | undefined
-	noTermPromptOptions: NoTermPromptOptsEntry[] | undefined
+	disable_terms?: string[]
+	usecase?: UseCase
+	abbrCutoff?: number
+	$id?: string
+	sampleCounts?: SampleCountsEntry[]
+	noTermPromptOptions?: NoTermPromptOptsEntry[]
+
 	//Optional opts in script, not init()
 	doNotHideTipInMain: boolean | undefined
+
 	//Created
 	hasError: boolean
-	api: Api
+	api: TermSettingApi
 	numqByTermIdModeType: any //{}
 	handlerByType: HandlerByType
 	showTree: any
@@ -162,13 +93,14 @@ class TermSetting {
 	showMenu: any
 	initUI: any
 	updateUI: any
-	handler: any
+	handler: Handler
+
 	//Pill data
 	term: any
+	q!: Q
 	data: any
 	error: string | undefined
 	filter: Filter | undefined
-	q!: DetermineQ<Term['type']>
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
@@ -227,7 +159,7 @@ class TermSetting {
 			showMenu: this.showMenu.bind(this),
 			showGeneSearch: this.showGeneSearch,
 			hasError: () => this.hasError,
-			validateQ: (d: Q) => {
+			validateQ: (d: PillData) => {
 				if (!this.handler || !this.handler.validateQ) return
 				try {
 					this.handler.validateQ(d)
@@ -236,7 +168,7 @@ class TermSetting {
 					throw e
 				}
 			}
-		}
+		} as TermSettingApi
 	}
 
 	runCallback(overrideTw = null) {
@@ -332,7 +264,8 @@ class TermSetting {
 		throw `no matches found for termsetting opts.menuOptions='${o.menuOptions}'`
 	}
 
-	mayValidate_noTermPromptOptions(o: TermSettingOpts | PillData) {
+	mayValidate_noTermPromptOptions(o) {
+		//: TermSettingOpts | PillData) {
 		if (!o.noTermPromptOptions) return
 		if (!Array.isArray(o.noTermPromptOptions)) throw 'noTermPromptOptions[] is not array'
 		// allow empty array
@@ -369,7 +302,7 @@ class TermSetting {
 
 export const termsettingInit = getInitFxn(TermSetting)
 
-function setRenderers(self: TermSettingInstance) {
+function setRenderers(self) {
 	self.initUI = () => {
 		// run only once, upon init
 		if (self.opts.$id) {
@@ -451,7 +384,7 @@ function setRenderers(self: TermSettingInstance) {
 
 				// TODO: modify termInfoInit() to display term info in tip rather than in div
 				// can be content_tip: self.dom.tip.d to separate it from content_holder
-				const termInfo = await import('#termdb/termInfo')
+				const termInfo = await import('../termdb/termInfo')
 				termInfo.termInfoInit({
 					vocabApi: self.opts.vocabApi,
 					icon_holder: infoIcon_div,
@@ -551,7 +484,7 @@ function setRenderers(self: TermSettingInstance) {
 	}
 }
 
-function setInteractivity(self: TermSettingInstance) {
+function setInteractivity(self) {
 	self.removeTerm = () => {
 		self.opts.callback!(null)
 	}
@@ -597,7 +530,7 @@ function setInteractivity(self: TermSettingInstance) {
 		// load the input ui for this term type
 	}
 
-	self.showTree = async function (holder: Selection, event: MouseEvent | undefined) {
+	self.showTree = async function (holder, event: MouseEvent | undefined) {
 		self.dom.tip.clear()
 		if (holder)
 			self.dom.tip.showunder(
@@ -605,7 +538,7 @@ function setInteractivity(self: TermSettingInstance) {
 			)
 		else self.dom.tip.show(event!.clientX, event!.clientY)
 
-		const termdb = await import('#termdb/app')
+		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.tip.d,
 			vocabApi: self.vocabApi,
@@ -617,10 +550,16 @@ function setInteractivity(self: TermSettingInstance) {
 			},
 			tree: {
 				disable_terms: self.disable_terms,
-				click_term: async (term: TermWrapper) => {
+				click_term: async t => {
 					self.dom.tip.hide()
 
-					const tw = term.term ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
+					let tw
+					if (t.term) tw = t as TermWrapper
+					else {
+						const term = t as Term
+						tw = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
+					}
+
 					if (self.opts.customFillTw) self.opts.customFillTw(tw)
 					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 					// tw is now furbished
@@ -864,7 +803,7 @@ function equivalentQs(q0: Q, q1: Q) {
 	return deepEqual(...qlst)
 }
 
-function getDefaultHandler(self: TermSettingInstance) {
+function getDefaultHandler(self): Handler {
 	return {
 		showEditMenu() {
 			//ignore
@@ -878,7 +817,7 @@ function getDefaultHandler(self: TermSettingInstance) {
 	}
 }
 
-export function getPillNameDefault(self: TermSettingInstance, d: any) {
+export function getPillNameDefault(self, d: any) {
 	if (!self.opts.abbrCutoff) return d.name
 	return d.name.length <= self.opts.abbrCutoff + 2
 		? d.name

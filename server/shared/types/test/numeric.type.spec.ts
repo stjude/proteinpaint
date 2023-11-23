@@ -1,7 +1,7 @@
 import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin, NumericTerm } from '../terms/numeric.ts'
 
 /*
-	Non-asserted type declaration tests 
+	Non-asserted type definition tests 
 	
 	For training only 
 	- these tests are not meant to be written for all declared types
@@ -41,7 +41,7 @@ import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin, NumericTerm } fro
 		}
 	}
 
-	// @ts-expect-error
+	// @ts-expect-error, wrong term.type
 	const A: NumericTerm = { name: 'test', type: 'categorical' }
 	// @ts-expect-error, missing other required properties
 	const B: NumericTerm = { type: 'integer' }
@@ -106,6 +106,12 @@ type UselessBinType = {
 		stopinclusive: true,
 		stopunbounded: true
 	}
+
+	// no error is thrown by an empty object because all properties are optional,
+	// but we want tsc to emit an error in this scenario
+	const B: UselessBinType = {}
+	// @ts-expect-error, not fully useless since an error is thrown because 'extraProp' is not defined as an optional property
+	B.extraProp = 'test'
 }
 
 /********************************************
@@ -127,6 +133,10 @@ type UselessBinType = {
 	const C: StartUnboundedBin = { startunbounded: true }
 	// @ts-expect-error, conflict between unbounded flags and assigned finite values for start, stop
 	const D: StartUnboundedBin = { startunbounded: true, start: 0, stop: 1, stopunbounded: true }
+	// @ts-expect-error, missing properties
+	const E: StartUnboundedBin = {}
+	// @ts-expect-error, adding a property that was not defined for this type
+	E.extraProp = 'test'
 }
 
 // Stop unbounded bin
@@ -239,6 +249,9 @@ type BetterStartUnboundedBin = {
 	inclusive: 'stop'
 }
 
+// NOTE: This approach also lessens the number of attributes/properties to define.
+// A problem with flags is it's very easy to have too many of them, and each one has to be defined,
+// and if they are mutually exclusive, most of the time that is not readily apparent.
 type BetterStopUnboundedBin = {
 	start: number
 	inclusive: 'start'

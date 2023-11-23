@@ -1,4 +1,4 @@
-import { Term, Q } from './termdb'
+import { Term } from './terms/tw'
 import { Filter } from './filter'
 import { UseCase } from './termsetting'
 
@@ -13,7 +13,7 @@ VocabApi
 export type VocabApi = {
 	termdbConfig: any
 	//Methods
-	cacheTermQ: (term: Term, q: Q) => any
+	cacheTermQ: (term: Term, q: any) => any
 	findTerm: (f: string, activeCohort: number, usecase: UseCase, x: string) => { lst: Term[] }
 	getCategories: (term: Term, filer: Filter, body?: any) => any
 	getCustomTermQLst: (f: Term) => any
@@ -21,5 +21,5 @@ export type VocabApi = {
 	getterm: (f: any) => Term
 	getTermdbConfig: () => any
 	getViolinPlotData: (f: any, params: any) => void
-	uncacheTermQ: (term: Term, q: Q) => any
+	uncacheTermQ: (term: Term, q: any) => any
 }

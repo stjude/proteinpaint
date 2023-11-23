@@ -1,5 +1,5 @@
 //import { TermWrapper, BaseQ } from '../termdb'
-import { Term, BaseValue, BaseQ } from './term'
+import { Term, BaseValue, BaseQ, BaseTW } from './term'
 import { TermSettingInstance } from '../termsetting'
 
 /*
@@ -52,7 +52,7 @@ export type CategoricalQ = BaseQ & (CategoricalValuesObject | GroupSet)
  * @group Termdb
  * @category TW
  */
-export type CategoricalTW = {
+export type CategoricalTW = BaseTW & {
 	term: CategoricalTerm
 	q: CategoricalQ
 }

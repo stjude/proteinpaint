@@ -15,71 +15,9 @@ importSubtype()
     resuable try/catch block for import statement
 */
 
-type NumObjRangeEntry = any //{}
-
-export type BrushEntry = {
-	//No documentation!
-	orig: string
-	range: {
-		start: number
-		stop: number
-	}
-	init: () => void
-}
-
-export type DensityData = {
-	maxvalue: number
-	minvalue: number
-}
-
-type PlotSize = {
-	width: number
-	height: number
-	xpad: number
-	ypad: number
-}
-
-export type NumberObj = {
-	binsize_g?: any //dom element??
-	brushes: BrushEntry[]
-	custom_bins_q: any
-	density_data: DensityData
-	no_density_data: true
-	plot_size: PlotSize
-	ranges?: NumObjRangeEntry[]
-	svg: any
-	xscale: any
-}
-
-type NumericDom = InstanceDom & {
-	bins_div?: any
-	bin_size_input: any
-	bins_table?: any
-	boundaryInclusionDiv: any
-	boundaryInput?: any
-	custom_knots_div: any
-	customKnotsInput: any
-	first_stop_input: any
-	knots_div: any
-	knot_select_div: any
-	last_radio_auto: any
-	last_start_input: any
-}
-
-export type NumericTermSettingInstance = TermSettingInstance & {
-	dom: NumericDom
-	num_obj: Partial<NumberObj>
-	numqByTermIdModeType: any
-	q?: Partial<NumericQ>
-	term: NumericTerm
-	//Methods
-	renderBinLines: (self: any, q: NumericQ) => void
-}
-
-export async function getHandler(self: NumericTermSettingInstance) {
+export async function getHandler(self) {
 	const numEditVers = self.opts.numericEditMenuVersion as string[]
-	const subtype: string = numEditVers.length > 1 ? 'toggle' : numEditVers[0] // defaults to 'discrete'
-
+	const subtype = numEditVers.length > 1 ? 'toggle' : numEditVers[0] // defaults to 'discrete'
 	const _ = await importSubtype(subtype)
 	return await _.getHandler(self)
 }
