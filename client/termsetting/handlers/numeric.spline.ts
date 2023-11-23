@@ -1,8 +1,8 @@
 import { setDensityPlot } from './density'
-import { keyupEnter } from '#src/client'
-import { getPillNameDefault } from '#termsetting'
-import { convertViolinData } from '#filter/tvs.numeric'
-import { NumericTermSettingInstance, NumericQ } from '#shared/types/index'
+import { keyupEnter } from '../../src/client'
+import { getPillNameDefault } from '../termsetting'
+import { convertViolinData } from '../../filter/tvs.numeric'
+import { NumericQ } from '../../shared/types/index'
 
 /*
 ********************** EXPORTED
@@ -28,7 +28,7 @@ renderEditMenu()
 	applyEdits() // when apply button clicked
 */
 
-export function getHandler(self: NumericTermSettingInstance) {
+export function getHandler(self) {
 	return {
 		getPillName(d: any) {
 			return getPillNameDefault(self, d)
@@ -83,7 +83,7 @@ export function getHandler(self: NumericTermSettingInstance) {
 	}
 }
 
-async function setqDefaults(self: NumericTermSettingInstance) {
+async function setqDefaults(self) {
 	const cache = self.numqByTermIdModeType
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
@@ -106,14 +106,14 @@ async function setqDefaults(self: NumericTermSettingInstance) {
 	//*** validate self.q ***//
 }
 
-function renderEditMenu(self: NumericTermSettingInstance) {
+function renderEditMenu(self) {
 	const edit_div = self.dom.knots_div
 	renderCustomSplineInputs(self, edit_div)
 	renderAutoSplineInputs(self, edit_div)
 }
 
 /******************* Functions for Custom Spline knots *******************/
-function renderCustomSplineInputs(self: NumericTermSettingInstance, div: any) {
+function renderCustomSplineInputs(self, div: any) {
 	self.dom.custom_knots_div = div.append('div')
 
 	self.dom.custom_knots_div
@@ -179,12 +179,12 @@ function renderCustomSplineInputs(self: NumericTermSettingInstance, div: any) {
 }
 
 // apply custom knots if changed from density plot to textarea
-function updateCustomSplineInputs(self: NumericTermSettingInstance) {
+function updateCustomSplineInputs(self) {
 	self.dom.customKnotsInput.property('value', self.q.knots.map((d: any) => d.value).join('\n'))
 }
 
 // apply custom knots to self.q.knots
-function processKnotsInputs(self: NumericTermSettingInstance) {
+function processKnotsInputs(self) {
 	const data = self.dom.customKnotsInput
 		.property('value')
 		.split('\n')
@@ -201,7 +201,7 @@ function processKnotsInputs(self: NumericTermSettingInstance) {
 }
 
 /******************* Functions for Auto Spline knots *******************/
-function renderAutoSplineInputs(self: NumericTermSettingInstance, div: any) {
+function renderAutoSplineInputs(self, div: any) {
 	const knot_count = 4
 	const default_knot_count = knot_count
 	self.dom.knot_select_div = div.append('div')
@@ -259,7 +259,7 @@ function renderAutoSplineInputs(self: NumericTermSettingInstance, div: any) {
 		.html('Will overwrite existing values.')
 }
 
-async function getKnots(self: NumericTermSettingInstance, knot_count: any) {
+async function getKnots(self, knot_count: any) {
 	// qnery knots from backend
 	// knots are calcualted by node backend, 1st knot at 5 percentile,
 	// last knot at 95, and inbetween knots at equidistance
@@ -286,7 +286,7 @@ async function getPercentile2Value(self, percentile_lst: any) {
 	return perc_values
 }
 
-function renderButtons(self: NumericTermSettingInstance) {
+function renderButtons(self) {
 	const btndiv = self.dom.knots_div.append('div')
 	btndiv
 		.append('button')
@@ -306,7 +306,7 @@ function renderButtons(self: NumericTermSettingInstance) {
 		})
 }
 
-function applyEdits(self: NumericTermSettingInstance) {
+function applyEdits(self) {
 	self.q.mode = 'spline'
 	self.dom.tip.hide()
 	self.runCallback()

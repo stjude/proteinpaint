@@ -97,7 +97,7 @@ export async function setDensityPlot(self) {
 	self.renderBinLines = renderBinLines
 }
 
-function handleNoDensity(self: NumericTermSettingInstance) {
+function handleNoDensity(self) {
 	self.num_obj.no_density_data = true
 	self.num_obj.ranges = []
 	if (self.q.first_bin) {
@@ -155,7 +155,7 @@ function handleNoDensity(self: NumericTermSettingInstance) {
 	}
 }
 
-function renderBinLines(self: NumericTermSettingInstance, data: any) {
+function renderBinLines(self, data: any) {
 	const o = self.num_obj as NumberObj
 	if (!o.density_data) throw `Missing .density_data [density.ts, renderBinLines()]`
 	const scaledMinX = Math.round(o.xscale(o.density_data.minvalue)) as number

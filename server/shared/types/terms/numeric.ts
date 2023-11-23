@@ -1,4 +1,4 @@
-import { Term, BaseQ, BaseTW, TermValues } from './term'
+import { Term, BaseQ, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting } from './term'
 
 /**
  *

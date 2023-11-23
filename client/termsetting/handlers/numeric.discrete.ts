@@ -1,12 +1,12 @@
-import { keyupEnter } from '#src/client'
+import { keyupEnter } from '../../src/client'
 import { format } from 'd3-format'
-import { setDensityPlot } from './density'
-import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
-import { Tabs } from '#dom/toggleButtons'
-import { make_radios } from '#dom/radiobutton'
-import { getPillNameDefault } from '#termsetting'
-import { convertViolinData } from '#filter/tvs.numeric'
-import { NumericTermSettingInstance, PillData, RangeEntry, NumericQ, DensityData } from '#shared/types/index'
+import { setDensityPlot, DensityData } from './density'
+import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
+import { Tabs } from '../../dom/toggleButtons'
+import { make_radios } from '../../dom/radiobutton'
+import { getPillNameDefault } from '../termsetting'
+import { convertViolinData } from '../../filter/tvs.numeric'
+import { PillData, RangeEntry, NumericQ } from '../../shared/types/index'
 
 /*
 ********************** EXPORTED
@@ -40,7 +40,7 @@ renderBoundaryInputDivs() //custom bin name inputs
 */
 
 // self is the termsetting instance
-export function getHandler(self: NumericTermSettingInstance) {
+export function getHandler(self) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -60,7 +60,7 @@ export function getHandler(self: NumericTermSettingInstance) {
 	}
 }
 
-async function showBinsMenu(self: NumericTermSettingInstance, div: any) {
+async function showBinsMenu(self, div: any) {
 	self.num_obj = {}
 
 	self.num_obj.plot_size = {
@@ -100,7 +100,7 @@ async function showBinsMenu(self: NumericTermSettingInstance, div: any) {
 	renderButtons(self)
 }
 
-function applyEdits(self: NumericTermSettingInstance) {
+function applyEdits(self) {
 	if (self.q.type == 'regular-bin') {
 		if (!self.q.first_bin) {
 			self.q.first_bin = {
@@ -140,7 +140,7 @@ function applyEdits(self: NumericTermSettingInstance) {
 	self.runCallback()
 }
 
-function processCustomBinInputs(self: NumericTermSettingInstance) {
+function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputs = self.dom.bins_table.node().querySelectorAll('input')
@@ -190,7 +190,7 @@ function processCustomBinInputs(self: NumericTermSettingInstance) {
 	return data
 }
 
-function setqDefaults(self: NumericTermSettingInstance) {
+function setqDefaults(self) {
 	const dd = self.num_obj.density_data as DensityData
 
 	const cache = self.numqByTermIdModeType
@@ -268,7 +268,7 @@ function setqDefaults(self: NumericTermSettingInstance) {
 	//*** validate self.q ***//
 }
 
-export function renderBoundaryInclusionInput(self: NumericTermSettingInstance) {
+export function renderBoundaryInclusionInput(self) {
 	self.dom.boundaryInclusionDiv = self.dom.bins_div.append('div').style('margin-left', '5px')
 
 	self.dom.boundaryInclusionDiv
@@ -323,7 +323,7 @@ export function renderBoundaryInclusionInput(self: NumericTermSettingInstance) {
 		.html((d: htmlData) => d.html)
 }
 
-function renderTypeInputs(self: NumericTermSettingInstance) {
+function renderTypeInputs(self) {
 	// toggle switch
 	const bins_div = self.dom.bins_div
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
@@ -361,7 +361,7 @@ function renderTypeInputs(self: NumericTermSettingInstance) {
 }
 
 /******************* Functions for Numerical Fixed size bins *******************/
-function mayShowValueconversionMsg(self: NumericTermSettingInstance, tablediv: any) {
+function mayShowValueconversionMsg(self, tablediv: any) {
 	if (!self.term.valueConversion) return
 	tablediv
 		.append('div')
@@ -369,7 +369,7 @@ function mayShowValueconversionMsg(self: NumericTermSettingInstance, tablediv: a
 		.style('opacity', 0.6)
 		.text(`Note: using values by the unit of ${self.term.valueConversion.fromUnit}.`)
 }
-function renderRegularSizedBinsInputs(self: NumericTermSettingInstance, tablediv: any) {
+function renderRegularSizedBinsInputs(self, tablediv: any) {
 	mayShowValueconversionMsg(self, tablediv)
 	self.dom.bins_table = tablediv.append('table')
 	renderBinSizeInput(self, self.dom.bins_table.append('tr'))
@@ -377,7 +377,7 @@ function renderRegularSizedBinsInputs(self: NumericTermSettingInstance, tablediv
 	renderLastBinInputs(self, self.dom.bins_table.append('tr'))
 }
 
-function renderBinSizeInput(self: NumericTermSettingInstance, tr: any) {
+function renderBinSizeInput(self, tr: any) {
 	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('Bin Size')
 
 	const dd = self.num_obj.density_data as DensityData
@@ -415,8 +415,8 @@ function renderBinSizeInput(self: NumericTermSettingInstance, tr: any) {
 		})
 }
 
-function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
-	if (!self.q.first_bin) self.q.first_bin = {} as NumericQ['first_bin'] // is this needed and safe?
+function renderFirstBinInput(self, tr: any) {
+	if (!self.q.first_bin) throw 'missing q.first_bin'
 
 	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('First Bin Stop')
 
@@ -451,7 +451,7 @@ function renderFirstBinInput(self: NumericTermSettingInstance, tr: any) {
 		.text('Indicated by left-most red line. Drag to change.')
 }
 
-function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
+function renderLastBinInputs(self, tr: any) {
 	// tell if last bin is automatic (not fixed)
 	const isAuto = !self.q.last_bin || !Number.isFinite(self.q.last_bin.start)
 
@@ -530,7 +530,7 @@ function renderLastBinInputs(self: NumericTermSettingInstance, tr: any) {
 }
 
 /******************* Functions for Numerical Custom size bins *******************/
-function renderCustomBinInputs(self: NumericTermSettingInstance, tablediv: any) {
+function renderCustomBinInputs(self, tablediv: any) {
 	mayShowValueconversionMsg(self, tablediv)
 	self.dom.bins_table = tablediv.append('div').style('display', 'flex').style('width', '100%')
 
@@ -606,7 +606,7 @@ function renderCustomBinInputs(self: NumericTermSettingInstance, tablediv: any) 
 	// add help message for custom bin labels
 }
 
-export function renderBoundaryInputDivs(self: NumericTermSettingInstance, data: any) {
+export function renderBoundaryInputDivs(self, data: any) {
 	const holder = self.dom.rangeAndLabelDiv
 	holder.selectAll('*').remove()
 
@@ -639,7 +639,7 @@ export function renderBoundaryInputDivs(self: NumericTermSettingInstance, data: 
 	self.dom.customBinLabelInput = self.dom.bins_table.selectAll('input').data(data)
 }
 
-function renderButtons(self: NumericTermSettingInstance) {
+function renderButtons(self) {
 	const btndiv = self.dom.bins_div.append('div')
 	btndiv
 		.append('button')

@@ -144,7 +144,7 @@ export type InstanceDom = {
 	rangeAndLabelDiv?: any
 }
 
-export interface Handler {
+export type Handler = {
 	getPillName: (d: any) => string
 	getPillStatus: (f?: any) => any
 	showEditMenu: (div: Selection) => void

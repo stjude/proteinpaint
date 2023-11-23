@@ -9,6 +9,7 @@ import {
 	NumericTW,
 	DefaultMedianQ,
 	DefaultBinnedQ,
+	DefaultNumericQ,
 	BinaryNumericQ,
 	StartUnboundedBin,
 	StopUnboundedBin,
@@ -134,8 +135,10 @@ export async function getHandler(self) {
 	}
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null) {
+export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: DefaultNumericQ) {
 	// when missing, defaults mode to discrete
+	// @ts-ignore
+	//const dq = defaultQ as DefaultNumericQ
 	if (!tw.q.mode && !defaultQ?.mode) tw.q.mode = 'discrete'
 
 	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q as BinnedNumericQ)) {
@@ -149,8 +152,10 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null)
 
 	if (defaultQ) {
 		defaultQ.isAtomic = true
-		if (defaultQ.preferredBins == 'median') {
-			const q: DefaultMedianQ = defaultQ
+		const dmq = defaultQ as DefaultMedianQ
+		const dbq = defaultQ as DefaultBinnedQ
+		if (dmq.preferredBins == 'median') {
+			const q = dmq
 			/*
 			do following computing to fill the q{} object
 			call vocab method to get median value (without filter)
@@ -179,11 +184,11 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null)
 					label: '≥' + median
 				} as StopUnboundedBin
 			]
-		} else if (defaultQ.preferredBins == 'less' || defaultQ.preferredBins == 'default') {
+		} else if (dbq.preferredBins == 'less' || dbq.preferredBins == 'default') {
 			/* this flag is true, use term.bins.less
 			in this case, defaultQ{} is not an actual q{} object
 			*/
-			tw.q = JSON.parse(JSON.stringify(tw.term.bins[defaultQ.preferredBins]))
+			tw.q = JSON.parse(JSON.stringify(tw.term.bins[dbq.preferredBins]))
 		} else {
 			// defaultQ is an actual q{} object
 			// merge it into tw.q

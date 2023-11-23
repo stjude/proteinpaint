@@ -1,5 +1,14 @@
 //import { TermWrapper, BaseQ } from '../termdb'
-import { Term, BaseValue, TermValues, BaseQ, BaseTW, PredefinedGroupSetting, CustomGroupSetting } from './term'
+import {
+	Term,
+	BaseValue,
+	TermValues,
+	BaseQ,
+	BaseTW,
+	EmptyGroupSetting,
+	PredefinedGroupSetting,
+	CustomGroupSetting
+} from './term'
 import { TermSettingInstance } from '../termsetting'
 
 /*
@@ -18,18 +27,13 @@ CategoricaTermSettingInstance
  * @category TW
  */
 
-type EmptyGroupSetting = {
-	inuse?: false
-	disabled?: true
-}
-
 export type CategoricalValuesObject = {
 	mode: 'binary' | 'discrete'
 	type?: 'values'
 	values: {
 		[key: string]: BaseValue
 	}
-	groupsetting?: EmptyGroupSetting
+	groupsetting: EmptyGroupSetting
 }
 
 export type ValuesGroup = {
@@ -38,7 +42,7 @@ export type ValuesGroup = {
 		key: string
 		label: string
 	}[]
-	groupsetting?: EmptyGroupSetting
+	groupsetting: EmptyGroupSetting
 }
 
 export type GroupSet = {
