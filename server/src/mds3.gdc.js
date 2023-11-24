@@ -26,6 +26,7 @@ validate_query_geneCnv2
 validate_query_geneExpression
 	getCasesWithExressionDataFromCohort
 validate_query_singleCell_samples
+validate_query_singleCell_data
 querySamples_gdcapi
 	flattenCaseByFields
 		mayApplyGroupsetting
@@ -2127,6 +2128,60 @@ export function validate_query_singleCell_samples(ds, genome) {
 			cases.push({ name: c, files: a })
 		}
 		return cases
+	}
+}
+
+export function validate_query_singleCell_data(ds, genome) {
+	/*
+	q{}
+		sample: value is the file Id, one that's found by validate_query_singleCell_samples
+	*/
+	ds.queries.singleCell.data.get = async q => {
+		const re = await got(path.join(apihost, 'data', q.sample), { method: 'GET', headers: getheaders(q) })
+		const lines = re.body.trim().split('\n')
+
+		// first line is header
+		// cell_barcode	read_count	gene_count	seurat_cluster	UMAP_1	UMAP_2	UMAP3d_1	UMAP3d_2	UMAP3d_3	tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3	PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
+		// this tsv file has coord for 3 maps
+		const plotUmap = { name: 'UMAP', cells: [] },
+			plotTsne = { name: 'TSNE', cells: [] },
+			plotPca = { name: 'PCA', cells: [] },
+			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} },
+			tid2cellvalue = { cluster: {} } // corresponds to above term id
+
+		for (let i = 1; i < lines.length; i++) {
+			const line = lines[i]
+			const l = line.split('\t')
+			const cellId = l[0]
+			if (!cellId) throw 'cellId missing from a line: ' + line
+			const clusterId = l[3]
+			if (!clusterId) throw 'seuratCluster missing from a line'
+			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
+			tid2cellvalue.cluster[cellId] = clusterId
+
+			const umap1 = Number(l[4]),
+				umap2 = Number(l[5]),
+				// skip umap 3d
+				tsne1 = Number(l[9]),
+				tsne2 = Number(l[10]),
+				// skip tsne 3d
+				pc1 = Number(l[14]),
+				pc2 = Number(l[15])
+			if (Number.isNaN(umap1)) throw 'umap1 is nan'
+			if (Number.isNaN(umap2)) throw 'umap2 is nan'
+			if (Number.isNaN(tsne1)) throw 'tsne1 is nan'
+			if (Number.isNaN(tsne2)) throw 'tsne2 is nan'
+			if (Number.isNaN(pc1)) throw 'pc1 is nan'
+			if (Number.isNaN(pc2)) throw 'pc2 is nan'
+			plotUmap.cells.push({ cellId, x: umap1, y: umap2 })
+			plotTsne.cells.push({ cellId, x: tsne1, y: tsne2 })
+			plotPca.cells.push({ cellId, x: pc1, y: pc2 })
+		}
+		return {
+			plots: [plotPca, plotTsne, plotUmap],
+			terms: [seuratClusterTerm],
+			tid2cellvalue
+		}
 	}
 }
 
