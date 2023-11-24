@@ -339,6 +339,8 @@ async function mayValidateRestrictAcestries(tdb) {
 	if (!tdb.restrictAncestries) return
 	if (!Array.isArray(tdb.restrictAncestries) || tdb.restrictAncestries.length == 0)
 		throw 'termdb.restrictAncestries[] is not non-empty array'
+
+	//console.log('tdb.restrictAncestries{} PC term and sample counts:')
 	for (const a of tdb.restrictAncestries) {
 		if (!a.name) throw 'name missing from one of restrictAncestries'
 
@@ -362,9 +364,10 @@ async function mayValidateRestrictAcestries(tdb) {
 				const pctid = a.PCTermId + i // pc term id
 				const pct = tdb.q.termjsonByOneid(pctid)
 				if (!pct) throw 'a PC term is not found in termdb'
-				const s2v = tdb.q.getAllFloatValues(pctid)
+				const s2v = tdb.q.getAllValues4term(pctid)
 				if (!s2v || !s2v.size) throw 'no sample PC values are retrieved by restrictAncestries term: ' + pctid
 				a.pcs.set(pct.name, s2v)
+				//console.log(pct.name, s2v.size)
 			}
 		} else if (a.PCBySubcohort) {
 			for (const subcohort in a.PCBySubcohort) {
@@ -384,9 +387,10 @@ async function mayValidateRestrictAcestries(tdb) {
 					const pctid = b.termId + i // pc term id
 					const pct = tdb.q.termjsonByOneid(pctid)
 					if (!pct) throw 'a PC term is not found in termdb'
-					const s2v = tdb.q.getAllFloatValues(pctid)
+					const s2v = tdb.q.getAllValues4term(pctid)
 					if (!s2v || !s2v.size) throw 'no sample PC values are retrieved by restrictAncestries.PCBySubcohort.<>.termId'
 					b.pcs.set(pct.name, s2v)
+					//console.log(pct.name, s2v.size)
 				}
 			}
 		} else {
@@ -1846,16 +1850,19 @@ async function validate_query_singleCell(ds, genome) {
 	const q = ds.queries.singleCell
 	if (!q) return
 
+	// query is structured as {samples.get, data.get}
 	if (!q.samples) throw 'singleCell.samples{} missing'
+	if (!q.data) throw 'singleCell.data{} missing'
+
 	if (q.samples.gdcapi) {
 		gdc.validate_query_singleCell_samples(ds, genome)
-		// samples.get() added
+		// q.samples.get() added
 	} else {
 		if (!q.samples.isSampleTerm) throw 'singleCell.samples.isSampleTerm missing'
 		// for now use this quick fix method to pull sample ids annotated by this term
 		// to support situation where not all samples from a dataset has sc data
 		const sampleIds = [] // list of sample ids with sc data
-		const s = ds.cohort.termdb.q.getAllFloatValues(q.samples.isSampleTerm)
+		const s = ds.cohort.termdb.q.getAllValues4term(q.samples.isSampleTerm)
 		for (const id of s.keys()) sampleIds.push(id)
 		if (sampleIds.length == 0) throw 'no sample with sc data'
 		const lst = sampleIds.map(i => {
@@ -1865,44 +1872,78 @@ async function validate_query_singleCell(ds, genome) {
 		q.samples.get = () => lst
 	}
 
-	if (!Array.isArray(q.plots)) throw 'queries.singleCell.plots[] is not array'
-	const nameSet = new Set() // guard against duplicating plot names
-	for (const plot of q.plots) {
-		if (!plot.name) throw 'plot.name missing'
-		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
-		nameSet.add(plot.name)
-		if (plot.gdcapi) {
-			//gdc.validate_query_singleCell_oneplot(ds, genome)
-			// plot.get() added
-		} else if (plot.folder) {
+	if (q.data.gdcapi) {
+		gdc.validate_query_singleCell_data(ds, genome)
+		// q.data.get() added; abstracts all logic and returns same structure as following
+	} else {
+		// must have q.data.plots[], for a sample, get data from each plot
+		if (!Array.isArray(q.data.plots)) throw 'queries.singleCell.data.plots[] is not array'
+		const nameSet = new Set() // guard against duplicating plot names
+		for (const plot of q.data.plots) {
+			if (!plot.name) throw 'plot.name missing'
+			if (nameSet.has(plot.name)) throw 'duplicate plot.name'
+			nameSet.add(plot.name)
+			if (!plot.folder) throw '.folder missing for a plot'
 			// folder contains tsv files as per-sample maps
-			plot.get = async sample => {
-				// given a sample name, return available sc data for this sample
-				// if sample is int, may convert to string
-				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sample, plot.fileSuffix)
-				try {
-					await fs.promises.stat(tsvfile)
-				} catch (e) {
-					if (e.code == 'EACCES') return { error: 'cannot read file, permission denied' }
-					if (e.code == 'ENOENT') return {} // no file found for this sample
-					return { error: 'failed to load data' }
+		}
+		if (!Array.isArray(q.data.termIds)) throw 'queries.singleCell.data.termIds[] is not array'
+		q.data._terms = []
+		q.data._tid2cellvalue = {}
+		for (const tid of q.data.termIds) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
+			if (!t) throw 'invalid term id from queries.singleCell.data.termIds[]'
+			q.data._terms.push(t)
+			q.data._tid2cellvalue[tid] = ds.cohort.termdb.q.getAllValues4term(tid)
+		}
+		q.data.get = async sample => {
+			// if sample is int, may convert to string
+			try {
+				const tid2cellvalue = {}
+				for (const tid of q.data.termIds) tid2cellvalue[tid] = {} // k: cell id, v: cell value for this term
+
+				const plots = [] // given a sample name, collect every plot data for this sample and return
+				for (const plot of q.data.plots) {
+					const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sample, plot.fileSuffix)
+					try {
+						await fs.promises.stat(tsvfile)
+					} catch (e) {
+						if (e.code == 'ENOENT') {
+							// no file found for this sample; allowed because sampleView tests if that sample has sc data or not
+							continue
+						}
+						if (e.code == 'EACCES') throw 'cannot read file, permission denied'
+						throw 'failed to load sc data file'
+					}
+					const lines = (await utils.read_file(tsvfile)).trim().split('\n')
+					// 1st line is header
+					const cells = []
+					for (let i = 1; i < lines.length; i++) {
+						// each line is a cell
+						const l = lines[i].split('\t')
+						const cellId = l[0],
+							x = Number(l[4]), // FIXME standardize, or define idx in plot
+							y = Number(l[5])
+						if (!cellId) throw 'cell id missing'
+						if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
+						cell.push({ cellId, x, y })
+
+						for (const tid of q.data.termIds) {
+							if (q.data._tid2cellvalue[tid].has(cellId)) {
+								tid2cellvalue[tid][cellId] = q.data._tid2cellvalue[tid].get(cellId)
+							}
+						}
+					}
+					plots.push({ name: plot.name, cells })
 				}
-				const lines = (await utils.read_file(tsvfile)).trim().split('\n')
-				// 1st line header
-				const data = []
-				for (let i = 1; i < lines.length; i++) {
-					const l = lines[i].split('\t')
-					const cid = l[0],
-						x = Number(l[4]), // FIXME standardize, or define idx in plot
-						y = Number(l[5])
-					if (!cid) throw 'cell id missing'
-					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
-					data.push({ cid, x, y })
+				if (plots.length == 0) {
+					// no data available for this sample
+					return { nodata: true }
 				}
-				return data
+				return { plots, terms: q.data._terms, tid2cellvalue }
+			} catch (e) {
+				if (e.stack) console.log(e.stack)
+				return { error: e.message || e }
 			}
-		} else {
-			throw 'unknown data source for singleCell'
 		}
 	}
 }

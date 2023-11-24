@@ -10,6 +10,7 @@ filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
 
+may later refactor into a mass app, to support same purpose from non-gdc datasets
 */
 
 // hardcoded parameter values. required by route
@@ -17,7 +18,7 @@ const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
 
 // list of columns to show in MAF file table
-const columns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Samples' }, { label: 'File Size' }]
+const columns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Sample type' }]
 
 export async function gdcSinglecellUi({ holder, filter0, callbackOnRender, debugmode = false }) {
 	// public api obj to be returned
@@ -70,10 +71,12 @@ async function getFilesAndShowTable(obj) {
 
 	// render
 	const rows = []
+	const rowid2gdcfileid = []
 	for (const sample of result.samples) {
 		for (const f of sample.files) {
-			const row = [{ value: sample.name }]
+			const row = [{ value: sample.name }, { value: f.project_id }, { value: f.samples[0].sample_type }]
 			rows.push(row)
+			rowid2gdcfileid.push(f.fileId)
 		}
 	}
 	renderTable({
@@ -81,49 +84,28 @@ async function getFilesAndShowTable(obj) {
 		columns,
 		resize: true,
 		div: obj.tableDiv.append('div'),
-		selectAll: true,
-		buttons: [
-			{
-				text: 'Aggregate selected MAF files and download',
-				callback: submitSelectedFiles
-			}
-		]
-	})
-
-	async function submitSelectedFiles(lst, button) {
-		const fileIdLst = []
-		for (const i of lst) {
-			fileIdLst.push(result.files[i].id)
+		noButtonCallback: index => {
+			submitSelectedFile(rowid2gdcfileid[index], obj)
 		}
-		if (fileIdLst.length == 0) return
-		const oldText = button.innerHTML
-		button.innerHTML = 'Loading... Please wait'
-		button.disabled = true
+	})
+}
 
-		// may disable the "Aggregate" button here and re-enable later
+async function submitSelectedFile(fileId, obj) {
+	obj.tableDiv.selectAll('*').remove()
+	const wait = obj.tableDiv.append('div').text('Loading...')
 
-		let data
+	let result
+	{
+		const body = { genome: gdcGenome, dslabel: gdcDslabel, sample: fileId }
 		try {
-			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
-			if (data.error) throw data.error
+			result = await dofetch3('termdb/singlecellData', { body })
+			if (result.error) throw result.error
 		} catch (e) {
+			wait.remove()
 			sayerror(obj.errDiv, e)
-			button.innerHTML = oldText
-			button.disabled = false
-
 			return
 		}
-
-		button.innerHTML = oldText
-		button.disabled = false
-
-		// download the file to client
-		const a = document.createElement('a')
-		a.href = URL.createObjectURL(data)
-		a.download = 'cohort.maf.gz'
-		a.style.display = 'none'
-		document.body.appendChild(a)
-		a.click()
-		document.body.removeChild(a)
 	}
+	console.log(result)
+	wait.remove()
 }

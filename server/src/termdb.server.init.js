@@ -341,9 +341,22 @@ export function server_init_db_queries(ds) {
 	}
 
 	{
-		const s = cn.prepare('SELECT sample,value FROM anno_float WHERE term_id=?')
-		// to work for getting per-sample pc/admix values; the terms are must be float
-		q.getAllFloatValues = id => {
+		/* get all sample-values for one term
+		only works for atomic terms categorical/float/integer, not for condition
+		uses:
+		- get per-sample pc/admix values
+		- singlecell cell annotations
+		*/
+		const t2s = {
+			float: cn.prepare('SELECT sample,value FROM anno_float WHERE term_id=?'),
+			integer: cn.prepare('SELECT sample,value FROM anno_integer WHERE term_id=?'),
+			categorical: cn.prepare('SELECT sample,value FROM anno_categorical WHERE term_id=?')
+		}
+		q.getAllValues4term = id => {
+			const t = q.termjsonByOneid(id)
+			if (!t) return undefined
+			const s = t2s[t.type]
+			if (!s) return undefined
 			const tmp = s.all(id)
 			if (!tmp || tmp.length == 0) return undefined
 			const s2v = new Map()
