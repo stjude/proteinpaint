@@ -32,6 +32,7 @@ import { mayInitiateScatterplots } from './termdb.scatter'
 import { mayInitiateMatrixplots } from './termdb.matrix'
 import { add_bcf_variant_filter } from './termdb.snp'
 import { spawnSync } from 'child_process'
+import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 
 /*
 init
@@ -1842,108 +1843,6 @@ async function validate_query_singleSampleGbtk(ds, genome) {
 			}
 		} else {
 			throw 'unknown query method for singleSampleGbtk'
-		}
-	}
-}
-
-async function validate_query_singleCell(ds, genome) {
-	const q = ds.queries.singleCell
-	if (!q) return
-
-	// query is structured as {samples.get, data.get}
-	if (!q.samples) throw 'singleCell.samples{} missing'
-	if (!q.data) throw 'singleCell.data{} missing'
-
-	if (q.samples.gdcapi) {
-		gdc.validate_query_singleCell_samples(ds, genome)
-		// q.samples.get() added
-	} else {
-		if (!q.samples.isSampleTerm) throw 'singleCell.samples.isSampleTerm missing'
-		// for now use this quick fix method to pull sample ids annotated by this term
-		// to support situation where not all samples from a dataset has sc data
-		const sampleIds = [] // list of sample ids with sc data
-		const s = ds.cohort.termdb.q.getAllValues4term(q.samples.isSampleTerm)
-		for (const id of s.keys()) sampleIds.push(id)
-		if (sampleIds.length == 0) throw 'no sample with sc data'
-		const lst = sampleIds.map(i => {
-			return { name: ds.cohort.termdb.q.id2sampleName(i) }
-		})
-		// getter returns array of {name:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
-		q.samples.get = () => lst
-	}
-
-	if (q.data.gdcapi) {
-		gdc.validate_query_singleCell_data(ds, genome)
-		// q.data.get() added; abstracts all logic and returns same structure as following
-	} else {
-		// must have q.data.plots[], for a sample, get data from each plot
-		if (!Array.isArray(q.data.plots)) throw 'queries.singleCell.data.plots[] is not array'
-		const nameSet = new Set() // guard against duplicating plot names
-		for (const plot of q.data.plots) {
-			if (!plot.name) throw 'plot.name missing'
-			if (nameSet.has(plot.name)) throw 'duplicate plot.name'
-			nameSet.add(plot.name)
-			if (!plot.folder) throw '.folder missing for a plot'
-			// folder contains tsv files as per-sample maps
-		}
-		if (!Array.isArray(q.data.termIds)) throw 'queries.singleCell.data.termIds[] is not array'
-		q.data._terms = []
-		q.data._tid2cellvalue = {}
-		for (const tid of q.data.termIds) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
-			if (!t) throw 'invalid term id from queries.singleCell.data.termIds[]'
-			q.data._terms.push(t)
-			q.data._tid2cellvalue[tid] = ds.cohort.termdb.q.getAllValues4term(tid)
-		}
-		q.data.get = async sample => {
-			// if sample is int, may convert to string
-			try {
-				const tid2cellvalue = {}
-				for (const tid of q.data.termIds) tid2cellvalue[tid] = {} // k: cell id, v: cell value for this term
-
-				const plots = [] // given a sample name, collect every plot data for this sample and return
-				for (const plot of q.data.plots) {
-					const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sample, plot.fileSuffix)
-					try {
-						await fs.promises.stat(tsvfile)
-					} catch (e) {
-						if (e.code == 'ENOENT') {
-							// no file found for this sample; allowed because sampleView tests if that sample has sc data or not
-							continue
-						}
-						if (e.code == 'EACCES') throw 'cannot read file, permission denied'
-						throw 'failed to load sc data file'
-					}
-					const lines = (await utils.read_file(tsvfile)).trim().split('\n')
-					// 1st line is header
-					const cells = []
-					for (let i = 1; i < lines.length; i++) {
-						// each line is a cell
-						const l = lines[i].split('\t')
-						const cellId = l[0],
-							x = Number(l[4]), // FIXME standardize, or define idx in plot
-							y = Number(l[5])
-						if (!cellId) throw 'cell id missing'
-						if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
-						cell.push({ cellId, x, y })
-
-						for (const tid of q.data.termIds) {
-							if (q.data._tid2cellvalue[tid].has(cellId)) {
-								tid2cellvalue[tid][cellId] = q.data._tid2cellvalue[tid].get(cellId)
-							}
-						}
-					}
-					plots.push({ name: plot.name, cells })
-				}
-				if (plots.length == 0) {
-					// no data available for this sample
-					return { nodata: true }
-				}
-				return { plots, terms: q.data._terms, tid2cellvalue }
-			} catch (e) {
-				if (e.stack) console.log(e.stack)
-				return { error: e.message || e }
-			}
 		}
 	}
 }

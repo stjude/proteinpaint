@@ -25,8 +25,8 @@ validate_query_geneCnv2
 	filter2GDCfilter
 validate_query_geneExpression
 	getCasesWithExressionDataFromCohort
-validate_query_singleCell_samples
-validate_query_singleCell_data
+gdc_validate_query_singleCell_samples
+gdc_validate_query_singleCell_data
 querySamples_gdcapi
 	flattenCaseByFields
 		mayApplyGroupsetting
@@ -2054,7 +2054,7 @@ async function convert2caseId(n) {
 	throw 'cannot convert to case_id (uuid)'
 }
 
-export function validate_query_singleCell_samples(ds, genome) {
+export function gdc_validate_query_singleCell_samples(ds, genome) {
 	/*
 	q{}
 		filter0, optional
@@ -2131,10 +2131,10 @@ export function validate_query_singleCell_samples(ds, genome) {
 	}
 }
 
-export function validate_query_singleCell_data(ds, genome) {
+export function gdc_validate_query_singleCell_data(ds, genome) {
 	/*
 	q{}
-		sample: value is the file Id, one that's found by validate_query_singleCell_samples
+		sample: value is the file Id, one that's found by gdc_validate_query_singleCell_samples
 	*/
 	ds.queries.singleCell.data.get = async q => {
 		const re = await got(path.join(apihost, 'data', q.sample), { method: 'GET', headers: getheaders(q) })
