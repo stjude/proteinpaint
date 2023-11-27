@@ -2,7 +2,13 @@ import fs from 'fs'
 import path from 'path'
 import { read_file } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import { SingleCellQuery, SingleCellSamplesNative, SingleCellDataNative } from '#shared/types/dataset.ts'
+import {
+	SingleCellQuery,
+	SingleCellSamplesNative,
+	SingleCellSamplesGdc,
+	SingleCellDataNative,
+	SingleCellDataGdc
+} from '#shared/types/dataset.ts'
 import {
 	Sample,
 	TermdbSinglecellsamplesRequest,
@@ -63,14 +69,14 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	const q = ds.queries.singleCell as SingleCellQuery
 	if (!q) return
 
-	if (q.samples.gdcapi) {
+	if ((q.samples as SingleCellSamplesGdc).gdcapi) {
 		gdc_validate_query_singleCell_samples(ds, genome)
 	} else {
 		validateSamplesNative(q.samples as SingleCellSamplesNative, ds)
 	}
 	// q.samples.get() added
 
-	if (q.data.gdcapi) {
+	if ((q.data as SingleCellDataGdc).gdcapi) {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else {
 		validateDataNative(q.data as SingleCellDataNative, ds)

@@ -297,6 +297,7 @@ export type SingleCellSamplesNative = {
 	TODO change to hasScTerm:string
 	*/
 	isSampleTerm: string
+	get: () => { sample: string }[]
 }
 export type SingleCellDataGdc = {
 	gdcapi: true
@@ -309,6 +310,7 @@ type SingleCellPlot = {
 export type SingleCellDataNative = {
 	plots: SingleCellPlot[]
 	termIds: string[]
+	get: (sample: any) => any
 }
 
 export type SingleCellQuery = {
