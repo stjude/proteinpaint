@@ -88,7 +88,8 @@ filter0=str
 	simply pass to backend to include in api queries
 callbackOnRender()
 	optional callback for ui testing
-
+stream2download=boolean
+	if true, run the app in "bam slice download" mode..
 Returns:
 
 a public API object with callbacks
@@ -99,6 +100,7 @@ export async function bamsliceui({
 	filter0,
 	hideTokenInput = false,
 	callbackOnRender,
+	stream2download = false,
 	debugmode = false
 }) {
 	// public api obj to be returned
@@ -728,7 +730,7 @@ export async function bamsliceui({
 		//
 		//////////////////////////////////////////////
 		for (const [idx, file] of args.bam_files.entries()) {
-			// file = {file_id}
+			// file = {file_id,track_name,about[]}
 
 			submitButton.text(`Slicing BAM file ${idx + 1} of ${args.bam_files.length}...`)
 
@@ -738,6 +740,25 @@ export async function bamsliceui({
 				gdcFilePosition: par.chr + '.' + par.start + '.' + par.stop,
 				// SV_EXPAND
 				regions: [{ chr: par.chr, start: par.start, stop: par.stop }]
+			}
+
+			if (stream2download) {
+				// detour
+				// TODO support unmapped in this mode
+				body.stream2download = true
+				const data = await dofetch3('tkbam', { headers, body })
+				if (data.error) throw data.error
+
+				// download the file to client
+				const a = document.createElement('a')
+				a.href = URL.createObjectURL(data)
+				a.download = `${file.track_name}.${par.chr}.${par.start}.${par.stop}.bam`
+				a.style.display = 'none'
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+
+				return
 			}
 
 			const gdc_bam_files = await dofetch3('tkbam', { headers, body })
