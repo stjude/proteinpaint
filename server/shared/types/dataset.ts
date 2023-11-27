@@ -289,6 +289,8 @@ type GeneExpressionQuery = {
 }
 
 export type SingleCellSamplesGdc = {
+	src: 'gdcapi'
+	// TODO: do not use this boolean
 	gdcapi: true
 }
 export type SingleCellSamplesNative = {
@@ -296,10 +298,15 @@ export type SingleCellSamplesNative = {
 	a way to query anno_cat table to find those samples labeled with this term for having sc data
 	TODO change to hasScTerm:string
 	*/
+	src: 'native'
+	// TODO: do not use this boolean
+	gdcapi?: false | undefined
 	isSampleTerm: string
 	get: () => { sample: string }[]
 }
 export type SingleCellDataGdc = {
+	src: 'gdcapi'
+	// TODO: do not use this boolean
 	gdcapi: true
 }
 type SingleCellPlot = {
@@ -308,6 +315,9 @@ type SingleCellPlot = {
 	fileSuffix: string
 }
 export type SingleCellDataNative = {
+	src: 'native'
+	// TODO: do not use this boolean
+	gdcapi?: false | undefined
 	plots: SingleCellPlot[]
 	termIds: string[]
 	get: (sample: any) => any

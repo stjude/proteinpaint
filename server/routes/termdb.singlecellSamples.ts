@@ -69,14 +69,14 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	const q = ds.queries.singleCell as SingleCellQuery
 	if (!q) return
 
-	if ((q.samples as SingleCellSamplesGdc).gdcapi) {
+	if (q.samples.src == 'gdcapi') {
 		gdc_validate_query_singleCell_samples(ds, genome)
 	} else {
 		validateSamplesNative(q.samples as SingleCellSamplesNative, ds)
 	}
 	// q.samples.get() added
 
-	if ((q.data as SingleCellDataGdc).gdcapi) {
+	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else {
 		validateDataNative(q.data as SingleCellDataNative, ds)
