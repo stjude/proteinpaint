@@ -173,7 +173,7 @@ class profileRadar extends profilePlot {
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
-		const color = field == 'term1' ? '#aaa' : 'blue'
+		const color = field == 'sc' ? '#aaa' : 'blue'
 		const circle = this.polarG
 			.append('g')
 			.attr('transform', `translate(${x}, ${y})`)

@@ -75,6 +75,7 @@ function burgerBtnInit(opts) {
 				.style('transition', '0.5s')
 				.html('&#8801;')
 				.on('click', opts.callback)
+				.attr('title', 'Settings')
 		}
 	}
 
@@ -89,7 +90,7 @@ function burgerBtnInit(opts) {
 }
 
 function helpBtnInit(opts) {
-	const infoDiv = opts.holder.style('margin', '20px')
+	const infoDiv = opts.holder.style('margin', '20px').attr('title', 'Documentation')
 
 	icon_functions['help'](infoDiv, { handler: opts.callback })
 
@@ -112,7 +113,7 @@ function helpBtnInit(opts) {
 }
 
 function downloadBtnInit(opts) {
-	const downloadDiv = opts.holder.style('margin-left', '20px')
+	const downloadDiv = opts.holder.style('margin-left', '20px').attr('title', 'Download plot image')
 
 	icon_functions['download'](downloadDiv, { handler: opts.callback })
 
