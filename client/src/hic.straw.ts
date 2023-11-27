@@ -501,14 +501,26 @@ async function init_wholegenome(hic: any) {
 
 	hic.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
 
-	// after the ui is created, load data for each chr pair,
-	// await on each request to finish to avoid server lockup
-	for (let i = 0; i < manychr; i++) {
-		const lead = hic.chrlst[i]
-		for (let j = 0; j <= i; j++) {
-			const follow = hic.chrlst[j]
-			await getdata_leadfollow(hic, lead, follow)
+	/* after the ui is created, load data for each chr pair,
+	await on each request to finish to avoid server lockup
+
+	there might be data inconsistenncy with hic file, it may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
+	do not flood ui with such errors, to tolerate, collect all errors and show in one place
+	*/
+	const errLst = []
+	try {
+		for (let i = 0; i < manychr; i++) {
+			const lead = hic.chrlst[i]
+			for (let j = 0; j <= i; j++) {
+				const follow = hic.chrlst[j]
+				await getdata_leadfollow(hic, lead, follow)
+			}
 		}
+	} catch (e) {
+		errLst.push(e)
+	}
+	if (errLst.length) {
+		// TODO enable a red bubble with errLst.length number in header to indicate occurrence of errors, click on bubble to see list of errs in menu
 	}
 
 	return
