@@ -83,7 +83,7 @@ class profileBarchart extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const width = 1400
-		const height = this.rowCount * 32 + 420
+		const height = this.rowCount * 32 + 500
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(config.title)
 		const svg = this.svg
@@ -153,6 +153,7 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 75, y, 'A')
 
 		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 60})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${50},${y + 210})`)
 
 		this.legendG
 			.append('text')
@@ -176,6 +177,9 @@ class profileBarchart extends profilePlot {
 			.append('text')
 			.attr('transform', `translate(0, 110)`)
 			.text('The end-user was asked to rate the current status of the domains and subdomains included for this module.')
+
+		this.addFilterLegend()
+
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
 		drawLine(910, 120, 75, y, 'A')
@@ -222,7 +226,7 @@ class profileBarchart extends profilePlot {
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const d = row[field]
 		let subjectiveTerm = false
-		if (row.name == 'Total Module' || row.name == 'End-user Impression') subjectiveTerm = true
+		if (row.name == 'Total Module' || row.name == 'End-user Impression') subjectiveTerm = false
 		const termColor = d.score.term.color
 		const value = this.getPercentage(d)
 		const isFirst = field == 'sc' || (field == 'poc' && !row.sc)
