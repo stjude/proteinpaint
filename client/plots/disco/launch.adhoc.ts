@@ -1,6 +1,6 @@
 import { Genome } from '#shared/types/index'
 import { Selection } from 'd3-selection'
-import { appInit } from '#plotsts/plot.app'
+import { appInit } from '../plot.app'
 
 type SnvEntry = {
 	dt: 1
