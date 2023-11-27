@@ -285,7 +285,8 @@ export class profilePlot {
 			return percentage.toFixed(0)
 		} else {
 			const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
-			const scores = this.data.lst.map(sample => (sample[d.score.$id]?.value * 100) / maxScore).sort()
+			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value * 100) / maxScore)
+			scores = [...new Set(scores)].sort()
 			const middle = Math.floor(scores.length / 2)
 			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
 			return score.toFixed(0)
