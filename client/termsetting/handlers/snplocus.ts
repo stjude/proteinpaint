@@ -1,7 +1,7 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { addGeneSearchbox } from '#dom/genesearch'
-import { SnpsTermSettingInstance, SnpsTermWrapper, SnpsQ, SnpsVocabApi, SnpsTerm } from '#shared/types/index'
+import { SnpsTW, SnpsQ, SnpsVocabApi, SnpsTerm } from '../../shared/types/terms/snps'
 
 /* 
 ***************** EXPORT
@@ -29,7 +29,7 @@ self.q{}
 const term_name = 'Variants in a locus'
 
 // self is the termsetting instance
-export function getHandler(self: SnpsTermSettingInstance) {
+export function getHandler(self) {
 	return {
 		getPillName() {
 			return self.term.name
@@ -69,7 +69,7 @@ export function getHandler(self: SnpsTermSettingInstance) {
 	}
 }
 
-async function makeEditMenu(self: SnpsTermSettingInstance, div: any) {
+async function makeEditMenu(self, div: any) {
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
 	const coordResult = addGeneSearchbox({
@@ -178,7 +178,7 @@ function validateQ(data: any) {
 	if (q.stop <= q.start) throw 'stop <= start'
 }
 
-export async function fillTW(tw: SnpsTermWrapper, vocabApi: SnpsVocabApi) {
+export async function fillTW(tw: SnpsTW, vocabApi: SnpsVocabApi) {
 	try {
 		// to catch any error in q{} before running validateInput()
 		validateQ(tw)
@@ -218,12 +218,7 @@ filterInState{}
 callback2
 	optional callback to run upon filter update, no parameter
 */
-async function mayDisplayVariantFilter(
-	self: SnpsTermSettingInstance,
-	filterInState: any,
-	holder: any,
-	callback2?: any
-) {
+async function mayDisplayVariantFilter(self, filterInState: any, holder: any, callback2?: any) {
 	if (!self.variantFilter) {
 		self.variantFilter = await self.vocabApi.get_variantFilter()
 		// variantFilter should be {opts{}, filter{}, terms[]}

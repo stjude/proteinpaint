@@ -2,7 +2,7 @@ import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
 import { sayerror } from '#dom/error'
-import { PillData, ConditionTW, ConditionQ, VocabApi, ConditionTermSettingInstance } from '#shared/types/index'
+import { PillData, ConditionTW, ConditionQ, VocabApi } from '#shared/types/index'
 //import { GroupSettingMethods } from './groupsetting'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { TermValues } from '#shared/types'
@@ -12,7 +12,7 @@ import { TermValues } from '#shared/types'
 
 const cutoffGrades: number[] = [1, 2, 3, 4, 5]
 
-export function getHandler(self: ConditionTermSettingInstance) {
+export function getHandler(self) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -53,7 +53,7 @@ export function getHandler(self: ConditionTermSettingInstance) {
 	}
 }
 
-function getPillStatus(self: ConditionTermSettingInstance) {
+function getPillStatus(self) {
 	const text: string | undefined = self.q?.name || self.q?.reuseId
 	if (text) return { text }
 	// if (self.q.groupsetting?.inuse) {
@@ -79,7 +79,7 @@ function getPillStatus(self: ConditionTermSettingInstance) {
 	return {}
 }
 
-// function validateGroupsetting(self: ConditionTermSettingInstance) {
+// function validateGroupsetting(self) {
 // 	if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 // 	const text = self.q.name || self.q.reuseId
 // if (text) return { text }
@@ -101,7 +101,7 @@ function getPillStatus(self: ConditionTermSettingInstance) {
 // return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
 // }
 
-async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
+async function showMenu_discrete(self, div: any) {
 	// div for selecting type of grade
 	const value_type_div = div
 		.append('div')
@@ -280,7 +280,7 @@ async function showMenu_discrete(self: ConditionTermSettingInstance, div: any) {
 		})
 }
 
-function showMenu_cutoff(self: ConditionTermSettingInstance, div: any) {
+function showMenu_cutoff(self, div: any) {
 	const holder = div
 		.append('div')
 		.style('margin', '10px')
@@ -434,7 +434,7 @@ function getGroups(grades: number[], breaks: number[]) {
 }
 
 export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ) {
-	set_hiddenvalues(tw.q, tw.term)
+	set_hiddenvalues(tw.q as ConditionQ, tw.term)
 
 	if (defaultQ) {
 		// apply predefined settings

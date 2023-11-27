@@ -23,7 +23,6 @@ PillData
 TermSettingOpts
 InstanceDom
 TermSettingInstance
-TSInstanceWithDynamicQ
 
 */
 

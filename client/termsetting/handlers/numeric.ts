@@ -23,8 +23,10 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null) {
-	if (!tw.q.mode && !(defaultQ as NumericQ | null)?.mode) tw.q.mode = 'discrete'
+export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+	if (!tw.q.mode) {
+		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
+	}
 	const subtype = tw.term.type == 'float' || tw.term.type == 'integer' ? 'toggle' : tw.q.mode
 
 	const _ = await importSubtype(subtype)
