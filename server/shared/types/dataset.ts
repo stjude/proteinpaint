@@ -288,6 +288,46 @@ type GeneExpressionQuery = {
 	valueIsTransformed?: boolean
 }
 
+export type SingleCellSamplesGdc = {
+	src: 'gdcapi'
+	// TODO: do not use this boolean
+	gdcapi: true
+}
+export type SingleCellSamplesNative = {
+	/*
+	a way to query anno_cat table to find those samples labeled with this term for having sc data
+	TODO change to hasScTerm:string
+	*/
+	src: 'native'
+	// TODO: do not use this boolean
+	gdcapi?: false | undefined
+	isSampleTerm: string
+	get: () => { sample: string }[]
+}
+export type SingleCellDataGdc = {
+	src: 'gdcapi'
+	// TODO: do not use this boolean
+	gdcapi: true
+}
+type SingleCellPlot = {
+	name: string
+	folder: string
+	fileSuffix: string
+}
+export type SingleCellDataNative = {
+	src: 'native'
+	// TODO: do not use this boolean
+	gdcapi?: false | undefined
+	plots: SingleCellPlot[]
+	termIds: string[]
+	get: (sample: any) => any
+}
+
+export type SingleCellQuery = {
+	samples: SingleCellSamplesGdc | SingleCellSamplesNative
+	data: SingleCellDataGdc | SingleCellDataNative
+}
+
 type Queries = {
 	defaultBlock2GeneMode?: boolean
 	snvindel?: SnvIndel
@@ -301,6 +341,7 @@ type Queries = {
 	topVariablyExpressedGenes?: TopVariablyExpressedGenes
 	trackLst?: TrackLstEntry[]
 	// TODO singleSampleGbtk
+	singleCell?: SingleCellQuery
 }
 
 /*** types supporting Termdb ***/

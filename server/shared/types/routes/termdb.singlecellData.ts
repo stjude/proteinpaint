@@ -25,7 +25,7 @@ export type TermdbSinglecellDataRequest = {
 	sample: string
 }
 
-type HasdataResponse = {
+export type HasdataResponse = {
 	/** List of plots from singlecell experiment of this sample */
 	plots: Plot[]
 
@@ -36,12 +36,12 @@ type HasdataResponse = {
 	//terms: Term[]
 }
 
-type NodataResponse = {
+export type NodataResponse = {
 	/** Flag to indicate no sc data for this sample */
 	nodata: boolean
 }
 
-type ErrorResponse = {
+export type ErrorResponse = {
 	/** Error msg */
 	error: string
 }
