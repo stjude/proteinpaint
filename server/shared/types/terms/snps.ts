@@ -1,4 +1,5 @@
-import { TermWrapper, BaseQ, Term } from '../termdb'
+import { BaseTW, BaseQ, Term } from './term'
+import { TermWrapper } from './tw'
 import { TermSettingInstance, InstanceDom, UseCase } from '../termsetting'
 import { VocabApi } from '../vocab'
 import { Tvs, Filter } from '../filter'
@@ -8,7 +9,7 @@ import { Tvs, Filter } from '../filter'
 SnpsQ
 SnpsEntry
 SnpsTerm
-SnpsTermWrapper
+SnpsTW
 SnpsVocabApi
 SnpsTermSettingInstance
 
@@ -71,7 +72,7 @@ export type SnpsTerm = Term & {
 	snps?: SnpsEntry[]
 }
 
-export type SnpsTermWrapper = TermWrapper & {
+export type SnpsTW = BaseTW & {
 	q: SnpsQ
 	term: SnpsTerm
 }

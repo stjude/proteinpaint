@@ -14,6 +14,9 @@ import {
 	SampleCountsEntry
 } from '../shared/types/index'
 import { TermSettingOpts, Handler, PillData } from './types'
+import { CategoricalQ } from '../shared/types/terms/categorical'
+import { NumericQ } from '../shared/types/terms/numeric'
+import { SnpsQ } from '../shared/types/terms/snps'
 
 /*
 ********************* EXPORTED
@@ -838,7 +841,11 @@ defaultQByTsHandler{}
 	with term types as keys
 */
 
-type DefaultQByTsHandler = { [index: string]: DetermineQ<TermWrapper['term']['type']> }
+type DefaultQByTsHandler = {
+	categorical?: CategoricalQ
+	numeric?: NumericQ
+	snplst?: SnpsQ
+}
 
 export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	tw.isAtomic = true

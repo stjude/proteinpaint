@@ -22,7 +22,6 @@ PillData
 TermSettingOpts
 InstanceDom
 TermSettingInstance
-TSInstanceWithDynamicQ
 
 */
 
@@ -189,8 +188,4 @@ export type TermSettingInstance = {
 	tabCallback?: (event: any, tab: any) => void
 	updatePill?: () => void
 	updateUI: () => void
-}
-
-export type TSInstanceWithDynamicQ = TermSettingInstance & {
-	q: DetermineQ<TermSettingInstance['term']['type']>
 }

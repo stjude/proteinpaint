@@ -106,7 +106,7 @@ async function getGenes(q: any, ds: any, genome: any) {
 			}
 		}
 		return genes
-	} catch (e) {
+	} catch (e: any) {
 		console.log(e.stack || e)
 		throw e
 	}

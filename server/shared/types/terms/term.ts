@@ -87,6 +87,7 @@ export type Term = {
 }
 
 export type BaseQ = {
+	mode?: string
 	isAtomic?: true
 	reuseId?: string
 	name?: string

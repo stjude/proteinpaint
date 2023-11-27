@@ -1,4 +1,4 @@
-import { SnpsTermWrapper } from '#shared/types/index'
+import { SnpsTW } from '#shared/types/index'
 
 /*
 if the "effect allele" is already set for a snp (by user), return it
@@ -52,7 +52,7 @@ data: returned by vocab getCategories()
 this function will alter tw,
 the changes must be kept in sync between termsetting instance and app state
 */
-export function mayRunSnplstTask(tw: SnpsTermWrapper, data: any) {
+export function mayRunSnplstTask(tw: SnpsTW, data: any) {
 	if (tw.term.type != 'snplst' && tw.term.type != 'snplocus') return // this func may be called on different terms, skip in that case
 	if (data.error) throw data.error
 	if (!Array.isArray(data.snps)) throw 'data.snps[] not array'
