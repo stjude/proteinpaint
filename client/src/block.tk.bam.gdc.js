@@ -11,7 +11,6 @@ import { renderTable } from '#dom/table'
 import { make_table_2col } from '#dom/table2col'
 
 /*
-TODO
 
 SV_EXPAND: to be expanded to support SV review using subpanel
 
@@ -26,6 +25,7 @@ gdc_args {}
 	useSsmOrGene: 'ssm' or 'gene'
 		identifies the choice of the SSM/Gene toggle button
 		if value is ssm, will use ssmInput; otherwise check coordInput
+		if stream2download=true, "unmapped" will be added as a new option
 	ssmInput:{}
 		chr, pos, ref, alt
 	coordInput:{}
@@ -75,7 +75,7 @@ const noPermissionMessage =
 	'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (<a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>click here for more information</a>).'
 
 /*
-arguments:
+Arguments:
 
 genomes{}
 holder
@@ -90,9 +90,13 @@ callbackOnRender()
 	optional callback for ui testing
 stream2download=boolean
 	if true, run the app in "bam slice download" mode..
-Returns:
 
-a public API object with callbacks
+
+** all above arguments are accessible to all helper functions **
+
+
+Returns:
+	a public API object with callbacks
 */
 export async function bamsliceui({
 	genomes,
@@ -548,6 +552,14 @@ export async function bamsliceui({
 				}
 			}
 		]
+
+		if (stream2download) {
+			tabs.push({
+				label: 'Unmapped reads',
+				callback: () => (gdc_args.useSsmOrGene = 'unmapped')
+			})
+		}
+
 		new Tabs({ holder: ssmGeneDiv, tabs }).main()
 
 		temp_renderSsmList(tabs[0].contentHolder, ssmLst)
@@ -699,6 +711,7 @@ export async function bamsliceui({
 
 	async function sliceBamAndRender() {
 		const args = gdc_args
+
 		// create arg for block init
 		const par = {
 			nobox: 1,
@@ -707,16 +720,24 @@ export async function bamsliceui({
 			debugmode
 		}
 
-		if (args.position) {
-			par.chr = args.position.chr
-			par.start = args.position.start
-			par.stop = args.position.stop
-		} else if (args.variant) {
-			par.chr = args.variant.chr
-			par.start = args.variant.pos - variantFlankingSize
-			par.stop = args.variant.pos + variantFlankingSize
+		if (args.useSsmOrGene == 'unmapped') {
+			/* when this option is in use, app must be running in "download mode"
+			even if par is block param, it's fine to skip chr/start/stop on it
+			as later it will not reach visualization step and will not instantiate a block
+			*/
+			par.unmapped = 1
 		} else {
-			throw 'SV_EXPAND here'
+			if (args.position) {
+				par.chr = args.position.chr
+				par.start = args.position.start
+				par.stop = args.position.stop
+			} else if (args.variant) {
+				par.chr = args.variant.chr
+				par.start = args.variant.pos - variantFlankingSize
+				par.stop = args.variant.pos + variantFlankingSize
+			} else {
+				throw 'SV_EXPAND here'
+			}
 		}
 
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -734,12 +755,19 @@ export async function bamsliceui({
 
 			submitButton.text(`Slicing BAM file ${idx + 1} of ${args.bam_files.length}...`)
 
+			// translate par{} into request body
 			const body = {
 				downloadgdc: 1,
-				gdcFileUUID: file.file_id,
-				gdcFilePosition: par.chr + '.' + par.start + '.' + par.stop,
+				gdcFileUUID: file.file_id
+			}
+
+			if (par.unmapped) {
+				body.gdcFilePosition = 'unmapped'
+				body.unmapped = 1
+			} else {
+				body.gdcFilePosition = par.chr + ':' + par.start + '-' + par.stop
 				// SV_EXPAND
-				regions: [{ chr: par.chr, start: par.start, stop: par.stop }]
+				body.regions = [{ chr: par.chr, start: par.start, stop: par.stop }]
 			}
 
 			if (stream2download) {
@@ -752,7 +780,11 @@ export async function bamsliceui({
 				// download the file to client
 				const a = document.createElement('a')
 				a.href = URL.createObjectURL(data)
-				a.download = `${file.track_name}.${par.chr}.${par.start}.${par.stop}.bam`
+				if (par.unmapped) {
+					a.download = file.track_name + '.unmapped.bam'
+				} else {
+					a.download = `${file.track_name}.${par.chr}.${par.start}.${par.stop}.bam`
+				}
 				a.style.display = 'none'
 				document.body.appendChild(a)
 				a.click()
@@ -859,6 +891,11 @@ function validateInputs(args, genome, hideTokenInput = false) {
 	for (const file of args.bam_files) {
 		if (!file.file_id) throw 'file uuid is missing'
 		if (typeof file.file_id !== 'string') throw 'file uuid is not string'
+	}
+
+	if (args.useSsmOrGene == 'unmapped') {
+		// do not supply a new attribute
+		return
 	}
 
 	if (args.useSsmOrGene == 'ssm') {

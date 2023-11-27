@@ -268,12 +268,9 @@ export default function (genomes) {
 
 				if (req.query.stream2download) {
 					// download the slice directly to client, do not write to cache file (app runs in "download mode")
-					const r = req.query.regions[0]
 					await streamGdcBam2response(
 						res,
-						r.chr,
-						r.start,
-						r.stop,
+						req.query.gdcFilePosition,
 						req.query.gdcFileUUID,
 						req.cookies.sessionid,
 						req.get('X-Auth-Token')
@@ -3423,11 +3420,11 @@ async function download_gdc_bam(req) {
 	return gdc_bam_filenames
 }
 
-async function streamGdcBam2response(res, chr, start, stop, gdcFileUUID, sessionid, token) {
+async function streamGdcBam2response(res, regionStr, gdcFileUUID, sessionid, token) {
 	const headers = { compression: false } // see comments in get_gdc_bam()
 	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
 	else headers['X-Auth-Token'] = token
-	const url = path.join(apihost, '/slicing/view/', gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop)
+	const url = path.join(apihost, '/slicing/view/', gdcFileUUID + '?region=' + regionStr)
 	res.statusCode = 200
 	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
