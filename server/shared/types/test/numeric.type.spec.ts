@@ -218,9 +218,9 @@ function incorrectProcessBin(bin: FullyBoundedBin) {
 	// @ts-expect-error, the argument type is not StopUnboundedBin
 	else if (bin.stopunbounded) handlers.stopUnbounded(bin as StopUnboundedBin)
 	else {
-		// @ts-expect-error
+		// @ts-expect-error, expects StartUnbounded as argument type
 		handlers.startUnbounded(bin as FullyBoundedBin)
-		// @ts-expect-error
+		// @ts-expect-error, expects StopUnbounded as argument type
 		handlers.stopUnbounded(bin as FullyBoundedBin)
 		// @ts-expect-error, since this function's argument type (NumericBin) does not include NonNumericBin
 		handlers.fullyBounded(bin as NonNumericBinType)

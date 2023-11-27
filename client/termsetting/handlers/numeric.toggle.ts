@@ -135,11 +135,10 @@ export async function getHandler(self) {
 	}
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: DefaultNumericQ) {
+export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: DefaultNumericQ | undefined) {
 	// when missing, defaults mode to discrete
-	// @ts-ignore
 	//const dq = defaultQ as DefaultNumericQ
-	if (!tw.q.mode && !defaultQ?.mode) tw.q.mode = 'discrete'
+	if (!tw.q.mode && !(defaultQ as DefaultNumericQ)?.mode) (tw.q as NumericQ).mode = 'discrete'
 
 	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q as BinnedNumericQ)) {
 		/*
