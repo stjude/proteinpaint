@@ -492,8 +492,9 @@ async function get_AllSamplesByName(q, req, res, ds) {
 		*/
 		const lst = await ds.queries.singleCell.samples.get()
 		const result = {}
-		for (const sampleName of lst) {
-			result[sampleName] = ds.cohort.termdb.q.sampleName2id(sampleName)
+		for (const s of lst) {
+			// {name}
+			result[s.name] = ds.cohort.termdb.q.sampleName2id(s.name)
 		}
 		res.send(result)
 		return

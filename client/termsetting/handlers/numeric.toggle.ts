@@ -1,7 +1,20 @@
-import { Tabs } from '#dom/toggleButtons'
-import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
-import { copyMerge } from '#rx'
-import { PillData, NumericTW, NumericTermSettingInstance, VocabApi, NumericQ } from '#shared/types/index'
+import { Tabs } from '../../dom/toggleButtons'
+import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
+import { copyMerge } from '../../rx'
+import { PillData, HandlerGenerator, Handler } from '../types'
+import { VocabApi } from '../../shared/types/vocab.ts'
+import {
+	NumericTerm,
+	NumericQ,
+	NumericTW,
+	DefaultMedianQ,
+	DefaultBinnedQ,
+	DefaultNumericQ,
+	BinaryNumericQ,
+	StartUnboundedBin,
+	StopUnboundedBin,
+	BinnedNumericQ
+} from '../../shared/types/terms/numeric.ts'
 
 /*
 ********************** EXPORTED
@@ -16,19 +29,29 @@ fillTW()
 	valid_binscheme()
 */
 
+type NumericTabCallback = (event: PointerEvent, tab: TabData) => void
+
+type TabData = {
+	mode: 'continuous' | 'discrete' | 'binary' | 'spline'
+	label: string
+	callback: NumericTabCallback
+	isRendered?: boolean
+	contentHolder?: any //
+}
+
 // self is the termsetting instance
-export async function getHandler(self: NumericTermSettingInstance) {
-	self.tabCallback = async (event: any, tab: any) => {
+export async function getHandler(self) {
+	self.tabCallback = async (event: PointerEvent, tab: TabData) => {
 		if (!tab) return
 		if (!self.q) throw `Missing .q{} [numeric.toggle getHandler()]`
-		self.q.mode = tab.subType
-		const typeSubtype = `numeric.${tab.subType}`
-		if (!self.handlerByType![typeSubtype]) {
-			const _ = await import(`./numeric.${tab.subType}.ts`)
-			self.handlerByType![typeSubtype] = await _.getHandler(self)
+		self.q.mode = tab.mode
+		const typeMode = `numeric.${tab.mode}`
+		if (!self.handlerByType![typeMode]) {
+			const _: HandlerGenerator = await import(`./numeric.${tab.mode}.ts`)
+			self.handlerByType![typeMode] = (await _.getHandler(self)) as Handler
 		}
 		tab.isRendered = true
-		await self.handlerByType![typeSubtype].showEditMenu(tab.contentHolder)
+		await self.handlerByType![typeMode].showEditMenu(tab.contentHolder)
 	}
 	// set numeric toggle tabs data here as a closure,
 	// so that the data is not recreated each time that showEditMenu() is called;
@@ -38,7 +61,7 @@ export async function getHandler(self: NumericTermSettingInstance) {
 	const tabs: any = []
 	if (self.opts.numericEditMenuVersion!.includes('continuous')) {
 		tabs.push({
-			subType: 'continuous',
+			mode: 'continuous',
 			label: 'Continuous',
 			callback: self.tabCallback
 		})
@@ -46,7 +69,7 @@ export async function getHandler(self: NumericTermSettingInstance) {
 
 	if (self.opts.numericEditMenuVersion!.includes('discrete')) {
 		tabs.push({
-			subType: 'discrete',
+			mode: 'discrete',
 			label: 'Discrete',
 			callback: self.tabCallback
 		})
@@ -54,7 +77,7 @@ export async function getHandler(self: NumericTermSettingInstance) {
 
 	if (self.opts.numericEditMenuVersion!.includes('spline')) {
 		tabs.push({
-			subType: 'spline',
+			mode: 'spline',
 			label: 'Cubic spline',
 			callback: self.tabCallback
 		})
@@ -62,7 +85,7 @@ export async function getHandler(self: NumericTermSettingInstance) {
 
 	if (self.opts.numericEditMenuVersion!.includes('binary')) {
 		tabs.push({
-			subType: 'binary',
+			mode: 'binary',
 			label: 'Binary',
 			callback: self.tabCallback
 		})
@@ -96,7 +119,7 @@ export async function getHandler(self: NumericTermSettingInstance) {
 				// NOTE: when clicking on a tab on the parent menu, showEditMenu() will not be called again,
 				// so this loop will not be called and the tracked rendered state in the tab.callback will apply
 				delete t.isRendered
-				t.active = self.q!.mode == t.subType || (t.subType == 'continuous' && !self.q!.mode)
+				t.active = self.q!.mode == t.mode || (t.mode == 'continuous' && !self.q!.mode)
 			}
 
 			const topBar = div.append('div').style('padding', '10px')
@@ -112,11 +135,12 @@ export async function getHandler(self: NumericTermSettingInstance) {
 	}
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null) {
+export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: DefaultNumericQ | undefined) {
 	// when missing, defaults mode to discrete
-	if (!tw.q.mode && !(defaultQ as NumericQ | null)?.mode) tw.q.mode = 'discrete'
+	//const dq = defaultQ as DefaultNumericQ
+	if (!tw.q.mode && !(defaultQ as DefaultNumericQ)?.mode) (tw.q as NumericQ).mode = 'discrete'
 
-	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q)) {
+	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q as BinnedNumericQ)) {
 		/*
 		if q is already initiated, do not overwrite
 		to be tested if can work with partially declared state
@@ -126,43 +150,44 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null)
 	}
 
 	if (defaultQ) {
-		//TODO change when Q objects separated out
-		;(defaultQ as NumericQ).isAtomic = true
-		if ((defaultQ as NumericQ).preferredBins == 'median') {
+		defaultQ.isAtomic = true
+		const dmq = defaultQ as DefaultMedianQ
+		const dbq = defaultQ as DefaultBinnedQ
+		if (dmq.preferredBins == 'median') {
+			const q = dmq
 			/*
 			do following computing to fill the q{} object
 			call vocab method to get median value (without filter)
 			and create custom list of two bins
 			used for cuminc overlay/divideby
 			*/
-
-			if (!(defaultQ as NumericQ).type || (defaultQ as NumericQ).type != 'custom-bin')
-				throw '.type must be custom-bin when .preferredBins=median'
+			if (!q.type || q.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
 			const result = await vocabApi.getPercentile(tw.term.id!, [50])
 			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 			const median = result.values[0]
 			if (!Number.isFinite(median)) throw 'median value not a number'
-			tw.q = JSON.parse(JSON.stringify(defaultQ))
-			delete (tw.q as NumericQ).preferredBins
+			const medianQ = JSON.parse(JSON.stringify(defaultQ))
+			delete medianQ.preferredBins
+			tw.q = medianQ as BinaryNumericQ
 			tw.q.lst! = [
 				{
 					startunbounded: true,
 					stop: median,
 					stopinclusive: false,
 					label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
-				},
+				} as StartUnboundedBin,
 				{
 					start: median,
 					startinclusive: true,
 					stopunbounded: true,
 					label: '≥' + median
-				}
+				} as StopUnboundedBin
 			]
-		} else if ((defaultQ as NumericQ).preferredBins == 'less') {
+		} else if (dbq.preferredBins == 'less' || dbq.preferredBins == 'default') {
 			/* this flag is true, use term.bins.less
 			in this case, defaultQ{} is not an actual q{} object
 			*/
-			tw.q = JSON.parse(JSON.stringify(tw.term.bins?.less || tw.term.bins!.default))
+			tw.q = JSON.parse(JSON.stringify(tw.term.bins[dbq.preferredBins]))
 		} else {
 			// defaultQ is an actual q{} object
 			// merge it into tw.q
@@ -175,7 +200,7 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null)
 
 // return false for failed validation
 // TODO this may not be needed as checks are auto-done by ts?
-function valid_binscheme(q: NumericQ) {
+function valid_binscheme(q: BinnedNumericQ) {
 	/*if (q.mode == 'continuous') { console.log(472, q)
 		// only expect a few keys for now "mode", "scale", "transform" keys for now
 		const supportedKeys = ['mode', 'scale', 'transform']

@@ -43,6 +43,9 @@ jobs:
       - name: Run ESLint
         run: npx eslint . --ext .ts
 
+      - name: Run tsc
+        run: npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions
+
       - name: Copy serverconfig.json to root
         run: |
           cd server/test/

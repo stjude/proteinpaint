@@ -34,14 +34,14 @@ class MassSessionBtn {
 		this.dom.tip.clear().d.style('padding', 0)
 		const gt = `<span style='margin-left: 24px; float: right'>&gt;</span>`
 		const options = [
-			{ label: `Open ${gt}`, callback: this.open },
-			{ label: `Save ${gt}`, callback: this.save },
-			{ label: `Share ${gt}`, callback: this.getSessionUrl }
+			{ label: `Open`, title: 'Recover a saved session', callback: this.open },
+			{ label: `Save`, title: 'Save the current view', callback: this.save },
+			{ label: `Share`, title: 'Create a URL link to share this view', callback: this.getSessionUrl }
 		]
 
 		if (!this.serverCachedSessions) await this.setServerCachedSessions()
 		if (Object.keys(this.savedSessions).length || Object.keys(this.serverCachedSessions).length) {
-			options.push({ label: `Delete ${gt}`, callback: this.delete })
+			options.push({ label: `Delete`, title: 'Delete a saved session', callback: this.delete })
 		}
 
 		this.dom.tip
@@ -51,6 +51,7 @@ class MassSessionBtn {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('title', d => d.title)
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				this.dom.tip.clear().d.style('padding', '10px')
@@ -63,14 +64,17 @@ class MassSessionBtn {
 
 	async open() {
 		const radioName = `sjpp-session-open-radio-` + Math.random().toString().slice(-6)
-		this.dom.tip.d.append('div').style('padding', '3px 9px').html(`
+		// always open in the current tab for now, to avoid the tricky part of the code
+		// that involves parent-child window messaging
+		// TODO: re-enable when the new tab option works reliably
+		this.dom.tip.d.append('div').style('display', 'none').style('padding', '3px 9px').html(`
 			<b>Open in</b>
 			<label>
-				<input type='radio' name='${radioName}' value='new' checked=checked style='margin-right: 0; vertical-align: bottom'/>
+				<input type='radio' name='${radioName}' value='new' style='margin-right: 0; vertical-align: bottom'/>
 				<span>a new tab</span>
 			</label>
 			<label style='margin-left: 5px'>
-				<input type='radio' name='${radioName}' value='current' style='margin-right: 0; vertical-align: bottom'/>
+				<input type='radio' name='${radioName}' value='current' checked=checked style='margin-right: 0; vertical-align: bottom'/>
 				<span>current tab</span>
 			</label>
 		`)
@@ -299,14 +303,16 @@ class MassSessionBtn {
 		// assume that a jwt-type credential will include the user email in the jwt payload,
 		// which could be trusted for saving sessions under cachedir/termdbSessions/[embedderHostName]/[email]
 		if (this.requiredAuth) {
+			const requiresSignIn = this.app.vocabApi.hasVerifiedToken() ? '' : 'Requires sign-in. '
 			submitDiv
 				.append('button')
 				.style('min-width', '80px')
 				.html('Server')
 				.attr(
 					'title',
-					`Save the session into a remote server. The session can be easily shared across your different devices and recovered using the 'Open from server' option.`
+					`${requiresSignIn}Save the session into a remote server. The session can be easily shared across your different devices and recovered using the 'Open from server' option.`
 				)
+				.property('disabled', !this.app.vocabApi.hasVerifiedToken())
 				.on('click', async () => {
 					if (!this.app.vocabApi.hasVerifiedToken()) {
 						alert('Requires sign-in')

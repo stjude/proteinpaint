@@ -1,6 +1,15 @@
-import { TermWrapper, BaseQ } from '../termdb'
+//import { TermWrapper, BaseQ } from '../termdb'
+import {
+	Term,
+	BaseValue,
+	TermValues,
+	BaseQ,
+	BaseTW,
+	EmptyGroupSetting,
+	PredefinedGroupSetting,
+	CustomGroupSetting
+} from './term'
 import { TermSettingInstance } from '../termsetting'
-import { doc } from '../../doc'
 
 /*
 --------EXPORTED--------
@@ -17,18 +26,45 @@ CategoricaTermSettingInstance
  *
  * @category TW
  */
-export type CategoricalQ = BaseQ & {
-	// termType: 'categorical'
-	//Not sure if separate categorical q is needed??
+
+export type CategoricalValuesObject = {
+	mode: 'binary' | 'discrete'
+	type?: 'values'
+	values: {
+		[key: string]: BaseValue
+	}
+	groupsetting: EmptyGroupSetting
 }
 
-doc({
-	type: 'CategoricalQ',
-	test: t => {
-		if (!t.mode.includes('groupsetting')) throw `CategoricalQ must have a '*-groupsetting' mode`
-		return true
-	}
-})
+export type ValuesGroup = {
+	name: string
+	values: {
+		key: string
+		label: string
+	}[]
+	groupsetting: EmptyGroupSetting
+}
+
+export type GroupSet = {
+	mode: 'binary' | 'discrete'
+	type?: 'predefined-groupset' | 'custom-groupset'
+	name: string
+	groups: ValuesGroup[]
+	groupsetting: PredefinedGroupSetting | CustomGroupSetting | EmptyGroupSetting
+}
+
+export type CategoricalTerm = Term & {
+	type: 'categorical'
+	values: CategoricalValuesObject
+	groupsetting:
+		| {
+				disabled: boolean
+				lst: GroupSet[]
+		  }
+		| { disabled?: boolean }
+}
+
+export type CategoricalQ = BaseQ & (CategoricalValuesObject | GroupSet)
 
 /**
  * A categorical term wrapper object
@@ -36,7 +72,8 @@ doc({
  * @group Termdb
  * @category TW
  */
-export type CategoricalTW = TermWrapper & {
+export type CategoricalTW = BaseTW & {
+	term: CategoricalTerm
 	q: CategoricalQ
 }
 
@@ -47,20 +84,4 @@ export type GroupSetInputValues = {
 		label?: string | number //value's label on client
 		group?: number //value's current group index
 	}
-}
-
-/**
- * @group Termdb
- * @category TW
- */
-export type CategoricalTermSettingInstance = TermSettingInstance & {
-	category2samplecount: Cat2SampleCntEntry[]
-	error: string
-	q: CategoricalQ
-	//Methods
-	getQlst: () => void
-	grpSet2valGrp: (f: any) => GroupSetInputValues
-	showGrpOpts: (div: any) => any
-	validateGroupsetting: () => void
-	showDraggables: () => void
 }

@@ -27,10 +27,10 @@ echo "[$PWD] [$ROUTESDIR] [$TYPESDIR] [$CHECKERSDIR] [$DOCSDIR]"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # echo "SCRIPT_DIR=[$SCRIPT_DIR]"
 
-# 
 # skipping the typeChecker step since ts-node(-esm) sometimes breaks on mixed esm import/cjs require between files 
 # the current solution is to use the opts.apiJSON + types.{importDir, outputFile} to augen.setRoutes()
 #
+# TODO: reenable these steps once the ts-node issues abpve are fixed
 # rm -rf $CHECKERSRAW
 # mkdir $CHECKERSRAW
 # CHECKERSRAW_OUTPUT=$(npx ts-node-esm $SCRIPT_DIR/cli.js typeCheckers $ROUTESDIR $IMPORTRELPATH)

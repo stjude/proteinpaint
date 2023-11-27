@@ -1,3 +1,8 @@
+export type Sample = {
+	sample: string
+	files?: any
+}
+
 export type TermdbSinglecellsamplesRequest = {
 	/** Genome id */
 	genome: string
@@ -8,5 +13,5 @@ export type TermdbSinglecellsamplesRequest = {
 
 export type TermdbSinglecellsamplesResponse = {
 	/** List of sample names with singlecell data */
-	samples: string[]
+	samples: Sample[]
 }

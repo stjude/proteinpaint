@@ -11,6 +11,7 @@ import * as bulkitd from '#shared/bulk.itd'
 import * as bulksv from '#shared/bulk.sv'
 import * as bulksvjson from '#shared/bulk.svjson'
 import * as bulktrunc from '#shared/bulk.trunc'
+import * as d3dsv from 'd3-dsv'
 
 export default async function handle_study(req, res) {
 	try {

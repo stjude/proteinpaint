@@ -1,130 +1,146 @@
-import { TermWrapper, BaseQ, Term } from '../termdb'
-import { TermSettingInstance, InstanceDom } from '../termsetting'
-
-/*
---------EXPORTED--------
-NumericQ
-BrushEntry
-DensityData
-NumberObj
-NumericTW
-NumericTermSettingInstance
-
-*/
+import { Term, BaseQ, BaseTW, TermValues, PredefinedGroupSetting, CustomGroupSetting } from './term'
 
 /**
- * .q{} for numeric terms
- FIXME regular-sized bin and knots (spline) are mixed in this definition and they shouldn't
- 	e.g. first_bin is only required for regular-sized, and knots[] is only required for the other
+ *
+ * @param start ....
+ * @params stop
  */
-export type NumericQ = BaseQ & {
-	// termType: 'float' | 'integer' -- converts to 'numeric'
-	preferredBins?: 'median' | 'less' | 'default'
+export type StartUnboundedBin = {
+	// where possible, assign a concrete value (true) when it is known in advance,
+	// in which case, do not use an abstract type (boolean) to startunbounded
+	startunbounded: true
+	startinclusive?: false // cannot include an infinite bound
+	stop: number
+	stopinclusive?: boolean
+	stopunbounded?: false
+	label?: string
+}
 
+export type StopUnboundedBin = {
+	start: number
+	stopunbounded: true
+	startinclusive?: boolean
+	startunbounded?: false
+	stopinclusive?: false // cannot include an infinite bound
+	label?: string
+}
+
+// TODO??? should separate a fully bounded bin by startinclusive, stopinclusive
+// since neighboring bins must not contain the same boundary value
+export type FullyBoundedBin = {
+	startunbounded?: false
+	startinclusive?: boolean
+	start: number
+	stop: number
+	stopinclusive?: boolean
+	stopunbounded?: false
+	label?: string
+}
+
+export type NumericBin = StartUnboundedBin | FullyBoundedBin | StopUnboundedBin
+
+export type RegularNumericBinConfig = {
+	type: 'regular-bin' // another concrete value being assigned, instead of `string`
 	//regular-sized bins
 	bin_size: number
-	startinclusive?: boolean
-	stopinclusive?: boolean
-
 	// first_bin.stop is always required
-	first_bin: {
-		startunbounded?: boolean
-		stop: number
-		//stop_percentile?: number // percentile value is not used right now
-	}
+	first_bin: StartUnboundedBin | FullyBoundedBin
 
-	// if last_bin?.start is set, then fixed last bin is used; otherwise it's not fixed and automatic
-	last_bin?: {
-		start?: number
-		stopunbounded?: boolean
-	}
+	// if last_bin?.start is set, then a fixed last bin is used; otherwise it's not fixed and computed from data
+	last_bin?: StopUnboundedBin | FullyBoundedBin
+}
 
+export type CustomNumericBinConfig = {
+	type: 'custom-bin'
+	// since ts will allow NumericBin[] to be empty,
+	// use this workaround to define a non-empty array
+	lst: [NumericBin, ...NumericBin[]]
+}
+
+/*export type NumericQ = BaseQ & {
+	// termType: 'float' | 'integer' -- converts to 'numeric'
+	preferredBins?: 'median' | 'less' | 'default'
 	modeBinaryCutoffType: 'normal' | 'percentile'
 	modeBinaryCutoffPercentile?: number
-
 	knots?: any //[]?
-
 	scale?: number //0.1 | 0.01 | 0.001
-
 	rounding: string
-}
+}*/
 
-type NumObjRangeEntry = any //{}
-
-export type BrushEntry = {
-	//No documentation!
-	orig: string
-	range: {
-		start: number
-		stop: number
-	}
-	init: () => void
-}
-
-export type DensityData = {
-	maxvalue: number
-	minvalue: number
-}
-
-type PlotSize = {
-	width: number
-	height: number
-	xpad: number
-	ypad: number
-}
-
-export type NumberObj = {
-	binsize_g?: any //dom element??
-	brushes: BrushEntry[]
-	custom_bins_q: any
-	density_data: DensityData
-	no_density_data: true
-	plot_size: PlotSize
-	ranges?: NumObjRangeEntry[]
-	svg: any
-	xscale: any
-}
-
-type NumericalBins = {
+type PresetNumericBins = {
+	default: RegularNumericBinConfig | CustomNumericBinConfig
+	less: RegularNumericBinConfig | CustomNumericBinConfig
 	label_offset?: number
 	label_offset_ignored?: boolean
 	rounding?: string
-	default: NumericQ
-	less: NumericQ
 }
 
-type NumericTerm = Term & {
+export type NumericTerm = Term & {
 	id: string
-	bins: NumericalBins
-	densityNotAvailable?: boolean //Not used?
+	// these concrete term.type values make it clear that only these are numeric,
+	// "categorical", "condition", and other term.types are not included in this union
+	type: 'integer' | 'float'
+	bins: PresetNumericBins
+	values?: TermValues
+	/*densityNotAvailable?: boolean //Not used?
+	logScale?: string | number
+	max?: number
+	min?: number
+	name?: string
+	skip0forPercentile?: boolean
+	tvs?: Tvs
+	values?: TermValues
+	unit?: string
+	valueConversion?: ValueConversion*/
 }
 
-export type NumericTW = TermWrapper & {
+export type BinnedNumericQ = RegularNumericBinConfig | CustomNumericBinConfig
+
+export type DiscreteNumericQ = BaseQ &
+	BinnedNumericQ & {
+		mode: 'discrete'
+	}
+
+// TODO: test with live code that defines an actual binary q object
+export type BinaryNumericQ = BaseQ & {
+	mode: 'binary'
+	type: 'custom-bin'
+	// tuple type with 2 members
+	lst: [StartUnboundedBin | FullyBoundedBin, StopUnboundedBin | FullyBoundedBin]
+}
+
+export type ContinuousNumericQ = BaseQ & {
+	mode: 'continuous'
+	//scale?: string
+}
+
+export type SplineNumericQ = BaseQ & {
+	mode: 'spline'
+	knots: {
+		value: number
+	}[]
+}
+
+export type NumericQ = DiscreteNumericQ | BinaryNumericQ | ContinuousNumericQ | SplineNumericQ
+
+export type NumericTW = BaseTW & {
+	term: NumericTerm
 	q: NumericQ
-	term: NumericTerm
 }
 
-type NumericDom = InstanceDom & {
-	bins_div?: any
-	bin_size_input: any
-	bins_table?: any
-	boundaryInclusionDiv: any
-	boundaryInput?: any
-	custom_knots_div: any
-	customKnotsInput: any
-	first_stop_input: any
-	knots_div: any
-	knot_select_div: any
-	last_radio_auto: any
-	last_start_input: any
+export type DefaultMedianQ = {
+	isAtomic?: true
+	mode: 'discrete'
+	type: 'custom-bin'
+	preferredBins: 'median'
+	lst: []
 }
 
-export type NumericTermSettingInstance = TermSettingInstance & {
-	dom: NumericDom
-	num_obj: Partial<NumberObj>
-	numqByTermIdModeType: any
-	q?: Partial<NumericQ>
-	term: NumericTerm
-	//Methods
-	renderBinLines: (self: any, q: NumericQ) => void
+export type DefaultBinnedQ = {
+	isAtomic: true
+	mode: 'discrete'
+	type: 'regular-bin' | 'custom-bin'
+	preferredBins: 'default' | 'less'
 }
+
+export type DefaultNumericQ = NumericQ | DefaultBinnedQ | DefaultMedianQ

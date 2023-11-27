@@ -1,4 +1,5 @@
-import { NumericQ, NumericTermSettingInstance, NumericTW, VocabApi } from '#shared/types/index'
+import { NumericTerm, NumericQ, NumericTW } from '../../shared/types/terms/numeric'
+import { VocabApi } from '../../shared/types/index'
 
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
@@ -15,16 +16,17 @@ importSubtype()
     resuable try/catch block for import statement
 */
 
-export async function getHandler(self: NumericTermSettingInstance) {
+export async function getHandler(self) {
 	const numEditVers = self.opts.numericEditMenuVersion as string[]
-	const subtype: string = numEditVers.length > 1 ? 'toggle' : numEditVers[0] // defaults to 'discrete'
-
+	const subtype = numEditVers.length > 1 ? 'toggle' : numEditVers[0] // defaults to 'discrete'
 	const _ = await importSubtype(subtype)
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ = null) {
-	if (!tw.q.mode && !(defaultQ as NumericQ | null)?.mode) tw.q.mode = 'discrete'
+export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+	if (!tw.q.mode) {
+		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
+	}
 	const subtype = tw.term.type == 'float' || tw.term.type == 'integer' ? 'toggle' : tw.q.mode
 
 	const _ = await importSubtype(subtype)

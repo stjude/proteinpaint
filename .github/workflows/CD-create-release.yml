@@ -94,6 +94,7 @@ jobs:
           CR_PAT: ${{ secrets.PAT }}
 
       - name: Build and Publish Docker Images
+        id: docker-publish
         run: 
           sleep 90;
           
@@ -109,7 +110,11 @@ jobs:
             TAG="$(node -p "require('./full/package.json').version")";
             docker push ghcr.io/stjude/ppfull:$TAG-$HASH;
             docker push ghcr.io/stjude/ppfull:latest;
+            echo "::set-output name=docker_version::$TAG-$HASH";
           fi
+          
+          echo "::set-output name=docker_version::NO_VERSION";
+
 
       - name: get pp version
         id: pp-version
@@ -133,4 +138,4 @@ jobs:
           token: ${{ secrets.PAT }}
           repository: stjude/sj-pp
           event-type: version-update
-          client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}"}'
+          client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}"}'

@@ -1,5 +1,5 @@
 import { mayRunSnplstTask } from './snplst.sampleSum'
-import { SnpsTermSettingInstance, SnpsQ, SnpsTermWrapper, SnpsVocabApi, SnpsTerm } from '#shared/types/index'
+import { SnpsQ, SnpsTW, SnpsVocabApi, SnpsTerm } from '../../shared/types/index'
 
 /* 
 TODO clean up ui logic, may use table.js?
@@ -43,7 +43,7 @@ Exports following functions shared with snplocus term
 */
 
 // self is the termsetting instance
-export function getHandler(self: SnpsTermSettingInstance) {
+export function getHandler(self) {
 	return {
 		getPillName() {
 			return self.term.name
@@ -77,7 +77,7 @@ ui switches between two modes
 if the instance carries snps (self.term.snps), directly enter edit ui
 else, enter input ui; after validating raw input, show edit ui
 */
-async function makeEditMenu(self: SnpsTermSettingInstance, div0: any) {
+async function makeEditMenu(self, div0: any) {
 	const div = div0.append('div').style('margin', '15px')
 
 	const select_ancestry = await mayRestrictAncestry(self, div)
@@ -284,7 +284,7 @@ async function makeEditMenu(self: SnpsTermSettingInstance, div0: any) {
 	}
 }
 
-function initSnpEditTable(div: any, self: SnpsTermSettingInstance, select_alleleType: any) {
+function initSnpEditTable(div: any, self, select_alleleType: any) {
 	self.dom.snplst_table = div.append('table')
 	renderSnpEditTable(self, select_alleleType)
 	div
@@ -294,7 +294,7 @@ function initSnpEditTable(div: any, self: SnpsTermSettingInstance, select_allele
 		.html('Effect alleles are highlighted in red. Click on an allele to set as the effect allele.')
 }
 
-function renderSnpEditTable(self: SnpsTermSettingInstance, select_alleleType: any) {
+function renderSnpEditTable(self, select_alleleType: any) {
 	// allow to delete or add to this list
 	self.dom.snplst_table.selectAll('*').remove()
 	const title_tr = self.dom.snplst_table.append('tr').style('opacity', 0.4)
@@ -477,7 +477,7 @@ function parseSnpFromText(textarea: any) {
 	return snps
 }
 
-function snp2text(self: SnpsTermSettingInstance) {
+function snp2text(self) {
 	if (!self.term || !self.term.snps) return ''
 	const lines: any = []
 	for (const a of self.term.snps) {
@@ -516,7 +516,7 @@ only need it to instantly update snp table in menu
 thus this function is not needed
 if there's a way to automatically update menu then can delete it TODO
 */
-async function makeSampleSummary(self: SnpsTermSettingInstance) {
+async function makeSampleSummary(self) {
 	const body = { cacheid: self.q.cacheid }
 
 	// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
@@ -545,7 +545,7 @@ async function makeSampleSummary(self: SnpsTermSettingInstance) {
 	const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
 	if (f) filter.lst.push(f)
 
-	const data = await self.vocabApi.getCategories(self.term, filter, body)
+	const data = await self.vocabApi.getCategories(self.term as SnpsTerm, filter, body)
 	mayRunSnplstTask({ term: self.term as SnpsTerm, q: self.q as SnpsQ }, data)
 }
 
@@ -557,7 +557,7 @@ function validateQ(data: any) {
 	if (![0, 1].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 }
 
-export async function fillTW(tw: SnpsTermWrapper, vocabApi: SnpsVocabApi) {
+export async function fillTW(tw: SnpsTW, vocabApi: SnpsVocabApi) {
 	try {
 		validateQ(tw)
 	} catch (e) {
@@ -600,7 +600,7 @@ create following dom elements and return in an array
   (missing gt is not created for snplocus)
 
 */
-export function makeSnpSelect(div: any, self: SnpsTermSettingInstance, termtype: string) {
+export function makeSnpSelect(div: any, self, termtype: string) {
 	let input_AFcutoff_label: any, input_AFcutoff: any, select_missingGenotype: any
 
 	// input - af cutoff
@@ -726,7 +726,7 @@ export function makeSnpSelect(div: any, self: SnpsTermSettingInstance, termtype:
 	return [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype]
 }
 
-export async function mayRestrictAncestry(self: SnpsTermSettingInstance, holder: any) {
+export async function mayRestrictAncestry(self, holder: any) {
 	if (self.q?.doNotRestrictAncestry) return
 
 	const tdbcfg = await self.vocabApi.getTermdbConfig()

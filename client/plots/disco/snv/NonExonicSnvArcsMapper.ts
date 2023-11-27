@@ -40,7 +40,7 @@ export default class NonExonicSnvArcsMapper {
 				dataClass: mLabel.label,
 				mname: data.mname,
 				chr: data.chr,
-				pos: data.pos
+				pos: data.position
 			}
 
 			arcs.push(arc)

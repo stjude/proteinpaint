@@ -1,19 +1,18 @@
 import { GroupSettingMethods } from './groupsetting.ts'
 // import { filterInit } from '#filter'
-import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
+import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
+import { VocabApi } from '../../shared/types/index'
 import {
-	PillData,
 	Term,
-	CategoricalQ,
 	TermValues,
-	GroupSetting,
+	PredefinedGroupSetting,
+	CustomGroupSetting,
 	BaseGroupSet,
-	GroupEntry,
-	CategoricalTermSettingInstance,
-	CategoricalTW,
-	VocabApi
-} from '#shared/types/index'
-import { copyMerge } from '#rx'
+	GroupEntry
+} from '../../shared/types/terms/term'
+import { CategoricalQ, CategoricalTW } from '../../shared/types/terms/categorical'
+import { PillData } from '../types'
+import { copyMerge } from '../../rx'
 
 /*
 ********************** EXPORTED
@@ -37,7 +36,7 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 ********************** INTERNAL
 */
 
-export async function getHandler(self: CategoricalTermSettingInstance) {
+export async function getHandler(self) {
 	setCategoryMethods(self)
 
 	return {
@@ -76,17 +75,19 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 			}
 
 			if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
-				const tgs = t.groupsetting as GroupSetting
+				const tgs = t.groupsetting as PredefinedGroupSetting
 				if (!tgs) throw `no term.groupsetting ${endNote}`
 
 				let groupset!: BaseGroupSet
 				if (q.groupsetting && q.type == 'predefined-groupset') {
-					const idx = q.groupsetting.predefined_groupset_idx as number
+					const gs = q.groupsetting as PredefinedGroupSetting
+					const idx = gs.predefined_groupset_idx as number
 					if (tgs.lst && !tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
 					else if (tgs.lst) groupset = tgs.lst[idx]
 				} else if (q.groupsetting) {
-					if (!q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
-					groupset = q.groupsetting.customset
+					const gs = q.groupsetting as CustomGroupSetting
+					if (!gs.customset) throw `no q.groupsetting.customset defined ${endNote}`
+					groupset = gs.customset
 				}
 
 				if (!groupset.groups.every((g: GroupEntry) => g.name !== undefined))
@@ -124,7 +125,7 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 	}
 }
 
-export function setCategoryMethods(self: CategoricalTermSettingInstance) {
+export function setCategoryMethods(self) {
 	self.validateGroupsetting = function () {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		const text = self.q.name || self.q.reuseId
@@ -379,15 +380,16 @@ export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ = null) {
 
 	// inuse:false is either from automatic setup or predefined in state
 	if (tw.q.groupsetting.inuse) {
+		const gs = tw.q.groupsetting as PredefinedGroupSetting
 		if (
-			tw.term.groupsetting.lst &&
+			gs.lst &&
 			//Typescript emits error that .useIndex could be undefined
-			tw.term.groupsetting.useIndex &&
+			gs.useIndex &&
 			//Fix checks if property is present
-			tw.term.groupsetting.useIndex >= 0 &&
-			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
+			gs.useIndex >= 0 &&
+			gs.lst[gs.useIndex]
 		) {
-			tw.q.groupsetting.predefined_groupset_idx = tw.term.groupsetting.useIndex
+			gs.predefined_groupset_idx = gs.useIndex
 		}
 	}
 

@@ -1,8 +1,7 @@
 import { select, Selection } from 'd3-selection'
-import { CategoricalTermSettingInstance, ConditionTermSettingInstance } from '#shared/types/index'
 //import { Tabs } from '#dom/toggleButtons'
 //import { disappear } from '#src/client'
-import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
+import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror'
 import { debounce } from 'debounce'
 
 /*
@@ -55,10 +54,6 @@ type GrpSetDom = {
 	excludedWrapper: HTMLElement
 }
 
-type GroupSettingInstance = (CategoricalTermSettingInstance | ConditionTermSettingInstance) & {
-	newMenu: boolean //launch a new menu (true) or show within a open menu (false)
-}
-
 export class GroupSettingMethods {
 	opts: any //a termsetting instance
 	dom: Partial<GrpSetDom> //main menu dom elements before drag and drop divs are added
@@ -67,7 +62,7 @@ export class GroupSettingMethods {
 	data: { groups: GrpEntry[]; values: ItemEntry[] }
 	initGrpSetUI: any //func init for groupsetting UI
 
-	constructor(opts: GroupSettingInstance) {
+	constructor(opts) {
 		this.opts = opts
 		this.dom = {
 			menuWrapper: opts.dom.tip.d.append('div')
@@ -78,7 +73,7 @@ export class GroupSettingMethods {
 		setRenderers(this)
 	}
 
-	validateOpts(opts: GroupSettingInstance) {
+	validateOpts(opts) {
 		if (!opts.newMenu) opts.newMenu = true
 	}
 
