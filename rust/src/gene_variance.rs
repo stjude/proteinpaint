@@ -1,4 +1,4 @@
-// cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts2.txt"}' && time echo $json | target/release/gene_variance
+// cd .. && cargo build --release && json='{"samples":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts2.txt"}' && time echo $json | target/release/gene_variance
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Dyn;
@@ -16,8 +16,7 @@ use std::time::Instant;
 
 fn input_data(
     filename: &String,
-    case_list: &Vec<&str>,
-    control_list: &Vec<&str>,
+    sample_list: &Vec<&str>,
 ) -> (
     Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     Vec<String>,
@@ -39,18 +38,17 @@ fn input_data(
         headers = field.split('\t').collect::<Vec<&str>>();
     }
     //println!("headers:{:?}", headers);
-    let mut case_indexes_original: Vec<usize> = Vec::with_capacity(case_list.len());
-    let mut control_indexes_original: Vec<usize> = Vec::with_capacity(control_list.len());
+    let mut sample_indexes_original: Vec<usize> = Vec::with_capacity(sample_list.len());
     let gene_name_index = headers.iter().position(|r| r == &"geneID");
     let gene_symbol_index = headers.iter().position(|r| r == &"geneSymbol");
-    //let mut case_samples_not_found: Vec<&str> = Vec::with_capacity(case_list.len());
+    //let mut case_samples_not_found: Vec<&str> = Vec::with_capacity(sample_list.len());
     //let mut control_samples_not_found: Vec<&str> = Vec::with_capacity(control_list.len());
 
-    for item in case_list {
+    for item in sample_list {
         //println!("item:{}", item);
         let index = headers.iter().position(|r| r == item);
         match index {
-            Some(n) => case_indexes_original.push(n),
+            Some(n) => sample_indexes_original.push(n),
             None => {
                 //panic!("Case sample not found:{}", item);
                 //case_samples_not_found.push(item);
@@ -58,22 +56,9 @@ fn input_data(
         }
     }
 
-    for item in control_list {
-        //println!("item:{}", item);
-        let index = headers.iter().position(|r| r == item);
-        match index {
-            Some(n) => control_indexes_original.push(n),
-            None => {
-                //panic!("Control sample not found:{}", item);
-                //control_samples_not_found.push(item);
-            }
-        }
-    }
     //println!("case_indexes_original:{:?}", case_indexes_original);
-    //println!("control_indexes_original:{:?}", control_indexes_original);
 
-    let mut case_indexes: Vec<usize> = Vec::with_capacity(case_list.len());
-    let mut control_indexes: Vec<usize> = Vec::with_capacity(control_list.len());
+    let mut samples_indexes: Vec<usize> = Vec::with_capacity(sample_list.len());
     for result in rdr.records() {
         // The iterator yields Result<StringRecord, Error>, so we check the
         // error here.
@@ -85,34 +70,14 @@ fn input_data(
                 gene_names.push(field.to_string());
             } else if index == gene_symbol_index.unwrap() {
                 gene_symbols.push(field.to_string());
-            } else if case_indexes_original.contains(&index) {
+            } else if sample_indexes_original.contains(&index) {
                 let num = FromStr::from_str(field);
                 match num {
                     Ok(n) => {
                         //println!("n:{}", n);
                         input_vector.push(n);
                         if num_lines == 0 {
-                            case_indexes.push(num_columns);
-                            num_columns += 1;
-                        }
-                    }
-                    Err(_n) => {
-                        panic!(
-                            "Number {} in line {} and column {} is not a decimal number",
-                            field,
-                            num_lines + 1,
-                            index + 1
-                        );
-                    }
-                }
-            } else if control_indexes_original.contains(&index) {
-                let num = FromStr::from_str(field);
-                match num {
-                    Ok(n) => {
-                        //println!("n:{}", n);
-                        input_vector.push(n);
-                        if num_lines == 0 {
-                            control_indexes.push(num_columns);
+                            samples_indexes.push(num_columns);
                             num_columns += 1;
                         }
                     }
@@ -157,7 +122,7 @@ fn calculate_variance(
         for col in 0..input_matrix.ncols() {
             gene_counts.push(input_matrix[(row, col)]);
         }
-        if gene_counts.clone().variance().is_nan() == true {
+        if gene_counts.clone().variance().is_nan() == true { // Should we add more conditions here for e.g filter genes with very low gene counts
         } else {
             gene_infos.push(GeneInfo {
                 std_dev: gene_counts.variance(),
@@ -185,8 +150,7 @@ fn main() {
             match input_json {
                 Ok(json_string) => {
                     let now = Instant::now();
-                    let case_string = &json_string["case"].to_owned().as_str().unwrap().to_string();
-                    let control_string = &json_string["control"]
+                    let samples_string = &json_string["samples"]
                         .to_owned()
                         .as_str()
                         .unwrap()
@@ -198,10 +162,9 @@ fn main() {
                         .to_string()
                         .split(",")
                         .collect();
-                    let case_list: Vec<&str> = case_string.split(",").collect();
-                    let control_list: Vec<&str> = control_string.split(",").collect();
+                    let samples_list: Vec<&str> = samples_string.split(",").collect();
                     let (input_matrix, gene_names, gene_symbols) =
-                        input_data(file_name, &case_list, &control_list);
+                        input_data(file_name, &samples_list);
                     let gene_infos = calculate_variance(input_matrix, gene_names, gene_symbols);
                     //println!("gene_infos:{:?}", gene_infos);
                     let mut output_string = "[".to_string();
