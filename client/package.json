@@ -12,7 +12,6 @@
     "#filter/*": "./filter/*.js",
     "#mass/*": "./mass/*.js",
     "#plots/*": "./plots/*",
-    "#plotsts/*": "./plots/*.js",
     "#plots/disco/*": "./plots/disco/*",
     "#rx": "./rx/index.js",
     "#shared/*": "@sjcrh/proteinpaint-server/shared/*",

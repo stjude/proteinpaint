@@ -4,7 +4,7 @@ import Reference from '#plots/disco/chromosome/Reference.ts'
 import discoDefaults from '#plots/disco/defaults.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 import _ from 'lodash'
-import Settings from '#plotsts/disco/Settings'
+import Settings from '../../Settings'
 
 // Create test data
 const overriders = { rings: { labelLinesInnerRadius: 10, labelsToLinesDistance: 5, labelsToLinesGap: 2 } }
