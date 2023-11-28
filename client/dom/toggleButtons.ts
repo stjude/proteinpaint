@@ -1,4 +1,4 @@
-import { select, selectAll } from 'd3-selection'
+import { select } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -50,16 +50,29 @@ opts: {
 }
 
 Note: 
-- newly created dom elements are attached to opts{} and tabs for exnternal code to access
-- if everthing should be rendered in single holder, supply just `holder`
-- if top tabs and div containing tab specific ui should be in different tabs, 
+- newly created dom elements are attached to opts{} and tabs for external code to access
+- if everything should be rendered in single holder, supply just `holder`
+- if main tabs and div containing tab specific ui (e.g. the app drawer sandboxes) should be in different tabs, 
 	define them sepeartely as holder and contentholder
-- tab data is bound to the rendered tab elements/content holder
-	and vice-versa, for easier debugging in the console using 
-	inspect element > styles > properties > __data__	
+- tab data is bound to the rendered tab elements/content holder and vice-versa. 
+	For easier debugging, in the console using inspect element > styles > properties > __data__	
 */
 
 export class Tabs {
+	opts: any
+	tabs: {
+		label: string
+		width?: number
+		callback?: (f: any) => void
+		disabled?: (f: any) => void
+		isVisible?: (f: any) => void
+	}[]
+	dom: {
+		holder: HTMLDivElement
+	}
+	defaultTabWidth: number
+	render: any
+
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.tabs = opts.tabs
@@ -90,7 +103,7 @@ export class Tabs {
 	async main() {
 		try {
 			await this.render()
-		} catch (e) {
+		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			else throw e
 		}
@@ -136,7 +149,7 @@ function setRenderers(self) {
 			.enter()
 			.append('button')
 			.attr('class', 'sj-toggle-button')
-			.classed('sjpp-active', tab => (tab.active ? true : false))
+			.classed('sjpp-active', tab => tab.active)
 			//Padding here overrides automatic styling for all pp buttons
 			.style('padding', '0px')
 			.style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
@@ -145,7 +158,7 @@ function setRenderers(self) {
 			.style('background-color', 'transparent')
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
 			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
-			.each(async function (tab) {
+			.each(async function (this: any, tab) {
 				/* The whole button is clickable (i.e. the white space where the blue, 'active' line
 				is not visible). The event is on the button (i.e. tab.wrapper). The style changes 
 				when the button is active/inactive are on the text (i.e. tab.tab) and line 
@@ -212,10 +225,10 @@ function setRenderers(self) {
 				if (tab.active && tab.callback) await tab.callback(event, tab)
 
 				tab.wrapper
-					.on('mouseenter', event => {
+					.on('mouseenter', () => {
 						tab.tab.style('color', tab.active ? '#757373' : '#1575ad')
 					})
-					.on('mouseleave', event => {
+					.on('mouseleave', () => {
 						tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
 					})
 			})
@@ -247,7 +260,7 @@ function setRenderers(self) {
 			.data(self.tabs)
 			.classed('sjpp-active', tab => tab.active)
 			.each(tab => {
-				tab.wrapper.classed('sjpp-active', tab.active ? true : false)
+				tab.wrapper.classed('sjpp-active', tab.active)
 				if (tab.isVisible) tab.wrapper.style('display', tab => (config && tab.isVisible() ? '' : 'none'))
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')

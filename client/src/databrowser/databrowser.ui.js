@@ -1,6 +1,6 @@
 import * as uiutils from '#dom/uiUtils'
 import { appear } from '#dom/animation'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../../dom/toggleButtons'
 import { appInit } from '#mass/app'
 import { parseDictionary } from './dictionary.parse'
 import { sayerror } from '../client'

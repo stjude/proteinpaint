@@ -6,7 +6,7 @@ import { contigNameNoChr2, mclass } from '#shared/common'
 import urlmap from '#common/urlmap'
 import { addGeneSearchbox, string2variant } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../dom/toggleButtons'
 import { renderTable } from '#dom/table'
 import { make_table_2col } from '#dom/table2col'
 
