@@ -82,11 +82,7 @@ export function init_discoplotUI(
 	makeDataTypeTabs(dataTypeTabs_div, obj)
 
 	//Submit and reset button at the bottom.
-	const controlBtns_div = wrapper
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('margin', '0px 0px 40px 130px')
+	const controlBtns_div = wrapper.append('div').style('display', 'flex').style('align-items', 'center')
 
 	submitButton(controlBtns_div, obj, genomes, wrapper, holder)
 	uiutils.makeResetBtn(controlBtns_div, obj, '.disco_input')
