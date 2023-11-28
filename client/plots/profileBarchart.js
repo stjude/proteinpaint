@@ -87,7 +87,6 @@ class profileBarchart extends profilePlot {
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(config.title)
 		const svg = this.svg
-
 		const color = this.configComponent.component.color
 		this.svg
 			.append('defs')
@@ -244,10 +243,10 @@ class profileBarchart extends profilePlot {
 				.attr('height', 20)
 			if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
 			else {
-				const id = d.score.term.name.replace(/[^a-zA-Z0-9]/g, '')
+				const termid = this.id + d.score.term.name.replace(/[^a-zA-Z0-9]/g, '')
 				g.append('defs')
 					.append('pattern')
-					.attr('id', id)
+					.attr('id', termid)
 					.attr('patternUnits', 'userSpaceOnUse')
 					.attr('width', 4)
 					.attr('height', 4)
@@ -255,7 +254,7 @@ class profileBarchart extends profilePlot {
 					.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
 					.attr('stroke-width', 1)
 					.attr('stroke', termColor)
-				rect.attr('fill', `url(#${id})`)
+				rect.attr('fill', `url(#${termid})`)
 			}
 		}
 		const text = g

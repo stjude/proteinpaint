@@ -84,7 +84,7 @@ class profileRadarFacility extends profilePlot {
 		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 140})`)
 
 		const rows = []
-		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Selection' }]
+		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
