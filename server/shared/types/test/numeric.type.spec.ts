@@ -1,4 +1,4 @@
-import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin, NumericTerm } from '../terms/numeric.ts'
+import { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin, NumericTerm } from '../terms/numeric'
 
 /*
 	Non-asserted type definition tests 

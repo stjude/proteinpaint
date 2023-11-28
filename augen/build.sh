@@ -29,8 +29,9 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # skipping the typeChecker step since ts-node(-esm) sometimes breaks on mixed esm import/cjs require between files 
 # !!! NOTE 
-# !!! the current solution is for server/src/run.sh to call augen.setRoutes(), 
+# !!! - in dev, the current solution is for server/src/run.sh to call augen.setRoutes(), 
 # !!! which fills in checkers-raw/index.ts, as part of server startup
+# !!! - in test, `cd ../server; npm run checkers` will also generate checkers-raw/index.ts
 # !!!
 #
 # TODO: reenable the code below once the issues are fixed with running these independent of server startup

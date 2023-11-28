@@ -51,7 +51,9 @@ jobs:
           mv serverconfig.json ../../
 
       - name: Run tsc
-        run: npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions
+        run: |
+          cd server && npm run checkers && cd ..
+          npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions
 
       - name: Create server cache folder
         run: mkdir server/cache

@@ -291,7 +291,7 @@ type GeneExpressionQuery = {
 export type SingleCellSamplesGdc = {
 	src: 'gdcapi'
 	// TODO: do not use this boolean
-	gdcapi: true
+	gdcapi?: true
 }
 export type SingleCellSamplesNative = {
 	/*
@@ -307,7 +307,7 @@ export type SingleCellSamplesNative = {
 export type SingleCellDataGdc = {
 	src: 'gdcapi'
 	// TODO: do not use this boolean
-	gdcapi: true
+	gdcapi?: true
 }
 type SingleCellPlot = {
 	name: string
