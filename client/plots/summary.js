@@ -6,7 +6,7 @@ import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultScatterSettings } from './sampleScatter.js'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../dom/toggleButtons'
 
 //import {  } from ''
 
@@ -115,7 +115,7 @@ class SummaryPlot {
 export const summaryInit = getCompInit(SummaryPlot)
 
 function setRenderers(self) {
-	self.initUi = function(opts, config) {
+	self.initUi = function (opts, config) {
 		const holder = opts.holder
 		try {
 			self.dom = {
@@ -302,7 +302,7 @@ function setRenderers(self) {
 			})
 	}
 
-	self.getWrappedTermCopy = async function(term, mode) {
+	self.getWrappedTermCopy = async function (term, mode) {
 		if (!term) return
 		const tw = structuredClone(term)
 		tw.q.mode = mode
@@ -312,7 +312,7 @@ function setRenderers(self) {
 		return tw
 	}
 
-	self.render = function() {
+	self.render = function () {
 		for (const childType in self.components.plots) {
 			const chart = self.components.plots[childType]
 			// hide non-active charts first, so not to momentarily have two visible charts

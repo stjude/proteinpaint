@@ -2,7 +2,7 @@ import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { make_one_checkbox } from '#dom/checkbox'
 import { filterInit, getNormalRoot, getFilterItemByTag } from '#filter/filter'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../dom/toggleButtons'
 import { appInit } from '#termdb/app'
 
 /*

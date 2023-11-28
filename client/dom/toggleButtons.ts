@@ -1,4 +1,4 @@
-import { select, selectAll } from 'd3-selection'
+import { select } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -60,6 +60,16 @@ Note:
 */
 
 export class Tabs {
+	private opts: any
+	private tabs: any
+	private dom: {
+		holder: any
+		tabsHolder?: any
+		contentHolder?: any
+	}
+	private defaultTabWidth: number
+	render: any
+
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.tabs = opts.tabs
@@ -90,7 +100,7 @@ export class Tabs {
 	async main() {
 		try {
 			await this.render()
-		} catch (e) {
+		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			else throw e
 		}
@@ -138,14 +148,16 @@ function setRenderers(self) {
 			.attr('class', 'sj-toggle-button')
 			.classed('sjpp-active', tab => (tab.active ? true : false))
 			//Padding here overrides automatic styling for all pp buttons
-			.style('padding', '0px')
-			.style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
-			.style('min-width', tab => (tab.width ? null : Math.max(self.defaultTabWidth)))
+			.style('padding', tab => tab.padding || 'Opx')
+			.style('width', 'fit-content')
+			.style('min-width', Math.max(self.defaultTabWidth))
+			// .style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
+			// .style('min-width', tab => (tab.width ? null : Math.max(self.defaultTabWidth)))
 			.style('border', 'none')
 			.style('background-color', 'transparent')
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
 			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
-			.each(async function (tab) {
+			.each(async function (this: any, tab) {
 				/* The whole button is clickable (i.e. the white space where the blue, 'active' line
 				is not visible). The event is on the button (i.e. tab.wrapper). The style changes 
 				when the button is active/inactive are on the text (i.e. tab.tab) and line 
@@ -212,10 +224,10 @@ function setRenderers(self) {
 				if (tab.active && tab.callback) await tab.callback(event, tab)
 
 				tab.wrapper
-					.on('mouseenter', event => {
+					.on('mouseenter', () => {
 						tab.tab.style('color', tab.active ? '#757373' : '#1575ad')
 					})
-					.on('mouseleave', event => {
+					.on('mouseleave', () => {
 						tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
 					})
 			})
