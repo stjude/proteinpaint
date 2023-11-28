@@ -28,15 +28,20 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # echo "SCRIPT_DIR=[$SCRIPT_DIR]"
 
 # skipping the typeChecker step since ts-node(-esm) sometimes breaks on mixed esm import/cjs require between files 
-# the current solution is to use the opts.apiJSON + types.{importDir, outputFile} to augen.setRoutes()
+# !!! NOTE 
+# !!! - in dev, the current solution is for server/src/run.sh to call augen.setRoutes(), 
+# !!! which fills in checkers-raw/index.ts, as part of server startup
+# !!! - in test, `cd ../server; npm run checkers` will also generate checkers-raw/index.ts
+# !!!
 #
-# TODO: reenable these steps once the ts-node issues abpve are fixed
+# TODO: reenable the code below once the issues are fixed with running these independent of server startup
 # rm -rf $CHECKERSRAW
 # mkdir $CHECKERSRAW
-# CHECKERSRAW_OUTPUT=$(npx ts-node-esm $SCRIPT_DIR/cli.js typeCheckers $ROUTESDIR $IMPORTRELPATH)
+# echo "npx tsx $SCRIPT_DIR/cli.js typeCheckers $PWD/$ROUTESDIR $IMPORTRELPATH"
+# CHECKERSRAW_OUTPUT=$(npx tsx $SCRIPT_DIR/cli.js typeCheckers $PWD/$ROUTESDIR $IMPORTRELPATH)
 # echo "$CHECKERSRAW_OUTPUT" > $CHECKERSRAW/index.ts
 # 
-
+echo "npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR"
 npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR # --project ./shared/checkers/tsconfig.json
 
 echo "building documentation at $DOCSDIR ..."
