@@ -281,16 +281,15 @@ export class profilePlot {
 		if (this.sampleData) {
 			const score = this.sampleData[d.score.$id]?.value
 			const maxScore = this.sampleData[d.maxScore.$id]?.value
-			const percentage = (score * 100) / maxScore
-			return percentage.toFixed(0)
+			const percentage = (score / maxScore) * 100
+			return Math.round(percentage)
 		} else {
 			const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
-			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value * 100) / maxScore)
-			scores = [...new Set(scores)]
+			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
 			scores.sort((s1, s2) => s1 - s2)
 			const middle = Math.floor(scores.length / 2)
 			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
-			return score.toFixed(0)
+			return Math.round(score)
 		}
 	}
 }
