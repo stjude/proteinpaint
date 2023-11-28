@@ -111,10 +111,9 @@ jobs:
             docker push ghcr.io/stjude/ppfull:$TAG-$HASH;
             docker push ghcr.io/stjude/ppfull:latest;
             echo "::set-output name=docker_version::$TAG-$HASH";
+          else
+            echo "::set-output name=docker_version::NO_VERSION";
           fi
-          
-          echo "::set-output name=docker_version::NO_VERSION";
-
 
       - name: get pp version
         id: pp-version
