@@ -9,7 +9,6 @@ import {
 	PredefinedGroupSetting,
 	CustomGroupSetting
 } from './term'
-import { TermSettingInstance } from '../termsetting'
 
 /*
 --------EXPORTED--------
@@ -56,12 +55,7 @@ export type GroupSet = {
 export type CategoricalTerm = Term & {
 	type: 'categorical'
 	values: CategoricalValuesObject
-	groupsetting:
-		| {
-				disabled: boolean
-				lst: GroupSet[]
-		  }
-		| { disabled?: boolean }
+	//groupsetting: { disabled?: boolean | undefined } //, lst?: GroupSet }
 }
 
 export type CategoricalQ = BaseQ & (CategoricalValuesObject | GroupSet)

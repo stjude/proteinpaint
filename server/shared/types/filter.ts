@@ -1,7 +1,8 @@
-import { Term, BaseValue } from './terms/term'
+import { BaseValue } from './terms/term'
 import { NumericTerm, NumericBin } from './terms/numeric'
 import { CategoricalTerm } from './terms/categorical'
 import { GeneVariantTerm } from './terms/geneVariant'
+import { ConditionTerm } from './terms/condition'
 
 /*
 --------EXPORTED--------
@@ -36,7 +37,7 @@ export type NumericTvs = BaseTvs & {
 	}[]
 }
 
-/*type GradeAndChildEntry = {
+type GradeAndChildEntry = {
 	grade: number
 	grade_label: string
 	child_id: string | undefined
@@ -50,7 +51,7 @@ export type ConditionTvs = BaseTvs & {
 	value_by_computable_grade?: boolean
 	grade_and_child?: GradeAndChildEntry[]
 }
-*/
+
 type GeneVariantOrigin = 'somatic' | 'germline'
 
 type SNVIndelClasses =
@@ -113,7 +114,7 @@ type GeneVariantTvs = BaseTvs & {
 }
 /*** types supporting Filter type ***/
 
-export type Tvs = CategoricalTvs | NumericTvs // | ConditionTvs | GeneVariantTvs // | SampleLstTvs ...
+export type Tvs = CategoricalTvs | NumericTvs | ConditionTvs | GeneVariantTvs // | SampleLstTvs ...
 
 export type Filter = {
 	type: 'lst'
