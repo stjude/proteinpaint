@@ -163,8 +163,8 @@ class profileRadarFacility extends profilePlot {
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const facilityName = this.sampleData.sampleName
-		this.addLegendItem('Total Scores', color1, 0, '5, 5')
-		this.addLegendItem(`Facility ${facilityName} Total Scores`, color2, 1, 'none')
+		this.addLegendItem(this.config[this.config.plot].score, color1, 0, '5, 5')
+		this.addLegendItem(`Facility ${facilityName} ${this.config[this.config.plot].score}`, color2, 1, 'none')
 	}
 
 	addData(iangle, i, data, isFacility) {
