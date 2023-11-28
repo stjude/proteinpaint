@@ -50,24 +50,27 @@ opts: {
 }
 
 Note: 
-- newly created dom elements are attached to opts{} and tabs for exnternal code to access
-- if everthing should be rendered in single holder, supply just `holder`
-- if top tabs and div containing tab specific ui should be in different tabs, 
+- newly created dom elements are attached to opts{} and tabs for external code to access
+- if everything should be rendered in single holder, supply just `holder`
+- if main tabs and div containing tab specific ui (e.g. the app drawer sandboxes) should be in different tabs, 
 	define them sepeartely as holder and contentholder
-- tab data is bound to the rendered tab elements/content holder
-	and vice-versa, for easier debugging in the console using 
-	inspect element > styles > properties > __data__	
+- tab data is bound to the rendered tab elements/content holder and vice-versa. 
+	For easier debugging, in the console using inspect element > styles > properties > __data__	
 */
 
 export class Tabs {
-	private opts: any
-	private tabs: any
-	private dom: {
-		holder: any
-		tabsHolder?: any
-		contentHolder?: any
+	opts: any
+	tabs: {
+		label: string
+		width?: number
+		callback?: (f: any) => void
+		disabled?: (f: any) => void
+		isVisible?: (f: any) => void
+	}[]
+	dom: {
+		holder: HTMLDivElement
 	}
-	private defaultTabWidth: number
+	defaultTabWidth: number
 	render: any
 
 	constructor(opts) {
@@ -146,13 +149,11 @@ function setRenderers(self) {
 			.enter()
 			.append('button')
 			.attr('class', 'sj-toggle-button')
-			.classed('sjpp-active', tab => (tab.active ? true : false))
+			.classed('sjpp-active', tab => tab.active)
 			//Padding here overrides automatic styling for all pp buttons
-			.style('padding', tab => tab.padding || 'Opx')
-			.style('width', 'fit-content')
-			.style('min-width', Math.max(self.defaultTabWidth))
-			// .style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
-			// .style('min-width', tab => (tab.width ? null : Math.max(self.defaultTabWidth)))
+			.style('padding', '0px')
+			.style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
+			.style('min-width', tab => (tab.width ? null : Math.max(self.defaultTabWidth)))
 			.style('border', 'none')
 			.style('background-color', 'transparent')
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
@@ -259,7 +260,7 @@ function setRenderers(self) {
 			.data(self.tabs)
 			.classed('sjpp-active', tab => tab.active)
 			.each(tab => {
-				tab.wrapper.classed('sjpp-active', tab.active ? true : false)
+				tab.wrapper.classed('sjpp-active', tab.active)
 				if (tab.isVisible) tab.wrapper.style('display', tab => (config && tab.isVisible() ? '' : 'none'))
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
