@@ -1,1 +1,1 @@
-
+Fix: Fixed bugs in the profile plots found after updating the data model
