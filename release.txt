@@ -1,1 +1,2 @@
-
+Features:
+- GDC BAM slicing UI supports new "download mode", will directly download BAM slice to client, including unmapped reads.
