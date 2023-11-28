@@ -1,7 +1,7 @@
 import * as uiutils from '#dom/uiUtils'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import { sayerror } from '../client'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../../dom/toggleButtons'
 import { appear } from '#dom/animation'
 
 /*
@@ -87,19 +87,9 @@ async function makePositionDropDown(div, obj) {
 		.style('border-radius', '5px')
 		.style('padding', '5px 10px')
 		.style('margin', '1px 10px 1px 10px')
-	positionSelect
-		.append('option')
-		.text('Codon position')
-		.property('value', 'codon')
-	positionSelect
-		.append('option')
-		.text('RNA position')
-		.property('value', 'rna')
-	positionSelect
-		.append('option')
-		.text('Genomic position')
-		.property('value', 'genomic')
-		.attr('selected', true)
+	positionSelect.append('option').text('Codon position').property('value', 'codon')
+	positionSelect.append('option').text('RNA position').property('value', 'rna')
+	positionSelect.append('option').text('Genomic position').property('value', 'genomic').attr('selected', true)
 	obj.posType = positionSelect.node()
 }
 
@@ -111,10 +101,7 @@ function makeSubmit(div, obj, holder) {
 	const errorMessage_div = div.append('div')
 	submit.style('display', 'block').on('click', () => {
 		if (!obj.data || obj.data == undefined) {
-			const sayerrorDiv = errorMessage_div
-				.append('div')
-				.style('display', 'inline-block')
-				.style('max-width', '20vw')
+			const sayerrorDiv = errorMessage_div.append('div').style('display', 'inline-block').style('max-width', '20vw')
 			sayerror(sayerrorDiv, 'Please provide data')
 			setTimeout(() => sayerrorDiv.remove(), 3000)
 		} else {
@@ -132,10 +119,7 @@ function makeSubmit(div, obj, holder) {
 }
 
 function makeInfoSection(div) {
-	div
-		.append('div')
-		.style('margin', '10px')
-		.style('opacity', '0.65').html(`Limited to two-gene fusion products.<br>
+	div.append('div').style('margin', '10px').style('opacity', '0.65').html(`Limited to two-gene fusion products.<br>
 		One product per line.<br>
 		Each line has eight fields. four fields for each gene. For each gene join the following fields separated by a comma:
 		<ol><li>Gene symbol</li>
@@ -182,10 +166,7 @@ function makeSubmitResult(obj, div, runpp_arg) {
 	}
 
 	for (const fusion of fusionsMap) {
-		fusionSelect
-			.append('option')
-			.property('value', fusion[0])
-			.text(fusion[0])
+		fusionSelect.append('option').property('value', fusion[0]).text(fusion[0])
 	}
 	fusionSelect.on('change', () => {
 		tabsDiv.selectAll('*').remove()
@@ -229,10 +210,7 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 			callback: async (event, tab) => {
 				appear(tab.contentHolder)
 				const fusion_arg = {
-					holder: tab.contentHolder
-						.append('div')
-						.style('margin', '20px')
-						.node(),
+					holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 					gene: gene1[0],
 					tracks: [
 						{
@@ -264,10 +242,7 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 			callback: async (event, tab) => {
 				appear(tab.contentHolder)
 				const fusion_arg = {
-					holder: tab.contentHolder
-						.append('div')
-						.style('margin', '20px')
-						.node(),
+					holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 					gene: gene2[0],
 					tracks: [
 						{

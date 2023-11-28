@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../../dom/toggleButtons'
 import * as d3s from 'd3-selection'
 import { detectGte } from '../../test/test.helpers.js'
 
