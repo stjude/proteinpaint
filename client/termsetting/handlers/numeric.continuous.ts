@@ -1,7 +1,8 @@
-import { getPillNameDefault } from '#termsetting'
-import { NumericTermSettingInstance, PillData, Term } from '#shared/types/index'
-import { makeDensityPlot } from '#filter/densityplot'
-import { convertViolinData } from '#filter/tvs.numeric'
+import { getPillNameDefault } from '../termsetting'
+import { PillData, Term } from '../../shared/types/index'
+import { makeDensityPlot } from '../../filter/densityplot'
+import { convertViolinData } from '../../filter/tvs.numeric'
+import { HandlerGenerator } from '../types'
 
 /*
 ********************** EXPORTED
@@ -19,7 +20,7 @@ getHandler(self)
 
 type DropDownOpt = { html: string; value: number }
 
-export function getHandler(self: NumericTermSettingInstance) {
+export function getHandler(self) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -99,7 +100,7 @@ export function getHandler(self: NumericTermSettingInstance) {
 	}
 }
 
-function setqDefaults(self: NumericTermSettingInstance) {
+function setqDefaults(self) {
 	const cache = self.numqByTermIdModeType
 	const t = self.term as Term
 	if (!cache[t.id!]) cache[t.id!] = {}

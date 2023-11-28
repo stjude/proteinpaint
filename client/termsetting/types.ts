@@ -1,7 +1,8 @@
-// TODO: will deprecate this code, should use client/termsetting/types.ts instead
-import { VocabApi } from './vocab'
-import { Term, Q, TermWrapper, DetermineQ } from './termdb'
-import { Filter } from './filter'
+import { VocabApi } from '../shared/types/vocab.ts'
+import { Filter } from '../shared/types/filter.ts'
+import { Term, Q, TermWrapper } from '../shared/types/terms/tw'
+import { CategoricalTerm, CategoricalQ, CategoricalTW } from '../shared/types/terms/categorical.ts'
+import { NumericTerm, NumericQ, NumericTW } from '../shared/types/terms/numeric.ts'
 
 /*
 
@@ -64,14 +65,6 @@ export type SampleCountsEntry = {
 	key: string
 	value: number //This maybe a string???
 	label?: string //Not documented?? in key or no?
-}
-
-export type Handler = {
-	getPillName: (d: any) => string
-	getPillStatus: (f?: any) => any
-	showEditMenu: (div: Selection) => void
-	validateQ?: (d: Q) => void
-	postMain?: () => void
 }
 
 type BaseTermSettingOpts = {
@@ -150,42 +143,14 @@ export type InstanceDom = {
 	rangeAndLabelDiv?: any
 }
 
-export type TermSettingInstance = {
-	activeCohort?: number
-	clickNoPillDiv?: any
-	dom: InstanceDom
-	doNotHideTipInMain?: boolean
-	disable_terms?: string[]
-	durations: { exit: number }
-	filter?: Filter
-	handler?: Handler
-	handlerByType?: { [index: string]: Handler }
-	hasError?: boolean
-	noTermPromptOptions?: NoTermPromptOptsEntry[]
-	opts: TermSettingOpts
-	placeholder: string | undefined
-	q: Q
-	term: Term
-	usecase?: UseCase
-	vocabApi: VocabApi
+export type Handler = {
+	getPillName: (d: any) => string
+	getPillStatus: (f?: any) => any
+	showEditMenu: (div: Selection) => void
+	validateQ?: (d: PillData) => void
+	postMain?: () => void
+}
 
-	//Methods
-	/*
-	TODOs: 
-		- Move specifc methods to their own intersection instance type within in termsetting/handler/*.ts, out of main type
-	*/
-	cancelGroupsetting?: () => void
-	enterPill?: () => void
-	exitPill?: () => void
-	initUI: () => void
-	removeTerm?: () => void
-	runCallback: (f?: any) => any
-	setHandler?: (f: string) => any
-	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
-	showMenu: (event: MouseEvent, clickedElem: string | null, menuHolder: any) => void
-	showReuseMenu?: (div: any) => void
-	showTree: (holder: Selection, event?: MouseEvent) => void
-	tabCallback?: (event: any, tab: any) => void
-	updatePill?: () => void
-	updateUI: () => void
+export interface HandlerGenerator {
+	getHandler: (self: any) => Handler
 }

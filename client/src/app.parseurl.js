@@ -75,6 +75,14 @@ upon error, throw err message as a string
 		})
 		return
 	}
+	if (urlp.has('gdcsinglecell')) {
+		const _ = await import('./gdc.singleCell')
+		_.gdcSinglecellUi({
+			holder: arg.holder,
+			debugmode: arg.debugmode
+		})
+		return
+	}
 
 	//////////// to delete
 	if (urlp.has('mdsjsonform')) {

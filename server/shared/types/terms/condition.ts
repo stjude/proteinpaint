@@ -1,5 +1,5 @@
-import { TermSettingInstance } from '../termsetting'
-import { TermWrapper, BaseQ } from '../termdb'
+import { BaseQ } from './term'
+import { TermWrapper } from './tw'
 
 /*
 --------EXPORTED--------
@@ -30,6 +30,7 @@ export type ConditionQ = BaseQ & {
 	value_by_max_grade?: boolean //'false' if bar_by_children is 'true'
 	value_by_most_recent?: boolean //'false' if bar_by_children is 'true'
 	value_by_computable_grade?: boolean //'true' if bar_by_children is 'true'
+	groups?: any // TODO: should use a defined type
 }
 
 /**
@@ -44,8 +45,10 @@ export type ConditionTW = TermWrapper & {
  * @group Termdb
  * @category TW
  */
+/*
 export type ConditionTermSettingInstance = TermSettingInstance & {
 	q: ConditionQ
 	category2samplecount: { key: string; label: string; count: number }[]
 	refGrp: any
 }
+*/

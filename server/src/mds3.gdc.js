@@ -25,6 +25,8 @@ validate_query_geneCnv2
 	filter2GDCfilter
 validate_query_geneExpression
 	getCasesWithExressionDataFromCohort
+gdc_validate_query_singleCell_samples
+gdc_validate_query_singleCell_data
 querySamples_gdcapi
 	flattenCaseByFields
 		mayApplyGroupsetting
@@ -2052,9 +2054,136 @@ async function convert2caseId(n) {
 	throw 'cannot convert to case_id (uuid)'
 }
 
-/************************************************
-for gdc bam slicing UI
-*/
+export function gdc_validate_query_singleCell_samples(ds, genome) {
+	/*
+	q{}
+		filter0, optional
+	*/
+	ds.queries.singleCell.samples.get = async q => {
+		const filters = {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'data_format', value: 'tsv' } },
+				{ op: '=', content: { field: 'data_type', value: 'Single Cell Analysis' } },
+				{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
+			]
+		}
+
+		if (q.filter0) {
+			filters.content.push(q.filter0)
+		}
+
+		const body = {
+			filters,
+			size: 100,
+			fields: [
+				'id',
+				'cases.project.project_id', // for display only
+				'cases.submitter_id', // used when listing all cases & files
+				'cases.samples.sample_type'
+				// may add diagnosis and primary site
+			].join(',')
+		}
+
+		const response = await got.post(path.join(apihost, 'files'), {
+			headers: getheaders(q),
+			body: JSON.stringify(body)
+		})
+
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from ' + api.endpoint
+		}
+		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
+		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+
+		// api return is by file, getter return is by case
+		const case2files = new Map() // k: case submitter id, v: list of scrna tsv files
+
+		for (const h of re.data.hits) {
+			/*
+			{
+			  id: 'bb4126d8-1c68-4309-820e-8b8c2520688c',
+			  cases: [
+				{ submitter_id: 'C3L-00359', project: {project_id}, samples:[{sample_type}]  }
+			  ]
+			}
+			*/
+
+			const c = h.cases?.[0]
+			if (!c) throw 'h.cases[0] missing'
+			if (!case2files.has(c.submitter_id)) case2files.set(c.submitter_id, [])
+
+			case2files.get(c.submitter_id).push({
+				fileId: h.id,
+				project_id: c.project.project_id,
+				samples: c.samples // should be one?
+			})
+		}
+
+		const cases = [] // flatten map to array and return
+		for (const [c, a] of case2files) {
+			cases.push({ name: c, files: a })
+		}
+		return cases
+	}
+}
+
+export function gdc_validate_query_singleCell_data(ds, genome) {
+	/*
+	q{}
+		sample: value is the file Id, one that's found by gdc_validate_query_singleCell_samples
+	*/
+	ds.queries.singleCell.data.get = async q => {
+		const re = await got(path.join(apihost, 'data', q.sample), { method: 'GET', headers: getheaders(q) })
+		const lines = re.body.trim().split('\n')
+
+		// first line is header
+		// cell_barcode	read_count	gene_count	seurat_cluster	UMAP_1	UMAP_2	UMAP3d_1	UMAP3d_2	UMAP3d_3	tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3	PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
+		// this tsv file has coord for 3 maps
+		const plotUmap = { name: 'UMAP', cells: [] },
+			plotTsne = { name: 'TSNE', cells: [] },
+			plotPca = { name: 'PCA', cells: [] },
+			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} },
+			tid2cellvalue = { cluster: {} } // corresponds to above term id
+
+		for (let i = 1; i < lines.length; i++) {
+			const line = lines[i]
+			const l = line.split('\t')
+			const cellId = l[0]
+			if (!cellId) throw 'cellId missing from a line: ' + line
+			const clusterId = l[3]
+			if (!clusterId) throw 'seuratCluster missing from a line'
+			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
+			tid2cellvalue.cluster[cellId] = clusterId
+
+			const umap1 = Number(l[4]),
+				umap2 = Number(l[5]),
+				// skip umap 3d
+				tsne1 = Number(l[9]),
+				tsne2 = Number(l[10]),
+				// skip tsne 3d
+				pc1 = Number(l[14]),
+				pc2 = Number(l[15])
+			if (Number.isNaN(umap1)) throw 'umap1 is nan'
+			if (Number.isNaN(umap2)) throw 'umap2 is nan'
+			if (Number.isNaN(tsne1)) throw 'tsne1 is nan'
+			if (Number.isNaN(tsne2)) throw 'tsne2 is nan'
+			if (Number.isNaN(pc1)) throw 'pc1 is nan'
+			if (Number.isNaN(pc2)) throw 'pc2 is nan'
+			plotUmap.cells.push({ cellId, x: umap1, y: umap2 })
+			plotTsne.cells.push({ cellId, x: tsne1, y: tsne2 })
+			plotPca.cells.push({ cellId, x: pc1, y: pc2 })
+		}
+		return {
+			plots: [plotPca, plotTsne, plotUmap],
+			terms: [seuratClusterTerm],
+			tid2cellvalue
+		}
+	}
+}
 
 export function handle_gdc_ssms(genomes) {
 	return async (req, res) => {
