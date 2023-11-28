@@ -3,7 +3,7 @@ import { Tabs } from '../../dom/toggleButtons'
 // import { appear } from '#dom/animation'
 import { Selection } from 'd3-selection'
 import { Genome } from '#shared/types/index'
-import { sayerror } from '#dom/sayerror'
+import { sayerror } from '../../dom/sayerror'
 import { launch, DiscoPlotArgs } from './launch.adhoc'
 
 /*

@@ -7,11 +7,14 @@ sayerror()
 
 throwMsgWithFilePathAndFnName()
 	- Generic throw message that includes the file and function name in this format: `Message [fileName functionName()]
+
+showErrorWithCounter
+	- Displays the error message with a counter in a red div. 
 */
 
-export function sayerror(holder, o) {
+export function sayerror(holder: any, o: any) {
 	// 2nd argument is a string or an Error object
-	let msg // string message for display
+	let msg: any // string message for display
 	if (typeof o == 'string') {
 		msg = o
 	} else {
@@ -29,10 +32,10 @@ export function sayerror(holder, o) {
 		})
 }
 
-export function throwMsgWithFilePathAndFnName(message) {
+export function throwMsgWithFilePathAndFnName(message: string) {
 	try {
 		throw new Error()
-	} catch (error) {
+	} catch (error: any) {
 		const stackLines = error.stack.split('\n')
 		const callerLine = stackLines[2].trim()
 
