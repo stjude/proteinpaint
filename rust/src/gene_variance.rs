@@ -1,4 +1,4 @@
-// cd .. && cargo build --release && json='{"samples":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts2.txt","filter_extreme_values":true,"num_genes":100}' && time echo $json | target/release/gene_variance
+// cd .. && cargo build --release && json='{"samples":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts2.txt","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Dyn;
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use statrs::statistics::Data;
 use statrs::statistics::Median;
+use statrs::statistics::OrderStatistics;
 use statrs::statistics::Statistics;
 use std::cmp::Ordering;
 use std::io;
@@ -119,6 +120,7 @@ fn calculate_variance(
     gene_symbols: Vec<String>,
     mut min_sample_size: f64,
     filter_extreme_values: bool,
+    param: String,
 ) -> Vec<GeneInfo> {
     const MIN_COUNT: f64 = 10.0; // Value of constant from R implementation
     const MIN_TOTAL_COUNT: f64 = 15.0; // Value of constant from R implementation
@@ -174,20 +176,45 @@ fn calculate_variance(
         for col in 0..input_matrix.ncols() {
             gene_counts.push(input_matrix[(row, col)]);
         }
-        if gene_counts.clone().variance().is_nan() == true {
-        } else if filter_extreme_values == true && keep_cpm_bool == true && keep_total_bool == true
-        {
-            gene_infos.push(GeneInfo {
-                param: gene_counts.variance(),
-                gene_name: gene_names[row].clone(),
-                gene_symbol: gene_symbols[row].clone(),
-            });
-        } else if filter_extreme_values == false {
-            gene_infos.push(GeneInfo {
-                param: gene_counts.variance(),
-                gene_name: gene_names[row].clone(),
-                gene_symbol: gene_symbols[row].clone(),
-            });
+        if param == "var" {
+            // Calculating variance
+            if gene_counts.clone().variance().is_nan() == true {
+            } else if filter_extreme_values == true
+                && keep_cpm_bool == true
+                && keep_total_bool == true
+            {
+                gene_infos.push(GeneInfo {
+                    param: gene_counts.variance(),
+                    gene_name: gene_names[row].clone(),
+                    gene_symbol: gene_symbols[row].clone(),
+                });
+            } else if filter_extreme_values == false {
+                gene_infos.push(GeneInfo {
+                    param: gene_counts.variance(),
+                    gene_name: gene_names[row].clone(),
+                    gene_symbol: gene_symbols[row].clone(),
+                });
+            }
+        } else {
+            // Calculating interquartile region
+            let mut gene_counts_data = Data::new(gene_counts);
+            if gene_counts_data.clone().interquartile_range().is_nan() == true {
+            } else if filter_extreme_values == true
+                && keep_cpm_bool == true
+                && keep_total_bool == true
+            {
+                gene_infos.push(GeneInfo {
+                    param: gene_counts_data.interquartile_range(),
+                    gene_name: gene_names[row].clone(),
+                    gene_symbol: gene_symbols[row].clone(),
+                });
+            } else if filter_extreme_values == false {
+                gene_infos.push(GeneInfo {
+                    param: gene_counts_data.interquartile_range(),
+                    gene_name: gene_names[row].clone(),
+                    gene_symbol: gene_symbols[row].clone(),
+                });
+            }
         }
     }
     gene_infos
@@ -240,6 +267,15 @@ fn main() {
                         .to_string()
                         .split(",")
                         .collect();
+                    let param = &json_string["param"] // Value provide must be either "var" or "iqr"
+                        .to_owned()
+                        .as_str()
+                        .unwrap()
+                        .to_string();
+                    if param != "var" && param != "iqr" {
+                        // Check if any unknown method has been provided
+                        panic!("Unknown method:{}", param);
+                    }
                     let filter_extreme_values: bool =
                         json_string["filter_extreme_values"].as_bool().unwrap();
                     let num_genes: usize = json_string["num_genes"].as_usize().unwrap();
@@ -252,13 +288,16 @@ fn main() {
                         gene_symbols,
                         samples_list.len() as f64,
                         filter_extreme_values,
+                        param.to_string(),
                     );
                     //println!("gene_infos:{:?}", gene_infos);
+
+                    // Printing the top "num_genes" genes to JSON
                     let mut output_string = "[".to_string();
                     for j in 0..num_genes {
                         let i = gene_infos.len() - j - 1;
                         output_string += &serde_json::to_string(&gene_infos[i]).unwrap();
-                        if i > 0 {
+                        if i > gene_infos.len() - num_genes {
                             output_string += &",".to_string();
                         }
                     }
