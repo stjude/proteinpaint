@@ -176,6 +176,38 @@ export function setInteractivity(self) {
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
 		self.dom.clickMenu.d.selectAll('*').remove()
+
+		// Add case summary and gene summary only for GDC
+		if (self.app.vocabApi.vocab?.dslabel === 'GDC') {
+			const menuDiv = self.dom.clickMenu.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(`Case summary: ${sampleData._SAMPLENAME_}`)
+				.on('click', async event => {
+					window.open(
+						`https://portal.gdc.cancer.gov/cases/${
+							sampleData.sample || sampleData.row.sample || sampleData._SAMPLENAME_
+						}`,
+						'_blank'
+					)
+					menuDiv.remove()
+					self.dom.clickMenu.d.selectAll('*').remove()
+				})
+
+			if (sampleData.tw?.term?.type == 'geneVariant') {
+				const menuDiv = self.dom.clickMenu.d
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(`Gene summary: ${sampleData.tw.term.name}`)
+					.on('click', async event => {
+						const ensemblGeneID = self.data.refs.byTermId[sampleData.tw.$id]?.ensemblGeneID
+						window.open(`https://portal.gdc.cancer.gov/genes/${ensemblGeneID}`, '_blank')
+						menuDiv.remove()
+						self.dom.clickMenu.d.selectAll('*').remove()
+					})
+			}
+		}
+
 		if (q.singleSampleGenomeQuantification) {
 			for (const k in q.singleSampleGenomeQuantification) {
 				const menuDiv = self.dom.clickMenu.d
@@ -381,6 +413,20 @@ function setTermActions(self) {
 				.html('Lollipop')
 				.on('click', async () => {
 					await self.launchGB(t)
+					self.dom.tip.hide()
+				})
+		}
+
+		// Add gene summary only for GDC
+		if (self.app.vocabApi.vocab?.dslabel === 'GDC' && vartype == 'gene') {
+			self.dom.gbButton = labelEditDiv
+				.append('button')
+				.style('text-align', 'center')
+				.style('margin-left', '3px')
+				.html('Gene summary')
+				.on('click', async () => {
+					const ensemblGeneID = self.data.refs.byTermId[t.tw.$id]?.ensemblGeneID
+					window.open(`https://portal.gdc.cancer.gov/genes/${ensemblGeneID}`, '_blank')
 					self.dom.tip.hide()
 				})
 		}
