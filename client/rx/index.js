@@ -286,6 +286,7 @@ export function getAppApi(self) {
 		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
+			self.bus.emit('preDispatch')
 			try {
 				if (middlewares.length) {
 					for (const fxn of middlewares.slice()) {
@@ -398,7 +399,7 @@ export function getAppApi(self) {
 	// pattern to hide the mutable parts, not checked here
 	if (self.opts.debugName) window[self.opts.debugName] = api
 	if (!self.bus) {
-		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender', 'firstRender']
+		if (!self.eventTypes) self.eventTypes = ['preDispatch', 'postInit', 'postRender', 'firstRender', 'error']
 		if (self.customEvents) self.eventTypes.push(...self.customEvents)
 		// set up a required event bus
 		const callbacks = (self.opts.app && self.opts.app.callbacks) || self.opts.callbacks || {}
