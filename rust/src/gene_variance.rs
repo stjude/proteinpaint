@@ -1,4 +1,4 @@
-// cd .. && cargo build --release && json='{"samples":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts2.txt"}' && time echo $json | target/release/gene_variance
+// cd .. && cargo build --release && json='{"samples":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts2.txt","filter_extreme_values":true,"num_genes":100}' && time echo $json | target/release/gene_variance
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Dyn;
@@ -7,6 +7,8 @@ use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use statrs::statistics::Data;
+use statrs::statistics::Median;
 use statrs::statistics::Statistics;
 use std::cmp::Ordering;
 use std::io;
@@ -108,35 +110,111 @@ fn input_data(
 struct GeneInfo {
     gene_name: String,
     gene_symbol: String,
-    std_dev: f64,
+    param: f64,
 }
 
 fn calculate_variance(
     input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     gene_names: Vec<String>,
     gene_symbols: Vec<String>,
+    mut min_sample_size: f64,
+    filter_extreme_values: bool,
 ) -> Vec<GeneInfo> {
+    const MIN_COUNT: f64 = 10.0; // Value of constant from R implementation
+    const MIN_TOTAL_COUNT: f64 = 15.0; // Value of constant from R implementation
+    const LARGE_N: f64 = 10.0; // Value of constant from R implementation
+    const MIN_PROP: f64 = 0.7; // Value of constant from R implementation
+
+    if min_sample_size == 0.0 {
+        panic!("Only one condition present in groups");
+    }
+
+    if min_sample_size > LARGE_N {
+        min_sample_size = LARGE_N + (min_sample_size - LARGE_N) * MIN_PROP;
+    }
+
+    let mut lib_sizes = Vec::<f64>::new();
+    let lib_sizes_vector = input_matrix.row_sum();
+    //println!("lib_sizes_vector:{:?}", lib_sizes_vector);
+    for i in 0..lib_sizes_vector.ncols() {
+        lib_sizes.push(lib_sizes_vector[(0, i)].into());
+    }
+    //println!("lib_sizes:{:?}", lib_sizes);
+    //println!("min_sample_size:{}", min_sample_size);
+    let median_lib_size = Data::new(lib_sizes.clone()).median();
+    let cpm_cutoff = (MIN_COUNT / median_lib_size) * 1000000.0;
+    //println!("cpm_cutoff:{}", cpm_cutoff);
+    let cpm_matrix = cpm(&input_matrix);
+    const TOL: f64 = 1e-14; // Value of constant from R implementation
+
     let mut gene_infos = Vec::<GeneInfo>::new();
+    let row_sums = input_matrix.column_sum();
     for row in 0..input_matrix.nrows() {
+        let mut trues = 0.0;
+        for col in 0..cpm_matrix.ncols() {
+            if cpm_matrix[(row, col)] >= cpm_cutoff {
+                trues += 1.0;
+            }
+        }
+        let mut keep_cpm_bool = false;
+        if trues >= min_sample_size - TOL {
+            keep_cpm_bool = true;
+            //keep_cpm.push(keep_cpm_bool);
+            //positive_cpm += 1;
+        }
+
+        let mut keep_total_bool = false;
+        if row_sums[(row, 0)] as f64 >= MIN_TOTAL_COUNT - TOL {
+            keep_total_bool = true;
+            //keep_total.push(keep_total_bool);
+            //positive_total += 1;
+        }
+
         let mut gene_counts: Vec<f64> = Vec::with_capacity(input_matrix.ncols());
         for col in 0..input_matrix.ncols() {
             gene_counts.push(input_matrix[(row, col)]);
         }
-        if gene_counts.clone().variance().is_nan() == true { // Should we add more conditions here for e.g filter genes with very low gene counts
-        } else {
+        if gene_counts.clone().variance().is_nan() == true {
+        } else if filter_extreme_values == true && keep_cpm_bool == true && keep_total_bool == true
+        {
             gene_infos.push(GeneInfo {
-                std_dev: gene_counts.variance(),
+                param: gene_counts.variance(),
+                gene_name: gene_names[row].clone(),
+                gene_symbol: gene_symbols[row].clone(),
+            });
+        } else if filter_extreme_values == false {
+            gene_infos.push(GeneInfo {
+                param: gene_counts.variance(),
                 gene_name: gene_names[row].clone(),
                 gene_symbol: gene_symbols[row].clone(),
             });
         }
     }
-    gene_infos.as_mut_slice().sort_by(|a, b| {
-        (a.std_dev)
-            .partial_cmp(&b.std_dev)
-            .unwrap_or(Ordering::Equal)
-    });
     gene_infos
+        .as_mut_slice()
+        .sort_by(|a, b| (a.param).partial_cmp(&b.param).unwrap_or(Ordering::Equal));
+    gene_infos
+}
+
+fn cpm(
+    input_matrix: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
+) -> Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>> {
+    //let mut blank = Vec::<f64>::new();
+    let mut blank = Vec::with_capacity(input_matrix.nrows() * input_matrix.ncols());
+    for _i in 0..input_matrix.nrows() * input_matrix.ncols() {
+        blank.push(0.0);
+    }
+    let mut output_matrix = DMatrix::from_vec(input_matrix.nrows(), input_matrix.ncols(), blank);
+    let column_sums = input_matrix.row_sum();
+    for col in 0..input_matrix.ncols() {
+        let norm_factor = column_sums[(0, col)];
+        for row in 0..input_matrix.nrows() {
+            output_matrix[(row, col)] =
+                (input_matrix[(row, col)] as f64 * 1000000.0) / norm_factor as f64;
+        }
+    }
+    //println!("output_matrix:{:?}", output_matrix);
+    output_matrix
 }
 
 fn main() {
@@ -162,13 +240,22 @@ fn main() {
                         .to_string()
                         .split(",")
                         .collect();
+                    let filter_extreme_values: bool =
+                        json_string["filter_extreme_values"].as_bool().unwrap();
+                    let num_genes: usize = json_string["num_genes"].as_usize().unwrap();
                     let samples_list: Vec<&str> = samples_string.split(",").collect();
                     let (input_matrix, gene_names, gene_symbols) =
                         input_data(file_name, &samples_list);
-                    let gene_infos = calculate_variance(input_matrix, gene_names, gene_symbols);
+                    let gene_infos = calculate_variance(
+                        input_matrix,
+                        gene_names,
+                        gene_symbols,
+                        samples_list.len() as f64,
+                        filter_extreme_values,
+                    );
                     //println!("gene_infos:{:?}", gene_infos);
                     let mut output_string = "[".to_string();
-                    for j in 0..gene_infos.len() {
+                    for j in 0..num_genes {
                         let i = gene_infos.len() - j - 1;
                         output_string += &serde_json::to_string(&gene_infos[i]).unwrap();
                         if i > 0 {
