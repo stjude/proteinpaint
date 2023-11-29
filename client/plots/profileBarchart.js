@@ -83,7 +83,7 @@ class profileBarchart extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const width = 1400
-		const height = this.rowCount * 32 + 500
+		const height = this.rowCount * 32 + 530
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(config.title)
 		const svg = this.svg
