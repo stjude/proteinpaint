@@ -420,16 +420,17 @@ function setTermActions(self) {
 				})
 		}
 
-		// Add gene summary only for GDC
-		if (self.app.vocabApi.vocab?.dslabel === 'GDC' && vartype == 'gene') {
+		// Add gene summary button
+		if (self.state.termdbConfig.urlTemplates?.gene && vartype == 'gene') {
+			const templates = self.state.termdbConfig.urlTemplates
 			self.dom.gbButton = labelEditDiv
 				.append('button')
 				.style('text-align', 'center')
 				.style('margin-left', '3px')
 				.html('Gene summary')
 				.on('click', async () => {
-					const ensemblGeneID = self.data.refs.byTermId[t.tw.$id]?.ensemblGeneID
-					window.open(`https://portal.gdc.cancer.gov/genes/${ensemblGeneID}`, '_blank')
+					const name = self.data.refs.byTermId[t.tw.$id][templates.gene.namekey]
+					window.open(`${templates.gene.base}/${name}`, '_blank')
 					self.dom.tip.hide()
 				})
 		}
