@@ -62,11 +62,9 @@ export function showErrorsWithCounter(errs: string | string[], holder: any) {
 	if (errs.length === 0) return
 	if (errs.length === 1) return sayerror(holder, errs[0])
 
-	const wrapper = holder.selectAll('.sja_errorbar').data([1])
-
 	let showErrors = false
-	const wrapperEnter = wrapper
-		.enter()
+	//Anywhere on the error bar is clickable to show/hide the error messages
+	const wrapper = holder
 		.append('div')
 		.attr('class', 'sja_errorbar')
 		.on('click', () => {
@@ -75,7 +73,7 @@ export function showErrorsWithCounter(errs: string | string[], holder: any) {
 		})
 
 	// Counter
-	const counterTextDiv = wrapperEnter.append('div').style('display', 'inline-block')
+	const counterTextDiv = wrapper.append('div').style('display', 'inline-block')
 
 	counterTextDiv
 		.append('div')
@@ -90,7 +88,7 @@ export function showErrorsWithCounter(errs: string | string[], holder: any) {
 	counterTextDiv.append('div').text('errors found.').style('padding', '3px').style('display', 'inline-block')
 
 	// Close button
-	wrapperEnter
+	wrapper
 		.append('div')
 		.style('display', 'inline-block')
 		.style('float', 'right')
@@ -100,11 +98,9 @@ export function showErrorsWithCounter(errs: string | string[], holder: any) {
 		})
 
 	//Error messages
-	const errorsDiv = wrapperEnter.append('div').style('display', 'none').style('margin-left', '10px')
+	const errorsDiv = wrapper.append('div').style('display', 'none').style('margin-left', '10px')
 
 	for (const err of errs) {
 		errorsDiv.append('div').text(err)
 	}
-
-	wrapper.exit().remove()
 }
