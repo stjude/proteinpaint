@@ -253,6 +253,7 @@ export class profilePlot {
 
 		const text = this.filterG
 			.append('text')
+			.attr('font-size', '0.9em')
 			.attr('transform', `translate(0, ${this.filtersCount * 20})`)
 			.attr('text-anchor', 'left')
 		text.append('tspan').attr('font-weight', 'bold').text(filter)
