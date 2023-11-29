@@ -255,18 +255,28 @@ fn main() {
             match input_json {
                 Ok(json_string) => {
                     let now = Instant::now();
-                    let samples_string = &json_string["samples"]
-                        .to_owned()
-                        .as_str()
-                        .unwrap()
-                        .to_string();
-                    let file_name = &json_string["input_file"]
-                        .to_owned()
-                        .as_str()
-                        .unwrap()
-                        .to_string()
-                        .split(",")
-                        .collect();
+                    let samples_string_result = &json_string["samples"].to_owned();
+                    let samples_string;
+                    match samples_string_result.as_str() {
+                        Some(x) => {
+                            samples_string = x.to_string();
+                        }
+                        None => {
+                            panic!("Samples not provided");
+                        }
+                    }
+
+                    let file_name_result = &json_string["input_file"];
+                    let file_name;
+                    match file_name_result.as_str() {
+                        Some(x) => {
+                            file_name = x.to_string();
+                        }
+                        None => {
+                            panic!("File name is missing");
+                        }
+                    }
+
                     let param = &json_string["param"] // Value provide must be either "var" or "iqr"
                         .to_owned()
                         .as_str()
@@ -276,12 +286,32 @@ fn main() {
                         // Check if any unknown method has been provided
                         panic!("Unknown method:{}", param);
                     }
-                    let filter_extreme_values: bool =
-                        json_string["filter_extreme_values"].as_bool().unwrap();
-                    let num_genes: usize = json_string["num_genes"].as_usize().unwrap();
+                    let filter_extreme_values_result = &json_string["filter_extreme_values"];
+
+                    let filter_extreme_values;
+                    match filter_extreme_values_result.as_bool() {
+                        Some(x) => {
+                            filter_extreme_values = x;
+                        }
+                        None => {
+                            filter_extreme_values = true; // If filter_extreme_values field is missing, set it to true by default
+                        }
+                    }
+
+                    let num_genes_result = &json_string["num_genes"];
+                    let num_genes;
+                    match num_genes_result.as_usize() {
+                        Some(x) => {
+                            num_genes = x;
+                        }
+                        None => {
+                            panic!("Number of genes to be given is missing")
+                        }
+                    }
+
                     let samples_list: Vec<&str> = samples_string.split(",").collect();
                     let (input_matrix, gene_names, gene_symbols) =
-                        input_data(file_name, &samples_list);
+                        input_data(&file_name, &samples_list);
                     let gene_infos = calculate_variance(
                         input_matrix,
                         gene_names,
