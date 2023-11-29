@@ -108,6 +108,9 @@ async function getSampleData(q) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
+			console.log(110, q.ds.cohort?.termdb?.urlTemplates)
+			if (q.ds.cohort?.termdb?.getGeneAlias) refs.byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
+
 			const bySampleId = await q.ds.mayGetGeneVariantData(tw, q)
 			for (const [sampleId, value] of bySampleId.entries()) {
 				if (!(tw.term.name in value)) continue

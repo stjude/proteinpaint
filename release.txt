@@ -1,1 +1,2 @@
-
+Features:
+- Click matrix cell to launch gene summary and case summary page, click row label to launch gene summary page, click case id to launch case summary

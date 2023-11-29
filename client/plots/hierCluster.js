@@ -163,8 +163,14 @@ class HierCluster extends Matrix {
 		c.geneNameLst = c.row_names_index.map(i => c.geneNameLst[i - 1])
 		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
 		this.hcTermGroup.lst = orderedTw
+
+		// from d.byTermId to byTermId: change byTermId keys from gene names to $ids
+		const byTermId = {}
+		for (const tw of twlst) {
+			if (d.byTermId[tw.term.name]) byTermId[tw.$id] = d.byTermId[tw.term.name]
+		}
 		this.hierClusterSamples = {
-			refs: { byTermId: {} },
+			refs: { byTermId },
 			lst: c.sampleNameLst.map(sample => samples[sample]),
 			samples
 		}
@@ -182,6 +188,12 @@ class HierCluster extends Matrix {
 			lst.push(s)
 			if (!(sampleId in d.samples)) continue
 			Object.assign(s, d.samples[sampleId])
+		}
+
+		// combine this.hierClusterSamples.refs.byTermId into this.data.refs.byTermId
+		const t = this.hierClusterSamples.refs.byTermId
+		for (const $id of Object.keys(t)) {
+			d.refs.byTermId[$id] = Object.assign({}, d.refs.byTermId[$id] || {}, t[$id])
 		}
 		this.data = { samples, lst, refs: d.refs }
 	}
