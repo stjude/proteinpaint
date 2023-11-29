@@ -287,7 +287,7 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 		})
 
 		.then(data => {
-			if (data.error) throw { message: data.error }
+			if (data.error) throw { message: data.error.error }
 			const err = hicparsestat(hic, data.out)
 			if (err) throw { message: err }
 
@@ -945,7 +945,7 @@ function getdata_chrpair(hic: any) {
 			return data.json()
 		})
 		.then(data => {
-			if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error }
+			if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error.error } //Fix for message displaying [object object] instead of error message
 
 			ctx.clearRect(0, 0, hic.chrpairview.canvas.width, hic.chrpairview.canvas.height)
 
@@ -1646,7 +1646,7 @@ function getdata_detail(hic: any) {
 			const xpxbp = canvaswidth / (xstop - xstart)
 			const ypxbp = canvasheight / (ystop - ystart)
 
-			if (data.error) throw { message: data.error }
+			if (data.error) throw { message: data.error.error }
 			if (!data.items || data.items.length == 0) {
 				return
 			}
