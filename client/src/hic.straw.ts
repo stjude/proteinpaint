@@ -6,6 +6,7 @@ import { format as d3format } from 'd3-format'
 import * as common from '#shared/common'
 import blocklazyload from './block.lazyload'
 import { HicstrawArgs } from '../types/hic.ts'
+import { showErrorsWithCounter } from '../dom/sayerror'
 
 /*
 
@@ -101,7 +102,11 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 
 	{
 		const div = hic.holder.append('div')
-		hic.error = (msg: string) => client.sayerror(div, msg)
+		const errs = [] as string[]
+		hic.error = (err: string) => {
+			errs.push(err)
+			setTimeout(() => showErrorsWithCounter(errs, div), 500)
+		}
 	}
 
 	if (!hic.name) {
@@ -507,21 +512,22 @@ async function init_wholegenome(hic: any) {
 	there might be data inconsistenncy with hic file, it may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
 	do not flood ui with such errors, to tolerate, collect all errors and show in one place
 	*/
-	const errLst = []
-	try {
-		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst[i]
-			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst[j]
-				await getdata_leadfollow(hic, lead, follow)
-			}
+	// const errLst = []
+	// try {
+	for (let i = 0; i < manychr; i++) {
+		const lead = hic.chrlst[i]
+		for (let j = 0; j <= i; j++) {
+			const follow = hic.chrlst[j]
+			await getdata_leadfollow(hic, lead, follow)
 		}
-	} catch (e) {
-		errLst.push(e)
 	}
-	if (errLst.length) {
-		// TODO enable a red bubble with errLst.length number in header to indicate occurrence of errors, click on bubble to see list of errs in menu
-	}
+	// } catch (e: any) {
+	// 	errLst.push(e.message || e)
+	// }
+	// console.log(errLst)
+	// if (errLst.length) {
+	// 	hic.error(errLst)
+	// }
 
 	return
 }
@@ -912,8 +918,8 @@ function getdata_chrpair(hic: any) {
 	const chrx = hic.chrpairview.chrx
 	const chry = hic.chrpairview.chry
 	const isintrachr = chrx == chry
-	const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
-	const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
+	// const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
+	// const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
 	const firstisx = tell_firstisx(hic, chrx, chry)
 
 	const resolution = hic.chrpairview.resolution
@@ -948,7 +954,7 @@ function getdata_chrpair(hic: any) {
 				return
 			}
 
-			const err = 0
+			// const err = 0
 
 			hic.chrpairview.isintrachr = isintrachr
 			hic.chrpairview.data = []
@@ -1132,7 +1138,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	hic.inchrpair = false
 	hic.wholegenomebutton.style('display', 'inline-block')
 
-	const isintrachr = chrx == chry
+	// const isintrachr = chrx == chry
 
 	hic.chrpairviewbutton.text('Entire ' + chrx + '-' + chry).style('display', 'inline-block')
 
@@ -1224,7 +1230,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 
 	detailviewupdatehic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
 
-	/*
+	/**
 	global zoom buttons
 	*/
 	{
