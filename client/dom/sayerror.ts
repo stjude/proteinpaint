@@ -60,6 +60,7 @@ export function throwMsgWithFilePathAndFnName(message: string) {
 export function showErrorsWithCounter(errs: string | string[], holder: any) {
 	if (typeof errs == 'string') return sayerror(holder, errs)
 	if (errs.length === 0) return
+	if (errs.length === 1) return sayerror(holder, errs[0])
 
 	const wrapper = holder.selectAll('.sja_errorbar').data([1])
 
