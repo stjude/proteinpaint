@@ -153,7 +153,7 @@ export class profilePlot {
 			})
 		}
 		this.components.controls.on(`downloadClick.${chartType}`, () =>
-			downloadSingleSVG(this.svg, this.getDownloadFilename())
+			downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
 		)
 		this.components.controls.on(`helpClick.${chartType}`, () =>
 			window.open(
