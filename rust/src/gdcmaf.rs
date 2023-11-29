@@ -4,8 +4,7 @@ use flate2::Compression;
 use serde_json::Value;
 use std::path::Path;
 use futures::StreamExt;
-use std::io;
-use std::io::{Read,Write};
+use std::io::{self,Read,Write};
 use std::sync::mpsc;
 
 
@@ -45,8 +44,7 @@ fn gen_vec(d:String) -> (Vec<String>,Vec<Vec<u8>>) {
                 }
             };
             maf_out_lst.push("\n".to_string());
-            let maf_compress_data = gen_gzip_vec(maf_out_lst);
-            maf_bit.push(maf_compress_data);
+            maf_bit.push(maf_out_lst.join("\t").as_bytes().to_vec());
             lst_chrom_pos.push(chrom+"\t"+&pos);
         }
     };
@@ -60,14 +58,6 @@ fn get_sorted_indices(lst: &Vec<String>) -> Vec<usize>{
             .then(lst[*a].split('\t').collect::<Vec<&str>>()[1].parse::<u32>().unwrap().cmp(&lst[*b].split('\t').collect::<Vec<&str>>()[1].parse::<u32>().unwrap()))
         });
     indices
-}
-
-// convert vector (maf row) to GZIP encoded format
-fn gen_gzip_vec(s:Vec<String>) -> Vec<u8> {
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    let _ = encoder.write_all(s.join("\t").as_bytes());
-    let compress_data = encoder.finish().unwrap();
-    compress_data
 }
 
 // GDC MAF columns (96)
@@ -112,18 +102,15 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         url.into_iter().map(|url|{
             let txt = tx.clone();
             async move {
-                match reqwest::get(&url).await{
-                    Ok(resp) => {
-                        let content = resp.bytes().await.unwrap();
-                        let mut decoder = GzDecoder::new(&content[..]);
-                        let mut decompressed_content = Vec::new();
-                        if let Ok(_) = decoder.read_to_end(&mut decompressed_content) {
-                            let text = String::from_utf8_lossy(&decompressed_content);
-                            let (lst_chrom_pos,maf_bit) = gen_vec(text.to_string());
-                            txt.send((lst_chrom_pos,maf_bit)).unwrap();
-                        }
+                if let Ok(resp) = reqwest::get(&url).await {
+                    let content = resp.bytes().await.unwrap();
+                    let mut decoder = GzDecoder::new(&content[..]);
+                    let mut decompressed_content = Vec::new();
+                    if let Ok(_) = decoder.read_to_end(&mut decompressed_content) {
+                        let text = String::from_utf8_lossy(&decompressed_content);
+                        let (lst_chrom_pos,maf_bit) = gen_vec(text.to_string());
+                        txt.send((lst_chrom_pos,maf_bit)).unwrap();
                     }
-                    Err(_) => println!("ERROR downloading {}", url),
                 }
             }
         })
@@ -145,17 +132,11 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     // output
     // maf_out_bit: A vector of GZIPPED maf
     // compress_header: output header
-    let mut maf_out_bit: Vec<u8> = Vec::new();
-    let compress_header = gen_gzip_vec(MAF_COL.iter().map(|s| s.to_string()).collect());
-    maf_out_bit.extend(compress_header);
-    let compress_header_line_break = gen_gzip_vec(["\n".to_string()].to_vec());
-    maf_out_bit.extend(compress_header_line_break);
+    let mut encoder = GzEncoder::new(io::stdout(), Compression::default());
+    let _ = encoder.write_all(&MAF_COL.join("\t").as_bytes().to_vec()).expect("Failed to write header");
+    let _ = encoder.write_all(b"\n").expect("Failed to write newline");
     for i in idx_sorted.iter() {
-        maf_out_bit.extend(&maf_bit[*i]);
+        let _ = encoder.write_all(&maf_bit[*i]).expect("Failed to write file");
     };
-
-    // standard output
-    println!("{:?}",maf_out_bit);
-    std::io::stdout().flush().expect("Failed to flush stdout");
     Ok(())
 }

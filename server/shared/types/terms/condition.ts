@@ -1,4 +1,4 @@
-import { BaseQ } from './term'
+import { Term, BaseQ, BaseValue, EmptyGroupSetting } from './term'
 import { TermWrapper } from './tw'
 
 /*
@@ -11,6 +11,16 @@ ConditionalTW
 /**
  * @category TW
  */
+
+export type ConditionValuesObject = {
+	mode: 'binary' | 'discrete'
+	type?: 'values'
+	values: {
+		[key: string]: BaseValue
+	}
+	groupsetting: EmptyGroupSetting
+}
+
 export type ConditionQ = BaseQ & {
 	// termType: 'conditional'
 	bar_by_children?: boolean // 'true' if term is not a leaf and has subconditions
@@ -33,11 +43,17 @@ export type ConditionQ = BaseQ & {
 	groups?: any // TODO: should use a defined type
 }
 
+export type ConditionTerm = Term & {
+	values: ConditionValuesObject
+	//groupsetting: { disabled?: boolean | undefined }
+}
+
 /**
  * @group Termdb
  * @category TW
  */
 export type ConditionTW = TermWrapper & {
+	term: ConditionTerm
 	q: ConditionQ //replace the generic Q with specific condition Q
 }
 

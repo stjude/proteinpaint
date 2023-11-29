@@ -83,11 +83,10 @@ class profileBarchart extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const width = 1400
-		const height = this.rowCount * 32 + 420
+		const height = this.rowCount * 32 + 500
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(config.title)
 		const svg = this.svg
-
 		const color = this.configComponent.component.color
 		this.svg
 			.append('defs')
@@ -153,6 +152,7 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 75, y, 'A')
 
 		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 60})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${50},${y + 210})`)
 
 		this.legendG
 			.append('text')
@@ -176,6 +176,9 @@ class profileBarchart extends profilePlot {
 			.append('text')
 			.attr('transform', `translate(0, 110)`)
 			.text('The end-user was asked to rate the current status of the domains and subdomains included for this module.')
+
+		this.addFilterLegend()
+
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
 		drawLine(910, 120, 75, y, 'A')
@@ -222,7 +225,7 @@ class profileBarchart extends profilePlot {
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const d = row[field]
 		let subjectiveTerm = false
-		if (row.name == 'Total Module' || row.name == 'End-user Impression') subjectiveTerm = true
+		if (row.name == 'Total Module' || row.name == 'End-user Impression') subjectiveTerm = false
 		const termColor = d.score.term.color
 		const value = this.getPercentage(d)
 		const isFirst = field == 'sc' || (field == 'poc' && !row.sc)
@@ -240,10 +243,10 @@ class profileBarchart extends profilePlot {
 				.attr('height', 20)
 			if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
 			else {
-				const id = d.score.term.name.replace(/[^a-zA-Z0-9]/g, '')
+				const termid = this.id + d.score.term.name.replace(/[^a-zA-Z0-9]/g, '')
 				g.append('defs')
 					.append('pattern')
-					.attr('id', id)
+					.attr('id', termid)
 					.attr('patternUnits', 'userSpaceOnUse')
 					.attr('width', 4)
 					.attr('height', 4)
@@ -251,7 +254,7 @@ class profileBarchart extends profilePlot {
 					.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
 					.attr('stroke-width', 1)
 					.attr('stroke', termColor)
-				rect.attr('fill', `url(#${id})`)
+				rect.attr('fill', `url(#${termid})`)
 			}
 		}
 		const text = g

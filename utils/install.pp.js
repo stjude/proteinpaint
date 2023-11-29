@@ -208,8 +208,8 @@ if (UC.BINPATH) {
 		trydownload(
 			a,
 			UC.MAC
-				? 'https://pecan.stjude.cloud/static/pp-support/mac/clustalo'
-				: 'https://pecan.stjude.cloud/static/pp-support/linux/clustalo'
+				? 'https://proteinpaint.stjude.org/ppSupport/static/pp-support/mac/clustalo'
+				: 'https://proteinpaint.stjude.org/ppSupport/static/pp-support/linux/clustalo'
 		)
 		if (!validateurlmode) {
 			exec('chmod +x ' + a)
@@ -221,8 +221,8 @@ if (UC.BINPATH) {
 		trydownload(
 			a,
 			UC.MAC
-				? 'https://pecan.stjude.cloud/static/pp-support/mac/straw'
-				: 'https://pecan.stjude.cloud/static/pp-support/linux/straw'
+				? 'https://proteinpaint.stjude.org/ppSupport/static/pp-support/mac/straw'
+				: 'https://proteinpaint.stjude.org/ppSupport/static/pp-support/linux/straw'
 		)
 		if (!validateurlmode) {
 			exec('chmod +x ' + a)
@@ -265,17 +265,20 @@ if (validateurlmode) {
 //////////////////// helpers
 
 function add_rn6() {
-	trydownload(path.join(path_tpgenome, 'rn6.gz'), 'https://pecan.stjude.cloud/static/rn6/rn6.gz')
-	trydownload(path.join(path_tpgenome, 'rn6.gz.fai'), 'https://pecan.stjude.cloud/static/rn6/rn6.gz.fai')
-	trydownload(path.join(path_tpgenome, 'rn6.gz.gzi'), 'https://pecan.stjude.cloud/static/rn6/rn6.gz.gzi')
-	trydownload(path.join(path_tpanno, 'ncbiRefSeq.rn6.gz'), 'https://pecan.stjude.cloud/static/rn6/ncbiRefSeq.rn6.gz')
+	trydownload(path.join(path_tpgenome, 'rn6.gz'), 'https://proteinpaint.stjude.org/ppGenomes/rn6.gz')
+	trydownload(path.join(path_tpgenome, 'rn6.gz.fai'), 'https://proteinpaint.stjude.org/ppGenomes/rn6.gz.fai')
+	trydownload(path.join(path_tpgenome, 'rn6.gz.gzi'), 'https://proteinpaint.stjude.org/ppGenomes/rn6.gz.gzi')
+	trydownload(
+		path.join(path_tpanno, 'ncbiRefSeq.rn6.gz'),
+		'https://proteinpaint.stjude.org/ppSupport/ncbiRefSeq.rn6.gz'
+	)
 	trydownload(
 		path.join(path_tpanno, 'ncbiRefSeq.rn6.gz.tbi'),
-		'https://pecan.stjude.cloud/static/rn6/ncbiRefSeq.rn6.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/ncbiRefSeq.rn6.gz.tbi'
 	)
-	trydownload(path.join(path_tpanno, 'rmsk.rn6.gz'), 'https://pecan.stjude.cloud/static/rn6/rmsk.rn6.gz')
-	trydownload(path.join(path_tpanno, 'rmsk.rn6.gz.tbi'), 'https://pecan.stjude.cloud/static/rn6/rmsk.rn6.gz.tbi')
-	trydownload(path.join(path_tpanno, 'genes.rn6.db'), 'https://pecan.stjude.cloud/static/rn6/genes.rn6.db')
+	trydownload(path.join(path_tpanno, 'rmsk.rn6.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.rn6.gz')
+	trydownload(path.join(path_tpanno, 'rmsk.rn6.gz.tbi'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.rn6.gz.tbi')
+	trydownload(path.join(path_tpanno, 'genes.rn6.db'), 'https://proteinpaint.stjude.org/ppSupport/genes.rn6.db')
 	SC.genomes.push({
 		name: 'rn6',
 		species: 'rat',
@@ -284,25 +287,25 @@ function add_rn6() {
 }
 
 function add_danRer10() {
-	trydownload(path.join(path_tpgenome, 'danRer10.gz'), 'https://pecan.stjude.cloud/static/danRer10/danRer10.gz')
-	trydownload(path.join(path_tpgenome, 'danRer10.gz.fai'), 'https://pecan.stjude.cloud/static/danRer10/danRer10.gz.fai')
-	trydownload(path.join(path_tpgenome, 'danRer10.gz.gzi'), 'https://pecan.stjude.cloud/static/danRer10/danRer10.gz.gzi')
+	trydownload(path.join(path_tpgenome, 'danRer10.gz'), 'https://proteinpaint.stjude.org/ppGenomes/danRer10.gz')
+	trydownload(path.join(path_tpgenome, 'danRer10.gz.fai'), 'https://proteinpaint.stjude.org/ppGenomes/danRer10.gz.fai')
+	trydownload(path.join(path_tpgenome, 'danRer10.gz.gzi'), 'https://proteinpaint.stjude.org/ppGenomes/danRer10.gz.gzi')
 	trydownload(
 		path.join(path_tpanno, 'ncbiRefSeq.danRer10.gz'),
-		'https://pecan.stjude.cloud/static/danRer10/ncbiRefSeq.danRer10.gz'
+		'https://proteinpaint.stjude.org/ppSupport/ncbiRefSeq.danRer10.gz'
 	)
 	trydownload(
 		path.join(path_tpanno, 'ncbiRefSeq.danRer10.gz.tbi'),
-		'https://pecan.stjude.cloud/static/danRer10/ncbiRefSeq.danRer10.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/ncbiRefSeq.danRer10.gz.tbi'
 	)
-	trydownload(path.join(path_tpanno, 'rmsk.danRer10.gz'), 'https://pecan.stjude.cloud/static/danRer10/rmsk.danRer10.gz')
+	trydownload(path.join(path_tpanno, 'rmsk.danRer10.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.danRer10.gz')
 	trydownload(
 		path.join(path_tpanno, 'rmsk.danRer10.gz.tbi'),
-		'https://pecan.stjude.cloud/static/danRer10/rmsk.danRer10.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/rmsk.danRer10.gz.tbi'
 	)
 	trydownload(
 		path.join(path_tpanno, 'genes.danRer10.db'),
-		'https://pecan.stjude.cloud/static/danRer10/genes.danRer10.db'
+		'https://proteinpaint.stjude.org/ppSupport/genes.danRer10.db'
 	)
 	SC.genomes.push({
 		name: 'danRer10',
@@ -312,16 +315,22 @@ function add_danRer10() {
 }
 
 function add_dm3() {
-	trydownload(path.join(path_tpgenome, 'dm3.gz'), 'https://pecan.stjude.cloud/static/dm3/dm3.gz')
-	trydownload(path.join(path_tpgenome, 'dm3.gz.fai'), 'https://pecan.stjude.cloud/static/dm3/dm3.gz.fai')
-	trydownload(path.join(path_tpgenome, 'dm3.gz.gzi'), 'https://pecan.stjude.cloud/static/dm3/dm3.gz.gzi')
-	trydownload(path.join(path_tpanno, 'refGene.dm3.gz'), 'https://pecan.stjude.cloud/static/dm3/refGene.dm3.gz')
-	trydownload(path.join(path_tpanno, 'refGene.dm3.gz.tbi'), 'https://pecan.stjude.cloud/static/dm3/refGene.dm3.gz.tbi')
-	trydownload(path.join(path_tpanno, 'ensGene.dm3.gz'), 'https://pecan.stjude.cloud/static/dm3/ensGene.dm3.gz')
-	trydownload(path.join(path_tpanno, 'ensGene.dm3.gz.tbi'), 'https://pecan.stjude.cloud/static/dm3/ensGene.dm3.gz.tbi')
-	trydownload(path.join(path_tpanno, 'rmsk.dm3.gz'), 'https://pecan.stjude.cloud/static/dm3/rmsk.dm3.gz')
-	trydownload(path.join(path_tpanno, 'rmsk.dm3.gz.tbi'), 'https://pecan.stjude.cloud/static/dm3/rmsk.dm3.gz.tbi')
-	trydownload(path.join(path_tpanno, 'genes.dm3.db'), 'https://pecan.stjude.cloud/static/dm3/genes.dm3.db')
+	trydownload(path.join(path_tpgenome, 'dm3.gz'), 'https://proteinpaint.stjude.org/ppGenomes/dm3.gz')
+	trydownload(path.join(path_tpgenome, 'dm3.gz.fai'), 'https://proteinpaint.stjude.org/ppGenomes/dm3.gz.fai')
+	trydownload(path.join(path_tpgenome, 'dm3.gz.gzi'), 'https://proteinpaint.stjude.org/ppGenomes/dm3.gz.gzi')
+	trydownload(path.join(path_tpanno, 'refGene.dm3.gz'), 'https://proteinpaint.stjude.org/ppSupport/refGene.dm3.gz')
+	trydownload(
+		path.join(path_tpanno, 'refGene.dm3.gz.tbi'),
+		'https://proteinpaint.stjude.org/ppSupport/refGene.dm3.gz.tbi'
+	)
+	trydownload(path.join(path_tpanno, 'ensGene.dm3.gz'), 'https://proteinpaint.stjude.org/ppSupport/ensGene.dm3.gz')
+	trydownload(
+		path.join(path_tpanno, 'ensGene.dm3.gz.tbi'),
+		'https://proteinpaint.stjude.org/ppSupport/ensGene.dm3.gz.tbi'
+	)
+	trydownload(path.join(path_tpanno, 'rmsk.dm3.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.dm3.gz')
+	trydownload(path.join(path_tpanno, 'rmsk.dm3.gz.tbi'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.dm3.gz.tbi')
+	trydownload(path.join(path_tpanno, 'genes.dm3.db'), 'https://proteinpaint.stjude.org/ppSupport/genes.dm3.db')
 	SC.genomes.push({
 		name: 'dm3',
 		species: 'fruit fly',
@@ -330,16 +339,22 @@ function add_dm3() {
 }
 
 function add_dm6() {
-	trydownload(path.join(path_tpgenome, 'dm6.gz'), 'https://pecan.stjude.cloud/static/dm6/dm6.gz')
-	trydownload(path.join(path_tpgenome, 'dm6.gz.fai'), 'https://pecan.stjude.cloud/static/dm6/dm6.gz.fai')
-	trydownload(path.join(path_tpgenome, 'dm6.gz.gzi'), 'https://pecan.stjude.cloud/static/dm6/dm6.gz.gzi')
-	trydownload(path.join(path_tpanno, 'refGene.dm6.gz'), 'https://pecan.stjude.cloud/static/dm6/refGene.dm6.gz')
-	trydownload(path.join(path_tpanno, 'refGene.dm6.gz.tbi'), 'https://pecan.stjude.cloud/static/dm6/refGene.dm6.gz.tbi')
-	trydownload(path.join(path_tpanno, 'ensGene.dm6.gz'), 'https://pecan.stjude.cloud/static/dm6/ensGene.dm6.gz')
-	trydownload(path.join(path_tpanno, 'ensGene.dm6.gz.tbi'), 'https://pecan.stjude.cloud/static/dm6/ensGene.dm6.gz.tbi')
-	trydownload(path.join(path_tpanno, 'rmsk.dm6.gz'), 'https://pecan.stjude.cloud/static/dm6/rmsk.dm6.gz')
-	trydownload(path.join(path_tpanno, 'rmsk.dm6.gz.tbi'), 'https://pecan.stjude.cloud/static/dm6/rmsk.dm6.gz.tbi')
-	trydownload(path.join(path_tpanno, 'genes.dm6.db'), 'https://pecan.stjude.cloud/static/dm6/genes.dm6.db')
+	trydownload(path.join(path_tpgenome, 'dm6.gz'), 'https://proteinpaint.stjude.org/ppGenomes/dm6.gz')
+	trydownload(path.join(path_tpgenome, 'dm6.gz.fai'), 'https://proteinpaint.stjude.org/ppGenomes/dm6.gz.fai')
+	trydownload(path.join(path_tpgenome, 'dm6.gz.gzi'), 'https://proteinpaint.stjude.org/ppGenomes/dm6.gz.gzi')
+	trydownload(path.join(path_tpanno, 'refGene.dm6.gz'), 'https://proteinpaint.stjude.org/ppSupport/refGene.dm6.gz')
+	trydownload(
+		path.join(path_tpanno, 'refGene.dm6.gz.tbi'),
+		'https://proteinpaint.stjude.org/ppSupport/refGene.dm6.gz.tbi'
+	)
+	trydownload(path.join(path_tpanno, 'ensGene.dm6.gz'), 'https://proteinpaint.stjude.org/ppSupport/ensGene.dm6.gz')
+	trydownload(
+		path.join(path_tpanno, 'ensGene.dm6.gz.tbi'),
+		'https://proteinpaint.stjude.org/ppSupport/ensGene.dm6.gz.tbi'
+	)
+	trydownload(path.join(path_tpanno, 'rmsk.dm6.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.dm6.gz')
+	trydownload(path.join(path_tpanno, 'rmsk.dm6.gz.tbi'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.dm6.gz.tbi')
+	trydownload(path.join(path_tpanno, 'genes.dm6.db'), 'https://proteinpaint.stjude.org/ppSupport/genes.dm6.db')
 	SC.genomes.push({
 		name: 'dm6',
 		species: 'fruit fly',
@@ -348,32 +363,68 @@ function add_dm6() {
 }
 
 function add_mm9() {
-	trydownload(path.join(path_tpgenome, 'mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/mm9.gz')
-	trydownload(path.join(path_tpgenome, 'mm9.gz.fai'), 'https://pecan.stjude.cloud/static/mm9/mm9.gz.fai')
-	trydownload(path.join(path_tpgenome, 'mm9.gz.gzi'), 'https://pecan.stjude.cloud/static/mm9/mm9.gz.gzi')
-	trydownload(path.join(path_tpanno, 'refGene.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/refGene.mm9.gz')
-	trydownload(path.join(path_tpanno, 'refGene.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/refGene.mm9.gz.tbi')
-	trydownload(path.join(path_tpanno, 'gencode.vM9.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/gencode.vM9.mm9.gz')
+	trydownload(path.join(path_tpgenome, 'mm9.gz'), 'https://proteinpaint.stjude.org/ppGenomes/mm9.gz')
+	trydownload(path.join(path_tpgenome, 'mm9.gz.fai'), 'https://proteinpaint.stjude.org/ppGenomes/mm9.gz.fai')
+	trydownload(path.join(path_tpgenome, 'mm9.gz.gzi'), 'https://proteinpaint.stjude.org/ppGenomes/mm9.gz.gzi')
+	trydownload(path.join(path_tpanno, 'refGene.mm9.gz'), 'https://proteinpaint.stjude.org/ppSupport/refGene.mm9.gz')
+	trydownload(
+		path.join(path_tpanno, 'refGene.mm9.gz.tbi'),
+		'https://proteinpaint.stjude.org/ppSupport/refGene.mm9.gz.tbi'
+	)
+	trydownload(
+		path.join(path_tpanno, 'gencode.vM9.mm9.gz'),
+		'https://proteinpaint.stjude.org/ppSupport/gencode.vM9.mm9.gz'
+	)
 	trydownload(
 		path.join(path_tpanno, 'gencode.vM9.mm9.gz.tbi'),
-		'https://pecan.stjude.cloud/static/mm9/gencode.vM9.mm9.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/gencode.vM9.mm9.gz.tbi'
 	)
-	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/rmsk.mm9.gz')
-	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/rmsk.mm9.gz.tbi')
-	trydownload(path.join(path_tpanno, 'genes.mm9.db'), 'https://pecan.stjude.cloud/static/mm9/genes.mm9.db')
+	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.mm9.gz')
+	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz.tbi'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.mm9.gz.tbi')
+	trydownload(path.join(path_tpanno, 'genes.mm9.db'), 'https://proteinpaint.stjude.org/ppSupport/genes.mm9.db')
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
-		trydownload(path.join(a, 'hic.DpnII.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/hic.DpnII.mm9.gz')
-		trydownload(path.join(a, 'hic.DpnII.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/hic.DpnII.mm9.gz.tbi')
-		trydownload(path.join(a, 'hic.EcoRI.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/hic.EcoRI.mm9.gz')
-		trydownload(path.join(a, 'hic.EcoRI.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/hic.EcoRI.mm9.gz.tbi')
-		trydownload(path.join(a, 'hic.HindIII.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/hic.HindIII.mm9.gz')
-		trydownload(path.join(a, 'hic.HindIII.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/hic.HindIII.mm9.gz.tbi')
-		trydownload(path.join(a, 'hic.MboI.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/hic.MboI.mm9.gz')
-		trydownload(path.join(a, 'hic.MboI.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/hic.MboI.mm9.gz.tbi')
-		trydownload(path.join(a, 'hic.NcoI.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/hic.NcoI.mm9.gz')
-		trydownload(path.join(a, 'hic.NcoI.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/hic.NcoI.mm9.gz.tbi')
+		trydownload(
+			path.join(a, 'hic.DpnII.mm9.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.mm9.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.DpnII.mm9.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.mm9.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.mm9.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.mm9.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.mm9.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.mm9.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.HindIII.mm9.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.mm9.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.HindIII.mm9.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.mm9.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.MboI.mm9.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.mm9.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.MboI.mm9.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.mm9.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.mm9.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.mm9.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.mm9.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.mm9.gz.tbi'
+		)
 	}
 	SC.genomes.push({
 		name: 'mm9',
@@ -383,33 +434,60 @@ function add_mm9() {
 }
 
 function add_mm10() {
-	trydownload(path.join(path_tpgenome, 'mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/mm10.gz')
-	trydownload(path.join(path_tpgenome, 'mm10.gz.fai'), 'https://pecan.stjude.cloud/static/mm10/mm10.gz.fai')
-	trydownload(path.join(path_tpgenome, 'mm10.gz.gzi'), 'https://pecan.stjude.cloud/static/mm10/mm10.gz.gzi')
-	trydownload(path.join(path_tpanno, 'refGene.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/refGene.mm10.gz')
+	trydownload(path.join(path_tpgenome, 'mm10.gz'), 'https://proteinpaint.stjude.org/ppGenomes/mm10.gz')
+	trydownload(path.join(path_tpgenome, 'mm10.gz.fai'), 'https://proteinpaint.stjude.org/ppGenomes/mm10.gz.fai')
+	trydownload(path.join(path_tpgenome, 'mm10.gz.gzi'), 'https://proteinpaint.stjude.org/ppGenomes/mm10.gz.gzi')
+	trydownload(path.join(path_tpanno, 'refGene.mm10.gz'), 'https://proteinpaint.stjude.org/ppSupport/refGene.mm10.gz')
 	trydownload(
 		path.join(path_tpanno, 'refGene.mm10.gz.tbi'),
-		'https://pecan.stjude.cloud/static/mm10/refGene.mm10.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/refGene.mm10.gz.tbi'
 	)
-	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/rmsk.mm10.gz')
-	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz.tbi'), 'https://pecan.stjude.cloud/static/mm10/rmsk.mm10.gz.tbi')
-	trydownload(path.join(path_tpanno, 'genes.mm10.db'), 'https://pecan.stjude.cloud/static/mm10/genes.mm10.db')
+	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.mm10.gz')
+	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz.tbi'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.mm10.gz.tbi')
+	trydownload(path.join(path_tpanno, 'genes.mm10.db'), 'https://proteinpaint.stjude.org/ppSupport/genes.mm10.db')
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
-		trydownload(path.join(a, 'hic.DpnII.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/hic.DpnII.mm10.gz')
-		trydownload(path.join(a, 'hic.DpnII.mm10.gz.tbi'), 'https://pecan.stjude.cloud/static/mm10/hic.DpnII.mm10.gz.tbi')
-		trydownload(path.join(a, 'hic.EcoRI.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/hic.EcoRI.mm10.gz')
-		trydownload(path.join(a, 'hic.EcoRI.mm10.gz.tbi'), 'https://pecan.stjude.cloud/static/mm10/hic.EcoRI.mm10.gz.tbi')
-		trydownload(path.join(a, 'hic.HindIII.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/hic.HindIII.mm10.gz')
+		trydownload(
+			path.join(a, 'hic.DpnII.mm10.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.mm10.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.DpnII.mm10.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.mm10.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.mm10.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.mm10.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.mm10.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.mm10.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.HindIII.mm10.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.mm10.gz'
+		)
 		trydownload(
 			path.join(a, 'hic.HindIII.mm10.gz.tbi'),
-			'https://pecan.stjude.cloud/static/mm10/hic.HindIII.mm10.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.mm10.gz.tbi'
 		)
-		trydownload(path.join(a, 'hic.MboI.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/hic.MboI.mm10.gz')
-		trydownload(path.join(a, 'hic.MboI.mm10.gz.tbi'), 'https://pecan.stjude.cloud/static/mm10/hic.MboI.mm10.gz.tbi')
-		trydownload(path.join(a, 'hic.NcoI.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/hic.NcoI.mm10.gz')
-		trydownload(path.join(a, 'hic.NcoI.mm10.gz.tbi'), 'https://pecan.stjude.cloud/static/mm10/hic.NcoI.mm10.gz.tbi')
+		trydownload(
+			path.join(a, 'hic.MboI.mm10.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.mm10.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.MboI.mm10.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.mm10.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.mm10.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.mm10.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.mm10.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.mm10.gz.tbi'
+		)
 	}
 	SC.genomes.push({
 		name: 'mm10',
@@ -438,7 +516,10 @@ function add_hg38() {
 	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz.tbi'), 'https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.hg38.db'), 'https://proteinpaint.stjude.org/ppSupport/genes.hg38.db')
-	trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
+	trydownload(
+		path.join(path_tpannodb, 'proteindomain.db'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/proteindomain.db'
+	)
 	trydownload(path.join(path_tpannodb, 'dbsnp.hg38.bb'), 'https://hgdownload.soe.ucsc.edu/gbdb/hg38/snp/dbSnp153.bb')
 
 	{
@@ -502,11 +583,11 @@ function add_hg38() {
 		mkdir(a)
 		trydownload(
 			path.join(a, 'HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'),
-			'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'
 		)
 		trydownload(
 			path.join(a, 'HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'),
-			'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
 		)
 	}
 
@@ -519,44 +600,92 @@ function add_hg38() {
 }
 
 function add_hg19() {
-	trydownload(path.join(path_tpgenome, 'hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hg19.gz')
-	trydownload(path.join(path_tpgenome, 'hg19.gz.fai'), 'https://pecan.stjude.cloud/static/hg19/hg19.gz.fai')
-	trydownload(path.join(path_tpgenome, 'hg19.gz.gzi'), 'https://pecan.stjude.cloud/static/hg19/hg19.gz.gzi')
-	trydownload(path.join(path_tpanno, 'refGene.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz')
+	trydownload(path.join(path_tpgenome, 'hg19.gz'), 'https://proteinpaint.stjude.org/ppSupport/static/hg19/hg19.gz')
+	trydownload(
+		path.join(path_tpgenome, 'hg19.gz.fai'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/hg19.gz.fai'
+	)
+	trydownload(
+		path.join(path_tpgenome, 'hg19.gz.gzi'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/hg19.gz.gzi'
+	)
+	trydownload(
+		path.join(path_tpanno, 'refGene.hg19.gz'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/refGene.hg19.gz'
+	)
 	trydownload(
 		path.join(path_tpanno, 'refGene.hg19.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/refGene.hg19.gz.tbi'
 	)
 	trydownload(
 		path.join(path_tpanno, 'gencode.v38.hg19.gz'),
-		'https://pecan.stjude.cloud/static/hg19/gencode.v38.hg19.gz'
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/gencode.v38.hg19.gz'
 	)
 	trydownload(
 		path.join(path_tpanno, 'gencode.v38.hg19.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg19/gencode.v38.hg19.gz.tbi'
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/gencode.v38.hg19.gz.tbi'
 	)
-	trydownload(path.join(path_tpanno, 'rmsk.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/rmsk.hg19.gz')
-	trydownload(path.join(path_tpanno, 'rmsk.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/rmsk.hg19.gz.tbi')
-	trydownload(path.join(path_tpanno, 'genes.hg19.db'), 'https://pecan.stjude.cloud/static/hg19/genes.hg19.db')
-	trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
+	trydownload(
+		path.join(path_tpanno, 'rmsk.hg19.gz'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/rmsk.hg19.gz'
+	)
+	trydownload(
+		path.join(path_tpanno, 'rmsk.hg19.gz.tbi'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/rmsk.hg19.gz.tbi'
+	)
+	trydownload(
+		path.join(path_tpanno, 'genes.hg19.db'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/genes.hg19.db'
+	)
+	trydownload(
+		path.join(path_tpannodb, 'proteindomain.db'),
+		'https://proteinpaint.stjude.org/ppSupport/static/hg19/proteindomain.db'
+	)
 	trydownload(path.join(path_tpannodb, 'dbsnp.hg19.bb'), 'https://hgdownload.soe.ucsc.edu/gbdb/hg19/snp/dbSnp153.bb')
 
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
-		trydownload(path.join(a, 'hic.DpnII.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.DpnII.hg19.gz')
-		trydownload(path.join(a, 'hic.DpnII.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/hic.DpnII.hg19.gz.tbi')
-		trydownload(path.join(a, 'hic.EcoRI.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.EcoRI.hg19.gz')
-		trydownload(path.join(a, 'hic.EcoRI.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/hic.EcoRI.hg19.gz.tbi')
-		trydownload(path.join(a, 'hic.HindIII.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.HindIII.hg19.gz')
+		trydownload(
+			path.join(a, 'hic.DpnII.hg19.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.DpnII.hg19.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.DpnII.hg19.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.DpnII.hg19.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.hg19.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.EcoRI.hg19.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.EcoRI.hg19.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.EcoRI.hg19.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.HindIII.hg19.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.HindIII.hg19.gz'
+		)
 		trydownload(
 			path.join(a, 'hic.HindIII.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/hic.HindIII.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.HindIII.hg19.gz.tbi'
 		)
-		trydownload(path.join(a, 'hic.MboI.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.MboI.hg19.gz')
-		trydownload(path.join(a, 'hic.MboI.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/hic.MboI.hg19.gz.tbi')
-		trydownload(path.join(a, 'hic.NcoI.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/hic.NcoI.hg19.gz')
-		trydownload(path.join(a, 'hic.NcoI.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/hic.NcoI.hg19.gz.tbi')
+		trydownload(
+			path.join(a, 'hic.MboI.hg19.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.MboI.hg19.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.MboI.hg19.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.MboI.hg19.gz.tbi'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.hg19.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.NcoI.hg19.gz'
+		)
+		trydownload(
+			path.join(a, 'hic.NcoI.hg19.gz.tbi'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.NcoI.hg19.gz.tbi'
+		)
 	}
 	{
 		const a = path.join(path_tpanno, 'hicTAD')
@@ -565,67 +694,67 @@ function add_hg19() {
 		mkdir(b)
 		trydownload(
 			path.join(b, 'GM12878.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/GM12878.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/GM12878.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'GM12878.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/GM12878.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/GM12878.domain.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(b, 'HeLa.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/HeLa.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/HeLa.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'HeLa.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/HeLa.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/HeLa.domain.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(b, 'HMEC.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/HMEC.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/HMEC.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'HMEC.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/HMEC.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/HMEC.domain.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(b, 'HUVEC.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/HUVEC.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/HUVEC.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'HUVEC.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/HUVEC.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/HUVEC.domain.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(b, 'IMR90.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/IMR90.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/IMR90.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'IMR90.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/IMR90.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/IMR90.domain.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(b, 'K562.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/K562.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/K562.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'K562.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/K562.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/K562.domain.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(b, 'KBM7.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/KBM7.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/KBM7.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'KBM7.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/KBM7.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/KBM7.domain.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(b, 'NHEK.domain.hg19.gz'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/NHEK.domain.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/NHEK.domain.hg19.gz'
 		)
 		trydownload(
 			path.join(b, 'NHEK.domain.hg19.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/tad-aiden2014/NHEK.domain.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/tad-aiden2014/NHEK.domain.hg19.gz.tbi'
 		)
 	}
 
@@ -633,10 +762,13 @@ function add_hg19() {
 	{
 		const a = path.join(UC.TP, 'hg19/')
 		mkdir(a)
-		trydownload(path.join(a, 'clinvar.hg19.vcf.gz'), 'https://pecan.stjude.cloud/static/hg19/clinvar.hg19.vcf.gz')
+		trydownload(
+			path.join(a, 'clinvar.hg19.vcf.gz'),
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/clinvar.hg19.vcf.gz'
+		)
 		trydownload(
 			path.join(a, 'clinvar.hg19.vcf.gz.tbi'),
-			'https://pecan.stjude.cloud/static/hg19/clinvar.hg19.vcf.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/clinvar.hg19.vcf.gz.tbi'
 		)
 	}
 	SC.genomes.push({
@@ -652,11 +784,11 @@ function add_hg19() {
 		mkdir(a)
 		trydownload(
 			path.join(a, 'HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'),
-			'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'
 		)
 		trydownload(
 			path.join(a, 'HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'),
-			'https://pecan.stjude.cloud/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
+			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
 		)
 	}
 }
@@ -740,5 +872,5 @@ function urlfilesize(url) {
 }
 /*
 scp utils/install.pp.js $prp1:/home/genomeuser/static_files/genomepaint-support/
-https://pecan.stjude.cloud/static/genomepaint-support/install.pp.js
+https://proteinpaint.stjude.org/ppSupport/static/genomepaint-support/install.pp.js
 */

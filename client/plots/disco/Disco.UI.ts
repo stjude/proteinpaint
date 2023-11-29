@@ -1,5 +1,5 @@
 import * as uiutils from '#dom/uiUtils'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../../dom/toggleButtons'
 // import { appear } from '#dom/animation'
 import { Selection } from 'd3-selection'
 import { Genome } from '#shared/types/index'

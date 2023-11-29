@@ -1,5 +1,5 @@
 import { makelabel } from './leftlabel'
-import { Tabs } from '#dom/toggleButtons'
+import { Tabs } from '../dom/toggleButtons'
 import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'

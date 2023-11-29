@@ -32,10 +32,8 @@ class profileRadarFacility extends profilePlot {
 		this.terms = this.config[this.config.plot].terms
 		for (const row of this.terms) {
 			this.rowCount++
-			if (row.sc) {
-				this.twLst.push(row.sc.score)
-				this.twLst.push(row.sc.maxScore)
-			}
+			this.twLst.push(row.score)
+			this.twLst.push(row.maxScore)
 		}
 		await this.setControls('profileRadarFacility')
 
@@ -45,13 +43,12 @@ class profileRadarFacility extends profilePlot {
 
 	getPercentage2(d) {
 		if (!d) return null
-
-		const scores = this.data.lst.map(sample => sample[d.score.$id]?.value).sort()
+		const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+		let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
+		scores.sort((s1, s2) => s1 - s2)
 		const middle = Math.floor(scores.length / 2)
 		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
-		const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
-		const percentage = (score * 100) / maxScore
-		return percentage.toFixed(0)
+		return Math.round(score)
 	}
 
 	plot() {
@@ -87,20 +84,21 @@ class profileRadarFacility extends profilePlot {
 		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 140})`)
 
 		const rows = []
-		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Total' }]
+		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
 		let i = 0
 		const data = [],
 			data2 = []
-		for (let { module, sc } of this.terms) {
+		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData(iangle, i, data2, true)
-			const row = [{ value: module }, { value: this.getPercentage(sc) }]
+			const color = item.score.term.color
+			const row = [{ color }, { value: item.module }, { value: this.getPercentage(item) }]
 
 			this.addData(iangle, i, data, false)
-			row.push({ value: this.getPercentage2(sc) })
+			row.push({ value: this.getPercentage2(item) })
 			rows.push(row)
 
 			i++
@@ -109,7 +107,7 @@ class profileRadarFacility extends profilePlot {
 			let dy = radius * 1.1 * Math.sin(iangle) - 10
 			const textElem = polarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
 
-			const texts = module.split(' ')
+			const texts = item.module.split(' ')
 			let span
 			texts.forEach((text, j) => {
 				if (text != 'and') {
@@ -166,13 +164,13 @@ class profileRadarFacility extends profilePlot {
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const facilityName = this.sampleData.sampleName
-		this.addLegendItem('Total Scores', color1, 0, '5, 5')
-		this.addLegendItem(`Facility ${facilityName} Total Scores`, color2, 1, 'none')
+		this.addLegendItem(this.config[this.config.plot].score, color1, 0, '5, 5')
+		this.addLegendItem(`Facility ${facilityName} ${this.config[this.config.plot].score}`, color2, 1, 'none')
 	}
 
 	addData(iangle, i, data, isFacility) {
 		const item = this.terms[i]
-		const percentage = isFacility ? this.getPercentage(item.sc) : this.getPercentage2(item.sc)
+		const percentage = isFacility ? this.getPercentage(item) : this.getPercentage2(item)
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
@@ -271,11 +269,9 @@ export async function getPlotConfig(opts, app) {
 		const terms = config[opts.plot].terms
 
 		for (const row of terms) {
-			if (row.sc) {
-				row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
-				await fillTermWrapper(row.sc.score, app.vocabApi)
-				await fillTermWrapper(row.sc.maxScore, app.vocabApi)
-			}
+			row.score.q = row.maxScore.q = { mode: 'continuous' }
+			await fillTermWrapper(row.score, app.vocabApi)
+			await fillTermWrapper(row.maxScore, app.vocabApi)
 		}
 		await loadFilterTerms(config, app)
 		return config

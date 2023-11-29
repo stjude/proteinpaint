@@ -27,6 +27,7 @@ rows = [ [] ]
 		url: string, to print in <a> element
 		html: string, to print with .html() d3 method, may be susceptible to attack
 		value: to print with .text() d3 method
+		color: to render with an input with type color
 	}
 
 	multi-value cell:
@@ -296,11 +297,9 @@ export function renderTable({
 					.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
 					.attr('href', cell.url)
 					.attr('target', '_blank')
-			} else if (cell.html) {
-				td.html(cell.html)
-			} else if (cell.value) {
-				td.text(cell.value)
-			}
+			} else if (cell.html) td.html(cell.html)
+			else if ('value' in cell) td.text(cell.value)
+			else if (cell.color) td.append('input').attr('type', 'color').attr('value', cell.color).property('disabled', true)
 		}
 	}
 

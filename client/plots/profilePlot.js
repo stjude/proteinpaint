@@ -4,6 +4,7 @@ import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
 import { fillTermWrapper } from '#termsetting'
 
+const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
@@ -61,6 +62,12 @@ export class profilePlot {
 		this.regions.unshift({ label: '', value: '' })
 		this.countries = this.getList(this.config.countryTW, countriesData)
 		this.incomes = this.getList(this.config.incomeTW, incomesData)
+		this.incomes.sort((elem1, elem2) => {
+			const i1 = orderedIncomes.indexOf(elem1.value)
+			const i2 = orderedIncomes.indexOf(elem2.value)
+			if (i1 < i2) return -1
+			return 1
+		})
 		this.types = this.getList(this.config.typeTW, typesData)
 
 		if (!this.settings.income) this.settings.income = this.incomes[0].value
@@ -274,15 +281,15 @@ export class profilePlot {
 		if (this.sampleData) {
 			const score = this.sampleData[d.score.$id]?.value
 			const maxScore = this.sampleData[d.maxScore.$id]?.value
-			const percentage = (score * 100) / maxScore
-			return percentage.toFixed(0)
+			const percentage = (score / maxScore) * 100
+			return Math.round(percentage)
 		} else {
-			const scores = this.data.lst.map(sample => sample[d.score.$id]?.value).sort()
+			const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
+			scores.sort((s1, s2) => s1 - s2)
 			const middle = Math.floor(scores.length / 2)
 			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
-			const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
-			const percentage = (score * 100) / maxScore
-			return percentage.toFixed(0)
+			return Math.round(score)
 		}
 	}
 }

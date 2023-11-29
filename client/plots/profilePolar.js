@@ -87,7 +87,7 @@ class profilePolar extends profilePlot {
 			.text(config.title)
 
 		const rows = []
-		const columns = [{ label: 'Module' }, { label: 'Score' }]
+		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score' }]
 
 		// Create a polar grid.
 		const radius = this.radius
@@ -105,13 +105,14 @@ class profilePolar extends profilePlot {
 		for (let d of config.terms) {
 			const name = d.module
 			d.i = i
+			const color = d.score.term.color
 			const percentage = this.getPercentage(d)
-			rows.push([{ value: name }, { value: percentage }])
+			rows.push([{ color }, { value: name }, { value: percentage }])
 			const path = polarG
 				.append('g')
 				.append('path')
 				.datum(d)
-				.attr('fill', d.score.term.color)
+				.attr('fill', color)
 				.attr('stroke', 'white')
 				.attr(
 					'd',

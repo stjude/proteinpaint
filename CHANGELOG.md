@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GDC BAM slicing UI supports new "download mode", will directly download BAM slice to client, including unmapped reads.
+
 
 ## 2.32.1
 
