@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GDC BAM slicing UI supports new "download mode", will directly download BAM slice to client, including unmapped reads.
+- Click matrix cell to launch gene summary and case summary page, click row label to launch gene summary page, click case id to launch case summary
 
 
 ## 2.32.1
