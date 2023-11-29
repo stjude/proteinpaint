@@ -1,5 +1,5 @@
 import { Matrix } from './matrix'
-import { getCompInit } from '../rx'
+import { getCompInit, copyMerge } from '../rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
 import { dofetch3 } from '#common/dofetch'
 import { fillTermWrapper } from '#termsetting'
@@ -456,6 +456,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
 	const config = await getMatrixPlotConfig(opts, app)
+	const overrides = app.vocabApi.termdbConfig.hierCluster || {}
+	copyMerge(config.settings.hierCluster, overrides.settings)
+
 	config.settings.matrix.collabelpos = 'top'
 	const termGroupName = config.settings.hierCluster?.termGroupName || 'Gene Expression'
 
@@ -484,7 +487,7 @@ export async function getPlotConfig(opts = {}, app) {
 		}
 
 		config.termgroups.unshift({
-			name: 'Gene Expression',
+			name: termGroupName,
 			// TODO: are duplicate term entries, with different q{} objects, allowed?
 			// if yes, should use tw.$id to disambiguate
 			lst: twlst,
