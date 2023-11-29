@@ -82,7 +82,7 @@ class profilePolar extends profilePlot {
 
 		this.svg
 			.append('text')
-			.attr('transform', `translate(130, ${height - 40})`)
+			.attr('transform', `translate(150, ${height - 40})`)
 			.attr('font-weight', 'bold')
 			.text(config.title)
 
@@ -95,8 +95,8 @@ class profilePolar extends profilePlot {
 		const y = 280
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 250}, ${y + 100})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 250},${y + 200})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 260}, ${y + 100})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 260},${y + 200})`)
 
 		for (let i = 0; i <= 10; i++) addCircle(i * 10)
 
@@ -132,7 +132,7 @@ class profilePolar extends profilePlot {
 				div: this.tableDiv,
 				showLines: true,
 				resize: true,
-				maxHeight: '60vh'
+				maxHeight: '70vh'
 			})
 
 		addCircle(50, 'C')
