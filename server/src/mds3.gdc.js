@@ -190,7 +190,7 @@ export function validate_query_geneExpression(ds, genome) {
 		const byTermId = {}
 		for (const g of ensgLst) {
 			const geneSymbol = ensg2symbol.get(g)
-			byTermId[geneSymbol] = { ensemblGeneID: g } // store ensemble gene ID in byTermId
+			byTermId[geneSymbol] = { gencodeId: g } // store ensemble gene ID in byTermId
 			gene2sample2value.set(geneSymbol, new Map())
 		}
 
