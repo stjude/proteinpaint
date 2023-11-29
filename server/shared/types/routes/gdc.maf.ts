@@ -20,7 +20,7 @@ enum ExperimentalStrategy {
 	wxs = 'WXS'
 }
 
-type Filter0 = {
+export type GdcFilter0 = {
 	op: string
 	// TODO: this should allow an array of objects, and/or nesting ???
 	content: {
@@ -33,7 +33,7 @@ export type GdcMafRequest = {
 	/** Name of exp strategy to get maf files for */
 	experimentalStrategy: ExperimentalStrategy
 	/** JSON, optional GDC cohort filter to restrict cases; if supplied, will only get maf files for these cases. the filter is readonly and pass to GDC API query */
-	filter0?: Filter0
+	filter0?: GdcFilter0
 }
 
 export type GdcMafResponse = {

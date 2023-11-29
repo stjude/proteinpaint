@@ -1,8 +1,13 @@
-import { GdcTopVariablyExpressedGenesResponse } from '#shared/types/routes/gdc.topVariablyExpressedGenes.ts'
+import {
+	GdcTopVariablyExpressedGenesRequest,
+	GdcTopVariablyExpressedGenesResponse
+} from '#shared/types/routes/gdc.topVariablyExpressedGenes.ts'
 import { getCasesWithExressionDataFromCohort } from '../src/mds3.gdc.js'
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
+
+// TODO make it general purpose based on ds.queries.geneExpression.topVariablyExpressedGenes{}; wait till case/gene link changes are done
 
 // TODO change when api is released to prod
 //const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -10,6 +15,7 @@ const apihost = 'https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/g
 // temporarily hardcode to use the direct API URL,
 // previously hardcoded to use 'https://uat-portal.gdc.cancer.gov/auth/api/v0/'
 const geneExpHost = 'https://uat-api.gdc.cancer.gov'
+// https://github.com/NCI-GDC/gdcapi/blob/develop/openapi/gene-expression.yaml
 
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
@@ -18,47 +24,37 @@ export const api = {
 	endpoint: 'gdc/topVariablyExpressedGenes',
 	methods: {
 		get: {
-			init({ genomes }) {
-				return async (req: any, res: any): Promise<void> => {
-					try {
-						// following logic requires hg38 gdc dataset
-						const genome = genomes[gdcGenome]
-						if (!genome) throw 'hg38 genome missing'
-						const ds = genome.datasets?.[gdcDslabel]
-						if (!ds) throw 'gdc dataset missing'
-						const genes = await getGenes(req.query, ds, genome)
-						const payload = { genes } as GdcTopVariablyExpressedGenesResponse
-						res.send(payload)
-					} catch (e: any) {
-						res.send({ status: 'error', error: e.message || e })
-					}
-				}
-			},
+			init,
 			request: {
-				typeId: null
-				//valid: default to type checker
+				typeId: 'GdcTopVariablyExpressedGenesRequest'
 			},
 			response: {
 				typeId: 'GdcTopVariablyExpressedGenesResponse'
-				// will combine this with type checker
-				//valid: (t) => {}
 			}
 		}
 	}
 }
 
-/*
-req.query {
-	filter0 // optional gdc GFF cohort filter, invisible and read only
-		FIXME should there be pp filter too?
-	maxGenes: int
+function init({ genomes }) {
+	return async (req: any, res: any): Promise<void> => {
+		try {
+			// following logic requires hg38 gdc dataset
+			const genome = genomes[gdcGenome]
+			if (!genome) throw 'hg38 genome missing'
+			const ds = genome.datasets?.[gdcDslabel]
+			if (!ds) throw 'gdc dataset missing'
+			const genes = await getGenes(req.query as GdcTopVariablyExpressedGenesRequest, ds, genome)
+			const payload = { genes } as GdcTopVariablyExpressedGenesResponse
+			res.send(payload)
+		} catch (e: any) {
+			res.send({ status: 'error', error: e.message || e })
+		}
+	}
 }
 
-ds { } // server-side ds object
-
-genome {}
-*/
-async function getGenes(q: any, ds: any, genome: any) {
+/*
+ */
+async function getGenes(q: GdcTopVariablyExpressedGenesRequest, ds: any, genome: any) {
 	if (serverconfig.features.gdcGenes) {
 		// for testing only; delete when api issue is resolved
 		return serverconfig.features.gdcGenes as string[]
@@ -83,9 +79,14 @@ async function getGenes(q: any, ds: any, genome: any) {
 			body: JSON.stringify({
 				// !!! temporarily limit the case_ids length, otherwise the request times out !!!
 				case_ids: caseLst.slice(0, 20),
-				//gene_ids: [] // this should not be a required parameter
-				gene_type: 'protein_coding',
-				selection_size: Number(q.maxGenes || 100)
+
+				// temporary!! restrict pool to cgc due to slow api. delete when new api is online
+				gene_ids: tempGetCGCgenes(genome),
+
+				// when gene_ids is deleted, enable this
+				//gene_type: 'protein_coding',
+
+				selection_size: Number(q.maxGenes) // FIXME it's defined as number but why it's string??
 			})
 		})
 
@@ -110,4 +111,18 @@ async function getGenes(q: any, ds: any, genome: any) {
 		console.log(e.stack || e)
 		throw e
 	}
+}
+
+function tempGetCGCgenes(genome: any) {
+	const lst = [] as string[] // list of ENSG ids from cgc genes
+	// don't think there's need to preparse genome.geneset, as this function is only temporary
+	for (const s of genome.geneset[0].lst) {
+		const a = genome.genedb.getAliasByName.all(s)
+		if (a) {
+			for (const b of a) {
+				if (b.alias.startsWith('ENSG')) lst.push(b.alias)
+			}
+		}
+	}
+	return lst
 }
