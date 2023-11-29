@@ -10,9 +10,9 @@ export default <Genome>{
 
 	termdbs: {
 		msigdb: {
-			label: 'MSigDB', // to be compatible with ds.label
+			label: 'MSigDB (2023.2.Hs)', // to be compatible with ds.label
 			cohort: {
-				db: { file: 'anno/msigdb/db' },
+				db: { file: 'anno/msigdb/db_2023.2.Hs' },
 				termdb: {
 					isGeneSetTermdb: true
 				}

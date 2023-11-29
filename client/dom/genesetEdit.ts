@@ -40,7 +40,11 @@ export function showGenesetEdit({
 }) {
 	menu.clear()
 	const tip2 = new Menu({ padding: '0px' })
-	const div = menu.d.append('div').style('width', '850px').style('padding', '5px')
+
+	// must not hardcode div width to 850px, gives broken ui
+	// FIXME should set min and max width for div to maintain proper look
+	const div = menu.d.append('div').style('padding', '5px')
+
 	if (showGroup) div.append('div').style('padding', '5px').append('span').style('color', '#aaa').text(group.name)
 
 	const api: API = {
@@ -72,11 +76,12 @@ export function showGenesetEdit({
 	api.dom.holder = div
 
 	const headerDiv = div.append('div')
+	//.style('white-space','nowrap')
 
 	const inputSearch = addGeneSearchbox({
 		tip: tip2,
 		genome,
-		row: headerDiv,
+		row: headerDiv.append('span').style('margin-right', '10px'),
 		geneOnly: true,
 		callback: addGene,
 		hideHelp: true
@@ -113,7 +118,6 @@ export function showGenesetEdit({
 				const args = {
 					filter0: vocabApi.state.termfilter.filter0
 				}
-				// TODO process args from api.topVariablyExpressedGeneParams
 				const result = await vocabApi.getTopVariablyExpressedGenes(args)
 
 				geneList = []
