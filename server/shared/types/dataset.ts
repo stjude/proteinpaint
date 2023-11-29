@@ -549,6 +549,15 @@ type RestrictAncestriesEntry = {
 	}
 }
 
+type UrlTemplateGene = {
+	base: string // must end with '/'
+	namekey: string
+}
+type UrlTemplateSample = {
+	base: string // must end with '/'
+	namekey: string
+}
+
 /*** types supporting Cohort type ***/
 type Termdb = {
 	//Terms
@@ -578,6 +587,12 @@ type Termdb = {
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
 	multipleTestingCorrection?: MultipleTestingCorrection
+	urlTemplates?: {
+		gene?: UrlTemplateGene // gene link definition
+		sample?: UrlTemplateSample // sample link definition
+		// TODO ssm link definition
+	}
+
 	//GDC
 	termid2totalsize2?: GdcApi
 	dictionary?: GdcApi
@@ -602,7 +617,6 @@ type Variant2Samples = GdcApi & {
 	variantkey: string
 	twLst: SimpleTermEntry[]
 	sunburst_twLst?: SimpleTermEntry[]
-	url?: URLEntry
 }
 
 type MutationSet = {

@@ -271,13 +271,10 @@ optional mutation from this sample may be provided, for showing along with disco
 */
 function printSampleName(sample, tk, div, block, thisMutation) {
 	// print sample name in a div, if applicable, generate a hyper link using the sample name
-	if (tk.mds.variant2samples.url) {
+	const temp = tk.mds.termdbConfig?.urlTemplates?.sample
+	if (temp) {
 		const a = div.append('a')
-		a.attr(
-			'href',
-			tk.mds.variant2samples.url.base +
-				(tk.mds.variant2samples.url.namekey ? sample[tk.mds.variant2samples.url.namekey] : sample.sample_id)
-		)
+		a.attr('href', temp.base + (sample[temp.namekey] || sample.sample_id))
 		a.attr('target', '_blank')
 		a.text(sample.sample_id)
 		a.style('word-break', 'break-word')
@@ -437,8 +434,11 @@ export async function samples2columnsRows(samples, tk) {
 		let ssm_id_lst = sample.ssm_id_lst
 		if (!ssm_id_lst && sample.ssm_id) ssm_id_lst = [sample.ssm_id]
 
-		if (tk.mds.variant2samples.url) {
-			row[0].url = tk.mds.variant2samples.url.base + sample[tk.mds.variant2samples.url.namekey]
+		{
+			const temp = tk.mds.termdbConfig?.urlTemplates?.sample
+			if (temp) {
+				row[0].url = temp.base + (sample[temp.namekey] || sample.sample_id)
+			}
 		}
 
 		if (has_caseAccess) {

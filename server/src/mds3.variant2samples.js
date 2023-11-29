@@ -81,10 +81,6 @@ export function validate_variant2samples(ds) {
 	vs.get = async q => {
 		return await variant2samples_getresult(q, ds)
 	}
-
-	if (vs.url) {
-		if (!vs.url.base) throw '.variant2samples.url.base missing'
-	}
 }
 
 /*
