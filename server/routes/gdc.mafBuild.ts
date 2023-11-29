@@ -1,7 +1,7 @@
 import got from 'got'
 import path from 'path'
 import fs from 'fs'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import Readable from 'stream'
 import { GdcMafBuildRequest } from '#shared/types/routes/gdc.mafBuild.ts'
@@ -50,19 +50,21 @@ async function buildMaf(q: GdcMafBuildRequest, res: any) {
 		host: path.join(apihost, 'data') // must use the /data/ endpoint from current host
 	}
 
-	const dataGzipped = await run_rust('gdcmaf', JSON.stringify(arg))
+	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
+	res.setHeader('Content-Type', 'application/octet-stream')
+	res.setHeader('Content-Disposition', 'attachment; filename=cohort.maf.gz')
+	rustStream.pipe(res)
 
 	console.log('rust gdcmaf', Date.now() - t0)
 
-	const data = JSON.parse(dataGzipped)
-
-	// by directly returning a blob, it won't tell client how many files are used
-	res.writeHead(200, {
-		'Content-Type': 'application/octet-stream',
-		'Content-Disposition': 'attachment; filename=cohort.maf.gz',
-		'Content-Length': data.length
+	rustStream.on('end', () => {
+		res.end()
 	})
-	res.end(Buffer.from(data, 'binary'))
+	rustStream.on('error', err => {
+		console.error(err)
+		res.statusCode = 500
+		res.end('Internal Server Error')
+	})
 }
 
 /*

@@ -1,8 +1,9 @@
 const path = require('path'),
 	spawn = require('child_process').spawn,
-	Readable = require('stream').Readable
+	Readable = require('stream').Readable,
+	Transform = require('stream').Transform
 
-exports.run_rust = function(binfile, input_data) {
+exports.run_rust = function (binfile, input_data) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)
 		const ps = spawn(binpath)
@@ -40,4 +41,32 @@ exports.run_rust = function(binfile, input_data) {
 			}
 		})
 	})
+}
+
+exports.run_rust_stream = function (binfile, input_data) {
+	const binpath = path.join(__dirname, '/target/release/', binfile)
+	const ps = spawn(binpath)
+	try {
+		Readable.from(input_data).pipe(ps.stdin)
+	} catch (error) {
+		ps.kill()
+		let errmsg = error
+		if (stderr.length) errmsg += `killed run_rust('${binfile}'), stderr: ${stderr.join('').trim()}`
+		reject(errmsg)
+	}
+
+	const childStream = new Transform({
+		transform(chunk, encoding, callback) {
+			this.push(chunk)
+			callback()
+		}
+	})
+	ps.stdout.pipe(childStream)
+	childStream.on('error', err => {
+		reject(err)
+	})
+	childStream.on('close', code => {
+		childStream.end()
+	})
+	return childStream
 }
