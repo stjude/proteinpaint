@@ -72,7 +72,7 @@ const baminfo_rows = [
 	{ title: 'Size', key: 'file_size', width: '10vw' }
 ]
 const noPermissionMessage =
-	'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (<a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>click here for more information</a>).'
+	'You are attempting to access a Sequence Read file that you are not authorized to access. <a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>Please request dbGaP Access to the project</a>.'
 
 /*
 Arguments:
