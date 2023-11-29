@@ -66,6 +66,7 @@ class profileRadar extends profilePlot {
 			.style('margin-top', '45px')
 		const rows = []
 		const columns = [
+			{ label: 'Color' },
 			{ label: 'Module' },
 			{ label: config[config.plot].term1.abbrev },
 			{ label: config[config.plot].term2.abbrev }
@@ -95,7 +96,8 @@ class profileRadar extends profilePlot {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData('sc', iangle, i, data)
 			this.addData('poc', iangle, i, data2)
-			rows.push([{ value: module }, { value: this.getPercentage(sc) }, { value: this.getPercentage(poc) }])
+			const color = sc.score.term.color
+			rows.push([{ color }, { value: module }, { value: this.getPercentage(sc) }, { value: this.getPercentage(poc) }])
 
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
