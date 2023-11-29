@@ -190,7 +190,7 @@ export function setInteractivity(self) {
 						.attr('class', 'sja_menuoption sja_sharp_border')
 						.text(`${s.controlLabels.Sample} summary: ${sampleData._SAMPLENAME_}`)
 						.on('click', async event => {
-							window.open(`${templates.sample.base}/${name}`, '_blank')
+							window.open(`${templates.sample.base}${name}`, '_blank')
 							menuDiv.remove()
 							self.dom.clickMenu.d.selectAll('*').remove()
 						})
@@ -204,7 +204,7 @@ export function setInteractivity(self) {
 					.text(`Gene summary: ${sampleData.tw.term.name}`)
 					.on('click', async event => {
 						const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
-						window.open(`${templates.gene.base}/${name}`, '_blank')
+						window.open(`${templates.gene.base}${name}`, '_blank')
 						menuDiv.remove()
 						self.dom.clickMenu.d.selectAll('*').remove()
 					})
@@ -430,7 +430,7 @@ function setTermActions(self) {
 				.html('Gene summary')
 				.on('click', async () => {
 					const name = self.data.refs.byTermId[t.tw.$id][templates.gene.namekey]
-					window.open(`${templates.gene.base}/${name}`, '_blank')
+					window.open(`${templates.gene.base}${name}`, '_blank')
 					self.dom.tip.hide()
 				})
 		}
