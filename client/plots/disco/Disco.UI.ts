@@ -82,7 +82,11 @@ export function init_discoplotUI(
 	makeDataTypeTabs(dataTypeTabs_div, obj)
 
 	//Submit and reset button at the bottom.
-	const controlBtns_div = wrapper.append('div').style('display', 'flex').style('align-items', 'center')
+	const controlBtns_div = wrapper
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('padding', '15px 0px')
 
 	submitButton(controlBtns_div, obj, genomes, wrapper, holder)
 	uiutils.makeResetBtn(controlBtns_div, obj, '.disco_input')
@@ -315,8 +319,19 @@ function submitButton(
 				setTimeout(() => sayerrorDiv.remove(), 2000)
 			} else {
 				const genomeObj = genomes[obj.genome!.options[obj.genome!.selectedIndex].text]
+				backButton(holder, genomes)
 				wrapper.remove()
 				launch(obj.data as DiscoPlotArgs, genomeObj, holder)
 			}
+		})
+}
+
+function backButton(holder: Selection<HTMLDivElement, any, any, any>, genomes: any) {
+	holder
+		.append('button')
+		.html('&#171; Back')
+		.on('click', () => {
+			holder.selectAll('*').remove()
+			init_discoplotUI(holder, genomes, false)
 		})
 }
