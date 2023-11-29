@@ -165,7 +165,13 @@ export function addGeneSearchbox(arg) {
 			// typed 2 or more chars, prompt user to press enter to search
 			searchStat.mark.html('')
 			searchStat.word.style('font-size', '0.7em')
-			if (!arg.hideHelp) searchStat.word.text('Press ENTER to search, ESC to cancel')
+			if (arg.hideHelp) {
+				// won't show prompt. must clear any old contents in word
+				searchStat.word.text('')
+			} else {
+				// will show prompt and old contents are cleared
+				searchStat.word.text('Press ENTER to search, ESC to cancel')
+			}
 
 			if (keyupEnter(event)) {
 				// pressed enter
@@ -237,11 +243,7 @@ export function addGeneSearchbox(arg) {
 
 	const searchStat = {
 		mark: row.append('span').style('margin-left', '5px'),
-		word: row
-			.append('span')
-			.style('margin-left', '5px')
-			.style('font-size', '.8em')
-			.style('opacity', 0.6)
+		word: row.append('span').style('margin-left', '5px').style('font-size', '.8em').style('opacity', 0.6)
 	}
 
 	async function inputIsCoordOrGenename() {

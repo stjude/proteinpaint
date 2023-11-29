@@ -263,9 +263,25 @@ export default function (genomes) {
 				const token = req.get('X-Auth-Token')
 				if (!token && !sessionid) throw 'GDC token or sessionid missing'
 				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid)
-				/* authorized. compute persistent cache file name using uuid etc
+
+				// authorized! can proceed
+
+				if (req.query.stream2download) {
+					// download the slice directly to client, do not write to cache file (app runs in "download mode")
+					await streamGdcBam2response(
+						res,
+						req.query.gdcFilePosition,
+						req.query.gdcFileUUID,
+						req.cookies.sessionid,
+						req.get('X-Auth-Token')
+					)
+					return
+				}
+
+				/* compute persistent cache file name using uuid etc
 				cache file name is never revealed to client
 				*/
+
 				req.query.file = getGDCcacheFileName(req)
 				req.query.isFileSlice = true
 			}
@@ -3402,6 +3418,15 @@ async function download_gdc_bam(req) {
 		gdc_bam_filenames.push({ filesize })
 	}
 	return gdc_bam_filenames
+}
+
+async function streamGdcBam2response(res, regionStr, gdcFileUUID, sessionid, token) {
+	const headers = { compression: false } // see comments in get_gdc_bam()
+	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
+	else headers['X-Auth-Token'] = token
+	const url = path.join(apihost, '/slicing/view/', gdcFileUUID + '?region=' + regionStr)
+	res.statusCode = 200
+	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
 
 async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename, sessionid) {
