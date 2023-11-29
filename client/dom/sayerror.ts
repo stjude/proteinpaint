@@ -94,7 +94,7 @@ export function showErrorsWithCounter(errs: string | string[], holder: any) {
 		.style('float', 'right')
 		.html('&#10005;')
 		.on('click', () => {
-			disappear(holder, true)
+			disappear(wrapper, true)
 		})
 
 	//Error messages
