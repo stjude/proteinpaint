@@ -102,14 +102,11 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 
 	{
 		const div = hic.holder.append('div')
-		const errs = [] as string[]
-		hic.error = (err: string) => {
-			errs.push(err)
-			/** Waits for errors to collect and then fire single error bar
-			 * TODO: Collect all the errors into a single array through out the file
-			 * and then fire the error bar. At present, errors fire as they are encountered.
-			 */
-			setTimeout(() => showErrorsWithCounter(errs, div), 500)
+		hic.errList = [] as string[]
+		hic.error = async (err: string | string[]) => {
+			if (err && typeof err == 'string') hic.errList.push(err)
+			showErrorsWithCounter(hic.errList, div)
+			hic.errList = [] //Remove errors after displaying
 		}
 	}
 
@@ -299,10 +296,13 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 			init_wholegenome(hic)
 		})
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) {
 				console.log(err.stack)
 			}
+		})
+		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 		})
 }
 
@@ -516,22 +516,18 @@ async function init_wholegenome(hic: any) {
 	there might be data inconsistenncy with hic file, it may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
 	do not flood ui with such errors, to tolerate, collect all errors and show in one place
 	*/
-	// const errLst = []
-	// try {
 	for (let i = 0; i < manychr; i++) {
 		const lead = hic.chrlst[i]
 		for (let j = 0; j <= i; j++) {
 			const follow = hic.chrlst[j]
-			await getdata_leadfollow(hic, lead, follow)
+			try {
+				await getdata_leadfollow(hic, lead, follow)
+			} catch (e: any) {
+				hic.errList.push(e.message || e)
+			}
 		}
 	}
-	// } catch (e: any) {
-	// 	errLst.push(e.message || e)
-	// }
-	// console.log(errLst)
-	// if (errLst.length) {
-	// 	hic.error(errLst)
-	// }
+	if (hic.errList.length) hic.error(hic.errList)
 
 	return
 }
@@ -658,7 +654,7 @@ async function getdata_leadfollow(hic: any, lead: any, follow: any) {
 			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
 		}
 	} catch (e: any) {
-		hic.error(e.message || e)
+		hic.errList.push(e.message || e)
 		if (e.stack) console.log(e.stack)
 	}
 }
@@ -993,8 +989,11 @@ function getdata_chrpair(hic: any) {
 			}
 		})
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) console.log(err.stack)
+		})
+		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 		})
 }
 
@@ -1009,11 +1008,17 @@ async function setnmeth(hic: any, nmeth: string) {
 			const lead = hic.chrlst[i]
 			for (let j = 0; j <= i; j++) {
 				const follow = hic.chrlst[j]
-				await getdata_leadfollow(hic, lead, follow)
+				try {
+					await getdata_leadfollow(hic, lead, follow)
+				} catch (e: any) {
+					hic.errList.push(e.message || e)
+				}
 			}
 		}
+		if (hic.errList.length) hic.error(hic.errList)
 		return
 	}
+
 	if (hic.inchrpair) {
 		hic.chrpairview.nmeth = nmeth
 		getdata_chrpair(hic)
@@ -1574,8 +1579,11 @@ function detailviewupdatehic(hic: any, chrx: any, xstart: any, xstop: any, chry:
 		})
 
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) console.log(err.stack)
+		})
+		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 		})
 }
 
@@ -1777,11 +1785,11 @@ function getdata_detail(hic: any) {
 		})
 
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) console.log(err.stack)
 		})
-
 		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 			hic.detailview.canvas
 				.style('left', hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
 				.style('top', hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px')
