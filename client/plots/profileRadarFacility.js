@@ -229,6 +229,7 @@ class profileRadarFacility extends profilePlot {
 
 		const textElem = this.legendG
 			.append('text')
+			.attr('font-size', '0.9em')
 			.attr('transform', `translate(${x + 5}, ${y})`)
 			.attr('text-anchor', 'left')
 		textElem.append('tspan').text(text)
