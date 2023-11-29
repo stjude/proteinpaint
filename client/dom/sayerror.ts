@@ -56,3 +56,54 @@ export function throwMsgWithFilePathAndFnName(message: string) {
 		}
 	}
 }
+
+export function showErrorsWithCounter(errs: string | string[], holder: any) {
+	if (typeof errs == 'string') return sayerror(holder, errs)
+	if (errs.length === 0) return
+
+	const wrapper = holder.selectAll('.sja_errorbar').data([1])
+
+	let showErrors = false
+	const wrapperEnter = wrapper
+		.enter()
+		.append('div')
+		.attr('class', 'sja_errorbar')
+		.on('click', () => {
+			showErrors = !showErrors
+			errorsDiv.style('display', showErrors ? 'block' : 'none')
+		})
+
+	// Counter
+	const counterTextDiv = wrapperEnter.append('div').style('display', 'inline-block')
+
+	counterTextDiv
+		.append('div')
+		.style('display', 'inline-block')
+		.style('color', 'white')
+		.style('background-color', 'red')
+		.style('border-radius', '100px')
+		.style('padding', '1px 4px')
+		.text(errs.length)
+
+	// Text
+	counterTextDiv.append('div').text('errors found.').style('padding', '3px').style('display', 'inline-block')
+
+	// Close button
+	wrapperEnter
+		.append('div')
+		.style('display', 'inline-block')
+		.style('float', 'right')
+		.html('&#10005;')
+		.on('click', () => {
+			disappear(holder, true)
+		})
+
+	//Error messages
+	const errorsDiv = wrapperEnter.append('div').style('display', 'none').style('margin-left', '10px')
+
+	for (const err of errs) {
+		errorsDiv.append('div').text(err)
+	}
+
+	wrapper.exit().remove()
+}
