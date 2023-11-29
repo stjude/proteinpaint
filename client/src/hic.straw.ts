@@ -105,6 +105,10 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 		const errs = [] as string[]
 		hic.error = (err: string) => {
 			errs.push(err)
+			/** Waits for errors to collect and then fire single error bar
+			 * TODO: Collect all the errors into a single array through out the file
+			 * and then fire the error bar. At present, errors fire as they are encountered.
+			 */
 			setTimeout(() => showErrorsWithCounter(errs, div), 500)
 		}
 	}
