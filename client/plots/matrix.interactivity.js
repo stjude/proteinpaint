@@ -167,7 +167,7 @@ export function setInteractivity(self) {
 		const sampleData = data || event.target.__data__
 
 		if (!sampleData) return // !!! it's undefined when dragging on the sample names
-
+		const s = self.config.settings.matrix
 		// preliminary fix: assign string sample name for "sample_id", which is used by data queries below
 		const sample = {
 			sample_id: sampleData._SAMPLENAME_ || sampleData.row.sampleName || sampleData.row.sample
@@ -177,31 +177,34 @@ export function setInteractivity(self) {
 
 		self.dom.clickMenu.d.selectAll('*').remove()
 
-		// Add case summary and gene summary only for GDC
-		if (self.app.vocabApi.vocab?.dslabel === 'GDC') {
-			const menuDiv = self.dom.clickMenu.d
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(`Case summary: ${sampleData._SAMPLENAME_}`)
-				.on('click', async event => {
-					window.open(
-						`https://portal.gdc.cancer.gov/cases/${
-							sampleData.sample || sampleData.row.sample || sampleData._SAMPLENAME_
-						}`,
-						'_blank'
-					)
-					menuDiv.remove()
-					self.dom.clickMenu.d.selectAll('*').remove()
-				})
+		if (self.state.termdbConfig.urlTemplates) {
+			const templates = self.state.termdbConfig.urlTemplates
+			// quick fix: should use templates[*].regex for a non-hardcoded condition
+			if (self.chartType != 'hierCluster' && templates.sample) {
+				// quick fix, should have a more reliable namekey that is guaranteed to have the UUID for the URL construction
+				// maybe from refs.bySampleId, filled in by termdb.getSampleAlias in the backend
+				const name = sampleData[templates.sample.namekey] || sampleData.row.sample || sampleData._SAMPLENAME_
+				if (!templates.sample.regex /*|| name has a matching pattern */) {
+					const menuDiv = self.dom.clickMenu.d
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text(`${s.controlLabels.Sample} summary: ${sampleData._SAMPLENAME_}`)
+						.on('click', async event => {
+							window.open(`${templates.sample.base}/${name}`, '_blank')
+							menuDiv.remove()
+							self.dom.clickMenu.d.selectAll('*').remove()
+						})
+				}
+			}
 
-			if (sampleData.tw?.term?.type == 'geneVariant') {
+			if (sampleData.tw?.term?.type == 'geneVariant' && templates.gene) {
 				const menuDiv = self.dom.clickMenu.d
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(`Gene summary: ${sampleData.tw.term.name}`)
 					.on('click', async event => {
-						const ensemblGeneID = self.data.refs.byTermId[sampleData.tw.$id]?.ensemblGeneID
-						window.open(`https://portal.gdc.cancer.gov/genes/${ensemblGeneID}`, '_blank')
+						const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
+						window.open(`${templates.gene.base}/${name}`, '_blank')
 						menuDiv.remove()
 						self.dom.clickMenu.d.selectAll('*').remove()
 					})

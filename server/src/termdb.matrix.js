@@ -108,10 +108,8 @@ async function getSampleData(q) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
-			// Add ensembl gene id to refs.byTermId
-			const aliasLst = q.genome.genedb.getAliasByName.all(tw.term.name)
-			const ensemblGeneID = aliasLst.find(a => a.alias.toUpperCase().startsWith('ENSG')).alias
-			refs.byTermId[tw.term.name] = { ensemblGeneID }
+			console.log(110, q.ds.cohort?.termdb?.urlTemplates)
+			if (q.ds.cohort?.termdb?.getGeneAlias) refs.byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 
 			const bySampleId = await q.ds.mayGetGeneVariantData(tw, q)
 			for (const [sampleId, value] of bySampleId.entries()) {

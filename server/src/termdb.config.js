@@ -49,7 +49,8 @@ export function make(q, res, ds, genome) {
 		mclass: tdb.mclass,
 		alwaysRefillCategoricalTermValues: tdb.alwaysRefillCategoricalTermValues,
 		isGeneSetTermdb: tdb.isGeneSetTermdb,
-		lollipop: tdb.lollipop
+		lollipop: tdb.lollipop,
+		urlTemplates: tdb.urlTemplates
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
