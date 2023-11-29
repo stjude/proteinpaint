@@ -1,7 +1,13 @@
 import { select } from 'd3-selection'
 import { to_svg } from '../src/client'
 
-export function downloadSingleSVG(svg, filename) {
+export function downloadSingleSVG(svg, filename, parent) {
+	if (parent) {
+		const svgStyles = window.getComputedStyle(parent)
+		for (const prop of svgStyles) {
+			if (prop.startsWith('font')) svg.style(prop, svgStyles.getPropertyValue(prop))
+		}
+	}
 	const link = document.createElement('a')
 	// If you don't know the name or want to use
 	// the webserver default set name = ''
