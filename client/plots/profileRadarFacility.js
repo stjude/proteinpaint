@@ -54,7 +54,7 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const widht = 1200
+		const widht = 1100
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -80,8 +80,8 @@ class profileRadarFacility extends profilePlot {
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 40})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 140})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 100})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 200})`)
 
 		const rows = []
 		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
