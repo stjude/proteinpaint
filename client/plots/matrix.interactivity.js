@@ -76,7 +76,7 @@ export function setInteractivity(self) {
 				// list that label only once but with a hit count, instead of listing that same label
 				// as multiple table rows in the mouseover
 				const label =
-					c.label == 'Gene Expression'
+					c.label == self.config.settings.hierCluster?.termGroupName
 						? v.value
 						: p
 						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
@@ -1668,7 +1668,7 @@ function setLabelDragEvents(self, prefix) {
 			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
 			const t = label?.__data__
 			if (!t) return
-			if (self.type == 'hierCluster' && t.tw && t.grp?.name == 'Gene Expression') return
+			if (self.type == 'hierCluster' && t.tw && t.grp?.name == self.config.settings.hierCluster?.termGroupName) return
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label).attr('transform').split('translate(')[1].split(')')[0].split(',').map(Number)
 			const node = label.cloneNode(true)

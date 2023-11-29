@@ -188,7 +188,8 @@ export function setLabelsAndScales() {
 
 		t.label = t.tw.label || t.tw.term.name
 		if (t.label.length > s.rowlabelmaxchars) t.label = t.label.slice(0, s.rowlabelmaxchars) + '...'
-		if (s.samplecount4gene && t.tw.term.type.startsWith('gene') && t.grp.name != 'Gene Expression') {
+		const termGroupName = self.config?.settings.hierCluster?.termGroupName
+		if (s.samplecount4gene && t.tw.term.type.startsWith('gene') && (!termGroupName || t.grp.name !== termGroupName)) {
 			const count =
 				s.samplecount4gene === 'abs'
 					? t.counts.samples

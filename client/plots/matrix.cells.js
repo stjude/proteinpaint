@@ -150,7 +150,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	} else if (value.dt == 3) {
 		return {
 			ref: t.ref,
-			group: 'Gene Expression',
+			group: self.config.settings.hierCluster?.termGroupName || 'Gene Expression',
 			value: value.class,
 			order: -1,
 			entry: {

@@ -46,6 +46,7 @@ export function make(q, res, ds, genome) {
 		massSessionDuration: serverconfig.features.massSessionDuration || 30,
 		dataDownloadCatch: tdb.dataDownloadCatch,
 		matrix: tdb.matrix,
+		hierCluster: tdb.hierCluster,
 		mclass: tdb.mclass,
 		alwaysRefillCategoricalTermValues: tdb.alwaysRefillCategoricalTermValues,
 		isGeneSetTermdb: tdb.isGeneSetTermdb,
