@@ -437,8 +437,8 @@ function print_mname(div, m) {
 export function print_snv(holder, m, tk) {
 	let snvDiv = holder
 
-	const url = tk.mds.queries?.snvindel?.variantUrl
-	if (url && url.key in m) {
+	const url = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.queries?.snvindel?.variantUrl
+	if (url && (url.namekey in m || url.key in m)) {
 		if (url.shownSeparately) {
 			// create new <span> to print snv into it
 			snvDiv = holder.append('span')
@@ -452,7 +452,7 @@ export function print_snv(holder, m, tk) {
 		} else {
 			// url is created directly on mutation string
 			snvDiv = holder.append('a')
-			snvDiv.attr('href', tk.mds.queries.snvindel.variantUrl.base + m[tk.mds.queries.snvindel.variantUrl.key])
+			snvDiv.attr('href', url.base + (m[url.namekey] || m[url.key]))
 			snvDiv.attr('target', '_blank')
 		}
 	}

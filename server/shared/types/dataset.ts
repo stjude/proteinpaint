@@ -558,6 +558,11 @@ type UrlTemplateSample = {
 	namekey: string
 }
 
+type UrlTemplateSsm = {
+	base: string // must end with '/'
+	namekey: string
+}
+
 /*** types supporting Cohort type ***/
 type Termdb = {
 	//Terms
@@ -590,7 +595,7 @@ type Termdb = {
 	urlTemplates?: {
 		gene?: UrlTemplateGene // gene link definition
 		sample?: UrlTemplateSample // sample link definition
-		// TODO ssm link definition
+		ssm?: UrlTemplateSsm // ssm link definition
 	}
 
 	//GDC
