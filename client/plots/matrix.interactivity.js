@@ -188,20 +188,7 @@ export function setInteractivity(self) {
 				// maybe from refs.bySampleId, filled in by termdb.getSampleAlias in the backend
 				const name = sampleData[templates.sample.namekey] || sampleData.row.sample || sampleData._SAMPLENAME_
 				if (!templates.sample.regex /*|| name has a matching pattern */) {
-					const menuDiv = self.dom.clickMenu.d
-						.append('div')
-						.style('color', 'black')
-						.style('padding', '5px 10px')
-						.style('cursor', 'default')
-						.style('background-color', '#f2f2f2')
-						.style('margin', '1px')
-						.style('border-radius', '5px')
-					menuDiv.on('mouseover', () => {
-						menuDiv.style('background-color', '#e6e6e6')
-					})
-					menuDiv.on('mouseout', () => {
-						menuDiv.style('background-color', '#f2f2f2')
-					})
+					const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
 
 					menuDiv.append('span').html(`${s.controlLabels.Sample}: `)
 					const link = menuDiv
@@ -218,20 +205,7 @@ export function setInteractivity(self) {
 			}
 
 			if (sampleData.tw?.term?.type == 'geneVariant' && templates.gene) {
-				const menuDiv = self.dom.clickMenu.d
-					.append('div')
-					.style('color', 'black')
-					.style('padding', '5px 10px')
-					.style('cursor', 'default')
-					.style('background-color', '#f2f2f2')
-					.style('margin', '1px')
-					.style('border-radius', '5px')
-				menuDiv.on('mouseover', () => {
-					menuDiv.style('background-color', '#e6e6e6')
-				})
-				menuDiv.on('mouseout', () => {
-					menuDiv.style('background-color', '#f2f2f2')
-				})
+				const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
 
 				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
 				menuDiv.append('span').html('Gene: ')
