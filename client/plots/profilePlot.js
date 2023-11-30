@@ -15,7 +15,8 @@ export class profilePlot {
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
 			config,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			dslabel: appState.vocab.dslabel
 		}
 	}
 

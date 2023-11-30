@@ -83,9 +83,13 @@ class profileBarchart extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const width = 1400
-		const height = this.rowCount * 32 + 530
+		const height = this.rowCount * 32 + 480
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
-		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(config.title)
+		this.svg
+			.append('text')
+			.attr('transform', `translate(50, 30)`)
+			.attr('font-weight', 'bold')
+			.text(`Objective and Subjective Score-Based Results for the ${this.component} Component by Module and Domain`)
 		const svg = this.svg
 		const color = this.configComponent.component.color
 		this.svg
@@ -151,8 +155,8 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 50, y, 'B')
 		drawLine(410, 120, 75, y, 'A')
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 60})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${50},${y + 210})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 90})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${440},${y + 90})`)
 
 		this.legendG
 			.append('text')
@@ -164,20 +168,22 @@ class profileBarchart extends profilePlot {
 		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
 		this.addLegendItem('B', '50-75% of possible scorable items', 2)
 		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
-		const textElem = this.legendG.append('text').attr('transform', `translate(0, 90)`)
-		textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression:')
-		textElem
-			.append('tspan')
-			.text(
-				'It is provided by the local liaison who completed the assessment in consultation with the PHO medical director or directly by the PHO medical director.'
-			)
-
-		this.legendG
-			.append('text')
-			.attr('transform', `translate(0, 110)`)
-			.text('The end-user was asked to rate the current status of the domains and subdomains included for this module.')
-
+		const textElem = this.legendG.append('text').attr('transform', `translate(0, 120)`).attr('font-size', '0.9em')
 		this.addFilterLegend()
+		if (this.state.dslabel == 'ProfileAbbrev') {
+			textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression:')
+			textElem
+				.append('tspan')
+				.text(
+					'It is provided by the local liaison who completed the assessment in consultation with the PHO medical director or directly by the PHO medical director.'
+				)
+			this.legendG
+				.append('text')
+				.attr('transform', `translate(0, 140)`)
+				.text(
+					'The end-user was asked to rate the current status of the domains and subdomains included for this module.'
+				)
+		}
 
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
@@ -225,7 +231,7 @@ class profileBarchart extends profilePlot {
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const d = row[field]
 		let subjectiveTerm = false
-		if (row.name == 'Total Module' || row.name == 'End-user Impression') subjectiveTerm = false
+		if ((row.name == 'Total Module' || row.name == 'End-user Impression*') && !row.poc) subjectiveTerm = true
 		const termColor = d.score.term.color
 		const value = this.getPercentage(d)
 		const isFirst = field == 'sc' || (field == 'poc' && !row.sc)
