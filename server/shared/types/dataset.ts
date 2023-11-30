@@ -79,13 +79,6 @@ type ByRangeEntry = {
 	gdcapi?: boolean
 }
 
-type VariantUrl = {
-	base: string
-	key: string
-	linkText?: string
-	shownSeparately?: boolean
-}
-
 type URLEntry = {
 	base?: string
 	key?: string
@@ -205,7 +198,6 @@ type Population = {
 type SnvIndel = {
 	forTrack?: boolean
 	byrange: ByRangeEntry
-	variantUrl?: VariantUrl
 	infoUrl?: URLEntry[]
 	skewerRim?: SkewerRim
 	format4filters?: string[]
@@ -550,17 +542,20 @@ type RestrictAncestriesEntry = {
 }
 
 /*
-	derive new type such as UrlTemplateSsm from the UrlTemplateBase as needed:
+base type for deriving new types with new attributes
 
-	type UrlTemplateSsm = UrlTemplateBase & {
-		newProperty: string
-	}
 */
 type UrlTemplateBase = {
 	base: string // must end with '/'
 	namekey: string
 	defaultText?: string
-	shownSeparately?: boolean
+}
+type UrlTemplateSsm = UrlTemplateBase & {
+	/** to create separate link, but not directly on chr.pos.ref.alt string.
+	name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
+	shownSeparately?: true
+	/** optional name of link, same name will be used for all links. e.g. "ClinVar" */
+	linkText?: string
 }
 
 /*** types supporting Cohort type ***/
@@ -595,7 +590,7 @@ type Termdb = {
 	urlTemplates?: {
 		gene?: UrlTemplateBase // gene link definition
 		sample?: UrlTemplateBase // sample link definition
-		ssm?: UrlTemplateBase // ssm link definition
+		ssm?: UrlTemplateSsm // ssm link definition
 	}
 
 	//GDC
