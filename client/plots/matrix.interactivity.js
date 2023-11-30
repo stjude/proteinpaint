@@ -8,7 +8,7 @@ import { Menu } from '#dom/menu'
 
 let inputIndex = 0
 const svgIcons = {
-	externalLink: `<svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512" transform="scale(0.8)" style="top:2px;left:4px;position:relative" ><!--!Font Awesome Free 6.5.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h82.7L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3V192c0 17.7 14.3 32 32 32s32-14.3 32-32V32c0-17.7-14.3-32-32-32H320zM80 32C35.8 32 0 67.8 0 112V432c0 44.2 35.8 80 80 80H400c44.2 0 80-35.8 80-80V320c0-17.7-14.3-32-32-32s-32 14.3-32 32V432c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16H192c17.7 0 32-14.3 32-32s-14.3-32-32-32H80z"/></svg>`
+	externalLink: '' //`<svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512" transform="scale(0.8)" style="display: inline-block; position:relative; top: -2px; left:4px;" ><!--!Font Awesome Free 6.5.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h82.7L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3V192c0 17.7 14.3 32 32 32s32-14.3 32-32V32c0-17.7-14.3-32-32-32H320zM80 32C35.8 32 0 67.8 0 112V432c0 44.2 35.8 80 80 80H400c44.2 0 80-35.8 80-80V320c0-17.7-14.3-32-32-32s-32 14.3-32 32V432c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16H192c17.7 0 32-14.3 32-32s-14.3-32-32-32H80z"/></svg>`
 }
 
 export function setInteractivity(self) {
@@ -431,11 +431,12 @@ function setTermActions(self) {
 			self.dom.geneSummaryLink = labelEditDiv
 				.append('div')
 				.style('display', 'inline-block')
+				.style('margin-left', '5px')
 				.style('text-align', 'center')
 				.style('color', 'rgb(0, 0, 238)')
 				.style('cursor', 'pointer')
 				.style('text-decoration', 'underline')
-				.html(`${svgIcons.externalLink}`)
+				.html(`${templates.gene.defaultText || ''}${svgIcons.externalLink}`)
 				.on('click', async () => {
 					const name = self.data.refs.byTermId[t.tw.$id][templates.gene.namekey]
 					window.open(`${templates.gene.base}${name}`, '_blank')

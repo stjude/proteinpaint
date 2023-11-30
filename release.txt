@@ -1,1 +1,2 @@
-
+Fixes:
+- Use a urlTemplates.gene.defaultText option to make a gene external link more intuitive
