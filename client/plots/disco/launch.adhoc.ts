@@ -1,6 +1,7 @@
 import { Genome } from '#shared/types/index'
 import { Selection } from 'd3-selection'
 import { appInit } from '../plot.app'
+import { showErrorsWithCounter } from '../../dom/sayerror'
 
 type SnvEntry = {
 	dt: 1
@@ -88,7 +89,7 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
 	const [mlst, errors] = await getMlst(arg)
 
 	if (errors?.length) {
-		// indicate errors on ui
+		return showErrorsWithCounter(errors, holder)
 	}
 
 	const opts = {
@@ -133,31 +134,22 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
  * from multiple possible data sources, parse mutation events and put everything into one array and return, for disco rendering
  * app drawer will supply data for "snvText, svText, cnvText"
  * while the "File" and "Url" can come from url parameters e.g. host?disco=1&snvFile=path/to/file
- * TODO collect errors
  * @param arg
  * @returns
  */
-async function getMlst(arg: DiscoPlotArgs) {
+async function getMlst(arg: DiscoPlotArgs): Promise<[MutationListEntry[], string[] | null]> {
 	if (Array.isArray(arg.mlst)) {
 		// has preformatted in runpp()
 		return [arg.mlst, null]
 	}
 
 	// parse data from text and files and append to one mlst[] array
-	const mlst = []
+	const mlst = [] as MutationListEntry[]
+	const errors = [] as string[]
 
-	/**TODO in the future, collect errors and return to caller
-	 * preserved the work already completed to ease development later
-	 */
-	// const errors = []
-
-	if (arg.snvText) parseSnvText(arg.snvText, mlst)
-	if (arg.cnvText) parseCnvText(arg.cnvText, mlst)
-	if (arg.svText) parseSvText(arg.svText, mlst)
-
-	// if (arg.snvText) parseSnvText(arg.snvText, mlst, errors)
-	// if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
-	// if (arg.svText) parseSvText(arg.svText, mlst, errors)
+	if (arg.snvText) parseSnvText(arg.snvText, mlst, errors)
+	if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
+	if (arg.svText) parseSvText(arg.svText, mlst, errors)
 
 	/*
 	if (arg.snvFile) {
@@ -175,17 +167,16 @@ async function getMlst(arg: DiscoPlotArgs) {
 	}
 	*/
 
-	return [mlst]
+	return [mlst, errors]
 }
 
-function parseSnvText(text: string, mlst: MutationListEntry[]) {
-	//function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	// TODO share a parser for snvindel text file with samples (with header line and non-fixed columns), but should not require sample here
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 
 		if (l.length != 5) {
-			// TODO collect err into errors[]
+			errors.push('snv input not equal to 5 columns')
 			continue
 		}
 
@@ -199,20 +190,19 @@ function parseSnvText(text: string, mlst: MutationListEntry[]) {
 				mname: l[3],
 				class: l[4]
 			}
-		} catch (e) {
+		} catch (e: any) {
+			errors.push(e)
 			continue
 		}
 		mlst.push(m)
-		// mlst.push(m, errors)
 	}
 }
 
-function parseSvText(text: string, mlst: MutationListEntry[]) {
-	//function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
-		if (l.length < 4) {
-			// TODO collect err
+		if (l.length < 4 || l.length > 6) {
+			errors.push('sv input has less than 4 or greater than 6 columns')
 			continue
 		}
 		let m: SvEntry
@@ -237,19 +227,19 @@ function parseSvText(text: string, mlst: MutationListEntry[]) {
 					geneB: l[5]
 				}
 			}
-		} catch (e) {
+		} catch (e: any) {
+			errors.push(e)
 			continue
 		}
 		mlst.push(m)
 	}
 }
 
-function parseCnvText(text: string, mlst: MutationListEntry[]) {
-	//function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
+function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
 		if (l.length != 4) {
-			// TODO err
+			errors.push('cnv input not equal to 4 columns')
 			continue
 		}
 		let m: CnvEntry
@@ -261,7 +251,8 @@ function parseCnvText(text: string, mlst: MutationListEntry[]) {
 				stop: Number(l[2]),
 				value: Number(l[3])
 			}
-		} catch (e) {
+		} catch (e: any) {
+			errors.push(e)
 			continue
 		}
 		mlst.push(m)
