@@ -57,21 +57,17 @@ class Scatter {
 		this.stopGradient = {}
 	}
 
-	async init(opts) {
-		const controls = this.opts.controls || this.opts.holder.append('div')
-		const controlsDiv = this.opts.controls
-			? opts.holder
-			: this.opts.holder.append('div').style('display', 'inline-block')
-		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
+	async init(appState) {
+		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
+		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
-		const controlsHolder = controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 
 		this.dom = {
 			header: this.opts.header,
 			//holder,
-			controls,
 			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
@@ -252,7 +248,7 @@ class Scatter {
 				title: 'Categories to divide by',
 				label: this.config.term0?.q?.mode == 'continuous' ? 'Z' : 'Divide by',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: this.app.hasWebGL() ? ['discrete', 'continuous'] : ['discrete']
+				numericEditMenuVersion: this.app.hasWebGL?.() ? ['discrete', 'continuous'] : ['discrete']
 			},
 
 			{
@@ -384,7 +380,7 @@ class Scatter {
 		this.components.controls.on('downloadClick.scatter', () => {
 			for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
 		})
-		this.dom.toolsDiv = this.dom.controls.insert('div')
+		this.dom.toolsDiv = this.dom.controlsHolder.insert('div')
 	}
 }
 
@@ -481,4 +477,23 @@ export function getDefaultScatterSettings() {
 		defaultColor: 'rgb(144, 23, 57)',
 		regression: 'None'
 	}
+}
+
+export async function renderScatter(holder, state) {
+	const opts = {
+		holder,
+		state: {
+			vocab: state.vocab,
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					subfolder: 'plots',
+					name: 'Methylome TSNE',
+					colorTW: { id: 'TSNE Category' }
+				}
+			]
+		}
+	}
+	const plot = await import('#plots/plot.app.js')
+	const plotAppApi = await plot.appInit(opts)
 }

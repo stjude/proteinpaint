@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
 import { controlsInit } from './controls'
+import { renderScatter } from './sampleScatter.js'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -522,6 +523,12 @@ class SampleView {
 				}
 			}
 		}
+		const div =
+			state.samples.length == 1
+				? this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+				: this.dom.contentDiv.append('div').insert('div').style('display', 'table-row').style('display', 'table-cell')
+		const cell = div.append('div').style('display', 'table-row').insert('div').style('display', 'table-cell')
+		renderScatter(cell, state)
 	}
 }
 
