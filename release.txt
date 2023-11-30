@@ -1,1 +1,2 @@
-
+Fixes:
+- Gdc bam slice download handles case with no ssm; bam table changes to radio to force single-selection; table.js bug fix to use unique input name

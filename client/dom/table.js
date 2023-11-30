@@ -89,6 +89,11 @@ selectedRowStyle={}
   an object of arbitrary css key-values on how to style selected rows,
   for example `{text-decoration: 'line-through'}`. If a row is not
   selected, each css property will be set to an empty string ''
+
+inputName=string
+	optional. value is predefined input name. this allows test to work. no need for prod code to use this
+	when not avaiable, for each table made, create a unique name to use as the <input name=?> 
+	if the same name is always used, multiple tables created in one page will conflict in row selection
 */
 export function renderTable({
 	columns,
@@ -106,7 +111,8 @@ export function renderTable({
 	selectedRows = [],
 	selectAll = false,
 	resize = false,
-	selectedRowStyle = {}
+	selectedRowStyle = {},
+	inputName = null
 }) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -131,6 +137,8 @@ export function renderTable({
 		// this check is disabled for now as it breaks gdc bam slicing ui
 		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
+
+	const uniqueInputName = inputName || 'select' + Math.random()
 
 	const parentDiv = div.append('div').style('background-color', 'white')
 
@@ -220,7 +228,7 @@ export function renderTable({
 				.append('input')
 				.attr('aria-label', 'Select row')
 				.attr('type', singleMode ? 'radio' : 'checkbox')
-				.attr('name', 'select')
+				.attr('name', uniqueInputName)
 				.attr('value', i)
 				.property('checked', selectAll || selectedRows.includes(i))
 				.on('change', () => {

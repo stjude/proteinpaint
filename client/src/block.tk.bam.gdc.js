@@ -1,6 +1,6 @@
 import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { contigNameNoChr2, mclass } from '#shared/common'
 import urlmap from '#common/urlmap'
@@ -22,14 +22,20 @@ gdc_args {}
 		track_name: used for naming of track <string> //optional
 		about:[] // with keys corresponding to baminfo_rows[]
 	case_id: <string>
-	useSsmOrGene: 'ssm' or 'gene'
-		identifies the choice of the SSM/Gene toggle button
-		if value is ssm, will use ssmInput; otherwise check coordInput
-		if stream2download=true, "unmapped" will be added as a new option
 	ssmInput:{}
 		chr, pos, ref, alt
 	coordInput:{}
 		output obj from genesearch
+	useSsmOrGene: string, one of ssm/gene/unmapped
+		to identify where to slice on that bam
+		when there are multiple options available, Tabs will be created on ui to toggle from
+		- ssm:
+			list ssms cataloged by gdc, allow user to select one and slice bam on it (uses ssmInput)
+			it's possible there's no ssm from gdc. if so this option will not be available
+		- gene:
+			always show. let user enter any locus/snp (uses coordInput)
+		- unmapped:
+			available if stream2download=true
 # after validation, create position or variant used for launching tk
 	position: {chr,start,stop}
 	variant: {chr,pos,ref,alt}
@@ -436,19 +442,33 @@ export async function bamsliceui({
 				rows,
 				columns,
 				div: bamselection_table,
+				singleMode: stream2download ? true : false, // if true, display radio to only select 1 for download; otherwise allow to selec >1 for viz
 				noButtonCallback: (i, node) => {
 					const onebam = files[i]
-					if (node.checked) {
-						gdc_args.bam_files.push({
-							file_id: onebam.file_uuid,
-							track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
-							about: baminfo_rows.map(i => {
-								return { k: i.title, v: onebam[i.key] }
-							})
-						})
+
+					if (stream2download) {
+						gdc_args.bam_files = [
+							{
+								file_id: onebam.file_uuid,
+								track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+								about: baminfo_rows.map(i => {
+									return { k: i.title, v: onebam[i.key] }
+								})
+							}
+						]
 					} else {
-						// remove from array if checkbox unchecked
-						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
+						if (node.checked) {
+							gdc_args.bam_files.push({
+								file_id: onebam.file_uuid,
+								track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+								about: baminfo_rows.map(i => {
+									return { k: i.title, v: onebam[i.key] }
+								})
+							})
+						} else {
+							// remove from array if checkbox unchecked
+							gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
+						}
 					}
 				}
 			})
@@ -517,21 +537,38 @@ export async function bamsliceui({
 
 		const mutationMsgDiv = ssmGeneDiv.append('p').text('Searching for mutations...')
 
-		// TODO to return all types of alterations for this case (ssm, cnv, fusion)
+		// FIXME change to /termdb/singleSampleMutation
 		const data = await dofetch3('gdc_ssms', {
 			body: { case_id: gdc_args.case_id, genome: gdc_genome, dslabel: gdcDslabel }
 		})
 		if (data.error) throw data.error
 
-		////////////////////////////////////////////////////////
-		// remaining of this function will be rewritten using block instance
-		// and no longer uses toggle and gene search
+		// future: show this data with block or disco
 
 		const ssmLst = data.mlst.filter(m => m.dt == 1) // for now filter to only ssm, exclude cnv
 
 		if (ssmLst.length == 0) {
 			mutationMsgDiv.text('No mutations from this case.')
-			await temp_renderGeneSearch(ssmGeneDiv.append('div'))
+
+			if (stream2download) {
+				// still show tab with 2 options
+				const tabs = [
+					{
+						label: 'Gene or position',
+						callback: () => (gdc_args.useSsmOrGene = 'gene')
+					},
+					{
+						label: 'Unmapped reads',
+						callback: () => (gdc_args.useSsmOrGene = 'unmapped')
+					}
+				]
+				new Tabs({ holder: ssmGeneDiv, tabs }).main()
+				await temp_renderGeneSearch(tabs[0].contentHolder)
+				tabs[1].contentHolder.append('p').text('Only download unmapped reads from this BAM file.')
+			} else {
+				// no tab. just gene search
+				await temp_renderGeneSearch(ssmGeneDiv.append('div'))
+			}
 			return
 		}
 
@@ -541,13 +578,13 @@ export async function bamsliceui({
 		const tabs = [
 			{
 				label: `${ssmLst.length} variants${data.dt2total?.[0] ? ' (' + data.dt2total[0].total + ' total)' : ''}`,
-				callback: event => {
+				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
 				}
 			},
 			{
 				label: 'Gene or position',
-				callback: event => {
+				callback: () => {
 					gdc_args.useSsmOrGene = 'gene'
 				}
 			}
@@ -564,6 +601,7 @@ export async function bamsliceui({
 
 		temp_renderSsmList(tabs[0].contentHolder, ssmLst)
 		await temp_renderGeneSearch(tabs[1].contentHolder)
+		if (tabs[2]) tabs[2].contentHolder.append('p').text('Only download unmapped reads from this BAM file.')
 	}
 
 	// to be replaced by block ui
@@ -686,8 +724,7 @@ export async function bamsliceui({
 						submitButton.style('display', 'none')
 					} else {
 						saydiv.selectAll('*').remove()
-						sayerror(saydiv, e.message || e)
-						if (e.stack) console.log(e.stack)
+						sayerror(saydiv, e)
 					}
 				}
 				// turn submit button back to active so ui can be reused later
