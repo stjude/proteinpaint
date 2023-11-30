@@ -102,6 +102,7 @@ class Scatter {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c = this.config
+		console.log(c)
 		const coordTWs = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
@@ -138,9 +139,11 @@ class Scatter {
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
-		this.charts = []
+
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
+		console.log(results)
 		if (results.error) throw results.error
+		this.charts = []
 		let i = 0
 		for (const [key, data] of Object.entries(results)) {
 			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
@@ -479,7 +482,7 @@ export function getDefaultScatterSettings() {
 	}
 }
 
-export async function renderScatter(holder, state) {
+export async function renderScatter(holder, state, plot) {
 	const opts = {
 		holder,
 		state: {
@@ -488,12 +491,12 @@ export async function renderScatter(holder, state) {
 				{
 					chartType: 'sampleScatter',
 					subfolder: 'plots',
-					name: 'Methylome TSNE',
-					colorTW: { id: 'TSNE Category' }
+					name: plot.name,
+					colorTW: plot.colorTW
 				}
 			]
 		}
 	}
-	const plot = await import('#plots/plot.app.js')
-	const plotAppApi = await plot.appInit(opts)
+	const plotImport = await import('#plots/plot.app.js')
+	const plotAppApi = await plotImport.appInit(opts)
 }

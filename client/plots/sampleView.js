@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
 import { controlsInit } from './controls'
-import { renderScatter } from './sampleScatter.js'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -48,8 +47,7 @@ class SampleView {
 		await this.setSampleSelect(config)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
-		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
-		if (hasPlots) await this.renderPlots(state, state.samples)
+		await this.renderPlots(state, state.samples)
 	}
 
 	async setSampleSelect(config) {
@@ -141,10 +139,9 @@ class SampleView {
 					this.dom.tableDiv.style('display', 'block')
 					this.sample = { sampleId, sampleName }
 
-					if (this.state.hasPlots) {
-						this.showVisiblePlots()
-						this.renderPlots(this.state, [this.sample])
-					}
+					this.showVisiblePlots()
+					this.renderPlots(this.state, [this.sample])
+
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: this.sample } })
 				} else {
 					this.dom.tableDiv.style('display', 'none')
@@ -523,12 +520,6 @@ class SampleView {
 				}
 			}
 		}
-		const div =
-			state.samples.length == 1
-				? this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-				: this.dom.contentDiv.append('div').insert('div').style('display', 'table-row')
-		for (const sample of samples)
-			renderScatter(state.samples.length == 1 ? div : div.append('div').style('display', 'table-cell'), state)
 	}
 }
 
