@@ -285,8 +285,8 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 			/**Quick fix for removing normalization hardcoding. Will address
 			 * when refactoring this file
 			 */
-			if (hic.normalization?.length == 1 && hic.normalization[0] == 'NONE') {
-				showNMethDiv.text(hic.normalization[0])
+			if (hic.normalization?.length == 1 && hic.normalization[0] == defaultnmeth) {
+				hic.nmethselect = showNMethDiv.text(hic.normalization[0])
 			} else {
 				hic.nmethselect = showNMethDiv
 					.style('margin-right', '10px')
@@ -1119,6 +1119,7 @@ function switchview(hic: any) {
 
 function nmeth2select(hic: any, v: any) {
 	const options = hic.nmethselect.node().options
+	if (!options) return //When only 'NONE' normalization is available
 	const selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value) as any
 	selectedNmeth.selected = true
 }
