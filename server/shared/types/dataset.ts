@@ -560,6 +560,7 @@ type UrlTemplateBase = {
 	base: string // must end with '/'
 	namekey: string
 	defaultText?: string
+	shownSeparately?: boolean
 }
 
 /*** types supporting Cohort type ***/
@@ -771,9 +772,9 @@ type Svcnv = BaseTrack & {
 
 type KeyLabelFull = {
 	/* Used in: 
-        queries.genefpkm.boxplotbysamplegroup.attributes
-        cohort.hierarchies.lst[i].levels
-    */
+		queries.genefpkm.boxplotbysamplegroup.attributes
+		cohort.hierarchies.lst[i].levels
+	*/
 	k: string
 	label: string
 	full?: string
