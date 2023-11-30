@@ -102,7 +102,6 @@ class Scatter {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c = this.config
-		console.log(c)
 		const coordTWs = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
@@ -141,7 +140,6 @@ class Scatter {
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
-		console.log(results)
 		if (results.error) throw results.error
 		this.charts = []
 		let i = 0
