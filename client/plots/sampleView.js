@@ -526,9 +526,9 @@ class SampleView {
 		const div =
 			state.samples.length == 1
 				? this.dom.rightDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-				: this.dom.contentDiv.append('div').insert('div').style('display', 'table-row').style('display', 'table-cell')
-		const cell = div.append('div').style('display', 'table-row').insert('div').style('display', 'table-cell')
-		renderScatter(cell, state)
+				: this.dom.contentDiv.append('div').insert('div').style('display', 'table-row')
+		for (const sample of samples)
+			renderScatter(state.samples.length == 1 ? div : div.append('div').style('display', 'table-cell'), state)
 	}
 }
 
