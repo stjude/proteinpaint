@@ -44,9 +44,9 @@ export default <Mds3>{
 					}
 				]
 			},
-			variantUrl: {
+			ssmUrl: {
 				base: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/',
-				key: 'vcf_id',
+				namekey: 'vcf_id',
 				linkText: 'ClinVar',
 				shownSeparately: true
 			},

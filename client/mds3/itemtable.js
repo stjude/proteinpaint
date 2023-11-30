@@ -437,7 +437,8 @@ function print_mname(div, m) {
 export function print_snv(holder, m, tk) {
 	let snvDiv = holder
 
-	const url = tk.mds.termdbConfig?.urlTemplates?.ssm
+	// ssm url definition can come from two places
+	const url = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.queries?.snvindel?.ssmUrl
 	if (url && url.namekey in m) {
 		if (url.shownSeparately) {
 			// create new <span> to print snv into it

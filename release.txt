@@ -1,1 +1,2 @@
-
+Fixes:
+- Allow ssm url to be supplied from both snvindel query and termdb, so termdb-less clinvar is able to link to ClinVar portal
