@@ -2,6 +2,7 @@ import { Genome } from '#shared/types/index'
 import { Selection } from 'd3-selection'
 import { appInit } from '../plot.app'
 import { showErrorsWithCounter } from '../../dom/sayerror'
+import { mclass } from '#shared/common'
 
 type SnvEntry = {
 	dt: 1
@@ -18,15 +19,25 @@ type CnvEntry = {
 	stop: number
 	value: number
 }
-type SvEntry = {
+type SvEntry4Cols = {
 	dt: number
 	chrA: string
 	posA: number
-	geneA?: string
 	chrB: string
 	posB: number
-	geneB?: string
 }
+
+type SvEntry6Cols = {
+	dt: number
+	chrA: string
+	posA: number
+	geneA: string
+	chrB: string
+	posB: number
+	geneB: string
+}
+
+type SvEntry = SvEntry4Cols | SvEntry6Cols
 
 type MutationListEntry = SnvEntry | CnvEntry | SvEntry
 
@@ -148,8 +159,8 @@ async function getMlst(arg: DiscoPlotArgs): Promise<[MutationListEntry[], string
 	const errors = [] as string[]
 
 	if (arg.snvText) parseSnvText(arg.snvText, mlst, errors)
-	if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
 	if (arg.svText) parseSvText(arg.svText, mlst, errors)
+	if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
 
 	/*
 	if (arg.snvFile) {
@@ -188,7 +199,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 				position: Number(l[1]),
 				gene: l[2],
 				mname: l[3],
-				class: l[4]
+				class: validateMutation(l[4], errors)
 			}
 		} catch (e: any) {
 			errors.push(e)
@@ -201,8 +212,8 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
-		if (l.length < 4 || l.length > 6) {
-			errors.push('sv input has less than 4 or greater than 6 columns')
+		if (l.length == 4 || l.length == 6) {
+			errors.push('sv input not equal to 4 or 6 columns')
 			continue
 		}
 		let m: SvEntry
@@ -256,5 +267,17 @@ function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[])
 			continue
 		}
 		mlst.push(m)
+	}
+}
+
+function validateMutation(mutation: string, errors: string[]) {
+	const mut2check = mutation.toLowerCase()
+	const foundMutation = Object.values(mclass).find(
+		(m: any) => m.key.toLowerCase() === mut2check || m.label.toLowerCase() === mutation
+	) as any
+	if (foundMutation) {
+		return foundMutation.key
+	} else {
+		errors.push(`Invalid mutation class: ${mutation}`)
 	}
 }
