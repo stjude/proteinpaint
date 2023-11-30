@@ -78,6 +78,7 @@ export function init_discoplotUI(
 		.style('opacity', 0.75)
 		.style('padding', '10px 10px 15px 20px')
 		.text('The plot accepts multiple data types. Paste data for SNV Indel, SV, and CNV in each tab and submit.')
+
 	const dataTypeTabs_div = wrapper.append('div').style('margin-left', '2vw')
 	makeDataTypeTabs(dataTypeTabs_div, obj)
 
@@ -319,9 +320,9 @@ function submitButton(
 				setTimeout(() => sayerrorDiv.remove(), 2000)
 			} else {
 				const genomeObj = genomes[obj.genome!.options[obj.genome!.selectedIndex].text]
-				backButton(holder, genomes)
 				wrapper.remove()
 				launch(obj.data as DiscoPlotArgs, genomeObj, holder)
+				backButton(holder, genomes)
 			}
 		})
 }
