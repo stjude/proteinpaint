@@ -73,7 +73,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('Render table', function(test) {
+tape('Render table', function (test) {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 
@@ -251,16 +251,19 @@ tape('Return correct rows on button click', async test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 
+	const inputName = 'select' // predefine input name. otherwise random names are used and prevent the test to work
+
 	renderTable({
 		columns: testColData,
 		rows: testRowData,
 		div: holder,
+		inputName,
 		buttons: [
 			{
 				text: 'Test Button',
 				class: 'test-btn',
 				callback: indexes => {
-					const checkboxes = holder.selectAll('input[name="select"]').nodes()
+					const checkboxes = holder.selectAll(`input[name="${inputName}"]`).nodes()
 					const checkedBoxes = []
 					for (const [i, checkbox] of checkboxes.entries()) {
 						if (checkbox.checked == true) checkedBoxes.push(i)
@@ -286,10 +289,7 @@ tape('Return correct rows on button click', async test => {
 	testBtn.click()
 
 	selectAllBtn.click() //Unselect all
-	holder
-		.select('input[name="select"]')
-		.node()
-		.click() //First checkbox
+	holder.select(`input[name="${inputName}"]`).node().click() //First checkbox
 	testBtn.click()
 
 	if (test._ok) holder.remove()
