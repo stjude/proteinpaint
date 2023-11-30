@@ -690,7 +690,7 @@ tape('Change symbol and reference size from menu', function (test) {
 			.done(test)
 	}
 	function changeSymbolInput(scatter) {
-		const sizeInput = scatter.Inner.dom.controls
+		const sizeInput = scatter.Inner.dom.controlsHolder
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.size)
@@ -702,7 +702,7 @@ tape('Change symbol and reference size from menu', function (test) {
 		test.ok(scatter.Inner.settings.size == testSymSize, `Should change symbol dot size to test value = ${testSymSize}`)
 	}
 	function changeRefInput(scatter) {
-		const refInput = scatter.Inner.dom.controls
+		const refInput = scatter.Inner.dom.controlsHolder
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.refSize)
@@ -742,14 +742,14 @@ tape('Change chart width and height from menu', function (test) {
 
 	async function testChartSizeChange(scatter) {
 		//Change chart width
-		const widthInput = scatter.Inner.dom.controls
+		const widthInput = scatter.Inner.dom.controlsHolder
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.svgw)
 		widthInput.value = testWidth
 
 		//Change chart height
-		const heightInput = scatter.Inner.dom.controls
+		const heightInput = scatter.Inner.dom.controlsHolder
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.svgh)
@@ -816,7 +816,7 @@ tape('Check/uncheck Show axes from menu', function (test) {
 				opacity: `${opacity}`
 			},
 			trigger() {
-				const axesCheckbox = scatter.Inner.dom.controls.select('input[type="checkbox"]')
+				const axesCheckbox = scatter.Inner.dom.controlsHolder.select('input[type="checkbox"]')
 				axesCheckbox.property('checked', isvisible)
 				axesCheckbox.node().dispatchEvent(new Event('change'))
 			}
