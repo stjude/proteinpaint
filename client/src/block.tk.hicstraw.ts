@@ -52,7 +52,7 @@ export function loadTk(tk: any, block: any) {
 
 	Promise.resolve()
 		.then(() => {
-			return import('./hic.straw.ts').then(p => {
+			return import('../tracks/hic/hic.straw.ts').then(p => {
 				hicstraw = p
 			})
 		})

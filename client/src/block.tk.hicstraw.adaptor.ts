@@ -17,7 +17,7 @@ export function hicstrawfromtemplate(tk: any, template: any) {
 			tk.domainoverlay[k] = template.domainoverlay[k]
 		}
 	}
-	// the "hic" object to work with hic.straw.ts
+	// the "hic" object to work with ../tracks/hic/hic.straw.ts
 	tk.hic = {
 		enzyme: template.enzyme
 	}

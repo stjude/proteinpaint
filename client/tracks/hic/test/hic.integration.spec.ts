@@ -2,7 +2,7 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { dofetch2 } from '../../../common/dofetch.js'
 import { hicData } from './hicData.ts'
-import { hicparsefile, hicparsestat } from '../../../src/hic.straw.ts'
+import { hicparsefile, hicparsestat } from '../../../tracks/hic/hic.straw.ts'
 
 /*
 Tests:
