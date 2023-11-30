@@ -293,7 +293,6 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 					.append('select')
 					.on('change', () => {
 						const v = hic.nmethselect.node().value
-						console.log(v)
 						setnmeth(hic, v)
 					})
 				for (const n of hic.normalization) {
@@ -1120,22 +1119,8 @@ function switchview(hic: any) {
 
 function nmeth2select(hic: any, v: any) {
 	const options = hic.nmethselect.node().options
-	console.log(options)
-	// for (const o of options) o.selected = false
-	// switch (v) {
-	// 	case 'NONE':
-	// 		options[0].selected = true
-	// 		break
-	// 	case 'VC':
-	// 		options[1].selected = true
-	// 		break
-	// 	case 'VC_SQRT':
-	// 		options[2].selected = true
-	// 		break
-	// 	case 'KR':
-	// 		options[3].selected = true
-	// 		break
-	// }
+	const selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value) as any
+	selectedNmeth.selected = true
 }
 
 //////////////////// __detail
