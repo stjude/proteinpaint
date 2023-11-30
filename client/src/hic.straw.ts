@@ -285,8 +285,8 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 			/**Quick fix for removing normalization hardcoding. Will address
 			 * when refactoring this file
 			 */
-			if (hic.normalization?.length == 1 && hic.normalization[0] == defaultnmeth) {
-				hic.nmethselect = showNMethDiv.text(hic.normalization[0])
+			if (!hic.normalization?.length) {
+				hic.nmethselect = showNMethDiv.text(defaultnmeth)
 			} else {
 				hic.nmethselect = showNMethDiv
 					.style('margin-right', '10px')
