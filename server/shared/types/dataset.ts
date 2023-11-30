@@ -1,14 +1,3 @@
-/********* private and public datasets ********
- 
---------EXPORTED--------
-ClinvarClinsig
-ClinvarAF
-Cohort
-Mds3
-Mds
-
-*/
-
 /*** General usage types ***/
 type FileObj = { file: string }
 
@@ -195,7 +184,7 @@ type Population = {
 }
 
 // a data type under ds.queries{}
-type SnvIndel = {
+type SnvIndelQuery = {
 	forTrack?: boolean
 	byrange: ByRangeEntry
 	infoUrl?: URLEntry[]
@@ -206,6 +195,9 @@ type SnvIndel = {
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter
 	populations?: Population[]
+	/** this definition can appear either in queries.snvindel{} or termdb{}
+	so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig cannot be made */
+	ssmUrl?: UrlTemplateSsm
 }
 
 type SvFusion = {
@@ -314,7 +306,7 @@ export type SingleCellQuery = {
 
 type Queries = {
 	defaultBlock2GeneMode?: boolean
-	snvindel?: SnvIndel
+	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
 	probe2cnv?: Probe2Cnv // this is no longer used
 	cnv?: CnvSegment

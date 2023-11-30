@@ -1,8 +1,8 @@
 {
   "delay": 1000,
   "watch": [
-    "./server/dataset",
-    "./server/genome",
+    "./server/dataset/*.js",
+    "./server/genome/*.js",
     "./server/server.js",
     "./client/test/specHelpers.js",
     "./serverconfig.json"
