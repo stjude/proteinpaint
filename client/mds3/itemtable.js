@@ -446,9 +446,9 @@ export function print_snv(holder, m, tk) {
 			holder
 				.append('a')
 				.style('padding-left', '10px')
-				.attr('href', url.base + m[url.key])
+				.attr('href', url.base + (m[url.namekey] || m[url.key]))
 				.attr('target', '_blank')
-				.text(url.linkText || m[url.key])
+				.text(url.linkText || m[url.namekey] || m[url.key])
 		} else {
 			// url is created directly on mutation string
 			snvDiv = holder.append('a')
