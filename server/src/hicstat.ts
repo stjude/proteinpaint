@@ -111,7 +111,7 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 			}
 		})
 	//console.log('Reading matrix ...')
-	out_data.normalization = normalization
+	out_data.normalization = normalization.length ? normalization : ['NONE']
 	return out_data
 
 	async function getVectorView(file: string, position: number, length: number) {
