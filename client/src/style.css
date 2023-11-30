@@ -109,7 +109,8 @@ h2 {
 
 .sja_root_holder a,
 .sja_menu_div a,
-.sja_pane a {
+.sja_pane a,
+.linkText {
     color: rgb(0, 0, 238);
     cursor: pointer;
     text-decoration: underline;

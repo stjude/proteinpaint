@@ -7,6 +7,9 @@ import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 
 let inputIndex = 0
+const svgIcons = {
+	externalLink: `<svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512" transform="scale(0.8)" style="top:2px;left:4px;position:relative" ><!--!Font Awesome Free 6.5.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h82.7L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3V192c0 17.7 14.3 32 32 32s32-14.3 32-32V32c0-17.7-14.3-32-32-32H320zM80 32C35.8 32 0 67.8 0 112V432c0 44.2 35.8 80 80 80H400c44.2 0 80-35.8 80-80V320c0-17.7-14.3-32-32-32s-32 14.3-32 32V432c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16H192c17.7 0 32-14.3 32-32s-14.3-32-32-32H80z"/></svg>`
+}
 
 export function setInteractivity(self) {
 	let t
@@ -188,9 +191,11 @@ export function setInteractivity(self) {
 					const menuDiv = self.dom.clickMenu.d
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
-						.text(`${s.controlLabels.Sample} summary: ${sampleData._SAMPLENAME_}`)
+						.html(
+							`${s.controlLabels.Sample}: <span class='linkText'>${sampleData._SAMPLENAME_}${svgIcons.externalLink}</span>`
+						)
 						.on('click', async event => {
-							window.open(`${templates.sample.base}/${name}`, '_blank')
+							window.open(`${templates.sample.base}${name}`, '_blank')
 							menuDiv.remove()
 							self.dom.clickMenu.d.selectAll('*').remove()
 						})
@@ -201,10 +206,10 @@ export function setInteractivity(self) {
 				const menuDiv = self.dom.clickMenu.d
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(`Gene summary: ${sampleData.tw.term.name}`)
+					.html(`Gene: <span class='linkText'>${sampleData.tw.term.name}${svgIcons.externalLink}</span>`)
 					.on('click', async event => {
 						const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
-						window.open(`${templates.gene.base}/${name}`, '_blank')
+						window.open(`${templates.gene.base}${name}`, '_blank')
 						menuDiv.remove()
 						self.dom.clickMenu.d.selectAll('*').remove()
 					})
@@ -423,14 +428,17 @@ function setTermActions(self) {
 		// Add gene summary button
 		if (self.state.termdbConfig.urlTemplates?.gene && vartype == 'gene') {
 			const templates = self.state.termdbConfig.urlTemplates
-			self.dom.gbButton = labelEditDiv
-				.append('button')
+			self.dom.geneSummaryLink = labelEditDiv
+				.append('div')
+				.style('display', 'inline-block')
 				.style('text-align', 'center')
-				.style('margin-left', '3px')
-				.html('Gene summary')
+				.style('color', 'rgb(0, 0, 238)')
+				.style('cursor', 'pointer')
+				.style('text-decoration', 'underline')
+				.html(`${svgIcons.externalLink}`)
 				.on('click', async () => {
 					const name = self.data.refs.byTermId[t.tw.$id][templates.gene.namekey]
-					window.open(`${templates.gene.base}/${name}`, '_blank')
+					window.open(`${templates.gene.base}${name}`, '_blank')
 					self.dom.tip.hide()
 				})
 		}
