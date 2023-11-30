@@ -273,7 +273,7 @@ function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[])
 function validateMutation(mutation: string, errors: string[]) {
 	const mut2check = mutation.toLowerCase()
 	const foundMutation = Object.values(mclass).find(
-		(m: any) => m.key.toLowerCase() === mut2check || m.label.toLowerCase() === mutation
+		(m: any) => m.key.toLowerCase() === mut2check || m.label.toLowerCase() === mut2check
 	) as any
 	if (foundMutation) {
 		return foundMutation.key
