@@ -1,12 +1,12 @@
 import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
-import * as client from './client'
+import * as client from '#src/client'
 import { format as d3format } from 'd3-format'
 import * as common from '#shared/common'
-import blocklazyload from './block.lazyload'
-import { HicstrawArgs } from '../types/hic.ts'
-import { showErrorsWithCounter } from '../dom/sayerror'
+import blocklazyload from '#src/block.lazyload'
+import { HicstrawArgs } from '../../types/hic.ts'
+import { showErrorsWithCounter } from '../../dom/sayerror'
 
 /*
 
