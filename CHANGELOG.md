@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Use a urlTemplates.gene.defaultText option to make a gene external link more intuitive
+- Allow ssm url to be supplied from both snvindel query and termdb, so termdb-less clinvar is able to link to ClinVar portal
+- Hardcoded normalization methods replaced with values encoded in Hi-C files.
+- Disco plot now detects and reports data issues from user submitted data.
 
 
 ## 2.33.1
