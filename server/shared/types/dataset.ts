@@ -549,18 +549,17 @@ type RestrictAncestriesEntry = {
 	}
 }
 
-type UrlTemplateGene = {
-	base: string // must end with '/'
-	namekey: string
-}
-type UrlTemplateSample = {
-	base: string // must end with '/'
-	namekey: string
-}
+/*
+	derive new type such as UrlTemplateSsm from the UrlTemplateBase as needed:
 
-type UrlTemplateSsm = {
+	type UrlTemplateSsm = UrlTemplateBase & {
+		newProperty: string
+	}
+*/
+type UrlTemplateBase = {
 	base: string // must end with '/'
 	namekey: string
+	defaultText?: string
 }
 
 /*** types supporting Cohort type ***/
@@ -593,9 +592,9 @@ type Termdb = {
 	helpPages?: URLEntry[]
 	multipleTestingCorrection?: MultipleTestingCorrection
 	urlTemplates?: {
-		gene?: UrlTemplateGene // gene link definition
-		sample?: UrlTemplateSample // sample link definition
-		ssm?: UrlTemplateSsm // ssm link definition
+		gene?: UrlTemplateBase // gene link definition
+		sample?: UrlTemplateBase // sample link definition
+		ssm?: UrlTemplateBase // ssm link definition
 	}
 
 	//GDC
