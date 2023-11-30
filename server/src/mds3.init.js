@@ -500,7 +500,6 @@ function copy_queries(ds, dscopy) {
 		copy.snvindel = {
 			forTrack: qs.forTrack,
 			vcfid4skewerName: qs.vcfid4skewerName,
-			variantUrl: qs.variantUrl,
 			skewerRim: qs.skewerRim
 		}
 
