@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Use a urlTemplates.gene.defaultText option to make a gene external link more intuitive
+
 ## 2.33.0
 
 Features:
