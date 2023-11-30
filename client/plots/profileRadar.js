@@ -51,7 +51,7 @@ class profileRadar extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const width = 1180
+		const width = 1100
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -66,7 +66,6 @@ class profileRadar extends profilePlot {
 			.style('margin-top', '45px')
 		const rows = []
 		const columns = [
-			{ label: 'Color' },
 			{ label: 'Module' },
 			{ label: config[config.plot].term1.abbrev },
 			{ label: config[config.plot].term2.abbrev }
@@ -84,20 +83,19 @@ class profileRadar extends profilePlot {
 
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 380},${y + 100})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 380},${y + 200})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 100})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 330},${y + 200})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
 		let i = 0
-		const data = [],
-			data2 = []
+		const data = [], //sc
+			data2 = [] //poc
 		for (let { module, sc, poc } of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData('sc', iangle, i, data)
 			this.addData('poc', iangle, i, data2)
-			const color = sc.score.term.color
-			rows.push([{ color }, { value: module }, { value: this.getPercentage(sc) }, { value: this.getPercentage(poc) }])
+			rows.push([{ value: module }, { value: this.getPercentage(sc) }, { value: this.getPercentage(poc) }])
 
 			i++
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
@@ -130,14 +128,13 @@ class profileRadar extends profilePlot {
 
 		data.push(data[0])
 		data2.push(data2[0])
-		const color1 = 'gray',
-			color2 = 'blue'
+		const color1 = 'blue',
+			color2 = 'gray'
 		polarG
 			.append('g')
 			.append('path')
 			.style('stroke', color1)
 			.attr('fill', 'none')
-			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
 
@@ -146,6 +143,7 @@ class profileRadar extends profilePlot {
 			.append('path')
 			.style('stroke', color2)
 			.attr('fill', 'none')
+			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data2))
 
@@ -164,9 +162,9 @@ class profileRadar extends profilePlot {
 
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
 		const item1 = `${config[config.plot].term1.name} (${config[config.plot].term1.abbrev})`
-		this.addLegendItem(item1, color1, 0, '5, 5')
+		this.addLegendItem(item1, color1, 0, 'none')
 		const item2 = `${config[config.plot].term2.name} (${config[config.plot].term2.abbrev})`
-		this.addLegendItem(item2, color2, 1, 'none')
+		this.addLegendItem(item2, color2, 1, '5, 5')
 	}
 
 	addData(field, iangle, i, data) {
@@ -175,7 +173,7 @@ class profileRadar extends profilePlot {
 		const iradius = (percentage / 100) * this.radius
 		let x = iradius * Math.cos(iangle)
 		let y = iradius * Math.sin(iangle)
-		const color = field == 'sc' ? '#aaa' : 'blue'
+		const color = field == 'sc' ? 'blue' : '#aaa'
 		const circle = this.polarG
 			.append('g')
 			.attr('transform', `translate(${x}, ${y})`)
@@ -231,6 +229,7 @@ class profileRadar extends profilePlot {
 
 		const textElem = this.legendG
 			.append('text')
+			.attr('font-size', '0.9em')
 			.attr('transform', `translate(${x + 5}, ${y})`)
 			.attr('text-anchor', 'left')
 		textElem.append('tspan').text(text)

@@ -155,7 +155,6 @@ export function client_copy(ds) {
 			type_samples: v.type_samples,
 			type_summary: v.type_summary,
 			type_sunburst: v.type_sunburst,
-			url: v.url,
 			variantkey: v.variantkey
 		}
 	}

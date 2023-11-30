@@ -263,7 +263,7 @@ async function load_driver(q, ds) {
 
 	if (q.geneExpression) {
 		if (!ds.queries.geneExpression) throw 'not supported'
-		const gene2sample2value = await ds.queries.geneExpression.get(q)
+		const { gene2sample2value, byTermId } = await ds.queries.geneExpression.get(q)
 		if (gene2sample2value.size == 0) throw 'no data'
 		if (gene2sample2value.size == 1) {
 			// get data for only 1 gene; may create violin plot
@@ -274,7 +274,7 @@ async function load_driver(q, ds) {
 		const t = new Date()
 		const clustering = await geneExpressionClustering(gene2sample2value, q, ds)
 		console.log('clustering done:', new Date() - t, 'ms')
-		return { clustering }
+		return { clustering, byTermId }
 	}
 
 	// other query type

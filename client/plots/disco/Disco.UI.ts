@@ -3,7 +3,7 @@ import { Tabs } from '../../dom/toggleButtons'
 // import { appear } from '#dom/animation'
 import { Selection } from 'd3-selection'
 import { Genome } from '#shared/types/index'
-import { sayerror } from '#dom/sayerror'
+import { sayerror } from '../../dom/sayerror'
 import { launch, DiscoPlotArgs } from './launch.adhoc'
 
 /*
@@ -86,7 +86,7 @@ export function init_discoplotUI(
 		.append('div')
 		.style('display', 'flex')
 		.style('align-items', 'center')
-		.style('margin', '0px 0px 40px 130px')
+		.style('padding', '15px 0px')
 
 	submitButton(controlBtns_div, obj, genomes, wrapper, holder)
 	uiutils.makeResetBtn(controlBtns_div, obj, '.disco_input')
@@ -319,8 +319,19 @@ function submitButton(
 				setTimeout(() => sayerrorDiv.remove(), 2000)
 			} else {
 				const genomeObj = genomes[obj.genome!.options[obj.genome!.selectedIndex].text]
+				backButton(holder, genomes)
 				wrapper.remove()
 				launch(obj.data as DiscoPlotArgs, genomeObj, holder)
 			}
+		})
+}
+
+function backButton(holder: Selection<HTMLDivElement, any, any, any>, genomes: any) {
+	holder
+		.append('button')
+		.html('&#171; Back')
+		.on('click', () => {
+			holder.selectAll('*').remove()
+			init_discoplotUI(holder, genomes, false)
 		})
 }

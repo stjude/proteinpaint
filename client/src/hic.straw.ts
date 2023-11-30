@@ -6,6 +6,7 @@ import { format as d3format } from 'd3-format'
 import * as common from '#shared/common'
 import blocklazyload from './block.lazyload'
 import { HicstrawArgs } from '../types/hic.ts'
+import { showErrorsWithCounter } from '../dom/sayerror'
 
 /*
 
@@ -101,7 +102,12 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 
 	{
 		const div = hic.holder.append('div')
-		hic.error = (msg: string) => client.sayerror(div, msg)
+		hic.errList = [] as string[]
+		hic.error = async (err: string | string[]) => {
+			if (err && typeof err == 'string') hic.errList.push(err)
+			showErrorsWithCounter(hic.errList, div)
+			hic.errList = [] //Remove errors after displaying
+		}
 	}
 
 	if (!hic.name) {
@@ -281,7 +287,7 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 		})
 
 		.then(data => {
-			if (data.error) throw { message: data.error }
+			if (data.error) throw { message: data.error.error }
 			const err = hicparsestat(hic, data.out)
 			if (err) throw { message: err }
 
@@ -290,10 +296,13 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 			init_wholegenome(hic)
 		})
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) {
 				console.log(err.stack)
 			}
+		})
+		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 		})
 }
 
@@ -501,15 +510,24 @@ async function init_wholegenome(hic: any) {
 
 	hic.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
 
-	// after the ui is created, load data for each chr pair,
-	// await on each request to finish to avoid server lockup
+	/* after the ui is created, load data for each chr pair,
+	await on each request to finish to avoid server lockup
+
+	there might be data inconsistenncy with hic file, it may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
+	do not flood ui with such errors, to tolerate, collect all errors and show in one place
+	*/
 	for (let i = 0; i < manychr; i++) {
 		const lead = hic.chrlst[i]
 		for (let j = 0; j <= i; j++) {
 			const follow = hic.chrlst[j]
-			await getdata_leadfollow(hic, lead, follow)
+			try {
+				await getdata_leadfollow(hic, lead, follow)
+			} catch (e: any) {
+				hic.errList.push(e.message || e)
+			}
 		}
 	}
+	if (hic.errList.length) hic.error(hic.errList)
 
 	return
 }
@@ -636,7 +654,7 @@ async function getdata_leadfollow(hic: any, lead: any, follow: any) {
 			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
 		}
 	} catch (e: any) {
-		hic.error(e.message || e)
+		hic.errList.push(e.message || e)
 		if (e.stack) console.log(e.stack)
 	}
 }
@@ -900,8 +918,8 @@ function getdata_chrpair(hic: any) {
 	const chrx = hic.chrpairview.chrx
 	const chry = hic.chrpairview.chry
 	const isintrachr = chrx == chry
-	const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
-	const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
+	// const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
+	// const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
 	const firstisx = tell_firstisx(hic, chrx, chry)
 
 	const resolution = hic.chrpairview.resolution
@@ -927,7 +945,7 @@ function getdata_chrpair(hic: any) {
 			return data.json()
 		})
 		.then(data => {
-			if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error }
+			if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error.error } //Fix for message displaying [object object] instead of error message
 
 			ctx.clearRect(0, 0, hic.chrpairview.canvas.width, hic.chrpairview.canvas.height)
 
@@ -936,7 +954,7 @@ function getdata_chrpair(hic: any) {
 				return
 			}
 
-			const err = 0
+			// const err = 0
 
 			hic.chrpairview.isintrachr = isintrachr
 			hic.chrpairview.data = []
@@ -971,8 +989,11 @@ function getdata_chrpair(hic: any) {
 			}
 		})
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) console.log(err.stack)
+		})
+		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 		})
 }
 
@@ -987,11 +1008,17 @@ async function setnmeth(hic: any, nmeth: string) {
 			const lead = hic.chrlst[i]
 			for (let j = 0; j <= i; j++) {
 				const follow = hic.chrlst[j]
-				await getdata_leadfollow(hic, lead, follow)
+				try {
+					await getdata_leadfollow(hic, lead, follow)
+				} catch (e: any) {
+					hic.errList.push(e.message || e)
+				}
 			}
 		}
+		if (hic.errList.length) hic.error(hic.errList)
 		return
 	}
+
 	if (hic.inchrpair) {
 		hic.chrpairview.nmeth = nmeth
 		getdata_chrpair(hic)
@@ -1120,7 +1147,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	hic.inchrpair = false
 	hic.wholegenomebutton.style('display', 'inline-block')
 
-	const isintrachr = chrx == chry
+	// const isintrachr = chrx == chry
 
 	hic.chrpairviewbutton.text('Entire ' + chrx + '-' + chry).style('display', 'inline-block')
 
@@ -1212,7 +1239,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 
 	detailviewupdatehic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
 
-	/*
+	/**
 	global zoom buttons
 	*/
 	{
@@ -1552,8 +1579,11 @@ function detailviewupdatehic(hic: any, chrx: any, xstart: any, xstop: any, chry:
 		})
 
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) console.log(err.stack)
+		})
+		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 		})
 }
 
@@ -1616,7 +1646,7 @@ function getdata_detail(hic: any) {
 			const xpxbp = canvaswidth / (xstop - xstart)
 			const ypxbp = canvasheight / (ystop - ystart)
 
-			if (data.error) throw { message: data.error }
+			if (data.error) throw { message: data.error.error }
 			if (!data.items || data.items.length == 0) {
 				return
 			}
@@ -1755,11 +1785,11 @@ function getdata_detail(hic: any) {
 		})
 
 		.catch(err => {
-			hic.error(err.message)
+			hic.errList.push(err.message || err)
 			if (err.stack) console.log(err.stack)
 		})
-
 		.then(() => {
+			if (hic.errList.length) hic.error(hic.errList)
 			hic.detailview.canvas
 				.style('left', hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
 				.style('top', hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px')

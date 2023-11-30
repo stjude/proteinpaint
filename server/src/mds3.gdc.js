@@ -176,20 +176,22 @@ export function validate_query_geneExpression(ds, genome) {
 
 		// get all cases from current filter
 		const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
-		if (caseLst.length == 0) return gene2sample2value // no cases with exp data
+		if (caseLst.length == 0) return { gene2sample2value, byTermId: {} } // no cases with exp data
 
 		const t2 = new Date()
 		console.log(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
 		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst)
 
-		if (ensgLst.length == 0) return gene2sample2value // no valid genes
+		if (ensgLst.length == 0) return { gene2sample2value, byTermId: {} } // no valid genes
 
 		const t3 = new Date()
 		console.log(ensgLst.length, 'out of', q.genes.length, 'genes selected for exp:', t3 - t2, 'ms')
-
+		const byTermId = {}
 		for (const g of ensgLst) {
-			gene2sample2value.set(ensg2symbol.get(g), new Map())
+			const geneSymbol = ensg2symbol.get(g)
+			byTermId[geneSymbol] = { gencodeId: g } // store ensemble gene ID in byTermId
+			gene2sample2value.set(geneSymbol, new Map())
 		}
 
 		await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
@@ -197,7 +199,7 @@ export function validate_query_geneExpression(ds, genome) {
 		const t4 = new Date()
 		console.log('gene-case matrix built:', t4 - t3, 'ms')
 
-		return gene2sample2value
+		return { gene2sample2value, byTermId }
 	}
 }
 

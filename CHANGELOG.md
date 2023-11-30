@@ -4,8 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Use a urlTemplates.gene.defaultText option to make a gene external link more intuitive
+
+
+## 2.33.1
+
+Fixes:
+- Use a urlTemplates.gene.defaultText option to make a gene external link more intuitive
+
+## 2.33.0
+
 Features:
 - GDC BAM slicing UI supports new "download mode", will directly download BAM slice to client, including unmapped reads.
+- Click matrix cell to launch gene summary and case summary page, click row label to launch gene summary page, click case id to launch case summary
 
 
 ## 2.32.1

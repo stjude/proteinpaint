@@ -1,6 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
 import { openSandbox } from '../appdrawer/adSandbox'
-import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
+import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 import { string2pos } from './coord'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import * as parseurl from './app.parseurl'

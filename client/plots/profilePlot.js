@@ -20,7 +20,7 @@ export class profilePlot {
 	}
 
 	async init(appState) {
-		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
+		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block').style('font-size', '0.9em')
 		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('display', 'inline-block')
 
 		const plotDiv = holder.append('div')
@@ -153,7 +153,7 @@ export class profilePlot {
 			})
 		}
 		this.components.controls.on(`downloadClick.${chartType}`, () =>
-			downloadSingleSVG(this.svg, this.getDownloadFilename())
+			downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
 		)
 		this.components.controls.on(`helpClick.${chartType}`, () =>
 			window.open(
@@ -253,6 +253,7 @@ export class profilePlot {
 
 		const text = this.filterG
 			.append('text')
+			.attr('font-size', '0.9em')
 			.attr('transform', `translate(0, ${this.filtersCount * 20})`)
 			.attr('text-anchor', 'left')
 		text.append('tspan').attr('font-weight', 'bold').text(filter)
@@ -262,6 +263,7 @@ export class profilePlot {
 	addLegendItem(category, description, index) {
 		const text = this.legendG
 			.append('text')
+			.attr('font-size', '0.9em')
 			.attr('transform', `translate(0, ${index * 20})`)
 			.attr('text-anchor', 'left')
 		text.append('tspan').attr('font-weight', 'bold').text(category)

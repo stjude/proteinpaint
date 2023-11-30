@@ -7,6 +7,9 @@ import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
 
 let inputIndex = 0
+const svgIcons = {
+	externalLink: '' //`<svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 512 512" transform="scale(0.8)" style="display: inline-block; position:relative; top: -2px; left:4px;" ><!--!Font Awesome Free 6.5.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path d="M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h82.7L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3V192c0 17.7 14.3 32 32 32s32-14.3 32-32V32c0-17.7-14.3-32-32-32H320zM80 32C35.8 32 0 67.8 0 112V432c0 44.2 35.8 80 80 80H400c44.2 0 80-35.8 80-80V320c0-17.7-14.3-32-32-32s-32 14.3-32 32V432c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16H192c17.7 0 32-14.3 32-32s-14.3-32-32-32H80z"/></svg>`
+}
 
 export function setInteractivity(self) {
 	let t
@@ -76,7 +79,7 @@ export function setInteractivity(self) {
 				// list that label only once but with a hit count, instead of listing that same label
 				// as multiple table rows in the mouseover
 				const label =
-					c.label == 'Gene Expression'
+					c.label == self.config.settings.hierCluster?.termGroupName
 						? v.value
 						: p
 						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
@@ -167,7 +170,7 @@ export function setInteractivity(self) {
 		const sampleData = data || event.target.__data__
 
 		if (!sampleData) return // !!! it's undefined when dragging on the sample names
-
+		const s = self.config.settings.matrix
 		// preliminary fix: assign string sample name for "sample_id", which is used by data queries below
 		const sample = {
 			sample_id: sampleData._SAMPLENAME_ || sampleData.row.sampleName || sampleData.row.sample
@@ -176,6 +179,49 @@ export function setInteractivity(self) {
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
 		self.dom.clickMenu.d.selectAll('*').remove()
+
+		if (self.state.termdbConfig.urlTemplates) {
+			const templates = self.state.termdbConfig.urlTemplates
+			// quick fix: should use templates[*].regex for a non-hardcoded condition
+			if (self.chartType != 'hierCluster' && templates.sample) {
+				// quick fix, should have a more reliable namekey that is guaranteed to have the UUID for the URL construction
+				// maybe from refs.bySampleId, filled in by termdb.getSampleAlias in the backend
+				const name = sampleData[templates.sample.namekey] || sampleData.row.sample || sampleData._SAMPLENAME_
+				if (!templates.sample.regex /*|| name has a matching pattern */) {
+					const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
+
+					menuDiv.append('span').html(`${s.controlLabels.Sample}: `)
+					const link = menuDiv
+						.append('a')
+						.attr('href', `${templates.sample.base}${name}`)
+						.attr('target', '_blank')
+						.html(`${sampleData._SAMPLENAME_} ${svgIcons.externalLink}`)
+
+					link.on('click', async event => {
+						menuDiv.remove()
+						self.dom.clickMenu.d.selectAll('*').remove()
+					})
+				}
+			}
+
+			if (sampleData.tw?.term?.type == 'geneVariant' && templates.gene) {
+				const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
+
+				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
+				menuDiv.append('span').html('Gene: ')
+				const link = menuDiv
+					.append('a')
+					.attr('href', `${templates.gene.base}${name}`)
+					.attr('target', '_blank')
+					.html(`${sampleData.tw.term.name} ${svgIcons.externalLink}`)
+
+				link.on('click', async event => {
+					menuDiv.remove()
+					self.dom.clickMenu.d.selectAll('*').remove()
+				})
+			}
+		}
+
 		if (q.singleSampleGenomeQuantification) {
 			for (const k in q.singleSampleGenomeQuantification) {
 				const menuDiv = self.dom.clickMenu.d
@@ -381,6 +427,25 @@ function setTermActions(self) {
 				.html('Lollipop')
 				.on('click', async () => {
 					await self.launchGB(t)
+					self.dom.tip.hide()
+				})
+		}
+
+		// Add gene summary button
+		if (self.state.termdbConfig.urlTemplates?.gene && vartype == 'gene') {
+			const templates = self.state.termdbConfig.urlTemplates
+			self.dom.geneSummaryLink = labelEditDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('margin-left', '5px')
+				.style('text-align', 'center')
+				.style('color', 'rgb(0, 0, 238)')
+				.style('cursor', 'pointer')
+				.style('text-decoration', 'underline')
+				.html(`${templates.gene.defaultText || ''}${svgIcons.externalLink}`)
+				.on('click', async () => {
+					const name = self.data.refs.byTermId[t.tw.$id][templates.gene.namekey]
+					window.open(`${templates.gene.base}${name}`, '_blank')
 					self.dom.tip.hide()
 				})
 		}
@@ -1668,7 +1733,7 @@ function setLabelDragEvents(self, prefix) {
 			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
 			const t = label?.__data__
 			if (!t) return
-			if (self.type == 'hierCluster' && t.tw && t.grp?.name == 'Gene Expression') return
+			if (self.type == 'hierCluster' && t.tw && t.grp?.name == self.config.settings.hierCluster?.termGroupName) return
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label).attr('transform').split('translate(')[1].split(')')[0].split(',').map(Number)
 			const node = label.cloneNode(true)

@@ -7,11 +7,11 @@ set -euo pipefail
 ###############
 
 USAGE="Usage:
-	./build2.sh [subdir] [-z] [-m] [-r] [-b] [-c]
+	./build2.sh [subdir] [-z] [-r] [-b] [-c]
 	
 	subdir: 'server' | 'full', the subdirectory to build
 
-	-z USETGZ: use local tarballs for the server and full packages
+	-z USETGZ: use local tarballs for the server and full packages 
 	-r PREFIX: prefix for the image name, defaults to an empty string ""
 			 - 'pkg' is reserved to indicate a package build, outside of the repo or dev environment
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted in the built image
@@ -100,7 +100,7 @@ if [[ ! -d ./tmppack ]]; then
 	mkdir tmppack
 fi
 
-if [[ "$PKGPATH" != "" ]]; then
+if [[ "$PKGPATH" == "" ]]; then
   rm -f tmppack/* 
 else
 	./pack.sh $PKGPATH

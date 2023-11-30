@@ -4,7 +4,7 @@ import { dofetch3, isInSession } from '../common/dofetch'
 import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
-import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
+import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -667,7 +667,7 @@ export class TermdbVocab extends Vocab {
     tw.term.category2samplecount = {}
     tw.term.values={}
     */
-	async getAnnotatedSampleData(opts) {
+	async getAnnotatedSampleData(opts, _refs = {}) {
 		// may check against required auth credentials for the server route
 		const headers = this.mayGetAuthHeaders('termdb')
 		// unlike scatter and violin, the matrix plot will NOT display anything
@@ -676,7 +676,7 @@ export class TermdbVocab extends Vocab {
 		if (!headers) return
 		const filter = getNormalRoot(opts.filter)
 		const samples = {}
-		const refs = { byTermId: {}, bySampleId: {} }
+		const refs = { byTermId: _refs.byTermId || {}, bySampleId: _refs.bySampleId || {} }
 		const promises = []
 		const samplesToShow = new Set()
 		const termsToUpdate = opts.terms.slice()
