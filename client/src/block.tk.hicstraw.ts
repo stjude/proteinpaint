@@ -1033,9 +1033,9 @@ function configPanel(tk: any, block: any) {
 	if (tk.file || tk.url) {
 		// hic straw normalization method
 		const normalization = tk.hic.normalization
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
+		row.append('span').html('Normalization&nbsp;')
 		if (tk.hic.normalization.length > 0) {
-			const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
-			row.append('span').html('Normalization&nbsp;')
 			const s = row.append('select').on('change', () => {
 				const ss = s.node()
 				tk.normalizationmethod = ss.options[ss.selectedIndex].innerHTML
@@ -1048,6 +1048,8 @@ function configPanel(tk: any, block: any) {
 					break
 				}
 			}
+		} else {
+			row.append('span').text('NONE')
 		}
 	}
 
