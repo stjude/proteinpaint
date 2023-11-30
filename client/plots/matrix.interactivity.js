@@ -190,29 +190,61 @@ export function setInteractivity(self) {
 				if (!templates.sample.regex /*|| name has a matching pattern */) {
 					const menuDiv = self.dom.clickMenu.d
 						.append('div')
-						.attr('class', 'sja_menuoption sja_sharp_border')
-						.html(
-							`${s.controlLabels.Sample}: <span class='linkText'>${sampleData._SAMPLENAME_}${svgIcons.externalLink}</span>`
-						)
-						.on('click', async event => {
-							window.open(`${templates.sample.base}${name}`, '_blank')
-							menuDiv.remove()
-							self.dom.clickMenu.d.selectAll('*').remove()
-						})
+						.style('color', 'black')
+						.style('padding', '5px 10px')
+						.style('cursor', 'default')
+						.style('background-color', '#f2f2f2')
+						.style('margin', '1px')
+						.style('border-radius', '5px')
+					menuDiv.on('mouseover', () => {
+						menuDiv.style('background-color', '#e6e6e6')
+					})
+					menuDiv.on('mouseout', () => {
+						menuDiv.style('background-color', '#f2f2f2')
+					})
+
+					menuDiv.append('span').html(`${s.controlLabels.Sample}: `)
+					const link = menuDiv
+						.append('a')
+						.attr('href', `${templates.sample.base}${name}`)
+						.attr('target', '_blank')
+						.html(`${sampleData._SAMPLENAME_} ${svgIcons.externalLink}`)
+
+					link.on('click', async event => {
+						menuDiv.remove()
+						self.dom.clickMenu.d.selectAll('*').remove()
+					})
 				}
 			}
 
 			if (sampleData.tw?.term?.type == 'geneVariant' && templates.gene) {
 				const menuDiv = self.dom.clickMenu.d
 					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.html(`Gene: <span class='linkText'>${sampleData.tw.term.name}${svgIcons.externalLink}</span>`)
-					.on('click', async event => {
-						const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
-						window.open(`${templates.gene.base}${name}`, '_blank')
-						menuDiv.remove()
-						self.dom.clickMenu.d.selectAll('*').remove()
-					})
+					.style('color', 'black')
+					.style('padding', '5px 10px')
+					.style('cursor', 'default')
+					.style('background-color', '#f2f2f2')
+					.style('margin', '1px')
+					.style('border-radius', '5px')
+				menuDiv.on('mouseover', () => {
+					menuDiv.style('background-color', '#e6e6e6')
+				})
+				menuDiv.on('mouseout', () => {
+					menuDiv.style('background-color', '#f2f2f2')
+				})
+
+				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
+				menuDiv.append('span').html('Gene: ')
+				const link = menuDiv
+					.append('a')
+					.attr('href', `${templates.gene.base}${name}`)
+					.attr('target', '_blank')
+					.html(`${sampleData.tw.term.name} ${svgIcons.externalLink}`)
+
+				link.on('click', async event => {
+					menuDiv.remove()
+					self.dom.clickMenu.d.selectAll('*').remove()
+				})
 			}
 		}
 
