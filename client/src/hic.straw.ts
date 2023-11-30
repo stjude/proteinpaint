@@ -202,18 +202,7 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 	}
 
 	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('NORMALIZATION')
-	hic.nmethselect = tr2
-		.append('td')
-		.style('margin-right', '10px')
-		.append('select')
-		.on('change', (event: Event) => {
-			const v = (event.target as HTMLSelectElement).options[(event.target as HTMLSelectElement).selectedIndex].innerHTML
-			setnmeth(hic, v)
-		})
-	hic.nmethselect.append('option').text('NONE')
-	hic.nmethselect.append('option').text('VC')
-	hic.nmethselect.append('option').text('VC_SQRT')
-	hic.nmethselect.append('option').text('KR')
+	const showNMethDiv = tr2.append('td') //placeholder until data is returned from server
 
 	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('CUTOFF')
 	hic.inputbpmaxv = tr2
@@ -292,6 +281,25 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 			if (err) throw { message: err }
 
 			// optionally, may init detail view by default
+
+			/**Quick fix for removing normalization hardcoding. Will address
+			 * when refactoring this file
+			 */
+			if (hic.normalization?.length == 1 && hic.normalization[0] == 'NONE') {
+				showNMethDiv.text(hic.normalization[0])
+			} else {
+				hic.nmethselect = showNMethDiv
+					.style('margin-right', '10px')
+					.append('select')
+					.on('change', () => {
+						const v = hic.nmethselect.node().value
+						console.log(v)
+						setnmeth(hic, v)
+					})
+				for (const n of hic.normalization) {
+					hic.nmethselect.append('option').text(n)
+				}
+			}
 
 			init_wholegenome(hic)
 		})
@@ -1112,21 +1120,22 @@ function switchview(hic: any) {
 
 function nmeth2select(hic: any, v: any) {
 	const options = hic.nmethselect.node().options
-	for (const o of options) o.selected = false
-	switch (v) {
-		case 'NONE':
-			options[0].selected = true
-			break
-		case 'VC':
-			options[1].selected = true
-			break
-		case 'VC_SQRT':
-			options[2].selected = true
-			break
-		case 'KR':
-			options[3].selected = true
-			break
-	}
+	console.log(options)
+	// for (const o of options) o.selected = false
+	// switch (v) {
+	// 	case 'NONE':
+	// 		options[0].selected = true
+	// 		break
+	// 	case 'VC':
+	// 		options[1].selected = true
+	// 		break
+	// 	case 'VC_SQRT':
+	// 		options[2].selected = true
+	// 		break
+	// 	case 'KR':
+	// 		options[3].selected = true
+	// 		break
+	// }
 }
 
 //////////////////// __detail
