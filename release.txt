@@ -1,1 +1,3 @@
-fix: Hardcoded normalization methods replaced with values encoded in Hi-C files.
+Fixes:
+- Hardcoded normalization methods replaced with values encoded in Hi-C files.
+- Disco plot now detects and reports data issues from user submitted data.
