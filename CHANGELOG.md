@@ -10,6 +10,7 @@ Fixes:
 - Hardcoded normalization methods replaced with values encoded in Hi-C files.
 - Disco plot now detects and reports data issues from user submitted data.
 - Gdc bam slice download handles case with no ssm; bam table changes to radio to force single-selection; table.js bug fix to use unique input name
+- Fix the processing of hierCluster overrides
 
 
 ## 2.33.1
