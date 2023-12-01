@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Disco plot UI now allows users to upload tab delimited data
+
 Fixes:
 - Use a urlTemplates.gene.defaultText option to make a gene external link more intuitive
 - Allow ssm url to be supplied from both snvindel query and termdb, so termdb-less clinvar is able to link to ClinVar portal
