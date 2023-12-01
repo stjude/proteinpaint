@@ -162,21 +162,18 @@ async function getMlst(arg: DiscoPlotArgs): Promise<[MutationListEntry[], string
 	if (arg.svText) parseSvText(arg.svText, mlst, errors)
 	if (arg.cnvText) parseCnvText(arg.cnvText, mlst, errors)
 
-	/*
-	if (arg.snvFile) {
-	}
-	if (arg.snvUrl) {
-	}
-
-	if (arg.svFile) {
-	}
-	if (arg.svUrl) {
-	}
-	if (arg.cnvFile) {
-	}
-	if (arg.cnvUrl) {
-	}
-	*/
+	// if (arg.snvFile) {
+	// }
+	// if (arg.snvUrl) {
+	// }
+	// if (arg.svFile) {
+	// }
+	// if (arg.svUrl) {
+	// }
+	// if (arg.cnvFile) {
+	// }
+	// if (arg.cnvUrl) {
+	// }
 
 	return [mlst, errors]
 }
@@ -184,7 +181,7 @@ async function getMlst(arg: DiscoPlotArgs): Promise<[MutationListEntry[], string
 function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	// TODO share a parser for snvindel text file with samples (with header line and non-fixed columns), but should not require sample here
 	for (const line of text.trim().split('\n')) {
-		const l = line.split('\t')
+		const l = line.trim().split('\t')
 
 		if (l.length != 5) {
 			errors.push('snv input not equal to 5 columns')
@@ -211,8 +208,8 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 
 function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
-		const l = line.split('\t')
-		if (l.length == 4 || l.length == 6) {
+		const l = line.trim().split('\t')
+		if (l.length < 4 || l.length > 6) {
 			errors.push('sv input not equal to 4 or 6 columns')
 			continue
 		}
@@ -248,7 +245,7 @@ function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) 
 
 function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
-		const l = line.split('\t')
+		const l = line.trim().split('\t')
 		if (l.length != 4) {
 			errors.push('cnv input not equal to 4 columns')
 			continue

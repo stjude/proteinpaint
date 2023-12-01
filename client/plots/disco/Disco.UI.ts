@@ -1,20 +1,10 @@
 import * as uiutils from '#dom/uiUtils'
 import { Tabs } from '../../dom/toggleButtons'
-// import { appear } from '#dom/animation'
+import { appear } from '#dom/animation'
 import { Selection } from 'd3-selection'
 import { Genome } from '#shared/types/index'
 import { sayerror } from '../../dom/sayerror'
 import { launch, DiscoPlotArgs } from './launch.adhoc'
-
-/*
--------EXPORTED-------
-init_discoplotUI()
-
--------Internal-------
-makeDataTypeTabs(): Creates the main tabs labeled by data type (e.g. SNV indel, SV, CNV, etc.)
-	- mainTabCallback()
-submitButton(): Calls launch.adhoc to open the disco plot in the sandbox
-*/
 
 /** Genome with dom attributes scoped for this file */
 type ScopedGenomes = Genome & {
@@ -37,7 +27,13 @@ type Tab = {
 	contentHolder: Selection<HTMLDivElement, any, any, any>
 	callback?: () => void
 }
-
+/**
+ * Launches the disco plot form.
+ * @param holder
+ * @param genomes
+ * @param debugmode
+ * @returns
+ */
 export function init_discoplotUI(
 	holder: Selection<HTMLDivElement, any, any, any>,
 	genomes: ScopedGenomes,
@@ -53,6 +49,7 @@ export function init_discoplotUI(
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
 		.classed('sjpp-app-ui', true)
+		.classed('sjpp-disco-ui', true)
 
 	const obj: Partial<DiscoUIArgs> = {
 		data: []
@@ -77,7 +74,11 @@ export function init_discoplotUI(
 		.append('div')
 		.style('opacity', 0.75)
 		.style('padding', '10px 10px 15px 20px')
-		.text('The plot accepts multiple data types. Paste data for SNV Indel, SV, and CNV in each tab and submit.')
+		.style('width', '65vw')
+		.style('line-height', '1.5em')
+		.html(
+			'<p>The plot accepts multiple data types. Input fields for each data type are available in the tabs below. Upload a file or paste data in at least one data type tab and click "Create Disco Plot". <a href="https://proteinpaint.stjude.org/ppdemo/hg38/disco/discoDemoData.tar.gz" target="Demo data">Download example files</a></p>'
+		)
 
 	const dataTypeTabs_div = wrapper.append('div').style('margin-left', '2vw')
 	makeDataTypeTabs(dataTypeTabs_div, obj)
@@ -93,7 +94,7 @@ export function init_discoplotUI(
 	uiutils.makeResetBtn(controlBtns_div, obj, '.disco_input')
 
 	//Remove after testing
-	if (debugmode) (window as any).doms = obj
+	if (debugmode) window['doms'] = obj
 	return obj
 }
 
@@ -108,12 +109,19 @@ function genomeSelection(
 	obj.genome = g.node()
 }
 
+/**
+ * Makes the main tabs labeled by data type (e.g. SNV indel, SV, CNV, etc.)
+ * @param dataTypeTabs_div
+ * @param obj
+ */
+
 function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, any>, obj: Partial<DiscoUIArgs>) {
 	const tabs = [
 		{
 			label: 'SNV Indel',
 			active: true,
 			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
+				/** Event though event is not required, stops type error??? */
 				dataTypeTab.key = 'snv'
 				/**Leave the weird spacing for <pre>! Otherwise it doesn't display properly on the client
 				 * and the user can't copy and paste the example data.*/
@@ -133,7 +141,7 @@ chr2	98765432	TestGene	TestMutation	F
 		},
 		{
 			label: 'SV',
-			active: true,
+			active: false,
 			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
 				dataTypeTab.key = 'sv'
 				const listHTML = `<ol>
@@ -157,7 +165,7 @@ chr6	3067605	chr12	61521661
 		},
 		{
 			label: 'CNV',
-			active: true,
+			active: false,
 			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
 				dataTypeTab.key = 'cnv'
 				const listHTML = `<ol>
@@ -179,15 +187,19 @@ chr1	100000000	200000000	-0.5
 	new Tabs({ holder: dataTypeTabs_div, tabs, tabsPosition: 'vertical', linePosition: 'right' }).main()
 }
 
+/**
+ * Creates the contents for the main tabs in a consistent layout.
+ * @param dataTypeTab
+ * @param obj
+ * @param listHTML
+ */
 function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: any) {
 	dataTypeTab.contentHolder.style('border', 'none').style('display', 'block').style('padding-left', '30px')
-	//On hold until other input types added to launch.adhoc.js
-	//makeDataInputTabs(dataTypeTab, obj)
-	makeCopyPasteInput(dataTypeTab, obj, dataTypeTab.key)
+	makeDataInputTabs(dataTypeTab, obj)
 
 	dataTypeTab.contentHolder
 		.append('div')
-		.style('margin', '10px 0px 0px 10px')
+		.style('padding', '15px 0px 0px 10px')
 		.style('opacity', 0.75)
 		.text(`Provide ${dataTypeTab.label} data in tab delimited format with the following columns:`)
 		.append('span')
@@ -195,61 +207,69 @@ function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: 
 	delete dataTypeTab.callback
 }
 
-// function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
-// 	const width = 95
-// 	const tabs = [
-// 		// //TODO: implement file upload and file path input once launch.adhoc is ready
-// 		// {
-// 		// 	label: 'Select File',
-// 		// 	active: true,
-// 		// 	width,
-// 		// 	callback: async (event: MouseEvent, tab: Tab) => {
-// 		// 		const key = dataTypeTab.key
-// 		// 		tab.contentHolder.style('border', 'none').style('display', 'block')
-// 		// 		appear(tab.contentHolder)
+/**
+ * Creates the different input tabs within the data type tabs. Users are able to upload a file or paste data.
+ * TODO: add option to provide a file path from server or url
+ * @param dataTypeTab
+ * @param obj
+ */
+function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
+	const width = 95
+	const tabs = [
+		// //TODO: implement file upload and file path input once launch.adhoc is ready
+		{
+			label: 'Select File',
+			active: true,
+			width,
+			callback: async (event: MouseEvent, tab: Tab) => {
+				const key = dataTypeTab.key
+				tab.contentHolder.style('border', 'none').style('display', 'block')
+				appear(tab.contentHolder)
 
-// 		// 		tab.contentHolder
-// 		// 			.append('div')
-// 		// 			.html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
-// 		// 		makeFileUpload(tab.contentHolder, obj, key)
+				tab.contentHolder
+					.append('div')
+					.style('padding', '0px 0px 5px 15px')
+					.style('opacity', 0.65)
+					.text(`Select a local file`)
+				makeFileUpload(tab, obj, key)
 
-// 		// 		delete tab.callback
-// 		// 	}
-// 		// },
-// 		// {
-// 		// 	label: 'File Path',
-// 		// 	active: false,
-// 		// 	width,
-// 		// 	callback: async (event: MouseEvent, tab: Tab) => {
-// 		// 		const key = dataTypeTab.key
-// 		// 		tab.contentHolder.style('border', 'none').style('display', 'block')
-// 		// 		appear(tab.contentHolder)
+				delete tab.callback
+			}
+		},
+		// {
+		// 	label: 'File Path',
+		// 	active: false,
+		// 	width,
+		// 	callback: async (tab: Tab) => {
+		// 		const key = dataTypeTab.key
+		// 		tab.contentHolder.style('border', 'none').style('display', 'block')
+		// 		appear(tab.contentHolder)
 
-// 		// 		tab.contentHolder
-// 		// 			.append('div')
-// 		// 			.html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
-// 		// 		uiutils.makePrompt(tab.contentHolder, 'URL')
-// 		// 		makeTextEntryFilePathInput(tab.contentHolder, obj, key)
+		// 		tab.contentHolder
+		// 			.append('div')
+		// 			.html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
+		// 		uiutils.makePrompt(tab.contentHolder, 'URL')
+		// 		makeTextEntryFilePathInput(tab.contentHolder, obj, key)
 
-// 		// 		delete tab.callback
-// 		// 	}
-// 		// },
-// 		{
-// 			label: 'Paste Data',
-// 			active: false,
-// 			width,
-// 			callback: async (event: MouseEvent, tab: Tab) => {
-// 				const key = dataTypeTab.key
-// 				tab.contentHolder.style('border', 'none').style('display', 'block')
-// 				appear(tab.contentHolder)
+		// 		delete tab.callback
+		// 	}
+		// },
+		{
+			label: 'Paste Data',
+			active: false,
+			width,
+			callback: async (event: MouseEvent, tab: Tab) => {
+				const key = dataTypeTab.key
+				tab.contentHolder.style('border', 'none').style('display', 'block')
+				appear(tab.contentHolder)
 
-// 				makeCopyPasteInput(tab, obj, key)
-// 				delete tab.callback
-// 			}
-// 		}
-// 	]
-// 	new Tabs({ holder: dataTypeTab.contentHolder, tabs }).main()
-// }
+				makeCopyPasteInput(tab, obj, key)
+				delete tab.callback
+			}
+		}
+	]
+	new Tabs({ holder: dataTypeTab.contentHolder, tabs }).main()
+}
 
 // function makeTextEntryFilePathInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
 // 	// Renders the file path input div and callback.
@@ -272,22 +292,33 @@ function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: 
 // 		})
 // }
 
-// function makeFileUpload(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
-// 	// Renders the select file div and callback.
-// 	const upload_div = tab.contentHolder.append('div').style('display', 'inline-block')
-// 	const upload = uiutils.makeFileUpload(upload_div).classed('disco_input', true)
-// 	upload.on('change', (event: KeyboardEvent) => {
-// 		const file = (event.target as any).files[0]
-// 		const reader = new FileReader()
-// 		reader.onload = (event: any) => {
-// 			obj.data![key + 'File'] = event.target.result
-// 		}
-// 		reader.readAsText(file, 'utf8')
-// 	})
-// }
+/**
+ * Renders the select file div. Callback captures file text as a string.
+ * ?TODO: maybe allow other file types and detect the delimiter (uiutils.detectDelimiter)
+ * @param tab
+ * @param obj
+ * @param key
+ */
+function makeFileUpload(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
+	const upload_div = tab.contentHolder.append('div').style('display', 'inline-block')
+	const upload = uiutils.makeFileUpload(upload_div).classed('disco_input', true)
+	upload.on('change', (event: KeyboardEvent) => {
+		const file = (event.target as any).files[0]
+		const reader = new FileReader()
+		reader.onload = (event: any) => {
+			obj.data![key + 'Text'] = event.target.result
+		}
+		reader.readAsText(file, 'utf8')
+	})
+}
 
+/**
+ * Renders the copy/paste div and callback.
+ * @param tab
+ * @param obj
+ * @param key
+ */
 function makeCopyPasteInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
-	// Renders the copy/paste div and callback.
 	const paste_div = tab.contentHolder.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput({ div: paste_div, cols: 50 })
@@ -321,6 +352,7 @@ function submitButton(
 			} else {
 				const genomeObj = genomes[obj.genome!.options[obj.genome!.selectedIndex].text]
 				wrapper.remove()
+				/** launch() validates data and returns errors to the browser */
 				launch(obj.data as DiscoPlotArgs, genomeObj, holder)
 				backButton(holder, genomes)
 			}
