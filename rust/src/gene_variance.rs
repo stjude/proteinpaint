@@ -1,4 +1,15 @@
-// cd .. && cargo build --release && json='{"samples":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts2.txt","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
+/*
+ This script selects the top most variant genes by calculating the variance/interquartile region for each gene.
+
+Various JSON parameters:
+   samples: Enter the sample ID(s) separated by comma
+   input_file: Path to input file
+   filter_extreme_values: boolean (true/false). When true, this filter according to logic filterbyExpr in edgeR. This basically removes genes that have very low gene counts.
+   num_genes: The top num_genes (for e.g 10) that need to be reported in the output.
+   param: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
+
+ Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","input_file":"/path/to/input/file","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
+*/
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Dyn;
