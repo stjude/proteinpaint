@@ -212,7 +212,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
 		const l = line.split('\t')
-		if (l.length == 4 || l.length == 6) {
+		if (l.length < 4 || l.length > 6) {
 			errors.push('sv input not equal to 4 or 6 columns')
 			continue
 		}
