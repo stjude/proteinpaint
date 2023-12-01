@@ -648,43 +648,43 @@ function add_hg19() {
 		mkdir(a)
 		trydownload(
 			path.join(a, 'hic.DpnII.hg19.gz'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.DpnII.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.hg19.gz'
 		)
 		trydownload(
 			path.join(a, 'hic.DpnII.hg19.gz.tbi'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.DpnII.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.DpnII.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(a, 'hic.EcoRI.hg19.gz'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.EcoRI.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.hg19.gz'
 		)
 		trydownload(
 			path.join(a, 'hic.EcoRI.hg19.gz.tbi'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.EcoRI.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.EcoRI.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(a, 'hic.HindIII.hg19.gz'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.HindIII.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.hg19.gz'
 		)
 		trydownload(
 			path.join(a, 'hic.HindIII.hg19.gz.tbi'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.HindIII.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.HindIII.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(a, 'hic.MboI.hg19.gz'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.MboI.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.hg19.gz'
 		)
 		trydownload(
 			path.join(a, 'hic.MboI.hg19.gz.tbi'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.MboI.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.MboI.hg19.gz.tbi'
 		)
 		trydownload(
 			path.join(a, 'hic.NcoI.hg19.gz'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.NcoI.hg19.gz'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.hg19.gz'
 		)
 		trydownload(
 			path.join(a, 'hic.NcoI.hg19.gz.tbi'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/hic.NcoI.hg19.gz.tbi'
+			'https://proteinpaint.stjude.org/ppSupport/hicFragment/hic.NcoI.hg19.gz.tbi'
 		)
 	}
 	{
