@@ -1500,7 +1500,9 @@ async function validate_query_geneExpression(ds, genome) {
 				}
 			})
 		}
-		return gene2sample2value
+		// pass blank byTermId to match with expected output structure
+		const byTermId = {}
+		return { gene2sample2value, byTermId }
 	}
 }
 
