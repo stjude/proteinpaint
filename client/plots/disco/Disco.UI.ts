@@ -183,11 +183,15 @@ chr1	100000000	200000000	-0.5
 	new Tabs({ holder: dataTypeTabs_div, tabs, tabsPosition: 'vertical', linePosition: 'right' }).main()
 }
 
+/**
+ * Creates the contents for the main tabs in a consistent layout.
+ * @param dataTypeTab
+ * @param obj
+ * @param listHTML
+ */
 function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: any) {
 	dataTypeTab.contentHolder.style('border', 'none').style('display', 'block').style('padding-left', '30px')
-	//Adding in input options slowly. Will eventually apply makeDataInputTabs() to all data types.
-	if (dataTypeTab.key == 'snv') makeDataInputTabs(dataTypeTab, obj)
-	else makeCopyPasteInput(dataTypeTab, obj, dataTypeTab.key)
+	makeDataInputTabs(dataTypeTab, obj)
 
 	dataTypeTab.contentHolder
 		.append('div')
@@ -219,7 +223,9 @@ function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
 
 				tab.contentHolder
 					.append('div')
-					.html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
+					.style('padding', '0px 0px 5px 10px')
+					.style('opacity', 0.65)
+					.text(`Select a file from your computer`)
 				makeFileUpload(tab, obj, key)
 
 				delete tab.callback
@@ -281,8 +287,13 @@ function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
 // 		})
 // }
 
+/**
+ * Renders the select file div and callback.
+ * @param tab
+ * @param obj
+ * @param key
+ */
 function makeFileUpload(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
-	// Renders the select file div and callback.
 	const upload_div = tab.contentHolder.append('div').style('display', 'inline-block')
 	const upload = uiutils.makeFileUpload(upload_div).classed('disco_input', true)
 	upload.on('change', (event: KeyboardEvent) => {
@@ -295,8 +306,13 @@ function makeFileUpload(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
 	})
 }
 
+/**
+ * Renders the copy/paste div and callback.
+ * @param tab
+ * @param obj
+ * @param key
+ */
 function makeCopyPasteInput(tab: Tab, obj: Partial<DiscoUIArgs>, key: string) {
-	// Renders the copy/paste div and callback.
 	const paste_div = tab.contentHolder.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput({ div: paste_div, cols: 50 })

@@ -208,7 +208,7 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 
 function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
-		const l = line.split('\t')
+		const l = line.trim().split('\t')
 		if (l.length < 4 || l.length > 6) {
 			errors.push('sv input not equal to 4 or 6 columns')
 			continue
@@ -245,7 +245,7 @@ function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) 
 
 function parseCnvText(text: string, mlst: MutationListEntry[], errors: string[]) {
 	for (const line of text.trim().split('\n')) {
-		const l = line.split('\t')
+		const l = line.trim().split('\t')
 		if (l.length != 4) {
 			errors.push('cnv input not equal to 4 columns')
 			continue
