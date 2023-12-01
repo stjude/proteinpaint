@@ -195,7 +195,7 @@ function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: 
 
 	dataTypeTab.contentHolder
 		.append('div')
-		.style('margin', '10px 0px 0px 10px')
+		.style('padding', '15px 0px 0px 10px')
 		.style('opacity', 0.75)
 		.text(`Provide ${dataTypeTab.label} data in tab delimited format with the following columns:`)
 		.append('span')
@@ -223,9 +223,9 @@ function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
 
 				tab.contentHolder
 					.append('div')
-					.style('padding', '0px 0px 5px 10px')
+					.style('padding', '0px 0px 5px 15px')
 					.style('opacity', 0.65)
-					.text(`Select a file from your computer`)
+					.text(`Select a local file`)
 				makeFileUpload(tab, obj, key)
 
 				delete tab.callback
