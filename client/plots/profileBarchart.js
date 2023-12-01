@@ -85,11 +85,11 @@ class profileBarchart extends profilePlot {
 		const width = 1400
 		const height = this.rowCount * 32 + 480
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
-		this.svg
-			.append('text')
-			.attr('transform', `translate(50, 30)`)
-			.attr('font-weight', 'bold')
-			.text(`Objective and Subjective Score-Based Results for the ${this.component} Component by Module and Domain`)
+		const title =
+			this.state.dslabel == 'ProfileAbbrev'
+				? `Score-based Results for the ${this.component} Component by Module and Domain Compared with End-User Impression`
+				: `Objective and Subjective Score-Based Results for the ${this.component} Component by Module and Domain`
+		this.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
 		const svg = this.svg
 		const color = this.configComponent.component.color
 		this.svg
