@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.34.0
 
 Features:
 - Disco plot UI now allows users to upload tab delimited data
