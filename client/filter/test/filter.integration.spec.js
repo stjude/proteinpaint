@@ -99,7 +99,7 @@ async function addDemographicSexFilter(opts, btn) {
 	const sexPill = termdivSex.find(elem => elem.__data__.id === 'sex')
 	sexPill.querySelectorAll('.termlabel')[0].click()
 
-	const detectSelect = await detectLst({ elem: tipd, selector: "input[name='select']", count: 1, matchAs: '>=' })
+	const detectSelect = await detectLst({ elem: tipd, selector: "input[type='checkbox']", count: 1, matchAs: '>=' })
 	detectSelect[0].click()
 	const applyBtn = await detectOne({ elem: tipd, selector: '.sjpp_apply_btn' })
 	applyBtn.click()
@@ -122,7 +122,7 @@ function normalizeActiveData(opts) {
 
 function getHighlightedRowCount(menuRows, action) {
 	return menuRows
-		.filter(function(d) {
+		.filter(function (d) {
 			return this.style.backgroundColor != ''
 		})
 		.size()
@@ -226,7 +226,7 @@ tape('empty filter: visible controls', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_add_transformer')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display === 'none'
 			})
 			.size(),
@@ -258,7 +258,7 @@ tape('1-entry root filter: visible controls', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_add_transformer')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display != 'none'
 			})
 			.size(),
@@ -268,7 +268,7 @@ tape('1-entry root filter: visible controls', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -329,7 +329,7 @@ tape('2-entry root filter: visible controls', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_join_label')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -339,7 +339,7 @@ tape('2-entry root filter: visible controls', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -349,7 +349,7 @@ tape('2-entry root filter: visible controls', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_add_transformer')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display != 'none'
 			})
 			.size(),
@@ -359,7 +359,7 @@ tape('2-entry root filter: visible controls', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_add_transformer')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display != 'none'
 			})
 			.node().innerHTML,
@@ -370,10 +370,7 @@ tape('2-entry root filter: visible controls', async test => {
 	/*********************
 		pill menu elements
 	**********************/
-	opts.holder
-		.select('.sja_pill_wrapper')
-		.node()
-		.click()
+	opts.holder.select('.sja_pill_wrapper').node().click()
 
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	test.equal(editOpt.style('display'), 'table-row', 'should have a pill Edit option')
@@ -486,7 +483,7 @@ tape('add-transformer button interaction, 1-pill', async test => {
 	await opts.filter.main(opts.filterData)
 	const adder = opts.holder
 		.selectAll('.sja_filter_add_transformer')
-		.filter(function() {
+		.filter(function () {
 			return this.style.display !== 'none'
 		})
 		.node()
@@ -531,7 +528,7 @@ tape('add-transformer button interaction, 2-pill', async test => {
 	await opts.filter.main(opts.filterData)
 	const adder = opts.holder
 		.selectAll('.sja_filter_add_transformer')
-		.filter(function() {
+		.filter(function () {
 			return this.style.display !== 'none'
 		})
 		.node()
@@ -582,7 +579,7 @@ tape('add-transformer button interaction, NEGATED 2-pill', async test => {
 	await opts.filter.main(opts.filterData)
 	const adder = opts.holder
 		.selectAll('.sja_filter_add_transformer')
-		.filter(function() {
+		.filter(function () {
 			return this.style.display !== 'none'
 		})
 		.node()
@@ -631,10 +628,7 @@ tape('pill Edit interaction', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	opts.holder
-		.select('.sja_pill_wrapper')
-		.node()
-		.click()
+	opts.holder.select('.sja_pill_wrapper').node().click()
 	await sleep(50)
 
 	const tipd = opts.filter.Inner.dom.controlsTip.d
@@ -673,10 +667,7 @@ tape('pill Replace interaction', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	opts.holder
-		.select('.sja_pill_wrapper')
-		.node()
-		.click()
+	opts.holder.select('.sja_pill_wrapper').node().click()
 	await sleep(50)
 
 	const tipd = opts.filter.Inner.dom.controlsTip.d
@@ -779,10 +770,7 @@ tape('pill Negate interaction', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	opts.holder
-		.select('.sja_pill_wrapper')
-		.node()
-		.click()
+	opts.holder.select('.sja_pill_wrapper').node().click()
 	await sleep(50)
 
 	const tipd = opts.filter.Inner.dom.controlsTip.d
@@ -815,10 +803,7 @@ tape('pill Remove interaction', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	opts.holder
-		.select('.sja_pill_wrapper')
-		.node()
-		.click()
+	opts.holder.select('.sja_pill_wrapper').node().click()
 	await sleep(50)
 
 	const tipd = opts.filter.Inner.dom.controlsTip.d
@@ -925,7 +910,7 @@ tape('group Negate interaction', async test => {
 	test.equal(
 		opts.holder
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display === 'none'
 			})
 			.size(),
@@ -1059,7 +1044,7 @@ tape('nested filters', async test => {
 		d3s
 			.select(grpDivsA[0])
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -1070,7 +1055,7 @@ tape('nested filters', async test => {
 		d3s
 			.select(grpDivsA[1])
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -1105,7 +1090,7 @@ tape('nested filters', async test => {
 		opts.holder
 			.selectAll('.sja_filter_item')
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -1133,7 +1118,7 @@ tape('nested filters', async test => {
 		d3s
 			.select(grpDivsB[0])
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -1144,7 +1129,7 @@ tape('nested filters', async test => {
 		d3s
 			.select(grpDivsB[1])
 			.selectAll('.sja_filter_paren_open, .sja_filter_paren_close')
-			.filter(function() {
+			.filter(function () {
 				return this.style.display !== 'none'
 			})
 			.size(),
@@ -1188,7 +1173,7 @@ tape('hidden filters', async test => {
 
 	const adder = opts.holder
 		.selectAll('.sja_filter_add_transformer')
-		.filter(function(d) {
+		.filter(function (d) {
 			return this.style.display !== 'none' && d == 'and'
 		})
 		.node()
@@ -1213,7 +1198,7 @@ tape('hidden filters', async test => {
 
 	const adderOr = opts.holder
 		.selectAll('.sja_filter_add_transformer')
-		.filter(function(d) {
+		.filter(function (d) {
 			return this.style.display !== 'none' && d == 'or'
 		})
 		.node()
@@ -1265,8 +1250,7 @@ tape('renderAs: htmlSelect', async test => {
 					keys: ['ABC', 'XYZ'],
 					label: 'Combined ABC+XYZ',
 					shortLabel: 'ABC+XYZ',
-					note:
-						'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
+					note: 'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
 				}
 			]
 		}
@@ -1317,7 +1301,7 @@ tape('renderAs: htmlSelect', async test => {
 	await opts.filter.main(opts.filterData)
 	test.equal(
 		rootAndOr
-			.filter(function() {
+			.filter(function () {
 				return this.style.display === 'none'
 			})
 			.size(),
@@ -1835,7 +1819,10 @@ tape('filterPromptInit()', async test => {
 	const backBtn = await detectOne({ elem: filter.dom.treeTip.dnode, selector: 'span' })
 	test.ok(backBtn.innerText.includes('Back to variable selection'), `Should display back button`)
 	const inputs = await detectGte({ elem: filter.dom.treeTip.dnode, selector: 'input', count: 3 })
-	test.ok(inputs.find(i => i.id == 'checkboxHeader'), `Should display 'Check/Uncheck All' checkbox`)
+	test.ok(
+		inputs.find(i => i.id == 'checkboxHeader'),
+		`Should display 'Check/Uncheck All' checkbox`
+	)
 	test.ok(inputs.length > 2, `Should show checkbox for at least one variable`)
 
 	backBtn.click()
