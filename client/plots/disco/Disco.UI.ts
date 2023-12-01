@@ -76,8 +76,8 @@ export function init_discoplotUI(
 		.style('padding', '10px 10px 15px 20px')
 		.style('width', '65vw')
 		.style('line-height', '1.5em')
-		.text(
-			'The plot accepts multiple data types. Input fields for each data type are available in the tabs below. Upload a file or paste data in at least one data type tab and click "Create Disco Plot".'
+		.html(
+			'<p>The plot accepts multiple data types. Input fields for each data type are available in the tabs below. Upload a file or paste data in at least one data type tab and click "Create Disco Plot". <a href="https://proteinpaint.stjude.org/ppdemo/hg38/disco/discoDemoData.tar.gz" target="Demo data">Download example files</a></p>'
 		)
 
 	const dataTypeTabs_div = wrapper.append('div').style('margin-left', '2vw')
@@ -208,7 +208,8 @@ function mainTabCallback(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>, listHTML: 
 }
 
 /**
- * Creates the different input tabs within the main tabs.
+ * Creates the different input tabs within the data type tabs. Users are able to upload a file or paste data.
+ * TODO: add option to provide a file path from server or url
  * @param dataTypeTab
  * @param obj
  */
@@ -292,7 +293,8 @@ function makeDataInputTabs(dataTypeTab: Tab, obj: Partial<DiscoUIArgs>) {
 // }
 
 /**
- * Renders the select file div and callback.
+ * Renders the select file div. Callback captures file text as a string.
+ * ?TODO: maybe allow other file types and detect the delimiter (uiutils.detectDelimiter)
  * @param tab
  * @param obj
  * @param key
@@ -350,6 +352,7 @@ function submitButton(
 			} else {
 				const genomeObj = genomes[obj.genome!.options[obj.genome!.selectedIndex].text]
 				wrapper.remove()
+				/** launch() validates data and returns errors to the browser */
 				launch(obj.data as DiscoPlotArgs, genomeObj, holder)
 				backButton(holder, genomes)
 			}
