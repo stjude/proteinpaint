@@ -9,6 +9,7 @@ Fixes:
 - Allow ssm url to be supplied from both snvindel query and termdb, so termdb-less clinvar is able to link to ClinVar portal
 - Hardcoded normalization methods replaced with values encoded in Hi-C files.
 - Disco plot now detects and reports data issues from user submitted data.
+- Gdc bam slice download handles case with no ssm; bam table changes to radio to force single-selection; table.js bug fix to use unique input name
 
 
 ## 2.33.1
