@@ -74,7 +74,11 @@ export function init_discoplotUI(
 		.append('div')
 		.style('opacity', 0.75)
 		.style('padding', '10px 10px 15px 20px')
-		.text('The plot accepts multiple data types. Paste data for SNV Indel, SV, and CNV in each tab and submit.')
+		.style('width', '65vw')
+		.style('line-height', '1.5em')
+		.text(
+			'The plot accepts multiple data types. Input fields for each data type are available in the tabs below. Upload a file or paste data in at least one data type tab and click "Create Disco Plot".'
+		)
 
 	const dataTypeTabs_div = wrapper.append('div').style('margin-left', '2vw')
 	makeDataTypeTabs(dataTypeTabs_div, obj)
