@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix the processing of hierCluster overrides

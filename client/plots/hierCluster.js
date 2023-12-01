@@ -456,12 +456,22 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
 	const config = await getMatrixPlotConfig(opts, app)
+	config.settings.hierCluster = {
+		// TODO: may adjust the default group name based on automatically detected term types
+		// otherwise, should define it via opts or overrides
+		termGroupName: 'Gene Expression',
+		clusterMethod: 'average',
+		zScoreCap: 5,
+		xDendrogramHeight: 100,
+		yDendrogramHeight: 200,
+		colors: []
+	}
 	const overrides = app.vocabApi.termdbConfig.hierCluster || {}
 	copyMerge(config.settings.hierCluster, overrides.settings)
 
 	config.settings.matrix.collabelpos = 'top'
-	const termGroupName = config.settings.hierCluster?.termGroupName || 'Gene Expression'
 
+	const termGroupName = config.settings.hierCluster.termGroupName
 	// TODO: should compose the term group in launchGdcHierCluster.js, since this handling is customized to only that dataset?
 	// the opts{} object should be standard, should pre-process the opts outside of this getPlotConfig()
 	if (!config.termgroups.find(g => g.name == termGroupName)) {
@@ -501,18 +511,5 @@ export async function getPlotConfig(opts = {}, app) {
 	}
 
 	config.settings.matrix.maxSample = 100000
-	config.settings.hierCluster = Object.assign(
-		{
-			// TODO: may adjust the default grour name based on the detected term types
-			termGroupName,
-			clusterMethod: 'average',
-			zScoreCap: 5,
-			xDendrogramHeight: 100,
-			yDendrogramHeight: 200,
-			colors: []
-		},
-		config.settings.hierCluster || {}
-	)
-
 	return config
 }
