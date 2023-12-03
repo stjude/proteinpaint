@@ -2060,6 +2060,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 	/*
 	q{}
 		filter0, optional
+	this is a sample getter, so it must return samples and files for each sample
 	*/
 	ds.queries.singleCell.samples.get = async q => {
 		const filters = {
@@ -2080,10 +2081,12 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			size: 100,
 			fields: [
 				'id',
+				'cases.submitter_id',
 				'cases.project.project_id', // for display only
-				'cases.submitter_id', // used when listing all cases & files
-				'cases.samples.sample_type'
-				// may add diagnosis and primary site
+				'cases.samples.sample_type',
+				'cases.samples.submitter_id',
+				'cases.primary_site',
+				'cases.disease_type'
 			].join(',')
 		}
 
@@ -2101,35 +2104,56 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
-		// api return is by file, getter return is by case
-		const case2files = new Map() // k: case submitter id, v: list of scrna tsv files
+		// api return is by file, must convert to file by case
+		//console.log(JSON.stringify(re.data.hits[0],null,2))
+
+		const case2files = new Map() // k: case submitter id, v: { project, disease, files:[{fileId, sampletype}]}
 
 		for (const h of re.data.hits) {
 			/*
 			{
-			  id: 'bb4126d8-1c68-4309-820e-8b8c2520688c',
-			  cases: [
-				{ submitter_id: 'C3L-00359', project: {project_id}, samples:[{sample_type}]  }
-			  ]
-			}
+  "id": "d9bc1a51-3d27-4b98-b133-7c17067e7cb5",
+  "cases": [
+    {
+      "primary_site": "Kidney",
+      "disease_type": "Adenomas and Adenocarcinomas",
+      "project": {
+        "project_id": "CPTAC-3"
+      },
+      "samples": [
+        {
+          "submitter_id": "C3L-00606-01",
+          "sample_type": "Primary Tumor"
+        }
+      ]
+    }
+  ]
+}
 			*/
 
+			if (!h.id) throw 'h.id (fileId) missing'
+			const fileId = h.id
 			const c = h.cases?.[0]
 			if (!c) throw 'h.cases[0] missing'
-			if (!case2files.has(c.submitter_id)) case2files.set(c.submitter_id, [])
-
-			case2files.get(c.submitter_id).push({
-				fileId: h.id,
-				project_id: c.project.project_id,
-				samples: c.samples // should be one?
+			const caseSubmitterId = c.submitter_id
+			if (!case2files.has(caseSubmitterId)) {
+				case2files.set(caseSubmitterId, {
+					sample: caseSubmitterId, // use "sample" but not case as generic property, which is typed
+					primarySite: c.primary_site,
+					diseaseType: c.disease_type,
+					projectId: c.project?.project_id,
+					files: []
+				})
+			}
+			if (!c.samples?.[0]) throw 'h.cases[0].samples[0] missing'
+			case2files.get(caseSubmitterId).files.push({
+				fileId,
+				sampleName: c.samples[0].submitter_id,
+				sampleType: c.samples[0].sample_type
 			})
 		}
 
-		const cases = [] // flatten map to array and return
-		for (const [c, a] of case2files) {
-			cases.push({ name: c, files: a })
-		}
-		return cases
+		return [...case2files.values()]
 	}
 }
 
