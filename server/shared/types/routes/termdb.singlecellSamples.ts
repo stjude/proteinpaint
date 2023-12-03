@@ -1,5 +1,7 @@
 export type Sample = {
+	/** Sample name, required */
 	sample: string
+	/** optional list of sc data files available for this sample, gdc-specific */
 	files?: any
 }
 

@@ -17,8 +17,14 @@ may later refactor into a mass app, to support same purpose from non-gdc dataset
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
 
-// list of columns to show in MAF file table
-const columns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Sample type' }]
+// list of columns to show in file table
+const columns = [
+	{ label: 'Case' },
+	{ label: 'Project' },
+	{ label: 'Primary Site' },
+	{ label: 'Disease Type' },
+	{ label: 'Sample Type' }
+]
 
 export async function gdcSinglecellUi({ holder, filter0, callbackOnRender, debugmode = false }) {
 	// public api obj to be returned
@@ -74,7 +80,13 @@ async function getFilesAndShowTable(obj) {
 	const rowid2gdcfileid = []
 	for (const sample of result.samples) {
 		for (const f of sample.files) {
-			const row = [{ value: sample.name }, { value: f.project_id }, { value: f.samples[0].sample_type }]
+			const row = [
+				{ value: sample.sample },
+				{ value: sample.projectId },
+				{ value: sample.primarySite },
+				{ value: sample.diseaseType },
+				{ value: f.sampleType }
+			]
 			rows.push(row)
 			rowid2gdcfileid.push(f.fileId)
 		}

@@ -93,7 +93,7 @@ function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
 		samples.push({ sample: ds.cohort.termdb.q.id2sampleName(id) })
 	}
 	if (samples.length == 0) throw 'no sample with sc data'
-	// getter returns array of {name:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
+	// getter returns array of {sample:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
 	S.get = () => samples
 }
 
