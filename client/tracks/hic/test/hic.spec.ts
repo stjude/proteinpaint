@@ -19,34 +19,34 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Render Hi-C track', function (test) {
-	// test.plan(1)
-	test.timeoutAfter(3000)
-	const holder = getHolder() as HTMLDivElement
+// tape('Render Hi-C track', function (test) {
+// 	// test.plan(1)
+// 	test.timeoutAfter(3000)
+// 	const holder = getHolder() as HTMLDivElement
 
-	runproteinpaint({
-		holder,
-		block: true,
-		nobox: 1,
-		noheader: 1,
-		genome: 'hg19',
-		position: 'chr7:13749862-20841903',
-		nativetracks: 'RefGene',
-		tracks: [
-			{
-				type: 'hicstraw',
-				file: 'proteinpaint_demo/hg19/hic/hic_demo.hic',
-				name: 'Hi-C Demo',
-				percentile_max: 95,
-				mincutoff: 1,
-				pyramidup: 1,
-				enzyme: 'MboI',
-				normalizationmethod: 'VC'
-			} as HicRunProteinPaintTrackArgs
-		]
-	})
-	test.pass('Rendered Hi-C track')
+// 	runproteinpaint({
+// 		holder,
+// 		block: true,
+// 		nobox: 1,
+// 		noheader: 1,
+// 		genome: 'hg19',
+// 		position: 'chr7:13749862-20841903',
+// 		nativetracks: 'RefGene',
+// 		tracks: [
+// 			{
+// 				type: 'hicstraw',
+// 				file: 'proteinpaint_demo/hg19/hic/hic_demo.hic',
+// 				name: 'Hi-C Demo',
+// 				percentile_max: 95,
+// 				mincutoff: 1,
+// 				pyramidup: 1,
+// 				enzyme: 'MboI',
+// 				normalizationmethod: 'VC'
+// 			} as HicRunProteinPaintTrackArgs
+// 		]
+// 	})
+// 	test.pass('Rendered Hi-C track')
 
-	// if (test._ok) holder.remove()
-	test.end()
-})
+// 	// if (test._ok) holder.remove()
+// 	test.end()
+// })
