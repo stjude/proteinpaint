@@ -180,6 +180,8 @@ class profileRadarFacility extends profilePlot {
 			.append('circle')
 			.attr('r', 4)
 			.attr('fill', color)
+			.on('click', event => this.onMouseOver(event))
+
 		data.push([x, y])
 		circle.datum({ module: item.module, percentage })
 	}

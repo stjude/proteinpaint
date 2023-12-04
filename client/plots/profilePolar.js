@@ -122,6 +122,7 @@ class profilePolar extends profilePlot {
 						endAngle: (i + 1) * angle
 					})
 				)
+				.on('click', event => this.onMouseOver(event))
 
 			i++
 		}
