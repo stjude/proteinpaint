@@ -1,5 +1,4 @@
 import { BaseTrackArgs } from './tracks.ts'
-import { Normalization } from '#shared/types/routes/hicstat.ts'
 
 type SharedArgs = {
 	/** HiC file path from tp/ */
@@ -23,7 +22,7 @@ export type HicRunProteinPaintTrackArgs = BaseTrackArgs &
 		pyramidup: number | boolean
 		enzyme: RestrictionEnzyme
 		/** Normalization method for the queried data */
-		normalizationmethod: Normalization
+		normalizationmethod: string[]
 	}
 
 export type HicstrawArgs = SharedArgs & {
@@ -31,7 +30,7 @@ export type HicstrawArgs = SharedArgs & {
 	pos1: string
 	pos2: string
 	/** Normalization method for the queried data */
-	nmeth: Normalization
+	nmeth: string[]
 	resolution: number
 	isfrag?: boolean
 }
