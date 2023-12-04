@@ -7,6 +7,8 @@ import * as common from '#shared/common'
 import blocklazyload from '#src/block.lazyload'
 import { HicstrawArgs } from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
+import { ExecFileSyncOptionsWithBufferEncoding } from 'child_process'
+// import { dofetch3 } from '#src/client'
 
 /*
 
@@ -48,22 +50,22 @@ hic.atdev controls dev-shortings
 const atdev_chrnum = 8
 
 const hardcode_wholegenomechrlabwidth = 100
-
-const defaultnmeth = 'NONE' // default normalization method
-
-const initialbinnum_detail = 20 // when clicking on chrpairview, to set a initial view range for detail view, the number of bins to cover at the clicked point
-
-const minimumbinnum_bp = 200 // at bp resolution, minimum bin number
-
-const mincanvassize_detail = 500 // mininum canvas w/h, detail view
-
-const minimumbinnum_frag = 100 // minimum bin num for fragment
-
-const default_svpointspan = 500000 // span at breakpoint when clicking an sv from x/y view to show horizontal view
-
-const default_hicstrawmaxvperc = 5 // default max value percentage for hicstraw track
-
-const default_subpanelpxwidth = 600 // default px width of subpanels
+/** default normalization method */
+const defaultnmeth = 'NONE'
+/** when clicking on chrpairview, to set a initial view range for detail view, the number of bins to cover at the clicked point */
+const initialbinnum_detail = 20
+/** at bp resolution, minimum bin number */
+const minimumbinnum_bp = 200
+/** mininum canvas w/h, detail view */
+const mincanvassize_detail = 500
+/** minimum bin num for fragment */
+const minimumbinnum_frag = 100
+/** span at breakpoint when clicking an sv from x/y view to show horizontal view */
+const default_svpointspan = 500000
+/** default max value percentage for hicstraw track */
+const default_hicstrawmaxvperc = 5
+/** default px width of subpanels */
+const default_subpanelpxwidth = 600
 
 const subpanel_bordercolor = 'rgba(200,0,0,.1)'
 
@@ -83,29 +85,132 @@ type Mutation = {
 	reads2: string | number
 }
 
-export function hicparsefile(hic: any, debugmode: boolean) {
-	/*
-	parse input file, initiate view
-	hic{}
-	.file
+type BaseHic = {
+	holder: Selection<HTMLDivElement, any, any, any> //Req && DOM
+	error: (f: string | string[]) => void
+}
+
+type HicWholeGenomSvg = {
+	wholegenome: Partial<{
+		binpx: number
+		bpmaxv: number
+		layer_map: any //dom
+		layer_sv: any //dom
+		lead2follow?: any //Map<string, Map<string, { x: number, y: number }>>
+		nmeth: string
+		/** Menu */
+		pica_x: any
+		/** Menu */
+		pica_y: any
+		resolution: number
+		svg: any //dom
+	}>
+}
+
+/** Scoped for file! May move to type later.
+ * Will break type down in server response data, dom elements, and client state during refactor
+ */
+type Hic = {
+	atdev: boolean
+	bpresolution: number[]
+	c: {
+		td?: any //dom
+	}
+	chrlst: string[]
+	chrorder: string[]
+	chrpairview: {
+		data: any
+		nmeth: string
+	}
+	chrpairviewbutton: Selection<HTMLButtonElement, any, any, any>
+	detailview: {
+		bbmargin: number
+		canvas?: any //dom
+		frag?: {
+			xid2coord: any
+			xstartfrag: any
+			xstopfrag: any
+			yid2coord: any
+			ystartfrag: any
+			ystopfrag: any
+		}
+		nmeth: string
+		xb: {
+			leftheadw: number
+			rightheadw: number
+			lpad: number
+			rpad: number
+		}
+		yb: {
+			leftheadw: number
+			rightheadw: number
+			lpad: number
+			rpad: number
+		}
+	}
+	enzyme: string
+	enzymefile: string
+	errList: string[]
+	file: string
+	fragresolution: number[]
+	genome: {
+		chrlookup: any
+		hicenzymefragment: any
+		majorchrorder: string[]
+	}
+	hostURL: string
+	inwholegenome: boolean
+	inputbpmaxv: Selection<HTMLInputElement, any, any, any> //dom
+	inchrpair: boolean
+	indetail: boolean
+	inlineview: boolean
+	/** TODO: define this somewhere */
+	jwt: any
+	name: string
+	nmethselect: any //dom
+	nochr: boolean
+	normalization: string[]
+	ressays: any //dom
+	/** Eventually there should be Menu type for client */
+	sv: {
+		file: string
+		header: string
+		items: any
+	}
+	tip: any
+	tklst: any
+	url: string
+	version: string
+	wholegenomebutton: Selection<HTMLButtonElement, any, any, any> //dom
+	x: {
+		td?: any //dom
+	}
+	y: {
+		td?: any //dom
+	}
+}
+
+/**
+ * Parse input file and initiate view.
+ * @param hic 
+ * 	.file
 	.url
 	.genome
 	.hostURL
 	.holder
-
-	debugmode passed from app, server state, if true, attach to window.hic
-	*/
-
+ * @param debugmode debugmode passed from app, server state, if true, attach to window.hic
+ */
+export function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
 	if (debugmode) {
 		window['hic'] = hic
 	}
 
 	{
-		const div = hic.holder.append('div')
+		const div = hic.holder!.append('div')
 		hic.errList = [] as string[]
 		hic.error = async (err: string | string[]) => {
-			if (err && typeof err == 'string') hic.errList.push(err)
-			showErrorsWithCounter(hic.errList, div)
+			if (err && typeof err == 'string') hic.errList!.push(err)
+			showErrorsWithCounter(hic.errList!, div)
 			hic.errList = [] //Remove errors after displaying
 		}
 	}
@@ -134,9 +239,9 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 	hic.tip = new client.Menu()
 
 	if (hic.enzyme) {
-		if (hic.genome.hicenzymefragment) {
+		if (hic.genome!.hicenzymefragment) {
 			let frag: any = null
-			for (const f of hic.genome.hicenzymefragment) {
+			for (const f of hic.genome!.hicenzymefragment) {
 				if (f.enzyme == hic.enzyme) {
 					frag = f
 					break
@@ -192,7 +297,7 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 
 	// controls
 
-	const table = hic.holder.append('table').style('border-spacing', '3px')
+	const table = hic.holder!.append('table').style('border-spacing', '3px')
 	const tr1 = table.append('tr')
 	const tr2 = table.append('tr')
 
@@ -249,10 +354,8 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 	// 2. stat the hic file
 
 	Promise.resolve()
-
 		.then(() => {
-			if (!hic.sv) return
-			if (!hic.sv.file) return
+			if (!hic.sv || !hic.sv.file) return
 			return fetch(
 				new Request(hic.hostURL + '/textfile', {
 					method: 'POST',
@@ -265,8 +368,8 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 				.then(data => {
 					const [err, header, items] = parseSV(data.text)
 					if (err) throw { message: 'Error parsing SV: ' + err }
-					hic.sv.header = header
-					hic.sv.items = items
+					hic.sv!.header = header
+					hic.sv!.items = items
 					return
 				})
 		})
@@ -303,20 +406,23 @@ export function hicparsefile(hic: any, debugmode: boolean) {
 			init_wholegenome(hic)
 		})
 		.catch(err => {
-			hic.errList.push(err.message || err)
+			hic.errList!.push(err.message || err)
 			if (err.stack) {
 				console.log(err.stack)
 			}
 		})
 		.then(() => {
-			if (hic.errList.length) hic.error(hic.errList)
+			if (hic.errList!.length) hic.error(hic.errList!)
 		})
 }
 
-export function hicparsestat(hic: any, j: any) {
-	/*
-	output by read_hic_header.py
-	*/
+/**
+ * output by read_hic_header.py
+ * @param hic
+ * @param j
+ * @returns
+ */
+export function hicparsestat(hic: BaseHic & Partial<Hic>, j: any) {
 	if (!j) return 'cannot stat hic file'
 	hic.normalization = j.normalization
 
@@ -342,11 +448,11 @@ export function hicparsestat(hic: any, j: any) {
 	if (nochrcount > 0) {
 		hic.nochr = true
 		// prepend 'chr' to names in chrorder array
-		for (let i = 0; i < hic.chrorder.length; i++) hic.chrorder[i] = 'chr' + hic.chrorder[i]
+		for (let i = 0; i < hic.chrorder!.length; i++) hic.chrorder![i] = 'chr' + hic.chrorder![i]
 	}
 	// as a way of skipping chrM
 	hic.chrlst = []
-	for (const chr of hic.genome.majorchrorder) {
+	for (const chr of hic.genome!.majorchrorder) {
 		const c2 = hic.nochr ? chr.replace('chr', '') : chr
 		if (chrlst.indexOf(c2) != -1) {
 			hic.chrlst.push(chr)
@@ -354,13 +460,12 @@ export function hicparsestat(hic: any, j: any) {
 	}
 }
 
-/////////// __whole genome
-
-async function init_wholegenome(hic: any) {
-	/*
-	launch wholegenome
-	*/
-
+/**
+ * Launches the hic whole genome view as an app.
+ * @param hic
+ * @returns
+ */
+async function init_wholegenome(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg) {
 	const checker_fill = '#DEF3FA'
 
 	if (!hic.y) {
@@ -372,17 +477,17 @@ async function init_wholegenome(hic: any) {
 	hic.c = {}
 	const table = hic.holder.append('table')
 	const tr1 = table.append('tr')
-	hic.c.td = tr1.append('td').style('vertical-align', 'top')
-	hic.y.td = tr1.append('td').style('vertical-align', 'top')
+	hic.c!.td = tr1.append('td').style('vertical-align', 'top')
+	hic.y!.td = tr1.append('td').style('vertical-align', 'top')
 	const tr2 = table.append('tr')
-	hic.x.td = tr2.append('td')
+	hic.x!.td = tr2.append('td')
 	tr2.append('td')
 
 	/*
 	launch wholegenome
 	at lowest resolution
 	*/
-	const resolution = hic.bpresolution[0]
+	const resolution = hic.bpresolution![0]
 
 	hic.ressays.text(common.bplen(resolution) + ' bp')
 
@@ -390,37 +495,37 @@ async function init_wholegenome(hic: any) {
 	const binpx = 1
 
 	// for each chr, a row as canvas container
-	hic.wholegenome.svg = hic.c.td.append('svg')
-	hic.wholegenome.binpx = binpx
-	hic.wholegenome.resolution = resolution
+	hic.wholegenome!.svg = hic.c!.td.append('svg')
+	hic.wholegenome!.binpx = binpx
+	hic.wholegenome!.resolution = resolution
 
 	const fontsize = 15 // chr labels
 	const borderwidth = 1
 	const spacecolor = '#ccc'
 
 	// heatmap layer underneath sv
-	const layer_map = hic.wholegenome.svg
-		.append('g')
+	const layer_map = hic
+		.wholegenome!.svg.append('g')
 		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-	hic.wholegenome.layer_map = layer_map
-	const layer_sv = hic.wholegenome.svg
-		.append('g')
+	hic.wholegenome!.layer_map = layer_map
+	const layer_sv = hic
+		.wholegenome!.svg.append('g')
 		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-	hic.wholegenome.layer_sv = layer_sv
+	hic.wholegenome!.layer_sv = layer_sv
 
 	let checker_row = true
 
 	const chr2px = {} // px width for each chr
-	let totalpx = hic.chrlst.length
-	for (const chr of hic.chrlst) {
-		const w = Math.ceil(hic.genome.chrlookup[chr.toUpperCase()].len / resolution) * binpx
+	let totalpx = hic.chrlst!.length
+	for (const chr of hic.chrlst!) {
+		const w = Math.ceil(hic.genome!.chrlookup![chr.toUpperCase()].len / resolution) * binpx
 		chr2px[chr] = w
 		totalpx += w
 	}
 
 	let xoff = 0
 	// column labels
-	for (const chr of hic.chrlst) {
+	for (const chr of hic.chrlst!) {
 		const chrw = chr2px[chr]
 		if (checker_row) {
 			layer_map
@@ -456,7 +561,7 @@ async function init_wholegenome(hic: any) {
 	checker_row = true
 
 	// row labels
-	for (const chr of hic.chrlst) {
+	for (const chr of hic.chrlst!) {
 		const chrh = chr2px[chr]
 		if (checker_row) {
 			layer_map
@@ -489,19 +594,19 @@ async function init_wholegenome(hic: any) {
 		yoff += borderwidth
 	}
 
-	const manychr = hic.atdev ? atdev_chrnum : hic.chrlst.length
+	const manychr = hic.atdev ? atdev_chrnum : hic.chrlst!.length
 
 	xoff = 0
 
 	for (let i = 0; i < manychr; i++) {
-		const lead = hic.chrlst[i]
-		hic.wholegenome.lead2follow.set(lead, new Map())
+		const lead = hic.chrlst![i]
+		hic.wholegenome!.lead2follow!.set(lead, new Map())
 
 		yoff = 0
 
 		for (let j = 0; j <= i; j++) {
-			const follow = hic.chrlst[j]
-			hic.wholegenome.lead2follow.get(lead).set(follow, {
+			const follow = hic.chrlst![j]
+			hic.wholegenome!.lead2follow!.get(lead).set(follow, {
 				x: xoff,
 				y: yoff
 			})
@@ -515,7 +620,7 @@ async function init_wholegenome(hic: any) {
 		makewholegenome_sv(hic)
 	}
 
-	hic.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
+	hic.wholegenome!.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
 
 	/* after the ui is created, load data for each chr pair,
 	await on each request to finish to avoid server lockup
@@ -524,27 +629,29 @@ async function init_wholegenome(hic: any) {
 	do not flood ui with such errors, to tolerate, collect all errors and show in one place
 	*/
 	for (let i = 0; i < manychr; i++) {
-		const lead = hic.chrlst[i]
+		const lead = hic.chrlst![i]
 		for (let j = 0; j <= i; j++) {
-			const follow = hic.chrlst[j]
+			const follow = hic.chrlst![j]
 			try {
 				await getdata_leadfollow(hic, lead, follow)
 			} catch (e: any) {
-				hic.errList.push(e.message || e)
+				hic.errList!.push(e.message || e)
 			}
 		}
 	}
-	if (hic.errList.length) hic.error(hic.errList)
+	if (hic.errList!.length) hic.error(hic.errList!)
 
 	return
 }
-
+/**
+ * wholegenome for a pair of chr (lead - follow)
+ * lead is on x
+ * follow is on y, lead & follow could be same
+ * @param hic
+ * @param lead
+ * @param follow
+ */
 function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any) {
-	/*
-	wholegenome for a pair of chr (lead - follow)
-	lead is on x
-	follow is on y, lead & follow could be same
-	*/
 	const binpx = hic.wholegenome.binpx
 	const obj = hic.wholegenome.lead2follow.get(lead).get(follow)
 
@@ -798,13 +905,16 @@ function click_sv(hic: any, item: any): void {
 
 /////////// __whole genome ends
 
+/**
+ * by clicking a pair of chr on whole genome view
+ * hide the whole genome view
+ * show view of entire chromosome pair
+ * @param hic
+ * @param chrx
+ * @param chry
+ * @returns
+ */
 function init_chrpair(hic: any, chrx: any, chry: any) {
-	/*
-	by clicking a pair of chr on whole genome view
-	hide the whole genome view
-	show view of entire chromosome pair
-	*/
-
 	nmeth2select(hic, hic.chrpairview.nmeth)
 
 	hic.inwholegenome = false
@@ -1004,10 +1114,13 @@ function getdata_chrpair(hic: any) {
 		})
 }
 
+/**
+ * set normalization method from <select>
+ * @param hic
+ * @param nmeth
+ * @returns
+ */
 async function setnmeth(hic: any, nmeth: string) {
-	/*
-	set normalization method from <select>
-	*/
 	if (hic.inwholegenome) {
 		hic.wholegenome.nmeth = nmeth
 		const manychr = hic.atdev ? 3 : hic.chrlst.length
@@ -1037,10 +1150,13 @@ async function setnmeth(hic: any, nmeth: string) {
 	}
 }
 
+/**
+ * setting max value from user input
+ * @param hic
+ * @param maxv
+ * @returns
+ */
 function setmaxv(hic: any, maxv: any) {
-	/*
-	setting max value from user input
-	*/
 	if (hic.inwholegenome) {
 		// viewing whole genome
 		hic.wholegenome.bpmaxv = maxv
@@ -1087,11 +1203,12 @@ function setmaxv(hic: any, maxv: any) {
 	}
 }
 
+/**
+ * by clicking buttons
+ * only for switching to whole genome view
+ * @param hic
+ */
 function switchview(hic: any) {
-	/*
-	by clicking buttons
-	only for switching to
-	*/
 	if (hic.inwholegenome) {
 		hic.x.td.selectAll('*').remove()
 		hic.y.td.selectAll('*').remove()
@@ -1126,15 +1243,18 @@ function nmeth2select(hic: any, v: any) {
 
 //////////////////// __detail
 
+/**
+ * chrpairview is static
+ * clicking on it to launch detail view
+ * initially, zoom into a pretty large region
+ * so only use bp resolution but not fragment
+ * @param hic
+ * @param chrx
+ * @param chry
+ * @param x
+ * @param y
+ */
 function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
-	/*
-	chrpairview is static
-	clicking on it to launch detail view
-	
-	initially, zoom into a pretty large region
-	so only use bp resolution but not fragment
-	*/
-
 	nmeth2select(hic, hic.detailview.nmeth)
 
 	hic.indetail = true
@@ -1232,7 +1352,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	hic.detailview.canvas = canvas
 	hic.detailview.ctx = ctx
 
-	detailviewupdatehic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
+	detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
 
 	/**
 	global zoom buttons
@@ -1363,7 +1483,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 			canvas.transition().style('left', hic.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
 			return
 		}
-		detailviewupdateregionfromblock(hic)
+		detailViewUpdateRegionFromBlock(hic)
 	}
 	arg.onpanning = xoff => {
 		canvas.style('left', xoff + hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
@@ -1406,7 +1526,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 			canvas.transition().style('top', hic.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
 			return
 		}
-		detailviewupdateregionfromblock(hic)
+		detailViewUpdateRegionFromBlock(hic)
 	}
 	arg2.onpanning = xoff => {
 		canvas.style('top', -xoff + hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px')
@@ -1428,23 +1548,27 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	*/
 }
 
-function detailviewupdateregionfromblock(hic: any) {
+function detailViewUpdateRegionFromBlock(hic: any) {
 	const rx = hic.detailview.xb.rglst[0]
 	const ry = hic.detailview.yb.rglst[0]
-	detailviewupdatehic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop)
+	detailViewUpdateHic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop)
 }
 
-function detailviewupdatehic(hic: any, chrx: any, xstart: any, xstop: any, chry: any, ystart: any, ystop: any) {
-	/*
-	call when coordinate changes
-
-	x/y can span different bp width, in different px width
-
-	calculate resolution, apply the same to both x/y
-
-	detect if to use bp or fragment resolution
-	*/
-
+/**
+ * call when coordinate changes
+ * x/y can span different bp width, in different px width
+ * calculate resolution, apply the same to both x/y
+ * detect if to use bp or fragment resolution
+ * @param hic
+ * @param chrx
+ * @param xstart
+ * @param xstop
+ * @param chry
+ * @param ystart
+ * @param ystop
+ * @returns
+ */
+function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any, chry: any, ystart: any, ystop: any) {
 	hic.detailview.chrx = chrx
 	hic.detailview.chry = chry
 	hic.detailview.xstart = xstart
@@ -1460,6 +1584,41 @@ function detailviewupdatehic(hic: any, chrx: any, xstart: any, xstop: any, chry:
 			break
 		}
 	}
+
+	// if (resolution != null) {
+	// 	// using bp resolution
+	// 	delete hic.detailview.frag
+	// 	return
+	// }
+	// if (!hic.enzyme) {
+	// 	// no enzyme available
+	// 	resolution = hic.bpresolution[hic.bpresolution.length - 1]
+	// 	delete hic.detailview.frag
+	// 	return
+	// }
+
+	// /*
+	// convert x/y view range coordinate to enzyme fragment index
+	// using the span of frag index to figure out resolution (# of fragments)
+	// */
+	// hic.detailview.frag = {}
+
+	// // query fragment index for x
+	// const arg = {
+	// 	getdata: 1,
+	// 	getBED: 1,
+	// 	file: hic.enzymefile,
+	// 	rglst: [{ chr: chrx, start: xstart, stop: xstop }]
+	// }
+	// try {
+	// 	const xfragment = client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
+	// 	console.log(xfragment)
+	// } catch (e: any) {
+	// 	hic.errList.push(e.message || e)
+	// 	if (e.stack) console.log(e.stack)
+	// }
+
+	// if (hic.errList.length) hic.error(hic.errList)
 
 	Promise.resolve()
 		.then(() => {
