@@ -21,9 +21,6 @@ type RequireFileOrUrl<T> = T extends HicstatRequestWithFile | HicstatRequestWith
 
 export type HicstatRequestWithValidation = RequireFileOrUrl<HicstatRequest>
 
-/** Normalization method for the queried data */
-export type Normalization = 'VC' | 'VC_SQRT' | 'KR' | 'NONE'
-
 export type HicstatResponse = {
 	/** Version number pulled from the header. Only hic versions 7-9 are acceptable */
 	version: 7 | 8 | 9
@@ -44,5 +41,5 @@ export type HicstatResponse = {
 	'Base pair-delimited resolutions': number[]
 	/** bins for fragment resolutions */
 	'Fragment-delimited resolutions': number[]
-	normalization: Normalization[]
+	normalization: string[]
 }
