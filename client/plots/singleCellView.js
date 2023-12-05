@@ -98,7 +98,7 @@ class SingleCellView {
 	// or current.state != replcament.state
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.table.selectAll('*').remove
+		this.table.selectAll('*').remove()
 		copyMerge(this.settings, this.config.settings.singleCellView)
 		const sampleData = this.samples.find(s => s.sample == this.state.sample)
 		this.plotsData = {}
