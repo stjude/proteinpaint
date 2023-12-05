@@ -15,8 +15,8 @@ export const maxDotSize = 300
 class SingleCellView {
 	constructor() {
 		this.type = 'singleCellView'
-		this.width = 800
-		this.height = 600
+		this.width = 1000
+		this.height = 1000
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
@@ -87,7 +87,7 @@ class SingleCellView {
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Single Cell Data')
-		this.table = this.mainDiv.append('table')
+		this.table = this.mainDiv.append('table').style('width', '95vw').style('border-collapse', 'collapse')
 	}
 
 	getState(appState) {
@@ -109,6 +109,8 @@ class SingleCellView {
 		copyMerge(this.settings, this.config.settings.singleCellView)
 		const sampleData = this.samples.find(s => s.sample == this.state.sample)
 		this.plotsData = {}
+		this.headerTr = this.table.append('tr')
+		this.tr = this.table.append('tr')
 		for (const file of sampleData.files) {
 			const body = { genome, dslabel, sample: file.fileId }
 			try {
@@ -135,14 +137,20 @@ class SingleCellView {
 		)
 		clusters = Array.from(clusters)
 		const cat2Color = getColors(clusters.length)
-		console.log(clusters)
 		this.initAxes(plot)
-		const svg = this.table
-			.append('tr')
+
+		this.headerTr
 			.append('td')
+			.style('font-weight', 'bold')
+			.style('border', '1px solid #d3d3d3')
+			.style('padding', '5px')
 			.text(plot.name)
-			.append('tr')
+			.style('background-color', '#d3d3d3')
+			.style('fo')
+		const svg = this.tr
 			.append('td')
+			.style('text-align', 'center')
+			.style('border', '1px solid #d3d3d3')
 			.append('svg')
 			.attr('width', this.width)
 			.attr('height', this.height)
