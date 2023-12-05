@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC BAM slicing UI will reject non-BAM files.

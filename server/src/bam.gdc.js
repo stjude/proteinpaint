@@ -36,9 +36,9 @@ gdc_bam_request
 			ifIdIsCase('cases.submitter_id')
 				-> getFileByCaseId('cases.submitter_id')
 					queryApi
-			getFileByFileId('file_id')
+			getBamfileByFileId('file_id')
 				queryApi
-			getFileByFileId('file_name')
+			getBamfileByFileId('file_name')
 				queryApi
 	
 */
@@ -79,6 +79,7 @@ const filesApi = {
 	fields: [
 		'id',
 		'file_size',
+		'data_type',
 		'experimental_strategy',
 		'cases.submitter_id', // used when listing all cases & files
 		'associated_entities.entity_submitter_id', // semi human readable
@@ -181,7 +182,7 @@ async function try_query(id, bamdata, filter0) {
 
 	// is not case id or case uuid
 	// then, test if is file uuid
-	const re = await getFileByFileId(id, 'file_id', filter0)
+	const re = await getBamfileByFileId(id, 'file_id', filter0)
 	if (re.data.hits.length) {
 		// is file uuid, "re" contains the bam file from it (what if this is not indexed?)
 		bamdata.is_file_uuid = true
@@ -190,7 +191,7 @@ async function try_query(id, bamdata, filter0) {
 
 	// is not case id, case uuid, file uuid
 	// last, test if is file id
-	const re2 = await getFileByFileId(id, 'file_name', filter0)
+	const re2 = await getBamfileByFileId(id, 'file_name', filter0)
 	if (re2.data.hits.length) {
 		// is file id
 		bamdata.is_file_id = true
@@ -276,10 +277,17 @@ async function getFileByCaseId(id, caseField, filter0, returnSize) {
 
 /*
 id is not case id or case uuid.
-assuming this id can only be file id or file uuid
+assuming this id can only be file name or file uuid
 query /files/ directly with this
+handles 3 scenarios:
+- id is valid bam file
+	returns re with valid re.data.hits[0]
+- id is valid non-bam file
+	throw error string to be shown on ui
+- id is invalid
+	return re with blank re.data.hits[]
 */
-async function getFileByFileId(id, field, filter0) {
+async function getBamfileByFileId(id, field, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -294,7 +302,16 @@ async function getFileByFileId(id, field, filter0) {
 		filter.content.push(filter0)
 	}
 
-	return await queryApi(filter, filesApi)
+	const re = await queryApi(filter, filesApi)
+	const hit = re.data.hits[0]
+	if (hit) {
+		// matches with a valid file on gdc
+		if (hit.data_type != 'Aligned Reads') throw 'Requested file is not a BAM file.' // indicate this err on ui
+		// matches with a bam file, this is what's needed and proceed to return this
+	} else {
+		// do not match with any file on gdc (invalid input id), return blank array but do not throw as this may be testing what kind of id this is
+	}
+	return re
 }
 
 // helper to query api
@@ -315,7 +332,7 @@ async function queryApi(filters, api, returnSize) {
 	} catch (e) {
 		throw 'invalid JSON from ' + api.end_point
 	}
-	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
+	if (!Array.isArray(re.data?.hits)) throw 'data structure not re.data.hits[]'
 	return re
 }
 
