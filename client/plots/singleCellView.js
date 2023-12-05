@@ -113,7 +113,6 @@ class SingleCellView {
 			const body = { genome, dslabel, sample: file.fileId }
 			try {
 				const result = await dofetch3('termdb/singlecellData', { body })
-				console.log(result)
 
 				if (result.error) throw result.error
 				for (const plot of result.plots) {
@@ -135,10 +134,9 @@ class SingleCellView {
 				return plot.clusterMap[c.cellId]
 			})
 		)
-		clusters = Array.from(clusters)
+		clusters = Array.from(clusters).sort()
 		const cat2Color = getColors(clusters.length)
 		for (const cluster of clusters) this.colorMap[cluster] = cat2Color(cluster)
-		console.log(this.colorMap)
 		this.initAxes(plot)
 
 		this.headerTr
@@ -149,16 +147,21 @@ class SingleCellView {
 			.text(plot.name)
 			.style('background-color', '#d3d3d3')
 			.style('fo')
-		const svg = this.tr
+		this.svg = this.tr
 			.append('td')
 			.style('text-align', 'center')
 			.style('border', '1px solid #d3d3d3')
 			.append('svg')
-			.attr('width', this.width)
+			.attr('width', this.width + 200)
 			.attr('height', this.height)
 			.on('mousemove', event => this.onMouseOver(event))
 
-		const symbols = svg.selectAll('path').data(plot.cells)
+		this.legendG = this.svg
+			.append('g')
+			.attr('transform', `translate(${this.width + 20}, 50)`)
+			.style('font-size', '0.9em')
+
+		const symbols = this.svg.selectAll('path').data(plot.cells)
 
 		symbols
 			.enter()
@@ -167,6 +170,27 @@ class SingleCellView {
 			.append('circle')
 			.attr('r', 2)
 			.attr('fill', d => cat2Color(d.clusterMap[d.cellId]))
+
+		this.renderLegend(plot)
+	}
+
+	renderLegend(plot) {
+		const legendG = this.legendG
+		legendG.append('text').style('font-weight', 'bold').text(`${plot.cells.length} cells`)
+		const step = 25
+		let y = 40
+		let x = 0
+		for (const cluster in this.colorMap) {
+			const color = this.colorMap[cluster]
+			const itemG = legendG.append('g').attr('transform', c => `translate(${x}, ${y})`)
+			itemG.append('circle').attr('r', 3).attr('fill', color)
+			itemG
+				.append('g')
+				.attr('transform', `translate(${x + 10}, ${5})`)
+				.append('text')
+				.text(`Cluster ${cluster}`)
+			y += step
+		}
 	}
 
 	initAxes(plot) {
@@ -198,7 +222,7 @@ class SingleCellView {
 			tr = table.append('tr')
 			tr.append('td').style('color', '#aaa').text('Cluster')
 			const td = tr.append('td')
-			const svg = td.append('svg').attr('width', 100).attr('height', 30)
+			const svg = td.append('svg').attr('width', 150).attr('height', 25)
 			const x = 15
 			const y = 18
 			const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
