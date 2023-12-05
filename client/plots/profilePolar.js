@@ -5,6 +5,7 @@ import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 import { loadFilterTerms } from './profilePlot.js'
+import { select } from 'd3-selection'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -25,6 +26,7 @@ class profilePolar extends profilePlot {
 		this.opts.header.text(config.name).style('font-weight', 'bold')
 		this.arcGenerator = d3.arc().innerRadius(0)
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
+		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
@@ -46,9 +48,9 @@ class profilePolar extends profilePlot {
 		if (event.target.tagName == 'path') {
 			const path = event.target
 			path.setAttribute('stroke', 'white')
-			this.tip.hide()
 			if (path.getAttribute('stroke-opacity') == 0) path.setAttribute('stroke-opacity', 1)
 		}
+		this.tip.hide()
 	}
 
 	onMouseOver(event) {
