@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- GDC BAM slicing UI will reject non-BAM files.
+
 
 ## 2.34.0
 
