@@ -1,11 +1,11 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import * as d3 from 'd3'
-import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 import { loadFilterTerms } from './profilePlot.js'
+import { select } from 'd3-selection'
 
 class profileRadar extends profilePlot {
 	constructor() {
@@ -20,7 +20,7 @@ class profileRadar extends profilePlot {
 		this.opts.header.style('font-weight', 'bold').text(config[config.plot].name)
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-
+		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
@@ -248,9 +248,7 @@ class profileRadar extends profilePlot {
 	}
 
 	onMouseOut(event) {
-		if (event.target.tagName == 'circle') {
-			this.tip.hide()
-		}
+		this.tip.hide()
 	}
 }
 

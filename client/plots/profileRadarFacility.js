@@ -5,6 +5,7 @@ import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 import { profilePlot } from './profilePlot.js'
 import { loadFilterTerms } from './profilePlot.js'
+import { select } from 'd3-selection'
 
 class profileRadarFacility extends profilePlot {
 	constructor() {
@@ -20,6 +21,7 @@ class profileRadarFacility extends profilePlot {
 
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
+		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
@@ -249,9 +251,7 @@ class profileRadarFacility extends profilePlot {
 	}
 
 	onMouseOut(event) {
-		if (event.target.tagName == 'circle') {
-			this.tip.hide()
-		}
+		this.tip.hide()
 	}
 }
 
