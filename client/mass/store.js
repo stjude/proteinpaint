@@ -464,6 +464,7 @@ function validatePlot(p, vocabApi) {
 		} else if (p.chartType == 'DEanalysis') {
 		} else if (p.chartType == 'sampleView') {
 		} else if (p.chartType == 'profileRadar' || p.chartType == 'profileRadarFacility') {
+		} else if (p.chartType == 'singleCellView') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
