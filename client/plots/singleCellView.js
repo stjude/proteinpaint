@@ -14,8 +14,8 @@ export const maxDotSize = 300
 class SingleCellView {
 	constructor() {
 		this.type = 'singleCellView'
-		this.width = 1000
-		this.height = 1000
+		this.width = 800
+		this.height = 600
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
@@ -106,12 +106,15 @@ class SingleCellView {
 		copyMerge(this.settings, this.config.settings.singleCellView)
 		const sampleData = this.samples.find(s => s.sample == this.state.sample)
 		this.plotsData = {}
+		this.colorMap = {}
 		this.headerTr = this.table.append('tr')
 		this.tr = this.table.append('tr')
 		for (const file of sampleData.files) {
 			const body = { genome, dslabel, sample: file.fileId }
 			try {
 				const result = await dofetch3('termdb/singlecellData', { body })
+				console.log(result)
+
 				if (result.error) throw result.error
 				for (const plot of result.plots) {
 					plot.clusterMap = result.tid2cellvalue.cluster
@@ -134,6 +137,8 @@ class SingleCellView {
 		)
 		clusters = Array.from(clusters)
 		const cat2Color = getColors(clusters.length)
+		for (const cluster of clusters) this.colorMap[cluster] = cat2Color(cluster)
+		console.log(this.colorMap)
 		this.initAxes(plot)
 
 		this.headerTr
@@ -170,12 +175,14 @@ class SingleCellView {
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
 			[s0.x, s0.x, s0.y, s0.y]
 		)
-
-		plot.xAxisScale = d3Linear().domain([xMin, xMax]).range([0, this.height])
-
+		const r = 5
+		plot.xAxisScale = d3Linear()
+			.domain([xMin, xMax])
+			.range([0 + r, this.height - 5])
 		plot.axisBottom = axisBottom(plot.xAxisScale)
-		plot.yAxisScale = d3Linear().domain([yMax, yMin]).range([0, this.height])
-
+		plot.yAxisScale = d3Linear()
+			.domain([yMax, yMin])
+			.range([0 + r, this.height - r])
 		plot.axisLeft = axisLeft(plot.yAxisScale)
 	}
 
@@ -183,8 +190,24 @@ class SingleCellView {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const menu = this.tip.clear()
+			const table = menu.d.append('table')
+			let tr = table.append('tr')
 			const cluster = d.clusterMap[d.cellId]
-			menu.d.text(`${d.cellId}`)
+			tr.append('td').style('color', '#aaa').text('Id')
+			tr.append('td').text(`${d.cellId}`)
+			tr = table.append('tr')
+			tr.append('td').style('color', '#aaa').text('Cluster')
+			const td = tr.append('td')
+			const svg = td.append('svg').attr('width', 100).attr('height', 30)
+			const x = 15
+			const y = 18
+			const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
+			g.append('circle').attr('fill', this.colorMap[cluster]).attr('r', 4)
+			svg
+				.append('g')
+				.attr('transform', `translate(${x + 15}, ${y + 4})`)
+				.append('text')
+				.text(`Cluster ${cluster}`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
