@@ -80,9 +80,13 @@ class SingleCellView {
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Single Cell Data')
-		this.table = this.mainDiv.append('table').style('width', '95vw').style('border-collapse', 'collapse')
+		this.table = this.mainDiv
+			.append('div')
+			.style('padding-top', '10px')
+			.append('table')
+			.style('width', '95vw')
+			.style('border-collapse', 'collapse')
 	}
-
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
