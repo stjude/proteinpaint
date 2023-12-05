@@ -53,6 +53,11 @@ class SingleCellView {
 				const i1 = primarySites.indexOf(elem1.primarySite)
 				const i2 = primarySites.indexOf(elem2.primarySite)
 				if (i1 < i2) return -1
+				if (i1 == i2) {
+					console.log(elem1)
+
+					return elem1.sample.localeCompare(elem2.sample)
+				}
 				return 1
 			})
 		} catch (e) {
