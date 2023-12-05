@@ -9,6 +9,7 @@ import { getColors } from '#shared/common'
 const dslabel = 'GDC',
 	genome = 'hg38'
 
+const primarySites = ['Brain', 'Kidney']
 export const minDotSize = 9
 export const maxDotSize = 300
 class SingleCellView {
@@ -47,7 +48,12 @@ class SingleCellView {
 			const result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
 
-			this.samples = result.samples
+			this.samples = result.samples.sort((elem1, elem2) => {
+				const i1 = primarySites.indexOf(elem1.primarySite)
+				const i2 = primarySites.indexOf(elem2.primarySite)
+				if (i1 < i2) return -1
+				return 1
+			})
 		} catch (e) {
 			sayerror(this.mainDiv, e)
 			return
@@ -101,9 +107,11 @@ class SingleCellView {
 			const body = { genome, dslabel, sample: file.fileId }
 			try {
 				const result = await dofetch3('termdb/singlecellData', { body })
-				const clusterMap = result.tid2cellvalue.cluster
 				if (result.error) throw result.error
-				for (const plot of result.plots) this.renderPlot(file, clusterMap, plot)
+				for (const plot of result.plots) {
+					plot.clusterMap = result.tid2cellvalue.cluster
+					this.renderPlot(file, plot)
+				}
 			} catch (e) {
 				sayerror(this.mainDiv, e)
 				return
@@ -111,12 +119,17 @@ class SingleCellView {
 		}
 	}
 
-	renderPlot(file, clusterMap, plot) {
+	renderPlot(file, plot) {
 		this.plotsData[file] = plot
-		let clusters = new Set(plot.cells.map(c => clusterMap[c.cellId]))
+		let clusters = new Set(
+			plot.cells.map(c => {
+				c.clusterMap = plot.clusterMap
+				return plot.clusterMap[c.cellId]
+			})
+		)
 		clusters = Array.from(clusters)
 		const cat2Color = getColors(clusters.length)
-
+		console.log(clusters)
 		this.initAxes(plot)
 		const svg = this.table
 			.append('tr')
@@ -127,6 +140,7 @@ class SingleCellView {
 			.append('svg')
 			.attr('width', this.width)
 			.attr('height', this.height)
+			.on('mousemove', event => this.onMouseOver(event))
 
 		const symbols = svg.selectAll('path').data(plot.cells)
 
@@ -136,7 +150,7 @@ class SingleCellView {
 			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
 			.append('circle')
 			.attr('r', 2)
-			.attr('fill', d => cat2Color(d.cellId))
+			.attr('fill', d => cat2Color(d.clusterMap[d.cellId]))
 	}
 
 	initAxes(plot) {
@@ -153,6 +167,15 @@ class SingleCellView {
 
 		plot.axisLeft = axisLeft(plot.yAxisScale)
 	}
+
+	onMouseOver(event) {
+		if (event.target.tagName == 'circle') {
+			const d = event.target.__data__
+			console.log(d.clusterMap[d.cellId])
+		} else this.onMouseOut(event)
+	}
+
+	onMouseOut(event) {}
 }
 
 export const scatterInit = getCompInit(SingleCellView)
