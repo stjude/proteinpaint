@@ -4,6 +4,7 @@ import got from 'got'
 import path from 'path'
 import { combineSamplesById } from './mds3.variant2samples'
 import { filter2GDCfilter } from './mds3.gdc.filter'
+import { write_tmpfile } from './utils'
 
 /*
 GDC API
@@ -61,9 +62,6 @@ thus need to define the "apihost" as global variables in multiple places
 */
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
-// temporarily hardcode to use the direct API URL,
-// previously hardcoded to use 'https://uat-portal.gdc.cancer.gov/auth/api/v0/'
-const geneExpHost = 'https://uat-api.gdc.cancer.gov'
 
 export function convertSampleId_addGetter(tdb, ds) {
 	tdb.convertSampleId.get = inputs => {
@@ -244,10 +242,10 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 	// so that valid SD-transformed value can be returned from /values api
 	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
 	try {
-		const response = await got.post(`${geneExpHost}/gene_expression/gene_selection`, {
+		const response = await got.post(`${apihost}/gene_expression/gene_selection`, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({
-				case_ids,
+				case_ids: case_ids,
 				gene_ids: ensgLst,
 				selection_size: ensgLst.length
 			})
@@ -302,7 +300,7 @@ export async function getCasesWithExressionDataFromCohort(q, ds) {
 
 async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
 	// when api is on prod, switch to path.join(apihost, 'gene_expression/values')
-	const response = await got.post(`${geneExpHost}/gene_expression/values`, {
+	const response = await got.post(`${apihost}/gene_expression/values`, {
 		headers: getheaders(q),
 		body: JSON.stringify({
 			case_ids,

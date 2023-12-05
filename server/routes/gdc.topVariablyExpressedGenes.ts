@@ -8,14 +8,8 @@ import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 
 // TODO make it general purpose based on ds.queries.geneExpression.topVariablyExpressedGenes{}; wait till case/gene link changes are done
-
-// TODO change when api is released to prod
-//const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const apihost = 'https://uat-portal.gdc.cancer.gov/auth/api/v0/gene_expression/gene_selection'
-// temporarily hardcode to use the direct API URL,
-// previously hardcoded to use 'https://uat-portal.gdc.cancer.gov/auth/api/v0/'
-const geneExpHost = 'https://uat-api.gdc.cancer.gov'
 // https://github.com/NCI-GDC/gdcapi/blob/develop/openapi/gene-expression.yaml
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
@@ -71,7 +65,7 @@ async function getGenes(q: GdcTopVariablyExpressedGenesRequest, ds: any, genome:
 	}
 
 	// change to this when api is available on prod
-	const url = path.join(geneExpHost, '/gene_expression/gene_selection')
+	const url = path.join(apihost, '/gene_expression/gene_selection')
 
 	try {
 		const response = await got.post(url, {

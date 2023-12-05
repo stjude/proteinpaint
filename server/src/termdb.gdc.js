@@ -41,9 +41,6 @@ initGDCdictionary
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
-// temporarily hardcode to use the direct API URL,
-// previously hardcoded to use 'https://uat-portal.gdc.cancer.gov/auth/api/v0/'
-const geneExpHost = 'https://uat-api.gdc.cancer.gov'
 
 // TODO switch to https://api.gdc.cancer.gov/cases/_mapping
 const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
@@ -1051,7 +1048,7 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 
 async function checkExpressionAvailability(ds) {
 	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
-	const url = `${geneExpHost}/gene_expression/availability`
+	const url = `${apihost}/gene_expression/availability`
 
 	{
 		/*
