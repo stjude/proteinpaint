@@ -17,6 +17,7 @@ class SingleCellView {
 		this.type = 'singleCellView'
 		this.width = 800
 		this.height = 600
+		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
 	async init(appState) {
@@ -171,11 +172,16 @@ class SingleCellView {
 	onMouseOver(event) {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
-			console.log(d.clusterMap[d.cellId])
+			const menu = this.tip.clear()
+			const cluster = d.clusterMap[d.cellId]
+			menu.d.text(`${d.cellId}`)
+			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
 
-	onMouseOut(event) {}
+	onMouseOut(event) {
+		this.tip.hide()
+	}
 }
 
 export const scatterInit = getCompInit(SingleCellView)
