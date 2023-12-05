@@ -9,7 +9,6 @@ import { getColors } from '#shared/common'
 const dslabel = 'GDC',
 	genome = 'hg38'
 
-const primarySites = ['Brain', 'Kidney']
 export const minDotSize = 9
 export const maxDotSize = 300
 class SingleCellView {
@@ -50,15 +49,9 @@ class SingleCellView {
 			if (result.error) throw result.error
 
 			this.samples = result.samples.sort((elem1, elem2) => {
-				const i1 = primarySites.indexOf(elem1.primarySite)
-				const i2 = primarySites.indexOf(elem2.primarySite)
-				if (i1 < i2) return -1
-				if (i1 == i2) {
-					console.log(elem1)
-
-					return elem1.sample.localeCompare(elem2.sample)
-				}
-				return 1
+				const result = elem1.primarySite.localeCompare(elem2.primarySite)
+				if (result != 0) return result
+				else return elem1.sample.localeCompare(elem2.sample)
 			})
 		} catch (e) {
 			sayerror(this.mainDiv, e)
