@@ -904,30 +904,45 @@ async function cacheSampleIdMapping(ds) {
 		console.log('GDC: caching complete sample ID mapping')
 	}
 
+	const size = 1000 // fetch 1000 ids at a time
+	let totalCases
+
 	try {
 		// key: aliquot uuid
 		// value: submitter id
-		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
-		if (!Number.isInteger(totalCases)) throw 'gdc totalCases not integer'
+
+		try {
+			totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
+		} catch (e) {
+			throw 'api failed at getting totalCases=integer'
+		}
+		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
 
 		const begin = new Date()
 		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
 
-		const size = 1000 // fetch 1000 ids at a time
-		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-			await fetchIdsFromGdcApi(ds, size, i * 1000)
-			if (
-				Number.isInteger(serverconfig.features.stopGdcCacheAliquot) &&
-				i >= serverconfig.features.stopGdcCacheAliquot
-			) {
-				// stop caching after this number of loops, to speed up testing
-				break
+		try {
+			for (let i = 0; i < Math.ceil(totalCases / size); i++) {
+				await fetchIdsFromGdcApi(ds, size, i * 1000)
+				if (
+					Number.isInteger(serverconfig.features.stopGdcCacheAliquot) &&
+					i >= serverconfig.features.stopGdcCacheAliquot
+				) {
+					// stop caching after this number of loops, to speed up testing
+					break
+				}
 			}
+		} catch (e) {
+			throw 'api failed at one of case caching loops'
 		}
 
-		await checkExpressionAvailability(ds)
-		ds.__gdc.doneCaching = true
+		try {
+			await checkExpressionAvailability(ds)
+		} catch (e) {
+			throw 'api failed at checking cases with gene exp data'
+		}
 
+		ds.__gdc.doneCaching = true
 		console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
 		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
 		console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
