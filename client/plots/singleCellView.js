@@ -4,6 +4,7 @@ import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
+import { getColors } from '#shared/common'
 
 const dslabel = 'GDC',
 	genome = 'hg38'
@@ -100,8 +101,9 @@ class SingleCellView {
 			const body = { genome, dslabel, sample: file.fileId }
 			try {
 				const result = await dofetch3('termdb/singlecellData', { body })
+				const clusterMap = result.tid2cellvalue.cluster
 				if (result.error) throw result.error
-				for (const plot of result.plots) this.renderPlot(file, plot)
+				for (const plot of result.plots) this.renderPlot(file, clusterMap, plot)
 			} catch (e) {
 				sayerror(this.mainDiv, e)
 				return
@@ -109,8 +111,11 @@ class SingleCellView {
 		}
 	}
 
-	renderPlot(file, plot) {
+	renderPlot(file, clusterMap, plot) {
 		this.plotsData[file] = plot
+		let clusters = new Set(plot.cells.map(c => clusterMap[c.cellId]))
+		clusters = Array.from(clusters)
+		const cat2Color = getColors(clusters.length)
 
 		this.initAxes(plot)
 		const svg = this.table
@@ -131,7 +136,7 @@ class SingleCellView {
 			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
 			.append('circle')
 			.attr('r', 2)
-			.attr('fill', 'gray')
+			.attr('fill', d => cat2Color(d.cellId))
 	}
 
 	initAxes(plot) {
