@@ -29,11 +29,11 @@ function cascade:
 gdc_bam_request
 	get_gdc_data
 		try_query
-			ifIdIsCase('cases.case_id')
+			ifIdIsEntity('cases.case_id')
 				queryApi
 				-> getFileByCaseId('cases.case_id')
 					queryApi
-			ifIdIsCase('cases.submitter_id')
+			ifIdIsEntity('cases.submitter_id')
 				-> getFileByCaseId('cases.submitter_id')
 					queryApi
 			getBamfileByFileId('file_id')
@@ -90,11 +90,20 @@ const filesApi = {
 	size: 100
 }
 
-// used in ifIdIsCase()
+// used in ifIdIsEntity()
 const casesApi = {
 	end_point: path.join(apihost, 'cases/'),
 	fields: ['case_id']
 }
+// fields to be used with casesApi, to test if user input is any of these
+const entityTypes = [
+	{ type: 'case', field: 'cases.case_id' },
+	{ type: 'case', field: 'cases.submitter_id' },
+	{ type: 'sample', field: 'cases.samples.submitter_id' },
+	{ type: 'sample', field: 'cases.samples.sample_id' },
+	{ type: 'aliquot', field: 'cases.samples.portions.analytes.aliquots.submitter_id' },
+	{ type: 'aliquot', field: 'cases.samples.portions.analytes.aliquots.aliquot_id' }
+]
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
@@ -102,6 +111,7 @@ async function get_gdc_data(gdc_id, filter0) {
 	// data to be returned
 	const bamdata = {
 		file_metadata: [],
+		isCaseSample: '', // set to a value type if input id is submitter/uuid of case/sample/aliquot. only used on backend, not on client
 		numFilesSkippedByWorkflow: 0
 	}
 
@@ -109,9 +119,9 @@ async function get_gdc_data(gdc_id, filter0) {
 
 	if (!re.data.hits.length) {
 		// no bam file found
-		if (bamdata.is_case_id || bamdata.is_case_uuid) {
+		if (bamdata.isCaseSample) {
 			// id is valid case_id/case_uuid, then respond that bam files are not available for this case_id
-			throw 'No bam files available for this case.'
+			throw `No bam files available for this ${bamdata.isCaseSample}.`
 		}
 
 		// no id found
@@ -162,25 +172,21 @@ async function get_gdc_data(gdc_id, filter0) {
 given user input id, test if it's one of four valid ones
 if true, return the list of bam files associated with that id
 */
+
 async function try_query(id, bamdata, filter0) {
 	// first, test if is case uuid
-	if (await ifIdIsCase(id, 'cases.case_id', filter0)) {
-		// is case uuid
-		bamdata.is_case_uuid = true
-		// get bam files from this case uuid
-		return await getFileByCaseId(id, 'cases.case_id', filter0)
+
+	// test user input against all types of entities
+	for (const entity of entityTypes) {
+		if (await ifIdIsEntity(id, entity.field, filter0)) {
+			// input id is this type of field. copy field type to this flag to pass on (in case it got no bam files)
+			bamdata.isCaseSample = entity.type
+			// get bam files from this entity
+			return await getFileByCaseId(id, entity.field, filter0)
+		}
 	}
 
-	// is not case uuid
-	// then, test if is case id
-	if (await ifIdIsCase(id, 'cases.submitter_id', filter0)) {
-		// is case id
-		bamdata.is_case_id = true
-		// get bam files
-		return await getFileByCaseId(id, 'cases.submitter_id', filter0)
-	}
-
-	// is not case id or case uuid
+	// is not any of above fields
 	// then, test if is file uuid
 	const re = await getBamfileByFileId(id, 'file_id', filter0)
 	if (re.data.hits.length) {
@@ -204,7 +210,7 @@ async function try_query(id, bamdata, filter0) {
 query /cases/ api with id; if valid return, is case id or case uuid, depends on value of field
 returns boolean
 */
-async function ifIdIsCase(id, field, filter0) {
+async function ifIdIsEntity(id, field, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
