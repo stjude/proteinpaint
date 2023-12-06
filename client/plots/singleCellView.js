@@ -6,9 +6,6 @@ import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 import { getColors } from '#shared/common'
 
-const dslabel = 'GDC',
-	genome = 'hg38'
-
 export const minDotSize = 9
 export const maxDotSize = 300
 class SingleCellView {
@@ -43,7 +40,7 @@ class SingleCellView {
 			controlsHolder
 		}
 
-		const body = { genome, dslabel }
+		const body = { genome: appState.vocab.genome, dslabel: appState.vocab.dslabel }
 		try {
 			const result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
@@ -94,7 +91,9 @@ class SingleCellView {
 		}
 		return {
 			config,
-			sample: config.sample || this.samples[0].sample
+			sample: config.sample || this.samples[0].sample,
+			dslabel: appState.vocab.dslabel,
+			genome: appState.vocab.genome
 		}
 	}
 
@@ -110,7 +109,7 @@ class SingleCellView {
 		this.headerTr = this.table.append('tr')
 		this.tr = this.table.append('tr')
 		for (const file of sampleData.files) {
-			const body = { genome, dslabel, sample: file.fileId }
+			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file.fileId }
 			try {
 				const result = await dofetch3('termdb/singlecellData', { body })
 
@@ -247,10 +246,8 @@ export const componentInit = scatterInit
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const settings = getDefaultScatterSettings()
-		if (!opts.term && !opts.term2) settings.showAxes = false
+		const settings = getDefaultSingleCellSettings()
 		const config = {
-			groups: [],
 			settings: {
 				singleCellView: settings
 			}
@@ -264,21 +261,10 @@ export async function getPlotConfig(opts, app) {
 	}
 }
 
-export function getDefaultScatterSettings() {
+export function getDefaultSingleCellSettings() {
 	return {
-		size: 25,
-		minDotSize: 16,
-		maxDotSize: 144,
-		scaleDotOrder: 'Ascending',
-		refSize: 9,
-		svgw: 550,
-		svgh: 550,
-		svgd: 550,
-		axisTitleFontSize: 16,
-		showAxes: true,
-		showRef: true,
-		opacity: 0.8,
-		defaultColor: 'rgb(144, 23, 57)',
-		regression: 'None'
+		svgw: 800,
+		svgh: 800,
+		svgd: 800
 	}
 }
