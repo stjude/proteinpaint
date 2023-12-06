@@ -43,11 +43,6 @@ validate_ssm2canonicalisoform
 getheaders
 
 
-**************** route handlers
-handle_gdc_ssms
-	getSingleSampleMutations
-		mayAddCGC2filter
-
 **************** internal
 mayMapRefseq2ensembl
 isoform2ssm_query1_getvariant{}
@@ -2006,20 +2001,33 @@ export function validate_query_singleSampleMutation(ds, genome) {
 	ds.queries.singleSampleMutation.get = async (sampleName, q) => {
 		if (!sampleName) throw 'sampleName missing'
 		/*
-		the "sampleName" is sample.sample_id from client based on gdc dataset
-		the value can be multiple types:
-		- sample submitter id (human redable) from mds3 tk (if cached, if not cached it is aliquot id)
-		- case submitter id  (human readable) from matrix
-		the 3 types of ids will all be converted to case.case_id (uuid) for next use
+		sampleName value can be multiple types:
+		- sample submitter id from mds3 tk (if cached, if not cached it is aliquot id)
+		- case submitter id from matrix
+		- case uuid from bam slicing ui
+
+		this getter will identify if the value is a case uuid, if so, use; otherwise, convert to case uuid
+		for now, always query ssm data by case uuid, but not sample (might change later)
 
 		do the conversion here on the fly so that no need for client to manage these extra, arbitrary ids that's specific for gdc
 		beyond sample.sample_id for display
 		*/
-		q.case_id = ds.__gdc.map2caseid.get(sampleName)
-		if (!q.case_id) {
-			// not mapped to case id
-			// this is possible when the server just started and hasn't finished caching. thus must call this method to map
-			q.case_id = await convert2caseId(sampleName)
+
+		if (sampleName.startsWith('___')) {
+			// is a case uuid. see comments in block.tk.bam.gdc.js
+			const id = sampleName.substring(3)
+			if (!id) throw 'expecting uuid after prefix but got blank'
+			q.case_id = id
+		} else if (ds.__gdc.caseid2submitter.has(sampleName)) {
+			// given name is case uuid
+			q.case_id = sampleName
+		} else {
+			q.case_id = ds.__gdc.map2caseid.get(sampleName)
+			if (!q.case_id) {
+				// not mapped to case id
+				// this is possible when the server just started and hasn't finished caching. thus must call this method to map
+				q.case_id = await convert2caseId(sampleName)
+			}
 		}
 		return await getSingleSampleMutations(q, ds, genome)
 	}
@@ -2208,27 +2216,6 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			plots: [plotPca, plotTsne, plotUmap],
 			terms: [seuratClusterTerm],
 			tid2cellvalue
-		}
-	}
-}
-
-export function handle_gdc_ssms(genomes) {
-	return async (req, res) => {
-		/* query{}
-		.genome: required
-		.dslabel: required
-		.case_id: required
-		*/
-		try {
-			const genome = genomes[req.query.genome]
-			if (!genome) throw 'invalid genome'
-			const ds = genome.datasets[req.query.dslabel]
-			if (!ds) throw 'invalid dslabel'
-			if (!req.query.case_id) throw '.case_id missing'
-			res.send(await getSingleSampleMutations(req.query, ds, genome))
-		} catch (e) {
-			if (e.stack) console.log(e.stack)
-			res.send({ error: e.message || e })
 		}
 	}
 }
