@@ -116,8 +116,10 @@ class SingleCellView {
 					const result = await dofetch3('termdb/singlecellData', { body })
 					if (result.error) throw result.error
 					for (const plot of result.plots) {
-						plot.clusterMap = result.tid2cellvalue.cellType
-						this.renderPlot(plot)
+						for (const tid in result.tid2cellvalue) {
+							plot.clusterMap = result.tid2cellvalue[tid]
+							this.renderPlot(plot)
+						}
 					}
 				} catch (e) {
 					if (e.stack) console.log(e.stack)
@@ -131,8 +133,10 @@ class SingleCellView {
 				const result = await dofetch3('termdb/singlecellData', { body })
 				if (result.error) throw result.error
 				for (const plot of result.plots) {
-					plot.clusterMap = result.tid2cellvalue.cellType
-					this.renderPlot(plot)
+					for (const tid in result.tid2cellvalue) {
+						plot.clusterMap = result.tid2cellvalue[tid]
+						this.renderPlot(plot)
+					}
 				}
 			} catch (e) {
 				if (e.stack) console.log(e.stack)
