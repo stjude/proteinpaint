@@ -2182,7 +2182,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			plotTsne = { name: 'TSNE', cells: [] },
 			plotPca = { name: 'PCA', cells: [] },
 			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} },
-			tid2cellvalue = { cellType: {} } // corresponds to above term id
+			tid2cellvalue = { [seuratClusterTerm.id]: {} } // corresponds to above term id
 
 		for (let i = 1; i < lines.length; i++) {
 			const line = lines[i]
@@ -2192,7 +2192,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			const clusterId = l[3]
 			if (!clusterId) throw 'seuratCluster missing from a line'
 			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
-			tid2cellvalue.cellType[cellId] = `Cluster ${clusterId}`
+			tid2cellvalue[seuratClusterTerm.id][cellId] = `Cluster ${clusterId}`
 
 			const umap1 = Number(l[4]),
 				umap2 = Number(l[5]),
