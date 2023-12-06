@@ -45,9 +45,10 @@ class SingleCellView {
 			const result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
 
-			this.samples = result.samples.sort((elem1, elem2) => {
-				const result = elem1.primarySite.localeCompare(elem2.primarySite)
-				if (result != 0) return result
+			this.samples = result.samples
+			this.samples.sort((elem1, elem2) => {
+				const result = elem1.primarySite?.localeCompare(elem2.primarySite)
+				if (result == 1 || result == -1) return result
 				else return elem1.sample.localeCompare(elem2.sample)
 			})
 		} catch (e) {
@@ -73,7 +74,7 @@ class SingleCellView {
 			.enter()
 			.append('option')
 			.attr('value', d => d.sample)
-			.attr('label', d => `${d.primarySite} | ${d.diseaseType}`)
+			.attr('label', d => ('primarySite' in d ? `${d.primarySite} | ${d.diseaseType}` : ''))
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Single Cell Data')
@@ -108,21 +109,22 @@ class SingleCellView {
 		this.colorMap = {}
 		this.headerTr = this.table.append('tr')
 		this.tr = this.table.append('tr')
-		for (const file of sampleData.files) {
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file.fileId }
-			try {
-				const result = await dofetch3('termdb/singlecellData', { body })
+		if (sampleData.files)
+			for (const file of sampleData.files) {
+				const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file.fileId }
+				try {
+					const result = await dofetch3('termdb/singlecellData', { body })
 
-				if (result.error) throw result.error
-				for (const plot of result.plots) {
-					plot.clusterMap = result.tid2cellvalue.cluster
-					this.renderPlot(file, plot)
+					if (result.error) throw result.error
+					for (const plot of result.plots) {
+						plot.clusterMap = result.tid2cellvalue.cluster
+						this.renderPlot(file, plot)
+					}
+				} catch (e) {
+					sayerror(this.mainDiv, e)
+					return
 				}
-			} catch (e) {
-				sayerror(this.mainDiv, e)
-				return
 			}
-		}
 	}
 
 	renderPlot(file, plot) {
