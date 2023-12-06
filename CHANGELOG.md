@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - GDC BAM slicing UI will reject non-BAM files.
+- GDC BAM slicing UI now works with submitter or UUID of samples and aliquots, in addition to cases
 
 
 ## 2.34.0

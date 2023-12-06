@@ -1,2 +1,1 @@
-Fixes:
-- GDC BAM slicing UI now works with submitter or UUID of samples and aliquots, in addition to cases
+
