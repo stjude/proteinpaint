@@ -44,7 +44,7 @@ class SingleCellView {
 		try {
 			const result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
-
+			console.log(result)
 			this.samples = result.samples
 			this.samples.sort((elem1, elem2) => {
 				const result = elem1.primarySite?.localeCompare(elem2.primarySite)
@@ -109,26 +109,45 @@ class SingleCellView {
 		this.colorMap = {}
 		this.headerTr = this.table.append('tr')
 		this.tr = this.table.append('tr')
-		if (sampleData.files)
+
+		if (sampleData.files) {
 			for (const file of sampleData.files) {
 				const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file.fileId }
 				try {
 					const result = await dofetch3('termdb/singlecellData', { body })
-
+					console.log(result)
 					if (result.error) throw result.error
 					for (const plot of result.plots) {
-						plot.clusterMap = result.tid2cellvalue.cluster
-						this.renderPlot(file, plot)
+						plot.clusterMap = result.tid2cellvalue.cellType
+						this.renderPlot(plot)
 					}
 				} catch (e) {
+					console.log(e.stack)
 					sayerror(this.mainDiv, e)
 					return
 				}
 			}
+		} else {
+			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: sampleData.sample }
+			try {
+				const result = await dofetch3('termdb/singlecellData', { body })
+				console.log(result)
+				if (result.error) throw result.error
+				for (const plot of result.plots) {
+					plot.clusterMap = result.tid2cellvalue.cellType
+					console.log(plot.clusterMap)
+					this.renderPlot(plot)
+				}
+			} catch (e) {
+				console.log(e.stack)
+				sayerror(this.mainDiv, e)
+				return
+			}
+		}
 	}
 
-	renderPlot(file, plot) {
-		this.plotsData[file] = plot
+	renderPlot(plot) {
+		console.log(plot)
 		let clusters = new Set(
 			plot.cells.map(c => {
 				c.clusterMap = plot.clusterMap
