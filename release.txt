@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC BAM slicing UI shares a common route to retrieve ssm by case, reducing code duplication
