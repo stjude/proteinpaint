@@ -209,7 +209,7 @@ async function ifIdIsCase(id, field, filter0) {
 		op: 'and',
 		content: [
 			{
-				op: 'in',
+				op: '=',
 				content: { field, value: id }
 			}
 		]
