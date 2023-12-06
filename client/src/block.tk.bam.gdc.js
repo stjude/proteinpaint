@@ -255,12 +255,7 @@ export async function bamsliceui({
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
 			.on('search', gdc_search)
 
-		const gdc_loading = td
-			.append('span')
-			.style('padding-left', '10px')
-			.style('color', '#999')
-			.style('display', 'none')
-			.html('loading...')
+		const gdc_loading = td.append('span').style('padding-left', '10px').style('display', 'none').text('Loading...')
 
 		const gdcid_error_div = td.append('span').style('display', 'none').style('padding', '2px 5px')
 
@@ -321,6 +316,7 @@ export async function bamsliceui({
 				// disable input field and show 'loading...' until response returned from gdc api
 				gdcid_input.attr('disabled', 1)
 				gdc_loading.style('display', 'inline-block')
+				gdcid_error_div.style('display', 'none')
 
 				const body = { gdc_id }
 				if (_filter0) body.filter0 = _filter0
@@ -346,9 +342,9 @@ export async function bamsliceui({
 				if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
 				if (data.file_metadata.length == 0) {
 					// no viewable bam files
-					if (data.is_file_uuid && data.numFilesSkippedByWorkflow == 1) {
-						// query is a file uuid which is skipped by workflow
-						throw 'File not viewable due to workflow type'
+					if (data.numFilesSkippedByWorkflow) {
+						// there are files skipped due to this reason. the value tells number of files rejected due to this reason
+						throw `File${data.numFilesSkippedByWorkflow > 1 ? 's' : ''} not viewable due to workflow type`
 					}
 					throw 'No viewable BAM files found'
 				}
@@ -375,16 +371,14 @@ export async function bamsliceui({
 				*/
 				gdc_args.case_id = data.file_metadata[0].case_id
 
-				if (data.is_file_uuid || data.is_file_id) {
-					// matches with one bam file
-					// update file id to be supplied to gdc bam query
+				if (data.file_metadata.length == 1) {
+					// has only 1 file
 					update_singlefile_table(data, gdc_id)
-					show_input_check(gdcid_error_div)
-				} else if (data.is_case_uuid || data.is_case_id) {
-					// matches with multiple bam files from a case
+				} else {
+					// 2 or more files
 					update_multifile_table(data.file_metadata)
-					show_input_check(gdcid_error_div)
 				}
+				show_input_check(gdcid_error_div)
 
 				await makeSsmGeneSearch()
 			} catch (e) {
@@ -401,7 +395,7 @@ export async function bamsliceui({
 
 			const onebam = data.file_metadata[0]
 			const file = {
-				file_id: data.is_file_uuid ? gdc_id : onebam.file_uuid,
+				file_id: onebam.file_uuid,
 				track_name: onebam.entity_id, // assign track name as entity_id
 				about: []
 			}
