@@ -129,7 +129,6 @@ class SingleCellView {
 			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: sampleData.sample }
 			try {
 				const result = await dofetch3('termdb/singlecellData', { body })
-				console.log(result)
 				if (result.error) throw result.error
 				for (const plot of result.plots) {
 					plot.clusterMap = result.tid2cellvalue.cellType
@@ -144,13 +143,11 @@ class SingleCellView {
 	}
 
 	renderPlot(plot) {
-		console.log(plot)
-		let clusters = new Set(
-			plot.cells.map(c => {
-				c.clusterMap = plot.clusterMap
-				return plot.clusterMap[c.cellId]
-			})
-		)
+		const cells2Clusters = plot.cells.map(c => {
+			c.clusterMap = plot.clusterMap
+			return plot.clusterMap[c.cellId]
+		})
+		let clusters = new Set(cells2Clusters)
 		clusters = Array.from(clusters).sort()
 		const cat2Color = getColors(clusters.length)
 		for (const cluster of clusters) this.colorMap[cluster] = cat2Color(cluster)
@@ -188,16 +185,17 @@ class SingleCellView {
 			.attr('r', 2)
 			.attr('fill', d => cat2Color(d.clusterMap[d.cellId]))
 
-		this.renderLegend(plot)
+		this.renderLegend(plot, cells2Clusters)
 	}
 
-	renderLegend(plot) {
+	renderLegend(plot, cells2Clusters) {
 		const legendG = this.legendG
 		legendG.append('text').style('font-weight', 'bold').text(`${plot.cells.length} cells`)
 		const step = 25
 		let y = 40
 		let x = 0
 		for (const cluster in this.colorMap) {
+			const n = cells2Clusters.filter(item => item == cluster).length
 			const color = this.colorMap[cluster]
 			const itemG = legendG.append('g').attr('transform', c => `translate(${x}, ${y})`)
 			itemG.append('circle').attr('r', 3).attr('fill', color)
@@ -205,7 +203,7 @@ class SingleCellView {
 				.append('g')
 				.attr('transform', `translate(${x + 10}, ${5})`)
 				.append('text')
-				.text(cluster)
+				.text(`${cluster} n=${n}`)
 			y += step
 		}
 	}
