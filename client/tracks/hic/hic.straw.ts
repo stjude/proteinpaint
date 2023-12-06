@@ -200,7 +200,7 @@ type Hic = {
 	.holder
  * @param debugmode debugmode passed from app, server state, if true, attach to window.hic
  */
-export function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
+export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
 	if (debugmode) {
 		window['hic'] = hic
 	}
@@ -301,68 +301,44 @@ export function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, deb
 	// data tasks:
 	// 1. load sv
 	// 2. stat the hic file
-
-	Promise.resolve()
-		.then(() => {
-			if (!hic.sv || !hic.sv.file) return
-			return fetch(
-				new Request(hic.hostURL + '/textfile', {
-					method: 'POST',
-					body: JSON.stringify({ file: hic.sv.file, jwt: hic.jwt })
+	try {
+		if (hic.sv && hic.sv.file) {
+			const re = await client.dofetch(hic.hostURL + '/textfile', {
+				method: 'POST',
+				body: JSON.stringify({ file: hic.sv.file, jwt: hic.jwt })
+			})
+			const data = re.json()
+			const [err, header, items] = parseSV(data.text)
+			if (err) throw { message: 'Error parsing SV: ' + err }
+			hic.sv.header = header
+			hic.sv.items = items
+		}
+		const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
+		if (data.error) throw { message: data.error.error }
+		const err = hicparsestat(hic, data.out)
+		if (err) throw { message: err }
+		if (!hic.normalization?.length) {
+			hic.nmethselect = showNMethDiv.text(defaultnmeth)
+		} else {
+			hic.nmethselect = showNMethDiv
+				.style('margin-right', '10px')
+				.append('select')
+				.on('change', () => {
+					const v = hic.nmethselect.node().value
+					setnmeth(hic, v)
 				})
-			)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					const [err, header, items] = parseSV(data.text)
-					if (err) throw { message: 'Error parsing SV: ' + err }
-					hic.sv!.header = header
-					hic.sv!.items = items
-					return
-				})
-		})
-
-		.then(() => {
-			return client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
-		})
-
-		.then(data => {
-			if (data.error) throw { message: data.error.error }
-			const err = hicparsestat(hic, data.out)
-			if (err) throw { message: err }
-
-			// optionally, may init detail view by default
-
-			/**Quick fix for removing normalization hardcoding. Will address
-			 * when refactoring this file
-			 */
-			if (!hic.normalization?.length) {
-				hic.nmethselect = showNMethDiv.text(defaultnmeth)
-			} else {
-				hic.nmethselect = showNMethDiv
-					.style('margin-right', '10px')
-					.append('select')
-					.on('change', () => {
-						const v = hic.nmethselect.node().value
-						setnmeth(hic, v)
-					})
-				for (const n of hic.normalization) {
-					hic.nmethselect.append('option').text(n)
-				}
+			for (const n of hic.normalization) {
+				hic.nmethselect.append('option').text(n)
 			}
-
-			init_wholegenome(hic)
-		})
-		.catch(err => {
-			hic.errList!.push(err.message || err)
-			if (err.stack) {
-				console.log(err.stack)
-			}
-		})
-		.then(() => {
-			if (hic.errList!.length) hic.error(hic.errList!)
-		})
+		}
+		init_wholegenome(hic)
+	} catch (err: any) {
+		hic.errList!.push(err.message || err)
+		if (err.stack) {
+			console.log(err.stack)
+		}
+	}
+	if (hic.errList!.length) hic.error(hic.errList!)
 }
 
 /**
@@ -961,9 +937,9 @@ function init_chrpair(hic: any, chrx: any, chry: any) {
 	const canvas = hic.c.td
 		.append('canvas')
 		.style('margin', axispad + 'px')
-		.on('click', function (this: any, event: MouseEvent) {
+		.on('click', async function (this: any, event: MouseEvent) {
 			const [x, y] = pointer(event, this)
-			init_detail(hic, chrx, chry, x, y)
+			await init_detail(hic, chrx, chry, x, y)
 		})
 		.node()
 	canvas.width = Math.ceil(chrxlen / resolution) * binpx
@@ -1119,7 +1095,7 @@ export function nmeth2select(hic: any, v: any) {
  * @param x
  * @param y
  */
-function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
+async function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	nmeth2select(hic, hic.detailview.nmeth)
 
 	hic.indetail = true
@@ -1217,7 +1193,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	hic.detailview.canvas = canvas
 	hic.detailview.ctx = ctx
 
-	detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
+	await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
 
 	/**
 	global zoom buttons
@@ -1332,7 +1308,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	arg.start = coordx
 	arg.stop = coordx + viewrangebpw
 	arg.holder = hic.x.td
-	arg.onloadalltk_always = bb => {
+	arg.onloadalltk_always = async bb => {
 		/*
 		cannot apply transition to canvasholder
 		it may prevent resetting width when both x and y are changing
@@ -1348,7 +1324,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 			canvas.transition().style('left', hic.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
 			return
 		}
-		detailViewUpdateRegionFromBlock(hic)
+		await detailViewUpdateRegionFromBlock(hic)
 	}
 	arg.onpanning = xoff => {
 		canvas.style('left', xoff + hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
@@ -1381,7 +1357,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	arg2.start = coordy
 	arg2.stop = coordy + viewrangebpw
 	arg2.holder = rotor
-	arg2.onloadalltk_always = bb => {
+	arg2.onloadalltk_always = async bb => {
 		const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * hic.detailview.bbmargin
 		sheath.transition().style('height', bbw + 'px')
 		canvasholder.style('height', bbw + 'px')
@@ -1391,7 +1367,7 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 			canvas.transition().style('top', hic.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
 			return
 		}
-		detailViewUpdateRegionFromBlock(hic)
+		await detailViewUpdateRegionFromBlock(hic)
 	}
 	arg2.onpanning = xoff => {
 		canvas.style('top', -xoff + hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px')
@@ -1413,10 +1389,10 @@ function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
 	*/
 }
 
-function detailViewUpdateRegionFromBlock(hic: any) {
+async function detailViewUpdateRegionFromBlock(hic: any) {
 	const rx = hic.detailview.xb.rglst[0]
 	const ry = hic.detailview.yb.rglst[0]
-	detailViewUpdateHic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop)
+	await detailViewUpdateHic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop)
 }
 
 /**
@@ -1433,7 +1409,7 @@ function detailViewUpdateRegionFromBlock(hic: any) {
  * @param ystop
  * @returns
  */
-function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any, chry: any, ystart: any, ystop: any) {
+async function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any, chry: any, ystart: any, ystop: any) {
 	hic.detailview.chrx = chrx
 	hic.detailview.chry = chry
 	hic.detailview.xstart = xstart
@@ -1450,84 +1426,18 @@ function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any, chry:
 		}
 	}
 
-	// if (resolution != null) {
-	// 	// using bp resolution
-	// 	delete hic.detailview.frag
-	// 	return
-	// }
-	// if (!hic.enzyme) {
-	// 	// no enzyme available
-	// 	resolution = hic.bpresolution[hic.bpresolution.length - 1]
-	// 	delete hic.detailview.frag
-	// 	return
-	// }
-
-	// /*
-	// convert x/y view range coordinate to enzyme fragment index
-	// using the span of frag index to figure out resolution (# of fragments)
-	// */
-	// hic.detailview.frag = {}
-
-	// // query fragment index for x
-	// const arg = {
-	// 	getdata: 1,
-	// 	getBED: 1,
-	// 	file: hic.enzymefile,
-	// 	rglst: [{ chr: chrx, start: xstart, stop: xstop }]
-	// }
-	// try {
-	// 	const xfragment = client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
-	// 	console.log(xfragment)
-	// } catch (e: any) {
-	// 	hic.errList.push(e.message || e)
-	// 	if (e.stack) console.log(e.stack)
-	// }
-
-	// if (hic.errList.length) hic.error(hic.errList)
-
-	Promise.resolve()
-		.then(() => {
-			if (resolution != null) {
-				// using bp resolution
-				delete hic.detailview.frag
-				return
-			}
-
-			if (!hic.enzyme) {
-				// no enzyme available
-				resolution = hic.bpresolution[hic.bpresolution.length - 1]
-				delete hic.detailview.frag
-				return
-			}
-
-			/*
-		convert x/y view range coordinate to enzyme fragment index
-		using the span of frag index to figure out resolution (# of fragments)
-		*/
-			hic.detailview.frag = {}
-
-			// query fragment index for x
-			const arg = {
-				getdata: 1,
-				getBED: 1,
-				file: hic.enzymefile,
-				rglst: [{ chr: chrx, start: xstart, stop: xstop }]
-			}
-			return client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
-		})
-
-		.then(xfragment => {
-			if (!xfragment) {
-				// use bpresolution, not fragment
-				hic.detailview.resolution = resolution
-				hic.ressays.text(common.bplen(resolution) + ' bp')
-				// fixed bin size only for bp bins
-				hic.detailview.xbinpx = hic.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
-				hic.detailview.ybinpx = hic.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
-				return
-			}
-
-			// got fragment index for x
+	try {
+		/** Format data for x fragment and query server for x data*/
+		const xfragment = await getXFragData(hic, resolution, chrx, xstart, xstop)
+		if (!xfragment) {
+			// use bpresolution, not fragment
+			hic.detailview.resolution = resolution
+			hic.ressays.text(common.bplen(resolution) + ' bp')
+			// fixed bin size only for bp bins
+			hic.detailview.xbinpx = hic.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
+			hic.detailview.ybinpx = hic.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
+		} else {
+			//got fragment index for x
 			if (xfragment.error) throw { message: xfragment.error }
 			if (!xfragment.items) throw { message: '.items[] missing for x view range enzyme fragment' }
 			const [err, map, start, stop] = hicparsefragdata(xfragment.items)
@@ -1536,74 +1446,105 @@ function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any, chry:
 			hic.detailview.frag.xstartfrag = start
 			hic.detailview.frag.xstopfrag = stop
 
-			// query fragment index for y
-			const arg = {
-				getdata: 1,
-				getBED: 1,
-				file: hic.enzymefile,
-				rglst: [{ chr: chry, start: ystart, stop: ystop }]
-			}
-			return client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
-		})
-
-		.then(yfragment => {
-			if (!yfragment) return
-
-			// got fragment index for y
-			if (yfragment.error) throw { message: yfragment.error }
-			if (!yfragment.items) throw { message: '.items[] missing' }
-			const [err, map, start, stop] = hicparsefragdata(yfragment.items)
-			if (err) throw { message: err }
-
-			if (chrx == chry) {
-				/*
-			intra chr
-			frag id to coord mapping goes to same bin for great merit
-			*/
-				for (const [id, pos] of map) {
-					hic.detailview.frag.xid2coord.set(id, pos)
+			const yfragment = await getYFragData(hic, chry, ystart, ystop)
+			if (yfragment) {
+				// got fragment index for y
+				if (yfragment.error) throw { message: yfragment.error }
+				if (!yfragment.items) throw { message: '.items[] missing' }
+				const [err, map, start, stop] = hicparsefragdata(yfragment.items)
+				if (err) throw { message: err }
+				if (chrx == chry) {
+					/*
+				intra chr
+				frag id to coord mapping goes to same bin for great merit
+				*/
+					for (const [id, pos] of map) {
+						hic.detailview.frag.xid2coord.set(id, pos)
+					}
+					hic.detailview.frag.yid2coord = hic.detailview.frag.xid2coord
+				} else {
+					hic.detailview.frag.yid2coord = map
 				}
-				hic.detailview.frag.yid2coord = hic.detailview.frag.xid2coord
-			} else {
-				hic.detailview.frag.yid2coord = map
-			}
-			hic.detailview.frag.ystartfrag = start
-			hic.detailview.frag.ystopfrag = stop
+				hic.detailview.frag.ystartfrag = start
+				hic.detailview.frag.ystopfrag = stop
 
-			/*
-		x/y fragment range defined
-		find out resolution
+				/** x/y fragment range defined
+				 * find out resolution
+				 */
+				const maxfragspan = Math.max(
+					hic.detailview.frag.xstopfrag - hic.detailview.frag.xstartfrag,
+					hic.detailview.frag.ystopfrag - hic.detailview.frag.ystartfrag
+				)
+				//let resolution: number | null = null
+				for (const r of hic.fragresolution) {
+					if (maxfragspan / r > minimumbinnum_frag) {
+						resolution = r
+						break
+					}
+				}
+				if (resolution == null) {
+					resolution = hic.fragresolution[hic.fragresolution.length - 1]
+				}
+				hic.ressays.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
+				hic.detailview.resolution = resolution
+			}
+		}
+		getdata_detail(hic)
+	} catch (err: any) {
+		hic.errList.push(err.message || err)
+		if (err.stack) console.log(err.stack)
+	}
+
+	if (hic.errList.length) hic.error(hic.errList)
+}
+
+async function getXFragData(hic: any, resolution: any, chrx: any, xstart: any, xstop: any) {
+	if (resolution != null) {
+		// using bp resolution
+		delete hic.detailview.frag
+		return
+	}
+	if (!hic.enzyme) {
+		// no enzyme available
+		resolution = hic.bpresolution[hic.bpresolution.length - 1]
+		delete hic.detailview.frag
+		return
+	}
+
+	/*
+		convert x/y view range coordinate to enzyme fragment index
+		using the span of frag index to figure out resolution (# of fragments)
 		*/
-			const maxfragspan = Math.max(
-				hic.detailview.frag.xstopfrag - hic.detailview.frag.xstartfrag,
-				hic.detailview.frag.ystopfrag - hic.detailview.frag.ystartfrag
-			)
-			let resolution = null
-			for (const r of hic.fragresolution) {
-				if (maxfragspan / r > minimumbinnum_frag) {
-					resolution = r
-					break
-				}
-			}
-			if (resolution == null) {
-				resolution = hic.fragresolution[hic.fragresolution.length - 1]
-			}
-			hic.ressays.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
-			hic.detailview.resolution = resolution
-			return
-		})
+	hic.detailview.frag = {}
 
-		.then(() => {
-			getdata_detail(hic)
-		})
+	// query fragment index for x
+	const arg = {
+		getdata: 1,
+		getBED: 1,
+		file: hic.enzymefile,
+		rglst: [{ chr: chrx, start: xstart, stop: xstop }]
+	}
+	return await getBedData(hic, arg)
+}
 
-		.catch(err => {
-			hic.errList.push(err.message || err)
-			if (err.stack) console.log(err.stack)
-		})
-		.then(() => {
-			if (hic.errList.length) hic.error(hic.errList)
-		})
+async function getYFragData(hic: any, chry: any, ystart: any, ystop: any) {
+	const arg = {
+		getdata: 1,
+		getBED: 1,
+		file: hic.enzymefile,
+		rglst: [{ chr: chry, start: ystart, stop: ystop }]
+	}
+
+	return getBedData(hic, arg)
+}
+
+async function getBedData(hic: any, arg: any) {
+	try {
+		return await client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
+	} catch (e: any) {
+		hic.errList.push(e.message || e)
+		if (e.stack) console.log(e.stack)
+	}
 }
 
 function getdata_detail(hic: any) {
