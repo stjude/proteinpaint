@@ -2171,7 +2171,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			plotTsne = { name: 'TSNE', cells: [] },
 			plotPca = { name: 'PCA', cells: [] },
 			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} },
-			tid2cellvalue = { cluster: {} } // corresponds to above term id
+			tid2cellvalue = { cellType: {} } // corresponds to above term id
 
 		for (let i = 1; i < lines.length; i++) {
 			const line = lines[i]

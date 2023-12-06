@@ -112,17 +112,22 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 		const t = ds.cohort.termdb.q.termjsonByOneid(tid)
 		if (!t) throw 'invalid term id from queries.singleCell.data.termIds[]'
 		_terms.push(t)
-		_tid2cellvalue[tid] = ds.cohort.termdb.q.getAllValues4term(tid)
+		// _tid2cellvalue[tid] = {}
+		// const clusterMap = ds.cohort.termdb.q.getAllValues4term(tid)
+		// for(const [id, cluster] of clusterMap)
+		// {
+		// 	const name = ds.cohort.termdb.q.id2sampleName(id)
+		// 	_tid2cellvalue[tid][name] = cluster
+		// }
 	}
-	D.get = async sample => {
+	D.get = async q => {
 		// if sample is int, may convert to string
 		try {
 			const tid2cellvalue = {}
 			for (const tid of D.termIds) tid2cellvalue[tid] = {} // k: cell id, v: cell value for this term
-
 			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
 			for (const plot of D.plots) {
-				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sample, plot.fileSuffix)
+				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
 				try {
 					await fs.promises.stat(tsvfile)
 				} catch (e: any) {
@@ -147,9 +152,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					cells.push({ cellId, x, y })
 
 					for (const tid of D.termIds) {
-						if (_tid2cellvalue[tid].has(cellId)) {
-							tid2cellvalue[tid][cellId] = _tid2cellvalue[tid].get(cellId)
-						}
+						tid2cellvalue[tid][cellId] = l[1]
 					}
 				}
 				plots.push({ name: plot.name, cells })
