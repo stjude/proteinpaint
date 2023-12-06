@@ -44,7 +44,6 @@ class SingleCellView {
 		try {
 			const result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
-			console.log(result)
 			this.samples = result.samples
 			this.samples.sort((elem1, elem2) => {
 				const result = elem1.primarySite?.localeCompare(elem2.primarySite)
@@ -115,14 +114,13 @@ class SingleCellView {
 				const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file.fileId }
 				try {
 					const result = await dofetch3('termdb/singlecellData', { body })
-					console.log(result)
 					if (result.error) throw result.error
 					for (const plot of result.plots) {
 						plot.clusterMap = result.tid2cellvalue.cellType
 						this.renderPlot(plot)
 					}
 				} catch (e) {
-					console.log(e.stack)
+					if (e.stack) console.log(e.stack)
 					sayerror(this.mainDiv, e)
 					return
 				}
@@ -135,11 +133,10 @@ class SingleCellView {
 				if (result.error) throw result.error
 				for (const plot of result.plots) {
 					plot.clusterMap = result.tid2cellvalue.cellType
-					console.log(plot.clusterMap)
 					this.renderPlot(plot)
 				}
 			} catch (e) {
-				console.log(e.stack)
+				if (e.stack) console.log(e.stack)
 				sayerror(this.mainDiv, e)
 				return
 			}
@@ -208,7 +205,7 @@ class SingleCellView {
 				.append('g')
 				.attr('transform', `translate(${x + 10}, ${5})`)
 				.append('text')
-				.text(`Cluster ${cluster}`)
+				.text(cluster)
 			y += step
 		}
 	}
