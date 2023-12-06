@@ -10,6 +10,8 @@ import serverconfig from '#src/serverconfig.js'
 // TODO make it general purpose based on ds.queries.geneExpression.topVariablyExpressedGenes{}; wait till case/gene link changes are done
 // https://github.com/NCI-GDC/gdcapi/blob/develop/openapi/gene-expression.yaml
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+// may override the geneExpHost for developers without access to qa/portal environments
+const geneExpHost = serverconfig.features?.geneExpHost || apihost
 
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
@@ -65,7 +67,7 @@ async function getGenes(q: GdcTopVariablyExpressedGenesRequest, ds: any, genome:
 	}
 
 	// change to this when api is available on prod
-	const url = path.join(apihost, '/gene_expression/gene_selection')
+	const url = path.join(geneExpHost, '/gene_expression/gene_selection')
 
 	try {
 		const response = await got.post(url, {
