@@ -36,7 +36,7 @@ tape('hicparsefile()', async test => {
 	}
 	const hic: any = Object.assign(copy, opts)
 	const hicOriginal = { ...hic }
-	hicparsefile(hic, true)
+	await hicparsefile(hic, true)
 	test.ok(!hicOriginal.name && hic.name == 'Hi-C', 'Should set name to Hi-C since no name was provided')
 	test.ok(
 		hic.wholegenome &&
