@@ -7,7 +7,7 @@ import * as common from '#shared/common'
 import blocklazyload from '#src/block.lazyload'
 import { HicstrawArgs } from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
-import { initWholeGenomeControls } from './controls.whole.genome.ts'
+import { hicParseFile2 } from './parse.genome.ts'
 
 /*
 
@@ -49,8 +49,6 @@ hic.atdev controls dev-shortings
 const atdev_chrnum = 8
 
 const hardcode_wholegenomechrlabwidth = 100
-/** default normalization method */
-const defaultnmeth = 'NONE'
 /** when clicking on chrpairview, to set a initial view range for detail view, the number of bins to cover at the clicked point */
 const initialbinnum_detail = 20
 /** at bp resolution, minimum bin number */
@@ -200,11 +198,72 @@ type Hic = {
 	.holder
  * @param debugmode debugmode passed from app, server state, if true, attach to window.hic
  */
-export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
-	if (debugmode) {
-		window['hic'] = hic
-	}
 
+// class Hicstat {
+// 	dom: any
+// 	errList: string[]
+// 	holder: any
+// 	opts: any
+// 	tip: any
+// 	/** defaults */
+// 	atdev_chrnum: number
+// 	hardcode_wholegenomechrlabwidth: number
+// 	/** default normalization method */
+// 	defaultnmeth: string
+// 	/** when clicking on chrpairview, to set a initial view range for detail view, the number of bins to cover at the clicked point */
+// 	initialbinnum_detail: number
+// 	/** at bp resolution, minimum bin number */
+// 	minimumbinnum_bp: number
+// 	/** mininum canvas w/h, detail view */
+// 	mincanvassize_detail: number
+// 	/** minimum bin num for fragment */
+// 	minimumbinnum_frag: number
+// 	/** span at breakpoint when clicking an sv from x/y view to show horizontal view */
+// 	default_svpointspan: number
+// 	/** default max value percentage for hicstraw track */
+// 	default_hicstrawmaxvperc = 5
+// 	/** default px width of subpanels */
+// 	default_subpanelpxwidth: number
+// 	subpanel_bordercolor: string
+// 	constructor(hic) {
+// 		this.opts = hic
+// 		this.holder = hic.holder,
+// 			this.dom = {
+// 				errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
+// 				controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true),
+// 				svgDiv: hic.holder.append('div').classed('sjpp-hic-svg', true)
+// 			}
+// 		this.errList = []
+// 		this.tip = new client.Menu()
+// 		this.atdev_chrnum = 8
+// 		this.hardcode_wholegenomechrlabwidth = 100
+// 		this.defaultnmeth = 'NONE'
+// 		this.initialbinnum_detail = 20
+// 		this.minimumbinnum_bp = 200
+// 		this.mincanvassize_detail = 500
+// 		this.minimumbinnum_frag = 100
+// 		this.default_svpointspan = 500000
+// 		this.default_hicstrawmaxvperc = 5
+// 		this.default_subpanelpxwidth = 600
+// 		this.subpanel_bordercolor = 'rgba(200,0,0,.1)'
+// 	}
+
+// 	async error(err: string | string[]) {
+// 		if (err && typeof err == 'string') this.errList.push(err)
+// 		showErrorsWithCounter(this.errList, this.dom.errorDiv)
+// 		//Remove errors after displaying
+// 		this.errList = []
+// 	}
+
+// 	render() {
+// 		initWholeGenomeControls(this)
+// 	}
+// }
+
+export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
+	// if (debugmode) {
+	// 	window['hic'] = hic
+	// }
 	{
 		const div = hic.holder!.append('div')
 		hic.errList = [] as string[]
@@ -215,130 +274,132 @@ export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSv
 		}
 	}
 
-	if (!hic.name) {
-		hic.name = 'Hi-C'
-	}
+	// if (!hic.name) {
+	// 	hic.name = 'Hi-C'
+	// }
 
-	if (hic.tklst) {
-		const lst = [] as any[]
-		for (const t of hic.tklst) {
-			if (!t.type) {
-				hic.error('type missing from one of the tracks accompanying HiC')
-			} else {
-				t.iscustom = true
-				lst.push(t)
-			}
-		}
-		if (lst.length) {
-			hic.tklst = lst
-		} else {
-			delete hic.tklst
-		}
-	}
+	// if (hic.tklst) {
+	// 	const lst = [] as any[]
+	// 	for (const t of hic.tklst) {
+	// 		if (!t.type) {
+	// 			hic.error('type missing from one of the tracks accompanying HiC')
+	// 		} else {
+	// 			t.iscustom = true
+	// 			lst.push(t)
+	// 		}
+	// 	}
+	// 	if (lst.length) {
+	// 		hic.tklst = lst
+	// 	} else {
+	// 		delete hic.tklst
+	// 	}
+	// }
 
 	hic.tip = new client.Menu()
 
-	if (hic.enzyme) {
-		if (hic.genome!.hicenzymefragment) {
-			let frag: any = null
-			for (const f of hic.genome!.hicenzymefragment) {
-				if (f.enzyme == hic.enzyme) {
-					frag = f
-					break
-				}
-			}
-			if (frag) {
-				hic.enzymefile = frag.file
-			} else {
-				hic.error('unknown enzyme: ' + hic.enzyme)
-				delete hic.enzyme
-			}
-		} else {
-			hic.error('no enzyme fragment information available for this genome')
-			delete hic.enzyme
-		}
-	}
+	// if (hic.enzyme) {
+	// 	if (hic.genome!.hicenzymefragment) {
+	// 		let frag: any = null
+	// 		for (const f of hic.genome!.hicenzymefragment) {
+	// 			if (f.enzyme == hic.enzyme) {
+	// 				frag = f
+	// 				break
+	// 			}
+	// 		}
+	// 		if (frag) {
+	// 			hic.enzymefile = frag.file
+	// 		} else {
+	// 			hic.error('unknown enzyme: ' + hic.enzyme)
+	// 			delete hic.enzyme
+	// 		}
+	// 	} else {
+	// 		hic.error('no enzyme fragment information available for this genome')
+	// 		delete hic.enzyme
+	// 	}
+	// }
 
-	// wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring
-	hic.wholegenome = {
-		bpmaxv: 5000,
-		lead2follow: new Map(),
-		nmeth: defaultnmeth,
-		pica_x: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
-		pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
-	}
+	// // wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring
+	// hic.wholegenome = {
+	// 	bpmaxv: 5000,
+	// 	lead2follow: new Map(),
+	// 	nmeth: defaultnmeth,
+	// 	pica_x: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
+	// 	pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
+	// }
 
-	hic.chrpairview = {
-		data: [],
-		nmeth: defaultnmeth
-	}
+	// hic.chrpairview = {
+	// 	data: [],
+	// 	nmeth: defaultnmeth
+	// }
 
-	hic.detailview = {
-		bbmargin: 1,
-		nmeth: defaultnmeth,
-		xb: {
-			leftheadw: 20,
-			rightheadw: 40,
-			lpad: 1,
-			rpad: 1
-		},
-		yb: {
-			leftheadw: 20,
-			rightheadw: 40,
-			lpad: 1,
-			rpad: 1
-		}
-	}
+	// hic.detailview = {
+	// 	bbmargin: 1,
+	// 	nmeth: defaultnmeth,
+	// 	xb: {
+	// 		leftheadw: 20,
+	// 		rightheadw: 40,
+	// 		lpad: 1,
+	// 		rpad: 1
+	// 	},
+	// 	yb: {
+	// 		leftheadw: 20,
+	// 		rightheadw: 40,
+	// 		lpad: 1,
+	// 		rpad: 1
+	// 	}
+	// }
 
-	hic.inwholegenome = true
-	hic.inchrpair = false
-	hic.indetail = false
-	hic.inlineview = false
+	// hic.inwholegenome = true
+	// hic.inchrpair = false
+	// hic.indetail = false
+	// hic.inlineview = false
 
 	// controls
-	const showNMethDiv = initWholeGenomeControls(hic)
+	await hicParseFile2(hic, true)
+	init_wholegenome(hic)
 
 	// data tasks:
 	// 1. load sv
 	// 2. stat the hic file
-	try {
-		if (hic.sv && hic.sv.file) {
-			const re = await client.dofetch(hic.hostURL + '/textfile', {
-				method: 'POST',
-				body: JSON.stringify({ file: hic.sv.file, jwt: hic.jwt })
-			})
-			const data = re.json()
-			const [err, header, items] = parseSV(data.text)
-			if (err) throw { message: 'Error parsing SV: ' + err }
-			hic.sv.header = header
-			hic.sv.items = items
-		}
-		const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
-		if (data.error) throw { message: data.error.error }
-		const err = hicparsestat(hic, data.out)
-		if (err) throw { message: err }
-		if (!hic.normalization?.length) {
-			hic.nmethselect = showNMethDiv.text(defaultnmeth)
-		} else {
-			hic.nmethselect = showNMethDiv
-				.style('margin-right', '10px')
-				.append('select')
-				.on('change', () => {
-					const v = hic.nmethselect.node().value
-					setnmeth(hic, v)
-				})
-			for (const n of hic.normalization) {
-				hic.nmethselect.append('option').text(n)
-			}
-		}
-		init_wholegenome(hic)
-	} catch (err: any) {
-		hic.errList!.push(err.message || err)
-		if (err.stack) {
-			console.log(err.stack)
-		}
-	}
-	if (hic.errList!.length) hic.error(hic.errList!)
+	// try {
+	// 	if (hic.sv && hic.sv.file) {
+	// 		const re = await client.dofetch(hic.hostURL + '/textfile', {
+	// 			method: 'POST',
+	// 			body: JSON.stringify({ file: hic.sv.file, jwt: hic.jwt })
+	// 		})
+	// 		const data = re.json()
+	// 		const [err, header, items] = parseSV(data.text)
+	// 		if (err) throw { message: 'Error parsing SV: ' + err }
+	// 		hic.sv.header = header
+	// 		hic.sv.items = items
+	// 	}
+	// 	const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
+	// 	if (data.error) throw { message: data.error.error }
+	// 	const err = hicparsestat(hic, data.out)
+	// 	if (err) throw { message: err }
+	// 	if (!hic.normalization?.length) {
+	// 		hic.nmethselect = showNMethDiv.text(defaultnmeth)
+	// 	} else {
+	// 		hic.nmethselect = showNMethDiv
+	// 			.style('margin-right', '10px')
+	// 			.append('select')
+	// 			.on('change', () => {
+	// 				const v = hic.nmethselect.node().value
+	// 				setnmeth(hic, v)
+	// 			})
+	// 		for (const n of hic.normalization) {
+	// 			hic.nmethselect.append('option').text(n)
+	// 		}
+	// 	}
+	// 	init_wholegenome(hic)
+	// } catch (err: any) {
+	// 	hic.errList!.push(err.message || err)
+	// 	if (err.stack) {
+	// 		console.log(err.stack)
+	// 	}
+	// }
+	// //console.log(375, hic)
+	// if (hic.errList!.length) hic.error(hic.errList!)
 }
 
 /**
@@ -347,43 +408,43 @@ export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSv
  * @param j
  * @returns
  */
-export function hicparsestat(hic: BaseHic & Partial<Hic>, j: any) {
-	if (!j) return 'cannot stat hic file'
-	hic.normalization = j.normalization
+// export function hicparsestat(hic: BaseHic & Partial<Hic>, j: any) {
+// 	if (!j) return 'cannot stat hic file'
+// 	hic.normalization = j.normalization
 
-	hic.version = j.version
+// 	hic.version = j.version
 
-	if (!j.Chromosomes) return 'Chromosomes not found in file stat'
-	if (!Array.isArray(j.chrorder)) return '.chrorder[] missing'
-	if (j.chrorder.length == 0) return '.chrorder[] empty array'
-	hic.chrorder = j.chrorder
-	if (!j['Base pair-delimited resolutions']) return 'Base pair-delimited resolutions not found in file stat'
-	if (!Array.isArray(j['Base pair-delimited resolutions'])) return 'Base pair-delimited resolutions should be array'
-	hic.bpresolution = j['Base pair-delimited resolutions']
-	if (!j['Fragment-delimited resolutions']) return 'Fragment-delimited resolutions not found in file stat'
-	if (!Array.isArray(j['Fragment-delimited resolutions'])) return 'Fragment-delimited resolutions is not array'
-	hic.fragresolution = j['Fragment-delimited resolutions']
+// 	if (!j.Chromosomes) return 'Chromosomes not found in file stat'
+// 	if (!Array.isArray(j.chrorder)) return '.chrorder[] missing'
+// 	if (j.chrorder.length == 0) return '.chrorder[] empty array'
+// 	hic.chrorder = j.chrorder
+// 	if (!j['Base pair-delimited resolutions']) return 'Base pair-delimited resolutions not found in file stat'
+// 	if (!Array.isArray(j['Base pair-delimited resolutions'])) return 'Base pair-delimited resolutions should be array'
+// 	hic.bpresolution = j['Base pair-delimited resolutions']
+// 	if (!j['Fragment-delimited resolutions']) return 'Fragment-delimited resolutions not found in file stat'
+// 	if (!Array.isArray(j['Fragment-delimited resolutions'])) return 'Fragment-delimited resolutions is not array'
+// 	hic.fragresolution = j['Fragment-delimited resolutions']
 
-	const chrlst = [] as any[]
-	for (const chr in j.Chromosomes) {
-		chrlst.push(chr)
-	}
-	const [nochrcount, haschrcount] = common.contigNameNoChr2(hic.genome, chrlst)
-	if (nochrcount + haschrcount == 0) return 'chromosome names do not match with genome build'
-	if (nochrcount > 0) {
-		hic.nochr = true
-		// prepend 'chr' to names in chrorder array
-		for (let i = 0; i < hic.chrorder!.length; i++) hic.chrorder![i] = 'chr' + hic.chrorder![i]
-	}
-	// as a way of skipping chrM
-	hic.chrlst = []
-	for (const chr of hic.genome!.majorchrorder) {
-		const c2 = hic.nochr ? chr.replace('chr', '') : chr
-		if (chrlst.indexOf(c2) != -1) {
-			hic.chrlst.push(chr)
-		}
-	}
-}
+// 	const chrlst = [] as any[]
+// 	for (const chr in j.Chromosomes) {
+// 		chrlst.push(chr)
+// 	}
+// 	const [nochrcount, haschrcount] = common.contigNameNoChr2(hic.genome, chrlst)
+// 	if (nochrcount + haschrcount == 0) return 'chromosome names do not match with genome build'
+// 	if (nochrcount > 0) {
+// 		hic.nochr = true
+// 		// prepend 'chr' to names in chrorder array
+// 		for (let i = 0; i < hic.chrorder!.length; i++) hic.chrorder![i] = 'chr' + hic.chrorder![i]
+// 	}
+// 	// as a way of skipping chrM
+// 	hic.chrlst = []
+// 	for (const chr of hic.genome!.majorchrorder) {
+// 		const c2 = hic.nochr ? chr.replace('chr', '') : chr
+// 		if (chrlst.indexOf(c2) != -1) {
+// 			hic.chrlst.push(chr)
+// 		}
+// 	}
+// }
 
 /**
  * Launches the hic whole genome view as an app.
@@ -647,7 +708,7 @@ function chrpair_mouseover(hic: any, img: any, x_chr: any, y_chr: any) {
 		.text(y_chr)
 }
 
-async function getdata_leadfollow(hic: any, lead: any, follow: any) {
+export async function getdata_leadfollow(hic: any, lead: any, follow: any) {
 	const binpx = hic.wholegenome.binpx
 	const resolution = hic.wholegenome.resolution
 	const obj = hic.wholegenome.lead2follow.get(lead).get(follow)
@@ -956,7 +1017,7 @@ function tell_firstisx(hic: any, chrx: any, chry: any) {
 	return hic.chrorder.indexOf(chrx) < hic.chrorder.indexOf(chry)
 }
 
-async function getdata_chrpair(hic: any) {
+export async function getdata_chrpair(hic: any) {
 	const chrx = hic.chrpairview.chrx
 	const chry = hic.chrpairview.chry
 	const isintrachr = chrx == chry
@@ -1039,35 +1100,35 @@ async function getdata_chrpair(hic: any) {
  * @param nmeth
  * @returns
  */
-async function setnmeth(hic: any, nmeth: string) {
-	if (hic.inwholegenome) {
-		hic.wholegenome.nmeth = nmeth
-		const manychr = hic.atdev ? 3 : hic.chrlst.length
-		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst[i]
-			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst[j]
-				try {
-					await getdata_leadfollow(hic, lead, follow)
-				} catch (e: any) {
-					hic.errList.push(e.message || e)
-				}
-			}
-		}
-		if (hic.errList.length) hic.error(hic.errList)
-		return
-	}
+// async function setnmeth(hic: any, nmeth: string) {
+// 	if (hic.inwholegenome) {
+// 		hic.wholegenome.nmeth = nmeth
+// 		const manychr = hic.atdev ? 3 : hic.chrlst.length
+// 		for (let i = 0; i < manychr; i++) {
+// 			const lead = hic.chrlst[i]
+// 			for (let j = 0; j <= i; j++) {
+// 				const follow = hic.chrlst[j]
+// 				try {
+// 					await getdata_leadfollow(hic, lead, follow)
+// 				} catch (e: any) {
+// 					hic.errList.push(e.message || e)
+// 				}
+// 			}
+// 		}
+// 		if (hic.errList.length) hic.error(hic.errList)
+// 		return
+// 	}
 
-	if (hic.inchrpair) {
-		hic.chrpairview.nmeth = nmeth
-		await getdata_chrpair(hic)
-		return
-	}
-	if (hic.indetail) {
-		hic.detailview.nmeth = nmeth
-		getdata_detail(hic)
-	}
-}
+// 	if (hic.inchrpair) {
+// 		hic.chrpairview.nmeth = nmeth
+// 		await getdata_chrpair(hic)
+// 		return
+// 	}
+// 	if (hic.indetail) {
+// 		hic.detailview.nmeth = nmeth
+// 		getdata_detail(hic)
+// 	}
+// }
 
 export function nmeth2select(hic: any, v: any) {
 	const options = hic.nmethselect.node().options
@@ -1541,7 +1602,7 @@ async function getBedData(hic: any, arg: any) {
 	}
 }
 
-function getdata_detail(hic: any) {
+export function getdata_detail(hic: any) {
 	/*
 	x/y view range and resolution have all been set
 	request hic data and paint canvas
@@ -1777,91 +1838,91 @@ export function hicparsefragdata(items: any) {
 
 //////////////////// __detail ends
 
-function parseSV(txt: any) {
-	const lines = txt.trim().split(/\r?\n/)
-	const [err, header] = parseSVheader(lines[0])
-	if (err) return ['header error: ' + err]
+// function parseSV(txt: any) {
+// 	const lines = txt.trim().split(/\r?\n/)
+// 	const [err, header] = parseSVheader(lines[0])
+// 	if (err) return ['header error: ' + err]
 
-	const items = [] as any
-	for (let i = 1; i < lines.length; i++) {
-		const line = lines[i]
-		if (line[0] == '#') continue
-		const [e, m] = parseSVline(line, header)
-		if (e) return ['line ' + (i + 1) + ' error: ' + e]
-		items.push(m)
-	}
-	return [null, header, items]
-}
+// 	const items = [] as any
+// 	for (let i = 1; i < lines.length; i++) {
+// 		const line = lines[i]
+// 		if (line[0] == '#') continue
+// 		const [e, m] = parseSVline(line, header)
+// 		if (e) return ['line ' + (i + 1) + ' error: ' + e]
+// 		items.push(m)
+// 	}
+// 	return [null, header, items]
+// }
 
-function parseSVheader(line: any) {
-	const header = line.toLowerCase().split('\t')
-	if (header.length <= 1) return 'invalid file header for fusions'
-	const htry = (...lst) => {
-		for (const a of lst) {
-			const j = header.indexOf(a)
-			if (j != -1) return j
-		}
-		return -1
-	}
-	let i = htry('chr_a', 'chr1', 'chra')
-	if (i == -1) return 'chr_A missing from header'
-	header[i] = 'chr1'
-	i = htry('chr_b', 'chr2', 'chrb')
-	if (i == -1) return 'chr_B missing from header'
-	header[i] = 'chr2'
-	i = htry('pos_a', 'position_a', 'position1', 'posa')
-	if (i == -1) return 'pos_a missing from header'
-	header[i] = 'position1'
-	i = htry('pos_b', 'position_b', 'position2', 'posb')
-	if (i == -1) return 'pos_b missing from header'
-	header[i] = 'position2'
-	i = htry('strand_a', 'orta', 'orienta')
-	if (i == -1) return 'strand_a missing from header'
-	header[i] = 'strand1'
-	i = htry('strand_b', 'ortb', 'orientb')
-	if (i == -1) return 'strand_b missing from header'
-	header[i] = 'strand2'
-	// optional
-	i = htry('numreadsa')
-	if (i != -1) header[i] = 'reads1'
-	i = htry('numreadsb')
-	if (i != -1) header[i] = 'reads2'
+// function parseSVheader(line: any) {
+// 	const header = line.toLowerCase().split('\t')
+// 	if (header.length <= 1) return 'invalid file header for fusions'
+// 	const htry = (...lst) => {
+// 		for (const a of lst) {
+// 			const j = header.indexOf(a)
+// 			if (j != -1) return j
+// 		}
+// 		return -1
+// 	}
+// 	let i = htry('chr_a', 'chr1', 'chra')
+// 	if (i == -1) return 'chr_A missing from header'
+// 	header[i] = 'chr1'
+// 	i = htry('chr_b', 'chr2', 'chrb')
+// 	if (i == -1) return 'chr_B missing from header'
+// 	header[i] = 'chr2'
+// 	i = htry('pos_a', 'position_a', 'position1', 'posa')
+// 	if (i == -1) return 'pos_a missing from header'
+// 	header[i] = 'position1'
+// 	i = htry('pos_b', 'position_b', 'position2', 'posb')
+// 	if (i == -1) return 'pos_b missing from header'
+// 	header[i] = 'position2'
+// 	i = htry('strand_a', 'orta', 'orienta')
+// 	if (i == -1) return 'strand_a missing from header'
+// 	header[i] = 'strand1'
+// 	i = htry('strand_b', 'ortb', 'orientb')
+// 	if (i == -1) return 'strand_b missing from header'
+// 	header[i] = 'strand2'
+// 	// optional
+// 	i = htry('numreadsa')
+// 	if (i != -1) header[i] = 'reads1'
+// 	i = htry('numreadsb')
+// 	if (i != -1) header[i] = 'reads2'
 
-	return [null, header]
-}
+// 	return [null, header]
+// }
 
-function parseSVline(line: string, header: any) {
-	const lst = line.split('\t')
-	const m: Partial<Mutation> = {}
+// function parseSVline(line: string, header: any) {
+// 	const lst = line.split('\t')
+// 	const m: Partial<Mutation> = {}
 
-	for (let j = 0; j < header.length; j++) {
-		m[header[j]] = lst[j]
-	}
-	if (!m.chr1) return ['missing chr1']
-	if (m.chr1.toLowerCase().indexOf('chr') != 0) {
-		m.chr1 = 'chr' + m.chr1
-	}
-	if (!m.chr2) return ['missing chr2']
-	if (m.chr2.toLowerCase().indexOf('chr') != 0) {
-		m.chr2 = 'chr' + m.chr2
-	}
-	if (!m.position1) return ['missing position1']
-	let v = Number.parseInt(m.position1 as string)
-	if (Number.isNaN(v) || v <= 0) return ['position1 invalid value']
-	m.position1 = v
-	if (!m.position2) return ['missing position2']
-	v = Number.parseInt(m.position2 as string)
-	if (Number.isNaN(v) || v <= 0) return ['position2 invalid value']
-	m.position2 = v
-	if (m.reads1) {
-		v = Number.parseInt(m.reads1 as string)
-		if (Number.isNaN(v)) return ['reads1 invalid value']
-		m.reads1 = v
-	}
-	if (m.reads2) {
-		v = Number.parseInt(m.reads2 as string)
-		if (Number.isNaN(v)) return ['reads2 invalid value']
-		m.reads2 = v
-	}
-	return [null, m]
-}
+// 	for (let j = 0; j < header.length; j++) {
+// 		m[header[j]] = lst[j]
+// 	}
+// 	if (!m.chr1) return ['missing chr1']
+// 	if (m.chr1.toLowerCase().indexOf('chr') != 0) {
+// 		m.chr1 = 'chr' + m.chr1
+// 	}
+// 	if (!m.chr2) return ['missing chr2']
+// 	if (m.chr2.toLowerCase().indexOf('chr') != 0) {
+// 		m.chr2 = 'chr' + m.chr2
+// 	}
+// 	if (!m.position1) return ['missing position1']
+// 	let v = Number.parseInt(m.position1 as string)
+// 	if (Number.isNaN(v) || v <= 0) return ['position1 invalid value']
+// 	m.position1 = v
+// 	if (!m.position2) return ['missing position2']
+// 	v = Number.parseInt(m.position2 as string)
+// 	if (Number.isNaN(v) || v <= 0) return ['position2 invalid value']
+// 	m.position2 = v
+// 	if (m.reads1) {
+// 		v = Number.parseInt(m.reads1 as string)
+// 		if (Number.isNaN(v)) return ['reads1 invalid value']
+// 		m.reads1 = v
+// 	}
+// 	if (m.reads2) {
+// 		v = Number.parseInt(m.reads2 as string)
+// 		if (Number.isNaN(v)) return ['reads2 invalid value']
+// 		m.reads2 = v
+// 	}
+// 	return [null, m]
+// }
