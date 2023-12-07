@@ -60,7 +60,8 @@ export async function getPlotConfig(opts = {}, app) {
 				sortSampleGrpsBy: 'name', // 'hits' | 'name' | 'sampleCount'
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'sampleCount', // or 'as listed'
-				samplecount4gene: 'abs', //true, // 'abs' (default, previously true), 'pct', ''  (previously false)
+				// do not show number of samples at hiercluster gene row labels
+				samplecount4gene: opts.chartType == 'hierCluster' ? '' : 'abs', //true, // 'abs' (default, previously true), 'pct', ''  (previously false)
 				geneVariantCountSamplesSkipMclass: [],
 				cellbg: '#ececec',
 				showGrid: '', // false | 'pattern' | 'rect'
