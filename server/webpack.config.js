@@ -90,7 +90,8 @@ module.exports = env => {
 							}
 						})
 					]
-				}
+				},
+				devtool: 'source-map'
 			})
 
 		case 'development':

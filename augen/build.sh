@@ -34,13 +34,6 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # !!! - in test, `cd ../server; npm run checkers` will also generate checkers-raw/index.ts
 # !!!
 #
-# TODO: reenable the code below once the issues are fixed with running these independent of server startup
-# rm -rf $CHECKERSRAW
-# mkdir $CHECKERSRAW
-# echo "npx tsx $SCRIPT_DIR/cli.js typeCheckers $PWD/$ROUTESDIR $IMPORTRELPATH"
-# CHECKERSRAW_OUTPUT=$(npx tsx $SCRIPT_DIR/cli.js typeCheckers $PWD/$ROUTESDIR $IMPORTRELPATH)
-# echo "$CHECKERSRAW_OUTPUT" > $CHECKERSRAW/index.ts
-# 
 echo "npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR"
 npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR # --project ./shared/checkers/tsconfig.json
 
