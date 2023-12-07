@@ -1,1 +1,3 @@
+Features:
+- Click dendrogram to highlight sub-branches, zoom in and select cases underneath
 

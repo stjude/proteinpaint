@@ -44,7 +44,138 @@ class HierCluster extends Matrix {
 			.attr('clip-path', `url(#${this.hcClipId})`)
 			.append('g')
 			.attr('class', 'sjpp-matrix-dendrogram')
+			.on('click', event => {
+				const clickedBranch = this.getImgBranch(event)
+				if (clickedBranch) {
+					const clickedBranchId = Math.min(clickedBranch.id1, clickedBranch.id2) // the smaller branchId has all the children
+					this.clickedChildren = this.hierClusterData.clustering.col_children.find(
+						c => c.id == clickedBranchId
+					).children
+
+					//get the sampleName of the children
+					const clickedSampleNames = this.getClickedSampleNames(this.clickedChildren)
+
+					// console.log(clickedSampleNames)
+					this.getSelectedSamples(clickedSampleNames)
+				} else delete this.clickedChildren
+
+				// rerender the Dendrogram
+				this.renderDendrogram()
+			})
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
+	}
+
+	getSelectedSamples(clickedSampleNames) {
+		const l = this.settings.matrix.controlLabels
+		const ss = this.opts.allow2selectSamples
+		if (ss) {
+			this.dom.tip.hide()
+			this.app.tip.clear()
+			this.app.tip.d
+				.selectAll('div')
+				.data([
+					{
+						label: 'Zoom in',
+						callback: () => {
+							this.triggerZoomBranch(this, clickedSampleNames)
+						}
+					},
+					{
+						label: ss.buttonText || `Select ${l.Samples}`,
+						callback: async () => {
+							const samples = clickedSampleNames.map(
+								c => this.sampleOrder.find(s => (s._SAMPLENAME_ || s.row.sample) == c).row
+							)
+							ss.callback({
+								samples: await this.app.vocabApi.convertSampleId(samples, ss.attributes),
+								source: ss.defaultSelectionLabel || `Selected ${l.samples} from gene expression`
+							})
+						}
+					}
+				])
+				.enter()
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.html(d => d.label)
+				.on('click', event => {
+					this.app.tip.hide()
+					event.target.__data__.callback()
+				})
+			this.app.tip.show(event.clientX, event.clientY)
+		}
+	}
+
+	triggerZoomBranch(self, clickedSampleNames) {
+		if (self.zoomArea) {
+			self.zoomArea.remove()
+			delete self.zoomArea
+		}
+		const c = {
+			startCell: self.serieses[0].cells.find(d => (d._SAMPLENAME_ || d.sample) == clickedSampleNames[0]),
+			endCell: self.serieses[0].cells.find(
+				d => (d._SAMPLENAME_ || d.sample) == clickedSampleNames[clickedSampleNames.length - 1]
+			)
+		}
+
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
+		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
+		const centerCell = self.sampleOrder[zoomIndex] // || self.getImgCell(event)
+		const colw = self.computedSettings.colw
+		const maxZoomLevel = s.colwMax / colw
+		const minZoomLevel = s.colwMin / colw
+		const tentativeZoomLevel = Math.max(
+			1,
+			((s.zoomLevel * d.mainw) / Math.max(c.endCell.x - c.startCell.x, 2 * d.colw)) * 0.7
+		)
+		const zoomLevel = Math.max(minZoomLevel, Math.min(tentativeZoomLevel, maxZoomLevel))
+		//const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
+
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					matrix: {
+						zoomLevel,
+						zoomCenterPct: 0.5,
+						//zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
+						zoomIndex,
+						zoomGrpIndex: centerCell.grpIndex
+					}
+				}
+			}
+		})
+		self.resetInteractions()
+	}
+
+	getClickedSampleNames(clickedChildren) {
+		const obj = this.hierClusterData.clustering
+		const childIndexArr = clickedChildren.map(c => obj.col_names_index.indexOf(c))
+		const childSampleNameArr = childIndexArr.map(c => obj.sampleNameLst[c])
+		return childSampleNameArr
+	}
+
+	getImgBranch(event) {
+		if (event.target.tagName == 'image') this.imgBox = event.target.getBoundingClientRect()
+		else return
+
+		const y = event.clientY - this.imgBox.y - event.target.clientTop
+		const xMin = this.dimensions.xMin
+		const x = event.clientX - this.imgBox.x - event.target.clientLeft + xMin
+
+		for (const branch of this.hierClusterData.clustering.col_dendro) {
+			if (!branch.normalized) return
+			const { x1, y1, x2, y2, verticalX } = branch.normalized
+
+			if (
+				(x1 <= x && x <= x2 && y1 - 5 < y && y < y1 + 5) ||
+				(y1 <= y && y <= y2 && verticalX - 5 < x && x < verticalX + 5)
+			) {
+				return branch
+			}
+		}
 	}
 
 	setClusteringBtn(holder, callback) {
@@ -356,15 +487,31 @@ class HierCluster extends Matrix {
 					x2 = Math.max(s.x1, s.x2),
 					y1 = Math.min(s.y1, s.y2),
 					y2 = Math.max(s.y1, s.y2)
+
+				r.normalized = { x1, x2, y1, y2 }
+				const minId = Math.min(r.id1, r.id2)
+				const childrenItem = this.hierClusterData.clustering.col_children.find(d => d.id == minId).children
+
+				const highlight =
+					this.clickedChildren &&
+					this.clickedChildren.some(c => childrenItem.includes(c)) &&
+					!(
+						this.clickedChildren.every(c => childrenItem.includes(c)) &&
+						childrenItem.length > this.clickedChildren.length
+					)
+				ctx.strokeStyle = highlight ? 'red' : 'black'
+
 				ctx.moveTo(x1, y1)
 				ctx.lineTo(x2, y1) // hline
 				if ((r.x1 > r.x2 && s.y1 > s.y2) || (r.x1 < r.x2 && s.y1 < s.y2)) {
 					// vline at max x
 					ctx.lineTo(x2, y2)
+					r.normalized.verticalX = x2
 				} else {
 					// vline at min x
 					ctx.moveTo(x1, y1)
 					ctx.lineTo(x1, y2)
+					r.normalized.verticalX = x1
 				}
 				ctx.stroke()
 				ctx.closePath()
