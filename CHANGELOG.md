@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Click dendrogram to highlight sub-branches, zoom in and select cases underneath
+
 
 ## 2.34.1
 
