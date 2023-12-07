@@ -105,8 +105,6 @@ class SingleCellView {
 		this.table.selectAll('*').remove()
 		copyMerge(this.settings, this.config.settings.singleCellView)
 		const sampleData = this.samples.find(s => s.sample == this.state.sample)
-		this.plotsData = {}
-		this.colorMap = {}
 		this.headerTr = this.table.append('tr')
 		this.tr = this.table.append('tr')
 
@@ -128,7 +126,8 @@ class SingleCellView {
 			for (const plot of result.plots) {
 				for (const tid in result.tid2cellvalue) {
 					plot.clusterMap = result.tid2cellvalue[tid]
-					this.renderPlot(plot, tid)
+					plot.tid = tid
+					this.renderPlot(plot)
 				}
 			}
 		} catch (e) {
@@ -138,16 +137,18 @@ class SingleCellView {
 		}
 	}
 
-	renderPlot(plot, tid) {
+	renderPlot(plot) {
 		const cells2Clusters = plot.cells.map(c => {
 			c.clusterMap = plot.clusterMap
-			c.tid = tid
+			c.tid = plot.tid
 			return plot.clusterMap[c.cellId]
 		})
 		let clusters = new Set(cells2Clusters)
 		clusters = Array.from(clusters).sort()
 		const cat2Color = getColors(clusters.length)
-		for (const cluster of clusters) this.colorMap[cluster] = cat2Color(cluster)
+		const colorMap = {}
+		plot.colorMap = colorMap
+		for (const cluster of clusters) colorMap[cluster] = cat2Color(cluster)
 		this.initAxes(plot)
 
 		this.headerTr
@@ -163,7 +164,7 @@ class SingleCellView {
 			.append('svg')
 			.attr('width', this.width)
 			.attr('height', this.height)
-			.on('mousemove', event => this.onMouseOver(event))
+			.on('mousemove', event => this.onMouseOver(event, colorMap))
 		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.height)
 
 		const zoom = d3zoom()
@@ -187,18 +188,22 @@ class SingleCellView {
 			.append('circle')
 			.attr('r', 2)
 			.attr('fill', d => cat2Color(d.clusterMap[d.cellId]))
+			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.clusterMap[d.cellId]) ? 0 : 1))
 
 		this.renderLegend(legendG, plot, cells2Clusters)
 	}
 
 	renderLegend(legendG, plot, cells2Clusters) {
+		const colorMap = plot.colorMap
 		legendG.append('text').style('font-weight', 'bold').text(`${plot.cells.length} cells`)
 		const step = 25
 		let y = 40
 		let x = 0
-		for (const cluster in this.colorMap) {
-			const n = cells2Clusters.filter(item => item == cluster).length
-			const color = this.colorMap[cluster]
+		for (const cluster in colorMap) {
+			const clusterCells = cells2Clusters.filter(item => item == cluster)
+			const hidden = this.config.hiddenClusters.includes(cluster)
+			const n = clusterCells.length
+			const color = plot.colorMap[cluster]
 			const itemG = legendG.append('g').attr('transform', c => `translate(${x}, ${y})`)
 			itemG.append('circle').attr('r', 3).attr('fill', color)
 			itemG
@@ -206,7 +211,23 @@ class SingleCellView {
 				.attr('transform', `translate(${x + 10}, ${5})`)
 				.append('text')
 				.text(`${cluster} n=${n}`)
+				.style('text-decoration', hidden ? 'line-through' : 'none')
+				.on('click', e => onCategoryClick(this, e, cluster, plot))
 			y += step
+		}
+
+		function onCategoryClick(parent, e, cluster, plot) {
+			const itemG = e.target
+			const hidden = itemG.style['text-decoration'] == 'line-through'
+			itemG.style['text-decoration'] = hidden ? 'none' : 'line-through'
+			let hiddenClusters = parent.config.hiddenClusters
+			if (!hidden) hiddenClusters.push(cluster)
+			else hiddenClusters.splice(hiddenClusters.indexOf(cluster), 1)
+			parent.app.dispatch({
+				type: 'plot_edit',
+				id: parent.id,
+				config: { hiddenClusters }
+			})
 		}
 	}
 
@@ -227,7 +248,7 @@ class SingleCellView {
 		plot.axisLeft = axisLeft(plot.yAxisScale)
 	}
 
-	onMouseOver(event) {
+	onMouseOver(event, colorMap) {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const menu = this.tip.clear()
@@ -243,7 +264,7 @@ class SingleCellView {
 			const x = 15
 			const y = 18
 			const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
-			g.append('circle').attr('fill', this.colorMap[cluster]).attr('r', 4)
+			g.append('circle').attr('fill', colorMap[cluster]).attr('r', 4)
 			svg
 				.append('g')
 				.attr('transform', `translate(${x + 15}, ${y + 4})`)
@@ -266,6 +287,7 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const settings = getDefaultSingleCellSettings()
 		const config = {
+			hiddenClusters: [],
 			settings: {
 				singleCellView: settings
 			}
