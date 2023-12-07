@@ -5,6 +5,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 import { getColors } from '#shared/common'
+import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 
 export const minDotSize = 9
 export const maxDotSize = 300
@@ -166,12 +167,29 @@ class SingleCellView {
 			.attr('height', this.height)
 			.on('mousemove', event => this.onMouseOver(event))
 
+		this.mainG = this.svg.append('g')
+		this.rect = this.mainG
+			.append('rect')
+			.attr('x', 0)
+			.attr('y', 0)
+			.attr('width', this.width)
+			.attr('height', this.height)
+			.attr('fill', 'white')
+		const zoom = d3zoom()
+			.scaleExtent([0.5, 10])
+			.on('zoom', e => this.handleZoom(e))
+			.filter(event => {
+				if (event.type === 'wheel') return event.ctrlKey
+				return true
+			})
+		this.svg.call(zoom)
+
 		this.legendG = this.svg
 			.append('g')
 			.attr('transform', `translate(${this.width + 20}, 50)`)
 			.style('font-size', '0.9em')
 
-		const symbols = this.svg.selectAll('path').data(plot.cells)
+		const symbols = this.mainG.selectAll('path').data(plot.cells)
 
 		symbols
 			.enter()
@@ -182,6 +200,11 @@ class SingleCellView {
 			.attr('fill', d => cat2Color(d.clusterMap[d.cellId]))
 
 		this.renderLegend(plot, cells2Clusters)
+	}
+
+	handleZoom(event) {
+		this.zoom = event.transform.scale(1).k
+		this.mainG.attr('transform', event.transform)
 	}
 
 	renderLegend(plot, cells2Clusters) {
