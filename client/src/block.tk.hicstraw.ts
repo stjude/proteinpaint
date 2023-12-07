@@ -3,6 +3,7 @@ import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
+import { hicparsestat } from '../tracks/hic/parse.genome.ts'
 
 /*
 single-sample hic
@@ -72,7 +73,7 @@ export function loadTk(tk: any, block: any) {
 
 			return client.dofetch2('hicstat?' + (tk.file ? 'file=' + tk.file : 'url=' + tk.url)).then(data => {
 				if (data.error) throw data.error
-				const err = hicstraw.hicparsestat(tk.hic, data.out)
+				const err = hicparsestat(tk.hic, data.out)
 				if (err) throw err
 			})
 		})
