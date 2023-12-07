@@ -112,43 +112,35 @@ class SingleCellView {
 		if (sampleData.files) {
 			for (const file of sampleData.files) {
 				const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file.fileId }
-				try {
-					const result = await dofetch3('termdb/singlecellData', { body })
-					if (result.error) throw result.error
-					for (const plot of result.plots) {
-						for (const tid in result.tid2cellvalue) {
-							plot.clusterMap = result.tid2cellvalue[tid]
-							this.renderPlot(plot)
-						}
-					}
-				} catch (e) {
-					if (e.stack) console.log(e.stack)
-					sayerror(this.mainDiv, e)
-					return
-				}
+				this.renderPlots(body)
 			}
 		} else {
 			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: sampleData.sample }
-			try {
-				const result = await dofetch3('termdb/singlecellData', { body })
-				if (result.error) throw result.error
-				for (const plot of result.plots) {
-					for (const tid in result.tid2cellvalue) {
-						plot.clusterMap = result.tid2cellvalue[tid]
-						this.renderPlot(plot)
-					}
-				}
-			} catch (e) {
-				if (e.stack) console.log(e.stack)
-				sayerror(this.mainDiv, e)
-				return
-			}
+			this.renderPlots(body)
 		}
 	}
 
-	renderPlot(plot) {
+	async renderPlots(body) {
+		try {
+			const result = await dofetch3('termdb/singlecellData', { body })
+			if (result.error) throw result.error
+			for (const plot of result.plots) {
+				for (const tid in result.tid2cellvalue) {
+					plot.clusterMap = result.tid2cellvalue[tid]
+					this.renderPlot(plot, tid)
+				}
+			}
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			sayerror(this.mainDiv, e)
+			return
+		}
+	}
+
+	renderPlot(plot, tid) {
 		const cells2Clusters = plot.cells.map(c => {
 			c.clusterMap = plot.clusterMap
+			c.tid = tid
 			return plot.clusterMap[c.cellId]
 		})
 		let clusters = new Set(cells2Clusters)
@@ -239,7 +231,7 @@ class SingleCellView {
 			tr.append('td').style('color', '#aaa').text('Id')
 			tr.append('td').text(`${d.cellId}`)
 			tr = table.append('tr')
-			tr.append('td').style('color', '#aaa').text('Cluster')
+			tr.append('td').style('color', '#aaa').text(d.tid)
 			const td = tr.append('td')
 			const svg = td.append('svg').attr('width', 150).attr('height', 25)
 			const x = 15
@@ -250,7 +242,7 @@ class SingleCellView {
 				.append('g')
 				.attr('transform', `translate(${x + 15}, ${y + 4})`)
 				.append('text')
-				.text(`Cluster ${cluster}`)
+				.text(cluster)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
