@@ -22,7 +22,7 @@ export type HicRunProteinPaintTrackArgs = BaseTrackArgs &
 		pyramidup: number | boolean
 		enzyme: RestrictionEnzyme
 		/** Normalization method for the queried data */
-		normalizationmethod: string[]
+		normalizationmethod: string | string[]
 	}
 
 export type HicstrawArgs = SharedArgs & {
