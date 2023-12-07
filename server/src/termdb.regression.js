@@ -315,6 +315,7 @@ function makeRinput(q, sampledata) {
 			if (tw.type == 'snplst') {
 				for (const snpid of tw.highAFsnps.keys()) {
 					if (!id2value.get(snpid)) {
+						// TODO: is this already handled in doImputation()?
 						skipsample = true
 						break
 					}
@@ -1286,7 +1287,9 @@ samples {Map}
 	as those will miss value for dict terms and ineligible for analysis
 
 useAllSamples true/false
-	if true, populate "samples" with all of those from cache file
+	if true
+		-populate "samples" with all of those from cache file
+		-do not perform imputation
 */
 export async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 	const lines = (await utils.read_file(path.join(serverconfig.cache_snpgt.dir, tw.q.cacheid))).split('\n')
@@ -1350,8 +1353,7 @@ export async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 	}
 
 	// imputation
-	// do not impute for snplocus
-	if (tw.type != 'snplocus') {
+	if (tw.type == 'snplst' && !useAllSamples) {
 		doImputation(snp2sample, tw, cachesampleheader, sampleinfilter)
 	}
 
