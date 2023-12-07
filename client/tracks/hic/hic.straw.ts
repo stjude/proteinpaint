@@ -599,8 +599,8 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any) {
 		.attr('height', obj.canvas.height)
 		.attr('x', obj.x)
 		.attr('y', obj.y)
-		.on('click', () => {
-			init_chrpair(hic, lead, follow)
+		.on('click', async () => {
+			await init_chrpair(hic, lead, follow)
 		})
 		.on('mouseover', () => {
 			chrpair_mouseover(hic, obj.img, lead, follow)
@@ -620,8 +620,8 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any) {
 			.attr('height', obj.canvas2.height)
 			.attr('x', obj.y)
 			.attr('y', obj.x)
-			.on('click', () => {
-				init_chrpair(hic, follow, lead)
+			.on('click', async () => {
+				await init_chrpair(hic, follow, lead)
 			})
 			.on('mouseover', () => {
 				chrpair_mouseover(hic, obj.img2, follow, lead)
@@ -839,7 +839,7 @@ function click_sv(hic: any, item: any): void {
  * @param chry
  * @returns
  */
-function init_chrpair(hic: any, chrx: any, chry: any) {
+async function init_chrpair(hic: any, chrx: any, chry: any) {
 	nmeth2select(hic, hic.chrpairview.nmeth)
 
 	hic.inwholegenome = false
@@ -948,7 +948,7 @@ function init_chrpair(hic: any, chrx: any, chry: any) {
 	hic.chrpairview.ctx = ctx
 	hic.chrpairview.canvas = canvas
 
-	getdata_chrpair(hic)
+	await getdata_chrpair(hic)
 }
 
 function tell_firstisx(hic: any, chrx: any, chry: any) {
@@ -956,7 +956,7 @@ function tell_firstisx(hic: any, chrx: any, chry: any) {
 	return hic.chrorder.indexOf(chrx) < hic.chrorder.indexOf(chry)
 }
 
-function getdata_chrpair(hic: any) {
+async function getdata_chrpair(hic: any) {
 	const chrx = hic.chrpairview.chrx
 	const chry = hic.chrpairview.chry
 	const isintrachr = chrx == chry
@@ -977,66 +977,61 @@ function getdata_chrpair(hic: any) {
 		nmeth: hic.chrpairview.nmeth,
 		resolution: resolution
 	}
-	fetch(
-		new Request(hic.hostURL + '/hicdata', {
+
+	try {
+		const re = await client.dofetch2(hic.hostURL + '/hicdata', {
 			method: 'POST',
 			body: JSON.stringify(arg)
 		})
-	)
-		.then(data => {
-			return data.json()
-		})
-		.then(data => {
-			if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error.error } //Fix for message displaying [object object] instead of error message
+		const data = re.json()
+		if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error.error } //Fix for message displaying [object object] instead of error message
 
-			ctx.clearRect(0, 0, hic.chrpairview.canvas.width, hic.chrpairview.canvas.height)
+		ctx.clearRect(0, 0, hic.chrpairview.canvas.width, hic.chrpairview.canvas.height)
 
-			if (!data.items || data.items.length == 0) {
-				// no data
-				return
-			}
+		if (!data.items || data.items.length == 0) {
+			// no data
+			return
+		}
 
-			// const err = 0
+		// const err = 0
 
-			hic.chrpairview.isintrachr = isintrachr
-			hic.chrpairview.data = []
+		hic.chrpairview.isintrachr = isintrachr
+		hic.chrpairview.data = []
 
-			/*
+		/*
 		a percentile as cutoff for chrpairview
 		*/
-			const vlst = [] as any
+		const vlst = [] as any
 
-			for (const [coord1, coord2, v] of data.items) {
-				vlst.push(v)
+		for (const [coord1, coord2, v] of data.items) {
+			vlst.push(v)
 
-				const px1 = Math.floor(coord1 / resolution) * binpx
-				const px2 = Math.floor(coord2 / resolution) * binpx
-				const x = firstisx ? px1 : px2
-				const y = firstisx ? px2 : px1
+			const px1 = Math.floor(coord1 / resolution) * binpx
+			const px2 = Math.floor(coord2 / resolution) * binpx
+			const x = firstisx ? px1 : px2
+			const y = firstisx ? px2 : px1
 
-				hic.chrpairview.data.push([x, y, v])
-				if (isintrachr) {
-					hic.chrpairview.data.push([y, x, v])
-				}
+			hic.chrpairview.data.push([x, y, v])
+			if (isintrachr) {
+				hic.chrpairview.data.push([y, x, v])
 			}
+		}
 
-			const maxv = vlst.sort((a, b) => a - b)[Math.floor(vlst.length * 0.99)]
-			hic.chrpairview.bpmaxv = maxv
-			hic.inputbpmaxv.property('value', maxv)
+		const maxv = vlst.sort((a, b) => a - b)[Math.floor(vlst.length * 0.99)]
+		hic.chrpairview.bpmaxv = maxv
+		hic.inputbpmaxv.property('value', maxv)
 
-			for (const [x, y, v] of hic.chrpairview.data) {
-				const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-				ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-				ctx.fillRect(x, y, binpx, binpx)
-			}
-		})
-		.catch(err => {
-			hic.errList.push(err.message || err)
-			if (err.stack) console.log(err.stack)
-		})
-		.then(() => {
-			if (hic.errList.length) hic.error(hic.errList)
-		})
+		for (const [x, y, v] of hic.chrpairview.data) {
+			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
+			ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
+			ctx.fillRect(x, y, binpx, binpx)
+		}
+	} catch (err: any) {
+		hic.errList.push(err.message || err)
+		if (err.stack) console.log(err.stack)
+	}
+
+	if (hic.errList.length) hic.error(hic.errList)
 }
 
 /**
@@ -1066,7 +1061,7 @@ async function setnmeth(hic: any, nmeth: string) {
 
 	if (hic.inchrpair) {
 		hic.chrpairview.nmeth = nmeth
-		getdata_chrpair(hic)
+		await getdata_chrpair(hic)
 		return
 	}
 	if (hic.indetail) {
