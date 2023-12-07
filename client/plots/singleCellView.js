@@ -158,38 +158,27 @@ class SingleCellView {
 			.text(plot.name)
 			.style('background-color', '#d3d3d3')
 			.style('fo')
-		this.svg = this.tr
-			.append('td')
-			.style('text-align', 'center')
-			.style('border', '1px solid #d3d3d3')
+		const td = this.tr.append('td').style('text-align', 'center').style('border', '1px solid #d3d3d3')
+		const svg = td
 			.append('svg')
-			.attr('width', this.width + 200)
-			.attr('height', this.height)
-			.on('mousemove', event => this.onMouseOver(event))
-
-		this.mainG = this.svg.append('g')
-		this.rect = this.mainG
-			.append('rect')
-			.attr('x', 0)
-			.attr('y', 0)
 			.attr('width', this.width)
 			.attr('height', this.height)
-			.attr('fill', 'white')
+			.on('mousemove', event => this.onMouseOver(event))
+		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.height)
+
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
-			.on('zoom', e => this.handleZoom(e))
+			.on('zoom', e => mainG.attr('transform', e.transform))
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-		this.svg.call(zoom)
+		svg.call(zoom)
+		const mainG = svg.append('g')
 
-		this.legendG = this.svg
-			.append('g')
-			.attr('transform', `translate(${this.width + 20}, 50)`)
-			.style('font-size', '0.9em')
+		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.9em')
 
-		const symbols = this.mainG.selectAll('path').data(plot.cells)
+		const symbols = mainG.selectAll('path').data(plot.cells)
 
 		symbols
 			.enter()
@@ -199,16 +188,10 @@ class SingleCellView {
 			.attr('r', 2)
 			.attr('fill', d => cat2Color(d.clusterMap[d.cellId]))
 
-		this.renderLegend(plot, cells2Clusters)
+		this.renderLegend(legendG, plot, cells2Clusters)
 	}
 
-	handleZoom(event) {
-		this.zoom = event.transform.scale(1).k
-		this.mainG.attr('transform', event.transform)
-	}
-
-	renderLegend(plot, cells2Clusters) {
-		const legendG = this.legendG
+	renderLegend(legendG, plot, cells2Clusters) {
 		legendG.append('text').style('font-weight', 'bold').text(`${plot.cells.length} cells`)
 		const step = 25
 		let y = 40
