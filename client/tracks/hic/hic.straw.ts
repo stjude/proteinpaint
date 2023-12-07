@@ -979,11 +979,10 @@ async function getdata_chrpair(hic: any) {
 	}
 
 	try {
-		const re = await client.dofetch2(hic.hostURL + '/hicdata', {
+		const data = await client.dofetch2('/hicdata', {
 			method: 'POST',
 			body: JSON.stringify(arg)
 		})
-		const data = re.json()
 		if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error.error } //Fix for message displaying [object object] instead of error message
 
 		ctx.clearRect(0, 0, hic.chrpairview.canvas.width, hic.chrpairview.canvas.height)
