@@ -287,22 +287,10 @@ function mlst2disc(mlst, tk) {
 			case dtsnvindel:
 				if (!k2g.get(m.dt).has(m.class)) k2g.get(m.dt).set(m.class, new Map())
 				const n = m.mname || ''
-				if (
-					!k2g
-						.get(m.dt)
-						.get(m.class)
-						.has(n)
-				) {
-					k2g
-						.get(m.dt)
-						.get(m.class)
-						.set(n, [])
+				if (!k2g.get(m.dt).get(m.class).has(n)) {
+					k2g.get(m.dt).get(m.class).set(n, [])
 				}
-				k2g
-					.get(m.dt)
-					.get(m.class)
-					.get(n)
-					.push(m)
+				k2g.get(m.dt).get(m.class).get(n).push(m)
 				break
 			case dtsv:
 			case dtfusionrna:
@@ -313,39 +301,15 @@ function mlst2disc(mlst, tk) {
 					})
 				}
 				if (m.useNterm) {
-					if (
-						!k2g
-							.get(m.dt)
-							.get(m.class)
-							.use5.has(m.mname)
-					) {
-						k2g
-							.get(m.dt)
-							.get(m.class)
-							.use5.set(m.mname, [])
+					if (!k2g.get(m.dt).get(m.class).use5.has(m.mname)) {
+						k2g.get(m.dt).get(m.class).use5.set(m.mname, [])
 					}
-					k2g
-						.get(m.dt)
-						.get(m.class)
-						.use5.get(m.mname)
-						.push(m)
+					k2g.get(m.dt).get(m.class).use5.get(m.mname).push(m)
 				} else {
-					if (
-						!k2g
-							.get(m.dt)
-							.get(m.class)
-							.use3.has(m.mname)
-					) {
-						k2g
-							.get(m.dt)
-							.get(m.class)
-							.use3.set(m.mname, [])
+					if (!k2g.get(m.dt).get(m.class).use3.has(m.mname)) {
+						k2g.get(m.dt).get(m.class).use3.set(m.mname, [])
 					}
-					k2g
-						.get(m.dt)
-						.get(m.class)
-						.use3.get(m.mname)
-						.push(m)
+					k2g.get(m.dt).get(m.class).use3.get(m.mname).push(m)
 				}
 				break
 			case dtitd:
@@ -458,9 +422,13 @@ function done_tknodata(tk, block) {
 	//remove previous message in case of panning in gmmode
 	tk.skewer.g.selectAll('*').remove()
 
-	let context = 'view range'
-	if (block.usegm && block.gmmode != 'genomic') {
-		context = block.usegm.name || block.usegm.isoform
+	let context
+	if (!tk.skewer.data || tk.skewer.data.length == 0) {
+		if (block.pannedpx != undefined || block.zoomedin == true) {
+			context = 'view range'
+		} else if (block.usegm && block.gmmode != 'genomic') {
+			context = block.usegm.name || block.usegm.isoform
+		}
 	}
 	tk.skewer.g
 		.append('text')

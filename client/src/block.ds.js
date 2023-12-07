@@ -306,10 +306,7 @@ async function dstkload_fromdsquery(tk, block) {
 
 	const data = await client.dofetch2('dsdata', { method: 'POST', body: JSON.stringify(par) })
 	if (tk.__handlesays) {
-		tk.__handlesays
-			.text(tk.ds.label)
-			.style('background-color', '#ddd')
-			.style('color', 'black')
+		tk.__handlesays.text(tk.ds.label).style('background-color', '#ddd').style('color', 'black')
 	}
 	if (data.error) throw data.error
 	load2tk(data.data, block, tk)
@@ -769,22 +766,10 @@ function mlst2disc(mlst, tk) {
 					k2g.get(m.dt).set(m.class, new Map())
 				}
 				const n = m.mname || ''
-				if (
-					!k2g
-						.get(m.dt)
-						.get(m.class)
-						.has(n)
-				) {
-					k2g
-						.get(m.dt)
-						.get(m.class)
-						.set(n, [])
+				if (!k2g.get(m.dt).get(m.class).has(n)) {
+					k2g.get(m.dt).get(m.class).set(n, [])
 				}
-				k2g
-					.get(m.dt)
-					.get(m.class)
-					.get(n)
-					.push(m)
+				k2g.get(m.dt).get(m.class).get(n).push(m)
 				break
 			case common.dtsv:
 			case common.dtfusionrna:
@@ -798,39 +783,15 @@ function mlst2disc(mlst, tk) {
 					})
 				}
 				if (m.useNterm) {
-					if (
-						!k2g
-							.get(m.dt)
-							.get(m.class)
-							.use5.has(m.mname)
-					) {
-						k2g
-							.get(m.dt)
-							.get(m.class)
-							.use5.set(m.mname, [])
+					if (!k2g.get(m.dt).get(m.class).use5.has(m.mname)) {
+						k2g.get(m.dt).get(m.class).use5.set(m.mname, [])
 					}
-					k2g
-						.get(m.dt)
-						.get(m.class)
-						.use5.get(m.mname)
-						.push(m)
+					k2g.get(m.dt).get(m.class).use5.get(m.mname).push(m)
 				} else {
-					if (
-						!k2g
-							.get(m.dt)
-							.get(m.class)
-							.use3.has(m.mname)
-					) {
-						k2g
-							.get(m.dt)
-							.get(m.class)
-							.use3.set(m.mname, [])
+					if (!k2g.get(m.dt).get(m.class).use3.has(m.mname)) {
+						k2g.get(m.dt).get(m.class).use3.set(m.mname, [])
 					}
-					k2g
-						.get(m.dt)
-						.get(m.class)
-						.use3.get(m.mname)
-						.push(m)
+					k2g.get(m.dt).get(m.class).use3.get(m.mname).push(m)
 				}
 				break
 			case common.dtitd:
@@ -1051,7 +1012,7 @@ custom mclass from vcfinfofilter
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg')
-		.each(function(d) {
+		.each(function (d) {
 			// determine dimension for this skewer, do not position or render yet
 			// compute radius for each group
 			d.skewer = this
@@ -1096,7 +1057,7 @@ custom mclass from vcfinfofilter
 			d => 'translate(0,' + (d.aa.showmode == modefold ? 0 : d.yoffset * (tk.aboveprotein ? -1 : 1)) + ')'
 		)
 		.attr('class', 'sja_aa_discg')
-		.each(function(d) {
+		.each(function (d) {
 			d.g = this
 		})
 	// actual disc
@@ -1162,7 +1123,7 @@ custom mclass from vcfinfofilter
 			d._labfontsize = Math.max(12, d.radius * 1.2)
 			return d._labfontsize
 		})
-		.each(function(d) {
+		.each(function (d) {
 			// after setting font size, set skewer width by label width
 			const lw = this.getBBox().width
 			d._label_width = lw
@@ -1366,7 +1327,7 @@ custom mclass from vcfinfofilter
 					.append('text')
 					.text(g.mlst[0].mname + (g.occurrence > 1 ? ' x' + g.occurrence : ''))
 					.attr('font-size', g.pica_fontsize)
-					.each(function() {
+					.each(function () {
 						boxw = Math.max(boxw, this.getBBox().width)
 					})
 					.remove()
@@ -1395,7 +1356,7 @@ custom mclass from vcfinfofilter
 			_g.append('text')
 				.text(g => g.mlst[0].mname)
 				.attr('font-size', g => g.pica_fontsize)
-				.each(function(g) {
+				.each(function (g) {
 					g.pica_mlabelwidth = this.getBBox().width
 				})
 				.attr('fill', d => color4disc(d.mlst[0]))
@@ -1525,7 +1486,7 @@ custom mclass from vcfinfofilter
 					.text(label1)
 					.attr('font-size', fontsize1)
 					.attr('font-family', client.font)
-					.each(function() {
+					.each(function () {
 						width = this.getBBox().width
 					})
 					.remove()
@@ -1534,7 +1495,7 @@ custom mclass from vcfinfofilter
 					.text(label2)
 					.attr('font-size', fontsize2)
 					.attr('font-family', client.font)
-					.each(function() {
+					.each(function () {
 						width = Math.max(width, this.getBBox().width)
 					})
 					.remove()
@@ -1633,30 +1594,16 @@ custom mclass from vcfinfofilter
 		.attr('width', d => d.ssk_width)
 		.on('mouseover', (event, d) => {
 			const p = d3select(event.target.parentNode)
-			p.selectAll('.sja_aa_disckick')
-				.transition()
-				.attr('stroke-opacity', 1)
-			p.select('.sja_aa_ssk_bg')
-				.transition()
-				.attr('fill-opacity', 1)
-				.attr('stroke-opacity', 1)
-			p.select('.sja_aa_ssk_text')
-				.transition()
-				.attr('fill-opacity', 1)
+			p.selectAll('.sja_aa_disckick').transition().attr('stroke-opacity', 1)
+			p.select('.sja_aa_ssk_bg').transition().attr('fill-opacity', 1).attr('stroke-opacity', 1)
+			p.select('.sja_aa_ssk_text').transition().attr('fill-opacity', 1)
 			epaint_may_hl(tk, d.mlst, true)
 		})
-		.on('mouseout', function(event, d) {
+		.on('mouseout', function (event, d) {
 			const p = d3select(event.target.parentNode)
-			p.selectAll('.sja_aa_disckick')
-				.transition()
-				.attr('stroke-opacity', 0)
-			p.select('.sja_aa_ssk_bg')
-				.transition()
-				.attr('fill-opacity', 0)
-				.attr('stroke-opacity', 0)
-			p.select('.sja_aa_ssk_text')
-				.transition()
-				.attr('fill-opacity', 0)
+			p.selectAll('.sja_aa_disckick').transition().attr('stroke-opacity', 0)
+			p.select('.sja_aa_ssk_bg').transition().attr('fill-opacity', 0).attr('stroke-opacity', 0)
+			p.select('.sja_aa_ssk_text').transition().attr('fill-opacity', 0)
 			epaint_may_hl(tk, d.mlst, false)
 		})
 		.on('click', async (event, d) => {
@@ -1875,7 +1822,7 @@ function unfold_glyph(newlst, tk, block) {
 				d.y = d.yoffset * (abp ? -1 : 1)
 				return 'translate(0,' + d.y + ')'
 			})
-		setTimeout(function() {
+		setTimeout(function () {
 			set.selectAll('.sja_aa_disckick').attr('transform', 'scale(1)')
 		}, dur)
 		/*
@@ -1883,12 +1830,7 @@ function unfold_glyph(newlst, tk, block) {
 			.transition().duration(dur)
 			.attr('transform','translate(0,'+(sk.maxskewerheight*(abp?-1:1))+') scale(1)')
 			*/
-		set
-			.selectAll('.sja_aa_discnum')
-			.transition()
-			.duration(dur)
-			.attr('fill-opacity', 1)
-			.attr('stroke-opacity', 1)
+		set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
 		set
 			.filter(d => d.groups.length > 1)
 			.selectAll('.sja_aa_disclabel')
@@ -1896,12 +1838,7 @@ function unfold_glyph(newlst, tk, block) {
 			.duration(dur)
 			.attr('fill-opacity', 1)
 			.attr('transform', 'scale(1)')
-		set
-			.selectAll('.sja_aa_discrim')
-			.transition()
-			.duration(dur)
-			.attr('fill-opacity', 1)
-			.attr('stroke-opacity', 1)
+		set.selectAll('.sja_aa_discrim').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
 		set
 			.selectAll('.sja_aa_ssk_kick')
 			.attr('transform', 'scale(1)')
@@ -2138,24 +2075,9 @@ export function fold_glyph(lst, tk) {
 		.transition().duration(dur)
 		.attr('transform','translate(0,0) scale(0)')
 		*/
-	set
-		.selectAll('.sja_aa_discnum')
-		.transition()
-		.duration(dur)
-		.attr('fill-opacity', 0)
-		.attr('stroke-opacity', 0)
-	set
-		.selectAll('.sja_aa_disclabel')
-		.transition()
-		.duration(dur)
-		.attr('fill-opacity', 0)
-		.attr('transform', 'scale(0)') // hide this label so it won't be tred
-	set
-		.selectAll('.sja_aa_discrim')
-		.transition()
-		.duration(dur)
-		.attr('fill-opacity', 0)
-		.attr('stroke-opacity', 0)
+	set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
+	set.selectAll('.sja_aa_disclabel').transition().duration(dur).attr('fill-opacity', 0).attr('transform', 'scale(0)') // hide this label so it won't be tred
+	set.selectAll('.sja_aa_discrim').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
 	set.selectAll('.sja_aa_ssk_kick').attr('transform', 'scale(0)')
 	set.selectAll('.sja_aa_ssk_bg').attr('transform', 'scale(0)')
 	set.selectAll('.sja_aa_ssk_text').attr('transform', 'scale(0)')
@@ -2170,11 +2092,7 @@ export function fold_glyph(lst, tk) {
 		.transition()
 		.duration(dur)
 		.attr('transform', d => 'translate(0,' + (abp ? 1 : -1) * (tk.stem1 - d.y) + ')')
-	skbars
-		.selectAll('.sja_aa_stackbar_rect')
-		.transition()
-		.duration(dur)
-		.attr('width', 0)
+	skbars.selectAll('.sja_aa_stackbar_rect').transition().duration(dur).attr('width', 0)
 }
 
 export function epaint_may_hl(tk, mlst, hl) {
@@ -2715,10 +2633,7 @@ function showlegend_vcfinfofilter(tk, block) {
 				.html(count > 1 ? count : '&nbsp;')
 				.style('margin-right', '5px')
 			// label
-			const lab = cell
-				.append('span')
-				.text(v.label)
-				.style('color', v.color)
+			const lab = cell.append('span').text(v.label).style('color', v.color)
 			if (mcset.categoryhidden[k]) {
 				lab.style('text-decoration', 'line-through')
 			}
@@ -3478,7 +3393,7 @@ export function mlst_pretreat(tk, block, originhidden) {
 	}
 
 	const collectleftlabw = []
-	tk.tklabel.each(function() {
+	tk.tklabel.each(function () {
 		collectleftlabw.push(this.getBBox().width)
 	})
 
@@ -3493,7 +3408,7 @@ export function mlst_pretreat(tk, block, originhidden) {
 					? usemlst.length + ' of ' + tk.mlst.length + ' ' + tk.itemlabelname + 's'
 					: usemlst.length + ' ' + tk.itemlabelname + (usemlst.length > 1 ? 's' : '')
 			)
-			.each(function() {
+			.each(function () {
 				collectleftlabw.push(this.getBBox().width)
 			})
 	}
@@ -3538,7 +3453,7 @@ export function mlst_pretreat(tk, block, originhidden) {
 			if (itemcount == 0) {
 				strat.svglabel.text('')
 			} else {
-				strat.svglabel.text(itemcount + ' ' + strat.label + (itemcount > 1 ? 's' : '')).each(function() {
+				strat.svglabel.text(itemcount + ' ' + strat.label + (itemcount > 1 ? 's' : '')).each(function () {
 					collectleftlabw.push(this.getBBox().width)
 				})
 			}
@@ -3624,9 +3539,13 @@ export function done_tknodata(tk, block) {
 		// went beyond range
 		block.tkerror(tk, tk.name + ': zoom in under ' + common.bplen(tk.viewrangeupperlimit) + ' to view data')
 	} else {
-		let context = 'view range'
-		if (block.usegm && block.gmmode != client.gmmode.genomic) {
-			context = block.usegm.name || block.usegm.isoform
+		let context
+		if (!tk.skewer.data || tk.skewer.data.length == 0) {
+			if (block.pannedpx != undefined || block.zoomedin == true) {
+				context = 'view range'
+			} else if (block.usegm && block.gmmode != 'genomic') {
+				context = block.usegm.name || block.usegm.isoform
+			}
 		}
 		block.tkerror(tk, tk.name + ': no mutation in ' + context)
 	}
