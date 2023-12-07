@@ -3,16 +3,24 @@ import * as d3s from 'd3-selection'
 import { dofetch2 } from '../../../common/dofetch.js'
 import { hicData } from './hicData.ts'
 import { hicparsefile, hicparsestat } from '../../../tracks/hic/hic.straw.ts'
+// import { runproteinpaint } from '../../../test/front.helpers.js'
+// import { HicRunProteinPaintTrackArgs } from '../../../types/hic.ts'
 
 /*
 Tests:
-    hicparsefile() - TODO: needs more work
-    hicparsestat()
-    SKIPPED - hicparsefragdata()
+	hicparsefile() - TODO: needs more work
+	hicparsestat()
+	SKIPPED - hicparsefragdata()
  */
 
 function getHolder() {
-	return d3s.select('body').append('div')
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+		.node()
 }
 
 async function getGenomes(genome: string) {
@@ -48,7 +56,7 @@ tape('hicparsefile()', async test => {
 			hic.inlineview == false,
 		'Should add .wholegenome, .chrpairview, and .detailview objects as well as .inwholegenome, .inchrpair, .indetail, and .inlineview booleans to hic'
 	)
-	if (test['_ok']) holder.remove()
+	if (test['_ok']) holder!.remove()
 	test.end()
 })
 
@@ -149,3 +157,35 @@ tape.skip('hicparsefragdata()', test => {
 	//test.plan()
 	test.end()
 })
+
+// tape('Render Hi-C track', function (test) {
+// 	// test.plan(1)
+// 	test.timeoutAfter(3000)
+// 	const holder = getHolder()
+
+// 	runproteinpaint({
+// 		holder,
+// 		block: true,
+// 		nobox: 1,
+// 		noheader: 1,
+// 		genome: 'hg19',
+// 		position: 'chr7:13749862-20841903',
+// 		nativetracks: 'RefGene',
+// 		tracks: [
+// 			{
+// 				type: 'hicstraw',
+// 				file: 'proteinpaint_demo/hg19/hic/hic_demo.hic',
+// 				name: 'Hi-C Demo',
+// 				percentile_max: 95,
+// 				mincutoff: 1,
+// 				pyramidup: 1,
+// 				enzyme: 'MboI',
+// 				normalizationmethod: 'VC'
+// 			} as HicRunProteinPaintTrackArgs
+// 		]
+// 	})
+// 	test.pass('Rendered Hi-C track')
+
+// 	// if (test._ok) holder.remove()
+// 	test.end()
+// })
