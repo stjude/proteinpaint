@@ -423,12 +423,10 @@ function done_tknodata(tk, block) {
 	tk.skewer.g.selectAll('*').remove()
 
 	let context
-	if (!tk.skewer.data || tk.skewer.data.length == 0) {
-		if (block.pannedpx != undefined || block.zoomedin == true) {
-			context = 'view range'
-		} else if (block.usegm && block.gmmode != 'genomic') {
-			context = block.usegm.name || block.usegm.isoform
-		}
+	if (block.pannedpx != undefined || block.zoomedin == true) {
+		context = 'view range'
+	} else if (block.usegm && block.gmmode != 'genomic') {
+		context = block.usegm.name || block.usegm.isoform
 	}
 	tk.skewer.g
 		.append('text')
