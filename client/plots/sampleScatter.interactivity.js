@@ -200,6 +200,7 @@ export function setInteractivity(self) {
 							const class_info = mclass[id]
 							if (mutation == class_info.label) {
 								mname = sample.cat_info[node.category].find(m => m.class == class_info.key).mname
+								console.log(tw.term.name, mname)
 							}
 						}
 					}
