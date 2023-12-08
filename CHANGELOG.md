@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Click dendrogram to highlight sub-branches, zoom in and select cases underneath
 
+Fixes:
+- topVariablyExpressedGenes is changed from a GDC-specific route to general purpose route. Awaiting further work for non-gdc dataset
+
 
 ## 2.34.1
 
