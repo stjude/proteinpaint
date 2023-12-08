@@ -174,7 +174,13 @@ type Hic = {
 }
 
 /**
- * Parse input file and initiate view.
+ * Parses input file and renders plot. Whole genome view renders as the default. 
+ * Clicking on chr-chr svg launches the chr-pair view.
+ * Clicking anywhere within the chr-pair view launches the detail view. The track maybe launched from the Horizontal View button.
+ * TODOs:
+ * - add state-like functionality. Add functions for views to operate independently of each other. 
+ * - modify controls into single div (dom.controlsDiv). Use state to change between views
+ * - After all that, fix the type mess above
  * @param hic 
  * 	.file
 	.url
@@ -183,7 +189,6 @@ type Hic = {
 	.holder
  * @param debugmode debugmode passed from app, server state, if true, attach to window.hic
  */
-
 class Hicstat {
 	dom: {
 		errorDiv: Selection<HTMLDivElement, any, any, any>
@@ -235,7 +240,7 @@ class Hicstat {
 	}
 
 	async init_wholeGenomeView(hic: any) {
-		const resolution = hic.bpresolution![0]
+		const resolution = hic.bpresolution[0]
 
 		//TODO modify with controls.whole.genome.ts
 		hic.ressays.text(common.bplen(resolution) + ' bp')
@@ -267,7 +272,7 @@ class Hicstat {
 		const chr2px = {} // px width for each chr
 		let totalpx = hic.chrlst.length
 		for (const chr of hic.chrlst!) {
-			const w = Math.ceil(hic.genome.chrlookup![chr.toUpperCase()].len / resolution) * binpx
+			const w = Math.ceil(hic.genome.chrlookup[chr.toUpperCase()].len / resolution) * binpx
 			chr2px[chr] = w
 			totalpx += w
 		}
@@ -349,13 +354,13 @@ class Hicstat {
 		xoff = 0
 
 		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst![i]
+			const lead = hic.chrlst[i]
 			hic.wholegenome.lead2follow.set(lead, new Map())
 
 			yoff = 0
 
 			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst![j]
+				const follow = hic.chrlst[j]
 				hic.wholegenome.lead2follow.get(lead).set(follow, {
 					x: xoff,
 					y: yoff
@@ -379,9 +384,9 @@ class Hicstat {
 		do not flood ui with such errors, to tolerate, collect all errors and show in one place
 		*/
 		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst![i]
+			const lead = hic.chrlst[i]
 			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst![j]
+				const follow = hic.chrlst[j]
 				try {
 					await getdata_leadfollow(hic, lead, follow)
 				} catch (e: any) {
