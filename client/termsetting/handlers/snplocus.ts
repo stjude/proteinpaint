@@ -69,39 +69,45 @@ export function getHandler(self) {
 	}
 }
 
-async function makeEditMenu(self, div: any) {
+async function makeEditMenu(self, div0: any) {
+	const div = div0.append('div').style('margin', '15px')
+
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
 	const coordResult = addGeneSearchbox({
 		genome: self.opts.genomeObj,
 		tip: self.dom.tip2,
-		row: div.append('div').style('margin', '15px'),
+		row: div.append('div').style('margin-top', '20px'),
 		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null
 	})
+
+	div.select('.sja_genesearchinput').style('margin', '0px')
+
 	div
 		.append('span')
-		.style('margin-left', '15px')
-		.style('margin-top', '-10px')
-		.style('margin-bottom', '5px')
+		.style('margin', '5px 0px')
 		.style('display', 'inline-block')
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.html(
-			'"Gene": Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>"dbSNP": dbSNP accession (e.g. rs1042522)'
+			'"Gene": Gene name (e.g. AKT1)</br>"Position": chr:start-stop (e.g. chr1:5000-6000)</br>"dbSNP": dbSNP accession (e.g. rs1042522)'
 		)
 
 	await mayDisplayVariantFilter(self, self.q?.variant_filter, div)
 
 	const [input_AFcutoff, select_alleleType, select_geneticModel] = makeSnpSelect(
-		div.append('div').style('margin', '15px'),
+		div.append('div').attr('class', 'sjpp-snp-select').style('margin-top', '15px'),
 		self,
 		'snplocus'
 	)
 
+	// hide snp select for data download
+	if (self.usecase.target == 'dataDownload') div.select('.sjpp-snp-select').style('display', 'none')
+
 	// submit button
 	div
 		.append('button')
-		.style('margin', '0px 15px 15px 15px')
+		.style('margin-top', '15px')
 		.text('Submit')
 		.on('click', async event => {
 			if (!coordResult.chr) return window.alert('Invalid coordinate')
@@ -240,9 +246,9 @@ async function mayDisplayVariantFilter(self, filterInState: any, holder: any, ca
 		// use default filter from dataset
 		self.variantFilter.active = JSON.parse(JSON.stringify(self.variantFilter.filter))
 	}
-	const div = holder.append('div').style('margin', '15px')
+	const div = holder.append('div').style('margin-top', '15px')
 
-	div.append('span').text('VARIANT FILTERS').style('font-size', '.8em').style('opacity', 0.6)
+	div.append('span').text('VARIANT FILTERS').style('font-size', '.8em').style('opacity', 0.5)
 
 	const filterBody = div.append('div')
 
