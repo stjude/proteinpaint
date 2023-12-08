@@ -33,6 +33,7 @@ import { mayInitiateMatrixplots } from './termdb.matrix'
 import { add_bcf_variant_filter } from './termdb.snp'
 import { spawnSync } from 'child_process'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
+import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 
 /*
 init
@@ -103,6 +104,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_singleSampleGbtk(ds, genome)
 		//await validate_query_probe2cnv(ds, genome)
 		await validate_query_singleCell(ds, genome)
+		await validate_query_TopVariablyExpressedGenes(ds, genome)
 
 		await validate_variant2samples(ds)
 		await validate_ssm2canonicalisoform(ds)

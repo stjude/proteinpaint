@@ -138,26 +138,26 @@ config{}
 async function getGenes(arg, filter0, config) {
 	if (arg.genes) {
 		// genes are predefined
-		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw '.genes[] is not non-empty array'
-		return await Promise.all(
-			arg.genes.map(async i => {
-				return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
-			})
-		)
+		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw 'arg.genes[] is not non-empty array'
+		return await makeGeneTwlst(arg.genes)
 	}
 
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
-		filter0,
+		genome: gdcGenome,
+		dslabel: gdcDslabel,
 		maxGenes: config.maxGenes
 	}
 	if (filter0) body.filter0 = filter0 // to avoid causing a "null" parameter value for backend
-	const data = await dofetch3('gdc/topVariablyExpressedGenes', { body })
+	const data = await dofetch3('termdb/topVariablyExpressedGenes', { body })
 	if (data.error) throw data.error
-	if (!data.genes) throw 'no top genes found using the cohort filter'
-	return await Promise.all(
-		data.genes.map(async i => {
-			return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
-		})
-	)
+	if (!data.genes || data.genes.length == 0) throw 'no top genes found using the cohort filter'
+	return await makeGeneTwlst(data.genes)
+}
+async function makeGeneTwlst(lst) {
+	const tws = []
+	for (const g of lst) {
+		tws.push(await fillTermWrapper({ term: { name: g, type: 'geneVariant' } }))
+	}
+	return tws
 }

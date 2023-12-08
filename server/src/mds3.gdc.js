@@ -26,7 +26,7 @@ validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
 validate_query_geneExpression
-	getCasesWithExressionDataFromCohort
+	gdcGetCasesWithExressionDataFromCohort
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
 querySamples_gdcapi
@@ -56,10 +56,10 @@ for now the api host is not attached to the pp-backend dataset object (as define
 as there are usages not involving the "dataset", e.g. in bam slicing
 thus need to define the "apihost" as global variables in multiple places
 */
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
+export const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 // may override the geneExpHost for developers without access to qa/portal environments
-const geneExpHost = serverconfig.features?.geneExpHost || apihost
+export const geneExpHost = serverconfig.features?.geneExpHost || apihost
 
 export function convertSampleId_addGetter(tdb, ds) {
 	tdb.convertSampleId.get = inputs => {
@@ -171,7 +171,7 @@ export function validate_query_geneExpression(ds, genome) {
 		const t1 = new Date()
 
 		// get all cases from current filter
-		const caseLst = await getCasesWithExressionDataFromCohort(q, ds)
+		const caseLst = await gdcGetCasesWithExressionDataFromCohort(q, ds)
 		if (caseLst.length == 0) return { gene2sample2value, byTermId: {} } // no cases with exp data
 
 		const t2 = new Date()
@@ -264,7 +264,7 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 	}
 }
 
-export async function getCasesWithExressionDataFromCohort(q, ds) {
+export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 	const f = { op: 'and', content: [] }
 	if (q.filter0) {
 		f.content.push(q.filter0)
