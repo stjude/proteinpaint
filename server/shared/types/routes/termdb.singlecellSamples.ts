@@ -1,3 +1,5 @@
+import { ErrorResponse } from './errorResponse'
+
 export type Sample = {
 	/** Sample name, required */
 	sample: string
@@ -12,10 +14,11 @@ export type TermdbSinglecellsamplesRequest = {
 	dslabel: string
 	//filter0?: Filter0 // for gdc
 }
-
-export type TermdbSinglecellsamplesResponse = {
+type ValidResponse = {
 	/** List of sample names with singlecell data */
 	samples: Sample[]
 	fields: string[]
 	columnNames: string[]
 }
+
+export type TermdbSinglecellsamplesResponse = ErrorResponse | ValidResponse
