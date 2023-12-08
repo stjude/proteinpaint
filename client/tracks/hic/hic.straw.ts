@@ -265,9 +265,9 @@ class Hicstat {
 		let checker_row = true
 
 		const chr2px = {} // px width for each chr
-		let totalpx = hic.chrlst!.length
+		let totalpx = hic.chrlst.length
 		for (const chr of hic.chrlst!) {
-			const w = Math.ceil(hic.genome!.chrlookup![chr.toUpperCase()].len / resolution) * binpx
+			const w = Math.ceil(hic.genome.chrlookup![chr.toUpperCase()].len / resolution) * binpx
 			chr2px[chr] = w
 			totalpx += w
 		}
@@ -344,19 +344,19 @@ class Hicstat {
 			yoff += borderwidth
 		}
 
-		const manychr = hic.atdev ? atdev_chrnum : hic.chrlst!.length
+		const manychr = hic.atdev ? atdev_chrnum : hic.chrlst.length
 
 		xoff = 0
 
 		for (let i = 0; i < manychr; i++) {
 			const lead = hic.chrlst![i]
-			hic.wholegenome!.lead2follow!.set(lead, new Map())
+			hic.wholegenome.lead2follow.set(lead, new Map())
 
 			yoff = 0
 
 			for (let j = 0; j <= i; j++) {
 				const follow = hic.chrlst![j]
-				hic.wholegenome.lead2follow!.get(lead).set(follow, {
+				hic.wholegenome.lead2follow.get(lead).set(follow, {
 					x: xoff,
 					y: yoff
 				})
@@ -385,11 +385,11 @@ class Hicstat {
 				try {
 					await getdata_leadfollow(hic, lead, follow)
 				} catch (e: any) {
-					hic.errList!.push(e.message || e)
+					hic.errList.push(e.message || e)
 				}
 			}
 		}
-		if (hic.errList!.length) hic.error(hic.errList!)
+		if (hic.errList.length) hic.error(hic.errList!)
 
 		return
 	}
@@ -807,7 +807,7 @@ class Hicstat {
 
 export async function init_hicstraw(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
 	{
-		const div = hic.holder!.append('div')
+		const div = hic.holder.append('div')
 		hic.errList = [] as string[]
 		hic.error = async (err: string | string[]) => {
 			if (err && typeof err == 'string') hic.errList!.push(err)
@@ -818,7 +818,7 @@ export async function init_hicstraw(hic: BaseHic & Partial<Hic> & HicWholeGenomS
 
 	hic.tip = new client.Menu()
 	const hicstat = new Hicstat(hic)
-	await hicParseFile(hic, hicstat, true)
+	await hicParseFile(hic, hicstat, debugmode)
 	hicstat.render(hic)
 }
 

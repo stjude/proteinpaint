@@ -35,9 +35,9 @@ export async function hicParseFile(hic: any, self: any, debugmode: boolean) {
 		}
 	}
 	if (hic.enzyme) {
-		if (hic.genome!.hicenzymefragment) {
+		if (hic.genome.hicenzymefragment) {
 			let frag: any = null
-			for (const f of hic.genome!.hicenzymefragment) {
+			for (const f of hic.genome.hicenzymefragment) {
 				if (f.enzyme == hic.enzyme) {
 					frag = f
 					break
@@ -126,12 +126,12 @@ export async function hicParseFile(hic: any, self: any, debugmode: boolean) {
 			}
 		}
 	} catch (err: any) {
-		hic.errList!.push(err.message || err)
+		hic.errList.push(err.message || err)
 		if (err.stack) {
 			console.log(err.stack)
 		}
 	}
-	if (hic.errList!.length) hic.error(hic.errList!)
+	if (hic.errList.length) hic.error(hic.errList)
 	return hic
 }
 
@@ -280,11 +280,11 @@ export function hicparsestat(hic: any, j: any) {
 	if (nochrcount > 0) {
 		hic.nochr = true
 		// prepend 'chr' to names in chrorder array
-		for (let i = 0; i < hic.chrorder!.length; i++) hic.chrorder![i] = 'chr' + hic.chrorder![i]
+		for (let i = 0; i < hic.chrorder.length; i++) hic.chrorder[i] = 'chr' + hic.chrorder[i]
 	}
 	// as a way of skipping chrM
 	hic.chrlst = []
-	for (const chr of hic.genome!.majorchrorder) {
+	for (const chr of hic.genome.majorchrorder) {
 		const c2 = hic.nochr ? chr.replace('chr', '') : chr
 		if (chrlst.indexOf(c2) != -1) {
 			hic.chrlst.push(chr)
