@@ -62,12 +62,24 @@ class SingleCellView {
 		let columns = []
 		const fields = result.fields
 		const columnNames = result.columnNames
-		for (const column of columnNames) columns.push({ label: column, width: columnNames.length > 1 ? '10vw' : '20vw' })
+		for (const column of columnNames) columns.push({ label: column })
+		const index = columnNames.length == 1 ? 0 : columnNames.length - 1
+		columns[index].width = '25vw'
+
 		for (const sample of this.samples) {
-			const row = []
-			addFields(row, fields, sample)
-			if (appState.vocab.dslabel == 'GDC') row.push({ value: sample.files[0].sampleType })
-			rows.push(row)
+			if (sample.files)
+				for (const file of sample.files) {
+					const row = []
+					addFields(row, fields, sample)
+					row.push({ value: file.sampleType })
+					row.push({ value: file.fileId })
+					rows.push(row)
+				}
+			else {
+				const row = []
+				addFields(row, fields, sample)
+				rows.push(row)
+			}
 		}
 
 		function addFields(row, fields, sample) {
@@ -84,7 +96,8 @@ class SingleCellView {
 			maxHeight: '25vh',
 			noButtonCallback: index => {
 				const sample = this.samples[index].sample
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample } })
+				const file = rows[index][columns.length - 1].value
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample, file } })
 			},
 			selectedRows: [0]
 		})
@@ -126,6 +139,7 @@ class SingleCellView {
 		return {
 			config,
 			sample: config.sample || this.samples[0].sample,
+			file: config.file || this.samples[0].files?.[0].fileId,
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome
 		}
@@ -135,17 +149,17 @@ class SingleCellView {
 	// or current.state != replcament.state
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+
 		this.table.selectAll('*').remove()
 		copyMerge(this.settings, this.config.settings.singleCellView)
 		const sampleData = this.samples.find(s => s.sample == this.state.sample)
+
 		this.headerTr = this.table.append('tr')
 		this.tr = this.table.append('tr')
 
 		if (sampleData.files) {
-			for (const file of sampleData.files) {
-				const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file.fileId }
-				this.renderPlots(body)
-			}
+			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.file }
+			this.renderPlots(body)
 		} else {
 			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: sampleData.sample }
 			this.renderPlots(body)
