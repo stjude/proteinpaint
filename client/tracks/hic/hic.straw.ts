@@ -7,27 +7,30 @@ import * as common from '#shared/common'
 import blocklazyload from '#src/block.lazyload'
 import { HicstrawArgs } from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
-import { hicParseFile2 } from './parse.genome.ts'
+import { hicParseFile } from './parse.genome.ts'
 
 /*
 
 ********************** EXPORTED
 
-hicparsefile()
-hicparsestat()
+init_hicstraw()
+getdata_leadfollow()
+getdata_chrpair()
+nmeth2select()
+getdata_detail()
 hicparsefragdata()
 
 ********************** INTERNAL
 
 initialize views
 
-	init_wholegenome()
+	init_wholeGenomeView()
 		.wholegenome
 
-	init_chrpair()
+	init_chrPairView()
 		.chrpairview
 
-	init_detail()
+	init_detailView()
 		.detailview
 
 
@@ -102,9 +105,6 @@ type HicWholeGenomSvg = {
 type Hic = {
 	atdev: boolean
 	bpresolution: number[]
-	c: {
-		td?: any //dom
-	}
 	chrlst: string[]
 	chrorder: string[]
 	chrpairview: {
@@ -156,10 +156,10 @@ type Hic = {
 	/** TODO: define this somewhere */
 	jwt: any
 	name: string
-	nmethselect: any //dom
+	nmethselect: any //dom, dropdown menu
 	nochr: boolean
 	normalization: string[]
-	ressays: any //dom
+	ressays: any //dom, resolution input
 	sv: {
 		file: string
 		header: string
@@ -171,12 +171,6 @@ type Hic = {
 	url: string
 	version: string
 	wholegenomebutton: Selection<HTMLButtonElement, any, any, any> //dom
-	x: {
-		td?: any //dom
-	}
-	y: {
-		td?: any //dom
-	}
 }
 
 /**
@@ -191,20 +185,23 @@ type Hic = {
  */
 
 class Hicstat {
-	dom: any
+	dom: {
+		errorDiv: Selection<HTMLDivElement, any, any, any>
+		controlsDiv: Selection<HTMLDivElement, any, any, any>
+		plotDiv: any
+	}
 	errList: string[]
-	holder: any
-	opts: any
+	holder: Selection<HTMLDivElement, any, any, any>
+	/** Eventually Menu type */
 	tip: any
 
-	constructor(hic) {
-		this.opts = hic
-		;(this.holder = hic.holder),
-			(this.dom = {
-				errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
-				controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true),
-				plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true)
-			})
+	constructor(hic: any) {
+		this.holder = hic.holder
+		this.dom = {
+			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
+			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true),
+			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true)
+		}
 		this.errList = []
 		this.tip = new client.Menu()
 	}
@@ -216,7 +213,7 @@ class Hicstat {
 		this.errList = []
 	}
 
-	async render(hic) {
+	async render(hic: any) {
 		//TODO: modify this to a component with a state
 		//render controls to this.dom.controlsDiv
 		//initWholeGenomeControls(this)
@@ -247,7 +244,7 @@ class Hicstat {
 		const binpx = 1
 
 		// for each chr, a row as canvas container
-		hic.wholegenome.plot = this.dom.plotDiv.plot.append('svg')
+		hic.wholegenome.svg = this.dom.plotDiv.plot.append('svg')
 		hic.wholegenome.binpx = binpx
 		hic.wholegenome.resolution = resolution
 
@@ -256,11 +253,11 @@ class Hicstat {
 		const spacecolor = '#ccc'
 
 		// heatmap layer underneath sv
-		const layer_map = hic.wholegenome.plot
+		const layer_map = hic.wholegenome.svg
 			.append('g')
 			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
 		hic.wholegenome.layer_map = layer_map
-		const layer_sv = hic.wholegenome.plot
+		const layer_sv = hic.wholegenome.svg
 			.append('g')
 			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
 		hic.wholegenome.layer_sv = layer_sv
@@ -373,7 +370,7 @@ class Hicstat {
 			makewholegenome_sv(hic)
 		}
 
-		hic.wholegenome.plot.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
+		hic.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
 
 		/* after the ui is created, load data for each chr pair,
 		await on each request to finish to avoid server lockup
@@ -406,7 +403,7 @@ class Hicstat {
 		hic.indetail = false
 		hic.wholegenomebutton.style('display', 'inline-block')
 		hic.chrpairviewbutton.style('display', 'none')
-		hic.wholegenome.plot.remove()
+		hic.wholegenome.svg.remove()
 
 		hic.chrpairview.chrx = chrx
 		hic.chrpairview.chry = chry
@@ -808,7 +805,7 @@ class Hicstat {
 	}
 }
 
-export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
+export async function init_hicstraw(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
 	{
 		const div = hic.holder!.append('div')
 		hic.errList = [] as string[]
@@ -820,9 +817,9 @@ export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSv
 	}
 
 	hic.tip = new client.Menu()
-
-	await hicParseFile2(hic, true)
-	new Hicstat(hic).render(hic)
+	const hicstat = new Hicstat(hic)
+	await hicParseFile(hic, hicstat, true)
+	hicstat.render(hic)
 }
 
 //////////////////// __whole genome view__ ////////////////////

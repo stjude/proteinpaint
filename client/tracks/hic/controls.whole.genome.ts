@@ -6,8 +6,8 @@ import { nmeth2select } from './hic.straw'
  * @param hic
  * @returns
  */
-export function initWholeGenomeControls(hic: any) {
-	const table = hic.holder.append('table').style('border-spacing', '3px')
+export function initWholeGenomeControls(hic: any, self: any) {
+	const table = self.dom.controlsDiv.append('table').style('border-spacing', '3px')
 	const tr1 = table.append('tr')
 	const tr2 = table.append('tr')
 
@@ -46,7 +46,7 @@ export function initWholeGenomeControls(hic: any) {
 			hic.inwholegenome = true
 			hic.inchrpair = false
 			hic.indetail = false
-			switchview(hic)
+			switchview(hic, self)
 		})
 
 	hic.chrpairviewbutton = td
@@ -56,7 +56,7 @@ export function initWholeGenomeControls(hic: any) {
 			hic.inwholegenome = false
 			hic.inchrpair = true
 			hic.indetail = false
-			switchview(hic)
+			switchview(hic, self)
 		})
 
 	return showNMethDiv
@@ -120,24 +120,24 @@ function setmaxv(hic: any, maxv: any) {
  * only for switching to whole genome view
  * @param hic
  */
-function switchview(hic: any) {
+function switchview(hic: any, self: any) {
 	if (hic.inwholegenome) {
-		hic.x.td.selectAll('*').remove()
-		hic.y.td.selectAll('*').remove()
-		hic.c.td.selectAll('*').remove()
-		hic.c.td.node().appendChild(hic.wholegenome.svg.node())
+		self.dom.plotDiv.xAxis.selectAll('*').remove()
+		self.dom.plotDiv.yAxis.selectAll('*').remove()
+		self.dom.plotDiv.plot.selectAll('*').remove()
+		self.dom.plotDiv.plot.node().appendChild(hic.wholegenome.svg.node())
 		hic.wholegenomebutton.style('display', 'none')
 		hic.chrpairviewbutton.style('display', 'none')
 		hic.inputbpmaxv.property('value', hic.wholegenome.bpmaxv)
 		hic.ressays.text(bplen(hic.wholegenome.resolution) + ' bp')
 		nmeth2select(hic, hic.wholegenome.nmeth)
 	} else if (hic.inchrpair) {
-		hic.y.td.selectAll('*').remove()
-		hic.y.td.node().appendChild(hic.chrpairview.axisy.node())
-		hic.x.td.selectAll('*').remove()
-		hic.x.td.node().appendChild(hic.chrpairview.axisx.node())
-		hic.c.td.selectAll('*').remove()
-		hic.c.td.node().appendChild(hic.chrpairview.canvas)
+		self.dom.plotDiv.yAxis.selectAll('*').remove()
+		self.dom.plotDiv.yAxis.node().appendChild(hic.chrpairview.axisy.node())
+		self.dom.plotDiv.xAxis.selectAll('*').remove()
+		self.dom.plotDiv.xAxis.node().appendChild(hic.chrpairview.axisx.node())
+		self.dom.plotDiv.plot.selectAll('*').remove()
+		self.dom.plotDiv.plot.node().appendChild(hic.chrpairview.canvas)
 		hic.wholegenomebutton.style('display', 'inline-block')
 		hic.chrpairviewbutton.style('display', 'none')
 		hic.inputbpmaxv.property('value', hic.chrpairview.bpmaxv)

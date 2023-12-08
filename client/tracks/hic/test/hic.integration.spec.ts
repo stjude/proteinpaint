@@ -2,14 +2,14 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { dofetch2 } from '../../../common/dofetch.js'
 import { hicData } from './hicData.ts'
-import { hicparsefile } from '../../../tracks/hic/hic.straw.ts'
+import { init_hicstraw } from '../../../tracks/hic/hic.straw.ts'
 import { hicparsestat } from '../../../tracks/hic/parse.genome.ts'
 // import { runproteinpaint } from '../../../test/front.helpers.js'
 // import { HicRunProteinPaintTrackArgs } from '../../../types/hic.ts'
 
 /*
 Tests:
-	hicparsefile() - TODO: needs more work
+	init_hicstraw() - TODO: needs more work
 	hicparsestat()
 	SKIPPED - hicparsefragdata()
  */
@@ -34,7 +34,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('hicparsefile()', async test => {
+tape('init_hicstraw()', async test => {
 	//test.plan()
 	const holder = getHolder()
 
@@ -45,7 +45,7 @@ tape('hicparsefile()', async test => {
 	}
 	const hic: any = Object.assign(copy, opts)
 	const hicOriginal = { ...hic }
-	await hicparsefile(hic, true)
+	await init_hicstraw(hic, true)
 	test.ok(!hicOriginal.name && hic.name == 'Hi-C', 'Should set name to Hi-C since no name was provided')
 	test.ok(
 		hic.wholegenome &&
