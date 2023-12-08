@@ -60,15 +60,8 @@ class SingleCellView {
 
 		const rows = []
 		let columns = []
-		let columnNames = []
-		let fields
-		if (appState.vocab.dslabel == 'GDC') {
-			fields = ['sample', 'projectId', 'primarySite', 'diseaseType']
-			columnNames = ['Case', 'Project', 'Primary Site', 'Disease Type', 'Sample Type']
-		} else if (appState.vocab.dslabel == 'BALL-scrna') {
-			fields = ['sample']
-			columnNames = ['Sample']
-		}
+		const fields = result.fields
+		const columnNames = result.columnNames
 		for (const column of columnNames) columns.push({ label: column, width: '10vw' })
 		for (const sample of this.samples) {
 			const row = []
@@ -92,7 +85,8 @@ class SingleCellView {
 			noButtonCallback: index => {
 				const sample = this.samples[index].sample
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample } })
-			}
+			},
+			selectedRows: [0]
 		})
 
 		// this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
@@ -208,7 +202,7 @@ class SingleCellView {
 
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
-			.on('zoom', e => mainG.attr('transform', e.transform))
+			.on('zoom', e => this.handleZoom(e, mainG, plot))
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
@@ -230,6 +224,11 @@ class SingleCellView {
 			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.clusterMap[d.cellId]) ? 0 : 1))
 
 		this.renderLegend(legendG, plot, cells2Clusters)
+	}
+
+	handleZoom(e, mainG, plot) {
+		mainG.attr('transform', e.transform)
+		plot.zoom = e.transform.scale(1).k
 	}
 
 	renderLegend(legendG, plot, cells2Clusters) {

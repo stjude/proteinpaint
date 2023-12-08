@@ -2162,7 +2162,11 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			})
 		}
 
-		return [...case2files.values()]
+		return {
+			samples: [...case2files.values()],
+			fields: ['sample', 'projectId', 'primarySite', 'diseaseType'],
+			columnNames: ['Case', 'Project', 'Primary Site', 'Disease Type', 'Sample Type']
+		}
 	}
 }
 

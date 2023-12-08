@@ -55,8 +55,8 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
-			const samples = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
-			res.send({ samples })
+			const result = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
+			res.send({ samples: result.samples, fields: result.fields, columnNames: result.columnNames })
 		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
 			res.send({ error: e.message || e })
@@ -94,7 +94,9 @@ function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	}
 	if (samples.length == 0) throw 'no sample with sc data'
 	// getter returns array of {sample:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
-	S.get = () => samples
+	S.get = () => {
+		return { samples, fields: ['sample'], columnNames: ['Sample'] }
+	}
 }
 
 function validateDataNative(D: SingleCellDataNative, ds: any) {
