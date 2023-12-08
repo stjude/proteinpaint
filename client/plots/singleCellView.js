@@ -5,7 +5,8 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 import { getColors } from '#shared/common'
-import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
+import { zoom as d3zoom } from 'd3-zoom'
+import { renderTable } from '#dom/table'
 
 export const minDotSize = 9
 export const maxDotSize = 300
@@ -42,39 +43,77 @@ class SingleCellView {
 		}
 
 		const body = { genome: appState.vocab.genome, dslabel: appState.vocab.dslabel }
+		let result
 		try {
-			const result = await dofetch3('termdb/singlecellSamples', { body })
+			result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
-			this.samples = result.samples
-			this.samples.sort((elem1, elem2) => {
-				const result = elem1.primarySite?.localeCompare(elem2.primarySite)
-				if (result == 1 || result == -1) return result
-				else return elem1.sample.localeCompare(elem2.sample)
-			})
 		} catch (e) {
 			sayerror(this.mainDiv, e)
 			return
 		}
+		this.samples = result.samples
+		this.samples.sort((elem1, elem2) => {
+			const result = elem1.primarySite?.localeCompare(elem2.primarySite)
+			if (result == 1 || result == -1) return result
+			else return elem1.sample.localeCompare(elem2.sample)
+		})
 
-		this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
-		const sample = this.samples[0]
-		const input = this.sampleDiv
-			.append('input')
-			.attr('list', 'sampleDatalist')
-			.attr('placeholder', sample.sample)
-			.style('width', '500px')
-			.on('change', e => {
-				const sample = input.node().value
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: sample } })
-			})
-		const datalist = this.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
-		datalist
-			.selectAll('option')
-			.data(this.samples)
-			.enter()
-			.append('option')
-			.attr('value', d => d.sample)
-			.attr('label', d => ('primarySite' in d ? `${d.primarySite} | ${d.diseaseType}` : ''))
+		const rows = []
+		let columns = []
+		let columnNames = []
+		let fields
+		if (appState.vocab.dslabel == 'GDC') {
+			fields = ['sample', 'projectId', 'primarySite', 'diseaseType']
+			columnNames = ['Case', 'Project', 'Primary Site', 'Disease Type', 'Sample Type']
+		} else if (appState.vocab.dslabel == 'BALL-scrna') {
+			fields = ['sample']
+			columnNames = ['Sample']
+		}
+		for (const column of columnNames) columns.push({ label: column, width: '10vw' })
+		for (const sample of this.samples) {
+			const row = []
+			addFields(row, fields, sample)
+			if (appState.vocab.dslabel == 'GDC') row.push({ value: sample.files[0].sampleType })
+			rows.push(row)
+		}
+
+		function addFields(row, fields, sample) {
+			for (const field of fields) {
+				row.push({ value: sample[field] })
+			}
+		}
+		renderTable({
+			rows,
+			columns,
+			resize: true,
+			singleMode: true,
+			div: this.sampleDiv,
+			maxHeight: '25vh',
+			noButtonCallback: index => {
+				const sample = this.samples[index].sample
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample } })
+			}
+		})
+
+		// this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
+		// const sample = this.samples[0]
+		// const input = this.sampleDiv
+		// 	.append('input')
+		// 	.attr('list', 'sampleDatalist')
+		// 	.attr('placeholder', sample.sample)
+		// 	.style('width', '500px')
+		// 	.on('change', e => {
+		// 		const sample = input.node().value
+		// 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample: sample } })
+		// 	})
+		// const datalist = this.sampleDiv.append('datalist').attr('id', 'sampleDatalist')
+		// datalist
+		// 	.selectAll('option')
+		// 	.data(this.samples)
+		// 	.enter()
+		// 	.append('option')
+		// 	.attr('value', d => d.sample)
+		// 	.attr('label', d => ('primarySite' in d ? `${d.primarySite} | ${d.diseaseType}` : ''))
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Single Cell Data')
