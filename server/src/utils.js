@@ -656,9 +656,18 @@ export function boxplot_getvalue(lst) {
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 
+const extApiCache = serverconfig.features?.extApiCache || {}
 const extApiResponseDir = path.join(serverconfig.cachedir, 'extApiResponse')
-if (serverconfig.features?.cacheExtApiResponse && !fs.existsSync(extApiResponseDir)) {
-	fs.mkdirSync(extApiResponseDir, { recursive: true })
+if (serverconfig.features?.extApiCache) {
+	if (!fs.existsSync(extApiResponseDir)) {
+		fs.mkdirSync(extApiResponseDir, { recursive: true })
+	}
+	for (const substr in extApiCache) {
+		const cacheDir = path.join(extApiResponseDir, extApiCache[substr])
+		if (!fs.existsSync(cacheDir)) {
+			fs.mkdirSync(cacheDir, { recursive: true })
+		}
+	}
 }
 
 /**
@@ -672,26 +681,32 @@ if (serverconfig.features?.cacheExtApiResponse && !fs.existsSync(extApiResponseD
  * !!! NOTE !!!: to clear the cache, `rm [cachedir]/extApiResponse/*`
  */
 export async function cachedFetch(url, opts = {}, use = {}) {
-	// assume that a non-relative url indicates an external API
-	if (!url.includes(':/')) throw `cannot use cachedFetch wuth a relative URL: ${url}`
+	let cacheDir
+	for (const substr in extApiCache) {
+		if (url.includes(substr)) {
+			cacheDir = path.join(extApiResponseDir, extApiCache[substr])
+		}
+	}
 
-	const cacheExtApiResponse = serverconfig.features?.cacheExtApiResponse
+	// assume that a non-relative url indicates an external API
+
+	if (!url.includes(':/')) throw `cannot use cachedFetch wuth a relative URL: ${url}`
 	const id =
-		cacheExtApiResponse &&
+		cacheDir &&
 		crypto
 			.createHash('sha1')
 			.update(`${url} ${JSON.stringify(opts.body)}`)
 			.digest('hex')
-	const cacheFile = cacheExtApiResponse && path.join(extApiResponseDir, id)
+	const cacheFile = cacheDir && path.join(cacheDir, id)
 
 	let body
 	if (cacheFile && fs.existsSync(cacheFile)) {
 		try {
-			if (cacheExtApiResponse == 'verbose') console.log(`Using cache file ${cacheFile}`)
+			// console.log(`Using cache file ${cacheFile}`)
 			const json = fs.readFileSync(cacheFile)
 			body = JSON.parse(json)
 		} catch (e) {
-			//console.log(e)
+			console.log(e)
 			throw e
 		}
 	} else {
@@ -704,13 +719,13 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 			})
 
 			if (cacheFile) {
-				if (cacheExtApiResponse == 'verbose') console.log(`caching ${cacheFile}`)
+				// console.log(`caching ${cacheFile}`)
 				fs.writeFileSync(cacheFile, JSON.stringify(response.body), console.error)
 			}
 
 			body = response.body
 		} catch (e) {
-			//console.log(690, e)
+			console.log(690, e)
 			throw e
 		}
 	}

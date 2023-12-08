@@ -3,7 +3,9 @@
   "defaultgenome": "hg38-test",
   "features": {
     "skip_checkDependenciesAndVersions": 1,
-    "cacheExtApiResponse": true
+    "extApiCache": {
+       "fake.org": "fake-test"
+    }
   },
   "genomes": [
     {
