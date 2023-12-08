@@ -211,7 +211,7 @@ async function makeEditMenu(self, div0: any) {
 	if (self.usecase.target == 'dataDownload') editUIholder.select('.sjpp-snp-select').style('display', 'none')
 
 	// bottom row for submit button and message
-	const btnRow = editUIholder.append('div').style('margin-top', '15px')
+	const btnRow = editUIholder.append('div').style('margin-top', '20px')
 	btnRow
 		.append('button')
 		.text('Submit')
@@ -631,8 +631,9 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 	{
 		input_AFcutoff_label = div
 			.append('div')
-			.style('opacity', 0.4)
-			.style('font-size', '.7em')
+			.style('opacity', 0.5)
+			.style('font-size', '.8em')
+			.style('margin-bottom', '2px')
 			.text('EFFECT ALLELE FREQUENCY CUTOFF')
 
 		self.dom.input_AFcutoff_label = input_AFcutoff_label
@@ -662,15 +663,22 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 				text = 'Variants below this cutoff are analyzed by the cumulative incidence test'
 			}
 		}
-		row.append('span').style('margin-left', '10px').style('opacity', 0.5).style('font-size', '.7em').text(text)
+		row
+			.append('span')
+			.style('margin-left', '10px')
+			.style('opacity', 0.5)
+			.style('font-size', '.7em')
+			.style('font-style', 'italic')
+			.text(text)
 	}
 
 	// select - allele type
 	div
 		.append('div')
-		.style('margin-top', '10px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
+		.style('margin-top', '15px')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+		.style('margin-bottom', '2px')
 		.text('SET EFFECT ALLELE AS')
 	const select_alleleType = div.append('select')
 	select_alleleType.append('option').text('Minor allele')
@@ -685,8 +693,9 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 		.append('div')
 		.style('display', 'inline-block')
 		.style('margin-left', '15px')
-		.style('opacity', 0.4)
+		.style('opacity', 0.5)
 		.style('font-size', '.7em')
+		.style('font-style', 'italic')
 		.text(getSetEffectAlleleAsHint(select_alleleType))
 	self.dom.setEffectAlleleAsHint = setEffectAlleleAsHint
 	select_alleleType.on('change', async () => {
@@ -705,7 +714,13 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 	})
 
 	// select - genetic model
-	div.append('div').style('margin-top', '10px').style('opacity', 0.4).style('font-size', '.7em').text('GENETIC MODEL')
+	div
+		.append('div')
+		.style('margin-top', '15px')
+		.style('margin-bottom', '2px')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+		.text('GENETIC MODEL')
 	const select_geneticModel = div.append('select')
 	select_geneticModel.append('option').text('Additive: EE=2, EN=1, NN=0')
 	select_geneticModel.append('option').text('Dominant: EE=1, EN=1, NN=0')
@@ -717,21 +732,22 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 		.append('div')
 		.style('display', 'inline-block')
 		.style('margin-left', '15px')
-		.style('opacity', 0.4)
+		.style('opacity', 0.5)
 		.style('font-size', '.7em')
+		.style('font-style', 'italic')
 		.html('E = effect allele; N = non-effect allele')
 
 	// select - missing genotype
 	const missingGenotypeLabel = div
 		.append('div')
-		.style('margin-top', '10px')
-		.style('opacity', 0.4)
+		.style('margin-top', '15px')
+		.style('opacity', 0.5)
 		.style('font-size', '.7em')
 	if (termtype == 'snplocus') {
 		// do not create <select> for this option
 		missingGenotypeLabel.text('Samples with missing genotypes are dropped.')
 	} else {
-		missingGenotypeLabel.text('MISSING GENOTYPE')
+		missingGenotypeLabel.text('MISSING GENOTYPE').style('font-size', '.8em').style('margin-bottom', '2px')
 		select_missingGenotype = div.append('select')
 		select_missingGenotype.append('option').text('Impute as homozygous for non-effect allele')
 		select_missingGenotype.append('option').text('Drop sample')
