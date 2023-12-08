@@ -14,13 +14,7 @@ import {
 	TermdbSinglecellsamplesRequest,
 	TermdbSinglecellsamplesResponse
 } from '#shared/types/routes/termdb.singlecellSamples.ts'
-import {
-	Cell,
-	Plot,
-	HasdataResponse,
-	NodataResponse,
-	ErrorResponse
-} from '#shared/types/routes/termdb.singlecellData.ts'
+import { Cell, Plot } from '#shared/types/routes/termdb.singlecellData.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 
 /* route returns list of samples with sc data
@@ -49,18 +43,22 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		const q = req.query as TermdbSinglecellsamplesRequest
+		let result
 		try {
 			const g = genomes[q.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
-			const result = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
-			res.send({ samples: result.samples, fields: result.fields, columnNames: result.columnNames })
+			result = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
 		} catch (e: any) {
-			if (e instanceof Error && e.stack) console.log(e)
-			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
+			result = {
+				status: e.status || 400,
+				error: e.message || e
+			} as TermdbSinglecellsamplesResponse
 		}
+		res.send(result)
 	}
 }
 

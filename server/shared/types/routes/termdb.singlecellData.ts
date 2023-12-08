@@ -1,3 +1,5 @@
+import { ErrorResponse } from './errorResponse'
+
 export type Cell = {
 	/** Cell id or barcode */
 	cellId: string
@@ -41,8 +43,4 @@ export type NodataResponse = {
 	nodata: boolean
 }
 
-export type ErrorResponse = {
-	/** Error msg */
-	error: string
-}
 export type TermdbSinglecellDataResponse = NodataResponse | ErrorResponse | HasdataResponse
