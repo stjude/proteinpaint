@@ -282,7 +282,7 @@ export type SingleCellSamplesNative = {
 	TODO change to hasScTerm:string
 	*/
 	isSampleTerm: string
-	get: () => { sample: string }[]
+	get: () => { samples: { sample: string }[]; fields: string[]; columnNames: string[] }
 }
 export type SingleCellDataGdc = {
 	src: 'gdcapi'
