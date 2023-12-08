@@ -73,15 +73,6 @@ type Pane = {
 	body: Selection<any, any, any, any>
 }
 
-type Mutation = {
-	chr1: string
-	chr2: string
-	position1: string | number
-	position2: string | number
-	reads1: string | number
-	reads2: string | number
-}
-
 type BaseHic = {
 	holder: Selection<HTMLDivElement, any, any, any> //Req && DOM
 	error: (f: string | string[]) => void
@@ -175,7 +166,7 @@ type Hic = {
 		items: any
 	}
 	tip: any
-	/** TODO: corresponsed to eventual TrackEntry shared type */
+	/** TODO: corresponds to eventual TrackEntry shared type */
 	tklst: any
 	url: string
 	version: string
@@ -199,71 +190,625 @@ type Hic = {
  * @param debugmode debugmode passed from app, server state, if true, attach to window.hic
  */
 
-// class Hicstat {
-// 	dom: any
-// 	errList: string[]
-// 	holder: any
-// 	opts: any
-// 	tip: any
-// 	/** defaults */
-// 	atdev_chrnum: number
-// 	hardcode_wholegenomechrlabwidth: number
-// 	/** default normalization method */
-// 	defaultnmeth: string
-// 	/** when clicking on chrpairview, to set a initial view range for detail view, the number of bins to cover at the clicked point */
-// 	initialbinnum_detail: number
-// 	/** at bp resolution, minimum bin number */
-// 	minimumbinnum_bp: number
-// 	/** mininum canvas w/h, detail view */
-// 	mincanvassize_detail: number
-// 	/** minimum bin num for fragment */
-// 	minimumbinnum_frag: number
-// 	/** span at breakpoint when clicking an sv from x/y view to show horizontal view */
-// 	default_svpointspan: number
-// 	/** default max value percentage for hicstraw track */
-// 	default_hicstrawmaxvperc = 5
-// 	/** default px width of subpanels */
-// 	default_subpanelpxwidth: number
-// 	subpanel_bordercolor: string
-// 	constructor(hic) {
-// 		this.opts = hic
-// 		this.holder = hic.holder,
-// 			this.dom = {
-// 				errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
-// 				controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true),
-// 				svgDiv: hic.holder.append('div').classed('sjpp-hic-svg', true)
-// 			}
-// 		this.errList = []
-// 		this.tip = new client.Menu()
-// 		this.atdev_chrnum = 8
-// 		this.hardcode_wholegenomechrlabwidth = 100
-// 		this.defaultnmeth = 'NONE'
-// 		this.initialbinnum_detail = 20
-// 		this.minimumbinnum_bp = 200
-// 		this.mincanvassize_detail = 500
-// 		this.minimumbinnum_frag = 100
-// 		this.default_svpointspan = 500000
-// 		this.default_hicstrawmaxvperc = 5
-// 		this.default_subpanelpxwidth = 600
-// 		this.subpanel_bordercolor = 'rgba(200,0,0,.1)'
-// 	}
+class Hicstat {
+	dom: any
+	errList: string[]
+	holder: any
+	opts: any
+	tip: any
 
-// 	async error(err: string | string[]) {
-// 		if (err && typeof err == 'string') this.errList.push(err)
-// 		showErrorsWithCounter(this.errList, this.dom.errorDiv)
-// 		//Remove errors after displaying
-// 		this.errList = []
-// 	}
+	constructor(hic) {
+		this.opts = hic
+		;(this.holder = hic.holder),
+			(this.dom = {
+				errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
+				controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true),
+				plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true)
+			})
+		this.errList = []
+		this.tip = new client.Menu()
+	}
 
-// 	render() {
-// 		initWholeGenomeControls(this)
-// 	}
-// }
+	async error(err: string | string[]) {
+		if (err && typeof err == 'string') this.errList.push(err)
+		showErrorsWithCounter(this.errList, this.dom.errorDiv)
+		//Remove errors after displaying
+		this.errList = []
+	}
+
+	async render(hic) {
+		//TODO: modify this to a component with a state
+		//render controls to this.dom.controlsDiv
+		//initWholeGenomeControls(this)
+		this.dom.plotDiv.append('table').classed('sjpp-hic-genome-main', true)
+		this.dom.plotDiv.tr1 = this.dom.plotDiv.append('tr')
+		this.dom.plotDiv.tr2 = this.dom.plotDiv.append('tr')
+		this.dom.plotDiv = {
+			//old c
+			plot: this.dom.plotDiv.tr1.append('td').classed('sjpp-hic-plot', true),
+			//old y
+			yAxis: this.dom.plotDiv.tr1.append('td').classed('sjpp-hic-plot-xaxis', true),
+			//old x
+			xAxis: this.dom.plotDiv.tr2.append('td').classed('sjpp-hic-plot-yaxis', true),
+			//TODO: blank space
+			blank: this.dom.plotDiv.tr2.append('td')
+		}
+
+		await this.init_wholeGenomeView(hic)
+	}
+
+	async init_wholeGenomeView(hic: any) {
+		const resolution = hic.bpresolution![0]
+
+		//TODO modify with controls.whole.genome.ts
+		hic.ressays.text(common.bplen(resolution) + ' bp')
+
+		// # pixel per bin, may set according to resolution
+		const binpx = 1
+
+		// for each chr, a row as canvas container
+		hic.wholegenome.plot = this.dom.plotDiv.plot.append('svg')
+		hic.wholegenome.binpx = binpx
+		hic.wholegenome.resolution = resolution
+
+		const fontsize = 15 // chr labels
+		const borderwidth = 1
+		const spacecolor = '#ccc'
+
+		// heatmap layer underneath sv
+		const layer_map = hic.wholegenome.plot
+			.append('g')
+			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
+		hic.wholegenome.layer_map = layer_map
+		const layer_sv = hic.wholegenome.plot
+			.append('g')
+			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
+		hic.wholegenome.layer_sv = layer_sv
+
+		let checker_row = true
+
+		const chr2px = {} // px width for each chr
+		let totalpx = hic.chrlst!.length
+		for (const chr of hic.chrlst!) {
+			const w = Math.ceil(hic.genome!.chrlookup![chr.toUpperCase()].len / resolution) * binpx
+			chr2px[chr] = w
+			totalpx += w
+		}
+		const checker_fill = '#DEF3FA'
+
+		let xoff = 0
+		// column labels
+		for (const chr of hic.chrlst!) {
+			const chrw = chr2px[chr]
+			if (checker_row) {
+				layer_map
+					.append('rect')
+					.attr('x', xoff)
+					.attr('width', chrw)
+					.attr('height', fontsize)
+					.attr('y', -fontsize)
+					.attr('fill', checker_fill)
+			}
+			checker_row = !checker_row
+			layer_map
+				.append('text')
+				.attr('font-family', client.font)
+				.attr('text-anchor', 'middle')
+				.attr('font-size', 12)
+				.attr('x', xoff + chrw / 2)
+				.text(chr)
+
+			xoff += chrw
+			layer_sv
+				.append('line')
+				.attr('x1', xoff)
+				.attr('x2', xoff)
+				.attr('y2', totalpx)
+				.attr('stroke', spacecolor)
+				.attr('shape-rendering', 'crispEdges')
+
+			xoff += borderwidth
+		}
+
+		let yoff = 0
+		checker_row = true
+
+		// row labels
+		for (const chr of hic.chrlst!) {
+			const chrh = chr2px[chr]
+			if (checker_row) {
+				layer_map
+					.append('rect')
+					.attr('x', -hardcode_wholegenomechrlabwidth)
+					.attr('width', hardcode_wholegenomechrlabwidth)
+					.attr('height', chrh)
+					.attr('y', yoff)
+					.attr('fill', checker_fill)
+			}
+			checker_row = !checker_row
+			layer_map
+				.append('text')
+				.attr('font-family', client.font)
+				.attr('text-anchor', 'end')
+				.attr('dominant-baseline', 'central')
+				.attr('font-size', 12)
+				.attr('y', yoff + chrh / 2)
+				.text(chr)
+
+			yoff += chrh
+			layer_sv
+				.append('line')
+				.attr('x2', totalpx)
+				.attr('y1', yoff)
+				.attr('y2', yoff)
+				.attr('stroke', spacecolor)
+				.attr('shape-rendering', 'crispEdges')
+
+			yoff += borderwidth
+		}
+
+		const manychr = hic.atdev ? atdev_chrnum : hic.chrlst!.length
+
+		xoff = 0
+
+		for (let i = 0; i < manychr; i++) {
+			const lead = hic.chrlst![i]
+			hic.wholegenome!.lead2follow!.set(lead, new Map())
+
+			yoff = 0
+
+			for (let j = 0; j <= i; j++) {
+				const follow = hic.chrlst![j]
+				hic.wholegenome.lead2follow!.get(lead).set(follow, {
+					x: xoff,
+					y: yoff
+				})
+				makewholegenome_chrleadfollow(hic, lead, follow, this)
+				yoff += chr2px[follow] + borderwidth
+			}
+			xoff += chr2px[lead] + borderwidth
+		}
+
+		if (hic.sv && hic.sv.items) {
+			makewholegenome_sv(hic)
+		}
+
+		hic.wholegenome.plot.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
+
+		/* after the ui is created, load data for each chr pair,
+		await on each request to finish to avoid server lockup
+	
+		there might be data inconsistenncy with hic file, it may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
+		do not flood ui with such errors, to tolerate, collect all errors and show in one place
+		*/
+		for (let i = 0; i < manychr; i++) {
+			const lead = hic.chrlst![i]
+			for (let j = 0; j <= i; j++) {
+				const follow = hic.chrlst![j]
+				try {
+					await getdata_leadfollow(hic, lead, follow)
+				} catch (e: any) {
+					hic.errList!.push(e.message || e)
+				}
+			}
+		}
+		if (hic.errList!.length) hic.error(hic.errList!)
+
+		return
+	}
+
+	async init_chrPairView(hic: any, chrx: any, chry: any) {
+		const detailView = this.init_detailView.bind(this)
+		nmeth2select(hic, hic.chrpairview.nmeth)
+
+		hic.inwholegenome = false
+		hic.inchrpair = true
+		hic.indetail = false
+		hic.wholegenomebutton.style('display', 'inline-block')
+		hic.chrpairviewbutton.style('display', 'none')
+		hic.wholegenome.plot.remove()
+
+		hic.chrpairview.chrx = chrx
+		hic.chrpairview.chry = chry
+
+		const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
+		const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
+		const maxchrlen = Math.max(chrxlen, chrylen)
+
+		/*
+		for resolution bin from great to tiny
+		find one that just shows >200 # bins over biggest chr
+		*/
+		let resolution = null
+		for (let i = 0; i < hic.bpresolution.length; i++) {
+			const res = hic.bpresolution[i]
+			if (maxchrlen / res > 200) {
+				resolution = res
+				break
+			}
+		}
+		if (resolution == null) {
+			hic.error('no suitable resolution')
+			return
+		}
+		hic.ressays.text(common.bplen(resolution) + ' bp')
+
+		let binpx = 1
+		while ((binpx * maxchrlen) / resolution < 600) {
+			binpx++
+		}
+
+		const axispad = 10 // padding on the ends of x/y chr coordinate axes
+
+		{
+			// y axis
+			this.dom.plotDiv.yAxis.selectAll('*').remove()
+			const svg = this.dom.plotDiv.yAxis.append('svg')
+			const h = Math.ceil(chrylen / resolution) * binpx
+			svg.attr('width', 100).attr('height', axispad * 2 + h)
+			svg
+				.append('g')
+				.attr('transform', 'translate(80,' + (axispad + h / 2) + ')')
+				.append('text')
+				.text(chry)
+				.attr('text-anchor', 'middle')
+				.attr('font-size', 15)
+				.attr('font-family', client.font)
+				.attr('dominant-baseline', 'central')
+				.attr('transform', 'rotate(90)')
+			client.axisstyle({
+				axis: svg
+					.append('g')
+					.attr('transform', 'translate(1,' + axispad + ')')
+					.call(axisRight(scaleLinear().domain([0, chrylen]).range([0, h])).tickFormat(d3format('.2s'))),
+				showline: true
+			})
+			hic.chrpairview.axisy = svg
+		}
+
+		{
+			// x axis
+			this.dom.plotDiv.xAxis.selectAll('*').remove()
+			const svg = this.dom.plotDiv.xAxis.append('svg')
+			const w = Math.ceil(chrxlen / resolution) * binpx
+			svg.attr('height', 100).attr('width', axispad * 2 + w)
+			svg
+				.append('text')
+				.text(chrx)
+				.attr('font-size', 15)
+				.attr('font-family', client.font)
+				.attr('x', axispad + w / 2)
+				.attr('text-anchor', 'middle')
+				.attr('y', 60)
+			client.axisstyle({
+				axis: svg
+					.append('g')
+					.attr('transform', 'translate(' + axispad + ',1)')
+					.call(axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w])).tickFormat(d3format('.2s'))),
+				showline: true
+			})
+			hic.chrpairview.axisx = svg
+		}
+
+		hic.chrpairview.resolution = resolution
+		hic.chrpairview.binpx = binpx
+
+		const canvas = this.dom.plotDiv.plot
+			.append('canvas')
+			.style('margin', axispad + 'px')
+			.on('click', async function (this: any, event: MouseEvent) {
+				const [x, y] = pointer(event, this)
+				await detailView(hic, chrx, chry, x, y)
+			})
+			.node()
+		canvas.width = Math.ceil(chrxlen / resolution) * binpx
+		canvas.height = Math.ceil(chrylen / resolution) * binpx
+		const ctx = canvas.getContext('2d')
+		hic.chrpairview.ctx = ctx
+		hic.chrpairview.canvas = canvas
+
+		await getdata_chrpair(hic)
+	}
+
+	async init_detailView(hic: any, chrx: any, chry: any, x: any, y: any) {
+		nmeth2select(hic, hic.detailview.nmeth)
+
+		hic.indetail = true
+		hic.inwholegenome = false
+		hic.inchrpair = false
+		hic.wholegenomebutton.style('display', 'inline-block')
+
+		// const isintrachr = chrx == chry
+
+		hic.chrpairviewbutton.text('Entire ' + chrx + '-' + chry).style('display', 'inline-block')
+
+		// default view span
+		const viewrangebpw = hic.chrpairview.resolution * initialbinnum_detail
+
+		let coordx = Math.max(1, Math.floor((x * hic.chrpairview.resolution) / hic.chrpairview.binpx) - viewrangebpw / 2)
+		let coordy = Math.max(1, Math.floor((y * hic.chrpairview.resolution) / hic.chrpairview.binpx) - viewrangebpw / 2)
+
+		// make sure positions are not out of bounds
+		{
+			const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
+			if (coordx + viewrangebpw >= lenx) {
+				coordx = lenx - viewrangebpw
+			}
+			const leny = hic.genome.chrlookup[chry.toUpperCase()].len
+			if (coordy + viewrangebpw > leny) {
+				coordy = leny - viewrangebpw
+			}
+		}
+
+		let resolution: number | null = null
+		for (const res of hic.bpresolution) {
+			if (viewrangebpw / res > minimumbinnum_bp) {
+				resolution = res
+				break
+			}
+		}
+		if (resolution == null) {
+			// use finest
+			resolution = hic.bpresolution[hic.bpresolution.length - 1]
+		}
+		let binpx = 2
+		while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
+			binpx += 2
+		}
+
+		// px width of x and y blocks
+		const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
+		hic.detailview.xb.width = blockwidth
+		hic.detailview.yb.width = blockwidth
+
+		hic.chrpairview.axisy.remove()
+		hic.chrpairview.axisx.remove()
+		this.dom.plotDiv.plot.selectAll('*').remove()
+
+		/************** middle canvas *****************/
+
+		const canvasholder = this.dom.plotDiv.plot
+			.append('div')
+			.style('position', 'relative')
+			.style('width', blockwidth + 'px')
+			.style('height', blockwidth + 'px')
+			.style('overflow', 'hidden')
+
+		const canvas = canvasholder
+			.append('canvas')
+			.style('display', 'block')
+			.style('position', 'absolute')
+			.attr('width', blockwidth)
+			.attr('height', blockwidth)
+			.attr('left', '10px')
+			.attr('top', '10px')
+			.on('mousedown', (event: MouseEvent) => {
+				const body = d3select(document.body)
+				const x = event.clientX
+				const y = event.clientY
+				const oldx = Number.parseInt(canvas.style('left'))
+				const oldy = Number.parseInt(canvas.style('top'))
+				body.on('mousemove', event => {
+					const xoff = event.clientX - x
+					const yoff = event.clientY - y
+					hic.detailview.xb.panning(xoff)
+					hic.detailview.yb.panning(yoff)
+					canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
+				})
+				body.on('mouseup', (event: MouseEvent) => {
+					body.on('mousemove', null).on('mouseup', null)
+					const xoff = event.clientX - x
+					const yoff = event.clientY - y
+					hic.detailview.xb.pannedby(xoff)
+					hic.detailview.yb.pannedby(yoff)
+				})
+			})
+		const ctx = canvas.node().getContext('2d')
+
+		hic.detailview.canvas = canvas
+		hic.detailview.ctx = ctx
+
+		await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
+
+		/**
+		global zoom buttons
+		*/
+		{
+			const row = canvasholder.append('div').style('position', 'absolute').style('right', '100px').style('top', '20px')
+			row
+				.append('button')
+				.text('Zoom in')
+				.style('margin-right', '10px')
+				.on('click', () => {
+					hic.detailview.xb.zoomblock(2, false)
+					hic.detailview.yb.zoomblock(2, false)
+				})
+			row
+				.append('button')
+				.text('Zoom out')
+				.style('margin-right', '10px')
+				.on('click', () => {
+					hic.detailview.xb.zoomblock(2, true)
+					hic.detailview.yb.zoomblock(2, true)
+				})
+
+			row
+				.append('button')
+				.text('Horizontal View')
+				.on('click', () => {
+					const regionx = hic.detailview.xb.rglst[0]
+					const regiony = hic.detailview.yb.rglst[0]
+
+					const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
+					;(pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
+
+					const tracks = [
+						{
+							type: client.tkt.hicstraw,
+							file: hic.file,
+							enzyme: hic.enzyme,
+							maxpercentage: default_hicstrawmaxvperc,
+							pyramidup: 1,
+							name: hic.name
+						}
+					]
+					if (hic.tklst) {
+						for (const t of hic.tklst) {
+							tracks.push(t)
+						}
+					}
+					client.first_genetrack_tolist(hic.genome, tracks)
+					const arg: any = {
+						holder: pane.body,
+						hostURL: hic.hostURL,
+						jwt: hic.jwt,
+						genome: hic.genome,
+						nobox: 1,
+						tklst: tracks
+					}
+					if (
+						regionx.chr == regiony.chr &&
+						Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)
+					) {
+						// x/y overlap
+						arg.chr = regionx.chr
+						arg.start = Math.min(regionx.start, regiony.start)
+						arg.stop = Math.max(regionx.stop, regiony.stop)
+					} else {
+						arg.chr = regionx.chr
+						arg.start = regionx.start
+						arg.stop = regionx.stop
+						arg.width = default_subpanelpxwidth
+						arg.subpanels = [
+							{
+								chr: regiony.chr,
+								start: regiony.start,
+								stop: regiony.stop,
+								width: default_subpanelpxwidth,
+								leftpad: 10,
+								leftborder: subpanel_bordercolor
+							}
+						]
+					}
+					blocklazyload(arg)
+				})
+		}
+
+		/******** common parameter for x/y block ********/
+
+		const arg: any = {
+			noresize: true,
+			nobox: true,
+			butrowbottom: true,
+			style: {
+				margin: hic.detailview.bbmargin + 'px'
+			},
+			genome: hic.genome,
+			hostURL: hic.hostURL,
+			width: blockwidth,
+			leftheadw: 20,
+			rightheadw: 40,
+			tklst: []
+		}
+		client.first_genetrack_tolist(hic.genome, arg.tklst)
+
+		// duplicate arg for y
+		const arg2: any = {}
+		for (const k in arg) arg2[k] = arg[k]
+
+		/******************* x block ******************/
+
+		let xfirsttime = true
+		arg.chr = chrx
+		arg.start = coordx
+		arg.stop = coordx + viewrangebpw
+		arg.holder = this.dom.plotDiv.xAxis
+		arg.onloadalltk_always = async bb => {
+			/*
+			cannot apply transition to canvasholder
+			it may prevent resetting width when both x and y are changing
+			*/
+			canvasholder.style(
+				'width',
+				2 * hic.detailview.bbmargin + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
+			)
+
+			if (xfirsttime) {
+				xfirsttime = false
+				// must do this:
+				canvas.transition().style('left', hic.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
+				return
+			}
+			await detailViewUpdateRegionFromBlock(hic)
+		}
+		arg.onpanning = xoff => {
+			canvas.style('left', xoff + hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
+		}
+		blocklazyload(arg).then(block => {
+			hic.detailview.xb = block
+		})
+
+		/******************* y block ******************/
+
+		const sheath = this.dom.plotDiv.yAxis
+			.append('div')
+			.style('position', 'relative')
+			.style('width', '200px') // dummy size
+			.style('height', '800px')
+
+		const rotor = sheath
+			.append('div')
+			.style('position', 'absolute')
+			.style('bottom', '0px')
+			.style('transform', 'rotate(-90deg)')
+			.style('transform-origin', 'left bottom')
+
+		let yfirsttime = true
+
+		arg2.rotated = true
+		arg2.showreverse = true
+
+		arg2.chr = chry
+		arg2.start = coordy
+		arg2.stop = coordy + viewrangebpw
+		arg2.holder = rotor
+		arg2.onloadalltk_always = async bb => {
+			const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * hic.detailview.bbmargin
+			sheath.transition().style('height', bbw + 'px')
+			canvasholder.style('height', bbw + 'px')
+			if (yfirsttime) {
+				yfirsttime = false
+				// must do this:
+				canvas.transition().style('top', hic.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
+				return
+			}
+			await detailViewUpdateRegionFromBlock(hic)
+		}
+		arg2.onpanning = xoff => {
+			canvas.style(
+				'top',
+				-xoff + hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px'
+			)
+		}
+
+		const buttonrowh = 30
+		arg2.onsetheight = bbh => {
+			rotor.transition().style('left', hic.detailview.bbmargin + bbh + buttonrowh + 'px')
+		}
+
+		blocklazyload(arg2).then(block => {
+			hic.detailview.yb = block
+		})
+		/*
+		//XXX this won't work, will duplicate the chunk for block, try named chunk
+		import('./block').then(p=>{
+			hic.detailview.yb = new p.Block(arg2)
+		})
+		*/
+	}
+}
 
 export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
-	// if (debugmode) {
-	// 	window['hic'] = hic
-	// }
 	{
 		const div = hic.holder!.append('div')
 		hic.errList = [] as string[]
@@ -274,370 +819,15 @@ export async function hicparsefile(hic: BaseHic & Partial<Hic> & HicWholeGenomSv
 		}
 	}
 
-	// if (!hic.name) {
-	// 	hic.name = 'Hi-C'
-	// }
-
-	// if (hic.tklst) {
-	// 	const lst = [] as any[]
-	// 	for (const t of hic.tklst) {
-	// 		if (!t.type) {
-	// 			hic.error('type missing from one of the tracks accompanying HiC')
-	// 		} else {
-	// 			t.iscustom = true
-	// 			lst.push(t)
-	// 		}
-	// 	}
-	// 	if (lst.length) {
-	// 		hic.tklst = lst
-	// 	} else {
-	// 		delete hic.tklst
-	// 	}
-	// }
-
 	hic.tip = new client.Menu()
 
-	// if (hic.enzyme) {
-	// 	if (hic.genome!.hicenzymefragment) {
-	// 		let frag: any = null
-	// 		for (const f of hic.genome!.hicenzymefragment) {
-	// 			if (f.enzyme == hic.enzyme) {
-	// 				frag = f
-	// 				break
-	// 			}
-	// 		}
-	// 		if (frag) {
-	// 			hic.enzymefile = frag.file
-	// 		} else {
-	// 			hic.error('unknown enzyme: ' + hic.enzyme)
-	// 			delete hic.enzyme
-	// 		}
-	// 	} else {
-	// 		hic.error('no enzyme fragment information available for this genome')
-	// 		delete hic.enzyme
-	// 	}
-	// }
-
-	// // wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring
-	// hic.wholegenome = {
-	// 	bpmaxv: 5000,
-	// 	lead2follow: new Map(),
-	// 	nmeth: defaultnmeth,
-	// 	pica_x: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
-	// 	pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
-	// }
-
-	// hic.chrpairview = {
-	// 	data: [],
-	// 	nmeth: defaultnmeth
-	// }
-
-	// hic.detailview = {
-	// 	bbmargin: 1,
-	// 	nmeth: defaultnmeth,
-	// 	xb: {
-	// 		leftheadw: 20,
-	// 		rightheadw: 40,
-	// 		lpad: 1,
-	// 		rpad: 1
-	// 	},
-	// 	yb: {
-	// 		leftheadw: 20,
-	// 		rightheadw: 40,
-	// 		lpad: 1,
-	// 		rpad: 1
-	// 	}
-	// }
-
-	// hic.inwholegenome = true
-	// hic.inchrpair = false
-	// hic.indetail = false
-	// hic.inlineview = false
-
-	// controls
 	await hicParseFile2(hic, true)
-	init_wholegenome(hic)
-
-	// data tasks:
-	// 1. load sv
-	// 2. stat the hic file
-	// try {
-	// 	if (hic.sv && hic.sv.file) {
-	// 		const re = await client.dofetch(hic.hostURL + '/textfile', {
-	// 			method: 'POST',
-	// 			body: JSON.stringify({ file: hic.sv.file, jwt: hic.jwt })
-	// 		})
-	// 		const data = re.json()
-	// 		const [err, header, items] = parseSV(data.text)
-	// 		if (err) throw { message: 'Error parsing SV: ' + err }
-	// 		hic.sv.header = header
-	// 		hic.sv.items = items
-	// 	}
-	// 	const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
-	// 	if (data.error) throw { message: data.error.error }
-	// 	const err = hicparsestat(hic, data.out)
-	// 	if (err) throw { message: err }
-	// 	if (!hic.normalization?.length) {
-	// 		hic.nmethselect = showNMethDiv.text(defaultnmeth)
-	// 	} else {
-	// 		hic.nmethselect = showNMethDiv
-	// 			.style('margin-right', '10px')
-	// 			.append('select')
-	// 			.on('change', () => {
-	// 				const v = hic.nmethselect.node().value
-	// 				setnmeth(hic, v)
-	// 			})
-	// 		for (const n of hic.normalization) {
-	// 			hic.nmethselect.append('option').text(n)
-	// 		}
-	// 	}
-	// 	init_wholegenome(hic)
-	// } catch (err: any) {
-	// 	hic.errList!.push(err.message || err)
-	// 	if (err.stack) {
-	// 		console.log(err.stack)
-	// 	}
-	// }
-	// //console.log(375, hic)
-	// if (hic.errList!.length) hic.error(hic.errList!)
+	new Hicstat(hic).render(hic)
 }
 
-/**
- * output by read_hic_header.py
- * @param hic
- * @param j
- * @returns
- */
-// export function hicparsestat(hic: BaseHic & Partial<Hic>, j: any) {
-// 	if (!j) return 'cannot stat hic file'
-// 	hic.normalization = j.normalization
+//////////////////// __whole genome view__ ////////////////////
 
-// 	hic.version = j.version
-
-// 	if (!j.Chromosomes) return 'Chromosomes not found in file stat'
-// 	if (!Array.isArray(j.chrorder)) return '.chrorder[] missing'
-// 	if (j.chrorder.length == 0) return '.chrorder[] empty array'
-// 	hic.chrorder = j.chrorder
-// 	if (!j['Base pair-delimited resolutions']) return 'Base pair-delimited resolutions not found in file stat'
-// 	if (!Array.isArray(j['Base pair-delimited resolutions'])) return 'Base pair-delimited resolutions should be array'
-// 	hic.bpresolution = j['Base pair-delimited resolutions']
-// 	if (!j['Fragment-delimited resolutions']) return 'Fragment-delimited resolutions not found in file stat'
-// 	if (!Array.isArray(j['Fragment-delimited resolutions'])) return 'Fragment-delimited resolutions is not array'
-// 	hic.fragresolution = j['Fragment-delimited resolutions']
-
-// 	const chrlst = [] as any[]
-// 	for (const chr in j.Chromosomes) {
-// 		chrlst.push(chr)
-// 	}
-// 	const [nochrcount, haschrcount] = common.contigNameNoChr2(hic.genome, chrlst)
-// 	if (nochrcount + haschrcount == 0) return 'chromosome names do not match with genome build'
-// 	if (nochrcount > 0) {
-// 		hic.nochr = true
-// 		// prepend 'chr' to names in chrorder array
-// 		for (let i = 0; i < hic.chrorder!.length; i++) hic.chrorder![i] = 'chr' + hic.chrorder![i]
-// 	}
-// 	// as a way of skipping chrM
-// 	hic.chrlst = []
-// 	for (const chr of hic.genome!.majorchrorder) {
-// 		const c2 = hic.nochr ? chr.replace('chr', '') : chr
-// 		if (chrlst.indexOf(c2) != -1) {
-// 			hic.chrlst.push(chr)
-// 		}
-// 	}
-// }
-
-/**
- * Launches the hic whole genome view as an app.
- * @param hic
- * @returns
- */
-async function init_wholegenome(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg) {
-	const checker_fill = '#DEF3FA'
-
-	if (!hic.y) {
-		hic.y = {}
-	}
-	if (!hic.x) {
-		hic.x = {}
-	}
-	hic.c = {}
-	const table = hic.holder.append('table')
-	const tr1 = table.append('tr')
-	hic.c!.td = tr1.append('td').style('vertical-align', 'top')
-	hic.y!.td = tr1.append('td').style('vertical-align', 'top')
-	const tr2 = table.append('tr')
-	hic.x!.td = tr2.append('td')
-	tr2.append('td')
-
-	/*
-	launch wholegenome
-	at lowest resolution
-	*/
-	const resolution = hic.bpresolution![0]
-
-	hic.ressays.text(common.bplen(resolution) + ' bp')
-
-	// # pixel per bin, may set according to resolution
-	const binpx = 1
-
-	// for each chr, a row as canvas container
-	hic.wholegenome!.svg = hic.c!.td.append('svg')
-	hic.wholegenome!.binpx = binpx
-	hic.wholegenome!.resolution = resolution
-
-	const fontsize = 15 // chr labels
-	const borderwidth = 1
-	const spacecolor = '#ccc'
-
-	// heatmap layer underneath sv
-	const layer_map = hic
-		.wholegenome!.svg.append('g')
-		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-	hic.wholegenome!.layer_map = layer_map
-	const layer_sv = hic
-		.wholegenome!.svg.append('g')
-		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-	hic.wholegenome!.layer_sv = layer_sv
-
-	let checker_row = true
-
-	const chr2px = {} // px width for each chr
-	let totalpx = hic.chrlst!.length
-	for (const chr of hic.chrlst!) {
-		const w = Math.ceil(hic.genome!.chrlookup![chr.toUpperCase()].len / resolution) * binpx
-		chr2px[chr] = w
-		totalpx += w
-	}
-
-	let xoff = 0
-	// column labels
-	for (const chr of hic.chrlst!) {
-		const chrw = chr2px[chr]
-		if (checker_row) {
-			layer_map
-				.append('rect')
-				.attr('x', xoff)
-				.attr('width', chrw)
-				.attr('height', fontsize)
-				.attr('y', -fontsize)
-				.attr('fill', checker_fill)
-		}
-		checker_row = !checker_row
-		layer_map
-			.append('text')
-			.attr('font-family', client.font)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', 12)
-			.attr('x', xoff + chrw / 2)
-			.text(chr)
-
-		xoff += chrw
-		layer_sv
-			.append('line')
-			.attr('x1', xoff)
-			.attr('x2', xoff)
-			.attr('y2', totalpx)
-			.attr('stroke', spacecolor)
-			.attr('shape-rendering', 'crispEdges')
-
-		xoff += borderwidth
-	}
-
-	let yoff = 0
-	checker_row = true
-
-	// row labels
-	for (const chr of hic.chrlst!) {
-		const chrh = chr2px[chr]
-		if (checker_row) {
-			layer_map
-				.append('rect')
-				.attr('x', -hardcode_wholegenomechrlabwidth)
-				.attr('width', hardcode_wholegenomechrlabwidth)
-				.attr('height', chrh)
-				.attr('y', yoff)
-				.attr('fill', checker_fill)
-		}
-		checker_row = !checker_row
-		layer_map
-			.append('text')
-			.attr('font-family', client.font)
-			.attr('text-anchor', 'end')
-			.attr('dominant-baseline', 'central')
-			.attr('font-size', 12)
-			.attr('y', yoff + chrh / 2)
-			.text(chr)
-
-		yoff += chrh
-		layer_sv
-			.append('line')
-			.attr('x2', totalpx)
-			.attr('y1', yoff)
-			.attr('y2', yoff)
-			.attr('stroke', spacecolor)
-			.attr('shape-rendering', 'crispEdges')
-
-		yoff += borderwidth
-	}
-
-	const manychr = hic.atdev ? atdev_chrnum : hic.chrlst!.length
-
-	xoff = 0
-
-	for (let i = 0; i < manychr; i++) {
-		const lead = hic.chrlst![i]
-		hic.wholegenome!.lead2follow!.set(lead, new Map())
-
-		yoff = 0
-
-		for (let j = 0; j <= i; j++) {
-			const follow = hic.chrlst![j]
-			hic.wholegenome!.lead2follow!.get(lead).set(follow, {
-				x: xoff,
-				y: yoff
-			})
-			makewholegenome_chrleadfollow(hic, lead, follow)
-			yoff += chr2px[follow] + borderwidth
-		}
-		xoff += chr2px[lead] + borderwidth
-	}
-
-	if (hic.sv && hic.sv.items) {
-		makewholegenome_sv(hic)
-	}
-
-	hic.wholegenome!.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
-
-	/* after the ui is created, load data for each chr pair,
-	await on each request to finish to avoid server lockup
-
-	there might be data inconsistenncy with hic file, it may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
-	do not flood ui with such errors, to tolerate, collect all errors and show in one place
-	*/
-	for (let i = 0; i < manychr; i++) {
-		const lead = hic.chrlst![i]
-		for (let j = 0; j <= i; j++) {
-			const follow = hic.chrlst![j]
-			try {
-				await getdata_leadfollow(hic, lead, follow)
-			} catch (e: any) {
-				hic.errList!.push(e.message || e)
-			}
-		}
-	}
-	if (hic.errList!.length) hic.error(hic.errList!)
-
-	return
-}
-/**
- * wholegenome for a pair of chr (lead - follow)
- * lead is on x
- * follow is on y, lead & follow could be same
- * @param hic
- * @param lead
- * @param follow
- */
-function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any) {
+function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: any) {
 	const binpx = hic.wholegenome.binpx
 	const obj = hic.wholegenome.lead2follow.get(lead).get(follow)
 
@@ -661,7 +851,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any) {
 		.attr('x', obj.x)
 		.attr('y', obj.y)
 		.on('click', async () => {
-			await init_chrpair(hic, lead, follow)
+			await self.init_chrPairView(hic, lead, follow)
 		})
 		.on('mouseover', () => {
 			chrpair_mouseover(hic, obj.img, lead, follow)
@@ -682,7 +872,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any) {
 			.attr('x', obj.y)
 			.attr('y', obj.x)
 			.on('click', async () => {
-				await init_chrpair(hic, follow, lead)
+				await self.init_chrPairView(hic, follow, lead)
 			})
 			.on('mouseover', () => {
 				chrpair_mouseover(hic, obj.img2, follow, lead)
@@ -889,128 +1079,7 @@ function click_sv(hic: any, item: any): void {
 	blocklazyload(arg)
 }
 
-/////////// __whole genome ends
-
-/**
- * by clicking a pair of chr on whole genome view
- * hide the whole genome view
- * show view of entire chromosome pair
- * @param hic
- * @param chrx
- * @param chry
- * @returns
- */
-async function init_chrpair(hic: any, chrx: any, chry: any) {
-	nmeth2select(hic, hic.chrpairview.nmeth)
-
-	hic.inwholegenome = false
-	hic.inchrpair = true
-	hic.indetail = false
-	hic.wholegenomebutton.style('display', 'inline-block')
-	hic.chrpairviewbutton.style('display', 'none')
-	hic.wholegenome.svg.remove()
-
-	hic.chrpairview.chrx = chrx
-	hic.chrpairview.chry = chry
-
-	const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
-	const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
-	const maxchrlen = Math.max(chrxlen, chrylen)
-
-	/*
-	for resolution bin from great to tiny
-	find one that just shows >200 # bins over biggest chr
-	*/
-	let resolution = null
-	for (let i = 0; i < hic.bpresolution.length; i++) {
-		const res = hic.bpresolution[i]
-		if (maxchrlen / res > 200) {
-			resolution = res
-			break
-		}
-	}
-	if (resolution == null) {
-		hic.error('no suitable resolution')
-		return
-	}
-	hic.ressays.text(common.bplen(resolution) + ' bp')
-
-	let binpx = 1
-	while ((binpx * maxchrlen) / resolution < 600) {
-		binpx++
-	}
-
-	const axispad = 10 // padding on the ends of x/y chr coordinate axes
-
-	{
-		// y axis
-		hic.y.td.selectAll('*').remove()
-		const svg = hic.y.td.append('svg')
-		const h = Math.ceil(chrylen / resolution) * binpx
-		svg.attr('width', 100).attr('height', axispad * 2 + h)
-		svg
-			.append('g')
-			.attr('transform', 'translate(80,' + (axispad + h / 2) + ')')
-			.append('text')
-			.text(chry)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', 15)
-			.attr('font-family', client.font)
-			.attr('dominant-baseline', 'central')
-			.attr('transform', 'rotate(90)')
-		client.axisstyle({
-			axis: svg
-				.append('g')
-				.attr('transform', 'translate(1,' + axispad + ')')
-				.call(axisRight(scaleLinear().domain([0, chrylen]).range([0, h])).tickFormat(d3format('.2s'))),
-			showline: true
-		})
-		hic.chrpairview.axisy = svg
-	}
-
-	{
-		// x axis
-		hic.x.td.selectAll('*').remove()
-		const svg = hic.x.td.append('svg')
-		const w = Math.ceil(chrxlen / resolution) * binpx
-		svg.attr('height', 100).attr('width', axispad * 2 + w)
-		svg
-			.append('text')
-			.text(chrx)
-			.attr('font-size', 15)
-			.attr('font-family', client.font)
-			.attr('x', axispad + w / 2)
-			.attr('text-anchor', 'middle')
-			.attr('y', 60)
-		client.axisstyle({
-			axis: svg
-				.append('g')
-				.attr('transform', 'translate(' + axispad + ',1)')
-				.call(axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w])).tickFormat(d3format('.2s'))),
-			showline: true
-		})
-		hic.chrpairview.axisx = svg
-	}
-
-	hic.chrpairview.resolution = resolution
-	hic.chrpairview.binpx = binpx
-
-	const canvas = hic.c.td
-		.append('canvas')
-		.style('margin', axispad + 'px')
-		.on('click', async function (this: any, event: MouseEvent) {
-			const [x, y] = pointer(event, this)
-			await init_detail(hic, chrx, chry, x, y)
-		})
-		.node()
-	canvas.width = Math.ceil(chrxlen / resolution) * binpx
-	canvas.height = Math.ceil(chrylen / resolution) * binpx
-	const ctx = canvas.getContext('2d')
-	hic.chrpairview.ctx = ctx
-	hic.chrpairview.canvas = canvas
-
-	await getdata_chrpair(hic)
-}
+//////////////////// __chrpair view__ ////////////////////
 
 function tell_firstisx(hic: any, chrx: any, chry: any) {
 	if (chrx == chry) return true
@@ -1100,35 +1169,6 @@ export async function getdata_chrpair(hic: any) {
  * @param nmeth
  * @returns
  */
-// async function setnmeth(hic: any, nmeth: string) {
-// 	if (hic.inwholegenome) {
-// 		hic.wholegenome.nmeth = nmeth
-// 		const manychr = hic.atdev ? 3 : hic.chrlst.length
-// 		for (let i = 0; i < manychr; i++) {
-// 			const lead = hic.chrlst[i]
-// 			for (let j = 0; j <= i; j++) {
-// 				const follow = hic.chrlst[j]
-// 				try {
-// 					await getdata_leadfollow(hic, lead, follow)
-// 				} catch (e: any) {
-// 					hic.errList.push(e.message || e)
-// 				}
-// 			}
-// 		}
-// 		if (hic.errList.length) hic.error(hic.errList)
-// 		return
-// 	}
-
-// 	if (hic.inchrpair) {
-// 		hic.chrpairview.nmeth = nmeth
-// 		await getdata_chrpair(hic)
-// 		return
-// 	}
-// 	if (hic.indetail) {
-// 		hic.detailview.nmeth = nmeth
-// 		getdata_detail(hic)
-// 	}
-// }
 
 export function nmeth2select(hic: any, v: any) {
 	const options = hic.nmethselect.node().options
@@ -1137,312 +1177,7 @@ export function nmeth2select(hic: any, v: any) {
 	selectedNmeth.selected = true
 }
 
-//////////////////// __detail
-
-/**
- * chrpairview is static
- * clicking on it to launch detail view
- * initially, zoom into a pretty large region
- * so only use bp resolution but not fragment
- * @param hic
- * @param chrx
- * @param chry
- * @param x
- * @param y
- */
-async function init_detail(hic: any, chrx: any, chry: any, x: any, y: any) {
-	nmeth2select(hic, hic.detailview.nmeth)
-
-	hic.indetail = true
-	hic.inwholegenome = false
-	hic.inchrpair = false
-	hic.wholegenomebutton.style('display', 'inline-block')
-
-	// const isintrachr = chrx == chry
-
-	hic.chrpairviewbutton.text('Entire ' + chrx + '-' + chry).style('display', 'inline-block')
-
-	// default view span
-	const viewrangebpw = hic.chrpairview.resolution * initialbinnum_detail
-
-	let coordx = Math.max(1, Math.floor((x * hic.chrpairview.resolution) / hic.chrpairview.binpx) - viewrangebpw / 2)
-	let coordy = Math.max(1, Math.floor((y * hic.chrpairview.resolution) / hic.chrpairview.binpx) - viewrangebpw / 2)
-
-	// make sure positions are not out of bounds
-	{
-		const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
-		if (coordx + viewrangebpw >= lenx) {
-			coordx = lenx - viewrangebpw
-		}
-		const leny = hic.genome.chrlookup[chry.toUpperCase()].len
-		if (coordy + viewrangebpw > leny) {
-			coordy = leny - viewrangebpw
-		}
-	}
-
-	let resolution: number | null = null
-	for (const res of hic.bpresolution) {
-		if (viewrangebpw / res > minimumbinnum_bp) {
-			resolution = res
-			break
-		}
-	}
-	if (resolution == null) {
-		// use finest
-		resolution = hic.bpresolution[hic.bpresolution.length - 1]
-	}
-	let binpx = 2
-	while ((binpx * viewrangebpw) / resolution! < mincanvassize_detail) {
-		binpx += 2
-	}
-
-	// px width of x and y blocks
-	const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
-	hic.detailview.xb.width = blockwidth
-	hic.detailview.yb.width = blockwidth
-
-	hic.chrpairview.axisy.remove()
-	hic.chrpairview.axisx.remove()
-	hic.c.td.selectAll('*').remove()
-
-	/************** middle canvas *****************/
-
-	const canvasholder = hic.c.td
-		.append('div')
-		.style('position', 'relative')
-		.style('width', blockwidth + 'px')
-		.style('height', blockwidth + 'px')
-		.style('overflow', 'hidden')
-
-	const canvas = canvasholder
-		.append('canvas')
-		.style('display', 'block')
-		.style('position', 'absolute')
-		.attr('width', blockwidth)
-		.attr('height', blockwidth)
-		.attr('left', '10px')
-		.attr('top', '10px')
-		.on('mousedown', (event: MouseEvent) => {
-			const body = d3select(document.body)
-			const x = event.clientX
-			const y = event.clientY
-			const oldx = Number.parseInt(canvas.style('left'))
-			const oldy = Number.parseInt(canvas.style('top'))
-			body.on('mousemove', event => {
-				const xoff = event.clientX - x
-				const yoff = event.clientY - y
-				hic.detailview.xb.panning(xoff)
-				hic.detailview.yb.panning(yoff)
-				canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
-			})
-			body.on('mouseup', (event: MouseEvent) => {
-				body.on('mousemove', null).on('mouseup', null)
-				const xoff = event.clientX - x
-				const yoff = event.clientY - y
-				hic.detailview.xb.pannedby(xoff)
-				hic.detailview.yb.pannedby(yoff)
-			})
-		})
-	const ctx = canvas.node().getContext('2d')
-
-	hic.detailview.canvas = canvas
-	hic.detailview.ctx = ctx
-
-	await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
-
-	/**
-	global zoom buttons
-	*/
-	{
-		const row = canvasholder.append('div').style('position', 'absolute').style('right', '100px').style('top', '20px')
-		row
-			.append('button')
-			.text('Zoom in')
-			.style('margin-right', '10px')
-			.on('click', () => {
-				hic.detailview.xb.zoomblock(2, false)
-				hic.detailview.yb.zoomblock(2, false)
-			})
-		row
-			.append('button')
-			.text('Zoom out')
-			.style('margin-right', '10px')
-			.on('click', () => {
-				hic.detailview.xb.zoomblock(2, true)
-				hic.detailview.yb.zoomblock(2, true)
-			})
-
-		row
-			.append('button')
-			.text('Horizontal View')
-			.on('click', () => {
-				const regionx = hic.detailview.xb.rglst[0]
-				const regiony = hic.detailview.yb.rglst[0]
-
-				const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-				;(pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
-
-				const tracks = [
-					{
-						type: client.tkt.hicstraw,
-						file: hic.file,
-						enzyme: hic.enzyme,
-						maxpercentage: default_hicstrawmaxvperc,
-						pyramidup: 1,
-						name: hic.name
-					}
-				]
-				if (hic.tklst) {
-					for (const t of hic.tklst) {
-						tracks.push(t)
-					}
-				}
-				client.first_genetrack_tolist(hic.genome, tracks)
-				const arg: any = {
-					holder: pane.body,
-					hostURL: hic.hostURL,
-					jwt: hic.jwt,
-					genome: hic.genome,
-					nobox: 1,
-					tklst: tracks
-				}
-				if (
-					regionx.chr == regiony.chr &&
-					Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)
-				) {
-					// x/y overlap
-					arg.chr = regionx.chr
-					arg.start = Math.min(regionx.start, regiony.start)
-					arg.stop = Math.max(regionx.stop, regiony.stop)
-				} else {
-					arg.chr = regionx.chr
-					arg.start = regionx.start
-					arg.stop = regionx.stop
-					arg.width = default_subpanelpxwidth
-					arg.subpanels = [
-						{
-							chr: regiony.chr,
-							start: regiony.start,
-							stop: regiony.stop,
-							width: default_subpanelpxwidth,
-							leftpad: 10,
-							leftborder: subpanel_bordercolor
-						}
-					]
-				}
-				blocklazyload(arg)
-			})
-	}
-
-	/******** common parameter for x/y block ********/
-
-	const arg: any = {
-		noresize: true,
-		nobox: true,
-		butrowbottom: true,
-		style: {
-			margin: hic.detailview.bbmargin + 'px'
-		},
-		genome: hic.genome,
-		hostURL: hic.hostURL,
-		width: blockwidth,
-		leftheadw: 20,
-		rightheadw: 40,
-		tklst: []
-	}
-	client.first_genetrack_tolist(hic.genome, arg.tklst)
-
-	// duplicate arg for y
-	const arg2: any = {}
-	for (const k in arg) arg2[k] = arg[k]
-
-	/******************* x block ******************/
-
-	let xfirsttime = true
-	arg.chr = chrx
-	arg.start = coordx
-	arg.stop = coordx + viewrangebpw
-	arg.holder = hic.x.td
-	arg.onloadalltk_always = async bb => {
-		/*
-		cannot apply transition to canvasholder
-		it may prevent resetting width when both x and y are changing
-		*/
-		canvasholder.style(
-			'width',
-			2 * hic.detailview.bbmargin + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
-		)
-
-		if (xfirsttime) {
-			xfirsttime = false
-			// must do this:
-			canvas.transition().style('left', hic.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
-			return
-		}
-		await detailViewUpdateRegionFromBlock(hic)
-	}
-	arg.onpanning = xoff => {
-		canvas.style('left', xoff + hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
-	}
-	blocklazyload(arg).then(block => {
-		hic.detailview.xb = block
-	})
-
-	/******************* y block ******************/
-
-	const sheath = hic.y.td
-		.append('div')
-		.style('position', 'relative')
-		.style('width', '200px') // dummy size
-		.style('height', '800px')
-
-	const rotor = sheath
-		.append('div')
-		.style('position', 'absolute')
-		.style('bottom', '0px')
-		.style('transform', 'rotate(-90deg)')
-		.style('transform-origin', 'left bottom')
-
-	let yfirsttime = true
-
-	arg2.rotated = true
-	arg2.showreverse = true
-
-	arg2.chr = chry
-	arg2.start = coordy
-	arg2.stop = coordy + viewrangebpw
-	arg2.holder = rotor
-	arg2.onloadalltk_always = async bb => {
-		const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * hic.detailview.bbmargin
-		sheath.transition().style('height', bbw + 'px')
-		canvasholder.style('height', bbw + 'px')
-		if (yfirsttime) {
-			yfirsttime = false
-			// must do this:
-			canvas.transition().style('top', hic.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
-			return
-		}
-		await detailViewUpdateRegionFromBlock(hic)
-	}
-	arg2.onpanning = xoff => {
-		canvas.style('top', -xoff + hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px')
-	}
-
-	const buttonrowh = 30
-	arg2.onsetheight = bbh => {
-		rotor.transition().style('left', hic.detailview.bbmargin + bbh + buttonrowh + 'px')
-	}
-
-	blocklazyload(arg2).then(block => {
-		hic.detailview.yb = block
-	})
-	/*
-	//XXX this won't work, will duplicate the chunk for block, try named chunk
-	import('./block').then(p=>{
-		hic.detailview.yb = new p.Block(arg2)
-	})
-	*/
-}
+//////////////////// __detail view__ ////////////////////
 
 async function detailViewUpdateRegionFromBlock(hic: any) {
 	const rx = hic.detailview.xb.rglst[0]
@@ -1835,94 +1570,3 @@ export function hicparsefragdata(items: any) {
 	}
 	return [null, id2coord, min, max]
 }
-
-//////////////////// __detail ends
-
-// function parseSV(txt: any) {
-// 	const lines = txt.trim().split(/\r?\n/)
-// 	const [err, header] = parseSVheader(lines[0])
-// 	if (err) return ['header error: ' + err]
-
-// 	const items = [] as any
-// 	for (let i = 1; i < lines.length; i++) {
-// 		const line = lines[i]
-// 		if (line[0] == '#') continue
-// 		const [e, m] = parseSVline(line, header)
-// 		if (e) return ['line ' + (i + 1) + ' error: ' + e]
-// 		items.push(m)
-// 	}
-// 	return [null, header, items]
-// }
-
-// function parseSVheader(line: any) {
-// 	const header = line.toLowerCase().split('\t')
-// 	if (header.length <= 1) return 'invalid file header for fusions'
-// 	const htry = (...lst) => {
-// 		for (const a of lst) {
-// 			const j = header.indexOf(a)
-// 			if (j != -1) return j
-// 		}
-// 		return -1
-// 	}
-// 	let i = htry('chr_a', 'chr1', 'chra')
-// 	if (i == -1) return 'chr_A missing from header'
-// 	header[i] = 'chr1'
-// 	i = htry('chr_b', 'chr2', 'chrb')
-// 	if (i == -1) return 'chr_B missing from header'
-// 	header[i] = 'chr2'
-// 	i = htry('pos_a', 'position_a', 'position1', 'posa')
-// 	if (i == -1) return 'pos_a missing from header'
-// 	header[i] = 'position1'
-// 	i = htry('pos_b', 'position_b', 'position2', 'posb')
-// 	if (i == -1) return 'pos_b missing from header'
-// 	header[i] = 'position2'
-// 	i = htry('strand_a', 'orta', 'orienta')
-// 	if (i == -1) return 'strand_a missing from header'
-// 	header[i] = 'strand1'
-// 	i = htry('strand_b', 'ortb', 'orientb')
-// 	if (i == -1) return 'strand_b missing from header'
-// 	header[i] = 'strand2'
-// 	// optional
-// 	i = htry('numreadsa')
-// 	if (i != -1) header[i] = 'reads1'
-// 	i = htry('numreadsb')
-// 	if (i != -1) header[i] = 'reads2'
-
-// 	return [null, header]
-// }
-
-// function parseSVline(line: string, header: any) {
-// 	const lst = line.split('\t')
-// 	const m: Partial<Mutation> = {}
-
-// 	for (let j = 0; j < header.length; j++) {
-// 		m[header[j]] = lst[j]
-// 	}
-// 	if (!m.chr1) return ['missing chr1']
-// 	if (m.chr1.toLowerCase().indexOf('chr') != 0) {
-// 		m.chr1 = 'chr' + m.chr1
-// 	}
-// 	if (!m.chr2) return ['missing chr2']
-// 	if (m.chr2.toLowerCase().indexOf('chr') != 0) {
-// 		m.chr2 = 'chr' + m.chr2
-// 	}
-// 	if (!m.position1) return ['missing position1']
-// 	let v = Number.parseInt(m.position1 as string)
-// 	if (Number.isNaN(v) || v <= 0) return ['position1 invalid value']
-// 	m.position1 = v
-// 	if (!m.position2) return ['missing position2']
-// 	v = Number.parseInt(m.position2 as string)
-// 	if (Number.isNaN(v) || v <= 0) return ['position2 invalid value']
-// 	m.position2 = v
-// 	if (m.reads1) {
-// 		v = Number.parseInt(m.reads1 as string)
-// 		if (Number.isNaN(v)) return ['reads1 invalid value']
-// 		m.reads1 = v
-// 	}
-// 	if (m.reads2) {
-// 		v = Number.parseInt(m.reads2 as string)
-// 		if (Number.isNaN(v)) return ['reads2 invalid value']
-// 		m.reads2 = v
-// 	}
-// 	return [null, m]
-// }
