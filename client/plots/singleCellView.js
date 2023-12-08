@@ -7,14 +7,13 @@ import { dofetch3 } from '#common/dofetch'
 import { getColors } from '#shared/common'
 import { zoom as d3zoom } from 'd3-zoom'
 import { renderTable } from '#dom/table'
+import { controlsInit } from './controls'
 
 export const minDotSize = 9
 export const maxDotSize = 300
 class SingleCellView {
 	constructor() {
 		this.type = 'singleCellView'
-		this.width = 800
-		this.height = 600
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 	}
 
@@ -130,6 +129,31 @@ class SingleCellView {
 			.append('table')
 			.style('width', '95vw')
 			.style('border-collapse', 'collapse')
+		await this.setControls()
+	}
+
+	async setControls() {
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsHolder,
+				inputs: [
+					{
+						label: 'Chart width',
+						type: 'number',
+						chartType: 'singleCellView',
+						settingsKey: 'svgw'
+					},
+					{
+						label: 'Chart height',
+						type: 'number',
+						chartType: 'singleCellView',
+						settingsKey: 'svgh'
+					}
+				]
+			})
+		}
 	}
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
@@ -209,10 +233,10 @@ class SingleCellView {
 		const td = this.tr.append('td').style('text-align', 'center').style('border', '1px solid #d3d3d3')
 		const svg = td
 			.append('svg')
-			.attr('width', this.width)
-			.attr('height', this.height)
+			.attr('width', this.settings.svgw)
+			.attr('height', this.settings.svgh)
 			.on('mousemove', event => this.onMouseOver(event, colorMap))
-		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.height)
+		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.settings.svgh)
 
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
@@ -292,11 +316,11 @@ class SingleCellView {
 		const r = 5
 		plot.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
-			.range([0 + r, this.height - 5])
+			.range([0 + r, this.settings.svgh - 5])
 		plot.axisBottom = axisBottom(plot.xAxisScale)
 		plot.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
-			.range([0 + r, this.height - r])
+			.range([0 + r, this.settings.svgh - r])
 		plot.axisLeft = axisLeft(plot.yAxisScale)
 	}
 
@@ -341,6 +365,9 @@ export async function getPlotConfig(opts, app) {
 		const config = {
 			hiddenClusters: [],
 			settings: {
+				controls: {
+					isOpen: false // control panel is hidden by default
+				},
 				singleCellView: settings
 			}
 		}
