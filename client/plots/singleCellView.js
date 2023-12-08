@@ -8,6 +8,7 @@ import { getColors } from '#shared/common'
 import { zoom as d3zoom } from 'd3-zoom'
 import { renderTable } from '#dom/table'
 import { controlsInit } from './controls'
+import { downloadSingleSVG } from '../common/svg.download.js'
 
 export const minDotSize = 9
 export const maxDotSize = 300
@@ -154,6 +155,9 @@ class SingleCellView {
 				]
 			})
 		}
+		this.components.controls.on('downloadClick.singleCellView', () => {
+			for (const plot of this.plots) downloadSingleSVG(plot.svg, 'plot.svg', this.opts.holder.node())
+		})
 	}
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
@@ -175,6 +179,7 @@ class SingleCellView {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 
 		this.table.selectAll('*').remove()
+		this.plots = []
 		copyMerge(this.settings, this.config.settings.singleCellView)
 		const sampleData = this.samples.find(s => s.sample == this.state.sample)
 
@@ -209,6 +214,7 @@ class SingleCellView {
 	}
 
 	renderPlot(plot) {
+		this.plots.push(plot)
 		const cells2Clusters = plot.cells.map(c => {
 			c.clusterMap = plot.clusterMap
 			c.tid = plot.tid
@@ -237,7 +243,8 @@ class SingleCellView {
 			.attr('height', this.settings.svgh)
 			.on('mousemove', event => this.onMouseOver(event, colorMap))
 		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.settings.svgh)
-
+		plot.svg = svg
+		plot.legendSVG = legendSVG
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
 			.on('zoom', e => this.handleZoom(e, mainG, plot))
