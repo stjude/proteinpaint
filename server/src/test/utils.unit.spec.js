@@ -1,7 +1,9 @@
 const tape = require('tape')
 const utils = require('../utils')
+const fs = require('fs')
+const serverconfig = require('../serverconfig')
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- server/utils specs -***-')
 	test.end()
 })
@@ -54,5 +56,26 @@ tape('stripJsScript', test => {
 		'should script tag and event handle keyword from multiline text'
 	)
 
+	test.end()
+})
+
+tape('cachedFetch', async test => {
+	const fakeResponse = { body: { test: 1 } }
+	const use = {
+		metaKey: 'info',
+		client: {
+			get(url, opts) {
+				return fakeResponse
+			}
+		}
+	}
+	const body = await utils.cachedFetch(`http://fake.org/data?random=${Date.now()}` + Date, {}, use)
+	const cachedBody = fs.existsSync(body.info.cacheFile) && fs.readFileSync(body.info.cacheFile).toString('utf-8').trim()
+	delete body.info
+	test.deepEqual(
+		body,
+		JSON.parse(cachedBody),
+		'should create a cache file in the serverconfig.cachedir with the expected content'
+	)
 	test.end()
 })
