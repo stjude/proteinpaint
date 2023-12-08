@@ -227,7 +227,7 @@ upon error, throw err message as a string
 			holder: arg.holder
 		}
 		const _ = await import('../tracks/hic/hic.straw')
-		await _.hicparsefile(hic)
+		await _.init_hicstraw(hic)
 		return
 	}
 
