@@ -322,11 +322,7 @@ function renderSnpEditTable(self, select_alleleType: any) {
 	for (const [i, snp] of self.term.snps.entries()) {
 		//const invalid_snp = snp.invalid || (!snp.alleles && !snp.gt2count) ? true : false
 		let invalid_snp: boolean | string = false
-		if (snp.invalid) {
-			invalid_snp = snp.invalid
-		} else if (!snp.alleles && !snp.gt2count) {
-			invalid_snp = 'NOT ANNNOTATED IN COHORT'
-		}
+		if (snp.invalid || (!snp.alleles && !snp.gt2count)) invalid_snp = 'NOT ANNNOTATED IN COHORT'
 
 		const rowcolor = (i + 2) % 2 ? '#eee' : '#fff'
 		const tr = self.dom.snplst_table.append('tr').style('background', rowcolor)
