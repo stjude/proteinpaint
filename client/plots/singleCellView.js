@@ -62,7 +62,7 @@ class SingleCellView {
 		let columns = []
 		const fields = result.fields
 		const columnNames = result.columnNames
-		for (const column of columnNames) columns.push({ label: column, width: '10vw' })
+		for (const column of columnNames) columns.push({ label: column, width: columnNames.length > 1 ? '10vw' : '20vw' })
 		for (const sample of this.samples) {
 			const row = []
 			addFields(row, fields, sample)
