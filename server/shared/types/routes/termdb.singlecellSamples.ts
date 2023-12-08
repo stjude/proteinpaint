@@ -16,6 +16,6 @@ export type TermdbSinglecellsamplesRequest = {
 export type TermdbSinglecellsamplesResponse = {
 	/** List of sample names with singlecell data */
 	samples: Sample[]
-	fields: String[]
-	columnNames: String[]
+	fields: string[]
+	columnNames: string[]
 }
