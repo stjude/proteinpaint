@@ -14,6 +14,7 @@ type Mutation = {
 	reads2: string | number
 }
 
+//Will rename once hic.straw refactored to class
 export async function hicParseFile2(hic: any, debugmode: boolean) {
 	if (debugmode) window['hic'] = hic
 	if (!hic.name) hic.name = 'Hi-C'
@@ -88,6 +89,8 @@ export async function hicParseFile2(hic: any, debugmode: boolean) {
 	hic.inchrpair = false
 	hic.indetail = false
 	hic.inlineview = false
+
+	//TODO: move to rendering code
 	const showNMethDiv = initWholeGenomeControls(hic)
 	// data tasks:
 	// 1. load sv
