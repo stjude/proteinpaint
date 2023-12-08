@@ -1,3 +1,15 @@
+/*
+	This script download cohort maf files from GDC, combine them into a single file, and output the sorted file based on chromsome and Start_Position.
+
+	Input JSON:
+		host: GDC host
+		fileIdLst: An array of uuid
+	Output gzip compressed maf file to stdout.
+
+	Example of usage:
+		echo '{"host": "https://api.gdc.cancer.gov/data/", "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "b429fcc1-2b59-4b4c-a472-fb27758f6249"]}'|./target/release/gdcmaf
+*/
+
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -85,14 +97,14 @@ const MAF_COL: [&str;96] = ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Bui
 async fn main() -> Result<(),Box<dyn std::error::Error>> {
     // Accepting the piped input json from jodejs and assign to the variable
     // host: GDC host
-    // save output into json string
     // url: urls to download single maf files
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer)?;
     let file_id_lst_js = serde_json::from_str::<Value>(&buffer).expect("Error reading input and serializing to JSON");
-    let host = &file_id_lst_js["host"].as_str().unwrap();
+    let host = file_id_lst_js.get("host").expect("Host was not provided").as_str().expect("Host is not a string");
     let mut url: Vec<String> = Vec::new();
-    for v in file_id_lst_js["fileIdLst"].as_array().unwrap() {
+    let file_id_lst = file_id_lst_js.get("fileIdLst").expect("File ID list is missed!").as_array().expect("File ID list is not an array");
+    for v in file_id_lst {
         url.push(Path::new(&host).join(&v.as_str().unwrap()).display().to_string());
     };
 
