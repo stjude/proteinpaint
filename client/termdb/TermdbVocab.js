@@ -1033,7 +1033,7 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('gdc/topMutatedGenes', { method: 'GET', body: arg })
 	}
 	async getTopVariablyExpressedGenes(arg) {
-		return await dofetch3('gdc/topVariablyExpressedGenes', { method: 'GET', body: arg })
+		return await dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: arg })
 	}
 
 	/* 

@@ -116,6 +116,9 @@ export function showGenesetEdit({
 			.on('click', async event => {
 				event.target.disabled = true
 				const args = {
+					genome: vocabApi.state.vocab.genome,
+					dslabel: vocabApi.state.vocab.dslabel,
+					maxGenes: 50,
 					filter0: vocabApi.state.termfilter.filter0
 				}
 				const result = await vocabApi.getTopVariablyExpressedGenes(args)
