@@ -56,7 +56,7 @@ jobs:
           npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions
 
       - name: Create server cache folder
-        run: mkdir server/cache
+        run: if [[ ! -d "server/cache" ]]; then mkdir server/cache; fi
 
       - name: Detect workspaces to test
         run: |

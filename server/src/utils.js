@@ -9,6 +9,8 @@ import bettersqlite from 'better-sqlite3'
 import _serverconfig from './serverconfig'
 import { Readable } from 'stream'
 import minimatch from 'minimatch'
+import crypto from 'crypto'
+import got from 'got'
 
 export const serverconfig = _serverconfig
 
@@ -652,4 +654,82 @@ export function boxplot_getvalue(lst) {
 	}
 	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
+}
+
+const extApiCache = serverconfig.features?.extApiCache || {}
+const extApiResponseDir = path.join(serverconfig.cachedir, 'extApiResponse')
+if (serverconfig.features?.extApiCache) {
+	if (!fs.existsSync(extApiResponseDir)) {
+		fs.mkdirSync(extApiResponseDir, { recursive: true })
+	}
+	for (const substr in extApiCache) {
+		const cacheDir = path.join(extApiResponseDir, extApiCache[substr])
+		if (!fs.existsSync(cacheDir)) {
+			fs.mkdirSync(cacheDir, { recursive: true })
+		}
+	}
+}
+
+/**
+ * @param url           string with optional
+ * @param opts          {method, header, body, ...} similar to got and node-fetch or browser fetch
+ * @param use{}	      non-fetch options to customize the client and/or response properties
+ * 	.metaKey          string key to use when attaching a caching metadata object to the response
+ *    .client           got-like HTTP client with get, post methods, etc
+ *
+ *
+ * !!! NOTE !!!: to clear the cache, `rm [cachedir]/extApiResponse/*`
+ */
+export async function cachedFetch(url, opts = {}, use = {}) {
+	let cacheDir
+	for (const substr in extApiCache) {
+		if (url.includes(substr)) {
+			cacheDir = path.join(extApiResponseDir, extApiCache[substr])
+		}
+	}
+
+	// assume that a non-relative url indicates an external API
+
+	if (!url.includes(':/')) throw `cannot use cachedFetch wuth a relative URL: ${url}`
+	const id =
+		cacheDir &&
+		crypto
+			.createHash('sha1')
+			.update(`${url} ${JSON.stringify(opts.body)}`)
+			.digest('hex')
+	const cacheFile = cacheDir && path.join(cacheDir, id)
+
+	let body
+	if (cacheFile && fs.existsSync(cacheFile)) {
+		try {
+			// console.log(`Using cache file ${cacheFile}`)
+			const json = fs.readFileSync(cacheFile)
+			body = JSON.parse(json)
+		} catch (e) {
+			console.log(e)
+			throw e
+		}
+	} else {
+		try {
+			const method = opts.method?.toLowerCase() || 'get'
+			const client = use.client || got
+			const response = await client[method](url, {
+				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+				body: method == 'get' ? undefined : JSON.stringify(opts.body || {})
+			})
+
+			if (cacheFile) {
+				// console.log(`caching ${cacheFile}`)
+				fs.writeFileSync(cacheFile, JSON.stringify(response.body), console.error)
+			}
+
+			body = response.body
+		} catch (e) {
+			console.log(690, e)
+			throw e
+		}
+	}
+
+	if (use.metaKey) body[use.metaKey] = { id, cacheFile }
+	return body
 }

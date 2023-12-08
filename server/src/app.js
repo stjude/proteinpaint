@@ -6930,7 +6930,7 @@ export async function pp_init(serverconfig) {
 			/*
 		for each raw dataset
 		*/
-
+			if (d.skip) continue
 			if (!d.name) throw 'a nameless dataset from ' + genomename
 			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename

@@ -2,7 +2,10 @@
   "debugmode": true,
   "defaultgenome": "hg38-test",
   "features": {
-    "skip_checkDependenciesAndVersions": 1
+    "skip_checkDependenciesAndVersions": 1,
+    "extApiCache": {
+       "fake.org": "fake-test"
+    }
   },
   "genomes": [
     {
