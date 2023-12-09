@@ -32,8 +32,9 @@ export function setInteractivity(self) {
 			return self.getOpacity(s) > 0 && dist < threshold
 		})
 		samples.sort((s1, s2) => {
-			if ('sampleId' in s1) return -1
-			return 1
+			if (!('sampleId' in s1)) return 1
+			if (s1.category.includes('Wildtype') || s1.category.includes('Not tested')) return 1
+			return -1
 		})
 		if (samples.length == 0) return
 		const tree = []
@@ -85,9 +86,9 @@ export function setInteractivity(self) {
 		}
 		let level = showCoords ? 4 : 2
 		let parentCategories = showCoords ? ['y', 'x', ''] : ['']
-		if (self.config.colorTW) addNodes('category')
-		if (self.config.shapeTW) addNodes('shape')
-		if (self.config.scaleDotTW) addNodes('scale')
+		if (self.config.colorTW) addNodes('category', self.config.colorTW)
+		if (self.config.shapeTW) addNodes('shape', self.config.shapeTW)
+		if (self.config.scaleDotTW) addNodes('scale', self.config.scaleDotTW)
 		self.dom.tooltip.clear()
 		//Rendering tooltip
 		const div = self.dom.tooltip.d.style('padding', '5px')
@@ -176,7 +177,7 @@ export function setInteractivity(self) {
 					const width = chars * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')
-					g.append('path').attr('d', shape).attr('fill', color)
+					g.append('path').attr('d', shape).attr('fill', color).attr('stroke', '#aaa')
 					const text = g.append('text').attr('x', 12).attr('y', 6)
 
 					const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
@@ -193,20 +194,8 @@ export function setInteractivity(self) {
 						}
 					row = table.append('tr')
 					row.append('td').style('color', '#aaa').text('Sample')
-					let mname = ''
-					if (tw?.term.type == 'geneVariant') {
-						const mutation = node.value.split(', ')[0]
-						for (const id in mclass) {
-							const class_info = mclass[id]
-							if (mutation == class_info.label) {
-								mname = sample.cat_info[node.category].find(m => m.class == class_info.key).mname
-							}
-						}
-					}
-					row
-						.append('td')
-						.style('padding', '2px')
-						.text(mname ? `${mname} ${sample.sample}` : sample.sample)
+
+					row.append('td').style('padding', '2px').text(sample.sample)
 					if ('sampleId' in sample && onClick) {
 						row
 							.append('td')
@@ -231,9 +220,9 @@ export function setInteractivity(self) {
 			}
 		}
 
-		function addNodes(category) {
+		function addNodes(category, tw) {
 			for (const sample of samples) {
-				const value = getCategoryValue(category, sample)
+				const value = getCategoryValue(category, sample, tw)
 				let parentId = ''
 				for (const pc of parentCategories) parentId += getCategoryValue(pc, sample)
 				const id = value + parentId
@@ -250,9 +239,19 @@ export function setInteractivity(self) {
 			parentCategories.unshift(category)
 		}
 
-		function getCategoryValue(category, d) {
+		function getCategoryValue(category, d, tw) {
 			if (category == '') return ''
 			let value = d[category]
+			if (tw?.term.type == 'geneVariant') {
+				const mutation = value.split(', ')[0]
+				for (const id in mclass) {
+					const class_info = mclass[id]
+					if (mutation == class_info.label) {
+						const mname = d.cat_info[category].find(m => m.class == class_info.key).mname
+						if (mname) value = `${mname} ${value}`
+					}
+				}
+			}
 			if (typeof value == 'number' && value % 1 != 0) value = value.toPrecision(2)
 			return value
 		}
