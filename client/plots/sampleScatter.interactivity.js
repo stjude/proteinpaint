@@ -33,8 +33,8 @@ export function setInteractivity(self) {
 		})
 		samples.sort((s1, s2) => {
 			if (!('sampleId' in s1)) return 1
-			if (s1.category.includes('Wildtype') || s1.category.includes('Not tested')) return 1
-			if (s1.shape.includes('Wildtype') || s1.shape.includes('Not tested')) return 1
+			if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
+			if (s1.shape.includes(mclass.WT.label) || s1.shape.includes(mclass.Blank.label)) return 1
 
 			return -1
 		})
