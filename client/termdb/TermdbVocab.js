@@ -835,6 +835,9 @@ export class TermdbVocab extends Vocab {
 		}
 	}
 
+	/*
+	Same as getAnnotatedSampleData, but only returns the lst[] of samples and makes a single request to the server.
+	*/
 	async getAnnotatedSampleDataSimple(opts, _refs = {}) {
 		// may check against required auth credentials for the server route
 		const headers = this.mayGetAuthHeaders('termdb')
