@@ -165,6 +165,19 @@ async function mayGetSampleFilterSet(q, nonDictTerms) {
 	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
 }
 
+export async function getSamplesPerFilter(q, ds, res) {
+	q.ds = ds
+	const samples = {}
+	for (const id in q.filters) {
+		const filter = q.filters[id]
+		console.log(filter)
+		const result = (await get_samples(filter, q.ds)).map(i => i.id)
+		samples[id] = Array.from(new Set(result))
+	}
+	console.log(samples)
+	res.send(samples)
+}
+
 function divideTerms(lst) {
 	// quick fix to divide list of term to two lists
 	// TODO ways to generalize; may use `shared/usecase2termtypes.js` with "regression":{nonDictTypes:['snplst','prs']}
