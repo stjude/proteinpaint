@@ -174,7 +174,6 @@ export async function getSamplesPerFilter(q, ds, res) {
 		const result = (await get_samples(filter, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}
-	console.log(samples)
 	res.send(samples)
 }
 

@@ -45,8 +45,8 @@ class profileRadarFacility extends profilePlot {
 
 	getPercentage2(d) {
 		if (!d) return null
-		const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
-		let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
+		const maxScore = this.data.lst[0]?.[d.maxScore.id]?.value //Max score has the same value for all the samples on this module
+		let scores = this.data.lst.map(sample => (sample[d.score.id]?.value / maxScore) * 100)
 		scores.sort((s1, s2) => s1 - s2)
 		const middle = Math.floor(scores.length / 2)
 		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
