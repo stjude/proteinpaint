@@ -11,8 +11,13 @@ export type VersionInfo = {
 	pkgver: string
 	codedate: string
 	launchdate: string
-	deps?: {
-		[pkgName: string]: string
+	deps: {
+		[pkgName: string]: {
+			/** the version as found in node_modules/[package]/package.json */
+			installed?: string
+			/** the version as entered in the project's package.dependencies */
+			entry?: string
+		}
 	}
 }
 

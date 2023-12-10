@@ -42,10 +42,25 @@ export async function getStat(genomes) {
 	return health
 }
 
+const sjcrh = `${process.cwd()}/node_modules/@sjcrh/proteinpaint`
+const serverPkg = JSON.parse(fs.readFileSync(`${sjcrh}-server/package.json`, { encoding: 'utf8' }))
+
 export const versionInfo: VersionInfo = {
 	pkgver: pkg.version,
 	codedate: get_codedate(),
-	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' ')
+	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' '),
+	deps: {
+		'@sjcrh/proteinpaint-server': {
+			installed: serverPkg.version
+		}
+	}
+}
+
+if (fs.existsSync(`${sjcrh}-client/package.json`)) {
+	const client = JSON.parse(fs.readFileSync(`${sjcrh}-client/package.json`, { encoding: 'utf8' }))
+	versionInfo.deps['@sjcrh/proteinpaint-client'] = {
+		installed: client.version
+	}
 }
 
 async function setVersionInfoDeps() {
@@ -53,19 +68,24 @@ async function setVersionInfoDeps() {
 	// that may have >=1 @sjcrh packages as dependencies
 	const targetPkgJson = `${process.cwd()}/package.json`
 	try {
-		if (!fs.existsSync(targetPkgJson)) versionInfo.deps = {}
+		if (!fs.existsSync(targetPkgJson)) return
 		else {
 			const targetPkgContent = fs.readFileSync(targetPkgJson, { encoding: 'utf8' })
 			const targetPkg = JSON.parse(targetPkgContent)
-			versionInfo.deps = {
-				'@sjcrh/proteinpaint-server': targetPkg?.dependencies['@sjcrh/proteinpaint-server'],
-				'@sjcrh/proteinpaint-client': targetPkg?.dependencies['@sjcrh/proteinpaint-client']
+			const serverEntry = targetPkg?.dependencies['@sjcrh/proteinpaint-server']
+			if (serverEntry) versionInfo.deps['@sjcrh/proteinpaint-server'].entry = serverEntry
+			const clientEntry = targetPkg?.dependencies['@sjcrh/proteinpaint-client']
+			if (clientEntry) {
+				if (!versionInfo.deps.entry['@sjcrh/proteinpaint-client']) {
+					versionInfo.deps['@sjcrh/proteinpaint-client'] = {}
+				}
+				versionInfo.deps['@sjcrh/proteinpaint-client'] = clientEntry
 			}
 		}
 	} catch (e) {
 		console.log(e)
 		// avoid repeated errors related to reading the target package.json
-		versionInfo.deps = {}
+		// versionInfo.deps = {}
 	}
 }
 
