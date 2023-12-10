@@ -835,6 +835,58 @@ export class TermdbVocab extends Vocab {
 		}
 	}
 
+	async getAnnotatedSampleDataSimple(opts, _refs = {}) {
+		// may check against required auth credentials for the server route
+		const headers = this.mayGetAuthHeaders('termdb')
+		// unlike scatter and violin, the matrix plot will NOT display anything
+		// if sample names are not allowed to be displayed
+		// TODO: may allow a request to proceed, but not display sampleNames???
+		if (!headers) return
+		const filter = getNormalRoot(opts.filter)
+
+		/************** quick fix
+        need list of gene names of current geneVariant terms,
+        so that a dictionary term will only retrieve samples mutated on this gene list, rather than whole cohort (e.g. gdc)
+        NOTE: sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
+        */
+		const currentGeneNames = opts.terms
+			.filter(tw => tw.term.type === 'geneVariant')
+			.map(tw => tw.term.name)
+			.sort()
+
+		const tws = []
+		for (const tw of opts.terms) tws.push(this.getTwMinCopy(tw))
+
+		const init = {
+			headers,
+			credentials: 'include',
+			body: {
+				for: 'matrix',
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				// one request per term
+				terms: tws,
+				filter,
+				embedder: window.location.hostname
+			}
+		}
+		if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
+		if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
+
+		/////////////////////////////////////////
+		// !!!!!!!! FIXME !!!!!!!!!!!
+		// do this via some settings via this.termdbConfig, replace hardcoded logic
+		/////////////////////////////////////////
+		if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length) {
+			init.body.currentGeneNames = currentGeneNames
+		}
+
+		const data = await dofetch3('termdb', init)
+		const result = [] //mapped to expected value
+		for (const id in data.samples) result.push(data.samples[id])
+		return { lst: result }
+	}
+
 	// get a tw copy with the correct identifier and without $id
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
