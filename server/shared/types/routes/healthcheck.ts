@@ -11,7 +11,7 @@ export type VersionInfo = {
 	pkgver: string
 	codedate: string
 	launchdate: string
-	deps?: {
+	deps: {
 		[pkgName: string]: {
 			/** the version as found in node_modules/[package]/package.json */
 			installed?: string

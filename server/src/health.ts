@@ -68,7 +68,7 @@ async function setVersionInfoDeps() {
 	// that may have >=1 @sjcrh packages as dependencies
 	const targetPkgJson = `${process.cwd()}/package.json`
 	try {
-		if (!fs.existsSync(targetPkgJson)) versionInfo.deps = {}
+		if (!fs.existsSync(targetPkgJson)) return
 		else {
 			const targetPkgContent = fs.readFileSync(targetPkgJson, { encoding: 'utf8' })
 			const targetPkg = JSON.parse(targetPkgContent)
