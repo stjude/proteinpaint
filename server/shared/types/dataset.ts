@@ -211,8 +211,9 @@ type SingleSampleMutation = GdcApi & {
 	discoSkipChrM?: boolean
 }
 
-type TopVariablyExpressedGenes = {
-	args?: any
+type TopVariablyExpressedGenesQuery = {
+	src: 'gdcapi' | 'native'
+	// to add optional parameters
 }
 
 type TopMutatedGenes = {
@@ -316,7 +317,7 @@ type Queries = {
 	geneExpression?: GeneExpressionQuery
 	rnaseqGeneCount?: RnaseqGeneCount
 	topMutatedGenes?: TopMutatedGenes
-	topVariablyExpressedGenes?: TopVariablyExpressedGenes
+	topVariablyExpressedGenes?: TopVariablyExpressedGenesQuery
 	trackLst?: TrackLstEntry[]
 	// TODO singleSampleGbtk
 	singleCell?: SingleCellQuery

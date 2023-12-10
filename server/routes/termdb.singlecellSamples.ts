@@ -69,15 +69,19 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 
 	if (q.samples.src == 'gdcapi') {
 		gdc_validate_query_singleCell_samples(ds, genome)
-	} else {
+	} else if (q.samples.src == 'native') {
 		validateSamplesNative(q.samples as SingleCellSamplesNative, ds)
+	} else {
+		throw 'unknown singleCell.samples.src'
 	}
 	// q.samples.get() added
 
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
-	} else {
+	} else if (q.data.src == 'native') {
 		validateDataNative(q.data as SingleCellDataNative, ds)
+	} else {
+		throw 'unknown singleCell.data.src'
 	}
 	// q.data.get() added
 }
