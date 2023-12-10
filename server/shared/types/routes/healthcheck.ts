@@ -12,7 +12,12 @@ export type VersionInfo = {
 	codedate: string
 	launchdate: string
 	deps?: {
-		[pkgName: string]: string
+		[pkgName: string]: {
+			/** the version as found in node_modules/[package]/package.json */
+			installed?: string
+			/** the version as entered in the project's package.dependencies */
+			entry?: string
+		}
 	}
 }
 
