@@ -8,7 +8,7 @@ import { validate as snpValidate } from './termdb.snp'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { trigger_getSampleScatter } from './termdb.scatter'
 import { trigger_getLowessCurve } from './termdb.scatter'
-import { getData } from './termdb.matrix'
+import { getData, getSamplesPerFilter } from './termdb.matrix'
 import { trigger_getCohortsData } from './termdb.cohort'
 import { get_mds3variantData } from './mds3.variant'
 import roundValue from '#shared/roundValue'
@@ -73,6 +73,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'mds3queryDetails') return get_mds3queryDetails(res, ds)
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
+			if (q.for == 'getSamplesPerFilter') return await getSamplesPerFilter(q, ds, res)
 			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'validateToken') {
 			}

@@ -34,7 +34,7 @@ export class profilePlot {
 	}
 
 	getList(tw, data) {
-		const samples = Object.values(data.lst)
+		const samples = Object.values(data)
 		const sampleValues = Array.from(new Set(samples.map(sample => sample[tw.$id]?.value)))
 		const list = sampleValues.map(value => {
 			return { label: value, value }
@@ -44,18 +44,25 @@ export class profilePlot {
 	}
 
 	async setControls(chartType, additionalInputs = []) {
-		const countriesData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: [this.config.countryTW],
-			filter: this.getFilter([this.config.countryTW.id])
+		const idFilters = [this.config.countryTW.id, this.config.incomeTW.id, this.config.typeTW.id]
+		const filters = {}
+		for (const id of idFilters) {
+			const filter = this.getFilter([id])
+			if (filter) filters[id] = filter
+		}
+		const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
+			filters
 		})
-		const incomesData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: [this.config.incomeTW],
-			filter: this.getFilter([this.config.incomeTW.id])
+		const data = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: [this.config.countryTW, this.config.incomeTW, this.config.typeTW]
 		})
-		const typesData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: [this.config.typeTW],
-			filter: this.getFilter([this.config.typeTW.id])
-		})
+		const countriesData = data.lst.filter(sample =>
+			samplesPerFilter[this.config.countryTW.id].includes(Number(sample.sample))
+		)
+		const incomesData = data.lst.filter(sample =>
+			samplesPerFilter[this.config.incomeTW.id].includes(Number(sample.sample))
+		)
+		const typesData = data.lst.filter(sample => samplesPerFilter[this.config.typeTW.id].includes(Number(sample.sample)))
 
 		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
 			return { label: value, value }
