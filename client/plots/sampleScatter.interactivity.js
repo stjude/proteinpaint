@@ -89,8 +89,8 @@ export function setInteractivity(self) {
 		let level = showCoords ? 4 : 2
 		let parentCategories = showCoords ? ['y', 'x', ''] : ['']
 		if (self.config.colorTW) addNodes('category', self.config.colorTW)
-		if (self.config.shapeTW) addNodes('shape', self.config.shapeTW)
-		if (self.config.scaleDotTW) addNodes('scale', self.config.scaleDotTW)
+		if (self.config.shapeTW) addNodes('shape', self.config.shapeTW, self.config.colorTW)
+		if (self.config.scaleDotTW) addNodes('scale', self.config.scaleDotTW, self.config.shapeTW)
 		self.dom.tooltip.clear()
 		//Rendering tooltip
 		const div = self.dom.tooltip.d.style('padding', '5px')
@@ -222,11 +222,11 @@ export function setInteractivity(self) {
 			}
 		}
 
-		function addNodes(category, tw) {
+		function addNodes(category, tw, parentTW) {
 			for (const sample of samples) {
 				const value = getCategoryValue(category, sample, tw)
 				let parentId = ''
-				for (const pc of parentCategories) parentId += getCategoryValue(pc, sample)
+				for (const pc of parentCategories) parentId += getCategoryValue(pc, sample, parentTW)
 				const id = value + parentId
 				let node = tree.find(item => item.id == id && item.parentId == parentId)
 				let parent = tree.find(item => item.id == parentId)
