@@ -42,7 +42,7 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 		const body = {
 			genome: genomeObj.name,
 			dslabel,
-			sample: sample[termdbConfig.queries.singleSampleMutation.sample_id_key || 'sample_id']
+			sample: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
 		}
 		const data = await dofetch3('termdb/singleSampleMutation', { body })
 		if (data.error) throw data.error
@@ -111,8 +111,7 @@ function computeOverrides(o, termdbConfig, genomeObj, sample) {
 	if (!overrides.label) overrides.label = {}
 	overrides.label.showPrioritizeGeneLabelsByGeneSets = !!genomeObj.geneset
 	if (!overrides.downloadImgName) {
-		overrides.downloadImgName =
-			sample[termdbConfig.queries.singleSampleMutation.sample_id_key || 'sample_id'] + ' Disco'
+		overrides.downloadImgName = sample[termdbConfig.queries.singleSampleMutation.sample_id_key] + ' Disco'
 	}
 	return overrides
 }

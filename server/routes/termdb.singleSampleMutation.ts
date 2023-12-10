@@ -2,15 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import { read_file } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-/*
-import {
-	SingleCellQuery,
-	SingleCellSamplesNative,
-	SingleCellSamplesGdc,
-	SingleCellDataNative,
-	SingleCellDataGdc
-} from '#shared/types/dataset.ts'
-*/
 import {
 	TermdbSingleSampleMutationRequest,
 	TermdbSingleSampleMutationResponse

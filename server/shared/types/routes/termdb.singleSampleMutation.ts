@@ -12,7 +12,7 @@ type ValidResponse = {
 	/** List of mutation data points from this sample TODO change to type of M elements */
 	mlst: object[]
 	/** */
-	dt2total: { dt: number; total: number }[]
+	dt2total?: { dt: number; total: number }[]
 }
 
 export type TermdbSingleSampleMutationResponse = ErrorResponse | ValidResponse
