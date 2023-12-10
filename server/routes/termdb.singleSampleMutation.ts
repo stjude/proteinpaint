@@ -1,0 +1,96 @@
+import fs from 'fs'
+import path from 'path'
+import { read_file } from '#src/utils.js'
+import serverconfig from '#src/serverconfig.js'
+/*
+import {
+	SingleCellQuery,
+	SingleCellSamplesNative,
+	SingleCellSamplesGdc,
+	SingleCellDataNative,
+	SingleCellDataGdc
+} from '#shared/types/dataset.ts'
+*/
+import {
+	TermdbSingleSampleMutationRequest,
+	TermdbSingleSampleMutationResponse
+} from '#shared/types/routes/termdb.singleSampleMutation.ts'
+import { gdcValidate_query_singleSampleMutation } from '#src/mds3.gdc.js'
+
+export const api: any = {
+	endpoint: 'termdb/singleSampleMutation',
+	methods: {
+		get: {
+			init,
+			request: {
+				typeId: 'TermdbSingleSampleMutationRequest'
+			},
+			response: {
+				typeId: 'TermdbSingleSampleMutationResponse'
+			}
+		}
+	}
+}
+
+function init({ genomes }) {
+	return async (req: any, res: any): Promise<void> => {
+		const q = req.query as TermdbSingleSampleMutationRequest
+		let result
+		try {
+			const g = genomes[q.genome]
+			if (!g) throw 'invalid genome name'
+			const ds = g.datasets[q.dslabel]
+			if (!ds) throw 'invalid dataset name'
+			if (!ds.queries?.singleSampleMutation) throw 'not supported on this dataset'
+			result = (await ds.queries.singleSampleMutation.get(q)) as TermdbSingleSampleMutationResponse
+		} catch (e: any) {
+			if (e.stack) console.log(e.stack)
+			result = {
+				status: e.status || 400,
+				error: e.message || e
+			} as TermdbSingleSampleMutationResponse
+		}
+		res.send(result)
+	}
+}
+
+/////////////////// ds query validator
+export async function validate_query_singleSampleMutation(ds: any, genome: any) {
+	const _q = ds.queries.singleSampleMutation
+	if (!_q) return
+	if (_q.src == 'gdcapi') {
+		gdcValidate_query_singleSampleMutation(ds, genome)
+	} else if (_q.src == 'native') {
+		// using a folder to store text files for individual samples
+		// file names are integer sample id
+		_q.get = async (q: TermdbSingleSampleMutationRequest) => {
+			/* as mds3 client may not be using integer sample id for now,
+			the argument is string id and has to be mapped to integer id
+			*/
+			let fileName = q.sample
+			if (ds.cohort?.termdb?.q?.sampleName2id) {
+				// has name-to-id converter
+				fileName = ds.cohort.termdb.q.sampleName2id(q.sample)
+				if (fileName == undefined) {
+					// unable to convert string id to integer
+					return []
+				}
+			}
+
+			const file = path.join(serverconfig.tpmasterdir, _q.folder, fileName.toString())
+			try {
+				await fs.promises.stat(file)
+			} catch (e: any) {
+				if (e.code == 'EACCES') throw 'cannot read file, permission denied'
+				if (e.code == 'ENOENT') throw 'no data for this sample'
+				throw 'failed to load data'
+			}
+
+			const data = await read_file(file)
+			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
+			return { mlst: JSON.parse(data) }
+		}
+	} else {
+		throw 'unknown singleSampleMutation.src'
+	}
+}
