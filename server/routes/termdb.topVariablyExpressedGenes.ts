@@ -44,8 +44,10 @@ export function validate_query_TopVariablyExpressedGenes(ds: any, genome: any) {
 	if (!q) return
 	if (q.src == 'gdcapi') {
 		gdcValidateQuery(ds, genome)
-	} else {
+	} else if (q.src == 'native') {
 		nativeValidateQuery(ds, genome)
+	} else {
+		throw 'unknown topVariablyExpressedGenes.src'
 	}
 	// added getter: q.getGenes()
 }
