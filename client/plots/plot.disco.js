@@ -42,9 +42,9 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 		const body = {
 			genome: genomeObj.name,
 			dslabel,
-			singleSampleMutation: sample[termdbConfig.queries.singleSampleMutation.sample_id_key || 'sample_id']
+			sample: sample[termdbConfig.queries.singleSampleMutation.sample_id_key || 'sample_id']
 		}
-		const data = await dofetch3('mds3', { body })
+		const data = await dofetch3('termdb/singleSampleMutation', { body })
 		if (data.error) throw data.error
 		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
 

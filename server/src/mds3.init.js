@@ -34,6 +34,7 @@ import { add_bcf_variant_filter } from './termdb.snp'
 import { spawnSync } from 'child_process'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
+import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 
 /*
 init
@@ -66,7 +67,6 @@ validate_query_probe2cnv
 validate_query_ld
 validate_query_geneExpression
 validate_query_rnaseqGeneCount
-validate_query_singleSampleMutation
 validate_query_singleSampleGenomeQuantification
 validate_query_singleSampleGbtk
 validate_variant2samples
@@ -1505,47 +1505,6 @@ async function validate_query_geneExpression(ds, genome) {
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
 		return { gene2sample2value, byTermId }
-	}
-}
-
-async function validate_query_singleSampleMutation(ds, genome) {
-	const q = ds.queries.singleSampleMutation
-	if (!q) return
-	if (q.gdcapi) {
-		gdc.validate_query_singleSampleMutation(ds, genome)
-		// q.get() added
-	} else if (q.folder) {
-		// using a folder to store text files for individual samples
-		// file names are integer sample id
-		q.get = async sampleName => {
-			/* as mds3 client may not be using integer sample id for now,
-			the argument is string id and has to be mapped to integer id
-			*/
-			let fileName = sampleName
-			if (ds.cohort?.termdb?.q?.sampleName2id) {
-				// has name-to-id converter
-				fileName = ds.cohort.termdb.q.sampleName2id(sampleName)
-				if (fileName == undefined) {
-					// unable to convert string id to integer
-					return []
-				}
-			}
-
-			const file = path.join(serverconfig.tpmasterdir, q.folder, fileName.toString())
-			try {
-				await fs.promises.stat(file)
-			} catch (e) {
-				if (e.code == 'EACCES') throw 'cannot read file, permission denied'
-				if (e.code == 'ENOENT') throw 'no data for this sample'
-				throw 'failed to load data'
-			}
-
-			const data = await utils.read_file(file)
-			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
-			return { mlst: JSON.parse(data) }
-		}
-	} else {
-		throw 'unknown query method for singleSampleMutation'
 	}
 }
 

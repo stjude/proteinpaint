@@ -181,6 +181,7 @@ export default <Mds3>{
 		}
 		*/
 		singleSampleMutation: {
+			src: 'native',
 			sample_id_key: 'sample_id',
 			folder: 'files/hg38/TermdbTest/mutationpersample/'
 		},

@@ -531,14 +531,14 @@ export async function bamsliceui({
 
 		const mutationMsgDiv = ssmGeneDiv.append('p').text('Searching for mutations...')
 
-		const data = await dofetch3('mds3', {
+		const data = await dofetch3('termdb/singleSampleMutation', {
 			body: {
 				/* knowing that the query id is already case uuid, this prefix signals this to backend gdc code and thus no need for backend to sniff out if is case or sample id, which requires complete cache
 				use non-alphabetic characters so no need to worry about lower/upper case
 				this helps when backend caseid caching is incomplete, or truncated on dev machines
 				this is harmless and do not impact non-gdc code
 				*/
-				singleSampleMutation: '___' + gdc_args.case_id,
+				sample: '___' + gdc_args.case_id,
 				genome: gdc_genome,
 				dslabel: gdcDslabel
 			}

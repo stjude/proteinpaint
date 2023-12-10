@@ -204,11 +204,14 @@ type SvFusion = {
 	byrange: ByRangeEntry
 }
 
-type SingleSampleMutation = GdcApi & {
-	sample_id?: string
+type SingleSampleMutationQuery = {
+	src: 'native' | 'gdcapi'
+	/** which property of client mutation object to retrieve sample identifier for querying single sample data with */
+	sample_id_key: string
+	/** only required for src=native */
 	folder?: string
-	sample_id_key?: string
-	discoSkipChrM?: boolean
+	/** quick fix to hide chrM from disco, due to reason e.g. this dataset doesn't have data on chrM */
+	discoSkipChrM?: true
 }
 
 type TopVariablyExpressedGenesQuery = {
@@ -313,7 +316,7 @@ type Queries = {
 	svfusion?: SvFusion
 	probe2cnv?: Probe2Cnv // this is no longer used
 	cnv?: CnvSegment
-	singleSampleMutation?: SingleSampleMutation
+	singleSampleMutation?: SingleSampleMutationQuery
 	geneExpression?: GeneExpressionQuery
 	rnaseqGeneCount?: RnaseqGeneCount
 	topMutatedGenes?: TopMutatedGenes

@@ -18,7 +18,7 @@ validate_query_snvindel_byisoform
 	snvindel_byisoform
 	snvindel_addclass
 	decideSampleId
-validate_query_singleSampleMutation
+gdcValidate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
@@ -1997,14 +1997,15 @@ function termid2size_filters(p, ds) {
 	return f
 }
 
-export function validate_query_singleSampleMutation(ds, genome) {
-	ds.queries.singleSampleMutation.get = async (sampleName, q) => {
-		if (!sampleName) throw 'sampleName missing'
+export function gdcValidate_query_singleSampleMutation(ds, genome) {
+	ds.queries.singleSampleMutation.get = async q => {
 		/*
-		sampleName value can be multiple types:
+		q.sample value can be multiple types:
 		- sample submitter id from mds3 tk (if cached, if not cached it is aliquot id)
 		- case submitter id from matrix
 		- case uuid from bam slicing ui
+
+		NOTE q.case_id is assigned! could be problematic or conflict with typing
 
 		this getter will identify if the value is a case uuid, if so, use; otherwise, convert to case uuid
 		for now, always query ssm data by case uuid, but not sample (might change later)
@@ -2012,21 +2013,20 @@ export function validate_query_singleSampleMutation(ds, genome) {
 		do the conversion here on the fly so that no need for client to manage these extra, arbitrary ids that's specific for gdc
 		beyond sample.sample_id for display
 		*/
-
-		if (sampleName.startsWith('___')) {
+		if (q.sample.startsWith('___')) {
 			// is a case uuid. see comments in block.tk.bam.gdc.js
-			const id = sampleName.substring(3)
+			const id = q.sample.substring(3)
 			if (!id) throw 'expecting uuid after prefix but got blank'
 			q.case_id = id
-		} else if (ds.__gdc.caseid2submitter.has(sampleName)) {
+		} else if (ds.__gdc.caseid2submitter.has(q.sample)) {
 			// given name is case uuid
-			q.case_id = sampleName
+			q.case_id = q.sample
 		} else {
-			q.case_id = ds.__gdc.map2caseid.get(sampleName)
+			q.case_id = ds.__gdc.map2caseid.get(q.sample)
 			if (!q.case_id) {
 				// not mapped to case id
 				// this is possible when the server just started and hasn't finished caching. thus must call this method to map
-				q.case_id = await convert2caseId(sampleName)
+				q.case_id = await convert2caseId(q.sample)
 			}
 		}
 		return await getSingleSampleMutations(q, ds, genome)
