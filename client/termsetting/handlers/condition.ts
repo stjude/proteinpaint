@@ -72,7 +72,7 @@ function getPillStatus(self) {
 			if (self.q.bar_by_children) return { text: 'Sub-condition' }
 		}
 	}
-	if (self.q.mode == 'cuminc') {
+	if (self.q.mode == 'cuminc' || self.q.mode == 'cox') {
 		if (!self.q.breaks || self.q.breaks.length == 0) throwMsgWithFilePathAndFnName('Missing q.breaks')
 		return { text: `Grades ${self.q.breaks![0]}-5` }
 	}
