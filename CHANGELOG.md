@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.35.0
 
 Features:
 - Click dendrogram to highlight sub-branches, zoom in and select cases underneath
