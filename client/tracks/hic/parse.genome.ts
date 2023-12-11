@@ -91,7 +91,7 @@ export async function hicParseFile(hic: any, self: any, debugmode: boolean) {
 	hic.inlineview = false
 
 	//TODO: move to rendering code
-	const showNMethDiv = initWholeGenomeControls(hic, self)
+	initWholeGenomeControls(hic, self)
 	// data tasks:
 	// 1. load sv
 	// 2. stat the hic file
@@ -112,9 +112,9 @@ export async function hicParseFile(hic: any, self: any, debugmode: boolean) {
 		const err = hicparsestat(hic, data.out)
 		if (err) throw { message: err }
 		if (!hic.normalization?.length) {
-			hic.nmethselect = showNMethDiv.text(defaultnmeth)
+			hic.nmethselect = self.dom.nmeth.text(defaultnmeth)
 		} else {
-			hic.nmethselect = showNMethDiv
+			hic.nmethselect = self.dom.nmeth
 				.style('margin-right', '10px')
 				.append('select')
 				.on('change', () => {
@@ -209,12 +209,12 @@ async function setnmeth(hic: any, nmeth: string) {
 
 	if (hic.inchrpair) {
 		hic.chrpairview.nmeth = nmeth
-		await getdata_chrpair(hic)
+		await getdata_chrpair(hic, self)
 		return
 	}
 	if (hic.indetail) {
 		hic.detailview.nmeth = nmeth
-		getdata_detail(hic)
+		getdata_detail(hic, self)
 	}
 }
 

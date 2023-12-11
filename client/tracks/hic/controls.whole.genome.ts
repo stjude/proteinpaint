@@ -2,28 +2,53 @@ import { bplen } from '#shared/common'
 import { nmeth2select } from './hic.straw'
 
 /**
- * Renders control panel for hic whole genome view
+ * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, and detail views)
  * @param hic
  * @returns
  */
 export function initWholeGenomeControls(hic: any, self: any) {
-	const table = self.dom.controlsDiv.append('table').style('border-spacing', '3px')
-	const tr1 = table.append('tr')
-	const tr2 = table.append('tr')
+	const menuWrapper = self.dom.controlsDiv
+		.style('background', 'rgb(253, 250, 244)')
+		.style('vertical-align', 'top')
+		.style('padding', '5px')
+		.style('border', 'solid 0.5px #ccc')
 
+	//Menu open by default
+	let menuVisible = true
+	//Burger btn
+	self.dom.controlsDiv
+		.append('button')
+		.style('display', 'block')
+		.style('border', 'none')
+		.style('font-size', '1.5em')
+		.style('background', 'none')
+		.html('&#8801;')
+		.on('click', () => {
+			menuVisible = !menuVisible
+			menu.style('display', menuVisible ? 'block' : 'none')
+		})
+	const menu = menuWrapper
+		.append('div')
+		.attr('class', 'sjpp-hic-menu')
+		.style('display', menuVisible ? 'block' : 'none')
+	const menuTable = menu.append('table').style('border-spacing', '3px')
 	if (hic.enzyme) {
-		tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('ENZYME')
-		tr2.append('td').text(hic.enzyme)
+		const enzymeRow = menuTable.append('tr')
+		addLabel(enzymeRow, 'ENZYME')
+		enzymeRow.append('td').text(hic.enzyme)
 	}
 
-	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('NORMALIZATION')
-	const showNMethDiv = tr2.append('td') //placeholder until data is returned from server
+	const normalizationRow = menuTable.append('tr')
+	addLabel(normalizationRow, 'NORMALIZATION')
+	self.dom.nmeth = normalizationRow.append('td') //placeholder until data is returned from server
 
-	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('CUTOFF')
-	hic.inputbpmaxv = tr2
+	const cutoffRow = menuTable.append('tr')
+	addLabel(cutoffRow, 'CUTOFF')
+	self.dom.inputBpMaxv = cutoffRow
 		.append('td')
 		.append('input')
-		.style('width', '70px')
+		.style('width', '80px')
+		.style('margin-left', '0px')
 		.attr('type', 'number')
 		.property('value', hic.wholegenome.bpmaxv)
 		.on('keyup', (event: KeyboardEvent) => {
@@ -33,33 +58,54 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			setmaxv(hic, v)
 		})
 
-	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('RESOLUTION')
-	hic.ressays = tr2.append('td').append('span')
+	const resolutionRow = menuTable.append('tr')
+	addLabel(resolutionRow, 'RESOLUTION')
+	self.dom.resolutionInput = resolutionRow.append('td').append('span')
 
-	tr1.append('td').style('color', '#858585').style('font-size', '.7em').text('VIEW')
-	const td = tr2.append('td')
-	hic.wholegenomebutton = td
+	const viewRow = menuTable.append('tr')
+	addLabel(viewRow, 'VIEW')
+	self.dom.viewBtnDiv = viewRow.append('td')
+	self.dom.view = self.dom.viewBtnDiv.append('span').style('padding-right', '5px').style('display', 'block')
+
+	hic.wholegenomebutton = self.dom.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
-		.text('Genome')
+		.html('&#8592; Genome')
 		.on('click', () => {
+			self.dom.view.text('Genome')
+			self.dom.zoomRow.style('display', 'none')
+			self.dom.detailView.style('display', 'none')
 			hic.inwholegenome = true
 			hic.inchrpair = false
 			hic.indetail = false
 			switchview(hic, self)
 		})
 
-	hic.chrpairviewbutton = td
+	hic.chrpairviewbutton = self.dom.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
 		.on('click', () => {
+			self.dom.detailView.style('display', 'none')
+			self.dom.zoomRow.style('display', 'none')
 			hic.inwholegenome = false
 			hic.inchrpair = true
 			hic.indetail = false
 			switchview(hic, self)
 		})
 
-	return showNMethDiv
+	self.dom.zoomRow = menuTable.append('tr').style('display', 'none')
+	addLabel(self.dom.zoomRow, 'ZOOM')
+	const zoomDiv = self.dom.zoomRow.append('td')
+	self.dom.zoomIn = zoomDiv.append('button').text('In')
+	self.dom.zoomOut = zoomDiv.append('button').text('Out')
+	const detailView = menuTable.append('tr')
+	detailView.append('td') //Leave blank
+	self.dom.detailView = detailView.append('td').style('display', 'none')
+	self.dom.horizontalView = self.dom.detailView.append('button').text('Horizontal View')
+}
+
+function addLabel(tr: any, text: string) {
+	return tr.append('td').style('color', '#858585').style('vertical-align', 'top').style('font-size', '.8em').text(text)
 }
 
 /**
@@ -128,8 +174,8 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.plot.node().appendChild(hic.wholegenome.svg.node())
 		hic.wholegenomebutton.style('display', 'none')
 		hic.chrpairviewbutton.style('display', 'none')
-		hic.inputbpmaxv.property('value', hic.wholegenome.bpmaxv)
-		hic.ressays.text(bplen(hic.wholegenome.resolution) + ' bp')
+		self.dom.inputBpMaxv.property('value', hic.wholegenome.bpmaxv)
+		self.dom.resolutionInput.text(bplen(hic.wholegenome.resolution) + ' bp')
 		nmeth2select(hic, hic.wholegenome.nmeth)
 	} else if (hic.inchrpair) {
 		self.dom.plotDiv.yAxis.selectAll('*').remove()
@@ -140,8 +186,8 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.plot.node().appendChild(hic.chrpairview.canvas)
 		hic.wholegenomebutton.style('display', 'inline-block')
 		hic.chrpairviewbutton.style('display', 'none')
-		hic.inputbpmaxv.property('value', hic.chrpairview.bpmaxv)
-		hic.ressays.text(bplen(hic.chrpairview.resolution) + ' bp')
+		self.dom.inputBpMaxv.property('value', hic.chrpairview.bpmaxv)
+		self.dom.resolutionInput.text(bplen(hic.chrpairview.resolution) + ' bp')
 		nmeth2select(hic, hic.chrpairview.nmeth)
 	}
 }

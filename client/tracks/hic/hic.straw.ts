@@ -174,20 +174,13 @@ type Hic = {
 }
 
 /**
- * Parses input file and renders plot. Whole genome view renders as the default. 
+ * Parses input file and renders plot. Whole genome view renders as the default.
  * Clicking on chr-chr svg launches the chr-pair view.
  * Clicking anywhere within the chr-pair view launches the detail view. The track maybe launched from the Horizontal View button.
  * TODOs:
- * - add state-like functionality. Add functions for views to operate independently of each other. 
+ * - add state-like functionality. Add functions for views to operate independently of each other.
  * - modify controls into single div (dom.controlsDiv). Use state to change between views
  * - After all that, fix the type mess above
- * @param hic 
- * 	.file
-	.url
-	.genome
-	.hostURL
-	.holder
- * @param debugmode debugmode passed from app, server state, if true, attach to window.hic
  */
 class Hicstat {
 	dom: {
@@ -204,8 +197,8 @@ class Hicstat {
 		this.holder = hic.holder
 		this.dom = {
 			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
-			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true),
-			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true)
+			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
+			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block')
 		}
 		this.errList = []
 		this.tip = new client.Menu()
@@ -219,8 +212,6 @@ class Hicstat {
 	}
 
 	async render(hic: any) {
-		//TODO: modify this to a component with a state
-		//render controls to this.dom.controlsDiv
 		//initWholeGenomeControls(this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-genome-main', true)
 		this.dom.plotDiv.tr1 = this.dom.plotDiv.append('tr')
@@ -236,14 +227,15 @@ class Hicstat {
 			blank: this.dom.plotDiv.tr2.append('td')
 		}
 
-		await this.init_wholeGenomeView(hic)
+		await this.init_wholeGenomeView(hic, this)
 	}
 
-	async init_wholeGenomeView(hic: any) {
+	async init_wholeGenomeView(hic: any, self: any) {
+		self.dom.view.text('Genome')
 		const resolution = hic.bpresolution[0]
 
 		//TODO modify with controls.whole.genome.ts
-		hic.ressays.text(common.bplen(resolution) + ' bp')
+		self.dom.resolutionInput.text(common.bplen(resolution) + ' bp')
 
 		// # pixel per bin, may set according to resolution
 		const binpx = 1
@@ -399,14 +391,15 @@ class Hicstat {
 		return
 	}
 
-	async init_chrPairView(hic: any, chrx: any, chry: any) {
+	async init_chrPairView(hic: any, chrx: any, chry: any, self: any) {
+		self.dom.view.text(`${chrx}-${chry} Pair`)
 		const detailView = this.init_detailView.bind(this)
 		nmeth2select(hic, hic.chrpairview.nmeth)
 
 		hic.inwholegenome = false
 		hic.inchrpair = true
 		hic.indetail = false
-		hic.wholegenomebutton.style('display', 'inline-block')
+		hic.wholegenomebutton.style('display', 'block')
 		hic.chrpairviewbutton.style('display', 'none')
 		hic.wholegenome.svg.remove()
 
@@ -433,7 +426,7 @@ class Hicstat {
 			hic.error('no suitable resolution')
 			return
 		}
-		hic.ressays.text(common.bplen(resolution) + ' bp')
+		self.dom.resolutionInput.text(common.bplen(resolution) + ' bp')
 
 		let binpx = 1
 		while ((binpx * maxchrlen) / resolution < 600) {
@@ -500,7 +493,7 @@ class Hicstat {
 			.style('margin', axispad + 'px')
 			.on('click', async function (this: any, event: MouseEvent) {
 				const [x, y] = pointer(event, this)
-				await detailView(hic, chrx, chry, x, y)
+				await detailView(hic, chrx, chry, x, y, self)
 			})
 			.node()
 		canvas.width = Math.ceil(chrxlen / resolution) * binpx
@@ -509,10 +502,13 @@ class Hicstat {
 		hic.chrpairview.ctx = ctx
 		hic.chrpairview.canvas = canvas
 
-		await getdata_chrpair(hic)
+		await getdata_chrpair(hic, self)
 	}
 
-	async init_detailView(hic: any, chrx: any, chry: any, x: any, y: any) {
+	async init_detailView(hic: any, chrx: any, chry: any, x: any, y: any, self: any) {
+		self.dom.view.text('Detail')
+		self.dom.zoomRow.style('display', 'contents')
+		self.dom.detailView.style('display', 'contents')
 		nmeth2select(hic, hic.detailview.nmeth)
 
 		hic.indetail = true
@@ -522,7 +518,7 @@ class Hicstat {
 
 		// const isintrachr = chrx == chry
 
-		hic.chrpairviewbutton.text('Entire ' + chrx + '-' + chry).style('display', 'inline-block')
+		hic.chrpairviewbutton.html(`&#8592; Entire ${chrx}-${chry}`).style('display', 'block')
 
 		// default view span
 		const viewrangebpw = hic.chrpairview.resolution * initialbinnum_detail
@@ -610,90 +606,78 @@ class Hicstat {
 		hic.detailview.canvas = canvas
 		hic.detailview.ctx = ctx
 
-		await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw)
+		await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw, self)
 
 		/**
 		global zoom buttons
 		*/
 		{
-			const row = canvasholder.append('div').style('position', 'absolute').style('right', '100px').style('top', '20px')
-			row
-				.append('button')
-				.text('Zoom in')
-				.style('margin-right', '10px')
-				.on('click', () => {
-					hic.detailview.xb.zoomblock(2, false)
-					hic.detailview.yb.zoomblock(2, false)
-				})
-			row
-				.append('button')
-				.text('Zoom out')
-				.style('margin-right', '10px')
-				.on('click', () => {
-					hic.detailview.xb.zoomblock(2, true)
-					hic.detailview.yb.zoomblock(2, true)
-				})
+			self.dom.zoomIn.style('margin-right', '10px').on('click', () => {
+				hic.detailview.xb.zoomblock(2, false)
+				hic.detailview.yb.zoomblock(2, false)
+			})
+			self.dom.zoomOut.style('margin-right', '10px').on('click', () => {
+				hic.detailview.xb.zoomblock(2, true)
+				hic.detailview.yb.zoomblock(2, true)
+			})
 
-			row
-				.append('button')
-				.text('Horizontal View')
-				.on('click', () => {
-					const regionx = hic.detailview.xb.rglst[0]
-					const regiony = hic.detailview.yb.rglst[0]
+			self.dom.horizontalView.on('click', () => {
+				const regionx = hic.detailview.xb.rglst[0]
+				const regiony = hic.detailview.yb.rglst[0]
 
-					const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-					;(pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
+				const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
+				;(pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
 
-					const tracks = [
+				const tracks = [
+					{
+						type: client.tkt.hicstraw,
+						file: hic.file,
+						enzyme: hic.enzyme,
+						maxpercentage: default_hicstrawmaxvperc,
+						pyramidup: 1,
+						name: hic.name
+					}
+				]
+				if (hic.tklst) {
+					for (const t of hic.tklst) {
+						tracks.push(t)
+					}
+				}
+				client.first_genetrack_tolist(hic.genome, tracks)
+				const arg: any = {
+					holder: pane.body,
+					hostURL: hic.hostURL,
+					jwt: hic.jwt,
+					genome: hic.genome,
+					nobox: 1,
+					tklst: tracks
+				}
+				if (
+					regionx.chr == regiony.chr &&
+					Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)
+				) {
+					// x/y overlap
+					arg.chr = regionx.chr
+					arg.start = Math.min(regionx.start, regiony.start)
+					arg.stop = Math.max(regionx.stop, regiony.stop)
+				} else {
+					arg.chr = regionx.chr
+					arg.start = regionx.start
+					arg.stop = regionx.stop
+					arg.width = default_subpanelpxwidth
+					arg.subpanels = [
 						{
-							type: client.tkt.hicstraw,
-							file: hic.file,
-							enzyme: hic.enzyme,
-							maxpercentage: default_hicstrawmaxvperc,
-							pyramidup: 1,
-							name: hic.name
+							chr: regiony.chr,
+							start: regiony.start,
+							stop: regiony.stop,
+							width: default_subpanelpxwidth,
+							leftpad: 10,
+							leftborder: subpanel_bordercolor
 						}
 					]
-					if (hic.tklst) {
-						for (const t of hic.tklst) {
-							tracks.push(t)
-						}
-					}
-					client.first_genetrack_tolist(hic.genome, tracks)
-					const arg: any = {
-						holder: pane.body,
-						hostURL: hic.hostURL,
-						jwt: hic.jwt,
-						genome: hic.genome,
-						nobox: 1,
-						tklst: tracks
-					}
-					if (
-						regionx.chr == regiony.chr &&
-						Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)
-					) {
-						// x/y overlap
-						arg.chr = regionx.chr
-						arg.start = Math.min(regionx.start, regiony.start)
-						arg.stop = Math.max(regionx.stop, regiony.stop)
-					} else {
-						arg.chr = regionx.chr
-						arg.start = regionx.start
-						arg.stop = regionx.stop
-						arg.width = default_subpanelpxwidth
-						arg.subpanels = [
-							{
-								chr: regiony.chr,
-								start: regiony.start,
-								stop: regiony.stop,
-								width: default_subpanelpxwidth,
-								leftpad: 10,
-								leftborder: subpanel_bordercolor
-							}
-						]
-					}
-					blocklazyload(arg)
-				})
+				}
+				blocklazyload(arg)
+			})
 		}
 
 		/******** common parameter for x/y block ********/
@@ -741,7 +725,7 @@ class Hicstat {
 				canvas.transition().style('left', hic.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
 				return
 			}
-			await detailViewUpdateRegionFromBlock(hic)
+			await detailViewUpdateRegionFromBlock(hic, self)
 		}
 		arg.onpanning = xoff => {
 			canvas.style('left', xoff + hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
@@ -784,7 +768,7 @@ class Hicstat {
 				canvas.transition().style('top', hic.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
 				return
 			}
-			await detailViewUpdateRegionFromBlock(hic)
+			await detailViewUpdateRegionFromBlock(hic, self)
 		}
 		arg2.onpanning = xoff => {
 			canvas.style(
@@ -809,6 +793,12 @@ class Hicstat {
 		*/
 	}
 }
+/**
+ * Launches hicstraw app
+ * Will replace later with class object above
+ * @param hic hic object
+ * @param debugmode boolean
+ */
 
 export async function init_hicstraw(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
 	{
@@ -853,7 +843,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 		.attr('x', obj.x)
 		.attr('y', obj.y)
 		.on('click', async () => {
-			await self.init_chrPairView(hic, lead, follow)
+			await self.init_chrPairView(hic, lead, follow, self)
 		})
 		.on('mouseover', () => {
 			chrpair_mouseover(hic, obj.img, lead, follow)
@@ -874,7 +864,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 			.attr('x', obj.y)
 			.attr('y', obj.x)
 			.on('click', async () => {
-				await self.init_chrPairView(hic, follow, lead)
+				await self.init_chrPairView(hic, follow, lead, self)
 			})
 			.on('mouseover', () => {
 				chrpair_mouseover(hic, obj.img2, follow, lead)
@@ -1088,7 +1078,7 @@ function tell_firstisx(hic: any, chrx: any, chry: any) {
 	return hic.chrorder.indexOf(chrx) < hic.chrorder.indexOf(chry)
 }
 
-export async function getdata_chrpair(hic: any) {
+export async function getdata_chrpair(hic: any, self: any) {
 	const chrx = hic.chrpairview.chrx
 	const chry = hic.chrpairview.chry
 	const isintrachr = chrx == chry
@@ -1150,7 +1140,7 @@ export async function getdata_chrpair(hic: any) {
 
 		const maxv = vlst.sort((a, b) => a - b)[Math.floor(vlst.length * 0.99)]
 		hic.chrpairview.bpmaxv = maxv
-		hic.inputbpmaxv.property('value', maxv)
+		self.dom.inputBpMaxv.property('value', maxv)
 
 		for (const [x, y, v] of hic.chrpairview.data) {
 			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
@@ -1181,10 +1171,10 @@ export function nmeth2select(hic: any, v: any) {
 
 //////////////////// __detail view__ ////////////////////
 
-async function detailViewUpdateRegionFromBlock(hic: any) {
+async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
 	const rx = hic.detailview.xb.rglst[0]
 	const ry = hic.detailview.yb.rglst[0]
-	await detailViewUpdateHic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop)
+	await detailViewUpdateHic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop, self)
 }
 
 /**
@@ -1201,7 +1191,16 @@ async function detailViewUpdateRegionFromBlock(hic: any) {
  * @param ystop
  * @returns
  */
-async function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any, chry: any, ystart: any, ystop: any) {
+async function detailViewUpdateHic(
+	hic: any,
+	chrx: any,
+	xstart: any,
+	xstop: any,
+	chry: any,
+	ystart: any,
+	ystop: any,
+	self: any
+) {
 	hic.detailview.chrx = chrx
 	hic.detailview.chry = chry
 	hic.detailview.xstart = xstart
@@ -1224,7 +1223,7 @@ async function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any,
 		if (!xfragment) {
 			// use bpresolution, not fragment
 			hic.detailview.resolution = resolution
-			hic.ressays.text(common.bplen(resolution) + ' bp')
+			self.dom.resolutionInput.text(common.bplen(resolution) + ' bp')
 			// fixed bin size only for bp bins
 			hic.detailview.xbinpx = hic.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
 			hic.detailview.ybinpx = hic.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
@@ -1277,11 +1276,11 @@ async function detailViewUpdateHic(hic: any, chrx: any, xstart: any, xstop: any,
 				if (resolution == null) {
 					resolution = hic.fragresolution[hic.fragresolution.length - 1]
 				}
-				hic.ressays.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
+				self.dom.resolutionInput.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
 				hic.detailview.resolution = resolution
 			}
 		}
-		getdata_detail(hic)
+		getdata_detail(hic, self)
 	} catch (err: any) {
 		hic.errList.push(err.message || err)
 		if (err.stack) console.log(err.stack)
@@ -1339,7 +1338,7 @@ async function getBedData(hic: any, arg: any) {
 	}
 }
 
-export function getdata_detail(hic: any) {
+export function getdata_detail(hic: any, self: any) {
 	/*
 	x/y view range and resolution have all been set
 	request hic data and paint canvas
@@ -1524,7 +1523,7 @@ export function getdata_detail(hic: any) {
 			maxv *= 0.8
 
 			hic.detailview.bpmaxv = maxv
-			hic.inputbpmaxv.property('value', maxv)
+			self.dom.inputBpMaxv.property('value', maxv)
 
 			for (const [x, y, w, h, v] of lst) {
 				const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
