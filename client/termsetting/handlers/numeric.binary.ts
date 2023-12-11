@@ -32,7 +32,10 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
-			return { text: 'binary' }
+			return {
+				text:
+					self.usecase?.target == 'regression' ? self.data.q.lst.find(x => x.label != self.data.refGrp).label : 'binary'
+			}
 		},
 
 		async showEditMenu(div: any) {
