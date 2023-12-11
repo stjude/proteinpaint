@@ -49,11 +49,16 @@ RUN curl -L https://github.com/samtools/samtools/releases/download/${htsversion}
 RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
-RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 'B8F25A8A73EACF41'
+
+RUN echo "deb https://cloud.r-project.org/bin/linux/debian buster-cran40/" >> /etc/apt/sources.list \
+    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 'E19F5F87128899B192B1A2C2AD5F960A256A04AF'
+
+RUN apt-get update && apt-get install -y r-base=4.3.2-1~bustercran.0 -y libargtable2-dev \
 	## install R packages
  	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'dendextend', 'reshape'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	## clean up
-	&& R -e "BiocManager::install('edgeR')"
+	&& R -e "BiocManager::install('edgeR')" \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/ \
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
