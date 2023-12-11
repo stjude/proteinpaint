@@ -51,8 +51,9 @@ RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}
 
 RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
 	## install R packages
- 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+ 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'dendextend', 'reshape'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	## clean up
+	&& R -e "BiocManager::install('edgeR')"
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/ \
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds

@@ -4,20 +4,20 @@
 
 # Checking if all R packages are installed or not, if not installing each one of them
 
-jsonlite_path <- system.file(package='jsonlite')
-if (nchar(jsonlite_path) == 0) {
-  install.packages("jsonlite", repos='https://cran.case.edu/')
-}
-
-edgeR_path <- system.file(package='edgeR')
-if (nchar(edgeR_path) == 0) {
-  BiocManager::install("edgeR")
-}
-
-readr_path <- system.file(package='readr')
-if (nchar(readr_path) == 0) {
-  install.packages("readr", repos='https://cran.case.edu/')
-}
+#jsonlite_path <- system.file(package='jsonlite')
+#if (nchar(jsonlite_path) == 0) {
+#  install.packages("jsonlite", repos='https://cran.case.edu/')
+#}
+#
+#edgeR_path <- system.file(package='edgeR')
+#if (nchar(edgeR_path) == 0) {
+#  BiocManager::install("edgeR")
+#}
+#
+#readr_path <- system.file(package='readr')
+#if (nchar(readr_path) == 0) {
+#  install.packages("readr", repos='https://cran.case.edu/')
+#}
 
 
 library(jsonlite)
