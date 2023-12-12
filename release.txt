@@ -1,2 +1,1 @@
-Fixes:
-- fix the toFixed error that randomly occurs when zoom on matrix. 
+
