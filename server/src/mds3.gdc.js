@@ -1757,19 +1757,10 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 		}
 		*/
 		if (typeof h.case_id != 'string') throw 'h.case_id missing'
-		/*
 		const sample = {
 			__sampleName: ds.__gdc.caseid2submitter.get(h.case_id), // display
 			sample_id: h.case_id,
-			sample_URLid: h.case_id,
-		}
-		*/
-		// FIXME unable to pass case uuid due to exp data format, solve later
-		const sample = {
-			sample_id: ds.__gdc.caseid2submitter.get(h.case_id), // display
-			__sampleName: ds.__gdc.caseid2submitter.get(h.case_id) // display
-			//__sampleName: h.case_id,
-			//sample_URLid: h.case_id,
+			sample_URLid: h.case_id
 		}
 
 		for (const tw of dictTwLst) {
