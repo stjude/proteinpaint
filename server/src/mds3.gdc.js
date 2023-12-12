@@ -9,8 +9,8 @@ import serverconfig from './serverconfig'
 
 // convenient helper to only print log on dev environments, and reduce pollution on prod
 // TODO move to utils.js, also fix use of _serverconfig
-function mayLog(m) {
-	if (serverconfig.debugmode) console.log(m)
+function mayLog(...args) {
+	if (serverconfig.debugmode) console.log(args.join(' '))
 }
 
 /*
@@ -300,7 +300,7 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 		}
 		return lst
 	} catch (e) {
-		console.log(e.stack || e)
+		if (e.stack) console.log(e.stack)
 		throw e
 	}
 }
