@@ -605,41 +605,6 @@ async function geneExpressionClustering(data, q, ds) {
 	}
 }
 
-//async function run_clustering(Rscript, args = []) {
-//	try {
-//		await fs.promises.stat(Rscript)
-//	} catch (e) {
-//		throw `${Rscript} does not exist`
-//	}
-//	const stdout = []
-//	const stderr = []
-//	return new Promise((resolve, reject) => {
-//		//console.log('Rscript:', Rscript)
-//		//console.log('args:', ...args)
-//		const sp = spawn(serverconfig.Rscript, [Rscript, ...args])
-//		sp.stdout.on('data', data => stdout.push(data))
-//		sp.stderr.on('data', data => stderr.push(data))
-//		sp.on('error', err => reject(err))
-//		sp.on('close', code => {
-//			if (code !== 0) {
-//				// handle non-zero exit status
-//				let errmsg = `R process exited with non-zero status code=${code}`
-//				if (stdout.length > 0) errmsg += `\nR stdout: ${stdout.join('').trim()}`
-//				if (stderr.length > 0) errmsg += `\nR stderr: ${stderr.join('').trim()}`
-//				reject(errmsg)
-//			}
-//			if (stderr.length > 0) {
-//				// handle R stderr
-//				const err = stderr.join('').trim()
-//				const errmsg = `R process emitted standard error\nR stderr: ${err}`
-//				reject(errmsg)
-//			}
-//			const out = stdout.join('').trim().split('\n')
-//			resolve(out)
-//		})
-//	})
-//}
-
 async function parseclust(coordinates, names_index) {
 	// This function parses the output from fastclust.R output. The dendextend packages prints the x-y coordinates for each node in depth-first search format. So the order of x-y coordinates describes how each nodes is connected to ane another.
 
