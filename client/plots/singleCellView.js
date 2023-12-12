@@ -9,9 +9,9 @@ import { zoom as d3zoom } from 'd3-zoom'
 import { renderTable } from '#dom/table'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
-
 export const minDotSize = 9
 export const maxDotSize = 300
+
 class SingleCellView {
 	constructor() {
 		this.type = 'singleCellView'
