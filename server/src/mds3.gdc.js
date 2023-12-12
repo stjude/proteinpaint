@@ -7,6 +7,12 @@ import { filter2GDCfilter } from './mds3.gdc.filter'
 import { write_tmpfile } from './utils'
 import serverconfig from './serverconfig'
 
+// convenient helper to only print log on dev environments, and reduce pollution on prod
+// TODO move to utils.js, also fix use of _serverconfig
+function mayLog(m) {
+	if (serverconfig.debugmode) console.log(m)
+}
+
 /*
 GDC API
 
@@ -171,18 +177,18 @@ export function validate_query_geneExpression(ds, genome) {
 		const t1 = new Date()
 
 		// get all cases from current filter
-		const caseLst = await gdcGetCasesWithExressionDataFromCohort(q, ds)
+		const caseLst = await gdcGetCasesWithExressionDataFromCohort(q, ds) // list of case uuid
 		if (caseLst.length == 0) return { gene2sample2value, byTermId: {} } // no cases with exp data
 
 		const t2 = new Date()
-		console.log(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
+		mayLog(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
 		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst)
 
 		if (ensgLst.length == 0) return { gene2sample2value, byTermId: {} } // no valid genes
 
 		const t3 = new Date()
-		console.log(ensgLst.length, 'out of', q.genes.length, 'genes selected for exp:', t3 - t2, 'ms')
+		mayLog(ensgLst.length, 'out of', q.genes.length, 'genes selected for exp:', t3 - t2, 'ms')
 		const byTermId = {}
 		for (const g of ensgLst) {
 			const geneSymbol = ensg2symbol.get(g)
@@ -190,12 +196,14 @@ export function validate_query_geneExpression(ds, genome) {
 			gene2sample2value.set(geneSymbol, new Map())
 		}
 
-		await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
+		const sampleNameMap = await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
+		/* returns mapping from uuid to submitter id; since uuid is used in gene2sample2value, but need to display submitter id on ui
+		 */
 
 		const t4 = new Date()
-		console.log('gene-case matrix built:', t4 - t3, 'ms')
+		mayLog('gene-case matrix built:', t4 - t3, 'ms')
 
-		return { gene2sample2value, byTermId }
+		return { gene2sample2value, byTermId, sampleNameMap }
 	}
 }
 
@@ -243,7 +251,7 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 		const response = await got.post(`${geneExpHost}/gene_expression/gene_selection`, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({
-				case_ids: case_ids,
+				case_ids,
 				gene_ids: ensgLst,
 				selection_size: ensgLst.length
 			})
@@ -264,6 +272,7 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 	}
 }
 
+// return list of case uuid with gene exp data
 export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 	const f = { op: 'and', content: [] }
 	if (q.filter0) {
@@ -316,31 +325,33 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 	// gene \t case1 \t case 2 \t ...
 	const caseHeader = lines[0].split('\t').slice(1) // order of case uuid in tsv header
 	if (caseHeader.length != case_ids.length) throw 'sample column length != case_ids.length'
-	const submitterHeader = [] // convert case ids from header into submitter ids, for including in data structure
+	//const submitterHeader = [] // convert case ids from header into submitter ids, for including in data structure
+	const caseuuid2submitter = {}
 	for (const c of caseHeader) {
 		const s = ds.__gdc.caseid2submitter.get(c)
 		if (!s) throw 'case submitter id unknown for a uuid'
-		submitterHeader.push(s)
+		//submitterHeader.push(s)
+		caseuuid2submitter[c] = s
 	}
 
 	// each line is data from one gene
 	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
-		if (l.length != submitterHeader.length + 1) throw 'number of fields in gene line does not equal header'
+		if (l.length != caseHeader.length + 1) throw 'number of fields in gene line does not equal header'
 		const ensg = l[0]
 		if (!ensg) throw 'ensg l[0] missing from a line'
 		const symbol = ensg2symbol.get(ensg)
 		if (!symbol) throw 'symbol missing for ' + ensg
-		for (const [j, sample] of submitterHeader.entries()) {
+		for (const [j, sample] of caseHeader.entries()) {
 			const v = Number(l[j + 1])
 			if (!Number.isFinite(v)) {
-				console.log(ensg, sample, l[j + 1])
-				continue
-				//throw 'non-numeric exp value'
+				//console.log(ensg, sample, l[j + 1]) continue
+				throw 'non-numeric exp value from gdc'
 			}
 			gene2sample2value.get(symbol)[sample] = v
 		}
 	}
+	return caseuuid2submitter
 }
 
 /* tandem rest api query
