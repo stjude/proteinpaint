@@ -72,6 +72,12 @@ function getPillStatus(self) {
 			if (self.q.bar_by_children) return { text: 'Sub-condition' }
 		}
 	}
+	if (self.q.mode == 'binary') {
+		return {
+			text:
+				self.usecase?.target == 'regression' ? self.data.q.groups.find(x => x.name != self.data.refGrp).name : 'binary'
+		}
+	}
 	if (self.q.mode == 'cuminc' || self.q.mode == 'cox') {
 		if (!self.q.breaks || self.q.breaks.length == 0) throwMsgWithFilePathAndFnName('Missing q.breaks')
 		return { text: `Grades ${self.q.breaks![0]}-5` }
@@ -227,7 +233,7 @@ async function showMenu_discrete(self, div: any) {
 		rangeNameDiv.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Label')
 		for (const [i, g] of groups.entries()) {
 			// range
-			rangeNameDiv.append('div').text(g.name.replace('Grade ', ''))
+			rangeNameDiv.append('div').text(g.name.replace(/Grades* /, ''))
 
 			// name
 			rangeNameDiv
@@ -408,7 +414,7 @@ function getGroups(grades: number[], breaks: number[]) {
 					if (group.values.length == 2 && group.values.includes(-1) && group.values.includes(0)) {
 						group.name = 'Not tested/Grade 0'
 					} else {
-						group.name = group.values.includes(-1) ? `Not tested/Grade 0 - Grade ${max}` : `Grade 0-${max}`
+						group.name = group.values.includes(-1) ? `Not tested/Grade 0 - Grade ${max}` : `Grades 0-${max}`
 					}
 				}
 			} else {
@@ -428,7 +434,7 @@ function getGroups(grades: number[], breaks: number[]) {
 		}
 	}
 	// add last group of groups[]
-	group.name = `Grade ${b}-5`
+	group.name = `Grades ${b}-5`
 	groups.push(group)
 	return groups
 }
