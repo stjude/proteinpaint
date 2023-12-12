@@ -105,6 +105,8 @@ jobs:
               N=$(git rev-list master.. --count)
               git fetch --depth=N origin $BRANCH:$BRANCH
               git fetch --depth=1 origin master:master
+              # TODO: fix the following error on CI
+              # fatal: refusing to fetch into branch 'refs/heads/master' checked out at '/home/runner/work/proteinpaint/proteinpaint'
               git switch master
               git merge $BRANCH
               git push
