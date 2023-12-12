@@ -506,9 +506,8 @@ class Hicstat {
 	}
 
 	async init_detailView(hic: any, chrx: any, chry: any, x: any, y: any, self: any) {
-		self.dom.view.text('Detail')
+		self.dom.view.text('Detailed')
 		self.dom.zoomRow.style('display', 'contents')
-		self.dom.detailView.style('display', 'contents')
 		nmeth2select(hic, hic.detailview.nmeth)
 
 		hic.indetail = true
@@ -621,7 +620,7 @@ class Hicstat {
 				hic.detailview.yb.zoomblock(2, true)
 			})
 
-			self.dom.horizontalView.on('click', () => {
+			hic.horizontalViewBtn.style('display', 'block').on('click', () => {
 				const regionx = hic.detailview.xb.rglst[0]
 				const regiony = hic.detailview.yb.rglst[0]
 
