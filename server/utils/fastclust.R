@@ -3,7 +3,14 @@
 
 # Image is in Rplots.pdf
 
-# Checking if all R packages are installed or not, if not installing each one of them
+############################
+#      !!! NOTE !!!        #
+############################
+# must not auto-install missing package in any R script!
+# declare required packages in dockerfile
+# at 2023/12, a problem emerged for pp container running in gdc qa-pink
+# since the docker images lacks the packages, but the auto-install was prevented due to container safety (no internet query)
+# this script will not run, leading to hard to decipher crashing
 
 #ggplot2_path <- system.file(package='ggplot2')
 #if (nchar(ggplot2_path) == 0) {
