@@ -36,13 +36,13 @@ validate_query_geneExpression
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
 querySamples_gdcapi
+	querySamplesTwlst4hierCluster
 	flattenCaseByFields
 		mayApplyGroupsetting
 	may_add_readdepth
 	may_add_projectAccess
 	mayApplyBinning
 		getBin
-querySamplesTwlst4hierCluster
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
@@ -1738,7 +1738,7 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 	const response = await got.post(path.join(apihost, 'cases'), {
 		headers: getheaders(q),
 		body: JSON.stringify({
-			size: 10000,
+			size: ds.__gdc.casesWithExpData.size,
 			fields: fields.join(','),
 			filters
 		})

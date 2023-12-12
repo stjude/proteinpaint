@@ -31,7 +31,11 @@ function init({ genomes }) {
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries?.topVariablyExpressedGenes) throw 'not supported on dataset'
+
+			const t: number = new Date().getTime()
 			const genes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
+			if (serverconfig.debugmode) console.log('topVariablyExpressedGenes', new Date().getTime() - t, 'ms')
+
 			res.send({ genes } as TermdbTopVariablyExpressedGenesResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -139,7 +143,7 @@ function gdcValidateQuery(ds: any, genome: any) {
 		// limit the case_ids length, and restrict pool to CGC genes, otherwise the request times out !!!
 		// must revert asap
 		return {
-			case_ids: caseLst.slice(0, 20),
+			case_ids: caseLst, //.slice(0, 20),
 			gene_ids: tempGetCGCgenes(genome),
 			selection_size: Number(q.maxGenes)
 		}
