@@ -1,1 +1,3 @@
 
+Features:
+-add menu options after clicking gene expression dendrogram

@@ -6,6 +6,8 @@ import { fillTermWrapper } from '#termsetting'
 import { extent } from 'd3-array'
 import { interpolateRgbBasis } from 'd3-interpolate'
 import { interpolateRdBu } from 'd3-scale-chromatic'
+import { renderTable } from '#dom/table'
+import { Menu } from '../dom/menu'
 
 /*
 FIXME items
@@ -55,56 +57,84 @@ class HierCluster extends Matrix {
 					//get the sampleName of the children
 					const clickedSampleNames = this.getClickedSampleNames(this.clickedChildren)
 
-					// console.log(clickedSampleNames)
-					this.getSelectedSamples(clickedSampleNames)
-				} else delete this.clickedChildren
+					this.addSelectedSamplesOptions(clickedSampleNames, event)
+				} else {
+					// if not clicking on a branch, change highlighted branch color from red back to black
+					delete this.clickedChildren
+				}
 
-				// rerender the Dendrogram
-				this.renderDendrogram()
+				// rerender the col Dendrogram
+				this.plotDendrogram_R(this.hierClusterData.clustering, true)
 			})
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
 	}
 
-	getSelectedSamples(clickedSampleNames) {
+	addSelectedSamplesOptions(clickedSampleNames, event) {
 		const l = this.settings.matrix.controlLabels
 		const ss = this.opts.allow2selectSamples
-		if (ss) {
-			this.dom.tip.hide()
-			this.app.tip.clear()
-			this.app.tip.d
-				.selectAll('div')
-				.data([
-					{
-						label: 'Zoom in',
-						callback: () => {
-							this.triggerZoomBranch(this, clickedSampleNames)
-						}
-					},
-					{
-						label: ss.buttonText || `Select ${l.Samples}`,
-						callback: async () => {
-							const samples = clickedSampleNames.map(
-								c => this.sampleOrder.find(s => (s._SAMPLENAME_ || s.row.sample) == c).row
-							)
-							ss.callback({
-								samples: await this.app.vocabApi.convertSampleId(samples, ss.attributes),
-								source: ss.defaultSelectionLabel || `Selected ${l.samples} from gene expression`
-							})
-						}
+		const optionArr = [
+			{
+				label: 'Zoom in',
+				callback: () => {
+					this.triggerZoomBranch(this, clickedSampleNames)
+				}
+			},
+			{
+				label: 'List samples',
+				callback: () => {
+					this.dom.tip.hide()
+					this.showTable(this, clickedSampleNames, event.clientX, event.clientY)
+				}
+			}
+		]
+
+		const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => (s._SAMPLENAME_ || s.row.sample) == c).row)
+
+		if (this.app.vocabApi.vocab?.dslabel !== 'GDC') {
+			for (const s of samples) {
+				if (!s.sampleId) s.sampleId = s.sample
+			}
+			optionArr.push({
+				label: 'Add to a group',
+				callback: async () => {
+					const group = {
+						name: 'Group',
+						items: samples
 					}
-				])
-				.enter()
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.html(d => d.label)
-				.on('click', event => {
-					this.app.tip.hide()
-					event.target.__data__.callback()
-				})
-			this.app.tip.show(event.clientX, event.clientY)
+					this.addGroup(group)
+				}
+			})
 		}
+
+		// when allow2selectSamples presents
+		if (ss)
+			optionArr.push({
+				label: ss.buttonText || `Select ${l.Samples}`,
+				callback: async () => {
+					ss.callback({
+						samples: await this.app.vocabApi.convertSampleId(samples, ss.attributes),
+						source: ss.defaultSelectionLabel || `Selected ${l.samples} from gene expression`
+					})
+				}
+			})
+
+		this.dom.tip.hide()
+		this.app.tip.clear()
+		this.app.tip.d
+			.selectAll('div')
+			.data(optionArr)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', event => {
+				this.app.tip.hide()
+				event.target.__data__.callback()
+			})
+		this.app.tip.show(event.clientX, event.clientY)
 	}
 
+	// zoom in matrix to the selected dendrogram branch
 	triggerZoomBranch(self, clickedSampleNames) {
 		if (self.zoomArea) {
 			self.zoomArea.remove()
@@ -150,6 +180,7 @@ class HierCluster extends Matrix {
 		self.resetInteractions()
 	}
 
+	// return the sample names of the clicked samples as an array
 	getClickedSampleNames(clickedChildren) {
 		const obj = this.hierClusterData.clustering
 		const childIndexArr = clickedChildren.map(c => obj.col_names_index.indexOf(c))
@@ -157,6 +188,34 @@ class HierCluster extends Matrix {
 		return childSampleNameArr
 	}
 
+	// show the list of clicked samples as a table
+	showTable(self, clickedSampleNames, x, y) {
+		const rows = clickedSampleNames.map(c => [{ value: c }])
+		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
+
+		const menu = new Menu({ padding: '5px' })
+		const div = menu.d.append('div')
+
+		renderTable({
+			rows,
+			columns,
+			div,
+			showLines: true,
+			maxWidth: columns.length * '15' + 'vw',
+			maxHeight: '35vh',
+			resize: true
+		})
+		menu.show(x, y, false, false)
+	}
+
+	// add the clicked samples into a group
+	async addGroup(group) {
+		group.plotId = this.id
+		await this.app.vocabApi.addGroup(group)
+		this.dom.tip.hide()
+	}
+
+	// upon clicking, find the corresponding clicked branch in this.hierClusterData.clustering.col_dendro
 	getImgBranch(event) {
 		if (event.target.tagName == 'image') this.imgBox = event.target.getBoundingClientRect()
 		else return
@@ -376,14 +435,15 @@ class HierCluster extends Matrix {
 		this.plotDendrogram_R(obj)
 	}
 
-	plotDendrogram_R(obj) {
+	// if onlyCol is true, only render the column dendrogram
+	plotDendrogram_R(obj, onlyCol) {
 		const d = this.dimensions
 		const s = this.config.settings.matrix
 		const zoomLevel = s.zoomLevel
 		const { xMin, xMax } = d
 		const xOffset = d.seriesXoffset // could be negative when zoomed
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
-		{
+		if (!onlyCol) {
 			let max = 0
 			for (const r of obj.row_dendro) {
 				max = Math.max(max, r.y1, r.y2)
