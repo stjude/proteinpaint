@@ -9,8 +9,8 @@
 		"postinstall": "if [ ! -f ./pack.sh ]; then docker pull ghcr.io/stjude/ppfull:latest; fi"
 	},
 	"containerDeps": {
-		"server": "2.29.5",
-		"front": "2.29.5"
+		"server": "2.35.0",
+		"front": "2.35.0"
 	},
 	"files": [
 		"build.sh",

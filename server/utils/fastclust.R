@@ -5,25 +5,25 @@
 
 # Checking if all R packages are installed or not, if not installing each one of them
 
-ggplot2_path <- system.file(package='ggplot2')
-if (nchar(ggplot2_path) == 0) {
-  install.packages("ggplot2", repos='https://cran.case.edu/')
-}
-
-jsonlite_path <- system.file(package='jsonlite')
-if (nchar(jsonlite_path) == 0) {
-  install.packages("jsonlite", repos='https://cran.case.edu/')
-}
-
-dendextend_path <- system.file(package='dendextend')
-if (nchar(dendextend_path) == 0) {
-  install.packages("dendextend", repos='https://cran.case.edu/')
-}
-
-reshape_path <- system.file(package='reshape')
-if (nchar(reshape_path) == 0) {
-  install.packages("reshape", repos='https://cran.case.edu/')
-}
+#ggplot2_path <- system.file(package='ggplot2')
+#if (nchar(ggplot2_path) == 0) {
+#  install.packages("ggplot2", repos='https://cran.case.edu/')
+#}
+#
+#jsonlite_path <- system.file(package='jsonlite')
+#if (nchar(jsonlite_path) == 0) {
+#  install.packages("jsonlite", repos='https://cran.case.edu/')
+#}
+#
+#dendextend_path <- system.file(package='dendextend')
+#if (nchar(dendextend_path) == 0) {
+#  install.packages("dendextend", repos='https://cran.case.edu/')
+#}
+#
+#reshape_path <- system.file(package='reshape')
+#if (nchar(reshape_path) == 0) {
+#  install.packages("reshape", repos='https://cran.case.edu/')
+#}
 
 #flashClust_path <- system.file(package='flashClust')
 #if (nchar(flashClust_path) == 0) {
