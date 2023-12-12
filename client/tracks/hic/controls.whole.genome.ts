@@ -44,7 +44,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 
 	const cutoffRow = menuTable.append('tr')
 	addLabel(cutoffRow, 'CUTOFF')
-	self.dom.inputBpMaxv = cutoffRow
+	hic.inputBpMaxv = cutoffRow
 		.append('td')
 		.append('input')
 		.style('width', '80px')
@@ -74,7 +74,6 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.on('click', () => {
 			self.dom.view.text('Genome')
 			self.dom.zoomRow.style('display', 'none')
-			self.dom.detailView.style('display', 'none')
 			hic.inwholegenome = true
 			hic.inchrpair = false
 			hic.indetail = false
@@ -85,7 +84,6 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.append('button')
 		.style('display', 'none')
 		.on('click', () => {
-			self.dom.detailView.style('display', 'none')
 			self.dom.zoomRow.style('display', 'none')
 			hic.inwholegenome = false
 			hic.inchrpair = true
@@ -93,15 +91,13 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			switchview(hic, self)
 		})
 
+	hic.horizontalViewBtn = self.dom.viewBtnDiv.append('button').style('display', 'none').html('Horizontal View &#8594;')
+
 	self.dom.zoomRow = menuTable.append('tr').style('display', 'none')
 	addLabel(self.dom.zoomRow, 'ZOOM')
 	const zoomDiv = self.dom.zoomRow.append('td')
 	self.dom.zoomIn = zoomDiv.append('button').text('In')
 	self.dom.zoomOut = zoomDiv.append('button').text('Out')
-	const detailView = menuTable.append('tr')
-	detailView.append('td') //Leave blank
-	self.dom.detailView = detailView.append('td').style('display', 'none')
-	self.dom.horizontalView = self.dom.detailView.append('button').text('Horizontal View')
 }
 
 function addLabel(tr: any, text: string) {
@@ -174,6 +170,7 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.plot.node().appendChild(hic.wholegenome.svg.node())
 		hic.wholegenomebutton.style('display', 'none')
 		hic.chrpairviewbutton.style('display', 'none')
+		hic.horizontalViewBtn.style('display', 'none')
 		self.dom.inputBpMaxv.property('value', hic.wholegenome.bpmaxv)
 		self.dom.resolutionInput.text(bplen(hic.wholegenome.resolution) + ' bp')
 		nmeth2select(hic, hic.wholegenome.nmeth)
@@ -186,6 +183,7 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.plot.node().appendChild(hic.chrpairview.canvas)
 		hic.wholegenomebutton.style('display', 'inline-block')
 		hic.chrpairviewbutton.style('display', 'none')
+		hic.horizontalViewBtn.style('display', 'none')
 		self.dom.inputBpMaxv.property('value', hic.chrpairview.bpmaxv)
 		self.dom.resolutionInput.text(bplen(hic.chrpairview.resolution) + ' bp')
 		nmeth2select(hic, hic.chrpairview.nmeth)
