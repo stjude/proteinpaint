@@ -1,7 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '#filter/filter'
-import { select } from 'd3-selection'
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -195,6 +194,14 @@ function getChartTypeList(self) {
 			config: {
 				chartType: 'dataDownload',
 				terms: []
+			}
+		},
+		{
+			label: 'Single Cell View',
+			clickTo: self.prepPlot,
+			chartType: 'singleCellView',
+			config: {
+				chartType: 'singleCellView'
 			}
 		}
 	]

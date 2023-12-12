@@ -451,12 +451,14 @@ export function server_init_db_queries(ds) {
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = new Set(['regression', 'summary'])
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
+
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
 				const forbiddenRoutes = authApi.getForbiddenRoutesForDsEmbedder(ds.label, embedder)
 				if (!forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 					supportedChartTypes[r.cohort].add('sampleView')
+					if (ds.queries?.singleCell) supportedChartTypes[r.cohort].add('singleCellView')
 				}
 			}
 			if (serverconfig.features?.draftChartTypes) {
