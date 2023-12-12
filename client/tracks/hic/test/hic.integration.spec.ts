@@ -21,7 +21,6 @@ function getHolder() {
 		.style('border', '1px solid #aaa')
 		.style('padding', '5px')
 		.style('margin', '5px')
-		.node()
 }
 
 async function getGenomes(genome: string) {
