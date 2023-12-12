@@ -199,14 +199,16 @@ export async function getPlotConfig(opts, app) {
 			},
 			profilePolar: settings
 		}
+		const promises = []
 		for (const data of config.terms) {
 			const scoreTerm = data.score
 			const maxScoreTerm = data.maxScore
 			scoreTerm.q = { mode: 'continuous' }
 			maxScoreTerm.q = { mode: 'continuous' }
-			await fillTermWrapper(scoreTerm, app.vocabApi)
-			await fillTermWrapper(maxScoreTerm, app.vocabApi)
+			promises.push(fillTermWrapper(scoreTerm, app.vocabApi))
+			promises.push(fillTermWrapper(maxScoreTerm, app.vocabApi))
 		}
+		await Promise.all(promises)
 		await loadFilterTerms(config, app)
 
 		return config

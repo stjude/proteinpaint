@@ -213,10 +213,10 @@ export class profilePlot {
 
 	getFilter(excluded = []) {
 		const lst = []
-		processTW(this.config.regionTW, this.settings.region)
-		processTW(this.config.countryTW, this.settings.country)
-		processTW(this.config.incomeTW, this.settings.income)
-		processTW(this.config.typeTW, this.settings.facilityType)
+		this.processTW(this.config.regionTW, this.settings.region, lst)
+		this.processTW(this.config.countryTW, this.settings.country, lst)
+		this.processTW(this.config.incomeTW, this.settings.income, lst)
+		this.processTW(this.config.typeTW, this.settings.facilityType, lst)
 
 		const tvslst = {
 			type: 'tvslst',
@@ -226,17 +226,17 @@ export class profilePlot {
 		}
 		const filter = filterJoin([this.state.termfilter.filter, tvslst])
 		return filter
+	}
 
-		function processTW(tw, value) {
-			if (value && !excluded.includes(tw.id))
-				lst.push({
-					type: 'tvs',
-					tvs: {
-						term: tw.term,
-						values: [{ key: value }]
-					}
-				})
-		}
+	processTW(tw, value, lst) {
+		if (value && !excluded.includes(tw.id))
+			lst.push({
+				type: 'tvs',
+				tvs: {
+					term: tw.term,
+					values: [{ key: value }]
+				}
+			})
 	}
 
 	addFilterLegend() {
@@ -306,13 +306,15 @@ export class profilePlot {
 }
 
 export async function loadFilterTerms(config, app) {
+	const promises = []
 	config.countryTW = { id: 'country' }
 	config.regionTW = { id: 'WHO_region' }
 	config.incomeTW = { id: 'Income_group' }
 	config.typeTW = { id: 'FC_TypeofFacility' }
 
-	await fillTermWrapper(config.countryTW, app.vocabApi)
-	await fillTermWrapper(config.regionTW, app.vocabApi)
-	await fillTermWrapper(config.incomeTW, app.vocabApi)
-	await fillTermWrapper(config.typeTW, app.vocabApi)
+	promises.push(fillTermWrapper(config.countryTW, app.vocabApi))
+	promises.push(fillTermWrapper(config.regionTW, app.vocabApi))
+	promises.push(fillTermWrapper(config.incomeTW, app.vocabApi))
+	promises.push(fillTermWrapper(config.typeTW, app.vocabApi))
+	await Promise.all(promises)
 }
