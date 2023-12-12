@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.35.1
 
 Fixes:
 - fix the toFixed error that randomly occurs when zoom on matrix.
