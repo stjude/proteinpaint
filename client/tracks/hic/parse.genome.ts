@@ -1,7 +1,5 @@
 import * as client from '#src/client'
 import * as common from '#shared/common'
-import { getdata_chrpair, getdata_detail, getdata_leadfollow } from './hic.straw'
-import { initWholeGenomeControls } from './controls.whole.genome.ts'
 
 const defaultnmeth = 'NONE'
 
@@ -15,7 +13,7 @@ type Mutation = {
 }
 
 //Will rename once hic.straw refactored to class
-export async function hicParseFile(hic: any, self: any, debugmode: boolean) {
+export async function hicParseFile(hic: any, debugmode: boolean) {
 	if (debugmode) window['hic'] = hic
 	if (!hic.name) hic.name = 'Hi-C'
 	if (hic.tklst) {
@@ -90,8 +88,6 @@ export async function hicParseFile(hic: any, self: any, debugmode: boolean) {
 	hic.indetail = false
 	hic.inlineview = false
 
-	//TODO: move to rendering code
-	initWholeGenomeControls(hic, self)
 	// data tasks:
 	// 1. load sv
 	// 2. stat the hic file
@@ -111,20 +107,6 @@ export async function hicParseFile(hic: any, self: any, debugmode: boolean) {
 		if (data.error) throw { message: data.error.error }
 		const err = hicparsestat(hic, data.out)
 		if (err) throw { message: err }
-		if (!hic.normalization?.length) {
-			hic.nmethselect = self.dom.nmeth.text(defaultnmeth)
-		} else {
-			hic.nmethselect = self.dom.nmeth
-				.style('margin-right', '10px')
-				.append('select')
-				.on('change', () => {
-					const v = hic.nmethselect.node().value
-					setnmeth(hic, v)
-				})
-			for (const n of hic.normalization) {
-				hic.nmethselect.append('option').text(n)
-			}
-		}
 	} catch (err: any) {
 		hic.errList.push(err.message || err)
 		if (err.stack) {
@@ -186,36 +168,6 @@ function parseSVheader(line: any) {
 	if (i != -1) header[i] = 'reads2'
 
 	return [null, header]
-}
-
-async function setnmeth(hic: any, nmeth: string) {
-	if (hic.inwholegenome) {
-		hic.wholegenome.nmeth = nmeth
-		const manychr = hic.atdev ? 3 : hic.chrlst.length
-		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst[i]
-			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst[j]
-				try {
-					await getdata_leadfollow(hic, lead, follow)
-				} catch (e: any) {
-					hic.errList.push(e.message || e)
-				}
-			}
-		}
-		if (hic.errList.length) hic.error(hic.errList)
-		return
-	}
-
-	if (hic.inchrpair) {
-		hic.chrpairview.nmeth = nmeth
-		await getdata_chrpair(hic, self)
-		return
-	}
-	if (hic.indetail) {
-		hic.detailview.nmeth = nmeth
-		getdata_detail(hic, self)
-	}
 }
 
 function parseSVline(line: string, header: any) {

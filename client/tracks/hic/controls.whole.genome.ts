@@ -1,5 +1,6 @@
 import { bplen } from '#shared/common'
 import { nmeth2select } from './hic.straw'
+import { getdata_chrpair, getdata_detail, getdata_leadfollow, defaultnmeth } from './hic.straw'
 
 /**
  * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, and detail views)
@@ -41,10 +42,11 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	const normalizationRow = menuTable.append('tr')
 	addLabel(normalizationRow, 'NORMALIZATION')
 	self.dom.nmeth = normalizationRow.append('td') //placeholder until data is returned from server
+	makeNormMethDisplay(hic, self)
 
 	const cutoffRow = menuTable.append('tr')
 	addLabel(cutoffRow, 'CUTOFF')
-	hic.inputBpMaxv = cutoffRow
+	self.dom.inputBpMaxv = cutoffRow
 		.append('td')
 		.append('input')
 		.style('width', '80px')
@@ -96,12 +98,59 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.zoomRow = menuTable.append('tr').style('display', 'none')
 	addLabel(self.dom.zoomRow, 'ZOOM')
 	const zoomDiv = self.dom.zoomRow.append('td')
-	self.dom.zoomIn = zoomDiv.append('button').text('In')
-	self.dom.zoomOut = zoomDiv.append('button').text('Out')
+	self.dom.zoomIn = zoomDiv.append('button').style('margin-right', '10px').text('In')
+	self.dom.zoomOut = zoomDiv.append('button').style('margin-right', '10px').text('Out')
 }
 
 function addLabel(tr: any, text: string) {
 	return tr.append('td').style('color', '#858585').style('vertical-align', 'top').style('font-size', '.8em').text(text)
+}
+
+function makeNormMethDisplay(hic: any, self: any) {
+	if (!hic.normalization?.length) {
+		hic.nmethselect = self.dom.nmeth.text(defaultnmeth)
+	} else {
+		hic.nmethselect = self.dom.nmeth
+			.style('margin-right', '10px')
+			.append('select')
+			.on('change', () => {
+				const v = hic.nmethselect.node().value
+				setnmeth(hic, v)
+			})
+		for (const n of hic.normalization) {
+			hic.nmethselect.append('option').text(n)
+		}
+	}
+}
+
+async function setnmeth(hic: any, nmeth: string) {
+	if (hic.inwholegenome) {
+		hic.wholegenome.nmeth = nmeth
+		const manychr = hic.atdev ? 3 : hic.chrlst.length
+		for (let i = 0; i < manychr; i++) {
+			const lead = hic.chrlst[i]
+			for (let j = 0; j <= i; j++) {
+				const follow = hic.chrlst[j]
+				try {
+					await getdata_leadfollow(hic, lead, follow)
+				} catch (e: any) {
+					hic.errList.push(e.message || e)
+				}
+			}
+		}
+		if (hic.errList.length) hic.error(hic.errList)
+		return
+	}
+
+	if (hic.inchrpair) {
+		hic.chrpairview.nmeth = nmeth
+		await getdata_chrpair(hic, self)
+		return
+	}
+	if (hic.indetail) {
+		hic.detailview.nmeth = nmeth
+		getdata_detail(hic, self)
+	}
 }
 
 /**

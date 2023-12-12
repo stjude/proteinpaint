@@ -8,6 +8,7 @@ import blocklazyload from '#src/block.lazyload'
 import { HicstrawArgs } from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { hicParseFile } from './parse.genome.ts'
+import { initWholeGenomeControls } from './controls.whole.genome.ts'
 
 /*
 
@@ -48,6 +49,9 @@ JumpTo:  __detail  __whole
 hic.atdev controls dev-shortings
 
 */
+
+/** Default normalization method if none returned from the server. Exported to parsing and controls script*/
+export const defaultnmeth = 'NONE'
 
 const atdev_chrnum = 8
 
@@ -212,7 +216,8 @@ class Hicstat {
 	}
 
 	async render(hic: any) {
-		//initWholeGenomeControls(this)
+		hic.tip = new client.Menu()
+		initWholeGenomeControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-genome-main', true)
 		this.dom.plotDiv.tr1 = this.dom.plotDiv.append('tr')
 		this.dom.plotDiv.tr2 = this.dom.plotDiv.append('tr')
@@ -611,11 +616,11 @@ class Hicstat {
 		global zoom buttons
 		*/
 		{
-			self.dom.zoomIn.style('margin-right', '10px').on('click', () => {
+			self.dom.zoomIn.on('click', () => {
 				hic.detailview.xb.zoomblock(2, false)
 				hic.detailview.yb.zoomblock(2, false)
 			})
-			self.dom.zoomOut.style('margin-right', '10px').on('click', () => {
+			self.dom.zoomOut.on('click', () => {
 				hic.detailview.xb.zoomblock(2, true)
 				hic.detailview.yb.zoomblock(2, true)
 			})
@@ -810,9 +815,8 @@ export async function init_hicstraw(hic: BaseHic & Partial<Hic> & HicWholeGenomS
 		}
 	}
 
-	hic.tip = new client.Menu()
+	await hicParseFile(hic, debugmode)
 	const hicstat = new Hicstat(hic)
-	await hicParseFile(hic, hicstat, debugmode)
 	hicstat.render(hic)
 }
 
@@ -1136,8 +1140,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 				hic.chrpairview.data.push([y, x, v])
 			}
 		}
-
-		const maxv = vlst.sort((a, b) => a - b)[Math.floor(vlst.length * 0.99)]
+		const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
 		hic.chrpairview.bpmaxv = maxv
 		self.dom.inputBpMaxv.property('value', maxv)
 
