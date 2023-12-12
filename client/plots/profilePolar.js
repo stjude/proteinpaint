@@ -32,6 +32,7 @@ class profilePolar extends profilePlot {
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
+		document.addEventListener('scroll', event => this.tip.hide())
 	}
 
 	async main() {

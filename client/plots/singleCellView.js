@@ -9,6 +9,8 @@ import { zoom as d3zoom } from 'd3-zoom'
 import { renderTable } from '#dom/table'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
+import { select } from 'd3-selection'
+
 export const minDotSize = 9
 export const maxDotSize = 300
 
@@ -131,6 +133,8 @@ class SingleCellView {
 			.style('width', '95vw')
 			.style('border-collapse', 'collapse')
 		await this.setControls()
+		document.addEventListener('scroll', event => this.tip.hide())
+		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
 	}
 
 	async setControls() {
@@ -242,6 +246,7 @@ class SingleCellView {
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh)
 			.on('mousemove', event => this.onMouseOver(event, colorMap))
+
 		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.settings.svgh)
 		plot.svg = svg
 		plot.legendSVG = legendSVG

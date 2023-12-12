@@ -25,6 +25,7 @@ class profileRadarFacility extends profilePlot {
 		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
+		document.addEventListener('scroll', event => this.tip.hide())
 	}
 
 	async main() {
