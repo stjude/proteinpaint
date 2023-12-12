@@ -8,6 +8,7 @@ const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle incom
 export class profilePlot {
 	constructor() {
 		this.type = 'profilePlot'
+		this.downloadCount = 0
 	}
 
 	getState(appState) {
@@ -280,9 +281,10 @@ export class profilePlot {
 	}
 
 	getDownloadFilename() {
+		this.downloadCount++
 		let filename = `${this.type}${this.component ? this.component : ''}${this.settings.region}${this.settings.country}${
 			this.settings.income
-		}${this.settings.facilityType}.svg`
+		}${this.settings.facilityType}${this.downloadCount}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}
