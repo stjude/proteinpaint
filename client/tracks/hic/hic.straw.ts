@@ -85,6 +85,25 @@ type BaseHic = {
 	error: (f: string | string[]) => void
 }
 
+type HicstrawDom = {
+	errorDiv: any
+	controlsDiv: {
+		inputBpMaxv: HTMLInputElement
+		resolutionInput: any
+		viewBtnDiv: HTMLElement
+		zoom: {
+			in: HTMLButtonElement
+			out: HTMLButtonElement
+		}
+	}
+	plotDiv: {
+		plot: any
+		xAxis: any
+		yAxis: any
+		blank: any
+	}
+}
+
 type HicWholeGenomSvg = {
 	wholegenome: Partial<{
 		binpx: number
@@ -153,17 +172,14 @@ type Hic = {
 	}
 	hostURL: string
 	inwholegenome: boolean
-	inputbpmaxv: Selection<HTMLInputElement, any, any, any> //dom
 	inchrpair: boolean
 	indetail: boolean
 	inlineview: boolean
 	/** TODO: define this somewhere */
 	jwt: any
 	name: string
-	nmethselect: any //dom, dropdown menu
 	nochr: boolean
 	normalization: string[]
-	ressays: any //dom, resolution input
 	sv: {
 		file: string
 		header: string
@@ -174,7 +190,7 @@ type Hic = {
 	tklst: any
 	url: string
 	version: string
-	wholegenomebutton: Selection<HTMLButtonElement, any, any, any> //dom
+	wholegenomebutton: HTMLButtonElement
 }
 
 /**
@@ -188,8 +204,8 @@ type Hic = {
  */
 class Hicstat {
 	dom: {
-		errorDiv: Selection<HTMLDivElement, any, any, any>
-		controlsDiv: Selection<HTMLDivElement, any, any, any>
+		errorDiv: HTMLDivElement
+		controlsDiv: HTMLDivElement
 		plotDiv: any
 	}
 	errList: string[]
@@ -236,11 +252,11 @@ class Hicstat {
 	}
 
 	async init_wholeGenomeView(hic: any, self: any) {
-		self.dom.view.text('Genome')
+		self.dom.controlsDiv.view.text('Genome')
 		const resolution = hic.bpresolution[0]
 
 		//TODO modify with controls.whole.genome.ts
-		self.dom.resolutionInput.text(common.bplen(resolution) + ' bp')
+		self.dom.controlsDiv.resolutionInput.text(common.bplen(resolution) + ' bp')
 
 		// # pixel per bin, may set according to resolution
 		const binpx = 1
@@ -397,7 +413,7 @@ class Hicstat {
 	}
 
 	async init_chrPairView(hic: any, chrx: any, chry: any, self: any) {
-		self.dom.view.text(`${chrx}-${chry} Pair`)
+		self.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
 		const detailView = this.init_detailView.bind(this)
 		nmeth2select(hic, hic.chrpairview.nmeth)
 
@@ -431,7 +447,7 @@ class Hicstat {
 			hic.error('no suitable resolution')
 			return
 		}
-		self.dom.resolutionInput.text(common.bplen(resolution) + ' bp')
+		self.dom.controlsDiv.resolutionInput.text(common.bplen(resolution) + ' bp')
 
 		let binpx = 1
 		while ((binpx * maxchrlen) / resolution < 600) {
@@ -511,8 +527,8 @@ class Hicstat {
 	}
 
 	async init_detailView(hic: any, chrx: any, chry: any, x: any, y: any, self: any) {
-		self.dom.view.text('Detailed')
-		self.dom.zoomRow.style('display', 'contents')
+		self.dom.controlsDiv.view.text('Detailed')
+		self.dom.controlsDiv.zoom.style('display', 'contents')
 		nmeth2select(hic, hic.detailview.nmeth)
 
 		hic.indetail = true
@@ -616,11 +632,11 @@ class Hicstat {
 		global zoom buttons
 		*/
 		{
-			self.dom.zoomIn.on('click', () => {
+			self.dom.controlsDiv.zoom.in.on('click', () => {
 				hic.detailview.xb.zoomblock(2, false)
 				hic.detailview.yb.zoomblock(2, false)
 			})
-			self.dom.zoomOut.on('click', () => {
+			self.dom.controlsDiv.zoom.out.on('click', () => {
 				hic.detailview.xb.zoomblock(2, true)
 				hic.detailview.yb.zoomblock(2, true)
 			})
@@ -1102,7 +1118,6 @@ export async function getdata_chrpair(hic: any, self: any) {
 		nmeth: hic.chrpairview.nmeth,
 		resolution: resolution
 	}
-
 	try {
 		const data = await client.dofetch2('/hicdata', {
 			method: 'POST',
@@ -1142,7 +1157,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		}
 		const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
 		hic.chrpairview.bpmaxv = maxv
-		self.dom.inputBpMaxv.property('value', maxv)
+		self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
 		for (const [x, y, v] of hic.chrpairview.data) {
 			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
@@ -1225,7 +1240,7 @@ async function detailViewUpdateHic(
 		if (!xfragment) {
 			// use bpresolution, not fragment
 			hic.detailview.resolution = resolution
-			self.dom.resolutionInput.text(common.bplen(resolution) + ' bp')
+			self.dom.controlsDiv.resolutionInput.text(common.bplen(resolution) + ' bp')
 			// fixed bin size only for bp bins
 			hic.detailview.xbinpx = hic.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
 			hic.detailview.ybinpx = hic.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
@@ -1278,7 +1293,7 @@ async function detailViewUpdateHic(
 				if (resolution == null) {
 					resolution = hic.fragresolution[hic.fragresolution.length - 1]
 				}
-				self.dom.resolutionInput.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
+				self.dom.controlsDiv.resolutionInput.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
 				hic.detailview.resolution = resolution
 			}
 		}
@@ -1525,7 +1540,7 @@ export function getdata_detail(hic: any, self: any) {
 			maxv *= 0.8
 
 			hic.detailview.bpmaxv = maxv
-			self.dom.inputBpMaxv.property('value', maxv)
+			self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
 			for (const [x, y, w, h, v] of lst) {
 				const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)

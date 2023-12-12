@@ -41,12 +41,12 @@ export function initWholeGenomeControls(hic: any, self: any) {
 
 	const normalizationRow = menuTable.append('tr')
 	addLabel(normalizationRow, 'NORMALIZATION')
-	self.dom.nmeth = normalizationRow.append('td') //placeholder until data is returned from server
+	self.dom.controlsDiv.nmeth = normalizationRow.append('td') //placeholder until data is returned from server
 	makeNormMethDisplay(hic, self)
 
 	const cutoffRow = menuTable.append('tr')
 	addLabel(cutoffRow, 'CUTOFF')
-	self.dom.inputBpMaxv = cutoffRow
+	self.dom.controlsDiv.inputBpMaxv = cutoffRow
 		.append('td')
 		.append('input')
 		.style('width', '80px')
@@ -62,44 +62,50 @@ export function initWholeGenomeControls(hic: any, self: any) {
 
 	const resolutionRow = menuTable.append('tr')
 	addLabel(resolutionRow, 'RESOLUTION')
-	self.dom.resolutionInput = resolutionRow.append('td').append('span')
+	self.dom.controlsDiv.resolutionInput = resolutionRow.append('td').append('span')
 
 	const viewRow = menuTable.append('tr')
 	addLabel(viewRow, 'VIEW')
-	self.dom.viewBtnDiv = viewRow.append('td')
-	self.dom.view = self.dom.viewBtnDiv.append('span').style('padding-right', '5px').style('display', 'block')
+	self.dom.controlsDiv.viewBtnDiv = viewRow.append('td')
+	self.dom.controlsDiv.view = self.dom.controlsDiv.viewBtnDiv
+		.append('span')
+		.style('padding-right', '5px')
+		.style('display', 'block')
 
-	hic.wholegenomebutton = self.dom.viewBtnDiv
+	hic.wholegenomebutton = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
 		.html('&#8592; Genome')
 		.on('click', () => {
-			self.dom.view.text('Genome')
-			self.dom.zoomRow.style('display', 'none')
+			self.dom.controlsDiv.view.text('Genome')
+			self.dom.controlsDiv.zoom.style('display', 'none')
 			hic.inwholegenome = true
 			hic.inchrpair = false
 			hic.indetail = false
 			switchview(hic, self)
 		})
 
-	hic.chrpairviewbutton = self.dom.viewBtnDiv
+	hic.chrpairviewbutton = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
 		.on('click', () => {
-			self.dom.zoomRow.style('display', 'none')
+			self.dom.controlsDiv.zoom.style('display', 'none')
 			hic.inwholegenome = false
 			hic.inchrpair = true
 			hic.indetail = false
 			switchview(hic, self)
 		})
 
-	hic.horizontalViewBtn = self.dom.viewBtnDiv.append('button').style('display', 'none').html('Horizontal View &#8594;')
+	hic.horizontalViewBtn = self.dom.controlsDiv.viewBtnDiv
+		.append('button')
+		.style('display', 'none')
+		.html('Horizontal View &#8594;')
 
-	self.dom.zoomRow = menuTable.append('tr').style('display', 'none')
-	addLabel(self.dom.zoomRow, 'ZOOM')
-	const zoomDiv = self.dom.zoomRow.append('td')
-	self.dom.zoomIn = zoomDiv.append('button').style('margin-right', '10px').text('In')
-	self.dom.zoomOut = zoomDiv.append('button').style('margin-right', '10px').text('Out')
+	self.dom.controlsDiv.zoom = menuTable.append('tr').style('display', 'none')
+	addLabel(self.dom.controlsDiv.zoom, 'ZOOM')
+	const zoomDiv = self.dom.controlsDiv.zoom.append('td')
+	self.dom.controlsDiv.zoom.in = zoomDiv.append('button').style('margin-right', '10px').text('In')
+	self.dom.controlsDiv.zoom.out = zoomDiv.append('button').style('margin-right', '10px').text('Out')
 }
 
 function addLabel(tr: any, text: string) {
@@ -108,14 +114,14 @@ function addLabel(tr: any, text: string) {
 
 function makeNormMethDisplay(hic: any, self: any) {
 	if (!hic.normalization?.length) {
-		hic.nmethselect = self.dom.nmeth.text(defaultnmeth)
+		hic.nmethselect = self.dom.controlsDiv.nmeth.text(defaultnmeth)
 	} else {
-		hic.nmethselect = self.dom.nmeth
+		hic.nmethselect = self.dom.controlsDiv.nmeth
 			.style('margin-right', '10px')
 			.append('select')
-			.on('change', () => {
+			.on('change', async () => {
 				const v = hic.nmethselect.node().value
-				setnmeth(hic, v)
+				await setnmeth(hic, v, self)
 			})
 		for (const n of hic.normalization) {
 			hic.nmethselect.append('option').text(n)
@@ -123,7 +129,7 @@ function makeNormMethDisplay(hic: any, self: any) {
 	}
 }
 
-async function setnmeth(hic: any, nmeth: string) {
+async function setnmeth(hic: any, nmeth: string, self: any) {
 	if (hic.inwholegenome) {
 		hic.wholegenome.nmeth = nmeth
 		const manychr = hic.atdev ? 3 : hic.chrlst.length
@@ -220,8 +226,8 @@ function switchview(hic: any, self: any) {
 		hic.wholegenomebutton.style('display', 'none')
 		hic.chrpairviewbutton.style('display', 'none')
 		hic.horizontalViewBtn.style('display', 'none')
-		self.dom.inputBpMaxv.property('value', hic.wholegenome.bpmaxv)
-		self.dom.resolutionInput.text(bplen(hic.wholegenome.resolution) + ' bp')
+		self.dom.controlsDiv.inputBpMaxv.property('value', hic.wholegenome.bpmaxv)
+		self.dom.controlsDiv.resolutionInput.text(bplen(hic.wholegenome.resolution) + ' bp')
 		nmeth2select(hic, hic.wholegenome.nmeth)
 	} else if (hic.inchrpair) {
 		self.dom.plotDiv.yAxis.selectAll('*').remove()
@@ -233,8 +239,8 @@ function switchview(hic: any, self: any) {
 		hic.wholegenomebutton.style('display', 'inline-block')
 		hic.chrpairviewbutton.style('display', 'none')
 		hic.horizontalViewBtn.style('display', 'none')
-		self.dom.inputBpMaxv.property('value', hic.chrpairview.bpmaxv)
-		self.dom.resolutionInput.text(bplen(hic.chrpairview.resolution) + ' bp')
+		self.dom.controlsDiv.inputBpMaxv.property('value', hic.chrpairview.bpmaxv)
+		self.dom.controlsDiv.resolutionInput.text(bplen(hic.chrpairview.resolution) + ' bp')
 		nmeth2select(hic, hic.chrpairview.nmeth)
 	}
 }
