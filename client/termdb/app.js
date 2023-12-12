@@ -208,6 +208,8 @@ class TdbApp {
 	}
 
 	async mayShowCustomTerms() {
+		if (Object.keys(this.state.submenu).length) return this.dom.customTermDiv.style('display', 'none') // do not display for submenu
+
 		// only run once, upon initiating this tree ui
 		const tws = await this.api.vocabApi.getCustomTerms()
 
