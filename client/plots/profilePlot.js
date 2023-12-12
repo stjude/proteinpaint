@@ -213,10 +213,10 @@ export class profilePlot {
 
 	getFilter(excluded = []) {
 		const lst = []
-		this.processTW(this.config.regionTW, this.settings.region, lst)
-		this.processTW(this.config.countryTW, this.settings.country, lst)
-		this.processTW(this.config.incomeTW, this.settings.income, lst)
-		this.processTW(this.config.typeTW, this.settings.facilityType, lst)
+		this.processTW(this.config.regionTW, this.settings.region, excluded, lst)
+		this.processTW(this.config.countryTW, this.settings.country, excluded, lst)
+		this.processTW(this.config.incomeTW, this.settings.income, excluded, lst)
+		this.processTW(this.config.typeTW, this.settings.facilityType, excluded, lst)
 
 		const tvslst = {
 			type: 'tvslst',
@@ -228,7 +228,7 @@ export class profilePlot {
 		return filter
 	}
 
-	processTW(tw, value, lst) {
+	processTW(tw, value, excluded, lst) {
 		if (value && !excluded.includes(tw.id))
 			lst.push({
 				type: 'tvs',
