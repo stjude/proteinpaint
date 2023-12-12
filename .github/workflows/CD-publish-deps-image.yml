@@ -67,7 +67,9 @@ jobs:
           if [[ "$BRANCH" != "publish-image" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && ${{ github.event_name }} != "workflow_dispatch" ]]; then
             echo "skipping build and publishing"
           else
+            cd deps
             ./build.sh -m "ghcr.io/stjude/"
+            cd ..
 
             HASH=$(git rev-parse --short HEAD 2>/dev/null)
             TAG="$(node -p "require('./package.json').version")"
