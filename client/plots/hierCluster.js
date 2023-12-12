@@ -88,9 +88,8 @@ class HierCluster extends Matrix {
 			}
 		]
 
-		const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => (s._SAMPLENAME_ || s.row.sample) == c).row)
-
 		if (this.app.vocabApi.vocab?.dslabel !== 'GDC') {
+			const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => s.row.sample == c).row)
 			for (const s of samples) {
 				if (!s.sampleId) s.sampleId = s.sample
 			}
@@ -112,7 +111,9 @@ class HierCluster extends Matrix {
 				label: ss.buttonText || `Select ${l.Samples}`,
 				callback: async () => {
 					ss.callback({
-						samples: await this.app.vocabApi.convertSampleId(samples, ss.attributes),
+						samples: clickedSampleNames.map(c => {
+							return { 'cases.case_id': c }
+						}),
 						source: ss.defaultSelectionLabel || `Selected ${l.samples} from gene expression`
 					})
 				}
@@ -141,10 +142,8 @@ class HierCluster extends Matrix {
 			delete self.zoomArea
 		}
 		const c = {
-			startCell: self.serieses[0].cells.find(d => (d._SAMPLENAME_ || d.sample) == clickedSampleNames[0]),
-			endCell: self.serieses[0].cells.find(
-				d => (d._SAMPLENAME_ || d.sample) == clickedSampleNames[clickedSampleNames.length - 1]
-			)
+			startCell: self.serieses[0].cells.find(d => d.sample == clickedSampleNames[0]),
+			endCell: self.serieses[0].cells.find(d => d.sample == clickedSampleNames[clickedSampleNames.length - 1])
 		}
 
 		const s = self.settings.matrix
@@ -190,7 +189,10 @@ class HierCluster extends Matrix {
 
 	// show the list of clicked samples as a table
 	showTable(self, clickedSampleNames, x, y) {
-		const rows = clickedSampleNames.map(c => [{ value: c }])
+		const rows =
+			this.app.vocabApi.vocab?.dslabel == 'GDC'
+				? clickedSampleNames.map(c => this.hierClusterData.sampleNameMap[c]).map(c => [{ value: c }])
+				: clickedSampleNames.map(c => [{ value: c }])
 		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
 
 		const menu = new Menu({ padding: '5px' })

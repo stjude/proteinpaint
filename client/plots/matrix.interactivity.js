@@ -183,7 +183,7 @@ export function setInteractivity(self) {
 		if (self.state.termdbConfig.urlTemplates) {
 			const templates = self.state.termdbConfig.urlTemplates
 			// quick fix: should use templates[*].regex for a non-hardcoded condition
-			if (self.chartType != 'hierCluster' && templates.sample) {
+			if (templates.sample) {
 				// quick fix, should have a more reliable namekey that is guaranteed to have the UUID for the URL construction
 				// maybe from refs.bySampleId, filled in by termdb.getSampleAlias in the backend
 				const name = sampleData[templates.sample.namekey] || sampleData.row.sample || sampleData._SAMPLENAME_
