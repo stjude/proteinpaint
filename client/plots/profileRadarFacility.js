@@ -270,12 +270,13 @@ export async function getPlotConfig(opts, app) {
 			profileRadarFacility: settings
 		}
 		const terms = config[opts.plot].terms
-
+		const promises = []
 		for (const row of terms) {
 			row.score.q = row.maxScore.q = { mode: 'continuous' }
-			await fillTermWrapper(row.score, app.vocabApi)
-			await fillTermWrapper(row.maxScore, app.vocabApi)
+			promises.push(fillTermWrapper(row.score, app.vocabApi))
+			promises.push(fillTermWrapper(row.maxScore, app.vocabApi))
 		}
+		await Promise.all(promises)
 		await loadFilterTerms(config, app)
 		return config
 	} catch (e) {
