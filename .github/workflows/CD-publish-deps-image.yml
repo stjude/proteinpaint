@@ -59,6 +59,7 @@ jobs:
 
       - name: Build image
         run: |
+          npm install glob
           cd container
           ./version.sh deps
 
