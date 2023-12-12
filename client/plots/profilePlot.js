@@ -280,9 +280,9 @@ export class profilePlot {
 	}
 
 	getDownloadFilename() {
-		let filename = `${this.type}${this.settings.component ? this.settings.component : ''}${this.settings.region}${
-			this.settings.country
-		}${this.settings.income}${this.settings.facilityType}.svg`
+		let filename = `${this.type}${this.component ? this.component : ''}${this.settings.region}${this.settings.country}${
+			this.settings.income
+		}${this.settings.facilityType}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}
