@@ -1,2 +1,1 @@
-Fixes:
-- Detect failure on GDC data caching and abort launch
+

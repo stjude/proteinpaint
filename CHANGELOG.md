@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - do not re-parse the already parsed result from cachedFetch
+- Detect failure on GDC data caching and abort launch
 
 
 ## 2.35.1
