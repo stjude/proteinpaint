@@ -882,11 +882,18 @@ async function initTermWrapper(tw, vocabApi, defaultQByTsHandler) {
 
 export async function fillTwLst(twlst: TermWrapper[], vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	const ids: Array<string | undefined> = []
-	for (const tw of twlst) ids.push(tw.id)
-	const terms = await vocabApi.getTerms(ids)
+	const id2term = {}
+	for (const tw of twlst) {
+		if (!tw.term) {
+			if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
+			ids.push(tw.id)
+		} else id2term[tw.term.id] = tw.term
+	}
+	const missingTerms = await vocabApi.getTerms(ids)
+	for (const id in missingTerms) id2term[id] = missingTerms[id]
 
 	for (const tw of twlst) {
-		tw.term = terms[tw.id || tw.term?.id]
+		tw.term = id2term[tw.id || tw.term?.id]
 		tw.isAtomic = true
 		if (!tw.$id) tw.$id = get$id()
 		await initTermWrapper(tw, vocabApi, defaultQByTsHandler)
