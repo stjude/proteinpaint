@@ -848,11 +848,6 @@ type DefaultQByTsHandler = {
 }
 
 export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
-	const term = await vocabApi.getterm(tw.id)
-	await initTermWrapper(tw, term, vocabApi, defaultQByTsHandler)
-}
-
-async function initTermWrapper(tw, term, vocabApi, defaultQByTsHandler) {
 	tw.isAtomic = true
 	if (!tw.$id) tw.$id = get$id()
 
@@ -860,9 +855,13 @@ async function initTermWrapper(tw, term, vocabApi, defaultQByTsHandler) {
 		if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
 		// has .id but no .term, must be a dictionary term
 		// as non-dict term must have tw.term{}
-		tw.term = term
+		tw.term = await vocabApi.getterm(tw.id)
 	}
+	await initTermWrapper(tw, vocabApi, defaultQByTsHandler)
+	return tw as TermWrapper
+}
 
+async function initTermWrapper(tw, vocabApi, defaultQByTsHandler) {
 	// tw.term{} is valid
 	if (tw.id == undefined || tw.id === '') {
 		// for dictionary term, tw.term.id must be valid
@@ -882,12 +881,15 @@ async function initTermWrapper(tw, term, vocabApi, defaultQByTsHandler) {
 }
 
 export async function fillTwLst(twlst: TermWrapper[], vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
-	{
-		const ids: Array<string | undefined> = []
-		for (const tw of twlst) ids.push(tw.id)
-		const terms = await vocabApi.getTerms(ids)
+	const ids: Array<string | undefined> = []
+	for (const tw of twlst) ids.push(tw.id)
+	const terms = await vocabApi.getTerms(ids)
 
-		for (const tw of twlst) await initTermWrapper(tw, terms[tw.id || tw.term.id], vocabApi, defaultQByTsHandler)
+	for (const tw of twlst) {
+		tw.term = terms[tw.id || tw.term.id]
+		tw.isAtomic = true
+		if (!tw.$id) tw.$id = get$id()
+		await initTermWrapper(tw, vocabApi, defaultQByTsHandler)
 	}
 }
 
