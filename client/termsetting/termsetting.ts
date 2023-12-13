@@ -891,13 +891,14 @@ export async function fillTwLst(twlst: TermWrapper[], vocabApi: VocabApi, defaul
 	}
 	const missingTerms = await vocabApi.getTerms(ids)
 	for (const id in missingTerms) id2term[id] = missingTerms[id]
-
+	const promises: any[] = []
 	for (const tw of twlst) {
 		tw.term = id2term[tw.id || tw.term?.id]
 		tw.isAtomic = true
 		if (!tw.$id) tw.$id = get$id()
-		await initTermWrapper(tw, vocabApi, defaultQByTsHandler)
+		promises.push(await initTermWrapper(tw, vocabApi, defaultQByTsHandler))
 	}
+	await Promise.all(promises)
 }
 
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
