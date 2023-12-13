@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- show # of samples and add link for samples for dendrogram list sample menu option
+
 Fixes:
 - do not re-parse the already parsed result from cachedFetch
 - Detect failure on GDC data caching and abort launch
