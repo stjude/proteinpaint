@@ -48,8 +48,14 @@ async function trigger_gettermsbyid(
 ) {
 	const terms = {}
 	for (const id of q.ids) {
-		const t = tdb.q.termjsonByOneid(id)
-		terms[id] = t ? copy_term(t) : undefined
+		const term = tdb.q.termjsonByOneid(id)
+		if (term) {
+			if (term.type == 'categorical' && !term.values && !term.groupsetting?.inuse) {
+				term.values = {}
+				term.samplecount = {}
+			}
+		}
+		terms[id] = term ? copy_term(term) : undefined
 	}
 	res.send({
 		terms
