@@ -80,7 +80,7 @@ class HierCluster extends Matrix {
 				}
 			},
 			{
-				label: `List ${clickedSampleNames.length} samples`,
+				label: `List ${clickedSampleNames.length} ${l.samples}`,
 				callback: () => {
 					this.dom.tip.hide()
 					this.showTable(this, clickedSampleNames, event.clientX, event.clientY)
@@ -108,7 +108,7 @@ class HierCluster extends Matrix {
 		// when allow2selectSamples presents
 		if (ss)
 			optionArr.push({
-				label: ss.buttonText || `Select ${l.Samples}`,
+				label: ss.buttonText || `Select ${l.samples}`,
 				callback: async () => {
 					ss.callback({
 						samples: clickedSampleNames.map(c => {
