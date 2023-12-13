@@ -265,7 +265,7 @@ export function renderTable({
 			cell.__td = td
 
 			const column = columns[colIdx]
-			if (column.editCallback && cell.value) {
+			if (column.editCallback && (cell.value || cell.color)) {
 				td.on('click', event => {
 					event.stopImmediatePropagation()
 					const isEdit = td.select('input').empty()
