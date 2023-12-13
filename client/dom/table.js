@@ -281,6 +281,7 @@ export function renderTable({
 						})
 					input.node().focus()
 					input.node().select()
+					column.editCallback(i, cell)
 				})
 			}
 			if (column.width) td.style('width', column.width)
