@@ -317,25 +317,25 @@ export async function getPlotConfig(opts, app) {
 			},
 			profileBarchart: settings
 		}
-		const terms = []
+		const tws = []
 		for (const component of config.plotByComponent) {
 			component.hasSubjectiveData = false
 			for (const group of component.groups)
 				for (const row of group.rows) {
 					if (row.sc) {
 						row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
-						terms.push(row.sc.score)
-						terms.push(row.sc.maxScore)
+						tws.push(row.sc.score)
+						tws.push(row.sc.maxScore)
 					}
 					if (row.poc) {
 						row.poc.score.q = row.poc.maxScore.q = { mode: 'continuous' }
-						terms.push(row.poc.score)
-						terms.push(row.poc.maxScore)
+						tws.push(row.poc.score)
+						tws.push(row.poc.maxScore)
 					}
 					if (row.sc && row.poc) component.hasSubjectiveData = true
 				}
 		}
-		await fillTermWrappers(terms, app.vocabApi)
+		await fillTermWrappers(tws, app.vocabApi)
 		await loadFilterTerms(config, app)
 
 		return config

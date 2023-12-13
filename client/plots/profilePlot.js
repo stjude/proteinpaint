@@ -1,8 +1,7 @@
 import { downloadSingleSVG } from '../common/svg.download.js'
-import { getSampleFilter } from '#termsetting/handlers/samplelst'
 import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
-import { fillTermWrapper } from '#termsetting'
+import { fillTermWrappers } from '#termsetting'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 export class profilePlot {
@@ -308,15 +307,15 @@ export class profilePlot {
 }
 
 export async function loadFilterTerms(config, app) {
-	const promises = []
+	const tws = []
 	config.countryTW = { id: 'country' }
 	config.regionTW = { id: 'WHO_region' }
 	config.incomeTW = { id: 'Income_group' }
 	config.typeTW = { id: 'FC_TypeofFacility' }
 
-	promises.push(fillTermWrapper(config.countryTW, app.vocabApi))
-	promises.push(fillTermWrapper(config.regionTW, app.vocabApi))
-	promises.push(fillTermWrapper(config.incomeTW, app.vocabApi))
-	promises.push(fillTermWrapper(config.typeTW, app.vocabApi))
-	await Promise.all(promises)
+	tws.push(config.countryTW)
+	tws.push(config.regionTW)
+	tws.push(config.incomeTW)
+	tws.push(config.typeTW)
+	await fillTermWrappers(tws, app.vocabApi)
 }

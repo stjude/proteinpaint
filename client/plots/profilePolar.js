@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { fillTermWrapper } from '#termsetting'
+import { fillTermWrappers } from '#termsetting'
 import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
@@ -199,16 +199,16 @@ export async function getPlotConfig(opts, app) {
 			},
 			profilePolar: settings
 		}
-		const promises = []
+		const tws = []
 		for (const data of config.terms) {
 			const scoreTerm = data.score
 			const maxScoreTerm = data.maxScore
 			scoreTerm.q = { mode: 'continuous' }
 			maxScoreTerm.q = { mode: 'continuous' }
-			promises.push(fillTermWrapper(scoreTerm, app.vocabApi))
-			promises.push(fillTermWrapper(maxScoreTerm, app.vocabApi))
+			tws.push(scoreTerm)
+			tws.push(maxScoreTerm)
 		}
-		await Promise.all(promises)
+		await fillTermWrappers(tws, app.vocabApi)
 		await loadFilterTerms(config, app)
 
 		return config
