@@ -69,7 +69,7 @@ tape('cachedFetch', async test => {
 			}
 		}
 	}
-	const body = await utils.cachedFetch(`http://fake.org/data?random=${Date.now()}` + Date, {}, use)
+	const { body } = await utils.cachedFetch(`http://fake.org/data?random=${Date.now()}` + Date, {}, use)
 	const cachedBody = fs.existsSync(body.info.cacheFile) && fs.readFileSync(body.info.cacheFile).toString('utf-8').trim()
 	delete body.info
 	test.deepEqual(
