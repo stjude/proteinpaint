@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { fillTermWrappers } from '#termsetting'
+import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
@@ -208,7 +208,7 @@ export async function getPlotConfig(opts, app) {
 			twlst.push(scoreTerm)
 			twlst.push(maxScoreTerm)
 		}
-		await fillTermWrappers(twlst, app.vocabApi)
+		await fillTwLst(twlst, app.vocabApi)
 		await loadFilterTerms(config, app)
 
 		return config

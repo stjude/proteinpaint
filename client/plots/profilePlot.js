@@ -1,7 +1,7 @@
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
-import { fillTermWrappers } from '#termsetting'
+import { fillTwLst } from '#termsetting'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 export class profilePlot {
@@ -317,5 +317,5 @@ export async function loadFilterTerms(config, app) {
 	twlst.push(config.regionTW)
 	twlst.push(config.incomeTW)
 	twlst.push(config.typeTW)
-	await fillTermWrappers(twlst, app.vocabApi)
+	await fillTwLst(twlst, app.vocabApi)
 }

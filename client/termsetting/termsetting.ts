@@ -881,11 +881,7 @@ async function initTermWrapper(tw, term, vocabApi, defaultQByTsHandler) {
 	mayValidateQmode(tw)
 }
 
-export async function fillTermWrappers(
-	twlst: TermWrapper[],
-	vocabApi: VocabApi,
-	defaultQByTsHandler?: DefaultQByTsHandler
-) {
+export async function fillTwLst(twlst: TermWrapper[], vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	{
 		const ids: Array<string | undefined> = []
 		for (const tw of twlst) ids.push(tw.id)
