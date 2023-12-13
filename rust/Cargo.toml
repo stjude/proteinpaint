@@ -26,7 +26,7 @@ serde = {version = "^1.0.147", features = ["derive"]}
 serde_json="^1.0.88"
 num = "^0.4.1"
 csv = "^1.2.2"
-#r_mathlib="^0.2.0" # Uncomment this line to activate DE expression app for high sample sizes
+r_mathlib="^0.2.0" # Uncomment this line to activate DE expression app for high sample sizes
 tokio = { version="1", features = ["full"] }
 reqwest = "0.11"
 flate2 = "1"
@@ -81,6 +81,6 @@ path="src/gene_variance.rs"
 #path="src/wilcoxon.rs"
 
 # Uncomment the lines below to use DE app for higher sample sizes
-#[[bin]]
-#name="DEanalysis"
-#path="src/DEanalysis.rs"
+[[bin]]
+name="DEanalysis"
+path="src/DEanalysis.rs"
