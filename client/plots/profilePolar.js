@@ -199,16 +199,16 @@ export async function getPlotConfig(opts, app) {
 			},
 			profilePolar: settings
 		}
-		const tws = []
+		const twlst = []
 		for (const data of config.terms) {
 			const scoreTerm = data.score
 			const maxScoreTerm = data.maxScore
 			scoreTerm.q = { mode: 'continuous' }
 			maxScoreTerm.q = { mode: 'continuous' }
-			tws.push(scoreTerm)
-			tws.push(maxScoreTerm)
+			twlst.push(scoreTerm)
+			twlst.push(maxScoreTerm)
 		}
-		await fillTermWrappers(tws, app.vocabApi)
+		await fillTermWrappers(twlst, app.vocabApi)
 		await loadFilterTerms(config, app)
 
 		return config

@@ -506,7 +506,7 @@ export class TermdbVocab extends Vocab {
 		return data.term
 	}
 
-	async getterms(ids, dslabel = null, genome = null) {
+	async getTerms(ids, dslabel = null, genome = null) {
 		if (!ids) throw 'getterm: ids missing'
 		if (this && this.state && this.state.vocab) {
 			if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
@@ -879,8 +879,8 @@ export class TermdbVocab extends Vocab {
 			.map(tw => tw.term.name)
 			.sort()
 
-		const tws = []
-		for (const tw of opts.terms) tws.push(this.getTwMinCopy(tw))
+		const twlst = []
+		for (const tw of opts.terms) twlst.push(this.getTwMinCopy(tw))
 
 		const init = {
 			headers,
@@ -890,7 +890,7 @@ export class TermdbVocab extends Vocab {
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
 				// one request per term
-				terms: tws,
+				terms: twlst,
 				filter,
 				embedder: window.location.hostname
 			}
