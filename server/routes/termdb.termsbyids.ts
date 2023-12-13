@@ -1,4 +1,4 @@
-// import { gettermbyidRequest, gettermbyidResponse } from '#shared/types/routes/termdb.termbyid'
+import { gettermsbyidsRequest, gettermsbyidsResponse } from '#shared/types/routes/termdb.termsbyids.js'
 import { copy_term } from '#src/termdb.js'
 
 export const api: any = {
@@ -7,10 +7,10 @@ export const api: any = {
 		get: {
 			init,
 			request: {
-				typeId: 'gettermsbyidRequest'
+				typeId: 'gettermsbyidsRequest'
 			},
 			response: {
-				typeId: 'gettermsbyidResponse'
+				typeId: 'gettermsbyidsResponse'
 			}
 		},
 		post: {
