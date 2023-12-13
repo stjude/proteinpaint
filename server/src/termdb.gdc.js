@@ -157,7 +157,8 @@ export async function initGDCdictionary(ds) {
 		const { body } = await cachedFetch(dictUrl)
 		re = body
 	} catch (e) {
-		throw 'invalid JSON from GDC dictionary'
+		if (e.stack) console.log(e.stack)
+		throw 'failed to get GDC API _mapping: ' + (e.message || e)
 	}
 
 	if (!re._mapping) throw 'returned data does not have ._mapping'
@@ -269,7 +270,13 @@ export async function initGDCdictionary(ds) {
 		}
 	}
 
-	await assignDefaultBins(id2term)
+	try {
+		await assignDefaultBins(id2term)
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		// must abort launch upon err. lack of term.bins system app will not work
+		throw 'assignDefaultBins() failed: ' + (e.message || e)
+	}
 
 	for (const t of id2term.values()) {
 		if (!t.type) parentCount++
@@ -344,12 +351,26 @@ export async function initGDCdictionary(ds) {
 		doneCaching: 0
 	}
 
-	await getOpenProjects(ds)
+	try {
+		await getOpenProjects(ds)
+	} catch (e) {
+		throw 'getOpenProjects() failed: ' + (e.message || e)
+	}
 
+	runRemainingWithoutAwait(ds)
+}
+
+async function runRemainingWithoutAwait(ds) {
 	// Important!
-	// do not await on following, as they execute logic that are optional for server function, and should not halt server launch
-	testGDCapi() // do not await
-	cacheSampleIdMapping(ds) // do not await
+	// do not await when calling this function, as following steps execute logic that are optional for server function, and should not halt server launch
+	// should await each step so they work in sequence
+	await testGDCapi()
+	try {
+		await cacheSampleIdMapping(ds)
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+	}
 }
 
 function mayAddTermAttribute(t) {
@@ -435,7 +456,7 @@ async function assignDefaultBins(id2term) {
 		}`
 		)
 	}
-	if (queryStrings.length == 0) throw 'GDC: no numeric terms'
+	if (queryStrings.length == 0) throw 'GDC: no numeric terms, should not happen'
 	const query = `
 	  query ContinuousAggregationQuery($caseFilters: FiltersArgument, $filters: FiltersArgument, $filters2: FiltersArgument) {
 	  viewer {
@@ -455,81 +476,77 @@ async function assignDefaultBins(id2term) {
 		filters2: { op: 'range', content: [{ ranges: [{ from: 0, to: 1 }] }] } // 0/1 values will not affect query
 	}
 
-	try {
-		let assignedCount = 0,
-			unassignedCount = 0
+	let assignedCount = 0,
+		unassignedCount = 0
 
-		const { body: re } = await cachedFetch(apihostGraphql, {
-			method: 'POST',
-			body: { query, variables }
-		})
-		if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
-			throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
-		for (const [facet, termid] of facet2termid) {
-			const term = id2term.get(termid)
-			if (!(facet in re.data.viewer.explore.cases.aggregations)) {
-				console.log('GDC: no stats object returned for numeric term', termid)
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-			const s = re.data.viewer.explore.cases.aggregations[facet].stats
-			if (typeof s != 'object') {
-				console.log('GDC: aggregations[facet].stats{} is not object')
-				// allow some terms to have no info
-				// assign dummy bin so not to break
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-			/*
-			{
-			  diagnoses__days_to_recurrence: {
-				range: { buckets: [Array] },
-				stats: {
-				  Max: 3782,
-				  Mean: 819.9636363636364,
-				  Min: 58,
-				  SD: 715.6613630457312,
-				  count: 165
-				}
-			  }
-			}
-			*/
-			if (!Number.isFinite(s.Max) || !Number.isFinite(s.Min)) {
-				//console.log('GDC numeric term min/max not numeric '+termid)
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-
-			if (s.Max <= s.Min) {
-				// unable to calculate bin
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-			const x = (s.Max - s.Min) / 5
-			const binsize = term.type == 'integer' ? Math.ceil(x) : x
-			term.bins = {
-				default: {
-					mode: 'discrete',
-					type: 'regular-bin',
-					bin_size: binsize,
-					startinclusive: false,
-					stopinclusive: true,
-					first_bin: {
-						startunbounded: true,
-						stop: s.Min + binsize
-					}
-				}
-			}
-			assignedCount++
+	const { body: re } = await cachedFetch(apihostGraphql, {
+		method: 'POST',
+		body: { query, variables }
+	})
+	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
+		throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
+	for (const [facet, termid] of facet2termid) {
+		const term = id2term.get(termid)
+		if (!(facet in re.data.viewer.explore.cases.aggregations)) {
+			console.log('GDC: no stats object returned for numeric term', termid)
+			term.bins = dummyBins
+			unassignedCount++
+			continue
 		}
-		console.log(`GDC default binning: ${assignedCount} assigned, ${unassignedCount} unassigned`)
-	} catch (e) {
-		console.log(e.message || e)
+		const s = re.data.viewer.explore.cases.aggregations[facet].stats
+		if (typeof s != 'object') {
+			console.log('GDC: aggregations[facet].stats{} is not object')
+			// allow some terms to have no info
+			// assign dummy bin so not to break
+			term.bins = dummyBins
+			unassignedCount++
+			continue
+		}
+		/*
+		{
+		  diagnoses__days_to_recurrence: {
+			range: { buckets: [Array] },
+			stats: {
+			  Max: 3782,
+			  Mean: 819.9636363636364,
+			  Min: 58,
+			  SD: 715.6613630457312,
+			  count: 165
+			}
+		  }
+		}
+		*/
+		if (!Number.isFinite(s.Max) || !Number.isFinite(s.Min)) {
+			//console.log('GDC numeric term min/max not numeric '+termid)
+			term.bins = dummyBins
+			unassignedCount++
+			continue
+		}
+
+		if (s.Max <= s.Min) {
+			// unable to calculate bin
+			term.bins = dummyBins
+			unassignedCount++
+			continue
+		}
+		const x = (s.Max - s.Min) / 5
+		const binsize = term.type == 'integer' ? Math.ceil(x) : x
+		term.bins = {
+			default: {
+				mode: 'discrete',
+				type: 'regular-bin',
+				bin_size: binsize,
+				startinclusive: false,
+				stopinclusive: true,
+				first_bin: {
+					startunbounded: true,
+					stop: s.Min + binsize
+				}
+			}
+		}
+		assignedCount++
 	}
+	console.log(`GDC default binning: ${assignedCount} assigned, ${unassignedCount} unassigned`)
 }
 
 /* not in use!
@@ -899,53 +916,28 @@ async function cacheSampleIdMapping(ds) {
 	}
 
 	const size = 1000 // fetch 1000 ids at a time
-	let totalCases
+	const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
+	if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
 
-	try {
-		// key: aliquot uuid
-		// value: submitter id
+	const begin = new Date()
+	console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
 
-		try {
-			totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
-		} catch (e) {
-			console.log(e)
-			throw 'api failed at getting totalCases=integer'
+	for (let i = 0; i < Math.ceil(totalCases / size); i++) {
+		await fetchIdsFromGdcApi(ds, size, i * 1000)
+		if (Number.isInteger(serverconfig.features.stopGdcCacheAliquot) && i >= serverconfig.features.stopGdcCacheAliquot) {
+			// stop caching after this number of loops, to speed up testing
+			break
 		}
-		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
-
-		const begin = new Date()
-		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
-
-		try {
-			for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-				await fetchIdsFromGdcApi(ds, size, i * 1000)
-				if (
-					Number.isInteger(serverconfig.features.stopGdcCacheAliquot) &&
-					i >= serverconfig.features.stopGdcCacheAliquot
-				) {
-					// stop caching after this number of loops, to speed up testing
-					break
-				}
-			}
-		} catch (e) {
-			throw 'api failed at one of case caching loops'
-		}
-
-		try {
-			await checkExpressionAvailability(ds)
-		} catch (e) {
-			throw 'api failed at checking cases with gene exp data'
-		}
-
-		ds.__gdc.doneCaching = true
-		console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
-		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
-		console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
-		console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
-		console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
-	} catch (e) {
-		console.log('Error at caching: ' + e)
 	}
+
+	await checkExpressionAvailability(ds)
+
+	ds.__gdc.doneCaching = true
+	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
+	console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
+	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
+	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
+	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
 }
 
 /*
@@ -1069,26 +1061,27 @@ async function checkExpressionAvailability(ds) {
 		const c = await testRestApi(url)
 		if (c == 'ERR_NON_2XX_3XX_RESPONSE') {
 			// this is expected code that this instance has access to the uat but the request lacks parameters
+			console.log('You have access to', url, ', which is required for GDC hierCluster.')
 		} else if (c) {
-			// this instance does not have access to uat. quit this function and do not abort
+			console.log(
+				"You don't have access to",
+				url,
+				'No worry you can continue to use all GDC features except hierCluster. This will work when gene exp API is released to prod.'
+			)
 			return
 		}
 	}
 
-	try {
-		const idLst = [...ds.__gdc.caseIds]
-		const { body: re } = await cachedFetch(url, {
-			method: 'post',
-			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
-		})
-		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
-		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
-		for (const c of re.cases.details) {
-			if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
-		}
-
-		delete ds.__gdc.caseIds
-	} catch (e) {
-		throw e
+	const idLst = [...ds.__gdc.caseIds]
+	const { body: re } = await cachedFetch(url, {
+		method: 'post',
+		body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
+	})
+	// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
+	if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
+	for (const c of re.cases.details) {
+		if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
 	}
+
+	delete ds.__gdc.caseIds
 }
