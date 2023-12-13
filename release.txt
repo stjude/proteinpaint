@@ -1,3 +1,2 @@
-
-Features:
--add menu options after clicking gene expression dendrogram
+Fixes:
+- do not re-parse the already parsed result from cachedFetch
