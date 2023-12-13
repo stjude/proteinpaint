@@ -848,6 +848,11 @@ type DefaultQByTsHandler = {
 }
 
 export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
+	const term = await vocabApi.getterm(tw.id)
+	await initTermWrapper(tw, term, vocabApi, defaultQByTsHandler)
+}
+
+async function initTermWrapper(tw, term, vocabApi, defaultQByTsHandler) {
 	tw.isAtomic = true
 	if (!tw.$id) tw.$id = get$id()
 
@@ -855,7 +860,7 @@ export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defau
 		if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
 		// has .id but no .term, must be a dictionary term
 		// as non-dict term must have tw.term{}
-		tw.term = await vocabApi.getterm(tw.id)
+		tw.term = term
 	}
 
 	// tw.term{} is valid
@@ -874,7 +879,6 @@ export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defau
 	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
 
 	mayValidateQmode(tw)
-	return tw as TermWrapper
 }
 
 export async function fillTermWrappers(
@@ -887,34 +891,7 @@ export async function fillTermWrappers(
 		for (const tw of twlst) ids.push(tw.id)
 		const terms = await vocabApi.getTerms(ids)
 
-		for (const tw of twlst) {
-			tw.term = terms[tw.id || tw.term.id]
-			tw.isAtomic = true
-			if (!tw.$id) tw.$id = get$id()
-
-			if (!tw.term) {
-				if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
-				// has .id but no .term, must be a dictionary term
-				// as non-dict term must have tw.term{}
-			}
-
-			// tw.term{} is valid
-			if (tw.id == undefined || tw.id === '') {
-				// for dictionary term, tw.term.id must be valid
-				// for non dict term, it can still be missing
-				tw.id = tw.term.id
-			} else if (tw.id != tw.term.id) {
-				throw 'the given ids (tw.id and tw.term.id) are different'
-			}
-
-			if (!tw.q) tw.q = {}
-			tw.q.isAtomic = true
-
-			// call term-type specific logic to fill tw
-			await call_fillTW(tw, vocabApi, defaultQByTsHandler)
-
-			mayValidateQmode(tw)
-		}
+		for (const tw of twlst) await initTermWrapper(tw, terms[tw.id || tw.term.id], vocabApi, defaultQByTsHandler)
 	}
 }
 
