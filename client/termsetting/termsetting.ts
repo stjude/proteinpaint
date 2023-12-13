@@ -877,6 +877,47 @@ export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defau
 	return tw as TermWrapper
 }
 
+export async function fillTermWrappers(
+	tws: TermWrapper[],
+	vocabApi: VocabApi,
+	defaultQByTsHandler?: DefaultQByTsHandler
+) {
+	{
+		const ids: Array<string | undefined> = []
+		for (const tw of tws) ids.push(tw.id)
+		const terms = await vocabApi.getterms(ids)
+
+		for (const tw of tws) {
+			tw.term = terms[tw.id || tw.term.id]
+			tw.isAtomic = true
+			if (!tw.$id) tw.$id = get$id()
+
+			if (!tw.term) {
+				if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
+				// has .id but no .term, must be a dictionary term
+				// as non-dict term must have tw.term{}
+			}
+
+			// tw.term{} is valid
+			if (tw.id == undefined || tw.id === '') {
+				// for dictionary term, tw.term.id must be valid
+				// for non dict term, it can still be missing
+				tw.id = tw.term.id
+			} else if (tw.id != tw.term.id) {
+				throw 'the given ids (tw.id and tw.term.id) are different'
+			}
+
+			if (!tw.q) tw.q = {}
+			tw.q.isAtomic = true
+
+			// call term-type specific logic to fill tw
+			await call_fillTW(tw, vocabApi, defaultQByTsHandler)
+
+			mayValidateQmode(tw)
+		}
+	}
+}
+
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	if (!tw.$id) tw.$id = get$id()
 	const t = tw.term.type
