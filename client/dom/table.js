@@ -281,6 +281,7 @@ export function renderTable({
 						})
 					input.node().focus()
 					input.node().select()
+					column.editCallback(i, cell)
 				})
 			}
 			if (column.width) td.style('width', column.width)
@@ -308,7 +309,6 @@ export function renderTable({
 			} else if (cell.html) td.html(cell.html)
 			else if ('value' in cell) td.text(cell.value)
 			else if (cell.color) {
-				console.log(cell)
 				const input = td
 					.append('input')
 					.attr('type', 'color')
@@ -317,7 +317,7 @@ export function renderTable({
 					.on('change', e => {
 						const color = input.node().value
 						cell.color = color
-						column.editCallback(i, cell)
+						if (column.editCallback) column.editCallback(i, cell)
 					})
 			}
 		}
