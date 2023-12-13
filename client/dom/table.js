@@ -278,10 +278,10 @@ export function renderTable({
 							const value = input.node().value
 							cell.value = value
 							td.text(cell.value)
+							column.editCallback(i, cell)
 						})
 					input.node().focus()
 					input.node().select()
-					column.editCallback(i, cell)
 				})
 			}
 			if (column.width) td.style('width', column.width)
