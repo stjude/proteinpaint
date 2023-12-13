@@ -5,7 +5,15 @@ import serverconfig from './serverconfig'
 import { cachedFetch } from './utils'
 
 /*
-******************** functions *************
+********************   Comment   *****************
+this script only runs once, when PP server launches.
+it caches publicly available info from some GDC apis.
+it is not a route, it does not accept request parameters from client and does not use any user token.
+upon any error, it throws exception and aborts launch.
+any error is considered critical and must be presented in full details in server log for diagnosis
+
+
+********************   functions    *************
 initGDCdictionary
 	assignDefaultBins
 	makeTermdbQueries
@@ -38,6 +46,7 @@ initGDCdictionary
   	doneCaching: boolean, falg to indicate when the sample ID caching is done
 	casesWithExpData Set
   }
+
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -49,7 +58,6 @@ const geneExpHost = serverconfig.features?.geneExpHost || apihost
 const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
 
 /* 
-
 sections from api return that are used to build in-memory termdb
 
 ******************* Part 1
@@ -157,7 +165,7 @@ export async function initGDCdictionary(ds) {
 		const { body } = await cachedFetch(dictUrl)
 		re = body
 	} catch (e) {
-		if (e.stack) console.log(e.stack)
+		console.log(e)
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)
 	}
 
@@ -273,7 +281,7 @@ export async function initGDCdictionary(ds) {
 	try {
 		await assignDefaultBins(id2term)
 	} catch (e) {
-		if (e.stack) console.log(e.stack)
+		console.log(e)
 		// must abort launch upon err. lack of term.bins system app will not work
 		throw 'assignDefaultBins() failed: ' + (e.message || e)
 	}
@@ -354,6 +362,7 @@ export async function initGDCdictionary(ds) {
 	try {
 		await getOpenProjects(ds)
 	} catch (e) {
+		console.log(e)
 		throw 'getOpenProjects() failed: ' + (e.message || e)
 	}
 
@@ -814,40 +823,45 @@ async function testGDCapi() {
 		{
 			const u = path.join(apihost, 'ssms')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'ssm_occurrences')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'cases')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'files')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'analysis/top_mutated_genes_by_project')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 
 		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
-		await testGraphqlApi(apihostGraphql)
+
+		{
+			const c = await testGraphqlApi(apihostGraphql)
+			if (c) throw `${apihostGraphql} returns error code: ${c}`
+		}
 	} catch (e) {
-		console.error(`
+		console.log(e)
+		throw `
 ##########################################
 #
-#   GDC API unavailable
+#   Some GDC API unavailable, see error above
 #   ${apihost}
 #   ${apihostGraphql}
 #
-##########################################`)
+##########################################`
 	}
 }
 
@@ -860,11 +874,19 @@ if gets error:
 async function testRestApi(url) {
 	try {
 		const t = new Date()
-		await got(url)
+		const response = await got(url)
+		if (response.statusCode > 399) {
+			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
+			// TODO console log additional response msg to help diagnosis
+			return response.statusCode
+		}
 		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
 	} catch (e) {
+		// if gdc service is down
+		console.log('See error from', url)
+		console.log(e)
 		if (e.code) return e.code
-		throw 'gdc api down: ' + url
+		throw 'gdc api down: ' + url // no code, just throw to abort
 	}
 }
 
@@ -880,12 +902,19 @@ async function testGraphqlApi(url) {
 				}
 			}
 		}}`
-		await got.post(url, {
+		const response = await got.post(url, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query, variables: {} })
 		})
+		if (response.statusCode > 399) {
+			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
+			// TODO console log additional response msg to help diagnosis
+			return response.statusCode
+		}
 	} catch (e) {
-		throw 'gdc api down: ' + url
+		console.log(e)
+		if (e.code) return e.code
+		throw 'see above error from graphql API ' + url
 	}
 	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
 }
@@ -1053,35 +1082,22 @@ async function checkExpressionAvailability(ds) {
 	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
 	const url = `${geneExpHost}/gene_expression/availability`
 
-	{
-		/*
-		when the api is released in production, delete this check and move it into testGDCapi()
-		exp api is only available on uat now, thus it works if the pp server ip is whitelisted, otherwise won't work and will skip this function
-		*/
-		const c = await testRestApi(url)
-		if (c == 'ERR_NON_2XX_3XX_RESPONSE') {
-			// this is expected code that this instance has access to the uat but the request lacks parameters
-			console.log('You have access to', url, ', which is required for GDC hierCluster.')
-		} else if (c) {
-			console.log(
-				"You don't have access to",
-				url,
-				'No worry you can continue to use all GDC features except hierCluster. This will work when gene exp API is released to prod.'
-			)
-			return
+	try {
+		const idLst = [...ds.__gdc.caseIds]
+		const { body: re } = await cachedFetch(url, {
+			method: 'post',
+			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
+		})
+		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
+		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
+		for (const c of re.cases.details) {
+			if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
 		}
-	}
 
-	const idLst = [...ds.__gdc.caseIds]
-	const { body: re } = await cachedFetch(url, {
-		method: 'post',
-		body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
-	})
-	// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
-	if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
-	for (const c of re.cases.details) {
-		if (c.has_gene_expression_values) ds.__gdc.casesWithExpData.add(c.case_id)
+		delete ds.__gdc.caseIds
+	} catch (e) {
+		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
+		// when api is releated to public prod, must throw here and abort
 	}
-
-	delete ds.__gdc.caseIds
 }
