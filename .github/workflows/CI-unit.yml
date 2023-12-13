@@ -41,7 +41,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run ESLint
-        run: npx eslint . --ext .ts
+        run: npx eslint . --ext .ts --quiet
 
       - name: Copy serverconfig.json to root
         run: |

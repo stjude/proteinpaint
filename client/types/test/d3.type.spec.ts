@@ -40,7 +40,9 @@ const dom: Sel.Dom = {
 // Use in functions
 // ----------------
 
-function abc(arg: Sel.Div) {}
+function abc(arg: Sel.Div) {
+	console.log(arg)
+}
 // ok
 abc(div)
 // @ts-expect-error, mismatched argument type
