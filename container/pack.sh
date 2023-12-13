@@ -25,8 +25,8 @@ fi
 rm -rf tmppack
 mkdir tmppack
 
-FRONTTDEPNAME="@sjcrh/proteinpaint-front"
-SERVERTDEPNAME="@sjcrh/proteinpaint-server"
+FRONTDEPNAME="@sjcrh/proteinpaint-front"
+SERVERDEPNAME="@sjcrh/proteinpaint-server"
 
 # no -w argument to bump.js, just get the changed workspace since the last publish
 cd ..
@@ -47,7 +47,7 @@ if [[ "$CHANGEDWS" == *"client"* ]]; then
 	cd ../container
 fi
 
-if [[ "$CHANGEDWS" == *"client"* || "$CHANGEDWS" == *"front"* ]]; then
+if [[ "$CHANGEDWS" == *"front"* ]]; then
 	cd ../front
 	echo "packing front ..."
 	npm pack
@@ -58,7 +58,7 @@ if [[ "$CHANGEDWS" == *"client"* || "$CHANGEDWS" == *"front"* ]]; then
 
 	cd ../container/full
 	echo "update the dependency in container/full/package.json to point to the front tarball inside of tmppack dir ..."
-	npm pkg set "dependencies.$FRONTTDEPNAME"=$PKGPATH/$FRONTTGZ
+	npm pkg set "dependencies.$FRONTDEPNAME"=$PKGPATH/$FRONTTGZ
 	cd ..
 fi
 
@@ -77,7 +77,7 @@ if [[ "$CHANGEDWS" == *"rust"* ]]; then
 	cd ../container
 fi
 
-if [[ "$CHANGEDWS" == *"rust"* || "$CHANGEDWS" == *"server"* ]]; then
+if [[ "$CHANGEDWS" == *"server"* ]]; then
 	cd ../server
 	echo "packing server ..."
 	npm pack
@@ -87,13 +87,12 @@ if [[ "$CHANGEDWS" == *"rust"* || "$CHANGEDWS" == *"server"* ]]; then
 	git restore package.json
 
 	cd ../container/full
-	echo "update the dependency in container/full/package.json to point to the server tarball inside of tmppack dir ..."
-	FRONTTDEPNAME="@sjcrh/proteinpaint-front"
-	npm pkg set "dependencies.$FRONTTDEPNAME"=$PKGPATH/$SERVERTGZ
+	echo "update the dependency in container/full/package.json to point to the front tarball inside of tmppack dir ..."
+	npm pkg set "dependencies.$SERVERDEPNAME"=$PKGPATH/$SERVERTGZ
 
 	cd ../server
 	echo "update dependencies in container/server/package.json to point to server tarball inside of tmppack dir ..."
-	npm pkg set "dependencies.$SERVERTDEPNAME"=$PKGPATH/$SERVERTGZ
+	npm pkg set "dependencies.$SERVERDEPNAME"=$PKGPATH/$SERVERTGZ
 
 	cd ..
 fi
