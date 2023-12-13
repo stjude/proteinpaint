@@ -80,7 +80,7 @@ class HierCluster extends Matrix {
 				}
 			},
 			{
-				label: 'List samples',
+				label: `List ${clickedSampleNames.length} samples`,
 				callback: () => {
 					this.dom.tip.hide()
 					this.showTable(this, clickedSampleNames, event.clientX, event.clientY)
@@ -190,10 +190,17 @@ class HierCluster extends Matrix {
 
 	// show the list of clicked samples as a table
 	showTable(self, clickedSampleNames, x, y) {
-		const rows =
-			this.app.vocabApi.vocab?.dslabel == 'GDC'
-				? clickedSampleNames.map(c => this.hierClusterData.sampleNameMap[c]).map(c => [{ value: c }])
-				: clickedSampleNames.map(c => [{ value: c }])
+		const templates = self.state.termdbConfig.urlTemplates
+		const rows = templates?.sample
+			? clickedSampleNames.map(c => [{ value: c, url: `${templates.sample.base}${c}` }])
+			: clickedSampleNames.map(c => [{ value: c }])
+
+		if (this.app.vocabApi.vocab?.dslabel == 'GDC') {
+			for (const row of rows) {
+				row[0].value = this.hierClusterData.sampleNameMap[row[0].value]
+			}
+		}
+
 		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
 
 		const menu = new Menu({ padding: '5px' })
