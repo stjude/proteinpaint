@@ -522,7 +522,7 @@ export class TermdbVocab extends Vocab {
 			embedder: window.location.hostname
 		}
 
-		const data = await dofetch3(`termdb/termbyids`, { body })
+		const data = await dofetch3(`termdb/termsbyids`, { body })
 		if (data.error) throw 'getterm: ' + data.error
 
 		return data.terms
