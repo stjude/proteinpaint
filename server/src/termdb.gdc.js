@@ -5,7 +5,15 @@ import serverconfig from './serverconfig'
 import { cachedFetch } from './utils'
 
 /*
-******************** functions *************
+********************   Comment   *****************
+this script only runs once, when PP server launches.
+it caches publicly available info from some GDC apis.
+it is not a route, it does not accept request parameters from client and does not use any user token.
+upon any error, it throws exception and aborts launch.
+any error is considered critical and must be presented in full details in server log for diagnosis
+
+
+********************   functions    *************
 initGDCdictionary
 	assignDefaultBins
 	makeTermdbQueries
@@ -38,6 +46,7 @@ initGDCdictionary
   	doneCaching: boolean, falg to indicate when the sample ID caching is done
 	casesWithExpData Set
   }
+
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -49,7 +58,6 @@ const geneExpHost = serverconfig.features?.geneExpHost || apihost
 const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
 
 /* 
-
 sections from api return that are used to build in-memory termdb
 
 ******************* Part 1
@@ -157,7 +165,8 @@ export async function initGDCdictionary(ds) {
 		const { body } = await cachedFetch(dictUrl)
 		re = body
 	} catch (e) {
-		throw 'invalid JSON from GDC dictionary'
+		console.log(e)
+		throw 'failed to get GDC API _mapping: ' + (e.message || e)
 	}
 
 	if (!re._mapping) throw 'returned data does not have ._mapping'
@@ -269,7 +278,13 @@ export async function initGDCdictionary(ds) {
 		}
 	}
 
-	await assignDefaultBins(id2term)
+	try {
+		await assignDefaultBins(id2term)
+	} catch (e) {
+		console.log(e)
+		// must abort launch upon err. lack of term.bins system app will not work
+		throw 'assignDefaultBins() failed: ' + (e.message || e)
+	}
 
 	for (const t of id2term.values()) {
 		if (!t.type) parentCount++
@@ -344,12 +359,27 @@ export async function initGDCdictionary(ds) {
 		doneCaching: 0
 	}
 
-	await getOpenProjects(ds)
+	try {
+		await getOpenProjects(ds)
+	} catch (e) {
+		console.log(e)
+		throw 'getOpenProjects() failed: ' + (e.message || e)
+	}
 
+	runRemainingWithoutAwait(ds)
+}
+
+async function runRemainingWithoutAwait(ds) {
 	// Important!
-	// do not await on following, as they execute logic that are optional for server function, and should not halt server launch
-	testGDCapi() // do not await
-	cacheSampleIdMapping(ds) // do not await
+	// do not await when calling this function, as following steps execute logic that are optional for server function, and should not halt server launch
+	// should await each step so they work in sequence
+	await testGDCapi()
+	try {
+		await cacheSampleIdMapping(ds)
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+	}
 }
 
 function mayAddTermAttribute(t) {
@@ -435,7 +465,7 @@ async function assignDefaultBins(id2term) {
 		}`
 		)
 	}
-	if (queryStrings.length == 0) throw 'GDC: no numeric terms'
+	if (queryStrings.length == 0) throw 'GDC: no numeric terms, should not happen'
 	const query = `
 	  query ContinuousAggregationQuery($caseFilters: FiltersArgument, $filters: FiltersArgument, $filters2: FiltersArgument) {
 	  viewer {
@@ -455,81 +485,77 @@ async function assignDefaultBins(id2term) {
 		filters2: { op: 'range', content: [{ ranges: [{ from: 0, to: 1 }] }] } // 0/1 values will not affect query
 	}
 
-	try {
-		let assignedCount = 0,
-			unassignedCount = 0
+	let assignedCount = 0,
+		unassignedCount = 0
 
-		const { body: re } = await cachedFetch(apihostGraphql, {
-			method: 'POST',
-			body: { query, variables }
-		})
-		if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
-			throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
-		for (const [facet, termid] of facet2termid) {
-			const term = id2term.get(termid)
-			if (!(facet in re.data.viewer.explore.cases.aggregations)) {
-				console.log('GDC: no stats object returned for numeric term', termid)
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-			const s = re.data.viewer.explore.cases.aggregations[facet].stats
-			if (typeof s != 'object') {
-				console.log('GDC: aggregations[facet].stats{} is not object')
-				// allow some terms to have no info
-				// assign dummy bin so not to break
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-			/*
-			{
-			  diagnoses__days_to_recurrence: {
-				range: { buckets: [Array] },
-				stats: {
-				  Max: 3782,
-				  Mean: 819.9636363636364,
-				  Min: 58,
-				  SD: 715.6613630457312,
-				  count: 165
-				}
-			  }
-			}
-			*/
-			if (!Number.isFinite(s.Max) || !Number.isFinite(s.Min)) {
-				//console.log('GDC numeric term min/max not numeric '+termid)
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-
-			if (s.Max <= s.Min) {
-				// unable to calculate bin
-				term.bins = dummyBins
-				unassignedCount++
-				continue
-			}
-			const x = (s.Max - s.Min) / 5
-			const binsize = term.type == 'integer' ? Math.ceil(x) : x
-			term.bins = {
-				default: {
-					mode: 'discrete',
-					type: 'regular-bin',
-					bin_size: binsize,
-					startinclusive: false,
-					stopinclusive: true,
-					first_bin: {
-						startunbounded: true,
-						stop: s.Min + binsize
-					}
-				}
-			}
-			assignedCount++
+	const { body: re } = await cachedFetch(apihostGraphql, {
+		method: 'POST',
+		body: { query, variables }
+	})
+	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
+		throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
+	for (const [facet, termid] of facet2termid) {
+		const term = id2term.get(termid)
+		if (!(facet in re.data.viewer.explore.cases.aggregations)) {
+			console.log('GDC: no stats object returned for numeric term', termid)
+			term.bins = dummyBins
+			unassignedCount++
+			continue
 		}
-		console.log(`GDC default binning: ${assignedCount} assigned, ${unassignedCount} unassigned`)
-	} catch (e) {
-		console.log(e.message || e)
+		const s = re.data.viewer.explore.cases.aggregations[facet].stats
+		if (typeof s != 'object') {
+			console.log('GDC: aggregations[facet].stats{} is not object')
+			// allow some terms to have no info
+			// assign dummy bin so not to break
+			term.bins = dummyBins
+			unassignedCount++
+			continue
+		}
+		/*
+		{
+		  diagnoses__days_to_recurrence: {
+			range: { buckets: [Array] },
+			stats: {
+			  Max: 3782,
+			  Mean: 819.9636363636364,
+			  Min: 58,
+			  SD: 715.6613630457312,
+			  count: 165
+			}
+		  }
+		}
+		*/
+		if (!Number.isFinite(s.Max) || !Number.isFinite(s.Min)) {
+			//console.log('GDC numeric term min/max not numeric '+termid)
+			term.bins = dummyBins
+			unassignedCount++
+			continue
+		}
+
+		if (s.Max <= s.Min) {
+			// unable to calculate bin
+			term.bins = dummyBins
+			unassignedCount++
+			continue
+		}
+		const x = (s.Max - s.Min) / 5
+		const binsize = term.type == 'integer' ? Math.ceil(x) : x
+		term.bins = {
+			default: {
+				mode: 'discrete',
+				type: 'regular-bin',
+				bin_size: binsize,
+				startinclusive: false,
+				stopinclusive: true,
+				first_bin: {
+					startunbounded: true,
+					stop: s.Min + binsize
+				}
+			}
+		}
+		assignedCount++
 	}
+	console.log(`GDC default binning: ${assignedCount} assigned, ${unassignedCount} unassigned`)
 }
 
 /* not in use!
@@ -797,40 +823,45 @@ async function testGDCapi() {
 		{
 			const u = path.join(apihost, 'ssms')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'ssm_occurrences')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'cases')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'files')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
 			const u = path.join(apihost, 'analysis/top_mutated_genes_by_project')
 			const c = await testRestApi(u)
-			if (c) throw `${u}: ${c}`
+			if (c) throw `${u} returns error code: ${c}`
 		}
 
 		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
-		await testGraphqlApi(apihostGraphql)
+
+		{
+			const c = await testGraphqlApi(apihostGraphql)
+			if (c) throw `${apihostGraphql} returns error code: ${c}`
+		}
 	} catch (e) {
-		console.error(`
+		console.log(e)
+		throw `
 ##########################################
 #
-#   GDC API unavailable
+#   Some GDC API unavailable, see error above
 #   ${apihost}
 #   ${apihostGraphql}
 #
-##########################################`)
+##########################################`
 	}
 }
 
@@ -843,11 +874,19 @@ if gets error:
 async function testRestApi(url) {
 	try {
 		const t = new Date()
-		await got(url)
+		const response = await got(url)
+		if (response.statusCode > 399) {
+			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
+			// TODO console log additional response msg to help diagnosis
+			return response.statusCode
+		}
 		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
 	} catch (e) {
+		// if gdc service is down
+		console.log('See error from', url)
+		console.log(e)
 		if (e.code) return e.code
-		throw 'gdc api down: ' + url
+		throw 'gdc api down: ' + url // no code, just throw to abort
 	}
 }
 
@@ -863,12 +902,19 @@ async function testGraphqlApi(url) {
 				}
 			}
 		}}`
-		await got.post(url, {
+		const response = await got.post(url, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query, variables: {} })
 		})
+		if (response.statusCode > 399) {
+			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
+			// TODO console log additional response msg to help diagnosis
+			return response.statusCode
+		}
 	} catch (e) {
-		throw 'gdc api down: ' + url
+		console.log(e)
+		if (e.code) return e.code
+		throw 'see above error from graphql API ' + url
 	}
 	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
 }
@@ -899,53 +945,28 @@ async function cacheSampleIdMapping(ds) {
 	}
 
 	const size = 1000 // fetch 1000 ids at a time
-	let totalCases
+	const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
+	if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
 
-	try {
-		// key: aliquot uuid
-		// value: submitter id
+	const begin = new Date()
+	console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
 
-		try {
-			totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
-		} catch (e) {
-			console.log(e)
-			throw 'api failed at getting totalCases=integer'
+	for (let i = 0; i < Math.ceil(totalCases / size); i++) {
+		await fetchIdsFromGdcApi(ds, size, i * 1000)
+		if (Number.isInteger(serverconfig.features.stopGdcCacheAliquot) && i >= serverconfig.features.stopGdcCacheAliquot) {
+			// stop caching after this number of loops, to speed up testing
+			break
 		}
-		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
-
-		const begin = new Date()
-		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
-
-		try {
-			for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-				await fetchIdsFromGdcApi(ds, size, i * 1000)
-				if (
-					Number.isInteger(serverconfig.features.stopGdcCacheAliquot) &&
-					i >= serverconfig.features.stopGdcCacheAliquot
-				) {
-					// stop caching after this number of loops, to speed up testing
-					break
-				}
-			}
-		} catch (e) {
-			throw 'api failed at one of case caching loops'
-		}
-
-		try {
-			await checkExpressionAvailability(ds)
-		} catch (e) {
-			throw 'api failed at checking cases with gene exp data'
-		}
-
-		ds.__gdc.doneCaching = true
-		console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
-		console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
-		console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
-		console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
-		console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
-	} catch (e) {
-		console.log('Error at caching: ' + e)
 	}
+
+	await checkExpressionAvailability(ds)
+
+	ds.__gdc.doneCaching = true
+	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
+	console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
+	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
+	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
+	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
 }
 
 /*
@@ -1061,20 +1082,6 @@ async function checkExpressionAvailability(ds) {
 	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
 	const url = `${geneExpHost}/gene_expression/availability`
 
-	{
-		/*
-		when the api is released in production, delete this check and move it into testGDCapi()
-		exp api is only available on uat now, thus it works if the pp server ip is whitelisted, otherwise won't work and will skip this function
-		*/
-		const c = await testRestApi(url)
-		if (c == 'ERR_NON_2XX_3XX_RESPONSE') {
-			// this is expected code that this instance has access to the uat but the request lacks parameters
-		} else if (c) {
-			// this instance does not have access to uat. quit this function and do not abort
-			return
-		}
-	}
-
 	try {
 		const idLst = [...ds.__gdc.caseIds]
 		const { body: re } = await cachedFetch(url, {
@@ -1089,6 +1096,8 @@ async function checkExpressionAvailability(ds) {
 
 		delete ds.__gdc.caseIds
 	} catch (e) {
-		throw e
+		console.log("You don't have access to /gene_expression/availability/, you cannot run GDC hierCluster")
+		// while gene exp api are only on uat-prod, do not throw here so a pp instance with IP not whitelisted on uat-prod will not be broken
+		// when api is releated to public prod, must throw here and abort
 	}
 }
