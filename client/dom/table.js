@@ -265,7 +265,7 @@ export function renderTable({
 			cell.__td = td
 
 			const column = columns[colIdx]
-			if (column.editCallback && (cell.value || cell.color)) {
+			if (column.editCallback && cell.value) {
 				td.on('click', event => {
 					event.stopImmediatePropagation()
 					const isEdit = td.select('input').empty()
@@ -278,7 +278,6 @@ export function renderTable({
 							const value = input.node().value
 							cell.value = value
 							td.text(cell.value)
-							column.editCallback(i, cell)
 						})
 					input.node().focus()
 					input.node().select()
@@ -318,6 +317,7 @@ export function renderTable({
 					.on('change', e => {
 						const color = input.node().value
 						cell.color = color
+						column.editCallback(i, cell)
 					})
 			}
 		}
