@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- do not re-parse the already parsed result from cachedFetch
+
 
 ## 2.35.1
 
