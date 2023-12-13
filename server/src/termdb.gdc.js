@@ -152,13 +152,9 @@ export async function initGDCdictionary(ds) {
 	// k: term id, string with full path
 	// v: term obj
 
-	const body = await cachedFetch(dictUrl, {
-		method: 'GET',
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
-	})
 	let re
 	try {
-		re = JSON.parse(body)
+		re = await cachedFetch(dictUrl)
 	} catch (e) {
 		throw 'invalid JSON from GDC dictionary'
 	}
@@ -462,11 +458,10 @@ async function assignDefaultBins(id2term) {
 		let assignedCount = 0,
 			unassignedCount = 0
 
-		const response = await cachedFetch(apihostGraphql, {
+		const re = await cachedFetch(apihostGraphql, {
 			method: 'POST',
 			body: { query, variables }
 		})
-		const re = JSON.parse(response.body)
 		if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
 			throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
 		for (const [facet, termid] of facet2termid) {
@@ -547,8 +542,7 @@ for this term, the function prints out: "Min=1992  Max=2021"
 */
 async function getNumericTermRange(id) {
 	// getting more datapoints will slow down the response
-	const body = await cachedFetch(apihost + '/ssm_occurrences?size=5000&fields=' + id, { method: 'GET' })
-	const re = JSON.parse(body)
+	const re = await cachedFetch(apihost + '/ssm_occurrences?size=5000&fields=' + id)
 	if (!Array.isArray(re.data.hits)) return
 	let min = null,
 		max = null
@@ -777,9 +771,7 @@ async function getOpenProjects(ds) {
 		size: 0
 	}
 
-	const body = await cachedFetch(path.join(apihost, 'files'), { method: 'POST', headers, body: data })
-
-	const re = JSON.parse(body)
+	const re = await cachedFetch(path.join(apihost, 'files'), { method: 'POST', headers, body: data })
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -915,6 +907,7 @@ async function cacheSampleIdMapping(ds) {
 		try {
 			totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
 		} catch (e) {
+			console.log(e)
 			throw 'api failed at getting totalCases=integer'
 		}
 		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
@@ -983,8 +976,7 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 		param.push('from=' + from)
 	}
 
-	const body = await cachedFetch(apihost + '/cases?' + param.join('&'))
-	const re = JSON.parse(body)
+	const re = await cachedFetch(apihost + '/cases?' + param.join('&'))
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	//console.log(re.data.hits[0]) // uncomment to examine output
@@ -1084,11 +1076,10 @@ async function checkExpressionAvailability(ds) {
 
 	try {
 		const idLst = [...ds.__gdc.caseIds]
-		const data = await cachedFetch(url, {
+		const re = await cachedFetch(url, {
 			method: 'post',
 			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
 		})
-		const re = JSON.parse(data)
 		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
 		if (!Array.isArray(re.cases?.details)) throw 're.cases.details[] not array'
 		for (const c of re.cases.details) {

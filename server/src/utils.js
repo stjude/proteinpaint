@@ -671,8 +671,15 @@ if (serverconfig.features?.extApiCache) {
 }
 
 /**
+ *
+ * Returns the JSON-decoded response.body
+ *
  * @param url           string with optional
  * @param opts          {method, header, body, ...} similar to got and node-fetch or browser fetch
+ * 							defaults:
+ * 								method: GET
+ * 								content-tyoe: 'application/json'
+ *                         acceptL 'application/json'
  * @param use{}	      non-fetch options to customize the client and/or response properties
  * 	.metaKey          string key to use when attaching a caching metadata object to the response
  *    .client           got-like HTTP client with get, post methods, etc
@@ -703,7 +710,7 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 	if (cacheFile && fs.existsSync(cacheFile)) {
 		try {
 			// console.log(`Using cache file ${cacheFile}`)
-			const json = fs.readFileSync(cacheFile)
+			const json = fs.readFileSync(cacheFile)?.toString('utf-8').trim()
 			body = JSON.parse(json)
 		} catch (e) {
 			console.log(e)
@@ -711,25 +718,53 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 		}
 	} else {
 		try {
+			// default headers
+			// forced lowercase keys, the client is expected to normalize the HTTP request header
+			// to the correct casing, not done in this function
+			const headers = { 'content-type': 'application/json', accept: 'application/json' }
+			if (opts.headers) {
+				// opts.headers can override the expected default JSON content-type
+				for (const key in opts.headers) {
+					// force lowercase to ensure override
+					headers[key.toLowerCase()] = opts.headers[key].toLowerCase()
+				}
+			}
 			const method = opts.method?.toLowerCase() || 'get'
 			const client = use.client || got
 			const response = await client[method](url, {
-				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-				body: method == 'get' ? undefined : JSON.stringify(opts.body || {})
+				headers,
+				body:
+					method == 'get'
+						? undefined
+						: headers['content-type'].includes('json')
+						? JSON.stringify(opts.body || {})
+						: opts.body
 			})
 
 			if (cacheFile) {
-				// console.log(`caching ${cacheFile}`)
-				fs.writeFileSync(cacheFile, JSON.stringify(response.body), console.error)
+				const jsonBody =
+					typeof response.body == 'string'
+						? response.body
+						: headers.accept.includes('json')
+						? JSON.stringify(response.body)
+						: opts.response
+
+				fs.writeFileSync(cacheFile, jsonBody, { encoding: 'utf8' })
 			}
 
-			body = response.body
+			// the code that calls this function should expect a parsed JSON result,
+			// UNLESS the opts.headers.accept is overriden to a non-json content-type,
+			// in which case the caller should be ready to process the body as needed
+			body =
+				typeof response.body == 'string' && headers['accept'].includes('json')
+					? JSON.parse(response.body)
+					: response.body
 		} catch (e) {
-			console.log(690, e)
 			throw e
 		}
 	}
 
+	// this is used for testing
 	if (use.metaKey) body[use.metaKey] = { id, cacheFile }
 	return body
 }
