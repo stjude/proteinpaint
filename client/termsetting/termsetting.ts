@@ -878,16 +878,16 @@ export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defau
 }
 
 export async function fillTermWrappers(
-	tws: TermWrapper[],
+	twlst: TermWrapper[],
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
 ) {
 	{
 		const ids: Array<string | undefined> = []
-		for (const tw of tws) ids.push(tw.id)
-		const terms = await vocabApi.getterms(ids)
+		for (const tw of twlst) ids.push(tw.id)
+		const terms = await vocabApi.getTerms(ids)
 
-		for (const tw of tws) {
+		for (const tw of twlst) {
 			tw.term = terms[tw.id || tw.term.id]
 			tw.isAtomic = true
 			if (!tw.$id) tw.$id = get$id()

@@ -307,15 +307,15 @@ export class profilePlot {
 }
 
 export async function loadFilterTerms(config, app) {
-	const tws = []
+	const twlst = []
 	config.countryTW = { id: 'country' }
 	config.regionTW = { id: 'WHO_region' }
 	config.incomeTW = { id: 'Income_group' }
 	config.typeTW = { id: 'FC_TypeofFacility' }
 
-	tws.push(config.countryTW)
-	tws.push(config.regionTW)
-	tws.push(config.incomeTW)
-	tws.push(config.typeTW)
-	await fillTermWrappers(tws, app.vocabApi)
+	twlst.push(config.countryTW)
+	twlst.push(config.regionTW)
+	twlst.push(config.incomeTW)
+	twlst.push(config.typeTW)
+	await fillTermWrappers(twlst, app.vocabApi)
 }

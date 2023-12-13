@@ -267,20 +267,20 @@ export async function getPlotConfig(opts, app) {
 			profileRadar: settings
 		}
 		const terms = config[opts.plot].terms
-		const tws = []
+		const twlst = []
 		for (const row of terms) {
 			if (row.sc) {
 				row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
-				tws.push(row.sc.score)
-				tws.push(row.sc.maxScore)
+				twlst.push(row.sc.score)
+				twlst.push(row.sc.maxScore)
 			}
 			if (row.poc) {
 				row.poc.score.q = row.poc.maxScore.q = { mode: 'continuous' }
-				tws.push(row.poc.score)
-				tws.push(row.poc.maxScore)
+				twlst.push(row.poc.score)
+				twlst.push(row.poc.maxScore)
 			}
 		}
-		await fillTermWrappers(tws, app.vocabApi)
+		await fillTermWrappers(twlst, app.vocabApi)
 		await loadFilterTerms(config, app)
 		return config
 	} catch (e) {
