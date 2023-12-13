@@ -672,7 +672,7 @@ if (serverconfig.features?.extApiCache) {
 
 /**
  *
- * Returns the JSON-decoded response.body
+ * Returns  {body: JSON-decoded body}
  *
  * @param url           string with optional
  * @param opts          {method, header, body, ...} similar to got and node-fetch or browser fetch
@@ -764,7 +764,8 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 		}
 	}
 
-	// this is used for testing
+	// in case the caller needs to know the saved cached id, mostly for testing
 	if (use.metaKey) body[use.metaKey] = { id, cacheFile }
-	return body
+	// may add back other response metadata as needed
+	return { body }
 }

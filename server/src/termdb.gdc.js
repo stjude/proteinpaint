@@ -154,7 +154,8 @@ export async function initGDCdictionary(ds) {
 
 	let re
 	try {
-		re = await cachedFetch(dictUrl)
+		const { body } = await cachedFetch(dictUrl)
+		re = body
 	} catch (e) {
 		throw 'invalid JSON from GDC dictionary'
 	}
@@ -458,7 +459,7 @@ async function assignDefaultBins(id2term) {
 		let assignedCount = 0,
 			unassignedCount = 0
 
-		const re = await cachedFetch(apihostGraphql, {
+		const { body: re } = await cachedFetch(apihostGraphql, {
 			method: 'POST',
 			body: { query, variables }
 		})
@@ -542,7 +543,7 @@ for this term, the function prints out: "Min=1992  Max=2021"
 */
 async function getNumericTermRange(id) {
 	// getting more datapoints will slow down the response
-	const re = await cachedFetch(apihost + '/ssm_occurrences?size=5000&fields=' + id)
+	const { body: re } = await cachedFetch(apihost + '/ssm_occurrences?size=5000&fields=' + id)
 	if (!Array.isArray(re.data.hits)) return
 	let min = null,
 		max = null
@@ -771,7 +772,7 @@ async function getOpenProjects(ds) {
 		size: 0
 	}
 
-	const re = await cachedFetch(path.join(apihost, 'files'), { method: 'POST', headers, body: data })
+	const { body: re } = await cachedFetch(path.join(apihost, 'files'), { method: 'POST', headers, body: data })
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -976,7 +977,7 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 		param.push('from=' + from)
 	}
 
-	const re = await cachedFetch(apihost + '/cases?' + param.join('&'))
+	const { body: re } = await cachedFetch(apihost + '/cases?' + param.join('&'))
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	//console.log(re.data.hits[0]) // uncomment to examine output
@@ -1076,7 +1077,7 @@ async function checkExpressionAvailability(ds) {
 
 	try {
 		const idLst = [...ds.__gdc.caseIds]
-		const re = await cachedFetch(url, {
+		const { body: re } = await cachedFetch(url, {
 			method: 'post',
 			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
 		})
