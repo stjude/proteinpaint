@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { fillTermWrappers } from '#termsetting'
+import { fillTwLst } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
@@ -335,7 +335,7 @@ export async function getPlotConfig(opts, app) {
 					if (row.sc && row.poc) component.hasSubjectiveData = true
 				}
 		}
-		await fillTermWrappers(twlst, app.vocabApi)
+		await fillTwLst(twlst, app.vocabApi)
 		await loadFilterTerms(config, app)
 
 		return config

@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { fillTermWrappers } from '#termsetting'
+import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
@@ -276,7 +276,7 @@ export async function getPlotConfig(opts, app) {
 			twlst.push(row.score)
 			twlst.push(row.maxScore)
 		}
-		await fillTermWrappers(twlst, app.vocabApi)
+		await fillTwLst(twlst, app.vocabApi)
 		await loadFilterTerms(config, app)
 		return config
 	} catch (e) {
