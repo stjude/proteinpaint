@@ -119,6 +119,7 @@ class HierCluster extends Matrix {
 				}
 			})
 
+		this.mouseout()
 		this.dom.tip.hide()
 		this.app.tip.clear()
 		this.app.tip.d
