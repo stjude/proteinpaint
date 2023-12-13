@@ -477,43 +477,14 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('/termdb', { body })
 	}
 
-	async getterm(termid, dslabel = null, genome = null) {
-		if (!termid) throw 'getterm: termid missing'
-		if (this && this.state && this.state.vocab) {
-			if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
-			if (this.state.vocab.genome) genome = this.state.vocab.genome
-		}
-		if (!dslabel) throw 'getterm: dslabel missing'
-		if (!genome) throw 'getterm: genome missing'
-
-		const body = {
-			genome,
-			dslabel,
-			gettermbyid: termid,
-			embedder: window.location.hostname
-		}
-
-		const data = await dofetch3(`termdb/termbyid`, { body })
-		if (data.error) throw 'getterm: ' + data.error
-		if (!data.term) throw 'no term found for ' + termid
-		if (data.term.type == 'categorical' && !data.term.values && !data.term.groupsetting?.inuse) {
-			// TODO: instead of this workaround to create an empty term.values to be filled in by other data requests,
-			// the data response should already have the filled in term.values
-			data.term.values = {}
-			data.term.samplecount = {}
-			this.missingCatValsByTermId[data.term.id] = data.term
-		}
-		return data.term
-	}
-
 	async getTerms(ids, dslabel = null, genome = null) {
-		if (!ids) throw 'getterm: ids missing'
+		if (!ids) throw 'getTerms: ids missing'
 		if (this && this.state && this.state.vocab) {
 			if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
 			if (this.state.vocab.genome) genome = this.state.vocab.genome
 		}
-		if (!dslabel) throw 'getterm: dslabel missing'
-		if (!genome) throw 'getterm: genome missing'
+		if (!dslabel) throw 'getTerms: dslabel missing'
+		if (!genome) throw 'getTerms: genome missing'
 
 		const body = {
 			genome,
@@ -523,9 +494,23 @@ export class TermdbVocab extends Vocab {
 		}
 
 		const data = await dofetch3(`termdb/termsbyids`, { body })
-		if (data.error) throw 'getterm: ' + data.error
-
+		if (data.error) throw 'getTerm: ' + data.error
+		for (const id in data.terms) {
+			const term = data.terms[id]
+			if (term.type == 'categorical' && !term.values && !term.groupsetting?.inuse)
+				this.missingCatValsByTermId[term.id] = term
+		}
 		return data.terms
+	}
+
+	async getterm(termid, dslabel = null, genome = null) {
+		if (!termid) throw 'getterm: termid missing'
+
+		const result = await this.getTerms([termid], dslabel, genome)
+		const term = result[termid]
+		if (!term) throw 'no term found for ' + termid
+
+		return term
 	}
 
 	graphable(term) {

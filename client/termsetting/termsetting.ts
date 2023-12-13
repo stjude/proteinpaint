@@ -886,7 +886,7 @@ export async function fillTwLst(twlst: TermWrapper[], vocabApi: VocabApi, defaul
 	const terms = await vocabApi.getTerms(ids)
 
 	for (const tw of twlst) {
-		tw.term = terms[tw.id || tw.term.id]
+		tw.term = terms[tw.id || tw.term?.id]
 		tw.isAtomic = true
 		if (!tw.$id) tw.$id = get$id()
 		await initTermWrapper(tw, vocabApi, defaultQByTsHandler)
