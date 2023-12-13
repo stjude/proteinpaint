@@ -307,7 +307,18 @@ export function renderTable({
 					.attr('target', '_blank')
 			} else if (cell.html) td.html(cell.html)
 			else if ('value' in cell) td.text(cell.value)
-			else if (cell.color) td.append('input').attr('type', 'color').attr('value', cell.color).property('disabled', true)
+			else if (cell.color) {
+				console.log(cell)
+				const input = td
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', cell.color)
+					.property('disabled', cell.disabled ? true : false)
+					.on('change', e => {
+						const color = input.node().value
+						cell.color = color
+					})
+			}
 		}
 	}
 
