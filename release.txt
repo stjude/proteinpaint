@@ -1,1 +1,2 @@
-
+Features:
+- show # of samples and add link for samples for dendrogram list sample menu option
