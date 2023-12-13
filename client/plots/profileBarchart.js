@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { fillTermWrapper } from '#termsetting'
+import { fillTermWrappers } from '#termsetting'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
@@ -317,25 +317,25 @@ export async function getPlotConfig(opts, app) {
 			},
 			profileBarchart: settings
 		}
-		const promises = []
+		const terms = []
 		for (const component of config.plotByComponent) {
 			component.hasSubjectiveData = false
 			for (const group of component.groups)
 				for (const row of group.rows) {
 					if (row.sc) {
 						row.sc.score.q = row.sc.maxScore.q = { mode: 'continuous' }
-						promises.push(fillTermWrapper(row.sc.score, app.vocabApi))
-						promises.push(fillTermWrapper(row.sc.maxScore, app.vocabApi))
+						terms.push(row.sc.score)
+						terms.push(row.sc.maxScore)
 					}
 					if (row.poc) {
 						row.poc.score.q = row.poc.maxScore.q = { mode: 'continuous' }
-						promises.push(fillTermWrapper(row.poc.score, app.vocabApi))
-						promises.push(fillTermWrapper(row.poc.maxScore, app.vocabApi))
+						terms.push(row.poc.score)
+						terms.push(row.poc.maxScore)
 					}
 					if (row.sc && row.poc) component.hasSubjectiveData = true
 				}
 		}
-		await Promise.all(promises)
+		await fillTermWrappers(terms, app.vocabApi)
 		await loadFilterTerms(config, app)
 
 		return config

@@ -506,6 +506,28 @@ export class TermdbVocab extends Vocab {
 		return data.term
 	}
 
+	async getterms(ids, dslabel = null, genome = null) {
+		if (!ids) throw 'getterm: ids missing'
+		if (this && this.state && this.state.vocab) {
+			if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
+			if (this.state.vocab.genome) genome = this.state.vocab.genome
+		}
+		if (!dslabel) throw 'getterm: dslabel missing'
+		if (!genome) throw 'getterm: genome missing'
+
+		const body = {
+			genome,
+			dslabel,
+			ids,
+			embedder: window.location.hostname
+		}
+
+		const data = await dofetch3(`termdb/termbyids`, { body })
+		if (data.error) throw 'getterm: ' + data.error
+
+		return data.terms
+	}
+
 	graphable(term) {
 		if (!term) throw 'graphable: term is missing'
 		return isUsableTerm(term).has('plot')

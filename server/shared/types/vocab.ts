@@ -19,6 +19,7 @@ export type VocabApi = {
 	getCustomTermQLst: (f: Term) => any
 	getPercentile: (term_id: string | number, percentile_lst: number[], filter?: Filter) => any
 	getterm: (f: any) => Term
+	getterms: (f: any) => any
 	getTermdbConfig: () => any
 	getViolinPlotData: (f: any, params: any) => void
 	uncacheTermQ: (term: Term, q: any) => any
