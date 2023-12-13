@@ -2,7 +2,7 @@
 import { copy_term } from '#src/termdb.js'
 
 export const api: any = {
-	endpoint: 'termdb/termbyids',
+	endpoint: 'termdb/termsbyids',
 	methods: {
 		get: {
 			init,
