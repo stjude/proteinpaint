@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { fillTermWrapper } from '#termsetting'
+import { fillTermWrappers } from '#termsetting'
 import * as d3 from 'd3'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
@@ -270,13 +270,13 @@ export async function getPlotConfig(opts, app) {
 			profileRadarFacility: settings
 		}
 		const terms = config[opts.plot].terms
-		const promises = []
+		const tws = []
 		for (const row of terms) {
 			row.score.q = row.maxScore.q = { mode: 'continuous' }
-			promises.push(fillTermWrapper(row.score, app.vocabApi))
-			promises.push(fillTermWrapper(row.maxScore, app.vocabApi))
+			tws.push(row.score)
+			tws.push(row.maxScore)
 		}
-		await Promise.all(promises)
+		await fillTermWrappers(tws, app.vocabApi)
 		await loadFilterTerms(config, app)
 		return config
 	} catch (e) {
