@@ -477,12 +477,11 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('/termdb', { body })
 	}
 
-	async getTerms(ids, dslabel = null, genome = null) {
+	async getTerms(ids, _dslabel = null, _genome = null) {
 		if (!ids) throw 'getTerms: ids missing'
-		if (this && this.state && this.state.vocab) {
-			if (this.state.vocab.dslabel) dslabel = this.state.vocab.dslabel
-			if (this.state.vocab.genome) genome = this.state.vocab.genome
-		}
+		if (!Array.isArray(ids)) throw `invalid ids` // should use typescript
+		const dslabel = _dslabel || this.state.vocab?.dslabel // this.vocab is guaranteed to exist?
+		const genome = _genome || this.state.vocab?.genome // this.vocab is guaranteed to exist?
 		if (!dslabel) throw 'getTerms: dslabel missing'
 		if (!genome) throw 'getTerms: genome missing'
 
