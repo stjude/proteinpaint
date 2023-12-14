@@ -400,6 +400,22 @@ TdbStore.prototype.actions = {
 		}
 	},
 
+	change_group_color(action) {
+		console.log('action:', action)
+		const index = action.index
+		const newColor = action.newColor
+		if (this.state.nav.header_mode != 'hidden') {
+			this.state.groups[index].color = newColor
+			console.log('this.state.groups:', this.state.groups)
+		} else {
+			for (const plot of this.state.plots) {
+				if (plot?.groups) {
+					plot.groups[index].color = newColor
+				}
+			}
+		}
+	},
+
 	delete_group({ name }) {
 		if (this.state.nav.header_mode != 'hidden') {
 			const i = this.state.groups.findIndex(i => i.name == name)
