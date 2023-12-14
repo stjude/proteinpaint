@@ -509,7 +509,8 @@ class HierCluster extends Matrix {
 			}
 			// find the first term in the gene expression group
 			const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
-			const ty = t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy + (t.labelOffset || 0) + t.totalHtAdjustments
+			const ty =
+				t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
 			this.renderImage(
 				this.dom.leftDendrogram,
 				canvas,
