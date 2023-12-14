@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.36.0
 
 Features:
 - show # of samples and add link for samples for dendrogram list sample menu option
