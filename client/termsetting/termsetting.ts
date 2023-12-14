@@ -847,9 +847,13 @@ type DefaultQByTsHandler = {
 	snplst?: SnpsQ
 }
 
-export async function fillTwLst(twlst: TwLst, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler): void {
+export async function fillTwLst(
+	twlst: TwLst,
+	vocabApi: VocabApi,
+	defaultQByTsHandler?: DefaultQByTsHandler
+): Promise<void> {
 	const dictTerms = await getDictTerms(twlst, vocabApi)
-	const promises: Promise[] = []
+	const promises: Promise<TermWrapper>[] = []
 	for (const tw of twlst) {
 		if (!tw.term) tw.term = dictTerms[tw.id]
 		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
@@ -869,7 +873,7 @@ async function getDictTerms(twlst: TwLst, vocabApi: VocabApi) {
 	// ids only have dictionary terms
 	const terms = ids.length ? await vocabApi.getTerms(ids) : {}
 	for (const id of ids) {
-		if (!terms[id]) throw `missing dictionary term for id=${tw.id}`
+		if (!terms[id]) throw `missing dictionary term for id=${id}`
 	}
 	return terms
 }
@@ -878,7 +882,7 @@ export async function fillTermWrapper(
 	tw: TermWrapper,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
-): TermWrapper {
+): Promise<TermWrapper> {
 	tw.isAtomic = true
 	if (!tw.$id) tw.$id = get$id()
 	if (!tw.term) {
