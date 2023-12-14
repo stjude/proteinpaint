@@ -3,7 +3,7 @@ import { Menu } from '../dom/menu'
 import { select, BaseType } from 'd3-selection'
 import minimatch from 'minimatch'
 import { nonDictionaryTermTypes } from '../shared/termdb.usecase'
-import { Term, Q, TermWrapper } from '../shared/types/terms/tw'
+import { Term, Q, TermWrapper, TwLst } from '../shared/types/terms/tw'
 import {
 	DetermineQ,
 	VocabApi,
@@ -847,22 +847,46 @@ type DefaultQByTsHandler = {
 	snplst?: SnpsQ
 }
 
-export async function fillTermWrapper(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
-	tw.isAtomic = true
-	if (!tw.$id) tw.$id = get$id()
-
-	if (!tw.term) {
-		if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
-		// has .id but no .term, must be a dictionary term
-		// as non-dict term must have tw.term{}
-		tw.term = await vocabApi.getterm(tw.id)
+export async function fillTwLst(twlst: TwLst, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler): void {
+	const dictTerms = await getDictTerms(twlst, vocabApi)
+	const promises: Promise[] = []
+	for (const tw of twlst) {
+		if (!tw.term) {
+			if (!dictTerms[tw.id]) throw `empty term for id=${tw.id}`
+			tw.term = dictTerms[tw.id]
+		}
+		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
 	}
-	await initTermWrapper(tw, vocabApi, defaultQByTsHandler)
-	return tw as TermWrapper
+	await Promise.all(promises)
 }
 
-async function initTermWrapper(tw, vocabApi, defaultQByTsHandler) {
-	// tw.term{} is valid
+async function getDictTerms(twlst: TwLst, vocabApi: VocabApi) {
+	const ids: string[] = []
+	for (const tw of twlst) {
+		// non-dictionary tw would always have a tw.term, so only dictionary tw will be tracked here
+		if (!tw.term) {
+			if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
+			ids.push(tw.id)
+		}
+	}
+	// ids only have dictionary terms
+	return ids.length ? await vocabApi.getTerms(ids) : {}
+}
+
+export async function fillTermWrapper(
+	tw: TermWrapper,
+	vocabApi: VocabApi,
+	defaultQByTsHandler?: DefaultQByTsHandler
+): TermWrapper {
+	tw.isAtomic = true
+	if (!tw.$id) tw.$id = get$id()
+	if (!tw.term) {
+		const terms = await getDictTerms([tw], vocabApi)
+		if (!terms[tw.id]) throw `missing term with id=${tw.id}`
+		tw.term = terms[tw.id]
+	}
+
+	// tw.term{} is valid, now make sure that tw.id makes sense
 	if (tw.id == undefined || tw.id === '') {
 		// for dictionary term, tw.term.id must be valid
 		// for non dict term, it can still be missing
@@ -878,27 +902,7 @@ async function initTermWrapper(tw, vocabApi, defaultQByTsHandler) {
 	await call_fillTW(tw, vocabApi, defaultQByTsHandler)
 
 	mayValidateQmode(tw)
-}
-
-export async function fillTwLst(twlst: TermWrapper[], vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
-	const ids: Array<string | undefined> = []
-	const id2term = {}
-	for (const tw of twlst) {
-		if (!tw.term) {
-			if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
-			ids.push(tw.id)
-		} else id2term[tw.term.id] = tw.term
-	}
-	const missingTerms = await vocabApi.getTerms(ids)
-	for (const id in missingTerms) id2term[id] = missingTerms[id]
-	const promises: any[] = []
-	for (const tw of twlst) {
-		tw.term = id2term[tw.id || tw.term?.id]
-		tw.isAtomic = true
-		if (!tw.$id) tw.$id = get$id()
-		promises.push(await initTermWrapper(tw, vocabApi, defaultQByTsHandler))
-	}
-	await Promise.all(promises)
+	return tw
 }
 
 async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {

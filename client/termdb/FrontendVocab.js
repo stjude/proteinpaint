@@ -22,10 +22,7 @@ export class FrontendVocab extends Vocab {
 	}
 
 	getTermChildren(term, cohortValuelst) {
-		const cohortValuestr = (cohortValuelst || [])
-			.slice()
-			.sort()
-			.join(',')
+		const cohortValuestr = (cohortValuelst || []).slice().sort().join(',')
 		// TODO: handle treeFilter
 		const parent_id = term.__tree_isroot ? null : term.id
 		return {
@@ -306,6 +303,17 @@ export class FrontendVocab extends Vocab {
 				{ id: 'sd', label: 'Standard deviation', value: roundValue(sd, 2) }
 			]
 		}
+	}
+
+	async getTerms(ids, _dslabel = null, _genome = null) {
+		if (!ids) throw 'getTerms: ids missing'
+		if (!Array.isArray(ids)) throw `invalid ids` // should use typescript
+		const terms = {}
+		for (const id of ids) {
+			const term = this.vocab.terms.find(t => t.id === id)
+			if (term) terms[id] = term
+		}
+		return terms
 	}
 
 	async getterm(termid) {
