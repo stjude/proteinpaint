@@ -21,6 +21,22 @@ export function computeStateDiff() {
 	const c = this.state.config.settings.matrix
 	const phc = this.prevState.config.settings.hierCluster || {}
 	const chc = this.state.config.settings.hierCluster || {}
+
+	// only apply to copy of termgroups, not the original one
+	if (prevState?.config?.termgroups) prevState.config.termgroups[0].lst.sort((a, b) => (a.$id < b.$id ? -1 : 1))
+	currState.config.termgroups[0].lst.sort((a, b) => (a.$id < b.$id ? -1 : 1))
+
+	// for dictionary terms from external APIs, the term details may not be fully available at server restart,
+	// only the term.id is imporatant for comparison, the other term details that are filled should not matter
+	for (const grps of [prevState.config?.termgroups?.slice(1), currState.config.termgroups.slice(1)]) {
+		if (!grps) continue
+		for (const grp of grps) {
+			grp.lst.forEach(tw => {
+				tw.term = { id: tw.term.id }
+			})
+		}
+	}
+
 	this.stateDiff = {
 		// state diff that should trigger a different server request
 		nonsettings: !deepEqual(prevState, currState),
