@@ -110,7 +110,7 @@ if [[ "$PKGPATH" != "" ]]; then
 		echo "reusing tmppack: to avoid reuse, run 'rm -rf tmppack'"
 	fi
 fi
-exit 1
+
 ###############
 # Docker build
 ###############
