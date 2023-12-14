@@ -2,7 +2,6 @@ const fs = require('fs')
 const spawnSync = require('child_process').spawnSync
 const path = require('path')
 const serverconfigFile = path.join(__dirname, './serverconfig.json')
-
 if (!fs.existsSync(serverconfigFile)) {
 	throw `missing serverconfig.json: did you forget to mount?`
 }
@@ -53,5 +52,7 @@ if (serverconfig.releaseTag) {
 if (!serverconfig.URL) serverconfig.URL = serverconfig.url || '.'
 console.log(`generating public/bin for ${serverconfig.URL}`)
 spawnSync('npx', ['proteinpaint-front', serverconfig.URL], { encoding: 'utf-8' })
+// since the npx command generated non-root owned js files inside the public/bin folder , we need to change the owner of the folder and files to root
+spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
 
 require('@sjcrh/proteinpaint-server')
