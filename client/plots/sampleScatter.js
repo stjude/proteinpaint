@@ -151,6 +151,7 @@ class Scatter {
 			if (data.isLast) this.createChart(key, data, i)
 			else this.createChart(key, data, 0)
 		}
+		this.initRanges()
 		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
 		await this.setControls()
 		await this.processData()
@@ -167,6 +168,62 @@ class Scatter {
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
+	}
+
+	initRanges() {
+		if (this.charts.length > 1) {
+			const samples = []
+			for (const chart of this.charts) samples.push(...chart.data.samples)
+			const s0 = samples[0] //First sample to start reduce comparisons
+			const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = samples.reduce(
+				(s, d) => [
+					d.x < s[0] ? d.x : s[0],
+					d.x > s[1] ? d.x : s[1],
+					d.y < s[2] ? d.y : s[2],
+					d.y > s[3] ? d.y : s[3],
+					d.z < s[4] ? d.z : s[4],
+					d.z > s[5] ? d.z : s[5],
+					'scale' in d ? (d.scale < s[6] ? d.scale : s[6]) : Number.POSITIVE_INFINITY,
+					'scale' in d ? (d.scale > s[7] ? d.scale : s[7]) : Number.NEGATIVE_INFINITY
+				],
+				[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
+			)
+			for (const chart of this.charts) {
+				chart.xMin = xMin
+				chart.xMax = xMax
+				chart.yMin = yMin
+				chart.yMax = yMax
+				chart.zMin = zMin
+				chart.zMax = zMax
+				chart.scaleMin = scaleMin
+				chart.scaleMax = scaleMax
+			}
+		} else
+			for (const chart of this.charts) {
+				if (chart.data.samples.length == 0) return
+				const s0 = chart.data.samples[0] //First sample to start reduce comparisons
+				const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = chart.data.samples.reduce(
+					(s, d) => [
+						d.x < s[0] ? d.x : s[0],
+						d.x > s[1] ? d.x : s[1],
+						d.y < s[2] ? d.y : s[2],
+						d.y > s[3] ? d.y : s[3],
+						d.z < s[4] ? d.z : s[4],
+						d.z > s[5] ? d.z : s[5],
+						'scale' in d ? (d.scale < s[6] ? d.scale : s[6]) : Number.POSITIVE_INFINITY,
+						'scale' in d ? (d.scale > s[7] ? d.scale : s[7]) : Number.NEGATIVE_INFINITY
+					],
+					[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
+				)
+				chart.xMin = xMin
+				chart.xMax = xMax
+				chart.yMin = yMin
+				chart.yMax = yMax
+				chart.zMin = zMin
+				chart.zMax = zMax
+				chart.scaleMin = scaleMin
+				chart.scaleMax = scaleMax
+			}
 	}
 
 	async setControls() {
