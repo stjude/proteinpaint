@@ -400,7 +400,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	change_group_color(action) {
+	change_color_group(action) {
 		console.log('action:', action)
 		const index = action.index
 		const newColor = action.newColor

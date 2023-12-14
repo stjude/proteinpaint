@@ -71,6 +71,7 @@ class MassGroups {
 	async groups2samplelst(groups) {
 		const samplelstGroups = []
 		for (const g of groups) {
+			console.log(g)
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
 			const items = []
 			for (const sample of samples) {
@@ -341,7 +342,7 @@ async function updateUI(self) {
 				label: 'COLOR',
 				editCallback: async (i, cell) => {
 					await self.app.dispatch({
-						type: 'change_group_color',
+						type: 'change_color_group',
 						index: i,
 						newColor: cell.color
 					})
