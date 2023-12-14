@@ -1,6 +1,7 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
 import { SampleLstTermSettingInstance, PillData, SampleLstTW } from '#shared/types/index'
+import { rgb } from 'd3'
 
 export function getHandler(self: SampleLstTermSettingInstance) {
 	return {
@@ -100,7 +101,7 @@ export function getSamplelstTW(groups: any, name = 'groups', notIn = true) {
 	}
 	if (groups.length == 1 && notIn) {
 		const name2 = 'Not in ' + groups[0].name
-		values[name2] = { key: name2, label: name2, color: groups[0].color }
+		values[name2] = { key: name2, label: name2, color: '#aaa' }
 		qgroups.push({
 			name: name2,
 			in: false,
