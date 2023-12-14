@@ -1,2 +1,1 @@
-fixes:
-- fix hierCluster gene dendrogram misaligned upon panning
+

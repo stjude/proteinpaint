@@ -10,6 +10,7 @@ Features:
 Fixes:
 - do not re-parse the already parsed result from cachedFetch
 - Detect failure on GDC data caching and abort launch
+- fix hierCluster gene dendrogram misaligned upon panning
 
 
 ## 2.35.1
