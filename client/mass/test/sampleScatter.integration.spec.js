@@ -378,7 +378,7 @@ tape('Invalid colorTW.id', async function (test) {
 		const errorbar = await detectGte({ elem: holder.node(), selector: '.sja_errorbar' })
 		test.equal(errorbar.length, 1, 'Should display only one error message.')
 		test.ok(
-			errorbar[0].innerText.includes(`no term found for ${id}`),
+			errorbar[0].innerText.includes(`missing dictionary term for id=${id}`),
 			`Should display, "Error: no term found for ${id} [sampleScatter getPlotConfig()]".`
 		)
 	} catch (e) {
