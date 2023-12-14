@@ -69,7 +69,7 @@ export async function init(arg, holder, genomes) {
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
-		const genes = await getGenes(arg, arg.filter0, settings.hierCluster)
+		const genes = await getGenes(arg, arg.filter0, settings.hierCluster, holder)
 
 		const opts = {
 			holder,
@@ -135,12 +135,20 @@ arg={}
 filter0={}
 config{}
 */
-async function getGenes(arg, filter0, config) {
+async function getGenes(arg, filter0, config, holder) {
 	if (arg.genes) {
 		// genes are predefined
 		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw 'arg.genes[] is not non-empty array'
 		return await makeGeneTwlst(arg.genes)
 	}
+
+	const wait = holder.append('div').style('margin', '20px')
+	wait.append('div').text('Loading genes that are top variably expressed in current cohort...')
+	// can delete cgc line when new api is online
+	wait.append('div').style('font-size', '.8em').html(`
+	Genes are selected from 738 Cancer Gene Census genes.<br>
+	Only up to 1000 cases with gene expression data will be used to select genes.`)
+	// hardcode of 1000 is in gdcGetCasesWithExressionDataFromCohort()
 
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
@@ -149,10 +157,17 @@ async function getGenes(arg, filter0, config) {
 		maxGenes: config.maxGenes
 	}
 	if (filter0) body.filter0 = filter0 // to avoid causing a "null" parameter value for backend
-	const data = await dofetch3('termdb/topVariablyExpressedGenes', { body })
-	if (data.error) throw data.error
-	if (!data.genes || data.genes.length == 0) throw 'no top genes found using the cohort filter'
-	return await makeGeneTwlst(data.genes)
+
+	try {
+		const data = await dofetch3('termdb/topVariablyExpressedGenes', { body })
+		if (data.error) throw data.error
+		if (!data.genes || data.genes.length == 0) throw 'no top genes found using the cohort filter'
+		wait.remove()
+		return await makeGeneTwlst(data.genes)
+	} catch (e) {
+		wait.remove()
+		throw e
+	}
 }
 async function makeGeneTwlst(lst) {
 	const tws = []

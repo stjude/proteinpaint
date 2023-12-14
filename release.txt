@@ -1,1 +1,2 @@
-
+Fixes:
+- Show a message about loading top gene in GDC hierCluster app
