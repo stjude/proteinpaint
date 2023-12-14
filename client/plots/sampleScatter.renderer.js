@@ -40,43 +40,23 @@ export function setRenderers(self) {
 	self.initAxes = function (chart) {
 		if (chart.data.samples.length == 0) return
 
-		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = chart.data.samples.reduce(
-			(s, d) => [
-				d.x < s[0] ? d.x : s[0],
-				d.x > s[1] ? d.x : s[1],
-				d.y < s[2] ? d.y : s[2],
-				d.y > s[3] ? d.y : s[3],
-				d.z < s[4] ? d.z : s[4],
-				d.z > s[5] ? d.z : s[5],
-				'scale' in d ? (d.scale < s[6] ? d.scale : s[6]) : Number.POSITIVE_INFINITY,
-				'scale' in d ? (d.scale > s[7] ? d.scale : s[7]) : Number.NEGATIVE_INFINITY
-			],
-			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
-		)
-		chart.scaleMin = scaleMin
-		chart.scaleMax = scaleMax
-
 		chart.xAxisScale = d3Linear()
-			.domain([xMin, xMax])
+			.domain([chart.xMin, chart.xMax])
 			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
 
 		chart.axisBottom = axisBottom(chart.xAxisScale)
 		chart.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
+			.domain([chart.yMax, chart.yMin])
 			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
 
-		chart.zAxisScale = d3Linear().domain([zMin, zMax]).range([0, self.settings.svgd])
-		chart.xMin = xMin
-		chart.xMax = xMax
-		chart.yMin = yMin
-		chart.yMax = yMax
-		chart.xScaleMin = chart.xAxisScale(xMin)
-		chart.xScaleMax = chart.xAxisScale(xMax)
-		chart.yScaleMin = chart.xAxisScale(yMin)
-		chart.yScaleMax = chart.yAxisScale(yMax)
-		chart.zScaleMin = chart.xAxisScale(zMin)
-		chart.zScaleMax = chart.zAxisScale(zMax)
+		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
+
+		chart.xScaleMin = chart.xAxisScale(chart.xMin)
+		chart.xScaleMax = chart.xAxisScale(chart.xMax)
+		chart.yScaleMin = chart.xAxisScale(chart.yMin)
+		chart.yScaleMax = chart.yAxisScale(chart.yMax)
+		chart.zScaleMin = chart.xAxisScale(chart.zMin)
+		chart.zScaleMax = chart.zAxisScale(chart.zMax)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		const gradientColor = self.config.settings.sampleScatter.defaultColor
