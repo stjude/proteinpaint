@@ -1,1 +1,2 @@
 
+feat: allow custom colors to be specified for custom groups;
