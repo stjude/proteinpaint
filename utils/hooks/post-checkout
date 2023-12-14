@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e                                                                           
+
+# this is a file checkout – do nothing
+if [ "$3" == "0" ]; then exit; fi
+
+BRANCH_NAME=$(git symbolic-ref --short -q HEAD)
+NUM_CHECKOUTS=`git reflog --date=local | grep -o ${BRANCH_NAME} | wc -l`
+
+#if the refs of the previous and new heads are the same 
+#AND the number of checkouts equals one, a new branch has been created
+if [ "$1" == "$2"  ] && [ ${NUM_CHECKOUTS} -eq 1 ]; then
+  if [[ -s release.txt ]]; then
+		node build/setReleaseText.js --empty > release.txt
+	fi
+fi

@@ -5,9 +5,11 @@ const DevOpsTitle = 'DevOps:' // engineering tasks, includes build, CI, refactor
 const BreakTitle = 'Breaking Change:' // anything that changes the runproteinpaint() or server API; TODO: how about new system deps or support files?
 const DocsTitle = 'Documentation:' // includes chores, this change category should not trigger a release by itself?
 
-const titles = [BreakTitle, GenTitle, FeatTitle, FixTitle, DevOpsTitle, DocsTitle]
+// These are ordered as they should appear in the changelog release
+const titles = [FeatTitle, FixTitle, GenTitle, DevOpsTitle, DocsTitle, BreakTitle]
 
 module.exports = {
+	titles,
 	keywordsToTitle: {
 		breaking: BreakTitle,
 		general: GenTitle,

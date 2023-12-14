@@ -5,6 +5,7 @@ HOOKS=$(git rev-parse --git-path hooks)
 mv -f $HOOKS/pre-commit $HOOKS/pre-commit-bkup
 cd $HOOKS
 ls $PPDIR/utils/hooks/
+ln -s $PPDIR/utils/hooks/post-checkout .
 ln -s $PPDIR/utils/hooks/pre-commit .
 ln -s $PPDIR/utils/hooks/commit-msg .
 ln -s $PPDIR/utils/hooks/post-commit .
