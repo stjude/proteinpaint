@@ -497,7 +497,7 @@ class SampleView {
 				)
 			}
 		}
-		if (state.termdbConfig.queries.singleSampleGenomeQuantification) {
+		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
 				let div = this.dom.contentDiv.append('div').style('display', 'table-row')
 				for (const sample of samples) {
