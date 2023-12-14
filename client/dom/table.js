@@ -15,7 +15,8 @@ columns = [ {label} ]
 	each element is an object describing a column
 	label: str, the text to show as header of a column
 	width: str, column width
-	editCallback: function, optional. Makes this column editable  and provides the callback to notify the change to the parent. It is only allowed for cells with a value field
+	editCallback: function, optional. Makes this column editable  and provides the callback to notify the change to the parent. 
+	It is only allowed for cells with a value or a color field
 
 rows = [ [] ]
 	each element is an array of cells for a row, with array length must matching columns.length
@@ -307,7 +308,18 @@ export function renderTable({
 					.attr('target', '_blank')
 			} else if (cell.html) td.html(cell.html)
 			else if ('value' in cell) td.text(cell.value)
-			else if (cell.color) td.append('input').attr('type', 'color').attr('value', cell.color).property('disabled', true)
+			else if (cell.color) {
+				const input = td
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', cell.color)
+					.property('disabled', cell.disabled ? true : false)
+					.on('change', e => {
+						const color = input.node().value
+						cell.color = color
+						if (column.editCallback) column.editCallback(i, cell)
+					})
+			}
 		}
 	}
 

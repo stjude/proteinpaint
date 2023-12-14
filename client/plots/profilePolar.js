@@ -110,7 +110,7 @@ class profilePolar extends profilePlot {
 			d.i = i
 			const color = d.score.term.color
 			const percentage = this.getPercentage(d)
-			rows.push([{ color }, { value: name }, { value: percentage }])
+			rows.push([{ color, disabled: true }, { value: name }, { value: percentage }])
 			const path = polarG
 				.append('g')
 				.append('path')
