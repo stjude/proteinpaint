@@ -39,6 +39,7 @@ class MassGroups {
 		}
 		initUI(this)
 		this.tip = new Menu({ padding: '0px' })
+		this.colorScale = getColors(5)
 	}
 
 	getState(appState) {
@@ -280,24 +281,23 @@ async function updateUI(self) {
 		termdbConfig: self.state.termdbConfig,
 		callback: f => {
 			// create new group
-			const name = 'New group'
+			let name = 'New group'
 			let i = 0
 			while (1) {
 				const name2 = name + (i == 0 ? '' : ' ' + i)
 				if (!groups.find(g => g.name == name2)) break
 				i++
 			}
+			name = name + (i == 0 ? '' : ' ' + i)
 			const newGroup = {
-				name: name + (i == 0 ? '' : ' ' + i),
-				filter: f
+				name,
+				filter: f,
+				color: rgb(self.colorScale(name)).formatHex()
 			}
 			groups.push(newGroup)
 			// assign colors
-			const colorScale = getColors(groups.length)
-			for (const group of groups) {
-				group.color = rgb(colorScale(group.name)).formatHex()
-			}
-			self.app.dispatch({
+
+			newGroup.color = self.app.dispatch({
 				type: 'app_refresh',
 				state: { groups }
 			})
