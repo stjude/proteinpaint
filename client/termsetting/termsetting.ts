@@ -851,10 +851,7 @@ export async function fillTwLst(twlst: TwLst, vocabApi: VocabApi, defaultQByTsHa
 	const dictTerms = await getDictTerms(twlst, vocabApi)
 	const promises: Promise[] = []
 	for (const tw of twlst) {
-		if (!tw.term) {
-			if (!dictTerms[tw.id]) throw `empty term for id=${tw.id}`
-			tw.term = dictTerms[tw.id]
-		}
+		if (!tw.term) tw.term = dictTerms[tw.id]
 		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
 	}
 	await Promise.all(promises)
@@ -870,7 +867,11 @@ async function getDictTerms(twlst: TwLst, vocabApi: VocabApi) {
 		}
 	}
 	// ids only have dictionary terms
-	return ids.length ? await vocabApi.getTerms(ids) : {}
+	const terms = ids.length ? await vocabApi.getTerms(ids) : {}
+	for (const id of ids) {
+		if (!terms[id]) throw `missing dictionary term for id=${tw.id}`
+	}
+	return terms
 }
 
 export async function fillTermWrapper(
@@ -882,7 +883,6 @@ export async function fillTermWrapper(
 	if (!tw.$id) tw.$id = get$id()
 	if (!tw.term) {
 		const terms = await getDictTerms([tw], vocabApi)
-		if (!terms[tw.id]) throw `missing term with id=${tw.id}`
 		tw.term = terms[tw.id]
 	}
 
