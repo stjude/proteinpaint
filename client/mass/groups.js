@@ -7,6 +7,8 @@ import { renderTable } from '#dom/table'
 import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
 import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
+import { getColors } from '#shared/common'
+import { rgb } from 'd3-color'
 
 /*
 this
@@ -78,7 +80,7 @@ class MassGroups {
 				}
 				items.push(item)
 			}
-			samplelstGroups.push({ name: g.name, items })
+			samplelstGroups.push({ name: g.name, items, color: g.color })
 		}
 
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
@@ -290,6 +292,11 @@ async function updateUI(self) {
 				filter: f
 			}
 			groups.push(newGroup)
+			// assign colors
+			const colorScale = getColors(groups.length)
+			for (const group of groups) {
+				group.color = rgb(colorScale(group.name)).formatHex()
+			}
 			self.app.dispatch({
 				type: 'app_refresh',
 				state: { groups }
@@ -330,6 +337,16 @@ async function updateUI(self) {
 						})
 				}
 			},
+			{
+				label: 'COLOR',
+				editCallback: async (i, cell) => {
+					await self.app.dispatch({
+						type: 'change_group_color',
+						index: i,
+						newColor: cell.color
+					})
+				}
+			},
 			{ label: '#SAMPLE' },
 			{ label: 'FILTER' }
 		],
@@ -347,6 +364,7 @@ async function updateUI(self) {
 	for (const g of groups) {
 		tableArg.rows.push([
 			{ value: g.name }, // to allow click to show <input>
+			{ color: g.color },
 			{ value: 'n=' + (await self.app.vocabApi.getFilteredSampleCount(g.filter)) },
 			{} // blank cell to show filter ui
 		])
@@ -378,7 +396,7 @@ async function updateUI(self) {
 	for (const [i, row] of tableArg.rows.entries()) {
 		const group = groups[i]
 		filterInit({
-			holder: row[2].__td,
+			holder: row[3].__td,
 			vocab: self.app.opts.state.vocab,
 			termdbConfig: self.state.termdbConfig,
 			callback: f => {
@@ -406,6 +424,8 @@ async function updateUI(self) {
 async function clickLaunchBtn(self) {
 	// click button to create samplelst tw
 	// collect groups in use
+	console.log('self.state.groups:', self.state.groups)
+
 	const groups = []
 	for (const i of self.selectedGroupsIdx) {
 		const g = self.state.groups[i]
@@ -419,6 +439,8 @@ async function clickLaunchBtn(self) {
 	// 1 or more groups are in use, generate samplelst tw and save it to state
 	const tw = await self.groups2samplelst(groups)
 	tw.term.name = name
+
+	console.log('tw:', tw)
 
 	self.app.vocabApi.addCustomTerm({ name, tw })
 
@@ -449,7 +471,8 @@ function rebaseGroupFilter(s) {
 		f.join = f.lst.length > 1 ? 'and' : ''
 		const g2 = {
 			name: g.name,
-			filter: f
+			filter: f,
+			color: g.color
 		}
 		groups.push(g2)
 	}
