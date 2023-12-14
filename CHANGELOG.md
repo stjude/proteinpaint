@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Show a message about loading top gene in GDC hierCluster app
+
 
 ## 2.36.0
 
