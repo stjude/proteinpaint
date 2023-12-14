@@ -71,7 +71,6 @@ class MassGroups {
 	async groups2samplelst(groups) {
 		const samplelstGroups = []
 		for (const g of groups) {
-			console.log(g)
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
 			const items = []
 			for (const sample of samples) {
@@ -425,8 +424,6 @@ async function updateUI(self) {
 async function clickLaunchBtn(self) {
 	// click button to create samplelst tw
 	// collect groups in use
-	console.log('self.state.groups:', self.state.groups)
-
 	const groups = []
 	for (const i of self.selectedGroupsIdx) {
 		const g = self.state.groups[i]
@@ -440,8 +437,6 @@ async function clickLaunchBtn(self) {
 	// 1 or more groups are in use, generate samplelst tw and save it to state
 	const tw = await self.groups2samplelst(groups)
 	tw.term.name = name
-
-	console.log('tw:', tw)
 
 	self.app.vocabApi.addCustomTerm({ name, tw })
 
