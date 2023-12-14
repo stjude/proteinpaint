@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- custom colors can now be assigned to custom groups
+
 Fixes:
 - Show a message about loading top gene in GDC hierCluster app
 
