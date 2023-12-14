@@ -26,7 +26,6 @@ SERVERTGZFILE=""
 SERVERTGZ=""
 FRONTTGZ=""
 PKGPATH=""
-KEEP=""
 
 #################
 # PROCESSED ARGS
@@ -97,15 +96,21 @@ fi
 # Handle -z option
 #########################
 
-if [[ "$PKGPATH" == "" ]]; then
-  rm -f tmppack/* 
-elif [[ -d tmppack ]] ; then
-	echo "reusing tmppack: to avoid reuse, run 'rm -rf tmppack'"
-else
+if [[ ! -d ./tmppack ]]; then
+	# always has to have a tmppack dir because the Dockerfile may require it to COPY
 	mkdir tmppack
-	./pack.sh $PKGPATH
 fi
 
+if [[ "$PKGPATH" != "" ]]; then
+  if [[ "$(find ./tmppack -type f -iname "sjcrh*.tgz")" == "" ]] ; then
+		echo "packing tarballs ..."
+		./pack.sh $PKGPATH
+	else
+		# option to reuse tarballs in dev, if certain updated tarballs are not needed
+		echo "reusing tmppack: to avoid reuse, run 'rm -rf tmppack'"
+	fi
+fi
+exit 1
 ###############
 # Docker build
 ###############
