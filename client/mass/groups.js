@@ -295,9 +295,7 @@ async function updateUI(self) {
 				color: rgb(self.colorScale(name)).formatHex()
 			}
 			groups.push(newGroup)
-			// assign colors
-
-			newGroup.color = self.app.dispatch({
+			self.app.dispatch({
 				type: 'app_refresh',
 				state: { groups }
 			})
