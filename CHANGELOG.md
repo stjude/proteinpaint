@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.37.0
 
 Features:
 - custom colors can now be assigned to custom groups
