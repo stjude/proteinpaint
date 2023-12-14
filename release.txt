@@ -1,2 +1,2 @@
-
-feat: allow custom colors to be specified for custom groups;
+Features
+- custom colors can now be assigned to custom groups
