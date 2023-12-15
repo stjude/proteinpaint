@@ -94,7 +94,7 @@ export function setLabelsAndScales() {
 				if (this.config.divideBy) sample.grp.label += ` (${sample.grp.lst.length})`
 				processedLabels.sampleGrpByName[name] = sample.grp.label
 			}
-			const sampleName = sample.row.sampleName || sample.row.sample || ''
+			const sampleName = sample.row._ref_.label || ''
 			sample.label =
 				sampleName.length < s.collabelmaxchars ? sampleName : sampleName.slice(0, s.collabelmaxchars) + '...'
 

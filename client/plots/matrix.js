@@ -243,7 +243,7 @@ export class Matrix {
 	}
 
 	sampleLabel(s) {
-		return s.label || s.row.label || s.row.sampleName || s.row.sample || ''
+		return s.label || s.row._ref_.label || ''
 	}
 
 	sampleGrpKey(s) {

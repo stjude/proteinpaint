@@ -116,11 +116,8 @@ function validateSettings(s) {
 }
 
 function sortSamplesByName(a, b) {
-	if (a.sampleName && b.sampleName) {
-		return a.sampleName < b.sampleName ? -1 : a.sampleName > b.sampleName ? 1 : 0
-	}
-	if (a._SAMPLENAME_ && b._SAMPLENAME_) {
-		return a._SAMPLENAME_ < b._SAMPLENAME_ ? -1 : a._SAMPLENAME_ > b._SAMPLENAME_ ? 1 : 0
+	if (a._ref_.label && b._ref_.label) {
+		return a._ref_.label < b._ref_.label ? -1 : a._ref_.label > b._ref_.label ? 1 : 0
 	}
 	if (!a.sample && !b.sample && a.row.sample) {
 		return a.row.sample < b.row.sample ? -1 : a.row.sample > b.row.sample ? 1 : 0

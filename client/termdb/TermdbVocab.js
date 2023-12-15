@@ -756,13 +756,27 @@ export class TermdbVocab extends Vocab {
 			promises.push(
 				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
+					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 					const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 
 					for (const sampleId in data.samples) {
 						samplesToShow.add(sampleId)
 						const sample = data.samples[sampleId]
 						if (!(sampleId in samples)) {
-							const s = { sample: sampleId }
+							// normalize the expected data shape
+							if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
+							if (typeof data.refs.bySampleId[sampleId] == 'string')
+								data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
+
+							const _ref_ = data.refs.bySampleId[sampleId]
+							// assign default sample ref values here
+							// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
+							if (!_ref_.label) _ref_.label = sampleId
+							const s = {
+								sample: sampleId,
+								// must reserve _ref -> should not be used as a term.id or tw.$id
+								_ref_
+							}
 							if (this.termdbConfig.additionalSampleAttributes) {
 								for (const k of this.termdbConfig.additionalSampleAttributes) {
 									if (k in data.samples[sampleId]) {
@@ -773,18 +787,7 @@ export class TermdbVocab extends Vocab {
 							samples[sampleId] = s
 						}
 						const row = samples[sampleId]
-						if (idn in sample) {
-							row[tw.$id] = sample[idn]
-							if (!row.sampleName) {
-								// only assign this value once for each sample
-								if (data.refs.bySampleId?.[sampleId]) row.sampleName = data.refs.bySampleId[sampleId]
-								else if ('sampleName' in sample) row.sampleName = sample.sampleName
-								else {
-									const v = sample[idn].values?.find(v => v._SAMPLENAME_)
-									if (v?._SAMPLENAME_) row.sampleName = v._SAMPLENAME_
-								}
-							}
-						}
+						if (idn in sample) row[tw.$id] = sample[idn]
 					}
 
 					for (const sampleId in data.refs.bySampleId) {
