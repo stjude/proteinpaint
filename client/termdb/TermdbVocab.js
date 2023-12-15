@@ -668,14 +668,17 @@ export class TermdbVocab extends Vocab {
     Expected server-data response
     {}
     .samples{}
-        .sampleId{}
-            .sample: the sample ID
-            .$id: {key, value || values[]}	
+        [sampleId]{}
+            sample: the sample ID
+            [$id]: {key, value || values[]}	
 	
     .refs{}
         .byTermId{}
-            .$id: {bins, etc}   metadata for processed terms, useful
+            [$id]: {bins, etc}   metadata for processed terms, useful
                                                     for specifying value order, colors, etc.
+		.bySampleId{}
+			[sampleId]: alternative sample name
+			available sample name(s) mapped to each sampleId; if none then UI will just display sampleId
 
     !!! NOTE !!!
     May fill in following attributes on term object if missing or met conditions:
@@ -689,7 +692,7 @@ export class TermdbVocab extends Vocab {
 		const headers = this.mayGetAuthHeaders('termdb')
 		// unlike scatter and violin, the matrix plot will NOT display anything
 		// if sample names are not allowed to be displayed
-		// TODO: may allow a request to proceed, but not display sampleNames???
+		// TODO: may allow a request to proceed, but not display sampleNames??? Answer: showing multiple term values aligned for a sample can be considered identifying. thus simply disable matrix plot if sample name is now allowed to show
 		if (!headers) return
 		const filter = getNormalRoot(opts.filter)
 		const samples = {}
@@ -698,15 +701,17 @@ export class TermdbVocab extends Vocab {
 		const samplesToShow = new Set()
 		const termsToUpdate = opts.terms.slice()
 
-		/************** quick fix
-        need list of gene names of current geneVariant terms,
-        so that a dictionary term will only retrieve samples mutated on this gene list, rather than whole cohort (e.g. gdc)
-        NOTE: sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
+		/************** tricky
+        need list of gene names of current geneVariant terms from opts.terms[]
+		assumption is that if this array is not empty,
+        request for a dictionary term also from opts.terms[] will only retrieve samples mutated on this gene list, rather than whole cohort
+		if currentGeneNames[] is empty, then dict term data return will not be restricted
+		XXX (not working yet) this is general and not specific to gdc
         */
 		const currentGeneNames = opts.terms
 			.filter(tw => tw.term.type === 'geneVariant')
 			.map(tw => tw.term.name)
-			.sort()
+			.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
@@ -735,6 +740,9 @@ export class TermdbVocab extends Vocab {
 			// do this via some settings via this.termdbConfig, replace hardcoded logic
 			/////////////////////////////////////////
 			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length) {
+				/* term.id is present meaning term is dictionary term
+				and there are gene terms, add this to limit to mutated cases
+				*/
 				init.body.currentGeneNames = currentGeneNames
 			}
 
