@@ -278,7 +278,35 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) continue // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
 		const tw = twByTermId[term_id]
-		samples[sample][term_id] = { key, value }
+		// this assumes unique term key/value for a given sample
+		// samples[sample][term_id] = { key, value }
+
+		if (!samples[sample][term_id]) samples[sample][term_id] = { key, value }
+		else {
+			// in case a sample can have multiple value for a given term,
+			// or a sample can belong to multiple groups, simply concatenate
+			if (!samples[sample][term_id].values) samples[sample][term_id].values = [samples[sample][term_id]]
+			samples[sample][term_id].values.push({ key, value })
+		}
+	}
+
+	for (const sample in samples) {
+		for (const term_id in samples[sample]) {
+			const values = samples[sample][term_id].values
+			if (!values) continue
+			// Create a new group for samples that belong to multiple groups
+			// The new group name will be a combination of all the group names
+			// that apply to a sample, sorted alphanumerically
+			// TODO: may simplify to create only one extra group to catch
+			// all multi-group samples, regardless of the combination of group names, etc
+			const key = values
+				.sort()
+				.map(v => v.key)
+				.sort()
+				.join(', ')
+			samples[sample][term_id] = { key, val: values.length }
+			delete samples[sample][term_id].values
+		}
 	}
 
 	return { samples, refs }
