@@ -59,14 +59,14 @@ export function setInteractivity(self) {
 			.style('display', '')
 
 		if (d.term.type != 'geneVariant') {
-			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
+			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label}</td></tr>`)
 			rows.push(
 				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill}'> ${
 					d.convertedValueLabel || d.label
 				}</td></tr>`
 			)
 		} else if (d.term.type == 'geneVariant' && d.value) {
-			rows.push(`<tr><td>${l.Sample}:</td><td>${d._SAMPLENAME_ || d.value._SAMPLENAME_ || d.value.sample}</td></tr>`)
+			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label || d.value.sample}</td></tr>`)
 			rows.push(`<tr><td>Gene:</td><td>${d.term.name}</td></tr>`)
 
 			const siblingCellLabels = {}
@@ -173,7 +173,7 @@ export function setInteractivity(self) {
 		const s = self.config.settings.matrix
 		// preliminary fix: assign string sample name for "sample_id", which is used by data queries below
 		const sample = {
-			sample_id: sampleData._SAMPLENAME_ || sampleData.row.sampleName || sampleData.row.sample
+			sample_id: sampleData.row._ref_.label
 		}
 		//when clicking a cell in SV, CNV, mutation panels
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
@@ -186,7 +186,7 @@ export function setInteractivity(self) {
 			if (templates.sample) {
 				// quick fix, should have a more reliable namekey that is guaranteed to have the UUID for the URL construction
 				// maybe from refs.bySampleId, filled in by termdb.getSampleAlias in the backend
-				const name = sampleData[templates.sample.namekey] || sampleData.row.sample || sampleData._SAMPLENAME_
+				const name = sampleData[templates.sample.namekey] || sampleData.row._ref_.label
 				if (!templates.sample.regex /*|| name has a matching pattern */) {
 					const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
 
@@ -195,7 +195,7 @@ export function setInteractivity(self) {
 						.append('a')
 						.attr('href', `${templates.sample.base}${name}`)
 						.attr('target', '_blank')
-						.html(`${sampleData._SAMPLENAME_} ${svgIcons.externalLink}`)
+						.html(`${sampleData.row._ref_.label} ${svgIcons.externalLink}`)
 
 					link.on('click', async event => {
 						menuDiv.remove()

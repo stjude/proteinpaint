@@ -33,7 +33,6 @@ export function getSerieses(data) {
 			const cellTemplate = {
 				s: so,
 				sample: row.sample,
-				_SAMPLENAME_: row.sampleName,
 				tw: t.tw,
 				term: t.tw.term,
 				termid,

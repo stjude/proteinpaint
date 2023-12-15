@@ -194,7 +194,6 @@ export function getSampleOrder(data) {
 				totalIndex: total + index,
 				totalHtAdjustments: 0, // may be required when transposed???
 				grpTotals: { htAdjustment: 0 }, // may be required when transposed???
-				_SAMPLENAME_: row.sampleName,
 				processedLst
 			})
 		}
