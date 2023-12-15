@@ -416,7 +416,6 @@ async function clickLaunchBtn(self) {
 	// 1 or more groups are in use, generate samplelst tw and save it to state
 	const tw = await self.groups2samplelst(groups)
 	tw.term.name = name
-
 	self.app.vocabApi.addCustomTerm({ name, tw })
 
 	self.dom.newTermSpan.style('display', 'none')
@@ -472,7 +471,8 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 	// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
 	// thus convert the given term into a termwrapper
 	// tw.q can be missing and will be filled in with default setting
-	const tw = { id: term.id, term }
+	const tw = term.term ? term : { id: term.id, term }
+
 	let config = {
 		chartType: 'summary',
 		childType: 'barchart',
