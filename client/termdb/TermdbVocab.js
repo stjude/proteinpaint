@@ -668,17 +668,24 @@ export class TermdbVocab extends Vocab {
     Expected server-data response
     {}
     .samples{}
-        [sampleId]{}
+        [sample]{}
             sample: the sample ID
-            [$id]: {key, value || values[]}	
+            [$id]: { // $id is tw id, not term id
+				key, value, // only used for dict term
+				values:[]
+					// used for non-dict term e.g. gene mutation
+					{sample, ...mutation properties...}
 	
     .refs{}
         .byTermId{}
             [$id]: {bins, etc}   metadata for processed terms, useful
                                                     for specifying value order, colors, etc.
 		.bySampleId{}
-			[sampleId]: alternative sample name
-			available sample name(s) mapped to each sampleId; if none then UI will just display sampleId
+			[sample]: {
+				label:str, // required, the display name of this sample
+				otherLabels:[ {map to sjcloud}, {link to pbtp},] // optional, to define later
+			}
+			available sample name(s) mapped to each sample, for display only
 
     !!! NOTE !!!
     May fill in following attributes on term object if missing or met conditions:
