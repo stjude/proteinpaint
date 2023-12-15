@@ -31,7 +31,6 @@ RUN apt-get update && apt-get install -y \
 	sqlite3 libsqlite3-dev \
 	g++ \
     pkg-config \
-    clang \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
@@ -86,7 +85,8 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
 # in isolation, without including all the rust toolchain in the image
 FROM ppbase AS pprust
 
-RUN set -eux; \
+RUN apt-get update && apt-get install -y clang; \
+    set -eux; \
     wget https://static.rust-lang.org/rustup/dist/${ARCH}-unknown-linux-gnu/rustup-init; \
     chmod +x rustup-init; \
     ./rustup-init -y --no-modify-path --default-toolchain stable; \
