@@ -7,29 +7,46 @@ export function getHandler(self: SampleLstTermSettingInstance) {
 	return {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()
-			const groups = self.q.groups
-			for (const group of groups) {
-				const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-				const noButtonCallback = (i: number, node: any) => {
-					group.values[i].checked = node.checked
+			if (self.vocabApi.termdbConfig.displaySampleIds && self.vocabApi.hasVerifiedToken()) {
+				const groups = self.q.groups
+				for (const group of groups) {
+					const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+					const noButtonCallback = (i: number, node: any) => {
+						group.values[i].checked = node.checked
+					}
+					const name = group.in ? group.name : `${group.name} will exclude these samples`
+					addTable(groupDiv, name, group, noButtonCallback)
 				}
-				const name = group.in ? group.name : `${group.name} will exclude these samples`
-				addTable(groupDiv, name, group, noButtonCallback)
+				div
+					.append('div')
+					.append('div')
+					.style('display', 'inline-block')
+					.style('float', 'right')
+					.style('padding', '6px 20px')
+					.append('button')
+					.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+					.text('Apply')
+					.on('click', () => {
+						for (const group of groups)
+							group.values = group.values.filter(value => !('checked' in value) || value.checked)
+						self.runCallback!()
+					})
+			} else {
+				const e = self.vocabApi.tokenVerificationPayload
+				const missingAccess =
+					e?.error == 'Missing access' && self.vocabApi.termdbConfig.dataDownloadCatch?.missingAccess
+				const message = missingAccess?.message?.replace('MISSING-ACCESS-LINK', missingAccess?.links[e?.linkKey])
+				const helpLink = self.vocabApi.termdbConfig.dataDownloadCatch?.helpLink
+				div
+					.append('div')
+					.style('color', '#e44')
+					.style('padding', '10px')
+					.html(
+						message ||
+							(self.vocabApi.tokenVerificationMessage || 'Requires sign-in') +
+								(helpLink ? ` <a href='${helpLink}' target=_blank>Tutorial</a>` : '')
+					)
 			}
-			div
-				.append('div')
-				.append('div')
-				.style('display', 'inline-block')
-				.style('float', 'right')
-				.style('padding', '6px 20px')
-				.append('button')
-				.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
-				.text('Apply')
-				.on('click', () => {
-					for (const group of groups)
-						group.values = group.values.filter(value => !('checked' in value) || value.checked)
-					self.runCallback!()
-				})
 		},
 		getPillStatus() {
 			//ignore
