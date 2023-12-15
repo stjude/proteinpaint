@@ -7,11 +7,12 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom, axisTop } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
-import { getSamplelstTW } from '../termsetting/handlers/samplelst.ts'
+import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
 import { regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 import { getId } from '#mass/nav'
 import { minDotSize, maxDotSize } from './sampleScatter.js'
+import { addNewGroup } from '../mass/groups.js'
 
 const defaultSize = 64
 export function setRenderers(self) {
@@ -600,7 +601,9 @@ export function setRenderers(self) {
 						name: 'Group',
 						items: samples
 					}
-					self.addGroup(group)
+					const tw = getSamplelstTW([group])
+					const filter = getFilter(tw)
+					addNewGroup(self.app, filter, self.state.groups)
 				})
 			menuDiv
 				.append('div')
@@ -611,8 +614,9 @@ export function setRenderers(self) {
 						name: 'Group',
 						items: samples
 					}
-					self.addGroup(group)
 					const tw = getSamplelstTW([group])
+					const filter = getFilter(tw)
+					addNewGroup(self.app, filter, self.state.groups)
 					self.addToFilter(tw)
 				})
 			if ('sample' in samples[0])

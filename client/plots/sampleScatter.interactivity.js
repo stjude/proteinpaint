@@ -4,7 +4,7 @@ import { mclass } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW, getFilter } from '../termsetting/handlers/samplelst.ts'
-import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
+import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2, addNewGroup } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 
@@ -445,10 +445,10 @@ export function setInteractivity(self) {
 
 					group.fromSearch = false
 					group.showOnly = false
-					self.addGroup(group)
 					const tw = getSamplelstTW([group])
 					self.addToFilter(tw)
-
+					const filter = getFilter(tw)
+					addNewGroup(self.app, filter, self.state.groups)
 					menu.hide()
 				}
 				return
@@ -565,7 +565,8 @@ export function setInteractivity(self) {
 						items,
 						index: self.config.groups.length
 					}
-					self.addGroup(group)
+					const filter = getFilter(getSamplelstTW([group]))
+					addNewGroup(self.app, filter, self.state.groups)
 				}
 			}
 			buttons.push(addGroupCallback)

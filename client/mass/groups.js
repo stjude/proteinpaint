@@ -9,6 +9,7 @@ import { get$id } from '#termsetting'
 import { getActiveCohortStr } from './charts'
 import { getColors } from '#shared/common'
 import { rgb } from 'd3-color'
+import { group } from 'console'
 
 /*
 this
@@ -26,7 +27,7 @@ this
 			filter{}
 		termdbConfig{}
 */
-
+const colorScale = getColors(5)
 class MassGroups {
 	constructor(opts = {}) {
 		this.type = 'groups'
@@ -39,7 +40,6 @@ class MassGroups {
 		}
 		initUI(this)
 		this.tip = new Menu({ padding: '0px' })
-		this.colorScale = getColors(5)
 	}
 
 	getState(appState) {
@@ -280,25 +280,7 @@ async function updateUI(self) {
 		emptyLabel: 'Add group',
 		termdbConfig: self.state.termdbConfig,
 		callback: f => {
-			// create new group
-			let name = 'New group'
-			let i = 0
-			while (1) {
-				const name2 = name + (i == 0 ? '' : ' ' + i)
-				if (!groups.find(g => g.name == name2)) break
-				i++
-			}
-			name = name + (i == 0 ? '' : ' ' + i)
-			const newGroup = {
-				name,
-				filter: f,
-				color: rgb(self.colorScale(name)).formatHex()
-			}
-			groups.push(newGroup)
-			self.app.dispatch({
-				type: 'app_refresh',
-				state: { groups }
-			})
+			addNewGroup(self.app, f, groups)
 		}
 	}).main(self.getMassFilter()) // provide mass filter to limit the term tree
 
@@ -447,7 +429,7 @@ termfilter is mass global filter
 if provided, need to "rebase" group's visible filter to it
 a group filter contains the shadowy global filter from previous state. when new state is provided, need to replace it
 */
-function rebaseGroupFilter(s) {
+export function rebaseGroupFilter(s) {
 	if (!s.termfilter?.filter || s.termfilter.filter.lst.length == 0) {
 		// blank filter
 		return s.groups
@@ -577,4 +559,26 @@ export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, newId) {
 				})
 		}
 	}
+}
+
+export function addNewGroup(app, filter, groups) {
+	groups = JSON.parse(JSON.stringify(groups))
+	let name = 'New group'
+	let i = 0
+	while (1) {
+		const name2 = name + (i == 0 ? '' : ' ' + i)
+		if (!groups.find(g => g.name == name2)) break
+		i++
+	}
+	name = name + (i == 0 ? '' : ' ' + i)
+	const newGroup = {
+		name,
+		filter,
+		color: rgb(colorScale(name)).formatHex()
+	}
+	groups.push(newGroup)
+	app.dispatch({
+		type: 'app_refresh',
+		state: { groups }
+	})
 }
