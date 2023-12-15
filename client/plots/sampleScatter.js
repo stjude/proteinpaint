@@ -20,6 +20,7 @@ import { getActiveCohortStr } from '../mass/charts'
 import { addDynamicScatterForm } from '#dom/dynamicScatter'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
+import { rebaseGroupFilter } from '../mass/groups'
 
 /*
 sample object returned by server:
@@ -95,7 +96,8 @@ class Scatter {
 			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
+			groups: rebaseGroupFilter(appState)
 		}
 	}
 
