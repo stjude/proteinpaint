@@ -42,6 +42,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
 
       - name: Login to GitHub Container Registry
         run: |
