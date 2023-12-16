@@ -143,11 +143,11 @@ export async function barchart_data(q, ds, tdb) {
 							//console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
 							samplesMap.set(sampleId, null)
 						} else {
+							// this series key will not deduplicate multi-valued samples (those that belong to multiple groups)
 							item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]
 							item[`val${i}`] = value.value
-							if (i === 1) {
-								item.dedupkey1 = value.values ? ['Multi-value'] : [value.key]
-							}
+							// the dedupkey1 will separate out multi-valued samples
+							if (i === 1) item.dedupkey1 = value.values ? [`${value.values.length}-value samples`] : [value.key]
 						}
 					} else {
 						item[`key${i}`] = ''
@@ -330,6 +330,7 @@ const template = JSON.stringify({
 		'__:boxplot': '=boxplot()',
 		'_:_refs': {
 			cols: ['$key1[]'],
+			dedupCols: ['$dedupkey1[]'],
 			colgrps: ['-'],
 			rows: ['$key2'],
 			rowgrps: ['-'],
@@ -478,11 +479,22 @@ function getPj(q, data, tdb, ds) {
 				if (terms[1].orderedLabels.length) {
 					const labels = terms[1].orderedLabels
 					result.cols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
+					result.dedupCols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
 				if (terms[2].orderedLabels.length) {
 					const labels = terms[2].orderedLabels
 					result.rows.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
+
+				result.dedupCols.sort((a, b) => {
+					const da = a.includes('-value samples')
+					const db = b.includes('-value samples')
+					if (!da && !db) return 0
+					if (da && db) return a < b ? -1 : 1
+					if (da) return 1
+					if (db) return -1
+					return 0
+				})
 			},
 			sortCharts(result) {
 				if (terms[0].orderedLabels.length) {
