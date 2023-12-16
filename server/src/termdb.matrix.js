@@ -298,25 +298,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		}
 	}
 
-	for (const sample in samples) {
-		for (const term_id in samples[sample]) {
-			const values = samples[sample][term_id].values
-			if (!values) continue
-			// Create a new group for samples that belong to multiple groups
-			// The new group name will be a combination of all the group names
-			// that apply to a sample, sorted alphanumerically
-			// TODO: may simplify to create only one extra group to catch
-			// all multi-group samples, regardless of the combination of group names, etc
-			const key = values
-				.sort()
-				.map(v => v.key)
-				.sort()
-				.join(', ')
-			samples[sample][term_id] = { key, val: values.length }
-			delete samples[sample][term_id].values
-		}
-	}
-
 	return { samples, refs }
 }
 

@@ -143,8 +143,11 @@ export async function barchart_data(q, ds, tdb) {
 							//console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
 							samplesMap.set(sampleId, null)
 						} else {
-							item[`key${i}`] = value.key
+							item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]
 							item[`val${i}`] = value.value
+							if (i === 1) {
+								item.dedupkey1 = value.values ? ['Multi-value'] : [value.key]
+							}
 						}
 					} else {
 						item[`key${i}`] = ''
@@ -284,6 +287,25 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 
 // template for partjson, already stringified so that it does not
 // have to be re-stringified within partjson refresh for every request
+const seriesTemplate = {
+	seriesId: '@key',
+	data: [
+		{
+			dataId: '@key',
+			'~samples': ['$sample', 'set'],
+			'__:total': '=sampleCount()'
+		},
+		'$key2'
+	],
+	'_:_max': '<$nval2', // needed by client-side boxplot renderer
+	'~values': ['$nval2', 0],
+	'~sum': '+$nval2',
+	'~samples': ['$sample', 'set'],
+	'__:total': '=sampleCount()',
+	'__:boxplot': '=boxplot()',
+	'__:AF': '=getAF()'
+}
+
 const template = JSON.stringify({
 	'@errmode': ['', '', '', ''],
 	'@before()': '=prep()',
@@ -298,27 +320,8 @@ const template = JSON.stringify({
 				'__:total': '=sampleCount()',
 				'_1:maxSeriesTotal': '=maxSeriesTotal()',
 				'@done()': '=filterEmptySeries()',
-				serieses: [
-					{
-						seriesId: '@key',
-						data: [
-							{
-								dataId: '@key',
-								'~samples': ['$sample', 'set'],
-								'__:total': '=sampleCount()'
-							},
-							'$key2'
-						],
-						'_:_max': '<$nval2', // needed by client-side boxplot renderer
-						'~values': ['$nval2', 0],
-						'~sum': '+$nval2',
-						'~samples': ['$sample', 'set'],
-						'__:total': '=sampleCount()',
-						'__:boxplot': '=boxplot()',
-						'__:AF': '=getAF()'
-					},
-					'$key1'
-				]
+				serieses: [seriesTemplate, '$key1[]'],
+				dedupedSerieses: [seriesTemplate, '$dedupkey1[]']
 			},
 			'$key0'
 		],
@@ -326,12 +329,12 @@ const template = JSON.stringify({
 		'~values': ['$nval1', 0],
 		'__:boxplot': '=boxplot()',
 		'_:_refs': {
-			cols: ['$key1'],
+			cols: ['$key1[]'],
 			colgrps: ['-'],
 			rows: ['$key2'],
 			rowgrps: ['-'],
 			col2name: {
-				$key1: {
+				'$key1[]': {
 					name: '@branch',
 					grp: '-'
 				}
