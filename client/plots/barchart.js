@@ -141,6 +141,14 @@ class Barchart {
 					getDisplayStyle: plot => (plot.term2 ? 'none' : 'table-row')
 				},
 				{
+					label: 'Deduplicate',
+					title: 'Use separate bars samples that has multiple values or belong to multiple groups',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'dedup',
+					boxLabel: 'Yes'
+				},
+				{
 					label: 'Default color',
 					title: 'Default color for bars when there is no overlay',
 					type: 'color',
@@ -280,6 +288,7 @@ class Barchart {
 			asterisksVisible: config.settings.barchart.asterisksVisible,
 			defaultColor: config.settings.barchart.defaultColor,
 			colorBars: config.settings.barchart.colorBars,
+			dedup: config.settings.barchart.dedup,
 			// normalize bar thickness regardless of orientation
 			colw: config.settings.common.barwidth,
 			rowh: config.settings.common.barwidth,
@@ -301,6 +310,7 @@ class Barchart {
 			exclude: this.settings.exclude
 		})
 
+		this.settings.cols = this.settings.dedup ? this.currServerData.refs.dedupCols : this.currServerData.refs.cols
 		this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
 		if (!config.term2 && this.settings.unit == 'pct') {
 			this.settings.unit = 'abs'
@@ -378,12 +388,11 @@ class Barchart {
 	}
 
 	processData(chartsData) {
-		const cols = chartsData.refs.cols
 		this.seriesOrder = this.setMaxVisibleTotals(chartsData)
 		if (!chartsData.charts.length) {
 			this.seriesOrder = []
 		} else if (chartsData.refs.useColOrder) {
-			this.seriesOrder = chartsData.refs.cols
+			this.seriesOrder = this.settings.cols
 		}
 
 		const rows = chartsData.refs.rows
@@ -439,7 +448,8 @@ class Barchart {
 			if (!chart.settings) chart.settings = JSON.parse(rendererSettings)
 			Object.assign(chart.settings, this.settings)
 			chart.visibleTotal = 0
-			chart.visibleSerieses = chart.serieses.filter(series => {
+			const serieses = this.settings.dedup ? chart.dedupedSerieses : chart.serieses
+			chart.visibleSerieses = serieses.filter(series => {
 				if (chart.settings.exclude.cols.includes(series.seriesId)) return false
 				series.visibleData = series.data.filter(d => !chart.settings.exclude.rows.includes(d.dataId))
 				series.visibleTotal = series.visibleData.reduce((sum, a) => sum + a.total, 0)
@@ -828,8 +838,9 @@ function setRenderers(self) {
 			.append('div')
 
 		// sort term1 categories based on self.chartsData.refs.cols
+		// const cols = self.settings.dedup ?  self.chartsData.refs.cols
 		self.chartsData.tests[chart.chartId].sort(function (a, b) {
-			return self.chartsData.refs.cols.indexOf(a.term1comparison) - self.chartsData.refs.cols.indexOf(b.term1comparison)
+			return self.settings.cols.indexOf(a.term1comparison) - self.settings.cols.indexOf(b.term1comparison)
 		})
 
 		// sort term2 categories based on self.chartsData.refs.rows
@@ -1042,7 +1053,8 @@ export function getDefaultBarSettings(app) {
 		rowlabelw: 250,
 		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
 		defaultColor: 'rgb(144, 23, 57)',
-		colorBars: false
+		colorBars: false,
+		dedup: true
 	}
 }
 
