@@ -7,7 +7,7 @@ export function getHandler(self: SampleLstTermSettingInstance) {
 	return {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()
-			if (self.vocabApi.termdbConfig.displaySampleIds && self.vocabApi.hasVerifiedToken()) {
+			if (self.vocabApi.termdbConfig?.displaySampleIds && self.vocabApi.hasVerifiedToken()) {
 				const groups = self.q.groups
 				for (const group of groups) {
 					const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -36,7 +36,7 @@ export function getHandler(self: SampleLstTermSettingInstance) {
 				const missingAccess =
 					e?.error == 'Missing access' && self.vocabApi.termdbConfig.dataDownloadCatch?.missingAccess
 				const message = missingAccess?.message?.replace('MISSING-ACCESS-LINK', missingAccess?.links[e?.linkKey])
-				const helpLink = self.vocabApi.termdbConfig.dataDownloadCatch?.helpLink
+				const helpLink = self.vocabApi.termdbConfig?.dataDownloadCatch?.helpLink
 				div
 					.append('div')
 					.style('color', '#e44')
