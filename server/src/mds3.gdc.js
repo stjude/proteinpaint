@@ -2166,8 +2166,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 		return {
 			samples: [...case2files.values()],
 			fields: ds.queries.singleCell.samples.fields,
-			columnNames: ds.queries.singleCell.samples.columnNames,
-			sameLegend: ds.queries.singleCell.samples.sameLegend
+			columnNames: ds.queries.singleCell.samples.columnNames
 		}
 	}
 }
