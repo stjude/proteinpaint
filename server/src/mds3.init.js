@@ -257,13 +257,6 @@ export async function validate_termdb(ds) {
 		if (tdb.ageEndOffset <= 0) throw 'termdb.ageEndOffset<=0'
 	}
 
-	if (ds.cohort.termdb.additionalSampleAttributes) {
-		if (!Array.isArray(ds.cohort.termdb.additionalSampleAttributes)) throw 'termdb.additionalSampleAttributes not array'
-		for (const k of ds.cohort.termdb.additionalSampleAttributes) {
-			if (typeof k != 'string') throw 'non-str key in termdb.additionalSampleAttributes[]'
-		}
-	}
-
 	if (tdb.convertSampleId) {
 		if (tdb.convertSampleId.gdcapi) {
 			gdc.convertSampleId_addGetter(tdb, ds)
@@ -2270,15 +2263,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			for (const s of m.samples) {
 				if (!bySampleId.has(s.sample_id)) {
 					bySampleId.set(s.sample_id, { sample: s.sample_id })
-				}
-
-				if (ds.cohort?.termdb?.additionalSampleAttributes) {
-					// TODO delete, should no longer be needed
-					for (const k of ds.cohort.termdb.additionalSampleAttributes) {
-						if (k in s) {
-							bySampleId.get(s.sample_id)[k] = s[k]
-						}
-					}
 				}
 
 				if (!bySampleId.get(s.sample_id)[tw.term.name]) {
