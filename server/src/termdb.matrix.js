@@ -93,28 +93,21 @@ async function getSampleData(q) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
 	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
-
-	if (q.ds.getSampleIdMap) {
-		// FIXME delete. never send entire sample mapping to client
-		refs.bySampleId = q.ds.getSampleIdMap(samples)
-	} else {
-		refs.bySampleId = {}
-		// k: sample id, v: {label, ..}
-	}
+	// sample data from all terms are added into samples data
+	// refs{byTermId, bySampleId} collects "meta" info on terms and samples
 
 	// return early if all samples are filtered out by not having matching dictionary term values
 	if (dictTerms.length && !Object.keys(samples).length) return { samples, refs }
 
 	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
 
-	// sample data from all terms are added into samples data
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
 			if (q.ds.cohort?.termdb?.getGeneAlias) refs.byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 
-			const data = await q.ds.mayGetGeneVariantData(tw, q, refs.bySampleId)
+			const data = await q.ds.mayGetGeneVariantData(tw, q)
 
 			for (const [sampleId, value] of data.entries()) {
 				if (!(tw.term.name in value)) continue
@@ -125,14 +118,6 @@ async function getSampleData(q) {
 				}
 				if (samples[sampleId]) {
 					samples[sampleId][tw.term.name] = value[tw.term.name]
-
-					if (q.ds.cohort?.termdb?.additionalSampleAttributes) {
-						for (const k of q.ds.cohort?.termdb?.additionalSampleAttributes) {
-							if (k in value) {
-								samples[sampleId][k] = value[k]
-							}
-						}
-					}
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
@@ -154,6 +139,24 @@ async function getSampleData(q) {
 			}
 		} else {
 			throw 'unknown type of non-dictionary term'
+		}
+	}
+
+	/* for samples collected into samples{}, register them in refs.bySampleId{} with display name
+	- for native dataset, samples{} key is integer id, record string name in bySampleId for display
+	- for gdc dataset, samples{} key is case uuid, record case submitter id in bySampleId for display
+
+	note:
+	- this gets rid of awkward properties e.g. "__sampleName", used to attach alternative sample name in mds3 mutation data points, and centralize such logic here
+	- it leaks (minimum amount of) gdc-specific setting in general code 
+	- future data sources need to be handled here
+	- subject to change!
+	*/
+	for (const sid in samples) {
+		if (q.ds.cohort?.termdb?.q?.id2sampleName) {
+			refs.bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sid)) }
+		} else if (q.ds.__gdc?.caseid2submitter) {
+			refs.bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
 		}
 	}
 
@@ -218,7 +221,7 @@ output:
 }
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
-	if (!termWrappers.length) return { samples: {}, refs: { byTermId: {} } }
+	if (!termWrappers.length) return { samples: {}, refs: { byTermId: {}, bySampleId: {} } }
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
@@ -232,7 +235,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const samples = {}
-	const refs = { byTermId: {} }
+	const refs = { byTermId: {}, bySampleId: {} }
 
 	const twByTermId = {}
 	const filter = await getFilterCTEs(q.filter, q.ds)
@@ -355,9 +358,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const data = await q.ds.variant2samples.get(q2)
 
 	const samples = {}
-	const refs = {
-		byTermId: data.byTermId
-	}
+	const refs = { byTermId: data.byTermId, bySampleId: {} }
 
 	for (const s of data.samples) {
 		const s2 = {
