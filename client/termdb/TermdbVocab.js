@@ -1016,7 +1016,7 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	async getAllSamplesByName() {
+	async getAllSamplesByName(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termb')
@@ -1029,6 +1029,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
 		}
+		if (opts.filter) body.filter = opts.filter
 		const data = await dofetch3('termdb', { headers, body })
 		return data
 	}
