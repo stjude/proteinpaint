@@ -388,8 +388,23 @@ function getPj(q, data, tdb, ds) {
 				// rows from db query are unique to request
 				for (const d of terms) {
 					if (d.term.type == 'condition') {
-						row[d.key] = d.q.bar_by_grade && row[d.key] in d.term.values ? d.term.values[row[d.key]].label : row[d.key]
-						row[d.val] = row[d.key]
+						if (d.q.bar_by_grade) {
+							if (Array.isArray(row[d.key])) {
+								for (const [i, k] of row[d.key].entries()) {
+									if (k in d.term.values) row[d.key][i] = d.term.values[k].label
+								}
+								if (d.key == 'key1' && row.dedupkey1) {
+									for (const [i, k] of row.dedupkey1.entries()) {
+										if (k in d.term.values) row.dedupkey1[i] = d.term.values[k].label
+									}
+								}
+							} else {
+								if (row[d.key] in d.term.values) row[d.key] = d.term.values[k].label
+							}
+						}
+
+						//row[d.key] = d.q.bar_by_grade && row[d.key] in d.term.values ? d.term.values[row[d.key]].label : row[d.key]
+						//row[d.val] = row[d.key]
 					} else if (d.term.type == 'float' || d.term.type == 'integer') {
 						// only computable values are included for boxplot
 						if (d.isComputableVal(row[d.val])) row[d.nval] = row[d.val]
@@ -486,10 +501,11 @@ function getPj(q, data, tdb, ds) {
 					result.rows.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
 
+				const labels = terms[1].orderedLabels
 				result.dedupCols.sort((a, b) => {
-					const da = a.includes('-value samples')
-					const db = b.includes('-value samples')
-					if (!da && !db) return 0
+					const da = `${a}`.includes('-value samples')
+					const db = `${b}`.includes('-value samples')
+					if (!da && !db) return labels.indexOf(a) - labels.indexOf(b)
 					if (da && db) return a < b ? -1 : 1
 					if (da) return 1
 					if (db) return -1
