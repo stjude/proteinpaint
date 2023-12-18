@@ -777,13 +777,6 @@ export class TermdbVocab extends Vocab {
 								// must reserve _ref -> should not be used as a term.id or tw.$id
 								_ref_
 							}
-							if (this.termdbConfig.additionalSampleAttributes) {
-								for (const k of this.termdbConfig.additionalSampleAttributes) {
-									if (k in data.samples[sampleId]) {
-										s[k] = data.samples[sampleId][k]
-									}
-								}
-							}
 							samples[sampleId] = s
 						}
 						const row = samples[sampleId]

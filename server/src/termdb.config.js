@@ -62,7 +62,6 @@ export function make(q, res, ds, genome) {
 	if (tdb.timeUnit) c.timeUnit = tdb.timeUnit
 	if (tdb.cohortStartTimeMsg) c.cohortStartTimeMsg = tdb.cohortStartTimeMsg
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
-	if (tdb.additionalSampleAttributes) c.additionalSampleAttributes = tdb.additionalSampleAttributes
 	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2
 
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
