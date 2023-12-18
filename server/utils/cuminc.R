@@ -201,10 +201,9 @@ runPermutations <- function(M, dat) {
 # function to compute p-value for permutation test
 # perform two-tailed test
 getPermutePvalue <- function(tsPs, tsO) {
-  B_left <- sum(tsPs <= -abs(tsO))
-  B_right <- sum(tsPs >= abs(tsO))
-  B <- B_left + B_right
-  pvalue <- signif((B+1)/(length(tsPs)+1), 2)
+  P_left <- sum(tsPs <= -abs(tsO))/(length(tsPs)+1)
+  P_right <- sum(tsPs >= abs(tsO))/(length(tsPs)+1)
+  pvalue <- signif(P_left + P_right, 2)
   return(pvalue)
 }
 
