@@ -1,9 +1,8 @@
 import { getAppInit } from '../rx'
-import { select } from 'd3-selection'
 import { storeInit } from '#mass/store'
 import { vocabInit } from '#termdb/vocabulary'
 import { recoverInit } from '../rx/src/recover'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { Menu } from '#dom/menu'
 
 /*

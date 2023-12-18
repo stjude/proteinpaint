@@ -1,14 +1,12 @@
 import { getAppInit } from '../rx'
-import { select } from 'd3-selection'
 import { storeInit } from './store'
 import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
 import { summaryInit } from '#plots/summary.js'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { Menu } from '#dom/menu'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { dofetch3 } from '#common/dofetch'
 
 /*
 opts{}

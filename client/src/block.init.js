@@ -4,7 +4,7 @@ import { nt2aa, codon_stop, bplen } from '#shared/common'
 import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { string2snp } from '#common/snp'
 
 /*
@@ -15,7 +15,7 @@ also for browser view if search term is position/snp
 quick fix: arg.__blockInstance is attached
 */
 
-export default async function(arg) {
+export default async function (arg) {
 	if (!arg.holder) throw 'No holder for block.init'
 	if (!arg.genome) throw 'no genome'
 	if (arg.holder instanceof Element) arg.holder = select(arg.holder)

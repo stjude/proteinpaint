@@ -1,6 +1,5 @@
 import { scaleLinear } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, pointer } from 'd3-selection'
-import { transition } from 'd3-transition'
 import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
@@ -14,7 +13,7 @@ import blockinit from './block.init'
 import * as Legend from './block.legend'
 import { newSandboxDiv } from '../dom/sandbox'
 import { string2snp } from '#common/snp'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { appear, disappear } from '#dom/animation'
 
 // track types

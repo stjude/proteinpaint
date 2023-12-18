@@ -2,7 +2,7 @@ import { getCompInit } from '../rx'
 import { select, selectAll } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { debounce } from 'debounce'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 //import { graphable } from '../../common/termutils'
 
 /*
@@ -48,10 +48,7 @@ class MassSearch {
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
-					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys
-							.slice()
-							.sort()
-							.join(','),
+					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
 			search: appState.search
 		}
 	}
@@ -99,11 +96,7 @@ function setRenderers(self) {
 	}
 	self.noResult = () => {
 		self.clear()
-		self.dom.resultDiv
-			.append('div')
-			.text('No match')
-			.style('padding', '3px 3px 3px 0px')
-			.style('opacity', 0.5)
+		self.dom.resultDiv.append('div').text('No match').style('padding', '3px 3px 3px 0px').style('opacity', 0.5)
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
@@ -113,16 +106,10 @@ function setRenderers(self) {
 			})
 		self.clear({ hide: !data.lst.length })
 		if (data.lst.length) {
-			self.dom.resultDiv
-				.append('table')
-				.selectAll()
-				.data(data.lst)
-				.enter()
-				.append('tr')
-				.each(self.showTerm)
+			self.dom.resultDiv.append('table').selectAll().data(data.lst).enter().append('tr').each(self.showTerm)
 		}
 	}
-	self.showTerm = function(term) {
+	self.showTerm = function (term) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
 

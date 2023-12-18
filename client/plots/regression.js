@@ -1,8 +1,7 @@
 import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
 import { getCompInit, copyMerge } from '../rx'
-import { select } from 'd3-selection'
-import { sayerror } from '../dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { fillTermWrapper } from '#termsetting'
 
 /*

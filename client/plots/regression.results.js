@@ -1,4 +1,4 @@
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from '#dom/axisstyle'
