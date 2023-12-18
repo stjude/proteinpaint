@@ -474,7 +474,7 @@ export class TermdbVocab extends Vocab {
 		if (filter) {
 			body.filter = getNormalRoot(filter)
 		}
-		return await dofetch3('/termdb/getdescrstats', { body })
+		return await dofetch3('/termdb/descrstats', { body })
 	}
 
 	async getTerms(ids, _dslabel = null, _genome = null) {
