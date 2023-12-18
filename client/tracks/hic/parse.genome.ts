@@ -1,7 +1,6 @@
 import * as client from '#src/client'
 import * as common from '#shared/common'
-
-const defaultnmeth = 'NONE'
+import { defaultnmeth } from './hic.straw'
 
 type Mutation = {
 	chr1: string
@@ -13,14 +12,14 @@ type Mutation = {
 }
 
 //Will rename once hic.straw refactored to class
-export async function hicParseFile(hic: any, debugmode: boolean) {
+export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 	if (debugmode) window['hic'] = hic
 	if (!hic.name) hic.name = 'Hi-C'
 	if (hic.tklst) {
 		const lst = [] as any[]
 		for (const t of hic.tklst) {
 			if (!t.type) {
-				hic.error('type missing from one of the tracks accompanying HiC')
+				self.error('type missing from one of the tracks accompanying HiC')
 			} else {
 				t.iscustom = true
 				lst.push(t)
@@ -44,11 +43,11 @@ export async function hicParseFile(hic: any, debugmode: boolean) {
 			if (frag) {
 				hic.enzymefile = frag.file
 			} else {
-				hic.error('unknown enzyme: ' + hic.enzyme)
+				self.error('unknown enzyme: ' + hic.enzyme)
 				delete hic.enzyme
 			}
 		} else {
-			hic.error('no enzyme fragment information available for this genome')
+			self.error('no enzyme fragment information available for this genome')
 			delete hic.enzyme
 		}
 	}
@@ -108,16 +107,16 @@ export async function hicParseFile(hic: any, debugmode: boolean) {
 		const err = hicparsestat(hic, data.out)
 		if (err) throw { message: err }
 	} catch (err: any) {
-		hic.errList.push(err.message || err)
+		self.errList.push(err.message || err)
 		if (err.stack) {
 			console.log(err.stack)
 		}
 	}
-	if (hic.errList.length) hic.error(hic.errList)
+	if (self.errList.length) self.error(self.errList)
 	return hic
 }
 
-function parseSV(txt: any) {
+function parseSV(txt: string) {
 	const lines = txt.trim().split(/\r?\n/)
 	const [err, header] = parseSVheader(lines[0])
 	if (err) return ['header error: ' + err]
@@ -133,7 +132,7 @@ function parseSV(txt: any) {
 	return [null, header, items]
 }
 
-function parseSVheader(line: any) {
+function parseSVheader(line: string) {
 	const header = line.toLowerCase().split('\t')
 	if (header.length <= 1) return 'invalid file header for fusions'
 	const htry = (...lst) => {
