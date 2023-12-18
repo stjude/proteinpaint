@@ -146,7 +146,9 @@ class Barchart {
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'dedup',
-					boxLabel: 'Yes'
+					boxLabel: 'Yes',
+					getDisplayStyle: plot =>
+						this.chartsData.charts.find(c => c.serieses.length != c.dedupedSerieses.length) ? 'table-row' : 'none'
 				},
 				{
 					label: 'Default color',
