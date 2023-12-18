@@ -19,7 +19,7 @@ type ValidResponse = {
 	samples: Sample[]
 	fields: string[]
 	columnNames: string[]
-	sameLegend: boolean
+	sameLegend?: boolean
 }
 
 export type TermdbSinglecellsamplesResponse = ErrorResponse | ValidResponse
