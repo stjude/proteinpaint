@@ -289,11 +289,17 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
 
-		if (!samples[sample][term_id]) samples[sample][term_id] = { key, value }
-		else {
-			// in case a sample can have multiple value for a given term,
-			// or a sample can belong to multiple groups, simply concatenate
-			if (!samples[sample][term_id].values) samples[sample][term_id].values = [samples[sample][term_id]]
+		if (!samples[sample][term_id]) {
+			// first value of term for a sample
+			samples[sample][term_id] = { key, value }
+		} else {
+			// samples has multiple values for a term
+			// convert to .values[]
+			if (!samples[sample][term_id].values) {
+				const firstvalue = samples[sample][term_id] // first term value of the sample
+				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
+			}
+			// add next term value to .values[]
 			samples[sample][term_id].values.push({ key, value })
 		}
 	}
