@@ -64,6 +64,7 @@ class SingleCellView {
 		let columns = []
 		const fields = result.fields
 		const columnNames = result.columnNames
+		this.sameLegend = result.sameLegend
 		for (const column of columnNames) columns.push({ label: column })
 		const index = columnNames.length == 1 ? 0 : columnNames.length - 1
 		columns[index].width = '25vw'
@@ -282,6 +283,8 @@ class SingleCellView {
 	}
 
 	renderLegend(legendG, plot, cells2Clusters) {
+		if (this.sameLegend && this.legendRendered) return
+		this.legendRendered = true
 		const colorMap = plot.colorMap
 		legendG.append('text').style('font-weight', 'bold').text(`${plot.cells.length} cells`)
 		const step = 25
