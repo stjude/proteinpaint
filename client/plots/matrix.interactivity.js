@@ -186,7 +186,7 @@ export function setInteractivity(self) {
 			if (templates.sample) {
 				// quick fix, should have a more reliable namekey that is guaranteed to have the UUID for the URL construction
 				// maybe from refs.bySampleId, filled in by termdb.getSampleAlias in the backend
-				const name = sampleData[templates.sample.namekey] || sampleData.row._ref_.label
+				const name = sampleData[templates.sample.namekey] || sampleData.sample || sampleData.row.sample
 				if (!templates.sample.regex /*|| name has a matching pattern */) {
 					const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
 
