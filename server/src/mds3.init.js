@@ -1434,16 +1434,19 @@ async function validate_query_geneExpression(ds, genome) {
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 
 	{
+		// is a gene-by-sample matrix file
 		const lines = await utils.get_header_tabix(q.file)
 		if (!lines[0]) throw 'header line missing from ' + q.file
-		const l = lines[0].split(' ')
-		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
-		q.samples = l.slice(1).map(i => {
-			return { name: i }
-		})
+		const l = lines[0].split('\t')
+		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') throw 'header line has wrong content for columns 1-4'
+		q.samples = [] // list of sample id based on order of matrix
+		for (let i = 4; i < l.length; i++) {
+			const id = ds.cohort.termdb.q.sampleName2id(l[i])
+			if (id == undefined) throw 'unknown sample from header'
+			q.samples.push(id)
+		}
+		console.log(q.samples.length, 'samples from geneExpression of', ds.label)
 	}
-
-	mayValidateSampleHeader(ds, q.samples, 'geneExpression')
 
 	/*
 	query exp data one gene at a time
@@ -1487,18 +1490,16 @@ async function validate_query_geneExpression(ds, genome) {
 				dir: q.dir,
 				callback: line => {
 					const l = line.split('\t')
-					let j
-					try {
-						j = JSON.parse(l[3])
-					} catch (e) {
-						//console.log('svfusion json err')
-						return
+					// case-insensitive match! FIXME if g.gene is alias won't work
+					if (l[3].toLowerCase() != g.gene.toLowerCase()) return
+					for (let i = 4; i < l.length; i++) {
+						const sampleId = q.samples[i - 4]
+						if (limitSamples && !limitSamples.has(sampleId)) return // doing filtering and sample of current column is not used
+						// if l[i] is blank string?
+						const v = Number(l[i])
+						if (Number.isNaN(v)) throw 'exp value not number'
+						gene2sample2value.get(g.gene)[sampleId] = v
 					}
-
-					// case-insensitive match!
-					if (j.gene.toLowerCase() != g.gene.toLowerCase()) return
-					if (limitSamples && !limitSamples.has(j.sample)) return
-					gene2sample2value.get(g.gene)[j.sample] = j.value
 				}
 			})
 		}
