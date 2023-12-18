@@ -149,7 +149,7 @@ export async function setData(_data) {
 	for (const d of this.data.lst) {
 		// mapping of sample string name to integer id
 		// TODO: not able to find matching sample names between ASH and termdb?
-		this.sampleIdMap[name] = d._ref_.label
+		this.sampleIdMap[d.sample] = d._ref_.label
 	}
 }
 
