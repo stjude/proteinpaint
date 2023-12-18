@@ -95,7 +95,11 @@ async function getSampleData(q) {
 	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
 
 	if (q.ds.getSampleIdMap) {
+		// FIXME delete. never send entire sample mapping to client
 		refs.bySampleId = q.ds.getSampleIdMap(samples)
+	} else {
+		refs.bySampleId = {}
+		// k: sample id, v: {label, ..}
 	}
 
 	// return early if all samples are filtered out by not having matching dictionary term values
@@ -110,8 +114,9 @@ async function getSampleData(q) {
 		if (tw.term.type == 'geneVariant') {
 			if (q.ds.cohort?.termdb?.getGeneAlias) refs.byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 
-			const bySampleId = await q.ds.mayGetGeneVariantData(tw, q)
-			for (const [sampleId, value] of bySampleId.entries()) {
+			const data = await q.ds.mayGetGeneVariantData(tw, q, refs.bySampleId)
+
+			for (const [sampleId, value] of data.entries()) {
 				if (!(tw.term.name in value)) continue
 				if (!dictTerms.length) {
 					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
