@@ -40,17 +40,18 @@ class SampleView {
 	}
 
 	async init(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
 		this.termsByCohort = {}
 
 		const div = this.dom.sampleDiv
-		await this.setSampleSelect(config)
+		await this.setSampleSelect(appState)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
 		await this.renderPlots(state, state.samples)
 	}
 
-	async setSampleSelect(config) {
+	async setSampleSelect(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+
 		const sampleDiv = this.dom.sampleDiv
 		if (this.dom.header) this.dom.header.html(`Sample View`)
 
@@ -100,9 +101,20 @@ class SampleView {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
 		} else {
+			let allSamples
 			const limit = 100
 			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName()
-			const allSamples = Object.keys(sampleName2Id)
+			if (appState.termfilter.filter.lst.length > 0) {
+				const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
+					filters: [appState.termfilter.filter]
+				})
+				const samplesFiltered = samplesPerFilter[0]
+				allSamples = []
+				for (const name in sampleName2Id) {
+					const id = sampleName2Id[name]
+					if (samplesFiltered.includes(id)) allSamples.push(name)
+				}
+			} else allSamples = Object.keys(sampleName2Id)
 			const isBigDataset = allSamples.length > 10000
 
 			if (allSamples.length == 0)
@@ -195,6 +207,7 @@ class SampleView {
 		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
 		const state = {
 			config,
+			termfilter: appState.termfilter,
 			// TODO: use state.config drectly, instead of having to extract
 			// selected config.key-values into the component state
 			activeCohort: config.activeCohort,
