@@ -1,7 +1,7 @@
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios } from '#dom/radiobutton'
 import { copyMerge } from '#rx'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../../dom/sayerror.ts'
 import { PillData, ConditionTW, ConditionQ, VocabApi } from '#shared/types/index'
 //import { GroupSettingMethods } from './groupsetting'
 import { throwMsgWithFilePathAndFnName } from '../../dom/sayerror'

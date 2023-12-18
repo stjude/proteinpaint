@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'

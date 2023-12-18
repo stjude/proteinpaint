@@ -11,8 +11,6 @@ import { trigger_getLowessCurve } from './termdb.scatter'
 import { getData, getSamplesPerFilter } from './termdb.matrix'
 import { trigger_getCohortsData } from './termdb.cohort'
 import { get_mds3variantData } from './mds3.variant'
-import roundValue from '#shared/roundValue'
-import computePercentile from '../shared/compute.percentile.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils'
 import { authApi } from './auth'
 import { getResult as geneSearch } from './gene'
@@ -45,7 +43,6 @@ export function handle_request_closure(genomes) {
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
 			// process triggers
-			if (q.getdescrstats) return trigger_getdescrstats(q, res, ds)
 			if (q.getnumericcategories) return await trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
@@ -333,69 +330,6 @@ async function trigger_getsurvival(q, res, ds) {
 async function trigger_getregression(q, res, ds) {
 	const data = await get_regression(q, ds)
 	res.send(data)
-}
-
-async function trigger_getdescrstats(q, res, ds) {
-	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
-	if (!term) throw 'invalid termid'
-	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
-	const rows = await termdbsql.get_rows_by_one_key({
-		ds,
-		key: q.tid,
-		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
-	})
-	const values = []
-	for (const { value } of rows) {
-		if (term.values && term.values[value] && term.values[value].uncomputable) {
-			// skip uncomputable values
-			continue
-		}
-		//skip computing for zeros if scale is log.
-		if (q.settings?.violin?.unit === 'log') {
-			if (value === 0) {
-				continue
-			}
-		}
-		values.push(Number(value))
-	}
-
-	// compute statistics
-	// total
-	const total = values.length
-
-	// mean
-	const sum = values.reduce((a, b) => a + b, 0)
-	const mean = sum / total
-
-	// percentiles
-	const p25 = computePercentile(values, 25)
-	const median = computePercentile(values, 50)
-	const p75 = computePercentile(values, 75)
-
-	// standard deviation
-	// get sum of squared differences from mean
-	const sumSqDiff = values.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0)
-	// get variance
-	const variance = sumSqDiff / (values.length - 1)
-	// get standard deviation
-	const sd = Math.sqrt(variance)
-
-	// min/max
-	const min = Math.min(...values)
-	const max = Math.max(...values)
-
-	res.send({
-		values: [
-			{ id: 'total', label: 'n', value: total },
-			{ id: 'min', label: 'Minimum', value: roundValue(min, 2) },
-			{ id: 'p25', label: '1st quartile', value: roundValue(p25, 2) },
-			{ id: 'median', label: 'Median', value: roundValue(median, 2) },
-			{ id: 'mean', label: 'Mean', value: roundValue(mean, 2) },
-			{ id: 'p75', label: '3rd quartile', value: roundValue(p75, 2) },
-			{ id: 'max', label: 'Maximum', value: roundValue(max, 2) },
-			{ id: 'sd', label: 'Standard deviation', value: roundValue(sd, 2) }
-		]
-	})
 }
 
 function getvariantfilter(res, ds) {

@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
-import { sayerror } from '#dom/error'
+import { sayerror } from '../dom/sayerror.ts'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
 
 /*
