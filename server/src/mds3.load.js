@@ -482,21 +482,21 @@ async function geneExpressionClustering(data, q, ds) {
 	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
 	fs.unlink(Rinputfile, () => {})
 
-	let row_coordinates = []
+	const row_coordinates = []
 	for (const item of Routput['RowNodeJson']) {
 		row_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
 	}
-	let col_coordinates = []
+	const col_coordinates = []
 	for (const item of Routput['ColNodeJson']) {
 		col_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
 	}
-	let matrix_1d = []
+	const matrix_1d = []
 	//console.log(Routput['OutputMatrix'])
 	for (const item of Routput['OutputMatrix']) {
 		matrix_1d.push(item['elem'][0])
 	}
-	let row_names_index = []
-	let col_names_index = []
+	const row_names_index = []
+	const col_names_index = []
 
 	for (const item of Routput['RowDendOrder']) {
 		row_names_index.push(item['i'][0])
@@ -505,8 +505,8 @@ async function geneExpressionClustering(data, q, ds) {
 		col_names_index.push(item['i'][0])
 	}
 
-	let row_names = []
-	let col_names = []
+	const row_names = []
+	const col_names = []
 
 	for (const item of Routput['SortedRowNames']) {
 		row_names.push(item['gene'][0])
@@ -515,8 +515,8 @@ async function geneExpressionClustering(data, q, ds) {
 		col_names.push(item['sample'][0])
 	}
 
-	let row_output = await parseclust(row_coordinates, row_names_index)
-	let col_output = await parseclust(col_coordinates, col_names_index)
+	const row_output = await parseclust(row_coordinates, row_names_index)
+	const col_output = await parseclust(col_coordinates, col_names_index)
 
 	// Converting the 1D array to 2D array column-wise
 	let output_matrix = []
