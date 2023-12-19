@@ -479,7 +479,7 @@ async function geneExpressionClustering(data, q, ds) {
 
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await write_file(Rinputfile, JSON.stringify(inputData))
-	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/fastclust.R'), [], [Rinputfile]))
+	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
 	fs.unlink(Rinputfile, () => {})
 
 	let row_coordinates = []
