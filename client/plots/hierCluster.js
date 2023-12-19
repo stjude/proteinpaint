@@ -370,7 +370,7 @@ class HierCluster extends Matrix {
 			if (d.byTermId[tw.term.name]) byTermId[tw.$id] = d.byTermId[tw.term.name]
 		}
 		this.hierClusterSamples = {
-			refs: { byTermId },
+			refs: { byTermId, bySampleId: d.bySampleId },
 			lst: c.sampleNameLst.map(sample => samples[sample]),
 			samples
 		}
@@ -378,7 +378,7 @@ class HierCluster extends Matrix {
 
 	combineData() {
 		if (!this.hierClusterSamples) return
-		const d = this.data
+		const d = this.data // matrix data
 		const samples = {}
 		const lst = []
 		// the gene expression samples will be used as a filter for the matrix samples
@@ -386,8 +386,11 @@ class HierCluster extends Matrix {
 			const s = this.hierClusterSamples.samples[sampleId]
 			samples[sampleId] = s
 			lst.push(s)
-			if (!(sampleId in d.samples)) continue
-			Object.assign(s, d.samples[sampleId])
+			if (sampleId in d.samples) Object.assign(s, d.samples[sampleId])
+			const _ref_ = this.hierClusterSamples.refs.bySampleId[sampleId] || {}
+			if (!s._ref_) s._ref_ = _ref_
+			// hierCluster refs.bySampleId will overwrite matrix reference properties with the same name
+			else Object.assign(s._ref_, _ref_)
 		}
 
 		// combine this.hierClusterSamples.refs.byTermId into this.data.refs.byTermId
