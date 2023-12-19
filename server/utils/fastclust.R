@@ -92,9 +92,17 @@ row_node_coordinates <- get_nodes_xy(
   RowDendro,
   type = "rectangle"
 )
-#print ("RowCoordinates")
-colnames(row_node_coordinates) <- c("x","y")
-row_node_json <- toJSON(row_node_coordinates)
+
+row_node_transform <- apply(row_node_coordinates, 1, function(row){
+    lapply(c(1,2), function(col_index){
+        if (col_index == 1) {
+          list(x=row[col_index])       
+        } else if (col_index == 2) {
+          list(y=row[col_index])
+        }
+    })
+})
+row_node_json <- toJSON(row_node_transform)
 #print (row_node_json)
 
 # For columns (i.e samples)
@@ -112,7 +120,16 @@ col_node_coordinates <- get_nodes_xy(
   ColumnDendro,
   type = "rectangle"
 )
-col_node_json <- toJSON(col_node_coordinates)
+col_node_transform <- apply(col_node_coordinates, 1, function(col){
+    lapply(c(1,2), function(col_index){
+        if (col_index == 1) {
+          list(x=col[col_index])       
+        } else if (col_index == 2) {
+          list(y=col[col_index])
+        }
+    })
+})
+col_node_json <- toJSON(col_node_transform)
 #print(col_node_json)
 
 
@@ -130,11 +147,21 @@ output_df <- list()
 output_df$method <- input$cluster_method
 output_df$RowNodeJson <- row_node_json
 output_df$ColNodeJson <- col_node_json
-output_df$RowDendOrder <- RowDend$order
-output_df$ColumnDendOrder <- ColumnDend$order
-output_df$SortedRowNames <- SortedRowNames
-output_df$SortedColumnNames <- SortedColumnNames
-output_df$OutputMatrix <- normalized_matrix
+output_df$RowDendOrder <- {lapply(1:length(RowDend$order), function(y){
+    list(i=RowDend$order[y])
+})}
+output_df$ColumnDendOrder <- {lapply(1:length(ColumnDend$order), function(y){
+    list(i=ColumnDend$order[y])
+})}
+output_df$SortedRowNames <- {lapply(1:length(SortedRowNames), function(y){
+    list(gene=SortedRowNames[y])
+})}
+output_df$SortedColumnNames <- {lapply(1:length(SortedColumnNames), function(y){
+    list(sample=SortedColumnNames[y])
+})}
+output_df$OutputMatrix <- {lapply(1:length(normalized_matrix), function(y){
+    list(elem=normalized_matrix[y])
+})}
 #print ("output_json")
 output_json <- toJSON(output_df)
 print (output_json)
