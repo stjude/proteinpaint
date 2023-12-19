@@ -482,30 +482,30 @@ async function geneExpressionClustering(data, q, ds) {
 
 	const row_coordinates = []
 	for (const item of Routput.RowNodeJson) {
-		row_coordinates.push({ x: item['x'], y: item['y'] })
+		row_coordinates.push({ x: item.x, y: item.y })
 	}
 	const col_coordinates = []
 	for (const item of Routput['ColNodeJson']) {
-		col_coordinates.push({ x: item['x'], y: item['y'] })
+		col_coordinates.push({ x: item.x, y: item.y })
 	}
 	const row_names_index = []
 	const col_names_index = []
 
 	for (const item of Routput['RowDendOrder']) {
-		row_names_index.push(item['ind'])
+		row_names_index.push(item.ind)
 	}
 	for (const item of Routput['ColumnDendOrder']) {
-		col_names_index.push(item['ind'])
+		col_names_index.push(item.ind)
 	}
 
 	const row_names = []
 	const col_names = []
 
 	for (const item of Routput['SortedRowNames']) {
-		row_names.push(item['gene'])
+		row_names.push(item.gene)
 	}
 	for (const item of Routput['SortedColumnNames']) {
-		col_names.push(item['sample'])
+		col_names.push(item.sample)
 	}
 
 	const row_output = await parseclust(row_coordinates, row_names_index)
@@ -514,7 +514,7 @@ async function geneExpressionClustering(data, q, ds) {
 	const matrix_1d = []
 	//console.log(Routput['OutputMatrix'])
 	for (const item of Routput['OutputMatrix']) {
-		matrix_1d.push(item['elem'][0])
+		matrix_1d.push(item.elem[0])
 	}
 
 	// Converting the 1D array to 2D array column-wise
