@@ -88,7 +88,7 @@ class HierCluster extends Matrix {
 			}
 		]
 
-		if (this.app.vocabApi.vocab?.dslabel !== 'GDC') {
+		if (this.state.nav && this.state.nav.header_mode !== 'hidden') {
 			const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => s.row.sample == c).row)
 			for (const s of samples) {
 				if (!s.sampleId) s.sampleId = s.sample

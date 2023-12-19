@@ -140,7 +140,8 @@ export class Matrix {
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,
-			clusterMethod: config.settings.hierCluster?.clusterMethod
+			clusterMethod: config.settings.hierCluster?.clusterMethod,
+			nav: appState.nav
 		}
 	}
 
