@@ -73,20 +73,21 @@ function getSelectRemovePos(j) {
 }
 
 function term_name_gen(d) {
-	const n = getGroupSize(d.term)
-	return `n=${n}`
+	const [group, n] = getGroupSize(d.term)
+	return `samples in ${group} n=${n}`
 }
 
 function get_pill_label(tvs) {
-	const n = getGroupSize(tvs.term)
+	const [group, n] = getGroupSize(tvs.term)
 	return { txt: `n=${n}` }
 }
 
 function getGroupSize(term) {
-	let n
-	for (const group in term.values) {
-		n = term.values[group].list.length
+	let n, group
+	for (const item in term.values) {
+		n = term.values[item].list.length
+		group = item
 		break
 	}
-	return n
+	return [group, n]
 }
