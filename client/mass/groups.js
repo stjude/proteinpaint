@@ -437,7 +437,7 @@ export function rebaseGroupFilter(s) {
 		const f = getNormalRoot(structuredClone(s.termfilter.filter))
 		const f2 = getFilterItemByTag(g.filter, 'filterUiRoot')
 		if (!f2) {
-			console.log('filterUiRoot not found')
+			//console.log('filterUiRoot not found')
 			groups.push(g)
 			continue
 		}
