@@ -140,8 +140,7 @@ function setRenderers(self) {
 		const lstlen = (self.tvs.values && self.tvs.values.length) || (self.tvs.ranges && self.tvs.ranges.length)
 
 		// update the main label
-		one_term_div.select('.term_name_btn').html(self.handler.term_name_gen)
-
+		one_term_div.select('.term_name_btn').html(self.handler.get_pill_label(tvs).txt)
 		// negate button
 		one_term_div
 			.select('.negate_btn')

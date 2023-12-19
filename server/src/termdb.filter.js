@@ -146,7 +146,7 @@ function get_samplelst(tvs, CTEname) {
 		  ${CTEname} AS (
 				SELECT id as sample
 				FROM sampleidmap
-				WHERE id IN (${Array(samples.length).fill('?').join(', ')})
+				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${Array(samples.length).fill('?').join(', ')})
 			)`
 		],
 		values: [...samples.map(value => value.sampleId)],
