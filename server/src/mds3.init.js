@@ -286,6 +286,7 @@ export async function validate_termdb(ds) {
 			ds.sampleName2Id.set(r.name, r.id)
 		}
 
+		// XXX suggest to delete, not a good idea to dump all samples to client
 		ds.getSampleIdMap = samples => {
 			const bySampleId = {}
 			for (const sampleId in samples) {
@@ -1461,6 +1462,20 @@ async function validate_query_geneExpression(ds, genome) {
 			return new Set()
 		}
 
+		// has at least 1 sample passing filter and with exp data
+		// TODO what if there's just 1 sample not enough for clustering?
+		const bySampleId = {}
+		if (limitSamples) {
+			for (const sid of limitSamples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		} else {
+			// use all samples with exp data
+			for (const sid of q.samples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		}
+
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const g of param.genes) {
@@ -1501,7 +1516,7 @@ async function validate_query_geneExpression(ds, genome) {
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		return { gene2sample2value, byTermId }
+		return { gene2sample2value, byTermId, bySampleId }
 	}
 }
 
@@ -2238,7 +2253,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 		}
 
-		const bySampleId = new Map()
+		const data = new Map() // to return
 
 		for (const m of mlst) {
 			/*
@@ -2261,12 +2276,12 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!Array.isArray(m.samples)) continue
 
 			for (const s of m.samples) {
-				if (!bySampleId.has(s.sample_id)) {
-					bySampleId.set(s.sample_id, { sample: s.sample_id })
+				if (!data.has(s.sample_id)) {
+					data.set(s.sample_id, { sample: s.sample_id })
 				}
 
-				if (!bySampleId.get(s.sample_id)[tw.term.name]) {
-					bySampleId.get(s.sample_id)[tw.term.name] = { key: tw.term.name, label: tw.term.name, values: [] }
+				if (!data.get(s.sample_id)[tw.term.name]) {
+					data.get(s.sample_id)[tw.term.name] = { key: tw.term.name, label: tw.term.name, values: [] }
 				}
 
 				// create new m2{} for each mutation in each sample
@@ -2304,17 +2319,17 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					m2.pairlst = m.pairlst
 				}
 
-				bySampleId.get(s.sample_id)[tw.term.name].values.push(m2)
+				data.get(s.sample_id)[tw.term.name].values.push(m2)
 			}
 		}
 
-		await mayAddDataAvailability(q, ds, bySampleId, tw.term.name)
+		await mayAddDataAvailability(q, ds, data, tw.term.name)
 
-		return bySampleId
+		return data
 	}
 }
 
-async function mayAddDataAvailability(q, ds, bySampleId, tname) {
+async function mayAddDataAvailability(q, ds, data, tname) {
 	if (!ds.assayAvailability?.byDt) return
 	// get samples passing filter if filter is in use
 	const sampleFilter = q.filter ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
@@ -2323,17 +2338,17 @@ async function mayAddDataAvailability(q, ds, bySampleId, tname) {
 		if (dt.byOrigin) {
 			for (const origin in dt.byOrigin) {
 				const sub_dt = dt.byOrigin[origin]
-				addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin, sampleFilter)
+				addDataAvailability(dtKey, sub_dt, data, tname, origin, sampleFilter)
 			}
-		} else addDataAvailability(dtKey, dt, bySampleId, tname, false, sampleFilter)
+		} else addDataAvailability(dtKey, dt, data, tname, false, sampleFilter)
 	}
 }
 
-function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleFilter) {
+function addDataAvailability(dtKey, dt, data, tname, origin, sampleFilter) {
 	for (const sid of dt.yesSamples) {
 		if (sampleFilter && !sampleFilter.has(sid)) continue
-		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
-		const sampleData = bySampleId.get(sid)
+		if (!data.has(sid)) data.set(sid, { sample: sid })
+		const sampleData = data.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 		if (origin) {
 			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
@@ -2345,8 +2360,8 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleFilter)
 	}
 	for (const sid of dt.noSamples) {
 		if (sampleFilter && !sampleFilter.has(sid)) continue
-		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
-		const sampleData = bySampleId.get(sid)
+		if (!data.has(sid)) data.set(sid, { sample: sid })
+		const sampleData = data.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 		if (origin) {
 			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
