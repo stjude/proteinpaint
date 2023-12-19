@@ -139,6 +139,9 @@ function setRenderers(self) {
 		const tvs = one_term_div.datum()
 		const lstlen = (self.tvs.values && self.tvs.values.length) || (self.tvs.ranges && self.tvs.ranges.length)
 
+		// update the main label
+		one_term_div.select('.term_name_btn').html(self.handler.term_name_gen)
+
 		// negate button
 		one_term_div
 			.select('.negate_btn')
