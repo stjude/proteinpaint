@@ -725,7 +725,7 @@ function setRenderers(self) {
 				const itemCopy = JSON.parse(JSON.stringify(item))
 				const keys = 'keys' in values[index] ? values[index].keys : [values[index].key]
 				itemCopy.tvs.values = keys.map(key => {
-					return { key, label: key }
+					return { key, label: key } //may be missing list if term type is samplelst
 				})
 				filterCopy.lst[i] = itemCopy
 				self.refresh(filterUiRoot)
