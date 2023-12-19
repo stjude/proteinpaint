@@ -479,77 +479,43 @@ async function geneExpressionClustering(data, q, ds) {
 
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await write_file(Rinputfile, JSON.stringify(inputData))
-	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/fastclust.R'), [], [Rinputfile])
+	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
 	fs.unlink(Rinputfile, () => {})
-	//const r_output_lines = Routput.trim().split('\n')
-	//console.log('r_output_lines:', r_output_lines)
 
-	let row_coordinates = []
-	let col_coordinates = []
-	let row_coordinate_start = false
-	let col_coordinate_start = false
-	let matrix_start = true
-	let row_names_index
-	let col_names_index
-	let row_names
-	let col_names
-	let matrix_1d // Getting matrix output from R in 1D. This will later be converted back into 2D array
-	for (const line of Routput) {
-		if (line.includes('OutputMatrix')) {
-			matrix_1d = line
-				.replace('OutputMatrix\t', '')
-				.split('\t')
-				.map(i => parseFloat(i))
-				.filter(n => n)
-		} else if (line.includes('[1] "RowCoordinates"')) {
-			row_coordinate_start = true
-		} else if (line.includes('"ColumnCoordinates"')) {
-			//console.log(line)
-			col_coordinate_start = true
-			row_coordinate_start = false
-		} else if (line.includes('rowindexes')) {
-			row_names_index = line
-				.replace('rowindexes\t', '')
-				.split('\t')
-				.map(i => parseInt(i))
-				.filter(n => n)
-		} else if (line.includes('colindexes')) {
-			//console.log('colnames:', line)
-			col_names_index = line
-				.replace('colindexes\t', '')
-				.split('\t')
-				.map(i => parseInt(i))
-				.filter(n => n)
-		} else if (line.includes('rownames')) {
-			row_names = line
-				.replace('rownames\t', '')
-				.split('\t')
-				.filter(function (entry) {
-					return entry.trim() != ''
-				})
-		} else if (line.includes('colnames')) {
-			//console.log('colnames:', line)
-			col_names = line
-				.replace('colnames\t', '')
-				.split('\t')
-				.filter(function (entry) {
-					return entry.trim() != ''
-				})
-		} else if (line.includes('"Done"')) {
-			col_coordinate_start = false
-		} else if (row_coordinate_start == true) {
-			row_coordinates.push(line)
-		} else if (col_coordinate_start == true) {
-			col_coordinates.push(line)
-		}
-		//else {
-		//	console.log(line)
-		//}
+	if (!Array.isArray(Routput.RowNodeJson)) throw 'invalid clustering output'
+
+	const row_coordinates = []
+	for (const item of Routput.RowNodeJson) {
+		row_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
 	}
-	//console.log("row_names:",row_names)
-	//console.log("col_names:",col_names)
-	//console.log('row_coordinates:', row_coordinates)
-	//console.log('col_coordinates:', col_coordinates)
+	let col_coordinates = []
+	for (const item of Routput['ColNodeJson']) {
+		col_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
+	}
+	let matrix_1d = []
+	//console.log(Routput['OutputMatrix'])
+	for (const item of Routput['OutputMatrix']) {
+		matrix_1d.push(item['elem'][0])
+	}
+	let row_names_index = []
+	let col_names_index = []
+
+	for (const item of Routput['RowDendOrder']) {
+		row_names_index.push(item['i'][0])
+	}
+	for (const item of Routput['ColumnDendOrder']) {
+		col_names_index.push(item['i'][0])
+	}
+
+	let row_names = []
+	let col_names = []
+
+	for (const item of Routput['SortedRowNames']) {
+		row_names.push(item['gene'][0])
+	}
+	for (const item of Routput['SortedColumnNames']) {
+		col_names.push(item['sample'][0])
+	}
 
 	let row_output = await parseclust(row_coordinates, row_names_index)
 	let col_output = await parseclust(col_coordinates, col_names_index)
@@ -646,23 +612,15 @@ async function parseclust(coordinates, names_index) {
 	let first = 1
 	let xs = []
 	let ys = []
-	for (const line of coordinates) {
-		// Lines are parsed into arrays xs and ys
-		if (first == 1) {
-			first = 0
-		} else if (line.length == 0) {
+	for (const item of coordinates) {
+		//console.log(item)
+		if (Number(item.x) % 1 != 0 && Number(item.y == 0)) {
+			// In rare cases sometimes y=0 when x is decimal (not integer). This is happening most probably because the y-value is infinitesimally small so y is set to 0.0001 to approximate it.
+			xs.push(Number(item.x))
+			ys.push(0.0001)
 		} else {
-			let line2 = line.split(/(\s+)/)
-			//console.log(line2)
-			//console.log(line2[line2.length - 3], line2[line2.length - 1])
-			if (Number(line2[line2.length - 3]) % 1 != 0 && Number(line2[line2.length - 1]) == 0) {
-				// In rare cases sometimes y=0 when x is decimal (not integer). This is happening most probably because the y-value is infinitesimally small so y is set to 0.0001 to approximate it.
-				xs.push(Number(line2[line2.length - 3]))
-				ys.push(0.0001)
-			} else {
-				xs.push(Number(line2[line2.length - 3]))
-				ys.push(Number(line2[line2.length - 1]))
-			}
+			xs.push(Number(item.x))
+			ys.push(Number(item.y))
 		}
 	}
 	//console.log(xs)

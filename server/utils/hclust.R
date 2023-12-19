@@ -1,5 +1,5 @@
 # Usage:
-# time Rscript fastclust.R in.json
+# time Rscript hclust.R in.json
 
 # Image is in Rplots.pdf
 
@@ -68,7 +68,6 @@ RowDist <- dist(normalized_matrix, method = "euclidean") # Transposing the matri
 
 
 # Hierarchical clustering
-print (input$cluster_method)
 RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
 #RowDend <- flashClust(RowDist, method = tolower(input$cluster_method))
 #print (RowDend$order)
@@ -93,8 +92,16 @@ row_node_coordinates <- get_nodes_xy(
   RowDendro,
   type = "rectangle"
 )
-print ("RowCoordinates")
-print (row_node_coordinates)
+
+row_node_transform <- apply(row_node_coordinates, 1, function(row){
+    lapply(c(1,2), function(col_index){
+        if (col_index == 1) {
+          list(x=row[col_index])       
+        } else if (col_index == 2) {
+          list(y=row[col_index])
+        }
+    })
+})
 
 # For columns (i.e samples)
 ColumnDist <- dist(t(normalized_matrix), method = "euclidean") # Transposing the matrix
@@ -106,14 +113,21 @@ ColumnDend <- hclust(ColumnDist, method = tolower(input$cluster_method))
 ColumnDendro <- as.dendrogram(ColumnDend)
 #plot (ColumnDendro)
 
+#print ("ColumnCoordinates")
 col_node_coordinates <- get_nodes_xy(
   ColumnDendro,
   type = "rectangle"
 )
-print ("ColumnCoordinates")
-print (col_node_coordinates)
+col_node_transform <- apply(col_node_coordinates, 1, function(col){
+    lapply(c(1,2), function(col_index){
+        if (col_index == 1) {
+          list(x=col[col_index])       
+        } else if (col_index == 2) {
+          list(y=col[col_index])
+        }
+    })
+})
 
-print ("Done")
 # Sorting the matrix
 
 SortedMatrix  <- normalized_matrix[RowDend$order, ColumnDend$order]
@@ -123,11 +137,35 @@ SortedColumnNames <- colnames(normalized_matrix)[ColumnDend$order]
 #m <- matrix(SortedMatrix,length(SortedRowNames),length(SortedColumnNames))
 #colnames(m) <- SortedColumnNames
 #rownames(m) <- SortedRowNames
-cat("rowindexes",RowDend$order,"\n",sep="\t") # Prints out row indices
-cat("colindexes",ColumnDend$order,"\n",sep="\t") # Prints out column indicies
-cat("rownames",SortedRowNames,"\n",sep="\t") # Prints out row names
-cat("colnames",SortedColumnNames,"\n",sep="\t") # Prints out column names
-cat ("OutputMatrix",normalized_matrix,"\n",sep="\t") # This outputs the 2D array in 1D column-wise. This is later converted to 2D array in nodejs.
+
+output_df <- list()
+output_df$method <- input$cluster_method
+output_df$RowNodeJson <- row_node_transform
+output_df$ColNodeJson <- col_node_transform
+output_df$RowDendOrder <- {lapply(1:length(RowDend$order), function(y){
+    list(i=RowDend$order[y])
+})}
+output_df$ColumnDendOrder <- {lapply(1:length(ColumnDend$order), function(y){
+    list(i=ColumnDend$order[y])
+})}
+output_df$SortedRowNames <- {lapply(1:length(SortedRowNames), function(y){
+    list(gene=SortedRowNames[y])
+})}
+output_df$SortedColumnNames <- {lapply(1:length(SortedColumnNames), function(y){
+    list(sample=SortedColumnNames[y])
+})}
+output_df$OutputMatrix <- {lapply(1:length(normalized_matrix), function(y){
+    list(elem=normalized_matrix[y])
+})}
+#print ("output_json")
+output_json <- toJSON(output_df)
+print (output_json)
+
+#cat("rowindexes",RowDend$order,"\n",sep="\t") # Prints out row indices
+#cat("colindexes",ColumnDend$order,"\n",sep="\t") # Prints out column indicies
+#cat("rownames",SortedRowNames,"\n",sep="\t") # Prints out row names
+#cat("colnames",SortedColumnNames,"\n",sep="\t") # Prints out column names
+#cat ("OutputMatrix",normalized_matrix,"\n",sep="\t") # This outputs the 2D array in 1D column-wise. This is later converted to 2D array in nodejs.
 
 
 #df  <- melt(m)

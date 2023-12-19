@@ -999,6 +999,7 @@ param={}
 allSamples=[]
 	whole list of samples, each ele: {name: int}
 	presumably the set of samples from a bcf file or tabix file
+	NOTE new format is list of integer sample ids!
 ds={}
 
 output:
@@ -1021,7 +1022,9 @@ async function mayLimitSamples(param, allSamples, ds) {
 	// filterSamples is the list of samples retrieved from termdb that are matching filter
 	// as allSamples (from bcf etc) may be a subset of what's in termdb
 	// must only use those from allSamples
-	const set = new Set(allSamples.map(i => i.name))
+	let set
+	if (Number.isInteger(allSamples[0])) set = new Set(allSamples)
+	else set = new Set(allSamples.map(i => i.name))
 	const useSet = new Set()
 	for (const i of filterSamples) {
 		if (set.has(i)) useSet.add(i)
@@ -1462,7 +1465,7 @@ async function validate_query_geneExpression(ds, genome) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
-			return new Map()
+			return new Set()
 		}
 
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
@@ -1494,7 +1497,7 @@ async function validate_query_geneExpression(ds, genome) {
 					if (l[3].toLowerCase() != g.gene.toLowerCase()) return
 					for (let i = 4; i < l.length; i++) {
 						const sampleId = q.samples[i - 4]
-						if (limitSamples && !limitSamples.has(sampleId)) return // doing filtering and sample of current column is not used
+						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
 						// if l[i] is blank string?
 						const v = Number(l[i])
 						if (Number.isNaN(v)) throw 'exp value not number'
