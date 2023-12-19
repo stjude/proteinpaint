@@ -92,6 +92,9 @@ class PlotApp {
 	async init() {
 		// catch initialization error
 		try {
+			// this plot.app does not create a this.components.nav, unlike mass/app.js
+			// so the nav is always hidden, can be hardcoded here
+			this.opts.state.nav = { header_mode: 'hidden' }
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			this.components = {

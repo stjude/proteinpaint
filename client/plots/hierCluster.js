@@ -88,25 +88,8 @@ class HierCluster extends Matrix {
 			}
 		]
 
-		if (this.state.nav && this.state.nav.header_mode !== 'hidden') {
-			const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => s.row.sample == c).row)
-			for (const s of samples) {
-				if (!s.sampleId) s.sampleId = s.sample
-			}
-			optionArr.push({
-				label: 'Add to a group',
-				callback: async () => {
-					const group = {
-						name: 'Group',
-						items: samples
-					}
-					this.addGroup(group)
-				}
-			})
-		}
-
 		// when allow2selectSamples presents
-		if (ss)
+		if (ss) {
 			optionArr.push({
 				label: ss.buttonText || `Select ${l.samples}`,
 				callback: async () => {
@@ -118,6 +101,24 @@ class HierCluster extends Matrix {
 					})
 				}
 			})
+		} else {
+			if (this.state.nav && this.state.nav.header_mode !== 'hidden') {
+				const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => s.row.sample == c).row)
+				for (const s of samples) {
+					if (!s.sampleId) s.sampleId = s.sample
+				}
+				optionArr.push({
+					label: 'Add to a group',
+					callback: async () => {
+						const group = {
+							name: 'Group',
+							items: samples
+						}
+						this.addGroup(group)
+					}
+				})
+			}
+		}
 
 		this.mouseout()
 		this.dom.tip.hide()

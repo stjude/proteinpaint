@@ -5,6 +5,7 @@ import { newSandboxDiv } from '../dom/sandbox.ts'
 import { mclass, dt2label, truncatingMutations, proteinChangingMutations } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
+import { renderTable } from '#dom/table'
 
 let inputIndex = 0
 const svgIcons = {
@@ -179,6 +180,7 @@ export function setInteractivity(self) {
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
 		self.dom.clickMenu.d.selectAll('*').remove()
+		if (self.dom.sampleListMenu) self.dom.sampleListMenu.destroy()
 
 		if (self.state.termdbConfig.urlTemplates) {
 			const templates = self.state.termdbConfig.urlTemplates
@@ -2026,52 +2028,112 @@ function setZoomPanActions(self) {
 		const l = s.controlLabels
 		c.endCell = endCell
 		const ss = self.opts.allow2selectSamples
-		if (ss) {
-			self.dom.tip.hide()
-			self.app.tip.clear()
-			self.app.tip.d
-				.selectAll('div')
-				.data([
-					{
-						label: 'Zoom in',
-						callback: self.triggerZoomArea
-					},
-					{
-						label: ss.buttonText || `Select ${l.Samples}`,
-						callback: async () => {
-							const c = self.clickedSeriesCell
-							delete self.clickedSeriesCell
-							const startCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
-							const endCell = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
-							const samples = new Set()
-							for (let i = startCell.totalIndex; i <= endCell.totalIndex; i++) {
-								samples.add(self.sampleOrder[i].row)
-							}
-							ss.callback({
-								samples: await self.app.vocabApi.convertSampleId([...samples], ss.attributes),
-								source: `Selected ${l.samples} from OncoMatrix`
-							})
-							self.zoomArea.remove()
-							delete self.zoomArea
-							delete self.clickedSeriesCell
-						}
-					}
-				])
-				.enter()
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.html(d => d.label)
-				.on('click', event => {
-					self.app.tip.hide()
-					event.target.__data__.callback()
-				})
 
-			self.app.tip.show(event.clientX, event.clientY)
-		} else {
-			self.triggerZoomArea()
+		const startCellTouched = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
+		const endCellTouched = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
+		const samplesSet = new Set()
+		for (let i = startCellTouched.totalIndex; i <= endCellTouched.totalIndex; i++) {
+			samplesSet.add(self.sampleOrder[i].row)
 		}
+		const samples = [...samplesSet]
+
+		const optionArr = [
+			{
+				label: 'Zoom in',
+				callback: self.triggerZoomArea
+			},
+			{
+				label: `List ${samples.length} ${l.samples}`,
+				callback: () => {
+					self.resetInteractions()
+					self.dom.tip.hide()
+					showTable(self, samples, event.clientX, event.clientY)
+				}
+			}
+		]
+
+		if (ss) {
+			optionArr.push({
+				label: ss.buttonText || `Select ${l.Samples}`,
+				callback: async () => {
+					ss.callback({
+						samples: samples.map(c => {
+							return { 'cases.case_id': c.sample }
+						}),
+						source: `Selected ${l.samples} from OncoMatrix`
+					})
+					self.zoomArea.remove()
+					delete self.zoomArea
+					delete self.clickedSeriesCell
+				}
+			})
+		} else {
+			if (self.state.nav && self.state.nav.header_mode !== 'hidden') {
+				for (const s of samples) {
+					if (!s.sampleId) s.sampleId = s.sample
+				}
+				optionArr.push({
+					label: 'Add to a group',
+					callback: async () => {
+						self.resetInteractions()
+						const group = {
+							name: 'Group',
+							items: samples
+						}
+						addGroup(group)
+					}
+				})
+			}
+		}
+
+		self.mouseout()
+		self.dom.tip.hide()
+		self.app.tip.clear()
+		self.app.tip.d
+			.selectAll('div')
+			.data(optionArr)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', event => {
+				self.app.tip.hide()
+				event.target.__data__.callback()
+			})
+		self.app.tip.show(event.clientX, event.clientY)
 	}
 
+	// show the list of clicked samples as a table
+	const showTable = function (self, samples, x, y) {
+		delete self.clickedSeriesCell
+		const templates = self.state.termdbConfig.urlTemplates
+		const rows = templates?.sample
+			? samples.map(c => [{ value: c._ref_.label, url: `${templates.sample.base}${c.sample}` }])
+			: samples.map(c => [{ value: c._ref_.label }])
+
+		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
+
+		self.dom.sampleListMenu = new Menu({ padding: '5px' })
+		const div = self.dom.sampleListMenu.d.append('div')
+
+		renderTable({
+			rows,
+			columns,
+			div,
+			showLines: true,
+			maxWidth: columns.length * '30' + 'vw',
+			maxHeight: '35vh',
+			resize: true
+		})
+		self.dom.sampleListMenu.show(x, y, false, false)
+	}
+
+	// add the selected samples into a group
+	const addGroup = async function (group) {
+		group.plotId = self.id
+		await self.app.vocabApi.addGroup(group)
+		self.dom.tip.hide()
+	}
 	self.triggerZoomArea = function () {
 		if (self.zoomArea) {
 			self.zoomArea.remove()
