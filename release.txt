@@ -1,0 +1,2 @@
+Fixes:
+- Fix the handling of multi-valued samples and group overlaps
