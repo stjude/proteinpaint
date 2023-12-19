@@ -399,7 +399,7 @@ function getPj(q, data, tdb, ds) {
 									}
 								}
 							} else {
-								if (row[d.key] in d.term.values) row[d.key] = d.term.values[k].label
+								if (row[d.key] in d.term.values) row[d.key] = d.term.values[row[d.key]].label
 							}
 						}
 
