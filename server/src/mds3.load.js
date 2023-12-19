@@ -260,11 +260,7 @@ async function load_driver(q, ds) {
 
 	if (q.geneExpression) {
 		if (!ds.queries.geneExpression) throw 'not supported'
-		const { gene2sample2value, byTermId, sampleNameMap } = await ds.queries.geneExpression.get(q)
-		/*
-		sampleNameMap{} is optional mapping
-		for gdc, it maps uuid to submitter; uuid is used in gene2sample2value
-		*/
+		const { gene2sample2value, byTermId, bySampleId } = await ds.queries.geneExpression.get(q)
 		if (gene2sample2value.size == 0) throw 'no data'
 		if (gene2sample2value.size == 1) {
 			// get data for only 1 gene; may create violin plot
@@ -275,7 +271,7 @@ async function load_driver(q, ds) {
 		const t = new Date()
 		const clustering = await geneExpressionClustering(gene2sample2value, q, ds)
 		if (serverconfig.debugmode) console.log('clustering done:', new Date() - t, 'ms')
-		return { clustering, byTermId, sampleNameMap }
+		return { clustering, byTermId, bySampleId }
 	}
 
 	// other query type

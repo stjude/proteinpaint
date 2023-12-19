@@ -196,14 +196,14 @@ export function validate_query_geneExpression(ds, genome) {
 			gene2sample2value.set(geneSymbol, new Map())
 		}
 
-		const sampleNameMap = await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
+		const bySampleId = await getExpressionData(q, ensgLst, caseLst, ensg2symbol, gene2sample2value, ds)
 		/* returns mapping from uuid to submitter id; since uuid is used in gene2sample2value, but need to display submitter id on ui
 		 */
 
 		const t4 = new Date()
 		mayLog('gene-case matrix built:', t4 - t3, 'ms')
 
-		return { gene2sample2value, byTermId, sampleNameMap }
+		return { gene2sample2value, byTermId, bySampleId }
 	}
 }
 
@@ -326,12 +326,13 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 	const caseHeader = lines[0].split('\t').slice(1) // order of case uuid in tsv header
 	if (caseHeader.length != case_ids.length) throw 'sample column length != case_ids.length'
 	//const submitterHeader = [] // convert case ids from header into submitter ids, for including in data structure
-	const caseuuid2submitter = {}
+
+	const bySampleId = {}
 	for (const c of caseHeader) {
 		const s = ds.__gdc.caseid2submitter.get(c)
 		if (!s) throw 'case submitter id unknown for a uuid'
 		//submitterHeader.push(s)
-		caseuuid2submitter[c] = s
+		bySampleId[c] = { label: s }
 	}
 
 	// each line is data from one gene
@@ -351,7 +352,7 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 			gene2sample2value.get(symbol)[sample] = v
 		}
 	}
-	return caseuuid2submitter
+	return bySampleId
 }
 
 /* tandem rest api query
