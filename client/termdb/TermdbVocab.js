@@ -1029,7 +1029,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		if (opts.filter) body.filter = opts.filter
+		if (opts?.filter) body.filter = opts.filter
 		const data = await dofetch3('termdb', { headers, body })
 		return data
 	}
