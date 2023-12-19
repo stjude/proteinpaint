@@ -192,14 +192,10 @@ class HierCluster extends Matrix {
 	showTable(self, clickedSampleNames, x, y) {
 		const templates = self.state.termdbConfig.urlTemplates
 		const rows = templates?.sample
-			? clickedSampleNames.map(c => [{ value: c, url: `${templates.sample.base}${c}` }])
-			: clickedSampleNames.map(c => [{ value: c }])
-
-		if (this.app.vocabApi.vocab?.dslabel == 'GDC') {
-			for (const row of rows) {
-				row[0].value = this.hierClusterData.sampleNameMap[row[0].value]
-			}
-		}
+			? clickedSampleNames.map(c => [
+					{ value: self.hierClusterData.bySampleId[c].label, url: `${templates.sample.base}${c}` }
+			  ])
+			: clickedSampleNames.map(c => [{ value: self.hierClusterData.bySampleId[c].label }])
 
 		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
 
