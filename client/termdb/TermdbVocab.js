@@ -1016,7 +1016,7 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	async getAllSamplesByName() {
+	async getAllSamplesByName(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termb')
