@@ -24,7 +24,7 @@ export default class PrioritizeGenesCheckboxRenderer {
 			holder
 				.append('label')
 				.attr('for', 'genes-checkbox')
-				.text(`${genesetName} (${displayedElementsCount} mutations out of ${allElementsCount} total)`)
+				.text(`Prioritize Cancer Gene Census (${displayedElementsCount} mutations out of ${allElementsCount} total)`)
 
 			checkbox.on('change', () => {
 				this.checkBoxClickListener(checkbox.property('checked'))
