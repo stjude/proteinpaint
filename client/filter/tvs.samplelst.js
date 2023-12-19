@@ -3,7 +3,8 @@ import { renderTable } from '#dom/table'
 export const handler = {
 	term_name_gen,
 	get_pill_label,
-	fillMenu
+	fillMenu,
+	getSelectRemovePos
 }
 async function fillMenu(self, div, tvs) {
 	div.selectAll('*').remove()
@@ -27,11 +28,16 @@ async function fillMenu(self, div, tvs) {
 		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 		.text('Apply')
 		.on('click', () => {
+			let firstGroup
 			for (const field in tvs.term.values) {
 				const value = tvs.term.values[field]
-				value.list = value.list.filter(s => !('checked' in s) || s.checked)
-				break //only the first group is edited
+
+				if (!firstGroup) {
+					firstGroup = field
+					value.list = value.list.filter(s => !('checked' in s) || s.checked)
+				} else value.list = tvs.term.values[firstGroup].list //not in group
 			}
+
 			self.opts.callback(tvs)
 		})
 }
@@ -62,16 +68,25 @@ export function addTable(div, tvs, field) {
 		selectAll: true
 	})
 }
+function getSelectRemovePos(j) {
+	return j
+}
 
 function term_name_gen(d) {
-	let n
-	for (const group in d.term.values) {
-		n = d.term.values[group].list.length
-		break
-	}
+	const n = getGroupSize(d.term)
 	return `n=${n}`
 }
 
 function get_pill_label(tvs) {
-	return { txt: ` in ${tvs.term.name}` }
+	const n = getGroupSize(tvs.term)
+	return { txt: `n=${n}` }
+}
+
+function getGroupSize(term) {
+	let n
+	for (const group in term.values) {
+		n = term.values[group].list.length
+		break
+	}
+	return n
 }
