@@ -7,6 +7,7 @@ export const handler = {
 	getSelectRemovePos
 }
 async function fillMenu(self, div, tvs) {
+	tvs = JSON.parse(JSON.stringify(tvs))
 	div.selectAll('*').remove()
 	div = div.append('div')
 	div.style('font-size', '0.8em')
