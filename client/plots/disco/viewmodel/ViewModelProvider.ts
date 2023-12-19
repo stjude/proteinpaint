@@ -21,6 +21,7 @@ export default class ViewModelProvider {
 	private settings: Settings
 	private reference: Reference
 	private sampleName: string
+	private genesetName: string
 	private dataMapper: DataMapper
 
 	private nonExonicArcRing?: Ring<SnvArc> = undefined
@@ -30,11 +31,18 @@ export default class ViewModelProvider {
 	private cnvArcsMapper?: CnvArcsMapper
 	private cnvArcRing?: Ring<CnvArc>
 
-	constructor(settings: Settings, dataMapper: DataMapper, reference: Reference, sampleName: string) {
+	constructor(
+		settings: Settings,
+		dataMapper: DataMapper,
+		reference: Reference,
+		sampleName: string,
+		genesetName: string
+	) {
 		this.settings = settings
 		this.dataMapper = dataMapper
 		this.reference = reference
 		this.sampleName = sampleName
+		this.genesetName = genesetName
 	}
 
 	map(data: Array<any>) {
@@ -143,7 +151,8 @@ export default class ViewModelProvider {
 			legend,
 			fusions,
 			dataHolder.filteredSnvData.length,
-			dataHolder.snvData.length - dataHolder.nonExonicSnvData.length
+			dataHolder.snvData.length - dataHolder.nonExonicSnvData.length,
+			this.genesetName
 		)
 	}
 }

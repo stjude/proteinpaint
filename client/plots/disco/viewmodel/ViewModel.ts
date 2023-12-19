@@ -18,6 +18,7 @@ export default class ViewModel {
 	settings: Settings
 	svnDataLength: number
 	filteredSnvDataLength: number
+	genesetName: string
 
 	constructor(
 		settings: Settings,
@@ -25,12 +26,14 @@ export default class ViewModel {
 		legend: Legend,
 		fusions: Array<Fusion>,
 		filteredSnvDataLength: number,
-		svnDataLength: number
+		svnDataLength: number,
+		genesetName: string
 	) {
 		this.settings = settings
 		this.rings = rings
 		this.legend = legend
 		this.fusions = fusions
+		this.genesetName = genesetName
 
 		this.width =
 			1.2 *
