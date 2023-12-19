@@ -93,15 +93,18 @@ row_node_coordinates <- get_nodes_xy(
   type = "rectangle"
 )
 
-row_node_transform <- apply(row_node_coordinates, 1, function(row){
-    lapply(c(1,2), function(col_index){
-        if (col_index == 1) {
-          list(x=row[col_index])       
-        } else if (col_index == 2) {
-          list(y=row[col_index])
-        }
-    })
-})
+row_node_df <- as.data.frame(row_node_coordinates)
+colnames(row_node_df) <- c("x","y")
+
+#row_node_transform <- apply(row_node_coordinates, 1, function(row){
+#    lapply(c(1,2), function(col_index){
+#        if (col_index == 1) {
+#          list(x=row[col_index])
+#        } else if (col_index == 2) {
+#          list(y=row[col_index])
+#        }
+#    })
+#})
 
 # For columns (i.e samples)
 ColumnDist <- dist(t(normalized_matrix), method = "euclidean") # Transposing the matrix
@@ -118,15 +121,9 @@ col_node_coordinates <- get_nodes_xy(
   ColumnDendro,
   type = "rectangle"
 )
-col_node_transform <- apply(col_node_coordinates, 1, function(col){
-    lapply(c(1,2), function(col_index){
-        if (col_index == 1) {
-          list(x=col[col_index])       
-        } else if (col_index == 2) {
-          list(y=col[col_index])
-        }
-    })
-})
+
+col_node_df <- as.data.frame(col_node_coordinates)
+colnames(col_node_df) <- c("x","y")
 
 # Sorting the matrix
 
@@ -140,26 +137,43 @@ SortedColumnNames <- colnames(normalized_matrix)[ColumnDend$order]
 
 output_df <- list()
 output_df$method <- input$cluster_method
-output_df$RowNodeJson <- row_node_transform
-output_df$ColNodeJson <- col_node_transform
-output_df$RowDendOrder <- {lapply(1:length(RowDend$order), function(y){
-    list(i=RowDend$order[y])
-})}
-output_df$ColumnDendOrder <- {lapply(1:length(ColumnDend$order), function(y){
-    list(i=ColumnDend$order[y])
-})}
-output_df$SortedRowNames <- {lapply(1:length(SortedRowNames), function(y){
-    list(gene=SortedRowNames[y])
-})}
-output_df$SortedColumnNames <- {lapply(1:length(SortedColumnNames), function(y){
-    list(sample=SortedColumnNames[y])
-})}
+output_df$RowNodeJson <- row_node_df
+output_df$ColNodeJson <- col_node_df
+#output_df$RowDendOrder <- {lapply(1:length(RowDend$order), function(y){
+#    list(i=RowDend$order[y])
+#})}
+row_dend_order_df <- as.data.frame(RowDend$order)
+colnames(row_dend_order_df) <- c("ind")
+output_df$RowDendOrder <- row_dend_order_df
+
+col_dend_order_df <- as.data.frame(ColumnDend$order)
+colnames(col_dend_order_df) <- c("ind")
+output_df$ColumnDendOrder <- col_dend_order_df
+
+#output_df$SortedRowNames <- {lapply(1:length(SortedRowNames), function(y){
+#    list(gene=SortedRowNames[y])
+#})}
+
+sorted_row_names_df <- as.data.frame(SortedRowNames)
+colnames(sorted_row_names_df) <- c("gene")
+output_df$SortedRowNames <- sorted_row_names_df
+
+sorted_col_names_df <- as.data.frame(SortedColumnNames)
+colnames(sorted_col_names_df) <- c("sample")
+output_df$SortedColumnNames <- sorted_col_names_df
+
 output_df$OutputMatrix <- {lapply(1:length(normalized_matrix), function(y){
     list(elem=normalized_matrix[y])
 })}
-#print ("output_json")
-output_json <- toJSON(output_df)
-print (output_json)
+
+# Converting to data frame does not work for the raw counts since the key of the json needs to be unique.
+
+#output_matrix_df <- as.data.frame(normalized_matrix)
+#colnames(output_matrix_df) <- c(rep("elem",dim(normalized_matrix)[2]))
+#print (output_matrix_df)
+#output_df$OutputMatrix <- output_matrix_df
+
+toJSON(output_df)
 
 #cat("rowindexes",RowDend$order,"\n",sep="\t") # Prints out row indices
 #cat("colindexes",ColumnDend$order,"\n",sep="\t") # Prints out column indicies
