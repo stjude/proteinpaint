@@ -482,8 +482,10 @@ async function geneExpressionClustering(data, q, ds) {
 	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
 	fs.unlink(Rinputfile, () => {})
 
-	let row_coordinates = []
-	for (const item of Routput['RowNodeJson']) {
+	if (!Array.isArray(Routput.RowNodeJson)) throw 'invalid clustering output'
+
+	const row_coordinates = []
+	for (const item of Routput.RowNodeJson) {
 		row_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
 	}
 	let col_coordinates = []
