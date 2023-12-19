@@ -55,7 +55,7 @@ function setRenderers(self) {
 				.style('margin-left', '25px')
 				.attr('class', 'term_info_div')
 				.style('display', self.state.isVisible ? 'block' : 'none')
-				.style('width', '100vh')
+				//.style('width', '100vh')
 				.style('white-space', 'normal')
 				.style('padding-bottom', '20px'),
 
