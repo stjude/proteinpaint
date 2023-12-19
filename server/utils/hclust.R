@@ -1,5 +1,5 @@
 # Usage:
-# time Rscript fastclust.R in.json
+# time Rscript hclust.R in.json
 
 # Image is in Rplots.pdf
 
@@ -102,7 +102,7 @@ row_node_transform <- apply(row_node_coordinates, 1, function(row){
         }
     })
 })
-row_node_json <- toJSON(row_node_transform)
+#row_node_json <- toJSON(row_node_transform)
 #print (row_node_json)
 
 # For columns (i.e samples)
@@ -129,7 +129,7 @@ col_node_transform <- apply(col_node_coordinates, 1, function(col){
         }
     })
 })
-col_node_json <- toJSON(col_node_transform)
+#col_node_json <- toJSON(col_node_transform)
 #print(col_node_json)
 
 
@@ -145,8 +145,8 @@ SortedColumnNames <- colnames(normalized_matrix)[ColumnDend$order]
 
 output_df <- list()
 output_df$method <- input$cluster_method
-output_df$RowNodeJson <- row_node_json
-output_df$ColNodeJson <- col_node_json
+output_df$RowNodeJson <- row_node_transform
+output_df$ColNodeJson <- col_node_transform
 output_df$RowDendOrder <- {lapply(1:length(RowDend$order), function(y){
     list(i=RowDend$order[y])
 })}

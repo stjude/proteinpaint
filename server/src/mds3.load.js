@@ -483,11 +483,11 @@ async function geneExpressionClustering(data, q, ds) {
 	fs.unlink(Rinputfile, () => {})
 
 	let row_coordinates = []
-	for (const item of JSON.parse(Routput['RowNodeJson'])) {
+	for (const item of Routput['RowNodeJson']) {
 		row_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
 	}
 	let col_coordinates = []
-	for (const item of JSON.parse(Routput['ColNodeJson'])) {
+	for (const item of Routput['ColNodeJson']) {
 		col_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
 	}
 	let matrix_1d = []
