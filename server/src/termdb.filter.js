@@ -136,7 +136,10 @@ function get_survival(tvs, CTEname) {
 
 function get_samplelst(tvs, CTEname) {
 	const samples = []
-	for (const field in tvs.term.values) samples.push(...tvs.term.values[field].list)
+	for (const field in tvs.term.values) {
+		const list = tvs.term.values[field].list
+		samples.push(...list)
+	}
 	return {
 		CTEs: [
 			`
