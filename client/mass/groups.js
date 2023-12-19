@@ -70,6 +70,8 @@ class MassGroups {
 
 	async groups2samplelst(groups) {
 		const samplelstGroups = []
+		const processedSamples = new Set(),
+			overlap = []
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
 			const items = []
@@ -78,9 +80,26 @@ class MassGroups {
 				if ('name' in sample) {
 					item.sample = sample.name
 				}
-				items.push(item)
+				//items.push(item)
+				if (!processedSamples.has(sample.id)) items.push(item)
+				else {
+					for (const pg of samplelstGroups) {
+						//if (pg.name === g.name) continue
+						const i = pg.items.findIndex(i => i.sampleId === sample.id)
+						if (i !== -1) overlap.push(...pg.items.splice(i, 1))
+					}
+				}
+				processedSamples.add(item.sampleId)
 			}
-			samplelstGroups.push({ name: g.name, items, color: g.color })
+			if (items.length) samplelstGroups.push({ name: g.name, items, color: g.color })
+		}
+
+		if (overlap.length) {
+			const ok = confirm(
+				'Overlap detected: 1 or more samples belong to >1 groups. A new group will be created for these "overlap" samples.'
+			)
+			if (!ok) return
+			samplelstGroups.push({ name: 'Group overlap', items: overlap })
 		}
 
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
@@ -415,6 +434,7 @@ async function clickLaunchBtn(self) {
 
 	// 1 or more groups are in use, generate samplelst tw and save it to state
 	const tw = await self.groups2samplelst(groups)
+	if (!tw) return
 	tw.term.name = name
 	self.app.vocabApi.addCustomTerm({ name, tw })
 
