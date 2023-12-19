@@ -102,8 +102,6 @@ row_node_transform <- apply(row_node_coordinates, 1, function(row){
         }
     })
 })
-#row_node_json <- toJSON(row_node_transform)
-#print (row_node_json)
 
 # For columns (i.e samples)
 ColumnDist <- dist(t(normalized_matrix), method = "euclidean") # Transposing the matrix
@@ -129,9 +127,6 @@ col_node_transform <- apply(col_node_coordinates, 1, function(col){
         }
     })
 })
-#col_node_json <- toJSON(col_node_transform)
-#print(col_node_json)
-
 
 # Sorting the matrix
 

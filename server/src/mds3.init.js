@@ -999,6 +999,7 @@ param={}
 allSamples=[]
 	whole list of samples, each ele: {name: int}
 	presumably the set of samples from a bcf file or tabix file
+	NOTE new format is list of integer sample ids!
 ds={}
 
 output:
@@ -1021,7 +1022,9 @@ async function mayLimitSamples(param, allSamples, ds) {
 	// filterSamples is the list of samples retrieved from termdb that are matching filter
 	// as allSamples (from bcf etc) may be a subset of what's in termdb
 	// must only use those from allSamples
-	const set = new Set(allSamples.map(i => i.name))
+	let set
+	if (Number.isInteger(allSamples[0])) set = new Set(allSamples)
+	else set = new Set(allSamples.map(i => i.name))
 	const useSet = new Set()
 	for (const i of filterSamples) {
 		if (set.has(i)) useSet.add(i)
@@ -1434,16 +1437,19 @@ async function validate_query_geneExpression(ds, genome) {
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 
 	{
+		// is a gene-by-sample matrix file
 		const lines = await utils.get_header_tabix(q.file)
 		if (!lines[0]) throw 'header line missing from ' + q.file
-		const l = lines[0].split(' ')
-		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
-		q.samples = l.slice(1).map(i => {
-			return { name: i }
-		})
+		const l = lines[0].split('\t')
+		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') throw 'header line has wrong content for columns 1-4'
+		q.samples = [] // list of sample id based on order of matrix
+		for (let i = 4; i < l.length; i++) {
+			const id = ds.cohort.termdb.q.sampleName2id(l[i])
+			if (id == undefined) throw 'unknown sample from header'
+			q.samples.push(id)
+		}
+		console.log(q.samples.length, 'samples from geneExpression of', ds.label)
 	}
-
-	mayValidateSampleHeader(ds, q.samples, 'geneExpression')
 
 	/*
 	query exp data one gene at a time
@@ -1459,7 +1465,7 @@ async function validate_query_geneExpression(ds, genome) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
-			return new Map()
+			return new Set()
 		}
 
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
@@ -1487,18 +1493,16 @@ async function validate_query_geneExpression(ds, genome) {
 				dir: q.dir,
 				callback: line => {
 					const l = line.split('\t')
-					let j
-					try {
-						j = JSON.parse(l[3])
-					} catch (e) {
-						//console.log('svfusion json err')
-						return
+					// case-insensitive match! FIXME if g.gene is alias won't work
+					if (l[3].toLowerCase() != g.gene.toLowerCase()) return
+					for (let i = 4; i < l.length; i++) {
+						const sampleId = q.samples[i - 4]
+						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
+						// if l[i] is blank string?
+						const v = Number(l[i])
+						if (Number.isNaN(v)) throw 'exp value not number'
+						gene2sample2value.get(g.gene)[sampleId] = v
 					}
-
-					// case-insensitive match!
-					if (j.gene.toLowerCase() != g.gene.toLowerCase()) return
-					if (limitSamples && !limitSamples.has(j.sample)) return
-					gene2sample2value.get(g.gene)[j.sample] = j.value
 				}
 			})
 		}

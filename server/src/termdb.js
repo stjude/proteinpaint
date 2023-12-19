@@ -17,6 +17,7 @@ import { get_lines_bigfile, mayCopyFromCookie } from './utils'
 import { authApi } from './auth'
 import { getResult as geneSearch } from './gene'
 import { searchSNP } from './app'
+import { get_samples } from './termdb.sql'
 
 /*
 ********************** EXPORTED
@@ -439,7 +440,6 @@ async function get_matrix(q, req, res, ds, genome) {
 }
 
 async function get_ProfileFacilities(q, req, res, ds, tdb) {
-	console.log('get profile facilities')
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	let result = []
 	if (canDisplay) {
@@ -482,7 +482,6 @@ async function get_AllSamplesByName(q, req, res, ds) {
 	and sc view should only list samples with sc
 	still need work
 	*/
-
 	if (ds.queries?.singleCell?.samples?.get) {
 		/*
 		this dataset has single cell data, only return samples with sc data
@@ -494,15 +493,23 @@ async function get_AllSamplesByName(q, req, res, ds) {
 		const lst = await ds.queries.singleCell.samples.get()
 		const result = {}
 		for (const s of lst) {
-			// {name}
 			result[s.sample] = ds.cohort.termdb.q.sampleName2id(s.sample)
 		}
 		res.send(result)
 		return
-	}
+	} else {
+		let sampleName2Id = ds.sampleName2Id
+		if (q.filter) {
+			q.ds = ds
+			const filteredSamples = await get_samples(q.filter, q.ds, true)
+			sampleName2Id = new Map()
+			for (const sample of filteredSamples) {
+				sampleName2Id.set(sample.name, sample.id)
+			}
+		}
 
-	// all samples
-	res.send(Object.fromEntries(ds.sampleName2Id))
+		res.send(Object.fromEntries(sampleName2Id))
+	}
 }
 
 async function get_DEanalysis(q, res, ds) {

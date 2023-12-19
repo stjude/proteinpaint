@@ -574,8 +574,15 @@ type Termdb = {
 	//Cohort specific
 	selectCohort?: SelectCohortEntry
 	additionalSampleAttributes?: string[]
-	//Plots
+
+	/** quick fix to convert category values from a term to lower cases for comparison (case insensitive comparison)
+	for gdc, graphql and rest apis return case-mismatching strings for the same category e.g. "Breast/breast"
+	keep this setting here for reason of:
+	- in mds3.gdc.js, when received all-lowercase values from graphql, it's hard to convert them to Title case for comparison
+	- mds3.variant2samples consider this setting, allows to handle other datasets of same issue
+ 	*/
 	useLower?: boolean
+
 	scatterplots?: Scatterplots
 	matrix?: Matrix
 	matrixplots?: MatrixPlots

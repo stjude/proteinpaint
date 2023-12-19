@@ -101,20 +101,10 @@ class SampleView {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
 		} else {
-			let allSamples
 			const limit = 100
-			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName()
-			if (appState.termfilter.filter.lst.length > 0) {
-				const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
-					filters: [appState.termfilter.filter]
-				})
-				const samplesFiltered = samplesPerFilter[0]
-				allSamples = []
-				for (const name in sampleName2Id) {
-					const id = sampleName2Id[name]
-					if (samplesFiltered.includes(id)) allSamples.push(name)
-				}
-			} else allSamples = Object.keys(sampleName2Id)
+			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName({ filter: appState.termfilter?.filter })
+			const allSamples = Object.keys(sampleName2Id)
+
 			const isBigDataset = allSamples.length > 10000
 
 			if (allSamples.length == 0)
