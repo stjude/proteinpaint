@@ -1,2 +1,1 @@
-Features:
--Always show a menu after brushing matrix: Zoom in, List samples, and Add to a group/create cohort.
+
