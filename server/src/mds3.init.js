@@ -1497,7 +1497,7 @@ async function validate_query_geneExpression(ds, genome) {
 					if (l[3].toLowerCase() != g.gene.toLowerCase()) return
 					for (let i = 4; i < l.length; i++) {
 						const sampleId = q.samples[i - 4]
-						if (limitSamples && !limitSamples.has(sampleId)) return // doing filtering and sample of current column is not used
+						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
 						// if l[i] is blank string?
 						const v = Number(l[i])
 						if (Number.isNaN(v)) throw 'exp value not number'
