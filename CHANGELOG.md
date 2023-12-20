@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.38.0
 
 Features:
 - Always show a menu after brushing matrix: Zoom in, List samples, and Add to a group/create cohort.
