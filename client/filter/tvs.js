@@ -119,7 +119,9 @@ function setRenderers(self) {
 			//.style('display', 'inline-block' : 'none')
 			.style('padding', '6px 6px 3px 6px')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
-			.html(self.tvs.isnot ? 'NOT' : 'IS')
+			.html(
+				self.handler.getNegateText?.(self) || (self.tvs.isnot && self.tvs.term.type !== 'geneVariant' ? 'NOT' : 'IS')
+			)
 
 		self.updatePill.call(this)
 	}
@@ -137,16 +139,19 @@ function setRenderers(self) {
 	self.updatePill = async function () {
 		const one_term_div = select(this)
 		const tvs = one_term_div.datum()
-		const lstlen = (self.tvs.values && self.tvs.values.length) || (self.tvs.ranges && self.tvs.ranges.length)
+		const lstlen =
+			(self.tvs.values && self.tvs.values.length) ||
+			(self.tvs.ranges && self.tvs.ranges.length) ||
+			self.tvs.term.type == 'samplelst'
 
 		// update the main label
-		one_term_div.select('.term_name_btn').html(self.handler.get_pill_label(tvs).txt)
+		one_term_div.select('.term_name_btn').html(self.handler.term_name_gen)
 		// negate button
 		one_term_div
 			.select('.negate_btn')
 			.style('display', lstlen ? 'inline-block' : 'none')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
-			.html(tvs.isnot && tvs.term.type !== 'geneVariant' ? 'NOT' : 'IS')
+			.html(self.handler.getNegateText?.(self) || (tvs.isnot && tvs.term.type !== 'geneVariant' ? 'NOT' : 'IS'))
 
 		const label = self.handler.get_pill_label(tvs)
 		if (!('grade_type' in label)) label.grade_type = ''

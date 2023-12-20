@@ -4,7 +4,10 @@ export const handler = {
 	term_name_gen,
 	get_pill_label,
 	fillMenu,
-	getSelectRemovePos
+	getSelectRemovePos,
+	getNegateText(self) {
+		return self.tvs.isnot ? 'NOT IN' : 'IN'
+	}
 }
 async function fillMenu(self, div, tvs) {
 	tvs = JSON.parse(JSON.stringify(tvs))
@@ -73,13 +76,12 @@ function getSelectRemovePos(j) {
 	return j
 }
 
-function term_name_gen(d) {
-	return getGroupLabel(d.term)
+function term_name_gen() {
+	return 'Samples'
 }
 
 function get_pill_label(tvs) {
-	const label = getGroupLabel(tvs.term)
-	return { txt: `${tvs.isnot ? 'NOT' : ''} ${label}` }
+	return { txt: getGroupLabel(tvs.term) }
 }
 
 function getGroupLabel(term) {
@@ -89,5 +91,5 @@ function getGroupLabel(term) {
 		group = item
 		break
 	}
-	return `samples in ${group} n=${n}`
+	return `${group} n=${n}`
 }
