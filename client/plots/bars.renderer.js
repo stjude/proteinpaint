@@ -116,7 +116,7 @@ export default function barsRenderer(barsapp, holder) {
 		Object.assign(hm, chart.settings)
 		hm.handlers = chart.handlers
 		hm.cols = hm.cols.filter(colId => hm.colLabels.find(d => d.id == colId))
-		hm.rows = hm.rows.filter(d => !hm.exclude.rows.includes(d))
+		hm.rows = hm.rows?.filter(d => !hm.exclude.rows.includes(d)) || []
 		if (_unstackedBarsPanes) unstackedBarsPanes = _unstackedBarsPanes
 		const nosvg = !svg
 		if (nosvg) init()
@@ -137,22 +137,14 @@ export default function barsRenderer(barsapp, holder) {
 		// only set this initially to prevent
 		// jerky svg resize on update
 		if (nosvg) {
-			svg
-				.attr('height', 0)
-				.attr('width', 0)
-				.style('opacity', 0)
+			svg.attr('height', 0).attr('width', 0).style('opacity', 0)
 			mainG.attr('transform', 'translate(' + hm.rowlabelw + ',0)')
 		}
 
-		const s = series
-			.attr('transform', seriesGrpTransform)
-			.selectAll('.bars-cell-grp')
-			.data(currserieses, seriesBindKey)
+		const s = series.attr('transform', seriesGrpTransform).selectAll('.bars-cell-grp').data(currserieses, seriesBindKey)
 		s.exit().each(seriesExit)
 		s.each(seriesUpdate)
-		s.enter()
-			.append('g')
-			.each(seriesEnter)
+		s.enter().append('g').each(seriesEnter)
 
 		const c = collabels
 			.attr('transform', colLabelsTransform)
@@ -162,9 +154,7 @@ export default function barsRenderer(barsapp, holder) {
 			.data(hm.colLabels, d => d.id)
 		c.exit().remove()
 		c.each(updateColLabel)
-		c.enter()
-			.append('g')
-			.each(addColLabel)
+		c.enter().append('g').each(addColLabel)
 
 		const r = rowlabels
 			.attr('transform', rowLabelsTransform)
@@ -174,9 +164,7 @@ export default function barsRenderer(barsapp, holder) {
 			.data(hm.colLabels, d => d.id)
 		r.exit().remove()
 		r.each(updateRowLabel)
-		r.enter()
-			.append('g')
-			.each(addRowLabel)
+		r.enter().append('g').each(addRowLabel)
 
 		currRects = series.selectAll('rect')
 		currColTexts = collabels.selectAll('text')
@@ -186,18 +174,10 @@ export default function barsRenderer(barsapp, holder) {
 
 		if (prevOrientation != hm.orientation) {
 			const labels = hm.orientation == 'vertical' ? collabels : rowlabels
-			labels
-				.transition()
-				.duration(1500)
-				.style('opacity', 1)
+			labels.transition().duration(1500).style('opacity', 1)
 		}
 		if (nosvg) {
-			svg
-				.transition()
-				.duration(100)
-				.attr('height', 1)
-				.attr('width', 1)
-				.style('opacity', 1)
+			svg.transition().duration(100).attr('height', 1).attr('width', 1).style('opacity', 1)
 		}
 
 		setTimeout(
@@ -280,10 +260,7 @@ export default function barsRenderer(barsapp, holder) {
 		}
 
 		if (!svg) {
-			chartTitle = holder
-				.append('div')
-				.attr('class', 'pp-chart-title')
-				.style('text-align', 'center')
+			chartTitle = holder.append('div').attr('class', 'pp-chart-title').style('text-align', 'center')
 
 			svg = holder
 				.append('svg')
@@ -324,23 +301,11 @@ export default function barsRenderer(barsapp, holder) {
 
 		axisG = mainG.append('g').attr('class', 'sjpcb-bar-chart-axis-g')
 		yAxis = axisG.append('g').attr('class', 'sjpcb-bar-chart-y-axis')
-		yLine = axisG
-			.append('line')
-			.attr('class', 'sjpcb-bar-chart-y-line')
-			.style('stroke', '#000')
-		yTitle = axisG
-			.append('g')
-			.attr('class', 'sjpcb-bar-chart-y-title')
-			.style('cursor', 'default')
+		yLine = axisG.append('line').attr('class', 'sjpcb-bar-chart-y-line').style('stroke', '#000')
+		yTitle = axisG.append('g').attr('class', 'sjpcb-bar-chart-y-title').style('cursor', 'default')
 		xAxis = axisG.append('g').attr('class', 'sjpcb-bar-chart-x-axis')
-		xLine = axisG
-			.append('line')
-			.attr('class', 'sjpcb-bar-chart-x-line')
-			.style('stroke', '#000')
-		xTitle = axisG
-			.append('g')
-			.attr('class', 'sjpcb-bar-chart-x-title')
-			.style('cursor', 'default')
+		xLine = axisG.append('line').attr('class', 'sjpcb-bar-chart-x-line').style('stroke', '#000')
+		xTitle = axisG.append('g').attr('class', 'sjpcb-bar-chart-x-title').style('cursor', 'default')
 	}
 
 	function setDimensions() {
@@ -441,11 +406,9 @@ export default function barsRenderer(barsapp, holder) {
 	}
 
 	function seriesUpdate(series) {
-		const g = select(this)
-			.selectAll('.bars-cell')
-			.data(series.data.filter(filterData), cellKey)
+		const g = select(this).selectAll('.bars-cell').data(series.data.filter(filterData), cellKey)
 
-		g.exit().each(function() {
+		g.exit().each(function () {
 			select(this).remove() //style("display", "none");
 		})
 
@@ -464,9 +427,7 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('fill', hm.handlers.series.rectFill)
 			.attr('stroke', hm.handlers.series.strokeFill)
 
-		g.enter()
-			.append('g')
-			.each(addCell)
+		g.enter().append('g').each(addCell)
 
 		g.selectAll('text').remove()
 		addAsterisks(g)
@@ -488,9 +449,7 @@ export default function barsRenderer(barsapp, holder) {
 	}
 
 	function addCell(d) {
-		const g = select(this)
-			.attr('class', 'bars-cell')
-			.datum(d)
+		const g = select(this).attr('class', 'bars-cell').datum(d)
 
 		g.style('display', d => {
 			return hm.cols.includes(d.colId) ? 'block' : 'none'
@@ -594,9 +553,7 @@ export default function barsRenderer(barsapp, holder) {
 
 	function addColLabel(d) {
 		if (!this || d === undefined) return
-		const g = select(this)
-			.attr('transform', colLabelTransform)
-			.style('opacity', 0)
+		const g = select(this).attr('transform', colLabelTransform).style('opacity', 0)
 
 		g.append('text')
 			.attr('transform', 'rotate(-40)')
@@ -605,10 +562,7 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('font-size', computed.colfontsize + 'px')
 			.html(hm.handlers.colLabel.text)
 
-		g.transition()
-			.delay(hm.delay)
-			.duration(hm.duration)
-			.style('opacity', 1)
+		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
 
 	function updateColLabel(d) {
@@ -644,9 +598,7 @@ export default function barsRenderer(barsapp, holder) {
 
 	function addRowLabel(d) {
 		if (!this || d === undefined) return
-		const g = select(this)
-			.attr('transform', rowLabelTransform)
-			.style('opacity', 0)
+		const g = select(this).attr('transform', rowLabelTransform).style('opacity', 0)
 
 		g.append('text')
 			.attr('x', 2) //hm.colw / 3)
@@ -654,10 +606,7 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('font-size', computed.rowfontsize + 'px')
 			.html(hm.handlers.rowLabel.text)
 
-		g.transition()
-			.delay(hm.delay)
-			.duration(hm.duration)
-			.style('opacity', 1)
+		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
 
 	function updateRowLabel(d) {
@@ -795,7 +744,7 @@ export default function barsRenderer(barsapp, holder) {
 			yTitle.style('text-anchor', 'end').attr(
 				'transform',
 				'translate(' +
-				0 + //-rowLabelBox.width/2 +
+					0 + //-rowLabelBox.width/2 +
 					',0)'
 			)
 		}, 0)
@@ -858,10 +807,7 @@ export default function barsRenderer(barsapp, holder) {
 			if (clusterRenderer) clusterRenderer.rowcolline(d, x, y)
 			//}
 
-			currColTexts
-				.attr('font-weight', colTextWeight)
-				.attr('font-size', colTextSize)
-				.style('fill', colTextColor)
+			currColTexts.attr('font-weight', colTextWeight).attr('font-size', colTextSize).style('fill', colTextColor)
 
 			//resizeCaller.hide()
 			//}
@@ -869,14 +815,8 @@ export default function barsRenderer(barsapp, holder) {
 			currCell = emptyObj
 			//resizeCaller.show()
 			if (clusterRenderer) clusterRenderer.rowcolline()
-			currRowTexts
-				.attr('font-weight', rowTextWeight)
-				.attr('font-size', rowTextSize)
-				.style('fill', rowTextColor)
-			currColTexts
-				.attr('font-weight', colTextWeight)
-				.attr('font-size', colTextSize)
-				.style('fill', colTextColor)
+			currRowTexts.attr('font-weight', rowTextWeight).attr('font-size', rowTextSize).style('fill', rowTextColor)
+			currColTexts.attr('font-weight', colTextWeight).attr('font-size', colTextSize).style('fill', colTextColor)
 		}
 
 		hm.handlers.series.mouseover(event, d)
@@ -885,10 +825,7 @@ export default function barsRenderer(barsapp, holder) {
 	function seriesMouseOut(event) {
 		event.stopPropagation()
 		//currRowTexts.attr('font-weight','').attr('font-size',computed.rowfontsize).style('fill','')
-		currColTexts
-			.attr('font-weight', '')
-			.attr('font-size', computed.colfontsize)
-			.style('fill', '')
+		currColTexts.attr('font-weight', '').attr('font-size', computed.colfontsize).style('fill', '')
 		//resizeCaller.show()
 		currCell = emptyObj
 		if (hm.handlers.series.mouseout) hm.handlers.series.mouseout(event)
