@@ -1056,7 +1056,7 @@ export function getDefaultBarSettings(app) {
 		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
 		defaultColor: 'rgb(144, 23, 57)',
 		colorBars: false,
-		dedup: true
+		dedup: false
 	}
 }
 
