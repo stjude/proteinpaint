@@ -1,5 +1,6 @@
 import { BaseTrackArgs } from './tracks.ts'
-import { Div, Elem, Input } from '../types/d3'
+import { Elem, Input, SvgG } from '../types/d3'
+import { Selection } from 'd3-selection'
 
 type SharedArgs = {
 	/** HiC file path from tp/ */
@@ -86,17 +87,22 @@ export type HicstrawDom = {
 export type WholeGenomeView = {
 	/** # pixel per bin, may set according to resolution */
 	binpx: number
+	/** Appears as the cutoff value for the user in the menu */
 	bpmaxv: number
-	layer_map: any //dom
-	layer_sv: any //dom
+	/** heatmap layer underneath svg */
+	layer_map: SvgG
+	/** second g layer underneath the svg */
+	layer_sv: SvgG
 	lead2follow?: any //Map<string, Map<string, { x: number, y: number }>>
+	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
 	/** Eventually there should be Menu type for client */
 	pica_x: any
 	/** Eventually there should be Menu type for client */
 	pica_y: any
 	resolution: number
-	svg: any //dom
+	/** Not entirely sure why SVGElement wasn't sufficient. Maybe this is a typescript bandaid?? */
+	svg: Selection<SVGSVGElement, any, HTMLElement, any>
 }
 
 export type ChrPairView = {
@@ -108,6 +114,7 @@ export type ChrPairView = {
 	chry: string
 	ctx: any //dom
 	data: any
+	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
 	resolution: number
 }
@@ -124,6 +131,7 @@ export type DetailView = {
 		ystartfrag: number
 		ystopfrag: number
 	}
+	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
 	xb: DetailedViewAxis
 	yb: DetailedViewAxis
@@ -136,6 +144,9 @@ export type DetailedViewAxis = {
 	rpad: number
 	width?: number
 	rglst?: any
+	/** The following methods were required to avoid a type error. Maybe better to separate the canvas
+	 * from rendering args in future
+	 */
 	panning: (f: number) => void
 	pannedby: (f: number) => void
 	zoomblock: (a: number, b: boolean) => void
@@ -156,10 +167,6 @@ export type HicstrawInput = {
 		majorchrorder: string[]
 	}
 	hostURL: string
-	inwholegenome: boolean
-	inchrpair: boolean
-	indetail: boolean
-	inlineview: boolean
 	/** TODO: define this somewhere */
 	jwt: any
 	name: string

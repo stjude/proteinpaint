@@ -18,7 +18,7 @@ import {
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { hicParseFile } from './parse.genome.ts'
 import { initWholeGenomeControls } from './controls.whole.genome.ts'
-import { Div } from '../../types/d3'
+import { Div, Svg } from '../../types/d3'
 
 /*
 
@@ -95,19 +95,28 @@ type Pane = {
  * Clicking anywhere within the chr-pair view launches the detail view. The track maybe launched from the Horizontal View button.
  * TODOs:
  * - add state-like functionality. Move objs for rendering under self and separate hic input. Add functions for views to operate independently of each other.
- * - After all that, fix the type mess above (e.g. HicInput, HicState, etc.)
+ * - Possibly type Pane can be import somewhere??
  */
 class Hicstat {
 	holder: Div
 	debugmode: boolean
 	dom: HicstrawDom
+	/** Collection of error messages. Appears to the user in bulk when self.error() fires. */
 	errList: string[]
+	/** TODO: fix this Partial business. */
+	/** Rendering properities specific to the whole genome view */
 	wholegenome: Partial<WholeGenomeView>
+	/** Rendering properities specific to the chr-chr pair view */
 	chrpairview: Partial<ChrPairView>
+	/** Rendering properities specific to the detail view */
 	detailview: Partial<DetailView>
+	/** following are flags for which view is displayed to switch between views.
+	 * See the view names above
+	 */
 	inwholegenome: boolean
 	inchrpair: boolean
 	indetail: boolean
+	/** Appears as horizontal view to the user. Launches from the 'Horizontal View' btn in detailed view menu */
 	inlineview: boolean
 
 	constructor(hic: any, debugmode: boolean) {
@@ -175,7 +184,7 @@ class Hicstat {
 			yAxis: tr1.append('td').classed('sjpp-hic-plot-xaxis', true),
 			//old x
 			xAxis: tr2.append('td').classed('sjpp-hic-plot-yaxis', true),
-			//TODO: blank space
+			//placeholder
 			blank: tr2.append('td')
 		} as MainPlotDiv
 
@@ -187,7 +196,6 @@ class Hicstat {
 		this.dom.controlsDiv.view.text('Genome')
 		const resolution = hic.bpresolution[0]
 
-		//TODO modify with controls.whole.genome.ts
 		this.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
 
 		// # pixel per bin, may set according to resolution
@@ -299,13 +307,13 @@ class Hicstat {
 
 		for (let i = 0; i < manychr; i++) {
 			const lead = hic.chrlst[i]
-			this.wholegenome.lead2follow.set(lead, new Map())
+			this.wholegenome!.lead2follow!.set(lead, new Map())
 
 			yoff = 0
 
 			for (let j = 0; j <= i; j++) {
 				const follow = hic.chrlst[j]
-				this.wholegenome.lead2follow.get(lead).set(follow, {
+				this.wholegenome!.lead2follow!.get(lead)!.set(follow, {
 					x: xoff,
 					y: yoff
 				})
@@ -353,7 +361,7 @@ class Hicstat {
 		this.indetail = false
 		this.dom.controlsDiv.wholegenomebutton.style('display', 'block')
 		this.dom.controlsDiv.chrpairviewbutton.style('display', 'none')
-		this.wholegenome.svg.remove()
+		this.wholegenome.svg!.remove()
 
 		this.chrpairview.chrx = chrx
 		this.chrpairview.chry = chry
@@ -1108,13 +1116,11 @@ export async function getdata_chrpair(hic: any, self: any) {
  */
 
 export function nmeth2select(hic: any, v: any) {
-	console.log(1183, v)
 	const options = hic.nmethselect.node().options
 	if (!options) return //When only 'NONE' is available
 	const selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value) as any
 	selectedNmeth.selected = true
 	v.nmeth = selectedNmeth.value
-	console.log(v.nmeth)
 }
 
 //////////////////// __detail view__ ////////////////////
