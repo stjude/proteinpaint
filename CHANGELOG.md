@@ -4,9 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Always show a menu after brushing matrix: Zoom in, List samples, and Add to a group/create cohort.
+
 Fixes:
 - Add clang missing dependency
 - Fixed issues showing variable definition with termsetting instance, especially in chart edit menu.
+- GDC OncoMatrix: use a more human-readable case ID as label instead of the UUID
+- Fix the samplelst filter editor and auto-update of the pill label
 
 
 ## 2.37.0
