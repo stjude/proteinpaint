@@ -5,11 +5,20 @@ import * as client from '#src/client'
 import { format as d3format } from 'd3-format'
 import * as common from '#shared/common'
 import blocklazyload from '#src/block.lazyload'
-import { HicstrawArgs } from '../../types/hic.ts'
+import {
+	HicstrawArgs,
+	MainPlotDiv,
+	HicstrawDom,
+	DetailedViewAxis,
+	HicstrawInput,
+	WholeGenomeView,
+	ChrPairView,
+	DetailView
+} from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { hicParseFile } from './parse.genome.ts'
 import { initWholeGenomeControls } from './controls.whole.genome.ts'
-import { Div, Elem, Input } from '../../types/d3'
+import { Div } from '../../types/d3'
 
 /*
 
@@ -80,158 +89,26 @@ type Pane = {
 	header: Selection<HTMLDivElement, any, any, any>
 	body: Selection<any, any, any, any>
 }
-
-type BaseHic = {
-	holder: Selection<HTMLDivElement, any, any, any> //Req && DOM
-	error: (f: string | string[]) => void
-}
-
-type MainPlotDiv = {
-	append: (s: string) => any
-	/** SVG plot display */
-	plot: Elem
-	/** Reuseable x axis*/
-	xAxis: Elem
-	/** Reuseable y axis*/
-	yAxis: Elem
-	/** Left blank to avoid rendering issues on resize */
-	blank: Elem
-}
-
-type HicstrawDom = {
-	/** Placeholder div for displaying errors to the user */
-	errorDiv: Elem
-	/** Control panel. Appears as a collapsible burger menu*/
-	controlsDiv: {
-		/** Equivalent of hic.nmethselect. May render as 'NONE' or dropdown */
-		nmeth: Elem
-		/** User input for cutoff */
-		inputBpMaxv: Input
-		/** Text display of resolution */
-		resolution: Elem
-		/** Hardcoded display of 'observed' matrix type. Change to dropdown in future. */
-		matrixType: Elem
-		/** Displays text of the user's current view and buttons for other views (except in genome view) */
-		view: Elem
-		/** Self explanatory */
-		viewBtnDiv: Elem
-		/** Returns user to the whole genome view from the chr-chr or detailed view*/
-		wholegenomebutton: Elem
-		/** Returns user to the chr-chr pair view from the detailed view */
-		chrpairviewbutton: Elem
-		/** Opens a pop up of the 2 chr genome browser view in the detailed view */
-		horizontalViewBtn: Elem
-		/** Div for zoom buttons visible in the detailed view */
-		zoomDiv: Elem
-		/** Zoom in button whilst in the detailed view */
-		zoomIn: Elem
-		/** Zoom out button whilst in the detailed view */
-		zoomOut: Elem
-	}
-	plotDiv: MainPlotDiv
-	/** Pop up menu */
-	tip: any
-}
-
-type HicWholeGenomSvg = {
-	wholegenome: Partial<{
-		binpx: number
-		bpmaxv: number
-		layer_map: any //dom
-		layer_sv: any //dom
-		lead2follow?: any //Map<string, Map<string, { x: number, y: number }>>
-		nmeth: string
-		/** Eventually there should be Menu type for client */
-		pica_x: any
-		/** Eventually there should be Menu type for client */
-		pica_y: any
-		resolution: number
-		svg: any //dom
-	}>
-}
-
-/** TODO: Scoped for file! Move to type file later.
- * Will break type down in server response data, dom elements, and client state during refactor
- * Plan to reorganize obj as well
- */
-type Hic = {
-	atdev: boolean
-	bpresolution: number[]
-	chrlst: string[]
-	chrorder: string[]
-	chrpairview: {
-		data: any
-		nmeth: string
-	}
-	detailview: {
-		bbmargin: number
-		canvas?: any //dom
-		frag?: {
-			xid2coord: any
-			xstartfrag: any
-			xstopfrag: any
-			yid2coord: any
-			ystartfrag: any
-			ystopfrag: any
-		}
-		nmeth: string
-		xb: {
-			leftheadw: number
-			rightheadw: number
-			lpad: number
-			rpad: number
-		}
-		yb: {
-			leftheadw: number
-			rightheadw: number
-			lpad: number
-			rpad: number
-		}
-	}
-	enzyme: string
-	enzymefile: string
-	file: string
-	fragresolution: number[]
-	genome: {
-		chrlookup: string[]
-		hicenzymefragment: number
-		majorchrorder: string[]
-	}
-	hostURL: string
-	inwholegenome: boolean
-	inchrpair: boolean
-	indetail: boolean
-	inlineview: boolean
-	/** TODO: define this somewhere */
-	jwt: any
-	name: string
-	nochr: boolean
-	normalization: string[]
-	sv: {
-		file: string
-		header: string
-		items: any
-	}
-	/** TODO: corresponds to eventual TrackEntry shared type */
-	tklst: any
-	url: string
-	version: string
-}
-
 /**
  * Parses input file and renders plot. Whole genome view renders as the default.
  * Clicking on chr-chr svg launches the chr-pair view.
  * Clicking anywhere within the chr-pair view launches the detail view. The track maybe launched from the Horizontal View button.
  * TODOs:
- * - add state-like functionality. Add functions for views to operate independently of each other.
- * - modify controls into single div (dom.controlsDiv). Use state to change between views
- * - After all that, fix the type mess above
+ * - add state-like functionality. Move objs for rendering under self and separate hic input. Add functions for views to operate independently of each other.
+ * - After all that, fix the type mess above (e.g. HicInput, HicState, etc.)
  */
 class Hicstat {
 	holder: Div
 	debugmode: boolean
 	dom: HicstrawDom
 	errList: string[]
+	wholegenome: Partial<WholeGenomeView>
+	chrpairview: Partial<ChrPairView>
+	detailview: Partial<DetailView>
+	inwholegenome: boolean
+	inchrpair: boolean
+	indetail: boolean
+	inlineview: boolean
 
 	constructor(hic: any, debugmode: boolean) {
 		this.holder = hic.holder
@@ -243,6 +120,39 @@ class Hicstat {
 			tip: new client.Menu()
 		}
 		this.errList = []
+		this.wholegenome = {
+			binpx: 1,
+			/** wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring*/
+			bpmaxv: 5000,
+			lead2follow: new Map(),
+			pica_x: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
+			pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
+			nmeth: ''
+		}
+		this.chrpairview = {
+			data: [],
+			nmeth: ''
+		}
+		this.detailview = {
+			bbmargin: 1,
+			nmeth: '',
+			xb: {
+				leftheadw: 20,
+				rightheadw: 40,
+				lpad: 1,
+				rpad: 1
+			} as DetailedViewAxis,
+			yb: {
+				leftheadw: 20,
+				rightheadw: 40,
+				lpad: 1,
+				rpad: 1
+			} as DetailedViewAxis
+		}
+		this.inwholegenome = true
+		this.inchrpair = false
+		this.indetail = false
+		this.inlineview = false
 	}
 
 	async error(err: string | string[]) {
@@ -269,6 +179,7 @@ class Hicstat {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 
+		/** Open the whole genome view by default. User clicks within squares to launch the other views. */
 		await this.init_wholeGenomeView(hic)
 	}
 
@@ -283,23 +194,22 @@ class Hicstat {
 		const binpx = 1
 
 		// for each chr, a row as canvas container
-		hic.wholegenome.svg = this.dom.plotDiv.plot.append('svg')
-		hic.wholegenome.binpx = binpx
-		hic.wholegenome.resolution = resolution
+		this.wholegenome.svg = this.dom.plotDiv.plot.append('svg')
+		this.wholegenome.resolution = resolution
 
 		const fontsize = 15 // chr labels
 		const borderwidth = 1
 		const spacecolor = '#ccc'
 
 		// heatmap layer underneath sv
-		const layer_map = hic.wholegenome.svg
+		const layer_map = this.wholegenome.svg
 			.append('g')
 			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-		hic.wholegenome.layer_map = layer_map
-		const layer_sv = hic.wholegenome.svg
+		this.wholegenome.layer_map = layer_map
+		const layer_sv = this.wholegenome.svg
 			.append('g')
 			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-		hic.wholegenome.layer_sv = layer_sv
+		this.wholegenome.layer_sv = layer_sv
 
 		let checker_row = true
 
@@ -389,13 +299,13 @@ class Hicstat {
 
 		for (let i = 0; i < manychr; i++) {
 			const lead = hic.chrlst[i]
-			hic.wholegenome.lead2follow.set(lead, new Map())
+			this.wholegenome.lead2follow.set(lead, new Map())
 
 			yoff = 0
 
 			for (let j = 0; j <= i; j++) {
 				const follow = hic.chrlst[j]
-				hic.wholegenome.lead2follow.get(lead).set(follow, {
+				this.wholegenome.lead2follow.get(lead).set(follow, {
 					x: xoff,
 					y: yoff
 				})
@@ -409,7 +319,7 @@ class Hicstat {
 			makewholegenome_sv(hic, this)
 		}
 
-		hic.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
+		this.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
 
 		/* after the ui is created, load data for each chr pair,
 		await on each request to finish to avoid server lockup
@@ -436,17 +346,17 @@ class Hicstat {
 	async init_chrPairView(hic: any, chrx: string, chry: string) {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
 		const detailView = this.init_detailView.bind(this)
-		nmeth2select(hic, hic.chrpairview.nmeth)
+		nmeth2select(hic, this.chrpairview)
 
-		hic.inwholegenome = false
-		hic.inchrpair = true
-		hic.indetail = false
+		this.inwholegenome = false
+		this.inchrpair = true
+		this.indetail = false
 		this.dom.controlsDiv.wholegenomebutton.style('display', 'block')
 		this.dom.controlsDiv.chrpairviewbutton.style('display', 'none')
-		hic.wholegenome.svg.remove()
+		this.wholegenome.svg.remove()
 
-		hic.chrpairview.chrx = chrx
-		hic.chrpairview.chry = chry
+		this.chrpairview.chrx = chrx
+		this.chrpairview.chry = chry
 
 		const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
 		const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
@@ -500,7 +410,7 @@ class Hicstat {
 					.call(axisRight(scaleLinear().domain([0, chrylen]).range([0, h])).tickFormat(d3format('.2s'))),
 				showline: true
 			})
-			hic.chrpairview.axisy = svg
+			this.chrpairview.axisy = svg
 		}
 
 		{
@@ -524,11 +434,11 @@ class Hicstat {
 					.call(axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w])).tickFormat(d3format('.2s'))),
 				showline: true
 			})
-			hic.chrpairview.axisx = svg
+			this.chrpairview.axisx = svg
 		}
 
-		hic.chrpairview.resolution = resolution
-		hic.chrpairview.binpx = binpx
+		this.chrpairview.resolution = resolution
+		this.chrpairview.binpx = binpx
 
 		const canvas = this.dom.plotDiv.plot
 			.append('canvas')
@@ -541,8 +451,8 @@ class Hicstat {
 		canvas!.width = Math.ceil(chrxlen / resolution) * binpx
 		canvas!.height = Math.ceil(chrylen / resolution) * binpx
 		const ctx = canvas!.getContext('2d')
-		hic.chrpairview.ctx = ctx
-		hic.chrpairview.canvas = canvas
+		this.chrpairview.ctx = ctx
+		this.chrpairview.canvas = canvas
 
 		await getdata_chrpair(hic, this)
 	}
@@ -550,22 +460,27 @@ class Hicstat {
 	async init_detailView(hic: any, chrx: any, chry: any, x: any, y: any) {
 		this.dom.controlsDiv.view.text('Detailed')
 		this.dom.controlsDiv.zoomDiv.style('display', 'contents')
-		nmeth2select(hic, hic.detailview.nmeth)
+		nmeth2select(hic, this.detailview)
 
-		hic.indetail = true
-		hic.inwholegenome = false
-		hic.inchrpair = false
+		// this.indetail = true
+		// this.inwholegenome = false
+		// this.inchrpair = false
 		this.dom.controlsDiv.wholegenomebutton.style('display', 'inline-block')
 
 		// const isintrachr = chrx == chry
-
 		this.dom.controlsDiv.chrpairviewbutton.html(`&#8592; Entire ${chrx}-${chry}`).style('display', 'block')
 
 		// default view span
-		const viewrangebpw = hic.chrpairview.resolution * initialbinnum_detail
+		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
 
-		let coordx = Math.max(1, Math.floor((x * hic.chrpairview.resolution) / hic.chrpairview.binpx) - viewrangebpw / 2)
-		let coordy = Math.max(1, Math.floor((y * hic.chrpairview.resolution) / hic.chrpairview.binpx) - viewrangebpw / 2)
+		let coordx = Math.max(
+			1,
+			Math.floor((x * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+		)
+		let coordy = Math.max(
+			1,
+			Math.floor((y * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+		)
 
 		// make sure positions are not out of bounds
 		{
@@ -597,11 +512,11 @@ class Hicstat {
 
 		// px width of x and y blocks
 		const blockwidth = Math.ceil((binpx * viewrangebpw) / resolution!)
-		hic.detailview.xb.width = blockwidth
-		hic.detailview.yb.width = blockwidth
+		this.detailview.xb!.width = blockwidth
+		this.detailview.yb!.width = blockwidth
 
-		hic.chrpairview.axisy.remove()
-		hic.chrpairview.axisx.remove()
+		this.chrpairview.axisy.remove()
+		this.chrpairview.axisx.remove()
 		this.dom.plotDiv.plot.selectAll('*').remove()
 
 		/************** middle canvas *****************/
@@ -630,22 +545,22 @@ class Hicstat {
 				body.on('mousemove', event => {
 					const xoff = event.clientX - x
 					const yoff = event.clientY - y
-					hic.detailview.xb.panning(xoff)
-					hic.detailview.yb.panning(yoff)
+					this.detailview.xb!.panning(xoff)
+					this.detailview.yb!.panning(yoff)
 					canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
 				})
 				body.on('mouseup', (event: MouseEvent) => {
 					body.on('mousemove', null).on('mouseup', null)
 					const xoff = event.clientX - x
 					const yoff = event.clientY - y
-					hic.detailview.xb.pannedby(xoff)
-					hic.detailview.yb.pannedby(yoff)
+					this.detailview.xb!.pannedby(xoff)
+					this.detailview.yb!.pannedby(yoff)
 				})
 			})
 		const ctx = canvas.node()!.getContext('2d')
 
-		hic.detailview.canvas = canvas
-		hic.detailview.ctx = ctx
+		this.detailview.canvas = canvas
+		this.detailview.ctx = ctx
 
 		await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw, this)
 
@@ -654,17 +569,17 @@ class Hicstat {
 		*/
 		{
 			this.dom.controlsDiv.zoomIn.on('click', () => {
-				hic.detailview.xb.zoomblock(2, false)
-				hic.detailview.yb.zoomblock(2, false)
+				this.detailview.xb!.zoomblock(2, false)
+				this.detailview.yb!.zoomblock(2, false)
 			})
 			this.dom.controlsDiv.zoomOut.on('click', () => {
-				hic.detailview.xb.zoomblock(2, true)
-				hic.detailview.yb.zoomblock(2, true)
+				this.detailview.xb!.zoomblock(2, true)
+				this.detailview.yb!.zoomblock(2, true)
 			})
 
 			this.dom.controlsDiv.horizontalViewBtn.style('display', 'block').on('click', () => {
-				const regionx = hic.detailview.xb.rglst[0]
-				const regiony = hic.detailview.yb.rglst[0]
+				const regionx = this.detailview.xb!.rglst[0]
+				const regiony = this.detailview.yb!.rglst[0]
 
 				const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
 				;(pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
@@ -728,7 +643,7 @@ class Hicstat {
 			nobox: true,
 			butrowbottom: true,
 			style: {
-				margin: hic.detailview.bbmargin + 'px'
+				margin: this.detailview.bbmargin + 'px'
 			},
 			genome: hic.genome,
 			hostURL: hic.hostURL,
@@ -757,22 +672,25 @@ class Hicstat {
 			*/
 			canvasholder.style(
 				'width',
-				2 * hic.detailview.bbmargin + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
+				2 * this.detailview.bbmargin! + bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 'px'
 			)
 
 			if (xfirsttime) {
 				xfirsttime = false
 				// must do this:
-				canvas.transition().style('left', hic.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
+				canvas.transition().style('left', this.detailview.bbmargin + bb.leftheadw + bb.lpad + 'px')
 				return
 			}
 			await detailViewUpdateRegionFromBlock(hic, this)
 		}
 		arg.onpanning = xoff => {
-			canvas.style('left', xoff + hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
+			canvas.style(
+				'left',
+				xoff + this.detailview.bbmargin + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
+			)
 		}
 		blocklazyload(arg).then(block => {
-			hic.detailview.xb = block
+			this.detailview.xb = block
 		})
 
 		/******************* y block ******************/
@@ -800,13 +718,13 @@ class Hicstat {
 		arg2.stop = coordy + viewrangebpw
 		arg2.holder = rotor
 		arg2.onloadalltk_always = async bb => {
-			const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * hic.detailview.bbmargin
+			const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
 			sheath.transition().style('height', bbw + 'px')
 			canvasholder.style('height', bbw + 'px')
 			if (yfirsttime) {
 				yfirsttime = false
 				// must do this:
-				canvas.transition().style('top', hic.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
+				canvas.transition().style('top', this.detailview.bbmargin + bb.rpad + bb.rightheadw + 'px')
 				return
 			}
 			await detailViewUpdateRegionFromBlock(hic, this)
@@ -814,17 +732,17 @@ class Hicstat {
 		arg2.onpanning = xoff => {
 			canvas.style(
 				'top',
-				-xoff + hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px'
+				-xoff + this.detailview.bbmargin! + this.detailview.yb!.rightheadw + this.detailview.yb!.rpad + 'px'
 			)
 		}
 
 		const buttonrowh = 30
 		arg2.onsetheight = bbh => {
-			rotor.transition().style('left', hic.detailview.bbmargin + bbh + buttonrowh + 'px')
+			rotor.transition().style('left', this.detailview.bbmargin + bbh + buttonrowh + 'px')
 		}
 
 		blocklazyload(arg2).then(block => {
-			hic.detailview.yb = block
+			this.detailview.yb = block
 		})
 		/*
 		//XXX this won't work, will duplicate the chunk for block, try named chunk
@@ -841,9 +759,7 @@ class Hicstat {
  * @param debugmode boolean
  */
 
-export async function init_hicstraw(hic: BaseHic & Partial<Hic> & HicWholeGenomSvg, debugmode: boolean) {
-	const oHic = hic
-	console.log(871, oHic)
+export async function init_hicstraw(hic: HicstrawInput, debugmode: boolean) {
 	const hicstat = new Hicstat(hic, debugmode)
 	hicstat.render(hic)
 }
@@ -851,14 +767,14 @@ export async function init_hicstraw(hic: BaseHic & Partial<Hic> & HicWholeGenomS
 //////////////////// __whole genome view__ ////////////////////
 
 function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: any) {
-	const binpx = hic.wholegenome.binpx
-	const obj = hic.wholegenome.lead2follow.get(lead).get(follow)
+	const binpx = self.wholegenome.binpx
+	const obj = self.wholegenome.lead2follow.get(lead).get(follow)
 
 	const leadchrlen = hic.genome.chrlookup[lead.toUpperCase()].len
 	const followchrlen = hic.genome.chrlookup[follow.toUpperCase()].len
 
-	const xbins = Math.ceil(leadchrlen / hic.wholegenome.resolution)
-	const ybins = Math.ceil(followchrlen / hic.wholegenome.resolution)
+	const xbins = Math.ceil(leadchrlen / self.wholegenome.resolution)
+	const ybins = Math.ceil(followchrlen / self.wholegenome.resolution)
 
 	obj.canvas = hic.holder.append('canvas').style('display', 'none').node()
 
@@ -867,7 +783,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 	obj.canvas.width = xbins * binpx
 	obj.canvas.height = ybins * binpx
 
-	obj.img = hic.wholegenome.layer_map
+	obj.img = self.wholegenome.layer_map
 		.append('image')
 		.attr('width', obj.canvas.width)
 		.attr('height', obj.canvas.height)
@@ -877,7 +793,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 			await self.init_chrPairView(hic, lead, follow, self)
 		})
 		.on('mouseover', () => {
-			chrpair_mouseover(hic, obj.img, lead, follow)
+			chrpair_mouseover(self, obj.img, lead, follow)
 		})
 
 	if (lead != follow) {
@@ -888,7 +804,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 		obj.canvas2.width = ybins * binpx
 		obj.canvas2.height = xbins * binpx
 
-		obj.img2 = hic.wholegenome.layer_map
+		obj.img2 = self.wholegenome.layer_map
 			.append('image')
 			.attr('width', obj.canvas2.width)
 			.attr('height', obj.canvas2.height)
@@ -898,22 +814,22 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 				await self.init_chrPairView(hic, follow, lead, self)
 			})
 			.on('mouseover', () => {
-				chrpair_mouseover(hic, obj.img2, follow, lead)
+				chrpair_mouseover(self, obj.img2, follow, lead)
 			})
 	} else {
 		obj.ctx2 = obj.ctx
 	}
 }
 
-function chrpair_mouseover(hic: any, img: any, x_chr: string, y_chr: string) {
+function chrpair_mouseover(self: any, img: any, x_chr: string, y_chr: string) {
 	const p = img.node().getBoundingClientRect()
-	hic.wholegenome.pica_x
+	self.wholegenome.pica_x
 		.clear()
 		.show(p.left, p.top)
 		.d.style('top', null)
 		.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
 		.text(x_chr)
-	hic.wholegenome.pica_y
+	self.wholegenome.pica_y
 		.clear()
 		.show(p.left, p.top)
 		.d.style('left', null)
@@ -922,9 +838,9 @@ function chrpair_mouseover(hic: any, img: any, x_chr: string, y_chr: string) {
 }
 
 export async function getdata_leadfollow(hic: any, lead: any, follow: any, self: any) {
-	const binpx = hic.wholegenome.binpx
-	const resolution = hic.wholegenome.resolution
-	const obj = hic.wholegenome.lead2follow.get(lead).get(follow)
+	const binpx = self.wholegenome.binpx
+	const resolution = self.wholegenome.resolution
+	const obj = self.wholegenome.lead2follow.get(lead).get(follow)
 	obj.data = []
 	obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
 	if (obj.canvas2) {
@@ -936,7 +852,7 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 		url: hic.url,
 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
 		pos2: hic.nochr ? follow.replace('chr', '') : follow,
-		nmeth: hic.wholegenome.nmeth,
+		nmeth: self.wholegenome.nmeth,
 		resolution: resolution
 	}
 
@@ -956,7 +872,7 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 			obj.data.push([leadpx, followpx, v])
 
 			const p =
-				v >= hic.wholegenome.bpmaxv ? 0 : Math.floor((255 * (hic.wholegenome.bpmaxv - v)) / hic.wholegenome.bpmaxv)
+				v >= self.wholegenome.bpmaxv ? 0 : Math.floor((255 * (self.wholegenome.bpmaxv - v)) / self.wholegenome.bpmaxv)
 			obj.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
 			obj.ctx.fillRect(followpx, leadpx, binpx, binpx)
 			obj.ctx2.fillStyle = 'rgb(255,' + p + ',' + p + ')'
@@ -978,7 +894,7 @@ function makewholegenome_sv(hic: any, self: any) {
 	const radius = 8
 
 	for (const item of hic.sv.items) {
-		const _o = hic.wholegenome.lead2follow.get(item.chr1)
+		const _o = self.wholegenome.lead2follow.get(item.chr1)
 		if (!_o) {
 			unknownchr.add(item.chr1)
 			continue
@@ -989,9 +905,9 @@ function makewholegenome_sv(hic: any, self: any) {
 			continue
 		}
 
-		const p1 = item.position1 / hic.wholegenome.resolution
-		const p2 = item.position2 / hic.wholegenome.resolution
-		hic.wholegenome.layer_sv
+		const p1 = item.position1 / self.wholegenome.resolution
+		const p2 = item.position2 / self.wholegenome.resolution
+		self.wholegenome.layer_sv
 			.append('circle')
 			.attr('stroke', 'black')
 			.attr('fill', 'white')
@@ -1010,7 +926,7 @@ function makewholegenome_sv(hic: any, self: any) {
 			})
 
 		if (obj.img2) {
-			hic.wholegenome.layer_sv
+			self.wholegenome.layer_sv
 				.append('circle')
 				.attr('stroke', 'black')
 				.attr('fill', 'whilte')
@@ -1110,16 +1026,16 @@ function tell_firstisx(hic: any, chrx: string, chry: string) {
 }
 
 export async function getdata_chrpair(hic: any, self: any) {
-	const chrx = hic.chrpairview.chrx
-	const chry = hic.chrpairview.chry
+	const chrx = self.chrpairview.chrx
+	const chry = self.chrpairview.chry
 	const isintrachr = chrx == chry
 	// const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
 	// const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
 	const firstisx = tell_firstisx(hic, chrx, chry)
 
-	const resolution = hic.chrpairview.resolution
-	const binpx = hic.chrpairview.binpx
-	const ctx = hic.chrpairview.ctx
+	const resolution = self.chrpairview.resolution
+	const binpx = self.chrpairview.binpx
+	const ctx = self.chrpairview.ctx
 
 	const arg = {
 		jwt: hic.jwt,
@@ -1127,7 +1043,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		url: hic.url,
 		pos1: hic.nochr ? chrx.replace('chr', '') : chrx,
 		pos2: hic.nochr ? chry.replace('chr', '') : chry,
-		nmeth: hic.chrpairview.nmeth,
+		nmeth: self.chrpairview.nmeth,
 		resolution: resolution
 	}
 	try {
@@ -1137,7 +1053,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		})
 		if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error.error } //Fix for message displaying [object object] instead of error message
 
-		ctx.clearRect(0, 0, hic.chrpairview.canvas.width, hic.chrpairview.canvas.height)
+		ctx.clearRect(0, 0, self.chrpairview.canvas.width, self.chrpairview.canvas.height)
 
 		if (!data.items || data.items.length == 0) {
 			// no data
@@ -1146,8 +1062,8 @@ export async function getdata_chrpair(hic: any, self: any) {
 
 		// const err = 0
 
-		hic.chrpairview.isintrachr = isintrachr
-		hic.chrpairview.data = []
+		self.chrpairview.isintrachr = isintrachr
+		self.chrpairview.data = []
 
 		/*
 		a percentile as cutoff for chrpairview
@@ -1162,16 +1078,16 @@ export async function getdata_chrpair(hic: any, self: any) {
 			const x = firstisx ? px1 : px2
 			const y = firstisx ? px2 : px1
 
-			hic.chrpairview.data.push([x, y, v])
+			self.chrpairview.data.push([x, y, v])
 			if (isintrachr) {
-				hic.chrpairview.data.push([y, x, v])
+				self.chrpairview.data.push([y, x, v])
 			}
 		}
 		const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
-		hic.chrpairview.bpmaxv = maxv
+		self.chrpairview.bpmaxv = maxv
 		self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
-		for (const [x, y, v] of hic.chrpairview.data) {
+		for (const [x, y, v] of self.chrpairview.data) {
 			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
 			ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
 			ctx.fillRect(x, y, binpx, binpx)
@@ -1192,17 +1108,20 @@ export async function getdata_chrpair(hic: any, self: any) {
  */
 
 export function nmeth2select(hic: any, v: any) {
+	console.log(1183, v)
 	const options = hic.nmethselect.node().options
-	if (!options) return //When only 'NONE' normalization is available
+	if (!options) return //When only 'NONE' is available
 	const selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value) as any
 	selectedNmeth.selected = true
+	v.nmeth = selectedNmeth.value
+	console.log(v.nmeth)
 }
 
 //////////////////// __detail view__ ////////////////////
 
 async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
-	const rx = hic.detailview.xb.rglst[0]
-	const ry = hic.detailview.yb.rglst[0]
+	const rx = self.detailview.xb.rglst[0]
+	const ry = self.detailview.yb.rglst[0]
 	await detailViewUpdateHic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop, self)
 }
 
@@ -1230,12 +1149,12 @@ async function detailViewUpdateHic(
 	ystop: number,
 	self: any
 ) {
-	hic.detailview.chrx = chrx
-	hic.detailview.chry = chry
-	hic.detailview.xstart = xstart
-	hic.detailview.xstop = xstop
-	hic.detailview.ystart = ystart
-	hic.detailview.ystop = ystop
+	self.detailview.chrx = chrx
+	self.detailview.chry = chry
+	self.detailview.xstart = xstart
+	self.detailview.xstop = xstop
+	self.detailview.ystart = ystart
+	self.detailview.ystop = ystop
 
 	const maxbpwidth = Math.max(xstop - xstart, ystop - ystart)
 	let resolution = null
@@ -1248,23 +1167,23 @@ async function detailViewUpdateHic(
 
 	try {
 		/** Format data for x fragment and query server for x data*/
-		const xfragment = await getXFragData(hic, resolution, chrx, xstart, xstop)
+		const xfragment = await getXFragData(hic, resolution, chrx, xstart, xstop, self)
 		if (!xfragment) {
 			// use bpresolution, not fragment
-			hic.detailview.resolution = resolution
+			self.detailview.resolution = resolution
 			self.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
 			// fixed bin size only for bp bins
-			hic.detailview.xbinpx = hic.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
-			hic.detailview.ybinpx = hic.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
+			self.detailview.xbinpx = self.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
+			self.detailview.ybinpx = self.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
 		} else {
 			//got fragment index for x
 			if (xfragment.error) throw { message: xfragment.error }
 			if (!xfragment.items) throw { message: '.items[] missing for x view range enzyme fragment' }
 			const [err, map, start, stop] = hicparsefragdata(xfragment.items)
 			if (err) throw { message: err }
-			hic.detailview.frag.xid2coord = map
-			hic.detailview.frag.xstartfrag = start
-			hic.detailview.frag.xstopfrag = stop
+			self.detailview.frag.xid2coord = map
+			self.detailview.frag.xstartfrag = start
+			self.detailview.frag.xstopfrag = stop
 
 			const yfragment = await getYFragData(hic, chry, ystart, ystop)
 			if (yfragment) {
@@ -1279,21 +1198,21 @@ async function detailViewUpdateHic(
 				frag id to coord mapping goes to same bin for great merit
 				*/
 					for (const [id, pos] of map) {
-						hic.detailview.frag.xid2coord.set(id, pos)
+						self.detailview.frag.xid2coord.set(id, pos)
 					}
-					hic.detailview.frag.yid2coord = hic.detailview.frag.xid2coord
+					self.detailview.frag.yid2coord = self.detailview.frag.xid2coord
 				} else {
-					hic.detailview.frag.yid2coord = map
+					self.detailview.frag.yid2coord = map
 				}
-				hic.detailview.frag.ystartfrag = start
-				hic.detailview.frag.ystopfrag = stop
+				self.detailview.frag.ystartfrag = start
+				self.detailview.frag.ystopfrag = stop
 
 				/** x/y fragment range defined
 				 * find out resolution
 				 */
 				const maxfragspan = Math.max(
-					hic.detailview.frag.xstopfrag - hic.detailview.frag.xstartfrag,
-					hic.detailview.frag.ystopfrag - hic.detailview.frag.ystartfrag
+					self.detailview.frag.xstopfrag - self.detailview.frag.xstartfrag,
+					self.detailview.frag.ystopfrag - self.detailview.frag.ystartfrag
 				)
 				//let resolution: number | null = null
 				for (const r of hic.fragresolution) {
@@ -1306,7 +1225,7 @@ async function detailViewUpdateHic(
 					resolution = hic.fragresolution[hic.fragresolution.length - 1]
 				}
 				self.dom.controlsDiv.resolution.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
-				hic.detailview.resolution = resolution
+				self.detailview.resolution = resolution
 			}
 		}
 		getdata_detail(hic, self)
@@ -1318,16 +1237,16 @@ async function detailViewUpdateHic(
 	if (self.errList.length) self.error(self.errList)
 }
 
-async function getXFragData(hic: any, resolution: any, chrx: string, xstart: number, xstop: number) {
+async function getXFragData(hic: any, resolution: any, chrx: string, xstart: number, xstop: number, self: any) {
 	if (resolution != null) {
 		// using bp resolution
-		delete hic.detailview.frag
+		delete self.detailview.frag
 		return
 	}
 	if (!hic.enzyme) {
 		// no enzyme available
 		resolution = hic.bpresolution[hic.bpresolution.length - 1]
-		delete hic.detailview.frag
+		delete self.detailview.frag
 		return
 	}
 
@@ -1335,7 +1254,7 @@ async function getXFragData(hic: any, resolution: any, chrx: string, xstart: num
 		convert x/y view range coordinate to enzyme fragment index
 		using the span of frag index to figure out resolution (# of fragments)
 		*/
-	hic.detailview.frag = {}
+	self.detailview.frag = {}
 
 	// query fragment index for x
 	const arg = {
@@ -1373,18 +1292,18 @@ export function getdata_detail(hic: any, self: any) {
 	request hic data and paint canvas
 	*/
 
-	const resolution = hic.detailview.resolution
-	const ctx = hic.detailview.ctx
-	const chrx = hic.detailview.chrx
-	const chry = hic.detailview.chry
+	const resolution = self.detailview.resolution
+	const ctx = self.detailview.ctx
+	const chrx = self.detailview.chrx
+	const chry = self.detailview.chry
 
-	const fg = hic.detailview.frag
+	const fg = self.detailview.frag
 
 	// genomic coordinates
-	const xstart = hic.detailview.xstart
-	const xstop = hic.detailview.xstop
-	const ystart = hic.detailview.ystart
-	const ystop = hic.detailview.ystop
+	const xstart = self.detailview.xstart
+	const xstop = self.detailview.xstop
+	const ystart = self.detailview.ystart
+	const ystop = self.detailview.ystop
 
 	const par: HicstrawArgs = {
 		jwt: hic.jwt,
@@ -1398,7 +1317,7 @@ export function getdata_detail(hic: any, self: any) {
 			(hic.nochr ? chry.replace('chr', '') : chry) +
 			':' +
 			(fg ? fg.ystartfrag + ':' + fg.ystopfrag : ystart + ':' + ystop),
-		nmeth: hic.detailview.nmeth,
+		nmeth: self.detailview.nmeth,
 		resolution: resolution
 	}
 
@@ -1416,10 +1335,10 @@ export function getdata_detail(hic: any, self: any) {
 			return data.json()
 		})
 		.then(data => {
-			hic.detailview.canvas.attr('width', hic.detailview.xb.width).attr('height', hic.detailview.yb.width)
+			self.detailview.canvas.attr('width', self.detailview.xb.width).attr('height', self.detailview.yb.width)
 
-			const canvaswidth = Number.parseInt(hic.detailview.canvas.attr('width'))
-			const canvasheight = Number.parseInt(hic.detailview.canvas.attr('height'))
+			const canvaswidth = Number.parseInt(self.detailview.canvas.attr('width'))
+			const canvasheight = Number.parseInt(self.detailview.canvas.attr('height'))
 			ctx.clearRect(0, 0, canvaswidth, canvasheight)
 
 			// pixel per bp
@@ -1551,7 +1470,7 @@ export function getdata_detail(hic: any, self: any) {
 
 			maxv *= 0.8
 
-			hic.detailview.bpmaxv = maxv
+			self.detailview.bpmaxv = maxv
 			self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
 			for (const [x, y, w, h, v] of lst) {
@@ -1561,7 +1480,7 @@ export function getdata_detail(hic: any, self: any) {
 				ctx.fillRect(x, y, w, h)
 			}
 
-			hic.detailview.data = lst
+			self.detailview.data = lst
 		})
 
 		.catch(err => {
@@ -1570,9 +1489,9 @@ export function getdata_detail(hic: any, self: any) {
 		})
 		.then(() => {
 			if (self.errList.length) self.error(self.errList)
-			hic.detailview.canvas
-				.style('left', hic.detailview.bbmargin + hic.detailview.xb.leftheadw + hic.detailview.xb.lpad + 'px')
-				.style('top', hic.detailview.bbmargin + hic.detailview.yb.rightheadw + hic.detailview.yb.rpad + 'px')
+			self.detailview.canvas
+				.style('left', self.detailview.bbmargin + self.detailview.xb.leftheadw + self.detailview.xb.lpad + 'px')
+				.style('top', self.detailview.bbmargin + self.detailview.yb.rightheadw + self.detailview.yb.rpad + 'px')
 		})
 }
 

@@ -81,41 +81,9 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 	/** Default args for each view */
 	const initialNmeth = hic.normalization.length ? hic.normalization[0] : defaultnmeth
 
-	hic.wholegenome = {
-		// wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring
-		bpmaxv: 5000,
-		lead2follow: new Map(),
-		nmeth: initialNmeth,
-		pica_x: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
-		pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
-	}
-
-	hic.chrpairview = {
-		data: [],
-		nmeth: initialNmeth
-	}
-
-	hic.detailview = {
-		bbmargin: 1,
-		nmeth: initialNmeth,
-		xb: {
-			leftheadw: 20,
-			rightheadw: 40,
-			lpad: 1,
-			rpad: 1
-		},
-		yb: {
-			leftheadw: 20,
-			rightheadw: 40,
-			lpad: 1,
-			rpad: 1
-		}
-	}
-
-	hic.inwholegenome = true
-	hic.inchrpair = false
-	hic.indetail = false
-	hic.inlineview = false
+	self.wholegenome.nmeth = initialNmeth
+	self.chrpairview.nmeth = initialNmeth
+	self.detailview.nmeth = initialNmeth
 
 	if (self.errList.length) self.error(self.errList)
 	return hic
