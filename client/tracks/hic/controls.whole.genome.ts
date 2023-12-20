@@ -53,12 +53,12 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('width', '80px')
 		.style('margin-left', '0px')
 		.attr('type', 'number')
-		.property('value', hic.wholegenome.bpmaxv)
+		.property('value', self.wholegenome.bpmaxv)
 		.on('keyup', (event: KeyboardEvent) => {
 			if (event.code != 'Enter') return
 			const v: any = (event.target as HTMLInputElement).value
-			if (v <= 0) return hic.error('invalid cutoff value')
-			setmaxv(hic, v)
+			if (v <= 0) return self.error('invalid cutoff value')
+			setmaxv(self, v)
 		})
 
 	const resolutionRow = menuTable.append('tr')
@@ -84,9 +84,9 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.on('click', () => {
 			self.dom.controlsDiv.view.text('Genome')
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
-			hic.inwholegenome = true
-			hic.inchrpair = false
-			hic.indetail = false
+			self.inwholegenome = true
+			self.inchrpair = false
+			self.indetail = false
 			switchview(hic, self)
 		})
 
@@ -95,9 +95,9 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('display', 'none')
 		.on('click', () => {
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
-			hic.inwholegenome = false
-			hic.inchrpair = true
-			hic.indetail = false
+			self.inwholegenome = false
+			self.inchrpair = true
+			self.indetail = false
 			switchview(hic, self)
 		})
 
@@ -140,8 +140,8 @@ function makeNormMethDisplay(hic: any, self: any) {
 }
 
 async function setnmeth(hic: any, nmeth: string, self: any) {
-	if (hic.inwholegenome) {
-		hic.wholegenome.nmeth = nmeth
+	if (self.inwholegenome) {
+		self.wholegenome.nmeth = nmeth
 		const manychr = hic.atdev ? 3 : hic.chrlst.length
 		for (let i = 0; i < manychr; i++) {
 			const lead = hic.chrlst[i]
@@ -150,21 +150,21 @@ async function setnmeth(hic: any, nmeth: string, self: any) {
 				try {
 					await getdata_leadfollow(hic, lead, follow, self)
 				} catch (e: any) {
-					hic.errList.push(e.message || e)
+					self.errList.push(e.message || e)
 				}
 			}
 		}
-		if (hic.errList.length) hic.error(hic.errList)
+		if (self.errList.length) self.error(self.errList)
 		return
 	}
 
-	if (hic.inchrpair) {
-		hic.chrpairview.nmeth = nmeth
+	if (self.inchrpair) {
+		self.chrpairview.nmeth = nmeth
 		await getdata_chrpair(hic, self)
 		return
 	}
-	if (hic.indetail) {
-		hic.detailview.nmeth = nmeth
+	if (self.indetail) {
+		self.detailview.nmeth = nmeth
 		getdata_detail(hic, self)
 	}
 }
@@ -175,13 +175,13 @@ async function setnmeth(hic: any, nmeth: string, self: any) {
  * @param maxv
  * @returns
  */
-function setmaxv(hic: any, maxv: number) {
-	if (hic.inwholegenome) {
+function setmaxv(self: any, maxv: number) {
+	if (self.inwholegenome) {
 		// viewing whole genome
-		hic.wholegenome.bpmaxv = maxv
-		if (!hic.wholegenome.lead2follow) return
-		const binpx = hic.wholegenome.binpx
-		for (const [lead, a] of hic.wholegenome.lead2follow) {
+		self.wholegenome.bpmaxv = maxv
+		if (!self.wholegenome.lead2follow) return
+		const binpx = self.wholegenome.binpx
+		for (const [lead, a] of self.wholegenome.lead2follow) {
 			for (const [follow, b] of a) {
 				for (const [leadpx, followpx, v] of b.data) {
 					const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
@@ -198,26 +198,26 @@ function setmaxv(hic: any, maxv: number) {
 		}
 		return
 	}
-	if (hic.inchrpair) {
+	if (self.inchrpair) {
 		// viewing chr pair
-		hic.chrpairview.bpmaxv = maxv
-		const binpx = hic.chrpairview.binpx
-		for (const [x, y, v] of hic.chrpairview.data) {
+		self.chrpairview.bpmaxv = maxv
+		const binpx = self.chrpairview.binpx
+		for (const [x, y, v] of self.chrpairview.data) {
 			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-			hic.chrpairview.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-			hic.chrpairview.ctx.fillRect(x, y, binpx, binpx)
-			if (hic.chrpairview.isintrachr) {
-				hic.chrpairview.ctx.fillRect(y, x, binpx, binpx)
+			self.chrpairview.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
+			self.chrpairview.ctx.fillRect(x, y, binpx, binpx)
+			if (self.chrpairview.isintrachr) {
+				self.chrpairview.ctx.fillRect(y, x, binpx, binpx)
 			}
 		}
 		return
 	}
-	if (hic.indetail) {
-		hic.detailview.bpmaxv = maxv
-		for (const [x, y, w, h, v] of hic.detailview.data) {
+	if (self.indetail) {
+		self.detailview.bpmaxv = maxv
+		for (const [x, y, w, h, v] of self.detailview.data) {
 			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-			hic.detailview.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-			hic.detailview.ctx.fillRect(x, y, w, h)
+			self.detailview.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
+			self.detailview.ctx.fillRect(x, y, w, h)
 		}
 	}
 }
@@ -228,29 +228,30 @@ function setmaxv(hic: any, maxv: number) {
  * @param hic
  */
 function switchview(hic: any, self: any) {
-	if (hic.inwholegenome) {
+	if (self.inwholegenome) {
+		console.log(self.wholegenome.nmeth)
+		nmeth2select(hic, self.wholegenome)
 		self.dom.plotDiv.xAxis.selectAll('*').remove()
 		self.dom.plotDiv.yAxis.selectAll('*').remove()
 		self.dom.plotDiv.plot.selectAll('*').remove()
-		self.dom.plotDiv.plot.node().appendChild(hic.wholegenome.svg.node())
+		self.dom.plotDiv.plot.node().appendChild(self.wholegenome.svg.node())
 		self.dom.controlsDiv.wholegenomebutton.style('display', 'none')
 		self.dom.controlsDiv.chrpairviewbutton.style('display', 'none')
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
-		self.dom.controlsDiv.inputBpMaxv.property('value', hic.wholegenome.bpmaxv)
-		self.dom.controlsDiv.resolution.text(bplen(hic.wholegenome.resolution) + ' bp')
-		nmeth2select(hic, hic.wholegenome.nmeth)
-	} else if (hic.inchrpair) {
+		self.dom.controlsDiv.inputBpMaxv.property('value', self.wholegenome.bpmaxv)
+		self.dom.controlsDiv.resolution.text(bplen(self.wholegenome.resolution) + ' bp')
+	} else if (self.inchrpair) {
+		nmeth2select(hic, self.chrpairview)
 		self.dom.plotDiv.yAxis.selectAll('*').remove()
-		self.dom.plotDiv.yAxis.node().appendChild(hic.chrpairview.axisy.node())
+		self.dom.plotDiv.yAxis.node().appendChild(self.chrpairview.axisy.node())
 		self.dom.plotDiv.xAxis.selectAll('*').remove()
-		self.dom.plotDiv.xAxis.node().appendChild(hic.chrpairview.axisx.node())
+		self.dom.plotDiv.xAxis.node().appendChild(self.chrpairview.axisx.node())
 		self.dom.plotDiv.plot.selectAll('*').remove()
-		self.dom.plotDiv.plot.node().appendChild(hic.chrpairview.canvas)
+		self.dom.plotDiv.plot.node().appendChild(self.chrpairview.canvas)
 		self.dom.controlsDiv.wholegenomebutton.style('display', 'inline-block')
 		self.dom.controlsDiv.chrpairviewbutton.style('display', 'none')
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
-		self.dom.controlsDiv.inputBpMaxv.property('value', hic.chrpairview.bpmaxv)
-		self.dom.controlsDiv.resolution.text(bplen(hic.chrpairview.resolution) + ' bp')
-		nmeth2select(hic, hic.chrpairview.nmeth)
+		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
+		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
 	}
 }
