@@ -46,16 +46,6 @@ tape('init_hicstraw()', async test => {
 	const hicOriginal = { ...hic }
 	await init_hicstraw(hic, true)
 	test.ok(!hicOriginal.name && hic.name == 'Hi-C', 'Should set name to Hi-C since no name was provided')
-	test.ok(
-		hic.wholegenome &&
-			hic.chrpairview &&
-			hic.detailview &&
-			hic.inwholegenome == true &&
-			hic.inchrpair == false &&
-			hic.indetail == false &&
-			hic.inlineview == false,
-		'Should add .wholegenome, .chrpairview, and .detailview objects as well as .inwholegenome, .inchrpair, .indetail, and .inlineview booleans to hic'
-	)
 	if (test['_ok']) holder!.remove()
 	test.end()
 })

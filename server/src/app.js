@@ -355,13 +355,13 @@ export function log(req) {
 	for (const k in req.query) {
 		if (k != 'jwt') j[k] = req.query[k]
 	}
-	console.log(
-		'%s\t%s\t%s\t%s',
-		url.parse(req.url).pathname,
-		new Date(),
-		req.header('x-forwarded-for') || req.connection.remoteAddress,
-		JSON.stringify(j).replace(/\\"/g, '"')
-	)
+	// console.log(
+	// 	'%s\t%s\t%s\t%s',
+	// 	url.parse(req.url).pathname,
+	// 	new Date(),
+	// 	req.header('x-forwarded-for') || req.connection.remoteAddress,
+	// 	JSON.stringify(j).replace(/\\"/g, '"')
+	// )
 }
 
 export async function startServer() {
