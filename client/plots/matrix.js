@@ -160,6 +160,7 @@ export class Matrix {
 
 			// may skip data requests when changes are not expected to affect the request payload
 			if (this.stateDiff.nonsettings) {
+				delete this.clickedChildren // reset highlighted dendrogram to black
 				const promises = []
 				// get the data
 				if (this.setHierClusterData) promises.push(this.setHierClusterData())
