@@ -160,7 +160,7 @@ export class Matrix {
 
 			// may skip data requests when changes are not expected to affect the request payload
 			if (this.stateDiff.nonsettings) {
-				// reset highlighted dendrogram chickren to black when data request is triggered
+				// reset highlighted dendrogram children to black when data request is triggered
 				delete this.clickedChildren
 
 				const promises = []
