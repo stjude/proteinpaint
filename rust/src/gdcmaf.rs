@@ -17,16 +17,12 @@ use serde_json::Value;
 use std::path::Path;
 use futures::StreamExt;
 use std::io::{self,Read,Write};
-use std::sync::mpsc;
 
 
 
-fn gen_vec(d:String) -> (Vec<String>,Vec<Vec<u8>>) {
-    let mut maf_bit: Vec<Vec<u8>> = Vec::new();
-    let mut lst_chrom_pos: Vec<String> = Vec::new();
+fn select_maf_col(d:String) -> Vec<u8> {
+    let mut maf_str: String = String::new();
     let mut header_indices: Vec<usize> = Vec::new();
-    let mut chrom_index: usize = 9999;
-    let mut pos_index: usize = 9999;
     let lines = d.trim_end().split("\n");
     for line in lines {
         if line.starts_with("#") {
@@ -36,41 +32,20 @@ fn gen_vec(d:String) -> (Vec<String>,Vec<Vec<u8>>) {
             for col in MAF_COL {
                 let col_index: usize = header.iter().position(|x| x == col).unwrap();
                 header_indices.push(col_index);
-                if col == "Chromosome" {
-                    chrom_index = col_index;
-                } else if col == "Start_Position" {
-                    pos_index = col_index;
-                }
             }
         } else {
             let maf_cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
             let mut maf_out_lst: Vec<String> = Vec::new();
-            let mut chrom = String::new();
-            let mut pos = String::new();
-            for (i,x) in header_indices.iter().enumerate() {
+            for x in header_indices.iter() {
                 maf_out_lst.push(maf_cont_lst[*x].to_string());
-                if chrom_index != 9999 && i == chrom_index {
-                    chrom = maf_cont_lst[*x].to_string();
-                } else if pos_index != 9999 && i == pos_index {
-                    pos = maf_cont_lst[*x].to_string();
-                }
             };
             maf_out_lst.push("\n".to_string());
-            maf_bit.push(maf_out_lst.join("\t").as_bytes().to_vec());
-            lst_chrom_pos.push(chrom+"\t"+&pos);
+            maf_str.push_str(maf_out_lst.join("\t").as_str());
         }
     };
-    (lst_chrom_pos,maf_bit)
+    maf_str.as_bytes().to_vec()
 }
 
-fn get_sorted_indices(lst: &Vec<String>) -> Vec<usize>{
-    let mut indices = (0..lst.len()).collect::<Vec<usize>>();
-    indices.sort_by(|a,b| {
-        lst[*a].split('\t').collect::<Vec<&str>>()[0].cmp(lst[*b].split('\t').collect::<Vec<&str>>()[0])
-            .then(lst[*a].split('\t').collect::<Vec<&str>>()[1].parse::<u32>().unwrap().cmp(&lst[*b].split('\t').collect::<Vec<&str>>()[1].parse::<u32>().unwrap()))
-        });
-    indices
-}
 
 // GDC MAF columns (96)
 const MAF_COL: [&str;96] = ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", 
@@ -109,46 +84,42 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     };
 
     //downloading maf files parallelly and merge them into single maf file
-    let (tx, rx) = mpsc::channel();
-    let fetches = futures::stream::iter(
+    let download_futures = futures::stream::iter(
         url.into_iter().map(|url|{
-            let txt = tx.clone();
             async move {
-                if let Ok(resp) = reqwest::get(&url).await {
+                let result = reqwest::get(&url).await;
+                if let Ok(resp) = result {
                     let content = resp.bytes().await.unwrap();
                     let mut decoder = GzDecoder::new(&content[..]);
                     let mut decompressed_content = Vec::new();
-                    if let Ok(_) = decoder.read_to_end(&mut decompressed_content) {
-                        let text = String::from_utf8_lossy(&decompressed_content);
-                        let (lst_chrom_pos,maf_bit) = gen_vec(text.to_string());
-                        txt.send((lst_chrom_pos,maf_bit)).unwrap();
+                    let read_content = decoder.read_to_end(&mut decompressed_content);
+                    if let Ok(_) = read_content {
+                        let text = String::from_utf8_lossy(&decompressed_content).to_string();
+                        text
+                    } else {
+                        let error_msg = "Failed to read content downloaded from: ".to_string() + &url;
+                        error_msg
                     }
+                } else {
+                    let error_msg = "Failed to download: ".to_string() + &url;
+                    error_msg
                 }
             }
         })
-    ).buffer_unordered(20).collect::<Vec<()>>();
-    fetches.await;
-    drop(tx);
-
-    // write downloaded maf (GZIP format) into a Vector
-    // lst_chrom_pos: a vector including chromsome&position info for sorting maf
-    // idx_sorted: indices after sorting basedon chromsome&position
-    let mut maf_bit: Vec<Vec<u8>> = Vec::new();
-    let mut lst_chrom_pos: Vec<String> = Vec::new();
-    for (chr_pos_lst,maf_bit_lst) in rx {
-        maf_bit.extend_from_slice(&maf_bit_lst);
-        lst_chrom_pos.extend_from_slice(&chr_pos_lst);
-    };
-    let idx_sorted = get_sorted_indices(&lst_chrom_pos);
+    );
 
     // output
-    // maf_out_bit: A vector of GZIPPED maf
-    // compress_header: output header
     let mut encoder = GzEncoder::new(io::stdout(), Compression::default());
     let _ = encoder.write_all(&MAF_COL.join("\t").as_bytes().to_vec()).expect("Failed to write header");
     let _ = encoder.write_all(b"\n").expect("Failed to write newline");
-    for i in idx_sorted.iter() {
-        let _ = encoder.write_all(&maf_bit[*i]).expect("Failed to write file");
-    };
+    download_futures.buffer_unordered(20).for_each(|item| {
+        if item.starts_with("Failed") {
+            eprintln!("{}",item);
+        } else {
+            let maf_bit = select_maf_col(item);
+            let _ = encoder.write_all(&maf_bit).expect("Failed to write file");
+        };
+        async {}
+    }).await;
     Ok(())
 }
