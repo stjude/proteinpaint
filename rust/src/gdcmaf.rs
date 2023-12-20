@@ -1,5 +1,5 @@
 /*
-	This script download cohort maf files from GDC, combine them into a single file, and output the sorted file based on chromsome and Start_Position.
+	This script download cohort maf files from GDC, concatenate them into a single file that includes user specified columns.
 
 	Input JSON:
 		host: GDC host
