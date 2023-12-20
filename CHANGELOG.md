@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - Add clang missing dependency
 
+
 ## 2.37.0
 
 Features:

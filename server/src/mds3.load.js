@@ -482,42 +482,43 @@ async function geneExpressionClustering(data, q, ds) {
 
 	const row_coordinates = []
 	for (const item of Routput.RowNodeJson) {
-		row_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
+		row_coordinates.push({ x: item.x, y: item.y })
 	}
-	let col_coordinates = []
+	const col_coordinates = []
 	for (const item of Routput['ColNodeJson']) {
-		col_coordinates.push({ x: item[0].x[0], y: item[1].y[0] })
+		col_coordinates.push({ x: item.x, y: item.y })
 	}
-	let matrix_1d = []
-	//console.log(Routput['OutputMatrix'])
-	for (const item of Routput['OutputMatrix']) {
-		matrix_1d.push(item['elem'][0])
-	}
-	let row_names_index = []
-	let col_names_index = []
+	const row_names_index = []
+	const col_names_index = []
 
 	for (const item of Routput['RowDendOrder']) {
-		row_names_index.push(item['i'][0])
+		row_names_index.push(item.ind)
 	}
 	for (const item of Routput['ColumnDendOrder']) {
-		col_names_index.push(item['i'][0])
+		col_names_index.push(item.ind)
 	}
 
-	let row_names = []
-	let col_names = []
+	const row_names = []
+	const col_names = []
 
 	for (const item of Routput['SortedRowNames']) {
-		row_names.push(item['gene'][0])
+		row_names.push(item.gene)
 	}
 	for (const item of Routput['SortedColumnNames']) {
-		col_names.push(item['sample'][0])
+		col_names.push(item.sample)
 	}
 
-	let row_output = await parseclust(row_coordinates, row_names_index)
-	let col_output = await parseclust(col_coordinates, col_names_index)
+	const row_output = await parseclust(row_coordinates, row_names_index)
+	const col_output = await parseclust(col_coordinates, col_names_index)
+
+	const matrix_1d = []
+	//console.log(Routput['OutputMatrix'])
+	for (const item of Routput['OutputMatrix']) {
+		matrix_1d.push(item.elem[0])
+	}
 
 	// Converting the 1D array to 2D array column-wise
-	let output_matrix = []
+	const output_matrix = []
 	for (let i = 0; i < row_names.length; i++) {
 		if (col_names.length > 0) {
 			let row = []
@@ -606,8 +607,8 @@ async function parseclust(coordinates, names_index) {
         */
 
 	let first = 1
-	let xs = []
-	let ys = []
+	const xs = []
+	const ys = []
 	for (const item of coordinates) {
 		//console.log(item)
 		if (Number(item.x) % 1 != 0 && Number(item.y == 0)) {
@@ -624,9 +625,9 @@ async function parseclust(coordinates, names_index) {
 
 	let depth_start_position = 0 // Initializing position of depth start to position 0 in R output
 	let i = 0
-	let depth_first_branch = []
-	let prev_ys = []
-	let prev_xs = []
+	const depth_first_branch = []
+	const prev_ys = []
+	const prev_xs = []
 	let break_point = false
 	let old_depth_start_position = 0
 	let node_children = []
