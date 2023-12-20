@@ -4,8 +4,7 @@ import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
 import { dofetch3 } from '#common/dofetch'
 import { fillTermWrapper } from '#termsetting'
 import { extent } from 'd3-array'
-import { interpolateRgbBasis } from 'd3-interpolate'
-import { interpolateRdBu } from 'd3-scale-chromatic'
+import { scaleLinear } from 'd3-scale'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 
@@ -329,13 +328,15 @@ class HierCluster extends Matrix {
 
 		const c = this.hierClusterData.clustering
 		this.setHierColorScale(c)
+
+		const zScoreCap = this.settings.hierCluster.zScoreCap // used in loops below
+
 		const samples = {}
 		for (const [i, sample] of c.sampleNameLst.entries()) {
 			samples[sample] = { sample }
 			for (const [j, name] of c.geneNameLst.entries()) {
 				const tw = twlst.find(tw => tw.term.name === name)
 				const value = c.matrix[j][i]
-				const { min, range, scale } = this.hierClusterColor[j]
 				samples[sample][tw.$id] = {
 					key: tw.term.name,
 					values: [
@@ -349,7 +350,8 @@ class HierCluster extends Matrix {
 							chr: tw.term.chr,
 							pos: `${tw.term.start}-${tw.term.stop}`,
 							value,
-							color: scale(1 - (value - min) / range)
+							// compute color for each cell based on its numeric value
+							color: this.geneExpValues.scale((value - -zScoreCap) / (zScoreCap * 2))
 						}
 					]
 				}
@@ -400,24 +402,14 @@ class HierCluster extends Matrix {
 
 	setHierColorScale(c) {
 		const hc = this.settings.hierCluster
-		const scale = hc.colors?.length ? interpolateRgbBasis(hc.colors) : interpolateRdBu
+		const scale = scaleLinear(hc.colorScale.domain, hc.colorScale.range).clamp(true)
 		const globalMinMaxes = []
 		for (const row of c.matrix) {
 			globalMinMaxes.push(...extent(row))
 		}
 		const absMax = Math.min(hc.zScoreCap, Math.max(...extent(globalMinMaxes).map(Math.abs)))
 		const [min, max] = [-absMax, absMax]
-		const minMaxes = []
-		for (const row of c.matrix) {
-			//const [min, max] = extent(row)
-			minMaxes.push({
-				min,
-				max,
-				range: max - min,
-				scale
-			})
-		}
-		this.hierClusterColor = minMaxes
+		// what's purpose of assigning this.geneExpValues{}, to signal something to matrix code?
 		this.geneExpValues = { scale, min, max }
 	}
 
@@ -427,9 +419,7 @@ class HierCluster extends Matrix {
 			rowHeight: this.dimensions.dy,
 			colWidth: this.dimensions.dx,
 			xDendrogramHeight: this.settings.hierCluster.xDendrogramHeight,
-			yDendrogramHeight: this.settings.hierCluster.yDendrogramHeight,
-			minColor: '#0c306b',
-			maxColor: '#ffcc00'
+			yDendrogramHeight: this.settings.hierCluster.yDendrogramHeight
 		}
 		try {
 			obj.row_dendro.map(this.validateRline)
@@ -683,10 +673,19 @@ export async function getPlotConfig(opts = {}, app) {
 		zScoreCap: 5,
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
-		colors: []
+		colorScale: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] }
 	}
 	const overrides = app.vocabApi.termdbConfig.hierCluster || {}
 	copyMerge(config.settings.hierCluster, overrides.settings)
+
+	// okay to validate state here?
+	{
+		const c = config.settings.hierCluster.colorScale
+		if (!c) throw 'colorScale missing'
+		if (!Array.isArray(c.domain) || c.domain.length == 0) throw 'colorScale.domain must be non-empty array'
+		if (!Array.isArray(c.range) || c.range.length == 0) throw 'colorScale.range must be non-empty array'
+		if (c.domain.length != c.range.length) throw 'colorScale domain[] and range[] of different length'
+	}
 
 	config.settings.matrix.collabelpos = 'top'
 

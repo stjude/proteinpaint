@@ -1,2 +1,2 @@
 Fixes:
--in hierCluster, disable sort buttons when clicking on a row label in non-clustering group
+- for hierCluster, nodejs always transform to zscore; use scaleLinear for improved heatmap rendering
