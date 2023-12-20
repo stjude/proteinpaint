@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- for hierCluster, nodejs always transform to zscore; use scaleLinear for improved heatmap rendering
+
 
 ## 2.38.0
 
