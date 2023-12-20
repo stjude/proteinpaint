@@ -162,10 +162,6 @@ sorted_col_names_df <- as.data.frame(SortedColumnNames)
 colnames(sorted_col_names_df) <- c("sample")
 output_df$SortedColumnNames <- sorted_col_names_df
 
-output_df$OutputMatrix <- {lapply(1:length(normalized_matrix), function(y){
-    list(elem=normalized_matrix[y])
-})}
-
 # Converting to data frame does not work for the raw counts since the key of the json needs to be unique.
 
 #output_matrix_df <- as.data.frame(normalized_matrix)
