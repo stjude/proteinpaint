@@ -313,8 +313,8 @@ async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample
 			case_ids,
 			gene_ids,
 			format: 'tsv',
-			//tsv_units: 'uqfpkm'
-			tsv_units: 'median_centered_log2_uqfpkm'
+			tsv_units: 'uqfpkm'
+			//tsv_units: 'median_centered_log2_uqfpkm'
 		})
 	})
 	if (typeof response.body != 'string') throw 'response.body is not tsv text'

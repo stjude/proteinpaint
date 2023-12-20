@@ -443,7 +443,8 @@ async function geneExpressionClustering(data, q, ds) {
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
 		cluster_method: q.clusterMethod,
-		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		valueIsTransformed: true // hardcoded to always transform to zscore in this function
 	}
 
 	if (ds.queries.geneExpression.valueIsTransformed) inputData.valueIsTransformed = true // to not to do scale() in R
@@ -456,7 +457,7 @@ async function geneExpressionClustering(data, q, ds) {
 		for (const s of inputData.col_names) {
 			row.push(o[s] || 0)
 		}
-		inputData.matrix.push(row)
+		inputData.matrix.push(getZscore(row))
 	}
 
 	/*
@@ -511,32 +512,6 @@ async function geneExpressionClustering(data, q, ds) {
 	const row_output = await parseclust(row_coordinates, row_names_index)
 	const col_output = await parseclust(col_coordinates, col_names_index)
 
-	const matrix_1d = []
-	//console.log(Routput['OutputMatrix'])
-	for (const item of Routput['OutputMatrix']) {
-		matrix_1d.push(item.elem[0])
-	}
-
-	// Converting the 1D array to 2D array column-wise
-	const output_matrix = []
-	for (let i = 0; i < row_names.length; i++) {
-		if (col_names.length > 0) {
-			let row = []
-			for (let j = 0; j < col_names.length; j++) {
-				row.push(matrix_1d[j * row_names.length + i])
-			}
-			output_matrix.push(row)
-		}
-	}
-
-	//console.log('output_matrix:', output_matrix)
-	//console.log('row_dendro:', row_output.dendrogram)
-	//console.log('row_children:', row_output.children)
-	//console.log('row_names_index:', JSON.stringify(row_names_index))
-	//console.log('col_dendro:', col_output.dendrogram)
-	//console.log('col_children:', col_output.children)
-	//console.log('col_names_index:', JSON.stringify(col_names_index))
-
 	/* rust is no longer used
 
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
@@ -562,7 +537,7 @@ async function geneExpressionClustering(data, q, ds) {
 	return {
 		geneNameLst: row_names,
 		sampleNameLst: col_names,
-		matrix: output_matrix,
+		matrix: inputData.matrix,
 		row_dendro: row_output.dendrogram,
 		row_children: row_output.children,
 		row_names_index: row_names_index,
@@ -570,6 +545,16 @@ async function geneExpressionClustering(data, q, ds) {
 		col_children: col_output.children,
 		col_names_index: col_names_index
 	}
+}
+
+function getZscore(l) {
+	const mean = l.reduce((sum, v) => sum + v, 0) / l.length
+	const sd = Math.sqrt(l.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / l.length)
+
+	if (sd == 0) {
+		return l
+	}
+	return l.map(v => (v - mean) / sd)
 }
 
 async function parseclust(coordinates, names_index) {

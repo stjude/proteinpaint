@@ -1,1 +1,2 @@
-
+Fixes:
+- for hierCluster, nodejs always transform to zscore; use scaleLinear for improved heatmap rendering
