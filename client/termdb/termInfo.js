@@ -49,22 +49,20 @@ class TdbTermInfo {
 export const termInfoInit = getInitFxn(TdbTermInfo)
 
 function setRenderers(self) {
-	self.initUI = function(opts) {
+	self.initUI = function (opts) {
 		self.dom = {
 			content_holder: opts.content_holder
 				.style('margin-left', '25px')
 				.attr('class', 'term_info_div')
 				.style('display', self.state.isVisible ? 'block' : 'none')
-				.style('width', '80vh')
+				//.style('width', '100vh')
+				.style('white-space', 'normal')
 				.style('padding-bottom', '20px'),
 
 			//Term information/description
 			details: opts.content_holder.append('div'),
 
-			tbody: opts.content_holder
-				.append('table')
-				.style('white-space', 'normal')
-				.append('tbody'),
+			tbody: opts.content_holder.append('table').append('tbody'),
 
 			//Information icon button div. Term description appears in content_holder
 			icon_holder: opts.icon_holder
@@ -94,24 +92,15 @@ function setRenderers(self) {
 		}
 	}
 
-	self.render = function(data) {
+	self.render = function (data) {
 		self.dom.tbody.selectAll('*').remove()
 		if (data.terminfo.src) {
 			for (let s of data.terminfo.src) {
-				const source_td = self.dom.tbody
-					.append('tr')
-					.append('td')
-					.style('padding', '5px 0')
+				const source_td = self.dom.tbody.append('tr').append('td').style('padding', '5px 0')
 
-				source_td
-					.append('div')
-					.style('font-weight', 'bold')
-					.text('Source')
+				source_td.append('div').style('font-weight', 'bold').text('Source')
 
-				source_td
-					.append('div')
-					.style('margin-left', '20px')
-					.text(s.pub)
+				source_td.append('div').style('margin-left', '20px').text(s.pub)
 
 				source_td
 					.append('div')
@@ -132,10 +121,7 @@ function setRenderers(self) {
 				.style('margin', '0px')
 
 			for (let grade of data.terminfo.rubric) {
-				grade_td
-					.append('li')
-					.style('font-weight', 'normal')
-					.text(grade)
+				grade_td.append('li').style('font-weight', 'normal').text(grade)
 			}
 		}
 		//Term information/description
@@ -143,18 +129,17 @@ function setRenderers(self) {
 		if (data.terminfo.description) {
 			const header = self.dom.details
 				.append('div')
-				.style('padding-top', '30px')
+				.style('padding-top', '20px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
 				.text('Description')
 			for (const d of data.terminfo.description) {
 				self.renderDetail(d, self.dom.details.append('div').style('padding-bottom', '3px'))
 			}
-			self.dom.details.append('div').style('padding-bottom', '20px')
 		}
 	}
 
-	self.renderDetail = function(d, div) {
+	self.renderDetail = function (d, div) {
 		if (Array.isArray(d.value)) {
 			div.append('span').html('<i>' + d.label + '</i>')
 			const section = div.append('div').style('padding-left', '20px')
@@ -171,7 +156,7 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	/*toggles the term description div by changing the state. The change in state triggers
 	multiple style changes via .main*/
-	self.toggleDescription = function() {
+	self.toggleDescription = function () {
 		self.state.isVisible = !self.state.isVisible
 		self.main({ isVisible: self.state.isVisible })
 	}

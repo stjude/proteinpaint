@@ -1,1 +1,2 @@
-
+Fixes:
+- Fixed issues showing variable definition with termsetting instance, especially in chart edit menu.
