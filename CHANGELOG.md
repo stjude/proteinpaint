@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Add clang missing dependency
+- Fixed issues showing variable definition with termsetting instance, especially in chart edit menu.
 
 
 ## 2.37.0
