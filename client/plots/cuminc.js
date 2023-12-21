@@ -1268,16 +1268,16 @@ export async function getPlotConfig(opts, app) {
 function getPj(self) {
 	const pj = new Partjson({
 		template: {
-			xMin: '>$time',
-			xMax: '<$time',
+			xMin: '>=x()',
+			xMax: '<=x()',
 			yMin: '>=yMin()',
 			yMax: '<=yMax()',
 			charts: [
 				{
 					chartId: '@key',
 					chartTitle: '=chartTitle()',
-					xMin: '>$time',
-					xMax: '<$time',
+					xMin: '>=x()',
+					xMax: '<=x()',
 					'__:xTickValues': '=xTickValues()',
 					'__:yTickValues': '=yTickValues()',
 					'__:xScale': '=xScale()',
@@ -1337,14 +1337,16 @@ function getPj(self) {
 				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
 				return seriesId
 			},
-			y(row, context) {
-				const seriesId = context.context.parent.seriesId
-				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
+			x(row) {
+				if (self.settings.hidden.includes(row.seriesId)) return
+				return row.time
 			},
 			yMin(row) {
+				if (self.settings.hidden.includes(row.seriesId)) return
 				return self.settings.ciVisible ? row.low : row.cuminc
 			},
 			yMax(row) {
+				if (self.settings.hidden.includes(row.seriesId)) return
 				return self.settings.ciVisible ? row.high : row.cuminc
 			},
 			xTickValues(row, context) {
@@ -1354,8 +1356,9 @@ function getPj(self) {
 					return s.xTickValues
 				} else {
 					// compute x-tick values
-					const xMin = s.scale == 'byChart' ? context.self.xMin : context.root.xMin
-					const xMax = s.scale == 'byChart' ? context.self.xMax : context.root.xMax
+					// uncomment .scale code when the control input is added
+					const xMin = /*s.scale == 'byChart' ? context.self.xMin : */ context.root.xMin
+					const xMax = /*s.scale == 'byChart' ? context.self.xMax : */ context.root.xMax
 					return computeTickValues(xMin, xMax)
 				}
 			},
@@ -1379,8 +1382,9 @@ function getPj(self) {
 					return s.yTickValues
 				} else {
 					// compute y-tick values
-					const yMin = s.scale == 'byChart' ? context.self.yMin : context.root.yMin
-					const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
+					// uncomment .scale code when the control input is added
+					const yMin = /*s.scale == 'byChart' ? context.self.yMin : */ context.root.yMin
+					const yMax = /*s.scale == 'byChart' ? context.self.yMax : */ context.root.yMax
 					return computeTickValues(yMin, yMax)
 				}
 			},
