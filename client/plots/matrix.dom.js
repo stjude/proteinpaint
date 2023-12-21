@@ -1,4 +1,5 @@
 import { Menu } from '#dom/menu'
+import { select } from 'd3-selection'
 
 export function setMatrixDom(opts) {
 	const holder = opts.controls ? opts.holder : opts.holder.append('div')
@@ -33,6 +34,8 @@ export function setMatrixDom(opts) {
 
 	const tip = new Menu({ padding: '5px' })
 	const clickMenu = new Menu({ padding: '0px' })
+	const brushMenu = new Menu({ padding: '0px' })
+	const dendroClickMenu = new Menu({ padding: '0px' })
 	this.dom = {
 		header: opts.header,
 		holder,
@@ -114,7 +117,9 @@ export function setMatrixDom(opts) {
 		tip,
 		menutop: tip.d.append('div'),
 		menubody: tip.d.append('div'),
-		clickMenu
+		clickMenu,
+		brushMenu,
+		dendroClickMenu
 	}
 
 	this.dom.colBeam = this.dom.highlightBeamG
@@ -135,6 +140,9 @@ export function setMatrixDom(opts) {
 		this.lastActiveLabel = this.activeLabel
 		delete this.activeLabel
 	}
+
+	// remove the matrix brush zoom area when clicking on body
+	select('body').on(`mousedown.matrixZoom-${this.id}`, this.resetInteractions)
 
 	window.onscroll = this.scrollStopHandler
 	const contentDiv = this.dom.holder.node().closest('.sjpp-output-sandbox-content')

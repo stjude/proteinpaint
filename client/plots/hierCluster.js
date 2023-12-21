@@ -121,8 +121,8 @@ class HierCluster extends Matrix {
 
 		this.mouseout()
 		this.dom.tip.hide()
-		this.app.tip.clear()
-		this.app.tip.d
+		this.dom.dendroClickMenu.d.selectAll('*').remove()
+		this.dom.dendroClickMenu.d
 			.selectAll('div')
 			.data(optionArr)
 			.enter()
@@ -130,10 +130,10 @@ class HierCluster extends Matrix {
 			.attr('class', 'sja_menuoption')
 			.html(d => d.label)
 			.on('click', event => {
-				this.app.tip.hide()
+				this.dom.dendroClickMenu.d.selectAll('*').remove()
 				event.target.__data__.callback()
 			})
-		this.app.tip.show(event.clientX, event.clientY)
+		this.dom.dendroClickMenu.show(event.clientX, event.clientY)
 	}
 
 	// zoom in matrix to the selected dendrogram branch
