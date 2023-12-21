@@ -436,6 +436,7 @@ async function geneExpressionClustering(data, q, ds) {
 	for (const o of data.values()) {
 		// {sampleId: value}
 		for (const s in o) sampleSet.add(s)
+		break
 	}
 
 	const inputData = {
@@ -443,14 +444,10 @@ async function geneExpressionClustering(data, q, ds) {
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
 		cluster_method: q.clusterMethod,
-		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
-		valueIsTransformed: true // hardcoded to always transform to zscore in this function
+		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
-	if (ds.queries.geneExpression.valueIsTransformed) inputData.valueIsTransformed = true // to not to do scale() in R
-
 	// compose "data{}" into a matrix
-	//console.log('data:', data)
 	for (const [gene, o] of data) {
 		inputData.row_names.push(gene)
 		const row = []
@@ -460,20 +457,6 @@ async function geneExpressionClustering(data, q, ds) {
 		inputData.matrix.push(getZscore(row))
 	}
 
-	/*
-        // For testing
-        inputData.row_names.push("fakegene")
-        const row = []
-        for (const s of inputData.col_names) {
-           row.push(0)
-        }
-        inputData.matrix.push(row)
-        */
-
-	//console.log('inputData.matrix:', inputData.matrix.length, inputData.matrix[0].length)
-	//console.log('input_data:', inputData)
-	//await write_file('test.json', JSON.stringify(inputData))
-
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await write_file(Rinputfile, JSON.stringify(inputData))
 	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
@@ -481,47 +464,25 @@ async function geneExpressionClustering(data, q, ds) {
 
 	if (!Array.isArray(Routput.RowNodeJson)) throw 'invalid clustering output'
 
-	const row_coordinates = []
-	for (const item of Routput.RowNodeJson) {
-		row_coordinates.push({ x: item.x, y: item.y })
-	}
-	const col_coordinates = []
-	for (const item of Routput['ColNodeJson']) {
-		col_coordinates.push({ x: item.x, y: item.y })
-	}
-	const row_names_index = []
-	const col_names_index = []
+	const row_coordinates = Routput.RowNodeJson // ?
+	const col_coordinates = Routput.ColNodeJson
+	const row_names_index = Routput.RowDendOrder.map(i => i.ind) // sorted rows. value is array index in input data
+	const col_names_index = Routput.ColumnDendOrder.map(i => i.ind) // sorted columns, value is array index from input array
 
-	for (const item of Routput['RowDendOrder']) {
-		row_names_index.push(item.ind)
-	}
-	for (const item of Routput['ColumnDendOrder']) {
-		col_names_index.push(item.ind)
-	}
-
-	const row_names = []
-	const col_names = []
-
-	for (const item of Routput['SortedRowNames']) {
-		row_names.push(item.gene)
-	}
-	for (const item of Routput['SortedColumnNames']) {
-		col_names.push(item.sample)
-	}
+	const row_names = Routput.SortedRowNames.map(i => i.gene) // sorted row names
+	const col_names = Routput.SortedColumnNames.map(i => i.sample) // sorted col names
 
 	const row_output = await parseclust(row_coordinates, row_names_index)
 	const col_output = await parseclust(col_coordinates, col_names_index)
 
-	// Sorting 2D array
+	// generated sorted matrix based on row/col clustering order
 	const output_matrix = []
-	for (let i = 0; i < row_names_index.length; i++) {
-		if (col_names.length > 0) {
-			const row = []
-			for (let j = 0; j < col_names_index.length; j++) {
-				row.push(inputData.matrix[row_names_index[i] - 1][col_names_index[j] - 1])
-			}
-			output_matrix.push(row)
+	for (const rowI of row_names_index) {
+		const newRow = []
+		for (const colI of col_names_index) {
+			newRow.push(inputData.matrix[rowI - 1][colI - 1])
 		}
+		output_matrix.push(newRow)
 	}
 
 	/* rust is no longer used
@@ -552,10 +513,9 @@ async function geneExpressionClustering(data, q, ds) {
 		matrix: output_matrix,
 		row_dendro: row_output.dendrogram,
 		row_children: row_output.children,
-		row_names_index: row_names_index,
 		col_dendro: col_output.dendrogram,
 		col_children: col_output.children,
-		col_names_index: col_names_index
+		col_names_index: col_names_index // to be deleted later
 	}
 }
 
