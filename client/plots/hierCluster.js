@@ -324,6 +324,15 @@ class HierCluster extends Matrix {
 		}
 		const d = await dofetch3('mds3', { body })
 		if (d.error) throw d.error
+
+		if (!d.clustering) {
+			// simple stop-gap data validation
+			// lacks essential data part
+			if (d.gene) {
+				// for now backend returns {gene:str, data:{}} if there's only 1 eligible gene
+				throw `Cannot do clustering: data is only available for 1 gene (${d.gene}). Try again by adding more genes.`
+			}
+		}
 		this.hierClusterData = d
 
 		const c = this.hierClusterData.clustering
