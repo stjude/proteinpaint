@@ -358,8 +358,6 @@ class HierCluster extends Matrix {
 			}
 		}
 
-		c.sampleNameLst = c.col_names_index.map(i => c.sampleNameLst[i - 1])
-		c.geneNameLst = c.row_names_index.map(i => c.geneNameLst[i - 1])
 		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
 		this.hcTermGroup.lst = orderedTw
 
