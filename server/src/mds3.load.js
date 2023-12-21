@@ -263,8 +263,9 @@ async function load_driver(q, ds) {
 		const { gene2sample2value, byTermId, bySampleId } = await ds.queries.geneExpression.get(q)
 		if (gene2sample2value.size == 0) throw 'no data'
 		if (gene2sample2value.size == 1) {
-			// get data for only 1 gene; may create violin plot
-			return { gene2sample2value }
+			// get data for only 1 gene; still return data, may create violin plot later
+			const g = Array.from(gene2sample2value.keys())[0]
+			return { gene: g, data: gene2sample2value.get(g) }
 		}
 
 		// have data for multiple genes, run clustering
