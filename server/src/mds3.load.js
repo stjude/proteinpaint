@@ -516,7 +516,7 @@ async function geneExpressionClustering(data, q, ds) {
 	const output_matrix = []
 	for (let i = 0; i < row_names_index.length; i++) {
 		if (col_names.length > 0) {
-			let row = []
+			const row = []
 			for (let j = 0; j < col_names_index.length; j++) {
 				row.push(inputData.matrix[row_names_index[i] - 1][col_names_index[j] - 1])
 			}
