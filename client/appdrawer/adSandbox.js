@@ -700,7 +700,8 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 				.on('click', () => {
 					// clear event handlers
 					resultDiv.selectAll('*').remove()
-					if (typeof close === 'function') close()
+					//Closes the whole window
+					// if (typeof close === 'function') close()
 				})
 			// Create 'Run Dataset from URL' btn specific to each applied search
 			makeURLbutton(resultDiv, coords, par)
