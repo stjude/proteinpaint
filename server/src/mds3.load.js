@@ -512,6 +512,18 @@ async function geneExpressionClustering(data, q, ds) {
 	const row_output = await parseclust(row_coordinates, row_names_index)
 	const col_output = await parseclust(col_coordinates, col_names_index)
 
+	// Sorting 2D array
+	const output_matrix = []
+	for (let i = 0; i < row_names_index.length; i++) {
+		if (col_names.length > 0) {
+			let row = []
+			for (let j = 0; j < col_names_index.length; j++) {
+				row.push(inputData.matrix[row_names_index[i] - 1][col_names_index[j] - 1])
+			}
+			output_matrix.push(row)
+		}
+	}
+
 	/* rust is no longer used
 
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
@@ -537,7 +549,7 @@ async function geneExpressionClustering(data, q, ds) {
 	return {
 		geneNameLst: row_names,
 		sampleNameLst: col_names,
-		matrix: inputData.matrix,
+		matrix: output_matrix,
 		row_dendro: row_output.dendrogram,
 		row_children: row_output.children,
 		row_names_index: row_names_index,
