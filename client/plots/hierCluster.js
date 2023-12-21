@@ -332,6 +332,7 @@ class HierCluster extends Matrix {
 				// for now backend returns {gene:str, data:{}} if there's only 1 eligible gene
 				throw `Cannot do clustering: data is only available for 1 gene (${d.gene}). Try again by adding more genes.`
 			}
+			throw 'Cannot do clustering: invalid server response (lacks .clustering{})'
 		}
 		this.hierClusterData = d
 
