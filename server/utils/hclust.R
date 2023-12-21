@@ -92,9 +92,7 @@ output_df <- list()
 output_df$method <- input$cluster_method
 output_df$RowNodeJson <- row_node_df
 output_df$ColNodeJson <- col_node_df
-#output_df$RowDendOrder <- {lapply(1:length(RowDend$order), function(y){
-#    list(i=RowDend$order[y])
-#})}
+
 row_dend_order_df <- as.data.frame(RowDend$order)
 colnames(row_dend_order_df) <- c("ind")
 output_df$RowDendOrder <- row_dend_order_df
@@ -102,10 +100,6 @@ output_df$RowDendOrder <- row_dend_order_df
 col_dend_order_df <- as.data.frame(ColumnDend$order)
 colnames(col_dend_order_df) <- c("ind")
 output_df$ColumnDendOrder <- col_dend_order_df
-
-#output_df$SortedRowNames <- {lapply(1:length(SortedRowNames), function(y){
-#    list(gene=SortedRowNames[y])
-#})}
 
 sorted_row_names_df <- as.data.frame(SortedRowNames)
 colnames(sorted_row_names_df) <- c("gene")
