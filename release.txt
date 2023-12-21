@@ -1,2 +1,1 @@
-Fixes:
-- GDC gene exp clustering bug fix on querying data for dictionary variables and leads to speeding up
+

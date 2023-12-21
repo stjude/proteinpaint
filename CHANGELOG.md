@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - for hierCluster, nodejs always transform to zscore; use scaleLinear for improved heatmap rendering
 - Fix the handling of multi-valued samples and group overlaps
+- GDC gene exp clustering bug fix on querying data for dictionary variables and leads to speeding up
 
 
 ## 2.38.0
