@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Gene exp clustering will display an alert msg to inform user that a map is not doable when there is just one gene
+
 
 ## 2.38.1
 
