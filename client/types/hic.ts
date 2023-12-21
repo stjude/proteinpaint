@@ -93,13 +93,16 @@ export type WholeGenomeView = {
 	layer_map: SvgG
 	/** second g layer underneath the svg */
 	layer_sv: SvgG
-	lead2follow?: any //Map<string, Map<string, { x: number, y: number }>>
+	lead2follow?: Map<string, Map<string, { x: number; y: number }>>
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
-	/** Eventually there should be Menu type for client */
+	/** Displays the chr on the x axis to the user next to the cell's upper left corner.
+	 * Eventually there should be Menu type for client */
 	pica_x: any
-	/** Eventually there should be Menu type for client */
+	/** Displays the chr on the y axis to the user next to the cell's upper left corner.
+	 * Eventually there should be Menu type for client */
 	pica_y: any
+	/** Calculated resolution. Displayed in menu for user */
 	resolution: number
 	/** Not entirely sure why SVGElement wasn't sufficient. Maybe this is a typescript bandaid?? */
 	svg: Selection<SVGSVGElement, any, HTMLElement, any>
@@ -116,6 +119,7 @@ export type ChrPairView = {
 	data: any
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
+	/** Calculated resolution. Displayed in menu for user */
 	resolution: number
 }
 
@@ -124,10 +128,10 @@ export type DetailView = {
 	canvas?: any //dom
 	ctx: any //dom
 	frag?: {
-		xid2coord: any
+		xid2coord: Map<string, { x: number; y: number }>
 		xstartfrag: number
 		xstopfrag: number
-		yid2coord: any
+		yid2coord: Map<string, { x: number; y: number }>
 		ystartfrag: number
 		ystopfrag: number
 	}
@@ -135,6 +139,8 @@ export type DetailView = {
 	nmeth: string
 	xb: DetailedViewAxis
 	yb: DetailedViewAxis
+	/** Calculated resolution. Displayed in menu for user */
+	resolution: number
 }
 
 export type DetailedViewAxis = {

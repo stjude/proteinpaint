@@ -135,16 +135,13 @@ class Hicstat {
 			bpmaxv: 5000,
 			lead2follow: new Map(),
 			pica_x: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
-			pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
-			nmeth: ''
+			pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
 		}
 		this.chrpairview = {
-			data: [],
-			nmeth: ''
+			data: []
 		}
 		this.detailview = {
 			bbmargin: 1,
-			nmeth: '',
 			xb: {
 				leftheadw: 20,
 				rightheadw: 40,
@@ -465,7 +462,7 @@ class Hicstat {
 		await getdata_chrpair(hic, this)
 	}
 
-	async init_detailView(hic: any, chrx: any, chry: any, x: any, y: any) {
+	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
 		this.dom.controlsDiv.zoomDiv.style('display', 'contents')
 		nmeth2select(hic, this.detailview)
