@@ -1706,15 +1706,20 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 /*
 offshoot of querySamples_gdcapi()!
-should make identical return but different, due to the data format returned by mds3.load.js. should look into it further
 
 ** this only works for dict terms!! but not geneVariant aiming to load mutations
-
 */
 async function querySamplesTwlst4hierCluster(q, twLst, ds) {
-	const filters = {
-		op: 'in',
-		content: { field: 'case_id', value: [...ds.__gdc.casesWithExpData] } // FIXME too many to add for every query, find alternative approach with UC
+	const filters = { op: 'and', content: [] }
+	/*
+	do not pass entire list of cases with expression data as filter! too slow
+		//content: { field: 'case_id', value: [...ds.__gdc.casesWithExpData] } 
+	*/
+	if (q.filter0) {
+		filters.content.push(q.filter0)
+	}
+	if (q.filterObj) {
+		filters.content.push(filter2GDCfilter(q.filterObj))
 	}
 
 	const dictTwLst = [] // get all dictionary terms from twLst, for querying /cases API
@@ -1741,7 +1746,7 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 		body: JSON.stringify({
 			size: ds.__gdc.casesWithExpData.size,
 			fields: fields.join(','),
-			filters
+			filters: filters.content.length ? filters : undefined
 		})
 	})
 	const re = JSON.parse(response.body)
@@ -1749,20 +1754,13 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 
 	const samples = []
 	for (const h of re.data.hits) {
-		/*
-		{
-			sample_id, // uuid
-			__sampleName, // submitter id for display
-			sample_URLid // uuid
-			<tid>:<v>
-		}
-		*/
 		if (typeof h.case_id != 'string') throw 'h.case_id missing'
-		const sample = {
-			__sampleName: ds.__gdc.caseid2submitter.get(h.case_id), // display
-			sample_id: h.case_id,
-			sample_URLid: h.case_id
+
+		if (!ds.__gdc.casesWithExpData.has(h.case_id)) {
+			// possible as "filters" does not limit to cases with gene expression. thus it can pull out cases without exp data and will skip those
+			continue
 		}
+		const sample = { sample_id: h.case_id }
 
 		for (const tw of dictTwLst) {
 			flattenCaseByFields(sample, h, tw) // helper to transfer term values to sample{}
