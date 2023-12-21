@@ -180,6 +180,9 @@ export function setInteractivity(self) {
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
 		self.dom.clickMenu.d.selectAll('*').remove()
+		self.dom.dendroClickMenu.d.selectAll('*').remove()
+		self.dom.brushMenu.d.selectAll('*').remove()
+
 		if (self.dom.sampleListMenu) self.dom.sampleListMenu.destroy()
 
 		if (self.state.termdbConfig.urlTemplates) {
@@ -2084,10 +2087,12 @@ function setZoomPanActions(self) {
 			}
 		}
 
+		self.dom.dendroClickMenu.d.selectAll('*').remove() // close the dendrogram clicking menu when brushing
+		self.dom.clickMenu.d.selectAll('*').remove() // close the matrix cell click menu when brushing
 		self.mouseout()
 		self.dom.tip.hide()
-		self.app.tip.clear()
-		self.app.tip.d
+		self.dom.brushMenu.d.selectAll('*').remove()
+		self.dom.brushMenu.d
 			.selectAll('div')
 			.data(optionArr)
 			.enter()
@@ -2095,10 +2100,10 @@ function setZoomPanActions(self) {
 			.attr('class', 'sja_menuoption')
 			.html(d => d.label)
 			.on('click', event => {
-				self.app.tip.hide()
+				self.dom.brushMenu.d.selectAll('*').remove()
 				event.target.__data__.callback()
 			})
-		self.app.tip.show(event.clientX, event.clientY)
+		self.dom.brushMenu.show(event.clientX, event.clientY)
 	}
 
 	// show the list of clicked samples as a table
