@@ -128,6 +128,7 @@ class HierCluster extends Matrix {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
+			.style('border-radius', '0px')
 			.html(d => d.label)
 			.on('click', event => {
 				this.dom.dendroClickMenu.d.selectAll('*').remove()
