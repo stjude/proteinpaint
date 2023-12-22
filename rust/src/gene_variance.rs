@@ -24,7 +24,9 @@ use statrs::statistics::Median;
 use statrs::statistics::OrderStatistics;
 use statrs::statistics::Statistics;
 use std::cmp::Ordering;
+use std::fs;
 use std::io;
+use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
 use std::time::Instant;
@@ -39,11 +41,7 @@ fn input_data(
 ) {
     // Build the CSV reader and iterate over each record.
     let path = Path::new(filename);
-    let mut reader = BGZFReader::new(
-        fs::File::open("/Users/rpaul1/pp_data/hg19/panallMds3/panallMds3.fpkm.matrix.hg19.gz")
-            .unwrap(),
-    )
-    .unwrap();
+    let mut reader = BGZFReader::new(fs::File::open(filename).unwrap()).unwrap();
     let mut num_lines: usize = 0;
     let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
     let mut gene_names: Vec<String> = Vec::with_capacity(65000);
