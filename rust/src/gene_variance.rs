@@ -11,6 +11,7 @@ Various JSON parameters:
  Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","input_file":"/path/to/input/file","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
 */
 #![allow(non_snake_case)]
+use bgzip::BGZFReader;
 use json;
 use nalgebra::base::dimension::Dyn;
 use nalgebra::base::Matrix;
@@ -38,77 +39,43 @@ fn input_data(
 ) {
     // Build the CSV reader and iterate over each record.
     let path = Path::new(filename);
-    let mut rdr = csv::Reader::from_path(path).unwrap();
+    let mut reader = BGZFReader::new(
+        fs::File::open("/Users/rpaul1/pp_data/hg19/panallMds3/panallMds3.fpkm.matrix.hg19.gz")
+            .unwrap(),
+    )
+    .unwrap();
     let mut num_lines: usize = 0;
     let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
     let mut gene_names: Vec<String> = Vec::with_capacity(65000);
     let mut gene_symbols: Vec<String> = Vec::with_capacity(65000);
     let mut num_columns: usize = 0;
 
-    // Check headers for samples
-    let header_line = rdr.headers().unwrap();
-    let mut headers: Vec<&str> = Vec::with_capacity(1500);
-    for field in header_line.iter() {
-        headers = field.split('\t').collect::<Vec<&str>>();
-    }
-    //println!("headers:{:?}", headers);
-    let mut sample_indexes_original: Vec<usize> = Vec::with_capacity(sample_list.len());
-    let gene_name_index = headers.iter().position(|r| r == &"geneID");
-    let gene_symbol_index = headers.iter().position(|r| r == &"geneSymbol");
-    //let mut case_samples_not_found: Vec<&str> = Vec::with_capacity(sample_list.len());
-    //let mut control_samples_not_found: Vec<&str> = Vec::with_capacity(control_list.len());
+    let mut buffer = String::new();
+    reader.read_to_string(&mut buffer).unwrap();
 
-    for item in sample_list {
-        //println!("item:{}", item);
-        let index = headers.iter().position(|r| r == item);
-        match index {
-            Some(n) => sample_indexes_original.push(n),
-            None => {
-                //panic!("Case sample not found:{}", item);
-                //case_samples_not_found.push(item);
+    let lines = buffer.split("\n");
+    let mut first = true;
+    let mut num_lines = 0;
+    let mut num_columns = 0;
+    let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
+    for line in lines {
+        if first == true {
+            first = false;
+            let columns: Vec<&str> = line.split("\t").collect();
+            num_columns = columns.len() - 4; // First 4 columns do not contain gene counts.
+        } else {
+            let line2: Vec<&str> = line.split("\t").collect();
+            if line2.len() == 1 {
+                break; // end of file
+            } else {
+                num_lines += 1;
+                //println!("line2:{:?}", line2);
+                gene_symbols.push(line2[3].to_string());
+                //if num_lines < 10 {}
             }
         }
     }
 
-    //println!("case_indexes_original:{:?}", case_indexes_original);
-
-    let mut samples_indexes: Vec<usize> = Vec::with_capacity(sample_list.len());
-    for result in rdr.records() {
-        // The iterator yields Result<StringRecord, Error>, so we check the
-        // error here.
-        let record = result.unwrap();
-        //println!("record:{:?}", record);
-        let mut index = 0;
-        for field in record[0].split('\t').collect::<Vec<&str>>() {
-            if index == gene_name_index.unwrap() {
-                gene_names.push(field.to_string());
-            } else if index == gene_symbol_index.unwrap() {
-                gene_symbols.push(field.to_string());
-            } else if sample_indexes_original.contains(&index) {
-                let num = FromStr::from_str(field);
-                match num {
-                    Ok(n) => {
-                        //println!("n:{}", n);
-                        input_vector.push(n);
-                        if num_lines == 0 {
-                            samples_indexes.push(num_columns);
-                            num_columns += 1;
-                        }
-                    }
-                    Err(_n) => {
-                        panic!(
-                            "Number {} in line {} and column {} is not a decimal number",
-                            field,
-                            num_lines + 1,
-                            index + 1
-                        );
-                    }
-                }
-            }
-            index += 1;
-        }
-        num_lines += 1;
-    }
     //println!("case_indexes:{:?}", case_indexes);
     //println!("control_indexes:{:?}", control_indexes);
 
