@@ -1,4 +1,4 @@
-import { GdcFilter0 } from './gdc.maf'
+//import GdcFilter0 from './filter.gdc'
 
 export type TermdbTopVariablyExpressedGenesRequest = {
 	/** Ref genome */
@@ -8,7 +8,7 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	/** Number of top genes requested */
 	maxGenes: number
 	/** JSON, optional GDC cohort filter to restrict cases */
-	filter0?: GdcFilter0
+	filter0?: any //GdcFilter0
 }
 
 export type TermdbTopVariablyExpressedGenesResponse = {
