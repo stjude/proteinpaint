@@ -275,7 +275,7 @@ export type GeneExpressionQueryNative = {
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples: number[]
 	nochr: boolean
-	get: (p: any) => {}
+	get: (param: any) => void
 }
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
@@ -291,7 +291,7 @@ export type SingleCellSamplesNative = {
 	isSampleTerm: string
 	fields: string[]
 	columnNames: string[]
-	get: () => { samples: { sample: string }[] }
+	get: () => void //{ samples: { sample: string }[] }
 }
 export type SingleCellDataGdc = {
 	src: 'gdcapi'
