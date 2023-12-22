@@ -323,7 +323,7 @@ class HierCluster extends Matrix {
 			filter: this.state.filter,
 			filter0: this.state.filter0
 		}
-		const d = await dofetch3('mds3', { body })
+		const d = await dofetch3('termdb/cluster', { body })
 		if (d.error) throw d.error
 
 		if (!d.clustering) {
