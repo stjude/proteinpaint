@@ -1,13 +1,12 @@
 import { TermdbClusterRequest, TermdbClusterResponse } from '#shared/types/routes/termdb.cluster.ts'
 import fs from 'fs'
 import path from 'path'
-import got from 'got'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { GeneExpressionQuery, GeneExpressionQueryNative } from '#shared/types/dataset.ts'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
-import { doClustering } from './doClustering.js' // unable to convert this to ts yet, when converted, move all code here
+import { doClustering } from '#src/doClustering.js' // unable to convert this to ts yet, when converted, move all code here
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -72,11 +71,14 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 
 	if (q.src == 'gdcapi') {
 		gdc_validate_query_geneExpression(ds, genome)
-		// .get() added, same behavior as below
+		// q.get() added
 		return
 	}
-
-	validateNative(q, ds, genome)
+	if (q.src == 'native') {
+		validateNative(q, ds, genome)
+		return
+	}
+	throw 'unknown queries.geneExpression.src'
 }
 
 async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
@@ -109,7 +111,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		.stop=int
 	.filterObj{}
 	*/
-	q.get = async param => {
+	q.get = async (param: TermdbClusterRequest) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
@@ -133,10 +135,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const g of param.genes) {
-			// g = {gene/chr/start/stop}
-
 			// FIXME newly added geneVariant terms from client to be changed to {gene} but not {name}
-			if (!g.gene) g.gene = g.name
 			if (!g.gene) continue
 
 			if (!g.chr) {
@@ -151,7 +150,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 
 			gene2sample2value.set(g.gene, {})
 			await utils.get_lines_bigfile({
-				args: [q.file, (q.nochr ? g.chr.replace('chr', '') : g.chr) + ':' + g.start + '-' + g.stop],
+				args: [q.file, (q.nochr ? g.chr?.replace('chr', '') : g.chr) + ':' + g.start + '-' + g.stop], // must do g.chr?.replace to avoid tsc error
 				callback: line => {
 					const l = line.split('\t')
 					// case-insensitive match! FIXME if g.gene is alias won't work

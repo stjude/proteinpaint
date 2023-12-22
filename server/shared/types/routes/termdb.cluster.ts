@@ -2,7 +2,12 @@ import { ErrorResponse } from './errorResponse'
 import { Filter } from '../filter'
 
 export type Gene = {
+	/** gene symbol, required */
 	gene: string
+	/** optionally, client may supply chr/start/stop; if missing, backend code may add them when processing native dataset */
+	chr?: string
+	start?: number
+	stop?: number
 }
 
 export type TermdbClusterRequest = {

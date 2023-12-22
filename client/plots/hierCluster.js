@@ -305,20 +305,18 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		// TODO: do not rely on the hardcoded grp.name for finding the hier cluster term group
+		// FIXME TODO: do not rely on the hardcoded grp.name for finding the hier cluster term group
 		const s = this.settings.hierCluster
 		this.hcTermGroup =
 			this.config.termgroups.find(grp => grp.name == s.termGroupName) ||
 			this.termOrder?.find(t => t.grp.name == s.termGroupName)?.grp
 		const twlst = this.hcTermGroup.lst
 
-		const genes = twlst.filter(tw => tw.term.type == 'geneVariant').map(tw => tw.term)
-		if (!genes.length) return
 		const body = {
 			genome: this.app.opts.state.vocab.genome,
 			dslabel: this.app.opts.state.vocab.dslabel,
 			geneExpression: 1,
-			genes,
+			genes: this.getClusterRowTermsAsParameter(),
 			clusterMethod: this.state.config.settings.hierCluster.clusterMethod,
 			filter: this.state.filter,
 			filter0: this.state.filter0
@@ -635,6 +633,44 @@ class HierCluster extends Matrix {
 		// const bitmap = canvas.transferToImageBitmap();
 		// foCanvas.getContext("bitmaprenderer").transferFromImageBitmap(bitmap);
 	}
+
+	/* returns list of gene terms e.g. {gene,chr,start,stop}
+	use of this is unfortunate because:
+		the incomplete migration of {name} to {gene} for gene-based term
+		geneset edit ui is hardcoded to return {name}
+		existing plot states contain {name}
+
+	!!! migration instruction !!!
+	- term.name is for display only, if a term is gene-based, it has term.gene=str
+	- a geneVariant term can be based on a genomic range (and not a gene), in that case it won't have term.gene and cannot be used where gene is expected, e.g. gene-based clustering analysis
+
+	TODO exciting future expansion,
+	change function name to getClusteringRowTerms() that will return a set of any following term types.
+	all terms must be in same type though, cannot mix up types for analysis
+	type is governed by this.config.settings.hierCluster.dataType
+
+	- gene, for gene exp data (already has)
+	- numeric dict term
+	- metabolite!
+	- non-gene genomic feature that are associated with quantitative attr, cpg?
+	*/
+	getClusterRowTermsAsParameter() {
+		const lst = []
+		for (const tw of this.hcTermGroup.lst) {
+			if (this.config.settings.hierCluster.dataType == 'gene') {
+				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==gene'
+
+				// FIXME when {name} is fully migrated to {gene}, delete following line and use continue to skip non-gene terms
+				if (!tw.term.gene) tw.term.gene = tw.term.name
+				// if(!tw.term.gene) continue
+
+				lst.push(tw.term)
+				continue
+			}
+			throw 'unknown dataType'
+		}
+		return lst
+	}
 }
 
 export const hierClusterInit = getCompInit(HierCluster)
@@ -675,10 +711,19 @@ export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
 	const config = await getMatrixPlotConfig(opts, app)
 	config.settings.hierCluster = {
+		/* type of data used for clustering
+		already supported
+		- gene: use gene variant terms
+		exciting todo:
+		- numeric dic term
+		- non-gene genomic stuff that resolves into numeric quantities (cpg meth)
+		- metabolite
+		*/
+		dataType: 'gene',
 		// TODO: may adjust the default group name based on automatically detected term types
 		// otherwise, should define it via opts or overrides
 		termGroupName: 'Gene Expression',
-		clusterMethod: 'average',
+		clusterMethod: 'average', // complete
 		zScoreCap: 5,
 		xDendrogramHeight: 100,
 		yDendrogramHeight: 200,
