@@ -27,7 +27,6 @@ use std::cmp::Ordering;
 use std::fs;
 use std::io;
 use std::io::Read;
-use std::path::Path;
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -40,27 +39,30 @@ fn input_data(
     Vec<String>,
 ) {
     // Build the CSV reader and iterate over each record.
-    let path = Path::new(filename);
     let mut reader = BGZFReader::new(fs::File::open(filename).unwrap()).unwrap();
     let mut num_lines: usize = 0;
-    let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
-    let mut gene_names: Vec<String> = Vec::with_capacity(65000);
-    let mut gene_symbols: Vec<String> = Vec::with_capacity(65000);
-    let mut num_columns: usize = 0;
+    let mut gene_names: Vec<String> = Vec::with_capacity(500);
+    let mut gene_symbols: Vec<String> = Vec::with_capacity(500);
 
     let mut buffer = String::new();
     reader.read_to_string(&mut buffer).unwrap();
 
     let lines = buffer.split("\n");
     let mut first = true;
-    let mut num_lines = 0;
-    let mut num_columns = 0;
-    let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
+    let mut input_vector: Vec<f64> = Vec::with_capacity(1000 * 500);
+    let mut column_numbers: Vec<usize> = Vec::with_capacity(300);
     for line in lines {
         if first == true {
             first = false;
             let columns: Vec<&str> = line.split("\t").collect();
-            num_columns = columns.len() - 4; // First 4 columns do not contain gene counts.
+            // Finding column numbers corresponding to each sample given in the input list
+            for item in sample_list {
+                if let Some(index) = columns.iter().position(|num| num == item) {
+                    column_numbers.push(index)
+                } else {
+                    panic!("Sample {} not found:", item)
+                }
+            }
         } else {
             let line2: Vec<&str> = line.split("\t").collect();
             if line2.len() == 1 {
@@ -69,7 +71,25 @@ fn input_data(
                 num_lines += 1;
                 //println!("line2:{:?}", line2);
                 gene_symbols.push(line2[3].to_string());
-                //if num_lines < 10 {}
+                gene_names.push(line2[3].to_string());
+                for i in &column_numbers {
+                    let field = line2[*i];
+                    let num = FromStr::from_str(field);
+                    match num {
+                        Ok(n) => {
+                            //println!("n:{}", n);
+                            input_vector.push(n);
+                        }
+                        Err(_n) => {
+                            panic!(
+                                "Number {} in line {} and column {} is not a decimal number",
+                                field,
+                                num_lines + 1,
+                                i + 1
+                            );
+                        }
+                    }
+                }
             }
         }
     }
@@ -77,7 +97,7 @@ fn input_data(
     //println!("case_indexes:{:?}", case_indexes);
     //println!("control_indexes:{:?}", control_indexes);
 
-    let dm = DMatrix::from_row_slice(num_lines, num_columns, &input_vector);
+    let dm = DMatrix::from_row_slice(num_lines, sample_list.len(), &input_vector);
     //println!("dm:{:?}", dm);
     (dm, gene_names, gene_symbols)
 }
