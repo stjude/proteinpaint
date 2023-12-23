@@ -15,6 +15,8 @@ export type TermdbClusterRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
+	/** Data type */
+	dataType: 'gene_expression' // create union to support more types
 	/** List of genes TODO generalize as termwrappers with numeric data on samples */
 	genes: Gene[]
 	/** pp filter */

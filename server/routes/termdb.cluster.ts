@@ -36,8 +36,12 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
-			if (!ds.queries?.geneExpression) throw 'no geneExpression data on this dataset'
-			result = (await getResult(q, ds)) as TermdbClusterResponse
+			if (q.dataType == 'gene_expression') {
+				if (!ds.queries?.geneExpression) throw 'no geneExpression data on this dataset'
+				result = (await getResult(q, ds)) as TermdbClusterResponse
+			} else {
+				throw 'unknown q.dataType ' + q.dataType
+			}
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
