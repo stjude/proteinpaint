@@ -7,6 +7,7 @@ import { extent } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
+import { dtgeneexpression } from '#shared/common.js'
 
 /*
 FIXME items
@@ -20,6 +21,8 @@ FIXME items
 	to be able to run clustering analysis on everything
 
 3. replace dofetch with vocabApi call with support for (2)
+
+- should not hardcode this.geneExpValues, incompatible for future expansion
 */
 
 class HierCluster extends Matrix {
@@ -350,9 +353,8 @@ class HierCluster extends Matrix {
 					values: [
 						{
 							sample,
-							dt: 3,
-							class: 'geneexpression',
-							// TODO: use the assigned label from common.js
+							dt: this.settings.hierCluster.dataType,
+							class: 'geneexpression', // FIXME since there's no class defined for dtgeneexpression in common.js, best not to require value.class
 							label: s.termGroupName,
 							gene: tw.term.name,
 							chr: tw.term.chr,
@@ -633,8 +635,10 @@ class HierCluster extends Matrix {
 		// foCanvas.getContext("bitmaprenderer").transferFromImageBitmap(bitmap);
 	}
 
-	/* returns list of gene terms e.g. {gene,chr,start,stop}
-	use of this is unfortunate because:
+	/* returns list of gene terms as request parameter, e.g. {gene,chr,start,stop}
+	request parameter only need term but not tw, as it will simply fetch continuous sample values on terms without transform
+
+	use of this function is unfortunate because:
 		the incomplete migration of {name} to {gene} for gene-based term
 		geneset edit ui is hardcoded to return {name}
 		existing plot states contain {name}
@@ -646,17 +650,18 @@ class HierCluster extends Matrix {
 	*/
 	getClusterRowTermsAsParameter() {
 		const lst = []
-		for (const tw of this.hcTermGroup.lst) {
-			if (this.config.settings.hierCluster.dataType == 'gene_expression') {
-				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==gene_expression'
-
+		if (this.config.settings.hierCluster.dataType == dtgeneexpression) {
+			/* all items from .lst[] are expected to be {gene} */
+			for (const tw of this.hcTermGroup.lst) {
+				if (tw.term.type != 'geneVariant') throw 'not geneVariant term while dataType==dtgeneexpression'
 				// FIXME when {name} is fully migrated to {gene}, delete following line and use continue to skip non-gene terms
-				if (!tw.term.gene) tw.term.gene = tw.term.name
-				// if(!tw.term.gene) continue
-
+				if (!tw.term.gene) {
+					if (!tw.term.name) throw 'geneVariant term missing gene/name'
+					tw.term.gene = tw.term.name
+				}
 				lst.push(tw.term)
-				continue
 			}
+		} else {
 			throw 'unknown dataType'
 		}
 		return lst
@@ -702,13 +707,13 @@ export async function getPlotConfig(opts = {}, app) {
 	const config = await getMatrixPlotConfig(opts, app)
 	config.settings.hierCluster = {
 		/* type of data used for clustering
-		exciting todo:
+		exciting todo: (to introduce new dt values)
 		- gene dependency
 		- numeric dic term
 		- non-gene genomic stuff that resolves into numeric quantities (cpg meth)
 		- metabolite
 		*/
-		dataType: 'gene_expression',
+		dataType: dtgeneexpression,
 		// TODO: may adjust the default group name based on automatically detected term types
 		// otherwise, should define it via opts or overrides
 		termGroupName: 'Gene Expression',
