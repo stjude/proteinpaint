@@ -7,6 +7,7 @@ import { GeneExpressionQuery, GeneExpressionQueryNative } from '#shared/types/da
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { doClustering } from '#src/doClustering.js' // unable to convert this to ts yet, when converted, move all code here
+import { dtgeneexpression } from '#shared/common.js'
 
 export const api = {
 	endpoint: 'termdb/cluster',
@@ -36,7 +37,7 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
-			if (q.dataType == 'gene_expression') {
+			if (q.dataType == dtgeneexpression) {
 				if (!ds.queries?.geneExpression) throw 'no geneExpression data on this dataset'
 				result = (await getResult(q, ds)) as TermdbClusterResponse
 			} else {
