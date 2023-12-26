@@ -3,6 +3,7 @@ import { sayerror } from '../dom/sayerror.ts'
 import { renderTable } from '#dom/table'
 import { make_radios } from '#dom/radiobutton'
 import { fileSize } from '#shared/fileSize'
+import { Menu } from '#dom/menu'
 
 /*
 a UI to list open-access maf files from current cohort
@@ -14,8 +15,32 @@ filter0=str
 
 */
 
+const tip = new Menu()
+
 // list of columns to show in MAF file table
-const columns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Samples' }, { label: 'File Size' }]
+const tableColumns = [{ label: 'Case' }, { label: 'Project' }, { label: 'Samples' }, { label: 'File Size' }]
+const mafColumns = [
+	{ column: 'Hugo_Symbol', selected: true },
+	{ column: 'Entrez_Gene_Id', selected: true },
+	{ column: 'Center', selected: true },
+	{ column: 'NCBI_Build', selected: true },
+	{ column: 'Chromosome', selected: true },
+	{ column: 'Start_Position', selected: true },
+	{ column: 'End_Position', selected: true },
+	{ column: 'Strand', selected: true },
+	{ column: 'Variant_Classification', selected: true },
+	{ column: 'Variant_Type', selected: true },
+	{ column: 'Reference_Allele', selected: true },
+	{ column: 'Tumor_Seq_Allele1', selected: true },
+	{ column: 'Tumor_Seq_Allele2', selected: true },
+	{ column: 'dbSNP_RS', selected: true },
+	{ column: 'dbSNP_Val_Status', selected: true },
+	{ column: 'Tumor_Sample_Barcode', selected: true },
+	{ column: 'Matched_Norm_Sample_Barcode', selected: true },
+	{ column: 'Match_Norm_Seq_Allele1', selected: true },
+	{ column: 'Match_Norm_Seq_Allele2', selected: true }
+	//{column:'',selected:true},
+]
 
 export async function gdcMAFui({ holder, filter0, callbackOnRender, debugmode = false }) {
 	// public api obj to be returned
@@ -75,6 +100,42 @@ function makeControls(obj) {
 			}
 		})
 	}
+	{
+		const tr = table.append('tr')
+		tr.append('td').style('opacity', 0.5).text('Output')
+		const td = tr.append('td')
+		const clickText = td
+			.append('span')
+			.attr('class', 'sja_clbtext')
+			.on('click', event => {
+				const rows = [],
+					selectedRows = []
+				for (const [i, c] of mafColumns.entries()) {
+					rows.push([{ value: c.column }])
+					if (c.selected) selectedRows.push(i)
+				}
+				renderTable({
+					div: tip.clear().showunder(event.target).d,
+					rows,
+					columns: [{ label: 'Column Name' }],
+					selectedRows,
+					noButtonCallback: (i, n) => {
+						mafColumns[i].selected = n.checked
+						updateText()
+					}
+				})
+			})
+
+		updateText()
+
+		function updateText() {
+			clickText.text(
+				`${mafColumns.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
+					mafColumns.length
+				} columns selected, click to change`
+			)
+		}
+	}
 }
 
 async function getFilesAndShowTable(obj) {
@@ -130,7 +191,7 @@ async function getFilesAndShowTable(obj) {
 	}
 	renderTable({
 		rows,
-		columns,
+		columns: tableColumns,
 		resize: true,
 		div: obj.tableDiv.append('div'),
 		selectAll: true,
@@ -159,6 +220,12 @@ async function getFilesAndShowTable(obj) {
 	}
 
 	async function submitSelectedFiles(lst, button) {
+		const outColumns = mafColumns.filter(i => i.selected).map(i => i.column)
+		if (outColumns.length == 0) {
+			window.alert('No output columns selected.')
+			return
+		}
+
 		const fileIdLst = []
 		for (const i of lst) {
 			fileIdLst.push(result.files[i].id)
@@ -172,7 +239,7 @@ async function getFilesAndShowTable(obj) {
 
 		let data
 		try {
-			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst } })
+			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
 			if (data.error) throw data.error
 		} catch (e) {
 			sayerror(obj.errDiv, e)
