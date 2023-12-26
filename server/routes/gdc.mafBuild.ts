@@ -43,10 +43,15 @@ async function buildMaf(q: GdcMafBuildRequest, res: any) {
 	const t0 = Date.now()
 
 	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst)) as string[]
-	console.log('test gdc maf sizes', Date.now() - t0)
+	if (serverconfig.debugmode)
+		console.log(
+			`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`,
+			Date.now() - t0
+		)
 
 	const arg = {
 		fileIdLst: fileLst2,
+		columns: q.columns,
 		host: path.join(apihost, 'data') // must use the /data/ endpoint from current host
 	}
 
@@ -55,7 +60,7 @@ async function buildMaf(q: GdcMafBuildRequest, res: any) {
 	res.setHeader('Content-Disposition', 'attachment; filename=cohort.maf.gz')
 	rustStream.pipe(res)
 
-	console.log('rust gdcmaf', Date.now() - t0)
+	if (serverconfig.debugmode) console.log('rust gdcmaf', Date.now() - t0)
 
 	rustStream.on('end', () => {
 		res.end()
