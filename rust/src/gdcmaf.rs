@@ -7,7 +7,7 @@
 	Output gzip compressed maf file to stdout.
 
 	Example of usage:
-		echo '{"host": "https://api.gdc.cancer.gov/data/", "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "b429fcc1-2b59-4b4c-a472-fb27758f6249"]}'|./target/release/gdcmaf
+		echo '{"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "b429fcc1-2b59-4b4c-a472-fb27758f6249"]}'|./target/release/gdcmaf
 */
 
 use flate2::read::GzDecoder;
@@ -20,7 +20,7 @@ use std::io::{self,Read,Write};
 
 
 
-fn select_maf_col(d:String) -> Vec<u8> {
+fn select_maf_col(d:String,columns:&Vec<String>) -> Vec<u8> {
     let mut maf_str: String = String::new();
     let mut header_indices: Vec<usize> = Vec::new();
     let lines = d.trim_end().split("\n");
@@ -29,9 +29,12 @@ fn select_maf_col(d:String) -> Vec<u8> {
             continue
         } else if line.contains("Hugo_Symbol") {
             let header: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
-            for col in MAF_COL {
-                let col_index: usize = header.iter().position(|x| x == col).unwrap();
-                header_indices.push(col_index);
+            for col in columns {
+                if let Some(index) = header.iter().position(|x| x == col) {
+                    header_indices.push(index);
+                } else {
+                    panic!("{} was not found!",col);
+                }
             }
         } else {
             let maf_cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
@@ -45,27 +48,6 @@ fn select_maf_col(d:String) -> Vec<u8> {
     };
     maf_str.as_bytes().to_vec()
 }
-
-
-// GDC MAF columns (96)
-const MAF_COL: [&str;96] = ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", 
-                            "Start_Position", "End_Position", "Strand", "Variant_Classification", 
-                            "Variant_Type", "Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2", 
-                            "dbSNP_RS", "dbSNP_Val_Status", "Tumor_Sample_Barcode", "Matched_Norm_Sample_Barcode", 
-                            "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2", "Tumor_Validation_Allele1", 
-                            "Tumor_Validation_Allele2", "Match_Norm_Validation_Allele1", "Match_Norm_Validation_Allele2", 
-                            "Verification_Status", "Validation_Status", "Mutation_Status", "Sequencing_Phase", 
-                            "Sequence_Source", "Validation_Method", "Score", "BAM_File", "Sequencer", 
-                            "Tumor_Sample_UUID", "Matched_Norm_Sample_UUID", "HGVSc", "HGVSp", "HGVSp_Short", 
-                            "Transcript_ID", "Exon_Number", "t_depth", "t_ref_count", "t_alt_count", "n_depth", 
-                            "n_ref_count", "n_alt_count", "all_effects", "Allele", "Gene", "Feature", "Feature_type", 
-                            "One_Consequence", "Consequence", "cDNA_position", "CDS_position", "Protein_position", 
-                            "Amino_acids", "Codons", "Existing_variation", "DISTANCE", "TRANSCRIPT_STRAND", "SYMBOL", 
-                            "SYMBOL_SOURCE", "HGNC_ID", "BIOTYPE", "CANONICAL", "CCDS", "ENSP", "SWISSPROT", "TREMBL", 
-                            "UNIPARC", "RefSeq", "SIFT", "PolyPhen", "EXON", "INTRON", "DOMAINS", "CLIN_SIG", "SOMATIC", 
-                            "PUBMED", "MOTIF_NAME", "MOTIF_POS", "HIGH_INF_POS", "MOTIF_SCORE_CHANGE", "IMPACT", "PICK", 
-                            "VARIANT_CLASS", "TSL", "HGVS_OFFSET", "PHENO", "GENE_PHENO", "CONTEXT", "tumor_bam_uuid", 
-                            "normal_bam_uuid", "case_id", "GDC_FILTER", "COSMIC"];
 
 
 #[tokio::main]
@@ -83,6 +65,22 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         url.push(Path::new(&host).join(&v.as_str().unwrap()).display().to_string());
     };
 
+    // read columns as array from input json and convert data type from Vec<Value> to Vec<String>
+    let maf_col:Vec<String>;
+    if let Some(maf_col_value) = file_id_lst_js.get("columns") {
+        //convert Vec<Value> to Vec<String>
+        if let Some(maf_col_array) = maf_col_value.as_array() {
+            maf_col = maf_col_array
+                .iter()
+                .map(|v| v.to_string().replace("\"",""))
+                .collect::<Vec<String>>();
+        } else {
+            panic!("Columns is not an array");
+        }
+    } else {
+        panic!("Columns was not selected");
+    };
+    
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(
         url.into_iter().map(|url|{
@@ -110,13 +108,13 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
 
     // output
     let mut encoder = GzEncoder::new(io::stdout(), Compression::default());
-    let _ = encoder.write_all(&MAF_COL.join("\t").as_bytes().to_vec()).expect("Failed to write header");
+    let _ = encoder.write_all(&maf_col.join("\t").as_bytes().to_vec()).expect("Failed to write header");
     let _ = encoder.write_all(b"\n").expect("Failed to write newline");
     download_futures.buffer_unordered(20).for_each(|item| {
         if item.starts_with("Failed") {
             eprintln!("{}",item);
         } else {
-            let maf_bit = select_maf_col(item);
+            let maf_bit = select_maf_col(item,&maf_col);
             let _ = encoder.write_all(&maf_bit).expect("Failed to write file");
         };
         async {}
