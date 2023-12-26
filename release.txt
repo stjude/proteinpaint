@@ -1,2 +1,1 @@
-Features:
-- GDC cohort-MAF tool: allow to customize output file columns
+
