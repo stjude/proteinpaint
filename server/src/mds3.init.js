@@ -35,6 +35,8 @@ import { spawnSync } from 'child_process'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
+import { validate_query_geneExpression } from '#routes/termdb.cluster.ts'
+import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 
 /*
 init
@@ -983,91 +985,6 @@ function mayDropMbyInfoFilter_2(m0, param) {
 	return false
 }
 
-/*
-input:
-param={}
-	.tid2value = { term1id: v1, term2id:v2, ... }
-		if present, return list of samples matching the given k/v pairs, assuming AND
-	.filterObj = pp filter
-	.filter = pp filter
-allSamples=[]
-	whole list of samples, each ele: {name: int}
-	presumably the set of samples from a bcf file or tabix file
-	NOTE new format is list of integer sample ids!
-ds={}
-
-output:
-if filter is applied, return set of sample id
-if not filtering, undefined
-*/
-async function mayLimitSamples(param, allSamples, ds) {
-	if (!allSamples) return // no samples from this big file
-
-	// later should be param.filter, no need for conversion
-	const filter = param2filter(param, ds)
-	if (!filter) {
-		// no filtering, use all samples
-		return
-	}
-
-	// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-	const filterSamples = [...new Set((await get_samples(filter, ds)).map(i => i.id))]
-
-	// filterSamples is the list of samples retrieved from termdb that are matching filter
-	// as allSamples (from bcf etc) may be a subset of what's in termdb
-	// must only use those from allSamples
-	let set
-	if (Number.isInteger(allSamples[0])) set = new Set(allSamples)
-	else set = new Set(allSamples.map(i => i.name))
-	const useSet = new Set()
-	for (const i of filterSamples) {
-		if (set.has(i)) useSet.add(i)
-	}
-	return useSet
-}
-
-function param2filter(param, ds) {
-	{
-		const f = param.filter || param.filterObj
-		if (f) {
-			if (!Array.isArray(f.lst)) throw 'filterObj.lst is not array'
-			if (f.lst.length == 0) {
-				// blank filter, do not return obj as that will break get_samples()
-				return null
-			}
-			return f
-		}
-	}
-	if (param.tid2value) {
-		if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
-		return tid2value2filter(param.tid2value, ds)
-	}
-}
-
-// temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
-function tid2value2filter(t, ds) {
-	const f = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: []
-	}
-	for (const k in t) {
-		const term = ds.cohort.termdb.q.termjsonByOneid(k)
-		if (!term) continue
-		const v = t[k]
-		f.lst.push({
-			type: 'tvs',
-			tvs: {
-				term,
-				// assuming only categorical
-				values: [{ key: v }]
-			}
-		})
-	}
-	return f
-}
-
 /* 
 usage:
 call at snvindel.byrange.get() to assign .samples[] to each m for counting total number of unique samples
@@ -1413,111 +1330,6 @@ async function run_edgeR(Rscript, input_data) {
 			}
 		})
 	})
-}
-
-async function validate_query_geneExpression(ds, genome) {
-	const q = ds.queries.geneExpression
-	if (!q) return
-
-	if (q.gdcapi) {
-		gdc.validate_query_geneExpression(ds, genome)
-		// .get() added, same behavior as below
-		return
-	}
-
-	if (!q.file) throw '.file missing from queries.geneExpression'
-	q.file = path.join(serverconfig.tpmasterdir, q.file)
-	await utils.validate_tabixfile(q.file)
-	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
-
-	{
-		// is a gene-by-sample matrix file
-		const lines = await utils.get_header_tabix(q.file)
-		if (!lines[0]) throw 'header line missing from ' + q.file
-		const l = lines[0].split('\t')
-		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') throw 'header line has wrong content for columns 1-4'
-		q.samples = [] // list of sample id based on order of matrix
-		for (let i = 4; i < l.length; i++) {
-			const id = ds.cohort.termdb.q.sampleName2id(l[i])
-			if (id == undefined) throw 'unknown sample from header'
-			q.samples.push(id)
-		}
-		console.log(q.samples.length, 'samples from geneExpression of', ds.label)
-	}
-
-	/*
-	query exp data one gene at a time
-	param{}
-	.genes[{}]
-		.gene=str
-		.chr=str
-		.start=int
-		.stop=int
-	.filterObj{}
-	*/
-	q.get = async param => {
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, return blank array for no data
-			return new Set()
-		}
-
-		// has at least 1 sample passing filter and with exp data
-		// TODO what if there's just 1 sample not enough for clustering?
-		const bySampleId = {}
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		} else {
-			// use all samples with exp data
-			for (const sid of q.samples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		}
-
-		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
-
-		for (const g of param.genes) {
-			// g = {gene/chr/start/stop}
-
-			// FIXME newly added geneVariant terms from client to be changed to {gene} but not {name}
-			if (!g.gene) g.gene = g.name
-			if (!g.gene) continue
-
-			if (!g.chr) {
-				// quick fix: newly added gene from client will lack chr/start/stop
-				const lst = genome.genedb.getjsonbyname.all(g.gene)
-				if (lst.length == 0) continue
-				const j = JSON.parse(lst.find(i => i.isdefault).genemodel || lst[0].genemodel)
-				g.start = j.start
-				g.stop = j.stop
-				g.chr = j.chr
-			}
-
-			gene2sample2value.set(g.gene, {})
-			await utils.get_lines_bigfile({
-				args: [q.file, (q.nochr ? g.chr.replace('chr', '') : g.chr) + ':' + g.start + '-' + g.stop],
-				dir: q.dir,
-				callback: line => {
-					const l = line.split('\t')
-					// case-insensitive match! FIXME if g.gene is alias won't work
-					if (l[3].toLowerCase() != g.gene.toLowerCase()) return
-					for (let i = 4; i < l.length; i++) {
-						const sampleId = q.samples[i - 4]
-						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
-						// if l[i] is blank string?
-						const v = Number(l[i])
-						if (Number.isNaN(v)) throw 'exp value not number'
-						gene2sample2value.get(g.gene)[sampleId] = v
-					}
-				}
-			})
-		}
-		// pass blank byTermId to match with expected output structure
-		const byTermId = {}
-		return { gene2sample2value, byTermId, bySampleId }
-	}
 }
 
 // no longer used

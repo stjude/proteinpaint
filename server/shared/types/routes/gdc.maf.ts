@@ -1,3 +1,5 @@
+//import GdcFilter0 from './filter.gdc'
+
 // an object representing gdc maf file, to be shown on client table
 
 export type File = {
@@ -20,20 +22,11 @@ enum ExperimentalStrategy {
 	wxs = 'WXS'
 }
 
-export type GdcFilter0 = {
-	op: string
-	// TODO: this should allow an array of objects, and/or nesting ???
-	content: {
-		field: string
-		value: string
-	}
-}
-
 export type GdcMafRequest = {
 	/** Name of exp strategy to get maf files for */
 	experimentalStrategy: ExperimentalStrategy
 	/** JSON, optional GDC cohort filter to restrict cases; if supplied, will only get maf files for these cases. the filter is readonly and pass to GDC API query */
-	filter0?: GdcFilter0
+	filter0?: any
 }
 
 export type GdcMafResponse = {

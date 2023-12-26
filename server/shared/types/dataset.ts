@@ -265,16 +265,19 @@ type RnaseqGeneCount = {
 	file: string
 }
 
-// the geneExpression query. if file is set, it loads data from local file; otherwise gdcapi should be set to true
-type GeneExpressionQuery = {
-	file?: string
-	gdcapi?: boolean
-	/* set to true if the value is already transformed across samples
-	e.g. gdc data returned by /values endpoint is transformed as "(expression - median) / stdev"
-	and should not be further transformed during clustering analysis
-	*/
-	valueIsTransformed?: boolean
+// the geneExpression query
+type GeneExpressionQueryGdc = {
+	src: 'gdcapi'
 }
+export type GeneExpressionQueryNative = {
+	src: 'native'
+	file: string
+	/** dynamically added during server launch, list of sample integer IDs from file */
+	samples: number[]
+	nochr: boolean
+	get: (param: any) => void
+}
+export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
 export type SingleCellSamplesGdc = {
 	src: 'gdcapi'
@@ -288,7 +291,7 @@ export type SingleCellSamplesNative = {
 	isSampleTerm: string
 	fields: string[]
 	columnNames: string[]
-	get: () => { samples: { sample: string }[] }
+	get: () => void //{ samples: { sample: string }[] }
 }
 export type SingleCellDataGdc = {
 	src: 'gdcapi'

@@ -31,7 +31,7 @@ validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
-validate_query_geneExpression
+gdc_validate_query_geneExpression
 	gdcGetCasesWithExressionDataFromCohort
 gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
@@ -167,7 +167,7 @@ samples are determined based on filter/filter0:
 	all cases based on current filter are retrieved
 	then, up to 1000 of those with exp data are kept
 */
-export function validate_query_geneExpression(ds, genome) {
+export function gdc_validate_query_geneExpression(ds, genome) {
 	ds.queries.geneExpression.get = async q => {
 		if (!Array.isArray(q.genes)) throw 'q.genes[] not array'
 
