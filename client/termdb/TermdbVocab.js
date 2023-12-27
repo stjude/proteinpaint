@@ -592,7 +592,7 @@ export class TermdbVocab extends Vocab {
 			body.filter = getNormalRoot(filter)
 		}
 		try {
-			const data = await dofetch3('/termdb', { body })
+			const data = await dofetch3('/termdb/numericcategories', { body })
 			if (data.error) throw data.error
 			return data
 		} catch (e) {
