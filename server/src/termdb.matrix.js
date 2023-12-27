@@ -33,28 +33,29 @@ genome{}
 Returns:
 
 {
-	samples: {}
-		key: stringified integer sample id (TODO use integer)
+	samples{}
+		key: stringified integer sample id 
 		value: { 
 			sample: integerId,
 			<termid>: {key, value},
 			<more terms...>
 			<geneName>:{ 
-				key, label, // these two are both gene names and useless
+				key, label, // these two are both gene names. useless?? FIXME
 				values:[]
 					{gene/isoform/chr/pos/ref/alt/class/mname/dt}
 			}
 		}
 	
-	byTermId:{}
+	byTermId{}
+		metadata about terms
 		<term id>:
 			bins: CTE.bins
 			events: CTE.events
 				these info are not available in term object and is computed during run time, and 
 
-	bySampleId:{}
-		key: stringified integer id
-		value: sample name
+	bySampleId{}
+		metadata about samples (e.g. print names). avoid duplicating such in sample data elements (e.g. mutations)
+		[sample integer id]: {label: [string sample name for display], ...}
 }
 */
 
@@ -92,12 +93,18 @@ function validateArg(q, ds, genome) {
 async function getSampleData(q) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
-	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
-	// sample data from all terms are added into samples data
-	// refs{byTermId, bySampleId} collects "meta" info on terms and samples
+	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
+	/* samples={}
+	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
+	non-dict term data will be appended to it
+	byTermId={}
+	collects metadata on terms
+	*/
 
-	// return early if all samples are filtered out by not having matching dictionary term values
-	if (dictTerms.length && !Object.keys(samples).length) return { samples, refs }
+	if (dictTerms.length && !Object.keys(samples).length) {
+		// return early if all samples are filtered out by not having matching dictionary term values
+		return { samples, refs: { byTermId, bySampleId: {} } }
+	}
 
 	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
 
@@ -105,7 +112,9 @@ async function getSampleData(q) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
-			if (q.ds.cohort?.termdb?.getGeneAlias) refs.byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
+			if (q.ds.cohort?.termdb?.getGeneAlias) {
+				byTermId[tw.term.name] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
+			}
 
 			const data = await q.ds.mayGetGeneVariantData(tw, q)
 
@@ -152,15 +161,16 @@ async function getSampleData(q) {
 	- future data sources need to be handled here
 	- subject to change!
 	*/
+	const bySampleId = {}
 	for (const sid in samples) {
 		if (q.ds.cohort?.termdb?.q?.id2sampleName) {
-			refs.bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sid)) }
+			bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sid)) }
 		} else if (q.ds.__gdc?.caseid2submitter) {
-			refs.bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
+			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
 		}
 	}
 
-	return { samples, refs }
+	return { samples, refs: { byTermId, bySampleId } }
 }
 
 async function mayGetSampleFilterSet(q, nonDictTerms) {
@@ -221,7 +231,7 @@ output:
 }
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
-	if (!termWrappers.length) return { samples: {}, refs: { byTermId: {}, bySampleId: {} } }
+	if (!termWrappers.length) return [{}, {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
@@ -234,8 +244,8 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 }
 
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
-	const samples = {}
-	const refs = { byTermId: {}, bySampleId: {} }
+	const samples = {} // to return
+	const byTermId = {} // to return
 
 	const twByTermId = {}
 	const filter = await getFilterCTEs(q.filter, q.ds)
@@ -247,15 +257,15 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		termWrappers.map(async (tw, i) => {
 			const CTE = await get_term_cte(q, values, i, filter, tw)
 			if (CTE.bins) {
-				refs.byTermId[tw.term.id] = { bins: CTE.bins }
+				byTermId[tw.term.id] = { bins: CTE.bins }
 			}
 			if (CTE.events) {
-				refs.byTermId[tw.term.id] = { events: CTE.events }
+				byTermId[tw.term.id] = { events: CTE.events }
 			}
 			if (tw.term.values) {
 				const values = Object.values(tw.term.values)
 				if (values.find(v => 'order' in v)) {
-					refs.byTermId[tw.term.id] = {
+					byTermId[tw.term.id] = {
 						keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
 					}
 				}
@@ -304,17 +314,18 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		}
 	}
 
-	return { samples, refs }
+	return [samples, byTermId]
 }
 
+// FIXME this never runs
 async function mayQueryMutatedSamples(q) {
 	if (!q.currentGeneNames) return // no genes, do not query mutated samples and do not limit
 	// has genes. query samples mutated on any of these genes, collect sample id into a set and return
 	const sampleSet = new Set()
 	for (const geneName of q.currentGeneNames) {
 		const tw = { term: { name: geneName, type: 'geneVariant' } }
-		const bySampleId = await q.ds.mayGetGeneVariantData(tw, q)
-		for (const [sampleId, value] of bySampleId.entries()) {
+		const data = await q.ds.mayGetGeneVariantData(tw, q)
+		for (const sampleId of data.keys()) {
 			sampleSet.add(sampleId)
 		}
 	}
@@ -323,7 +334,7 @@ async function mayQueryMutatedSamples(q) {
 
 /*
 using mds3 dataset, that's without server-side sqlite db
-only gdc runs it
+only gdc runs it ?? FIXME
 */
 async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
@@ -343,9 +354,12 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	}
 
 	const data = await q.ds.variant2samples.get(q2)
+	/* data={samples[], byTermId{}}
+	data.samples[] is converted to samples{}
+	data.byTermId{} is returned without change
+	*/
 
-	const samples = {}
-	const refs = { byTermId: data.byTermId, bySampleId: {} }
+	const samples = {} //
 
 	for (const s of data.samples) {
 		const s2 = {
@@ -384,7 +398,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		}
 		samples[s.sample_id] = s2
 	}
-	return { samples, refs }
+	return [samples, data.byTermId || {}]
 }
 
 /*
