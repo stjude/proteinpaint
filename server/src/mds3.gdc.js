@@ -366,9 +366,13 @@ export function validate_query_snvindel_byisoform(ds) {
 
 	.isoform:str
 		required
-	.useCaseid4sample:true
-		if true, use case id for sample_id
-		otherwise, use sample(aliquot) id
+
+	.gdcUseCaseuuid:true
+		(gdc specific parameter)
+		determines what kind of value is "sample_id" property of every sample:
+		if true, is case uuid, to count data points by cases for getData()
+		else, is aliquot uuid, to count data by samples
+
 	.hiddenmclass = set
 	.filter0
 		read-only gdc cohort filter, pass to gdc api as-is
@@ -408,24 +412,14 @@ export function validate_query_snvindel_byisoform(ds) {
 
 			m.samples = []
 			for (const c of ssm.cases) {
-				const s = { sample_id: await decideSampleId(c, ds, opts.useCaseid4sample) }
-				if (opts.useCaseid4sample) {
-					// when flag is true, this query came from getData() for gdc matrix
-					// sample_id is case uuid, the required unique identifier to align columns
-					// also create optional attribute __sampleName with submitter_id value, for displaying to user
-					s.__sampleName = c.submitter_id
+				const s = {}
+				if (opts.gdcUseCaseuuid) {
+					s.sample_id = c.case_id // case uuid
+					if (!s.sample_id) throw 'gdcUseCaseuuid=true but c.case_id undefined'
+				} else {
+					s.sample_id = c.observation?.[0]?.sample?.tumor_sample_uuid
+					if (!s.sample_id) throw 'gdcUseCaseuuid=false but c.observation?.[0]?.sample?.tumor_sample_uuid undefined'
 				}
-
-				/* remain to see if okay not to pass this
-				if (c.case_id) {
-					 when case_id is available, pass it on to returned data as "case.case_id"
-					this is used by gdc matrix case selection where case_id (uuid) is needed to build cohort in gdc portal,
-					but the submitter_id cannot be used as it will prevent mds3 gdc filter to work, it only works with uuid
-					see __matrix_case_id__
-					s['case.case_id'] = c.case_id
-				}
-				*/
-
 				m.samples.push(s)
 			}
 			mlst.push(m)
