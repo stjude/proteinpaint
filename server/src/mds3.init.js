@@ -288,13 +288,13 @@ export async function validate_termdb(ds) {
 			ds.sampleName2Id.set(r.name, r.id)
 		}
 
-		// XXX suggest to delete, not a good idea to dump all samples to client
+		// XXX delete, not a good idea to dump all samples to client
 		ds.getSampleIdMap = samples => {
-			const bySampleId = {}
-			for (const sampleId in samples) {
-				bySampleId[sampleId] = ds.sampleId2Name.get(+sampleId)
+			const d = {}
+			for (const i in samples) {
+				d[sampleId] = ds.sampleId2Name.get(+sampleId)
 			}
-			return bySampleId
+			return d
 		}
 	}
 
