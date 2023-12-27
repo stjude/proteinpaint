@@ -43,7 +43,6 @@ export function handle_request_closure(genomes) {
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
 			// process triggers
-			if (q.getnumericcategories) return await trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
 			if (q.findterm) return await trigger_findterm(q, res, tdb, ds, genome)
@@ -295,19 +294,6 @@ Returns:
 		list of string names
 }
 */
-
-async function trigger_getnumericcategories(q, res, tdb, ds) {
-	if (!q.tid) throw '.tid missing'
-	const term = tdb.q.termjsonByOneid(q.tid)
-	const arg = {
-		ds,
-		term_id: q.tid
-		//filter
-	}
-	if (q.filter) arg.filter = q.filter
-	const lst = await termdbsql.get_summary_numericcategories(arg)
-	res.send({ lst })
-}
 
 function trigger_getterminfo(q, res, tdb) {
 	/* get terminfo the the term
