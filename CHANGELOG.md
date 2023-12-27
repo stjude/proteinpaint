@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GDC cohort-MAF tool: allow to customize output file columns
+- Clicking matrix cell to show similar info table as hovering over the matrix cell.
 
 Fixes:
 - Gene exp clustering will display an alert msg to inform user that a map is not doable when there is just one gene

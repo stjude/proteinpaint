@@ -1,3 +1,1 @@
 
-Feature:
-- Clicking matrix cell to show similar info table as hovering over the matrix cell. 
