@@ -236,6 +236,8 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
 	}
+	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
+	 */
 	if (q.ds?.variant2samples?.get) {
 		// ds is not using sqlite db but has v2s method
 		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
@@ -333,8 +335,9 @@ async function mayQueryMutatedSamples(q) {
 }
 
 /*
-using mds3 dataset, that's without server-side sqlite db
-only gdc runs it ?? FIXME
+using mds3 dataset, that's without server-side sqlite db and will not execute any sql query
+so far it's only gdc
+later can be other api-based datasets
 */
 async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
@@ -343,14 +346,19 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		genome: q.genome,
 		get: 'samples',
 		twLst: termWrappers,
-		useIntegerSampleId: true, // ask v2s.get() to return integer sample id
-		isHierCluster: q.isHierCluster // optional flag required for gdc dataset
+		// !! gdc specific parameter !!
+		// instructs querySamples_gdcapi() to return case uuid as sample.sample_id; more or less harmless as it's ignored by non-gdc ds
+		gdcUseCaseuuid: true,
+		// !! gdc specific parameter !!
+		isHierCluster: q.isHierCluster
 	}
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
 		for (const n of q.currentGeneNames) {
 			q2.geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
 		}
+	} else {
+		throw 'calling v2s() but lacks q.currentGeneNames'
 	}
 
 	const data = await q.ds.variant2samples.get(q2)
@@ -359,20 +367,12 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	data.byTermId{} is returned without change
 	*/
 
-	const samples = {} //
+	const samples = {} // data.samples[] converts into this
 
 	for (const s of data.samples) {
 		const s2 = {
 			sample: s.sample_id
 		}
-
-		/* optional attribute returned by gdc dataset
-		s.sample_id: case uuid for aligning matrix columns
-		s.__sampleName: case submitter id for display
-
-		non-gdc won't return this and will display s.sample_id
-		*/
-		if (s.__sampleName) s2.sampleName = s.__sampleName
 
 		for (const tw of termWrappers) {
 			const v = s[tw.term.id]

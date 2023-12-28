@@ -23,7 +23,6 @@ validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
 	snvindel_byisoform
 	snvindel_addclass
-	decideSampleId
 gdcValidate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
@@ -768,8 +767,7 @@ export function validate_query_geneCnv2(ds) {
 			}
 			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
 			const sample = {
-				sample_id: hit.case.case_id,
-				__sampleName: hit.case.submitter_id
+				sample_id: hit.case.case_id
 			}
 
 			if (opts.twLst) {
@@ -1443,6 +1441,7 @@ q{}
 	.rglst[]
 	.filterObj
 	.filter0
+	.gdcUseCaseuuid = true, see byisoform.get()
 
 twLst[]
 	array of termwrapper objects, for sample-annotating terms (not geneVariant)
@@ -1505,6 +1504,13 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		}
 	}
 
+	/* this function can identify sample either by case uuid, or sample submitter id
+	for simplicity, always request these two different values
+	*/
+	if (!twLst.some(i => i.id == 'case.observation.sample.tumor_sample_uuid'))
+		twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
+	if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
+
 	if (q.get == 'samples') {
 		// getting list of samples (e.g. for table display)
 		// need following fields for table display, add to twLst[] if missing:
@@ -1525,23 +1531,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 				twLst.push({ term: { id: 'case.observation.read_depth.t_depth' } })
 			if (!twLst.some(i => i.id == 'case.observation.read_depth.n_depth'))
 				twLst.push({ term: { id: 'case.observation.read_depth.n_depth' } })
-
-			// get aliquot id for converting to sample name from which the mutation is detected
-			// TODO no need when
-			if (!twLst.some(i => i.id == 'case.observation.sample.tumor_sample_uuid'))
-				twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
 		}
-
-		// need both case_id and submitter id
-		// need case_id to generate url/cases/<ID> link in table display; submitter and aliquot id won't work
-		if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
-		// need submitter id for
-		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
-	}
-
-	if (q.get == 'summary' || q.get == 'sunburst') {
-		// submitter id is sufficient to count unique number of samples, no need for case_id
-		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
 	const dictTwLst = []
@@ -1639,25 +1629,23 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			}
 		}
 
-		if (q.variant2samples) {
-			// from mds3 client
-			// set 3rd arg to false to not set uuid as sample_id, but to use sample submitter id
-			sample.sample_id = await decideSampleId(s.case, ds, false)
-		} else {
-			// from getData(), need below:
-			// sample_id=case uuid, __sampleName=case submitter id (not sample submitter!)
+		if (q.gdcUseCaseuuid) {
+			/* identify sample with case uuid, but no need to convert to case submitter id
+			as this should be for getData() query, which will fill in bySampleId{} with submitter id;
+			url link will be just by sample_id and no need to generate separate property for it
+			*/
 			sample.sample_id = s.case.case_id
-			sample.__sampleName = s.case.submitter_id
-		}
-
-		if (s.case.case_id) {
-			// for making url link on a sample
-			sample.sample_URLid = s.case.case_id
-			if (s.case?.observation?.[0]?.sample?.tumor_sample_uuid) {
-				// aliquot id available; append to URLid so when opening the page, the sample is auto highlighted from the tree
-				// per uat feedback by bill 1/6/2023
-				sample.sample_URLid = sample.sample_URLid + '?bioId=' + s.case.observation[0].sample.tumor_sample_uuid
-			}
+			if (!sample.sample_id) throw 'querySamples_gdcapi: case.case_id missing'
+		} else {
+			/* identify sample as sample submitter id
+			sample url link is complex and must be specifically generated
+			*/
+			const aliquot_id = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
+			if (!aliquot_id) throw 'querySamples_gdcapi: aliquot_id missing'
+			sample.sample_id = await ds.__gdc.aliquot2submitter.get(aliquot_id)
+			// append aliquot_id to case url so when opening the page, the sample is auto highlighted from the tree
+			// per uat feedback by bill 1/6/2023
+			sample.sample_URLid = s.case.case_id + '?bioId=' + aliquot_id
 		}
 
 		for (const tw of dictTwLst) {
@@ -1766,24 +1754,6 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 	const byTermId = mayApplyBinning(samples, dictTwLst)
 
 	return { byTermId, samples }
-}
-
-/*
-c is case{}
-decide the value to the generic sample_id attribute
-*/
-async function decideSampleId(c, ds, useCaseid4sample) {
-	if (useCaseid4sample && c.case_id) {
-		// asks for case uuid, and the id is present, then return it
-		return c.case_id
-	}
-
-	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
-		// hardcoded logic to return sample submitter id when aliquot id is present
-		return await ds.__gdc.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
-	}
-
-	return c.case_id || c.submitter_id
 }
 
 function may_add_readdepth(acase, sample) {
