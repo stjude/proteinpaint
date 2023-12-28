@@ -358,7 +358,10 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 			q2.geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
 		}
 	} else {
-		throw 'calling v2s() but lacks q.currentGeneNames'
+		/* do not throw here
+		gene list is not required for loading dict term for gdc gene exp clustering
+		but it's required for gdc oncomatrix and will break FIXME
+		*/
 	}
 
 	const data = await q.ds.variant2samples.get(q2)
