@@ -103,10 +103,27 @@ export function validate_variant2sample(a) {
 }
 
 export function validate_query_snvindel_byrange(ds) {
-	ds.queries.snvindel.byrange.get = async opts => {
+	/*
+q{}
+	.rglst[]
+	.hiddenmclass: Set
+	.isoform:
+*/
+	ds.queries.snvindel.byrange.get = async q => {
+		return await ds.queries.snvindel.byisoform.get(q)
+
+		/*********
+
+		the graphql query is not used; byisoform.get() now works to pull ssm by rglst[]
+
+		previous reason for using graphql instead of Rest api is assumption that intergenic ssm (not on any isoform) are not available from s/ssms and /ssm_occurrences endpoints
+		now that these endpoints actually support range query, will use them for now
+		and look into enabling genomic mode on gdc view
+		to confirm that whether intergenic ssm are indeed indexed on Rest; if so can delete graphql below
+
 		const response = await got.post(apihostGraphql, {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, // xxx
-			body: JSON.stringify({ query: query_range2ssm, variables: variables_range2ssm(opts) })
+			headers: getheaders(q),
+			body: JSON.stringify({ query: query_range2ssm, variables: variables_range2ssm(q) })
 		})
 		let re
 		try {
@@ -126,28 +143,34 @@ export function validate_query_snvindel_byrange(ds) {
 				alt: h.node.tumor_allele,
 				samples: []
 			}
-			if (h.node.consequence && h.node.consequence.hits && h.node.consequence.hits.edges) {
-				m.csqcount = h.node.consequence.hits.edges.length
+			if(!Array.isArray(h.node?.consequence?.hits?.edges)) throw 'h.node.consequence.hits.edges[] not array'
+			m.csqcount = h.node.consequence.hits.edges.length
+			{
 				let c // consequence
-				if (opts.isoform) {
+				if (q.isoform) {
 					c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
 				} else {
 					c = h.node.consequence.hits.edges.find(i => i.node.transcript.is_canonical)
 				}
-				const c2 = c || h.node.consequence.hits.edges[0]
-				// c2: { node: {consequence} }
 				snvindel_addclass(m, (c || h.node.consequence.hits.edges[0]).node)
-			}
-			if (h.node.occurrence.hits.edges) {
-				for (const c of h.node.occurrence.hits.edges) {
-					const sample = makeSampleObj(c.node.case, ds)
-					sample.sample_id = c.node.case.case_id
-					m.samples.push(sample)
+				if(q.hiddenmclass && q.hiddenmclass.has(m.class)) {
+					// m filtered by class
+					continue
 				}
+			}
+			if(!Array.isArray(h.node?.occurrence?.hits?.edges)) throw 'h.node.occurrence.hits.edges[] not array'
+			for (const c of h.node.occurrence.hits.edges) {
+				const sample = makeSampleObj(c.node.case, ds)
+				/ currently query only returns case uuid; when the query is fixed to be able to return both aliquot and case id,
+				can change getter to return either based on q{} setting
+				/
+				sample.sample_id = c.node.case.case_id
+				m.samples.push(sample)
 			}
 			mlst.push(m)
 		}
 		return mlst
+	*/
 	}
 }
 
@@ -1110,9 +1133,7 @@ function getheaders(q) {
 }
 
 async function snvindel_byisoform(opts, ds) {
-	if (!opts.isoform) throw 'snvindel_byisoform: .isoform missing'
-	if (typeof opts.isoform != 'string') throw '.isoform value not string'
-
+	// query ssm by either isoform or rglst
 	const query1 = isoform2ssm_query1_getvariant,
 		query2 = isoform2ssm_query2_getcase
 
@@ -1154,11 +1175,14 @@ async function snvindel_byisoform(opts, ds) {
 		if (!h.consequence) throw '.consequence[] missing from a ssm'
 		if (!Number.isInteger(h.start_position)) throw 'hit.start_position is not integer'
 		h.csqcount = h.consequence.length
-		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
-		if (!consequence) {
-			// may alert??
+
+		let c
+		if (opts.isoform) {
+			c = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
+		} else {
+			c = h.consequence.find(i => i.transcript.is_canonical)
 		}
-		h.consequence = consequence // keep only info for this isoform
+		h.consequence = c || h.consequence[0]
 		h.cases = []
 		id2ssm.set(h.ssm_id, h)
 	}
@@ -1550,6 +1574,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		*/
 		fields.push('ssm.consequence.transcript.consequence_type')
 		fields.push('ssm.consequence.transcript.transcript_id')
+		fields.push('ssm.consequence.transcript.is_canonical')
 	}
 
 	if (q.rglst) {
@@ -1607,25 +1632,17 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 				}
 			}
 			*/
+			let c
+			if (q.isoform) {
+				c = s.ssm.consequence.find(i => i.transcript.transcript_id == q.isoform)
+			} else {
+				c = s.ssm.consequence.find(i => i.transcript.is_canonical)
+			}
 			const m = {}
-			snvindel_addclass(
-				m,
-				s.ssm.consequence.find(i => i.transcript.transcript_id == q.isoform)
-			)
+			snvindel_addclass(m, c || s.ssm.consequence[0])
 			if (q.hiddenmclass.has(m.class)) {
 				// this variant is dropped
 				continue
-			}
-		}
-
-		if (q.rglst) {
-			if (!s.ssm?.chromosome || !s.ssm?.start_position) continue // lack position, skip
-			if (
-				!q.rglst.find(
-					i => i.chr == s.ssm.chromosome && i.start < s.ssm.start_position && i.stop >= s.ssm.start_position
-				)
-			) {
-				continue // out of range
 			}
 		}
 
@@ -2278,7 +2295,12 @@ const isoform2ssm_query1_getvariant = {
 	/*
 	p={}
 		.isoform
-			isoform is provided for mds3 tk loading using isoform,
+			optional, isoform is provided for mds3 tk loading using isoform,
+		.rglst[]
+			optional, and hardcoded to use only 1 region:
+			when .isoform is provided, rglst should be zoomed in on isoform and used to limit ssm
+			when .isoform is not provided, rglst comes from genomic query
+			when both .isform and .rglst are missing, case_id should be required to limit to ssm from a case
 		.case_id
 			case_id is provided for loading ssm from a case in gdc bam slicing ui 
 		.set_id, obsolete
@@ -2290,6 +2312,13 @@ const isoform2ssm_query1_getvariant = {
 			op: 'and',
 			content: []
 		}
+
+		let r
+		if (p.rglst) {
+			r = p.rglst[0]
+			validateRegion(r)
+		}
+
 		if (p.isoform) {
 			if (typeof p.isoform != 'string') throw '.isoform value not string'
 			f.content.push({
@@ -2299,8 +2328,32 @@ const isoform2ssm_query1_getvariant = {
 					value: [p.isoform]
 				}
 			})
-		}
-		if (p.case_id) {
+			if (r) {
+				// limit ssm to zoom in region
+				f.content.push({
+					op: '>=',
+					content: { field: 'start_position', value: r.start }
+				})
+				f.content.push({
+					op: '<=',
+					content: { field: 'start_position', value: r.stop }
+				})
+			}
+		} else if (r) {
+			// no isoform but rglst is provided
+			f.content.push({
+				op: '=',
+				content: { field: 'chromosome', value: r.chr }
+			})
+			f.content.push({
+				op: '>=',
+				content: { field: 'start_position', value: r.start }
+			})
+			f.content.push({
+				op: '<=',
+				content: { field: 'start_position', value: r.stop }
+			})
+		} else if (p.case_id) {
 			if (typeof p.case_id != 'string') throw '.case_id value not string'
 			f.content.push({
 				op: '=',
@@ -2309,7 +2362,10 @@ const isoform2ssm_query1_getvariant = {
 					value: [p.case_id]
 				}
 			})
+		} else {
+			throw '.isoform, .rglst, and .case_id are all missing'
 		}
+
 		if (p.set_id) {
 			if (typeof p.set_id != 'string') throw '.set_id value not string'
 			f.content.push({
@@ -2328,6 +2384,12 @@ const isoform2ssm_query1_getvariant = {
 		}
 		return f
 	}
+}
+
+function validateRegion(r) {
+	if (typeof r != 'object') throw 'p.rglst[0] not object'
+	if (typeof r.chr != 'string' || !r.chr || !Number.isInteger(r.start) || !Number.isInteger(r.stop))
+		throw 'p.rglst[0] not valid {chr,start,stop}'
 }
 
 // REST: get case details for each ssm, no variant-level info
@@ -2358,6 +2420,12 @@ const isoform2ssm_query2_getcase = {
 		.filterObj
 		*/
 		const f = { op: 'and', content: [] }
+
+		/* if query provides isoform, rglst[] can be used alongside isoform to restrict ssm to part of isoform (when zoomed in)
+		if no ssm or isoform, rglst[] must be provided (querying from genomic mode)
+		*/
+		let hasSsmOrIsoform = false
+
 		if (p.ssm_id_lst) {
 			if (typeof p.ssm_id_lst != 'string') throw 'ssm_id_lst not string'
 			f.content.push({
@@ -2367,6 +2435,7 @@ const isoform2ssm_query2_getcase = {
 					value: p.ssm_id_lst.split(',')
 				}
 			})
+			hasSsmOrIsoform = true
 		} else if (p.isoform) {
 			f.content.push({
 				op: '=',
@@ -2375,31 +2444,51 @@ const isoform2ssm_query2_getcase = {
 					value: [p.isoform]
 				}
 			})
+			hasSsmOrIsoform = true
 		} else if (p.isoforms) {
 			if (!Array.isArray(p.isoforms)) throw '.isoforms[] not array'
 			f.content.push({
 				op: 'in',
 				content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms }
 			})
-		} else {
-			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
+			hasSsmOrIsoform = true
 		}
 
-		if (p.rglst) {
-			/* to filter out variants that are out of view range (e.g. zoomed in on protein)
-			necessary when zooming in
-
-			!!!hardcoded to only one region!!!
-
-			*/
-			f.content.push({
-				op: '>=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].start }
-			})
-			f.content.push({
-				op: '<=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].stop }
-			})
+		{
+			let r
+			if (p.rglst) {
+				// !!!hardcoded to only one region!!!
+				r = p.rglst[0]
+				validateRegion(r)
+			}
+			if (hasSsmOrIsoform) {
+				if (r) {
+					// rglst[] is optional in this case; to filter out variants that are out of view range (e.g. zoomed in on protein) necessary when zooming in
+					f.content.push({
+						op: '>=',
+						content: { field: 'ssms.start_position', value: r.start }
+					})
+					f.content.push({
+						op: '<=',
+						content: { field: 'ssms.start_position', value: r.stop }
+					})
+				}
+			} else {
+				// rglst is required now
+				if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
+				f.content.push({
+					op: '=',
+					content: { field: 'ssms.chromosome', value: r.chr }
+				})
+				f.content.push({
+					op: '>=',
+					content: { field: 'ssms.start_position', value: r.start }
+				})
+				f.content.push({
+					op: '<=',
+					content: { field: 'ssms.start_position', value: r.stop }
+				})
+			}
 		}
 
 		if (p.set_id) {
@@ -2448,6 +2537,8 @@ TODO if can be done in protein_mutations
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
+
+FIXME change query to return aliquot uuid alongside case_id
 */
 const query_range2ssm = `query range2variants($filters: FiltersArgument) {
   explore {
@@ -2500,9 +2591,7 @@ const query_range2ssm = `query range2variants($filters: FiltersArgument) {
   }
 }`
 function variables_range2ssm(p) {
-	// p:{}
-	// .rglst[{chr/start/stop}]
-	// .set_id
+	// TODO hardcoded for only one region; may extend to handle multiple ones
 	if (!p.rglst) throw '.rglst missing'
 	const r = p.rglst[0]
 	if (!r) throw '.rglst[0] missing'

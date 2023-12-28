@@ -99,13 +99,15 @@ async function trigger_getcategories(
 	if (!q.tid) throw '.tid missing'
 	const term =
 		q.type == 'geneVariant' ? { name: q.tid, type: 'geneVariant', isleaf: true } : tdb.q.termjsonByOneid(q.tid)
+
 	const arg = {
 		filter: q.filter,
 		terms:
 			q.type == 'geneVariant'
 				? [{ term: term, q: { isAtomic: true } }]
 				: [{ id: q.tid, term, q: q.term1_q || getDefaultQ(term, q) }],
-		currentGeneNames: q.currentGeneNames
+		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
+		rglst: q.rglst // optional, from mds3 mayAddGetCategoryArgs()
 	}
 
 	const data = await getData(arg, ds, genome)

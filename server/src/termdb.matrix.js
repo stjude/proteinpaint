@@ -352,6 +352,10 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		// !! gdc specific parameter !!
 		isHierCluster: q.isHierCluster
 	}
+	if (q.rglst) {
+		// !! gdc specific parameter !! present for block tk in genomic mode
+		q2.rglst = q.rglst
+	}
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
 		for (const n of q.currentGeneNames) {
