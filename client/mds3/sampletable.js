@@ -1,8 +1,8 @@
 import { fillbar } from '#dom/fillbar'
-import { get_list_cells } from '#dom/gridutils'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 import { newSandboxDiv } from '../dom/sandbox.ts'
+import { table2col } from '../dom/table2col'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
 import { convertUnits } from '#shared/helpers'
@@ -159,21 +159,11 @@ async function feedSample2selectCallback(tk, block, _samples, sampleIdxLst) {
 }
 
 async function make_singleSampleTable(s, arg) {
-	const grid_div =
-		arg.singleSampleDiv ||
-		arg.div
-			.append('div')
-			.style('display', 'inline-grid')
-			.style('grid-template-columns', 'auto auto')
-			.style('gap-row-gap', '1px')
-			.style('align-items', 'center')
-			.style('justify-items', 'left')
-			.style('padding', '10px')
-			.style('width', '100%')
+	const table = arg.singleSampleDiv || table2col({ holder: arg.div })
 
 	if (s.sample_id) {
 		// sample_id is hardcoded
-		const [cell1, cell2] = get_list_cells(grid_div)
+		const [cell1, cell2] = table.addRow()
 		cell1.text(arg.tk.mds.termdbConfig?.lollipop?.sample || 'Sample')
 		printSampleName(s, arg.tk, cell2, arg.block, arg.mlst?.[0])
 	}
@@ -181,14 +171,14 @@ async function make_singleSampleTable(s, arg) {
 	/////////////
 	// hardcoded logic to represent if this case is open or controlled-access
 	if ('caseIsOpenAccess' in s) {
-		const [cell1, cell2] = get_list_cells(grid_div)
+		const [cell1, cell2] = table.addRow()
 		cell1.text('Access')
 		cell2.text(s.caseIsOpenAccess ? 'Open' : 'Controlled')
 	}
 
 	if (arg.tk.mds.variant2samples.twLst) {
 		for (const tw of arg.tk.mds.variant2samples.twLst) {
-			const [cell1, cell2] = get_list_cells(grid_div)
+			const [cell1, cell2] = table.addRow()
 			cell1.text(tw.term.name).style('text-overflow', 'ellipsis')
 			cell2.style('text-overflow', 'ellipsis')
 			if (tw.id in s) {
@@ -217,19 +207,21 @@ async function make_singleSampleTable(s, arg) {
 		for (const ssmid of s.ssm_id_lst) {
 			if (s.ssm_id_lst.length > 1) {
 				// there are multiple, need to mark it out
-				const div = grid_div.append('div').style('grid-column', 'span 2').style('margin-top', '20px')
+				//const td = table.addRow({spanTwoColumns:true})
+				const [td1, td] = table.addRow()
+				td.style('padding-top', '20px')
 				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
 					if (m.dt == 1) {
-						print_snv(div, m, arg.tk)
+						print_snv(td, m, arg.tk)
 					} else if (m.dt == 2 || m.dt == 5) {
-						printSvPair(m.pairlst[0], div)
+						printSvPair(m.pairlst[0], td)
 					} else {
-						div.text(ssmid)
+						td.text(ssmid)
 					}
 				} else {
-					div.text(ssmid)
+					td.text(ssmid)
 				}
 			} else {
 				// only 1 ssm from this sample obj, no need to mark it out
@@ -237,7 +229,7 @@ async function make_singleSampleTable(s, arg) {
 
 			for (const formatkey in s.ssmid2format[ssmid]) {
 				const value = s.ssmid2format[ssmid][formatkey]
-				const [cell1, cell2] = get_list_cells(grid_div)
+				const [cell1, cell2] = table.addRow()
 				const fobj = arg.tk.mds?.bcf?.format?.[formatkey]
 				cell1.text((fobj && fobj.Description) || formatkey)
 				cell2.html(printFormat(fobj, value))
