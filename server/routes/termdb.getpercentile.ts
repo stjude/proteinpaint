@@ -1,4 +1,4 @@
-// import { getpercentileRequest, getpercentileResponse } from '#shared/types/routes/termdb.getpercentile'
+import { getpercentileRequest, getpercentileResponse } from '#shared/types/routes/termdb.getpercentile.ts'
 import * as termdbsql from '#src/termdb.sql.js'
 import computePercentile from '#shared/compute.percentile.js'
 
@@ -61,7 +61,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query // as getpercentileRequest
+		const q = req.query as getpercentileRequest
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -113,5 +113,5 @@ async function trigger_getpercentile(
 		const perc_value = computePercentile(values, percentile)
 		perc_values.push(perc_value)
 	}
-	res.send({ values: perc_values })
+	res.send({ values: perc_values } as getpercentileResponse)
 }

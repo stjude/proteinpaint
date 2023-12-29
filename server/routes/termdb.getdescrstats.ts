@@ -1,4 +1,4 @@
-// import { getdescrstatsRequest, getdescrstatsResponse } from '#shared/types/routes/termdb.descrstats'
+import { getdescrstatsRequest, getdescrstatsResponse } from '#shared/types/routes/termdb.getdescrstats.ts'
 import roundValue from '#shared/roundValue.js'
 import computePercentile from '#shared/compute.percentile.js'
 import * as termdbsql from '#src/termdb.sql.js'
@@ -62,7 +62,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query // as getdescrstatsRequest
+		const q = req.query as getdescrstatsRequest
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -141,5 +141,5 @@ async function trigger_getdescrstats(q: any, res: any, ds: any) {
 			{ id: 'max', label: 'Maximum', value: roundValue(max, 2) },
 			{ id: 'sd', label: 'Standard deviation', value: roundValue(sd, 2) }
 		]
-	})
+	} as getdescrstatsResponse)
 }
