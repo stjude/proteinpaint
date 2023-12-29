@@ -862,16 +862,6 @@ export class TermdbVocab extends Vocab {
 		if (!headers) return
 		const filter = getNormalRoot(opts.filter)
 
-		/************** quick fix
-        need list of gene names of current geneVariant terms,
-        so that a dictionary term will only retrieve samples mutated on this gene list, rather than whole cohort (e.g. gdc)
-        NOTE: sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
-        */
-		const currentGeneNames = opts.terms
-			.filter(tw => tw.term.type === 'geneVariant')
-			.map(tw => tw.term.name)
-			.sort()
-
 		const twlst = []
 		for (const tw of opts.terms) twlst.push(this.getTwMinCopy(tw))
 
