@@ -8,7 +8,7 @@ import { addGeneSearchbox, string2variant } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { Tabs } from '../dom/toggleButtons'
 import { renderTable } from '#dom/table'
-import { make_table_2col } from '#dom/table2col'
+import { table2col } from '../dom/table2col'
 
 /*
 
@@ -401,15 +401,15 @@ export async function bamsliceui({
 			}
 			gdc_args.bam_files.push(file)
 
-			const rows = []
+			const table = table2col({ holder: baminfo_table })
 			for (const row of baminfo_rows) {
-				rows.push({
-					k: row.title,
-					v: row.url ? `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` : onebam[row.key]
-				})
+				const [td1, td2] = table.addRow()
+				td1.text(row.title)
+				td2.html(
+					row.url ? `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` : onebam[row.key]
+				)
 				file.about.push({ k: row.title, v: onebam[row.key] })
 			}
-			make_table_2col(baminfo_table, rows)
 		}
 
 		function update_multifile_table(files) {

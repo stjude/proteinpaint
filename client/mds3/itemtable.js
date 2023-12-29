@@ -1,9 +1,9 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv } from '#shared/common'
 import { init_sampletable } from './sampletable'
-import { get_list_cells } from '#dom/gridutils'
 import { appear } from '#dom/animation'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '#dom/table'
+import { table2col } from '#dom/table2col'
 
 /*
 itemtable
@@ -94,26 +94,19 @@ function mayMoveTipDiv2left(arg) {
 display full details (and samples) for one item
 */
 async function itemtable_oneItem(arg) {
-	const grid = arg.div.append('div').style('display', 'inline-grid').style('overflow-y', 'scroll')
-
-	grid
-		.style('grid-template-columns', 'auto auto')
-		.style('max-height', '40vw')
-		// in case creating a new table for multiple samples of this variant,
-		// add space between grid and the new table
-		.style('margin-bottom', '10px')
+	const table = table2col({ holder: arg.div })
 
 	const m = arg.mlst[0]
 
 	if (m.dt == dtsnvindel) {
-		table_snvindel(arg, grid)
+		table_snvindel(arg, table)
 	} else {
-		await table_svfusion(arg, grid)
+		await table_svfusion(arg, table)
 	}
 
 	// if the variant has only one sample,
-	// allow to append new rows to grid to show sample key:value
-	arg.singleSampleDiv = grid
+	// allow to append new rows to table to show sample key:value
+	arg.singleSampleDiv = table
 	// if there are multiple samples, this <div> won't be used
 	// a new table will be created under arg.div to show sample table
 
@@ -123,7 +116,7 @@ async function itemtable_oneItem(arg) {
 			await init_sampletable(arg)
 		} else {
 			// invalid occurrence; still show row to indicate this
-			const [td1, td2] = get_list_cells(grid)
+			const [td1, td2] = table.addRow()
 			td1.text('Occurrence')
 			td2.text('occurrence' in m ? m.occurrence : '')
 		}
@@ -284,28 +277,28 @@ async function itemtable_multiItems(arg) {
 table display of variant attributes, for mlst[0] single variant
 do not show sample level details
 */
-function table_snvindel({ mlst, tk, block }, grid) {
+function table_snvindel({ mlst, tk, block }, table) {
 	const m = mlst[0]
 	{
-		const [td1, td2] = get_list_cells(grid)
+		const [td1, td2] = table.addRow()
 		td1.text(block.mclassOverride ? block.mclassOverride.className : 'Consequence')
 		print_mname(td2, m)
 		//add_csqButton(m, tk, td2, table)
 	}
 	{
-		const [td1, td2] = get_list_cells(grid)
+		const [td1, td2] = table.addRow()
 		// do not pretend m is mutation if ref/alt is missing
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk)
 	}
 	if (m.occurrence > 1) {
-		const [td1, td2] = get_list_cells(grid)
+		const [td1, td2] = table.addRow()
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
-	table_snvindel_mayInsertNumericValueRow(m, tk, grid)
-	table_snvindel_mayInsertHtmlSections(m, tk, grid)
-	table_snvindel_mayInsertLD(m, tk, grid)
+	table_snvindel_mayInsertNumericValueRow(m, tk, table)
+	table_snvindel_mayInsertHtmlSections(m, tk, table)
+	table_snvindel_mayInsertLD(m, tk, table)
 
 	if (m.info) {
 		/* info fields are available for this variant
@@ -319,7 +312,7 @@ function table_snvindel({ mlst, tk, block }, grid) {
 				continue
 			}
 
-			const [td1, td2] = get_list_cells(grid)
+			const [td1, td2] = table.addRow()
 
 			// column 1: info field key
 			td1.text(key)
@@ -351,7 +344,7 @@ function table_snvindel({ mlst, tk, block }, grid) {
 	}
 }
 
-function table_snvindel_mayInsertNumericValueRow(m, tk, grid) {
+function table_snvindel_mayInsertNumericValueRow(m, tk, table) {
 	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
 	if (currentMode.type != 'numeric' || currentMode.byAttribute == 'occurrence') return
 	// current mode is numeric and is not occurrence, as occurrence has already been shown in the table
@@ -361,7 +354,7 @@ function table_snvindel_mayInsertNumericValueRow(m, tk, grid) {
 		if (Array.isArray(tmp)) {
 			for (const s of tmp) {
 				// s should be {k,v}
-				const [td1, td2] = get_list_cells(grid)
+				const [td1, td2] = table.addRow()
 				td1.text(s.k)
 				td2.text(s.v)
 			}
@@ -371,15 +364,15 @@ function table_snvindel_mayInsertNumericValueRow(m, tk, grid) {
 		return
 	}
 
-	const [td1, td2] = get_list_cells(grid)
+	const [td1, td2] = table.addRow()
 	td1.text(currentMode.label)
 	td2.text(m.__value_missing ? 'NA' : m.__value_use)
 }
-function table_snvindel_mayInsertHtmlSections(m, tk, grid) {
+function table_snvindel_mayInsertHtmlSections(m, tk, table) {
 	if (!m.htmlSections) return
 	if (!Array.isArray(m.htmlSections)) throw 'htmlSections[] is not array'
 	for (const section of m.htmlSections) {
-		const [td1, td2] = get_list_cells(grid)
+		const [td1, td2] = table.addRow()
 		if (section.key && section.html) {
 			td1.text(section.key)
 			td2.html(section.html)
@@ -509,22 +502,25 @@ function add_csqButton(m, tk, td, table) {
 	}
 }
 
-async function table_svfusion(arg, grid) {
+async function table_svfusion(arg, table) {
 	// display one svfusion event
 
 	// svgraph in 1st row
-	grid.append('div')
-	await makeSvgraph(arg.mlst[0], grid.append('div').style('margin-bottom', '10px'), arg.block)
+	await makeSvgraph(
+		arg.mlst[0],
+		table.scrollDiv.insert('div', ':first-child'), // insert to top
+		arg.block
+	)
 
 	// rows
 	{
-		const [c1, c2] = get_list_cells(grid)
+		const [c1, c2] = table.addRow()
 		c1.text('Data type')
 		c2.text(mclass[arg.mlst[0].class].label)
 	}
 	{
 		// todo: support chimeric read fraction on each break end
-		const [c1, c2] = get_list_cells(grid)
+		const [c1, c2] = table.addRow()
 		c1.text('Break points')
 		for (const pair of arg.mlst[0].pairlst) {
 			printSvPair(pair, c2.append('div'))
@@ -587,9 +583,9 @@ async function getGm(p, block) {
 	}
 }
 
-function table_snvindel_mayInsertLD(m, tk, grid) {
+function table_snvindel_mayInsertLD(m, tk, table) {
 	if (!tk.mds.queries?.ld) return // not available
-	const [td1, td2] = get_list_cells(grid)
+	const [td1, td2] = table.addRow()
 	td1.text('LD overlay')
 
 	const m0 = tk.mds.queries.ld.mOverlay?.m
