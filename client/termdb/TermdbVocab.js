@@ -713,7 +713,6 @@ export class TermdbVocab extends Vocab {
 		assumption is that if this array is not empty,
         request for a dictionary term also from opts.terms[] will only retrieve samples mutated on this gene list, rather than whole cohort
 		if currentGeneNames[] is empty, then dict term data return will not be restricted
-		XXX (not working yet) this is general and not specific to gdc
         */
 		const currentGeneNames = opts.terms
 			.filter(tw => tw.term.type === 'geneVariant')
@@ -724,6 +723,8 @@ export class TermdbVocab extends Vocab {
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
+			// request data for one term each time, empty list and break while loop
+			// possible to change to pop two or more each time
 			const tw = termsToUpdate.pop()
 			const copy = this.getTwMinCopy(tw)
 			const init = {
@@ -742,12 +743,8 @@ export class TermdbVocab extends Vocab {
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 
-			/////////////////////////////////////////
-			// !!!!!!!! FIXME !!!!!!!!!!!
-			// do this via some settings via this.termdbConfig, replace hardcoded logic
-			/////////////////////////////////////////
-			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length) {
-				/* term.id is present meaning term is dictionary term
+			if (tw.term.id && currentGeneNames.length) {
+				/* term.id is present meaning term is dictionary term (FIXME if this is unreliable)
 				and there are gene terms, add this to limit to mutated cases
 				*/
 				init.body.currentGeneNames = currentGeneNames
@@ -854,6 +851,7 @@ export class TermdbVocab extends Vocab {
 
 	/*
 	Same as getAnnotatedSampleData, but only returns the lst[] of samples and makes a single request to the server.
+	XXX state requirements and eliminate code dup
 	*/
 	async getAnnotatedSampleDataSimple(opts, _refs = {}) {
 		// may check against required auth credentials for the server route
@@ -892,14 +890,6 @@ export class TermdbVocab extends Vocab {
 		}
 		if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 		if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-
-		/////////////////////////////////////////
-		// !!!!!!!! FIXME !!!!!!!!!!!
-		// do this via some settings via this.termdbConfig, replace hardcoded logic
-		/////////////////////////////////////////
-		if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length) {
-			init.body.currentGeneNames = currentGeneNames
-		}
 
 		const data = await dofetch3('termdb', init)
 		const result = [] //mapped to expected value
