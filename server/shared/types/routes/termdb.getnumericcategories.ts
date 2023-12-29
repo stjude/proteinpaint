@@ -9,7 +9,7 @@ export type getnumericcategoriesRequest = {
 	getnumericcategories: number
 	/** term id string */
 	tid: string
-	filter: Filter
+	filter?: Filter
 }
 
 interface entries {

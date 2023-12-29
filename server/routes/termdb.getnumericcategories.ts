@@ -1,4 +1,7 @@
-// import { getnumericcategoriesRequest, getnumericcategoriesResponse } from '#shared/types/routes/termdb.numericcategories'
+import {
+	getnumericcategoriesRequest,
+	getnumericcategoriesResponse
+} from '#shared/types/routes/termdb.getnumericcategories.ts'
 import * as termdbsql from '#src/termdb.sql.js'
 
 export const api: any = {
@@ -60,7 +63,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query // as getnumericcategoriesRequest
+		const q = req.query as getnumericcategoriesRequest
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -89,10 +92,9 @@ async function trigger_getnumericcategories(
 	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
 		ds,
-		term_id: q.tid
-		//filter
+		term_id: q.tid,
+		filter: q.filter
 	}
-	if (q.filter) arg.filter = q.filter
 	const lst = await termdbsql.get_summary_numericcategories(arg)
-	res.send({ lst })
+	res.send({ lst } as getnumericcategoriesResponse)
 }
