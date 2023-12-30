@@ -18,6 +18,7 @@ export default class ViewModel {
 	settings: Settings
 	svnDataLength: number
 	filteredSnvDataLength: number
+	snvDataLength
 	genesetName: string
 
 	constructor(
@@ -27,7 +28,8 @@ export default class ViewModel {
 		fusions: Array<Fusion>,
 		filteredSnvDataLength: number,
 		svnDataLength: number,
-		genesetName: string
+		genesetName: string,
+		snvDataLength: number
 	) {
 		this.settings = settings
 		this.rings = rings
@@ -49,6 +51,7 @@ export default class ViewModel {
 		this.legendHeight = this.calculateLegendHeight(legend)
 		this.svnDataLength = svnDataLength
 		this.filteredSnvDataLength = filteredSnvDataLength
+		this.snvDataLength = snvDataLength
 	}
 
 	getElements(ringType: RingType): Array<Arc> {
