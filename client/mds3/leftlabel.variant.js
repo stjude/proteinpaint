@@ -4,6 +4,7 @@ import { itemtable } from './itemtable'
 import { makelabel, positionLeftlabelg } from './leftlabel'
 import { to_textfile } from '#dom/downloadTextfile'
 import { Tabs } from '../dom/toggleButtons'
+import { make_radios } from '../dom/radiobutton'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source } from './sampletable'
 import { dt2label, mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
@@ -89,6 +90,7 @@ function menu_variants(tk, block) {
 		.append('div')
 		.text('List')
 		.attr('class', 'sja_menuoption')
+		.style('border-radius', '0px')
 		.on('click', () => {
 			listSkewerData(tk, block)
 		})
@@ -97,6 +99,7 @@ function menu_variants(tk, block) {
 		tk.menutip.d
 			.append('div')
 			.text('Cancel highlight')
+			.style('border-radius', '0px')
 			.attr('class', 'sja_menuoption')
 			.on('click', () => {
 				delete tk.skewer.hlssmid
@@ -124,6 +127,7 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text('Collapse')
 				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
 				.on('click', () => {
 					fold_glyph(tk.skewer.data, tk)
 					tk.menutip.hide()
@@ -133,6 +137,7 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text('Expand')
 				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
 				.on('click', () => {
 					settle_glyph(tk, block)
 					tk.menutip.hide()
@@ -145,6 +150,7 @@ function menu_variants(tk, block) {
 			.append('div')
 			.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
 			.attr('class', 'sja_menuoption')
+			.style('border-radius', '0px')
 			.on('click', () => {
 				tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
 				tk.load()
@@ -158,6 +164,7 @@ function menu_variants(tk, block) {
 			.append('div')
 			.text('Download')
 			.attr('class', 'sja_menuoption')
+			.style('border-radius', '0px')
 			.on('click', () => {
 				downloadVariants(tk, block)
 				tk.menutip.hide()
@@ -239,28 +246,26 @@ function mayAddSkewerModeOption(tk, block) {
 		return
 	}
 	// there are more than 1 mode, print name of current mode
-	tk.menutip.d
-		.append('div')
-		.style('margin', '10px 10px 3px 10px')
-		.style('font-size', '.7em')
-		.text(getViewmodeName(tk.skewer.viewModes.find(n => n.inuse)))
-	// show available modes
-	for (const n of tk.skewer.viewModes) {
-		if (n.inuse) continue
-		// a mode not in use; make option to switch to it
-		tk.menutip.d
-			.append('div')
-			.text(getViewmodeName(n))
-			.attr('class', 'sja_menuoption')
-			.on('click', () => {
-				for (const i of tk.skewer.viewModes) i.inuse = false
-				n.inuse = true
-				tk.menutip.hide()
-				may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
-				positionLeftlabelg(tk, block)
-				tk._finish()
-			})
+	const options = []
+	for (const [idx, v] of tk.skewer.viewModes.entries()) {
+		const o = {
+			label: getViewmodeName(v),
+			value: idx
+		}
+		if (v.inuse) o.checked = true
+		options.push(o)
 	}
+	make_radios({
+		holder: tk.menutip.d.append('div').style('margin', '10px'),
+		options,
+		callback: async idx => {
+			for (const i of tk.skewer.viewModes) i.inuse = false
+			tk.skewer.viewModes[idx].inuse = true
+			may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+			positionLeftlabelg(tk, block)
+			tk._finish()
+		}
+	})
 }
 
 function getViewmodeName(n) {

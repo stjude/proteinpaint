@@ -1,5 +1,4 @@
 import { keyupEnter } from '#src/client'
-//import {make_radios} from './radiobuttons.js'
 
 /*
 configure numeric axis
