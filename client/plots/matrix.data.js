@@ -268,7 +268,7 @@ export function applyLegendValueFilter(self) {
 			}
 		}
 	}
-	remove_empty_sample(data)
+	if (self.chartType !== 'hierCluster') remove_empty_sample(data)
 	self.data = data
 }
 

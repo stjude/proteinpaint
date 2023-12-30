@@ -324,6 +324,7 @@ class HierCluster extends Matrix {
 			filter: this.state.filter,
 			filter0: this.state.filter0
 		}
+		if (_data.passLegendFilterSampleLst) body.passLegendFilterSampleLst = _data.passLegendFilterSampleLst
 		const d = await dofetch3('termdb/cluster', { body })
 		if (d.error) throw d.error
 

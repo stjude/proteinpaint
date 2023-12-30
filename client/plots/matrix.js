@@ -165,9 +165,11 @@ export class Matrix {
 
 				const promises = []
 				// get the data
-				if (this.setHierClusterData) promises.push(this.setHierClusterData())
-				promises.push(this.setData())
 				this.dom.loadingDiv.html('Processing data ...')
+				await this.setData()
+				applyLegendValueFilter(this)
+				const passLegendFilterSampleLst = Object.keys(this.data.samples)
+				if (this.setHierClusterData) promises.push(this.setHierClusterData({ passLegendFilterSampleLst }))
 				await Promise.all(promises)
 				if (this.combineData) this.combineData()
 				// tws in the config may be filled-in based on applicable server response data;
@@ -180,7 +182,6 @@ export class Matrix {
 			// may skip term or sample ordering when there are
 			// no relevant state/config/setting changes
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
-				applyLegendValueFilter(this)
 				this.termOrder = this.getTermOrder(this.data)
 				this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 				this.sampleOrder = this.getSampleOrder(this.data)
