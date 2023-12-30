@@ -16,6 +16,7 @@ import Labels from '#plots/disco/label/Labels.ts'
 import NonExonicSnvArcsMapper from '#plots/disco/snv/NonExonicSnvArcsMapper.ts'
 import LohArcMapper from '#plots/disco/loh/LohArcMapper.ts'
 import Rings from '#plots/disco/ring/Rings.ts'
+import { dtsnvindel } from '#shared/common'
 
 export default class ViewModelProvider {
 	private settings: Settings
@@ -151,8 +152,9 @@ export default class ViewModelProvider {
 			legend,
 			fusions,
 			dataHolder.filteredSnvData.length,
-			dataHolder.snvData.length - dataHolder.nonExonicSnvData.length,
-			this.genesetName
+			dataHolder.snvData.length,
+			this.genesetName,
+			data.filter(i => i.dt == dtsnvindel).length
 		)
 	}
 }

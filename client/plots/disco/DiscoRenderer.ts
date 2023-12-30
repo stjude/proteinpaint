@@ -37,8 +37,11 @@ export class DiscoRenderer {
 			controlsDiv,
 			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
 			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets,
-			viewModel.filteredSnvDataLength,
-			viewModel.svnDataLength,
+			viewModel.settings.label.prioritizeGeneLabelsByGeneSets &&
+				viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets
+				? viewModel.filteredSnvDataLength
+				: viewModel.snvDataLength,
+			viewModel.snvDataLength,
 			viewModel.genesetName
 		)
 
