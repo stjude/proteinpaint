@@ -1,1 +1,2 @@
-
+Features:
+- Mds3 track uses simpler radio buttons to toggle between view modes such as lollipop and occurrence
