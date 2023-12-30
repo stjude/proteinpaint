@@ -246,13 +246,13 @@ export function setInteractivity(self) {
 			)
 		} else rows.push(`<tr><td>${l.Sample}:</td><td>${sampleData.row._ref_.label || sampleData.value.sample}</td></tr>`)
 
-		if (sampleData.term.type != 'geneVariant') {
+		if (sampleData.term && sampleData.term.type != 'geneVariant') {
 			rows.push(
 				`<tr><td>${sampleData.term.name}:</td><td style='color: ${
 					sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
 				}'> ${sampleData.convertedValueLabel || sampleData.label}</td></tr>`
 			)
-		} else if (sampleData.tw?.term?.type == 'geneVariant' && sampleData.value) {
+		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
 			if (templates?.gene) {
 				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
 				rows.push(
