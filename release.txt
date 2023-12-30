@@ -1,1 +1,3 @@
 
+Features:
+-in hierCluster, allow to filter samples by clicking legend items
