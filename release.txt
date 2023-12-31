@@ -1,1 +1,3 @@
 
+Fixes:
+- Fix oncomatrix error: adding dictionary term from row group menu
