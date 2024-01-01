@@ -239,7 +239,7 @@ tape('term0=defaultbins, term1=categorical', function (test) {
 	}
 })
 
-tape.only('term1=geneVariant', function (test) {
+tape('term1=geneVariant', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
