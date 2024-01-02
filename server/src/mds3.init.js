@@ -288,13 +288,13 @@ export async function validate_termdb(ds) {
 			ds.sampleName2Id.set(r.name, r.id)
 		}
 
-		// XXX suggest to delete, not a good idea to dump all samples to client
+		// XXX delete, not a good idea to dump all samples to client
 		ds.getSampleIdMap = samples => {
-			const bySampleId = {}
-			for (const sampleId in samples) {
-				bySampleId[sampleId] = ds.sampleId2Name.get(+sampleId)
+			const d = {}
+			for (const i in samples) {
+				d[sampleId] = ds.sampleId2Name.get(+sampleId)
 			}
-			return bySampleId
+			return d
 		}
 	}
 
@@ -2224,13 +2224,10 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		sessionid: q.sessionid
-	}
-
-	if (ds.queries.geneCnv) {
-		// FIXME !!!!!!!!
-		// may need a boolean flag to specify the geneCnv query is asking for case but not sample id, thus all queries must return data with case id
-		arg.useCaseid4sample = true
+		sessionid: q.sessionid,
+		// !! gdc specific parameter !!
+		// instructs byisoform.get() to return case uuid as sample.sample_id; more or less harmless as it's ignored by non-gdc ds
+		gdcUseCaseuuid: true
 	}
 
 	if (ds.queries.snvindel.byisoform) {

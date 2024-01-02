@@ -6,10 +6,10 @@ import MLabel from './MLabel.ts'
 import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
 import Settings from '#plots/disco/Settings.ts'
 import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
-import { MutationTypes } from '#plots/disco/data/MutationTypes.ts'
 import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 import CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 import CnvColorProvider from '#plots/disco/cnv/CnvColorProvider.ts'
+import { dtsnvindel, dtfusionrna } from '#shared/common'
 
 export default class LabelsMapper {
 	private settings: Settings
@@ -29,7 +29,7 @@ export default class LabelsMapper {
 		const outerRadius = innerRadius + this.settings.rings.labelsToLinesDistance
 
 		data.forEach(data => {
-			if (data.dt == MutationTypes.SNV) {
+			if (data.dt == dtsnvindel) {
 				const startAngle = this.calculateStartAngle(data.chr, data.position)
 				const endAngle = this.calculateEndAngle(data.chr, data.position)
 
@@ -48,7 +48,7 @@ export default class LabelsMapper {
 				)
 			}
 
-			if (data.dt == MutationTypes.FUSION) {
+			if (data.dt == dtfusionrna) {
 				const color = FusionColorProvider.getColor(data.chrA, data.chrB)
 				if (data.geneA) {
 					const startAngleSource = this.calculateStartAngle(data.chrA, data.posA)

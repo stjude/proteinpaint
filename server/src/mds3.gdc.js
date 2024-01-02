@@ -23,7 +23,6 @@ validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
 	snvindel_byisoform
 	snvindel_addclass
-	decideSampleId
 gdcValidate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
@@ -104,10 +103,27 @@ export function validate_variant2sample(a) {
 }
 
 export function validate_query_snvindel_byrange(ds) {
-	ds.queries.snvindel.byrange.get = async opts => {
+	/*
+q{}
+	.rglst[]
+	.hiddenmclass: Set
+	.isoform:
+*/
+	ds.queries.snvindel.byrange.get = async q => {
+		return await ds.queries.snvindel.byisoform.get(q)
+
+		/*********
+
+		the graphql query is not used; byisoform.get() now works to pull ssm by rglst[]
+
+		previous reason for using graphql instead of Rest api is assumption that intergenic ssm (not on any isoform) are not available from s/ssms and /ssm_occurrences endpoints
+		now that these endpoints actually support range query, will use them for now
+		and look into enabling genomic mode on gdc view
+		to confirm that whether intergenic ssm are indeed indexed on Rest; if so can delete graphql below
+
 		const response = await got.post(apihostGraphql, {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, // xxx
-			body: JSON.stringify({ query: query_range2ssm, variables: variables_range2ssm(opts) })
+			headers: getheaders(q),
+			body: JSON.stringify({ query: query_range2ssm, variables: variables_range2ssm(q) })
 		})
 		let re
 		try {
@@ -127,28 +143,34 @@ export function validate_query_snvindel_byrange(ds) {
 				alt: h.node.tumor_allele,
 				samples: []
 			}
-			if (h.node.consequence && h.node.consequence.hits && h.node.consequence.hits.edges) {
-				m.csqcount = h.node.consequence.hits.edges.length
+			if(!Array.isArray(h.node?.consequence?.hits?.edges)) throw 'h.node.consequence.hits.edges[] not array'
+			m.csqcount = h.node.consequence.hits.edges.length
+			{
 				let c // consequence
-				if (opts.isoform) {
+				if (q.isoform) {
 					c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
 				} else {
 					c = h.node.consequence.hits.edges.find(i => i.node.transcript.is_canonical)
 				}
-				const c2 = c || h.node.consequence.hits.edges[0]
-				// c2: { node: {consequence} }
 				snvindel_addclass(m, (c || h.node.consequence.hits.edges[0]).node)
-			}
-			if (h.node.occurrence.hits.edges) {
-				for (const c of h.node.occurrence.hits.edges) {
-					const sample = makeSampleObj(c.node.case, ds)
-					sample.sample_id = c.node.case.case_id
-					m.samples.push(sample)
+				if(q.hiddenmclass && q.hiddenmclass.has(m.class)) {
+					// m filtered by class
+					continue
 				}
+			}
+			if(!Array.isArray(h.node?.occurrence?.hits?.edges)) throw 'h.node.occurrence.hits.edges[] not array'
+			for (const c of h.node.occurrence.hits.edges) {
+				const sample = makeSampleObj(c.node.case, ds)
+				/ currently query only returns case uuid; when the query is fixed to be able to return both aliquot and case id,
+				can change getter to return either based on q{} setting
+				/
+				sample.sample_id = c.node.case.case_id
+				m.samples.push(sample)
 			}
 			mlst.push(m)
 		}
 		return mlst
+	*/
 	}
 }
 
@@ -366,9 +388,13 @@ export function validate_query_snvindel_byisoform(ds) {
 
 	.isoform:str
 		required
-	.useCaseid4sample:true
-		if true, use case id for sample_id
-		otherwise, use sample(aliquot) id
+
+	.gdcUseCaseuuid:true
+		(gdc specific parameter)
+		determines what kind of value is "sample_id" property of every sample:
+		if true, is case uuid, to count data points by cases for getData()
+		else, is aliquot uuid, to count data by samples
+
 	.hiddenmclass = set
 	.filter0
 		read-only gdc cohort filter, pass to gdc api as-is
@@ -408,24 +434,14 @@ export function validate_query_snvindel_byisoform(ds) {
 
 			m.samples = []
 			for (const c of ssm.cases) {
-				const s = { sample_id: await decideSampleId(c, ds, opts.useCaseid4sample) }
-				if (opts.useCaseid4sample) {
-					// when flag is true, this query came from getData() for gdc matrix
-					// sample_id is case uuid, the required unique identifier to align columns
-					// also create optional attribute __sampleName with submitter_id value, for displaying to user
-					s.__sampleName = c.submitter_id
+				const s = {}
+				if (opts.gdcUseCaseuuid) {
+					s.sample_id = c.case_id // case uuid
+					if (!s.sample_id) throw 'gdcUseCaseuuid=true but c.case_id undefined'
+				} else {
+					s.sample_id = c.observation?.[0]?.sample?.tumor_sample_uuid
+					if (!s.sample_id) throw 'gdcUseCaseuuid=false but c.observation?.[0]?.sample?.tumor_sample_uuid undefined'
 				}
-
-				/* remain to see if okay not to pass this
-				if (c.case_id) {
-					 when case_id is available, pass it on to returned data as "case.case_id"
-					this is used by gdc matrix case selection where case_id (uuid) is needed to build cohort in gdc portal,
-					but the submitter_id cannot be used as it will prevent mds3 gdc filter to work, it only works with uuid
-					see __matrix_case_id__
-					s['case.case_id'] = c.case_id
-				}
-				*/
-
 				m.samples.push(s)
 			}
 			mlst.push(m)
@@ -774,8 +790,7 @@ export function validate_query_geneCnv2(ds) {
 			}
 			// each hit is one gain/loss event in one case, and is reshaped into m{ samples[] }
 			const sample = {
-				sample_id: hit.case.case_id,
-				__sampleName: hit.case.submitter_id
+				sample_id: hit.case.case_id
 			}
 
 			if (opts.twLst) {
@@ -1118,9 +1133,7 @@ function getheaders(q) {
 }
 
 async function snvindel_byisoform(opts, ds) {
-	if (!opts.isoform) throw 'snvindel_byisoform: .isoform missing'
-	if (typeof opts.isoform != 'string') throw '.isoform value not string'
-
+	// query ssm by either isoform or rglst
 	const query1 = isoform2ssm_query1_getvariant,
 		query2 = isoform2ssm_query2_getcase
 
@@ -1162,11 +1175,14 @@ async function snvindel_byisoform(opts, ds) {
 		if (!h.consequence) throw '.consequence[] missing from a ssm'
 		if (!Number.isInteger(h.start_position)) throw 'hit.start_position is not integer'
 		h.csqcount = h.consequence.length
-		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
-		if (!consequence) {
-			// may alert??
+
+		let c
+		if (opts.isoform) {
+			c = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
+		} else {
+			c = h.consequence.find(i => i.transcript.is_canonical)
 		}
-		h.consequence = consequence // keep only info for this isoform
+		h.consequence = c || h.consequence[0]
 		h.cases = []
 		id2ssm.set(h.ssm_id, h)
 	}
@@ -1449,6 +1465,7 @@ q{}
 	.rglst[]
 	.filterObj
 	.filter0
+	.gdcUseCaseuuid = true, see byisoform.get()
 
 twLst[]
 	array of termwrapper objects, for sample-annotating terms (not geneVariant)
@@ -1511,6 +1528,13 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		}
 	}
 
+	/* this function can identify sample either by case uuid, or sample submitter id
+	for simplicity, always request these two different values
+	*/
+	if (!twLst.some(i => i.id == 'case.observation.sample.tumor_sample_uuid'))
+		twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
+	if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
+
 	if (q.get == 'samples') {
 		// getting list of samples (e.g. for table display)
 		// need following fields for table display, add to twLst[] if missing:
@@ -1531,23 +1555,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 				twLst.push({ term: { id: 'case.observation.read_depth.t_depth' } })
 			if (!twLst.some(i => i.id == 'case.observation.read_depth.n_depth'))
 				twLst.push({ term: { id: 'case.observation.read_depth.n_depth' } })
-
-			// get aliquot id for converting to sample name from which the mutation is detected
-			// TODO no need when
-			if (!twLst.some(i => i.id == 'case.observation.sample.tumor_sample_uuid'))
-				twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
 		}
-
-		// need both case_id and submitter id
-		// need case_id to generate url/cases/<ID> link in table display; submitter and aliquot id won't work
-		if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
-		// need submitter id for
-		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
-	}
-
-	if (q.get == 'summary' || q.get == 'sunburst') {
-		// submitter id is sufficient to count unique number of samples, no need for case_id
-		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
 	const dictTwLst = []
@@ -1566,6 +1574,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		*/
 		fields.push('ssm.consequence.transcript.consequence_type')
 		fields.push('ssm.consequence.transcript.transcript_id')
+		fields.push('ssm.consequence.transcript.is_canonical')
 	}
 
 	if (q.rglst) {
@@ -1623,47 +1632,37 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 				}
 			}
 			*/
+			let c
+			if (q.isoform) {
+				c = s.ssm.consequence.find(i => i.transcript.transcript_id == q.isoform)
+			} else {
+				c = s.ssm.consequence.find(i => i.transcript.is_canonical)
+			}
 			const m = {}
-			snvindel_addclass(
-				m,
-				s.ssm.consequence.find(i => i.transcript.transcript_id == q.isoform)
-			)
+			snvindel_addclass(m, c || s.ssm.consequence[0])
 			if (q.hiddenmclass.has(m.class)) {
 				// this variant is dropped
 				continue
 			}
 		}
 
-		if (q.rglst) {
-			if (!s.ssm?.chromosome || !s.ssm?.start_position) continue // lack position, skip
-			if (
-				!q.rglst.find(
-					i => i.chr == s.ssm.chromosome && i.start < s.ssm.start_position && i.stop >= s.ssm.start_position
-				)
-			) {
-				continue // out of range
-			}
-		}
-
-		if (q.variant2samples) {
-			// from mds3 client
-			// set 3rd arg to false to not set uuid as sample_id, but to use sample submitter id
-			sample.sample_id = await decideSampleId(s.case, ds, false)
-		} else {
-			// from getData(), need below:
-			// sample_id=case uuid, __sampleName=case submitter id (not sample submitter!)
+		if (q.gdcUseCaseuuid) {
+			/* identify sample with case uuid, but no need to convert to case submitter id
+			as this should be for getData() query, which will fill in bySampleId{} with submitter id;
+			url link will be just by sample_id and no need to generate separate property for it
+			*/
 			sample.sample_id = s.case.case_id
-			sample.__sampleName = s.case.submitter_id
-		}
-
-		if (s.case.case_id) {
-			// for making url link on a sample
-			sample.sample_URLid = s.case.case_id
-			if (s.case?.observation?.[0]?.sample?.tumor_sample_uuid) {
-				// aliquot id available; append to URLid so when opening the page, the sample is auto highlighted from the tree
-				// per uat feedback by bill 1/6/2023
-				sample.sample_URLid = sample.sample_URLid + '?bioId=' + s.case.observation[0].sample.tumor_sample_uuid
-			}
+			if (!sample.sample_id) throw 'querySamples_gdcapi: case.case_id missing'
+		} else {
+			/* identify sample as sample submitter id
+			sample url link is complex and must be specifically generated
+			*/
+			const aliquot_id = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
+			if (!aliquot_id) throw 'querySamples_gdcapi: aliquot_id missing'
+			sample.sample_id = await ds.__gdc.aliquot2submitter.get(aliquot_id)
+			// append aliquot_id to case url so when opening the page, the sample is auto highlighted from the tree
+			// per uat feedback by bill 1/6/2023
+			sample.sample_URLid = s.case.case_id + '?bioId=' + aliquot_id
 		}
 
 		for (const tw of dictTwLst) {
@@ -1772,24 +1771,6 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 	const byTermId = mayApplyBinning(samples, dictTwLst)
 
 	return { byTermId, samples }
-}
-
-/*
-c is case{}
-decide the value to the generic sample_id attribute
-*/
-async function decideSampleId(c, ds, useCaseid4sample) {
-	if (useCaseid4sample && c.case_id) {
-		// asks for case uuid, and the id is present, then return it
-		return c.case_id
-	}
-
-	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
-		// hardcoded logic to return sample submitter id when aliquot id is present
-		return await ds.__gdc.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
-	}
-
-	return c.case_id || c.submitter_id
 }
 
 function may_add_readdepth(acase, sample) {
@@ -2314,7 +2295,12 @@ const isoform2ssm_query1_getvariant = {
 	/*
 	p={}
 		.isoform
-			isoform is provided for mds3 tk loading using isoform,
+			optional, isoform is provided for mds3 tk loading using isoform,
+		.rglst[]
+			optional, and hardcoded to use only 1 region:
+			when .isoform is provided, rglst should be zoomed in on isoform and used to limit ssm
+			when .isoform is not provided, rglst comes from genomic query
+			when both .isform and .rglst are missing, case_id should be required to limit to ssm from a case
 		.case_id
 			case_id is provided for loading ssm from a case in gdc bam slicing ui 
 		.set_id, obsolete
@@ -2326,6 +2312,13 @@ const isoform2ssm_query1_getvariant = {
 			op: 'and',
 			content: []
 		}
+
+		let r
+		if (p.rglst) {
+			r = p.rglst[0]
+			validateRegion(r)
+		}
+
 		if (p.isoform) {
 			if (typeof p.isoform != 'string') throw '.isoform value not string'
 			f.content.push({
@@ -2335,8 +2328,32 @@ const isoform2ssm_query1_getvariant = {
 					value: [p.isoform]
 				}
 			})
-		}
-		if (p.case_id) {
+			if (r) {
+				// limit ssm to zoom in region
+				f.content.push({
+					op: '>=',
+					content: { field: 'start_position', value: r.start }
+				})
+				f.content.push({
+					op: '<=',
+					content: { field: 'start_position', value: r.stop }
+				})
+			}
+		} else if (r) {
+			// no isoform but rglst is provided
+			f.content.push({
+				op: '=',
+				content: { field: 'chromosome', value: r.chr }
+			})
+			f.content.push({
+				op: '>=',
+				content: { field: 'start_position', value: r.start }
+			})
+			f.content.push({
+				op: '<=',
+				content: { field: 'start_position', value: r.stop }
+			})
+		} else if (p.case_id) {
 			if (typeof p.case_id != 'string') throw '.case_id value not string'
 			f.content.push({
 				op: '=',
@@ -2345,7 +2362,10 @@ const isoform2ssm_query1_getvariant = {
 					value: [p.case_id]
 				}
 			})
+		} else {
+			throw '.isoform, .rglst, and .case_id are all missing'
 		}
+
 		if (p.set_id) {
 			if (typeof p.set_id != 'string') throw '.set_id value not string'
 			f.content.push({
@@ -2364,6 +2384,12 @@ const isoform2ssm_query1_getvariant = {
 		}
 		return f
 	}
+}
+
+function validateRegion(r) {
+	if (typeof r != 'object') throw 'p.rglst[0] not object'
+	if (typeof r.chr != 'string' || !r.chr || !Number.isInteger(r.start) || !Number.isInteger(r.stop))
+		throw 'p.rglst[0] not valid {chr,start,stop}'
 }
 
 // REST: get case details for each ssm, no variant-level info
@@ -2394,6 +2420,12 @@ const isoform2ssm_query2_getcase = {
 		.filterObj
 		*/
 		const f = { op: 'and', content: [] }
+
+		/* if query provides isoform, rglst[] can be used alongside isoform to restrict ssm to part of isoform (when zoomed in)
+		if no ssm or isoform, rglst[] must be provided (querying from genomic mode)
+		*/
+		let hasSsmOrIsoform = false
+
 		if (p.ssm_id_lst) {
 			if (typeof p.ssm_id_lst != 'string') throw 'ssm_id_lst not string'
 			f.content.push({
@@ -2403,6 +2435,7 @@ const isoform2ssm_query2_getcase = {
 					value: p.ssm_id_lst.split(',')
 				}
 			})
+			hasSsmOrIsoform = true
 		} else if (p.isoform) {
 			f.content.push({
 				op: '=',
@@ -2411,31 +2444,51 @@ const isoform2ssm_query2_getcase = {
 					value: [p.isoform]
 				}
 			})
+			hasSsmOrIsoform = true
 		} else if (p.isoforms) {
 			if (!Array.isArray(p.isoforms)) throw '.isoforms[] not array'
 			f.content.push({
 				op: 'in',
 				content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms }
 			})
-		} else {
-			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
+			hasSsmOrIsoform = true
 		}
 
-		if (p.rglst) {
-			/* to filter out variants that are out of view range (e.g. zoomed in on protein)
-			necessary when zooming in
-
-			!!!hardcoded to only one region!!!
-
-			*/
-			f.content.push({
-				op: '>=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].start }
-			})
-			f.content.push({
-				op: '<=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].stop }
-			})
+		{
+			let r
+			if (p.rglst) {
+				// !!!hardcoded to only one region!!!
+				r = p.rglst[0]
+				validateRegion(r)
+			}
+			if (hasSsmOrIsoform) {
+				if (r) {
+					// rglst[] is optional in this case; to filter out variants that are out of view range (e.g. zoomed in on protein) necessary when zooming in
+					f.content.push({
+						op: '>=',
+						content: { field: 'ssms.start_position', value: r.start }
+					})
+					f.content.push({
+						op: '<=',
+						content: { field: 'ssms.start_position', value: r.stop }
+					})
+				}
+			} else {
+				// rglst is required now
+				if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
+				f.content.push({
+					op: '=',
+					content: { field: 'ssms.chromosome', value: r.chr }
+				})
+				f.content.push({
+					op: '>=',
+					content: { field: 'ssms.start_position', value: r.start }
+				})
+				f.content.push({
+					op: '<=',
+					content: { field: 'ssms.start_position', value: r.stop }
+				})
+			}
 		}
 
 		if (p.set_id) {
@@ -2484,6 +2537,8 @@ TODO if can be done in protein_mutations
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
 the "filter" name is hardcoded and used in app.js
+
+FIXME change query to return aliquot uuid alongside case_id
 */
 const query_range2ssm = `query range2variants($filters: FiltersArgument) {
   explore {
@@ -2536,9 +2591,7 @@ const query_range2ssm = `query range2variants($filters: FiltersArgument) {
   }
 }`
 function variables_range2ssm(p) {
-	// p:{}
-	// .rglst[{chr/start/stop}]
-	// .set_id
+	// TODO hardcoded for only one region; may extend to handle multiple ones
 	if (!p.rglst) throw '.rglst missing'
 	const r = p.rglst[0]
 	if (!r) throw '.rglst[0] missing'

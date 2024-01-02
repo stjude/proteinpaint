@@ -185,48 +185,6 @@ export function setInteractivity(self) {
 
 		if (self.dom.sampleListMenu) self.dom.sampleListMenu.destroy()
 
-		if (self.state.termdbConfig.urlTemplates) {
-			const templates = self.state.termdbConfig.urlTemplates
-			// quick fix: should use templates[*].regex for a non-hardcoded condition
-			if (templates.sample) {
-				// quick fix, should have a more reliable namekey that is guaranteed to have the UUID for the URL construction
-				// maybe from refs.bySampleId, filled in by termdb.getSampleAlias in the backend
-				const name = sampleData[templates.sample.namekey] || sampleData.sample || sampleData.row.sample
-				if (!templates.sample.regex /*|| name has a matching pattern */) {
-					const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
-
-					menuDiv.append('span').html(`${s.controlLabels.Sample}: `)
-					const link = menuDiv
-						.append('a')
-						.attr('href', `${templates.sample.base}${name}`)
-						.attr('target', '_blank')
-						.html(`${sampleData.row._ref_.label} ${svgIcons.externalLink}`)
-
-					link.on('click', async event => {
-						menuDiv.remove()
-						self.dom.clickMenu.d.selectAll('*').remove()
-					})
-				}
-			}
-
-			if (sampleData.tw?.term?.type == 'geneVariant' && templates.gene) {
-				const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 10px').style('margin', '1px')
-
-				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
-				menuDiv.append('span').html('Gene: ')
-				const link = menuDiv
-					.append('a')
-					.attr('href', `${templates.gene.base}${name}`)
-					.attr('target', '_blank')
-					.html(`${sampleData.tw.term.name} ${svgIcons.externalLink}`)
-
-				link.on('click', async event => {
-					menuDiv.remove()
-					self.dom.clickMenu.d.selectAll('*').remove()
-				})
-			}
-		}
-
 		if (q.singleSampleGenomeQuantification) {
 			for (const k in q.singleSampleGenomeQuantification) {
 				const menuDiv = self.dom.clickMenu.d
@@ -276,6 +234,63 @@ export function setInteractivity(self) {
 					self.dom.clickMenu.d.selectAll('*').remove()
 				})
 		}
+
+		const l = self.settings.matrix.controlLabels
+		const rows = []
+
+		const templates = self.state.termdbConfig.urlTemplates
+		if (templates?.sample) {
+			const name = sampleData[templates.sample.namekey] || sampleData.sample || sampleData.row.sample
+			rows.push(
+				`<tr><td>${l.Sample}:</td> <td><a href="${templates.sample.base}${name}" target="_blank">${sampleData.row._ref_.label} ${svgIcons.externalLink}</a></td></tr>`
+			)
+		} else rows.push(`<tr><td>${l.Sample}:</td><td>${sampleData.row._ref_.label || sampleData.value.sample}</td></tr>`)
+
+		if (sampleData.term.type != 'geneVariant') {
+			rows.push(
+				`<tr><td>${sampleData.term.name}:</td><td style='color: ${
+					sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+				}'> ${sampleData.convertedValueLabel || sampleData.label}</td></tr>`
+			)
+		} else if (sampleData.tw?.term?.type == 'geneVariant' && sampleData.value) {
+			if (templates?.gene) {
+				const name = self.data.refs.byTermId[sampleData.tw.$id][templates.gene.namekey]
+				rows.push(
+					`<tr><td>Gene:</td><td><a href="${templates.gene.base}${name}" target="_blank">${sampleData.tw.term.name} ${svgIcons.externalLink}</a></td></tr>`
+				)
+			} else rows.push(`<tr><td>Gene:</td><td>${sampleData.term.name}</td></tr>`)
+
+			const siblingCellLabels = {}
+			for (const c of sampleData.siblingCells) {
+				if (c.$id != sampleData.$id) continue
+				const v = c.value
+				const p = v.pairlst
+				const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
+				const label =
+					c.label == self.config.settings.hierCluster?.termGroupName
+						? v.value
+						: p
+						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+						: v.mname
+						? `${v.mname} ${mclass[v.class].label}`
+						: mclass[v.class].label
+				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+
+				if (!siblingCellLabels[dtLabel]) {
+					siblingCellLabels[dtLabel] = [{ label, color }]
+				} else {
+					siblingCellLabels[dtLabel].push({ label, color })
+				}
+			}
+			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
+				rows.push(`<tr><td>${dtLabel}:</td><td  style='color: ${classArray[0].color}'>${classArray[0].label}</td></tr>`)
+				for (const classType of classArray.slice(1)) {
+					rows.push(`<tr><td></td><td style='color: ${classType.color}'>${classType.label}</td></tr>`)
+				}
+			}
+		}
+		const menuDiv = self.dom.clickMenu.d.append('div').style('padding', '5px 9px')
+		menuDiv.append('span').html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		self.dom.clickMenu.show(event.clientX, event.clientY, false, true)
 	}
 
@@ -845,7 +860,8 @@ function setTermActions(self) {
 
 	async function submit_lst(termlst) {
 		const newterms = await Promise.all(
-			termlst.map(async term => {
+			termlst.map(async _term => {
+				const term = structuredClone(_term)
 				const tw = 'id' in term ? { id: term.id, term } : { term }
 				await fillTermWrapper(tw)
 				return tw

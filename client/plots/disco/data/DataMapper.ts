@@ -4,7 +4,7 @@ import DataObjectMapper from './DataObjectMapper.ts'
 import Settings from '#plots/disco/Settings.ts'
 import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper.ts'
 import { DataHolder } from '#plots/disco/data/DataHolder.ts'
-import { MutationTypes } from '#plots/disco/data/MutationTypes.ts'
+import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common'
 
 export default class DataMapper {
 	// remove fields and extract filters to seperate classes
@@ -48,11 +48,11 @@ export default class DataMapper {
 	private dataObjectMapper: DataObjectMapper
 	private lastInnerRadious: number
 
-	private snvFilter = (data: Data) => data.dt == MutationTypes.SNV
-	private fusionFilter = (data: Data) => data.dt == MutationTypes.FUSION || data.dt == MutationTypes.SV
+	private snvFilter = (data: Data) => data.dt == dtsnvindel
+	private fusionFilter = (data: Data) => data.dt == dtfusionrna || data.dt == dtsv
 
-	private cnvFilter = (data: Data) => data.dt == MutationTypes.CNV
-	private lohFilter = (data: Data) => data.dt == MutationTypes.LOH
+	private cnvFilter = (data: Data) => data.dt == dtcnv
+	private lohFilter = (data: Data) => data.dt == dtloh
 
 	private compareData = (a, b) => {
 		const chrDiff = this.reference.chromosomesOrder.indexOf(a.chr) - this.reference.chromosomesOrder.indexOf(b.chr)
@@ -73,8 +73,16 @@ export default class DataMapper {
 		this.sample = sample
 		this.lastInnerRadious = this.settings.rings.chromosomeInnerRadius
 
-		this.nonExonicFilter = (data: Data) =>
-			settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
+		this.nonExonicFilter = (data: Data) => {
+			if (prioritizedGenes.length > 0 && this.settings.label.prioritizeGeneLabelsByGeneSets) {
+				return (
+					prioritizedGenes.includes(data.gene) &&
+					settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
+				)
+			} else {
+				return settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
+			}
+		}
 
 		this.snvRingFilter = (data: Data) => {
 			if (prioritizedGenes.length > 0 && this.settings.label.prioritizeGeneLabelsByGeneSets) {
@@ -98,15 +106,15 @@ export default class DataMapper {
 			const indexA = this.reference.chromosomesOrder.indexOf(dObject.chrA)
 			const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
 
-			if (dObject.dt == MutationTypes.SNV) {
+			if (dObject.dt == dtsnvindel) {
 				if (index != -1 && this.snvData.length < this.settings.snv.maxMutationCount) {
 					this.addData(dObject, dataArray)
 				}
-			} else if (dObject.dt == MutationTypes.FUSION || dObject.dt == MutationTypes.SV) {
+			} else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
 				if (indexA != -1 && indexB != -1) {
 					this.addData(dObject, dataArray)
 				}
-			} else if ([MutationTypes.CNV, MutationTypes.LOH].includes(Number(dObject.dt))) {
+			} else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
 				this.addData(dObject, dataArray)
 			} else {
 				throw Error('Unknown mutation type!')

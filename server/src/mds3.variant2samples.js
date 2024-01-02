@@ -109,8 +109,6 @@ q{}
 	actual pp filter, from mds3 client side
 .filter
 	actual pp filter, request does not come from mds3 and maybe getData()
-.useIntegerSampleId
-	if true, return integer sample id
 
 ****** mutation/genomic filters; one of below must be provided
 
@@ -136,6 +134,14 @@ q{}
 	client always provides this, to reflect any user changes
 	if get=sunburst, twLst is an ordered array of terms, for which to build layered sunburst
 	otherwise element order is not essential
+
+******* getter() returns
+{
+	samples[]
+		always present
+	byTermId{}
+		optional, term metadata e.g. bin labels. only gdc does it
+}
 */
 async function variant2samples_getresult(q, ds) {
 	mayAllow2returnFormatValues(q, ds)

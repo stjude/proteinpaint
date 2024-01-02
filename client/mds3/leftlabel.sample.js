@@ -64,21 +64,33 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 				tk.load()
 			}
 		}
-		if (block.usegm) {
-			/////////////////////////////////////
-			//
-			// GDC specific logic
-			// in gene mode, supply the current gene name as a new parameter
-			// for the vocabApi getCategories() query, so it can pull the number of mutated samples for a term
-			// this parameter is used by some sneaky gdc-specific logic in termdb.matrix.js getData()
-			// should not impact non-gdc datasets
-			//
-			/////////////////////////////////////
-			arg.getCategoriesArguments = { currentGeneNames: [block.usegm.name] }
-			// TODO {name: block.usegm.name, isoform, q:{allowedDt}}
-		}
+		mayAddGetCategoryArgs(arg, block)
 		filterInit(arg).main(tk.filterObj)
 	})
+}
+
+function mayAddGetCategoryArgs(arg, block) {
+	if (block.usegm) {
+		/////////////////////////////////////
+		//
+		// GDC specific logic
+		// in gene mode, supply the current gene name as a new parameter
+		// for the vocabApi getCategories() query, so it can pull the number of mutated samples for a term
+		// this parameter is used by some sneaky gdc-specific logic in termdb.matrix.js getData()
+		// should not impact non-gdc datasets
+		//
+		/////////////////////////////////////
+		arg.getCategoriesArguments = { currentGeneNames: [block.usegm.name] }
+		// TODO {name: block.usegm.name, isoform, q:{allowedDt}}
+	} else {
+		/////////////////////////////////////
+		//
+		// GDC specific logic
+		// in genomic mode, pass rglst for pulling cases mutated in this region, handled in the same way as currentGeneNames
+		//
+		/////////////////////////////////////
+		arg.getCategoriesArguments = { rglst: structuredClone(block.rglst) }
+	}
 }
 
 export function getFilterName(f) {

@@ -4,8 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GDC cohort-MAF tool: allow to customize output file columns
+- Clicking matrix cell to show similar info table as hovering over the matrix cell.
+- Mds3 track uses simpler radio buttons to toggle between view modes such as lollipop and occurrence
+
 Fixes:
 - Gene exp clustering will display an alert msg to inform user that a map is not doable when there is just one gene
+- display total number of mutations on disco plot
+- Fix oncomatrix error: adding dictionary term from row group menu
 
 
 ## 2.38.1

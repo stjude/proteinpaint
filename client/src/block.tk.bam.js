@@ -1704,9 +1704,7 @@ function configPanel(tk, block) {
 			callback: v => {
 				tk.asPaired = v
 				loadTk(tk, block)
-			},
-			inputName: 'show-reads-radios' /* Fix for show reads and strictness radio 
-			buttons operating independently */
+			}
 		})
 	}
 	{
@@ -1767,9 +1765,7 @@ function configPanel(tk, block) {
 			callback: v => {
 				tk.strictness = v
 				loadTk(tk, block)
-			},
-			inputName: 'strictness-radios' /* Fix for show reads and strictness radio 
-			buttons operating independently */
+			}
 		})
 	}
 

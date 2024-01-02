@@ -918,6 +918,7 @@ function render_axis(tk, nm, block) {
 				.d.append('div')
 				.text('Cancel')
 				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.menutip.hide()
 					nm.inuse = false
