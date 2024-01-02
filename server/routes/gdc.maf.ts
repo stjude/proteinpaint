@@ -4,9 +4,9 @@ import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const maxFileNumber = 1000
+const maxFileNumber = 2000
 const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
-const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 50000000 // 50Mb
+const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 100000000 // 100Mb
 
 export const api = {
 	endpoint: 'gdc/maf',
