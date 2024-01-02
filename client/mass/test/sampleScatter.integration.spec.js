@@ -683,8 +683,8 @@ tape('Change symbol and reference size from menu', function (test) {
 	async function runTests(scatter) {
 		helpers
 			.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-			.run(changeSymbolInput)
-			.run(testSymbolSize, { wait: 100 })
+			.use(changeSymbolInput)
+			.to(testSymbolSize, { wait: 100 })
 			.use(changeRefInput, { wait: 100 })
 			.to(testRefDotSize, { wait: 300 })
 			.done(test)
@@ -699,7 +699,7 @@ tape('Change symbol and reference size from menu', function (test) {
 	}
 	function testSymbolSize(scatter) {
 		//separate function because wait needed before test to run
-		test.ok(scatter.Inner.settings.size == testSymSize, `Should change symbol dot size to test value = ${testSymSize}`)
+		test.equal(scatter.Inner.settings.size, testSymSize, `Should change symbol dot size to test value = ${testSymSize}`)
 	}
 	function changeRefInput(scatter) {
 		const refInput = scatter.Inner.dom.controlsHolder

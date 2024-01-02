@@ -126,7 +126,7 @@ class MassApp {
 		const newPlots = {}
 		let sandbox
 		for (const plot of this.state.plots) {
-			if (!(plot.id in this.components.plots)) {
+			if (this.components.plots && !(plot.id in this.components.plots)) {
 				sandbox = newSandboxDiv(this.dom.plotDiv, {
 					close: () => {
 						this.api.dispatch({

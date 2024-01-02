@@ -37,7 +37,10 @@ class ViolinPlot {
 			controls,
 			violinDiv: holder
 				.append('div')
-				.attr('id', 'sjpp-vp-violinDiv')
+				// set attr('class') class when using a constant string value below;
+				// should not set a constant attr('id') value for the violinDiv,
+				// since multiple violin plots in the same view must not share the same ID value
+				.attr('class', 'sjpp-vp-violinDiv')
 				.style('padding-left', this.opts.mode != 'minimal' ? '10px' : '0px'),
 			legendDiv: holder.append('div').classed('sjpp-vp-legend', true).style('padding-left', '5px'),
 

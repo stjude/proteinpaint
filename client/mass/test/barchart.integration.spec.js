@@ -8,10 +8,13 @@ const vocabData = require('../../termdb/test/vocabData')
 const hideCategory = require('../../plots/barchart.events.js').hideCategory
 
 /*
+TODO cover all combinations
+
 Tests:
-	single barchart, categorical bars
-	single chart, with overlay
-	multiple charts
+	term1=categorical
+	term1=categorical, term2=defaultbins
+	term0=defaultbins, term1=categorical
+	term1=geneVariant
 	series visibility - q.hiddenValue
 	series visibility - numeric
 	series visibility - condition
@@ -55,7 +58,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('single barchart, categorical bars', function (test) {
+tape('term1=categorical', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -101,26 +104,16 @@ tape('single barchart, categorical bars', function (test) {
 	}
 })
 
-tape('single chart, with overlay', function (test) {
+tape('term1=categorical, term2=defaultbins', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
-	const termfilter = { filter: [] }
 	runpp({
 		state: {
-			termfilter,
 			plots: [
 				{
 					chartType: 'barchart',
 					term: { id: 'diaggrp' },
-					term2: { id: 'agedx' },
-					settings: {
-						controls: {
-							term2: { id: 'agedx', term: termjson['agedx'] }
-						},
-						barchart: {
-							overlay: 'tree'
-						}
-					}
+					term2: { id: 'agedx' }
 				}
 			]
 		},
@@ -217,7 +210,7 @@ tape('single chart, with overlay', function (test) {
 	}
 })
 
-tape('multiple charts', function (test) {
+tape('term0=defaultbins, term1=categorical', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -225,15 +218,7 @@ tape('multiple charts', function (test) {
 				{
 					chartType: 'barchart',
 					term: { id: 'diaggrp' },
-					term0: { id: 'agedx' },
-					settings: {
-						barchart: {
-							divideBy: 'tree'
-						},
-						controls: {
-							term0: { id: 'agedx', term: termjson['agedx'] }
-						}
-					}
+					term0: { id: 'agedx' }
 				}
 			]
 		},
@@ -249,6 +234,34 @@ tape('multiple charts', function (test) {
 		barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=geneVariant', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary', // cannot use 'barchart', breaks
+					term: { term: { type: 'geneVariant', name: 'TP53' } }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
+		}
+	})
+
+	let barDiv
+	function testNumCharts(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts > 2, 'should have more than 2 charts by TP53')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
