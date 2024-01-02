@@ -33,6 +33,12 @@ export function setInteractivity(self) {
 		})
 		samples.sort((s1, s2) => {
 			if (!('sampleId' in s1)) return 1
+			if (self.config.term) {
+				//coordinates from terms
+				if (s1.x < s2.x) return -1
+				return 1
+			}
+
 			if (self.config.colorTW) {
 				if (self.config.colorTW.term.type == 'categorical') {
 					if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
