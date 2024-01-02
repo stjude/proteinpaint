@@ -60,7 +60,6 @@ export function setInteractivity(self) {
 		const getCoords = sample => `${sample.x.toPrecision(2)},${sample.y.toPrecision(2)}`
 		//Building tree
 		for (const sample of samples) {
-			console.log(sample.shape)
 			const id = getCoords(sample)
 			let node = tree.find(item => item.id == id)
 			if (!node) {
