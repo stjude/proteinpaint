@@ -293,7 +293,7 @@ function handleLegendClick(target, self) {
 			menu.hide()
 			hideCategory(d, self, isHidden)
 		})
-	if (term.q.hiddenValues && Object.keys(term.q.hiddenValues).length > 0 && Object.keys(term.term.values).length > 1)
+	if (term.q.hiddenValues && Object.keys(term.q.hiddenValues).length > 1)
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
