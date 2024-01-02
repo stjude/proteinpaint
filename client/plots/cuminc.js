@@ -431,7 +431,8 @@ class MassCumInc {
 		const opts = {
 			chartType: 'cuminc',
 			term: c.term,
-			filter: this.state.termfilter.filter
+			filter: this.state.termfilter.filter,
+			minSampleSize: c.settings.minSampleSize
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -458,7 +459,7 @@ class MassCumInc {
 		const c = this.config
 		const estimates = {}
 		const tests = {}
-		const lowSampleSize = {}
+		const lowSampleSize = results.lowSampleSize
 		const noEvents = results.noEvents
 		this.currData = []
 		this.uniqueSeriesIds = new Set()
@@ -466,34 +467,27 @@ class MassCumInc {
 		this.noData = []
 		this.refs = results.refs
 
-		// filter charts and serieses from the data
+		// filter the data
 		for (const chartId in results.data) {
 			const chart = results.data[chartId]
-			if (!chart.estimates) {
+			// filter the estimates
+			if (chart.estimates) {
+				for (const seriesId in chart.estimates) {
+					const series = chart.estimates[seriesId]
+					if (!series.filter(timepoint => timepoint.nrisk >= s.minAtRisk && timepoint.est > 0).length) {
+						// discard series with no events after applying
+						// the at-risk count filter
+						chartId in noEvents ? noEvents[chartId].push(seriesId) : (noEvents[chartId] = [seriesId])
+						continue
+					}
+					chartId in estimates ? (estimates[chartId][seriesId] = series) : (estimates[chartId] = { [seriesId]: series })
+				}
+				if (!(chartId in estimates)) this.noData.push(chartId)
+			} else {
 				// chart does not have any data
 				this.noData.push(chartId)
-				continue
 			}
-			for (const seriesId in chart.estimates) {
-				const series = chart.estimates[seriesId]
-				if (series[0].nrisk < s.minSampleSize) {
-					// discard series with low starting sample size
-					chartId in lowSampleSize ? lowSampleSize[chartId].push(seriesId) : (lowSampleSize[chartId] = [seriesId])
-					continue
-				}
-				if (!series.filter(timepoint => timepoint.nrisk >= s.minAtRisk && timepoint.est > 0).length) {
-					// discard series with no events after applying
-					// the at-risk count filter
-					chartId in noEvents ? noEvents[chartId].push(seriesId) : (noEvents[chartId] = [seriesId])
-					continue
-				}
-				chartId in estimates ? (estimates[chartId][seriesId] = series) : (estimates[chartId] = { [seriesId]: series })
-			}
-			if (!(chartId in estimates)) {
-				// chart does not have any data
-				this.noData.push(chartId)
-				continue
-			}
+			// filter the tests
 			if (chart.tests) {
 				// discard tests that have series that are either
 				// discarded or hidden
@@ -1220,7 +1214,7 @@ const defaultSettings = JSON.stringify({
 		term0: null
 	},
 	cuminc: {
-		minSampleSize: 10,
+		minSampleSize: 10, // sent to server-side
 		minAtRisk: 10,
 		atRiskVisible: true,
 		atRiskLabelOffset: -10,

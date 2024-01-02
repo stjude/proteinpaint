@@ -14,7 +14,9 @@ export async function get_incidence(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
-		if (!minTimeSinceDx) throw 'missing min time since dx'
+		const minSampleSize = Number(q.minSampleSize)
+		if (!Number.isFinite(minTimeSinceDx)) throw 'invalid minTimeSinceDx'
+		if (!Number.isFinite(minSampleSize)) throw 'invalid minSampleSize'
 		q.ds = ds
 		const results = { data: {} }
 		const rows = await get_rows(q)
@@ -36,22 +38,31 @@ export async function get_incidence(q, ds) {
 
 		// prepare R input
 		const Rinput = { data: {}, startTime: minTimeSinceDx }
-		// remove series with no events of interest (i.e. event=1)
-		// need to do this because if series only has event=0/2
-		// then R will consider event=2 to be event of interest
 		results.noEvents = {}
+		results.lowSampleSize = {}
 		for (const chartId in byChartSeries) {
 			const chart = byChartSeries[chartId]
 			const seriesIds = new Set(chart.map(x => x.series))
 			for (const seriesId of seriesIds) {
-				if (!chart.find(x => x.series == seriesId && x.event === 1)) {
-					chartId in results.noEvents
-						? results.noEvents[chartId].push(seriesId)
-						: (results.noEvents[chartId] = [seriesId])
+				const series = chart.filter(sample => sample.series == seriesId)
+				if (!series.find(sample => sample.event === 1)) {
+					// skip series with no events of interest (i.e. event=1)
+					// need to do this because if series only has event=0/2
+					// then R will consider event=2 to be event of interest
+					results.noEvents[chartId] = (results.noEvents[chartId] || []).concat([seriesId])
+					continue
 				}
+				if (series.length < minSampleSize) {
+					// skip series with low sample size
+					// should do this because cuminc computation of series
+					// with low sample size can trigger permutation tests
+					// which have long execution times
+					results.lowSampleSize[chartId] = (results.lowSampleSize[chartId] || []).concat([seriesId])
+					continue
+				}
+				Rinput.data[chartId] = (Rinput.data[chartId] || []).concat(series)
 			}
-			const serieses = chart.filter(x => !results.noEvents[chartId]?.includes(x.series))
-			serieses.length ? (Rinput.data[chartId] = serieses) : (results.data[chartId] = {})
+			if (!(chartId in Rinput.data)) results.data[chartId] = {}
 		}
 		if (!Object.keys(Rinput.data).length) return { data: {} }
 
