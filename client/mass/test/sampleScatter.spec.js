@@ -393,5 +393,6 @@ tape('Color by gene', function (test) {
 			`At least a sample with MISSENSE color was expected`
 		)
 		if (test._ok) scatter.Inner.dom.tip.d.remove()
+		test.end()
 	}
 })
