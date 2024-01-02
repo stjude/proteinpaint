@@ -60,6 +60,7 @@ export function setInteractivity(self) {
 		const getCoords = sample => `${sample.x.toPrecision(2)},${sample.y.toPrecision(2)}`
 		//Building tree
 		for (const sample of samples) {
+			console.log(sample.shape)
 			const id = getCoords(sample)
 			let node = tree.find(item => item.id == id)
 			if (!node) {
@@ -180,14 +181,14 @@ export function setInteractivity(self) {
 							: chart.shapeLegend.get(sample.shape).shape % self.symbols.length
 					const shape = self.symbols[index].size(64)()
 					let fontColor = 'black'
+					const whiteColor = rgb('white').toString()
+
 					if (tw?.term.type == 'geneVariant') {
-						fontColor = mclass['WT'].color
-						const mutation = node.value.split(', ')[0]
 						for (const id in mclass) {
 							const class_info = mclass[id]
-							const whiteColor = rgb(class_info.color).toString() == rgb('white').toString()
-							if (mutation == class_info.label) {
-								if (mutation == class_info.label) if (!whiteColor) fontColor = class_info.color
+							if (node.value.includes(class_info.label)) {
+								if (rgb(class_info.color).toString() != whiteColor) fontColor = class_info.color
+								break
 							}
 						}
 					}
