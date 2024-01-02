@@ -314,7 +314,7 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
-				if (lst.length > 1000) {
+				if (lst.length == 1000) {
 					// max 1000 samples
 					break
 				}
