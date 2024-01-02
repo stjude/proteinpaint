@@ -36,6 +36,8 @@ export function setInteractivity(self) {
 			if (self.config.term) {
 				//coordinates from terms
 				if (s1.x < s2.x) return -1
+				if (s1.x > s2.x) return 1
+				if (s1.y < s2.y) return -1
 				return 1
 			}
 
