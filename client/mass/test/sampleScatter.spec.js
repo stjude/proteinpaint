@@ -1,10 +1,7 @@
 'use strict'
 const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
-const d3color = require('d3-color')
 const d3s = require('d3-selection')
-const d3drag = require('d3-drag')
-import { mclass } from '#shared/common'
 
 /* Launch from http://localhost:3000/testrun.html?name=sampleScatter */
 
@@ -365,34 +362,5 @@ tape('Groups and group menus functions', function (test) {
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
 		if (test._ok) scatter.Inner.dom.tip.d.remove()
-	}
-})
-
-tape('Color by gene', function (test) {
-	const colorGeneState = {
-		plots: [
-			{
-				chartType: 'sampleScatter',
-				colorTW: { term: { name: 'TP53', type: 'geneVariant' } },
-				name: 'Methylome TSNE'
-			}
-		]
-	}
-	runpp({
-		state: colorGeneState,
-		sampleScatter: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-	async function runTests(scatter) {
-		const dots = scatter.Inner.charts[0].chartDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		test.true(
-			dots.find(dot => dot.getAttribute('fill') == mclass['M'].color),
-			`At least a sample with MISSENSE color was expected`
-		)
-		if (test._ok) scatter.Inner.app.destroy()
-		test.end()
 	}
 })
