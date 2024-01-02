@@ -392,7 +392,7 @@ tape('Color by gene', function (test) {
 			dots.find(dot => dot.getAttribute('fill') == mclass['M'].color),
 			`At least a sample with MISSENSE color was expected`
 		)
-		if (test._ok) scatter.Inner.dom.tip.d.remove()
+		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 })
