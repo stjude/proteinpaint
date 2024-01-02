@@ -33,7 +33,15 @@ export function setInteractivity(self) {
 		})
 		samples.sort((s1, s2) => {
 			if (!('sampleId' in s1)) return 1
-			if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
+			if (self.config.colorTW) {
+				if (self.config.colorTW.term.type == 'categorical') {
+					if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
+				} // numeric
+				else {
+					if (s1.category < s2.category) return -1
+					else if (s1.category > s2.category) return 1
+				}
+			}
 			if (s1.shape.includes(mclass.WT.label) || s1.shape.includes(mclass.Blank.label)) return 1
 
 			return -1
