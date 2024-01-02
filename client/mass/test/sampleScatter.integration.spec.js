@@ -15,6 +15,7 @@ import {
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { openSummaryPlot, openPlot } from '../groups'
 import { rgb } from 'd3-color'
+import { mclass } from '#shared/common'
 
 /*
 Tests:
@@ -956,5 +957,34 @@ tape('Groups and group menus functions', function (test) {
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
 		if (test._ok) scatter.Inner.dom.tip.d.remove()
+	}
+})
+
+tape('Color by gene', function (test) {
+	const colorGeneState = {
+		plots: [
+			{
+				chartType: 'sampleScatter',
+				colorTW: { term: { name: 'TP53', type: 'geneVariant' } },
+				name: 'TermdbTest TSNE'
+			}
+		]
+	}
+	runpp({
+		state: colorGeneState,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		test.true(
+			dots.find(dot => dot.getAttribute('fill') == mclass['M'].color),
+			`At least a sample with MISSENSE color was expected`
+		)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
 	}
 })
