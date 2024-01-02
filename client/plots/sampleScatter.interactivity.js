@@ -191,7 +191,7 @@ export function setInteractivity(self) {
 							}
 						}
 					}
-					let chars = node.value.length
+					let chars = node.value.toString().length
 					const width = chars * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')
