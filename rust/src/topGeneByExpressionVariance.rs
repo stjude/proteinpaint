@@ -9,27 +9,44 @@ Various JSON parameters:
    param: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 
  Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","input_file":"/path/to/input/file","filter_extreme_values":true,"num_genes":100, "param":"var"}' && time echo $json | target/release/gene_variance
-*/
+ */
 #![allow(non_snake_case)]
-use bgzip::BGZFReader;
+#[cfg(feature = "test")]
 use json;
+#[cfg(feature = "test")]
 use nalgebra::base::dimension::Dyn;
+#[cfg(feature = "test")]
 use nalgebra::base::Matrix;
+#[cfg(feature = "test")]
 use nalgebra::base::VecStorage;
+#[cfg(feature = "test")]
 use nalgebra::DMatrix;
+#[cfg(feature = "test")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "test")]
 use serde_json;
+#[cfg(feature = "test")]
 use statrs::statistics::Data;
+#[cfg(feature = "test")]
 use statrs::statistics::Median;
+#[cfg(feature = "test")]
 use statrs::statistics::OrderStatistics;
+#[cfg(feature = "test")]
 use statrs::statistics::Statistics;
+#[cfg(feature = "test")]
 use std::cmp::Ordering;
+#[cfg(feature = "test")]
 use std::fs;
+#[cfg(feature = "test")]
 use std::io;
+#[cfg(feature = "test")]
 use std::io::Read;
+#[cfg(feature = "test")]
 use std::str::FromStr;
+#[cfg(feature = "test")]
 use std::time::Instant;
 
+#[cfg(feature = "test")]
 fn input_data(
     filename: &String,
     sample_list: &Vec<&str>,
@@ -38,6 +55,8 @@ fn input_data(
     Vec<String>,
     Vec<String>,
 ) {
+    use bgzip::BGZFReader;
+
     // Build the CSV reader and iterate over each record.
     let mut reader = BGZFReader::new(fs::File::open(filename).unwrap()).unwrap();
     let mut num_lines: usize = 0;
@@ -102,7 +121,7 @@ fn input_data(
     (dm, gene_names, gene_symbols)
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "test")]
 #[derive(Debug, Serialize, Deserialize)]
 struct GeneInfo {
     gene_name: String,
@@ -110,6 +129,7 @@ struct GeneInfo {
     param: f64,
 }
 
+#[cfg(feature = "test")]
 fn calculate_variance(
     input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     gene_names: Vec<String>,
@@ -219,6 +239,7 @@ fn calculate_variance(
     gene_infos
 }
 
+#[cfg(feature = "test")]
 fn cpm(
     input_matrix: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
 ) -> Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>> {
@@ -241,6 +262,8 @@ fn cpm(
 }
 
 fn main() {
+    cfg_if::cfg_if! {
+                                        if #[cfg(feature = "test")] {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
@@ -306,9 +329,10 @@ fn main() {
                     }
 
                     let samples_list: Vec<&str> = samples_string.split(",").collect();
-                    let (input_matrix, gene_names, gene_symbols) =
-                        input_data(&file_name, &samples_list);
-                    let gene_infos = calculate_variance(
+                                                        let (input_matrix, gene_names, gene_symbols) =
+                                                input_data(&file_name, &samples_list);
+
+                                            let gene_infos = calculate_variance(
                         input_matrix,
                         gene_names,
                         gene_symbols,
@@ -330,10 +354,16 @@ fn main() {
                     output_string += &"]".to_string();
                     println!("{}", output_string);
                     println!("Time for calculating variances:{:?}", now.elapsed());
-                }
+                                        }
+
                 Err(error) => println!("Incorrect json: {}", error),
             }
         }
         Err(error) => println!("Piping error: {}", error),
+        }
+                                        }
+                                    else {
+                    panic!("To use this functionality must enable test compilation")
+                }
     }
 }
