@@ -499,7 +499,7 @@ function getPj(q, data, tdb, ds) {
 				if (terms[1].orderedLabels.length) {
 					const labels = terms[1].orderedLabels
 					result.cols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
-					result.dedupCols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
+					if (result.dedupCols) result.dedupCols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
 				if (terms[2].orderedLabels.length) {
 					const labels = terms[2].orderedLabels
