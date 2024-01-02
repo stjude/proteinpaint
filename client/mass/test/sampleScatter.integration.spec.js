@@ -9,8 +9,7 @@ import {
 	detectChildAttr,
 	detectChildStyle,
 	detectGte,
-	detectOne,
-	sleep
+	detectOne
 } from '../../test/test.helpers'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { openSummaryPlot, openPlot } from '../groups'
@@ -30,6 +29,7 @@ Tests:
 	Check/uncheck Show axes from menu
 	Click zoom in, zoom out, and reset buttons
 	Groups and group menus function
+	Color by gene
  */
 
 const runpp = helpers.getRunPp('mass', {
