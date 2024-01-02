@@ -48,11 +48,6 @@ export class ViewModelMapper {
 
 		const data: Array<any> = opts.args.data
 
-		console.log(
-			'data',
-			data.filter(i => i.dt == dtsnvindel)
-		)
-
 		const reference = new Reference(this.settings, chrSizes, chromosomesOverride)
 
 		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes)
