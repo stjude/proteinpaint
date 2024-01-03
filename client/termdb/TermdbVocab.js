@@ -648,7 +648,8 @@ export class TermdbVocab extends Vocab {
     .terms[{}]     an array of termWrapper objects
         tw.$id       id to disambugate when multiple terms
                      with the same ID are in terms[], such as in matrix plot
-    .termsPerRequest When provided, a request includes the number of terms specified, improving the response times
+    .termsPerRequest optional, a number greater than 1;
+	                 when provided, a request includes the number of terms specified, improving the response times
     Returns 
     {
         lst: [{
