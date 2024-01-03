@@ -2427,7 +2427,7 @@ function setLengendActions(self) {
 		const div = menu.d.append('div')
 
 		//Add the hard filter option
-		if (!targetData.dt || self.type !== 'hierCluster') {
+		if (!targetData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1) {
 			// Do not show the hard filter option for hierCluster geneVariant legend items.
 
 			// ********* TODO  ********
