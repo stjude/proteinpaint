@@ -1,6 +1,6 @@
 import { getcategoriesRequest, getcategoriesResponse } from '#shared/types/routes/termdb.categories.ts'
-import { getOrderedLabels } from '../src/termdb.barchart.js'
-import { getData } from '../src/termdb.matrix.js'
+import { getOrderedLabels } from '#src/termdb.barchart.js'
+import { getData } from '#src/termdb.matrix.js'
 
 export const api: any = {
 	endpoint: 'termdb/categories',
