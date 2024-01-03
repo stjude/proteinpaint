@@ -160,11 +160,6 @@ tape('vocabInit(), default', test => {
 	test.equal(typeof vocabApi.getterm, 'function', 'should have a vocab.getterm function')
 	test.equal(typeof vocabApi.graphable, 'function', 'should have a vocab.graphable function')
 	test.equal(typeof vocabApi.getCategories, 'function', 'should have a vocab.getCategories function')
-	test.equal(
-		typeof vocabApi.getNumericUncomputableCategories,
-		'function',
-		'should have a vocab.getNumericUncomputableCategories function'
-	)
 	test.equal(typeof vocabApi.validateSnps, 'function', 'should have a vocab.validateSnps function')
 	test.equal(typeof vocabApi.get_variantFilter, 'function', 'should have a vocab.get_variantFilter function')
 	test.equal(typeof vocabApi.getAnnotatedSampleData, 'function', 'should have a vocab.getAnnotatedSampleData function')
