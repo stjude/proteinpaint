@@ -2,7 +2,10 @@
 f{}
 	filter object
 returns a GDC filter object
-TODO support nested filter
+
+GDC filter: https://docs.gdc.cancer.gov/API/Users_Guide/Search_and_Retrieval/
+
+TODO !!support nested filter!!
 */
 export function filter2GDCfilter(f) {
 	// gdc filter that will be returned
