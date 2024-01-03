@@ -40,15 +40,12 @@ const handlers = {
 */
 exports.mayGetGeneVariantData = async function (tw, q) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
-	//console.log('what is tw in mayGetGeneVariantData', tw)
-	//console.log('what is q in mayGetGeneVariantData', q)
 	const ds = this
 	const tname = tw.term.name
 	const flagset = await get_flagset(ds, q.genome)
 	const bySampleId = new Map()
 	if (!flagset) return bySampleId
 
-	//console.log('reached to mayGetGeneVariantData inside of bulk.mset, what is tw ', tw)
 	let filterSamples
 	if (q?.filter?.lst.length > 0) {
 		// requires that not only q.filter{} is present, but also filter.lst[] is a non-empty array
@@ -93,10 +90,6 @@ exports.mayGetGeneVariantData = async function (tw, q) {
 			}
 		}
 	}
-	// console.log('what is bySampleId', bySampleId)
-	// for (const [k, v] of bySampleId.entries()) {
-	// 	console.log(k, v[tname])
-	// }
 	return bySampleId
 }
 

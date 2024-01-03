@@ -169,6 +169,7 @@ export class Matrix {
 				promises.push(this.setData())
 				this.dom.loadingDiv.html('Processing data ...')
 				await Promise.all(promises)
+				applyLegendValueFilter(this)
 				if (this.combineData) this.combineData()
 				// tws in the config may be filled-in based on applicable server response data;
 				// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
@@ -180,7 +181,6 @@ export class Matrix {
 			// may skip term or sample ordering when there are
 			// no relevant state/config/setting changes
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
-				applyLegendValueFilter(this)
 				this.termOrder = this.getTermOrder(this.data)
 				this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 				this.sampleOrder = this.getSampleOrder(this.data)

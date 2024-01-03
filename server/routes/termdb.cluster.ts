@@ -37,6 +37,8 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
+			if (ds.__gdc && !ds.__gdc.doneCaching)
+				throw 'The server has not finished caching the case IDs: try again in ~2 minutes'
 			if (q.dataType == dtgeneexpression) {
 				if (!ds.queries?.geneExpression) throw 'no geneExpression data on this dataset'
 				result = (await getResult(q, ds)) as TermdbClusterResponse

@@ -303,6 +303,9 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 	if (q.filterObj) {
 		f.content.push(filter2GDCfilter(q.filterObj))
 	}
+	if (q.filter) {
+		f.content.push(filter2GDCfilter(q.filter))
+	}
 	const body = { size: 10000, fields: 'case_id' }
 	if (f.content.length) body.filters = f
 

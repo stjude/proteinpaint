@@ -97,8 +97,8 @@ export function getLegendData(legendGroups, refs, self) {
 						const termValues = Object.values(t.ref.bins)
 						legend.values[v.name] = {
 							key: v.name,
-							label: termValues.find(vl => vl.name == v.name).name,
-							fill: termValues.find(vl => vl.name == v.name).color,
+							label: termValues.find(vl => vl.name == v.name)?.name || v.name,
+							fill: termValues.find(vl => vl.name == v.name)?.color,
 							crossedOut: true
 						}
 					}
@@ -107,8 +107,8 @@ export function getLegendData(legendGroups, refs, self) {
 						const termValues = Object.values(t.tw.term.values)
 						legend.values[v.key] = {
 							key: v.key,
-							label: termValues.find(vl => vl.key == v.key).label,
-							fill: termValues.find(vl => vl.key == v.key).color,
+							label: termValues.find(vl => vl.key == v.key)?.label || v.key,
+							fill: termValues.find(vl => vl.key == v.key)?.color,
 							crossedOut: true
 						}
 					}

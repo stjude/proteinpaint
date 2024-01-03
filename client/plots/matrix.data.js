@@ -211,13 +211,15 @@ export function applyLegendValueFilter(self) {
 	}
 
 	const geneVariant$ids = Object.values(self.data.refs.byTermId)
-		.filter(v => v.term.type == 'geneVariant')
+		.filter(v => v.term?.type == 'geneVariant')
 		.map(v => v.$id)
 	const data = { samples: {}, lst: [], refs: self.data.refs }
 
 	for (const row of self.origData.lst) {
 		const include = sample_match_termvaluesetting(row, self.config.legendValueFilter, geneVariant$ids)
-		if (include) {
+		if (include || self.chartType == 'hierCluster') {
+			// for hierCluster, should not filter out any samples by sample_match_termvaluesetting
+			// samples are filtered out by joining legendValueFilter with filter in setHierClusterData
 			data.samples[row.sample] = row
 			data.lst.push(row)
 		}
@@ -269,7 +271,7 @@ export function applyLegendValueFilter(self) {
 			}
 		}
 	}
-	remove_empty_sample(data)
+	if (self.chartType !== 'hierCluster') remove_empty_sample(data)
 	self.data = data
 }
 
