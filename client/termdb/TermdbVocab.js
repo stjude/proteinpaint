@@ -706,7 +706,6 @@ export class TermdbVocab extends Vocab {
 		const refs = { byTermId: _refs.byTermId || {}, bySampleId: _refs.bySampleId || {} }
 		const promises = []
 		const samplesToShow = new Set()
-		let termsToUpdate = opts.terms.slice()
 
 		/************** tricky
         need list of gene names of current geneVariant terms from opts.terms[]
@@ -727,18 +726,14 @@ export class TermdbVocab extends Vocab {
 					.map(tw => tw.term.name)
 					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 
+		const allTerms2update = opts.terms.slice() // make copy of array as it will be truncated to empty. do not modify original
+
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
-		let termsPerRequest = opts.termsPerRequest || 1
-		// fetch the annotated sample for each term
-		const pendingTerms = []
-		while (termsToUpdate.length) {
-			const duplicates = termsToUpdate.filter((tw, index) => termsToUpdate.indexOf(tw) !== index)
-			pendingTerms.push(...duplicates)
-			const tws = termsToUpdate.splice(0, termsPerRequest)
-			// request data for one term each time, empty list and break while loop
-			// possible to change to pop two or more each time
-			const copies = tws.map(this.getTwMinCopy)
+
+		while (true) {
+			const copies = getTerms2update(allTerms2update, opts.termsPerRequest || 1) // list of unique terms to update in this round
+			if (copies.length == 0) break // at the end of list, break loop
 			const init = {
 				headers,
 				credentials: 'include',
@@ -747,28 +742,24 @@ export class TermdbVocab extends Vocab {
 					genome: this.vocab.genome,
 					dslabel: this.vocab.dslabel,
 					// one request per term
-					terms: copies,
+					terms: copies.map(this.getTwMinCopy),
 					filter,
 					embedder: window.location.hostname
 				}
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-			if (tws.find(tw => tw.term.id && currentGeneNames?.length)) {
+			if (copies.find(tw => tw.term.id && currentGeneNames?.length)) {
 				/* term.id is present meaning term is dictionary term (FIXME if this is unreliable)
 				and there are gene terms, add this to limit to mutated cases
 				*/
 				init.body.currentGeneNames = currentGeneNames
 			}
-			if (termsToUpdate.length == 0 && pendingTerms.length > 0) {
-				termsToUpdate = pendingTerms
-				pendingTerms = []
-			}
 			promises.push(
 				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
-					for (const tw of tws) {
+					for (const tw of copies) {
 						const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 
 						for (const sampleId in data.samples) {
@@ -1202,4 +1193,18 @@ function mayFillInCategory2samplecount4term(tw, lst, termdbConfig) {
 	if (termdbConfig.alwaysRefillCategoricalTermValues || !tw.term.values || Object.keys(tw.term.values).length == 0) {
 		tw.term.values = k2label
 	}
+}
+
+function getTerms2update(lst, count) {
+	const copies = []
+	let i = 0,
+		n = lst.length
+	while (i < n) {
+		i++
+		const tw = lst.pop()
+		if (copies.find(c => c.term.id === tw.term.id || c.term.name === tw.term.name)) tws.push(tw) // move to end of array
+		else copies.push(tw)
+		if (copies.length >= count) break
+	}
+	return copies
 }
