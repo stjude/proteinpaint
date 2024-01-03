@@ -1201,7 +1201,7 @@ function getTerms2update(lst, count) {
 		n = lst.length
 	while (i < n) {
 		i++
-		const tw = lst.pop()
+		const tw = lst.unshift()
 		if (copies.find(c => c.term.id === tw.term.id || c.term.name === tw.term.name)) tws.push(tw) // move to end of array
 		else copies.push(tw)
 		if (copies.length >= count) break
