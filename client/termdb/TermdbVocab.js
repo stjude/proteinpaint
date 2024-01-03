@@ -1194,15 +1194,25 @@ function mayFillInCategory2samplecount4term(tw, lst, termdbConfig) {
 	}
 }
 
+/*
+from input list of termwrappers, get up to "count" number of unique tw and return in new list; original lst will be truncated
+copies cannot contain multiple tw of same term, e.g. matrix can have same age term in two rows as continuous and discrete, having 2 age tw will confuse downstream code of getAnnotatedSampleData()
+duplicating tw will be pushed to the end of lst and are returned one at a time
+*/
 function getTerms2update(lst, count) {
 	const copies = []
 	let i = 0,
 		n = lst.length
 	while (i < n) {
 		i++
-		const tw = lst.unshift()
-		if (copies.find(c => c.term.id === tw.term.id || c.term.name === tw.term.name)) tws.push(tw) // move to end of array
-		else copies.push(tw)
+		const tw = lst.shift() // first of lst[]
+		if (copies.find(c => c.term.id === tw.term.id || c.term.name === tw.term.name)) {
+			// tw already exists in copies[], do not put into copies[], put it at the end of lst to be processed later
+			lst.push(tw)
+		} else {
+			// tw is not in copies[], which should only contain up to "count" of unique terms
+			copies.push(tw)
+		}
 		if (copies.length >= count) break
 	}
 	return copies
