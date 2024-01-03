@@ -648,7 +648,8 @@ export class TermdbVocab extends Vocab {
     .terms[{}]     an array of termWrapper objects
         tw.$id       id to disambugate when multiple terms
                      with the same ID are in terms[], such as in matrix plot
-    	
+    .termsPerRequest optional, a number greater than 1;
+	                 when provided, a request includes the number of terms specified, improving the response times
     Returns 
     {
         lst: [{
@@ -705,7 +706,6 @@ export class TermdbVocab extends Vocab {
 		const refs = { byTermId: _refs.byTermId || {}, bySampleId: _refs.bySampleId || {} }
 		const promises = []
 		const samplesToShow = new Set()
-		const termsToUpdate = opts.terms.slice()
 
 		/************** tricky
         need list of gene names of current geneVariant terms from opts.terms[]
@@ -726,14 +726,14 @@ export class TermdbVocab extends Vocab {
 					.map(tw => tw.term.name)
 					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 
+		const allTerms2update = opts.terms.slice() // make copy of array as it will be truncated to empty. do not modify original
+
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
-		// fetch the annotated sample for each term
-		while (termsToUpdate.length) {
-			// request data for one term each time, empty list and break while loop
-			// possible to change to pop two or more each time
-			const tw = termsToUpdate.pop()
-			const copy = this.getTwMinCopy(tw)
+
+		while (true) {
+			const copies = getTerms2update(allTerms2update, opts.termsPerRequest || 1) // list of unique terms to update in this round
+			if (copies.length == 0) break // at the end of list, break loop
 			const init = {
 				headers,
 				credentials: 'include',
@@ -742,60 +742,59 @@ export class TermdbVocab extends Vocab {
 					genome: this.vocab.genome,
 					dslabel: this.vocab.dslabel,
 					// one request per term
-					terms: [copy],
+					terms: copies.map(this.getTwMinCopy),
 					filter,
 					embedder: window.location.hostname
 				}
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-
-			if (tw.term.id && currentGeneNames?.length) {
+			if (copies.find(tw => tw.term.id && currentGeneNames?.length)) {
 				/* term.id is present meaning term is dictionary term (FIXME if this is unreliable)
 				and there are gene terms, add this to limit to mutated cases
 				*/
 				init.body.currentGeneNames = currentGeneNames
 			}
-
 			promises.push(
 				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
-					const idn = 'id' in tw.term ? tw.term.id : tw.term.name
+					for (const tw of copies) {
+						const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 
-					for (const sampleId in data.samples) {
-						samplesToShow.add(sampleId)
-						const sample = data.samples[sampleId]
-						if (!(sampleId in samples)) {
-							// normalize the expected data shape
-							if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
-							if (typeof data.refs.bySampleId[sampleId] == 'string')
-								data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
+						for (const sampleId in data.samples) {
+							samplesToShow.add(sampleId)
+							const sample = data.samples[sampleId]
+							if (!(sampleId in samples)) {
+								// normalize the expected data shape
+								if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
+								if (typeof data.refs.bySampleId[sampleId] == 'string')
+									data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
 
-							const _ref_ = data.refs.bySampleId[sampleId]
-							// assign default sample ref values here
-							// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
-							if (!_ref_.label) _ref_.label = sampleId
-							const s = {
-								sample: sampleId,
-								// must reserve _ref -> should not be used as a term.id or tw.$id
-								_ref_
+								const _ref_ = data.refs.bySampleId[sampleId]
+								// assign default sample ref values here
+								// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
+								if (!_ref_.label) _ref_.label = sampleId
+								const s = {
+									sample: sampleId,
+									// must reserve _ref -> should not be used as a term.id or tw.$id
+									_ref_
+								}
+								samples[sampleId] = s
 							}
-							samples[sampleId] = s
+							const row = samples[sampleId]
+							if (idn in sample) row[tw.$id] = sample[idn]
 						}
-						const row = samples[sampleId]
-						if (idn in sample) row[tw.$id] = sample[idn]
-					}
 
-					for (const sampleId in data.refs.bySampleId) {
-						refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
-					}
+						for (const sampleId in data.refs.bySampleId) {
+							refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
+						}
 
-					refs.byTermId[tw.$id] = tw
-					if (idn in data.refs.byTermId) {
-						refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[idn])
+						refs.byTermId[tw.$id] = tw
+						if (idn in data.refs.byTermId) {
+							refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[idn])
+						}
 					}
-
 					numResponses++
 					if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (${numResponses}/${promises.length}) ...`)
 				})
@@ -849,49 +848,10 @@ export class TermdbVocab extends Vocab {
 			for (const tw of opts.terms) {
 				mayFillInCategory2samplecount4term(tw, data.lst, this.termdbConfig)
 			}
-
 			return data
 		} catch (e) {
 			throw e
 		}
-	}
-
-	/*
-	Same as getAnnotatedSampleData, but only returns the lst[] of samples and makes a single request to the server.
-	XXX state requirements and eliminate code dup
-	*/
-	async getAnnotatedSampleDataSimple(opts, _refs = {}) {
-		// may check against required auth credentials for the server route
-		const headers = this.mayGetAuthHeaders('termdb')
-		// unlike scatter and violin, the matrix plot will NOT display anything
-		// if sample names are not allowed to be displayed
-		// TODO: may allow a request to proceed, but not display sampleNames???
-		if (!headers) return
-		const filter = getNormalRoot(opts.filter)
-
-		const twlst = []
-		for (const tw of opts.terms) twlst.push(this.getTwMinCopy(tw))
-
-		const init = {
-			headers,
-			credentials: 'include',
-			body: {
-				for: 'matrix',
-				genome: this.vocab.genome,
-				dslabel: this.vocab.dslabel,
-				// one request per term
-				terms: twlst,
-				filter,
-				embedder: window.location.hostname
-			}
-		}
-		if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
-		if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-
-		const data = await dofetch3('termdb', init)
-		const result = [] //mapped to expected value
-		for (const id in data.samples) result.push(data.samples[id])
-		return { lst: result }
 	}
 
 	// get a tw copy with the correct identifier and without $id
@@ -1233,4 +1193,34 @@ function mayFillInCategory2samplecount4term(tw, lst, termdbConfig) {
 	if (termdbConfig.alwaysRefillCategoricalTermValues || !tw.term.values || Object.keys(tw.term.values).length == 0) {
 		tw.term.values = k2label
 	}
+}
+
+/*
+from input list of termwrappers, get up to "count" number of unique tw and return in new list; original lst will be truncated
+copies cannot contain multiple tw of same term, e.g. matrix can have same age term in two rows as continuous and discrete, having 2 age tw will confuse downstream code of getAnnotatedSampleData()
+duplicating tw will be pushed to the end of lst and are returned one at a time
+*/
+function getTerms2update(lst, count) {
+	const copies = []
+	let i = 0,
+		n = lst.length
+	while (i < n) {
+		i++
+		const tw = lst.shift() // first of lst[]
+		if (
+			copies.find(
+				c =>
+					c.term.type === tw.term.type &&
+					((('id' in c.term || 'id' in tw.term) && c.term.id === tw.term.id) || c.term.name === tw.term.name)
+			)
+		) {
+			// tw already exists in copies[], do not put into copies[], put it at the end of lst to be processed later
+			lst.push(tw)
+		} else {
+			// tw is not in copies[], which should only contain up to "count" of unique terms
+			copies.push(tw)
+		}
+		if (copies.length >= count) break
+	}
+	return copies
 }
