@@ -316,6 +316,9 @@ class HierCluster extends Matrix {
 			this.termOrder?.find(t => t.grp.name == s.termGroupName)?.grp
 		const twlst = this.hcTermGroup.lst
 
+		// temporary fix to get rid of hard/soft filter and only keep dictionary legend filter,
+		// soft filter shouldn't be used to filter out any samples for hierCluster
+		// TODO: add hard filter back to filter out samples
 		const dictionaryLegendFilter = {
 			type: 'tvslst',
 			in: true,
