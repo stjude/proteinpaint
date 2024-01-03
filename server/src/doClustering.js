@@ -11,11 +11,7 @@ export async function doClustering(data, q, ds) {
 	const sampleSet = new Set()
 	for (const o of data.values()) {
 		// {sampleId: value}
-		for (const s in o) {
-			if (q.passLegendFilterSampleLst) {
-				if (q.passLegendFilterSampleLst.includes(s)) sampleSet.add(s)
-			} else sampleSet.add(s)
-		}
+		for (const s in o) sampleSet.add(s)
 		break
 	}
 

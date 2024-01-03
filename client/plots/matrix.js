@@ -165,12 +165,11 @@ export class Matrix {
 
 				const promises = []
 				// get the data
+				if (this.setHierClusterData) promises.push(this.setHierClusterData())
+				promises.push(this.setData())
 				this.dom.loadingDiv.html('Processing data ...')
-				await this.setData()
-				applyLegendValueFilter(this)
-				const passLegendFilterSampleLst = Object.keys(this.data.samples)
-				if (this.setHierClusterData) promises.push(this.setHierClusterData({ passLegendFilterSampleLst }))
 				await Promise.all(promises)
+				applyLegendValueFilter(this)
 				if (this.combineData) this.combineData()
 				// tws in the config may be filled-in based on applicable server response data;
 				// these filled-in config, such as tw.term.values|category2samplecount, will need to replace

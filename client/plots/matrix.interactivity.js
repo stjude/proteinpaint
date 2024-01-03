@@ -2426,97 +2426,104 @@ function setLengendActions(self) {
 		const div = menu.d.append('div')
 
 		//Add the hard filter option
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(
-				targetData.dt
-					? legendFilterIndex == -1
-						? `Hide ${controlLabels.samples} with ${mclass[targetData.key].label}`
-						: `Show ${controlLabels.samples} with ${mclass[targetData.key].label}`
-					: legendFilterIndex == -1
-					? 'Hide'
-					: 'Show'
-			)
-			.on('click', () => {
-				menu.hide()
-				if (legendFilterIndex == -1) {
-					// when its shown and now hide it
-					if (targetData.dt) {
-						// for a geneVariant term
-						// add a new "hard filter" to filter out samples that have genes' values match with the legend's origin + legend's dt + legend's class
-						const filterNew = {
-							legendGrpName: targetData.termid,
-							type: 'tvs',
-							tvs: {
-								isnot: true,
-								legendFilterType: 'geneVariant_hard', // indicates this matrix legend filter is hard filter
-								term: { type: 'geneVariant' },
-								values: [{ dt: targetData.dt, origin: targetData.origin, mclasslst: [targetData.key] }]
+		if (!targetData.dt || self.type !== 'hierCluster') {
+			// Do not show the hard filter option for hierCluster geneVariant legend items.
+
+			// ********* TODO  ********
+			// allow to hard filter geneVariant legend for hierCluster
+			// ********* TODO  ********
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(
+					targetData.dt
+						? legendFilterIndex == -1
+							? `Hide ${controlLabels.samples} with ${mclass[targetData.key].label}`
+							: `Show ${controlLabels.samples} with ${mclass[targetData.key].label}`
+						: legendFilterIndex == -1
+						? 'Hide'
+						: 'Show'
+				)
+				.on('click', () => {
+					menu.hide()
+					if (legendFilterIndex == -1) {
+						// when its shown and now hide it
+						if (targetData.dt) {
+							// for a geneVariant term
+							// add a new "hard filter" to filter out samples that have genes' values match with the legend's origin + legend's dt + legend's class
+							const filterNew = {
+								legendGrpName: targetData.termid,
+								type: 'tvs',
+								tvs: {
+									isnot: true,
+									legendFilterType: 'geneVariant_hard', // indicates this matrix legend filter is hard filter
+									term: { type: 'geneVariant' },
+									values: [{ dt: targetData.dt, origin: targetData.origin, mclasslst: [targetData.key] }]
+								}
 							}
-						}
-						self.config.legendValueFilter.lst.push(filterNew)
-					} else {
-						// for a non-geneVariant term
-						const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
-						if (term.type == 'categorical') {
-							term.$id = targetData.$id
-							const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
-								l => l.legendGrpName == targetData.termid
-							)
-							if (filterGrpIndex == -1) {
+							self.config.legendValueFilter.lst.push(filterNew)
+						} else {
+							// for a non-geneVariant term
+							const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+							if (term.type == 'categorical') {
+								term.$id = targetData.$id
+								const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
+									l => l.legendGrpName == targetData.termid
+								)
+								if (filterGrpIndex == -1) {
+									const filterNew = {
+										legendGrpName: targetData.termid,
+										type: 'tvs',
+										tvs: {
+											isnot: true,
+											term,
+											values: [{ key: targetData.key }]
+										}
+									}
+									self.config.legendValueFilter.lst.push(filterNew)
+								} else {
+									// the filter for the categorical term exist, but the current legend key is not there.
+									self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: targetData.key })
+								}
+							} else if (term.type == 'integer' || term.type == 'float') {
+								term.$id = targetData.$id
 								const filterNew = {
 									legendGrpName: targetData.termid,
 									type: 'tvs',
 									tvs: {
 										isnot: true,
 										term,
-										values: [{ key: targetData.key }]
+										ranges: [self.data.refs.byTermId[targetData.$id].bins.find(b => targetData.key == b.name)]
 									}
 								}
 								self.config.legendValueFilter.lst.push(filterNew)
-							} else {
-								// the filter for the categorical term exist, but the current legend key is not there.
-								self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.push({ key: targetData.key })
 							}
-						} else if (term.type == 'integer' || term.type == 'float') {
-							term.$id = targetData.$id
-							const filterNew = {
-								legendGrpName: targetData.termid,
-								type: 'tvs',
-								tvs: {
-									isnot: true,
-									term,
-									ranges: [self.data.refs.byTermId[targetData.$id].bins.find(b => targetData.key == b.name)]
-								}
-							}
-							self.config.legendValueFilter.lst.push(filterNew)
+						}
+					} else {
+						// when the legend is crossed-out, either by clicking hide or by clicking another legend and show-only,
+						// A filter to filter out the legend's dt + legend's class exist in self.config.legendValueFilter
+						// So remove the filter that filters out the legend's dt + legend's class
+						if (targetData.dt) self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
+						else {
+							const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
+							if (term.type == 'categorical') {
+								const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
+									l => l.legendGrpName == targetData.termid
+								)
+								const filterIndex = self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.findIndex(
+									v => v.key == targetData.key
+								)
+								self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.splice(filterIndex, 1)
+							} else self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
 						}
 					}
-				} else {
-					// when the legend is crossed-out, either by clicking hide or by clicking another legend and show-only,
-					// A filter to filter out the legend's dt + legend's class exist in self.config.legendValueFilter
-					// So remove the filter that filters out the legend's dt + legend's class
-					if (targetData.dt) self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
-					else {
-						const term = self.termOrder.find(t => t.tw.$id == targetData.$id).tw.term
-						if (term.type == 'categorical') {
-							const filterGrpIndex = self.config.legendValueFilter.lst.findIndex(
-								l => l.legendGrpName == targetData.termid
-							)
-							const filterIndex = self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.findIndex(
-								v => v.key == targetData.key
-							)
-							self.config.legendValueFilter.lst[filterGrpIndex].tvs.values.splice(filterIndex, 1)
-						} else self.config.legendValueFilter.lst.splice(legendFilterIndex, 1)
-					}
-				}
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: { legendValueFilter: self.config.legendValueFilter }
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: { legendValueFilter: self.config.legendValueFilter }
+					})
 				})
-			})
+		}
 
 		if (targetData.isLegendItem) {
 			// Add the soft filter option only for the not already hidden geneVariant legend

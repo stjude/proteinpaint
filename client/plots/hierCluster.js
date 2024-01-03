@@ -8,6 +8,7 @@ import { scaleLinear } from 'd3-scale'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 import { dtgeneexpression } from '#shared/common.js'
+import { filterJoin } from '#filter'
 
 /*
 FIXME items
@@ -315,16 +316,21 @@ class HierCluster extends Matrix {
 			this.termOrder?.find(t => t.grp.name == s.termGroupName)?.grp
 		const twlst = this.hcTermGroup.lst
 
+		const dictionaryLegendFilter = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: this.state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
+		}
 		const body = {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			dataType: s.dataType,
 			genes: this.getClusterRowTermsAsParameter(),
 			clusterMethod: s.clusterMethod,
-			filter: this.state.filter,
+			filter: filterJoin([this.state.filter, dictionaryLegendFilter]),
 			filter0: this.state.filter0
 		}
-		if (_data.passLegendFilterSampleLst) body.passLegendFilterSampleLst = _data.passLegendFilterSampleLst
 		const d = await dofetch3('termdb/cluster', { body })
 		if (d.error) throw d.error
 
