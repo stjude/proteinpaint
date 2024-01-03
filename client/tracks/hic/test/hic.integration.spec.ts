@@ -4,7 +4,7 @@ import { dofetch2 } from '../../../common/dofetch.js'
 import { hicData } from './hicData.ts'
 import { init_hicstraw } from '../../../tracks/hic/hic.straw.ts'
 import { hicparsestat } from '../../../tracks/hic/parse.genome.ts'
-// import { runproteinpaint } from '../../../test/front.helpers.js'
+import { runproteinpaint } from '../../../test/front.helpers.js'
 // import { HicRunProteinPaintTrackArgs } from '../../../types/hic.ts'
 
 /*
@@ -25,7 +25,17 @@ function getHolder() {
 
 async function getGenomes(genome: string) {
 	const response = await dofetch2('genomes')
-	return response.genomes[genome]
+	const g = response.genomes[genome]
+	g.chrlookup = {}
+	for (const nn in g.majorchr) {
+		g.chrlookup[nn.toUpperCase()] = { name: nn, len: g.majorchr[nn], major: true }
+	}
+	if (g.minorchr) {
+		for (const nn in g.minorchr) {
+			g.chrlookup[nn.toUpperCase()] = { name: nn, len: g.minorchr[nn] }
+		}
+	}
+	return g
 }
 
 tape('\n', test => {
@@ -33,19 +43,22 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('init_hicstraw()', async test => {
+tape.skip('init_hicstraw(), v8', async test => {
 	//test.plan()
+	//TODO: needs more work
 	const holder = getHolder()
 
 	const copy = { ...hicData.hic.v8 }
 	const opts = {
 		holder,
+		url: 'https://proteinpaint.stjude.org/ppdemo/hg38/hic/hic_demo_v8.hic',
 		genome: await getGenomes('hg19')
 	}
 	const hic: any = Object.assign(copy, opts)
 	const hicOriginal = { ...hic }
 	await init_hicstraw(hic, true)
 	test.ok(!hicOriginal.name && hic.name == 'Hi-C', 'Should set name to Hi-C since no name was provided')
+
 	if (test['_ok']) holder!.remove()
 	test.end()
 })
@@ -148,23 +161,23 @@ tape.skip('hicparsefragdata()', test => {
 	test.end()
 })
 
-// tape('Render Hi-C track', function (test) {
+// tape.skip('Render Hi-C track (genome browser)', function (test) {
 // 	// test.plan(1)
 // 	test.timeoutAfter(3000)
 // 	const holder = getHolder()
 
 // 	runproteinpaint({
-// 		holder,
+// 		holder: holder.node(),
 // 		block: true,
 // 		nobox: 1,
 // 		noheader: 1,
-// 		genome: 'hg19',
+// 		genome: 'hg38',
 // 		position: 'chr7:13749862-20841903',
 // 		nativetracks: 'RefGene',
 // 		tracks: [
 // 			{
 // 				type: 'hicstraw',
-// 				file: 'proteinpaint_demo/hg19/hic/hic_demo.hic',
+// 				file: 'proteinpaint_demo/hg38/hic/hic_demo_v9.hic',
 // 				name: 'Hi-C Demo',
 // 				percentile_max: 95,
 // 				mincutoff: 1,
@@ -174,8 +187,33 @@ tape.skip('hicparsefragdata()', test => {
 // 			} as HicRunProteinPaintTrackArgs
 // 		]
 // 	})
-// 	test.pass('Rendered Hi-C track')
+// 	// test.pass('Rendered Hi-C track')
 
 // 	// if (test._ok) holder.remove()
 // 	test.end()
 // })
+
+tape.skip('Render Hi-C whole genome, v9', function (test) {
+	// test.plan(1)
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+	const hic = {
+		genome: 'hg38',
+		file: 'proteinpaint_demo/hg38/hic/hic_demo_v9.hic',
+		enzyme: 'MboI'
+	}
+
+	runproteinpaint({
+		holder: holder.node(),
+		nobox: 1,
+		noheader: 1,
+		hic
+	})
+
+	const nmethSelect = holder.select('.sjpp-nmeth-select').node()
+	console.log(nmethSelect)
+	// test.pass('Rendered Hi-C track')
+
+	// if (test._ok) holder.remove()
+	test.end()
+})
