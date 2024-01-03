@@ -34,7 +34,7 @@ export class profilePlot {
 	}
 
 	getList(tw, data) {
-		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.id]?.value)))
+		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
 		const list = sampleValues.map(value => {
 			return { label: value, value }
 		})
@@ -52,17 +52,18 @@ export class profilePlot {
 		const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
-		this.filtersData = await this.app.vocabApi.getAnnotatedSampleDataSimple({
-			terms: [this.config.countryTW, this.config.incomeTW, this.config.typeTW]
+		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: [this.config.countryTW, this.config.incomeTW, this.config.typeTW],
+			termsPerRequest: 10
 		})
 		const countriesData = this.filtersData.lst.filter(sample =>
-			samplesPerFilter[this.config.countryTW.id].includes(sample.sample)
+			samplesPerFilter[this.config.countryTW.id].includes(parseInt(sample.sample))
 		)
 		const incomesData = this.filtersData.lst.filter(sample =>
-			samplesPerFilter[this.config.incomeTW.id].includes(sample.sample)
+			samplesPerFilter[this.config.incomeTW.id].includes(parseInt(sample.sample))
 		)
 		const typesData = this.filtersData.lst.filter(sample =>
-			samplesPerFilter[this.config.typeTW.id].includes(sample.sample)
+			samplesPerFilter[this.config.typeTW.id].includes(parseInt(sample.sample))
 		)
 
 		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
@@ -85,9 +86,10 @@ export class profilePlot {
 		if (!this.settings.facilityType) this.settings.facilityType = this.types[0].value
 
 		const filter = this.config.filter || this.getFilter()
-		this.data = await this.app.vocabApi.getAnnotatedSampleDataSimple({
+		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: this.twLst,
-			filter
+			filter,
+			termsPerRequest: 30
 		})
 
 		this.dom.controlsDiv.selectAll('*').remove()
@@ -127,11 +129,13 @@ export class profilePlot {
 		]
 		inputs.unshift(...additionalInputs)
 		if (this.type == 'profileRadarFacility') {
-			this.data2 = await this.app.vocabApi.getAnnotatedSampleDataSimple({
-				terms: this.twLst
+			this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
+				terms: this.twLst,
+				termsPerRequest: 30
 			})
+
 			this.sites = this.data2.lst.map(sample => {
-				return { label: sample.sampleName, value: sample.sample }
+				return { label: this.data2.refs.bySampleId[sample.sample].label, value: sample.sample }
 			})
 			if (!this.settings.site) this.settings.site = this.sites[0].value
 
@@ -229,7 +233,7 @@ export class profilePlot {
 	}
 
 	processTW(tw, value, excluded, lst) {
-		if (value && !excluded.includes(tw.id))
+		if (value && !excluded.includes(tw.$id))
 			lst.push({
 				type: 'tvs',
 				tvs: {
@@ -291,13 +295,13 @@ export class profilePlot {
 	getPercentage(d) {
 		if (!d) return null
 		if (this.sampleData) {
-			const score = this.sampleData[d.score.id]?.value
-			const maxScore = this.sampleData[d.maxScore.id]?.value
+			const score = this.sampleData[d.score.$id]?.value
+			const maxScore = this.sampleData[d.maxScore.$id]?.value
 			const percentage = (score / maxScore) * 100
 			return Math.round(percentage)
 		} else {
-			const maxScore = this.data.lst[0]?.[d.maxScore.id]?.value //Max score has the same value for all the samples on this module
-			let scores = this.data.lst.map(sample => (sample[d.score.id]?.value / maxScore) * 100)
+			const maxScore = this.data.lst[0]?.[d.maxScore.$id]?.value //Max score has the same value for all the samples on this module
+			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
 			scores.sort((s1, s2) => s1 - s2)
 			const middle = Math.floor(scores.length / 2)
 			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2

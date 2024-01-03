@@ -729,12 +729,16 @@ export class TermdbVocab extends Vocab {
 
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
+		let termsPerRequest = opts.termsPerRequest || 10
 		// fetch the annotated sample for each term
-		while (termsToUpdate.length) {
+		let index = 0
+		while (index < termsToUpdate.length) {
+			termsPerRequest = index + termsPerRequest > termsToUpdate.length ? termsToUpdate.length - index : termsPerRequest
+
+			const tws = termsToUpdate.slice(index, index + termsPerRequest)
 			// request data for one term each time, empty list and break while loop
 			// possible to change to pop two or more each time
-			const tw = termsToUpdate.pop()
-			const copy = this.getTwMinCopy(tw)
+			const copies = tws.map(tw => this.getTwMinCopy(tw))
 			const init = {
 				headers,
 				credentials: 'include',
@@ -743,7 +747,7 @@ export class TermdbVocab extends Vocab {
 					genome: this.vocab.genome,
 					dslabel: this.vocab.dslabel,
 					// one request per term
-					terms: [copy],
+					terms: copies,
 					filter,
 					embedder: window.location.hostname
 				}
@@ -751,56 +755,51 @@ export class TermdbVocab extends Vocab {
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 
-			if (tw.term.id && currentGeneNames?.length) {
-				/* term.id is present meaning term is dictionary term (FIXME if this is unreliable)
-				and there are gene terms, add this to limit to mutated cases
-				*/
-				init.body.currentGeneNames = currentGeneNames
-			}
-
 			promises.push(
 				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
-					const idn = 'id' in tw.term ? tw.term.id : tw.term.name
+					for (const tw of tws) {
+						const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 
-					for (const sampleId in data.samples) {
-						samplesToShow.add(sampleId)
-						const sample = data.samples[sampleId]
-						if (!(sampleId in samples)) {
-							// normalize the expected data shape
-							if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
-							if (typeof data.refs.bySampleId[sampleId] == 'string')
-								data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
+						for (const sampleId in data.samples) {
+							samplesToShow.add(sampleId)
+							const sample = data.samples[sampleId]
+							if (!(sampleId in samples)) {
+								// normalize the expected data shape
+								if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
+								if (typeof data.refs.bySampleId[sampleId] == 'string')
+									data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
 
-							const _ref_ = data.refs.bySampleId[sampleId]
-							// assign default sample ref values here
-							// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
-							if (!_ref_.label) _ref_.label = sampleId
-							const s = {
-								sample: sampleId,
-								// must reserve _ref -> should not be used as a term.id or tw.$id
-								_ref_
+								const _ref_ = data.refs.bySampleId[sampleId]
+								// assign default sample ref values here
+								// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
+								if (!_ref_.label) _ref_.label = sampleId
+								const s = {
+									sample: sampleId,
+									// must reserve _ref -> should not be used as a term.id or tw.$id
+									_ref_
+								}
+								samples[sampleId] = s
 							}
-							samples[sampleId] = s
+							const row = samples[sampleId]
+							if (idn in sample) row[tw.$id] = sample[idn]
 						}
-						const row = samples[sampleId]
-						if (idn in sample) row[tw.$id] = sample[idn]
-					}
 
-					for (const sampleId in data.refs.bySampleId) {
-						refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
-					}
+						for (const sampleId in data.refs.bySampleId) {
+							refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
+						}
 
-					refs.byTermId[tw.$id] = tw
-					if (idn in data.refs.byTermId) {
-						refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[idn])
+						refs.byTermId[tw.$id] = tw
+						if (idn in data.refs.byTermId) {
+							refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[idn])
+						}
 					}
-
 					numResponses++
 					if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (${numResponses}/${promises.length}) ...`)
 				})
 			)
+			index += termsPerRequest
 		}
 		try {
 			if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (0/${promises.length})`)
@@ -850,49 +849,10 @@ export class TermdbVocab extends Vocab {
 			for (const tw of opts.terms) {
 				mayFillInCategory2samplecount4term(tw, data.lst, this.termdbConfig)
 			}
-
 			return data
 		} catch (e) {
 			throw e
 		}
-	}
-
-	/*
-	Same as getAnnotatedSampleData, but only returns the lst[] of samples and makes a single request to the server.
-	XXX state requirements and eliminate code dup
-	*/
-	async getAnnotatedSampleDataSimple(opts, _refs = {}) {
-		// may check against required auth credentials for the server route
-		const headers = this.mayGetAuthHeaders('termdb')
-		// unlike scatter and violin, the matrix plot will NOT display anything
-		// if sample names are not allowed to be displayed
-		// TODO: may allow a request to proceed, but not display sampleNames???
-		if (!headers) return
-		const filter = getNormalRoot(opts.filter)
-
-		const twlst = []
-		for (const tw of opts.terms) twlst.push(this.getTwMinCopy(tw))
-
-		const init = {
-			headers,
-			credentials: 'include',
-			body: {
-				for: 'matrix',
-				genome: this.vocab.genome,
-				dslabel: this.vocab.dslabel,
-				// one request per term
-				terms: twlst,
-				filter,
-				embedder: window.location.hostname
-			}
-		}
-		if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
-		if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-
-		const data = await dofetch3('termdb', init)
-		const result = [] //mapped to expected value
-		for (const id in data.samples) result.push(data.samples[id])
-		return { lst: result }
 	}
 
 	// get a tw copy with the correct identifier and without $id
