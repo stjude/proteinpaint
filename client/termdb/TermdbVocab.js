@@ -579,6 +579,27 @@ export class TermdbVocab extends Vocab {
 		}
 	}
 
+	async getNumericUncomputableCategories(term, filter) {
+		// for numeric term
+		// return number of samples per uncomputable categories
+		const body = {
+			getnumericcategories: 1,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			tid: term.id
+		}
+		if (filter) {
+			body.filter = getNormalRoot(filter)
+		}
+		try {
+			const data = await dofetch3('/termdb/numericcategories', { body })
+			if (data.error) throw data.error
+			return data
+		} catch (e) {
+			window.alert(e.message || e)
+		}
+	}
+
 	/* when arg.text is true, arg should only be {text} from a snplst term;
     else, it should be the q{} of snplocus term: {chr,start,stop,variant_filter}
     to generate snp-sample gt matrix cache file and return file name
