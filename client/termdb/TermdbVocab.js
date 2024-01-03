@@ -705,7 +705,7 @@ export class TermdbVocab extends Vocab {
 		const refs = { byTermId: _refs.byTermId || {}, bySampleId: _refs.bySampleId || {} }
 		const promises = []
 		const samplesToShow = new Set()
-		const termsToUpdate = opts.terms.slice()
+		let termsToUpdate = opts.terms.slice()
 
 		/************** tricky
         need list of gene names of current geneVariant terms from opts.terms[]
@@ -730,7 +730,10 @@ export class TermdbVocab extends Vocab {
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 		let termsPerRequest = opts.termsPerRequest || 1
 		// fetch the annotated sample for each term
+		const pendingTerms = []
 		while (termsToUpdate.length) {
+			const duplicates = termsToUpdate.filter((tw, index) => termsToUpdate.indexOf(tw) !== index)
+			pendingTerms.push(...duplicates)
 			const tws = termsToUpdate.splice(0, termsPerRequest)
 			// request data for one term each time, empty list and break while loop
 			// possible to change to pop two or more each time
@@ -755,6 +758,10 @@ export class TermdbVocab extends Vocab {
 				and there are gene terms, add this to limit to mutated cases
 				*/
 				init.body.currentGeneNames = currentGeneNames
+			}
+			if (termsToUpdate.length == 0 && pendingTerms.length > 0) {
+				termsToUpdate = pendingTerms
+				pendingTerms = []
 			}
 			promises.push(
 				dofetch3('termdb', init).then(data => {
