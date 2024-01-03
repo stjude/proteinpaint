@@ -6,6 +6,7 @@ import { gdcGetCasesWithExressionDataFromCohort, apihost, geneExpHost } from '..
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
+import { get_samples } from '#src/termdb.sql.js'
 
 export const api = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -32,9 +33,9 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries?.topVariablyExpressedGenes) throw 'not supported on dataset'
 
-			const t: number = new Date().getTime()
+			const t = Date.now()
 			const genes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
-			if (serverconfig.debugmode) console.log('topVariablyExpressedGenes', new Date().getTime() - t, 'ms')
+			if (serverconfig.debugmode) console.log('topVariablyExpressedGenes', Date.now() - t, 'ms')
 
 			res.send({ genes } as TermdbTopVariablyExpressedGenesResponse)
 		} catch (e: any) {
@@ -57,20 +58,49 @@ export function validate_query_TopVariablyExpressedGenes(ds: any, genome: any) {
 }
 
 function nativeValidateQuery(ds: any, genome: any) {
-	ds.queries.topVariablyExpressedGenes.getGenes = async (
-		q: TermdbTopVariablyExpressedGenesRequest,
-		ds: any,
-		genome: any
-	) => {
-		// get list of samples that are used in current analysis
+	const gE = ds.queries.geneExpression // a separate query required to supply data for computing top genes
+	if (!gE) throw 'topVariablyExpressedGenes query given but geneExpression missing'
+	if (gE.src != 'native') throw 'topVariablyExpressedGenes is native but geneExpression.src is not native'
+
+	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
+		// get list of samples that are used in current analysis; gE.samples[] contains all sample integer ids with exp data
 		const samples = [] as string[]
+		if (q.filter) {
+			// get all samples pasing pp filter, may contain those without exp data
+			const sidlst = await get_samples(q.filter, ds)
+			// [{id:int}]
+			// filter for those with exp data from q.samples[]
+			for (const i of sidlst) {
+				if (gE.samples.includes(i.id)) {
+					// this sample passing filter also has exp data; convert to string name
+					const n: string = ds.cohort.termdb.q.id2sampleName(i.id)
+					if (!n) throw 'sample id cannot convert to string name'
+					samples.push(n)
+				}
+			}
+		} else {
+			// no filter, use all samples with exp data
+			for (const i of gE.samples) {
+				const n: string = ds.cohort.termdb.q.id2sampleName(i.id)
+				if (!n) throw 'sample id cannot convert to string name'
+				samples.push(n)
+			}
+		}
+
 		// call rust to compute top genes on these samples
-		const genes = await computeGenes4nativeDs(q, ds, samples)
+		const genes = await computeGenes4nativeDs(q, ds, gE.file, samples)
 		return genes
 	}
 }
 
-async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, ds: any, samples: string[]) {
+async function computeGenes4nativeDs(
+	q: TermdbTopVariablyExpressedGenesRequest,
+	ds: any,
+	matrixFile: string,
+	samples: string[]
+) {
+	console.log(matrixFile)
+	console.log(samples)
 	return []
 }
 

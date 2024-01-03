@@ -118,8 +118,12 @@ export function showGenesetEdit({
 				const args = {
 					genome: vocabApi.state.vocab.genome,
 					dslabel: vocabApi.state.vocab.dslabel,
-					maxGenes: 50,
-					filter0: vocabApi.state.termfilter.filter0
+					maxGenes: 50
+				}
+				// supply filters from app state
+				if (vocabApi.state.termfilter) {
+					if (vocabApi.state.termfilter.filter) args.filter = vocabApi.state.termfilter.filter // pp filter
+					if (vocabApi.state.termfilter.filter0) args.filter0 = vocabApi.state.termfilter.filter0 // gdc filter
 				}
 				const result = await vocabApi.getTopVariablyExpressedGenes(args)
 
