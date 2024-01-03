@@ -83,7 +83,7 @@ function init({ genomes }) {
 }
 
 async function trigger_getnumericcategories(
-	q: { tid: any; filter: any },
+	q: { tid: any; filter?: any },
 	res: { send: (arg0: { lst: any }) => void },
 	tdb: { q: { termjsonByOneid: (arg0: any) => any } },
 	ds: any
