@@ -729,12 +729,10 @@ export class TermdbVocab extends Vocab {
 
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
-		let termsPerRequest = opts.termsPerRequest || 10
+		let termsPerRequest = opts.termsPerRequest || 1
 		// fetch the annotated sample for each term
 		let index = 0
 		while (index < termsToUpdate.length) {
-			termsPerRequest = index + termsPerRequest > termsToUpdate.length ? termsToUpdate.length - index : termsPerRequest
-
 			const tws = termsToUpdate.slice(index, index + termsPerRequest)
 			// request data for one term each time, empty list and break while loop
 			// possible to change to pop two or more each time
