@@ -6,7 +6,6 @@ export type getnumericcategoriesRequest = {
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
 	embedder: string
-	getnumericcategories: number
 	/** term id string */
 	tid: string
 	filter?: Filter
