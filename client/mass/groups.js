@@ -593,7 +593,7 @@ export function addNewGroup(app, filter, groups) {
 	const newGroup = {
 		name,
 		filter,
-		color: rgb(colorScale(name)).formatHex()
+		color: rgb(colorScale(groups.length)).formatHex()
 	}
 	groups.push(newGroup)
 	app.dispatch({

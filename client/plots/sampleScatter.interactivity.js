@@ -33,7 +33,23 @@ export function setInteractivity(self) {
 		})
 		samples.sort((s1, s2) => {
 			if (!('sampleId' in s1)) return 1
-			if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
+			if (self.config.term) {
+				//coordinates from terms
+				if (s1.x < s2.x) return -1
+				if (s1.x > s2.x) return 1
+				if (s1.y < s2.y) return -1
+				return 1
+			}
+
+			if (self.config.colorTW) {
+				if (self.config.colorTW.term.type == 'categorical') {
+					if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
+				} // numeric
+				else {
+					if (s1.category < s2.category) return -1
+					else if (s1.category > s2.category) return 1
+				}
+			}
 			if (s1.shape.includes(mclass.WT.label) || s1.shape.includes(mclass.Blank.label)) return 1
 
 			return -1
@@ -164,18 +180,18 @@ export function setInteractivity(self) {
 							: chart.shapeLegend.get(sample.shape).shape % self.symbols.length
 					const shape = self.symbols[index].size(64)()
 					let fontColor = 'black'
+					const whiteColor = rgb('white').toString()
+
 					if (tw?.term.type == 'geneVariant') {
-						fontColor = mclass['WT'].color
-						const mutation = node.value.split(', ')[0]
 						for (const id in mclass) {
 							const class_info = mclass[id]
-							const whiteColor = rgb(class_info.color).toString() == rgb('white').toString()
-							if (mutation == class_info.label) {
-								if (mutation == class_info.label) if (!whiteColor) fontColor = class_info.color
+							if (node.value.includes(class_info.label)) {
+								if (rgb(class_info.color).toString() != whiteColor) fontColor = class_info.color
+								break
 							}
 						}
 					}
-					let chars = node.value.length
+					let chars = node.value.toString().length
 					const width = chars * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')

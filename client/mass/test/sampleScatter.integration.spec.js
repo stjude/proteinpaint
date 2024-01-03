@@ -9,12 +9,12 @@ import {
 	detectChildAttr,
 	detectChildStyle,
 	detectGte,
-	detectOne,
-	sleep
+	detectOne
 } from '../../test/test.helpers'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { openSummaryPlot, openPlot } from '../groups'
 import { rgb } from 'd3-color'
+import { mclass } from '#shared/common'
 
 /*
 Tests:
@@ -29,6 +29,7 @@ Tests:
 	Check/uncheck Show axes from menu
 	Click zoom in, zoom out, and reset buttons
 	Groups and group menus function
+	Color by gene
  */
 
 const runpp = helpers.getRunPp('mass', {
@@ -683,8 +684,8 @@ tape('Change symbol and reference size from menu', function (test) {
 	async function runTests(scatter) {
 		helpers
 			.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-			.run(changeSymbolInput)
-			.run(testSymbolSize, { wait: 100 })
+			.use(changeSymbolInput)
+			.to(testSymbolSize, { wait: 100 })
 			.use(changeRefInput, { wait: 100 })
 			.to(testRefDotSize, { wait: 300 })
 			.done(test)
@@ -699,7 +700,7 @@ tape('Change symbol and reference size from menu', function (test) {
 	}
 	function testSymbolSize(scatter) {
 		//separate function because wait needed before test to run
-		test.ok(scatter.Inner.settings.size == testSymSize, `Should change symbol dot size to test value = ${testSymSize}`)
+		test.equal(scatter.Inner.settings.size, testSymSize, `Should change symbol dot size to test value = ${testSymSize}`)
 	}
 	function changeRefInput(scatter) {
 		const refInput = scatter.Inner.dom.controlsHolder
@@ -956,5 +957,34 @@ tape('Groups and group menus functions', function (test) {
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
 		if (test._ok) scatter.Inner.dom.tip.d.remove()
+	}
+})
+
+tape('Color by gene', function (test) {
+	const colorGeneState = {
+		plots: [
+			{
+				chartType: 'sampleScatter',
+				colorTW: { term: { name: 'TP53', type: 'geneVariant' } },
+				name: 'TermdbTest TSNE'
+			}
+		]
+	}
+	runpp({
+		state: colorGeneState,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		test.true(
+			dots.find(dot => dot.getAttribute('fill') == mclass['M'].color),
+			`At least a sample with MISSENSE color was expected`
+		)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
 	}
 })

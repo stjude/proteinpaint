@@ -387,6 +387,11 @@ function getPj(q, data, tdb, ds) {
 				// mutates the data row, ok since
 				// rows from db query are unique to request
 				for (const d of terms) {
+					// Expect all main term data to be an array, even if single-keyed,
+					// in order for the input data shape to match the $key1[] template,
+					// and in case the row key is not already an array
+					if (d.key == 'key1' && !Array.isArray(row[d.key])) row[d.key] = [row[d.key]]
+
 					if (d.term.type == 'condition') {
 						if (d.q.bar_by_grade) {
 							if (Array.isArray(row[d.key])) {
@@ -494,23 +499,25 @@ function getPj(q, data, tdb, ds) {
 				if (terms[1].orderedLabels.length) {
 					const labels = terms[1].orderedLabels
 					result.cols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
-					result.dedupCols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
+					if (result.dedupCols) result.dedupCols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
 				if (terms[2].orderedLabels.length) {
 					const labels = terms[2].orderedLabels
 					result.rows.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
 
-				const labels = terms[1].orderedLabels
-				result.dedupCols.sort((a, b) => {
-					const da = `${a}`.includes('-value samples')
-					const db = `${b}`.includes('-value samples')
-					if (!da && !db) return labels.indexOf(a) - labels.indexOf(b)
-					if (da && db) return a < b ? -1 : 1
-					if (da) return 1
-					if (db) return -1
-					return 0
-				})
+				if (result.dedupCols) {
+					const labels = terms[1].orderedLabels
+					result.dedupCols.sort((a, b) => {
+						const da = `${a}`.includes('-value samples')
+						const db = `${b}`.includes('-value samples')
+						if (!da && !db) return labels.indexOf(a) - labels.indexOf(b)
+						if (da && db) return a < b ? -1 : 1
+						if (da) return 1
+						if (db) return -1
+						return 0
+					})
+				}
 			},
 			sortCharts(result) {
 				if (terms[0].orderedLabels.length) {

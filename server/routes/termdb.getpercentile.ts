@@ -1,6 +1,7 @@
-// import { getpercentileRequest, getpercentileResponse } from '#shared/types/routes/termdb.getpercentile'
-import * as termdbsql from '#src/termdb.sql.js'
-import computePercentile from '#shared/compute.percentile.js'
+import { getpercentileRequest, getpercentileResponse } from '#shared/types/routes/termdb.getpercentile.ts'
+import * as termdbsql from '../src/termdb.sql.js'
+import computePercentile from '../shared/compute.percentile.js'
+import { Filter } from '../shared/types/filter'
 
 export const api: any = {
 	endpoint: 'termdb/getpercentile',
@@ -61,7 +62,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query // as getpercentileRequest
+		const q = req.query as getpercentileRequest
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -78,7 +79,7 @@ function init({ genomes }) {
 }
 
 async function trigger_getpercentile(
-	q: { tid: string; getpercentile: number[]; filter: string },
+	q: { tid: string; getpercentile: number[]; filter: Filter },
 	res: { send: (arg0: { values: number[] }) => void },
 	ds: { cohort: { termdb: { q: { termjsonByOneid: (arg0: any) => any } } } }
 ) {
@@ -113,5 +114,5 @@ async function trigger_getpercentile(
 		const perc_value = computePercentile(values, percentile)
 		perc_values.push(perc_value)
 	}
-	res.send({ values: perc_values })
+	res.send({ values: perc_values } as getpercentileResponse)
 }

@@ -1,4 +1,4 @@
-// import { getViolinRequest, getViolinResponse } from '#shared/types/routes/termdb.violin'
+import { getViolinRequest, getViolinResponse } from '#shared/types/routes/termdb.violin.ts'
 import { trigger_getViolinPlotData } from '#src/termdb.violin.js'
 
 export const api: any = {
@@ -61,13 +61,13 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query // as getViolinRequest
+		const q = req.query as getViolinRequest
 		try {
 			const g = genomes[req.query.genome]
 			const ds = g.datasets[req.query.dslabel]
 			if (!g) throw 'invalid genome name'
 			const data = await trigger_getViolinPlotData(req.query, null, ds, g) // as getViolinResponse
-			res.send(data)
+			res.send(data as getViolinResponse)
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore

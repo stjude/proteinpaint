@@ -17,10 +17,12 @@
 .inputName
 	common Name of <input>, use random number if not given
 */
+
+let nameSuffix = 0
+
 export function make_radios(arg) {
 	const { holder, options, callback, styles } = arg
-	let nameSuffix = 0
-	const inputName = arg.inputName || 'dom-radio-' + nameSuffix++
+	const inputName = arg.inputName || 'pp-dom-radio-' + nameSuffix++
 
 	const divs = holder
 		.selectAll()

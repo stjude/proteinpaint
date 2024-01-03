@@ -3,23 +3,9 @@ import Reference from '#plots/disco/chromosome/Reference.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 import Settings from '#plots/disco/Settings.ts'
 import ViewModelProvider from './ViewModelProvider.ts'
+import { dtsnvindel, dtfusionrna } from '#shared/common'
 
 export class ViewModelMapper {
-	static dtNums = [2, 5, 4, 10, 1, 'exonic', 'non-exonic']
-
-	static dtAlias = {
-		1: 'snv', //
-		2: 'sv', //'fusionrna',
-		3: 'geneexpression',
-		4: 'cnv',
-		5: 'sv',
-		6: 'snv', //'itd',
-		7: 'snv', //'del',
-		8: 'snv', //'nloss',
-		9: 'snv', //'closs',
-		10: 'loh'
-	}
-
 	static snvClassLayer = {
 		M: 'exonic',
 		E: 'exonic',

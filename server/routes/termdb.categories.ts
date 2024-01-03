@@ -1,4 +1,4 @@
-// import { getcategoriesRequest, getcategoriesResponse } from '#shared/types/routes/termdb.categories'
+import { getcategoriesRequest, getcategoriesResponse } from '#shared/types/routes/termdb.categories.ts'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
 
@@ -68,7 +68,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query // as getcategoriesRequest
+		const q = req.query as getcategoriesRequest
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -89,7 +89,7 @@ function init({ genomes }) {
 
 async function trigger_getcategories(
 	q: { tid: string | number; type: string; filter: any; term1_q: any; currentGeneNames?: string[]; rglst?: any },
-	res: { send: (arg0: { lst: any[]; orderedLabels: any }) => void },
+	res: { send: (arg0: { lst: any[]; orderedLabels?: any }) => void },
 	tdb: { q: { termjsonByOneid: (arg0: any) => any } },
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
 	genome: any
@@ -202,7 +202,7 @@ async function trigger_getcategories(
 	res.send({
 		lst,
 		orderedLabels
-	})
+	} as getcategoriesResponse)
 }
 
 function getDefaultQ(

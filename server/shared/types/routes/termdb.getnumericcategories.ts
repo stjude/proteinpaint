@@ -1,26 +1,21 @@
 import { Filter } from '../filter'
 
-export type getcategoriesRequest = {
+export type getnumericcategoriesRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
 	embedder: string
-	getcategories: number
 	/** term id string */
 	tid: string
-	filter: Filter
-	type: string
-	term1_q: { isAtomic: boolean; hiddenValues: object; type: string; groupsetting: { disabled: boolean }; mode: string }
+	filter?: Filter
 }
 
 interface entries {
+	value: number
 	samplecount: number
-	key: string
-	label: string
 }
 
-export type getcategoriesResponse = {
+export type getnumericcategoriesResponse = {
 	lst: entries[]
-	orderedLabels?: []
 }

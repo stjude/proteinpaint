@@ -1,9 +1,7 @@
 'use strict'
 const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
-const d3color = require('d3-color')
 const d3s = require('d3-selection')
-const d3drag = require('d3-drag')
 
 /* Launch from http://localhost:3000/testrun.html?name=sampleScatter */
 
@@ -138,12 +136,12 @@ const groupState = {
 /**************
  test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- mass/sampleScatter -***-')
 	test.end()
 })
 
-tape('PNET plot + filter + colorTW=gene', function(test) {
+tape('PNET plot + filter + colorTW=gene', function (test) {
 	test.timeoutAfter(3000)
 
 	const s2 = JSON.parse(JSON.stringify(state))
@@ -186,7 +184,7 @@ tape('PNET plot + filter + colorTW=gene', function(test) {
 	}
 })
 
-tape.skip('Add shape, clicking term and replace by search', function(test) {
+tape.skip('Add shape, clicking term and replace by search', function (test) {
 	test.timeoutAfter(8000)
 
 	runpp({
@@ -303,7 +301,7 @@ tape.skip('Add shape, clicking term and replace by search', function(test) {
 	}
 })
 
-tape('Groups and group menus functions', function(test) {
+tape('Groups and group menus functions', function (test) {
 	test.timeoutAfter(8000)
 
 	runpp({
