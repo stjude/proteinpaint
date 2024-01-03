@@ -5,9 +5,9 @@ returns a GDC filter object
 TODO support nested filter
 */
 export function filter2GDCfilter(f) {
-	// gdc filter
+	// gdc filter that will be returned
 	const obj = {
-		op: 'and',
+		op: f.in ? 'and' : 'not',
 		content: []
 	}
 	if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
@@ -19,7 +19,7 @@ export function filter2GDCfilter(f) {
 		if (item.tvs.values) {
 			// categorical
 			const f = {
-				op: 'in',
+				op: item.tvs.isnot ? '!=' : 'in',
 				content: {
 					field: mayChangeCase2Cases(item.tvs.term.id),
 					value: item.tvs.values.map(i => i.key)
@@ -30,14 +30,14 @@ export function filter2GDCfilter(f) {
 			for (const range of item.tvs.ranges) {
 				if (range.startunbounded) {
 					obj.content.push({
-						op: range.stopinclusive ? '<=' : '<',
+						op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '>=' : '<',
 						content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
 					})
 					continue
 				}
 				if (range.stopunbounded) {
 					obj.content.push({
-						op: range.startinclusive ? '>=' : '>',
+						op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '<=' : '>',
 						content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
 					})
 					continue
