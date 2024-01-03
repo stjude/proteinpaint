@@ -731,9 +731,8 @@ export class TermdbVocab extends Vocab {
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 		let termsPerRequest = opts.termsPerRequest || 1
 		// fetch the annotated sample for each term
-		let index = 0
-		while (index < termsToUpdate.length) {
-			const tws = termsToUpdate.slice(index, index + termsPerRequest)
+		while (termsToUpdate.length) {
+			const tws = termsToUpdate.splice(0, termsPerRequest)
 			// request data for one term each time, empty list and break while loop
 			// possible to change to pop two or more each time
 			const copies = tws.map(tw => this.getTwMinCopy(tw))
@@ -802,7 +801,6 @@ export class TermdbVocab extends Vocab {
 					if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (${numResponses}/${promises.length}) ...`)
 				})
 			)
-			index += termsPerRequest
 		}
 		try {
 			if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (0/${promises.length})`)
