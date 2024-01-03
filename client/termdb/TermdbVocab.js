@@ -713,11 +713,19 @@ export class TermdbVocab extends Vocab {
 		assumption is that if this array is not empty,
         request for a dictionary term also from opts.terms[] will only retrieve samples mutated on this gene list, rather than whole cohort
 		if currentGeneNames[] is empty, then dict term data return will not be restricted
+		(even when this is needed, this is a poor fix as flat list of gene names does not allow restricting mclass or use genomic region)
+
+		*************** and trickier
+		do not supply gene list if opts.isHierCluster is set!!! (doing hierarchical clustering)
+		in such case, samples requested for dictionary term are based on those with data for hierCluster,
+		but not by mutation status of gene list
         */
-		const currentGeneNames = opts.terms
-			.filter(tw => tw.term.type === 'geneVariant')
-			.map(tw => tw.term.name)
-			.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
+		const currentGeneNames = opts.isHierCluster
+			? null
+			: opts.terms
+					.filter(tw => tw.term.type === 'geneVariant')
+					.map(tw => tw.term.name)
+					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
@@ -743,7 +751,7 @@ export class TermdbVocab extends Vocab {
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 
-			if (tw.term.id && currentGeneNames.length) {
+			if (tw.term.id && currentGeneNames?.length) {
 				/* term.id is present meaning term is dictionary term (FIXME if this is unreliable)
 				and there are gene terms, add this to limit to mutated cases
 				*/
