@@ -1206,7 +1206,13 @@ function getTerms2update(lst, count) {
 	while (i < n) {
 		i++
 		const tw = lst.shift() // first of lst[]
-		if (copies.find(c => c.term.id === tw.term.id || c.term.name === tw.term.name)) {
+		if (
+			copies.find(
+				c =>
+					c.term.type === tw.term.type &&
+					((('id' in c.term || 'id' in tw.term) && c.term.id === tw.term.id) || c.term.name === tw.term.name)
+			)
+		) {
 			// tw already exists in copies[], do not put into copies[], put it at the end of lst to be processed later
 			lst.push(tw)
 		} else {

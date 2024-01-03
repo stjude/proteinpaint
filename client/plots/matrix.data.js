@@ -133,6 +133,7 @@ export async function setData(_data) {
 		filter0: this.state.filter0,
 		loadingDiv: this.dom.loadingDiv,
 		maxGenes: this.state.config.settings.matrix.maxGenes
+		//termsPerRequest: 100
 	}
 
 	if (this.chartType == 'hierCluster') {
