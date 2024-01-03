@@ -22,7 +22,6 @@ export const api: any = {
 							genome: 'hg38-test',
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
-							getnumericcategories: 1,
 							tid: 'aaclassic_5',
 							filter: {
 								type: 'tvslst',

@@ -583,7 +583,6 @@ export class TermdbVocab extends Vocab {
 		// for numeric term
 		// return number of samples per uncomputable categories
 		const body = {
-			getnumericcategories: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			tid: term.id
