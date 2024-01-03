@@ -649,7 +649,7 @@ export class TermdbVocab extends Vocab {
     .terms[{}]     an array of termWrapper objects
         tw.$id       id to disambugate when multiple terms
                      with the same ID are in terms[], such as in matrix plot
-    	
+    .termsPerRequest When provided, a request includes the number of terms specified, improving the response times
     Returns 
     {
         lst: [{
@@ -735,7 +735,7 @@ export class TermdbVocab extends Vocab {
 			const tws = termsToUpdate.splice(0, termsPerRequest)
 			// request data for one term each time, empty list and break while loop
 			// possible to change to pop two or more each time
-			const copies = tws.map(tw => this.getTwMinCopy(tw))
+			const copies = tws.map(this.getTwMinCopy)
 			const init = {
 				headers,
 				credentials: 'include',
