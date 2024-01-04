@@ -120,11 +120,6 @@ export async function getPlotConfig(opts = {}, app) {
 		}
 	}
 
-	if (opts.name) {
-		// should be identifier of premade plot; try to load
-		config = await app.vocabApi.getMatrixByName(opts.name)
-	}
-
 	const s = config.settings
 	const fontsize = Math.max(s.matrix.rowh + s.matrix.rowspace - 3 * s.matrix.rowlabelpad, 12)
 
@@ -144,6 +139,12 @@ export async function getPlotConfig(opts = {}, app) {
 
 	const overrides = app.vocabApi.termdbConfig.matrix || {}
 	copyMerge(config.settings.matrix, overrides.settings)
+
+	if (opts.name) {
+		// name should be identifier of a premade plot from the datase; load and override into config{}
+		// TODO err handling
+		copyMerge(config, await app.vocabApi.getMatrixByName(opts.name))
+	}
 
 	const os = opts?.settings?.matrix
 	if (os) {
