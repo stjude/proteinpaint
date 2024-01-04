@@ -749,7 +749,7 @@ export class TermdbVocab extends Vocab {
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-			if (copies.find(tw => tw.term.id && currentGeneNames?.length)) {
+			if (this.vocab.dslabel == 'GDC' && copies.find(tw => tw.term.id) && currentGeneNames?.length) {
 				/* term.id is present meaning term is dictionary term (FIXME if this is unreliable)
 				and there are gene terms, add this to limit to mutated cases
 				*/

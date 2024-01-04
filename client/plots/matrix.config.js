@@ -15,7 +15,7 @@ export async function getPlotConfig(opts = {}, app) {
 		Mutations: 'Mutations'
 	}
 
-	const config = {
+	let config = {
 		// data configuration
 		termgroups: [],
 		samplegroups: [],
@@ -118,6 +118,11 @@ export async function getPlotConfig(opts = {}, app) {
 				barh: 32 // default bar height for continuous terms
 			}
 		}
+	}
+
+	if (opts.name) {
+		// should be identifier of premade plot; try to load
+		config = await app.vocabApi.getMatrixByName(opts.name)
 	}
 
 	const s = config.settings
