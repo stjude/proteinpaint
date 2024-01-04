@@ -33,6 +33,7 @@
         },
         {
             "label": "Two chromosome view",
+            "message": "Zoom the right subpanel by hovering over the zoom in and out buttons above the track. The position of the right subpanel will appear in a popup. Click on the position to zoom the right subpanel.",
             "runargs": {
                 "parseurl": true,
                 "block": true,
