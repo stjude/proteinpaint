@@ -65,9 +65,28 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	addLabel(resolutionRow, 'RESOLUTION')
 	self.dom.controlsDiv.resolution = resolutionRow.append('td').append('span')
 
+	// const matrixTypeRow = menuTable.append('tr')
+	// addLabel(matrixTypeRow, 'matrix type') //Display option is another name? Data type? No label?
+	// self.dom.controlsDiv.matrixType = matrixTypeRow.append('td').text('Observed')
+
+	// Drop down
 	const matrixTypeRow = menuTable.append('tr')
-	addLabel(matrixTypeRow, 'matrix type') //Display option is another name? Data type? No label?
-	self.dom.controlsDiv.matrixType = matrixTypeRow.append('td').text('Observed')
+	addLabel(matrixTypeRow, 'MATRIX TYPE')
+	const matrixTypeDropdownContainer = matrixTypeRow.append('td')
+	const matrixTypeDropdown = matrixTypeDropdownContainer.append('select').on('change', () => {
+		const selectedOption = matrixTypeDropdown.property('value')
+		// Handle the selected option as needed
+		console.log('Selected Matrix Type:', selectedOption)
+	})
+
+	// Options for the dropdown
+	const matrixTypeOptions = ['Observed', 'Expected', 'Observed/Expected']
+
+	// Populate dropdown with options
+	matrixTypeOptions.forEach(option => {
+		matrixTypeDropdown.append('option').attr('value', option.toLowerCase()).text(option)
+	})
+	self.dom.controlsDiv.matrixType = matrixTypeDropdownContainer // Update the reference to the dropdown container
 
 	const viewRow = menuTable.append('tr')
 	addLabel(viewRow, 'VIEW')

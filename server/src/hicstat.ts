@@ -112,7 +112,126 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 		})
 	//console.log('Reading matrix ...')
 	out_data.normalization = normalization
+
+	// Fetch observed and expected values for all resolutions
+	const resolutions = out_data['Base pair-delimited resolutions'].concat(out_data['Fragment-delimited resolutions'])
+
+	for (const resolution of resolutions) {
+		const observedExpectedData: Record<string, ResolutionData> = {}
+
+		for (const chr1 of out_data.chrorder) {
+			for (const chr2 of out_data.chrorder) {
+				const observed = await getObservedValues(file, resolution, chr1, chr2)
+				const expected = await getExpectedValues(file, resolution, chr1, chr2)
+				const observedOverExpected = calculateObservedOverExpected(observed, expected)
+
+				// Store the data in resolutionsData
+				observedExpectedData[`${chr1}-${chr2}`] = {
+					observed,
+					expected,
+					observedOverExpected
+				}
+			}
+		}
+
+		out_data.resolutionsData[resolution] = observedExpectedData
+	}
+
 	return out_data
+
+	// Functions for o,e, o/e
+	async function getObservedValues(file: string, resolution: number, chr1: string, chr2: string) {
+		const observedValues: number[] = []
+
+		// Logic to identify the position of the matrix block for the given chromosomes and resolution
+		const matrixPosition = await getMatrixPosition(file, resolution, chr1, chr2)
+
+		// Read the observed values from the identified matrix block
+		const observedData = isurl
+			? await readHicUrl(file, matrixPosition.position, matrixPosition.length)
+			: await readHicFile(file, matrixPosition.position, matrixPosition.length)
+
+		// Adjust the logic below based on your actual file format
+		const view = new DataView(observedData)
+		let position = 0
+
+		// Example: Reading observed values assuming they are stored as 4-byte floats
+		while (position < matrixPosition.length) {
+			const observedValue = view.getFloat32(position, true) // Assuming little-endian
+			observedValues.push(observedValue)
+			position += 4 // Move to the next float (adjust based on your file format)
+		}
+
+		return observedValues
+	}
+
+	async function getMatrixPosition(file: string, resolution: number, chr1: string, chr2: string) {
+		const view = new DataView(isurl ? await readHicUrl(file, 0, 32000) : await readHicFile(file, 0, 32000))
+
+		let position = 0
+		let length = 0
+
+		// Replace the logic below with the actual logic based on your Hi-C file format
+		// The goal is to find the position and length of the matrix block for the given chromosomes and resolution
+
+		const magic = getString()
+		if (magic !== 'HIC') {
+			throw Error('Unsupported hic file')
+		}
+
+		const version = getInt()
+		if (version !== 7 && version !== 8 && version != 9) {
+			throw Error('Unsupported hic version: ' + version)
+		}
+
+		// Find the position and length of the matrix block for the given chromosomes and resolution
+		// This is a placeholder, and you need to adapt it based on your actual file format
+		position = 1000 // Replace with the actual position based on your format
+		length = 5000 // Replace with the actual length based on your format
+
+		return { position, length }
+	}
+
+	async function getExpectedValues(file: string, resolution: number, chr1: string, chr2: string) {
+		const { position, length } = await getMatrixPosition(file, resolution, chr1, chr2)
+		const view = new DataView(
+			isurl ? await readHicUrl(file, position, length) : await readHicFile(file, position, length)
+		)
+
+		// Replace the logic below with the actual logic based on your Hi-C file format
+		// The goal is to extract the expected values for the given chromosomes and resolution
+
+		const expectedValues = []
+
+		// This is a placeholder. Replace it with the actual logic to read expected values.
+		for (let i = 0; i < 100; i++) {
+			// Assuming the expected values are stored as 4-byte floats (adjust based on your format)
+			const expected = view.getFloat32(i * 4, true)
+			expectedValues.push(expected)
+		}
+
+		return expectedValues
+	}
+
+	async function calculateObservedOverExpected(observedValues: number[], expectedValues: number[]): Promise<number[]> {
+		if (observedValues.length !== expectedValues.length) {
+			throw new Error('Observed and expected values must have the same length.')
+		}
+
+		const observedOverExpectedValues: number[] = []
+
+		for (let i = 0; i < observedValues.length; i++) {
+			const observed = observedValues[i]
+			const expected = expectedValues[i]
+
+			// Avoid division by zero
+			const oeValue = expected !== 0 ? observed / expected : 0
+
+			observedOverExpectedValues.push(oeValue)
+		}
+
+		return observedOverExpectedValues
+	}
 
 	async function getVectorView(file: string, position: number, length: number) {
 		const vectorData = isurl ? await readHicUrl(file, position, length) : await readHicFile(file, position, length)
