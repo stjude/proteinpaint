@@ -1,3 +1,2 @@
-
-Features:
--in hierCluster, allow to filter samples by clicking legend items
+Fixes:
+- Numeric termsetting edit UI allows a term to be default with custom bin config and will not switch to regular binning

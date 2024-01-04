@@ -14,6 +14,7 @@ Tests:
 	Numerical term: range boundaries
 	Numerical term: fixed bins
 	Numerical term: float custom bins
+	Numerical term.bins.default.type=custom-bin
 	Numerical term: toggle menu - 4 options
 	Numerical term: toggle menu - 2 options
 	Numerical term: toggle menu - 1 options
@@ -638,18 +639,58 @@ tape('Numerical term: float custom bins', async test => {
 
 	await opts.pill.main(opts.tsData)
 
-	// create enter event to use for inputs of bin edit menu
-	const enter_event = new KeyboardEvent('keyup', {
-		code: 'Enter',
-		key: 'Enter',
-		keyCode: 13
-	})
-
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
 	tip.hide()
+})
+
+tape('Numerical term.bins.default.type=custom-bin', async test => {
+	test.timeoutAfter(3000)
+	test.plan(2)
+
+	// define a custom bin and apply to both term.bins and tw.q
+	const binconfig = {
+		type: 'custom-bin',
+		lst: [
+			{
+				startunbounded: true,
+				startinclusive: false,
+				stopinclusive: true,
+				stop: 5,
+				label: '<=5 years old'
+			},
+			{
+				stopunbounded: true,
+				startinclusive: false,
+				stopinclusive: true,
+				start: 5,
+				label: '> 5 years old'
+			}
+		]
+	}
+
+	const copy = JSON.parse(JSON.stringify(termjson.agedx))
+	copy.bins.default = binconfig
+
+	const opts = await getOpts({ tsData: { term: copy, q: binconfig } })
+
+	await opts.pill.main(opts.tsData)
+
+	await opts.pillMenuClick('Edit')
+	const tip = opts.pill.Inner.dom.tip
+	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
+	test.equal(lines.length, 1, 'should have 1 line')
+
+	const tabs = tip.d.select('.sj-toggle-button').node()
+	test.notOk(tabs, 'No switch tab should be rendered for Same/Varying bin size')
+	// if the "Same bin size/Varying bin size" toggle tab is still rendered, click "Same bin size" tab will break!! thus test to avoid it
+
+	if (test._ok) {
+		opts.holder.remove()
+		tip.d.remove()
+	}
 })
 
 tape('Numerical term: toggle menu - 4 options', async test => {
