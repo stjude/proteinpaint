@@ -293,7 +293,7 @@ function setInteractivity(self) {
 			// {sample:'integer', sampleName:str, <termId>:{} }
 
 			// sample name as 1st col
-			const row = [s.sampleName || self.data.refs.bySampleId[s.sample]]
+			const row = [s.sampleName || self.data.refs.bySampleId[s.sample]?.label]
 
 			for (const tw of self.config.terms) {
 				if (!s[tw.$id]) row.push('')
