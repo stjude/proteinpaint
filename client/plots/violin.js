@@ -223,7 +223,6 @@ class ViolinPlot {
 
 	async main() {
 		const c = this.state.config
-
 		if (c.chartType != this.type && c.childType != this.type) return
 		this.config = structuredClone(this.state.config)
 

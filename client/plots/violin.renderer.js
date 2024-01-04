@@ -329,10 +329,11 @@ export default function violinRenderer(self) {
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
 		const color = category?.color ? category.color : plot.divideTwBins ? plot.divideTwBins.color : self.k2c(plotIdx)
+		if (!plot.color) plot.color = color
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
-			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color ? plot.color : color)
+			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color)
 			.style('opacity', 0)
 			// .transition()
 			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
