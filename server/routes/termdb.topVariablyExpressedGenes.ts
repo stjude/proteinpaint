@@ -4,6 +4,7 @@ import {
 } from '#shared/types/routes/termdb.topVariablyExpressedGenes.ts'
 import { gdcGetCasesWithExressionDataFromCohort, apihost, geneExpHost } from '../src/mds3.gdc.js'
 import path from 'path'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 import { get_samples } from '#src/termdb.sql.js'
@@ -99,9 +100,27 @@ async function computeGenes4nativeDs(
 	matrixFile: string,
 	samples: string[]
 ) {
-	console.log(matrixFile)
-	console.log(samples)
-	return []
+	// The param option in input JSON is very important. It instructs what method will be used to calculate variation in the counts for a particular gene. It supports variance as well as interquartile region. This is based on the recommendation of this article https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full . This article recommends using interquartile region over variance.
+	const input_json = {
+		input_file: matrixFile,
+		samples: samples.join(','),
+		filter_extreme_values: true,
+		num_genes: Number(q.maxGenes),
+		param: 'var'
+	}
+	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
+	const rust_output_list = rust_output.split('\n')
+
+	let output_json
+	for (let item of rust_output_list) {
+		if (item.includes('output_json:')) {
+			output_json = JSON.parse(item.replace('output_json:', ''))
+		} else {
+			console.log(item)
+		}
+	}
+	const varGenes = output_json.map(i => i.gene_symbol)
+	return varGenes
 }
 
 function gdcValidateQuery(ds: any, genome: any) {

@@ -36,12 +36,10 @@ fn input_data(
 ) -> (
     Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     Vec<String>,
-    Vec<String>,
 ) {
     // Build the CSV reader and iterate over each record.
     let mut reader = BGZFReader::new(fs::File::open(filename).unwrap()).unwrap();
     let mut num_lines: usize = 0;
-    let mut gene_names: Vec<String> = Vec::with_capacity(500);
     let mut gene_symbols: Vec<String> = Vec::with_capacity(500);
 
     let mut buffer = String::new();
@@ -71,7 +69,6 @@ fn input_data(
                 num_lines += 1;
                 //println!("line2:{:?}", line2);
                 gene_symbols.push(line2[3].to_string());
-                gene_names.push(line2[3].to_string());
                 for i in &column_numbers {
                     let field = line2[*i];
                     let num = FromStr::from_str(field);
@@ -99,20 +96,18 @@ fn input_data(
 
     let dm = DMatrix::from_row_slice(num_lines, sample_list.len(), &input_vector);
     //println!("dm:{:?}", dm);
-    (dm, gene_names, gene_symbols)
+    (dm, gene_symbols)
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 struct GeneInfo {
-    gene_name: String,
     gene_symbol: String,
     param: f64,
 }
 
 fn calculate_variance(
     input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-    gene_names: Vec<String>,
     gene_symbols: Vec<String>,
     mut min_sample_size: f64,
     filter_extreme_values: bool,
@@ -181,13 +176,11 @@ fn calculate_variance(
             {
                 gene_infos.push(GeneInfo {
                     param: gene_counts.variance(),
-                    gene_name: gene_names[row].clone(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             } else if filter_extreme_values == false {
                 gene_infos.push(GeneInfo {
                     param: gene_counts.variance(),
-                    gene_name: gene_names[row].clone(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             }
@@ -201,13 +194,11 @@ fn calculate_variance(
             {
                 gene_infos.push(GeneInfo {
                     param: gene_counts_data.interquartile_range(),
-                    gene_name: gene_names[row].clone(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             } else if filter_extreme_values == false {
                 gene_infos.push(GeneInfo {
                     param: gene_counts_data.interquartile_range(),
-                    gene_name: gene_names[row].clone(),
                     gene_symbol: gene_symbols[row].clone(),
                 });
             }
@@ -306,11 +297,9 @@ fn main() {
                     }
 
                     let samples_list: Vec<&str> = samples_string.split(",").collect();
-                    let (input_matrix, gene_names, gene_symbols) =
-                        input_data(&file_name, &samples_list);
+                    let (input_matrix, gene_symbols) = input_data(&file_name, &samples_list);
                     let gene_infos = calculate_variance(
                         input_matrix,
-                        gene_names,
                         gene_symbols,
                         samples_list.len() as f64,
                         filter_extreme_values,
@@ -328,7 +317,7 @@ fn main() {
                         }
                     }
                     output_string += &"]".to_string();
-                    println!("{}", output_string);
+                    println!("output_json:{}", output_string);
                     println!("Time for calculating variances:{:?}", now.elapsed());
                 }
                 Err(error) => println!("Incorrect json: {}", error),
