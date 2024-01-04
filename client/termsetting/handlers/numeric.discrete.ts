@@ -327,9 +327,10 @@ function renderTypeInputs(self) {
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 
 	if (self.term.bins.default.type == 'custom-bin') {
-		/* this term's default bin is custom bin! it's without a regular binning config
-		cannot render regular/custom bin switchtab, as regular ui will break without all necessary config data
-		only render custom bin ui
+		/*
+		this term's default bin is custom bin! it's without a regular binning config
+		cannot render regular/custom bin switchtab, as regular ui will break without that part of data
+		only render custom bin ui, and do not allow switching from custom to regular bin size
 		*/
 		self.q.type = 'custom-bin'
 		setqDefaults(self)
