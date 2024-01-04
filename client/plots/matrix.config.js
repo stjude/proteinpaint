@@ -15,7 +15,7 @@ export async function getPlotConfig(opts = {}, app) {
 		Mutations: 'Mutations'
 	}
 
-	let config = {
+	const config = {
 		// data configuration
 		termgroups: [],
 		samplegroups: [],
@@ -141,9 +141,11 @@ export async function getPlotConfig(opts = {}, app) {
 	copyMerge(config.settings.matrix, overrides.settings)
 
 	if (opts.name) {
-		// name should be identifier of a premade plot from the datase; load and override into config{}
-		// TODO err handling
-		copyMerge(config, await app.vocabApi.getMatrixByName(opts.name))
+		// name should be identifier of a premade plot from the datase; load data of the premade plot and override into config{}
+		const data = await app.vocabApi.getMatrixByName(opts.name)
+		if (!data) throw 'error from getMatrixByName()'
+		if (data.error) throw data.error
+		copyMerge(config, data)
 	}
 
 	const os = opts?.settings?.matrix

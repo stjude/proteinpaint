@@ -342,11 +342,10 @@ function trigger_genesetByTermId(q, res, tdb) {
 
 async function get_matrix(q, req, res, ds, genome) {
 	if (q.getPlotDataByName) {
-		// send back the config for pre-built matrix plot
-		if (!ds.cohort.matrixplots) throw 'ds.cohort.matrixplots missing for the dataset'
-		if (!ds.cohort.matrixplots.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
+		// send back the config for premade matrix plot
+		if (!ds.cohort?.matrixplots?.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
 		const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
-		if (!plot) throw `plot name: q.getPlotDataByName=${getPlotDataByName} missing in ds.cohort.matrixplots.plots`
+		if (!plot) throw 'invalid name of premade matrix plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
 		res.send(plot.matrixConfig)
 		return
 	}
