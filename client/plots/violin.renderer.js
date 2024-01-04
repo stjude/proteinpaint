@@ -328,8 +328,16 @@ export default function violinRenderer(self) {
 		const label = plot.label.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
-		const color = category?.color ? category.color : plot.divideTwBins ? plot.divideTwBins.color : self.k2c(plotIdx)
+
+		const color = category?.color
+			? category.color
+			: plot.divideTwBins
+			? plot.divideTwBins.color
+			: self.config.term2
+			? self.k2c(plotIdx)
+			: self.config.settings.violin.defaultColor
 		if (!plot.color) plot.color = color
+		if (category && !category.color) category.color = color
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
