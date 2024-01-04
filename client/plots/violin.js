@@ -183,6 +183,12 @@ class ViolinPlot {
 				max: 10,
 				min: 3,
 				debounceInterval: 100
+			},
+			{
+				label: 'Default color',
+				type: 'color',
+				chartType: 'violin',
+				settingsKey: 'defaultColor'
 			}
 		]
 
@@ -342,7 +348,8 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		unit: 'abs', // abs: absolute scale, log: log scale
 		plotThickness: 150,
 		medianLength: 7,
-		medianThickness: 3
+		medianThickness: 3,
+		defaultColor: 'rgb(144, 23, 57)'
 	}
 	return Object.assign(defaults, overrides)
 }

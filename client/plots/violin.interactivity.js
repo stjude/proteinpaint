@@ -110,6 +110,11 @@ export function setInteractivity(self) {
 				d.callback()
 				self.dom.tableHolder.style('display', 'none')
 			})
+		self.addEditColorToMenu(plot)
+		self.app.tip.show(event.clientX, event.clientY)
+	}
+
+	self.addEditColorToMenu = function (plot) {
 		const color = plot.color
 		const input = self.app.tip.d
 			.append('div')
@@ -122,12 +127,14 @@ export function setInteractivity(self) {
 			.on('change', () => {
 				const newColor = input.node().value
 				const term2 = self.config.term2
-				console.log(term2)
-				if (!term2.term.values[plot.label]) term2.term.values = { [plot.label]: { label: plot.label, color: newColor } }
-				else {
-					const value = Object.values(term2.term.values).find(v => v.label == plot.label || v.key == plot.label)
-					value.color = newColor
-				}
+				let key
+				for (const field in term2.term.values)
+					if (term2.term.values[field].label == plot.label) {
+						term2.term.values[field].color = newColor
+						key = field
+					}
+
+				if (!key) term2.term.values = { [plot.label]: { label: plot.label, color: newColor } }
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
@@ -143,7 +150,6 @@ export function setInteractivity(self) {
 
 				self.app.tip.hide()
 			})
-		self.app.tip.show(event.clientX, event.clientY)
 	}
 
 	self.listSamples = async function (event, t1, t2, plot, start, end) {
