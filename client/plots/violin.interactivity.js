@@ -33,7 +33,7 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
-				callback: getAddFilterCallback(t1, t2, self, plot, label),
+				callback: getAddFilterCallback(t1, t2, self, plot, label)
 			},
 			{
 				label: `Hide: ${plot.label}`,
@@ -50,12 +50,12 @@ export function setInteractivity(self) {
 								isAtomic: true,
 								id: term.id,
 								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden),
-							},
-						},
+								q: getUpdatedQfromClick(plot, term, isHidden)
+							}
+						}
 					})
-				},
-			},
+				}
+			}
 		]
 
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
@@ -64,10 +64,10 @@ export function setInteractivity(self) {
 				callback: async () => {
 					const [start, end] = [self.data.min, self.data.max * 2]
 					await self.listSamples(event, t1, t2, plot, start, end)
-				},
+				}
 			})
 		}
-		self.displayMenu(event, options)
+		self.displayMenu(event, options, plot)
 	}
 
 	self.displayBrushMenu = function (t1, t2, self, plot, selection, scale, isH) {
@@ -79,21 +79,21 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end),
-			},
+				callback: getAddFilterCallback(t1, t2, self, plot, start, end)
+			}
 		]
 
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
-				callback: async () => self.listSamples(event, t1, t2, plot, start, end),
+				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
 			})
 		}
-		self.displayMenu(event, options)
+		self.displayMenu(event, options, plot)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function (event, options) {
+	self.displayMenu = function (event, options, plot) {
 		self.app.tip.d.selectAll('*').remove()
 
 		//show menu options for label clicking and brush selection
@@ -104,13 +104,45 @@ export function setInteractivity(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.text((d) => d.label)
+			.text(d => d.label)
 			.on('click', (event, d) => {
 				self.app.tip.hide()
 				d.callback()
 				self.dom.tableHolder.style('display', 'none')
 			})
+		const color = plot.color
+		const input = self.app.tip.d
+			.append('div')
+			.attr('class', 'sja_sharp_border')
+			.style('padding', '0px 10px')
+			.text('Color:')
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', color)
+			.on('change', () => {
+				const newColor = input.node().value
+				const term2 = self.config.term2
+				console.log(term2)
+				if (!term2.term.values[plot.label]) term2.term.values = { [plot.label]: { label: plot.label, color: newColor } }
+				else {
+					const value = Object.values(term2.term.values).find(v => v.label == plot.label || v.key == plot.label)
+					value.color = newColor
+				}
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						term2: {
+							isAtomic: true,
+							id: self.config.term2.id,
+							term: self.config.term2.term,
+							q: getUpdatedQfromClick(plot, self.config.term2, false)
+						}
+					}
+				})
 
+				self.app.tip.hide()
+			})
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
@@ -121,11 +153,11 @@ export function setInteractivity(self) {
 			type: 'tvslst',
 			join: 'and',
 			lst: [self.state.termfilter.filter, tvslst],
-			in: true,
+			in: true
 		}
 		const opts = {
 			terms: [term],
-			filter,
+			filter
 		}
 		//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
@@ -154,7 +186,7 @@ export function setInteractivity(self) {
 			maxWidth: '30vw',
 			maxHeight: '25vh',
 			resize: true,
-			showLines: true,
+			showLines: true
 		})
 
 		self.app.tip.show(event.clientX, event.clientY)
@@ -163,7 +195,7 @@ export function setInteractivity(self) {
 	self.labelHideLegendClicking = function (t2, plot) {
 		self.dom.legendDiv
 			.selectAll('.sjpp-htmlLegend')
-			.on('click', (event) => {
+			.on('click', event => {
 				event.stopPropagation()
 				const d = event.target.__data__
 				const termNum =
@@ -189,13 +221,13 @@ export function setInteractivity(self) {
 								isAtomic: true,
 								id: term.id,
 								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden),
-							},
-						},
+								q: getUpdatedQfromClick(plot, term, isHidden)
+							}
+						}
 					})
 				}
 			})
-			.on('mouseover', (event) => {
+			.on('mouseover', event => {
 				const q = event.target.__data__
 				if (q === undefined) return
 				if (q.isHidden === true) {
@@ -218,8 +250,8 @@ export function setInteractivity(self) {
 				startinclusive: true,
 				stopinclusive: true,
 				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
-				stopunbounded: self.displayLabelClickMenu.called == false ? true : false,
-			},
+				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
+			}
 		]
 	}
 
@@ -228,7 +260,7 @@ export function setInteractivity(self) {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [],
+			lst: []
 		}
 
 		if (t2) {
@@ -247,8 +279,8 @@ export function setInteractivity(self) {
 						startinclusive: plot.divideTwBins?.startinclusive || true,
 						stopinclusive: plot.divideTwBins?.stopinclusive || false,
 						startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null,
-					},
+						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
+					}
 				]
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 			} else {
@@ -265,7 +297,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 		type: 'tvslst',
 		in: true,
 		join: 'and',
-		lst: [],
+		lst: []
 	}
 
 	if (t2) {
@@ -287,8 +319,8 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 					startinclusive: plot.divideTwBins?.startinclusive || true,
 					stopinclusive: plot.divideTwBins?.stopinclusive || false,
 					startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null,
-				},
+					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
+				}
 			]
 			if (self.displayBrushMenu.called === true) {
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
@@ -311,7 +343,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',
-			filter,
+			filter
 		})
 	}
 }
@@ -332,8 +364,8 @@ function createTvsLstValues(term, plot, tvslst, lstIdx) {
 	tvslst.lst[lstIdx].tvs.values = [
 		{
 			key: plot.seriesId,
-			label: plot.label,
-		},
+			label: plot.label
+		}
 	]
 	if (term.term.type === 'condition') {
 		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
@@ -348,7 +380,7 @@ function createTvsTerm(term, tvslst) {
 	tvslst.lst.push({
 		type: 'tvs',
 		tvs: {
-			term: term.term,
-		},
+			term: term.term
+		}
 	})
 }
