@@ -112,7 +112,7 @@ async function computeGenes4nativeDs(
 	const rust_output_list = rust_output.split('\n')
 
 	let output_json
-	for (let item of rust_output_list) {
+	for (const item of rust_output_list) {
 		if (item.includes('output_json:')) {
 			output_json = JSON.parse(item.replace('output_json:', ''))
 		} else {
