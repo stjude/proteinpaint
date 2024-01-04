@@ -113,10 +113,7 @@ export function setRenderers(self) {
 			chart.mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			labelsG = svg.append('g').attr('class', 'sjpcb-scatter-labelsG')
-			chart.xAxis = axisG
-				.append('g')
-				.attr('class', 'sjpcb-scatter-x-axis')
-				.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
+			chart.xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
 			chart.yAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-y-axis')
@@ -169,6 +166,8 @@ export function setRenderers(self) {
 
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
+		chart.xAxis.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
+
 		chart.legendG.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
 		if (chart.axisBottom) {
 			chart.xAxis.call(chart.axisBottom)
