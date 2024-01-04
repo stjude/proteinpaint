@@ -324,16 +324,30 @@ export function renderBoundaryInclusionInput(self) {
 }
 
 function renderTypeInputs(self) {
-	// toggle switch
-	const bins_div = self.dom.bins_div
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
+
+	if (self.term.bins.default.type == 'custom-bin') {
+		/* this term's default bin is custom bin! it's without a regular binning config
+		cannot render regular/custom bin switchtab, as regular ui will break without all necessary config data
+		only render custom bin ui
+		*/
+		self.q.type = 'custom-bin'
+		setqDefaults(self)
+		setDensityPlot(self)
+		renderCustomBinInputs(self, div)
+		return
+	}
+
+	if (self.term.bins.default.type != 'regular-bin')
+		throw 'self.bins.default.type is neither regular-bin or custom-bin, cannot render ui'
+
+	// toggle switch between regular and custom
 	const tabs: any = [
 		{
 			active: self.q.type == 'regular-bin',
 			label: 'Same bin size',
 			callback: async (event, tab) => {
 				self.q.type = 'regular-bin'
-				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[0].isInitialized) {
@@ -347,7 +361,6 @@ function renderTypeInputs(self) {
 			label: 'Varying bin sizes',
 			callback: async (event, tab) => {
 				self.q.type = 'custom-bin'
-				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[1].isInitialized) {
