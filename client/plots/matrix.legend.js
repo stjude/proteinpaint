@@ -93,13 +93,16 @@ export function getLegendData(legendGroups, refs, self) {
 				}
 			} else {
 				if (f.tvs.term.type == 'integer' || f.tvs.term.type == 'float') {
-					for (const v of f.tvs.ranges) {
-						const termValues = Object.values(t.ref.bins)
-						legend.values[v.name] = {
-							key: v.name,
-							label: termValues.find(vl => vl.name == v.name)?.name || v.name,
-							fill: termValues.find(vl => vl.name == v.name)?.color,
-							crossedOut: true
+					// create a legend only if the mode is discrete, no legend created for continuous mode
+					if (t.ref?.bins) {
+						for (const v of f.tvs.ranges) {
+							const termValues = Object.values(t.ref.bins)
+							legend.values[v.name] = {
+								key: v.name,
+								label: termValues.find(vl => vl.name == v.name)?.name || v.name,
+								fill: termValues.find(vl => vl.name == v.name)?.color,
+								crossedOut: true
+							}
 						}
 					}
 				} else {

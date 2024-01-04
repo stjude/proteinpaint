@@ -379,6 +379,7 @@ function setTermActions(self) {
 				const t = self.activeLabel || self.lastactiveLabel
 				if (tw) {
 					if (t && t.tw) tw.$id = t.tw.$id
+					const legendValueFilter = self.mayRemoveTvsEntry(tw)
 					self.pill.main(tw)
 					self.app.dispatch({
 						type: 'plot_nestedEdits',
@@ -387,6 +388,10 @@ function setTermActions(self) {
 							{
 								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
 								value: tw
+							},
+							{
+								nestedKeys: ['legendValueFilter'],
+								value: legendValueFilter
 							}
 						]
 					})
@@ -1141,6 +1146,7 @@ function setTermActions(self) {
 
 	self.removeTerm = () => {
 		const t = self.activeLabel
+		const legendValueFilter = self.mayRemoveTvsEntry(t.tw)
 		const termgroups = self.termGroups
 		const grp = termgroups[t.grpIndex]
 		// remove this element
@@ -1153,6 +1159,10 @@ function setTermActions(self) {
 					{
 						nestedKeys: ['termgroups', t.grpIndex, 'lst'],
 						value: grp.lst
+					},
+					{
+						nestedKeys: ['legendValueFilter'],
+						value: legendValueFilter
 					}
 				]
 			})
@@ -1162,7 +1172,10 @@ function setTermActions(self) {
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.opts.id,
-				config: { termgroups }
+				config: {
+					termgroups,
+					legendValueFilter
+				}
 			})
 		}
 		self.dom.tip.hide()
@@ -1178,6 +1191,30 @@ function setTermActions(self) {
 			config: { termgroups }
 		})
 		self.dom.tip.hide()
+	}
+
+	self.mayRemoveTvsEntry = tw => {
+		if (!self.config.legendValueFilter?.lst.length) return self.config.legendValueFilter
+		const lst = structuredClone(self.config.legendValueFilter.lst)
+		const items = lst.filter(
+			f =>
+				f.tvs.term.type === tw.term.type &&
+				((('id' in f.tvs.term || 'id' in tw.term) && f.tvs.term.id === tw.term.id) || f.tvs.term.name === tw.term.name)
+		)
+		if (!items.length) return self.config.legendValueFilter
+		else {
+			for (const t of items) {
+				const tvs = t.tvs
+				if (tvs.term.type != tw.term.type) continue
+				if (('id' in tvs.term || 'id' in tw.term) && tvs.term.id !== tw.term.id) continue
+				else if (tvs.term.name != tw.term.name) continue
+				// always remove a legendValueFilter.lst entry that corresponds to an edited term
+				// TODO: may improve the logic to not remove a tvs entry when the tw edits are not data related, such as for colors
+				const i = lst.findIndex(t => t === tvs)
+				lst.splice(i, 1)
+			}
+		}
+		return { type: 'tvslst', lst }
 	}
 
 	self.launchBrowser = event => {
