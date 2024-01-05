@@ -18,7 +18,7 @@ class SingleCellView {
 	constructor() {
 		this.type = 'singleCellView'
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
-		this.tip.d.style('max-height', '300px').style('overflow', 'scroll')
+		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
 	}
 
 	async init(appState) {
@@ -369,20 +369,31 @@ class SingleCellView {
 				const dist = this.distance(s.x, s.y, d.x, d.y, plot)
 				return dist < threshold
 			})
-			const menu = this.tip.clear()
+			const tree = []
 
+			for (const sample of samples) {
+				const cluster = d.clusterMap[sample.cellId]
+
+				let node = tree.find(item => item.id == cluster)
+				if (!node) {
+					node = { id: cluster, parentId: null, samples: [sample], level: 1, category: null, children: [] }
+					tree.push(node)
+				} else {
+					node.samples.push(sample)
+				}
+			}
+			const menu = this.tip.clear()
+			console.log(tree)
 			const table = menu.d.append('table')
-			for (const s of samples) {
+			for (const node of tree) {
 				let tr = table.append('tr')
-				const cluster = d.clusterMap[d.cellId]
-				tr.append('td').style('color', '#aaa').text('Id')
-				tr.append('td').text(`${d.cellId}`)
-				tr = table.append('tr')
 				tr.append('td').style('color', '#aaa').text(d.tid)
+
+				const cluster = node.id
 				const td = tr.append('td')
-				const svg = td.append('svg').attr('width', 150).attr('height', 25)
-				const x = 15
-				const y = 18
+				const svg = td.append('svg').attr('width', 150).attr('height', 20)
+				const x = 10
+				const y = 12
 				const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
 				g.append('circle').attr('fill', plot.colorMap[cluster]).attr('r', 4)
 				svg
@@ -390,8 +401,11 @@ class SingleCellView {
 					.attr('transform', `translate(${x + 15}, ${y + 4})`)
 					.append('text')
 					.text(cluster)
-				menu.show(event.clientX, event.clientY, true, true)
+				tr = table.append('tr')
+				tr.append('td').style('color', '#aaa').text('cells')
+				tr.append('td').text(node.samples.length)
 			}
+			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
 
