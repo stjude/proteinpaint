@@ -2,6 +2,7 @@ import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '#dom/table'
 import { to_svg } from '#src/client'
 import roundValue from '../../server/shared/roundValue'
+import { rgb } from 'd3'
 
 export function setInteractivity(self) {
 	self.download = () => {
@@ -115,7 +116,7 @@ export function setInteractivity(self) {
 	}
 
 	self.addEditColorToMenu = function (plot) {
-		const color = plot.color
+		const color = rgb(plot.color).formatHex()
 		const input = self.app.tip.d
 			.append('div')
 			.attr('class', 'sja_sharp_border')
