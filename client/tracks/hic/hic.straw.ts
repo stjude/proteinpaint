@@ -94,6 +94,7 @@ type Pane = {
  * Clicking on chr-chr svg launches the horizontal view.
  * Clicking anywhere within the chr-pair view launches the detail view. The track maybe launched from the Horizontal View button.
  * TODOs:
+ * - ?maybe make chrx and chry more universal? Not in horizontal/detail/chrpair view objs?
  * - add state-like functionality. Move objs for rendering under self and separate hic input. Add functions for views to operate independently of each other.
  * - Possibly type Pane can be import somewhere??
  */
@@ -357,7 +358,7 @@ class Hicstat {
 		this.indetail = false
 		this.inhorizontal = false
 
-		this.showBtns()
+		showBtns(this)
 		this.wholegenome.svg!.remove()
 
 		this.chrpairview.chrx = chrx
@@ -464,7 +465,6 @@ class Hicstat {
 
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Horizontal')
-		this.dom.controlsDiv.zoomDiv.style('display', 'contents')
 		nmeth2select(hic, this.detailview)
 
 		//Clear elements created in other views
@@ -477,7 +477,7 @@ class Hicstat {
 		this.inwholegenome = false
 		this.inchrpair = false
 
-		this.showBtns(chrx, chry)
+		showBtns(this, chrx, chry)
 
 		//Similar to the detailview.rglst[0]
 		const regionx = { chr: chrx, start: x, stop: y }
@@ -537,7 +537,6 @@ class Hicstat {
 
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
-		this.dom.controlsDiv.zoomDiv.style('display', 'contents')
 		nmeth2select(hic, this.detailview)
 
 		this.inhorizontal = false
@@ -546,7 +545,7 @@ class Hicstat {
 		this.inchrpair = false
 
 		// const isintrachr = chrx == chry
-		this.showBtns(chrx, chry)
+		showBtns(this, chrx, chry)
 
 		// default view span
 		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
@@ -641,78 +640,6 @@ class Hicstat {
 		this.detailview.ctx = ctx
 
 		await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw, this)
-
-		/**
-		global zoom buttons
-		*/
-		{
-			this.dom.controlsDiv.zoomIn.on('click', () => {
-				this.detailview.xb!.zoomblock(2, false)
-				this.detailview.yb!.zoomblock(2, false)
-			})
-			this.dom.controlsDiv.zoomOut.on('click', () => {
-				this.detailview.xb!.zoomblock(2, true)
-				this.detailview.yb!.zoomblock(2, true)
-			})
-
-			// this.dom.controlsDiv.horizontalViewBtn.style('display', 'block').on('click', () => {
-			// 	const regionx = this.detailview.xb!.rglst[0]
-			// 	const regiony = this.detailview.yb!.rglst[0]
-
-			// 	// const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-			// 	// (pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
-
-			// 	const tracks = [
-			// 		{
-			// 			type: client.tkt.hicstraw,
-			// 			file: hic.file,
-			// 			enzyme: hic.enzyme,
-			// 			maxpercentage: default_hicstrawmaxvperc,
-			// 			pyramidup: 1,
-			// 			name: hic.name
-			// 		}
-			// 	]
-			// 	if (hic.tklst) {
-			// 		for (const t of hic.tklst) {
-			// 			tracks.push(t)
-			// 		}
-			// 	}
-			// 	client.first_genetrack_tolist(hic.genome, tracks)
-			// 	const arg: any = {
-			// 		holder: pane.body,
-			// 		hostURL: hic.hostURL,
-			// 		jwt: hic.jwt,
-			// 		genome: hic.genome,
-			// 		nobox: 1,
-			// 		tklst: tracks
-			// 	}
-			// 	if (
-			// 		regionx.chr == regiony.chr &&
-			// 		Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)
-			// 	) {
-			// 		// x/y overlap
-			// 		arg.chr = regionx.chr
-			// 		arg.start = Math.min(regionx.start, regiony.start)
-			// 		arg.stop = Math.max(regionx.stop, regiony.stop)
-			// 	} else {
-			// 		arg.chr = regionx.chr
-			// 		arg.start = regionx.start
-			// 		arg.stop = regionx.stop
-			// 		arg.width = default_subpanelpxwidth
-			// 		arg.subpanels = [
-			// 			{
-			// 				chr: regiony.chr,
-			// 				start: regiony.start,
-			// 				stop: regiony.stop,
-			// 				width: default_subpanelpxwidth,
-			// 				leftpad: 10,
-			// 				leftborder: subpanel_bordercolor
-			// 			}
-			// 		]
-			// 	}
-			// 	blocklazyload(arg)
-			// })
-		}
 
 		/******** common parameter for x/y block ********/
 
@@ -828,25 +755,14 @@ class Hicstat {
 			hic.detailview.yb = new p.Block(arg2)
 		})
 		*/
-	}
-
-	showBtns(chrx?: string, chry?: string) {
-		//Show in any other view except whole genome
-		this.dom.controlsDiv.genomeViewBtn.style('display', this.inwholegenome ? 'none' : 'inline-block')
-
-		//Only show chrpairViewBtn if in horizonal or detail view
-		//Include chr x and chr y in the button text
-		if (this.inhorizontal || this.indetail) {
-			this.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${chrx}-${chry}`).style('display', 'block')
-		} else {
-			this.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
-		}
-
-		//Only show horizontalViewBtn in detail view
-		this.dom.controlsDiv.horizontalViewBtn.style('display', this.indetail ? 'block' : 'none')
-
-		//Only show horizontalViewBtn in horizontal view
-		this.dom.controlsDiv.detailViewBtn.style('display', this.inhorizontal ? 'block' : 'none')
+		this.dom.controlsDiv.zoomIn.on('click', () => {
+			this.detailview.xb!.zoomblock(2, false)
+			this.detailview.yb!.zoomblock(2, false)
+		})
+		this.dom.controlsDiv.zoomOut.on('click', () => {
+			this.detailview.xb!.zoomblock(2, true)
+			this.detailview.yb!.zoomblock(2, true)
+		})
 	}
 
 	debug() {
@@ -868,6 +784,34 @@ export async function init_hicstraw(hic: HicstrawInput, debugmode: boolean) {
 	await hicstat.render(hic)
 	if (debugmode) {
 		return hicstat.debug()
+	}
+}
+
+export function showBtns(self: any, chrx?: string, chry?: string) {
+	//Show in any other view except whole genome
+	self.dom.controlsDiv.genomeViewBtn.style('display', self.inwholegenome ? 'none' : 'inline-block')
+
+	if (self.inhorizontal) {
+		//Only show chrpairViewBtn if in horizonal or detail view
+		//Include chr x and chr y in the button text
+		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${chrx}-${chry}`).style('display', 'block')
+		//Only show detailViewBtn in horizontal view
+		self.dom.controlsDiv.detailViewBtn.style('display', 'block')
+		//Hide if horizontal and zoom btns if previously displayed
+		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
+		self.dom.controlsDiv.zoomDiv.style('display', 'none')
+	} else if (self.indetail) {
+		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${chrx}-${chry}`).style('display', 'block')
+		//Only show horizontalViewBtn and zoom buttons in detail view
+		self.dom.controlsDiv.horizontalViewBtn.style('display', 'block')
+		self.dom.controlsDiv.zoomDiv.style('display', 'contents')
+		//Hide previously shown detail view btn
+		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
+	} else {
+		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
+		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
+		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
+		self.dom.controlsDiv.zoomDiv.style('display', 'none')
 	}
 }
 
