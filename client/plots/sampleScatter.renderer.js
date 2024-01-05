@@ -243,6 +243,8 @@ export function setRenderers(self) {
 			.attr('transform', c => translate(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
+			.attr('stroke', c => self.getColor(c, chart))
+			.attr('stroke-width', c => (self.getOpacity(c) == 0 ? 0 : 1))
 			.style('fill-opacity', c => self.getOpacity(c))
 		symbols
 			.enter()
@@ -252,7 +254,8 @@ export function setRenderers(self) {
 			.attr('transform', c => translate(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
-
+			.attr('stroke', c => self.getColor(c, chart))
+			.attr('stroke-width', c => (self.getOpacity(c) == 0 ? 0 : 1))
 			.style('fill-opacity', c => self.getOpacity(c))
 			.transition()
 			.duration(duration)
