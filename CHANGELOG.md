@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.39.0
 
 Features:
 - GDC cohort-MAF tool: allow to customize output file columns
