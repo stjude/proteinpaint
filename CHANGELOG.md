@@ -13,6 +13,7 @@ Fixes:
 - Gene exp clustering will display an alert msg to inform user that a map is not doable when there is just one gene
 - display total number of mutations on disco plot
 - Fix oncomatrix error: adding dictionary term from row group menu
+- Numeric termsetting edit UI allows a term to be default with custom bin config and will not switch to regular binning
 
 
 ## 2.38.1
