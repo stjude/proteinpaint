@@ -12,7 +12,9 @@ import {
 	symbolDiamond,
 	symbolDiamond2,
 	symbolStar,
-	symbolSquare2
+	symbolPlus,
+	symbolAsterisk,
+	symbolX
 } from 'd3-shape'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
@@ -47,11 +49,12 @@ class Scatter {
 			symbolCross,
 			symbolWye,
 			symbolTriangle,
-			//symbolAsterisk,
 			symbolDiamond,
 			symbolDiamond2,
 			symbolStar,
-			symbolSquare2
+			symbolPlus,
+			symbolX,
+			symbolAsterisk
 		]
 		this.symbols = mySymbols.map(s => symbol(s))
 		this.zoom = 1

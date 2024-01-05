@@ -155,8 +155,8 @@ class Barchart {
 					title: 'Default color for bars when there is no overlay',
 					type: 'color',
 					chartType: 'barchart',
-					settingsKey: 'defaultColor',
-					getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
+					settingsKey: 'defaultColor'
+					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				}
 			]
 
