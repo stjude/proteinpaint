@@ -42,7 +42,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 
 	const normalizationRow = menuTable.append('tr')
 	addLabel(normalizationRow, 'NORMALIZATION')
-	self.dom.controlsDiv.nmeth = normalizationRow.append('td') //placeholder until data is returned from server
+	self.dom.controlsDiv.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select')
 	makeNormMethDisplay(hic, self)
 
 	const cutoffRow = menuTable.append('tr')
@@ -66,7 +66,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.controlsDiv.resolution = resolutionRow.append('td').append('span')
 
 	const matrixTypeRow = menuTable.append('tr')
-	addLabel(matrixTypeRow, 'matrix type') //Display option is another name? Data type? No label?
+	addLabel(matrixTypeRow, 'matrix type')
 	self.dom.controlsDiv.matrixType = matrixTypeRow.append('td').text('Observed')
 
 	const viewRow = menuTable.append('tr')
@@ -77,10 +77,10 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('padding-right', '5px')
 		.style('display', 'block')
 
-	self.dom.controlsDiv.wholegenomebutton = self.dom.controlsDiv.viewBtnDiv
+	self.dom.controlsDiv.genomeViewBtn = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
-		.html('&#8592; Genome')
+		.html('&#8810; Genome')
 		.on('click', () => {
 			self.dom.controlsDiv.view.text('Genome')
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
@@ -90,7 +90,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			switchview(hic, self)
 		})
 
-	self.dom.controlsDiv.chrpairviewbutton = self.dom.controlsDiv.viewBtnDiv
+	self.dom.controlsDiv.chrpairViewBtn = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
 		.on('click', () => {
@@ -104,7 +104,12 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.controlsDiv.horizontalViewBtn = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
-		.html('Horizontal View &#8594;')
+		.html('Horizontal View &#8810;')
+
+	self.dom.controlsDiv.detailViewBtn = self.dom.controlsDiv.viewBtnDiv
+		.append('button')
+		.style('display', 'none')
+		.html('Detailed View &#8811;')
 
 	self.dom.controlsDiv.zoomDiv = menuTable.append('tr').style('display', 'none')
 	addLabel(self.dom.controlsDiv.zoomDiv, 'ZOOM')
@@ -229,15 +234,15 @@ function setmaxv(self: any, maxv: number) {
  */
 function switchview(hic: any, self: any) {
 	if (self.inwholegenome) {
-		console.log(self.wholegenome.nmeth)
 		nmeth2select(hic, self.wholegenome)
 		self.dom.plotDiv.xAxis.selectAll('*').remove()
 		self.dom.plotDiv.yAxis.selectAll('*').remove()
 		self.dom.plotDiv.plot.selectAll('*').remove()
 		self.dom.plotDiv.plot.node().appendChild(self.wholegenome.svg.node())
-		self.dom.controlsDiv.wholegenomebutton.style('display', 'none')
-		self.dom.controlsDiv.chrpairviewbutton.style('display', 'none')
-		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
+		self.dom.controlsDiv.genomeViewBtn.style('display', 'none')
+		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
+		self.dom.controlsDiv.horizonalViewBtn.style('display', 'none')
+		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.wholegenome.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.wholegenome.resolution) + ' bp')
 	} else if (self.inchrpair) {
@@ -248,9 +253,10 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.xAxis.node().appendChild(self.chrpairview.axisx.node())
 		self.dom.plotDiv.plot.selectAll('*').remove()
 		self.dom.plotDiv.plot.node().appendChild(self.chrpairview.canvas)
-		self.dom.controlsDiv.wholegenomebutton.style('display', 'inline-block')
-		self.dom.controlsDiv.chrpairviewbutton.style('display', 'none')
-		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
+		self.dom.controlsDiv.genomeViewBtn.style('display', 'inline-block')
+		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
+		self.dom.controlsDiv.horizonalViewBtn.style('display', 'none')
+		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
 	}

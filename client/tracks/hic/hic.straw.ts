@@ -9,7 +9,7 @@ import {
 	HicstrawArgs,
 	MainPlotDiv,
 	HicstrawDom,
-	DetailedViewAxis,
+	DetailViewAxis,
 	HicstrawInput,
 	WholeGenomeView,
 	ChrPairView,
@@ -18,7 +18,7 @@ import {
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { hicParseFile } from './parse.genome.ts'
 import { initWholeGenomeControls } from './controls.whole.genome.ts'
-import { Div, Svg } from '../../types/d3'
+import { Div } from '../../types/d3'
 
 /*
 
@@ -91,7 +91,7 @@ type Pane = {
 }
 /**
  * Parses input file and renders plot. Whole genome view renders as the default.
- * Clicking on chr-chr svg launches the chr-pair view.
+ * Clicking on chr-chr svg launches the horizontal view.
  * Clicking anywhere within the chr-pair view launches the detail view. The track maybe launched from the Horizontal View button.
  * TODOs:
  * - add state-like functionality. Move objs for rendering under self and separate hic input. Add functions for views to operate independently of each other.
@@ -116,8 +116,7 @@ class Hicstat {
 	inwholegenome: boolean
 	inchrpair: boolean
 	indetail: boolean
-	/** Appears as horizontal view to the user. Launches from the 'Horizontal View' btn in detailed view menu */
-	inlineview: boolean
+	inhorizontal: boolean
 
 	constructor(hic: any, debugmode: boolean) {
 		this.holder = hic.holder
@@ -147,18 +146,18 @@ class Hicstat {
 				rightheadw: 40,
 				lpad: 1,
 				rpad: 1
-			} as DetailedViewAxis,
+			} as DetailViewAxis,
 			yb: {
 				leftheadw: 20,
 				rightheadw: 40,
 				lpad: 1,
 				rpad: 1
-			} as DetailedViewAxis
+			} as DetailViewAxis
 		}
 		this.inwholegenome = true
 		this.inchrpair = false
 		this.indetail = false
-		this.inlineview = false
+		this.inhorizontal = false
 	}
 
 	async error(err: string | string[]) {
@@ -220,7 +219,7 @@ class Hicstat {
 
 		const chr2px = {} // px width for each chr
 		let totalpx = hic.chrlst.length
-		for (const chr of hic.chrlst!) {
+		for (const chr of hic.chrlst) {
 			const w = Math.ceil(hic.genome.chrlookup[chr.toUpperCase()].len / resolution) * binpx
 			chr2px[chr] = w
 			totalpx += w
@@ -229,7 +228,7 @@ class Hicstat {
 
 		let xoff = 0
 		// column labels
-		for (const chr of hic.chrlst!) {
+		for (const chr of hic.chrlst) {
 			const chrw = chr2px[chr]
 			if (checker_row) {
 				layer_map
@@ -350,14 +349,15 @@ class Hicstat {
 
 	async init_chrPairView(hic: any, chrx: string, chry: string) {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
-		const detailView = this.init_detailView.bind(this)
+		const horizontalView = this.init_horizontalView.bind(this)
 		nmeth2select(hic, this.chrpairview)
 
 		this.inwholegenome = false
 		this.inchrpair = true
 		this.indetail = false
-		this.dom.controlsDiv.wholegenomebutton.style('display', 'block')
-		this.dom.controlsDiv.chrpairviewbutton.style('display', 'none')
+		this.inhorizontal = false
+
+		this.showBtns()
 		this.wholegenome.svg!.remove()
 
 		this.chrpairview.chrx = chrx
@@ -450,7 +450,7 @@ class Hicstat {
 			.style('margin', axispad + 'px')
 			.on('click', async function (this: any, event: MouseEvent) {
 				const [x, y] = pointer(event, this)
-				await detailView(hic, chrx, chry, x, y)
+				await horizontalView(hic, chrx, chry, x, y)
 			})
 			.node()
 		canvas!.width = Math.ceil(chrxlen / resolution) * binpx
@@ -462,18 +462,91 @@ class Hicstat {
 		await getdata_chrpair(hic, this)
 	}
 
+	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
+		this.dom.controlsDiv.view.text('Horizontal')
+		this.dom.controlsDiv.zoomDiv.style('display', 'contents')
+		nmeth2select(hic, this.detailview)
+
+		//Clear elements created in other views
+		this.dom.plotDiv.xAxis.selectAll('*').remove()
+		this.dom.plotDiv.yAxis.selectAll('*').remove()
+		this.dom.plotDiv.plot.selectAll('*').remove()
+
+		this.inhorizontal = true
+		this.indetail = false
+		this.inwholegenome = false
+		this.inchrpair = false
+
+		this.showBtns(chrx, chry)
+
+		//Similar to the detailview.rglst[0]
+		const regionx = { chr: chrx, start: x, stop: y }
+		const regiony = { chr: chry, start: x, stop: y }
+
+		const tracks = [
+			{
+				type: client.tkt.hicstraw,
+				file: hic.file,
+				enzyme: hic.enzyme,
+				maxpercentage: default_hicstrawmaxvperc,
+				pyramidup: 1,
+				name: hic.name
+			}
+		]
+		if (hic.tklst) {
+			for (const t of hic.tklst) {
+				tracks.push(t)
+			}
+		}
+		client.first_genetrack_tolist(hic.genome, tracks)
+		const arg: any = {
+			holder: this.dom.plotDiv.plot,
+			hostURL: hic.hostURL,
+			jwt: hic.jwt,
+			genome: hic.genome,
+			nobox: 1,
+			tklst: tracks
+		}
+		if (regionx.chr == regiony.chr && Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)) {
+			// x/y overlap
+			arg.chr = regionx.chr
+			arg.start = Math.min(regionx.start, regiony.start)
+			arg.stop = Math.max(regionx.stop, regiony.stop)
+		} else {
+			arg.chr = regionx.chr
+			arg.start = regionx.start
+			arg.stop = regionx.stop
+			arg.width = default_subpanelpxwidth
+			arg.subpanels = [
+				{
+					chr: regiony.chr,
+					start: regiony.start,
+					stop: regiony.stop,
+					width: default_subpanelpxwidth,
+					leftpad: 10,
+					leftborder: subpanel_bordercolor
+				}
+			]
+		}
+		blocklazyload(arg)
+
+		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
+			await this.init_detailView(hic, chrx, chry, x, y)
+		})
+	}
+
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
 		this.dom.controlsDiv.zoomDiv.style('display', 'contents')
 		nmeth2select(hic, this.detailview)
 
-		// this.indetail = true
-		// this.inwholegenome = false
-		// this.inchrpair = false
-		this.dom.controlsDiv.wholegenomebutton.style('display', 'inline-block')
+		this.inhorizontal = false
+		this.indetail = true
+		this.inwholegenome = false
+		this.inchrpair = false
 
 		// const isintrachr = chrx == chry
-		this.dom.controlsDiv.chrpairviewbutton.html(`&#8592; Entire ${chrx}-${chry}`).style('display', 'block')
+		this.showBtns(chrx, chry)
 
 		// default view span
 		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
@@ -582,63 +655,63 @@ class Hicstat {
 				this.detailview.yb!.zoomblock(2, true)
 			})
 
-			this.dom.controlsDiv.horizontalViewBtn.style('display', 'block').on('click', () => {
-				const regionx = this.detailview.xb!.rglst[0]
-				const regiony = this.detailview.yb!.rglst[0]
+			// this.dom.controlsDiv.horizontalViewBtn.style('display', 'block').on('click', () => {
+			// 	const regionx = this.detailview.xb!.rglst[0]
+			// 	const regiony = this.detailview.yb!.rglst[0]
 
-				const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-				;(pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
+			// 	// const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
+			// 	// (pane.header as Pane['header']).text(hic.name + ' ' + regionx.chr + ' : ' + regiony.chr)
 
-				const tracks = [
-					{
-						type: client.tkt.hicstraw,
-						file: hic.file,
-						enzyme: hic.enzyme,
-						maxpercentage: default_hicstrawmaxvperc,
-						pyramidup: 1,
-						name: hic.name
-					}
-				]
-				if (hic.tklst) {
-					for (const t of hic.tklst) {
-						tracks.push(t)
-					}
-				}
-				client.first_genetrack_tolist(hic.genome, tracks)
-				const arg: any = {
-					holder: pane.body,
-					hostURL: hic.hostURL,
-					jwt: hic.jwt,
-					genome: hic.genome,
-					nobox: 1,
-					tklst: tracks
-				}
-				if (
-					regionx.chr == regiony.chr &&
-					Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)
-				) {
-					// x/y overlap
-					arg.chr = regionx.chr
-					arg.start = Math.min(regionx.start, regiony.start)
-					arg.stop = Math.max(regionx.stop, regiony.stop)
-				} else {
-					arg.chr = regionx.chr
-					arg.start = regionx.start
-					arg.stop = regionx.stop
-					arg.width = default_subpanelpxwidth
-					arg.subpanels = [
-						{
-							chr: regiony.chr,
-							start: regiony.start,
-							stop: regiony.stop,
-							width: default_subpanelpxwidth,
-							leftpad: 10,
-							leftborder: subpanel_bordercolor
-						}
-					]
-				}
-				blocklazyload(arg)
-			})
+			// 	const tracks = [
+			// 		{
+			// 			type: client.tkt.hicstraw,
+			// 			file: hic.file,
+			// 			enzyme: hic.enzyme,
+			// 			maxpercentage: default_hicstrawmaxvperc,
+			// 			pyramidup: 1,
+			// 			name: hic.name
+			// 		}
+			// 	]
+			// 	if (hic.tklst) {
+			// 		for (const t of hic.tklst) {
+			// 			tracks.push(t)
+			// 		}
+			// 	}
+			// 	client.first_genetrack_tolist(hic.genome, tracks)
+			// 	const arg: any = {
+			// 		holder: pane.body,
+			// 		hostURL: hic.hostURL,
+			// 		jwt: hic.jwt,
+			// 		genome: hic.genome,
+			// 		nobox: 1,
+			// 		tklst: tracks
+			// 	}
+			// 	if (
+			// 		regionx.chr == regiony.chr &&
+			// 		Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)
+			// 	) {
+			// 		// x/y overlap
+			// 		arg.chr = regionx.chr
+			// 		arg.start = Math.min(regionx.start, regiony.start)
+			// 		arg.stop = Math.max(regionx.stop, regiony.stop)
+			// 	} else {
+			// 		arg.chr = regionx.chr
+			// 		arg.start = regionx.start
+			// 		arg.stop = regionx.stop
+			// 		arg.width = default_subpanelpxwidth
+			// 		arg.subpanels = [
+			// 			{
+			// 				chr: regiony.chr,
+			// 				start: regiony.start,
+			// 				stop: regiony.stop,
+			// 				width: default_subpanelpxwidth,
+			// 				leftpad: 10,
+			// 				leftborder: subpanel_bordercolor
+			// 			}
+			// 		]
+			// 	}
+			// 	blocklazyload(arg)
+			// })
 		}
 
 		/******** common parameter for x/y block ********/
@@ -756,6 +829,32 @@ class Hicstat {
 		})
 		*/
 	}
+
+	showBtns(chrx?: string, chry?: string) {
+		//Show in any other view except whole genome
+		this.dom.controlsDiv.genomeViewBtn.style('display', this.inwholegenome ? 'none' : 'inline-block')
+
+		//Only show chrpairViewBtn if in horizonal or detail view
+		//Include chr x and chr y in the button text
+		if (this.inhorizontal || this.indetail) {
+			this.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${chrx}-${chry}`).style('display', 'block')
+		} else {
+			this.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
+		}
+
+		//Only show horizontalViewBtn in detail view
+		this.dom.controlsDiv.horizontalViewBtn.style('display', this.indetail ? 'block' : 'none')
+
+		//Only show horizontalViewBtn in horizontal view
+		this.dom.controlsDiv.detailViewBtn.style('display', this.inhorizontal ? 'block' : 'none')
+	}
+
+	debug() {
+		/** Quick fix for returning self to the client for testing.
+		 * Remove once rx app implemented.
+		 */
+		return this
+	}
 }
 /**
  * Launches hicstraw app
@@ -766,7 +865,10 @@ class Hicstat {
 
 export async function init_hicstraw(hic: HicstrawInput, debugmode: boolean) {
 	const hicstat = new Hicstat(hic, debugmode)
-	hicstat.render(hic)
+	await hicstat.render(hic)
+	if (debugmode) {
+		return hicstat.debug()
+	}
 }
 
 //////////////////// __whole genome view__ ////////////////////
