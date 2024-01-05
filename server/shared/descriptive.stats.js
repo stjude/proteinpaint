@@ -3,13 +3,14 @@ import roundValue from './roundValue'
 
 /* This file generates summary statistics on any given array of numbers*/
 
-export function summaryStats(array) {
+export default function summaryStats(array) {
 	let arr = array
 	if (typeof array[0] == 'string') {
 		// somehow the values can be string but not numbers
 		// must cast to numbers to properly compute values
 		arr = array.map(Number)
 	}
+	//compute total
 	const n = arr.length
 
 	//compute mean

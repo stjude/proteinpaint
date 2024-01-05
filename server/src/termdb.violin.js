@@ -1,4 +1,4 @@
-import { unlink, writeFile } from 'fs'
+import { unlink } from 'fs'
 import { scaleLinear, scaleLog } from 'd3'
 import serverconfig from './serverconfig'
 import lines2R from './lines2R'
@@ -8,7 +8,7 @@ import { write_file } from './utils'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
 import { violinBinsObj } from '../../server/shared/violin.bins'
-import { summaryStats } from '../../server/shared/descriptive.stats'
+import summaryStats from '../../server/shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
 
 /*
