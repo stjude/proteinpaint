@@ -1,10 +1,11 @@
 import { bplen } from '#shared/common'
 import { nmeth2select } from './hic.straw'
-import { getdata_chrpair, getdata_detail, getdata_leadfollow, defaultnmeth } from './hic.straw'
+import { getdata_chrpair, getdata_detail, getdata_leadfollow, defaultnmeth, showBtns } from './hic.straw'
 import { Elem } from '../../types/d3'
 
 /**
- * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, and detail views)
+ * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, horizontal and detail views)
+ * Some of the view button text and functionality updated in hic.straw.ts
  * @param hic
  * @returns
  */
@@ -80,12 +81,15 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.controlsDiv.genomeViewBtn = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
+		.style('padding', '2px')
+		.style('margin', '2px 0px')
 		.html('&#8810; Genome')
 		.on('click', () => {
 			self.dom.controlsDiv.view.text('Genome')
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
 			self.inwholegenome = true
 			self.inchrpair = false
+			self.inhorizontal = false
 			self.indetail = false
 			switchview(hic, self)
 		})
@@ -93,10 +97,13 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.controlsDiv.chrpairViewBtn = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
+		.style('padding', '2px')
+		.style('margin', '2px 0px')
 		.on('click', () => {
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
 			self.inwholegenome = false
 			self.inchrpair = true
+			self.inhorizontal = false
 			self.indetail = false
 			switchview(hic, self)
 		})
@@ -104,11 +111,22 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.controlsDiv.horizontalViewBtn = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
-		.html('Horizontal View &#8810;')
+		.style('padding', '2px')
+		.style('margin', '2px 0px')
+		.html('&#8810; Horizontal View')
+		.on('click', () => {
+			self.inwholegenome = false
+			self.inchrpair = false
+			self.inhorizontal = true
+			self.indetail = false
+			switchview(hic, self)
+		})
 
 	self.dom.controlsDiv.detailViewBtn = self.dom.controlsDiv.viewBtnDiv
 		.append('button')
 		.style('display', 'none')
+		.style('padding', '2px')
+		.style('margin', '2px 0px')
 		.html('Detailed View &#8811;')
 
 	self.dom.controlsDiv.zoomDiv = menuTable.append('tr').style('display', 'none')
@@ -168,6 +186,13 @@ async function setnmeth(hic: any, nmeth: string, self: any) {
 		await getdata_chrpair(hic, self)
 		return
 	}
+
+	if (self.inhorizontal) {
+		self.chrpairview.nmeth = nmeth
+		//need launch function here
+		return
+	}
+
 	if (self.indetail) {
 		self.detailview.nmeth = nmeth
 		getdata_detail(hic, self)
@@ -228,36 +253,32 @@ function setmaxv(self: any, maxv: number) {
 }
 
 /**
- * by clicking buttons
- * only for switching to whole genome view
+ * Click buttons in menu to switch between views (whole genome, chr-chr pair, detail, horizontal).
+ * Launches or rerenders previously created views.
  * @param hic
  */
 function switchview(hic: any, self: any) {
+	//Remove all previous elements
+	self.dom.plotDiv.xAxis.selectAll('*').remove()
+	self.dom.plotDiv.yAxis.selectAll('*').remove()
+	self.dom.plotDiv.plot.selectAll('*').remove()
+
 	if (self.inwholegenome) {
 		nmeth2select(hic, self.wholegenome)
-		self.dom.plotDiv.xAxis.selectAll('*').remove()
-		self.dom.plotDiv.yAxis.selectAll('*').remove()
-		self.dom.plotDiv.plot.selectAll('*').remove()
 		self.dom.plotDiv.plot.node().appendChild(self.wholegenome.svg.node())
-		self.dom.controlsDiv.genomeViewBtn.style('display', 'none')
-		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
-		self.dom.controlsDiv.horizonalViewBtn.style('display', 'none')
-		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.wholegenome.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.wholegenome.resolution) + ' bp')
 	} else if (self.inchrpair) {
 		nmeth2select(hic, self.chrpairview)
-		self.dom.plotDiv.yAxis.selectAll('*').remove()
 		self.dom.plotDiv.yAxis.node().appendChild(self.chrpairview.axisy.node())
-		self.dom.plotDiv.xAxis.selectAll('*').remove()
 		self.dom.plotDiv.xAxis.node().appendChild(self.chrpairview.axisx.node())
-		self.dom.plotDiv.plot.selectAll('*').remove()
 		self.dom.plotDiv.plot.node().appendChild(self.chrpairview.canvas)
-		self.dom.controlsDiv.genomeViewBtn.style('display', 'inline-block')
-		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
-		self.dom.controlsDiv.horizonalViewBtn.style('display', 'none')
-		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
+	} else if (self.inhorizontal) {
+		console.log(self)
 	}
+
+	if (self.chrpairview.chrx && self.chrpairview.chry) showBtns(self, self.chrpairview.chrx, self.chrpairview.chry)
+	else showBtns(self)
 }
