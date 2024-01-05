@@ -11,6 +11,8 @@ import {
 	symbolWye,
 	symbolDiamond,
 	symbolDiamond2,
+	symbolSquare2,
+	symbolTriangle2,
 	symbolStar,
 	symbolPlus,
 	symbolAsterisk,
@@ -53,6 +55,8 @@ class Scatter {
 			symbolDiamond2,
 			symbolStar,
 			symbolPlus,
+			symbolSquare2,
+			symbolTriangle2,
 			symbolX,
 			symbolAsterisk
 		]
