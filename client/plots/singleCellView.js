@@ -17,7 +17,8 @@ export const maxDotSize = 300
 class SingleCellView {
 	constructor() {
 		this.type = 'singleCellView'
-		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
+		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
+		this.tip.d.style('max-height', '300px').style('overflow', 'scroll')
 	}
 
 	async init(appState) {
@@ -96,7 +97,7 @@ class SingleCellView {
 			resize: true,
 			singleMode: true,
 			div: this.sampleDiv,
-			maxHeight: '25vh',
+			maxHeight: '18vh',
 			noButtonCallback: index => {
 				const sample = this.samples[index].sample
 				const file = rows[index][columns.length - 1].value
@@ -246,7 +247,10 @@ class SingleCellView {
 			.append('svg')
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh)
-			.on('mousemove', event => this.onMouseOver(event, colorMap))
+			.on('mouseover', event => {
+				if (!this.onClick) this.showTooltip(event, plot)
+			})
+			.on('click', event => this.showTooltip(event, plot))
 
 		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.settings.svgh)
 		plot.svg = svg
@@ -337,36 +341,66 @@ class SingleCellView {
 			.domain([yMax, yMin])
 			.range([0 + r, this.settings.svgh - r])
 		plot.axisLeft = axisLeft(plot.yAxisScale)
+		plot.zoom = 1
 	}
 
-	onMouseOver(event, colorMap) {
+	distance(x1, y1, x2, y2, plot) {
+		const x = plot.xAxisScale(x2) - plot.xAxisScale(x1)
+		const y = plot.yAxisScale(y2) - plot.yAxisScale(y1)
+		const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
+		return distance
+	}
+
+	showTooltip(event, plot) {
+		if (this.onClick && event.type == 'click') {
+			this.onClick = false
+			this.tip.hide()
+			return
+		}
 		if (event.target.tagName == 'circle') {
+			this.onClick = event.type == 'click'
+
 			const d = event.target.__data__
+
+			let threshold = 10 //min distance in pixels to be in the neighborhood
+			threshold = threshold / plot.zoom //Threshold should consider the zoom
+			const samples = plot.cells.filter(s => {
+				if (this.getOpacity(s) == 0) return false
+				const dist = this.distance(s.x, s.y, d.x, d.y, plot)
+				return dist < threshold
+			})
 			const menu = this.tip.clear()
+
 			const table = menu.d.append('table')
-			let tr = table.append('tr')
-			const cluster = d.clusterMap[d.cellId]
-			tr.append('td').style('color', '#aaa').text('Id')
-			tr.append('td').text(`${d.cellId}`)
-			tr = table.append('tr')
-			tr.append('td').style('color', '#aaa').text(d.tid)
-			const td = tr.append('td')
-			const svg = td.append('svg').attr('width', 150).attr('height', 25)
-			const x = 15
-			const y = 18
-			const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
-			g.append('circle').attr('fill', colorMap[cluster]).attr('r', 4)
-			svg
-				.append('g')
-				.attr('transform', `translate(${x + 15}, ${y + 4})`)
-				.append('text')
-				.text(cluster)
-			menu.show(event.clientX, event.clientY, true, true)
+			for (const s of samples) {
+				let tr = table.append('tr')
+				const cluster = d.clusterMap[d.cellId]
+				tr.append('td').style('color', '#aaa').text('Id')
+				tr.append('td').text(`${d.cellId}`)
+				tr = table.append('tr')
+				tr.append('td').style('color', '#aaa').text(d.tid)
+				const td = tr.append('td')
+				const svg = td.append('svg').attr('width', 150).attr('height', 25)
+				const x = 15
+				const y = 18
+				const g = svg.append('g').attr('transform', `translate(${x}, ${y})`)
+				g.append('circle').attr('fill', plot.colorMap[cluster]).attr('r', 4)
+				svg
+					.append('g')
+					.attr('transform', `translate(${x + 15}, ${y + 4})`)
+					.append('text')
+					.text(cluster)
+				menu.show(event.clientX, event.clientY, true, true)
+			}
 		} else this.onMouseOut(event)
 	}
 
 	onMouseOut(event) {
 		this.tip.hide()
+	}
+
+	getOpacity(d) {
+		return this.config.hiddenClusters.includes(d.clusterMap[d.cellId]) ? 0 : 1
 	}
 }
 
@@ -397,8 +431,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 800,
-		svgh: 800,
-		svgd: 800
+		svgw: 500,
+		svgh: 500,
+		svgd: 500
 	}
 }
