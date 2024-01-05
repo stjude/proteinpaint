@@ -383,7 +383,6 @@ class SingleCellView {
 				}
 			}
 			const menu = this.tip.clear()
-			console.log(tree)
 			const table = menu.d.append('table')
 			for (const node of tree) {
 				let tr = table.append('tr')
