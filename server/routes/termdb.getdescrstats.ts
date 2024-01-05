@@ -1,7 +1,7 @@
 import { getdescrstatsRequest, getdescrstatsResponse } from '#shared/types/routes/termdb.getdescrstats.ts'
-import roundValue from '#shared/roundValue.js'
-import computePercentile from '#shared/compute.percentile.js'
-import * as termdbsql from '#src/termdb.sql.js'
+import * as termdbsql from '../src/termdb.sql.js'
+import Summarystats from '../shared/descriptive.stats.js'
+import summaryStats from '../shared/descriptive.stats.js'
 
 export const api: any = {
 	endpoint: 'termdb/descrstats',
@@ -104,42 +104,5 @@ async function trigger_getdescrstats(q: any, res: any, ds: any) {
 		}
 		values.push(value)
 	}
-
-	// compute statistics
-	// total
-	const total = values.length
-
-	// mean
-	const sum = values.reduce((a, b) => a + b, 0)
-	const mean = sum / total
-
-	// percentiles
-	const p25 = computePercentile(values, 25)
-	const median = computePercentile(values, 50)
-	const p75 = computePercentile(values, 75)
-
-	// standard deviation
-	// get sum of squared differences from mean
-	const sumSqDiff = values.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0)
-	// get variance
-	const variance = sumSqDiff / (values.length - 1)
-	// get standard deviation
-	const sd = Math.sqrt(variance)
-
-	// min/max
-	const min = Math.min(...values)
-	const max = Math.max(...values)
-
-	res.send({
-		values: [
-			{ id: 'total', label: 'n', value: total },
-			{ id: 'min', label: 'Minimum', value: roundValue(min, 2) },
-			{ id: 'p25', label: '1st quartile', value: roundValue(p25, 2) },
-			{ id: 'median', label: 'Median', value: roundValue(median, 2) },
-			{ id: 'mean', label: 'Mean', value: roundValue(mean, 2) },
-			{ id: 'p75', label: '3rd quartile', value: roundValue(p75, 2) },
-			{ id: 'max', label: 'Maximum', value: roundValue(max, 2) },
-			{ id: 'sd', label: 'Standard deviation', value: roundValue(sd, 2) }
-		]
-	} as getdescrstatsResponse)
+	res.send(Summarystats(values) as getdescrstatsResponse)
 }

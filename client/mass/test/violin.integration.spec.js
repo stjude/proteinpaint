@@ -571,13 +571,13 @@ tape('test hide option on label clicking', function (test) {
 	}
 
 	async function testHiddenValues(violin, legendDiv, violinDiv) {
-		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend', count: 8 })
+		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend', count: 10 })
 		test.ok(htmlLegends, 'Legend exists')
 
 		const hiddenKeys = Object.keys(violin.Inner.config.term2.q.hiddenValues)
 		test.equal(
 			Object.keys(violin.Inner.config.term2.q.hiddenValues)[0],
-			htmlLegends[8].innerHTML,
+			htmlLegends[10].innerHTML,
 			'q.hiddenValues match legend'
 		)
 		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
