@@ -68,10 +68,12 @@ export type HicstrawDom = {
 		viewBtnDiv: Elem
 		/** Returns user to the whole genome view from the chr-chr or detailed view*/
 		wholegenomebutton: Elem
-		/** Returns user to the chr-chr pair view from the detailed view */
+		/** Returns user to the chr-chr pair view from the any other view besides whole genome */
 		chrpairviewbutton: Elem
-		/** Opens a pop up of the 2 chr genome browser view in the detailed view */
+		/** Returns user to the 2 chr genome browser view (subpanels) in the detailed view */
 		horizontalViewBtn: Elem
+		/** Displays the detail x/y view, replacing the horizontal view */
+		detailViewBtn: Elem
 		/** Div for zoom buttons visible in the detailed view */
 		zoomDiv: Elem
 		/** Zoom in button whilst in the detailed view */
@@ -137,13 +139,13 @@ export type DetailView = {
 	}
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
-	xb: DetailedViewAxis
-	yb: DetailedViewAxis
+	xb: DetailViewAxis
+	yb: DetailViewAxis
 	/** Calculated resolution. Displayed in menu for user */
 	resolution: number
 }
 
-export type DetailedViewAxis = {
+export type DetailViewAxis = {
 	leftheadw: number
 	rightheadw: number
 	lpad: number
