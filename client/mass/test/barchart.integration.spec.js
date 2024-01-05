@@ -191,6 +191,7 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 	const legendDataId = 'not exposed'
 
 	async function clickLegendToHideOverlay(barchart) {
+		await sleep(40)
 		const legendDiv = barchart.Inner.dom.legendDiv
 		const item = legendDiv
 			.selectAll('.sjpp-htmlLegend')
