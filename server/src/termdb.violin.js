@@ -8,7 +8,7 @@ import { write_file } from './utils'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
 import { violinBinsObj } from '../../server/shared/violin.bins'
-import summaryStats from '../../server/shared/descriptive.stats'
+import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
 
 /*
