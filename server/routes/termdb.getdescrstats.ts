@@ -1,7 +1,6 @@
 import { getdescrstatsRequest, getdescrstatsResponse } from '#shared/types/routes/termdb.getdescrstats.ts'
 import * as termdbsql from '../src/termdb.sql.js'
 import Summarystats from '../shared/descriptive.stats.js'
-import summaryStats from '../shared/descriptive.stats.js'
 
 export const api: any = {
 	endpoint: 'termdb/descrstats',
