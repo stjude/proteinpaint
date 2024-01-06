@@ -1462,6 +1462,12 @@ function setTermGroupActions(self) {
 			{ label: 'Sort', callback: self.showSortMenu },
 			{ label: 'Delete', callback: self.removeTermGroup }
 		]
+		if (self.chartType == 'hierCluster') {
+			// Do not show the 'Edit' and 'Sort' option in the term group menu for hierCluster term groups
+			// for hiercluster gene expression term group, the term group menu won't be shown after clicking the term group label.
+			menuOptions.splice(0, 1)
+			menuOptions.splice(1, 1)
+		}
 
 		holder
 			.append('div')
@@ -1765,7 +1771,17 @@ function setLabelDragEvents(self, prefix) {
 		}
 		//const cls = event.target.className?.baseVal || event.target.parentNode.className?.baseVal || ''
 		if (event.target.innerHTML.includes('grouped by')) return
-		if (event.target.tagName === 'text') select(event.target).style('fill', 'blue')
+		if (event.target.tagName === 'text') {
+			if (
+				self.chartType == 'hierCluster' &&
+				event.target.__data__.grp.name == self.config.settings.hierCluster.termGroupName
+			) {
+				// do not change color when hovering over for hierCluster gene expression term group name label
+				// as the term group menu is disabled for hierCluster gene expression term group for now
+				return
+			}
+			select(event.target).style('fill', 'blue')
+		}
 		if (!self.dragged) return
 		// TODO: why is the element-bound __data__ (t) not provided as a second argument by d3??
 		self.hovered = event.target.__data__
@@ -1873,7 +1889,11 @@ function setLabelDragEvents(self, prefix) {
 			delete self.dragged
 		} else if (prefix == 'term') {
 			self.showTermMenu(event)
-		} else {
+		} else if (
+			self.chartType !== 'hierCluster' ||
+			event.target.__data__.grp.name !== self.config.settings.hierCluster.termGroupName
+		) {
+			// Do not show the term group menu for hierCluster gene expression term group
 			self.showTermGroupMenu(event)
 		}
 	}

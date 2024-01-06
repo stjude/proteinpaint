@@ -1,1 +1,3 @@
 
+Fixes:
+-Disable the term group menu for hierCluster gene expression term group, and remove the 'edit' and 'sort' options for other hier cluster term groups 
