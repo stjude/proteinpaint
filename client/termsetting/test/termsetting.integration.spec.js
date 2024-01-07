@@ -147,7 +147,7 @@ tape('menuOptions', async test => {
 	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
 	test.equal(
 		tipd.selectAll('.sja_menuoption').size(),
-		4,
+		3,
 		`the menu should show 3 buttons for edit/replace/remove when menuOptions='all'`
 	)
 
@@ -162,15 +162,15 @@ tape('menuOptions', async test => {
 	pilldiv.click()
 	test.equal(
 		tipd.selectAll('.sja_menuoption').size(),
-		2,
-		`should show 2 menu options when menuOptions is empty/undefined`
+		1,
+		`should show 1 menu option when menuOptions is empty/undefined`
 	)
 
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
 })
 
-tape('Reuse option', async test => {
+tape.skip('Reuse option', async test => {
 	test.timeoutAfter(5000)
 	test.plan(11)
 
@@ -335,7 +335,11 @@ tape('Categorical term', async test => {
 	const tip = opts.pill.Inner.dom.tip
 
 	//check menu buttons on first menu
-	test.equal(tip.d.selectAll('.sja_menuoption.sja_sharp_border').size(), 2, 'Should have 2 buttons for group config')
+	test.equal(
+		tip.d.selectAll('.sja_menuoption.sja_sharp_border').size(),
+		1,
+		'Should have 1 menu option for group config'
+	)
 
 	// check menu buttons on category menu
 	/** Although 27 values, annotations only available for 10. */
@@ -1066,7 +1070,7 @@ tape('Custom vocabulary', async test => {
 	pilldiv.click()
 	const tipd = opts.pill.Inner.dom.tip.d
 	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
-	test.equal(tipd.selectAll('.sja_menuoption').size(), 4, 'the menu should show 4 buttons for edit/replace/remove')
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 3, 'the menu should show 3 buttons for edit/replace/remove')
 
 	const replaceBtn = tipd
 		.selectAll('.sja_menuoption')
