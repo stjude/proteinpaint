@@ -230,6 +230,7 @@ export class TermSetting {
 			if ('filter' in data) this.filter = data.filter as Filter
 			if ('activeCohort' in data) this.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
+			if ('menuOptions' in data) this.opts.menuOptions = data.menuOptions
 			await this.setHandler(this.term ? this.term.type : null)
 			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.handler.postMain) await this.handler.postMain()
@@ -574,8 +575,8 @@ function setInteractivity(self) {
 			}
 		})
 	}
-	// skipEditandReplace is a temperary fix to remove the Edit and Replace options for hierCluster gene expression terms
-	self.showMenu = (event: MouseEvent, clickedElem = null, menuHolder = null, skipEditandReplace = false) => {
+
+	self.showMenu = (event: MouseEvent, clickedElem = null, menuHolder = null) => {
 		const tip = self.dom.tip
 		tip.clear()
 		// self.dom.holder really is set to clickedElem because
@@ -596,7 +597,7 @@ function setInteractivity(self) {
 			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
 		}
 
-		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions) && !skipEditandReplace) {
+		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
 			options.push({ label: 'Edit', callback: self.handler!.showEditMenu } as opt)
 		}
 
@@ -606,7 +607,7 @@ function setInteractivity(self) {
 		// 	options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
 		// }
 
-		if (minimatch('replace', self.opts.menuOptions) && !skipEditandReplace) {
+		if (minimatch('replace', self.opts.menuOptions)) {
 			options.push({ label: 'Replace', callback: self.showTree } as opt)
 		}
 
