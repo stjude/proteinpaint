@@ -16,7 +16,9 @@ export class profilePlot {
 		return {
 			config,
 			termfilter: appState.termfilter,
-			dslabel: appState.vocab.dslabel
+			dslabel: appState.vocab.dslabel,
+			isLoggedIn: false,
+			role: 'regular'
 		}
 	}
 
@@ -42,7 +44,7 @@ export class profilePlot {
 		return list
 	}
 
-	async setControls(chartType, additionalInputs = []) {
+	async setControls(additionalInputs = []) {
 		const idFilters = [this.config.countryTW.id, this.config.incomeTW.id, this.config.typeTW.id]
 		const filters = {}
 		for (const id of idFilters) {
@@ -91,7 +93,7 @@ export class profilePlot {
 			filter,
 			termsPerRequest: 30
 		})
-
+		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
@@ -128,7 +130,7 @@ export class profilePlot {
 			}
 		]
 		inputs.unshift(...additionalInputs)
-		if (this.type == 'profileRadarFacility') {
+		if (this.state.isLoggedIn) {
 			this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
 				terms: this.twLst,
 				termsPerRequest: 30
@@ -146,7 +148,8 @@ export class profilePlot {
 				chartType,
 				options: this.sites,
 				settingsKey: 'site',
-				callback: value => this.setSite(value)
+				callback: value => this.setSite(value),
+				disabled: this.state.role == 'regular'
 			})
 		}
 		if (this.type != 'profileBarchart')
