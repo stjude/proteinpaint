@@ -263,7 +263,7 @@ export class TermSetting {
 		// support legacy options, now converted to use glob-style pattern matching
 		if (o.menuOptions == 'all') o.menuOptions = '*'
 		// skip reuse option
-		for (const opt of ['edit' /*'reuse'*/, , 'replace', 'remove']) {
+		for (const opt of ['edit', /*'reuse',*/ 'replace', 'remove']) {
 			if (minimatch(opt, o.menuOptions)) return // matched at least one menu option
 		}
 		throw `no matches found for termsetting opts.menuOptions='${o.menuOptions}'`
