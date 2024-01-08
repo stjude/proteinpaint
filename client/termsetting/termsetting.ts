@@ -45,7 +45,7 @@ export function get$id() {
 }
 
 const defaultOpts: { menuOptions: string; menuLayout: string } = {
-	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
+	menuOptions: 'edit', // ['edit', 'replace', 'save', 'remove', 'reuse'],
 	menuLayout: 'vertical'
 }
 
@@ -262,7 +262,8 @@ export class TermSetting {
 		if (!o.menuOptions) o.menuOptions = defaultOpts.menuOptions
 		// support legacy options, now converted to use glob-style pattern matching
 		if (o.menuOptions == 'all') o.menuOptions = '*'
-		for (const opt of ['edit', 'reuse', 'replace', 'remove']) {
+		// skip reuse option
+		for (const opt of ['edit', /*'reuse',*/ 'replace', 'remove']) {
 			if (minimatch(opt, o.menuOptions)) return // matched at least one menu option
 		}
 		throw `no matches found for termsetting opts.menuOptions='${o.menuOptions}'`
@@ -601,9 +602,9 @@ function setInteractivity(self) {
 
 		// Restored the reuse menu option for now, due to failing integration tests that will require more code changes to fix
 		// Instead of deleting the reuse code, may move the Reuse to the edit menu for recovering saved grouping/bin config
-		if (minimatch('reuse', self.opts.menuOptions)) {
-			options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
-		}
+		// if (minimatch('reuse', self.opts.menuOptions)) {
+		// 	options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
+		// }
 
 		if (minimatch('replace', self.opts.menuOptions)) {
 			options.push({ label: 'Replace', callback: self.showTree } as opt)
