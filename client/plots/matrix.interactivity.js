@@ -403,6 +403,12 @@ function setTermActions(self) {
 		})
 	}
 
+	self.getMenuOptions = function (t) {
+		return self.chartType == 'hierCluster' && t.grp.name === self.config.settings.hierCluster?.termGroupName
+			? '{edit,remove}'
+			: '*'
+	}
+
 	self.showTermMenu = async function (event) {
 		const t = event.target.__data__
 		if (!t || !t.tw || !t.grp) return
@@ -487,7 +493,7 @@ function setTermActions(self) {
 		//menuBtnsDiv.on('click', () => menuBtnsDiv.style('display', 'none'))
 		// must remember event target since it's cleared after async-await
 		const clickedElem = event.target
-		await self.pill.main(t.tw ? t.tw : { term: null, q: null })
+		await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null }))
 		let skipEditandReplace
 		if (
 			self.chartType == 'hierCluster' &&
@@ -755,7 +761,7 @@ function setTermActions(self) {
 					self.dom.tip.hide()
 				})
 		} else {
-			await self.pill.main(self.activeLabel.tw)
+			await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, self.activeLabel.tw))
 			self.pill.showMenu()
 		}
 	}
