@@ -5,9 +5,9 @@ import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import Readable from 'stream'
 import { GdcMafBuildRequest } from '#shared/types/routes/gdc.mafBuild.ts'
+import { maxTotalSizeCompressed } from './gdc.maf.ts'
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 50000000 // 50Mb
 
 export const api = {
 	endpoint: 'gdc/mafBuild',
@@ -43,6 +43,7 @@ async function buildMaf(q: GdcMafBuildRequest, res: any) {
 	const t0 = Date.now()
 
 	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst)) as string[]
+
 	if (serverconfig.debugmode)
 		console.log(
 			`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`,
@@ -60,11 +61,12 @@ async function buildMaf(q: GdcMafBuildRequest, res: any) {
 	res.setHeader('Content-Disposition', 'attachment; filename=cohort.maf.gz')
 	rustStream.pipe(res)
 
-	if (serverconfig.debugmode) console.log('rust gdcmaf', Date.now() - t0)
-
 	rustStream.on('end', () => {
+		// report amount of time taken to run rust
+		if (serverconfig.debugmode) console.log('rust gdcmaf', Date.now() - t0)
 		res.end()
 	})
+
 	rustStream.on('error', err => {
 		console.error(err)
 		res.statusCode = 500
