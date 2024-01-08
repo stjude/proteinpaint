@@ -61,13 +61,15 @@ function handle_hicdata(q: HicdataRequest) {
 
 		const par = [
 			// TODO add option for observed/oe
-			q.nmeth || 'NONE',
+			q.oevalue || 'observed',
+			q.nmeth || 'None',
 			file,
 			q.pos1,
 			q.pos2,
 			q.isfrag ? 'FRAG' : 'BP',
 			q.resolution
 		]
+		console.log(par)
 
 		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })

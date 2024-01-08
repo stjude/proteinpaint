@@ -1,4 +1,6 @@
 export type HicdataRequest = {
+	/** observed, expected, oe values*/
+	oevalue: string
 	/** HiC file path from tp/ */
 	file?: string
 	/** Remote HiC file URL */
