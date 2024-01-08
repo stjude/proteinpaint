@@ -479,9 +479,33 @@ class Hicstat {
 
 		showBtns(this, chrx, chry)
 
+		// default view span
+		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
+
+		let coordx = Math.max(
+			1,
+			Math.floor((x * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+		)
+		let coordy = Math.max(
+			1,
+			Math.floor((y * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+		)
+
+		// make sure positions are not out of bounds
+		{
+			const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
+			if (coordx + viewrangebpw >= lenx) {
+				coordx = lenx - viewrangebpw
+			}
+			const leny = hic.genome.chrlookup[chry.toUpperCase()].len
+			if (coordy + viewrangebpw > leny) {
+				coordy = leny - viewrangebpw
+			}
+		}
+
 		//Similar to the detailview.rglst[0]
-		const regionx = { chr: chrx, start: x, stop: y }
-		const regiony = { chr: chry, start: x, stop: y }
+		const regionx = { chr: chrx, start: coordy, stop: coordx }
+		const regiony = { chr: chry, start: coordy, stop: coordx }
 
 		const tracks = [
 			{
