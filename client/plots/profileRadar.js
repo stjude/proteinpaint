@@ -43,7 +43,7 @@ class profileRadar extends profilePlot {
 				this.twLst.push(row.poc.maxScore)
 			}
 		}
-		await this.setControls('profileRadar')
+		await this.setControls()
 		this.angle = (Math.PI * 2) / this.terms.length
 		this.plot()
 	}

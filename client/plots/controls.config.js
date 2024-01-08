@@ -447,22 +447,25 @@ function setDropdownInput(opts) {
 		}
 	}
 
-	self.dom.select = self.dom.inputTd.append('select').on('change', () => {
-		const value = self.dom.select.property('value')
-		if (opts.callback) opts.callback(value)
-		else
-			opts.dispatch({
-				type: 'plot_edit',
-				id: opts.id,
-				config: {
-					settings: {
-						[opts.chartType]: {
-							[opts.settingsKey]: value
+	self.dom.select = self.dom.inputTd
+		.append('select')
+		.property('disabled', opts.disabled)
+		.on('change', () => {
+			const value = self.dom.select.property('value')
+			if (opts.callback) opts.callback(value)
+			else
+				opts.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						settings: {
+							[opts.chartType]: {
+								[opts.settingsKey]: value
+							}
 						}
 					}
-				}
-			})
-	})
+				})
+		})
 	self.dom.select
 		.selectAll('option')
 		.data(opts.options)

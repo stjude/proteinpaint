@@ -38,7 +38,7 @@ class profileRadarFacility extends profilePlot {
 			this.twLst.push(row.score)
 			this.twLst.push(row.maxScore)
 		}
-		await this.setControls('profileRadarFacility')
+		await this.setControls()
 
 		this.angle = (Math.PI * 2) / this.terms.length
 		this.plot()
@@ -144,13 +144,15 @@ class profileRadarFacility extends profilePlot {
 			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
 			.attr('d', this.lineGenerator(data))
-		polarG
-			.append('g')
-			.append('path')
-			.style('stroke', color2)
-			.attr('fill', 'none')
-			.attr('stroke-width', '2px')
-			.attr('d', this.lineGenerator(data2))
+		if (this.state.isLoggedIn) {
+			polarG
+				.append('g')
+				.append('path')
+				.style('stroke', color2)
+				.attr('fill', 'none')
+				.attr('stroke-width', '2px')
+				.attr('d', this.lineGenerator(data2))
+		}
 
 		for (let i = 0; i <= 10; i++) {
 			const percent = i * 10
@@ -165,9 +167,11 @@ class profileRadarFacility extends profilePlot {
 
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		const facilityName = this.data2.refs.bySampleId[this.sampleData.sample].label
 		this.addLegendItem(this.config[this.config.plot].score, color1, 0, '5, 5')
-		this.addLegendItem(`Facility ${facilityName} ${this.config[this.config.plot].score}`, color2, 1, 'none')
+		if (this.state.isLoggedIn) {
+			const facilityName = this.data2.refs.bySampleId[this.sampleData.sample].label
+			this.addLegendItem(`Facility ${facilityName} ${this.config[this.config.plot].score}`, color2, 1, 'none')
+		}
 	}
 
 	addData(iangle, i, data, isFacility) {

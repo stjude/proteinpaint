@@ -19,6 +19,7 @@ pre-commit run --files "$FILES"
 
 # lint against team preferences
 echo "Linting ..."
+echo "$FILES"
 echo "$FILES" | grep "\.ts" | xargs npx eslint
 
 exit 0

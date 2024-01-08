@@ -39,7 +39,7 @@ class profilePolar extends profilePlot {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.profilePolar
 
-		await this.setControls('profilePolar')
+		await this.setControls()
 		this.angle = (Math.PI * 2) / this.config.terms.length
 
 		this.plot()
