@@ -15,12 +15,16 @@ export type TermdbClusterRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
+	/** cluster method */
+	clusterMethod: 'average' | 'complete'
+	/** TODO new param distance metric */
 	/** Data type */
 	dataType: 3 // create union to support more types
-	/** List of genes TODO generalize as termwrappers with numeric data on samples */
+	/** List of genes TODO can be non-genes when dataType is generalized */
 	genes: Gene[]
 	/** pp filter */
 	filter?: Filter
+	/** todo gdc filter */
 	filter0?: any
 }
 
