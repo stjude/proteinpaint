@@ -62,7 +62,10 @@ export class MatrixControls {
 						title: `Limit the number of displayed ${l.samples}`,
 						type: 'number',
 						chartType: 'matrix',
-						settingsKey: 'maxSample'
+						settingsKey: 'maxSample',
+						getDisplayStyle(plot) {
+							return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+						}
 					},
 					{
 						label: `Group ${l.Samples} By`,
@@ -109,7 +112,7 @@ export class MatrixControls {
 							{
 								label: `Hits`,
 								value: 'hits',
-								title: `Sort by the total number of variants for every sample in the group`
+								title: `Sort by the total number of variants for every ${l.sample} in the group`
 							}
 						],
 						getDisplayStyle(plot) {
@@ -117,7 +120,7 @@ export class MatrixControls {
 						}
 					},
 					{
-						label: `${l.Sample} Group Label Max Length`,
+						label: `${l.Sample} Group Label Character Limit`,
 						title: `Truncate the ${l.sample} group label if it exceeds this maximum number of characters`,
 						type: 'number',
 						chartType: 'matrix',
@@ -127,7 +130,7 @@ export class MatrixControls {
 						}
 					},
 					{
-						label: `${l.Sample} Label Max Length`,
+						label: `${l.Sample} Label Character Limit`,
 						title: `Truncate the ${l.sample} label if it exceeds this maximum number of characters`,
 						type: 'number',
 						chartType: 'matrix',
@@ -172,14 +175,14 @@ export class MatrixControls {
 					// 	processInput: tw => {},
 					// },
 					{
-						label: `Row Group Label Max Length`,
+						label: `Row Group Label Character Limit`,
 						title: `Truncate the row group label if it exceeds this maximum number of characters`,
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'termGrpLabelMaxChars'
 					},
 					{
-						label: `Row Label Max Length`,
+						label: `Row Label Character Limit`,
 						title: `Truncate the row label if it exceeds this maximum number of characters`,
 						type: 'number',
 						chartType: 'matrix',
@@ -195,13 +198,12 @@ export class MatrixControls {
 							{
 								label: 'Stacked',
 								value: '',
-								title: 'Show stacked rectangles in the same matrix cell to render variants for the same sample and gene'
+								title: `Show stacked rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
 							},
 							{
 								label: 'Oncoprint',
 								value: 'oncoprint',
-								title:
-									'Show overlapping rectangles in the same matrix cell to render variants for the same sample and gene'
+								title: `Show overlapping rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
 							}
 						],
 						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
@@ -328,7 +330,7 @@ export class MatrixControls {
 							},
 							{
 								label: 'Background Color',
-								title: 'Set the background color when there are no alterations or annotation data for a sample',
+								title: `Set the background color when there are no alterations or annotation data for a ${l.sample}`,
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'cellbg',
@@ -337,7 +339,7 @@ export class MatrixControls {
 							},
 							{
 								label: `Use Canvas If # ${l.sample} Exceeds`,
-								title: 'Switch from SVG to canvas rendering when the number of samples exceeds this number',
+								title: `Switch from SVG to canvas rendering when the number of ${l.samples} exceeds this number`,
 								type: 'number',
 								chartType: 'matrix',
 								settingsKey: 'svgCanvasSwitch',

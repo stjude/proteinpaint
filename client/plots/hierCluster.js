@@ -281,21 +281,21 @@ class HierCluster extends Matrix {
 						]
 					},
 					{
-						label: `Column dendrogram height`,
+						label: `Column Dendrogram Height`,
 						title: `The maximum height to render the column dendrogram`,
 						type: 'number',
 						chartType: 'hierCluster',
 						settingsKey: 'yDendrogramHeight'
 					},
 					{
-						label: `Row dendrogram width`,
+						label: `Row Dendrogram Width`,
 						title: `The maximum width to render the row dendrogram`,
 						type: 'number',
 						chartType: 'hierCluster',
 						settingsKey: 'xDendrogramHeight'
 					},
 					{
-						label: `Z-score cap`,
+						label: `Z-Score Cap`,
 						title: `Cap the z-score scale to not exceed this absolute value`,
 						type: 'number',
 						chartType: 'hierCluster',
