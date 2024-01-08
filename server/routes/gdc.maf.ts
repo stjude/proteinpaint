@@ -3,15 +3,28 @@ import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const maxFileNumber = 2000
+/*
+this route lists available gdc MAF files based on user's cohort filter
+and return them to client to be shown in a table for selection
+*/
+
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // to switch to serverconfig export
+
+const maxFileNumber = 1000 // determines max number of files to return to client
+// preliminary testing:
+// 36s for 1000 (87Mb)
+// 78s for 2000 (177Mb)
+// if safe to increase to 2000, maybe fast when this runs in gdc env
+
 const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
-const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 100000000 // 100Mb
+
+// change to 400 so it won't limit number of files; should keep this setting as a safeguard; also it's fast to check file size (.5s in gdc.mafBuild.ts)
+export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 400000000 // 400Mb
 
 export const api = {
 	endpoint: 'gdc/maf',
 	methods: {
-		get: {
+		all: {
 			init,
 			request: {
 				typeId: 'GdcMafRequest'
