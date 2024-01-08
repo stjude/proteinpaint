@@ -59,7 +59,7 @@ class profileBarchart extends profilePlot {
 					this.twLst.push(row.poc.maxScore)
 				}
 			}
-		await this.setControls('profileBarchart', [this.componentInput])
+		await this.setControls([this.componentInput])
 		this.component = this.settings.component || this.componentNames[0].value
 		this.plot()
 	}
