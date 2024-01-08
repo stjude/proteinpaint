@@ -6,5 +6,7 @@ FILES=$(git diff-tree --no-commit-id --name-only -r HEAD..origin/master)
 echo "number of files to be checked=$(echo "$FILES" | wc -w)"
 # doing this per GDC requirements
 pre-commit run --files $FILES
-
+# run linter on ts files
+echo "linting ..."
+echo "$FILES" | grep .ts | xargs npx eslint
 exit 0

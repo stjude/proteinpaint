@@ -19,6 +19,6 @@ pre-commit run --files "$FILES"
 
 # lint against team preferences
 echo "Linting ..."
-echo "$FILES" | xargs sh -c "f=$1; [ \"${f:0:1}\" != \".\" ] && npx eslint $f"
+echo "$FILES" | grep .ts | xargs npx eslint
 
 exit 0
