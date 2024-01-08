@@ -574,8 +574,8 @@ function setInteractivity(self) {
 			}
 		})
 	}
-
-	self.showMenu = (event: MouseEvent, clickedElem = null, menuHolder = null) => {
+	// skipEditandReplace is a temperary fix to remove the Edit and Replace options for hierCluster gene expression terms
+	self.showMenu = (event: MouseEvent, clickedElem = null, menuHolder = null, skipEditandReplace = false) => {
 		const tip = self.dom.tip
 		tip.clear()
 		// self.dom.holder really is set to clickedElem because
@@ -596,7 +596,7 @@ function setInteractivity(self) {
 			options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
 		}
 
-		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
+		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions) && !skipEditandReplace) {
 			options.push({ label: 'Edit', callback: self.handler!.showEditMenu } as opt)
 		}
 
@@ -606,7 +606,7 @@ function setInteractivity(self) {
 		// 	options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
 		// }
 
-		if (minimatch('replace', self.opts.menuOptions)) {
+		if (minimatch('replace', self.opts.menuOptions) && !skipEditandReplace) {
 			options.push({ label: 'Replace', callback: self.showTree } as opt)
 		}
 

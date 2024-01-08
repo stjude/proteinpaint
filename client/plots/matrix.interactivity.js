@@ -488,7 +488,15 @@ function setTermActions(self) {
 		// must remember event target since it's cleared after async-await
 		const clickedElem = event.target
 		await self.pill.main(t.tw ? t.tw : { term: null, q: null })
-		self.pill.showMenu(event, clickedElem, self.dom.twMenuBar)
+		let skipEditandReplace
+		if (
+			self.chartType == 'hierCluster' &&
+			self.config.settings.hierCluster.termGroupName == clickedElem.__data__.grp.name
+		) {
+			// Temporary fix: for hierCluster gene expression terms, do not show 'Edit' and 'Replace" options upon clicking term label
+			skipEditandReplace = true
+		}
+		self.pill.showMenu(event, clickedElem, self.dom.twMenuBar, skipEditandReplace)
 
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
 		//self.showTermGroupInputs(self.dom.grpMenuDiv)
@@ -2256,11 +2264,11 @@ function setLengendActions(self) {
 			// for gene expression don't use legend as filter
 			return
 		}
-		if (!targetData.isLegendItem && !targetData.dt) {
-			// when its a non-genevariant legend group name
+		if (!targetData.isLegendItem && (!targetData.dt || self.chartType == 'hierCluster')) {
+			// do not change color when its a non-genevariant legend group name
+			// or when its a genevariant legend group name for hierCluster
 			return
 		}
-
 		const legendGrpHidden = self.config.legendGrpFilter.lst.find(f => f.legendData.name == targetData.termid) && true
 		if (targetData.isLegendItem && legendGrpHidden) {
 			// when the legend's group is hidden
@@ -2286,8 +2294,9 @@ function setLengendActions(self) {
 
 		// When clicking a legend group name
 		if (!targetData.isLegendItem) {
-			if (!targetData.dt) {
-				// when its a non-genevariant legend group name
+			if (!targetData.dt || self.chartType == 'hierCluster') {
+				// do not use as filter when its a non-genevariant legend group name
+				// or when its a genevariant legend group name for hierCluster
 				return
 			}
 
