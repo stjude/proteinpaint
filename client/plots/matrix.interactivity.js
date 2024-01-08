@@ -405,7 +405,7 @@ function setTermActions(self) {
 
 	self.getMenuOptions = function (t) {
 		return self.chartType == 'hierCluster' && t.grp.name === self.config.settings.hierCluster?.termGroupName
-			? '{edit,remove}'
+			? '{remove,}'
 			: '*'
 	}
 
@@ -494,15 +494,7 @@ function setTermActions(self) {
 		// must remember event target since it's cleared after async-await
 		const clickedElem = event.target
 		await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null }))
-		let skipEditandReplace
-		if (
-			self.chartType == 'hierCluster' &&
-			self.config.settings.hierCluster.termGroupName == clickedElem.__data__.grp.name
-		) {
-			// Temporary fix: for hierCluster gene expression terms, do not show 'Edit' and 'Replace" options upon clicking term label
-			skipEditandReplace = true
-		}
-		self.pill.showMenu(event, clickedElem, self.dom.twMenuBar, skipEditandReplace)
+		self.pill.showMenu(event, clickedElem, self.dom.twMenuBar)
 
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
 		//self.showTermGroupInputs(self.dom.grpMenuDiv)
