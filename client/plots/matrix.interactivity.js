@@ -62,9 +62,15 @@ export function setInteractivity(self) {
 		if (d.term.type != 'geneVariant') {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label}</td></tr>`)
 			rows.push(
-				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill}'> ${
-					d.convertedValueLabel || d.label
-				}</td></tr>`
+				`<tr>
+					<td>${d.term.name}:</td>
+					<td>
+						<span style="display:inline-block; width:12px; height:12px; background-color:${
+							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+						}" ></span>
+						${d.convertedValueLabel || d.label}
+					</td>
+				</tr>`
 			)
 		} else if (d.term.type == 'geneVariant' && d.value) {
 			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label || d.value.sample}</td></tr>`)
@@ -122,9 +128,21 @@ export function setInteractivity(self) {
 				*/
 			}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
-				rows.push(`<tr><td>${dtLabel}:</td><td  style='color: ${classArray[0].color}'>${classArray[0].label}</td></tr>`)
+				rows.push(`<tr>
+						   		<td>${dtLabel}:</td>
+								<td>
+									<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
+									${classArray[0].label}
+								</td>
+						    </tr>`)
 				for (const classType of classArray.slice(1)) {
-					rows.push(`<tr><td></td><td style='color: ${classType.color}'>${classType.label}</td></tr>`)
+					rows.push(`<tr>
+									<td></td>
+									<td>
+										<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
+										${classType.label}
+									</td>
+								</tr>`)
 				}
 			}
 		}
@@ -248,9 +266,14 @@ export function setInteractivity(self) {
 
 		if (sampleData.term && sampleData.term.type != 'geneVariant') {
 			rows.push(
-				`<tr><td>${sampleData.term.name}:</td><td style='color: ${
-					sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-				}'> ${sampleData.convertedValueLabel || sampleData.label}</td></tr>`
+				`<tr><td>${sampleData.term.name}:</td>
+					<td> 
+						<span style="display:inline-block; width:12px; height:12px; background-color:${
+							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+						}" ></span>
+						${sampleData.convertedValueLabel || sampleData.label}
+					</td>
+				</tr>`
 			)
 		} else if (sampleData.term && sampleData.term.type == 'geneVariant' && sampleData.value) {
 			if (templates?.gene) {
@@ -283,9 +306,21 @@ export function setInteractivity(self) {
 				}
 			}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
-				rows.push(`<tr><td>${dtLabel}:</td><td  style='color: ${classArray[0].color}'>${classArray[0].label}</td></tr>`)
+				rows.push(`<tr>
+								<td>${dtLabel}:</td>
+								<td>
+									<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
+									${classArray[0].label}
+								</td>
+						   </tr>`)
 				for (const classType of classArray.slice(1)) {
-					rows.push(`<tr><td></td><td style='color: ${classType.color}'>${classType.label}</td></tr>`)
+					rows.push(`<tr>
+									<td></td>
+									<td>
+										<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
+										${classType.label}
+									</td>
+							   </tr>`)
 				}
 			}
 		}
