@@ -61,6 +61,7 @@ function handle_hicdata(q: HicdataRequest) {
 
 		const par = [
 			// TODO add option for observed/oe
+			q.oevalues || 'observed',
 			q.nmeth || 'NONE',
 			file,
 			q.pos1,
