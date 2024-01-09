@@ -40,7 +40,6 @@ export async function doClustering(data, q, ds) {
 
 	const row_coordinates = Routput.RowMerge
 	const col_coordinates = Routput.ColumnMerge
-	console.log('row_coordinates:', row_coordinates)
 	const row_height = Routput.RowHeight
 	const col_height = Routput.ColumnHeight
 	const row_names_index = Routput.RowDendOrder.map(i => i.ind) // sorted rows. value is array index in input data
@@ -131,6 +130,7 @@ function parseclust2(coordinates, height, names_index) {
 			const child_entry = children.find(ent => ent.id == branch_entry.id1)
 			//console.log('child_entry:', child_entry)
 			n1_children = child_entry.children
+			children.push({ id: node_id, children: n1_children })
 		}
 		n1_id = node_id
 		node_id += 1
@@ -150,6 +150,7 @@ function parseclust2(coordinates, height, names_index) {
 			const child_entry = children.find(ent => ent.id == branch_entry.id1)
 			//console.log('child_entry:', child_entry)
 			n2_children = child_entry.children
+			children.push({ id: node_id, children: n2_children })
 		}
 		n2_id = node_id
 		node_id += 1
@@ -181,6 +182,7 @@ function parseclust2(coordinates, height, names_index) {
 		iter += 1
 	}
 	//console.log('branches:', branches)
+	//console.log('children:', children)
 	return { dendrogram: branches, children: children }
 }
 
