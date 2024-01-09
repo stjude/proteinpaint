@@ -105,7 +105,7 @@ function setRenderers(self) {
 			.on('input', debounce(self.onInput, 300))
 			.on('keyup', self.onKeyup)
 
-		self.dom.input.node().focus()
+		if (self.opts.focus != 'off') self.dom.input.node().focus()
 
 		// a holder to contain two side-by-side divs for genes and dictionary term hits
 		self.dom.resultDiv = (self.opts.resultsHolder || self.dom.holder)

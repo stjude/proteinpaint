@@ -92,7 +92,7 @@ class TdbConfigUiInit {
 				.style('transition', '0.2s')
 		}
 
-		this.dom.table = this.dom.holder.append('table').attr('cellpadding', 0).attr('cellspacing', 0)
+		this.dom.table = this.dom.holder.append('form').append('table').attr('cellpadding', 0).attr('cellspacing', 0)
 
 		return this.dom.table
 	}
@@ -128,6 +128,9 @@ class TdbConfigUiInit {
 			.selectAll('tr')
 			.filter(this.rowIsVisible)
 			.selectAll('td')
+			.attr('tabindex', function (d, i) {
+				return i + 1
+			})
 			.style('border-top', '2px solid #FFECDD')
 			.style('padding', '5px 10px')
 	}

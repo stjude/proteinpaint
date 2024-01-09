@@ -26,7 +26,39 @@ export class MatrixControls {
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
 		this.setDownloadBtn(s)
-		this.btns = this.opts.holder.selectAll('button').filter(d => d && d.label)
+
+		this.keyboardNavHandler = async event => {
+			console.log(32, event.key, event.target.previousSibling, event.target.nextSibling)
+			if (event.key == 'Tab') {
+			} else if (event.key == 'ArrowLeft') {
+				if (event.target.previousSibling) event.target.previousSibling.focus()
+			} else if (event.key == 'ArrowRight') {
+				if (event.target.nextSibling) event.target.nextSibling.focus()
+			} else if (event.key == 'ArrowDown') {
+				console.log(38, this.parent.app.tip.d.node())
+				this.parent.app.tip.d.node().firstChild.focus()
+			} else if (event.key == 1) {
+			} else if (event.key == 1) {
+			} else if (event.key == 1) {
+			}
+		}
+
+		this.btns = this.opts.holder
+			.selectAll(':scope>button')
+			.filter(d => d && d.label)
+			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
+			// .on('click.sjpp-btn-focus', function() {
+			// 	//this.focus()
+			// })
+			.on('focus.matrix-keyboard-nav', function (d) {
+				this.click()
+			})
+		console.log(
+			29,
+			this.btns.each(function () {
+				console.log(this)
+			})
+		)
 
 		this.setZoomInput()
 		this.setDragToggle({
@@ -38,6 +70,7 @@ export class MatrixControls {
 
 	setSamplesBtn(s) {
 		const l = s.controlLabels
+
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
@@ -604,7 +637,7 @@ export class MatrixControls {
 			.style('margin', '2px 0')
 			//.property('disabled', d => d.disabled)
 			.text('Download')
-			.on('click', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
+			.on('click.sjpp-matrix-download', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
 	}
 
 	main() {
@@ -654,6 +687,7 @@ export class MatrixControls {
 		const parent = this.opts.parent
 		const tables = d.tables || [d]
 
+		event.target.focus()
 		app.tip.clear()
 
 		const table = app.tip.d.append('table').attr('class', 'sjpp-controls-table')
@@ -691,6 +725,8 @@ export class MatrixControls {
 
 			if (t.customInputs) t.customInputs(this, app, parent, table)
 		}
+
+		table.selectAll('tr').on('keyup.nav-handler', () => console.log('test')) //this.keyboardNavHandler)
 
 		app.tip.showunder(event.target)
 	}
@@ -874,6 +910,7 @@ export class MatrixControls {
 		termdb.appInit({
 			holder: holder || app.tip.d,
 			vocabApi: this.parent.app.vocabApi,
+			focus: 'off',
 			state: {
 				vocab: this.parent.state.vocab,
 				activeCohort: this.parent.activeCohort,
@@ -889,6 +926,9 @@ export class MatrixControls {
 					this.submit_lst(termlst)
 					app.tip.hide()
 				}
+			},
+			search: {
+				focus: 'off'
 			}
 		})
 	}
