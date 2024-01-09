@@ -1,5 +1,5 @@
 export type HicdataRequest = {
-	/** oe values  */
+	/** specify whether observed, expected, or observed/expected(o/e) values.  */
 	oevalues: string
 
 	/** HiC file path from tp/ */
