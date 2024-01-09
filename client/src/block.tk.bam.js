@@ -787,6 +787,10 @@ function may_render_variant(data, tk, block) {
 		}
 
 		// Depicting reference allele
+		if (!ref_color) {
+			// This can happen when the reference group is not present
+			ref_color = '#47C8FF'
+		}
 		if (tk.is_same_ref == true) {
 			html_text.push(
 				'<svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
