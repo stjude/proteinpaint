@@ -309,16 +309,19 @@ export function renderTable({
 			} else if (cell.html) td.html(cell.html)
 			else if ('value' in cell) td.text(cell.value)
 			else if (cell.color) {
-				const input = td
-					.append('input')
-					.attr('type', 'color')
-					.attr('value', cell.color)
-					.property('disabled', cell.disabled ? true : false)
-					.on('change', e => {
-						const color = input.node().value
-						cell.color = color
-						if (column.editCallback) column.editCallback(i, cell)
-					})
+				if (cell.disabled) {
+					td.style('background-color', cell.color)
+				} else {
+					const input = td
+						.append('input')
+						.attr('type', 'color')
+						.attr('value', cell.color)
+						.on('change', e => {
+							const color = input.node().value
+							cell.color = color
+							if (column.editCallback) column.editCallback(i, cell)
+						})
+				}
 			}
 		}
 	}
