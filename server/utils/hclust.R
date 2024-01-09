@@ -14,14 +14,9 @@
 
 # To plot the heatmap uncomment line `library(ggplot2) and lines after "Visualization" comment
 
-
-
-suppressPackageStartupMessages(library(dendextend))
 library(jsonlite)
 #library(flashClust)
-library(dendextend)
-library(reshape)
-#library(ggplot2) # Uncomment this line to plot heatmap in R 
+#library(ggplot2) # Uncomment this line to plot heatmap in R
 
 # Distance matrix
 args <- commandArgs(trailingOnly = T)
@@ -42,7 +37,7 @@ input <- fromJSON(infile)
 #print ("normalized_matrix")
 #print (dim(normalized_matrix))
 
-# For columns (i.e samples)
+# For Rows (i.e genes)
 RowDist <- dist(input$matrix, method = "euclidean") # Transposing the matrix
 # Hierarchical clustering
 RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
@@ -56,16 +51,6 @@ colnames(RowDendMergeDf) <- c("n1","n2")
 RowDendOrderHeight <- as.data.frame(RowDend$height)
 colnames(RowDendOrderHeight) <- "height"
 #print (RowDendOrderHeight)
-
-RowDendro <- as.dendrogram(RowDend)
-
-row_node_coordinates <- get_nodes_xy(
-  RowDendro,
-  type = "rectangle"
-)
-
-row_node_df <- as.data.frame(row_node_coordinates)
-colnames(row_node_df) <- c("x","y")
 
 # For columns (i.e samples)
 ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matrix
@@ -84,18 +69,6 @@ colnames(ColumnDendMergeDf) <- c("n1","n2")
 ColumnDendOrderHeight <- as.data.frame(ColumnDend$height)
 colnames(ColumnDendOrderHeight) <- "height"
 #print (ColumnDendOrderHeight)
-
-ColumnDendro <- as.dendrogram(ColumnDend)
-#plot (ColumnDendro)
-
-#print ("ColumnCoordinates")
-col_node_coordinates <- get_nodes_xy(
-  ColumnDendro,
-  type = "rectangle"
-)
-
-col_node_df <- as.data.frame(col_node_coordinates)
-colnames(col_node_df) <- c("x","y")
 
 # Sorting the matrix
 
