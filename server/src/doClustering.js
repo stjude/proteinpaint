@@ -38,18 +38,19 @@ export async function doClustering(data, q, ds) {
 	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
 	fs.unlink(Rinputfile, () => {})
 
-	if (!Array.isArray(Routput.RowNodeJson)) throw 'invalid clustering output'
-
-	const row_coordinates = Routput.RowNodeJson // ?
-	const col_coordinates = Routput.ColNodeJson
+	const row_coordinates = Routput.RowMerge
+	const col_coordinates = Routput.ColumnMerge
+	console.log('row_coordinates:', row_coordinates)
+	const row_height = Routput.RowHeight
+	const col_height = Routput.ColumnHeight
 	const row_names_index = Routput.RowDendOrder.map(i => i.ind) // sorted rows. value is array index in input data
 	const col_names_index = Routput.ColumnDendOrder.map(i => i.ind) // sorted columns, value is array index from input array
 
 	const row_names = Routput.SortedRowNames.map(i => i.gene) // sorted row names
 	const col_names = Routput.SortedColumnNames.map(i => i.sample) // sorted col names
 
-	const row_output = await parseclust(row_coordinates, row_names_index)
-	const col_output = await parseclust(col_coordinates, col_names_index)
+	const row_output = parseclust2(row_coordinates, row_height, row_names_index)
+	const col_output = parseclust2(col_coordinates, col_height, col_names_index)
 
 	// generated sorted matrix based on row/col clustering order
 	const output_matrix = []
@@ -103,6 +104,84 @@ function getZscore(l) {
 		return l
 	}
 	return l.map(v => (v - mean) / sd)
+}
+
+function parseclust2(coordinates, height, names_index) {
+	const branches = []
+	const children = []
+	let iter = 1
+	let node_id = 0
+	for (const item of coordinates) {
+		let x_n1, y_n1, x_n2, y_n2, n1_id, n2_id
+		const new_original_children = [] // This is used to store any new original nodes parsed
+		let n1_children = []
+		let n2_children = []
+		if (item.n1 < 0) {
+			// This is an original node
+			x_n1 = names_index.indexOf(item.n1 * -1)
+			y_n1 = 0
+			children.push({ id: node_id, children: [] })
+			new_original_children.push(item.n1 * -1)
+		} else {
+			// This is a derived node, need to find its coordinates from branches[] array
+			const branch_entry = branches.find(ent => ent.id1 == 2 + 3 * (item.n1 - 1))
+			//console.log('branch_entry:', branch_entry)
+			x_n1 = branch_entry.x1
+			y_n1 = branch_entry.y1
+			const child_entry = children.find(ent => ent.id == branch_entry.id1)
+			//console.log('child_entry:', child_entry)
+			n1_children = child_entry.children
+		}
+		n1_id = node_id
+		node_id += 1
+
+		if (item.n2 < 0) {
+			// This is an original node
+			x_n2 = names_index.indexOf(item.n2 * -1)
+			y_n2 = 0
+			children.push({ id: node_id, children: [] })
+			new_original_children.push(item.n1 * -1)
+		} else {
+			// This is a derived node, need to find its coordinates from branches[] array
+			const branch_entry = branches.find(ent => ent.id1 == 2 + 3 * (item.n2 - 1))
+			//console.log('branch_entry:', branch_entry)
+			x_n2 = branch_entry.x1
+			y_n2 = branch_entry.y1
+			const child_entry = children.find(ent => ent.id == branch_entry.id1)
+			//console.log('child_entry:', child_entry)
+			n2_children = child_entry.children
+		}
+		n2_id = node_id
+		node_id += 1
+
+		const new_node_height = height[iter - 1].height
+		// Adding the branches of the dendrogram
+		branches.push({ id1: n1_id, x1: x_n1, y1: y_n1, id2: node_id, x2: (x_n1 + x_n2) / 2, y2: new_node_height })
+		branches.push({ id1: node_id, x1: (x_n1 + x_n2) / 2, y1: new_node_height, id2: n2_id, x2: x_n2, y2: y_n2 })
+
+		let new_parent_node_children = []
+		// If any of the children of this new parent node is an original node those are added into the list of children of this new parent node
+		if (item.n1 < 0 || item.n2 < 0) new_parent_node_children = [...new_original_children]
+
+		// If n1 child is a derived node, all the children from n1 need to be copied into the parent node
+		if (item.n1 > 0) {
+			for (let i = 0; i < n1_children.length; i++) {
+				new_parent_node_children.push(n1_children[i])
+			}
+		}
+		// If n2 child is a derived node, all the children from n2 need to be copied into the parent node
+		if (item.n2 > 0) {
+			for (let i = 0; i < n2_children.length; i++) {
+				new_parent_node_children.push(n2_children[i])
+			}
+		}
+		children.push({ id: node_id, children: new_parent_node_children })
+
+		node_id += 1
+		iter += 1
+	}
+	//console.log('branches:', branches)
+	return { dendrogram: branches, children: children }
 }
 
 async function parseclust(coordinates, names_index) {
