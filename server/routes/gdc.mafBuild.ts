@@ -87,7 +87,7 @@ async function getFileLstUnderSizeLimit(lst: string[]) {
 			op: 'in',
 			content: { field: 'file_id', value: lst }
 		},
-		size: 1000,
+		size: 10000,
 		fields: 'file_size'
 	}
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
