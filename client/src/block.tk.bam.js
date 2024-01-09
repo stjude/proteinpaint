@@ -746,22 +746,25 @@ function may_render_variant(data, tk, block) {
 				.style('border-collapse', 'collapse')
 		})
 	}
-	if (Number.isFinite(data.max_diff_score)) {
-		// Should always be true if variant field was given by user, but may change in the future
-		const diff_score_string = tk.dom.variantg
+
+	if (Number.isFinite(data.max_diff_score) && !tk.dom.alleleSimilarityHeaderLabel) {
+		/* running in variant mode and need to create the allele similarity column header
+		only create if missing. do not create multiple ones on every update
+		*/
+		tk.dom.alleleSimilarityHeaderLabel = tk.dom.alleleSimilarityHeaderG
 			.append('text')
-			.attr('x', data.pileup_data.width + 5)
-			.attr('y', -20 + tk.dom.variantrowheight)
+			.attr('y', 2 * tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.attr('class', 'sja_clbtext2')
 			.text('Allele similarity')
 
 		//Show information about diff score in tooltip on click
-		let html_text =
-			'<span style="white-space: pre-wrap">Allele similarity: This chart shows the allele to which the read has maximum sequence similarity. In case of alternative and reference alleles, all reads in the same group have same color. In case of none category, color representing allele with maximum sequence color is displayed. In case of ambiguous category, for each read colors representing each alleles having equal similarity to each other are displayed.</span>'
+		const html_text = [
+			'Allele similarity: This chart shows the allele to which the read has maximum sequence similarity. In case of alternative and reference alleles, all reads in the same group have same color. In case of none category, color representing allele with maximum sequence color is displayed. In case of ambiguous category, for each read colors representing each alleles having equal similarity to each other are displayed.'
+		]
 
 		let var_idx = 0
-		html_text += '<ul style="list-style: none;"><h3>Color codes for all alleles</h3>'
+		html_text.push('<br>Allele color codes:')
 		let old_pos = tk.variants[0].pos
 		let old_ref_length = tk.variants[0].ref.length
 		tk.is_same_ref = true // Tests whether the ref allele is common between all the multi-allelic variants
@@ -769,12 +772,11 @@ function may_render_variant(data, tk, block) {
 		for (const g of tk.groups) {
 			if (g.data.type.includes('support_alt')) {
 				let test_text =
-					'<li><svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
+					'<svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
 					g.data.group_color +
 					';" /> </svg> ' +
-					tk.variants[var_idx].alt +
-					'</li>'
-				html_text += test_text
+					tk.variants[var_idx].alt
+				html_text.push(test_text)
 				if (tk.variants[var_idx].pos != old_pos || tk.variants[var_idx].ref.length != old_ref_length) {
 					tk.is_same_ref = false
 				}
@@ -785,28 +787,30 @@ function may_render_variant(data, tk, block) {
 		}
 
 		// Depicting reference allele
-		let test_text
 		if (tk.is_same_ref == true) {
-			test_text =
-				'<li><svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
-				ref_color +
-				';" /> </svg> ' +
-				tk.variants[0].ref +
-				'</li>'
+			html_text.push(
+				'<svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
+					ref_color +
+					';" /> </svg> ' +
+					tk.variants[0].ref
+			)
 		} else {
-			test_text =
-				'<li><svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
-				ref_color +
-				';" /> </svg> Combined reference allele </li>'
+			html_text.push(
+				'<svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
+					ref_color +
+					';" /> </svg> Combined reference allele'
+			)
 		}
-		html_text += test_text
-		html_text += '</ul>'
 
-		html_text +=
-			"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
-		diff_score_string.on('click', event => {
+		if (!tk.gdcFile) {
+			// do not add this since gdc doesn't allow linking out
+			html_text.push(
+				"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
+			)
+		}
+		tk.dom.alleleSimilarityHeaderLabel.on('click', event => {
 			tk.tktip.clear().showunder(event.target)
-			tk.tktip.d.append('div').style('width', '300px').style('font-size', '12px').html(html_text)
+			tk.tktip.d.append('div').style('width', '300px').style('font-size', '12px').html(html_text.join('<br>'))
 		})
 	}
 }
@@ -825,9 +829,14 @@ function setTkHeight(tk) {
 	//	tk.dom.gdc_g.attr('transform', 'translate(0,' + h + ')')
 	//	h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
 	//}
+
 	if (tk.dom.variantg) {
 		tk.dom.variantg.attr('transform', 'translate(0,' + h + ')')
 	}
+	if (tk.dom.alleleSimilarityHeaderG) {
+		tk.dom.alleleSimilarityHeaderG.attr('transform', 'translate(0,' + h + ')')
+	}
+
 	let var_idx = 0
 	for (const g of tk.groups) {
 		//console.log('tk.dom.variantg:', tk.dom.variantg)
@@ -1051,10 +1060,11 @@ function makeTk(tk, block) {
 	///////////// row #3: variant
 	if (tk.variants) {
 		// assuming that variant will only be added upon track initiation
-		tk.dom.variantg = tk.glider.append('g')
+		tk.dom.variantg = tk.glider.append('g') // create variant mark box aligned with coord ruler
+		tk.dom.alleleSimilarityHeaderG = tk.gright.append('g')
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
-		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
+		//tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 20
 		tk.fs_string = block.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2) // Will contain Fisher strand value which will be added in may_render_variant function
 	} else if (tk.sv) {
