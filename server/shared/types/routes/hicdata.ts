@@ -1,5 +1,5 @@
 export type HicdataRequest = {
-	/** specify whether observed, expected, or observed/expected(o/e) values.  */
+	/** Value is the 1st parameter of straw tool, and can only use these specific strings but not anything else. */
 	oevalues: 'observed' | 'expected' | 'oe'
 
 	/** HiC file path from tp/ */
