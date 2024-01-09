@@ -74,7 +74,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	cell.label = value.label || self.mclass[value.class].label
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
 	// may overriden by a color scale by dt, if applicable below
-	cell.fill = colorFromq || value.color || self.mclass[value.class]?.color
+	cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
 	cell.class = value.class
 	cell.value = value
 

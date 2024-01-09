@@ -369,9 +369,9 @@ class HierCluster extends Matrix {
 							gene: tw.term.name,
 							chr: tw.term.chr,
 							pos: `${tw.term.start}-${tw.term.stop}`,
-							value,
-							// compute color for each cell based on its numeric value
-							color: this.geneExpValues.scale((value - -zScoreCap) / (zScoreCap * 2))
+							value
+							// the color will be computed in matrix.cells, so that
+							// it can get updated even when there are no nonsetting state diff
 						}
 					]
 				}
@@ -429,6 +429,11 @@ class HierCluster extends Matrix {
 		const [min, max] = [-absMax, absMax]
 		// what's purpose of assigning this.geneExpValues{}, to signal something to matrix code?
 		this.geneExpValues = { scale, min, max }
+	}
+
+	getValueColor(value) {
+		const zScoreCap = this.settings.hierCluster.zScoreCap
+		return this.geneExpValues.scale((value - -zScoreCap) / (zScoreCap * 2))
 	}
 
 	async renderDendrogram() {
