@@ -739,7 +739,7 @@ export async function getPlotConfig(opts = {}, app) {
 		colorScale: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] }
 	}
 	const overrides = app.vocabApi.termdbConfig.hierCluster || {}
-	copyMerge(config.settings.hierCluster, overrides.settings)
+	copyMerge(config.settings.hierCluster, overrides.settings, opts.settings?.hierCluster || {})
 
 	// okay to validate state here?
 	{
