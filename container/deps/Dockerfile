@@ -55,7 +55,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 'B8F25A8A73EACF41' 
 
 RUN apt-get update && apt-get install -y r-base=4.3.2-1~bustercran.0 -y libargtable2-dev \
 	## install R packages
- 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'dendextend', 'reshape'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+ 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	## clean up
 	&& R -e "BiocManager::install('edgeR')" \
     && apt-get clean \
