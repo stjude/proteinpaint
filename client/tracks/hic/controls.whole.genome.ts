@@ -2,6 +2,7 @@ import { bplen } from '#shared/common'
 import { nmeth2select } from './hic.straw'
 import { getdata_chrpair, getdata_detail, getdata_leadfollow, defaultnmeth, showBtns } from './hic.straw'
 import { Elem } from '../../types/d3'
+import blocklazyload from '#src/block.lazyload'
 
 /**
  * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, horizontal and detail views)
@@ -276,7 +277,8 @@ function switchview(hic: any, self: any) {
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
 	} else if (self.inhorizontal) {
-		console.log(self)
+		//TODO: Problem with this is it rerenders. Maybe a way to save the rendering and just show/hide?
+		blocklazyload(self.horizontalview.args)
 	}
 
 	if (self.chrpairview.chrx && self.chrpairview.chry) showBtns(self, self.chrpairview.chrx, self.chrpairview.chry)
