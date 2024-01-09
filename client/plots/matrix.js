@@ -177,6 +177,7 @@ export class Matrix {
 				// dispatch notifications, so use app.save()
 				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
 			}
+
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
 			// may skip term or sample ordering when there are
 			// no relevant state/config/setting changes
@@ -197,6 +198,7 @@ export class Matrix {
 			}
 
 			this.setLayout()
+			if (this.setHierColorScale) this.setHierColorScale(this.hierClusterData.clustering)
 			this.serieses = this.getSerieses(this.data)
 
 			// render the data
