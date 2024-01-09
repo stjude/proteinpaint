@@ -44,11 +44,19 @@ input <- fromJSON(infile)
 
 # For columns (i.e samples)
 RowDist <- dist(input$matrix, method = "euclidean") # Transposing the matrix
-
-
 # Hierarchical clustering
 RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
 #RowDend <- flashClust(RowDist, method = tolower(input$cluster_method))
+RowDendMergeDf <- as.data.frame(RowDend$merge)
+colnames(RowDendMergeDf) <- c("n1","n2")
+#print ("merge")
+#print (RowDendMergeDf)
+
+#print ("height")
+RowDendOrderHeight <- as.data.frame(RowDend$height)
+colnames(RowDendOrderHeight) <- "height"
+#print (RowDendOrderHeight)
+
 RowDendro <- as.dendrogram(RowDend)
 
 row_node_coordinates <- get_nodes_xy(
@@ -66,6 +74,17 @@ ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matr
 
 ColumnDend <- hclust(ColumnDist, method = tolower(input$cluster_method))
 #ColumnDend <- flashClust(ColumnDist,method = tolower(input$cluster_method))
+
+ColumnDendMergeDf <- as.data.frame(ColumnDend$merge)
+colnames(ColumnDendMergeDf) <- c("n1","n2")
+#print ("merge")
+#print (ColumnDendMergeDf)
+
+#print ("height")
+ColumnDendOrderHeight <- as.data.frame(ColumnDend$height)
+colnames(ColumnDendOrderHeight) <- "height"
+#print (ColumnDendOrderHeight)
+
 ColumnDendro <- as.dendrogram(ColumnDend)
 #plot (ColumnDendro)
 
@@ -90,8 +109,12 @@ SortedColumnNames <- input$col_names[ColumnDend$order]
 
 output_df <- list()
 output_df$method <- input$cluster_method
-output_df$RowNodeJson <- row_node_df
-output_df$ColNodeJson <- col_node_df
+#output_df$RowNodeJson <- row_node_df
+#output_df$ColNodeJson <- col_node_df
+output_df$RowMerge <- RowDendMergeDf
+output_df$RowHeight <- RowDendOrderHeight
+output_df$ColumnMerge <- ColumnDendMergeDf
+output_df$ColumnHeight <- ColumnDendOrderHeight
 
 row_dend_order_df <- as.data.frame(RowDend$order)
 colnames(row_dend_order_df) <- c("ind")
