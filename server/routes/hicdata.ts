@@ -60,7 +60,6 @@ function handle_hicdata(q: HicdataRequest) {
 		if (e) reject({ error: 'illegal file name' })
 
 		const par = [
-			// TODO add option for observed/oe
 			q.oevalues || 'observed',
 			q.nmeth || 'NONE',
 			file,
