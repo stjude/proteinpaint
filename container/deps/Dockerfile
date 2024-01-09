@@ -50,7 +50,7 @@ RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 'B8F25A8A73EACF41' && \
-    echo "deb https://cloud.r-project.org/bin/linux/debian buster-cran40/" >> /etc/apt/sources.list \
+    echo "deb https://cloud.r-project.org/bin/linux/debian buster-cran40/" >> /etc/apt/sources.list \ #pragma: allowlist secret
     && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 'E19F5F87128899B192B1A2C2AD5F960A256A04AF' #pragma: allowlist secret
 
 RUN apt-get update && apt-get install -y r-base=4.3.2-1~bustercran.0 -y libargtable2-dev \
