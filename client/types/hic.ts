@@ -67,9 +67,9 @@ export type HicstrawDom = {
 		/** Self explanatory */
 		viewBtnDiv: Elem
 		/** Returns user to the whole genome view from the chr-chr or detailed view*/
-		wholegenomebutton: Elem
+		genomeViewBtn: Elem
 		/** Returns user to the chr-chr pair view from the any other view besides whole genome */
-		chrpairviewbutton: Elem
+		chrpairViewBtn: Elem
 		/** Returns user to the 2 chr genome browser view (subpanels) in the detailed view */
 		horizontalViewBtn: Elem
 		/** Displays the detail x/y view, replacing the horizontal view */
@@ -123,6 +123,13 @@ export type ChrPairView = {
 	nmeth: string
 	/** Calculated resolution. Displayed in menu for user */
 	resolution: number
+}
+
+export type HorizontalView = {
+	/** args for runpp(). Define this later */
+	args: any
+	/** Nonfunctional at the moment */
+	nmeth: string
 }
 
 export type DetailView = {

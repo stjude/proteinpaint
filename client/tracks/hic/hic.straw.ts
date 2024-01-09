@@ -13,6 +13,7 @@ import {
 	HicstrawInput,
 	WholeGenomeView,
 	ChrPairView,
+	HorizontalView,
 	DetailView
 } from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
@@ -109,6 +110,8 @@ class Hicstat {
 	wholegenome: Partial<WholeGenomeView>
 	/** Rendering properities specific to the chr-chr pair view */
 	chrpairview: Partial<ChrPairView>
+	/** Rendering properities specific to the horizontal (2 chr subpanel pair) view */
+	horizontalview: Partial<HorizontalView>
 	/** Rendering properities specific to the detail view */
 	detailview: Partial<DetailView>
 	/** following are flags for which view is displayed to switch between views.
@@ -139,6 +142,14 @@ class Hicstat {
 		}
 		this.chrpairview = {
 			data: []
+		}
+		this.horizontalview = {
+			args: {
+				hostURL: hic.hostURL,
+				jwt: hic.jwt,
+				genome: hic.genome,
+				nobox: 1
+			}
 		}
 		this.detailview = {
 			bbmargin: 1,
@@ -465,7 +476,7 @@ class Hicstat {
 
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Horizontal')
-		nmeth2select(hic, this.detailview)
+		nmeth2select(hic, this.horizontalview)
 
 		//Clear elements created in other views
 		this.dom.plotDiv.xAxis.selectAll('*').remove()
@@ -480,6 +491,9 @@ class Hicstat {
 		showBtns(this, chrx, chry)
 
 		// default view span
+		/** TODO: Consolidate this logic into one for both the horizonal and detail view.
+		 * Save values into new attribue of self
+		 */
 		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
 
 		let coordx = Math.max(
@@ -503,9 +517,9 @@ class Hicstat {
 			}
 		}
 
-		//Similar to the detailview.rglst[0]
-		const regionx = { chr: chrx, start: coordy, stop: coordx }
-		const regiony = { chr: chry, start: coordy, stop: coordx }
+		//Similar to the detailview.rglst[0] from the block code
+		const regionx = { chr: chrx, start: coordx, stop: coordx + viewrangebpw }
+		const regiony = { chr: chry, start: coordy, stop: coordy + viewrangebpw }
 
 		const tracks = [
 			{
@@ -552,6 +566,7 @@ class Hicstat {
 				}
 			]
 		}
+		this.horizontalview.args = arg //save so can reload when switching back from detail view
 		blocklazyload(arg)
 
 		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
@@ -694,7 +709,8 @@ class Hicstat {
 		arg.start = coordx
 		arg.stop = coordx + viewrangebpw
 		arg.holder = this.dom.plotDiv.xAxis
-		arg.onloadalltk_always = async bb => {
+		arg.onloadalltk_always = async (bb: any) => {
+			/**Replace with Block type when defined later */
 			/*
 			cannot apply transition to canvasholder
 			it may prevent resetting width when both x and y are changing
@@ -712,10 +728,10 @@ class Hicstat {
 			}
 			await detailViewUpdateRegionFromBlock(hic, this)
 		}
-		arg.onpanning = xoff => {
+		arg.onpanning = (xoff: number) => {
 			canvas.style(
 				'left',
-				xoff + this.detailview.bbmargin + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
+				xoff + this.detailview.bbmargin! + this.detailview.xb!.leftheadw + this.detailview.xb!.lpad + 'px'
 			)
 		}
 		blocklazyload(arg).then(block => {
