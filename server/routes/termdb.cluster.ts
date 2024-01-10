@@ -12,7 +12,7 @@ import { dtgeneexpression } from '#shared/common.js'
 export const api = {
 	endpoint: 'termdb/cluster',
 	methods: {
-		get: {
+		all: {
 			init,
 			request: {
 				typeId: 'TermdbClusterRequest'
@@ -20,10 +20,6 @@ export const api = {
 			response: {
 				typeId: 'TermdbClusterResponse'
 			}
-		},
-		post: {
-			alternativeFor: 'get',
-			init
 		}
 	}
 }

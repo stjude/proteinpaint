@@ -137,8 +137,9 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 			.run(testHiddenOverlayData, 2000)
 			.done(test)*/
 
+		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		await testOverlayOrder()
+		testOverlayOrder()
 		await triggerUncomputableOverlay(barchart)
 		clickLegendToHideOverlay(barchart)
 		await testHiddenOverlayData(barchart)
@@ -146,6 +147,7 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 	}
 
 	function testBarCount() {
+		// no need to await, the bar order will tested after the initial postRender event
 		const minBars = 5
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
@@ -153,8 +155,8 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 
-	async function testOverlayOrder() {
-		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' }) //Fix to remove sleep()
+	function testOverlayOrder() {
+		// no need to await, the bar order will tested after the initial postRender event
 		const bars_grp = barDiv.selectAll('.bars-cell-grp')
 		const legend_rows = barDiv.selectAll('.legend-row')
 		//flag to indicate unordered bars
@@ -169,29 +171,39 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 				.filter(id => bar_ids.includes(id))
 				.reduce((bool, id, i) => bool && bar_ids[i] === id, overlay_ordered)
 		})
-		test.true(overlay_ordered, 'overlays order is same as legend')
+		test.true(overlay_ordered, 'overlay order is same as legend')
 	}
 
 	async function triggerUncomputableOverlay(barchart) {
-		barchart.Inner.app.dispatch({
-			type: 'plot_edit',
-			id: 'diaggrp',
-			config: {
-				term2: {
-					id: 'aaclassic_5',
-					term: termjson['aaclassic_5'],
-					q: termjson['aaclassic_5'].bins.default
-				}
+		//Await for legend rows to increase before moving on to the next function
+		await detectLst({
+			target: barchart.Inner.dom.legendDiv.node(),
+			// avoid detecting legend entries for descriptive stats,
+			// term legend items have a corresponding icon as the first div,
+			// making the second div (even-numbered child) the relevant target/selector
+			selector: '.sjpp-htmlLegend:nth-child(even)',
+			count: 6,
+			matchAs: '>=',
+			trigger: () => {
+				barchart.Inner.app.dispatch({
+					type: 'plot_edit',
+					id: 'diaggrp',
+					config: {
+						term2: {
+							id: 'aaclassic_5',
+							term: termjson['aaclassic_5'],
+							q: termjson['aaclassic_5'].bins.default
+						}
+					}
+				})
 			}
 		})
-		//Await for legend rows to increase before moving on to the next function
-		await detectLst({ elem: barchart.Inner.dom.legendDiv.node(), selector: '.legend-row', count: 14, matchAs: '>=' })
 	}
 
 	const legendDataId = 'not exposed'
 
 	async function clickLegendToHideOverlay(barchart) {
-		await sleep(40)
+		//await sleep(40)
 		const legendDiv = barchart.Inner.dom.legendDiv
 		const item = legendDiv
 			.selectAll('.sjpp-htmlLegend')
