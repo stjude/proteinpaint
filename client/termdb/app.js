@@ -200,6 +200,10 @@ class TdbApp {
 			.text(!n ? 'Search or click term(s)' : `Submit ${n} term${n > 1 ? 's' : ''}`)
 
 		await this.mayShowCustomTerms()
+		this.dom.holder.selectAll('search, .termbtn, button').attr('tabindex', 0)
+		this.dom.holder.selectAll('.termbtn').on('keyup', event => {
+			if (event.key == 'Enter') event.target.click()
+		})
 	}
 
 	printError(e) {

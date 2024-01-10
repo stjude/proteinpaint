@@ -430,7 +430,7 @@ function setRenderers(self) {
 			.each(self.enterPill)
 		self.dom.pilldiv
 			.select('.term_name_btn')
-			.attr('tabindex', self.dom.nopilldiv.select('.add_term_btn')?.attr('tabindex') || 0)
+			.attr('tabindex', 0)
 			.on(`keyup.sjpp-termdb`, event => {
 				if (event.key == 'Enter') event.target.click()
 			})

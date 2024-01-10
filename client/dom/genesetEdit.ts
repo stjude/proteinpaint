@@ -17,35 +17,72 @@ type API = {
 
 type Gene = { name: string }
 
-export function showGenesetEdit({
-	holder,
-	menu,
-	genome,
-	callback,
-	geneList = [],
-	mode,
-	vocabApi,
-	group,
-	showGroup
-}: {
-	holder: any
-	menu: Menu
-	genome: any
-	geneList: Array<Gene>
-	mode?: string
-	callback: (group, geneList) => void
-	vocabApi: any
-	group: any
-	showGroup: boolean
-}) {
-	menu.clear()
-	const tip2 = new Menu({ padding: '0px' })
+type CallbackArg = {
+	geneList: Gene[]
+	groupIndex?: number
+	groupName?: string
+}
 
+type showGenesetEditArg = {
+	holder: any
+	genome: any
+	geneList?: Gene[]
+	mode?: string
+	callback: (CallbackArg) => void
+	vocabApi: any
+	groups?: { name: string }[]
+	showGroup: boolean
+}
+
+export function showGenesetEdit(arg: showGenesetEditArg) {
+	const { holder, genome, callback, groups, vocabApi } = arg
+	let mode = arg.mode || (groups?.length && arg.getMode?.(groups.find(g => g.selected)))
+	let geneList = arg.geneLst || groups?.find(g => g.selected)?.lst
+	if (groups.length && !geneList?.length) throw `missing or invalid geneLst or groups argument`
+	else if (!groups.length) geneList = []
+
+	const tip2 = new Menu({ padding: '0px' })
+	holder.selectAll('*').remove()
 	// must not hardcode div width to 850px, gives broken ui
 	// FIXME should set min and max width for div to maintain proper look
-	const div = menu.d.append('div').style('padding', '5px')
+	const div = holder.append('div').style('padding', '5px')
 
-	if (showGroup) div.append('div').style('padding', '5px').append('span').style('color', '#aaa').text(group.name)
+	let groupSelect, input
+	if (groups?.length) {
+		const grpDiv = div.append('div').style('padding', '5px 0')
+		const label = grpDiv.append('label')
+		label.append('span').html('Group to edit: ')
+		groupSelect = label.append('select').on('change', () => {
+			const group = groups[groupSelect.property('value')]
+			geneList = group.lst
+			if (arg.getMode) {
+				mode = arg.getMode(group)
+				renderRightDiv()
+			}
+			renderGenes()
+		})
+
+		groupSelect
+			.selectAll('option')
+			.data(groups)
+			.enter()
+			.append('option')
+			.property('selected', grp => grp.selected)
+			.attr('value', (d, i) => i)
+			.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
+	} else if (groups && !groups.length) {
+		// an empty groups array indicates to show the input for a new group name
+		const grpDiv = div.append('div').style('padding', '5px')
+		const label = grpDiv.append('label')
+		label.append('span').html('Group to Add ')
+		input = label
+			.append('input')
+			.attr('placeholder', 'Name')
+			.on('input', function () {
+				const name = input.node().value
+				submitBtn.property('disabled', name == '' || !geneList.length)
+			})
+	}
 
 	const api: API = {
 		dom: {
@@ -77,14 +114,17 @@ export function showGenesetEdit({
 
 	const headerDiv = div.append('div')
 	//.style('white-space','nowrap')
-
-	const inputSearch = addGeneSearchbox({
+	const label = headerDiv.append('label')
+	label.append('span').html('Search')
+	const row = label.append('span')
+	const geneSearch = addGeneSearchbox({
 		tip: tip2,
 		genome,
-		row: headerDiv.append('span').style('margin-right', '10px'),
+		row,
 		geneOnly: true,
 		callback: addGene,
 		hideHelp: true
+		//placeholder: ''
 	})
 
 	// a holder to render optional buttons
@@ -106,108 +146,114 @@ export function showGenesetEdit({
 	  when this ui is used elsewhere outside of matrix, this assumption can subject to change
 	*/
 
-	if (mode == 'expression' && vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
-		if (vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
-			for (const param of vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) addParameter(param)
-		}
-		rightDiv
-			.append('button')
-			.text('Load top variably expressed genes')
-			.on('click', async event => {
-				event.target.disabled = true
-				const args = {
-					genome: vocabApi.state.vocab.genome,
-					dslabel: vocabApi.state.vocab.dslabel,
-					maxGenes: 50
-				}
-				// supply filters from app state
-				if (vocabApi.state.termfilter) {
-					if (vocabApi.state.termfilter.filter) args.filter = vocabApi.state.termfilter.filter // pp filter
-					if (vocabApi.state.termfilter.filter0) args.filter0 = vocabApi.state.termfilter.filter0 // gdc filter
-				}
-				const result = await vocabApi.getTopVariablyExpressedGenes(args)
+	renderRightDiv()
 
-				geneList = []
-				for (const gene of result.genes) geneList.push({ name: gene })
-				renderGenes()
-				event.target.disabled = false
-			})
-	} else if (vocabApi.termdbConfig?.queries?.topMutatedGenes) {
-		// only render this button when the first is not rendered
-		if (vocabApi.termdbConfig.queries.topMutatedGenes.arguments) {
-			for (const param of vocabApi.termdbConfig.queries.topMutatedGenes.arguments) addParameter(param)
-		}
-		api.dom.loadBt = rightDiv
-			.append('button')
-			.html(`Load top mutated genes`)
-			.on('click', async () => {
-				api.dom.loadBt.property('disabled', true)
-				const args = {
-					filter0: vocabApi.state.termfilter.filter0
-				}
-				// TODO rename api.params[] as api.topMutatedParams[]
-				// as topMutatedGenes and topVariablyExpressedGenes can both come with arguments.
-				// renaming to api.topMutatedGeneParams[] and api.topVariablyExpressedGeneParams[] will help this
-				for (const { param, input } of api.params) {
-					const id = input.attr('id')
-					args[id] = getInputValue({ param, input })
-				}
-				const result = await vocabApi.getTopMutatedGenes(args)
+	function renderRightDiv() {
+		rightDiv.selectAll('*').remove()
 
-				geneList = []
-				for (const gene of result.genes) geneList.push({ name: gene })
-				renderGenes()
-				api.dom.loadBt.property('disabled', false)
-			})
-	}
-	if (genome?.termdbs?.msigdb) {
-		for (const key in genome.termdbs) {
-			const tdb = genome.termdbs[key]
-			api.dom.tdbBtns[key] = rightDiv
+		if (mode == 'expression' && vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
+			if (vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
+				for (const param of vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) addParameter(param)
+			}
+			rightDiv
 				.append('button')
-				.attr('name', 'msigdbBt')
-				.html(`Load ${tdb.label} gene set &#9660;`)
+				.text('Load top variably expressed genes')
+				.on('click', async event => {
+					event.target.disabled = true
+					const args = {
+						genome: vocabApi.state.vocab.genome,
+						dslabel: vocabApi.state.vocab.dslabel,
+						maxGenes: 50
+					}
+					// supply filters from app state
+					if (vocabApi.state.termfilter) {
+						if (vocabApi.state.termfilter.filter) args.filter = vocabApi.state.termfilter.filter // pp filter
+						if (vocabApi.state.termfilter.filter0) args.filter0 = vocabApi.state.termfilter.filter0 // gdc filter
+					}
+					const result = await vocabApi.getTopVariablyExpressedGenes(args)
+
+					geneList = []
+					for (const gene of result.genes) geneList.push({ name: gene })
+					renderGenes()
+					event.target.disabled = false
+				})
+		} else if (vocabApi.termdbConfig?.queries?.topMutatedGenes) {
+			// only render this button when the first is not rendered
+			if (vocabApi.termdbConfig.queries.topMutatedGenes.arguments) {
+				for (const param of vocabApi.termdbConfig.queries.topMutatedGenes.arguments) addParameter(param)
+			}
+			api.dom.loadBt = rightDiv
+				.append('button')
+				.html(`Load top mutated genes`)
 				.on('click', async () => {
-					tip2.clear()
-					const termdb = await import('../termdb/app.js')
-					termdb.appInit({
-						holder: tip2.d,
-						state: {
-							dslabel: key,
-							genome: genome.name,
-							nav: {
-								header_mode: 'search_only'
-							}
-						},
-						tree: {
-							click_term: term => {
-								geneList = []
-								const geneset = term._geneset
-								if (geneset) {
-									for (const gene of geneset) geneList.push({ name: gene.symbol })
-									renderGenes()
-								}
-								//menu.hide()
-								tip2.hide()
-							}
-						}
-					})
-					tip2.showunder(api.dom.tdbBtns[key].node())
+					api.dom.loadBt.property('disabled', true)
+					const args = {
+						filter0: vocabApi.state.termfilter.filter0
+					}
+					// TODO rename api.params[] as api.topMutatedParams[]
+					// as topMutatedGenes and topVariablyExpressedGenes can both come with arguments.
+					// renaming to api.topMutatedGeneParams[] and api.topVariablyExpressedGeneParams[] will help this
+					for (const { param, input } of api.params) {
+						const id = input.attr('id')
+						args[id] = getInputValue({ param, input })
+					}
+					const result = await vocabApi.getTopMutatedGenes(args)
+
+					geneList = []
+					for (const gene of result.genes) geneList.push({ name: gene })
+					renderGenes()
+					api.dom.loadBt.property('disabled', false)
 				})
 		}
-	}
+		if (genome?.termdbs?.msigdb) {
+			for (const key in genome.termdbs) {
+				const tdb = genome.termdbs[key]
+				api.dom.tdbBtns[key] = rightDiv
+					.append('button')
+					.attr('name', 'msigdbBt')
+					.html(`Load ${tdb.label} gene set &#9660;`)
+					.on('click', async () => {
+						tip2.clear()
+						const termdb = await import('../termdb/app.js')
+						termdb.appInit({
+							holder: tip2.d,
+							state: {
+								dslabel: key,
+								genome: genome.name,
+								nav: {
+									header_mode: 'search_only'
+								}
+							},
+							tree: {
+								click_term: term => {
+									geneList = []
+									const geneset = term._geneset
+									if (geneset) {
+										for (const gene of geneset) geneList.push({ name: gene.symbol })
+										renderGenes()
+									}
+									tip2.hide()
+								}
+							}
+						})
+						tip2.showunder(api.dom.tdbBtns[key].node())
+					})
+			}
+		}
 
-	api.dom.clearBtn = rightDiv
-		.append('button')
-		.property('disabled', !geneList.length)
-		.text('Clear')
-		.on('click', () => {
-			geneList = []
-			renderGenes()
-		})
+		api.dom.clearBtn = rightDiv
+			.append('button')
+			.property('disabled', !geneList?.length)
+			.text('Clear')
+			.on('click', () => {
+				geneList = []
+				renderGenes()
+			})
+	}
 
 	const genesDiv = div
 		.append('div')
+		.attr('contenteditable', true)
 		.style('display', 'flex')
 		.style('flex-wrap', 'wrap')
 		.style('gap', '5px')
@@ -224,22 +270,24 @@ export function showGenesetEdit({
 	const footerDiv = div.append('div')
 	const submitBtn = footerDiv
 		.append('button')
-		.property('disabled', !geneList.length)
+		.property('disabled', !geneList?.length)
 		.text('Submit')
 		.on('click', () => {
-			menu.hide()
-			callback(group, geneList)
+			callback({
+				geneList,
+				groupIndex: groupSelect?.property('value'),
+				groupName: input?.property('value')
+			})
 		})
 
 	api.dom.submitBtn = submitBtn
 
-	menu.showunder(holder)
-
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()
 
-		const spans = genesDiv.selectAll('span').data(geneList)
-		spans
+		genesDiv
+			.selectAll('div')
+			.data(geneList || [])
 			.enter()
 			.append('div')
 			.attr('title', 'click to delete')
@@ -273,12 +321,12 @@ export function showGenesetEdit({
 				select(event.target).select('.sjpp_deletebt').remove()
 			})
 
-		api.dom.submitBtn.property('disabled', !geneList.length)
-		api.dom.clearBtn.property('disabled', !geneList.length)
+		api.dom.submitBtn.property('disabled', !geneList?.length)
+		api.dom.clearBtn.property('disabled', !geneList?.length)
 	}
 
 	function addGene() {
-		const name = inputSearch.geneSymbol
+		const name = geneSearch.geneSymbol
 		for (const gene of geneList) {
 			if (gene.name == name) {
 				alert(`The gene ${name} has already been added`)
@@ -288,6 +336,7 @@ export function showGenesetEdit({
 
 		geneList.push({ name })
 		renderGenes()
+		submitBtn.node().focus()
 	}
 
 	function deleteGene(event, d) {

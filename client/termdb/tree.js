@@ -132,7 +132,7 @@ class TdbTree {
 		await this.renderBranch(root, this.dom.holder)
 		this.dom.holder
 			.selectAll('.termbtn, .sja_tree_click_term')
-			.attr('tabindex', (d, i) => i + 1)
+			.attr('tabindex', 0)
 			.on('keyup', event => {
 				if (event.key == 'Enter') event.target.click()
 			})

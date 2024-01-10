@@ -28,7 +28,6 @@ export class MatrixControls {
 		this.setDownloadBtn(s)
 
 		this.keyboardNavHandler = async event => {
-			console.log(32, event.key, event.target.previousSibling, event.target.nextSibling)
 			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
 			/*if (event.key == 'Tab') {
 			} else if (event.key == 'ArrowLeft') {
@@ -692,7 +691,7 @@ export class MatrixControls {
 		event.target.focus()
 		app.tip.clear()
 
-		const table = app.tip.d.append('form').append('table').attr('class', 'sjpp-controls-table')
+		const table = app.tip.d.append('table').attr('class', 'sjpp-controls-table')
 		for (const t of tables) {
 			//if (d.customHeaderRows) d.customHeaderRows(parent, table)
 			if (t.header) {
@@ -726,10 +725,8 @@ export class MatrixControls {
 			}
 
 			if (t.customInputs) t.customInputs(this, app, parent, table)
-			table.selectAll('input, button, select, .add_term_btn, .term_name_btn').attr('tabindex', (d, i) => i + 1)
+			table.selectAll('input, button, select, .add_term_btn, .term_name_btn').attr('tabindex', 0)
 			table.select('.term_name_btn').node()
-			// table.selectAll('td')
-			// 	.attr('tabindex', (d,i) => i + 1)
 		}
 
 		table.selectAll('td').on('keyup.nav-handler', this.keyboardNavHandler)
@@ -769,41 +766,9 @@ export class MatrixControls {
 				//parent.opts.customInputs.genes(table.append('tr').append('td').attr('colspan', 2).style('text-align', 'center'))
 			}
 		}
-		const callback = (group, geneset) => {
-			if (group.lst.length == 0)
-				//it was a new group
-				parent.config.termgroups.push(group)
 
-			const lst = []
-			for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
-			const tws = geneset.map(d => {
-				//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-				let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
-				if (!tw)
-					tw = {
-						$id: get$id(),
-						term: {
-							name: d.symbol || d.name,
-							type: 'geneVariant'
-						},
-						q: {}
-					}
-				return tw
-			})
-			group.lst = lst
-			// TODO: see above for input to select which group to add the gene
-			// right not it assumes the first group
-			group.lst.push(...tws)
-			app.dispatch({
-				type: 'plot_edit',
-				id: parent.id,
-				config: {
-					termgroups: parent.config.termgroups
-				}
-			})
-		}
-		self.addGeneSearch(event, app, parent, table.append('tr'), callback)
-		self.addGeneGroup(event, app, parent, table.append('tr'), callback)
+		self.addGenesetInput(event, app, parent, table.append('tr'))
+		//self.addGeneGroup(event, app, parent, table.append('tr'), callback)
 	}
 
 	appendDictInputs(self, app, parent, table) {
@@ -813,97 +778,127 @@ export class MatrixControls {
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
-	addGeneSearch(event, app, parent, tr, callback) {
+	addGenesetInput(event, app, parent, tr) {
+		const tip = new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
-		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene set')
+		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
 		const td = tr.append('td')
-		let select
-		if (tg.length > 1) {
-			select = td.append('select')
-			select
-				.selectAll('option')
-				.data(tg)
-				.enter()
-				.append('option')
-				.property('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
-				.attr('value', (d, i) => i)
-				.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
-		} else {
-			const group = parent.config.termgroups[parent.selectedGroup]
-			const count = group.lst.filter(tw => tw.term.type == 'geneVariant').length
-			td.append('span')
-				.style('color', '#aaa')
-				.style('padding', '5px')
-				.text(`${count} ${count == 1 ? 'gene' : 'genes'} `)
-		}
+		this.showGenegroupEditUi(td, app, tip, tg)
+		this.showGenegroupAddUi(td, app, tip, tg)
+	}
 
+	showGenegroupEditUi(td, app, tip, tg) {
 		td.append('button')
-			.style('margin-left', '3px')
-			.text('Edit')
-			.on('click', () => {
-				const selectedGroup = parseInt(select?.node().value || 0)
-				const group = parent.config.termgroups[selectedGroup]
-				app.tip.clear().hide()
-
-				const gsArg = {
-					holder: event.target,
-					menu: app.tip,
-					genome: app.opts.genome,
-					geneList: [],
-					callback,
-					vocabApi: this.opts.app.vocabApi,
-					group,
-					showGroup: parent.config.termgroups > 1
-				}
-
-				if (this.parent.chartType == 'hierCluster' && group == parent.hcTermGroup) {
+			.html('Edit Group')
+			.on('key', event => {
+				if (event.key == 'Enter') event.target.click()
+			})
+			.on('click', event => {
+				const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
+				tip.showunder(event.target)
+				// const getMode = group => {
+				// 	console.log(807, group, this.parent.config.settings.hierCluster?.termGroupName)
+				// 	return parent.chartType == 'hierCluster' && (group.type == 'hierCluster' || group.name == this.parent.config.settings.hierCluster?.termGroupName) ? 'geneExpression' : ''
+				// }
+				showGenesetEdit({
+					holder: tip.d,
 					/* running hier clustering and the editing group is the group used for clustering
-					pass this mode value to inform ui to support the optional button "top variably exp gene"
-					this is hardcoded for the purpose of gene expression and should be improved
-					*/
-					gsArg.mode = 'expression'
-				}
-
-				for (const tw of group.lst) if (tw.term.type == 'geneVariant') gsArg.geneList.push({ name: tw.term.name })
-				showGenesetEdit(gsArg)
+				pass this mode value to inform ui to support the optional button "top variably exp gene"
+				this is hardcoded for the purpose of gene expression and should be improved
+				*/
+					getMode: group => {
+						return this.parent.chartType == 'hierCluster' &&
+							(group.type == 'hierCluster' || group.name == this.parent.config.settings.hierCluster?.termGroupName)
+							? 'expression'
+							: ''
+					},
+					genome: app.opts.genome,
+					groups: tg.map((g, i) => {
+						return {
+							name: g.name,
+							type: g.type,
+							lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+							selected:
+								(parent.chartType == 'hierCluster' &&
+									(g.type == 'hierCluster' || g.name == this.parent.config.termGroupName)) ||
+								g === firstGrpWithGeneTw
+						}
+					}),
+					vocabApi: this.opts.app.vocabApi,
+					callback: ({ geneList, groupIndex }) => {
+						tip.clear().hide()
+						const group = tg[groupIndex]
+						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+						const tws = geneList.map(d => {
+							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
+							if (!tw)
+								tw = {
+									$id: get$id(),
+									term: {
+										name: d.symbol || d.name,
+										type: 'geneVariant'
+									},
+									q: {}
+								}
+							return tw
+						})
+						group.lst = [...lst, ...tws]
+						if (!group.lst.length) tg.splice(groupIndex, 1)
+						app.dispatch({
+							type: 'plot_edit',
+							id: this.parent.id,
+							config: {
+								termgroups: tg
+							}
+						})
+					}
+				})
 			})
 	}
 
-	addGeneGroup(event, app, parent, tr, callback) {
-		const tg = parent.config.termgroups
-		parent.selectedGroup = 0
-		tr.append('td').attr('class', 'sja-termdb-config-row-label')
-		const td = tr.append('td')
-		const input = td
-			.append('input')
-			.attr('placeholder', 'New group name')
-			.on('input', function () {
-				const name = input.node().value
-				button.property('disabled', name == '')
+	showGenegroupAddUi(td, app, tip, tg) {
+		td.append('button')
+			.html('Add a New Group')
+			.on('key', event => {
+				if (event.key == 'Enter') event.target.click()
 			})
-		const button = td
-			.append('button')
-			.text('Add new group')
-			.property('disabled', true)
-			.on('click', () => {
-				const name = input.node().value
-				const group = {
-					name,
-					overrides: false,
-					lst: []
-				}
-				/* no need to detect the condition and assign mode=expression. 
-				it is expected that a newly added gene term group will not trigger clustering analysis
-				*/
+			.on('click', event => {
+				tip.showunder(event.target)
 				showGenesetEdit({
-					holder: event.target,
-					menu: app.tip,
+					holder: tip.d,
+					/* running hier clustering and the editing group is the group used for clustering
+				pass this mode value to inform ui to support the optional button "top variably exp gene"
+				this is hardcoded for the purpose of gene expression and should be improved
+				*/
+					//mode: parent.chartType == 'hierCluster' && group == parent.hcTermGroup ? 'gene expression' : '',
 					genome: app.opts.genome,
-					geneList: [],
-					callback,
+					groups: [],
 					vocabApi: this.opts.app.vocabApi,
-					group,
-					showGroup: true
+					callback: ({ geneList, groupName }) => {
+						tip.clear().hide()
+						if (!geneList.length) return
+						tg.push({
+							name: groupName,
+							lst: geneList.map(d => {
+								return {
+									$id: get$id(),
+									term: {
+										name: d.symbol || d.name,
+										type: 'geneVariant'
+									},
+									q: {}
+								}
+							})
+						})
+						app.dispatch({
+							type: 'plot_edit',
+							id: this.parent.id,
+							config: {
+								termgroups: tg
+							}
+						})
+					}
 				})
 			})
 	}
