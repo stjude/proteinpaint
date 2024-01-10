@@ -129,7 +129,13 @@ class TdbTree {
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
 		this.dom.holder.style('display', 'block')
-		this.renderBranch(root, this.dom.holder)
+		await this.renderBranch(root, this.dom.holder)
+		this.dom.holder
+			.selectAll('.termbtn, .sja_tree_click_term')
+			.attr('tabindex', (d, i) => i + 1)
+			.on('keyup', event => {
+				if (event.key == 'Enter') event.target.click()
+			})
 	}
 
 	getTermsById() {

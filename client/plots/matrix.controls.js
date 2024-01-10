@@ -726,15 +726,13 @@ export class MatrixControls {
 			}
 
 			if (t.customInputs) t.customInputs(this, app, parent, table)
-
-			table.selectAll('input, button, select').attr('tabindex', (d, i) => i + 1)
-
+			table.selectAll('input, button, select, .add_term_btn, .term_name_btn').attr('tabindex', (d, i) => i + 1)
+			table.select('.term_name_btn').node()
 			// table.selectAll('td')
 			// 	.attr('tabindex', (d,i) => i + 1)
 		}
 
 		table.selectAll('td').on('keyup.nav-handler', this.keyboardNavHandler)
-
 		app.tip.showunder(event.target)
 	}
 
