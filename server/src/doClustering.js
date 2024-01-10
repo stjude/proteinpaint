@@ -140,7 +140,7 @@ function parseclust(coordinates, height, names_index) {
 			x_n2 = names_index.indexOf(item.n2 * -1)
 			y_n2 = 0
 			children.push({ id: node_id, children: [] })
-			new_original_children.push(item.n1 * -1)
+			new_original_children.push(item.n2 * -1)
 		} else {
 			// This is a derived node, need to find its coordinates from branches[] array
 			const branch_entry = branches.find(ent => ent.id1 == 2 + 3 * (item.n2 - 1))
