@@ -97,8 +97,11 @@ type Pane = {
  * Parses input file and renders plot. Whole genome view renders as the default.
  * Clicking on chr-chr svg within the whole genonme view launches the chr-pair view.
  * Clicking anywhere within the chr-pair view launches the horizonal view. The detail view can be launched from the Detailed View button.
+ *
+ * Issues:
+ * - CONFIG menu cutoff in detail view. Elem does not allow overflow
+ *
  * TODOs:
- * - ?maybe make chrx and chry more universal? Not in horizontal/detail/chrpair view objs?
  * - add state-like functionality. Move objs for rendering under self and separate hic input. Add functions for views to operate independently of each other.
  * - Possibly type Pane can be import somewhere??
  */
@@ -387,9 +390,6 @@ class Hicstat {
 
 		showBtns(this)
 		this.wholegenome.svg!.remove()
-
-		this.chrpairview.chrx = chrx
-		this.chrpairview.chry = chry
 
 		const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
 		const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
@@ -895,6 +895,8 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 		.attr('x', obj.x)
 		.attr('y', obj.y)
 		.on('click', async () => {
+			self.chrx.chr = lead
+			self.chry.chr = follow
 			await self.init_chrPairView(hic, lead, follow, self)
 		})
 		.on('mouseover', () => {
@@ -1131,8 +1133,8 @@ function tell_firstisx(hic: any, chrx: string, chry: string) {
 }
 
 export async function getdata_chrpair(hic: any, self: any) {
-	const chrx = self.chrpairview.chrx
-	const chry = self.chrpairview.chry
+	const chrx = self.chrx.chr
+	const chry = self.chry.chr
 	const isintrachr = chrx == chry
 	// const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
 	// const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
@@ -1208,7 +1210,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 /**
  * set normalization method from <select>
  * @param hic
- * @param nmeth
+ * @param v view object
  * @returns
  */
 
