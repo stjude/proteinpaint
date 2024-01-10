@@ -29,17 +29,24 @@ export class MatrixControls {
 
 		this.keyboardNavHandler = async event => {
 			console.log(32, event.key, event.target.previousSibling, event.target.nextSibling)
-			if (event.key == 'Tab') {
+			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
+			/*if (event.key == 'Tab') {
 			} else if (event.key == 'ArrowLeft') {
 				if (event.target.previousSibling) event.target.previousSibling.focus()
+				else event.target.parentNode.focus()
 			} else if (event.key == 'ArrowRight') {
 				if (event.target.nextSibling) event.target.nextSibling.focus()
-			} else if (event.key == 'ArrowDown') {
-				console.log(38, this.parent.app.tip.d.node())
-				this.parent.app.tip.d.node().firstChild.focus()
-			} else if (event.key == 1) {
-			} else if (event.key == 1) {
-			} else if (event.key == 1) {
+				else if (event.target.parentNode.nextSibling) event.target.parentNode.nextSibling()
+			} else if (event.key == 'ArrowDown') { console.log(38, event.target)
+				if (event.target.tagName == 'BUTTON') this.parent.app.tip.d.select('input, select, button').node().focus()
+				else if (!event.target.firstChild?.querySelectorAll('input').length) {
+					if (event.target.nextSibling?.firstChild?.tagName == 'td') event.target.nextSibling?.firstChild.focus()
+				}
+			} else*/ if (event.key == 'Enter' || event.key == 'ArrowDown') {
+				if (event.target.tagName == 'BUTTON') this.parent.app.tip.d.select('input, select').node().focus()
+				if (event.target.querySelectorAll('input')?.length) event.target.querySelector('input').focus()
+			} else if (event.key == 'Backspace' || event.key == 'ArrowUp') {
+				this.keyEventTarget.focus()
 			}
 		}
 
@@ -53,12 +60,6 @@ export class MatrixControls {
 			.on('focus.matrix-keyboard-nav', function (d) {
 				this.click()
 			})
-		console.log(
-			29,
-			this.btns.each(function () {
-				console.log(this)
-			})
-		)
 
 		this.setZoomInput()
 		this.setDragToggle({
@@ -637,6 +638,7 @@ export class MatrixControls {
 			.style('margin', '2px 0')
 			//.property('disabled', d => d.disabled)
 			.text('Download')
+			.on('focus', () => this.parent.app.tip.hide())
 			.on('click.sjpp-matrix-download', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
 	}
 
@@ -690,7 +692,7 @@ export class MatrixControls {
 		event.target.focus()
 		app.tip.clear()
 
-		const table = app.tip.d.append('table').attr('class', 'sjpp-controls-table')
+		const table = app.tip.d.append('form').append('table').attr('class', 'sjpp-controls-table')
 		for (const t of tables) {
 			//if (d.customHeaderRows) d.customHeaderRows(parent, table)
 			if (t.header) {
@@ -724,9 +726,14 @@ export class MatrixControls {
 			}
 
 			if (t.customInputs) t.customInputs(this, app, parent, table)
+
+			table.selectAll('input, button, select').attr('tabindex', (d, i) => i + 1)
+
+			// table.selectAll('td')
+			// 	.attr('tabindex', (d,i) => i + 1)
 		}
 
-		table.selectAll('tr').on('keyup.nav-handler', () => console.log('test')) //this.keyboardNavHandler)
+		table.selectAll('td').on('keyup.nav-handler', this.keyboardNavHandler)
 
 		app.tip.showunder(event.target)
 	}
