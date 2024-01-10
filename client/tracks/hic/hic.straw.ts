@@ -168,8 +168,8 @@ class Hicstat {
 		}
 		this.inwholegenome = true
 		this.inchrpair = false
-		this.indetail = false
 		this.inhorizontal = false
+		this.indetail = false
 	}
 
 	async error(err: string | string[]) {
@@ -366,8 +366,8 @@ class Hicstat {
 
 		this.inwholegenome = false
 		this.inchrpair = true
-		this.indetail = false
 		this.inhorizontal = false
+		this.indetail = false
 
 		showBtns(this)
 		this.wholegenome.svg!.remove()
@@ -478,15 +478,15 @@ class Hicstat {
 		this.dom.controlsDiv.view.text('Horizontal')
 		nmeth2select(hic, this.horizontalview)
 
-		//Clear elements created in other views
-		this.dom.plotDiv.xAxis.selectAll('*').remove()
-		this.dom.plotDiv.yAxis.selectAll('*').remove()
+		//Clear elements created in chr pair view
+		this.chrpairview.axisy.remove()
+		this.chrpairview.axisx.remove()
 		this.dom.plotDiv.plot.selectAll('*').remove()
 
-		this.inhorizontal = true
-		this.indetail = false
 		this.inwholegenome = false
 		this.inchrpair = false
+		this.inhorizontal = true
+		this.indetail = false
 
 		showBtns(this, chrx, chry)
 
@@ -578,10 +578,10 @@ class Hicstat {
 		this.dom.controlsDiv.view.text('Detailed')
 		nmeth2select(hic, this.detailview)
 
-		this.inhorizontal = false
-		this.indetail = true
 		this.inwholegenome = false
 		this.inchrpair = false
+		this.inhorizontal = false
+		this.indetail = true
 
 		// const isintrachr = chrx == chry
 		showBtns(this, chrx, chry)

@@ -83,7 +83,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.append('button')
 		.style('display', 'none')
 		.style('padding', '2px')
-		.style('margin', '2px 0px')
+		.style('margin-top', '4px')
 		.html('&#8810; Genome')
 		.on('click', () => {
 			self.dom.controlsDiv.view.text('Genome')
@@ -99,7 +99,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.append('button')
 		.style('display', 'none')
 		.style('padding', '2px')
-		.style('margin', '2px 0px')
+		.style('margin', '4px 0px')
 		.on('click', () => {
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
 			self.inwholegenome = false
@@ -113,7 +113,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.append('button')
 		.style('display', 'none')
 		.style('padding', '2px')
-		.style('margin', '2px 0px')
+		.style('margin', '4px 0px')
 		.html('&#8810; Horizontal View')
 		.on('click', () => {
 			self.inwholegenome = false
@@ -127,7 +127,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.append('button')
 		.style('display', 'none')
 		.style('padding', '2px')
-		.style('margin', '2px 0px')
+		.style('margin', '4px 0px')
 		.html('Detailed View &#8811;')
 
 	self.dom.controlsDiv.zoomDiv = menuTable.append('tr').style('display', 'none')
