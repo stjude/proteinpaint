@@ -755,7 +755,7 @@ export async function getPlotConfig(opts = {}, app) {
 	const termGroupName = config.settings.hierCluster.termGroupName
 	// TODO: should compose the term group in launchGdcHierCluster.js, since this handling is customized to only that dataset?
 	// the opts{} object should be standard, should pre-process the opts outside of this getPlotConfig()
-	if (!config.termgroups.find(g => g.type == 'hierCluster')) {
+	if (!config.termgroups.find(g => g.type == 'hierCluster' || g.name == termGroupName)) {
 		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
