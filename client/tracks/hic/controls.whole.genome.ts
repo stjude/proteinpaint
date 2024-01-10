@@ -281,6 +281,5 @@ function switchview(hic: any, self: any) {
 		blocklazyload(self.horizontalview.args)
 	}
 
-	if (self.chrpairview.chrx && self.chrpairview.chry) showBtns(self, self.chrpairview.chrx, self.chrpairview.chry)
-	else showBtns(self)
+	showBtns(self)
 }
