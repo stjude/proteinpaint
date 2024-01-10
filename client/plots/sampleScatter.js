@@ -532,8 +532,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultScatterSettings() {
 	return {
-		size: 25,
-		minDotSize: 16,
+		size: 16,
+		minDotSize: 9,
 		maxDotSize: 144,
 		scaleDotOrder: 'Ascending',
 		refSize: 9,
