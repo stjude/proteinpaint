@@ -42,6 +42,9 @@ initialize views
 	init_chrPairView()
 		.chrpairview
 
+	init_horizontalView()
+		.horizontalview
+
 	init_detailView()
 		.detailview
 
@@ -92,8 +95,8 @@ type Pane = {
 }
 /**
  * Parses input file and renders plot. Whole genome view renders as the default.
- * Clicking on chr-chr svg launches the horizontal view.
- * Clicking anywhere within the chr-pair view launches the detail view. The track maybe launched from the Horizontal View button.
+ * Clicking on chr-chr svg within the whole genonme view launches the chr-pair view.
+ * Clicking anywhere within the chr-pair view launches the horizonal view. The detail view can be launched from the Detailed View button.
  * TODOs:
  * - ?maybe make chrx and chry more universal? Not in horizontal/detail/chrpair view objs?
  * - add state-like functionality. Move objs for rendering under self and separate hic input. Add functions for views to operate independently of each other.
@@ -121,6 +124,17 @@ class Hicstat {
 	inchrpair: boolean
 	indetail: boolean
 	inhorizontal: boolean
+	/** Required position attributes for every view except for the whole genome view. Only chr pair does not need start or stop. */
+	chrx: Partial<{
+		chr: string
+		start: number
+		stop: number
+	}>
+	chry: Partial<{
+		chr: string
+		start: number
+		stop: number
+	}>
 
 	constructor(hic: any, debugmode: boolean) {
 		this.holder = hic.holder
@@ -170,6 +184,8 @@ class Hicstat {
 		this.inchrpair = false
 		this.inhorizontal = false
 		this.indetail = false
+		this.chrx = {}
+		this.chry = {}
 	}
 
 	async error(err: string | string[]) {
@@ -340,7 +356,7 @@ class Hicstat {
 		/* after the ui is created, load data for each chr pair,
 		await on each request to finish to avoid server lockup
 	
-		there might be data inconsistenncy with hic file, it may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
+		There might be data inconsistency with hic file. It may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
 		do not flood ui with such errors, to tolerate, collect all errors and show in one place
 		*/
 		for (let i = 0; i < manychr; i++) {
@@ -474,6 +490,40 @@ class Hicstat {
 		await getdata_chrpair(hic, this)
 	}
 
+	set_Positions(hic: any, chrx: string, chry: string, x: number, y: number) {
+		this.chrx.chr = chrx
+		this.chry.chr = chry
+
+		if (x && y) {
+			const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
+
+			let coordx = Math.max(
+				1,
+				Math.floor((x * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+			)
+			let coordy = Math.max(
+				1,
+				Math.floor((y * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
+			)
+
+			// make sure positions are not out of bounds
+			{
+				const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
+				if (coordx + viewrangebpw >= lenx) {
+					coordx = lenx - viewrangebpw
+				}
+				const leny = hic.genome.chrlookup[chry.toUpperCase()].len
+				if (coordy + viewrangebpw > leny) {
+					coordy = leny - viewrangebpw
+				}
+			}
+
+			;(this.chrx.start = coordx), (this.chrx.stop = coordx + viewrangebpw)
+			this.chry.start = coordy
+			this.chry.stop = coordy + viewrangebpw
+		}
+	}
+
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Horizontal')
 		nmeth2select(hic, this.horizontalview)
@@ -488,38 +538,13 @@ class Hicstat {
 		this.inhorizontal = true
 		this.indetail = false
 
-		showBtns(this, chrx, chry)
+		showBtns(this)
 
-		// default view span
-		/** TODO: Consolidate this logic into one for both the horizonal and detail view.
-		 * Save values into new attribue of self
-		 */
-		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
+		if (!this.chrx.start || !this.chrx.stop || !this.chry.start || !this.chry.stop)
+			this.set_Positions(hic, chrx, chry, x, y)
 
-		let coordx = Math.max(
-			1,
-			Math.floor((x * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
-		)
-		let coordy = Math.max(
-			1,
-			Math.floor((y * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
-		)
-
-		// make sure positions are not out of bounds
-		{
-			const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
-			if (coordx + viewrangebpw >= lenx) {
-				coordx = lenx - viewrangebpw
-			}
-			const leny = hic.genome.chrlookup[chry.toUpperCase()].len
-			if (coordy + viewrangebpw > leny) {
-				coordy = leny - viewrangebpw
-			}
-		}
-
-		//Similar to the detailview.rglst[0] from the block code
-		const regionx = { chr: chrx, start: coordx, stop: coordx + viewrangebpw }
-		const regiony = { chr: chry, start: coordy, stop: coordy + viewrangebpw }
+		const regionx = { chr: this.chrx.chr, start: this.chrx.start, stop: this.chrx.stop }
+		const regiony = { chr: this.chry.chr, start: this.chry.start, stop: this.chry.stop }
 
 		const tracks = [
 			{
@@ -545,11 +570,14 @@ class Hicstat {
 			nobox: 1,
 			tklst: tracks
 		}
-		if (regionx.chr == regiony.chr && Math.max(regionx.start, regiony.start) < Math.min(regionx.stop, regiony.stop)) {
+		if (
+			regionx.chr == regiony.chr &&
+			Math.max(regionx.start!, regiony.start!) < Math.min(regionx.stop!, regiony.stop!)
+		) {
 			// x/y overlap
 			arg.chr = regionx.chr
-			arg.start = Math.min(regionx.start, regiony.start)
-			arg.stop = Math.max(regionx.stop, regiony.stop)
+			arg.start = Math.min(regionx.start!, regiony.start!)
+			arg.stop = Math.max(regionx.stop!, regiony.stop!)
 		} else {
 			arg.chr = regionx.chr
 			arg.start = regionx.start
@@ -584,31 +612,13 @@ class Hicstat {
 		this.indetail = true
 
 		// const isintrachr = chrx == chry
-		showBtns(this, chrx, chry)
+		showBtns(this)
 
-		// default view span
+		if (!this.chrx.start || !this.chrx.stop || !this.chry.start || !this.chry.stop)
+			this.set_Positions(hic, chrx, chry, x, y)
+
+		// // default view span
 		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
-
-		let coordx = Math.max(
-			1,
-			Math.floor((x * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
-		)
-		let coordy = Math.max(
-			1,
-			Math.floor((y * this.chrpairview.resolution!) / this.chrpairview.binpx!) - viewrangebpw / 2
-		)
-
-		// make sure positions are not out of bounds
-		{
-			const lenx = hic.genome.chrlookup[chrx.toUpperCase()].len
-			if (coordx + viewrangebpw >= lenx) {
-				coordx = lenx - viewrangebpw
-			}
-			const leny = hic.genome.chrlookup[chry.toUpperCase()].len
-			if (coordy + viewrangebpw > leny) {
-				coordy = leny - viewrangebpw
-			}
-		}
 
 		let resolution: number | null = null
 		for (const res of hic.bpresolution) {
@@ -678,7 +688,7 @@ class Hicstat {
 		this.detailview.canvas = canvas
 		this.detailview.ctx = ctx
 
-		await detailViewUpdateHic(hic, chrx, coordx, coordx + viewrangebpw, chry, coordy, coordy + viewrangebpw, this)
+		await detailViewUpdateHic(hic, this)
 
 		/******** common parameter for x/y block ********/
 
@@ -705,9 +715,9 @@ class Hicstat {
 		/******************* x block ******************/
 
 		let xfirsttime = true
-		arg.chr = chrx
-		arg.start = coordx
-		arg.stop = coordx + viewrangebpw
+		arg.chr = this.chrx.chr
+		arg.start = this.chrx.start
+		arg.stop = this.chrx.stop
 		arg.holder = this.dom.plotDiv.xAxis
 		arg.onloadalltk_always = async (bb: any) => {
 			/**Replace with Block type when defined later */
@@ -758,9 +768,9 @@ class Hicstat {
 		arg2.rotated = true
 		arg2.showreverse = true
 
-		arg2.chr = chry
-		arg2.start = coordy
-		arg2.stop = coordy + viewrangebpw
+		arg2.chr = this.chry.chr
+		arg2.start = this.chry.start
+		arg2.stop = this.chry.stop
 		arg2.holder = rotor
 		arg2.onloadalltk_always = async bb => {
 			const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
@@ -827,21 +837,25 @@ export async function init_hicstraw(hic: HicstrawInput, debugmode: boolean) {
 	}
 }
 
-export function showBtns(self: any, chrx?: string, chry?: string) {
+export function showBtns(self: any) {
 	//Show in any other view except whole genome
 	self.dom.controlsDiv.genomeViewBtn.style('display', self.inwholegenome ? 'none' : 'inline-block')
 
 	if (self.inhorizontal) {
 		//Only show chrpairViewBtn if in horizonal or detail view
 		//Include chr x and chr y in the button text
-		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${chrx}-${chry}`).style('display', 'block')
+		self.dom.controlsDiv.chrpairViewBtn
+			.html(`&#8810; Entire ${self.chrx.chr}-${self.chry.chr}`)
+			.style('display', 'block')
 		//Only show detailViewBtn in horizontal view
 		self.dom.controlsDiv.detailViewBtn.style('display', 'block')
 		//Hide if horizontal and zoom btns if previously displayed
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
 		self.dom.controlsDiv.zoomDiv.style('display', 'none')
 	} else if (self.indetail) {
-		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${chrx}-${chry}`).style('display', 'block')
+		self.dom.controlsDiv.chrpairViewBtn
+			.html(`&#8810; Entire ${self.chrx.chr}-${self.chry.chr}`)
+			.style('display', 'block')
 		//Only show horizontalViewBtn and zoom buttons in detail view
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'block')
 		self.dom.controlsDiv.zoomDiv.style('display', 'contents')
@@ -1209,9 +1223,9 @@ export function nmeth2select(hic: any, v: any) {
 //////////////////// __detail view__ ////////////////////
 
 async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
-	const rx = self.detailview.xb.rglst[0]
-	const ry = self.detailview.yb.rglst[0]
-	await detailViewUpdateHic(hic, rx.chr, rx.start, rx.stop, ry.chr, ry.start, ry.stop, self)
+	self.chrx = self.detailview.xb.rglst[0]
+	self.chry = self.detailview.yb.rglst[0]
+	await detailViewUpdateHic(hic, self)
 }
 
 /**
@@ -1220,30 +1234,16 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
  * calculate resolution, apply the same to both x/y
  * detect if to use bp or fragment resolution
  * @param hic
- * @param chrx
- * @param xstart
- * @param xstop
- * @param chry
- * @param ystart
- * @param ystop
+ * @param self
  * @returns
  */
-async function detailViewUpdateHic(
-	hic: any,
-	chrx: string,
-	xstart: number,
-	xstop: number,
-	chry: string,
-	ystart: number,
-	ystop: number,
-	self: any
-) {
-	self.detailview.chrx = chrx
-	self.detailview.chry = chry
-	self.detailview.xstart = xstart
-	self.detailview.xstop = xstop
-	self.detailview.ystart = ystart
-	self.detailview.ystop = ystop
+async function detailViewUpdateHic(hic: any, self: any) {
+	const chrx = (self.detailview.chrx = self.chrx.chr)
+	const chry = (self.detailview.chry = self.chry.chr)
+	const xstart = (self.detailview.xstart = self.chrx.start)
+	const xstop = (self.detailview.xstop = self.chrx.stop)
+	const ystart = (self.detailview.ystart = self.chry.start)
+	const ystop = (self.detailview.ystop = self.chry.stop)
 
 	const maxbpwidth = Math.max(xstop - xstart, ystop - ystart)
 	let resolution = null
