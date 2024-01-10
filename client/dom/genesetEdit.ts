@@ -30,16 +30,16 @@ type showGenesetEditArg = {
 	mode?: string
 	callback: (CallbackArg) => void
 	vocabApi: any
-	groups?: { name: string }[]
+	groups?: { name: string; lst: Gene[]; type?: 'hierCluster' }[]
 	showGroup: boolean
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {
 	const { holder, genome, callback, groups, vocabApi } = arg
 	let mode = arg.mode || (groups?.length && arg.getMode?.(groups.find(g => g.selected)))
-	let geneList = arg.geneLst || groups?.find(g => g.selected)?.lst
+	let geneList = arg.geneList || groups?.find(g => g.selected)?.lst
 	if (groups.length && !geneList?.length) throw `missing or invalid geneLst or groups argument`
-	else if (!groups.length) geneList = []
+	else if (!geneList && !groups.length) geneList = []
 
 	const tip2 = new Menu({ padding: '0px' })
 	holder.selectAll('*').remove()
@@ -145,8 +145,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	  this is primarily based on how matrix gene groups operate; a group is either for mutation data, or exp data, but not both
 	  when this ui is used elsewhere outside of matrix, this assumption can subject to change
 	*/
-
-	renderRightDiv()
 
 	function renderRightDiv() {
 		rightDiv.selectAll('*').remove()
@@ -376,6 +374,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		}
 	}
 
+	renderRightDiv()
 	renderGenes()
 	return api
 }
