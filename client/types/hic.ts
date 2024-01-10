@@ -115,8 +115,6 @@ export type ChrPairView = {
 	axisy: any //dom
 	binpx: number
 	canvas?: any //dom
-	chrx: string
-	chry: string
 	ctx: any //dom
 	data: any
 	/** Normalization method tied to this view. Intended to render independently of other views */
@@ -127,7 +125,12 @@ export type ChrPairView = {
 
 export type HorizontalView = {
 	/** args for runpp(). Define this later */
-	args: any
+	args: {
+		hostURL: string
+		jwt: any
+		genome: string
+		nobox: boolean | number
+	}
 	/** Nonfunctional at the moment */
 	nmeth: string
 }
