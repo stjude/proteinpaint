@@ -74,7 +74,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 
 		.on('change', async () => {
 			const selectedOEOption = self.dom.controlsDiv.matrixType.node().value
-			console.log(selectedOEOption)
+			//console.log(selectedOEOption)
 			// Handle the selected option
 			await setOEOption(hic, selectedOEOption, self)
 		})

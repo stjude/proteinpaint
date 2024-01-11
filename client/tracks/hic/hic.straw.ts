@@ -866,7 +866,7 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 		resolution: resolution
 	}
 
-	console.log(arg)
+	//console.log(arg)
 
 	try {
 		const data = await client.dofetch2('/hicdata', {
@@ -1059,7 +1059,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		nmeth: self.chrpairview.nmeth,
 		resolution: resolution
 	}
-	console.log(arg)
+	//console.log(arg)
 	try {
 		const data = await client.dofetch2('/hicdata', {
 			method: 'POST',
