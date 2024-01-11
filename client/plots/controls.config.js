@@ -151,7 +151,8 @@ function setNumberInput(opts) {
 				.attr('class', 'sja-termdb-config-row-label')
 				.attr('title', opts.title),
 			inputs: {}
-		}
+		},
+		values: {}
 	}
 
 	if (!opts.inputs)
@@ -171,9 +172,9 @@ function setNumberInput(opts) {
 		('debounceInterval' in opts.parent?.app.opts ? opts.parent?.app.opts.debounceInterval : 100)
 	for (const input of opts.inputs) {
 		let dispatchTimer
-		function debouncedDispatch(event) {
+		function debouncedDispatch(noDispatch = false) {
 			if (dispatchTimer) clearTimeout(dispatchTimer)
-			dispatchTimer = setTimeout(dispatchChange, debounceTimeout)
+			if (!noDispatch) dispatchTimer = setTimeout(dispatchChange, debounceTimeout)
 		}
 
 		function dispatchChange() {
@@ -211,10 +212,12 @@ function setNumberInput(opts) {
 				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
 				.style('width', (input.width || opts.width || 100) + 'px')
 				.on('keyup', event => {
-					if (event.key !== 'Enter') clearTimeout(dispatchTimer)
-					else setTimeout(dispatchChange, debounceTimeout)
+					const valueChanged =
+						self.values[opts.settingsKey] !== Number(self.dom.inputs[input.settingsKey].property('value'))
+					debouncedDispatch(event.key !== 'Enter' && valueChanged)
 				})
-				.on('change', debouncedDispatch)
+			// the onchange event is too sensitive for a number input, and can cause premature dispatch
+			//.on('change', debouncedDispatch)
 		}
 	}
 
@@ -223,7 +226,9 @@ function setNumberInput(opts) {
 			const display = opts.getDisplayStyle?.(plot) || 'table-row'
 			opts.holder.style('display', display)
 			for (const settingsKey in self.dom.inputs) {
-				self.dom.inputs[settingsKey].property('value', plot.settings[opts.chartType][settingsKey])
+				const value = plot.settings[opts.chartType][settingsKey]
+				self.dom.inputs[settingsKey].property('value', value)
+				self.values[settingsKey] = value
 			}
 		}
 	}
