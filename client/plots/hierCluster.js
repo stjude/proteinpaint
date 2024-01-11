@@ -31,11 +31,21 @@ class HierCluster extends Matrix {
 		super(opts)
 		this.type = 'hierCluster'
 		this.chartType = 'hierCluster'
-		this.holderTitle = 'Hierarchical Clustering'
+		//this.holderTitle = 'Hierarchical Clustering'
 	}
 
 	async init(appState) {
 		await super.init(appState)
+
+		// update holderTitle once state and dataType is set
+		switch (this.config.settings.hierCluster.dataType) {
+			case dtgeneexpression:
+				this.holderTitle = 'Gene Expression Clustering'
+				break
+			default:
+				throw 'unknown hierCluster.dataType'
+		}
+
 		this.hcClipId = this.seriesClipId + '-hc'
 		this.dom.hcClipRect = this.dom.svg
 			.select('defs')
