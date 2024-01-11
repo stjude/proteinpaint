@@ -5,7 +5,7 @@ import { profilePlot } from './profilePlot.js'
 import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 import { loadFilterTerms } from './profilePlot.js'
-import { select } from 'd3-selection'
+import { getDefaultProfilePlotSettings } from './profilePlot.js'
 
 class profilePolar extends profilePlot {
 	constructor() {
@@ -23,21 +23,16 @@ class profilePolar extends profilePlot {
 			this.twLst.push(data.maxScore)
 		}
 
-		this.opts.header.text(config.name).style('font-weight', 'bold')
+		//this.opts.header.text(config.name).style('font-weight', 'bold')
 		this.arcGenerator = d3.arc().innerRadius(0)
 		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
-		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
-		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
-		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
-		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', event => this.tip.hide())
 	}
 
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.settings = this.config.settings.profilePolar
+		await super.main()
 
 		await this.setControls()
 		this.angle = (Math.PI * 2) / this.config.terms.length
@@ -192,7 +187,8 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profilePolar
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profilePolar'
 		const config = copyMerge(structuredClone(defaults), opts)
-		const settings = getDefaultProfilePolarSettings()
+		const settings = getDefaultProfilePlotSettings()
+		settings.showTable = true
 		config.settings = {
 			controls: {
 				isOpen: true // control panel is hidden by default
@@ -220,9 +216,3 @@ export async function getPlotConfig(opts, app) {
 export const profilePolarInit = getCompInit(profilePolar)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profilePolarInit
-
-export function getDefaultProfilePolarSettings() {
-	return {
-		showTable: true
-	}
-}
