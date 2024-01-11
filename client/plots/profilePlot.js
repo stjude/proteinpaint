@@ -57,7 +57,12 @@ export class profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
-		if (this.settings.show2Plots && !this.plotAdded) await this.addPlot()
+		if (this.settings.show2Plots) {
+			if (!this.plotAdded) await this.addPlot()
+		} else {
+			if (this.plotAdded) this.dom.holder2.selectAll('*').remove()
+			this.plotAdded = false
+		}
 	}
 
 	async addPlot() {
