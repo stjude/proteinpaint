@@ -8,20 +8,18 @@ const { Menu } = require('#dom/menu')
  reusable helper functions
 **************************/
 function getHolder() {
-	return select('body').append('div')
+	return select('body').append('div').style('max-width', '800px').style('border', '1px solid #555')
 }
-const holder = getHolder().node()
+
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
-
-const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
 
 /**************
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- dom/geneDictionary -***-')
+	test.pass('-***- dom/genesetEdit -***-')
 	test.end()
 })
 
@@ -42,13 +40,11 @@ tape('Empty opts.geneList', function (test) {
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
 		const ui = showGenesetEdit({
-			holder,
-			menu,
+			holder: getHolder(),
 			genome: hg38,
 			callback: () => {},
 			vocabApi,
-			group: null,
-			showGroup: false
+			groups: []
 		})
 		test.true('msigdb' in ui.dom.tdbBtns, `should show MSigDB button for the hg38 genome`)
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
@@ -62,13 +58,11 @@ tape('Empty opts.geneList', function (test) {
 	function testHG19() {
 		const menu = new Menu({ padding: '0px' })
 		const ui = showGenesetEdit({
-			holder,
-			menu,
+			holder: getHolder(),
 			genome: hg19,
 			callback: () => {},
 			vocabApi: {},
-			group: null,
-			showGroup: false
+			groups: []
 		})
 		test.false('msigdb' in ui.dom.tdbBtns, `should not show MSigDB button for the hg19 genome`)
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
@@ -89,15 +83,14 @@ tape('Non-empty opts.geneList', function (test) {
 
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
+		const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
 		const ui = showGenesetEdit({
-			holder,
-			menu,
+			holder: getHolder(),
 			genome: hg38,
 			geneList,
 			callback: () => {},
 			vocabApi,
-			group: null,
-			showGroup: false
+			groups: []
 		})
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), geneList.length, 'should render two gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), false, `should not have a disabled submit button`)
@@ -114,16 +107,15 @@ tape('gene deletion', function (test) {
 
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
+		const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
 		const len = geneList.length
 		const ui = showGenesetEdit({
-			holder,
-			menu,
+			holder: getHolder(),
 			genome: hg38,
 			geneList,
 			callback: () => {},
 			vocabApi: {},
-			group: null,
-			showGroup: false
+			groups: []
 		})
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), len, `should render ${len} gene pills`)
 		const geneListCopy = geneList.slice()
@@ -136,23 +128,21 @@ tape('gene deletion', function (test) {
 tape('submit button', function (test) {
 	test.timeoutAfter(100)
 	const vocabApi = {} //Fake vocab api returning  some genes
-
+	const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
 	const geneLstCopy = structuredClone(geneList)
 	const menu = new Menu({ padding: '0px' })
 	const ui = showGenesetEdit({
-		holder,
-		menu,
+		holder: getHolder(),
 		genome: hg38,
 		geneList,
 		callback,
 		vocabApi,
-		group: null,
-		showGroup: false
+		groups: []
 	})
 	ui.dom.submitBtn.node().click()
 
-	function callback(group, arg) {
-		test.deepEqual(geneLstCopy, arg, `should supply the expected geneList as a callback argument`)
+	function callback({ geneList }) {
+		test.deepEqual(geneLstCopy, geneList, `should supply the expected geneList as a callback argument`)
 		if (test._ok) ui.destroy()
 		test.end()
 	}

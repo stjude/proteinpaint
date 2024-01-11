@@ -151,7 +151,8 @@ function setNumberInput(opts) {
 				.attr('class', 'sja-termdb-config-row-label')
 				.attr('title', opts.title),
 			inputs: {}
-		}
+		},
+		values: {}
 	}
 
 	if (!opts.inputs)
@@ -171,9 +172,9 @@ function setNumberInput(opts) {
 		('debounceInterval' in opts.parent?.app.opts ? opts.parent?.app.opts.debounceInterval : 100)
 	for (const input of opts.inputs) {
 		let dispatchTimer
-		function debouncedDispatch() {
+		function debouncedDispatch(noDispatch = false) {
 			if (dispatchTimer) clearTimeout(dispatchTimer)
-			dispatchTimer = setTimeout(dispatchChange, debounceTimeout)
+			if (!noDispatch) dispatchTimer = setTimeout(dispatchChange, debounceTimeout)
 		}
 
 		function dispatchChange() {
@@ -210,7 +211,13 @@ function setNumberInput(opts) {
 				.attr('max', 'max' in input ? input.max : null) // same
 				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
 				.style('width', (input.width || opts.width || 100) + 'px')
-				.on('change', debouncedDispatch)
+				.on('keyup', event => {
+					const valueChanged =
+						self.values[opts.settingsKey] !== Number(self.dom.inputs[input.settingsKey].property('value'))
+					debouncedDispatch(event.key !== 'Enter' && valueChanged)
+				})
+			// the onchange event is too sensitive for a number input, and can cause premature dispatch
+			//.on('change', debouncedDispatch)
 		}
 	}
 
@@ -219,7 +226,9 @@ function setNumberInput(opts) {
 			const display = opts.getDisplayStyle?.(plot) || 'table-row'
 			opts.holder.style('display', display)
 			for (const settingsKey in self.dom.inputs) {
-				self.dom.inputs[settingsKey].property('value', plot.settings[opts.chartType][settingsKey])
+				const value = plot.settings[opts.chartType][settingsKey]
+				self.dom.inputs[settingsKey].property('value', value)
+				self.values[settingsKey] = value
 			}
 		}
 	}
@@ -385,6 +394,8 @@ function setRadioInput(opts) {
 				}
 		  ]
 
+	if (!('instanceNum' in opts)) opts.instanceNum = `sjpp-${Math.random().toString().slice(-7)}-${Date.now()}`
+
 	const styles = opts.styles || {}
 	for (const input of inputs) {
 		self.inputs[input.settingsKey] = initRadioInputs({
@@ -398,6 +409,8 @@ function setRadioInput(opts) {
 			styles,
 			listeners: {
 				input(event, d) {
+					if (event.key && event.key !== 'Enter') return
+
 					if (opts.callback) {
 						opts.callback(d.value)
 					} else {

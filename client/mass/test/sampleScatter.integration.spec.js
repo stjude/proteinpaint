@@ -696,7 +696,7 @@ tape('Change symbol and reference size from menu', function (test) {
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.size)
 		sizeInput.value = testSymSize
-		sizeInput.dispatchEvent(new Event('change'))
+		sizeInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }))
 	}
 	function testSymbolSize(scatter) {
 		//separate function because wait needed before test to run
@@ -708,7 +708,7 @@ tape('Change symbol and reference size from menu', function (test) {
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.refSize)
 		refInput.value = testRefSize
-		refInput.dispatchEvent(new Event('change'))
+		refInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }))
 	}
 	function testRefDotSize(scatter) {
 		test.equal(
@@ -764,8 +764,8 @@ tape('Change chart width and height from menu', function (test) {
 			},
 			// count: 1,
 			trigger() {
-				widthInput.dispatchEvent(new Event('change'))
-				heightInput.dispatchEvent(new Event('change'))
+				widthInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }))
+				heightInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }))
 			}
 			// matcher(mutations){
 			// 	let foundH, foundW = 0

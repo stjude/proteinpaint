@@ -26,18 +26,44 @@ export class MatrixControls {
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
 		this.setDownloadBtn(s)
-		this.btns = this.opts.holder.selectAll('button').filter(d => d && d.label)
-
 		this.setZoomInput()
 		this.setDragToggle({
 			holder: this.opts.holder.append('div').style('display', 'inline-block'),
 			target: this.parent.dom.seriesesG
 		})
 		this.setSvgScroll(state)
+
+		this.keyboardNavHandler = async event => {
+			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
+			if (event.key == 'Enter' || event.key == 'ArrowDown') {
+				const elems =
+					event.target.tagName == 'BUTTON'
+						? this.parent.app.tip.d.node().querySelectorAll('input, select')
+						: event.target.querySelectorAll('input, select')
+				for (const elem of elems) {
+					if (elem.checkVisibility?.() || (!elem.checkVisibility && elem.getBoundingClientRect().height)) {
+						elem.focus()
+						return false
+					}
+				}
+			} else if ((event.key == 'Tab' && event.shiftKey) || event.key == 'Backspace' || event.key == 'ArrowUp') {
+				this.keyEventTarget.focus()
+				return false
+			} //else if (event.keyShift && el)
+		}
+
+		this.btns = this.opts.holder
+			.selectAll(':scope>button')
+			.filter(d => d && d.label)
+			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
+			.on('focus.matrix-keyboard-nav', function (d) {
+				this.click()
+			})
 	}
 
 	setSamplesBtn(s) {
 		const l = s.controlLabels
+
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
@@ -604,7 +630,8 @@ export class MatrixControls {
 			.style('margin', '2px 0')
 			//.property('disabled', d => d.disabled)
 			.text('Download')
-			.on('click', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
+			.on('focus', () => this.parent.app.tip.hide())
+			.on('click.sjpp-matrix-download', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
 	}
 
 	main() {
@@ -654,6 +681,7 @@ export class MatrixControls {
 		const parent = this.opts.parent
 		const tables = d.tables || [d]
 
+		event.target.focus()
 		app.tip.clear()
 
 		const table = app.tip.d.append('table').attr('class', 'sjpp-controls-table')
@@ -690,6 +718,7 @@ export class MatrixControls {
 			}
 
 			if (t.customInputs) t.customInputs(this, app, parent, table)
+			table.selectAll('select, input, button').attr('tabindex', 0).on('keydown', self.keyboardNavHandler)
 		}
 
 		app.tip.showunder(event.target)
@@ -728,41 +757,9 @@ export class MatrixControls {
 				//parent.opts.customInputs.genes(table.append('tr').append('td').attr('colspan', 2).style('text-align', 'center'))
 			}
 		}
-		const callback = (group, geneset) => {
-			if (group.lst.length == 0)
-				//it was a new group
-				parent.config.termgroups.push(group)
 
-			const lst = []
-			for (const tw of group.lst) if (tw.term.type != 'geneVariant') lst.push(tw)
-			const tws = geneset.map(d => {
-				//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-				let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
-				if (!tw)
-					tw = {
-						$id: get$id(),
-						term: {
-							name: d.symbol || d.name,
-							type: 'geneVariant'
-						},
-						q: {}
-					}
-				return tw
-			})
-			group.lst = lst
-			// TODO: see above for input to select which group to add the gene
-			// right not it assumes the first group
-			group.lst.push(...tws)
-			app.dispatch({
-				type: 'plot_edit',
-				id: parent.id,
-				config: {
-					termgroups: parent.config.termgroups
-				}
-			})
-		}
-		self.addGeneSearch(event, app, parent, table.append('tr'), callback)
-		self.addGeneGroup(event, app, parent, table.append('tr'), callback)
+		self.addGenesetInput(event, app, parent, table.append('tr'))
+		//self.addGeneGroup(event, app, parent, table.append('tr'), callback)
 	}
 
 	appendDictInputs(self, app, parent, table) {
@@ -772,97 +769,123 @@ export class MatrixControls {
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
-	addGeneSearch(event, app, parent, tr, callback) {
+	addGenesetInput(event, app, parent, tr) {
+		const tip = new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
-		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene set')
+		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
 		const td = tr.append('td')
-		let select
-		if (tg.length > 1) {
-			select = td.append('select')
-			select
-				.selectAll('option')
-				.data(tg)
-				.enter()
-				.append('option')
-				.property('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
-				.attr('value', (d, i) => i)
-				.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
-		} else {
-			const group = parent.config.termgroups[parent.selectedGroup]
-			const count = group.lst.filter(tw => tw.term.type == 'geneVariant').length
-			td.append('span')
-				.style('color', '#aaa')
-				.style('padding', '5px')
-				.text(`${count} ${count == 1 ? 'gene' : 'genes'} `)
-		}
+		this.showGenegroupEditUi(td, app, tip, tg)
+		this.showGenegroupAddUi(td, app, tip, tg)
+	}
 
+	showGenegroupEditUi(td, app, tip, tg) {
 		td.append('button')
-			.style('margin-left', '3px')
-			.text('Edit')
-			.on('click', () => {
-				const selectedGroup = parseInt(select?.node().value || 0)
-				const group = parent.config.termgroups[selectedGroup]
-				app.tip.clear().hide()
-
-				const gsArg = {
-					holder: event.target,
-					menu: app.tip,
-					genome: app.opts.genome,
-					geneList: [],
-					callback,
-					vocabApi: this.opts.app.vocabApi,
-					group,
-					showGroup: parent.config.termgroups > 1
-				}
-
-				if (this.parent.chartType == 'hierCluster' && group == parent.hcTermGroup) {
+			.html('Edit')
+			.on('key', event => {
+				if (event.key == 'Enter') event.target.click()
+			})
+			.on('click', event => {
+				const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
+				tip.showunder(event.target)
+				showGenesetEdit({
+					holder: tip.d,
 					/* running hier clustering and the editing group is the group used for clustering
-					pass this mode value to inform ui to support the optional button "top variably exp gene"
-					this is hardcoded for the purpose of gene expression and should be improved
-					*/
-					gsArg.mode = 'expression'
-				}
-
-				for (const tw of group.lst) if (tw.term.type == 'geneVariant') gsArg.geneList.push({ name: tw.term.name })
-				showGenesetEdit(gsArg)
+				pass this mode value to inform ui to support the optional button "top variably exp gene"
+				this is hardcoded for the purpose of gene expression and should be improved
+				*/
+					getMode: group => {
+						return this.parent.chartType == 'hierCluster' &&
+							(group.type == 'hierCluster' || group.name == this.parent.config.settings.hierCluster?.termGroupName)
+							? 'expression'
+							: ''
+					},
+					genome: app.opts.genome,
+					groups: tg.map((g, i) => {
+						return {
+							name: g.name,
+							type: g.type,
+							lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+							selected:
+								(parent.chartType == 'hierCluster' &&
+									(g.type == 'hierCluster' || g.name == this.parent.config.termGroupName)) ||
+								g === firstGrpWithGeneTw
+						}
+					}),
+					vocabApi: this.opts.app.vocabApi,
+					callback: ({ geneList, groupIndex }) => {
+						tip.clear().hide()
+						const group = tg[groupIndex]
+						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+						const tws = geneList.map(d => {
+							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
+							if (!tw)
+								tw = {
+									$id: get$id(),
+									term: {
+										name: d.symbol || d.name,
+										type: 'geneVariant'
+									},
+									q: {}
+								}
+							return tw
+						})
+						group.lst = [...lst, ...tws]
+						if (!group.lst.length) tg.splice(groupIndex, 1)
+						app.dispatch({
+							type: 'plot_edit',
+							id: this.parent.id,
+							config: {
+								termgroups: tg
+							}
+						})
+					}
+				})
 			})
 	}
 
-	addGeneGroup(event, app, parent, tr, callback) {
-		const tg = parent.config.termgroups
-		parent.selectedGroup = 0
-		tr.append('td').attr('class', 'sja-termdb-config-row-label')
-		const td = tr.append('td')
-		const input = td
-			.append('input')
-			.attr('placeholder', 'New group name')
-			.on('input', function () {
-				const name = input.node().value
-				button.property('disabled', name == '')
+	showGenegroupAddUi(td, app, tip, tg) {
+		td.append('button')
+			.html('Add')
+			.on('key', event => {
+				if (event.key == 'Enter') event.target.click()
 			})
-		const button = td
-			.append('button')
-			.text('Add new group')
-			.property('disabled', true)
-			.on('click', () => {
-				const name = input.node().value
-				const group = {
-					name,
-					overrides: false,
-					lst: []
-				}
-				/* no need to detect the condition and assign mode=expression. 
-				it is expected that a newly added gene term group will not trigger clustering analysis
-				*/
+			.on('click', event => {
+				tip.showunder(event.target)
 				showGenesetEdit({
-					holder: event.target,
-					menu: app.tip,
+					holder: tip.d,
+					/* running hier clustering and the editing group is the group used for clustering
+				pass this mode value to inform ui to support the optional button "top variably exp gene"
+				this is hardcoded for the purpose of gene expression and should be improved
+				*/
+					//mode: parent.chartType == 'hierCluster' && group == parent.hcTermGroup ? 'gene expression' : '',
 					genome: app.opts.genome,
-					geneList: [],
-					callback,
+					groups: [],
 					vocabApi: this.opts.app.vocabApi,
-					group,
-					showGroup: true
+					callback: ({ geneList, groupName }) => {
+						tip.clear().hide()
+						if (!geneList.length) return
+						tg.push({
+							name: groupName,
+							lst: geneList.map(d => {
+								return {
+									$id: get$id(),
+									term: {
+										name: d.symbol || d.name,
+										type: 'geneVariant'
+									},
+									q: {}
+								}
+							})
+						})
+						app.dispatch({
+							type: 'plot_edit',
+							id: this.parent.id,
+							config: {
+								termgroups: tg
+							}
+						})
+					}
 				})
 			})
 	}
@@ -874,6 +897,7 @@ export class MatrixControls {
 		termdb.appInit({
 			holder: holder || app.tip.d,
 			vocabApi: this.parent.app.vocabApi,
+			focus: 'off',
 			state: {
 				vocab: this.parent.state.vocab,
 				activeCohort: this.parent.activeCohort,
@@ -889,6 +913,9 @@ export class MatrixControls {
 					this.submit_lst(termlst)
 					app.tip.hide()
 				}
+			},
+			search: {
+				focus: 'off'
 			}
 		})
 	}
@@ -1001,6 +1028,7 @@ export class MatrixControls {
 				selectBtn: opts.holder
 					.append('button')
 					.attr('title', 'Click the matrix to select data')
+					.attr('tabindex', 100)
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')
@@ -1010,6 +1038,7 @@ export class MatrixControls {
 				grabBtn: opts.holder
 					.append('button')
 					.attr('title', 'Click the matrix to drag and move')
+					.attr('tabindex', 100)
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')

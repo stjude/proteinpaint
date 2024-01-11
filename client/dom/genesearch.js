@@ -132,7 +132,10 @@ export function addGeneSearchbox(arg) {
 
 	let placeholder,
 		width = 150
-	if (arg.geneOnly) {
+
+	if ('placeholder' in arg) {
+		placeholder = arg.placeholder
+	} else if (arg.geneOnly) {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
 	} else {
@@ -232,6 +235,23 @@ export function addGeneSearchbox(arg) {
 					input.value = d.chr + (d.isVariant ? '.' + d.pos + '.' + d.ref + '.' + d.alt : ':' + d.start + '-' + d.stop)
 				}
 				input.blur()
+				return
+			}
+
+			if (event.key == 'ArrowDown') {
+				tip.d
+					.selectAll('.sja_menuoption')
+					.attr('tabindex', 0)
+					.on('keyup', event => {
+						if (event.key == 'Enter') {
+							event.target.click()
+						} else if (event.key == 'ArrowDown') {
+							if (event.target.nextSibling) event.target.nextSibling.focus()
+						} else if (event.key == 'ArrowUp') {
+							if (event.target.previousSibling) event.target.previousSibling.focus()
+						}
+					})
+				tip.d.select('.sja_menuoption').node().focus()
 				return
 			}
 			debouncer()
