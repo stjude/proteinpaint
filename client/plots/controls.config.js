@@ -171,7 +171,7 @@ function setNumberInput(opts) {
 		('debounceInterval' in opts.parent?.app.opts ? opts.parent?.app.opts.debounceInterval : 100)
 	for (const input of opts.inputs) {
 		let dispatchTimer
-		function debouncedDispatch() {
+		function debouncedDispatch(event) {
 			if (dispatchTimer) clearTimeout(dispatchTimer)
 			dispatchTimer = setTimeout(dispatchChange, debounceTimeout)
 		}
@@ -210,6 +210,10 @@ function setNumberInput(opts) {
 				.attr('max', 'max' in input ? input.max : null) // same
 				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
 				.style('width', (input.width || opts.width || 100) + 'px')
+				.on('keyup', event => {
+					if (event.key !== 'Enter') clearTimeout(dispatchTimer)
+					else setTimeout(dispatchChange, debounceTimeout)
+				})
 				.on('change', debouncedDispatch)
 		}
 	}
@@ -385,6 +389,8 @@ function setRadioInput(opts) {
 				}
 		  ]
 
+	if (!('instanceNum' in opts)) opts.instanceNum = `sjpp-${Math.random().toString().slice(-7)}-${Date.now()}`
+
 	const styles = opts.styles || {}
 	for (const input of inputs) {
 		self.inputs[input.settingsKey] = initRadioInputs({
@@ -398,6 +404,8 @@ function setRadioInput(opts) {
 			styles,
 			listeners: {
 				input(event, d) {
+					if (event.key && event.key !== 'Enter') return
+
 					if (opts.callback) {
 						opts.callback(d.value)
 					} else {

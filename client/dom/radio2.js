@@ -34,7 +34,8 @@ export function initRadioInputs(opts) {
 		.style('margin-top', '2px')
 		.style('margin-right', 0)
 		.property('checked', opts.isCheckedFxn)
-		.on('input', opts.listeners.input)
+		.on('mouseup', opts.listeners.input)
+		.on('keyup', opts.listeners.input)
 
 	labels
 		.append('span')
