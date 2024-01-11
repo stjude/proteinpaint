@@ -64,7 +64,6 @@ hic.atdev controls dev-shortings
 
 */
 
-const oeOption = 'expected'
 /** Default normalization method if none returned from the server. Exported to parsing and controls script*/
 export const defaultnmeth = 'NONE'
 
