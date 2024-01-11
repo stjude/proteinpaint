@@ -2,6 +2,7 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
 import { fillTwLst } from '#termsetting'
+import { select } from 'd3-selection'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 export class profilePlot {
@@ -13,25 +14,34 @@ export class profilePlot {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
+		const isLoggedIn = this.app.vocabApi.hasVerifiedToken()
 		return {
 			config,
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
 			isLoggedIn: false,
-			role: 'regular'
+			role: 'regular',
+			vocab: appState.vocab
 		}
 	}
 
 	async init(appState) {
-		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block').style('font-size', '0.9em')
-		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('display', 'inline-block')
+		const mainDiv = this.opts.holder.append('div')
+		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.9em')
+		const holder = mainDiv.insert('div').style('display', 'inline-block')
+		const holder2 = mainDiv.append('div')
 
 		const plotDiv = holder.append('div')
 		this.dom = {
 			controlsDiv,
 			holder,
-			plotDiv
+			plotDiv,
+			holder2
 		}
+		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
+		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
+		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 	}
 
@@ -42,6 +52,22 @@ export class profilePlot {
 		})
 		list.unshift({ label: '', value: '' })
 		return list
+	}
+
+	async main() {
+		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.settings = this.config.settings[this.type]
+		if (this.settings.show2Plots && !this.plotAdded) await this.addPlot()
+	}
+
+	async addPlot() {
+		this.plotAdded = true
+		const appState = this.state
+		const plotMod = await import('#plots/plot.app.js')
+		const plot = { chartType: this.type }
+		if (this.type == 'profileRadar' || this.type == 'profileRadarFacility') plot.plot = this.config.plot
+		const opts = { holder: this.dom.holder2, state: { plots: [plot], vocab: appState.vocab } }
+		const plotAppApi = await plotMod.appInit(opts)
 	}
 
 	async setControls(additionalInputs = []) {
@@ -127,6 +153,13 @@ export class profilePlot {
 				options: this.types,
 				settingsKey: 'facilityType',
 				callback: value => this.setFacilityType(value)
+			},
+			{
+				label: 'Show two plots',
+				type: 'checkbox',
+				chartType,
+				settingsKey: 'show2Plots',
+				boxLabel: 'Yes'
 			}
 		]
 		inputs.unshift(...additionalInputs)
@@ -152,7 +185,7 @@ export class profilePlot {
 				disabled: this.state.role == 'regular'
 			})
 		}
-		if (this.type != 'profileBarchart')
+		if (this.type == 'profilePolar')
 			inputs.push({
 				label: 'Show table',
 				type: 'checkbox',
@@ -325,4 +358,10 @@ export async function loadFilterTerms(config, app) {
 	twlst.push(config.incomeTW)
 	twlst.push(config.typeTW)
 	await fillTwLst(twlst, app.vocabApi)
+}
+
+export function getDefaultProfilePlotSettings() {
+	return {
+		show2Plots: false
+	}
 }

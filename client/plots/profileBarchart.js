@@ -4,6 +4,8 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { profilePlot } from './profilePlot.js'
 import { loadFilterTerms } from './profilePlot.js'
+import { getDefaultProfilePlotSettings } from './profilePlot.js'
+
 let stepx = 500
 const barwidth = 400
 
@@ -27,10 +29,6 @@ class profileBarchart extends profilePlot {
 			settingsKey: 'component',
 			callback: value => this.setComponent(value)
 		}
-		this.opts.header.style('font-weight', 'bold').text(config.name)
-		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
-		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
-		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 	}
 
 	setComponent(value) {
@@ -39,8 +37,7 @@ class profileBarchart extends profilePlot {
 	}
 
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.settings = this.config.settings.profileBarchart
+		await super.main()
 
 		this.configComponent =
 			this.config.plotByComponent.find(comp => comp.component.name == this.settings.component) ||
@@ -309,7 +306,7 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileBarchart
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileBarchart'
 		const config = copyMerge(structuredClone(defaults), opts)
-		const settings = getDefaultProfileBarchartSettings()
+		const settings = getDefaultProfilePlotSettings()
 
 		config.settings = {
 			controls: {
