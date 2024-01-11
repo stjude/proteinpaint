@@ -320,6 +320,9 @@ function setRenderers(self) {
 			.append('div')
 			.style('cursor', 'pointer')
 			.on('click', self.clickNoPillDiv)
+			.on(`keyup.sjpp-termdb`, event => {
+				if (event.key == 'Enter') self.showTree(event)
+			})
 		self.dom.pilldiv = self.dom.holder.append('div')
 
 		// nopilldiv - placeholder label
@@ -425,6 +428,12 @@ function setRenderers(self) {
 			.transition()
 			.duration(200)
 			.each(self.enterPill)
+		self.dom.pilldiv
+			.select('.term_name_btn')
+			.attr('tabindex', 0)
+			.on(`keyup.sjpp-termdb`, event => {
+				if (event.key == 'Enter') event.target.click()
+			})
 	}
 
 	self.enterPill = async function (this: string) {
@@ -615,20 +624,25 @@ function setInteractivity(self) {
 			options.push({ label: 'Remove', callback: self.removeTerm } as opt)
 		}
 
-		const d3elem = menuHolder || tip.d
-		d3elem
+		self.openMenu = menuHolder || tip.d
+		self.openMenu
 			.selectAll('div')
 			.data(options)
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('tabindex', (d, i) => i + 1)
 			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text((d: opt) => d.label)
 			.on('click', (event: MouseEvent, d: opt) => {
 				self.dom.tip.clear()
 				d.callback(self.dom.tip.d)
 			})
+			.on('keyup', event => {
+				if (event.key == 'Enter') event.target.click()
+			})
 
+		self.openMenu.select('.sja_menuoption').node()?.focus()
 		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
