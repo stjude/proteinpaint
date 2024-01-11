@@ -1022,7 +1022,7 @@ async function do_alignOneGroup(group, q, templates) {
 			}
 		} else if (group.type == 'support_amb') {
 			// Currently ambiguous group does not have read alignment? Will work on this later if needed
-			console.log('Realignment of reads in ambiguous group is not currently implemented')
+			throw 'Realignment of reads in ambiguous group is not currently implemented.'
 		} else if (group.type.includes('support_alt')) {
 			// Determining which alternate allele the reads must be realigned to
 			for (let var_idx = 0; var_idx < q.variant.length; var_idx++) {
