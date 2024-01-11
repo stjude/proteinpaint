@@ -672,7 +672,14 @@ function setRenderers(self) {
 			// add in charts with no data
 			data.push(
 				...self.noData.map(chartId => {
-					return { chartId, chartTitle: chartId }
+					let chartTitle = chartId
+					const t0 = self.config.term0
+					if (t0.q && t0.q.groupsetting && t0.q.groupsetting.inuse) return { chartId, chartTitle }
+					if (t0.term.values) {
+						const value = t0.term.values[chartId]
+						if (value && value.label) chartTitle = value.label
+					}
+					return { chartId, chartTitle }
 				})
 			)
 		}
