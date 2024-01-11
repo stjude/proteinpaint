@@ -3,10 +3,8 @@ import { pointer } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '#dom/axisstyle'
-import { newpane } from '#src/client'
 import { Menu } from '#dom/menu'
 import { sayerror } from '../dom/sayerror'
-import { appear } from '#dom/animation'
 import { dofetch3 } from '#common/dofetch'
 import { make_radios } from '#dom/radiobutton'
 import { make_table_2col } from '#dom/table2col'
@@ -940,24 +938,6 @@ function makeTk(tk, block) {
 		.style('max-height', '65vh')
 		.style('overflow', 'scroll')
 		.attr('class', 'sjpp_show_scrollbar')
-
-	/*
-	tk.alignpane = newpane({
-		x: 100,
-		y: 100,
-		close: () => {
-			if (tk.readAlignmentTable) {
-				delete tk.readAlignmentTable
-				delete tk.readAlignmentTableGroup
-				if (tk.is_align_gene) {
-					tk.is_align_gene = false
-				}
-			}
-			tk.alignpane.pane.style('display', 'none')
-		}
-	}) // Panel for showing multi_read alignment to ref/alt allele
-	tk.alignpane.pane.style('display', 'none')
-	*/
 
 	tk.pileupheight = 100
 	tk.pileupbottompad = 6
