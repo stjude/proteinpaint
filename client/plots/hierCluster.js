@@ -31,6 +31,7 @@ class HierCluster extends Matrix {
 		super(opts)
 		this.type = 'hierCluster'
 		this.chartType = 'hierCluster'
+		this.holderTitle = 'Hierarchical Clustering'
 	}
 
 	async init(appState) {
