@@ -64,6 +64,7 @@ hic.atdev controls dev-shortings
 
 */
 
+const oeOption = 'expected'
 /** Default normalization method if none returned from the server. Exported to parsing and controls script*/
 export const defaultnmeth = 'NONE'
 
@@ -150,6 +151,7 @@ class Hicstat {
 		}
 		this.errList = []
 		this.wholegenome = {
+			oeOption: 'observed',
 			binpx: 1,
 			/** wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring*/
 			bpmaxv: 5000,
@@ -955,6 +957,7 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 	}
 
 	const arg = {
+		oevalues: self.wholegenome.oeOption,
 		file: hic.file,
 		url: hic.url,
 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
@@ -1145,6 +1148,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 	const ctx = self.chrpairview.ctx
 
 	const arg = {
+		oevalues: self.chrpairview.oeOption,
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
@@ -1228,6 +1232,16 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
 	self.chrx = self.detailview.xb.rglst[0]
 	self.chry = self.detailview.yb.rglst[0]
 	await detailViewUpdateHic(hic, self)
+}
+
+/** */
+export function oeOption4select(v: any, self: any) {
+	const options = self.dom.controlsDiv.matrixType.node().options
+	const selectedOption = Array.from(options).find(
+		(o: any) => o.value === self.dom.controlsDiv.matrixType.node().value
+	) as any
+	selectedOption.selected = true
+	v.oeOption = selectedOption.value // Return the selected option value
 }
 
 /**
@@ -1397,6 +1411,7 @@ export function getdata_detail(hic: any, self: any) {
 	const ystop = self.detailview.ystop
 
 	const par: HicstrawArgs = {
+		oevalues: self.detailview.oeOption,
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
