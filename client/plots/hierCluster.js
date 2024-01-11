@@ -754,9 +754,12 @@ export async function getPlotConfig(opts = {}, app) {
 	config.settings.matrix.collabelpos = 'top'
 
 	const termGroupName = config.settings.hierCluster.termGroupName
+	const hcTermGroup = config.termgroups.find(g => g.type == 'hierCluster' || g.name == termGroupName)
 	// TODO: should compose the term group in launchGdcHierCluster.js, since this handling is customized to only that dataset?
 	// the opts{} object should be standard, should pre-process the opts outside of this getPlotConfig()
-	if (!config.termgroups.find(g => g.type == 'hierCluster' || g.name == termGroupName)) {
+	if (hcTermGroup)
+		hcTermGroup.type = 'hierCluster' // ensure that the group.type is correct for recovered legacy sessions
+	else {
 		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
