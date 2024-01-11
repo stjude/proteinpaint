@@ -26,46 +26,39 @@ export class MatrixControls {
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
 		this.setDownloadBtn(s)
-
-		this.keyboardNavHandler = async event => {
-			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
-			/*if (event.key == 'Tab') {
-			} else if (event.key == 'ArrowLeft') {
-				if (event.target.previousSibling) event.target.previousSibling.focus()
-				else event.target.parentNode.focus()
-			} else if (event.key == 'ArrowRight') {
-				if (event.target.nextSibling) event.target.nextSibling.focus()
-				else if (event.target.parentNode.nextSibling) event.target.parentNode.nextSibling()
-			} else if (event.key == 'ArrowDown') { console.log(38, event.target)
-				if (event.target.tagName == 'BUTTON') this.parent.app.tip.d.select('input, select, button').node().focus()
-				else if (!event.target.firstChild?.querySelectorAll('input').length) {
-					if (event.target.nextSibling?.firstChild?.tagName == 'td') event.target.nextSibling?.firstChild.focus()
-				}
-			} else*/ if (event.key == 'Enter' || event.key == 'ArrowDown') {
-				if (event.target.tagName == 'BUTTON') this.parent.app.tip.d.select('input, select').node().focus()
-				if (event.target.querySelectorAll('input')?.length) event.target.querySelector('input').focus()
-			} else if (event.key == 'Backspace' || event.key == 'ArrowUp') {
-				this.keyEventTarget.focus()
-			}
-		}
-
-		this.btns = this.opts.holder
-			.selectAll(':scope>button')
-			.filter(d => d && d.label)
-			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
-			// .on('click.sjpp-btn-focus', function() {
-			// 	//this.focus()
-			// })
-			.on('focus.matrix-keyboard-nav', function (d) {
-				this.click()
-			})
-
 		this.setZoomInput()
 		this.setDragToggle({
 			holder: this.opts.holder.append('div').style('display', 'inline-block'),
 			target: this.parent.dom.seriesesG
 		})
 		this.setSvgScroll(state)
+
+		this.keyboardNavHandler = async event => {
+			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
+			if (event.key == 'Enter' || event.key == 'ArrowDown') {
+				const elems =
+					event.target.tagName == 'BUTTON'
+						? this.parent.app.tip.d.node().querySelectorAll('input, select')
+						: event.target.querySelectorAll('input, select')
+				for (const elem of elems) {
+					if (elem.checkVisibility?.() || (!elem.checkVisibility && elem.getBoundingClientRect().height)) {
+						elem.focus()
+						return false
+					}
+				}
+			} else if ((event.key == 'Tab' && event.shiftKey) || event.key == 'Backspace' || event.key == 'ArrowUp') {
+				this.keyEventTarget.focus()
+				return false
+			} //else if (event.keyShift && el)
+		}
+
+		this.btns = this.opts.holder
+			.selectAll(':scope>button')
+			.filter(d => d && d.label)
+			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
+			.on('focus.matrix-keyboard-nav', function (d) {
+				this.click()
+			})
 	}
 
 	setSamplesBtn(s) {
@@ -725,8 +718,7 @@ export class MatrixControls {
 			}
 
 			if (t.customInputs) t.customInputs(this, app, parent, table)
-			table.selectAll('.add_term_btn, .term_name_btn').attr('tabindex', 0)
-			table.select('.term_name_btn').node()
+			table.selectAll('select, input, button').attr('tabindex', 0).on('keydown', self.keyboardNavHandler)
 		}
 
 		app.tip.showunder(event.target)
@@ -788,17 +780,13 @@ export class MatrixControls {
 
 	showGenegroupEditUi(td, app, tip, tg) {
 		td.append('button')
-			.html('Edit Group')
+			.html('Edit')
 			.on('key', event => {
 				if (event.key == 'Enter') event.target.click()
 			})
 			.on('click', event => {
 				const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
 				tip.showunder(event.target)
-				// const getMode = group => {
-				// 	console.log(807, group, this.parent.config.settings.hierCluster?.termGroupName)
-				// 	return parent.chartType == 'hierCluster' && (group.type == 'hierCluster' || group.name == this.parent.config.settings.hierCluster?.termGroupName) ? 'geneExpression' : ''
-				// }
 				showGenesetEdit({
 					holder: tip.d,
 					/* running hier clustering and the editing group is the group used for clustering
@@ -858,7 +846,7 @@ export class MatrixControls {
 
 	showGenegroupAddUi(td, app, tip, tg) {
 		td.append('button')
-			.html('Add a New Group')
+			.html('Add')
 			.on('key', event => {
 				if (event.key == 'Enter') event.target.click()
 			})
@@ -1040,6 +1028,7 @@ export class MatrixControls {
 				selectBtn: opts.holder
 					.append('button')
 					.attr('title', 'Click the matrix to select data')
+					.attr('tabindex', 100)
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')
@@ -1049,6 +1038,7 @@ export class MatrixControls {
 				grabBtn: opts.holder
 					.append('button')
 					.attr('title', 'Click the matrix to drag and move')
+					.attr('tabindex', 100)
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')

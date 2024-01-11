@@ -320,10 +320,8 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.onKeyup = event => {
-		console.log(314, event.key, self.currData?.lst)
 		// to search snp upon hitting enter
 		if (event.key == 'ArrowDown' && self.currData?.lst?.length) {
-			console.log(316, self.dom.resultDiv.select('.sja_tree_click_term, .sja_menuoption').node())
 			self.dom.resultDiv.select('.sja_tree_click_term, .sja_menuoption').node().focus()
 			return
 		}
