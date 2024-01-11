@@ -77,6 +77,7 @@ class TermSearch {
 			return
 		}
 		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.usecase, targetType)
+		this.currData = data
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {
@@ -190,6 +191,8 @@ function setRenderers(self) {
 		if (dictTerms.length) {
 			self.dom.resultDiv_terms.append('table').selectAll().data(dictTerms).enter().append('tr').each(self.showTerm)
 		}
+
+		self.focusableResults = [...self.dom.resultDiv.node().querySelectorAll('.sja_tree_click_term, .sja_menuoption')]
 	}
 	self.showTerm = function (term) {
 		const tr = select(this)
@@ -215,6 +218,7 @@ function setRenderers(self) {
 				// clickable button
 				button
 					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term')
+					.attr('tabindex', 0)
 					.style('display', 'block')
 					.style('color', 'black')
 					.style('padding', '5px 8px')
@@ -231,6 +235,7 @@ function setRenderers(self) {
 						self.clear()
 						self.dom.input.property('value', '')
 					})
+					.on('keyup', self.navInputValueByKeyboard)
 			}
 			//show sample count for a term
 			if (term.samplecount !== undefined) {
@@ -244,34 +249,38 @@ function setRenderers(self) {
 			}
 		} else {
 			// as regular button, click to expand tree
-			button.attr('class', 'sja_menuoption').on('click', () => {
-				self.clear()
-				self.dom.input.property('value', '')
-				const expandedTermIds = [root_ID]
+			button
+				.attr('class', 'sja_menuoption')
+				.attr('tabindex', 0)
+				.on('click', () => {
+					self.clear()
+					self.dom.input.property('value', '')
+					const expandedTermIds = [root_ID]
 
-				if (term.type == 'geneVariant' && self.opts.handleGeneVariant) {
-					self.opts.handleGeneVariant(term)
-				} else if (nonDictionaryTermTypes.has(term.type)) {
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: {
-							selectedTerms: [...self.state.selectedTerms, term]
+					if (term.type == 'geneVariant' && self.opts.handleGeneVariant) {
+						self.opts.handleGeneVariant(term)
+					} else if (nonDictionaryTermTypes.has(term.type)) {
+						self.app.dispatch({
+							type: 'app_refresh',
+							state: {
+								selectedTerms: [...self.state.selectedTerms, term]
+							}
+						})
+					} else {
+						if (term.__ancestors) {
+							expandedTermIds.push(...term.__ancestors)
 						}
-					})
-				} else {
-					if (term.__ancestors) {
-						expandedTermIds.push(...term.__ancestors)
+						// pre-expand non-selectable parent term
+						if (!self.app.vocabApi.graphable(term)) expandedTermIds.push(term.id)
+						self.app.dispatch({
+							type: 'app_refresh',
+							state: {
+								tree: { expandedTermIds }
+							}
+						})
 					}
-					// pre-expand non-selectable parent term
-					if (!self.app.vocabApi.graphable(term)) expandedTermIds.push(term.id)
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: {
-							tree: { expandedTermIds }
-						}
-					})
-				}
-			})
+				})
+				.on('keyup', self.navInputValueByKeyboard)
 		}
 		tr.append('td')
 			.text(term.type == 'geneVariant' ? 'gene variant' : (term.__ancestorNames || []).join(' > '))
@@ -311,7 +320,13 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.onKeyup = event => {
+		console.log(314, event.key, self.currData?.lst)
 		// to search snp upon hitting enter
+		if (event.key == 'ArrowDown' && self.currData?.lst?.length) {
+			console.log(316, self.dom.resultDiv.select('.sja_tree_click_term, .sja_menuoption').node())
+			self.dom.resultDiv.select('.sja_tree_click_term, .sja_menuoption').node().focus()
+			return
+		}
 		if (!keyupEnter(event)) return // not pressing enter
 		if (!self.app.vocabApi.termdbConfig?.queries?.snvindel?.allowSNPs) return // snp search not enabled on this ds
 		self.onInput(event, 'snp') // targetType=snp
@@ -328,6 +343,20 @@ function setInteractivity(self) {
 			self.dom.resultDiv.style('display', 'inline-grid')
 			sayerror(self.dom.resultDiv_terms, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
+		}
+	}
+
+	self.navInputValueByKeyboard = event => {
+		if (event.key == 'Enter') event.target.click()
+		else if (event.key.startsWith('Arrow')) {
+			const i = self.focusableResults.findIndex(r => r === event.target)
+			if (event.key == 'ArrowDown') {
+				if (i < self.focusableResults.length - 1) self.focusableResults[i + 1].focus()
+				else self.focusableResults[0].focus()
+			} else if (event.key == 'ArrowUp') {
+				if (i != 0) self.focusableResults[i - 1].focus()
+				else self.focusableResults[self.focusableResults.length - 1].focus()
+			}
 		}
 	}
 }

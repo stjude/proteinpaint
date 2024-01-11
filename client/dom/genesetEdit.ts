@@ -171,7 +171,9 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 					const result = await vocabApi.getTopVariablyExpressedGenes(args)
 
 					geneList = []
-					for (const gene of result.genes) geneList.push({ name: gene })
+					if (result.genes) {
+						for (const gene of result.genes) geneList.push({ name: gene })
+					}
 					renderGenes()
 					event.target.disabled = false
 				})
@@ -201,6 +203,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 					for (const gene of result.genes) geneList.push({ name: gene })
 					renderGenes()
 					api.dom.loadBt.property('disabled', false)
+					submitBtn.node().focus()
 				})
 		}
 		if (genome?.termdbs?.msigdb) {
@@ -231,6 +234,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 										renderGenes()
 									}
 									tip2.hide()
+									submitBtn.node().focus()
 								}
 							}
 						})
@@ -321,6 +325,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 
 		api.dom.submitBtn.property('disabled', !geneList?.length)
 		api.dom.clearBtn.property('disabled', !geneList?.length)
+		if (geneList?.length) api.dom.submitBtn.node().focus()
 	}
 
 	function addGene() {
