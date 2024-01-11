@@ -31,22 +31,12 @@ class HierCluster extends Matrix {
 		super(opts)
 		this.type = 'hierCluster'
 		this.chartType = 'hierCluster'
-		//this.holderTitle = 'Hierarchical Clustering'
 	}
 
 	async init(appState) {
 		await super.init(appState)
 
-		// update holderTitle once state and dataType is set
-		switch (this.config.settings.hierCluster.dataType) {
-			case dtgeneexpression:
-				this.holderTitle = 'Gene Expression Clustering'
-				break
-			default:
-				throw 'unknown hierCluster.dataType'
-		}
-
-		if (this.dom.header) this.dom.header.html(this.holderTitle)
+		maySetSandboxHeader(this)
 
 		this.hcClipId = this.seriesClipId + '-hc'
 		this.dom.hcClipRect = this.dom.svg
@@ -810,4 +800,16 @@ export async function getPlotConfig(opts = {}, app) {
 
 	config.settings.matrix.maxSample = 100000
 	return config
+}
+
+function maySetSandboxHeader(self) {
+	// run only once upon init, after state and dataType is given
+	if (!self.dom.header) return // no header
+	switch (self.config.settings.hierCluster.dataType) {
+		case dtgeneexpression:
+			self.dom.header.text('Gene Expression Clustering')
+			break
+		default:
+			throw 'unknown hierCluster.dataType to set header'
+	}
 }
