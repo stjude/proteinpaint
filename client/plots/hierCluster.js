@@ -313,8 +313,8 @@ class HierCluster extends Matrix {
 		// FIXME TODO: do not rely on the hardcoded grp.name for finding the hier cluster term group
 		const s = this.settings.hierCluster
 		this.hcTermGroup =
-			this.config.termgroups.find(grp => grp.name == s.termGroupName) ||
-			this.termOrder?.find(t => t.grp.name == s.termGroupName)?.grp
+			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
+			this.termOrder?.find(t => t.grp.type == 'hierCluster')?.grp
 		const twlst = this.hcTermGroup.lst
 
 		// temporary fix to get rid of hard/soft filter and only keep dictionary legend filter,
@@ -754,9 +754,12 @@ export async function getPlotConfig(opts = {}, app) {
 	config.settings.matrix.collabelpos = 'top'
 
 	const termGroupName = config.settings.hierCluster.termGroupName
+	const hcTermGroup = config.termgroups.find(g => g.type == 'hierCluster' || g.name == termGroupName)
 	// TODO: should compose the term group in launchGdcHierCluster.js, since this handling is customized to only that dataset?
 	// the opts{} object should be standard, should pre-process the opts outside of this getPlotConfig()
-	if (!config.termgroups.find(g => g.name == termGroupName)) {
+	if (hcTermGroup)
+		hcTermGroup.type = 'hierCluster' // ensure that the group.type is correct for recovered legacy sessions
+	else {
 		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
@@ -788,7 +791,8 @@ export async function getPlotConfig(opts = {}, app) {
 				tvs: {
 					values: [{ dt: 3 }]
 				}
-			}
+			},
+			type: 'hierCluster'
 		})
 	}
 
