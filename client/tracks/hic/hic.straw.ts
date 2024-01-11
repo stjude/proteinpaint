@@ -383,6 +383,7 @@ class Hicstat {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
 		const horizontalView = this.init_horizontalView.bind(this)
 		nmeth2select(hic, this.chrpairview)
+		oeOption4select(this.chrpairview, this)
 
 		this.inwholegenome = false
 		this.inchrpair = true
@@ -528,6 +529,7 @@ class Hicstat {
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Horizontal')
 		nmeth2select(hic, this.horizontalview)
+		oeOption4select(this.horizontalview, this)
 
 		//Clear elements created in chr pair view
 		this.chrpairview.axisy.remove()
@@ -606,6 +608,7 @@ class Hicstat {
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
 		nmeth2select(hic, this.detailview)
+		oeOption4select(this.detailview, this)
 
 		this.inwholegenome = false
 		this.inchrpair = false
