@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 import { renderTable } from '#dom/table'
 import { profilePlot } from './profilePlot.js'
 import { loadFilterTerms } from './profilePlot.js'
-import { select } from 'd3-selection'
+import { getDefaultProfilePlotSettings } from './profilePlot.js'
 
 class profileRadarFacility extends profilePlot {
 	constructor() {
@@ -17,20 +17,14 @@ class profileRadarFacility extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
-		this.opts.header.style('font-weight', 'bold').text(config[config.plot].name)
 
 		this.lineGenerator = d3.line()
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
-		select('.sjpp-output-sandbox-content').on('scroll', event => this.onMouseOut(event))
-		this.dom.plotDiv.on('mousemove', event => this.onMouseOver(event))
-		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
-		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		document.addEventListener('scroll', event => this.tip.hide())
 	}
 
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.settings = this.config.settings.profileRadarFacility
+		await super.main()
 		this.twLst = []
 		this.terms = this.config[this.config.plot].terms
 		for (const row of this.terms) {
@@ -265,7 +259,7 @@ export async function getPlotConfig(opts, app) {
 		const defaults = app.vocabApi.termdbConfig?.chartConfigByType?.profileRadarFacility
 		if (!defaults) throw 'default config not found in termdbConfig.chartConfigByType.profileRadarFacility'
 		let config = copyMerge(structuredClone(defaults), opts)
-		const settings = getDefaultProfileRadarSettings()
+		const settings = getDefaultProfilePlotSettings()
 
 		config.settings = {
 			controls: {
@@ -291,9 +285,3 @@ export async function getPlotConfig(opts, app) {
 export const profileRadarFacilityInit = getCompInit(profileRadarFacility)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profileRadarFacilityInit
-
-export function getDefaultProfileRadarSettings() {
-	return {
-		showTable: true
-	}
-}
