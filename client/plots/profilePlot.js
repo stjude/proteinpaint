@@ -14,13 +14,13 @@ export class profilePlot {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
-		const isLoggedIn = this.app.vocabApi.hasVerifiedToken()
+		const isLoggedIn = true
 		return {
 			config,
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
-			isLoggedIn: false,
-			role: 'regular',
+			isLoggedIn,
+			site: 'PRO_00020',
 			vocab: appState.vocab
 		}
 	}
@@ -168,7 +168,7 @@ export class profilePlot {
 			}
 		]
 		inputs.unshift(...additionalInputs)
-		if (this.state.isLoggedIn) {
+		if (this.type == 'profileRadarFacility') {
 			this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
 				terms: this.twLst,
 				termsPerRequest: 30
@@ -178,7 +178,6 @@ export class profilePlot {
 				return { label: this.data2.refs.bySampleId[sample.sample].label, value: sample.sample }
 			})
 			if (!this.settings.site) this.settings.site = this.sites[0].value
-
 			this.sampleData = this.data2.lst.find(s => s.sample === this.settings.site)
 			inputs.unshift({
 				label: 'Site',
@@ -186,8 +185,7 @@ export class profilePlot {
 				chartType,
 				options: this.sites,
 				settingsKey: 'site',
-				callback: value => this.setSite(value),
-				disabled: this.state.role == 'regular'
+				callback: value => this.setSite(value)
 			})
 		}
 		if (this.type == 'profilePolar')

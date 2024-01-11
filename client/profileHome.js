@@ -42,7 +42,11 @@ async function loadDataset(headerHolder, dslabel) {
 }
 
 function addButtons(headerHolder, app, dslabel) {
-	const div = headerHolder.append('div').style('display', 'inline-flex').style('gap', '5px')
+	const div = headerHolder
+		.append('div')
+		.style('display', 'inline-flex')
+		.style('gap', '5px')
+		.style('padding-left', '12px')
 
 	div
 		.append('button')
