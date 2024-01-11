@@ -1021,8 +1021,13 @@ function makeTk(tk, block) {
 			configPanel(tk, block)
 		})
 
-	tk.readpane = newpane({ x: 100, y: 100, closekeep: 1 })
-	tk.readpane.pane.style('display', 'none')
+	tk.readMenu = new Menu() // show read details here upon clicking a read
+	// css class will force scrollbar to always show when content is too wide. if narrow scrollbar won't show
+	tk.readMenu.d
+		.style('max-width', '90vw')
+		.style('max-height', '65vh')
+		.style('overflow', 'scroll')
+		.attr('class', 'sjpp_show_scrollbar')
 
 	tk.alignpane = newpane({
 		x: 100,
@@ -1386,6 +1391,12 @@ function makeGroup(gd, tk, block, data) {
 				return
 			}
 			if (!group.data.templatebox) return
+
+			// prepare to show read detail. find the read at click position
+			// read panel is always wide (reads are long). show at a fix pos on left
+			tk.readMenu.clear().show(50, event.clientY)
+			let readNotShown = true
+
 			for (let region_idx = 0; region_idx < tk.regions.length; region_idx += 1) {
 				for (const t of group.data.templatebox) {
 					const cx1 = Math.max(t.x1, left_margin)
@@ -1405,7 +1416,7 @@ function makeGroup(gd, tk, block, data) {
 								// box under cursor is highlighted, cancel
 								delete group.clickedtemplate
 								group.dom.box_stay.attr('width', 0)
-								return
+								break
 							}
 						}
 
@@ -1425,13 +1436,16 @@ function makeGroup(gd, tk, block, data) {
 							.attr('height', t.y2 - t.y1)
 							.attr('transform', 'translate(' + cx1 + ',' + t.y1 + ')')
 						getReadInfo(tk, block, t, region_idx)
-						//return
+						readNotShown = false
 					} else if (tk.asPaired && mx > cx1 && mx < cx2 && my > t.y1 && my < t.y2 && t.multi_region) {
 						// In case of templates extending into multiple regions
 						getReadInfo(tk, block, t, region_idx)
+						readNotShown = false
 					}
+					// must not return here because ...
 				}
 			}
+			if (readNotShown) tk.readMenu.hide() // possible if clicked on white space of img where there's no read
 		})
 
 	group.dom.rightg.vslider.bar = group.dom.rightg.vslider.g
@@ -2387,10 +2401,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 }
 
 async function getReadInfo(tk, block, box, ridx) {
-	appear(tk.readpane.pane)
-	tk.readpane.header.text('Read info')
-	tk.readpane.body.selectAll('*').remove()
-	const wait = tk.readpane.body.append('div').text('Loading...')
+	const wait = tk.readMenu.d.append('div').text('Loading...')
 	const param = getparam(
 		tk.variants
 			? {
@@ -2409,10 +2420,10 @@ async function getReadInfo(tk, block, box, ridx) {
 		return
 	}
 	wait.remove()
-	tk.readpane.body.style('max-width', '90vw').style('max-height', '65vh').style('overflow', 'scroll')
+
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
-		const div = tk.readpane.body.append('div').style('margin', '20px')
+		const div = tk.readMenu.d.append('div').style('margin', '10px')
 		const read_reference_div = div.append('div').html(r.alignment) // This stores the HTML table displaying the read against the reference
 
 		/*** 
@@ -2435,139 +2446,14 @@ async function getReadInfo(tk, block, box, ridx) {
 				navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
 				d3select(this).append('span').html('&nbsp;&check;')
 			})
-		/*Creates read alignment table when 'Read alignment' button
-		is clicked. 
-		type
-			'Ref' - reference
-			'Alt' - alternate */
-		//TODO: make pane scrollable if the read is too long. Detect if pane is 1000px for example
-		function makeReadAlignmentTable(div, type, tk, read_start_pos, var_idx) {
-			let q_align, align_wrt, r_align
-			if (type == 'Ref') {
-				q_align = data.lst[0].alignments[var_idx].q_seq_ref
-				align_wrt = data.lst[0].alignments[var_idx].align_ref
-				r_align = data.lst[0].alignments[var_idx].r_seq_ref
-			}
-			if (type == 'Alt') {
-				q_align = data.lst[0].alignments[var_idx].q_seq_alt
-				align_wrt = data.lst[0].alignments[var_idx].align_alt
-				r_align = data.lst[0].alignments[var_idx].r_seq_alt
-			}
-			if (data.lst[0].alignments.length == 1) {
-				div
-					.append('span')
-					.text(type + ' alignment')
-					.style('font-family', 'Courier')
-					.style('font-size', '15px')
-					.style('color', '#303030')
-					.style('margin', '5px 5px 10px 5px')
-			} else {
-				if (type == 'Alt') {
-					div
-						.append('span')
-						.text('Alignment with Alt allele: ' + tk.variants[var_idx].alt)
-						.style('font-family', 'Courier')
-						.style('font-size', '15px')
-						.style('color', '#303030')
-						.style('margin', '5px 5px 10px 5px')
-				} else if (type == 'Ref') {
-					div
-						.append('span')
-						.text('Alignment with Ref allele: ' + tk.variants[var_idx].ref)
-						.style('font-family', 'Courier')
-						.style('font-size', '15px')
-						.style('color', '#303030')
-						.style('margin', '5px 5px 10px 5px')
-				} else {
-					// Should not happen
-					console.log('Unknown allele, please check')
-				}
-			}
-			const readAlignmentTable = div
-				.append('table')
-				.style('font-family', 'Courier')
-				.style('font-size', '0.8em')
-				.style('color', '#303030')
-				.style('margin', '5px 5px 20px 5px')
-			let nclt_count = 0
-			const refAlt_tr = readAlignmentTable.append('tr')
-			refAlt_tr
-				.append('td')
-				.text(type + ' allele')
-				.style('text-align', 'right')
-				.style('font-weight', '550')
-				.style('white-space', 'nowrap')
-			for (const nclt of r_align) {
-				nclt_count += 1
-				if (
-					type == 'Ref' &&
-					nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
-					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
-				) {
-					refAlt_tr.append('td').text(nclt).style('color', 'red')
-				} else if (
-					type == 'Alt' &&
-					nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
-					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
-				) {
-					refAlt_tr.append('td').text(nclt).style('color', 'red')
-				} else {
-					refAlt_tr.append('td').text(nclt)
-				}
-			}
-			const alignment_tr = readAlignmentTable.append('tr')
-			alignment_tr.append('td')
-			nclt_count = 0
-			for (const align_str of align_wrt) {
-				nclt_count += 1
-				if (
-					type == 'Ref' &&
-					nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
-					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
-				) {
-					alignment_tr.append('td').text(align_str).style('color', 'red')
-				} else if (
-					type == 'Alt' &&
-					nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
-					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
-				) {
-					alignment_tr.append('td').text(align_str).style('color', 'red')
-				} else {
-					alignment_tr.append('td').text(align_str)
-				}
-			}
 
-			const query_tr = readAlignmentTable.append('tr')
-			query_tr.append('td').text('Read').style('text-align', 'right').style('font-weight', '550')
-			nclt_count = 0
-			for (const nclt of q_align) {
-				nclt_count += 1
-				if (
-					type == 'Ref' &&
-					nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
-					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
-				) {
-					query_tr.append('td').text(nclt).style('color', 'red')
-				} else if (
-					type == 'Alt' &&
-					nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
-					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
-				) {
-					query_tr.append('td').text(nclt).style('color', 'red')
-				} else {
-					query_tr.append('td').text(nclt)
-				}
-			}
-		}
-
-		//console.log('data.lst:', data.lst)
 		if (data.lst[0].alignments) {
 			// Invoked only if variant is specified
 			d3select(this).append('span').html('&nbsp;')
-			const alignment_button = row.append('button').style('margin-left', '10px').text('Read alignment')
+			const alignment_button = row.append('button').style('margin-left', '10px').text('Align read to variant alleles')
 
 			let first = true // use this flag to only make the table once when clicking the button for the first time
-			alignment_button.on('click', async () => {
+			alignment_button.on('click', () => {
 				if (first) {
 					first = false
 					for (let var_idx = 0; var_idx < tk.variants.length; var_idx++) {
@@ -2593,7 +2479,7 @@ async function getReadInfo(tk, block, box, ridx) {
 				.text('Show unmapped mate')
 				.on('click', async () => {
 					mate_button.property('disabled', true) // disable this button
-					const wait = tk.readpane.body.append('div').text('Loading...')
+					const wait = tk.readMenu.d.append('div').text('Loading...')
 					const data2 = await dofetch3('tkbam', getparam({ show_unmapped: 1 }))
 					if (data2.error) {
 						wait.text('')
@@ -2774,6 +2660,131 @@ async function getReadInfo(tk, block, box, ridx) {
 		}
 		return { headers: getHeaders(tk), body }
 	}
+
+	/*
+	Creates read alignment table when 'Read alignment' button is clicked. 
+	type
+		'Ref' - reference
+		'Alt' - alternate
+	*/
+	function makeReadAlignmentTable(div, type, tk, read_start_pos, var_idx) {
+		let q_align, align_wrt, r_align
+		if (type == 'Ref') {
+			q_align = data.lst[0].alignments[var_idx].q_seq_ref
+			align_wrt = data.lst[0].alignments[var_idx].align_ref
+			r_align = data.lst[0].alignments[var_idx].r_seq_ref
+		}
+		if (type == 'Alt') {
+			q_align = data.lst[0].alignments[var_idx].q_seq_alt
+			align_wrt = data.lst[0].alignments[var_idx].align_alt
+			r_align = data.lst[0].alignments[var_idx].r_seq_alt
+		}
+		if (data.lst[0].alignments.length == 1) {
+			div
+				.append('span')
+				.text(type + ' alignment')
+				.style('font-family', 'Courier')
+				.style('font-size', '15px')
+				.style('color', '#303030')
+				.style('margin', '5px 5px 10px 5px')
+		} else {
+			if (type == 'Alt') {
+				div
+					.append('span')
+					.text('Alignment with Alt allele: ' + tk.variants[var_idx].alt)
+					.style('font-family', 'Courier')
+					.style('font-size', '15px')
+					.style('color', '#303030')
+					.style('margin', '5px 5px 10px 5px')
+			} else if (type == 'Ref') {
+				div
+					.append('span')
+					.text('Alignment with Ref allele: ' + tk.variants[var_idx].ref)
+					.style('font-family', 'Courier')
+					.style('font-size', '15px')
+					.style('color', '#303030')
+					.style('margin', '5px 5px 10px 5px')
+			} else {
+				// Should not happen
+				console.log('Unknown allele, please check')
+			}
+		}
+		const table = div
+			.append('table')
+			.style('font-family', 'Courier')
+			.style('font-size', '0.8em')
+			.style('color', '#303030')
+			.style('margin', '5px 5px 20px 5px')
+		let nclt_count = 0
+		const refAlt_tr = table.append('tr')
+		refAlt_tr
+			.append('td')
+			.text(type + ' allele')
+			.style('text-align', 'right')
+			.style('font-weight', '550')
+			.style('white-space', 'nowrap')
+		for (const nclt of r_align) {
+			nclt_count += 1
+			if (
+				type == 'Ref' &&
+				nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
+				nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
+			) {
+				refAlt_tr.append('td').text(nclt).style('color', 'red')
+			} else if (
+				type == 'Alt' &&
+				nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
+				nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
+			) {
+				refAlt_tr.append('td').text(nclt).style('color', 'red')
+			} else {
+				refAlt_tr.append('td').text(nclt)
+			}
+		}
+		const alignment_tr = table.append('tr')
+		alignment_tr.append('td')
+		nclt_count = 0
+		for (const align_str of align_wrt) {
+			nclt_count += 1
+			if (
+				type == 'Ref' &&
+				nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
+				nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
+			) {
+				alignment_tr.append('td').text(align_str).style('color', 'red')
+			} else if (
+				type == 'Alt' &&
+				nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
+				nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
+			) {
+				alignment_tr.append('td').text(align_str).style('color', 'red')
+			} else {
+				alignment_tr.append('td').text(align_str)
+			}
+		}
+
+		const query_tr = table.append('tr')
+		query_tr.append('td').text('Read').style('text-align', 'right').style('font-weight', '550')
+		nclt_count = 0
+		for (const nclt of q_align) {
+			nclt_count += 1
+			if (
+				type == 'Ref' &&
+				nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
+				nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
+			) {
+				query_tr.append('td').text(nclt).style('color', 'red')
+			} else if (
+				type == 'Alt' &&
+				nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
+				nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
+			) {
+				query_tr.append('td').text(nclt).style('color', 'red')
+			} else {
+				query_tr.append('td').text(nclt)
+			}
+		}
+	}
 }
 
 async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) {
@@ -2882,27 +2893,6 @@ function mayshow_blatbutton(read, div, tk, block) {
 		})
 
 	const blatdiv = div.append('div')
-}
-function show_blatresult3(hits, div, tk, block, lst) {
-	tk.readpane.body.selectAll('*').remove()
-
-	for (const r of lst) {
-		// {seq, alignment (html), info (html) }
-		const div = tk.readpane.body.append('div').style('margin', '20px')
-		div.append('div').html(r.alignment)
-	}
-
-	const width = 200
-	const height = 200
-	const svg = div.append('svg').attr('width', width).attr('height', height)
-	svg
-		.append('line')
-		.attr('x1', 100)
-		.attr('y1', 100)
-		.attr('x2', 200)
-		.attr('y2', 200)
-		.style('stroke', 'rgb(255,0,0)')
-		.style('stroke-width', 2)
 }
 
 function show_blatresult2(hits, div, tk, block) {
