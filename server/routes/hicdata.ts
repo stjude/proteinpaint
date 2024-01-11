@@ -68,7 +68,7 @@ function handle_hicdata(q: HicdataRequest) {
 			q.isfrag ? 'FRAG' : 'BP',
 			q.resolution
 		]
-
+		//console.log(par)
 		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })
 

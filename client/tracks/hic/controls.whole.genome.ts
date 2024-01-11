@@ -1,5 +1,5 @@
 import { bplen } from '#shared/common'
-import { nmeth2select } from './hic.straw'
+import { nmeth2select, oeOption4select } from './hic.straw'
 import { getdata_chrpair, getdata_detail, getdata_leadfollow, defaultnmeth } from './hic.straw'
 import { Elem } from '../../types/d3'
 
@@ -67,7 +67,21 @@ export function initWholeGenomeControls(hic: any, self: any) {
 
 	const matrixTypeRow = menuTable.append('tr')
 	addLabel(matrixTypeRow, 'matrix type') //Display option is another name? Data type? No label?
-	self.dom.controlsDiv.matrixType = matrixTypeRow.append('td').text('Observed')
+	self.dom.controlsDiv.matrixType = matrixTypeRow
+		.append('td')
+		.style('margin-right', '10px')
+		.append('select')
+
+		.on('change', async () => {
+			const selectedOEOption = self.dom.controlsDiv.matrixType.node().value
+			console.log(selectedOEOption)
+			// Handle the selected option
+			await setOEOption(hic, selectedOEOption, self)
+		})
+	const matrixTypevalues = ['observed', 'expected', 'oe']
+	for (const oeOption of matrixTypevalues) {
+		self.dom.controlsDiv.matrixType.append('option').text(oeOption)
+	}
 
 	const viewRow = menuTable.append('tr')
 	addLabel(viewRow, 'VIEW')
@@ -169,6 +183,47 @@ async function setnmeth(hic: any, nmeth: string, self: any) {
 	}
 }
 
+// function makeOEOptionDisplay(hic: any, self: any) {
+
+//   }
+
+async function setOEOption(hic: any, oeOption: string, self: any) {
+	if (self.inwholegenome) {
+		self.wholegenome.oeOption = oeOption
+		const manychr = hic.atdev ? 3 : hic.chrlst.length
+
+		for (let i = 0; i < manychr; i++) {
+			const lead = hic.chrlst[i]
+
+			for (let j = 0; j <= i; j++) {
+				const follow = hic.chrlst[j]
+
+				try {
+					await getdata_leadfollow(hic, lead, follow, self)
+				} catch (e: any) {
+					self.errList.push(e.message || e)
+				}
+			}
+		}
+
+		if (self.errList.length) {
+			self.error(self.errList)
+		}
+
+		return
+	}
+
+	if (self.inchrpair) {
+		self.chrpairview.oeOption = oeOption
+		await getdata_chrpair(hic, self)
+		return
+	}
+	if (self.indetail) {
+		self.detailview.oeOption = oeOption
+		getdata_detail(hic, self)
+	}
+}
+
 /**
  * setting max value from user input
  * @param hic
@@ -229,8 +284,10 @@ function setmaxv(self: any, maxv: number) {
  */
 function switchview(hic: any, self: any) {
 	if (self.inwholegenome) {
-		console.log(self.wholegenome.nmeth)
+		//console.log(self.wholegenome.nmeth)
 		nmeth2select(hic, self.wholegenome)
+		oeOption4select(self.wholegenome, self)
+		// self.oevalues='observed'
 		self.dom.plotDiv.xAxis.selectAll('*').remove()
 		self.dom.plotDiv.yAxis.selectAll('*').remove()
 		self.dom.plotDiv.plot.selectAll('*').remove()
@@ -242,6 +299,8 @@ function switchview(hic: any, self: any) {
 		self.dom.controlsDiv.resolution.text(bplen(self.wholegenome.resolution) + ' bp')
 	} else if (self.inchrpair) {
 		nmeth2select(hic, self.chrpairview)
+		oeOption4select(self.chrpairview, self)
+		// self.oevalues='observed'
 		self.dom.plotDiv.yAxis.selectAll('*').remove()
 		self.dom.plotDiv.yAxis.node().appendChild(self.chrpairview.axisy.node())
 		self.dom.plotDiv.xAxis.selectAll('*').remove()
@@ -253,5 +312,8 @@ function switchview(hic: any, self: any) {
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
+	} else if (self.indetail) {
+		nmeth2select(hic, self.detailview)
+		oeOption4select(self.detailview, self)
 	}
 }

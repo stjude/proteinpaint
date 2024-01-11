@@ -60,6 +60,8 @@ hic.atdev controls dev-shortings
 
 */
 
+const oeOption = 'expected'
+//export const defaultOEOption = 'observed'
 /** Default normalization method if none returned from the server. Exported to parsing and controls script*/
 export const defaultnmeth = 'NONE'
 
@@ -130,6 +132,7 @@ class Hicstat {
 		}
 		this.errList = []
 		this.wholegenome = {
+			oeOption: 'observed',
 			binpx: 1,
 			/** wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring*/
 			bpmaxv: 5000,
@@ -853,6 +856,8 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 	}
 
 	const arg = {
+		oevalues: self.wholegenome.oeOption,
+		// oevalues:oeOption
 		file: hic.file,
 		url: hic.url,
 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
@@ -860,6 +865,8 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 		nmeth: self.wholegenome.nmeth,
 		resolution: resolution
 	}
+
+	console.log(arg)
 
 	try {
 		const data = await client.dofetch2('/hicdata', {
@@ -1043,6 +1050,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 	const ctx = self.chrpairview.ctx
 
 	const arg = {
+		oevalues: self.chrpairview.oeOption,
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
@@ -1051,6 +1059,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		nmeth: self.chrpairview.nmeth,
 		resolution: resolution
 	}
+	console.log(arg)
 	try {
 		const data = await client.dofetch2('/hicdata', {
 			method: 'POST',
@@ -1118,6 +1127,16 @@ export function nmeth2select(hic: any, v: any) {
 	const selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value) as any
 	selectedNmeth.selected = true
 	v.nmeth = selectedNmeth.value
+}
+
+/** */
+export function oeOption4select(v: any, self: any) {
+	const options = self.dom.controlsDiv.matrixType.node().options
+	const selectedOption = Array.from(options).find(
+		(o: any) => o.value === self.dom.controlsDiv.matrixType.node().value
+	) as any
+	selectedOption.selected = true
+	v.oeOption = selectedOption.value // Return the selected option value
 }
 
 //////////////////// __detail view__ ////////////////////
@@ -1309,6 +1328,7 @@ export function getdata_detail(hic: any, self: any) {
 	const ystop = self.detailview.ystop
 
 	const par: HicstrawArgs = {
+		oevalues: self.detailview.oeOption,
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
