@@ -1562,8 +1562,12 @@ function getHeaders(tk) {
 }
 
 function configPanel(tk, block) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
-	const d = tk.tkconfigtip.d.append('div').style('min-width', '700px').style('max-width', '25vw')
+	{
+		// panel is very wide so shift it to left
+		const b = tk.config_handle.node().getBoundingClientRect()
+		tk.tkconfigtip.clear().show(b.x - 300, b.y)
+	}
+	const d = tk.tkconfigtip.d.append('div').style('max-width', '50vw')
 
 	{
 		const row = d.append('div')
