@@ -46,6 +46,8 @@ class HierCluster extends Matrix {
 				throw 'unknown hierCluster.dataType'
 		}
 
+		if (this.dom.header) this.dom.header.html(this.holderTitle)
+
 		this.hcClipId = this.seriesClipId + '-hc'
 		this.dom.hcClipRect = this.dom.svg
 			.select('defs')
