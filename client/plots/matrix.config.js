@@ -88,6 +88,7 @@ export async function getPlotConfig(opts = {}, app) {
 				rowlabelvisible: true,
 				rowlabelpad: 1,
 				rowlabelmaxchars: 32,
+				legendGrpLabelMaxChars: 26,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
 				maxLabelFontSize: 14,

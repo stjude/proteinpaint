@@ -122,8 +122,10 @@ export function getLegendData(legendGroups, refs, self) {
 		const keys = Object.keys(legend.values).sort()
 		const hasScale = Object.values(legend.values).find(v => v.scale)
 		if (hasScale) {
+			const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
 			legendData.push({
-				name: $id,
+				name: $id.length < legendGrpLabelMaxChars ? $id : $id.slice(0, legendGrpLabelMaxChars) + '...',
+				//name:$id,
 				order: legend.order,
 				$id: legend.$id,
 				dt: legend.dt,
@@ -180,8 +182,9 @@ export function getLegendData(legendGroups, refs, self) {
 					keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 
 			const name = t.tw.legend?.group || t.tw.label || term.name
+			const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
 			legendData.push({
-				name: name.length < s.rowlabelmaxchars ? name : name.slice(0, s.rowlabelmaxchars) + '...',
+				name: name.length < legendGrpLabelMaxChars ? name : name.slice(0, legendGrpLabelMaxChars) + '...',
 				order: legend.order,
 				$id: legend.$id,
 				dt: legend.dt,
