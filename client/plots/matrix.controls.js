@@ -816,8 +816,8 @@ export class MatrixControls {
 					}),
 					vocabApi: this.opts.app.vocabApi,
 					callback: ({ geneList, groupIndex }) => {
-						tip.clear().hide()
 						const group = tg[groupIndex]
+						tip.confirm({ html: `Editing ${group.name}`, timeout: 2500 })
 						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 						const tws = geneList.map(d => {
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
@@ -874,8 +874,8 @@ export class MatrixControls {
 					groups: [],
 					vocabApi: this.opts.app.vocabApi,
 					callback: ({ geneList, groupName }) => {
-						tip.clear().hide()
 						if (!geneList.length) return
+						tip.confirm({ html: `Creating ${groupName}`, timeout: 2500 })
 						tg.push({
 							name: groupName,
 							lst: geneList.map(d => {

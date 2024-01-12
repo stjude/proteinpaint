@@ -215,7 +215,7 @@ export class Menu {
 			)
 				return
 		}
-		this.d.style('display', 'none').style('opacity', 0)
+		if (!this.fadeTimeout) this.d.style('display', 'none').style('opacity', 0)
 		if (this.onHide) this.onHide()
 		return this
 	}
@@ -226,6 +226,12 @@ export class Menu {
 			.style('opacity', 0)
 			.on('end', () => this.d.style('display', 'none'))
 		return this
+	}
+
+	confirm({ html, timeout }) {
+		this.d.selectAll('*').remove()
+		this.d.append('div').style('padding', '5px').html(html)
+		if (timeout) this.fadeTimeout = setTimeout(() => this.fadeout(), 3000)
 	}
 
 	toggle() {
