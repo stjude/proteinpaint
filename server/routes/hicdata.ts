@@ -40,7 +40,7 @@ export const api: any = {
 	}
 }
 
-function init({ genomes }) {
+function init() {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const payload = await handle_hicdata(req.query as HicdataRequest)
@@ -60,7 +60,7 @@ function handle_hicdata(q: HicdataRequest) {
 		if (e) reject({ error: 'illegal file name' })
 
 		const par = [
-			q.oevalues || 'observed',
+			q.matrixType || 'observed',
 			q.nmeth || 'NONE',
 			file,
 			q.pos1,

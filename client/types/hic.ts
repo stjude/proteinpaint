@@ -28,7 +28,7 @@ export type HicRunProteinPaintTrackArgs = BaseTrackArgs &
 	}
 
 export type HicstrawArgs = SharedArgs & {
-	oevalues: 'observed' | 'expected' | 'oe'
+	matrixType: 'observed' | 'expected' | 'oe'
 	jwt: any
 	pos1: string
 	pos2: string
@@ -89,7 +89,7 @@ export type HicstrawDom = {
 
 export type WholeGenomeView = {
 	/** value for o,e,and oe option */
-	oeOption: 'observed' | 'expected' | 'oe'
+	matrixType: 'observed' | 'expected' | 'oe'
 	/** # pixel per bin, may set according to resolution */
 	binpx: number
 	/** Appears as the cutoff value for the user in the menu */
@@ -114,7 +114,7 @@ export type WholeGenomeView = {
 }
 
 export type ChrPairView = {
-	oeOption: 'observed' | 'expected' | 'oe'
+	matrixType: 'observed' | 'expected' | 'oe'
 	axisx: any //dom
 	axisy: any //dom
 	binpx: number
@@ -140,7 +140,7 @@ export type HorizontalView = {
 }
 
 export type DetailView = {
-	oeOption: 'observed' | 'expected' | 'oe'
+	matrixType: 'observed' | 'expected' | 'oe'
 	bbmargin: number
 	canvas?: any //dom
 	ctx: any //dom

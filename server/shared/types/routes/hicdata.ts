@@ -1,6 +1,6 @@
 export type HicdataRequest = {
 	/** Value is the 1st parameter of straw tool, and can only use these specific strings but not anything else. */
-	oevalues: 'observed' | 'expected' | 'oe'
+	matrixType: 'observed' | 'expected' | 'oe'
 	/** HiC file path from tp/ */
 	file?: string
 	/** Remote HiC file URL */
