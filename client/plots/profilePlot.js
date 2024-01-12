@@ -3,6 +3,7 @@ import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
 import { fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
+import { getSampleFilter } from '../termsetting/handlers/samplelst'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 export class profilePlot {
@@ -15,12 +16,14 @@ export class profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		const isLoggedIn = true
+		const site = 'PRO_00020'
+
 		return {
 			config,
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
 			isLoggedIn,
-			site: 'PRO_00020',
+			site,
 			vocab: appState.vocab
 		}
 	}
@@ -43,6 +46,18 @@ export class profilePlot {
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
+		const state = this.getState(appState)
+
+		if (state.site) {
+			const config = JSON.parse(JSON.stringify(state.config))
+			const siteId = this.sampleidmap[state.site]
+			this.userData = await this.app.vocabApi.getAnnotatedSampleData({
+				terms: [config.regionTW, config.countryTW, config.incomeTW, config.typeTW],
+				termsPerRequest: 10,
+				filter: getSampleFilter(siteId)
+			})
+			this.userData = this.userData.lst[0]
+		}
 	}
 
 	getList(tw, data) {
@@ -76,6 +91,17 @@ export class profilePlot {
 	}
 
 	async setControls(additionalInputs = []) {
+		if (this.userData && this.settings.site == undefined) {
+			this.settings.region = this.userData[this.config.regionTW.$id].value
+			this.settings.country = this.userData[this.config.countryTW.$id].value
+			this.settings.facilityType = this.userData[this.config.typeTW.$id].value
+			this.settings.income = this.userData[this.config.incomeTW.$id].value
+			this.settings.site = this.userData.sample
+			await this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+			return
+		}
+		this.dom.controlsDiv.selectAll('*').remove()
+
 		const idFilters = [this.config.countryTW.id, this.config.incomeTW.id, this.config.typeTW.id]
 		const filters = {}
 		for (const id of idFilters) {
@@ -85,8 +111,9 @@ export class profilePlot {
 		const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
+
 		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: [this.config.countryTW, this.config.incomeTW, this.config.typeTW],
+			terms: [this.config.regionTW, this.config.countryTW, this.config.incomeTW, this.config.typeTW],
 			termsPerRequest: 10
 		})
 		const countriesData = this.filtersData.lst.filter(sample =>
@@ -125,7 +152,6 @@ export class profilePlot {
 			termsPerRequest: 30
 		})
 		const chartType = this.type
-		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
 				label: 'Region',
@@ -158,15 +184,37 @@ export class profilePlot {
 				options: this.types,
 				settingsKey: 'facilityType',
 				callback: value => this.setFacilityType(value)
-			},
-			{
-				label: 'Show two plots',
-				type: 'checkbox',
-				chartType,
-				settingsKey: 'show2Plots',
-				boxLabel: 'Yes'
 			}
 		]
+		if (this.state.isLoggedIn) {
+			this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
+				terms: this.twLst,
+				termsPerRequest: 30,
+				filter: getSampleFilter(this.sampleidmap[this.state.site])
+			})
+
+			this.sites = this.data2.lst.map(sample => {
+				return { label: this.data2.refs.bySampleId[sample.sample].label, value: sample.sample }
+			})
+			this.sites.unshift({ label: '', value: '' })
+
+			inputs.push({
+				label: 'Facility',
+				type: 'dropdown',
+				chartType,
+				options: this.sites,
+				settingsKey: 'site',
+				callback: value => this.setSite(value)
+			})
+		}
+
+		inputs.push({
+			label: 'Show two plots',
+			type: 'checkbox',
+			chartType,
+			settingsKey: 'show2Plots',
+			boxLabel: 'Yes'
+		})
 		inputs.unshift(...additionalInputs)
 		if (this.type == 'profileRadarFacility') {
 			this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
@@ -222,6 +270,7 @@ export class profilePlot {
 		this.settings.country = ''
 		this.settings.income = ''
 		this.settings.facilityType = ''
+		this.settings.site = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -293,6 +342,7 @@ export class profilePlot {
 					: 'No filter applied'
 			)
 			.attr('transform', `translate(0, -5)`)
+		this.filtersCount = 0
 		this.addFilterLegendItem('Region', this.settings.region)
 		this.addFilterLegendItem('Country', this.settings.country)
 		this.addFilterLegendItem('Income', this.settings.income)
