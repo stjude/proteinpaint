@@ -32,12 +32,14 @@ type showGenesetEditArg = {
 		name: string
 	}[]
 
-	titleText: string
-
-	backBtn: {
+	// if provided, will be shown at the top left corner
+	backBtn?: {
 		callback: () => void
 		target?: string
 	}
+
+	// if provided, will be displayed above the headerdiv
+	titleText?: string
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {

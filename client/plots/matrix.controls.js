@@ -214,7 +214,7 @@ export class MatrixControls {
 						settingsKey: 'rowlabelmaxchars'
 					},
 					{
-						label: 'Rendering Style',
+						label: 'Genomic Alterations Rendering',
 						title: `Set how to indicate a ${l.sample}'s applicable variant types in the same matrix cell`,
 						type: 'radio',
 						chartType: 'matrix',
@@ -226,7 +226,7 @@ export class MatrixControls {
 								title: `Show stacked rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
 							},
 							{
-								label: 'Oncoprint',
+								label: 'OncoPrint',
 								value: 'oncoprint',
 								title: `Show overlapping rectangles in the same matrix cell to render variants for the same ${l.sample} and gene`
 							}
