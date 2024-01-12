@@ -113,11 +113,11 @@ export async function init(arg, holder, genomes) {
 		const genes = await getGenes(arg, arg.filter0, settings.matrix)
 
 		if (!genes || genes.length == 0) {
-			holder.append('p').text('No default genes. Please define a gene set to launch OncoMatrix.')
 			// geneset edit ui requires vocabApi
 			const tempDiv = holder.append('div') // single-use div to show edit ui;
+			tempDiv.append('p').text('No default genes. Please define a gene set to launch OncoMatrix.')
 			showGenesetEdit({
-				holder: tempDiv,
+				holder: tempDiv.append('div'),
 				genome,
 				vocabApi: await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
 				callback: async result => {
