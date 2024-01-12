@@ -43,7 +43,7 @@ export class TermdbVocab extends Vocab {
 		} else {
 			body.get_children = 1
 			body.tid = term.id
-			data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+			data = await dofetch3('termdb/termchildren', { body }, this.opts.fetchOpts)
 		}
 		if (data.error) throw data.error
 		for (const term of data.lst) {
