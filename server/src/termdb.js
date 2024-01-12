@@ -43,7 +43,6 @@ export function handle_request_closure(genomes) {
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
 			// process triggers
-			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
 			if (q.findterm) return await trigger_findterm(q, res, tdb, ds, genome)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
@@ -144,12 +143,6 @@ async function getSampleCount(req, q, ds) {
 		return samples
 	}
 	return await termdbsql.get_samplecount(q, ds)
-}
-
-async function trigger_rootterm(q, res, tdb) {
-	const cohortValues = q.cohortValues ? q.cohortValues : ''
-	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) })
 }
 
 async function trigger_children(q, res, tdb) {

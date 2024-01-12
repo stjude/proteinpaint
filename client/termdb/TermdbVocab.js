@@ -26,15 +26,10 @@ export class TermdbVocab extends Vocab {
 	}
 
 	async getTermChildren(term, cohortValuelst) {
+		let data
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel
-		}
-		if (term.__tree_isroot) {
-			body.default_rootterm = 1
-		} else {
-			body.get_children = 1
-			body.tid = term.id
 		}
 		if (cohortValuelst) {
 			body.cohortValues = cohortValuelst.slice().sort().join(',')
@@ -42,7 +37,14 @@ export class TermdbVocab extends Vocab {
 		if (this.state.treeFilter) {
 			body.treeFilter = this.state.treeFilter
 		}
-		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+		if (term.__tree_isroot) {
+			body.default_rootterm = 1
+			data = await dofetch3('termdb/rootterm', { body }, this.opts.fetchOpts)
+		} else {
+			body.get_children = 1
+			body.tid = term.id
+			data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+		}
 		if (data.error) throw data.error
 		for (const term of data.lst) {
 			if (term.type == 'integer' || term.type == 'float') {
