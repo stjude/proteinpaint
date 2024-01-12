@@ -167,7 +167,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 
 	const genesDiv = div
 		.append('div')
-		.attr('contenteditable', true)
 		.style('display', 'flex')
 		.style('flex-wrap', 'wrap')
 		.style('gap', '5px')
