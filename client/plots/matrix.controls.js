@@ -734,6 +734,7 @@ export class MatrixControls {
 		if (!parent.selectedGroup) parent.selectedGroup = 0
 
 		if (parent.opts.customInputs?.genes) {
+			// these are embedder portal specific controls
 			for (const inputConfig of parent.opts.customInputs?.genes) {
 				inputConfig.chartType = 'matrix'
 				const holder = table.append('tr')
@@ -758,63 +759,39 @@ export class MatrixControls {
 		}
 
 		self.addGenesetInput(event, app, parent, table.append('tr'))
-		//self.addGeneGroup(event, app, parent, table.append('tr'), callback)
-	}
-
-	appendDictInputs(self, app, parent, table) {
-		tip.clear()
-		if (!parent.selectedGroup) parent.selectedGroup = self.chartType == 'hierCluster' ? 1 : 0
-		app.tip.d.append('hr')
-		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
 	addGenesetInput(event, app, parent, tr) {
+		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
 		const td = tr.append('td')
-		this.showGenegroupEditUi(td, app, tip, tg)
-		this.showGenegroupAddUi(td, app, tip, tg)
-	}
 
-	showGenegroupEditUi(td, app, tip, tg) {
-		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
-		td.append('button')
+		const { groups, groupSelect } = this.setTermGroupSelector(td, app, tip, tg)
+		groupSelect.on('change', () => {
+			const selectedGroup = groups[groupSelect.property('value')]
+			editBtn.html(selectedGroup.status == 'new' ? 'Create' : 'Edit')
+		})
+
+		const editBtn = td
+			.append('button')
 			.html('Edit')
-			.on('key', event => {
-				if (event.key == 'Enter') event.target.click()
-			})
-			.on('click', event => {
-				const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
-				tip.showunder(GenesBtn)
+			.on('click', () => {
+				const groupIndex = groupSelect.property('value')
+				const selectedGroup = tg[groupIndex]
 				showGenesetEdit({
 					holder: tip.d,
 					/* running hier clustering and the editing group is the group used for clustering
 				pass this mode value to inform ui to support the optional button "top variably exp gene"
 				this is hardcoded for the purpose of gene expression and should be improved
 				*/
-					getMode: group => {
-						return this.parent.chartType == 'hierCluster' &&
-							(group.type == 'hierCluster' || group.name == this.parent.config.settings.hierCluster?.termGroupName)
-							? 'expression'
-							: ''
-					},
 					genome: app.opts.genome,
-					groups: tg.map((g, i) => {
-						return {
-							name: g.name,
-							type: g.type,
-							lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
-							selected:
-								(parent.chartType == 'hierCluster' &&
-									(g.type == 'hierCluster' || g.name == this.parent.config.termGroupName)) ||
-								g === firstGrpWithGeneTw
-						}
-					}),
+					selectedGroup: groups[groupSelect.property('value')],
 					vocabApi: this.opts.app.vocabApi,
-					callback: ({ geneList, groupIndex }) => {
-						const group = tg[groupIndex]
-						tip.confirm({ html: `Edited ${group.name || group.label || 'unlabeled group'}`, timeout: 2500 })
+					callback: ({ geneList, groupName }) => {
+						const group = !selectedGroup ? { name: groupName, lst: [] } : tg[groupIndex]
+						if (!selectedGroup) tg.push(group)
 						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 						const tws = geneList.map(d => {
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
@@ -850,57 +827,64 @@ export class MatrixControls {
 			})
 	}
 
-	showGenegroupAddUi(td, app, tip, tg) {
-		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
-		td.append('button')
-			.html('Create')
-			.on('key', event => {
-				if (event.key == 'Enter') event.target.click()
-			})
-			.on('click', event => {
-				tip.showunder(GenesBtn)
-				showGenesetEdit({
-					holder: tip.d,
-					/* running hier clustering and the editing group is the group used for clustering
-				pass this mode value to inform ui to support the optional button "top variably exp gene"
-				this is hardcoded for the purpose of gene expression and should be improved
-				*/
-					//mode: parent.chartType == 'hierCluster' && group == parent.hcTermGroup ? 'gene expression' : '',
-					genome: app.opts.genome,
-					groups: [],
-					vocabApi: this.opts.app.vocabApi,
-					callback: ({ geneList, groupName }) => {
-						if (!geneList.length) return
-						tip.confirm({ html: `Created ${groupName}`, timeout: 2500 })
-						tg.push({
-							name: groupName,
-							lst: geneList.map(d => {
-								return {
-									$id: get$id(),
-									term: {
-										name: d.symbol || d.name,
-										type: 'geneVariant'
-									},
-									q: {}
-								}
-							})
-						})
-						app.dispatch({
-							type: 'plot_edit',
-							id: this.parent.id,
-							config: {
-								termgroups: tg
-							}
-						})
-					},
-					backBtn: {
-						target: 'Genes Menu',
-						callback: () => {
-							GenesBtn.click()
-						}
-					}
-				})
-			})
+	setTermGroupSelector(td, app, tip, tg) {
+		//const label = grpDiv.append('label')
+		//label.append('span').html('')
+		const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
+		const groups = tg.map((g, index) => {
+			return {
+				index,
+				name: g.name,
+				type: g.type,
+				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+				mode:
+					this.parent.chartType == 'hierCluster' &&
+					(group.type == 'hierCluster' || group.name == this.parent.config.settings.hierCluster?.termGroupName)
+						? 'expression'
+						: '',
+				selected:
+					(this.parent.chartType == 'hierCluster' &&
+						(g.type == 'hierCluster' || g.name == this.parent.config.termGroupName)) ||
+					g === firstGrpWithGeneTw
+			}
+		})
+
+		const groupSelect = td.append('select')
+
+		for (const [i, group] of groups.entries()) {
+			if (group.name) group.label = group.name
+			else {
+				const n = group.lst.filter(tw => tw.term?.type == 'geneVariant').length
+				group.label = n > 0 ? `${n} gene${n < 2 ? '' : 's'}` : `Unlabeled group #${i}`
+			}
+		}
+
+		groups.push({
+			index: tg.length,
+			name: '',
+			nameEditable: true,
+			label: '+Add to a new group',
+			lst: [],
+			status: 'new'
+		})
+
+		groupSelect
+			.selectAll('option')
+			.data(groups)
+			.enter()
+			.append('option')
+			.property('selected', grp => grp.selected)
+			.attr('value', (d, i) => i)
+			.html(grp => grp.label)
+
+		return { groups, groupSelect }
+	}
+
+	appendDictInputs(self, app, parent, table) {
+		tip.clear()
+		if (!parent.selectedGroup) parent.selectedGroup = self.chartType == 'hierCluster' ? 1 : 0
+		app.tip.d.append('hr')
+		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
 	async addDictMenu(app, parent, tr, holder = undefined) {
