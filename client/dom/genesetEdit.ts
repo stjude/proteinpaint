@@ -27,19 +27,9 @@ type showGenesetEditArg = {
 	mode?: string
 	callback: (CallbackArg) => void
 	vocabApi: any
-
 	geneList?: {
 		name: string
 	}[]
-
-	// if provided, will be shown at the top left corner
-	backBtn?: {
-		callback: () => void
-		target?: string
-	}
-
-	// if provided, will be displayed above the headerdiv
-	titleText?: string
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {
@@ -52,24 +42,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	// FIXME should set min and max width for div to maintain proper look
 	const div = holder.append('div').style('padding', '5px')
 
-	let backBtn, nameInput, hasChanged
-	if (arg.backBtn) {
-		backBtn = div
-			.append('div')
-			.attr('tabindex', 0)
-			.style('text-decoration', 'underline')
-			.style('cursor', 'pointer')
-			.style('margin-bottom', '12px')
-			.html(arg.backBtn.target ? `&#171; Back to ${arg.backBtn.target}` : '&#171; Go Back')
-			.on('click', () => {
-				tip2.hide()
-				if (arg.parent_menu) arg.parent_menu.hide()
-				arg.backBtn.callback()
-			})
-			.on('keyup', event => {
-				if (event.key == 'Enter') event.target.click()
-			})
-	}
+	let hasChanged
 
 	const origLst = structuredClone(geneList)
 	const origNames = JSON.stringify(geneList.map(t => t.name).sort())
@@ -149,10 +122,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		.property('disabled', !geneList?.length)
 		.text(`Submit`)
 		.on('click', () => {
-			callback({
-				geneList,
-				groupName: nameInput?.property('value')
-			})
+			callback({ geneList })
 		})
 
 	api.dom.submitBtn = submitBtn
