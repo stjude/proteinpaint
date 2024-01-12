@@ -40,23 +40,20 @@ export function getSeriesTip(line, rect, _tip = null) {
 		const xVal = +opts.xScale.invert(mx).toFixed(opts.decimals)
 		const x = opts.xScale(xVal) /* + 0.5*/ // do not add a small float value here; otherwise, the line will not match up with the data
 
-		line
-			.style('display', '')
-			.attr('stroke', '#aaa')
-			.attr('stroke-dasharray', 4)
-			.attr('x1', x)
-			.attr('x2', x)
+		line.style('display', '').attr('stroke', '#aaa').attr('stroke-dasharray', 4).attr('x1', x).attr('x2', x)
 
-		const seriesHtmls = opts.serieses
-			.map(s => {
-				let matched
-				for (const d of s.data) {
-					if (d.x > xVal) break
-					matched = d
-				}
-				return !matched ? null : matched.html
-			})
-			.filter(d => d)
+		const seriesHtmls = []
+		for (const series of opts.serieses) {
+			const data = series.data
+			if (xVal <= Math.max(...data.map(d => d.x))) {
+				// xVal is within range of series timepoints
+				// determine max timepoint that is less than or
+				// equal to xVal
+				const max = Math.max(...data.filter(d => d.x <= xVal).map(d => d.x))
+				// store html of this timepoint
+				seriesHtmls.push(data.find(d => d.x == max).html)
+			}
+		}
 
 		if (seriesHtmls.length) {
 			tip
@@ -137,10 +134,7 @@ export function getSeriesTip(line, rect, _tip = null) {
 			because of non-deactivated references
 		*/
 		destroy() {
-			rect
-				.on('mouseover', null)
-				.on('mousemove', null)
-				.on('mouseout', null)
+			rect.on('mouseover', null).on('mousemove', null).on('mouseout', null)
 		}
 	}
 }
