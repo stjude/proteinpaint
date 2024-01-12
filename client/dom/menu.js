@@ -231,7 +231,11 @@ export class Menu {
 	confirm({ html, timeout }) {
 		this.d.selectAll('*').remove()
 		this.d.append('div').style('padding', '5px').html(html)
-		if (timeout) this.fadeTimeout = setTimeout(() => this.fadeout(), 3000)
+		if (timeout)
+			this.fadeTimeout = setTimeout(() => {
+				this.fadeout()
+				delete this.fadeTimeout
+			}, 3000)
 	}
 
 	toggle() {
