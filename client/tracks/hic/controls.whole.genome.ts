@@ -74,8 +74,11 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('margin-right', '10px')
 		.append('select')
 		.on('change', async () => {
-			const selectedmatrixType = self.dom.controlsDiv.matrixType.node().value
-			await setMatrixType(hic, selectedmatrixType, self)
+			const matrixType = self.dom.controlsDiv.matrixType.node().value
+			if (self.inwholegenome) self.wholegenome.matrixType = matrixType
+			if (self.inchrpair) self.chrpairview.matrixType = matrixType
+			if (self.indetail) self.detailview.matrixType = matrixType
+			await getData(hic, self)
 		})
 	const matrixTypevalues = [
 		//Allow for customer friendly labels but pass the appropriate straw parameter
@@ -162,6 +165,12 @@ function addLabel(tr: Elem, text: string) {
 		.text(text.toUpperCase())
 }
 
+/**
+ * Show either NONE if no normalization methods present in the hic file of dropdown of normalization methods
+ * read from the hic file.
+ * @param hic File input
+ * @param self App object
+ */
 function makeNormMethDisplay(hic: any, self: any) {
 	if (!hic.normalization?.length) {
 		hic.nmethselect = self.dom.controlsDiv.nmeth.text(defaultnmeth)
@@ -170,8 +179,11 @@ function makeNormMethDisplay(hic: any, self: any) {
 			.style('margin-right', '10px')
 			.append('select')
 			.on('change', async () => {
-				const v = hic.nmethselect.node().value
-				await setnmeth(hic, v, self)
+				const nmeth = hic.nmethselect.node().value
+				if (self.inwholegenome) self.wholegenome.nmeth = nmeth
+				if (self.inchrpair) self.chrpairview.nmeth = nmeth
+				if (self.indetail) self.detailview.nmeth = nmeth
+				await getData(hic, self)
 			})
 		for (const n of hic.normalization) {
 			hic.nmethselect.append('option').text(n)
@@ -179,9 +191,14 @@ function makeNormMethDisplay(hic: any, self: any) {
 	}
 }
 
-async function setnmeth(hic: any, nmeth: string, self: any) {
+/**
+ * Get data from user inputs ()
+ * @param hic
+ * @param self
+ * @returns
+ */
+async function getData(hic: any, self: any) {
 	if (self.inwholegenome) {
-		self.wholegenome.nmeth = nmeth
 		const manychr = hic.atdev ? 3 : hic.chrlst.length
 		for (let i = 0; i < manychr; i++) {
 			const lead = hic.chrlst[i]
@@ -199,57 +216,13 @@ async function setnmeth(hic: any, nmeth: string, self: any) {
 	}
 
 	if (self.inchrpair) {
-		self.chrpairview.nmeth = nmeth
 		await getdata_chrpair(hic, self)
 		return
 	}
 
-	if (self.inhorizontal) {
-		self.chrpairview.nmeth = nmeth
-		//need launch function here
-		return
-	}
-
 	if (self.indetail) {
-		self.detailview.nmeth = nmeth
 		getdata_detail(hic, self)
-	}
-}
-
-async function setMatrixType(hic: any, matrixType: string, self: any) {
-	if (self.inwholegenome) {
-		self.wholegenome.matrixType = matrixType
-		const manychr = hic.atdev ? 3 : hic.chrlst.length
-
-		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst[i]
-
-			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst[j]
-
-				try {
-					await getdata_leadfollow(hic, lead, follow, self)
-				} catch (e: any) {
-					self.errList.push(e.message || e)
-				}
-			}
-		}
-
-		if (self.errList.length) {
-			self.error(self.errList)
-		}
-
 		return
-	}
-
-	if (self.inchrpair) {
-		self.chrpairview.matrixType = matrixType
-		await getdata_chrpair(hic, self)
-		return
-	}
-	if (self.indetail) {
-		self.detailview.matrixType = matrixType
-		getdata_detail(hic, self)
 	}
 }
 
