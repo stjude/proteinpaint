@@ -112,7 +112,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			.on('input', function () {
 				const name = groupInput.node().value
 				submitBtn.property('disabled', name == '' || !geneList.length)
-				setSubmitText()
 			})
 	}
 
@@ -124,8 +123,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			clearBtn: null,
 			restoreBtn: null,
 			genesDiv: null,
-			submitBtn: null,
-			submitText: ''
+			submitBtn: null
 		},
 		params: [],
 		destroy() {
@@ -197,8 +195,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		})
 
 	api.dom.submitBtn = submitBtn
-
-	const submitText = footerDiv.append('span').style('margin-left', '5px').text('')
 
 	function renderRightDiv() {
 		rightDiv.selectAll('*').remove()
@@ -363,7 +359,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		api.dom.restoreBtn.property('disabled', !hasChanged)
 		api.dom.submitBtn.property('disabled', !hasChanged)
 		if (hasChanged) submitBtn.node().focus()
-		setSubmitText()
 	}
 
 	function addGene() {
@@ -384,15 +379,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		if (i != -1) {
 			geneList.splice(i, 1)
 			renderGenes()
-		}
-	}
-
-	function setSubmitText() {
-		if (!groups?.length) {
-			const newGrpName = groupInput?.property('value')
-			submitText.html(newGrpName ? ` geneset for ${newGrpName}` : '')
-		} else {
-			submitText.html(`geneset for ${selectedGroup?.label}`)
 		}
 	}
 
