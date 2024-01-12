@@ -304,6 +304,7 @@ function switchview(hic: any, self: any) {
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.wholegenome.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.wholegenome.resolution) + ' bp')
 	} else if (self.inchrpair) {
+		self.dom.controlsDiv.view.text(`${self.chrx.chr}-${self.chry.chr} Pair`)
 		nmeth2select(hic, self.chrpairview)
 		matrixType2select(self.chrpairview, self)
 		self.dom.plotDiv.yAxis.node().appendChild(self.chrpairview.axisy.node())
