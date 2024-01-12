@@ -2286,7 +2286,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			.text('Copy read sequence')
 			.on('click', function () {
 				navigator.clipboard.writeText(r.seq).then(() => {}, console.warn)
-				d3select(this).append('span').html('&nbsp;&check;')
+				d3select(this).html('Copy read sequence&nbsp;&check;')
 			})
 
 		if (data.lst[0].alignments) {
@@ -2341,7 +2341,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						.text('Copy read sequence')
 						.on('click', function () {
 							navigator.clipboard.writeText(r2.seq).then(() => {}, console.warn)
-							d3select(this).append('span').html('&nbsp;&check;')
+							d3select(this).html('Copy read sequence&nbsp;&check;')
 						})
 					mayshow_blatbutton(r2, row, tk, block)
 					div.append('div').html(r2.info)
