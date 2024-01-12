@@ -186,8 +186,8 @@ class Hicstat {
 		}
 		this.inwholegenome = true
 		this.inchrpair = false
-		this.inhorizontal = false
 		this.indetail = false
+		this.inhorizontal = false
 		this.chrx = {}
 		this.chry = {}
 	}
@@ -381,14 +381,14 @@ class Hicstat {
 
 	async init_chrPairView(hic: any, chrx: string, chry: string) {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
-		const horizontalView = this.init_horizontalView.bind(this)
+		const detailView = this.init_detailView.bind(this)
 		nmeth2select(hic, this.chrpairview)
 		matrixType2select(this.chrpairview, this)
 
 		this.inwholegenome = false
 		this.inchrpair = true
-		this.inhorizontal = false
 		this.indetail = false
+		this.inhorizontal = false
 
 		showBtns(this)
 		this.wholegenome.svg!.remove()
@@ -480,7 +480,7 @@ class Hicstat {
 			.style('margin', axispad + 'px')
 			.on('click', async function (this: any, event: MouseEvent) {
 				const [x, y] = pointer(event, this)
-				await horizontalView(hic, chrx, chry, x, y)
+				await detailView(hic, chrx, chry, x, y)
 			})
 			.node()
 		canvas!.width = Math.ceil(chrxlen / resolution) * binpx
@@ -526,85 +526,6 @@ class Hicstat {
 		}
 	}
 
-	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
-		this.dom.controlsDiv.view.text('Horizontal')
-		nmeth2select(hic, this.horizontalview)
-		matrixType2select(this.horizontalview, this)
-
-		//Clear elements created in chr pair view
-		this.chrpairview.axisy.remove()
-		this.chrpairview.axisx.remove()
-		this.dom.plotDiv.plot.selectAll('*').remove()
-
-		this.inwholegenome = false
-		this.inchrpair = false
-		this.inhorizontal = true
-		this.indetail = false
-
-		showBtns(this)
-
-		if (!this.chrx.start || !this.chrx.stop || !this.chry.start || !this.chry.stop)
-			this.set_Positions(hic, chrx, chry, x, y)
-
-		const regionx = { chr: this.chrx.chr, start: this.chrx.start, stop: this.chrx.stop }
-		const regiony = { chr: this.chry.chr, start: this.chry.start, stop: this.chry.stop }
-
-		const tracks = [
-			{
-				type: client.tkt.hicstraw,
-				file: hic.file,
-				enzyme: hic.enzyme,
-				maxpercentage: default_hicstrawmaxvperc,
-				pyramidup: 1,
-				name: hic.name
-			}
-		]
-		if (hic.tklst) {
-			for (const t of hic.tklst) {
-				tracks.push(t)
-			}
-		}
-		client.first_genetrack_tolist(hic.genome, tracks)
-		const arg: any = {
-			holder: this.dom.plotDiv.plot,
-			hostURL: hic.hostURL,
-			jwt: hic.jwt,
-			genome: hic.genome,
-			nobox: 1,
-			tklst: tracks
-		}
-		if (
-			regionx.chr == regiony.chr &&
-			Math.max(regionx.start!, regiony.start!) < Math.min(regionx.stop!, regiony.stop!)
-		) {
-			// x/y overlap
-			arg.chr = regionx.chr
-			arg.start = Math.min(regionx.start!, regiony.start!)
-			arg.stop = Math.max(regionx.stop!, regiony.stop!)
-		} else {
-			arg.chr = regionx.chr
-			arg.start = regionx.start
-			arg.stop = regionx.stop
-			arg.width = default_subpanelpxwidth
-			arg.subpanels = [
-				{
-					chr: regiony.chr,
-					start: regiony.start,
-					stop: regiony.stop,
-					width: default_subpanelpxwidth,
-					leftpad: 10,
-					leftborder: subpanel_bordercolor
-				}
-			]
-		}
-		this.horizontalview.args = arg //save so can reload when switching back from detail view
-		blocklazyload(arg)
-
-		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
-			await this.init_detailView(hic, chrx, chry, x, y)
-		})
-	}
-
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
 		nmeth2select(hic, this.detailview)
@@ -612,8 +533,8 @@ class Hicstat {
 
 		this.inwholegenome = false
 		this.inchrpair = false
-		this.inhorizontal = false
 		this.indetail = true
+		this.inhorizontal = false
 
 		// const isintrachr = chrx == chry
 		showBtns(this)
@@ -817,6 +738,89 @@ class Hicstat {
 			this.detailview.xb!.zoomblock(2, true)
 			this.detailview.yb!.zoomblock(2, true)
 		})
+
+		this.dom.controlsDiv.horizontalViewBtn.style('display', 'block').on('click', async () => {
+			await this.init_horizontalView(hic, chrx, chry, x, y)
+		})
+	}
+
+	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
+		this.dom.controlsDiv.view.text('Horizontal')
+		nmeth2select(hic, this.horizontalview)
+		matrixType2select(this.horizontalview, this)
+
+		//Clear elements created in chr pair view
+		this.dom.plotDiv.xAxis.selectAll('*').remove()
+		this.dom.plotDiv.yAxis.selectAll('*').remove()
+		this.dom.plotDiv.plot.selectAll('*').remove()
+
+		this.inwholegenome = false
+		this.inchrpair = false
+		this.indetail = false
+		this.inhorizontal = true
+
+		showBtns(this)
+
+		if (!this.chrx.start || !this.chrx.stop || !this.chry.start || !this.chry.stop)
+			this.set_Positions(hic, chrx, chry, x, y)
+
+		const regionx = { chr: this.chrx.chr, start: this.chrx.start, stop: this.chrx.stop }
+		const regiony = { chr: this.chry.chr, start: this.chry.start, stop: this.chry.stop }
+
+		const tracks = [
+			{
+				type: client.tkt.hicstraw,
+				file: hic.file,
+				enzyme: hic.enzyme,
+				maxpercentage: default_hicstrawmaxvperc,
+				pyramidup: 1,
+				name: hic.name
+			}
+		]
+		if (hic.tklst) {
+			for (const t of hic.tklst) {
+				tracks.push(t)
+			}
+		}
+		client.first_genetrack_tolist(hic.genome, tracks)
+		const arg: any = {
+			holder: this.dom.plotDiv.plot,
+			hostURL: hic.hostURL,
+			jwt: hic.jwt,
+			genome: hic.genome,
+			nobox: 1,
+			tklst: tracks
+		}
+		if (
+			regionx.chr == regiony.chr &&
+			Math.max(regionx.start!, regiony.start!) < Math.min(regionx.stop!, regiony.stop!)
+		) {
+			// x/y overlap
+			arg.chr = regionx.chr
+			arg.start = Math.min(regionx.start!, regiony.start!)
+			arg.stop = Math.max(regionx.stop!, regiony.stop!)
+		} else {
+			arg.chr = regionx.chr
+			arg.start = regionx.start
+			arg.stop = regionx.stop
+			arg.width = default_subpanelpxwidth
+			arg.subpanels = [
+				{
+					chr: regiony.chr,
+					start: regiony.start,
+					stop: regiony.stop,
+					width: default_subpanelpxwidth,
+					leftpad: 10,
+					leftborder: subpanel_bordercolor
+				}
+			]
+		}
+		this.horizontalview.args = arg //save so can reload when switching back from detail view
+		blocklazyload(arg)
+
+		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
+			await this.init_detailView(hic, chrx, chry, x, y)
+		})
 	}
 
 	debug() {
@@ -845,7 +849,16 @@ export function showBtns(self: any) {
 	//Show in any other view except whole genome
 	self.dom.controlsDiv.genomeViewBtn.style('display', self.inwholegenome ? 'none' : 'inline-block')
 
-	if (self.inhorizontal) {
+	if (self.indetail) {
+		self.dom.controlsDiv.chrpairViewBtn
+			.html(`&#8810; Entire ${self.chrx.chr}-${self.chry.chr}`)
+			.style('display', 'block')
+		//Only show horizontalViewBtn and zoom buttons in detail view
+		self.dom.controlsDiv.horizontalViewBtn.style('display', 'block')
+		self.dom.controlsDiv.zoomDiv.style('display', 'contents')
+		//Hide previously shown detail view btn
+		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
+	} else if (self.inhorizontal) {
 		//Only show chrpairViewBtn if in horizonal or detail view
 		//Include chr x and chr y in the button text
 		self.dom.controlsDiv.chrpairViewBtn
@@ -856,15 +869,6 @@ export function showBtns(self: any) {
 		//Hide if horizontal and zoom btns if previously displayed
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
 		self.dom.controlsDiv.zoomDiv.style('display', 'none')
-	} else if (self.indetail) {
-		self.dom.controlsDiv.chrpairViewBtn
-			.html(`&#8810; Entire ${self.chrx.chr}-${self.chry.chr}`)
-			.style('display', 'block')
-		//Only show horizontalViewBtn and zoom buttons in detail view
-		self.dom.controlsDiv.horizontalViewBtn.style('display', 'block')
-		self.dom.controlsDiv.zoomDiv.style('display', 'contents')
-		//Hide previously shown detail view btn
-		self.dom.controlsDiv.detailViewBtn.style('display', 'none')
 	} else {
 		self.dom.controlsDiv.chrpairViewBtn.style('display', 'none')
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'none')
