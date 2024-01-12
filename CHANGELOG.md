@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Disable the term group menu for hierCluster gene expression term group, and remove the 'edit' and 'sort' options for other hier cluster term groups
+- Fix the navigation of matrix and gene expression controls by keyboard
+
 
 ## 2.39.0
 
