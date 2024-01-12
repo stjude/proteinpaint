@@ -43,7 +43,6 @@ export function handle_request_closure(genomes) {
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
 			// process triggers
-			if (q.get_children) return await trigger_children(q, res, tdb)
 			if (q.findterm) return await trigger_findterm(q, res, tdb, ds, genome)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
@@ -143,17 +142,6 @@ async function getSampleCount(req, q, ds) {
 		return samples
 	}
 	return await termdbsql.get_samplecount(q, ds)
-}
-
-async function trigger_children(q, res, tdb) {
-	/* get children terms
-may apply ssid: a premade sample set
-*/
-	if (!q.tid) throw 'no parent term id'
-	const cohortValues = q.cohortValues ? q.cohortValues : ''
-	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	const terms = await tdb.q.getTermChildren(q.tid, cohortValues, treeFilter)
-	res.send({ lst: terms.map(copy_term) })
 }
 
 export function copy_term(t) {
