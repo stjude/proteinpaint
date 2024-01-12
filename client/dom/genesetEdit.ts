@@ -30,8 +30,7 @@ type showGenesetEditArg = {
 	mode?: string
 	callback: (CallbackArg) => void
 	vocabApi: any
-	groups?: { name: string; lst: Gene[]; type?: 'hierCluster' }[]
-	showGroup: boolean
+	selectedGroup: any
 	backBtn: {
 		callback: () => void
 		target?: string
@@ -39,11 +38,8 @@ type showGenesetEditArg = {
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {
-	const { holder, genome, callback, groups, vocabApi } = arg
-	let mode = arg.mode || (groups?.length && arg.getMode?.(groups.find(g => g.selected)))
-	let geneList = arg.geneList || groups?.find(g => g.selected)?.lst
-	if (groups.length && !geneList?.length) throw `missing or invalid geneLst or groups argument`
-	else if (!geneList && !groups.length) geneList = []
+	const { holder, genome, mode, callback, selectedGroup, vocabApi } = arg
+	let geneList = selectedGroup?.lst
 
 	const tip2 = new Menu({ padding: '0px', parent_menu: holder.node(), test: 'test' })
 	holder.selectAll('*').remove()
@@ -51,7 +47,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	// FIXME should set min and max width for div to maintain proper look
 	const div = holder.append('div').style('padding', '5px')
 
-	let backBtn
+	let backBtn, nameInput, hasChanged
 	if (arg.backBtn) {
 		backBtn = div
 			.append('div')
@@ -70,49 +66,23 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			})
 	}
 
-	let groupSelect, groupInput, selectedGroup
-	if (groups?.length) {
-		const grpDiv = div.append('div').style('padding', '5px 0')
-		const label = grpDiv.append('label')
-		label.append('span').html('Group to edit: ')
-		groupSelect = label.append('select').on('change', () => {
-			selectedGroup = groups[groupSelect.property('value')]
-			geneList = selectedGroup.lst
-			if (arg.getMode) {
-				mode = arg.getMode(selectedGroup)
-				renderRightDiv()
-			}
-			renderGenes()
-		})
+	const origLst = structuredClone(selectedGroup.lst)
+	const origNames = JSON.stringify(selectedGroup.lst.map(t => t.name).sort())
 
-		for (const [i, group] of groups.entries()) {
-			group.origLst = structuredClone(group.lst)
-			group.origNames = JSON.stringify(group.lst.map(t => t.name).sort())
-			group.label = group.name || `Unlabeled group # ${i + 1}`
-		}
-
-		groupSelect
-			.selectAll('option')
-			.data(groups)
-			.enter()
-			.append('option')
-			.property('selected', grp => grp.selected)
-			.attr('value', (d, i) => i)
-			.html(grp => grp.label)
-
-		selectedGroup = groups[groupSelect.property('value')]
-	} else if (groups && !groups.length) {
-		// an empty groups array indicates to show the input for a new group name
+	// NOTE: do not show a name text or input when there is no selectedGroup.name and it is not editable
+	if (selectedGroup.name || selectedGroup.nameEditable) {
 		const grpDiv = div.append('div').style('padding', '5px')
-		const label = grpDiv.append('label')
-		label.append('span').html('Group to Add ')
-		groupInput = label
-			.append('input')
-			.attr('placeholder', 'Name')
-			.on('input', function () {
-				const name = groupInput.node().value
-				submitBtn.property('disabled', name == '' || !geneList.length)
-			})
+		const label = grpDiv.append(selectedGroup.nameEditable ? 'label' : 'span')
+		label.append('span').html(`${selectedGroup.status == 'new' ? 'Create' : 'Edit'} the genes in `)
+		if (selectedGroup.nameEditable)
+			nameInput = label
+				.append('input')
+				.attr('placeholder', 'Name')
+				.on('input', function () {
+					const name = nameInput.node().value
+					submitBtn.property('disabled', name == '' || !hasChanged)
+				})
+		else label.append('span').text(selectedGroup.label)
 	}
 
 	const api: API = {
@@ -188,8 +158,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		.on('click', () => {
 			callback({
 				geneList,
-				groupIndex: groupSelect?.property('value'),
-				groupName: groupInput?.property('value')
+				groupName: nameInput?.property('value')
 			})
 		})
 
@@ -300,13 +269,13 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				renderGenes()
 			})
 
-		if (groups) {
+		if (selectedGroup.status != 'new') {
 			api.dom.restoreBtn = rightDiv
 				.append('button')
 				.property('disabled', true)
 				.text('Restore')
 				.on('click', () => {
-					geneList = groups[groupSelect.property('value')].origLst
+					geneList = origLst
 					renderGenes()
 				})
 		}
@@ -352,10 +321,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			})
 
 		api.dom.clearBtn.property('disabled', !geneList?.length)
-		const hasChanged =
-			(!groups?.length && geneList.length) ||
-			(groups?.length && selectedGroup?.origNames !== JSON.stringify(geneList.map(t => t.name).sort()))
-		api.dom.restoreBtn.property('disabled', !hasChanged)
+		const hasChanged = origNames !== JSON.stringify(geneList.map(t => t.name).sort())
+		api.dom.restoreBtn?.property('disabled', !hasChanged)
 		api.dom.submitBtn.property('disabled', !hasChanged)
 		if (hasChanged) submitBtn.node().focus()
 	}
