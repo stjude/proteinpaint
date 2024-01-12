@@ -77,9 +77,14 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			const selectedmatrixType = self.dom.controlsDiv.matrixType.node().value
 			await setMatrixType(hic, selectedmatrixType, self)
 		})
-	const matrixTypevalues = ['observed', 'expected', 'oe']
+	const matrixTypevalues = [
+		//Allow for customer friendly labels but pass the appropriate straw parameter
+		{ label: 'Observed', value: 'observed' },
+		{ label: 'Expected', value: 'expected' },
+		{ label: 'Observed/Expected', value: 'oe' }
+	]
 	for (const matrixType of matrixTypevalues) {
-		self.dom.controlsDiv.matrixType.append('option').text(matrixType)
+		self.dom.controlsDiv.matrixType.append('option').text(matrixType.label).attr('value', matrixType.value)
 	}
 
 	const viewRow = menuTable.append('tr')
