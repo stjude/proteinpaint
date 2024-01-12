@@ -833,6 +833,8 @@ export class MatrixControls {
 
 		const nameInput = td
 			.append('input')
+			.style('margin', '2px 5px')
+			.style('width', '210px')
 			.attr('placeholder', 'Name')
 			.on('input', () => {
 				createBtn.property('disabled', !nameInput.property('value'))
@@ -875,7 +877,7 @@ export class MatrixControls {
 			}
 		})
 
-		const groupSelect = td.append('select')
+		const groupSelect = td.append('select').style('margin', '2px 5px').style('width', '218px')
 
 		for (const [i, group] of groups.entries()) {
 			if (group.name) group.label = group.name
