@@ -20,7 +20,8 @@ export const api: any = {
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
 							get_children: 1,
-							cohortValues: 'ABC'
+							cohortValues: 'ABC',
+							tid: 'GO:0000001'
 						}
 					},
 					response: {
@@ -57,7 +58,19 @@ function init({ genomes }) {
 	}
 }
 
-async function trigger_children(q, res, tdb) {
+async function trigger_children(
+	q: {
+		genome?: string
+		dslabel?: string
+		embedder?: string
+		get_children?: number
+		tid: any
+		cohortValues?: any
+		treeFilter?: any
+	},
+	res: { send: (arg0: gettermchildrenResponse) => void },
+	tdb: { q: { getTermChildren: (arg0: any, arg1: any, arg2: any) => any } }
+) {
 	/* get children terms
 may apply ssid: a premade sample set
 */
