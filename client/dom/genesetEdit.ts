@@ -30,7 +30,13 @@ type showGenesetEditArg = {
 	mode?: string
 	callback: (CallbackArg) => void
 	vocabApi: any
-	selectedGroup: any
+	selectedGroup: {
+		lst: {
+			name: string
+		}[]
+		name: string
+		label: string
+	}
 	backBtn: {
 		callback: () => void
 		target?: string
@@ -69,20 +75,11 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	const origLst = structuredClone(selectedGroup.lst)
 	const origNames = JSON.stringify(selectedGroup.lst.map(t => t.name).sort())
 
-	// NOTE: do not show a name text or input when there is no selectedGroup.name and it is not editable
-	if (selectedGroup.name || selectedGroup.nameEditable) {
-		const grpDiv = div.append('div').style('padding', '5px')
-		const label = grpDiv.append(selectedGroup.nameEditable ? 'label' : 'span')
-		label.append('span').html(`${selectedGroup.status == 'new' ? 'Create' : 'Edit'} the genes in `)
-		if (selectedGroup.nameEditable)
-			nameInput = label
-				.append('input')
-				.attr('placeholder', 'Name')
-				.on('input', function () {
-					const name = nameInput.node().value
-					submitBtn.property('disabled', name == '' || !hasChanged)
-				})
-		else label.append('span').text(selectedGroup.label)
+	if (selectedGroup.label) {
+		div
+			.append('div')
+			.style('margin-bottom', '10px')
+			.html((selectedGroup.status == 'new' ? `Add geneset to ` : `Edit the geneset in `) + selectedGroup.label)
 	}
 
 	const api: API = {
