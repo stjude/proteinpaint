@@ -109,8 +109,8 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
 			self.inwholegenome = true
 			self.inchrpair = false
-			self.inhorizontal = false
 			self.indetail = false
+			self.inhorizontal = false
 			switchview(hic, self)
 		})
 
@@ -123,8 +123,8 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
 			self.inwholegenome = false
 			self.inchrpair = true
-			self.inhorizontal = false
 			self.indetail = false
+			self.inhorizontal = false
 			switchview(hic, self)
 		})
 
@@ -133,12 +133,12 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('display', 'none')
 		.style('padding', '2px')
 		.style('margin', '4px 0px')
-		.html('&#8810; Horizontal View')
+		.html('Horizontal View &#8811;')
 		.on('click', () => {
 			self.inwholegenome = false
 			self.inchrpair = false
-			self.inhorizontal = true
 			self.indetail = false
+			self.inhorizontal = true
 			switchview(hic, self)
 		})
 
@@ -147,7 +147,14 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('display', 'none')
 		.style('padding', '2px')
 		.style('margin', '4px 0px')
-		.html('Detailed View &#8811;')
+		.html('&#8810; Detailed View')
+		.on('click', () => {
+			self.inwholegenome = false
+			self.inchrpair = false
+			self.indetail = true
+			self.inhorizontal = false
+			switchview(hic, self)
+		})
 
 	self.dom.controlsDiv.zoomDiv = menuTable.append('tr').style('display', 'none')
 	addLabel(self.dom.controlsDiv.zoomDiv, 'ZOOM')
@@ -192,7 +199,7 @@ function makeNormMethDisplay(hic: any, self: any) {
 }
 
 /**
- * Get data from user inputs ()
+ * Request data when user changes dropdowns per view
  * @param hic
  * @param self
  * @returns
