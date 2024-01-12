@@ -117,8 +117,8 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 	q.get = async (param: TermdbClusterRequest) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, return blank array for no data
-			return new Set()
+			// got 0 sample after filtering, must still return expected structure with no data
+			return { gene2sample2value: new Set(), byTermId: {}, bySampleId: {} }
 		}
 
 		// has at least 1 sample passing filter and with exp data
