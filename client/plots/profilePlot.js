@@ -347,6 +347,7 @@ export class profilePlot {
 		this.addFilterLegendItem('Country', this.settings.country)
 		this.addFilterLegendItem('Income', this.settings.income)
 		this.addFilterLegendItem('Facility type', this.settings.facilityType)
+		this.addFilterLegendItem('Facility', this.data2.refs.bySampleId[this.settings.site].label)
 	}
 
 	addFilterLegendItem(filter, value) {
@@ -356,7 +357,7 @@ export class profilePlot {
 		const text = this.filterG
 			.append('text')
 			.attr('font-size', '0.9em')
-			.attr('transform', `translate(0, ${this.filtersCount * 20})`)
+			.attr('transform', `translate(0, ${this.filtersCount * 22})`)
 			.attr('text-anchor', 'left')
 		text.append('tspan').attr('font-weight', 'bold').text(filter)
 		text.append('tspan').text(`: ${value ? value : 'None'}`)
