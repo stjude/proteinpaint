@@ -1,5 +1,4 @@
 import { TermdbClusterRequest, TermdbClusterResponse } from '#shared/types/routes/termdb.cluster.ts'
-import fs from 'fs'
 import path from 'path'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
