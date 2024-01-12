@@ -41,6 +41,8 @@ export function initRadioInputs(opts) {
 		.append('span')
 		.style('vertical-align', 'top')
 		.html(d => '&nbsp;' + d.label)
+		.on('mouseup', opts.listeners.input)
+		.on('keyup', opts.listeners.input)
 
 	function isChecked(d) {
 		return d.value == radio.currValue
