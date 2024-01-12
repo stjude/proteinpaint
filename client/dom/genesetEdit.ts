@@ -19,24 +19,21 @@ type Gene = { name: string }
 
 type CallbackArg = {
 	geneList: Gene[]
-	groupIndex?: number
-	groupName?: string
 }
 
 type showGenesetEditArg = {
 	holder: any
 	genome: any
-	geneList?: Gene[]
 	mode?: string
 	callback: (CallbackArg) => void
 	vocabApi: any
-	selectedGroup: {
-		lst: {
-			name: string
-		}[]
+
+	geneList: {
 		name: string
-		label: string
-	}
+	}[]
+
+	titleText: string
+
 	backBtn: {
 		callback: () => void
 		target?: string
@@ -44,8 +41,8 @@ type showGenesetEditArg = {
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {
-	const { holder, genome, mode, callback, selectedGroup, vocabApi } = arg
-	let geneList = selectedGroup?.lst
+	const { holder, genome, mode, callback, vocabApi, titleText } = arg
+	let geneList = structuredClone(arg.geneList || [])
 
 	const tip2 = new Menu({ padding: '0px', parent_menu: holder.node(), test: 'test' })
 	holder.selectAll('*').remove()
@@ -72,14 +69,11 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			})
 	}
 
-	const origLst = structuredClone(selectedGroup.lst)
-	const origNames = JSON.stringify(selectedGroup.lst.map(t => t.name).sort())
+	const origLst = structuredClone(geneList)
+	const origNames = JSON.stringify(geneList.map(t => t.name).sort())
 
-	if (selectedGroup.label) {
-		div
-			.append('div')
-			.style('margin-bottom', '10px')
-			.html((selectedGroup.status == 'new' ? `Add geneset to ` : `Edit the geneset in `) + selectedGroup.label)
+	if (titleText) {
+		div.append('div').style('margin-bottom', '10px').html(titleText)
 	}
 
 	const api: API = {
@@ -266,7 +260,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				renderGenes()
 			})
 
-		if (selectedGroup.status != 'new') {
+		if (arg.geneList?.length) {
 			api.dom.restoreBtn = rightDiv
 				.append('button')
 				.property('disabled', true)
