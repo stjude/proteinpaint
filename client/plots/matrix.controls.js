@@ -58,9 +58,6 @@ export class MatrixControls {
 			.selectAll(':scope>button')
 			.filter(d => d && d.label)
 			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
-			.on('focus.matrix-keyboard-nav', function (d) {
-				this.click()
-			})
 	}
 
 	setSamplesBtn(s) {
@@ -846,8 +843,7 @@ export class MatrixControls {
 					backBtn: {
 						target: 'Genes Menu',
 						callback: () => {
-							GenesBtn.focus()
-							//GenesBtn.click()
+							GenesBtn.click()
 						}
 					}
 				})
@@ -900,7 +896,7 @@ export class MatrixControls {
 					backBtn: {
 						target: 'Genes Menu',
 						callback: () => {
-							GenesBtn.focus()
+							GenesBtn.click()
 						}
 					}
 				})
