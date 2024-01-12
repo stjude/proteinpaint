@@ -766,20 +766,20 @@ export class MatrixControls {
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
 		let selectedGroup
-		const triggerGenesetEdit = () => {
+		const triggerGenesetEdit = holder => {
+			holder.selectAll('*').remove()
 			showGenesetEdit({
-				holder: tip.d,
+				holder,
 				/* running hier clustering and the editing group is the group used for clustering
 			pass this mode value to inform ui to support the optional button "top variably exp gene"
 			this is hardcoded for the purpose of gene expression and should be improved
 			*/
 				genome: app.opts.genome,
 				geneList: selectedGroup.lst,
-				titleText: (selectedGroup.status == 'new' ? `Create: ` : `Edit: `) + selectedGroup.label,
-
 				vocabApi: this.opts.app.vocabApi,
 				callback: ({ geneList, groupName }) => {
 					if (!selectedGroup) throw `missing selectedGroup`
+					tip.hide()
 					const group = selectedGroup.status == 'new' ? { name: groupName, lst: [] } : tg[selectedGroup.index]
 					if (selectedGroup.status == 'new') tg.push(group)
 					const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
@@ -819,30 +819,41 @@ export class MatrixControls {
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
 		const td = tr.append('td')
 
-		const { groups, groupSelect } = this.setTermGroupSelector(td, app, tip, tg)
 		const editBtn = td
 			.append('button')
-			.html('Edit')
+			.html('Edit Group')
 			.on('click', () => {
+				tip.clear()
+				this.setMenuBackBtn(tip.d.append('div').style('padding', '5px'), () => GenesBtn.click())
+				const { groups, groupSelect } = this.setTermGroupSelector(tip.d.append('div'), tg)
+				const genesetEdiUiHolder = tip.d.append('div')
+				groupSelect.on('change', () => {
+					selectedGroup = groups[groupSelect.property('value')]
+					triggerGenesetEdit(genesetEdiUiHolder)
+				})
 				const groupIndex = groupSelect.property('value')
 				selectedGroup = groups[groupIndex]
-				triggerGenesetEdit()
+				triggerGenesetEdit(genesetEdiUiHolder)
 			})
 
-		td.append('br')
-
-		const nameInput = td
-			.append('input')
-			.style('margin', '2px 5px')
-			.style('width', '210px')
-			.attr('placeholder', 'Name')
-			.on('input', () => {
-				createBtn.property('disabled', !nameInput.property('value'))
-			})
 		const createBtn = td
 			.append('button')
-			.html('Add new group')
+			.html('Create Group')
 			.on('click', () => {
+				tip.clear()
+				this.setMenuBackBtn(tip.d.append('div'), () => GenesBtn.click())
+				const div = tip.d.append('div').style('padding', '5px')
+				const label = div.append('label')
+				label.append('span').text('Create ')
+				const nameInput = label
+					.append('input')
+					.style('margin', '2px 5px')
+					.style('width', '210px')
+					.attr('placeholder', 'Group Name')
+					.on('input', () => {
+						createBtn.property('disabled', !nameInput.property('value'))
+					})
+
 				const name = nameInput.property('value')
 				selectedGroup = {
 					index: tg.length,
@@ -851,11 +862,26 @@ export class MatrixControls {
 					lst: [],
 					status: 'new'
 				}
-				triggerGenesetEdit()
+				triggerGenesetEdit(tip.d.append('div'))
 			})
 	}
 
-	setTermGroupSelector(td, app, tip, tg) {
+	setMenuBackBtn(holder, callback) {
+		holder
+			.attr('tabindex', 0)
+			.style('padding', '5px')
+			.style('text-decoration', 'underline')
+			.style('cursor', 'pointer')
+			.style('margin-bottom', '12px')
+			.html(`&#171; Back to Genes`)
+			.on('click', callback)
+			.on('keyup', event => {
+				if (event.key == 'Enter') event.target.click()
+			})
+	}
+
+	setTermGroupSelector(holder, tg) {
+		holder.style('padding', '5px')
 		//const label = grpDiv.append('label')
 		//label.append('span').html('')
 		const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
@@ -877,7 +903,9 @@ export class MatrixControls {
 			}
 		})
 
-		const groupSelect = td.append('select').style('margin', '2px 5px').style('width', '218px')
+		const label = holder.append('label')
+		label.append('span').text('Edit ')
+		const groupSelect = label.append('select').style('margin', '2px 5px').style('width', '218px')
 
 		for (const [i, group] of groups.entries()) {
 			if (group.name) group.label = group.name
