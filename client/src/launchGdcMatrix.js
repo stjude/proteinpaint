@@ -122,7 +122,17 @@ export async function init(arg, holder, genomes) {
 				vocabApi: await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
 				callback: async result => {
 					tempDiv.remove()
-					const plotAppApi = await launchWithGenes(result.geneList, genome, arg, holder)
+					const plotAppApi = await launchWithGenes(
+						await Promise.all(
+							result.geneList.map(async i => {
+								return await fillTermWrapper({ term: { name: i.name, type: 'geneVariant' } })
+							})
+						),
+						genome,
+						arg,
+						settings,
+						holder
+					)
 					// FIXME plotAppApi generated inside callback is no longer returned where it supposed to be, may break app update on GFF cohort change
 				}
 			})
@@ -130,7 +140,7 @@ export async function init(arg, holder, genomes) {
 		}
 
 		// has default genes; launch map with these
-		const plotAppApi = await launchWithGenes(genes, genome, arg, holder)
+		const plotAppApi = await launchWithGenes(genes, genome, arg, settings, holder)
 		const matrixApi = plotAppApi.getComponents('plots.0')
 
 		const api = {
@@ -197,7 +207,7 @@ async function getGenes(arg, filter0, matrix) {
 	)
 }
 
-async function launchWithGenes(genes, genome, arg, holder) {
+async function launchWithGenes(genes, genome, arg, settings, holder) {
 	const opts = {
 		holder,
 		genome,
