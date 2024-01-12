@@ -150,7 +150,7 @@ class Hicstat {
 		}
 		this.errList = []
 		this.wholegenome = {
-			oeOption: 'observed',
+			matrixType: 'observed',
 			binpx: 1,
 			/** wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring*/
 			bpmaxv: 5000,
@@ -383,7 +383,7 @@ class Hicstat {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
 		const horizontalView = this.init_horizontalView.bind(this)
 		nmeth2select(hic, this.chrpairview)
-		oeOption4select(this.chrpairview, this)
+		matrixType2select(this.chrpairview, this)
 
 		this.inwholegenome = false
 		this.inchrpair = true
@@ -529,7 +529,7 @@ class Hicstat {
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Horizontal')
 		nmeth2select(hic, this.horizontalview)
-		oeOption4select(this.horizontalview, this)
+		matrixType2select(this.horizontalview, this)
 
 		//Clear elements created in chr pair view
 		this.chrpairview.axisy.remove()
@@ -608,7 +608,7 @@ class Hicstat {
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
 		nmeth2select(hic, this.detailview)
-		oeOption4select(this.detailview, this)
+		matrixType2select(this.detailview, this)
 
 		this.inwholegenome = false
 		this.inchrpair = false
@@ -959,7 +959,7 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 	}
 
 	const arg = {
-		oevalues: self.wholegenome.oeOption,
+		matrixType: self.wholegenome.matrixType,
 		file: hic.file,
 		url: hic.url,
 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
@@ -1150,7 +1150,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 	const ctx = self.chrpairview.ctx
 
 	const arg = {
-		oevalues: self.chrpairview.oeOption,
+		matrixType: self.chrpairview.matrixType,
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
@@ -1237,13 +1237,13 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
 }
 
 /** */
-export function oeOption4select(v: any, self: any) {
+export function matrixType2select(v: any, self: any) {
 	const options = self.dom.controlsDiv.matrixType.node().options
 	const selectedOption = Array.from(options).find(
 		(o: any) => o.value === self.dom.controlsDiv.matrixType.node().value
 	) as any
 	selectedOption.selected = true
-	v.oeOption = selectedOption.value // Return the selected option value
+	v.matrixType = selectedOption.value // Return the selected option value
 }
 
 /**
@@ -1413,7 +1413,7 @@ export function getdata_detail(hic: any, self: any) {
 	const ystop = self.detailview.ystop
 
 	const par: HicstrawArgs = {
-		oevalues: self.detailview.oeOption,
+		matrixType: self.detailview.matrixType,
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,

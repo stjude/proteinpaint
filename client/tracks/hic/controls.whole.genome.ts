@@ -1,5 +1,5 @@
 import { bplen } from '#shared/common'
-import { nmeth2select, oeOption4select } from './hic.straw'
+import { nmeth2select, matrixType2select } from './hic.straw'
 import { getdata_chrpair, getdata_detail, getdata_leadfollow, defaultnmeth, showBtns } from './hic.straw'
 import { Elem } from '../../types/d3'
 import blocklazyload from '#src/block.lazyload'
@@ -73,16 +73,13 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.append('td')
 		.style('margin-right', '10px')
 		.append('select')
-
 		.on('change', async () => {
-			const selectedOEOption = self.dom.controlsDiv.matrixType.node().value
-			//console.log(selectedOEOption)
-			// Handle the selected option
-			await setOEOption(hic, selectedOEOption, self)
+			const selectedmatrixType = self.dom.controlsDiv.matrixType.node().value
+			await setMatrixType(hic, selectedmatrixType, self)
 		})
 	const matrixTypevalues = ['observed', 'expected', 'oe']
-	for (const oeOption of matrixTypevalues) {
-		self.dom.controlsDiv.matrixType.append('option').text(oeOption)
+	for (const matrixType of matrixTypevalues) {
+		self.dom.controlsDiv.matrixType.append('option').text(matrixType)
 	}
 
 	const viewRow = menuTable.append('tr')
@@ -214,9 +211,9 @@ async function setnmeth(hic: any, nmeth: string, self: any) {
 	}
 }
 
-async function setOEOption(hic: any, oeOption: string, self: any) {
+async function setMatrixType(hic: any, matrixType: string, self: any) {
 	if (self.inwholegenome) {
-		self.wholegenome.oeOption = oeOption
+		self.wholegenome.matrixType = matrixType
 		const manychr = hic.atdev ? 3 : hic.chrlst.length
 
 		for (let i = 0; i < manychr; i++) {
@@ -241,12 +238,12 @@ async function setOEOption(hic: any, oeOption: string, self: any) {
 	}
 
 	if (self.inchrpair) {
-		self.chrpairview.oeOption = oeOption
+		self.chrpairview.matrixType = matrixType
 		await getdata_chrpair(hic, self)
 		return
 	}
 	if (self.indetail) {
-		self.detailview.oeOption = oeOption
+		self.detailview.matrixType = matrixType
 		getdata_detail(hic, self)
 	}
 }
@@ -317,13 +314,13 @@ function switchview(hic: any, self: any) {
 
 	if (self.inwholegenome) {
 		nmeth2select(hic, self.wholegenome)
-		oeOption4select(self.wholegenome, self)
+		matrixType2select(self.wholegenome, self)
 		self.dom.plotDiv.plot.node().appendChild(self.wholegenome.svg.node())
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.wholegenome.bpmaxv)
 		self.dom.controlsDiv.resolution.text(bplen(self.wholegenome.resolution) + ' bp')
 	} else if (self.inchrpair) {
 		nmeth2select(hic, self.chrpairview)
-		oeOption4select(self.chrpairview, self)
+		matrixType2select(self.chrpairview, self)
 		self.dom.plotDiv.yAxis.node().appendChild(self.chrpairview.axisy.node())
 		self.dom.plotDiv.xAxis.node().appendChild(self.chrpairview.axisx.node())
 		self.dom.plotDiv.plot.node().appendChild(self.chrpairview.canvas)
@@ -331,7 +328,7 @@ function switchview(hic: any, self: any) {
 		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
 	} else if (self.indetail) {
 		nmeth2select(hic, self.detailview)
-		oeOption4select(self.detailview, self)
+		matrixType2select(self.detailview, self)
 	} else if (self.inhorizontal) {
 		//TODO: Problem with this is it rerenders. Maybe a way to save the rendering and just show/hide?
 		blocklazyload(self.horizontalview.args)
