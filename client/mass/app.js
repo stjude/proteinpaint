@@ -61,6 +61,9 @@ class MassApp {
 	async preApiFreeze(api) {
 		try {
 			api.tip = new Menu({ padding: '5px' })
+			api.tip.d.on('keyup', event => {
+				if (event.key == 'Escape') api.tip.hide()
+			})
 			api.printError = e => this.printError(e)
 			const vocab = this.opts.state.vocab
 

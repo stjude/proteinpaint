@@ -35,7 +35,9 @@ export class MatrixControls {
 
 		this.keyboardNavHandler = async event => {
 			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
-			if (event.key == 'Enter' || event.key == 'ArrowDown') {
+			if (event.key == 'Escape') {
+				this.parent.app.tip.hide()
+			} else if (event.key == 'Enter' || event.key == 'ArrowDown') {
 				const elems =
 					event.target.tagName == 'BUTTON'
 						? this.parent.app.tip.d.node().querySelectorAll('input, select')
@@ -770,7 +772,7 @@ export class MatrixControls {
 	}
 
 	addGenesetInput(event, app, parent, tr) {
-		const tip = new Menu({ padding: '5px' })
+		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
 		const td = tr.append('td')
@@ -779,6 +781,7 @@ export class MatrixControls {
 	}
 
 	showGenegroupEditUi(td, app, tip, tg) {
+		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
 		td.append('button')
 			.html('Edit')
 			.on('key', event => {
@@ -786,7 +789,7 @@ export class MatrixControls {
 			})
 			.on('click', event => {
 				const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
-				tip.showunder(event.target)
+				tip.showunder(GenesBtn)
 				showGenesetEdit({
 					holder: tip.d,
 					/* running hier clustering and the editing group is the group used for clustering
@@ -839,19 +842,27 @@ export class MatrixControls {
 								termgroups: tg
 							}
 						})
+					},
+					backBtn: {
+						target: 'Genes Menu',
+						callback: () => {
+							GenesBtn.focus()
+							//GenesBtn.click()
+						}
 					}
 				})
 			})
 	}
 
 	showGenegroupAddUi(td, app, tip, tg) {
+		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
 		td.append('button')
-			.html('Add')
+			.html('Create')
 			.on('key', event => {
 				if (event.key == 'Enter') event.target.click()
 			})
 			.on('click', event => {
-				tip.showunder(event.target)
+				tip.showunder(GenesBtn)
 				showGenesetEdit({
 					holder: tip.d,
 					/* running hier clustering and the editing group is the group used for clustering
@@ -885,6 +896,12 @@ export class MatrixControls {
 								termgroups: tg
 							}
 						})
+					},
+					backBtn: {
+						target: 'Genes Menu',
+						callback: () => {
+							GenesBtn.focus()
+						}
 					}
 				})
 			})
@@ -1028,7 +1045,6 @@ export class MatrixControls {
 				selectBtn: opts.holder
 					.append('button')
 					.attr('title', 'Click the matrix to select data')
-					.attr('tabindex', 100)
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')
@@ -1038,7 +1054,6 @@ export class MatrixControls {
 				grabBtn: opts.holder
 					.append('button')
 					.attr('title', 'Click the matrix to drag and move')
-					.attr('tabindex', 100)
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')

@@ -65,13 +65,16 @@ export class Menu {
 					 // allow the bubbling of the mouse event to the document body
 				}*/
 			})
+			.on('keyup', event => {
+				if (event.key == 'Escape') this.hide()
+			})
 
 		this.dnode = this.d.node()
 
 		// detect if this menu is launched from within another menu
 		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
 		// check if this.d isn't empty before assigning parent_menu
-		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu
+		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu //; console.log(74, this.dnode.parent_menu)
 
 		body.on('mousedown.menu' + this.typename, event => {
 			/*** 
@@ -121,11 +124,7 @@ export class Menu {
 	}
 
 	clear() {
-		if (this.clearSelector)
-			this.d
-				.select(this.clearSelector)
-				.selectAll('*')
-				.remove()
+		if (this.clearSelector) this.d.select(this.clearSelector).selectAll('*').remove()
 		else this.d.selectAll('*').remove()
 		return this
 	}
