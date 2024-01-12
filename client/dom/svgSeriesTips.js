@@ -51,7 +51,8 @@ export function getSeriesTip(line, rect, _tip = null) {
 				// equal to xVal
 				const max = Math.max(...data.filter(d => d.x <= xVal).map(d => d.x))
 				// store html of this timepoint
-				seriesHtmls.push(data.find(d => d.x == max).html)
+				const timepoint = data.find(d => d.x == max)
+				if (timepoint) seriesHtmls.push(timepoint.html)
 			}
 		}
 
