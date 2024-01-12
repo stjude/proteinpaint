@@ -765,65 +765,89 @@ export class MatrixControls {
 		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
+		let selectedGroup
+		const triggerGenesetEdit = () => {
+			showGenesetEdit({
+				holder: tip.d,
+				/* running hier clustering and the editing group is the group used for clustering
+			pass this mode value to inform ui to support the optional button "top variably exp gene"
+			this is hardcoded for the purpose of gene expression and should be improved
+			*/
+				genome: app.opts.genome,
+				selectedGroup,
+				vocabApi: this.opts.app.vocabApi,
+				callback: ({ geneList, groupName }) => {
+					if (!selectedGroup) throw `missing selectedGroup`
+					const group = selectedGroup.status == 'new' ? { name: groupName, lst: [] } : tg[selectedGroup.index]
+					if (selectedGroup.status == 'new') tg.push(group)
+					const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+					const tws = geneList.map(d => {
+						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
+						if (!tw)
+							tw = {
+								$id: get$id(),
+								term: {
+									name: d.symbol || d.name,
+									type: 'geneVariant'
+								},
+								q: {}
+							}
+						return tw
+					})
+					group.lst = [...lst, ...tws]
+					if (!group.lst.length) tg.splice(selectedGroup.index, 1)
+					app.dispatch({
+						type: 'plot_edit',
+						id: this.parent.id,
+						config: {
+							termgroups: tg
+						}
+					})
+				},
+				backBtn: {
+					target: 'Genes Menu',
+					callback: () => {
+						GenesBtn.click()
+					}
+				}
+			})
+		}
+
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
 		const td = tr.append('td')
 
 		const { groups, groupSelect } = this.setTermGroupSelector(td, app, tip, tg)
-		groupSelect.on('change', () => {
-			const selectedGroup = groups[groupSelect.property('value')]
-			editBtn.html(selectedGroup.status == 'new' ? 'Create' : 'Edit')
-		})
-
 		const editBtn = td
 			.append('button')
 			.html('Edit')
 			.on('click', () => {
 				const groupIndex = groupSelect.property('value')
-				const selectedGroup = tg[groupIndex]
-				showGenesetEdit({
-					holder: tip.d,
-					/* running hier clustering and the editing group is the group used for clustering
-				pass this mode value to inform ui to support the optional button "top variably exp gene"
-				this is hardcoded for the purpose of gene expression and should be improved
-				*/
-					genome: app.opts.genome,
-					selectedGroup: groups[groupSelect.property('value')],
-					vocabApi: this.opts.app.vocabApi,
-					callback: ({ geneList, groupName }) => {
-						const group = !selectedGroup ? { name: groupName, lst: [] } : tg[groupIndex]
-						if (!selectedGroup) tg.push(group)
-						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
-						const tws = geneList.map(d => {
-							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
-							if (!tw)
-								tw = {
-									$id: get$id(),
-									term: {
-										name: d.symbol || d.name,
-										type: 'geneVariant'
-									},
-									q: {}
-								}
-							return tw
-						})
-						group.lst = [...lst, ...tws]
-						if (!group.lst.length) tg.splice(groupIndex, 1)
-						app.dispatch({
-							type: 'plot_edit',
-							id: this.parent.id,
-							config: {
-								termgroups: tg
-							}
-						})
-					},
-					backBtn: {
-						target: 'Genes Menu',
-						callback: () => {
-							GenesBtn.click()
-						}
-					}
-				})
+				selectedGroup = groups[groupIndex]
+				triggerGenesetEdit()
+			})
+
+		td.append('br')
+
+		const nameInput = td
+			.append('input')
+			.attr('placeholder', 'Name')
+			.on('input', () => {
+				createBtn.property('disabled', !nameInput.property('value'))
+			})
+		const createBtn = td
+			.append('button')
+			.html('Add new group')
+			.on('click', () => {
+				const name = nameInput.property('value')
+				selectedGroup = {
+					index: tg.length,
+					name,
+					label: name,
+					lst: [],
+					status: 'new'
+				}
+				triggerGenesetEdit()
 			})
 	}
 
@@ -858,15 +882,6 @@ export class MatrixControls {
 				group.label = n > 0 ? `${n} gene${n < 2 ? '' : 's'}` : `Unlabeled group #${i}`
 			}
 		}
-
-		groups.push({
-			index: tg.length,
-			name: '',
-			nameEditable: true,
-			label: '+Add to a new group',
-			lst: [],
-			status: 'new'
-		})
 
 		groupSelect
 			.selectAll('option')
