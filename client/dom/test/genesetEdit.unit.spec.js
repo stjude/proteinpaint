@@ -44,7 +44,7 @@ tape('Empty opts.geneList', function (test) {
 			genome: hg38,
 			callback: () => {},
 			vocabApi,
-			selectedGroup: { name: '', lst: [] }
+			geneList: []
 		})
 		test.true('msigdb' in ui.dom.tdbBtns, `should show MSigDB button for the hg38 genome`)
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
@@ -62,7 +62,7 @@ tape('Empty opts.geneList', function (test) {
 			genome: hg19,
 			callback: () => {},
 			vocabApi: {},
-			selectedGroup: { name: '', lst: [] }
+			geneList: []
 		})
 		test.false('msigdb' in ui.dom.tdbBtns, `should not show MSigDB button for the hg19 genome`)
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
@@ -90,7 +90,7 @@ tape('Non-empty opts.geneList', function (test) {
 			geneList,
 			callback: () => {},
 			vocabApi,
-			selectedGroup: { name: '', lst: geneList }
+			geneList
 		})
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), geneList.length, 'should render two gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
@@ -115,7 +115,7 @@ tape('gene deletion', function (test) {
 			geneList,
 			callback: () => {},
 			vocabApi: {},
-			selectedGroup: { name: '', lst: geneList }
+			lst: geneList
 		})
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), len, `should render ${len} gene pills`)
@@ -139,7 +139,7 @@ tape('submit button', function (test) {
 		geneList,
 		callback,
 		vocabApi,
-		selectedGroup: { name: '', lst: geneList }
+		geneList
 	})
 	geneList.slice(-1)
 	ui.dom.genesDiv.node().querySelector(':scope>div').click()

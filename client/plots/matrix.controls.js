@@ -774,7 +774,9 @@ export class MatrixControls {
 			this is hardcoded for the purpose of gene expression and should be improved
 			*/
 				genome: app.opts.genome,
-				selectedGroup,
+				geneList: selectedGroup.lst,
+				titleText: (selectedGroup.status == 'new' ? `Create: ` : `Edit: `) + selectedGroup.label,
+
 				vocabApi: this.opts.app.vocabApi,
 				callback: ({ geneList, groupName }) => {
 					if (!selectedGroup) throw `missing selectedGroup`
@@ -863,7 +865,7 @@ export class MatrixControls {
 				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
 				mode:
 					this.parent.chartType == 'hierCluster' &&
-					(group.type == 'hierCluster' || group.name == this.parent.config.settings.hierCluster?.termGroupName)
+					(g.type == 'hierCluster' || g.name == this.parent.config.settings.hierCluster?.termGroupName)
 						? 'expression'
 						: '',
 				selected:
