@@ -776,6 +776,7 @@ export class MatrixControls {
 			*/
 				genome: app.opts.genome,
 				geneList: selectedGroup.lst,
+				mode: selectedGroup.mode,
 				vocabApi: this.opts.app.vocabApi,
 				callback: ({ geneList, groupName }) => {
 					if (!selectedGroup) throw `missing selectedGroup`
