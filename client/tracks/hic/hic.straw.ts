@@ -1236,14 +1236,18 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
 	await detailViewUpdateHic(hic, self)
 }
 
-/** */
+/**
+ * Identifies the selected matrix type from the dropdown and sets it to the view object
+ * @param v view object within self (e.g. self.wholegenome) Each view object has its own matrixType
+ * @param self
+ */
 export function matrixType2select(v: any, self: any) {
 	const options = self.dom.controlsDiv.matrixType.node().options
 	const selectedOption = Array.from(options).find(
 		(o: any) => o.value === self.dom.controlsDiv.matrixType.node().value
 	) as any
 	selectedOption.selected = true
-	v.matrixType = selectedOption.value // Return the selected option value
+	v.matrixType = selectedOption.value
 }
 
 /**
@@ -1604,7 +1608,6 @@ export function getdata_detail(hic: any, self: any) {
 }
 
 export function hicparsefragdata(items: any) {
-	console.log(items)
 	const id2coord = new Map()
 	let min: number | null = null,
 		max: number | any
