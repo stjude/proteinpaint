@@ -1,6 +1,8 @@
 import { dofetch3 } from '#common/dofetch'
 import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
+import { showGenesetEdit } from '../dom/genesetEdit.ts'
+import { vocabInit } from '#termdb/vocabulary'
 
 /*
 test with http://localhost:3000/example.gdc.matrix.html
@@ -110,63 +112,25 @@ export async function init(arg, holder, genomes) {
 
 		const genes = await getGenes(arg, arg.filter0, settings.matrix)
 
-		const opts = {
-			holder,
-			genome,
-			state: {
-				genome: gdcGenome,
-				dslabel: gdcDslabel,
-				termfilter: { filter0: arg.filter0 },
-				plots: [
-					{
-						chartType: 'matrix',
-						termgroups: [...(arg.termgroups || []), { lst: genes }],
-						divideBy: arg.divideBy || undefined,
-						// moved default settings to gdc.hg38.js termdb.matrix.settings
-						// but can still override in the runpp() argument
-						settings
-					}
-				]
-			},
-			app: {
-				features: ['recover'],
-				callbacks: arg.opts?.app?.callbacks || {}
-			},
-			recover: {
-				undoHtml: 'Undo',
-				redoHtml: 'Redo',
-				resetHtml: 'Restore'
-			},
-			matrix: Object.assign(
-				{
-					// these will display the inputs together in the Genes menu,
-					// instead of being rendered outside of the matrix holder
-					customInputs: {
-						genes: [
-							{
-								label: `Maximum # Genes`,
-								title: 'Limit the number of displayed genes',
-								type: 'number',
-								chartType: 'matrix',
-								settingsKey: 'maxGenes',
-								callback: async value => {
-									const genes = await getGenes(arg, arg.filter0, { maxGenes: value })
-									api.update({
-										termgroups: [{ lst: genes }],
-										settings: {
-											matrix: { maxGenes: value }
-										}
-									})
-								}
-							}
-						]
-					}
-				},
-				arg.opts?.matrix || {}
-			)
+		if (!genes || genes.length == 0) {
+			holder.append('p').text('No default genes. Please define a gene set to launch OncoMatrix.')
+			// geneset edit ui requires vocabApi
+			const tempDiv = holder.append('div') // single-use div to show edit ui;
+			showGenesetEdit({
+				holder: tempDiv,
+				genome,
+				vocabApi: await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
+				callback: async result => {
+					tempDiv.remove()
+					const plotAppApi = await launchWithGenes(result.geneList, genome, arg, holder)
+					// FIXME plotAppApi generated inside callback is no longer returned where it supposed to be, may break app update on GFF cohort change
+				}
+			})
+			return
 		}
 
-		const plotAppApi = await appInit(opts)
+		// has default genes; launch map with these
+		const plotAppApi = await launchWithGenes(genes, genome, arg, holder)
 		const matrixApi = plotAppApi.getComponents('plots.0')
 
 		const api = {
@@ -224,11 +188,71 @@ async function getGenes(arg, filter0, matrix) {
 
 	const data = await dofetch3('gdc/topMutatedGenes', { body })
 	if (data.error) throw data.error
-	if (!data.genes) throw 'no top genes found using the cohort filter'
+	if (!data.genes) return // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
 	return await Promise.all(
 		// do tempfix of "data.genes.slice(0,3).map" for faster testing
 		data.genes.map(async i => {
 			return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
 		})
 	)
+}
+
+async function launchWithGenes(genes, genome, arg, holder) {
+	const opts = {
+		holder,
+		genome,
+		state: {
+			genome: gdcGenome,
+			dslabel: gdcDslabel,
+			termfilter: { filter0: arg.filter0 },
+			plots: [
+				{
+					chartType: 'matrix',
+					termgroups: [...(arg.termgroups || []), { lst: genes }],
+					divideBy: arg.divideBy || undefined,
+					// moved default settings to gdc.hg38.js termdb.matrix.settings
+					// but can still override in the runpp() argument
+					settings
+				}
+			]
+		},
+		app: {
+			features: ['recover'],
+			callbacks: arg.opts?.app?.callbacks || {}
+		},
+		recover: {
+			undoHtml: 'Undo',
+			redoHtml: 'Redo',
+			resetHtml: 'Restore'
+		},
+		matrix: Object.assign(
+			{
+				// these will display the inputs together in the Genes menu,
+				// instead of being rendered outside of the matrix holder
+				customInputs: {
+					genes: [
+						{
+							label: `Maximum # Genes`,
+							title: 'Limit the number of displayed genes',
+							type: 'number',
+							chartType: 'matrix',
+							settingsKey: 'maxGenes',
+							callback: async value => {
+								const genes = await getGenes(arg, arg.filter0, { maxGenes: value })
+								api.update({
+									termgroups: [{ lst: genes }],
+									settings: {
+										matrix: { maxGenes: value }
+									}
+								})
+							}
+						}
+					]
+				}
+			},
+			arg.opts?.matrix || {}
+		)
+	}
+
+	return await appInit(opts)
 }
