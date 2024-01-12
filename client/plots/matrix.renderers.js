@@ -169,7 +169,7 @@ export function setRenderers(self) {
 			.attr('x', cell.x || 0)
 			.attr('y', cell.y || 0)
 			.attr('width', cell.width || self.dimensions.colw)
-			.attr('height', 'height' in cell ? cell.height : s.rowh)
+			.attr('height', 'height' in cell ? Math.max(0, cell.height) : s.rowh)
 			.attr('shape-rendering', 'crispEdges')
 			//.attr('stroke', cell.fill)
 			.attr('stroke-width', 0)

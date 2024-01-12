@@ -6,7 +6,7 @@ type API = {
 	dom: {
 		tdbBtns: { [key: string]: any }
 		holder: any
-		loadBt: any
+		loadBtn: any
 		clearBtn: any
 		submitBtn: any
 		genesDiv: any | null
@@ -32,6 +32,10 @@ type showGenesetEditArg = {
 	vocabApi: any
 	groups?: { name: string; lst: Gene[]; type?: 'hierCluster' }[]
 	showGroup: boolean
+	backBtn: {
+		callback: () => void
+		target?: string
+	}
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {
@@ -41,26 +45,51 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	if (groups.length && !geneList?.length) throw `missing or invalid geneLst or groups argument`
 	else if (!geneList && !groups.length) geneList = []
 
-	const tip2 = new Menu({ padding: '0px' })
+	const tip2 = new Menu({ padding: '0px', parent_menu: holder.node(), test: 'test' })
 	holder.selectAll('*').remove()
 	// must not hardcode div width to 850px, gives broken ui
 	// FIXME should set min and max width for div to maintain proper look
 	const div = holder.append('div').style('padding', '5px')
 
-	let groupSelect, input
+	let backBtn
+	if (arg.backBtn) {
+		backBtn = div
+			.append('div')
+			.attr('tabindex', 0)
+			.style('text-decoration', 'underline')
+			.style('cursor', 'pointer')
+			.style('margin-bottom', '12px')
+			.html(arg.backBtn.target ? `&#171; Back to ${arg.backBtn.target}` : '&#171; Go Back')
+			.on('click', () => {
+				tip2.hide()
+				if (arg.parent_menu) arg.parent_menu.hide()
+				arg.backBtn.callback()
+			})
+			.on('keyup', event => {
+				if (event.key == 'Enter') event.target.click()
+			})
+	}
+
+	let groupSelect, groupInput, selectedGroup
 	if (groups?.length) {
 		const grpDiv = div.append('div').style('padding', '5px 0')
 		const label = grpDiv.append('label')
 		label.append('span').html('Group to edit: ')
 		groupSelect = label.append('select').on('change', () => {
-			const group = groups[groupSelect.property('value')]
-			geneList = group.lst
+			selectedGroup = groups[groupSelect.property('value')]
+			geneList = selectedGroup.lst
 			if (arg.getMode) {
-				mode = arg.getMode(group)
+				mode = arg.getMode(selectedGroup)
 				renderRightDiv()
 			}
 			renderGenes()
 		})
+
+		for (const [i, group] of groups.entries()) {
+			group.origLst = structuredClone(group.lst)
+			group.origNames = JSON.stringify(group.lst.map(t => t.name).sort())
+			group.label = group.name || `Unlabeled group # ${i + 1}`
+		}
 
 		groupSelect
 			.selectAll('option')
@@ -69,18 +98,21 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			.append('option')
 			.property('selected', grp => grp.selected)
 			.attr('value', (d, i) => i)
-			.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
+			.html(grp => grp.label)
+
+		selectedGroup = groups[groupSelect.property('value')]
 	} else if (groups && !groups.length) {
 		// an empty groups array indicates to show the input for a new group name
 		const grpDiv = div.append('div').style('padding', '5px')
 		const label = grpDiv.append('label')
 		label.append('span').html('Group to Add ')
-		input = label
+		groupInput = label
 			.append('input')
 			.attr('placeholder', 'Name')
 			.on('input', function () {
-				const name = input.node().value
+				const name = groupInput.node().value
 				submitBtn.property('disabled', name == '' || !geneList.length)
+				setSubmitText()
 			})
 	}
 
@@ -88,10 +120,12 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		dom: {
 			tdbBtns: {},
 			holder: div,
-			loadBt: null,
+			loadBtn: null,
 			clearBtn: null,
+			restoreBtn: null,
 			genesDiv: null,
-			submitBtn: null
+			submitBtn: null,
+			submitText: ''
 		},
 		params: [],
 		destroy(_obj) {
@@ -110,8 +144,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		}
 	}
 
-	api.dom.holder = div
-
 	const headerDiv = div.append('div')
 	//.style('white-space','nowrap')
 	const label = headerDiv.append('label')
@@ -123,8 +155,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		row,
 		geneOnly: true,
 		callback: addGene,
-		hideHelp: true
-		//placeholder: ''
+		hideHelp: true,
+		focusOff: true
 	})
 
 	// a holder to render optional buttons
@@ -145,6 +177,39 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	  this is primarily based on how matrix gene groups operate; a group is either for mutation data, or exp data, but not both
 	  when this ui is used elsewhere outside of matrix, this assumption can subject to change
 	*/
+
+	const genesDiv = div
+		.append('div')
+		.attr('contenteditable', true)
+		.style('display', 'flex')
+		.style('flex-wrap', 'wrap')
+		.style('gap', '5px')
+		.style('min-height', '20px')
+		.style('border-style', 'solid')
+		.style('border-width', '2px')
+		.style('border-color', '#eee')
+		.style('margin', '10px 0px')
+		.style('padding', '2px 0px')
+		.style('min-height', '30px')
+
+	api.dom.genesDiv = genesDiv
+
+	const footerDiv = div.append('div')
+	const submitBtn = footerDiv
+		.append('button')
+		.property('disabled', !geneList?.length)
+		.text(`Submit`)
+		.on('click', () => {
+			callback({
+				geneList,
+				groupIndex: groupSelect?.property('value'),
+				groupName: groupInput?.property('value')
+			})
+		})
+
+	api.dom.submitBtn = submitBtn
+
+	const submitText = footerDiv.append('span').style('margin-left', '5px').text('')
 
 	function renderRightDiv() {
 		rightDiv.selectAll('*').remove()
@@ -182,11 +247,11 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			if (vocabApi.termdbConfig.queries.topMutatedGenes.arguments) {
 				for (const param of vocabApi.termdbConfig.queries.topMutatedGenes.arguments) addParameter(param)
 			}
-			api.dom.loadBt = rightDiv
+			api.dom.loadBtn = rightDiv
 				.append('button')
 				.html(`Load top mutated genes`)
 				.on('click', async () => {
-					api.dom.loadBt.property('disabled', true)
+					api.dom.loadBtn.property('disabled', true)
 					const args = {
 						filter0: vocabApi.state.termfilter.filter0
 					}
@@ -202,8 +267,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 					geneList = []
 					for (const gene of result.genes) geneList.push({ name: gene })
 					renderGenes()
-					api.dom.loadBt.property('disabled', false)
-					submitBtn.node().focus()
+					api.dom.loadBtn.property('disabled', false)
 				})
 		}
 		if (genome?.termdbs?.msigdb) {
@@ -251,38 +315,18 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				geneList = []
 				renderGenes()
 			})
+
+		if (groups) {
+			api.dom.restoreBtn = rightDiv
+				.append('button')
+				.property('disabled', true)
+				.text('Restore')
+				.on('click', () => {
+					geneList = groups[groupSelect.property('value')].origLst
+					renderGenes()
+				})
+		}
 	}
-
-	const genesDiv = div
-		.append('div')
-		.attr('contenteditable', true)
-		.style('display', 'flex')
-		.style('flex-wrap', 'wrap')
-		.style('gap', '5px')
-		.style('min-height', '20px')
-		.style('border-style', 'solid')
-		.style('border-width', '2px')
-		.style('border-color', '#eee')
-		.style('margin', '10px 0px')
-		.style('padding', '2px 0px')
-		.style('min-height', '30px')
-
-	api.dom.genesDiv = genesDiv
-
-	const footerDiv = div.append('div')
-	const submitBtn = footerDiv
-		.append('button')
-		.property('disabled', !geneList?.length)
-		.text('Submit')
-		.on('click', () => {
-			callback({
-				geneList,
-				groupIndex: groupSelect?.property('value'),
-				groupName: input?.property('value')
-			})
-		})
-
-	api.dom.submitBtn = submitBtn
 
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()
@@ -323,9 +367,14 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				select(event.target).select('.sjpp_deletebt').remove()
 			})
 
-		api.dom.submitBtn.property('disabled', !geneList?.length)
 		api.dom.clearBtn.property('disabled', !geneList?.length)
-		if (geneList?.length) api.dom.submitBtn.node().focus()
+		const hasChanged =
+			(!groups?.length && geneList.length) ||
+			(groups?.length && selectedGroup?.origNames !== JSON.stringify(geneList.map(t => t.name).sort()))
+		api.dom.restoreBtn.property('disabled', !hasChanged)
+		api.dom.submitBtn.property('disabled', !hasChanged)
+		if (hasChanged) submitBtn.node().focus()
+		setSubmitText()
 	}
 
 	function addGene() {
@@ -339,7 +388,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 
 		geneList.push({ name })
 		renderGenes()
-		submitBtn.node().focus()
 	}
 
 	function deleteGene(event, d) {
@@ -347,6 +395,15 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		if (i != -1) {
 			geneList.splice(i, 1)
 			renderGenes()
+		}
+	}
+
+	function setSubmitText() {
+		if (!groups?.length) {
+			const newGrpName = groupInput?.property('value')
+			submitText.html(newGrpName ? ` geneset for ${newGrpName}` : '')
+		} else {
+			submitText.html(`geneset for ${selectedGroup?.label}`)
 		}
 	}
 
