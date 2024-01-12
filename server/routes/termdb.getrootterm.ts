@@ -1,4 +1,5 @@
 import { getroottermRequest, getroottermResponse } from '#shared/types/routes/termdb.getrootterm.ts'
+import { get_ds_tdb } from '../src/termdb'
 
 export const api: any = {
 	endpoint: 'termdb/rootterm',
@@ -38,14 +39,14 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		const q = req.query as getroottermRequest
+		const cohortValues = q.cohortValues ? q.cohortValues : ''
+		const treeFilter = q.treeFilter ? q.treeFilter : ''
+		//res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) })
+
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
-			const ds = g.datasets[req.query.dslabel]
-			if (!ds) throw 'invalid dataset name'
-			const tdb = ds.cohort.termdb
-			if (!tdb) throw 'invalid termdb object'
-
+			const [ds, tdb] = get_ds_tdb(g, q)
 			await trigger_rootterm(q, res, tdb) // as getroottermResponse
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
