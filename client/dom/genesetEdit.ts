@@ -28,7 +28,7 @@ type showGenesetEditArg = {
 	callback: (CallbackArg) => void
 	vocabApi: any
 
-	geneList: {
+	geneList?: {
 		name: string
 	}[]
 
