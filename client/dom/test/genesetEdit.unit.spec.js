@@ -50,7 +50,7 @@ tape('Empty opts.geneList', function (test) {
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
-		test.true(ui.dom.loadBt !== undefined, `should show load top genes button`)
+		test.true(ui.dom.loadBtn !== undefined, `should show load top genes button`)
 
 		if (test._ok) ui.destroy()
 	}
@@ -68,7 +68,7 @@ tape('Empty opts.geneList', function (test) {
 		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
-		test.true(ui.dom.loadBt == undefined, `should not show load top genes button`)
+		test.true(ui.dom.loadBtn == undefined, `should not show load top genes button`)
 
 		if (test._ok) ui.destroy()
 	}

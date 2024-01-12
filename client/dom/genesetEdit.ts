@@ -128,19 +128,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			submitText: ''
 		},
 		params: [],
-		destroy(_obj) {
-			const obj = _obj || api.dom
-			for (const key in obj) {
-				if (obj[key] == null) continue
-				if (key == 'holder') continue
-				else if (key == 'tdbBtns') {
-					api.destroy(obj[key])
-				} else {
-					obj[key].remove()
-				}
-				delete obj[key]
-			}
-			if (obj.holder) obj.holder.remove()
+		destroy() {
+			arg.holder.remove()
 		}
 	}
 
