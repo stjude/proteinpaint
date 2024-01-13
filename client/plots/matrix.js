@@ -202,7 +202,7 @@ export class Matrix {
 
 			// render the data
 			this.dom.loadingDiv.html('Rendering ...')
-			if (this.renderDendrogram) this.renderDendrogram()
+			if (this.plotDendrogramHclust) this.plotDendrogramHclust()
 			this.render()
 			this.dom.loadingDiv.style('display', 'none')
 			this.dom.svg.style('display', '')
