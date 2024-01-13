@@ -70,7 +70,7 @@ class HierCluster extends Matrix {
 				}
 
 				// rerender the col Dendrogram
-				this.plotDendrogram_R(this.hierClusterData.clustering, true)
+				this.plotDendrogramHclust(true)
 			})
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
 	}
@@ -437,6 +437,71 @@ class HierCluster extends Matrix {
 	getValueColor(value) {
 		const zScoreCap = this.settings.hierCluster.zScoreCap
 		return this.geneExpValues.scale((value - -zScoreCap) / (zScoreCap * 2))
+	}
+
+	plotDendrogramHclust(plotColOnly) {
+		/*
+		colOnly=true will only render column dendrograms
+		if false will render both row and column
+		*/
+		const d = this.dimensions
+		const s = this.config.settings.matrix
+		const xOffset = d.seriesXoffset // could be negative when zoomed
+		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
+
+		const obj = this.hierClusterData.clustering
+		console.log(obj)
+		const row = obj.row
+		const col = obj.col
+		/*
+		row.merge[]       {n1,n2}
+		row.height[]      {height}
+		row.order[]       {name}
+		row.inputOrder[]  [str]
+		*/
+
+		// plot column dendrogram
+		{
+			const colWidth = this.dimensions.dx,
+				yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
+			const height2px = getHclustHeightScalefactor(col.height, yDendrogramHeight)
+
+			const mergedClusters = new Map()
+			/*
+			as iterating through .merge[], collect merged clusters in here
+			k: cluster id, positive integer, as in row.merge[]
+			v: {
+				x:
+				y:
+				children:[]
+			}
+			*/
+			for (const [i, pair] of col.merge.entries()) {
+				const clusterId = i + 1 // id of this cluster formed by pair
+				// pair is {n1,n2} find x position for n1/2
+				let x1, x2
+				if (pair.n1 < 0) {
+					const columnNumber = getLeafNumber(pair.n1, col.inputOrder, col.order)
+					x1 = colWidth * (columnNumber + 0.5)
+				} else {
+					if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
+					x1 = mergedClusters.get(pair.n1).x
+				}
+				if (pair.n2 < 0) {
+					const columnNumber = getLeafNumber(pair.n2, col.inputOrder, col.order)
+					x2 = colWidth * (columnNumber + 0.5)
+				} else {
+					if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
+					x2 = mergedClusters.get(pair.n2).x
+				}
+			}
+		}
+
+		if (plotColOnly) return
+
+		// plot row dendrogram
+		const rowHeight = this.dimensions.dy,
+			xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight
 	}
 
 	async renderDendrogram() {
@@ -812,4 +877,19 @@ function maySetSandboxHeader(self) {
 		default:
 			throw 'unknown hierCluster.dataType to set header'
 	}
+}
+
+function getHclustHeightScalefactor(lst, ph) {
+	// scale hclust$height to on-screen max height (h) in number of pixels
+	let max = lst[0].height
+	for (const h of lst) max = Math.max(max, h.height)
+	return ph / max
+}
+
+function getLeafNumber(minus, inputOrder, order) {
+	const name = inputOrder[-minus - 1]
+	if (!name) throw 'minus not in inputOrder'
+	const i = order.findIndex(j => j.name == name)
+	if (i == -1) throw 'name not found in hc$order'
+	return i
 }

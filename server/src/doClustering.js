@@ -84,9 +84,22 @@ export async function doClustering(data, q, ds) {
 	*/
 
 	return {
+		row: {
+			merge: Routput.RowMerge,
+			height: Routput.RowHeight,
+			order: Routput.SortedRowNames2,
+			inputOrder: inputData.row_names
+		},
+		col: {
+			merge: Routput.ColumnMerge,
+			height: Routput.ColumnHeight,
+			order: Routput.SortedColumnNames2,
+			inputOrder: inputData.col_names
+		},
+		matrix: output_matrix,
+		// delete all below
 		geneNameLst: row_names,
 		sampleNameLst: col_names,
-		matrix: output_matrix,
 		row_dendro: row_output.dendrogram,
 		row_children: row_output.children,
 		col_dendro: col_output.dendrogram,
