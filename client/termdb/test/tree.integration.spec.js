@@ -30,12 +30,12 @@ const runpp = helpers.getRunPp('termdb', {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb/tree -***-')
 	test.end()
 })
 
-tape('default behavior', function(test) {
+tape('default behavior', function (test) {
 	test.timeoutAfter(2000)
 
 	runpp({
@@ -180,7 +180,7 @@ tape('click_term', test => {
 	}
 	function testExpand_child1(tree) {
 		//Find disabled term button specified in tree.disable_terms
-		const disabledlabels = [...childdiv_child1.querySelectorAll('.termlabel')].filter(function(elem) {
+		const disabledlabels = [...childdiv_child1.querySelectorAll('.termlabel')].filter(function (elem) {
 			return elem.style.opacity == '0.4'
 		})
 		test.ok(disabledlabels.length > 0, 'should have one or more disabled terms')
@@ -261,7 +261,7 @@ tape('click_term2select_tvs', test => {
 	}
 })
 
-tape('rehydrated from saved state', function(test) {
+tape('rehydrated from saved state', function (test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
@@ -295,7 +295,7 @@ tape('rehydrated from saved state', function(test) {
 	}
 })
 
-tape('error handling', function(test) {
+tape('error handling', function (test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
@@ -324,15 +324,11 @@ tape('error handling', function(test) {
 	})
 	function testWrongDslabel(app) {
 		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
-		test.equal(
-			d.text(),
-			'Error: genome-level termdb not available',
-			'should show for genome-level termdb not available'
-		)
+		test.equal(d.text(), 'Error: invalid dslabel', 'should show for genome-level termdb not available')
 	}
 })
 
-tape('usecase', function(test) {
+tape('usecase', function (test) {
 	test.timeoutAfter(2000)
 
 	runpp({
