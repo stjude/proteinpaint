@@ -14,7 +14,6 @@ class profilePolar extends profilePlot {
 		this.radius = 250
 	}
 	async init(appState) {
-		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 
 		this.twLst = []
@@ -22,6 +21,7 @@ class profilePolar extends profilePlot {
 			this.twLst.push(data.score)
 			this.twLst.push(data.maxScore)
 		}
+		await super.init(appState)
 
 		//this.opts.header.text(config.name).style('font-weight', 'bold')
 		this.arcGenerator = d3.arc().innerRadius(0)

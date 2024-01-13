@@ -48,16 +48,22 @@ export class profilePlot {
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
 		const state = this.getState(appState)
 
-		if (state.site) {
-			const config = JSON.parse(JSON.stringify(state.config))
-			const siteId = this.sampleidmap[state.site]
-			this.userData = await this.app.vocabApi.getAnnotatedSampleData({
-				terms: [config.regionTW, config.countryTW, config.incomeTW, config.typeTW],
-				termsPerRequest: 10,
-				filter: getSampleFilter(siteId)
-			})
-			this.userData = this.userData.lst[0]
-		}
+		if (state.site) await this.loadSampleData(state.site, state)
+	}
+
+	async loadSampleData(site, state) {
+		const config = JSON.parse(JSON.stringify(state.config))
+		const siteId = this.sampleidmap[site]
+		const terms = this.twLst
+		terms.push(...[config.regionTW, config.countryTW, config.incomeTW, config.typeTW])
+		this.sampleData = await this.app.vocabApi.getAnnotatedSampleData({
+			terms,
+			termsPerRequest: 10,
+			filter: getSampleFilter(siteId)
+		})
+
+		this.sampleId2Name = this.sampleData.refs.bySampleId
+		this.sampleData = this.sampleData.lst[0]
 	}
 
 	getList(tw, data) {
@@ -72,6 +78,8 @@ export class profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
+		if (this.settings.site) await this.loadSampleData(this.settings.site, this.state)
+		console.log(this.settings.site, this.sampleData)
 		if (this.settings.show2Plots) {
 			if (!this.plotAdded) await this.addPlot()
 		} else {
@@ -91,12 +99,13 @@ export class profilePlot {
 	}
 
 	async setControls(additionalInputs = []) {
-		if (this.userData && this.settings.site == undefined) {
-			this.settings.region = this.userData[this.config.regionTW.$id].value
-			this.settings.country = this.userData[this.config.countryTW.$id].value
-			this.settings.facilityType = this.userData[this.config.typeTW.$id].value
-			this.settings.income = this.userData[this.config.incomeTW.$id].value
-			this.settings.site = this.userData.sample
+		//User logged in with site data and first time loading plot
+		if (this.sampleData && this.settings.site == undefined) {
+			this.settings.region = this.sampleData[this.config.regionTW.$id].value
+			this.settings.country = this.sampleData[this.config.countryTW.$id].value
+			this.settings.facilityType = this.sampleData[this.config.typeTW.$id].value
+			this.settings.income = this.sampleData[this.config.incomeTW.$id].value
+			this.settings.site = this.sampleData.sample
 			await this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 			return
 		}
@@ -300,6 +309,7 @@ export class profilePlot {
 
 	setSite(site) {
 		this.settings.site = site
+		this.sampleData = null
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
@@ -347,7 +357,7 @@ export class profilePlot {
 		this.addFilterLegendItem('Country', this.settings.country)
 		this.addFilterLegendItem('Income', this.settings.income)
 		this.addFilterLegendItem('Facility type', this.settings.facilityType)
-		this.addFilterLegendItem('Facility', this.data2.refs.bySampleId[this.settings.site].label)
+		if (this.sampleData) this.addFilterLegendItem('Facility', this.sampleId2Name[this.sampleData.sample].label)
 	}
 
 	addFilterLegendItem(filter, value) {
