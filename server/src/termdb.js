@@ -107,7 +107,7 @@ export function get_ds_tdb(genome, q) {
 	}
 	// not matching with dataset
 	if (!genome.termdbs) {
-		throw 'genome-level termdb not available'
+		throw 'invalid dslabel'
 	}
 	const ds = genome.termdbs[q.dslabel]
 	if (!ds) {

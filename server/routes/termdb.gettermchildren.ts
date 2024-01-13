@@ -1,6 +1,5 @@
 import { gettermchildrenRequest, gettermchildrenResponse } from '#shared/types/routes/termdb.gettermchildren.ts'
-import { copy_term } from '#src/termdb.js'
-import { get_ds_tdb } from '#src/termdb.js'
+import { copy_term, get_ds_tdb } from '#src/termdb.js'
 
 export const api: any = {
 	endpoint: 'termdb/termchildren',
