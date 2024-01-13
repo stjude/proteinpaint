@@ -1,1 +1,2 @@
-
+Fixes:
+- detect empty hits before trying to render bam variants
