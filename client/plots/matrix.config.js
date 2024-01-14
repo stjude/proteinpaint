@@ -116,7 +116,12 @@ export async function getPlotConfig(opts = {}, app) {
 				cnvUnit: 'log2ratio',
 				ignoreCnvValues: false, //will ignore numeric CNV values if true
 
-				barh: 32 // default bar height for continuous terms
+				barh: 32, // default bar height for continuous terms,
+
+				// possible string entries:
+				// - "genesetEdit", for gene-centric embedders only like GDC OncoMatrix
+				// - may add other optional hints later
+				showHints: []
 			}
 		}
 	}

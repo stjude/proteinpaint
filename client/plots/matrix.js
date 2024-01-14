@@ -192,8 +192,7 @@ export class Matrix {
 				!this.config.legendGrpFilter.lst.length &&
 				!this.config.legendValueFilter.lst.length
 			) {
-				this.dom.loadingDiv.html('No matching sample data').style('display', '')
-				this.dom.svg.style('display', 'none')
+				this.showNoMatchingDataMessage()
 				return
 			}
 
@@ -242,6 +241,45 @@ export class Matrix {
 
 		this.prevState = this.state
 		this.resetInteractions()
+	}
+
+	showNoMatchingDataMessage() {
+		this.dom.loadingDiv.html('')
+		const div = this.dom.loadingDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('text-align', 'center')
+			.style('position', 'relative')
+			.style('left', '-150px')
+		div.append('div').html('No matching cohort sample data for the current gene list.')
+		if (this.settings.matrix.showHints?.includes('genesetEdit')) {
+			const div1 = div.append('div')
+			div1.append('span').html('You may view and modify the gene list from the ')
+			div1
+				.append('span')
+				.style('cursor', 'pointer')
+				.style('text-decoration', 'underline')
+				.html('Gene Set Edit Group option.')
+				.on('click', () => {
+					const GenesBtn = this.controlsRenderer.btns
+						.filter(d => d.label == 'Genes')
+						?.node()
+						.click()
+					const i = setInterval(() => {
+						const editBtn = this.app.tip.d
+							.selectAll('button')
+							.filter(function () {
+								return this.innerHTML == 'Edit Group'
+							})
+							.node()
+						if (editBtn) {
+							editBtn.click()
+							clearInterval(i)
+						}
+					}, 100)
+				})
+		}
+		this.dom.svg.style('display', 'none')
 	}
 
 	sampleKey(s) {
