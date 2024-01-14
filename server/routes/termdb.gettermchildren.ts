@@ -1,6 +1,5 @@
 import { gettermchildrenRequest, gettermchildrenResponse } from '#shared/types/routes/termdb.gettermchildren.ts'
-import { copy_term } from '#src/termdb.js'
-import { get_ds_tdb } from '../src/termdb'
+import { copy_term, get_ds_tdb } from '#src/termdb.js'
 
 export const api: any = {
 	endpoint: 'termdb/termchildren',
@@ -43,7 +42,12 @@ function init({ genomes }) {
 		const q = req.query as gettermchildrenRequest
 		try {
 			const g = genomes[req.query.genome]
-			const [ds, tdb] = get_ds_tdb(g, q)
+			if (!g) throw 'invalid genome name'
+			const [ds, tdb] =await get_ds_tdb(g, q)
+			if (!ds) throw 'invalid dataset name'
+			if (!tdb) throw 'invalid termdb object'
+
+
 			await trigger_children(q, res, tdb)
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment

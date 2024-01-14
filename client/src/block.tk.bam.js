@@ -463,20 +463,18 @@ function may_render_variant(data, tk, block) {
 			let x1, x2 // on screen pixel start/stop of the variant box
 			{
 				const hits = block.seekcoord(tk.variants[0].chr, tk.variants[var_idx].pos)
-				if (hits) {
+				if (hits[0]) {
 					x1 = hits[0].x - block.exonsf / 2
 				}
 			}
 			{
 				const hits = block.seekcoord(tk.variants[0].chr, tk.variants[var_idx].pos + tk.variants[var_idx].ref.length)
-				if (hits) {
+				if (hits[0]) {
 					x2 = hits[0].x - block.exonsf / 2
 				}
 			}
-			if (x1 >= block.width || x2 <= 0) {
-				// variant is out of range, do not show
-				return
-			}
+
+			if (x1 === undefined || x2 === undefined || x1 >= block.width || x2 <= 0) return // variant is out of range, do not show
 
 			// will render variant in a row
 			let variant_box_width = x2 - x1

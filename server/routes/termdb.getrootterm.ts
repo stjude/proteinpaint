@@ -1,5 +1,6 @@
 import { getroottermRequest, getroottermResponse } from '#shared/types/routes/termdb.getrootterm.ts'
-import { get_ds_tdb } from '../src/termdb'
+import { get_ds_tdb } from '#src/termdb.js'
+
 
 export const api: any = {
 	endpoint: 'termdb/rootterm',
@@ -46,7 +47,11 @@ function init({ genomes }) {
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
+
 			const [ds, tdb] = get_ds_tdb(g, q)
+			if (!ds) throw 'invalid dataset name'
+			if (!tdb) throw 'invalid termdb object'
+
 			await trigger_rootterm(q, res, tdb) // as getroottermResponse
 		} catch (e) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
