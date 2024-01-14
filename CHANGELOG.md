@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- detect empty hits before trying to render bam variants
+
 
 ## 2.39.1
 
