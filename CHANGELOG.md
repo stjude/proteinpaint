@@ -4,13 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-Features:
-- Option to render an initial geneset edit UI when the default matrix genes is empty
-- Support an option to adjust the tracked state
-
 Fixes:
 - Detect empty hits before trying to render bam variants
-- Fix the handling of genome-level termdb in the migrated server routes
+- Reenable the handling of genome-level termdbs in the migrated server route
+- Display an initial geneset edit UI when the GDC default matrix genes is empty
+- Exclude embedder state in the standalone recover tracked state, for the matrix and hier cluster undo/redo
 
 
 ## 2.39.1
