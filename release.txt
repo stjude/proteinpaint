@@ -1,1 +1,2 @@
-
+Fixes:
+- supply the missing api reference when launching a gdc matrix
