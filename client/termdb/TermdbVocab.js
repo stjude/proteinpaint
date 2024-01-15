@@ -869,8 +869,8 @@ export class TermdbVocab extends Vocab {
 	getTwMinCopy(tw) {
 		const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 		const copy = { term: {}, q: tw.q }
-		if ('id' in tw) {
-			copy.term.id = tw.term.id
+		if ('id' in tw || 'id' in tw.term) {
+			copy.term.id = tw.id || tw.term.id
 			if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 				// added following so getData will not break
 				copy.term.type = tw.term.type

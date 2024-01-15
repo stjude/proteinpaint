@@ -110,11 +110,35 @@ export async function init(arg, holder, genomes) {
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
-		let plotAppApi, matrixApi
+		let plotAppApi,
+			matrixApi,
+			pendingArg = arg,
+			removedTempDiv = false
 		const api = {
-			update: arg => {
+			update: async arg => {
 				if (!plotAppApi) {
 					Object.assign(pendingArg, arg)
+					return
+				}
+				if (!removedTempDiv && tempDiv?.node?.().closest('body')) {
+					Object.assign(pendingArg, arg)
+					if ('filter0' in arg) {
+						const genes = await getGenes(pendingArg, arg.filter0, settings.matrix)
+						if (genes.length) {
+							removedTempDiv = true
+							tempDiv.remove()
+							const plotState = structuredClone(plotAppApi.getState().plots[0])
+							plotState.termgroups = [...(pendingArg.termgroups || []), { lst: genes }]
+							plotAppApi.dispatch({
+								type: 'app_refresh',
+								state: {
+									termfilter: { filter0: arg.filter0 },
+									plots: [plotState]
+								}
+							})
+							matrixDiv.style('display', '')
+						}
+					}
 					return
 				}
 				if ('filter0' in arg) {
@@ -133,8 +157,10 @@ export async function init(arg, holder, genomes) {
 		}
 
 		const genes = await getGenes(arg, arg.filter0, settings.matrix)
+		const tempDiv = !genes.length && holder.append('div') // single-use div to show geneset edit ui if there are no genes
+		const matrixDiv = holder.append('div').style('display', genes.length ? '' : 'none') // hide the matrix div if there are no genes
 		// launchWithGenes will handle empty genes list with a postInit callback
-		plotAppApi = await launchWithGenes(api, genes, genome, arg, settings, holder)
+		plotAppApi = await launchWithGenes(api, genes, genome, arg, settings, holder, tempDiv, matrixDiv)
 		matrixApi = plotAppApi.getComponents('plots.0')
 		return api
 	} catch (e) {
@@ -183,9 +209,7 @@ async function getGenes(arg, filter0, matrix) {
 	)
 }
 
-async function launchWithGenes(api, genes, genome, arg, settings, holder) {
-	const tempDiv = holder.append('div').style('display', genes.length ? 'none' : '') // single-use div to show geneset edit ui if there are no genes
-	const matrixDiv = holder.append('div').style('display', genes.length ? '' : 'none') // hide the matrix div if there are no genes
+async function launchWithGenes(api, genes, genome, arg, settings, holder, tempDiv, matrixDiv) {
 	if (!genes.length) {
 		// the GFF will supply these options, should handle gracefully if missing in test code
 		if (!arg.opts) arg.opts = {}
