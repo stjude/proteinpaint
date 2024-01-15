@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Option to render an initial geneset edit UI when the default matrix genes is empty
+
 Fixes:
 - detect empty hits before trying to render bam variants
 
