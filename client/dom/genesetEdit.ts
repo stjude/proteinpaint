@@ -254,6 +254,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			.append('div')
 			.attr('title', 'click to delete')
 			.attr('class', 'sja_menuoption')
+			.attr('tabindex', 0)
 			.style('position', 'relative')
 			.style('display', 'inline-block')
 			.style('padding', '5px 16px 5px 9px')
@@ -281,6 +282,15 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			})
 			.on('mouseout', function (event) {
 				select(event.target).select('.sjpp_deletebt').remove()
+			})
+			.on('focus', event => {
+				event.target.dispatchEvent(new PointerEvent('mouseover'))
+			})
+			.on('blur', event => {
+				event.target.dispatchEvent(new PointerEvent('mouseout'))
+			})
+			.on('keyup', event => {
+				if (event.key == 'Enter') event.target.click()
 			})
 
 		api.dom.clearBtn.property('disabled', !geneList?.length)
