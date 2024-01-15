@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.39.2
 
 Fixes:
 - Detect empty hits before trying to render bam variants
