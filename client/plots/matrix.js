@@ -259,7 +259,7 @@ export class Matrix {
 				.append('span')
 				.style('cursor', 'pointer')
 				.style('text-decoration', 'underline')
-				.html('Gene Set Edit Group option.')
+				.html('Gene Set Edit Group menu.')
 				.on('click', () => {
 					const GenesBtn = this.controlsRenderer.btns
 						.filter(d => d.label == 'Genes')

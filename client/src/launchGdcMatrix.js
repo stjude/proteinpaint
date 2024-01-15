@@ -110,41 +110,13 @@ export async function init(arg, holder, genomes) {
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
-		const genes = await getGenes(arg, arg.filter0, settings.matrix)
-
-		if (!genes || genes.length == 0) {
-			// geneset edit ui requires vocabApi
-			const tempDiv = holder.append('div') // single-use div to show edit ui;
-			tempDiv.append('p').text('No default genes. Please define a gene set to launch OncoMatrix.')
-			showGenesetEdit({
-				holder: tempDiv.append('div'),
-				genome,
-				vocabApi: await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
-				callback: async result => {
-					tempDiv.remove()
-					const plotAppApi = await launchWithGenes(
-						await Promise.all(
-							result.geneList.map(async i => {
-								return await fillTermWrapper({ term: { name: i.name, type: 'geneVariant' } })
-							})
-						),
-						genome,
-						arg,
-						settings,
-						holder
-					)
-					// FIXME plotAppApi generated inside callback is no longer returned where it supposed to be, may break app update on GFF cohort change
-				}
-			})
-			return
-		}
-
-		// has default genes; launch map with these
-		const plotAppApi = await launchWithGenes(genes, genome, arg, settings, holder)
-		const matrixApi = plotAppApi.getComponents('plots.0')
-
+		let plotAppApi, matrixApi
 		const api = {
 			update: arg => {
+				if (!plotAppApi) {
+					Object.assign(pendingArg, arg)
+					return
+				}
 				if ('filter0' in arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
@@ -160,6 +132,10 @@ export async function init(arg, holder, genomes) {
 			}
 		}
 
+		const genes = await getGenes(arg, arg.filter0, settings.matrix)
+		// launchWithGenes will handle empty genes list with a postInit callback
+		plotAppApi = await launchWithGenes(genes, genome, arg, settings, holder)
+		matrixApi = plotAppApi.getComponents('plots.0')
 		return api
 	} catch (e) {
 		if (arg.opts?.matrix?.callbacks) {
@@ -208,8 +184,42 @@ async function getGenes(arg, filter0, matrix) {
 }
 
 async function launchWithGenes(genes, genome, arg, settings, holder) {
+	const tempDiv = holder.append('div').style('display', genes.length ? 'none' : '') // single-use div to show geneset edit ui if there are no genes
+	const matrixDiv = holder.append('div').style('display', genes.length ? '' : 'none') // hide the matrix div if there are no genes
+	if (!genes.length) {
+		// the GFF will supply these options, should handle gracefully if missing in test code
+		if (!arg.opts) arg.opts = {}
+		if (!arg.opts.matrix) arg.opts.matrix = {}
+		if (!arg.opts.matrix.callbacks) arg.opts.matrix.callbacks = {}
+		arg.opts.matrix.callbacks['postInit.genesetEdit'] = async matrixApi => {
+			// geneset edit ui requires vocabApi
+			tempDiv.append('p').text('No default genes. Please define a gene set to launch OncoMatrix.')
+			showGenesetEdit({
+				holder: tempDiv.append('div'),
+				genome,
+				vocabApi: await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
+				callback: async result => {
+					tempDiv.remove()
+					matrixDiv.style('display', '')
+					const twlst = await Promise.all(
+						result.geneList.map(async i => {
+							return await fillTermWrapper({ term: { name: i.name, type: 'geneVariant' } })
+						})
+					) //; console.log(256, termgroups)
+					plotAppApi.dispatch({
+						type: 'plot_edit',
+						id: matrixApi.id,
+						config: {
+							termgroups: [...(arg.termgroups || []), { lst: twlst }]
+						}
+					})
+				}
+			})
+		}
+	}
+
 	const opts = {
-		holder,
+		holder: matrixDiv,
 		genome,
 		state: {
 			genome: gdcGenome,
@@ -264,5 +274,6 @@ async function launchWithGenes(genes, genome, arg, settings, holder) {
 		)
 	}
 
-	return await appInit(opts)
+	const plotAppApi = await appInit(opts)
+	return plotAppApi
 }
