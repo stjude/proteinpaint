@@ -6,10 +6,11 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Option to render an initial geneset edit UI when the default matrix genes is empty
-- support an option to adjust the tracked state
+- Support an option to adjust the tracked state
 
 Fixes:
-- detect empty hits before trying to render bam variants
+- Detect empty hits before trying to render bam variants
+- Fix the handling of genome-level termdb in the migrated server routes
 
 
 ## 2.39.1
