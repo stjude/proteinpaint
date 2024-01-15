@@ -542,7 +542,7 @@ class HierCluster extends Matrix {
 				})
 			}
 
-			this.renderImage(this.dom.topDendrogram, canvas, width, height, xDendrogramHeight, rowHeight)
+			this.renderImage(this.dom.topDendrogram, canvas, width, height, xDendrogramHeight + 0.5 * colWidth, rowHeight)
 
 			col.mergedClusters = mergedClusters
 		}
@@ -618,7 +618,7 @@ class HierCluster extends Matrix {
 		const ty =
 			//t.labelOffset is commented out because it causes row dendrogram to be misrendered
 			t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + rowHeight)
+		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + 1.5 * rowHeight)
 
 		row.mergedClusters = mergedClusters
 	}
