@@ -53,7 +53,7 @@ class HierCluster extends Matrix {
 			.append('g')
 			.attr('class', 'sjpp-matrix-dendrogram')
 			.on('click', event => {
-				const clickedBranch = this.getImgBranch(event)
+				const clickedBranch = this.getBranchFromTopDendrogram(event)
 				if (clickedBranch) {
 					const clickedBranchId = Math.min(clickedBranch.id1, clickedBranch.id2) // the smaller branchId has all the children
 					// TODO
@@ -229,7 +229,8 @@ class HierCluster extends Matrix {
 	}
 
 	// upon clicking, find the corresponding clicked branch in this.hierClusterData.clustering.col_dendro
-	getImgBranch(event) {
+	getBranchFromTopDendrogram(event) {
+		// TODO why need this.imgBox
 		if (event.target.tagName == 'image') this.imgBox = event.target.getBoundingClientRect()
 		else return
 
@@ -237,8 +238,7 @@ class HierCluster extends Matrix {
 		const xMin = this.dimensions.xMin
 		const x = event.clientX - this.imgBox.x - event.target.clientLeft + xMin
 
-		for (const branch of this.hierClusterData.clustering.col_dendro) {
-			if (!branch.normalized) return
+		for (const [clusterId, cluster] of this.hierClusterData.clustering.col.mergedClusters) {
 			const { x1, y1, x2, y2, verticalX } = branch.normalized
 
 			if (
