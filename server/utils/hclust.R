@@ -70,49 +70,23 @@ ColumnDendOrderHeight <- as.data.frame(ColumnDend$height)
 colnames(ColumnDendOrderHeight) <- "height"
 #print (ColumnDendOrderHeight)
 
-# Sorting the matrix
-
-#SortedMatrix  <- normalized_matrix[RowDend$order, ColumnDend$order]
 SortedRowNames <- input$row_names[RowDend$order]
 SortedColumnNames <- input$col_names[ColumnDend$order]
 
-#m <- matrix(SortedMatrix,length(SortedRowNames),length(SortedColumnNames))
-#colnames(m) <- SortedColumnNames
-#rownames(m) <- SortedRowNames
-
 output_df <- list()
 output_df$method <- input$cluster_method
-#output_df$RowNodeJson <- row_node_df
-#output_df$ColNodeJson <- col_node_df
 output_df$RowMerge <- RowDendMergeDf
 output_df$RowHeight <- RowDendOrderHeight
 output_df$ColumnMerge <- ColumnDendMergeDf
 output_df$ColumnHeight <- ColumnDendOrderHeight
 
-row_dend_order_df <- as.data.frame(RowDend$order)
-colnames(row_dend_order_df) <- c("ind")
-output_df$RowDendOrder <- row_dend_order_df
-
-col_dend_order_df <- as.data.frame(ColumnDend$order)
-colnames(col_dend_order_df) <- c("ind")
-output_df$ColumnDendOrder <- col_dend_order_df
-
-sorted_row_names_df <- as.data.frame(SortedRowNames)
-colnames(sorted_row_names_df) <- c("gene") # do not use gene
-output_df$SortedRowNames <- sorted_row_names_df
-# delete above
 sorted_row_names_df2 <- as.data.frame(SortedRowNames)
 colnames(sorted_row_names_df2) <- c("name")
-output_df$SortedRowNames2 <- sorted_row_names_df2
+output_df$RowOrder <- sorted_row_names_df2
 
-sorted_col_names_df <- as.data.frame(SortedColumnNames)
-colnames(sorted_col_names_df) <- c("sample")
-output_df$SortedColumnNames <- sorted_col_names_df
-# delete above
 sorted_col_names_df2 <- as.data.frame(SortedColumnNames)
 colnames(sorted_col_names_df2) <- c("name")
-output_df$SortedColumnNames2 <- sorted_col_names_df2
-
+output_df$ColOrder <- sorted_col_names_df2
 
 
 
