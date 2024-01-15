@@ -541,7 +541,9 @@ class HierCluster extends Matrix {
 			const ty =
 				//t.labelOffset is commented out because it causes row dendrogram to be misrendered
 				t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-			this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + this.dimensions.dy)
+			this.renderImage(this.dom.topDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + this.dimensions.dy)
+
+			col.mergedClusters = mergedClusters
 		}
 
 		if (plotColOnly) return
@@ -549,8 +551,80 @@ class HierCluster extends Matrix {
 		// plot row dendrogram
 		const rowHeight = this.dimensions.dy,
 			xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight
+		const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
+
+		const width = xDendrogramHeight + 0.0000001
+		const height = rowHeight * row.inputOrder.length
+		const canvas = new OffscreenCanvas(width * pxr, height * pxr)
+		const ctx = canvas.getContext('2d')
+		ctx.scale(pxr, pxr)
+		ctx.imageSmoothingEnabled = false
+		ctx.imageSmoothingQuality = 'high'
+		ctx.strokeStyle = 'black'
+
+		const mergedClusters = new Map()
+		for (const [clusterid0, pair] of row.merge.entries()) {
+			// pair is {n1,n2}, n1 and n2 form a new cluster; id of which is clusterid
+
+			const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
+			const children = [] // collect all children leaves for this cluster
+
+			let x1, x2, y1, y2
+			if (pair.n1 < 0) {
+				// n1 is leaf
+				const [name, rowNumber] = getLeafNumber(pair.n1, row.inputOrder, row.order)
+				x1 = rowHeight * (rowNumber + 0.5)
+				y1 = xDendrogramHeight
+				children.push({ name })
+			} else {
+				// n1 is cluster
+				if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
+				const c = mergedClusters.get(pair.n1)
+				x1 = c.x
+				y1 = c.y
+				children.push(...c.children)
+			}
+			if (pair.n2 < 0) {
+				// n2 is leaf
+				const [name, rowNumber] = getLeafNumber(pair.n2, row.inputOrder, row.order)
+				x2 = rowHeight * (rowNumber + 0.5)
+				y2 = xDendrogramHeight
+				children.push({ name })
+			} else {
+				if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
+				const c = mergedClusters.get(pair.n2)
+				x2 = c.x
+				y2 = c.y
+				children.push(...c.children)
+			}
+			// cluster x position
+			const clusterX = xDendrogramHeight - row.height[clusterid0].height * height2px
+
+			ctx.beginPath()
+			ctx.moveTo(x1, y1) // move to n1
+			ctx.lineTo(clusterX, y1) // h line right to cluster
+			ctx.lineTo(clusterX, y2) // v line down to n2
+			ctx.lineTo(x2, y2) // h line left to n2
+			ctx.stroke()
+			ctx.closePath()
+
+			mergedClusters.set(clusterid, {
+				x: clusterX,
+				y: (y1 + y2) / 2,
+				children
+			})
+		}
+
+		const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
+		const ty =
+			//t.labelOffset is commented out because it causes row dendrogram to be misrendered
+			t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
+		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + xDendrogramHeight + this.dimensions.dy)
+
+		row.mergedClusters = mergedClusters
 	}
 
+	// to delete!
 	async renderDendrogram() {
 		const obj = this.hierClusterData.clustering
 		obj.d = {
@@ -573,6 +647,7 @@ class HierCluster extends Matrix {
 		this.plotDendrogram_R(obj)
 	}
 
+	// to delete!
 	// if onlyCol is true, only render the column dendrogram
 	plotDendrogram_R(obj, onlyCol) {
 		const d = this.dimensions
@@ -720,6 +795,7 @@ class HierCluster extends Matrix {
 		}
 	}
 
+	// to delete!
 	validateRline(r) {
 		return
 		// a line between parent and child, {id1,x1,y1, id2,x2,y2}
