@@ -205,7 +205,15 @@ async function launchWithGenes(genes, genome, arg, settings, holder) {
 						result.geneList.map(async i => {
 							return await fillTermWrapper({ term: { name: i.name, type: 'geneVariant' } })
 						})
-					) //; console.log(256, termgroups)
+					)
+					if (arg.termgroups) {
+						// arg.termgroups was not rehydrated on the appInit() of plotApp,
+						// need to rehydrate here manually
+						for (const group of arg.termgroups) {
+							group.lst = await Promise.all(group.lst.map(fillTermWrapper))
+						}
+					}
+
 					plotAppApi.dispatch({
 						type: 'plot_edit',
 						id: matrixApi.id,
@@ -228,7 +236,9 @@ async function launchWithGenes(genes, genome, arg, settings, holder) {
 			plots: [
 				{
 					chartType: 'matrix',
-					termgroups: [...(arg.termgroups || []), { lst: genes }],
+					// avoid making a dictionary request when there is no gene data;
+					// if there is gene data, then the arg.termgroups can be submitted and rehydrated on app/store.init()
+					termgroups: !genes.length ? [{ lst: genes }] : [...(arg.termgroups || []), { lst: genes }],
 					divideBy: arg.divideBy || undefined,
 					// moved default settings to gdc.hg38.js termdb.matrix.settings
 					// but can still override in the runpp() argument
