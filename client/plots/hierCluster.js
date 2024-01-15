@@ -56,6 +56,7 @@ class HierCluster extends Matrix {
 				const clickedBranch = this.getImgBranch(event)
 				if (clickedBranch) {
 					const clickedBranchId = Math.min(clickedBranch.id1, clickedBranch.id2) // the smaller branchId has all the children
+					// TODO
 					this.clickedColChildren = this.hierClusterData.clustering.col.mergedClusters.get(clickedBranchId).children
 
 					//get the sampleName of the children
@@ -442,7 +443,7 @@ class HierCluster extends Matrix {
 
 	plotDendrogramHclust(plotColOnly) {
 		/*
-		colOnly=true will only render column dendrograms
+		plotColOnly=true will only render column dendrograms
 		if false will render both row and column
 		*/
 		const d = this.dimensions
@@ -461,10 +462,13 @@ class HierCluster extends Matrix {
 		.inputOrder[]  [str]
 		*/
 
+		const rowHeight = this.dimensions.dy,
+			xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight,
+			colWidth = this.dimensions.dx,
+			yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
+
 		// plot column dendrogram
 		{
-			const colWidth = this.dimensions.dx,
-				yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
 			const height2px = getHclustHeightScalefactor(col.height, yDendrogramHeight)
 
 			const height = yDendrogramHeight + 0.0000001
@@ -538,11 +542,7 @@ class HierCluster extends Matrix {
 				})
 			}
 
-			const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
-			const ty =
-				//t.labelOffset is commented out because it causes row dendrogram to be misrendered
-				t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-			this.renderImage(this.dom.topDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + this.dimensions.dy)
+			this.renderImage(this.dom.topDendrogram, canvas, width, height, xDendrogramHeight, rowHeight)
 
 			col.mergedClusters = mergedClusters
 		}
@@ -550,8 +550,6 @@ class HierCluster extends Matrix {
 		if (plotColOnly) return
 
 		// plot row dendrogram
-		const rowHeight = this.dimensions.dy,
-			xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight
 		const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
 
 		const width = xDendrogramHeight + 0.0000001
@@ -574,8 +572,8 @@ class HierCluster extends Matrix {
 			if (pair.n1 < 0) {
 				// n1 is leaf
 				const [name, rowNumber] = getLeafNumber(pair.n1, row.inputOrder, row.order)
-				x1 = rowHeight * (rowNumber + 0.5)
-				y1 = xDendrogramHeight
+				y1 = rowHeight * (rowNumber + 0.5)
+				x1 = xDendrogramHeight
 				children.push({ name })
 			} else {
 				// n1 is cluster
@@ -588,8 +586,8 @@ class HierCluster extends Matrix {
 			if (pair.n2 < 0) {
 				// n2 is leaf
 				const [name, rowNumber] = getLeafNumber(pair.n2, row.inputOrder, row.order)
-				x2 = rowHeight * (rowNumber + 0.5)
-				y2 = xDendrogramHeight
+				y2 = rowHeight * (rowNumber + 0.5)
+				x2 = xDendrogramHeight
 				children.push({ name })
 			} else {
 				if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
@@ -620,7 +618,7 @@ class HierCluster extends Matrix {
 		const ty =
 			//t.labelOffset is commented out because it causes row dendrogram to be misrendered
 			t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + xDendrogramHeight + this.dimensions.dy)
+		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + rowHeight)
 
 		row.mergedClusters = mergedClusters
 	}
