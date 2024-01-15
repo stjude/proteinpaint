@@ -93,7 +93,12 @@ export async function init(arg, holder, genomes) {
 			recover: {
 				undoHtml: 'Undo',
 				redoHtml: 'Redo',
-				resetHtml: 'Restore'
+				resetHtml: 'Restore',
+				adjustTrackedState(state) {
+					const s = structuredClone(state)
+					delete s.termfilter.filter0
+					return s
+				}
 			},
 			hierCluster: arg.opts?.hierCluster || {}
 		}
