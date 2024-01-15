@@ -56,9 +56,7 @@ class HierCluster extends Matrix {
 				const clickedBranch = this.getImgBranch(event)
 				if (clickedBranch) {
 					const clickedBranchId = Math.min(clickedBranch.id1, clickedBranch.id2) // the smaller branchId has all the children
-					this.clickedChildren = this.hierClusterData.clustering.col_children.find(
-						c => c.id == clickedBranchId
-					).children
+					this.clickedColChildren = this.hierClusterData.clustering.col.mergedClusters.get(clickedBranchId).children
 
 					//get the sampleName of the children
 					const clickedSampleNames = this.getClickedSampleNames(this.clickedChildren)
@@ -191,8 +189,8 @@ class HierCluster extends Matrix {
 	// return the sample names of the clicked samples as an array
 	getClickedSampleNames(clickedChildren) {
 		const obj = this.hierClusterData.clustering
-		const childIndexArr = clickedChildren.map(c => obj.col_names_index.indexOf(c))
-		const childSampleNameArr = childIndexArr.map(c => obj.sampleNameLst[c])
+		const childIndexArr = clickedChildren.map(c => obj.col.order.findIndex(i => i.name == c))
+		const childSampleNameArr = childIndexArr.map(c => obj.col.order[c].name)
 		return childSampleNameArr
 	}
 
@@ -356,16 +354,19 @@ class HierCluster extends Matrix {
 		const zScoreCap = this.settings.hierCluster.zScoreCap // used in loops below
 
 		const samples = {}
-		for (const [i, sample] of c.sampleNameLst.entries()) {
-			samples[sample] = { sample }
-			for (const [j, name] of c.geneNameLst.entries()) {
-				const tw = twlst.find(tw => tw.term.name === name)
+
+		// assumes c.col is samples and c.row is non-sample things (genes for now); later may flip to c.row be samples instead!!
+
+		for (const [i, column] of c.col.order.entries()) {
+			samples[column.name] = { sample: column.name }
+			for (const [j, row] of c.row.order.entries()) {
+				const tw = twlst.find(tw => tw.term.name === row.name)
 				const value = c.matrix[j][i]
-				samples[sample][tw.$id] = {
+				samples[column.name][tw.$id] = {
 					key: tw.term.name,
 					values: [
 						{
-							sample,
+							sample: column.name,
 							dt: this.settings.hierCluster.dataType,
 							class: 'geneexpression', // FIXME since there's no class defined for dtgeneexpression in common.js, best not to require value.class
 							label: s.termGroupName,
@@ -381,7 +382,7 @@ class HierCluster extends Matrix {
 			}
 		}
 
-		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
+		const orderedTw = c.row.order.map(row => twlst.find(tw => tw.term.name === row.name))
 		this.hcTermGroup.lst = orderedTw
 
 		// from d.byTermId to byTermId: change byTermId keys from gene names to $ids
@@ -391,7 +392,7 @@ class HierCluster extends Matrix {
 		}
 		this.hierClusterSamples = {
 			refs: { byTermId, bySampleId: d.bySampleId },
-			lst: c.sampleNameLst.map(sample => samples[sample]),
+			lst: c.col.order.map(c => samples[c.name]),
 			samples
 		}
 	}
