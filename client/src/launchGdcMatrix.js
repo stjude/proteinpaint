@@ -253,7 +253,12 @@ async function launchWithGenes(genes, genome, arg, settings, holder) {
 		recover: {
 			undoHtml: 'Undo',
 			redoHtml: 'Redo',
-			resetHtml: 'Restore'
+			resetHtml: 'Restore',
+			adjustTrackedState(state) {
+				const s = structuredClone(state)
+				delete s.termfilter.filter0
+				return s
+			}
 		},
 		matrix: Object.assign(
 			{
