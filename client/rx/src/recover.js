@@ -1,4 +1,4 @@
-import { getCompInit, toJson } from '../index.js'
+import { getCompInit, toJson, deepFreeze, deepEqual } from '../index.js'
 
 /*
 opts:{}
@@ -84,7 +84,10 @@ class Recover {
 		if (this.currIndex < this.history.length - 1) {
 			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
 		}
-		this.history.push(this.state)
+		const state = this.opts.adjustTrackedState ? this.opts.adjustTrackedState(this.state) : this.state
+		if (!Object.isFrozen(state)) deepFreeze(state)
+		if (deepEqual(state, this.history[this.history.length - 1])) return
+		this.history.push(state)
 		this.currIndex += 1
 
 		if (this.history.length > this.maxHistoryLen) {
