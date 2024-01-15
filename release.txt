@@ -1,2 +1,1 @@
-Features:
-- support an option to adjust the tracked state
+
