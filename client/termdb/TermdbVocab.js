@@ -765,8 +765,10 @@ export class TermdbVocab extends Vocab {
 						const idn = 'id' in tw.term ? tw.term.id : tw.term.name
 
 						for (const sampleId in data.samples) {
-							samplesToShow.add(sampleId)
 							const sample = data.samples[sampleId]
+							// ignore sample objects that are not annotated by other keys besides 'sample'
+							if (!Object.keys(sample).filter(k => k != 'sample').length) continue
+							samplesToShow.add(sampleId)
 							if (!(sampleId in samples)) {
 								// normalize the expected data shape
 								if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
@@ -824,8 +826,9 @@ export class TermdbVocab extends Vocab {
 				lst.push(...Object.values(samples))
 			} else {
 				// If there are dictionary terms, only show samples that have been annotated
-				// for at least one dictionary terms, otherwise do NOT show samples that
+				// for at least one dictionary term, otherwise do NOT show samples that
 				// are only annotated for non-dictionary terms like gene variants
+				// NOTE: there is an exception when using matrix?.settings?.displayDictRowWithNoValues
 				for (const sampleId in samples) {
 					const row = samples[sampleId]
 					for (const $id in row) {
@@ -834,6 +837,11 @@ export class TermdbVocab extends Vocab {
 							break
 						}
 					}
+				}
+				if (!lst.length && this.termdbConfig?.matrix?.settings?.displayDictRowWithNoValues) {
+					// this prevents the display of 'no matching sample data for the current gene list',
+					// which may be confusing if there is data for genes but not for dictionary terms
+					lst.push(...Object.values(samples))
 				}
 			}
 
