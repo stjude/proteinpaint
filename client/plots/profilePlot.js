@@ -195,13 +195,14 @@ export class profilePlot {
 				]
 			)
 		}
-		inputs.push({
-			label: 'Show two plots',
-			type: 'checkbox',
-			chartType,
-			settingsKey: 'show2Plots',
-			boxLabel: 'Yes'
-		})
+		if (chartType != 'profileRadarFacility')
+			inputs.push({
+				label: 'Show two plots',
+				type: 'checkbox',
+				chartType,
+				settingsKey: 'show2Plots',
+				boxLabel: 'Yes'
+			})
 		inputs.unshift(...additionalInputs)
 		await this.loadSampleData(chartType, inputs)
 
