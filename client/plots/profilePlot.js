@@ -242,7 +242,7 @@ export class profilePlot {
 					const id = this.sampleidmap[this.state.site]
 					this.settings.site = id
 				} //Admin
-				else {
+				else if (!this.state.site) {
 					this.sites = this.data.lst.map(s => {
 						return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
 					})
