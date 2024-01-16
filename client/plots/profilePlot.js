@@ -30,7 +30,7 @@ export class profilePlot {
 
 		if (this.opts.header) {
 			const suffix = config.isLoggedIn ? (config.site ? config.site : 'Admin') : 'Public'
-			this.opts.header.text(config.header + ` / ${suffix}`)
+			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
 		const mainDiv = this.opts.holder.append('div')
 		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.9em')
@@ -366,20 +366,22 @@ export class profilePlot {
 	}
 
 	addFilterLegend() {
-		this.filterG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text(
-				this.settings.region || this.settings.country || this.settings.income || this.settings.facilityType
-					? 'Filters'
-					: 'No filter applied'
-			)
-			.attr('transform', `translate(0, -5)`)
-		this.addFilterLegendItem('Region', this.settings.region)
-		this.addFilterLegendItem('Country', this.settings.country)
-		this.addFilterLegendItem('Income', this.settings.income)
-		this.addFilterLegendItem('Facility type', this.settings.facilityType)
+		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
+			this.filterG
+				.append('text')
+				.attr('text-anchor', 'left')
+				.style('font-weight', 'bold')
+				.text(
+					this.settings.region || this.settings.country || this.settings.income || this.settings.facilityType
+						? 'Filters'
+						: 'No filter applied'
+				)
+				.attr('transform', `translate(0, -5)`)
+			this.addFilterLegendItem('Region', this.settings.region)
+			this.addFilterLegendItem('Country', this.settings.country)
+			this.addFilterLegendItem('Income', this.settings.income)
+			this.addFilterLegendItem('Facility type', this.settings.facilityType)
+		}
 	}
 
 	addFilterLegendItem(filter, value) {
