@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.39.3
 
 Fixes:
 - Supply the missing api reference when launching a gdc matrix
