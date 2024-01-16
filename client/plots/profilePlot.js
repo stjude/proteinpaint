@@ -180,17 +180,17 @@ export class profilePlot {
 						options: this.types,
 						settingsKey: 'facilityType',
 						callback: value => this.setFacilityType(value)
-					},
-					{
-						label: 'Show two plots',
-						type: 'checkbox',
-						chartType,
-						settingsKey: 'show2Plots',
-						boxLabel: 'Yes'
 					}
 				]
 			)
 		}
+		inputs.push({
+			label: 'Show two plots',
+			type: 'checkbox',
+			chartType,
+			settingsKey: 'show2Plots',
+			boxLabel: 'Yes'
+		})
 		inputs.unshift(...additionalInputs)
 		await this.loadSampleData(chartType, inputs)
 
