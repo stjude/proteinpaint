@@ -53,25 +53,34 @@ class HierCluster extends Matrix {
 			.append('g')
 			.attr('class', 'sjpp-matrix-dendrogram')
 			.on('click', event => {
-				const clickedBranch = this.getBranchFromTopDendrogram(event)
-				if (clickedBranch) {
-					const clickedBranchId = Math.min(clickedBranch.id1, clickedBranch.id2) // the smaller branchId has all the children
-					// TODO
-					this.clickedColChildren = this.hierClusterData.clustering.col.mergedClusters.get(clickedBranchId).children
+				const clickedClusterId = this.getClusterFromTopDendrogram(event)
+				if (clickedClusterId) {
+					this.clickedClusterIds = this.getAllChildrenClusterIds(clickedClusterId)
+					this.clickedClusterIds.push(clickedClusterId)
 
-					//get the sampleName of the children
-					const clickedSampleNames = this.getClickedSampleNames(this.clickedChildren)
-
-					this.addSelectedSamplesOptions(clickedSampleNames, event)
+					const clickedCluster = this.hierClusterData.clustering.col.mergedClusters.get(clickedClusterId)
+					const clickedClusterSampleNames = clickedCluster.children.map(c => c.name)
+					this.addSelectedSamplesOptions(clickedClusterSampleNames, event)
 				} else {
-					// if not clicking on a branch, change highlighted branch color from red back to black
-					delete this.clickedChildren
+					// if not clicking on a cluster, change highlighted cluster color from red back to black
+					delete this.clickedClusterIds
 				}
 
 				// rerender the col Dendrogram
 				this.plotDendrogramHclust(true)
 			})
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
+	}
+
+	// Given a clusterId, return all its children clusterIds
+	getAllChildrenClusterIds(clickedClusterId) {
+		const mergedClusters = this.hierClusterData.clustering.col.mergedClusters
+		const children = mergedClusters.get(clickedClusterId).childrenClusters || []
+		let allChildren = [...children]
+		for (const child of children) {
+			allChildren = allChildren.concat(this.getAllChildrenClusterIds(child))
+		}
+		return allChildren
 	}
 
 	addSelectedSamplesOptions(clickedSampleNames, event) {
@@ -187,14 +196,6 @@ class HierCluster extends Matrix {
 		self.resetInteractions()
 	}
 
-	// return the sample names of the clicked samples as an array
-	getClickedSampleNames(clickedChildren) {
-		const obj = this.hierClusterData.clustering
-		const childIndexArr = clickedChildren.map(c => obj.col.order.findIndex(i => i.name == c))
-		const childSampleNameArr = childIndexArr.map(c => obj.col.order[c].name)
-		return childSampleNameArr
-	}
-
 	// show the list of clicked samples as a table
 	showTable(self, clickedSampleNames, x, y) {
 		const templates = self.state.termdbConfig.urlTemplates
@@ -228,9 +229,9 @@ class HierCluster extends Matrix {
 		this.dom.tip.hide()
 	}
 
-	// upon clicking, find the corresponding clicked branch in this.hierClusterData.clustering.col_dendro
-	getBranchFromTopDendrogram(event) {
-		// TODO why need this.imgBox
+	// upon clicking, find the corresponding clicked clusterId from this.hierClusterData.clustering.col.mergedClusters
+	getClusterFromTopDendrogram(event) {
+		// Need imgBox to find the position of event relative to dendrogram
 		if (event.target.tagName == 'image') this.imgBox = event.target.getBoundingClientRect()
 		else return
 
@@ -239,13 +240,13 @@ class HierCluster extends Matrix {
 		const x = event.clientX - this.imgBox.x - event.target.clientLeft + xMin
 
 		for (const [clusterId, cluster] of this.hierClusterData.clustering.col.mergedClusters) {
-			const { x1, y1, x2, y2, verticalX } = branch.normalized
-
+			const { x1, y1, x2, y2, clusterY } = cluster.clusterPosition
 			if (
-				(x1 <= x && x <= x2 && y1 - 5 < y && y < y1 + 5) ||
-				(y1 <= y && y <= y2 && verticalX - 5 < x && x < verticalX + 5)
+				(x1 <= x && x <= x2 && clusterY - 5 < y && y < clusterY + 5) ||
+				(clusterY <= y && y <= y1 && x1 - 5 < x && x < x1 + 5) ||
+				(clusterY <= y && y <= y2 && x2 - 5 < x && x < x2 + 5)
 			) {
-				return branch
+				return clusterId
 			}
 		}
 	}
@@ -452,7 +453,6 @@ class HierCluster extends Matrix {
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
 
 		const obj = this.hierClusterData.clustering
-		console.log(obj)
 		const row = obj.row
 		const col = obj.col
 		/* both row{} and col{} are hclust() output structure:
@@ -495,6 +495,7 @@ class HierCluster extends Matrix {
 
 				const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
 				const children = [] // collect all children leaves for this cluster
+				const childrenClusters = [] // collect direct children cluster Ids for this cluster
 
 				let x1, x2, y1, y2
 				if (pair.n1 < 0) {
@@ -510,6 +511,7 @@ class HierCluster extends Matrix {
 					x1 = c.x
 					y1 = c.y
 					children.push(...c.children)
+					childrenClusters.push(pair.n1)
 				}
 				if (pair.n2 < 0) {
 					// n2 is leaf
@@ -523,9 +525,13 @@ class HierCluster extends Matrix {
 					x2 = c.x
 					y2 = c.y
 					children.push(...c.children)
+					childrenClusters.push(pair.n2)
 				}
 				// cluster y position
 				const clusterY = yDendrogramHeight - col.height[clusterid0].height * height2px
+
+				const highlight = this.clickedClusterIds?.includes(clusterid)
+				ctx.strokeStyle = highlight ? 'red' : 'black'
 
 				ctx.beginPath()
 				ctx.moveTo(x1, y1) // move to n1
@@ -538,7 +544,15 @@ class HierCluster extends Matrix {
 				mergedClusters.set(clusterid, {
 					x: (x1 + x2) / 2,
 					y: clusterY,
-					children
+					children,
+					childrenClusters,
+					clusterPosition: {
+						x1,
+						x2,
+						y1,
+						y2,
+						clusterY
+					}
 				})
 			}
 
