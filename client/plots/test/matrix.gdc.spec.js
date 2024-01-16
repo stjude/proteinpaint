@@ -1,5 +1,6 @@
-const tape = require('tape')
-const helpers = require('../../test/front.helpers.js')
+import * as helpers from '../../test/front.helpers.js'
+import tape from 'tape'
+import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
 
 /*************************
  reusable helper functions
@@ -25,7 +26,7 @@ tape('\n', function (test) {
 
 tape('2 genes, 2 dict terms', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(5)
+	test.plan(1)
 	runpp({
 		state: {
 			nav: { header_mode: 'hidden' }, // must set to hidden for gdc, since it lacks termdb method to get cohort size..
@@ -59,10 +60,16 @@ tape('2 genes, 2 dict terms', function (test) {
 		}
 	})
 
-	function runTests(matrix) {
+	async function runTests(matrix) {
 		matrix.on('postRender.test', null)
-		test.equal(matrix.Inner.dom.seriesesG.selectAll('image').size(), 1, `should render 1 <image> element`)
+		const matrixSeriesesG = matrix.Inner.dom.seriesesG
+		await testImagerendering(matrix, matrixSeriesesG)
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
+	}
+
+	async function testImagerendering(matrix, matrixSeriesesG) {
+		await detectOne({ elem: matrixSeriesesG.node(), selector: 'image' })
+		test.equal(matrix.Inner.dom.seriesesG.selectAll('image').size(), 1, `should render 1 <image> element`)
 	}
 })
