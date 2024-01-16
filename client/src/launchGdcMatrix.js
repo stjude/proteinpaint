@@ -128,6 +128,13 @@ export async function init(arg, holder, genomes) {
 							removedTempDiv = true
 							tempDiv.remove()
 							const plotState = structuredClone(plotAppApi.getState().plots[0])
+							if (pendingArg.termgroups) {
+								// arg.termgroups was not rehydrated on the appInit() of plotApp,
+								// need to rehydrate here manually
+								for (const group of pendingArg.termgroups) {
+									group.lst = await Promise.all(group.lst.map(fillTermWrapper))
+								}
+							}
 							plotState.termgroups = [...(pendingArg.termgroups || []), { lst: genes }]
 							plotAppApi.dispatch({
 								type: 'app_refresh',
