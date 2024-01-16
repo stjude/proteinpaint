@@ -50,6 +50,9 @@ export function zoom(opts) {
 
 	label.append('span').text('unit' in opts ? opts.unit : '%')
 
+	// if the zoom is rendered within a parent/ancestor div that is invisible,
+	// then the box dimensions will be zero, will be corrected in the update()
+	// below as needed
 	const box = opts.holder.node().getBoundingClientRect()
 	opts.holder.style('max-height', box.height + 'px').style('max-width', box.width + 'px')
 
