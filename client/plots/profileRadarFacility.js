@@ -88,6 +88,7 @@ class profileRadarFacility extends profilePlot {
 		let i = 0
 		const data = [],
 			data2 = []
+		console.log(data, data2)
 		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData(iangle, i, data2, true)
@@ -162,6 +163,8 @@ class profileRadarFacility extends profilePlot {
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		this.addLegendItem(this.config[this.config.plot].score, color1, 0, '5, 5')
+		const siteLabel = this.sites.find(s => s.value == this.settings.site).label
+		this.addLegendItem(siteLabel, color2, 1, 'none')
 	}
 
 	addData(iangle, i, data, isFacility) {
