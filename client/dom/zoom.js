@@ -121,6 +121,15 @@ export function zoom(opts) {
 
 	const api = {
 		update(s = {}) {
+			const box = opts.holder.node().getBoundingClientRect()
+			if (!box.height || !box.width) {
+				// when the matrix renders in an invisible div, these dimensions are empty,
+				// should be reset based on the width of its contents
+				opts.holder.style('max-height', '').style('max-width', '')
+				const box = opts.holder.node().getBoundingClientRect()
+				opts.holder.style('max-height', box.height + 'px').style('max-width', box.width + 'px')
+			}
+
 			Object.assign(settings, s)
 			slider
 				.property('value', settings.value)
