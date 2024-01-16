@@ -3,6 +3,7 @@ import { filterJoin } from '#filter'
 import { controlsInit } from './controls'
 import { fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
+import { getSampleFilter } from '../termsetting/handlers/samplelst'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 export class profilePlot {
@@ -14,14 +15,13 @@ export class profilePlot {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
-		const isLoggedIn = this.app.vocabApi.hasVerifiedToken()
 		return {
 			config,
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
-			isLoggedIn: false,
-			role: 'regular',
-			vocab: appState.vocab
+			vocab: appState.vocab,
+			isLoggedIn: config.isLoggedIn,
+			site: config.site
 		}
 	}
 
@@ -126,70 +126,69 @@ export class profilePlot {
 		})
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
-		const inputs = [
-			{
-				label: 'Region',
-				type: 'dropdown',
+
+		let inputs = []
+		if (this.state.isLoggedIn && this.state.site) {
+			const dataInput = {
+				label: 'Data',
+				type: 'radio',
 				chartType,
-				options: this.regions,
-				settingsKey: 'region',
-				callback: value => this.setRegion(value)
-			},
-			{
-				label: 'Country',
-				type: 'dropdown',
-				chartType,
-				options: this.countries,
-				settingsKey: 'country',
-				callback: value => this.setCountry(value)
-			},
-			{
-				label: 'Income group',
-				type: 'dropdown',
-				chartType,
-				options: this.incomes,
-				settingsKey: 'income',
-				callback: value => this.setIncome(value)
-			},
-			{
-				label: 'Facility type',
-				type: 'dropdown',
-				chartType,
-				options: this.types,
-				settingsKey: 'facilityType',
-				callback: value => this.setFacilityType(value)
-			},
-			{
-				label: 'Show two plots',
-				type: 'checkbox',
-				chartType,
-				settingsKey: 'show2Plots',
-				boxLabel: 'Yes'
+				settingsKey: 'isAggregate',
+				options: [
+					{ label: this.state.site, value: false },
+					{ label: 'Aggregate', value: true }
+				]
 			}
-		]
-		inputs.unshift(...additionalInputs)
-		if (this.state.isLoggedIn) {
-			this.data2 = await this.app.vocabApi.getAnnotatedSampleData({
-				terms: this.twLst,
-				termsPerRequest: 30
-			})
-
-			this.sites = this.data2.lst.map(sample => {
-				return { label: this.data2.refs.bySampleId[sample.sample].label, value: sample.sample }
-			})
-			if (!this.settings.site) this.settings.site = this.sites[0].value
-
-			this.sampleData = this.data2.lst.find(s => s.sample === this.settings.site)
-			inputs.unshift({
-				label: 'Site',
-				type: 'dropdown',
-				chartType,
-				options: this.sites,
-				settingsKey: 'site',
-				callback: value => this.setSite(value),
-				disabled: this.state.role == 'regular'
-			})
+			inputs.push(dataInput)
 		}
+		if (!this.state.isLoggedIn || !this.state.site || this.settings.isAggregate) {
+			inputs.push(
+				...[
+					{
+						label: 'Region',
+						type: 'dropdown',
+						chartType,
+						options: this.regions,
+						settingsKey: 'region',
+						callback: value => this.setRegion(value)
+					},
+					{
+						label: 'Country',
+						type: 'dropdown',
+						chartType,
+						options: this.countries,
+						settingsKey: 'country',
+						callback: value => this.setCountry(value)
+					},
+					{
+						label: 'Income group',
+						type: 'dropdown',
+						chartType,
+						options: this.incomes,
+						settingsKey: 'income',
+						callback: value => this.setIncome(value)
+					},
+					{
+						label: 'Facility type',
+						type: 'dropdown',
+						chartType,
+						options: this.types,
+						settingsKey: 'facilityType',
+						callback: value => this.setFacilityType(value)
+					},
+					{
+						label: 'Show two plots',
+						type: 'checkbox',
+						chartType,
+						settingsKey: 'show2Plots',
+						boxLabel: 'Yes'
+					}
+				]
+			)
+		}
+		inputs.unshift(...additionalInputs)
+		await this.loadSampleData(chartType, inputs)
+
 		if (this.type == 'profilePolar')
 			inputs.push({
 				label: 'Show table',
@@ -216,6 +215,32 @@ export class profilePlot {
 			)
 		)
 		this.filtersCount = 0
+	}
+
+	async loadSampleData(chartType, inputs) {
+		if (this.state.isLoggedIn) {
+			let result
+			if (this.state.site) {
+				const id = this.sampleidmap[this.state.site]
+				this.settings.site = id
+			} //Admin
+			else {
+				this.sites = this.data.lst.map(s => {
+					return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
+				})
+				this.sites.unshift({ label: '', value: '' })
+				inputs.push({
+					label: 'Site',
+					type: 'dropdown',
+					chartType,
+					options: this.sites,
+					settingsKey: 'site',
+					callback: value => this.setSite(value)
+				})
+			}
+			if (this.settings.site) this.sampleData = this.data.lst[this.settings.site]
+			else this.sampleData = null
+		}
 	}
 
 	setRegion(region) {
@@ -367,6 +392,7 @@ export async function loadFilterTerms(config, app) {
 
 export function getDefaultProfilePlotSettings() {
 	return {
-		show2Plots: false
+		show2Plots: false,
+		isAggregate: false
 	}
 }
