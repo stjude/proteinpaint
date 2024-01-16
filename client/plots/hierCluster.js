@@ -95,10 +95,7 @@ class HierCluster extends Matrix {
 			},
 			{
 				label: `List ${clickedSampleNames.length} ${l.samples}`,
-				callback: () => {
-					this.dom.tip.hide()
-					this.showTable(this, clickedSampleNames, event.clientX, event.clientY)
-				}
+				callback: () => this.showTable4selectedSamples(clickedSampleNames)
 			}
 		]
 
@@ -197,29 +194,24 @@ class HierCluster extends Matrix {
 	}
 
 	// show the list of clicked samples as a table
-	showTable(self, clickedSampleNames, x, y) {
-		const templates = self.state.termdbConfig.urlTemplates
+	showTable4selectedSamples(clickedSampleNames) {
+		const templates = this.state.termdbConfig.urlTemplates
 		const rows = templates?.sample
 			? clickedSampleNames.map(c => [
-					{ value: self.hierClusterData.bySampleId[c].label, url: `${templates.sample.base}${c}` }
+					{ value: this.hierClusterData.bySampleId[c].label, url: `${templates.sample.base}${c}` }
 			  ])
-			: clickedSampleNames.map(c => [{ value: self.hierClusterData.bySampleId[c].label }])
+			: clickedSampleNames.map(c => [{ value: this.hierClusterData.bySampleId[c].label }])
 
-		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
-
-		const menu = new Menu({ padding: '5px' })
-		const div = menu.d.append('div')
+		const columns = [{ label: this.settings.matrix.controlLabels.Samples }]
 
 		renderTable({
 			rows,
 			columns,
-			div,
+			div: this.dom.dendroClickMenu.clear().d.append('div').style('margin', '10px'),
 			showLines: true,
-			maxWidth: columns.length * '15' + 'vw',
 			maxHeight: '35vh',
 			resize: true
 		})
-		menu.show(x, y, false, false)
 	}
 
 	// add the clicked samples into a group
