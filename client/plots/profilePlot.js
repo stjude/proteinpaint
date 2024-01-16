@@ -26,6 +26,8 @@ export class profilePlot {
 	}
 
 	async init(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (this.opts.header) this.opts.header.text(config.header)
 		const mainDiv = this.opts.holder.append('div')
 		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.9em')
 		const holder = mainDiv.insert('div').style('display', 'inline-block')
