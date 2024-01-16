@@ -13,16 +13,6 @@ import { filterJoin } from '#filter'
 /*
 FIXME items
 
-1. do not hardcode this.config.termgroups[0] to be the list of items for clustering analysis
-	this prevents showing a non-clustering group of terms at the first position, right under the sample dendrogram, which is common
-	need a way to designate which element of termgroups[] is to run clustering analysis
-
-2. do not hardcode to force tw.type='geneVariant'
-	caller should supply well-formed twlst[] that can include gene and non-gene terms
-	to be able to run clustering analysis on everything
-
-3. replace dofetch with vocabApi call with support for (2)
-
 - should not hardcode this.geneExpValues, incompatible for future expansion
 */
 
@@ -304,7 +294,6 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		// FIXME TODO: do not rely on the hardcoded grp.name for finding the hier cluster term group
 		const s = this.settings.hierCluster
 		this.hcTermGroup =
 			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
@@ -349,7 +338,9 @@ class HierCluster extends Matrix {
 
 		const samples = {}
 
-		// assumes c.col is samples and c.row is non-sample things (genes for now); later may flip to c.row be samples instead!!
+		/* see comments inside plotDendrogramHclust() on structure of d.clustering.row{} and col{}
+		assumes c.col is samples and c.row is non-sample things (genes for now); later may flip to c.row be samples instead!!
+		*/
 
 		for (const [i, column] of c.col.order.entries()) {
 			samples[column.name] = { sample: column.name }
@@ -436,6 +427,7 @@ class HierCluster extends Matrix {
 
 	plotDendrogramHclust(plotColOnly) {
 		/*
+		based on hclust() output
 		plotColOnly=true will only render column dendrograms
 		if false will render both row and column
 		*/
@@ -627,197 +619,6 @@ class HierCluster extends Matrix {
 		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + 1.5 * rowHeight)
 
 		row.mergedClusters = mergedClusters
-	}
-
-	// to delete!
-	async renderDendrogram() {
-		const obj = this.hierClusterData.clustering
-		obj.d = {
-			rowHeight: this.dimensions.dy,
-			colWidth: this.dimensions.dx,
-			xDendrogramHeight: this.settings.hierCluster.xDendrogramHeight,
-			yDendrogramHeight: this.settings.hierCluster.yDendrogramHeight
-		}
-		try {
-			obj.row_dendro.map(this.validateRline)
-		} catch (e) {
-			throw 'row_dendro error: ' + e
-		}
-		try {
-			obj.col_dendro.map(this.validateRline)
-		} catch (e) {
-			throw 'col_dendro error: ' + e
-		}
-
-		this.plotDendrogram_R(obj)
-	}
-
-	// to delete!
-	// if onlyCol is true, only render the column dendrogram
-	plotDendrogram_R(obj, onlyCol) {
-		const d = this.dimensions
-		const s = this.config.settings.matrix
-		const zoomLevel = s.zoomLevel
-		const { xMin, xMax } = d
-		const xOffset = d.seriesXoffset // could be negative when zoomed
-		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
-		if (!onlyCol) {
-			let max = 0
-			for (const r of obj.row_dendro) {
-				max = Math.max(max, r.y1, r.y2)
-				// hardcoding gene to be on rows, swap x/y for row dendrogram
-				const t = {
-					x1: r.y1,
-					x2: r.y2,
-					y1: r.x1,
-					y2: r.x2
-				}
-				r.transformed = t
-			}
-			const sf = obj.d.xDendrogramHeight / max
-			for (const r of obj.row_dendro) {
-				const t = r.transformed
-				t.x1 = sf * (max - t.x1) // for row dendrogram, x is now depth
-				t.x2 = sf * (max - t.x2)
-				t.y1 *= obj.d.rowHeight // y is number of row items
-				t.y2 *= obj.d.rowHeight
-			}
-			const width = obj.d.xDendrogramHeight + 0.0000001
-			const height = d.mainh + 0.0000001
-			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
-			const ctx = canvas.getContext('2d')
-			ctx.scale(pxr, pxr)
-			ctx.imageSmoothingEnabled = false
-			ctx.imageSmoothingQuality = 'high'
-			ctx.strokeStyle = 'black'
-			// plot row dendrogram
-			for (const r of obj.row_dendro) {
-				ctx.beginPath()
-				const t = r.transformed
-				// r is a line between two points. get extreme x/y
-				const x1 = Math.min(t.x1, t.x2),
-					x2 = Math.max(t.x1, t.x2),
-					y1 = Math.min(t.y1, t.y2),
-					y2 = Math.max(t.y1, t.y2)
-
-				// always one way to plot vertical line
-				ctx.moveTo(x1, y1)
-				ctx.lineTo(x1, y2)
-				// two ways to plot horizontal line
-				if ((t.x1 > t.x2 && t.y1 > t.y2) || (t.x1 < t.x2 && t.y1 < t.y2)) {
-					// one point is on lower right of another, the horizontal line is based on *max y*
-					ctx.lineTo(x2, y2)
-				} else {
-					// one point is on upper right of another, the horizontal line is based on *min y*
-					ctx.moveTo(x1, y1)
-					ctx.lineTo(x2, y1)
-				}
-				ctx.stroke()
-				ctx.closePath()
-			}
-			// find the first term in the gene expression group
-			const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
-			const ty =
-				//t.labelOffset is commented out because it causes row dendrogram to be misrendered
-				t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-			this.renderImage(
-				this.dom.leftDendrogram,
-				canvas,
-				width,
-				height,
-				0,
-				ty + obj.d.yDendrogramHeight + obj.d.rowHeight
-			)
-		}
-
-		{
-			// replace node x/y values with on-screen #pixel for plotting
-			let max = 0
-			const visible = []
-			for (const r of obj.col_dendro) {
-				max = Math.max(max, r.y1, r.y2)
-				const x1 = r.x1 * d.dx //+ xOffset
-				const x2 = r.x2 * d.dx //+ xOffset
-				if (x2 < x1) {
-					if (x1 < xMin || x2 > xMax) continue
-				} else if (x2 < xMin || x1 > xMax) continue
-				r.scaled = { x1, x2 }
-				visible.push(r)
-			}
-			const sf = obj.d.yDendrogramHeight / max
-			for (const r of visible) {
-				r.scaled.y1 = sf * (max - r.y1) // for col dendrogram, y is depth
-				r.scaled.y2 = sf * (max - r.y2)
-			}
-
-			const width = d.imgW + 0.0000001
-			const height = obj.d.yDendrogramHeight + 0.0000001
-			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
-			const ctx = canvas.getContext('2d')
-			ctx.scale(pxr, pxr)
-			ctx.imageSmoothingEnabled = false
-			ctx.imageSmoothingQuality = 'high'
-			ctx.strokeStyle = 'black'
-			// plot row dendrogram
-			// plot column dendrogram
-			for (const r of visible) {
-				ctx.beginPath()
-				const s = r.scaled
-				const x1 = Math.min(s.x1, s.x2),
-					x2 = Math.max(s.x1, s.x2),
-					y1 = Math.min(s.y1, s.y2),
-					y2 = Math.max(s.y1, s.y2)
-
-				r.normalized = { x1, x2, y1, y2 }
-				const minId = Math.min(r.id1, r.id2)
-				const childrenItem = this.hierClusterData.clustering.col_children.find(d => d.id == minId).children
-
-				const highlight =
-					this.clickedChildren &&
-					this.clickedChildren.some(c => childrenItem.includes(c)) &&
-					!(
-						this.clickedChildren.every(c => childrenItem.includes(c)) &&
-						childrenItem.length > this.clickedChildren.length
-					)
-				ctx.strokeStyle = highlight ? 'red' : 'black'
-
-				ctx.moveTo(x1, y1)
-				ctx.lineTo(x2, y1) // hline
-				if ((r.x1 > r.x2 && s.y1 > s.y2) || (r.x1 < r.x2 && s.y1 < s.y2)) {
-					// vline at max x
-					ctx.lineTo(x2, y2)
-					r.normalized.verticalX = x2
-				} else {
-					// vline at min x
-					ctx.moveTo(x1, y1)
-					ctx.lineTo(x1, y2)
-					r.normalized.verticalX = x1
-				}
-				ctx.stroke()
-				ctx.closePath()
-			}
-			this.renderImage(this.dom.topDendrogram, canvas, width, height, obj.d.xDendrogramHeight, obj.d.rowHeight)
-		}
-	}
-
-	// to delete!
-	validateRline(r) {
-		return
-		// a line between parent and child, {id1,x1,y1, id2,x2,y2}
-
-		// r1/2 is node id, 0-based, currently not used
-		if (r.r1 < 0) throw `r.r1<0 ${r.r1}`
-		if (r.r2 < 0) throw `r.r2<0 ${r.r2}`
-
-		// x1/2 is matrix row/column entity index, 1-based; parent node can get non-integer value
-		if (r.x1 < 1) throw `r.x1<1 ${r.x1}`
-		if (r.x2 < 1) throw `r.x2<1 ${r.x2}`
-		r.x1 -= 0.5 // since the values are 1-based, subtract 0.5 to point to middle of row/column when rendering
-		r.x2 -= 0.5
-
-		// y1/2 is dendrogram node depth, non-negative
-		if (r.y1 < 0) throw `r.y1<0 ${r.y1}`
-		if (r.y2 < 0) throw `r.y2<0 ${r.y2}`
 	}
 
 	async renderImage(g, canvas, width, height, x, y) {
