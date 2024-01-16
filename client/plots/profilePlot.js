@@ -133,7 +133,7 @@ export class profilePlot {
 		this.dom.controlsDiv.selectAll('*').remove()
 
 		let inputs = []
-		if (this.state.isLoggedIn && this.state.site) {
+		if (this.state.isLoggedIn && this.state.site && chartType != 'profileRadarFacility') {
 			const dataInput = {
 				label: 'Data',
 				type: 'radio',
@@ -144,9 +144,15 @@ export class profilePlot {
 					{ label: 'Aggregate', value: true }
 				]
 			}
+
 			inputs.push(dataInput)
 		}
-		if (!this.state.isLoggedIn || !this.state.site || this.settings.isAggregate) {
+		if (
+			!this.state.isLoggedIn ||
+			!this.state.site ||
+			this.settings.isAggregate ||
+			chartType == 'profileRadarFacility'
+		) {
 			inputs.push(
 				...[
 					{
@@ -223,18 +229,58 @@ export class profilePlot {
 	}
 
 	async loadSampleData(chartType, inputs) {
-		if (this.state.isLoggedIn) {
+		if (chartType != 'profileRadarFacility') {
+			if (this.state.isLoggedIn) {
+				let result
+				if (this.state.site) {
+					const id = this.sampleidmap[this.state.site]
+					this.settings.site = id
+				} //Admin
+				else {
+					this.sites = this.data.lst.map(s => {
+						return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
+					})
+					this.sites.unshift({ label: '', value: '' })
+					inputs.push({
+						label: 'Site',
+						type: 'dropdown',
+						chartType,
+						options: this.sites,
+						settingsKey: 'site',
+						callback: value => this.setSite(value)
+					})
+				}
+				if (this.settings.site) this.sampleData = this.data.lst[this.settings.site]
+				else this.sampleData = null
+			}
+		} else {
 			let result
-			if (this.state.site) {
-				const id = this.sampleidmap[this.state.site]
-				this.settings.site = id
-			} //Admin
-			else {
-				this.sites = this.data.lst.map(s => {
-					return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
-				})
-				this.sites.unshift({ label: '', value: '' })
-				inputs.push({
+			if (this.state.isLoggedIn) {
+				let result
+
+				if (this.state.site) {
+					const id = this.sampleidmap[this.state.site]
+					this.settings.site = id
+					this.sites = [{ label: this.state.site, value: id }]
+					result = await this.app.vocabApi.getAnnotatedSampleData({
+						terms: this.twLst,
+						termsPerRequest: 30,
+						filter: getSampleFilter(parseInt(id))
+					})
+					this.sampleData = result.lst[0]
+				} //Admin
+				else {
+					result = await this.app.vocabApi.getAnnotatedSampleData({
+						terms: this.twLst,
+						termsPerRequest: 30
+					})
+					this.sites = result.lst.map(s => {
+						return { label: result.refs.bySampleId[s.sample].label, value: s.sample }
+					})
+					if (!this.settings.site) this.settings.site = result.lst[0].sample
+					this.sampleData = result.lst[this.settings.site]
+				}
+				inputs.unshift({
 					label: 'Site',
 					type: 'dropdown',
 					chartType,
@@ -243,8 +289,6 @@ export class profilePlot {
 					callback: value => this.setSite(value)
 				})
 			}
-			if (this.settings.site) this.sampleData = this.data.lst[this.settings.site]
-			else this.sampleData = null
 		}
 	}
 
@@ -283,6 +327,7 @@ export class profilePlot {
 
 	setSite(site) {
 		this.settings.site = site
+		this.sampleData = null
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
