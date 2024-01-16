@@ -88,7 +88,6 @@ class profileRadarFacility extends profilePlot {
 		let i = 0
 		const data = [],
 			data2 = []
-		console.log(data, data2)
 		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
 			this.addData(iangle, i, data2, true)
