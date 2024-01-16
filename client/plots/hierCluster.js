@@ -192,7 +192,7 @@ class HierCluster extends Matrix {
 			  ])
 			: clickedSampleNames.map(c => [{ value: this.hierClusterData.bySampleId[c].label }])
 
-		const columns = [{ label: this.settings.matrix.controlLabels.Samples }]
+		const columns = [{ label: this.settings.matrix.controlLabels.Sample }]
 
 		renderTable({
 			rows,
