@@ -5,9 +5,10 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Fixes:
-- supply the missing api reference when launching a gdc matrix
+- Supply the missing api reference when launching a gdc matrix
 - Option to override the matrix default of not rendering samples that are not annotated for any dictionary term, for more intuitive behavior in gene-centric use-cases
 - Matrix should update when the filter0 changes while the geneset edit UI is displayed
+- Ensure that the zoom controls has valid dimensions on update, in case it was initially rendered in an invisible div
 
 
 ## 2.39.2
