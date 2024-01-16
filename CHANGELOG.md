@@ -10,6 +10,9 @@ Fixes:
 - Matrix should update when the filter0 changes while the geneset edit UI is displayed
 - Ensure that the zoom controls has valid dimensions on update, in case it was initially rendered in an invisible div
 
+DevOps:
+- detect unreleased notes in the CHANGELOG, in addition to the release.txt
+
 
 ## 2.39.2
 
