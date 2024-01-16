@@ -27,6 +27,7 @@ export class profilePlot {
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
+
 		if (this.opts.header) {
 			const suffix = config.isLoggedIn ? (config.site ? config.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header + ` / ${suffix}`)
@@ -48,6 +49,10 @@ export class profilePlot {
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
+		if (config.site) {
+			const id = this.sampleidmap[config.site]
+			if (!id) throw 'Invalid site'
+		}
 	}
 
 	getList(tw, data) {
