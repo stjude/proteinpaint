@@ -1,0 +1,2 @@
+DevOps:
+- detect unreleased notes in the CHANGELOG, in addition to the release.txt
