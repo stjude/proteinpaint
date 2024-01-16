@@ -90,6 +90,7 @@ add:
 		}
 	}
 
+	const tabel_panel = holder.text('DE info')
 	let yaxisw,
 		xaxish,
 		width,
