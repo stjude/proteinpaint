@@ -237,7 +237,7 @@ export class profilePlot {
 		if (chartType != 'profileRadarFacility') {
 			if (this.state.isLoggedIn) {
 				let result
-				if (this.state.site) {
+				if (this.state.site && !this.settings.isAggregate) {
 					const id = this.sampleidmap[this.state.site]
 					this.settings.site = id
 				} //Admin
