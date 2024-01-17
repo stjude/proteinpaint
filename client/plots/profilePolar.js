@@ -70,7 +70,7 @@ class profilePolar extends profilePlot {
 			.append('svg')
 			.attr('width', width)
 			.attr('height', height)
-		this.tableDiv = this.dom.plotDiv
+		this.dom.tableDiv = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
@@ -126,7 +126,7 @@ class profilePolar extends profilePlot {
 			renderTable({
 				rows,
 				columns,
-				div: this.tableDiv,
+				div: this.dom.tableDiv,
 				showLines: true,
 				resize: true,
 				maxHeight: '70vh'
