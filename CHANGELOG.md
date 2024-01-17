@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- GDC bam slicing UI bug fix to forget previous coordinate input box search result
+- always trigger the closing of an embedder's loading overlay, even when there are no chart state changes
+- Block track menu will not allow to hide a GDC bam tk, and no longer shows delete button for custom tracks
+
 
 ## 2.39.3
 

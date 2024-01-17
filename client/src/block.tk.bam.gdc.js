@@ -135,7 +135,7 @@ export async function bamsliceui({
 	const backBtnDiv = holder.append('div').style('margin-left', '30px').style('display', 'none')
 	backBtnDiv
 		.append('button')
-		.html('&#171; Back to input form')
+		.html('&#171; Back To Input Form')
 		.on('click', () => {
 			backBtnDiv.style('display', 'none')
 			blockHolder.style('display', 'none').selectAll('*').remove()
@@ -246,9 +246,9 @@ export async function bamsliceui({
 			.append('input')
 			.attr('type', 'search')
 			.attr('size', 45)
-			.attr('aria-label', 'Specify File name / File UUID / Case ID / Case UUID')
+			.attr('aria-label', 'Specify File Name / File UUID / Case ID / Case UUID')
 			.style('padding', '3px 10px')
-			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
+			.property('placeholder', 'File Name / File UUID / Case ID / Case UUID')
 			.attr('class', 'sja-gdcbam-input') // for testing
 			// debounce event listener on keyup
 			.on('keyup', debounce(gdc_search, 500))
@@ -792,7 +792,7 @@ export async function bamsliceui({
 		for (const [idx, file] of args.bam_files.entries()) {
 			// file = {file_id,track_name,about[]}
 
-			submitButton.text(`Slicing BAM file ${idx + 1} of ${args.bam_files.length}...`)
+			submitButton.text(`Slicing BAM File ${idx + 1} of ${args.bam_files.length}...`)
 
 			// translate par{} into request body
 			const body = {
@@ -936,6 +936,15 @@ function validateInputs(args, genome, hideTokenInput = false) {
 		// do not supply a new attribute
 		return
 	}
+
+	/* if selecting one ssm from ssm table, args.variant{} is created
+	   if searched variant string in <input>, args.variant{} is created
+	   if searched position in <input>, args.position is created
+	   at bam slicing request, it will use args.position or args.variant, whichever is present
+	   thus must delete any previous setting
+	*/
+	delete args.position
+	delete args.variant
 
 	if (args.useSsmOrGene == 'ssm') {
 		const s = args.ssmInput
