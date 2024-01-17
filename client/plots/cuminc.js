@@ -707,16 +707,13 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
 			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
-			//.style("position", "absolute")
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('padding', '10px')
 			.style('top', 0)
 			.style('left', 0)
-			.style('text-align', 'left')
+			.style('text-align', 'center')
 			.style('vertical-align', 'top')
-			//.style('border', '1px solid #eee')
-			//.style('box-shadow', '0px 0px 1px 0px #ccc')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
@@ -736,63 +733,69 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'pp-cuminc-chart-noData')
 			.style('display', 'none')
-			.style('text-align', 'center')
-			.style('margin', '30px')
+			.style('width', s.svgw + 50 + 'px')
+			.style('margin', '40px 5px')
 			.text('No cumulative incidence data')
 
 		if (chart.serieses) {
+			// series in chart
 			setVisibleSerieses(chart, s)
 
 			const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
 			renderSVG(svg, chart, s, 0)
 
 			div.transition().duration(s.duration).style('opacity', 1)
-
-			// div for chart-specific legends
-			div
-				.append('div')
-				.attr('class', 'pp-cuminc-chartLegends')
-				.style('vertical-align', 'top')
-				.style('margin', '10px 10px 10px 30px')
-				.style('display', 'none')
-
-			// p-values legend
-			if (self.tests && chart.chartId in self.tests) {
-				const holder = div.select('.pp-cuminc-chartLegends').style('display', 'inline-block').append('div')
-				renderPvalues({
-					title: "Group comparisons (Gray's test)",
-					holder,
-					plot: 'cuminc',
-					tests: self.tests[chart.chartId],
-					s,
-					bins: self.refs.bins
-				})
-			}
-
-			// skipped series legends
-			// series with no events
-			if (self.noEvents && chart.chartId in self.noEvents) {
-				const skipdiv = div
-					.select('.pp-cuminc-chartLegends')
-					.style('display', 'inline-block')
-					.append('div')
-					.style('margin', '30px 0px')
-				const title = 'Skipped series (no events)'
-				renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
-			}
-			// series with low sample size
-			if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
-				const skipdiv = div
-					.select('.pp-cuminc-chartLegends')
-					.style('display', 'inline-block')
-					.append('div')
-					.style('margin', '30px 0px')
-				const title = 'Skipped series (low sample size)'
-				renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
-			}
 		} else {
 			// no series in chart
 			div.select('.pp-cuminc-chart-noData').style('display', 'block')
+		}
+
+		// div for chart-specific legends
+		div
+			.append('div')
+			.attr('class', 'pp-cuminc-chartLegends')
+			.style('vertical-align', 'top')
+			.style('text-align', chart.serieses ? 'left' : 'center')
+			.style('margin', chart.serieses ? '10px 30px 0px 20px' : '0px')
+			.style('display', 'none')
+
+		if (chart.chartId in self.tests) {
+			// p-values legend
+			const holder = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin-bottom', '30px')
+			renderPvalues({
+				title: "Group comparisons (Gray's test)",
+				holder,
+				plot: 'cuminc',
+				tests: self.tests[chart.chartId],
+				s,
+				bins: self.refs.bins
+			})
+		}
+
+		if (chart.chartId in self.noEvents) {
+			// legend for series with no events
+			const skipdiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin-bottom', '30px')
+			const title = 'Skipped series (no events)'
+			renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
+		}
+
+		if (chart.chartId in self.lowSampleSize) {
+			// legend for series with low sample size
+			const skipdiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin-bottom', '30px')
+			const title = 'Skipped series (low sample size)'
+			renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 		}
 	}
 
@@ -814,7 +817,7 @@ function setRenderers(self) {
 
 		div
 			.select('.sjpcb-cuminc-title')
-			.style('width', s.svgw + 50)
+			.style('width', s.svgw + 50 + 'px')
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
 			.html(chart.chartTitle)
@@ -831,47 +834,53 @@ function setRenderers(self) {
 			setVisibleSerieses(chart, s)
 
 			renderSVG(div.select('svg'), chart, s, s.duration)
-
-			// div for chart-specific legends
-			div.select('.pp-cuminc-chartLegends').selectAll('*').remove()
-
-			// p-values legend
-			if (self.tests && chart.chartId in self.tests) {
-				const holder = div.select('.pp-cuminc-chartLegends').style('display', 'inline-block').append('div')
-				renderPvalues({
-					title: "Group comparisons (Gray's test)",
-					holder,
-					plot: 'cuminc',
-					tests: self.tests[chart.chartId],
-					s,
-					bins: self.refs.bins
-				})
-			}
-
-			// skipped series legends
-			// series with no events
-			if (self.noEvents && chart.chartId in self.noEvents) {
-				const skipdiv = div
-					.select('.pp-cuminc-chartLegends')
-					.style('display', 'inline-block')
-					.append('div')
-					.style('margin', '30px 0px')
-				const title = 'Skipped series (no events)'
-				renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
-			}
-			// series with low sample size
-			if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
-				const skipdiv = div
-					.select('.pp-cuminc-chartLegends')
-					.style('display', 'inline-block')
-					.append('div')
-					.style('margin', '30px 0px')
-				const title = 'Skipped series (low sample size)'
-				renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
-			}
 		} else {
-			// no series in chart
-			div.select('.pp-cuminc-chart-noData').style('display', 'block')
+			div
+				.select('.pp-cuminc-chart-noData')
+				.style('display', 'block')
+				.style('width', s.svgw + 50 + 'px')
+		}
+
+		// div for chart-specific legends
+		div.select('.pp-cuminc-chartLegends').selectAll('*').remove()
+
+		if (chart.chartId in self.tests) {
+			// p-values legend
+			const holder = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin-bottom', '30px')
+			renderPvalues({
+				title: "Group comparisons (Gray's test)",
+				holder,
+				plot: 'cuminc',
+				tests: self.tests[chart.chartId],
+				s,
+				bins: self.refs.bins
+			})
+		}
+
+		if (chart.chartId in self.noEvents) {
+			// legend for series with no events
+			const skipdiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin-bottom', '30px')
+			const title = 'Skipped series (no events)'
+			renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
+		}
+
+		if (chart.chartId in self.lowSampleSize) {
+			// legend for series with low sample size
+			const skipdiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin-bottom', '30px')
+			const title = 'Skipped series (low sample size)'
+			renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 		}
 	}
 
