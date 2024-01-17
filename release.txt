@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC bam slicing UI bug fix to forget previous coordinate input box search result
