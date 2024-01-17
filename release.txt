@@ -1,1 +1,2 @@
-
+Fixes:
+- Block track menu will not allow to hide a GDC bam tk, and no longer shows delete button for custom tracks
