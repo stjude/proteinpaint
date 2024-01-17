@@ -36,7 +36,7 @@ facettrigger
 
 const colorfunc = scaleOrdinal(schemeCategory10)
 
-export default function(block, tip, x, y) {
+export default function (block, tip, x, y) {
 	/*
 	make the most current menu, consisted of:
 		"one search" and result display
@@ -120,10 +120,7 @@ function onesearchui(block, div) {
 		.append('input')
 		.attr('size', 15)
 		.attr('placeholder', 'Search ' + count + ' tracks')
-	const searchsays = searchrow
-		.append('span')
-		.style('font-size', '.8em')
-		.style('padding-left', '10px')
+	const searchsays = searchrow.append('span').style('font-size', '.8em').style('padding-left', '10px')
 	input.on('keyup', event => {
 		founddiv.selectAll('*').remove()
 		searchsays.text('')
@@ -156,10 +153,7 @@ function onesearchui(block, div) {
 			foundnum += hits.length
 			if (hits.length == 0) continue
 			const color = colorfunc(set.name)
-			const tr = founddiv
-				.append('table')
-				.style('border-spacing', '0px')
-				.append('tr')
+			const tr = founddiv.append('table').style('border-spacing', '0px').append('tr')
 			const thisscroll = tr
 				.append('td')
 				.style('padding', '0px 10px 0px 20px')
@@ -194,17 +188,11 @@ function onesearchui(block, div) {
 				const tr = tktable.append('tr')
 				//tr.append('td').style('font-size','.7em').text(cold.assayname || 'n/a')
 				//tr.append('td').style('font-size','.7em').text(cold.type)
-				const td1 = tr
-					.append('td')
-					.style('color', '#aaa')
-					.style('font-size', '.7em')
+				const td1 = tr.append('td').style('color', '#aaa').style('font-size', '.7em')
 				if (hot) {
 					td1.text('SHOWN')
 				}
-				const handle = tr
-					.append('td')
-					.classed('sja_menuoption', true)
-					.text(tkhtmllabel(cold, block))
+				const handle = tr.append('td').classed('sja_menuoption', true).text(tkhtmllabel(cold, block))
 				if (hot) {
 					handle.on('click', () => tkhandleclick(block, hot, td1))
 				} else {
@@ -257,26 +245,21 @@ function hardlist4block(block, div) {
 	for (const tk of block.tklst) {
 		const tr = hardtable.append('tr')
 		const td1 = tr.append('td')
-		td1
-			.text('SHOWN')
-			.style('color', '#aaa')
-			.style('font-size', '.7em')
+		td1.text('SHOWN').style('color', '#aaa').style('font-size', '.7em')
 
 		const handle = tr.append('td').text(tkhtmllabel(tk, block))
 
-		if (tk.type == client.tkt.usegm) {
-			// usegm track is always on, cannot remove, because it's not registered in genome.tracks[]
-			handle.style('padding', '5px 10px')
-		} else if (tk.type == 'mds3' && tk.dslabel) {
-			// is official mds3 tk, always on
-			// could be temporary fix! can encode this choice at ds if indeed we need to hide an official mds3...
+		if (notAllowedToHideThisTrack(tk)) {
 			handle.style('padding', '5px 10px')
 		} else {
-			// other tracks can toggle show/hide
+			// allowed to toggle show/hide of this tk, show button over tk name
 			handle.attr('class', 'sja_menuoption').on('click', () => {
 				tkhandleclick(block, tk, td1)
 			})
 		}
+
+		/*
+		no longer allow to delete a custom track; too many complains
 		const td3 = tr.append('td')
 		if (tk.iscustom) {
 			td3
@@ -286,6 +269,7 @@ function hardlist4block(block, div) {
 					deletecustom(block, tk, tr)
 				})
 		}
+		*/
 	}
 
 	///// genome.tracks[]
@@ -302,14 +286,9 @@ function hardlist4block(block, div) {
 			continue
 		}
 		const tr = hardtable.append('tr')
-		const td1 = tr
-			.append('td')
-			.style('color', '#aaa')
-			.style('font-size', '.7em')
-		const handle = tr
-			.append('td')
-			.attr('class', 'sja_menuoption')
-			.text(tkhtmllabel(tk, block))
+		const td1 = tr.append('td').style('color', '#aaa').style('font-size', '.7em')
+		const handle = tr.append('td').attr('class', 'sja_menuoption').text(tkhtmllabel(tk, block))
+		/*
 		const td3 = tr.append('td')
 		if (tk.iscustom) {
 			td3
@@ -319,6 +298,7 @@ function hardlist4block(block, div) {
 					deletecustom(block, tk, tr)
 				})
 		}
+		*/
 		handle.on('click', () => {
 			tkhandleclick(block, tk, td1)
 		})
@@ -371,14 +351,8 @@ function customtracktypeui(block, div) {
 	//// add new track type here
 
 	const d2 = div.append('div').style('margin', '20px')
-	d2.append('p')
-		.style('color', '#858585')
-		.text('Declare tracks as JSON text:')
-	const ta = d2
-		.append('textarea')
-		.attr('rows', 5)
-		.attr('cols', '30')
-		.attr('placeholder', 'Enter JSON text')
+	d2.append('p').style('color', '#858585').text('Declare tracks as JSON text:')
+	const ta = d2.append('textarea').attr('rows', 5).attr('cols', '30').attr('placeholder', 'Enter JSON text')
 	const row = d2.append('div').style('margin-top', '3px')
 	row
 		.append('button')
@@ -418,10 +392,7 @@ function customtracktypeui(block, div) {
 		.html(
 			'<a href=https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit?usp=sharing target=_blank>Track format</a>'
 		)
-	row
-		.append('span')
-		.style('padding-left', '10px')
-		.html('<a href=https://jsonlint.com/ target=_blank>debug</a>')
+	row.append('span').style('padding-left', '10px').html('<a href=https://jsonlint.com/ target=_blank>debug</a>')
 }
 
 function may_add_customtk(tk, block, div) {
@@ -463,11 +434,7 @@ function newtk_bw(block, div) {
 
 	{
 		const box = div.append('div').style('margin', '0px 20px 20px 20px')
-		box
-			.append('p')
-			.text('Add a single track')
-			.style('color', '#858585')
-			.style('font-size', '.7em')
+		box.append('p').text('Add a single track').style('color', '#858585').style('font-size', '.7em')
 		const iname = box
 			.append('p')
 			.append('input')
@@ -512,11 +479,7 @@ function newtk_bw(block, div) {
 
 	{
 		const box = div.append('div').style('margin', '0px 20px 20px 20px')
-		box
-			.append('p')
-			.text('Add multiple tracks')
-			.style('color', '#858585')
-			.style('font-size', '.7em')
+		box.append('p').text('Add multiple tracks').style('color', '#858585').style('font-size', '.7em')
 		const input = box
 			.append('p')
 			.append('textarea')
@@ -818,11 +781,7 @@ function newtk_vcf(block, div) {
 		.html(
 			'<a href=https://drive.google.com/open?id=1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw target=_blank>VCF format</a>'
 		)
-	box
-		.append('p')
-		.style('color', '#858585')
-		.style('font-size', '.8em')
-		.text('SNV/indel data only')
+	box.append('p').style('color', '#858585').style('font-size', '.8em').text('SNV/indel data only')
 }
 
 function newtk_interaction(block, div) {
@@ -917,10 +876,7 @@ function newtk_interaction(block, div) {
 			enzymeselect = p.append('select')
 			enzymeselect.append('option').text('none')
 			for (const e of block.genome.hicenzymefragment) {
-				enzymeselect
-					.append('option')
-					.text(e.enzyme)
-					.property('value', e.enzyme)
+				enzymeselect.append('option').text(e.enzyme).property('value', e.enzyme)
 			}
 		}
 		div1
@@ -1052,11 +1008,7 @@ function facettrigger(block, holder, menutip) {
 	// has facets to be shown
 	// a holder to show one button for each facet table
 	const div = holder.append('div').style('margin', '15px')
-	div
-		.append('div')
-		.text('FACET')
-		.style('color', '#858585')
-		.style('font-size', '.7em')
+	div.append('div').text('FACET').style('color', '#858585').style('font-size', '.7em')
 
 	for (const tkset of toshow) {
 		if (tkset.facetlst) {
@@ -1139,10 +1091,7 @@ function facetmake(block, tkset, flet) {
 	const scrollholder = facetpane.body.append('div')
 	if (sample2assay2tracks.size > 50) {
 		// more than 50 samples
-		scrollholder
-			.style('height', '500px')
-			.style('overflow-y', 'scroll')
-			.style('resize', 'vertical')
+		scrollholder.style('height', '500px').style('overflow-y', 'scroll').style('resize', 'vertical')
 	}
 
 	const table = scrollholder
@@ -1291,9 +1240,7 @@ function facetmake(block, tkset, flet) {
 		const tklst = s.get(assay)
 		if (!tklst) return
 		// this cell has tracks
-		td.attr('class', 'sja_menuoption')
-			.style('font-size', '.7em')
-			.style('text-align', 'center')
+		td.attr('class', 'sja_menuoption').style('font-size', '.7em').style('text-align', 'center')
 
 		let numdisplayed = 0
 		for (const t of tklst) {
@@ -1311,10 +1258,7 @@ function facetmake(block, tkset, flet) {
 				const table = tip.d.append('table')
 				for (const t of tklst) {
 					const tr = table.append('tr')
-					const td1 = tr
-						.append('td')
-						.style('color', '#858585')
-						.style('font-size', '.7em')
+					const td1 = tr.append('td').style('color', '#858585').style('font-size', '.7em')
 					if (findtkbytkid(block, t.tkid)) {
 						td1.text('SHOWN')
 					}
@@ -1492,10 +1436,7 @@ function get_dimensions(tkset, flet) {
 			assays.set(t.assay, assays.get(t.assay) + 1)
 
 			if (!sample2assay2tracks.get(sample).has(t.assay)) sample2assay2tracks.get(sample).set(t.assay, [])
-			sample2assay2tracks
-				.get(sample)
-				.get(t.assay)
-				.push(t)
+			sample2assay2tracks.get(sample).get(t.assay).push(t)
 		}
 		return [assays, sample2assay2tracks, null, null, samplewithlevel]
 	}
@@ -1534,10 +1475,7 @@ function get_dimensions(tkset, flet) {
 		// capture sample to assay to track mapping
 		if (!sample2assay2tracks.has(sample)) sample2assay2tracks.set(sample, new Map())
 		if (!sample2assay2tracks.get(sample).has(assay)) sample2assay2tracks.get(sample).set(assay, [])
-		sample2assay2tracks
-			.get(sample)
-			.get(assay)
-			.push(t)
+		sample2assay2tracks.get(sample).get(assay).push(t)
 
 		const L1 = t.level1,
 			L2 = t.level2
@@ -1548,9 +1486,7 @@ function get_dimensions(tkset, flet) {
 				// has both levels
 				if (!L1_2_L2.has(L1)) L1_2_L2.set(L1, new Map())
 				if (!L1_2_L2.get(L1).has(L2)) L1_2_L2.get(L1).set(L2, new Set())
-				L1_2_L2.get(L1)
-					.get(L2)
-					.add(sample)
+				L1_2_L2.get(L1).get(L2).add(sample)
 			} else {
 				// has just one level, allow it to be either L1 or L2, and associate the sample with it
 				const L = L1 || L2
@@ -1845,5 +1781,20 @@ function stringisurl(s) {
 	if (ss.startsWith('http://')) return true
 	if (ss.startsWith('https://')) return true
 	if (ss.startsWith('ftp://')) return true
+	return false
+}
+
+function notAllowedToHideThisTrack(tk) {
+	// return true to indicate the track cannot be turned hidden in tk menu
+
+	// usegm track is always on, cannot remove, because it's not registered in genome.tracks[]
+	if (tk.type == client.tkt.usegm) return true
+
+	// is official mds3 tk, always on; could be temporary fix! can encode this choice at ds if indeed we need to hide an official mds3...
+	if (tk.type == 'mds3' && tk.dslabel) return true
+
+	// is a gdc bam tk, it only shows in gdc bam slicing app and doesn't make sense to hide it
+	if (tk.type == 'bam' && tk.gdcFile) return true
+
 	return false
 }
