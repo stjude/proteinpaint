@@ -1,62 +1,52 @@
-import { GdcTopMutatedGeneResponse } from '#shared/types/routes/gdc.topMutatedGenes.ts'
+import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse } from '#shared/types/routes/gdc.topMutatedGenes.ts'
 import path from 'path'
 import got from 'got'
+
+// TODO change to /termdb/topMutatedGenes
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 export const api = {
 	endpoint: 'gdc/topMutatedGenes',
 	methods: {
-		get: {
-			init({ genomes }) {
-				/*
-				genomes parameter is currently not used
-				could be used later to:
-				- verify hg38/GDC is on this instance and otherwise disable this route..
-				- perform conversion on gene name/id for future on needs
-				*/
-
-				return async (req: any, res: any): Promise<void> => {
-					try {
-						const genes = await getGenes(req.query)
-						const payload = { genes } as GdcTopMutatedGeneResponse
-						res.send(payload)
-					} catch (e: any) {
-						res.send({ status: 'error', error: e.message || e })
-					}
-				}
-			},
+		all: {
+			init,
 			request: {
-				typeId: null
-				//valid: default to type checker
+				typeId: 'GdcTopMutatedGeneRequest'
 			},
 			response: {
 				typeId: 'GdcTopMutatedGeneResponse'
-				// will combine this with type checker
-				//valid: (t) => {}
 			}
 		}
 	}
 }
 
-/*
-req.query {
-	filter0 // optional gdc GFF cohort filter, invisible and read only
-		FIXME should there be pp filter too?
-	geneFilter?: str
-	maxGenes: int
+function init() {
+	/*
+	genomes parameter is currently not used
+	could be used later to:
+	- verify hg38/GDC is on this instance and otherwise disable this route..
+	- perform conversion on gene name/id for future on needs
+	*/
+	return async (req: any, res: any): Promise<void> => {
+		const q: GdcTopMutatedGeneRequest = req.query
+		try {
+			const genes = await getGenes(q)
+			const payload: GdcTopMutatedGeneResponse = { genes }
+			res.send(payload)
+		} catch (e: any) {
+			res.send({ status: 'error', error: e.message || e })
+		}
+	}
 }
 
+/*
 mayAddCGC2filter() are copied to
 /utils/gdc/topSSMgenes.js
 and hosted on https://proteinpaint.stjude.org/GDC/
 */
-async function getGenes(q: any) {
-	let _f = { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
-	if (q.filter0) {
-		if (typeof q.filter0 != 'object') throw 'filter0 not object'
-		_f = q.filter0
-	}
+async function getGenes(q: GdcTopMutatedGeneRequest) {
+	const _f = q.filter0 || { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
 	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
