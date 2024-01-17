@@ -134,14 +134,20 @@ class WpPlugin {
 		compiler.hooks.beforeCompile.tapAsync('SpecsHelperPlugin', (compilation, callback) => {
 			const internalsFilename = path.join(__dirname, './internals.js')
 			const internals = fs.readFileSync(internalsFilename).toString('utf-8').trim()
-			const importedFiles = internals.split('\n').map(line => line.split(' ')[1]?.slice(1, -1)) // remove quotes
-			const exists = []
-			for (const f of importedFiles) {
-				if (fs.existsSync(path.join(__dirname, f))) exists.push(f)
-			}
-			if (exists.length < importedFiles.length) {
-				console.log('\n--- adjusting the imported spec files in internals.js ---\n')
-				fs.writeFileSync(internalsFilename, exists.map(f => `import '${f}'`).join('\n'))
+			const importedFiles = internals
+				.split('\n')
+				.map(line => line.split(' ')[1]?.slice(1, -1))
+				.filter(f => f && true)
+			if (importedFiles.length) {
+				// remove quotes
+				const exists = []
+				for (const f of importedFiles) {
+					if (f && fs.existsSync(path.join(__dirname, f))) exists.push(f)
+				}
+				if (exists.length < importedFiles.length) {
+					console.log('\n--- adjusting the imported spec files in internals.js ---\n')
+					fs.writeFileSync(internalsFilename, exists.map(f => `import '${f}'`).join('\n'))
+				}
 			}
 			callback()
 		})
