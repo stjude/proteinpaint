@@ -255,7 +255,7 @@ add:
 				tr.append('td').text('Adjusted p-value')
 			}
 			for (const d of mavb) {
-				if (d.adjusted_p_value > p_value_cutoff) {
+				if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
 					// Subsequent rows
 					const tr = table.append('tr')
 					tr.append('td')
