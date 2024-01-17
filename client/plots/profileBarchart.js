@@ -187,9 +187,10 @@ class profileBarchart extends profilePlot {
 		drawLine(910, 120, 75, y, 'A')
 		y += 40
 		x = 600
-		this.drawLegendRect(x, y, 'and', color)
+		const lineG = svg.append('g')
+		this.drawLegendRect(x, y, 'and', color, lineG)
 		x += 300
-		this.drawLegendRect(x, y, 'or', color)
+		this.drawLegendRect(x, y, 'or', color, lineG)
 
 		function drawAxes(x, y) {
 			const xAxisScale = d3Linear().domain([0, 100]).range([0, barwidth])
@@ -277,8 +278,8 @@ class profileBarchart extends profilePlot {
 				.attr('pointer-events', 'none')
 	}
 
-	drawLegendRect(x, y, operator, color) {
-		const rect = this.svg
+	drawLegendRect(x, y, operator, color, lineG) {
+		const rect = lineG
 			.append('g')
 			.attr('transform', `translate(${x}, ${y})`)
 			.append('rect')
