@@ -63,13 +63,13 @@ jobs:
         run: |
           npm install glob
           cd container
-          ./version.sh deps
 
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           if [[ "$BRANCH" != "publish-image" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && ${{ github.event_name }} != "workflow_dispatch" ]]; then
             echo "skipping build and publishing"
           else
             cd deps
+            ./version.sh deps
             ./build.sh -m "ghcr.io/stjude/"
             TAG="$(node -p "require('./package.json').version")"
             cd ..
