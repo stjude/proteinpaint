@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- GDC bam slicing UI bug fix to forget previous coordinate input box search result
+
 
 ## 2.39.3
 
