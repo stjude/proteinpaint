@@ -1,1 +1,2 @@
-
+Fixes:
+- Use graphql query to replace /analysis/top_mutated_genes_by_project in GDC OncoMatrix
