@@ -1,2 +1,1 @@
-Fixes:
-- always trigger the closing of an embedder's loading overlay, even when there are no chart state changes
+

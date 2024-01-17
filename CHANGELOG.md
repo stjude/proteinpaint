@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - GDC bam slicing UI bug fix to forget previous coordinate input box search result
+- always trigger the closing of an embedder's loading overlay, even when there are no chart state changes
 
 
 ## 2.39.3
