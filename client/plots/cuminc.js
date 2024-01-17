@@ -720,7 +720,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sjpcb-cuminc-title')
 			.style('text-align', 'center')
-			.style('width', s.svgw + 50 + 'px')
+			.style('width', `${s.svgw + 50}px`)
 			.style('height', s.chartTitleDivHt + 'px')
 			.style('font-weight', '600')
 			.style('margin', '5px')
@@ -733,7 +733,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'pp-cuminc-chart-noData')
 			.style('display', 'none')
-			.style('width', s.svgw + 50 + 'px')
+			.style('width', `${s.svgw + 50}px`)
 			.style('margin', '40px 5px')
 			.text('No cumulative incidence data')
 
@@ -817,7 +817,7 @@ function setRenderers(self) {
 
 		div
 			.select('.sjpcb-cuminc-title')
-			.style('width', s.svgw + 50 + 'px')
+			.style('width', `${s.svgw + 50}px`)
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
 			.html(chart.chartTitle)
@@ -838,7 +838,7 @@ function setRenderers(self) {
 			div
 				.select('.pp-cuminc-chart-noData')
 				.style('display', 'block')
-				.style('width', s.svgw + 50 + 'px')
+				.style('width', `${s.svgw + 50}px`)
 		}
 
 		// div for chart-specific legends
