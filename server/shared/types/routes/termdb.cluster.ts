@@ -28,39 +28,16 @@ export type TermdbClusterRequest = {
 	filter0?: any
 }
 
-export type Children = {
-	/**  */
-	id: number
-	/**  */
-	children: number[]
+export type Hclust = {
+	merge: { n1: number; n2: number }[]
+	height: { height: number }[]
+	order: { name: string }[]
+	inputOrder: string[]
 }
-
-export type Dendro = {
-	id1: number
-	id2: number
-	x1: number
-	x2: number
-	y1: number
-	y2: number
-}
-
 export type Clustering = {
-	/**  */
-	col_children: Children[]
-	/**  */
-	row_children: Children[]
-	/**  */
-	col_dendro: Dendro[]
-	/**  */
-	row_dendro: Dendro[]
-	/**  */
-	geneNameLst: string[]
-	/**  */
-	sampleNameLst: string[]
-	/**  */
+	row: Hclust
+	col: Hclust
 	matrix: number[][]
-	/** to be deleted */
-	col_names_index: number[]
 }
 
 // response with clustering result of multiple gene/rows

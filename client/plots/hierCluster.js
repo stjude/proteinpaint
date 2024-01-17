@@ -13,16 +13,6 @@ import { filterJoin } from '#filter'
 /*
 FIXME items
 
-1. do not hardcode this.config.termgroups[0] to be the list of items for clustering analysis
-	this prevents showing a non-clustering group of terms at the first position, right under the sample dendrogram, which is common
-	need a way to designate which element of termgroups[] is to run clustering analysis
-
-2. do not hardcode to force tw.type='geneVariant'
-	caller should supply well-formed twlst[] that can include gene and non-gene terms
-	to be able to run clustering analysis on everything
-
-3. replace dofetch with vocabApi call with support for (2)
-
 - should not hardcode this.geneExpValues, incompatible for future expansion
 */
 
@@ -53,26 +43,34 @@ class HierCluster extends Matrix {
 			.append('g')
 			.attr('class', 'sjpp-matrix-dendrogram')
 			.on('click', event => {
-				const clickedBranch = this.getImgBranch(event)
-				if (clickedBranch) {
-					const clickedBranchId = Math.min(clickedBranch.id1, clickedBranch.id2) // the smaller branchId has all the children
-					this.clickedChildren = this.hierClusterData.clustering.col_children.find(
-						c => c.id == clickedBranchId
-					).children
+				const clickedClusterId = this.getClusterFromTopDendrogram(event)
+				if (clickedClusterId) {
+					this.clickedClusterIds = this.getAllChildrenClusterIds(clickedClusterId)
+					this.clickedClusterIds.push(clickedClusterId)
 
-					//get the sampleName of the children
-					const clickedSampleNames = this.getClickedSampleNames(this.clickedChildren)
-
-					this.addSelectedSamplesOptions(clickedSampleNames, event)
+					const clickedCluster = this.hierClusterData.clustering.col.mergedClusters.get(clickedClusterId)
+					const clickedClusterSampleNames = clickedCluster.children.map(c => c.name)
+					this.addSelectedSamplesOptions(clickedClusterSampleNames, event)
 				} else {
-					// if not clicking on a branch, change highlighted branch color from red back to black
-					delete this.clickedChildren
+					// if not clicking on a cluster, change highlighted cluster color from red back to black
+					delete this.clickedClusterIds
 				}
 
 				// rerender the col Dendrogram
-				this.plotDendrogram_R(this.hierClusterData.clustering, true)
+				this.plotDendrogramHclust(true)
 			})
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
+	}
+
+	// Given a clusterId, return all its children clusterIds
+	getAllChildrenClusterIds(clickedClusterId) {
+		const mergedClusters = this.hierClusterData.clustering.col.mergedClusters
+		const children = mergedClusters.get(clickedClusterId).childrenClusters || []
+		let allChildren = [...children]
+		for (const child of children) {
+			allChildren = allChildren.concat(this.getAllChildrenClusterIds(child))
+		}
+		return allChildren
 	}
 
 	addSelectedSamplesOptions(clickedSampleNames, event) {
@@ -87,10 +85,7 @@ class HierCluster extends Matrix {
 			},
 			{
 				label: `List ${clickedSampleNames.length} ${l.samples}`,
-				callback: () => {
-					this.dom.tip.hide()
-					this.showTable(this, clickedSampleNames, event.clientX, event.clientY)
-				}
+				callback: () => this.showTable4selectedSamples(clickedSampleNames)
 			}
 		]
 
@@ -188,38 +183,25 @@ class HierCluster extends Matrix {
 		self.resetInteractions()
 	}
 
-	// return the sample names of the clicked samples as an array
-	getClickedSampleNames(clickedChildren) {
-		const obj = this.hierClusterData.clustering
-		const childIndexArr = clickedChildren.map(c => obj.col_names_index.indexOf(c))
-		const childSampleNameArr = childIndexArr.map(c => obj.sampleNameLst[c])
-		return childSampleNameArr
-	}
-
 	// show the list of clicked samples as a table
-	showTable(self, clickedSampleNames, x, y) {
-		const templates = self.state.termdbConfig.urlTemplates
+	showTable4selectedSamples(clickedSampleNames) {
+		const templates = this.state.termdbConfig.urlTemplates
 		const rows = templates?.sample
 			? clickedSampleNames.map(c => [
-					{ value: self.hierClusterData.bySampleId[c].label, url: `${templates.sample.base}${c}` }
+					{ value: this.hierClusterData.bySampleId[c].label, url: `${templates.sample.base}${c}` }
 			  ])
-			: clickedSampleNames.map(c => [{ value: self.hierClusterData.bySampleId[c].label }])
+			: clickedSampleNames.map(c => [{ value: this.hierClusterData.bySampleId[c].label }])
 
-		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
-
-		const menu = new Menu({ padding: '5px' })
-		const div = menu.d.append('div')
+		const columns = [{ label: this.settings.matrix.controlLabels.Sample }]
 
 		renderTable({
 			rows,
 			columns,
-			div,
+			div: this.dom.dendroClickMenu.clear().d.append('div').style('margin', '10px'),
 			showLines: true,
-			maxWidth: columns.length * '15' + 'vw',
 			maxHeight: '35vh',
 			resize: true
 		})
-		menu.show(x, y, false, false)
 	}
 
 	// add the clicked samples into a group
@@ -229,8 +211,9 @@ class HierCluster extends Matrix {
 		this.dom.tip.hide()
 	}
 
-	// upon clicking, find the corresponding clicked branch in this.hierClusterData.clustering.col_dendro
-	getImgBranch(event) {
+	// upon clicking, find the corresponding clicked clusterId from this.hierClusterData.clustering.col.mergedClusters
+	getClusterFromTopDendrogram(event) {
+		// Need imgBox to find the position of event relative to dendrogram
 		if (event.target.tagName == 'image') this.imgBox = event.target.getBoundingClientRect()
 		else return
 
@@ -238,15 +221,14 @@ class HierCluster extends Matrix {
 		const xMin = this.dimensions.xMin
 		const x = event.clientX - this.imgBox.x - event.target.clientLeft + xMin
 
-		for (const branch of this.hierClusterData.clustering.col_dendro) {
-			if (!branch.normalized) return
-			const { x1, y1, x2, y2, verticalX } = branch.normalized
-
+		for (const [clusterId, cluster] of this.hierClusterData.clustering.col.mergedClusters) {
+			const { x1, y1, x2, y2, clusterY } = cluster.clusterPosition
 			if (
-				(x1 <= x && x <= x2 && y1 - 5 < y && y < y1 + 5) ||
-				(y1 <= y && y <= y2 && verticalX - 5 < x && x < verticalX + 5)
+				(x1 <= x && x <= x2 && clusterY - 5 < y && y < clusterY + 5) ||
+				(clusterY <= y && y <= y1 && x1 - 5 < x && x < x1 + 5) ||
+				(clusterY <= y && y <= y2 && x2 - 5 < x && x < x2 + 5)
 			) {
-				return branch
+				return clusterId
 			}
 		}
 	}
@@ -312,7 +294,6 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		// FIXME TODO: do not rely on the hardcoded grp.name for finding the hier cluster term group
 		const s = this.settings.hierCluster
 		this.hcTermGroup =
 			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
@@ -356,16 +337,21 @@ class HierCluster extends Matrix {
 		const zScoreCap = this.settings.hierCluster.zScoreCap // used in loops below
 
 		const samples = {}
-		for (const [i, sample] of c.sampleNameLst.entries()) {
-			samples[sample] = { sample }
-			for (const [j, name] of c.geneNameLst.entries()) {
-				const tw = twlst.find(tw => tw.term.name === name)
+
+		/* see comments inside plotDendrogramHclust() on structure of d.clustering.row{} and col{}
+		assumes c.col is samples and c.row is non-sample things (genes for now); later may flip to c.row be samples instead!!
+		*/
+
+		for (const [i, column] of c.col.order.entries()) {
+			samples[column.name] = { sample: column.name }
+			for (const [j, row] of c.row.order.entries()) {
+				const tw = twlst.find(tw => tw.term.name === row.name)
 				const value = c.matrix[j][i]
-				samples[sample][tw.$id] = {
+				samples[column.name][tw.$id] = {
 					key: tw.term.name,
 					values: [
 						{
-							sample,
+							sample: column.name,
 							dt: this.settings.hierCluster.dataType,
 							class: 'geneexpression', // FIXME since there's no class defined for dtgeneexpression in common.js, best not to require value.class
 							label: s.termGroupName,
@@ -381,7 +367,7 @@ class HierCluster extends Matrix {
 			}
 		}
 
-		const orderedTw = c.geneNameLst.map(name => twlst.find(tw => tw.term.name === name))
+		const orderedTw = c.row.order.map(row => twlst.find(tw => tw.term.name === row.name))
 		this.hcTermGroup.lst = orderedTw
 
 		// from d.byTermId to byTermId: change byTermId keys from gene names to $ids
@@ -391,7 +377,7 @@ class HierCluster extends Matrix {
 		}
 		this.hierClusterSamples = {
 			refs: { byTermId, bySampleId: d.bySampleId },
-			lst: c.sampleNameLst.map(sample => samples[sample]),
+			lst: c.col.order.map(c => samples[c.name]),
 			samples
 		}
 	}
@@ -439,192 +425,200 @@ class HierCluster extends Matrix {
 		return this.geneExpValues.scale((value - -zScoreCap) / (zScoreCap * 2))
 	}
 
-	async renderDendrogram() {
-		const obj = this.hierClusterData.clustering
-		obj.d = {
-			rowHeight: this.dimensions.dy,
-			colWidth: this.dimensions.dx,
-			xDendrogramHeight: this.settings.hierCluster.xDendrogramHeight,
-			yDendrogramHeight: this.settings.hierCluster.yDendrogramHeight
-		}
-		try {
-			obj.row_dendro.map(this.validateRline)
-		} catch (e) {
-			throw 'row_dendro error: ' + e
-		}
-		try {
-			obj.col_dendro.map(this.validateRline)
-		} catch (e) {
-			throw 'col_dendro error: ' + e
-		}
-
-		this.plotDendrogram_R(obj)
-	}
-
-	// if onlyCol is true, only render the column dendrogram
-	plotDendrogram_R(obj, onlyCol) {
+	plotDendrogramHclust(plotColOnly) {
+		/*
+		based on hclust() output
+		plotColOnly=true will only render column dendrograms
+		if false will render both row and column
+		*/
 		const d = this.dimensions
 		const s = this.config.settings.matrix
-		const zoomLevel = s.zoomLevel
-		const { xMin, xMax } = d
 		const xOffset = d.seriesXoffset // could be negative when zoomed
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
-		if (!onlyCol) {
-			let max = 0
-			for (const r of obj.row_dendro) {
-				max = Math.max(max, r.y1, r.y2)
-				// hardcoding gene to be on rows, swap x/y for row dendrogram
-				const t = {
-					x1: r.y1,
-					x2: r.y2,
-					y1: r.x1,
-					y2: r.x2
-				}
-				r.transformed = t
-			}
-			const sf = obj.d.xDendrogramHeight / max
-			for (const r of obj.row_dendro) {
-				const t = r.transformed
-				t.x1 = sf * (max - t.x1) // for row dendrogram, x is now depth
-				t.x2 = sf * (max - t.x2)
-				t.y1 *= obj.d.rowHeight // y is number of row items
-				t.y2 *= obj.d.rowHeight
-			}
-			const width = obj.d.xDendrogramHeight + 0.0000001
-			const height = d.mainh + 0.0000001
-			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
-			const ctx = canvas.getContext('2d')
-			ctx.scale(pxr, pxr)
-			ctx.imageSmoothingEnabled = false
-			ctx.imageSmoothingQuality = 'high'
-			ctx.strokeStyle = 'black'
-			// plot row dendrogram
-			for (const r of obj.row_dendro) {
-				ctx.beginPath()
-				const t = r.transformed
-				// r is a line between two points. get extreme x/y
-				const x1 = Math.min(t.x1, t.x2),
-					x2 = Math.max(t.x1, t.x2),
-					y1 = Math.min(t.y1, t.y2),
-					y2 = Math.max(t.y1, t.y2)
 
-				// always one way to plot vertical line
-				ctx.moveTo(x1, y1)
-				ctx.lineTo(x1, y2)
-				// two ways to plot horizontal line
-				if ((t.x1 > t.x2 && t.y1 > t.y2) || (t.x1 < t.x2 && t.y1 < t.y2)) {
-					// one point is on lower right of another, the horizontal line is based on *max y*
-					ctx.lineTo(x2, y2)
-				} else {
-					// one point is on upper right of another, the horizontal line is based on *min y*
-					ctx.moveTo(x1, y1)
-					ctx.lineTo(x2, y1)
-				}
-				ctx.stroke()
-				ctx.closePath()
-			}
-			// find the first term in the gene expression group
-			const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
-			const ty =
-				//t.labelOffset is commented out because it causes row dendrogram to be misrendered
-				t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-			this.renderImage(
-				this.dom.leftDendrogram,
-				canvas,
-				width,
-				height,
-				0,
-				ty + obj.d.yDendrogramHeight + obj.d.rowHeight
-			)
-		}
+		const obj = this.hierClusterData.clustering
+		const row = obj.row
+		const col = obj.col
+		/* both row{} and col{} are hclust() output structure:
+		.merge[]       {n1,n2}
+		.height[]      {height}
+		.order[]       {name}
+		.inputOrder[]  [str]
+		*/
 
+		const rowHeight = this.dimensions.dy,
+			xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight,
+			colWidth = this.dimensions.dx,
+			yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
+
+		// plot column dendrogram
 		{
-			// replace node x/y values with on-screen #pixel for plotting
-			let max = 0
-			const visible = []
-			for (const r of obj.col_dendro) {
-				max = Math.max(max, r.y1, r.y2)
-				const x1 = r.x1 * d.dx //+ xOffset
-				const x2 = r.x2 * d.dx //+ xOffset
-				if (x2 < x1) {
-					if (x1 < xMin || x2 > xMax) continue
-				} else if (x2 < xMin || x1 > xMax) continue
-				r.scaled = { x1, x2 }
-				visible.push(r)
-			}
-			const sf = obj.d.yDendrogramHeight / max
-			for (const r of visible) {
-				r.scaled.y1 = sf * (max - r.y1) // for col dendrogram, y is depth
-				r.scaled.y2 = sf * (max - r.y2)
-			}
+			const height2px = getHclustHeightScalefactor(col.height, yDendrogramHeight)
 
-			const width = d.imgW + 0.0000001
-			const height = obj.d.yDendrogramHeight + 0.0000001
+			const height = yDendrogramHeight + 0.0000001
+			const width = colWidth * col.inputOrder.length
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
 			ctx.imageSmoothingEnabled = false
 			ctx.imageSmoothingQuality = 'high'
 			ctx.strokeStyle = 'black'
-			// plot row dendrogram
-			// plot column dendrogram
-			for (const r of visible) {
-				ctx.beginPath()
-				const s = r.scaled
-				const x1 = Math.min(s.x1, s.x2),
-					x2 = Math.max(s.x1, s.x2),
-					y1 = Math.min(s.y1, s.y2),
-					y2 = Math.max(s.y1, s.y2)
 
-				r.normalized = { x1, x2, y1, y2 }
-				const minId = Math.min(r.id1, r.id2)
-				const childrenItem = this.hierClusterData.clustering.col_children.find(d => d.id == minId).children
+			const mergedClusters = new Map()
+			/*
+			as iterating through .merge[], collect merged clusters in here
+			k: cluster id, positive integer, as in row.merge[]
+			v: {
+				x:
+				y:
+				children:[]
+			}
+			*/
+			for (const [clusterid0, pair] of col.merge.entries()) {
+				// pair is {n1,n2}, n1 and n2 form a new cluster; id of which is clusterid
 
-				const highlight =
-					this.clickedChildren &&
-					this.clickedChildren.some(c => childrenItem.includes(c)) &&
-					!(
-						this.clickedChildren.every(c => childrenItem.includes(c)) &&
-						childrenItem.length > this.clickedChildren.length
-					)
+				const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
+				const children = [] // collect all children leaves for this cluster
+				const childrenClusters = [] // collect direct children cluster Ids for this cluster
+
+				let x1, x2, y1, y2
+				if (pair.n1 < 0) {
+					// n1 is leaf
+					const [name, columnNumber] = getLeafNumber(pair.n1, col.inputOrder, col.order)
+					x1 = colWidth * (columnNumber + 0.5)
+					y1 = yDendrogramHeight
+					children.push({ name })
+				} else {
+					// n1 is cluster
+					if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
+					const c = mergedClusters.get(pair.n1)
+					x1 = c.x
+					y1 = c.y
+					children.push(...c.children)
+					childrenClusters.push(pair.n1)
+				}
+				if (pair.n2 < 0) {
+					// n2 is leaf
+					const [name, columnNumber] = getLeafNumber(pair.n2, col.inputOrder, col.order)
+					x2 = colWidth * (columnNumber + 0.5)
+					y2 = yDendrogramHeight
+					children.push({ name })
+				} else {
+					if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
+					const c = mergedClusters.get(pair.n2)
+					x2 = c.x
+					y2 = c.y
+					children.push(...c.children)
+					childrenClusters.push(pair.n2)
+				}
+				// cluster y position
+				const clusterY = yDendrogramHeight - col.height[clusterid0].height * height2px
+
+				const highlight = this.clickedClusterIds?.includes(clusterid)
 				ctx.strokeStyle = highlight ? 'red' : 'black'
 
-				ctx.moveTo(x1, y1)
-				ctx.lineTo(x2, y1) // hline
-				if ((r.x1 > r.x2 && s.y1 > s.y2) || (r.x1 < r.x2 && s.y1 < s.y2)) {
-					// vline at max x
-					ctx.lineTo(x2, y2)
-					r.normalized.verticalX = x2
-				} else {
-					// vline at min x
-					ctx.moveTo(x1, y1)
-					ctx.lineTo(x1, y2)
-					r.normalized.verticalX = x1
-				}
+				ctx.beginPath()
+				ctx.moveTo(x1, y1) // move to n1
+				ctx.lineTo(x1, clusterY) // vertical line up to cluster
+				ctx.lineTo(x2, clusterY) // h line to n2
+				ctx.lineTo(x2, y2) // v line down to n2
 				ctx.stroke()
 				ctx.closePath()
+
+				mergedClusters.set(clusterid, {
+					x: (x1 + x2) / 2,
+					y: clusterY,
+					children,
+					childrenClusters,
+					clusterPosition: {
+						x1,
+						x2,
+						y1,
+						y2,
+						clusterY
+					}
+				})
 			}
-			this.renderImage(this.dom.topDendrogram, canvas, width, height, obj.d.xDendrogramHeight, obj.d.rowHeight)
+
+			this.renderImage(this.dom.topDendrogram, canvas, width, height, xDendrogramHeight + 0.5 * colWidth, rowHeight)
+
+			col.mergedClusters = mergedClusters
 		}
-	}
 
-	validateRline(r) {
-		return
-		// a line between parent and child, {id1,x1,y1, id2,x2,y2}
+		if (plotColOnly) return
 
-		// r1/2 is node id, 0-based, currently not used
-		if (r.r1 < 0) throw `r.r1<0 ${r.r1}`
-		if (r.r2 < 0) throw `r.r2<0 ${r.r2}`
+		// plot row dendrogram
+		const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
 
-		// x1/2 is matrix row/column entity index, 1-based; parent node can get non-integer value
-		if (r.x1 < 1) throw `r.x1<1 ${r.x1}`
-		if (r.x2 < 1) throw `r.x2<1 ${r.x2}`
-		r.x1 -= 0.5 // since the values are 1-based, subtract 0.5 to point to middle of row/column when rendering
-		r.x2 -= 0.5
+		const width = xDendrogramHeight + 0.0000001
+		const height = rowHeight * row.inputOrder.length
+		const canvas = new OffscreenCanvas(width * pxr, height * pxr)
+		const ctx = canvas.getContext('2d')
+		ctx.scale(pxr, pxr)
+		ctx.imageSmoothingEnabled = false
+		ctx.imageSmoothingQuality = 'high'
+		ctx.strokeStyle = 'black'
 
-		// y1/2 is dendrogram node depth, non-negative
-		if (r.y1 < 0) throw `r.y1<0 ${r.y1}`
-		if (r.y2 < 0) throw `r.y2<0 ${r.y2}`
+		const mergedClusters = new Map()
+		for (const [clusterid0, pair] of row.merge.entries()) {
+			// pair is {n1,n2}, n1 and n2 form a new cluster; id of which is clusterid
+
+			const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
+			const children = [] // collect all children leaves for this cluster
+
+			let x1, x2, y1, y2
+			if (pair.n1 < 0) {
+				// n1 is leaf
+				const [name, rowNumber] = getLeafNumber(pair.n1, row.inputOrder, row.order)
+				y1 = rowHeight * (rowNumber + 0.5)
+				x1 = xDendrogramHeight
+				children.push({ name })
+			} else {
+				// n1 is cluster
+				if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
+				const c = mergedClusters.get(pair.n1)
+				x1 = c.x
+				y1 = c.y
+				children.push(...c.children)
+			}
+			if (pair.n2 < 0) {
+				// n2 is leaf
+				const [name, rowNumber] = getLeafNumber(pair.n2, row.inputOrder, row.order)
+				y2 = rowHeight * (rowNumber + 0.5)
+				x2 = xDendrogramHeight
+				children.push({ name })
+			} else {
+				if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
+				const c = mergedClusters.get(pair.n2)
+				x2 = c.x
+				y2 = c.y
+				children.push(...c.children)
+			}
+			// cluster x position
+			const clusterX = xDendrogramHeight - row.height[clusterid0].height * height2px
+
+			ctx.beginPath()
+			ctx.moveTo(x1, y1) // move to n1
+			ctx.lineTo(clusterX, y1) // h line right to cluster
+			ctx.lineTo(clusterX, y2) // v line down to n2
+			ctx.lineTo(x2, y2) // h line left to n2
+			ctx.stroke()
+			ctx.closePath()
+
+			mergedClusters.set(clusterid, {
+				x: clusterX,
+				y: (y1 + y2) / 2,
+				children
+			})
+		}
+
+		const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
+		const ty =
+			//t.labelOffset is commented out because it causes row dendrogram to be misrendered
+			t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
+		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + 1.5 * rowHeight)
+
+		row.mergedClusters = mergedClusters
 	}
 
 	async renderImage(g, canvas, width, height, x, y) {
@@ -812,4 +806,19 @@ function maySetSandboxHeader(self) {
 		default:
 			throw 'unknown hierCluster.dataType to set header'
 	}
+}
+
+function getHclustHeightScalefactor(lst, ph) {
+	// scale hclust$height to on-screen max height (h) in number of pixels
+	let max = lst[0].height
+	for (const h of lst) max = Math.max(max, h.height)
+	return ph / max
+}
+
+function getLeafNumber(minus, inputOrder, order) {
+	const name = inputOrder[-minus - 1]
+	if (!name) throw 'minus not in inputOrder'
+	const i = order.findIndex(j => j.name == name)
+	if (i == -1) throw 'name not found in hc$order'
+	return [name, i]
 }

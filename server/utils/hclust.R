@@ -14,14 +14,9 @@
 
 # To plot the heatmap uncomment line `library(ggplot2) and lines after "Visualization" comment
 
-
-
-suppressPackageStartupMessages(library(dendextend))
 library(jsonlite)
 #library(flashClust)
-library(dendextend)
-library(reshape)
-#library(ggplot2) # Uncomment this line to plot heatmap in R 
+#library(ggplot2) # Uncomment this line to plot heatmap in R
 
 # Distance matrix
 args <- commandArgs(trailingOnly = T)
@@ -42,22 +37,20 @@ input <- fromJSON(infile)
 #print ("normalized_matrix")
 #print (dim(normalized_matrix))
 
-# For columns (i.e samples)
+# For Rows (i.e genes)
 RowDist <- dist(input$matrix, method = "euclidean") # Transposing the matrix
-
-
 # Hierarchical clustering
 RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
 #RowDend <- flashClust(RowDist, method = tolower(input$cluster_method))
-RowDendro <- as.dendrogram(RowDend)
+RowDendMergeDf <- as.data.frame(RowDend$merge)
+colnames(RowDendMergeDf) <- c("n1","n2")
+#print ("merge")
+#print (RowDendMergeDf)
 
-row_node_coordinates <- get_nodes_xy(
-  RowDendro,
-  type = "rectangle"
-)
-
-row_node_df <- as.data.frame(row_node_coordinates)
-colnames(row_node_df) <- c("x","y")
+#print ("height")
+RowDendOrderHeight <- as.data.frame(RowDend$height)
+colnames(RowDendOrderHeight) <- "height"
+#print (RowDendOrderHeight)
 
 # For columns (i.e samples)
 ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matrix
@@ -66,48 +59,37 @@ ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matr
 
 ColumnDend <- hclust(ColumnDist, method = tolower(input$cluster_method))
 #ColumnDend <- flashClust(ColumnDist,method = tolower(input$cluster_method))
-ColumnDendro <- as.dendrogram(ColumnDend)
-#plot (ColumnDendro)
 
-#print ("ColumnCoordinates")
-col_node_coordinates <- get_nodes_xy(
-  ColumnDendro,
-  type = "rectangle"
-)
+ColumnDendMergeDf <- as.data.frame(ColumnDend$merge)
+colnames(ColumnDendMergeDf) <- c("n1","n2")
+#print ("merge")
+#print (ColumnDendMergeDf)
 
-col_node_df <- as.data.frame(col_node_coordinates)
-colnames(col_node_df) <- c("x","y")
+#print ("height")
+ColumnDendOrderHeight <- as.data.frame(ColumnDend$height)
+colnames(ColumnDendOrderHeight) <- "height"
+#print (ColumnDendOrderHeight)
 
-# Sorting the matrix
-
-#SortedMatrix  <- normalized_matrix[RowDend$order, ColumnDend$order]
 SortedRowNames <- input$row_names[RowDend$order]
 SortedColumnNames <- input$col_names[ColumnDend$order]
 
-#m <- matrix(SortedMatrix,length(SortedRowNames),length(SortedColumnNames))
-#colnames(m) <- SortedColumnNames
-#rownames(m) <- SortedRowNames
-
 output_df <- list()
 output_df$method <- input$cluster_method
-output_df$RowNodeJson <- row_node_df
-output_df$ColNodeJson <- col_node_df
+output_df$RowMerge <- RowDendMergeDf
+output_df$RowHeight <- RowDendOrderHeight
+output_df$ColumnMerge <- ColumnDendMergeDf
+output_df$ColumnHeight <- ColumnDendOrderHeight
 
-row_dend_order_df <- as.data.frame(RowDend$order)
-colnames(row_dend_order_df) <- c("ind")
-output_df$RowDendOrder <- row_dend_order_df
+sorted_row_names_df2 <- as.data.frame(SortedRowNames)
+colnames(sorted_row_names_df2) <- c("name")
+output_df$RowOrder <- sorted_row_names_df2
 
-col_dend_order_df <- as.data.frame(ColumnDend$order)
-colnames(col_dend_order_df) <- c("ind")
-output_df$ColumnDendOrder <- col_dend_order_df
+sorted_col_names_df2 <- as.data.frame(SortedColumnNames)
+colnames(sorted_col_names_df2) <- c("name")
+output_df$ColOrder <- sorted_col_names_df2
 
-sorted_row_names_df <- as.data.frame(SortedRowNames)
-colnames(sorted_row_names_df) <- c("gene")
-output_df$SortedRowNames <- sorted_row_names_df
 
-sorted_col_names_df <- as.data.frame(SortedColumnNames)
-colnames(sorted_col_names_df) <- c("sample")
-output_df$SortedColumnNames <- sorted_col_names_df
+
 toJSON(output_df)
 
 

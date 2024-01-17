@@ -36,12 +36,16 @@ async function loadDataset(headerHolder, dslabel) {
 	}
 	const _ = await import('./mass/app')
 	const app = await _.appInit(opts)
+	const queryString = window.location.search
+	const urlParams = new URLSearchParams(queryString)
+	const isLoggedIn = urlParams.get('isLoggedIn')
+	const site = urlParams.get('site')
 
-	addButtons(headerHolder, app, dslabel)
-	launchPlot(app, 'profilePolar', false)
+	addButtons(headerHolder, app, dslabel, isLoggedIn, site)
+	launchPlot(app, 'profilePolar', 'Polar Graph', false, isLoggedIn, site)
 }
 
-function addButtons(headerHolder, app, dslabel) {
+function addButtons(headerHolder, app, dslabel, isLoggedIn, site) {
 	const div = headerHolder.append('div').style('display', 'inline-flex').style('gap', '5px')
 
 	div
@@ -53,49 +57,87 @@ function addButtons(headerHolder, app, dslabel) {
 	div
 		.append('button')
 		.text('Polar Graph')
-		.on('click', e => launchPlot(app, 'profilePolar', preserveCheckbox.node().checked))
+		.on('click', e => launchPlot(app, 'profilePolar', 'Polar Graph', preserveCheckbox.node().checked, isLoggedIn, site))
 	div
 		.append('button')
 		.text('Barchart Graph')
-		.on('click', e => launchPlot(app, 'profileBarchart', preserveCheckbox.node().checked))
-
-	div
-		.append('button')
-		.text('Radar Graph 1')
-		.on('click', e => launchRadarPlot(app, 'profileRadarFacility', 'plot1', preserveCheckbox.node().checked))
+		.on('click', e =>
+			launchPlot(app, 'profileBarchart', 'Barchart Graph', preserveCheckbox.node().checked, isLoggedIn, site)
+		)
+	if (isLoggedIn)
+		div
+			.append('button')
+			.text('Radar Graph 1')
+			.on('click', e =>
+				launchRadarPlot(
+					app,
+					'profileRadarFacility',
+					'Radar Graph 1',
+					'plot1',
+					preserveCheckbox.node().checked,
+					isLoggedIn,
+					site
+				)
+			)
 	if (dslabel == 'ProfileFull')
 		div
 			.append('button')
 			.text('Radar Graph 3')
-			.on('click', e => launchRadarPlot(app, 'profileRadar', 'plot1', preserveCheckbox.node().checked))
+			.on('click', e =>
+				launchRadarPlot(
+					app,
+					'profileRadar',
+					'Radar Graph 3',
+					'plot1',
+					preserveCheckbox.node().checked,
+					isLoggedIn,
+					site
+				)
+			)
 
-	if (dslabel == 'ProfileAbbrev')
+	if (dslabel == 'ProfileAbbrev' && isLoggedIn)
 		div
 			.append('button')
 			.text('Radar Graph 2')
-			.on('click', e => launchRadarPlot(app, 'profileRadarFacility', 'plot1', preserveCheckbox.node().checked))
+			.on('click', e =>
+				launchRadarPlot(
+					app,
+					'profileRadarFacility',
+					'Radar Graph 2',
+					'plot2',
+					preserveCheckbox.node().checked,
+					isLoggedIn,
+					site
+				)
+			)
 
 	div.append('label').attr('for', 'preservePlots').text('Preserve Plots')
 	const preserveCheckbox = div.append('input').attr('id', 'preservePlots').attr('type', 'checkbox')
 }
 
-async function launchPlot(app, chartType, preserve) {
-	if (!preserve) await deletePlots(app)
-	const config = await app.dispatch({
-		type: 'plot_create',
-		config: {
-			chartType
-		}
-	})
-}
-
-async function launchRadarPlot(app, chartType, plot, preserve) {
+async function launchPlot(app, chartType, header, preserve, isLoggedIn, site) {
 	if (!preserve) await deletePlots(app)
 	const config = await app.dispatch({
 		type: 'plot_create',
 		config: {
 			chartType,
-			plot
+			header,
+			isLoggedIn,
+			site
+		}
+	})
+}
+
+async function launchRadarPlot(app, chartType, header, plot, preserve, isLoggedIn, site) {
+	if (!preserve) await deletePlots(app)
+	const config = await app.dispatch({
+		type: 'plot_create',
+		config: {
+			chartType,
+			plot,
+			header,
+			isLoggedIn,
+			site
 		}
 	})
 }

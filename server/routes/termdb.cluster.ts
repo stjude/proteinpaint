@@ -1,11 +1,18 @@
-import { TermdbClusterRequest, TermdbClusterResponse } from '#shared/types/routes/termdb.cluster.ts'
 import path from 'path'
+import fs from 'fs'
+import lines2R from '#src/lines2R.js'
+import {
+	TermdbClusterRequest,
+	TermdbClusterResponse,
+	Clustering,
+	ValidResponse,
+	SinglegeneResponse
+} from '#shared/types/routes/termdb.cluster.ts'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { GeneExpressionQuery, GeneExpressionQueryNative } from '#shared/types/dataset.ts'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
-import { doClustering } from '#src/doClustering.js' // unable to convert this to ts yet, when converted, move all code here
 import { dtgeneexpression } from '#shared/common.js'
 
 export const api = {
@@ -57,14 +64,87 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 	if (gene2sample2value.size == 1) {
 		// get data for only 1 gene; still return data, may create violin plot later
 		const g = Array.from(gene2sample2value.keys())[0]
-		return { gene: g, data: gene2sample2value.get(g) }
+		return { gene: g, data: gene2sample2value.get(g) } as SinglegeneResponse
 	}
 
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
-	const clustering = await doClustering(gene2sample2value, q, ds)
+	const clustering: Clustering = await doClustering(gene2sample2value, q)
 	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
-	return { clustering, byTermId, bySampleId }
+	return { clustering, byTermId, bySampleId } as ValidResponse
+}
+
+async function doClustering(data: any, q: TermdbClusterRequest) {
+	// get set of unique sample names, to generate col_names dimension
+	const sampleSet = new Set()
+	for (const o of data.values()) {
+		// {sampleId: value}
+		for (const s in o) sampleSet.add(s)
+		break
+	}
+
+	const inputData = {
+		matrix: [] as number[][],
+		row_names: [] as string[], // genes
+		col_names: [...sampleSet] as string[], // samples
+		cluster_method: q.clusterMethod as string,
+		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+	}
+
+	// compose "data{}" into a matrix
+	for (const [gene, o] of data) {
+		inputData.row_names.push(gene)
+		const row: number[] = []
+		for (const s of inputData.col_names) {
+			row.push(o[s] || 0)
+		}
+		inputData.matrix.push(getZscore(row))
+	}
+
+	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(Rinputfile, JSON.stringify(inputData))
+	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
+	fs.unlink(Rinputfile, (arg: any) => {
+		return
+	})
+
+	const row_names_index: number[] = Routput.RowOrder.map(row => inputData.row_names.indexOf(row.name)) // sorted rows. value is array index in input data
+	const col_names_index: number[] = Routput.ColOrder.map(col => inputData.col_names.indexOf(col.name)) // sorted columns, value is array index from input array
+
+	// generated sorted matrix based on row/col clustering order
+	const output_matrix: number[][] = []
+	for (const rowI of row_names_index) {
+		const newRow: number[] = []
+		for (const colI of col_names_index) {
+			newRow.push(inputData.matrix[rowI][colI])
+		}
+		output_matrix.push(newRow)
+	}
+
+	return {
+		row: {
+			merge: Routput.RowMerge,
+			height: Routput.RowHeight,
+			order: Routput.RowOrder,
+			inputOrder: inputData.row_names
+		},
+		col: {
+			merge: Routput.ColumnMerge,
+			height: Routput.ColumnHeight,
+			order: Routput.ColOrder,
+			inputOrder: inputData.col_names
+		},
+		matrix: output_matrix
+	}
+}
+function getZscore(l: number[]) {
+	const mean: number = l.reduce((sum, v) => sum + v, 0) / l.length
+	const sd: number = Math.sqrt(l.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / l.length)
+
+	if (sd == 0) {
+		return l
+	}
+	return l.map(v => (v - mean) / sd)
 }
 
 export async function validate_query_geneExpression(ds: any, genome: any) {

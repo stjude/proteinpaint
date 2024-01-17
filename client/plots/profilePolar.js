@@ -23,9 +23,7 @@ class profilePolar extends profilePlot {
 			this.twLst.push(data.maxScore)
 		}
 
-		//this.opts.header.text(config.name).style('font-weight', 'bold')
 		this.arcGenerator = d3.arc().innerRadius(0)
-		//this.dom.plotDiv.on('mouseover', event => this.onMouseOver(event))
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		document.addEventListener('scroll', event => this.tip.hide())
