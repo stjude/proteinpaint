@@ -241,6 +241,7 @@ export class profilePlot {
 				if (this.state.site && !this.settings.isAggregate) {
 					const id = this.sampleidmap[this.state.site]
 					this.settings.site = id
+					this.sites = [{ label: this.state.site, value: id }]
 				} //Admin
 				else if (!this.state.site) {
 					this.sites = this.data.lst.map(s => {
@@ -304,6 +305,7 @@ export class profilePlot {
 		this.settings.country = ''
 		this.settings.income = ''
 		this.settings.facilityType = ''
+		this.settings.site = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -312,6 +314,7 @@ export class profilePlot {
 		const config = this.config
 		this.settings.income = income
 		this.settings.facilityType = ''
+		this.settings.site = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -320,6 +323,7 @@ export class profilePlot {
 		const config = this.config
 		this.settings.country = country
 		this.settings.facilityType = ''
+		this.settings.site = ''
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -327,6 +331,8 @@ export class profilePlot {
 	setFacilityType(type) {
 		const config = this.config
 		this.settings.facilityType = type
+		this.settings.site = ''
+
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -382,6 +388,10 @@ export class profilePlot {
 			this.addFilterLegendItem('Income', this.settings.income)
 			this.addFilterLegendItem('Facility type', this.settings.facilityType)
 		}
+		if (this.settings.site && this.config.chartType != 'profileRadarFacility') {
+			const label = this.sites.find(s => s.value == this.settings.site).label
+			this.addFilterLegendItem('Facility', label)
+		}
 	}
 
 	addFilterLegendItem(filter, value) {
@@ -391,7 +401,7 @@ export class profilePlot {
 		const text = this.filterG
 			.append('text')
 			.attr('font-size', '0.9em')
-			.attr('transform', `translate(0, ${this.filtersCount * 20})`)
+			.attr('transform', `translate(0, ${this.filtersCount * 22})`)
 			.attr('text-anchor', 'left')
 		text.append('tspan').attr('font-weight', 'bold').text(filter)
 		text.append('tspan').text(`: ${value ? value : 'None'}`)
