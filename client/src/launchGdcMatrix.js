@@ -144,7 +144,21 @@ export async function init(arg, holder, genomes) {
 								}
 							})
 							matrixDiv.style('display', '')
+						} else {
+							plotAppApi.dispatch({
+								type: 'filter_replace',
+								filter0: arg.filter0
+							})
 						}
+					} else {
+						// this will force an app.postRender() emit to trigger hiding the loading overlay,
+						// if there is an arg.app.calllbacks.postRender, and even if there is no state change
+						// that would have trigerred a matrix re-render to trigger a postRender closing of
+						// the loading overlay
+						plotAppApi.dispatch({
+							type: 'app_refresh',
+							state: {}
+						})
 					}
 					return
 				}
