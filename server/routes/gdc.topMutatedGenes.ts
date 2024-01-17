@@ -5,6 +5,7 @@ import got from 'got'
 // TODO change to /termdb/topMutatedGenes
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
 export const api = {
 	endpoint: 'gdc/topMutatedGenes',
@@ -31,7 +32,7 @@ function init() {
 	return async (req: any, res: any): Promise<void> => {
 		const q: GdcTopMutatedGeneRequest = req.query
 		try {
-			const genes = await getGenes(q)
+			const genes = await getGenesGraphql(q)
 			const payload: GdcTopMutatedGeneResponse = { genes }
 			res.send(payload)
 		} catch (e: any) {
@@ -40,10 +41,245 @@ function init() {
 	}
 }
 
-/*
-mayAddCGC2filter() are copied to
-/utils/gdc/topSSMgenes.js
-and hosted on https://proteinpaint.stjude.org/GDC/
+const query = `
+query GenesTable_relayQuery(
+  $genesTable_filters: FiltersArgument
+  $genesTable_size: Int
+  $genesTable_offset: Int
+  $score: String
+  $ssmCase: FiltersArgument
+  $geneCaseFilter: FiltersArgument
+  $ssmTested: FiltersArgument
+  $cnvTested: FiltersArgument
+  $cnvGainFilters: FiltersArgument
+  $cnvLossFilters: FiltersArgument
+) {
+  genesTableViewer: viewer {
+    explore {
+      cases {
+        hits(first: 0, filters: $ssmTested) {
+          total
+        }
+      }
+      filteredCases: cases {
+        hits(first: 0, filters: $geneCaseFilter) {
+          total
+        }
+      }
+      cnvCases: cases {
+        hits(first: 0, filters: $cnvTested) {
+          total
+        }
+      }
+      genes {
+        hits(first: $genesTable_size, offset: $genesTable_offset, filters: $genesTable_filters, score: $score) {
+          total
+          edges {
+            node {
+              id
+              numCases: score
+              symbol
+              name
+              cytoband
+              biotype
+              gene_id
+              is_cancer_gene_census
+              ssm_case: case {
+                hits(first: 0, filters: $ssmCase) {
+                  total
+                }
+              }
+              cnv_case: case {
+                hits(first: 0, filters: $cnvTested) {
+                  total
+                }
+              }
+              case_cnv_gain: case {
+                hits(first: 0, filters: $cnvGainFilters) {
+                  total
+                }
+              }
+              case_cnv_loss: case {
+                hits(first: 0, filters: $cnvLossFilters) {
+                  total
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`
+
+async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
+	// set type "any" to avoid complains
+	const variables: any = {
+		genesTable_filters: {
+			op: 'and',
+			content: []
+		},
+		genesTable_size: q.maxGenes || 50,
+		genesTable_offset: 0,
+		score: 'case.project.project_id',
+		ssmCase: {
+			op: 'and',
+			content: [
+				{
+					op: 'in',
+					content: {
+						field: 'cases.available_variation_data',
+						value: ['ssm']
+					}
+				},
+				{
+					op: 'NOT',
+					content: {
+						field: 'genes.case.ssm.observation.observation_id',
+						value: 'MISSING'
+					}
+				}
+			]
+		},
+		geneCaseFilter: {
+			content: [
+				{
+					content: {
+						field: 'cases.available_variation_data',
+						value: ['ssm']
+					},
+					op: 'in'
+				}
+			],
+			op: 'and'
+		},
+		ssmTested: {
+			content: [
+				{
+					content: {
+						field: 'cases.available_variation_data',
+						value: ['ssm']
+					},
+					op: 'in'
+				}
+			],
+			op: 'and'
+		},
+		cnvTested: {
+			op: 'and',
+			content: [
+				{
+					content: {
+						field: 'cases.available_variation_data',
+						value: ['cnv']
+					},
+					op: 'in'
+				}
+			]
+		},
+		cnvGainFilters: {
+			op: 'and',
+			content: [
+				{
+					content: {
+						field: 'cases.available_variation_data',
+						value: ['cnv']
+					},
+					op: 'in'
+				},
+				{
+					content: {
+						field: 'cnvs.cnv_change',
+						value: ['Gain']
+					},
+					op: 'in'
+				}
+			]
+		},
+		cnvLossFilters: {
+			op: 'and',
+			content: [
+				{
+					content: {
+						field: 'cases.available_variation_data',
+						value: ['cnv']
+					},
+					op: 'in'
+				},
+				{
+					content: {
+						field: 'cnvs.cnv_change',
+						value: ['Loss']
+					},
+					op: 'in'
+				}
+			]
+		}
+	}
+
+	if (q.filter0) {
+		variables.genesTable_filters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		variables.geneCaseFilter.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		variables.cnvTested.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		variables.cnvGainFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		variables.cnvLossFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+	}
+
+	if (q.geneFilter == 'CGC') {
+		variables.genesTable_filters.content.push(geneCGC())
+		variables.geneCaseFilter.content.push(geneCGC())
+		variables.cnvTested.content.push(geneCGC())
+		variables.cnvGainFilters.content.push(geneCGC())
+		variables.cnvLossFilters.content.push(geneCGC())
+	}
+
+	const response = await got.post(apihostGraphql, {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({ query, variables })
+	})
+
+	const re: any = JSON.parse(response.body)
+	const genes: string[] = []
+	for (const g of re.data.genesTableViewer.explore.genes.hits.edges) {
+		/*
+		{
+		  node: {
+			biotype: 'protein_coding',
+			case_cnv_gain: { hits: [Object] },
+			case_cnv_loss: { hits: [Object] },
+			cnv_case: { hits: [Object] },
+			cytoband: [ '17q11.2' ],
+			gene_id: 'ENSG00000196712',
+			is_cancer_gene_census: true,
+			name: 'neurofibromin 1',
+			numCases: 93,
+			ssm_case: { hits: [Object] },
+			symbol: 'NF1'
+		  }
+		}
+		*/
+		genes.push(g.node.symbol)
+	}
+	return genes
+}
+
+function geneCGC() {
+	// return a copy of cgc filter obj each time
+	return {
+		content: {
+			field: 'genes.is_cancer_gene_census',
+			value: ['true']
+		},
+		op: 'in'
+	} as object
+}
+
+/*************************************
+      old method to use rest api
+**************************************
+this api only gets ssm-cases and does not account for cnv cases, will not return any gene for ssm-less cohort e.g. APOLLO-LUAD
+thus is replaced by getGenesGraphql
 */
 async function getGenes(q: GdcTopMutatedGeneRequest) {
 	const _f = q.filter0 || { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
