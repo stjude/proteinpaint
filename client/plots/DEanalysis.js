@@ -237,6 +237,36 @@ add:
 			})
 		select.append('option').text('Adjusted P value')
 		select.append('option').text('Original P value')
+		tabel_panel.on('click', event => {
+			//if (table_panel.d) {
+			//	delete table_panel.d
+			//}
+			const d = tabel_panel.append('div').style('width', '350px').html(`DE analysis results`)
+			const table = d.append('table').style('margin-top', '20px').style('border-spacing', '5px')
+
+			{
+				// row 1
+				const tr = table.append('tr').style('font-weight', 'bold')
+				tr.append('td')
+				tr.append('td').text('Gene Name')
+				tr.append('td').text('Gene Symbol')
+				tr.append('td').text('log2 Fold change') // The 2 should be in subscript
+				tr.append('td').text('Original p-value')
+				tr.append('td').text('Adjusted p-value')
+			}
+			for (const d of mavb) {
+				if (d.adjusted_p_value > p_value_cutoff) {
+					// Subsequent rows
+					const tr = table.append('tr')
+					tr.append('td')
+					tr.append('td').text(d.gene_name)
+					tr.append('td').text(d.gene_symbol)
+					tr.append('td').text(d.fold_change)
+					tr.append('td').text(d.original_p_value)
+					tr.append('td').text(d.adjusted_p_value)
+				}
+			}
+		})
 	}
 	return svg
 }
