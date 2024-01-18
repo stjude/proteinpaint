@@ -26,11 +26,12 @@ class DEanalysis {
 	async init(opts) {
 		const config = opts.plots.find(p => p.id === this.id)
 		console.log('config:', config)
-		const holder = this.opts.holder.append('div')
+		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
+		const holder = this.opts.holder.append('div').style('display', 'inline-block')
 		this.dom = {
 			holder,
 			header: this.opts.header,
-			controlsDiv: holder.append('div')
+			controlsDiv
 		}
 		const inputs = [
 			{
@@ -303,9 +304,9 @@ export async function getPlotConfig(opts, app) {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
-				orientation: 'vertical',
+				DEanalysis: { orientation: 'vertical' },
 				controls: {
-					isOpen: true // control panel is hidden by default
+					isOpen: false // control panel is hidden by default
 				}
 			}
 		}
