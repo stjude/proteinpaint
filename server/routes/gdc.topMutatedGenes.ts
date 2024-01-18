@@ -1,4 +1,5 @@
-import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse } from '#shared/types/routes/gdc.topMutatedGenes.ts'
+import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, Gene } from '#shared/types/routes/gdc.topMutatedGenes.ts'
+import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import path from 'path'
 import got from 'got'
 
@@ -240,26 +241,37 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
 	})
 
 	const re: any = JSON.parse(response.body)
-	const genes: string[] = []
+	const genes: Gene[] = []
 	for (const g of re.data.genesTableViewer.explore.genes.hits.edges) {
-		/*
+		/* g.node is:
 		{
-		  node: {
-			biotype: 'protein_coding',
-			case_cnv_gain: { hits: [Object] },
-			case_cnv_loss: { hits: [Object] },
-			cnv_case: { hits: [Object] },
-			cytoband: [ '17q11.2' ],
-			gene_id: 'ENSG00000196712',
-			is_cancer_gene_census: true,
-			name: 'neurofibromin 1',
-			numCases: 93,
-			ssm_case: { hits: [Object] },
-			symbol: 'NF1'
-		  }
+		  "biotype": "protein_coding",
+		  "case_cnv_gain": { "hits": { "total": 65 } },
+		  "case_cnv_loss": { "hits": { "total": 93 } },
+		  "cnv_case": { "hits": { "total": 173 } },
+		  "cytoband": [
+			"12q15"
+		  ],
+		  "gene_id": "ENSG00000127329",
+		  "is_cancer_gene_census": true,
+		  "name": "protein tyrosine phosphatase receptor type B",
+		  "numCases": 18,
+		  "ssm_case": { "hits": { "total": 630 } },
+		  "symbol": "PTPRB"
 		}
 		*/
-		genes.push(g.node.symbol)
+		if (typeof g.node != 'object') throw 'node missing from re.data.genesTableViewer.explore.genes.hits.edges[]'
+		const mutationStat: any = []
+		if (Number.isInteger(g.node.case_cnv_gain?.hits?.total))
+			mutationStat.push({ class: mclasscnvgain, count: g.node.case_cnv_gain.hits.total })
+		if (Number.isInteger(g.node.case_cnv_loss?.hits?.total))
+			mutationStat.push({ class: mclasscnvloss, count: g.node.case_cnv_loss.hits.total })
+		if (Number.isInteger(g.node.ssm_case?.hits?.total))
+			mutationStat.push({ dt: dtsnvindel, count: g.node.ssm_case.hits.total })
+		genes.push({
+			name: g.node.symbol, // TODO change "name" to "gene"
+			mutationStat
+		})
 	}
 	return genes
 }
