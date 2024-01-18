@@ -181,7 +181,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 					const result = await vocabApi.getTopMutatedGenes(args)
 
 					geneList = []
-					for (const gene of result.genes) geneList.push({ name: gene })
+					for (const gene of result.genes) geneList.push({ name: gene.name })
 					renderGenes()
 					api.dom.loadBtn.property('disabled', false)
 				})
