@@ -128,3 +128,40 @@ tape('nested filter', async function (test) {
 	test.equal(filter.CTEs.length, 8, 'should return 8 CTE clauses for this complex filter')
 	test.end()
 })
+
+tape('invalid filter term', async function (test) {
+	const message = 'Should throw for invalid term id'
+	try {
+		const filter = await getFilterCTEs(
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: {
+								id: 'invalidTerm',
+								name: 'InvalidTerm',
+								type: 'categorical'
+							},
+							values: [
+								{
+									key: 'RMS',
+									label: 'RMS'
+								}
+							]
+						}
+					}
+				]
+			},
+			tdb.ds
+		)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	test.end()
+})
