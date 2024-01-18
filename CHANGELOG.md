@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Use graphql query to replace /analysis/top_mutated_genes_by_project in GDC OncoMatrix
+
+
 ## 2.39.4
 
 Fixes:
