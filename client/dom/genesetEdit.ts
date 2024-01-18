@@ -1,6 +1,7 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
+import { mclass } from '#shared/common'
 
 type API = {
 	dom: {
@@ -35,7 +36,6 @@ type showGenesetEditArg = {
 export function showGenesetEdit(arg: showGenesetEditArg) {
 	const { holder, genome, mode, callback, vocabApi, titleText } = arg
 	let geneList = structuredClone(arg.geneList || [])
-
 	const tip2 = new Menu({ padding: '0px', parent_menu: holder.node(), test: 'test' })
 	holder.selectAll('*').remove()
 	// must not hardcode div width to 850px, gives broken ui
@@ -181,7 +181,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 					const result = await vocabApi.getTopMutatedGenes(args)
 
 					geneList = []
-					for (const gene of result.genes) geneList.push({ name: gene.name })
+					for (const gene of result.genes) geneList.push({ name: gene.name, mutationStat: gene.mutationStat })
 					renderGenes()
 					api.dom.loadBtn.property('disabled', false)
 				})
@@ -259,7 +259,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			.style('display', 'inline-block')
 			.style('padding', '5px 16px 5px 9px')
 			.style('margin-left', '5px')
-			.text(gene => gene.name)
+			.each(renderGene)
 			.on('click', deleteGene)
 			.on('mouseover', function (event) {
 				const div = select(event.target)
@@ -298,6 +298,25 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		api.dom.restoreBtn?.property('disabled', !hasChanged)
 		api.dom.submitBtn.property('disabled', !hasChanged)
 		if (hasChanged) submitBtn.node().focus()
+	}
+
+	function renderGene(gene) {
+		const div = select(this).style('background-color', '#fffdaf').style('border-radius', '5px')
+
+		div.insert('div').style('display', 'inline-block').html(gene.name)
+		if (gene.mutationStat) {
+			div.html(`${gene.name}&nbsp;&nbsp;`)
+			for (const m of gene.mutationStat) {
+				const classinfo = mclass[m.class]
+				if (classinfo)
+					div
+						.insert('div')
+						.style('display', 'inline-block')
+						.style('background-color', classinfo.color)
+						.style('padding', '0px 2px')
+						.text(m.count)
+			}
+		}
 	}
 
 	function addGene() {
