@@ -6,6 +6,20 @@ export type GdcTopMutatedGeneRequest = {
 	/** gdc cohort filter */
 	filter0?: object
 }
+
+export type Gene = {
+	/** FIXME change .name to .gene */
+	name: string
+	/** optional attributes on number of mutated cases per dt */
+	mutationStat?: {
+		/** each stat object is identified by either dt or class */
+		dt?: number
+		class?: string
+		/** number of samples with alterations of this gene */
+		count: number
+	}[]
+}
+
 export type GdcTopMutatedGeneResponse = {
-	genes: string[]
+	genes: Gene[]
 }
