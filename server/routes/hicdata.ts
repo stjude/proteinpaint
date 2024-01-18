@@ -86,7 +86,7 @@ function handle_hicdata(q: HicdataRequest) {
 			}
 			const n1 = Number.parseInt(l[0])
 			const n2 = Number.parseInt(l[1])
-			const v = Number.parseFloat(l[2])
+			const v = q.matrixType == 'oe' ? Math.log(Number.parseFloat(l[2])) : Number.parseFloat(l[2])
 			if (Number.isNaN(n1) || Number.isNaN(n2) || Number.isNaN(v)) {
 				fieldnotnumerical++
 				return

@@ -749,7 +749,6 @@ class Hicstat {
 		nmeth2select(hic, this.horizontalview)
 		matrixType2select(this.horizontalview, this)
 
-		//Clear elements created in chr pair view
 		this.dom.plotDiv.xAxis.selectAll('*').remove()
 		this.dom.plotDiv.yAxis.selectAll('*').remove()
 		this.dom.plotDiv.plot.selectAll('*').remove()
@@ -987,11 +986,21 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 
 			obj.data.push([leadpx, followpx, v])
 
-			const p =
-				v >= self.wholegenome.bpmaxv ? 0 : Math.floor((255 * (self.wholegenome.bpmaxv - v)) / self.wholegenome.bpmaxv)
-			obj.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
+			let p: number
+			if (v >= 0) {
+				// positive, use red
+				p =
+					v >= self.wholegenome.bpmaxv ? 0 : Math.floor((255 * (self.wholegenome.bpmaxv - v)) / self.wholegenome.bpmaxv)
+				obj.ctx.fillStyle = `rgb(255, ${p}, ${p})`
+				obj.ctx2.fillStyle = `rgb(255, ${p}, ${p})`
+			} else {
+				// negative, use blue
+				p = Math.floor((255 * (self.wholegenome.bpmaxv + v)) / self.wholegenome.bpmaxv)
+				obj.ctx.fillStyle = `rgb(${p}, ${p}, 255)`
+				obj.ctx2.fillStyle = `rgb(${p}, ${p}, 255)`
+			}
+
 			obj.ctx.fillRect(followpx, leadpx, binpx, binpx)
-			obj.ctx2.fillStyle = 'rgb(255,' + p + ',' + p + ')'
 			obj.ctx2.fillRect(leadpx, followpx, binpx, binpx)
 		}
 		obj.img.attr('xlink:href', obj.canvas.toDataURL())
@@ -1205,8 +1214,14 @@ export async function getdata_chrpair(hic: any, self: any) {
 		self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
 		for (const [x, y, v] of self.chrpairview.data) {
-			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-			ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
+			//Show red for positive values and blue for negative values
+			if (v >= 0) {
+				const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
+				ctx.fillStyle = `rgb(255, ${p}, ${p})`
+			} else {
+				const p = Math.floor((255 * (maxv + v)) / maxv)
+				ctx.fillStyle = `rgb(${p}, ${p}, 255)`
+			}
 			ctx.fillRect(x, y, binpx, binpx)
 		}
 	} catch (err: any) {
@@ -1590,9 +1605,13 @@ export function getdata_detail(hic: any, self: any) {
 			self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
 			for (const [x, y, w, h, v] of lst) {
-				const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-				ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-
+				if (v >= 0) {
+					const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
+					ctx.fillStyle = `rgb(255, ${p}, ${p})`
+				} else {
+					const p = Math.floor((255 * (maxv + v)) / maxv)
+					ctx.fillStyle = `rgb(${p}, ${p}, 255)`
+				}
 				ctx.fillRect(x, y, w, h)
 			}
 
