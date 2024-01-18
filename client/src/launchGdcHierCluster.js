@@ -88,7 +88,8 @@ export async function init(arg, holder, genomes) {
 				]
 			},
 			app: {
-				features: ['recover']
+				features: ['recover'],
+				callbacks: arg.opts?.app?.callbacks || {}
 			},
 			recover: {
 				undoHtml: 'Undo',
