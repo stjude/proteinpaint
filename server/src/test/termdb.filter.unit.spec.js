@@ -10,26 +10,29 @@ const tdb = require('./load.testds').init('termdb.test.js')
 const { server_init_db_queries } = require('../termdb.server.init')
 server_init_db_queries(tdb.ds)
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- modules/termdb.filter specs -***-')
 	test.end()
 })
 
-tape('simple filter', async function(test) {
-	const filter = await getFilterCTEs({
-		type: 'tvslst',
-		in: true,
-		join: '',
-		lst: [
-			{
-				type: 'tvs',
-				tvs: {
-					term: { id: 'wgs_sequenced', type: 'categorical' },
-					values: [{ key: '1', label: 'Yes' }] // always assumed OR
+tape('simple filter', async function (test) {
+	const filter = await getFilterCTEs(
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'wgs_curated', type: 'categorical' },
+						values: [{ key: '1', label: 'Yes' }] // always assumed OR
+					}
 				}
-			}
-		]
-	})
+			]
+		},
+		tdb.ds
+	)
 
 	//console.log(filter.CTEs.join(',\n'))
 	//console.log(filter.values)
@@ -48,7 +51,7 @@ tape('simple filter', async function(test) {
 	test.end()
 })
 
-tape('nested filter', async function(test) {
+tape('nested filter', async function (test) {
 	const filter = await getFilterCTEs(
 		{
 			type: 'tvslst',
@@ -58,7 +61,7 @@ tape('nested filter', async function(test) {
 				{
 					type: 'tvs',
 					tvs: {
-						term: { id: 'wgs_sequenced', type: 'categorical' },
+						term: { id: 'wgs_curated', type: 'categorical' },
 						values: [{ key: '1', label: 'Yes' }] // always assumed OR
 					}
 				},
