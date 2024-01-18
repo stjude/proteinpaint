@@ -1,6 +1,7 @@
 import * as client from '../src/client'
 import { renderTable } from '#dom/table'
 import * as d3axis from 'd3-axis'
+import { controlsInit } from './controls'
 import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
 import { scaleLog, scaleLinear } from 'd3-scale'
@@ -23,11 +24,33 @@ class DEanalysis {
 		this.type = 'DEanalysis'
 	}
 	async init(opts) {
+		const config = opts.plots.find(p => p.id === this.id)
+		console.log('config:', config)
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder,
 			header: this.opts.header,
 			controlsDiv: holder.append('div')
+		}
+		const inputs = [
+			{
+				label: 'Orientation',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'orientation',
+				options: [
+					{ label: 'Vertical', value: 'vertical' },
+					{ label: 'Horizontal', value: 'horizontal' }
+				]
+			}
+		]
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs: inputs
+			})
 		}
 	}
 
@@ -40,6 +63,8 @@ class DEanalysis {
 	}
 
 	async main() {
+		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.settings = this.config.settings
 		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
 		//const state = this.app.getState()
 		//console.log('state:', state) // state.customTerms[0].name
@@ -277,6 +302,12 @@ export async function getPlotConfig(opts, app) {
 		const config = {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
+			settings: {
+				orientation: 'vertical',
+				controls: {
+					isOpen: true // control panel is hidden by default
+				}
+			}
 		}
 		return copyMerge(config, opts)
 	} catch (e) {
