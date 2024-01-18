@@ -142,8 +142,8 @@ add:
 					{ value: d.gene_name },
 					{ value: d.gene_symbol },
 					{ value: d.fold_change },
-					{ value: d.original_p_value },
-					{ value: d.adjusted_p_value }
+					{ value: Math.pow(10, -d.original_p_value) },
+					{ value: Math.pow(10, -d.adjusted_p_value) }
 				])
 			} else {
 				color = 'black'
@@ -163,6 +163,7 @@ add:
 	//.on('click', (event, d) => {
 	//	circleclick(d, mavb, event.clientX, event.clientY)
 	//})
+	table_rows.sort((a, b) => a[2].value - b[2].value).reverse() // Sorting genes in descending order of fold change
 	console.log(
 		'Percentage of significant genes:',
 		(num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)
