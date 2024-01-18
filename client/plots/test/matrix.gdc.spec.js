@@ -65,7 +65,11 @@ tape('2 genes, 2 dict terms', function (test) {
 		await testMatrixrendering(matrix)
 		await testLegendRendering(matrix)
 		await testBtnRendering(matrix)
-		await testButtonFunctionalities(matrix)
+		await testZoom(matrix)
+		await testCaseLabelCharLimit(matrix)
+		await testRowLabelCharLimit(matrix)
+		await testGroupBy(matrix)
+
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
@@ -90,7 +94,7 @@ tape('2 genes, 2 dict terms', function (test) {
 		test.equal(matrix.Inner.dom.controls.node().querySelectorAll('button').length, 8, `should render buttons`)
 	}
 
-	async function testButtonFunctionalities(matrix) {
+	async function testZoom(matrix) {
 		//test zoom in feature
 		await matrix.Inner.app.dispatch({
 			type: 'plot_edit',
@@ -104,7 +108,9 @@ tape('2 genes, 2 dict terms', function (test) {
 			}
 		})
 		test.equal(matrix.Inner.config.settings.matrix.zoomLevel, 10, `should zoom in`)
+	}
 
+	async function testCaseLabelCharLimit(matrix) {
 		//test Case Label character limit feature
 		await matrix.Inner.app.dispatch({
 			type: 'plot_edit',
@@ -122,7 +128,29 @@ tape('2 genes, 2 dict terms', function (test) {
 			10,
 			`should limit case label characters to ${matrix.Inner.config.settings.matrix.collabelmaxchars}`
 		)
+	}
 
+	async function testRowLabelCharLimit(matrix) {
+		// test Case Row Label max character limit feature
+		await matrix.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: matrix.Inner.id,
+			config: {
+				settings: {
+					matrix: {
+						rowlabelmaxchars: 10
+					}
+				}
+			}
+		})
+		test.equal(
+			matrix.Inner.config.settings.matrix.rowlabelmaxchars,
+			10,
+			`should limit row label characters to ${matrix.Inner.config.settings.matrix.rowlabelmaxchars}`
+		)
+	}
+
+	async function testGroupBy(matrix) {
 		//test Group by feature. Note groups are not provided in the test data, so groups don't show up on the UI
 		await matrix.Inner.app.dispatch({
 			type: 'plot_edit',
