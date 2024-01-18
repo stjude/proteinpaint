@@ -6,13 +6,13 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Use graphql query to replace /analysis/top_mutated_genes_by_project in GDC OncoMatrix
-
+- Ensure that an embedder loading overlay gets triggered using the app callbacks.preDispatch option
 
 ## 2.39.4
 
 Fixes:
 - GDC bam slicing UI bug fix to forget previous coordinate input box search result
-- always trigger the closing of an embedder's loading overlay, even when there are no chart state changes
+- Always trigger the closing of an embedder's loading overlay, even when there are no chart state changes
 - Block track menu will not allow to hide a GDC bam tk, and no longer shows delete button for custom tracks
 
 
@@ -25,7 +25,7 @@ Fixes:
 - Ensure that the zoom controls has valid dimensions on update, in case it was initially rendered in an invisible div
 
 DevOps:
-- detect unreleased notes in the CHANGELOG, in addition to the release.txt
+- Detect unreleased notes in the CHANGELOG, in addition to the release.txt
 
 
 ## 2.39.2
