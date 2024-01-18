@@ -119,13 +119,25 @@ tape('Test radar POC vs SC', function (test) {
 	openRadarPlot('profileRadar', 'plot1', runTests)
 
 	async function runTests(plot) {
-		//plot.on('postRender.test', null)
+		plot.on('postRender.test', null)
 
 		const self = plot.Inner
 		const svg = self.dom.plotDiv.select('svg')
 		test.true(!svg.empty(), `Should render one svg`)
-		console.log(svg.selectAll('circle'))
 		test.true(svg.selectAll('circle').size() > 0, `Should render several dots`)
+		const matched = await detectLst({
+			target: self.dom.plotDiv.node(),
+			selector: 'circle',
+
+			trigger() {
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { settings: { country: 'Mexico' } } })
+			},
+			matcher(mutations) {
+				return mutations
+			}
+		})
+		const dot = matched.find(m => m.target.__data__.module == 'National Context' && m.target.__data__.percentage == 57)
+		test.true(dot != null, `Should find a dot for National Context with percentage 58`)
 
 		if (test._ok) self.app.destroy()
 		test.end()
