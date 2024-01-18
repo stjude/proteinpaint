@@ -1,4 +1,5 @@
 import * as client from '../src/client'
+import { renderTable } from '#dom/table'
 import * as d3axis from 'd3-axis'
 import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
@@ -128,6 +129,7 @@ add:
 	let p_value_cutoff = 3 // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
+	const table_rows = []
 	const circle = dotg
 		.append('circle')
 		.attr('stroke', d => {
@@ -136,6 +138,13 @@ add:
 			if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
 				color = 'red'
 				num_significant_genes += 1
+				table_rows.push([
+					{ value: d.gene_name },
+					{ value: d.gene_symbol },
+					{ value: d.fold_change },
+					{ value: d.original_p_value },
+					{ value: d.adjusted_p_value }
+				])
 			} else {
 				color = 'black'
 				num_non_significant_genes += 1
@@ -238,34 +247,22 @@ add:
 		select.append('option').text('Adjusted P value')
 		select.append('option').text('Original P value')
 		tabel_panel.on('click', event => {
-			//if (table_panel.d) {
-			//	delete table_panel.d
-			//}
-			const d = tabel_panel.append('div').style('width', '350px').html(`DE analysis results`)
-			const table = d.append('table').style('margin-top', '20px').style('border-spacing', '5px')
-
-			{
-				// row 1
-				const tr = table.append('tr').style('font-weight', 'bold')
-				tr.append('td')
-				tr.append('td').text('Gene Name')
-				tr.append('td').text('Gene Symbol')
-				tr.append('td').text('log2 Fold change') // The 2 should be in subscript
-				tr.append('td').text('Original p-value')
-				tr.append('td').text('Adjusted p-value')
-			}
-			for (const d of mavb) {
-				if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
-					// Subsequent rows
-					const tr = table.append('tr')
-					tr.append('td')
-					tr.append('td').text(d.gene_name)
-					tr.append('td').text(d.gene_symbol)
-					tr.append('td').text(d.fold_change)
-					tr.append('td').text(d.original_p_value)
-					tr.append('td').text(d.adjusted_p_value)
-				}
-			}
+			const table_cols = [
+				{ label: 'Gene Name' },
+				{ label: 'Gene Symbol' },
+				{ label: 'log2 Fold change' },
+				{ label: 'Original p-value' },
+				{ label: 'Adjusted p-value' }
+			]
+			const d = tabel_panel.append('div').html(`DE analysis results`)
+			renderTable({
+				columns: table_cols,
+				rows: table_rows,
+				div: d,
+				showLines: true,
+				maxHeight: '150vh',
+				resize: true
+			})
 		})
 	}
 	return svg
