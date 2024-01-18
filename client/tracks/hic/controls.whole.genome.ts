@@ -84,7 +84,8 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		//Allow for customer friendly labels but pass the appropriate straw parameter
 		{ label: 'Observed', value: 'observed' },
 		{ label: 'Expected', value: 'expected' },
-		{ label: 'Observed/Expected', value: 'oe' }
+		//'oe' is the straw parameter and returns a ratio. Server code applies log().
+		{ label: 'Log(Observed/Expected)', value: 'oe' }
 	]
 	for (const matrixType of matrixTypevalues) {
 		self.dom.controlsDiv.matrixType.append('option').text(matrixType.label).attr('value', matrixType.value)
@@ -289,7 +290,9 @@ function setmaxv(self: any, maxv: number) {
 /**
  * Click buttons in menu to switch between views (whole genome, chr-chr pair, detail, horizontal).
  * Launches or rerenders previously created views.
- * @param hic
+ * @param hic file input
+ * @param self app obj
+
  */
 function switchview(hic: any, self: any) {
 	//Remove all previous elements
