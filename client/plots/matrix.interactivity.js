@@ -454,7 +454,9 @@ function setTermActions(self) {
 		self.dom.menubody.style('padding', 0).selectAll('*').remove()
 
 		self.dom.shortcutDiv = self.dom.menutop.append('div')
-		self.showShortcuts(t, self.dom.shortcutDiv)
+
+		// Do not show shortcuts for hierCluster for now
+		if (self.chartType !== 'hierCluster') self.showShortcuts(t, self.dom.shortcutDiv)
 
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
