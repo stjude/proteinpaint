@@ -358,8 +358,13 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		api.dom.statLegendDiv.style('display', 'block').selectAll('*').remove()
 		for (const [c, n] of api.statColor2label) {
 			api.dom.statLegendDiv
-				.append('span')
-				.html(`<span style="background-color:${c}">&nbsp;&nbsp;</span> ${n} &nbsp;&nbsp;`)
+				.append('div')
+				.style('display', 'inline-block')
+				.style('width', '12px')
+				.style('height', '12px')
+				.style('background-color', c)
+				.style('border', '1px solid gray')
+			api.dom.statLegendDiv.append('span').html(` ${n} &nbsp;&nbsp;`)
 		}
 	}
 
