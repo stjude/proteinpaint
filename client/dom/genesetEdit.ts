@@ -10,7 +10,7 @@ type API = {
 		loadBtn: any
 		clearBtn: any
 		submitBtn: any
-		genesDiv: any | null // gene holding area, shows bunch of gene buttons pending submission
+		geneHoldingDiv: any | null // gene holding area, shows bunch of gene buttons pending submission
 		statLegendDiv: any // legend area, to show available stats legend on genes
 	}
 	params: any[]
@@ -60,7 +60,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			loadBtn: null,
 			clearBtn: null,
 			restoreBtn: null,
-			genesDiv: null,
+			geneHoldingDiv: null,
 			statLegendDiv: null,
 			submitBtn: null
 		},
@@ -105,20 +105,16 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	  when this ui is used elsewhere outside of matrix, this assumption can subject to change
 	*/
 
-	const genesDiv = div
+	api.dom.geneHoldingDiv = div
 		.append('div')
 		.style('display', 'flex')
 		.style('flex-wrap', 'wrap')
 		.style('gap', '5px')
 		.style('min-height', '20px')
-		.style('border-style', 'solid')
-		.style('border-width', '2px')
-		.style('border-color', '#eee')
+		.style('border', 'solid 1px #aaa')
 		.style('margin', '10px 0px')
-		.style('padding', '2px 0px')
+		.style('padding', '6px 2px')
 		.style('min-height', '30px')
-
-	api.dom.genesDiv = genesDiv
 
 	api.dom.statLegendDiv = div.append('div')
 
@@ -251,11 +247,11 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	}
 
 	function renderGenes() {
-		genesDiv.selectAll('*').remove()
+		api.dom.geneHoldingDiv.selectAll('*').remove()
 
 		api.statColor2label = new Map()
 
-		genesDiv
+		api.dom.geneHoldingDiv
 			.selectAll('div')
 			.data(geneList || [])
 			.enter()
