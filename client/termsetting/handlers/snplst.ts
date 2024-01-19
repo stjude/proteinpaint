@@ -84,22 +84,51 @@ async function makeEditMenu(self, div0: any) {
 
 	// input ui holder
 	const inputUIholder = div.append('div')
+
 	const textarea = inputUIholder
 		.append('textarea')
 		.attr('rows', 5)
 		.attr('cols', 20)
 		.attr('placeholder', 'Enter variants')
-	inputUIholder
+
+	const prompt = inputUIholder.append('div').style('opacity', 0.8).style('font-size', '.8em')
+
+	prompt
 		.append('div')
-		.style('opacity', 0.8)
-		.style('font-size', '.8em')
 		.html(
-			`Enter a list of variants (dbSNP accessions). One variant per line. Max 500 allowed. ${
+			`Enter a list of variants (dbSNP accessions). One variant per line. Max 500 allowed.${
 				self.usecase.target == 'dataDownload'
-					? '<br><br><span style="text-decoration: underline;">Example:</span><br>rs1641548<br>rs1642793<br>rs1042522<br>rs1642782'
-					: '<br>Variant accession in first column and optional effect allele in second column.<br>Effect allele is allele that will be used for testing in regression analysis.<br><br><span style="text-decoration: underline;">Example:</span><br>rs1641548<br>rs1642793 C<br>rs1042522<br>rs1642782 G'
+					? ''
+					: '<br>Effect alleles (alleles tested against in the analysis) can be specified here or<br>after variant validation.'
 			}`
 		)
+
+	const exampleInput = [
+		{ id: 'rs1641548', effectAllele: 'T' },
+		{ id: 'rs4968204', effectAllele: 'C' },
+		{ id: 'rs9893249', effectAllele: 'T' },
+		{ id: 'rs1042522', effectAllele: 'G' }
+	]
+
+	const example1 = prompt
+		.append('ul')
+		.style('display', 'inline-block')
+		.style('list-style-type', 'none')
+		.style('padding', '0px')
+	const example2 = prompt
+		.append('ul')
+		.style('display', self.usecase.target == 'dataDownload' ? 'none' : 'inline-block')
+		.style('list-style-type', 'none')
+		.style('padding', '0px')
+		.style('margin-left', '40px')
+
+	example1.append('li').style('text-decoration', 'underline').text('Example:')
+	example2.append('li').style('text-decoration', 'underline').text('Example (with effect alleles):')
+
+	for (const variant of exampleInput) {
+		example1.append('li').text(variant.id)
+		example2.append('li').html(`${variant.id}&nbsp;${variant.effectAllele}`)
+	}
 
 	const validateBtn = inputUIholder
 		.append('div')
@@ -109,15 +138,6 @@ async function makeEditMenu(self, div0: any) {
 		.on('click', async () => {
 			// parse input text
 			const snps: any = parseSnpFromText(textarea)
-			/*
-			if (snps.length && snps.find(snp => snp.effectAllele)) {
-				// if user provides custom effect allele in input text
-				// then set the select_alleleType option to be 'custom'
-				select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
-				//no hint message shown for "SET EFFECT ALLELE AS" when users provide custome effect allele in input text.
-				self.dom.setEffectAlleleAsHint.text('')
-			}
-			*/
 
 			if (!snps.length) return window.alert('No valid variants')
 
@@ -164,10 +184,27 @@ async function makeEditMenu(self, div0: any) {
 			// successfully validated, q.cacheid is set
 
 			// fill default q{} parameters to run summary
-			if (!Number.isFinite(self.q.AFcutoff)) self.q.AFcutoff = 5
-			if (!Number.isInteger(self.q.alleleType)) self.q.alleleType = 0
-			if (!Number.isInteger(self.q.geneticModel)) self.q.geneticModel = 0
-			if (!Number.isInteger(self.q.missingGenotype)) self.q.missingGenotype = 0
+			if (!Number.isFinite(self.q.AFcutoff)) {
+				self.q.AFcutoff = 5
+				input_AFcutoff.property('value', self.q.AFcutoff)
+			}
+
+			if (!Number.isInteger(self.q.alleleType)) {
+				self.q.alleleType = snps.find(snp => snp.effectAllele) ? 2 : 0
+				select_alleleType.property('selectedIndex', self.q.alleleType)
+				div.select('.sjpp-allele-type-hint').text(getAlleleTypeHint(select_alleleType))
+			}
+
+			if (!Number.isInteger(self.q.geneticModel)) {
+				self.q.geneticModel = 0
+				select_geneticModel.property('selectedIndex', self.q.geneticModel)
+			}
+
+			if (!Number.isInteger(self.q.missingGenotype)) {
+				self.q.missingGenotype = 0
+				select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
+			}
+
 			if (select_ancestry) {
 				self.q.restrictAncestry =
 					select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
@@ -217,6 +254,9 @@ async function makeEditMenu(self, div0: any) {
 		.text('Submit')
 		.on('click', async () => {
 			self.term.snps = self.term.snps!.filter(i => !i.tobe_deleted)
+
+			if (self.term.snps.find(snp => !snp.effectAllele))
+				return window.alert('Effect allele not specified for one or more variants')
 
 			self.term.name = getTermName(self.term.snps)
 
@@ -685,17 +725,18 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 
 	// hint message to indicate which allele will be used as the effect allele
 	// for multi-allelic variants
-	const setEffectAlleleAsHint = div
+	div
 		.append('div')
+		.attr('class', 'sjpp-allele-type-hint')
 		.style('display', 'inline-block')
 		.style('margin-left', '15px')
 		.style('opacity', 0.5)
 		.style('font-size', '.7em')
 		.style('font-style', 'italic')
-		.text(getSetEffectAlleleAsHint(select_alleleType))
-	self.dom.setEffectAlleleAsHint = setEffectAlleleAsHint
+		.text(getAlleleTypeHint(select_alleleType))
+
 	select_alleleType.on('change', async () => {
-		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint(select_alleleType))
+		div.select('.sjpp-allele-type-hint').text(getAlleleTypeHint(select_alleleType))
 		self.q.alleleType = select_alleleType.property('selectedIndex')
 		if (termtype !== 'snplocus') {
 			if (!self.term.snps) throw `Missing term.snps [snplst.ts makeSnpSelect()]`
@@ -749,12 +790,6 @@ export function makeSnpSelect(div: any, self, termtype: string) {
 		select_missingGenotype.append('option').text('Drop sample')
 	}
 
-	// populate UI with values if term/q is available
-	if (self.term) {
-		//set the correct hint message base on which option is chosen for "SET EFFECT ALLELE AS"
-		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint(select_alleleType))
-	}
-
 	if (Number.isInteger(self.q?.alleleType)) select_alleleType.property('selectedIndex', self.q.alleleType)
 	if (Number.isFinite(self.q?.AFcutoff)) input_AFcutoff.property('value', self.q.AFcutoff)
 	if (Number.isInteger(self.q?.geneticModel)) select_geneticModel.property('selectedIndex', self.q.geneticModel)
@@ -787,7 +822,7 @@ export async function mayRestrictAncestry(self, holder: any) {
 }
 
 // return corresponding hint messages based on the option users select for "SET EFFECT ALLELE AS"
-function getSetEffectAlleleAsHint(select_alleleType: any) {
+function getAlleleTypeHint(select_alleleType: any) {
 	let hint: string
 	const i = select_alleleType.property('selectedIndex')
 	if (i == 0) {
