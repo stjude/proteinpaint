@@ -363,7 +363,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				.style('width', '12px')
 				.style('height', '12px')
 				.style('background-color', c)
-				.style('border', '1px solid gray')
 			api.dom.statLegendDiv.append('span').html(` ${n} &nbsp;&nbsp;`)
 		}
 	}
