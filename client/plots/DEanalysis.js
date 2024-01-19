@@ -25,7 +25,6 @@ class DEanalysis {
 	}
 	async init(opts) {
 		const config = opts.plots.find(p => p.id === this.id)
-		console.log('config:', config)
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
 		const holder = this.opts.holder.append('div').style('display', 'inline-block')
 		this.dom = {
@@ -34,15 +33,24 @@ class DEanalysis {
 			controlsDiv
 		}
 		const inputs = [
+			//{
+			//	label: 'Orientation',
+			//	type: 'radio',
+			//	chartType: 'DEanalysis',
+			//	settingsKey: 'orientation',
+			//	options: [
+			//		{ label: 'Vertical', value: 'vertical' },
+			//		{ label: 'Horizontal', value: 'horizontal' }
+			//	]
+			//},
 			{
-				label: 'Orientation',
-				type: 'radio',
+				label: 'p-value',
+				type: 'number',
 				chartType: 'DEanalysis',
-				settingsKey: 'orientation',
-				options: [
-					{ label: 'Vertical', value: 'vertical' },
-					{ label: 'Horizontal', value: 'horizontal' }
-				]
+				settingsKey: 'pvalue',
+				title: 'P-value significance',
+				min: 0,
+				max: 1
 			}
 		]
 		this.components = {
@@ -65,7 +73,8 @@ class DEanalysis {
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.settings = this.config.settings
+		console.log(this.config.settings)
+		this.settings = this.config.settings.DEanalysis
 		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
 		//const state = this.app.getState()
 		//console.log('state:', state) // state.customTerms[0].name
@@ -87,11 +96,11 @@ class DEanalysis {
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
 		//}
-		render_volcano(this.dom.holder, data)
+		render_volcano(this.dom.holder, data, this.settings)
 	}
 }
 
-function render_volcano(holder, mavb) {
+function render_volcano(holder, mavb, settings) {
 	/*
 m {}
 - gene
@@ -152,7 +161,8 @@ add:
 			d.vo_g = this
 		})
 	let fold_change_cutoff = 2 // Will build UI later so that this parameter can be adjusted by the user
-	let p_value_cutoff = 3 // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
+	let p_value_cutoff = settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
+	console.log('p_value_cutoff:', p_value_cutoff)
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
 	const table_rows = []
@@ -304,7 +314,8 @@ export async function getPlotConfig(opts, app) {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
-				DEanalysis: { orientation: 'vertical' },
+				//DEanalysis: { orientation: 'vertical' },
+				DEanalysis: { pvalue: 0.05 },
 				controls: {
 					isOpen: false // control panel is hidden by default
 				}
