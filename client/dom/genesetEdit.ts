@@ -181,7 +181,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 					const result = await vocabApi.getTopMutatedGenes(args)
 
 					geneList = []
-					for (const gene of result.genes) geneList.push({ name: gene.name, mutationStat: gene.mutationStat })
+					for (const gene of result.genes) geneList.push(gene)
 					renderGenes()
 					api.dom.loadBtn.property('disabled', false)
 				})
@@ -301,16 +301,17 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	}
 
 	function renderGene(gene) {
-		const div = select(this).style('background-color', '#fffdaf').style('border-radius', '5px')
+		const div = select(this).style('border-radius', '5px')
 
 		div.insert('div').style('display', 'inline-block').html(gene.name)
 		if (gene.mutationStat) {
 			div.html(`${gene.name}&nbsp;&nbsp;`)
 			for (const m of gene.mutationStat) {
-				const classinfo = mclass[m.class]
+				const classinfo = 'class' in m ? mclass[m.class] : 'dt' in m ? m.dt : null
 				if (classinfo)
 					div
 						.insert('div')
+						.style('font-size', '0.8em')
 						.style('display', 'inline-block')
 						.style('background-color', classinfo.color)
 						.style('padding', '0px 2px')
