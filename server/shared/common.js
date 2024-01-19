@@ -299,6 +299,11 @@ mclass[mclassdeletion] = {
 }
 // TODO complex indel
 
+export const dt2color = {
+	[dtsnvindel]: mclass.M.color // general color for snvindel irrespective of class (when class is not available)
+	// add new dt as needed
+}
+
 // option to override mutation class attribute values
 export function applyOverrides(overrides = {}) {
 	if (overrides.mclass) {
