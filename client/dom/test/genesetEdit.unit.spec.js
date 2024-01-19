@@ -47,7 +47,7 @@ tape('Empty opts.geneList', function (test) {
 			geneList: []
 		})
 		test.true('msigdb' in ui.dom.tdbBtns, `should show MSigDB button for the hg38 genome`)
-		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
+		test.equal(ui.dom.geneHoldingDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
 		test.true(ui.dom.loadBtn !== undefined, `should show load top genes button`)
@@ -65,7 +65,7 @@ tape('Empty opts.geneList', function (test) {
 			geneList: []
 		})
 		test.false('msigdb' in ui.dom.tdbBtns, `should not show MSigDB button for the hg19 genome`)
-		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
+		test.equal(ui.dom.geneHoldingDiv.selectAll(':scope>div').size(), 0, 'should render 0 gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.clearBtn.property('disabled'), true, `should have a disabled clear button`)
 		test.true(ui.dom.loadBtn == undefined, `should not show load top genes button`)
@@ -92,7 +92,7 @@ tape('Non-empty opts.geneList', function (test) {
 			vocabApi,
 			geneList
 		})
-		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), geneList.length, 'should render two gene pills')
+		test.equal(ui.dom.geneHoldingDiv.selectAll(':scope>div').size(), geneList.length, 'should render two gene pills')
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
 		test.equal(ui.dom.clearBtn.property('disabled'), false, `should not have a disabled clear button`)
 		if (test._ok) ui.destroy()
@@ -118,10 +118,10 @@ tape('gene deletion', function (test) {
 			lst: geneList
 		})
 		test.equal(ui.dom.submitBtn.property('disabled'), true, `should have a disabled submit button`)
-		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), len, `should render ${len} gene pills`)
+		test.equal(ui.dom.geneHoldingDiv.selectAll(':scope>div').size(), len, `should render ${len} gene pills`)
 		const geneListCopy = geneList.slice()
-		ui.dom.genesDiv.node().querySelector(':scope>div').click()
-		test.equal(ui.dom.genesDiv.selectAll(':scope>div').size(), len - 1, `should render ${len - 1} gene pill`)
+		ui.dom.geneHoldingDiv.node().querySelector(':scope>div').click()
+		test.equal(ui.dom.geneHoldingDiv.selectAll(':scope>div').size(), len - 1, `should render ${len - 1} gene pill`)
 		test.equal(ui.dom.submitBtn.property('disabled'), false, `should not have a disabled submit button`)
 		if (test._ok) ui.destroy()
 	}
@@ -142,7 +142,7 @@ tape('submit button', function (test) {
 		geneList
 	})
 	geneList.slice(-1)
-	ui.dom.genesDiv.node().querySelector(':scope>div').click()
+	ui.dom.geneHoldingDiv.node().querySelector(':scope>div').click()
 	test.equal(ui.dom.submitBtn.property('disabled'), false, `should not have a disabled submit button`)
 	ui.dom.submitBtn.node().click()
 

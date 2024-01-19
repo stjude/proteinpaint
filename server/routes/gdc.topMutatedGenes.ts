@@ -1,6 +1,5 @@
 import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, Gene } from '#shared/types/routes/gdc.topMutatedGenes.ts'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
-import path from 'path'
 import got from 'got'
 
 // TODO change to /termdb/topMutatedGenes
