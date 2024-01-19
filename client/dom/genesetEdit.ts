@@ -1,7 +1,7 @@
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
-import { mclass } from '#shared/common'
+import { mclass, dt2color, dt2label } from '#shared/common'
 
 type API = {
 	dom: {
@@ -10,9 +10,11 @@ type API = {
 		loadBtn: any
 		clearBtn: any
 		submitBtn: any
-		genesDiv: any | null
+		genesDiv: any | null // gene holding area, shows bunch of gene buttons pending submission
+		statLegendDiv: any // legend area, to show available stats legend on genes
 	}
 	params: any[]
+	statColor2label: any // while rendering each gene button, if gene stat is available, it records color and labels for each color, to be shown in statLegendDiv
 	destroy: (_obj) => void
 }
 
@@ -59,9 +61,11 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			clearBtn: null,
 			restoreBtn: null,
 			genesDiv: null,
+			statLegendDiv: null,
 			submitBtn: null
 		},
 		params: [],
+		statColor2label: null,
 		destroy() {
 			arg.holder.remove()
 		}
@@ -116,7 +120,9 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 
 	api.dom.genesDiv = genesDiv
 
-	const footerDiv = div.append('div')
+	api.dom.statLegendDiv = div.append('div')
+
+	const footerDiv = div.append('div').style('margin-top', '10px')
 	const submitBtn = footerDiv
 		.append('button')
 		.property('disabled', !geneList?.length)
@@ -247,6 +253,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	function renderGenes() {
 		genesDiv.selectAll('*').remove()
 
+		api.statColor2label = new Map()
+
 		genesDiv
 			.selectAll('div')
 			.data(geneList || [])
@@ -293,6 +301,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				if (event.key == 'Enter') event.target.click()
 			})
 
+		renderStatLegend() // api.statColor2label has been accumulated if available
+
 		api.dom.clearBtn.property('disabled', !geneList?.length)
 		const hasChanged = origNames !== JSON.stringify(geneList.map(t => t.name).sort())
 		api.dom.restoreBtn?.property('disabled', !hasChanged)
@@ -303,22 +313,53 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	function renderGene(gene) {
 		const div = select(this).style('border-radius', '5px')
 
-		div.insert('div').style('display', 'inline-block').html(gene.name)
 		if (gene.mutationStat) {
-			div.html(`${gene.name}&nbsp;&nbsp;`)
-			const mclasses = Object.values(mclass)
+			div.html(`${gene.gene || gene.name}&nbsp;&nbsp;`) // TODO geneVariant replace name with gene
 			for (const m of gene.mutationStat) {
-				const classinfo = 'class' in m ? mclass[m.class] : 'dt' in m ? mclasses.find(mc => mc.dt == m.dt) : null
-
-				if (classinfo)
-					div
-						.insert('div')
-						.style('font-size', '0.8em')
-						.style('display', 'inline-block')
-						.style('background-color', classinfo.color)
-						.style('padding', '1px 3px')
-						.text(m.count)
+				// m is {class,count} or {dt,count}; if class is given, bgcolor is determined by class; otherwise by dt and logicis  a bit shaky now (may
+				let bgcolor, textcolor // bg and text color of gene button
+				if ('class' in m) {
+					if (!mclass[m.class]) throw 'invalid stat class'
+					bgcolor = mclass[m.class].color
+					api.statColor2label.set(bgcolor, mclass[m.class].label)
+				} else if ('dt' in m) {
+					if (!dt2color[m.dt]) throw 'invalid stat dt'
+					bgcolor = dt2color[m.dt]
+					textcolor = 'white' // hardcode it for now
+					api.statColor2label.set(bgcolor, dt2label[m.dt])
+				} else {
+					throw 'stat missing dt/class'
+				}
+				div
+					.insert('span')
+					.style('font-size', '.7em')
+					.style('background-color', bgcolor)
+					.style('padding', '1px 2px')
+					.style('color', textcolor || 'black')
+					.text(m.count)
 			}
+			/* enable different types of gene stats this way
+		} else if(gene.expStat) {
+		*/
+		} else {
+			div
+				.insert('div')
+				.style('display', 'inline-block')
+				.html(gene.gene || gene.name) // TODO geneVariant replace name with gene
+		}
+	}
+
+	function renderStatLegend() {
+		if (!api.statColor2label || api.statColor2label.size == 0) {
+			// no legend to display
+			api.dom.statLegendDiv.style('display', 'none')
+			return
+		}
+		api.dom.statLegendDiv.style('display', 'block').selectAll('*').remove()
+		for (const [c, n] of api.statColor2label) {
+			api.dom.statLegendDiv
+				.append('span')
+				.html(`<span style="background-color:${c}">&nbsp;&nbsp;</span> ${n} &nbsp;&nbsp;`)
 		}
 	}
 

@@ -288,11 +288,11 @@ function geneCGC() {
 }
 
 /*************************************
+	  below are old code
       old method to use rest api
 **************************************
 this api only gets ssm-cases and does not account for cnv cases, will not return any gene for ssm-less cohort e.g. APOLLO-LUAD
 thus is replaced by getGenesGraphql
-*/
 async function getGenes(q: GdcTopMutatedGeneRequest) {
 	const _f = q.filter0 || { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
 	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
@@ -311,6 +311,7 @@ async function getGenes(q: GdcTopMutatedGeneRequest) {
 	}
 	return genes
 }
+*/
 
 /*
 str:
@@ -327,7 +328,6 @@ geneFilter: str
 			}
 		]
 	}
-*/
 function mayAddCGC2filter(f: any, geneFilter?: string) {
 	// reformulate f into f2
 	// f may be "in" or "and". f2 is always "and", in order to join in additional filters
@@ -366,3 +366,4 @@ function mayAddCGC2filter(f: any, geneFilter?: string) {
 
 	return f2
 }
+*/
