@@ -28,6 +28,7 @@ export function filter2GDCfilter(f) {
 					value: item.tvs.values.map(i => i.key)
 				}
 			}
+			console.log('is categorical, gdc f', f)
 			obj.content.push(f)
 		} else if (item.tvs.ranges) {
 			for (const range of item.tvs.ranges) {
@@ -46,14 +47,14 @@ export function filter2GDCfilter(f) {
 					continue
 				}
 				obj.content.push({
-					op: 'and',
+					op: item.tvs.isnot ? 'or' : 'and',
 					content: [
 						{
-							op: range.startinclusive ? '>=' : '>',
+							op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '<=' : '>',
 							content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
 						},
 						{
-							op: range.stopinclusive ? '<=' : '<',
+							op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '>=' : '<',
 							content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
 						}
 					]
@@ -61,6 +62,7 @@ export function filter2GDCfilter(f) {
 			}
 		}
 	}
+	console.log('obj', JSON.stringify(obj))
 	return obj
 }
 
