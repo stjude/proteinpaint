@@ -28,7 +28,7 @@ type showGenesetEditArg = {
 	holder: any
 	genome: any
 	mode?: string
-	callback: (CallbackArg) => void
+	callback: () => void
 	vocabApi: any
 	geneList?: {
 		name: string
@@ -43,8 +43,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	// must not hardcode div width to 850px, gives broken ui
 	// FIXME should set min and max width for div to maintain proper look
 	const div = holder.append('div').style('padding', '5px')
-
-	let hasChanged
 
 	const origLst = structuredClone(geneList)
 	const origNames = JSON.stringify(geneList.map(t => t.name).sort())
