@@ -32,10 +32,12 @@ export class profilePlot {
 			const suffix = config.isLoggedIn ? (config.site ? config.site : 'Admin') : 'Public'
 			this.opts.header.text(config.header ? config.header : config.chartType + ` / ${suffix}`)
 		}
-		const mainDiv = this.opts.holder.append('div')
+		const div = this.opts.holder.append('div')
+		const holder2 = div.append('div')
+		const mainDiv = div.append('div')
+
 		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.9em')
 		const holder = mainDiv.insert('div').style('display', 'inline-block')
-		const holder2 = mainDiv.append('div')
 
 		const plotDiv = holder.append('div')
 		this.dom = {
@@ -49,7 +51,9 @@ export class profilePlot {
 		this.dom.plotDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.plotDiv.on('mouseout', event => this.onMouseOut(event))
 		this.sampleidmap = await this.app.vocabApi.getAllSamplesByName()
+
 		if (config.site) {
+			if (Object.keys(this.sampleidmap).length == 0) throw 'You must login to view site info' //no sample data returned
 			const id = this.sampleidmap[config.site]
 			if (!id) throw 'Invalid site'
 		}
@@ -95,6 +99,7 @@ export class profilePlot {
 		const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
+
 		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: [this.config.countryTW, this.config.incomeTW, this.config.typeTW],
 			termsPerRequest: 10
@@ -197,7 +202,7 @@ export class profilePlot {
 		}
 		if (chartType != 'profileRadarFacility')
 			inputs.push({
-				label: 'Show two plots',
+				label: 'Add plot',
 				type: 'checkbox',
 				chartType,
 				settingsKey: 'show2Plots',
