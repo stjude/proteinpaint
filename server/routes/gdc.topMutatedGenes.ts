@@ -268,7 +268,7 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
 		if (Number.isInteger(g.node.ssm_case?.hits?.total) && g.node.ssm_case.hits.total > 0)
 			mutationStat.push({ dt: dtsnvindel, count: g.node.ssm_case.hits.total })
 		genes.push({
-			name: g.node.symbol, // TODO change "name" to "gene"
+			gene: g.node.symbol,
 			mutationStat
 		})
 	}
