@@ -51,6 +51,15 @@ class DEanalysis {
 				title: 'P-value significance',
 				min: 0,
 				max: 1
+			},
+			{
+				label: 'fold change',
+				type: 'number',
+				chartType: 'DEanalysis',
+				settingsKey: 'foldchange',
+				title: 'Fold change',
+				min: -10,
+				max: 10
 			}
 		]
 		this.components = {
@@ -73,7 +82,6 @@ class DEanalysis {
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		console.log(this.config.settings)
 		this.settings = this.config.settings.DEanalysis
 		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
 		//const state = this.app.getState()
@@ -160,9 +168,8 @@ add:
 		.each(function (d) {
 			d.vo_g = this
 		})
-	let fold_change_cutoff = 2 // Will build UI later so that this parameter can be adjusted by the user
-	let p_value_cutoff = settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
-	console.log('p_value_cutoff:', p_value_cutoff)
+	const fold_change_cutoff = settings.foldchange // Will build UI later so that this parameter can be adjusted by the user
+	const p_value_cutoff = settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
 	const table_rows = []
@@ -315,7 +322,7 @@ export async function getPlotConfig(opts, app) {
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
 				//DEanalysis: { orientation: 'vertical' },
-				DEanalysis: { pvalue: 0.05 },
+				DEanalysis: { pvalue: 0.05, foldchange: 2 },
 				controls: {
 					isOpen: false // control panel is hidden by default
 				}
