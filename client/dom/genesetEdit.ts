@@ -27,7 +27,7 @@ type CallbackArg = {
 type showGenesetEditArg = {
 	holder: any
 	genome: any
-	mode?: string
+	mode?: 'expression' // if provided, allow to load top variably expressed genes; later can be union of multiple mode strings
 	callback: () => void
 	vocabApi: any
 	geneList?: {
