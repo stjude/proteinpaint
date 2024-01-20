@@ -768,6 +768,9 @@ export class MatrixControls {
 		let selectedGroup
 		const triggerGenesetEdit = holder => {
 			holder.selectAll('*').remove()
+			const geneList = selectedGroup.lst.map(item => {
+				return { gene: item.name }
+			}) //To do, selectedGroup.lst may replace name with gene as well
 			showGenesetEdit({
 				holder,
 				/* running hier clustering and the editing group is the group used for clustering
@@ -775,7 +778,7 @@ export class MatrixControls {
 			this is hardcoded for the purpose of gene expression and should be improved
 			*/
 				genome: app.opts.genome,
-				geneList: selectedGroup.lst,
+				geneList,
 				mode: selectedGroup.mode,
 				vocabApi: this.opts.app.vocabApi,
 				callback: ({ geneList, groupName }) => {
@@ -786,12 +789,12 @@ export class MatrixControls {
 					const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 					const tws = geneList.map(d => {
 						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.name)
+						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
 						if (!tw)
 							tw = {
 								$id: get$id(),
 								term: {
-									name: d.symbol || d.name,
+									name: d.symbol || d.gene,
 									type: 'geneVariant'
 								},
 								q: {}
