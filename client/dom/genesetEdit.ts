@@ -153,7 +153,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 
 					geneList = []
 					if (result.genes) {
-						for (const gene of result.genes) geneList.push({ gene: gene })
+						for (const gene of result.genes) geneList.push({ gene })
 					}
 					renderGenes()
 					event.target.disabled = false
@@ -308,7 +308,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		const div = select(this).style('border-radius', '5px')
 
 		if (gene.mutationStat) {
-			div.html(`${gene.gene}&nbsp;&nbsp;`) // TODO geneVariant replace gene with gene
+			div.html(`${gene.gene}&nbsp;&nbsp;`)
 			for (const m of gene.mutationStat) {
 				// m is {class,count} or {dt,count}; if class is given, bgcolor is determined by class; otherwise by dt and logicis  a bit shaky now (may
 				let bgcolor, textcolor // bg and text color of gene button
