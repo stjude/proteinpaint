@@ -116,13 +116,15 @@ export function getFilterName(f) {
 				// tvs uses only 1 category
 				if ((tvs.term.name + catValue).length < 20) {
 					// term name plus category value has short length, show both
-					return tvs.term.name + ': ' + catValue
+					return tvs.term.name + (tvs.isnot ? '!=' : ': ') + catValue
 				}
 				// only show cat value
-				return catValue.length < 15 ? catValue : catValue.substring(0, 13) + '...'
+				return (tvs.isnot ? '!' : '') + (catValue.length < 15 ? catValue : catValue.substring(0, 13) + '...')
 			}
 			// tvs uses more than 1 category, set label as "catValue (3)"
-			return `${catValue.length < 12 ? catValue : catValue.substring(0, 10) + '...'} (${tvs.values.length})`
+			return `${tvs.isnot ? '!' : ''}${catValue.length < 12 ? catValue : catValue.substring(0, 10) + '...'} (${
+				tvs.values.length
+			})`
 		}
 		if (ttype == 'integer' || ttype == 'float') {
 			// if tvs is numeric, may show numeric range
@@ -144,9 +146,14 @@ export function getFilterName(f) {
 					if ('stop' in r) stopName = r.stop
 				}
 
-				if (r.startunbounded) return `x ${r.stopinclusive ? '&le;' : '<'} ${stopName}`
-				if (r.stopunbounded) return `x ${r.startinclusive ? '&ge;' : '>'} ${startName}`
-				return `${startName}${r.startinclusive ? '&le;' : '<'}x${r.stopinclusive ? '&ge;' : '<'}${stopName}`
+				if (tvs.isnot) {
+					if (r.startunbounded) return `x ${r.stopinclusive ? '>' : '>='} ${stopName}`
+					if (r.stopunbounded) return `x ${r.startinclusive ? '<' : '<='} ${startName}`
+					return `!(${startName} ${stopName})`
+				}
+				if (r.startunbounded) return `x ${r.stopinclusive ? '<=' : '<'} ${stopName}`
+				if (r.stopunbounded) return `x ${r.startinclusive ? '>=' : '>'} ${startName}`
+				return `${startName}${r.startinclusive ? '<=' : '<'}x${r.stopinclusive ? '<=' : '<'}${stopName}`
 			}
 			// multiple ranges
 		} else {

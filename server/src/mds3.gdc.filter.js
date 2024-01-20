@@ -28,9 +28,10 @@ export function filter2GDCfilter(f) {
 					value: item.tvs.values.map(i => i.key)
 				}
 			}
-			console.log('is categorical, gdc f', f)
 			obj.content.push(f)
-		} else if (item.tvs.ranges) {
+			continue
+		}
+		if (item.tvs.ranges) {
 			for (const range of item.tvs.ranges) {
 				if (range.startunbounded) {
 					obj.content.push({
@@ -60,9 +61,10 @@ export function filter2GDCfilter(f) {
 					]
 				})
 			}
+			continue
 		}
+		throw 'unknown tvs structure when converting to gdc filter'
 	}
-	console.log('obj', JSON.stringify(obj))
 	return obj
 }
 
