@@ -225,7 +225,7 @@ async function getGenes(arg, filter0, matrix) {
 	return await Promise.all(
 		// do tempfix of "data.genes.slice(0,3).map" for faster testing
 		data.genes.map(async i => {
-			return await fillTermWrapper({ term: { name: i.name, type: 'geneVariant' } })
+			return await fillTermWrapper({ term: { name: i.gene, type: 'geneVariant' } })
 		})
 	)
 }

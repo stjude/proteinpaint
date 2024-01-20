@@ -8,8 +8,8 @@ export type GdcTopMutatedGeneRequest = {
 }
 
 export type Gene = {
-	/** FIXME change .name to .gene */
-	name: string
+	/** gene symbol */
+	gene: string
 	/** optional attributes on number of mutated cases per dt */
 	mutationStat?: {
 		/** each stat object is identified by either dt or class */
