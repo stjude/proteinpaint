@@ -18,7 +18,7 @@ type API = {
 	destroy: (_obj) => void
 }
 
-type Gene = { name: string }
+type Gene = { gene: string }
 
 type CallbackArg = {
 	geneList: Gene[]
@@ -31,7 +31,7 @@ type showGenesetEditArg = {
 	callback: () => void
 	vocabApi: any
 	geneList?: {
-		name: string
+		gene: string
 	}[]
 }
 
@@ -45,7 +45,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	const div = holder.append('div').style('padding', '5px')
 
 	const origLst = structuredClone(geneList)
-	const origNames = JSON.stringify(geneList.map(t => t.name).sort())
+	const origNames = JSON.stringify(geneList.map(t => t.gene).sort())
 
 	if (titleText) {
 		div.append('div').style('margin-bottom', '10px').html(titleText)
@@ -153,7 +153,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 
 					geneList = []
 					if (result.genes) {
-						for (const gene of result.genes) geneList.push({ name: gene })
+						for (const gene of result.genes) geneList.push({ gene: gene })
 					}
 					renderGenes()
 					event.target.disabled = false
@@ -210,7 +210,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 									geneList = []
 									const geneset = term._geneset
 									if (geneset) {
-										for (const gene of geneset) geneList.push({ name: gene.symbol })
+										for (const gene of geneset) geneList.push({ gene: gene.symbol })
 										renderGenes()
 									}
 									tip2.hide()
@@ -298,7 +298,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		renderStatLegend() // api.statColor2label has been accumulated if available
 
 		api.dom.clearBtn.property('disabled', !geneList?.length)
-		const hasChanged = origNames !== JSON.stringify(geneList.map(t => t.name).sort())
+		const hasChanged = origNames !== JSON.stringify(geneList.map(t => t.gene).sort())
 		api.dom.restoreBtn?.property('disabled', !hasChanged)
 		api.dom.submitBtn.property('disabled', !hasChanged)
 		if (hasChanged) submitBtn.node().focus()
@@ -308,7 +308,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		const div = select(this).style('border-radius', '5px')
 
 		if (gene.mutationStat) {
-			div.html(`${gene.gene || gene.name}&nbsp;&nbsp;`) // TODO geneVariant replace name with gene
+			div.html(`${gene.gene}&nbsp;&nbsp;`) // TODO geneVariant replace gene with gene
 			for (const m of gene.mutationStat) {
 				// m is {class,count} or {dt,count}; if class is given, bgcolor is determined by class; otherwise by dt and logicis  a bit shaky now (may
 				let bgcolor, textcolor // bg and text color of gene button
@@ -336,10 +336,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		} else if(gene.expStat) {
 		*/
 		} else {
-			div
-				.insert('div')
-				.style('display', 'inline-block')
-				.html(gene.gene || gene.name) // TODO geneVariant replace name with gene
+			div.insert('div').style('display', 'inline-block').html(gene.gene)
 		}
 	}
 
@@ -362,20 +359,19 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 	}
 
 	function addGene() {
-		const name = geneSearch.geneSymbol
-		for (const gene of geneList) {
-			if (gene.name == name) {
-				alert(`The gene ${name} has already been added`)
+		const gene = geneSearch.geneSymbol
+		for (const item of geneList) {
+			if (item.gene == gene) {
+				alert(`The gene $.gene} has already been added`)
 				return
 			}
 		}
-
-		geneList.push({ name })
+		geneList.push({ gene })
 		renderGenes()
 	}
 
 	function deleteGene(event, d) {
-		const i = geneList.findIndex(g => g.name === d.name)
+		const i = geneList.findIndex(g => g.gene === d.gene)
 		if (i != -1) {
 			geneList.splice(i, 1)
 			renderGenes()

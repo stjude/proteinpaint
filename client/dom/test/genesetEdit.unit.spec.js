@@ -83,7 +83,7 @@ tape('Non-empty opts.geneList', function (test) {
 
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
-		const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
+		const geneList = [{ gene: 'TP53' }, { gene: 'KRAS' }]
 		const ui = showGenesetEdit({
 			holder: getHolder(),
 			genome: hg38,
@@ -107,7 +107,7 @@ tape('gene deletion', function (test) {
 
 	function testHG38() {
 		const menu = new Menu({ padding: '0px' })
-		const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
+		const geneList = [{ gene: 'TP53' }, { gene: 'KRAS' }]
 		const len = geneList.length
 		const ui = showGenesetEdit({
 			holder: getHolder(),
@@ -130,7 +130,7 @@ tape('gene deletion', function (test) {
 tape('submit button', function (test) {
 	test.timeoutAfter(100)
 	const vocabApi = {} //Fake vocab api returning  some genes
-	const geneList = [{ name: 'TP53' }, { name: 'KRAS' }]
+	const geneList = [{ gene: 'TP53' }, { gene: 'KRAS' }]
 	const geneLstCopy = structuredClone(geneList)
 	const menu = new Menu({ padding: '0px' })
 	const ui = showGenesetEdit({
