@@ -195,14 +195,21 @@ output: (output is an object to be easily extendable of adding additional attr, 
 	samples[]
 		list of mutated samples as basis for further processing
 		these samples all harbor mutation of certain specification (see q{})
+		each sample is an object with annotation value for each term of variant2samples.twLst[]
 		depending on q.get=?, the samples may be summarized (to barchart), or returned without summary
+
+		** note **
+		** original term value per sample is returned, twLst[].q is ignored
+		** e.g. for age term, age value is returned, but not age category, even if tw.q is discrete
+		** so that density chart can be made using actual numeric values when q.get=summary
+
 	byTermId{}
 		only from gdc,
 }
 */
 async function queryMutatedSamples(q, ds) {
 	/*
-	!!!tricky!!!
+	!!! tricky !!!
 
 	make copy of twLst[] that's only used in this function
 	as new array elements can be added when using gdc api (e.g. case_id and read counts)
@@ -212,6 +219,14 @@ async function queryMutatedSamples(q, ds) {
 	const twLst = q.twLst ? q.twLst.slice() : []
 
 	if (ds.variant2samples.gdcapi) {
+		/*
+		!!! doubly tricky !!!
+
+		querySamples_gdcapi() will observe numeric tw.q and return bin label if q is discrete;
+		must delete tw.q to avoid this and ensure it to return actual numeric value 
+		*/
+		for (const t of twLst) delete t.q
+
 		return await querySamples_gdcapi(q, twLst, ds, q.geneTwLst)
 	}
 
@@ -482,7 +497,6 @@ async function make_summary(mutatedSamples, ds, q) {
 	/* one element for a term
 	{
 		termid=str
-		termname=str
 		numbycategory=[ ]
 		density_data=[]
 	}
@@ -496,14 +510,12 @@ async function make_summary(mutatedSamples, ds, q) {
 
 			entries.push({
 				termid: tw.id,
-				termname: tw.term.name,
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
 			const density_data = await get_densityplot(tw.term, mutatedSamples)
 			entries.push({
 				termid: tw.id,
-				termname: tw.term.name,
 				density_data
 			})
 		} else {
@@ -799,7 +811,6 @@ summary=[ {} ]
 each element:
 {
   "termid": "Lineage",
-  "termname": "Lineage",
   "numbycategory": [
     [
       "BALL", // category name

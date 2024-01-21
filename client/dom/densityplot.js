@@ -88,7 +88,7 @@ export async function make_densityplot(holder, data, callabck, term) {
 		.call(x_axis)
 
 	g.append('text')
-		.text(`${data.termname} ${vc ? `(${vc.toUnit}s)` : '(days)'}`)
+		.text(`${data.termname ? data.termname + ', ' : ''}${vc ? `${vc.toUnit}s` : 'days'}`)
 		.attr('fill', 'black')
 		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 		.attr('font-size', '13px')
