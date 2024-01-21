@@ -6,6 +6,7 @@ import urlmap from '#common/urlmap'
 import { mclass } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
 import { getFilterName } from './leftlabel.sample'
+import { fillTermWrapper } from '#termsetting'
 
 /*
 this script exports one function "makeTk()" that will be called just once
@@ -28,7 +29,7 @@ mayInitTermdb
 mayInitSkewer
 	setSkewerMode
 mayaddGetter_m2csq
-mayaddGetter_variant2samples
+mayInit_variant2samples
 mayaddGetter_singleSampleMutation
 configPanel
 _load
@@ -115,7 +116,7 @@ export async function makeTk(tk, block) {
 
 	await mayInitTermdb(tk, block)
 
-	mayaddGetter_variant2samples(tk, block)
+	await mayInit_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
 	mayaddGetter_singleSampleMutation(tk, block)
 
@@ -429,61 +430,74 @@ note inconsistency in getSamples() for client/server
 where server function queries v2s.get()
 but client function does not do v2s.get() but should do the same to support sunburst and summary
 */
-function mayaddGetter_variant2samples(tk, block) {
+async function mayInit_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 
 	if (tk.custom_variants) {
-		// TODO auto generate variant2samples.twLst[] based on sample data
-
-		/* getter implemented for custom data
-		currently only provides list of samples
-		TODO support summary and sunburst
-		*/
-		tk.mds.variant2samples.get = arg => {
-			/*
-			arg{}
-			.mlst[]
-			*/
-			if (arg.querytype == tk.mds.variant2samples.type_samples) {
-				const samples = []
-				for (const m of arg.mlst) {
-					if (!m.samples) continue
-					for (const s of m.samples) {
-						const s2 = JSON.parse(JSON.stringify(s))
-						s2.ssm_id = m.ssm_id
-						samples.push(s2)
-					}
-				}
-				return { samples }
-			}
-			if (arg.querytype == tk.mds.variant2samples.type_summary) {
-				throw 'todo: summary'
-			}
-			if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
-				throw 'todo: sunburst'
-			}
-			throw 'unknown querytype'
-		}
-
-		tk.mds.getSamples = () => {
-			const id2sample = new Map()
-			for (const m of tk.custom_variants) {
-				if (!m.samples) continue
-				for (const s of m.samples) {
-					if (id2sample.has(s.sample_id)) {
-						id2sample.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
-					} else {
-						const s2 = JSON.parse(JSON.stringify(s))
-						s2.ssm_id_lst = [m.ssm_id]
-						id2sample.set(s.sample_id, s2)
-					}
-				}
-			}
-			return { samples: [...id2sample.values()] }
-		}
-		return
+		addV2Sgetter_custom(tk, block)
+	} else {
+		addV2Sgetter_native(tk, block)
 	}
 
+	if (tk.mds.variant2samples.twLst) {
+		if (!Array.isArray(tk.mds.variant2samples.twLst)) throw 'v2s.twLst[] not array'
+		if (!tk.mds.termdb?.vocabApi) throw 'mds.termdb.vocabApi should be present for initiating v2s.twLst'
+		for (const t of tk.mds.variant2samples.twLst) await fillTermWrapper(t, tk.mds.termdb.vocabApi)
+	}
+}
+
+function addV2Sgetter_custom(tk, block) {
+	// TODO auto generate variant2samples.twLst[] based on sample data
+
+	/* getter implemented for custom data
+	currently only provides list of samples
+	TODO support summary and sunburst
+	*/
+	tk.mds.variant2samples.get = arg => {
+		/*
+		arg{}
+		.mlst[]
+		*/
+		if (arg.querytype == tk.mds.variant2samples.type_samples) {
+			const samples = []
+			for (const m of arg.mlst) {
+				if (!m.samples) continue
+				for (const s of m.samples) {
+					const s2 = JSON.parse(JSON.stringify(s))
+					s2.ssm_id = m.ssm_id
+					samples.push(s2)
+				}
+			}
+			return { samples }
+		}
+		if (arg.querytype == tk.mds.variant2samples.type_summary) {
+			throw 'todo: summary'
+		}
+		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+			throw 'todo: sunburst'
+		}
+		throw 'unknown querytype'
+	}
+
+	tk.mds.getSamples = () => {
+		const id2sample = new Map()
+		for (const m of tk.custom_variants) {
+			if (!m.samples) continue
+			for (const s of m.samples) {
+				if (id2sample.has(s.sample_id)) {
+					id2sample.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
+				} else {
+					const s2 = JSON.parse(JSON.stringify(s))
+					s2.ssm_id_lst = [m.ssm_id]
+					id2sample.set(s.sample_id, s2)
+				}
+			}
+		}
+		return { samples: [...id2sample.values()] }
+	}
+}
+
+function addV2Sgetter_native(tk, block) {
 	// same getters implemented for server-hosted official dataset
 
 	/*

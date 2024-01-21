@@ -186,18 +186,16 @@ async function mayShowSummary(tk, block) {
 }
 
 /* show summaries over a list of terms
-data is array, each ele: {termid, termname, numbycategory}
+data is array, each ele: {termid, numbycategory}
 */
 async function showSummary4terms(data, div, tk, block) {
 	const tabs = []
-	for (const { termname, numbycategory } of data) {
+	for (const { termid, numbycategory } of data) {
 		tabs.push({
 			label:
-				termname +
+				tk.mds.variant2samples.twLst.find(i => i.id == termid).term.name +
 				(numbycategory
-					? '<span style="color:#999;font-size:.8em;float:right;margin-left: 5px;">n=' +
-					  numbycategory.length +
-					  '</span>'
+					? `<span style="opacity:.8;font-size:.8em;float:right;margin-left: 5px;">n=${numbycategory.length}</span>`
 					: '')
 		})
 	}
@@ -219,7 +217,9 @@ async function showSummary4terms(data, div, tk, block) {
 				.style('font-size', '.8em')
 				.style('opacity', 0.5)
 			showSummary4oneTerm(d.termid, holder, d.numbycategory, tk, block)
-		} else if (d.density_data) {
+			continue
+		}
+		if (d.density_data) {
 			if (!Number.isFinite(d.density_data.minvalue) || !Number.isFinite(d.density_data.maxvalue)) {
 				holder.append('div').text('No data')
 				continue
@@ -232,9 +232,9 @@ async function showSummary4terms(data, div, tk, block) {
 				.style('font-size', '.8em')
 				.style('opacity', 0.5)
 			showDensity4oneTerm(d.termid, holder, d, tk, block)
-		} else {
-			throw 'unknown summary data'
+			continue
 		}
+		throw 'unknown summary data'
 	}
 }
 
@@ -248,6 +248,9 @@ numbycategory = []
 	[2] = total number of cases from this category
 */
 function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
+	const tw = tk.mds.variant2samples.twLst.find(i => i.id == termid)
+	if (!tw) throw 'showSummary4oneTerm(): tw not found from variant2samples.twLst'
+
 	const grid_div = div
 		.append('div')
 		.style('display', 'inline-grid')
@@ -256,18 +259,19 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
 
-	for (const [category_name, count, total] of numbycategory) {
+	for (const [category_key, count, total] of numbycategory) {
+		// in future tw may be in groupsetting mode
 		grid_div
 			.append('div')
 			.style('padding-right', '10px')
 			.attr('class', 'sja_clbtext2')
-			.text(category_name)
-			.on('click', () => clickCategory(category_name))
+			.text(tw.term.values?.[category_key]?.label || category_key)
+			.on('click', () => clickCategory(category_key))
 
 		const percent_div = grid_div.append('div')
 		if (total != undefined) {
 			// show percent bar
-			percent_div.on('click', () => clickCategory(category_name))
+			percent_div.on('click', () => clickCategory(category_key))
 
 			fillbar(percent_div, { f: count / total, v1: count, v2: total }, { fillbg: '#ECE5FF', fill: '#9F80FF' })
 		}
@@ -276,7 +280,7 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			.append('div')
 			.style('margin-left', '10px')
 			.attr('class', 'sja_clbtext2')
-			.on('click', () => clickCategory(category_name))
+			.on('click', () => clickCategory(category_key))
 			.html(count + (total ? ' <span style="font-size:.8em">/ ' + total + '</span>' : ''))
 	}
 

@@ -143,7 +143,11 @@ export default <Mds3>{
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 
 		// list of term ids as sample details
-		twLst: [{ id: 'sex', q: {} }],
+		twLst: [
+			{ id: 'sex', q: {} },
+			{ id: 'diaggrp', q: {} },
+			{ id: 'agedx', q: {} }
+		],
 
 		// small list of terms for sunburst rings
 		sunburst_twLst: [{ id: 'sex', q: {} }]
