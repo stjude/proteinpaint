@@ -219,14 +219,6 @@ async function queryMutatedSamples(q, ds) {
 	const twLst = q.twLst ? q.twLst.slice() : []
 
 	if (ds.variant2samples.gdcapi) {
-		/*
-		!!! doubly tricky !!!
-
-		querySamples_gdcapi() will observe numeric tw.q and return bin label if q is discrete;
-		must delete tw.q to avoid this and ensure it to return actual numeric value 
-		*/
-		for (const t of twLst) delete t.q
-
 		return await querySamples_gdcapi(q, twLst, ds, q.geneTwLst)
 	}
 
