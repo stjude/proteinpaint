@@ -110,7 +110,8 @@ export function getFilterName(f) {
 			// tvs is categorical
 			if (!Array.isArray(tvs.values)) throw 'f.lst[0].tvs.values not array'
 
-			const catValue = tvs.values[0].key // only assess 1st category name
+			const catKey = tvs.values[0].key
+			const catValue = tvs.term.values?.[catKey]?.label || catKey // only assess 1st category name; only use for display, not computing
 
 			if (tvs.values.length == 1) {
 				// tvs uses only 1 category
