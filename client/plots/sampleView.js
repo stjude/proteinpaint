@@ -609,13 +609,23 @@ function setRenderers(self) {
 		//const sampleId = Number(d.sample.sampleId)
 		const data = d.sample
 		const term = d.term
-		select(this)
+		const isNumeric = term.type == 'integer' || term.type == 'float'
+		const value = getTermValue(d.term, d.sample)
+		const td = select(this)
 			.datum(d)
 			.style('text-align', 'end')
 			.style('padding', '5px 10px')
 
 			// !!! TODO: use getTermValue only for actual data !!!
-			.html(d.sample[d.term.id]?.label || getTermValue(d.term, d.sample))
+			.html(d.sample[d.term.id]?.label || value)
+		if (isNumeric)
+			td.append('button')
+				.style('margin-left', '5px')
+				.text('Plot')
+				.on('click', e => {
+					const tw = { id: term.id, q: { mode: 'continuous' } }
+					self.app.dispatch({ type: 'plot_create', config: { chartType: 'violin', term: tw, value } })
+				})
 	}
 
 	self.renderTerm = function (td) {
