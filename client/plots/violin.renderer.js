@@ -329,13 +329,12 @@ export default function violinRenderer(self) {
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
 
-		const color = category?.color
-			? category.color
-			: plot.divideTwBins
-			? plot.divideTwBins.color
-			: self.config.term2
-			? self.k2c(plotIdx)
-			: self.config.settings.violin.defaultColor
+		const color = category?.color ? category.color : self.config.settings.violin.defaultColor
+		// : plot.divideTwBins
+		// ? plot.divideTwBins.color
+		// : self.config.term2
+		// ? self.k2c(plotIdx)
+		// : self.config.settings.violin.defaultColor
 		if (!plot.color) plot.color = color
 		if (category && !category.color) category.color = color
 		violinG

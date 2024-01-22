@@ -31,6 +31,7 @@ export const dtdel = 7
 export const dtnloss = 8
 export const dtcloss = 9
 export const dtloh = 10 // to be used in svcnv track
+export const plotColor = '#ce768e'
 
 export const dt2label = {
 	[dtsnvindel]: 'SNV/indel',
