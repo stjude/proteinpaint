@@ -25,6 +25,7 @@ import { addDynamicScatterForm } from '#dom/dynamicScatter'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { rebaseGroupFilter } from '../mass/groups'
+import { plotColor } from '../shared/common.js'
 
 /*
 sample object returned by server:
@@ -544,7 +545,7 @@ export function getDefaultScatterSettings() {
 		showAxes: true,
 		showRef: true,
 		opacity: 0.8,
-		defaultColor: 'rgb(144, 23, 57)',
+		defaultColor: plotColor,
 		regression: 'None'
 	}
 }

@@ -13,6 +13,7 @@ import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '#termsetting'
 import { getColors } from '#shared/common'
 import { mclass } from '#shared/common'
+import { plotColor } from '../shared/common'
 
 class Barchart {
 	constructor(opts) {
@@ -1054,7 +1055,7 @@ export function getDefaultBarSettings(app) {
 		divideBy: 'none',
 		rowlabelw: 250,
 		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
-		defaultColor: 'rgb(144, 23, 57)',
+		defaultColor: plotColor,
 		colorBars: false,
 		dedup: false
 	}
