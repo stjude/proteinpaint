@@ -5,6 +5,7 @@ import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
 import { filterInit, getNormalRoot } from '#filter'
 import { convertUnits } from '#shared/helpers'
+import { getDefaultViolinSettings } from '../plots/violin'
 
 /*
 makeSampleLabel()
@@ -347,8 +348,27 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 	const term = await tk.mds.termdb.vocabApi.getterm(termid)
 	term.q = { mode: 'continuous' }
 	const plotMod = await import('#plots/plot.app.js')
-	const plot = { chartType: 'violin', term }
-	const opts = { holder: div, state: { plots: [plot], vocab: tk.mds.termdb.vocabApi.state.vocab } }
+	const settings = {
+		violin: getDefaultViolinSettings(null, {
+			svgw: 350,
+			axisHeight: 25,
+			rightMargin: 10,
+			datasymbol: 'rug',
+			radius: 3,
+			plotThickness: 100
+			//strokeWidth: 0.01
+		})
+	}
+
+	const plot = { chartType: 'violin', term, settings }
+	const opts = {
+		holder: div,
+		state: {
+			plots: [plot],
+			vocab: tk.mds.termdb.vocabApi.state.vocab,
+			violin: { mode: 'minimal' } //not working
+		}
+	}
 	const plotAppApi = await plotMod.appInit(opts)
 	// make_densityplot(
 	// 	div,
