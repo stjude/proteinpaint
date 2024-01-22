@@ -1,1 +1,2 @@
-
+Fixes:
+- Do not create a bin containing values if values are zeros. No plot should be rendered.
