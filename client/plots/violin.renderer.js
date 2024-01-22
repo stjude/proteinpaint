@@ -352,6 +352,20 @@ export default function violinRenderer(self) {
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
 		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg, self)
 		renderLines(violinG, isH, self.config.settings.violin.lines, svg)
+		if (self.state.config.value) {
+			const value = svg.axisScale(self.state.config.value)
+			const s = self.config.settings.violin
+			violinG
+				.append('line')
+				.style('stroke', 'black')
+				.style('stroke-width', s.medianThickness)
+				.attr('x1', 200)
+				.attr('x2', 200)
+				.attr('x1', isH ? value : -s.medianLength)
+				.attr('x2', isH ? value : s.medianLength)
+				.attr('y1', isH ? -s.medianLength : value)
+				.attr('y2', isH ? s.medianLength : value)
+		}
 	}
 
 	function renderSymbolImage(self, violinG, plot, isH, imageOffset) {
