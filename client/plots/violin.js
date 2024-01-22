@@ -4,6 +4,7 @@ import violinRenderer from './violin.renderer'
 import htmlLegend from '../dom/html.legend'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
+import { plotColor } from '../shared/common'
 
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
@@ -349,7 +350,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		plotThickness: 150,
 		medianLength: 7,
 		medianThickness: 3,
-		defaultColor: 'rgb(144, 23, 57)'
+		defaultColor: plotColor
 	}
 	return Object.assign(defaults, overrides)
 }
