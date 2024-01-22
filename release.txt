@@ -1,2 +1,1 @@
-Fixes:
-- Do not show the "Edit" option when clicking a gene row label in matrix
+
