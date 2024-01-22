@@ -60,6 +60,14 @@ class DEanalysis {
 				title: 'Fold change',
 				min: -10,
 				max: 10
+			},
+			{
+				label: 'pvalue table',
+				type: 'checkbox',
+				chartType: 'DEanalysis',
+				settingsKey: 'pvaluetable',
+				title: 'Display table showing original and adjusted pvalues for all significant genes',
+				boxLabel: ''
 			}
 		]
 		this.components = {
@@ -134,7 +142,6 @@ add:
 		}
 	}
 
-	const tabel_panel = holder.text('DE info')
 	let yaxisw,
 		xaxish,
 		width,
@@ -290,7 +297,7 @@ add:
 			})
 		select.append('option').text('Adjusted P value')
 		select.append('option').text('Original P value')
-		tabel_panel.on('click', event => {
+		if (settings.pvaluetable == true) {
 			const table_cols = [
 				{ label: 'Gene Name' },
 				{ label: 'Gene Symbol' },
@@ -298,7 +305,7 @@ add:
 				{ label: 'Original p-value' },
 				{ label: 'Adjusted p-value' }
 			]
-			const d = tabel_panel.append('div').html(`DE analysis results`)
+			const d = holder.append('div').html(`DE analysis results`)
 			renderTable({
 				columns: table_cols,
 				rows: table_rows,
@@ -307,7 +314,7 @@ add:
 				maxHeight: '150vh',
 				resize: true
 			})
-		})
+		}
 	}
 	return svg
 }
@@ -322,7 +329,7 @@ export async function getPlotConfig(opts, app) {
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
 				//DEanalysis: { orientation: 'vertical' },
-				DEanalysis: { pvalue: 0.05, foldchange: 2 },
+				DEanalysis: { pvalue: 0.05, foldchange: 2, pvaluetable: false },
 				controls: {
 					isOpen: false // control panel is hidden by default
 				}
