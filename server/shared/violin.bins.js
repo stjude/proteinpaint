@@ -38,6 +38,9 @@ export function violinBinsObj(scale, plot) {
 	// map messy bins0 to tidy set of bins and return to client
 	const bins = []
 	for (const b of bins0) {
+		const values = b.slice(0, b.length - 2)
+		const zeros = values.filter(v => v == 0)
+		if (zeros.length == values.length && values.length > 0) continue
 		const b2 = {
 			x0: b.x0,
 			x1: b.x1,
@@ -47,6 +50,7 @@ export function violinBinsObj(scale, plot) {
 		delete b.x1
 		bins.push(b2)
 	}
+
 	// Add an extra bin with 0 binValueCount at the end of b2 for improving rendering and removing convoluted logic for threshold.
 	const lastBinX1 = bins[bins.length - 1].x1
 	const extraBin = {
