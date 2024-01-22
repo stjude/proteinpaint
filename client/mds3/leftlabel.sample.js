@@ -343,31 +343,36 @@ function getNewFilter(tk, tvs) {
 
 // will be nice if the data computing and rendering can both be replaced by violin
 async function showDensity4oneTerm(termid, div, data, tk, block) {
+	div.style('display', 'inline-block')
 	const term = await tk.mds.termdb.vocabApi.getterm(termid)
-
-	make_densityplot(
-		div,
-		data,
-		async range => {
-			// a range is selected
-			tk.menutip.clear()
-			const tvs = {
-				type: 'tvs',
-				tvs: { term, ranges: [{ start: range.range_start, stop: range.range_end }] }
-			}
-			const tkarg = {
-				type: 'mds3',
-				dslabel: tk.dslabel,
-				filter0: tk.filter0,
-				showCloseLeftlabel: true,
-				filterObj: getNewFilter(tk, tvs),
-				allow2selectSamples: tk.allow2selectSamples
-			}
-			const tk2 = block.block_addtk_template(tkarg)
-			block.tk_load(tk2)
-		},
-		term
-	)
+	term.q = { mode: 'continuous' }
+	const plotMod = await import('#plots/plot.app.js')
+	const plot = { chartType: 'violin', term }
+	const opts = { holder: div, state: { plots: [plot], vocab: tk.mds.termdb.vocabApi.state.vocab } }
+	const plotAppApi = await plotMod.appInit(opts)
+	// make_densityplot(
+	// 	div,
+	// 	data,
+	// 	async range => {
+	// 		// a range is selected
+	// 		tk.menutip.clear()
+	// 		const tvs = {
+	// 			type: 'tvs',
+	// 			tvs: { term, ranges: [{ start: range.range_start, stop: range.range_end }] }
+	// 		}
+	// 		const tkarg = {
+	// 			type: 'mds3',
+	// 			dslabel: tk.dslabel,
+	// 			filter0: tk.filter0,
+	// 			showCloseLeftlabel: true,
+	// 			filterObj: getNewFilter(tk, tvs),
+	// 			allow2selectSamples: tk.allow2selectSamples
+	// 		}
+	// 		const tk2 = block.block_addtk_template(tkarg)
+	// 		block.tk_load(tk2)
+	// 	},
+	// 	term
+	// )
 }
 
 function menu_listSamples(buttonrow, data, tk, block) {
