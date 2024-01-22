@@ -759,7 +759,7 @@ function setRenderers(self) {
 			.style('margin', chart.serieses ? '10px 30px 0px 20px' : '0px')
 			.style('display', 'none')
 
-		if (chart.chartId in self.tests) {
+		if (self.tests && chart.chartId in self.tests) {
 			// p-values legend
 			const holder = div
 				.select('.pp-cuminc-chartLegends')
@@ -776,7 +776,7 @@ function setRenderers(self) {
 			})
 		}
 
-		if (chart.chartId in self.noEvents) {
+		if (self.noEvents && chart.chartId in self.noEvents) {
 			// legend for series with no events
 			const skipdiv = div
 				.select('.pp-cuminc-chartLegends')
@@ -787,7 +787,7 @@ function setRenderers(self) {
 			renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
 		}
 
-		if (chart.chartId in self.lowSampleSize) {
+		if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
 			// legend for series with low sample size
 			const skipdiv = div
 				.select('.pp-cuminc-chartLegends')
@@ -844,7 +844,7 @@ function setRenderers(self) {
 		// div for chart-specific legends
 		div.select('.pp-cuminc-chartLegends').selectAll('*').remove()
 
-		if (chart.chartId in self.tests) {
+		if (self.tests && chart.chartId in self.tests) {
 			// p-values legend
 			const holder = div
 				.select('.pp-cuminc-chartLegends')
@@ -861,7 +861,7 @@ function setRenderers(self) {
 			})
 		}
 
-		if (chart.chartId in self.noEvents) {
+		if (self.noEvents && chart.chartId in self.noEvents) {
 			// legend for series with no events
 			const skipdiv = div
 				.select('.pp-cuminc-chartLegends')
@@ -872,7 +872,7 @@ function setRenderers(self) {
 			renderSkippedSeries(skipdiv, title, self.noEvents[chart.chartId], s)
 		}
 
-		if (chart.chartId in self.lowSampleSize) {
+		if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
 			// legend for series with low sample size
 			const skipdiv = div
 				.select('.pp-cuminc-chartLegends')
@@ -1348,15 +1348,15 @@ function getPj(self) {
 				return seriesId
 			},
 			x(row) {
-				if (self.settings.hidden.includes(row.seriesId)) return
+				if (self.settings.hidden?.includes(row.seriesId)) return
 				return row.time
 			},
 			yMin(row) {
-				if (self.settings.hidden.includes(row.seriesId)) return
+				if (self.settings.hidden?.includes(row.seriesId)) return
 				return self.settings.ciVisible ? row.low : row.cuminc
 			},
 			yMax(row) {
-				if (self.settings.hidden.includes(row.seriesId)) return
+				if (self.settings.hidden?.includes(row.seriesId)) return
 				return self.settings.ciVisible ? row.high : row.cuminc
 			},
 			xTickValues(row, context) {
