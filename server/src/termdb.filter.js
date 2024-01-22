@@ -68,9 +68,11 @@ export async function getFilterCTEs(filter, ds, CTEname = 'f') {
 		} else {
 			throw 'unknown term type'
 		}
-		thislevelCTEnames.push(f.CTEname)
-		CTEs.push(...f.CTEs)
-		values.push(...f.values)
+		if (f) {
+			thislevelCTEnames.push(f.CTEname)
+			CTEs.push(...f.CTEs)
+			values.push(...f.values)
+		}
 	}
 
 	const JOINOPER = filter.join == 'and' ? 'INTERSECT' : 'UNION'
