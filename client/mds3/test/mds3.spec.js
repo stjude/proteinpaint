@@ -42,8 +42,6 @@ Collapse and expand mutations from variant link
 
 Launch sample table from sunburst
 
-### custom data
-Numeric mode custom dataset, with mode change
 ***************/
 function getHolder() {
 	return d3s
