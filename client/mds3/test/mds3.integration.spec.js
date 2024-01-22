@@ -6,7 +6,7 @@ const { runproteinpaint } = require('../../test/front.helpers.js')
 /*
 Tests:  
 
-TP53 with hg38-test and custom data
+TP53 custom data, no sample
 Custom variants, missing or invalid mclass
 Custom dataset with custom variants, WITH samples
 Custom data with samples and sample selection
@@ -37,14 +37,13 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('TP53 with hg38-test and custom data', test => {
-	test.timeoutAfter(3000)
+tape('TP53 custom data, no sample', test => {
+	test.timeoutAfter(2000)
 	const holder = getHolder()
 
-	const opts = {
-		gene: 'TP53',
-		name: 'TP53 hg38-test',
-		custom_variants: [
+	const gene = 'TP53',
+		tkname = 'TP53 hg38-test',
+		custom_variants = [
 			{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1 },
 			{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1 },
 			{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1 }
@@ -54,38 +53,36 @@ tape('TP53 with hg38-test and custom data', test => {
 			// { chr: 'chr17', pos: 7673700, mname: 'point 7', class: 'F', dt: 1 },
 			// { chr: 'chr17', pos: 7673534, mname: 'point 8', class: 'I', dt: 1 }
 		]
-	}
 
 	runproteinpaint({
 		holder,
 		noheader: true,
 		genome: 'hg38-test',
-		gene: opts.gene,
+		gene,
 		tracks: [
 			{
 				type: 'mds3',
-				name: opts.name,
-				custom_variants: opts.custom_variants,
+				name: tkname,
+				custom_variants,
 				callbackOnRender
 			}
 		]
 	})
-
 	function callbackOnRender(tk, bb) {
 		// Test mds3 is a track object and bb is block object
-		test.equal(bb.usegm.name, opts.gene, `Should render block.usegm.name = ${opts.gene}`)
+		test.equal(bb.usegm.name, gene, `Should render block.usegm.name = ${gene}`)
 		test.equal(bb.tklst.length, 2, 'Should have two tracks')
 		test.ok(tk.skewer.rawmlst.length > 0, 'Should load mds3 tk with at least 1 data point')
 
 		//Confirm number of custom variants matches in block instance
 		test.equal(
 			tk.custom_variants.length,
-			opts.custom_variants.length,
-			`Should render total # of custom variants = ${opts.custom_variants.length}`
+			custom_variants.length,
+			`Should render total # of custom variants = ${custom_variants.length}`
 		)
 
 		const classes2Check = new Set() //for legend testing below
-		for (const variant of opts.custom_variants) {
+		for (const variant of custom_variants) {
 			classes2Check.add(variant.class)
 			//Test all custom variant entries successfully passed to block instance
 			const variantFound = tk.custom_variants.find(i => i.mname == variant.mname)
@@ -101,12 +98,12 @@ tape('TP53 with hg38-test and custom data', test => {
 		//Legend
 		test.equal(
 			tk.tr_legend.node().querySelectorAll('td')[0].innerText,
-			opts.name,
-			`Should pass custom name = ${opts.name} to legend`
+			tkname,
+			`Should pass custom name = ${tkname} to legend`
 		)
 		for (const mutClass of classes2Check) {
 			const legendArray = tk.legend.mclass.currentData.find(d => d[0] == mutClass)
-			const samples2check = opts.custom_variants.filter(d => d.class == mutClass)
+			const samples2check = custom_variants.filter(d => d.class == mutClass)
 			test.equal(
 				legendArray[1],
 				samples2check.length,
