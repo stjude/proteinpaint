@@ -428,12 +428,6 @@ function setRenderers(self) {
 			.transition()
 			.duration(200)
 			.each(self.enterPill)
-		self.dom.pilldiv
-			.select('.term_name_btn')
-			.attr('tabindex', 0)
-			.on(`keyup.sjpp-termdb`, event => {
-				if (event.key == 'Enter') event.target.click()
-			})
 	}
 
 	self.enterPill = async function (this: string) {
@@ -443,6 +437,7 @@ function setRenderers(self) {
 		self.dom.pill_termname = one_term_div
 			.append('div')
 			.attr('class', 'term_name_btn  sja_filter_tag_btn')
+			.attr('tabindex', 0)
 			.style('display', 'flex')
 			.style('grid-area', 'left')
 			.style('position', 'relative')
@@ -450,6 +445,9 @@ function setRenderers(self) {
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
 			.html(self.handler!.getPillName)
+			.on(`keyup.sjpp-termdb`, event => {
+				if (event.key == 'Enter') event.target.click()
+			})
 
 		self.updatePill!.call(this)
 	}
