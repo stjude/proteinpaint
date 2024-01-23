@@ -1,2 +1,1 @@
-Fixes:
-- detect and handle race conditions in the matrix and hiercluster server data requests
+
