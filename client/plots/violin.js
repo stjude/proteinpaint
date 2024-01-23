@@ -141,13 +141,20 @@ class ViolinPlot {
 				min: 0.1
 			},
 			{
-				label: 'Bins',
+				label: 'Ticks',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'ticks',
 				title: 'Number of ticks used to build the plot',
 				min: 1,
 				max: 50
+			},
+			{
+				label: 'Use common thickness',
+				type: 'checkbox',
+				chartType: 'violin',
+				settingsKey: 'commonThickness',
+				boxLabel: 'Yes'
 			},
 
 			{
@@ -240,6 +247,8 @@ class ViolinPlot {
 
 	async main() {
 		const c = this.state.config
+		this.settings = this.state.config.settings.violin
+
 		if (c.chartType != this.type && c.childType != this.type) return
 		this.config = structuredClone(this.state.config)
 
@@ -361,6 +370,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		medianLength: 7,
 		medianThickness: 3,
 		ticks: 15,
+		commonThickness: false,
 		defaultColor: plotColor
 	}
 	return Object.assign(defaults, overrides)
