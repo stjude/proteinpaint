@@ -306,7 +306,6 @@ export default function violinRenderer(self) {
 	}
 
 	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset, biggestBin) {
-		console.log(self.settings)
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
 			.domain(self.settings.commonThickness ? [-biggestBin, biggestBin] : [-plot.biggestBin, plot.biggestBin])
