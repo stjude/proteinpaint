@@ -16,7 +16,7 @@ FIXME items
 - should not hardcode this.geneExpValues, incompatible for future expansion
 */
 
-class HierCluster extends Matrix {
+export class HierCluster extends Matrix {
 	constructor(opts) {
 		super(opts)
 		this.type = 'hierCluster'
@@ -294,32 +294,20 @@ class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		const s = this.settings.hierCluster
 		this.hcTermGroup =
 			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
 			this.termOrder?.find(t => t.grp.type == 'hierCluster')?.grp
-		const twlst = this.hcTermGroup.lst
-
-		// temporary fix to get rid of hard/soft filter and only keep dictionary legend filter,
-		// soft filter shouldn't be used to filter out any samples for hierCluster
-		// TODO: add hard filter back to filter out samples
-		const dictionaryLegendFilter = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: this.state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
+		// track the actionSequenceId before the server request, which may be laggy
+		const actionSequenceId = this.api.notes('actionSequenceId')
+		const d = await this.requestData()
+		if (this.api.notes('actionSequenceId') !== actionSequenceId) {
+			// (an)other state change(s) has been dispatched between the start and completion of the server request
+			console.warn('aborted state update, the server data corresponds to a stale action.sequenceId')
+			return
 		}
-		const body = {
-			genome: this.state.vocab.genome,
-			dslabel: this.state.vocab.dslabel,
-			dataType: s.dataType,
-			genes: this.getClusterRowTermsAsParameter(),
-			clusterMethod: s.clusterMethod,
-			filter: filterJoin([this.state.filter, dictionaryLegendFilter]),
-			filter0: this.state.filter0
-		}
-		const d = await dofetch3('termdb/cluster', { body })
 		if (d.error) throw d.error
+		const s = this.settings.hierCluster
+		const twlst = this.hcTermGroup.lst
 
 		if (!d.clustering) {
 			// stop-gap data validation, lacks essential data part
@@ -380,6 +368,29 @@ class HierCluster extends Matrix {
 			lst: c.col.order.map(c => samples[c.name]),
 			samples
 		}
+	}
+
+	async requestData() {
+		// temporary fix to get rid of hard/soft filter and only keep dictionary legend filter,
+		// soft filter shouldn't be used to filter out any samples for hierCluster
+		// TODO: add hard filter back to filter out samples
+		const s = this.config.settings.hierCluster
+		const dictionaryLegendFilter = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: this.state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
+		}
+		const body = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			dataType: s.dataType,
+			genes: this.getClusterRowTermsAsParameter(),
+			clusterMethod: s.clusterMethod,
+			filter: filterJoin([this.state.filter, dictionaryLegendFilter]),
+			filter0: this.state.filter0
+		}
+		return await dofetch3('termdb/cluster', { body })
 	}
 
 	combineData() {

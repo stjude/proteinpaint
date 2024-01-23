@@ -701,7 +701,9 @@ export class TermdbVocab extends Vocab {
 		const headers = this.mayGetAuthHeaders('termdb')
 		// unlike scatter and violin, the matrix plot will NOT display anything
 		// if sample names are not allowed to be displayed
-		// TODO: may allow a request to proceed, but not display sampleNames??? Answer: showing multiple term values aligned for a sample can be considered identifying. thus simply disable matrix plot if sample name is now allowed to show
+		// TODO: may allow a request to proceed, but not display sampleNames???
+		// Answer: showing multiple term values aligned for a sample can be considered identifying.
+		// thus simply disable matrix plot if sample name is now allowed to show
 		if (!headers) return
 		const filter = getNormalRoot(opts.filter)
 		const samples = {}

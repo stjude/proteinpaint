@@ -1232,3 +1232,103 @@ tape('Sort Genes By Input Data Order', function (test) {
 		test.end()
 	}
 })
+
+tape('avoid race condition', function (test) {
+	test.timeoutAfter(1000)
+	test.plan(4)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortTermsBy: 'asListed'
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		matrix.Inner.app.vocabApi.origGetAnnotatedSampleData = matrix.Inner.app.vocabApi.getAnnotatedSampleData
+		matrix.Inner.app.vocabApi.getAnnotatedSampleData = async (opts, _refs = {}) => {
+			await sleep(i)
+			i = 0
+			return await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
+		}
+		let i = 5
+		const results = await Promise.all([
+			matrix.Inner.app.dispatch({
+				type: 'plot_edit',
+				id: matrix.id,
+				config: {
+					termgroups: [
+						{
+							name: '',
+							lst: [
+								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+							]
+						}
+					]
+				}
+			}),
+			(async () => {
+				await sleep(0)
+				matrix.Inner.app.dispatch({
+					type: 'plot_edit',
+					id: matrix.id,
+					config: {
+						termgroups: [
+							{
+								name: '',
+								lst: [{ term: { name: 'BCR', type: 'geneVariant', isleaf: true } }]
+							}
+						]
+					}
+				})
+			})()
+		])
+
+		matrix.on('postRender.test', () => {
+			matrix.on('postRender.test', null)
+			const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')
+			test.equal(termLabels.size(), 1, `should have 1 gene row`)
+			test.true(termLabels._groups?.[0][0].textContent.startsWith('BCR'), `should sort genes by input data order`)
+			const rects = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
+			const hits = rects.filter(d => d.key === 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
+			test.equal(
+				rects.size(),
+				240,
+				'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
+			)
+			test.equal(hits.size(), 2, 'should have the expected number of matrix cell rects with hits')
+			//if (test._ok) matrix.Inner.app.destroy()
+			test.end()
+		})
+	}
+})

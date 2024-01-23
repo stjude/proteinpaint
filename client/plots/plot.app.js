@@ -47,6 +47,7 @@ class PlotApp {
 		// this will create divs in the correct order
 		const controls = opts.holder.append('div').style('white-space', 'nowrap')
 		this.dom = {
+			holder: opts.holder,
 			plotControls: controls.append('div').style('display', 'inline-block'),
 			recoverControls: controls.append('div').style('display', 'inline-block'),
 			errdiv: opts.holder.append('div'),
@@ -140,6 +141,10 @@ class PlotApp {
 	printError(e) {
 		sayerror(this.dom.errdiv, 'Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
+	}
+
+	destroy() {
+		this.dom.holder.selectAll('*').remove()
 	}
 }
 
