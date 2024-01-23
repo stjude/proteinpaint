@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
 import { controlsInit } from './controls'
+import { getNormalRoot } from '#filter/filter'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -102,7 +103,9 @@ class SampleView {
 			})
 		} else {
 			const limit = 100
-			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName({ filter: appState.termfilter?.filter })
+			const sampleName2Id = await this.app.vocabApi.getAllSamplesByName({
+				filter: getNormalRoot(appState.termfilter?.filter)
+			})
 			const allSamples = Object.keys(sampleName2Id)
 
 			const isBigDataset = allSamples.length > 10000
