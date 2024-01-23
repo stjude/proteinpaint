@@ -1,4 +1,8 @@
-export const noBCR = {
+// TODO: use typescript to ensure that the hardcoded fake data conforms
+// to the expected data shape
+//import { ValidResponse } from '../../shared/types/routes/termdb.cluster'
+
+export const noBCR /*: ValidResponse*/ = {
 	clustering: {
 		row: {
 			merge: [
@@ -655,7 +659,7 @@ export const noBCR = {
 	bySampleId: {}
 }
 
-export const withBCR = {
+export const withBCR /*: ValidResponse*/ = {
 	clustering: {
 		row: {
 			merge: [
@@ -1335,7 +1339,7 @@ export const withBCR = {
 	bySampleId: {}
 }
 
-export const twoGenes = {
+export const twoGenes /*: ValidResponse*/ = {
 	clustering: {
 		row: {
 			merge: [

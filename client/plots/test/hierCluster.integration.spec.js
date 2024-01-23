@@ -3,7 +3,7 @@ import tape from 'tape'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
 import { select } from 'd3-selection'
 import { appInit } from '../plot.app.js'
-import { withBCR, noBCR, twoGenes } from '../../test/testdata/fake-hcdata.js'
+import { withBCR, noBCR, twoGenes } from '../../test/testdata/fake-hcdata'
 import { fillTermWrapper } from '#termsetting'
 
 /*************************
@@ -92,7 +92,7 @@ async function getHierClusterApp(_opts = {}) {
 // the client-side, such as rendering and avoiding race conditions
 
 tape('\n', function (test) {
-	test.pass('-***- plots/hierCluster.gdc -***-')
+	test.pass('-***- plots/hierCluster.js -***-')
 	test.end()
 })
 
@@ -146,6 +146,14 @@ tape('avoid race condition', async test => {
 	])
 
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 gene rows')
+	const rects = hc.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
+	const hits = rects.filter(d => d.key !== 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
+	test.equal(
+		rects.size(),
+		156,
+		'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
+	)
+	test.equal(hits.size(), 156, 'should have the expected number of matrix cell rects with hits')
 	if (test._ok) app.destroy()
 	test.end()
 })

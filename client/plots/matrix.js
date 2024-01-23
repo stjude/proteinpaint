@@ -23,7 +23,7 @@ export class Matrix {
 	constructor(opts) {
 		this.type = 'matrix'
 		this.holderTitle = 'Sample Matrix'
-		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures')).matrix || []
+		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.matrix || []
 		this.prevState = { config: { settings: {} } }
 		setInteractivity(this)
 		setRenderers(this)
