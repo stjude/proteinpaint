@@ -355,7 +355,6 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		strokeWidth: 0.2,
 		axisHeight: 60,
 		rightMargin: 50,
-		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
 		plotThickness: 150,

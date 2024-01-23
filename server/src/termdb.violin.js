@@ -298,7 +298,7 @@ function createCanvasImg(q, result, ds) {
 	let axisScale
 
 	const useLog = q.unit == 'log'
-
+	console.log(result.min, result.max)
 	if (useLog) {
 		axisScale = scaleLog()
 			.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)

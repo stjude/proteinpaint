@@ -58,8 +58,7 @@ export function setInteractivity(self) {
 				}
 			}
 		]
-
-		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
+		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
 				callback: async () => {
@@ -84,7 +83,7 @@ export function setInteractivity(self) {
 			}
 		]
 
-		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
+		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
 				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
@@ -175,15 +174,11 @@ export function setInteractivity(self) {
 		self.app.tip.clear()
 		if (!data?.samples) return
 		const sampleIdArr = []
-		for (const [c, k] of Object.entries(data.samples)) {
-			const sampleIdObj = {}
-			if (data.refs.bySampleId[c]) {
-				sampleIdObj[data.refs.bySampleId[c]] = roundValue(k[term.$id].value, 1)
-			}
-			sampleIdArr.push([{ value: Object.keys(sampleIdObj) }, { value: Object.values(sampleIdObj) }])
-		}
+		for (const [c, k] of Object.entries(data.samples))
+			sampleIdArr.push([{ value: data.refs.bySampleId[c].label }, { value: roundValue(k[term.$id].value, 1) }])
+
 		const tableDiv = self.app.tip.d.append('div')
-		const columns = [{ label: 'Sample Id' }, { label: 'Value' }]
+		const columns = [{ label: 'Sample' }, { label: 'Value' }]
 		const rows = sampleIdArr
 
 		renderTable({
