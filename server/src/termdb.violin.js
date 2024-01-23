@@ -359,7 +359,6 @@ function createCanvasImg(q, result, ds) {
 		plot.src = canvas.toDataURL()
 
 		if (plot.values.every((val, i) => val === plot.values[0])) {
-			console.log(plot.values[0], plot.values[1])
 			plot.bins = []
 		} else {
 			// create bins for violins
