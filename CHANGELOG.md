@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Do not show the "Edit" option when clicking a gene row label in matrix
+- detect and handle race conditions in the matrix and hiercluster server data requests
 
 
 ## 2.39.5
