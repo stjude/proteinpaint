@@ -357,9 +357,8 @@ function createCanvasImg(q, result, ds) {
 			: null
 
 		plot.src = canvas.toDataURL()
-
 		// create bins for violins
-		const finalVpBins = violinBinsObj(axisScale, plot)
+		const finalVpBins = violinBinsObj(axisScale, plot, q.ticks)
 
 		plot.bins = finalVpBins.bins
 

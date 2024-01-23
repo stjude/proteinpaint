@@ -31,8 +31,8 @@ output:
 */
 const { bin } = require('d3-array')
 
-export function violinBinsObj(scale, plot) {
-	const bins0 = computeViolinBins(scale, plot.values)
+export function violinBinsObj(scale, plot, ticks) {
+	const bins0 = computeViolinBins(scale, plot.values, ticks)
 	if (plot.values.every((val, i) => val === plot.values[0])) return { bins0, bins: [] }
 	// array; each element is an array of values belonging to this bin
 
@@ -56,18 +56,17 @@ export function violinBinsObj(scale, plot) {
 		binValueCount: 0
 	}
 	bins.push(extraBin)
-
 	return { bins0, bins }
 }
 
-function computeViolinBins(scale, values) {
+function computeViolinBins(scale, values, ticks) {
 	// disable this method for now and hardcode ticks to 15.
 	// const uniqueValues = new Set(values)
 	// const ticksCompute = uniqueValues.size === 1 ? 50 : uniqueValues.size <= 10 ? 5 : uniqueValues.size <= 20 ? 10 : 20
 
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(15)) /* buckets are created which are separated by the threshold*/
+		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 
 	return binBuilder(values)
