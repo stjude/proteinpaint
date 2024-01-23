@@ -219,12 +219,23 @@ export function prepStore(self, opts) {
 	if (self.validateState) self.validateState()
 }
 
+// the action.sequenceId can be used by a chart/app
+// to identify the state that corresponds to an async step
+// like a server data request, so that a really late-arriving data
+// can be rejected if the state that was associated with that requested
+// is already stale/superseded by a subsequent state update
+let sequenceId = 0
+
 export function getStoreApi(self) {
 	self.history = []
 	self.currIndex = -1
 	let numPromisedWrites = 0
 	const api = {
 		async write(action) {
+			// to allow an app or chart code to fail due to race condition,
+			// hardcode a constant value or comment out the ++ for the sequenceID
+			// !!! CRITICAL TO INCREMENT THIS !!!
+			action.sequenceId = sequenceId++
 			// avoid calls to inherited methods
 			const actions = self.constructor.prototype.actions
 			if (!actions) {
@@ -424,9 +435,15 @@ export function getComponentApi(self) {
 		throw `The component's type must be set before calling this.getComponentApi(this).`
 	}
 
+	// remember the action.sequenceId that caused the last state change
+	const notes = {
+		actionSequenceId: undefined
+	}
+
 	const api = {
 		type: self.type,
 		id: self.id,
+		notes: key => notes[key],
 		async update(current) {
 			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
@@ -435,6 +452,7 @@ export function getComponentApi(self) {
 			// force update if there is no action, or
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
+				if (current.action) notes.actionSequenceId = current.action.sequenceId
 				if (self.mainArg == 'state') {
 					// some components may require passing state to its .main() method,
 					// for example when extending a simple object class into an rx-component

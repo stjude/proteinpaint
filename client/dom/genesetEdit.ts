@@ -362,7 +362,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		const gene = geneSearch.geneSymbol
 		for (const item of geneList) {
 			if (item.gene == gene) {
-				alert(`The gene $.gene} has already been added`)
+				window.alert(`The gene ${gene} has already been added`)
 				return
 			}
 		}
