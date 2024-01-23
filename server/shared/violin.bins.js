@@ -38,8 +38,6 @@ export function violinBinsObj(scale, plot) {
 	// map messy bins0 to tidy set of bins and return to client
 	const bins = []
 	for (const b of bins0) {
-		const values = b.splice(0, b.length - 2)
-		if (values.length > 0 && values.every((val, i) => val == values[0])) continue
 		const b2 = {
 			x0: b.x0,
 			x1: b.x1,
