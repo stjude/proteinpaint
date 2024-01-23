@@ -38,6 +38,7 @@ export function violinBinsObj(scale, plot, ticks) {
 
 	// map messy bins0 to tidy set of bins and return to client
 	const bins = []
+	let xMax = 0
 	for (const b of bins0) {
 		const b2 = {
 			x0: b.x0,

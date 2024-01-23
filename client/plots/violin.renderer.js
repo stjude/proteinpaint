@@ -61,7 +61,7 @@ export default function violinRenderer(self) {
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
-			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
+			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset, self.data.biggestBin)
 			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
 			self.labelHideLegendClicking(t2, plot)
 		}
@@ -305,10 +305,10 @@ export default function violinRenderer(self) {
 			.attr('transform', isH ? null : 'rotate(-90)')
 	}
 
-	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset) {
+	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset, biggestBin) {
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
-			.domain([-plot.biggestBin, plot.biggestBin])
+			.domain([-biggestBin, biggestBin])
 			.range([-self.data.plotThickness * 0.45, self.data.plotThickness * 0.45])
 
 		let areaBuilder
