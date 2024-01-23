@@ -358,15 +358,12 @@ function createCanvasImg(q, result, ds) {
 
 		plot.src = canvas.toDataURL()
 
-		if (plot.values.every((val, i) => val === plot.values[0])) {
-			plot.bins = []
-		} else {
-			// create bins for violins
-			const finalVpBins = violinBinsObj(axisScale, plot)
+		// create bins for violins
+		const finalVpBins = violinBinsObj(axisScale, plot)
 
-			plot.bins = finalVpBins.bins
-			plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
-		}
+		plot.bins = finalVpBins.bins
+
+		plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
 
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values)
