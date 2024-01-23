@@ -33,6 +33,7 @@ const { bin } = require('d3-array')
 
 export function violinBinsObj(scale, plot) {
 	const bins0 = computeViolinBins(scale, plot.values)
+	if (plot.values.every((val, i) => val === plot.values[0])) return { bins0, bins: [] }
 	// array; each element is an array of values belonging to this bin
 
 	// map messy bins0 to tidy set of bins and return to client
