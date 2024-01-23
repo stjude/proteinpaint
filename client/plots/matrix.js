@@ -120,14 +120,12 @@ export class Matrix {
 		)
 	}
 
-	/*reactsTo(action) {
-		if (action.type == 'plot_edit') {
-			// note: parent 'plot' component already checked against action.id == this.id
-			// no need to react to edits to controls panel 
-			return action.config && action.config.settings && actions.config.settings.matrix
-		}
-		return true
-	}*/
+	// reactsTo(action) {
+	// 	// note: a parent app or 'plot' component is expected to already have
+	// 	// a comprehensive reactsTo() call to filter the actions for this component,
+	// 	// so only farther selective action filters should be applied here as needed
+	// 	return true
+	// }
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
@@ -195,7 +193,6 @@ export class Matrix {
 				this.showNoMatchingDataMessage()
 				return
 			}
-
 			this.setLayout()
 			if (this.setHierColorScale) this.setHierColorScale(this.hierClusterData.clustering)
 			this.serieses = this.getSerieses(this.data)
@@ -224,7 +221,6 @@ export class Matrix {
 					padleft: this.settings.legend.padleft //+ d.xOffset
 				})
 			})
-
 			await this.adjustSvgDimensions(prevTranspose)
 			this.controlsRenderer.main()
 		} catch (e) {
