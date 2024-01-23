@@ -298,7 +298,6 @@ function createCanvasImg(q, result, ds) {
 	let axisScale
 
 	const useLog = q.unit == 'log'
-	console.log(result.min, result.max)
 	if (useLog) {
 		axisScale = scaleLog()
 			.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)
@@ -317,7 +316,7 @@ function createCanvasImg(q, result, ds) {
 
 	const scaledRadius = q.radius / q.devicePixelRatio
 	const arcEndAngle = scaledRadius * Math.PI
-
+	let biggestBin = 0
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
@@ -363,12 +362,13 @@ function createCanvasImg(q, result, ds) {
 		plot.bins = finalVpBins.bins
 
 		plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
-
+		if (biggestBin < plot.biggestBin) biggestBin = plot.biggestBin
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values)
 
 		delete plot.values
 	}
+	result.biggestBin = biggestBin
 }
 
 function plotThickness(result, q) {
