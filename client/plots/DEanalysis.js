@@ -33,16 +33,6 @@ class DEanalysis {
 			controlsDiv
 		}
 		const inputs = [
-			//{
-			//	label: 'Orientation',
-			//	type: 'radio',
-			//	chartType: 'DEanalysis',
-			//	settingsKey: 'orientation',
-			//	options: [
-			//		{ label: 'Vertical', value: 'vertical' },
-			//		{ label: 'Horizontal', value: 'horizontal' }
-			//	]
-			//},
 			{
 				label: 'p-value',
 				type: 'number',
@@ -93,7 +83,7 @@ class DEanalysis {
 		this.settings = this.config.settings.DEanalysis
 		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
 		//const state = this.app.getState()
-		//console.log('state:', state) // state.customTerms[0].name
+		//console.log('state:', state)
 		//if (state.customTerms[0].name) {
 		//	const headerText = state.customTerms[0].name
 		//	this.dom.header
@@ -111,7 +101,6 @@ class DEanalysis {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
-		//}
 		render_volcano(this.dom.holder, data, this.settings)
 	}
 }
@@ -126,7 +115,10 @@ m {}
 
 add:
 - vo_circle
-*/
+	*/
+
+	// Delete previous holder, if present
+	holder.selectAll('*').remove()
 	let minlogfc = 0,
 		maxlogfc = 0,
 		minlogpv = 0,
@@ -151,6 +143,7 @@ add:
 		toppad = 50,
 		rightpad = 50,
 		radius
+
 	const svg = holder.append('svg')
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
@@ -175,8 +168,8 @@ add:
 		.each(function (d) {
 			d.vo_g = this
 		})
-	const fold_change_cutoff = settings.foldchange // Will build UI later so that this parameter can be adjusted by the user
-	const p_value_cutoff = settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
+	const fold_change_cutoff = settings.foldchange
+	const p_value_cutoff = settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale.
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
 	const table_rows = []
@@ -277,6 +270,7 @@ add:
 				minlogpv = 0
 				maxlogpv = 0
 				const useun = select.node().selectedIndex == 0
+				console.log('useun:', useun)
 				for (const d of mavb) {
 					const pv = useun ? d.adjusted_p_value : d.original_p_value
 					if (pv == 0) continue
