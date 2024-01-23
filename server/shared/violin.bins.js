@@ -31,7 +31,7 @@ output:
 */
 const { bin } = require('d3-array')
 
-export function violinBinsObj(scale, plot, ticks) {
+export function violinBinsObj(scale, plot, ticks = 15) {
 	const bins0 = computeViolinBins(scale, plot.values, ticks)
 	//if (plot.values.every((val, i) => val === plot.values[0])) return { bins0, bins: [] }
 	// array; each element is an array of values belonging to this bin
