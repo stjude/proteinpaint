@@ -140,6 +140,15 @@ class ViolinPlot {
 				max: 2,
 				min: 0.1
 			},
+			{
+				label: 'Bins',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'ticks',
+				title: 'Number of ticks used to build the plot',
+				min: 1,
+				max: 50
+			},
 
 			{
 				label: 'Plot length',
@@ -185,6 +194,7 @@ class ViolinPlot {
 				min: 3,
 				debounceInterval: 100
 			},
+
 			{
 				label: 'Default color',
 				type: 'color',
@@ -297,7 +307,8 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			screenThickness: window.document.body.clientWidth - thicknessMargin
+			screenThickness: window.document.body.clientWidth - thicknessMargin,
+			ticks: s.ticks
 		}
 		if (s.plotThickness) arg.plotThickness = s.plotThickness
 
@@ -350,6 +361,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		plotThickness: 150,
 		medianLength: 7,
 		medianThickness: 3,
+		ticks: 15,
 		defaultColor: plotColor
 	}
 	return Object.assign(defaults, overrides)
