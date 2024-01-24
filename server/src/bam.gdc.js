@@ -20,8 +20,7 @@ does:
 			and return to client
 		/files/<inputId>
 			valid return indicates the id is about a file
-			must also ensure it's a bam file? test with a maf file
-			will fetch info about the case of this file
+			must also ensure it's a bam file
 		
 	if no inputId:
 		query list of case uuids based on filter0; then get bams from the uuids
@@ -49,29 +48,6 @@ gdc_bam_request
 				queryApi
 	
 */
-
-export async function gdc_bam_request(req, res) {
-	try {
-		if (req.query.gdc_id) {
-			// has user input, test on which id it is and any bam file associated with it
-			const bamdata = await get_gdc_data(
-				req.query.gdc_id,
-				req.query.filter0 // optional gdc cohort filter
-			)
-
-			await mayCheckPermission(bamdata, req)
-
-			res.send(bamdata)
-		} else {
-			// no user input, list all available bam files from current cohort
-			const re = await getCaseFiles(req.query.filter0)
-			res.send(re)
-		}
-	} catch (e) {
-		res.send({ error: e.message || e })
-		if (e.stack) console.log(e.stack)
-	}
-}
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
@@ -108,6 +84,31 @@ const entityTypes = [
 ]
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
+
+const listCaseFileSize = 1000
+
+export async function gdc_bam_request(req, res) {
+	try {
+		if (req.query.gdc_id) {
+			// has user input, test on which id it is and any bam file associated with it
+			const bamdata = await get_gdc_data(
+				req.query.gdc_id,
+				req.query.filter0 // optional gdc cohort filter
+			)
+
+			await mayCheckPermissionWithFileAndSession(bamdata, req)
+
+			res.send(bamdata)
+		} else {
+			// no user input, list all available bam files from current cohort
+			const re = await getCaseFiles(req.query.filter0)
+			res.send(re)
+		}
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
+	}
+}
 
 async function get_gdc_data(gdc_id, filter0) {
 	// data to be returned
@@ -290,6 +291,8 @@ handles 3 scenarios:
 	throw error string to be shown on ui
 - id is invalid
 	return re with blank re.data.hits[]
+
+NOTE: no filter0 is checked here. a file from a case outside of cohort is thus allowed. need to confirm with gdc
 */
 async function getBamfileByFileId(id, field) {
 	const filter = {
@@ -306,7 +309,13 @@ async function getBamfileByFileId(id, field) {
 	const hit = re.data.hits[0]
 	if (hit) {
 		// matches with a valid file on gdc
-		if (hit.data_type != 'Aligned Reads') throw 'Requested file is not a BAM file.' // indicate this err on ui
+		if (hit.data_type != 'Aligned Reads') {
+			/*
+			indicate this err on ui
+			do not include this in filter{}, this allows to distinguish invalid id versus valid file which is not a bam
+			*/
+			throw 'Requested file is not a BAM file.'
+		}
 		// matches with a bam file, this is what's needed and proceed to return this
 	} else {
 		// do not match with any file on gdc (invalid input id), return blank array but do not throw as this may be testing what kind of id this is
@@ -336,7 +345,12 @@ async function queryApi(filters, api, returnSize) {
 	return re
 }
 
-async function mayCheckPermission(bamdata, req) {
+/*
+if bam file has been found, and user session is available, check user's permission on those files;
+if no permission, return an indicator to allow ui to indicate this in a helpful manner
+on gdc portal, when user has signed in, the session will be available from cookie, this feature is intended to work there
+*/
+async function mayCheckPermissionWithFileAndSession(bamdata, req) {
 	if (!bamdata.file_metadata?.length) return
 	// has found files
 	const sessionid = req.cookies.sessionid
@@ -393,8 +407,10 @@ export async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 	}
 }
 
-const listCaseFileSize = 1000
-
+/*
+get list of cases by filter0, then get bam files for these cases
+to be displayed in a UI table and user can browse and select one
+*/
 async function getCaseFiles(filter0) {
 	const cases = await getCasesByFilter(filter0)
 	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize)
