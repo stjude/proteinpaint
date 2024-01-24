@@ -1,5 +1,5 @@
 import { BaseTrackArgs } from './tracks.ts'
-import { Elem, Input, SvgG } from '../types/d3'
+import { Elem, Input, Svg, SvgG } from '../types/d3'
 import { Selection } from 'd3-selection'
 
 type SharedArgs = {
@@ -51,6 +51,8 @@ export type MainPlotDiv = {
 }
 
 export type HicstrawDom = {
+	/** Holds the cloak when the view is loading. */
+	loadingDiv: Elem
 	/** Placeholder div for displaying errors to the user */
 	errorDiv: Elem
 	/** Control panel. Appears as a collapsible burger menu*/
@@ -61,7 +63,7 @@ export type HicstrawDom = {
 		inputBpMaxv: Input
 		/** Text display of resolution */
 		resolution: Elem
-		/** Hardcoded display of 'observed' matrix type. Change to dropdown in future. */
+		/** User select matrix type. Returns straw values based on selected type. */
 		matrixType: Elem
 		/** Displays text of the user's current view and buttons for other views (except in genome view) */
 		view: Elem
@@ -88,7 +90,9 @@ export type HicstrawDom = {
 }
 
 export type WholeGenomeView = {
-	/** value for o,e,and oe option */
+	/** Arrays of hicdata response [pos1, pos2, and value] reformatted for rendering */
+	data: number[][]
+	/** Straw parameter to return matrix type from dropdown */
 	matrixType: 'observed' | 'expected' | 'oe'
 	/** # pixel per bin, may set according to resolution */
 	binpx: number
@@ -98,7 +102,22 @@ export type WholeGenomeView = {
 	layer_map: SvgG
 	/** second g layer underneath the svg */
 	layer_sv: SvgG
-	lead2follow?: Map<string, Map<string, { x: number; y: number }>>
+	/** SVG elements and data for individual canvases */
+	lead2follow?: Map<
+		string,
+		Map<
+			string,
+			Partial<{
+				canvas: Elem
+				canvas2?: Elem
+				x: number
+				y: number
+				data: number[][]
+				img: Elem
+				img2?: Elem
+			}>
+		>
+	>
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
 	/** Displays the chr on the x axis to the user next to the cell's upper left corner.
@@ -115,12 +134,12 @@ export type WholeGenomeView = {
 
 export type ChrPairView = {
 	matrixType: 'observed' | 'expected' | 'oe'
-	axisx: any //dom
-	axisy: any //dom
+	axisx?: Svg
+	axisy?: Svg
 	binpx: number
-	canvas?: any //dom
+	canvas: any //dom
 	ctx: any //dom
-	data: any
+	data: number[][]
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
 	/** Calculated resolution. Displayed in menu for user */
