@@ -268,7 +268,7 @@ export async function bamsliceui({
 			.append('div')
 			.style('margin', '5px')
 			.style('display', 'inline-block')
-			.text('Loading...')
+			.text('Looking for BAM files from current cohort...')
 		queryCaseFileList(listCaseFileHandle)
 
 		const userHasNoAccessDiv = td
@@ -481,9 +481,14 @@ export async function bamsliceui({
 		const data = await dofetch3('gdcbam', { body }) // query same route without case_id
 		if (data.error) return handle.text(data.error)
 		if (typeof data.case2files != 'object') return handle.text('wrong return')
+
 		// data = { case2files={}, total=int, loaded=int }
+		/*
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
 		else handle.text(`Or, browse first ${data.loaded} BAM files out of ${data.total} total`)
+		*/
+		if (data.total < data.loaded) handle.text(`Or, browse ${data.loaded} available BAM files`)
+
 		handle.attr('class', 'sja_clbtext').on('click', event => {
 			const div = tip
 				.clear()
