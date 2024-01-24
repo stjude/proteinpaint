@@ -3,25 +3,32 @@ import path from 'path'
 import { fileSize } from '../shared/fileSize'
 
 /*
-exports one function
-
 hardcoded logic to work with gdc APIs
   /files/ to get list of files
   /cases/ to test if a case if case id
 
-input: <inputId>
-	a gdc id of unspecified type entered by user on the ui
+input: 
+	<inputId> optional, a gdc id of unspecified type entered by user on the ui
+	<filter0> optional gdc cohort filter
 
 does:
-	determine the type of id by trying to query multiple gdc apis
-	/cases/<inputId>
-		valid return indicates the id is about a case
-		will fetch all bam files eligible for slicing
-		and return to client
-	/files/<inputId>
-		valid return indicates the id is about a file
-		must also ensure it's a bam file? test with a maf file
-		will fetch info about the case of this file
+	if has inputId:
+		determine the type of id by trying to query multiple gdc apis
+		/cases/<inputId>
+			valid return indicates the id is about a case
+			will fetch all bam files eligible for slicing
+			and return to client
+		/files/<inputId>
+			valid return indicates the id is about a file
+			must also ensure it's a bam file? test with a maf file
+			will fetch info about the case of this file
+		
+	if no inputId:
+		query list of case uuids based on filter0; then get bams from the uuids
+		consideration is that filter0 may have conflicting filter e.g. experimental_strategy=Methylation Array
+		when this filter is used on /files/ api, it prevents bam file from being returned
+		this way, the app shows all bam files from just those cases passing filter
+
 
 
 function cascade:
@@ -68,12 +75,7 @@ export async function gdc_bam_request(req, res) {
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
-/**********************************************************
-all the rest is copied to /utils/gdc/fileCase2bam.js
-for testing and posting to https://proteinpaint.stjude.org/GDC/
-*/
-
-// used in getFileByCaseId() and getFileByCaseId()
+// used in getFileByCaseId()
 const filesApi = {
 	end_point: path.join(apihost, 'files/'),
 	fields: [
@@ -181,14 +183,16 @@ async function try_query(id, bamdata, filter0) {
 		if (await ifIdIsEntity(id, entity.field, filter0)) {
 			// input id is this type of field. copy field type to this flag to pass on (in case it got no bam files)
 			bamdata.isCaseSample = entity.type
-			// get bam files from this entity
-			return await getFileByCaseId(id, entity.field, filter0)
+			/* get bam files from this entity
+			do not supply filter0 in this query! if filter0 contains non_bam_filter, using filter0 will prevent finding any bam files
+			*/
+			return await getFileByCaseId(id, entity.field)
 		}
 	}
 
 	// is not any of above fields
 	// then, test if is file uuid
-	const re = await getBamfileByFileId(id, 'file_id', filter0)
+	const re = await getBamfileByFileId(id, 'file_id')
 	if (re.data.hits.length) {
 		// is file uuid, "re" contains the bam file from it (what if this is not indexed?)
 		bamdata.is_file_uuid = true
@@ -197,7 +201,7 @@ async function try_query(id, bamdata, filter0) {
 
 	// is not case id, case uuid, file uuid
 	// last, test if is file id
-	const re2 = await getBamfileByFileId(id, 'file_name', filter0)
+	const re2 = await getBamfileByFileId(id, 'file_name')
 	if (re2.data.hits.length) {
 		// is file id
 		bamdata.is_file_id = true
@@ -232,18 +236,16 @@ async function ifIdIsEntity(id, field, filter0) {
 /*
 inputs:
 - id
-	case id or case uuid
-	when missing, will query all cases and file
+	1 case submitter id, or 1 case uuid, or an array of uuids
+	when missing, will query bam files from all cases
 - caseField
 	corresponding filter field of first argument
-- filter0
-	gdc cohort filter
 - returnSize
 	max number of items api will return, default 10
 
 query /files/ to retrieve all indexed bam files using this id
 */
-async function getFileByCaseId(id, caseField, filter0, returnSize) {
+async function getFileByCaseId(id, caseField, returnSize) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -274,10 +276,6 @@ async function getFileByCaseId(id, caseField, filter0, returnSize) {
 		})
 	}
 
-	if (filter0) {
-		filter.content.push(filter0)
-	}
-
 	return await queryApi(filter, filesApi, returnSize)
 }
 
@@ -293,7 +291,7 @@ handles 3 scenarios:
 - id is invalid
 	return re with blank re.data.hits[]
 */
-async function getBamfileByFileId(id, field, filter0) {
+async function getBamfileByFileId(id, field) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -302,10 +300,6 @@ async function getBamfileByFileId(id, field, filter0) {
 				content: { field, value: id }
 			}
 		]
-	}
-
-	if (filter0) {
-		filter.content.push(filter0)
 	}
 
 	const re = await queryApi(filter, filesApi)
@@ -402,7 +396,8 @@ export async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 const listCaseFileSize = 1000
 
 async function getCaseFiles(filter0) {
-	const re = await getFileByCaseId(null, null, filter0, listCaseFileSize)
+	const cases = await getCasesByFilter(filter0)
+	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize)
 	const case2files = {}
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 	for (const h of re.data.hits) {
@@ -414,7 +409,7 @@ async function getCaseFiles(filter0) {
 			file_uuid: h.id,
 			sample_type: h.cases?.[0].samples?.[0].sample_type,
 			experimental_strategy: h.experimental_strategy,
-			file_size: (Number.parseFloat(h.file_size) / 10e8).toFixed(2) + ' GB'
+			file_size: fileSize(Number.parseFloat(h.file_size))
 		})
 	}
 	return {
@@ -422,4 +417,9 @@ async function getCaseFiles(filter0) {
 		total: re.data?.pagination?.total,
 		loaded: listCaseFileSize
 	}
+}
+
+async function getCasesByFilter(filter0) {
+	const re = await queryApi(filter0, casesApi, 300)
+	return re.data.hits.map(i => i.id)
 }
