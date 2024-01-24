@@ -6,6 +6,7 @@ import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import { d3lasso } from '../common/lasso'
+import { downloadTable } from '../dom/table'
 /*
 
 opts{}
@@ -79,6 +80,9 @@ class DEanalysis {
 				inputs: inputs
 			})
 		}
+		this.components.controls.on('downloadClick.DEanalysis', () => {
+			downloadTable(this.table_rows, this.table_cols)
+		})
 	}
 
 	getState(appState) {
@@ -112,11 +116,11 @@ class DEanalysis {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
-		render_volcano(this.dom.holder, data, this.settings)
+		render_volcano(this.dom.holder, data, this)
 	}
 }
 
-function render_volcano(holder, mavb, settings) {
+function render_volcano(holder, mavb, self) {
 	/*
 m {}
 - gene
@@ -179,12 +183,12 @@ add:
 		.each(function (d) {
 			d.vo_g = this
 		})
-	const fold_change_cutoff = settings.foldchange
-	const p_value_cutoff = settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale.
-	const p_value_adjusted_original = settings.adjusted_original_pvalue
+	const fold_change_cutoff = self.settings.foldchange
+	const p_value_cutoff = self.settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale.
+	const p_value_adjusted_original = self.settings.adjusted_original_pvalue
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
-	const table_rows = []
+	self.table_rows = []
 	const circle = dotg
 		.append('circle')
 		.attr('stroke', d => {
@@ -197,7 +201,7 @@ add:
 			) {
 				color = 'red'
 				num_significant_genes += 1
-				table_rows.push([
+				self.table_rows.push([
 					{ value: d.gene_name },
 					{ value: d.gene_symbol },
 					{ value: d.fold_change },
@@ -211,7 +215,7 @@ add:
 			) {
 				color = 'red'
 				num_significant_genes += 1
-				table_rows.push([
+				self.table_rows.push([
 					{ value: d.gene_name },
 					{ value: d.gene_symbol },
 					{ value: d.fold_change },
@@ -236,7 +240,7 @@ add:
 	//.on('click', (event, d) => {
 	//	circleclick(d, mavb, event.clientX, event.clientY)
 	//})
-	table_rows.sort((a, b) => a[2].value - b[2].value).reverse() // Sorting genes in descending order of fold change
+	self.table_rows.sort((a, b) => a[2].value - b[2].value).reverse() // Sorting genes in descending order of fold change
 	//console.log(
 	//	'Percentage of significant genes:',
 	//	(num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)
@@ -335,19 +339,18 @@ add:
 					'<br>Number of significant genes:' +
 					num_significant_genes
 			)
-
-		if (settings.pvaluetable == true) {
-			const table_cols = [
-				{ label: 'Gene Name' },
-				{ label: 'Gene Symbol' },
-				{ label: 'log2 Fold change' },
-				{ label: 'Original p-value' },
-				{ label: 'Adjusted p-value' }
-			]
+		self.table_cols = [
+			{ label: 'Gene Name' },
+			{ label: 'Gene Symbol' },
+			{ label: 'log2 Fold change' },
+			{ label: 'Original p-value' },
+			{ label: 'Adjusted p-value' }
+		]
+		if (self.pvaluetable == true) {
 			const d = holder.append('div').html(`<br>DE analysis results`)
 			renderTable({
-				columns: table_cols,
-				rows: table_rows,
+				columns: self.table_cols,
+				rows: self.table_rows,
 				div: d,
 				showLines: true,
 				maxHeight: '150vh',
