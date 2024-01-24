@@ -37,7 +37,7 @@ hicparsefragdata()
 initialize views
 
 	init_wholeGenomeView()
-		.wholegenome
+		.genomeView
 
 	init_chrPairView()
 		.chrpairview
@@ -104,6 +104,7 @@ type Pane = {
  * TODOs:
  * - add state-like functionality. Move objs for rendering under self and separate hic input. Add functions for views to operate independently of each other.
  * - Possibly type Pane can be import somewhere??
+ * - Maybe make a class for each view?? See comments in utility functions
  */
 class Hicstat {
 	holder: Div
@@ -113,7 +114,7 @@ class Hicstat {
 	errList: string[]
 	/** TODO: fix this Partial business. */
 	/** Rendering properities specific to the whole genome view */
-	wholegenome: Partial<WholeGenomeView>
+	genomeview: Partial<WholeGenomeView>
 	/** Rendering properities specific to the chr-chr pair view */
 	chrpairview: Partial<ChrPairView>
 	/** Rendering properities specific to the horizontal (2 chr subpanel pair) view */
@@ -123,17 +124,17 @@ class Hicstat {
 	/** following are flags for which view is displayed to switch between views.
 	 * See the view names above
 	 */
-	inwholegenome: boolean
+	ingenome: boolean
 	inchrpair: boolean
 	indetail: boolean
 	inhorizontal: boolean
 	/** Required position attributes for every view except for the whole genome view. Only chr pair does not need start or stop. */
-	chrx: Partial<{
+	x: Partial<{
 		chr: string
 		start: number
 		stop: number
 	}>
-	chry: Partial<{
+	y: Partial<{
 		chr: string
 		start: number
 		stop: number
@@ -145,15 +146,23 @@ class Hicstat {
 		this.dom = {
 			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
 			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
+			loadingDiv: hic.holder
+				.append('div')
+				.classed('sjpp-hic-loading', true)
+				.text('Loading...')
+				.style('padding', '10px 20px')
+				.style('color', '#8AB1D4')
+				.style('font-size', '1.5em'),
 			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
 			tip: new client.Menu()
 		}
 		this.errList = []
-		this.wholegenome = {
+		this.genomeview = {
+			data: [],
 			matrixType: 'observed',
 			binpx: 1,
 			/** wholegenome is fixed to use lowest bp resolution, and fixed cutoff value for coloring*/
-			bpmaxv: 5000,
+			//bpmaxv: 5000,
 			lead2follow: new Map(),
 			pica_x: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
 			pica_y: new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
@@ -184,12 +193,12 @@ class Hicstat {
 				rpad: 1
 			} as DetailViewAxis
 		}
-		this.inwholegenome = true
+		this.ingenome = true
 		this.inchrpair = false
 		this.indetail = false
 		this.inhorizontal = false
-		this.chrx = {}
-		this.chry = {}
+		this.x = {}
+		this.y = {}
 	}
 
 	async error(err: string | string[]) {
@@ -215,12 +224,12 @@ class Hicstat {
 			//placeholder
 			blank: tr2.append('td')
 		} as MainPlotDiv
-
 		/** Open the whole genome view by default. User clicks within squares to launch the other views. */
 		await this.init_wholeGenomeView(hic)
 	}
 
 	async init_wholeGenomeView(hic: any) {
+		this.dom.loadingDiv.style('visibility', 'visible')
 		this.dom.controlsDiv.view.text('Genome')
 		const resolution = hic.bpresolution[0]
 
@@ -230,22 +239,22 @@ class Hicstat {
 		const binpx = 1
 
 		// for each chr, a row as canvas container
-		this.wholegenome.svg = this.dom.plotDiv.plot.append('svg')
-		this.wholegenome.resolution = resolution
+		this.genomeview.svg = this.dom.plotDiv.plot.append('svg')
+		this.genomeview.resolution = resolution
 
 		const fontsize = 15 // chr labels
 		const borderwidth = 1
 		const spacecolor = '#ccc'
 
 		// heatmap layer underneath sv
-		const layer_map = this.wholegenome.svg
+		const layer_map = this.genomeview.svg
 			.append('g')
 			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-		this.wholegenome.layer_map = layer_map
-		const layer_sv = this.wholegenome.svg
+		this.genomeview.layer_map = layer_map
+		const layer_sv = this.genomeview.svg
 			.append('g')
 			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-		this.wholegenome.layer_sv = layer_sv
+		this.genomeview.layer_sv = layer_sv
 
 		let checker_row = true
 
@@ -257,7 +266,6 @@ class Hicstat {
 			totalpx += w
 		}
 		const checker_fill = '#DEF3FA'
-
 		let xoff = 0
 		// column labels
 		for (const chr of hic.chrlst) {
@@ -330,18 +338,17 @@ class Hicstat {
 		}
 
 		const manychr = hic.atdev ? atdev_chrnum : hic.chrlst.length
-
 		xoff = 0
 
 		for (let i = 0; i < manychr; i++) {
 			const lead = hic.chrlst[i]
-			this.wholegenome!.lead2follow!.set(lead, new Map())
+			this.genomeview!.lead2follow!.set(lead, new Map())
 
 			yoff = 0
 
 			for (let j = 0; j <= i; j++) {
 				const follow = hic.chrlst[j]
-				this.wholegenome!.lead2follow!.get(lead)!.set(follow, {
+				this.genomeview!.lead2follow!.get(lead)!.set(follow, {
 					x: xoff,
 					y: yoff
 				})
@@ -355,7 +362,7 @@ class Hicstat {
 			makewholegenome_sv(hic, this)
 		}
 
-		this.wholegenome.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
+		this.genomeview.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
 
 		/* after the ui is created, load data for each chr pair,
 		await on each request to finish to avoid server lockup
@@ -363,17 +370,24 @@ class Hicstat {
 		There might be data inconsistency with hic file. It may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
 		do not flood ui with such errors, to tolerate, collect all errors and show in one place
 		*/
-		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst[i]
-			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst[j]
-				try {
-					await getdata_leadfollow(hic, lead, follow, this)
-				} catch (e: any) {
-					this.errList.push(e.message || e)
-				}
-			}
-		}
+		// for (let i = 0; i < manychr; i++) {
+		// 	const lead = hic.chrlst[i]
+		// 	for (let j = 0; j <= i; j++) {
+		// 		const follow = hic.chrlst[j]
+		// 		try {
+		// 			await getdata_leadfollow(hic, lead, follow, this)
+		// 		} catch (e: any) {
+		// 			this.errList.push(e.message || e)
+		// 		}
+		// 	}
+		// }
+
+		await makeWholeGenomeElements(hic, this)
+		await colorizeGenomeElements(this)
+		if (this.errList.length) this.error(this.errList)
+		// await getWholeGenomeData(hic, this)
+		this.dom.loadingDiv.style('visibility', 'hidden')
+
 		if (this.errList.length) this.error(this.errList)
 
 		return
@@ -385,13 +399,13 @@ class Hicstat {
 		nmeth2select(hic, this.chrpairview)
 		matrixType2select(this.chrpairview, this)
 
-		this.inwholegenome = false
+		this.ingenome = false
 		this.inchrpair = true
 		this.indetail = false
 		this.inhorizontal = false
 
 		showBtns(this)
-		this.wholegenome.svg!.remove()
+		this.genomeview.svg!.remove()
 
 		const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
 		const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
@@ -445,7 +459,7 @@ class Hicstat {
 					.call(axisRight(scaleLinear().domain([0, chrylen]).range([0, h])).tickFormat(d3format('.2s'))),
 				showline: true
 			})
-			this.chrpairview.axisy = svg
+			this.chrpairview.axisy = svg as any
 		}
 
 		{
@@ -469,7 +483,7 @@ class Hicstat {
 					.call(axisBottom(scaleLinear().domain([0, chrxlen]).range([0, w])).tickFormat(d3format('.2s'))),
 				showline: true
 			})
-			this.chrpairview.axisx = svg
+			this.chrpairview.axisx = svg as any
 		}
 
 		this.chrpairview.resolution = resolution
@@ -493,8 +507,8 @@ class Hicstat {
 	}
 
 	set_Positions(hic: any, chrx: string, chry: string, x: number, y: number) {
-		this.chrx.chr = chrx
-		this.chry.chr = chry
+		this.x.chr = chrx
+		this.y.chr = chry
 
 		if (x && y) {
 			const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
@@ -520,9 +534,9 @@ class Hicstat {
 				}
 			}
 
-			;(this.chrx.start = coordx), (this.chrx.stop = coordx + viewrangebpw)
-			this.chry.start = coordy
-			this.chry.stop = coordy + viewrangebpw
+			;(this.x.start = coordx), (this.x.stop = coordx + viewrangebpw)
+			this.y.start = coordy
+			this.y.stop = coordy + viewrangebpw
 		}
 	}
 
@@ -531,7 +545,7 @@ class Hicstat {
 		nmeth2select(hic, this.detailview)
 		matrixType2select(this.detailview, this)
 
-		this.inwholegenome = false
+		this.ingenome = false
 		this.inchrpair = false
 		this.indetail = true
 		this.inhorizontal = false
@@ -539,8 +553,7 @@ class Hicstat {
 		// const isintrachr = chrx == chry
 		showBtns(this)
 
-		if (!this.chrx.start || !this.chrx.stop || !this.chry.start || !this.chry.stop)
-			this.set_Positions(hic, chrx, chry, x, y)
+		if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
 
 		// // default view span
 		const viewrangebpw = this.chrpairview.resolution! * initialbinnum_detail
@@ -566,8 +579,9 @@ class Hicstat {
 		this.detailview.xb!.width = blockwidth
 		this.detailview.yb!.width = blockwidth
 
-		this.chrpairview.axisy.remove()
-		this.chrpairview.axisx.remove()
+		/** TODO: Update this logic when calling from runproteinpaint() */
+		if (this.chrpairview.axisx) this.chrpairview.axisx.remove()
+		if (this.chrpairview.axisy) this.chrpairview.axisy.remove()
 		this.dom.plotDiv.plot.selectAll('*').remove()
 
 		/************** middle canvas *****************/
@@ -640,9 +654,9 @@ class Hicstat {
 		/******************* x block ******************/
 
 		let xfirsttime = true
-		arg.chr = this.chrx.chr
-		arg.start = this.chrx.start
-		arg.stop = this.chrx.stop
+		arg.chr = this.x.chr
+		arg.start = this.x.start
+		arg.stop = this.x.stop
 		arg.holder = this.dom.plotDiv.xAxis
 		arg.onloadalltk_always = async (bb: any) => {
 			/**Replace with Block type when defined later */
@@ -693,9 +707,9 @@ class Hicstat {
 		arg2.rotated = true
 		arg2.showreverse = true
 
-		arg2.chr = this.chry.chr
-		arg2.start = this.chry.start
-		arg2.stop = this.chry.stop
+		arg2.chr = this.y.chr
+		arg2.start = this.y.start
+		arg2.stop = this.y.stop
 		arg2.holder = rotor
 		arg2.onloadalltk_always = async bb => {
 			const bbw = bb.leftheadw + bb.lpad + bb.width + bb.rpad + bb.rightheadw + 2 * this.detailview.bbmargin!
@@ -753,18 +767,17 @@ class Hicstat {
 		this.dom.plotDiv.yAxis.selectAll('*').remove()
 		this.dom.plotDiv.plot.selectAll('*').remove()
 
-		this.inwholegenome = false
+		this.ingenome = false
 		this.inchrpair = false
 		this.indetail = false
 		this.inhorizontal = true
 
 		showBtns(this)
 
-		if (!this.chrx.start || !this.chrx.stop || !this.chry.start || !this.chry.stop)
-			this.set_Positions(hic, chrx, chry, x, y)
+		if (!this.x.start || !this.x.stop || !this.y.start || !this.y.stop) this.set_Positions(hic, chrx, chry, x, y)
 
-		const regionx = { chr: this.chrx.chr, start: this.chrx.start, stop: this.chrx.stop }
-		const regiony = { chr: this.chry.chr, start: this.chry.start, stop: this.chry.stop }
+		const regionx = { chr: this.x.chr, start: this.x.start, stop: this.x.stop }
+		const regiony = { chr: this.y.chr, start: this.y.start, stop: this.y.stop }
 
 		const tracks = [
 			{
@@ -846,12 +859,10 @@ export async function init_hicstraw(hic: HicstrawInput, debugmode: boolean) {
 
 export function showBtns(self: any) {
 	//Show in any other view except whole genome
-	self.dom.controlsDiv.genomeViewBtn.style('display', self.inwholegenome ? 'none' : 'inline-block')
+	self.dom.controlsDiv.genomeViewBtn.style('display', self.ingenome ? 'none' : 'inline-block')
 
 	if (self.indetail) {
-		self.dom.controlsDiv.chrpairViewBtn
-			.html(`&#8810; Entire ${self.chrx.chr}-${self.chry.chr}`)
-			.style('display', 'block')
+		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
 		//Only show horizontalViewBtn and zoom buttons in detail view
 		self.dom.controlsDiv.horizontalViewBtn.style('display', 'block')
 		self.dom.controlsDiv.zoomDiv.style('display', 'contents')
@@ -860,9 +871,7 @@ export function showBtns(self: any) {
 	} else if (self.inhorizontal) {
 		//Only show chrpairViewBtn if in horizonal or detail view
 		//Include chr x and chr y in the button text
-		self.dom.controlsDiv.chrpairViewBtn
-			.html(`&#8810; Entire ${self.chrx.chr}-${self.chry.chr}`)
-			.style('display', 'block')
+		self.dom.controlsDiv.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
 		//Only show detailViewBtn in horizontal view
 		self.dom.controlsDiv.detailViewBtn.style('display', 'block')
 		//Hide if horizontal and zoom btns if previously displayed
@@ -879,14 +888,14 @@ export function showBtns(self: any) {
 //////////////////// __whole genome view__ ////////////////////
 
 function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: any) {
-	const binpx = self.wholegenome.binpx
-	const obj = self.wholegenome.lead2follow.get(lead).get(follow)
+	const binpx = self.genomeview.binpx
+	const obj = self.genomeview.lead2follow.get(lead).get(follow)
 
 	const leadchrlen = hic.genome.chrlookup[lead.toUpperCase()].len
 	const followchrlen = hic.genome.chrlookup[follow.toUpperCase()].len
 
-	const xbins = Math.ceil(leadchrlen / self.wholegenome.resolution)
-	const ybins = Math.ceil(followchrlen / self.wholegenome.resolution)
+	const xbins = Math.ceil(leadchrlen / self.genomeview.resolution)
+	const ybins = Math.ceil(followchrlen / self.genomeview.resolution)
 
 	obj.canvas = hic.holder.append('canvas').style('display', 'none').node()
 
@@ -895,15 +904,15 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 	obj.canvas.width = xbins * binpx
 	obj.canvas.height = ybins * binpx
 
-	obj.img = self.wholegenome.layer_map
+	obj.img = self.genomeview.layer_map
 		.append('image')
 		.attr('width', obj.canvas.width)
 		.attr('height', obj.canvas.height)
 		.attr('x', obj.x)
 		.attr('y', obj.y)
 		.on('click', async () => {
-			self.chrx.chr = lead
-			self.chry.chr = follow
+			self.x.chr = lead
+			self.y.chr = follow
 			await self.init_chrPairView(hic, lead, follow, self)
 		})
 		.on('mouseover', () => {
@@ -918,7 +927,7 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 		obj.canvas2.width = ybins * binpx
 		obj.canvas2.height = xbins * binpx
 
-		obj.img2 = self.wholegenome.layer_map
+		obj.img2 = self.genomeview.layer_map
 			.append('image')
 			.attr('width', obj.canvas2.width)
 			.attr('height', obj.canvas2.height)
@@ -937,13 +946,13 @@ function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: a
 
 function chrpair_mouseover(self: any, img: any, x_chr: string, y_chr: string) {
 	const p = img.node().getBoundingClientRect()
-	self.wholegenome.pica_x
+	self.genomeview.pica_x
 		.clear()
 		.show(p.left, p.top)
 		.d.style('top', null)
 		.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
 		.text(x_chr)
-	self.wholegenome.pica_y
+	self.genomeview.pica_y
 		.clear()
 		.show(p.left, p.top)
 		.d.style('left', null)
@@ -951,10 +960,83 @@ function chrpair_mouseover(self: any, img: any, x_chr: string, y_chr: string) {
 		.text(y_chr)
 }
 
+export async function makeWholeGenomeElements(hic: any, self: any) {
+	const manychr = hic.atdev ? atdev_chrnum : hic.chrlst.length
+	const vlst = [] as number[]
+
+	for (let i = 0; i < manychr; i++) {
+		const lead = hic.chrlst[i]
+		for (let j = 0; j <= i; j++) {
+			const follow = hic.chrlst[j]
+			await getWholeGenomeData(hic, self, lead, follow, vlst)
+		}
+	}
+	await setViewCutoff(vlst, self.genomeview, self)
+}
+
+async function getWholeGenomeData(hic: any, self: any, lead: any, follow: any, vlst: any) {
+	const arg = {
+		matrixType: self.genomeview.matrixType,
+		file: hic.file,
+		url: hic.url,
+		pos1: hic.nochr ? lead.replace('chr', '') : lead,
+		pos2: hic.nochr ? follow.replace('chr', '') : follow,
+		nmeth: self.genomeview.nmeth,
+		resolution: self.genomeview.resolution
+	}
+
+	try {
+		const data = await client.dofetch2('/hicdata', {
+			method: 'POST',
+			body: JSON.stringify(arg)
+		})
+		if (data.error) throw `${lead} - ${follow}: ${data.error.error}` //Fix for error message displaying [Object object] instead of error message
+		if (!data.items || data.items.length == 0) return
+
+		self.genomeview.data.push({ items: data.items, lead: lead, follow: follow })
+		for (const [plead, pfollow, v] of data.items) {
+			vlst.push(v)
+		}
+	} catch (e: any) {
+		/** Collect all errors from the response and then call self.error() above.
+		 * This allows errors to appear in a single, expandable div.
+		 */
+		self.errList.push(e.message || e)
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function colorizeGenomeElements(self: any) {
+	console.log(1011, 'color elements', self.genomeview.bpmaxv)
+	for (const data of self.genomeview.data) {
+		const obj = self.genomeview.lead2follow.get(data.lead).get(data.follow)
+		obj.data = [] as any
+		obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
+		if (obj.canvas2) {
+			obj.ctx2.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
+		}
+
+		for (const [plead, pfollow, value] of data.items) {
+			const leadpx = Math.floor(plead / self.genomeview.resolution) * self.genomeview.binpx
+			const followpx = Math.floor(pfollow / self.genomeview.resolution) * self.genomeview.binpx
+			obj.data.push([leadpx, followpx, value])
+			colorizeElement(leadpx, followpx, value, obj, self)
+		}
+		await makeImgs(obj)
+	}
+}
+
+async function makeImgs(obj: any) {
+	obj.img.attr('xlink:href', obj.canvas.toDataURL())
+	if (obj.canvas2) {
+		obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
+	}
+}
+
 export async function getdata_leadfollow(hic: any, lead: any, follow: any, self: any) {
-	const binpx = self.wholegenome.binpx
-	const resolution = self.wholegenome.resolution
-	const obj = self.wholegenome.lead2follow.get(lead).get(follow)
+	const binpx = self.genomeview.binpx
+	const resolution = self.genomeview.resolution
+	const obj = self.genomeview.lead2follow.get(lead).get(follow)
 	obj.data = []
 	obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
 	if (obj.canvas2) {
@@ -962,12 +1044,12 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 	}
 
 	const arg = {
-		matrixType: self.wholegenome.matrixType,
+		matrixType: self.genomeview.matrixType,
 		file: hic.file,
 		url: hic.url,
 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
 		pos2: hic.nochr ? follow.replace('chr', '') : follow,
-		nmeth: self.wholegenome.nmeth,
+		nmeth: self.genomeview.nmeth,
 		resolution: resolution
 	}
 
@@ -983,19 +1065,17 @@ export async function getdata_leadfollow(hic: any, lead: any, follow: any, self:
 		for (const [plead, pfollow, v] of data.items) {
 			const leadpx = Math.floor(plead / resolution) * binpx
 			const followpx = Math.floor(pfollow / resolution) * binpx
-
 			obj.data.push([leadpx, followpx, v])
 
-			let p: number
 			if (v >= 0) {
 				// positive, use red
-				p =
-					v >= self.wholegenome.bpmaxv ? 0 : Math.floor((255 * (self.wholegenome.bpmaxv - v)) / self.wholegenome.bpmaxv)
+				const p =
+					v >= self.genomeview.bpmaxv ? 0 : Math.floor((255 * (self.genomeview.bpmaxv - v)) / self.genomeview.bpmaxv)
 				obj.ctx.fillStyle = `rgb(255, ${p}, ${p})`
 				obj.ctx2.fillStyle = `rgb(255, ${p}, ${p})`
 			} else {
 				// negative, use blue
-				p = Math.floor((255 * (self.wholegenome.bpmaxv + v)) / self.wholegenome.bpmaxv)
+				const p = Math.floor((255 * (self.genomeview.bpmaxv + v)) / self.genomeview.bpmaxv)
 				obj.ctx.fillStyle = `rgb(${p}, ${p}, 255)`
 				obj.ctx2.fillStyle = `rgb(${p}, ${p}, 255)`
 			}
@@ -1019,7 +1099,7 @@ function makewholegenome_sv(hic: any, self: any) {
 	const radius = 8
 
 	for (const item of hic.sv.items) {
-		const _o = self.wholegenome.lead2follow.get(item.chr1)
+		const _o = self.genomeview.lead2follow.get(item.chr1)
 		if (!_o) {
 			unknownchr.add(item.chr1)
 			continue
@@ -1030,9 +1110,9 @@ function makewholegenome_sv(hic: any, self: any) {
 			continue
 		}
 
-		const p1 = item.position1 / self.wholegenome.resolution
-		const p2 = item.position2 / self.wholegenome.resolution
-		self.wholegenome.layer_sv
+		const p1 = item.position1 / self.genomeview.resolution
+		const p2 = item.position2 / self.genomeview.resolution
+		self.genomeview.layer_sv
 			.append('circle')
 			.attr('stroke', 'black')
 			.attr('fill', 'white')
@@ -1051,7 +1131,7 @@ function makewholegenome_sv(hic: any, self: any) {
 			})
 
 		if (obj.img2) {
-			self.wholegenome.layer_sv
+			self.genomeview.layer_sv
 				.append('circle')
 				.attr('stroke', 'black')
 				.attr('fill', 'whilte')
@@ -1079,8 +1159,8 @@ function tooltip_sv(event: MouseEvent, self: any, item: any): void {
 		.d.append('div')
 		.text(
 			item.chr1 == item.chr2
-				? item.chr1 + ' : ' + item.position1 + ' - ' + item.position2
-				: item.chr1 + ':' + item.position1 + ' > ' + item.chr2 + ':' + item.position2
+				? `${item.chr1}:${item.position1}-${item.position2}`
+				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`
 		)
 }
 
@@ -1090,8 +1170,8 @@ function click_sv(hic: any, item: any): void {
 		hic.name +
 			' ' +
 			(item.chr1 == item.chr2
-				? item.chr1 + ':' + item.position1 + '-' + item.position2
-				: item.chr1 + ':' + item.position1 + ' > ' + item.chr2 + ':' + item.position2)
+				? `${item.chr1}:${item.position1}-${item.position2}`
+				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`)
 	)
 	const tracks = [
 		{
@@ -1151,12 +1231,10 @@ function tell_firstisx(hic: any, chrx: string, chry: string) {
 }
 
 export async function getdata_chrpair(hic: any, self: any) {
-	const chrx = self.chrx.chr
-	const chry = self.chry.chr
-	const isintrachr = chrx == chry
+	const isintrachr = self.x.chr == self.y.chr
 	// const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
 	// const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
-	const firstisx = tell_firstisx(hic, chrx, chry)
+	const firstisx = tell_firstisx(hic, self.x.chr, self.y.chr)
 
 	const resolution = self.chrpairview.resolution
 	const binpx = self.chrpairview.binpx
@@ -1167,8 +1245,8 @@ export async function getdata_chrpair(hic: any, self: any) {
 		jwt: hic.jwt,
 		file: hic.file,
 		url: hic.url,
-		pos1: hic.nochr ? chrx.replace('chr', '') : chrx,
-		pos2: hic.nochr ? chry.replace('chr', '') : chry,
+		pos1: hic.nochr ? self.x.chr.replace('chr', '') : self.x.chr,
+		pos2: hic.nochr ? self.y.chr.replace('chr', '') : self.y.chr,
 		nmeth: self.chrpairview.nmeth,
 		resolution: resolution
 	}
@@ -1177,7 +1255,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 			method: 'POST',
 			body: JSON.stringify(arg)
 		})
-		if (data.error) throw { message: chrx + ' - ' + chry + ': ' + data.error.error } //Fix for message displaying [object object] instead of error message
+		if (data.error) throw { message: `${self.x.chr} - ${self.y.chr}: ${data.error.error}` } //Fix for message displaying [object object] instead of error message
 
 		ctx.clearRect(0, 0, self.chrpairview.canvas.width, self.chrpairview.canvas.height)
 
@@ -1209,17 +1287,16 @@ export async function getdata_chrpair(hic: any, self: any) {
 				self.chrpairview.data.push([y, x, v])
 			}
 		}
-		const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
-		self.chrpairview.bpmaxv = maxv
-		self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
+		setViewCutoff(vlst, self.chrpairview, self)
 
 		for (const [x, y, v] of self.chrpairview.data) {
 			//Show red for positive values and blue for negative values
 			if (v >= 0) {
-				const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
+				const p =
+					v >= self.chrpairview.bpmaxv ? 0 : Math.floor((255 * (self.chrpairview.bpmaxv - v)) / self.chrpairview.bpmaxv)
 				ctx.fillStyle = `rgb(255, ${p}, ${p})`
 			} else {
-				const p = Math.floor((255 * (maxv + v)) / maxv)
+				const p = Math.floor((255 * (self.chrpairview.bpmaxv + v)) / self.chrpairview.bpmaxv)
 				ctx.fillStyle = `rgb(${p}, ${p}, 255)`
 			}
 			ctx.fillRect(x, y, binpx, binpx)
@@ -1235,7 +1312,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 /**
  * set normalization method from <select>
  * @param hic
- * @param v view object
+ * @param v view object in self
  * @returns
  */
 
@@ -1250,14 +1327,14 @@ export function nmeth2select(hic: any, v: any) {
 //////////////////// __detail view__ ////////////////////
 
 async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
-	self.chrx = self.detailview.xb.rglst[0]
-	self.chry = self.detailview.yb.rglst[0]
+	self.x = self.detailview.xb.rglst[0]
+	self.y = self.detailview.yb.rglst[0]
 	await detailViewUpdateHic(hic, self)
 }
 
 /**
  * Identifies the selected matrix type from the dropdown and sets it to the view object
- * @param v view object within self (e.g. self.wholegenome) Each view object has its own matrixType
+ * @param v view object within self (e.g. self.genomeView) Each view object has its own matrixType
  * @param self
  */
 export function matrixType2select(v: any, self: any) {
@@ -1279,12 +1356,10 @@ export function matrixType2select(v: any, self: any) {
  * @returns
  */
 async function detailViewUpdateHic(hic: any, self: any) {
-	const chrx = (self.detailview.chrx = self.chrx.chr)
-	const chry = (self.detailview.chry = self.chry.chr)
-	const xstart = (self.detailview.xstart = self.chrx.start)
-	const xstop = (self.detailview.xstop = self.chrx.stop)
-	const ystart = (self.detailview.ystart = self.chry.start)
-	const ystop = (self.detailview.ystop = self.chry.stop)
+	const xstart = self.x.start
+	const xstop = self.x.stop
+	const ystart = self.y.start
+	const ystop = self.y.stop
 
 	const maxbpwidth = Math.max(xstop - xstart, ystop - ystart)
 	let resolution = null
@@ -1297,7 +1372,7 @@ async function detailViewUpdateHic(hic: any, self: any) {
 
 	try {
 		/** Format data for x fragment and query server for x data*/
-		const xfragment = await getXFragData(hic, resolution, chrx, xstart, xstop, self)
+		const xfragment = await getXFragData(hic, resolution, self)
 		if (!xfragment) {
 			// use bpresolution, not fragment
 			self.detailview.resolution = resolution
@@ -1315,14 +1390,14 @@ async function detailViewUpdateHic(hic: any, self: any) {
 			self.detailview.frag.xstartfrag = start
 			self.detailview.frag.xstopfrag = stop
 
-			const yfragment = await getYFragData(hic, chry, ystart, ystop)
+			const yfragment = await getYFragData(hic, self)
 			if (yfragment) {
 				// got fragment index for y
 				if (yfragment.error) throw { message: yfragment.error }
 				if (!yfragment.items) throw { message: '.items[] missing' }
 				const [err, map, start, stop] = hicparsefragdata(yfragment.items)
 				if (err) throw { message: err }
-				if (chrx == chry) {
+				if (self.x.chr == self.y.chr) {
 					/*
 				intra chr
 				frag id to coord mapping goes to same bin for great merit
@@ -1367,7 +1442,7 @@ async function detailViewUpdateHic(hic: any, self: any) {
 	if (self.errList.length) self.error(self.errList)
 }
 
-async function getXFragData(hic: any, resolution: any, chrx: string, xstart: number, xstop: number, self: any) {
+async function getXFragData(hic: any, resolution: any, self: any) {
 	if (resolution != null) {
 		// using bp resolution
 		delete self.detailview.frag
@@ -1391,17 +1466,17 @@ async function getXFragData(hic: any, resolution: any, chrx: string, xstart: num
 		getdata: 1,
 		getBED: 1,
 		file: hic.enzymefile,
-		rglst: [{ chr: chrx, start: xstart, stop: xstop }]
+		rglst: [{ chr: self.x.chr, start: self.x.start, stop: self.x.stop }]
 	}
 	return await getBedData(arg, self)
 }
 
-async function getYFragData(hic: any, chry: string, ystart: number, ystop: number) {
+async function getYFragData(hic: any, self: any) {
 	const arg = {
 		getdata: 1,
 		getBED: 1,
 		file: hic.enzymefile,
-		rglst: [{ chr: chry, start: ystart, stop: ystop }]
+		rglst: [{ chr: self.y.chr, start: self.y.start, stop: self.y.stop }]
 	}
 
 	return getBedData(arg, self)
@@ -1424,16 +1499,16 @@ export function getdata_detail(hic: any, self: any) {
 
 	const resolution = self.detailview.resolution
 	const ctx = self.detailview.ctx
-	const chrx = self.detailview.chrx
-	const chry = self.detailview.chry
+	const chrx = self.x.chr
+	const chry = self.y.chr
 
 	const fg = self.detailview.frag
 
 	// genomic coordinates
-	const xstart = self.detailview.xstart
-	const xstop = self.detailview.xstop
-	const ystart = self.detailview.ystart
-	const ystop = self.detailview.ystop
+	const xstart = self.x.start
+	const xstop = self.x.stop
+	const ystart = self.y.start
+	const ystop = self.y.stop
 
 	const par: HicstrawArgs = {
 		matrixType: self.detailview.matrixType,
@@ -1654,4 +1729,39 @@ export function hicparsefragdata(items: any) {
 		}
 	}
 	return [null, id2coord, min, max]
+}
+
+/******* Utiliy functions
+ * Common code shared between views consolidated into function
+ * Ideally these will be separated into a rendering function (e.g. setRenderers)
+ * Maybe make a view class or component and call as methods -> main view super with sub classes per view
+ * Also could invesigate consolidating the hic data fetches into a single function
+ */
+
+/**
+ *
+ * @param view view object within self (e.g. self.genomeView)
+ */
+export async function setViewCutoff(vlst: any, view: any, self: any) {
+	console.log(1744, 'set cutoff')
+	const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
+	view.bpmaxv = maxv
+	self.dom.controlsDiv.inputBpMaxv.property('value', view.bpmaxv)
+}
+
+function colorizeElement(leadpx: number, followpx: number, v: number, obj: any, view: any) {
+	if (v >= 0) {
+		// positive or zero, use red
+		const p = v >= view.bpmaxv ? 0 : Math.floor((255 * (view.bpmaxv - v)) / view.bpmaxv)
+		obj.ctx.fillStyle = `rgb(255, ${p}, ${p})`
+		if (obj.ctx2) obj.ctx2.fillStyle = `rgb(255, ${p}, ${p})`
+	} else {
+		// negative, use blue
+		const p = Math.floor((255 * (view.bpmaxv + v)) / view.bpmaxv)
+		obj.ctx.fillStyle = `rgb(${p}, ${p}, 255)`
+		if (obj.ctx2) obj.ctx2.fillStyle = `rgb(${p}, ${p}, 255)`
+	}
+
+	obj.ctx.fillRect(followpx, leadpx, view.binpx, view.binpx)
+	if (obj.ctx2) obj.ctx2.fillRect(leadpx, followpx, view.binpx, view.binpx)
 }

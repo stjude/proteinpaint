@@ -1,6 +1,13 @@
 import { bplen } from '#shared/common'
 import { nmeth2select, matrixType2select } from './hic.straw'
-import { getdata_chrpair, getdata_detail, getdata_leadfollow, defaultnmeth, showBtns } from './hic.straw'
+import {
+	getdata_chrpair,
+	getdata_detail,
+	getdata_leadfollow,
+	defaultnmeth,
+	showBtns,
+	makeWholeGenomeElements
+} from './hic.straw'
 import { Elem } from '../../types/d3'
 import blocklazyload from '#src/block.lazyload'
 
@@ -55,7 +62,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('width', '80px')
 		.style('margin-left', '0px')
 		.attr('type', 'number')
-		.property('value', self.wholegenome.bpmaxv)
+		.property('value', self.genomeview.bpmaxv)
 		.on('keyup', (event: KeyboardEvent) => {
 			if (event.code != 'Enter') return
 			const v: any = (event.target as HTMLInputElement).value
@@ -75,7 +82,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.append('select')
 		.on('change', async () => {
 			const matrixType = self.dom.controlsDiv.matrixType.node().value
-			if (self.inwholegenome) self.wholegenome.matrixType = matrixType
+			if (self.ingenome) self.genomeview.matrixType = matrixType
 			if (self.inchrpair) self.chrpairview.matrixType = matrixType
 			if (self.indetail) self.detailview.matrixType = matrixType
 			await getData(hic, self)
@@ -108,7 +115,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.on('click', () => {
 			self.dom.controlsDiv.view.text('Genome')
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
-			self.inwholegenome = true
+			self.ingenome = true
 			self.inchrpair = false
 			self.indetail = false
 			self.inhorizontal = false
@@ -122,7 +129,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('margin', '4px 0px')
 		.on('click', () => {
 			self.dom.controlsDiv.zoomDiv.style('display', 'none')
-			self.inwholegenome = false
+			self.ingenome = false
 			self.inchrpair = true
 			self.indetail = false
 			self.inhorizontal = false
@@ -136,7 +143,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('margin', '4px 0px')
 		.html('Horizontal View &#8811;')
 		.on('click', () => {
-			self.inwholegenome = false
+			self.ingenome = false
 			self.inchrpair = false
 			self.indetail = false
 			self.inhorizontal = true
@@ -150,7 +157,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('margin', '4px 0px')
 		.html('&#8810; Detailed View')
 		.on('click', () => {
-			self.inwholegenome = false
+			self.ingenome = false
 			self.inchrpair = false
 			self.indetail = true
 			self.inhorizontal = false
@@ -188,7 +195,7 @@ function makeNormMethDisplay(hic: any, self: any) {
 			.append('select')
 			.on('change', async () => {
 				const nmeth = hic.nmethselect.node().value
-				if (self.inwholegenome) self.wholegenome.nmeth = nmeth
+				if (self.ingenome) self.genomeview.nmeth = nmeth
 				if (self.inchrpair) self.chrpairview.nmeth = nmeth
 				if (self.indetail) self.detailview.nmeth = nmeth
 				await getData(hic, self)
@@ -206,7 +213,7 @@ function makeNormMethDisplay(hic: any, self: any) {
  * @returns
  */
 async function getData(hic: any, self: any) {
-	if (self.inwholegenome) {
+	if (self.ingenome) {
 		const manychr = hic.atdev ? 3 : hic.chrlst.length
 		for (let i = 0; i < manychr; i++) {
 			const lead = hic.chrlst[i]
@@ -241,12 +248,12 @@ async function getData(hic: any, self: any) {
  * @returns
  */
 function setmaxv(self: any, maxv: number) {
-	if (self.inwholegenome) {
+	if (self.ingenome) {
 		// viewing whole genome
-		self.wholegenome.bpmaxv = maxv
-		if (!self.wholegenome.lead2follow) return
-		const binpx = self.wholegenome.binpx
-		for (const [lead, a] of self.wholegenome.lead2follow) {
+		self.genomeview.bpmaxv = maxv
+		if (!self.genomeview.lead2follow) return
+		const binpx = self.genomeview.binpx
+		for (const [lead, a] of self.genomeview.lead2follow) {
 			for (const [follow, b] of a) {
 				for (const [leadpx, followpx, v] of b.data) {
 					const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
@@ -300,14 +307,14 @@ function switchview(hic: any, self: any) {
 	self.dom.plotDiv.yAxis.selectAll('*').remove()
 	self.dom.plotDiv.plot.selectAll('*').remove()
 
-	if (self.inwholegenome) {
-		nmeth2select(hic, self.wholegenome)
-		matrixType2select(self.wholegenome, self)
-		self.dom.plotDiv.plot.node().appendChild(self.wholegenome.svg.node())
-		self.dom.controlsDiv.inputBpMaxv.property('value', self.wholegenome.bpmaxv)
-		self.dom.controlsDiv.resolution.text(bplen(self.wholegenome.resolution) + ' bp')
+	if (self.ingenome) {
+		nmeth2select(hic, self.genomeview)
+		matrixType2select(self.genomeview, self)
+		self.dom.plotDiv.plot.node().appendChild(self.genomeview.svg.node())
+		self.dom.controlsDiv.inputBpMaxv.property('value', self.genomeview.bpmaxv)
+		self.dom.controlsDiv.resolution.text(bplen(self.genomeview.resolution) + ' bp')
 	} else if (self.inchrpair) {
-		self.dom.controlsDiv.view.text(`${self.chrx.chr}-${self.chry.chr} Pair`)
+		self.dom.controlsDiv.view.text(`${self.x.chr}-${self.y.chr} Pair`)
 		nmeth2select(hic, self.chrpairview)
 		matrixType2select(self.chrpairview, self)
 		self.dom.plotDiv.yAxis.node().appendChild(self.chrpairview.axisy.node())
