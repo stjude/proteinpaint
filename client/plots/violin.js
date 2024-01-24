@@ -310,7 +310,6 @@ class ViolinPlot {
 	validateArg() {
 		const { term, term2, settings } = this.config
 		const s = this.settings
-		const thicknessMargin = s.orientation === 'horizontal' ? 70 : 55
 		const arg = {
 			filter: this.state.termfilter.filter,
 			svgw: s.svgw / window.devicePixelRatio,
@@ -322,10 +321,8 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			screenThickness: window.document.body.clientWidth - thicknessMargin,
 			ticks: s.ticks
 		}
-		arg.plotThickness = s.plotThickness
 
 		if (this.opts.mode == 'minimal') {
 			// assume a single term for minimal plot

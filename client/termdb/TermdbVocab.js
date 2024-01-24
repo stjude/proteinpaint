@@ -421,7 +421,6 @@ export class TermdbVocab extends Vocab {
                 x0: number
                 x1: number
                 binValueCount: int
-        plotThickness: Number
     */
 	async getViolinPlotData(arg, _body = {}) {
 		// the violin plot may still render when not in session,
@@ -434,8 +433,6 @@ export class TermdbVocab extends Vocab {
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
-				maxThickness: 150,
-				screenThickness: arg.screenThickness,
 				ticks: arg.ticks
 			},
 			arg,
