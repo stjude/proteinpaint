@@ -187,13 +187,13 @@ export default function violinRenderer(self) {
 				'width',
 				margin.left +
 					margin.top +
-					(isH ? settings.svgw : self.data.plotThickness * self.data.plots.length + t1.term.name.length)
+					(isH ? settings.svgw : self.settings.plotThickness * self.data.plots.length + t1.term.name.length)
 			)
 			.attr(
 				'height',
 				margin.bottom +
 					margin.top +
-					(isH ? self.data.plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
+					(isH ? self.settings.plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
 			)
 			.classed('sjpp-violin-plot', true)
 
@@ -266,8 +266,8 @@ export default function violinRenderer(self) {
 			.attr(
 				'transform',
 				isH
-					? 'translate(0,' + self.data.plotThickness * (plotIdx + 0.5) + ')'
-					: 'translate(' + self.data.plotThickness * (plotIdx + 0.5) + ',0)'
+					? 'translate(0,' + self.settings.plotThickness * (plotIdx + 0.5) + ')'
+					: 'translate(' + self.settings.plotThickness * (plotIdx + 0.5) + ',0)'
 			)
 			.attr('class', 'sjpp-violinG')
 
@@ -309,7 +309,7 @@ export default function violinRenderer(self) {
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
 			.domain(self.settings.commonThickness ? [-biggestBin, biggestBin] : [-plot.biggestBin, plot.biggestBin])
-			.range([-self.data.plotThickness * 0.45, self.data.plotThickness * 0.45])
+			.range([-self.settings.plotThickness * 0.45, self.settings.plotThickness * 0.45])
 
 		let areaBuilder
 		if (isH) {
@@ -413,10 +413,10 @@ export default function violinRenderer(self) {
 				// .duration(self.opts.mode == 'minimal' ? 0 : 30)
 				.attr('class', 'sjpp-vp-line')
 				.style('stroke', self.opts.mode == 'minimal' ? 'red' : 'black') // if not minimal, then red median line will also appear
-				.attr('y1', isH ? -(self.data.plotThickness / 2) : svg.axisScale(line))
-				.attr('y2', isH ? self.data.plotThickness / 2 : svg.axisScale(line))
-				.attr('x1', isH ? svg.axisScale(line) : -(self.data.plotThickness / 2))
-				.attr('x2', isH ? svg.axisScale(line) : self.data.plotThickness / 2)
+				.attr('y1', isH ? -(self.settings.plotThickness / 2) : svg.axisScale(line))
+				.attr('y2', isH ? self.settings.plotThickness / 2 : svg.axisScale(line))
+				.attr('x1', isH ? svg.axisScale(line) : -(self.settings.plotThickness / 2))
+				.attr('x2', isH ? svg.axisScale(line) : self.settings.plotThickness / 2)
 		}
 	}
 

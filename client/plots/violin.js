@@ -15,10 +15,12 @@ TODO default to unit=log if term enables
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
+		this.initSettings = true
 	}
 
 	async init(appState) {
 		const controls = this.opts.holder.append('div').attr('class', 'sjpp-plot-controls').style('display', 'inline-block')
+		const config = appState.plots.find(p => p.id === this.id)
 
 		const holder = this.opts.holder
 			.append('div')
@@ -246,11 +248,9 @@ class ViolinPlot {
 	}
 
 	async main() {
-		const c = this.state.config
-		this.settings = this.state.config.settings.violin
-
-		if (c.chartType != this.type && c.childType != this.type) return
 		this.config = structuredClone(this.state.config)
+		this.settings = this.config.settings.violin
+		if (this.config.chartType != this.type && this.config.childType != this.type) return
 
 		if (this.dom.header)
 			this.dom.header.text(
@@ -262,7 +262,13 @@ class ViolinPlot {
 		const arg = this.validateArg()
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
-		if (this.data.plotThickness) this.config.settings.violin.plotThickness = this.data.plotThickness
+		if (this.initSettings) {
+			if (this.config.term2?.term.type == 'categorical') {
+				this.settings.plotThickness = Math.min(1200 / Object.keys(this.config.term2.term.values).length, 150)
+				this.initSettings = false
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { violin: this.settings } } })
+			}
+		}
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -303,7 +309,7 @@ class ViolinPlot {
 
 	validateArg() {
 		const { term, term2, settings } = this.config
-		const s = settings.violin
+		const s = this.settings
 		const thicknessMargin = s.orientation === 'horizontal' ? 70 : 55
 		const arg = {
 			filter: this.state.termfilter.filter,
@@ -319,7 +325,7 @@ class ViolinPlot {
 			screenThickness: window.document.body.clientWidth - thicknessMargin,
 			ticks: s.ticks
 		}
-		if (s.plotThickness) arg.plotThickness = s.plotThickness
+		arg.plotThickness = s.plotThickness
 
 		if (this.opts.mode == 'minimal') {
 			// assume a single term for minimal plot

@@ -27,7 +27,6 @@ export type getViolinRequest = {
 	rightMargin: number
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
-	/** A number representing the thickness of the plot */
 	plotThickness: number
 	/** A string representing a term identifier, related to the term from the data being visualized */
 	termid: string
@@ -65,6 +64,5 @@ export type getViolinResponse = {
 		}
 	]
 	pvalues?: pvalueEntries[][]
-	plotThickness: number
 	uncomputableValueObj: any
 }

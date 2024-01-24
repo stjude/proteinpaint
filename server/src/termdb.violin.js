@@ -253,7 +253,6 @@ function resultObj(valuesObject, data, q) {
 		max: valuesObject.minMaxValues.max,
 		plots: [], // each element is data for one plot: {label=str, values=[]}
 		pvalues: [],
-		plotThickness: Number,
 		uncomputableValueObj:
 			Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
 	}
@@ -278,9 +277,7 @@ function resultObj(valuesObject, data, q) {
 			})
 		}
 	}
-	if (result.plots.length >= 1) {
-		result.plotThickness = q.plotThickness ? Number(q.plotThickness) : plotThickness(result, q)
-	}
+
 	return result
 }
 
@@ -369,10 +366,4 @@ function createCanvasImg(q, result, ds) {
 		delete plot.values
 	}
 	result.biggestBin = biggestBin
-}
-
-function plotThickness(result, q) {
-	const tentativeThickness = q.screenThickness / result.plots.length
-	const plotThickness = Math.round(Math.min(tentativeThickness, q.maxThickness))
-	return plotThickness
 }
