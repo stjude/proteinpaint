@@ -346,7 +346,7 @@ add:
 			{ label: 'Original p-value' },
 			{ label: 'Adjusted p-value' }
 		]
-		if (self.pvaluetable == true) {
+		if (self.settings.pvaluetable == true) {
 			const d = holder.append('div').html(`<br>DE analysis results`)
 			renderTable({
 				columns: self.table_cols,
