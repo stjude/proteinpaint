@@ -184,6 +184,7 @@ add:
 			d.vo_g = this
 		})
 	const fold_change_cutoff = self.settings.foldchange
+	if (self.settings.pvalue == 0) throw 'p-value cutoff cannot be zero'
 	const p_value_cutoff = -Math.log10(self.settings.pvalue) // 3 corresponds to p-value =0.05 in -log10 scale.
 	const p_value_adjusted_original = self.settings.adjusted_original_pvalue
 	let num_significant_genes = 0
