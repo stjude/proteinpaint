@@ -35,7 +35,7 @@ class DEanalysis {
 		}
 		const inputs = [
 			{
-				label: 'P-value significance',
+				label: 'P-value significance (linear scale)',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'pvalue',
@@ -44,7 +44,7 @@ class DEanalysis {
 				max: 1
 			},
 			{
-				label: 'Fold change',
+				label: 'Fold change (log scale)',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'foldchange',
@@ -343,8 +343,8 @@ add:
 			{ label: 'Gene Name' },
 			{ label: 'Gene Symbol' },
 			{ label: 'log2 Fold change' },
-			{ label: 'Original p-value' },
-			{ label: 'Adjusted p-value' }
+			{ label: 'Original p-value (linear scale)' },
+			{ label: 'Adjusted p-value (linear scale)' }
 		]
 		if (self.settings.pvaluetable == true) {
 			const d = holder.append('div').html(`<br>DE analysis results`)
