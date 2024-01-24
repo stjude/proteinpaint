@@ -414,6 +414,7 @@ to be displayed in a UI table and user can browse and select one
 */
 async function getCaseFiles(filter0) {
 	const cases = await getCasesByFilter(filter0)
+	if (cases.length == 0) throw 'No cases available' // shows this msg in the handle on ui
 	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize)
 	const case2files = {}
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
