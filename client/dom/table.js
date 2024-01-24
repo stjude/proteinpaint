@@ -96,6 +96,7 @@ inputName=string
 	when not avaiable, for each table made, create a unique name to use as the <input name=?> 
 	if the same name is always used, multiple tables created in one page will conflict in row selection
 */
+
 export function renderTable({
 	columns,
 	rows,
@@ -386,4 +387,35 @@ export function renderTable({
 	}
 
 	return api
+}
+
+export async function downloadTable(rows, cols) {
+	const filename = `table.tsv`
+	const data = {}
+	let lines = ''
+	for (const column of cols) {
+		lines += `${column.label}\t`
+	}
+	lines += '\n'
+
+	for (const row of rows) {
+		for (const cell of row) {
+			let value = ''
+			if (cell.value) value = cell.value
+			else if (cell.url) value = cell.url
+			else if (value.color) value = cell.color
+			lines += `${value}\t`
+		}
+		lines += '\n'
+	}
+	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
+
+	const link = document.createElement('a')
+	link.setAttribute('href', dataStr)
+	// If you don't know the name or want to use
+	// the webserver default set name = ''
+	link.setAttribute('download', filename)
+	document.body.appendChild(link)
+	link.click()
+	link.remove()
 }
