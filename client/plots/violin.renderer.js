@@ -130,14 +130,17 @@ export default function violinRenderer(self) {
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = self.data.pvalues
-
+		const isH = this.settings.orientation === 'horizontal'
+		const maxHeight = isH
+			? this.settings.plotThickness * this.data.plots.length
+			: this.settings.svgw + this.config.term.term.name.length
 		renderTable({
 			rows,
 			columns,
 			div: self.dom.tableHolder,
 			showLines: false,
 			maxWidth: '27vw',
-			maxHeight: '20vh',
+			maxHeight: `${maxHeight}px`,
 			resize: true
 		})
 	}
