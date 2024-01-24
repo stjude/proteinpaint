@@ -6,10 +6,6 @@ export type getViolinRequest = {
 	embedder: string
 	/** A number representing the device's pixel ratio, which may be used for rendering quality adjustments */
 	devicePixelRatio: number
-	/** A number representing the maximum thickness of each violin plot rendered */
-	maxThickness: number
-	/** A number representing the thickness of the screen or display */
-	screenThickness: number
 	filter: Filter
 	/** A number representing the width of the SVG (Scalable Vector Graphics) box, used for rendering the chart */
 	svgw: number
@@ -27,8 +23,6 @@ export type getViolinRequest = {
 	rightMargin: number
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
-	plotThickness: number
-	/** A string representing a term identifier, related to the term from the data being visualized */
 	termid: string
 }
 
