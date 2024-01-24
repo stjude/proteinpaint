@@ -81,7 +81,7 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 	/** Default args for each view */
 	const initialNmeth = hic.normalization.length ? hic.normalization[0] : defaultnmeth
 
-	self.wholegenome.nmeth = initialNmeth
+	self.genomeview.nmeth = initialNmeth
 	self.chrpairview.nmeth = initialNmeth
 	self.detailview.nmeth = initialNmeth
 
