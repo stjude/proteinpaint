@@ -85,7 +85,8 @@ const entityTypes = [
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
-const listCaseFileSize = 1000
+const maxCaseNumber = 100 // max number of cases to request based on cohort, setting to 200 doesn't work
+const listCaseFileSize = 1000 // max number of bam files to request based on case ids
 
 export async function gdc_bam_request(req, res) {
 	try {
@@ -436,6 +437,6 @@ async function getCaseFiles(filter0) {
 }
 
 async function getCasesByFilter(filter0) {
-	const re = await queryApi(filter0, casesApi, 300)
+	const re = await queryApi(filter0, casesApi, maxCaseNumber)
 	return re.data.hits.map(i => i.id)
 }
