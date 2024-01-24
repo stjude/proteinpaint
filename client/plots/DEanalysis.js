@@ -1,5 +1,7 @@
 import * as client from '../src/client'
+import { renderTable } from '#dom/table'
 import * as d3axis from 'd3-axis'
+import { controlsInit } from './controls'
 import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
 import { scaleLog, scaleLinear } from 'd3-scale'
@@ -22,11 +24,60 @@ class DEanalysis {
 		this.type = 'DEanalysis'
 	}
 	async init(opts) {
-		const holder = this.opts.holder.append('div')
+		const config = opts.plots.find(p => p.id === this.id)
+		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
+		const holder = this.opts.holder.append('div').style('display', 'inline-block')
 		this.dom = {
 			holder,
 			header: this.opts.header,
-			controlsDiv: holder.append('div')
+			controlsDiv
+		}
+		const inputs = [
+			{
+				label: 'P-value significance',
+				type: 'number',
+				chartType: 'DEanalysis',
+				settingsKey: 'pvalue',
+				title: 'P-value significance',
+				min: 0,
+				max: 1
+			},
+			{
+				label: 'Fold change',
+				type: 'number',
+				chartType: 'DEanalysis',
+				settingsKey: 'foldchange',
+				title: 'Fold change',
+				min: -10,
+				max: 10
+			},
+			{
+				label: 'P-value table',
+				type: 'checkbox',
+				chartType: 'DEanalysis',
+				settingsKey: 'pvaluetable',
+				title: 'Display table showing original and adjusted pvalues for all significant genes',
+				boxLabel: ''
+			},
+			{
+				label: 'P-value',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'adjusted_original_pvalue',
+				title: 'Toggle between original and adjusted pvalues for volcano plot',
+				options: [
+					{ label: 'adjusted', value: 'adjusted' },
+					{ label: 'original', value: 'original' }
+				]
+			}
+		]
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs: inputs
+			})
 		}
 	}
 
@@ -39,9 +90,11 @@ class DEanalysis {
 	}
 
 	async main() {
+		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.settings = this.config.settings.DEanalysis
 		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
 		//const state = this.app.getState()
-		//console.log('state:', state) // state.customTerms[0].name
+		//console.log('state:', state)
 		//if (state.customTerms[0].name) {
 		//	const headerText = state.customTerms[0].name
 		//	this.dom.header
@@ -59,12 +112,11 @@ class DEanalysis {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
-		//}
-		render_volcano(this.dom.holder, data)
+		render_volcano(this.dom.holder, data, this.settings)
 	}
 }
 
-function render_volcano(holder, mavb) {
+function render_volcano(holder, mavb, settings) {
 	/*
 m {}
 - gene
@@ -74,7 +126,10 @@ m {}
 
 add:
 - vo_circle
-*/
+	*/
+
+	// Delete previous holder, if present
+	holder.selectAll('*').remove()
 	let minlogfc = 0,
 		maxlogfc = 0,
 		minlogpv = 0,
@@ -99,6 +154,7 @@ add:
 		toppad = 50,
 		rightpad = 50,
 		radius
+
 	const svg = holder.append('svg')
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
@@ -123,18 +179,45 @@ add:
 		.each(function (d) {
 			d.vo_g = this
 		})
-	let fold_change_cutoff = 2 // Will build UI later so that this parameter can be adjusted by the user
-	let p_value_cutoff = 3 // 3 corresponds to p-value =0.05 in -log10 scale. Will build UI later so that this parameter can be adjusted by the user
+	const fold_change_cutoff = settings.foldchange
+	const p_value_cutoff = settings.pvalue // 3 corresponds to p-value =0.05 in -log10 scale.
+	const p_value_adjusted_original = settings.adjusted_original_pvalue
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
+	const table_rows = []
 	const circle = dotg
 		.append('circle')
 		.attr('stroke', d => {
 			let color
 			//console.log("Gene name:", d.gene_name, " Gene Symbol:", d.gene_symbol, " original p-value:", d.original_p_value, " adjusted p-value:", d.adjusted_p_value)
-			if (d.adjusted_p_value > p_value_cutoff && Math.abs(d.fold_change) > fold_change_cutoff) {
+			if (
+				p_value_adjusted_original == 'adjusted' &&
+				d.adjusted_p_value > p_value_cutoff &&
+				Math.abs(d.fold_change) > fold_change_cutoff
+			) {
 				color = 'red'
 				num_significant_genes += 1
+				table_rows.push([
+					{ value: d.gene_name },
+					{ value: d.gene_symbol },
+					{ value: d.fold_change },
+					{ value: Math.pow(10, -d.original_p_value) },
+					{ value: Math.pow(10, -d.adjusted_p_value) }
+				])
+			} else if (
+				p_value_adjusted_original == 'original' &&
+				d.original_p_value > p_value_cutoff &&
+				Math.abs(d.fold_change) > fold_change_cutoff
+			) {
+				color = 'red'
+				num_significant_genes += 1
+				table_rows.push([
+					{ value: d.gene_name },
+					{ value: d.gene_symbol },
+					{ value: d.fold_change },
+					{ value: Math.pow(10, -d.original_p_value) },
+					{ value: Math.pow(10, -d.adjusted_p_value) }
+				])
 			} else {
 				color = 'black'
 				num_non_significant_genes += 1
@@ -153,10 +236,11 @@ add:
 	//.on('click', (event, d) => {
 	//	circleclick(d, mavb, event.clientX, event.clientY)
 	//})
-	console.log(
-		'Percentage of significant genes:',
-		(num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)
-	)
+	table_rows.sort((a, b) => a[2].value - b[2].value).reverse() // Sorting genes in descending order of fold change
+	//console.log(
+	//	'Percentage of significant genes:',
+	//	(num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)
+	//)
 
 	const logfc0line = mavb.vo_dotarea.append('line').attr('stroke', '#ccc').attr('shape-rendering', 'crispEdges')
 
@@ -208,34 +292,68 @@ add:
 	if (mavb[0].adjusted_p_value != undefined) {
 		// enable pvalue switching between adjusted and unadjusted
 		const row = holder.append('div').style('margin', '20px')
-		row.append('span').text('Select P value for Volcano plot:')
-		const select = row
-			.append('select')
-			.style('margin-left', '5px')
-			.on('change', event => {
-				minlogpv = 0
-				maxlogpv = 0
-				const useun = select.node().selectedIndex == 0
-				for (const d of mavb) {
-					const pv = useun ? d.adjusted_p_value : d.original_p_value
-					if (pv == 0) continue
-					minlogpv = Math.min(minlogpv, pv)
-					maxlogpv = Math.max(maxlogpv, pv)
-				}
-				yscale.domain([minlogpv, maxlogpv])
-				client.axisstyle({
-					axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
-					color: 'black',
-					showline: true
-				})
-				dotg.attr('transform', d => {
-					const pv = useun ? d.adjusted_p_value : d.original_p_value
-					return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv) + ')'
-				})
-				ylab.text(useun ? '-log10(adjusted P value)' : '-log10(original P value)')
+		minlogpv = 0
+		maxlogpv = 0
+		let text_string
+		for (const d of mavb) {
+			let pv
+			if (p_value_adjusted_original == 'adjusted') {
+				pv = d.adjusted_p_value
+			} else {
+				pv = d.original_p_value
+			}
+			if (pv == 0) continue
+			minlogpv = Math.min(minlogpv, pv)
+			maxlogpv = Math.max(maxlogpv, pv)
+		}
+		yscale.domain([minlogpv, maxlogpv])
+		client.axisstyle({
+			axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
+			color: 'black',
+			showline: true
+		})
+		dotg.attr('transform', d => {
+			let pv
+			if (p_value_adjusted_original == 'adjusted') {
+				pv = d.adjusted_p_value
+			} else {
+				pv = d.original_p_value
+			}
+			return 'translate(' + xscale(d.fold_change) + ',' + yscale(pv) + ')'
+		})
+		if (p_value_adjusted_original == 'adjusted') {
+			text_string = '-log10(adjusted P value)'
+		} else {
+			text_string = '-log10(original P value)'
+		}
+		ylab.text(text_string)
+		holder
+			.append('div')
+			.html(
+				'Percentage of significant genes:' +
+					((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toFixed(2) +
+					'<br>Number of significant genes:' +
+					num_significant_genes
+			)
+
+		if (settings.pvaluetable == true) {
+			const table_cols = [
+				{ label: 'Gene Name' },
+				{ label: 'Gene Symbol' },
+				{ label: 'log2 Fold change' },
+				{ label: 'Original p-value' },
+				{ label: 'Adjusted p-value' }
+			]
+			const d = holder.append('div').html(`<br>DE analysis results`)
+			renderTable({
+				columns: table_cols,
+				rows: table_rows,
+				div: d,
+				showLines: true,
+				maxHeight: '150vh',
+				resize: true
 			})
-		select.append('option').text('Adjusted P value')
-		select.append('option').text('Original P value')
+		}
 	}
 	return svg
 }
@@ -248,6 +366,17 @@ export async function getPlotConfig(opts, app) {
 		const config = {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
+			settings: {
+				DEanalysis: {
+					pvalue: 0.05,
+					foldchange: 2,
+					pvaluetable: false,
+					adjusted_original_pvalue: 'adjusted'
+				},
+				controls: {
+					isOpen: false // control panel is hidden by default
+				}
+			}
 		}
 		return copyMerge(config, opts)
 	} catch (e) {
