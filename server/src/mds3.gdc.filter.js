@@ -47,19 +47,45 @@ export function filter2GDCfilter(f) {
 					})
 					continue
 				}
-				obj.content.push({
-					op: item.tvs.isnot ? 'or' : 'and',
-					content: [
-						{
-							op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '<=' : '>',
-							content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
-						},
-						{
-							op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '>=' : '<',
-							content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
-						}
-					]
-				})
+				if (item.tvs.isnot) {
+					obj.content.push({
+						op: 'or',
+						content: [
+							{
+								op: 'and',
+								content: [
+									{
+										op: range.startinclusive ? '<' : '<=',
+										content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
+									}
+								]
+							},
+							{
+								op: 'and',
+								content: [
+									{
+										op: range.stopinclusive ? '>' : '>=',
+										content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
+									}
+								]
+							}
+						]
+					})
+				} else {
+					obj.content.push({
+						op: 'and',
+						content: [
+							{
+								op: range.startinclusive ? '>=' : '>',
+								content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
+							},
+							{
+								op: range.stopinclusive ? '<=' : '<',
+								content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
+							}
+						]
+					})
+				}
 			}
 			continue
 		}
