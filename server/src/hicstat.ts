@@ -170,8 +170,8 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 			if (type == 'string') {
 				let str = ''
 				let chr: string | number
-
 				while ((chr = vectorView.getUint8(pos++)) != 0) {
+					if (pos < vectorView.byteLength) return
 					if (pos > shunk) await readShunk()
 					const charStr = String.fromCharCode(chr)
 					str += charStr
