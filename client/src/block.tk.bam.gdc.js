@@ -257,7 +257,11 @@ export async function bamsliceui({
 
 		const gdc_loading = td.append('span').style('padding-left', '10px').style('display', 'none').text('Loading...')
 
-		const gdcid_error_div = td.append('span').style('display', 'none').style('padding', '2px 5px')
+		const gdcid_error_div = td
+			.append('span')
+			.attr('class', 'sja-gdcbam-gdcid_error_div') // for testing
+			.style('display', 'none')
+			.style('padding', '2px 5px')
 
 		td.append('br') // add line break from input box
 		const listCaseFileHandle = td
@@ -300,6 +304,8 @@ export async function bamsliceui({
 			saydiv.selectAll('*').remove()
 			noPermissionDiv.style('display', 'none')
 			submitButton.style('display', 'inline-block')
+			gdcid_error_div.style('display', 'none')
+			gdc_loading.style('display', 'none')
 
 			const _filter0 = Object.keys(filter0override || {}).length ? filter0override : filter0 || null
 
@@ -308,7 +314,6 @@ export async function bamsliceui({
 				if (!gdc_id.length) {
 					baminfo_div.style('display', 'none')
 					saydiv.selectAll('*').remove()
-					gdcid_error_div.style('display', 'none')
 					ssmGeneDiv.style('display', 'none')
 					return
 				}
@@ -316,7 +321,6 @@ export async function bamsliceui({
 				// disable input field and show 'loading...' until response returned from gdc api
 				gdcid_input.attr('disabled', 1)
 				gdc_loading.style('display', 'inline-block')
-				gdcid_error_div.style('display', 'none')
 
 				const body = { gdc_id }
 				if (_filter0) body.filter0 = _filter0
@@ -344,7 +348,7 @@ export async function bamsliceui({
 					// no viewable bam files
 					if (data.numFilesSkippedByWorkflow) {
 						// there are files skipped due to this reason. the value tells number of files rejected due to this reason
-						throw `File${data.numFilesSkippedByWorkflow > 1 ? 's' : ''} not viewable due to workflow type`
+						throw `File${data.numFilesSkippedByWorkflow > 1 ? 's' : ''} not viewable due to workflow type.`
 					}
 					throw 'No viewable BAM files found'
 				}
