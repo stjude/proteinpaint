@@ -1,6 +1,7 @@
 const tape = require('tape')
 const termjson = require('../../test/testdata/termjson').termjson
 const helpers = require('../../test/front.helpers.js')
+const { sleep } = require('../../test/test.helpers.js')
 
 /*************************
  reusable helper functions
