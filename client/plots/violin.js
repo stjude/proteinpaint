@@ -152,7 +152,7 @@ class ViolinPlot {
 				max: 50
 			},
 			{
-				label: 'Use common thickness',
+				label: 'Use common scale',
 				type: 'checkbox',
 				chartType: 'violin',
 				settingsKey: 'commonThickness',
@@ -264,7 +264,7 @@ class ViolinPlot {
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
 		if (this.initSettings) {
 			if (this.config.term2?.term.type == 'categorical') {
-				this.settings.plotThickness = Math.min(1200 / Object.keys(this.config.term2.term.values).length, 150)
+				this.settings.plotThickness = Math.min(1400 / Object.keys(this.config.term2.term.values).length, 150)
 				this.initSettings = false
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { violin: this.settings } } })
 			}
