@@ -42,7 +42,6 @@ export const api: any = {
 							axisHeight: 60,
 							rightMargin: 50,
 							unit: 'abs',
-							plotThickness: 150,
 							termid: 'agedx'
 						}
 					},
