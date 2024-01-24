@@ -15,7 +15,6 @@ TODO default to unit=log if term enables
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
-		this.initSettings = true
 	}
 
 	async init(appState) {
@@ -87,7 +86,8 @@ class ViolinPlot {
 				//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
 				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
 
-				usecase: { target: 'violin', detail: 'term2' }
+				usecase: { target: 'violin', detail: 'term2' },
+				callback: value => (this.settings.plotThickness = undefined)
 			},
 			{
 				label: 'Orientation',
@@ -172,13 +172,13 @@ class ViolinPlot {
 			},
 			{
 				label: 'Plot thickness',
-				title: 'Thickness of plots, min:60 and max:150',
+				title: 'Thickness of plots, can be between 40 and 200',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'plotThickness',
 				step: 10,
-				max: 500,
-				min: 60,
+				max: 200,
+				min: 40,
 				debounceInterval: 1000
 			},
 			{
@@ -262,13 +262,8 @@ class ViolinPlot {
 		const arg = this.validateArg()
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
-		if (this.initSettings) {
-			if (this.config.term2?.term.type == 'categorical') {
-				this.settings.plotThickness = Math.min(1400 / Object.keys(this.config.term2.term.values).length, 150)
-				this.initSettings = false
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { violin: this.settings } } })
-			}
-		}
+		if (this.settings.plotThickness == undefined)
+			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, 150)
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -369,7 +364,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		rightMargin: 50,
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
-		plotThickness: 150,
+		plotThickness: undefined,
 		medianLength: 7,
 		medianThickness: 3,
 		ticks: 15,
