@@ -414,6 +414,7 @@ export async function bamsliceui({
 				)
 				file.about.push({ k: row.title, v: onebam[row.key] })
 			}
+			baminfo_table.select('input').node()?.focus()
 		}
 
 		function update_multifile_table(files) {
@@ -489,43 +490,57 @@ export async function bamsliceui({
 		*/
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.loaded} available BAM files`)
 
-		handle.attr('class', 'sja_clbtext').on('click', event => {
-			const div = tip
-				.clear()
-				.showunder(event.target)
-				.d.append('div')
-				.style('margin', '10px')
-				.style('overflow-y', 'scroll')
-				.style('height', '300px')
-				.style('resize', 'vertical')
-			const table = div.append('table').style('border-spacing', '0px')
-			// header row that stays
-			const tr = table
-				.append('tr')
-				.style('position', 'sticky')
-				.style('top', '0px')
-				.style('background-color', 'white')
-				.style('color', '#aaa')
-				.style('font-size', '.7em')
-			tr.append('td').text('CASE')
-			tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
-			for (const caseName in data.case2files) {
-				const tr = table.append('tr').attr('class', 'sja_clb_gray')
-				tr.append('td').style('vertical-align', 'top').style('color', '#888').text(caseName)
-				const td2 = tr.append('td')
-				for (const f of data.case2files[caseName]) {
-					// f { sample_type, experimental_strategy, file_size, file_uuid }
-					td2
-						.append('div')
-						.attr('class', 'sja_clbtext')
-						.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
-						.on('click', () => {
-							tip.hide()
-							gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('keyup'))
-						})
+		handle
+			.attr('class', 'sja_clbtext')
+			.attr('tabindex', 0)
+			.on('keyup', event => {
+				if (event.key == 'Enter') {
+					event.target.click()
 				}
-			}
-		})
+			})
+			.on('click', event => {
+				const div = tip
+					.clear()
+					.showunder(event.target)
+					.d.append('div')
+					.style('margin', '10px')
+					.style('overflow-y', 'scroll')
+					.style('height', '300px')
+					.style('resize', 'vertical')
+				const table = div.append('table').style('border-spacing', '0px')
+				// header row that stays
+				const tr = table
+					.append('tr')
+					.style('position', 'sticky')
+					.style('top', '0px')
+					.style('background-color', 'white')
+					.style('color', '#aaa')
+					.style('font-size', '.7em')
+				tr.append('td').text('CASE')
+				tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
+				for (const caseName in data.case2files) {
+					const tr = table.append('tr').attr('class', 'sja_clb_gray')
+					tr.append('td').style('vertical-align', 'top').style('color', '#888').text(caseName)
+					const td2 = tr.append('td')
+					for (const f of data.case2files[caseName]) {
+						// f { sample_type, experimental_strategy, file_size, file_uuid }
+						td2
+							.append('div')
+							.attr('class', 'sja_clbtext')
+							.attr('tabindex', 0)
+							.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
+							.on('click', () => {
+								tip.hide()
+								gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('keyup'))
+							})
+							.on('keyup', event => {
+								if (event.key == 'Enter') event.target.click()
+							})
+					}
+				}
+
+				table.select('.sja_clbtext').node().focus()
+			})
 	}
 
 	// this is called after a file/case is found
@@ -673,6 +688,8 @@ export async function bamsliceui({
 				}
 			}
 		}
+
+		div.select('input').node().focus()
 	}
 	async function temp_renderGeneSearch(div) {
 		const geneSearchRow = div.append('div').style('display', 'grid').style('grid-template-columns', '300px auto')
