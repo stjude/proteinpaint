@@ -14,7 +14,9 @@
 
 # To plot the heatmap uncomment line `library(ggplot2) and lines after "Visualization" comment
 
-library(jsonlite)
+suppressWarnings({
+    suppressPackageStartupMessages(library(jsonlite))
+})
 #library(flashClust)
 #library(ggplot2) # Uncomment this line to plot heatmap in R
 
