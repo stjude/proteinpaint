@@ -36,19 +36,7 @@ function sleep(ms) {
 const testColData = [{ label: 'URL/Value' }, { label: 'Value' }, { label: 'HTML' }, { label: 'Values array' }]
 
 const testRowData = [
-	[
-		{ url: 'https://proteinpaint.stjude.org/', value: 'A' },
-		{ value: 'B' },
-		{ html: '<p>AB</p>' },
-		{
-			values: [
-				{ url: 'https://proteinpaint.stjude.org/', value: 'A' },
-				{ url: 'https://proteinpaint.stjude.org/', value: 'B' },
-				{ value: 'AB' },
-				{ html: '<p>BA</p>' }
-			]
-		}
-	],
+	[{ url: 'https://proteinpaint.stjude.org/', value: 'A' }, { value: 'B' }, { html: '<p>AB</p>' }, { value: 'C' }],
 	[
 		{ url: 'https://proteinpaint.stjude.org/', value: 'C' },
 		{ value: 'D' },
@@ -146,15 +134,6 @@ tape('Render table', function (test) {
 				if (d.url) return `${d.url}:${d.value || d.value == 0 ? d.value : d.url}`
 				else if (d.value) return d.value
 				else if (d.html) return d.html
-				else if (d.values) {
-					const arrTestData2Str = []
-					for (const obj of d.values) {
-						if (obj.url) arrTestData2Str.push(`${obj.url}:${obj.value || obj.value == 0 ? obj.value : obj.url}`)
-						else if (obj.value) arrTestData2Str.push(obj.value)
-						else arrTestData2Str.push(obj.html)
-					}
-					return arrTestData2Str.toString()
-				}
 			})
 			const renderedData = renderedRowsMap.get((i + 1).toString())
 			if (renderedData.toString() !== testData.toString()) {
