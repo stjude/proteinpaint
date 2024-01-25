@@ -145,13 +145,7 @@ class Hicstat {
 		this.dom = {
 			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
 			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
-			loadingDiv: hic.holder
-				.append('div')
-				.classed('sjpp-hic-loading', true)
-				.text('Loading...')
-				.style('padding', '10px 20px')
-				.style('color', '#8AB1D4')
-				.style('font-size', '1.5em'),
+			loadingDiv: d3select('body').append('div').attr('id', 'sjpp-loading-overlay'),
 			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
 			tip: new client.Menu()
 		}
@@ -209,6 +203,7 @@ class Hicstat {
 	}
 
 	async render(hic: any) {
+		this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner').style('display', '')
 		await hicParseFile(hic, this.debugmode, this)
 		initWholeGenomeControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
@@ -229,7 +224,7 @@ class Hicstat {
 	}
 
 	async init_wholeGenomeView(hic: any) {
-		this.dom.loadingDiv.style('visibility', 'visible')
+		this.dom.loadingDiv.style('display', '')
 		this.dom.controlsDiv.view.text('Genome')
 		const resolution = hic.bpresolution[0]
 
@@ -385,7 +380,7 @@ class Hicstat {
 		// 	}
 		// }
 		if (this.errList.length) this.error(this.errList)
-		this.dom.loadingDiv.style('visibility', 'hidden')
+		this.dom.loadingDiv.style('display', 'none')
 
 		if (this.errList.length) this.error(this.errList)
 
@@ -960,7 +955,7 @@ function chrpair_mouseover(self: any, img: any, x_chr: string, y_chr: string) {
 }
 
 export async function makeWholeGenomeElements(hic: any, self: any, manychrArg?: number) {
-	self.dom.loadingDiv.style('visibility', 'visible')
+	self.dom.loadingDiv.style('display', '')
 	const manychr = manychrArg || (hic.atdev ? atdev_chrnum : hic.chrlst.length)
 	const vlst = [] as number[]
 
@@ -974,7 +969,7 @@ export async function makeWholeGenomeElements(hic: any, self: any, manychrArg?: 
 	await setViewCutoff(vlst, self.genomeview, self)
 
 	await colorizeGenomeElements(self)
-	self.dom.loadingDiv.style('visibility', 'hidden')
+	self.dom.loadingDiv.style('display', 'none')
 }
 
 async function getWholeGenomeData(hic: any, self: any, lead: any, follow: any, vlst: any) {
