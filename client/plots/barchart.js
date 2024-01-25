@@ -902,7 +902,15 @@ function setRenderers(self) {
 
 		const table = holder.append('div').style('font-size', '0.9em')
 
-		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '50vw', maxHeight: '25vh', resize: true })
+		renderTable({
+			columns,
+			rows,
+			div: table,
+			showLines: false,
+			maxWidth: '50vw',
+			maxHeight: `${chart.svgh - 100}px`,
+			resize: true
+		})
 
 		//footnote: superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
 		table

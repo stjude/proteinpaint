@@ -334,6 +334,7 @@ export default function barsRenderer(barsapp, holder) {
 			const numChartRows = Math.ceil(hm.numCharts / maxChartsPerRow)
 			hm.svgh = Math.max(350, Math.min(400, window.innerHeight * 0.5)) / (numChartRows > 3 ? 2 : 1)
 		}
+		chart.svgh = hm.svgh
 
 		hm.h.yScale = {}
 		hm.h.xScale = {}
