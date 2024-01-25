@@ -1,5 +1,5 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table'
 import { to_svg } from '#src/client'
 import roundValue from '../../server/shared/roundValue'
 import { rgb } from 'd3'

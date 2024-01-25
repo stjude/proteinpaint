@@ -455,7 +455,7 @@ export async function downloadTable(rows, cols) {
 	}
 	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 
-	const link = document.createelement('a')
+	const link = document.createElement('a')
 	link.setAttribute('href', dataStr)
 	// If you don't know the name or want to use
 	// the webserver default set name = ''

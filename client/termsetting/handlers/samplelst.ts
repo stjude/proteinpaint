@@ -1,5 +1,5 @@
 import { getPillNameDefault, get$id } from '#termsetting'
-import { renderTable } from '#dom/table'
+import { renderTable } from 'dom/table'
 import { SampleLstTermSettingInstance, PillData, SampleLstTW } from '#shared/types/index'
 import { rgb } from 'd3'
 

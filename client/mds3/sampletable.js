@@ -1,6 +1,6 @@
 import { fillbar } from '#dom/fillbar'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table.ts'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { table2col } from '../dom/table2col'
 import { rgb } from 'd3-color'

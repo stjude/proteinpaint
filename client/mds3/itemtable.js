@@ -2,7 +2,7 @@ import { mclass, dtsnvindel, dtfusionrna, dtsv } from '#shared/common'
 import { init_sampletable } from './sampletable'
 import { appear } from '#dom/animation'
 import { dofetch3 } from '#common/dofetch'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table'
 import { table2col } from '#dom/table2col'
 
 /*

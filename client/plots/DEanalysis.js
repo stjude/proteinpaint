@@ -1,5 +1,5 @@
 import * as client from '../src/client'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table'
 import * as d3axis from 'd3-axis'
 import { controlsInit } from './controls'
 import { select as d3select } from 'd3-selection'
