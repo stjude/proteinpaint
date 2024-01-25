@@ -1,13 +1,6 @@
 import { bplen } from '#shared/common'
 import { nmeth2select, matrixType2select } from './hic.straw'
-import {
-	getdata_chrpair,
-	getdata_detail,
-	getdata_leadfollow,
-	defaultnmeth,
-	showBtns,
-	makeWholeGenomeElements
-} from './hic.straw'
+import { getdata_chrpair, getdata_detail, defaultnmeth, showBtns, makeWholeGenomeElements } from './hic.straw'
 import { Elem } from '../../types/d3'
 import blocklazyload from '#src/block.lazyload'
 
@@ -215,17 +208,7 @@ function makeNormMethDisplay(hic: any, self: any) {
 async function getData(hic: any, self: any) {
 	if (self.ingenome) {
 		const manychr = hic.atdev ? 3 : hic.chrlst.length
-		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst[i]
-			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst[j]
-				try {
-					await getdata_leadfollow(hic, lead, follow, self)
-				} catch (e: any) {
-					self.errList.push(e.message || e)
-				}
-			}
-		}
+		await makeWholeGenomeElements(hic, self, manychr)
 		if (self.errList.length) self.error(self.errList)
 		return
 	}
