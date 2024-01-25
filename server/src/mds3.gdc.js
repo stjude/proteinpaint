@@ -271,7 +271,7 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
 	try {
 		const response = await got.post(`${geneExpHost}/gene_expression/gene_selection`, {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			headers: getheaders(),
 			body: JSON.stringify({
 				case_ids,
 				gene_ids: ensgLst,
@@ -1125,7 +1125,7 @@ function parseArribaName(f, str) {
 
 ////////////////////////// CNV ends /////////////////////////////
 
-function getheaders(q) {
+export function getheaders(q) {
 	// q is req.query{}
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	if (q) {

@@ -2,6 +2,7 @@ import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, Gene } from '#shar
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
+import { getheaders } from '#src/mds3.gdc.js'
 
 // TODO change to /termdb/topMutatedGenes
 
@@ -450,7 +451,7 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
 	}
 
 	const response = await got.post(apihostGraphql, {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		headers: getheaders(q),
 		body: JSON.stringify({ query, variables })
 	})
 
