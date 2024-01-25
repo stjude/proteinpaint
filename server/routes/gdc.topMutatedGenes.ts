@@ -41,8 +41,10 @@ function init() {
 	}
 }
 
-const query = `
+// query string copied from v1
+const queryV1 = `
 query GenesTable_relayQuery(
+  $caseFilters: FiltersArgument
   $genesTable_filters: FiltersArgument
   $genesTable_size: Int
   $genesTable_offset: Int
@@ -72,7 +74,7 @@ query GenesTable_relayQuery(
         }
       }
       genes {
-        hits(first: $genesTable_size, offset: $genesTable_offset, filters: $genesTable_filters, score: $score) {
+        hits(first: $genesTable_size, offset: $genesTable_offset, filters: $genesTable_filters, case_filters: $caseFilters, score: $score) {
           total
           edges {
             node {
@@ -113,9 +115,94 @@ query GenesTable_relayQuery(
 }
 `
 
+/*
+          query GenesTable(
+            $caseFilters: FiltersArgument
+            $genesTable_filters: FiltersArgument
+            $genesTable_size: Int
+            $genesTable_offset: Int
+            $score: String
+            $ssmCase: FiltersArgument
+            $geneCaseFilter: FiltersArgument
+            $ssmTested: FiltersArgument
+            $cnvTested: FiltersArgument
+            $cnvGainFilters: FiltersArgument
+            $cnvLossFilters: FiltersArgument
+            $sort: [Sort]
+          ) {
+            genesTableViewer: viewer {
+              explore {
+                cases {
+                  hits(first: 0, case_filters: $ssmTested) {
+                    total
+                  }
+                }
+                filteredCases: cases {
+                  hits(first: 0, case_filters: $geneCaseFilter) {
+                    total
+                  }
+                }
+                cnvCases: cases {
+                  hits(first: 0, case_filters: $cnvTested) {
+                    total
+                  }
+                }
+                genes {
+                  hits(
+                    first: $genesTable_size
+                    offset: $genesTable_offset
+                    filters: $genesTable_filters
+                    case_filters: $caseFilters
+                    score: $score
+                    sort: $sort
+                  ) {
+                    total
+                    edges {
+                      node {
+                        id
+                        numCases: score
+                        symbol
+                        name
+                        cytoband
+                        biotype
+                        gene_id
+                        is_cancer_gene_census
+                        ssm_case: case {
+                          hits(first: 0, filters: $ssmCase) {
+                            total
+                          }
+                        }
+                        cnv_case: case {
+                          hits(first: 0, filters: $cnvTested) {
+                            total
+                          }
+                        }
+                        case_cnv_gain: case {
+                          hits(first: 0, filters: $cnvGainFilters) {
+                            total
+                          }
+                        }
+                        case_cnv_loss: case {
+                          hits(first: 0, filters: $cnvLossFilters) {
+                            total
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+		  */
+
 async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
 	// set type "any" to avoid complains
 	const variables: any = {
+		caseFilters: {
+			op: 'and',
+			content: []
+		},
 		genesTable_filters: {
 			op: 'and',
 			content: []
@@ -219,7 +306,8 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
 	}
 
 	if (q.filter0) {
-		variables.genesTable_filters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		//variables.genesTable_filters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		variables.caseFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
 		variables.geneCaseFilter.content.push(JSON.parse(JSON.stringify(q.filter0)))
 		variables.cnvTested.content.push(JSON.parse(JSON.stringify(q.filter0)))
 		variables.cnvGainFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
@@ -236,7 +324,7 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
 
 	const response = await got.post(apihostGraphql, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({ query, variables })
+		body: JSON.stringify({ query: queryV1, variables })
 	})
 
 	const re: any = JSON.parse(response.body)
