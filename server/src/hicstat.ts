@@ -170,15 +170,16 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 			if (type == 'string') {
 				let str = ''
 				let chr: string | number
-				while ((chr = vectorView.getUint8(pos++)) != 0) {
-					if (pos < vectorView.byteLength) return
+				//Fix for when pos is > than the byteLength and .getUint8() returns undefined
+				while (pos < vectorView.byteLength && (chr = vectorView.getUint8(pos++)) != 0) {
 					if (pos > shunk) await readShunk()
 					const charStr = String.fromCharCode(chr)
 					str += charStr
 				}
 				value = str
 			} else if (type == 'int32') {
-				if (pos + 4 > shunk) await readShunk()
+				if (pos < 0) return //Fix for when pos is negative
+				if (pos + 4 > vectorView.byteLength) await readShunk()
 				value = vectorView.getInt32(pos, true)
 				pos += 4
 			} else throw `No value assigned [server/src/hicstat.ts getViewValue()]`
