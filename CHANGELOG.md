@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - GDC bam slicing UI can still pull BAM files when experimental_strategy=Methylation Array filtering is used
+- support navigation-by-keyboard of bam UI elements
 
 
 ## 2.39.6
