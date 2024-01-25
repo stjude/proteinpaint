@@ -1299,7 +1299,7 @@ tape('avoid race condition', function (test) {
 				}
 			}),
 			(async () => {
-				await sleep(0)
+				await sleep(5)
 				matrix.Inner.app.dispatch({
 					type: 'plot_edit',
 					id: matrix.id,
@@ -1328,7 +1328,7 @@ tape('avoid race condition', function (test) {
 				'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
 			)
 			test.equal(hits.size(), 2, 'should have the expected number of matrix cell rects with hits')
-			//if (test._ok) matrix.Inner.app.destroy()
+			if (test._ok) matrix.Inner.app.destroy()
 			test.end()
 		})
 	}

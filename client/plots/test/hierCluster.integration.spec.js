@@ -129,7 +129,7 @@ tape('avoid race condition', async test => {
 			config: { termgroups }
 		}),
 		(async () => {
-			await sleep(0)
+			await sleep(5)
 			hc.__wait = 0
 			const termgroups = structuredClone(hc.config.termgroups)
 			termgroups[0].lst = [
