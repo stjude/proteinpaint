@@ -1,4 +1,4 @@
-import { select, Selection } from 'd3-selection'
+import { select } from 'd3-selection'
 
 /*
 print an html table, using the specified columns and rows
@@ -169,9 +169,9 @@ export function renderTable({
 		if (!rows) throw `Missing rows data`
 		if (!div) throw `Missing div argument`
 		const lineNumsWithDataProbs: number[] = []
-		rows.forEach((row, i) => {
+		for (const [i, row] of rows.entries()) {
 			if (row.length != columns.length) lineNumsWithDataProbs.push(i + 1)
-		})
+		}
 		if (lineNumsWithDataProbs.length > 0)
 			throw `Num of row objects != num of cols. Line num(s) = ${lineNumsWithDataProbs}`
 		if (buttons) {
