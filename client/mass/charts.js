@@ -199,9 +199,9 @@ function getChartTypeList(self) {
 		{
 			label: 'Single Cell View',
 			clickTo: self.prepPlot,
-			chartType: 'singleCellView',
+			chartType: 'singleCellPlot',
 			config: {
-				chartType: 'singleCellView'
+				chartType: 'singleCellPlot'
 			}
 		}
 	]
