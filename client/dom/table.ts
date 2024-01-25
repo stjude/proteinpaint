@@ -1,147 +1,61 @@
 import { select } from 'd3-selection'
 
-/*
-print an html table, using the specified columns and rows
-
-Accepts following parameters; function has no return
-
-******************
-REQUIRED ARGUMENTS
-******************
-
-div = d3-wrapped holder
-
-columns = [ {label} ] 
-	each element is an object describing a column
-	label: str, the text to show as header of a column
-	width: str, column width
-	editCallback: function, optional. Makes this column editable  and provides the callback to notify the change to the parent. 
-	It is only allowed for cells with a value or a color field
-
-rows = [ [] ]
-	each element is an array of cells for a row, with array length must matching columns.length
-	a cell can be single value, or multi value
-	"__td" is attached to each cell object pointing to <td>, for external code to render interative contents in it
-
-	single value cell: 
-	{
-		url: string, to print in <a> element
-		html: string, to print with .html() d3 method, may be susceptible to attack
-		value: to print with .text() d3 method
-		color: to render with an input with type color
-	}
-
-	multi-value cell:
-	{
-		values: [
-			{url/html/value}, {}, ...
-		]
-	}
-
-
-******************
-OPTIONAL ARGUMENTS
-******************
-
-columnButtons = [ {button} ]
-	Each element is an object describing a column button. Button columns will be inserted in the beginning:
-	text: str, the text to show in the button
-	callback: button callback
-	disabled: function, Optional. receives the row index and returns true if the button should be disabled for this row
-
-buttons = [ {} ]
-	Each element describes a button:
-	Required attr:
-		text: str, the text to show in the button
-		callback: called when button is clicked, has 2 arguments:
-			1st argument is lst of array index for selected items of rows[]
-			2nd argument is button dom object
-	Optional attr:
-		class: class to customize the button style
-		onChange: called when any row is checked/unchecked. same parameter as callback()
-
-noButtonCallback = (index, node) => {}
-	Function that will be called when a row is selected	
-
-singleMode = false, boolean
-	Specifies if a radio button should be rendered instead
-
-showLines = true: boolean.
-	Shows/hides line column. 
-
-striped = true, boolean
-	When active makes the table rows to alternate colors
-
-maxWidth = 90vw, string
-	The max width of the table
-maxHeight = 40vw, string
-	The max height of the table
-
-selectedRows=[]
-	Each element is an index indicating that the corresponding row should be selected
-
-selectAll = false, boolean
-	When active makes all the rows selected by default
-
-resize = false, boolean
-	If true, allow to adjust table height by dragging
-
-selectedRowStyle={}
-  an object of arbitrary css key-values on how to style selected rows,
-  for example `{text-decoration: 'line-through'}`. If a row is not
-  selected, each css property will be set to an empty string ''
-
-inputName=string
-	optional. value is predefined input name. this allows test to work. no need for prod code to use this
-	when not avaiable, for each table made, create a unique name to use as the <input name=?> 
-	if the same name is always used, multiple tables created in one page will conflict in row selection
-*/
-
 export type Cell = {
-	url?: string
-	value?: string | number | undefined
-	color?: string
-	html?: string
-	__td?: any
+	url?: string //optional string, to print in <a> element
+	value?: string | number //optinal to print with .text() d3 method
+	color?: string //optional color code to render as a color
+	html?: string //optional string, to print with .html() d3 method, may be susceptible to attack
+	__td?: any //is attached to each cell object pointing to <td>, for external code to render interactive contents in it
 	values?: Cell[]
 	disabled?: boolean
 }
 
 export type Column = {
-	label: string
-	width?: string
-	editCallback?: ((i: number, cell: Cell) => void) | undefined
+	label: string //str, the text to show as header of a column
+	width?: string //str, column width
+	editCallback?: (i: number, cell: Cell) => void //Function, optional. Makes this column editable  and allows to notify the change through the callback.
+	//It is only allowed for cells with a value or a color field
 }
 
 export type Button = {
-	text: string
-	callback: (idxs: number[], button: any) => void //called when the button is clicked
+	text: string //the text to show in the button
+	callback: (idxs: number[], button: any) => void //called when the button is clicked. Receives selected indexes and the button dom object
 	disabled?: (index: number) => boolean
 	button: any
 	onChange?: (idx: number[], button: any) => void //Called when selecting rows, it would update the button text
-	class?: string
+	class?: string //to customize button style
 }
 
 export type TableArgs = {
-	columns: Column[]
-	rows: Cell[][]
-	div: any
-	columnButtons?: Button[]
-	buttons?: Button[]
-	noButtonCallback?: (i: number, node: any) => void
-	singleMode?: boolean
-	showLines?: boolean
-	striped?: boolean
-	showHeader?: boolean
-	maxWidth?: string
-	maxHeight?: string
-	selectedRows: number[]
-	selectAll: boolean
-	resize: boolean
-	selectedRowStyle: any
-	inputName: any
-}
+	columns: Column[] //List of table columns
+	rows: Cell[][] //each element is an array of cells for a row, with array length must matching columns length
 
+	div: any //Holder to render the table
+	columnButtons?: Button[] //List of buttons to render in a column
+	buttons?: Button[] //List of buttons to do actions after the table is edited
+	noButtonCallback?: (i: number, node: any) => void //Function that will be called when a row is selected
+	singleMode?: boolean
+	showLines?: boolean //Shows or hides line column.
+	striped?: boolean //When active makes the table rows to alternate bg colors
+	showHeader?: boolean //Render header or not
+	maxWidth?: string //The max width of the table, 90vw by default.
+	maxHeight?: string //The max height of the table, 40vh by default
+
+	selectedRows: number[] //Preselect rows specified
+	selectAll: boolean //Preselect all rows
+	resize: boolean //Allow to resize the table height dragging the border
+	selectedRowStyle: any //An object of arbitrary css key-values on how to style selected rows,
+	//for example `{text-decoration: 'line-through'}`. If a row is not
+	//selected, each css property will be set to an empty string ''
+	inputName?: any //For testing purposes
+	//optional. value is predefined input name. this allows test to work.
+	//when not avaiable, for each table made, create a unique name to use as the <input name=?>
+	//if the same name is always used, multiple tables created in one page will conflict in row selection
+}
+/*
+Prints an html table, using the specified columns and rows
+See the paramters in TableArgs; function has no return
+*/
 export function renderTable({
 	columns,
 	rows,
@@ -149,7 +63,7 @@ export function renderTable({
 	columnButtons,
 	buttons,
 	noButtonCallback,
-	singleMode = false,
+	singleMode = false, //	Specifies if a radio button should be rendered instead
 	showLines = true,
 	striped = true,
 	showHeader = true,
@@ -331,23 +245,7 @@ export function renderTable({
 				})
 			}
 			if (column.width) td.style('width', column.width)
-			if (cell.values) {
-				for (const v of cell.values) {
-					// if those values have url in them then tag it to the sample name/id otherwise just append the value of that cell onto the td
-					if (v.url) {
-						td.append('a')
-							.text(v.value || v.value == 0 ? v.value : v.url) //Fix for if .value missing, url does not display
-							.attr('href', v.url)
-							.attr('target', '_blank')
-					} else if (v.html) {
-						//Fix for only the last html or value displaying in the td
-						//instead of all objs in values array
-						td.append('div').html(v.html)
-					} else {
-						td.append('div').text(v.value)
-					}
-				}
-			} else if (cell.url) {
+			if (cell.url) {
 				td.append('a')
 					.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
 					.attr('href', cell.url)
