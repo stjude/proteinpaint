@@ -96,7 +96,7 @@ class DEanalysis {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.DEanalysis
-		const data = await this.app.vocabApi.runDEanalysis(this.state.config)
+		const output = await this.app.vocabApi.runDEanalysis(this.state.config)
 		//const state = this.app.getState()
 		//console.log('state:', state)
 		//if (state.customTerms[0].name) {
@@ -116,11 +116,11 @@ class DEanalysis {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
-		render_volcano(this.dom.holder, data, this)
+		render_volcano(this.dom.holder, output.data, this, output.sample_size1, output.sample_size2)
 	}
 }
 
-function render_volcano(holder, mavb, self) {
+function render_volcano(holder, mavb, self, sample_size1, sample_size2) {
 	/*
 m {}
 - gene
@@ -183,10 +183,9 @@ add:
 		.each(function (d) {
 			d.vo_g = this
 		})
-	if (self.settings.foldchange == 0) throw 'fold change cutoff cannot be zero'
 	const fold_change_cutoff = self.settings.foldchange
 	if (self.settings.pvalue == 0) throw 'p-value significance cannot be zero'
-	const p_value_cutoff = -Math.log10(self.settings.pvalue) // 3 corresponds to p-value =0.05 in -log10 scale.
+	const p_value_cutoff = -Math.log10(self.settings.pvalue)
 	const p_value_adjusted_original = self.settings.adjusted_original_pvalue
 	let num_significant_genes = 0
 	let num_non_significant_genes = 0
@@ -339,7 +338,11 @@ add:
 				'Percentage of significant genes:' +
 					((num_significant_genes * 100) / (num_significant_genes + num_non_significant_genes)).toFixed(2) +
 					'<br>Number of significant genes:' +
-					num_significant_genes
+					num_significant_genes +
+					'<br>Sample size of group1:' +
+					sample_size1 +
+					'<br>Sample size of group2:' +
+					sample_size2
 			)
 		self.table_cols = [
 			{ label: 'Gene Name' },
