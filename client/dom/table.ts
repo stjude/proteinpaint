@@ -6,7 +6,6 @@ export type Cell = {
 	color?: string //optional color code to render as a color
 	html?: string //optional string, to print with .html() d3 method, may be susceptible to attack
 	__td?: any //is attached to each cell object pointing to <td>, for external code to render interactive contents in it
-	values?: Cell[]
 	disabled?: boolean
 }
 
