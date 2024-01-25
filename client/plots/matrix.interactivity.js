@@ -5,7 +5,7 @@ import { newSandboxDiv } from '../dom/sandbox.ts'
 import { mclass, dt2label, truncatingMutations, proteinChangingMutations } from '#shared/common'
 import { format as d3format } from 'd3-format'
 import { Menu } from '#dom/menu'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table.ts'
 
 let inputIndex = 0
 const svgIcons = {

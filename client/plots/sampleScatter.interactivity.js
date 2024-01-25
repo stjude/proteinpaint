@@ -1,5 +1,5 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table.ts'
 import { mclass } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'

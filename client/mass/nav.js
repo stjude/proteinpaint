@@ -8,7 +8,7 @@ import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { Menu } from '#dom/menu'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table'
 
 /*
 nav {}

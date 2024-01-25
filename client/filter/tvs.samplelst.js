@@ -1,4 +1,4 @@
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table'
 
 export const handler = {
 	term_name_gen,

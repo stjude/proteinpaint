@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../table'
 import * as d3s from 'd3-selection'
 
 /*

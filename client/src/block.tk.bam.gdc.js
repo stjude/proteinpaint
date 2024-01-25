@@ -7,7 +7,7 @@ import urlmap from '#common/urlmap'
 import { addGeneSearchbox, string2variant } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { Tabs } from '../dom/toggleButtons'
-import { renderTable } from '#dom/table'
+import { renderTable } from '../dom/table'
 import { table2col } from '../dom/table2col'
 
 /*
