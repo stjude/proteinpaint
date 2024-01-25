@@ -222,8 +222,6 @@ async function getGenes(arg, filter0, matrix) {
 	const data = await dofetch3('gdc/topMutatedGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) return // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
-	console.log(data.genes)
-	throw 'xx'
 	return await Promise.all(
 		// do tempfix of "data.genes.slice(0,3).map" for faster testing
 		data.genes.map(async i => {

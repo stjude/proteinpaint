@@ -1,6 +1,7 @@
 import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, Gene } from '#shared/types/routes/gdc.topMutatedGenes.ts'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import got from 'got'
+import serverconfig from '#src/serverconfig.js'
 
 // TODO change to /termdb/topMutatedGenes
 
@@ -41,10 +42,11 @@ function init() {
 	}
 }
 
-// query string copied from v1
-const queryV1 = `
+// query string copied from v1, works in v2. but v1 are not "cohort-centric and lacks the case_filters: $caseFilters"
+// delete the v1 after soft launch
+const queryV1: any = {
+	query: `
 query GenesTable_relayQuery(
-  $caseFilters: FiltersArgument
   $genesTable_filters: FiltersArgument
   $genesTable_size: Int
   $genesTable_offset: Int
@@ -74,7 +76,7 @@ query GenesTable_relayQuery(
         }
       }
       genes {
-        hits(first: $genesTable_size, offset: $genesTable_offset, filters: $genesTable_filters, case_filters: $caseFilters, score: $score) {
+        hits(first: $genesTable_size, offset: $genesTable_offset, filters: $genesTable_filters, score: $score) {
           total
           edges {
             node {
@@ -113,9 +115,130 @@ query GenesTable_relayQuery(
     }
   }
 }
-`
+`,
+	getVariables: (q: any) => {
+		// set type "any" to avoid complains
+		const variables: any = {
+			genesTable_filters: { op: 'and', content: [] },
+			genesTable_size: q.maxGenes || 50,
+			genesTable_offset: 0,
+			score: 'case.project.project_id',
+			ssmCase: {
+				op: 'and',
+				content: [
+					{
+						op: 'in',
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['ssm']
+						}
+					},
+					{
+						op: 'NOT',
+						content: {
+							field: 'genes.case.ssm.observation.observation_id',
+							value: 'MISSING'
+						}
+					}
+				]
+			},
+			geneCaseFilter: {
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['ssm']
+						},
+						op: 'in'
+					}
+				],
+				op: 'and'
+			},
+			ssmTested: {
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['ssm']
+						},
+						op: 'in'
+					}
+				],
+				op: 'and'
+			},
+			cnvTested: {
+				op: 'and',
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['cnv']
+						},
+						op: 'in'
+					}
+				]
+			},
+			cnvGainFilters: {
+				op: 'and',
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['cnv']
+						},
+						op: 'in'
+					},
+					{
+						content: {
+							field: 'cnvs.cnv_change',
+							value: ['Gain']
+						},
+						op: 'in'
+					}
+				]
+			},
+			cnvLossFilters: {
+				op: 'and',
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['cnv']
+						},
+						op: 'in'
+					},
+					{
+						content: {
+							field: 'cnvs.cnv_change',
+							value: ['Loss']
+						},
+						op: 'in'
+					}
+				]
+			}
+		}
 
-/*
+		if (q.filter0) {
+			variables.genesTable_filters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.geneCaseFilter.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.cnvTested.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.cnvGainFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.cnvLossFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		}
+
+		if (q.geneFilter == 'CGC') {
+			variables.genesTable_filters.content.push(geneCGC())
+			variables.geneCaseFilter.content.push(geneCGC())
+			variables.cnvTested.content.push(geneCGC())
+			variables.cnvGainFilters.content.push(geneCGC())
+			variables.cnvLossFilters.content.push(geneCGC())
+		}
+		return variables
+	}
+}
+
+const queryV2: any = {
+	query: `
           query GenesTable(
             $caseFilters: FiltersArgument
             $genesTable_filters: FiltersArgument
@@ -193,138 +316,142 @@ query GenesTable_relayQuery(
                 }
               }
             }
-          }
-		  */
+          }`,
+	getVariables: (q: any) => {
+		const variables: any = {
+			caseFilters: { op: 'and', content: [] },
+			genesTable_filters: { op: 'and', content: [] },
+			genesTable_size: q.maxGenes || 50,
+			genesTable_offset: 0,
+			score: 'case.project.project_id',
+			ssmCase: {
+				op: 'and',
+				content: [
+					{
+						op: 'in',
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['ssm']
+						}
+					},
+					{
+						op: 'NOT',
+						content: {
+							field: 'genes.case.ssm.observation.observation_id',
+							value: 'MISSING'
+						}
+					}
+				]
+			},
+			geneCaseFilter: {
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['ssm']
+						},
+						op: 'in'
+					}
+				],
+				op: 'and'
+			},
+			ssmTested: {
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['ssm']
+						},
+						op: 'in'
+					}
+				],
+				op: 'and'
+			},
+			cnvTested: {
+				op: 'and',
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['cnv']
+						},
+						op: 'in'
+					}
+				]
+			},
+			cnvGainFilters: {
+				op: 'and',
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['cnv']
+						},
+						op: 'in'
+					},
+					{
+						content: {
+							field: 'cnvs.cnv_change',
+							value: ['Gain']
+						},
+						op: 'in'
+					}
+				]
+			},
+			cnvLossFilters: {
+				op: 'and',
+				content: [
+					{
+						content: {
+							field: 'cases.available_variation_data',
+							value: ['cnv']
+						},
+						op: 'in'
+					},
+					{
+						content: {
+							field: 'cnvs.cnv_change',
+							value: ['Loss']
+						},
+						op: 'in'
+					}
+				]
+			}
+		}
+
+		if (q.filter0) {
+			variables.caseFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.geneCaseFilter.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.cnvLossFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.cnvGainFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
+			variables.cnvTested.content.push(JSON.parse(JSON.stringify(q.filter0)))
+		}
+
+		if (q.geneFilter == 'CGC') {
+			variables.genesTable_filters.content.push(geneCGC())
+			variables.cnvLossFilters.content.push(geneCGC())
+			variables.cnvGainFilters.content.push(geneCGC())
+		}
+		return variables
+	}
+}
 
 async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
-	// set type "any" to avoid complains
-	const variables: any = {
-		caseFilters: {
-			op: 'and',
-			content: []
-		},
-		genesTable_filters: {
-			op: 'and',
-			content: []
-		},
-		genesTable_size: q.maxGenes || 50,
-		genesTable_offset: 0,
-		score: 'case.project.project_id',
-		ssmCase: {
-			op: 'and',
-			content: [
-				{
-					op: 'in',
-					content: {
-						field: 'cases.available_variation_data',
-						value: ['ssm']
-					}
-				},
-				{
-					op: 'NOT',
-					content: {
-						field: 'genes.case.ssm.observation.observation_id',
-						value: 'MISSING'
-					}
-				}
-			]
-		},
-		geneCaseFilter: {
-			content: [
-				{
-					content: {
-						field: 'cases.available_variation_data',
-						value: ['ssm']
-					},
-					op: 'in'
-				}
-			],
-			op: 'and'
-		},
-		ssmTested: {
-			content: [
-				{
-					content: {
-						field: 'cases.available_variation_data',
-						value: ['ssm']
-					},
-					op: 'in'
-				}
-			],
-			op: 'and'
-		},
-		cnvTested: {
-			op: 'and',
-			content: [
-				{
-					content: {
-						field: 'cases.available_variation_data',
-						value: ['cnv']
-					},
-					op: 'in'
-				}
-			]
-		},
-		cnvGainFilters: {
-			op: 'and',
-			content: [
-				{
-					content: {
-						field: 'cases.available_variation_data',
-						value: ['cnv']
-					},
-					op: 'in'
-				},
-				{
-					content: {
-						field: 'cnvs.cnv_change',
-						value: ['Gain']
-					},
-					op: 'in'
-				}
-			]
-		},
-		cnvLossFilters: {
-			op: 'and',
-			content: [
-				{
-					content: {
-						field: 'cases.available_variation_data',
-						value: ['cnv']
-					},
-					op: 'in'
-				},
-				{
-					content: {
-						field: 'cnvs.cnv_change',
-						value: ['Loss']
-					},
-					op: 'in'
-				}
-			]
-		}
-	}
+	let query: string, variables: object
 
-	if (q.filter0) {
-		//variables.genesTable_filters.content.push(JSON.parse(JSON.stringify(q.filter0)))
-		variables.caseFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
-		variables.geneCaseFilter.content.push(JSON.parse(JSON.stringify(q.filter0)))
-		variables.cnvTested.content.push(JSON.parse(JSON.stringify(q.filter0)))
-		variables.cnvGainFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
-		variables.cnvLossFilters.content.push(JSON.parse(JSON.stringify(q.filter0)))
-	}
-
-	if (q.geneFilter == 'CGC') {
-		variables.genesTable_filters.content.push(geneCGC())
-		variables.geneCaseFilter.content.push(geneCGC())
-		variables.cnvTested.content.push(geneCGC())
-		variables.cnvGainFilters.content.push(geneCGC())
-		variables.cnvLossFilters.content.push(geneCGC())
+	if (serverconfig.features?.geneExpHost) {
+		// quick fix! this is only set on local dev machines, meaning it's using v1 api; delete this after soft launch!!
+		query = queryV1.query
+		variables = queryV1.getVariables(q)
+	} else {
+		// this is not set and should be in qa-orange. it should be like this after softlaunch
+		query = queryV2.query
+		variables = queryV2.getVariables(q)
 	}
 
 	const response = await got.post(apihostGraphql, {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({ query: queryV1, variables })
+		body: JSON.stringify({ query, variables })
 	})
 
 	const re: any = JSON.parse(response.body)
