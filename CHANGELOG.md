@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Hi-C whole genome view supports different matrix types (e.g. observed, expected, etc.). Users can select different matrix types from dropdown.
+- The Hi-C whole genome view now calculates the cutoff on load and with user changes. Previously, the default was 5000.
+
 Fixes:
 - GDC bam slicing UI can still pull BAM files when experimental_strategy=Methylation Array filtering is used
 - support navigation-by-keyboard of bam UI elements

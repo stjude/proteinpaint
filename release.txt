@@ -1,3 +1,1 @@
-Features:
-- Hi-C whole genome view supports different matrix types (e.g. observed, expected, etc.). Users can select different matrix types from dropdown.
-- The Hi-C whole genome view now calculates the cutoff on load and with user changes. Previously, the default was 5000. 
+
