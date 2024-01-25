@@ -12,20 +12,20 @@ REQUIRED ARGUMENTS
 div = d3-wrapped holder
 
 columns = [ {label} ] 
-	each any is an object describing a column
+	each element is an object describing a column
 	label: str, the text to show as header of a column
 	width: str, column width
 	editCallback: function, optional. Makes this column editable  and provides the callback to notify the change to the parent. 
 	It is only allowed for cells with a value or a color field
 
 rows = [ [] ]
-	each any is an array of cells for a row, with array length must matching columns.length
+	each element is an array of cells for a row, with array length must matching columns.length
 	a cell can be single value, or multi value
 	"__td" is attached to each cell object pointing to <td>, for external code to render interative contents in it
 
 	single value cell: 
 	{
-		url: string, to print in <a> any
+		url: string, to print in <a> element
 		html: string, to print with .html() d3 method, may be susceptible to attack
 		value: to print with .text() d3 method
 		color: to render with an input with type color
@@ -44,13 +44,13 @@ OPTIONAL ARGUMENTS
 ******************
 
 columnButtons = [ {button} ]
-	Each any is an object describing a column button. Button columns will be inserted in the beginning:
+	Each element is an object describing a column button. Button columns will be inserted in the beginning:
 	text: str, the text to show in the button
 	callback: button callback
 	disabled: function, Optional. receives the row index and returns true if the button should be disabled for this row
 
 buttons = [ {} ]
-	Each any describes a button:
+	Each element describes a button:
 	Required attr:
 		text: str, the text to show in the button
 		callback: called when button is clicked, has 2 arguments:
@@ -78,7 +78,7 @@ maxHeight = 40vw, string
 	The max height of the table
 
 selectedRows=[]
-	Each any is an index indicating that the corresponding row should be selected
+	Each element is an index indicating that the corresponding row should be selected
 
 selectAll = false, boolean
 	When active makes all the rows selected by default
@@ -455,7 +455,7 @@ export async function downloadTable(rows, cols) {
 	}
 	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 
-	const link = document.createany('a')
+	const link = document.createelement('a')
 	link.setAttribute('href', dataStr)
 	// If you don't know the name or want to use
 	// the webserver default set name = ''
