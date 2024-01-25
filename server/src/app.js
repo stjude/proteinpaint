@@ -203,6 +203,20 @@ app.use((req, res, next) => {
 		// if using req.params based on expressjs server route /:paramName interpolation
 		Object.assign(req.query, req.body)
 	}
+
+	/*
+	!!more or less quick fix!!
+	in gdc environment, this will pass sessionid from cookie to req.query
+	to be added to request header where it's querying gdc api
+	by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
+	these *protected* contents are not used in non-gdc code
+	*/
+	req.query.__protected__ = {}
+	if (req.cookies?.sessionid) {
+		req.query.__protected__.sessionid = req.cookie.sessionid
+	}
+	Object.freeze(req.query.__protected__)
+
 	log(req)
 	setHeaders(res)
 	res.header(

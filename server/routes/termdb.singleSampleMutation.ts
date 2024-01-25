@@ -25,7 +25,7 @@ export const api: any = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q = req.query as TermdbSingleSampleMutationRequest
+		const q: TermdbSingleSampleMutationRequest = req.query
 		let result
 		try {
 			const g = genomes[q.genome]
