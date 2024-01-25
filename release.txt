@@ -1,2 +1,2 @@
-Features
-Added downloadTable function to download data rendered using renderTable
+Fixes:
+- support navigation-by-keyboard of bam UI elements
