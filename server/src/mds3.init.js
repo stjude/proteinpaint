@@ -1220,12 +1220,14 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			}
 		}
 
-		console.log('Sample size of group1:', group1names.length)
-		console.log('Sample size of group2:', group2names.length)
-		console.log('Number of group1 names not found:', group1names_not_found)
-		console.log('Number of group2 names not found:', group2names_not_found)
-		if (group1names.length < 1) throw 'group1names.length<1'
-		if (group2names.length < 1) throw 'group2names.length<1'
+		//console.log('Sample size of group1:', group1names.length)
+		//console.log('Sample size of group2:', group2names.length)
+		const sample_size1 = group1names.length
+		const sample_size2 = group2names.length
+		//console.log('Number of group1 names not found:', group1names_not_found)
+		//console.log('Number of group2 names not found:', group2names_not_found)
+		if (sample_size1 < 1) throw 'sample size of group1 < 1'
+		if (sample_size2 < 1) throw 'sample size of group2 < 1'
 		// pass group names and txt file to rust
 
 		const cases_string = group1names.map(i => i).join(',')
@@ -1282,7 +1284,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			}
 			console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
 		}
-		return result
+		return { data: result, sample_size1: sample_size1, sample_size2: sample_size2 }
 	}
 }
 
