@@ -458,7 +458,7 @@ export function server_init_db_queries(ds) {
 				if (!forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 					supportedChartTypes[r.cohort].add('sampleView')
-					if (ds.queries?.singleCell) supportedChartTypes[r.cohort].add('singleCellView')
+					if (ds.queries?.singleCell) supportedChartTypes[r.cohort].add('singleCellPlot')
 				}
 			}
 			if (serverconfig.features?.draftChartTypes) {
