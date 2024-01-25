@@ -1,5 +1,5 @@
 import { BaseTrackArgs } from './tracks.ts'
-import { Elem, Input, Svg, SvgG } from '../types/d3'
+import { Div, Elem, Input, Svg, SvgG } from '../types/d3'
 import { Selection } from 'd3-selection'
 
 type SharedArgs = {
@@ -52,7 +52,7 @@ export type MainPlotDiv = {
 
 export type HicstrawDom = {
 	/** Holds the cloak when the view is loading. */
-	loadingDiv: Elem
+	loadingDiv: Div
 	/** Placeholder div for displaying errors to the user */
 	errorDiv: Elem
 	/** Control panel. Appears as a collapsible burger menu*/
