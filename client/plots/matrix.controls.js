@@ -902,7 +902,8 @@ export class MatrixControls {
 						: '',
 				selected:
 					(this.parent.chartType == 'hierCluster' &&
-						(g.type == 'hierCluster' || g.name == this.parent.config.termGroupName)) ||
+						(g.type == 'hierCluster' ||
+							(g.name && g.name == this.parent.config.settings.hierCluster?.termGroupName))) ||
 					g === firstGrpWithGeneTw
 			}
 		})
