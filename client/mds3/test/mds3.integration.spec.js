@@ -3,38 +3,71 @@ const d3s = require('d3-selection')
 const { detectOne, detectGte, whenVisible } = require('../../test/test.helpers')
 const { runproteinpaint } = require('../../test/front.helpers.js')
 
-/*
-Tests:  
+/**************
+ test sections
+***************
 
+TermdbTest official data on TP53
 TP53 custom data, no sample
 Custom variants, missing or invalid mclass
 Custom dataset with custom variants, WITH samples
 Custom data with samples and sample selection
 Numeric mode custom dataset, with mode change
 
+
 */
-
-/*************************
- reusable helper functions
-**************************/
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-		.node()
-}
-
-/**************
- test sections
-***************/
 
 tape('\n', function (test) {
 	test.pass('-***- mds3 -***-')
 	test.end()
+})
+
+tape('TermdbTest official data on TP53', test => {
+	const holder = getHolder()
+	const gene = 'TP53'
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene,
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
+	})
+	function callbackOnRender(tk, bb) {
+		// tk is gdc mds3 track object; bb is block object
+		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
+		// in this first test, verify all ui parts are rendered
+		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
+		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
+		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
+		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
+		test.ok(tk.legend.mclass, 'tk.legend.mclass{} is set')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Incorrect dslabel', test => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'tp53',
+		tracks: [{ type: 'mds3', dslabel: 'blah', callbackOnRender }]
+	})
+	function callbackOnRender(tk, bb) {
+		// Confirm mds3 track sent to block instance but not rendering
+		test.ok(tk.uninitialized == true, 'Should not render mds3 track and not throw')
+		// Confirm error message appears
+		const errorDivFound = tk.gmiddle
+			.selectAll('text')
+			.nodes()
+			.find(i => i.textContent == 'Error: invalid dsname')
+		test.ok(errorDivFound, 'Should display invalid dsname error')
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
 tape('TP53 custom data, no sample', test => {
@@ -439,3 +472,17 @@ tape('Numeric mode custom dataset, with mode change', test => {
 		test.end()
 	}
 })
+
+/*************************
+ reusable helper functions
+**************************/
+
+function getHolder() {
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+		.node()
+}
