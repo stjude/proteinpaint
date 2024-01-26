@@ -26,11 +26,14 @@ import { Div } from '../../types/d3'
 ********************** EXPORTED
 
 init_hicstraw()
-getdata_leadfollow()
+showBtns()
+makeWholeGenomeElements()
 getdata_chrpair()
 nmeth2select()
+matrixType2select()
 getdata_detail()
 hicparsefragdata()
+setViewCutoff()
 
 ********************** INTERNAL
 
@@ -51,7 +54,7 @@ initialize views
 
 hic data getter and canvas painter
 
-	getdata_leadfollow()
+	makeWholeGenomeElements()
 	getdata_chrpair()
 	getdata_detail()
 
