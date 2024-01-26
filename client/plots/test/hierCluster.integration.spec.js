@@ -121,7 +121,8 @@ tape('avoid race condition', async test => {
 		await fillTermWrapper({ term: { name: 'AKT1', type: 'geneVariant' } }),
 		await fillTermWrapper({ term: { name: 'TP53', type: 'geneVariant' } })
 	]
-	hc.__wait = 5
+	const responseDelay = 10
+	hc.__wait = responseDelay
 	await Promise.all([
 		app.dispatch({
 			type: 'plot_edit',
@@ -129,7 +130,7 @@ tape('avoid race condition', async test => {
 			config: { termgroups }
 		}),
 		(async () => {
-			await sleep(5)
+			await sleep(1)
 			hc.__wait = 0
 			const termgroups = structuredClone(hc.config.termgroups)
 			termgroups[0].lst = [
@@ -144,7 +145,8 @@ tape('avoid race condition', async test => {
 			})
 		})()
 	])
-
+	// run tests after the delayed response, as part of simulating the race condition
+	await sleep(responseDelay + 10)
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 gene rows')
 	const rects = hc.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
 	const hits = rects.filter(d => d.key !== 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
