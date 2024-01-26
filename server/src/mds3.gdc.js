@@ -14,8 +14,8 @@ function mayLog(...args) {
 }
 
 // TODO fix in next PR
-// if geneExpHost is set, it is hitting v1 api and use "filters"; if not set, it is hitting v2 and must use "case_filters" to be cohort_centric. use it as "const body = { [`${prefix}filters`]: {...} } "  after softlaunch, delete all usage of REPLACE and always use "case_filters"
-const PREFIX = serverconfig.features.geneExpHost ? '' : 'case_'
+// if geneExpHost is set, it is hitting v1 api and use "filters"; if not set, it is hitting v2 and must use "case_filters" to be cohort_centric. use it as "const body = { [`${PREFIX}filters`]: {...} } "  after softlaunch, delete all usage of REPLACE and always use "case_filters"
+export const PREFIX = serverconfig.features.geneExpHost ? '' : 'case_'
 
 /*
 GDC API
@@ -311,7 +311,7 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 		f.content.push(filter2GDCfilter(q.filter))
 	}
 	const body = { size: 10000, fields: 'case_id' }
-	if (f.content.length) body.filters = f
+	if (f.content.length) body[`${PREFIX}filters`] = f
 
 	try {
 		const response = await got.post(path.join(apihost, 'cases'), { headers: getheaders(q), body: JSON.stringify(body) })
@@ -763,7 +763,7 @@ export function validate_query_geneCnv2(ds) {
 			body: JSON.stringify({
 				size: 100000,
 				fields: getFields(opts),
-				filters: getFilter(opts)
+				[`${PREFIX}filters`]: getFilter(opts)
 			})
 		})
 		const re = JSON.parse(tmp.body)
@@ -1163,7 +1163,7 @@ async function snvindel_byisoform(opts, ds) {
 		body: JSON.stringify({
 			size: query1.size,
 			fields: query1.fields.join(','),
-			filters: query1.filters(opts)
+			[`${PREFIX}filters`]: query1.filters(opts)
 		})
 	})
 	const p2 = got.post(path.join(apihost, query2.endpoint), {
@@ -1171,7 +1171,7 @@ async function snvindel_byisoform(opts, ds) {
 		body: JSON.stringify({
 			size: query2.size,
 			fields: query2.fields.join(','),
-			filters: query2.filters(opts, ds)
+			[`${PREFIX}filters`]: query2.filters(opts, ds)
 		})
 	})
 	const [tmp1, tmp2] = await Promise.all([p1, p2])
@@ -1605,7 +1605,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
 
-	param.filters = isoform2ssm_query2_getcase.filters(q, ds)
+	param[`${PREFIX}filters`] = isoform2ssm_query2_getcase.filters(q, ds)
 
 	const headers = getheaders(q) // will be reused below
 
@@ -1763,7 +1763,7 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 		body: JSON.stringify({
 			size: ds.__gdc.casesWithExpData.size,
 			fields: fields.join(','),
-			filters: filters.content.length ? filters : undefined
+			[`${PREFIX}filters`]: filters.content.length ? filters : undefined
 		})
 	})
 	const re = JSON.parse(response.body)
@@ -1848,7 +1848,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 		})
 	}
 
-	const query = termid2size_query(termPaths)
+	const query = termid2size_query(termPaths) // need to do case_filters fix in this
 	const variables = termid2size_filters(q, ds)
 
 	const response = await got.post(apihostGraphql, {
@@ -2086,7 +2086,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 		}
 
 		const body = {
-			filters,
+			[`${PREFIX}filters`]: filters,
 			size: 100,
 			fields: [
 				'id',
@@ -2239,7 +2239,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 			body: JSON.stringify({
 				size: 10000, // ssm max!
 				fields: isoform2ssm_query1_getvariant.fields.join(','),
-				filters: isoform2ssm_query1_getvariant.filters(query)
+				filters: isoform2ssm_query1_getvariant.filters(query) // may delete filter for single sample query
 			})
 		})
 		const re = JSON.parse(response.body)

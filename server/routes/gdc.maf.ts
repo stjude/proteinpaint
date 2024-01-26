@@ -2,6 +2,7 @@ import { GdcMafRequest, GdcMafResponse, File } from '#shared/types/routes/gdc.ma
 import path from 'path'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
+import { PREFIX } from '#src/mds3.gdc.js'
 
 /*
 this route lists available gdc MAF files based on user's cohort filter
@@ -98,7 +99,7 @@ async function listMafFiles(q: GdcMafRequest) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 
 	const data = {
-		filters,
+		[`${PREFIX}filters`]: filters,
 		size: maxFileNumber,
 		fields: [
 			'id',
