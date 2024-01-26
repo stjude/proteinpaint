@@ -403,8 +403,8 @@ class Hicstat {
 	async init_chrPairView(hic: any, chrx: string, chry: string) {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
 		const detailView = this.init_detailView.bind(this)
-		nmeth2select(hic, this.chrpairview)
-		matrixType2select(this.chrpairview, this)
+		nmeth2select(hic, this.chrpairview, true)
+		matrixType2select(this.chrpairview, this, true)
 
 		this.ingenome = false
 		this.inchrpair = true
@@ -549,8 +549,8 @@ class Hicstat {
 
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
-		nmeth2select(hic, this.detailview)
-		matrixType2select(this.detailview, this)
+		nmeth2select(hic, this.detailview, true)
+		matrixType2select(this.detailview, this, true)
 
 		this.ingenome = false
 		this.inchrpair = false
@@ -767,8 +767,8 @@ class Hicstat {
 
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Horizontal')
-		nmeth2select(hic, this.horizontalview)
-		matrixType2select(this.horizontalview, this)
+		nmeth2select(hic, this.horizontalview, true)
+		matrixType2select(this.horizontalview, this, true)
 
 		this.dom.plotDiv.xAxis.selectAll('*').remove()
 		this.dom.plotDiv.yAxis.selectAll('*').remove()
@@ -1313,10 +1313,15 @@ export async function getdata_chrpair(hic: any, self: any) {
  * @returns
  */
 
-export function nmeth2select(hic: any, v: any) {
+export function nmeth2select(hic: any, v: any, init?: boolean) {
 	const options = hic.nmethselect.node().options
 	if (!options) return //When only 'NONE' is available
-	const selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value) as any
+	let selectedNmeth: any
+	if (init) {
+		selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value)
+	} else {
+		selectedNmeth = Array.from(options).find((o: any) => o.value === v.nmeth)
+	}
 	selectedNmeth.selected = true
 	v.nmeth = selectedNmeth.value
 }
@@ -1334,11 +1339,14 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
  * @param v view object within self (e.g. self.genomeView) Each view object has its own matrixType
  * @param self
  */
-export function matrixType2select(v: any, self: any) {
+export function matrixType2select(v: any, self: any, init?: boolean) {
 	const options = self.dom.controlsDiv.matrixType.node().options
-	const selectedOption = Array.from(options).find(
-		(o: any) => o.value === self.dom.controlsDiv.matrixType.node().value
-	) as any
+	let selectedOption: any
+	if (init) {
+		selectedOption = Array.from(options).find((o: any) => o.value === self.dom.controlsDiv.matrixType.node().value)
+	} else {
+		selectedOption = Array.from(options).find((o: any) => o.value === v.matrixType)
+	}
 	selectedOption.selected = true
 	v.matrixType = selectedOption.value
 }
