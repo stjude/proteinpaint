@@ -18,7 +18,8 @@ import {
 } from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { hicParseFile } from './parse.genome.ts'
-import { initWholeGenomeControls } from './controls.whole.genome.ts'
+import { init_hicInfoBar } from './info.bar.ts'
+import { init_hicControls } from './controls.whole.genome.ts'
 import { Div } from '../../types/d3'
 
 /*
@@ -148,6 +149,7 @@ class Hicstat {
 		this.dom = {
 			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
 			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
+			infoBarDiv: hic.holder.append('div').classed('sjpp-hic-infobar', true).style('display', 'inline-block'),
 			loadingDiv: d3select('body').append('div').attr('id', 'sjpp-loading-overlay'),
 			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
 			tip: new client.Menu()
@@ -215,7 +217,8 @@ class Hicstat {
 			this.dom.loadingDiv.style('display', 'none')
 			return
 		}
-		initWholeGenomeControls(hic, this)
+		init_hicInfoBar(hic, this)
+		init_hicControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
 		const tr1 = this.dom.plotDiv.append('tr')
 		const tr2 = this.dom.plotDiv.append('tr')
@@ -238,7 +241,7 @@ class Hicstat {
 		this.dom.controlsDiv.view.text('Genome')
 		const resolution = hic.bpresolution[0]
 
-		this.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
+		this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 
 		// # pixel per bin, may set according to resolution
 		const binpx = 1
@@ -431,7 +434,7 @@ class Hicstat {
 			this.error('no suitable resolution')
 			return
 		}
-		this.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
+		this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 
 		let binpx = 1
 		while ((binpx * maxchrlen) / resolution < 600) {
@@ -1370,7 +1373,7 @@ async function detailViewUpdateHic(hic: any, self: any) {
 		if (!xfragment) {
 			// use bpresolution, not fragment
 			self.detailview.resolution = resolution
-			self.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
+			self.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 			// fixed bin size only for bp bins
 			self.detailview.xbinpx = self.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
 			self.detailview.ybinpx = self.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
@@ -1423,7 +1426,7 @@ async function detailViewUpdateHic(hic: any, self: any) {
 				if (resolution == null) {
 					resolution = hic.fragresolution[hic.fragresolution.length - 1]
 				}
-				self.dom.controlsDiv.resolution.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
+				self.dom.infoBarDiv.resolution.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
 				self.detailview.resolution = resolution
 			}
 		}
@@ -1725,9 +1728,10 @@ export function hicparsefragdata(items: any) {
  * Also could invesigate consolidating the hic data fetches into a single function
  */
 
-/**
- *
+/** Calculates the cutoff from the server response and sets the view object's bpmaxv
+ * @param vlst array of values
  * @param view view object within self (e.g. self.genomeView)
+ * @param self
  */
 export async function setViewCutoff(vlst: any, view: any, self: any) {
 	const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
@@ -1748,23 +1752,23 @@ function colorizeElement(
 	if (v >= 0) {
 		// positive or zero, use red
 		const p = v >= view.bpmaxv ? 0 : Math.floor((255 * (view.bpmaxv - v)) / view.bpmaxv)
-		const redFill = `rgb(255, ${p}, ${p})`
+		const positiveFill = `rgb(255, ${p}, ${p})`
 		if (self.ingenome == true) {
-			obj.ctx.fillStyle = redFill
-			obj.ctx2.fillStyle = redFill
+			obj.ctx.fillStyle = positiveFill
+			obj.ctx2.fillStyle = positiveFill
 		} else {
 			/** ctx for the chrpair and detail view */
-			obj.fillStyle = redFill
+			obj.fillStyle = positiveFill
 		}
 	} else {
 		// negative, use blue
 		const p = Math.floor((255 * (view.bpmaxv + v)) / view.bpmaxv)
-		const blueFill = `rgb(${p}, ${p}, 255)`
+		const negativeFill = `rgb(${p}, ${p}, 255)`
 		if (self.ingenome == true) {
-			obj.ctx.fillStyle = blueFill
-			obj.ctx2.fillStyle = blueFill
+			obj.ctx.fillStyle = negativeFill
+			obj.ctx2.fillStyle = negativeFill
 		} else {
-			obj.fillStyle = blueFill
+			obj.fillStyle = negativeFill
 		}
 	}
 	const w = width || view.binpx
