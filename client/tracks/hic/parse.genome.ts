@@ -68,7 +68,10 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 			hic.sv.items = items
 		}
 		const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
-		if (data.error) throw { message: data.error.error }
+		if (data.error) {
+			self.errList.push(data.error)
+			return
+		}
 		const err = hicparsestat(hic, data.out)
 		if (err) throw { message: err }
 	} catch (err: any) {
@@ -77,7 +80,6 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 			console.log(err.stack)
 		}
 	}
-
 	/** Default args for each view */
 	const initialNmeth = hic.normalization.length ? hic.normalization[0] : defaultnmeth
 
