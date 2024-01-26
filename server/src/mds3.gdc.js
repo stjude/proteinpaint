@@ -13,10 +13,6 @@ function mayLog(...args) {
 	if (serverconfig.debugmode) console.log(args.join(' '))
 }
 
-// TODO fix in next PR
-// if geneExpHost is set, it is hitting v1 api and use "filters"; if not set, it is hitting v2 and must use "case_filters" to be cohort_centric. use it as "const body = { [`${prefix}filters`]: {...} } "  after softlaunch, delete all usage of REPLACE and always use "case_filters"
-const PREFIX = serverconfig.features.geneExpHost ? '' : 'case_'
-
 /*
 GDC API
 
@@ -311,7 +307,7 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 		f.content.push(filter2GDCfilter(q.filter))
 	}
 	const body = { size: 10000, fields: 'case_id' }
-	if (f.content.length) body.filters = f
+	if (f.content.length) body.case_filters = f
 
 	try {
 		const response = await got.post(path.join(apihost, 'cases'), { headers: getheaders(q), body: JSON.stringify(body) })
@@ -760,11 +756,7 @@ export function validate_query_geneCnv2(ds) {
 		const headers = getheaders(opts)
 		const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
 			headers,
-			body: JSON.stringify({
-				size: 100000,
-				fields: getFields(opts),
-				filters: getFilter(opts)
-			})
+			body: JSON.stringify(Object.assign({ size: 100000, fields: getFields(opts) }, getFilters(opts)))
 		})
 		const re = JSON.parse(tmp.body)
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
@@ -830,7 +822,7 @@ export function validate_query_geneCnv2(ds) {
 		return lst.join(',')
 	}
 
-	function getFilter(p) {
+	function getFilters(p) {
 		/* p={}
 		.gene=str
 			needed for lollipop view, to limit data on one gene
@@ -844,19 +836,24 @@ export function validate_query_geneCnv2(ds) {
 
 		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string' // gene is required for now
 
-		const filters = { op: 'and', content: [] }
+		const f = {
+			filters: { op: 'and', content: [] },
+			case_filters: { op: 'and', content: [] }
+		}
 
 		if (p.gene) {
-			filters.content.push({ op: '=', content: { field: 'cnv.consequence.gene.symbol', value: p.gene.split(',') } })
+			f.filters.content.push({ op: '=', content: { field: 'cnv.consequence.gene.symbol', value: p.gene.split(',') } })
 		}
 
 		if (p.filter0) {
-			filters.content.push(p.filter0)
+			f.case_filters.content.push(p.filter0)
 		}
 		if (p.filterObj) {
-			filters.content.push(filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj))
+			f.case_filters.content.push(
+				filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj)
+			)
 		}
-		return filters
+		return f
 	}
 }
 
@@ -1160,19 +1157,13 @@ async function snvindel_byisoform(opts, ds) {
 	// must use POST as filter can be too long for GET
 	const p1 = got.post(path.join(apihost, query1.endpoint), {
 		headers,
-		body: JSON.stringify({
-			size: query1.size,
-			fields: query1.fields.join(','),
-			filters: query1.filters(opts)
-		})
+		body: JSON.stringify(Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts)))
 	})
 	const p2 = got.post(path.join(apihost, query2.endpoint), {
 		headers,
-		body: JSON.stringify({
-			size: query2.size,
-			fields: query2.fields.join(','),
-			filters: query2.filters(opts, ds)
-		})
+		body: JSON.stringify(
+			Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
+		)
 	})
 	const [tmp1, tmp2] = await Promise.all([p1, p2])
 	let re_ssms, re_cases
@@ -1605,7 +1596,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
 
-	param.filters = isoform2ssm_query2_getcase.filters(q, ds)
+	Object.assign(param, isoform2ssm_query2_getcase.filters(q, ds))
 
 	const headers = getheaders(q) // will be reused below
 
@@ -1763,7 +1754,7 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 		body: JSON.stringify({
 			size: ds.__gdc.casesWithExpData.size,
 			fields: fields.join(','),
-			filters: filters.content.length ? filters : undefined
+			case_filters: filters.content.length ? filters : undefined
 		})
 	})
 	const re = JSON.parse(response.body)
@@ -2080,13 +2071,15 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 				{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
 			]
 		}
+		const case_filters = { op: 'and', content: [] }
 
 		if (q.filter0) {
-			filters.content.push(q.filter0)
+			case_filters.content.push(q.filter0)
 		}
 
 		const body = {
 			filters,
+			case_filters,
 			size: 100,
 			fields: [
 				'id',
@@ -2327,8 +2320,8 @@ const isoform2ssm_query1_getvariant = {
 	*/
 	filters: p => {
 		const f = {
-			op: 'and',
-			content: []
+			filters: { op: 'and', content: [] },
+			case_filters: { op: 'and', content: [] }
 		}
 
 		let r
@@ -2339,7 +2332,7 @@ const isoform2ssm_query1_getvariant = {
 
 		if (p.isoform) {
 			if (typeof p.isoform != 'string') throw '.isoform value not string'
-			f.content.push({
+			f.filters.content.push({
 				op: '=',
 				content: {
 					field: 'consequence.transcript.transcript_id',
@@ -2348,32 +2341,32 @@ const isoform2ssm_query1_getvariant = {
 			})
 			if (r) {
 				// limit ssm to zoom in region
-				f.content.push({
+				f.filters.content.push({
 					op: '>=',
 					content: { field: 'start_position', value: r.start }
 				})
-				f.content.push({
+				f.filters.content.push({
 					op: '<=',
 					content: { field: 'start_position', value: r.stop }
 				})
 			}
 		} else if (r) {
 			// no isoform but rglst is provided
-			f.content.push({
+			f.filters.content.push({
 				op: '=',
 				content: { field: 'chromosome', value: r.chr }
 			})
-			f.content.push({
+			f.filters.content.push({
 				op: '>=',
 				content: { field: 'start_position', value: r.start }
 			})
-			f.content.push({
+			f.filters.content.push({
 				op: '<=',
 				content: { field: 'start_position', value: r.stop }
 			})
 		} else if (p.case_id) {
 			if (typeof p.case_id != 'string') throw '.case_id value not string'
-			f.content.push({
+			f.filters.content.push({
 				op: '=',
 				content: {
 					field: 'cases.case_id',
@@ -2386,7 +2379,7 @@ const isoform2ssm_query1_getvariant = {
 
 		if (p.set_id) {
 			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.content.push({
+			f.case_filters.content.push({
 				op: 'in',
 				content: {
 					field: 'cases.case_id',
@@ -2395,10 +2388,10 @@ const isoform2ssm_query1_getvariant = {
 			})
 		}
 		if (p.filter0) {
-			f.content.push(p.filter0)
+			f.case_filters.content.push(p.filter0)
 		}
 		if (p.filterObj) {
-			f.content.push(filter2GDCfilter(p.filterObj))
+			f.case_filters.content.push(filter2GDCfilter(p.filterObj))
 		}
 		return f
 	}
@@ -2437,7 +2430,10 @@ const isoform2ssm_query2_getcase = {
 		.filter0
 		.filterObj
 		*/
-		const f = { op: 'and', content: [] }
+		const f = {
+			filters: { op: 'and', content: [] },
+			case_filters: { op: 'and', content: [] }
+		}
 
 		/* if query provides isoform, rglst[] can be used alongside isoform to restrict ssm to part of isoform (when zoomed in)
 		if no ssm or isoform, rglst[] must be provided (querying from genomic mode)
@@ -2446,7 +2442,7 @@ const isoform2ssm_query2_getcase = {
 
 		if (p.ssm_id_lst) {
 			if (typeof p.ssm_id_lst != 'string') throw 'ssm_id_lst not string'
-			f.content.push({
+			f.filters.content.push({
 				op: '=',
 				content: {
 					field: 'ssm.ssm_id',
@@ -2455,7 +2451,7 @@ const isoform2ssm_query2_getcase = {
 			})
 			hasSsmOrIsoform = true
 		} else if (p.isoform) {
-			f.content.push({
+			f.filters.content.push({
 				op: '=',
 				content: {
 					field: 'ssms.consequence.transcript.transcript_id',
@@ -2465,7 +2461,7 @@ const isoform2ssm_query2_getcase = {
 			hasSsmOrIsoform = true
 		} else if (p.isoforms) {
 			if (!Array.isArray(p.isoforms)) throw '.isoforms[] not array'
-			f.content.push({
+			f.filters.content.push({
 				op: 'in',
 				content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms }
 			})
@@ -2482,11 +2478,11 @@ const isoform2ssm_query2_getcase = {
 			if (hasSsmOrIsoform) {
 				if (r) {
 					// rglst[] is optional in this case; to filter out variants that are out of view range (e.g. zoomed in on protein) necessary when zooming in
-					f.content.push({
+					f.filters.content.push({
 						op: '>=',
 						content: { field: 'ssms.start_position', value: r.start }
 					})
-					f.content.push({
+					f.filters.content.push({
 						op: '<=',
 						content: { field: 'ssms.start_position', value: r.stop }
 					})
@@ -2494,15 +2490,15 @@ const isoform2ssm_query2_getcase = {
 			} else {
 				// rglst is required now
 				if (!r) throw '.ssm_id_lst, .isoform, .isoforms, .rglst[] are all missing'
-				f.content.push({
+				f.filters.content.push({
 					op: '=',
 					content: { field: 'ssms.chromosome', value: r.chr }
 				})
-				f.content.push({
+				f.filters.content.push({
 					op: '>=',
 					content: { field: 'ssms.start_position', value: r.start }
 				})
-				f.content.push({
+				f.filters.content.push({
 					op: '<=',
 					content: { field: 'ssms.start_position', value: r.stop }
 				})
@@ -2511,7 +2507,7 @@ const isoform2ssm_query2_getcase = {
 
 		if (p.set_id) {
 			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.content.push({
+			f.case_filters.content.push({
 				op: 'in',
 				content: {
 					field: 'cases.case_id',
@@ -2520,23 +2516,23 @@ const isoform2ssm_query2_getcase = {
 			})
 		}
 		if (p.filter0) {
-			f.content.push(p.filter0)
+			f.case_filters.content.push(p.filter0)
 		}
 		if (p.filterObj) {
-			f.content.push(filter2GDCfilter(p.filterObj))
+			f.case_filters.content.push(filter2GDCfilter(p.filterObj))
 		}
 		if (p.tid2value) {
 			for (const termid in p.tid2value) {
 				const t = ds.cohort.termdb.q.termjsonByOneid(termid)
 				if (!t) continue
 				if (t.type == 'categorical') {
-					f.content.push({
+					f.case_filters.content.push({
 						op: 'in',
 						content: { field: termid, value: [p.tid2value[termid]] }
 					})
 				} else if (t.type == 'integer') {
 					for (const val of p.tid2value[termid]) {
-						f.content.push({
+						f.case_filters.content.push({
 							op: val.op,
 							content: { field: termid, value: val.range }
 						})
