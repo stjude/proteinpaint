@@ -150,7 +150,8 @@ export class Matrix {
 
 			const prevTranspose = this.settings.transpose
 			// controlsRenderer.getSettings() supplies settings that are not tracked in the global app and plot state
-			Object.assign(this.settings, this.config.settings, this.controlsRenderer.getSettings())
+			// use structuredClone to avoid overwriting of original settings.matrix
+			Object.assign(this.settings, structuredClone(this.config.settings), this.controlsRenderer.getSettings())
 
 			// see matrix.data for logic to be able to skip server data request or re-ordering
 			this.computeStateDiff()
