@@ -293,13 +293,22 @@ export class TermdbVocab extends Vocab {
 						if (!contQkeys.includes(key)) delete q[key]
 					}
 				}
+				const term = JSON.parse(JSON.stringify(t.term))
+				if (term.snps) {
+					// remove unneeded parameters from term
+					for (const snp of term.snps) {
+						snp.genome = this.vocab.genome
+						delete snp.mlst
+					}
+				}
 				return {
 					id: t.id,
 					q,
 					type: t.term.type,
 					refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
 					interactions: t.interactions || [],
-					values: t.term.values
+					values: t.term.values,
+					term
 				}
 			})
 		}
