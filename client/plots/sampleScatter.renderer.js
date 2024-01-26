@@ -301,7 +301,7 @@ export function setRenderers(self) {
 		const particles = new THREE.Points(geometry, material)
 
 		scene.add(particles)
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas })
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 
 		document.addEventListener('mousewheel', event => {
@@ -385,7 +385,7 @@ export function setRenderers(self) {
 			scene.add(circle)
 		}
 
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas })
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 
 		function animate() {
 			requestAnimationFrame(animate)
