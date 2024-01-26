@@ -176,7 +176,7 @@ export function setRenderers(self) {
 			chart.yAxis.call(chart.axisLeft)
 		}
 		const particleWidth = Math.sqrt(self.settings.size)
-		if (self.settings.showAxes) {
+		if (self.settings.showAxes && !(self.is2DLarge || self.is3D)) {
 			clipRect
 				.attr('x', self.axisOffset.x)
 				.attr('y', 0)
