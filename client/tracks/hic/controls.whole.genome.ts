@@ -5,10 +5,26 @@ import { Elem } from '../../types/d3'
 import blocklazyload from '#src/block.lazyload'
 
 /**
+********* EXPORTED *********
+
+initWholeGenomeControls()
+
+********* INTERNAL *********
+addLabel()
+makeNormMethDisplay()
+getData()
+setmaxv()
+switchview()
+
+see function documentation for more details
+ */
+
+/**
  * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, horizontal and detail views)
  * Some of the view button text and functionality updated in hic.straw.ts
- * @param hic
- * @returns
+ * @param hic formatted input
+ * @param self app obj
+ * @returns control panel for the app
  */
 export function initWholeGenomeControls(hic: any, self: any) {
 	const menuWrapper = self.dom.controlsDiv
@@ -169,6 +185,12 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.controlsDiv.zoomOut = zoomDiv.append('button').style('margin-right', '10px').text('Out')
 }
 
+/**
+ * Returns appropriately styled label for menu, for consistency and ease of updating
+ * @param tr table row in menu
+ * @param text label text
+ * @returns
+ */
 function addLabel(tr: Elem, text: string) {
 	return tr
 		.append('td')
@@ -182,7 +204,7 @@ function addLabel(tr: Elem, text: string) {
 /**
  * Show either NONE if no normalization methods present in the hic file of dropdown of normalization methods
  * read from the hic file.
- * @param hic File input
+ * @param hic formatted input
  * @param self App object
  */
 function makeNormMethDisplay(hic: any, self: any) {
@@ -206,9 +228,9 @@ function makeNormMethDisplay(hic: any, self: any) {
 }
 
 /**
- * Request data when user changes dropdowns per view
- * @param hic
- * @param self
+ * Requests data when user changes dropdowns per view specific functions
+ * @param hic file input
+ * @param self app obj
  * @returns
  */
 async function getData(hic: any, self: any) {
@@ -231,10 +253,10 @@ async function getData(hic: any, self: any) {
 }
 
 /**
- * setting max value from user input
- * @param hic
- * @param maxv
- * @returns
+ * Setting max value from user input
+ * @param hic formatted input
+ * @param maxv value from UI
+ * @returns view specific cutoff value
  */
 function setmaxv(self: any, maxv: number) {
 	if (self.ingenome) {
@@ -288,7 +310,6 @@ function setmaxv(self: any, maxv: number) {
  * Launches or rerenders previously created views.
  * @param hic file input
  * @param self app obj
-
  */
 function switchview(hic: any, self: any) {
 	//Remove all previous elements
