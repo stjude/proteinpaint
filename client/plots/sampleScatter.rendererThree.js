@@ -20,7 +20,7 @@ export function setRenderersThree(self) {
 			.attr('transform', 'translate(20, 20)')
 		self.renderLegend(chart)
 
-		const fov = 60
+		const fov = 50
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
@@ -112,7 +112,7 @@ export function setRenderersThree(self) {
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
 		self.renderLegend(chart)
-		const fov = 20
+		const fov = 15
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
