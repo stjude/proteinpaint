@@ -90,7 +90,7 @@ async function listMafFiles(q: GdcMafRequest) {
 			{ op: '=', content: { field: 'access', value: 'open' } } // delete if later to support controlled files
 		]
 	}
-	const case_filters = { op: 'and', content: [] }
+	const case_filters: any = { op: 'and', content: [] }
 	if (q.filter0) {
 		case_filters.content.push(q.filter0)
 	}
