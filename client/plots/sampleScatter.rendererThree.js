@@ -6,10 +6,20 @@ export function setRenderersThree(self) {
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
 		chart.chartDiv.selectAll('*').remove()
-		self.canvas = chart.chartDiv.append('canvas').node()
+
+		self.canvas = chart.chartDiv.append('div').style('display', 'inline-block').append('canvas').node()
 		self.canvas.width = self.settings.svgw * 1.5
 		self.canvas.height = self.settings.svgh * 1.5
 		chart.chartDiv.style('margin', '20px 20px')
+		chart.legendDiv = chart.chartDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		chart.legendG = chart.legendDiv
+			.append('svg')
+			.attr('width', self.settings.svgw / 2)
+			.attr('height', self.settings.svgh * 1.5)
+			.append('g')
+			.attr('transform', 'translate(20, 20)')
+		self.renderLegend(chart)
+
 		const fov = 60
 		const near = 0.1
 		const far = 1000
@@ -51,6 +61,8 @@ export function setRenderersThree(self) {
 			const vertices = []
 			const colors = []
 			for (const sample of chart.data.samples) {
+				const opacity = self.getOpacity(sample)
+				if (opacity == 0) continue
 				let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
 				let y = (chart.yAxisScale(sample.y) - chart.yScaleMax) / -self.canvas.height
 				let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
