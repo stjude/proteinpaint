@@ -300,8 +300,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		api.dom.clearBtn.property('disabled', !geneList?.length)
 		const hasChanged = origNames !== JSON.stringify(geneList.map(t => t.gene).sort())
 		api.dom.restoreBtn?.property('disabled', !hasChanged)
-		// disable submit button when gene list not changed or empty
-		api.dom.submitBtn.property('disabled', !hasChanged || !geneList?.length)
+		// disable submit button when gene list not changed or is empty in expression mode
+		api.dom.submitBtn.property('disabled', !hasChanged || (mode == 'expression' && !geneList?.length))
 		if (hasChanged) submitBtn.node().focus()
 	}
 
