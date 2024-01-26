@@ -142,6 +142,12 @@ class Hicstat {
 		start: number
 		stop: number
 	}>
+	colorScale: {
+		gradientStart: any
+		gradientStop: any
+		negative: string
+		positive: string
+	}
 
 	constructor(hic: any, debugmode: boolean) {
 		this.holder = hic.holder
@@ -198,6 +204,14 @@ class Hicstat {
 		this.inhorizontal = false
 		this.x = {}
 		this.y = {}
+		this.colorScale = {
+			gradientStart: null,
+			gradientStop: null,
+			//Start with white for zero. Change color when negative values are implemented
+			//Args shown are not in use. Anticipating future implementation
+			negative: hic.colorNeg || 'white',
+			positive: hic.color || hic.colorPos || 'red'
+		}
 	}
 
 	async error(err: string | string[]) {
@@ -223,13 +237,9 @@ class Hicstat {
 		const tr1 = this.dom.plotDiv.append('tr')
 		const tr2 = this.dom.plotDiv.append('tr')
 		this.dom.plotDiv = {
-			//old c
 			plot: tr1.append('td').classed('sjpp-hic-plot', true),
-			//old y
 			yAxis: tr1.append('td').classed('sjpp-hic-plot-xaxis', true),
-			//old x
 			xAxis: tr2.append('td').classed('sjpp-hic-plot-yaxis', true),
-			//placeholder
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		/** Open the whole genome view by default. User clicks within squares to launch the other views. */
@@ -1310,6 +1320,7 @@ export async function getdata_chrpair(hic: any, self: any) {
  * set normalization method from <select>
  * @param hic
  * @param v view object in self
+ * @param init true if called during view init
  * @returns
  */
 
@@ -1338,6 +1349,7 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
  * Identifies the selected matrix type from the dropdown and sets it to the view object
  * @param v view object within self (e.g. self.genomeView) Each view object has its own matrixType
  * @param self
+ * @param init true if called during view init
  */
 export function matrixType2select(v: any, self: any, init?: boolean) {
 	const options = self.dom.controlsDiv.matrixType.node().options
