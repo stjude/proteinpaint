@@ -1079,18 +1079,39 @@ function getLine4OneSnp(snpid, tw) {
 	const gt2count = tw.snpgt2count.get(snpid)
 	if (!gt2count) return { k: 'Error', v: 'Variant not found' }
 
+	const snp = tw.term.snps.find(snp => snp.snpid == snpid)
+
+	// snp id label
+	const urls = []
+	if (snp.dbsnp) urls.push(`<a href="https://www.ncbi.nlm.nih.gov/snp/${snpid}" target="_blank">dbSNP</a>`)
+	urls.push(
+		`<a href="https://regulomedb.org/regulome-search?regions=${snp.chr}%3A${snp.pos}-${snp.pos + 1}&genome=${
+			snp.genome == 'hg38' ? 'GRCh38' : snp.genome
+		}" target="_blank">RegulomeDB</a>`
+	)
+	const snpid_label = `${snpid} (${urls.join(', ')})`
+
+	// gt label
+	const gts = []
+	for (const [gt, c] of gt2count) gts.push(gt + '=' + c)
+	const gt_label = `Genotypes: ${gts.join(', ')}`
+
+	let lst
 	if (tw.monomorphicLst.includes(snpid)) {
-		const [gt, c] = [...gt2count][0]
-		return { k: 'Genotype', v: gt + '=' + c }
-	}
-	const lst = [
-		`${tw.q.alleleType == 0 ? 'Minor' : 'Alternative'} allele=${
+		lst = [snpid_label, gt_label]
+	} else {
+		// effect allele label
+		const effale_label = `Effect allele: ${
 			tw.highAFsnps.has(snpid) ? tw.highAFsnps.get(snpid).effAle : tw.lowAFsnps.get(snpid).effAle
-		}`,
-		'AF=' + tw.snpid2AFstr.get(snpid)
-	]
-	for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
-	return { k: 'Variant:', v: lst.join('&nbsp;&nbsp;&nbsp;') }
+		}`
+
+		// allel frequency label
+		const af_label = `Allele frequency: ${tw.snpid2AFstr.get(snpid)}`
+
+		lst = [snpid_label, effale_label, af_label, gt_label]
+	}
+
+	return { k: 'Variant:', v: lst.join('&nbsp;&#65372;&nbsp;') }
 }
 
 /*

@@ -67,7 +67,6 @@ export class RegressionResults {
 		const holder = this.opts.holder
 		holder
 			.append('div')
-			.attr('id', 'pp-regression-results-title')
 			.style('margin-top', '10px')
 			.style('padding-top', '20px')
 			.style('font-size', '1.2em')
@@ -115,7 +114,9 @@ export class RegressionResults {
 			await this.displayResult(data)
 
 			// scroll to results
-			document.getElementById('pp-regression-results-title').scrollIntoView({ behavior: 'smooth' })
+			const results_y = this.dom.holder.node().getBoundingClientRect().top + window.scrollY
+			const nav_height = document.querySelector('.sjpp-nav').getBoundingClientRect().height
+			window.scroll({ behavior: 'smooth', top: results_y - nav_height })
 		} catch (e) {
 			this.hasError = true
 			this.dom.holder.style('display', 'block')
@@ -1119,7 +1120,9 @@ async function createGenomebrowser(self, input, resultLst) {
 		click_snvindel: async m => {
 			self.displayResult_oneset(m.regressionResult.data)
 			await mayCheckLD(m, input, self)
-			self.dom.oneSetResultDiv.node().scrollIntoView({ behavior: 'smooth' })
+			const result_y = self.dom.oneSetResultDiv.node().getBoundingClientRect().top + window.scrollY
+			const nav_height = document.querySelector('.sjpp-nav').getBoundingClientRect().height
+			window.scroll({ behavior: 'smooth', top: result_y - nav_height })
 		}
 	})
 
