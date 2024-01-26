@@ -205,6 +205,12 @@ class Hicstat {
 	async render(hic: any) {
 		this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner').style('display', '')
 		await hicParseFile(hic, this.debugmode, this)
+		if (this.errList.length) {
+			//Display file reader errors to user before rendering app
+			this.error(this.errList)
+			this.dom.loadingDiv.style('display', 'none')
+			return
+		}
 		initWholeGenomeControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
 		const tr1 = this.dom.plotDiv.append('tr')
