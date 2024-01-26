@@ -13,6 +13,10 @@ function mayLog(...args) {
 	if (serverconfig.debugmode) console.log(args.join(' '))
 }
 
+// TODO fix in next PR
+// if geneExpHost is set, it is hitting v1 api and use "filters"; if not set, it is hitting v2 and must use "case_filters" to be cohort_centric. use it as "const body = { [`${prefix}filters`]: {...} } "  after softlaunch, delete all usage of REPLACE and always use "case_filters"
+const PREFIX = serverconfig.features.geneExpHost ? '' : 'case_'
+
 /*
 GDC API
 
@@ -1126,11 +1130,22 @@ function parseArribaName(f, str) {
 ////////////////////////// CNV ends /////////////////////////////
 
 export function getheaders(q) {
-	// q is req.query{}
+	/*
+	q { 
+		token,
+		//token is only used for adhoc testing outside of gdc env, by directly add token string in runpp(), this is not used in gdc portal
+		sessionid,
+		__protected__:{sessionid}
+		// see middleware
+	}
+	*/
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	if (q) {
 		if (q.token) h['X-Auth-Token'] = q.token
 		if (q.sessionid) h['Cookie'] = 'sessionid=' + q.sessionid
+		if (q.__protected__?.sessionid) {
+			h['Cookie'] = 'sessionid=' + q.__protected__.sessionid
+		}
 	}
 	return h
 }

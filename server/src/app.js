@@ -203,7 +203,24 @@ app.use((req, res, next) => {
 		// if using req.params based on expressjs server route /:paramName interpolation
 		Object.assign(req.query, req.body)
 	}
+
+	// log the request before adding protected info
 	log(req)
+
+	/*
+	!!! put this code after logging the request, so these protected info are not logged !!!
+	!! more or less quick fix !!
+	in gdc environment, this will pass sessionid from cookie to req.query
+	to be added to request header where it's querying gdc api
+	by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
+	these *protected* contents are not used in non-gdc code
+	*/
+	req.query.__protected__ = {}
+	if (req.cookies?.sessionid) {
+		req.query.__protected__.sessionid = req.cookies.sessionid
+	}
+	Object.freeze(req.query.__protected__)
+
 	setHeaders(res)
 	res.header(
 		'Access-Control-Allow-Origin',
