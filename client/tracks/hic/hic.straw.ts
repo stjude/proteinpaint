@@ -200,6 +200,7 @@ class Hicstat {
 		showErrorsWithCounter(this.errList, this.dom.errorDiv)
 		//Remove errors after displaying
 		this.errList = []
+		this.dom.loadingDiv.style('display', 'none')
 	}
 
 	async render(hic: any) {
@@ -1023,7 +1024,7 @@ async function colorizeGenomeElements(self: any) {
 			const leadpx = Math.floor(plead / self.genomeview.resolution) * self.genomeview.binpx
 			const followpx = Math.floor(pfollow / self.genomeview.resolution) * self.genomeview.binpx
 			obj.data.push([leadpx, followpx, value])
-			colorizeElement(leadpx, followpx, value, obj, self.genomeview)
+			colorizeElement(leadpx, followpx, value, self.genomeview, self, obj)
 		}
 		obj.img.attr('xlink:href', obj.canvas.toDataURL())
 		if (obj.canvas2) {
@@ -1289,16 +1290,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		setViewCutoff(vlst, self.chrpairview, self)
 
 		for (const [x, y, v] of self.chrpairview.data) {
-			//Show red for positive values and blue for negative values
-			if (v >= 0) {
-				const p =
-					v >= self.chrpairview.bpmaxv ? 0 : Math.floor((255 * (self.chrpairview.bpmaxv - v)) / self.chrpairview.bpmaxv)
-				ctx.fillStyle = `rgb(255, ${p}, ${p})`
-			} else {
-				const p = Math.floor((255 * (self.chrpairview.bpmaxv + v)) / self.chrpairview.bpmaxv)
-				ctx.fillStyle = `rgb(${p}, ${p}, 255)`
-			}
-			ctx.fillRect(x, y, binpx, binpx)
+			colorizeElement(x, y, v, self.chrpairview, self, ctx)
 		}
 	} catch (err: any) {
 		self.errList.push(err.message || err)
@@ -1564,7 +1556,7 @@ export function getdata_detail(hic: any, self: any) {
 				//firstisx = hic.genome.chrlookup[chrx.toUpperCase()].len > hic.genome.chrlookup[chry.toUpperCase()].len
 			}
 
-			const lst: any = []
+			const lst = [] as number[][]
 			let err = 0
 			let maxv = 0
 
@@ -1679,14 +1671,7 @@ export function getdata_detail(hic: any, self: any) {
 			self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
 			for (const [x, y, w, h, v] of lst) {
-				if (v >= 0) {
-					const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-					ctx.fillStyle = `rgb(255, ${p}, ${p})`
-				} else {
-					const p = Math.floor((255 * (maxv + v)) / maxv)
-					ctx.fillStyle = `rgb(${p}, ${p}, 255)`
-				}
-				ctx.fillRect(x, y, w, h)
+				colorizeElement(x, y, v, self.detailview, self, ctx, w, h)
 			}
 
 			self.detailview.data = lst
@@ -1746,20 +1731,46 @@ export async function setViewCutoff(vlst: any, view: any, self: any) {
 	view.bpmaxv = maxv
 	self.dom.controlsDiv.inputBpMaxv.property('value', view.bpmaxv)
 }
-
-function colorizeElement(leadpx: number, followpx: number, v: number, obj: any, view: any) {
+//Super messy, need to clean up
+function colorizeElement(
+	leadpx: number,
+	followpx: number,
+	v: number,
+	view: any,
+	self: any,
+	obj: any,
+	width?: number,
+	height?: number
+) {
 	if (v >= 0) {
 		// positive or zero, use red
 		const p = v >= view.bpmaxv ? 0 : Math.floor((255 * (view.bpmaxv - v)) / view.bpmaxv)
-		obj.ctx.fillStyle = `rgb(255, ${p}, ${p})`
-		if (obj.ctx2) obj.ctx2.fillStyle = `rgb(255, ${p}, ${p})`
+		const redFill = `rgb(255, ${p}, ${p})`
+		if (self.ingenome == true) {
+			obj.ctx.fillStyle = redFill
+			obj.ctx2.fillStyle = redFill
+		} else {
+			/** ctx for the chrpair and detail view */
+			obj.fillStyle = redFill
+		}
 	} else {
 		// negative, use blue
 		const p = Math.floor((255 * (view.bpmaxv + v)) / view.bpmaxv)
-		obj.ctx.fillStyle = `rgb(${p}, ${p}, 255)`
-		if (obj.ctx2) obj.ctx2.fillStyle = `rgb(${p}, ${p}, 255)`
+		const blueFill = `rgb(${p}, ${p}, 255)`
+		if (self.ingenome == true) {
+			obj.ctx.fillStyle = blueFill
+			obj.ctx2.fillStyle = blueFill
+		} else {
+			obj.fillStyle = blueFill
+		}
 	}
+	const w = width || view.binpx
+	const h = height || view.binpx
 
-	obj.ctx.fillRect(followpx, leadpx, view.binpx, view.binpx)
-	if (obj.ctx2) obj.ctx2.fillRect(leadpx, followpx, view.binpx, view.binpx)
+	if (self.ingenome == true) {
+		obj.ctx.fillRect(followpx, leadpx, w, h)
+		obj.ctx2.fillRect(leadpx, followpx, w, h)
+	} else {
+		obj.fillRect(followpx, leadpx, w, h)
+	}
 }
