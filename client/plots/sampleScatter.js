@@ -449,10 +449,26 @@ class Scatter {
 		}
 		// TODO: handle multiple chart download when there is a divide by term
 		this.components.controls.on('downloadClick.scatter', () => {
-			for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
+			if (this.is2DLarge || this.is3D) {
+				const url = this.canvas.toDataURL('image/png')
+				downloadImage(url)
+			} else for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
 		})
 		this.dom.toolsDiv = this.dom.controlsHolder.insert('div')
 	}
+}
+
+export function downloadImage(imageURL) {
+	const link = document.createElement('a')
+	// If you don't know the name or want to use
+	// the webserver default set name = ''
+	link.setAttribute('download', 'image')
+	document.body.appendChild(link)
+	link.click()
+	link.remove()
+	link.href = imageURL
+	link.click()
+	link.remove()
 }
 
 export async function getPlotConfig(opts, app) {
