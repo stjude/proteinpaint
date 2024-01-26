@@ -36,6 +36,11 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.attr('class', 'sjpp-hic-menu')
 		.style('display', menuVisible ? 'block' : 'none')
 	const menuTable = menu.append('table').style('border-spacing', '3px')
+
+	const versionRow = menuTable.append('tr')
+	addLabel(versionRow, 'hic file version')
+	versionRow.append('td').text(hic.version)
+
 	if (hic.enzyme) {
 		const enzymeRow = menuTable.append('tr')
 		addLabel(enzymeRow, 'ENZYME')
@@ -170,6 +175,7 @@ function addLabel(tr: Elem, text: string) {
 		.style('color', '#858585')
 		.style('vertical-align', 'top')
 		.style('font-size', '.8em')
+		.style('vertical-align', 'middle')
 		.text(text.toUpperCase())
 }
 
