@@ -321,7 +321,6 @@ function switchview(hic: any, self: any) {
 		nmeth2select(hic, self.detailview)
 		matrixType2select(self.detailview, self)
 	} else if (self.inhorizontal) {
-		//TODO: Problem with this is it rerenders. Maybe a way to save the rendering and just show/hide?
 		blocklazyload(self.horizontalview.args)
 	}
 

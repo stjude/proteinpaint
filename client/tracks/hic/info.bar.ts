@@ -1,5 +1,3 @@
-import { Elem } from '../../types/d3'
-
 /**
 ********* EXPORTED *********
 init_hicInfoBar()
@@ -10,6 +8,11 @@ init_hicInfoBar()
 see function documentation for more details
  */
 
+/**
+ * Initializes the info bar above hic plots
+ * @param hic formatted hic object with defaults
+ * @param self app object
+ */
 export function init_hicInfoBar(hic: any, self: any) {
 	const wrapper = self.dom.infoBarDiv
 		// .style('background', 'rgb(253, 250, 244)')
@@ -21,14 +24,12 @@ export function init_hicInfoBar(hic: any, self: any) {
 	const labelRow = table.append('tr')
 	const valueRow = table.append('tr')
 
-	//Display verion
+	//Display version
 	addLabel('Version')
 	addValue(hic.version)
 
-	if (hic.enzyme) {
-		addLabel('Enzyme')
-		addValue(hic.enzyme)
-	}
+	addLabel('Enzyme')
+	addValue(hic.enzyme || 'None')
 
 	//Text dynamically updates from hic.straw and controls.whole.genome
 	addLabel('Resolution')
