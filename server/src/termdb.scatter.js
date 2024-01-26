@@ -420,9 +420,9 @@ export async function getScatterCoordinates(req, q, ds) {
 
 	sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y , ${zterm ? 'az.value AS z' : '0 as z'}
 			FROM anno_${xterm.type} ax 
-			JOIN anno_${yterm.type} ay on ax.sample = ay.sample and ay.term_id = '${yterm.id}'  
+			JOIN anno_${yterm.type} ay on ax.sample = ay.sample  
 			${zterm ? `JOIN anno_${zterm.type} az on ax.sample = az.sample and az.term_id = '${zterm.id}' ` : ''}
-			WHERE ax.term_id = '${xterm.id}'`
+			WHERE ax.term_id = '${xterm.id}' and ay.term_id = '${yterm.id}'`
 	if (filter) sql += ` AND ax.sample IN ${filter.CTEname}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)

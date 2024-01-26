@@ -112,7 +112,7 @@ export function setRenderersThree(self) {
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
 		self.renderLegend(chart)
-		const fov = 15
+		const fov = 20
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
@@ -130,13 +130,12 @@ export function setRenderersThree(self) {
 		const light = new THREE.DirectionalLight(whiteColor, 2)
 		light.position.set(2, 1, 5)
 		scene.add(light)
-
 		for (const sample of chart.data.samples) {
 			const opacity = self.getOpacity(sample)
 			if (opacity == 0) continue
-			let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
-			let y = (chart.yAxisScale(sample.y) - chart.yScaleMax) / self.canvas.height
-			let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
+			let x = Math.abs((sample.x - chart.xMin) / (chart.xMax - chart.xMin))
+			let y = Math.abs((sample.y - chart.yMin) / (chart.yMax - chart.yMin))
+			let z = Math.abs((sample.z - chart.zMin) / (chart.zMax - chart.zMin))
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			const geometry = new THREE.SphereGeometry(0.005, 32)
 			const material = new THREE.MeshLambertMaterial({ color })
