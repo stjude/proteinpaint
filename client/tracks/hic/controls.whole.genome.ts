@@ -7,7 +7,7 @@ import blocklazyload from '#src/block.lazyload'
 /**
 ********* EXPORTED *********
 
-initWholeGenomeControls()
+init_hicControls()
 
 ********* INTERNAL *********
 addLabel()
@@ -26,7 +26,7 @@ see function documentation for more details
  * @param self app obj
  * @returns control panel for the app
  */
-export function initWholeGenomeControls(hic: any, self: any) {
+export function init_hicControls(hic: any, self: any) {
 	const menuWrapper = self.dom.controlsDiv
 		.style('background', 'rgb(253, 250, 244)')
 		.style('vertical-align', 'top')
@@ -53,16 +53,6 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('display', menuVisible ? 'block' : 'none')
 	const menuTable = menu.append('table').style('border-spacing', '3px')
 
-	const versionRow = menuTable.append('tr')
-	addLabel(versionRow, 'hic file version')
-	versionRow.append('td').text(hic.version)
-
-	if (hic.enzyme) {
-		const enzymeRow = menuTable.append('tr')
-		addLabel(enzymeRow, 'ENZYME')
-		enzymeRow.append('td').text(hic.enzyme)
-	}
-
 	const normalizationRow = menuTable.append('tr')
 	addLabel(normalizationRow, 'NORMALIZATION')
 	self.dom.controlsDiv.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select')
@@ -83,10 +73,6 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			if (v <= 0) return self.error('invalid cutoff value')
 			setmaxv(self, v)
 		})
-
-	const resolutionRow = menuTable.append('tr')
-	addLabel(resolutionRow, 'RESOLUTION')
-	self.dom.controlsDiv.resolution = resolutionRow.append('td').append('span')
 
 	const matrixTypeRow = menuTable.append('tr')
 	addLabel(matrixTypeRow, 'matrix type')
@@ -195,9 +181,8 @@ function addLabel(tr: Elem, text: string) {
 	return tr
 		.append('td')
 		.style('color', '#858585')
-		.style('vertical-align', 'top')
 		.style('font-size', '.8em')
-		.style('vertical-align', 'middle')
+		.style('vertical-align', text.toUpperCase() == 'VIEW' ? 'top' : 'middle')
 		.text(text.toUpperCase())
 }
 
@@ -322,7 +307,7 @@ function switchview(hic: any, self: any) {
 		matrixType2select(self.genomeview, self)
 		self.dom.plotDiv.plot.node().appendChild(self.genomeview.svg.node())
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.genomeview.bpmaxv)
-		self.dom.controlsDiv.resolution.text(bplen(self.genomeview.resolution) + ' bp')
+		self.dom.infoBarDiv.resolution.text(bplen(self.genomeview.resolution) + ' bp')
 	} else if (self.inchrpair) {
 		self.dom.controlsDiv.view.text(`${self.x.chr}-${self.y.chr} Pair`)
 		nmeth2select(hic, self.chrpairview)
@@ -331,7 +316,7 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.xAxis.node().appendChild(self.chrpairview.axisx.node())
 		self.dom.plotDiv.plot.node().appendChild(self.chrpairview.canvas)
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
-		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
+		self.dom.infoBarDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
 	} else if (self.indetail) {
 		nmeth2select(hic, self.detailview)
 		matrixType2select(self.detailview, self)

@@ -51,8 +51,6 @@ export type MainPlotDiv = {
 }
 
 export type HicstrawDom = {
-	/** Holds the cloak when the view is loading. */
-	loadingDiv: Div
 	/** Placeholder div for displaying errors to the user */
 	errorDiv: Elem
 	/** Control panel. Appears as a collapsible burger menu*/
@@ -61,8 +59,6 @@ export type HicstrawDom = {
 		nmeth: Elem
 		/** User input for cutoff */
 		inputBpMaxv: Input
-		/** Text display of resolution */
-		resolution: Elem
 		/** User select matrix type. Returns straw values based on selected type. */
 		matrixType: Elem
 		/** Displays text of the user's current view and buttons for other views (except in genome view) */
@@ -84,6 +80,14 @@ export type HicstrawDom = {
 		/** Zoom out button whilst in the detailed view */
 		zoomOut: Elem
 	}
+	/** Information display for the user */
+	infoBarDiv: {
+		/** Text display of resolution */
+		resolution: Elem
+	}
+	/** Holds the cloak when the view is loading. */
+	loadingDiv: Div
+	/** Holder for the plot and axes */
 	plotDiv: MainPlotDiv
 	/** Pop up menu */
 	tip: any
