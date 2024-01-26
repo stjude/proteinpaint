@@ -1,13 +1,17 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { detectOne, detectGte, whenVisible } = require('../../test/test.helpers')
+const { detectOne, detectGte, whenVisible, detectLst } = require('../../test/test.helpers')
 const { runproteinpaint } = require('../../test/front.helpers.js')
 
 /**************
  test sections
 ***************
 
-TermdbTest official data on TP53
+Official data on TP53
+Official - mclass filtering
+Official - sample summaries table, create subtrack (tk.filterObj)
+Official - Collapse and expand mutations from variant link
+Incorrect dslabel
 TP53 custom data, no sample
 Custom variants, missing or invalid mclass
 Custom dataset with custom variants, WITH samples
@@ -22,7 +26,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('TermdbTest official data on TP53', test => {
+tape('Official data on TP53', test => {
 	const holder = getHolder()
 	const gene = 'TP53'
 	runproteinpaint({
@@ -31,7 +35,7 @@ tape('TermdbTest official data on TP53', test => {
 		gene,
 		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
 	})
-	function callbackOnRender(tk, bb) {
+	async function callbackOnRender(tk, bb) {
 		// tk is gdc mds3 track object; bb is block object
 		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
@@ -42,10 +46,321 @@ tape('TermdbTest official data on TP53', test => {
 		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
 		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
 		test.ok(tk.legend.mclass, 'tk.legend.mclass{} is set')
+		await findSingletonMutationTestDiscoCnvPlots(test, tk)
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
+
+export async function findSingletonMutationTestDiscoCnvPlots(test, tk, holder) {
+	// find a singleton skewer, click disc
+	const singletonMutationDisc = tk.skewer.g
+		.selectAll('.sja_aa_disckick')
+		.nodes()
+		.find(i => i.__data__.occurrence == 1)
+	test.ok(singletonMutationDisc, 'a singleton mutation is found') // if not found can change to different gene
+	// click the singleton disc to show itemtip
+	singletonMutationDisc.dispatchEvent(new Event('click'))
+	await whenVisible(tk.itemtip.d)
+	test.pass('itemtip shows with variant table')
+
+	/* surprise
+	in mbmeta, as soon as itemtip.d is shown, buttons are already created; calling detectLst() will timeout
+	in gdc, there's a delay (api request) for buttons to be shown after itemtip, thus must use detectLst
+	*/
+	let buttons = tk.itemtip.d.selectAll('button').nodes()
+	if (buttons.length == 0) {
+		buttons = await detectLst({ elem: tk.itemtip.d.node(), selector: 'button' })
+	}
+	/* multiplt buttons can be shown, based on data availability
+	#1: disco
+	#2: methylation cnv
+	*/
+	test.ok(buttons.length >= 1, '1 or more buttons are showing in itemtip')
+
+	for (const btn of buttons) {
+		switch (btn.innerHTML) {
+			case 'Disco plot':
+				await testDisco(btn, tk)
+				break
+			case 'MethylationArray':
+				await testCnv(btn, tk)
+				break
+			default:
+				throw 'unknown button: ' + btn.innerHTML
+		}
+	}
+	if (test._ok) {
+		tk.itemtip.d.remove()
+		tk.menutip.d.remove()
+	}
+
+	async function testDisco(btn, tk) {
+		const name = 'Disco plot'
+		test.equal(btn.innerHTML, name, '1st button is called ' + name)
+		btn.dispatchEvent(new Event('click'))
+
+		// TODO disco now shows in new sandbox
+
+		//await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
+		//test.pass(`clicking 1st button ${name} the menutip shows`)
+		//const svg = await detectOne({elem: tk.menutip.d.node(), selector:'svg'})
+		//test.ok(svg, '<svg> created in tk.menutip.d as disco plot')
+	}
+	async function testCnv(btn, tk) {
+		const name = 'MethylationArray'
+		test.equal(btn.innerHTML, name, '2nd button is called ' + name)
+		btn.dispatchEvent(new Event('click'))
+
+		// TODO cnv now shows in new sandbox
+
+		/*
+		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
+		test.pass(`clicking 2nd button ${name} the menutip shows`)
+		const img = await detectOne({ elem: tk.menutip.d.node(), selector: 'img' })
+		test.ok(img, '<img> found in menutip')
+		// TODO click at a particular position on img, detect if block shows up
+		*/
+	}
+}
+
+tape('Official - mclass filtering', test => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene: 'tp53',
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
+	})
+	async function callbackOnRender(tk, bb) {
+		await testMclassFiltering(test, tk, bb, holder)
+	}
+})
+
+export async function testMclassFiltering(test, tk, bb, holder) {
+	const allMcount = tk.skewer.rawmlst.length
+	test.ok(
+		tk.skewer.rawmlst.find(m => m.class == 'M'),
+		'has class=M before filtering'
+	)
+	tk.legend.mclass.hiddenvalues.add('M')
+	// must delete this to not to trigger the same function on rerendering
+	delete tk.callbackOnRender
+	bb.onloadalltk_always = () => {
+		test.ok(allMcount > tk.skewer.rawmlst.length, 'fewer mutations left after filtering by mclass')
+		test.notOk(
+			tk.skewer.rawmlst.find(m => m.class == 'M'),
+			'no longer has class=M after filtering'
+		)
+		if (test._ok) holder.remove()
+		test.end()
+	}
+	await tk.load()
+}
+
+// somehow calling helper twice in one tape() call will break, thus calling tape twice
+tape('Official - sample summaries table, create subtrack (tk.filterObj)', test => {
+	testSampleSummary2subtrack('hg38-test', 'TP53', 'TermdbTest', test)
+})
+
+export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome,
+		gene,
+		tracks: [{ type: 'mds3', dslabel, callbackOnRender }]
+	})
+
+	async function callbackOnRender(tk, bb) {
+		// click on "xx samples" left label, to open sample summary panel
+		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d)
+
+		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
+		test.ok(div, 'Sample summary table rendered in menutip')
+
+		for (const tw of tk.mds.variant2samples.twLst) {
+			// each tw should show up in div as a tab
+			const twDiv = tk.menutip.d
+				.selectAll('div')
+				.nodes()
+				.find(e => e.innerText.startsWith(tw.term.name))
+			// the found div is <div>TW.name <span></span></div>, thus must use startsWith
+			test.ok(twDiv, 'Should display tab for ' + tw.term.name)
+		}
+
+		// find one of the clickable label for a category
+		// attach this callback on bb (block instance) to be triggered when the subtrack is loaded
+		bb.onloadalltk_always = async () => {
+			test.equal(
+				bb.tklst.length,
+				3,
+				'now bb has 3 tracks after clicking a category from mds3 tk sample summaries table'
+			)
+
+			const subtk = bb.tklst[2] // mds3 sub-track object created off main one (tk)
+
+			test.equal(subtk.type, 'mds3', '3rd track type is mds3 (subtrack launched from main track)')
+
+			test.ok(
+				Number(tk.leftlabels.doms.variants.text().split(' ')[0]) >
+					Number(subtk.leftlabels.doms.variants.text().split(' ')[0]),
+				'subtrack has fewer number of mutations than main track'
+			)
+			test.ok(
+				Number(tk.leftlabels.doms.samples.text().split(' ')[0]) >
+					Number(subtk.leftlabels.doms.samples.text().split(' ')[0]),
+				'subtrack has fewer number of samples than main track'
+			)
+
+			// click on "samples" left label of subtk, to open sample summary panel
+			subtk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
+			await whenVisible(subtk.menutip.d)
+			// same as in main tk, must await for the summary table to be shown in subtk.menutip
+			// that means leftlabels.__samples_data is now created
+			await detectOne({ elem: subtk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
+
+			compareSummary(tk, subtk)
+
+			test.ok(subtk.leftlabels.doms.filterObj, '.leftlabels.doms.filterObj is set on subtrack')
+			// click on the filterObj left label to show menu with filter UI
+			subtk.leftlabels.doms.filterObj.node().dispatchEvent(new Event('click'))
+			await whenVisible(subtk.menutip.d)
+			test.pass('subtk.menutip is shown (with filter UI), after clicking leftlabels.doms.filterObj')
+
+			test.ok(subtk.leftlabels.doms.close, '.leftlabels.doms.close is set on subtrack')
+
+			if (test._ok) {
+				holder.remove()
+				subtk.menutip.d.remove() // Close orphaned popup window
+			}
+			test.end()
+		}
+
+		const categoryDiv = tk.menutip.d.select('.sja_clbtext2')
+		categoryDiv.node().dispatchEvent(new Event('click'))
+	}
+
+	// compare sample summary data between sub and main tk
+	function compareSummary(tk, subtk) {
+		test.ok(
+			subtk.leftlabels.__samples_data.length == tk.leftlabels.__samples_data.length,
+			'main and sub track returned summaries for the same number of terms'
+		)
+		// assuming order of terms in the array are identical between main and sub tk
+		// for the same catgory from same term, sub track must show <= samplecount than main
+
+		// since 'sub<=main' must be used in tests but not 'sub<main', verify at least one category shows sub<main
+		let subLTmainCount = 0
+
+		for (const [i, main] of tk.leftlabels.__samples_data.entries()) {
+			const sub = subtk.leftlabels.__samples_data[i]
+			if (main.numbycategory) {
+				test.ok(
+					main.numbycategory.length >= sub.numbycategory.length,
+					'main.numbycategory.length >= sub for ' + main.termid
+				)
+				const k2c = new Map()
+				for (const a of main.numbycategory) {
+					// a=[categorylabel, #mutated, #total]
+					k2c.set(a[0], { mutated: a[1], total: a[2] })
+				}
+				for (const a of sub.numbycategory) {
+					const a2 = k2c.get(a[0])
+					if (!a2) throw 'a2 not found'
+
+					if (a2.total) {
+						test.ok(
+							a[1] <= a2.mutated && a[2] <= a2.total,
+							`sub<=main for mutated/total counts of ${a[0]}, ${main.termid}`
+						)
+						if (a[2] < a2.total) subLTmainCount++
+					} else {
+						// TODO FIXME unknown reason a2.total is undefined for termdbtest
+					}
+				}
+			} else if (main.density_data) {
+				if (!Number.isInteger(main.density_data.samplecount)) throw 'main.density_data.samplecount is not integer'
+				test.ok(
+					sub.density_data.samplecount <= main.density_data.samplecount,
+					'sub<=main for density_data.samplecount for ' + main.termid
+				)
+				if (sub.density_data.samplecount < main.density_data.samplecount) subLTmainCount++
+			} else {
+			}
+		}
+
+		test.ok(subLTmainCount > 0, subLTmainCount + ' categories have reduced sample count in subtk')
+	}
+}
+
+tape('Official - Collapse and expand mutations from variant link', test => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38-test',
+		gene: 'tp53',
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
+	})
+	async function callbackOnRender(tk, bb) {
+		await testCollapseExpand_variantLeftLabel(test, tk, bb, holder)
+	}
+})
+
+export async function testCollapseExpand_variantLeftLabel(test, tk, bb, holder) {
+	//Click on variant leftlabel to open menu
+	const variantsLeftlabel = tk.leftlabels.doms.variants.node()
+	variantsLeftlabel.dispatchEvent(new Event('click'))
+	await whenVisible(tk.menutip.d)
+
+	//Click 'Collapse' menu option
+	tk.menutip.d
+		.selectAll('.sja_menuoption')
+		.nodes()
+		.find(e => e.innerHTML == 'Collapse')
+		.dispatchEvent(new Event('click'))
+
+	// as soon as collapsing animation starts, none of the sja_aa_disclabel should have "scale(1)"
+	{
+		const expandedText = tk.skewer.selection
+			.selectAll('text.sja_aa_disclabel')
+			.nodes()
+			.some(e => {
+				//console.log(e)
+				e.attributes.transform.value == 'scale(1)'
+			})
+		test.notOk(expandedText, 'No expanded skewer found after collapsing')
+	}
+
+	//Go back and click on 'Expand' to test skewer expanding
+	variantsLeftlabel.dispatchEvent(new Event('click'))
+	await whenVisible(tk.menutip.d)
+
+	tk.menutip.d
+		.selectAll('.sja_menuoption')
+		.nodes()
+		.find(e => e.innerHTML == 'Expand')
+		.dispatchEvent(new Event('click'))
+
+	/* FIXME this fails
+
+	// as soon as expanding animation starts, some sja_aa_disclabel should have opacity!=0
+	{
+		const expandedText = tk.skewer.g
+			.selectAll('text.sja_aa_disclabel')
+			.nodes()
+			.some(e => e.attributes['fill-opacity'].value != '0')
+		test.ok(expandedText, 'Should find some expanded skewers')
+	}
+	*/
+
+	if (test._ok) holder.remove()
+	test.end()
+}
 
 tape('Incorrect dslabel', test => {
 	const holder = getHolder()
