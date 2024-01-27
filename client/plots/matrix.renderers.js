@@ -432,7 +432,22 @@ export function setRenderers(self) {
 			.attr('width', d.svgw)
 			.attr('height', d.svgh)
 
-		const x = leftBox.width - l.left.offset + hcWidth
+		//calculate the max gene label
+		let maxLabelWidth = 0,
+			maxLabelNumChars = 0
+		if (hc.xDendrogramHeight) {
+			self.dom.termLabelG.selectAll('.sjpp-matrix-label').each(function (d) {
+				if (d.grp.type !== 'hierCluster') return
+				if (d.label.length < maxLabelNumChars - 5) return
+				const box = this.getBBox()
+				if (box.width > maxLabelWidth) {
+					maxLabelWidth = box.width
+					maxLabelNumChars = d.label.length
+				}
+			})
+		}
+
+		const x = leftBox.width - l.left.offset + hcWidth - leftBox.width + maxLabelWidth
 		const y = (l.top.display == 'none' ? 0 : topBox.height) - l.top.offset + hcHeight
 		self.dom.mainG
 			//.transition()
@@ -456,20 +471,7 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${legendX},${legendY})`)
 
 		if (hc.xDendrogramHeight) {
-			//calculate the max gene label
-			let maxLabelWidth = 0,
-				maxLabelNumChars = 0
-			self.dom.termLabelG.selectAll('.sjpp-matrix-label').each(function (d) {
-				if (d.grp.type !== 'hierCluster') return
-				if (d.label.length < maxLabelNumChars - 5) return
-				const box = this.getBBox()
-				if (box.width > maxLabelWidth) {
-					maxLabelWidth = box.width
-					maxLabelNumChars = d.label.length
-				}
-			})
-
-			const dendroX = leftBox.width - l.left.offset + d.xOffset - d.dx / 2
+			const dendroX = maxLabelWidth - l.left.offset + d.xOffset - d.dx / 2
 			self.dom.hcClipRect
 				.attr('x', dendroX + hcWidth + d.dx / 2)
 				.attr('y', 0)
