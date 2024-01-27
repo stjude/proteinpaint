@@ -5,11 +5,12 @@ const {
 	findSingletonMutationTestDiscoCnvPlots,
 	testMclassFiltering,
 	testSampleSummary2subtrack,
-	testCollapseExpand_variantLeftLabel
+	testVariantLeftLabel
 } = require('./mds3.integration.spec')
 
 /**************
- test sections
+ tests both GDC and clinvar
+ GDC is mission critical, clinvar is sample-less. both are not covered by CI
 
 ### gdc dataset is based on GDC API
 GDC - gene symbol KRAS
@@ -26,13 +27,7 @@ GDC - gene hoxa1 - Disco button
 Clinvar - gene kras
 
 
-Launch variant table from track variant label
-
-### via gdc api
 GDC - sample summaries table, create subtrack (tk.filterObj)
-
-### via bcf and termdb
-ASH - sample summaries table, create subtrack (tk.filterObj)
 
 ###
 GDC - mclass filtering
@@ -43,15 +38,6 @@ Collapse and expand mutations from variant link
 GDC - Launch sample table from sunburst
 
 ***************/
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-		.node()
-}
 
 tape('\n', function (test) {
 	test.pass('-***- mds3 -***-')
@@ -71,7 +57,7 @@ tape('GDC - gene symbol KRAS', test => {
 		gene: 'kras',
 		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
-	function callbackOnRender(tk, bb) {
+	async function callbackOnRender(tk, bb) {
 		// tk is gdc mds3 track object; bb is block object
 		test.equal(bb.usegm.name, 'KRAS', 'block.usegm.name="KRAS"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
@@ -82,6 +68,8 @@ tape('GDC - gene symbol KRAS', test => {
 		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
 		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
 		test.ok(tk.legend.mclass, 'tk.legend.mclass{} is set')
+		await findSingletonMutationTestDiscoCnvPlots(test, tk, bb)
+		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -228,24 +216,6 @@ tape('geneSearch4GDCmds3', async test => {
 	}
 })
 
-tape('GDC - gene hoxa1 - Disco button', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		noheader: true,
-		genome: 'hg38',
-		gene: 'hoxa1',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
-	})
-	async function callbackOnRender(tk, bb) {
-		await findSingletonMutationTestDiscoCnvPlots(test, tk)
-		if (test._ok) {
-			holder.remove()
-		}
-		test.end()
-	}
-})
-
 tape('Clinvar - gene kras', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
@@ -257,66 +227,24 @@ tape('Clinvar - gene kras', test => {
 		gene: 'kras',
 		tracks: [{ type: 'mds3', dslabel: 'clinvar', callbackOnRender }]
 	})
-	function callbackOnRender(tk, bb) {
+	async function callbackOnRender(tk, bb) {
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
 		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
 		test.notOk(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is absent')
+		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
 
-tape('Launch variant table from track variant label', test => {
-	test.timeoutAfter(10000)
-	const holder = getHolder()
-
-	runproteinpaint({
-		holder,
-		noheader: true,
-		genome: 'hg38',
-		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
-	})
-	function callbackOnRender(tk, bb) {
-		//Click on track variant link to open menu
-		tk.leftlabels.doms.variants.node().dispatchEvent(new Event('click'))
-
-		//Click 'List' menu option
-		const listMenuOptionFound = tk.menutip.d
-			.selectAll('.sja_menuoption')
-			.nodes()
-			.find(e => e.innerHTML == 'List')
-		test.ok(listMenuOptionFound, 'Should open menu from clicking on variant link beneath track label')
-		listMenuOptionFound.dispatchEvent(new Event('click'))
-
-		//Click on the first variant bar in the list
-		const E3KvariantFound = tk.menutip.d
-			.selectAll('div.sja_menuoption')
-			.nodes()
-			.find(e => e.innerText == 'E3KMISSENSEchr12:25245378, C>T')
-		E3KvariantFound.dispatchEvent(new Event('click'))
-
-		//Confirm variant annotation table appears
-		const variantTableFound = tk.menutip.d
-			.selectAll('span')
-			.nodes()
-			.find(e => e.innerText == 'E3K')
-		test.ok(variantTableFound, 'Should display variant annotation table')
-
-		//Close orphaned popup window
-		tk.menutip.d.remove()
-
-		if (test._ok) holder.remove()
-		test.end()
-	}
-})
-
-// same tests applied on two datasets, each using a different data source
-// somehow calling helper twice in one tape() call will break, thus calling tape twice
+/*
+!!! this test is disabled due to case_filters change that breaks pp function against v1 !!!!
+after softlaunch can reenable it
 tape('GDC - sample summaries table, create subtrack (tk.filterObj)', test => {
-	testSampleSummary2subtrack('IDH1', 'GDC', test)
+	testSampleSummary2subtrack('hg38','IDH1', 'GDC', test)
 })
+*/
 
 tape('GDC - mclass filtering', test => {
 	const holder = getHolder()
@@ -340,24 +268,6 @@ tape('Clinvar - mclass filtering', test => {
 	})
 	async function callbackOnRender(tk, bb) {
 		await testMclassFiltering(test, tk, bb, holder)
-	}
-})
-
-tape('GDC - Collapse and expand mutations from variant link', test => {
-	test.timeoutAfter(10000) //Fix for succeeding tape tests running before this one finishes
-	//Will throw a not ok error if another test fires
-	const holder = getHolder()
-
-	runproteinpaint({
-		holder,
-		noheader: true,
-		nobox: true,
-		genome: 'hg38',
-		gene: 'hoxa1',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
-	})
-	async function callbackOnRender(tk, bb) {
-		await testCollapseExpand_variantLeftLabel(test, tk, bb, holder)
 	}
 })
 
@@ -400,3 +310,13 @@ tape('GDC - Launch sample table from sunburst', test => {
 		test.end()
 	}
 })
+
+function getHolder() {
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+		.node()
+}

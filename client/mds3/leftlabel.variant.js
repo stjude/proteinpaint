@@ -224,7 +224,10 @@ async function listSkewerData(tk, block) {
 		tabs.push({ label: mlst.length + ' ' + dt2label[dt] })
 	}
 	new Tabs({
-		holder: tk.menutip.d.append('div').style('margin', '10px'),
+		holder: tk.menutip.d
+			.append('div')
+			.attr('class', 'sja_pp_vlb_dttabdiv') // for testing
+			.style('margin', '10px'),
 		tabs
 	}).main()
 	let i = 0
@@ -256,7 +259,10 @@ function mayAddSkewerModeOption(tk, block) {
 		options.push(o)
 	}
 	make_radios({
-		holder: tk.menutip.d.append('div').style('margin', '10px'),
+		holder: tk.menutip.d
+			.append('div')
+			.attr('class', 'sja_pp_vlb_viewmoderadiodiv') // for testing
+			.style('margin', '10px'),
 		options,
 		callback: async idx => {
 			for (const i of tk.skewer.viewModes) i.inuse = false
