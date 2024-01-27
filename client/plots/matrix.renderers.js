@@ -456,6 +456,21 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${legendX},${legendY})`)
 
 		if (hc.xDendrogramHeight) {
+			//calculate the max gene label
+			let maxLabelWidth = 0,
+				maxLabelNumChars = 0
+			if (hc.xDendrogramHeight) {
+				self.dom.termLabelG.selectAll('.sjpp-matrix-label').each(function (d) {
+					if (d.grp.type !== 'hierCluster') return
+					if (d.label.length < maxLabelNumChars - 5) return
+					const box = this.getBBox()
+					if (box.width > maxLabelWidth) {
+						maxLabelWidth = box.width
+						maxLabelNumChars = d.label.length
+					}
+				})
+			}
+
 			const dendroX = leftBox.width - l.left.offset + d.xOffset - d.dx / 2
 			self.dom.hcClipRect
 				.attr('x', dendroX + hcWidth + d.dx / 2)
@@ -468,7 +483,7 @@ export function setRenderers(self) {
 			self.topDendroX = dendroX + d.seriesXoffset
 			self.dom.topDendrogram.attr('transform', `translate(${self.topDendroX}, -5)`)
 			const y = -0.5 * s.rowh + (l.top.display == 'none' ? 0 : topBox.height)
-			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - leftBox.width - 10}, ${y})`)
+			self.dom.leftDendrogram.attr('transform', `translate(${dendroX - maxLabelWidth - 10}, ${y})`)
 		}
 	}
 }
