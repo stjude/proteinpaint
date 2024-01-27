@@ -459,17 +459,15 @@ export function setRenderers(self) {
 			//calculate the max gene label
 			let maxLabelWidth = 0,
 				maxLabelNumChars = 0
-			if (hc.xDendrogramHeight) {
-				self.dom.termLabelG.selectAll('.sjpp-matrix-label').each(function (d) {
-					if (d.grp.type !== 'hierCluster') return
-					if (d.label.length < maxLabelNumChars - 5) return
-					const box = this.getBBox()
-					if (box.width > maxLabelWidth) {
-						maxLabelWidth = box.width
-						maxLabelNumChars = d.label.length
-					}
-				})
-			}
+			self.dom.termLabelG.selectAll('.sjpp-matrix-label').each(function (d) {
+				if (d.grp.type !== 'hierCluster') return
+				if (d.label.length < maxLabelNumChars - 5) return
+				const box = this.getBBox()
+				if (box.width > maxLabelWidth) {
+					maxLabelWidth = box.width
+					maxLabelNumChars = d.label.length
+				}
+			})
 
 			const dendroX = leftBox.width - l.left.offset + d.xOffset - d.dx / 2
 			self.dom.hcClipRect
