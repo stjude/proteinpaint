@@ -131,7 +131,7 @@ export async function setData(_data) {
 		terms,
 		filter: this.state.filter,
 		filter0: this.state.filter0,
-		loadingDiv: this.dom.loadingDiv,
+		loadingDiv: this.chartType != 'hierCluster' && this.dom.loadingDiv,
 		maxGenes: this.state.config.settings.matrix.maxGenes
 		//termsPerRequest: 100 // this is just for testing
 	}
