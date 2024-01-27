@@ -11,6 +11,7 @@ Features:
 Fixes:
 - GDC bam slicing UI can still pull BAM files when experimental_strategy=Methylation Array filtering is used
 - support navigation-by-keyboard of bam UI elements
+- fix the display of no data error message and hiding of previously rendered heatmap in the hier cluster app
 
 
 ## 2.39.6

@@ -1,2 +1,1 @@
-Fixes:
-- fix the display of no data error message and hiding of previously rendered heatmap in the hier cluster app
+
