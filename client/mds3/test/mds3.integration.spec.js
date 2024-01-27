@@ -1,13 +1,13 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { detectOne, detectGte, whenVisible, detectLst } = require('../../test/test.helpers')
+const { detectOne, detectZero, detectGte, whenVisible, detectLst } = require('../../test/test.helpers')
 const { runproteinpaint } = require('../../test/front.helpers.js')
 
 /**************
  test sections
 ***************
 
-Official data on TP53
+Official data on TP53, extensive ui test
 Official - mclass filtering
 Official - sample summaries table, create subtrack (tk.filterObj)
 Official - Collapse and expand mutations from variant link
@@ -19,6 +19,13 @@ Custom data with samples and sample selection
 Numeric mode custom dataset, with mode change
 
 
+this script exports following test methods to share with non-CI test using GDC/clinvar
+- findSingletonMutationTestDiscoCnvPlots
+- testMclassFiltering
+- testSampleSummary2subtrack
+- testVariantLeftLabel
+
+TODO fix termdbtest data to move sunburst test 
 */
 
 tape('\n', function (test) {
@@ -26,7 +33,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Official data on TP53', test => {
+tape('Official data on TP53, extensive ui test', test => {
 	const holder = getHolder()
 	const gene = 'TP53'
 	runproteinpaint({
@@ -47,6 +54,7 @@ tape('Official data on TP53', test => {
 		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
 		test.ok(tk.legend.mclass, 'tk.legend.mclass{} is set')
 		await findSingletonMutationTestDiscoCnvPlots(test, tk)
+		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -296,36 +304,71 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 	}
 }
 
-tape('Official - Collapse and expand mutations from variant link', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		noheader: true,
-		nobox: true,
-		genome: 'hg38-test',
-		gene: 'tp53',
-		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
-	})
-	async function callbackOnRender(tk, bb) {
-		await testCollapseExpand_variantLeftLabel(test, tk, bb, holder)
-	}
-})
-
-export async function testCollapseExpand_variantLeftLabel(test, tk, bb, holder) {
+export async function testVariantLeftLabel(test, tk, bb) {
 	//Click on variant leftlabel to open menu
 	const variantsLeftlabel = tk.leftlabels.doms.variants.node()
+
+	// show menu >>> "List" option
 	variantsLeftlabel.dispatchEvent(new Event('click'))
 	await whenVisible(tk.menutip.d)
-
-	//Click 'Collapse' menu option
 	tk.menutip.d
 		.selectAll('.sja_menuoption')
 		.nodes()
-		.find(e => e.innerHTML == 'Collapse')
+		.find(e => e.innerHTML == 'List')
 		.dispatchEvent(new Event('click'))
-
-	// as soon as collapsing animation starts, none of the sja_aa_disclabel should have "scale(1)"
 	{
+		const dtSet = new Set(tk.skewer.rawmlst.map(i => i.dt))
+		if (dtSet.size > 1) {
+			// more than 1 dt, should show toggle
+			const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_pp_vlb_dttabdiv' })
+			test.ok(div, 'Toggle button div is shown after clicking List (more than 1 dt)')
+		} else {
+			// only 1 dt, should not show toggle
+			const div = await detectZero({ elem: tk.menutip.d.node().firstChild, selector: '.sja_pp_vlb_dttabdiv' })
+			test.equal(div, undefined, 'Toggle button div is not shown after clicking List (only 1 dt)')
+		}
+		// TODO further test variant table contents, based on dtSet
+	}
+
+	// show menu >>> "Download" option
+	variantsLeftlabel.dispatchEvent(new Event('click'))
+	await whenVisible(tk.menutip.d)
+	if (0) {
+		// FIXME not enabled for custom tk yet
+		const op = tk.menutip.d
+			.selectAll('.sja_menuoption')
+			.nodes()
+			.find(e => e.innerHTML == 'Download')
+		test.ok(op, 'Download option is present')
+		// do not trigger clicking, don't know if it will break ci
+	}
+
+	// show menu >>> view mode toggle
+	if (tk.skewer.viewModes.length > 1) {
+		// should show radiobuttons to allow toggling between viewmodes
+		variantsLeftlabel.dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d)
+		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_pp_vlb_viewmoderadiodiv' })
+		test.ok(div, 'View mode toggle div is shown')
+	}
+
+	const currentViewMode = tk.skewer.viewModes.find(i => i.inuse)
+	if (currentViewMode.type == 'skewer') {
+		// is in skewer mode. can test Collapse/Expand
+		// if not in skewer mode, the options may not be shown
+
+		// show menu >>> "Collapse" option
+		variantsLeftlabel.dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d)
+		const op1 = tk.menutip.d
+			.selectAll('.sja_menuoption')
+			.nodes()
+			.find(e => e.innerHTML == 'Collapse')
+		test.ok(op1, 'Collapse option is shown')
+
+		op1.dispatchEvent(new Event('click'))
+
+		// as soon as collapsing animation starts, none of the sja_aa_disclabel should have "scale(1)"
 		const expandedText = tk.skewer.selection
 			.selectAll('text.sja_aa_disclabel')
 			.nodes()
@@ -334,32 +377,27 @@ export async function testCollapseExpand_variantLeftLabel(test, tk, bb, holder) 
 				e.attributes.transform.value == 'scale(1)'
 			})
 		test.notOk(expandedText, 'No expanded skewer found after collapsing')
-	}
 
-	//Go back and click on 'Expand' to test skewer expanding
-	variantsLeftlabel.dispatchEvent(new Event('click'))
-	await whenVisible(tk.menutip.d)
-
-	tk.menutip.d
-		.selectAll('.sja_menuoption')
-		.nodes()
-		.find(e => e.innerHTML == 'Expand')
-		.dispatchEvent(new Event('click'))
-
-	/* FIXME this fails
-
-	// as soon as expanding animation starts, some sja_aa_disclabel should have opacity!=0
-	{
-		const expandedText = tk.skewer.g
-			.selectAll('text.sja_aa_disclabel')
+		// show menu >>> "Expand" option
+		variantsLeftlabel.dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d)
+		const op2 = tk.menutip.d
+			.selectAll('.sja_menuoption')
 			.nodes()
-			.some(e => e.attributes['fill-opacity'].value != '0')
-		test.ok(expandedText, 'Should find some expanded skewers')
-	}
-	*/
+			.find(e => e.innerHTML == 'Expand')
+		test.ok(op2, 'Expand option is now shown after clicking Collapse')
+		op2.dispatchEvent(new Event('click'))
 
-	if (test._ok) holder.remove()
-	test.end()
+		// as soon as expanding animation starts, some sja_aa_disclabel should have opacity!=0
+		if (0) {
+			// FIXME always fails
+			const expandedText = tk.skewer.g
+				.selectAll('text.sja_aa_disclabel')
+				.nodes()
+				.some(e => e.attributes['fill-opacity'].value != '0')
+			test.ok(expandedText, 'Should find some expanded skewers')
+		}
+	}
 }
 
 tape('Incorrect dslabel', test => {
@@ -416,7 +454,7 @@ tape('TP53 custom data, no sample', test => {
 			}
 		]
 	})
-	function callbackOnRender(tk, bb) {
+	async function callbackOnRender(tk, bb) {
 		// Test mds3 is a track object and bb is block object
 		test.equal(bb.usegm.name, gene, `Should render block.usegm.name = ${gene}`)
 		test.equal(bb.tklst.length, 2, 'Should have two tracks')
@@ -440,6 +478,7 @@ tape('TP53 custom data, no sample', test => {
 		/*** Verify all ui parts are rendered ***/
 		//Left labels
 		test.ok(tk.leftlabels.doms.variants, 'Should render tk.leftlabels.doms.variants')
+		await testVariantLeftLabel(test, tk, bb)
 		test.notOk(tk.leftlabels.doms.filterObj, 'Should NOT render tk.leftlabels.doms.filterObj')
 		test.notOk(tk.leftlabels.doms.close, 'Should NOT render tk.leftlabels.doms.close')
 
@@ -733,7 +772,9 @@ tape('Numeric mode custom dataset, with mode change', test => {
 
 	// TODO all data points should be rendered in svg
 
-	function callbackOnRender(tk, bb) {
+	async function callbackOnRender(tk, bb) {
+		await testVariantLeftLabel(test, tk, bb)
+
 		// verify that all custom data points are present in tk
 		for (const m of custom_variants) {
 			const m2 = tk.skewer.rawmlst.find(i => i.mname == m.mname)
