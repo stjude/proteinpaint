@@ -687,6 +687,7 @@ export class HierCluster extends Matrix {
 		} else {
 			throw 'unknown dataType'
 		}
+		lst.sort((a, b) => (a.name < b.name ? -1 : 1))
 		return lst
 	}
 }

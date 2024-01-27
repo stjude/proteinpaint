@@ -98,6 +98,11 @@ export async function init(arg, holder, genomes) {
 				adjustTrackedState(state) {
 					const s = structuredClone(state)
 					delete s.termfilter.filter0
+					// this twlst is added from the server response, it follows the
+					// dendrogram clustering and sorting of genes
+					// TODO: this twlst should not be tracked in state, since it can be computed
+					// from other state configuration/settings
+					delete s.plots[0]?.termgroups?.find(g => g.type == 'hierCluster')?.lst
 					return s
 				}
 			},

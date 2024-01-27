@@ -1,2 +1,2 @@
 Fixes:
--For hierCluster, set left dendrogram position based on max gene label length, ignore variable labels. 
+- ignore the computed twlst of the hierCluster term group when tracking recoverable state
