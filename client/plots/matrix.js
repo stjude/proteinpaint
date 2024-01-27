@@ -155,26 +155,35 @@ export class Matrix {
 
 			// see matrix.data for logic to be able to skip server data request or re-ordering
 			this.computeStateDiff()
-			this.dom.loadingDiv.html('').style('display', '').style('position', 'absolute').style('left', '45%')
+			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
 
 			// may skip data requests when changes are not expected to affect the request payload
 			if (this.stateDiff.nonsettings) {
 				// reset highlighted dendrogram children to black when data request is triggered
 				delete this.clickedChildren
-
-				const promises = []
-				// get the data
-				if (this.setHierClusterData) promises.push(this.setHierClusterData())
-				promises.push(this.setData())
-				this.dom.loadingDiv.html('Processing data ...')
-				await Promise.all(promises)
-				applyLegendValueFilter(this)
-				if (this.combineData) this.combineData()
-				// tws in the config may be filled-in based on applicable server response data;
-				// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
-				// the corresponding tracked state values in the app store, without causing unnecessary
-				// dispatch notifications, so use app.save()
-				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
+				try {
+					const promises = []
+					// get the data
+					if (this.setHierClusterData) promises.push(this.setHierClusterData())
+					promises.push(this.setData())
+					this.dom.loadingDiv.html('Processing data ...')
+					await Promise.all(promises)
+					applyLegendValueFilter(this)
+					if (this.combineData) this.combineData()
+					// tws in the config may be filled-in based on applicable server response data;
+					// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
+					// the corresponding tracked state values in the app store, without causing unnecessary
+					// dispatch notifications, so use app.save()
+					this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
+				} catch (e) {
+					if (e == 'no data') {
+						this.showNoMatchingDataMessage()
+						return
+					} else {
+						this.dom.svg.style('display', 'none')
+						throw e
+					}
+				}
 			}
 
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
@@ -248,10 +257,10 @@ export class Matrix {
 			.style('text-align', 'center')
 			.style('position', 'relative')
 			.style('left', '-150px')
-		div.append('div').html('No matching cohort sample data for the current gene list.')
+		div.append('div').style('margin', '5px 10px').html('No matching cohort sample data for the current gene list.')
 		if (this.settings.matrix.showHints?.includes('genesetEdit')) {
-			const div1 = div.append('div')
-			div1.append('span').html('You may view and modify the gene list from the ')
+			const div1 = div.append('div').style('margin', '5px 10px')
+			div1.append('span').html('You change the cohort or modify the gene list from the ')
 			div1
 				.append('span')
 				.style('cursor', 'pointer')

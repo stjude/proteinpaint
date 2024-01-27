@@ -7,7 +7,7 @@ export function setMatrixDom(opts) {
 	const controls = this.opts.controls || holder.append('div')
 	const loadingDiv = holder
 		.append('div')
-		.style('position', 'absolute')
+		.style('position', 'relative')
 		.style('top', this.opts.controls ? 0 : '50px')
 		.style('left', '50px')
 	const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
