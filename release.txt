@@ -1,1 +1,2 @@
-
+Fixes:
+-For hierCluster, set left dendrogram position based on max gene label length, ignore variable labels. 
