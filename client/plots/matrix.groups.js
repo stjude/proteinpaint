@@ -46,11 +46,11 @@ export function getTermOrder(data) {
 					}
 				}
 			}
-			lst.push({ tw, counts, index })
+			if (grp.type != 'hierCluster' || counts.samples) lst.push({ tw, counts, index })
 		}
 
 		// may override the settings.sortTermsBy with a sorter that is specific to a term group
-		const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
+		const termSorter = grp.sortTermsBy || grp.type == 'hierCluster' ? getTermSorter(this, s, grp) : this.termSorter
 		const processedLst = lst
 			.filter(t => {
 				if ('minNumSamples' in t.tw) return t.tw.minNumSamples <= t.counts.samples

@@ -98,11 +98,24 @@ export async function init(arg, holder, genomes) {
 				adjustTrackedState(state) {
 					const s = structuredClone(state)
 					delete s.termfilter.filter0
-					// this twlst is added from the server response, it follows the
-					// dendrogram clustering and sorting of genes
-					// TODO: this twlst should not be tracked in state, since it can be computed
-					// from other state configuration/settings
-					delete s.plots[0]?.termgroups?.find(g => g.type == 'hierCluster')?.lst
+					if (s.plots) {
+						// don't track plot configuration that are not specific to the plot config/settings
+						for (const plot of s.plots) {
+							if (!plot.termgroups) continue
+							for (const grp of plot.termgroups) {
+								if (!grp.lst) continue
+								for (const tw of grp.lst) {
+									if (!tw?.term) continue
+									// this is cohort-dependent and should be ignored like termfilter.filter0
+									delete tw.term.category2samplecount
+									// for GDC, the term.values may not be known ahead of time
+									// and only filled in as data comes in, should ignore this
+									// computed value as to avoid affecting tracked state
+									delete tw.term.values
+								}
+							}
+						}
+					}
 					return s
 				}
 			},

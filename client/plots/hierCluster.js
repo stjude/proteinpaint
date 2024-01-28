@@ -355,8 +355,15 @@ export class HierCluster extends Matrix {
 			}
 		}
 
-		const orderedTw = c.row.order.map(row => twlst.find(tw => tw.term.name === row.name))
-		this.hcTermGroup.lst = orderedTw
+		this.hcTermNameOrder = c.row.order.map(row => row.name)
+		this.hcTermSorter = (a, b) => {
+			const i = this.hcTermNameOrder.indexOf(a.tw.term.name)
+			const j = this.hcTermNameOrder.indexOf(b.tw.term.name)
+			if (i == -1 && j == -1) return 0
+			if (i == -1) return 1
+			if (j == -1) return -1
+			return i - j
+		}
 
 		// from d.byTermId to byTermId: change byTermId keys from gene names to $ids
 		const byTermId = {}
@@ -680,13 +687,19 @@ export class HierCluster extends Matrix {
 				// FIXME when {name} is fully migrated to {gene}, delete following line and use continue to skip non-gene terms
 				if (!tw.term.gene) {
 					if (!tw.term.name) throw 'geneVariant term missing gene/name'
-					tw.term.gene = tw.term.name
+					// adding tw properties should be done in fillTermWrapper(),
+					// otherwise it makes state-tracked tw comparison unreliable
+					// tw.term.gene = tw.term.name
 				}
-				lst.push(tw.term)
+				// see notes above, avoid modifying the state unnecessarily
+				// select the properties to include, since GDC term.values (computed incrementally)
+				// or cohort-dependent term.categories2samplecount can affect caching
+				lst.push({ name: tw.term.name, type: tw.term.type, gene: tw.term.gene || tw.term.name })
 			}
 		} else {
 			throw 'unknown dataType'
 		}
+		// this helps caching by having a more consistent URL string
 		lst.sort((a, b) => (a.name < b.name ? -1 : 1))
 		return lst
 	}
@@ -729,6 +742,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
 	const config = await getMatrixPlotConfig(opts, app)
+	// opts.genes will be processed as the hierCluster term group.lst
+	delete config.genes
+
 	config.settings.hierCluster = {
 		/* type of data used for clustering
 		exciting todo: (to introduce new dt values)

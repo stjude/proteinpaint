@@ -269,8 +269,10 @@ function findMatchingValue(annoValues, filterValues) {
 	}
 }
 
-export function getTermSorter(self, s) {
-	if (s.sortTermsBy == 'asListed' || self.config.heirCluster) {
+export function getTermSorter(self, s, grp) {
+	if (grp?.type == 'hierCluster') return self.hcTermSorter
+
+	if (s.sortTermsBy == 'asListed') {
 		//no additional logic required
 		return (a, b) => a.index - b.index
 	}
