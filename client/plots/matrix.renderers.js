@@ -438,7 +438,10 @@ export function setRenderers(self) {
 		if (hc.xDendrogramHeight) {
 			self.dom.termLabelG.selectAll('.sjpp-matrix-label').each(function (d) {
 				if (d.grp.type !== 'hierCluster') return
-				if (d.label.length < maxLabelNumChars - 5) return
+				// TODO: may enable this optimization to only detect the label box width
+				//       if the text length difference is likely to affect the width
+				//       DOM measurements like getBBox() may affect performance if there are lots of labels
+				// if (d.label.length < maxLabelNumChars - 10) return
 				const box = this.getBBox()
 				if (box.width > maxLabelWidth) {
 					maxLabelWidth = box.width
@@ -447,12 +450,14 @@ export function setRenderers(self) {
 			})
 		}
 
-		const x = leftBox.width - l.left.offset + hcWidth - leftBox.width + maxLabelWidth
+		// note: two leftBox.width terms cancels to zero
+		const x = -l.left.offset + hcWidth + maxLabelWidth
+		const xAdjust = !hc.xDendrogramHeight ? 0 : Math.max(leftBox.width - (hc.xDendrogramHeight + maxLabelWidth), 0)
 		const y = (l.top.display == 'none' ? 0 : topBox.height) - l.top.offset + hcHeight
 		self.dom.mainG
 			//.transition()
 			//.duration(duration)
-			.attr('transform', `translate(${x},${y})`)
+			.attr('transform', `translate(${x + xAdjust},${y})`)
 
 		self.dom.clipRect
 			// the cliprect has to be moved upwards, plus increased height to that adjustment value,
@@ -471,7 +476,7 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${legendX},${legendY})`)
 
 		if (hc.xDendrogramHeight) {
-			const dendroX = maxLabelWidth - l.left.offset + d.xOffset - d.dx / 2
+			const dendroX = maxLabelWidth + xAdjust - l.left.offset + d.xOffset - d.dx / 2
 			self.dom.hcClipRect
 				.attr('x', dendroX + hcWidth + d.dx / 2)
 				.attr('y', 0)
