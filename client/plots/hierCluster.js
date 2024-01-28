@@ -297,6 +297,7 @@ export class HierCluster extends Matrix {
 		this.hcTermGroup =
 			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
 			this.termOrder?.find(t => t.grp.type == 'hierCluster')?.grp
+
 		// track the actionSequenceId before the server request, which may be laggy
 		const actionSequenceId = this.api.notes('actionSequenceId')
 		const d = await this.requestData()
@@ -398,11 +399,13 @@ export class HierCluster extends Matrix {
 			join: 'and',
 			lst: this.state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
 		}
+		const genes = this.getClusterRowTermsAsParameter()
+		if (!genes.length) throw 'no data'
 		const body = {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			dataType: s.dataType,
-			genes: this.getClusterRowTermsAsParameter(),
+			genes,
 			clusterMethod: s.clusterMethod,
 			filter: filterJoin([this.state.filter, dictionaryLegendFilter]),
 			filter0: this.state.filter0
@@ -794,7 +797,7 @@ export async function getPlotConfig(opts = {}, app) {
 	if (hcTermGroup)
 		hcTermGroup.type = 'hierCluster' // ensure that the group.type is correct for recovered legacy sessions
 	else {
-		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
+		if (!Array.isArray(opts.genes)) opts.genes = [] //throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
 		for (const i of opts.genes) {

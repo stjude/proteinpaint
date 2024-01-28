@@ -258,9 +258,14 @@ export class Matrix {
 			.style('position', 'relative')
 			.style('left', '-150px')
 		div.append('div').style('margin', '5px 10px').html('No matching cohort sample data for the current gene list.')
+
 		if (this.settings.matrix.showHints?.includes('genesetEdit')) {
 			const div1 = div.append('div').style('margin', '5px 10px')
-			div1.append('span').html('You change the cohort or modify the gene list from the ')
+			div1
+				.append('span')
+				.html(
+					'You may change the selected cohort and keep the current gene list,<br/>or modify the gene list from the '
+				)
 			div1
 				.append('span')
 				.style('cursor', 'pointer')
