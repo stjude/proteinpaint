@@ -365,6 +365,16 @@ export class HierCluster extends Matrix {
 			return i - j
 		}
 
+		this.hcSampleNameOrder = c.col.order.map(col => col.name)
+		this.hcSampleSorter = (a, b) => {
+			const i = this.hcSampleNameOrder.indexOf(a.sample)
+			const j = this.hcSampleNameOrder.indexOf(b.sample)
+			if (i == -1 && j == -1) return 0
+			if (i == -1) return 1
+			if (j == -1) return -1
+			return i - j
+		}
+
 		// from d.byTermId to byTermId: change byTermId keys from gene names to $ids
 		const byTermId = {}
 		for (const tw of twlst) {

@@ -5,7 +5,11 @@
 export function getSampleSorter(self, settings, rows, opts = {}) {
 	const s = settings
 	validateSettings(s)
-	if (s.sortSamplesBy == 'asListed' || self.config.chartType == 'hierCluster') {
+	if (self.config.chartType == 'hierCluster') {
+		return self.hcSampleSorter
+	}
+
+	if (s.sortSamplesBy == 'asListed') {
 		return (a, b) => {
 			return self.asListedSampleOrder.indexOf(a.sample) - self.asListedSampleOrder.indexOf(b.sample)
 		}
