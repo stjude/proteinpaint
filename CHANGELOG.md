@@ -12,7 +12,9 @@ Fixes:
 - GDC bam slicing UI can still pull BAM files when experimental_strategy=Methylation Array filtering is used
 - support navigation-by-keyboard of bam UI elements
 - fix the display of no data error message and hiding of previously rendered heatmap in the hier cluster app
-- For hierCluster, set left dendrogram position based on max gene label length, ignore variable labels. 
+- For hierCluster, set left dendrogram position based on max gene label length, ignore variable labels.
+- ignore the computed twlst of the hierCluster term group when tracking recoverable state
+- Do not modify the hierCluster term group lst with server data, to avoid unnecessary state tracking and to prevent unwanted geneset edits
 
 
 ## 2.39.6

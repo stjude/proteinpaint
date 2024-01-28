@@ -1,3 +1,1 @@
-Fixes:
-- ignore the computed twlst of the hierCluster term group when tracking recoverable state
-- Do not modify the hierCluster term group lst with server data, to avoid unnecessary state tracking and to prevent unwanted geneset edits
+
