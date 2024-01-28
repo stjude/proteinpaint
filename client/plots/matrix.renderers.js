@@ -452,6 +452,9 @@ export function setRenderers(self) {
 
 		// note: two leftBox.width terms cancels to zero
 		const x = -l.left.offset + hcWidth + maxLabelWidth
+		// with hierCluster:
+		// in case the term dendrograms + max term label width is less than the leftBox.width of all row labels,
+		// then the mainG and top/left dendrograms must be offset have an additional offset based on the difference
 		const xAdjust = !hc.xDendrogramHeight ? 0 : Math.max(leftBox.width - (hc.xDendrogramHeight + maxLabelWidth), 0)
 		const y = (l.top.display == 'none' ? 0 : topBox.height) - l.top.offset + hcHeight
 		self.dom.mainG
