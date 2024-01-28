@@ -433,7 +433,7 @@ export function setRenderers(self) {
 			.attr('height', d.svgh)
 
 		//calculate the max gene label
-		let maxLabelWidth = 0,
+		let maxLabelWidth = self.type == 'hierCluster' ? 0 : leftBox.width,
 			maxLabelNumChars = 0
 		if (hc.xDendrogramHeight) {
 			self.dom.termLabelG.selectAll('.sjpp-matrix-label').each(function (d) {
