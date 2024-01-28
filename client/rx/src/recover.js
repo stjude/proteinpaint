@@ -78,14 +78,16 @@ class Recover {
 		}
 		if (this.state._scope_ == 'none') return
 		this.isRecovering = false
+		const state = this.opts.adjustTrackedState ? this.opts.adjustTrackedState(this.state) : this.state
+		if (!Object.isFrozen(state)) deepFreeze(state)
+
 		// the goto() code should not allow currIndex to go back to -1
-		if (this.currIndex == -1) this.origState = this.state
+		if (this.currIndex == -1) this.origState = state
 
 		if (this.currIndex < this.history.length - 1) {
 			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
 		}
-		const state = this.opts.adjustTrackedState ? this.opts.adjustTrackedState(this.state) : this.state
-		if (!Object.isFrozen(state)) deepFreeze(state)
+
 		if (deepEqual(state, this.history[this.history.length - 1])) return
 		this.history.push(state)
 		this.currIndex += 1
