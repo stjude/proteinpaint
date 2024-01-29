@@ -197,8 +197,8 @@ function getChartTypeList(self) {
 			}
 		},
 		{
-			label: 'Single Cell View',
-			clickTo: self.prepPlot,
+			label: 'Single Cell Plot',
+			clickTo: self.loadChartSpecificMenu,
 			chartType: 'singleCellPlot',
 			config: {
 				chartType: 'singleCellPlot'
