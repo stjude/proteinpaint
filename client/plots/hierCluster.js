@@ -643,7 +643,7 @@ export class HierCluster extends Matrix {
 			})
 		}
 
-		const t = this.termOrder.find(t => t.grp.name == this.hcTermGroup.name)
+		const t = this.termOrder.find(t => t.grp.type == 'hierCluster' || t.grp.name == this.hcTermGroup.name)
 		const ty =
 			//t.labelOffset is commented out because it causes row dendrogram to be misrendered
 			t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
@@ -791,13 +791,17 @@ export async function getPlotConfig(opts = {}, app) {
 	config.settings.matrix.collabelpos = 'top'
 
 	const termGroupName = config.settings.hierCluster.termGroupName
-	const hcTermGroup = config.termgroups.find(g => g.type == 'hierCluster' || g.name == termGroupName)
+	const hcTermGroup = config.termgroups.find(g => g.type == 'hierCluster' || g.name == termGroupName) || {
+		name: termGroupName
+	}
 	// TODO: should compose the term group in launchGdcHierCluster.js, since this handling is customized to only that dataset?
 	// the opts{} object should be standard, should pre-process the opts outside of this getPlotConfig()
-	if (hcTermGroup)
-		hcTermGroup.type = 'hierCluster' // ensure that the group.type is correct for recovered legacy sessions
-	else {
-		if (!Array.isArray(opts.genes)) opts.genes = [] //throw 'opts.genes[] not array (may show geneset edit ui)'
+
+	hcTermGroup.type = 'hierCluster' // ensure that the group.type is correct for recovered legacy sessions
+
+	if (!hcTermGroup.lst?.length) {
+		const genes = opts.genes || []
+		if (!Array.isArray(opts.genes)) throw 'opts.genes[] not array (may show geneset edit ui)'
 
 		const twlst = []
 		for (const i of opts.genes) {
@@ -818,19 +822,8 @@ export async function getPlotConfig(opts = {}, app) {
 			twlst.push(tw)
 		}
 
-		config.termgroups.unshift({
-			name: termGroupName,
-			// TODO: are duplicate term entries, with different q{} objects, allowed?
-			// if yes, should use tw.$id to disambiguate
-			lst: twlst,
-			valueFilter: {
-				type: 'tvs',
-				tvs: {
-					values: [{ dt: 3 }]
-				}
-			},
-			type: 'hierCluster'
-		})
+		hcTermGroup.lst = twlst
+		if (config.termgroups.indexOf(hcTermGroup) == -1) config.termgroups.unshift(hcTermGroup)
 	}
 
 	config.settings.matrix.maxSample = 100000

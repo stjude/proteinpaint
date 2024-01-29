@@ -39,7 +39,7 @@ async function getHierClusterApp(_opts = {}) {
 					termgroups: [], // _opts.termgroups || [],
 					// !!! there will be an initial load error since this is an empty geneset,
 					// !!! but will be ignored since it's not relevant to this test
-					genes: []
+					genes: _opts.genes || []
 					//genes,
 					//settings
 				}

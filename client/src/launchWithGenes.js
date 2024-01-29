@@ -6,7 +6,18 @@ import { fillTermWrapper } from '#termsetting'
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
 
-export async function launchWithGenes(api, genes, genome, arg, settings, holder, tempDiv, chartDiv) {
+export async function launchWithGenes(
+	api,
+	genes,
+	genome,
+	arg,
+	settings,
+	holder,
+	tempDiv,
+	chartDiv,
+	getGenes,
+	callbacks = {}
+) {
 	const chartType = api.type || 'matrix'
 	if (!genes.length) {
 		// the GFF will supply these options, should handle gracefully if missing in test code
@@ -14,6 +25,8 @@ export async function launchWithGenes(api, genes, genome, arg, settings, holder,
 		if (!arg.opts[chartType]) arg.opts[chartType] = {}
 		if (!arg.opts[chartType].callbacks) arg.opts[chartType].callbacks = {}
 		arg.opts[chartType].callbacks['postInit.genesetEdit'] = async chartApi => {
+			callbacks.postRender?.()
+
 			// geneset edit ui requires vocabApi
 			const toolName = api.type == 'hierCluster' ? 'Gene Expression Clustering' : 'OncoMatrix'
 			tempDiv.append('p').text(`No default genes. Please change the cohort or define a gene set to launch ${toolName}.`)
@@ -95,37 +108,65 @@ export async function launchWithGenes(api, genes, genome, arg, settings, holder,
 			undoHtml: 'Undo',
 			redoHtml: 'Redo',
 			resetHtml: 'Restore',
-			adjustTrackedState(state) {
-				const s = structuredClone(state)
-				delete s.termfilter.filter0
-				return s
-			}
+			adjustTrackedState:
+				api.type == 'hierCluster'
+					? state => {
+							const s = structuredClone(state)
+							delete s.termfilter.filter0
+							if (s.plots) {
+								// don't track plot configuration that are not specific to the plot config/settings
+								for (const plot of s.plots) {
+									if (!plot.termgroups) continue
+									for (const grp of plot.termgroups) {
+										if (!grp.lst) continue
+										for (const tw of grp.lst) {
+											if (!tw?.term) continue
+											// this is cohort-dependent and should be ignored like termfilter.filter0
+											delete tw.term.category2samplecount
+											// for GDC, the term.values may not be known ahead of time
+											// and only filled in as data comes in, should ignore this
+											// computed value as to avoid affecting tracked state
+											delete tw.term.values
+										}
+									}
+								}
+							}
+					  }
+					: state => {
+							const s = structuredClone(state)
+							delete s.termfilter.filter0
+							return s
+					  }
 		},
 		[chartType]: Object.assign(
-			{
-				// these will display the inputs together in the Genes menu,
-				// instead of being rendered outside of the chart holder
-				customInputs: {
-					genes: [
-						{
-							label: `Maximum # Genes`,
-							title: 'Limit the number of displayed genes',
-							type: 'number',
-							chartType,
-							settingsKey: 'maxGenes',
-							callback: async value => {
-								const genes = await getGenes(arg, arg.filter0, { maxGenes: value })
-								api.update({
-									termgroups: [{ lst: genes }],
-									settings: {
-										[chartType]: { maxGenes: value }
+			api.type == 'hierCluster'
+				? {}
+				: {
+						// these will display the inputs together in the Genes menu,
+						// instead of being rendered outside of the chart holder
+						customInputs: {
+							genes: [
+								{
+									label: `Maximum # Genes`,
+									title: 'Limit the number of displayed genes',
+									type: 'number',
+									chartType,
+									settingsKey: 'maxGenes',
+									callback: async value => {
+										callbacks.preDispatch?.()
+										const genes = await getGenes(arg, arg.filter0, { maxGenes: value }, holder)
+										const termgroups = structuredClone(plotAppApi.getState().plots[0].termgroups)
+										api.update({
+											termgroups: [{ lst: genes }],
+											settings: {
+												[chartType]: { maxGenes: value }
+											}
+										})
 									}
-								})
-							}
+								}
+							]
 						}
-					]
-				}
-			},
+				  },
 			arg.opts?.[chartType] || {}
 		)
 	}
