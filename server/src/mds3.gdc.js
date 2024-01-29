@@ -2232,7 +2232,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 			body: JSON.stringify({
 				size: 10000, // ssm max!
 				fields: isoform2ssm_query1_getvariant.fields.join(','),
-				filters: isoform2ssm_query1_getvariant.filters(query)
+				filters: isoform2ssm_query1_getvariant.filters(query).filters
 			})
 		})
 		const re = JSON.parse(response.body)
