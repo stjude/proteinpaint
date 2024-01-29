@@ -26,6 +26,9 @@
                         "nochr": false
                     }
                 ]
+            },
+            "testSpec": {
+                "expected": { "image": 2 }
             }
         }
     ],
