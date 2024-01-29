@@ -152,6 +152,7 @@ class PlotApp {
 	printError(e) {
 		sayerror(this.dom.errdiv, 'Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
+		this.bus.emit('error')
 	}
 
 	destroy() {
