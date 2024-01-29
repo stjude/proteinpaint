@@ -15,6 +15,7 @@ Fixes:
 - For hierCluster, set left dendrogram position based on max gene label length, ignore variable labels.
 - ignore the computed twlst of the hierCluster term group when tracking recoverable state
 - Do not modify the hierCluster term group lst with server data, to avoid unnecessary state tracking and to prevent unwanted geneset edits
+- Use the geneset edit UI when there is no initial computed geneset for hierCluster
 
 
 ## 2.39.6
