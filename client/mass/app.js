@@ -171,6 +171,7 @@ class MassApp {
 	printError(e) {
 		sayerror(this.dom.errdiv || this.opts.holder, 'Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
+		this.bus.emit('error')
 	}
 }
 
