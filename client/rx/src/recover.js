@@ -12,6 +12,7 @@ opts:{}
 class Recover {
 	constructor(opts = {}) {
 		this.type = 'recover'
+		this.initialHolderDisplay = opts.holder.style('display')
 		this.dom = {
 			holder: opts.holder,
 			btnDiv: opts.holder
@@ -60,6 +61,11 @@ class Recover {
 		// assume that the presence of app.opts.state
 		// indicates testing, no need for history in that case
 		if (!this.isActive) return
+		if (this.opts.hide?.(this.state)) {
+			this.dom.holder.style('display', 'none')
+			return
+		}
+		this.dom.holder.style('display', this.initialHolderDisplay || '')
 		if (!this.timedTrack) {
 			this.trackState()
 			this.trackPending = true

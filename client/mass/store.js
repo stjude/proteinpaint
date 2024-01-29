@@ -289,6 +289,12 @@ TdbStore.prototype.actions = {
 		validatePlot(plot, this.app.vocabApi)
 	},
 
+	async plot_splice(action) {
+		for (const a of action.subactions) {
+			await this.actions[a.type].call(this, a)
+		}
+	},
+
 	filter_replace(action) {
 		if ('filter0' in action) {
 			// quick fix since rx.copyMerge() does not work for filter0,

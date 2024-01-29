@@ -120,19 +120,30 @@ class PlotApp {
 
 	async main() {
 		this.api.vocabApi.main()
+
+		for (const [i, plot] of this.components.plots.entries()) {
+			if (!this.state.plots.find(p => p.id === plot.id)) {
+				plot.destroy()
+				this.components.plots.splice(i, 1)
+			}
+		}
+
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!plot.id) plot.id = `mds3bar_${+new Date()}_${Math.random()}`
 			if (!this.components.plots.find(p => p.id === plot.id)) {
+				const holder = this.dom.holder.append('div')
+				// quick fix to only track the plotDiv for the first plot
+				// TODO: reliably handle the case where a plotApp instance may have multiple plots/holders
+				if (!this.dom.plotDiv) this.dom.plotDiv = holder
 				// easier for rollup to support less complex dynamic imports with variables,
 				// webpack is already more flexible but need to support packing with rollup
 				const _ = await import(`../plots/${plot.chartType}.js`)
 				const plotInstance = await _.componentInit({
 					id: plot.id,
 					app: this.api,
-					holder: this.dom.plotDiv,
+					holder,
 					controls: this.dom.plotControls
 				})
-
 				this.components.plots.push(plotInstance)
 			}
 		}

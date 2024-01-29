@@ -1,7 +1,6 @@
-import { dofetch3 } from '#common/dofetch'
 import { appInit } from '#plots/plot.app.js'
-import { fillTermWrapper } from '#termsetting'
-import { launchWithGenes } from './launchWithGenes'
+// import { launchWithGenes } from './launchWithGenes'
+import { select } from 'd3-selection'
 
 /*
 test with http://localhost:3000/example.gdc.exp.html
@@ -70,21 +69,108 @@ export async function init(arg, holder, genomes) {
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
-		const callbacks = {}
-		if (arg.opts?.app?.callbacks) {
-			const events = ['preDispatch', 'error', 'postRender']
-			for (const key in arg.opts.app.callbacks) {
-				for (const event of events) {
-					if (key.startsWith(event)) callbacks[event] = arg.opts.app.callbacks[key]
+		const plotAppApi = await appInit({
+			holder: select(arg.holder).select('.sja_root_holder'),
+			genome,
+			state: {
+				genome: gdcGenome,
+				dslabel: gdcDslabel,
+				termfilter: { filter0: arg.filter0 },
+				plots: [
+					// initialize with a geneset component, in case the genes lst is empty
+					// this will be replace with the actual matrix/hierCluster app once
+					// a valid geneset is selected
+					{
+						chartType: 'geneset',
+						toolName: 'Gene Expression Clustering',
+						settings: {
+							maxGenes: settings.hierCluster.maxGenes
+						}
+					}
+				]
+			},
+			app: {
+				features: ['recover'],
+				callbacks: arg.opts?.app?.callbacks || {}
+			},
+			geneset: {
+				mode: 'expression',
+				genome,
+				genes: arg.genes,
+				showWaitMessage(div) {
+					div.style('margin', '20px')
+					div.append('div').text('Loading genes that are top variably expressed in current cohort...')
+					// can delete cgc line when new api is online
+					div.append('div').style('font-size', '.8em').html(`
+						Genes are selected from 738 Cancer Gene Census genes.<br>
+						Only up to 1000 cases with gene expression data will be used to select genes.
+					`)
+				},
+				callback(genesetCompApi, twlst) {
+					plotAppApi.dispatch({
+						type: 'plot_splice',
+						subactions: [
+							{
+								type: 'plot_delete',
+								id: genesetCompApi.id
+							},
+							{
+								type: 'plot_create',
+								config: {
+									chartType: 'hierCluster',
+									// avoid making a dictionary request when there is no gene data;
+									// if there is gene data, then the arg.termgroups can be submitted and rehydrated on app/store.init()
+									termgroups: [
+										{
+											name: 'Gene Expression',
+											type: 'hierCluster',
+											lst: twlst
+										},
+										...(arg.termgroups || [])
+									],
+									divideBy: arg.divideBy || undefined,
+									// moved default settings to gdc.hg38.js termdb[chartType].settings
+									// but can still override in the runpp() argument
+									settings
+								}
+							}
+						]
+					})
+				}
+			},
+			recover: {
+				undoHtml: 'Undo',
+				redoHtml: 'Redo',
+				resetHtml: 'Restore',
+				hide(state) {
+					return state.plots[0]?.chartType != 'hierCluster'
+				},
+				adjustTrackedState: state => {
+					const s = structuredClone(state)
+					delete s.termfilter.filter0
+					if (s.plots) {
+						// don't track plot configuration that are not specific to the plot config/settings
+						for (const plot of s.plots) {
+							if (!plot.termgroups) continue
+							for (const grp of plot.termgroups) {
+								if (!grp.lst) continue
+								for (const tw of grp.lst) {
+									if (!tw?.term) continue
+									// this is cohort-dependent and should be ignored like termfilter.filter0
+									delete tw.term.category2samplecount
+									// for GDC, the term.values may not be known ahead of time
+									// and only filled in as data comes in, should ignore this
+									// computed value as to avoid affecting tracked state
+									delete tw.term.values
+								}
+							}
+						}
+					}
 				}
 			}
-		}
+		})
 
-		let plotAppApi,
-			hierClusterApi,
-			pendingArg = arg,
-			removedTempDiv = false
-		//let plotAppApi, hierClusterApi
+		let hierClusterApi
 		const api = Object.freeze({
 			type: 'hierCluster',
 			update: async _arg => {
@@ -92,53 +178,13 @@ export async function init(arg, holder, genomes) {
 					Object.assign(pendingArg, _arg)
 					return
 				}
-				if (!removedTempDiv && tempDiv?.node?.().closest('body')) {
-					Object.assign(pendingArg, _arg)
-					if ('filter0' in _arg) {
-						tempDiv.style('display', 'none')
-						const genes = await getGenes(pendingArg, _arg.filter0, settings.hierCluster, holder)
-						if (genes.length) {
-							removedTempDiv = true
-							tempDiv.remove()
-							const plotState = structuredClone(plotAppApi.getState().plots[0])
-							const hcTermGroup = plotState.termgroups.find(grp => grp.type == 'hierCluster')
-							// arg.termgroups was not rehydrated on the appInit() of plotApp,
-							// need to rehydrate here manually
-							hcTermGroup.lst = await Promise.all(genes.map(async tw => await fillTermWrapper(tw)))
-							plotAppApi.dispatch({
-								type: 'app_refresh',
-								state: {
-									termfilter: { filter0: _arg.filter0 },
-									plots: [plotState]
-								}
-							})
-							chartDiv.style('display', '')
-						} else {
-							tempDiv.style('display', '')
-							plotAppApi.dispatch({
-								type: 'filter_replace',
-								filter0: _arg.filter0
-							})
-						}
-					} else {
-						// this will force an app.postRender() emit to trigger hiding the loading overlay,
-						// if there is an arg.app.calllbacks.postRender, and even if there is no state change
-						// that would have trigerred a matrix re-render to trigger a postRender closing of
-						// the loading overlay
-						plotAppApi.dispatch({
-							type: 'app_refresh',
-							state: {}
-						})
-					}
-					return
-				}
-
 				if ('filter0' in _arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
 						filter0: _arg.filter0
 					})
 				} else {
+					if (!hierClusterApi) hierClusterApi = plotAppApi.getComponents('plots.0')
 					plotAppApi.dispatch({
 						type: 'plot_edit',
 						id: hierClusterApi.id,
@@ -148,78 +194,8 @@ export async function init(arg, holder, genomes) {
 			}
 		})
 
-		const genes = await getGenes(arg, arg.filter0, settings.hierCluster, holder)
-		const tempDiv = !genes.length && holder.append('div') // single-use div to show geneset edit ui if there are no genes
-		const chartDiv = holder.append('div').style('display', genes.length ? '' : 'none') // hide the matrix div if there are no genes
-		// launchWithGenes will handle empty genes list with a postInit callback
-		plotAppApi = await launchWithGenes(
-			api,
-			genes,
-			genome,
-			arg,
-			settings,
-			holder,
-			tempDiv,
-			chartDiv,
-			getGenes,
-			callbacks
-		)
-		hierClusterApi = plotAppApi.getComponents('plots.0')
 		return api
 	} catch (e) {
-		if (arg.opts?.hierCluster?.callbacks) {
-			for (const eventName in arg.opts.hierCluster.callbacks) {
-				if (eventName.startsWith('error')) arg.opts.hierCluster.callbacks[eventName]()
-			}
-		}
 		throw e
 	}
-}
-
-/*
-arg={}
-	.genes=[ str, ... ]
-filter0={}
-config{}
-*/
-async function getGenes(arg, filter0, config, holder) {
-	if (arg.genes) {
-		// genes are predefined
-		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw 'arg.genes[] is not non-empty array'
-		return await makeGeneTwlst(arg.genes)
-	}
-
-	const wait = holder.append('div').style('margin', '20px')
-	wait.append('div').text('Loading genes that are top variably expressed in current cohort...')
-	// can delete cgc line when new api is online
-	wait.append('div').style('font-size', '.8em').html(`
-	Genes are selected from 738 Cancer Gene Census genes.<br>
-	Only up to 1000 cases with gene expression data will be used to select genes.`)
-	// hardcode of 1000 is in gdcGetCasesWithExressionDataFromCohort()
-
-	// genes are not predefined. query to get top genes using the current cohort
-	const body = {
-		genome: gdcGenome,
-		dslabel: gdcDslabel,
-		maxGenes: config.maxGenes
-	}
-	if (filter0) body.filter0 = filter0 // to avoid causing a "null" parameter value for backend
-
-	try {
-		const data = await dofetch3('termdb/topVariablyExpressedGenes', { body })
-		if (data.error) throw data.error
-		if (!data.genes) throw 'no top genes found using the cohort filter'
-		wait.remove()
-		return await makeGeneTwlst(data.genes)
-	} catch (e) {
-		wait.remove()
-		throw e
-	}
-}
-async function makeGeneTwlst(lst) {
-	const tws = []
-	for (const g of lst) {
-		tws.push(await fillTermWrapper({ term: { name: g, type: 'geneVariant' } }))
-	}
-	return tws
 }
