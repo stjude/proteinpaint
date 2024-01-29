@@ -2,66 +2,58 @@ import * as client from './client'
 import * as common from '#shared/common'
 import * as coord from './coord'
 
+// TODO reuse ui for genomic mode too
+
 export default function (block) {
 	if (!block.usegm) {
 		return
 	}
 	const tip = block.tip.d
-	tip.append('div').text(`Add data to show over ${block.usegm.name} ${block.usegm.isoform}`).style('margin', '10px')
+	tip
+		.append('div')
+		.text(`Add data to show over ${block.usegm.name} ${block.usegm.isoform}`)
+		.style('margin', '10px')
+		.style('font-size', '.8em')
 	// snv
 	tip
 		.append('div')
 		.attr('class', 'sja_menuoption')
 		.style('border-radius', '0px')
-		.style('Mutation')
+		.text('Mutation')
 		.on('click', () => {
 			customdataui_snv(block)
 		})
 	// sv
 	tip
 		.append('div')
-		.classed('sja_menuoption', true)
-		.style('padding', '10px 12px')
-		.html(
-			'<span style="color:#858585">' +
-				block.usegm.name +
-				' <span style="font-size:.7em">' +
-				(block.usegm.isoform || '') +
-				'</span></span> SV/Fusion'
-		)
+		.attr('class', 'sja_menuoption')
+		.style('border-radius', '0px')
+		.text('SV/Fusion')
 		.on('click', () => {
 			customdataui_sv(block)
 		})
+
+	/*
+		show both itd and del as cnvs (itd may be specially designated)
 	// itd
 	tip
 		.append('div')
-		.classed('sja_menuoption', true)
-		.style('padding', '10px 12px')
-		.html(
-			'<span style="color:#858585">' +
-				block.usegm.name +
-				' <span style="font-size:.7em">' +
-				(block.usegm.isoform || '') +
-				'</span></span> Internal Tandem Duplication'
-		)
+		.attr('class','sja_menuoption')
+		.style('border-radius', '0px')
+		.text('Internal Tandem Duplication')
 		.on('click', () => {
 			customdataui_itd(block)
 		})
 	// del
 	tip
 		.append('div')
-		.classed('sja_menuoption', true)
-		.style('padding', '10px 12px')
-		.html(
-			'<span style="color:#858585">' +
-				block.usegm.name +
-				' <span style="font-size:.7em">' +
-				(block.usegm.isoform || '') +
-				'</span></span> Intragenic Deletion'
-		)
+		.attr('class','sja_menuoption')
+		.style('border-radius', '0px')
+		.text('Intragenic Deletion')
 		.on('click', () => {
 			customdataui_del(block)
 		})
+		*/
 }
 
 function customdataui_sv(block, x, y) {
@@ -179,54 +171,26 @@ function customdataui_sv(block, x, y) {
 				const m = {
 					class: common.mclassfusionrna,
 					dt: common.dtfusionrna,
-					isoform: block.usegm.isoform,
-					pairlst: [
-						{
-							a: {
-								name: l[0].trim(),
-								isoform: isoform1,
-								codon: codon1,
-								rnaposition: rnapos1,
-								chr: chr1,
-								position: position1
-							},
-							b: {
-								name: l[3].trim(),
-								isoform: isoform2,
-								codon: codon2,
-								rnaposition: rnapos2,
-								chr: chr2,
-								position: position2
-							}
-						}
-					]
+					gene1: l[0].trim(),
+					gene2: l[3].trim(),
+					chr1,
+					chr2,
+					pos1: position1,
+					pos2: position2
 				}
-				if (l[6]) {
-					const ilen = Number.parseInt(l[6].trim())
-					if (!Number.isNaN(ilen)) {
-						m.pairlst[0].interstitial = { aalen: ilen }
-					}
-				}
+				// TODO map codon/rna to genomic
 				mlst.push(m)
 			}
 			if (bad.length) {
 				says.style('display', 'block').text('Rejected: ' + bad.join('\n'))
 			}
 			if (mlst.length == 0) return
-			const ds = {
-				bulkdata: {},
-				iscustom: true
-			}
-			ds.bulkdata[block.usegm.name.toUpperCase()] = mlst
-			const label = nameinput.property('value') || 'Custom fusion'
-			ds.label = label
-			let i = 0
-			while (block.ownds[ds.label]) {
-				ds.label = label + ' ' + ++i
-			}
-			block.ownds[ds.label] = ds
-			//block.dshandle_new(ds.label)
-			const tk = block.block_addtk_template({ type: client.tkt.ds, ds: ds })
+			const tk = block.block_addtk_template({
+				type: 'mds3',
+				name: nameinput.property('value') || 'Custom fusion',
+				iscustom: true,
+				custom_variants: mlst
+			})
 			block.tk_load(tk)
 		})
 	row
