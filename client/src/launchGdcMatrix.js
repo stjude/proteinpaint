@@ -108,10 +108,21 @@ export async function init(arg, holder, genomes) {
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
+		const callbacks = {}
+		if (arg.opts?.app?.callbacks) {
+			const events = ['preDispatch', 'error', 'postRender']
+			for (const key in arg.opts.app.callbacks) {
+				for (const event of events) {
+					if (key.startsWith(event)) callbacks[event] = arg.opts.app.callbacks[key]
+				}
+			}
+		}
+
 		let plotAppApi,
 			matrixApi,
 			pendingArg = arg,
 			removedTempDiv = false
+
 		const api = {
 			update: async arg => {
 				if (!plotAppApi) {
@@ -119,6 +130,7 @@ export async function init(arg, holder, genomes) {
 					return
 				}
 				if (!removedTempDiv && tempDiv?.node?.().closest('body')) {
+					callbacks.preDispatch?.()
 					Object.assign(pendingArg, arg)
 					if ('filter0' in arg) {
 						const genes = await getGenes(pendingArg, arg.filter0, settings.matrix)
@@ -179,7 +191,18 @@ export async function init(arg, holder, genomes) {
 		const tempDiv = !genes.length && holder.append('div') // single-use div to show geneset edit ui if there are no genes
 		const matrixDiv = holder.append('div').style('display', genes.length ? '' : 'none') // hide the matrix div if there are no genes
 		// launchWithGenes will handle empty genes list with a postInit callback
-		plotAppApi = await launchWithGenes(api, genes, genome, arg, settings, holder, tempDiv, matrixDiv)
+		plotAppApi = await launchWithGenes(
+			api,
+			genes,
+			genome,
+			arg,
+			settings,
+			holder,
+			tempDiv,
+			matrixDiv,
+			getGenes,
+			callbacks
+		)
 		matrixApi = plotAppApi.getComponents('plots.0')
 		return api
 	} catch (e) {
