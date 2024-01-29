@@ -559,10 +559,11 @@ export function setRenderers(self) {
 			.style('margin', '20px')
 			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
 		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
-		if (!self.is2DLarge || self.is3D) {
-			const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
+		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
+		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
+
+		if (!(self.is2DLarge || self.is3D)) {
 			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
-			const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
 		}
 		self.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
