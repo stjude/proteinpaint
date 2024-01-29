@@ -44,68 +44,7 @@ class singleCellPlot {
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder
 		}
-
-		const body = { genome: appState.vocab.genome, dslabel: appState.vocab.dslabel }
-		let result
-		try {
-			result = await dofetch3('termdb/singlecellSamples', { body })
-			if (result.error) throw result.error
-		} catch (e) {
-			sayerror(this.mainDiv, e)
-			return
-		}
-		this.samples = result.samples
-		this.samples.sort((elem1, elem2) => {
-			const result = elem1.primarySite?.localeCompare(elem2.primarySite)
-			if (result == 1 || result == -1) return result
-			else return elem1.sample.localeCompare(elem2.sample)
-		})
-
-		const rows = []
-		let columns = []
-		const fields = result.fields
-		const columnNames = result.columnNames
-		this.sameLegend = result.sameLegend
-		for (const column of columnNames) columns.push({ label: column })
-		const index = columnNames.length == 1 ? 0 : columnNames.length - 1
-		columns[index].width = '25vw'
-
-		for (const sample of this.samples) {
-			if (sample.files)
-				for (const file of sample.files) {
-					const row = []
-					addFields(row, fields, sample)
-					row.push({ value: file.sampleType })
-					row.push({ value: file.fileId })
-					rows.push(row)
-				}
-			else {
-				const row = []
-				addFields(row, fields, sample)
-				rows.push(row)
-			}
-		}
-
-		function addFields(row, fields, sample) {
-			for (const field of fields) {
-				row.push({ value: sample[field] })
-			}
-		}
-		renderTable({
-			rows,
-			columns,
-			resize: true,
-			singleMode: true,
-			div: this.sampleDiv,
-			maxHeight: '18vh',
-			noButtonCallback: index => {
-				const sample = this.samples[index].sample
-				const file = rows[index][columns.length - 1].value
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { sample, file } })
-			},
-			selectedRows: [0]
-		})
-
+		if (appState.vocab.dslabel == 'GDC') await renderSamplesTable(this.sampleDiv, this, appState)
 		// this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
 		// const sample = this.samples[0]
 		// const input = this.sampleDiv
@@ -127,7 +66,6 @@ class singleCellPlot {
 		// 	.attr('label', d => ('primarySite' in d ? `${d.primarySite} | ${d.diseaseType}` : ''))
 
 		this.settings = {}
-		if (this.dom.header) this.dom.header.html('Single Cell Data')
 		this.table = this.mainDiv
 			.append('div')
 			.style('padding-top', '10px')
@@ -172,8 +110,6 @@ class singleCellPlot {
 		}
 		return {
 			config,
-			sample: config.sample || this.samples[0].sample,
-			file: config.file || this.samples[0].files?.[0].fileId,
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome
 		}
@@ -187,18 +123,26 @@ class singleCellPlot {
 		this.table.selectAll('*').remove()
 		this.plots = []
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
-		const sampleData = this.samples.find(s => s.sample == this.state.sample)
 
 		this.headerTr = this.table.append('tr')
 		this.tr = this.table.append('tr')
-
-		if (sampleData.files) {
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.file }
+		let sample = this.state.config.sample
+		if (this.state.dslabel != 'GDC') {
+			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.config.sample }
 			this.renderPlots(body)
 		} else {
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: sampleData.sample }
+			let file
+			if (!this.state.config.file) {
+				sample = this.samples[0].sample
+				file = this.samples[0].files[0].fileId
+			} else {
+				sample = this.state.config.sample
+				file = this.state.config.file
+			}
+			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file }
 			this.renderPlots(body)
 		}
+		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
 	}
 
 	async renderPlots(body) {
@@ -415,6 +359,94 @@ class singleCellPlot {
 	getOpacity(d) {
 		return this.config.hiddenClusters.includes(d.clusterMap[d.cellId]) ? 0 : 1
 	}
+}
+
+export async function makeChartBtnMenu(holder, chartsInstance) {
+	/*
+	holder: the holder in the tooltip
+	chartsInstance: MassCharts instance
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
+	*/
+
+	const menuDiv = holder.append('div').style('padding', '5px')
+	renderSamplesTable(menuDiv, chartsInstance, chartsInstance.state)
+}
+
+async function renderSamplesTable(div, self, state) {
+	const body = { genome: state.vocab.genome, dslabel: state.vocab.dslabel }
+	let result
+	try {
+		result = await dofetch3('termdb/singlecellSamples', { body })
+		if (result.error) throw result.error
+	} catch (e) {
+		sayerror(div, e)
+		return
+	}
+	const samples = result.samples
+	samples.sort((elem1, elem2) => {
+		const result = elem1.primarySite?.localeCompare(elem2.primarySite)
+		if (result == 1 || result == -1) return result
+		else return elem1.sample.localeCompare(elem2.sample)
+	})
+
+	const rows = []
+	let columns = []
+	const fields = result.fields
+	const columnNames = result.columnNames
+	for (const column of columnNames) columns.push({ label: column })
+	const index = columnNames.length == 1 ? 0 : columnNames.length - 1
+	columns[index].width = '25vw'
+
+	for (const sample of samples) {
+		if (sample.files)
+			for (const file of sample.files) {
+				const row = []
+				addFields(row, fields, sample)
+				row.push({ value: file.sampleType })
+				row.push({ value: file.fileId })
+				rows.push(row)
+			}
+		else {
+			const row = []
+			addFields(row, fields, sample)
+			rows.push(row)
+		}
+	}
+
+	function addFields(row, fields, sample) {
+		for (const field of fields) {
+			row.push({ value: sample[field] })
+		}
+	}
+	const selectedRows = []
+	let maxHeight = '40vh'
+	if (state.vocab.dslabel == 'GDC') {
+		selectedRows.push(0)
+		self.samples = samples
+		maxHeight = '21vh'
+	}
+
+	renderTable({
+		rows,
+		columns,
+		resize: true,
+		singleMode: true,
+		div,
+		maxHeight,
+		noButtonCallback: index => {
+			const sample = samples[index].sample
+			const file = rows[index][columns.length - 1].value
+			let config = { chartType: 'singleCellPlot', sample, file }
+			let type = 'plot_edit'
+			if (state.vocab.dslabel != 'GDC') {
+				self.dom.tip.hide()
+				type = 'plot_create'
+				self.app.dispatch({ type, config })
+			} else self.app.dispatch({ type, id: self.id, config })
+		},
+		selectedRows
+	})
 }
 
 export const scatterInit = getCompInit(singleCellPlot)
