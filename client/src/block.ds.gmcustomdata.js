@@ -1,25 +1,19 @@
 import * as client from './client'
 import * as common from '#shared/common'
 import * as coord from './coord'
-import { bulkui } from './bulk.ui'
 
-export default function(block) {
+export default function (block) {
 	if (!block.usegm) {
 		return
 	}
 	const tip = block.tip.d
+	tip.append('div').text(`Add data to show over ${block.usegm.name} ${block.usegm.isoform}`).style('margin', '10px')
 	// snv
 	tip
 		.append('div')
-		.classed('sja_menuoption', true)
-		.style('padding', '10px 12px')
-		.html(
-			'<span style="color:#858585">' +
-				block.usegm.name +
-				' <span style="font-size:.7em">' +
-				(block.usegm.isoform || '') +
-				'</span></span> SNV/Indel'
-		)
+		.attr('class', 'sja_menuoption')
+		.style('border-radius', '0px')
+		.style('Mutation')
 		.on('click', () => {
 			customdataui_snv(block)
 		})
@@ -68,17 +62,6 @@ export default function(block) {
 		.on('click', () => {
 			customdataui_del(block)
 		})
-	// file
-	tip
-		.append('div')
-		.classed('sja_menuoption', true)
-		.style('padding', '10px 12px')
-		.text('Upload text files')
-		.on('click', () => {
-			const _genomes = {}
-			_genomes[block.genome.name] = block.genome
-			bulkui(100, 100, _genomes, block.hostURL)
-		})
 }
 
 function customdataui_sv(block, x, y) {
@@ -89,10 +72,7 @@ function customdataui_sv(block, x, y) {
 		.append('p')
 		.style('font-size', '.9em')
 		.html('<span style="font-size:.8em;color:#aaa">EXAMPLE</span> PAX5,NM_016734,201,JAK2,NM_004972,812')
-	const ta = div
-		.append('textarea')
-		.attr('cols', '50')
-		.attr('rows', '3')
+	const ta = div.append('textarea').attr('cols', '50').attr('rows', '3')
 
 	const nameinput = div
 		.append('div')
@@ -290,10 +270,7 @@ function customdataui_snv(block) {
 		.append('p')
 		.style('font-size', '.9em')
 		.html('<span style="font-size:.8em;color:#aaa">FORMAT</span> mutation name ; position ; class')
-	const ta = div
-		.append('textarea')
-		.attr('cols', '30')
-		.attr('rows', '4')
+	const ta = div.append('textarea').attr('cols', '30').attr('rows', '4')
 
 	const nameinput = div
 		.append('div')
@@ -387,19 +364,12 @@ function customdataui_snv(block) {
 				says.style('display', 'block').text('Rejected: ' + bad.join('\n'))
 			}
 			if (mlst.length == 0) return
-			const ds = {
-				bulkdata: {},
-				iscustom: true
-			}
-			ds.bulkdata[block.usegm.name.toUpperCase()] = mlst
-			const label = nameinput.property('value') || 'Custom mutation'
-			ds.label = label
-			let i = 0
-			while (block.ownds[ds.label]) {
-				ds.label = label + ' ' + ++i
-			}
-			block.ownds[ds.label] = ds
-			const tk = block.block_addtk_template({ type: client.tkt.ds, ds: ds })
+			const tk = block.block_addtk_template({
+				type: 'mds3',
+				name: nameinput.property('value') || 'Custom mutation',
+				iscustom: true,
+				custom_variants: mlst
+			})
 			block.tk_load(tk)
 		})
 	row
@@ -439,10 +409,7 @@ function customdataui_itd(block, x, y) {
 		.append('p')
 		.style('font-size', '.9em')
 		.html('<span style="font-size:.8em;color:#aaa">FORMAT</span> position1 ; position2/span')
-	const ta = div
-		.append('textarea')
-		.attr('cols', '20')
-		.attr('rows', '5')
+	const ta = div.append('textarea').attr('cols', '20').attr('rows', '5')
 
 	const nameinput = div
 		.append('div')
@@ -559,10 +526,7 @@ function customdataui_del(block, x, y) {
 		.append('p')
 		.style('font-size', '.9em')
 		.html('<span style="font-size:.8em;color:#aaa">FORMAT</span> position1 ; position2/span')
-	const ta = div
-		.append('textarea')
-		.attr('cols', '20')
-		.attr('rows', '5')
+	const ta = div.append('textarea').attr('cols', '20').attr('rows', '5')
 
 	const nameinput = div
 		.append('div')
