@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { detectOne, detectZero, detectGte, whenVisible, detectLst } = require('../../test/test.helpers')
+const { detectOne, detectZero, detectGte, whenVisible, detectLst, sleep } = require('../../test/test.helpers')
 const { runproteinpaint } = require('../../test/front.helpers.js')
 
 /**************
@@ -78,7 +78,7 @@ export async function findSingletonMutationTestDiscoCnvPlots(test, tk, holder) {
 	*/
 	let buttons = tk.itemtip.d.selectAll('button').nodes()
 	if (buttons.length == 0) {
-		buttons = await detectLst({ elem: tk.itemtip.d.node(), selector: 'button' })
+		buttons = await detectGte({ elem: tk.itemtip.d.node(), selector: 'button', count: 2 })
 	}
 	/* multiplt buttons can be shown, based on data availability
 	#1: disco
