@@ -1,0 +1,31 @@
+{
+    "ppcalls": [
+        {
+            "message": "<p>Data shown from the <a href='https://viz.stjude.cloud/cancer-survivorship/visualization/st-jude-survivorship-portal~18'>St. Jude Survivorship Portal<a/>.</p>",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "tracks": [
+                    {
+                        "type": "ld",
+                        "name": "European ancestry",
+                        "file": "files/hg38/sjlife/ld/CEU.gz",
+                        "viewrangelimit": 200000,
+                        "nochr": false
+                    },
+                    {
+                        "type": "ld",
+                        "name": "African ancestry",
+                        "file": "files/hg38/sjlife/ld/YRI.gz",
+                        "viewrangelimit": 200000,
+                        "nochr": false
+                    }
+                ]
+            }
+        }
+    ],
+    "ribbonMessage": "Explore new LD maps! Paper under review."
+}

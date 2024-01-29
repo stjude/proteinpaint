@@ -31,7 +31,7 @@
             "type": "nestedCard",
             "name": "Use Cases",
             "section": "nestedCards",
-            "description": "find workflows and processes for specific needs",
+            "description": "Find workflows and processes for specific needs",
             "children": [
                 {
                     "name": "Generate GenomePaint SV View",
@@ -133,7 +133,7 @@
             "type": "card",
             "name": "Track list & facet table",
             "section": "tracks",
-            "description": " ",
+            "description": "Organize large number of tracks into a tables",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/tklist-square.png",
             "sandboxJson": "tklist",
             "searchterms": []
@@ -161,7 +161,7 @@
             "type": "card",
             "name": "Gene Fusion",
             "section": "tracks",
-            "description": " ",
+            "description": "Visualize gene fusions",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/genefusion-square.png",
             "sandboxJson": "genefusion",
             "searchterms": []
@@ -195,6 +195,16 @@
             "image": "https://proteinpaint.stjude.org/ppdemo/images/bam-square.png",
             "sandboxJson": "gdcbam",
             "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "Linkage Disequilibrium",
+            "section": "tracks",
+            "ribbon": {"text": "new", "expireDate": "2024-03-01"},
+            "description": "Non-random association of alleles at different loci",
+            "image": "https://proteinpaint.stjude.org/ppdemo/images/ld-square.png",
+            "sandboxJson": "ld",
+            "searchterms": ["ld"]
         },
         {
             "type": "card",
