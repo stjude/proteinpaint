@@ -260,7 +260,7 @@ function setRenderers(self) {
 		self.mayshow_warn(result)
 		if (result.sampleSize) self.newDiv('Sample size:', result.sampleSize)
 		if (result.eventCnt) self.newDiv('Number of events:', result.eventCnt)
-		if (result.headerRow) self.newDiv(result.headerRow.k, result.headerRow.v)
+		self.mayshow_headerRow(result)
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
 		self.mayshow_coefficients(result)
@@ -295,6 +295,44 @@ function setRenderers(self) {
 		for (const line of warnings) {
 			div.append('p').style('margin', '5px').text(line)
 		}
+	}
+
+	self.mayshow_headerRow = result => {
+		if (!result.headerRow) return
+		const k = result.headerRow.k
+		const v = result.headerRow.v
+		const snplocusInput = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
+		let lst
+		if (snplocusInput) {
+			// header row is for snplocus results
+			const snpid = v.snpid
+			const snp = snplocusInput.term.term.snps.find(snp => snp.snpid == snpid)
+			// snp id label
+			const urls = []
+			if (snp.dbsnp) urls.push(`<a href="https://www.ncbi.nlm.nih.gov/snp/${snpid}" target="_blank">dbSNP</a>`)
+			urls.push(
+				`<a href="https://regulomedb.org/regulome-search?regions=${snp.chr}%3A${snp.pos}-${snp.pos + 1}&genome=${
+					self.parent.genomeObj.name == 'hg38' ? 'GRCh38' : self.parent.genomeObj.name
+				}" target="_blank">RegulomeDB</a>`
+			)
+			const snpid_label = `${snpid} (${urls.join(', ')})`
+			// gt label
+			const gt_label = `Genotypes: ${v.gtcounts.join(', ')}`
+			if (v.monomorphic) {
+				lst = [snpid_label, gt_label]
+			} else {
+				// effect allele label
+				const effale_label = `Effect allele: ${v.effAle}`
+				// allel frequency label
+				const af_label = `Allele frequency: ${v.af}`
+				lst = [snpid_label, effale_label, af_label, gt_label]
+			}
+		} else {
+			// header row is not for snplocus results
+			lst = v
+		}
+
+		self.newDiv(k, lst.join('&nbsp;&#65372;&nbsp;'))
 	}
 
 	self.mayshow_splinePlots = result => {
