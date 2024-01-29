@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-server",
-  "version": "2.39.6",
+  "version": "2.40.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
   "bin": "start.js",

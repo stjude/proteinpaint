@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.40.0
 
 Features:
 - Hi-C whole genome view supports different matrix types (e.g. observed, expected, etc.). Users can select different matrix types from dropdown.
