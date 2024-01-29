@@ -2,12 +2,14 @@
     "ppcalls": [
         {
             "message": "<p>Data shown from the <a href='https://viz.stjude.cloud/cancer-survivorship/visualization/st-jude-survivorship-portal~18'>St. Jude Survivorship Portal<a/>.</p>",
+            "urlparam": "?block=on&genome=hg38&ldfile=local,files/hg38/sjlife/ld/CEU.gz",
             "runargs": {
                 "parseurl": true,
                 "block": true,
                 "nobox": 1,
                 "noheader": 1,
                 "genome": "hg38",
+                "nativetracks": "Refgene",
                 "tracks": [
                     {
                         "type": "ld",
