@@ -1,6 +1,7 @@
+import { appInit } from '#plots/plot.app.js'
+import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { fillTermWrapper } from '#termsetting'
-import { launchWithGenes } from './launchWithGenes'
 
 /*
 test with http://localhost:3000/example.gdc.matrix.html
@@ -108,68 +109,145 @@ export async function init(arg, holder, genomes) {
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
-		const callbacks = {}
-		if (arg.opts?.app?.callbacks) {
-			const events = ['preDispatch', 'error', 'postRender']
-			for (const key in arg.opts.app.callbacks) {
-				for (const event of events) {
-					if (key.startsWith(event)) callbacks[event] = arg.opts.app.callbacks[key]
+		const plotAppApi = await appInit({
+			holder: select(arg.holder).select('.sja_root_holder'),
+			genome,
+			state: {
+				genome: gdcGenome,
+				dslabel: gdcDslabel,
+				termfilter: { filter0: arg.filter0 },
+				plots: [
+					// initialize with a geneset component, in case the genes lst is empty
+					// this will be replace with the actual matrix/hierCluster app once
+					// a valid geneset is selected
+					{
+						chartType: 'geneset',
+						toolName: 'OncoMatrix',
+						settings: {
+							maxGenes: settings.matrix?.maxGenes
+						}
+					}
+				]
+			},
+			app: {
+				features: ['recover'],
+				callbacks: arg.opts?.app?.callbacks || {}
+			},
+			geneset: {
+				mode: 'mutation',
+				genome,
+				genes: arg.genes,
+				showWaitMessage(div) {
+					div.style('margin', '20px')
+					div.append('div').text('Loading the top mutated genes in the current cohort...')
+					// can delete cgc line when new api is online
+					// div.append('div').style('font-size', '.8em').html(`
+					// 	Genes are selected from 738 Cancer Gene Census genes.<br>
+					// 	Only up to 1000 cases with gene expression data will be used to select genes.
+					// `)
+				},
+				callback(genesetCompApi, twlst) {
+					plotAppApi.dispatch({
+						type: 'plot_splice',
+						subactions: [
+							{
+								type: 'plot_delete',
+								id: genesetCompApi.id
+							},
+							{
+								type: 'plot_create',
+								config: {
+									chartType: 'matrix',
+									// avoid making a dictionary request when there is no gene data;
+									// if there is gene data, then the arg.termgroups can be submitted and rehydrated on app/store.init()
+									termgroups: [
+										...(arg.termgroups || []),
+										{
+											//name: 'Gene Expression',
+											lst: twlst
+										}
+									],
+									divideBy: arg.divideBy || undefined,
+									// moved default settings to gdc.hg38.js termdb[chartType].settings
+									// but can still override in the runpp() argument
+									settings
+								}
+							}
+						]
+					})
 				}
-			}
-		}
+			},
+			recover: {
+				undoHtml: 'Undo',
+				redoHtml: 'Redo',
+				resetHtml: 'Restore',
+				hide(state) {
+					return state.plots[0]?.chartType != 'matrix'
+				},
+				adjustTrackedState: state => {
+					const s = structuredClone(state)
+					delete s.termfilter.filter0
+					if (s.plots) {
+						// don't track plot configuration that are not specific to the plot config/settings
+						for (const plot of s.plots) {
+							if (!plot.termgroups) continue
+							for (const grp of plot.termgroups) {
+								if (!grp.lst) continue
+								for (const tw of grp.lst) {
+									if (!tw?.term) continue
+									// this is cohort-dependent and should be ignored like termfilter.filter0
+									delete tw.term.category2samplecount
+									// for GDC, the term.values may not be known ahead of time
+									// and only filled in as data comes in, should ignore this
+									// computed value as to avoid affecting tracked state
+									delete tw.term.values
+								}
+							}
+						}
+					}
+				}
+			},
+			matrix: Object.assign(
+				{
+					// these will display the inputs together in the Genes menu,
+					// instead of being rendered outside of the matrix holder
+					customInputs: {
+						genes: [
+							{
+								label: `Maximum # Genes`,
+								title: 'Limit the number of displayed genes',
+								type: 'number',
+								chartType: 'matrix',
+								settingsKey: 'maxGenes',
+								callback: async value => {
+									for (const key in arg.opts?.app?.callbacks) {
+										if (key.startsWith('preDispatch')) {
+											arg.opts?.app?.callbacks[key]()
+											break
+										}
+									}
+									const genes = await getGenes(arg, { maxGenes: value, geneFilter: settings.matrix.geneFilter })
+									api.update({
+										termgroups: [{ lst: genes }],
+										settings: {
+											matrix: { maxGenes: value }
+										}
+									})
+								}
+							}
+						]
+					}
+				},
+				arg.opts?.matrix || {}
+			)
+		})
 
-		let plotAppApi,
-			matrixApi,
-			pendingArg = arg,
-			removedTempDiv = false
+		let matrixApi
 
 		const api = {
 			update: async arg => {
 				if (!plotAppApi) {
 					Object.assign(pendingArg, arg)
-					return
-				}
-				if (!removedTempDiv && tempDiv?.node?.().closest('body')) {
-					callbacks.preDispatch?.()
-					Object.assign(pendingArg, arg)
-					if ('filter0' in arg) {
-						const genes = await getGenes(pendingArg, arg.filter0, settings.matrix)
-						if (genes.length) {
-							removedTempDiv = true
-							tempDiv.remove()
-							const plotState = structuredClone(plotAppApi.getState().plots[0])
-							if (pendingArg.termgroups) {
-								// arg.termgroups was not rehydrated on the appInit() of plotApp,
-								// need to rehydrate here manually
-								for (const group of pendingArg.termgroups) {
-									group.lst = await Promise.all(group.lst.map(fillTermWrapper))
-								}
-							}
-							plotState.termgroups = [...(pendingArg.termgroups || []), { lst: genes }]
-							plotAppApi.dispatch({
-								type: 'app_refresh',
-								state: {
-									termfilter: { filter0: arg.filter0 },
-									plots: [plotState]
-								}
-							})
-							matrixDiv.style('display', '')
-						} else {
-							plotAppApi.dispatch({
-								type: 'filter_replace',
-								filter0: arg.filter0
-							})
-						}
-					} else {
-						// this will force an app.postRender() emit to trigger hiding the loading overlay,
-						// if there is an arg.app.calllbacks.postRender, and even if there is no state change
-						// that would have trigerred a matrix re-render to trigger a postRender closing of
-						// the loading overlay
-						plotAppApi.dispatch({
-							type: 'app_refresh',
-							state: {}
-						})
-					}
 					return
 				}
 				if ('filter0' in arg) {
@@ -178,6 +256,7 @@ export async function init(arg, holder, genomes) {
 						filter0: arg.filter0
 					})
 				} else {
+					if (!matrixApi) matrixApi = plotAppApi.getComponents('plots.0')
 					plotAppApi.dispatch({
 						type: 'plot_edit',
 						id: matrixApi.id,
@@ -187,67 +266,23 @@ export async function init(arg, holder, genomes) {
 			}
 		}
 
-		const genes = await getGenes(arg, arg.filter0, settings.matrix)
-		const tempDiv = !genes.length && holder.append('div') // single-use div to show geneset edit ui if there are no genes
-		const matrixDiv = holder.append('div').style('display', genes.length ? '' : 'none') // hide the matrix div if there are no genes
-		// launchWithGenes will handle empty genes list with a postInit callback
-		plotAppApi = await launchWithGenes(
-			api,
-			genes,
-			genome,
-			arg,
-			settings,
-			holder,
-			tempDiv,
-			matrixDiv,
-			getGenes,
-			callbacks
-		)
-		matrixApi = plotAppApi.getComponents('plots.0')
 		return api
 	} catch (e) {
-		if (arg.opts?.matrix?.callbacks) {
-			for (const eventName in arg.opts.matrix.callbacks) {
-				if (eventName.startsWith('error')) arg.opts.matrix.callbacks[eventName]()
-			}
-		}
 		throw e
 	}
 }
 
-/*
-arg={}
-	.genes=[ str, ... ]
-filter0={}
-matrix{}
-*/
-let i = 0
-async function getGenes(arg, filter0, matrix) {
-	if (arg.genes) {
-		// genes are predefined
-		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw '.genes[] is not non-empty array'
-		return await Promise.all(
-			arg.genes.map(async i => {
-				return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
-			})
-		)
-	}
-
+async function getGenes(arg, settings) {
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
-		maxGenes: matrix.maxGenes,
-		geneFilter: matrix.geneFilter
+		maxGenes: settings.maxGenes,
+		geneFilter: settings.geneFilter
 	}
 
-	if (filter0) body.filter0 = filter0 // to avoid causing a "null" parameter value for backend
+	if (arg.filter0) body.filter0 = arg.filter0 // to avoid causing a "null" parameter value for backend
 
 	const data = await dofetch3('gdc/topMutatedGenes', { body })
 	if (data.error) throw data.error
-	//for testing only
-	// if (i === 0) {
-	// 	data.genes = []
-	// 	i++
-	// }
 	if (!data.genes) return // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
 	return await Promise.all(
 		// do tempfix of "data.genes.slice(0,3).map" for faster testing
