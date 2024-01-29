@@ -3,9 +3,6 @@ import { showGenesetEdit } from '../dom/genesetEdit.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
 
-const gdcGenome = 'hg38'
-const gdcDslabel = 'GDC'
-
 // This is a reactive geneset component, meant for use with
 // plotApp to offer a geneset edit UI when there are no starting gene lst.
 // The reactivity has to mostly to do with toggling loading overlay visibility
@@ -24,6 +21,7 @@ class GenesetComp {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		return {
+			vocab: appState.vocab,
 			filter0: appState.termfilter.filter0,
 			config
 		}
@@ -67,8 +65,8 @@ class GenesetComp {
 			data = await dofetch3('gdc/topMutatedGenes', { body })
 		} else if (this.opts.mode == 'expression') {
 			const body = {
-				genome: gdcGenome,
-				dslabel: gdcDslabel,
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel,
 				maxGenes: settings.maxGenes
 			}
 			if (this.state.filter0) body.filter0 = this.state.filter0
