@@ -1,8 +1,8 @@
 {
     "ppcalls": [
         {
-            "message": "<p>Data shown from the <a href='https://viz.stjude.cloud/cancer-survivorship/visualization/st-jude-survivorship-portal~18'>St. Jude Survivorship Portal<a/>.</p>",
-            "urlparam": "?block=on&genome=hg38&ldfile=local,files/hg38/sjlife/ld/CEU.gz",
+            "message": "<p>The LD track shows linkage disequilibrium (LD) values between variant pairs. LD values represent r<sup>2</sup> coefficients. LD computations were performed separately for each ancestry. Full data set available from the <a href='https://viz.stjude.cloud/cancer-survivorship/visualization/st-jude-survivorship-portal~18'>St. Jude Survivorship Portal<a/>.</p>",
+            "urlparam": "?block=on&genome=hg38&ldfile=European ancestry demo,files/hg38/sjlife/ld/CEU.gz",
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -13,14 +13,14 @@
                 "tracks": [
                     {
                         "type": "ld",
-                        "name": "European ancestry",
+                        "name": "European ancestry demo",
                         "file": "files/hg38/sjlife/ld/CEU.gz",
                         "viewrangelimit": 200000,
                         "nochr": false
                     },
                     {
                         "type": "ld",
-                        "name": "African ancestry",
+                        "name": "African ancestry demo",
                         "file": "files/hg38/sjlife/ld/YRI.gz",
                         "viewrangelimit": 200000,
                         "nochr": false
