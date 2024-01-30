@@ -91,8 +91,8 @@ export function init_hicControls(hic: any, self: any) {
 		//Allow for customer friendly labels but pass the appropriate straw parameter
 		{ label: 'Observed', value: 'observed' },
 		{ label: 'Expected', value: 'expected' },
-		//'oe' is the straw parameter and returns a ratio. Server code applies log().
-		{ label: 'Log(Observed/Expected)', value: 'oe' }
+		{ label: 'Observed/Expected', value: 'oe' },
+		{ label: 'Log(Observed/Expected)', value: 'log(oe)' }
 	]
 	for (const matrixType of matrixTypevalues) {
 		self.dom.controlsDiv.matrixType.append('option').text(matrixType.label).attr('value', matrixType.value)

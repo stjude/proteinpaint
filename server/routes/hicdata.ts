@@ -59,15 +59,13 @@ function handle_hicdata(q: HicdataRequest) {
 		const [e, file, isurl] = fileurl({ query: q })
 		if (e) reject({ error: 'illegal file name' })
 
-		const par = [
-			q.matrixType || 'observed',
-			q.nmeth || 'NONE',
-			file,
-			q.pos1,
-			q.pos2,
-			q.isfrag ? 'FRAG' : 'BP',
-			q.resolution
-		]
+		/*Value passed from client is not the proper straw parameter.
+		Must convert to straw parameter and apply the corresponding maths to the result.
+		Use 'observed' as default if not provided.
+		*/
+		const matrixType = q.matrixType == 'log(oe)' ? 'oe' : q.matrixType ? q.matrixType : 'observed'
+
+		const par = [matrixType, q.nmeth || 'NONE', file, q.pos1, q.pos2, q.isfrag ? 'FRAG' : 'BP', q.resolution]
 
 		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })
@@ -86,7 +84,7 @@ function handle_hicdata(q: HicdataRequest) {
 			}
 			const n1 = Number.parseInt(l[0])
 			const n2 = Number.parseInt(l[1])
-			const v = q.matrixType == 'oe' ? Math.log(Number.parseFloat(l[2])) : Number.parseFloat(l[2])
+			const v = q.matrixType == 'log(oe)' ? Math.log(Number.parseFloat(l[2])) : Number.parseFloat(l[2])
 			if (Number.isNaN(n1) || Number.isNaN(n2) || Number.isNaN(v)) {
 				fieldnotnumerical++
 				return
