@@ -226,12 +226,8 @@ async function ifIdIsEntity(id, field, filter0) {
 			}
 		]
 	}
-
-	if (filter0) {
-		filter.content.push(filter0)
-	}
-
-	const re = await queryApi(filter, casesApi)
+	// filter0 is case filter and must not be combined into filter{}
+	const re = await queryApi(filter, casesApi, null, filter0)
 	return re.data.hits.length > 0
 }
 
@@ -324,12 +320,18 @@ async function getBamfileByFileId(id, field) {
 	return re
 }
 
-// helper to query api
-async function queryApi(filters, api, returnSize) {
+/* helper to query api
+filters: non-case filter, e.g. to test if file id is valid, must not be used in case_filters
+api:
+returnSize:
+filter0: case filters, must not be combined with 1st arg
+*/
+async function queryApi(filters, api, returnSize, filter0) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 
 	const data = {
 		filters,
+		case_filters: filter0,
 		size: returnSize || 10,
 		fields: api.fields.join(',')
 	}
@@ -438,6 +440,6 @@ async function getCaseFiles(filter0) {
 }
 
 async function getCasesByFilter(filter0) {
-	const re = await queryApi(filter0, casesApi, maxCaseNumber)
+	const re = await queryApi(null, casesApi, maxCaseNumber, filter0)
 	return re.data.hits.map(i => i.id)
 }
