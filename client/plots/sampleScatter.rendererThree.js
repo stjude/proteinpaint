@@ -1,4 +1,5 @@
 import { rgb } from 'd3-color'
+import roundValue from '#shared/roundValue'
 
 export function setRenderersThree(self) {
 	self.render2DSerieLarge = async function (chart) {
@@ -121,6 +122,11 @@ export function setRenderersThree(self) {
 		controls.update()
 		camera.position.set(2, 1, 5)
 		camera.lookAt(scene.position)
+		const grid = new THREE.GridHelper(1)
+		grid.position.x = 0.5
+		grid.position.z = 0.5
+
+		scene.add(grid)
 		const axesHelper = new THREE.AxesHelper(3)
 		scene.add(axesHelper)
 		camera.updateMatrix()
@@ -133,9 +139,9 @@ export function setRenderersThree(self) {
 		for (const sample of chart.data.samples) {
 			const opacity = self.getOpacity(sample)
 			if (opacity == 0) continue
-			let x = Math.abs((sample.x - chart.xMin) / (chart.xMax - chart.xMin))
-			let y = Math.abs((sample.y - chart.yMin) / (chart.yMax - chart.yMin))
-			let z = Math.abs((sample.z - chart.zMin) / (chart.zMax - chart.zMin))
+			let x = chart.xMax == chart.xMin ? 0 : Math.abs((sample.x - chart.xMin) / (chart.xMax - chart.xMin))
+			let y = chart.yMax == chart.yMin ? 0 : Math.abs((sample.y - chart.yMin) / (chart.yMax - chart.yMin))
+			let z = chart.zMax == chart.zMin ? 0 : Math.abs((sample.z - chart.zMin) / (chart.zMax - chart.zMin))
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			const geometry = new THREE.SphereGeometry(0.005, 32)
 			const material = new THREE.MeshLambertMaterial({ color })
@@ -146,6 +152,7 @@ export function setRenderersThree(self) {
 		}
 
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
+		//document.addEventListener( 'pointermove', onPointerMove );
 
 		function animate() {
 			requestAnimationFrame(animate)
@@ -156,4 +163,10 @@ export function setRenderersThree(self) {
 		}
 		animate()
 	}
+}
+
+function onPointerMove(event) {
+	const x = (event.clientX / window.innerWidth) * 2 - 1
+	const y = -(event.clientY / window.innerHeight) * 2 + 1
+	console.log(roundValue(x, 1), roundValue(y, 1))
 }
