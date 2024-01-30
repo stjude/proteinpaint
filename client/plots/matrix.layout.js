@@ -23,7 +23,10 @@ export function setAutoDimensions(xOffset) {
 		let boundingWidth = this.dom.contentNode.getBoundingClientRect().width
 		if (boundingWidth < 600) boundingWidth = window.document.body.clientWidth
 
-		const padding = 65
+		// 65 is an mannually calibrated padding
+		const maxGrpLabelWidth = this.getMaxGrpLabelWidth()
+		const padding = Math.max(65, maxGrpLabelWidth)
+
 		// should be estimated based on label-fontsize and longest label
 		// const labelOffset = !s.transpose
 		// 	? s.termLabelOffset + s.termGrpLabelOffset
@@ -52,6 +55,24 @@ export function setAutoDimensions(xOffset) {
 	}
 
 	copyMerge(this.settings.matrix, this.computedSettings)
+}
+
+export function getMaxGrpLabelWidth() {
+	const s = this.settings.matrix
+	const g = this.dom.svg.append('g').attr('opacity', 1)
+	let maxWidth = 0
+	for (const grp of this.termGroups) {
+		const grpLabel = !grp.name
+			? ''
+			: grp.name.length < s.termGrpLabelMaxChars
+			? grp.name
+			: grp.name.slice(0, s.termGrpLabelMaxChars) + '...'
+		const text = g.append('text').text(grpLabel).attr('font-size', 12)
+		const box = text.node().getBBox()
+		if (maxWidth < box.width) maxWidth = box.width
+	}
+	g.remove()
+	return maxWidth
 }
 
 export function setLabelsAndScales() {
