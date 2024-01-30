@@ -113,28 +113,30 @@ export function setRenderersThree(self) {
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
 		self.renderLegend(chart)
-		const fov = 20
+		const fov = 18
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
 		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 		controls.update()
-		camera.position.set(2, 1, 5)
+		camera.position.set(5, 0.5, 5)
 		camera.lookAt(scene.position)
-		const grid = new THREE.GridHelper(1)
-		grid.position.x = 0.5
-		grid.position.z = 0.5
 
-		scene.add(grid)
-		const axesHelper = new THREE.AxesHelper(3)
-		scene.add(axesHelper)
+		if (self.settings.showAxes) {
+			const axesHelper = new THREE.AxesHelper(1)
+			scene.add(axesHelper)
+			const grid = new THREE.GridHelper(1)
+			grid.position.x = 0.5
+			grid.position.z = 0.5
+			scene.add(grid)
+		}
 		camera.updateMatrix()
 		const whiteColor = new THREE.Color('rgb(255,255,255)')
 		scene.background = whiteColor
 
 		const light = new THREE.DirectionalLight(whiteColor, 2)
-		light.position.set(2, 1, 5)
+		light.position.set(0, 0, 5)
 		scene.add(light)
 		for (const sample of chart.data.samples) {
 			const opacity = self.getOpacity(sample)
