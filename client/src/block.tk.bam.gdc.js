@@ -16,6 +16,7 @@ SV_EXPAND: to be expanded to support SV review using subpanel
 
 *********** gdc_args{}
 gdc_args {}
+	runFlags{}
 	gdc_token: <string>,
 	bam_files: [ {} ]
 		file_id: file uuid from gdc <string>,
@@ -47,7 +48,7 @@ and is validated in validateInputs{}
 makeTokenInput
 makeGdcIDinput
 	queryCaseFileList
-	gdc_search
+	searchByGdcInputString
 		makeSsmGeneSearch
 			temp_renderGeneSearch
 			temp_renderSsmList
@@ -94,6 +95,7 @@ filter0=str
 	simply pass to backend to include in api queries
 callbackOnRender()
 	optional callback for ui testing
+	called when all ui components finish updating
 stream2download=boolean
 	if true, run the app in "bam slice download" mode..
 
@@ -113,6 +115,8 @@ export async function bamsliceui({
 	stream2download = false,
 	debugmode = false
 }) {
+	if (callbackOnRender && typeof callbackOnRender != 'function') throw 'callbackOnRender is not function'
+
 	// public api obj to be returned
 	const publicApi = {}
 
@@ -120,7 +124,13 @@ export async function bamsliceui({
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
 	// central obj, see comments on top
-	const gdc_args = { bam_files: [] }
+	const gdc_args = {
+		bam_files: [],
+		runFlags: {
+			runflag_caseFileList: 1,
+			runflag_gdcInput: 1
+		} //
+	}
 
 	// fill from url for quick testing: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
 	// unable to autoload toke file this way
@@ -161,21 +171,33 @@ export async function bamsliceui({
 	const gdcid_input = await makeGdcIDinput()
 
 	// hold toggle ui for ssm list and gene search
-	// contents are only rendered here after a case/file is found via gdc_search()
+	// contents are only rendered here after a case/file is found via searchByGdcInputString()
 	const ssmGeneDiv = formdiv.append('div').style('padding', '3px 10px').style('display', 'none')
 
 	// submit button, "no permission" alert
 	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
 
-	if (typeof callbackOnRender == 'function') {
-		callbackOnRender(publicApi)
-	}
-
 	if (urlp.has('gdc_id')) {
 		gdcid_input.property('value', urlp.get('gdc_id')).node().dispatchEvent(new Event('keyup'))
+	} else {
+		delete gdc_args.runFlags.runflag_gdcInput
+		runCallbackAfterUIupdate()
 	}
 
 	//////////////////////// helper functions
+
+	function runCallbackAfterUIupdate() {
+		if (!callbackOnRender) return
+		/* this ensures callbackOnRender() is only called when all ui parts are loaded
+		at the end of rendering an ui part, and removal of its flag in runFlags{}, call this run() helper 
+		*/
+		if (Object.keys(gdc_args.runFlags).length == 0) {
+			// no flags. all ui components are updated;
+			callbackOnRender(publicApi)
+		} else {
+			// some other ui is in midst of updating, do not run; this type of checking is agnostic to actual inserted flags
+		}
+	}
 
 	function makeTokenInput() {
 		// make one <tr> with two cells
@@ -251,9 +273,9 @@ export async function bamsliceui({
 			.property('placeholder', 'File Name / File UUID / Case ID / Case UUID')
 			.attr('class', 'sja-gdcbam-input') // for testing
 			// debounce event listener on keyup
-			.on('keyup', debounce(gdc_search, 500))
+			.on('keyup', debounce(searchByGdcInputString, 500))
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
-			.on('search', gdc_search)
+			.on('search', searchByGdcInputString)
 
 		const gdc_loading = td.append('span').style('padding-left', '10px').style('display', 'none').text('Loading...')
 
@@ -292,103 +314,130 @@ export async function bamsliceui({
 
 		// the update() will be called in pp react wrapper, when user changes cohort from gdc ATF
 		publicApi.update = _arg => {
-			gdc_search(null, _arg?.filter0 || filter0)
+			searchByGdcInputString(null, _arg?.filter0 || filter0)
 			queryCaseFileList(listCaseFileHandle, _arg?.filter0 || filter0)
 		}
 
 		/* arguments
-		eventNotUsed: d3v7 passes "event" as first argument which is unused, as gdc_search() is used as event listener
+		eventNotUsed: d3v7 passes "event" as first argument which is unused, as searchByGdcInputString() is used as event listener
 		filter0override: new updated gdc filter object, to replace existing filter0
 		*/
-		async function gdc_search(eventNotUsed, filter0override) {
+		async function searchByGdcInputString(eventNotUsed, filter0override) {
 			saydiv.selectAll('*').remove()
 			noPermissionDiv.style('display', 'none')
 			submitButton.style('display', 'inline-block')
 			gdcid_error_div.style('display', 'none')
 			gdc_loading.style('display', 'none')
 
-			const _filter0 = Object.keys(filter0override || {}).length ? filter0override : filter0 || null
-
+			/* as _actual() is highly variable in how it can end
+			- in the middle
+			- done input search and not found
+			- found case and trigger ssm search
+			thus no need to worry about triggering callback everywhere
+			*/
 			try {
-				const gdc_id = gdcid_input.property('value').trim()
-				if (!gdc_id.length) {
-					baminfo_div.style('display', 'none')
-					saydiv.selectAll('*').remove()
-					ssmGeneDiv.style('display', 'none')
-					return
-				}
-
-				// disable input field and show 'loading...' until response returned from gdc api
-				gdcid_input.attr('disabled', 1)
-				gdc_loading.style('display', 'inline-block')
-
-				const body = { gdc_id }
-				if (_filter0) body.filter0 = _filter0
-				const data = await dofetch3('gdcbam', { body })
-				/* data = {
-					file_metadata:[]
-					is_case_id:true
-					is_case_uuid:true
-					is_file_uuid:true
-					is_file_id:true
-					numFilesSkippedByWorkflow:int
-				}
-				*/
-
-				gdcid_input.attr('disabled', null) // enable input field
-				gdc_loading.style('display', 'none') // hide loading
-				gdc_args.bam_files = [] //empty bam_files array after each gdc api call
-
-				/////////////////////////////////
-				// possible exists before rendering ssm and gene ui
-
-				if (data.error) throw 'Error: ' + data.error
-				if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
-				if (data.file_metadata.length == 0) {
-					// no viewable bam files
-					if (data.numFilesSkippedByWorkflow) {
-						// there are files skipped due to this reason. the value tells number of files rejected due to this reason
-						throw `File${data.numFilesSkippedByWorkflow > 1 ? 's' : ''} not viewable due to workflow type.`
-					}
-					throw 'No viewable BAM files found'
-				}
-
-				// in react wrapper of gdc, session id is available from cookie, if so backend checks user's access to this bam
-				// and if no access sets this flag
-				// will show the prompt here but will still allow rest of ui to show, just to showcase app's capability
-				userHasNoAccessDiv.style('display', data.userHasNoAccess ? 'block' : 'none')
-
-				/*
-				in file_metadata[], each element is a bam file:
-				{
-					case_id: "9a2a226e-9605-4214-9320-469305e664e6"
-					entity_id: "TCGA-49-AARQ-11A-21D-A413-08"
-					experimental_strategy: "WXS"
-					file_size: "10.43 GB"
-					file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
-					sample_type: "Solid Tissue Normal"
-				}
-
-				record case_id for the found file
-				if the array has multiple files, all are from the same case
-				so the case_id should be the same for all files
-				*/
-				gdc_args.case_id = data.file_metadata[0].case_id
-
-				if (data.file_metadata.length == 1) {
-					// has only 1 file
-					update_singlefile_table(data, gdc_id)
-				} else {
-					// 2 or more files
-					update_multifile_table(data.file_metadata)
-				}
-				show_input_check(gdcid_error_div)
-
-				await makeSsmGeneSearch()
+				await searchByGdcInputString_actual(
+					Object.keys(filter0override || {}).length ? filter0override : filter0 || null
+				)
 			} catch (e) {
 				show_input_check(gdcid_error_div, e.message || e)
 				baminfo_div.style('display', 'none')
 				ssmGeneDiv.style('display', 'none')
+			}
+			console.log(341)
+			runCallbackAfterUIupdate()
+		}
+
+		async function searchByGdcInputString_actual(_filter0) {
+			const gdc_id = gdcid_input.property('value').trim()
+			if (!gdc_id.length) {
+				baminfo_div.style('display', 'none')
+				saydiv.selectAll('*').remove()
+				ssmGeneDiv.style('display', 'none')
+				return
+			}
+
+			// disable input field and show 'loading...' until response returned from gdc api
+			gdcid_input.attr('disabled', 1)
+			gdc_loading.style('display', 'inline-block')
+			gdc_args.runFlags.runflag_gdcInput = 1
+
+			const body = { gdc_id }
+			if (_filter0) body.filter0 = _filter0
+			let data
+			try {
+				data = await dofetch3('gdcbam', { body })
+			} catch (e) {
+				throw e
+			} finally {
+				delete gdc_args.runFlags.runflag_gdcInput // TEST if deleted when dofetch() throws
+			}
+			/* data = {
+				file_metadata:[]
+				is_case_id:true
+				is_case_uuid:true
+				is_file_uuid:true
+				is_file_id:true
+				numFilesSkippedByWorkflow:int
+			}
+			*/
+
+			gdcid_input.attr('disabled', null) // enable input field
+			gdc_loading.style('display', 'none') // hide loading
+			gdc_args.bam_files = [] //empty bam_files array after each gdc api call
+
+			/////////////////////////////////
+			// possible exists before rendering ssm and gene ui
+
+			if (data.error) throw 'Error: ' + data.error
+			if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
+			if (data.file_metadata.length == 0) {
+				// no viewable bam files
+				if (data.numFilesSkippedByWorkflow) {
+					// there are files skipped due to this reason. the value tells number of files rejected due to this reason
+					throw `File${data.numFilesSkippedByWorkflow > 1 ? 's' : ''} not viewable due to workflow type.`
+				}
+				throw 'No viewable BAM files found'
+			}
+
+			// in react wrapper of gdc, session id is available from cookie, if so backend checks user's access to this bam
+			// and if no access sets this flag
+			// will show the prompt here but will still allow rest of ui to show, just to showcase app's capability
+			userHasNoAccessDiv.style('display', data.userHasNoAccess ? 'block' : 'none')
+
+			/*
+			in file_metadata[], each element is a bam file:
+			{
+				case_id: "9a2a226e-9605-4214-9320-469305e664e6"
+				entity_id: "TCGA-49-AARQ-11A-21D-A413-08"
+				experimental_strategy: "WXS"
+				file_size: "10.43 GB"
+				file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
+				sample_type: "Solid Tissue Normal"
+			}
+
+			record case_id for the found file
+			if the array has multiple files, all are from the same case
+			so the case_id should be the same for all files
+			*/
+			gdc_args.case_id = data.file_metadata[0].case_id
+
+			if (data.file_metadata.length == 1) {
+				// has only 1 file
+				update_singlefile_table(data, gdc_id)
+			} else {
+				// 2 or more files
+				update_multifile_table(data.file_metadata)
+			}
+			show_input_check(gdcid_error_div)
+
+			gdc_args.runFlags.ssmSearch = 1
+			try {
+				await makeSsmGeneSearch()
+			} catch (e) {
+				throw e
+			} finally {
+				delete gdc_args.runFlags.ssmSearch
 			}
 		}
 		function update_singlefile_table(data, gdc_id) {
@@ -476,12 +525,25 @@ export async function bamsliceui({
 	}
 
 	async function queryCaseFileList(handle, filter0override) {
+		gdc_args.runFlags.runflag_caseFileList = 1
+		try {
+			await queryCaseFileList_actual(handle, filter0override)
+		} catch (e) {
+			handle.text(e.message || e)
+		} finally {
+			delete gdc_args.runFlags.runflag_caseFileList
+		}
+		console.log(529)
+		runCallbackAfterUIupdate()
+	}
+
+	async function queryCaseFileList_actual(handle, filter0override) {
 		const _filter0 = Object.keys(filter0override || {}).length ? filter0override : filter0 || null
 		const body = {}
 		if (_filter0) body.filter0 = _filter0
 		const data = await dofetch3('gdcbam', { body }) // query same route without case_id
-		if (data.error) return handle.text(data.error)
-		if (typeof data.case2files != 'object') return handle.text('wrong return')
+		if (data.error) throw data.error
+		if (typeof data.case2files != 'object') throw 'wrong return'
 
 		// data = { case2files={}, total=int, loaded=int }
 		/*
