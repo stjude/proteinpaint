@@ -98,17 +98,12 @@ export function gdc_bam_request(genomes) {
 
 			if (req.query.gdc_id) {
 				// has user input, test on which id it is and any bam file associated with it
-				const bamdata = await get_gdc_data(
-					req.query.gdc_id,
-					req.query.filter0 // optional gdc cohort filter,
-				)
-
+				const bamdata = await get_gdc_data(req.query)
 				await mayCheckPermissionWithFileAndSession(bamdata, req, ds)
-
 				res.send(bamdata)
 			} else {
 				// no user input, list all available bam files from current cohort
-				const re = await getCaseFiles(req.query.filter0)
+				const re = await getCaseFiles(req.query.filter0, req.query)
 				res.send(re)
 			}
 		} catch (e) {
@@ -118,7 +113,8 @@ export function gdc_bam_request(genomes) {
 	}
 }
 
-async function get_gdc_data(gdc_id, filter0, ds) {
+async function get_gdc_data(q) {
+	const { gdc_id, filter0 } = q
 	// data to be returned
 	const bamdata = {
 		file_metadata: [],
@@ -126,7 +122,7 @@ async function get_gdc_data(gdc_id, filter0, ds) {
 		numFilesSkippedByWorkflow: 0
 	}
 
-	const re = await try_query(gdc_id, bamdata, filter0)
+	const re = await try_query(gdc_id, bamdata, filter0, q)
 
 	if (!re.data.hits.length) {
 		// no bam file found
@@ -140,7 +136,7 @@ async function get_gdc_data(gdc_id, filter0, ds) {
 		if (filter0) {
 			// is using filter
 			// try again without filter. if found hit, meaning case not in filter
-			const re = await try_query(gdc_id, bamdata)
+			const re = await try_query(gdc_id, bamdata, null, q)
 			if (re.data.hits.length) {
 				// has hit without filter
 				throw 'Case not in current cohort.'
@@ -184,24 +180,24 @@ given user input id, test if it's one of four valid ones
 if true, return the list of bam files associated with that id
 */
 
-async function try_query(id, bamdata, filter0) {
+async function try_query(id, bamdata, filter0, q) {
 	// first, test if is case uuid
 
 	// test user input against all types of entities
 	for (const entity of entityTypes) {
-		if (await ifIdIsEntity(id, entity.field, filter0)) {
+		if (await ifIdIsEntity(id, entity.field, filter0, q)) {
 			// input id is this type of field. copy field type to this flag to pass on (in case it got no bam files)
 			bamdata.isCaseSample = entity.type
 			/* get bam files from this entity
 			do not supply filter0 in this query! if filter0 contains non_bam_filter, using filter0 will prevent finding any bam files
 			*/
-			return await getFileByCaseId(id, entity.field)
+			return await getFileByCaseId(id, entity.field, 10, q)
 		}
 	}
 
 	// is not any of above fields
 	// then, test if is file uuid
-	const re = await getBamfileByFileId(id, 'file_id')
+	const re = await getBamfileByFileId(id, 'file_id', q)
 	if (re.data.hits.length) {
 		// is file uuid, "re" contains the bam file from it (what if this is not indexed?)
 		bamdata.is_file_uuid = true
@@ -210,7 +206,7 @@ async function try_query(id, bamdata, filter0) {
 
 	// is not case id, case uuid, file uuid
 	// last, test if is file id
-	const re2 = await getBamfileByFileId(id, 'file_name')
+	const re2 = await getBamfileByFileId(id, 'file_name', q)
 	if (re2.data.hits.length) {
 		// is file id
 		bamdata.is_file_id = true
@@ -223,7 +219,7 @@ async function try_query(id, bamdata, filter0) {
 query /cases/ api with id; if valid return, is case id or case uuid, depends on value of field
 returns boolean
 */
-async function ifIdIsEntity(id, field, filter0) {
+async function ifIdIsEntity(id, field, filter0, q) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -234,7 +230,7 @@ async function ifIdIsEntity(id, field, filter0) {
 		]
 	}
 	// filter0 is case filter and must not be combined into filter{}
-	const re = await queryApi(filter, casesApi, null, filter0)
+	const re = await queryApi(filter, casesApi, null, filter0, q)
 	return re.data.hits.length > 0
 }
 
@@ -250,7 +246,7 @@ inputs:
 
 query /files/ to retrieve all indexed bam files using this id
 */
-async function getFileByCaseId(id, caseField, returnSize) {
+async function getFileByCaseId(id, caseField, returnSize, q) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -281,7 +277,7 @@ async function getFileByCaseId(id, caseField, returnSize) {
 		})
 	}
 
-	return await queryApi(filter, filesApi, returnSize)
+	return await queryApi(filter, filesApi, returnSize, null, q)
 }
 
 /*
@@ -298,7 +294,7 @@ handles 3 scenarios:
 
 NOTE: no filter0 is checked here. a file from a case outside of cohort is thus allowed. need to confirm with gdc
 */
-async function getBamfileByFileId(id, field) {
+async function getBamfileByFileId(id, field, q) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -309,7 +305,7 @@ async function getBamfileByFileId(id, field) {
 		]
 	}
 
-	const re = await queryApi(filter, filesApi)
+	const re = await queryApi(filter, filesApi, null, null, q)
 	const hit = re.data.hits[0]
 	if (hit) {
 		// matches with a valid file on gdc
@@ -338,7 +334,7 @@ function getQueryApi(ds) {
 		filter0: case filters, must not be combined with 1st arg
 	*/
 
-	return async function getQueryApi(filters, api, returnSize, filter0) {
+	return async function (filters, api, returnSize, filter0) {
 		const { host, headers } = ds.getHostHeaders()
 		const end_point = path.join(host.rest, api.end_point)
 
@@ -424,10 +420,10 @@ export async function gdcCheckPermission(gdcFileUUID, token, sessionid, ds, q) {
 get list of cases by filter0, then get bam files for these cases
 to be displayed in a UI table and user can browse and select one
 */
-async function getCaseFiles(filter0) {
-	const cases = await getCasesByFilter(filter0)
+async function getCaseFiles(filter0, q) {
+	const cases = await getCasesByFilter(filter0, q)
 	if (cases.length == 0) throw 'No cases available' // shows this msg in the handle on ui
-	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize)
+	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize, q)
 	const case2files = {}
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 	for (const h of re.data.hits) {
@@ -449,7 +445,7 @@ async function getCaseFiles(filter0) {
 	}
 }
 
-async function getCasesByFilter(filter0) {
-	const re = await queryApi(null, casesApi, maxCaseNumber, filter0)
+async function getCasesByFilter(filter0, q) {
+	const re = await queryApi(null, casesApi, maxCaseNumber, filter0, q)
 	return re.data.hits.map(i => i.id)
 }

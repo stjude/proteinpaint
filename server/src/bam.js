@@ -3419,7 +3419,15 @@ async function download_gdc_bam(req, ds) {
 	if (!Array.isArray(regions) || regions.length == 0) throw 'req.query.regions[] not non-empty array'
 	const gdc_bam_filenames = []
 	for (const r of regions) {
-		const filesize = await get_gdc_bam(r.chr, r.start, r.stop, req.query.gdcFileUUID, getGDCcacheFileName(req), ds)
+		const filesize = await get_gdc_bam(
+			r.chr,
+			r.start,
+			r.stop,
+			req.query.gdcFileUUID,
+			getGDCcacheFileName(req),
+			ds,
+			req.query
+		)
 		gdc_bam_filenames.push({ filesize })
 	}
 	return gdc_bam_filenames
@@ -3433,14 +3441,14 @@ async function streamGdcBam2response(res, regionStr, gdcFileUUID, ds) {
 	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
 
-async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, ds) {
+async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, ds, q) {
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
 	// Also:
 	// since the expected response is binary data, should not set Accept: application/json as a request header
 	// also no body is submitted with a GET request, should not set a Content-type request header
-	const { host, headers } = ds.getHostHeaders()
+	const { host, headers } = ds.getHostHeaders(q)
 	headers.compression = false
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
 	const url = host.rest + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
