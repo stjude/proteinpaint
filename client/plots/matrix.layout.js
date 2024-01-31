@@ -67,9 +67,9 @@ export function getMaxGrpLabelWidth() {
 	for (const grp of this.termGroups) {
 		const grpLabel = !grp.name
 			? ''
-			: grp.name.length < s.termGrpLabelMaxChars
+			: grp.name.length <= s.termGrpLabelMaxChars
 			? grp.name
-			: grp.name.slice(0, s.termGrpLabelMaxChars) + '...'
+			: grp.name.slice(0, s.termGrpLabelMaxChars) + '…'
 		const text = g.append('text').text(grpLabel).attr('font-size', 12)
 		const box = text.node().getBBox()
 		if (maxWidth < box.width) maxWidth = box.width
@@ -105,7 +105,7 @@ export function setLabelsAndScales() {
 		}
 		if (!processedLabels.termGrpByName[t.grp.name || '']) {
 			const name = t.grp.name || ''
-			t.grp.label = name.length < s.termGrpLabelMaxChars ? name : name.slice(0, s.termGrpLabelMaxChars) + '...'
+			t.grp.label = name.length <= s.termGrpLabelMaxChars ? name : name.slice(0, s.termGrpLabelMaxChars) + '…'
 			processedLabels.termGrpByName[name] = t.grp.label
 		}
 
@@ -114,13 +114,13 @@ export function setLabelsAndScales() {
 			const name = sample.grp.name || ''
 			if (!(name in processedLabels.sampleGrpByName)) {
 				sample.grp.label =
-					name.length < s.sampleGrpLabelMaxChars ? name : name.slice(0, s.sampleGrpLabelMaxChars) + '...'
+					name.length <= s.sampleGrpLabelMaxChars ? name : name.slice(0, s.sampleGrpLabelMaxChars) + '…'
 				if (this.config.divideBy) sample.grp.label += ` (${sample.grp.lst.length})`
 				processedLabels.sampleGrpByName[name] = sample.grp.label
 			}
 			const sampleName = sample.row._ref_.label || ''
 			sample.label =
-				sampleName.length < s.collabelmaxchars ? sampleName : sampleName.slice(0, s.collabelmaxchars) + '...'
+				sampleName.length <= s.collabelmaxchars ? sampleName : sampleName.slice(0, s.collabelmaxchars) + '…'
 
 			const anno = sample.row[t.tw.$id]
 			if (!anno) continue
@@ -211,7 +211,7 @@ export function setLabelsAndScales() {
 		}
 
 		t.label = t.tw.label || t.tw.term.name
-		if (t.label.length > s.rowlabelmaxchars) t.label = t.label.slice(0, s.rowlabelmaxchars) + '...'
+		if (t.label.length > s.rowlabelmaxchars) t.label = t.label.slice(0, s.rowlabelmaxchars - 1) + '…'
 		const termGroupName = this.config?.settings.hierCluster?.termGroupName
 		if (s.samplecount4gene && t.tw.term.type.startsWith('gene') && (!termGroupName || t.grp.name !== termGroupName)) {
 			const count =
