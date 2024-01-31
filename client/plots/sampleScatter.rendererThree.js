@@ -117,14 +117,14 @@ export function setRenderersThree(self) {
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
 		self.renderLegend(chart)
-		const fov = self.settings.fov
+		const fov = 50
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
 		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 		controls.update()
-		camera.position.set(0.1, 0.1, 2)
+		camera.position.set(1.5, 0.5, 2)
 		camera.lookAt(scene.position)
 
 		if (self.settings.showAxes) {
@@ -172,33 +172,49 @@ export function setRenderersThree(self) {
 		animate()
 	}
 
-	self.addLabels = async function (scene, chart) {
-		let text = getTextMesh(self.config.term.term.name)
-		text.position.x = 1.01
-		scene.add(text)
+	self.addLabels = async function (scene) {
+		const intensity = 0.7
+		let textGeo = getTextGeo(self.config.term.term.name)
+		let textMesh = new THREE.Mesh(
+			textGeo,
+			new THREE.MeshBasicMaterial({ color: new THREE.Color(intensity, intensity / 4, intensity / 4) })
+		)
+		textMesh.position.x = 0.01
+		textMesh.position.y = -0.03
+		scene.add(textMesh)
 
-		text = getTextMesh(self.config.term2.term.name)
-		text.position.y = 1.01
-		scene.add(text)
-		text = getTextMesh(self.config.term0.term.name)
-		text.position.z = 1.01
-		scene.add(text)
-		function getTextMesh(text) {
+		textGeo = getTextGeo(self.config.term2.term.name)
+		textGeo.rotateZ(Math.PI / 2)
+		textMesh = new THREE.Mesh(
+			textGeo,
+			new THREE.MeshBasicMaterial({ color: new THREE.Color(intensity / 4, intensity, intensity / 4) })
+		)
+		textMesh.position.x = -0.03
+		textMesh.position.y = 0.01
+		scene.add(textMesh)
+
+		textGeo = getTextGeo(self.config.term0.term.name)
+		textGeo.rotateY(Math.PI / 2)
+		textMesh = new THREE.Mesh(
+			textGeo,
+			new THREE.MeshBasicMaterial({ color: new THREE.Color(intensity / 4, intensity / 4, intensity) })
+		)
+		textMesh.position.z = 0.98
+		textMesh.position.y = -0.03
+		scene.add(textMesh)
+		function getTextGeo(text) {
 			const loader = new FontLoader()
 			const font = loader.parse(HelvetikerFont)
 
 			const textGeo = new TextGeometry(text, {
 				font,
-				size: 0.03,
+				size: 0.02,
 				height: 0.01,
 				curveSegments: 8,
 				bevelEnabled: false
 			})
 
-			const color = new THREE.Color(0x686868)
-			const textMaterial = new THREE.MeshBasicMaterial({ color: color })
-			const textMesh = new THREE.Mesh(textGeo, textMaterial)
-			return textMesh
+			return textGeo
 		}
 	}
 }
