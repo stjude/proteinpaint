@@ -57,9 +57,12 @@ export function setAutoDimensions(xOffset) {
 	copyMerge(this.settings.matrix, this.computedSettings)
 }
 
+// calculate the max group label width on the plot
 export function getMaxGrpLabelWidth() {
 	const s = this.settings.matrix
-	const g = this.dom.svg.append('g').attr('opacity', 1)
+
+	// attach each group label on tmp g (later removed) to calculate the max actual width of the group label on plot
+	const g = this.dom.svg.append('g').attr('opacity', 0.01)
 	let maxWidth = 0
 	for (const grp of this.termGroups) {
 		const grpLabel = !grp.name
