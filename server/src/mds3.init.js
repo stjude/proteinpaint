@@ -1180,6 +1180,12 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		const samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
 		q.allSampleSet = new Set(samples)
 		//if(q.allSampleSet.size < samples.length) throw 'rnaseqGeneCount.file header contains duplicate samples'
+		const unknownSamples = []
+		for (const n of q.allSampleSet) {
+			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
+		}
+		if (unknownSamples.length)
+			throw `rnaseqGeneCount has ${unknownSamples.length} sample names: ${unknownSamples.join(',')}`
 		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 	}
 
