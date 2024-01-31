@@ -106,6 +106,7 @@ export function setRenderersThree(self) {
 		self.canvas = self.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
 		self.canvas.width = self.settings.svgw
 		self.canvas.height = self.settings.svgh
+
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		chart.legendG = chart.legendDiv
@@ -161,7 +162,9 @@ export function setRenderersThree(self) {
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 		renderer.setPixelRatio(window.devicePixelRatio)
 		//document.addEventListener( 'pointermove', onPointerMove );
-
+		document.addEventListener('mousewheel', event => {
+			controls.enableZoom = event.ctrlKey
+		})
 		function animate() {
 			requestAnimationFrame(animate)
 			// required if controls.enableDamping or controls.autoRotate are set to true
