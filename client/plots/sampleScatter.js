@@ -353,7 +353,10 @@ class Scatter {
 				title: 'Categories to divide by',
 				label: this.config.term0?.q?.mode == 'continuous' ? 'Z' : 'Divide by',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: this.app.hasWebGL?.() ? ['discrete', 'continuous'] : ['discrete']
+				numericEditMenuVersion: this.app.hasWebGL?.() ? ['discrete', 'continuous'] : ['discrete'],
+				processInput: tw => {
+					if (tw) tw.q = { mode: 'continuous' }
+				}
 			})
 		}
 

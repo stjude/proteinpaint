@@ -132,6 +132,8 @@ export function setRenderersThree(self) {
 		if (self.settings.showAxes) {
 			const axesHelper = new THREE.AxesHelper(1)
 			scene.add(axesHelper)
+			self.addLabels(scene, chart)
+
 			// const grid = new THREE.GridHelper(1)
 			// grid.position.x = 0.5
 			// grid.position.z = 0.5
@@ -159,7 +161,6 @@ export function setRenderersThree(self) {
 			scene.add(circle)
 		}
 
-		self.addLabels(scene, chart)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 		renderer.setPixelRatio(window.devicePixelRatio)
 		//document.addEventListener( 'pointermove', onPointerMove );
