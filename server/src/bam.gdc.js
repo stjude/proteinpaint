@@ -49,11 +49,9 @@ gdc_bam_request
 	
 */
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-
 // used in getFileByCaseId()
 const filesApi = {
-	end_point: path.join(apihost, 'files/'),
+	end_point: 'files/',
 	fields: [
 		'id',
 		'file_size',
@@ -70,7 +68,7 @@ const filesApi = {
 
 // used in ifIdIsEntity()
 const casesApi = {
-	end_point: path.join(apihost, 'cases/'),
+	end_point: 'cases/',
 	fields: ['case_id']
 }
 // fields to be used with casesApi, to test if user input is any of these
@@ -88,30 +86,39 @@ const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 const maxCaseNumber = 100 // max number of cases to request based on cohort, setting to 200 doesn't work
 const listCaseFileSize = 1000 // max number of bam files to request based on case ids
 
-export async function gdc_bam_request(req, res) {
-	try {
-		if (req.query.gdc_id) {
-			// has user input, test on which id it is and any bam file associated with it
-			const bamdata = await get_gdc_data(
-				req.query.gdc_id,
-				req.query.filter0 // optional gdc cohort filter
-			)
+let queryApi
+export function gdc_bam_request(genomes) {
+	return async function (req, res) {
+		try {
+			const g = genomes.hg38
+			if (!g) throw 'hg38 missing'
+			const ds = g.datasets.GDC
+			if (!ds) throw 'hg38 GDC missing'
+			if (!queryApi) queryApi = getQueryApi(ds)
 
-			await mayCheckPermissionWithFileAndSession(bamdata, req)
+			if (req.query.gdc_id) {
+				// has user input, test on which id it is and any bam file associated with it
+				const bamdata = await get_gdc_data(
+					req.query.gdc_id,
+					req.query.filter0 // optional gdc cohort filter,
+				)
 
-			res.send(bamdata)
-		} else {
-			// no user input, list all available bam files from current cohort
-			const re = await getCaseFiles(req.query.filter0)
-			res.send(re)
+				await mayCheckPermissionWithFileAndSession(bamdata, req)
+
+				res.send(bamdata)
+			} else {
+				// no user input, list all available bam files from current cohort
+				const re = await getCaseFiles(req.query.filter0)
+				res.send(re)
+			}
+		} catch (e) {
+			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
 		}
-	} catch (e) {
-		res.send({ error: e.message || e })
-		if (e.stack) console.log(e.stack)
 	}
 }
 
-async function get_gdc_data(gdc_id, filter0) {
+async function get_gdc_data(gdc_id, filter0, ds) {
 	// data to be returned
 	const bamdata = {
 		file_metadata: [],
@@ -320,32 +327,39 @@ async function getBamfileByFileId(id, field) {
 	return re
 }
 
-/* helper to query api
-filters: non-case filter, e.g. to test if file id is valid, must not be used in case_filters
-api:
-returnSize:
-filter0: case filters, must not be combined with 1st arg
-*/
-async function queryApi(filters, api, returnSize, filter0) {
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+function getQueryApi(ds) {
+	// Should be generated once per dataset, in this case once for gdc only
+	if (queryApi) throw `The gdc queryApi has already been set.`
 
-	const data = {
-		filters,
-		case_filters: filter0,
-		size: returnSize || 10,
-		fields: api.fields.join(',')
+	/* helper to query api
+		filters: non-case filter, e.g. to test if file id is valid, must not be used in case_filters
+		api:
+		returnSize:
+		filter0: case filters, must not be combined with 1st arg
+	*/
+
+	return async function getQueryApi(filters, api, returnSize, filter0) {
+		const { host, headers } = ds.getHostHeaders()
+		const end_point = path.join(host.rest, api.end_point)
+
+		const data = {
+			filters,
+			case_filters: filter0,
+			size: returnSize || 10,
+			fields: api.fields.join(',')
+		}
+
+		const response = await got(end_point, { method: 'POST', headers, body: JSON.stringify(data) })
+
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from ' + api.end_point
+		}
+		if (!Array.isArray(re.data?.hits)) throw 'data structure not re.data.hits[]'
+		return re
 	}
-
-	const response = await got(api.end_point, { method: 'POST', headers, body: JSON.stringify(data) })
-
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from ' + api.end_point
-	}
-	if (!Array.isArray(re.data?.hits)) throw 'data structure not re.data.hits[]'
-	return re
 }
 
 /*
@@ -368,18 +382,14 @@ async function mayCheckPermissionWithFileAndSession(bamdata, req) {
 	}
 }
 
-export async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
+export async function gdcCheckPermission(gdcFileUUID, token, sessionid, ds) {
+	const { host, headers } = ds.getHostHeaders()
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
-	const headers = {
-		// since the expected response is binary data, should not set Accept: application/json as a request header
-		// also no body is submitted with a GET request, should not set a Content-type request header
-		Range: 'bytes=0-0'
-	}
-	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
-	else headers['X-Auth-Token'] = token
-
-	const url = apihost + '/data/' + gdcFileUUID
+	// since the expected response is binary data, should not set Accept: application/json as a request header
+	// also no body is submitted with a GET request, should not set a Content-type request header
+	headers.Range = 'bytes=0-0'
+	const url = host.rest + '/data/' + gdcFileUUID
 	try {
 		// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 		// which may not be handled properly by the GDC API in qa-uat

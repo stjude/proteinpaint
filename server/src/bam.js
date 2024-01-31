@@ -245,12 +245,15 @@ const max_read_alignment = 200 // Max number of reads that can be aligned to ref
 const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is rendered showing the reference or simply shown how big the deletion is. If greater, only the size of deletion is shown. If lower, the reference sequence is shown
 
 const bases = new Set(['A', 'T', 'C', 'G'])
-
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const gdcHashSecret = Math.random.toString()
 
 export default function (genomes) {
 	return async (req, res) => {
+		const g = genomes.hg38
+		if (!g) throw 'hg38 missing'
+		const ds = g.datasets.GDC
+		if (!ds) throw 'hg38 GDC missing'
+
 		try {
 			// isFileSlice:true can only be set after verifying access on a gdc file
 			delete req.query.isFileSlice
@@ -262,19 +265,13 @@ export default function (genomes) {
 				const sessionid = req.cookies.sessionid
 				const token = req.get('X-Auth-Token')
 				if (!token && !sessionid) throw 'GDC token or sessionid missing'
-				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid)
+				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid, ds)
 
 				// authorized! can proceed
 
 				if (req.query.stream2download) {
 					// download the slice directly to client, do not write to cache file (app runs in "download mode")
-					await streamGdcBam2response(
-						res,
-						req.query.gdcFilePosition,
-						req.query.gdcFileUUID,
-						req.cookies.sessionid,
-						req.get('X-Auth-Token')
-					)
+					await streamGdcBam2response(res, req.query.gdcFilePosition, req.query.gdcFileUUID, ds)
 					return
 				}
 
@@ -288,7 +285,7 @@ export default function (genomes) {
 
 			if (req.query.downloadgdc) {
 				// call gdc bam slicing api to slice the bam, save to cachedir
-				res.send(await download_gdc_bam(req))
+				res.send(await download_gdc_bam(req, ds))
 				return
 			}
 
@@ -3399,48 +3396,38 @@ req{}
 
 function is also called during visualization requests
 */
-async function download_gdc_bam(req) {
+async function download_gdc_bam(req, ds) {
 	// query gdc bam slicing api using the uuid of one bam file
 	// download one bam slice for each region
 	const regions = req.query.regions
 	if (!Array.isArray(regions) || regions.length == 0) throw 'req.query.regions[] not non-empty array'
 	const gdc_bam_filenames = []
 	for (const r of regions) {
-		const filesize = await get_gdc_bam(
-			r.chr,
-			r.start,
-			r.stop,
-			req.get('X-Auth-Token'),
-			req.query.gdcFileUUID,
-			getGDCcacheFileName(req),
-			req.cookies.sessionid
-		)
+		const filesize = await get_gdc_bam(r.chr, r.start, r.stop, req.query.gdcFileUUID, getGDCcacheFileName(req), ds)
 		gdc_bam_filenames.push({ filesize })
 	}
 	return gdc_bam_filenames
 }
 
-async function streamGdcBam2response(res, regionStr, gdcFileUUID, sessionid, token) {
-	const headers = { compression: false } // see comments in get_gdc_bam()
-	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
-	else headers['X-Auth-Token'] = token
-	const url = path.join(apihost, '/slicing/view/', gdcFileUUID + '?region=' + regionStr)
+async function streamGdcBam2response(res, regionStr, gdcFileUUID, ds) {
+	const { host, headers } = ds.getHostHeaders()
+	headers.compression = false // see comments in get_gdc_bam()
+	const url = path.join(host.rest, '/slicing/view/', gdcFileUUID + '?region=' + regionStr)
 	res.statusCode = 200
 	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
 
-async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename, sessionid) {
+async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, ds) {
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
 	// Also:
 	// since the expected response is binary data, should not set Accept: application/json as a request header
 	// also no body is submitted with a GET request, should not set a Content-type request header
-	const headers = { compression: false }
-	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
-	else headers['X-Auth-Token'] = token
+	const { host, headers } = ds.getHostHeaders()
+	headers.compression = false
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
-	const url = apihost + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
+	const url = host.rest + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
 
 	try {
 		if (await utils.file_not_exist(fullpath)) {

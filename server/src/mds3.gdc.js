@@ -908,7 +908,7 @@ get a text file with genome-wide cnv segment data from one case, and read the fi
 opts{}
 	.case_id=str
 */
-async function getCnvFusion4oneCase(opts) {
+async function getCnvFusion4oneCase(opts, ds) {
 	const fields = [
 		'cases.samples.sample_type',
 		'data_type',
@@ -2188,7 +2188,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 
 	// ssm
 	{
-		const { host, headers } = ds.getHostHeaders(q)
+		const { host, headers } = ds.getHostHeaders(query)
 		const response = await got.post(path.join(host.rest, isoform2ssm_query1_getvariant.endpoint), {
 			headers,
 			body: JSON.stringify({
@@ -2233,7 +2233,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 
 	{
 		// cnv TODO total
-		const tmp = await getCnvFusion4oneCase(query)
+		const tmp = await getCnvFusion4oneCase(query, ds)
 		result.mlst.push(...tmp)
 	}
 
