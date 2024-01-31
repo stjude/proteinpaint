@@ -1,6 +1,6 @@
 import { rgb } from 'd3-color'
 import roundValue from '#shared/roundValue'
-import { TextGeometry } from 'three/addons/geometries/TextGeometry'
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import HelvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
 import * as THREE from 'three'
