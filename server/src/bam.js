@@ -269,7 +269,7 @@ export default function (genomes) {
 				if (req.query.stream2download) {
 					// TODO: move into a dedicated route /bam/gdc/stream ???
 					// download the slice directly to client, do not write to cache file (app runs in "download mode")
-					await streamGdcBam2response(res, req.query.gdcFilePosition, req.query.gdcFileUUID, ds)
+					await streamGdcBam2response(res, req.query.gdcFilePosition, req.query.gdcFileUUID, ds, req.query)
 					return
 				}
 
@@ -3433,8 +3433,8 @@ async function download_gdc_bam(req, ds) {
 	return gdc_bam_filenames
 }
 
-async function streamGdcBam2response(res, regionStr, gdcFileUUID, ds) {
-	const { host, headers } = ds.getHostHeaders()
+async function streamGdcBam2response(res, regionStr, gdcFileUUID, ds, q) {
+	const { host, headers } = ds.getHostHeaders(q)
 	headers.compression = false // see comments in get_gdc_bam()
 	const url = path.join(host.rest, '/slicing/view/', gdcFileUUID + '?region=' + regionStr)
 	res.statusCode = 200

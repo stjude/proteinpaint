@@ -334,8 +334,8 @@ function getQueryApi(ds) {
 		filter0: case filters, must not be combined with 1st arg
 	*/
 
-	return async function (filters, api, returnSize, filter0) {
-		const { host, headers } = ds.getHostHeaders()
+	return async function (filters, api, returnSize, filter0, q) {
+		const { host, headers } = ds.getHostHeaders(q)
 		const end_point = path.join(host.rest, api.end_point)
 
 		const data = {
