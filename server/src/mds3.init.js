@@ -1185,7 +1185,9 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 		}
 		if (unknownSamples.length)
-			throw `rnaseqGeneCount has ${unknownSamples.length} sample names: ${unknownSamples.join(',')}`
+			throw `${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
+				q.allSampleSet.size
+			} sample names are unknown: ${unknownSamples.join(',')}`
 		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 	}
 
