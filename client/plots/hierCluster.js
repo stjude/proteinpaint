@@ -769,7 +769,7 @@ export async function getPlotConfig(opts = {}, app) {
 		dataType: dtgeneexpression,
 		// TODO: may adjust the default group name based on automatically detected term types
 		// otherwise, should define it via opts or overrides
-		termGroupName: 'Gene Expression',
+		termGroupName: 'Gene Expression (CGC Genes Only)',
 		clusterMethod: 'average', // complete
 		zScoreCap: 5,
 		xDendrogramHeight: 100,

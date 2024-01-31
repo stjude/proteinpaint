@@ -9,7 +9,7 @@ import { mclass, dt2label, morigin } from '#shared/common'
 export { getPlotConfig } from './matrix.config'
 import { getLegendData, getLegendItemText } from './matrix.legend'
 import { getSerieses } from './matrix.serieses'
-import { setAutoDimensions, setLabelsAndScales, setLayout } from './matrix.layout'
+import { setAutoDimensions, setLabelsAndScales, setLayout, getMaxGrpLabelWidth } from './matrix.layout'
 import { computeStateDiff, mayRequireToken, setData, applyLegendValueFilter } from './matrix.data'
 import {
 	getTermOrder,
@@ -336,6 +336,7 @@ Matrix.prototype.getLegendData = getLegendData
 Matrix.prototype.setAutoDimensions = setAutoDimensions
 Matrix.prototype.setLabelsAndScales = setLabelsAndScales
 Matrix.prototype.setLayout = setLayout
+Matrix.prototype.getMaxGrpLabelWidth = getMaxGrpLabelWidth
 
 // from matrix.data
 Matrix.prototype.computeStateDiff = computeStateDiff

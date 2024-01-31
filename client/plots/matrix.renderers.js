@@ -324,7 +324,7 @@ export function setRenderers(self) {
 		self.dom.mainG.selectAll('.sjpp-matrix-divide-by-label').remove()
 		if (!self.config.divideBy) return
 		const name = self.config.divideBy?.term.name || ''
-		const text = name.length < s.rowlabelmaxchars ? name : name.slice(0, s.rowlabelmaxchars) + '...'
+		const text = name.length <= s.rowlabelmaxchars ? name : name.slice(0, s.rowlabelmaxchars) + '…'
 		const sides = !s.transpose ? [l.left, l.right] : [l.top, l.bottom]
 		const box = sides.find(d => !d.isGroup)?.box
 		const y = (s.collabelpos == 'top' ? d.mainh + s.collabelmaxchars : -s.collabelmaxchars) + 8
