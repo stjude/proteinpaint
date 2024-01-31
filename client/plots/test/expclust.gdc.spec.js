@@ -2,6 +2,7 @@ import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
 import { runproteinpaint } from '#src/app'
+import { select } from 'd3-selection'
 
 /*************************
  reusable helper functions
@@ -18,7 +19,9 @@ const runpp = helpers.getRunPp('mass', {
 /**************
  test sections
 
-2 genes, 2 dict terms
+TME genes, 3 variables
+launch gene exp clustering using runproteinpaint with launchGdcHierCluster
+
 ***************/
 tape('\n', function (test) {
 	test.pass('-***- plots/hierCluster.gdc -***-')
@@ -224,6 +227,7 @@ tape('TME genes, 3 variables', function (test) {
 
 tape('launch gene exp clustering using runproteinpaint with launchGdcHierCluster', async function (test) {
 	await runproteinpaint({
+		holder: select('body').append('div').node(),
 		noheader: 1,
 		launchGdcHierCluster: true,
 		filter0: {
@@ -242,4 +246,5 @@ tape('launch gene exp clustering using runproteinpaint with launchGdcHierCluster
 			}
 		]
 	})
+	test.end()
 })
