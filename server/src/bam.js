@@ -261,7 +261,8 @@ export default function (genomes) {
 				const sessionid = req.cookies.sessionid
 				const token = req.get('X-Auth-Token')
 				if (!token && !sessionid) throw 'GDC token or sessionid missing'
-				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid, ds)
+				if (token) req.query.token = token
+				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid, ds, req.query)
 
 				// authorized! can proceed
 
@@ -329,6 +330,7 @@ function getGdcDs(genomes) {
 	if (!g) throw 'hg38 missing'
 	const ds = g.datasets.GDC
 	if (!ds) throw 'hg38 GDC missing'
+	if (!mayReSliceFile) mayReSliceFile = get_mayReSliceFile(ds)
 	return ds
 }
 
@@ -806,27 +808,34 @@ then visualization requests goes to 2nd container, there the slice file is not f
 call this function to force download
 can delete this function when gdc containers share a cachedir
 */
-async function mayReSliceFile(req, cachefile) {
-	/* uncomment these two lines to test on local
-	await fs.promises.unlink(cachefile)
-	await fs.promises.unlink(cachefile+'.bai')
-	*/
+let mayReSliceFile
+function get_mayReSliceFile(ds) {
+	if (mayReSliceFile) throw `mayReSliceFile() is already set`
 
-	if (!(await utils.file_not_exist(cachefile))) {
-		// bam file exists
-		return
+	return async function (req, cachefile) {
+		/* uncomment these two lines to test on local
+		await fs.promises.unlink(cachefile)
+		await fs.promises.unlink(cachefile+'.bai')
+		*/
+
+		try {
+			if (!(await utils.file_not_exist(cachefile))) {
+				// bam file exists
+				return
+			}
+
+			// slice file not found; force to download slice here
+
+			if (!req.query.gdcFilePosition) throw '.gdcFilePosition missing'
+			const bakRegions = req.query.regions
+			const tmp = req.query.gdcFilePosition.split('.')
+			req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
+			await download_gdc_bam(req, ds)
+			req.query.regions = bakRegions
+		} catch (e) {
+			throw e
+		}
 	}
-
-	// slice file not found; force to download slice here
-
-	if (!req.query.gdcFilePosition) throw '.gdcFilePosition missing'
-	const bakRegions = req.query.regions
-	const tmp = req.query.gdcFilePosition.split('.')
-	req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
-
-	await download_gdc_bam(req)
-
-	req.query.regions = bakRegions
 }
 
 async function do_query(q) {

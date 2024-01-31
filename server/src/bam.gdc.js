@@ -103,7 +103,7 @@ export function gdc_bam_request(genomes) {
 					req.query.filter0 // optional gdc cohort filter,
 				)
 
-				await mayCheckPermissionWithFileAndSession(bamdata, req)
+				await mayCheckPermissionWithFileAndSession(bamdata, req, ds)
 
 				res.send(bamdata)
 			} else {
@@ -367,7 +367,7 @@ if bam file has been found, and user session is available, check user's permissi
 if no permission, return an indicator to allow ui to indicate this in a helpful manner
 on gdc portal, when user has signed in, the session will be available from cookie, this feature is intended to work there
 */
-async function mayCheckPermissionWithFileAndSession(bamdata, req) {
+async function mayCheckPermissionWithFileAndSession(bamdata, req, ds) {
 	if (!bamdata.file_metadata?.length) return
 	// has found files
 	const sessionid = req.cookies.sessionid
@@ -376,14 +376,14 @@ async function mayCheckPermissionWithFileAndSession(bamdata, req) {
 	// check user's permission, if no, set a flag
 	// assumption is that when user has access to a case, the user can access all bam files from the case (thus no need to check every file in file_metadata[]
 	try {
-		await gdcCheckPermission(bamdata.file_metadata[0].file_uuid, null, sessionid)
+		await gdcCheckPermission(bamdata.file_metadata[0].file_uuid, null, sessionid, ds, req.query)
 	} catch (e) {
 		if (e == 'Permission denied') bamdata.userHasNoAccess = true
 	}
 }
 
-export async function gdcCheckPermission(gdcFileUUID, token, sessionid, ds) {
-	const { host, headers } = ds.getHostHeaders()
+export async function gdcCheckPermission(gdcFileUUID, token, sessionid, ds, q) {
+	const { host, headers } = ds.getHostHeaders(q)
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
 	// since the expected response is binary data, should not set Accept: application/json as a request header
