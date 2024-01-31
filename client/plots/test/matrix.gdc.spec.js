@@ -2,6 +2,7 @@ import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
 import { runproteinpaint } from '#src/app'
+import { select } from 'd3-selection'
 
 /*************************
  reusable helper functions
@@ -19,6 +20,9 @@ const runpp = helpers.getRunPp('mass', {
  test sections
 
 2 genes, 2 dict terms
+2 genes, 2 dict terms, divideBy
+launch matrix using runproteinpaint with launchGdcMatrix
+
 ***************/
 tape('\n', function (test) {
 	test.pass('-***- plots/matrix.gdc (aka OncoMatrix) -***-')
@@ -303,6 +307,7 @@ tape('2 genes, 2 dict terms, divideBy', function (test) {
 
 tape('launch matrix using runproteinpaint with launchGdcMatrix', async function (test) {
 	await runproteinpaint({
+		holder: select('body').append('div').node(),
 		noheader: 1,
 		launchGdcMatrix: true,
 		filter0: {
@@ -326,4 +331,5 @@ tape('launch matrix using runproteinpaint with launchGdcMatrix', async function 
 			}
 		]
 	})
+	test.end()
 })
