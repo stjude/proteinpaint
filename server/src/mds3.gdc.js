@@ -312,7 +312,6 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 }
 
 async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
-	// when api is on prod, switch to path.join(apihost, 'gene_expression/values')
 	const { host, headers } = ds.getHostHeaders(q)
 	const response = await got.post(`${host.geneExp}/gene_expression/values`, {
 		headers,

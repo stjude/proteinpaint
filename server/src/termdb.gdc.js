@@ -49,14 +49,6 @@ initGDCdictionary
 
 */
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
-// may override the geneExpHost for developers without access to qa/portal environments
-const geneExpHost = serverconfig.features?.geneExpHost || apihost
-
-// TODO switch to https://api.gdc.cancer.gov/cases/_mapping
-const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
-
 /* 
 sections from api return that are used to build in-memory termdb
 
@@ -160,9 +152,13 @@ export async function initGDCdictionary(ds) {
 	// k: term id, string with full path
 	// v: term obj
 
+	// TODO switch to https://api.gdc.cancer.gov/cases/_mapping
+	const { host, headers } = ds.getHostHeaders()
+	const dictUrl = path.join(host.rest, 'ssm_occurrences/_mapping')
+
 	let re
 	try {
-		const { body } = await cachedFetch(dictUrl)
+		const { body } = await cachedFetch(dictUrl, { headers })
 		re = body
 	} catch (e) {
 		console.log(e)
@@ -279,7 +275,7 @@ export async function initGDCdictionary(ds) {
 	}
 
 	try {
-		await assignDefaultBins(id2term)
+		await assignDefaultBins(id2term, ds)
 	} catch (e) {
 		console.log(e)
 		// must abort launch upon err. lack of term.bins system app will not work
@@ -373,7 +369,7 @@ async function runRemainingWithoutAwait(ds) {
 	// Important!
 	// do not await when calling this function, as following steps execute logic that are optional for server function, and should not halt server launch
 	// should await each step so they work in sequence
-	await testGDCapi()
+	await testGDCapi(ds)
 	try {
 		await cacheSampleIdMapping(ds)
 	} catch (e) {
@@ -431,7 +427,7 @@ const hardcodedBins = {
 	}
 }
 
-async function assignDefaultBins(id2term) {
+async function assignDefaultBins(id2term, ds) {
 	const queryStrings = []
 	const facet2termid = new Map() // term id is converted to facet for query, this maps it back
 	for (const t of id2term.values()) {
@@ -488,7 +484,8 @@ async function assignDefaultBins(id2term) {
 	let assignedCount = 0,
 		unassignedCount = 0
 
-	const { body: re } = await cachedFetch(apihostGraphql, {
+	const { host, headers } = ds.getHostHeaders()
+	const { body: re } = await cachedFetch(host.graphql, {
 		method: 'POST',
 		body: { query, variables }
 	})
@@ -567,9 +564,10 @@ to be able to get the min/max range of this term
 id: gdc numeric term id, e.g. "case.demographic.year_of_death"
 for this term, the function prints out: "Min=1992  Max=2021"
 */
-async function getNumericTermRange(id) {
+async function getNumericTermRange(id, ds) {
+	const { host, headers } = ds.getHostHeaders()
 	// getting more datapoints will slow down the response
-	const { body: re } = await cachedFetch(apihost + '/ssm_occurrences?size=5000&fields=' + id)
+	const { body: re } = await cachedFetch(host.rest + '/ssm_occurrences?size=5000&fields=' + id, { headers })
 	if (!Array.isArray(re.data.hits)) return
 	let min = null,
 		max = null
@@ -769,11 +767,6 @@ function makeTermdbQueries(ds, id2term) {
 }
 
 async function getOpenProjects(ds) {
-	const headers = {
-		'Content-Type': 'application/json',
-		Accept: 'application/json'
-	}
-
 	const data = {
 		filters: {
 			op: 'and',
@@ -798,7 +791,8 @@ async function getOpenProjects(ds) {
 		size: 0
 	}
 
-	const { body: re } = await cachedFetch(path.join(apihost, 'files'), { method: 'POST', headers, body: data })
+	const { host, headers } = ds.getHostHeaders()
+	const { body: re } = await cachedFetch(path.join(host.rest, 'files'), { method: 'POST', headers, body: data })
 
 	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
@@ -816,32 +810,33 @@ primary purpose is to catch malformed api URLs
 when running this on sj prod server, the gdc api can be down due to maintainance, and we do not want to prevent our server from launching
 thus do not halt process if api is down
 */
-async function testGDCapi() {
+async function testGDCapi(ds) {
+	const { host, headers } = ds.getHostHeaders()
 	try {
 		// all these apis are available on gdc production and are publicly available
 		// if any returns an error code, will abort
 		{
-			const u = path.join(apihost, 'ssms')
+			const u = path.join(host.rest, 'ssms')
 			const c = await testRestApi(u)
 			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
-			const u = path.join(apihost, 'ssm_occurrences')
+			const u = path.join(host.rest, 'ssm_occurrences')
 			const c = await testRestApi(u)
 			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
-			const u = path.join(apihost, 'cases')
+			const u = path.join(host.rest, 'cases')
 			const c = await testRestApi(u)
 			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
-			const u = path.join(apihost, 'files')
+			const u = path.join(host.rest, 'files')
 			const c = await testRestApi(u)
 			if (c) throw `${u} returns error code: ${c}`
 		}
 		{
-			const u = path.join(apihost, 'analysis/top_mutated_genes_by_project')
+			const u = path.join(host.rest, 'analysis/top_mutated_genes_by_project')
 			const c = await testRestApi(u)
 			if (c) throw `${u} returns error code: ${c}`
 		}
@@ -849,8 +844,8 @@ async function testGDCapi() {
 		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
 
 		{
-			const c = await testGraphqlApi(apihostGraphql)
-			if (c) throw `${apihostGraphql} returns error code: ${c}`
+			const c = await testGraphqlApi(host.graphql, JSON.parse(JSON.stringify(headers)))
+			if (c) throw `${host.graphql} returns error code: ${c}`
 		}
 	} catch (e) {
 		console.log(e)
@@ -858,8 +853,8 @@ async function testGDCapi() {
 ##########################################
 #
 #   Some GDC API unavailable, see error above
-#   ${apihost}
-#   ${apihostGraphql}
+#   ${host.rest}
+#   ${host.graphql}
 #
 ##########################################`
 	}
@@ -890,7 +885,7 @@ async function testRestApi(url) {
 	}
 }
 
-async function testGraphqlApi(url) {
+async function testGraphqlApi(url, headers) {
 	// FIXME lightweight method to test if graphql is accessible?
 	const t = new Date()
 	try {
@@ -903,7 +898,7 @@ async function testGraphqlApi(url) {
 			}
 		}}`
 		const response = await got.post(url, {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			headers,
 			body: JSON.stringify({ query, variables: {} })
 		})
 		if (response.statusCode > 399) {
@@ -998,7 +993,8 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 		param.push('from=' + from)
 	}
 
-	const { body: re } = await cachedFetch(apihost + '/cases?' + param.join('&'))
+	const { host, headers } = ds.getHostHeaders()
+	const { body: re } = await cachedFetch(host.rest + '/cases?' + param.join('&'), { headers })
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	//console.log(re.data.hits[0]) // uncomment to examine output
@@ -1080,12 +1076,14 @@ async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
 
 async function checkExpressionAvailability(ds) {
 	// hardcodes this url since the api is only in uat now. replace with path.join() when it's in prod
-	const url = `${geneExpHost}/gene_expression/availability`
+	const { host, headers } = ds.getHostHeaders()
+	const url = `${host.geneExp}/gene_expression/availability`
 
 	try {
 		const idLst = [...ds.__gdc.caseIds]
 		const { body: re } = await cachedFetch(url, {
 			method: 'post',
+			headers,
 			body: { case_ids: idLst, gene_ids: ['ENSG00000141510'] }
 		})
 		// {"cases":{"details":[{"case_id":"4abbd258-0f0c-4428-901d-625d47ad363a","has_gene_expression_values":true}],"with_gene_expression_count":1,"without_gene_expression_count":0},"genes":null}
