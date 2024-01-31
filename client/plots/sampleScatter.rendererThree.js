@@ -108,6 +108,8 @@ export function setRenderersThree(self) {
 		chart.legendDiv = chart.chartDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		chart.legendG = chart.legendDiv
 			.append('svg')
+			.attr('width', self.settings.svgw / 2)
+			.attr('height', self.settings.svgh)
 			.attr('width', self.settings.svgw)
 			.attr('height', self.settings.svgh)
 			.append('g')
