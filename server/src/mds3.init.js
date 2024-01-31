@@ -1197,6 +1197,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		// txt file uses string sample name, must convert integer sample id to string
 		const group1names = []
 		let group1names_not_found = 0
+		const group1names_not_found_list = []
 		for (const s of param.samplelst.groups[0].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -1205,10 +1206,12 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 				group1names.push(n)
 			} else {
 				group1names_not_found += 1
+				group1names_not_found_list.push(n)
 			}
 		}
 		const group2names = []
 		let group2names_not_found = 0
+		const group2names_not_found_list = []
 		for (const s of param.samplelst.groups[1].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -1217,6 +1220,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 				group2names.push(n)
 			} else {
 				group2names_not_found += 1
+				group2names_not_found_list.push(n)
 			}
 		}
 
@@ -1224,6 +1228,8 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		//console.log('Sample size of group2:', group2names.length)
 		const sample_size1 = group1names.length
 		const sample_size2 = group2names.length
+		console.log('group1names_not_found_list:', group1names_not_found_list)
+		console.log('group2names_not_found_list:', group2names_not_found_list)
 		//console.log('Number of group1 names not found:', group1names_not_found)
 		//console.log('Number of group2 names not found:', group2names_not_found)
 		if (sample_size1 < 1) throw 'sample size of group1 < 1'
