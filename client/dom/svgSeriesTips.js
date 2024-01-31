@@ -45,11 +45,12 @@ export function getSeriesTip(line, rect, _tip = null) {
 		const seriesHtmls = []
 		for (const series of opts.serieses) {
 			const data = series.data
-			if (xVal <= Math.max(...data.map(d => d.x))) {
-				// xVal is within range of series timepoints
+			const data_x = data.map(d => d.x)
+			if (xVal >= Math.min(...data_x) && xVal <= Math.max(...data_x)) {
+				// xVal is within range of the series
 				// determine max timepoint that is less than or
 				// equal to xVal
-				const max = Math.max(...data.filter(d => d.x <= xVal).map(d => d.x))
+				const max = Math.max(...data_x.filter(x => x <= xVal))
 				// store html of this timepoint
 				const timepoint = data.find(d => d.x == max)
 				if (timepoint) seriesHtmls.push(timepoint.html)
