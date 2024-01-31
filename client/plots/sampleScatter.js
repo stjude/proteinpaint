@@ -418,6 +418,7 @@ class Scatter {
 				})
 				inputs.push({
 					label: 'Field of vision',
+					title: 'Camera field of view, in degrees',
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'fov'
@@ -570,7 +571,7 @@ export function getDefaultScatterSettings() {
 		opacity: 0.8,
 		defaultColor: plotColor,
 		regression: 'None',
-		fov: 90
+		fov: 50
 	}
 }
 
