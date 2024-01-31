@@ -1,6 +1,7 @@
 import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
+import { runproteinpaint } from '#src/app'
 
 /*************************
  reusable helper functions
@@ -26,7 +27,7 @@ tape('\n', function (test) {
 
 tape('2 genes, 2 dict terms', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(9)
+	test.plan(10)
 	runpp({
 		state: {
 			nav: { header_mode: 'hidden' }, // must set to hidden for gdc, since it lacks termdb method to get cohort size..
@@ -179,7 +180,7 @@ tape('2 genes, 2 dict terms', function (test) {
 
 tape('2 genes, 2 dict terms, divideBy', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(3)
+	test.plan(5)
 	runpp({
 		state: {
 			nav: { header_mode: 'hidden' }, // must set to hidden for gdc, since it lacks termdb method to get cohort size..
@@ -219,8 +220,28 @@ tape('2 genes, 2 dict terms, divideBy', function (test) {
 	async function runTests(matrix) {
 		matrix.on('postRender.test', null)
 		await testSortingFunctionalities(matrix)
+		await testMaxCases(matrix)
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
+	}
+
+	async function testMaxCases(matrix) {
+		//test max cases feature
+		test.equal(matrix.Inner.config.settings.matrix.maxSample, 2000, `should limit max cases to 2000`)
+
+		//reduce sample size
+		await matrix.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: matrix.Inner.id,
+			config: {
+				settings: {
+					matrix: {
+						maxSample: 1000
+					}
+				}
+			}
+		})
+		test.equal(matrix.Inner.config.settings.matrix.maxSample, 1000, `should limit max cases to 1000`)
 	}
 
 	async function testSortingFunctionalities(matrix) {
@@ -275,7 +296,34 @@ tape('2 genes, 2 dict terms, divideBy', function (test) {
 		test.equal(
 			matrix.Inner.config.settings.matrix.sortSamplesBy,
 			'name',
-			`should sort samples by ${matrix.Inner.config.settings.matrix.sortSamplesBy}`
+			`should sort cases by ${matrix.Inner.config.settings.matrix.sortSamplesBy}`
 		)
 	}
+})
+
+tape('launch matrix using runproteinpaint with launchGdcMatrix', async function (test) {
+	await runproteinpaint({
+		noheader: 1,
+		launchGdcMatrix: true,
+		filter0: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }]
+		},
+		settings: {
+			matrix: {
+				maxGenes: 50,
+				maxSample: 10000
+			}
+		},
+		termgroups: [
+			{
+				lst: [
+					{ term: { name: 'IDH1', type: 'geneVariant' } },
+					{ term: { name: 'EGFR', type: 'geneVariant' } },
+					{ id: 'case.disease_type' },
+					{ id: 'case.diagnoses.age_at_diagnosis' }
+				]
+			}
+		]
+	})
 })
