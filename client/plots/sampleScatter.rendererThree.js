@@ -1,18 +1,21 @@
 import { rgb } from 'd3-color'
 import roundValue from '#shared/roundValue'
+import { TextGeometry } from 'three/addons/geometries/TextGeometry'
+import { FontLoader } from 'three/addons/loaders/FontLoader.js'
+import HelvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
+import * as THREE from 'three'
 
 export function setRenderersThree(self) {
 	self.render2DSerieLarge = async function (chart) {
-		const THREE = await import('three')
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
 		chart.chartDiv.selectAll('*').remove()
 
-		self.canvas = chart.chartDiv.append('div').style('display', 'inline-block').append('canvas').node()
+		self.canvas = chart.chartDiv.insert('div').style('display', 'inline-block').append('canvas').node()
 		self.canvas.width = self.settings.svgw * 1.5
 		self.canvas.height = self.settings.svgh * 1.5
 		chart.chartDiv.style('margin', '20px 20px')
-		chart.legendDiv = chart.chartDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		chart.legendDiv = chart.chartDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		chart.legendG = chart.legendDiv
 			.append('svg')
 			.attr('width', self.settings.svgw / 2)
@@ -98,14 +101,13 @@ export function setRenderersThree(self) {
 	}
 
 	self.render3DSerie = async function (chart) {
-		const THREE = await import('three')
 		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
-		self.canvas = chart.chartDiv.append('div').style('display', 'inline-block').append('canvas').node()
+		self.canvas = chart.chartDiv.insert('div').style('display', 'inline-block').append('canvas').node()
 		self.canvas.width = self.settings.svgw
 		self.canvas.height = self.settings.svgh
 		chart.chartDiv.style('margin', '20px 20px')
-		chart.legendDiv = chart.chartDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		chart.legendDiv = chart.chartDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		chart.legendG = chart.legendDiv
 			.append('svg')
 			.attr('width', self.settings.svgw / 2)
@@ -128,10 +130,10 @@ export function setRenderersThree(self) {
 		if (self.settings.showAxes) {
 			const axesHelper = new THREE.AxesHelper(1)
 			scene.add(axesHelper)
-			const grid = new THREE.GridHelper(1)
-			grid.position.x = 0.5
-			grid.position.z = 0.5
-			scene.add(grid)
+			// const grid = new THREE.GridHelper(1)
+			// grid.position.x = 0.5
+			// grid.position.z = 0.5
+			// scene.add(grid)
 		}
 		camera.updateMatrix()
 		const whiteColor = new THREE.Color('rgb(255,255,255)')
@@ -155,6 +157,7 @@ export function setRenderersThree(self) {
 			scene.add(circle)
 		}
 
+		self.addLabels(scene, chart)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 		renderer.setPixelRatio(window.devicePixelRatio)
 		//document.addEventListener( 'pointermove', onPointerMove );
@@ -167,6 +170,36 @@ export function setRenderersThree(self) {
 			renderer.render(scene, camera)
 		}
 		animate()
+	}
+
+	self.addLabels = async function (scene, chart) {
+		let text = getTextMesh(self.config.term.term.name)
+		text.position.x = 1.01
+		scene.add(text)
+
+		text = getTextMesh(self.config.term2.term.name)
+		text.position.y = 1.01
+		scene.add(text)
+		text = getTextMesh(self.config.term0.term.name)
+		text.position.z = 1.01
+		scene.add(text)
+		function getTextMesh(text) {
+			const loader = new FontLoader()
+			const font = loader.parse(HelvetikerFont)
+
+			const textGeo = new TextGeometry(text, {
+				font,
+				size: 0.03,
+				height: 0.01,
+				curveSegments: 8,
+				bevelEnabled: false
+			})
+
+			const color = new THREE.Color(0x686868)
+			const textMaterial = new THREE.MeshBasicMaterial({ color: color })
+			const textMesh = new THREE.Mesh(textGeo, textMaterial)
+			return textMesh
+		}
 	}
 }
 
