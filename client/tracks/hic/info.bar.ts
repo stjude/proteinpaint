@@ -47,7 +47,9 @@ export function init_hicInfoBar(hic: any, self: any) {
 	self.colorScale = new ColorScale({
 		barheight: 10,
 		barwidth: 85,
-		holder: colorScaleDiv
+		holder: colorScaleDiv,
+		startColor: self.colorBar.startColor,
+		endColor: self.colorBar.endColor
 		// tickPosition: 'bottom',
 		// ticks: 1
 	})

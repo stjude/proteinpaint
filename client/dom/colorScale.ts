@@ -31,7 +31,7 @@ export class ColorScale {
 	barheight: number
 	/** The width of the color bar */
 	barwidth: number
-	colorScale: Partial<ColorScaleOpts>
+	bar: Partial<ColorScaleOpts>
 	/** Required */
 	data: any
 	/** Required */
@@ -51,7 +51,7 @@ export class ColorScale {
 	constructor(opts: any) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
-		this.colorScale = {
+		this.bar = {
 			startColor: opts.startColor || 'white',
 			endColor: opts.endColor || 'red'
 		}
@@ -66,42 +66,39 @@ export class ColorScale {
 
 	render() {
 		const scaleSvg = this.holder.append('svg').attr('width', this.svg.width).attr('height', this.svg.height)
-		this.colorScale.g = scaleSvg.append('g').attr('transform', 'translate(0, 0)')
+		this.bar.g = scaleSvg.append('g').attr('transform', 'translate(0, 0)')
 
-		const defs = this.colorScale.g.append('defs')
+		const defs = this.bar.g.append('defs')
 		const id = Math.random().toString()
 		const gradient = defs.append('linearGradient').attr('id', id)
 
-		this.colorScale.gradientStart = gradient
-			.append('stop')
-			.attr('offset', 0)
-			.attr('stop-color', this.colorScale.startColor)
-		this.colorScale.gradientEnd = gradient.append('stop').attr('offset', 1).attr('stop-color', this.colorScale.endColor)
+		this.bar.gradientStart = gradient.append('stop').attr('offset', 0).attr('stop-color', this.bar.startColor)
+		this.bar.gradientEnd = gradient.append('stop').attr('offset', 1).attr('stop-color', this.bar.endColor)
 
-		this.colorScale.bar = this.colorScale.g
+		this.bar.bar = this.bar.g
 			.append('rect')
 			.attr('height', this.barheight)
 			.attr('width', this.barwidth)
 			.attr('fill', 'url(#' + id + ')')
-		this.colorScale.axisg = this.colorScale.g.append('g').attr('transform', `translate(0, ${this.barheight})`)
+		this.bar.axisg = this.bar.g.append('g').attr('transform', `translate(0, ${this.barheight})`)
 		const start = this.data[0]
 		const stop = this.data[this.data.length - 1]
-		this.colorScale.scale = scaleLinear([start, stop]).range([0, this.barwidth])
+		this.bar.scale = scaleLinear([start, stop]).range([0, this.barwidth])
 
 		// const axis = this.tickPosition === 'top' ?
-		//     axisTop(this.colorScale.scale).ticks(this.ticks) :
+		//     axisTop(this.bar.scale).ticks(this.ticks) :
 		//     // @ts-ignore
-		//     axisBottom().scale(this.colorScale.scale).ticks(this.ticks).tickSize(1)
+		//     axisBottom().scale(this.bar.scale).ticks(this.ticks).tickSize(1)
 
 		// axisstyle({
-		//     axis: this.colorScale.axisg.call(axis),
+		//     axis: this.bar.axisg.call(axis),
 		//     showline: true
 		// })
 	}
 
 	updateColors() {
-		this.colorScale.gradientStart.attr('stop-color', this.colorScale.startColor)
-		this.colorScale.gradientEnd.attr('stop-color', this.colorScale.endColor)
+		this.bar.gradientStart.attr('stop-color', this.bar.startColor)
+		this.bar.gradientEnd.attr('stop-color', this.bar.endColor)
 	}
 
 	updateTicks() {

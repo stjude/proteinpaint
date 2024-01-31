@@ -142,11 +142,10 @@ class Hicstat {
 		start: number
 		stop: number
 	}>
-	colorScale: {
-		gradientStart: any
-		gradientStop: any
-		negative: string
-		positive: string
+	/** This maybe unneccessary but leave until runproteinpaint() enabled different views  */
+	colorBar: {
+		startColor: string
+		endColor: string
 	}
 
 	constructor(hic: any, debugmode: boolean) {
@@ -204,13 +203,11 @@ class Hicstat {
 		this.inhorizontal = false
 		this.x = {}
 		this.y = {}
-		this.colorScale = {
-			gradientStart: null,
-			gradientStop: null,
+		this.colorBar = {
 			//Start with white for zero. Change color when negative values are implemented
 			//Args shown are not in use. Anticipating future implementation
-			negative: hic.colorNeg || 'white',
-			positive: hic.color || hic.colorPos || 'red'
+			startColor: hic.colorNeg || 'white',
+			endColor: hic.color || hic.colorPos || 'red'
 		}
 	}
 
@@ -1763,9 +1760,18 @@ export function hicparsefragdata(items: any) {
  * @param self
  */
 export async function setViewCutoff(vlst: any, view: any, self: any) {
-	const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
+	const sortedVlst = vlst.sort((a: number, b: number) => a - b)
+	const maxv = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
 	view.bpmaxv = maxv
 	self.dom.controlsDiv.inputBpMaxv.property('value', view.bpmaxv)
+
+	if (sortedVlst[0] < 0) {
+		self.colorScale.bar.startColor = self.colorBar.startColor = 'blue'
+		self.colorScale.updateColors()
+	} else {
+		self.colorScale.bar.startColor = self.colorBar.startColor = 'white'
+		self.colorScale.updateColors()
+	}
 }
 //Super messy, need to clean up
 function colorizeElement(
