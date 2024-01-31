@@ -53,6 +53,16 @@ isoform2ssm_query1_getvariant{}
 isoform2ssm_query2_getcase{}
 */
 
+export function convertSampleId_addGetter(tdb, ds) {
+	tdb.convertSampleId.get = inputs => {
+		const old2new = {}
+		for (const old of inputs) {
+			old2new[old] = ds.__gdc.map2caseid.get(old) || old
+		}
+		return old2new
+	}
+}
+
 export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 	const fields = ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 	api.get = async q => {
