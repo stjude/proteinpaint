@@ -45,45 +45,23 @@ querySamples_gdcapi
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
-getheaders
 
 
 **************** internal
 mayMapRefseq2ensembl
 isoform2ssm_query1_getvariant{}
 isoform2ssm_query2_getcase{}
-
-**************** api hosts
-for the pp docker instance running in gdc backend, the api host should be defined by environmental variable
-otherwise, e.g. in sj prod server it uses the public api https://api.gdc.cancer.gov
-
-for now the api host is not attached to the pp-backend dataset object (as defined by dataset/gdc.hg38.js)
-as there are usages not involving the "dataset", e.g. in bam slicing
-thus need to define the "apihost" as global variables in multiple places
 */
-export const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
-const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
-// may override the geneExpHost for developers without access to qa/portal environments
-export const geneExpHost = serverconfig.features?.geneExpHost || apihost
 
-export function convertSampleId_addGetter(tdb, ds) {
-	tdb.convertSampleId.get = inputs => {
-		const old2new = {}
-		for (const old of inputs) {
-			old2new[old] = ds.__gdc.map2caseid.get(old) || old
-		}
-		return old2new
-	}
-}
-
-export async function validate_ssm2canonicalisoform(api) {
+export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 	const fields = ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 	api.get = async q => {
 		// q is client request object
 		if (!q.ssm_id) throw '.ssm_id missing'
-		const response = await got(apihost + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
+		const { host, headers } = getHostHeaders(q)
+		const response = await got(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			method: 'GET',
-			headers: getheaders(q)
+			headers
 		})
 		let re
 		try {
@@ -120,9 +98,10 @@ q{}
 		now that these endpoints actually support range query, will use them for now
 		and look into enabling genomic mode on gdc view
 		to confirm that whether intergenic ssm are indeed indexed on Rest; if so can delete graphql below
-
-		const response = await got.post(apihostGraphql, {
-			headers: getheaders(q),
+		
+		const {host, headers} = ds.getHostHeaders(q)
+		const response = await got.post(host.graphql, {
+			headers,
 			body: JSON.stringify({ query: query_range2ssm, variables: variables_range2ssm(q) })
 		})
 		let re
@@ -205,7 +184,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		const t2 = new Date()
 		mayLog(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
-		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst)
+		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst, ds)
 
 		if (ensgLst.length == 0) return { gene2sample2value, byTermId: {} } // no valid genes
 
@@ -237,7 +216,7 @@ genome:
 case_ids:[]
 	required for hitting /gene_selection to screen ensg list before returning
 */
-async function geneExpression_getGenes(genes, genome, case_ids) {
+async function geneExpression_getGenes(genes, genome, case_ids, ds) {
 	// convert given gene symbols to ENSG for api query
 	const ensgLst = []
 	// convert ensg back to symbol for using in data structure
@@ -270,8 +249,9 @@ async function geneExpression_getGenes(genes, genome, case_ids) {
 	// so that valid SD-transformed value can be returned from /values api
 	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
 	try {
-		const response = await got.post(`${geneExpHost}/gene_expression/gene_selection`, {
-			headers: getheaders(),
+		const { host, headers } = ds.getHostHeaders()
+		const response = await got.post(`${host.geneExp}/gene_expression/gene_selection`, {
+			headers,
 			body: JSON.stringify({
 				case_ids,
 				gene_ids: ensgLst,
@@ -310,7 +290,8 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 	if (f.content.length) body.case_filters = f
 
 	try {
-		const response = await got.post(path.join(apihost, 'cases'), { headers: getheaders(q), body: JSON.stringify(body) })
+		const { host, headers } = ds.getHostHeaders(q)
+		const response = await got.post(path.join(host.rest, 'cases'), { headers, body: JSON.stringify(body) })
 		const re = JSON.parse(response.body)
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
@@ -332,8 +313,9 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 
 async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
 	// when api is on prod, switch to path.join(apihost, 'gene_expression/values')
-	const response = await got.post(`${geneExpHost}/gene_expression/values`, {
-		headers: getheaders(q),
+	const { host, headers } = ds.getHostHeaders(q)
+	const response = await got.post(`${host.geneExp}/gene_expression/values`, {
+		headers,
 		body: JSON.stringify({
 			case_ids,
 			gene_ids,
@@ -469,9 +451,8 @@ export function validate_query_snvindel_byisoform_2(ds) {
 	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not function'
 	ds.queries.snvindel.byisoform.get = async opts => {
 		const refseq = mayMapRefseq2ensembl(opts, ds)
-
-		const headers = getheaders(opts)
-		const response = await got.post(api.apihost, {
+		const { host, headers } = ds.getHostHeaders(opts)
+		const response = await got.post(host.rest, {
 			headers,
 			body: JSON.stringify({ query: api.query, variables: api.filters(opts) })
 		})
@@ -629,8 +610,8 @@ export function validate_query_geneCnv(ds) {
 		.gene=str
 	*/
 	ds.queries.geneCnv.bygene.get = async opts => {
-		const headers = getheaders(opts)
-		const tmp = await got.post(path.join(apihost, 'cnvs'), {
+		const { host, headers } = ds.getHostHeaders(opts)
+		const tmp = await got.post(path.join(host.rest, 'cnvs'), {
 			headers,
 			body: JSON.stringify({
 				size: 100000,
@@ -753,8 +734,8 @@ export function validate_query_geneCnv2(ds) {
 		.gene=str
 	*/
 	ds.queries.geneCnv.bygene.get = async opts => {
-		const headers = getheaders(opts)
-		const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
+		const { host, headers } = ds.getHostHeaders(opts)
+		const tmp = await got.post(path.join(host.rest, 'cnv_occurrences'), {
 			headers,
 			body: JSON.stringify(Object.assign({ size: 100000, fields: getFields(opts) }, getFilters(opts)))
 		})
@@ -863,7 +844,7 @@ get genome-wide gene-level cnv data for one case
 opts{}
 	.case_id=str
 */
-async function getGeneCnv4oneCase(opts) {
+async function getGeneCnv4oneCase(opts, ds) {
 	const fields = [
 		'cnv.chromosome',
 		'cnv.start_position',
@@ -872,8 +853,8 @@ async function getGeneCnv4oneCase(opts) {
 		'cnv.gene_level_cn',
 		'cnv.consequence.gene.symbol' // turn on later if gene is needed
 	]
-	const headers = getheaders(opts)
-	const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
+	const { host, headers } = getHostHeaders(opts)
+	const tmp = await got.post(path.join(host.rest, 'cnv_occurrences'), {
 		headers,
 		body: JSON.stringify({
 			size: 10000,
@@ -936,8 +917,8 @@ async function getCnvFusion4oneCase(opts) {
 		'experimental_strategy',
 		'analysis.workflow_type'
 	]
-	const headers = getheaders(opts)
-	const tmp = await got.post(path.join(apihost, 'files'), {
+	const { host, headers } = ds.getHostHeaders(opts)
+	const tmp = await got.post(path.join(host.rest, 'files'), {
 		headers,
 		body: JSON.stringify({
 			size: 10000,
@@ -982,7 +963,7 @@ async function getCnvFusion4oneCase(opts) {
 	const events = [] // collect cnv and fusion events into one array
 
 	if (wgsFile) {
-		const re = await got(path.join(apihost, 'data') + '/' + wgsFile, { method: 'GET', headers })
+		const re = await got(path.join(host.rest, 'data') + '/' + wgsFile, { method: 'GET', headers })
 		const lines = re.body.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
@@ -1037,7 +1018,7 @@ async function getCnvFusion4oneCase(opts) {
 	} else if (snpFile) {
 		// only load available snp file if no wgs cnv
 
-		const re = await got(path.join(apihost, 'data') + '/' + snpFile, { method: 'GET', headers })
+		const re = await got(path.join(host.rest, 'data') + '/' + snpFile, { method: 'GET', headers })
 		const lines = re.body.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Num_Probes	Segment_Mean
@@ -1059,7 +1040,7 @@ async function getCnvFusion4oneCase(opts) {
 
 	if (arribaFile) {
 		try {
-			const re = await got(path.join(apihost, 'data') + '/' + arribaFile, { method: 'GET', headers })
+			const re = await got(path.join(host.rest, 'data') + '/' + arribaFile, { method: 'GET', headers })
 			const lines = re.body.split('\n')
 			// first line is header
 			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
@@ -1126,40 +1107,19 @@ function parseArribaName(f, str) {
 
 ////////////////////////// CNV ends /////////////////////////////
 
-export function getheaders(q) {
-	/*
-	q { 
-		token,
-		//token is only used for adhoc testing outside of gdc env, by directly add token string in runpp(), this is not used in gdc portal
-		sessionid,
-		__protected__:{sessionid}
-		// see middleware
-	}
-	*/
-	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	if (q) {
-		if (q.token) h['X-Auth-Token'] = q.token
-		if (q.sessionid) h['Cookie'] = 'sessionid=' + q.sessionid
-		if (q.__protected__?.sessionid) {
-			h['Cookie'] = 'sessionid=' + q.__protected__.sessionid
-		}
-	}
-	return h
-}
-
 async function snvindel_byisoform(opts, ds) {
 	// query ssm by either isoform or rglst
 	const query1 = isoform2ssm_query1_getvariant,
 		query2 = isoform2ssm_query2_getcase
 
-	const headers = getheaders(opts)
+	const { host, headers } = ds.getHostHeaders(opts)
 
 	// must use POST as filter can be too long for GET
-	const p1 = got.post(path.join(apihost, query1.endpoint), {
+	const p1 = got.post(path.join(host.rest, query1.endpoint), {
 		headers,
 		body: JSON.stringify(Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts)))
 	})
-	const p2 = got.post(path.join(apihost, query2.endpoint), {
+	const p2 = got.post(path.join(host.rest, query2.endpoint), {
 		headers,
 		body: JSON.stringify(
 			Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
@@ -1598,9 +1558,9 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	Object.assign(param, isoform2ssm_query2_getcase.filters(q, ds))
 
-	const headers = getheaders(q) // will be reused below
+	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
-	const response = await got.post(path.join(apihost, isoform2ssm_query2_getcase.endpoint), {
+	const response = await got.post(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), {
 		headers,
 		body: JSON.stringify(param)
 	})
@@ -1749,8 +1709,9 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 		field2termid.set(field, t.term.id)
 	}
 
-	const response = await got.post(path.join(apihost, 'cases'), {
-		headers: getheaders(q),
+	const { host, headers } = ds.getHostHeaders(q)
+	const response = await got.post(path.join(host.rest, 'cases'), {
+		headers,
 		body: JSON.stringify({
 			size: ds.__gdc.casesWithExpData.size,
 			fields: fields.join(','),
@@ -1841,9 +1802,9 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 
 	const query = termid2size_query(termPaths)
 	const variables = termid2size_filters(q, ds)
-
-	const response = await got.post(apihostGraphql, {
-		headers: getheaders(q),
+	const { host, headers } = ds.getHostHeaders(q)
+	const response = await got.post(host.graphql, {
+		headers,
 		body: JSON.stringify({ query, variables })
 	})
 
@@ -1899,9 +1860,10 @@ export function validate_m2csq(ds) {
 	]
 	ds.queries.snvindel.m2csq.get = async q => {
 		// q is client request object
-		const response = await got(apihost + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
+		const { host, headers } = ds.getHostHeaders(q)
+		const response = await got(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			method: 'GET',
-			headers: getheaders(q)
+			headers
 		})
 		let re
 		try {
@@ -2017,38 +1979,36 @@ export function gdcValidate_query_singleSampleMutation(ds, genome) {
 			if (!q.case_id) {
 				// not mapped to case id
 				// this is possible when the server just started and hasn't finished caching. thus must call this method to map
-				q.case_id = await convert2caseId(q.sample)
+				q.case_id = await convert2caseId(q.sample, ds)
 			}
 		}
 		return await getSingleSampleMutations(q, ds, genome)
 	}
 }
 
-async function convert2caseId(n) {
+async function convert2caseId(n, ds) {
 	/*
 	convert all below to case.case_id
 	- case submitter id (TCGA-FR-A44A)
 	- aliquot id (d835e9c7-de84-4acd-ba30-516f396cbd84)
 	- sample submitter id (TCGA-B5-A1MR-01A)
 	*/
-	const response = await got.post(
-		'https://api.gdc.cancer.gov/cases', //path.join(apihost, 'cases'), TODO chane to apihost
-		{
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, //getheaders({}),
-			body: JSON.stringify({
-				size: 1,
-				fields: 'case_id,submitter_id',
-				filters: {
-					op: 'or',
-					content: [
-						{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: [n] } },
-						{ op: '=', content: { field: 'submitter_id', value: [n] } },
-						{ op: '=', content: { field: 'samples.submitter_id', value: [n] } }
-					]
-				}
-			})
-		}
-	)
+	const { host, headers } = ds.getHostHeaders(q)
+	const response = await got.post(`${host.rest}/cases`, {
+		headers,
+		body: JSON.stringify({
+			size: 1,
+			fields: 'case_id,submitter_id',
+			filters: {
+				op: 'or',
+				content: [
+					{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: [n] } },
+					{ op: '=', content: { field: 'submitter_id', value: [n] } },
+					{ op: '=', content: { field: 'samples.submitter_id', value: [n] } }
+				]
+			}
+		})
+	})
 	const re = JSON.parse(response.body)
 	for (const h of re.data.hits) {
 		if (h.case_id) return h.case_id
@@ -2091,9 +2051,9 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 				'cases.disease_type'
 			].join(',')
 		}
-
-		const response = await got.post(path.join(apihost, 'files'), {
-			headers: getheaders(q),
+		const { host, headers } = ds.getHostHeaders(q)
+		const response = await got.post(path.join(host.rest, 'files'), {
+			headers,
 			body: JSON.stringify(body)
 		})
 
@@ -2168,7 +2128,8 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		sample: value is the file Id, one that's found by gdc_validate_query_singleCell_samples
 	*/
 	ds.queries.singleCell.data.get = async q => {
-		const re = await got(path.join(apihost, 'data', q.sample), { method: 'GET', headers: getheaders(q) })
+		const { host, headers } = ds.getHostHeaders(q)
+		const re = await got(path.join(host.rest, 'data', q.sample), { method: 'GET', headers })
 		const lines = re.body.trim().split('\n')
 
 		// first line is header
@@ -2227,8 +2188,9 @@ async function getSingleSampleMutations(query, ds, genome) {
 
 	// ssm
 	{
-		const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
-			headers: getheaders(query),
+		const { host, headers } = ds.getHostHeaders(q)
+		const response = await got.post(path.join(host.rest, isoform2ssm_query1_getvariant.endpoint), {
+			headers,
 			body: JSON.stringify({
 				size: 10000, // ssm max!
 				fields: isoform2ssm_query1_getvariant.fields.join(','),

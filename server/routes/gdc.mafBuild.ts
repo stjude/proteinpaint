@@ -7,8 +7,6 @@ import Readable from 'stream'
 import { GdcMafBuildRequest } from '#shared/types/routes/gdc.mafBuild.ts'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-
 export const api = {
 	endpoint: 'gdc/mafBuild',
 	methods: {
@@ -27,7 +25,12 @@ export const api = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			await buildMaf(req.query as GdcMafBuildRequest, res)
+			// g and ds are not used right now, but could be later
+			const g = genomes.hg38
+			if (!g) throw 'hg38 missing'
+			const ds = g.datasets.GDC
+			if (!ds) throw 'hg38 GDC missing'
+			await buildMaf(req.query as GdcMafBuildRequest, res, ds)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ status: 'error', error: e.message || e })
@@ -39,10 +42,10 @@ function init({ genomes }) {
 q{}
 res{}
 */
-async function buildMaf(q: GdcMafBuildRequest, res: any) {
+async function buildMaf(q: GdcMafBuildRequest, res: any, ds) {
 	const t0 = Date.now()
-
-	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst)) as string[]
+	const { host, headers } = ds.getHostHeaders(q)
+	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)) as string[]
 
 	if (serverconfig.debugmode)
 		console.log(
@@ -53,7 +56,7 @@ async function buildMaf(q: GdcMafBuildRequest, res: any) {
 	const arg = {
 		fileIdLst: fileLst2,
 		columns: q.columns,
-		host: path.join(apihost, 'data') // must use the /data/ endpoint from current host
+		host: path.join(host.rest, 'data') // must use the /data/ endpoint from current host
 	}
 
 	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
@@ -80,7 +83,7 @@ excess files are not processed in order not to crash server
 must not rely on file size sent by client, as that can be spoofed and never to be trusted
 it's inexpensive to query api for this
 */
-async function getFileLstUnderSizeLimit(lst: string[]) {
+async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 	if (lst.length == 0) throw 'fileIdLst[] not array or blank'
 	const data = {
 		filters: {
@@ -90,8 +93,7 @@ async function getFileLstUnderSizeLimit(lst: string[]) {
 		size: 10000,
 		fields: 'file_size'
 	}
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	const response = await got.post(path.join(apihost, 'files'), { headers, body: JSON.stringify(data) })
+	const response = await got.post(path.join(host.rest, 'files'), { headers, body: JSON.stringify(data) })
 	let re
 	try {
 		re = JSON.parse(response.body)
