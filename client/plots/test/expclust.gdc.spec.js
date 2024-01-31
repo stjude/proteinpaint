@@ -1,6 +1,7 @@
 import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
+import { runproteinpaint } from '#src/app'
 
 /*************************
  reusable helper functions
@@ -80,8 +81,7 @@ tape('TME genes, 3 variables', function (test) {
 		await testClusteringMethod(hierCluster)
 		await testRowColumnDendrograms(hierCluster)
 		await testzScoreCap(hierCluster)
-
-		// if (test._ok) hierCluster.Inner.app.destroy()
+		if (test._ok) hierCluster.Inner.app.destroy()
 		test.end()
 	}
 
@@ -220,4 +220,26 @@ tape('TME genes, 3 variables', function (test) {
 			`should cap zscore at ${hierCluster.Inner.config.settings.hierCluster.zScoreCap}`
 		)
 	}
+})
+
+tape('launch gene exp clustering using runproteinpaint with launchGdcHierCluster', async function (test) {
+	await runproteinpaint({
+		noheader: 1,
+		launchGdcHierCluster: true,
+		filter0: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }]
+		},
+		settings: {
+			hierCluster: {
+				maxGenes: 50
+			}
+		},
+		termgroups: [
+			{
+				name: 'Variables',
+				lst: [{ id: 'case.disease_type' }, { id: 'case.primary_site' }, { id: 'case.demographic.gender' }]
+			}
+		]
+	})
 })
