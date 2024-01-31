@@ -402,10 +402,12 @@ class Hicstat {
 		// 		}
 		// 	}
 		// }
-		if (this.errList.length) this.error(this.errList)
+		if (this.errList.length) {
+			//Loading div problematic with errors. Fix problem when it becomes a component
+			this.dom.loadingDiv.style('display', 'none')
+			this.error(this.errList)
+		}
 		this.dom.loadingDiv.style('display', 'none')
-
-		if (this.errList.length) this.error(this.errList)
 
 		return
 	}
@@ -994,6 +996,13 @@ export async function makeWholeGenomeElements(hic: any, self: any, manychrArg?: 
 	await colorizeGenomeElements(self)
 	self.dom.loadingDiv.style('display', 'none')
 }
+
+// async function updateColorScale(vlst: number[], self: any) {
+// 	const sorted = new Set(vlst.sort((a, b) => a - b))
+// 	const sortedArray = Array.from(sorted)
+// 	self.colorScale.data = [sortedArray, sortedArray[sortedArray.length - 1]]
+// 	self.colorScale.updateTicks()
+// }
 
 async function getWholeGenomeData(hic: any, self: any, lead: any, follow: any, vlst: any) {
 	const arg = {
