@@ -742,9 +742,9 @@ function setRenderers(self) {
 			setVisibleSerieses(chart, s)
 
 			const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
-			renderSVG(svg, chart, s, 0)
+			renderSVG(svg, chart, s)
 
-			div.transition().duration(s.duration).style('opacity', 1)
+			div.style('opacity', 1)
 		} else {
 			// no series in chart
 			div.select('.pp-cuminc-chart-noData').style('display', 'block')
@@ -810,10 +810,7 @@ function setRenderers(self) {
 
 		const div = select(this)
 
-		div
-			.transition()
-			.duration(s.duration)
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
+		div.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
 			.select('.sjpcb-cuminc-title')
@@ -833,7 +830,7 @@ function setRenderers(self) {
 
 			setVisibleSerieses(chart, s)
 
-			renderSVG(div.select('svg'), chart, s, s.duration)
+			renderSVG(div.select('svg'), chart, s)
 		} else {
 			div
 				.select('.pp-cuminc-chart-noData')
@@ -884,14 +881,12 @@ function setRenderers(self) {
 		}
 	}
 
-	function renderSVG(svg, chart, s, duration) {
+	function renderSVG(svg, chart, s) {
 		const extraHeight = s.atRiskVisible
 			? s.axisTitleFontSize + 4 + chart.visibleSerieses.length * 2 * s.axisTitleFontSize
 			: 0
 
 		svg
-			.transition()
-			.duration(duration)
 			.attr('width', s.svgw)
 			.attr('height', s.svgh + extraHeight)
 			.style('overflow', 'visible')
