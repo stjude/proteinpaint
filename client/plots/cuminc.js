@@ -1402,7 +1402,7 @@ function getPj(self) {
 				// scale axis according to tick values
 				const s = self.settings
 				const min = Math.min(...context.self.yTickValues)
-				const max = Math.min(100, Math.max(...context.self.yTickValues))
+				const max = Math.max(...context.self.yTickValues)
 				return scaleLinear()
 					.domain([max, min])
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
@@ -1432,7 +1432,7 @@ function computeTickValues(min, max) {
 	// compute tick values using tick width
 	const tickValues = []
 	let tick = min
-	while (tick < max + tickWidth_rnd) {
+	while (tick <= Math.min(100, max + tickWidth_rnd)) {
 		// using max + tickWidth_rnd to ensure that
 		// the last tick will be greater than the max
 		// value of the data
