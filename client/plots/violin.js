@@ -177,7 +177,7 @@ class ViolinPlot {
 				chartType: 'violin',
 				settingsKey: 'plotThickness',
 				step: 10,
-				max: 200,
+				max: 400,
 				min: 40,
 				debounceInterval: 1000
 			},
@@ -358,7 +358,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		brushRange: null, //object with start and end if there is a brush selection
 		svgw: 500, // span length of a plot/svg, not including margin
 		datasymbol: 'bean',
-		radius: 5,
+		radius: 3,
 		strokeWidth: 0.2,
 		axisHeight: 60,
 		rightMargin: 50,

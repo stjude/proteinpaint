@@ -305,7 +305,6 @@ function createCanvasImg(q, result, ds) {
 			.domain([result.min, result.max])
 			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 	}
-
 	const [width, height] =
 		q.orientation == 'horizontal'
 			? [q.svgw * q.devicePixelRatio, refSize * q.devicePixelRatio]
@@ -329,7 +328,6 @@ function createCanvasImg(q, result, ds) {
 		if (q.devicePixelRatio != 1) {
 			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 		}
-
 		q.datasymbol === 'rug'
 			? plot.values.forEach(i => {
 					ctx.beginPath()
@@ -359,6 +357,7 @@ function createCanvasImg(q, result, ds) {
 		plot.bins = finalVpBins.bins
 
 		plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
+
 		if (biggestBin < plot.biggestBin) biggestBin = plot.biggestBin
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values)
