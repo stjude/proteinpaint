@@ -416,6 +416,12 @@ class Scatter {
 					chartType: 'sampleScatter',
 					settingsKey: 'svgd'
 				})
+				inputs.push({
+					label: 'Field of vision',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'fov'
+				})
 			}
 			inputs.push(showAxes)
 
@@ -555,15 +561,16 @@ export function getDefaultScatterSettings() {
 		maxDotSize: 144,
 		scaleDotOrder: 'Ascending',
 		refSize: 9,
-		svgw: 550,
-		svgh: 550,
-		svgd: 550,
+		svgw: 500,
+		svgh: 500,
+		svgd: 500,
 		axisTitleFontSize: 16,
 		showAxes: true,
 		showRef: true,
 		opacity: 0.8,
 		defaultColor: plotColor,
-		regression: 'None'
+		regression: 'None',
+		fov: 90
 	}
 }
 
