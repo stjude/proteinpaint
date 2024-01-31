@@ -85,6 +85,10 @@ class Recover {
 		if (this.state._scope_ == 'none') return
 		this.isRecovering = false
 		const state = this.opts.adjustTrackedState ? this.opts.adjustTrackedState(this.state) : this.state
+		if (!state) {
+			console.error('no state to track')
+			return
+		}
 		if (!Object.isFrozen(state)) deepFreeze(state)
 
 		// the goto() code should not allow currIndex to go back to -1

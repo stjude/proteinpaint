@@ -205,6 +205,7 @@ export async function init(arg, holder, genomes) {
 							}
 						}
 					}
+					return s
 				}
 			},
 			matrix: Object.assign(
