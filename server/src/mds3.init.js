@@ -1291,9 +1291,18 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 function getFirstLine(file) {
 	// TODO now requires "head" command on the system
 	return new Promise((resolve, reject) => {
+		const out1 = [],
+			out2 = []
 		const ps = spawn('head', ['-1', file])
-		ps.stdout.on('data', data => resolve(data.toString()))
-		ps.stderr.on('data', data => reject(data.toString()))
+		ps.stdout.on('data', data => out1.push(data.toString()))
+		ps.stderr.on('data', data => out2.push(data.toString()))
+		ps.on('error', err => {
+			if (out2.length) reject(out2.join(''))
+		})
+		ps.on('close', code => {
+			if (code != 0) reject('head command exited with non-zero status and this error: ' + out2.join(''))
+			resolve(out1.join(''))
+		})
 	})
 }
 async function run_edgeR(Rscript, input_data) {
