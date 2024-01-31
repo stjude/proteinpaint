@@ -30,8 +30,14 @@ output:
 
 */
 const { bin } = require('d3-array')
+import * as d3 from 'd3'
 
 export function violinBinsObj(scale, plot, ticks = 15) {
+	const density = kde(epanechnikov(7), scale.ticks(ticks), plot.values)
+	plot.bins2 = []
+	density.forEach(element => {
+		plot.bins2.push({ x0: element[0], x1: element[0] + 500, binValueCount: element[1] })
+	})
 	const bins0 = computeViolinBins(scale, plot.values, ticks)
 	//if (plot.values.every((val, i) => val === plot.values[0])) return { bins0, bins: [] }
 	// array; each element is an array of values belonging to this bin
@@ -63,12 +69,22 @@ export function violinBinsObj(scale, plot, ticks = 15) {
 function computeViolinBins(scale, values, ticks) {
 	// disable this method for now and hardcode ticks to 15.
 	// const uniqueValues = new Set(values)
-	// const ticksCompute = uniqueValues.size === 1 ? 50 : uniqueValues.size <= 10 ? 5 : uniqueValues.size <= 20 ? 10 : 20
+	// const ticksCompute = uniqueValues.size === 1 ? 50 : uniqueValues.size <= 10 ? 5 : uniqueValues.size <= 20
 
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
 		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 
-	return binBuilder(values)
+	const result = binBuilder(values)
+	//console.log(result)
+	return result
+}
+
+function epanechnikov(bandwidth) {
+	return x => (Math.abs((x /= bandwidth)) <= 1 ? (0.75 * (1 - x * x)) / bandwidth : 0)
+}
+
+function kde(kernel, thresholds, data) {
+	return thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
 }

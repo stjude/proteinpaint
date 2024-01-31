@@ -58,10 +58,15 @@ export default function violinRenderer(self) {
 		const svg = renderSvg(t1, self, isH, settings)
 		renderScale(t1, t2, settings, isH, svg, self)
 
+		let biggestBin = 0
+		for (const plot of self.data.plots) {
+			const max = Math.max(...plot.bins2.map(b => b.binValueCount))
+			if (max > biggestBin) biggestBin = max
+		}
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
-			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset, self.data.biggestBin)
+			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset, biggestBin)
 			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
 			self.labelHideLegendClicking(t2, plot)
 		}
@@ -309,9 +314,17 @@ export default function violinRenderer(self) {
 	}
 
 	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset, biggestBin) {
+		console.log(plot.bins)
+		console.log(plot.bins2)
+		console.log(plot.bins2[0])
+		const values = plot.bins2.map(b => b.binValueCount)
+		console.log(values)
+		const xMax = Math.max(...values)
+
+		console.log(xMax)
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
-			.domain(self.settings.commonThickness ? [-biggestBin, biggestBin] : [-plot.biggestBin, plot.biggestBin])
+			.domain(self.settings.commonThickness ? [-biggestBin, biggestBin] : [-xMax, xMax])
 			.range([-self.settings.plotThickness * 0.45, self.settings.plotThickness * 0.45])
 
 		let areaBuilder
@@ -349,7 +362,7 @@ export default function violinRenderer(self) {
 			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
 			// .duration(self.opts.mode == 'minimal' ? 0 : 600)
 			.style('opacity', '0.8')
-			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
+			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins2 : 0)) //do not build violin plots for values 3 or less than 3.
 
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
 		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg, self)
