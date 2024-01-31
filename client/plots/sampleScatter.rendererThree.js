@@ -67,7 +67,7 @@ export function setRenderersThree(self) {
 				let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
 				let y = (chart.yAxisScale(sample.y) - chart.yScaleMax) / -self.canvas.height
 				let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
-				vertices.push(x - 0.5, y - pointer.y + 0.5, z)
+				vertices.push(x - 0.5, y + 0.5, z)
 				const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 				colors.push(color.r, color.g, color.b)
 			}
