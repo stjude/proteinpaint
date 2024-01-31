@@ -194,7 +194,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		const t2 = new Date()
 		mayLog(caseLst.length, 'cases with exp data:', t2 - t1, 'ms')
 
-		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst, ds)
+		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.genes, genome, caseLst, ds, q)
 
 		if (ensgLst.length == 0) return { gene2sample2value, byTermId: {} } // no valid genes
 
@@ -226,7 +226,7 @@ genome:
 case_ids:[]
 	required for hitting /gene_selection to screen ensg list before returning
 */
-async function geneExpression_getGenes(genes, genome, case_ids, ds) {
+async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 	// convert given gene symbols to ENSG for api query
 	const ensgLst = []
 	// convert ensg back to symbol for using in data structure
@@ -259,7 +259,7 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds) {
 	// so that valid SD-transformed value can be returned from /values api
 	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
 	try {
-		const { host, headers } = ds.getHostHeaders()
+		const { host, headers } = ds.getHostHeaders(q)
 		const response = await got.post(`${host.geneExp}/gene_expression/gene_selection`, {
 			headers,
 			body: JSON.stringify({
