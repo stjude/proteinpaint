@@ -9,13 +9,13 @@ export function setRenderersThree(self) {
 	self.render2DSerieLarge = async function (chart) {
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
-		chart.chartDiv.selectAll('*').remove()
+		self.mainDiv.selectAll('*').remove()
 
-		self.canvas = chart.chartDiv.insert('div').style('display', 'inline-block').append('canvas').node()
+		self.canvas = self.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
 		self.canvas.width = self.settings.svgw * 1.5
 		self.canvas.height = self.settings.svgh * 1.5
 		chart.chartDiv.style('margin', '20px 20px')
-		chart.legendDiv = chart.chartDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		chart.legendG = chart.legendDiv
 			.append('svg')
 			.attr('width', self.settings.svgw / 2)
@@ -103,11 +103,11 @@ export function setRenderersThree(self) {
 	self.render3DSerie = async function (chart) {
 		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
-		self.canvas = chart.chartDiv.insert('div').style('display', 'inline-block').append('canvas').node()
+		self.canvas = self.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
 		self.canvas.width = self.settings.svgw
 		self.canvas.height = self.settings.svgh
 		chart.chartDiv.style('margin', '20px 20px')
-		chart.legendDiv = chart.chartDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		chart.legendG = chart.legendDiv
 			.append('svg')
 			.attr('width', self.settings.svgw / 2)
