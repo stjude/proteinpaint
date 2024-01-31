@@ -83,9 +83,7 @@ export async function init(arg, holder, genomes) {
 					{
 						chartType: 'geneset',
 						toolName: 'Gene Expression Clustering',
-						settings: {
-							maxGenes: settings.hierCluster.maxGenes
-						}
+						settings
 					}
 				]
 			},

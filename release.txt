@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix the geneFilter handling in the gdc tool launchers

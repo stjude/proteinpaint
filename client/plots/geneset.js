@@ -57,10 +57,9 @@ class GenesetComp {
 		// genes are not predefined. query to get top genes using the current cohort
 		let data
 		if (this.opts.mode == 'mutation') {
-			const body = {
-				maxGenes: settings.maxGenes,
-				geneFilter: settings.geneFilter
-			}
+			const body = {}
+			if (settings.matrix?.maxGenes) body.maxGenes = settings.matrix?.maxGenes
+			if (settings.matrix?.geneFilter) body.geneFilter = settings.matrix?.geneFilter
 			if (this.state.filter0) body.filter0 = this.state.filter0
 			data = await dofetch3('gdc/topMutatedGenes', { body })
 		} else if (this.opts.mode == 'expression') {
