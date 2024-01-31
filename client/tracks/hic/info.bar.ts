@@ -39,13 +39,19 @@ export function init_hicInfoBar(hic: any, self: any) {
 
 	//Color scale
 	addLabel('Scale')
-	const colorScale = new ColorScale({
-		barwidth: 100,
-		holder: valueRow.append('td'),
-		tickPosition: 'bottom'
+	const colorScaleDiv = valueRow
+		.append('td')
+		.style('display', 'flex')
+		.style('justify-content', 'center')
+		.style('align-items', 'center')
+	self.colorScale = new ColorScale({
+		barheight: 10,
+		barwidth: 85,
+		holder: colorScaleDiv
+		// tickPosition: 'bottom',
+		// ticks: 1
 	})
-	colorScale.render()
-	self.colorScale = colorScale
+	self.colorScale.render()
 
 	function addLabel(text: string) {
 		return labelRow
