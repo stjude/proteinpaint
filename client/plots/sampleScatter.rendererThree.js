@@ -147,7 +147,6 @@ export function setRenderersThree(self) {
 			let x = chart.xMax == chart.xMin ? 0 : Math.abs((sample.x - chart.xMin) / (chart.xMax - chart.xMin))
 			let y = chart.yMax == chart.yMin ? 0 : Math.abs((sample.y - chart.yMin) / (chart.yMax - chart.yMin))
 			let z = chart.zMax == chart.zMin ? 0 : Math.abs((sample.z - chart.zMin) / (chart.zMax - chart.zMin))
-			console.log(roundValue(y, 2))
 			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 			const material = new THREE.MeshLambertMaterial({ color })
 			const circle = new THREE.Mesh(geometry, material)
