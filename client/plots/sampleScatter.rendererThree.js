@@ -138,7 +138,7 @@ export function setRenderersThree(self) {
 		scene.background = whiteColor
 
 		const light = new THREE.DirectionalLight(whiteColor, 2)
-		light.position.set(1, 1, 1)
+		light.position.set(0.1, 0.1, 2)
 		scene.add(light)
 		const geometry = new THREE.SphereGeometry(0.005, 32)
 		for (const sample of chart.data.samples) {
