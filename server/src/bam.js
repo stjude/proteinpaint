@@ -249,16 +249,12 @@ const gdcHashSecret = Math.random.toString()
 
 export default function (genomes) {
 	return async (req, res) => {
-		const g = genomes.hg38
-		if (!g) throw 'hg38 missing'
-		const ds = g.datasets.GDC
-		if (!ds) throw 'hg38 GDC missing'
-
 		try {
 			// isFileSlice:true can only be set after verifying access on a gdc file
 			delete req.query.isFileSlice
 
 			if (req.query.gdcFileUUID) {
+				const ds = getGdcDs(genomes)
 				/* for every request with a gdc file uuid (slice bam, view a bam, view a read etc)
 				always make an api query to verify access to prevent unauthorized access
 				*/
@@ -270,6 +266,7 @@ export default function (genomes) {
 				// authorized! can proceed
 
 				if (req.query.stream2download) {
+					// TODO: move into a dedicated route /bam/gdc/stream ???
 					// download the slice directly to client, do not write to cache file (app runs in "download mode")
 					await streamGdcBam2response(res, req.query.gdcFilePosition, req.query.gdcFileUUID, ds)
 					return
@@ -282,14 +279,16 @@ export default function (genomes) {
 				req.query.file = getGDCcacheFileName(req)
 				req.query.isFileSlice = true
 			}
-
+			// TODO: move into a dedicated route /bam/gdc/cache ???
 			if (req.query.downloadgdc) {
+				const ds = getGdcDs(genomes)
 				// call gdc bam slicing api to slice the bam, save to cachedir
 				res.send(await download_gdc_bam(req, ds))
 				return
 			}
-
+			// TODO: move into a dedicated route /bam/gdc/download ???
 			if (req.query.clientdownloadgdcslice) {
+				const ds = getGdcDs(genomes)
 				// read the cached bam slice for client to download
 				if (!req.query.file || !req.query.isFileSlice) throw 'invalid query'
 				const file = path.join(serverconfig.cachedir_bam, req.query.file)
@@ -323,6 +322,14 @@ export default function (genomes) {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+function getGdcDs(genomes) {
+	const g = genomes.hg38
+	if (!g) throw 'hg38 missing'
+	const ds = g.datasets.GDC
+	if (!ds) throw 'hg38 GDC missing'
+	return ds
 }
 
 async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
