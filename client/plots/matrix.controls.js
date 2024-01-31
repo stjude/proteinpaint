@@ -399,7 +399,10 @@ export class MatrixControls {
 								width: 50,
 								align: 'center',
 								chartType: 'matrix',
-								inputs: [{ label: 'N/A' }, { settingsKey: 'rowh', min: 8, max: 30, step: 1 }]
+								inputs: [{ label: 'N/A' }, { settingsKey: 'rowh', min: 8, max: 30, step: 1 }],
+								getDisplayStyle(plot) {
+									return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+								}
 							},
 							{
 								label: 'Min Col. Width',
@@ -429,7 +432,10 @@ export class MatrixControls {
 								inputs: [
 									{ settingsKey: 'colspace', min: 0, max: 20, step: 1 },
 									{ settingsKey: 'rowspace', min: 0, max: 20, step: 1 }
-								]
+								],
+								getDisplayStyle(plot) {
+									return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+								}
 							},
 							{
 								label: 'Group spacing',
@@ -439,7 +445,9 @@ export class MatrixControls {
 								align: 'center',
 								chartType: 'matrix',
 								inputs: [
-									{ settingsKey: 'colgspace', min: 0, max: 20, step: 1 },
+									this.parent.chartType == 'hierCluster'
+										? { label: 'N/A' }
+										: { settingsKey: 'colgspace', min: 0, max: 20, step: 1 },
 									{ settingsKey: 'rowgspace', min: 0, max: 20, step: 1 }
 								]
 							}
@@ -473,7 +481,7 @@ export class MatrixControls {
 								]
 							},
 							{
-								label: 'Minimum Size',
+								label: 'Min font size',
 								title:
 									'Set the minimum auto-computed font size for labels. Note that labels will be hidden if the auto-computed values falls below this minimum.',
 								type: 'number',
@@ -487,7 +495,7 @@ export class MatrixControls {
 								step: 0.1
 							},
 							{
-								label: 'Maximum Size',
+								label: 'Max font size',
 								title: 'Set the maximum auto-computed font size for labels',
 								type: 'number',
 								width: 50,
@@ -506,6 +514,9 @@ export class MatrixControls {
 								width: 50,
 								chartType: 'matrix',
 								labelDisplay: 'block',
+								getDisplayStyle(plot) {
+									return plot.chartType == 'hierCluster' ? 'none' : 'table-row'
+								},
 								inputs: [
 									{
 										settingsKey: 'collabelpos',

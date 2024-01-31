@@ -2313,6 +2313,11 @@ function setLengendActions(self) {
 			// when the legend's group is hidden
 			return
 		}
+		const term = self.termOrder.find(t => t.tw.$id == targetData.$id)
+		if (term?.tw?.q?.groupsetting?.inuse) {
+			// when the term has customized groupsetting
+			return
+		}
 		if (event.target.nodeName == 'rect') select(event.target).style('stroke', 'blue').style('cursor', 'pointer')
 		else select(event.target).style('fill', 'blue').style('cursor', 'pointer')
 	}
@@ -2497,6 +2502,11 @@ function setLengendActions(self) {
 			return
 		}
 
+		const term = self.terms.find(t => t.tw.$id == targetData.$id)
+		if (term?.tw?.q?.groupsetting?.inuse) {
+			// when the term has customized groupsetting
+			return
+		}
 		//legendFilterIndex is the index of the filter that is already in self.config.legendValueFilter.lst
 		// All the filters in self.config.legendValueFilter.lst is joined by 'and' and for all of them the isnot is true.
 		let legendFilterIndex
