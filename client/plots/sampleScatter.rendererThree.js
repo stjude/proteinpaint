@@ -124,6 +124,7 @@ export function setRenderersThree(self) {
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
 		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
+		controls.enableZoom = false
 		controls.update()
 		camera.position.set(1.5, 0.5, 2)
 		camera.lookAt(scene.position)
