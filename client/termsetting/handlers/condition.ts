@@ -466,7 +466,7 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 	// assign breaks
 	if (tw.q.mode == 'binary' || tw.q.mode == 'cox' || tw.q.mode == 'cuminc') {
 		// must have a single break
-		const defaultBreak = tw.q.mode == 'binary' ? 1 : 2
+		const defaultBreak = tw.q.mode == 'binary' ? 1 : 3
 		if (!tw.q.breaks?.length) tw.q.breaks = [defaultBreak]
 		if (tw.q.breaks.length != 1 || ![1, 2, 3, 4, 5].includes(tw.q.breaks[0])) throw 'invalid tw.q.breaks'
 	}
