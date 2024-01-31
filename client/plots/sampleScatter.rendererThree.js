@@ -209,7 +209,7 @@ export function setRenderersThree(self) {
 			const textGeo = new TextGeometry(text, {
 				font,
 				size: 0.02,
-				height: 0.01,
+				height: 0.005,
 				curveSegments: 8,
 				bevelEnabled: false
 			})
