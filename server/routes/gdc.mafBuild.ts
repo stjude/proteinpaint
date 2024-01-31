@@ -25,7 +25,6 @@ export const api = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			// g and ds are not used right now, but could be later
 			const g = genomes.hg38
 			if (!g) throw 'hg38 missing'
 			const ds = g.datasets.GDC

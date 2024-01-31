@@ -261,7 +261,6 @@ export async function validate_termdb(ds) {
 
 	if (tdb.convertSampleId) {
 		if (tdb.convertSampleId.gdcapi) {
-			// !!!! THIS IS NOT EXPORTED BY mds.gdc !!!
 			gdc.convertSampleId_addGetter(tdb, ds)
 			// convertSampleId.get() added
 		} else {
