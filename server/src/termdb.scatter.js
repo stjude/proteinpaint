@@ -427,16 +427,17 @@ export async function getScatterCoordinates(req, q, ds) {
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	for (const { sampleId, x, y, z } of rows) {
-		if (zterm?.values && z in zterm.values) continue
 		const sample = { sampleId, x, y, z }
 		if (canDisplay) sample.sample = ds.sampleId2Name.get(sampleId)
-		const computable = isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y)
+		const computable =
+			isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y) && isComputable(q.divideByTW?.term, z)
 		if (sample && computable) samples.push(sample)
 	}
 	return samples
 }
 
 function isComputable(term, value) {
+	if (!term) return true
 	const computable = !term.values?.[value]?.uncomputable
 	return computable
 }
