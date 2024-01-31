@@ -70,6 +70,7 @@ export function getSeriesTip(line, rect, _tip = null) {
 		.on('mousemove', mouseOver)
 		.on('mouseout', () => {
 			line.style('display', 'none')
+			tip.hide()
 		})
 
 	const opts = {
