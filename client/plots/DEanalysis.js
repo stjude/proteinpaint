@@ -33,6 +33,10 @@ class DEanalysis {
 			header: this.opts.header,
 			controlsDiv
 		}
+	}
+
+	async setControls(output) {
+		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
 				label: 'P-value significance (linear scale)',
@@ -72,6 +76,28 @@ class DEanalysis {
 				]
 			}
 		]
+
+		if (
+			(output.mid_sample_size_cutoff >= output.sample_size1 && output.mid_sample_size_cutoff < output.sample_size2) ||
+			(output.mid_sample_size_cutoff >= output.sample_size2 && output.mid_sample_size_cutoff < output.sample_size1)
+		) {
+			// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher
+			inputs.push({
+				label: 'Method',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'method',
+				title: 'Toggle between edgeR and wilcoxon test',
+				options: [
+					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'wilcoxon', value: 'wilcoxon' }
+				]
+			})
+			this.settings.method = output.method
+			this.state.config = output.method
+		}
+
+		console.log('this.settings:', this.settings)
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -84,7 +110,6 @@ class DEanalysis {
 			downloadTable(this.table_rows, this.table_cols)
 		})
 	}
-
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
@@ -96,7 +121,10 @@ class DEanalysis {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.DEanalysis
+		console.log('this.state.config:', this.state.config)
 		const output = await this.app.vocabApi.runDEanalysis(this.state.config)
+		output.mid_sample_size_cutoff = 30 // mid sample size cutoff for method toggle to appear
+		await this.setControls(output)
 		//const state = this.app.getState()
 		//console.log('state:', state)
 		//if (state.customTerms[0].name) {
@@ -116,11 +144,11 @@ class DEanalysis {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
-		render_volcano(this.dom.holder, output.data, this, output.sample_size1, output.sample_size2)
+		render_volcano(this.dom.holder, output.data, this)
 	}
 }
 
-function render_volcano(holder, mavb, self, sample_size1, sample_size2) {
+function render_volcano(holder, mavb, self) {
 	/*
 m {}
 - gene
@@ -340,9 +368,9 @@ add:
 					'<br>Number of significant genes:' +
 					num_significant_genes +
 					'<br>Sample size of group1:' +
-					sample_size1 +
+					holder.sample_size1 +
 					'<br>Sample size of group2:' +
-					sample_size2
+					holder.sample_size2
 			)
 		self.table_cols = [
 			{ label: 'Gene Name' },
@@ -371,6 +399,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.samplelst.groups.length != 2) throw 'opts.samplelst.groups[].length!=2'
 		if (opts.samplelst.groups[0].values?.length < 1) throw 'group 1 not having >1 samples'
 		if (opts.samplelst.groups[1].values?.length < 1) throw 'group 2 not having >1 samples'
+		console.log('opts:', opts)
 		const config = {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
@@ -379,7 +408,8 @@ export async function getPlotConfig(opts, app) {
 					pvalue: 0.05,
 					foldchange: 2,
 					pvaluetable: false,
-					adjusted_original_pvalue: 'adjusted'
+					adjusted_original_pvalue: 'adjusted',
+					method: undefined
 				},
 				controls: {
 					isOpen: false // control panel is hidden by default
@@ -436,4 +466,22 @@ function circlemouseout(event, d) {
 		d3select(d.ma_circle).attr('fill-opacity', 0)
 		d3select(d.vo_circle).attr('fill-opacity', 0)
 	}
+}
+
+export async function openHiercluster(term, samplelstTW, app, id, newId) {
+	// barchart config.term{} name is confusing, as it is actually a termsetting object, not t    erm
+	// thus convert the given term into a termwrapper
+	// tw.q can be missing and will be filled in with default setting
+	const tw = term.term ? term : { id: term.id, term }
+
+	let config = {
+		chartType: 'hierCluster',
+		genes: ['barchart', xxx]
+	}
+	if (id) config.insertBefore = id
+	if (newId) config.id = newId()
+	await app.dispatch({
+		type: 'plot_create',
+		config
+	})
 }
