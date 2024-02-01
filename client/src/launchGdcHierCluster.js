@@ -93,6 +93,8 @@ export async function init(arg, holder, genomes) {
 				features: ['recover'],
 				callbacks: arg.opts?.app?.callbacks || {}
 			},
+			hierCluster: arg.opts?.hierCluster || {},
+			matrix: arg.opts?.matrix || {},
 			geneset: {
 				mode: 'expression',
 				genome,
@@ -172,13 +174,9 @@ export async function init(arg, holder, genomes) {
 		})
 
 		let hierClusterApi
-		const api = Object.freeze({
+		const api = {
 			type: 'hierCluster',
 			update: async _arg => {
-				if (!plotAppApi) {
-					Object.assign(pendingArg, _arg)
-					return
-				}
 				if ('filter0' in _arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
@@ -193,7 +191,7 @@ export async function init(arg, holder, genomes) {
 					})
 				}
 			}
-		})
+		}
 
 		return api
 	} catch (e) {
