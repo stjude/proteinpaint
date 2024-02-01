@@ -248,10 +248,6 @@ export async function init(arg, holder, genomes) {
 
 		const api = {
 			update: async arg => {
-				if (!plotAppApi) {
-					Object.assign(pendingArg, arg)
-					return
-				}
 				if ('filter0' in arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
