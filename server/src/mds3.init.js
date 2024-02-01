@@ -1184,10 +1184,10 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		for (const n of q.allSampleSet) {
 			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 		}
-		if (unknownSamples.length)
-			throw `${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
-				q.allSampleSet.size
-			} sample names are unknown: ${unknownSamples.join(',')}`
+		//if (unknownSamples.length)
+		//	throw `${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
+		//		q.allSampleSet.size
+		//	} sample names are unknown: ${unknownSamples.join(',')}`
 		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 	}
 
@@ -1205,7 +1205,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		// txt file uses string sample name, must convert integer sample id to string
 		const group1names = []
 		let group1names_not_found = 0
-		const group1names_not_found_list = []
+		//const group1names_not_found_list = []
 		for (const s of param.samplelst.groups[0].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -1214,12 +1214,12 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 				group1names.push(n)
 			} else {
 				group1names_not_found += 1
-				group1names_not_found_list.push(n)
+				//group1names_not_found_list.push(n)
 			}
 		}
 		const group2names = []
 		let group2names_not_found = 0
-		const group2names_not_found_list = []
+		//const group2names_not_found_list = []
 		for (const s of param.samplelst.groups[1].values) {
 			if (!Number.isInteger(s.sampleId)) continue
 			const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
@@ -1228,7 +1228,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 				group2names.push(n)
 			} else {
 				group2names_not_found += 1
-				group2names_not_found_list.push(n)
+				//group2names_not_found_list.push(n)
 			}
 		}
 
@@ -1236,8 +1236,8 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 		//console.log('Sample size of group2:', group2names.length)
 		const sample_size1 = group1names.length
 		const sample_size2 = group2names.length
-		console.log('group1names_not_found_list:', group1names_not_found_list)
-		console.log('group2names_not_found_list:', group2names_not_found_list)
+		//console.log('group1names_not_found_list:', group1names_not_found_list)
+		//console.log('group2names_not_found_list:', group2names_not_found_list)
 		//console.log('Number of group1 names not found:', group1names_not_found)
 		//console.log('Number of group2 names not found:', group2names_not_found)
 		if (sample_size1 < 1) throw 'sample size of group1 < 1'
@@ -1260,6 +1260,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 
 		const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 		let result
+		let method
 		if (group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) {
 			// edgeR will be used for DE analysis
 			const time1 = new Date()
@@ -1269,6 +1270,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			)
 			const time2 = new Date()
 			console.log('Time taken to run edgeR:', time2 - time1, 'ms')
+			method = 'edgeR'
 			//console.log("r_output:",r_output)
 
 			//for (const line of r_output.split('\n')) {
@@ -1297,8 +1299,9 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 				}
 			}
 			console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+			method = 'wilcoxon'
 		}
-		return { data: result, sample_size1: sample_size1, sample_size2: sample_size2 }
+		return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: method }
 	}
 }
 
