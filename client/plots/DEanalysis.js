@@ -97,7 +97,6 @@ class DEanalysis {
 			this.state.config = output.method
 		}
 
-		console.log('this.settings:', this.settings)
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -121,7 +120,6 @@ class DEanalysis {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.DEanalysis
-		console.log('this.state.config:', this.state.config)
 		const output = await this.app.vocabApi.runDEanalysis(this.state.config)
 		output.mid_sample_size_cutoff = 30 // mid sample size cutoff for method toggle to appear
 		await this.setControls(output)
@@ -144,11 +142,11 @@ class DEanalysis {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
-		render_volcano(this.dom.holder, output.data, this)
+		render_volcano(this.dom.holder, output.data, this, output.sample_size1, output.sample_size2)
 	}
 }
 
-function render_volcano(holder, mavb, self) {
+function render_volcano(holder, mavb, self, sample_size1, sample_size2) {
 	/*
 m {}
 - gene
@@ -368,9 +366,9 @@ add:
 					'<br>Number of significant genes:' +
 					num_significant_genes +
 					'<br>Sample size of group1:' +
-					holder.sample_size1 +
+					sample_size1 +
 					'<br>Sample size of group2:' +
-					holder.sample_size2
+					sample_size2
 			)
 		self.table_cols = [
 			{ label: 'Gene Name' },
@@ -399,7 +397,6 @@ export async function getPlotConfig(opts, app) {
 		if (opts.samplelst.groups.length != 2) throw 'opts.samplelst.groups[].length!=2'
 		if (opts.samplelst.groups[0].values?.length < 1) throw 'group 1 not having >1 samples'
 		if (opts.samplelst.groups[1].values?.length < 1) throw 'group 2 not having >1 samples'
-		console.log('opts:', opts)
 		const config = {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
