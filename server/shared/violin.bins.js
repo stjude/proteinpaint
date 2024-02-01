@@ -21,8 +21,8 @@ output:
         [can be empty],
     bins:[                 //take this bins object and send to client. See implementation at termdb.violin.js and mds3.densityPlot.js
         {
-            { x0: 0, x1: 0.05, binValueCount: 121 },
-            { x0: 0.05, x1: 0.1, binValueCount: 2 },
+            { x0: 0, x1: 0.05, density: 121 },
+            { x0: 0.05, x1: 0.1, density: 2 },
         }
     ]
     ]
@@ -32,53 +32,19 @@ output:
 const { bin } = require('d3-array')
 import * as d3 from 'd3'
 
-export function violinBinsObj(scale, plot, ticks = 15) {
-	const density = kde(epanechnikov(7), scale.ticks(ticks), plot.values)
-	plot.bins2 = []
-	density.forEach(element => {
-		plot.bins2.push({ x0: element[0], x1: element[0] + 500, binValueCount: element[1] })
-	})
-	const bins0 = computeViolinBins(scale, plot.values, ticks)
-	//if (plot.values.every((val, i) => val === plot.values[0])) return { bins0, bins: [] }
-	// array; each element is an array of values belonging to this bin
+export function getBinsDensity(scale, plot, ticks = 20, bandwidth = 7) {
+	const [min, max] = scale.domain()
+	const step = (max - min) / ticks
 
-	// map messy bins0 to tidy set of bins and return to client
+	const density = kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values)
+
 	const bins = []
-	let xMax = 0
-	for (const b of bins0) {
-		const b2 = {
-			x0: b.x0,
-			x1: b.x1,
-			binValueCount: b.length
-		}
-		delete b.x0
-		delete b.x1
-		bins.push(b2)
-	}
-	// Add an extra bin with 0 binValueCount at the end of b2 for improving rendering and removing convoluted logic for threshold.
-	const lastBinX1 = bins[bins.length - 1].x1
-	const extraBin = {
-		x0: lastBinX1,
-		x1: lastBinX1,
-		binValueCount: 0
-	}
-	bins.push(extraBin)
-	return { bins0, bins }
-}
+	density.forEach(element => {
+		bins.push({ x0: element[0], x1: element[0] + step, density: element[1] })
+	})
+	bins.push({ x0: max, x1: max, density: 0 })
 
-function computeViolinBins(scale, values, ticks) {
-	// disable this method for now and hardcode ticks to 15.
-	// const uniqueValues = new Set(values)
-	// const ticksCompute = uniqueValues.size === 1 ? 50 : uniqueValues.size <= 10 ? 5 : uniqueValues.size <= 20
-
-	const binBuilder = bin()
-		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/
-		.value(d => d) /* bin the data points into this bucket*/
-
-	const result = binBuilder(values)
-	//console.log(result)
-	return result
+	return bins
 }
 
 function epanechnikov(bandwidth) {

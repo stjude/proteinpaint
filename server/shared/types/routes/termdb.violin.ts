@@ -29,7 +29,7 @@ export type getViolinRequest = {
 interface binsEntries {
 	x0: number
 	x1: number
-	binValueCount: number
+	density: number
 }
 interface valuesEntries {
 	id: string

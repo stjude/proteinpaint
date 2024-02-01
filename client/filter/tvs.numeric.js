@@ -219,7 +219,7 @@ export function convertViolinData(vd) {
 		samplecount: p.plotValueCount,
 		densitymax: p.biggestBin,
 		density: p.bins.map(i => {
-			return [i.x0, i.binValueCount]
+			return [i.x0, i.density]
 		})
 	}
 	return dd

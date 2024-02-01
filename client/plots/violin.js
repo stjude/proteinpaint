@@ -152,11 +152,14 @@ class ViolinPlot {
 				max: 50
 			},
 			{
-				label: 'Use common scale',
-				type: 'checkbox',
+				label: 'Bandwidth',
+				type: 'number',
+				title:
+					'If the bandwidth is too small, the estimate may include spurious bumps and wiggles; too large, and the estimate reveals little about the underlying distribution',
 				chartType: 'violin',
-				settingsKey: 'commonThickness',
-				boxLabel: 'Yes'
+				settingsKey: 'bandwidth',
+				min: 1,
+				max: 20
 			},
 
 			{
@@ -262,8 +265,10 @@ class ViolinPlot {
 		const arg = this.validateArg()
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
-		if (this.settings.plotThickness == undefined)
-			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, 150)
+		if (this.settings.plotThickness == undefined) {
+			const thickness = this.data.plots.length == 1 ? 500 : 150
+			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, thickness)
+		}
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -275,7 +280,7 @@ class ViolinPlot {
 			.bins[]
 				.x0
 				.x1
-				.binValueCount
+				.density
 		*/
 		this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
 		setTimeout(
@@ -316,7 +321,8 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			ticks: s.ticks
+			ticks: s.ticks,
+			bandwidth: s.bandwidth
 		}
 
 		if (this.opts.mode == 'minimal') {
@@ -357,7 +363,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		rowlabelw: 250,
 		brushRange: null, //object with start and end if there is a brush selection
 		svgw: 500, // span length of a plot/svg, not including margin
-		datasymbol: 'bean',
+		datasymbol: 'rug',
 		radius: 3,
 		strokeWidth: 0.2,
 		axisHeight: 60,
@@ -367,8 +373,8 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		plotThickness: undefined,
 		medianLength: 7,
 		medianThickness: 3,
-		ticks: 15,
-		commonThickness: false,
+		ticks: 20,
+		bandwidth: 5,
 		defaultColor: plotColor
 	}
 	return Object.assign(defaults, overrides)
