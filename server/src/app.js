@@ -367,7 +367,7 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export function log(req) {
+function log(req) {
 	const j = {}
 	for (const k in req.query) {
 		if (k != 'jwt') j[k] = req.query[k]
@@ -440,7 +440,6 @@ function setOptionalRoutes() {
 }
 
 function handle_gene2canonicalisoform(req, res) {
-	log(req)
 	try {
 		if (!req.query.gene) throw '.gene missing'
 		const genome = genomes[req.query.genome]
@@ -535,7 +534,6 @@ function maymakefolder() {
 }
 
 async function handle_tabixheader(req, res) {
-	log(req)
 	try {
 		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw e
@@ -549,8 +547,6 @@ async function handle_tabixheader(req, res) {
 }
 
 async function handle_genomes(req, res) {
-	log(req)
-
 	try {
 		await fs.promises.stat(serverconfig.tpmasterdir)
 	} catch (e) {
@@ -965,7 +961,6 @@ function mds_clientcopy(ds) {
 }
 
 async function handle_img(req, res) {
-	log(req)
 	const [e, file, isurl] = utils.fileurl(req) // utils.fileurl({ query: { file: req.query.file } })
 	try {
 		if (e) throw 'invalid image file'
@@ -1766,7 +1761,6 @@ function handle_mdscnv(req, res) {
 }
 
 async function handle_mdsgenecount(req, res) {
-	log(req)
 	try {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'invalid genome'
@@ -5437,7 +5431,6 @@ function mds_tkquery_samplesummary(ds, dsquery, samples) {
 }
 
 async function handle_mdssamplescatterplot(req, res) {
-	log(req)
 	try {
 		const gn = genomes[req.query.genome]
 		if (!gn) throw 'invalid genome'
