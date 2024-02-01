@@ -1,2 +1,1 @@
-Fixes:
-- Fix OncoMatrix and hierCluster brushing and list samples issue 
+

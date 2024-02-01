@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Fix OncoMatrix and hierCluster brushing and list samples issue
+
+
 ## 2.40.1
 
 Fixes:
