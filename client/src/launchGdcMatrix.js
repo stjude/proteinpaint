@@ -123,7 +123,10 @@ export async function init(arg, holder, genomes) {
 					{
 						chartType: 'geneset',
 						toolName: 'OncoMatrix',
-						settings
+						settings: {
+							maxGenes: settings.matrix.maxGenes,
+							geneFilter: settings.matrix.geneFilter
+						}
 					}
 				]
 			},

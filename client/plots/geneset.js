@@ -58,8 +58,8 @@ class GenesetComp {
 		let data
 		if (this.opts.mode == 'mutation') {
 			const body = {}
-			if (settings.matrix?.maxGenes) body.maxGenes = settings.matrix?.maxGenes
-			if (settings.matrix?.geneFilter) body.geneFilter = settings.matrix?.geneFilter
+			if (settings.maxGenes) body.maxGenes = settings.maxGenes
+			if (settings.geneFilter) body.geneFilter = settings.geneFilter
 			if (this.state.filter0) body.filter0 = this.state.filter0
 			data = await dofetch3('gdc/topMutatedGenes', { body })
 		} else if (this.opts.mode == 'expression') {
