@@ -3,13 +3,17 @@ import { showGenesetEdit } from '../dom/genesetEdit.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
 
-// This is a reactive geneset component, meant for use with
-// plotApp to offer a geneset edit UI when there are no starting gene lst.
-// The reactivity has to mostly to do with toggling loading overlay visibility
-// and creating a new plot within the same plot app, once a valid geneset is
-// obtained from the server.
-// - Use dom/genesetEdit to directly use the non-reactive version.
-//
+/*
+FIXME please fully explain functionality and arg, e.g. toolName
+(now that both oncomatrix and gdccluster are both routed through it, how is this connected to the downstream tool)
+
+This is a reactive geneset component, meant for use with
+plotApp to offer a geneset edit UI when there are no starting gene lst.
+The reactivity has to mostly to do with toggling loading overlay visibility
+and creating a new plot within the same plot app, once a valid geneset is
+obtained from the server.
+ - Use dom/genesetEdit to directly use the non-reactive version.
+*/
 class GenesetComp {
 	constructor(opts) {
 		this.type = 'geneset'
@@ -61,6 +65,8 @@ class GenesetComp {
 			if (settings.maxGenes) body.maxGenes = settings.maxGenes
 			if (settings.geneFilter) body.geneFilter = settings.geneFilter
 			if (this.state.filter0) body.filter0 = this.state.filter0
+			// TODO change to /termdb/topMutatedGenes
+			// XXX this is optional query!! if ds is missing then should show input ui instead
 			data = await dofetch3('gdc/topMutatedGenes', { body })
 		} else if (this.opts.mode == 'expression') {
 			const body = {
@@ -69,6 +75,7 @@ class GenesetComp {
 				maxGenes: settings.maxGenes
 			}
 			if (this.state.filter0) body.filter0 = this.state.filter0
+			// XXX this is optional query!! if ds is missing then should show input ui instead
 			data = await dofetch3('termdb/topVariablyExpressedGenes', { body })
 		}
 
