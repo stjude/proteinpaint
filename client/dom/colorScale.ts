@@ -12,8 +12,8 @@ type ColorScaleOpts = {
 	/** Color shown on the right, end of the scale. Default is red */
 	endColor: string
 	bar: any //dom
-	scale: any //dom
-	axisg: any
+	scale: any
+	scaleAxis: any
 }
 
 /** Work in Progress! Update as needed.
@@ -36,6 +36,7 @@ export class ColorScale {
 	data: any
 	/** Required */
 	holder: Elem | Div
+	position: string
 	/** Optional. Attributes for the svg*/
 	svg: {
 		/** Optional. Default is 100 */
@@ -43,30 +44,34 @@ export class ColorScale {
 		/** Optional. Default is 30.*/
 		height: number
 	}
-	// /** Optional. Placement of numbered ticks. Default is bottom */
-	// tickPosition: 'top' | 'bottom'
-	// /** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
-	// ticks: number
+	/** Optional. Placement of numbered ticks. Default is bottom */
+	tickPosition: 'top' | 'bottom'
+	/** Optional. Number of ticks to show. Cannot be zero. Default is 4. */
+	ticks: number
+	tickSize: number
 
 	constructor(opts: any) {
 		this.barheight = opts.barheight || 14
 		this.barwidth = opts.barwidth || 100
-		this.bar = {
+		;(this.bar = {
 			startColor: opts.startColor || 'white',
 			endColor: opts.endColor || 'red'
-		}
-		;(this.data = opts.data || [0, 1]), (this.holder = opts.holder)
+		}),
+			(this.data = opts.data || [0, 1]),
+			(this.holder = opts.holder)
+		this.position = opts.position || '0,0'
 		this.svg = {
 			width: opts.width || 100,
 			height: opts.height || 30
 		}
-		// this.tickPosition = opts.tickPosition || 'bottom'
-		// this.ticks = opts.ticks || 4
+		this.tickPosition = opts.tickPosition || 'bottom'
+		this.ticks = opts.ticks || 5
+		this.tickSize = opts.tickSize || 1
 	}
 
-	render() {
+	async render() {
 		const scaleSvg = this.holder.append('svg').attr('width', this.svg.width).attr('height', this.svg.height)
-		this.bar.g = scaleSvg.append('g').attr('transform', 'translate(0, 0)')
+		this.bar.g = scaleSvg.append('g').attr('transform', `translate(${this.position})`)
 
 		const defs = this.bar.g.append('defs')
 		const id = Math.random().toString()
@@ -80,20 +85,20 @@ export class ColorScale {
 			.attr('height', this.barheight)
 			.attr('width', this.barwidth)
 			.attr('fill', 'url(#' + id + ')')
-		this.bar.axisg = this.bar.g.append('g').attr('transform', `translate(0, ${this.barheight})`)
+		this.bar.scaleAxis = this.bar.g.append('g').attr('transform', `translate(0, ${this.barheight})`)
 		const start = this.data[0]
 		const stop = this.data[this.data.length - 1]
-		this.bar.scale = scaleLinear([start, stop]).range([0, this.barwidth])
+		this.bar.scale = scaleLinear().domain([start, stop]).range([0, this.barwidth])
 
-		// const axis = this.tickPosition === 'top' ?
-		//     axisTop(this.bar.scale).ticks(this.ticks) :
-		//     // @ts-ignore
-		//     axisBottom().scale(this.bar.scale).ticks(this.ticks).tickSize(1)
+		const axis =
+			this.tickPosition === 'top'
+				? axisTop(this.bar.scale).ticks(this.ticks)
+				: axisBottom().scale(this.bar.scale).ticks(this.ticks).tickSize(this.tickSize)
 
-		// axisstyle({
-		//     axis: this.bar.axisg.call(axis),
-		//     showline: true
-		// })
+		axisstyle({
+			axis: this.bar.scaleAxis.call(axis),
+			showline: true
+		})
 	}
 
 	updateColors() {
@@ -101,12 +106,20 @@ export class ColorScale {
 		this.bar.gradientEnd.attr('stop-color', this.bar.endColor)
 	}
 
-	updateTicks() {
-		console.log(this.data)
+	updateAxis() {
+		const start = Math.floor(this.data[0])
+		const stop = Math.floor(this.data[this.data.length - 1])
+		console.log(start, stop)
+		this.bar.scale = scaleLinear().domain([start, stop]).range([0, this.barwidth])
+		this.bar.scaleAxis.selectAll('*').remove()
+		this.bar.scaleAxis
+			.transition()
+			.duration(500)
+			.call(axisBottom(this.bar.scale).tickValues([start, stop]).tickSize(this.tickSize))
 	}
 
 	updateScale() {
 		this.updateColors()
-		this.updateTicks()
+		this.updateAxis()
 	}
 }
