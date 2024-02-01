@@ -142,7 +142,7 @@ export function init_hicControls(hic: any, self: any) {
 		.style('padding', '2px')
 		.style('margin', '4px 0px')
 		.html('Horizontal View &#8811;')
-		.on('click', () => {
+		.on('click', async () => {
 			self.ingenome = false
 			self.inchrpair = false
 			self.indetail = false
@@ -308,6 +308,8 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.plot.node().appendChild(self.genomeview.svg.node())
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.genomeview.bpmaxv)
 		self.dom.infoBarDiv.resolution.text(bplen(self.genomeview.resolution) + ' bp')
+		self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	} else if (self.inchrpair) {
 		self.dom.controlsDiv.view.text(`${self.x.chr}-${self.y.chr} Pair`)
 		nmeth2select(hic, self.chrpairview)
@@ -317,10 +319,17 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.plot.node().appendChild(self.chrpairview.canvas)
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
 		self.dom.infoBarDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
+		self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	} else if (self.indetail) {
 		nmeth2select(hic, self.detailview)
 		matrixType2select(self.detailview, self)
+		self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	} else if (self.inhorizontal) {
+		console.log(330)
+		self.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
 		blocklazyload(self.horizontalview.args)
 	}
 

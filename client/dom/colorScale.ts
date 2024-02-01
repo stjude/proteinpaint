@@ -59,6 +59,7 @@ export class ColorScale {
 		}),
 			(this.data = opts.data || [0, 1]),
 			(this.holder = opts.holder)
+		//TODO change this so it detects the holder size
 		this.position = opts.position || '0,0'
 		this.svg = {
 			width: opts.width || 100,
@@ -86,19 +87,27 @@ export class ColorScale {
 			.attr('width', this.barwidth)
 			.attr('fill', 'url(#' + id + ')')
 		this.bar.scaleAxis = this.bar.g.append('g').attr('transform', `translate(0, ${this.barheight})`)
-		const start = this.data[0]
-		const stop = this.data[this.data.length - 1]
+		const start = Math.floor(this.data[0])
+		const stop = Math.floor(this.data[this.data.length - 1])
 		this.bar.scale = scaleLinear().domain([start, stop]).range([0, this.barwidth])
 
-		const axis =
-			this.tickPosition === 'top'
-				? axisTop(this.bar.scale).ticks(this.ticks)
-				: axisBottom().scale(this.bar.scale).ticks(this.ticks).tickSize(this.tickSize)
+		const axis = this.getAxis()
 
 		axisstyle({
 			axis: this.bar.scaleAxis.call(axis),
 			showline: true
 		})
+	}
+
+	getAxis() {
+		const axis =
+			this.tickPosition === 'top'
+				? axisTop(this.bar.scale).ticks(this.ticks).tickSize(this.tickSize)
+				: axisBottom(this.bar.scale)
+
+		axis.ticks(this.ticks).tickSize(this.tickSize)
+
+		return axis
 	}
 
 	updateColors() {
@@ -109,7 +118,6 @@ export class ColorScale {
 	updateAxis() {
 		const start = Math.floor(this.data[0])
 		const stop = Math.floor(this.data[this.data.length - 1])
-		console.log(start, stop)
 		this.bar.scale = scaleLinear().domain([start, stop]).range([0, this.barwidth])
 		this.bar.scaleAxis.selectAll('*').remove()
 		this.bar.scaleAxis
