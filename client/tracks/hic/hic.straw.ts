@@ -849,6 +849,9 @@ class Hicstat {
 		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
 			await this.init_detailView(hic, chrx, chry, x, y)
 		})
+
+		this.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
+		this.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
 	}
 
 	debug() {
@@ -993,13 +996,6 @@ export async function makeWholeGenomeElements(hic: any, self: any, manychrArg?: 
 	await colorizeGenomeElements(self)
 	self.dom.loadingDiv.style('display', 'none')
 }
-
-// async function updateColorScale(vlst: number[], self: any) {
-// 	const sorted = new Set(vlst.sort((a, b) => a - b))
-// 	const sortedArray = Array.from(sorted)
-// 	self.colorScale.data = [sortedArray, sortedArray[sortedArray.length - 1]]
-// 	self.colorScale.updateTicks()
-// }
 
 async function getWholeGenomeData(hic: any, self: any, lead: any, follow: any, vlst: any) {
 	const arg = {
@@ -1379,6 +1375,8 @@ export function matrixType2select(v: any, self: any, init?: boolean) {
  * @returns
  */
 async function detailViewUpdateHic(hic: any, self: any) {
+	self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+	self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	const xstart = self.x.start
 	const xstop = self.x.stop
 	const ystart = self.y.start
@@ -1590,12 +1588,15 @@ export function getdata_detail(hic: any, self: any) {
 
 			const lst = [] as number[][]
 			let err = 0
-			let maxv = 0
+			// let maxv = 0
 
+			const vlst = [] as number[]
 			for (const [n1, n2, v] of data.items) {
 				/*
 			genomic position and length of either the bin, or the fragment
 			*/
+				vlst.push(v)
+
 				let coord1, coord2, span1, span2
 
 				if (fg) {
@@ -1660,7 +1661,7 @@ export function getdata_detail(hic: any, self: any) {
 					span2 = resolution
 				}
 
-				maxv = Math.max(v, maxv)
+				// maxv = Math.max(v, maxv)
 
 				if (isintrachr) {
 					if (coord1 > xstart - span1 && coord1 < xstop && coord2 > ystart - span2 && coord2 < ystop) {
@@ -1697,10 +1698,12 @@ export function getdata_detail(hic: any, self: any) {
 			}
 			// done all lines
 
-			maxv *= 0.8
+			// maxv *= 0.8
 
-			self.detailview.bpmaxv = maxv
-			self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
+			// self.detailview.bpmaxv = maxv
+			// self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
+
+			setViewCutoff(vlst, self.detailview, self)
 
 			for (const [x, y, w, h, v] of lst) {
 				colorizeElement(x, y, v, self.detailview, self, ctx, w, h)

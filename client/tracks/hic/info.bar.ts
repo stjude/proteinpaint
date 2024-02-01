@@ -38,17 +38,13 @@ export async function init_hicInfoBar(hic: any, self: any) {
 	self.dom.infoBarDiv.resolution = valueRow.append('td').append('span').style('text-align', 'center')
 
 	//Color scale
-	addLabel('Scale')
-	const colorScaleDiv = valueRow
-		.append('td')
-		.style('display', 'flex')
-		.style('justify-content', 'center')
-		.style('align-items', 'center')
+	self.dom.infoBarDiv.colorScaleLabel = addLabel('Scale')
+	self.dom.infoBarDiv.colorScaleDiv = valueRow.append('td')
 
 	self.colorScale = new ColorScale({
 		barheight: 10,
 		barwidth: 85,
-		holder: colorScaleDiv,
+		holder: self.dom.infoBarDiv.colorScaleDiv,
 		startColor: self.colorBar.startColor,
 		endColor: self.colorBar.endColor,
 		position: '20,0',

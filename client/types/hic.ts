@@ -82,6 +82,10 @@ export type HicstrawDom = {
 	}
 	/** Information display for the user */
 	infoBarDiv: {
+		/** Text to be hidden in horizontal view */
+		colorScaleLabel: Elem
+		/** Color scale container. Hidden in horizontal view */
+		colorScaleDiv: Div
 		/** Text display of resolution */
 		resolution: Elem
 	}
