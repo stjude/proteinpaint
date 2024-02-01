@@ -1376,11 +1376,13 @@ function launchgdcbamslice(arg, app) {
 			genomes: app.genomes,
 			holder: app.holder0,
 			hideTokenInput: arg.gdcbamslice.hideTokenInput, // set to true in gdc react wrapper
-			callbackOnRender: arg.gdcbamslice.callbackOnRender, // for testing
+			callbacks: arg.gdcbamslice.callbacks || {}, // for testing
 			// react wrapper can supply this optional filter as bam ui is required to only search cases within a cohort user created in Analysis Tools Framework(ATF)
 			filter0: arg.filter0,
 			// react wrapper can set this to true and run it in "download mode", will not visualize file
-			stream2download: arg.gdcbamslice.stream2download
+			stream2download: arg.gdcbamslice.stream2download,
+			// for testing
+			inputValue: arg.gdcbamslice.inputValue
 		})
 	})
 }

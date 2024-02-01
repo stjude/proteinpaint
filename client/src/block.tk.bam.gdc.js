@@ -12,6 +12,8 @@ import { table2col } from '../dom/table2col'
 
 /*
 
+TODO rename to launchGdcBAM.js to be consistent
+
 SV_EXPAND: to be expanded to support SV review using subpanel
 
 *********** gdc_args{}
@@ -93,29 +95,34 @@ hideTokenInput=true/false
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
-callbackOnRender()
-	optional callback for ui testing
-	called when all ui components finish updating
+callbacks={}
+	standard optional callbacks
+	.postRender
+		called when all ui components finish updating, for testing
+		see helper runCallbackAfterUIupdate()
 stream2download=boolean
 	if true, run the app in "bam slice download" mode..
+inputValue=str
+	optional search str to launch a default view, for tape test
 
 
 ** all above arguments are accessible to all helper functions **
 
 
 Returns:
-	a public API object with callbacks
+	a public API object with callback
 */
 export async function bamsliceui({
 	genomes,
 	holder,
 	filter0,
 	hideTokenInput = false,
-	callbackOnRender,
+	callbacks = {},
 	stream2download = false,
+	inputValue,
 	debugmode = false
 }) {
-	if (callbackOnRender && typeof callbackOnRender != 'function') throw 'callbackOnRender is not function'
+	if (callbacks.postRender && typeof callbacks.postRender != 'function') throw 'callbacks.postRender is not function'
 
 	// public api obj to be returned
 	const publicApi = {}
@@ -177,8 +184,10 @@ export async function bamsliceui({
 	// submit button, "no permission" alert
 	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
 
-	if (urlp.has('gdc_id')) {
-		gdcid_input.property('value', urlp.get('gdc_id')).node().dispatchEvent(new Event('keyup'))
+	const defaultSearchString = inputValue || urlp.get('gdc_id')
+	if (defaultSearchString) {
+		// default search string is supplied either from runpp() or url. this is for testing only
+		gdcid_input.property('value', defaultSearchString).node().dispatchEvent(new Event('keyup'))
 	} else {
 		delete gdc_args.runFlags.runflag_gdcInput
 		runCallbackAfterUIupdate()
@@ -187,13 +196,13 @@ export async function bamsliceui({
 	//////////////////////// helper functions
 
 	function runCallbackAfterUIupdate() {
-		if (!callbackOnRender) return
-		/* this ensures callbackOnRender() is only called when all ui parts are loaded
+		if (!callbacks.postRender) return
+		/* this ensures postRender is only called when all ui parts are loaded
 		at the end of rendering an ui part, and removal of its flag in runFlags{}, call this run() helper 
 		*/
 		if (Object.keys(gdc_args.runFlags).length == 0) {
 			// no flags. all ui components are updated;
-			callbackOnRender(publicApi)
+			callbacks.postRender(publicApi)
 		} else {
 			// some other ui is in midst of updating, do not run; this type of checking is agnostic to actual inserted flags
 		}
@@ -344,7 +353,6 @@ export async function bamsliceui({
 				baminfo_div.style('display', 'none')
 				ssmGeneDiv.style('display', 'none')
 			}
-			console.log(341)
 			runCallbackAfterUIupdate()
 		}
 
@@ -533,7 +541,6 @@ export async function bamsliceui({
 		} finally {
 			delete gdc_args.runFlags.runflag_caseFileList
 		}
-		console.log(529)
 		runCallbackAfterUIupdate()
 	}
 
