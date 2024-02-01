@@ -14,6 +14,7 @@ export class MatrixControls {
 		this.type = 'matrixControls'
 		this.opts = opts
 		this.parent = opts.parent
+		this.overrides = {}
 
 		this.opts.holder.style('margin', '10px 10px 20px 10px').style('white-space', 'nowrap')
 		const state = this.parent.getState(appState)
@@ -68,7 +69,7 @@ export class MatrixControls {
 			//.property('disabled', d => d.disabled)
 			.datum({
 				label: l.Samples || `Samples`,
-				getCount: () => this.parent.sampleOrder.length,
+				getCount: () => ('sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder.length),
 				rows: [
 					{
 						label: `Sort ${l.Samples}`,
@@ -644,7 +645,8 @@ export class MatrixControls {
 			.on('click.sjpp-matrix-download', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
 	}
 
-	main() {
+	main(overrides = {}) {
+		this.overrides = overrides
 		this.parent.app.tip.hide()
 
 		this.btns

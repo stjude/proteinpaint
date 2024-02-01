@@ -1,2 +1,4 @@
 Fixes:
 - refresh the case count when there is no matching oncomatrix data
+- pass opts.hierCluster in the launcher to handle create cohort
+- hide the svg on error or matching data

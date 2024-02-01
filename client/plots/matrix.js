@@ -159,6 +159,7 @@ export class Matrix {
 
 			// may skip data requests when changes are not expected to affect the request payload
 			if (this.stateDiff.nonsettings) {
+				this.dom.svg.style('opacity', 0.001)
 				// reset highlighted dendrogram children to black when data request is triggered
 				delete this.clickedChildren
 				try {
@@ -212,7 +213,7 @@ export class Matrix {
 			if (this.plotDendrogramHclust) this.plotDendrogramHclust()
 			this.render()
 			this.dom.loadingDiv.style('display', 'none')
-			this.dom.svg.style('display', '')
+			this.dom.svg.style('opacity', 1).style('display', '')
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
 			const d = this.dimensions
@@ -250,7 +251,9 @@ export class Matrix {
 	}
 
 	showNoMatchingDataMessage() {
-		this.controlsRenderer.main()
+		this.forcedSampleCount = 0
+		this.dom.svg.style('opacity', 0.001).style('display', 'none')
+		this.controlsRenderer.main({ sampleCount: 0 })
 		this.dom.loadingDiv.html('')
 		const div = this.dom.loadingDiv
 			.append('div')
