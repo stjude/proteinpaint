@@ -14,7 +14,7 @@ Official - Collapse and expand mutations from variant link
 Incorrect dslabel
 TP53 custom data, no sample
 Custom variants, missing or invalid mclass
-Custom dataset with custom variants, WITH samples
+Custom variants WITH samples
 Custom data with samples and sample selection
 Numeric mode custom dataset, with mode change
 
@@ -73,12 +73,16 @@ export async function findSingletonMutationTestDiscoCnvPlots(test, tk, holder) {
 	test.pass('itemtip shows with variant table')
 
 	/* surprise
-	in mbmeta, as soon as itemtip.d is shown, buttons are already created; calling detectLst() will timeout
+	in termdbtest, as soon as itemtip.d is shown, buttons are already created; calling detectLst() will timeout
 	in gdc, there's a delay (api request) for buttons to be shown after itemtip, thus must use detectLst
 	*/
 	let buttons = tk.itemtip.d.selectAll('button').nodes()
 	if (buttons.length == 0) {
-		buttons = await detectGte({ elem: tk.itemtip.d.node(), selector: 'button', count: 2 })
+		/* use count=1 to detect 1 or more buttons
+		gdc has 1 button (disco)
+		termdbtest has 2 buttons (disco, methy)
+		*/
+		buttons = await detectGte({ elem: tk.itemtip.d.node(), selector: 'button', count: 1 })
 	}
 	/* multiplt buttons can be shown, based on data availability
 	#1: disco
@@ -521,7 +525,7 @@ tape('Custom variants, missing or invalid mclass', test => {
 			{
 				type: 'mds3',
 				name: 'Missing or invalid class assignments',
-				custom_variants: custom_variants,
+				custom_variants,
 				callbackOnRender
 			}
 		]
@@ -544,7 +548,7 @@ tape('Custom variants, missing or invalid mclass', test => {
 	}
 })
 
-tape('Custom dataset with custom variants, WITH samples', test => {
+tape('Custom variants WITH samples', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -565,6 +569,7 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 	})
 
 	async function callbackOnRender(tk, bb) {
+		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 		const variantNum = new Set()
 		for (const variant of custom_variants) {
 			//Test all custom variant entries successfully passed to block instance
