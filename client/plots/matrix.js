@@ -250,6 +250,7 @@ export class Matrix {
 	}
 
 	showNoMatchingDataMessage() {
+		this.controlsRenderer.main()
 		this.dom.loadingDiv.html('')
 		const div = this.dom.loadingDiv
 			.append('div')

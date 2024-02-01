@@ -3,17 +3,19 @@ import { showGenesetEdit } from '../dom/genesetEdit.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
 
-/*
-FIXME please fully explain functionality and arg, e.g. toolName
-(now that both oncomatrix and gdccluster are both routed through it, how is this connected to the downstream tool)
+// This is a reactive geneset component, meant for use within plotApp.
+//
+// 1. plotApp is initialized with geneset as the first plot/component
+// 2. if there are opts.genes, geneset would simply call its opts.callback right away (not even render the edit UI)
+// 3. if not, then geneset would render the edit UI, and also use its opts.callback to supply the wrapped genes
+// 4. in the opts.callback, the matrix/hierCluster will dispatch plot_delete to remove the geneset as the plot,
+//    and also plot_create to render the target plot (like matrix, hierCluster)
+//
+// The reactivity is rquired to toggle loading overlay visibility
+// and to create a new plot within the same plot app, once a valid geneset is
+// obtained from the server.
+//
 
-This is a reactive geneset component, meant for use with
-plotApp to offer a geneset edit UI when there are no starting gene lst.
-The reactivity has to mostly to do with toggling loading overlay visibility
-and creating a new plot within the same plot app, once a valid geneset is
-obtained from the server.
- - Use dom/genesetEdit to directly use the non-reactive version.
-*/
 class GenesetComp {
 	constructor(opts) {
 		this.type = 'geneset'

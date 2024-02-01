@@ -1,1 +1,2 @@
-
+Fixes:
+- refresh the case count when there is no matching oncomatrix data
