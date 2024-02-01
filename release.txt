@@ -1,1 +1,2 @@
-
+Fixes:
+- Increase the contrast of the table header text in the BAM files and variants list

@@ -539,7 +539,7 @@ export async function bamsliceui({
 					}
 				}
 
-				table.select('.sja_clbtext').node().focus()
+				table.select('.sja_clbtext')?.node()?.focus()
 			})
 	}
 

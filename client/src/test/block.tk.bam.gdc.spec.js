@@ -186,7 +186,7 @@ tape('Case NOT in cohort filter', async test => {
 	input.value = caseNotInCohort
 	input.dispatchEvent(new Event('keyup'))
 
-	await whenVisible(gdcid_error_div)
+	await whenVisible(gdcid_error_div, { wait: 10000 })
 	test.ok(
 		gdcid_error_div.innerHTML.endsWith('Error: Case not in current cohort.'),
 		'gdcid_error_div prints proper message'

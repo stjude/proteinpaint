@@ -331,7 +331,10 @@ export async function whenHidden(elem) {
 
 // must know that the element already exists when calling this,
 // otherwise use one of the detect* helpers
-export async function whenVisible(elem) {
+export async function whenVisible(elem, opts = {}) {
+	const intervalWait = 25
+	const totalWait = opts.wait || 5000
+	const numRepeats = totalWait / intervalWait
 	return new Promise((resolve, reject) => {
 		let j = 0
 		const i = setInterval(() => {
@@ -340,12 +343,12 @@ export async function whenVisible(elem) {
 				resolve(elem)
 			} else {
 				j++
-				if (j > 200) {
+				if (j > numRepeats) {
 					reject(`elem did not become visible within 5 seconds`)
 					clearInterval(i)
 				}
 			}
-		}, 25)
+		}, intervalWait)
 	})
 }
 
