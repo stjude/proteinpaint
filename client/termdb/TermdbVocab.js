@@ -1171,7 +1171,8 @@ export class TermdbVocab extends Vocab {
 				for: 'DEanalysis',
 				genome: this.state.vocab.genome,
 				dslabel: this.state.vocab.dslabel,
-				samplelst: config.samplelst
+				samplelst: config.samplelst,
+				method: config.settings.DEanalysis.method
 			}
 		})
 	}

@@ -1260,8 +1260,10 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 
 		const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 		let result
-		let method
-		if (group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) {
+		if (
+			(group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) ||
+			param.method == 'edgeR'
+		) {
 			// edgeR will be used for DE analysis
 			const time1 = new Date()
 			const r_output = await run_edgeR(
@@ -1270,7 +1272,7 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			)
 			const time2 = new Date()
 			console.log('Time taken to run edgeR:', time2 - time1, 'ms')
-			method = 'edgeR'
+			param.method = 'edgeR'
 			//console.log("r_output:",r_output)
 
 			//for (const line of r_output.split('\n')) {
@@ -1286,6 +1288,20 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 			const tmpfile = path.join(serverconfig.binpath, 'utils', 'r_output.txt')
 			result = JSON.parse(fs.readFileSync(tmpfile, 'utf8'))
 			fs.unlink(tmpfile, () => {})
+		} else if (param.method == 'wilcoxon') {
+			// Wilcoxon test will be used for DE analysis
+			const time1 = new Date()
+			const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
+			const time2 = new Date()
+			for (const line of rust_output.split('\n')) {
+				if (line.startsWith('adjusted_p_values:')) {
+					result = JSON.parse(line.replace('adjusted_p_values:', ''))
+				} else {
+					//console.log(line)
+				}
+			}
+			console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+			param.method = 'wilcoxon'
 		} else {
 			// Wilcoxon test will be used for DE analysis
 			const time1 = new Date()
@@ -1299,9 +1315,9 @@ async function validate_query_rnaseqGeneCount(ds, genome) {
 				}
 			}
 			console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
-			method = 'wilcoxon'
+			param.method = 'wilcoxon'
 		}
-		return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: method }
+		return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method }
 	}
 }
 
