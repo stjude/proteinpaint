@@ -631,7 +631,7 @@ function validate_ssm2canonicalisoform(ds) {
 	// gdc-specific logic
 	if (!ds.ssm2canonicalisoform) return
 	if (ds.ssm2canonicalisoform.gdcapi) {
-		gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
+		gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform, ds.getHostHeaders) // add get()
 		return
 	}
 	throw 'ssm2canonicalisoform.gdcapi is false'

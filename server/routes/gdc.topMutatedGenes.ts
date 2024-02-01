@@ -2,12 +2,8 @@ import { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, Gene } from '#shar
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import got from 'got'
 import serverconfig from '#src/serverconfig.js'
-import { getheaders } from '#src/mds3.gdc.js'
 
 // TODO change to /termdb/topMutatedGenes
-
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
 export const api = {
 	endpoint: 'gdc/topMutatedGenes',
@@ -24,7 +20,7 @@ export const api = {
 	}
 }
 
-function init() {
+function init({ genomes }) {
 	/*
 	genomes parameter is currently not used
 	could be used later to:
@@ -33,8 +29,12 @@ function init() {
 	*/
 	return async (req: any, res: any): Promise<void> => {
 		const q: GdcTopMutatedGeneRequest = req.query
+		const g = genomes.hg38
+		if (!g) throw 'hg38 missing'
+		const ds = g.datasets.GDC
+		if (!ds) throw 'hg38 GDC missing'
 		try {
-			const genes = await getGenesGraphql(q)
+			const genes = await getGenesGraphql(q, ds)
 			const payload: GdcTopMutatedGeneResponse = { genes }
 			res.send(payload)
 		} catch (e: any) {
@@ -437,9 +437,11 @@ const queryV2: any = {
 	}
 }
 
-async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
+async function getGenesGraphql(q: GdcTopMutatedGeneRequest, ds) {
 	let query: string, variables: object
+	const { host, headers } = ds.getHostHeaders(q)
 
+	// TODO: change this condition to use host.geneExp != host.rest ???
 	if (serverconfig.features?.geneExpHost) {
 		// quick fix! this is only set on local dev machines, meaning it's using v1 api; delete this after soft launch!!
 		query = queryV1.query
@@ -450,8 +452,8 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest) {
 		variables = queryV2.getVariables(q)
 	}
 
-	const response = await got.post(apihostGraphql, {
-		headers: getheaders(q),
+	const response = await got.post(host.graphql, {
+		headers,
 		body: JSON.stringify({ query, variables })
 	})
 
@@ -510,7 +512,7 @@ this api only gets ssm-cases and does not account for cnv cases, will not return
 thus is replaced by getGenesGraphql
 async function getGenes(q: GdcTopMutatedGeneRequest) {
 	const _f = q.filter0 || { op: 'and', content: [] } // allow blank filter to test geneset edit ui (without filter)
-	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
+	const response = await got.post(path.join(host.rest, '/analysis/top_mutated_genes_by_project'), {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
 			size: q.maxGenes || 50,

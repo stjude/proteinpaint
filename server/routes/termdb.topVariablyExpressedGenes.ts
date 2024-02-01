@@ -2,7 +2,7 @@ import {
 	TermdbTopVariablyExpressedGenesRequest,
 	TermdbTopVariablyExpressedGenesResponse
 } from '#shared/types/routes/termdb.topVariablyExpressedGenes.ts'
-import { gdcGetCasesWithExressionDataFromCohort, apihost, geneExpHost } from '../src/mds3.gdc.js'
+import { gdcGetCasesWithExressionDataFromCohort } from '../src/mds3.gdc.js'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import got from 'got'
@@ -142,11 +142,11 @@ function gdcValidateQuery(ds: any, genome: any) {
 		}
 
 		// change to this when api is available on prod
-		const url = path.join(geneExpHost, '/gene_expression/gene_selection')
-
+		const { host, headers } = ds.getHostHeaders(q)
+		const url = path.join(host.geneExp, '/gene_expression/gene_selection')
 		try {
 			const response = await got.post(url, {
-				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+				headers,
 				body: JSON.stringify(getGeneSelectionArg(q, caseLst))
 			})
 

@@ -49,11 +49,9 @@ gdc_bam_request
 	
 */
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-
 // used in getFileByCaseId()
 const filesApi = {
-	end_point: path.join(apihost, 'files/'),
+	end_point: 'files/',
 	fields: [
 		'id',
 		'file_size',
@@ -70,7 +68,7 @@ const filesApi = {
 
 // used in ifIdIsEntity()
 const casesApi = {
-	end_point: path.join(apihost, 'cases/'),
+	end_point: 'cases/',
 	fields: ['case_id']
 }
 // fields to be used with casesApi, to test if user input is any of these
@@ -88,30 +86,35 @@ const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 const maxCaseNumber = 100 // max number of cases to request based on cohort, setting to 200 doesn't work
 const listCaseFileSize = 1000 // max number of bam files to request based on case ids
 
-export async function gdc_bam_request(req, res) {
-	try {
-		if (req.query.gdc_id) {
-			// has user input, test on which id it is and any bam file associated with it
-			const bamdata = await get_gdc_data(
-				req.query.gdc_id,
-				req.query.filter0 // optional gdc cohort filter
-			)
+let queryApi
+export function gdc_bam_request(genomes) {
+	return async function (req, res) {
+		try {
+			const g = genomes.hg38
+			if (!g) throw 'hg38 missing'
+			const ds = g.datasets.GDC
+			if (!ds) throw 'hg38 GDC missing'
+			if (!queryApi) queryApi = getQueryApi(ds)
 
-			await mayCheckPermissionWithFileAndSession(bamdata, req)
-
-			res.send(bamdata)
-		} else {
-			// no user input, list all available bam files from current cohort
-			const re = await getCaseFiles(req.query.filter0)
-			res.send(re)
+			if (req.query.gdc_id) {
+				// has user input, test on which id it is and any bam file associated with it
+				const bamdata = await get_gdc_data(req.query)
+				await mayCheckPermissionWithFileAndSession(bamdata, req, ds)
+				res.send(bamdata)
+			} else {
+				// no user input, list all available bam files from current cohort
+				const re = await getCaseFiles(req.query.filter0, req.query)
+				res.send(re)
+			}
+		} catch (e) {
+			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
 		}
-	} catch (e) {
-		res.send({ error: e.message || e })
-		if (e.stack) console.log(e.stack)
 	}
 }
 
-async function get_gdc_data(gdc_id, filter0) {
+async function get_gdc_data(q) {
+	const { gdc_id, filter0 } = q
 	// data to be returned
 	const bamdata = {
 		file_metadata: [],
@@ -119,7 +122,7 @@ async function get_gdc_data(gdc_id, filter0) {
 		numFilesSkippedByWorkflow: 0
 	}
 
-	const re = await try_query(gdc_id, bamdata, filter0)
+	const re = await try_query(gdc_id, bamdata, filter0, q)
 
 	if (!re.data.hits.length) {
 		// no bam file found
@@ -133,7 +136,7 @@ async function get_gdc_data(gdc_id, filter0) {
 		if (filter0) {
 			// is using filter
 			// try again without filter. if found hit, meaning case not in filter
-			const re = await try_query(gdc_id, bamdata)
+			const re = await try_query(gdc_id, bamdata, null, q)
 			if (re.data.hits.length) {
 				// has hit without filter
 				throw 'Case not in current cohort.'
@@ -177,24 +180,24 @@ given user input id, test if it's one of four valid ones
 if true, return the list of bam files associated with that id
 */
 
-async function try_query(id, bamdata, filter0) {
+async function try_query(id, bamdata, filter0, q) {
 	// first, test if is case uuid
 
 	// test user input against all types of entities
 	for (const entity of entityTypes) {
-		if (await ifIdIsEntity(id, entity.field, filter0)) {
+		if (await ifIdIsEntity(id, entity.field, filter0, q)) {
 			// input id is this type of field. copy field type to this flag to pass on (in case it got no bam files)
 			bamdata.isCaseSample = entity.type
 			/* get bam files from this entity
 			do not supply filter0 in this query! if filter0 contains non_bam_filter, using filter0 will prevent finding any bam files
 			*/
-			return await getFileByCaseId(id, entity.field)
+			return await getFileByCaseId(id, entity.field, 10, q)
 		}
 	}
 
 	// is not any of above fields
 	// then, test if is file uuid
-	const re = await getBamfileByFileId(id, 'file_id')
+	const re = await getBamfileByFileId(id, 'file_id', q)
 	if (re.data.hits.length) {
 		// is file uuid, "re" contains the bam file from it (what if this is not indexed?)
 		bamdata.is_file_uuid = true
@@ -203,7 +206,7 @@ async function try_query(id, bamdata, filter0) {
 
 	// is not case id, case uuid, file uuid
 	// last, test if is file id
-	const re2 = await getBamfileByFileId(id, 'file_name')
+	const re2 = await getBamfileByFileId(id, 'file_name', q)
 	if (re2.data.hits.length) {
 		// is file id
 		bamdata.is_file_id = true
@@ -216,7 +219,7 @@ async function try_query(id, bamdata, filter0) {
 query /cases/ api with id; if valid return, is case id or case uuid, depends on value of field
 returns boolean
 */
-async function ifIdIsEntity(id, field, filter0) {
+async function ifIdIsEntity(id, field, filter0, q) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -227,7 +230,7 @@ async function ifIdIsEntity(id, field, filter0) {
 		]
 	}
 	// filter0 is case filter and must not be combined into filter{}
-	const re = await queryApi(filter, casesApi, null, filter0)
+	const re = await queryApi(filter, casesApi, null, filter0, q)
 	return re.data.hits.length > 0
 }
 
@@ -243,7 +246,7 @@ inputs:
 
 query /files/ to retrieve all indexed bam files using this id
 */
-async function getFileByCaseId(id, caseField, returnSize) {
+async function getFileByCaseId(id, caseField, returnSize, q) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -274,7 +277,7 @@ async function getFileByCaseId(id, caseField, returnSize) {
 		})
 	}
 
-	return await queryApi(filter, filesApi, returnSize)
+	return await queryApi(filter, filesApi, returnSize, null, q)
 }
 
 /*
@@ -291,7 +294,7 @@ handles 3 scenarios:
 
 NOTE: no filter0 is checked here. a file from a case outside of cohort is thus allowed. need to confirm with gdc
 */
-async function getBamfileByFileId(id, field) {
+async function getBamfileByFileId(id, field, q) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -302,7 +305,7 @@ async function getBamfileByFileId(id, field) {
 		]
 	}
 
-	const re = await queryApi(filter, filesApi)
+	const re = await queryApi(filter, filesApi, null, null, q)
 	const hit = re.data.hits[0]
 	if (hit) {
 		// matches with a valid file on gdc
@@ -320,32 +323,39 @@ async function getBamfileByFileId(id, field) {
 	return re
 }
 
-/* helper to query api
-filters: non-case filter, e.g. to test if file id is valid, must not be used in case_filters
-api:
-returnSize:
-filter0: case filters, must not be combined with 1st arg
-*/
-async function queryApi(filters, api, returnSize, filter0) {
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+function getQueryApi(ds) {
+	// Should be generated once per dataset, in this case once for gdc only
+	if (queryApi) throw `The gdc queryApi has already been set.`
 
-	const data = {
-		filters,
-		case_filters: filter0,
-		size: returnSize || 10,
-		fields: api.fields.join(',')
+	/* helper to query api
+		filters: non-case filter, e.g. to test if file id is valid, must not be used in case_filters
+		api:
+		returnSize:
+		filter0: case filters, must not be combined with 1st arg
+	*/
+
+	return async function (filters, api, returnSize, filter0, q) {
+		const { host, headers } = ds.getHostHeaders(q)
+		const end_point = path.join(host.rest, api.end_point)
+
+		const data = {
+			filters,
+			case_filters: filter0,
+			size: returnSize || 10,
+			fields: api.fields.join(',')
+		}
+
+		const response = await got(end_point, { method: 'POST', headers, body: JSON.stringify(data) })
+
+		let re
+		try {
+			re = JSON.parse(response.body)
+		} catch (e) {
+			throw 'invalid JSON from ' + api.end_point
+		}
+		if (!Array.isArray(re.data?.hits)) throw 'data structure not re.data.hits[]'
+		return re
 	}
-
-	const response = await got(api.end_point, { method: 'POST', headers, body: JSON.stringify(data) })
-
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from ' + api.end_point
-	}
-	if (!Array.isArray(re.data?.hits)) throw 'data structure not re.data.hits[]'
-	return re
 }
 
 /*
@@ -353,7 +363,7 @@ if bam file has been found, and user session is available, check user's permissi
 if no permission, return an indicator to allow ui to indicate this in a helpful manner
 on gdc portal, when user has signed in, the session will be available from cookie, this feature is intended to work there
 */
-async function mayCheckPermissionWithFileAndSession(bamdata, req) {
+async function mayCheckPermissionWithFileAndSession(bamdata, req, ds) {
 	if (!bamdata.file_metadata?.length) return
 	// has found files
 	const sessionid = req.cookies.sessionid
@@ -362,24 +372,20 @@ async function mayCheckPermissionWithFileAndSession(bamdata, req) {
 	// check user's permission, if no, set a flag
 	// assumption is that when user has access to a case, the user can access all bam files from the case (thus no need to check every file in file_metadata[]
 	try {
-		await gdcCheckPermission(bamdata.file_metadata[0].file_uuid, null, sessionid)
+		await gdcCheckPermission(bamdata.file_metadata[0].file_uuid, null, sessionid, ds, req.query)
 	} catch (e) {
 		if (e == 'Permission denied') bamdata.userHasNoAccess = true
 	}
 }
 
-export async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
+export async function gdcCheckPermission(gdcFileUUID, token, sessionid, ds, q) {
+	const { host, headers } = ds.getHostHeaders(q)
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
-	const headers = {
-		// since the expected response is binary data, should not set Accept: application/json as a request header
-		// also no body is submitted with a GET request, should not set a Content-type request header
-		Range: 'bytes=0-0'
-	}
-	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
-	else headers['X-Auth-Token'] = token
-
-	const url = apihost + '/data/' + gdcFileUUID
+	// since the expected response is binary data, should not set Accept: application/json as a request header
+	// also no body is submitted with a GET request, should not set a Content-type request header
+	headers.Range = 'bytes=0-0'
+	const url = host.rest + '/data/' + gdcFileUUID
 	try {
 		// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 		// which may not be handled properly by the GDC API in qa-uat
@@ -414,10 +420,10 @@ export async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 get list of cases by filter0, then get bam files for these cases
 to be displayed in a UI table and user can browse and select one
 */
-async function getCaseFiles(filter0) {
-	const cases = await getCasesByFilter(filter0)
+async function getCaseFiles(filter0, q) {
+	const cases = await getCasesByFilter(filter0, q)
 	if (cases.length == 0) throw 'No cases available' // shows this msg in the handle on ui
-	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize)
+	const re = await getFileByCaseId(cases, 'cases.case_id', listCaseFileSize, q)
 	const case2files = {}
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 	for (const h of re.data.hits) {
@@ -439,7 +445,7 @@ async function getCaseFiles(filter0) {
 	}
 }
 
-async function getCasesByFilter(filter0) {
-	const re = await queryApi(null, casesApi, maxCaseNumber, filter0)
+async function getCasesByFilter(filter0, q) {
+	const re = await queryApi(null, casesApi, maxCaseNumber, filter0, q)
 	return re.data.hits.map(i => i.id)
 }

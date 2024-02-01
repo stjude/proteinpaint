@@ -8,8 +8,6 @@ this route lists available gdc MAF files based on user's cohort filter
 and return them to client to be shown in a table for selection
 */
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // to switch to serverconfig export
-
 const maxFileNumber = 1000 // determines max number of files to return to client
 // preliminary testing:
 // 36s for 1000 (87Mb)
@@ -60,7 +58,7 @@ function init({ genomes }) {
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
 
-			const payload = await listMafFiles(req.query as GdcMafRequest)
+			const payload = await listMafFiles(req.query as GdcMafRequest, ds)
 			res.send(payload)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -80,7 +78,7 @@ ds {
 	}
 }
 */
-async function listMafFiles(q: GdcMafRequest) {
+async function listMafFiles(q: GdcMafRequest, ds) {
 	const filters = {
 		op: 'and',
 		content: [
@@ -95,7 +93,7 @@ async function listMafFiles(q: GdcMafRequest) {
 		case_filters.content.push(q.filter0)
 	}
 
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	const { host, headers } = ds.getHostHeaders(q)
 
 	const data = {
 		filters,
@@ -111,7 +109,7 @@ async function listMafFiles(q: GdcMafRequest) {
 		].join(',')
 	}
 
-	const response = await got.post(path.join(apihost, 'files'), { headers, body: JSON.stringify(data) })
+	const response = await got.post(path.join(host.rest, 'files'), { headers, body: JSON.stringify(data) })
 
 	let re
 	try {
