@@ -228,7 +228,7 @@ class Hicstat {
 			this.dom.loadingDiv.style('display', 'none')
 			return
 		}
-		init_hicInfoBar(hic, this)
+		await init_hicInfoBar(hic, this)
 		init_hicControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
 		const tr1 = this.dom.plotDiv.append('tr')
@@ -1767,11 +1767,13 @@ export async function setViewCutoff(vlst: any, view: any, self: any) {
 
 	if (sortedVlst[0] < 0) {
 		self.colorScale.bar.startColor = self.colorBar.startColor = 'blue'
-		self.colorScale.updateColors()
+		self.colorScale.data = [sortedVlst[0], maxv]
 	} else {
 		self.colorScale.bar.startColor = self.colorBar.startColor = 'white'
-		self.colorScale.updateColors()
+		self.colorScale.data = [0, maxv]
 	}
+
+	self.colorScale.updateScale()
 }
 //Super messy, need to clean up
 function colorizeElement(

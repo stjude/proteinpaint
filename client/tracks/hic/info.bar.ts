@@ -15,7 +15,7 @@ see function documentation for more details
  * @param hic formatted hic object with defaults
  * @param self app object
  */
-export function init_hicInfoBar(hic: any, self: any) {
+export async function init_hicInfoBar(hic: any, self: any) {
 	const wrapper = self.dom.infoBarDiv
 		// .style('background', 'rgb(253, 250, 244)')
 		.style('vertical-align', 'top')
@@ -44,16 +44,19 @@ export function init_hicInfoBar(hic: any, self: any) {
 		.style('display', 'flex')
 		.style('justify-content', 'center')
 		.style('align-items', 'center')
+
 	self.colorScale = new ColorScale({
 		barheight: 10,
 		barwidth: 85,
 		holder: colorScaleDiv,
 		startColor: self.colorBar.startColor,
-		endColor: self.colorBar.endColor
-		// tickPosition: 'bottom',
-		// ticks: 1
+		endColor: self.colorBar.endColor,
+		position: '20,0',
+		tickPosition: 'bottom',
+		ticks: 2,
+		width: 120
 	})
-	self.colorScale.render()
+	await self.colorScale.render()
 
 	function addLabel(text: string) {
 		return labelRow
