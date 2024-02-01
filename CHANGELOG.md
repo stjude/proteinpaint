@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Return a defined adjusted state for the GDC matrix and gene expression tools, so that the undo/redo component can react
+- Increase the contrast of the table header text in the BAM files and variants list
 
 
 ## 2.40.0
