@@ -63,7 +63,6 @@ upon error, throw err message as a string
 			genomes: arg.genomes,
 			holder: arg.holder,
 			debugmode: arg.debugmode,
-			callbackOnRender: a => console.log(a),
 			stream2download: urlp.has('stream2download') // for testing only, launch the app in "download mode", will not visualize
 		})
 		return
