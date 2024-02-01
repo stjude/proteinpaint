@@ -97,6 +97,22 @@ class DEanalysis {
 			this.state.config = output.method
 		}
 
+		if (this.settings.pvaluetable == true) {
+			inputs.push({
+				label: 'Hierarchial Clustering',
+				type: 'radio',
+				chartType: 'DEanalysis',
+				settingsKey: 'hierCluster',
+				title: 'Toggle between various methods for selecting genes for hierarchial clustering',
+				options: [
+					{ label: 'Top 100 genes', value: 'top100' },
+					{ label: 'Top 100 upregulated', value: 'top100up' },
+					{ label: 'Top 100 downregulated', value: 'top100down' }
+				]
+			})
+			this.settings.hierCluster = 'top100'
+		}
+
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
