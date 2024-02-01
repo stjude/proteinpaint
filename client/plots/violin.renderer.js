@@ -1,11 +1,11 @@
 import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
-import { area, curveBumpX, curveBumpY } from 'd3-shape'
+import { area, curveBasis, line } from 'd3-shape'
 import { getColors } from '#shared/common'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '../dom/table'
 import { Menu } from '../dom/menu'
-import { rgb } from 'd3'
+import { rgb, extent } from 'd3'
 import { format as d3format } from 'd3-format'
 
 export default function violinRenderer(self) {
@@ -310,26 +310,25 @@ export default function violinRenderer(self) {
 
 	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset) {
 		const values = plot.bins.map(b => b.density)
-		const xMax = Math.max(...values)
+		const [densityMin, densityMax] = extent(values)
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
-			.domain([-xMax, xMax])
-			.range([-self.settings.plotThickness * 0.45, self.settings.plotThickness * 0.45])
-
+			.domain([densityMax, densityMin])
+			.range([-self.settings.plotThickness * 0.45, 0])
 		let areaBuilder
 		if (isH) {
-			areaBuilder = area()
-				.y0(d => wScale(-d.density))
-				.y1(d => wScale(d.density))
+			areaBuilder = line()
+				.curve(curveBasis)
 				.x(d => svg.axisScale(d.x0))
-				.curve(curveBumpX)
+				.y(d => wScale(d.density))
 		} else {
-			areaBuilder = area()
-				.x0(d => wScale(-d.density))
-				.x1(d => wScale(d.density))
-				.y(d => svg.axisScale(d.x0))
-				.curve(curveBumpY)
+			areaBuilder = line()
+				.curve(curveBasis)
+				.x(d => svg.axisScale(d.x0))
+				.y(d => wScale(d.density))
 		}
+		console.log(plot.bins)
+
 		const label = plot.label.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
@@ -347,6 +346,9 @@ export default function violinRenderer(self) {
 			.attr('class', 'sjpp-vp-path')
 			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color)
 			.style('opacity', 0)
+			.attr('stroke', '#000')
+			.attr('stroke-width', 1)
+			.attr('stroke-linejoin', 'round')
 			// .transition()
 			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
 			// .duration(self.opts.mode == 'minimal' ? 0 : 600)

@@ -39,6 +39,7 @@ export function getBinsDensity(scale, plot, ticks = 20, bandwidth = 7) {
 	const density = kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values)
 
 	const bins = []
+	bins.push({ x0: min, x1: min, density: 0 })
 	density.forEach(element => {
 		bins.push({ x0: element[0], x1: element[0] + step, density: element[1] })
 	})
