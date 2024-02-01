@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { violinBinsObj } from '../../server/shared/violin.bins'
+import { getBinsDensity } from '../../server/shared/violin.bins'
 
 /*
 ********************** EXPORTED
@@ -40,7 +40,7 @@ export async function get_densityplot(term, samples) {
 		.domain([minvalue, maxvalue])
 		.range([xpad, xpad + width])
 
-	const bins = violinBinsObj(xscale, { values })
+	const bins = getBinsDensity(xscale, { values })
 	if (!Array.isArray(bins.bins)) throw 'violinBins does not return {bins[]}'
 	if (bins.bins.length == 0) throw 'violinBins {bins[]} empty array'
 
@@ -55,9 +55,9 @@ export async function get_densityplot(term, samples) {
 	for (const b of bins.bins) {
 		if (!Number.isFinite(b.x0)) throw 'b.x0 not number'
 		if (!Number.isFinite(b.x1)) throw 'b.x1 not number'
-		if (!Number.isFinite(b.binValueCount)) throw 'b.binValueCount not number'
-		result.density.push([(b.x0 + b.x1) / 2, b.binValueCount])
-		result.densitymax = Math.max(result.densitymax, b.binValueCount)
+		if (!Number.isFinite(b.density)) throw 'b.density not number'
+		result.density.push([(b.x0 + b.x1) / 2, b.density])
+		result.densitymax = Math.max(result.densitymax, b.density)
 	}
 
 	return result

@@ -7,7 +7,7 @@ import path from 'path'
 import { write_file } from './utils'
 import { getData } from './termdb.matrix'
 import { createCanvas } from 'canvas'
-import { violinBinsObj } from '../../server/shared/violin.bins'
+import { getBinsDensity } from '../../server/shared/violin.bins'
 import summaryStats from '../shared/descriptive.stats'
 import { getOrderedLabels } from './termdb.barchart'
 
@@ -352,13 +352,7 @@ function createCanvasImg(q, result, ds) {
 
 		plot.src = canvas.toDataURL()
 		// create bins for violins
-		const finalVpBins = violinBinsObj(axisScale, plot, q.ticks)
-
-		plot.bins = finalVpBins.bins
-
-		plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
-
-		if (biggestBin < plot.biggestBin) biggestBin = plot.biggestBin
+		plot.bins = getBinsDensity(axisScale, plot, q.ticks, q.bandwidth)
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values)
 
