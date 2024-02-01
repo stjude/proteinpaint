@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.40.1
 
 Fixes:
 - Return a defined adjusted state for the GDC matrix and gene expression tools, so that the undo/redo component can react
