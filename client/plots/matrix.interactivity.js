@@ -2237,7 +2237,8 @@ function setZoomPanActions(self) {
 
 		const columns = [{ label: self.settings.matrix.controlLabels.Samples }]
 
-		self.dom.sampleListMenu = new Menu({ padding: '5px' })
+		if (!self.dom.sampleListMenu) self.dom.sampleListMenu = new Menu({ padding: '5px' })
+		else self.dom.sampleListMenu.clear()
 		const div = self.dom.sampleListMenu.d.append('div')
 
 		renderTable({
@@ -2249,7 +2250,7 @@ function setZoomPanActions(self) {
 			maxHeight: '35vh',
 			resize: true
 		})
-		self.dom.sampleListMenu.show(x, y, false, false)
+		self.dom.sampleListMenu.show(x, y)
 	}
 
 	// add the selected samples into a group
