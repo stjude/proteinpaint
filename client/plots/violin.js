@@ -269,7 +269,6 @@ class ViolinPlot {
 		const arg = this.validateArg()
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
-		console.log(this.data)
 
 		if (this.settings.plotThickness == undefined) {
 			const thickness = this.data.plots.length == 1 ? 300 : 150
@@ -316,7 +315,6 @@ class ViolinPlot {
 	validateArg() {
 		const { term, term2, settings } = this.config
 		const s = this.settings
-		console.log(s.isKDE)
 		const arg = {
 			filter: this.state.termfilter.filter,
 			svgw: s.svgw / window.devicePixelRatio,
