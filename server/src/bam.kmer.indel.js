@@ -226,12 +226,13 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	*/
 
 	//console.log('input_data:', input_data)
-	//fs.writeFile('test.txt', JSON.stringify(input_data), function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
+	fs.writeFile('test.txt', JSON.stringify(input_data), function (err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
 
 	const time1 = new Date()
+	console.log('input_data:', input_data)
 	const rust_output = await run_rust('indel', JSON.stringify(input_data))
 	const time2 = new Date()
 	console.log('Time taken to run rust indel pipeline:', time2 - time1, 'ms')
@@ -244,8 +245,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let strand_probability = 0 // Contains p_value of strand bias i.e forward/reverse vs alternate/reference
 	let alternate_forward_count, alternate_reverse_count, reference_forward_count, reference_reverse_count
 	for (let item of rust_output_list) {
-		if (item.includes('Final_output:')) {
-			console.log(248, item)
+		if (item.includes('Final_output:') && item.length > 15) {
 			final_output = JSON.parse(JSON.parse(item.replace('Final_output:', '')))
 		} else if (refalleles.length == 1 && item.includes('fisher_strand:')) {
 			fisher_strand_output = JSON.parse(item.replace('fisher_strand:', ''))
@@ -274,49 +274,52 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const possible_num_of_groups = q.variant.length + 3 // Number of alternate groups + ref group + none group + amb group
 
 	let max_diff_score = 1
-	for (let i = 0; i < final_output.length; i++) {
-		const item = final_output[i]
-		const index = item.read_number
-		const categories = item.categories
-		const category = item.categories[0] // Only the first item in this array, contains the actual classification. For ref/alts(s) this will be a single element array, for amb the additional elements will contain the alleles with which it has equal similarity and none will contain the allele with which it has maximum similarity
-		const additional_fields = []
-		if (categories.length > 1) {
-			for (let i = 1; i < categories.length; i++) {
-				// Starting from 1 because the first element contains the actual classification
-				additional_fields.push(categories[i])
-			}
-			if (categories.length - 1 > max_diff_score) {
-				max_diff_score = categories.length - 1
-			}
-		}
-		if (category.includes('alt')) {
-			// Checking with various alternate allele(s)
-			for (let var_idx = 0; var_idx < q.variant.length; var_idx++) {
-				if (category == 'alt' + var_idx.toString()) {
-					if (type2group[bamcommon.type_supportalt + var_idx.toString()]) {
-						templates_info[index].tempscore = ['alt' + var_idx.toString()]
-						type2group[bamcommon.type_supportalt + var_idx.toString()].templates.push(templates_info[index])
-					}
+	if (final_output) {
+		// final_output will not be defined if no reads come out of the indel pipeline
+		for (let i = 0; i < final_output.length; i++) {
+			const item = final_output[i]
+			const index = item.read_number
+			const categories = item.categories
+			const category = item.categories[0] // Only the first item in this array, contains the actual classification. For ref/alts(s) this will be a single element array, for amb the additional elements will contain the alleles with which it has equal similarity and none will contain the allele with which it has maximum similarity
+			const additional_fields = []
+			if (categories.length > 1) {
+				for (let i = 1; i < categories.length; i++) {
+					// Starting from 1 because the first element contains the actual classification
+					additional_fields.push(categories[i])
+				}
+				if (categories.length - 1 > max_diff_score) {
+					max_diff_score = categories.length - 1
 				}
 			}
-		} else if (category == 'ref') {
-			if (type2group[bamcommon.type_supportref]) {
-				templates_info[index].tempscore = ['ref']
-				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
+			if (category.includes('alt')) {
+				// Checking with various alternate allele(s)
+				for (let var_idx = 0; var_idx < q.variant.length; var_idx++) {
+					if (category == 'alt' + var_idx.toString()) {
+						if (type2group[bamcommon.type_supportalt + var_idx.toString()]) {
+							templates_info[index].tempscore = ['alt' + var_idx.toString()]
+							type2group[bamcommon.type_supportalt + var_idx.toString()].templates.push(templates_info[index])
+						}
+					}
+				}
+			} else if (category == 'ref') {
+				if (type2group[bamcommon.type_supportref]) {
+					templates_info[index].tempscore = ['ref']
+					type2group[bamcommon.type_supportref].templates.push(templates_info[index])
+				}
+			} else if (category == 'none') {
+				if (type2group[bamcommon.type_supportno]) {
+					templates_info[index].tempscore = additional_fields
+					type2group[bamcommon.type_supportno].templates.push(templates_info[index])
+				}
+			} else if (category == 'amb') {
+				if (type2group[bamcommon.type_supportamb]) {
+					templates_info[index].tempscore = additional_fields
+					type2group[bamcommon.type_supportamb].templates.push(templates_info[index])
+				}
+			} else {
+				// Should not happen
+				console.log('Unaccounted group, please check')
 			}
-		} else if (category == 'none') {
-			if (type2group[bamcommon.type_supportno]) {
-				templates_info[index].tempscore = additional_fields
-				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
-			}
-		} else if (category == 'amb') {
-			if (type2group[bamcommon.type_supportamb]) {
-				templates_info[index].tempscore = additional_fields
-				type2group[bamcommon.type_supportamb].templates.push(templates_info[index])
-			}
-		} else {
-			// Should not happen
-			console.log('Unaccounted group, please check')
 		}
 	}
 
