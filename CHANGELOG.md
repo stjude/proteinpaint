@@ -9,6 +9,8 @@ Fixes:
 - refresh the case count when there is no matching oncomatrix data
 - pass opts.hierCluster in the launcher to handle create cohort
 - hide the svg on error or matching data
+- darken table2col row titles to meet Section 508 contrast requirements
+- do not show the option to replace a gene expression/hierCluster term
 
 
 ## 2.40.1

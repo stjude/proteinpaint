@@ -1,3 +1,1 @@
-Fixes:
-- darken table2col row titles to meet Section 508 contrast requirements
-- do not show the option to replace a gene expression/hierCluster term
+
