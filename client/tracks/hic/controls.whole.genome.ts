@@ -1,6 +1,13 @@
 import { bplen } from '#shared/common'
 import { nmeth2select, matrixType2select } from './hic.straw'
-import { getdata_chrpair, getdata_detail, defaultnmeth, showBtns, makeWholeGenomeElements } from './hic.straw'
+import {
+	getdata_chrpair,
+	getdata_detail,
+	defaultnmeth,
+	showBtns,
+	makeWholeGenomeElements,
+	colorizeElement
+} from './hic.straw'
 import { Elem } from '../../types/d3'
 import blocklazyload from '#src/block.lazyload'
 
@@ -248,15 +255,12 @@ function setmaxv(self: any, maxv: number) {
 		// viewing whole genome
 		self.genomeview.bpmaxv = maxv
 		if (!self.genomeview.lead2follow) return
-		const binpx = self.genomeview.binpx
 		for (const [lead, a] of self.genomeview.lead2follow) {
 			for (const [follow, b] of a) {
+				//Fix for when chr present in the header but no data in the hic file
+				if (!b.data) continue
 				for (const [leadpx, followpx, v] of b.data) {
-					const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-					b.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-					b.ctx.fillRect(followpx, leadpx, binpx, binpx)
-					b.ctx2.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-					b.ctx2.fillRect(leadpx, followpx, binpx, binpx)
+					colorizeElement(leadpx, followpx, v, self.genomeview, self, b)
 				}
 				b.img.attr('xlink:href', b.canvas.toDataURL())
 				if (b.canvas2) {
@@ -271,9 +275,7 @@ function setmaxv(self: any, maxv: number) {
 		self.chrpairview.bpmaxv = maxv
 		const binpx = self.chrpairview.binpx
 		for (const [x, y, v] of self.chrpairview.data) {
-			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-			self.chrpairview.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-			self.chrpairview.ctx.fillRect(x, y, binpx, binpx)
+			colorizeElement(x, y, v, self.chrpairview, self, self.chrpairview.ctx)
 			if (self.chrpairview.isintrachr) {
 				self.chrpairview.ctx.fillRect(y, x, binpx, binpx)
 			}
@@ -283,9 +285,7 @@ function setmaxv(self: any, maxv: number) {
 	if (self.indetail) {
 		self.detailview.bpmaxv = maxv
 		for (const [x, y, w, h, v] of self.detailview.data) {
-			const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-			self.detailview.ctx.fillStyle = 'rgb(255,' + p + ',' + p + ')'
-			self.detailview.ctx.fillRect(x, y, w, h)
+			colorizeElement(x, y, v, self.detailview, self, self.detailview.ctx, w, h)
 		}
 	}
 }

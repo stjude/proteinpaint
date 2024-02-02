@@ -388,17 +388,6 @@ class Hicstat {
 
 		await makeWholeGenomeElements(hic, this)
 
-		// for (let i = 0; i < manychr; i++) {
-		// 	const lead = hic.chrlst[i]
-		// 	for (let j = 0; j <= i; j++) {
-		// 		const follow = hic.chrlst[j]
-		// 		try {
-		// 			await getdata_leadfollow(hic, lead, follow, this)
-		// 		} catch (e: any) {
-		// 			this.errList.push(e.message || e)
-		// 		}
-		// 	}
-		// }
 		if (this.errList.length) {
 			//Loading div problematic with errors. Fix problem when it becomes a component
 			this.dom.loadingDiv.style('display', 'none')
@@ -1779,7 +1768,7 @@ export async function setViewCutoff(vlst: any, view: any, self: any) {
 	self.colorScale.updateScale()
 }
 //Super messy, need to clean up
-function colorizeElement(
+export function colorizeElement(
 	leadpx: number,
 	followpx: number,
 	v: number,
