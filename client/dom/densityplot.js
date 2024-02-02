@@ -1,4 +1,4 @@
-import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, format, brushX, extent } from 'd3'
+import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, format, brushX } from 'd3'
 
 /*
 ********************** EXPORTED
@@ -24,13 +24,11 @@ export async function make_densityplot(holder, data, callabck, term) {
 	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
 	//density data, add first and last values to array
 
-	const density_data = data.density_data.density
+	const density_data = data.density_data
 
 	//density data, add first and last values to array
-	density_data.unshift([data.density_data.minvalue, 0])
-	density_data.push([data.density_data.maxvalue, 0])
-	let min = data.density_data.minvalue
-	let max = data.density_data.maxvalue
+	let min = density_data.minvalue
+	let max = density_data.maxvalue
 	const xscale = scaleLinear()
 		.domain([min, max])
 		.range([xpad, width - xpad])
@@ -49,17 +47,12 @@ export async function make_densityplot(holder, data, callabck, term) {
 	const x_axis = axisBottom().scale(xscaleTicks)
 
 	x_axis
-	const [densityMin, densityMax] = extent(density_data.map(d => d[1]))
 
 	// y-scale
 	const yscale = scaleLinear()
-		.domain([densityMin, densityMax])
+		.domain([0, data.density_data.densitymax])
 		.range([height + ypad, ypad])
-
-	const y_axis = axisLeft()
-		.scale(yscale)
-		.ticks(data.density_data.densitymax < default_ticks ? data.density_data.densitymax : default_ticks)
-		.tickFormat(format('d'))
+	const y_axis = axisLeft().scale(yscale).ticks(default_ticks).tickFormat(format('d'))
 
 	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
 
@@ -77,7 +70,7 @@ export async function make_densityplot(holder, data, callabck, term) {
 
 	// plot the data as a line
 	g.append('path')
-		.datum(density_data)
+		.datum(density_data.density)
 		.attr('class', 'line')
 		.attr('d', line)
 		.style('fill', '#eee')

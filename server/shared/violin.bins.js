@@ -32,18 +32,16 @@ output:
 const { bin } = require('d3-array')
 import * as d3 from 'd3'
 
-export function getBinsDensity(scale, plot, ticks = 20, bandwidth = 7) {
-	const [min, max] = scale.domain()
-	const step = (max - min) / ticks
+export function getBinsDensity(scale, plot, ticks = 20, isKDE = true, bandwidth = 7) {
+	const [min, max] = scale.domain() //Min and max for all plots
+	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
+	const step = Math.abs(max - min) / ticks
 
-	const density = kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values)
-
-	const bins = []
-	bins.push({ x0: min, x1: min, density: 0 })
-	density.forEach(element => {
-		bins.push({ x0: element[0], x1: element[0] + step, density: element[1] })
-	})
-	bins.push({ x0: max, x1: max, density: 0 })
+	if (valuesMin == valuesMax) return [{ x0: valuesMin, x1: valuesMax, density: 1 }]
+	let bins
+	if (isKDE) bins = kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMax, step)
+	else bins = getBinsHist(scale, plot.values, ticks, max)
+	bins.unshift({ x0: min, x1: min, density: 0 })
 
 	return bins
 }
@@ -52,6 +50,28 @@ function epanechnikov(bandwidth) {
 	return x => (Math.abs((x /= bandwidth)) <= 1 ? (0.75 * (1 - x * x)) / bandwidth : 0)
 }
 
-function kde(kernel, thresholds, data) {
-	return thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
+function kde(kernel, thresholds, data, valuesMax, step) {
+	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
+	const bins = []
+	density.forEach(element => {
+		const bin = { x0: element[0], x1: element[0] + step, density: element[1] }
+		if (bin.x1 > valuesMax) return
+		bins.push(bin)
+	})
+	bins.push({ x0: valuesMax, x1: valuesMax, density: 0 })
+
+	return bins
+}
+
+function getBinsHist(scale, values, ticks) {
+	const binBuilder = bin()
+		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
+		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/
+		.value(d => d) /* bin the data points into this bucket*/
+	const bins0 = binBuilder(values)
+	const bins = []
+	for (const bin of bins0) bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
+	bins.push({ x0: max, x1: max, density: 0 })
+
+	return bins
 }

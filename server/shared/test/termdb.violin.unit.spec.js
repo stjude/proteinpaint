@@ -16,6 +16,7 @@ tape('\n', function (test) {
 
 tape('compute bins given an array', function (test) {
 	const bins = [
+		{ x0: 0, x1: 0, density: 0 },
 		{ x0: 0, x1: 0.5, density: 0.05929514663008059 },
 		{ x0: 0.5, x1: 1, density: 0.06489024181101011 },
 		{ x0: 1, x1: 1.5, density: 0.06958497684788201 },

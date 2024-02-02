@@ -180,7 +180,7 @@ class ViolinPlot {
 				chartType: 'violin',
 				settingsKey: 'plotThickness',
 				step: 10,
-				max: 400,
+				max: 500,
 				min: 40,
 				debounceInterval: 1000
 			},
@@ -262,7 +262,7 @@ class ViolinPlot {
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
 		if (this.settings.plotThickness == undefined) {
-			const thickness = this.data.plots.length == 1 ? 500 : 150
+			const thickness = this.data.plots.length == 1 ? 300 : 150
 			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, thickness)
 		}
 		if (this.data.error) throw this.data.error
