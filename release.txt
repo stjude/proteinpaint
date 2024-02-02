@@ -1,1 +1,2 @@
-
+Fixes:
+- hide the undo/redo buttons until a more thorough fix is implemented for the oncomatrix and gene expression
