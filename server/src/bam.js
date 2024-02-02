@@ -718,35 +718,31 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 	}
 }
 
-async function get_q(genome, req) {
-	let q
+async function getFilefullpathOrUrl(req) {
 	if (req.query.gdcFileUUID) {
-		q = {
-			genome,
-			file: path.join(serverconfig.cachedir_bam, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
-			asPaired: req.query.asPaired,
-			getcolorscale: req.query.getcolorscale,
-			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
-		}
+		// is gdc bam slice, join with cache dir
+		const cachefile = path.join(serverconfig.cachedir_bam, req.query.file)
+		// before the file is accessed, test if missing! if so re-slice in case the query runs on a different worker..
+		await mayReSliceFile(req, cachefile)
+		return [cachefile, null]
+	}
+	// not gdc file; either a file (join with tp/) or url
+	const [e, _file, isurl] = utils.fileurl(req)
+	if (e) throw e
+	const dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
+	return [_file, dir]
+}
 
-		await mayReSliceFile(req, q.file)
-	} else {
-		const [e, _file, isurl] = utils.fileurl(req)
-		if (e) throw e
-
-		// a query object to collect all the bits
-		q = {
-			genome,
-			file: _file, // may change if is url
-			asPaired: req.query.asPaired,
-			getcolorscale: req.query.getcolorscale,
-			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
-		}
-		if (isurl) {
-			q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
-		}
+async function get_q(genome, req) {
+	const [filefullpath, dir] = await getFilefullpathOrUrl(req)
+	const q = {
+		genome,
+		file: filefullpath,
+		dir,
+		asPaired: req.query.asPaired,
+		getcolorscale: req.query.getcolorscale,
+		//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
+		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
@@ -3053,16 +3049,8 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop, lst // array of reads to be returned
-
-	if (req.query.gdcFileUUID) {
-		_file = path.join(serverconfig.cachedir_bam, req.query.file)
-		await mayReSliceFile(req, _file)
-	} else {
-		;[e, _file, isurl] = utils.fileurl(req)
-		if (e) throw e
-		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
-	}
+	const [_file, dir] = await getFilefullpathOrUrl(req)
+	let firstseg, lastseg, readstart, readstop, lst // array of reads to be returned
 
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
