@@ -24,6 +24,7 @@ export type getViolinRequest = {
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
 	termid: string
+	isKDE: boolean
 }
 
 interface binsEntries {
