@@ -8,7 +8,7 @@ import { Menu } from '../dom/menu'
 import { rgb, extent } from 'd3'
 import { format as d3format } from 'd3-format'
 
-export default function violinRenderer(self) {
+export default function setViolinRenderer(self) {
 	self.render = function () {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
@@ -88,6 +88,10 @@ export default function violinRenderer(self) {
 		tip.show(event.clientX, event.clientY).d.html(tableHtml)
 	}
 
+	self.getPlotThickness = function () {
+		return self.settings.plotThickness || 150 //may be undefined if loading a state, because main is not executed
+	}
+
 	self.renderPvalueTable = function () {
 		self.dom.tableHolder.selectAll('*').remove()
 		if (self.data.plots.length === 1) return
@@ -132,7 +136,7 @@ export default function violinRenderer(self) {
 		const rows = self.data.pvalues
 		const isH = this.settings.orientation === 'horizontal'
 		const maxHeight = isH
-			? this.settings.plotThickness * this.data.plots.length
+			? self.getPlotThickness() * this.data.plots.length
 			: this.settings.svgw + this.config.term.term.name.length
 		renderTable({
 			rows,
@@ -184,19 +188,17 @@ export default function violinRenderer(self) {
 		const labelsize = maxLabelSize(self, violinSvg)
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
-
+		const plotThickness = self.getPlotThickness()
 		violinSvg
 			.attr(
 				'width',
-				margin.left +
-					margin.top +
-					(isH ? settings.svgw : self.settings.plotThickness * self.data.plots.length + t1.term.name.length)
+				margin.left + margin.top + (isH ? settings.svgw : plotThickness * self.data.plots.length + t1.term.name.length)
 			)
 			.attr(
 				'height',
 				margin.bottom +
 					margin.top +
-					(isH ? self.settings.plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
+					(isH ? plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
 			)
 			.classed('sjpp-violin-plot', true)
 
@@ -269,8 +271,8 @@ export default function violinRenderer(self) {
 			.attr(
 				'transform',
 				isH
-					? 'translate(0,' + self.settings.plotThickness * (plotIdx + 0.5) + ')'
-					: 'translate(' + self.settings.plotThickness * (plotIdx + 0.5) + ',0)'
+					? 'translate(0,' + self.getPlotThickness() * (plotIdx + 0.5) + ')'
+					: 'translate(' + self.getPlotThickness() * (plotIdx + 0.5) + ',0)'
 			)
 			.attr('class', 'sjpp-violinG')
 
@@ -311,10 +313,11 @@ export default function violinRenderer(self) {
 	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset) {
 		const values = plot.bins.map(b => b.density)
 		const [densityMin, densityMax] = extent(values)
+		const plotThickness = self.getPlotThickness()
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
 			.domain([densityMax, densityMin])
-			.range([-self.settings.plotThickness * 0.45, 0])
+			.range([-plotThickness * 0.45, 0])
 		let areaBuilder
 		if (isH) {
 			areaBuilder = line()
@@ -324,8 +327,8 @@ export default function violinRenderer(self) {
 		} else {
 			areaBuilder = line()
 				.curve(curveBasis)
-				.x(d => svg.axisScale(d.x0))
-				.y(d => wScale(d.density))
+				.x(d => wScale(d.density))
+				.y(d => svg.axisScale(d.x0))
 		}
 
 		const label = plot.label.split(',')[0]
@@ -342,11 +345,7 @@ export default function violinRenderer(self) {
 		if (category && !category.color) category.color = color
 
 		renderArea(violinG, plot, areaBuilder)
-		renderArea(
-			violinG,
-			plot,
-			areaBuilder.y(d => -wScale(d.density))
-		)
+		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
 
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
 		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg, self)
@@ -380,7 +379,7 @@ export default function violinRenderer(self) {
 			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
 			// .duration(self.opts.mode == 'minimal' ? 0 : 600)
 			.style('opacity', '0.8')
-			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
+			.attr('d', areaBuilder(plot.bins))
 	}
 
 	function renderSymbolImage(self, violinG, plot, isH, imageOffset) {
@@ -419,6 +418,8 @@ export default function violinRenderer(self) {
 
 	function renderLines(violinG, isH, lines, svg) {
 		// render straight lines on plot
+		const plotThickness = self.settings.plotThickness || 150 //When loading plot from state plotThickness is not initialized
+
 		violinG.selectAll('.sjpp-vp-line').remove()
 		if (!lines?.length) return
 		for (const line of lines) {
@@ -429,10 +430,10 @@ export default function violinRenderer(self) {
 				// .duration(self.opts.mode == 'minimal' ? 0 : 30)
 				.attr('class', 'sjpp-vp-line')
 				.style('stroke', self.opts.mode == 'minimal' ? 'red' : 'black') // if not minimal, then red median line will also appear
-				.attr('y1', isH ? -(self.settings.plotThickness / 2) : svg.axisScale(line))
-				.attr('y2', isH ? self.settings.plotThickness / 2 : svg.axisScale(line))
-				.attr('x1', isH ? svg.axisScale(line) : -(self.settings.plotThickness / 2))
-				.attr('x2', isH ? svg.axisScale(line) : self.settings.plotThickness / 2)
+				.attr('y1', isH ? -(plotThickness / 2) : svg.axisScale(line))
+				.attr('y2', isH ? plotThickness / 2 : svg.axisScale(line))
+				.attr('x1', isH ? svg.axisScale(line) : -(plotThickness / 2))
+				.attr('x2', isH ? svg.axisScale(line) : plotThickness / 2)
 		}
 	}
 

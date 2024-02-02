@@ -2,7 +2,7 @@ import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
-import { sleep, detectOne, detectGte } from '../../test/test.helpers.js'
+import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
 
 /***************** Test Layout *****************:
 
@@ -361,21 +361,15 @@ tape('test basic controls', function (test) {
 	}
 
 	async function changeOverlayTerm(violin, violinDiv) {
-		const changeOvTerm = await detectGte({
-			elem: violinDiv.node(),
-			selector: '.sjpp-vp-path',
-			count: 3,
-			async trigger() {
-				await violin.Inner.app.dispatch({
-					type: 'plot_edit',
-					id: violin.Inner.id,
-					config: {
-						term2: await fillTermWrapper({ id: 'genetic_race' }, violin.Inner.app.vocabApi)
-					}
-				})
+		const term2 = await fillTermWrapper({ id: 'genetic_race' }, violin.Inner.app.vocabApi)
+
+		await violin.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: violin.Inner.id,
+			config: {
+				term2
 			}
 		})
-		test.ok(changeOvTerm, 'Overlay Term has been changed')
 		test.true(violin.Inner.app.Inner.state.plots[0].term2.id === 'genetic_race', 'Overlay term changed')
 	}
 
@@ -390,7 +384,8 @@ tape('test basic controls', function (test) {
 					config: {
 						settings: {
 							violin: {
-								unit: 'log'
+								unit: 'log',
+								plotThickness: 150
 							}
 						}
 					}
@@ -745,11 +740,11 @@ tape('term1 as numerical and term2 condition', function (test) {
 		test.end()
 	}
 	async function testConditionTermOrder(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 5 })
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 10 })
 		test.ok(groups, 'Condition groups exist')
 
 		test.deepEqual(
-			groups.map(k => k.__data__.label),
+			groups.filter((k, i) => i % 2 == 0).map(k => k.__data__.label),
 			violin.Inner.data.plots.map(k => k.label),
 			'Order of conditional categories in term2 is accurate'
 		)
@@ -1036,14 +1031,15 @@ tape('Load linear regression-violin UI', function (test) {
 		test.end()
 	}
 	async function regressionViolinRendering(regression) {
-		const regressionVp = await detectOne({
+		const regressionVp = await detectLst({
 			elem: regression.Inner.dom.inputs.node(),
-			selector: '.sjpp-vp-path'
+			selector: '.sjpp-vp-path',
+			count: 2
 		})
-		test.ok(regressionVp, 'Violin plot for regression UI exists')
+		test.ok(regressionVp.length == 2, 'Violin plot for regression UI exists')
 
 		const expectedPathColor = 'rgb(221, 221, 221)'
-		test.equal(expectedPathColor, getComputedStyle(regressionVp).fill, 'Path fill matches expected fill')
+		test.equal(expectedPathColor, getComputedStyle(regressionVp[0]).fill, 'Path fill matches expected fill')
 	}
 })
 

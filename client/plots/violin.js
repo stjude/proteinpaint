@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
-import violinRenderer from './violin.renderer'
+import setViolinRenderer from './violin.renderer'
 import htmlLegend from '../dom/html.legend'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
@@ -57,7 +57,7 @@ class ViolinPlot {
 				.style('margin-right', '30px')
 		}
 
-		violinRenderer(this)
+		setViolinRenderer(this)
 		setInteractivity(this)
 
 		if (this.opts.mode != 'minimal') {
@@ -240,11 +240,7 @@ class ViolinPlot {
 
 		return {
 			termfilter: appState.termfilter,
-			config: Object.assign({}, config, {
-				settings: {
-					violin: config.settings.violin
-				}
-			}),
+			config,
 			displaySampleIds: appState.termdbConfig.displaySampleIds,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken()
 		}
