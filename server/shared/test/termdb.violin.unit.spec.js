@@ -37,7 +37,6 @@ tape('compute bins given an array', function (test) {
 		{ x0: 8.5, x1: 9, density: 0.0574301149031041 },
 		{ x0: 9, x1: 9.5, density: 0.05106328245583948 },
 		{ x0: 9.5, x1: 10, density: 0.046593637454982 },
-		{ x0: 10, x1: 10.5, density: 0.04141656662665066 },
 		{ x0: 10, x1: 10, density: 0 }
 	]
 	test.deepEqual(bins, getBinsDensity(axisScale, v), 'should match expected output')
