@@ -108,6 +108,7 @@ export async function init(arg, holder, genomes) {
 		if (!Number.isInteger(settings.matrix.maxGenes)) settings.matrix.maxGenes = 50
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
+		let plot_spliced = false
 
 		const plotAppApi = await appInit({
 			holder: select(arg.holder).select('.sja_root_holder'),
@@ -130,10 +131,7 @@ export async function init(arg, holder, genomes) {
 					}
 				]
 			},
-			app: {
-				features: ['recover'],
-				callbacks: arg.opts?.app?.callbacks || {}
-			},
+			app: arg.opts?.app || {},
 			geneset: {
 				mode: 'mutation',
 				genome,
@@ -148,6 +146,10 @@ export async function init(arg, holder, genomes) {
 					// `)
 				},
 				callback(genesetCompApi, twlst) {
+					// this callback may be called more than once as a user changes a GDC cohort initially,
+					// need to avoid re-deleting/re-creating plots
+					if (plot_spliced || !genesetCompApi) return
+					plot_spliced = true
 					plotAppApi.dispatch({
 						type: 'plot_splice',
 						subactions: [
@@ -248,10 +250,6 @@ export async function init(arg, holder, genomes) {
 
 		const api = {
 			update: async arg => {
-				if (!plotAppApi) {
-					Object.assign(pendingArg, arg)
-					return
-				}
 				if ('filter0' in arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',

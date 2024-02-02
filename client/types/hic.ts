@@ -51,8 +51,6 @@ export type MainPlotDiv = {
 }
 
 export type HicstrawDom = {
-	/** Holds the cloak when the view is loading. */
-	loadingDiv: Div
 	/** Placeholder div for displaying errors to the user */
 	errorDiv: Elem
 	/** Control panel. Appears as a collapsible burger menu*/
@@ -61,8 +59,6 @@ export type HicstrawDom = {
 		nmeth: Elem
 		/** User input for cutoff */
 		inputBpMaxv: Input
-		/** Text display of resolution */
-		resolution: Elem
 		/** User select matrix type. Returns straw values based on selected type. */
 		matrixType: Elem
 		/** Displays text of the user's current view and buttons for other views (except in genome view) */
@@ -84,20 +80,30 @@ export type HicstrawDom = {
 		/** Zoom out button whilst in the detailed view */
 		zoomOut: Elem
 	}
+	/** Information display for the user */
+	infoBarDiv: {
+		/** Text to be hidden in horizontal view */
+		colorScaleLabel: Elem
+		/** Color scale container. Hidden in horizontal view */
+		colorScaleDiv: Div
+		/** Text display of resolution */
+		resolution: Elem
+	}
+	/** Holds the cloak when the view is loading. */
+	loadingDiv: Div
+	/** Holder for the plot and axes */
 	plotDiv: MainPlotDiv
 	/** Pop up menu */
 	tip: any
 }
 
 export type WholeGenomeView = {
-	/** Arrays of hicdata response [pos1, pos2, and value] reformatted for rendering */
-	data: number[][]
-	/** Straw parameter to return matrix type from dropdown */
-	matrixType: 'observed' | 'expected' | 'oe'
 	/** # pixel per bin, may set according to resolution */
 	binpx: number
 	/** Appears as the cutoff value for the user in the menu */
 	bpmaxv: number
+	/** Arrays of hicdata response [pos1, pos2, and value] reformatted for rendering */
+	data: number[]
 	/** heatmap layer underneath svg */
 	layer_map: SvgG
 	/** second g layer underneath the svg */
@@ -120,6 +126,8 @@ export type WholeGenomeView = {
 	>
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
+	/** Matrix type specific to this view. Value from dropdown and relates to 1st straw parameter. */
+	matrixType: 'observed' | 'expected' | 'oe' | 'log(oe)'
 	/** Displays the chr on the x axis to the user next to the cell's upper left corner.
 	 * Eventually there should be Menu type for client */
 	pica_x: any
@@ -133,13 +141,14 @@ export type WholeGenomeView = {
 }
 
 export type ChrPairView = {
-	matrixType: 'observed' | 'expected' | 'oe'
 	axisx?: Svg
 	axisy?: Svg
 	binpx: number
 	canvas: any //dom
 	ctx: any //dom
 	data: number[][]
+	/** Matrix type specific to this view. Value from dropdown and relates to 1st straw parameter. */
+	matrixType: 'observed' | 'expected' | 'oe' | 'log(oe)'
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
 	/** Calculated resolution. Displayed in menu for user */
@@ -159,7 +168,6 @@ export type HorizontalView = {
 }
 
 export type DetailView = {
-	matrixType: 'observed' | 'expected' | 'oe'
 	bbmargin: number
 	canvas?: any //dom
 	ctx: any //dom
@@ -171,12 +179,14 @@ export type DetailView = {
 		ystartfrag: number
 		ystopfrag: number
 	}
+	/** Matrix type specific to this view. Value from dropdown and relates to 1st straw parameter. */
+	matrixType: 'observed' | 'expected' | 'oe' | 'log(oe)'
 	/** Normalization method tied to this view. Intended to render independently of other views */
 	nmeth: string
-	xb: DetailViewAxis
-	yb: DetailViewAxis
 	/** Calculated resolution. Displayed in menu for user */
 	resolution: number
+	xb: DetailViewAxis
+	yb: DetailViewAxis
 }
 
 export type DetailViewAxis = {

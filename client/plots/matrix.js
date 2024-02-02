@@ -155,10 +155,15 @@ export class Matrix {
 
 			// see matrix.data for logic to be able to skip server data request or re-ordering
 			this.computeStateDiff()
+			// must remember the previous state right away, so that subsequent computeStateDiffs
+			// has the correct reference in case of errors
+			this.prevState = this.state
+			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
 
 			// may skip data requests when changes are not expected to affect the request payload
 			if (this.stateDiff.nonsettings) {
+				this.dom.svg.style('opacity', 0.001)
 				// reset highlighted dendrogram children to black when data request is triggered
 				delete this.clickedChildren
 				try {
@@ -178,6 +183,9 @@ export class Matrix {
 				} catch (e) {
 					if (e == 'no data') {
 						this.showNoMatchingDataMessage()
+						return
+					} else if (e == 'stale sequenceId') {
+						// ignore this error, but skip this update since a subsequent action is being processed
 						return
 					} else {
 						this.dom.svg.style('display', 'none')
@@ -212,7 +220,7 @@ export class Matrix {
 			if (this.plotDendrogramHclust) this.plotDendrogramHclust()
 			this.render()
 			this.dom.loadingDiv.style('display', 'none')
-			this.dom.svg.style('display', '')
+			this.dom.svg.style('opacity', 1).style('display', '')
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
 			const d = this.dimensions
@@ -245,11 +253,13 @@ export class Matrix {
 			}
 		}
 
-		this.prevState = this.state
 		this.resetInteractions()
 	}
 
 	showNoMatchingDataMessage() {
+		this.forcedSampleCount = 0
+		this.dom.svg.style('opacity', 0.001).style('display', 'none')
+		this.controlsRenderer.main({ sampleCount: 0 })
 		this.dom.loadingDiv.html('')
 		const div = this.dom.loadingDiv
 			.append('div')

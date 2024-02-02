@@ -34,7 +34,7 @@ export function table2col(arg) {
 					.attr('class', 'sjpp_show_scrollbar')
 			}
 			const tr = table.append('tr')
-			const td1 = tr.append('td').style('padding', '3px').style('color', '#858585')
+			const td1 = tr.append('td').style('padding', '3px').style('color', '#555')
 			const td2 = tr.append('td')
 			return [td1, td2]
 		}

@@ -2,6 +2,20 @@ import * as client from '#src/client'
 import * as common from '#shared/common'
 import { defaultnmeth } from './hic.straw'
 
+/**
+********* EXPORTED *********
+
+hicParseFile()
+hicparsestat()
+
+see function documentation for more details
+
+********* INTERNAL *********
+parseSV()
+parseSVheader()
+hicparsestat()
+ */
+
 type Mutation = {
 	chr1: string
 	chr2: string
@@ -11,7 +25,15 @@ type Mutation = {
 	reads2: string | number
 }
 
-//Will rename once hic.straw refactored to class
+/**
+ * Validates hic input and returns formatted hic object with defaults as well as add defaults to self.
+ * Only time hicstat route used for the hicstraw app.
+ * Will rename once hic.straw refactored to class
+ * @param hic hic input file
+ * @param debugmode returns self to the client when true
+ * @param self app object
+ * @returns formatted hic object with defaults
+ */
 export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 	if (debugmode) window['hic'] = hic
 	if (!hic.name) hic.name = 'Hi-C'
@@ -68,7 +90,10 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 			hic.sv.items = items
 		}
 		const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
-		if (data.error) throw { message: data.error.error }
+		if (data.error) {
+			self.errList.push(data.error)
+			return
+		}
 		const err = hicparsestat(hic, data.out)
 		if (err) throw { message: err }
 	} catch (err: any) {
@@ -77,7 +102,6 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 			console.log(err.stack)
 		}
 	}
-
 	/** Default args for each view */
 	const initialNmeth = hic.normalization.length ? hic.normalization[0] : defaultnmeth
 
@@ -178,6 +202,12 @@ function parseSVline(line: string, header: any) {
 	return [null, m]
 }
 
+/**
+ * Validates hic file and returns error message if hic file is invalid
+ * @param hic input hic file
+ * @param j returned server response
+ * @returns error message if hic file is invalid
+ */
 export function hicparsestat(hic: any, j: any) {
 	if (!j) return 'cannot stat hic file'
 	hic.normalization = j.normalization

@@ -5,12 +5,28 @@ import { Elem } from '../../types/d3'
 import blocklazyload from '#src/block.lazyload'
 
 /**
+********* EXPORTED *********
+
+init_hicControls()
+
+********* INTERNAL *********
+addLabel()
+makeNormMethDisplay()
+getData()
+setmaxv()
+switchview()
+
+see function documentation for more details
+ */
+
+/**
  * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, horizontal and detail views)
  * Some of the view button text and functionality updated in hic.straw.ts
- * @param hic
- * @returns
+ * @param hic formatted input
+ * @param self app obj
+ * @returns control panel for the app
  */
-export function initWholeGenomeControls(hic: any, self: any) {
+export function init_hicControls(hic: any, self: any) {
 	const menuWrapper = self.dom.controlsDiv
 		.style('background', 'rgb(253, 250, 244)')
 		.style('vertical-align', 'top')
@@ -36,11 +52,6 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.attr('class', 'sjpp-hic-menu')
 		.style('display', menuVisible ? 'block' : 'none')
 	const menuTable = menu.append('table').style('border-spacing', '3px')
-	if (hic.enzyme) {
-		const enzymeRow = menuTable.append('tr')
-		addLabel(enzymeRow, 'ENZYME')
-		enzymeRow.append('td').text(hic.enzyme)
-	}
 
 	const normalizationRow = menuTable.append('tr')
 	addLabel(normalizationRow, 'NORMALIZATION')
@@ -63,10 +74,6 @@ export function initWholeGenomeControls(hic: any, self: any) {
 			setmaxv(self, v)
 		})
 
-	const resolutionRow = menuTable.append('tr')
-	addLabel(resolutionRow, 'RESOLUTION')
-	self.dom.controlsDiv.resolution = resolutionRow.append('td').append('span')
-
 	const matrixTypeRow = menuTable.append('tr')
 	addLabel(matrixTypeRow, 'matrix type')
 	self.dom.controlsDiv.matrixType = matrixTypeRow
@@ -84,8 +91,8 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		//Allow for customer friendly labels but pass the appropriate straw parameter
 		{ label: 'Observed', value: 'observed' },
 		{ label: 'Expected', value: 'expected' },
-		//'oe' is the straw parameter and returns a ratio. Server code applies log().
-		{ label: 'Log(Observed/Expected)', value: 'oe' }
+		{ label: 'Observed/Expected', value: 'oe' },
+		{ label: 'Log(Observed/Expected)', value: 'log(oe)' }
 	]
 	for (const matrixType of matrixTypevalues) {
 		self.dom.controlsDiv.matrixType.append('option').text(matrixType.label).attr('value', matrixType.value)
@@ -135,7 +142,7 @@ export function initWholeGenomeControls(hic: any, self: any) {
 		.style('padding', '2px')
 		.style('margin', '4px 0px')
 		.html('Horizontal View &#8811;')
-		.on('click', () => {
+		.on('click', async () => {
 			self.ingenome = false
 			self.inchrpair = false
 			self.indetail = false
@@ -164,19 +171,25 @@ export function initWholeGenomeControls(hic: any, self: any) {
 	self.dom.controlsDiv.zoomOut = zoomDiv.append('button').style('margin-right', '10px').text('Out')
 }
 
+/**
+ * Returns appropriately styled label for menu, for consistency and ease of updating
+ * @param tr table row in menu
+ * @param text label text
+ * @returns
+ */
 function addLabel(tr: Elem, text: string) {
 	return tr
 		.append('td')
 		.style('color', '#858585')
-		.style('vertical-align', 'top')
 		.style('font-size', '.8em')
+		.style('vertical-align', text.toUpperCase() == 'VIEW' ? 'top' : 'middle')
 		.text(text.toUpperCase())
 }
 
 /**
  * Show either NONE if no normalization methods present in the hic file of dropdown of normalization methods
  * read from the hic file.
- * @param hic File input
+ * @param hic formatted input
  * @param self App object
  */
 function makeNormMethDisplay(hic: any, self: any) {
@@ -200,9 +213,9 @@ function makeNormMethDisplay(hic: any, self: any) {
 }
 
 /**
- * Request data when user changes dropdowns per view
- * @param hic
- * @param self
+ * Requests data when user changes dropdowns per view specific functions
+ * @param hic file input
+ * @param self app obj
  * @returns
  */
 async function getData(hic: any, self: any) {
@@ -225,10 +238,10 @@ async function getData(hic: any, self: any) {
 }
 
 /**
- * setting max value from user input
- * @param hic
- * @param maxv
- * @returns
+ * Setting max value from user input
+ * @param hic formatted input
+ * @param maxv value from UI
+ * @returns view specific cutoff value
  */
 function setmaxv(self: any, maxv: number) {
 	if (self.ingenome) {
@@ -282,7 +295,6 @@ function setmaxv(self: any, maxv: number) {
  * Launches or rerenders previously created views.
  * @param hic file input
  * @param self app obj
-
  */
 function switchview(hic: any, self: any) {
 	//Remove all previous elements
@@ -295,7 +307,9 @@ function switchview(hic: any, self: any) {
 		matrixType2select(self.genomeview, self)
 		self.dom.plotDiv.plot.node().appendChild(self.genomeview.svg.node())
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.genomeview.bpmaxv)
-		self.dom.controlsDiv.resolution.text(bplen(self.genomeview.resolution) + ' bp')
+		self.dom.infoBarDiv.resolution.text(bplen(self.genomeview.resolution) + ' bp')
+		self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	} else if (self.inchrpair) {
 		self.dom.controlsDiv.view.text(`${self.x.chr}-${self.y.chr} Pair`)
 		nmeth2select(hic, self.chrpairview)
@@ -304,12 +318,18 @@ function switchview(hic: any, self: any) {
 		self.dom.plotDiv.xAxis.node().appendChild(self.chrpairview.axisx.node())
 		self.dom.plotDiv.plot.node().appendChild(self.chrpairview.canvas)
 		self.dom.controlsDiv.inputBpMaxv.property('value', self.chrpairview.bpmaxv)
-		self.dom.controlsDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
+		self.dom.infoBarDiv.resolution.text(bplen(self.chrpairview.resolution) + ' bp')
+		self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	} else if (self.indetail) {
 		nmeth2select(hic, self.detailview)
 		matrixType2select(self.detailview, self)
+		self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	} else if (self.inhorizontal) {
-		//TODO: Problem with this is it rerenders. Maybe a way to save the rendering and just show/hide?
+		console.log(330)
+		self.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
+		self.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
 		blocklazyload(self.horizontalview.args)
 	}
 

@@ -18,7 +18,8 @@ import {
 } from '../../types/hic.ts'
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { hicParseFile } from './parse.genome.ts'
-import { initWholeGenomeControls } from './controls.whole.genome.ts'
+import { init_hicInfoBar } from './info.bar.ts'
+import { init_hicControls } from './controls.whole.genome.ts'
 import { Div } from '../../types/d3'
 
 /*
@@ -26,11 +27,14 @@ import { Div } from '../../types/d3'
 ********************** EXPORTED
 
 init_hicstraw()
-getdata_leadfollow()
+showBtns()
+makeWholeGenomeElements()
 getdata_chrpair()
 nmeth2select()
+matrixType2select()
 getdata_detail()
 hicparsefragdata()
+setViewCutoff()
 
 ********************** INTERNAL
 
@@ -51,7 +55,7 @@ initialize views
 
 hic data getter and canvas painter
 
-	getdata_leadfollow()
+	makeWholeGenomeElements()
 	getdata_chrpair()
 	getdata_detail()
 
@@ -138,6 +142,11 @@ class Hicstat {
 		start: number
 		stop: number
 	}>
+	/** This maybe unneccessary but leave until runproteinpaint() enabled different views  */
+	colorBar: {
+		startColor: string
+		endColor: string
+	}
 
 	constructor(hic: any, debugmode: boolean) {
 		this.holder = hic.holder
@@ -145,6 +154,7 @@ class Hicstat {
 		this.dom = {
 			errorDiv: hic.holder.append('div').classed('sjpp-hic-error', true),
 			controlsDiv: hic.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
+			infoBarDiv: hic.holder.append('div').classed('sjpp-hic-infobar', true).style('display', 'inline-block'),
 			loadingDiv: d3select('body').append('div').attr('id', 'sjpp-loading-overlay'),
 			plotDiv: hic.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
 			tip: new client.Menu()
@@ -193,6 +203,12 @@ class Hicstat {
 		this.inhorizontal = false
 		this.x = {}
 		this.y = {}
+		this.colorBar = {
+			//Start with white for zero. Change color when negative values are implemented
+			//Args shown are not in use. Anticipating future implementation
+			startColor: hic.colorNeg || 'white',
+			endColor: hic.color || hic.colorPos || 'red'
+		}
 	}
 
 	async error(err: string | string[]) {
@@ -200,23 +216,27 @@ class Hicstat {
 		showErrorsWithCounter(this.errList, this.dom.errorDiv)
 		//Remove errors after displaying
 		this.errList = []
+		this.dom.loadingDiv.style('display', 'none')
 	}
 
 	async render(hic: any) {
 		this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner').style('display', '')
 		await hicParseFile(hic, this.debugmode, this)
-		initWholeGenomeControls(hic, this)
+		if (this.errList.length) {
+			//Display file reader errors to user before rendering app
+			this.error(this.errList)
+			this.dom.loadingDiv.style('display', 'none')
+			return
+		}
+		await init_hicInfoBar(hic, this)
+		init_hicControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
 		const tr1 = this.dom.plotDiv.append('tr')
 		const tr2 = this.dom.plotDiv.append('tr')
 		this.dom.plotDiv = {
-			//old c
 			plot: tr1.append('td').classed('sjpp-hic-plot', true),
-			//old y
 			yAxis: tr1.append('td').classed('sjpp-hic-plot-xaxis', true),
-			//old x
 			xAxis: tr2.append('td').classed('sjpp-hic-plot-yaxis', true),
-			//placeholder
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		/** Open the whole genome view by default. User clicks within squares to launch the other views. */
@@ -228,7 +248,7 @@ class Hicstat {
 		this.dom.controlsDiv.view.text('Genome')
 		const resolution = hic.bpresolution[0]
 
-		this.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
+		this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 
 		// # pixel per bin, may set according to resolution
 		const binpx = 1
@@ -379,10 +399,12 @@ class Hicstat {
 		// 		}
 		// 	}
 		// }
-		if (this.errList.length) this.error(this.errList)
+		if (this.errList.length) {
+			//Loading div problematic with errors. Fix problem when it becomes a component
+			this.dom.loadingDiv.style('display', 'none')
+			this.error(this.errList)
+		}
 		this.dom.loadingDiv.style('display', 'none')
-
-		if (this.errList.length) this.error(this.errList)
 
 		return
 	}
@@ -390,8 +412,8 @@ class Hicstat {
 	async init_chrPairView(hic: any, chrx: string, chry: string) {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
 		const detailView = this.init_detailView.bind(this)
-		nmeth2select(hic, this.chrpairview)
-		matrixType2select(this.chrpairview, this)
+		nmeth2select(hic, this.chrpairview, true)
+		matrixType2select(this.chrpairview, this, true)
 
 		this.ingenome = false
 		this.inchrpair = true
@@ -421,7 +443,7 @@ class Hicstat {
 			this.error('no suitable resolution')
 			return
 		}
-		this.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
+		this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 
 		let binpx = 1
 		while ((binpx * maxchrlen) / resolution < 600) {
@@ -536,8 +558,8 @@ class Hicstat {
 
 	async init_detailView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Detailed')
-		nmeth2select(hic, this.detailview)
-		matrixType2select(this.detailview, this)
+		nmeth2select(hic, this.detailview, true)
+		matrixType2select(this.detailview, this, true)
 
 		this.ingenome = false
 		this.inchrpair = false
@@ -754,8 +776,8 @@ class Hicstat {
 
 	async init_horizontalView(hic: any, chrx: string, chry: string, x: number, y: number) {
 		this.dom.controlsDiv.view.text('Horizontal')
-		nmeth2select(hic, this.horizontalview)
-		matrixType2select(this.horizontalview, this)
+		nmeth2select(hic, this.horizontalview, true)
+		matrixType2select(this.horizontalview, this, true)
 
 		this.dom.plotDiv.xAxis.selectAll('*').remove()
 		this.dom.plotDiv.yAxis.selectAll('*').remove()
@@ -827,6 +849,9 @@ class Hicstat {
 		this.dom.controlsDiv.detailViewBtn.style('display', 'block').on('click', async () => {
 			await this.init_detailView(hic, chrx, chry, x, y)
 		})
+
+		this.dom.infoBarDiv.colorScaleDiv.style('display', 'none')
+		this.dom.infoBarDiv.colorScaleLabel.style('display', 'none')
 	}
 
 	debug() {
@@ -1017,7 +1042,7 @@ async function colorizeGenomeElements(self: any) {
 			const leadpx = Math.floor(plead / self.genomeview.resolution) * self.genomeview.binpx
 			const followpx = Math.floor(pfollow / self.genomeview.resolution) * self.genomeview.binpx
 			obj.data.push([leadpx, followpx, value])
-			colorizeElement(leadpx, followpx, value, obj, self.genomeview)
+			colorizeElement(leadpx, followpx, value, self.genomeview, self, obj)
 		}
 		obj.img.attr('xlink:href', obj.canvas.toDataURL())
 		if (obj.canvas2) {
@@ -1283,16 +1308,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		setViewCutoff(vlst, self.chrpairview, self)
 
 		for (const [x, y, v] of self.chrpairview.data) {
-			//Show red for positive values and blue for negative values
-			if (v >= 0) {
-				const p =
-					v >= self.chrpairview.bpmaxv ? 0 : Math.floor((255 * (self.chrpairview.bpmaxv - v)) / self.chrpairview.bpmaxv)
-				ctx.fillStyle = `rgb(255, ${p}, ${p})`
-			} else {
-				const p = Math.floor((255 * (self.chrpairview.bpmaxv + v)) / self.chrpairview.bpmaxv)
-				ctx.fillStyle = `rgb(${p}, ${p}, 255)`
-			}
-			ctx.fillRect(x, y, binpx, binpx)
+			colorizeElement(x, y, v, self.chrpairview, self, ctx)
 		}
 	} catch (err: any) {
 		self.errList.push(err.message || err)
@@ -1306,13 +1322,19 @@ export async function getdata_chrpair(hic: any, self: any) {
  * set normalization method from <select>
  * @param hic
  * @param v view object in self
+ * @param init true if called during view init
  * @returns
  */
 
-export function nmeth2select(hic: any, v: any) {
+export function nmeth2select(hic: any, v: any, init?: boolean) {
 	const options = hic.nmethselect.node().options
 	if (!options) return //When only 'NONE' is available
-	const selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value) as any
+	let selectedNmeth: any
+	if (init) {
+		selectedNmeth = Array.from(options).find((o: any) => o.value === hic.nmethselect.node().value)
+	} else {
+		selectedNmeth = Array.from(options).find((o: any) => o.value === v.nmeth)
+	}
 	selectedNmeth.selected = true
 	v.nmeth = selectedNmeth.value
 }
@@ -1329,12 +1351,16 @@ async function detailViewUpdateRegionFromBlock(hic: any, self: any) {
  * Identifies the selected matrix type from the dropdown and sets it to the view object
  * @param v view object within self (e.g. self.genomeView) Each view object has its own matrixType
  * @param self
+ * @param init true if called during view init
  */
-export function matrixType2select(v: any, self: any) {
+export function matrixType2select(v: any, self: any, init?: boolean) {
 	const options = self.dom.controlsDiv.matrixType.node().options
-	const selectedOption = Array.from(options).find(
-		(o: any) => o.value === self.dom.controlsDiv.matrixType.node().value
-	) as any
+	let selectedOption: any
+	if (init) {
+		selectedOption = Array.from(options).find((o: any) => o.value === self.dom.controlsDiv.matrixType.node().value)
+	} else {
+		selectedOption = Array.from(options).find((o: any) => o.value === v.matrixType)
+	}
 	selectedOption.selected = true
 	v.matrixType = selectedOption.value
 }
@@ -1349,6 +1375,8 @@ export function matrixType2select(v: any, self: any) {
  * @returns
  */
 async function detailViewUpdateHic(hic: any, self: any) {
+	self.dom.infoBarDiv.colorScaleLabel.style('display', '')
+	self.dom.infoBarDiv.colorScaleDiv.style('display', '')
 	const xstart = self.x.start
 	const xstop = self.x.stop
 	const ystart = self.y.start
@@ -1369,7 +1397,7 @@ async function detailViewUpdateHic(hic: any, self: any) {
 		if (!xfragment) {
 			// use bpresolution, not fragment
 			self.detailview.resolution = resolution
-			self.dom.controlsDiv.resolution.text(common.bplen(resolution) + ' bp')
+			self.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 			// fixed bin size only for bp bins
 			self.detailview.xbinpx = self.detailview.canvas.attr('width') / ((xstop - xstart) / resolution!)
 			self.detailview.ybinpx = self.detailview.canvas.attr('height') / ((ystop - ystart) / resolution!)
@@ -1422,7 +1450,7 @@ async function detailViewUpdateHic(hic: any, self: any) {
 				if (resolution == null) {
 					resolution = hic.fragresolution[hic.fragresolution.length - 1]
 				}
-				self.dom.controlsDiv.resolution.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
+				self.dom.infoBarDiv.resolution.text(resolution! > 1 ? resolution + ' fragments' : 'single fragment')
 				self.detailview.resolution = resolution
 			}
 		}
@@ -1558,14 +1586,17 @@ export function getdata_detail(hic: any, self: any) {
 				//firstisx = hic.genome.chrlookup[chrx.toUpperCase()].len > hic.genome.chrlookup[chry.toUpperCase()].len
 			}
 
-			const lst: any = []
+			const lst = [] as number[][]
 			let err = 0
-			let maxv = 0
+			// let maxv = 0
 
+			const vlst = [] as number[]
 			for (const [n1, n2, v] of data.items) {
 				/*
 			genomic position and length of either the bin, or the fragment
 			*/
+				vlst.push(v)
+
 				let coord1, coord2, span1, span2
 
 				if (fg) {
@@ -1630,7 +1661,7 @@ export function getdata_detail(hic: any, self: any) {
 					span2 = resolution
 				}
 
-				maxv = Math.max(v, maxv)
+				// maxv = Math.max(v, maxv)
 
 				if (isintrachr) {
 					if (coord1 > xstart - span1 && coord1 < xstop && coord2 > ystart - span2 && coord2 < ystop) {
@@ -1667,20 +1698,15 @@ export function getdata_detail(hic: any, self: any) {
 			}
 			// done all lines
 
-			maxv *= 0.8
+			// maxv *= 0.8
 
-			self.detailview.bpmaxv = maxv
-			self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
+			// self.detailview.bpmaxv = maxv
+			// self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
+
+			setViewCutoff(vlst, self.detailview, self)
 
 			for (const [x, y, w, h, v] of lst) {
-				if (v >= 0) {
-					const p = v >= maxv ? 0 : Math.floor((255 * (maxv - v)) / maxv)
-					ctx.fillStyle = `rgb(255, ${p}, ${p})`
-				} else {
-					const p = Math.floor((255 * (maxv + v)) / maxv)
-					ctx.fillStyle = `rgb(${p}, ${p}, 255)`
-				}
-				ctx.fillRect(x, y, w, h)
+				colorizeElement(x, y, v, self.detailview, self, ctx, w, h)
 			}
 
 			self.detailview.data = lst
@@ -1731,29 +1757,67 @@ export function hicparsefragdata(items: any) {
  * Also could invesigate consolidating the hic data fetches into a single function
  */
 
-/**
- *
+/** Calculates the cutoff from the server response and sets the view object's bpmaxv
+ * @param vlst array of values
  * @param view view object within self (e.g. self.genomeView)
+ * @param self
  */
 export async function setViewCutoff(vlst: any, view: any, self: any) {
-	const maxv = vlst.sort((a: number, b: number) => a - b)[Math.floor(vlst.length * 0.99)] as number
+	const sortedVlst = vlst.sort((a: number, b: number) => a - b)
+	const maxv = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
 	view.bpmaxv = maxv
 	self.dom.controlsDiv.inputBpMaxv.property('value', view.bpmaxv)
-}
 
-function colorizeElement(leadpx: number, followpx: number, v: number, obj: any, view: any) {
+	if (sortedVlst[0] < 0) {
+		self.colorScale.bar.startColor = self.colorBar.startColor = 'blue'
+		self.colorScale.data = [sortedVlst[0], maxv]
+	} else {
+		self.colorScale.bar.startColor = self.colorBar.startColor = 'white'
+		self.colorScale.data = [0, maxv]
+	}
+
+	self.colorScale.updateScale()
+}
+//Super messy, need to clean up
+function colorizeElement(
+	leadpx: number,
+	followpx: number,
+	v: number,
+	view: any,
+	self: any,
+	obj: any,
+	width?: number,
+	height?: number
+) {
 	if (v >= 0) {
 		// positive or zero, use red
 		const p = v >= view.bpmaxv ? 0 : Math.floor((255 * (view.bpmaxv - v)) / view.bpmaxv)
-		obj.ctx.fillStyle = `rgb(255, ${p}, ${p})`
-		if (obj.ctx2) obj.ctx2.fillStyle = `rgb(255, ${p}, ${p})`
+		const positiveFill = `rgb(255, ${p}, ${p})`
+		if (self.ingenome == true) {
+			obj.ctx.fillStyle = positiveFill
+			obj.ctx2.fillStyle = positiveFill
+		} else {
+			/** ctx for the chrpair and detail view */
+			obj.fillStyle = positiveFill
+		}
 	} else {
 		// negative, use blue
 		const p = Math.floor((255 * (view.bpmaxv + v)) / view.bpmaxv)
-		obj.ctx.fillStyle = `rgb(${p}, ${p}, 255)`
-		if (obj.ctx2) obj.ctx2.fillStyle = `rgb(${p}, ${p}, 255)`
+		const negativeFill = `rgb(${p}, ${p}, 255)`
+		if (self.ingenome == true) {
+			obj.ctx.fillStyle = negativeFill
+			obj.ctx2.fillStyle = negativeFill
+		} else {
+			obj.fillStyle = negativeFill
+		}
 	}
+	const w = width || view.binpx
+	const h = height || view.binpx
 
-	obj.ctx.fillRect(followpx, leadpx, view.binpx, view.binpx)
-	if (obj.ctx2) obj.ctx2.fillRect(leadpx, followpx, view.binpx, view.binpx)
+	if (self.ingenome == true) {
+		obj.ctx.fillRect(followpx, leadpx, w, h)
+		obj.ctx2.fillRect(leadpx, followpx, w, h)
+	} else {
+		obj.fillRect(followpx, leadpx, w, h)
+	}
 }

@@ -2,10 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.40.5
+
+Fixes:
+- do not redispatch a plot_splice from the oncomatrix and gene expression launchers
+
+## 2.40.4
+
+Fixes:
+- Hide the undo/redo buttons until a more thorough fix is implemented for the oncomatrix and gene expression
+
+## 2.40.3
+
+Fixes:
+- Matrix must skip data processing steps after detecting stale action, to avoid confusing rerenders   
+
+## 2.40.2
 
 Fixes:
 - Fix OncoMatrix and hierCluster brushing and list samples issue
+- refresh the case count when there is no matching oncomatrix data
+- pass opts.hierCluster in the launcher to handle create cohort
+- hide the svg on error or matching data
+- darken table2col row titles to meet Section 508 contrast requirements
+- do not show the option to replace a gene expression/hierCluster term
 
 
 ## 2.40.1

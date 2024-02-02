@@ -245,6 +245,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let alternate_forward_count, alternate_reverse_count, reference_forward_count, reference_reverse_count
 	for (let item of rust_output_list) {
 		if (item.includes('Final_output:')) {
+			console.log(248, item)
 			final_output = JSON.parse(JSON.parse(item.replace('Final_output:', '')))
 		} else if (refalleles.length == 1 && item.includes('fisher_strand:')) {
 			fisher_strand_output = JSON.parse(item.replace('fisher_strand:', ''))
