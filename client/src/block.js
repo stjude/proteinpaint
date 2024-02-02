@@ -566,8 +566,10 @@ export class Block {
 
 				const headers = {
 					'Content-Type': 'application/json',
-					Accept: 'application/json',
-					'X-Auth-Token': tk.gdcToken
+					Accept: 'application/json'
+				}
+				if (tk.gdcToken) {
+					headers['X-Auth-Token'] = tk.gdcToken
 				}
 				const lst = [
 					'clientdownloadgdcslice=1',
