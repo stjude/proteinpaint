@@ -68,6 +68,7 @@ export async function init(arg, holder, genomes) {
 		if (!Number.isInteger(settings.hierCluster.maxGenes)) settings.hierCluster.maxGenes = 100
 
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
+		let plot_spliced = false
 
 		const plotAppApi = await appInit({
 			holder: select(arg.holder).select('.sja_root_holder'),
@@ -106,6 +107,9 @@ export async function init(arg, holder, genomes) {
 					`)
 				},
 				callback(genesetCompApi, twlst) {
+					// this callback may be called more than once as a user changes a GDC cohort initially,
+					// need to avoid re-deleting/re-creating plots
+					if (plot_spliced || !genesetCompApi) return
 					plotAppApi.dispatch({
 						type: 'plot_splice',
 						subactions: [

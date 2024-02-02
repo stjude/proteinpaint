@@ -1,3 +1,2 @@
 Fixes:
-- hide the undo/redo buttons until a more thorough fix is implemented for the oncomatrix and gene expression
-- Refactor and improve GDC BAM slicing logic
+- Refactor and improve backend GDC BAM slicing logic
