@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.40.3
 
 Fixes:
 - Matrix must skip data processing steps after detecting stale action, to avoid confusing rerenders   
