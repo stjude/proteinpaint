@@ -38,15 +38,11 @@ export function makeDensityPlot(opts) {
 	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
 
 	//density data, add first and last values to array
-	const density_data = data.density
-	density_data.unshift([data.minvalue, 0])
-	density_data.push([data.maxvalue, 0])
 
 	// x-axis
 	const xscale = scaleLinear()
 		.domain([data.minvalue, data.maxvalue])
 		.range([xpad, width - xpad])
-
 	let min = data.minvalue
 	let max = data.maxvalue
 	const vc = term?.valueConversion
@@ -80,7 +76,7 @@ export function makeDensityPlot(opts) {
 		.curve(curveMonotoneX)
 	// plot the data as a line
 	g.append('path')
-		.datum(density_data)
+		.datum(data.density)
 		.attr('class', 'line')
 		.attr('d', line)
 		.style('fill', '#eee')

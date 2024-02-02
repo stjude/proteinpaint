@@ -317,6 +317,7 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
+			isKDE: true,
 			ticks: s.ticks,
 			bandwidth: s.bandwidth
 		}
