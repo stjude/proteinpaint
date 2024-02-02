@@ -69,6 +69,7 @@ async function getHierClusterApp(_opts = {}) {
 	// mock requestData() directly on the instance itself and without modifying the HierCluster.prototype
 	hc.requestData = requestData
 	const termgroups = structuredClone(hc.config.termgroups)
+	termgroups[0].type = 'hierCluster'
 	termgroups[0].lst = await Promise.all(
 		(_opts.genes || []).map(async g =>
 			fillTermWrapper({
@@ -121,7 +122,7 @@ tape('avoid race condition', async test => {
 		await fillTermWrapper({ term: { name: 'AKT1', type: 'geneVariant' } }),
 		await fillTermWrapper({ term: { name: 'TP53', type: 'geneVariant' } })
 	]
-	const responseDelay = 10
+	const responseDelay = 15
 	hc.__wait = responseDelay
 	await Promise.all([
 		app.dispatch({
