@@ -158,6 +158,7 @@ export class Matrix {
 			// must remember the previous state right away, so that subsequent computeStateDiffs
 			// has the correct reference in case of errors
 			this.prevState = this.state
+			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
 
 			// may skip data requests when changes are not expected to affect the request payload

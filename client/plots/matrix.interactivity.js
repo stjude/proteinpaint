@@ -441,7 +441,7 @@ function setTermActions(self) {
 	}
 
 	self.getMenuOptions = function (t) {
-		return self.chartType == 'hierCluster' && t.grp.name === self.config.settings.hierCluster?.termGroupName
+		return self.config.chartType == 'hierCluster' && t.grp.type === 'hierCluster'
 			? '{remove,}'
 			: t.tw.term.type == 'geneVariant'
 			? '{replace,remove}'
