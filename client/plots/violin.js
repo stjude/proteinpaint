@@ -101,6 +101,14 @@ class ViolinPlot {
 				]
 			},
 			{
+				boxLabel: 'Yes',
+				label: 'Use KDE',
+				type: 'checkbox',
+				chartType: 'violin',
+				settingsKey: 'isKDE',
+				title: `If selected uses the KDE method, otherwise uses a histogram`
+			},
+			{
 				label: 'Data symbol',
 				title: 'Symbol type',
 				type: 'radio',
@@ -261,6 +269,8 @@ class ViolinPlot {
 		const arg = this.validateArg()
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
+		console.log(this.data)
+
 		if (this.settings.plotThickness == undefined) {
 			const thickness = this.data.plots.length == 1 ? 300 : 150
 			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, thickness)
@@ -306,6 +316,7 @@ class ViolinPlot {
 	validateArg() {
 		const { term, term2, settings } = this.config
 		const s = this.settings
+		console.log(s.isKDE)
 		const arg = {
 			filter: this.state.termfilter.filter,
 			svgw: s.svgw / window.devicePixelRatio,
@@ -317,7 +328,7 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			isKDE: true,
+			isKDE: s.isKDE,
 			ticks: s.ticks,
 			bandwidth: s.bandwidth
 		}
@@ -372,7 +383,8 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		medianThickness: 3,
 		ticks: 20,
 		bandwidth: 5,
-		defaultColor: plotColor
+		defaultColor: plotColor,
+		isKDE: true
 	}
 	return Object.assign(defaults, overrides)
 }
