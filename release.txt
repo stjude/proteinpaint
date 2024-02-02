@@ -1,1 +1,2 @@
-
+Fixes:
+- darken table2col row titles to meet Section 508 contrast requirements
