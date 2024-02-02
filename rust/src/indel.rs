@@ -1,7 +1,7 @@
 // Syntax: cd .. && cargo build --release
 
 // Test case below:
-//Debug syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | ~/proteinpaint/rust/target/release/indel
+//Debug syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | ~/sjpp/proteinpaint/rust/target/release/indel
 
 // Strictness:
 //   0: No postprocessing, pure indel typing results
@@ -1356,7 +1356,12 @@ fn main() {
                     //let mut output_string = "[".to_string();
                     //output_string += &all_alleles.to_string();
                     output_string.pop();
-                    output_string += &"]".to_string();
+                    if output_string.len() == 0 {
+                        // Pass empty JSON "[]" when no reads are passed back to nodejs
+                        output_string = "[]".to_string();
+                    } else {
+                        output_string += &"]".to_string();
+                    }
                     println!("Final_output:{:?}", output_string);
                 }
                 Err(error) => println!("Incorrect json: {}", error),
