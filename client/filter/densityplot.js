@@ -1,4 +1,4 @@
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, format, extent } from 'd3'
+import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, format } from 'd3'
 
 /*
 	opts{}
@@ -42,7 +42,6 @@ export function makeDensityPlot(opts) {
 	density_data.unshift([data.minvalue, 0])
 	density_data.push([data.maxvalue, 0])
 
-	const [densityMin, densityMax] = extent(density_data.map(d => d[1]))
 	// x-axis
 	const xscale = scaleLinear()
 		.domain([data.minvalue, data.maxvalue])
@@ -65,7 +64,7 @@ export function makeDensityPlot(opts) {
 
 	// y-scale
 	const yscale = scaleLinear()
-		.domain([densityMin, densityMax])
+		.domain([0, data.densitymax])
 		.range([height + ypad, ypad])
 
 	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)

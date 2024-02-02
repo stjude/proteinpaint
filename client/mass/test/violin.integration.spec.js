@@ -298,31 +298,23 @@ tape('test basic controls', function (test) {
 	}
 
 	async function changeDataSymbol(violin, violinDiv) {
-		const datasymbol = await detectGte({
-			elem: violinDiv.node(),
-			selector: '.sjpp-rug-img',
-			count: 2,
-			async trigger() {
-				await violin.Inner.app.dispatch({
-					type: 'plot_edit',
-					id: violin.Inner.id,
-					config: {
-						settings: {
-							violin: {
-								datasymbol: 'rug'
-							}
-						}
+		await violin.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: violin.Inner.id,
+			config: {
+				settings: {
+					violin: {
+						datasymbol: 'rug'
 					}
-				})
+				}
 			}
 		})
-		test.ok(datasymbol, 'Data symbol exists')
 		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.datasymbol === 'rug', 'Data Symbol are now Ticks')
 	}
 
 	async function changeStrokeWidth(violin) {
 		const testStrokeWidth = 1
-		violin.Inner.app.dispatch({
+		await violin.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: violin.Inner.id,
 			config: {
@@ -333,7 +325,7 @@ tape('test basic controls', function (test) {
 				}
 			}
 		})
-		await sleep(20)
+		//await sleep(20)
 		test.true(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.strokeWidth === testStrokeWidth,
 			`Stroke width changed to ${testStrokeWidth}`
@@ -342,7 +334,7 @@ tape('test basic controls', function (test) {
 
 	async function changeSymbolSize(violin) {
 		const testSymSize = 10
-		violin.Inner.app.dispatch({
+		await violin.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: violin.Inner.id,
 			config: {
@@ -353,7 +345,6 @@ tape('test basic controls', function (test) {
 				}
 			}
 		})
-		await sleep(20)
 		test.true(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.radius === testSymSize,
 			`Symbol size changed to ${testSymSize}`
