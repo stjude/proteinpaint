@@ -184,6 +184,9 @@ export class Matrix {
 					if (e == 'no data') {
 						this.showNoMatchingDataMessage()
 						return
+					} else if (e == 'stale sequenceId') {
+						// ignore this error, but skip this update since a subsequent action is being processed
+						return
 					} else {
 						this.dom.svg.style('display', 'none')
 						throw e

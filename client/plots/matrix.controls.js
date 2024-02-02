@@ -69,7 +69,8 @@ export class MatrixControls {
 			//.property('disabled', d => d.disabled)
 			.datum({
 				label: l.Samples || `Samples`,
-				getCount: () => ('sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder.length),
+				getCount: () =>
+					'sampleCount' in this.overrides ? this.overrides.sampleCount : this.parent.sampleOrder?.length || 0,
 				rows: [
 					{
 						label: `Sort ${l.Samples}`,
@@ -176,7 +177,7 @@ export class MatrixControls {
 			//.property('disabled', d => d.disabled)
 			.datum({
 				label: 'Genes',
-				getCount: () => this.parent.termOrder.filter(t => t.tw.term.type == 'geneVariant').length,
+				getCount: () => this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length || 0,
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{

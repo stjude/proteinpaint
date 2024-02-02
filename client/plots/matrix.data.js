@@ -150,7 +150,7 @@ export async function setData(_data) {
 	if (this.api.notes('actionSequenceId') !== actionSequenceId) {
 		// (an)other state change(s) has been dispatched between the start and completion of the server request
 		console.warn('aborted state update, the server data corresponds to a stale action.sequenceId')
-		return
+		throw `stale sequenceId`
 	}
 	this.data = data
 	this.origData = structuredClone(this.data)
