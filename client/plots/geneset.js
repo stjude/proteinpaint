@@ -22,6 +22,7 @@ class GenesetComp {
 		this.dom = {
 			holder: opts.holder
 		}
+		this.sequenceId = 0
 	}
 
 	getState(appState) {
@@ -35,7 +36,13 @@ class GenesetComp {
 
 	async main() {
 		this.dom.holder.selectAll('*').remove()
+		//const actionSequenceId = this.api.notes('actionSequenceId')
 		const genes = await this.getGenes()
+		// if (this.api.notes('actionSequenceId') !== actionSequenceId) {
+		// 	// (an)other state change(s) has been dispatched between the start and completion of the server request
+		// 	console.warn('aborted state update, the server data corresponds to a stale action.sequenceId')
+		// 	return
+		// }
 		if (!genes?.length) this.render()
 		else
 			setTimeout(async () => {
