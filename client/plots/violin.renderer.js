@@ -317,7 +317,7 @@ export default function setViolinRenderer(self) {
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
 			.domain([densityMax, densityMin])
-			.range([-plotThickness * 0.45, 0])
+			.range([plotThickness * 0.45, 0])
 		let areaBuilder
 		if (isH) {
 			areaBuilder = line()
