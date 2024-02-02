@@ -130,10 +130,7 @@ export async function init(arg, holder, genomes) {
 					}
 				]
 			},
-			app: {
-				features: ['recover'],
-				callbacks: arg.opts?.app?.callbacks || {}
-			},
+			app: arg.opts?.app || {},
 			geneset: {
 				mode: 'mutation',
 				genome,

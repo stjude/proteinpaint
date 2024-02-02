@@ -89,10 +89,7 @@ export async function init(arg, holder, genomes) {
 					}
 				]
 			},
-			app: {
-				features: ['recover'],
-				callbacks: arg.opts?.app?.callbacks || {}
-			},
+			app: arg.opts?.app || {},
 			hierCluster: arg.opts?.hierCluster || {},
 			matrix: arg.opts?.matrix || {},
 			geneset: {
