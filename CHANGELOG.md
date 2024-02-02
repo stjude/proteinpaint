@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Fix OncoMatrix and hierCluster brushing and list samples issue
+- refresh the case count when there is no matching oncomatrix data
+- pass opts.hierCluster in the launcher to handle create cohort
+- hide the svg on error or matching data
 
 
 ## 2.40.1
