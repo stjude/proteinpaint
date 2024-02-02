@@ -2,8 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- do not redispatch a plot_splice from the oncomatrix and gene expression launchers
+
 ## 2.40.4
 
+Fixes:
+- Hide the undo/redo buttons until a more thorough fix is implemented for the oncomatrix and gene expression
 
 ## 2.40.3
 
