@@ -32,17 +32,17 @@ output:
 const { bin } = require('d3-array')
 import * as d3 from 'd3'
 
-export function getBinsDensity(scale, plot, ticks = 20, isKDE = true, bandwidth = 7) {
+export function getBinsDensity(scale, plot, ticks = 20, isKDE = false, bandwidth = 7) {
 	const [min, max] = scale.domain() //Min and max for all plots
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
 	const step = Math.abs(max - min) / ticks
 
 	if (valuesMin == valuesMax) return [{ x0: valuesMin, x1: valuesMax, density: 1 }]
-	let bins
-	if (isKDE) bins = kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMax, step)
-	else bins = getBinsHist(scale, plot.values, max, ticks)
-	bins.unshift({ x0: min, x1: min, density: 0 })
 
+	const bins = isKDE
+		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMax, step)
+		: getBinsHist(scale, plot.values, max, ticks)
+	bins.unshift({ x0: min, x1: min, density: 0 })
 	return bins
 }
 
@@ -51,6 +51,7 @@ function epanechnikov(bandwidth) {
 }
 
 function kde(kernel, thresholds, data, valuesMax, step) {
+	console.log('kde')
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
 	const bins = []
 	density.forEach(element => {
@@ -64,6 +65,7 @@ function kde(kernel, thresholds, data, valuesMax, step) {
 }
 
 function getBinsHist(scale, values, max, ticks) {
+	console.log('histogram')
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
 		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/

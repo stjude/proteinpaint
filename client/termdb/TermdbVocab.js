@@ -426,6 +426,7 @@ export class TermdbVocab extends Vocab {
 		// the violin plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
+
 		const body = Object.assign(
 			{
 				getViolinPlotData: 1,
@@ -433,6 +434,7 @@ export class TermdbVocab extends Vocab {
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
+				isKDE: arg.isKDE,
 				ticks: arg.ticks,
 				bandwith: arg.bandwidth
 			},

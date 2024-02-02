@@ -213,14 +213,18 @@ async function fillMenu(self, div, tvs) {
 // convert violin data (vd) to old density data (dd)
 export function convertViolinData(vd) {
 	const p = vd.plots[0] || { plotValueCount: 0, biggestBin: 0, bins: [] } // assuming only one plot
+	const bins = []
+	let densitymax = 0
+	p.bins.forEach(b => {
+		if (densitymax < b.density) densitymax = b.density
+		bins.push([b.x0, b.density])
+	})
 	const dd = {
 		minvalue: vd.min,
 		maxvalue: vd.max,
 		samplecount: p.plotValueCount,
-		densitymax: p.biggestBin,
-		density: p.bins.map(i => {
-			return [i.x0, i.density]
-		})
+		densitymax,
+		density: bins
 	}
 	return dd
 }
