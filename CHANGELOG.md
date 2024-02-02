@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.40.5
 
 Fixes:
 - do not redispatch a plot_splice from the oncomatrix and gene expression launchers
