@@ -41,8 +41,8 @@ export async function get_densityplot(term, samples) {
 		.range([xpad, xpad + width])
 
 	const bins = getBinsDensity(xscale, { values })
-	if (!Array.isArray(bins.bins)) throw 'violinBins does not return {bins[]}'
-	if (bins.bins.length == 0) throw 'violinBins {bins[]} empty array'
+	if (!Array.isArray(bins)) throw 'getBinsDensity does not return []'
+	if (bins.length == 0) throw 'getBinsDensity returns an empty array'
 
 	const result = {
 		minvalue,
@@ -52,7 +52,7 @@ export async function get_densityplot(term, samples) {
 		samplecount: values.length,
 		unit: term.unit
 	}
-	for (const b of bins.bins) {
+	for (const b of bins) {
 		if (!Number.isFinite(b.x0)) throw 'b.x0 not number'
 		if (!Number.isFinite(b.x1)) throw 'b.x1 not number'
 		if (!Number.isFinite(b.density)) throw 'b.density not number'

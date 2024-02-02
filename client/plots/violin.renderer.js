@@ -327,7 +327,6 @@ export default function violinRenderer(self) {
 				.x(d => svg.axisScale(d.x0))
 				.y(d => wScale(d.density))
 		}
-		console.log(plot.bins)
 
 		const label = plot.label.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
@@ -341,19 +340,13 @@ export default function violinRenderer(self) {
 		// : self.config.settings.violin.defaultColor
 		if (!plot.color) plot.color = color
 		if (category && !category.color) category.color = color
-		violinG
-			.append('path')
-			.attr('class', 'sjpp-vp-path')
-			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color)
-			.style('opacity', 0)
-			.attr('stroke', '#000')
-			.attr('stroke-width', 1)
-			.attr('stroke-linejoin', 'round')
-			// .transition()
-			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
-			// .duration(self.opts.mode == 'minimal' ? 0 : 600)
-			.style('opacity', '0.8')
-			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
+
+		renderArea(violinG, plot, areaBuilder)
+		renderArea(
+			violinG,
+			plot,
+			areaBuilder.y(d => -wScale(d.density))
+		)
 
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
 		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg, self)
@@ -372,6 +365,22 @@ export default function violinRenderer(self) {
 				.attr('y1', isH ? -s.medianLength : value)
 				.attr('y2', isH ? s.medianLength : value)
 		}
+	}
+
+	function renderArea(violinG, plot, areaBuilder) {
+		violinG
+			.append('path')
+			.attr('class', 'sjpp-vp-path')
+			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color)
+			.style('opacity', 0)
+			.attr('stroke', rgb(plot.color).darker())
+			.attr('stroke-width', 1)
+			.attr('stroke-linejoin', 'round')
+			// .transition()
+			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
+			// .duration(self.opts.mode == 'minimal' ? 0 : 600)
+			.style('opacity', '0.8')
+			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 	}
 
 	function renderSymbolImage(self, violinG, plot, isH, imageOffset) {

@@ -1,4 +1,4 @@
-import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, format, brushX } from 'd3'
+import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, format, brushX, extent } from 'd3'
 
 /*
 ********************** EXPORTED
@@ -29,7 +29,6 @@ export async function make_densityplot(holder, data, callabck, term) {
 	//density data, add first and last values to array
 	density_data.unshift([data.density_data.minvalue, 0])
 	density_data.push([data.density_data.maxvalue, 0])
-
 	let min = data.density_data.minvalue
 	let max = data.density_data.maxvalue
 	const xscale = scaleLinear()
@@ -50,10 +49,11 @@ export async function make_densityplot(holder, data, callabck, term) {
 	const x_axis = axisBottom().scale(xscaleTicks)
 
 	x_axis
+	const [densityMin, densityMax] = extent(density_data.map(d => d[1]))
 
 	// y-scale
 	const yscale = scaleLinear()
-		.domain([0, data.density_data.densitymax])
+		.domain([densityMin, densityMax])
 		.range([height + ypad, ypad])
 
 	const y_axis = axisLeft()
