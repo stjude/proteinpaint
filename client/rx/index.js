@@ -443,7 +443,6 @@ export function getComponentApi(self) {
 	const api = {
 		type: self.type,
 		id: self.id,
-		notes: key => notes[key],
 		async update(current) {
 			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
@@ -484,6 +483,23 @@ export function getComponentApi(self) {
 		},
 		getComponents(dotSepNames = '') {
 			return getComponents(self.components, dotSepNames)
+		},
+		//
+		// When an async function takes a while to resolve, such as for server requests,
+		// a subsequent action may trigger another request before the first one resolves,
+		// in that case should ignore the stale response/result from the async function.
+		// This is an api function so that code that has access to this component api
+		// can also tie-in a function call to the fresheness of the component action.
+		//
+		async detectStale(asyncFxn) {
+			const actionSequenceId = notes.actionSequenceId
+			const result = await asyncFxn()
+			if (notes.actionSequenceId !== actionSequenceId) {
+				// another state change has been dispatched between the start and completion of the server request
+				console.warn('aborted state update, the returned data corresponds to a stale action.sequenceId')
+				return [result, true]
+			}
+			return [result]
 		},
 		destroy() {
 			// delete references to other objects to make it easier

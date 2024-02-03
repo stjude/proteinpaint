@@ -143,15 +143,8 @@ export async function setData(_data) {
 			*/
 		opts.isHierCluster = 1
 	}
-	// track the actionSequenceId before the server request, which may be laggy
-	const actionSequenceId = this.api.notes('actionSequenceId')
-	const data = await this.app.vocabApi.getAnnotatedSampleData(opts, _data)
-	// only update the data if the corresponding state has not updated since the server request
-	if (this.api.notes('actionSequenceId') !== actionSequenceId) {
-		// (an)other state change(s) has been dispatched between the start and completion of the server request
-		console.warn('aborted state update, the server data corresponds to a stale action.sequenceId')
-		throw `stale sequenceId`
-	}
+	const [data, stale] = await this.api.detectStale(() => this.app.vocabApi.getAnnotatedSampleData(opts, _data))
+	if (stale) throw `stale sequenceId`
 	this.data = data
 	this.origData = structuredClone(this.data)
 	this.sampleIdMap = {}

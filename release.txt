@@ -1,1 +1,2 @@
-
+Fixes:
+- reliably detect stale async results using a rx component api method
