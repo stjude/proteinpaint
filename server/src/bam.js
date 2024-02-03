@@ -121,7 +121,7 @@ box {}
 
 *********************** function cascade
 
-download_gdc_bam  // For downloading gdc bam files
+downloadGdcBam2cacheFile_withDenial // download gdc bam slice and write to cache file securely and deny unauthorized access
 	get_gdc_bam
 		index_bam
 get_q
@@ -247,59 +247,88 @@ const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is re
 const bases = new Set(['A', 'T', 'C', 'G'])
 const gdcHashSecret = Math.random.toString()
 
+/**************************
+      gdc security
+***************************
+
+if a gdc file is used on client tk, every request (slice bam, view a bam, view a read etc) will carry both gdcFileUUID and gdcFilePosition
+
+when the slice file will be saved in cache, an encrypted file name is computed and assigned to req.query.file=str
+later when reading the file to load reads, detect:
+if( req.query.gdcFileUUID) {
+	file = join( cachedir_bam, req.query.file )
+} else {
+	file = join( tp, req.query.file )
+}
+if client send a computed cache file name only without uuid, the file name will be joined to wrong folder and inaccessible
+
+every request carrying gdcFileUUID will be checked against gdc api for access using token/session
+*/
 export default function (genomes) {
 	return async (req, res) => {
 		try {
-			// isFileSlice:true can only be set after verifying access on a gdc file
-			delete req.query.isFileSlice
-
 			if (req.query.gdcFileUUID) {
-				const ds = getGdcDs(genomes)
-				/* for every request with a gdc file uuid (slice bam, view a bam, view a read etc)
-				always make an api query to verify access to prevent unauthorized access
+				if (typeof req.query.gdcFileUUID != 'string') throw 'gdcFileUUID not string'
+				/****************************
+				!!! always make an api query to verify access to prevent unauthorized access !!!
+				****************************
+				credential is token (for use outside gdc portal) or sessionid (for use inside gdc portal)
+
+				req.query{} parameters:
+
+				gdcFileUUID: str
+				gdcFilePosition: str
+					this pair of parameters must both be set, as file position is the position where gdc bam is sliced against
+					both are required to do slicing
+					if the slice will be stored as a cache file, both are used to compute the file name
+					a different slice position will yield a different cache file name
+					position can be "chr.start.stop", or "unmapped" (see below)
+
+				downloadgdc:1
+					present at the initial query to slice bam, either viewing or download; not in subsequent queries
+
+				clientdownloadgdcslice:1
+					present on clicking download button in block
+
+				stream2download:true
+					present at slice to download (by streaming), no cache file is created
+					file position can be "unmapped" or coord
 				*/
-				const sessionid = req.cookies.sessionid
+
+				if (!req.query.gdcFilePosition) throw 'gdcFileUUID is present but gdcFilePosition is missing'
+				if (typeof req.query.gdcFilePosition != 'string') throw 'gdcFilePosition is not string'
+
+				// to access ds.getHostHeaders(), assign query.__genomes so later code can access gdc ds object as needed
+				req.query.__genomes = genomes
+				// because getHostHeaders() expects req.query.token;  should do getHostHeaders(req) and no need for this
+				// right now only gdc uses token. if another api source need it too, may move these lines up
 				const token = req.get('X-Auth-Token')
-				if (!token && !sessionid) throw 'GDC token or sessionid missing'
 				if (token) req.query.token = token
-				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid, ds, req.query)
+
+				await gdcCheckPermission(req.query.gdcFileUUID, getGdcDs(genomes), req.query)
 
 				// authorized! can proceed
 
 				if (req.query.stream2download) {
 					// TODO: move into a dedicated route /bam/gdc/stream ???
 					// download the slice directly to client, do not write to cache file (app runs in "download mode")
-					await streamGdcBam2response(res, req.query.gdcFilePosition, req.query.gdcFileUUID, ds, req.query)
+					await streamGdcBam2response(req, res)
 					return
 				}
 
-				/* compute persistent cache file name using uuid etc
-				cache file name is never revealed to client
-				*/
-
+				// compute persistent cache file name using uuid etc; cache file name is never revealed to client
 				req.query.file = getGDCcacheFileName(req)
-				req.query.isFileSlice = true
 			}
+
 			// TODO: move into a dedicated route /bam/gdc/cache ???
 			if (req.query.downloadgdc) {
-				const ds = getGdcDs(genomes)
-				// call gdc bam slicing api to slice the bam, save to cachedir
-				res.send(await download_gdc_bam(req, ds))
+				res.send(await downloadGdcBam2cacheFile_withDenial(req))
 				return
 			}
+
 			// TODO: move into a dedicated route /bam/gdc/download ???
 			if (req.query.clientdownloadgdcslice) {
-				const ds = getGdcDs(genomes)
-				// read the cached bam slice for client to download
-				if (!req.query.file || !req.query.isFileSlice) throw 'invalid query'
-				const file = path.join(serverconfig.cachedir_bam, req.query.file)
-				const data = await fs.promises.readFile(file)
-				res.writeHead(200, {
-					'Content-Type': 'application/octet-stream',
-					'Content-Disposition': 'attachment; filename=gdc.bam',
-					'Content-Length': data.length
-				})
-				res.end(Buffer.from(data, 'binary'))
+				await clientdownloadgdcsliceFromCache_withDenial(req, res)
 				return
 			}
 
@@ -311,6 +340,9 @@ export default function (genomes) {
 				res.send(await route_getread(genome, req))
 				return
 			}
+
+			// finished all routes that are not about rendering
+			// following is to deal with rendering requests
 
 			const starttime = serverconfig.debugmode ? new Date() : null
 
@@ -325,13 +357,26 @@ export default function (genomes) {
 	}
 }
 
+async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
+	if (!req.query.gdcFileUUID || !req.query.gdcFilePosition || !req.query.file) {
+		// dangerous: require all above so it must have gone through access checking
+		throw 'clientdownloadgdcslice: unauthorized access'
+	}
+	// read the cached bam slice for client to download
+	const file = path.join(serverconfig.cachedir_bam, req.query.file)
+	const data = await fs.promises.readFile(file)
+	res.writeHead(200, {
+		'Content-Type': 'application/octet-stream',
+		'Content-Disposition': 'attachment; filename=gdc.bam',
+		'Content-Length': data.length
+	})
+	res.end(Buffer.from(data, 'binary'))
+}
+
 function getGdcDs(genomes) {
-	const g = genomes.hg38
-	if (!g) throw 'hg38 missing'
-	const ds = g.datasets.GDC
-	if (!ds) throw 'hg38 GDC missing'
-	if (!mayReSliceFile) mayReSliceFile = get_mayReSliceFile(ds)
-	return ds
+	const d = genomes.hg38?.datasets?.GDC
+	if (!d) throw 'hg38.datasets.GDC missing'
+	return d
 }
 
 async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
@@ -673,35 +718,31 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 	}
 }
 
+async function getFilefullpathOrUrl(req) {
+	if (req.query.gdcFileUUID) {
+		// is gdc bam slice, join with cache dir
+		const cachefile = path.join(serverconfig.cachedir_bam, req.query.file)
+		// before the file is accessed, test if missing! if so re-slice in case the query runs on a different worker..
+		await mayReSliceFile(req, cachefile)
+		return [cachefile, null]
+	}
+	// not gdc file; either a file (join with tp/) or url
+	const [e, _file, isurl] = utils.fileurl(req)
+	if (e) throw e
+	const dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
+	return [_file, dir]
+}
+
 async function get_q(genome, req) {
-	let q
-	if (req.query.isFileSlice) {
-		q = {
-			genome,
-			file: path.join(serverconfig.cachedir_bam, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
-			asPaired: req.query.asPaired,
-			getcolorscale: req.query.getcolorscale,
-			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
-		}
-
-		await mayReSliceFile(req, q.file)
-	} else {
-		const [e, _file, isurl] = utils.fileurl(req)
-		if (e) throw e
-
-		// a query object to collect all the bits
-		q = {
-			genome,
-			file: _file, // may change if is url
-			asPaired: req.query.asPaired,
-			getcolorscale: req.query.getcolorscale,
-			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
-		}
-		if (isurl) {
-			q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
-		}
+	const [filefullpath, dir] = await getFilefullpathOrUrl(req)
+	const q = {
+		genome,
+		file: filefullpath,
+		dir,
+		asPaired: req.query.asPaired,
+		getcolorscale: req.query.getcolorscale,
+		//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
+		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 	}
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
@@ -808,33 +849,26 @@ then visualization requests goes to 2nd container, there the slice file is not f
 call this function to force download
 can delete this function when gdc containers share a cachedir
 */
-let mayReSliceFile
-function get_mayReSliceFile(ds) {
-	if (mayReSliceFile) throw `mayReSliceFile() is already set`
-
-	return async function (req, cachefile) {
-		/* uncomment these two lines to test on local
-		await fs.promises.unlink(cachefile)
-		await fs.promises.unlink(cachefile+'.bai')
-		*/
-
-		try {
-			if (!(await utils.file_not_exist(cachefile))) {
-				// bam file exists
-				return
-			}
-
-			// slice file not found; force to download slice here
-
-			if (!req.query.gdcFilePosition) throw '.gdcFilePosition missing'
-			const bakRegions = req.query.regions
-			const tmp = req.query.gdcFilePosition.split('.')
-			req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
-			await download_gdc_bam(req, ds)
-			req.query.regions = bakRegions
-		} catch (e) {
-			throw e
+async function mayReSliceFile(req, cachefile) {
+	/* uncomment these two lines to test on local
+	await fs.promises.unlink(cachefile)
+	await fs.promises.unlink(cachefile+'.bai')
+	*/
+	try {
+		if (!(await utils.file_not_exist(cachefile))) {
+			// bam file exists
+			return
 		}
+
+		// slice file not found; force to download slice here
+
+		const bakRegions = req.query.regions
+		const tmp = req.query.gdcFilePosition.split('.')
+		req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
+		await downloadGdcBam2cacheFile_withDenial(req)
+		req.query.regions = bakRegions
+	} catch (e) {
+		throw e
 	}
 }
 
@@ -3015,16 +3049,8 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop, lst // array of reads to be returned
-
-	if (req.query.isFileSlice) {
-		_file = path.join(serverconfig.cachedir_bam, req.query.file)
-		await mayReSliceFile(req, _file)
-	} else {
-		;[e, _file, isurl] = utils.fileurl(req)
-		if (e) throw e
-		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
-	}
+	const [_file, dir] = await getFilefullpathOrUrl(req)
+	let firstseg, lastseg, readstart, readstop, lst // array of reads to be returned
 
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
@@ -3412,7 +3438,12 @@ req{}
 
 function is also called during visualization requests
 */
-async function download_gdc_bam(req, ds) {
+async function downloadGdcBam2cacheFile_withDenial(req) {
+	if (!req.query.gdcFileUUID || !req.query.gdcFilePosition || !req.query.file) {
+		// since this function can be directly triggered by a request flag irrespetive whether gdc properties are present, must check to be sure
+		throw 'cannot download GDC BAM slice: request is unauthorized'
+	}
+
 	// query gdc bam slicing api using the uuid of one bam file
 	// download one bam slice for each region
 	const regions = req.query.regions
@@ -3424,31 +3455,32 @@ async function download_gdc_bam(req, ds) {
 			r.start,
 			r.stop,
 			req.query.gdcFileUUID,
-			getGDCcacheFileName(req),
-			ds,
-			req.query
+			getGDCcacheFileName(req), // XXX same file name is computed for multiple regions FIXME need multi-region support e.g. gdcFilePosition may be an array??
+			// NOTE FUTURE SOLUTION
+			// should use one slice file for multi region view. find a way to concatenate sliced reads from multiple regions into one cache file
+			req
 		)
 		gdc_bam_filenames.push({ filesize })
 	}
 	return gdc_bam_filenames
 }
 
-async function streamGdcBam2response(res, regionStr, gdcFileUUID, ds, q) {
-	const { host, headers } = ds.getHostHeaders(q)
+async function streamGdcBam2response(req, res) {
+	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false // see comments in get_gdc_bam()
-	const url = path.join(host.rest, '/slicing/view/', gdcFileUUID + '?region=' + regionStr)
+	const url = path.join(host.rest, '/slicing/view/', req.query.gdcFileUUID + '?region=' + req.query.gdcFilePosition)
 	res.statusCode = 200
 	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
 
-async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, ds, q) {
+async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
 	// Also:
 	// since the expected response is binary data, should not set Accept: application/json as a request header
 	// also no body is submitted with a GET request, should not set a Content-type request header
-	const { host, headers } = ds.getHostHeaders(q)
+	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
 	const url = host.rest + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop

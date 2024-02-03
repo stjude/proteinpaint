@@ -372,14 +372,14 @@ async function mayCheckPermissionWithFileAndSession(bamdata, req, ds) {
 	// check user's permission, if no, set a flag
 	// assumption is that when user has access to a case, the user can access all bam files from the case (thus no need to check every file in file_metadata[]
 	try {
-		await gdcCheckPermission(bamdata.file_metadata[0].file_uuid, null, sessionid, ds, req.query)
+		await gdcCheckPermission(bamdata.file_metadata[0].file_uuid, ds, req.query)
 	} catch (e) {
 		if (e == 'Permission denied') bamdata.userHasNoAccess = true
 	}
 }
 
-export async function gdcCheckPermission(gdcFileUUID, token, sessionid, ds, q) {
-	const { host, headers } = ds.getHostHeaders(q)
+export async function gdcCheckPermission(gdcFileUUID, ds, reqQuery) {
+	const { host, headers } = ds.getHostHeaders(reqQuery)
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
 	// since the expected response is binary data, should not set Accept: application/json as a request header
