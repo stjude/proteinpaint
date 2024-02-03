@@ -1,3 +1,1 @@
-Fixes:
-- BAM track in variant-typing mode, read group header clicking is disabled due to known issue with GFF
-- GDC BAM slicing will reject if range>=50kb to be safe
+

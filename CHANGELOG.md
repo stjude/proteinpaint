@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Refactor and improve backend GDC BAM slicing logic
+- BAM track in variant-typing mode, read group header clicking is disabled due to known issue with GFF
+- GDC BAM slicing will reject if range>=50kb to be safe
 
 
 ## 2.40.5
