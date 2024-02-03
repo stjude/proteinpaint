@@ -1,1 +1,2 @@
-
+Fixes:
+- BAM track in variant-typing mode, read group header clicking is disabled due to known issue with GFF
