@@ -5,9 +5,6 @@ import * as rx from '../index.js'
  reusable helper functions
 **************************/
 
-// to run, at /client/, do below:
-// rm -f ../public/bin/bundle.*; npx browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/core*.spec.js | npx tape-run --static ../public
-
 class TestApp {
 	constructor(opts) {
 		this.type = 'app'
@@ -86,12 +83,12 @@ class TestPart {
  test sections
 ***************/
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- rx.core -***-')
 	test.end()
 })
 
-tape('getOpts', function(test) {
+tape('getOpts', function (test) {
 	// this app object will be its own appApi
 	const app = {
 		opts: {
@@ -121,7 +118,7 @@ tape('getOpts', function(test) {
 	test.end()
 })
 
-tape('getInitFxn', function(test) {
+tape('getInitFxn', function (test) {
 	test.equal(typeof rx.getInitFxn, 'function', 'should be an rx.function')
 
 	const appInit0 = rx.getInitFxn(
@@ -159,7 +156,7 @@ tape('getInitFxn', function(test) {
 	test.end()
 })
 
-tape('getStoreApi', function(test) {
+tape('getStoreApi', function (test) {
 	test.equal(typeof rx.getStoreApi, 'function', 'should be an rx.function')
 
 	const storeInit = rx.getInitFxn(TestStore)
@@ -177,7 +174,7 @@ tape('getStoreApi', function(test) {
 	test.end()
 })
 
-tape('getComponentApi', function(test) {
+tape('getComponentApi', function (test) {
 	test.equal(typeof rx.getComponentApi, 'function', 'should be an rx.function')
 
 	const partInit = rx.getInitFxn(TestPart)
@@ -196,10 +193,11 @@ tape('getComponentApi', function(test) {
 	test.equal(typeof part0.update, 'function', 'should provide an update() method')
 	test.equal(typeof part0.on, 'function', 'should provide an on() method')
 	test.equal(typeof part0.getComponents, 'function', 'should provide a getComponents() method')
+	test.equal(typeof part0.detectStale, 'function', 'should provide a detectStale() method')
 	test.end()
 })
 
-tape('getAppApi', function(test) {
+tape('getAppApi', function (test) {
 	test.equal(typeof rx.getAppApi, 'function', 'should be an rx.function')
 
 	const appInit = rx.getInitFxn(TestApp)
@@ -221,7 +219,7 @@ tape('getAppApi', function(test) {
 	reactive update flow calls various rx apis
 	and methods
 */
-tape('Reactive flow', async function(test) {
+tape('Reactive flow', async function (test) {
 	test.timeoutAfter(100)
 	test.plan(8)
 
@@ -300,7 +298,7 @@ tape('Reactive flow', async function(test) {
 			'dispatch() should trigger component.api.update() but not necessarily component.main()'
 		)
 	}
-	comp2.main = function(state, data) {
+	comp2.main = function (state, data) {
 		test.fail(`must not trigger component.main() when its type's reactsTo.prefix is not matched`)
 	}
 	await app.dispatch(action_fake)
@@ -334,7 +332,7 @@ tape('Reactive flow', async function(test) {
 	await app.dispatch(action_edit)
 })
 
-tape('copyMerge', function(test) {
+tape('copyMerge', function (test) {
 	const target = {
 		setting: {
 			color: 'red'
