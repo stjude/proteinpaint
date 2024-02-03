@@ -295,8 +295,7 @@ export default function (genomes) {
 					file position can be "unmapped" or coord
 				*/
 
-				if (!req.query.gdcFilePosition) throw 'gdcFileUUID is present but gdcFilePosition is missing'
-				if (typeof req.query.gdcFilePosition != 'string') throw 'gdcFilePosition is not string'
+				validateGdcFilePosition(req)
 
 				// to access ds.getHostHeaders(), assign query.__genomes so later code can access gdc ds object as needed
 				req.query.__genomes = genomes
@@ -371,6 +370,19 @@ async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
 		'Content-Length': data.length
 	})
 	res.end(Buffer.from(data, 'binary'))
+}
+
+function validateGdcFilePosition(req) {
+	if (!req.query.gdcFilePosition) throw 'gdcFileUUID is present but gdcFilePosition is missing'
+	if (typeof req.query.gdcFilePosition != 'string') throw 'gdcFilePosition is not string'
+	if (req.query.gdcFilePosition == 'unmapped') return // in download mode
+	// not in download mode. value should be a coord "chr2.29192773.29921586" or "chr16:31189077-31189197"
+	const tmp = req.query.gdcFilePosition.split(/[.:-]/)
+	if (tmp.length != 3) throw 'gdcFilePosition not 3 fields'
+	const start = Number(tmp[1]),
+		stop = Number(tmp[2])
+	if (!Number.isInteger(start) || !Number.isInteger(stop) || start > stop) throw 'gdcFilePosition invalid start/stop'
+	if (stop - start > 50000) throw 'Slice range exceeds 50 Kb limit. Please choose a smaller range.'
 }
 
 function getGdcDs(genomes) {
