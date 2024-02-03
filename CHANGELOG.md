@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Refactor and improve backend GDC BAM slicing logic
+
+
 ## 2.40.5
 
 Fixes:
