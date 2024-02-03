@@ -298,14 +298,8 @@ export class HierCluster extends Matrix {
 			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
 			this.termOrder?.find(t => t.grp.type == 'hierCluster')?.grp
 
-		// track the actionSequenceId before the server request, which may be laggy
-		const actionSequenceId = this.api.notes('actionSequenceId')
-		const d = await this.requestData()
-		if (this.api.notes('actionSequenceId') !== actionSequenceId) {
-			// (an)other state change(s) has been dispatched between the start and completion of the server request
-			console.warn('aborted state update, the server data corresponds to a stale action.sequenceId')
-			return
-		}
+		const [d, stale] = await this.api.detectStale(() => this.requestData())
+		if (stale) throw `stale sequenceId`
 		if (d.error) throw d.error
 		const s = this.settings.hierCluster
 		const twlst = this.hcTermGroup.lst

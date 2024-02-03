@@ -22,7 +22,6 @@ class GenesetComp {
 		this.dom = {
 			holder: opts.holder
 		}
-		this.sequenceId = 0
 	}
 
 	getState(appState) {
@@ -36,20 +35,18 @@ class GenesetComp {
 
 	async main() {
 		this.dom.holder.selectAll('*').remove()
-		//const actionSequenceId = this.api.notes('actionSequenceId')
-		const genes = await this.getGenes()
-		// if (this.api.notes('actionSequenceId') !== actionSequenceId) {
-		// 	// (an)other state change(s) has been dispatched between the start and completion of the server request
-		// 	console.warn('aborted state update, the server data corresponds to a stale action.sequenceId')
-		// 	return
-		// }
+		// do not await, since this main may be called as part of the initial dispatch
+		// in the app init(), and that app instance should return without having to wait
+		// for this component to finish the initial genes request and fully render
+		// NOTE: This is an important accomodation of rapid-fire cohort changes in the gdc portal
+		this.noWait()
+	}
+
+	async noWait() {
+		const [genes, stale] = await this.api.detectStale(() => this.getGenes())
+		if (stale) return
 		if (!genes?.length) this.render()
-		else
-			setTimeout(async () => {
-				// if there are genes on initial load, then allow the plotAppInit to complete
-				// by using a timeout here, otherwise it will be missing if the opts.callback() uses it
-				this.opts.callback(this.api, genes)
-			}, 0)
+		else this.opts.callback(this.api, genes)
 	}
 
 	async getGenes(filter) {

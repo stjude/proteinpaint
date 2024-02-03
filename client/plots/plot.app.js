@@ -129,7 +129,6 @@ class PlotApp {
 		}
 
 		for (const [index, plot] of this.state.plots.entries()) {
-			if (!plot.id) plot.id = `mds3bar_${+new Date()}_${Math.random()}`
 			if (!this.components.plots.find(p => p.id === plot.id)) {
 				const holder = this.dom.holder.append('div')
 				// quick fix to only track the plotDiv for the first plot
