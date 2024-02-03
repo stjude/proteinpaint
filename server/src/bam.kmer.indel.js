@@ -258,6 +258,8 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		}
 	}
 
+	if (final_output.length == 0) throw 'No reads available for variant typing'
+
 	let strand_significance = false
 	if (q.variant.length == 1 && strand_probability > fisher_test_threshold) {
 		// Check for strand significance only if one allele is defined by user
