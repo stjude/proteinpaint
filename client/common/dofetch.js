@@ -1,4 +1,5 @@
 import { select } from 'd3-selection'
+import { deepFreeze } from '#rx'
 
 const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
 const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
@@ -145,7 +146,19 @@ export function dofetch2(path, init = {}, opts = {}) {
 					// then the result may be another Promise instead of a data object,
 					// as observed when rapidly changing the gdc cohort filter
 					if (typeof result == 'object' && !(result instanceof Promise)) {
-						opts.serverData[dataName] = opts.cacheAs == 'decoded' ? Object.freeze(result) : res
+						// TODO: make decoded caching as default, since storing as a
+						// fetch Response interface can be problematic when the fetch is aborted
+						if (opts.cacheAs == 'decoded') {
+							// should prefer to store results as a deeply frozen object instead of a Response interface,
+							// but must not return the same object to be reused by different requests
+							opts.serverData[dataName] = deepFreeze(result)
+							result = structuredClone(result)
+						} else {
+							// per https://developer.mozilla.org/en-US/docs/Web/API/Response/clone,
+							// **should not use (.clone) to read very large bodies in parallel** at different speeds,
+							// may also mean(?) to not persist/store the Response for a long time as is being done here
+							opts.serverData[dataName] = res
+						}
 					}
 				} catch (e) {
 					delete opts.serverData[dataName]
