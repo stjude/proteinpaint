@@ -298,7 +298,8 @@ export class HierCluster extends Matrix {
 			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
 			this.termOrder?.find(t => t.grp.type == 'hierCluster')?.grp
 
-		const [d, stale] = await this.api.detectStale(() => this.requestData())
+		const abortCtrl = new AbortController()
+		const [d, stale] = await this.api.detectStale(() => this.requestData({ signal: abortCtrl.signal }), { abortCtrl })
 		if (stale) throw `stale sequenceId`
 		if (d.error) throw d.error
 		const s = this.settings.hierCluster
@@ -382,7 +383,7 @@ export class HierCluster extends Matrix {
 		}
 	}
 
-	async requestData() {
+	async requestData({ signal }) {
 		// temporary fix to get rid of hard/soft filter and only keep dictionary legend filter,
 		// soft filter shouldn't be used to filter out any samples for hierCluster
 		// TODO: add hard filter back to filter out samples
@@ -404,7 +405,7 @@ export class HierCluster extends Matrix {
 			filter: filterJoin([this.state.filter, dictionaryLegendFilter]),
 			filter0: this.state.filter0
 		}
-		return await dofetch3('termdb/cluster', { body })
+		return await dofetch3('termdb/cluster', { body, signal })
 	}
 
 	combineData() {

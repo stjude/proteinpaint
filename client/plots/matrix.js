@@ -163,7 +163,7 @@ export class Matrix {
 
 			// may skip data requests when changes are not expected to affect the request payload
 			if (this.stateDiff.nonsettings) {
-				this.dom.svg.style('opacity', 0.001)
+				this.dom.svg.style('opacity', 0.001).style('pointer-events', 'none')
 				// reset highlighted dendrogram children to black when data request is triggered
 				delete this.clickedChildren
 				try {
@@ -184,7 +184,7 @@ export class Matrix {
 					if (e == 'no data') {
 						this.showNoMatchingDataMessage()
 						return
-					} else if (e == 'stale sequenceId') {
+					} else if (e == 'stale sequenceId' || e.name == 'AbortError') {
 						// ignore this error, but skip this update since a subsequent action is being processed
 						return
 					} else {
@@ -220,7 +220,7 @@ export class Matrix {
 			if (this.plotDendrogramHclust) this.plotDendrogramHclust()
 			this.render()
 			this.dom.loadingDiv.style('display', 'none')
-			this.dom.svg.style('opacity', 1).style('display', '')
+			this.dom.svg.style('display', '').style('opacity', 1).style('pointer-events', '')
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
 			const d = this.dimensions
@@ -259,7 +259,9 @@ export class Matrix {
 	showNoMatchingDataMessage() {
 		this.forcedSampleCount = 0
 		this.dom.svg.style('opacity', 0.001).style('display', 'none')
-		this.controlsRenderer.main({ sampleCount: 0 })
+		// an error on initial load/data request will cause computed data/settings to be empty,
+		// which would cause input values to be empty for controls and likely thrown errors
+		if (this.termOrder && this.dimensions) this.controlsRenderer.main({ sampleCount: 0 })
 		this.dom.loadingDiv.html('')
 		const div = this.dom.loadingDiv
 			.append('div')

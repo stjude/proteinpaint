@@ -127,12 +127,14 @@ export async function setData(_data) {
 	if (this.config.divideBy) terms.push(this.config.divideBy)
 	this.numTerms = terms.length
 
+	const abortCtrl = new AbortController()
 	const opts = {
 		terms,
 		filter: this.state.filter,
 		filter0: this.state.filter0,
 		loadingDiv: this.chartType != 'hierCluster' && this.dom.loadingDiv,
-		maxGenes: this.state.config.settings.matrix.maxGenes
+		maxGenes: this.state.config.settings.matrix.maxGenes,
+		signal: abortCtrl.signal
 		//termsPerRequest: 100 // this is just for testing
 	}
 
@@ -143,7 +145,9 @@ export async function setData(_data) {
 			*/
 		opts.isHierCluster = 1
 	}
-	const [data, stale] = await this.api.detectStale(() => this.app.vocabApi.getAnnotatedSampleData(opts, _data))
+	const [data, stale] = await this.api.detectStale(() => this.app.vocabApi.getAnnotatedSampleData(opts, _data), {
+		abortCtrl
+	})
 	if (stale) throw `stale sequenceId`
 	this.data = data
 	this.origData = structuredClone(this.data)

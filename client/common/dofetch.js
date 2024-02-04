@@ -120,24 +120,38 @@ export function dofetch2(path, init = {}, opts = {}) {
 		to the usual request handling unless no credentials
 		are required or a valid session has already been established
 	*/
-	return mayShowAuthUi(init, url).then(() => {
+	return mayShowAuthUi(init, url).then(async () => {
 		if (!jwt) mayAddJwtToRequest(init, body, url)
 		const dataName = url + ' | ' + init.method + ' | ' + init.body
 
 		if (opts.serverData) {
-			if (!(dataName in opts.serverData)) {
-				// to-do: support opt.freeze to enforce Object.freeze(data.json())
-				opts.serverData[dataName] = fetch(url, init).then(res => {
-					const d = processResponse(res.clone())
-					if (typeof d != 'object') return res
-					if (d.error || (d.status && d.status != 'ok')) {
-						delete opts.serverData[dataName]
-						throw d.error || d
-					}
-					return res
-				})
+			let result
+			if (opts.serverData[dataName]) {
+				result = opts.serverData[dataName].clone
+					? await processResponse(opts.serverData[dataName].clone())
+					: structuredClone(opts.serverData[dataName])
+			}
+			if (!result || typeof result != 'object' || result instanceof Promise) {
+				delete opts.serverData[dataName]
+				result = undefined
 			}
 
+			if (!result) {
+				// to-do: support opt.freeze to enforce Object.freeze(data.json())
+				try {
+					const res = await fetch(url, init)
+					result = await processResponse(res.clone())
+					// in case this fetch was cancelled with AbortController.signal,
+					// then the result may be another Promise instead of a data object,
+					// as observed when rapidly changing the gdc cohort filter
+					if (typeof result == 'object' && !(result instanceof Promise)) {
+						opts.serverData[dataName] = opts.cacheAs == 'decoded' ? Object.freeze(result) : res
+					}
+				} catch (e) {
+					delete opts.serverData[dataName]
+					throw e
+				}
+			}
 			// manage the number of stored keys in serverData
 			const i = cachedServerDataKeys.indexOf(dataName)
 			if (i !== -1) cachedServerDataKeys.splice(i, 1)
@@ -146,8 +160,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 				const oldestDataname = cachedServerDataKeys.pop()
 				delete opts.serverData[oldestDataname]
 			}
-
-			return opts.serverData[dataName].then(r => processResponse(r.clone()))
+			return result
 		} else {
 			return fetch(url, init).then(processResponse)
 		}
