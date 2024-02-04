@@ -293,10 +293,12 @@ export function getAppApi(self) {
 	const componentsByType = {}
 	const middlewares = []
 	let numExpectedWrites = 0
+	let latestActionSequenceId
 	const api = {
 		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
+			latestActionSequenceId = action?.sequenceId
 			self.bus.emit('preDispatch')
 			try {
 				if (middlewares.length) {
@@ -321,11 +323,12 @@ export function getAppApi(self) {
 				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current)
 			} catch (e) {
-				if (self.bus) self.bus.emit('error')
+				if (self.bus && latestActionSequenceId == action?.sequenceId) self.bus.emit('error')
 				if (self.printError) self.printError(e)
 				else console.log(e)
 			}
-			if (self.bus) self.bus.emit('postRender')
+			// do not emit a postRender event if the action has become stale
+			if (self.bus && latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
 		},
 		async save(action) {
 			// save changes to store, do not notify components
@@ -436,9 +439,7 @@ export function getComponentApi(self) {
 	}
 
 	// remember the action.sequenceId that caused the last state change
-	const notes = {
-		actionSequenceId: undefined
-	}
+	let latestActionSequenceId
 
 	const api = {
 		type: self.type,
@@ -451,7 +452,7 @@ export function getComponentApi(self) {
 			// force update if there is no action, or
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
-				if (current.action) notes.actionSequenceId = current.action.sequenceId
+				if (current.action) latestActionSequenceId = current.action.sequenceId
 				if (self.mainArg == 'state') {
 					// some components may require passing state to its .main() method,
 					// for example when extending a simple object class into an rx-component
@@ -470,7 +471,8 @@ export function getComponentApi(self) {
 			}
 			// notify children
 			await notifyComponents(self.components, current)
-			if (self.bus) self.bus.emit('postRender')
+			if (self.bus && (!current.action || current.action.sequenceId === latestActionSequenceId))
+				self.bus.emit('postRender')
 			return api
 		},
 		// must not expose self.bus directly since that
@@ -493,7 +495,7 @@ export function getComponentApi(self) {
 		//
 		async detectStale(asyncFxn, opts = {}) {
 			try {
-				const actionSequenceId = notes.actionSequenceId
+				const actionSequenceId = latestActionSequenceId
 				const promises = []
 				let i, promResolve
 				if (opts.abortCtrl) {
@@ -501,7 +503,7 @@ export function getComponentApi(self) {
 						new Promise((resolve, reject) => {
 							promResolve = resolve
 							i = setInterval(() => {
-								if (actionSequenceId !== notes.actionSequenceId) {
+								if (actionSequenceId !== latestActionSequenceId) {
 									clearInterval(i)
 									try {
 										opts.abortCtrl.abort()
@@ -519,7 +521,7 @@ export function getComponentApi(self) {
 				const result = await Promise.race(promises)
 				if (i) clearInterval(i)
 				if (promResolve) promResolve()
-				if (notes.actionSequenceId !== actionSequenceId) {
+				if (latestActionSequenceId !== actionSequenceId) {
 					// another state change has been dispatched between the start and completion of the server request
 					console.warn('aborted state update, the returned data corresponds to a stale action.sequenceId')
 					if (opts.abortCtrl) opts.abortCtrl.abort()

@@ -705,7 +705,7 @@ tape('sort samples by CNV+SSM > SSM-only', function (test) {
 		test.equal(index_2660, 11, `should be in the expected order`)
 		const index_3472 = r.find(rect => rect.textContent == '3472').__data__.index
 		test.true(index_3472, r.length - 1, `should be in the expected order`)
-		//if (test._ok) matrix.Inner.app.destroy()
+		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -974,7 +974,7 @@ tape('sort sample groups by Hits 2', function (test) {
 		)._groups[0]
 		test.true(matrixGroupLabels[0].textContent.startsWith('10 to <15'), `should have the expected left-most group name`)
 		test.true(matrixGroupLabels[4].textContent.startsWith('≥20'), `should have the right-most expected group name`)
-		//if (test._ok) matrix.Inner.app.destroy()
+		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
