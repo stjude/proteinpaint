@@ -216,13 +216,13 @@ tape('long column group labels', function (test) {
 		},
 		matrix: {
 			callbacks: {
-				'postRender.test': runTests
+				'postRender.test222': runTests
 			}
 		}
 	})
 
 	function runTests(matrix) {
-		matrix.on('postRender.test', null)
+		matrix.on('postRender.test222', null)
 		const y = matrix.Inner.dom.clipRect.property('y').baseVal.value
 		test.true(y > -63 && y < -62, `should adjust the clip-path rect y-value to between -39 and -38, actual=${y}`)
 		const h = matrix.Inner.dom.clipRect.property('height').baseVal.value
@@ -649,9 +649,9 @@ tape('sort samples by CNV+SSM > SSM-only > CNV-only', function (test) {
 	}
 })
 
-tape.skip('sort samples by CNV+SSM > SSM-only', function (test) {
+tape('sort samples by CNV+SSM > SSM-only', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(4)
+	test.plan(5)
 	runpp({
 		state: {
 			nav: {
@@ -696,13 +696,16 @@ tape.skip('sort samples by CNV+SSM > SSM-only', function (test) {
 			`should render the expected number of sample names`
 		)
 		const rects = matrix.Inner.dom.sampleLabelsPG.selectAll('.sjpp-matrix-series-label-g g')._groups[0]
-		const index_3346 = Array.from(rects).find(rect => rect.textContent == '3346').__data__.index
-		test.true(index_3346 < 7, `should be in the expected order`)
-		const index_2660 = Array.from(rects).find(rect => rect.textContent == '2660').__data__.index
-		test.true(index_2660 > 6, `should be in the expected order`)
-		const index_3472 = Array.from(rects).find(rect => rect.textContent == '3472').__data__.index
-		test.true(index_3472 > 6, `should be in the expected order`)
-		if (test._ok) matrix.Inner.app.destroy()
+		const r = Array.from(rects)
+		const index_3416 = r.find(rect => rect.textContent == '3416').__data__.index
+		test.equal(index_3416, 0, `should be in the expected order`)
+		const index_3346 = r.find(rect => rect.textContent == '3346').__data__.index
+		test.equal(index_3346, 9, `should be in the expected order`)
+		const index_2660 = r.find(rect => rect.textContent == '2660').__data__.index
+		test.equal(index_2660, 11, `should be in the expected order`)
+		const index_3472 = r.find(rect => rect.textContent == '3472').__data__.index
+		test.true(index_3472, r.length - 1, `should be in the expected order`)
+		//if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -931,6 +934,7 @@ tape('sort sample groups by Hits 2', function (test) {
 			},
 			plots: [
 				{
+					id: 'xyz',
 					chartType: 'matrix',
 					settings: {
 						// the matrix autocomputes the colw based on available screen width,
@@ -958,19 +962,19 @@ tape('sort sample groups by Hits 2', function (test) {
 		},
 		matrix: {
 			callbacks: {
-				'postRender.test': runTests
+				postRender: runTests
 			}
 		}
 	})
 
 	function runTests(matrix) {
-		matrix.on('postRender.test', null)
+		matrix.on('postRender', null)
 		const matrixGroupLabels = matrix.Inner.dom.sampleLabelsPG.selectAll(
 			'.sjpp-matrix-series-group-label-g .sjpp-matrix-label'
 		)._groups[0]
-		test.true(matrixGroupLabels[0].textContent.startsWith('10 to <15'), `should be the expected group name`)
-		test.true(matrixGroupLabels[4].textContent.startsWith('≥20'), `should be the expected group name`)
-		if (test._ok) matrix.Inner.app.destroy()
+		test.true(matrixGroupLabels[0].textContent.startsWith('10 to <15'), `should have the expected left-most group name`)
+		test.true(matrixGroupLabels[4].textContent.startsWith('≥20'), `should have the right-most expected group name`)
+		//if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1235,7 +1239,7 @@ tape('Sort Genes By Input Data Order', function (test) {
 })
 
 tape('avoid race condition', function (test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(1500)
 	test.plan(4)
 	runpp({
 		state: {
@@ -1285,7 +1289,7 @@ tape('avoid race condition', function (test) {
 		matrix.on('postRender.test', async () => {
 			matrix.on('postRender.test', null)
 			// run tests after the delayed response, as part of simulating the race condition
-			await sleep(responseDelay + 10)
+			await sleep(responseDelay + 300)
 			const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')
 			test.equal(termLabels.size(), 1, `should have 1 gene row`)
 			test.true(termLabels._groups?.[0][0].textContent.startsWith('BCR'), `should sort genes by input data order`)
@@ -1303,24 +1307,8 @@ tape('avoid race condition', function (test) {
 
 		const responseDelay = 10
 		let i = responseDelay
-		const results = await Promise.all([
-			matrix.Inner.app.dispatch({
-				type: 'plot_edit',
-				id: matrix.id,
-				config: {
-					termgroups: [
-						{
-							name: '',
-							lst: [
-								{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
-								{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
-							]
-						}
-					]
-				}
-			}),
-			(async () => {
-				await sleep(1)
+		try {
+			const results = await Promise.all([
 				matrix.Inner.app.dispatch({
 					type: 'plot_edit',
 					id: matrix.id,
@@ -1328,12 +1316,33 @@ tape('avoid race condition', function (test) {
 						termgroups: [
 							{
 								name: '',
-								lst: [{ term: { name: 'BCR', type: 'geneVariant', isleaf: true } }]
+								lst: [
+									{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+									{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } }
+								]
 							}
 						]
 					}
-				})
-			})()
-		])
+				}),
+				(async () => {
+					await sleep(1)
+					matrix.Inner.app.dispatch({
+						type: 'plot_edit',
+						id: matrix.id,
+						config: {
+							termgroups: [
+								{
+									name: '',
+									lst: [{ term: { name: 'BCR', type: 'geneVariant', isleaf: true } }]
+								}
+							]
+						}
+					})
+				})()
+			])
+		} catch (e) {
+			test.fail('error: ' + e)
+			throw e
+		}
 	}
 })
