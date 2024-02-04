@@ -491,15 +491,44 @@ export function getComponentApi(self) {
 		// This is an api function so that code that has access to this component api
 		// can also tie-in a function call to the fresheness of the component action.
 		//
-		async detectStale(asyncFxn) {
-			const actionSequenceId = notes.actionSequenceId
-			const result = await asyncFxn()
-			if (notes.actionSequenceId !== actionSequenceId) {
-				// another state change has been dispatched between the start and completion of the server request
-				console.warn('aborted state update, the returned data corresponds to a stale action.sequenceId')
-				return [result, true]
+		async detectStale(asyncFxn, opts = {}) {
+			try {
+				const actionSequenceId = notes.actionSequenceId
+				const promises = []
+				let i, promResolve
+				if (opts.abortCtrl) {
+					promises.push(
+						new Promise((resolve, reject) => {
+							promResolve = resolve
+							i = setInterval(() => {
+								if (actionSequenceId !== notes.actionSequenceId) {
+									clearInterval(i)
+									try {
+										opts.abortCtrl.abort()
+									} catch (e) {
+										reject(e)
+									}
+								}
+							}, opts.wait || 100)
+						})
+					)
+				}
+				promises.push(asyncFxn())
+				// the setInterval does not resolve, so Promise.race can only be "won" by the asyncFxn() result,
+				// but the race can be aborted by the reject() inside the setInterval
+				const result = await Promise.race(promises)
+				if (i) clearInterval(i)
+				if (promResolve) promResolve()
+				if (notes.actionSequenceId !== actionSequenceId) {
+					// another state change has been dispatched between the start and completion of the server request
+					console.warn('aborted state update, the returned data corresponds to a stale action.sequenceId')
+					if (opts.abortCtrl) opts.abortCtrl.abort()
+					return [result, true]
+				}
+				return [result]
+			} catch (e) {
+				throw e
 			}
-			return [result]
 		},
 		destroy() {
 			// delete references to other objects to make it easier

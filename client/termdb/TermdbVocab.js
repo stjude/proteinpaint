@@ -749,6 +749,7 @@ export class TermdbVocab extends Vocab {
 					embedder: window.location.hostname
 				}
 			}
+			if (opts.signal) init.signal = opts.signal // an AbortController.signal to trigger a fetch cancellation
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 			if (this.vocab.dslabel == 'GDC' && copies.find(tw => tw.term.id) && currentGeneNames?.length) {
@@ -758,7 +759,7 @@ export class TermdbVocab extends Vocab {
 				init.body.currentGeneNames = currentGeneNames
 			}
 			promises.push(
-				dofetch3('termdb', init).then(data => {
+				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 					for (const tw of copies) {
@@ -809,7 +810,31 @@ export class TermdbVocab extends Vocab {
 			await Promise.all(promises)
 			if (opts.loadingDiv) opts.loadingDiv.html('')
 		} catch (e) {
-			this.tokenVerificationMessage = e
+			if (typeof e == 'string') {
+				const _e = e.toLowerCase()
+				// TODO: standardize the auth error message across all SJ viz tools/portals,
+				// which may be difficult since embedders can specify custom auth error messages,
+				// or use an error object with separate code and string message
+				if (
+					e.includes('token') ||
+					e.includes('jwt') ||
+					e.includes('login') ||
+					e.includes('sign') ||
+					e.includes('auth') ||
+					e.includes('credential')
+				) {
+					//
+					// do not track non-auth related errors as a tokenVerificationMessage
+					// only applies in SJ-portals where password or JWT auth tokens are used by embedders
+					//
+					// - app/viz must use vocabApi.hasVerifiedToken() method to verify access to tool features,
+					//   instead of relying on an empty string value for tokenVerificationMessage
+					//
+					// - !!! not used in the GDC portal, where auth is handled in the tool react wrapper + domain-based cookie session !!!
+					//
+					this.tokenVerificationMessage = e
+				}
+			}
 			throw e
 		}
 		try {

@@ -43,13 +43,14 @@ class GenesetComp {
 	}
 
 	async noWait() {
-		const [genes, stale] = await this.api.detectStale(() => this.getGenes())
+		const abortCtrl = new AbortController()
+		const [genes, stale] = await this.api.detectStale(() => this.getGenes({ signal: abortCtrl.signal }), { abortCtrl })
 		if (stale) return
 		if (!genes?.length) this.render()
 		else this.opts.callback(this.api, genes)
 	}
 
-	async getGenes(filter) {
+	async getGenes({ signal }) {
 		const genes = this.opts.genes
 		const settings = this.state.config.settings
 		if (this.opts.genes) {
@@ -73,7 +74,7 @@ class GenesetComp {
 			if (this.state.filter0) body.filter0 = this.state.filter0
 			// TODO change to /termdb/topMutatedGenes
 			// XXX this is optional query!! if ds is missing then should show input ui instead
-			data = await dofetch3('gdc/topMutatedGenes', { body })
+			data = await dofetch3('gdc/topMutatedGenes', { body, signal }, { cacheAs: 'decoded' })
 		} else if (this.opts.mode == 'expression') {
 			const body = {
 				genome: this.state.vocab.genome,
@@ -82,7 +83,7 @@ class GenesetComp {
 			}
 			if (this.state.filter0) body.filter0 = this.state.filter0
 			// XXX this is optional query!! if ds is missing then should show input ui instead
-			data = await dofetch3('termdb/topVariablyExpressedGenes', { body })
+			data = await dofetch3('termdb/topVariablyExpressedGenes', { body, signal }, { cacheAs: 'decoded' })
 		}
 
 		if (!data) throw 'invalid server response'
