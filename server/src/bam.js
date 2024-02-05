@@ -3227,89 +3227,96 @@ async function convertread2html(seg, genome, query) {
 	const refstop = b.start + b.len
 	const refseq = await get_refseq(genome, query.chr + ':' + (refstart + 1) + '-' + refstop)
 	const quallst = qual2int(seg.qual)
-	const reflst = ['<td>Reference</td>']
-	const querylst = ['<td style="color:black;text-align:left">Read</td>']
-	for (const b of seg.boxes) {
-		if (b.opr == 'H') {
-			continue
-		}
-		if (b.opr == 'I') {
-			for (let i = b.cidx; i < b.cidx + b.len; i++) {
-				reflst.push('<td>-</td>')
-				if (seg.qual == '*') {
-					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
-					querylst.push('<td style="color:' + insertion_hq + ';background:white">' + seg.seq[i] + '</td>')
-				} else {
-					querylst.push(
-						'<td style="color:' +
-							insertion_hq +
-							';background:' +
-							qual2match(quallst[i] / maxqual) +
-							'">' +
-							seg.seq[i] +
-							'</td>'
-					)
-				}
+	let reflst, querylst
+	if (seg.seq == '*') {
+		reflst = ['<td>DNA sequence not available for this read</td>']
+		querylst = ['<td></td>']
+	} else {
+		reflst = ['<td>Reference</td>']
+		querylst = ['<td style="color:black;text-align:left">Read</td>']
+		for (const b of seg.boxes) {
+			if (b.opr == 'H') {
+				continue
 			}
-			continue
-		}
-		if (b.opr == 'D' || b.opr == 'N') {
-			if (b.len >= readpanel_DN_maxlength) {
-				reflst.push('<td style="font-size:.8em;opacity:.5;white-space:nowrap">' + b.len + ' bp</td>')
-				querylst.push('<td style="color:black;white-space:nowrap">-----------</td>')
-			} else {
+			if (b.opr == 'I') {
+				for (let i = b.cidx; i < b.cidx + b.len; i++) {
+					reflst.push('<td>-</td>')
+					if (seg.qual == '*') {
+						// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
+						querylst.push('<td style="color:' + insertion_hq + ';background:white">' + seg.seq[i] + '</td>')
+					} else {
+						querylst.push(
+							'<td style="color:' +
+								insertion_hq +
+								';background:' +
+								qual2match(quallst[i] / maxqual) +
+								'">' +
+								seg.seq[i] +
+								'</td>'
+						)
+					}
+				}
+				continue
+			}
+			if (b.opr == 'D' || b.opr == 'N') {
+				if (b.len >= readpanel_DN_maxlength) {
+					reflst.push('<td style="font-size:.8em;opacity:.5;white-space:nowrap">' + b.len + ' bp</td>')
+					querylst.push('<td style="color:black;white-space:nowrap">-----------</td>')
+				} else {
+					for (let i = 0; i < b.len; i++) {
+						reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
+						querylst.push('<td style="color:black">-</td>')
+					}
+				}
+				continue
+			}
+			if (b.opr == 'S') {
 				for (let i = 0; i < b.len; i++) {
 					reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
-					querylst.push('<td style="color:black">-</td>')
+					if (seg.qual == '*') {
+						// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a blue background
+						querylst.push('<td style="background:' + qual2softclipbg(1) + '">' + seg.seq[b.cidx + i] + '</td>')
+					} else {
+						querylst.push(
+							'<td style="background:' +
+								qual2softclipbg(quallst[b.cidx + i] / maxqual) +
+								'">' +
+								seg.seq[b.cidx + i] +
+								'</td>'
+						)
+					}
 				}
+				continue
 			}
-			continue
-		}
-		if (b.opr == 'S') {
-			for (let i = 0; i < b.len; i++) {
-				reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
-				if (seg.qual == '*') {
-					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a blue background
-					querylst.push('<td style="background:' + qual2softclipbg(1) + '">' + seg.seq[b.cidx + i] + '</td>')
-				} else {
-					querylst.push(
-						'<td style="background:' +
-							qual2softclipbg(quallst[b.cidx + i] / maxqual) +
-							'">' +
-							seg.seq[b.cidx + i] +
-							'</td>'
-					)
+			if (b.opr == 'M' || b.opr == '=' || b.opr == 'X' || b.opr == '*') {
+				for (let i = 0; i < b.len; i++) {
+					const nt0 = refseq[b.start - refstart + i]
+					const nt1 = seg.seq[b.cidx + i]
+					reflst.push('<td>' + nt0 + '</td>')
+					if (seg.qual == '*') {
+						// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
+						querylst.push(
+							'<td style="color:black;background:' +
+								(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg) +
+								'">' +
+								seg.seq[b.cidx + i] +
+								'</td>'
+						)
+					} else {
+						querylst.push(
+							'<td style="background:' +
+								(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
+								'">' +
+								seg.seq[b.cidx + i] +
+								'</td>'
+						)
+					}
 				}
+				continue
 			}
-			continue
-		}
-		if (b.opr == 'M' || b.opr == '=' || b.opr == 'X' || b.opr == '*') {
-			for (let i = 0; i < b.len; i++) {
-				const nt0 = refseq[b.start - refstart + i]
-				const nt1 = seg.seq[b.cidx + i]
-				reflst.push('<td>' + nt0 + '</td>')
-				if (seg.qual == '*') {
-					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
-					querylst.push(
-						'<td style="color:black;background:' +
-							(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg) +
-							'">' +
-							seg.seq[b.cidx + i] +
-							'</td>'
-					)
-				} else {
-					querylst.push(
-						'<td style="background:' +
-							(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
-							'">' +
-							seg.seq[b.cidx + i] +
-							'</td>'
-					)
-				}
-			}
-			continue
 		}
 	}
+
 	// Determining start and stop position of softclips (if any)
 	let soft_start = 0
 	let soft_stop = 0
