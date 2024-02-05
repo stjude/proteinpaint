@@ -908,7 +908,7 @@ function setRenderers(self) {
 			div: table,
 			showLines: false,
 			maxWidth: '70vw',
-			maxHeight: `${chart.svgh - 200}px`,
+			maxHeight: `${chart.svgh - 100}px`,
 			resize: true
 		})
 
