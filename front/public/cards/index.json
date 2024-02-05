@@ -203,7 +203,7 @@
             "ribbon": {"text": "new", "expireDate": "2024-03-01"},
             "description": "Non-random association of alleles at different loci",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/ld-square.png",
-            "sandboxJson": "ld",
+            "sandboxJson": "LD",
             "searchterms": ["ld"]
         },
         {
