@@ -1,6 +1,7 @@
 import { appInit } from '#plots/plot.app.js'
 // import { launchWithGenes } from './launchWithGenes'
 import { select } from 'd3-selection'
+import { copyMerge } from '#rx'
 
 /*
 test with http://localhost:3000/example.gdc.exp.html
@@ -90,12 +91,37 @@ export async function init(arg, holder, genomes) {
 				]
 			},
 			app: arg.opts?.app || {},
-			hierCluster: arg.opts?.hierCluster || {},
+			hierCluster: copyMerge(
+				{
+					reactsTo(action) {
+						if (action.type.startsWith('plot_')) return action.id === this.id
+						if (action.type.startsWith('filter')) return true
+						if (action.type == 'app_refresh') return true
+					},
+					callbacks: {
+						'firstRender.gdcHierCluster': async hierClusterApi => {
+							hierClusterApi.on('firstRender.gdcHierCluster', null)
+							if (!genesetCompApi) return
+							plotAppApi.dispatch({
+								type: 'plot_delete',
+								id: genesetCompApi.id
+							})
+							genesetCompApi = undefined
+						}
+					}
+				},
+				arg.opts?.hierCluster || {}
+			),
 			matrix: arg.opts?.matrix || {},
 			geneset: {
 				mode: 'expression',
 				genome,
 				genes: arg.genes,
+				reactsTo(action) {
+					if (action.type.startsWith('plot_')) return action.id === this.id
+					if (action.type.startsWith('filter')) return true
+					if (action.type == 'app_refresh') return true
+				},
 				showWaitMessage(div) {
 					div.style('margin', '20px')
 					div.append('div').text('Loading genes that are top variably expressed in current cohort...')
@@ -105,39 +131,46 @@ export async function init(arg, holder, genomes) {
 						Only up to 1000 cases with gene expression data will be used to select genes.
 					`)
 				},
-				async callback(genesetCompApi, twlst) {
+				async callback(_genesetCompApi, twlst) {
 					// exit early if the geneset api is already gone,
 					// as caused by race condition from quick changes to the filter0
-					if (!genesetCompApi) return
-					plotAppApi.dispatch({
-						type: 'plot_splice',
-						subactions: [
-							{
-								type: 'plot_delete',
-								id: genesetCompApi.id
-							},
-							{
-								type: 'plot_create',
-								config: {
-									chartType: 'hierCluster',
-									// avoid making a dictionary request when there is no gene data;
-									// if there is gene data, then the arg.termgroups can be submitted and rehydrated on app/store.init()
-									termgroups: [
-										{
-											name: 'Gene Expression',
-											type: 'hierCluster',
-											lst: twlst
-										},
-										...(arg.termgroups || [])
-									],
-									divideBy: arg.divideBy || undefined,
-									// moved default settings to gdc.hg38.js termdb[chartType].settings
-									// but can still override in the runpp() argument
-									settings
-								}
+					if (!_genesetCompApi) return
+					genesetCompApi = _genesetCompApi
+					if (!hierClusterApi) {
+						const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'hierCluster')
+						if (plotConfig) hierClusterApi = plotAppApi.getComponents(`plots.${plotConfig.id}`)
+					}
+
+					const termgroups = [
+						{
+							name: 'Gene Expression',
+							type: 'hierCluster',
+							lst: twlst
+						},
+						...(arg.termgroups || [])
+					]
+
+					if (hierClusterApi) {
+						plotAppApi.dispatch({
+							type: 'plot_edit',
+							id: hierClusterApi.id,
+							config: { termgroups }
+						})
+					} else {
+						plotAppApi.dispatch({
+							type: 'plot_create',
+							config: {
+								chartType: 'hierCluster',
+								// avoid making a dictionary request when there is no gene data;
+								// if there is gene data, then the arg.termgroups can be submitted and rehydrated on app/store.init()
+								termgroups,
+								divideBy: arg.divideBy || undefined,
+								// moved default settings to gdc.hg38.js termdb[chartType].settings
+								// but can still override in the runpp() argument
+								settings
 							}
-						]
-					})
+						})
+					}
 				}
 			},
 			recover: {
@@ -173,17 +206,21 @@ export async function init(arg, holder, genomes) {
 			}
 		})
 
-		let hierClusterApi
+		let hierClusterApi, genesetCompApi
 		const api = {
 			type: 'hierCluster',
 			update: async _arg => {
+				if (!hierClusterApi) {
+					const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'hierCluster')
+					if (plotConfig) hierClusterApi = plotAppApi.getComponents(`plots.${plotConfig.id}`)
+				}
+
 				if ('filter0' in _arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
 						filter0: _arg.filter0
 					})
-				} else {
-					if (!hierClusterApi) hierClusterApi = plotAppApi.getComponents('plots.0')
+				} else if (hierClusterApi) {
 					plotAppApi.dispatch({
 						type: 'plot_edit',
 						id: hierClusterApi.id,
