@@ -19,8 +19,20 @@ import { dofetch3 } from '#common/dofetch'
 class GenesetComp {
 	constructor(opts) {
 		this.type = 'geneset'
+
 		this.dom = {
-			holder: opts.holder
+			holder: opts.holder.style('position', 'relative').style('min-height', '300px'),
+			body: opts.holder.append('div'),
+			loadingOverlay: opts.holder
+				.append('div')
+				.attr('class', 'sjpp-spinner')
+				.style('display', 'none')
+				.style('position', 'absolute')
+				.style('background-color', '#fff')
+				.style('z-index', 10)
+				.style('opacity', '0.5')
+			//.style('width', '100%')
+			//.style('height', '100%')
 		}
 	}
 
@@ -38,7 +50,8 @@ class GenesetComp {
 	}
 
 	async main() {
-		this.dom.holder.selectAll('*').remove()
+		this.dom.body.selectAll('*').remove()
+		this.dom.loadingOverlay.style('display', '')
 		// do not await, since this main may be called as part of the initial dispatch
 		// in the app init(), and that app instance should return without having to wait
 		// for this component to finish the initial genes request and fully render
@@ -73,7 +86,7 @@ class GenesetComp {
 
 		let waitDiv
 		if (this.opts.showWaitMessage) {
-			waitDiv = this.dom.holder.append('div').style('margin', '20px')
+			waitDiv = this.dom.body.append('div').style('margin', '20px')
 			this.opts.showWaitMessage(waitDiv)
 		}
 
@@ -101,14 +114,9 @@ class GenesetComp {
 		if (!data) throw 'invalid server response'
 		if (data.error) throw data.error
 
-		// uncomment for testing only
-		// if (!this.i) {
-		// 	data.genes = []
-		// 	this.i = 1
-		// }
-
 		if (!data.genes) return [] // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
 		waitDiv.remove()
+		this.dom.loadingOverlay?.style('display', 'none')
 		return await this.getTwLst(data.genes)
 	}
 
@@ -125,11 +133,11 @@ class GenesetComp {
 
 	async render() {
 		if (!this.dom?.holder) return
-		this.dom.holder
+		this.dom.body
 			.append('p')
 			.text(`No default genes. Please change the cohort or define a gene set to launch ${this.state.config.toolName}.`)
 		showGenesetEdit({
-			holder: this.dom.holder.append('div'),
+			holder: this.dom.body.append('div'),
 			genome: this.opts.genome,
 			mode: this.opts.mode,
 			vocabApi: this.app.vocabApi, //  await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
@@ -143,6 +151,7 @@ class GenesetComp {
 				this.opts.callback(this.api, twlst)
 			}
 		})
+		this.dom.loadingOverlay?.style('display', 'none')
 	}
 
 	destroy() {
