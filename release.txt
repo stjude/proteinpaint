@@ -1,1 +1,4 @@
-
+Fixes:
+- Fix the detection of termgroup related changes in the matrix app as distinct from the hier cluster
+- Send the cohort filter when launching a lollipop track from the matrix plot
+- Fix the detection of sorting-related updates in the matrix app, as distinct from the hier cluster
