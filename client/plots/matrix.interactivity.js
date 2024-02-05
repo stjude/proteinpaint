@@ -552,7 +552,6 @@ function setTermActions(self) {
 			genome: self.app.opts.genome,
 			nobox: true,
 			query: t.tw.term.name,
-			filter0: self.config.filter0,
 			tklst: [
 				{
 					type: 'mds3',
