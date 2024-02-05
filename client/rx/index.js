@@ -298,7 +298,6 @@ export function getAppApi(self) {
 		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
-			latestActionSequenceId = action?.sequenceId
 			self.bus.emit('preDispatch')
 			try {
 				if (middlewares.length) {
@@ -317,6 +316,7 @@ export function getAppApi(self) {
 				// expect store.write() to be debounced and handler rapid succession of dispatches
 				// replace app.state if there is an action
 				if (action) self.state = await self.store.write(action)
+				latestActionSequenceId = action?.sequenceId
 				// TODO: may need to group calls to self.main by action type and plot.id,
 				// in order to debounce correctly
 				if (self.main) await self.main()
@@ -848,4 +848,8 @@ export function deepEqual(x, y) {
 		}
 		return true
 	} else return false
+}
+
+export function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
