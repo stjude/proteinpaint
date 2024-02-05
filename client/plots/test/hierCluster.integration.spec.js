@@ -65,7 +65,9 @@ async function getHierClusterApp(_opts = {}) {
 	const opts = Object.assign(defaults, _opts)
 	const app = await appInit(opts)
 	holder.select('.sja_errorbar').node()?.lastChild.click()
-	const hc = app.Inner.components.plots[0].Inner
+	const hc = Object.values(app.Inner.components.plots).find(
+		p => p.type == 'hierCluster' || p.chartType == 'hierCluster'
+	).Inner
 	// mock requestData() directly on the instance itself and without modifying the HierCluster.prototype
 	hc.requestData = requestData
 	const termgroups = structuredClone(hc.config.termgroups)
