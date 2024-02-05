@@ -124,6 +124,7 @@ class GenesetComp {
 	}
 
 	async render() {
+		if (!this.dom?.holder) return
 		this.dom.holder
 			.append('p')
 			.text(`No default genes. Please change the cohort or define a gene set to launch ${this.state.config.toolName}.`)
