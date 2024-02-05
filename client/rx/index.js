@@ -494,6 +494,7 @@ export function getComponentApi(self) {
 		// can also tie-in a function call to the fresheness of the component action.
 		//
 		async detectStale(asyncFxn, opts = {}) {
+			let errMsg = ''
 			try {
 				const actionSequenceId = latestActionSequenceId
 				const promises = []
@@ -507,6 +508,7 @@ export function getComponentApi(self) {
 									clearInterval(i)
 									try {
 										opts.abortCtrl.abort()
+										throw `stale sequenceId`
 									} catch (e) {
 										reject(e)
 									}
@@ -529,6 +531,7 @@ export function getComponentApi(self) {
 				}
 				return [result]
 			} catch (e) {
+				if (typeof e == 'string' && e.includes('sequenceId')) console.warn(e)
 				throw e
 			}
 		},
