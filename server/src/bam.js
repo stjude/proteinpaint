@@ -2919,7 +2919,13 @@ if b.qual is available, set text color based on it
 				} else {
 					ctx.fillStyle = insertion_hq
 				}
-				const text = b.s.length == 1 ? b.s : b.s.length
+				let text
+				if (b.s == '') {
+					// When sequence read is missing extract length of insertion from the CIGAR sequence
+					text = b.len
+				} else {
+					text = b.s.length == 1 ? b.s : b.s.length
+				}
 				// text y position to observe if the read is in an overlapping pair and shifted down
 				ctx.fillText(text, x, template.y + group.stackheight * (segment.on2ndrow || 0) + group.stackheight / 2)
 			}
@@ -3229,7 +3235,7 @@ async function convertread2html(seg, genome, query) {
 	const quallst = qual2int(seg.qual)
 	let reflst, querylst
 	if (seg.seq == '*') {
-		reflst = ['<td>DNA sequence not available for this read</td>']
+		reflst = ['<td>Nucleotide sequence not available for this read</td>']
 		querylst = ['<td></td>']
 	} else {
 		reflst = ['<td>Reference</td>']
