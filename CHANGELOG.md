@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Fix the detection of sorting-related updates in the matrix app, as distinct from the hier cluster
+
 
 ## 2.40.6
 
