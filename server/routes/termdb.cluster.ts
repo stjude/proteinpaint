@@ -157,7 +157,7 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 		return
 	}
 	if (q.src == 'native') {
-		validateNative(q, ds, genome)
+		await validateNative(q, ds, genome)
 		return
 	}
 	throw 'unknown queries.geneExpression.src'
@@ -177,7 +177,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') throw 'header line has wrong content for columns 1-4'
 		for (let i = 4; i < l.length; i++) {
 			const id = ds.cohort.termdb.q.sampleName2id(l[i])
-			if (id == undefined) throw 'unknown sample from header'
+			if (id == undefined) throw 'queries.geneExpression: unknown sample from header: ' + l[i]
 			q.samples.push(id)
 		}
 		console.log(q.samples.length, 'samples from geneExpression of', ds.label)
