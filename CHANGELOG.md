@@ -9,6 +9,11 @@ Fixes:
 - BAM track in variant-typing mode, read group header clicking is disabled due to known issue with GFF
 - GDC BAM slicing will reject if range>=50kb to be safe
 - reliably detect stale async results using a rx component api method
+- Cancel stale fetch requests to unblock current geneset, matrix, and hierCluster requests that are being throttled by the browser's concurrent request limit
+- Do not re-render the matrix controls as part of displaying a no data message when svg dimensions and layout have not been computed yet
+- Do not assign a non-auth related error as a token verification message, which caused the matrix to not rerender even with subsequent valid data
+- Do not display a mouseover over a hidden matrix or hier cluster svg
+- an unrendered matrix or hierCluster should not react to window resize
 
 
 ## 2.40.5
