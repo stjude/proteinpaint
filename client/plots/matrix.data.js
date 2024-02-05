@@ -11,8 +11,8 @@ import { sample_match_termvaluesetting } from '../common/termutils'
 //
 export function computeStateDiff() {
 	const s = this.settings.matrix
-	const prevState = structuredClone(this.prevState)
-	const currState = structuredClone(this.state)
+	const prevState = JSON.parse(JSON.stringify(this.prevState))
+	const currState = JSON.parse(JSON.stringify(this.state))
 	delete prevState.config?.settings
 	delete prevState.isVisible
 	delete currState.config.settings
@@ -22,18 +22,18 @@ export function computeStateDiff() {
 	const phc = this.prevState.config.settings.hierCluster || {}
 	const chc = this.state.config.settings.hierCluster || {}
 
-	// only apply to copy of termgroups, not the original one
-	if (prevState?.config?.termgroups) prevState.config.termgroups[0].lst.sort((a, b) => (a.$id < b.$id ? -1 : 1))
-	currState.config.termgroups[0].lst.sort((a, b) => (a.$id < b.$id ? -1 : 1))
-
-	// for dictionary terms from external APIs, the term details may not be fully available at server restart,
-	// only the term.id is imporatant for comparison, the other term details that are filled should not matter
-	for (const grps of [prevState.config?.termgroups?.slice(1), currState.config.termgroups.slice(1)]) {
-		if (!grps) continue
-		for (const grp of grps) {
-			grp.lst.forEach(tw => {
-				tw.term = { id: tw.term.id }
-			})
+	if (this.type == 'hierCluster') {
+		// only apply to copy of termgroups, not the original one
+		for (const tg of [prevState.termgroups, currState.termgroups]) {
+			if (!tg) continue
+			const hcTermGroup = tg.find(g => g.type == 'hierCluster')
+			if (hcTermGroup) hcTermGroup.lst.sort((a, b) => (a.$id < b.$id ? -1 : 1))
+			for (const g of tg) {
+				if (g == hcTermGroup) continue
+				// for dictionary terms from external APIs, the term details may not be fully available at server restart,
+				// only the term.id is imporatant for comparison, the other term details that are filled should not matter
+				grp.lst = grp.lst.map(tw => tw.term.id || tw.term.name || tw.term.gene)
+			}
 		}
 	}
 
