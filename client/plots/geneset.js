@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge } from '../rx'
+import { getCompInit, copyMerge, sleep } from '../rx'
 import { showGenesetEdit } from '../dom/genesetEdit.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
@@ -24,6 +24,10 @@ class GenesetComp {
 		}
 	}
 
+	init() {
+		if (this.opts.reactsTo) this.reactsTo = this.opts.reactsTo
+	}
+
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		return {
@@ -44,10 +48,18 @@ class GenesetComp {
 
 	async noWait() {
 		const abortCtrl = new AbortController()
-		const [genes, stale] = await this.api.detectStale(() => this.getGenes({ signal: abortCtrl.signal }), { abortCtrl })
-		if (stale) return
-		if (!genes?.length) this.render()
-		else this.opts.callback(this.api, genes)
+		try {
+			const [genes, stale] = await this.api.detectStale(() => this.getGenes({ signal: abortCtrl.signal }), {
+				abortCtrl
+			})
+			if (stale) return
+			if (!genes?.length) this.render()
+			else this.opts.callback(this.api, genes)
+		} catch (e) {
+			// may ignore this error
+			if (e == 'stale sequenceId' || e.name == 'AbortError') return
+			else throw e
+		}
 	}
 
 	async getGenes({ signal }) {

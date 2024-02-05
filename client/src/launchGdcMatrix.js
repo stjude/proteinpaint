@@ -2,6 +2,7 @@ import { appInit } from '#plots/plot.app.js'
 import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { fillTermWrapper } from '#termsetting'
+import { copyMerge } from '#rx'
 
 /*
 test with http://localhost:3000/example.gdc.matrix.html
@@ -135,6 +136,11 @@ export async function init(arg, holder, genomes) {
 				mode: 'mutation',
 				genome,
 				genes: arg.genes,
+				reactsTo(action) {
+					if (action.type.startsWith('plot_')) return action.id === this.id
+					if (action.type.startsWith('filter')) return true
+					if (action.type == 'app_refresh') return true
+				},
 				showWaitMessage(div) {
 					div.style('margin', '20px')
 					div.append('div').text('Loading the top mutated genes in the current cohort...')
@@ -144,38 +150,45 @@ export async function init(arg, holder, genomes) {
 					// 	Only up to 1000 cases with gene expression data will be used to select genes.
 					// `)
 				},
-				async callback(genesetCompApi, twlst) {
+				async callback(_genesetCompApi, twlst) {
 					// exit early if the geneset api is already gone,
 					// as caused by race condition from quick changes to the filter0
-					if (!genesetCompApi) return
-					plotAppApi.dispatch({
-						type: 'plot_splice',
-						subactions: [
-							{
-								type: 'plot_delete',
-								id: genesetCompApi.id
-							},
-							{
-								type: 'plot_create',
-								config: {
-									chartType: 'matrix',
-									// avoid making a dictionary request when there is no gene data;
-									// if there is gene data, then the arg.termgroups can be submitted and rehydrated on app/store.init()
-									termgroups: [
-										...(arg.termgroups || []),
-										{
-											//name: 'Gene Expression',
-											lst: twlst
-										}
-									],
-									divideBy: arg.divideBy || undefined,
-									// moved default settings to gdc.hg38.js termdb[chartType].settings
-									// but can still override in the runpp() argument
-									settings
-								}
+					if (!_genesetCompApi) return
+					genesetCompApi = _genesetCompApi
+					if (!matrixApi) {
+						const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'matrix')
+						if (plotConfig) matrixApi = plotAppApi.getComponents(`plots.${plotConfig.id}`)
+					}
+
+					const termgroups = [
+						...(arg.termgroups || []),
+						{
+							//name: 'Gene Expression',
+							lst: twlst
+						}
+					]
+
+					if (matrixApi) {
+						plotAppApi.dispatch({
+							type: 'plot_edit',
+							id: matrixApi.id,
+							config: { termgroups }
+						})
+					} else {
+						plotAppApi.dispatch({
+							type: 'plot_create',
+							config: {
+								chartType: 'matrix',
+								// avoid making a dictionary request when there is no gene data;
+								// if there is gene data, then the arg.termgroups can be submitted and rehydrated on app/store.init()
+								termgroups,
+								divideBy: arg.divideBy || undefined,
+								// moved default settings to gdc.hg38.js termdb[chartType].settings
+								// but can still override in the runpp() argument
+								settings
 							}
-						]
-					})
+						})
+					}
 				}
 			},
 			recover: {
@@ -209,8 +222,13 @@ export async function init(arg, holder, genomes) {
 					return s
 				}
 			},
-			matrix: Object.assign(
+			matrix: copyMerge(
 				{
+					reactsTo(action) {
+						if (action.type.startsWith('plot_')) return action.id === this.id
+						if (action.type.startsWith('filter')) return true
+						if (action.type == 'app_refresh') return true
+					},
 					// these will display the inputs together in the Genes menu,
 					// instead of being rendered outside of the matrix holder
 					customInputs: {
@@ -238,23 +256,38 @@ export async function init(arg, holder, genomes) {
 								}
 							}
 						]
+					},
+					callbacks: {
+						'firstRender.gdcMatrix': async matrixApi => {
+							matrixApi.on('firstRender.gdcMatrix', null)
+							if (!genesetCompApi) return
+							plotAppApi.dispatch({
+								type: 'plot_delete',
+								id: genesetCompApi.id
+							})
+							genesetCompApi = undefined
+						}
 					}
 				},
 				arg.opts?.matrix || {}
 			)
 		})
 
-		let matrixApi
+		let matrixApi, genesetCompApi
 
 		const api = {
 			update: async arg => {
+				if (!matrixApi) {
+					const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'matrix')
+					if (plotConfig) matrixApi = plotAppApi.getComponents(`plots.${plotConfig.id}`)
+				}
+
 				if ('filter0' in arg) {
 					plotAppApi.dispatch({
 						type: 'filter_replace',
 						filter0: arg.filter0
 					})
-				} else {
-					if (!matrixApi) matrixApi = plotAppApi.getComponents('plots.0')
+				} else if (matrixApi) {
 					plotAppApi.dispatch({
 						type: 'plot_edit',
 						id: matrixApi.id,

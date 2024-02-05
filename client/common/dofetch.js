@@ -151,7 +151,8 @@ export function dofetch2(path, init = {}, opts = {}) {
 						if (opts.cacheAs == 'decoded') {
 							// should prefer to store results as a deeply frozen object instead of a Response interface,
 							// but must not return the same object to be reused by different requests
-							opts.serverData[dataName] = deepFreeze(result)
+							deepFreeze(result)
+							opts.serverData[dataName] = result
 							result = structuredClone(result)
 						} else {
 							// per https://developer.mozilla.org/en-US/docs/Web/API/Response/clone,

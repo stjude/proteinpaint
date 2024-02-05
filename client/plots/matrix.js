@@ -31,6 +31,7 @@ export class Matrix {
 
 	async init(appState) {
 		const opts = this.opts
+		if (opts.reactsTo) this.reactsTo = opts.reactsTo
 		this.setDom = setMatrixDom
 		this.setDom(opts)
 
