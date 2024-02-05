@@ -366,11 +366,12 @@ export function setInteractivity(self) {
 function setResizeHandler(self) {
 	let resizeId
 	select(window).on(`resize.sjpp-${self.id}`, () => {
-		clearTimeout(resizeId)
-		resizeId = setTimeout(resize, 200)
+		if (resizeId) clearTimeout(resizeId)
+		if (self.dimensions && self.layout) resizeId = setTimeout(resize, 200)
 	})
 	function resize() {
-		self.main()
+		// !!! this.abortCtl.abort()
+		if (self.dimensions && self.layout) self.main()
 	}
 }
 
