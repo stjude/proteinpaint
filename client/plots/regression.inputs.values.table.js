@@ -187,7 +187,8 @@ function setRenderers(self) {
 					}
 				}
 				self.plotAppApi = await appInit(opts)
-				self.violinApi = self.plotAppApi.getComponents('plots.0')
+				const plotId = self.plotAppApi.getState().plots[0].id
+				self.violinApi = self.plotAppApi.getComponents(`plots.${plotId}`)
 			}
 		} else {
 			// mode is neither continuous nor spline
