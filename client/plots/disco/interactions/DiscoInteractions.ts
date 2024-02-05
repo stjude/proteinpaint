@@ -70,7 +70,9 @@ export class DiscoInteractions {
 					{
 						type: 'mds3',
 						dslabel: disco.app.opts.state.dslabel,
-						hlaachange: mnames.join(',')
+						hlaachange: mnames.join(','),
+						filter0: disco.app.getState().termfilter.filter0
+						// should also pass termfilter.filter ???
 					}
 				]
 			}

@@ -555,7 +555,9 @@ function setTermActions(self) {
 			tklst: [
 				{
 					type: 'mds3',
-					dslabel: self.app.opts.state.vocab.dslabel
+					dslabel: self.app.opts.state.vocab.dslabel,
+					filter0: self.state.filter0
+					// should also pass self.state.filter ???
 				}
 			]
 		}
