@@ -43,7 +43,7 @@ class GenesetComp {
 		// in the app init(), and that app instance should return without having to wait
 		// for this component to finish the initial genes request and fully render
 		// NOTE: This is an important accomodation of rapid-fire cohort changes in the gdc portal
-		this.noWait()
+		this.noWait().catch(console.warn)
 	}
 
 	async noWait() {
