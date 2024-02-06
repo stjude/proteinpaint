@@ -25,7 +25,6 @@ export async function make_densityplot(holder, data, callabck, term) {
 	//density data, add first and last values to array
 
 	const density_data = data.density_data
-	console.log(density_data)
 	//density data, add first and last values to array
 	let min = density_data.minvalue
 	let max = density_data.maxvalue
