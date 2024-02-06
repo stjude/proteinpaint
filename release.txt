@@ -1,1 +1,3 @@
-
+Fixes:
+- Pass the cohort filter to the lollipop track from the matrix gene label click
+- Pass the cohort filter to the lollipop track from the matrix and disco plot label click
