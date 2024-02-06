@@ -372,6 +372,7 @@ export default function setViolinRenderer(self) {
 	}
 
 	function renderArea(violinG, plot, areaBuilder) {
+		if (plot.density.densityMax == 0) return
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
