@@ -353,7 +353,8 @@ function createCanvasImg(q, result, ds) {
 		plot.src = canvas.toDataURL()
 		// create bins for violins
 		const isKDE = q.isKDE === 'true' || q.isKDE
-		plot.bins = getBinsDensity(axisScale, plot, isKDE, q.ticks, q.bandwidth)
+		plot.density = getBinsDensity(axisScale, plot, isKDE, q.ticks, q.bandwidth)
+
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values)
 

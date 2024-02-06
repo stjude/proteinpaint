@@ -40,26 +40,18 @@ export async function get_densityplot(term, samples) {
 		.domain([minvalue, maxvalue])
 		.range([xpad, xpad + width])
 	const ticks = 20
-	const bins = getBinsDensity(xscale, { values }, ticks, false)
-	console.log(bins)
-	if (!Array.isArray(bins)) throw 'getBinsDensity does not return []'
-	if (bins.length == 0) throw 'getBinsDensity returns an empty array'
+	const density = getBinsDensity(xscale, { values }, false, ticks, false)
+	if (!Array.isArray(density.bins)) throw 'getBinsDensity does not return []'
+	if (density.bins.length == 0) throw 'getBinsDensity returns an empty array'
 
 	const result = {
 		minvalue,
 		maxvalue,
-		densitymax: 0,
-		density: [], // [ bin position, sample count ]
+		densityMax: density.densityMax,
+		density: density.bins,
 		samplecount: values.length,
 		unit: term.unit,
 		ticks
-	}
-	for (const b of bins) {
-		if (!Number.isFinite(b.x0)) throw 'b.x0 not number'
-		if (!Number.isFinite(b.x1)) throw 'b.x1 not number'
-		if (!Number.isFinite(b.density)) throw 'b.density not number'
-		result.density.push([b.x0, b.density])
-		result.densitymax = Math.max(result.densitymax, b.density)
 	}
 
 	return result

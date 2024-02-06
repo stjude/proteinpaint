@@ -68,10 +68,10 @@ export function makeDensityPlot(opts) {
 	// SVG line generator
 	const line = d3line()
 		.x(function (d) {
-			return xscale(d[0])
+			return xscale(d.x0)
 		})
 		.y(function (d) {
-			return yscale(d[1])
+			return yscale(d.density)
 		})
 		.curve(curveMonotoneX)
 	// plot the data as a line

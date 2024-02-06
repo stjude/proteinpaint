@@ -311,12 +311,10 @@ export default function setViolinRenderer(self) {
 	}
 
 	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset) {
-		const values = plot.bins.map(b => b.density)
-		const [densityMin, densityMax] = extent(values)
 		const plotThickness = self.getPlotThickness()
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
-			.domain([densityMax, densityMin])
+			.domain([plot.density.densityMax, 0])
 			.range([plotThickness * 0.45, 0])
 		let areaBuilder
 		if (isH) {
@@ -379,7 +377,7 @@ export default function setViolinRenderer(self) {
 			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
 			// .duration(self.opts.mode == 'minimal' ? 0 : 600)
 			.style('opacity', '0.8')
-			.attr('d', areaBuilder(plot.bins))
+			.attr('d', areaBuilder(plot.density.bins))
 	}
 
 	function renderSymbolImage(self, violinG, plot, isH, imageOffset) {

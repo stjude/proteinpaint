@@ -37,13 +37,13 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
 	const step = Math.abs(max - min) / ticks
 
-	if (valuesMin == valuesMax) return [{ x0: valuesMin, x1: valuesMax, density: 1 }]
+	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, x1: valuesMax, density: 1 }], densityMax: valuesMax }
 
-	const bins = isKDE
+	const result = isKDE
 		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMax, step)
 		: getBinsHist(scale, plot.values, ticks, valuesMax)
-	bins.unshift({ x0: min, x1: min, density: 0 })
-	return bins
+	result.bins.unshift({ x0: min, x1: min, density: 0 })
+	return result
 }
 
 function epanechnikov(bandwidth) {
@@ -53,14 +53,16 @@ function epanechnikov(bandwidth) {
 function kde(kernel, thresholds, data, valuesMax, step) {
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
 	const bins = []
+	let densityMax = 0
 	density.forEach(element => {
 		const bin = { x0: element[0], x1: element[0] + step, density: element[1] }
+		if (bin.density > densityMax) densityMax = bin.density
 		if (bin.x1 > valuesMax) return
 		bins.push(bin)
 	})
 	bins.push({ x0: valuesMax, x1: valuesMax, density: 0 })
 
-	return bins
+	return { bins, densityMax }
 }
 
 function getBinsHist(scale, values, ticks, valuesMax) {
@@ -70,13 +72,15 @@ function getBinsHist(scale, values, ticks, valuesMax) {
 		.value(d => d) /* bin the data points into this bucket*/
 	const bins0 = binBuilder(values)
 	const bins = []
+	let densityMax = 0
 	for (const bin of bins0) {
 		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
+		if (bin.length > densityMax) densityMax = bin.length
 		if (bin.x1 > valuesMax) {
 			bins.push({ x0: valuesMax, x1: valuesMax, density: 0 })
 			break
 		}
 	}
 
-	return bins
+	return { bins, densityMax }
 }
