@@ -54,12 +54,13 @@ function kde(kernel, thresholds, data, valuesMax, step) {
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
 	const bins = []
 	let densityMax = 0
-	density.forEach(element => {
+	for (const element of density) {
 		const bin = { x0: element[0], x1: element[0] + step, density: element[1] }
 		if (bin.density > densityMax) densityMax = bin.density
-		if (bin.x1 > valuesMax) return
+		if (bin.density == 0 && densityMax == 0) continue
+		if (bin.x1 > valuesMax) break
 		bins.push(bin)
-	})
+	}
 	bins.push({ x0: valuesMax, x1: valuesMax, density: 0 })
 
 	return { bins, densityMax }
@@ -74,13 +75,14 @@ function getBinsHist(scale, values, ticks, valuesMax) {
 	const bins = []
 	let densityMax = 0
 	for (const bin of bins0) {
-		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
 		if (bin.length > densityMax) densityMax = bin.length
+		if (bin.length == 0 && densityMax == 0) continue
+		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
 		if (bin.x1 > valuesMax) {
-			bins.push({ x0: valuesMax, x1: valuesMax, density: 0 })
 			break
 		}
 	}
+	bins.push({ x0: valuesMax, x1: valuesMax, density: 0 })
 
 	return { bins, densityMax }
 }
