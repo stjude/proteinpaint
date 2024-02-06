@@ -68,10 +68,11 @@ class ViolinPlot {
 				handlers: {}
 			})
 		}
+		await this.setControls()
 	}
 
 	async setControls() {
-		this.dom.controls.selectAll('*').remove()
+		//this.dom.controls.selectAll('*').remove()
 		this.components = {}
 		if (this.opts.mode == 'minimal') return
 		const inputs = [
@@ -111,7 +112,16 @@ class ViolinPlot {
 					{ label: 'Histogram', value: 1 }
 				]
 			},
-
+			{
+				label: 'Bandwidth',
+				type: 'number',
+				title:
+					'It only applies to the KDE method. If the bandwidth is too small, the estimate may include spurious bumps and wiggles; too large, and the estimate reveals little about the underlying distribution',
+				chartType: 'violin',
+				settingsKey: 'bandwidth',
+				min: 1,
+				max: 20
+			},
 			{
 				label: 'Data symbol',
 				title: 'Symbol type',
@@ -217,19 +227,6 @@ class ViolinPlot {
 			}
 		]
 
-		if (this.settings.method == 0) {
-			//KDE
-			inputs.splice(4, 0, {
-				label: 'Bandwidth',
-				type: 'number',
-				title:
-					'If the bandwidth is too small, the estimate may include spurious bumps and wiggles; too large, and the estimate reveals little about the underlying distribution',
-				chartType: 'violin',
-				settingsKey: 'bandwidth',
-				min: 1,
-				max: 20
-			})
-		}
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -264,7 +261,6 @@ class ViolinPlot {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.violin
-		await this.setControls()
 
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
 
