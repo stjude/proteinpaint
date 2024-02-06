@@ -116,6 +116,8 @@ box {}
 .len   // #bp
 .cidx  // start position in sequence/qual string
 .s (read sequence) FIXME only keep box.s if sequence will be rendered
+	if a read has no sequence ("*" as value), doing box.s=segment.seq.substr() will not break and returns blank string ''
+	thus rendering code may have to test if box.s==''
 .qual[]
 
 
