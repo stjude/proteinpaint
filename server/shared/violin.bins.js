@@ -41,7 +41,7 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth
 
 	const bins = isKDE
 		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMax, step)
-		: getBinsHist(scale, plot.values, max, ticks)
+		: getBinsHist(scale, plot.values, ticks, valuesMax)
 	bins.unshift({ x0: min, x1: min, density: 0 })
 	return bins
 }
@@ -63,15 +63,20 @@ function kde(kernel, thresholds, data, valuesMax, step) {
 	return bins
 }
 
-function getBinsHist(scale, values, max, ticks) {
+function getBinsHist(scale, values, ticks, valuesMax) {
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
 		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 	const bins0 = binBuilder(values)
 	const bins = []
-	for (const bin of bins0) bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
-	bins.push({ x0: max, x1: max, density: 0 })
+	for (const bin of bins0) {
+		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
+		if (bin.x1 > valuesMax) {
+			bins.push({ x0: valuesMax, x1: valuesMax, density: 0 })
+			break
+		}
+	}
 
 	return bins
 }
