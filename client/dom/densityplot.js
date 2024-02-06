@@ -25,7 +25,7 @@ export async function make_densityplot(holder, data, callabck, term) {
 	//density data, add first and last values to array
 
 	const density_data = data.density_data
-
+	console.log(density_data)
 	//density data, add first and last values to array
 	let min = density_data.minvalue
 	let max = density_data.maxvalue
@@ -50,7 +50,7 @@ export async function make_densityplot(holder, data, callabck, term) {
 
 	// y-scale
 	const yscale = scaleLinear()
-		.domain([0, data.density_data.densitymax])
+		.domain([0, density_data.densityMax])
 		.range([height + ypad, ypad])
 	const y_axis = axisLeft().scale(yscale).ticks(default_ticks).tickFormat(format('d'))
 
@@ -59,13 +59,12 @@ export async function make_densityplot(holder, data, callabck, term) {
 	// SVG line generator
 	const line = d3line()
 		.x(function (d) {
-			return xscale(d[0])
+			return xscale(d.x0)
 		})
 		.y(function (d) {
-			return yscale(d[1])
+			return yscale(d.density)
 		})
 		.curve(curveMonotoneX)
-
 	g.append('g').attr('transform', `translate(${xpad}, 0)`).call(y_axis)
 
 	// plot the data as a line
