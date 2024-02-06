@@ -125,7 +125,11 @@ export async function bamsliceui({
 	if (callbacks.postRender && typeof callbacks.postRender != 'function') throw 'callbacks.postRender is not function'
 
 	// public api obj to be returned
-	const publicApi = {}
+	const publicApi = {
+		dom: {
+			tip
+		}
+	}
 
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
@@ -210,10 +214,10 @@ export async function bamsliceui({
 
 	function makeTokenInput() {
 		// make one <tr> with two cells
-		const tr = formDiv.insert('div')
+		const tr = formDiv.insert('div').attr('class', 'sja-gdcbam-tokendiv')
 
 		// cell 1
-		tr.insert('div').style('display', 'inline-block').style('width', '15vw').text('GDC token file')
+		tr.insert('div').style('display', 'inline-block').style('width', '15vw').text('GDC Token File')
 
 		// cell 2
 		const td = tr.insert('div').style('display', 'inline-block')
@@ -267,7 +271,7 @@ export async function bamsliceui({
 			.style('display', 'inline-block')
 			.style('width', '15vw')
 			.style('padding-top', '5px')
-			.text('Enter search string')
+			.text('Enter Search String')
 			.style('vertical-align', 'top')
 
 		// cell 2
@@ -297,6 +301,7 @@ export async function bamsliceui({
 		td.append('br') // add line break from input box
 		const listCaseFileHandle = td
 			.append('div')
+			.attr('class', 'sja-gdcbam-listCaseFileHandle') // for testing
 			.style('margin', '5px')
 			.style('display', 'inline-block')
 			.text('Looking for BAM files from current cohort...')
@@ -560,7 +565,7 @@ export async function bamsliceui({
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.loaded} available BAM files`)
 
 		handle
-			.attr('class', 'sja_clbtext')
+			.classed('sja_clbtext', true) // not to override the class name used for testing
 			.attr('tabindex', 0)
 			.on('keyup', event => {
 				if (event.key == 'Enter') {
@@ -570,7 +575,7 @@ export async function bamsliceui({
 			.on('click', event => {
 				const div = tip
 					.clear()
-					.showunder(event.target)
+					//.showunder(event.target)
 					.d.append('div')
 					.style('margin', '10px')
 					.style('overflow-y', 'scroll')
@@ -609,6 +614,8 @@ export async function bamsliceui({
 				}
 
 				table.select('.sja_clbtext')?.node()?.focus()
+
+				tip.showunder(event.target)
 			})
 	}
 

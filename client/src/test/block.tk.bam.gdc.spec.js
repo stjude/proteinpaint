@@ -71,6 +71,45 @@ tape('\n', function (test) {
 	test.end()
 })
 
+tape('Hide token input', test => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		gdcbamslice: {
+			hideTokenInput: true,
+			callbacks: { postRender }
+		}
+	})
+
+	let isFirstUpdate = true
+
+	async function postRender(api) {
+		await detectZero({ elem: holder, selector: '.sja-gdcbam-tokendiv' })
+		test.pass('No token input is shown')
+		const handle = await detectOne({ elem: holder, selector: '.sja-gdcbam-listCaseFileHandle' })
+		test.equal(
+			handle.innerHTML,
+			'Or, browse 1000 available BAM files',
+			'List case file handle is shown with correct text'
+		)
+
+		handle.dispatchEvent(new Event('click'))
+		await whenVisible(api.dom.tip.d.node())
+
+		// FIXME cannot detect a file by class in the tip
+		//const file = await detectOne({elem:api.dom.tip.d.node(), selector:'.sja_clbtext'})
+
+		// trigger click on the text to search by bam and update ui, then use isFirstUpdate =true/false to reuse postRender to test
+
+		if (test._ok) {
+			holder.remove()
+			api.dom.tip.d.remove()
+		}
+		test.end()
+	}
+})
+
 for (const entity of entities) {
 	tape(entity.label, test => {
 		/*** must not use "async (test)=>{}" postRender runs after test finishes!! ***/

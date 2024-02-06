@@ -398,17 +398,17 @@ or update existing groups, in which groupidx will be provided
 				.attr('text-anchor', 'middle')
 				.text(m.t)
 			/*
-				TODO
-				clicking header has unresolved issues in GFF, disable until after softlaunch
+			TODO !tk.gdcFile
+				clicking header has unresolved issues in GFF, disable it in GDC until after softlaunch
 				- click on 1st group will show what's from the 4th group
 				- the realignment panel y position can be too high and got covered up by gdc portal component
-			if (m.isheader) {
+			*/
+			if (m.isheader && !tk.gdcFile) {
 				// this message is the header of the group, allow clickable
 				msg.attr('class', 'sja_clbtext2').on('click', () => {
 					click_groupheader(tk, g, block)
 				})
 			}
-			*/
 			y += messagerowheight
 		}
 	}
