@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.40.7
 
 Fixes:
 - Fix the detection of sorting-related updates in the matrix app, as distinct from the hier cluster
