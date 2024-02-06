@@ -1,1 +1,2 @@
-
+Fixes:
+- In GDC BAM slicing, before creating new cache file, find out old enough ones to delete to free up storage

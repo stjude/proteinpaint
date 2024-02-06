@@ -3500,7 +3500,53 @@ async function streamGdcBam2response(req, res) {
 	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
 
+async function mayDeleteOldCacheFiles() {
+	const filenames = await fs.promises.readdir(serverconfig.cachedir_bam)
+	const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
+	const currentTime = Date.now()
+	const timeLimit = 2 * 60 * 60 * 1000
+	for (const filename of filenames) {
+		if (!filename.endsWith('.bam')) continue
+		const fp = path.join(serverconfig.cachedir_bam, filename)
+		const s = await fs.promises.stat(fp)
+		if (!s.isFile()) throw '.bam not a file in cache'
+		const time = s.mtimeMs
+		if (currentTime - time > timeLimit) {
+			await fs.promises.unlink(fp)
+			await fs.promises.unlink(fp + '.bai')
+			continue
+		}
+		files.push({
+			path: fp,
+			time,
+			size: s.size
+		})
+	}
+
+	if (!ifStorageUsageAboveLimit()) return
+
+	/*
+	storage use is still above limit, deleting files just older than cutoff is not enough
+	a lot of recent requests may have deposited lots of cache files
+	must futher delete old files ranked by age
+	*/
+	files.sort((i, j) => j.time - i.time) // descending
+	for (const f of files) {
+		await fs.promises.unlink(f.path)
+		await fs.promises.unlink(f.path + '.bai')
+		if (!ifStorageUsageAboveLimit()) return
+	}
+}
+
+async function ifStorageUsageAboveLimit() {
+	// need method; return true if so
+	return false
+}
+
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
+	// before creating new cache file, check if possible to delete old files to be safe
+	await mayDeleteOldCacheFiles()
+
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
