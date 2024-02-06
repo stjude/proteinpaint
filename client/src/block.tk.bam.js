@@ -796,14 +796,7 @@ function updateExistingGroups(data, tk, block) {
 	for (let i = 0; i < tk.groups.length; i++) {
 		const group = data.groups.find(g => g.type == tk.groups[i].data.type)
 		if (!group) {
-			tk.groups[i].dom.message_rowg.remove()
-			tk.groups[i].dom.img_fullstack.remove()
-			tk.groups[i].dom.img_partstack.remove()
-			tk.groups[i].dom.diff_score_barplot_fullstack.remove()
-			tk.groups[i].dom.diff_score_barplot_partstack.remove()
-			tk.groups[i].dom.read_names_g.remove()
-			tk.groups[i].dom.leftg.remove()
-			tk.groups[i].dom.rightg.remove()
+			deleteGroupDom(tk.groups[i])
 			tk.groups.splice(i, 1) // Deleting the group
 		}
 	}
@@ -902,6 +895,17 @@ function update_box_stay(group, tk, block) {
 	}
 	// clicked template not found
 	group.dom.box_stay.attr('width', 0)
+}
+
+function deleteGroupDom(g) {
+	g.dom.message_rowg.remove()
+	g.dom.img_fullstack.remove()
+	g.dom.img_partstack.remove()
+	g.dom.diff_score_barplot_fullstack?.remove()
+	g.dom.diff_score_barplot_partstack?.remove()
+	g.dom.read_names_g?.remove()
+	g.dom.leftg.remove()
+	g.dom.rightg.remove()
 }
 
 function makeTk(tk, block) {
@@ -1008,6 +1012,17 @@ function makeTk(tk, block) {
 			.on('mouseout', () => {
 				tk.tktip.hide()
 			})
+	}
+
+	/* 
+	on makeTk(), existing settings and doms must be cleared
+	at block tk menu, hide and reshow this tk will trigger makeTk() on this tk a second time
+	if following things are not cleared, somehow some group img will become homeless
+	*/
+	delete tk.alleleAlreadyUpdated
+	if (tk.groups) {
+		for (const g of tk.groups) deleteGroupDom(g)
+		delete tk.groups
 	}
 }
 
