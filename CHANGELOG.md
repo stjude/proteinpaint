@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- BAM track bug fix to handle reads with no sequence and not to break.
+- BAM track bug fix to not to break by hide/show toggling at track menu
+
 
 ## 2.40.7
 
