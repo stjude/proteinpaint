@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Fix the detection of sorting-related updates in the matrix app, as distinct from the hier cluster
+- Pass the cohort filter to the lollipop track from the matrix gene label click
+- Pass the cohort filter to the lollipop track from the matrix and disco plot label click
 
 
 ## 2.40.6
