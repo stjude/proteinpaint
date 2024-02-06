@@ -1,6 +1,6 @@
 import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
-import { curveMonotoneX, line } from 'd3-shape'
+import { curveMonotoneX, curveMonotoneY, line } from 'd3-shape'
 import { getColors } from '#shared/common'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '../dom/table'
@@ -324,7 +324,7 @@ export default function setViolinRenderer(self) {
 				.y(d => wScale(d.density))
 		} else {
 			areaBuilder = line()
-				.curve(curveMonotoneX)
+				.curve(curveMonotoneY)
 				.x(d => wScale(d.density))
 				.y(d => svg.axisScale(d.x0))
 		}

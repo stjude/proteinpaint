@@ -107,8 +107,8 @@ class ViolinPlot {
 				chartType: 'violin',
 				settingsKey: 'method',
 				options: [
-					{ label: 'KDE', value: 'KDE' },
-					{ label: 'Histogram', value: 'Histogram' }
+					{ label: 'KDE', value: 0 },
+					{ label: 'Histogram', value: 1 }
 				]
 			},
 
@@ -330,7 +330,7 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			isKDE: s.method == 'KDE',
+			method: s.method,
 			ticks: s.ticks,
 			bandwidth: s.bandwidth
 		}
@@ -386,7 +386,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		ticks: 20,
 		bandwidth: 5,
 		defaultColor: plotColor,
-		method: 'KDE'
+		method: 0
 	}
 	return Object.assign(defaults, overrides)
 }
