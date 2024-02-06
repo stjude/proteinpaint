@@ -39,9 +39,11 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth
 
 	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, x1: valuesMax, density: 1 }], densityMax: valuesMax }
 
-	const result = isKDE
+	let result = isKDE
 		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMax, step)
 		: getBinsHist(scale, plot.values, ticks, valuesMax)
+
+	if (isKDE && result.densityMax == 0) result = getBinsHist(scale, plot.values, ticks, valuesMax)
 	result.bins.unshift({ x0: min, x1: min, density: 0 })
 	return result
 }
