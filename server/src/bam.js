@@ -3500,53 +3500,58 @@ async function streamGdcBam2response(req, res) {
 	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
 
-async function mayDeleteOldCacheFiles() {
-	const filenames = await fs.promises.readdir(serverconfig.cachedir_bam)
-	const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
-	const currentTime = Date.now()
-	const timeLimit = 2 * 60 * 60 * 1000
-	for (const filename of filenames) {
-		if (!filename.endsWith('.bam')) continue
-		const fp = path.join(serverconfig.cachedir_bam, filename)
-		const s = await fs.promises.stat(fp)
-		if (!s.isFile()) throw '.bam not a file in cache'
-		const time = s.mtimeMs
-		if (currentTime - time > timeLimit) {
-			await fs.promises.unlink(fp)
-			await fs.promises.unlink(fp + '.bai')
-			continue
-		}
-		files.push({
-			path: fp,
-			time,
-			size: s.size
-		})
-	}
+const bamCache = serverconfig.features?.bamCache || {}
+const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
+const maxSize = bamCache.maxSize || 5e9 // in bytes
 
-	if (!ifStorageUsageAboveLimit()) return
-
-	/*
-	storage use is still above limit, deleting files just older than cutoff is not enough
-	a lot of recent requests may have deposited lots of cache files
-	must futher delete old files ranked by age
-	*/
-	files.sort((i, j) => j.time - i.time) // descending
-	for (const f of files) {
-		await fs.promises.unlink(f.path)
-		await fs.promises.unlink(f.path + '.bai')
-		if (!ifStorageUsageAboveLimit()) return
-	}
+if (serverconfig.features?.bamCache) {
+	// only run this if configured
+	setInterval(mayDeleteOldCacheFiles, bamCache.checkWait || 5 * 60 * 1000)
 }
 
-async function ifStorageUsageAboveLimit() {
-	// need method; return true if so
-	return false
+async function mayDeleteOldCacheFiles() {
+	console.log('mayDeleteOldCacheFiles() ...')
+	try {
+		const minTime = Date.now() - maxAge
+		const filenames = await fs.promises.readdir(serverconfig.cachedir_bam)
+		const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
+		let totalSize = 0
+		for (const filename of filenames) {
+			if (!filename.endsWith('.bam') && !filename.endsWith('.bai')) continue
+			const fp = path.join(serverconfig.cachedir_bam, filename)
+			const s = await fs.promises.stat(fp)
+			if (!s.isFile()) continue // no need for??: throw '.bam not a file in cache'
+			const time = s.atimeMs
+			if (time < minTime) {
+				await fs.promises.unlink(fp)
+				continue
+			}
+			files.push({
+				path: fp,
+				time,
+				size: s.size
+			})
+			totalSize += s.size
+		}
+
+		if (totalSize < maxSize) return
+		/*
+		storage use is still above limit, deleting files just older than cutoff is not enough
+		a lot of recent requests may have deposited lots of cache files
+		must futher delete old files ranked by age
+		*/
+		files.sort((i, j) => j.time - i.time) // descending
+		for (const f of files) {
+			await fs.promises.unlink(f.path)
+			totalSize -= f.size
+			if (totalSize < maxSize) return
+		}
+	} catch (e) {
+		console.error('Error in mayDeleteOldCacheFiles(): ' + e)
+	}
 }
 
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
-	// before creating new cache file, check if possible to delete old files to be safe
-	await mayDeleteOldCacheFiles()
-
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
@@ -3559,6 +3564,8 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	const url = host.rest + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
 
 	try {
+		const time = Math.round(Date.now() / 1000)
+
 		if (await utils.file_not_exist(fullpath)) {
 			// bam file not found. download
 			await pipelineProm(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
@@ -3568,6 +3575,8 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 			}
 		} else {
 			// bam file found, no need to re-download
+			// change the modify times to prevent automated deletion with mayDeleteOldCacheFiles()
+			await fs.promises.utimes(fullpath, time, time)
 		}
 
 		const baiFilePath = fullpath + '.bai'
@@ -3578,6 +3587,9 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 			if (await utils.file_not_exist(baiFilePath)) {
 				throw 'index file is missing after indexing'
 			}
+		} else {
+			// change the modify times to prevent automated deletion with mayDeleteOldCacheFiles()
+			await fs.promises.utimes(baiFilePath, time, time)
 		}
 
 		const s = await fs.promises.stat(fullpath)
