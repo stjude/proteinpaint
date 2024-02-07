@@ -1855,18 +1855,31 @@ function parse_one_segment(arg, r, q) {
 			// read bp length of this part
 			const len = Number.parseInt(cigarstr.substring(prev, i))
 			if (cigar == 'H') {
-				segment.boxes.push({
+				const b = {
 					opr: cigar,
 					start: pos,
 					len,
 					cidx: cum - len
-				})
+				}
+				if (segment.boxes.length == 0) {
+					// this is the first box, will not consume ref
+					// shift softclip start to left, so its end will be pos, will not increment pos
+					b.start -= len
+					b.cidx = 0
+					if (keepallboxes || Math.max(pos, r.start) <= Math.min(pos + len - 1, r.stop)) {
+						segment.boxes.push(b)
+					}
+				} else {
+					// not the first box, so should be the last box
+					// do not shift start
+					segment.boxes.push(b)
+				}
 				prev = i + 1
 				continue
 			}
 			if (cigar == 'N') {
 				// no seq
-			} else if (cigar == 'P' || cigar == 'D') {
+			} else if (cigar == 'P' || cigar == 'D' || cigar == 'H') {
 				// padding or del, no sequence in read
 			} else {
 				// will consume read seq
@@ -2576,8 +2589,21 @@ function plot_segment(ctx, segment, y, group, q) {
 	r.width = group.widths[segment.ridx]
 	for (const b of segment.boxes) {
 		const x = r.x + r.scale(b.start)
-		if (b.opr == 'P' || b.opr == 'H') continue // do not handle
+		if (b.opr == 'P') continue // do not handle
 		if (b.opr == 'I') continue // do it next round
+		if (b.opr == 'H') {
+			// box with maybe letters
+			// not using quality or there ain't such data
+			ctx.fillStyle = 'white'
+			if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x < x) {
+				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
+			} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
+				ctx.fillRect(r.x, y, b.len * r.ntwidth + ntboxwidthincrement + x - r.x, group.stackheight)
+			} else if (x + b.len * r.ntwidth + ntboxwidthincrement <= r.width && r.x < x) {
+				ctx.fillRect(x, y, r.width - x, group.stackheight)
+			}
+			continue
+		}
 		if (b.opr == 'D' || b.opr == 'N') {
 			// a line
 			if (b.opr == 'D') {
