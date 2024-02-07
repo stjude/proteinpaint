@@ -3503,14 +3503,21 @@ async function streamGdcBam2response(req, res) {
 const bamCache = serverconfig.features?.bamCache || {}
 const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
 const maxSize = bamCache.maxSize || 5e9 // in bytes
+const checkWait = bamCache.checkWait || 1 * 60 * 1000
 
+let cacheCheckTimeout
 if (serverconfig.features?.bamCache) {
-	// only run this if configured
-	setInterval(mayDeleteOldCacheFiles, bamCache.checkWait || 5 * 60 * 1000)
+	// only run this loop if configured, otherwise will only rely on
+	// cleanup as new bam requests come in
+	setInterval(() => {
+		if (!cacheCheckTimeout) cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, checkWait)
+	}, 10 * checkWait)
 }
 
-async function mayDeleteOldCacheFiles() {
-	console.log('mayDeleteOldCacheFiles() ...')
+async function mayDeleteCacheFiles() {
+	console.log(`deleting cache files based on last access time ...`)
+	clearTimeout(cacheCheckTimeout)
+	cacheCheckTimeout = undefined
 	try {
 		const minTime = Date.now() - maxAge
 		const filenames = await fs.promises.readdir(serverconfig.cachedir_bam)
@@ -3547,11 +3554,15 @@ async function mayDeleteOldCacheFiles() {
 			if (totalSize < maxSize) return
 		}
 	} catch (e) {
-		console.error('Error in mayDeleteOldCacheFiles(): ' + e)
+		console.error('Error in mayDeleteCacheFiles(): ' + e)
 	}
 }
 
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
+	// before creating new cache file, check if possible to delete cache files
+	// only trigger a new check if a pending timeout doesn't already exist
+	if (!cacheCheckTimeout) cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, checkWait)
+
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
@@ -3575,7 +3586,7 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 			}
 		} else {
 			// bam file found, no need to re-download
-			// change the modify times to prevent automated deletion with mayDeleteOldCacheFiles()
+			// change the modify times to prevent automated deletion with mayDeleteCacheFiles()
 			await fs.promises.utimes(fullpath, time, time)
 		}
 
@@ -3588,7 +3599,7 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 				throw 'index file is missing after indexing'
 			}
 		} else {
-			// change the modify times to prevent automated deletion with mayDeleteOldCacheFiles()
+			// change the modify times to prevent automated deletion with mayDeleteCacheFiles()
 			await fs.promises.utimes(baiFilePath, time, time)
 		}
 
