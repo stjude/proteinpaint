@@ -214,7 +214,7 @@ async function make_singleSampleTable(s, arg) {
 				if (m) {
 					// found m object by id, can make a better display
 					if (m.dt == 1) {
-						print_snv(td, m, arg.tk)
+						print_snv(td, m, arg.tk, arg.block)
 					} else if (m.dt == 2 || m.dt == 5) {
 						printSvPair(m.pairlst[0], td)
 					} else {

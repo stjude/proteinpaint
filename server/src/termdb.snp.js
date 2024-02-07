@@ -456,12 +456,10 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			const altAlleles = l[3].split(',')
 
 			// if valid vcf ID is avaialble, use it since it should be snp rsid
-			const dbsnp = vcfId && vcfId != '.' ? vcfId : null
-			const snpid = dbsnp || pos + '.' + refAllele + '.' + altAlleles.join(',')
+			const snpid = vcfId && vcfId != '.' ? vcfId : pos + '.' + refAllele + '.' + altAlleles.join(',')
 
 			const variant = {
 				snpid,
-				dbsnp,
 				chr: q.chr,
 				pos
 			}
