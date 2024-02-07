@@ -429,21 +429,18 @@ function print_mname(div, m) {
 }
 
 export function print_snv(holder, m, tk, block) {
-	let snv_label = `${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`
-	if (m.vcf_id) snv_label += `&nbsp;&#65372;&nbsp;${m.vcf_id}`
-	const ssm = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.queries?.snvindel?.ssmUrl // ssm url definition can come from two places
-	if (ssm) {
-		const ssm_htmls = makeSsmLink(ssm, m, block.genome.name)
-		if (ssm_htmls) {
-			if (Array.isArray(ssm_htmls)) {
-				snv_label += `&nbsp;(${ssm_htmls.join(', ')})`
-			} else {
-				const ssm_html = ssm_htmls
-				snv_label = ssm_html.replace('</a>', `${snv_label}</a>`)
-			}
+	// first print snv name. ref/alt may be missing if data is non-mutation
+	// later its html may be rewritten with a link
+	const ssmNameDom = holder.append('span').text(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
+
+	// ssm url definition can come from two places! see type def
+	const urlConfig = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.queries?.snvindel?.ssmUrl
+	if (urlConfig) {
+		const separateUrls = makeSsmLink(urlConfig, m, ssmNameDom, block.genome.name)
+		if (separateUrls?.length) {
+			holder.append('span').style('margin-left', '10px').html(separateUrls.join(' '))
 		}
 	}
-	holder.html(snv_label)
 }
 
 // function is not used
