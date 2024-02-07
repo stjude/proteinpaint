@@ -551,7 +551,7 @@ type UrlTemplateBase = {
 	namekey: string
 	defaultText?: string
 }
-type UrlTemplateSsm = UrlTemplateBase & {
+export type UrlTemplateSsm = UrlTemplateBase & {
 	/** to create separate link, but not directly on chr.pos.ref.alt string.
 	name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
 	shownSeparately?: true
