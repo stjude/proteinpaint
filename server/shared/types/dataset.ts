@@ -597,7 +597,7 @@ type Termdb = {
 	urlTemplates?: {
 		gene?: UrlTemplateBase // gene link definition
 		sample?: UrlTemplateBase // sample link definition
-		ssm?: UrlTemplateSsm // ssm link definition
+		ssm?: UrlTemplateSsm | UrlTemplateSsm[] // ssm link definition
 	}
 
 	//GDC

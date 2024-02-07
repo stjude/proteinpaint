@@ -4,6 +4,7 @@ import { appear } from '#dom/animation'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table'
 import { table2col } from '#dom/table2col'
+import { makeSsmLink } from '../dom/ssmLink.ts'
 
 /*
 itemtable
@@ -289,7 +290,7 @@ function table_snvindel({ mlst, tk, block }, table) {
 		const [td1, td2] = table.addRow()
 		// do not pretend m is mutation if ref/alt is missing
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
-		print_snv(td2, m, tk)
+		print_snv(td2, m, tk, block)
 	}
 	if (m.occurrence > 1) {
 		const [td1, td2] = table.addRow()
@@ -427,30 +428,22 @@ function print_mname(div, m) {
 		.text(mclass[m.class].label.toUpperCase())
 }
 
-export function print_snv(holder, m, tk) {
-	let snvDiv = holder
-
-	// ssm url definition can come from two places
-	const url = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.queries?.snvindel?.ssmUrl
-	if (url && url.namekey in m) {
-		if (url.shownSeparately) {
-			// create new <span> to print snv into it
-			snvDiv = holder.append('span')
-			// create a separate <a> element for the url, not directly on the Mutation field
-			holder
-				.append('a')
-				.style('padding-left', '10px')
-				.attr('href', url.base + m[url.namekey])
-				.attr('target', '_blank')
-				.text(url.linkText || m[url.namekey])
-		} else {
-			// url is created directly on mutation string
-			snvDiv = holder.append('a')
-			snvDiv.attr('href', url.base + m[url.namekey])
-			snvDiv.attr('target', '_blank')
+export function print_snv(holder, m, tk, block) {
+	let snv_label = `${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`
+	if (m.vcf_id) snv_label += `&nbsp;&#65372;&nbsp;${m.vcf_id}`
+	const ssm = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.queries?.snvindel?.ssmUrl // ssm url definition can come from two places
+	if (ssm) {
+		const ssm_htmls = makeSsmLink(ssm, m, block.genome.name)
+		if (ssm_htmls) {
+			if (Array.isArray(ssm_htmls)) {
+				snv_label += `&nbsp;(${ssm_htmls.join(', ')})`
+			} else {
+				const ssm_html = ssm_htmls
+				snv_label = ssm_html.replace('</a>', `${snv_label}</a>`)
+			}
 		}
 	}
-	snvDiv.html(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
+	holder.html(snv_label)
 }
 
 // function is not used

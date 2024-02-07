@@ -5,6 +5,7 @@ import { axisstyle } from '#dom/axisstyle'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 import { drawBoxplot } from '#dom/boxplot'
+import { makeSsmLink } from '../dom/ssmLink.ts'
 
 /*************
 can dynamically add following attributes
@@ -305,17 +306,25 @@ function setRenderers(self) {
 		let lst
 		if (snplocusInput) {
 			// header row is for snplocus results
-			const snpid = v.snpid
-			const snp = snplocusInput.term.term.snps.find(snp => snp.snpid == snpid)
 			// snp id label
-			const urls = []
-			if (snp.dbsnp) urls.push(`<a href="https://www.ncbi.nlm.nih.gov/snp/${snpid}" target="_blank">dbSNP</a>`)
-			urls.push(
-				`<a href="https://regulomedb.org/regulome-search?regions=${snp.chr}%3A${snp.pos}-${snp.pos + 1}&genome=${
-					self.parent.genomeObj.name == 'hg38' ? 'GRCh38' : self.parent.genomeObj.name
-				}" target="_blank">RegulomeDB</a>`
-			)
-			const snpid_label = `${snpid} (${urls.join(', ')})`
+			const snpid = v.snpid
+			let snpid_label = snpid
+			const ssm = self.app.vocabApi.termdbConfig.urlTemplates?.ssm
+			if (ssm) {
+				// add ssm urls to snp label
+				const snp = snplocusInput.term.term.snps.find(snp => snp.snpid == snpid)
+				const m = snp.mlst[0]
+				m.chr = snp.chr
+				const ssm_htmls = makeSsmLink(ssm, m, self.parent.genomeObj.name)
+				if (ssm_htmls) {
+					if (Array.isArray(ssm_htmls)) {
+						snpid_label += ` (${ssm_htmls.join(', ')})`
+					} else {
+						const ssm_html = ssm_htmls
+						snpid_label = ssm_html.replace('</a>', `${snv_label}</a>`)
+					}
+				}
+			}
 			// gt label
 			const gt_label = `Genotypes: ${v.gtcounts.join(', ')}`
 			if (v.monomorphic) {
