@@ -195,7 +195,8 @@ type SnvIndelQuery = {
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter
 	populations?: Population[]
-	/** this definition can appear either in queries.snvindel{} or termdb{}
+	/** NOTE **
+	this definition can appear either in queries.snvindel{} or termdb{}
 	so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig cannot be made */
 	ssmUrl?: UrlTemplateSsm
 }
@@ -555,7 +556,8 @@ export type UrlTemplateSsm = UrlTemplateBase & {
 	/** to create separate link, but not directly on chr.pos.ref.alt string.
 	name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
 	shownSeparately?: true
-	/** optional name of link, same name will be used for all links. e.g. "ClinVar" */
+	/** optional name of link, if set, same name will be used for all links. e.g. "ClinVar".
+	if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsid) */
 	linkText?: string
 }
 
