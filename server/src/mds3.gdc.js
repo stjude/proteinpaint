@@ -1907,7 +1907,7 @@ function termid2size_query(termlst) {
 	const query = `query termislst2total( $filters: FiltersArgument) {
 		explore {
 			cases {
-				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+				aggregations (case_filters: $filters, aggregations_filter_themselves: true) {
 					${lst.join('\n')}
 				}
 			}
