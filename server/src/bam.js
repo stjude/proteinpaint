@@ -3500,11 +3500,28 @@ async function streamGdcBam2response(req, res) {
 	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
 }
 
+/*
+	BAM deletion is prioritized by last access time, not modified time,
+	although they will be equal due to using utimes() to reset both in get_gdc_bam(). 
+
+	Each call to get_gdc_bam() will trigger mayDeleteCacheFiles() if 
+	there is no pending timeout for it already, to avoid multiples of that 
+	function running at the same time unnecessarily. 
+
+	There is also a separate interval for trigger mayDeleteCacheFiles(), so that it would run 
+	every so often even when get_gdc_bam() has not run in a while
+*/
+
 const bamCache = serverconfig.features?.bamCache || {}
+// the max age for the access time, will delete files whose access time exceeds this "aged" access
 const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
-const maxSize = bamCache.maxSize || 5e9 // in bytes
+// maximum allowed cache size in bytes
+const maxSize = bamCache.maxSize || 5e9
+// maximum time to wait before triggering another call to mayDeleteCacheFiles(),
+// this is used to debounce/prevent multiple active calls to mayDeleteCacheFiles()
 const checkWait = bamCache.checkWait || 1 * 60 * 1000
 
+// a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
 let cacheCheckTimeout
 if (serverconfig.features?.bamCache) {
 	// only run this loop if configured, otherwise will only rely on
