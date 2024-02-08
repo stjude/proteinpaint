@@ -77,7 +77,6 @@ export class RegressionResults {
 		this.dom = {
 			holder,
 			err_div: holder.append('div'),
-			headerDiv: holder.append('div'),
 			snplocusBlockDiv: holder.append('div'),
 			// is where newDiv() and displayResult_oneset() writes to
 			oneSetResultDiv: holder.append('div').style('margin', '10px')
@@ -208,7 +207,6 @@ function setRenderers(self) {
 	self.displayResult = async result => {
 		/*
 		result {
-			headerMessage {k, v}
 			resultLst [
 				{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
 				{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
@@ -216,11 +214,6 @@ function setRenderers(self) {
 			]
 		}
 		*/
-
-		self.dom.headerDiv.selectAll('*').remove()
-		if (result.headerMessage) {
-			self.newDiv(result.headerMessage.k, result.headerMessage.v, self.dom.headerDiv)
-		}
 
 		// if there is a snplocus Input
 		const snplocusInput = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
@@ -274,19 +267,17 @@ function setRenderers(self) {
 		self.mayshow_cuminc(result)
 	}
 
-	self.newDiv = (label, label2, holder) => {
+	self.newDiv = (label, label2, getrow) => {
 		// create div to show a section of the result
 		// label is required, label2 is optional
-		const div = (holder || self.dom.oneSetResultDiv)
-			.append('div')
-			.style('margin', '20px 0px 10px 0px')
-			.attr('name', label) //For integration testing
+		// specify getrow=true to return row instead of div
+		const div = self.dom.oneSetResultDiv.append('div').style('margin', '20px 0px 10px 0px').attr('name', label) //For integration testing
 		const row = div.append('div')
 		row.append('span').style('text-decoration', 'underline').text(label)
 		if (label2) {
 			row.append('span').html(label2).style('margin-left', '5px')
 		}
-		return div.append('div').style('margin-left', '20px')
+		return getrow ? row : div.append('div').style('margin-left', '20px')
 	}
 
 	self.mayshow_warn = result => {
@@ -303,45 +294,43 @@ function setRenderers(self) {
 		const k = result.headerRow.k
 		const v = result.headerRow.v
 		const snplocusInput = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
-		let lst
 		if (snplocusInput) {
 			// header row is for snplocus results
-			// snp id label
-			const snpid = v.snpid
-			let snpid_label = snpid
-			const ssm = self.app.vocabApi.termdbConfig.urlTemplates?.ssm
-			if (ssm) {
-				// add ssm urls to snp label
-				const snp = snplocusInput.term.term.snps.find(snp => snp.snpid == snpid)
-				const m = snp.mlst[0]
-				m.chr = snp.chr
-				const ssm_htmls = makeSsmLink(ssm, m, self.parent.genomeObj.name)
-				if (ssm_htmls) {
-					if (Array.isArray(ssm_htmls)) {
-						snpid_label += ` (${ssm_htmls.join(', ')})`
-					} else {
-						const ssm_html = ssm_htmls
-						snpid_label = ssm_html.replace('</a>', `${snv_label}</a>`)
-					}
+			// variant label
+			const snp = snplocusInput.term.term.snps.find(snp => snp.snpid == v.snpid)
+			const m = snp.mlst[0]
+			m.chr = snp.chr
+			const row = self.newDiv(k, null, true)
+			const snpLabelDom = row
+				.append('span')
+				.text(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
+				.style('margin-left', '5px')
+			const urlConfig =
+				self.app.vocabApi.termdbConfig.urlTemplates?.ssm || self.app.vocabApi.termdbConfig.queries?.snvindel?.ssmUrl
+			if (urlConfig) {
+				// add urls to snp label
+				const separateUrls = makeSsmLink(urlConfig, m, snpLabelDom, self.parent.genomeObj.name)
+				if (separateUrls?.length) {
+					row.append('span').style('margin-left', '10px').html(separateUrls.join(' '))
 				}
 			}
 			// gt label
+			let labels
 			const gt_label = `Genotypes: ${v.gtcounts.join(', ')}`
 			if (v.monomorphic) {
-				lst = [snpid_label, gt_label]
+				labels = [gt_label]
 			} else {
 				// effect allele label
 				const effale_label = `Effect allele: ${v.effAle}`
 				// allel frequency label
 				const af_label = `Allele frequency: ${v.af}`
-				lst = [snpid_label, effale_label, af_label, gt_label]
+				labels = [effale_label, af_label, gt_label]
 			}
+			row.append('span').html(`&nbsp;&#65372;&nbsp;${labels.join('&nbsp;&#65372;&nbsp;')}`)
 		} else {
 			// header row is not for snplocus results
-			lst = v
+			self.newDiv(k, v)
 		}
-
-		self.newDiv(k, lst.join('&nbsp;&#65372;&nbsp;'))
 	}
 
 	self.mayshow_splinePlots = result => {
