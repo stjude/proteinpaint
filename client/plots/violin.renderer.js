@@ -17,31 +17,32 @@ export default function setViolinRenderer(self) {
 		const t2 = self.config.term2
 		const tip = new Menu({ padding: '5px' })
 		self.dom.tip = tip
+		if (self.config.term) {
+			//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
+			const termNum =
+				t2?.term.type === 'condition' ||
+				t2?.term.type === 'samplelst' ||
+				t2?.term.type === 'categorical' ||
+				((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1?.q.mode === 'continuous')
+					? t2
+					: t1
 
-		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
-		const termNum =
-			t2?.term.type === 'condition' ||
-			t2?.term.type === 'samplelst' ||
-			t2?.term.type === 'categorical' ||
-			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
-				? t2
-				: t1
-
-		if (termNum && termNum.term?.values) {
-			for (const [k, v] of Object.entries(termNum.term.values)) {
-				if (v.uncomputable) {
-					if (termNum.q.hiddenValues[k]) {
-						termNum.q.hiddenValues[v.label] = 1
-						delete termNum.q.hiddenValues[k]
+			if (termNum && termNum.term?.values) {
+				for (const [k, v] of Object.entries(termNum.term.values)) {
+					if (v.uncomputable) {
+						if (termNum.q.hiddenValues[k]) {
+							termNum.q.hiddenValues[v.label] = 1
+							delete termNum.q.hiddenValues[k]
+						}
 					}
 				}
 			}
-		}
 
-		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
-		self.data.plots = self.data.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
+			//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
+			self.data.plots = self.data.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
+			if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
+		}
 		this.k2c = getColors(self.data.plots.length)
-		if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
 		if (self.data.plots.length === 0) {
 			self.dom.violinDiv.html(
@@ -241,7 +242,6 @@ export default function setViolinRenderer(self) {
 				})
 				.tickValues(ticks)
 		)
-
 		if (self.opts.mode != 'minimal') {
 			// TODO need to add term2 label onto the svg
 			const lab = svg.svgG
@@ -337,7 +337,7 @@ export default function setViolinRenderer(self) {
 		// }
 		// console.log(plot, X, Y)
 		const label = plot.label.split(',')[0]
-		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
+		const catTerm = self.config.term?.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
 
 		const color = category?.color ? category.color : self.config.settings.violin.defaultColor

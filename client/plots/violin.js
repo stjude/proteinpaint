@@ -268,13 +268,14 @@ class ViolinPlot {
 			this.dom.header.text(
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
-
+		if (this.config.data) {
+			this.data = this.config.data
+			this.render()
+			return
+		}
 		await this.getDescrStats()
-
 		const arg = this.validateArg()
-
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
-
 		if (this.settings.plotThickness == undefined) {
 			const thickness = this.data.plots.length == 1 ? 200 : 150
 			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, thickness)
@@ -393,9 +394,9 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 }
 
 export async function getPlotConfig(opts, app) {
-	if (!opts.term) throw 'violin getPlotConfig: opts.term{} missing'
+	//if (!opts.term) throw 'violin getPlotConfig: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term) await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
@@ -403,7 +404,7 @@ export async function getPlotConfig(opts, app) {
 	}
 
 	const config = {
-		id: opts.term.term.id,
+		id: opts.term?.term.id,
 		settings: {
 			controls: {
 				isOpen: false, // control panel is hidden by default

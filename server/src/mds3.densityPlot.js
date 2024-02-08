@@ -47,8 +47,7 @@ export async function get_densityplot(term, samples) {
 	const result = {
 		minvalue,
 		maxvalue,
-		densityMax: density.densityMax,
-		density: density.bins,
+		density,
 		samplecount: values.length,
 		unit: term.unit,
 		ticks

@@ -49,7 +49,7 @@ export async function make_densityplot(holder, data, callabck, term) {
 
 	// y-scale
 	const yscale = scaleLinear()
-		.domain([0, density_data.densityMax])
+		.domain([0, density_data.density.densityMax])
 		.range([height + ypad, ypad])
 	const y_axis = axisLeft().scale(yscale).ticks(default_ticks).tickFormat(format('d'))
 
@@ -68,7 +68,7 @@ export async function make_densityplot(holder, data, callabck, term) {
 
 	// plot the data as a line
 	g.append('path')
-		.datum(density_data.density)
+		.datum(density_data.density.bins)
 		.attr('class', 'line')
 		.attr('d', line)
 		.style('fill', '#eee')

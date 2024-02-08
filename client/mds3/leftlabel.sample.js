@@ -359,15 +359,21 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 			//strokeWidth: 0.01
 		})
 	}
-
-	const plot = { chartType: 'violin', term, settings }
+	let plotData = data.density_data
+	plotData.label = termid
+	console.log(plotData)
+	const plot = {
+		chartType: 'violin',
+		data: { plots: [plotData], min: plotData.minvalue, max: plotData.maxvalue },
+		settings
+	}
 	const opts = {
 		holder: div,
 		state: {
 			plots: [plot],
-			vocab: tk.mds.termdb.vocabApi.state.vocab,
-			violin: { mode: 'minimal' } //not working
-		}
+			vocab: tk.mds.termdb.vocabApi.state.vocab
+		},
+		violin: { mode: 'minimal' }
 	}
 	const plotAppApi = await plotMod.appInit(opts)
 	// make_densityplot(
