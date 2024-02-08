@@ -765,6 +765,10 @@ async function get_q(genome, req) {
 	if (req.query.drop_pcrduplicates) {
 		q.drop_pcrduplicates = true
 	}
+	if (req.query.supplementary_alignments) {
+		q.supplementary_alignments = true
+	}
+
 	if (req.query.variant) {
 		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
 		if (req.query.max_diff_score) {
@@ -1414,6 +1418,10 @@ async function query_region(r, q) {
 			if (flag & 0x400 && q.drop_pcrduplicates) {
 				return
 			}
+			// Show/Hide secondary alignments
+			if (flag & 0x800 && q.supplementary_alignments) {
+				return
+			}
 			if (q.downsample) {
 				// apply downsampling based on the ratio specified in .keep and .skip
 				const d = q.downsample
@@ -1463,6 +1471,10 @@ async function run_samtools_depth(q, r) {
 	if (q.drop_pcrduplicates) {
 		args.push('-G')
 		args.push('0x400')
+	}
+	if (q.supplementary_alignments) {
+		args.push('-G')
+		args.push('0x800')
 	}
 	await utils.get_lines_bigfile({
 		isbam: true,
