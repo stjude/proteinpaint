@@ -1,1 +1,2 @@
-
+Fixes:
+- Bug fix to convert "case." to "cases." in case_filters[] for GDC mds3 sunburst clicking to load sample table
