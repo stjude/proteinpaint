@@ -405,7 +405,7 @@ export async function testVariantLeftLabel(test, tk, bb) {
 	}
 }
 
-tape.only('Official - allow2selectSamples', test => {
+tape('Official - allow2selectSamples', test => {
 	testAllow2selectSamples('hg38-test', 'tp53', 'TermdbTest', test)
 })
 
@@ -414,7 +414,8 @@ export async function testAllow2selectSamples(genome, gene, dslabel, test) {
 must use a gene with both single and multi occurrence mutations to test
 */
 	const holder = getHolder()
-	const buttonText = 'SElect sample'
+	const buttonText = 'SElect SAmple'
+	const buttonClass = 'testclassabc'
 	runproteinpaint({
 		holder,
 		genome,
@@ -426,6 +427,7 @@ must use a gene with both single and multi occurrence mutations to test
 				callbackOnRender,
 				allow2selectSamples: {
 					buttonText, // hardcoded text should show in selection button
+					class: buttonClass,
 					callback: () => {} // TODO figure out a way to verify callback is called by clicking button
 				}
 			}
@@ -440,9 +442,8 @@ must use a gene with both single and multi occurrence mutations to test
 		singletonMutationDisc.dispatchEvent(new Event('click'))
 		await whenVisible(tk.itemtip.d)
 		{
-			//const buttons = tk.itemtip.d.selectAll('button').nodes()
-			const buttons = await detectGte({ elem: tk.itemtip.d.node(), selector: 'button', count: 1 })
-			test.equal(buttons[0].innerHTML, buttonText, '1st button in single-sample menu shows buttonText')
+			const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass })
+			test.equal(button.innerHTML, buttonText, buttonText + ' button created in single-sample menu')
 			// TODO trigger click on selection button
 		}
 
@@ -454,9 +455,9 @@ must use a gene with both single and multi occurrence mutations to test
 		multiMutationDisc.dispatchEvent(new Event('click'))
 		await whenVisible(tk.itemtip.d)
 		{
-			const buttons = tk.itemtip.d.selectAll('button').nodes()
-			test.equal(buttons[buttons.length - 1].innerHTML, buttonText, 'last button in multi-sample menu shows buttonText')
-			test.ok(buttons[buttons.length - 1].disabled, 'button is also disabled (when no checkbox is checked)')
+			const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass, maxTime: 10000 })
+			test.equal(button.innerHTML, buttonText, buttonText + ' button created in multi-sample menu')
+			test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
 			// must check one checkbox first to
 		}
 
@@ -466,10 +467,9 @@ must use a gene with both single and multi occurrence mutations to test
 		{
 			const btn = await detectOne({ elem: tk.menutip.dnode, selector: '.sja_mds3_slb_sampletablebtn' })
 			btn.dispatchEvent(new Event('click'))
-			await detectOne({ elem: tk.menutip.dnode, selector: 'table' }) // wait when table is shown
-			const buttons = tk.menutip.d.selectAll('button').nodes()
-			test.equal(buttons[buttons.length - 1].innerHTML, buttonText, 'last button in sample table shows buttonText')
-			test.ok(buttons[buttons.length - 1].disabled, 'button is also disabled (when no checkbox is checked)')
+			const button = await detectOne({ elem: tk.menutip.dnode, selector: '.' + buttonClass, maxTime: 10000 })
+			test.equal(button.innerHTML, buttonText, buttonText + ' button is created in leftlabel sample table')
+			test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
 		}
 		if (test._ok) {
 			tk.menutip.d.remove()

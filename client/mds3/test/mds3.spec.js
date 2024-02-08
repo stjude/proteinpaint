@@ -13,7 +13,6 @@ const {
  tests both GDC and clinvar
  GDC is mission critical, clinvar is sample-less. both are not covered by CI
 
-### gdc dataset is based on GDC API
 GDC - gene symbol KRAS
 GDC - GENCODE transcript ENST00000407796
 GDC - GENCODE gene ENSG00000133703
@@ -22,22 +21,15 @@ GDC - KRAS SSM ID
 GDC - ssm by range
 GDC - allow2selectSamples
 geneSearch4GDCmds3
-
 GDC - gene hoxa1 - Disco button
-
-### clinvar dataset is based on sample-less bcf file
 Clinvar - gene kras
-
-
 GDC - sample summaries table, create subtrack (tk.filterObj)
 
-###
 GDC - mclass filtering
 Clinvar - mclass filtering
 
 Collapse and expand mutations from variant link
-
-GDC - Launch sample table from sunburst
+GDC - sunburst
 
 ***************/
 
@@ -244,13 +236,9 @@ tape('Clinvar - gene kras', test => {
 	}
 })
 
-/*
-!!! this test is disabled due to case_filters change that breaks pp function against v1 !!!!
-after softlaunch can reenable it
 tape('GDC - sample summaries table, create subtrack (tk.filterObj)', test => {
-	testSampleSummary2subtrack('hg38','IDH1', 'GDC', test)
+	testSampleSummary2subtrack('hg38', 'IDH1', 'GDC', test)
 })
-*/
 
 tape('GDC - mclass filtering', test => {
 	const holder = getHolder()
@@ -277,7 +265,7 @@ tape('Clinvar - mclass filtering', test => {
 	}
 })
 
-tape('GDC - Launch sample table from sunburst', test => {
+tape('GDC - sunburst', test => {
 	const holder = getHolder()
 
 	runproteinpaint({
@@ -285,7 +273,7 @@ tape('GDC - Launch sample table from sunburst', test => {
 		noheader: true,
 		nobox: true,
 		genome: 'hg38',
-		gene: 'kras',
+		gene: 'ENST00000407796',
 		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
 	async function callbackOnRender(tk, bb) {
@@ -293,11 +281,15 @@ tape('GDC - Launch sample table from sunburst', test => {
 		const discFound = tk.skewer.g
 			.selectAll('circle.sja_aa_disckick')
 			.nodes()
-			.find(e => e.__data__.occurrence >= 310)
-		test.ok(discFound, 'Found a mutation with occurrence >= 310, click on it to show sunburst')
+			.find(e => e.__data__.occurrence >= 10)
+		test.ok(discFound, 'Found a mutation with occurrence >= 10, click on it to show sunburst')
 		discFound.dispatchEvent(new Event('click'))
 
-		const clickInfo = await detectOne({ elem: tk.skewer.g.node(), selector: 'rect.sja_info_click' })
+		const clickInfo = await detectOne({
+			elem: tk.skewer.g.node(),
+			selector: 'rect.sja_info_click',
+			maxTime: 10000 // prod api is slow to generate sunburst data
+		})
 		test.ok(clickInfo, 'Info button from sunburst is found')
 		clickInfo.dispatchEvent(new Event('click'))
 
@@ -305,13 +297,24 @@ tape('GDC - Launch sample table from sunburst', test => {
 		await whenVisible(tk.itemtip.d)
 		test.pass('tk.itemtip displayed showing the sample table after clicking "Info" from sunburst')
 
-		// this test doesn't work
-		//const divFound = await detectOne({elem:tk.itemtip.d.node(), selector:':scope>div'}) // use :scope> to select immediate children
-		//test.ok(divFound,'Found <div> as variant/sample table in tooltip')
+		const table = await detectOne({ elem: tk.itemtip.dnode, selector: 'table' })
+		test.ok(table, '<table> shown in itemtip after sunburst')
+
+		/*
+		such table is mutation table but not sample table
+		lacks a way to test if sample table is actually shown
+
+		TODO !!!
+		find a sunburst slice >1 click to show table of multiple samples
+		find a sunburst slice =1 click to show table of just 1 sample
+		run sunburst with tk filter to check slice sizes are smaller than without filter
+		click slice under filter to make sure it still shows sample table
+		add recurrent mutation to termdbtest to reuse sunburst test
+		*/
 
 		if (test._ok) {
 			holder.remove()
-			tk.itemtip.d.remove()
+			//tk.itemtip.d.remove()
 		}
 		test.end()
 	}

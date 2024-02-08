@@ -22,7 +22,7 @@ export type Button = {
 	disabled?: (index: number) => boolean
 	button: any
 	onChange?: (idx: number[], button: any) => void //Called when selecting rows, it would update the button text
-	class?: string //to customize button style
+	class?: string //to customize button style or to assist detection in testing
 }
 
 export type TableArgs = {
@@ -277,17 +277,17 @@ export function renderTable({
 			.style('float', 'right')
 			.style('padding-bottom', '5px')
 
-		for (const button of buttons) {
-			button.button = footerDiv
+		for (const bCfg of buttons) {
+			bCfg.button = footerDiv
 				.append('button')
-				.text(button.text)
+				.text(bCfg.text)
 				.style('margin', '10px 10px 0 0')
 				.on('click', e => {
-					button.callback(getCheckedRowIndex(), button.button.node())
+					bCfg.callback(getCheckedRowIndex(), bCfg.button.node())
 				})
-			if (button.class) button.button.attr('class', button.class)
+			if (bCfg.class) bCfg.button.attr('class', bCfg.class)
 			//else button.button.attr('class', 'sjpp_apply_btn')
-			button.button.node().disabled = selectedRows.length == 0 && !selectAll
+			bCfg.button.node().disabled = selectedRows.length == 0 && !selectAll
 		}
 
 		// call function to update buttons with .onChange(), so their text can reflect default checkbox selection

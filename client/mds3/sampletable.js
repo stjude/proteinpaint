@@ -131,6 +131,7 @@ export async function displaySampleTable(samples, args) {
 		params.buttons = [
 			{
 				text: args.tk.allow2selectSamples.buttonText,
+				class: args.tk.allow2selectSamples.class,
 				callback: sampleIdxLst => {
 					// argument is list of array index of selected samples
 					feedSample2selectCallback(args.tk, args.block, samples, sampleIdxLst)
@@ -280,7 +281,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 	if (tk.allow2selectSamples) {
 		// display button for selecting this sample alone
 		const t = tk.allow2selectSamples.buttonText
-		extraRow
+		const btn = extraRow
 			.append('button')
 			.style('margin-right', '10px')
 			.text(t.endsWith('s') ? t.substring(0, t.length - 1) : t)
@@ -289,6 +290,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 				tk.itemtip.hide()
 				tk.menutip.hide()
 			})
+		if (tk.allow2selectSamples.class) btn.attr('class', tk.allow2selectSamples.class)
 	}
 
 	if (tk.mds.queries?.singleSampleMutation) {
