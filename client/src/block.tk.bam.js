@@ -606,6 +606,7 @@ function may_render_variant(data, tk, block) {
 			var_idx += 1
 		}
 	}
+
 	if (tk.variants.length == 1) {
 		// Rendering FS score
 		tk.fs_string.text('FS = ' + data.strand_probability)
@@ -747,7 +748,7 @@ function setTkHeight(tk) {
 		tk.dom.variantg.attr('transform', 'translate(0,' + h + ')')
 	}
 	if (tk.dom.alleleSimilarityHeaderG) {
-		tk.dom.alleleSimilarityHeaderG.attr('transform', 'translate(0,' + h + ')')
+		tk.dom.alleleSimilarityHeaderG.attr('transform', 'translate(0,' + (tk.pileupheight - tk.pileupbottompad * 2) + ')')
 	}
 
 	let var_idx = 0
