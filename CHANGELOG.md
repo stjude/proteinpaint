@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - BAM track bug fix to handle reads with no sequence and not to break.
 - BAM track bug fix to not to break by hide/show toggling at track menu
+- In GDC BAM slicing, before creating new cache file, find out old enough ones to delete to free up storage
 
 
 ## 2.40.7
