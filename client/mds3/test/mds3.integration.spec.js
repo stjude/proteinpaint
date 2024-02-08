@@ -10,7 +10,7 @@ const { runproteinpaint } = require('../../test/front.helpers.js')
 Official data on TP53, extensive ui test
 Official - mclass filtering
 Official - sample summaries table, create subtrack (tk.filterObj)
-Official - Collapse and expand mutations from variant link
+Official - allow2selectSamples
 Incorrect dslabel
 TP53 custom data, no sample
 Custom variants, missing or invalid mclass
@@ -24,6 +24,7 @@ this script exports following test methods to share with non-CI test using GDC/c
 - testMclassFiltering
 - testSampleSummary2subtrack
 - testVariantLeftLabel
+- testAllow2selectSamples
 
 TODO fix termdbtest data to move sunburst test 
 */
@@ -404,6 +405,81 @@ export async function testVariantLeftLabel(test, tk, bb) {
 	}
 }
 
+tape.only('Official - allow2selectSamples', test => {
+	testAllow2selectSamples('hg38-test', 'tp53', 'TermdbTest', test)
+})
+
+export async function testAllow2selectSamples(genome, gene, dslabel, test) {
+	/* 
+must use a gene with both single and multi occurrence mutations to test
+*/
+	const holder = getHolder()
+	const buttonText = 'SElect sample'
+	runproteinpaint({
+		holder,
+		genome,
+		gene,
+		tracks: [
+			{
+				type: 'mds3',
+				dslabel,
+				callbackOnRender,
+				allow2selectSamples: {
+					buttonText, // hardcoded text should show in selection button
+					callback: () => {} // TODO figure out a way to verify callback is called by clicking button
+				}
+			}
+		]
+	})
+	async function callbackOnRender(tk, bb) {
+		// 1: click on singleton mutation to show selection button in menu
+		const singletonMutationDisc = tk.skewer.g
+			.selectAll('.sja_aa_disckick')
+			.nodes()
+			.find(i => i.__data__.occurrence == 1)
+		singletonMutationDisc.dispatchEvent(new Event('click'))
+		await whenVisible(tk.itemtip.d)
+		{
+			//const buttons = tk.itemtip.d.selectAll('button').nodes()
+			const buttons = await detectGte({ elem: tk.itemtip.d.node(), selector: 'button', count: 1 })
+			test.equal(buttons[0].innerHTML, buttonText, '1st button in single-sample menu shows buttonText')
+			// TODO trigger click on selection button
+		}
+
+		// 2: click on multi-sample mutation to show selection button in sample table
+		const multiMutationDisc = tk.skewer.g
+			.selectAll('.sja_aa_disckick')
+			.nodes()
+			.find(i => i.__data__.occurrence > 1)
+		multiMutationDisc.dispatchEvent(new Event('click'))
+		await whenVisible(tk.itemtip.d)
+		{
+			const buttons = tk.itemtip.d.selectAll('button').nodes()
+			test.equal(buttons[buttons.length - 1].innerHTML, buttonText, 'last button in multi-sample menu shows buttonText')
+			test.ok(buttons[buttons.length - 1].disabled, 'button is also disabled (when no checkbox is checked)')
+			// must check one checkbox first to
+		}
+
+		// 3: click on sample leftlabel to show selection button in sample table
+		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d)
+		{
+			const btn = await detectOne({ elem: tk.menutip.dnode, selector: '.sja_mds3_slb_sampletablebtn' })
+			btn.dispatchEvent(new Event('click'))
+			await detectOne({ elem: tk.menutip.dnode, selector: 'table' }) // wait when table is shown
+			const buttons = tk.menutip.d.selectAll('button').nodes()
+			test.equal(buttons[buttons.length - 1].innerHTML, buttonText, 'last button in sample table shows buttonText')
+			test.ok(buttons[buttons.length - 1].disabled, 'button is also disabled (when no checkbox is checked)')
+		}
+		if (test._ok) {
+			tk.menutip.d.remove()
+			tk.itemtip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+}
+
 tape('Incorrect dslabel', test => {
 	const holder = getHolder()
 	runproteinpaint({
@@ -671,6 +747,7 @@ tape('Custom data with samples and sample selection', test => {
 				custom_variants,
 				sampleAnnotation,
 				allow2selectSamples: {
+					// cannot test this function! frontend vocab lacks a method
 					buttonText, // hardcoded text should show in selection button
 					callback: () => {}
 				}

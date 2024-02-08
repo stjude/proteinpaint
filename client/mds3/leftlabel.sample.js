@@ -376,7 +376,7 @@ function menu_listSamples(buttonrow, data, tk, block) {
 	buttonrow
 		.append('div')
 		.text(`List ${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
-		.attr('class', 'sja_menuoption')
+		.attr('class', 'sja_menuoption sja_mds3_slb_sampletablebtn')
 		.on('click', async () => {
 			tk.menutip.clear()
 			const wait = tk.menutip.d.append('div').text('Loading...').style('margin', '15px')

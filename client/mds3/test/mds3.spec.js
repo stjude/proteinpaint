@@ -5,7 +5,8 @@ const {
 	findSingletonMutationTestDiscoCnvPlots,
 	testMclassFiltering,
 	testSampleSummary2subtrack,
-	testVariantLeftLabel
+	testVariantLeftLabel,
+	testAllow2selectSamples
 } = require('./mds3.integration.spec')
 
 /**************
@@ -19,6 +20,7 @@ GDC - GENCODE gene ENSG00000133703
 GDC - RefSeq NM_005163
 GDC - KRAS SSM ID
 GDC - ssm by range
+GDC - allow2selectSamples
 geneSearch4GDCmds3
 
 GDC - gene hoxa1 - Disco button
@@ -181,6 +183,10 @@ tape('GDC - ssm by range', test => {
 		if (test._ok) holder.remove()
 		test.end()
 	}
+})
+
+tape('GDC - allow2selectSamples', test => {
+	testAllow2selectSamples('hg38', 'IDH1', 'GDC', test)
 })
 
 tape('geneSearch4GDCmds3', async test => {

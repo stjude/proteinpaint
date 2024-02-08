@@ -671,7 +671,7 @@ export class TermdbVocab extends Vocab {
     .samples{}
         [sample]{}
             sample: the sample ID
-            [$id]: { // $id is tw id, not term id
+            [$id]: {} // $id is tw id, not term id
 				key, value, // only used for dict term
 				values:[]
 					// used for non-dict term e.g. gene mutation
