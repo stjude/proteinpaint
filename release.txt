@@ -1,2 +1,1 @@
-Fixes:
-- Bug fix for GDC mds3 category total sample count to respond/shrink with cohort change
+
