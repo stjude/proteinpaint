@@ -2271,9 +2271,12 @@ async function getReadInfo(tk, block, box, ridx) {
 					chrom: tk.variants[0].chr,
 					ref_positions: tk.variants.ref_positions,
 					refalleles: tk.variants.refalleles,
-					altalleles: tk.variants.altalleles
+					altalleles: tk.variants.altalleles,
+					start: box.start,
+					stop: box.stop,
+					paired: tk.asPaired
 			  }
-			: {}
+			: { start: box.start, stop: box.stop, paired: tk.asPaired }
 	)
 	const data = await dofetch3('tkbam', param)
 	if (data.error) {
