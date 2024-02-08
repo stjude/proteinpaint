@@ -3119,6 +3119,7 @@ async function query_oneread(req, r) {
 			const s = parse_one_segment({ sam_info: line, keepallboxes: true, keepmatepos: true, keepunmappedread: true }, r)
 			if (!s) return
 			else if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
+			if ((req.query.start != s.segstart_original || req.query.stop != s.segstop) && req.query.paired == 'false') return
 			if (req.query.show_unmapped && req.query.getfirst) {
 				// In case first read is mapped and second unmapped
 				if (s.islast) {
