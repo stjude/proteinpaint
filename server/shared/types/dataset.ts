@@ -245,6 +245,7 @@ type TrackLstEntry = {
 }
 
 type CnvSegment = {
+	src?: string
 	byrange?: CnvSegmentByRange
 	gdcapi?: boolean
 }
