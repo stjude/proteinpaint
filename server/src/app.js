@@ -156,36 +156,38 @@ app.use((req, res, next) => {
 
 	// detect URL parameter values with matching JSON start-stop encoding characters
 	try {
+		const encoding = req.query.encoding
 		for (const key in req.query) {
 			const value = req.query[key]
+			if (value == 'undefined') {
+				// maybe better to also detect this common error
+				// console.warn(`${key}="undefined" value as a string URL query parameter`)
+				delete req.query[key]
+				continue
+			}
 			if (
-				value == 'null' ||
+				encoding == 'json' ||
+				value == 'null' || // not new, always been
+				value == 'true' || // NEED TO FIND-REPLACE CODE THAT USES value == 'true'
+				value == 'false' || // NEED TO FIND-REPLACE CODE THAT USES value == 'false'
+				isNumeric(value) || // NEED TO check
 				(value.startsWith('"') && value.endsWith('"')) ||
 				(value.startsWith('{') && value.endsWith('}')) ||
 				(value.startsWith('[') && value.endsWith(']'))
 			)
 				req.query[key] = JSON.parse(value)
+			// else the value is already a string
 		}
 	} catch (e) {
 		res.send({ error: e })
 		return
 	}
-
-	/*
-	// TODO: may simplify the above detection by using the paramEncoding parameter
-	if (req.query.paramEncoding=='json') {
-		for(const key in req.query) {
-			if (key == 'paramEncoding' || key.startsWith('get')) continue
-			try {
-				req.query[key] = JSON.parse(req.query[key])
-			} catch(e) { console.log(key, req.query[key])
-				res.send({error: 'JSON.parse: ' + e})
-			}
-		}
-	}
-	*/
 	next()
 })
+
+function isNumeric(d) {
+	return !isNaN(parseFloat(d)) && isFinite(d) && d !== ''
+}
 
 app.use(cookieParser())
 app.use(bodyParser.json({ limit: '5mb' }))
