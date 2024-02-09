@@ -765,8 +765,8 @@ async function get_q(genome, req) {
 	if (req.query.drop_pcrduplicates) {
 		q.drop_pcrduplicates = true
 	}
-	if (req.query.supplementary_alignments) {
-		q.supplementary_alignments = true
+	if (req.query.drop_supplementary_alignments) {
+		q.drop_supplementary_alignments = true
 	}
 
 	if (req.query.variant) {
@@ -1419,7 +1419,7 @@ async function query_region(r, q) {
 				return
 			}
 			// Show/Hide secondary alignments
-			if (flag & 0x800 && q.supplementary_alignments) {
+			if (flag & 0x800 && q.drop_supplementary_alignments) {
 				return
 			}
 			if (q.downsample) {
@@ -1472,7 +1472,7 @@ async function run_samtools_depth(q, r) {
 		args.push('-G')
 		args.push('0x400')
 	}
-	if (q.supplementary_alignments) {
+	if (q.drop_supplementary_alignments) {
 		args.push('-G')
 		args.push('0x800')
 	}
@@ -1875,7 +1875,7 @@ function parse_one_segment(arg, r, q) {
 				}
 				if (segment.boxes.length == 0) {
 					// this is the first box, will not consume ref
-					// shift softclip start to left, so its end will be pos, will not increment pos
+					// shift hardclip start to left, so its end will be pos, will not increment pos
 					b.start -= len
 					b.cidx = 0
 					if (keepallboxes || Math.max(pos, r.start) <= Math.min(pos + len - 1, r.stop)) {
@@ -1891,7 +1891,7 @@ function parse_one_segment(arg, r, q) {
 			}
 			if (cigar == 'N') {
 				// no seq
-			} else if (cigar == 'P' || cigar == 'D' || cigar == 'H') {
+			} else if (cigar == 'P' || cigar == 'D') {
 				// padding or del, no sequence in read
 			} else {
 				// will consume read seq
