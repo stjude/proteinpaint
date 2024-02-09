@@ -10,6 +10,7 @@ Fixes:
 - In GDC BAM slicing, before creating new cache file, find out old enough ones to delete to free up storage
 - Bug fix to convert "case." to "cases." in case_filters[] for GDC mds3 sunburst clicking to load sample table
 - Bug fix for GDC mds3 category total sample count to respond/shrink with cohort change
+- Prevent double-clicking on a sunburst ring so that same sample table will not appear duplicated
 
 
 ## 2.40.7

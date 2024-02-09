@@ -1,2 +1,1 @@
-Fixes:
-- Prevent double-clicking on a sunburst ring so that same sample table will not appear duplicated
+
