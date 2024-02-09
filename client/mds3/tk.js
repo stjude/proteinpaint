@@ -1,6 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { makeTk } from './makeTk'
 import { may_render_skewer } from './skewer'
+import { may_render_cnv } from './cnv'
 import { make_leftlabels } from './leftlabel'
 import { mclass } from '#shared/common'
 
@@ -35,8 +36,12 @@ export async function loadTk(tk, block) {
 		}
 
 		// render each possible track type. if indeed rendered, return sub track height
+
 		// left labels and skewer at same row, whichever taller
 		may_render_skewer(data, tk, block)
+
+		may_render_cnv(data, tk, block)
+
 		// must render skewer first, then left labels
 		await make_leftlabels(data, tk, block)
 
@@ -58,6 +63,7 @@ function getParameter(tk, block) {
 	// to get data for current view range
 
 	const par = {
+		encoding: 'json',
 		genome: block.genome.name,
 		// instructs server to return data types associated with tracks
 		// including skewer or non-skewer
@@ -161,6 +167,12 @@ function getParameter(tk, block) {
 		if (Object.keys(filter).length) {
 			par.formatFilter = filter
 		}
+	}
+
+	if (tk.cnv) {
+		if (tk.cnv.cnvMaxLength) par.cnvMaxLength = tk.cnv.cnvMaxLength
+		if (tk.cnv.cnvGainCutoff) par.cnvGainCutoff = tk.cnv.cnvGainCutoff
+		if (tk.cnv.cnvLossCutoff) par.cnvLossCutoff = tk.cnv.cnvLossCutoff
 	}
 
 	return [par, headers]

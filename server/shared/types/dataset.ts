@@ -245,12 +245,31 @@ type TrackLstEntry = {
 }
 
 type CnvSegment = {
-	src?: string
-	byrange?: CnvSegmentByRange
-	gdcapi?: boolean
+	byrange: CnvSegmentByRange
+	/****** rendering parameters ****
+	not used as query parameter to filter segments
+	value range for color scaling. default to 5. cnv segment value>this will use solid color
+	*/
+	absoluteValueRenderMax?: number
+	gainColor?: string
+	lossColor?: string
+
+	/*** filtering parameters ***
+	default max length setting to restrict to focal events; if missing show all */
+	cnvMaxLength?: number
+
+	/** TODO define value type, if logratio, or copy number */
+
+	/** following two cutoffs only apply to log ratio, cnv gain value is positive, cnv loss value is negative
+	if cnv is gain, skip if value<this cutoff */
+	cnvGainCutoff?: number
+	/** if cnv is loss, skip if value>this cutoff */
+	cnvLossCutoff?: number
 }
 type CnvSegmentByRange = {
-	file: string
+	src: 'native' | 'gdcapi'
+	// only for src=native
+	file?: string
 }
 
 /*
@@ -316,7 +335,7 @@ export type SingleCellQuery = {
 	data: SingleCellDataGdc | SingleCellDataNative
 }
 
-type Queries = {
+type Mds3Queries = {
 	defaultBlock2GeneMode?: boolean
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
@@ -969,7 +988,7 @@ export type Mds3 = BaseMds & {
 	isMds3: boolean
 	viewModes?: ViewMode[]
 	dsinfo?: KeyVal[]
-	queries?: Queries
+	queries?: Mds3Queries
 	cohort?: Cohort
 	termdb?: Termdb
 	validate_filter0?: (f: any) => void
