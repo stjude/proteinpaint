@@ -165,6 +165,7 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 
 async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
 	q.file = path.join(serverconfig.tpmasterdir, q.file)
+	if (!q.samples) q.samples = []
 	await utils.validate_tabixfile(q.file)
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 	q.samples = [] as number[]
@@ -203,13 +204,14 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		// has at least 1 sample passing filter and with exp data
 		// TODO what if there's just 1 sample not enough for clustering?
 		const bySampleId = {}
+		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
 				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
 			}
 		} else {
 			// use all samples with exp data
-			for (const sid of q.samples) {
+			for (const sid of samples) {
 				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
 			}
 		}
@@ -238,7 +240,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 					// case-insensitive match! FIXME if g.gene is alias won't work
 					if (l[3].toLowerCase() != g.gene.toLowerCase()) return
 					for (let i = 4; i < l.length; i++) {
-						const sampleId = q.samples[i - 4]
+						const sampleId = samples[i - 4]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
 						// if l[i] is blank string?
 						const v = Number(l[i])

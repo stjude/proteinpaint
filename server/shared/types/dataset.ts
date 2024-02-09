@@ -271,6 +271,7 @@ type RnaseqGeneCount = {
 type GeneExpressionQueryGdc = {
 	src: 'gdcapi'
 }
+
 export type GeneExpressionQueryNative = {
 	src: 'native'
 	file: string
