@@ -18,7 +18,7 @@ todo:
 const dur1 = 500 // needs annotation
 const dur2 = 250
 
-export default function(opts) {
+export default function (opts) {
 	const {
 		occurrence,
 		boxyoff,
@@ -67,11 +67,7 @@ export default function(opts) {
 	partition().size([1, Math.pow(radius, 2)])(root)
 
 	// blocker
-	eye
-		.append('circle')
-		.attr('r', radius)
-		.attr('fill', 'white')
-		.attr('fill-opacity', 0)
+	eye.append('circle').attr('r', radius).attr('fill', 'white').attr('fill-opacity', 0)
 
 	let emptyspace
 	const arcfunc = d3arc()
@@ -121,12 +117,7 @@ export default function(opts) {
 			if (!d.parent) return
 			if (sun.busy) return
 
-			event.target.setAttribute(
-				'fill',
-				d3rgb(d._color)
-					.darker(0.5)
-					.toString()
-			)
+			event.target.setAttribute('fill', d3rgb(d._color).darker(0.5).toString())
 			slicemouseover(d, sun)
 		})
 		.on('mouseout', (event, d) => {
@@ -134,11 +125,12 @@ export default function(opts) {
 			if (!d.parent) return
 			event.target.setAttribute('fill', d._color)
 		})
-
-		.on('click', (event, d) => {
-			if (!click_ring) return
-			// TODO
-			click_ring(event, d)
+		.on('click', async (event, d) => {
+			if (!click_ring) return // no callback
+			if (sun.busy) return // do not allow clicking while is busy. this prevents a bug in gdc mds3 that double-clicking on a ring will issue two sample-fetching requests and show the same sample table twice
+			sun.busy = true
+			await click_ring(event, d)
+			sun.busy = false
 		})
 
 	const eyeheight = emptyspace * 2
@@ -416,14 +408,8 @@ function slicemouseover(d, sun) {
 			bar.attr('transform', 'translate(0,' + (fontsize + ypad) * 2 + ')')
 		}
 	} else if (toangle < 0.75) {
-		text0
-			.attr('dominant-baseline', 'hanging')
-			.attr('text-anchor', 'end')
-			.attr('y', 0)
-		text
-			.attr('dominant-baseline', 'hanging')
-			.attr('text-anchor', 'end')
-			.attr('y', 0)
+		text0.attr('dominant-baseline', 'hanging').attr('text-anchor', 'end').attr('y', 0)
+		text.attr('dominant-baseline', 'hanging').attr('text-anchor', 'end').attr('y', 0)
 		text20
 			.attr('dominant-baseline', 'hanging')
 			.attr('text-anchor', 'end')
