@@ -753,7 +753,6 @@ function setTkHeight(tk) {
 
 	let var_idx = 0
 	for (const g of tk.groups) {
-		//console.log('tk.dom.variantg:', tk.dom.variantg)
 		if (g.data.type.includes('support_alt')) {
 			g.variantg.attr('transform', 'translate(0,' + h + ')')
 			h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
@@ -908,6 +907,8 @@ function deleteGroupDom(g) {
 	g.dom.diff_score_barplot_partstack?.remove()
 	g.dom.read_names_g?.remove()
 	g.dom.leftg.remove()
+	g.dom.box_stay?.remove()
+	g.dom.box_move?.remove()
 	g.dom.rightg.remove()
 }
 
