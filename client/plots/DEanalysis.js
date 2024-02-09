@@ -78,10 +78,14 @@ class DEanalysis {
 		]
 
 		if (
-			(output.mid_sample_size_cutoff >= output.sample_size1 && output.mid_sample_size_cutoff < output.sample_size2) ||
-			(output.mid_sample_size_cutoff >= output.sample_size2 && output.mid_sample_size_cutoff < output.sample_size1)
+			(output.mid_sample_size_cutoff >= output.sample_size1 &&
+				output.mid_sample_size_cutoff < output.sample_size2 &&
+				output.sample_size2 < output.high_sample_size_cutoff) ||
+			(output.mid_sample_size_cutoff >= output.sample_size2 &&
+				output.mid_sample_size_cutoff < output.sample_size1 &&
+				output.sample_size1 < output.high_sample_size_cutoff)
 		) {
-			// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher
+			// Invoked only when one sample size is low than the mid_sample_size_cutoff and the other one is higher but the higher sample size is lower than the high cutoff so that the DE computation does not take a lot of time on the server
 			inputs.push({
 				label: 'Method',
 				type: 'radio',
@@ -98,6 +102,7 @@ class DEanalysis {
 		}
 
 		if (this.settings.pvaluetable == true) {
+			// This currently does not work as hiearchial clustering code needs to be changed
 			inputs.push({
 				label: 'Hierarchial Clustering',
 				type: 'radio',
@@ -138,6 +143,7 @@ class DEanalysis {
 		this.settings = this.config.settings.DEanalysis
 		const output = await this.app.vocabApi.runDEanalysis(this.state.config)
 		output.mid_sample_size_cutoff = 30 // mid sample size cutoff for method toggle to appear
+		output.high_sample_size_cutoff = 50 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
 		await this.setControls(output)
 		//const state = this.app.getState()
 		//console.log('state:', state)
