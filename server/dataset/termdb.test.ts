@@ -175,6 +175,7 @@ export default <Mds3>{
 		},
 		cnv: {
 			byrange: {
+				src: 'native',
 				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
 			}
 		},

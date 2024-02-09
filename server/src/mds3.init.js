@@ -1133,18 +1133,22 @@ async function validate_query_cnv(ds, genome) {
 	// cnv segments, compared to geneCnv
 	const q = ds.queries.cnv
 	if (!q) return
-	if (!q.byrange) throw 'byrange missing from queries.cnv'
-	if (q.byrange) {
-		if (q.byrange.file) {
-			q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.file
-				: path.join(serverconfig.tpmasterdir, q.byrange.file)
-			q.byrange.get = await cnvByRangeGetter_file(ds, genome)
-			mayValidateSampleHeader(ds, q.byrange.samples, 'cnv.byrange')
-		} else {
-			throw 'unknown query method for cnv.byrange'
-		}
+	if (!q.byrange) throw 'queries.cnv.byrange{} missing'
+	/*
+	if(q.byrange.src=='gdcapi') {
 	}
+	*/
+	if (q.byrange.src == 'native') {
+		if (!q.byrange.file) throw 'cnv.byrange.file missing when src=native'
+		// incase the same ds js file is included twice on this pp, the file will already become absolute path
+		q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
+			? q.byrange.file
+			: path.join(serverconfig.tpmasterdir, q.byrange.file)
+		q.byrange.get = await cnvByRangeGetter_file(ds, genome)
+		mayValidateSampleHeader(ds, q.byrange.samples, 'cnv.byrange')
+		return
+	}
+	throw 'unknown cnv.byrange.src'
 }
 
 async function validate_query_ld(ds, genome) {
@@ -1899,7 +1903,8 @@ export async function cnvByRangeGetter_file(ds, genome) {
 
 	/* extra parameters from snvindel.byrange.get():
 	cnvMaxLength: int
-	cnvMinAbsValue: float
+	cnvGainCutoff: float
+	cnvLossCutoff: float
 	*/
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
@@ -1917,91 +1922,88 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		}
 
 		const cnvs = []
-		const promises = []
 		for (const r of param.rglst) {
-			promises.push(
-				utils.get_lines_bigfile({
-					args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-					dir: q.dir,
-					callback: line => {
-						const l = line.split('\t')
-						const start = Number(l[1]) // must always be numbers
-						const stop = Number(l[2])
-						if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
+			await utils.get_lines_bigfile({
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				dir: q.dir,
+				callback: line => {
+					const l = line.split('\t')
+					const start = Number(l[1]) // must always be numbers
+					const stop = Number(l[2])
+					if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
 
-						let j
-						try {
-							j = JSON.parse(l[3])
-						} catch (e) {
-							//console.log('cnv json err')
-							return
-						}
-						if (j.dt != dtcnv) {
-							//console.log('cnv invalid dt')
-							return
-						}
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('cnv json err')
+						return
+					}
+					if (j.dt != dtcnv) {
+						//console.log('cnv invalid dt')
+						return
+					}
 
-						j.start = start
-						j.stop = stop
+					j.chr = r.chr
+					j.start = start
+					j.stop = stop
 
-						/*
+					/*
 						if value=number is present, it's a quantitative call, j.class will be computed dynamically
 							TODO distinguish segmean vs integer copy number; what class to assign when value is copy number?
 						if value is missing, it should be a qualitative call, with j.class=mclasscnvgain/mclasscnvloss 
 						*/
-						if (Number.isFinite(j.value)) {
-							// quantitative
-							if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
-							if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
-							j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
-						} else {
-							// should be qualitative, valid class is required
-							if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
-						}
+					if (Number.isFinite(j.value)) {
+						// quantitative
+						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
+						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
+						j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
+					} else {
+						// should be qualitative, valid class is required
+						if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
+					}
 
-						j.ssm_id = [r.chr, j.start, j.stop, j.class].join(ssmIdFieldsSeparator) // no longer use j.value as that's optional
+					j.ssm_id = [r.chr, j.start, j.stop, j.class].join(ssmIdFieldsSeparator) // no longer use j.value as that's optional
 
-						if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
+					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
 
-						if (j.sample && limitSamples) {
-							// to filter sample
-							if (!limitSamples.has(j.sample)) return
-						}
+					if (j.sample && limitSamples) {
+						// to filter sample
+						if (!limitSamples.has(j.sample)) return
+					}
 
-						if (j.sample) {
-							// has sample, prepare the sample obj
-							// if the sample is skipped by format, then the event will be skipped
+					if (j.sample) {
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
 
-							// for ds with sampleidmap, j.sample value should be integer
-							// XXX not guarding against file uses non-integer sample values in such case
+						// for ds with sampleidmap, j.sample value should be integer
+						// XXX not guarding against file uses non-integer sample values in such case
 
-							const sampleObj = { sample_id: j.sample }
-							if (j.mattr) {
-								// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
-								if (formatFilter) {
-									// will do the same filtering as snvindel
-									for (const formatKey in formatFilter) {
-										const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
-										if (formatFilter[formatKey].has(formatValue)) {
-											// sample is dropped by format filter
-											return
-										}
+						const sampleObj = { sample_id: j.sample }
+						if (j.mattr) {
+							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							if (formatFilter) {
+								// will do the same filtering as snvindel
+								for (const formatKey in formatFilter) {
+									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
+									if (formatFilter[formatKey].has(formatValue)) {
+										// sample is dropped by format filter
+										return
 									}
 								}
-								if (param.addFormatValues) {
-									// only attach format values when required
-									sampleObj.formatK2v = j.mattr
-								}
 							}
-							delete j.sample
-							j.samples = [sampleObj]
+							if (param.addFormatValues) {
+								// only attach format values when required
+								sampleObj.formatK2v = j.mattr
+							}
 						}
-						cnvs.push(j)
+						delete j.sample
+						j.samples = [sampleObj]
 					}
-				})
-			)
+					cnvs.push(j)
+				}
+			})
 		}
-		await Promise.all(promises)
 		return cnvs
 	}
 }

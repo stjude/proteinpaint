@@ -28,6 +28,7 @@ get_ds
 mayInitTermdb
 mayInitSkewer
 	setSkewerMode
+mayInitCnv
 mayaddGetter_m2csq
 mayInit_variant2samples
 mayaddGetter_singleSampleMutation
@@ -114,6 +115,7 @@ export async function makeTk(tk, block) {
 	// tk.mds{} is created for both official and custom track
 	// following procedures are only based on tk.mds
 
+	// must init termdb first to get termdbconfig, and inform what queries are available
 	await mayInitTermdb(tk, block)
 
 	await mayInit_variant2samples(tk, block)
@@ -121,6 +123,8 @@ export async function makeTk(tk, block) {
 	mayaddGetter_singleSampleMutation(tk, block)
 
 	mayInitSkewer(tk) // tk.skewer{} may be added
+
+	mayInitCnv(tk)
 
 	tk.tklabel.text(tk.mds.label || tk.name)
 
@@ -264,6 +268,19 @@ function mayInitSkewer(tk) {
 		hideDotLabels: false
 	}
 	setSkewerMode(tk) // adds skewer.viewModes[]
+}
+function mayInitCnv(tk) {
+	const cfg = tk.mds.termdbConfig?.queries?.cnv
+	if (!cfg) return // lack this
+	tk.cnv = {
+		g: tk.glider.append('g'),
+		cnvMaxLength: cfg.cnvMaxLength, // if missing do not filter
+		cnvGainCutoff: cfg.cnvGainCutoff, // if missing do not filter
+		cnvLossCutoff: cfg.cnvLossCutoff,
+		absoluteValueRenderMax: cfg.absoluteValueRenderMax || 5,
+		gainColor: cfg.gainColor || '#D6683C',
+		lossColor: cfg.lossColor || '#67a9cf'
+	}
 }
 
 function setSkewerMode(tk) {

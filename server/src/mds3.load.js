@@ -240,6 +240,9 @@ async function load_driver(q, ds) {
 				// this is not appended to result.skewer[]
 				result.geneCnv = lst
 			}
+			if (ds.queries.cnv) {
+				result.cnv = await query_cnv(q, ds)
+			}
 
 			filter_data(q, result)
 
@@ -289,6 +292,13 @@ async function query_svfusion(q, ds) {
 		return await ds.queries.svfusion.byrange.get(q)
 	}
 	throw 'insufficient query parameters for svfusion'
+}
+async function query_cnv(q, ds) {
+	if (q.rglst) {
+		if (!ds.queries.cnv.byrange) throw 'q.rglst provided but cnv.byrange missing'
+		return await ds.queries.cnv.byrange.get(q)
+	}
+	throw 'insufficient query parameters for cnv'
 }
 async function query_geneCnv(q, ds) {
 	if (q.gene) {

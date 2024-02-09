@@ -113,6 +113,19 @@ function addGenomicQueries(c, ds, genome) {
 			allowSNPs: q.snvindel.allowSNPs
 		}
 	}
+	if (q.cnv) {
+		q2.cnv = {}
+		for (const k of [
+			'cnvMaxLength',
+			'cnvGainCutoff',
+			'cnvLossCutoff',
+			'absoluteValueRenderMax',
+			'gainColor',
+			'lossColor'
+		]) {
+			if (k in q.cnv) q2.cnv[k] = q.cnv[k]
+		}
+	}
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
 	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes
 	if (q.singleSampleMutation) {
