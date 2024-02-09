@@ -40,7 +40,7 @@ tk.pileupheight
 tk.pileupbottompad
 tk.alleleAlreadyUpdated // When true (in case of pan/zoom by user) prevents repeated reference genome queries for alt/refallele and left/rightflankseq
 tk.drop_pcrduplicates // By default, hides PCR duplicates. Can be changed to show PCR duplicates from config panel
-tk.supplementary_alignments // By default, hides supplementary alignments. Can be changed to show supplementary alignments from config panel
+tk.drop_supplementary_alignments // By default, hides supplementary alignments. Can be changed to show supplementary alignments from config panel
 tk.show_readnames // Shows read names when this flag is true. By default, read names are hidden
 
 tk.dom{}
@@ -294,7 +294,7 @@ async function getData(tk, block, additional = {}) {
 	if (tk.indexURL) body.indexURL = tk.indexURL
 
 	if (tk.drop_pcrduplicates) body.drop_pcrduplicates = 1
-	if (tk.supplementary_alignments) body.supplementary_alignments = 1
+	if (tk.drop_supplementary_alignments) body.drop_supplementary_alignments = 1
 	if (window.devicePixelRatio > 1) body.devicePixelRatio = window.devicePixelRatio
 
 	const data = await dofetch3('tkbam', { headers: getHeaders(tk), body })
@@ -924,9 +924,9 @@ function makeTk(tk, block) {
 		// attribute is not set, set to true by default
 		tk.drop_pcrduplicates = true
 	}
-	if (tk.supplementary_alignments == undefined) {
+	if (tk.drop_supplementary_alignments == undefined) {
 		// attribute is not set, set to true by default
-		tk.supplementary_alignments = true
+		tk.drop_supplementary_alignments = true
 	}
 
 	if (tk.show_readnames == undefined) {
@@ -1574,7 +1574,7 @@ async function align_reads_to_allele(tk, group, block) {
 	if (tk.asPaired) body.asPaired = 1
 	if ('nochr' in tk) body.nochr = tk.nochr
 	if (tk.drop_pcrduplicates) body.drop_pcrduplicates = 1
-	if (tk.supplementary_alignments) body.supplementary_alignments = 1
+	if (tk.drop_supplementary_alignments) body.drop_supplementary_alignments = 1
 	if (group.partstack) {
 		body.stackstart = group.partstack.start
 		body.stackstop = group.partstack.stop
@@ -1629,10 +1629,10 @@ function configPanel(tk, block) {
 		make_one_checkbox({
 			holder: d.append('div'),
 			labeltext: 'Drop supplementary alignments',
-			checked: tk.supplementary_alignments,
+			checked: tk.drop_supplementary_alignments,
 			divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
 			callback: () => {
-				tk.supplementary_alignments = !tk.supplementary_alignments
+				tk.drop_supplementary_alignments = !tk.drop_supplementary_alignments
 				loadTk(tk, block)
 			}
 		})
