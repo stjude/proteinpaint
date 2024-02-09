@@ -275,9 +275,9 @@ export type GeneExpressionQueryNative = {
 	src: 'native'
 	file: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
-	samples: number[]
-	nochr: boolean
-	get: (param: any) => void
+	samples?: number[]
+	nochr?: boolean
+	get?: (param: any) => void
 }
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
