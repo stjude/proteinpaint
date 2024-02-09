@@ -26,7 +26,6 @@ this script exports following test methods to share with non-CI test using GDC/c
 - testVariantLeftLabel
 - testAllow2selectSamples
 
-TODO fix termdbtest data to move sunburst test 
 */
 
 tape('\n', function (test) {
@@ -73,22 +72,17 @@ export async function findSingletonMutationTestDiscoCnvPlots(test, tk, holder) {
 	await whenVisible(tk.itemtip.d)
 	test.pass('itemtip shows with variant table')
 
-	/* surprise
-	in termdbtest, as soon as itemtip.d is shown, buttons are already created; calling detectLst() will timeout
-	in gdc, there's a delay (api request) for buttons to be shown after itemtip, thus must use detectLst
+	/* use count=1 to detect 1 or more buttons
+	gdc:
+		disco
+	termdbtest:
+		disco
+		methyl
+	
+	if sample selection is used, +1
 	*/
-	let buttons = tk.itemtip.d.selectAll('button').nodes()
-	if (buttons.length == 0) {
-		/* use count=1 to detect 1 or more buttons
-		gdc has 1 button (disco)
-		termdbtest has 2 buttons (disco, methy)
-		*/
-		buttons = await detectGte({ elem: tk.itemtip.d.node(), selector: 'button', count: 1 })
-	}
-	/* multiplt buttons can be shown, based on data availability
-	#1: disco
-	#2: methylation cnv
-	*/
+	const buttons = await detectGte({ elem: tk.itemtip.dnode, selector: 'button', count: 1 })
+
 	test.ok(buttons.length >= 1, '1 or more buttons are showing in itemtip')
 
 	for (const btn of buttons) {
@@ -113,27 +107,14 @@ export async function findSingletonMutationTestDiscoCnvPlots(test, tk, holder) {
 		test.equal(btn.innerHTML, name, '1st button is called ' + name)
 		btn.dispatchEvent(new Event('click'))
 
-		// TODO disco now shows in new sandbox
-
-		//await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
-		//test.pass(`clicking 1st button ${name} the menutip shows`)
-		//const svg = await detectOne({elem: tk.menutip.d.node(), selector:'svg'})
-		//test.ok(svg, '<svg> created in tk.menutip.d as disco plot')
+		// TODO detect disco showing in new sandbox
 	}
 	async function testCnv(btn, tk) {
 		const name = 'MethylationArray'
 		test.equal(btn.innerHTML, name, '2nd button is called ' + name)
 		btn.dispatchEvent(new Event('click'))
 
-		// TODO cnv now shows in new sandbox
-
-		/*
-		await whenVisible(tk.menutip.d) // upon clicking btn, this menu shows to display content
-		test.pass(`clicking 2nd button ${name} the menutip shows`)
-		const img = await detectOne({ elem: tk.menutip.d.node(), selector: 'img' })
-		test.ok(img, '<img> found in menutip')
-		// TODO click at a particular position on img, detect if block shows up
-		*/
+		// TODO detect cnv showing in new sandbox
 	}
 }
 
@@ -171,7 +152,6 @@ export async function testMclassFiltering(test, tk, bb, holder) {
 	await tk.load()
 }
 
-// somehow calling helper twice in one tape() call will break, thus calling tape twice
 tape('Official - sample summaries table, create subtrack (tk.filterObj)', test => {
 	testSampleSummary2subtrack('hg38-test', 'TP53', 'TermdbTest', test)
 })
@@ -403,6 +383,7 @@ export async function testVariantLeftLabel(test, tk, bb) {
 			test.ok(expandedText, 'Should find some expanded skewers')
 		}
 	}
+	tk.menutip.hide()
 }
 
 tape('Official - allow2selectSamples', test => {
@@ -919,7 +900,7 @@ function getHolder() {
 	return d3s
 		.select('body')
 		.append('div')
-		.style('border', '1px solid #aaa')
+		.style('border', '1px solid black')
 		.style('padding', '5px')
 		.style('margin', '5px')
 		.node()
