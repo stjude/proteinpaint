@@ -466,7 +466,6 @@ export class TermdbVocab extends Vocab {
 		// for a numeric term, get descriptive statistics
 		// mean, median, standard deviation, min, max
 		const body = {
-			getdescrstats: 1,
 			tid: term_id,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
