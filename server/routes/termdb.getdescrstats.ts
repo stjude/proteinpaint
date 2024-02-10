@@ -1,11 +1,11 @@
 import { getdescrstatsRequest, getdescrstatsResponse } from '#shared/types/routes/termdb.getdescrstats.ts'
-import * as termdbsql from '../src/termdb.sql.js'
+import { get_rows_by_one_key } from '../src/termdb.sql.js'
 import Summarystats from '../shared/descriptive.stats.js'
 
 export const api: any = {
 	endpoint: 'termdb/descrstats',
 	methods: {
-		get: {
+		all: {
 			init,
 			request: {
 				typeId: 'getdescrstatsRequest'
@@ -20,7 +20,6 @@ export const api: any = {
 							genome: 'hg38-test',
 							dslabel: 'TermdbTest',
 							embedder: 'localhost',
-							getdescrstats: 1,
 							tid: 'hrtavg',
 							filter: {
 								type: 'tvslst',
@@ -51,10 +50,6 @@ export const api: any = {
 					}
 				}
 			]
-		},
-		post: {
-			alternativeFor: 'get',
-			init
 		}
 	}
 }
@@ -84,14 +79,14 @@ async function trigger_getdescrstats(q: any, res: any, ds: any) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
 	if (!term) throw 'invalid termid'
 	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
-	const rows = await termdbsql.get_rows_by_one_key({
+	const rows = await get_rows_by_one_key({
 		ds,
 		key: q.tid,
-		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
+		filter: q.filter
 	})
 	const values: number[] = []
 	for (const { value } of rows) {
-		if (term.values && term.values[value] && term.values[value].uncomputable) {
+		if (term.values?.[value]?.uncomputable) {
 			// skip uncomputable values
 			continue
 		}

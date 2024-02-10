@@ -6,7 +6,6 @@ export type getdescrstatsRequest = {
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
 	embedder: string
-	getdescrstats: number
 	/** term id string */
 	tid: string
 	filter: Filter
