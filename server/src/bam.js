@@ -3070,18 +3070,15 @@ async function route_getread(genome, req) {
 	if (!req.query.chr) throw '.chr missing'
 	if (!req.query.qname) throw '.qname missing'
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
-	//if(!req.query.pos) throw '.pos missing'
-	if (!req.query.start) throw '.start missing'
-	if (!req.query.stop) throw '.stop missing'
+	if (!Number.isInteger(req.query.start)) throw '.start is not integer'
+	if (!Number.isInteger(req.query.stop)) throw '.stop is not integer'
 	const r = {
 		chr: req.query.chr,
-		start: Number(req.query.start),
-		stop: Number(req.query.stop),
+		start: req.query.start,
+		stop: req.query.stop,
 		scale: () => {}, // dummy
 		ntwidth: 10 // good to show all insertions
 	}
-	if (!Number.isInteger(r.start)) throw '.start not integer'
-	if (!Number.isInteger(r.stop)) throw '.stop not integer'
 	const seglst = await query_oneread(req, r)
 	if (!seglst) {
 		// no read found
@@ -3107,15 +3104,16 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
+	console.log(req.query)
 	const [_file, dir] = await getFilefullpathOrUrl(req)
 	let firstseg, lastseg, readstart, readstop, lst // array of reads to be returned
 
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
-		readstart = Number(req.query.readstart)
-		readstop = Number(req.query.readstop)
-		if (Number.isNaN(readstart) || Number.isNaN(readstop))
+		if (!Number.isInteger(req.query.readstart) || !Number.isInteger(req.query.readstop))
 			throw 'readstart/stop not provided for read with unknown order'
+		readstart = req.query.readstart
+		readstop = req.query.readstop
 	}
 
 	await utils.get_lines_bigfile({
@@ -3130,12 +3128,11 @@ async function query_oneread(req, r) {
 			if (line.split('\t')[0] != req.query.qname) return
 			const s = parse_one_segment({ sam_info: line, keepallboxes: true, keepmatepos: true, keepunmappedread: true }, r)
 			if (!s) return
-			else if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
-			if (
-				(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
-				(!req.query.paired || req.query.paired == 'false')
-			)
-				return
+
+			if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
+
+			if ((req.query.start != s.segstart_original || req.query.stop != s.segstop) && !req.query.paired) return
+
 			if (req.query.show_unmapped && req.query.getfirst) {
 				// In case first read is mapped and second unmapped
 				if (s.islast) {
