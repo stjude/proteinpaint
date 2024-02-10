@@ -1,17 +1,22 @@
 import { scaleLinear } from 'd3-scale'
 import { line, curveMonotoneX } from 'd3-shape'
-import { rgb } from 'd3'
+import { axisBottom, axisTop, rgb } from 'd3'
 
 export class violinRenderer {
 	constructor(holder, plot, width = 350, height = 150) {
-		console.log(plot)
 		this.holder = holder
 		this.plot = plot
 		this.width = width
 		this.height = height
-		this.svg = holder.append('svg').attr('width', `${width}px`).attr('height', `${height}px`)
+		this.svg = holder
+			.append('svg')
+			.attr('width', `${width}px`)
+			.attr('height', `${height + 100}px`)
+		this.scaleG = this.svg.append('g').attr('transform', `translate(0, ${height})`)
 		this.violinG = this.svg.append('g').attr('transform', `translate(0, ${height / 2})`)
 		this.axisScale = scaleLinear().domain([plot.minvalue, plot.maxvalue]).range([0, width])
+		this.scaleG.call(axisBottom(this.axisScale).tickValues(this.axisScale.ticks()))
+
 		this.wScale = scaleLinear()
 			.domain([plot.densityMax, 0])
 			.range([height * 0.45, 0])
