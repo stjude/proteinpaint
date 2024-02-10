@@ -27,11 +27,18 @@ class DEanalysis {
 	async init(opts) {
 		const config = opts.plots.find(p => p.id === this.id)
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
-		const holder = this.opts.holder.append('div').style('display', 'inline-block')
+		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '20px')
+		const detailsDiv = this.opts.holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin-top', '50px')
+
 		this.dom = {
 			holder,
 			header: this.opts.header,
-			controlsDiv
+			controlsDiv,
+			detailsDiv
 		}
 	}
 
@@ -182,6 +189,7 @@ add:
 
 	// Delete previous holder, if present
 	holder.selectAll('*').remove()
+	detailsDiv.selectAll('*').remove()
 	let minlogfc = 0,
 		maxlogfc = 0,
 		minlogpv = 0,
@@ -380,7 +388,7 @@ add:
 			text_string = '-log10(original P value)'
 		}
 		ylab.text(text_string)
-		holder
+		self.dom.detailsDiv
 			.append('div')
 			.html(
 				'Percentage of significant genes:' +
