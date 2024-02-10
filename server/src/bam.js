@@ -3104,7 +3104,6 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	console.log(req.query)
 	const [_file, dir] = await getFilefullpathOrUrl(req)
 	let firstseg, lastseg, readstart, readstop, lst // array of reads to be returned
 
@@ -3128,11 +3127,13 @@ async function query_oneread(req, r) {
 			if (line.split('\t')[0] != req.query.qname) return
 			const s = parse_one_segment({ sam_info: line, keepallboxes: true, keepmatepos: true, keepunmappedread: true }, r)
 			if (!s) return
-
 			if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
-
-			if ((req.query.start != s.segstart_original || req.query.stop != s.segstop) && !req.query.paired) return
-
+			if (
+				(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
+				!req.query.paired &&
+				!req.query.show_unmapped
+			)
+				return
 			if (req.query.show_unmapped && req.query.getfirst) {
 				// In case first read is mapped and second unmapped
 				if (s.islast) {
