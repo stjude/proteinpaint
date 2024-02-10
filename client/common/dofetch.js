@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import { deepFreeze } from '#rx'
+import { encode } from '../shared/urljson'
 
 const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
 const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
@@ -246,43 +247,9 @@ function mayAdjustRequest(url, init) {
 		// (b) POST body, JSON-encoded
 		if (!init.body.embedder) init.body.embedder = hostname
 
-		const params = []
-		for (const key in init.body) {
-			const value = init.body[key]
-			if (typeof value == 'string') {
-				// no need to json-encode a string before percent encoding
-				params.push(`${key}=${encodeURIComponent(value)}`)
-			} else if (value !== undefined) {
-				params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
-			}
-		}
-		// NOTE: cannot assume that there are no query parameters in the url argument
-		// (first argument to this function), so those may also have to be parsed first
-		// before it is certain that all URL params are json-encoded
-		//
-		// tentative transform of pre-supplied URL params
-		// const searchHash = url.split('?')[1] || ''
-		// if (searchHash) {
-		// 	// remove the location hash, then split into key-value params
-		// 	const query = searchHash.split('#')[0].split('&')
-		// 	for(const kv of query) {
-		// 		const [k, v] = kv.split("=")
-		// 	  let value = v
-		// 		try {
-		// 			if (value.startsWith('%')) value = decodeURIComponent(v)
-		// 			value = JSON.parse(v)
-		// 			// if the value can be json-parsed, then assume it is encoded
-		// 			params.push(`${k}=${v}`)
-		// 		} catch(e) {
-		// 			params.push(`${k}=${value}`)
-		// 		}
-		// 	}
-		// }
-		//
-		// params.push('encoding=json')
-
+		const params = encode(init.body)
 		if (!url.includes('?')) url += '?'
-		url += params.join('&')
+		url += params
 	}
 
 	if (!url.includes('embedder=')) {
@@ -309,6 +276,7 @@ function mayAdjustRequest(url, init) {
 		const params = {}
 		// decode URL search parameters, if available
 		if (query)
+			// TODO: !!! use urljson.decode here !!!
 			query.split('&').forEach(p => {
 				const [k, v] = p.split('=')
 				const decodedVal = decodeURIComponent(v)

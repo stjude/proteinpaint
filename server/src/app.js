@@ -85,6 +85,8 @@ import cookieParser from 'cookie-parser'
 import { authApi } from './auth.js'
 import { server_init_db_queries, listDbTables } from './termdb.server.init'
 import { versionInfo } from './health'
+import { decode as urlJsonDecode } from '../shared/urljson'
+
 export * as phewas from './termdb.phewas'
 
 export const tabixnoterror = s => {
@@ -157,27 +159,7 @@ app.use((req, res, next) => {
 	// detect URL parameter values with matching JSON start-stop encoding characters
 	try {
 		const encoding = req.query.encoding
-		for (const key in req.query) {
-			const value = req.query[key]
-			if (value == 'undefined') {
-				// maybe better to also detect this common error
-				// console.warn(`${key}="undefined" value as a string URL query parameter`)
-				delete req.query[key]
-				continue
-			}
-			if (
-				encoding == 'json' ||
-				value == 'null' || // not new, always been
-				value == 'true' || // NEED TO FIND-REPLACE CODE THAT USES value == 'true'
-				value == 'false' || // NEED TO FIND-REPLACE CODE THAT USES value == 'false'
-				isNumeric(value) || // NEED TO check
-				(value.startsWith('"') && value.endsWith('"')) ||
-				(value.startsWith('{') && value.endsWith('}')) ||
-				(value.startsWith('[') && value.endsWith(']'))
-			)
-				req.query[key] = JSON.parse(value)
-			// else the value is already a string
-		}
+		urlJsonDecode(req.query)
 	} catch (e) {
 		res.send({ error: e })
 		return
