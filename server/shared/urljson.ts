@@ -15,7 +15,7 @@
 
 // a URL query parameters object with values to be encoded
 export type UrlJsonRaw = {
-	[key: string]: string | number | { [key: string]: any } | any[] | null
+	[key: string]: boolean | string | number | { [key: string]: any } | any[] | null
 }
 
 // a URL query parameters object with values to be decoded
