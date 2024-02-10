@@ -260,24 +260,24 @@ function mayAdjustRequest(url, init) {
 		// (first argument to this function), so those may also have to be parsed first
 		// before it is certain that all URL params are json-encoded
 		//
-		// // tentative transform of pre-supplied URL params
-		// url.split('?')[1]?.split("&").forEach(kv => {
-		// 	const [k, v] = kv.split("=")
-		//  let value
-		// 	try {
-		// 		const value = JSON.parse(v)
-		// 		// if the value can be json-parsed, then assume it is encoded
-		// 		params.push(`${k}=${v}`)
-		// 	} catch(e) {
+		// tentative transform of pre-supplied URL params
+		// const searchHash = url.split('?')[1] || ''
+		// if (searchHash) {
+		// 	// remove the location hash, then split into key-value params
+		// 	const query = searchHash.split('#')[0].split('&')
+		// 	for(const kv of query) {
+		// 		const [k, v] = kv.split("=")
+		// 	  let value = v
 		// 		try {
-		// 			const v1 = decodeURIComponent(v)
-		// 			const v2 = JSON.parse(v1)
-		// 			params.push(`${k}=${v2}`)
-		// 		} catch(e) {
+		// 			if (value.startsWith('%')) value = decodeURIComponent(v)
+		// 			value = JSON.parse(v)
+		// 			// if the value can be json-parsed, then assume it is encoded
 		// 			params.push(`${k}=${v}`)
+		// 		} catch(e) {
+		// 			params.push(`${k}=${value}`)
 		// 		}
 		// 	}
-		// })
+		// }
 		//
 		// params.push('encoding=json')
 
@@ -464,8 +464,4 @@ function mayAddJwtToRequest(init, body, url) {
 	const route = (h[1] || h[0]).split('/')[1].split('?')[0]
 	const jwt = jwtByDsRoute[dslabel][route] || jwtByDsRoute[dslabel]['/**']
 	if (jwt) init.headers.authorization = 'Bearer ' + btoa(jwt)
-}
-
-function isNumeric(d) {
-	return !isNaN(parseFloat(d)) && isFinite(d) && d !== ''
 }
