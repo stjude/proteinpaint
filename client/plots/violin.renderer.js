@@ -5,7 +5,7 @@ import { getColors } from '#shared/common'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '../dom/table'
 import { Menu } from '../dom/menu'
-import { rgb, extent } from 'd3'
+import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 
 export default function setViolinRenderer(self) {
@@ -55,14 +55,14 @@ export default function setViolinRenderer(self) {
 		// append the svg object to the body of the page
 		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
 
-		const svg = renderSvg(t1, self, isH, settings)
-		renderScale(t1, t2, settings, isH, svg, self)
+		const svgData = renderSvg(t1, self, isH, settings)
+		renderScale(t1, t2, settings, isH, svgData, self)
 
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
-			const violinG = createViolinG(svg, plot, plotIdx, isH)
+			const violinG = createViolinG(svgData, plot, plotIdx, isH)
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
-			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
-			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
+			renderViolinPlot(plot, self, isH, svgData, plotIdx, violinG, imageOffset)
+			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
 			self.labelHideLegendClicking(t2, plot)
 		}
 	}
@@ -310,7 +310,7 @@ export default function setViolinRenderer(self) {
 			.attr('transform', isH ? null : 'rotate(-90)')
 	}
 
-	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset) {
+	function renderViolinPlot(plot, self, isH, svgData, plotIdx, violinG, imageOffset) {
 		const plotThickness = self.getPlotThickness()
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
@@ -320,13 +320,13 @@ export default function setViolinRenderer(self) {
 		if (isH) {
 			areaBuilder = line()
 				.curve(curveMonotoneX)
-				.x(d => svg.axisScale(d.x0))
+				.x(d => svgData.axisScale(d.x0))
 				.y(d => wScale(d.density))
 		} else {
 			areaBuilder = line()
 				.curve(curveMonotoneY)
 				.x(d => wScale(d.density))
-				.y(d => svg.axisScale(d.x0))
+				.y(d => svgData.axisScale(d.x0))
 		}
 		// const X = []
 		// const Y = []
@@ -353,10 +353,10 @@ export default function setViolinRenderer(self) {
 		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
 
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
-		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg, self)
-		renderLines(violinG, isH, self.config.settings.violin.lines, svg)
+		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svgData, self)
+		renderLines(violinG, isH, self.config.settings.violin.lines, svgData)
 		if (self.state.config.value) {
-			const value = svg.axisScale(self.state.config.value)
+			const value = svgData.axisScale(self.state.config.value)
 			const s = self.config.settings.violin
 			violinG
 				.append('line')
@@ -401,7 +401,7 @@ export default function setViolinRenderer(self) {
 			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
 	}
 
-	function renderMedian(violinG, isH, plot, svg, self) {
+	function renderMedian(violinG, isH, plot, svgData, self) {
 		const s = self.config.settings.violin
 		//render median values on plots
 		if (plot.plotValueCount >= 2) {
@@ -415,14 +415,26 @@ export default function setViolinRenderer(self) {
 				.style('stroke-width', s.medianThickness)
 				.style('stroke', 'red')
 				.style('opacity', '1')
-				.attr('y1', isH ? -s.medianLength : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
-				.attr('y2', isH ? s.medianLength : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
-				.attr('x1', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : -s.medianLength)
-				.attr('x2', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : s.medianLength)
+				.attr(
+					'y1',
+					isH ? -s.medianLength : svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value)
+				)
+				.attr(
+					'y2',
+					isH ? s.medianLength : svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value)
+				)
+				.attr(
+					'x1',
+					isH ? svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : -s.medianLength
+				)
+				.attr(
+					'x2',
+					isH ? svgData.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : s.medianLength
+				)
 		} else return
 	}
 
-	function renderLines(violinG, isH, lines, svg) {
+	function renderLines(violinG, isH, lines, svgData) {
 		// render straight lines on plot
 		const plotThickness = self.settings.plotThickness || 150 //When loading plot from state plotThickness is not initialized
 
@@ -436,14 +448,14 @@ export default function setViolinRenderer(self) {
 				// .duration(self.opts.mode == 'minimal' ? 0 : 30)
 				.attr('class', 'sjpp-vp-line')
 				.style('stroke', self.opts.mode == 'minimal' ? 'red' : 'black') // if not minimal, then red median line will also appear
-				.attr('y1', isH ? -(plotThickness / 2) : svg.axisScale(line))
-				.attr('y2', isH ? plotThickness / 2 : svg.axisScale(line))
-				.attr('x1', isH ? svg.axisScale(line) : -(plotThickness / 2))
-				.attr('x2', isH ? svg.axisScale(line) : plotThickness / 2)
+				.attr('y1', isH ? -(plotThickness / 2) : svgData.axisScale(line))
+				.attr('y2', isH ? plotThickness / 2 : svgData.axisScale(line))
+				.attr('x1', isH ? svgData.axisScale(line) : -(plotThickness / 2))
+				.attr('x2', isH ? svgData.axisScale(line) : plotThickness / 2)
 		}
 	}
 
-	function renderBrushing(t1, t2, violinG, settings, plot, isH, svg) {
+	function renderBrushing(t1, t2, violinG, settings, plot, isH, svgData) {
 		//brushing on data points
 		if (settings.datasymbol === 'rug' || settings.datasymbol === 'bean') {
 			violinG
@@ -461,7 +473,7 @@ export default function setViolinRenderer(self) {
 
 									if (!selection) return
 
-									self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
 								})
 						: brushY()
 								.extent([
@@ -473,7 +485,7 @@ export default function setViolinRenderer(self) {
 
 									if (!selection) return
 
-									self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
 								})
 				)
 		} else return
