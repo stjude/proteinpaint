@@ -70,9 +70,9 @@ const commonConfig = {
 }
 
 module.exports = env => {
-	const NODE_ENV = env.NODE_ENV || 'production'
+	const mode = env.NODE_ENV || 'development'
 	return merge(commonConfig, {
-		mode: 'production',
+		mode,
 		entry: path.join(__dirname, './emitPrepFiles.js'),
 		output: {
 			path: __dirname,

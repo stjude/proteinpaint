@@ -1,5 +1,6 @@
 import serverconfig from './serverconfig'
 import fs from 'fs'
+import path from 'path'
 import pkg from '../package.json'
 import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/routes/healthcheck.js'
 
@@ -42,24 +43,28 @@ export async function getStat(genomes) {
 	return health
 }
 
-const sjcrh = `${process.cwd()}/node_modules/@sjcrh/proteinpaint`
-const serverPkg = JSON.parse(fs.readFileSync(`${sjcrh}-server/package.json`, { encoding: 'utf8' }))
-
 export const versionInfo: VersionInfo = {
 	pkgver: pkg.version,
 	codedate: get_codedate(),
 	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' '),
-	deps: {
-		'@sjcrh/proteinpaint-server': {
-			installed: serverPkg.version
-		}
+	deps: {}
+}
+
+// not  `${process.cwd()}/node_modules/@sjcrh/proteinpaint`
+const sjcrhServer = serverconfig.binpath
+const serverPkg = `${sjcrhServer}/package.json`
+if (fs.existsSync(serverPkg)) {
+	const pkg = JSON.parse(fs.readFileSync(serverPkg, { encoding: 'utf8' }))
+	versionInfo.deps['@sjcrh/proteinpaint-server'] = {
+		installed: pkg.version
 	}
 }
 
-if (fs.existsSync(`${sjcrh}-client/package.json`)) {
-	const client = JSON.parse(fs.readFileSync(`${sjcrh}-client/package.json`, { encoding: 'utf8' }))
+const clientPkg = serverPkg.replace('server', 'client')
+if (fs.existsSync(clientPkg)) {
+	const pkg = JSON.parse(fs.readFileSync(clientPkg, { encoding: 'utf8' }))
 	versionInfo.deps['@sjcrh/proteinpaint-client'] = {
-		installed: client.version
+		installed: pkg.version
 	}
 }
 
