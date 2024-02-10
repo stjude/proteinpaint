@@ -54,7 +54,7 @@ tape('array values', test => {
 	const params: UrlJsonRaw = { a: ['xyz', 1, 0, true, false, null, 'null', undefined, { b: 5 }] }
 	const encodedParams = encode(structuredClone(params))
 	// Special handling of undefined value in an array, which JSON.stringify() converts to null
-	params.a[params.a.indexOf(undefined)] = null
+	if (params.a && Array.isArray(params.a)) params.a[params.a.indexOf(undefined)] = null
 	test.deepEqual(params, decode(preprocess(encodedParams)), 'should correctly encode and decode array values')
 	test.end()
 })

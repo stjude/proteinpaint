@@ -1,6 +1,5 @@
 import serverconfig from './serverconfig'
 import fs from 'fs'
-import path from 'path'
 import pkg from '../package.json'
 import { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '../shared/types/routes/healthcheck.js'
 

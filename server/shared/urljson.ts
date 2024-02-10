@@ -15,7 +15,7 @@
 
 // a URL query parameters object with values to be encoded
 export type UrlJsonRaw = {
-	[key: string]: boolean | string | number | { [key: string]: any } | any[] | null
+	[key: string]: any //boolean | string | number | any[] | null | undefined  //| { [key: string]: any }
 }
 
 // a URL query parameters object with values to be decoded
@@ -27,7 +27,7 @@ const reserved = ['false', 'true', 'null', 'undefined']
 const delimiters = ['"', '{', '[']
 
 export function encode(rawObject: UrlJsonRaw) {
-	const params = []
+	const params: any[] = []
 	for (const [key, value] of Object.entries(rawObject)) {
 		if (typeof value == 'string' && !isNumeric(value) && !reserved.includes(value) && !delimiters.includes(value[0])) {
 			// no need to json-encode a string before percent encoding
@@ -44,12 +44,12 @@ export function decode(query: UrlJsonEncoded) {
 	const encoding = query.encoding
 	for (const [key, value] of Object.entries(query)) {
 		//const value = query[key]
-		if (value == 'undefined') {
-			// maybe better to also detect this common error
-			console.warn(`${key}="undefined" value as a string URL query parameter`)
-			query[key] = undefined
-			continue
-		}
+		// if (value == 'undefined') {
+		// 	// maybe better to also detect this common error
+		// 	console.warn(`${key}="undefined" value as a string URL query parameter`)
+		// 	query[key] = undefined
+		// 	continue
+		// }
 		if (
 			encoding == 'json' ||
 			value == 'null' || // not new, always been
