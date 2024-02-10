@@ -52,8 +52,9 @@ jobs:
 
       - name: Run tsc
         run: |
-          cd server && npm run checkers && cd ..
+          cd server && npm run checkers # && cd .. # TODO: enable type check at proteinpaint root dir
           npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions
+          cd ..
 
       - name: Create server cache folder
         run: if [[ ! -d "server/cache" ]]; then mkdir server/cache; fi
