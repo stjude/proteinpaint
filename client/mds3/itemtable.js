@@ -1,4 +1,4 @@
-import { mclass, dtsnvindel, dtfusionrna, dtsv } from '#shared/common'
+import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv } from '#shared/common'
 import { init_sampletable } from './sampletable'
 import { appear } from '#dom/animation'
 import { dofetch3 } from '#common/dofetch'
@@ -52,7 +52,7 @@ arg{}
 */
 export async function itemtable(arg) {
 	for (const m of arg.mlst) {
-		if (m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv) throw 'mlst[] contains unknown dt'
+		if (m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv) throw 'mlst[] contains unknown dt'
 	}
 
 	if (arg.mlst.length == 1) {
@@ -101,8 +101,12 @@ async function itemtable_oneItem(arg) {
 
 	if (m.dt == dtsnvindel) {
 		table_snvindel(arg, table)
-	} else {
+	} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 		await table_svfusion(arg, table)
+	} else if (m.dt == dtcnv) {
+		table_cnv(arg, table)
+	} else {
+		throw 'oneItem: unknown dt'
 	}
 
 	// if the variant has only one sample,
@@ -115,11 +119,6 @@ async function itemtable_oneItem(arg) {
 		if (m.occurrence) {
 			// has valid occurrence; display samples carrying this variant
 			await init_sampletable(arg)
-		} else {
-			// invalid occurrence; still show row to indicate this
-			const [td1, td2] = table.addRow()
-			td1.text('Occurrence')
-			td2.text('occurrence' in m ? m.occurrence : '')
 		}
 	}
 }
@@ -218,7 +217,7 @@ async function itemtable_multiItems(arg) {
 
 	// print buttons for each m in table
 	for (const [i, m] of arg.mlst.entries()) {
-		// create a menu option, clicking to show this variant by itself
+		// create a button, click to show this variant by itself
 		const div = rows[i][0].__td
 			.append('div')
 			.attr('class', 'sja_menuoption')
@@ -232,7 +231,7 @@ async function itemtable_multiItems(arg) {
 				itemtable(a2)
 			})
 
-		// print variant name in div
+		// print variant name in div button
 		if (m.dt == dtsnvindel) {
 			div.append('span').text(arg.tk.mnamegetter(m))
 			div
@@ -250,6 +249,15 @@ async function itemtable_multiItems(arg) {
 			div.append('span').text(mclass[m.class].label).style('font-size', '.7em').style('margin-right', '8px')
 
 			printSvPair(m.pairlst[0], div)
+		} else if (m.dt == dtcnv) {
+			div
+				.append('span')
+				.style('background', arg.tk.cnv.colorScale(m.value))
+				.text(m.value)
+				.style('font-size', '.8em')
+				.style('padding', '0px 3px')
+			div.append('span').style('margin-left', '10px').text(`${m.chr}:${m.start}-${m.stop}`)
+			// sample?
 		} else {
 			div.text('error: unknown m.dt')
 		}
@@ -514,6 +522,28 @@ async function table_svfusion(arg, table) {
 		c1.text('Break points')
 		for (const pair of arg.mlst[0].pairlst) {
 			printSvPair(pair, c2.append('div'))
+		}
+	}
+}
+
+export function table_cnv(arg, table) {
+	const m = arg.mlst[0]
+	{
+		const [c1, c2] = table.addRow()
+		c1.text('Copy number change')
+		c2.html(`<span style="background:${arg.tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`)
+	}
+	{
+		const [c1, c2] = table.addRow()
+		c1.text('Position')
+		c2.text(m.chr + ':' + m.start + '-' + m.stop)
+	}
+	{
+		const [c1, c2] = table.addRow()
+		c1.text('Sample')
+		for (const s of m.samples) {
+			c2.append('div').text(s.sample_id)
+			// TODO disco
 		}
 	}
 }

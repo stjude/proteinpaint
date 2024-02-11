@@ -211,17 +211,56 @@ export async function makeTk(tk, block) {
 }
 
 function loadTk_finish_closure(tk, block) {
+	// call this when tk finish rendering
 	return data => {
 		// update legend name in case filter has changed
 		// tk.legend{} is missing if tk is not initiated (wrong ds name)
 		tk.legend?.headTd.text(tk.name + (tk.filterObj ? ' - ' + getFilterName(tk.filterObj) : ''))
 
-		// derive tk height
-		tk.height_main = 0
-		for (const k in tk.subtk2height) {
-			tk.height_main = Math.max(tk.height_main, tk.subtk2height[k])
+		if (tk.cnv) {
+			tk.cnv.g.transition().attr('transform', `translate(0,${tk.subtk2height.skewer || 0})`)
 		}
-		tk.height_main += tk.toppad + tk.bottompad
+
+		if (data) {
+			// centralized place on indicating if tk has error or simply no data
+			// only do this when server return data is present. data may not be supplied e.g when switching skewer mode
+
+			if (data.error) {
+				// has error e.g. server snafu. set skewer height to show error msg later
+				tk.subtk2height.skewer = 40
+			} else {
+				// no error. detect if has data or not
+				let totalCount = 0
+				if (data.skewer) totalCount = data.skewer.length
+				if (data.cnv) totalCount += data.cnv.length
+				if (totalCount == 0) {
+					// show blank tk with msg
+					let context
+					if (block.pannedpx != undefined || block.zoomedin == true) {
+						context = 'view range'
+					} else if (block.usegm && block.gmmode != 'genomic') {
+						context = block.usegm.name || block.usegm.isoform
+					}
+					tk.skewer.g
+						.append('text')
+						.text('No mutation in ' + context)
+						.attr('y', 25)
+						.attr('x', block.width / 2)
+						.attr('text-anchor', 'middle')
+						.attr('dominant-baseline', 'center')
+					tk.subtk2height.skewer = 40
+				}
+			}
+		}
+
+		// derive tk height
+		tk.height_main =
+			Math.max(
+				tk.subtk2height.leftlabels || 0, // won't be added if tk crashed
+				tk.subtk2height.skewer + (tk.subtk2height.cnv || 0)
+			) +
+			tk.toppad +
+			tk.bottompad
 
 		if (data) {
 			updateLegend(data, tk, block)

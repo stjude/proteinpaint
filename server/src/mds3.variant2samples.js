@@ -418,6 +418,12 @@ async function queryServerFileByRglst(q, twLst, ds) {
 			combineSamplesById(m.samples, samples, m.ssm_id)
 		}
 	}
+	if (ds.queries.cnv) {
+		const mlst = await ds.queries.cnv.byrange.get(q)
+		for (const m of mlst) {
+			combineSamplesById(m.samples, samples, m.ssm_id)
+		}
+	}
 
 	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
 

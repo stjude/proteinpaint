@@ -63,7 +63,6 @@ function getParameter(tk, block) {
 	// to get data for current view range
 
 	const par = {
-		encoding: 'json',
 		genome: block.genome.name,
 		// instructs server to return data types associated with tracks
 		// including skewer or non-skewer
