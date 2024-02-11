@@ -13,18 +13,21 @@ import { Selection } from 'd3-selection'
 	vs 
 
 	import { Selection } from '../types/d3.d.ts'
-	const holder: Selection<HTMLDivElement, any, any, any> = ...
+	const holder: Sel.Div = ...
 */
 
 // most code can use these general element selection types,
 // it has the most used methods like .attr(), .style(), .on(), .node(), etc
-export type Elem = Selection<HTMLElement, any, HTMLElement, any>
-export type Svg = Selection<SVGElement, any, HTMLElement, any>
-export type SvgG = Selection<SVGGElement, any, HTMLElement, any>
+export type _Element_ = Selection<Element, any, any, any>
+export type Elem = Selection<HTMLElement, any, any, any>
+export type Div = Selection<HTMLDivElement, any, any, any>
+export type Svg = Selection<SVGElement, any, any, any>
+export type SvgG = Selection<SVGGElement, any, any, any>
+export type SvgSvg = Selection<SVGSVGElement, any, any, any>
 
 // this is meant to easily type all properties of the this.dom object in an rx component
 export type Dom = {
-	[selectionName: string]: Elem | Svg | SvgG
+	[selectionName: string]: Div | Svg | SvgG | SvgSvg | Span | Input
 }
 
 /*
@@ -47,7 +50,7 @@ export type Dom = {
 		- etc)
 */
 
-export type Div = Selection<HTMLDivElement, any, HTMLElement, any>
 export type Span = Selection<HTMLSpanElement, any, any, any>
-export type Input = Selection<HTMLInputElement, any, HTMLElement, any>
-export type Table = Selection<HTMLTableElement, any, HTMLElement, any>
+export type Button = Selection<HTMLButtonElement, any, any, any>
+export type Input = Selection<HTMLInputElement, any, any, any>
+export type Table = Selection<HTMLTableElement, any, any, any>

@@ -52,7 +52,7 @@ jobs:
 
       - name: Run tsc
         run: |
-          cd server && npm run checkers # && cd .. # TODO: enable type check at proteinpaint root dir
+          cd server && npm run checkers && cd ..
           npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions
           cd ..
 
