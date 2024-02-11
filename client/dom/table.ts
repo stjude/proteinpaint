@@ -40,10 +40,10 @@ export type TableArgs = {
 	maxWidth?: string //The max width of the table, 90vw by default.
 	maxHeight?: string //The max height of the table, 40vh by default
 
-	selectedRows: number[] //Preselect rows specified
+	selectedRows?: number[] //Preselect rows specified
 	selectAll: boolean //Preselect all rows
-	resize: boolean //Allow to resize the table height dragging the border
-	selectedRowStyle: any //An object of arbitrary css key-values on how to style selected rows,
+	resize?: boolean //Allow to resize the table height dragging the border
+	selectedRowStyle?: any //An object of arbitrary css key-values on how to style selected rows,
 	//for example `{text-decoration: 'line-through'}`. If a row is not
 	//selected, each css property will be set to an empty string ''
 	inputName?: any //For testing purposes

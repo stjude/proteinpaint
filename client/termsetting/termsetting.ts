@@ -869,7 +869,12 @@ export async function fillTwLst(
 	const dictTerms = await getDictTerms(twlst, vocabApi)
 	const promises: Promise<TermWrapper>[] = []
 	for (const tw of twlst) {
-		if (!tw.term) tw.term = dictTerms[tw.id]
+		if (!tw.term) {
+			// maybe already fill-in tw.term in getDictTerms() and rename that function to maySetMissingTwTerm(),
+			// since the results from getDictTerms() is always used to fill-in tw.term anyway
+			if (tw.id === undefined || tw.id === '') throw 'missing both .id and .term'
+			tw.term = dictTerms[tw.id]
+		}
 		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
 	}
 	await Promise.all(promises)
@@ -880,7 +885,7 @@ async function getDictTerms(twlst: TwLst, vocabApi: VocabApi) {
 	for (const tw of twlst) {
 		// non-dictionary tw would always have a tw.term, so only dictionary tw will be tracked here
 		if (!tw.term) {
-			if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
+			if (tw.id === undefined || tw.id === '') throw 'missing both .id and .term'
 			ids.push(tw.id)
 		}
 	}
@@ -899,7 +904,7 @@ export async function fillTermWrapper(
 ): Promise<TermWrapper> {
 	tw.isAtomic = true
 	if (!tw.$id) tw.$id = get$id()
-	if (!tw.term) {
+	if (!tw.term && tw.id) {
 		const terms = await getDictTerms([tw], vocabApi)
 		tw.term = terms[tw.id]
 	}

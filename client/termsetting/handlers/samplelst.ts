@@ -35,7 +35,8 @@ export function getHandler(self: SampleLstTermSettingInstance) {
 				const e = self.vocabApi.tokenVerificationPayload
 				const missingAccess =
 					e?.error == 'Missing access' && self.vocabApi.termdbConfig.dataDownloadCatch?.missingAccess
-				const message = missingAccess?.message?.replace('MISSING-ACCESS-LINK', missingAccess?.links[e?.linkKey])
+				const message =
+					e && missingAccess?.message?.replace('MISSING-ACCESS-LINK', missingAccess?.links[e.linkKey || ''])
 				const helpLink = self.vocabApi.termdbConfig?.dataDownloadCatch?.helpLink
 				div
 					.append('div')
