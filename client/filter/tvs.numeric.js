@@ -5,6 +5,7 @@ import { addBrushes, addNewBrush } from './tvs.density'
 import { makeDensityPlot } from './densityplot'
 import { NumericRangeInput } from '#dom/numericRangeInput'
 import { convertUnits } from '#shared/helpers'
+import { violinRenderer } from '../dom/violinRenderer'
 
 /*
 ********************** EXPORTED
@@ -144,7 +145,11 @@ async function fillMenu(self, div, tvs) {
 	}
 
 	// svg
-	self.num_obj.svg = self.num_obj.num_div.append('svg')
+	//self.num_obj.svg = self.num_obj.num_div.append('svg')
+	//makeDensityPlot(density_plot_opts)
+	const vr = new violinRenderer(self.num_obj.num_div, self.num_obj.density_data, 500, 100)
+	vr.render()
+	self.num_obj.svg = vr.svg
 
 	self.num_obj.range_table = self.num_obj.num_div
 		.append('table')
@@ -160,14 +165,6 @@ async function fillMenu(self, div, tvs) {
 		//}
 	}
 
-	const density_plot_opts = {
-		svg: self.num_obj.svg,
-		data: self.num_obj.density_data,
-		plot_size: self.num_obj.plot_size,
-		term: self.tvs.term
-	}
-
-	makeDensityPlot(density_plot_opts)
 	// add brush_g for tvs brushes
 	self.num_obj.brush_g = self.num_obj.svg
 		.append('g')
@@ -217,7 +214,7 @@ export function convertViolinData(vd) {
 		minvalue: vd.min,
 		maxvalue: vd.max,
 		samplecount: p.plotValueCount,
-		densitymax: p.density.densityMax,
+		densityMax: p.density.densityMax,
 		density: p.density.bins
 	}
 	return dd
