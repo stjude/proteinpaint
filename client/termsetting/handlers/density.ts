@@ -4,6 +4,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { makeDensityPlot } from '#filter/densityplot'
 import { BaseType } from 'd3-selection'
 import { NumericBin } from '../../shared/types/terms/numeric.ts'
+import { violinRenderer } from '../../dom/violinRenderer.js'
 /*
 ********************** IMPORTED
 	makeDensityPlot(opts) // retrun svg densityplot for given density data
@@ -66,7 +67,9 @@ export async function setDensityPlot(self) {
 			term: self.term,
 			plot_size: self.num_obj.plot_size
 		}
-		makeDensityPlot(density_plot_opts)
+		//makeDensityPlot(density_plot_opts)
+		const vr = new violinRenderer(div, self.num_obj.density_data)
+		vr.render()
 
 		// add binsize_g for termsetting lines
 		self.num_obj.binsize_g = self.num_obj.svg
