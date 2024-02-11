@@ -36,7 +36,8 @@ export default [
 				filterRoot: '../'
 			}),
 			commonjs({
-				extensions: ['.js', '.ts']
+				// ts files are expected to use esm only
+				extensions: ['.js']
 			}),
 			postcss({
 				plugins: [postcssImport()]
