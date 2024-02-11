@@ -32,15 +32,15 @@ export default [
 				extensions: ['.js', '.ts']
 			}),
 			json(),
-			typescript({
-				filterRoot: '../'
-			}),
 			commonjs({
 				// ts files are expected to use esm only
 				extensions: ['.js']
 			}),
 			postcss({
 				plugins: [postcssImport()]
+			}),
+			typescript({
+				filterRoot: '../'
 			}),
 			dynamicImportVars(),
 			// for GDC webpack 3 use case: do not use terser by running

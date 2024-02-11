@@ -4,5 +4,5 @@
     "baseUrl": "./",
     "target": "es2016"
   },
-  "include": ["./**/*.ts", "../server/shared/*.ts"]
+  "include": ["./**/*.ts"]
 }
