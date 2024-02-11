@@ -7,7 +7,7 @@ import { Tabs } from '../dom/toggleButtons'
 import { make_radios } from '../dom/radiobutton'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source } from './sampletable'
-import { dt2label, mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
@@ -20,9 +20,8 @@ if type=numeric, cached at currentMode.data
 may allow to show a different name instead of "variant"
 */
 export function makeVariantLabel(data, tk, block, laby) {
-	// TODO while skewer data is optional for a mds3 track,
-	// later should check other non-skewer data types too
-	if (!tk.skewer) return
+	// variant label covers skewer and cnv
+	if (!tk.skewer && !tk.cnv) return
 
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.variants) {
@@ -38,7 +37,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 		totalcount = tk.custom_variants.length
 	} else {
 		// no custom data but server returned data, get total from it
-		totalcount = tk.skewer.rawmlst.length
+		totalcount = tk.skewer.rawmlst.length + data.cnv?.length
 	}
 
 	if (totalcount == 0) {
@@ -59,6 +58,8 @@ export function makeVariantLabel(data, tk, block, laby) {
 	} else {
 		throw 'unknown mode type'
 	}
+
+	if (data.cnv) showcount += data.cnv.length // always count cnv when present, so as not to trigger "xx of yy" at variant label
 
 	if (showcount == 0) {
 		// has data but none displayed
@@ -203,6 +204,9 @@ async function listSkewerData(tk, block) {
 			if (!dt2mlst.has(m.dt)) dt2mlst.set(m.dt, [])
 			dt2mlst.get(m.dt).push(m)
 		}
+	}
+	if (tk.cnv?.cnvLst) {
+		dt2mlst.set(dtcnv, tk.cnv.cnvLst)
 	}
 
 	if (dt2mlst.size == 1) {

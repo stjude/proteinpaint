@@ -20,7 +20,6 @@ make_skewer_data
 	skewer_make
 	tkdata_update_x
 	settle_glyph
-	done_tknodata
 
 *************************
 * skewer data structure *
@@ -135,7 +134,8 @@ export function may_render_skewer(data, tk, block) {
 	}
 
 	if (!tk.skewer.data || tk.skewer.data.length == 0) {
-		done_tknodata(tk, block)
+		tk.subtk2height.skewer = 0
+		tk.skewer.g.selectAll('*').remove() //remove previous message in case of panning in gmmode
 		return
 	}
 
@@ -410,33 +410,6 @@ function mlst2disc(mlst, tk) {
 		return b.occurrence - a.occurrence
 	})
 	return groups
-}
-
-function done_tknodata(tk, block) {
-	/*
-	no data loaded for track
-	set track height by # of controllers
-	*/
-	let height = 0 // cumulate
-
-	//remove previous message in case of panning in gmmode
-	tk.skewer.g.selectAll('*').remove()
-
-	let context
-	if (block.pannedpx != undefined || block.zoomedin == true) {
-		context = 'view range'
-	} else if (block.usegm && block.gmmode != 'genomic') {
-		context = block.usegm.name || block.usegm.isoform
-	}
-	tk.skewer.g
-		.append('text')
-		.text('No mutation in ' + context)
-		.attr('y', 25)
-		.attr('x', block.width / 2)
-		.attr('text-anchor', 'middle')
-		.attr('dominant-baseline', 'center')
-
-	tk.subtk2height.skewer = 40
 }
 
 function updateViewModes(tk, mlst) {

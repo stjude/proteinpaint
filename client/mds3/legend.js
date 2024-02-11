@@ -3,6 +3,9 @@ import { Menu } from '#dom/menu'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
+import { axisBottom, axisTop } from 'd3-axis'
+import { axisstyle } from '#dom/axisstyle'
+import { scaleLinear } from 'd3-scale'
 
 /*
 ********************** EXPORTED
@@ -21,6 +24,8 @@ may_create_skewerRim
 may_update_skewerRim
 may_create_ld
 may_update_ld
+may_create_cnv
+may_update_cnv
 
 ********************** tk.legend{} structure
 .tip
@@ -61,6 +66,7 @@ run only once, called by makeTk
 	may_create_formatFilter(tk)
 	may_create_skewerRim(tk)
 	may_create_ld(tk)
+	may_create_cnv(tk)
 }
 
 /*
@@ -322,6 +328,7 @@ export function updateLegend(data, tk, block) {
 	may_update_formatFilter(data, tk)
 	may_update_skewerRim(data, tk)
 	may_update_ld(tk)
+	may_update_cnv(tk)
 }
 
 function may_update_variantShapeName(data, tk) {
@@ -754,4 +761,50 @@ function may_update_ld(tk) {
 	// doing overlay
 	tk.legend.ld.headerTd.html(tk.mds.queries.ld.mOverlay.ldtkname + ' LD r<sup>2</sup>')
 	tk.legend.ld.showHolder.style('display', 'block')
+}
+
+function may_create_cnv(tk, block) {
+	if (!tk.cnv) return
+	const R = (tk.legend.cnv = {})
+	R.row = tk.legend.table.append('tr')
+	// contents are filled in dynamically
+	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7).text('CNV')
+	R.holder = R.row.append('td')
+	R.showHolder = R.holder.append('div').style('display', 'none')
+}
+
+function may_update_cnv(tk) {
+	if (!tk.cnv) return
+	tk.legend.cnv.holder.selectAll('*').remove()
+	const svg = tk.legend.cnv.holder.append('svg')
+	const axisheight = 20
+	const barheight = 15
+	const xpad = 10
+	const axiswidth = 150
+	axisstyle({
+		axis: svg
+			.append('g')
+			.attr('transform', 'translate(' + xpad + ',' + axisheight + ')')
+			.call(
+				axisTop()
+					.scale(scaleLinear().domain([-tk.cnv.absoluteMax, tk.cnv.absoluteMax]).range([0, axiswidth]))
+					.ticks(4)
+			),
+		fontsize: 12
+	})
+
+	const id = 'grad' + Math.random()
+	const grad = svg.append('defs').append('linearGradient').attr('id', id)
+	grad.append('stop').attr('offset', '0%').attr('stop-color', tk.cnv.lossColor)
+	grad.append('stop').attr('offset', '50%').attr('stop-color', 'white')
+	grad.append('stop').attr('offset', '100%').attr('stop-color', tk.cnv.gainColor)
+	svg
+		.append('rect')
+		.attr('x', xpad)
+		.attr('y', axisheight)
+		.attr('width', axiswidth)
+		.attr('height', barheight)
+		.attr('fill', `url(#${id})`)
+
+	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
 }

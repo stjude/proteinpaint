@@ -97,6 +97,21 @@ function finalize_result(q, ds, result) {
 			}
 		}
 	}
+	if (result.cnv) {
+		for (const c of result.cnv) {
+			if (c.samples) {
+				for (const s of c.samples) {
+					sampleSet.add(s.sample_id)
+
+					if (ds.cohort?.termdb?.q?.id2sampleName) {
+						// sample_id is always sent to client for display; right now its value is integer id. convert to string name for proper display
+						const n = ds.cohort.termdb.q.id2sampleName(s.sample_id)
+						if (n) s.sample_id = n
+					}
+				}
+			}
+		}
+	}
 
 	if (sampleSet.size) {
 		// has samples, report total number of unique samples across all data types
