@@ -23,4 +23,10 @@ export type VocabApi = {
 	getTermdbConfig: () => any
 	getViolinPlotData: (f: any, params: any) => void
 	uncacheTermQ: (term: Term, q: any) => any
+	hasVerifiedToken: () => boolean
+	tokenVerificationMessage: string
+	tokenVerificationPayload?: {
+		error?: string
+		linkKey?: string
+	}
 }

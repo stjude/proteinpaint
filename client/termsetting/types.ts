@@ -85,6 +85,7 @@ export type PillData = BaseTermSettingOpts & {
 	q?: Q
 	sampleCounts?: SampleCountsEntry[]
 	term?: Term
+	menuOptions?: string
 }
 
 export type TermSettingOpts = BaseTermSettingOpts & {
@@ -95,7 +96,7 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	$id?: string
 	buttons?: string[] //replace, delete, info
 	defaultQ4fillTW?: DefaultQ4fillTW
-	menuOptions: string //all, edit, replace, remove
+	menuOptions?: string //all, edit, replace, remove
 	menuLayout?: string //horizonal, all
 	numericEditMenuVersion?: string[]
 	numericContinuousEditOptions?: NumericContEditOptsEntry[]
