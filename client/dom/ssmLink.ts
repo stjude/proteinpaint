@@ -23,7 +23,10 @@ separateUrls[]: array of html links (if ssm_urls is array) or html string (if ss
 */
 export function makeSsmLink(
 	ssm_urls: UrlTemplateSsm | UrlTemplateSsm[],
-	m: object,
+	m: {
+		chr?: string
+		pos?: number
+	},
 	variantNameDom: any,
 	genome: string
 ) {
@@ -35,7 +38,7 @@ export function makeSsmLink(
 		for (const ssm_url of ssm_urls) {
 			if (ssm_url.namekey == 'regulomedb') {
 				// this key corresponds to hardcoded logic to build regulomedb link with special requirements that also include genome
-				if (typeof m.chr == 'string' && Number.isInteger(m.pos)) {
+				if (typeof m.chr == 'string' && m.pos !== undefined && Number.isInteger(m.pos)) {
 					const coord = `${m.chr}%3A${m.pos}-${m.pos + 1}`
 					separateUrls.push(
 						`<a href="${ssm_url.base}regions=${coord}&genome=${genome == 'hg38' ? 'GRCh38' : genome}" target="_blank">${

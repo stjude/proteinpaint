@@ -10,6 +10,7 @@ type API = {
 		loadBtn: any
 		clearBtn: any
 		submitBtn: any
+		restoreBtn: any
 		geneHoldingDiv: any | null // gene holding area, shows bunch of gene buttons pending submission
 		statLegendDiv: any // legend area, to show available stats legend on genes
 	}
@@ -28,11 +29,12 @@ type showGenesetEditArg = {
 	holder: any
 	genome: any
 	mode?: 'expression' // if provided, allow to load top variably expressed genes; later can be union of multiple mode strings
-	callback: () => void
+	callback: (arg: CallbackArg) => void
 	vocabApi: any
 	geneList?: {
 		gene: string
 	}[]
+	titleText?: string
 }
 
 export function showGenesetEdit(arg: showGenesetEditArg) {
@@ -139,7 +141,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				.text('Load top variably expressed genes')
 				.on('click', async event => {
 					event.target.disabled = true
-					const args = {
+					const args: any = {
 						genome: vocabApi.state.vocab.genome,
 						dslabel: vocabApi.state.vocab.dslabel,
 						maxGenes: 50
@@ -305,7 +307,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 		if (hasChanged) submitBtn.node().focus()
 	}
 
-	function renderGene(gene) {
+	function renderGene(this: any, gene) {
 		const div = select(this).style('border-radius', '5px')
 
 		if (gene.mutationStat) {

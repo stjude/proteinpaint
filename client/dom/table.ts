@@ -295,6 +295,7 @@ export function renderTable({
 	}
 
 	function updateButtons() {
+		if (!buttons) return
 		const idxlst = getCheckedRowIndex()
 		for (const b of buttons) {
 			b.button.node().disabled = idxlst.length == 0
@@ -320,7 +321,7 @@ export function renderTable({
 				_selectedRowStyle = opts.selectedRowStyle
 				const trs = tbody.selectAll('tr')
 				for (const key in _selectedRowStyle) {
-					const value = trs.style(key, function () {
+					const value = trs.style(key, function (this: any) {
 						return select(this).select('td input').property('checked') ? _selectedRowStyle[key] : ''
 					})
 				}

@@ -9,14 +9,14 @@
 */
 
 import { Selection, select } from 'd3-selection'
-import * as Sel from '../d3'
+import * as Sel from '../d3.d'
 
 // ------------
 // Declarations
 // ------------
 
 // ok
-const elem: Sel.Elem = select('body').append('div')
+const elem: Sel.Div = select('body').append('div')
 // ok
 const div: Sel.Div = elem.append('div')
 // ok
@@ -25,7 +25,10 @@ const span: Sel.Span = elem.append('span')
 const spanAsDiv: Sel.Div = elem.append('span')
 // ok
 const spanGen = <Sel.Span>elem.append('span')
-// ok - should have caught this non-sensical syntax ???
+// tsc does not catch this error when called directly on this spec file
+// e.g. npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions client/types/test/d3.type.spec.ts
+// but calling tsc on a directory (without a filename) works as expected
+// @ts-expect-error, span is not a div
 const spanGen2: Sel.Span = <Sel.Div>elem.append('span')
 
 const dom: Sel.Dom = {
@@ -47,7 +50,10 @@ function abc(arg: Sel.Div) {
 abc(div)
 // @ts-expect-error, mismatched argument type
 abc(span)
-// ok, should be an error !!! this forced type syntax should not be used for generics !!!
+// tsc does not catch this error when called directly on this spec file
+// e.g. npx tsc --noEmit --esModuleInterop --allowImportingTsExtensions client/types/test/d3.type.spec.ts
+// but calling tsc on a directory (without a filename) works as expected
+// @ts-expect-error, this forced type syntax should not be used for generics !!!
 abc(span as Sel.Div)
 // ok - should have been prevented if the @ts-expect-error comment was removed above this variable's declaration
 abc(spanAsDiv)
