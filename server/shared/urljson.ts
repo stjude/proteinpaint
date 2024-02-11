@@ -10,7 +10,21 @@
 
 	In addition, a URL-payload that includes an `encoding=urljson` parameter
 	will cause all query parameter values to be processed by the decode()
-	function below. 
+	function below. This is not required, but may help remove ambiguity, especially
+	to distinguish urljson-encoded params vs legacy URL params that have 
+	been manually coded in a way that doesn't conform to the expectations here.
+
+	Why not just encode every URL query parameter value as JSON?
+
+	- That makes the URL harder to read, since more encoding characters have to
+		be URI (percent) encoded. In contrast, since most values are strings or numbers,
+	  the encoder below leaves those values alone for better readability of the URL. For
+	  example, unambiguous strings would not have to be wrapped with double-quotes
+	  that are then URI encoded.
+
+	- The decoder will always accept and correctly process values that are JSON-encoded.
+	  So the encoding exceptions above do not prevent harder-to-read JSON-encoded string
+	  values. 
 */
 
 // a URL query parameters object with values to be encoded
@@ -31,7 +45,7 @@ export function encode(rawObject: UrlJsonRaw) {
 	for (const [key, value] of Object.entries(rawObject)) {
 		if (typeof value == 'string' && !isNumeric(value) && !reserved.includes(value) && !delimiters.includes(value[0])) {
 			// no need to json-encode a string before percent encoding
-			// if it doesn't contain reserved JSON wrapper/delimiters
+			// if it doesn't contain reserved JSON keywords/wrapper characters
 			params.push(`${key}=${encodeURIComponent(value)}`)
 		} else if (value !== undefined) {
 			params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
