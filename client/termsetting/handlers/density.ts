@@ -213,7 +213,7 @@ function renderBinLines(self, data: any) {
 					.reverse()
 					.find((d: LineData) => d.scaledX < scaledMaxX)
 	let lastScaledX = lastVisibleLine ? Math.min(scaledMaxX, lastVisibleLine.scaledX) : (scaledMaxX as number)
-
+	const shift = self.vr.shift
 	self.num_obj.binsize_g
 		.selectAll('line')
 		.data(lines)
@@ -222,9 +222,9 @@ function renderBinLines(self, data: any) {
 		.style('stroke', (d: LineData) => (d.isDraggable ? '#cc0000' : '#555'))
 		.style('stroke-width', 1)
 		.attr('x1', (d: LineData) => d.scaledX)
-		.attr('y1', 0)
+		.attr('y1', -shift)
 		.attr('x2', (d: LineData) => d.scaledX)
-		.attr('y2', o.plot_size.height)
+		.attr('y2', o.plot_size.height - shift)
 		.style('cursor', (d: LineData) => (d.isDraggable ? 'ew-resize' : ''))
 		.style('display', (d: LineData) => (!d.isDraggable && d.scaledX > lastScaledX ? 'none' : ''))
 		.on('mouseover', function (this: BaseType, d: LineData) {
