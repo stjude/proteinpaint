@@ -153,8 +153,8 @@ class DEanalysis {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.DEanalysis
 		const output = await this.app.vocabApi.runDEanalysis(this.state.config)
-		output.mid_sample_size_cutoff = 30 // mid sample size cutoff for method toggle to appear
-		output.high_sample_size_cutoff = 50 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
+		output.mid_sample_size_cutoff = 8 // mid sample size cutoff for method toggle to appear
+		output.high_sample_size_cutoff = 30 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
 		await this.setControls(output)
 		//const state = this.app.getState()
 		//console.log('state:', state)
