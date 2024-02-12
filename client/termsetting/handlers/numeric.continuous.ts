@@ -1,8 +1,8 @@
 import { getPillNameDefault } from '../termsetting'
 import { PillData, Term } from '../../shared/types/index'
-import { makeDensityPlot } from '../../filter/densityplot'
 import { convertViolinData } from '../../filter/tvs.numeric'
 import { HandlerGenerator } from '../types'
+import { violinRenderer } from '../../dom/violinRenderer'
 
 /*
 ********************** EXPORTED
@@ -55,14 +55,10 @@ export function getHandler(self) {
 				self.opts.getBodyParams?.()
 			)
 			const density_data = convertViolinData(d)
-			const svg = densityDiv.append('svg')
-			const density_plot_opts = {
-				svg: svg,
-				data: density_data,
-				term: self.term,
-				plot_size: plot_size
-			}
-			makeDensityPlot(density_plot_opts)
+
+			const vr = new violinRenderer(densityDiv, density_data, 500, 100)
+			vr.render()
+			const svg = vr.svg
 
 			div.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
