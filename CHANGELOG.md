@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.40.8
 
 Fixes:
 - BAM track bug fix to handle reads with no sequence and not to break.
