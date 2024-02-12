@@ -27,11 +27,22 @@ class DEanalysis {
 	async init(opts) {
 		const config = opts.plots.find(p => p.id === this.id)
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
-		const holder = this.opts.holder.append('div').style('display', 'inline-block')
+		const mainDiv = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
+		const holder = mainDiv.append('div').style('display', 'inline-block')
+		const detailsDiv = mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin-top', '50px')
+
+		const tableDiv = this.opts.holder.append('div').style('margin-left', '50px')
+
 		this.dom = {
 			holder,
 			header: this.opts.header,
-			controlsDiv
+			controlsDiv,
+			detailsDiv,
+			tableDiv
 		}
 	}
 
@@ -164,11 +175,11 @@ class DEanalysis {
 			.style('padding-left', '10px')
 			.style('font-size', '0.75em')
 			.text('DIFFERENTIAL EXPRESSION')
-		render_volcano(this.dom.holder, output.data, this, output.sample_size1, output.sample_size2)
+		render_volcano(this, output)
 	}
 }
 
-function render_volcano(holder, mavb, self, sample_size1, sample_size2) {
+function render_volcano(self, output) {
 	/*
 m {}
 - gene
@@ -181,7 +192,12 @@ add:
 	*/
 
 	// Delete previous holder, if present
+	const sample_size1 = output.sample_size1
+	const sample_size2 = output.sample_size2
+	const mavb = output.data
+	const holder = self.dom.holder
 	holder.selectAll('*').remove()
+	self.dom.detailsDiv.selectAll('*').remove()
 	let minlogfc = 0,
 		maxlogfc = 0,
 		minlogpv = 0,
@@ -380,7 +396,7 @@ add:
 			text_string = '-log10(original P value)'
 		}
 		ylab.text(text_string)
-		holder
+		self.dom.detailsDiv
 			.append('div')
 			.html(
 				'Percentage of significant genes:' +
@@ -400,7 +416,7 @@ add:
 			{ label: 'Adjusted p-value (linear scale)' }
 		]
 		if (self.settings.pvaluetable == true) {
-			const d = holder.append('div').html(`<br>DE analysis results`)
+			const d = self.dom.tableDiv.append('div').html(`<br>DE analysis results`)
 			renderTable({
 				columns: self.table_cols,
 				rows: self.table_rows,
