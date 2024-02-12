@@ -4,7 +4,6 @@ import { axisBottom, axisTop, rgb } from 'd3'
 
 export class violinRenderer {
 	constructor(holder, plot, width = 350, height = 150) {
-		console.log(plot)
 		this.holder = holder
 		this.plot = plot
 		this.width = width
