@@ -146,9 +146,9 @@ async function fillMenu(self, div, tvs) {
 	// svg
 	//self.num_obj.svg = self.num_obj.num_div.append('svg')
 	//makeDensityPlot(density_plot_opts)
-	const vr = new violinRenderer(self.num_obj.num_div, self.num_obj.density_data, 500, 100)
-	vr.render()
-	self.num_obj.svg = vr.svg
+	self.vr = new violinRenderer(self.num_obj.num_div, self.num_obj.density_data, 500, 100)
+	self.vr.render()
+	self.num_obj.svg = self.vr.svg
 
 	self.num_obj.range_table = self.num_obj.num_div
 		.append('table')

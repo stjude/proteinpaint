@@ -8,11 +8,12 @@ export class violinRenderer {
 		this.plot = plot
 		this.width = width
 		this.height = height
+		this.shift = 20
 		this.svg = holder
 			.append('svg')
 			.attr('width', `${width + 50}px`)
 			.attr('height', `${height + 50}px`)
-		holder.style('margin', '20px')
+		holder.style('margin', `${this.shift}px`)
 		this.axisScale = scaleLinear().domain([plot.minvalue, plot.maxvalue]).range([0, width])
 		this.wScale = scaleLinear()
 			.domain([plot.densityMax, 0])

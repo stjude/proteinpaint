@@ -71,8 +71,8 @@ function applyBrush(self, elem, brush) {
 
 	brush.d3brush = brushX()
 		.extent([
-			[plot_size.xpad, 0],
-			[plot_size.width - plot_size.xpad, plot_size.height]
+			[plot_size.xpad, -self.vr.shift],
+			[plot_size.width - plot_size.xpad, plot_size.height - self.vr.shift]
 		])
 		.on('brush', function (event, d) {
 			const s = event.selection
