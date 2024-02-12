@@ -1,7 +1,6 @@
 import { select, pointer } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
-import { makeDensityPlot } from '#filter/densityplot'
 import { BaseType } from 'd3-selection'
 import { NumericBin } from '../../shared/types/terms/numeric.ts'
 import { violinRenderer } from '../../dom/violinRenderer.js'
@@ -59,8 +58,7 @@ export async function setDensityPlot(self) {
 	} else {
 		// svg for range plot
 		const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
-		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
-		self.num_obj.svg.selectAll('*').remove()
+		div.selectAll('*').remove()
 		const density_plot_opts = {
 			svg: self.num_obj.svg,
 			data: self.num_obj.density_data,
@@ -70,6 +68,7 @@ export async function setDensityPlot(self) {
 		//makeDensityPlot(density_plot_opts)
 		const vr = new violinRenderer(div, self.num_obj.density_data)
 		vr.render()
+		self.num_obj.svg = vr.svg
 
 		// add binsize_g for termsetting lines
 		self.num_obj.binsize_g = self.num_obj.svg
