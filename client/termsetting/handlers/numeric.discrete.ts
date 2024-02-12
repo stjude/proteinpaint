@@ -7,6 +7,7 @@ import { make_radios } from '../../dom/radiobutton'
 import { getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '../../filter/tvs.numeric'
 import { PillData, RangeEntry, NumericQ } from '../../shared/types/index'
+import { violinRenderer } from '../../dom/violinRenderer.js'
 
 /*
 ********************** EXPORTED
@@ -92,6 +93,9 @@ async function showBinsMenu(self, div: any) {
 
 	div.selectAll('*').remove()
 	self.dom.num_holder = div
+	self.dom.density_div = div.append('div')
+	self.vr = new violinRenderer(self.dom.density_div, self.num_obj.density_data)
+	self.num_obj.svg = self.vr.svg
 	self.dom.bins_div = div.append('div').style('padding', '5px')
 	setqDefaults(self)
 	setDensityPlot(self)
