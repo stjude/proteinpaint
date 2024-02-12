@@ -56,7 +56,6 @@ export async function setDensityPlot(self) {
 	} else {
 		// svg for range plot
 		const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
-
 		self.vr.render()
 
 		// add binsize_g for termsetting lines
