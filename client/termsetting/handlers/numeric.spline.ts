@@ -3,7 +3,7 @@ import { keyupEnter } from '../../src/client'
 import { getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '../../filter/tvs.numeric'
 import { NumericQ } from '../../shared/types/index'
-
+import { violinRenderer } from '../../dom/violinRenderer'
 /*
 ********************** EXPORTED
 getHandler(self)
@@ -70,8 +70,10 @@ export function getHandler(self) {
 			} catch (err) {
 				console.log(err)
 			}
-
 			div.selectAll('*').remove()
+			self.dom.density_div = div.append('div')
+			self.vr = new violinRenderer(self.dom.density_div, self.num_obj.density_data, 500, 100)
+			self.num_obj.svg = self.vr.svg
 			self.dom.num_holder = div
 			self.dom.knots_div = div.append('div').style('padding', '5px')
 			await setqDefaults(self)
