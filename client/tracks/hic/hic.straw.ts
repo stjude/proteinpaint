@@ -1043,66 +1043,6 @@ async function colorizeGenomeElements(self: any) {
 		}
 	}
 }
-/** Old method for getting data in whole genome view when cutoff was hardcoded to 5000. */
-// export async function getdata_leadfollow(hic: any, lead: any, follow: any, self: any) {
-// 	const binpx = self.genomeview.binpx
-// 	const resolution = self.genomeview.resolution
-// 	const obj = self.genomeview.lead2follow.get(lead).get(follow)
-// 	obj.data = []
-// 	obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
-// 	if (obj.canvas2) {
-// 		obj.ctx2.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
-// 	}
-
-// 	const arg = {
-// 		matrixType: self.genomeview.matrixType,
-// 		file: hic.file,
-// 		url: hic.url,
-// 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
-// 		pos2: hic.nochr ? follow.replace('chr', '') : follow,
-// 		nmeth: self.genomeview.nmeth,
-// 		resolution: resolution
-// 	}
-
-// 	try {
-// 		const data = await client.dofetch2('/hicdata', {
-// 			method: 'POST',
-// 			body: JSON.stringify(arg)
-// 		})
-// 		if (data.error) throw lead + ' - ' + follow + ': ' + data.error.error //Fix for error message displaying [Object object] instead of error message
-// 		if (!data.items || data.items.length == 0) {
-// 			return
-// 		}
-// 		for (const [plead, pfollow, v] of data.items) {
-// 			const leadpx = Math.floor(plead / resolution) * binpx
-// 			const followpx = Math.floor(pfollow / resolution) * binpx
-// 			obj.data.push([leadpx, followpx, v])
-
-// 			if (v >= 0) {
-// 				// positive, use red
-// 				const p =
-// 					v >= self.genomeview.bpmaxv ? 0 : Math.floor((255 * (self.genomeview.bpmaxv - v)) / self.genomeview.bpmaxv)
-// 				obj.ctx.fillStyle = `rgb(255, ${p}, ${p})`
-// 				obj.ctx2.fillStyle = `rgb(255, ${p}, ${p})`
-// 			} else {
-// 				// negative, use blue
-// 				const p = Math.floor((255 * (self.genomeview.bpmaxv + v)) / self.genomeview.bpmaxv)
-// 				obj.ctx.fillStyle = `rgb(${p}, ${p}, 255)`
-// 				obj.ctx2.fillStyle = `rgb(${p}, ${p}, 255)`
-// 			}
-
-// 			obj.ctx.fillRect(followpx, leadpx, binpx, binpx)
-// 			obj.ctx2.fillRect(leadpx, followpx, binpx, binpx)
-// 		}
-// 		obj.img.attr('xlink:href', obj.canvas.toDataURL())
-// 		if (obj.canvas2) {
-// 			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
-// 		}
-// 	} catch (e: any) {
-// 		self.errList.push(e.message || e)
-// 		if (e.stack) console.log(e.stack)
-// 	}
-// }
 
 function makewholegenome_sv(hic: any, self: any) {
 	const unknownchr = new Set()
@@ -1243,8 +1183,6 @@ function tell_firstisx(hic: any, chrx: string, chry: string) {
 
 export async function getdata_chrpair(hic: any, self: any) {
 	const isintrachr = self.x.chr == self.y.chr
-	// const chrxlen = hic.genome.chrlookup[chrx.toUpperCase()].len
-	// const chrylen = hic.genome.chrlookup[chry.toUpperCase()].len
 	const firstisx = tell_firstisx(hic, self.x.chr, self.y.chr)
 
 	const resolution = self.chrpairview.resolution
@@ -1581,7 +1519,6 @@ export function getdata_detail(hic: any, self: any) {
 
 			const lst = [] as number[][]
 			let err = 0
-			// let maxv = 0
 
 			const vlst = [] as number[]
 			for (const [n1, n2, v] of data.items) {
@@ -1654,8 +1591,6 @@ export function getdata_detail(hic: any, self: any) {
 					span2 = resolution
 				}
 
-				// maxv = Math.max(v, maxv)
-
 				if (isintrachr) {
 					if (coord1 > xstart - span1 && coord1 < xstop && coord2 > ystart - span2 && coord2 < ystop) {
 						lst.push([
@@ -1690,11 +1625,6 @@ export function getdata_detail(hic: any, self: any) {
 				// done this line
 			}
 			// done all lines
-
-			// maxv *= 0.8
-
-			// self.detailview.bpmaxv = maxv
-			// self.dom.controlsDiv.inputBpMaxv.property('value', maxv)
 
 			setViewCutoff(vlst, self.detailview, self)
 
