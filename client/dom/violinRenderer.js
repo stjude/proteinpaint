@@ -3,7 +3,7 @@ import { line, curveMonotoneX } from 'd3-shape'
 import { axisBottom, rgb, brushX } from 'd3'
 
 export class violinRenderer {
-	constructor(holder, plot, callback = null, width = 500, height = 100) {
+	constructor(holder, plot, callback = null, scaleFactor = 1, width = 500, height = 100) {
 		this.holder = holder
 		this.plot = plot
 		this.width = width
@@ -16,6 +16,10 @@ export class violinRenderer {
 			.attr('height', `${height + 50}px`)
 		holder.style('margin', `${this.shift}px`)
 		this.axisScale = scaleLinear().domain([plot.minvalue, plot.maxvalue]).range([0, width])
+		this.axisScaleUI = scaleLinear()
+			.domain([plot.minvalue * scaleFactor, plot.maxvalue * scaleFactor])
+			.range([0, width])
+
 		this.wScale = scaleLinear()
 			.domain([plot.densityMax, 0])
 			.range([height * 0.45, 0])
@@ -26,7 +30,7 @@ export class violinRenderer {
 		this.violinG = this.svg.append('g').attr('transform', `translate(20, ${this.height / 2})`)
 
 		this.scaleG = this.svg.append('g').attr('transform', `translate(20, ${this.height})`)
-		this.scaleG.call(axisBottom(this.axisScale).tickValues(this.axisScale.ticks()))
+		this.scaleG.call(axisBottom(this.axisScaleUI).tickValues(this.axisScaleUI.ticks()))
 		this.renderArea(false)
 		this.renderArea(true)
 		if (this.callback)
