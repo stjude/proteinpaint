@@ -43,8 +43,8 @@ export class violinRenderer {
 			this.svg.call(
 				brushX()
 					.extent([
-						[0, 0],
-						[this.width, this.height]
+						[this.shift, this.shift],
+						[this.width + this.shift, this.height + this.shift]
 					])
 					.on('end', async event => {
 						const selection = event.selection
