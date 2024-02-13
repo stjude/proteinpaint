@@ -12,7 +12,7 @@ import { get_samples } from '#src/termdb.sql.js'
 export const api = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
 	methods: {
-		get: {
+		all: {
 			init,
 			request: {
 				typeId: 'TermdbTopVariablyExpressedGenesRequest'
