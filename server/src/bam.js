@@ -3542,53 +3542,56 @@ async function streamGdcBam2response(req, res) {
 }
 
 /*
-	BAM deletion is prioritized by last access time, not modified time,
-	although they will be equal due to using utimes() to reset both in get_gdc_bam(). 
+	BAM deletion is prioritized by last modified time, not access time (to avoid relatime issues),
+	although they will be equal due to using utimes() to reset both in get_gdc_bam(). From
+	https://manpages.ubuntu.com/manpages/bionic/en/man8/mount.8.html:
+    
+    relatime (default mount used in GDC hosts for PP container)
+      Update inode access times relative to modify or change time. Access time is only
+      updated if the previous access time was earlier than the current modify or change
+      time.
 
 	Each call to get_gdc_bam() will trigger mayDeleteCacheFiles() if 
 	there is no pending timeout for it already, to avoid multiples of that 
 	function running at the same time unnecessarily. 
 
-	There is also a separate interval for trigger mayDeleteCacheFiles(), so that it would run 
-	every so often even when get_gdc_bam() has not run in a while
+	Another setTimeout() may also be triggered at the end of mayDeleteCacheFiles(),
+	if there are remaining files, with the wait time set to the oldest mtime.
 */
 
 const bamCache = serverconfig.features?.bamCache || {}
-// the max age for the access time, will delete files whose access time exceeds this "aged" access
-const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
+// the max age for the modified time, will delete files whose modified time exceeds this "aged" access
+const maxAge = 60000 //bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
 // maximum allowed cache size in bytes
 const maxSize = bamCache.maxSize || 5e9
-// maximum time to wait before triggering another call to mayDeleteCacheFiles(),
+// time to wait before triggering another call to mayDeleteCacheFiles(),
 // this is used to debounce/prevent multiple active calls to mayDeleteCacheFiles()
-const checkWait = bamCache.checkWait || 1 * 60 * 1000
+const checkWait = bamCache.checkWait || 0.25 * 60 * 1000
 
 // a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
-let cacheCheckTimeout
-if (serverconfig.features?.bamCache) {
-	// only run this loop if configured, otherwise will only rely on
-	// cleanup as new bam requests come in
-	setInterval(() => {
-		if (!cacheCheckTimeout) cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, checkWait)
-	}, 10 * checkWait)
-}
+let cacheCheckTimeout,
+	nextCheckTime = 0
+// only run this loop if configured, otherwise will only rely on
+// cleanup as new bam requests come in
+if (serverconfig.features?.bamCache) mayResetCacheCheckTimeout(checkWait)
 
 async function mayDeleteCacheFiles() {
-	console.log(`deleting cache files based on last access time ...`)
-	clearTimeout(cacheCheckTimeout)
-	cacheCheckTimeout = undefined
+	console.log(`checking for cached bam files to delete ...`)
 	try {
 		const minTime = Date.now() - maxAge
 		const filenames = await fs.promises.readdir(serverconfig.cachedir_bam)
 		const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
-		let totalSize = 0
+		let totalSize = 0,
+			deletedCount = 0
 		for (const filename of filenames) {
 			if (!filename.endsWith('.bam') && !filename.endsWith('.bai')) continue
 			const fp = path.join(serverconfig.cachedir_bam, filename)
 			const s = await fs.promises.stat(fp)
 			if (!s.isFile()) continue // no need for??: throw '.bam not a file in cache'
-			const time = s.atimeMs
+			const time = s.mtimeMs
 			if (time < minTime) {
 				await fs.promises.unlink(fp)
+				deletedCount++
 				continue
 			}
 			files.push({
@@ -3598,28 +3601,56 @@ async function mayDeleteCacheFiles() {
 			})
 			totalSize += s.size
 		}
-
-		if (totalSize < maxSize) return
-		/*
-		storage use is still above limit, deleting files just older than cutoff is not enough
-		a lot of recent requests may have deposited lots of cache files
-		must futher delete old files ranked by age
-		*/
 		files.sort((i, j) => j.time - i.time) // descending
-		for (const f of files) {
-			await fs.promises.unlink(f.path)
-			totalSize -= f.size
-			if (totalSize < maxSize) return
+		if (totalSize >= maxSize) {
+			/*
+			storage use is still above limit, deleting files just older than cutoff is not enough
+			a lot of recent requests may have deposited lots of cache files
+			must delete more old files ranked by age
+			*/
+			for (const f of files) {
+				await fs.promises.unlink(f.path)
+				f.deleted = true
+				deletedCount++
+				totalSize -= f.size
+				if (totalSize < maxSize) break
+			}
+		}
+		console.log(`deleted ${deletedCount} cached bam files`)
+		// empty out the following tracking variables
+		cacheCheckTimeout = undefined
+		nextCheckTime = 0
+		if (totalSize) {
+			const nextFile = files.find(f => !f.deleted)
+			if (!nextFile) return
+			// trigger another mayDeleteCachefile() call with setTimeout,
+			// using the oldest file mtime as the wait time
+			const wait = Math.round(nextFile.time + maxAge - Date.now())
+			mayResetCacheCheckTimeout(wait >= 0 ? wait : 0)
 		}
 	} catch (e) {
 		console.error('Error in mayDeleteCacheFiles(): ' + e)
 	}
 }
 
+function mayResetCacheCheckTimeout(wait = 0) {
+	const checkTime = Date.now() + wait
+	if (cacheCheckTimeout) {
+		if (nextCheckTime && nextCheckTime <= checkTime + 5) return
+		else {
+			clearTimeout(cacheCheckTimeout)
+			cacheCheckTimeout = undefined
+		}
+	}
+	nextCheckTime = checkTime
+	console.log(`setting mayDeleteCacheFiles() timeout at ${wait} ms`)
+	cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, wait)
+}
+
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	// before creating new cache file, check if possible to delete cache files
 	// only trigger a new check if a pending timeout doesn't already exist
-	if (!cacheCheckTimeout) cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, checkWait)
+	mayResetCacheCheckTimeout(checkWait)
 
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
