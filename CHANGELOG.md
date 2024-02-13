@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- adding geneset edit ui from Gene Expression chart button
+
 Fixes:
 - Bug fix to show correct category total size by passing a missing filter0
 
