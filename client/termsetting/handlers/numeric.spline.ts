@@ -72,7 +72,7 @@ export function getHandler(self) {
 			}
 			div.selectAll('*').remove()
 			self.dom.density_div = div.append('div')
-			self.vr = new violinRenderer(self.dom.density_div, self.num_obj.density_data, 500, 100)
+			self.vr = new violinRenderer(self.dom.density_div, self.num_obj.density_data)
 			self.num_obj.svg = self.vr.svg
 			self.dom.num_holder = div
 			self.dom.knots_div = div.append('div').style('padding', '5px')

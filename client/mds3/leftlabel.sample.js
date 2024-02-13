@@ -343,7 +343,26 @@ function getNewFilter(tk, tvs) {
 
 // will be nice if the data computing and rendering can both be replaced by violin
 async function showDensity4oneTerm(termid, div, data, tk, block) {
-	const vr = new violinRenderer(div, data.density_data)
+	const term = await tk.mds.termdb.vocabApi.getterm(termid)
+	const callback = async range => {
+		// a range is selected
+		tk.menutip.clear()
+		const tvs = {
+			type: 'tvs',
+			tvs: { term, ranges: [{ start: range.range_start, stop: range.range_end }] }
+		}
+		const tkarg = {
+			type: 'mds3',
+			dslabel: tk.dslabel,
+			filter0: tk.filter0,
+			showCloseLeftlabel: true,
+			filterObj: getNewFilter(tk, tvs),
+			allow2selectSamples: tk.allow2selectSamples
+		}
+		const tk2 = block.block_addtk_template(tkarg)
+		block.tk_load(tk2)
+	}
+	const vr = new violinRenderer(div, data.density_data, callback)
 	vr.render()
 }
 
