@@ -1294,10 +1294,10 @@ export async function getdata_chrpair(hic: any, self: any) {
 				self.chrpairview.data.push([y, x, v])
 			}
 		}
-		setViewCutoff(vlst, self.chrpairview, self)
+		await setViewCutoff(vlst, self.chrpairview, self)
 
 		for (const [x, y, v] of self.chrpairview.data) {
-			colorizeElement(x, y, v, self.chrpairview, self, ctx)
+			await colorizeElement(x, y, v, self.chrpairview, self, ctx)
 		}
 	} catch (err: any) {
 		self.errList.push(err.message || err)
@@ -1767,10 +1767,23 @@ export async function setViewCutoff(vlst: any, view: any, self: any) {
 
 	self.colorScale.updateScale()
 }
-//Super messy, need to clean up
-export function colorizeElement(
-	leadpx: number,
-	followpx: number,
+/**
+ * Fills the canvas with color based on the value from the straw response
+ * Default color is red for positive values and blue for negative values.
+ * When no negative values are present, no color is displayed (i.e. appears white)
+ * Note the genome view renders two ctx objs, otherwise only one ctx obj is filled in.
+ * @param lead lead chr
+ * @param follow following chr
+ * @param v returned value from straw
+ * @param view either genomeview, chrpairview, or detailview
+ * @param self
+ * @param obj obj to color
+ * @param width if no .binpx for the view, must provied width
+ * @param height if no .binpx for the view, must provied width
+ */
+export async function colorizeElement(
+	lead: number,
+	follow: number,
 	v: number,
 	view: any,
 	self: any,
@@ -1804,9 +1817,9 @@ export function colorizeElement(
 	const h = height || view.binpx
 
 	if (self.ingenome == true) {
-		obj.ctx.fillRect(followpx, leadpx, w, h)
-		obj.ctx2.fillRect(leadpx, followpx, w, h)
+		obj.ctx.fillRect(follow, lead, w, h)
+		obj.ctx2.fillRect(lead, follow, w, h)
 	} else {
-		obj.fillRect(followpx, leadpx, w, h)
+		obj.fillRect(lead, follow, w, h)
 	}
 }
