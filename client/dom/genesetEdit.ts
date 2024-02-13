@@ -107,6 +107,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 
 	api.dom.geneHoldingDiv = div
 		.append('div')
+		.append('div')
 		.style('display', 'flex')
 		.style('flex-wrap', 'wrap')
 		.style('gap', '5px')
@@ -138,6 +139,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			}
 			rightDiv
 				.append('button')
+				.style('white-space', 'nowrap')
 				.text('Load top variably expressed genes')
 				.on('click', async event => {
 					event.target.disabled = true
@@ -167,6 +169,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 			}
 			api.dom.loadBtn = rightDiv
 				.append('button')
+				.style('white-space', 'nowrap')
 				.html(`Load top mutated genes`)
 				.on('click', async () => {
 					api.dom.loadBtn.property('disabled', true)
@@ -194,6 +197,7 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 				api.dom.tdbBtns[key] = rightDiv
 					.append('button')
 					.attr('name', 'msigdbBt')
+					.style('white-space', 'nowrap')
 					.html(`Load ${tdb.label} gene set &#9660;`)
 					.on('click', async () => {
 						tip2.clear()
