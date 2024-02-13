@@ -3561,7 +3561,7 @@ async function streamGdcBam2response(req, res) {
 
 const bamCache = serverconfig.features?.bamCache || {}
 // the max age for the modified time, will delete files whose modified time exceeds this "aged" access
-const maxAge = 60000 //bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
+const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
 // maximum allowed cache size in bytes
 const maxSize = bamCache.maxSize || 5e9
 // checkWait:
@@ -3645,9 +3645,10 @@ async function mayDeleteCacheFiles() {
 			const nextFile = files.find(f => !f.deleted)
 			if (!nextFile) return
 			// trigger another mayDeleteCachefile() call with setTimeout,
-			// using the oldest file mtime as the wait time
-			const wait = Math.round(nextFile.time + maxAge - Date.now())
-			mayResetCacheCheckTimeout(wait >= 0 ? wait : 0)
+			// using the oldest file mtime + checkWait as the wait time,
+			// or much sooner if the max cache size is currently exceeded
+			const wait = checkWait + Math.round(totalSize >= maxSize ? 0 : Math.max(0, nextFile.time + maxAge - Date.now()))
+			mayResetCacheCheckTimeout(wait)
 		}
 	} catch (e) {
 		console.error('Error in mayDeleteCacheFiles(): ' + e)
