@@ -1933,6 +1933,9 @@ function termid2size_filters(p, ds) {
 		})
 	}
 
+	if (p.filter0) {
+		f.filters.content.push(p.filter0)
+	}
 	if (p.filterObj) {
 		f.filters.content.push(filter2GDCfilter(p.filterObj))
 	}
