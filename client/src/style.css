@@ -143,10 +143,6 @@ h2 {
     -webkit-appearance: searchfield;
 }
 
-.sja_root_holder input[type="search"].tree_search::-webkit-search-cancel-button {
-    -webkit-appearance: searchfield-cancel-button;
-}
-
 .sja_root_holder ul {
     display: block;
     list-style-type: disc;
