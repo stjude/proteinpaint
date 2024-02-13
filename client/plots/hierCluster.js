@@ -2,14 +2,14 @@ import { Matrix } from './matrix'
 import { getCompInit, copyMerge } from '../rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
 import { dofetch3 } from '#common/dofetch'
-import { fillTermWrapper } from '#termsetting'
+import { fillTermWrapper, get$id } from '#termsetting'
 import { extent } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
 import { renderTable } from '../dom/table'
 import { Menu } from '../dom/menu'
 import { dtgeneexpression } from '#shared/common.js'
 import { filterJoin } from '#filter'
-
+import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
 /*
 FIXME items
 
@@ -743,6 +743,77 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			chartsInstance.dom.tip.hide()
 			chartsInstance.prepPlot({
 				config: await getPlotConfig({}, chartsInstance.app)
+			})
+		})
+
+	holder
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Gene Expression')
+		.on('click', () => {
+			const geneList = []
+			const app = chartsInstance.app
+			const tip = app.tip
+
+			holder.selectAll('*').remove()
+			const div = holder.append('div').style('padding', '5px')
+			const label = div.append('label')
+			label.append('span').text('Create ')
+			const nameInput = label
+				.append('input')
+				.style('margin', '2px 5px')
+				.style('width', '210px')
+				.attr('placeholder', 'Group Name')
+
+			const name = nameInput.property('value')
+			const selectedGroup = {
+				index: 0,
+				name,
+				label: name,
+				lst: [],
+				status: 'new'
+			}
+
+			showGenesetEdit({
+				holder: holder.append('div'),
+				/* running hier clustering and the editing group is the group used for clustering
+			pass this mode value to inform ui to support the optional button "top variably exp gene"
+			this is hardcoded for the purpose of gene expression and should be improved
+			*/
+				genome: app.opts.genome,
+				geneList,
+				mode: 'expression',
+				vocabApi: app.vocabApi,
+				callback: ({ geneList, groupName }) => {
+					if (!selectedGroup) throw `missing selectedGroup`
+					tip.hide()
+					const group = { name: groupName, lst: [], type: 'hierCluster' }
+					const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+					const tws = geneList.map(d => {
+						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
+						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+						if (!tw)
+							tw = {
+								$id: get$id(),
+								term: {
+									name: d.symbol || d.gene,
+									type: 'geneVariant'
+								},
+								q: {}
+							}
+						return tw
+					})
+					group.lst = [...lst, ...tws]
+					if (!group.lst.length) tg.splice(selectedGroup.index, 1)
+
+					app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'hierCluster',
+							termgroups: [group]
+						}
+					})
+				}
 			})
 		})
 }
