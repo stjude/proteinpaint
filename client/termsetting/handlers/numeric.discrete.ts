@@ -94,7 +94,7 @@ async function showBinsMenu(self, div: any) {
 	div.selectAll('*').remove()
 	self.dom.num_holder = div
 	self.dom.density_div = div.append('div')
-	self.vr = new violinRenderer(self.dom.density_div, self.num_obj.density_data, 500, 100)
+	self.vr = new violinRenderer(self.dom.density_div, self.num_obj.density_data)
 	self.num_obj.svg = self.vr.svg
 	self.dom.bins_div = div.append('div').style('padding', '5px')
 	setqDefaults(self)

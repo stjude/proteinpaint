@@ -56,7 +56,7 @@ export function getHandler(self) {
 			)
 			const density_data = convertViolinData(d)
 
-			const vr = new violinRenderer(densityDiv, density_data, 500, 100)
+			const vr = new violinRenderer(densityDiv, density_data)
 			vr.render()
 			const svg = vr.svg
 

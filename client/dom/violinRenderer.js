@@ -1,14 +1,15 @@
 import { scaleLinear } from 'd3-scale'
 import { line, curveMonotoneX } from 'd3-shape'
-import { axisBottom, rgb } from 'd3'
+import { axisBottom, rgb, brushX } from 'd3'
 
 export class violinRenderer {
-	constructor(holder, plot, width = 350, height = 150) {
+	constructor(holder, plot, callback = null, width = 500, height = 100) {
 		this.holder = holder
 		this.plot = plot
 		this.width = width
 		this.height = height
 		this.shift = 20
+		this.callback = callback
 		this.svg = holder
 			.append('svg')
 			.attr('width', `${width + 50}px`)
@@ -23,10 +24,25 @@ export class violinRenderer {
 	render() {
 		this.svg.selectAll('*').remove()
 		this.violinG = this.svg.append('g').attr('transform', `translate(20, ${this.height / 2})`)
+
 		this.scaleG = this.svg.append('g').attr('transform', `translate(20, ${this.height})`)
 		this.scaleG.call(axisBottom(this.axisScale).tickValues(this.axisScale.ticks()))
 		this.renderArea(false)
 		this.renderArea(true)
+		if (this.callback)
+			this.svg.call(
+				brushX()
+					.extent([
+						[0, 0],
+						[this.width, this.height]
+					])
+					.on('end', async event => {
+						const selection = event.selection
+						const range_start = this.axisScale.invert(selection[0])
+						const range_end = this.axisScale.invert(selection[1])
+						this.callback({ range_start, range_end })
+					})
+			)
 	}
 
 	renderArea(invert) {
