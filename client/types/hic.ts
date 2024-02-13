@@ -100,7 +100,7 @@ export type HicstrawDom = {
 export type WholeGenomeView = {
 	/** # pixel per bin, may set according to resolution */
 	binpx: number
-	/** Appears as the cutoff value for the user in the menu */
+	/** Appears as the max cutoff value for the user in the menu */
 	bpmaxv: number
 	/** Arrays of hicdata response [pos1, pos2, and value] reformatted for rendering */
 	data: number[]
