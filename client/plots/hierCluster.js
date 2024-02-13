@@ -742,13 +742,15 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	const div = holder.append('div').style('padding', '5px')
 	const label = div.append('label')
 	label.append('span').text('Create ')
+	let name
 	const nameInput = label
 		.append('input')
 		.style('margin', '2px 5px')
 		.style('width', '210px')
 		.attr('placeholder', 'Group Name')
-
-	const name = nameInput.property('value')
+		.on('input', () => {
+			name = nameInput.property('value')
+		})
 	const selectedGroup = {
 		index: 0,
 		name,
@@ -770,7 +772,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		callback: ({ geneList, groupName }) => {
 			if (!selectedGroup) throw `missing selectedGroup`
 			tip.hide()
-			const group = { name: groupName, lst: [], type: 'hierCluster' }
+			const group = { name: groupName || name, lst: [], type: 'hierCluster' }
 			const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 			const tws = geneList.map(d => {
 				//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
@@ -788,6 +790,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			})
 			group.lst = [...lst, ...tws]
 			if (!group.lst.length) tg.splice(selectedGroup.index, 1)
+
+			// close geneset edit ui after clicking submit
+			holder.selectAll('*').remove()
 
 			app.dispatch({
 				type: 'plot_create',
