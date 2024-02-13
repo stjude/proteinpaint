@@ -1350,10 +1350,6 @@ function makeGroup(gd, tk, block, data) {
 							.attr('transform', 'translate(' + cx1 + ',' + t.y1 + ')')
 						getReadInfo(tk, block, t, region_idx)
 						readNotShown = false
-					} else if (tk.asPaired && mx > cx1 && mx < cx2 && my > t.y1 && my < t.y2 && t.multi_region) {
-						// In case of templates extending into multiple regions
-						getReadInfo(tk, block, t, region_idx)
-						readNotShown = false
 					}
 					// must not return here because ...
 				}
@@ -2300,6 +2296,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			: { start: box.start, stop: box.stop, paired: tk.asPaired }
 	)
 	const data = await dofetch3('tkbam', param)
+	console.log('data:', data)
 	if (data.error) {
 		sayerror(wait, data.error)
 		return
