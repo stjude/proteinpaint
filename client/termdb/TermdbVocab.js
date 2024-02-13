@@ -396,10 +396,6 @@ export class TermdbVocab extends Vocab {
             optional
         .svgw=int
             required
-        .orientation='horizontal'
-        .datasymbol='bean'
-        .radius=5
-        .strokeWidth=0.2
         .axisHeight=80
         .rightMargin=50
 
