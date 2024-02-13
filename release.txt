@@ -1,1 +1,3 @@
 
+Features:
+- adding geneset edit ui from Gene Expression chart button
