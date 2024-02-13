@@ -108,7 +108,8 @@ export default <Mds3>{
 				settings: {
 					ignoreCnvValues: true
 				}
-			}
+			},
+			termid2totalsize2: {}
 		},
 		scatterplots: {
 			plots: [

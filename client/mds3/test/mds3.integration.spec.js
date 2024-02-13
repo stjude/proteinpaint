@@ -245,8 +245,8 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 		// assuming order of terms in the array are identical between main and sub tk
 		// for the same catgory from same term, sub track must show <= samplecount than main
 
-		// since 'sub<=main' must be used in tests but not 'sub<main', verify at least one category shows sub<main
-		let subLTmainCount = 0
+		// since 'sub<=main' must be used in tests but not 'sub<main', verify at least one category has a smaller total sample in subtk
+		const subLTmaintotalcount = []
 
 		for (const [i, main] of tk.leftlabels.__samples_data.entries()) {
 			const sub = subtk.leftlabels.__samples_data[i]
@@ -269,9 +269,9 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 							a[1] <= a2.mutated && a[2] <= a2.total,
 							`sub<=main for mutated/total counts of ${a[0]}, ${main.termid}`
 						)
-						if (a[2] < a2.total) subLTmainCount++
+						if (a[2] < a2.total) subLTmaintotalcount.push(`${a[0]}: ${a[2]}<${a2.total}`)
 					} else {
-						// TODO FIXME unknown reason a2.total is undefined for termdbtest
+						// no total. likely the dataset lacks termid2totalsize2{}
 					}
 				}
 			} else if (main.density_data) {
@@ -280,12 +280,18 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 					sub.density_data.samplecount <= main.density_data.samplecount,
 					'sub<=main for density_data.samplecount for ' + main.termid
 				)
-				if (sub.density_data.samplecount < main.density_data.samplecount) subLTmainCount++
+				if (sub.density_data.samplecount < main.density_data.samplecount)
+					subLTmaintotalcount.push(main.termid + ' lower density')
 			} else {
 			}
 		}
 
-		test.ok(subLTmainCount > 0, subLTmainCount + ' categories have reduced sample count in subtk')
+		test.ok(
+			subLTmaintotalcount.length > 0,
+			subLTmaintotalcount.length + ' categories have reduced total sample count in subtk'
+		)
+		// log out categories with total change for eyeballing
+		console.log(subLTmaintotalcount)
 	}
 }
 
