@@ -363,7 +363,7 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 		block.tk_load(tk2)
 	}
 	const scaleFactor = term.valueConversion ? term.valueConversion.scaleFactor : 1
-	const vr = new violinRenderer(div, data.density_data, callback, scaleFactor)
+	const vr = new violinRenderer(div, data.density_data, callback, scaleFactor, 400, 100)
 	vr.render()
 }
 
