@@ -119,7 +119,7 @@ async function fillMenu(self, div, tvs) {
 				{
 					termid: tvs.term.id,
 					filter: self.filter,
-					svgw: self.num_obj.plot_size.width
+					svgw: self.num_obj.plot_size.width / window.devicePixelRatio
 				},
 				self.opts.getCategoriesArguments
 			)
@@ -214,7 +214,8 @@ export function convertViolinData(vd) {
 		maxvalue: vd.max,
 		samplecount: p.plotValueCount,
 		densityMax: p.density.densityMax,
-		density: p.density.bins
+		density: p.density.bins,
+		valuesImg: p.src
 	}
 	return dd
 }
