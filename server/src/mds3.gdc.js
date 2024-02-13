@@ -1780,6 +1780,7 @@ input:
 		.tid2value={ termid: v}
 		.ssm_id_lst=str
 		.filterObj={}
+		.filter0
 	combination={}
 		if provided, return alongside map; needed for sunburst, see get_crosstabCombinations()
 	ds
