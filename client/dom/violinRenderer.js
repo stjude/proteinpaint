@@ -1,20 +1,19 @@
 import { scaleLinear } from 'd3-scale'
 import { line, curveMonotoneX } from 'd3-shape'
-import { axisBottom, rgb, brushX } from 'd3'
+import { rgb, brushX, axisTop } from 'd3'
 
 export class violinRenderer {
-	constructor(holder, plot, callback = null, scaleFactor = 1, width = 500, height = 100) {
+	constructor(holder, plot, callback = null, scaleFactor = 1, width = 500, height = 100, shift = 20) {
 		this.holder = holder
 		this.plot = plot
 		this.width = width
 		this.height = height
-		this.shift = 20
 		this.callback = callback
+		this.shift = shift
 		this.svg = holder
 			.append('svg')
 			.attr('width', `${width + 50}px`)
 			.attr('height', `${height + 50}px`)
-		holder.style('margin', `${this.shift}px`)
 		this.axisScale = scaleLinear().domain([plot.minvalue, plot.maxvalue]).range([0, width])
 		this.axisScaleUI = scaleLinear()
 			.domain([plot.minvalue * scaleFactor, plot.maxvalue * scaleFactor])
@@ -27,10 +26,10 @@ export class violinRenderer {
 
 	render() {
 		this.svg.selectAll('*').remove()
-		this.violinG = this.svg.append('g').attr('transform', `translate(20, ${this.height / 2})`)
+		this.violinG = this.svg.append('g').attr('transform', `translate(${this.shift}, ${this.height / 2 + this.shift})`)
 
-		this.scaleG = this.svg.append('g').attr('transform', `translate(20, ${this.height})`)
-		this.scaleG.call(axisBottom(this.axisScaleUI).tickValues(this.axisScaleUI.ticks()))
+		this.scaleG = this.svg.append('g').attr('transform', `translate(${this.shift}, ${this.shift})`)
+		this.scaleG.call(axisTop(this.axisScaleUI).tickValues(this.axisScaleUI.ticks()))
 		this.renderArea(false)
 		this.renderArea(true)
 		if (this.plot.valuesImg)
