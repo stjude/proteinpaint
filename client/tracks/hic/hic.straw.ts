@@ -400,6 +400,10 @@ class Hicstat {
 
 	async init_chrPairView(hic: any, chrx: string, chry: string) {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
+		if (Object.values(this.x).length > 0) this.x = {}
+		this.x.chr = chrx
+		if (Object.values(this.y).length > 0) this.y = {}
+		this.y.chr = chry
 		const detailView = this.init_detailView.bind(this)
 		nmeth2select(hic, this.chrpairview, true)
 		matrixType2select(this.chrpairview, this, true)
