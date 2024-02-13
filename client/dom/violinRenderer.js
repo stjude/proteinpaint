@@ -33,6 +33,13 @@ export class violinRenderer {
 		this.scaleG.call(axisBottom(this.axisScaleUI).tickValues(this.axisScaleUI.ticks()))
 		this.renderArea(false)
 		this.renderArea(true)
+		if (this.plot.valuesImg)
+			this.violinG
+				.append('image')
+				.classed('sjpp-beans-img', true)
+				.attr('xlink:href', this.plot.valuesImg)
+				.attr('transform', `translate(0, -${this.plot.radius || 3})`)
+
 		if (this.callback)
 			this.svg.call(
 				brushX()

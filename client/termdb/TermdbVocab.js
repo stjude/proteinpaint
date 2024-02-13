@@ -433,9 +433,13 @@ export class TermdbVocab extends Vocab {
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
-				isKDE: arg.isKDE,
+				isKDE: arg.isKDE || true,
 				ticks: arg.ticks,
-				bandwith: arg.bandwidth
+				bandwith: arg.bandwidth,
+				datasymbol: arg.datasymbol || 'rug',
+				orientation: arg.orientation || 'horizontal',
+				radius: arg.radius || 3,
+				svgw: arg.svgw
 			},
 			arg,
 			_body

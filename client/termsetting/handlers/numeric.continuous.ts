@@ -46,11 +46,7 @@ export function getHandler(self) {
 				{
 					termid: self.term.id,
 					filter: self.filter,
-					svgw: plot_size.width,
-					orientation: 'horizontal',
-					datasymbol: 'bean',
-					radius: 5,
-					strokeWidth: 0.2
+					svgw: plot_size.width / window.devicePixelRatio
 				},
 				self.opts.getBodyParams?.()
 			)

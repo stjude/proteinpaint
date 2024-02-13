@@ -271,9 +271,9 @@ class ViolinPlot {
 
 		await this.getDescrStats()
 
-		const arg = this.validateArg()
+		const args = this.validateArgs()
 
-		this.data = await this.app.vocabApi.getViolinPlotData(arg)
+		this.data = await this.app.vocabApi.getViolinPlotData(args)
 
 		if (this.settings.plotThickness == undefined) {
 			const thickness = this.data.plots.length == 1 ? 200 : 150
@@ -317,12 +317,12 @@ class ViolinPlot {
 		}
 	}
 
-	validateArg() {
+	validateArgs() {
 		const { term, term2, settings } = this.config
 		const s = this.settings
 		const arg = {
 			filter: this.state.termfilter.filter,
-			svgw: s.svgw / window.devicePixelRatio,
+			svgw: s.svgw,
 			orientation: s.orientation,
 			devicePixelRatio: window.devicePixelRatio,
 			datasymbol: s.datasymbol,

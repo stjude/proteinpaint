@@ -78,10 +78,7 @@ async function showBinsMenu(self, div: any) {
 			{
 				termid: self.term.id,
 				filter: self.filter,
-				svgw: self.num_obj.plot_size.width,
-				orientation: 'horizontal',
-				datasymbol: 'bean',
-				radius: 5,
+				svgw: self.num_obj.plot_size.width / window.devicePixelRatio,
 				strokeWidth: 0.2
 			},
 			self.opts.getBodyParams?.()
