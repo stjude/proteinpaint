@@ -3566,7 +3566,7 @@ const maxAge = 60000 //bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
 const maxSize = bamCache.maxSize || 5e9
 // time to wait before triggering another call to mayDeleteCacheFiles(),
 // this is used to debounce/prevent multiple active calls to mayDeleteCacheFiles()
-const checkWait = bamCache.checkWait || 0.25 * 60 * 1000
+const checkWait = bamCache.checkWait || 1 * 60 * 1000
 
 // a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
 let cacheCheckTimeout,
@@ -3574,6 +3574,20 @@ let cacheCheckTimeout,
 // only run this loop if configured, otherwise will only rely on
 // cleanup as new bam requests come in
 if (serverconfig.features?.bamCache) mayResetCacheCheckTimeout(checkWait)
+
+function mayResetCacheCheckTimeout(wait = 0) {
+	const checkTime = Date.now() + wait
+	if (cacheCheckTimeout) {
+		if (nextCheckTime && nextCheckTime <= checkTime + 5) return
+		else {
+			clearTimeout(cacheCheckTimeout)
+			cacheCheckTimeout = undefined
+		}
+	}
+	nextCheckTime = checkTime
+	console.log(`setting mayDeleteCacheFiles() timeout at ${wait} ms`)
+	cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, wait)
+}
 
 async function mayDeleteCacheFiles() {
 	console.log(`checking for cached bam files to delete ...`)
@@ -3631,20 +3645,6 @@ async function mayDeleteCacheFiles() {
 	} catch (e) {
 		console.error('Error in mayDeleteCacheFiles(): ' + e)
 	}
-}
-
-function mayResetCacheCheckTimeout(wait = 0) {
-	const checkTime = Date.now() + wait
-	if (cacheCheckTimeout) {
-		if (nextCheckTime && nextCheckTime <= checkTime + 5) return
-		else {
-			clearTimeout(cacheCheckTimeout)
-			cacheCheckTimeout = undefined
-		}
-	}
-	nextCheckTime = checkTime
-	console.log(`setting mayDeleteCacheFiles() timeout at ${wait} ms`)
-	cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, wait)
 }
 
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
