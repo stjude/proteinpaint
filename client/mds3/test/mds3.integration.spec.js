@@ -25,6 +25,7 @@ this script exports following test methods to share with non-CI test using GDC/c
 - testSampleSummary2subtrack
 - testVariantLeftLabel
 - testAllow2selectSamples
+- testSubtkSampleSummaryIsSmaller
 
 */
 
@@ -169,9 +170,9 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 	async function callbackOnRender(tk, bb) {
 		// click on "xx samples" left label, to open sample summary panel
 		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
-		await whenVisible(tk.menutip.d)
+		await whenVisible(tk.menutip.d, 10000)
 
-		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
+		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv', maxTime: 10000 })
 		test.ok(div, 'Sample summary table rendered in menutip')
 
 		for (const tw of tk.mds.variant2samples.twLst) {
@@ -215,7 +216,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 			// that means leftlabels.__samples_data is now created
 			await detectOne({ elem: subtk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
 
-			compareSummary(tk, subtk)
+			testSubtkSampleSummaryIsSmaller(test, tk, subtk)
 
 			test.ok(subtk.leftlabels.doms.filterObj, '.leftlabels.doms.filterObj is set on subtrack')
 			// click on the filterObj left label to show menu with filter UI
@@ -235,64 +236,64 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 		const categoryDiv = tk.menutip.d.select('.sja_clbtext2')
 		categoryDiv.node().dispatchEvent(new Event('click'))
 	}
+}
 
-	// compare sample summary data between sub and main tk
-	function compareSummary(tk, subtk) {
-		test.ok(
-			subtk.leftlabels.__samples_data.length == tk.leftlabels.__samples_data.length,
-			'main and sub track returned summaries for the same number of terms'
-		)
-		// assuming order of terms in the array are identical between main and sub tk
-		// for the same catgory from same term, sub track must show <= samplecount than main
+// compare sample summary data between sub and main tk
+export function testSubtkSampleSummaryIsSmaller(test, tk, subtk) {
+	test.ok(
+		subtk.leftlabels.__samples_data.length == tk.leftlabels.__samples_data.length,
+		'main and sub track returned summaries for the same number of terms'
+	)
+	// assuming order of terms in the array are identical between main and sub tk
+	// for the same catgory from same term, sub track must show <= samplecount than main
 
-		// since 'sub<=main' must be used in tests but not 'sub<main', verify at least one category has a smaller total sample in subtk
-		const subLTmaintotalcount = []
+	// since 'sub<=main' must be used in tests but not 'sub<main', verify at least one category has a smaller total sample in subtk
+	const subLTmaintotalcount = []
 
-		for (const [i, main] of tk.leftlabels.__samples_data.entries()) {
-			const sub = subtk.leftlabels.__samples_data[i]
-			if (main.numbycategory) {
-				test.ok(
-					main.numbycategory.length >= sub.numbycategory.length,
-					'main.numbycategory.length >= sub for ' + main.termid
-				)
-				const k2c = new Map()
-				for (const a of main.numbycategory) {
-					// a=[categorylabel, #mutated, #total]
-					k2c.set(a[0], { mutated: a[1], total: a[2] })
-				}
-				for (const a of sub.numbycategory) {
-					const a2 = k2c.get(a[0])
-					if (!a2) throw 'a2 not found'
-
-					if (a2.total) {
-						test.ok(
-							a[1] <= a2.mutated && a[2] <= a2.total,
-							`sub<=main for mutated/total counts of ${a[0]}, ${main.termid}`
-						)
-						if (a[2] < a2.total) subLTmaintotalcount.push(`${a[0]}: ${a[2]}<${a2.total}`)
-					} else {
-						// no total. likely the dataset lacks termid2totalsize2{}
-					}
-				}
-			} else if (main.density_data) {
-				if (!Number.isInteger(main.density_data.samplecount)) throw 'main.density_data.samplecount is not integer'
-				test.ok(
-					sub.density_data.samplecount <= main.density_data.samplecount,
-					'sub<=main for density_data.samplecount for ' + main.termid
-				)
-				if (sub.density_data.samplecount < main.density_data.samplecount)
-					subLTmaintotalcount.push(main.termid + ' lower density')
-			} else {
+	for (const [i, main] of tk.leftlabels.__samples_data.entries()) {
+		const sub = subtk.leftlabels.__samples_data[i]
+		if (main.numbycategory) {
+			test.ok(
+				main.numbycategory.length >= sub.numbycategory.length,
+				'main.numbycategory.length >= sub for ' + main.termid
+			)
+			const k2c = new Map()
+			for (const a of main.numbycategory) {
+				// a=[categorylabel, #mutated, #total]
+				k2c.set(a[0], { mutated: a[1], total: a[2] })
 			}
-		}
+			for (const a of sub.numbycategory) {
+				const a2 = k2c.get(a[0])
+				test.ok(a2, `subtk category ${a[0]} is also found in main tk`)
 
-		test.ok(
-			subLTmaintotalcount.length > 0,
-			subLTmaintotalcount.length + ' categories have reduced total sample count in subtk'
-		)
-		// log out categories with total change for eyeballing
-		console.log(subLTmaintotalcount)
+				if (a2.total) {
+					test.ok(
+						a[1] <= a2.mutated && a[2] <= a2.total,
+						`sub<=main for mutated/total counts of ${a[0]}, ${main.termid}`
+					)
+					if (a[2] < a2.total) subLTmaintotalcount.push(`${a[0]}: ${a[2]}<${a2.total}`)
+				} else {
+					// no total. likely the dataset lacks termid2totalsize2{}
+				}
+			}
+		} else if (main.density_data) {
+			if (!Number.isInteger(main.density_data.samplecount)) throw 'main.density_data.samplecount is not integer'
+			test.ok(
+				sub.density_data.samplecount <= main.density_data.samplecount,
+				'sub<=main for density_data.samplecount for ' + main.termid
+			)
+			if (sub.density_data.samplecount < main.density_data.samplecount)
+				subLTmaintotalcount.push(main.termid + ' lower density')
+		} else {
+		}
 	}
+
+	test.ok(
+		subLTmaintotalcount.length > 0,
+		subLTmaintotalcount.length + ' categories have reduced total sample count in subtk'
+	)
+	// log out categories with total change for eyeballing
+	console.log(subLTmaintotalcount)
 }
 
 export async function testVariantLeftLabel(test, tk, bb) {
