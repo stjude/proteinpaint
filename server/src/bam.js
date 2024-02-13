@@ -3564,8 +3564,12 @@ const bamCache = serverconfig.features?.bamCache || {}
 const maxAge = 60000 //bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
 // maximum allowed cache size in bytes
 const maxSize = bamCache.maxSize || 5e9
+// checkWait:
 // time to wait before triggering another call to mayDeleteCacheFiles(),
 // this is used to debounce/prevent multiple active calls to mayDeleteCacheFiles()
+// also assumed to be roughly equivalent to the minimum required time for a bam file read
+// to complete, otherwise deleting sooner than this may cause a bam file read error;
+// this last assumption only applies to file deletion when the maxSize is exceeded
 const checkWait = bamCache.checkWait || 1 * 60 * 1000
 
 // a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
@@ -3622,7 +3626,10 @@ async function mayDeleteCacheFiles() {
 			a lot of recent requests may have deposited lots of cache files
 			must delete more old files ranked by age
 			*/
+			const minMtime = Date.now() - checkWait
 			for (const f of files) {
+				// do not delete files too soon that it may affect a current file read
+				if (f.time > minMtime) break
 				await fs.promises.unlink(f.path)
 				f.deleted = true
 				deletedCount++
