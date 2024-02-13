@@ -123,7 +123,7 @@ async function showAvailableSpecs() {
             .attr('class', 'testrun-file-div')
             .style('font-weight', d => d.isActive ? 600 : '')
             .append('a')
-            .attr('href', d => `testrun.html?dir=${dir.path}&name=${d.name}`)
+            .attr('href', d => `testrun.html?dir=${d.dir}&name=${d.name}`)
             .style('color', d => d.isActive ? activeColor : '')
             .text(d => d.name)
       })
@@ -141,13 +141,13 @@ function processData(data) {
     // the last subdir is /test/, remove from the dir name
     const path = d.slice(0,-1).join('/')
     if (d[d.length - 1] == 'test') d.pop()
-    const short = d.slice(0,2).join('/') + (d.length > 2 ? '/**' : '')  
+    const short = d.slice(0,2).join('/') + (d.length > 2 ? '/**' : '')
     if (!byDir[short]) byDir[short] = {
       path,
       short,
       specs: []
     }
-    byDir[short].specs.push({name, file, isActive: data.active.includes(file)})
+    byDir[short].specs.push({name, file, isActive: data.active.includes(file), dir: path})
   }
   return byDir
 }
