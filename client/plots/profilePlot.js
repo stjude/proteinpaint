@@ -358,16 +358,15 @@ export class profilePlot {
 
 	setIncome(income) {
 		const config = this.config
-		this.settings.income = income
-		this.clearFiltersExcept([config.regionTW.id, config.incomeTW.id])
-
+		this.settings[config.incomeTW.id] = income
+		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id, config.incomeTW.id])
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	setCountry(country) {
 		const config = this.config
-		this.settings.country = country
+		this.settings[config.countryTW.id] = country
 		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id])
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
@@ -375,9 +374,8 @@ export class profilePlot {
 
 	setFacilityType(type) {
 		const config = this.config
-		this.settings.facilityType = type
+		this.settings[config.typeTW.id] = type
 		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id, config.incomeTW.id, config.typeTW.id])
-
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -415,20 +413,14 @@ export class profilePlot {
 
 	addFilterLegend() {
 		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
+			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.id])
 			this.filterG
 				.append('text')
 				.attr('text-anchor', 'left')
 				.style('font-weight', 'bold')
-				.text(
-					this.settings.region || this.settings.country || this.settings.income || this.settings.facilityType
-						? 'Filters'
-						: 'No filter applied'
-				)
+				.text(hasFilters ? 'Filters' : 'No filter applied')
 				.attr('transform', `translate(0, -5)`)
-			this.addFilterLegendItem('Region', this.settings.region)
-			this.addFilterLegendItem('Country', this.settings.country)
-			this.addFilterLegendItem('Income', this.settings.income)
-			this.addFilterLegendItem('Facility type', this.settings.facilityType)
+			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.id])
 		}
 		if (this.settings.site && this.config.chartType != 'profileRadarFacility') {
 			const label = this.sites.find(s => s.value == this.settings.site).label
@@ -445,7 +437,7 @@ export class profilePlot {
 			.attr('font-size', '0.9em')
 			.attr('transform', `translate(0, ${this.filtersCount * 22})`)
 			.attr('text-anchor', 'left')
-		text.append('tspan').attr('font-weight', 'bold').text(filter)
+		text.append('tspan').attr('font-size', 'bold').text(filter)
 		text.append('tspan').text(`: ${value ? value : 'None'}`)
 	}
 
