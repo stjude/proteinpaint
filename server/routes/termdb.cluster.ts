@@ -216,6 +216,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			}
 		}
 
+		// only valid genes with data are added. invalid genes or genes missing from data file is not added. backend returned genes is allowed to be fewer than supplied by client
 		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
 
 		for (const g of param.genes) {
@@ -232,7 +233,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				g.chr = j.chr
 			}
 
-			gene2sample2value.set(g.gene, {})
+			const s2v = {}
 			await utils.get_lines_bigfile({
 				args: [q.file, (q.nochr ? g.chr?.replace('chr', '') : g.chr) + ':' + g.start + '-' + g.stop], // must do g.chr?.replace to avoid tsc error
 				callback: line => {
@@ -242,14 +243,15 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 					for (let i = 4; i < l.length; i++) {
 						const sampleId = samples[i - 4]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
-						// if l[i] is blank string?
+						if (!l[i]) continue // blank string
 						const v = Number(l[i])
 						if (Number.isNaN(v)) throw 'exp value not number'
-						gene2sample2value.get(g.gene)[sampleId] = v
+						s2v[sampleId] = v
 					}
 				}
 			} as any)
 			// Above!! add "as any" to suppress a npx tsc alert
+			if (Object.keys(s2v).length) gene2sample2value.set(g.gene, s2v) // only add gene if has data
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
