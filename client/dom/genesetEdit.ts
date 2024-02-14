@@ -199,8 +199,8 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 					.attr('name', 'msigdbBt')
 					.style('white-space', 'nowrap')
 					.html(`Load ${tdb.label} gene set &#9660;`)
-					.on('click', async () => {
-						tip2.clear()
+					.on('click', async event => {
+						tip2.clear().showunder(event.target)
 						const termdb = await import('../termdb/app.js')
 						termdb.appInit({
 							holder: tip2.d,
@@ -224,7 +224,6 @@ export function showGenesetEdit(arg: showGenesetEditArg) {
 								}
 							}
 						})
-						tip2.showunder(api.dom.tdbBtns[key].node())
 					})
 			}
 		}

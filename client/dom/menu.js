@@ -170,7 +170,7 @@ export class Menu {
 	showunder(dom) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
-		const x = p.left
+		const x = p.left + window.scrollX
 		const y = p.top + p.height + window.scrollY + 5
 		return this.show(x, y, false, true, false)
 
