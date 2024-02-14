@@ -383,7 +383,8 @@ async function makeheader(app, obj, jwt) {
 		return data
 	}
 	//TODO eventually move to omniSearch.js
-	new InputSearch({
+
+	const omniSearch = new InputSearch({
 		holder: headbox,
 		tip,
 		style: {
@@ -394,9 +395,22 @@ async function makeheader(app, obj, jwt) {
 		placeholder: 'Gene, position, SNP, app, or dataset',
 		title: 'Search by gene, SNP, position, app, or dataset',
 		searchItems: searchItems
-	}).initUI()
+	})
+
+	omniSearch.initUI()
 
 	const genome_select_div = headbox.append('div').attr('class', 'sjpp-genome-select-div').style('padding', padw_sm)
+
+	const get_placeholder = () => {
+		const currG = app.genomes[app.selectgenome.property('value')]
+		/** Defaults */
+		const opts2Show = ['Gene', 'position', 'app']
+		/** Show all the genomic options together */
+		if (currG.hasSNP) opts2Show.splice(2, 0, 'SNP')
+		if (Object.keys(currG.datasets).length) opts2Show.push('dataset')
+		const str = opts2Show.join(', ').replace(/,(?=[^,]*$)/, ', or')
+		return str
+	}
 
 	app.selectgenome = genome_select_div
 		.append('select')
@@ -406,7 +420,9 @@ async function makeheader(app, obj, jwt) {
 		.style('border', 'solid 1px ' + common.defaultcolor)
 		.on('change', () => {
 			update_genome_browser_btn(app)
+			omniSearch.updatePlaceholder(get_placeholder())
 		})
+
 	for (const n in app.genomes) {
 		app.selectgenome
 			.append('option')
