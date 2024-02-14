@@ -110,7 +110,8 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	if (value.dt == 4) {
 		if (t.scales && value.class.startsWith('CNV_')) {
 			const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
-			value.scaledValue = Math.abs(value.value / max)
+			const { maxLoss, maxGain, minLoss, minGain } = t.scales
+			value.scaledValue = value.value < 0 ? value.value / minLoss : value.value / maxGain
 			cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
 
 			return {
@@ -122,9 +123,9 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 					key: value.class,
 					label: cell.label,
 					scale: value.class == 'CNV_loss' ? t.scales.loss : t.scales.gain,
-					domain: value.class == 'CNV_loss' ? [max, 0] : [0, max],
-					minLabel: value.class == 'CNV_loss' ? -max : 0,
-					maxLabel: value.class == 'CNV_loss' ? 0 : max,
+					domain: value.class == 'CNV_loss' ? [0, -minLoss] : [0, maxGain],
+					minLabel: 0,
+					maxLabel: value.class == 'CNV_loss' ? minLoss : maxGain,
 					order,
 					dt: value.dt,
 					origin: value.origin
