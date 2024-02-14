@@ -3589,7 +3589,7 @@ function mayResetCacheCheckTimeout(wait = 0) {
 		}
 	}
 	nextCheckTime = checkTime
-	console.log(`setting mayDeleteCacheFiles() timeout at ${wait} ms`)
+	console.log(`will trigger mayDeleteCacheFiles() in ${wait} ms`)
 	cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, wait)
 }
 
@@ -3600,16 +3600,20 @@ async function mayDeleteCacheFiles() {
 		const filenames = await fs.promises.readdir(serverconfig.cachedir_bam)
 		const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
 		let totalSize = 0,
+			deletedSize = 0,
+			totalCount = 0,
 			deletedCount = 0
 		for (const filename of filenames) {
 			if (!filename.endsWith('.bam') && !filename.endsWith('.bai')) continue
+			totalCount++
 			const fp = path.join(serverconfig.cachedir_bam, filename)
 			const s = await fs.promises.stat(fp)
-			if (!s.isFile()) continue // no need for??: throw '.bam not a file in cache'
+			if (!s.isFile()) continue
 			const time = s.mtimeMs
 			if (time < minTime) {
 				await fs.promises.unlink(fp)
 				deletedCount++
+				deletedSize += s.size
 				continue
 			}
 			files.push({
@@ -3633,17 +3637,19 @@ async function mayDeleteCacheFiles() {
 				await fs.promises.unlink(f.path)
 				f.deleted = true
 				deletedCount++
+				deletedSize += f.size
 				totalSize -= f.size
 				if (totalSize < maxSize) break
 			}
 		}
-		console.log(`deleted ${deletedCount} cached bam files`)
+		console.log(
+			`deleted ${deletedCount} of ${totalCount} cached bam files (${deletedSize} bytes deleted, ${totalSize} remaining)`
+		)
 		// empty out the following tracking variables
 		cacheCheckTimeout = undefined
 		nextCheckTime = 0
-		if (totalSize) {
-			const nextFile = files.find(f => !f.deleted)
-			if (!nextFile) return
+		const nextFile = totalSize && files.find(f => !f.deleted)
+		if (nextFile) {
 			// trigger another mayDeleteCachefile() call with setTimeout,
 			// using the oldest file mtime + checkWait as the wait time,
 			// or much sooner if the max cache size is currently exceeded
