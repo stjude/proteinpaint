@@ -104,9 +104,7 @@ async function doClustering(data: any, q: TermdbClusterRequest) {
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(Rinputfile, JSON.stringify(inputData))
 	const Routput = JSON.parse(await lines2R(path.join(serverconfig.binpath, 'utils/hclust.R'), [], [Rinputfile]))
-	fs.unlink(Rinputfile, (arg: any) => {
-		return
-	})
+	await fs.promises.unlink(Rinputfile)
 
 	const row_names_index: number[] = Routput.RowOrder.map(row => inputData.row_names.indexOf(row.name)) // sorted rows. value is array index in input data
 	const col_names_index: number[] = Routput.ColOrder.map(col => inputData.col_names.indexOf(col.name)) // sorted columns, value is array index from input array
@@ -184,16 +182,6 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		console.log(q.samples.length, 'samples from geneExpression of', ds.label)
 	}
 
-	/*
-	query exp data one gene at a time
-	param{}
-	.genes[{}]
-		.gene=str
-		.chr=str
-		.start=int
-		.stop=int
-	.filterObj{}
-	*/
 	q.get = async (param: TermdbClusterRequest) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
