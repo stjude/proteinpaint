@@ -172,7 +172,7 @@ export class profilePlot {
 						chartType,
 						options: this.countries,
 						settingsKey: this.config.countryTW.id,
-						callback: value => this.setCountry(value)
+						callback: value => this.setFilterValue(this.config.countryTW.id, value)
 					},
 					{
 						label: 'Income group',
@@ -180,7 +180,7 @@ export class profilePlot {
 						chartType,
 						options: this.incomes,
 						settingsKey: this.config.incomeTW.id,
-						callback: value => this.setIncome(value)
+						callback: value => this.setFilterValue(this.config.incomeTW.id, value)
 					},
 					{
 						label: 'Facility type',
@@ -188,7 +188,7 @@ export class profilePlot {
 						chartType,
 						options: this.types,
 						settingsKey: this.config.typeTW.id,
-						callback: value => this.setFacilityType(value)
+						callback: value => this.setFilterValue(this.config.typeTW.id, value)
 					},
 					{
 						label: this.config.teachingStatusTW.term.name,
@@ -340,6 +340,7 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
+		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
@@ -354,30 +355,6 @@ export class profilePlot {
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.id)) this.settings[tw.id] = ''
 		this.settings.site = ''
-	}
-
-	setIncome(income) {
-		const config = this.config
-		this.settings[config.incomeTW.id] = income
-		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id, config.incomeTW.id])
-		config.filter = this.getFilter()
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-	}
-
-	setCountry(country) {
-		const config = this.config
-		this.settings[config.countryTW.id] = country
-		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id])
-		config.filter = this.getFilter()
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-	}
-
-	setFacilityType(type) {
-		const config = this.config
-		this.settings[config.typeTW.id] = type
-		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id, config.incomeTW.id, config.typeTW.id])
-		config.filter = this.getFilter()
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	setSite(site) {
