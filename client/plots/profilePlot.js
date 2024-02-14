@@ -59,12 +59,14 @@ export class profilePlot {
 		}
 	}
 
-	getList(tw, data) {
+	getList(tw) {
+		const data = this.filtersData.lst.filter(sample => this.samplesPerFilter[tw.id].includes(parseInt(sample.sample)))
 		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
 		const list = sampleValues.map(value => {
 			return { label: value, value }
 		})
 		list.unshift({ label: '', value: '' })
+		if (!(tw.id in this.settings)) this.settings[tw.id] = list[0].value
 		return list
 	}
 
@@ -90,48 +92,39 @@ export class profilePlot {
 	}
 
 	async setControls(additionalInputs = []) {
-		const idFilters = [this.config.countryTW.id, this.config.incomeTW.id, this.config.typeTW.id]
 		const filters = {}
-		for (const id of idFilters) {
-			const filter = this.getFilter([id])
-			if (filter) filters[id] = filter
+		for (const tw of this.config.filterTWs) {
+			const filter = this.getFilter([tw.id])
+			if (filter) filters[tw.id] = filter
 		}
-		const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
+		this.samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
 
 		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: [this.config.countryTW, this.config.incomeTW, this.config.typeTW],
+			terms: this.config.filterTWs,
 			termsPerRequest: 10
 		})
-		const countriesData = this.filtersData.lst.filter(sample =>
-			samplesPerFilter[this.config.countryTW.id].includes(parseInt(sample.sample))
-		)
-		const incomesData = this.filtersData.lst.filter(sample =>
-			samplesPerFilter[this.config.incomeTW.id].includes(parseInt(sample.sample))
-		)
-		const typesData = this.filtersData.lst.filter(sample =>
-			samplesPerFilter[this.config.typeTW.id].includes(parseInt(sample.sample))
-		)
 
 		this.regions = Object.keys(this.config.regionTW.term.values).map(value => {
 			return { label: value, value }
 		})
 		this.regions.unshift({ label: '', value: '' })
-		this.countries = this.getList(this.config.countryTW, countriesData)
-		this.incomes = this.getList(this.config.incomeTW, incomesData)
+		this.countries = this.getList(this.config.countryTW)
+		this.incomes = this.getList(this.config.incomeTW)
+		this.teachingStates = this.getList(this.config.teachingStatusTW)
+		this.referralStates = this.getList(this.config.referralStatusTW)
+		this.fundingSources = this.getList(this.config.fundingSourceTW)
+		this.hospitalVolumes = this.getList(this.config.hospitalVolumeTW)
+		this.yearsOfImplementation = this.getList(this.config.yearOfImplementationTW)
+
 		this.incomes.sort((elem1, elem2) => {
 			const i1 = orderedIncomes.indexOf(elem1.value)
 			const i2 = orderedIncomes.indexOf(elem2.value)
 			if (i1 < i2) return -1
 			return 1
 		})
-		this.types = this.getList(this.config.typeTW, typesData)
-
-		if (!this.settings.income) this.settings.income = this.incomes[0].value
-		if (!this.settings.region) this.settings.region = this.regions[0].value
-		if (!this.settings.country) this.settings.country = this.countries[0].value
-		if (!this.settings.facilityType) this.settings.facilityType = this.types[0].value
+		this.types = this.getList(this.config.typeTW)
 
 		const filter = this.config.filter || this.getFilter()
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
@@ -170,7 +163,7 @@ export class profilePlot {
 						type: 'dropdown',
 						chartType,
 						options: this.regions,
-						settingsKey: 'region',
+						settingsKey: this.config.regionTW.id,
 						callback: value => this.setRegion(value)
 					},
 					{
@@ -178,7 +171,7 @@ export class profilePlot {
 						type: 'dropdown',
 						chartType,
 						options: this.countries,
-						settingsKey: 'country',
+						settingsKey: this.config.countryTW.id,
 						callback: value => this.setCountry(value)
 					},
 					{
@@ -186,7 +179,7 @@ export class profilePlot {
 						type: 'dropdown',
 						chartType,
 						options: this.incomes,
-						settingsKey: 'income',
+						settingsKey: this.config.incomeTW.id,
 						callback: value => this.setIncome(value)
 					},
 					{
@@ -194,8 +187,48 @@ export class profilePlot {
 						type: 'dropdown',
 						chartType,
 						options: this.types,
-						settingsKey: 'facilityType',
+						settingsKey: this.config.typeTW.id,
 						callback: value => this.setFacilityType(value)
+					},
+					{
+						label: 'Teaching status',
+						type: 'dropdown',
+						chartType,
+						options: this.teachingStates,
+						settingsKey: this.config.teachingStatusTW.id,
+						callback: value => this.setFilterValue(this.config.teachingStatusTW.id, value)
+					},
+					{
+						label: 'Referral status',
+						type: 'dropdown',
+						chartType,
+						options: this.referralStates,
+						settingsKey: this.config.referralStatusTW.id,
+						callback: value => this.setFilterValue(this.config.referralStatusTW.id, value)
+					},
+					{
+						label: 'Funding source',
+						type: 'dropdown',
+						chartType,
+						options: this.fundingSources,
+						settingsKey: this.config.fundingSourceTW.id,
+						callback: value => this.setFilterValue(this.config.fundingSourceTW.id, value)
+					},
+					{
+						label: 'Hospital volume',
+						type: 'dropdown',
+						chartType,
+						options: this.hospitalVolumes,
+						settingsKey: this.config.hospitalVolumeTW.id,
+						callback: value => this.setFilterValue(this.config.hospitalVolumeTW.id, value)
+					},
+					{
+						label: 'Year of implementation',
+						type: 'dropdown',
+						chartType,
+						options: this.yearsOfImplementation,
+						settingsKey: this.config.yearOfImplementationTW.id,
+						callback: value => this.setFilterValue(this.config.yearOfImplementationTW.id, value)
 					}
 				]
 			)
@@ -304,22 +337,30 @@ export class profilePlot {
 		}
 	}
 
+	setFilterValue(key, value) {
+		const config = this.config
+		this.settings[key] = value
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+	}
+
 	setRegion(region) {
 		const config = this.config
-		this.settings.region = region
-		this.settings.country = ''
-		this.settings.income = ''
-		this.settings.facilityType = ''
-		this.settings.site = ''
+		this.settings[config.regionTW.id] = region
+		this.clearFiltersExcept([config.regionTW.id])
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	clearFiltersExcept(ids) {
+		for (const tw of this.config.filterTWs) if (!ids.includes(tw.id)) this.settings[tw.id] = ''
+		this.settings.site = ''
 	}
 
 	setIncome(income) {
 		const config = this.config
 		this.settings.income = income
-		this.settings.facilityType = ''
-		this.settings.site = ''
+		this.clearFiltersExcept([config.regionTW.id, config.incomeTW.id])
+
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -327,8 +368,7 @@ export class profilePlot {
 	setCountry(country) {
 		const config = this.config
 		this.settings.country = country
-		this.settings.facilityType = ''
-		this.settings.site = ''
+		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id])
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
@@ -336,7 +376,7 @@ export class profilePlot {
 	setFacilityType(type) {
 		const config = this.config
 		this.settings.facilityType = type
-		this.settings.site = ''
+		this.clearFiltersExcept([config.regionTW.id, config.countryTW.id, config.incomeTW.id, config.typeTW.id])
 
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
@@ -350,10 +390,7 @@ export class profilePlot {
 
 	getFilter(excluded = []) {
 		const lst = []
-		this.processTW(this.config.regionTW, this.settings.region, excluded, lst)
-		this.processTW(this.config.countryTW, this.settings.country, excluded, lst)
-		this.processTW(this.config.incomeTW, this.settings.income, excluded, lst)
-		this.processTW(this.config.typeTW, this.settings.facilityType, excluded, lst)
+		for (const tw of this.config.filterTWs) this.processTW(tw, this.settings[tw.id], excluded, lst)
 
 		const tvslst = {
 			type: 'tvslst',
@@ -448,19 +485,34 @@ export class profilePlot {
 		}
 	}
 }
-
 export async function loadFilterTerms(config, app) {
 	const twlst = []
 	config.countryTW = { id: 'country' }
 	config.regionTW = { id: 'WHO_region' }
 	config.incomeTW = { id: 'Income_group' }
 	config.typeTW = { id: 'FC_TypeofFacility' }
+	config.teachingStatusTW = { id: 'FC_TeachingFacility' }
+	config.referralStatusTW = { id: 'FC_ReferralFacility' }
+	config.fundingSourceTW = { id: 'FC_FundingSrc' }
+	//config.annualDiagnosisNumber = {id: 'PO_TotalDxAll'}
+	config.hospitalVolumeTW = { id: 'PO_HospitalVolume' }
+	config.yearOfImplementationTW = { id: 'Year_implementation' }
 
-	twlst.push(config.countryTW)
-	twlst.push(config.regionTW)
-	twlst.push(config.incomeTW)
-	twlst.push(config.typeTW)
+	twlst.push(
+		...[
+			config.countryTW,
+			config.regionTW,
+			config.incomeTW,
+			config.typeTW,
+			config.teachingStatusTW,
+			config.referralStatusTW,
+			config.fundingSourceTW,
+			config.hospitalVolumeTW,
+			config.yearOfImplementationTW
+		]
+	)
 	await fillTwLst(twlst, app.vocabApi)
+	config.filterTWs = twlst
 }
 
 export function getDefaultProfilePlotSettings() {

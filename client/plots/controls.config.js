@@ -479,6 +479,7 @@ function setDropdownInput(opts) {
 					}
 				})
 		})
+	self.dom.select.style('max-width', '300px')
 	self.dom.select
 		.selectAll('option')
 		.data(opts.options)
