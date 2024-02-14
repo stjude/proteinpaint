@@ -453,9 +453,9 @@ export class profilePlot {
 
 	getDownloadFilename() {
 		this.downloadCount++
-		let filename = `${this.type}${this.component ? this.component : ''}${this.settings.region}${this.settings.country}${
-			this.settings.income
-		}${this.settings.facilityType}${this.downloadCount}.svg`
+		let filename = `${this.type}${this.component ? this.component : ''}${this.settings[this.config.regionTW.id]}${
+			this.settings[this.config.countryTW.id]
+		}${this.settings[this.config.incomeTW.id]}${this.settings[this.config.typeTW.id]}${this.downloadCount}.svg`
 		filename = filename.split(' ').join('_')
 		return filename
 	}

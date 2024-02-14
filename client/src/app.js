@@ -788,7 +788,7 @@ async function parseEmbedThenUrl(arg, app) {
 		- this adhoc trigger has minimum change to app.js and will not affect rest of function
 		- the intermediate logic in profileHome.js provides entry to two ds while presenting custom contents tailored for ds owner
 		*/
-		const _ = await import('../profileHome.js')
+		const _ = await import('../../../public/profile/profileHome.js')
 		_.init(arg)
 		return
 	}
