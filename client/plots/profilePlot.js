@@ -233,6 +233,8 @@ export class profilePlot {
 				]
 			)
 		}
+		await this.loadSampleData(chartType, inputs)
+
 		if (chartType != 'profileRadarFacility')
 			inputs.push({
 				label: 'Add plot',
@@ -242,7 +244,6 @@ export class profilePlot {
 				boxLabel: 'Yes'
 			})
 		inputs.unshift(...additionalInputs)
-		await this.loadSampleData(chartType, inputs)
 
 		if (this.type == 'profilePolar')
 			inputs.push({
