@@ -198,10 +198,7 @@ function makeTk(tk, block) {
 
 		if (tk.genevaluetklst.length == 1) {
 			// just one gvtk, its label will show on left of its axis
-			tk.genevaluetklst[0].label
-				.attr('text-anchor', 'end')
-				.attr('x', -block.rpad)
-				.attr('y', gvtkheaderyoff)
+			tk.genevaluetklst[0].label.attr('text-anchor', 'end').attr('x', -block.rpad).attr('y', gvtkheaderyoff)
 		} else {
 			// multiple gvtk, label of each to show on top of axis
 			for (const gvtk of tk.genevaluetklst) {
@@ -257,12 +254,7 @@ function makeTk(tk, block) {
 		configPanel(tk, block)
 	})
 
-	const collectleftlabw = [
-		tk.tklabel
-			.attr('y', -10)
-			.node()
-			.getBBox().width
-	]
+	const collectleftlabw = [tk.tklabel.attr('y', -10).node().getBBox().width]
 
 	// legend
 	if (block.legend && block.legend.holder) {
@@ -323,6 +315,7 @@ function makeTk(tk, block) {
 
 	for (const t of tk.tracks) {
 		t.g = tk.glider.append('g').attr('transform', 'translate(0,0)')
+		t.errg = t.g.append('g') // cannot call block.tkerror() so add this adhoc holder to show subtk-specific err msg
 
 		/*
 		member track name label, bigwig axis, and gene value bar needs to stay stationary when the browser is panning
@@ -397,7 +390,7 @@ function makeTk(tk, block) {
 	block.setllabel()
 }
 
-export function loadTk(tk, block) {
+export async function loadTk(tk, block) {
 	if (tk.uninitiated) {
 		makeTk(tk, block)
 		delete tk.uninitiated
@@ -408,67 +401,56 @@ export function loadTk(tk, block) {
 	const tasks = []
 	for (const t of tk.tracks) {
 		t.height = 20
+		t.errg.selectAll('*').remove()
 
 		if (t.type == client.tkt.bedj) {
 			const arg = block.tkarg_bedj(t)
 			if (tk.categories) {
 				arg.categories = tk.categories
 			}
-			const task = dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
-				if (data.error) {
-					throw data.error
-				}
-				t.height = t.toppad + data.height + t.bottompad
-				t.img
-					.attr('width', block.width)
-					.attr('height', data.height)
-					.attr('xlink:href', data.src)
-				if (block.pannedpx != undefined) {
-					t.img.attr('x', block.pannedpx * -1)
-				}
-				block.bedj_tooltip(t, data)
-			})
+			const task = dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(arg) })
+				.then(data => {
+					if (data.error) throw data.error
+					t.height = t.toppad + data.height + t.bottompad
+					t.img.attr('width', block.width).attr('height', data.height).attr('xlink:href', data.src)
+					if (block.pannedpx != undefined) {
+						t.img.attr('x', block.pannedpx * -1)
+					}
+					block.bedj_tooltip(t, data)
+				})
+				.catch(e => tkerror(t, e.message || e))
 			tasks.push(task)
 		} else if (t.type == client.tkt.bigwig) {
 			const arg = block.tkarg_q(t)
 			const task = dofetch3('tkbigwig', {
 				method: 'POST',
 				body: JSON.stringify(arg)
-			}).then(data => {
-				if (data.error) {
-					throw data.error
-				}
-				t.height = t.toppad + t.barheight + t.bottompad
-				t.img
-					.attr('width', block.width)
-					.attr('height', t.barheight)
-					.attr('xlink:href', data.src)
-				if (block.pannedpx != undefined) {
-					t.img.attr('x', block.pannedpx * -1)
-				}
-				if (data.minv != undefined) {
-					t.scale.min = data.minv
-				}
-				if (data.maxv != undefined) {
-					t.scale.max = data.maxv
-				}
-				t.leftaxis.selectAll('*').remove()
-				if (data.nodata) {
-				} else {
-					const scale = scaleLinear()
-						.domain([t.scale.min, t.scale.max])
-						.range([t.barheight, 0])
-					client.axisstyle({
-						axis: t.leftaxis.call(
-							axisLeft()
-								.scale(scale)
-								.tickValues([t.scale.min, t.scale.max])
-						),
-						color: 'black',
-						showline: true
-					})
-				}
 			})
+				.then(data => {
+					if (data.error) throw data.error
+					t.height = t.toppad + t.barheight + t.bottompad
+					t.img.attr('width', block.width).attr('height', t.barheight).attr('xlink:href', data.src)
+					if (block.pannedpx != undefined) {
+						t.img.attr('x', block.pannedpx * -1)
+					}
+					if (data.minv != undefined) {
+						t.scale.min = data.minv
+					}
+					if (data.maxv != undefined) {
+						t.scale.max = data.maxv
+					}
+					t.leftaxis.selectAll('*').remove()
+					if (data.nodata) {
+					} else {
+						const scale = scaleLinear().domain([t.scale.min, t.scale.max]).range([t.barheight, 0])
+						client.axisstyle({
+							axis: t.leftaxis.call(axisLeft().scale(scale).tickValues([t.scale.min, t.scale.max])),
+							color: 'black',
+							showline: true
+						})
+					}
+				})
+				.catch(e => tkerror(t, e.message || e))
 			tasks.push(task)
 		}
 	}
@@ -493,30 +475,15 @@ export function loadTk(tk, block) {
 							tk.sample2gvtk2gene.get(i.sample).set(gvtk.name, new Map())
 						}
 						if (gvtk.multivaluekey) {
-							if (
-								!tk.sample2gvtk2gene
-									.get(i.sample)
-									.get(gvtk.name)
-									.has(i.gene)
-							) {
-								tk.sample2gvtk2gene
-									.get(i.sample)
-									.get(gvtk.name)
-									.set(i.gene, [])
+							if (!tk.sample2gvtk2gene.get(i.sample).get(gvtk.name).has(i.gene)) {
+								tk.sample2gvtk2gene.get(i.sample).get(gvtk.name).set(i.gene, [])
 							}
-							tk.sample2gvtk2gene
-								.get(i.sample)
-								.get(gvtk.name)
-								.get(i.gene)
-								.push({
-									name: i[gvtk.multivaluekey],
-									value: i.value
-								})
+							tk.sample2gvtk2gene.get(i.sample).get(gvtk.name).get(i.gene).push({
+								name: i[gvtk.multivaluekey],
+								value: i.value
+							})
 						} else {
-							tk.sample2gvtk2gene
-								.get(i.sample)
-								.get(gvtk.name)
-								.set(i.gene, i.value)
+							tk.sample2gvtk2gene.get(i.sample).get(gvtk.name).set(i.gene, i.value)
 						}
 					}
 				}
@@ -525,26 +492,20 @@ export function loadTk(tk, block) {
 		}
 	}
 
-	Promise.all(tasks)
-		.then(() => {
-			render_tk(tk, block)
-			return null
-		})
-		.catch(err => {
-			if (err.stack) {
-				console.log(err.stack)
-			}
-			return err.message
-		})
-		.then(errmsg => {
-			block.tkcloakoff(tk, { error: errmsg })
+	try {
+		await Promise.all(tasks)
+		render_tk(tk, block)
+		block.tkcloakoff(tk, {})
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		block.tkcloakoff(tk, { error: e.message || e })
+	}
 
-			for (const t of tk.tracks) {
-				t.immobileg.attr('transform', 'translate(0,0)')
-			}
+	for (const t of tk.tracks) {
+		t.immobileg.attr('transform', 'translate(0,0)')
+	}
 
-			block.block_setheight()
-		})
+	block.block_setheight()
 }
 
 function render_tk(tk, block) {
@@ -632,10 +593,7 @@ function showgeneplot(tk, block, gene) {
 				// sample not found in this gvtk
 				continue
 			}
-			const genev = tk.sample2gvtk2gene
-				.get(samplename)
-				.get(gvtk.name)
-				.get(gene)
+			const genev = tk.sample2gvtk2gene.get(samplename).get(gvtk.name).get(gene)
 			if (genev == undefined) continue
 			t.gvtkattr.get(gvtk.name).value = genev
 
@@ -716,7 +674,11 @@ function showgeneplot(tk, block, gene) {
 							}
 							const p = event.target.getBoundingClientRect()
 							tk.tktip.clear().show(p.left, p.top)
-							const lst = [{ k: 'sample', v: t.name }, { k: gvtk.multivaluekey, v: d.name }, { k: 'value', v: d.value }]
+							const lst = [
+								{ k: 'sample', v: t.name },
+								{ k: gvtk.multivaluekey, v: d.name },
+								{ k: 'value', v: d.value }
+							]
 							setTimeout(make_table_2col(tk.tktip.d, lst), 500)
 						})
 						.on('mouseout', (event, d) => {
@@ -756,11 +718,7 @@ function showgeneplot(tk, block, gene) {
 		{
 			const axis = axisTop()
 				.ticks(3)
-				.scale(
-					scaleLinear()
-						.domain([minv, maxv])
-						.range([0, gvtk.barwidth])
-				)
+				.scale(scaleLinear().domain([minv, maxv]).range([0, gvtk.barwidth]))
 			if (gvtk.axistickformat) {
 				axis.tickFormat(d3format(gvtk.axistickformat))
 			}
@@ -868,11 +826,7 @@ function showlegend_gvtk(tk, block) {
 					})
 				if (gvtk.legend.gene2hiddenkeys.has(tk.__usegene) && gvtk.legend.gene2hiddenkeys.get(tk.__usegene).has(name)) {
 					// this type name is hidden, do not show color dot
-					cell
-						.append('span')
-						.style('color', '#858585')
-						.style('text-decoration', 'line-through')
-						.text(name)
+					cell.append('span').style('color', '#858585').style('text-decoration', 'line-through').text(name)
 				} else {
 					// this type is not hidden
 					cell
@@ -991,10 +945,7 @@ function samplegenematrix(tk, block) {
 			}
 			td.style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + v / maxvalue + ')')
 			if (v >= maxvalue) {
-				td.style('color', 'white')
-					.style('font-size', '.7em')
-					.style('text-align', 'center')
-					.text(Math.ceil(v))
+				td.style('color', 'white').style('font-size', '.7em').style('text-align', 'center').text(Math.ceil(v))
 			}
 		}
 	}
@@ -1243,10 +1194,7 @@ function configPanel_bwcommon(tk, block) {
 
 function configPanel_uniformheight(d, tk, block) {
 	const row = d.append('div').style('margin-bottom', '10px')
-	row
-		.append('span')
-		.style('color', '#858585')
-		.html('Set uniform height to all member tracks&nbsp;')
+	row.append('span').style('color', '#858585').html('Set uniform height to all member tracks&nbsp;')
 	let maxheight = 0
 	for (const t of tk.tracks) {
 		switch (t.type) {
@@ -1282,10 +1230,7 @@ function configPanel_uniformheight(d, tk, block) {
 }
 
 function configPanel_tkheights(d, tk, block) {
-	d.append('div')
-		.style('margin-bottom', '5px')
-		.style('color', '#858585')
-		.text('Set height for each track:')
+	d.append('div').style('margin-bottom', '5px').style('color', '#858585').text('Set height for each track:')
 	let scrollholder = d
 	if (tk.tracks.length > 8) {
 		scrollholder = d
@@ -1298,9 +1243,7 @@ function configPanel_tkheights(d, tk, block) {
 	const table = scrollholder.append('table').style('margin-left', '20px')
 	for (const t of tk.tracks) {
 		const tr = table.append('tr')
-		tr.append('td')
-			.text(t.name)
-			.style('vertical-align', 'top')
+		tr.append('td').text(t.name).style('vertical-align', 'top')
 		const td = tr.append('td')
 		let v
 		switch (t.type) {
@@ -1339,15 +1282,9 @@ function gvtklabelclick(gvtk, tk, block) {
 	*/
 	tk.tkconfigtip.clear().showunder(gvtk.label.node())
 	{
-		const row = tk.tkconfigtip.d
-			.append('div')
-			.style('margin-bottom', '10px')
-			.style('color', '#858585')
+		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px').style('color', '#858585')
 		row.append('span').text(gvtk.name)
-		row
-			.append('span')
-			.html('&nbsp;CONFIG')
-			.style('font-size', '.7em')
+		row.append('span').html('&nbsp;CONFIG').style('font-size', '.7em')
 	}
 
 	const table = tk.tkconfigtip.d.append('table')
@@ -1423,4 +1360,9 @@ function gvtklabelclick(gvtk, tk, block) {
 	if (gvtk.multivaluekey) {
 		// to show sample by value type matrix?
 	}
+}
+
+function tkerror(t, msg) {
+	// show err on subtk
+	t.errg.append('text').text(msg).attr('font-size', 12).attr('y', 14)
 }
