@@ -18,6 +18,7 @@ export type Column = {
 }
 
 export type Button = {
+	dataTestId?: any
 	text: string //the text to show in the button
 	callback: (idxs: number[], button: any) => void //called when the button is clicked. Receives selected indexes and the button dom object
 	disabled?: (index: number) => boolean
@@ -52,6 +53,9 @@ export type TableArgs = {
 	//optional. value is predefined input name. this allows test to work.
 	//when not available, for each table made, create a unique name to use as the <input name=?>
 	//if the same name is always used, multiple tables created in one page will conflict in row selection
+	dataTestId?: any
+	//Optional
+	//For testing purposes
 }
 /*
 Prints an html table, using the specified columns and rows
@@ -75,7 +79,8 @@ export function renderTable({
 	selectAll = false,
 	resize = false,
 	selectedRowStyle = {},
-	inputName = null
+	inputName = null,
+	dataTestId = null
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -117,6 +122,9 @@ export function renderTable({
 
 	const table = parentDiv.append('table').style('width', '100%')
 
+	if (dataTestId) {
+		table.attr('data-testid', dataTestId)
+	}
 	// should not use "fixed", it does not make sense to force equal width of all columns. also sample name column is a bit longer than most fields but we do want it to be entirely visible
 	//.style('table-layout', 'fixed')
 
@@ -214,12 +222,16 @@ export function renderTable({
 		}
 		if (columnButtons && columnButtons.length > 0) {
 			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
+			// Assuming x is your variable
 			for (const button of columnButtons) {
 				button.button = td
 					.append('button')
 					.style('white-space', 'normal')
 					.text(button.text)
 					.on('click', event => button.callback(event, i))
+				if (button.dataTestId) {
+					button.button.attr('data-testid', button.dataTestId)
+				}
 				if ('disabled' in button) button.button.node().disabled = button.disabled!(i)
 			}
 		}

@@ -21,7 +21,11 @@ arg{}
 export function table2col(arg) {
 	const scrollDiv = arg.holder.append('div').style('max-width', '80vw')
 
-	const table = scrollDiv.append('table').style('margin', '5px 8px').attr('class', 'sja_simpletable')
+	const table = scrollDiv
+		.append('table')
+		.style('margin', '5px 8px')
+		.attr('class', 'sja_simpletable')
+		.attr('data-testid', 'sja_simpletable')
 	return {
 		scrollDiv,
 		table,

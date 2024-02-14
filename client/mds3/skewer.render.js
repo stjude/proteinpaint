@@ -108,7 +108,7 @@ export function skewer_make(tk, block) {
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg')
-		.each(function(d) {
+		.each(function (d) {
 			d.skewer = this
 		})
 	// disc containers
@@ -122,7 +122,7 @@ export function skewer_make(tk, block) {
 			d => 'translate(0,' + (d.aa.showmode == modefold ? 0 : d.yoffset * (tk.aboveprotein ? -1 : 1)) + ')'
 		)
 		.attr('class', 'sja_aa_discg')
-		.each(function(d) {
+		.each(function (d) {
 			d.g = this
 		})
 	// actual disc
@@ -178,7 +178,7 @@ export function skewer_make(tk, block) {
 			d._labfontsize = Math.max(12, d.radius * 1.2)
 			return d._labfontsize
 		})
-		.each(function(d) {
+		.each(function (d) {
 			// after setting font size, set skewer width by label width
 			const lw = this.getBBox().width
 			d._label_width = lw
@@ -328,7 +328,7 @@ export function skewer_make(tk, block) {
 					.append('text')
 					.text((g.mnameCompact || g.mlst[0].mname) + (g.occurrence > 1 ? ' x' + g.occurrence : ''))
 					.attr('font-size', g.pica_fontsize)
-					.each(function() {
+					.each(function () {
 						boxw = Math.max(boxw, this.getBBox().width)
 					})
 					.remove()
@@ -357,7 +357,7 @@ export function skewer_make(tk, block) {
 			_g.append('text')
 				.text(g => g.mnameCompact || g.mlst[0].mname)
 				.attr('font-size', g => g.pica_fontsize)
-				.each(function(g) {
+				.each(function (g) {
 					g.pica_mlabelwidth = this.getBBox().width
 				})
 				.attr('fill', d => tk.color4disc(d.mlst[0]))
@@ -464,29 +464,15 @@ export function skewer_make(tk, block) {
 		.attr('width', d => d.ssk_width)
 		.on('mouseover', (event, d) => {
 			const p = d3select(event.target.parentNode)
-			p.selectAll('.sja_aa_disckick')
-				.transition()
-				.attr('stroke-opacity', 1)
-			p.select('.sja_aa_ssk_bg')
-				.transition()
-				.attr('fill-opacity', 1)
-				.attr('stroke-opacity', 1)
-			p.select('.sja_aa_ssk_text')
-				.transition()
-				.attr('fill-opacity', 1)
+			p.selectAll('.sja_aa_disckick').transition().attr('stroke-opacity', 1)
+			p.select('.sja_aa_ssk_bg').transition().attr('fill-opacity', 1).attr('stroke-opacity', 1)
+			p.select('.sja_aa_ssk_text').transition().attr('fill-opacity', 1)
 		})
-		.on('mouseout', function(event, d) {
+		.on('mouseout', function (event, d) {
 			const p = d3select(event.target.parentNode)
-			p.selectAll('.sja_aa_disckick')
-				.transition()
-				.attr('stroke-opacity', 0)
-			p.select('.sja_aa_ssk_bg')
-				.transition()
-				.attr('fill-opacity', 0)
-				.attr('stroke-opacity', 0)
-			p.select('.sja_aa_ssk_text')
-				.transition()
-				.attr('fill-opacity', 0)
+			p.selectAll('.sja_aa_disckick').transition().attr('stroke-opacity', 0)
+			p.select('.sja_aa_ssk_bg').transition().attr('fill-opacity', 0).attr('stroke-opacity', 0)
+			p.select('.sja_aa_ssk_text').transition().attr('fill-opacity', 0)
 		})
 		.on('click', async (event, d) => {
 			click_variant(d, tk, block, event.target.getBoundingClientRect(), null, event.target)
@@ -618,15 +604,10 @@ export function unfold_glyph(newlst, tk, block) {
 				d.y = d.yoffset * (abp ? -1 : 1)
 				return 'translate(0,' + d.y + ')'
 			})
-		setTimeout(function() {
-			set.selectAll('.sja_aa_disckick').attr('transform', 'scale(1)')
+		setTimeout(function () {
+			set.selectAll('.sja_aa_disckick').attr('transform', 'scale(1)').attr('data-testid', 'scale(1)')
 		}, dur)
-		set
-			.selectAll('.sja_aa_discnum')
-			.transition()
-			.duration(dur)
-			.attr('fill-opacity', 1)
-			.attr('stroke-opacity', 1)
+		set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
 		set
 			.filter(d => d.groups.length > 1)
 			.selectAll('.sja_aa_disclabel')
@@ -634,12 +615,7 @@ export function unfold_glyph(newlst, tk, block) {
 			.duration(dur)
 			.attr('fill-opacity', 1)
 			.attr('transform', 'scale(1)')
-		set
-			.selectAll('.sja_aa_discrim')
-			.transition()
-			.duration(dur)
-			.attr('fill-opacity', 1)
-			.attr('stroke-opacity', 1)
+		set.selectAll('.sja_aa_discrim').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
 		set
 			.selectAll('.sja_aa_ssk_kick')
 			.attr('transform', 'scale(1)')
@@ -846,24 +822,9 @@ export function fold_glyph(lst, tk) {
 		.duration(dur)
 		.attr('transform', d => 'translate(0,' + (abp ? '-' : '') + d.aa.maxradius + ')')
 	set.selectAll('.sja_aa_disckick').attr('transform', 'scale(0)')
-	set
-		.selectAll('.sja_aa_discnum')
-		.transition()
-		.duration(dur)
-		.attr('fill-opacity', 0)
-		.attr('stroke-opacity', 0)
-	set
-		.selectAll('.sja_aa_disclabel')
-		.transition()
-		.duration(dur)
-		.attr('fill-opacity', 0)
-		.attr('transform', 'scale(0)') // hide this label so it won't be tred
-	set
-		.selectAll('.sja_aa_discrim')
-		.transition()
-		.duration(dur)
-		.attr('fill-opacity', 0)
-		.attr('stroke-opacity', 0)
+	set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
+	set.selectAll('.sja_aa_disclabel').transition().duration(dur).attr('fill-opacity', 0).attr('transform', 'scale(0)') // hide this label so it won't be tred
+	set.selectAll('.sja_aa_discrim').transition().duration(dur).attr('fill-opacity', 0).attr('stroke-opacity', 0)
 	set.selectAll('.sja_aa_ssk_kick').attr('transform', 'scale(0)')
 	set.selectAll('.sja_aa_ssk_bg').attr('transform', 'scale(0)')
 	set.selectAll('.sja_aa_ssk_text').attr('transform', 'scale(0)')

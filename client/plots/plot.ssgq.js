@@ -65,7 +65,10 @@ export async function plotSingleSampleGenomeQuantification(
 		const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
 
 		// description
-		holder.append('div').text(q.description || queryKey)
+		holder
+			.append('div')
+			.attr('data-testid', 'methylation_array_sand_box')
+			.text(q.description || queryKey)
 		if (q2) {
 			holder
 				.append('div')

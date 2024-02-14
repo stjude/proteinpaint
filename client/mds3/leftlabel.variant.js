@@ -26,6 +26,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.variants) {
 		tk.leftlabels.doms.variants = makelabel(tk, block, laby)
+		tk.leftlabels.doms.variants.attr('data-testid', 'sja_variants_label')
 	}
 
 	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
@@ -91,6 +92,7 @@ function menu_variants(tk, block) {
 		.append('div')
 		.text('List')
 		.attr('class', 'sja_menuoption')
+		.attr('data-testid', 'sja_list_menuoption')
 		.style('border-radius', '0px')
 		.on('click', () => {
 			listSkewerData(tk, block)
@@ -128,6 +130,7 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text('Collapse')
 				.attr('class', 'sja_menuoption')
+				.attr('data-testid', 'sja_collapse_menuoption')
 				.style('border-radius', '0px')
 				.on('click', () => {
 					fold_glyph(tk.skewer.data, tk)
@@ -138,6 +141,7 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text('Expand')
 				.attr('class', 'sja_menuoption')
+				.attr('data-testid', 'sja_expand_menuoption')
 				.style('border-radius', '0px')
 				.on('click', () => {
 					settle_glyph(tk, block)
@@ -165,6 +169,7 @@ function menu_variants(tk, block) {
 			.append('div')
 			.text('Download')
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', 'sja_download_menuoption')
 			.style('border-radius', '0px')
 			.on('click', () => {
 				downloadVariants(tk, block)
