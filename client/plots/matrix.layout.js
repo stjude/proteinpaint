@@ -149,10 +149,13 @@ export function setLabelsAndScales() {
 					for (const val of anno.values) {
 						if (val.dt == 4 && 'value' in val && !s.ignoreCnvValues) {
 							const v = val.value
-							const minKey = v < 0 ? 'minLoss' : 'minGain'
-							const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
-							if (!(minKey in this.cnvValues) || this.cnvValues[minKey] > v) this.cnvValues[minKey] = v
-							if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
+							if (v < 0) {
+								if (!('minLoss' in this.cnvValues) || this.cnvValues['minLoss'] > v) this.cnvValues['minLoss'] = v
+								if (!('maxLoss' in this.cnvValues) || this.cnvValues['maxLoss'] < v) this.cnvValues['maxLoss'] = v
+							} else {
+								if (!('minGain' in this.cnvValues) || this.cnvValues['minGain'] > v) this.cnvValues['minGain'] = v
+								if (!('maxGain' in this.cnvValues) || this.cnvValues['maxGain'] < v) this.cnvValues['maxGain'] = v
+							}
 						}
 					}
 				}
@@ -260,13 +263,13 @@ export function setLabelsAndScales() {
 			}
 		} else if (t.tw.term.type == 'geneVariant') {
 			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
-				const maxVals = []
-				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
-				if ('maxGain' in this.cnvValues) maxVals.push(this.cnvValues.maxGain)
 				t.scales = {
 					loss: interpolateBlues,
 					gain: interpolateReds,
-					max: Math.max(...maxVals)
+					maxLoss: this.cnvValues.maxLoss,
+					maxGain: this.cnvValues.maxGain,
+					minLoss: this.cnvValues.minLoss,
+					minGain: this.cnvValues.minGain
 				}
 			}
 		}

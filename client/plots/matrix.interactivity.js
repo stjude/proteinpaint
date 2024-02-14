@@ -86,7 +86,7 @@ export function setInteractivity(self) {
 				// list that label only once but with a hit count, instead of listing that same label
 				// as multiple table rows in the mouseover
 				const label =
-					c.label == self.config.settings.hierCluster?.termGroupName
+					c.label == self.config.settings.hierCluster?.termGroupName || v.value
 						? v.value
 						: p
 						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
