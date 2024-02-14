@@ -80,7 +80,7 @@ class profileBarchart extends profilePlot {
 		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
 		const width = 1400
-		const height = this.rowCount * 32 + 480
+		const height = this.rowCount * 32 + 600
 		this.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		const title =
 			this.state.dslabel == 'ProfileAbbrev'
@@ -152,8 +152,8 @@ class profileBarchart extends profilePlot {
 		drawLine(410, 120, 50, y, 'B')
 		drawLine(410, 120, 75, y, 'A')
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 90})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${440},${y + 90})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${50},${y + 60})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${50},${y + 180})`)
 
 		this.legendG
 			.append('text')
