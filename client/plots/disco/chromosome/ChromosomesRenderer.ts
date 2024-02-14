@@ -24,7 +24,7 @@ export default class ChromosomesRenderer implements IRenderer {
 
 		const arc = d3.arc<d3.PieArcDatum<number>>().innerRadius(this.innerRadius).outerRadius(this.outerRadius)
 
-		const arcs = holder.append('g')
+		const arcs = holder.append('g').attr('data-testid', 'sjpp_chromosomes_arc_group')
 
 		arcs.selectAll('path').data(arcData).enter().append('path').attr('d', arc).attr('fill', 'black')
 

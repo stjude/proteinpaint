@@ -13,7 +13,7 @@ export default class LegendRenderer {
 
 	render(holder: any, legend: Legend, xOffset: number, svgw, svgh) {
 		const svgLegendRenderer = svgLegend({
-			holder: holder.append('g'),
+			holder: holder.append('g').attr('data-testid', 'sjpp_disco_plot_legend'),
 			rectFillFxn: d => d.color,
 			iconStroke: '#aaa'
 		})

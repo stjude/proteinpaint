@@ -28,7 +28,6 @@ export class DiscoRenderer {
 
 	render(holder: any, viewModel: ViewModel) {
 		const rootDiv = holder.append('div')
-		const headerDiv = rootDiv.append('div')
 		const svgDiv = rootDiv.append('div').style('display', 'inline-block').style('font-family', 'Arial')
 		const controlsDiv = svgDiv.append('div')
 
@@ -47,7 +46,7 @@ export class DiscoRenderer {
 
 		const svg = svgDiv
 			.append('svg')
-			.attr('width', viewModel.width)
+			.attr('data-testid', 'sjpp_disco_plot')
 			.attr('height', viewModel.height + viewModel.legendHeight)
 
 		const mainG = svg

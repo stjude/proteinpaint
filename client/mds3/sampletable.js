@@ -73,7 +73,7 @@ export async function displaySampleTable(samples, args) {
 		return await make_singleSampleTable(samples[0], args)
 	}
 	const [columns, rows] = await samples2columnsRows(samples, args.tk)
-	const params = { rows, columns, div: args.div, resize: rows.length > 10 }
+	const params = { rows, columns, div: args.div, resize: rows.length > 10, dataTestId: 'sja_simpletable' }
 	//if (args.maxWidth) params.maxWidth = args.maxWidth
 	//if (args.maxHeight) params.maxHeight = args.maxHeight
 
@@ -84,6 +84,7 @@ export async function displaySampleTable(samples, args) {
 		const height = screen.height
 		const colButton = {
 			text: 'Disco',
+			dataTestId: 'sja_sample_table_disco_button',
 			callback: async (event, i) => {
 				// hide tooltips where disco may have been launched
 				args.tk.itemtip.hide() // when clicking dot with occurrence>1
@@ -104,6 +105,7 @@ export async function displaySampleTable(samples, args) {
 		for (const k in args.tk.mds.queries.singleSampleGenomeQuantification) {
 			const btn = {
 				text: k,
+				dataTestId: `${k}_button`,
 				callback: async (event, i) => {
 					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 					sandbox.header.text(samples[i].sample_id)
@@ -161,6 +163,7 @@ async function feedSample2selectCallback(tk, block, _samples, sampleIdxLst) {
 
 async function make_singleSampleTable(s, arg) {
 	const table = arg.singleSampleDiv || table2col({ holder: arg.div })
+	table.attr()
 
 	if (s.sample_id) {
 		// sample_id is hardcoded

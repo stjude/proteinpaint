@@ -283,9 +283,12 @@ export class Block {
 				.append('div') // contains svg and resize button
 				.style('position', 'relative')
 				.style('display', 'inline-block')
-			this.svg = inlinediv.append('svg').on('mousedown', event => {
-				event.preventDefault()
-			})
+			this.svg = inlinediv
+				.append('svg')
+				.attr('data-testid', 'sja_plot_svg')
+				.on('mousedown', event => {
+					event.preventDefault()
+				})
 			if (!arg.noresize) {
 				this.resizewidthbutton = inlinediv
 					.append('div')
@@ -406,7 +409,12 @@ export class Block {
 			this.ctrl.namebutt = butrow
 				.append('span')
 				.attr('class', 'sja_clbtext')
-				.html('<span style="font-size:1.5em;font-weight:bold">' + this.usegm.name + '</span> ' + this.usegm.isoform)
+				.html(
+					'<span data-testid="sja_block_usegm_name" style="font-size:1.5em;font-weight:bold">' +
+						this.usegm.name +
+						'</span> ' +
+						this.usegm.isoform
+				)
 				.on('click', event => {
 					event.stopPropagation()
 					this.genemenu()
@@ -596,6 +604,7 @@ export class Block {
 		this.gCloakRect = this.gCloak.append('rect').attr('fill', 'white')
 		this.gCloakWord = this.gCloak
 			.append('text')
+			.attr('id', 'loadinggCloak')
 			.text('Loading ...')
 			.attr('fill', common.defaultcolor)
 			.attr('fill-opacity', 0)
@@ -2559,7 +2568,7 @@ seekrange(chr,start,stop) {
 		tk.tktip = new Menu({ padding: '15px' })
 		tk.tkconfigtip = new Menu({ padding: '15px' })
 
-		tk.g = this.gbase.append('g').attr('transform', 'translate(0,0)')
+		tk.g = this.gbase.append('g').attr('data-testid', 'sja_sample_menu_opener').attr('transform', 'translate(0,0)')
 		/*
 	order of precedence:
 	gtksubpanels < gmiddle < gleft and gright
@@ -2652,6 +2661,7 @@ seekrange(chr,start,stop) {
 		tk.cloakbox = tk.cloak.append('rect').attr('fill', 'white').attr('fill-opacity', 0)
 		tk.cloaktext = tk.cloak
 			.append('text')
+			.attr('data-testid', 'loading_message')
 			.text('Loading ...')
 			.attr('fill', common.defaultcolor)
 			.attr('fill-opacity', 0)
@@ -4235,6 +4245,7 @@ seekrange(chr,start,stop) {
 		obj.cloakbox = obj.cloak.append('rect').attr('fill', 'white').attr('fill-opacity', 0)
 		obj.cloaktext = obj.cloak
 			.append('text')
+			.attr('id', 'loadingCloak2')
 			.text('Loading ...')
 			.attr('fill', common.defaultcolor)
 			.attr('fill-opacity', 0)
