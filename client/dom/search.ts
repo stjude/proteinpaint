@@ -3,6 +3,7 @@ import { Menu } from '#dom/menu'
 import { select, Selection } from 'd3-selection'
 import { keyupEnter } from '../src/client'
 import { throwMsgWithFilePathAndFnName } from './sayerror'
+import { Elem, Input, Span } from '../types/d3'
 
 type SearchGroupEntry = {
 	/** Text appearing above the search results group */
@@ -21,7 +22,7 @@ type SearchGroupEntry = {
 }
 
 type InputSearchOpts = {
-	holder: Selection<any, any, any, any>
+	holder: Elem
 	searchItems: () => SearchGroupEntry[]
 	app: any
 	/** Menu tip. If not provided, created by default */
@@ -35,8 +36,8 @@ type InputSearchOpts = {
 }
 
 export class InputSearch {
-	holder: Selection<HTMLDivElement, any, any, any>
-	input: Selection<HTMLInputElement, any, any, any>
+	holder: Elem
+	input: Input
 	tip: any
 	searchItems: () => SearchGroupEntry[]
 	style: any
@@ -103,7 +104,7 @@ export class InputSearch {
 		this: Element,
 		result: SearchGroupEntry & {
 			wrapper: Selection<Element, any, any, any>
-			titleDiv: Selection<HTMLSpanElement, any, any, any>
+			titleDiv: Span
 		}
 	) {
 		result.wrapper = select(this)
@@ -146,5 +147,9 @@ export class InputSearch {
 		}
 		this.input.property('value', '')
 		this.tip.hide()
+	}
+
+	updatePlaceholder(placeholder: string) {
+		this.input.attr('placeholder', placeholder)
 	}
 }
