@@ -36,7 +36,7 @@ export class profilePlot {
 		const holder2 = div.append('div')
 		const mainDiv = div.append('div')
 
-		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.9em')
+		const controlsDiv = mainDiv.insert('div').style('display', 'inline-block').style('font-size', '0.8em')
 		const holder = mainDiv.insert('div').style('display', 'inline-block')
 
 		const plotDiv = holder.append('div')
@@ -191,7 +191,7 @@ export class profilePlot {
 						callback: value => this.setFacilityType(value)
 					},
 					{
-						label: 'Teaching status',
+						label: this.config.teachingStatusTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.teachingStates,
@@ -199,7 +199,7 @@ export class profilePlot {
 						callback: value => this.setFilterValue(this.config.teachingStatusTW.id, value)
 					},
 					{
-						label: 'Referral status',
+						label: this.config.referralStatusTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.referralStates,
@@ -207,7 +207,7 @@ export class profilePlot {
 						callback: value => this.setFilterValue(this.config.referralStatusTW.id, value)
 					},
 					{
-						label: 'Funding source',
+						label: this.config.fundingSourceTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.fundingSources,
@@ -215,7 +215,7 @@ export class profilePlot {
 						callback: value => this.setFilterValue(this.config.fundingSourceTW.id, value)
 					},
 					{
-						label: 'Hospital volume',
+						label: this.config.hospitalVolumeTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.hospitalVolumes,
@@ -223,7 +223,7 @@ export class profilePlot {
 						callback: value => this.setFilterValue(this.config.hospitalVolumeTW.id, value)
 					},
 					{
-						label: 'Year of implementation',
+						label: this.config.yearOfImplementationTW.term.name,
 						type: 'dropdown',
 						chartType,
 						options: this.yearsOfImplementation,
