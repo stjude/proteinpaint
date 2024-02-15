@@ -143,3 +143,55 @@ tape('avoid race condition', async test => {
 	if (test._ok) app.destroy()
 	test.end()
 })
+
+tape('dendrogram click', async function (test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
+
+	let numRenders = 0
+	const { app, hc } = await getHierClusterApp({
+		genes: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
+	})
+
+	const img = await detectOne({ elem: hc.dom.topDendrogram.node(), selector: 'image' })
+	const svgBox = hc.dom.svg.node().getBoundingClientRect()
+	const imgBox = img.getBBox()
+	// helper to see where the x, y position of the click
+	// select('body')
+	// 	.append('div')
+	// 	.style('position', 'absolute')
+	// 	.style('top', svgBox.y + imgBox.y + imgBox.height/2)
+	// 	.style('left', svgBox.x + hc.dimensions.xOffset + imgBox.x + imgBox.width/2)
+	// 	.style('width', '5px').style('height', '5px')
+	// 	.style('background-color', '#00f')
+
+	img.dispatchEvent(
+		new MouseEvent('click', {
+			//'view': window,
+			bubbles: true,
+			cancelable: true,
+			clientX: svgBox.x + hc.dimensions.xOffset + imgBox.x + imgBox.width / 2,
+			clientY: svgBox.y + imgBox.y + imgBox.height / 2
+		})
+	)
+
+	// TODO: low priority - find a way to test the red lines vs black lines in the dendrogram branches?
+
+	test.deepEqual(
+		['Zoom in', 'List 50 samples'],
+		[...hc.dom.dendroClickMenu.d.node().querySelectorAll('.sja_menuoption')].map(elem => elem.__data__.label),
+		'should show the expected menu options on dendrogram click'
+	)
+
+	hc.dom.dendroClickMenu.d.node().querySelector('.sja_menuoption').parentNode.lastChild.click()
+	await sleep(5)
+	test.equal(
+		hc.dom.dendroClickMenu.d.node().querySelectorAll('.sjpp_row_wrapper').length,
+		50,
+		'should list the expected number of samples'
+	)
+	if (test._ok) {
+		hc.dom.dendroClickMenu.clear().hide()
+		app.destroy()
+	}
+})
