@@ -318,10 +318,15 @@ export type SingleCellSamplesNative = {
 export type SingleCellDataGdc = {
 	src: 'gdcapi'
 }
+type ColorColumn = {
+	index: number
+	name: string
+}
 type SingleCellPlot = {
 	name: string
 	folder: string
 	fileSuffix: string
+	colorColumn: ColorColumn
 }
 export type SingleCellDataNative = {
 	src: 'native'

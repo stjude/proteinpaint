@@ -165,12 +165,7 @@ class singleCellPlot {
 
 	renderPlot(plot) {
 		this.plots.push(plot)
-		const cells2Clusters = plot.cells.map(c => {
-			c.clusterMap = plot.clusterMap
-			c.tid = plot.tid
-			return plot.clusterMap[c.cellId]
-		})
-		let clusters = new Set(cells2Clusters)
+		let clusters = new Set(plot.cells.map(c => c.category))
 		clusters = Array.from(clusters).sort()
 		const cat2Color = getColors(clusters.length)
 		const colorMap = {}
@@ -219,10 +214,10 @@ class singleCellPlot {
 			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
 			.append('circle')
 			.attr('r', 2)
-			.attr('fill', d => cat2Color(d.clusterMap[d.cellId]))
-			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.clusterMap[d.cellId]) ? 0 : 1))
+			.attr('fill', d => cat2Color(d.category))
+			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 1))
 
-		this.renderLegend(legendG, plot, cells2Clusters)
+		this.renderLegend(legendG, plot)
 	}
 
 	handleZoom(e, mainG, plot) {
@@ -230,16 +225,17 @@ class singleCellPlot {
 		plot.zoom = e.transform.scale(1).k
 	}
 
-	renderLegend(legendG, plot, cells2Clusters) {
+	renderLegend(legendG, plot) {
 		if (this.sameLegend && this.legendRendered) return
 		this.legendRendered = true
 		const colorMap = plot.colorMap
-		legendG.append('text').style('font-weight', 'bold').text(`${plot.cells.length} cells`)
+		legendG.append('text').style('font-weight', 'bold').text(`${plot.colorBy}`)
+
 		const step = 25
-		let y = 40
+		let y = 30
 		let x = 0
 		for (const cluster in colorMap) {
-			const clusterCells = cells2Clusters.filter(item => item == cluster)
+			const clusterCells = plot.cells.filter(item => item.category == cluster)
 			const hidden = this.config.hiddenClusters.includes(cluster)
 			const n = clusterCells.length
 			const color = plot.colorMap[cluster]
@@ -305,7 +301,6 @@ class singleCellPlot {
 			this.onClick = event.type == 'click'
 
 			const d = event.target.__data__
-
 			let threshold = 10 //min distance in pixels to be in the neighborhood
 			threshold = threshold / plot.zoom //Threshold should consider the zoom
 			const samples = plot.cells.filter(s => {
@@ -316,7 +311,7 @@ class singleCellPlot {
 			const tree = []
 
 			for (const sample of samples) {
-				const cluster = d.clusterMap[sample.cellId]
+				const cluster = d.category
 
 				let node = tree.find(item => item.id == cluster)
 				if (!node) {
@@ -330,7 +325,7 @@ class singleCellPlot {
 			const table = menu.d.append('table')
 			for (const node of tree) {
 				let tr = table.append('tr')
-				tr.append('td').style('color', '#aaa').text(d.tid)
+				tr.append('td').style('color', '#aaa').text(plot.colorBy)
 
 				const cluster = node.id
 				const td = tr.append('td')
@@ -357,7 +352,7 @@ class singleCellPlot {
 	}
 
 	getOpacity(d) {
-		return this.config.hiddenClusters.includes(d.clusterMap[d.cellId]) ? 0 : 1
+		return this.config.hiddenClusters.includes(d.category) ? 0 : 1
 	}
 }
 
