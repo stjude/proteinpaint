@@ -9,6 +9,7 @@ export type Cell = {
 	y: number
 	/** Z coord of the cell, should be present for all cells and trigger 3d plot   */
 	z?: number
+	category: string
 }
 
 export type Plot = {
@@ -16,6 +17,7 @@ export type Plot = {
 	name: string
 	/** List of cells */
 	cells: Cell[]
+	colorBy: string
 }
 
 export type TermdbSinglecellDataRequest = {

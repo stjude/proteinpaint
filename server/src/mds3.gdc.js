@@ -2128,9 +2128,9 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		// first line is header
 		// cell_barcode	read_count	gene_count	seurat_cluster	UMAP_1	UMAP_2	UMAP3d_1	UMAP3d_2	UMAP3d_3	tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3	PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
 		// this tsv file has coord for 3 maps
-		const plotUmap = { name: 'UMAP', cells: [] },
-			plotTsne = { name: 'TSNE', cells: [] },
-			plotPca = { name: 'PCA', cells: [] },
+		const plotUmap = { name: 'UMAP', cells: [], colorBy: 'Cluster' },
+			plotTsne = { name: 'TSNE', cells: [], colorBy: 'Cluster' },
+			plotPca = { name: 'PCA', cells: [], colorBy: 'Cluster' },
 			seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} },
 			tid2cellvalue = { [seuratClusterTerm.id]: {} } // corresponds to above term id
 
@@ -2158,9 +2158,10 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			if (Number.isNaN(tsne2)) throw 'tsne2 is nan'
 			if (Number.isNaN(pc1)) throw 'pc1 is nan'
 			if (Number.isNaN(pc2)) throw 'pc2 is nan'
-			plotUmap.cells.push({ cellId, x: umap1, y: umap2 })
-			plotTsne.cells.push({ cellId, x: tsne1, y: tsne2 })
-			plotPca.cells.push({ cellId, x: pc1, y: pc2 })
+			const category = `Cluster ${clusterId}`
+			plotUmap.cells.push({ cellId, x: umap1, y: umap2, category })
+			plotTsne.cells.push({ cellId, x: tsne1, y: tsne2, category })
+			plotPca.cells.push({ cellId, x: pc1, y: pc2, category })
 		}
 		return {
 			plots: [plotPca, plotTsne, plotUmap],

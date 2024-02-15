@@ -132,6 +132,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 			for (const tid of D.termIds) tid2cellvalue[tid] = {} // k: cell id, v: cell value for this term
 			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
 			for (const plot of D.plots) {
+				console.log(plot)
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
 				try {
 					await fs.promises.stat(tsvfile)
@@ -152,15 +153,16 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					const cellId = l[0],
 						x = Number(l[4]), // FIXME standardize, or define idx in plot
 						y = Number(l[5])
+					const category = l[plot.colorColumn?.index] || ''
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
-					cells.push({ cellId, x, y })
+					cells.push({ cellId, x, y, category })
 
 					for (const tid of D.termIds) {
 						tid2cellvalue[tid][cellId] = l[1]
 					}
 				}
-				plots.push({ name: plot.name, cells })
+				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name })
 			}
 			if (plots.length == 0) {
 				// no data available for this sample
