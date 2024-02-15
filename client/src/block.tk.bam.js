@@ -2396,6 +2396,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			.append('button')
 			.style('margin-left', '10px')
 			.text('Show gene model')
+			.property('disabled', !r.seq || r.seq == '*')
 			.on('click', async () => {
 				gene_button.property('disabled', true) // disable this button
 				// Determine how many calls to bedj track need to be made. This depends on whether the read has insertions/deletions or spliced. In these cases, each part of the read will need a separate bedj track
