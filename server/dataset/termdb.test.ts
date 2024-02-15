@@ -214,6 +214,10 @@ export default <Mds3>{
 				folder: 'files/hg38/TermdbTest/methylationArrayNormalSubtracted/' // probe-level data, only for locus view as genome browser track
 				// each file is 1.gz and 1.gz.tbi, bedgraph format
 			}
+		},
+		geneExpression: {
+			src: 'native',
+			file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.gz'
 		}
 	},
 	assayAvailability: {
