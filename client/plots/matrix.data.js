@@ -13,7 +13,8 @@ export function computeStateDiff() {
 	const s = this.settings.matrix
 	const prevState = structuredClone(this.prevState)
 	const currState = structuredClone(this.state)
-	// these request bodies will be used to detect the need to make another server request
+
+	// these request bodies will be used to detect the need to make another data request
 	this.currRequestOpts = {
 		matrix: this.getMatrixRequestOpts(currState),
 		hierCluster: this.getHCRequestBody?.(currState)
