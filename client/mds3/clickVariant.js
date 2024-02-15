@@ -84,30 +84,32 @@ async function click2sunburst(d, tk, block, tippos) {
 			add the key/values to tid2value{}
 			*/
 			tk.itemtip.clear()
-			const arg = {
+			const param = {
 				mlst: d.mlst,
 				tk,
 				block,
 				div: tk.itemtip.d,
 				tid2value: {}
 			}
-			arg.tid2value[d2.data.id0] = d2.data.v0
-			if (d2.data.id1) arg.tid2value[d2.data.id1] = d2.data.v1
-			if (d2.data.id2) arg.tid2value[d2.data.id2] = d2.data.v2
+			param.tid2value[d2.data.id0] = d2.data.v0
+			if (d2.data.id1) param.tid2value[d2.data.id1] = d2.data.v1
+			if (d2.data.id2) param.tid2value[d2.data.id2] = d2.data.v2
 
 			/*
-			TEMP FIX to create a mock arg.mlst[]
-			this wedge has less samples than d.mlst will have multiple.
+			!! to create a mock param.mlst[] !!
+			(re-evaluate if this is actually temp fix)
+			this wedge has less samples than what d.mlst[] have in total
 			as mlst2samplesummary uses occurrence sum to decide what type of data to request
 			must change occurrence sum to d2.value so mlst2samplesummary() can function based on sum of this wedge
+			(by first setting .occurrence=0 for entire param.mlst[], then just set param.mlst[0].occurrence=d2.value)
 			*/
-			arg.mlst = d.mlst.map(m => {
+			param.mlst = d.mlst.map(m => {
 				if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 					return { ssm_id: m.ssm_id, occurrence: 0 }
 				}
 				throw 'unknown variant2samples.variantkey'
 			})
-			arg.mlst[0].occurrence = d2.value
+			param.mlst[0].occurrence = d2.value
 
 			const x = event.clientX
 			const y = event.clientY
@@ -118,16 +120,16 @@ async function click2sunburst(d, tk, block, tippos) {
 			const middlex = width / 2
 			const middley = height / 2
 
-			arg.maxWidth = width - x > middlex ? width - x : x
-			arg.maxHeight = height - y > middley ? height - y : y
-			arg.maxWidth = arg.maxWidth - 150 + 'px'
-			arg.maxHeight = arg.maxHeight - 150 + 'px'
+			param.maxWidth = width - x > middlex ? width - x : x
+			param.maxHeight = height - y > middley ? height - y : y
+			param.maxWidth = param.maxWidth - 150 + 'px'
+			param.maxHeight = param.maxHeight - 150 + 'px'
 			*/
 
 			/* do not call variant_details() as no need to show info on variants
 			only need to show sample display
 			*/
-			await init_sampletable(arg)
+			await init_sampletable(param)
 			tk.itemtip.show(x, y, false, false)
 		}
 	}

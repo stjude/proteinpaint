@@ -166,7 +166,11 @@ async function make_singleSampleTable(s, arg) {
 		// sample_id is hardcoded
 		const [cell1, cell2] = table.addRow()
 		cell1.text(arg.tk.mds.termdbConfig?.lollipop?.sample || 'Sample')
-		printSampleName(s, arg.tk, cell2, arg.block, arg.mlst?.[0])
+		let m // mutation carried by this sample. if found, pass to createDiscoInSandbox for showing aachange on disco sandbox header for showing context
+		if (s.ssm_id_lst?.[0]) {
+			m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == s.ssm_id_lst[0])
+		}
+		printSampleName(s, arg.tk, cell2, arg.block, m)
 	}
 
 	/////////////
@@ -214,9 +218,9 @@ async function make_singleSampleTable(s, arg) {
 				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
-					if (m.dt == 1) {
+					if (m.dt == dtsnvindel) {
 						print_snv(td, m, arg.tk, arg.block)
-					} else if (m.dt == 2 || m.dt == 5) {
+					} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 						printSvPair(m.pairlst[0], td)
 					} else {
 						td.text(ssmid)
