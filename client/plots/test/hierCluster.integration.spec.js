@@ -32,7 +32,7 @@ async function getHierClusterApp(_opts = {}) {
 					termgroups: [], // _opts.termgroups || [],
 					// !!! there will be an initial load error since this is an empty geneset,
 					// !!! but will be ignored since it's not relevant to this test
-					genes: [] // _opts.genes || []
+					genes: _opts.genes || []
 					//genes,
 					//settings
 				}
@@ -89,7 +89,7 @@ tape('avoid race condition', async test => {
 	// hardcode a constant value or comment out the ++ for the sequenceID
 	// in rx/index.js getStoreApi().write()
 	// !!!
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 	const { app, hc } = await getHierClusterApp({
 		genes: [{ gene: 'AKT1' }, { gene: 'TP53' }, { gene: 'BCR' }, { gene: 'KRAS' }]
 	})
@@ -98,7 +98,7 @@ tape('avoid race condition', async test => {
 		await fillTermWrapper({ term: { name: 'AKT1', type: 'geneVariant' } }),
 		await fillTermWrapper({ term: { name: 'TP53', type: 'geneVariant' } })
 	]
-	const responseDelay = 15
+	const responseDelay = 250
 	hc.__wait = responseDelay
 	hc.origRequestData = hc.requestData
 	hc.requestData = async () => {
@@ -130,7 +130,7 @@ tape('avoid race condition', async test => {
 		})()
 	])
 	// run tests after the delayed response, as part of simulating the race condition
-	await sleep(responseDelay + 500)
+	await sleep(responseDelay + 800)
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 gene rows')
 	const rects = hc.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
 	const hits = rects.filter(d => d.key !== 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
