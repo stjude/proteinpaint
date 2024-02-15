@@ -9,6 +9,7 @@ export type Cell = {
 	y: number
 	/** Z coord of the cell, should be present for all cells and trigger 3d plot   */
 	z?: number
+	/** The cell may have different classifications, e.g. by cell type, CNV, FUSION, etc. */
 	category: string
 }
 
@@ -17,6 +18,7 @@ export type Plot = {
 	name: string
 	/** List of cells */
 	cells: Cell[]
+	/** Column name to color by, e.g Cell type, CNV, Fusion */
 	colorBy: string
 }
 
