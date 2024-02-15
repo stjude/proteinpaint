@@ -31,7 +31,7 @@ export function getMatrixRequestOpts(state) {
 	for (const grp of termgroups) {
 		terms.push(...getNormalizedTwLstCopy(grp.lst))
 	}
-	if (state.config.divideBy) terms.push(normalizeTwForRequest(state.config.divideBy))
+	if (state.config.divideBy) terms.push(normalizeTwForRequest(structuredClone(state.config.divideBy)))
 
 	// !!! NOTE !!!
 	// all parameters here must remove payload properties that are
