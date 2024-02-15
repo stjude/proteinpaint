@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.41.0
 
 Features:
 - adding geneset edit ui from Gene Expression chart button
