@@ -1,2 +1,1 @@
-Fixes:
-- Bug fix for disco plot launched from sunburst shows aachange in sandbox header rather than undefined
+

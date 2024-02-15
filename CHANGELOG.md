@@ -10,6 +10,7 @@ Features:
 Fixes:
 - Bug fix to show correct category total size by passing a missing filter0
 - profilegenevalue track reports subtrack file error in a legible way
+- Bug fix for disco plot launched from sunburst shows aachange in sandbox header rather than undefined
 
 
 ## 2.40.8
