@@ -162,7 +162,7 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 }
 
 async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
-	q.file = path.join(serverconfig.tpmasterdir, q.file)
+	if (!q.file.startsWith(serverconfig.tpmasterdir)) q.file = path.join(serverconfig.tpmasterdir, q.file)
 	if (!q.samples) q.samples = []
 	await utils.validate_tabixfile(q.file)
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
