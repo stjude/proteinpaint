@@ -6,18 +6,12 @@ import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
 import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin } from '#shared/common'
+import * as matrixData from './matrix.data'
+import * as matrixLayout from './matrix.layout'
+import * as matrixSerieses from './matrix.serieses'
+import * as matrixLegend from './matrix.legend'
+import * as matrixGroups from './matrix.groups'
 export { getPlotConfig } from './matrix.config'
-import { getLegendData, getLegendItemText } from './matrix.legend'
-import { getSerieses } from './matrix.serieses'
-import { setAutoDimensions, setLabelsAndScales, setLayout, getMaxGrpLabelWidth } from './matrix.layout'
-import { computeStateDiff, mayRequireToken, setData, applyLegendValueFilter } from './matrix.data'
-import {
-	getTermOrder,
-	getSampleGroups,
-	getSampleOrder,
-	classifyValues,
-	stackSiblingCellsByClass
-} from './matrix.groups'
 
 export class Matrix {
 	constructor(opts) {
@@ -146,7 +140,7 @@ export class Matrix {
 
 	async main() {
 		try {
-			this.config = JSON.parse(JSON.stringify(this.state.config))
+			this.config = structuredClone(this.state.config)
 			if (this.mayRequireToken()) return
 
 			const prevTranspose = this.settings.transpose
@@ -154,11 +148,20 @@ export class Matrix {
 			// use structuredClone to avoid overwriting of original settings.matrix
 			Object.assign(this.settings, structuredClone(this.config.settings), this.controlsRenderer.getSettings())
 
+			// these request bodies will be used to detect the need to make another server request
+			this.currRequestOpts = {
+				matrix: this.getMatrixRequestOpts(this.state),
+				hierCluster: this.getHCRequestBody?.(this.state)
+			}
+			console.log(161, this.currRequestOpts)
 			// see matrix.data for logic to be able to skip server data request or re-ordering
 			this.computeStateDiff()
+			console.log(157, this.stateDiff)
 			// must remember the previous state right away, so that subsequent computeStateDiffs
 			// has the correct reference in case of errors
 			this.prevState = this.state
+			this.prevRequestOpts = structuredClone(this.currRequestOpts)
+
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
 
@@ -174,7 +177,7 @@ export class Matrix {
 					promises.push(this.setData())
 					this.dom.loadingDiv.html('Processing data ...')
 					await Promise.all(promises)
-					applyLegendValueFilter(this)
+					this.applyLegendValueFilter()
 					if (this.combineData) this.combineData()
 					// tws in the config may be filled-in based on applicable server response data;
 					// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
@@ -339,30 +342,12 @@ export class Matrix {
 	}
 }
 
-Matrix.prototype.getSerieses = getSerieses
-
-// from matrix.legend
-Matrix.prototype.getLegendItemText = getLegendItemText
-Matrix.prototype.getLegendData = getLegendData
-
-// from matrix.layout
-Matrix.prototype.setAutoDimensions = setAutoDimensions
-Matrix.prototype.setLabelsAndScales = setLabelsAndScales
-Matrix.prototype.setLayout = setLayout
-Matrix.prototype.getMaxGrpLabelWidth = getMaxGrpLabelWidth
-
-// from matrix.data
-Matrix.prototype.computeStateDiff = computeStateDiff
-Matrix.prototype.mayRequireToken = mayRequireToken
-Matrix.prototype.setData = setData
-Matrix.prototype.applyLegendValueFilter = applyLegendValueFilter
-
-// from matrix.groups
-Matrix.prototype.getTermOrder = getTermOrder
-Matrix.prototype.getSampleGroups = getSampleGroups
-Matrix.prototype.getSampleOrder = getSampleOrder
-Matrix.prototype.classifyValues = classifyValues
-Matrix.prototype.stackSiblingCellsByClass = stackSiblingCellsByClass
+// assign class prototype methods and props that are exported from other matrix.* code files
+for (const m of [matrixData, matrixGroups, matrixLayout, matrixSerieses, matrixLegend]) {
+	for (const key in m) {
+		Matrix.prototype[key] = m[key]
+	}
+}
 
 export const matrixInit = getCompInit(Matrix)
 // this alias will allow abstracted dynamic imports
