@@ -10,6 +10,8 @@ import { Menu } from '../dom/menu'
 import { dtgeneexpression } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { showGenesetEdit } from '../dom/genesetEdit.ts' // cannot use '#dom/', breaks
+import { getNormalRoot } from '#filter'
+
 /*
 FIXME items
 
@@ -402,7 +404,7 @@ export class HierCluster extends Matrix {
 			dataType: s.dataType,
 			genes,
 			clusterMethod: s.clusterMethod,
-			filter: filterJoin([this.state.filter, dictionaryLegendFilter]),
+			filter: getNormalRoot(filterJoin([this.state.filter, dictionaryLegendFilter])),
 			filter0: this.state.filter0
 		}
 		return await dofetch3('termdb/cluster', { body, signal })
