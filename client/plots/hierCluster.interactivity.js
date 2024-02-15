@@ -1,3 +1,5 @@
+import { renderTable } from '../dom/table'
+
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId) {
 	const mergedClusters = this.hierClusterData.clustering.col.mergedClusters
