@@ -132,7 +132,6 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 			for (const tid of D.termIds) tid2cellvalue[tid] = {} // k: cell id, v: cell value for this term
 			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
 			for (const plot of D.plots) {
-				console.log(plot)
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, q.sample + plot.fileSuffix)
 				try {
 					await fs.promises.stat(tsvfile)
