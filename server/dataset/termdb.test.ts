@@ -218,7 +218,8 @@ export default <Mds3>{
 		geneExpression: {
 			src: 'native',
 			file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.gz'
-		}
+		},
+		topVariablyExpressedGenes: { src: 'native' }
 	},
 	assayAvailability: {
 		// use "genetic_race" as fake sources of assay availability
