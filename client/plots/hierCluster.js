@@ -1,6 +1,8 @@
 import { Matrix } from './matrix'
 import { getCompInit, copyMerge } from '../rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
+import * as renderers from './hierCluster.renderers'
+import * as interactivity from './hierCluster.interactivity'
 import { dofetch3 } from '#common/dofetch'
 import { fillTermWrapper, get$id } from '#termsetting'
 import { extent } from 'd3-array'
@@ -28,7 +30,7 @@ export class HierCluster extends Matrix {
 	async init(appState) {
 		await super.init(appState)
 
-		maySetSandboxHeader(this)
+		this.maySetSandboxHeader()
 
 		this.hcClipId = this.seriesClipId + '-hc'
 		this.dom.hcClipRect = this.dom.svg
@@ -39,6 +41,7 @@ export class HierCluster extends Matrix {
 			.attr('clipPathUnits', 'userSpaceOnUse')
 			.append('rect')
 			.attr('display', 'block')
+
 		this.dom.topDendrogram = this.dom.svg
 			.insert('g', 'g')
 			.attr('clip-path', `url(#${this.hcClipId})`)
@@ -62,237 +65,6 @@ export class HierCluster extends Matrix {
 				this.plotDendrogramHclust(true)
 			})
 		this.dom.leftDendrogram = this.dom.svg.insert('g', 'g').attr('class', 'sjpp-matrix-dendrogram') //.attr('clip-path', `url(#${this.seriesClipId})`)
-	}
-
-	// Given a clusterId, return all its children clusterIds
-	getAllChildrenClusterIds(clickedClusterId) {
-		const mergedClusters = this.hierClusterData.clustering.col.mergedClusters
-		const children = mergedClusters.get(clickedClusterId).childrenClusters || []
-		let allChildren = [...children]
-		for (const child of children) {
-			allChildren = allChildren.concat(this.getAllChildrenClusterIds(child))
-		}
-		return allChildren
-	}
-
-	addSelectedSamplesOptions(clickedSampleNames, event) {
-		const l = this.settings.matrix.controlLabels
-		const ss = this.opts.allow2selectSamples
-		const optionArr = [
-			{
-				label: 'Zoom in',
-				callback: () => {
-					this.triggerZoomBranch(this, clickedSampleNames)
-				}
-			},
-			{
-				label: `List ${clickedSampleNames.length} ${l.samples}`,
-				callback: () => this.showTable4selectedSamples(clickedSampleNames)
-			}
-		]
-
-		// when allow2selectSamples presents
-		if (ss) {
-			optionArr.push({
-				label: ss.buttonText || `Select ${l.samples}`,
-				callback: async () => {
-					ss.callback({
-						samples: clickedSampleNames.map(c => {
-							return { 'cases.case_id': c }
-						}),
-						source: ss.defaultSelectionLabel || `Selected ${l.samples} from gene expression`
-					})
-				}
-			})
-		} else {
-			if (this.state.nav && this.state.nav.header_mode !== 'hidden') {
-				const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => s.row.sample == c).row)
-				for (const s of samples) {
-					if (!s.sampleId) s.sampleId = s.sample
-				}
-				optionArr.push({
-					label: 'Add to a group',
-					callback: async () => {
-						const group = {
-							name: 'Group',
-							items: samples
-						}
-						this.addGroup(group)
-					}
-				})
-			}
-		}
-
-		this.mouseout()
-		this.dom.tip.hide()
-		this.dom.dendroClickMenu.d.selectAll('*').remove()
-		this.dom.dendroClickMenu.d
-			.selectAll('div')
-			.data(optionArr)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('border-radius', '0px')
-			.html(d => d.label)
-			.on('click', event => {
-				this.dom.dendroClickMenu.d.selectAll('*').remove()
-				event.target.__data__.callback()
-			})
-		this.dom.dendroClickMenu.show(event.clientX, event.clientY)
-	}
-
-	// zoom in matrix to the selected dendrogram branch
-	triggerZoomBranch(self, clickedSampleNames) {
-		if (self.zoomArea) {
-			self.zoomArea.remove()
-			delete self.zoomArea
-		}
-		const c = {
-			startCell: self.serieses[0].cells.find(d => d.sample == clickedSampleNames[0]),
-			endCell: self.serieses[0].cells.find(d => d.sample == clickedSampleNames[clickedSampleNames.length - 1])
-		}
-
-		const s = self.settings.matrix
-		const d = self.dimensions
-		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
-		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
-		const centerCell = self.sampleOrder[zoomIndex] // || self.getImgCell(event)
-		const colw = self.computedSettings.colw || self.settings.matrix.colw
-		const maxZoomLevel = s.colwMax / colw
-		const minZoomLevel = s.colwMin / colw
-		const tentativeZoomLevel = Math.max(
-			1,
-			((s.zoomLevel * d.mainw) / Math.max(c.endCell.x - c.startCell.x, 2 * d.colw)) * 0.7
-		)
-		const zoomLevel = Math.max(minZoomLevel, Math.min(tentativeZoomLevel, maxZoomLevel))
-		//const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
-
-		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: {
-				settings: {
-					matrix: {
-						zoomLevel,
-						zoomCenterPct: 0.5,
-						//zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
-						zoomIndex,
-						zoomGrpIndex: centerCell.grpIndex
-					}
-				}
-			}
-		})
-		self.resetInteractions()
-	}
-
-	// show the list of clicked samples as a table
-	showTable4selectedSamples(clickedSampleNames) {
-		const templates = this.state.termdbConfig.urlTemplates
-		const rows = templates?.sample
-			? clickedSampleNames.map(c => [
-					{ value: this.hierClusterData.bySampleId[c].label, url: `${templates.sample.base}${c}` }
-			  ])
-			: clickedSampleNames.map(c => [{ value: this.hierClusterData.bySampleId[c].label }])
-
-		const columns = [{ label: this.settings.matrix.controlLabels.Sample }]
-
-		renderTable({
-			rows,
-			columns,
-			div: this.dom.dendroClickMenu.clear().d.append('div').style('margin', '10px'),
-			showLines: true,
-			maxHeight: '35vh',
-			resize: true
-		})
-	}
-
-	// add the clicked samples into a group
-	async addGroup(group) {
-		group.plotId = this.id
-		await this.app.vocabApi.addGroup(group)
-		this.dom.tip.hide()
-	}
-
-	// upon clicking, find the corresponding clicked clusterId from this.hierClusterData.clustering.col.mergedClusters
-	getClusterFromTopDendrogram(event) {
-		// Need imgBox to find the position of event relative to dendrogram
-		if (event.target.tagName == 'image') this.imgBox = event.target.getBoundingClientRect()
-		else return
-
-		const y = event.clientY - this.imgBox.y - event.target.clientTop
-		const xMin = this.dimensions.xMin
-		const x = event.clientX - this.imgBox.x - event.target.clientLeft + xMin
-
-		for (const [clusterId, cluster] of this.hierClusterData.clustering.col.mergedClusters) {
-			const { x1, y1, x2, y2, clusterY } = cluster.clusterPosition
-			if (
-				(x1 <= x && x <= x2 && clusterY - 5 < y && y < clusterY + 5) ||
-				(clusterY <= y && y <= y1 && x1 - 5 < x && x < x1 + 5) ||
-				(clusterY <= y && y <= y2 && x2 - 5 < x && x < x2 + 5)
-			) {
-				return clusterId
-			}
-		}
-	}
-
-	setClusteringBtn(holder, callback) {
-		const hc = this.settings.hierCluster
-		holder
-			.append('button')
-			//.property('disabled', d => d.disabled)
-			.datum({
-				label: `Clustering`,
-				rows: [
-					{
-						label: `Clustering Method`,
-						title: `Sets which clustering method to use`,
-						type: 'radio',
-						chartType: 'hierCluster',
-						settingsKey: 'clusterMethod',
-						options: [
-							{
-								label: 'Average',
-								value: 'average',
-								title: `Cluster by average value`
-							},
-							{
-								label: `Complete`,
-								value: 'complete',
-								title: `Use the complete clustering method`
-							}
-							/*{
-								label: `Mcquity`,
-								value: 'mcquity',
-								title: `Use the Mcquity clustering method`
-							}*/
-						]
-					},
-					{
-						label: `Column Dendrogram Height`,
-						title: `The maximum height to render the column dendrogram`,
-						type: 'number',
-						chartType: 'hierCluster',
-						settingsKey: 'yDendrogramHeight'
-					},
-					{
-						label: `Row Dendrogram Width`,
-						title: `The maximum width to render the row dendrogram`,
-						type: 'number',
-						chartType: 'hierCluster',
-						settingsKey: 'xDendrogramHeight'
-					},
-					{
-						label: `Z-Score Cap`,
-						title: `Cap the z-score scale to not exceed this absolute value`,
-						type: 'number',
-						chartType: 'hierCluster',
-						settingsKey: 'zScoreCap'
-					}
-				]
-			})
-			.html(d => d.label)
-			.style('margin', '2px 0')
-			.on('click', callback)
 	}
 
 	async setHierClusterData(_data = {}) {
@@ -458,228 +230,6 @@ export class HierCluster extends Matrix {
 		return this.geneExpValues.scale((value - -zScoreCap) / (zScoreCap * 2))
 	}
 
-	plotDendrogramHclust(plotColOnly) {
-		/*
-		based on hclust() output
-		plotColOnly=true will only render column dendrograms
-		if false will render both row and column
-		*/
-		const d = this.dimensions
-		const s = this.config.settings.matrix
-		const xOffset = d.seriesXoffset // could be negative when zoomed
-		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
-
-		const obj = this.hierClusterData.clustering
-		const row = obj.row
-		const col = obj.col
-		/* both row{} and col{} are hclust() output structure:
-		.merge[]       {n1,n2}
-		.height[]      {height}
-		.order[]       {name}
-		.inputOrder[]  [str]
-		*/
-
-		const rowHeight = this.dimensions.dy,
-			xDendrogramHeight = this.settings.hierCluster.xDendrogramHeight,
-			colWidth = this.dimensions.dx,
-			yDendrogramHeight = this.settings.hierCluster.yDendrogramHeight
-
-		// plot column dendrogram
-		{
-			const height2px = getHclustHeightScalefactor(col.height, yDendrogramHeight)
-
-			const height = yDendrogramHeight + 0.0000001
-			const width = colWidth * col.inputOrder.length
-			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
-			const ctx = canvas.getContext('2d')
-			ctx.scale(pxr, pxr)
-			ctx.imageSmoothingEnabled = false
-			ctx.imageSmoothingQuality = 'high'
-			ctx.strokeStyle = 'black'
-
-			const mergedClusters = new Map()
-			/*
-			as iterating through .merge[], collect merged clusters in here
-			k: cluster id, positive integer, as in row.merge[]
-			v: {
-				x:
-				y:
-				children:[]
-			}
-			*/
-			for (const [clusterid0, pair] of col.merge.entries()) {
-				// pair is {n1,n2}, n1 and n2 form a new cluster; id of which is clusterid
-
-				const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
-				const children = [] // collect all children leaves for this cluster
-				const childrenClusters = [] // collect direct children cluster Ids for this cluster
-
-				let x1, x2, y1, y2
-				if (pair.n1 < 0) {
-					// n1 is leaf
-					const [name, columnNumber] = getLeafNumber(pair.n1, col.inputOrder, col.order)
-					x1 = colWidth * (columnNumber + 0.5)
-					y1 = yDendrogramHeight
-					children.push({ name })
-				} else {
-					// n1 is cluster
-					if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
-					const c = mergedClusters.get(pair.n1)
-					x1 = c.x
-					y1 = c.y
-					children.push(...c.children)
-					childrenClusters.push(pair.n1)
-				}
-				if (pair.n2 < 0) {
-					// n2 is leaf
-					const [name, columnNumber] = getLeafNumber(pair.n2, col.inputOrder, col.order)
-					x2 = colWidth * (columnNumber + 0.5)
-					y2 = yDendrogramHeight
-					children.push({ name })
-				} else {
-					if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
-					const c = mergedClusters.get(pair.n2)
-					x2 = c.x
-					y2 = c.y
-					children.push(...c.children)
-					childrenClusters.push(pair.n2)
-				}
-				// cluster y position
-				const clusterY = yDendrogramHeight - col.height[clusterid0].height * height2px
-
-				const highlight = this.clickedClusterIds?.includes(clusterid)
-				ctx.strokeStyle = highlight ? 'red' : 'black'
-
-				ctx.beginPath()
-				ctx.moveTo(x1, y1) // move to n1
-				ctx.lineTo(x1, clusterY) // vertical line up to cluster
-				ctx.lineTo(x2, clusterY) // h line to n2
-				ctx.lineTo(x2, y2) // v line down to n2
-				ctx.stroke()
-				ctx.closePath()
-
-				mergedClusters.set(clusterid, {
-					x: (x1 + x2) / 2,
-					y: clusterY,
-					children,
-					childrenClusters,
-					clusterPosition: {
-						x1,
-						x2,
-						y1,
-						y2,
-						clusterY
-					}
-				})
-			}
-
-			this.renderImage(this.dom.topDendrogram, canvas, width, height, xDendrogramHeight + 0.5 * colWidth, rowHeight)
-
-			col.mergedClusters = mergedClusters
-		}
-
-		if (plotColOnly) return
-
-		// plot row dendrogram
-		const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
-
-		const width = xDendrogramHeight + 0.0000001
-		const height = rowHeight * row.inputOrder.length
-		const canvas = new OffscreenCanvas(width * pxr, height * pxr)
-		const ctx = canvas.getContext('2d')
-		ctx.scale(pxr, pxr)
-		ctx.imageSmoothingEnabled = false
-		ctx.imageSmoothingQuality = 'high'
-		ctx.strokeStyle = 'black'
-
-		const mergedClusters = new Map()
-		for (const [clusterid0, pair] of row.merge.entries()) {
-			// pair is {n1,n2}, n1 and n2 form a new cluster; id of which is clusterid
-
-			const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
-			const children = [] // collect all children leaves for this cluster
-
-			let x1, x2, y1, y2
-			if (pair.n1 < 0) {
-				// n1 is leaf
-				const [name, rowNumber] = getLeafNumber(pair.n1, row.inputOrder, row.order)
-				y1 = rowHeight * (rowNumber + 0.5)
-				x1 = xDendrogramHeight
-				children.push({ name })
-			} else {
-				// n1 is cluster
-				if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
-				const c = mergedClusters.get(pair.n1)
-				x1 = c.x
-				y1 = c.y
-				children.push(...c.children)
-			}
-			if (pair.n2 < 0) {
-				// n2 is leaf
-				const [name, rowNumber] = getLeafNumber(pair.n2, row.inputOrder, row.order)
-				y2 = rowHeight * (rowNumber + 0.5)
-				x2 = xDendrogramHeight
-				children.push({ name })
-			} else {
-				if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
-				const c = mergedClusters.get(pair.n2)
-				x2 = c.x
-				y2 = c.y
-				children.push(...c.children)
-			}
-			// cluster x position
-			const clusterX = xDendrogramHeight - row.height[clusterid0].height * height2px
-
-			ctx.beginPath()
-			ctx.moveTo(x1, y1) // move to n1
-			ctx.lineTo(clusterX, y1) // h line right to cluster
-			ctx.lineTo(clusterX, y2) // v line down to n2
-			ctx.lineTo(x2, y2) // h line left to n2
-			ctx.stroke()
-			ctx.closePath()
-
-			mergedClusters.set(clusterid, {
-				x: clusterX,
-				y: (y1 + y2) / 2,
-				children
-			})
-		}
-
-		const t = this.termOrder.find(t => t.grp.type == 'hierCluster' || t.grp.name == this.hcTermGroup.name)
-		const ty =
-			//t.labelOffset is commented out because it causes row dendrogram to be misrendered
-			t.grpIndex * s.rowgspace + t.prevGrpTotalIndex * d.dy /* + (t.labelOffset || 0) */ + t.totalHtAdjustments
-		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, ty + yDendrogramHeight + 1.5 * rowHeight)
-
-		row.mergedClusters = mergedClusters
-	}
-
-	async renderImage(g, canvas, width, height, x, y) {
-		const reader = new FileReader()
-		reader.addEventListener(
-			'load',
-			() => {
-				// remove a previously rendered image, if applicable, right before replacing it
-				// so that there will be no flicker on update
-				g.selectAll('*').remove()
-
-				g.append('image') //.attr('transform', `translate(${x},${y})`)
-					.attr('x', x + 0.033)
-					.attr('y', y + 0.033)
-					.attr('xlink:href', reader.result)
-					.attr('width', width)
-					.attr('height', height)
-			},
-			false
-		)
-		const blob = await canvas.convertToBlob({ quality: 1 })
-		reader.readAsDataURL(blob)
-		// g.selectAll('*').remove()
-		// const foCanvas = g.append('foreignObject').append('canvas').attr('width', width).attr('height', height).node()
-		// const bitmap = canvas.transferToImageBitmap();
-		// foCanvas.getContext("bitmaprenderer").transferFromImageBitmap(bitmap);
-	}
-
 	/* returns list of gene terms as request parameter, e.g. {gene,chr,start,stop}
 	request parameter only need term but not tw, as it will simply fetch continuous sample values on terms without transform
 
@@ -718,6 +268,10 @@ export class HierCluster extends Matrix {
 		lst.sort((a, b) => (a.name < b.name ? -1 : 1))
 		return lst
 	}
+}
+
+for (const methods of [renderers, interactivity]) {
+	for (const methodName in methods) HierCluster.prototype[methodName] = methods[methodName]
 }
 
 export const hierClusterInit = getCompInit(HierCluster)
@@ -888,31 +442,4 @@ export async function getPlotConfig(opts = {}, app) {
 
 	config.settings.matrix.maxSample = 100000
 	return config
-}
-
-function maySetSandboxHeader(self) {
-	// run only once upon init, after state and dataType is given
-	if (!self.dom.header) return // no header
-	switch (self.config.settings.hierCluster.dataType) {
-		case dtgeneexpression:
-			self.dom.header.text('Gene Expression Clustering')
-			break
-		default:
-			throw 'unknown hierCluster.dataType to set header'
-	}
-}
-
-function getHclustHeightScalefactor(lst, ph) {
-	// scale hclust$height to on-screen max height (h) in number of pixels
-	let max = lst[0].height
-	for (const h of lst) max = Math.max(max, h.height)
-	return ph / max
-}
-
-function getLeafNumber(minus, inputOrder, order) {
-	const name = inputOrder[-minus - 1]
-	if (!name) throw 'minus not in inputOrder'
-	const i = order.findIndex(j => j.name == name)
-	if (i == -1) throw 'name not found in hc$order'
-	return [name, i]
 }

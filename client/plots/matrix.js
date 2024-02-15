@@ -148,20 +148,8 @@ export class Matrix {
 			// use structuredClone to avoid overwriting of original settings.matrix
 			Object.assign(this.settings, structuredClone(this.config.settings), this.controlsRenderer.getSettings())
 
-			// these request bodies will be used to detect the need to make another server request
-			this.currRequestOpts = {
-				matrix: this.getMatrixRequestOpts(this.state),
-				hierCluster: this.getHCRequestBody?.(this.state)
-			}
-			console.log(161, this.currRequestOpts)
 			// see matrix.data for logic to be able to skip server data request or re-ordering
 			this.computeStateDiff()
-			console.log(157, this.stateDiff)
-			// must remember the previous state right away, so that subsequent computeStateDiffs
-			// has the correct reference in case of errors
-			this.prevState = this.state
-			this.prevRequestOpts = structuredClone(this.currRequestOpts)
-
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
 
@@ -208,9 +196,9 @@ export class Matrix {
 			}
 
 			if (
-				!this.sampleOrder.length &&
-				!this.config.legendGrpFilter.lst.length &&
-				!this.config.legendValueFilter.lst.length
+				!this.sampleOrder?.length &&
+				!this.config.legendGrpFilter?.lst.length &&
+				!this.config.legendValueFilter?.lst.length
 			) {
 				this.showNoMatchingDataMessage()
 				return
@@ -344,8 +332,8 @@ export class Matrix {
 
 // assign class prototype methods and props that are exported from other matrix.* code files
 for (const m of [matrixData, matrixGroups, matrixLayout, matrixSerieses, matrixLegend]) {
-	for (const key in m) {
-		Matrix.prototype[key] = m[key]
+	for (const methodName in m) {
+		Matrix.prototype[methodName] = m[methodName]
 	}
 }
 
