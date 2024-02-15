@@ -1930,9 +1930,14 @@ async function click_groupheader_showMultiReadAlign(tk, group, block) {
 
 	try {
 		const data = await align_reads_to_allele(tk, group, block) // Sending server side bam request for aligning reads to ref/alt
-		if (data.error) throw data.error
-		wait.remove()
+		if (data.error) {
+			wait.remove()
+			sayerror(tk.multiAlignMenu.d, 'Realignment of reads in ambiguous group is not currently implemented.')
+			setTimeout(() => tk.multiAlignMenu.d.remove(), 3000)
+			return
+		}
 
+		wait.remove()
 		let alt_var_idx = 0 // Contains the index of the alternate allele (if queried) of the selected alternate allele
 		// If one of the alternate alles are clicked, determine which alternate allele
 		let ref_start_stops = []
@@ -2296,7 +2301,6 @@ async function getReadInfo(tk, block, box, ridx) {
 			: { start: box.start, stop: box.stop, paired: tk.asPaired }
 	)
 	const data = await dofetch3('tkbam', param)
-	console.log('data:', data)
 	if (data.error) {
 		sayerror(wait, data.error)
 		return
