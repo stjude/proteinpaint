@@ -13,6 +13,12 @@ export function computeStateDiff() {
 	const s = this.settings.matrix
 	const prevState = structuredClone(this.prevState)
 	const currState = structuredClone(this.state)
+	// these request bodies will be used to detect the need to make another server request
+	this.currRequestOpts = {
+		matrix: this.getMatrixRequestOpts(currState),
+		hierCluster: this.getHCRequestBody?.(currState)
+	}
+
 	delete prevState.config?.settings
 	delete prevState.isVisible
 	delete currState.config.settings
@@ -78,6 +84,11 @@ export function computeStateDiff() {
 			}
 		)
 	}
+
+	// must remember the previous state right away, so that subsequent computeStateDiffs
+	// has the correct reference in case of errors
+	this.prevState = this.state
+	this.prevRequestOpts = structuredClone(this.currRequestOpts)
 }
 
 export function mayRequireToken(tokenMessage = '') {
@@ -148,6 +159,7 @@ function normalizeTwForRequest(tw) {
 	// and only filled in as data comes in, should ignore this
 	// computed value as to avoid affecting tracked state
 	delete tw.term.values
+	return tw
 }
 
 function sortTwLst(twa, twb) {
