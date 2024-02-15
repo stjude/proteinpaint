@@ -18,7 +18,6 @@ export class Matrix {
 		this.type = 'matrix'
 		this.holderTitle = 'Sample Matrix'
 		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.matrix || []
-		this.prevState = { config: { settings: {} } }
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -148,52 +147,43 @@ export class Matrix {
 			// use structuredClone to avoid overwriting of original settings.matrix
 			Object.assign(this.settings, structuredClone(this.config.settings), this.controlsRenderer.getSettings())
 
-			// see matrix.data for logic to be able to skip server data request or re-ordering
-			this.computeStateDiff()
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
+			this.dom.svg.style('opacity', 0.001).style('pointer-events', 'none')
+			// reset highlighted dendrogram children to black when data request is triggered
+			delete this.clickedChildren
 
-			// may skip data requests when changes are not expected to affect the request payload
-			if (this.stateDiff.nonsettings) {
-				this.dom.svg.style('opacity', 0.001).style('pointer-events', 'none')
-				// reset highlighted dendrogram children to black when data request is triggered
-				delete this.clickedChildren
-				try {
-					const promises = []
-					// get the data
-					if (this.setHierClusterData) promises.push(this.setHierClusterData())
-					promises.push(this.setData())
-					this.dom.loadingDiv.html('Processing data ...')
-					await Promise.all(promises)
-					this.applyLegendValueFilter()
-					if (this.combineData) this.combineData()
-					// tws in the config may be filled-in based on applicable server response data;
-					// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
-					// the corresponding tracked state values in the app store, without causing unnecessary
-					// dispatch notifications, so use app.save()
-					this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
-				} catch (e) {
-					if (e == 'no data') {
-						this.showNoMatchingDataMessage()
-						return
-					} else if (e == 'stale sequenceId' || e.name == 'AbortError') {
-						// ignore this error, but skip this update since a subsequent action is being processed
-						return
-					} else {
-						this.dom.svg.style('display', 'none')
-						throw e
-					}
+			try {
+				const promises = []
+				// get the data
+				if (this.setHierClusterData) promises.push(this.setHierClusterData())
+				promises.push(this.setData())
+				this.dom.loadingDiv.html('Processing data ...')
+				await Promise.all(promises)
+				this.applyLegendValueFilter()
+				if (this.combineData) this.combineData()
+				// tws in the config may be filled-in based on applicable server response data;
+				// these filled-in config, such as tw.term.values|category2samplecount, will need to replace
+				// the corresponding tracked state values in the app store, without causing unnecessary
+				// dispatch notifications, so use app.save()
+				this.app.save({ type: 'plot_edit', id: this.id, config: this.config })
+			} catch (e) {
+				if (e == 'no data') {
+					this.showNoMatchingDataMessage()
+					return
+				} else if (e == 'stale sequenceId' || e.name == 'AbortError') {
+					// ignore this error, but skip this update since a subsequent action is being processed
+					return
+				} else {
+					this.dom.svg.style('display', 'none')
+					throw e
 				}
 			}
 
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
-			// may skip term or sample ordering when there are
-			// no relevant state/config/setting changes
-			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
-				this.termOrder = this.getTermOrder(this.data)
-				this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
-				this.sampleOrder = this.getSampleOrder(this.data)
-			}
+			this.termOrder = this.getTermOrder(this.data)
+			this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
+			this.sampleOrder = this.getSampleOrder(this.data)
 
 			if (
 				!this.sampleOrder?.length &&
