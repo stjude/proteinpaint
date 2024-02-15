@@ -261,17 +261,6 @@ export function setLabelsAndScales() {
 					.domain([domainMax, t.counts.minval])
 					.range([1, barh - t.counts.posMaxHt - t.tw.settings.gap])
 			}
-		} else if (t.tw.term.type == 'geneVariant') {
-			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
-				t.scales = {
-					loss: interpolateBlues,
-					gain: interpolateReds,
-					maxLoss: this.cnvValues.maxLoss,
-					maxGain: this.cnvValues.maxGain,
-					minLoss: this.cnvValues.minLoss,
-					minGain: this.cnvValues.minGain
-				}
-			}
 		}
 
 		t.totalHtAdjustments = totalHtAdjustments
@@ -285,6 +274,22 @@ export function setLabelsAndScales() {
 		if (!(t.visibleGrpIndex in grpTotals)) grpTotals[t.visibleGrpIndex] = { htAdjustment: 0 }
 		grpTotals[t.visibleGrpIndex].htAdjustment += adjustment
 		t.grpTotals = grpTotals[t.visibleGrpIndex]
+	}
+
+	// need to assign scales to terms after the loop above so each term has the global maxLoss, maxGain, minLoss, minGain
+	for (const t of this.termOrder) {
+		if (t.tw.term.type == 'geneVariant') {
+			if ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues) {
+				t.scales = {
+					loss: interpolateBlues,
+					gain: interpolateReds,
+					maxLoss: this.cnvValues.maxLoss,
+					maxGain: this.cnvValues.maxGain,
+					minLoss: this.cnvValues.minLoss,
+					minGain: this.cnvValues.minGain
+				}
+			}
+		}
 	}
 }
 
