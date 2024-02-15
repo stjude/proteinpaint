@@ -11,8 +11,8 @@ import { sample_match_termvaluesetting } from '../common/termutils'
 //
 export function computeStateDiff() {
 	const s = this.settings.matrix
-	const prevState = JSON.parse(JSON.stringify(this.prevState))
-	const currState = JSON.parse(JSON.stringify(this.state))
+	const prevState = structuredClone(this.prevState)
+	const currState = structuredClone(this.state)
 	delete prevState.config?.settings
 	delete prevState.isVisible
 	delete currState.config.settings
@@ -22,24 +22,9 @@ export function computeStateDiff() {
 	const phc = this.prevState.config.settings.hierCluster || {}
 	const chc = this.state.config.settings.hierCluster || {}
 
-	if (this.type == 'hierCluster') {
-		// only apply to copy of termgroups, not the original one
-		for (const tg of [prevState.termgroups, currState.termgroups]) {
-			if (!tg) continue
-			const hcTermGroup = tg.find(g => g.type == 'hierCluster')
-			if (hcTermGroup) hcTermGroup.lst.sort((a, b) => (a.$id < b.$id ? -1 : 1))
-			for (const g of tg) {
-				if (g == hcTermGroup) continue
-				// for dictionary terms from external APIs, the term details may not be fully available at server restart,
-				// only the term.id is imporatant for comparison, the other term details that are filled should not matter
-				grp.lst = grp.lst.map(tw => tw.term.id || tw.term.name || tw.term.gene)
-			}
-		}
-	}
-
 	this.stateDiff = {
 		// state diff that should trigger a different server request
-		nonsettings: !deepEqual(prevState, currState),
+		nonsettings: !deepEqual(this.prevRequestOpts, this.currRequestOpts),
 		// state/config/settings diffs that trigger re-sorting
 		sorting: !deepEqual(
 			{
@@ -110,7 +95,7 @@ export function mayRequireToken(tokenMessage = '') {
 	}
 }
 
-export async function setData(_data) {
+export function getMatrixRequestOpts(state) {
 	/* requests data for all terms shown in matrix,
 		by creating request argument for getAnnotatedSampleData and run it
 		NOTE this excludes the term group used for hierCluster, as its data request is done separately
@@ -119,22 +104,19 @@ export async function setData(_data) {
 
 	const termgroups =
 		this.chartType == 'hierCluster'
-			? this.config.termgroups.filter(grp => grp != this.hcTermGroup)
-			: this.config.termgroups
-	for (const grp of termgroups) {
-		terms.push(...grp.lst)
-	}
-	if (this.config.divideBy) terms.push(this.config.divideBy)
-	this.numTerms = terms.length
+			? state.config.termgroups.filter(grp => grp.type != 'hierCluster')
+			: state.config.termgroups
 
-	const abortCtrl = new AbortController()
+	for (const grp of termgroups) {
+		terms.push(...getNormalizedTwLstCopy(grp.lst))
+	}
+	if (state.config.divideBy) terms.push(normalizeTwForRequest(state.config.divideBy))
+
 	const opts = {
 		terms,
-		filter: this.state.filter,
-		filter0: this.state.filter0,
-		loadingDiv: this.chartType != 'hierCluster' && this.dom.loadingDiv,
-		maxGenes: this.state.config.settings.matrix.maxGenes,
-		signal: abortCtrl.signal
+		filter: state.filter,
+		filter0: state.filter0,
+		maxGenes: state.config.settings.matrix.maxGenes
 		//termsPerRequest: 100 // this is just for testing
 	}
 
@@ -145,6 +127,42 @@ export async function setData(_data) {
 			*/
 		opts.isHierCluster = 1
 	}
+
+	return opts
+}
+
+function getNormalizedTwLstCopy(twlst) {
+	const lst = structuredClone(twlst)
+	lst.forEach(normalizeTwForRequest)
+	lst.sort(sortTwLst)
+	return lst
+}
+
+function normalizeTwForRequest(tw) {
+	if (!tw?.term) return
+	// These props are cohort-dependent and should be ignored like termfilter.filter0.
+	// Note that state filter, filter0 are always sent to the server for dataset-related requests,
+	// which indirectly covers the computed properties below that are being deleted.
+	delete tw.term.category2samplecount
+	// for GDC, the term.values may not be known ahead of time
+	// and only filled in as data comes in, should ignore this
+	// computed value as to avoid affecting tracked state
+	delete tw.term.values
+}
+
+function sortTwLst(twa, twb) {
+	const a = twa?.$id || twa.term?.id || twa?.term?.name
+	const b = twb?.$id || twb.term?.id || twb?.term?.name
+	return a < b ? -1 : 1
+}
+
+export async function setData(_data) {
+	const opts = this.currRequestOpts?.matrix || this.getMatrixRequestOpts(this.state)
+	this.numTerms = opts.terms.length
+	const abortCtrl = new AbortController()
+	opts.signal = abortCtrl.signal
+	opts.loadingDiv = this.chartType != 'hierCluster' && this.dom.loadingDiv
+
 	const [data, stale] = await this.api.detectStale(() => this.app.vocabApi.getAnnotatedSampleData(opts, _data), {
 		abortCtrl
 	})
@@ -159,7 +177,8 @@ export async function setData(_data) {
 	}
 }
 
-export function applyLegendValueFilter(self) {
+export function applyLegendValueFilter() {
+	const self = this
 	if (!self.config.legendValueFilter.lst.length && !self.config.legendGrpFilter.lst.length) return
 
 	for (const grpFilter of self.config.legendGrpFilter.lst) {

@@ -296,10 +296,6 @@ export class HierCluster extends Matrix {
 	}
 
 	async setHierClusterData(_data = {}) {
-		this.hcTermGroup =
-			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
-			this.termOrder?.find(t => t.grp.type == 'hierCluster')?.grp
-
 		const abortCtrl = new AbortController()
 		const [d, stale] = await this.api.detectStale(() => this.requestData({ signal: abortCtrl.signal }), { abortCtrl })
 		if (stale) throw `stale sequenceId`
@@ -386,28 +382,37 @@ export class HierCluster extends Matrix {
 	}
 
 	async requestData({ signal }) {
+		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
+		return await dofetch3('termdb/cluster', { body, signal })
+	}
+
+	getHCRequestBody(state) {
+		this.hcTermGroup =
+			this.config.termgroups.find(grp => grp.type == 'hierCluster') ||
+			this.termOrder?.find(t => t.grp.type == 'hierCluster')?.grp
+
+		const s = state.config.settings.hierCluster
 		// temporary fix to get rid of hard/soft filter and only keep dictionary legend filter,
 		// soft filter shouldn't be used to filter out any samples for hierCluster
 		// TODO: add hard filter back to filter out samples
-		const s = this.config.settings.hierCluster
 		const dictionaryLegendFilter = {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: this.state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
+			lst: state.config.legendValueFilter.lst.filter(f => !f.tvs.legendFilterType)
 		}
 		const genes = this.getClusterRowTermsAsParameter()
 		if (!genes.length) throw 'no data'
 		const body = {
-			genome: this.state.vocab.genome,
-			dslabel: this.state.vocab.dslabel,
+			genome: state.vocab.genome,
+			dslabel: state.vocab.dslabel,
 			dataType: s.dataType,
 			genes,
 			clusterMethod: s.clusterMethod,
-			filter: getNormalRoot(filterJoin([this.state.filter, dictionaryLegendFilter])),
-			filter0: this.state.filter0
+			filter: getNormalRoot(filterJoin([state.filter, dictionaryLegendFilter])),
+			filter0: state.filter0
 		}
-		return await dofetch3('termdb/cluster', { body, signal })
+		return body
 	}
 
 	combineData() {
