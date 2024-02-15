@@ -170,6 +170,10 @@ export class HierCluster extends Matrix {
 		}
 		const genes = this.getClusterRowTermsAsParameter()
 		if (!genes.length) throw 'no data'
+		// !!! NOTE !!!
+		// all parameters here must remove payload properties that are
+		// not relevant to the data request, so that the dofetch and/or
+		// browser caching would work
 		const body = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,

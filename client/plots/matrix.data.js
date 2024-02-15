@@ -1,97 +1,6 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx'
 import { sample_match_termvaluesetting } from '../common/termutils'
 
-// track state diff to be able to skip server data request
-// and term/sample order recomputation, as needed
-//
-// !!! NOTE !!!
-// May have to add properties in getState() or
-// in one of the "diffs" below, if the matrix does not react
-// to data, ordering, sorting changes
-//
-export function computeStateDiff() {
-	const s = this.settings.matrix
-	const prevState = structuredClone(this.prevState)
-	const currState = structuredClone(this.state)
-
-	// these request bodies will be used to detect the need to make another data request
-	this.currRequestOpts = {
-		matrix: this.getMatrixRequestOpts(currState),
-		hierCluster: this.getHCRequestBody?.(currState)
-	}
-
-	delete prevState.config?.settings
-	delete prevState.isVisible
-	delete currState.config.settings
-	delete currState.isVisible
-	const p = this.prevState.config.settings?.matrix || {}
-	const c = this.state.config.settings.matrix
-	const phc = this.prevState.config.settings.hierCluster || {}
-	const chc = this.state.config.settings.hierCluster || {}
-
-	this.stateDiff = {
-		// state diff that should trigger a different server request
-		nonsettings: !deepEqual(this.prevRequestOpts, this.currRequestOpts),
-		// state/config/settings diffs that trigger re-sorting
-		sorting: !deepEqual(
-			{
-				maxSample: p.maxSample,
-				sortPriority: p.sortPriority,
-				sampleNameFilter: p.sampleNameFilter,
-				sortSamplesBy: p.sortSamplesBy,
-				sortSampleGrpsBy: p.sortSampleGrpsBy,
-				sortSamplesTieBreakers: p.sortSamplesTieBreakers,
-				sortTermsBy: p.sortTermsBy,
-				// TODO: take out dimension related computations in setTermOrder,
-				// so that sorting is not affected by rowh
-				rowh: p.rowh,
-				clusterMethod: phc.clusterMethod
-			},
-			{
-				maxSample: c.maxSample,
-				sortPriority: c.sortPriority,
-				sampleNameFilter: c.sampleNameFilter,
-				sortSamplesBy: c.sortSamplesBy,
-				sortSampleGrpsBy: c.sortSampleGrpsBy,
-				sortSamplesTieBreakers: c.sortSamplesTieBreakers,
-				sortTermsBy: c.sortTermsBy,
-				// TODO: take out dimension related computations in setTermOrder,
-				// so that sorting is not affected by rowh
-				rowh: c.rowh,
-				clusterMethod: chc.clusterMethod
-			}
-		),
-		// state/config/settings that trigger canvas re-rendering
-		cellDimensions: !deepEqual(
-			{
-				transpose: p.transpose,
-				zoomLevel: p.zoomLevel,
-				rowh: p.rowh,
-				rowspace: p.rowspace,
-				rowgspace: p.rowgspace,
-				colw: p.colw,
-				colspace: p.colspace,
-				colgspace: p.colgspace
-			},
-			{
-				transpose: c.transpose,
-				zoomLevel: c.zoomLevel,
-				rowh: c.rowh,
-				rowspace: c.rowspace,
-				rowgspace: c.rowgspace,
-				colw: c.colw,
-				colspace: c.colspace,
-				colgspace: c.colgspace
-			}
-		)
-	}
-
-	// must remember the previous state right away, so that subsequent computeStateDiffs
-	// has the correct reference in case of errors
-	this.prevState = this.state
-	this.prevRequestOpts = structuredClone(this.currRequestOpts)
-}
-
 export function mayRequireToken(tokenMessage = '') {
 	const message = tokenMessage || this.state.tokenVerificationMessage
 	if (!message && this.state.hasVerifiedToken) {
@@ -124,6 +33,10 @@ export function getMatrixRequestOpts(state) {
 	}
 	if (state.config.divideBy) terms.push(normalizeTwForRequest(state.config.divideBy))
 
+	// !!! NOTE !!!
+	// all parameters here must remove payload properties that are
+	// not relevant to the data request, so that the dofetch and/or
+	// browser caching would work
 	const opts = {
 		terms,
 		filter: state.filter,
