@@ -140,7 +140,7 @@ export default class CnvArcsMapper {
 
 		if (this.lossOnly) {
 			const outerRadius = this.cnvInnerRadius + this.cnvWidth
-			return outerRadius - this.capMinValue((this.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
+			return outerRadius + this.capMinValue((this.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
 		}
 
 		const centerRadius = this.cnvInnerRadius + this.cnvWidth / 2
