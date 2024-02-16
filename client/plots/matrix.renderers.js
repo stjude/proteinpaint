@@ -69,9 +69,6 @@ export function setRenderers(self) {
 	}
 
 	self.renderCanvas = async function (serieses, g, d, s, _g, duration) {
-		const df = self.stateDiff
-		// no need to re-render the canvas if there are no data, sorting, or dimension changes
-		if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
 		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
 		// TODO: may not need to remove the image???
 		g.selectAll('*').remove()

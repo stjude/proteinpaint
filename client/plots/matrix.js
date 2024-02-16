@@ -149,7 +149,7 @@ export class Matrix {
 
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
-			this.dom.svg.style('opacity', 0.001).style('pointer-events', 'none')
+			this.dom.svg.style('opacity', 0.1).style('pointer-events', 'none')
 			// reset highlighted dendrogram children to black when data request is triggered
 			delete this.clickedChildren
 
