@@ -170,7 +170,7 @@ class singleCellPlot {
 		const cat2Color = getColors(clusters.length)
 		const colorMap = {}
 		plot.colorMap = colorMap
-		for (const cluster of clusters) colorMap[cluster] = cat2Color(cluster)
+		for (const cluster of clusters) colorMap[cluster] = cluster == 'ref' ? '#F2F2F2' : cat2Color(cluster)
 		this.initAxes(plot)
 
 		this.headerTr
@@ -214,8 +214,8 @@ class singleCellPlot {
 			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
 			.append('circle')
 			.attr('r', 2)
-			.attr('fill', d => cat2Color(d.category))
-			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 1))
+			.attr('fill', d => colorMap[d.category])
+			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
 
 		this.renderLegend(legendG, plot)
 	}

@@ -327,6 +327,7 @@ type SingleCellPlot = {
 	folder: string
 	fileSuffix: string
 	colorColumn: ColorColumn
+	coordsColumns: { x: number; y: number }
 }
 export type SingleCellDataNative = {
 	src: 'native'
