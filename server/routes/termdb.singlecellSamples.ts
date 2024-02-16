@@ -150,8 +150,8 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					// each line is a cell
 					const l = lines[i].split('\t')
 					const cellId = l[0],
-						x = Number(l[4]), // FIXME standardize, or define idx in plot
-						y = Number(l[5])
+						x = Number(l[plot.coordsColumns.x]), // FIXME standardize, or define idx in plot
+						y = Number(l[plot.coordsColumns.y])
 					const category = l[plot.colorColumn?.index] || ''
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
