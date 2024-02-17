@@ -600,7 +600,7 @@ function renderCustomBinInputs(self, tablediv: any) {
 			self.renderBinLines!(self, q)
 		}
 		renderBoundaryInputDivs(self, q.lst)
-		self.q = q
+		//self.q = q
 	}
 
 	function binsChanged(data, qlst) {
