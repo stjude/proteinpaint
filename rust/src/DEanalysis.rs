@@ -24,6 +24,31 @@ use std::time::Instant;
 use std::io;
 //mod stats_functions; // Importing Wilcoxon function from stats_functions.rs
 
+fn binary_search(input: &Vec<usize>, y: usize) -> i64 {
+    let input_dup = &input[..];
+    let mut index: i64 = -1;
+    let mut l: usize = 0;
+    let mut r: usize = input_dup.len() - 1;
+    let mut m: usize;
+    while l <= r {
+        m = l + ((r - l) / 2);
+        if y == input_dup[m] {
+            index = m as i64;
+            break;
+        } else if y > input_dup[m] {
+            l = m + 1;
+        }
+        // If x is smaller, ignore right half
+        else {
+            if m == 0 as usize {
+                break;
+            }
+            r = m - 1;
+        }
+    }
+    index
+}
+
 fn input_data(
     filename: &String,
     case_list: &Vec<&str>,
@@ -82,19 +107,24 @@ fn input_data(
     }
     //println!("case_indexes_original:{:?}", case_indexes_original);
     //println!("control_indexes_original:{:?}", control_indexes_original);
+    case_indexes_original.sort();
+    case_indexes_original.dedup();
+    control_indexes_original.sort();
+    control_indexes_original.dedup();
 
     let mut case_indexes: Vec<usize> = Vec::with_capacity(case_list.len());
     let mut control_indexes: Vec<usize> = Vec::with_capacity(control_list.len());
-    for line_iter in 1..lines.len() - 1 {
-        // Subtracting 1 from total length of lines because the last one will be empty
-        let line = lines[line_iter];
+    let lines_slice = &lines[..];
+    for line_iter in 1..lines_slice.len() - 1 {
+        // Subtracting 1 from total length of lines_slice because the last one will be empty
+        let line = lines_slice[line_iter];
         let mut index = 0;
         for field in line.split('\t').collect::<Vec<&str>>() {
             if index == gene_name_index.unwrap() {
                 gene_names.push(field.to_string());
             } else if index == gene_symbol_index.unwrap() {
                 gene_symbols.push(field.to_string());
-            } else if case_indexes_original.contains(&index) {
+            } else if binary_search(&case_indexes_original, index) != -1 {
                 let num = FromStr::from_str(field);
                 match num {
                     Ok(n) => {
@@ -114,7 +144,7 @@ fn input_data(
                         );
                     }
                 }
-            } else if control_indexes_original.contains(&index) {
+            } else if binary_search(&control_indexes_original, index) != -1 {
                 let num = FromStr::from_str(field);
                 match num {
                     Ok(n) => {
