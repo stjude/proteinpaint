@@ -215,7 +215,7 @@ export class InputTerm {
 		if (tw.q.numOfSampleWithAnyValidGT) {
 			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
 			this.termStatus.topInfoStatus.push(
-				`${tw.q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
+				`${tw.q.numOfSampleWithAnyValidGT} samples with valid genotypes` +
 					(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '')
 			)
 		}
@@ -233,6 +233,11 @@ export class InputTerm {
 		}
 		if (tw.q.restrictAncestry) {
 			this.termStatus.topInfoStatus.push('Analyzing ' + tw.q.restrictAncestry.name)
+			if (tw.q.restrictAncestry.PCcount) {
+				this.termStatus.topInfoStatus.push(
+					`Adjusting for top ${tw.q.restrictAncestry.PCcount} ancestry principal components`
+				)
+			}
 		}
 		if (tw.term.reachedVariantLimit) {
 			this.termStatus.topInfoStatus.push(

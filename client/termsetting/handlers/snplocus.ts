@@ -105,7 +105,8 @@ async function makeEditMenu(self, div0: any) {
 	if (self.usecase.target == 'dataDownload') div.select('.sjpp-snp-select').style('display', 'none')
 
 	// submit button
-	div
+	const btnRow = div.append('div').style('margin-top', '15px')
+	btnRow
 		.append('button')
 		.style('margin-top', '15px')
 		.text('Submit')
@@ -154,6 +155,15 @@ async function makeEditMenu(self, div0: any) {
 
 			self.runCallback()
 		})
+
+	btnRow
+		.append('span')
+		.style('padding-left', '15px')
+		.style('opacity', 0.8)
+		.style('font-size', '.8em')
+		.text(
+			self.usecase.target == 'dataDownload' ? '' : 'Variants will be treated individually in separate regression models'
+		)
 }
 
 /* 

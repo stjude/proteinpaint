@@ -78,7 +78,7 @@ export function make(q, res, ds, genome) {
 function addRestrictAncestries(c, tdb) {
 	if (!tdb.restrictAncestries) return
 	c.restrictAncestries = tdb.restrictAncestries.map(i => {
-		return { name: i.name, tvs: i.tvs }
+		return { name: i.name, tvs: i.tvs, PCcount: i.PCcount }
 	})
 }
 
