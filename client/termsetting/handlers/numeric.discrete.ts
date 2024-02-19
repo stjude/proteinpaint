@@ -600,7 +600,7 @@ function renderCustomBinInputs(self, tablediv: any) {
 			self.renderBinLines!(self, q)
 		}
 		renderBoundaryInputDivs(self, q.lst)
-		self.q.lst = q.lst
+		self.q.lst = q.lst //store the new ranges in self.q, the mode is initialized when selecting the tab
 	}
 
 	function binsChanged(data, qlst) {
