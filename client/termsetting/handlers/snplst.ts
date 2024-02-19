@@ -308,7 +308,11 @@ async function makeEditMenu(self, div0: any) {
 		.style('padding-left', '15px')
 		.style('opacity', 0.8)
 		.style('font-size', '.8em')
-		.text('Must press submit button to apply changes.')
+		.text(
+			self.usecase.target == 'dataDownload'
+				? ''
+				: 'Variants will be treated as separate covariates in the regression model'
+		)
 
 	// both input and edit UIs are rendered
 	// decide visibility of edit and input UIs
