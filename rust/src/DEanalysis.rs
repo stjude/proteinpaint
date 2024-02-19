@@ -15,7 +15,8 @@ use statrs::statistics::Data;
 use statrs::statistics::Distribution;
 use statrs::statistics::Median;
 use std::cmp::Ordering;
-use std::path::Path;
+use std::fs::File;
+use std::io::Read;
 use std::str::FromStr;
 use std::time::Instant;
 //use std::cmp::Ordering;
@@ -34,9 +35,8 @@ fn input_data(
     Vec<String>,
     Vec<String>,
 ) {
-    // Build the CSV reader and iterate over each record.
-    let path = Path::new(filename);
-    let mut rdr = csv::Reader::from_path(path).unwrap();
+    //let mut rdr = csv::Reader::from_path(path).unwrap();
+    let mut file = File::open(filename).unwrap();
     let mut num_lines: usize = 0;
     let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
     let mut gene_names: Vec<String> = Vec::with_capacity(65000);
@@ -44,11 +44,11 @@ fn input_data(
     let mut num_columns: usize = 0;
 
     // Check headers for samples
-    let header_line = rdr.headers().unwrap();
-    let mut headers: Vec<&str> = Vec::with_capacity(1500);
-    for field in header_line.iter() {
-        headers = field.split('\t').collect::<Vec<&str>>();
-    }
+    let mut buffer = String::new();
+    file.read_to_string(&mut buffer).unwrap();
+    // Check headers for samples
+    let lines: Vec<&str> = buffer.split('\n').collect::<Vec<&str>>();
+    let headers: Vec<&str> = lines[0].split('\t').collect::<Vec<&str>>();
     //println!("headers:{:?}", headers);
     let mut case_indexes_original: Vec<usize> = Vec::with_capacity(case_list.len());
     let mut control_indexes_original: Vec<usize> = Vec::with_capacity(control_list.len());
@@ -85,13 +85,11 @@ fn input_data(
 
     let mut case_indexes: Vec<usize> = Vec::with_capacity(case_list.len());
     let mut control_indexes: Vec<usize> = Vec::with_capacity(control_list.len());
-    for result in rdr.records() {
-        // The iterator yields Result<StringRecord, Error>, so we check the
-        // error here.
-        let record = result.unwrap();
-        //println!("record:{:?}", record);
+    for line_iter in 1..lines.len() - 1 {
+        // Subtracting 1 from total length of lines because the last one will be empty
+        let line = lines[line_iter];
         let mut index = 0;
-        for field in record[0].split('\t').collect::<Vec<&str>>() {
+        for field in line.split('\t').collect::<Vec<&str>>() {
             if index == gene_name_index.unwrap() {
                 gene_names.push(field.to_string());
             } else if index == gene_symbol_index.unwrap() {
@@ -143,6 +141,10 @@ fn input_data(
     }
     //println!("case_indexes:{:?}", case_indexes);
     //println!("control_indexes:{:?}", control_indexes);
+    //println!("num_lines:{}", num_lines);
+    //println!("num_columns:{}", num_columns);
+    //println!("num_lines * num_columns:{}", num_lines * num_columns);
+    //println!("input_vector:{:?}", input_vector.len());
 
     let dm = DMatrix::from_row_slice(num_lines, num_columns, &input_vector);
     //println!("dm:{:?}", dm);
