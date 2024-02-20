@@ -1,2 +1,1 @@
-Fixes:
-- Reload page while streaming/downloading gdc bam slice to client will not crash server
+

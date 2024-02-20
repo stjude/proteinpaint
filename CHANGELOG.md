@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - when downloading GDC bam slice (no caching), do not limit request region max size;
+- Reload page while streaming/downloading gdc bam slice to client will not crash server
 
 
 ## 2.41.0
