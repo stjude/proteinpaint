@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.41.1
 
 Fixes:
 - when downloading GDC bam slice (no caching), do not limit request region max size;
