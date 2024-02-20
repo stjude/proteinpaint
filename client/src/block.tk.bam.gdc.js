@@ -1,4 +1,3 @@
-import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '../dom/sayerror'
 import { first_genetrack_tolist } from '#common/1stGenetk'
@@ -191,7 +190,7 @@ export async function bamsliceui({
 	const defaultSearchString = inputValue || urlp.get('gdc_id')
 	if (defaultSearchString) {
 		// default search string is supplied either from runpp() or url. this is for testing only
-		gdcid_input.property('value', defaultSearchString).node().dispatchEvent(new Event('keyup'))
+		gdcid_input.property('value', defaultSearchString).node().dispatchEvent(new Event('search'))
 	} else {
 		delete gdc_args.runFlags.runflag_gdcInput
 		runCallbackAfterUIupdate()
@@ -285,12 +284,15 @@ export async function bamsliceui({
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File Name / File UUID / Case ID / Case UUID')
 			.attr('class', 'sja-gdcbam-input') // for testing
-			// debounce event listener on keyup
-			.on('keyup', debounce(searchByGdcInputString, 500))
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
 			.on('search', searchByGdcInputString)
+			.on('keyup', () => {
+				// do not debounce search on keyup. this avoid an err when hitting Enter too fast after entering string, that will trigger both "search" and "keyup" listeners and cause it to search twice (and show ssm table twice). also by not listening to keyup it allows users to manually type in search string without being interrupted, thus should be okay..
+				gdc_loading.style('display', '').text('Press ENTER to search') // prompt
+				gdcid_error_div.style('display', 'none')
+			})
 
-		const gdc_loading = td.append('span').style('padding-left', '10px').style('display', 'none').text('Loading...')
+		const gdc_loading = td.append('span').style('padding-left', '10px').style('display', 'none')
 
 		const gdcid_error_div = td
 			.append('span')
@@ -372,7 +374,8 @@ export async function bamsliceui({
 
 			// disable input field and show 'loading...' until response returned from gdc api
 			gdcid_input.attr('disabled', 1)
-			gdc_loading.style('display', 'inline-block')
+			gdc_loading.style('display', '').text('Loading...')
+
 			gdc_args.runFlags.runflag_gdcInput = 1
 
 			const body = { gdc_id }
@@ -605,7 +608,7 @@ export async function bamsliceui({
 							.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
 							.on('click', () => {
 								tip.hide()
-								gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('keyup'))
+								gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('search'))
 							})
 							.on('keyup', event => {
 								if (event.key == 'Enter') event.target.click()
