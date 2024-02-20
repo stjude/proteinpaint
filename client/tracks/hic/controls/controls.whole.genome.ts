@@ -1,14 +1,15 @@
 import { bplen } from '#shared/common'
-import { nmeth2select, matrixType2select } from './hic.straw'
 import {
+	nmeth2select,
+	matrixType2select,
 	getdata_chrpair,
 	getdata_detail,
 	defaultnmeth,
 	showBtns,
 	makeWholeGenomeElements,
 	colorizeElement
-} from './hic.straw'
-import { Elem } from '../../types/d3'
+} from '../views/hic.straw'
+import { Elem } from '../../../types/d3'
 import blocklazyload from '#src/block.lazyload'
 
 /**

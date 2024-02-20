@@ -3,7 +3,7 @@ import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { hicparsestat } from '../tracks/hic/parse.genome.ts'
+import { hicparsestat } from '../tracks/hic/data/parse.genome.ts'
 
 /*
 single-sample hic
@@ -53,7 +53,7 @@ export function loadTk(tk: any, block: any) {
 
 	Promise.resolve()
 		.then(() => {
-			return import('../tracks/hic/hic.straw.ts').then(p => {
+			return import('../tracks/hic/views/hic.straw.ts').then(p => {
 				hicstraw = p
 			})
 		})
