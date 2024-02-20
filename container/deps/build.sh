@@ -1,8 +1,9 @@
 #!/bin/bash
 
 #
-# !!! call from the proetinpaint/container dir !!!
-#
+# !!! call from the proetinpaint/container/deps dir !!!
+# ./build.sh
+# 
 
 set -euxo pipefail
 
