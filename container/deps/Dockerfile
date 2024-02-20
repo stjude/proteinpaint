@@ -118,6 +118,7 @@ CMD ["sleep", "3600"]
 FROM pprust AS ppserverdeps
 
 WORKDIR /home/root/pp
+COPY ../tmppack ./tmppack
 
 WORKDIR /home/root/pp/app 
 RUN mkdir active
@@ -166,6 +167,8 @@ CMD ["sh", "-c", "node --enable-source-maps app-server.js"]
 FROM pprust AS ppfulldeps
 
 WORKDIR /home/root/pp
+COPY ./tmppack ./tmppack
+
 WORKDIR /home/root/pp/app
 COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
