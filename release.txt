@@ -1,1 +1,2 @@
-
+Fixes:
+- when downloading GDC bam slice (no caching), do not limit request region max size;

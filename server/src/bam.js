@@ -13,6 +13,7 @@ import { interpolateRgb } from 'd3-interpolate'
 import { match_complexvariant_rust } from './bam.kmer.indel'
 import { basecolor, bplen } from '#shared/common'
 import { gdcCheckPermission } from './bam.gdc'
+import { fileSize } from '../shared/fileSize'
 import { promisify } from 'util'
 
 const clustalo_read_alignment = serverconfig.clustalo
@@ -248,6 +249,7 @@ const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is re
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 const gdcHashSecret = Math.random.toString()
+const gdcSliceCacheRequestRegionMaxSize = 300000 // max region size to slice and cache file for
 
 /**************************
       gdc security
@@ -297,7 +299,7 @@ export default function (genomes) {
 					file position can be "unmapped" or coord
 				*/
 
-				validateGdcFilePosition(req)
+				validateGdcFilePositionWithMaxLimit(req)
 
 				// to access ds.getHostHeaders(), assign query.__genomes so later code can access gdc ds object as needed
 				req.query.__genomes = genomes
@@ -311,7 +313,6 @@ export default function (genomes) {
 				// authorized! can proceed
 
 				if (req.query.stream2download) {
-					// TODO: move into a dedicated route /bam/gdc/stream ???
 					// download the slice directly to client, do not write to cache file (app runs in "download mode")
 					await streamGdcBam2response(req, res)
 					return
@@ -321,13 +322,11 @@ export default function (genomes) {
 				req.query.file = getGDCcacheFileName(req)
 			}
 
-			// TODO: move into a dedicated route /bam/gdc/cache ???
 			if (req.query.downloadgdc) {
 				res.send(await downloadGdcBam2cacheFile_withDenial(req))
 				return
 			}
 
-			// TODO: move into a dedicated route /bam/gdc/download ???
 			if (req.query.clientdownloadgdcslice) {
 				await clientdownloadgdcsliceFromCache_withDenial(req, res)
 				return
@@ -374,7 +373,16 @@ async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
 	res.end(Buffer.from(data, 'binary'))
 }
 
-function validateGdcFilePosition(req) {
+/* if query is from bam slice download, will not limit request range, per discussion on 2/13/2024
+otherwise, a cache file will be created for the slice and a max region size is applied as a crude measure
+to limit cache file size; this does not guard against high depth bam
+in future, a good fix will need gdc to make bam coverage bigwig files available.
+before slicing, query bw file to estimate total cumulative depth over requested region
+if cumulative depth is above a cutoff, deny. this allows to guard against amplified region or hbb gene expression etc 
+and will allow to relax max range limit e.g. to 1Mb over a sparsely covered region and make the app less restrictive
+still bigwig estimation is approximate due to use of summary layers when zoommed out
+*/
+function validateGdcFilePositionWithMaxLimit(req) {
 	if (!req.query.gdcFilePosition) throw 'gdcFileUUID is present but gdcFilePosition is missing'
 	if (typeof req.query.gdcFilePosition != 'string') throw 'gdcFilePosition is not string'
 	if (req.query.gdcFilePosition == 'unmapped') return // in download mode
@@ -384,7 +392,10 @@ function validateGdcFilePosition(req) {
 	const start = Number(tmp[1]),
 		stop = Number(tmp[2])
 	if (!Number.isInteger(start) || !Number.isInteger(stop) || start > stop) throw 'gdcFilePosition invalid start/stop'
-	if (stop - start > 50000) throw 'Slice range exceeds 50 Kb limit. Please choose a smaller range.'
+
+	if (req.query.stream2download) return // to download and do not write to cache. do not apply limit
+	if (stop - start > gdcSliceCacheRequestRegionMaxSize)
+		throw `Slice range exceeds ${fileSize(gdcSliceCacheRequestRegionMaxSize)} limit. Please choose a smaller range.`
 }
 
 function getGdcDs(genomes) {
