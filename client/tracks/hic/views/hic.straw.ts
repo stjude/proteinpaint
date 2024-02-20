@@ -15,12 +15,12 @@ import {
 	ChrPairView,
 	HorizontalView,
 	DetailView
-} from '../../types/hic.ts'
-import { showErrorsWithCounter } from '../../dom/sayerror'
-import { hicParseFile } from './parse.genome.ts'
-import { init_hicInfoBar } from './info.bar.ts'
-import { init_hicControls } from './controls.whole.genome.ts'
-import { Div } from '../../types/d3'
+} from '../../../types/hic.ts'
+import { showErrorsWithCounter } from '../../../dom/sayerror'
+import { hicParseFile } from '../data/parse.genome.ts'
+import { init_hicInfoBar } from '../info.bar.ts'
+import { init_hicControls } from '../controls/controls.whole.genome.ts'
+import { Div } from '../../../types/d3'
 
 /*
 
