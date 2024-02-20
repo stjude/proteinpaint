@@ -3,7 +3,7 @@
 ARG registry=docker.io/library
 
 # need to manually bump the base version periodically
-FROM ${registry}/node:16-buster-slim AS ppbase
+FROM ${registry}/node:20-bookworm-slim AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
@@ -24,13 +24,14 @@ RUN apt-get update && apt-get install -y \
 	libncurses5-dev \
 	libperl-dev \
 	libssl-dev \
-	zlib1g-dev && rm -rf /var/lib/apt/lists/* \
+	zlib1g-dev \
     libcairo-dev \
 	libjpeg-dev \
 	libgif-dev \
 	sqlite3 libsqlite3-dev \
 	g++ \
     pkg-config \
+    cmake \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
@@ -53,7 +54,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 'B8F25A8A73EACF41' 
     echo "deb https://cloud.r-project.org/bin/linux/debian buster-cran40/" >> /etc/apt/sources.list \ 
     && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 'E19F5F87128899B192B1A2C2AD5F960A256A04AF' #pragma: allowlist secret
 
-RUN apt-get update && apt-get install -y r-base=4.3.2-1~bustercran.0 -y libargtable2-dev \
+RUN apt-get update && apt-get install -y r-base -y r-base-dev -y libargtable2-dev \
 	## install R packages
  	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	&& R -e "BiocManager::install('edgeR')" \
