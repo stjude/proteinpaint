@@ -848,7 +848,7 @@ fn main() {
                                     let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
                                                                                //println!("iter:{}", iter);
                                     if remainder == thread_num {
-                                        // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read. Also checking if the read length > 0
+                                        // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple threads from parsing the same read. Also checking if the read length > 0
 
                                         //println!(
                                         //    "start_positions_list:{}",
