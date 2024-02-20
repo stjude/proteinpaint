@@ -51,7 +51,7 @@ RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 'B8F25A8A73EACF41' && `#pragma: allowlist secret` \
-    echo "deb https://cloud.r-project.org/bin/linux/debian buster-cran40/" >> /etc/apt/sources.list \ 
+    echo "deb http://cloud.r-project.org/bin/linux/debian bookworm-cran40/" >> /etc/apt/sources.list \ 
     && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 'E19F5F87128899B192B1A2C2AD5F960A256A04AF' #pragma: allowlist secret
 
 RUN apt-get update && apt-get install -y r-base -y r-base-dev -y libargtable2-dev \
