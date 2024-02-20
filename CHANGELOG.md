@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - when downloading GDC bam slice (no caching), do not limit request region max size;
 - Reload page while streaming/downloading gdc bam slice to client will not crash server
+- GDC bam slice ui requires hitting Enter to search and no longer auto search to avoid showing duplicate ssm table
 
 
 ## 2.41.0

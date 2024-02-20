@@ -1,2 +1,1 @@
-Fixes:
-- GDC bam slice ui requires hitting Enter to search and no longer auto search to avoid showing duplicate ssm table
+
