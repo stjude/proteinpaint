@@ -351,8 +351,13 @@ export default function (genomes) {
 
 			if (serverconfig.debugmode) console.log('bam.js time ms', new Date() - starttime)
 		} catch (e) {
-			res.send({ error: e.message || e })
+			if (e?.code == 'ERR_STREAM_PREMATURE_CLOSE') {
+				// happens when client refreshed page in the mid of streaming bam data from backend. somehow the response header is already set. this check help avoid ERR_HTTP_HEADERS_SENT that crashes server
+				return
+			}
+
 			if (e.stack) console.log(e.stack)
+			res.send({ error: e.message || e })
 		}
 	}
 }
