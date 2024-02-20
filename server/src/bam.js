@@ -351,11 +351,6 @@ export default function (genomes) {
 
 			if (serverconfig.debugmode) console.log('bam.js time ms', new Date() - starttime)
 		} catch (e) {
-			if (e?.code == 'ERR_STREAM_PREMATURE_CLOSE') {
-				// happens when client refreshed page in the mid of streaming bam data from backend. somehow the response header is already set. this check help avoid ERR_HTTP_HEADERS_SENT that crashes server
-				return
-			}
-
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
 		}
@@ -3554,7 +3549,16 @@ async function streamGdcBam2response(req, res) {
 	headers.compression = false // see comments in get_gdc_bam()
 	const url = path.join(host.rest, '/slicing/view/', req.query.gdcFileUUID + '?region=' + req.query.gdcFilePosition)
 	res.statusCode = 200
-	await pipelineProm(got.stream(url, { method: 'get', headers }), res)
+	try {
+		await pipelineProm(got.stream(url, { method: 'get', headers }), res)
+	} catch (e) {
+		if (e.code == 'ERR_STREAM_PREMATURE_CLOSE') {
+			// happens when client reload page in the mid of streaming bam data from backend. somehow the response header is already set. must not do res.send() again to avoid ERR_HTTP_HEADERS_SENT that crashes server
+			return
+		}
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
+	}
 }
 
 /*
