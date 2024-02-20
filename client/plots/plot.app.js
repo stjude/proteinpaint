@@ -45,13 +45,15 @@ class PlotApp {
 	constructor(opts) {
 		this.type = 'app'
 		// this will create divs in the correct order
-		const controls = opts.holder.append('div').style('white-space', 'nowrap')
+		const controls = opts.violin?.mode == 'minimal' ? null : opts.holder.append('div').style('white-space', 'nowrap')
 		this.dom = {
 			holder: opts.holder,
-			plotControls: controls.append('div').style('display', 'inline-block'),
-			recoverControls: controls.append('div').style('display', 'inline-block'),
 			errdiv: opts.holder.append('div'),
 			plotDiv: opts.holder.append('div')
+		}
+		if (controls) {
+			this.dom.plotControls = controls.append('div').style('display', 'inline-block')
+			this.dom.recoverControls = controls.append('div').style('display', 'inline-block')
 		}
 	}
 

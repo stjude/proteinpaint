@@ -79,7 +79,7 @@ function setRenderers(self) {
 
 			top_info_div: holder.append('div').style('padding-bottom', '5px'),
 
-			violin_div: holder.append('div').style('color', 'black'),
+			violin_div: holder.append('div').style('color', 'black').style('padding-top', '5px'),
 
 			table_div: holder
 				.append('table')
