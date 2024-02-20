@@ -7,8 +7,8 @@
 		"release": ""
 	},
 	"dependencies": {
-		"@sjcrh/proteinpaint-front": "2.41.1-0",
-		"@sjcrh/proteinpaint-server": "2.41.1-0"
+		"@sjcrh/proteinpaint-front": "2.41.1",
+		"@sjcrh/proteinpaint-server": "2.41.1"
 	},
 	"files": [
 		"app-full.js"
