@@ -105,6 +105,30 @@ upon error, throw err message as a string
 		return
 	}
 
+	if (urlp.has('massnative')) {
+		/* ?massnative=hg38-test,TermdbTest
+		alternative url for mass={"genome":"hg38-test","dslabel":"TermdbTest"}
+		tidier to include in manuscript
+		no customization supported, though later additional fields may be appended to customize something
+		it is intended that the dataset should carry essential customizations so the link opens mass ui with expected customizations
+		*/
+		const value = urlp.get('massnative')
+		const [genomename, dslabel] = value.split(',')
+		if (!genomename || !dslabel) throw 'value is not "genome,dslabel"'
+		const opts = {
+			holder: arg.holder,
+			genome: arg.genomes[genomename],
+			state: {
+				genome: genomename,
+				dslabel
+			}
+		}
+		if (!opts.genome) throw 'invalid genome'
+		const _ = await import('../mass/app')
+		_.appInit(opts)
+		return
+	}
+
 	if (urlp.has('mass')) {
 		const value = urlp.get('mass')
 		const state = typeof value === 'string' ? JSON.parse(value) : value
