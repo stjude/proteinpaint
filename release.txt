@@ -1,1 +1,2 @@
-
+Fixes:
+- support ?massnative=genome,dslabel url parameter shorthand
