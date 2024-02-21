@@ -27,7 +27,6 @@ class singleCellPlot {
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
-		console.log(this.tableOnPlot)
 
 		if (this.tableOnPlot) {
 			this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
@@ -36,8 +35,8 @@ class singleCellPlot {
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
 		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
-		const tableDiv = this.mainDiv
-			.append('div')
+		const tableDiv = this.tableOnPlot ? this.opts.holder.append('div') : this.mainDiv.append('div')
+		tableDiv
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
@@ -200,14 +199,8 @@ class singleCellPlot {
 			.style('font-size', '1.1em')
 			.text(`${plot.name}`)
 
-		const legendSVG = plotDiv
-			.append('svg')
-			.attr('width', 250)
-			.attr('height', this.settings.svgh)
-			.style('vertical-align', 'top')
-
 		plot.svg = svg
-		plot.legendSVG = legendSVG
+		plot.plotDiv = plotDiv
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
 			.on('zoom', e => this.handleZoom(e, mainG, plot))
@@ -217,8 +210,6 @@ class singleCellPlot {
 			})
 		svg.call(zoom)
 		const mainG = svg.append('g')
-
-		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
 
 		const symbols = mainG.selectAll('path').data(plot.cells)
 
@@ -231,7 +222,7 @@ class singleCellPlot {
 			.attr('fill', d => colorMap[d.category])
 			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
 
-		this.renderLegend(legendG, plot, colorMap)
+		this.renderLegend(plot, colorMap)
 	}
 
 	handleZoom(e, mainG, plot) {
@@ -239,9 +230,17 @@ class singleCellPlot {
 		plot.zoom = e.transform.scale(1).k
 	}
 
-	renderLegend(legendG, plot, colorMap) {
+	renderLegend(plot, colorMap) {
 		if (this.state.termdbConfig.singleCell.sameLegend && this.legendRendered) return
 		this.legendRendered = true
+		const legendSVG = plot.plotDiv
+			.append('svg')
+			.attr('width', 250)
+			.attr('height', this.settings.svgh)
+			.style('vertical-align', 'top')
+
+		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
+
 		legendG
 			.append('text')
 			.attr('transform', `translate(${0}, ${25})`)
@@ -444,7 +443,7 @@ async function renderSamplesTable(div, self, state) {
 	if (self.tableOnPlot) {
 		selectedRows.push(0)
 		self.samples = samples
-		maxHeight = '21vh'
+		maxHeight = '25vh'
 	}
 
 	renderTable({
@@ -496,7 +495,7 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 450,
-		svgh: 450
+		svgw: 400,
+		svgh: 400
 	}
 }
