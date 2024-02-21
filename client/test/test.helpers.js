@@ -45,6 +45,7 @@ export function sleep(ms) {
     .matcher()   optional, a function that signals the end of the observer 
                              passed (mutationsList, observer) as arguments
                              must return an array of zero or more elements to trigger observer.disconnect() 
+    .maxTime     optional, max time to wait
 
     // only used when opts.matcher is not supplied
     .count       optional, the expected number of detected matching elements to stop the observer
@@ -58,7 +59,7 @@ export async function detectLst(_opts = {}) {
 	const defaults = {
 		target: _opts.target || _opts.elem,
 		selector: _opts.selector,
-		maxTime: 5000,
+		maxTime: 12000, // default is increased from 5 to 12 specifically for gdc live tests with high latency
 		observe: {
 			childList: true,
 			subtree: true,

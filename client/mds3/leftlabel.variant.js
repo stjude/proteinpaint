@@ -37,7 +37,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 		totalcount = tk.custom_variants.length
 	} else {
 		// no custom data but server returned data, get total from it
-		totalcount = tk.skewer.rawmlst.length + data.cnv?.length
+		totalcount = tk.skewer.rawmlst.length + (data.cnv?.length || 0)
 	}
 
 	if (totalcount == 0) {
