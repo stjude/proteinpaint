@@ -7,6 +7,7 @@ import * as mdsjson from './app.mdsjson'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { corsMessage } from '#common/embedder-helpers'
+import { sayerror } from '../dom/sayerror'
 /*
 ********************** EXPORTED
 parse()
@@ -225,6 +226,16 @@ upon error, throw err message as a string
 		const n = urlp.get('genome')
 		const genome_options = [...arg.selectgenome.node().childNodes]
 		const selectedIndex = genome_options.findIndex(d => d.value == n)
+		if (selectedIndex == -1) {
+			sayerror(
+				arg.holder,
+				`Invalid genome: ${n}. Please provide an available genome from this list: ${genome_options
+					.map(d => d.value)
+					.join(', ')
+					.replace(/,(?=[^,]*$)/, ', or')}`
+			)
+			return
+		}
 		arg.selectgenome.node().selectedIndex = selectedIndex
 		arg.selectgenome.node().dispatchEvent(new Event('change'))
 	}
