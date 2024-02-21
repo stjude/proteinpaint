@@ -2164,7 +2164,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			plotPca.cells.push({ cellId, x: pc1, y: pc2, category })
 		}
 		return {
-			plots: [plotPca, plotTsne, plotUmap],
+			plots: [plotTsne, plotUmap, plotPca],
 			terms: [seuratClusterTerm],
 			tid2cellvalue
 		}
