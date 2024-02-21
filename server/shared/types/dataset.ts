@@ -317,6 +317,7 @@ export type SingleCellSamplesNative = {
 }
 export type SingleCellDataGdc = {
 	src: 'gdcapi'
+	sameLegend: boolean
 }
 type ColorColumn = {
 	index: number
@@ -336,6 +337,7 @@ export type SingleCellDataNative = {
 	termIds: string[]
 	refName: string
 	get: (sample: any) => any
+	sameLegend: boolean
 }
 
 export type SingleCellQuery = {
@@ -703,7 +705,7 @@ type AssayAvailability = {
 export type Cohort = {
 	allowedChartTypes?: string[]
 	hiddenChartTypes?: string[]
-	renamedChartTypes?: { singleCellPlot: string }
+	renamedChartTypes?: { singleCellPlot?: string; sampleScatter?: string }
 	mutationset?: MutationSet[]
 	db: FileObj
 	termdb?: Termdb

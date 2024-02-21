@@ -125,6 +125,8 @@ class singleCellPlot {
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
 		let sample = this.state.config.sample
+		this.legendRendered = false
+
 		if (this.state.dslabel != 'GDC') {
 			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.config.sample }
 			this.renderPlots(body)
@@ -179,22 +181,29 @@ class singleCellPlot {
 		plot.colorMap = colorMap
 		this.initAxes(plot)
 
-		const plotDiv = this.dom.tableDiv.append('div').style('display', 'inline-block')
+		const plotDiv = this.dom.tableDiv.append('div').style('display', 'inline-block').style('padding', '10px')
+
 		const svg = plotDiv
 			.append('svg')
 			.attr('width', this.settings.svgw)
-			.attr('height', this.settings.svgh)
-			.style('padding', '30px')
+			.attr('height', this.settings.svgh + 40)
 			.on('mouseover', event => {
 				if (!this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
+		svg
+			.append('text')
+			.attr('transform', `translate(20, 30)`)
+			.style('font-weight', 'bold')
+			.style('font-size', '1.1em')
+			.text(`${plot.name}`)
 
 		const legendSVG = plotDiv
 			.append('svg')
-			.attr('width', 350)
+			.attr('width', 250)
 			.attr('height', this.settings.svgh)
 			.style('vertical-align', 'top')
+
 		plot.svg = svg
 		plot.legendSVG = legendSVG
 		const zoom = d3zoom()
@@ -207,14 +216,14 @@ class singleCellPlot {
 		svg.call(zoom)
 		const mainG = svg.append('g')
 
-		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.9em')
+		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
 
 		const symbols = mainG.selectAll('path').data(plot.cells)
 
 		symbols
 			.enter()
 			.append('g')
-			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
+			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y) + 40})`)
 			.append('circle')
 			.attr('r', 1.5)
 			.attr('fill', d => colorMap[d.category])
@@ -229,15 +238,15 @@ class singleCellPlot {
 	}
 
 	renderLegend(legendG, plot, colorMap) {
-		legendG.append('text').style('font-weight', 'bold').style('font-size', '1.1em').text(`${plot.name}`)
-
+		if (this.state.termdbConfig.singleCell.sameLegend && this.legendRendered) return
+		this.legendRendered = true
 		legendG
 			.append('text')
 			.attr('transform', `translate(${0}, ${25})`)
 			.style('font-weight', 'bold')
 			.text(`${plot.colorBy}`)
 
-		const step = 25
+		const step = 20
 		let y = 50
 		let x = 0
 		for (const cluster in colorMap) {
@@ -477,7 +486,7 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 600,
-		svgh: 600
+		svgw: 450,
+		svgh: 450
 	}
 }
