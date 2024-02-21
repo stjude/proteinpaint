@@ -26,7 +26,7 @@ class singleCellPlot {
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		if (appState.vocab.dslabel == 'GDC') {
+		if (appState.nav.header_mode == 'hidden') {
 			this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
 			await renderSamplesTable(this.sampleDiv, this, appState)
 		}
@@ -431,11 +431,9 @@ async function renderSamplesTable(div, self, state) {
 	}
 	const selectedRows = []
 	let maxHeight = '40vh'
-	if (state.vocab.dslabel == 'GDC') {
-		selectedRows.push(0)
-		self.samples = samples
-		maxHeight = '21vh'
-	}
+	selectedRows.push(0)
+	self.samples = samples
+	maxHeight = '21vh'
 
 	renderTable({
 		rows,
@@ -449,11 +447,7 @@ async function renderSamplesTable(div, self, state) {
 			const file = rows[index][columns.length - 1].value
 			let config = { chartType: 'singleCellPlot', sample, file }
 			let type = 'plot_edit'
-			if (state.vocab.dslabel != 'GDC') {
-				self.dom.tip.hide()
-				type = 'plot_create'
-				self.app.dispatch({ type, config })
-			} else self.app.dispatch({ type, id: self.id, config })
+			self.app.dispatch({ type, id: self.id, config })
 		},
 		selectedRows
 	})
