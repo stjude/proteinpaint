@@ -1,1 +1,2 @@
-
+Fixes:
+- replace require syntax with import to prevent bundling errors in client package bundlers

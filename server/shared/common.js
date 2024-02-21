@@ -9,8 +9,8 @@ exported functions
 
 */
 import { rgb } from 'd3-color'
-const d3scale = require('d3-scale')
-const d3 = require('d3')
+import * as d3scale from 'd3-scale'
+import * as d3 from 'd3'
 
 export const defaultcolor = rgb('#8AB1D4').darker()
 export const default_text_color = rgb('#aaa').darker().darker()
