@@ -2,14 +2,14 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { dofetch2 } from '../../../common/dofetch.js'
 import { hicData } from './hicData.ts'
-import { init_hicstraw } from '../../../tracks/hic/views/hic.straw.ts'
-import { hicparsestat } from '../../../tracks/hic/data/parse.genome.ts'
+//import { hicInit } from '../../../tracks/hic/app.ts'
+import { hicparsestat } from '../../../tracks/hic/data/parseData.ts'
 import { runproteinpaint } from '../../../test/front.helpers.js'
 // import { HicRunProteinPaintTrackArgs } from '../../../types/hic.ts'
 
 /*
 Tests:
-	init_hicstraw() - TODO: needs more work
+	hicInit() - TODO: needs more work
 	hicparsestat()
 	SKIPPED - hicparsefragdata()
  */
@@ -43,25 +43,25 @@ tape('\n', test => {
 	test.end()
 })
 
-tape.skip('init_hicstraw(), v8', async test => {
-	//test.plan()
-	//TODO: needs more work
-	const holder = getHolder()
+// tape.skip('init_hicstraw(), v8', async test => {
+// 	//test.plan()
+// 	//TODO: needs more work
+// 	const holder = getHolder()
 
-	const copy = { ...hicData.hic.v8 }
-	const opts = {
-		holder,
-		url: 'https://proteinpaint.stjude.org/ppdemo/hg38/hic/hic_demo_v8.hic',
-		genome: await getGenomes('hg19')
-	}
-	const hic: any = Object.assign(copy, opts)
-	const hicOriginal = { ...hic }
-	await init_hicstraw(hic, true)
-	test.ok(!hicOriginal.name && hic.name == 'Hi-C', 'Should set name to Hi-C since no name was provided')
+// 	const copy = { ...hicData.hic.v8 }
+// 	const opts = {
+// 		holder,
+// 		url: 'https://proteinpaint.stjude.org/ppdemo/hg38/hic/hic_demo_v8.hic',
+// 		genome: await getGenomes('hg19')
+// 	}
+// 	const hic: any = Object.assign(copy, opts)
+// 	const hicOriginal = { ...hic }
+// 	await init_hicstraw(hic, true)
+// 	test.ok(!hicOriginal.name && hic.name == 'Hi-C', 'Should set name to Hi-C since no name was provided')
 
-	if (test['_ok']) holder!.remove()
-	test.end()
-})
+// 	if (test['_ok']) holder!.remove()
+// 	test.end()
+// })
 
 tape('hicparsestat()', async test => {
 	test.plan(13)

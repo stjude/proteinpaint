@@ -17,9 +17,9 @@ import {
 	DetailView
 } from '../../../types/hic.ts'
 import { showErrorsWithCounter } from '../../../dom/sayerror'
-import { hicParseFile } from '../data/parse.genome.ts'
-import { init_hicInfoBar } from '../info.bar.ts'
-import { init_hicControls } from '../controls/controls.whole.genome.ts'
+import { hicParseFile } from '../data/parseData.ts'
+import { init_hicInfoBar } from '../dom/info.bar.ts'
+import { init_hicControls } from '../controls/controlPanel.ts'
 import { Div } from '../../../types/d3'
 
 /*

@@ -11,29 +11,75 @@ import {
 } from '../views/hic.straw'
 import { Elem } from '../../../types/d3'
 import blocklazyload from '#src/block.lazyload'
+import { getCompInit } from '#rx'
 
-/**
-********* EXPORTED *********
+// /**
+// ********* EXPORTED *********
 
-init_hicControls()
+// init_hicControls()
 
-********* INTERNAL *********
-addLabel()
-makeNormMethDisplay()
-getData()
-setmaxv()
-switchview()
+// ********* INTERNAL *********
+// addLabel()
+// makeNormMethDisplay()
+// getData()
+// setmaxv()
+// switchview()
 
-see function documentation for more details
- */
+// see function documentation for more details
+//  */
 
-/**
- * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, horizontal and detail views)
- * Some of the view button text and functionality updated in hic.straw.ts
- * @param hic formatted input
- * @param self app obj
- * @returns control panel for the app
- */
+// /**
+//  * Renders control panel for hicstraw app (ie whole genome, chr-chr pair, horizontal and detail views)
+//  * Some of the view button text and functionality updated in hic.straw.ts
+//  * @param hic formatted input
+//  * @param self app obj
+//  * @returns control panel for the app
+//  */
+
+class ControlPanel {
+	type: 'controlPanel'
+	
+	constructor(opts) {
+		this.type = 'controlPanel'
+	}
+
+	main(){
+		console.log('ControlPanel launched')
+	}
+}
+
+export const controlPanelInit = getCompInit(ControlPanel)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export function init_hicControls(hic: any, self: any) {
 	const menuWrapper = self.dom.controlsDiv
 		.style('background', 'rgb(253, 250, 244)')

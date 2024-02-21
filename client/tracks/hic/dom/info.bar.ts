@@ -1,4 +1,4 @@
-import { ColorScale } from '../../dom/colorScale'
+import { ColorScale } from '../../../dom/colorScale'
 
 /**
 ********* EXPORTED *********

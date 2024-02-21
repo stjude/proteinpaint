@@ -3,7 +3,7 @@ import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { hicparsestat } from '../tracks/hic/data/parse.genome.ts'
+import { hicparsestat } from '../tracks/hic/data/parseData.ts'
 
 /*
 single-sample hic
@@ -53,7 +53,7 @@ export function loadTk(tk: any, block: any) {
 
 	Promise.resolve()
 		.then(() => {
-			return import('../tracks/hic/views/hic.straw.ts').then(p => {
+			return import('../tracks/hic/app.ts').then(p => {
 				hicstraw = p
 			})
 		})
@@ -507,7 +507,7 @@ function parseStrawData(datalst: any, resolution_bp: number, resolution_frag: nu
 			fs_left, // # pixel per bp
 			fs_right
 
-		// using the same logic in hic.straw.ts, inherently related to how straw generates data
+		// using the same logic in tracks/hi.ts, inherently related to how straw generates data
 		let firstisleft = false
 
 		if (data.regionidx != undefined) {
