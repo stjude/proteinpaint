@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - upgrade node from v16 to v20
 
+Fixes:
+- Show user error message for an invalid genome provided in a URL. Error message contains the list of available genomes from that server.
+
 
 ## 2.41.1
 
