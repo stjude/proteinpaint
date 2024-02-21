@@ -152,8 +152,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					const cellId = l[0],
 						x = Number(l[plot.coordsColumns.x]), // FIXME standardize, or define idx in plot
 						y = Number(l[plot.coordsColumns.y])
-					let category = l[plot.colorColumn?.index] || ''
-					if (category == 'query') category = q.sample
+					const category = l[plot.colorColumn?.index] || ''
 					if (!cellId) throw 'cell id missing'
 					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
 					cells.push({ cellId, x, y, category })
