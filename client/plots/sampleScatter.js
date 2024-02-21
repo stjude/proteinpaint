@@ -555,7 +555,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				})
 		}
 	const formDiv = menuDiv.append('div')
-	addDynamicScatterForm(chartsInstance.dom.tip, chartsInstance.app)
+	if (!chartsInstance.state.termdbConfig.hiddenChartTypes?.includes('dynamicScatter'))
+		addDynamicScatterForm(chartsInstance.dom.tip, chartsInstance.app)
 }
 
 export function getDefaultScatterSettings() {
