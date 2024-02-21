@@ -3,14 +3,16 @@ import { getStoreInit } from '#rx'
 class HicStore {
 	type: 'store'
 	defaultState: {
-		nmeth: string
+		defaultNmeth: string
+		errList: any[]
 	}
 	actions: any
 
 	constructor() {
 		this.type = 'store'
 		this.defaultState = {
-			nmeth: 'NONE'
+			defaultNmeth: 'NONE',
+			errList: []
 		}
 	}
 
