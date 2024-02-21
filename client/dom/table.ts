@@ -1,19 +1,20 @@
 import { select } from 'd3-selection'
 
 export type Cell = {
-	url?: string //optional string, to print in <a> element
-	value?: string | number //optinal to print with .text() d3 method
-	color?: string //optional color code to render as a color
-	html?: string //optional string, to print with .html() d3 method, may be susceptible to attack
+	url?: string // to print in <a> element
+	value?: string | number // to print with .text() d3 method
+	color?: string // color code to render as a color
+	html?: string // to print with .html() d3 method, may be susceptible to attack
 	__td?: any //is attached to each cell object pointing to <td>, for external code to render interactive contents in it
 	disabled?: boolean
 }
 
 export type Column = {
-	label: string //str, the text to show as header of a column
-	width?: string //str, column width
-	editCallback?: (i: number, cell: Cell) => void //Function, optional. Makes this column editable  and allows to notify the change through the callback.
+	label: string //the text to show as header of a column
+	width?: string // column width
+	editCallback?: (i: number, cell: Cell) => void // Makes this column editable  and allows to notify the change through the callback.
 	//It is only allowed for cells with a value or a color field
+	nowrap?: boolean // set white-space=nowrap on all <td> of this column so strings do not wrap
 }
 
 export type Button = {
@@ -33,7 +34,8 @@ export type TableArgs = {
 	columnButtons?: Button[] //List of buttons to render in a column
 	buttons?: Button[] //List of buttons to do actions after the table is edited
 	noButtonCallback?: (i: number, node: any) => void //Function that will be called when a row is selected
-	singleMode?: boolean
+	singleMode?: boolean //	true for single-selection. use radio button instead of checkboxes for multiselect
+	noRadioBtn?: boolean // true to show no radio buttons. should only use when singleMode=true
 	showLines?: boolean //Shows or hides line column.
 	striped?: boolean //When active makes the table rows to alternate bg colors
 	showHeader?: boolean //Render header or not
@@ -48,7 +50,7 @@ export type TableArgs = {
 	//selected, each css property will be set to an empty string ''
 	inputName?: any //For testing purposes
 	//optional. value is predefined input name. this allows test to work.
-	//when not avaiable, for each table made, create a unique name to use as the <input name=?>
+	//when not available, for each table made, create a unique name to use as the <input name=?>
 	//if the same name is always used, multiple tables created in one page will conflict in row selection
 }
 /*
@@ -62,7 +64,8 @@ export function renderTable({
 	columnButtons,
 	buttons,
 	noButtonCallback,
-	singleMode = false, //	Specifies if a radio button should be rendered instead
+	singleMode = false,
+	noRadioBtn = false,
 	showLines = true,
 	striped = true,
 	showHeader = true,
@@ -143,8 +146,9 @@ export function renderTable({
 					if (noButtonCallback) for (const [i, node] of nodes.entries()) noButtonCallback(i, node)
 				})
 			checkboxH.node().checked = selectAll
+			if (!showHeader)
+				theadRow.append('th').text('Check/Uncheck All').attr('class', 'sjpp_table_header sjpp_table_item')
 		}
-		if (!showHeader) theadRow.append('th').text('Check/Uncheck All').attr('class', 'sjpp_table_header sjpp_table_item')
 	}
 	if (columnButtons && columnButtons.length > 0) {
 		theadRow.append('th').text('Actions').attr('class', 'sjpp_table_item sjpp_table_header')
@@ -181,10 +185,12 @@ export function renderTable({
 		}
 
 		if (buttons || noButtonCallback) {
-			checkbox = rowtable
-				.append('td')
-				.style('width', '1.5vw')
-				.style('float', 'center')
+			const td = rowtable.append('td').style('width', '1.5vw').style('float', 'center')
+			if (noRadioBtn) {
+				// should be in singleMode and do not want to show radio buttons for cleaner look. <input> elements are still rendered since "checkbox" element is required for selection. thus simply hide <td>.
+				td.style('display', 'none')
+			}
+			checkbox = td
 				.append('input')
 				.attr('aria-label', 'Select row')
 				.attr('type', singleMode ? 'radio' : 'checkbox')
@@ -244,6 +250,7 @@ export function renderTable({
 				})
 			}
 			if (column.width) td.style('width', column.width)
+			if (column.nowrap) td.style('white-space', 'nowrap')
 			if (cell.url) {
 				td.append('a')
 					.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display

@@ -172,7 +172,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
 		await whenVisible(tk.menutip.d, 10000)
 
-		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv', maxTime: 10000 })
+		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
 		test.ok(div, 'Sample summary table rendered in menutip')
 
 		for (const tw of tk.mds.variant2samples.twLst) {
@@ -233,7 +233,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 			test.end()
 		}
 
-		const categoryDiv = tk.menutip.d.select('.sja_clbtext2')
+		const categoryDiv = tk.menutip.d.select('.sjpp_row_wrapper')
 		categoryDiv.node().dispatchEvent(new Event('click'))
 	}
 }
@@ -443,7 +443,7 @@ must use a gene with both single and multi occurrence mutations to test
 		multiMutationDisc.dispatchEvent(new Event('click'))
 		await whenVisible(tk.itemtip.d)
 		{
-			const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass, maxTime: 10000 })
+			const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass })
 			test.equal(button.innerHTML, buttonText, buttonText + ' button created in multi-sample menu')
 			test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
 			// must check one checkbox first to
@@ -455,7 +455,7 @@ must use a gene with both single and multi occurrence mutations to test
 		{
 			const btn = await detectOne({ elem: tk.menutip.dnode, selector: '.sja_mds3_slb_sampletablebtn' })
 			btn.dispatchEvent(new Event('click'))
-			const button = await detectOne({ elem: tk.menutip.dnode, selector: '.' + buttonClass, maxTime: 10000 })
+			const button = await detectOne({ elem: tk.menutip.dnode, selector: '.' + buttonClass })
 			test.equal(button.innerHTML, buttonText, buttonText + ' button is created in leftlabel sample table')
 			test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
 		}

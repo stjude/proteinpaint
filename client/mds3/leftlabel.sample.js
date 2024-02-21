@@ -2,6 +2,7 @@ import { makelabel } from './leftlabel'
 import { Tabs } from '../dom/toggleButtons'
 import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
+import { renderTable } from '../dom/table'
 import { filterInit, getNormalRoot } from '#filter'
 import { convertUnits } from '#shared/helpers'
 import { violinRenderer } from '../dom/violinRenderer'
@@ -252,38 +253,33 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	const tw = tk.mds.variant2samples.twLst.find(i => i.id == termid)
 	if (!tw) throw 'showSummary4oneTerm(): tw not found from variant2samples.twLst'
 
-	const grid_div = div
-		.append('div')
-		.style('display', 'inline-grid')
-		.style('grid-template-columns', 'auto auto auto')
-		.style('grid-row-gap', '3px')
-		.style('align-items', 'center')
-		.style('justify-items', 'left')
-
+	const rows = []
 	for (const [category_key, count, total] of numbycategory) {
 		// in future tw may be in groupsetting mode
-		grid_div
-			.append('div')
-			.style('padding-right', '10px')
-			.attr('class', 'sja_clbtext2')
-			.text(tw.term.values?.[category_key]?.label || category_key)
-			.on('click', () => clickCategory(category_key))
-
-		const percent_div = grid_div.append('div')
-		if (total != undefined) {
-			// show percent bar
-			percent_div.on('click', () => clickCategory(category_key))
-
-			fillbar(percent_div, { f: count / total, v1: count, v2: total }, { fillbg: '#ECE5FF', fill: '#9F80FF' })
-		}
-
-		grid_div
-			.append('div')
-			.style('margin-left', '10px')
-			.attr('class', 'sja_clbtext2')
-			.on('click', () => clickCategory(category_key))
-			.html(count + (total ? ' <span style="font-size:.8em">/ ' + total + '</span>' : ''))
+		const row = [
+			{ value: tw.term.values?.[category_key]?.label || category_key },
+			{ html: total == undefined ? '' : fillbar(null, { f: count / total, v1: count, v2: total }) },
+			{ html: count + (total ? ' <span style="font-size:.8em">/ ' + total + '</span>' : '') }
+		]
+		rows.push(row)
 	}
+	renderTable({
+		div,
+		rows,
+		columns: [
+			{
+				nowrap: true // to force all category values to show in one line without wrap. otherwise they wrap and column width appears fixed
+			},
+			{},
+			{}
+		],
+		showHeader: false,
+		singleMode: true,
+		noRadioBtn: true,
+		noButtonCallback: i => {
+			clickCategory(numbycategory[i][0])
+		}
+	})
 
 	async function clickCategory(category) {
 		// for a selected category, launch subtrack
