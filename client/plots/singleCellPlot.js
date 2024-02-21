@@ -26,12 +26,7 @@ class singleCellPlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
-		this.mainDiv = this.opts.holder
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-			.style('padding', '10px')
-		this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block')
+		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
@@ -45,7 +40,10 @@ class singleCellPlot {
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder
 		}
-		if (appState.vocab.dslabel == 'GDC') await renderSamplesTable(this.sampleDiv, this, appState)
+		if (appState.vocab.dslabel == 'GDC') {
+			this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block')
+			await renderSamplesTable(this.sampleDiv, this, appState)
+		}
 		// this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
 		// const sample = this.samples[0]
 		// const input = this.sampleDiv
@@ -172,9 +170,15 @@ class singleCellPlot {
 		clusters = Array.from(clusters).sort()
 		const cat2Color = this.cat2Color
 		const colorMap = {}
-		plot.colorMap = colorMap
 		for (const cluster of clusters)
-			colorMap[cluster] = cluster == 'ref' || cluster == 'No' ? '#F2F2F2' : cat2Color(cluster)
+			colorMap[cluster] =
+				cluster == 'ref' || cluster == 'No'
+					? '#F2F2F2'
+					: plot.colorMap?.[cluster]
+					? plot.colorMap[cluster]
+					: cat2Color(cluster)
+
+		plot.colorMap = colorMap
 		this.initAxes(plot)
 
 		this.headerTr
@@ -221,7 +225,7 @@ class singleCellPlot {
 			.attr('fill', d => colorMap[d.category])
 			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
 
-		this.renderLegend(legendG, plot)
+		this.renderLegend(legendG, plot, colorMap)
 	}
 
 	handleZoom(e, mainG, plot) {
@@ -229,10 +233,8 @@ class singleCellPlot {
 		plot.zoom = e.transform.scale(1).k
 	}
 
-	renderLegend(legendG, plot) {
-		if (this.sameLegend && this.legendRendered) return
-		this.legendRendered = true
-		const colorMap = plot.colorMap
+	renderLegend(legendG, plot, colorMap) {
+		if (this.state.dslabel == 'GDC' && plot.name != 'PCA') return
 		legendG.append('text').style('font-weight', 'bold').text(`${plot.colorBy}`)
 
 		const step = 25
@@ -242,7 +244,7 @@ class singleCellPlot {
 			const clusterCells = plot.cells.filter(item => item.category == cluster)
 			const hidden = this.config.hiddenClusters.includes(cluster)
 			const n = clusterCells.length
-			const color = plot.colorMap[cluster]
+			const color = colorMap[cluster]
 			const itemG = legendG.append('g').attr('transform', c => `translate(${x}, ${y})`)
 			itemG.append('circle').attr('r', 3).attr('fill', color)
 			itemG

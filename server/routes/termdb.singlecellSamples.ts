@@ -162,7 +162,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 						tid2cellvalue[tid][cellId] = l[1]
 					}
 				}
-				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name })
+				plots.push({ name: plot.name, cells, colorBy: plot.colorColumn?.name, colorMap: plot.colorMap })
 			}
 			if (plots.length == 0) {
 				// no data available for this sample
