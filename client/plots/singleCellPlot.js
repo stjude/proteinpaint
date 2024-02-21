@@ -26,7 +26,10 @@ class singleCellPlot {
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		if (appState.nav.header_mode == 'hidden') {
+		this.tableOnPlot = appState.nav?.header_mode == 'hidden'
+		console.log(this.tableOnPlot)
+
+		if (this.tableOnPlot) {
 			this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
 			await renderSamplesTable(this.sampleDiv, this, appState)
 		}
@@ -126,8 +129,7 @@ class singleCellPlot {
 
 		let sample = this.state.config.sample
 		this.legendRendered = false
-
-		if (this.state.dslabel != 'GDC') {
+		if (!this.tableOnPlot) {
 			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.config.sample }
 			this.renderPlots(body)
 		} else {
@@ -260,7 +262,15 @@ class singleCellPlot {
 				.append('g')
 				.attr('transform', `translate(${x + 10}, ${5})`)
 				.append('text')
-				.text(`${cluster == 'ref' ? this.state.termdbConfig.singleCell.refName : cluster} n=${n}`)
+				.text(
+					`${
+						cluster == 'ref'
+							? this.state.termdbConfig.singleCell.refName
+							: cluster == 'query'
+							? this.state.config.sample
+							: cluster
+					} n=${n}`
+				)
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.on('click', e => onCategoryClick(this, e, cluster, plot))
 			y += step
@@ -431,9 +441,11 @@ async function renderSamplesTable(div, self, state) {
 	}
 	const selectedRows = []
 	let maxHeight = '40vh'
-	selectedRows.push(0)
-	self.samples = samples
-	maxHeight = '21vh'
+	if (self.tableOnPlot) {
+		selectedRows.push(0)
+		self.samples = samples
+		maxHeight = '21vh'
+	}
 
 	renderTable({
 		rows,
@@ -447,7 +459,11 @@ async function renderSamplesTable(div, self, state) {
 			const file = rows[index][columns.length - 1].value
 			let config = { chartType: 'singleCellPlot', sample, file }
 			let type = 'plot_edit'
-			self.app.dispatch({ type, id: self.id, config })
+			if (!self.tableOnPlot) {
+				self.dom.tip.hide()
+				type = 'plot_create'
+				self.app.dispatch({ type, config })
+			} else self.app.dispatch({ type, id: self.id, config })
 		},
 		selectedRows
 	})
