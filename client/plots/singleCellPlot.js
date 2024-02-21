@@ -182,9 +182,10 @@ class singleCellPlot {
 		plot.colorMap = colorMap
 		this.initAxes(plot)
 
-		const plotDiv = this.dom.tableDiv.append('div').style('display', 'inline-block').style('padding', '10px')
+		plot.plotDiv = this.dom.tableDiv.append('div').style('display', 'inline-block').style('padding', '10px')
+		this.renderLegend(plot, colorMap)
 
-		const svg = plotDiv
+		const svg = plot.plotDiv
 			.append('svg')
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh + 40)
@@ -200,7 +201,6 @@ class singleCellPlot {
 			.text(`${plot.name}`)
 
 		plot.svg = svg
-		plot.plotDiv = plotDiv
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
 			.on('zoom', e => this.handleZoom(e, mainG, plot))
@@ -221,8 +221,6 @@ class singleCellPlot {
 			.attr('r', 1.5)
 			.attr('fill', d => colorMap[d.category])
 			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
-
-		this.renderLegend(plot, colorMap)
 	}
 
 	handleZoom(e, mainG, plot) {
