@@ -328,6 +328,7 @@ type SingleCellPlot = {
 	fileSuffix: string
 	colorColumn: ColorColumn
 	coordsColumns: { x: number; y: number }
+	colorMap?: { [index: string]: string }
 }
 export type SingleCellDataNative = {
 	src: 'native'
