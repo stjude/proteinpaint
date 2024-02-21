@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2.42.1
 
+Fixes:
+- Replace require syntax with import to prevent bundling errors in client package bundlers
+
 
 ## 2.42.0
 
