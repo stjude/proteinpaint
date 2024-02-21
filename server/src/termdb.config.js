@@ -34,13 +34,14 @@ returns:
 
 export function make(q, res, ds, genome) {
 	const tdb = ds.cohort.termdb
-
 	// add attributes to this object to reveal to client
 
 	// add required attributes
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
+		hiddenChartTypes: ds.cohort.hiddenChartTypes,
+		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),
 		termMatch2geneSet: tdb.termMatch2geneSet,
 		massSessionDuration: serverconfig.features.massSessionDuration || 30,
@@ -71,6 +72,7 @@ export function make(q, res, ds, genome) {
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addGenomicQueries(c, ds, genome)
+	addSinglecellData(c, ds)
 
 	res.send({ termdbConfig: c })
 }
@@ -96,6 +98,12 @@ function addMatrixplots(c, ds) {
 	c.matrixplots = ds.cohort.matrixplots.plots.map(p => {
 		return { name: p.name }
 	})
+}
+
+function addSinglecellData(c, ds) {
+	if (!ds.queries?.singleCell?.data) return
+	// this dataset has premade scatterplots. reveal to client
+	c.singleCell = ds.queries.singleCell.data
 }
 
 function addGenomicQueries(c, ds, genome) {

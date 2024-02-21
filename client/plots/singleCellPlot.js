@@ -19,6 +19,7 @@ class singleCellPlot {
 		this.type = 'singleCellPlot'
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
+		this.cat2Color = getColors(20)
 	}
 
 	async init(appState) {
@@ -111,7 +112,8 @@ class singleCellPlot {
 		return {
 			config,
 			dslabel: appState.vocab.dslabel,
-			genome: appState.vocab.genome
+			genome: appState.vocab.genome,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
@@ -156,6 +158,7 @@ class singleCellPlot {
 					this.renderPlot(plot)
 				}
 			}
+			this.refName = result.refName
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			sayerror(this.mainDiv, e)
@@ -167,10 +170,11 @@ class singleCellPlot {
 		this.plots.push(plot)
 		let clusters = new Set(plot.cells.map(c => c.category))
 		clusters = Array.from(clusters).sort()
-		const cat2Color = getColors(clusters.length)
+		const cat2Color = this.cat2Color
 		const colorMap = {}
 		plot.colorMap = colorMap
-		for (const cluster of clusters) colorMap[cluster] = cluster == 'ref' ? '#F2F2F2' : cat2Color(cluster)
+		for (const cluster of clusters)
+			colorMap[cluster] = cluster == 'ref' || cluster == 'No' ? '#F2F2F2' : cat2Color(cluster)
 		this.initAxes(plot)
 
 		this.headerTr
@@ -213,7 +217,7 @@ class singleCellPlot {
 			.append('g')
 			.attr('transform', c => `translate(${plot.xAxisScale(c.x)}, ${plot.yAxisScale(c.y)})`)
 			.append('circle')
-			.attr('r', 2)
+			.attr('r', 1.5)
 			.attr('fill', d => colorMap[d.category])
 			.style('fill-opacity', d => (this.config.hiddenClusters.includes(d.category) ? 0 : 0.7))
 
@@ -245,7 +249,7 @@ class singleCellPlot {
 				.append('g')
 				.attr('transform', `translate(${x + 10}, ${5})`)
 				.append('text')
-				.text(`${cluster} n=${n}`)
+				.text(`${cluster == 'ref' ? this.state.termdbConfig.singleCell.refName : cluster} n=${n}`)
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.on('click', e => onCategoryClick(this, e, cluster, plot))
 			y += step
