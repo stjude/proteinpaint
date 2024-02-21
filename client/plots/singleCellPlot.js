@@ -413,7 +413,7 @@ async function renderSamplesTable(div, self, state) {
 	let columns = []
 	const fields = result.fields
 	const columnNames = result.columnNames
-	for (const column of columnNames) columns.push({ label: column })
+	for (const column of columnNames) columns.push({ label: column, width: '20vw' })
 	const index = columnNames.length == 1 ? 0 : columnNames.length - 1
 	columns[index].width = '25vw'
 
@@ -443,7 +443,7 @@ async function renderSamplesTable(div, self, state) {
 	if (self.tableOnPlot) {
 		selectedRows.push(0)
 		self.samples = samples
-		maxHeight = '25vh'
+		maxHeight = '30vh'
 	}
 
 	renderTable({
