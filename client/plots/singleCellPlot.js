@@ -19,7 +19,6 @@ class singleCellPlot {
 		this.type = 'singleCellPlot'
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
-		this.cat2Color = getColors(20)
 	}
 
 	async init(appState) {
@@ -27,23 +26,29 @@ class singleCellPlot {
 		//read files data
 		const controlsDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-
+		if (appState.vocab.dslabel == 'GDC') {
+			this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block').style('padding', '10px')
+			await renderSamplesTable(this.sampleDiv, this, appState)
+		}
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
 		const controlsHolder = controlsDiv.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
-
+		const tableDiv = this.mainDiv
+			.append('div')
+			.style('display', 'flex')
+			.style('flex-wrap', 'wrap')
+			.style('justify-content', 'flex-start')
+			.style('width', '100vw')
 		this.dom = {
 			header: this.opts.header,
 			//holder,
 			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
-			controlsHolder
+			controlsHolder,
+			tableDiv
 		}
-		if (appState.vocab.dslabel == 'GDC') {
-			this.sampleDiv = this.mainDiv.insert('div').style('display', 'inline-block')
-			await renderSamplesTable(this.sampleDiv, this, appState)
-		}
+
 		// this.sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
 		// const sample = this.samples[0]
 		// const input = this.sampleDiv
@@ -65,12 +70,7 @@ class singleCellPlot {
 		// 	.attr('label', d => ('primarySite' in d ? `${d.primarySite} | ${d.diseaseType}` : ''))
 
 		this.settings = {}
-		this.table = this.mainDiv
-			.append('div')
-			.style('padding-top', '10px')
-			.append('table')
-			.style('width', '95vw')
-			.style('border-collapse', 'collapse')
+
 		await this.setControls()
 		document.addEventListener('scroll', event => this.tip.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
@@ -120,12 +120,10 @@ class singleCellPlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 
-		this.table.selectAll('*').remove()
+		this.dom.tableDiv.selectAll('*').remove()
 		this.plots = []
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
-		this.headerTr = this.table.append('tr')
-		this.tr = this.table.append('tr')
 		let sample = this.state.config.sample
 		if (this.state.dslabel != 'GDC') {
 			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.config.sample }
@@ -168,7 +166,7 @@ class singleCellPlot {
 		this.plots.push(plot)
 		let clusters = new Set(plot.cells.map(c => c.category))
 		clusters = Array.from(clusters).sort()
-		const cat2Color = this.cat2Color
+		const cat2Color = getColors(clusters.length + 2) //Helps to use the same color scheme in different samples
 		const colorMap = {}
 		for (const cluster of clusters)
 			colorMap[cluster] =
@@ -181,25 +179,22 @@ class singleCellPlot {
 		plot.colorMap = colorMap
 		this.initAxes(plot)
 
-		this.headerTr
-			.append('td')
-			.style('font-weight', 'bold')
-			.style('border', '1px solid #d3d3d3')
-			.style('padding', '5px')
-			.text(plot.name)
-			.style('background-color', '#d3d3d3')
-			.style('fo')
-		const td = this.tr.append('td').style('text-align', 'center').style('border', '1px solid #d3d3d3')
-		const svg = td
+		const plotDiv = this.dom.tableDiv.append('div').style('display', 'inline-block')
+		const svg = plotDiv
 			.append('svg')
 			.attr('width', this.settings.svgw)
 			.attr('height', this.settings.svgh)
+			.style('padding', '30px')
 			.on('mouseover', event => {
 				if (!this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
 
-		const legendSVG = td.append('svg').attr('width', 200).attr('height', this.settings.svgh)
+		const legendSVG = plotDiv
+			.append('svg')
+			.attr('width', 350)
+			.attr('height', this.settings.svgh)
+			.style('vertical-align', 'top')
 		plot.svg = svg
 		plot.legendSVG = legendSVG
 		const zoom = d3zoom()
@@ -234,11 +229,16 @@ class singleCellPlot {
 	}
 
 	renderLegend(legendG, plot, colorMap) {
-		if (this.state.dslabel == 'GDC' && plot.name != 'PCA') return
-		legendG.append('text').style('font-weight', 'bold').text(`${plot.colorBy}`)
+		legendG.append('text').style('font-weight', 'bold').style('font-size', '1.1em').text(`${plot.name}`)
+
+		legendG
+			.append('text')
+			.attr('transform', `translate(${0}, ${25})`)
+			.style('font-weight', 'bold')
+			.text(`${plot.colorBy}`)
 
 		const step = 25
-		let y = 30
+		let y = 50
 		let x = 0
 		for (const cluster in colorMap) {
 			const clusterCells = plot.cells.filter(item => item.category == cluster)
@@ -477,8 +477,7 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 500,
-		svgh: 500,
-		svgd: 500
+		svgw: 600,
+		svgh: 600
 	}
 }
