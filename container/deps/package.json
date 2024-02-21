@@ -1,6 +1,6 @@
 {
 	"name": "@sjcrh/proteinpaint-container",
-	"version": "2.39.3",
+	"version": "2.41.1",
 	"bin": "launch.js",
 	"scripts": {
 		"//": "this dev script is for developing and testing the container itself, not for using the container as a dev environment",
