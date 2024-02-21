@@ -333,6 +333,7 @@ export type SingleCellDataNative = {
 	src: 'native'
 	plots: SingleCellPlot[]
 	termIds: string[]
+	refName: string
 	get: (sample: any) => any
 }
 
@@ -700,6 +701,8 @@ type AssayAvailability = {
 //Shared with genome.ts
 export type Cohort = {
 	allowedChartTypes?: string[]
+	hiddenChartTypes?: string[]
+	renamedChartTypes?: { singleCellPlot: string }
 	mutationset?: MutationSet[]
 	db: FileObj
 	termdb?: Termdb

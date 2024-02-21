@@ -8,12 +8,12 @@ class MassCharts {
 		setRenderers(this)
 	}
 
-	async init() {
+	async init(appState) {
 		this.dom = {
 			holder: this.opts.holder,
 			tip: new Menu({ padding: '0px' })
 		}
-		this.makeButtons()
+		this.makeButtons(appState)
 	}
 
 	// TODO later add reactsTo() to react to filter change
@@ -36,9 +36,13 @@ class MassCharts {
 		if (appState?.termfilter?.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
 		}
-		if (!state.supportedChartTypes.includes('dictionary')) {
+		if (
+			!state.supportedChartTypes.includes('dictionary') &&
+			!state.termdbConfig.hiddenChartTypes?.includes('dictionary')
+		) {
 			// force to show a dictionary chart button
 			// TODO: may want the server to decide this, and as defined for a dataset
+
 			state.supportedChartTypes.push('dictionary')
 		}
 
@@ -66,7 +70,7 @@ export function getActiveCohortStr(appState) {
 	return ''
 }
 
-function getChartTypeList(self) {
+function getChartTypeList(self, state) {
 	/* returns a list all possible chart types supported in mass
 	each char type will generate a button under the nav bar
 	a dataset can support a subset of these charts
@@ -111,7 +115,7 @@ function getChartTypeList(self) {
 		describe private details for creating a chart of a particular type
 		to be attached to action and used by store
 	*/
-	return [
+	const buttons = [
 		{
 			label: 'Data Dictionary',
 			clickTo: self.prepPlot,
@@ -205,11 +209,18 @@ function getChartTypeList(self) {
 			}
 		}
 	]
+	for (const field in state?.termdbConfig.renamedChartTypes || []) {
+		const btn = buttons.find(b => b.chartType === field)
+		if (btn) {
+			btn.label = state.termdbConfig.renamedChartTypes[field]
+		}
+	}
+	return buttons
 }
 
 function setRenderers(self) {
-	self.makeButtons = function () {
-		const chartTypeList = getChartTypeList(self)
+	self.makeButtons = function (state) {
+		const chartTypeList = getChartTypeList(self, state)
 
 		self.dom.btns = self.dom.holder
 			.selectAll('button')
