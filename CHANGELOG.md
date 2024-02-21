@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.42.0
 
 Features:
 - upgrade node from v16 to v20
