@@ -36,7 +36,8 @@ type Mutation = {
  */
 export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 	if (debugmode) window['hic'] = hic
-	if (!hic.name) hic.name = 'Hi-C'
+	// if (!hic.name) hic.name = 'Hi-C'
+	console.log(hic)
 	if (hic.tklst) {
 		const lst = [] as any[]
 		for (const t of hic.tklst) {
@@ -102,12 +103,12 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 			console.log(err.stack)
 		}
 	}
-	/** Default args for each view */
-	const initialNmeth = hic.normalization.length ? hic.normalization[0] : defaultnmeth
+	// /** Default args for each view */
+	// const initialNmeth = hic.normalization.length ? hic.normalization[0] : defaultnmeth
 
-	self.genomeview.nmeth = initialNmeth
-	self.chrpairview.nmeth = initialNmeth
-	self.detailview.nmeth = initialNmeth
+	// self.genomeview.nmeth = initialNmeth
+	// self.chrpairview.nmeth = initialNmeth
+	// self.detailview.nmeth = initialNmeth
 
 	if (self.errList.length) self.error(self.errList)
 	return hic

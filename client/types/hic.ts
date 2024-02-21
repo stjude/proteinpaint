@@ -1,5 +1,5 @@
 import { BaseTrackArgs } from './tracks.ts'
-import { Div, Elem, Input, Svg, SvgG } from '../types/d3'
+import { Div, Elem, Input, Svg, SvgG } from './d3'
 import { Selection } from 'd3-selection'
 
 type SharedArgs = {
