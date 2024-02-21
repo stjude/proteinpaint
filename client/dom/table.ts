@@ -176,7 +176,7 @@ export function renderTable({
 				}
 			})
 		if (showLines) {
-			const lineDiv = rowtable
+			rowtable
 				.append('td')
 				.text(i + 1)
 				.style('text-align', 'center')
@@ -266,7 +266,7 @@ export function renderTable({
 						.append('input')
 						.attr('type', 'color')
 						.attr('value', cell.color)
-						.on('change', e => {
+						.on('change', () => {
 							const color = input.node().value
 							cell.color = color
 							if (column.editCallback) column.editCallback(i, cell)
@@ -289,7 +289,7 @@ export function renderTable({
 				.append('button')
 				.text(bCfg.text)
 				.style('margin', '10px 10px 0 0')
-				.on('click', e => {
+				.on('click', () => {
 					bCfg.callback(getCheckedRowIndex(), bCfg.button.node())
 				})
 			if (bCfg.class) bCfg.button.attr('class', bCfg.class)
@@ -328,7 +328,7 @@ export function renderTable({
 				_selectedRowStyle = opts.selectedRowStyle
 				const trs = tbody.selectAll('tr')
 				for (const key in _selectedRowStyle) {
-					const value = trs.style(key, function (this: any) {
+					trs.style(key, function (this: any) {
 						return select(this).select('td input').property('checked') ? _selectedRowStyle[key] : ''
 					})
 				}
@@ -341,7 +341,6 @@ export function renderTable({
 
 export async function downloadTable(rows, cols) {
 	const filename = `table.tsv`
-	const data = {}
 	let lines = ''
 	for (const column of cols) {
 		lines += `${column.label}\t`
