@@ -193,12 +193,13 @@ class singleCellPlot {
 				if (!this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
-		svg
-			.append('text')
-			.attr('transform', `translate(20, 30)`)
-			.style('font-weight', 'bold')
-			.style('font-size', '1.1em')
-			.text(`${plot.name}`)
+		if (this.state.termdbConfig.singleCell.sameLegend)
+			svg
+				.append('text')
+				.attr('transform', `translate(20, 30)`)
+				.style('font-weight', 'bold')
+				.style('font-size', '1.1em')
+				.text(`${plot.name}`)
 
 		plot.svg = svg
 		const zoom = d3zoom()
@@ -236,7 +237,13 @@ class singleCellPlot {
 			.attr('width', 250)
 			.attr('height', this.settings.svgh)
 			.style('vertical-align', 'top')
-
+		if (!this.state.termdbConfig.singleCell.sameLegend)
+			legendSVG
+				.append('text')
+				.attr('transform', `translate(20, 30)`)
+				.style('font-weight', 'bold')
+				.style('font-size', '1.1em')
+				.text(`${plot.name}`)
 		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
 
 		legendG
