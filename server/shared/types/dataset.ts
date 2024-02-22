@@ -309,7 +309,13 @@ export type SingleCellSamplesNative = {
 	*/
 	isSampleTerm: string
 
-	/** allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc */
+	/** 
+	logic to decide sample table columns:
+	a sample table will always have a sample column, to show sample.sample value
+	firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
+	the other two properties allow to declare additional columns to be shown in table, that are for display only
+	when sample.experiments[] are used, a last column of experiment id will be auto added
+	*/
 	firstColumnName?: string
 	/** any other columns to be added to sample table. each is a term id */
 	sampleColumns?: { termid: string }[]

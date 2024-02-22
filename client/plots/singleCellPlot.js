@@ -150,20 +150,23 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.config = structuredClone(this.state.config) // ?
 
 		this.dom.tableDiv.selectAll('*').remove()
 		this.plots = []
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
-		let sample = this.state.config.sample
 		this.legendRendered = false
 
 		const body = { genome: this.state.genome, dslabel: this.state.dslabel }
+		let sample
 		if (this.state.config.sample) {
+			// a sample has already been selected
+			sample = this.state.config.sample
 			body.sample = this.state.config.experimentID || this.state.config.sample
 		} else {
-			// no given sample in state.config{}, assume that this.samples[] are already loaded!!
+			// no given sample in state.config{}, assume that this.samples[] are already loaded, then use 1st sample
+			sample = this.samples[0].sample
 			body.sample = this.samples[0].experiments?.[0]?.experimentID || this.samples[0].sample
 		}
 		this.renderPlots(body)
@@ -433,37 +436,32 @@ async function renderSamplesTable(div, self, state) {
 	})
 
 	const rows = []
-	const columns = [{ label: state.termdbConfig.queries.singleCell.samples.firstColumnName || 'Sample' }]
-	for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
-		columns.push({
-			label: (await self.app.vocabApi.getterm(c.termid)).name,
-			width: '20vw'
-		})
-	}
-	for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
-		columns.push({ label: c.label, width: '20vw' })
-	}
-	if (samples.some(i => i.experiments)) {
-		columns.push({ label: 'Experiment' })
-	}
-	//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
-	//columns[index].width = '25vw'
 
 	for (const sample of samples) {
 		if (sample.experiments)
 			for (const exp of sample.experiments) {
-				const row = [{ value: sample.sample, __experiment: exp }]
+				// first cell is always sample name. sneak in experiment object to be accessed in click callback
+				const row = [{ value: sample.sample, __experimentID: exp.experimentID }]
+
+				// optional sample and experiment columns
 				for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
 					row.push({ value: sample[c.termid] })
 				}
 				for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
 					row.push({ value: sample[c.label] })
 				}
+
+				// hardcode to always add in experiment id column
 				row.push({ value: exp.experimentID })
 				rows.push(row)
 			}
 		else {
+			// sample does not use experiment
+
+			// first cell is sample name
 			const row = [{ value: sample.sample }]
+
+			// optional sample columns
 			for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
 				row.push({ value: sample[c.termid] })
 			}
@@ -481,7 +479,7 @@ async function renderSamplesTable(div, self, state) {
 
 	renderTable({
 		rows,
-		columns,
+		columns: await getTableColumns(self, samples, state),
 		resize: true,
 		singleMode: true,
 		div,
@@ -489,18 +487,46 @@ async function renderSamplesTable(div, self, state) {
 		noButtonCallback: index => {
 			const sample = rows[index][0].value
 			const config = { chartType: 'singleCellPlot', sample }
-			if (rows[index][0].__experiment) {
-				config.experimentID = rows[index][0].__experiment.experimentID
+			if (rows[index][0].__experimentID) {
+				config.experimentID = rows[index][0].__experimentID
 			}
-			if (!self.tableOnPlot) {
-				self.dom.tip.hide()
+			if (self.tableOnPlot) {
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
 			} else {
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
+				// please explain
+				self.dom.tip.hide()
+				self.app.dispatch({ type: 'plot_create', config })
 			}
 		},
 		selectedRows
 	})
+}
+
+async function getTableColumns(self, samples, state) {
+	// first column is sample and is hardcoded
+	const columns = [{ label: state.termdbConfig.queries.singleCell.samples.firstColumnName || 'Sample' }]
+
+	// add in optional sample columns
+	for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+		columns.push({
+			label: (await self.app.vocabApi.getterm(c.termid)).name,
+			width: '20vw'
+		})
+	}
+
+	// add in optional experiment columns
+	for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
+		columns.push({ label: c.label, width: '20vw' })
+	}
+
+	// if samples are using experiments, add the last hardcoded experiment column
+	if (samples.some(i => i.experiments)) {
+		columns.push({ label: 'Experiment' })
+	}
+
+	//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
+	//columns[index].width = '25vw'
+	return columns
 }
 
 export const scatterInit = getCompInit(singleCellPlot)
