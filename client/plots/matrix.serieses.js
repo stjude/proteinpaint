@@ -85,10 +85,11 @@ export function getSerieses(data) {
 								values: {},
 								order: legend.order,
 								$id,
-								dt: legend.entry.dt,
+								dt: legend.entry.dt ? [legend.entry.dt] : legend.entry.dt,
 								origin: legend.entry.origin
 							}
 						const lg = l[legend.group]
+						if (lg.dt && !lg.dt.includes(legend.entry.dt)) lg.dt.push(legend.entry.dt)
 						const legendK = legend.entry.origin ? legend.entry.origin + legend.value : legend.value
 
 						if (!lg.values[legendK]) {
@@ -140,7 +141,7 @@ function addAllHiddenLegendGroups(legendGroups, self) {
 			legendGroups[valueFilter.legendGrpName] = {
 				ref: {},
 				values: {},
-				dt: valueFilter.tvs.values[0].dt,
+				dt: [valueFilter.tvs.values[0].dt],
 				origin: valueFilter.tvs.values[0].origin
 			}
 		} else if (

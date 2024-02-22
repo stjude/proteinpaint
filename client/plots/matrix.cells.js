@@ -105,6 +105,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	}
 	//if (value.origin) cell.label = `${self.morigin[value.origin].label} ${cell.label}`
 
+	const byDt = self.state.termdbConfig.assayAvailability?.byDt
 	// return the corresponding legend item data
 	const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
 	if (value.dt == 4) {
@@ -141,8 +142,17 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 				entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
 			}
 		}
-	} else if (value.dt == 2) {
-		const group = 'Structural Variants'
+	} else if (value.dt == 2 && byDt?.[2]) {
+		const group = 'Fusion RNA'
+		return {
+			ref: t.ref,
+			group,
+			value: value.class,
+			order: -1,
+			entry: { key: value.class, label: cell.label, fill: cell.fill, order, dt: value.dt, origin: value.origin }
+		}
+	} else if (value.dt == 5 && byDt?.[5]) {
+		const group = 'Structural Variation'
 		return {
 			ref: t.ref,
 			group,

@@ -77,6 +77,8 @@ export function getLegendData(legendGroups, refs, self) {
 			if (f.legendGrpName != $id && f.legendGrpName != name && f.tvs.term.name != name) continue
 			if (f.tvs.term.type == 'geneVariant') {
 				for (const v of f.tvs.values) {
+					// need to push all the dt to legend group, even when the legend item is hidden or filtered out
+					if (legend.dt && !legend.dt.includes(v.dt)) legend.dt.push(v.dt)
 					for (const key of v.mclasslst) {
 						const legendk = v.origin ? v.origin + key : key
 						legend.values[legendk] = {

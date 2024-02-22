@@ -203,7 +203,7 @@ export default function svgLegend(opts) {
 				.enter()
 				.append('stop')
 				.attr('offset', (c, i) => `${c * 100}%`)
-				.attr('stop-color', c => d.scale(c))
+				.attr('stop-color', c => (d.scale ? d.scale(c) : 'grey'))
 				.attr('stop-opacity', 1)
 
 			const minLabel = g

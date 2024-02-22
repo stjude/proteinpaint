@@ -113,19 +113,7 @@ export function applyLegendValueFilter() {
 				for (const annoForOneTerm of Object.values(oneSampleData)) {
 					if (annoForOneTerm.values)
 						annoForOneTerm.values = annoForOneTerm.values.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
-						)
-					if (annoForOneTerm.countedValues)
-						annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
-						)
-					if (annoForOneTerm.filteredValues)
-						annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
-						)
-					if (annoForOneTerm.renderedValues)
-						annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+							v => !(grpFilter.dt.includes(v.dt) && (!grpFilter.origin || v.origin == grpFilter.origin))
 						)
 				}
 			}
@@ -134,19 +122,7 @@ export function applyLegendValueFilter() {
 				for (const annoForOneTerm of Object.values(oneSampleData)) {
 					if (annoForOneTerm.values)
 						annoForOneTerm.values = annoForOneTerm.values.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
-						)
-					if (annoForOneTerm.countedValues)
-						annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
-						)
-					if (annoForOneTerm.filteredValues)
-						annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
-						)
-					if (annoForOneTerm.renderedValues)
-						annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
-							v => !(v.dt == grpFilter.dt && (!grpFilter.origin || v.origin == grpFilter.origin))
+							v => !(grpFilter.dt.includes(v.dt) && (!grpFilter.origin || v.origin == grpFilter.origin))
 						)
 				}
 			}
@@ -165,8 +141,16 @@ export function applyLegendValueFilter() {
 		.map(v => v.$id)
 	const data = { samples: {}, lst: [], refs: self.data.refs }
 
+	const onlyHardFilter = structuredClone(self.config.legendValueFilter)
+	onlyHardFilter.lst = onlyHardFilter.lst.filter(
+		l => !l.tvs.legendFilterType || l.tvs.legendFilterType !== 'geneVariant_soft'
+	)
 	for (const row of self.origData.lst) {
-		const include = sample_match_termvaluesetting(row, self.config.legendValueFilter, geneVariant$ids)
+		const include = sample_match_termvaluesetting(
+			row,
+			self.app.vocabApi.vocab?.dslabel == 'GDC' ? self.config.legendValueFilter : onlyHardFilter,
+			geneVariant$ids
+		)
 		if (include || self.chartType == 'hierCluster') {
 			// for hierCluster, should not filter out any samples by sample_match_termvaluesetting
 			// samples are filtered out by joining legendValueFilter with filter in setHierClusterData
@@ -186,18 +170,6 @@ export function applyLegendValueFilter() {
 					annoForOneTerm.values = annoForOneTerm.values.filter(
 						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
 					)
-				if (annoForOneTerm.countedValues)
-					annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
-						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
-					)
-				if (annoForOneTerm.filteredValues)
-					annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
-						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
-					)
-				if (annoForOneTerm.renderedValues)
-					annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
-						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
-					)
 			}
 		}
 		for (const oneSampleData of Object.values(data.samples)) {
@@ -206,22 +178,11 @@ export function applyLegendValueFilter() {
 					annoForOneTerm.values = annoForOneTerm.values.filter(
 						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
 					)
-				if (annoForOneTerm.countedValues)
-					annoForOneTerm.countedValues = annoForOneTerm.countedValues.filter(
-						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
-					)
-				if (annoForOneTerm.filteredValues)
-					annoForOneTerm.filteredValues = annoForOneTerm.filteredValues.filter(
-						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
-					)
-				if (annoForOneTerm.renderedValues)
-					annoForOneTerm.renderedValues = annoForOneTerm.renderedValues.filter(
-						v => !(v.dt == tvsV.dt && (!tvsV.origin || v.origin == tvsV.origin) && tvsV.mclasslst.includes(v.class))
-					)
 			}
 		}
 	}
-	if (self.chartType !== 'hierCluster') remove_empty_sample(data)
+	if (self.chartType !== 'hierCluster' && geneVariant$ids.length && self.app.vocabApi.vocab?.dslabel == 'GDC')
+		remove_empty_sample(data, geneVariant$ids)
 	self.data = data
 }
 
