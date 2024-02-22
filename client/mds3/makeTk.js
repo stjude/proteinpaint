@@ -115,7 +115,7 @@ export async function makeTk(tk, block) {
 	// tk.mds{} is created for both official and custom track
 	// following procedures are only based on tk.mds
 
-	// must init termdb first to get termdbconfig, and inform what queries are available
+	// must init termdb first to get termdbconfig, and do all the rest (inform what queries are available, has vocabApi methods etc)
 	await mayInitTermdb(tk, block)
 
 	await mayInit_variant2samples(tk, block)
@@ -125,6 +125,8 @@ export async function makeTk(tk, block) {
 	mayInitSkewer(tk) // tk.skewer{} may be added
 
 	mayInitCnv(tk)
+
+	await mayHydrateFilter(tk)
 
 	tk.tklabel.text(tk.mds.label || tk.name)
 
@@ -951,4 +953,27 @@ function validateSelectSamples(tk) {
 	}
 	if (typeof a.callback != 'function') throw 'allow2selectSamples.callback() is not function'
 	a._cart = [] // array to hold samples selected so far (e.g. separately from multiple mutations), for submitting to a.callback()
+}
+
+async function mayHydrateFilter(tk) {
+	if (!tk.filterObj) return
+	// hydrate filter by filling tvs term obj
+	if (typeof tk.filterObj != 'object') throw 'tk.filterObj{} is set but is not object'
+
+	await hydrate(tk.filterObj)
+
+	async function hydrate(f) {
+		if (f.type == 'tvs') {
+			if (!f.tvs?.term) throw 'tvs.tvs.term missing'
+			if (!f.tvs.term.id) throw 'tvs.tvs.term.id missing'
+			f.tvs.term = await tk.mds.termdb.vocabApi.getterm(f.tvs.term.id)
+			return
+		}
+		if (f.type == 'tvslst') {
+			if (!Array.isArray(f.lst)) throw 'tvslst.lst[] not array'
+			for (const t of f.lst) await hydrate(t)
+			return
+		}
+		throw 'type not tvs or tvslst'
+	}
 }
