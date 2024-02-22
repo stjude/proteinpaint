@@ -40,7 +40,7 @@ class singleCellPlot {
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
 			.style('justify-content', 'flex-start')
-			.style('width', '100vw')
+			.style('width', '92vw')
 		this.dom = {
 			header: this.opts.header,
 			//holder,
@@ -89,13 +89,24 @@ class singleCellPlot {
 						label: 'Chart width',
 						type: 'number',
 						chartType: 'singleCellPlot',
-						settingsKey: 'svgw'
+						settingsKey: 'svgw',
+						min: 300,
+						max: 1000
 					},
 					{
 						label: 'Chart height',
 						type: 'number',
 						chartType: 'singleCellPlot',
-						settingsKey: 'svgh'
+						settingsKey: 'svgh',
+						min: 300,
+						max: 1000
+					},
+					{
+						label: 'Show borders',
+						type: 'checkbox',
+						chartType: 'singleCellPlot',
+						settingsKey: 'showBorders',
+						boxLabel: 'Yes'
 					}
 				]
 			})
@@ -182,7 +193,13 @@ class singleCellPlot {
 		plot.colorMap = colorMap
 		this.initAxes(plot)
 
-		plot.plotDiv = this.dom.tableDiv.append('div').style('display', 'inline-block').style('padding', '10px')
+		plot.plotDiv = this.dom.tableDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '10px')
+			.style('flex-grow', 1)
+		if (this.state.config.settings.singleCellPlot.showBorders) plot.plotDiv.style('border', '1px solid #aaa')
+
 		this.renderLegend(plot, colorMap)
 
 		const svg = plot.plotDiv
@@ -193,13 +210,7 @@ class singleCellPlot {
 				if (!this.onClick) this.showTooltip(event, plot)
 			})
 			.on('click', event => this.showTooltip(event, plot))
-		if (this.state.termdbConfig.singleCell.sameLegend)
-			svg
-				.append('text')
-				.attr('transform', `translate(20, 30)`)
-				.style('font-weight', 'bold')
-				.style('font-size', '1.1em')
-				.text(`${plot.name}`)
+		svg.append('text').attr('transform', `translate(20, 30)`).style('font-weight', 'bold').text(`${plot.name}`)
 
 		plot.svg = svg
 		const zoom = d3zoom()
@@ -237,13 +248,7 @@ class singleCellPlot {
 			.attr('width', 250)
 			.attr('height', this.settings.svgh)
 			.style('vertical-align', 'top')
-		if (!this.state.termdbConfig.singleCell.sameLegend)
-			legendSVG
-				.append('text')
-				.attr('transform', `translate(20, 30)`)
-				.style('font-weight', 'bold')
-				.style('font-size', '1.1em')
-				.text(`${plot.name}`)
+
 		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
 
 		legendG
@@ -501,6 +506,7 @@ export async function getPlotConfig(opts, app) {
 export function getDefaultSingleCellSettings() {
 	return {
 		svgw: 400,
-		svgh: 400
+		svgh: 400,
+		showBorders: false
 	}
 }
