@@ -325,7 +325,7 @@ type ColorColumn = {
 	index: number
 	name: string
 }
-export type SingleCellPlot = {
+type SingleCellPlot = {
 	name: string
 	folder: string
 	fileSuffix: string
