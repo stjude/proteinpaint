@@ -2307,7 +2307,7 @@ function setLengendActions(self) {
 			// for gene expression don't use legend as filter
 			return
 		}
-		if (!targetData.isLegendItem && (!targetData.dt || self.chartType == 'hierCluster')) {
+		if (!targetData.isLegendItem && !targetData.dt) {
 			// do not change color when its a non-genevariant legend group name
 			// or when its a genevariant legend group name for hierCluster
 			return
@@ -2342,7 +2342,7 @@ function setLengendActions(self) {
 
 		// When clicking a legend group name
 		if (!targetData.isLegendItem) {
-			if (!targetData.dt || self.chartType == 'hierCluster') {
+			if (!targetData.dt) {
 				// do not use as filter when its a non-genevariant legend group name
 				// or when its a genevariant legend group name for hierCluster
 				return
@@ -2350,14 +2350,16 @@ function setLengendActions(self) {
 
 			//legendGrpFilterIndex is the index of the filter that is already in self.config.legendGrpFilter.lst
 			const legendGrpFilterIndex = self.config.legendGrpFilter.lst.findIndex(
-				f => f.dt == targetData.dt && (!byOrigin || f.origin == targetData.origin)
+				f =>
+					f.dt.slice().sort().toString() === targetData.dt.slice().sort().toString() &&
+					(!byOrigin || f.origin == targetData.origin)
 			)
 
 			//legendFilterIndex is the index of the first filter (in this filter group being clicked) that is already in self.config.legendValueFilter.lst, if there's any
 			const legendFilterIndex = self.config.legendValueFilter.lst.findIndex(
 				l =>
 					l.legendGrpName == targetData.name &&
-					l.tvs.values.find(v => v.dt == targetData.dt && (!byOrigin || v.origin == targetData.origin))
+					l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
 			)
 			const menuGrp = new Menu({ padding: '0px' })
 			const div = menuGrp.d.append('div')
@@ -2365,7 +2367,7 @@ function setLengendActions(self) {
 			// when the legend group is not hidden
 			if (legendGrpFilterIndex == -1) {
 				// for consequences/mutations legend group
-				if (targetData.dt == 1) {
+				if (targetData.dt.includes(1)) {
 					div
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
@@ -2453,7 +2455,7 @@ function setLengendActions(self) {
 						menuGrp.hide()
 						// when the legend group is shown and now hide it
 						// add a new "legend group filter" to filter out the legend group's origin + legend group's dt
-						const legendData = structuredClone(targetData)
+						const legendData = JSON.parse(JSON.stringify(targetData))
 						legendData.crossedOut = true
 						const filterNew = { dt: targetData.dt, legendData }
 						if (byOrigin) {

@@ -109,9 +109,17 @@ tape('only dictionary terms', function (test) {
 		sg0rects.each(d => uniqueHts.add(d.height))
 		test.equal(uniqueHts.size, 45, `should render different rect heights for continuous mode bar plots`)
 
+		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')]
+			.find(d => d?.__data__?.text?.startsWith('Male'))
+			.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
 		// TODO: test for matrix bar plots of continuous mode terms with allowed negative value
 
-		if (test._ok) matrix.Inner.app.destroy()
+		//if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1344,5 +1352,62 @@ tape('avoid race condition', function (test) {
 			test.fail('error: ' + e)
 			throw e
 		}
+	}
+})
+
+tape.only('one geneVariant term with legend filter', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(1)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{
+									id: 'sex'
+									//q: { mode: 'values' } // or 'groupsetting'
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		console.log('before legendTexts')
+		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')]
+			.find(d => d?.__data__?.text?.startsWith('Male'))
+			.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+		console.log('what is legendTexts', legendTexts)
+		// if (test._ok) matrix.Inner.app.destroy()
+		test.end()
 	}
 })
