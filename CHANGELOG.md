@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- enable geneVariant legend group filter for hierCluster
+- combine all dts (except for dt=4) into mutations/consequences legend group for dt without assay availability
+
 Fixes:
 - allow to use a simplified filterObj on mds3 tk that will be hydrated on launch
 
