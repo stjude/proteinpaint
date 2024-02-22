@@ -1,7 +1,7 @@
 import { getAppInit } from '#rx'
 import { hicStoreInit } from './store'
 import { Div, Elem } from '../../types/d3'
-//import { showErrorsWithCounter } from '../../dom/sayerror'
+import { showErrorsWithCounter } from '../../dom/sayerror'
 import { loadingInit } from './dom/loadingOverlay'
 import { controlPanelInit } from './controls/controlPanel'
 import { hicViewInit } from './views/view'
@@ -13,7 +13,6 @@ class HicApp {
 	/** Required for rx */
 	api: any
 	components: any
-	currView: string
 	dom: {
 		errorDiv: Div | Elem
 		controlsDiv: Div | Elem
@@ -23,7 +22,7 @@ class HicApp {
 		tip: client.Menu
 	}
 	errList: string[]
-	opts: {
+	hic: {
 		enzyme?: string
 		file?: string
 		url?: string
@@ -31,6 +30,7 @@ class HicApp {
 		holder: Div | Elem
 		hostUrl: string
 		name: string
+		tklist?: any[]
 		state?: any
 	}
 	state: any
@@ -41,7 +41,7 @@ class HicApp {
 
 	constructor(opts) {
 		this.type = 'app'
-		this.opts = {
+		this.hic = {
 			enzyme: opts.enzyme,
 			file: opts.file,
 			url: opts.url,
@@ -49,7 +49,7 @@ class HicApp {
 			holder: opts.holder,
 			hostUrl: opts.hostUrl,
 			name: 'name' in opts ? opts.name : 'Hi-C',
-			state: opts.state
+			tklist: opts.tklst || []
 		}
 		this.dom = {
 			errorDiv: opts.holder.append('div').classed('sjpp-hic-error', true),
@@ -61,19 +61,12 @@ class HicApp {
 			tip: new client.Menu()
 		}
 		this.errList = []
-		this.currView = this.determineView(opts)
-	}
-
-	determineView(opts) {
-		//TODO figure out view based on opts
-		//Will be useful when runpp() for chrPair and detailed view is implemented
-		return 'genome'
 	}
 
 	async error(err: string | string[]) {
 		if (err && typeof err == 'string') this.errList.push(err)
 		//TODO: Change to dispatch? Show error, remove loading div, maybe show error over plot all at once?
-		//showErrorsWithCounter(this.errList, this.dom.errorDiv)
+		showErrorsWithCounter(this.errList, this.dom.errorDiv)
 		//Remove errors after displaying
 		this.errList = []
 		//this.dom.loadingDiv.style('display', 'none')
@@ -83,36 +76,34 @@ class HicApp {
 		return appState
 	}
 
-	async init() {
+	async init(opts) {
 		try {
-			this.store = await hicStoreInit({ app: this.api, state: this.opts.state })
+			this.store = await hicStoreInit({ app: this.api })
 			this.state = await this.store.copyState()
+			await hicParseFile(this.hic, true, this.errList)
+			if (this.errList.length) this.error(this.errList)
 			this.components = {
-				loadingOverlay: loadingInit({
+				// loadingOverlay: await loadingInit({
+				// 	app: this.api,
+				// 	state: this.state,
+				// 	loadingDiv: this.dom.loadingDiv
+				// }),
+				controls: await controlPanelInit({
 					app: this.api,
 					state: this.state,
-					loadingDiv: this.dom.loadingDiv
-				}),
-				controls: controlPanelInit({
-					app: this.api,
-					state: this.state,
-					controlsDiv: this.dom.controlsDiv
-				}),
-				view: hicViewInit({
-					app: this.api,
-					state: this.state,
-					plotDiv: this.dom.plotDiv
+					controlsDiv: this.dom.controlsDiv,
+					hic: this.hic
 				})
+				// view: await hicViewInit({
+				// 	app: this.api,
+				// 	state: this.state,
+				// 	plotDiv: this.dom.plotDiv
+				// })
 			}
 			await this.api.dispatch()
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 		}
-	}
-
-	async main() {
-		await hicParseFile(this.opts, true, this)
-		console.log(117, 'app main', this.opts)
 	}
 }
 
