@@ -19,7 +19,7 @@ import {
 import { showErrorsWithCounter } from '../../../dom/sayerror'
 import { hicParseFile } from '../data/parseData.ts'
 import { init_hicInfoBar } from '../dom/info.bar.ts'
-import { init_hicControls } from '../controls/controlPanel.ts'
+//import { init_hicControls } from '../controls/controlPanel.ts'
 import { Div } from '../../../types/d3'
 
 /*
@@ -221,7 +221,7 @@ class Hicstat {
 
 	async render(hic: any) {
 		this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner').style('display', '')
-		await hicParseFile(hic, this.debugmode, this)
+		await hicParseFile(hic, this.debugmode, this.errList)
 		if (this.errList.length) {
 			//Display file reader errors to user before rendering app
 			this.error(this.errList)
@@ -229,7 +229,7 @@ class Hicstat {
 			return
 		}
 		await init_hicInfoBar(hic, this)
-		init_hicControls(hic, this)
+		//init_hicControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
 		const tr1 = this.dom.plotDiv.append('tr')
 		const tr2 = this.dom.plotDiv.append('tr')
