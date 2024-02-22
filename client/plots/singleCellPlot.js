@@ -39,7 +39,7 @@ class singleCellPlot {
 		tableDiv
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
-			.style('justify-content', 'flex-start')
+			.style('justify-content', 'center')
 			.style('width', '92vw')
 		this.dom = {
 			header: this.opts.header,
@@ -76,6 +76,16 @@ class singleCellPlot {
 		await this.setControls()
 		document.addEventListener('scroll', event => this.tip.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
+
+		let body
+		if (!this.tableOnPlot) {
+			body = { genome: appState.vocab.genome, dslabel: appState.vocab.dslabel, sample: config.sample }
+		} else {
+			const file = config.file || this.samples[0].files[0].fileId
+			body = { genome: appState.vocab.genome, dslabel: appState.vocab.dslabel, sample: file }
+		}
+		this.data = await dofetch3('termdb/singlecellData', { body })
+		if (this.data.error) throw result.error
 	}
 
 	async setControls() {
@@ -131,44 +141,26 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
+		console.log(this.data)
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 
 		this.dom.tableDiv.selectAll('*').remove()
 		this.plots = []
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
-
-		let sample = this.state.config.sample
+		this.renderPlots()
 		this.legendRendered = false
-		if (!this.tableOnPlot) {
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.config.sample }
-			this.renderPlots(body)
-		} else {
-			let file
-			if (!this.state.config.file) {
-				sample = this.samples[0].sample
-				file = this.samples[0].files[0].fileId
-			} else {
-				sample = this.state.config.sample
-				file = this.state.config.file
-			}
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file }
-			this.renderPlots(body)
-		}
+		const sample = this.config.sample || this.samples[0].sample
 		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
 	}
 
-	async renderPlots(body) {
+	async renderPlots() {
 		try {
-			const result = await dofetch3('termdb/singlecellData', { body })
-			if (result.error) throw result.error
-			for (const plot of result.plots) {
-				for (const tid in result.tid2cellvalue) {
-					plot.clusterMap = result.tid2cellvalue[tid]
+			for (const plot of this.data.plots) {
+				for (const tid in this.data.tid2cellvalue) {
 					plot.tid = tid
 					this.renderPlot(plot)
 				}
 			}
-			this.refName = result.refName
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			sayerror(this.mainDiv, e)
@@ -245,7 +237,7 @@ class singleCellPlot {
 		this.legendRendered = true
 		const legendSVG = plot.plotDiv
 			.append('svg')
-			.attr('width', 250)
+			.attr('width', 220)
 			.attr('height', this.settings.svgh)
 			.style('vertical-align', 'top')
 
@@ -507,6 +499,6 @@ export function getDefaultSingleCellSettings() {
 	return {
 		svgw: 400,
 		svgh: 400,
-		showBorders: false
+		showBorders: true
 	}
 }
