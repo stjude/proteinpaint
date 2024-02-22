@@ -445,13 +445,11 @@ export function getComponentApi(self) {
 		type: self.type,
 		id: self.id,
 		async update(current) {
-			if (current.action && self.reactsTo) {
-				const affected = self.reactsTo(current.action)
+			if (current.action) {
+				const affected = self.reactsTo ? self.reactsTo(current.action) : true
 				if (!affected) return
-				if (current.action._scope_ === 'none') {
-					// _scope_ = 'none' indicates a state change that should not be tracked,
-					// assume that this also indicates that the main component itself will not
-					// be visibly affected, but should notify children which may be visibly affected
+				if (current.action._skipNotification_?.(api)) {
+					// option to skip notification of a parent component, but still nofify subcomponents
 					await notifyComponents(self.components, current)
 					return
 				}
