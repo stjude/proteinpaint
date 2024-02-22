@@ -79,15 +79,19 @@ export function getSerieses(data) {
 				if (legend) {
 					for (const l of [legendGroups, so.grp.legendGroups]) {
 						if (!l) continue
-						if (!l[legend.group])
+						if (!l[legend.group]) {
 							l[legend.group] = {
 								ref: legend.ref,
 								values: {},
 								order: legend.order,
 								$id,
-								dt: legend.entry.dt ? [legend.entry.dt] : legend.entry.dt,
 								origin: legend.entry.origin
 							}
+							// legend group dt needs to be an array because a legend group such as Mutations/Consequences
+							// could have legend items from multiple dts (dt=1, dt=2, dt=5)
+							if (legend.entry.dt) l[legend.group].dt = [legend.entry.dt]
+						}
+
 						const lg = l[legend.group]
 						if (lg.dt && !lg.dt.includes(legend.entry.dt)) lg.dt.push(legend.entry.dt)
 						const legendK = legend.entry.origin ? legend.entry.origin + legend.value : legend.value
