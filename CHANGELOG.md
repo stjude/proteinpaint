@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.42.2
 
 Fixes:
 - mds3 tk sample summary table will scroll if too tall
