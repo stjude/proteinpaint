@@ -25,8 +25,6 @@ copy_term
 trigger_*
 */
 
-const limitSearchTermTo = 10
-
 export function handle_request_closure(genomes) {
 	/*
 	 */
@@ -234,7 +232,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 			}
 		}
 
-		const _terms = await termdb.q.findTermByName(str, limitSearchTermTo, q.cohortStr, q.treeFilter, q.usecase, matches)
+		const _terms = await termdb.q.findTermByName(str, q.cohortStr, q.treeFilter, q.usecase, matches)
 
 		terms.push(..._terms.map(copy_term))
 

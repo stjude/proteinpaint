@@ -300,7 +300,7 @@ export function server_init_db_queries(ds) {
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		q.findTermByName = (n, limit = 10, cohortStr = '', treeFilter = null, usecase = null, matches = null) => {
+		q.findTermByName = (n, cohortStr = '', treeFilter = null, usecase = null, matches = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
@@ -320,7 +320,7 @@ export function server_init_db_queries(ds) {
 						else r.includes.push(j)
 					}
 				}
-				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes].slice(0, limit)
+				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes]
 			}
 			return undefined
 		}

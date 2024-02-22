@@ -71,7 +71,7 @@ class TermSearch {
 
 	// targetType optional, see vocab.findTerm()
 	async doSearch(str, targetType) {
-		if (!str) {
+		if (!str || str.length < 3) {
 			this.clear()
 			this.bus.emit('postSearch', [])
 			return
@@ -94,23 +94,28 @@ function setRenderers(self) {
 	self.initUI = state => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
 
-		self.dom.input = self.dom.holder
-			.style('text-align', 'left')
+		const searchDiv = self.dom.holder.append('div').style('text-align', 'left')
+
+		self.dom.input = searchDiv
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
 			.attr('placeholder', 'Search' + self.getPrompt(state))
 			.style('width', '220px')
 			.style('margin', '10px')
-			.style('display', 'block')
+			.style('display', 'inline-block')
 			.on('input', debounce(self.onInput, 300))
 			.on('keyup', self.onKeyup)
+
+		self.dom.resultCntDiv = searchDiv.append('div').style('display', 'none')
 
 		if (self.opts.focus != 'off') self.dom.input.node().focus()
 
 		// a holder to contain two side-by-side divs for genes and dictionary term hits
 		self.dom.resultDiv = (self.opts.resultsHolder || self.dom.holder)
 			.append('div')
+			.attr('class', 'sjpp_show_scrollbar')
+			.style('max-height', '35vh')
 			.style('display', 'none')
 			//div is hidden when no results to show, since an empty grid holder occupies white space and increase the distance between search box and tree
 			// when showing, turn to "inline-grid", but not "grid", to show up nicely
@@ -191,6 +196,8 @@ function setRenderers(self) {
 		if (dictTerms.length) {
 			self.dom.resultDiv_terms.append('table').selectAll().data(dictTerms).enter().append('tr').each(self.showTerm)
 		}
+
+		self.dom.resultCntDiv.style('display', 'inline-block').text(`${data.lst.length} results`)
 
 		self.focusableResults = [...self.dom.resultDiv.node().querySelectorAll('.sja_tree_click_term, .sja_menuoption')]
 	}
@@ -291,6 +298,7 @@ function setRenderers(self) {
 		self.dom.resultDiv_genes.selectAll('*').remove()
 		self.dom.resultDiv_terms.selectAll('*').remove()
 		self.dom.resultDiv.style('display', 'none')
+		self.dom.resultCntDiv.style('display', 'none')
 	}
 
 	self.renderSelectedNonDictTerms = function () {
