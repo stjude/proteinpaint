@@ -445,7 +445,17 @@ export function getComponentApi(self) {
 		type: self.type,
 		id: self.id,
 		async update(current) {
-			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
+			if (current.action && self.reactsTo) {
+				const affected = self.reactsTo(current.action)
+				if (!affected) return
+				if (current.action._scope_ === 'none') {
+					// _scope_ = 'none' indicates a state change that should not be tracked,
+					// assume that this also indicates that the main component itself will not
+					// be visibly affected, but should notify children which may be visibly affected
+					await notifyComponents(self.components, current)
+					return
+				}
+			}
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
