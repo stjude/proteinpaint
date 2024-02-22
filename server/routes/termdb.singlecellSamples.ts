@@ -51,7 +51,6 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
 			result = (await ds.queries.singleCell.samples.get(q)) as TermdbSinglecellsamplesResponse
-			result.sameLegend = ds.queries.singleCell.samples.sameLegend
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {

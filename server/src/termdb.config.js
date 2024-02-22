@@ -155,8 +155,9 @@ function addGenomicQueries(c, ds, genome) {
 	if (q.singleCell) {
 		q2.singleCell = {
 			samples: {
-				fields: q.singleCell.samples.fields,
-				columnNames: q.singleCell.samples.fields
+				firstColumnName: q.singleCell.samples.firstColumnName,
+				sampleColumns: q.singleCell.samples.sampleColumns,
+				experimentColumns: q.singleCell.samples.experimentColumns
 			},
 			data: {
 				sameLegend: q.singleCell.data.sameLegend,

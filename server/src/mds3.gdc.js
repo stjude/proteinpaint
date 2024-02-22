@@ -2037,7 +2037,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			fields: [
 				'id',
 				'cases.submitter_id',
-				'cases.project.project_id', // for display only
+				'cases.project.project_id', // for display only NOTE it will be replaced to 'case.project.project_id' to be consistent with dict term id and used in sample obj property
 				'cases.samples.sample_type',
 				'cases.samples.submitter_id',
 				'cases.primary_site',
@@ -2093,24 +2093,22 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			const caseSubmitterId = c.submitter_id
 			if (!case2files.has(caseSubmitterId)) {
 				case2files.set(caseSubmitterId, {
-					sample: caseSubmitterId, // use "sample" but not case as generic property, which is typed
-					primarySite: c.primary_site,
-					diseaseType: c.disease_type,
-					projectId: c.project?.project_id,
-					files: []
+					sample: caseSubmitterId, // "sample" is universal key, though here is actually case
+					'case.primary_site': c.primary_site,
+					'case.disease_type': c.disease_type,
+					'case.project.project_id': c.project?.project_id,
+					experiments: []
 				})
 			}
 			if (!c.samples?.[0]) throw 'h.cases[0].samples[0] missing'
-			case2files.get(caseSubmitterId).files.push({
-				fileId,
+			case2files.get(caseSubmitterId).experiments.push({
+				experimentID: fileId,
 				sampleName: c.samples[0].submitter_id,
 				sampleType: c.samples[0].sample_type
 			})
 		}
 		return {
-			samples: [...case2files.values()],
-			fields: ds.queries.singleCell.samples.fields,
-			columnNames: ds.queries.singleCell.samples.columnNames
+			samples: [...case2files.values()]
 		}
 	}
 }

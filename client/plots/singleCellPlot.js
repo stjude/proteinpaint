@@ -11,6 +11,24 @@ import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 
+/*
+this
+	.tableOnPlot=bool
+
+	.samples[]
+		datastructure returned by /termdb/singlecellSamples
+		only attached when tableOnPlot=true
+
+	.config{}
+		if a sample is already selected, config is {sample:str} or {sample:str, experimentID:str}
+		if config.sample is undefined, use 
+
+	.legendRendered=bool
+	.state{}
+		.config{}
+			.sample
+*/
+
 export const minDotSize = 9
 export const maxDotSize = 300
 
@@ -19,6 +37,7 @@ class singleCellPlot {
 		this.type = 'singleCellPlot'
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
+		window.sc = this
 	}
 
 	async init(appState) {
@@ -139,21 +158,15 @@ class singleCellPlot {
 
 		let sample = this.state.config.sample
 		this.legendRendered = false
-		if (!this.tableOnPlot) {
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.config.sample }
-			this.renderPlots(body)
+
+		const body = { genome: this.state.genome, dslabel: this.state.dslabel }
+		if (this.state.config.sample) {
+			body.sample = this.state.config.experimentID || this.state.config.sample
 		} else {
-			let file
-			if (!this.state.config.file) {
-				sample = this.samples[0].sample
-				file = this.samples[0].files[0].fileId
-			} else {
-				sample = this.state.config.sample
-				file = this.state.config.file
-			}
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file }
-			this.renderPlots(body)
+			// no given sample in state.config{}, assume that this.samples[] are already loaded!!
+			body.sample = this.samples[0].experiments?.[0]?.experimentID || this.samples[0].sample
 		}
+		this.renderPlots(body)
 		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
 	}
 
@@ -420,34 +433,44 @@ async function renderSamplesTable(div, self, state) {
 	})
 
 	const rows = []
-	let columns = []
-	const fields = result.fields
-	const columnNames = result.columnNames
-	for (const column of columnNames) columns.push({ label: column, width: '20vw' })
-	const index = columnNames.length == 1 ? 0 : columnNames.length - 1
-	columns[index].width = '25vw'
+	const columns = [{ label: state.termdbConfig.queries.singleCell.samples.firstColumnName || 'Sample' }]
+	for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+		columns.push({
+			label: (await self.app.vocabApi.getterm(c.termid)).name,
+			width: '20vw'
+		})
+	}
+	for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
+		columns.push({ label: c.label, width: '20vw' })
+	}
+	if (samples.some(i => i.experiments)) {
+		columns.push({ label: 'Experiment' })
+	}
+	//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
+	//columns[index].width = '25vw'
 
 	for (const sample of samples) {
-		if (sample.files)
-			for (const file of sample.files) {
-				const row = []
-				addFields(row, fields, sample)
-				row.push({ value: file.sampleType })
-				row.push({ value: file.fileId })
+		if (sample.experiments)
+			for (const exp of sample.experiments) {
+				const row = [{ value: sample.sample, __experiment: exp }]
+				for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+					row.push({ value: sample[c.termid] })
+				}
+				for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
+					row.push({ value: sample[c.label] })
+				}
+				row.push({ value: exp.experimentID })
 				rows.push(row)
 			}
 		else {
-			const row = []
-			addFields(row, fields, sample)
+			const row = [{ value: sample.sample }]
+			for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+				row.push({ value: sample[c.termid] })
+			}
 			rows.push(row)
 		}
 	}
 
-	function addFields(row, fields, sample) {
-		for (const field of fields) {
-			row.push({ value: sample[field] })
-		}
-	}
 	const selectedRows = []
 	let maxHeight = '40vh'
 	if (self.tableOnPlot) {
@@ -464,15 +487,17 @@ async function renderSamplesTable(div, self, state) {
 		div,
 		maxHeight,
 		noButtonCallback: index => {
-			const sample = samples[index].sample
-			const file = rows[index][columns.length - 1].value
-			let config = { chartType: 'singleCellPlot', sample, file }
-			let type = 'plot_edit'
+			const sample = rows[index][0].value
+			const config = { chartType: 'singleCellPlot', sample }
+			if (rows[index][0].__experiment) {
+				config.experimentID = rows[index][0].__experiment.experimentID
+			}
 			if (!self.tableOnPlot) {
 				self.dom.tip.hide()
-				type = 'plot_create'
-				self.app.dispatch({ type, config })
-			} else self.app.dispatch({ type, id: self.id, config })
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
+			} else {
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
+			}
 		},
 		selectedRows
 	})
