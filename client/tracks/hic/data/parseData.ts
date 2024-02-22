@@ -1,6 +1,6 @@
 import * as client from '#src/client'
 import * as common from '#shared/common'
-import { defaultnmeth } from '../views/hic.straw'
+import { truncate } from 'fs'
 
 /**
 ********* EXPORTED *********
@@ -34,15 +34,14 @@ type Mutation = {
  * @param self app object
  * @returns formatted hic object with defaults
  */
-export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
+export async function hicParseFile(hic: any, debugmode: boolean, errList: string[] = []) {
 	if (debugmode) window['hic'] = hic
 	// if (!hic.name) hic.name = 'Hi-C'
-	console.log(hic)
 	if (hic.tklst) {
 		const lst = [] as any[]
 		for (const t of hic.tklst) {
 			if (!t.type) {
-				self.error('type missing from one of the tracks accompanying HiC')
+				errList.push('type missing from one of the tracks accompanying HiC')
 			} else {
 				t.iscustom = true
 				lst.push(t)
@@ -66,11 +65,11 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 			if (frag) {
 				hic.enzymefile = frag.file
 			} else {
-				self.error('unknown enzyme: ' + hic.enzyme)
+				errList.push('unknown enzyme: ' + hic.enzyme)
 				delete hic.enzyme
 			}
 		} else {
-			self.error('no enzyme fragment information available for this genome')
+			errList.push('no enzyme fragment information available for this genome')
 			delete hic.enzyme
 		}
 	}
@@ -92,13 +91,13 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 		}
 		const data = await client.dofetch2('hicstat?' + (hic.file ? 'file=' + hic.file : 'url=' + hic.url))
 		if (data.error) {
-			self.errList.push(data.error)
+			errList.push(data.error)
 			return
 		}
 		const err = hicparsestat(hic, data.out)
 		if (err) throw { message: err }
 	} catch (err: any) {
-		self.errList.push(err.message || err)
+		errList.push(err.message || err)
 		if (err.stack) {
 			console.log(err.stack)
 		}
@@ -110,7 +109,6 @@ export async function hicParseFile(hic: any, debugmode: boolean, self: any) {
 	// self.chrpairview.nmeth = initialNmeth
 	// self.detailview.nmeth = initialNmeth
 
-	if (self.errList.length) self.error(self.errList)
 	return hic
 }
 
