@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- allow to use a simplified filterObj on mds3 tk that will be hydrated on launch
+
+
 ## 2.42.2
 
 Fixes:

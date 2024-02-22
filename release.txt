@@ -1,2 +1,1 @@
-Fixes:
-- allow to use a simplified filterObj on mds3 tk that will be hydrated on launch
+
