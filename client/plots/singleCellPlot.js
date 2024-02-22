@@ -241,7 +241,7 @@ class singleCellPlot {
 	}
 
 	renderLegend(plot, colorMap) {
-		if (this.state.termdbConfig.singleCell.sameLegend && this.legendRendered) return
+		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
 		this.legendRendered = true
 		const legendSVG = plot.plotDiv
 			.append('svg')
@@ -274,7 +274,7 @@ class singleCellPlot {
 				.text(
 					`${
 						cluster == 'ref'
-							? this.state.termdbConfig.singleCell.refName
+							? this.state.termdbConfig.queries.singleCell.data.refName
 							: cluster == 'query'
 							? this.state.config.sample
 							: cluster
