@@ -303,6 +303,7 @@ export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNa
 
 export type SingleCellSamplesGdc = {
 	src: 'gdcapi'
+	get?: (q: any) => any
 }
 export type SingleCellSamplesNative = {
 	src: 'native'
@@ -313,17 +314,18 @@ export type SingleCellSamplesNative = {
 	isSampleTerm: string
 	fields: string[]
 	columnNames: string[]
-	get: () => void //{ samples: { sample: string }[] }
+	get?: (q: any) => any
 }
 export type SingleCellDataGdc = {
 	src: 'gdcapi'
 	sameLegend: boolean
+	get?: (q: any) => any
 }
 type ColorColumn = {
 	index: number
 	name: string
 }
-type SingleCellPlot = {
+export type SingleCellPlot = {
 	name: string
 	folder: string
 	fileSuffix: string
@@ -333,11 +335,11 @@ type SingleCellPlot = {
 }
 export type SingleCellDataNative = {
 	src: 'native'
+	sameLegend: boolean
 	plots: SingleCellPlot[]
 	termIds: string[]
 	refName: string
-	get: (sample: any) => any
-	sameLegend: boolean
+	get?: (q: any) => any
 }
 
 export type SingleCellQuery = {
