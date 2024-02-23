@@ -61,6 +61,7 @@ class ControlPanel {
 	hic: any
 	type: 'controlPanel'
 	state: any
+	hasStatePreMain: boolean
 
 	constructor(opts) {
 		this.type = 'controlPanel'
@@ -68,7 +69,7 @@ class ControlPanel {
 		this.controls = {}
 		this.controlsDiv = opts.controlsDiv
 		this.hic = opts.hic
-		this.state = opts.state
+		;(this.state = opts.state), (this.hasStatePreMain = true)
 	}
 
 	addLabel(tr: Tr, text: string) {
@@ -80,7 +81,7 @@ class ControlPanel {
 			.text(text.toUpperCase())
 	}
 
-	async main() {
+	init() {
 		const menuWrapper = this.controlsDiv
 			.style('background', 'rgb(253, 250, 244)')
 			.style('vertical-align', 'top')
@@ -114,15 +115,17 @@ class ControlPanel {
 		this.controls.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select') as any
 		new NormalizationMethodControl(this.state, this.controls.nmeth, this.hic.normalization).render()
 
-		//Cutoffs
+		//***Cutoffs
 		//Min CUTOFF
 		const minCutoffRow = menuTable.append('tr') as any
 		this.addLabel(minCutoffRow, 'Min CUTOFF')
+		//**** CHANGE TO THE VIEW VALUE */
 		this.controls.inputBpMinV = new CutoffControl(this.state, minCutoffRow.append('td'), 0).render()
 
 		//Max CUTOFF
 		const maxCutoffRow = menuTable.append('tr') as any
 		this.addLabel(maxCutoffRow, 'Max CUTOFF')
+		//**** CHANGE TO THE VIEW VALUE */
 		this.controls.inputBpMaxV = new CutoffControl(this.state, maxCutoffRow.append('td'), 0).render()
 
 		//Matrix type
@@ -199,8 +202,41 @@ class ControlPanel {
 		this.controls.zoomOut = zoomDiv.append('button').style('margin-right', '10px').text('Out')
 	}
 
-	update() {
+	showBtns() {
+		this.controls.genomeViewBtn.style('display', this.state.currView === 'genome' ? 'none' : 'inline-block')
+
+		if (this.state.currView === 'detail') {
+			//state.x and state.y?
+			// this.controls.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
+			//Only show horizontalViewBtn and zoom buttons in detail view
+			this.controls.horizontalViewBtn.style('display', 'block')
+			this.controls.zoomDiv.style('display', 'contents')
+			//Hide previously shown detail view btn
+			this.controls.detailViewBtn.style('display', 'none')
+		} else if (this.state.currView === 'horizontal') {
+			//Only show chrpairViewBtn if in horizonal or detail view
+			//Include chr x and chr y in the button text
+			//state.x and state.y?
+			//this.controls.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
+			//Only show detailViewBtn in horizontal view
+			this.controls.detailViewBtn.style('display', 'block')
+			//Hide if horizontal and zoom btns if previously displayed
+			this.controls.horizontalViewBtn.style('display', 'none')
+			this.controls.zoomDiv.style('display', 'none')
+		} else {
+			this.controls.chrpairViewBtn.style('display', 'none')
+			this.controls.horizontalViewBtn.style('display', 'none')
+			this.controls.detailViewBtn.style('display', 'none')
+			this.controls.zoomDiv.style('display', 'none')
+		}
+	}
+
+	//Acts as the update method
+	//Maybe separate if need something differences from init()
+	main() {
 		this.controls.zoomDiv.style('display', this.state.currView == 'detail' ? 'contents' : 'none')
+
+		this.showBtns()
 	}
 }
 
