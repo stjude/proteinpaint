@@ -78,7 +78,7 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}, host = 'htt
 		if (appname && defaultArgs.fetchOpts) {
 			argCopy[appname].fetchOpts = defaultArgs.fetchOpts
 		}
-		runproteinpaint(Object.assign(argCopy, { serverData }))
+		return runproteinpaint(Object.assign(argCopy, { serverData }))
 	}
 }
 
@@ -109,7 +109,7 @@ function copyMerge(base, ...args) {
 
 exports.copyMerge = copyMerge
 
-exports.rideInit = function(opts = {}) {
+exports.rideInit = function (opts = {}) {
 	/*
 		The exported rideInit() test helper function tries to 
 		reliably sequence UI tests using chained Promises, with

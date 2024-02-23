@@ -677,7 +677,6 @@ function setInteractivity(self) {
 
 export async function getPlotConfig(opts) {
 	const settings = {
-		controls: { isOpen: false },
 		sampleView: { showDictionary: true, showDisco: true, showSingleSample: true }
 	}
 	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }

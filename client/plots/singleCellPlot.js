@@ -537,9 +537,6 @@ export async function getPlotConfig(opts, app) {
 		const config = {
 			hiddenClusters: [],
 			settings: {
-				controls: {
-					isOpen: false // control panel is hidden by default
-				},
 				singleCellPlot: settings
 			}
 		}
