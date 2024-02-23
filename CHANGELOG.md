@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.43.0
 
 Features:
 - enable geneVariant legend group filter for hierCluster
