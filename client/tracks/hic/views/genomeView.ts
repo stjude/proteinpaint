@@ -1,3 +1,7 @@
+import { colorizeElement,  } from './view' //add setViewCutoff
+//import * as client from '#src/client'
+//import blocklazyload from '#src/block.lazyload'
+
 import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
@@ -21,6 +25,463 @@ import { hicParseFile } from '../data/parseData.ts'
 import { init_hicInfoBar } from '../dom/info.bar.ts'
 //import { init_hicControls } from '../controls/controlPanel.ts'
 import { Div } from '../../../types/d3'
+
+export class GenomeView {
+	hic: any
+	state: any
+	plotDiv: MainPlotDiv
+	binpx: number
+	genomeView: any
+	resolution: number
+	svg: any
+	atdev_chrnum: number
+	lead2follow: any //Map<string, Map<string, { x: number; y: number }>>
+	borderwidth: number
+	chr2px: any
+	app: any
+	layer_map: any
+	layer_sv: any
+	pica_x: any
+	pica_y: any
+	tip: any
+	default_maxVPerc: number
+	defaultChrLabWidth: number
+	fontsize: number
+	xoff: number
+	yoff: number
+	nmeth: string
+	matrixType: string
+	data: any[]
+
+	constructor(opts) {
+		this.hic = opts.hic
+		this.state = opts.state
+		this.lead2follow = new Map()
+		this.chr2px = {}
+		/**Dom */
+		this.plotDiv = opts.plotDiv
+		this.svg = this.plotDiv.plot.append('svg')
+		this.tip = new client.Menu()
+		this.pica_x = new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
+			this.pica_y = new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
+		/** Defaults */
+		this.resolution = opts.hic.bpresolution[0]
+		this.binpx = 1
+		this.atdev_chrnum = 8
+		this.defaultChrLabWidth = 100
+		this.borderwidth = 1
+		this.default_maxVPerc = 5
+		this.fontsize = 15
+		this.xoff = 0
+		this.yoff = 0
+		this.app = opts.app
+		this.matrixType = 'observed'
+		this.nmeth = opts.state.defaultNmeth
+		this.data = []
+	}
+
+	renderGrid() {
+		/** Defaults */
+		const spacecolor = '#ccc'
+		const checker_fill = '#DEF3FA'
+
+		// heatmap layer underneath sv
+		this.layer_map = this.svg.append('g').attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
+		this.layer_sv = this.svg
+			.append('g')
+			.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
+
+		let checker_row = true
+
+		// px width for each chr
+		const chr2px = {}
+		let totalpx = this.hic.chrlst.length
+		for (const chr of this.hic.chrlst) {
+			const w = Math.ceil(this.hic.genome.chrlookup[chr.toUpperCase()].len / this.resolution) * this.binpx
+			chr2px[chr] = w
+			totalpx += w
+		}
+
+		this.xoff = 0
+
+		// column labels
+		for (const chr of this.hic.chrlst) {
+			const chrw = chr2px[chr]
+			if (checker_row) {
+				this.layer_map
+					.append('rect')
+					.attr('x', this.xoff)
+					.attr('width', chrw)
+					.attr('height', this.fontsize)
+					.attr('y', -this.fontsize)
+					.attr('fill', checker_fill)
+			}
+			checker_row = !checker_row
+			this.layer_map
+				.append('text')
+				.attr('font-family', client.font)
+				.attr('text-anchor', 'middle')
+				.attr('font-size', 12)
+				.attr('x', this.xoff + chrw / 2)
+				.text(chr)
+
+			this.xoff += chrw
+			this.layer_sv
+				.append('line')
+				.attr('x1', this.xoff)
+				.attr('x2', this.xoff)
+				.attr('y2', totalpx)
+				.attr('stroke', spacecolor)
+				.attr('shape-rendering', 'crispEdges')
+
+			this.xoff += this.borderwidth
+		}
+
+		this.yoff = 0
+		checker_row = true
+
+		// row labels
+		for (const chr of this.hic.chrlst) {
+			const chrh = chr2px[chr]
+			if (checker_row) {
+				this.layer_map
+					.append('rect')
+					.attr('x', -hardcode_wholegenomechrlabwidth)
+					.attr('width', hardcode_wholegenomechrlabwidth)
+					.attr('height', chrh)
+					.attr('y', this.yoff)
+					.attr('fill', checker_fill)
+			}
+			checker_row = !checker_row
+			this.layer_map
+				.append('text')
+				.attr('font-family', client.font)
+				.attr('text-anchor', 'end')
+				.attr('dominant-baseline', 'central')
+				.attr('font-size', 12)
+				.attr('y', this.yoff + chrh / 2)
+				.text(chr)
+
+			this.yoff += chrh
+			this.layer_sv
+				.append('line')
+				.attr('x2', totalpx)
+				.attr('y1', this.yoff)
+				.attr('y2', this.yoff)
+				.attr('stroke', spacecolor)
+				.attr('shape-rendering', 'crispEdges')
+
+			this.yoff += this.borderwidth
+		}
+	}
+
+	setLeadFollowMap() {
+		const manychr = this.hic.atdev ? this.atdev_chrnum : this.hic.chrlst.length
+		this.xoff = 0
+
+		for (let i = 0; i < manychr; i++) {
+			const lead = this.hic.chrlst[i]
+			this.lead2follow.set(lead, new Map())
+
+			this.yoff = 0
+
+			for (let j = 0; j <= i; j++) {
+				const follow = this.hic.chrlst[j]
+				this.lead2follow!.get(lead)!.set(follow, {
+					x: this.xoff,
+					y: this.yoff
+				})
+				this.makeChrCanvas(lead, follow)
+				this.yoff += this.chr2px[follow] + this.borderwidth
+			}
+			this.xoff += this.chr2px[lead] + this.borderwidth
+		}
+	}
+
+	makeChrCanvas(lead: string, follow: string) {
+		const obj = this.lead2follow.get(lead).get(follow)
+
+		const leadchrlen = this.hic.genome.chrlookup[lead.toUpperCase()].len
+		const followchrlen = this.hic.genome.chrlookup[follow.toUpperCase()].len
+
+		const xbins = Math.ceil(leadchrlen / this.resolution)
+		const ybins = Math.ceil(followchrlen / this.resolution)
+
+		obj.canvas = this.hic.holder.append('canvas').style('display', 'none').node()
+
+		obj.canvas.width = xbins * this.binpx
+		obj.canvas.height = ybins * this.binpx
+
+		obj.img = this.layer_map
+			.append('image')
+			.attr('width', obj.canvas.width)
+			.attr('height', obj.canvas.height)
+			.attr('x', obj.x)
+			.attr('y', obj.y)
+			.on('click', async () => {
+				//state????
+				// self.x.chr = lead
+				// self.y.chr = follow
+				await this.app.dispatch({
+					type: 'view_change',
+					view: 'chrpair'
+					//need to add state changes
+				})
+			})
+			.on('mouseover', () => {
+				chrpair_mouseover(self, obj.img, lead, follow)
+			})
+
+		if (lead != follow) {
+			obj.canvas2 = this.hic.holder.append('canvas').style('display', 'none').node()
+
+			obj.ctx2 = obj.canvas2.getContext('2d')
+
+			obj.canvas2.width = ybins * this.binpx
+			obj.canvas2.height = xbins * this.binpx
+
+			obj.img2 = this.layer_map
+				.append('image')
+				.attr('width', obj.canvas2.width)
+				.attr('height', obj.canvas2.height)
+				.attr('x', obj.y)
+				.attr('y', obj.x)
+				.on('click', async () => {
+					await this.app.dispatch({
+						type: 'view_change',
+						view: 'chrpair',
+					})
+				})
+				.on('mouseover', () => {
+					this.showChrPair_mouseover(obj.img2, follow, lead)
+				})
+		} else {
+			obj.ctx2 = obj.ctx
+		}
+	}
+
+	showChrPair_mouseover(img: any, x_chr: string, y_chr: string) {
+		const p = img.node().getBoundingClientRect()
+		this.pica_x
+			.clear()
+			.show(p.left, p.top)
+			.d.style('top', null)
+			.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
+			.text(x_chr)
+		this.pica_y
+			.clear()
+			.show(p.left, p.top)
+			.d.style('left', null)
+			.style('right', document.body.clientWidth - p.left - window.pageXOffset + 'px') // no scrollbar width
+			.text(y_chr)
+	}
+
+	makeSv() {
+		const unknownchr = new Set()
+
+		const radius = 8
+		for (const item of this.hic.sv.items) {
+			const _o = this.lead2follow.get(item.chr1)
+			if (!_o) {
+				unknownchr.add(item.chr1)
+				continue
+			}
+			const obj = _o.get(item.chr2)
+			if (!obj) {
+				unknownchr.add(item.chr2)
+				continue
+			}
+
+			const p1 = item.position1 / this.resolution
+			const p2 = item.position2 / this.resolution
+			this.layer_sv
+				.append('circle')
+				.attr('stroke', 'black')
+				.attr('fill', 'white')
+				.attr('fill-opacity', 0)
+				.attr('cx', obj.x + p1)
+				.attr('cy', obj.y + p2)
+				.attr('r', radius)
+				.on('mouseover', (event: MouseEvent) => {
+					tooltip_sv(event, this.hic, item)
+				})
+				.on('mouseout', () => {
+					this.tip.hide()
+				})
+				.on('click', () => {
+					click_sv(this.hic, item)
+				})
+
+			if (obj.img2) {
+				this.layer_sv
+					.append('circle')
+					.attr('stroke', 'black')
+					.attr('fill', 'whilte')
+					.attr('fill-opacity', 0)
+					.attr('cy', obj.x + p1)
+					.attr('cx', obj.y + p2)
+					.attr('r', radius)
+					.on('mouseover', (event: MouseEvent) => {
+						this.tooltipSv(event, item)
+					})
+					.on('mouseout', () => {
+						this.tip.hide()
+					})
+					.on('click', () => {
+						this.clickSv(item)
+					})
+			}
+		}
+
+	}
+
+	tooltipSv(event: MouseEvent, item: any) {
+		this.tip
+			.clear()
+			.show(event.clientX, event.clientY)
+			.d.append('div')
+			.text(
+				item.chr1 == item.chr2
+					? `${item.chr1}:${item.position1}-${item.position2}`
+					: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`
+			)
+	}
+
+	clickSv(item) {
+		const default_svpointspan = 500000
+		const default_subpanelpxwidth = 600
+		const subpanel_bordercolor = 'rgba(200,0,0,.1)'
+
+		const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
+			; (pane.header as Pane['header']).text(
+				this.hic.name +
+				' ' +
+				(item.chr1 == item.chr2
+					? `${item.chr1}:${item.position1}-${item.position2}`
+					: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`)
+			)
+		const tracks = [
+			{
+				type: client.tkt.hicstraw,
+				file: this.hic.file,
+				enzyme: this.hic.enzyme,
+				maxpercentage: this.default_maxVPerc,
+				pyramidup: 1,
+				name: this.hic.name
+			}
+		]
+		if (this.hic.tklst) {
+			for (const t of this.hic.tklst) {
+				tracks.push(t)
+			}
+		}
+		client.first_genetrack_tolist(this.hic.genome, tracks)
+		const arg: any = {
+			holder: pane.body,
+			hostURL: this.hic.hostURL,
+			jwt: this.hic.jwt,
+			genome: this.hic.genome,
+			nobox: 1,
+			tklst: tracks
+		}
+
+		if (item.chr1 == item.chr2 && Math.abs(item.position2 - item.position1) < default_svpointspan * 2) {
+			// two breakends overlap
+			arg.chr = item.chr1
+			const w = Math.abs(item.position2 - item.position1)
+			arg.start = Math.max(1, Math.min(item.position1, item.position2) - w)
+			arg.stop = Math.min(this.hic.genome.chrlookup[item.chr1.toUpperCase()].len, Math.max(item.position1, item.position2) + w)
+		} else {
+			arg.chr = item.chr1
+			arg.start = Math.max(1, item.position1 - default_svpointspan / 2)
+			arg.stop = Math.min(this.hic.genome.chrlookup[item.chr1.toUpperCase()].len, item.position1 + default_svpointspan / 2)
+			arg.width = default_subpanelpxwidth
+			arg.subpanels = [
+				{
+					chr: item.chr2,
+					start: Math.max(1, item.position2 - default_svpointspan / 2),
+					stop: Math.min(this.hic.genome.chrlookup[item.chr2.toUpperCase()].len, item.position2 + default_svpointspan / 2),
+					width: default_subpanelpxwidth,
+					leftpad: 10,
+					leftborder: subpanel_bordercolor
+				}
+			]
+		}
+		blocklazyload(arg)
+	}
+
+	async render() {
+		//Update info bar
+		this.renderGrid()
+
+		if (this.hic.sv && this.hic.sv.items) {
+			this.makeSv()
+		}
+
+		this.svg.attr('width', this.defaultChrLabWidth + this.xoff).attr('height', this.fontsize + this.yoff)
+
+		await this.update()
+	}
+
+	async update(){
+		/* after the ui is created, load data for each chr pair,
+		await on each request to finish to avoid server lockup
+	
+		There might be data inconsistency with hic file. It may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
+		do not flood ui with such errors, to tolerate, collect all errors and show in one place
+		*/
+		await this.makeElements()
+	}
+
+	async makeElements(manychrArg?: number) {
+		const manychr = manychrArg || (this.hic.atdev ? atdev_chrnum : this.hic.chrlst.length)
+		const vlst = [] as number[]
+
+		for (let i = 0; i < manychr; i++) {
+			const lead = this.hic.chrlst[i]
+			for (let j = 0; j <= i; j++) {
+				const follow = this.hic.chrlst[j]
+				await this.getData(lead, follow, vlst)
+			}
+		}
+		// await setViewCutoff(vlst, self.genomeview, self)
+	
+		// await colorizeGenomeElements(self)
+	}
+
+	async getData(lead: string, follow: string, vlst: any) {
+		const arg = {
+			matrixType: this.matrixType,
+			file: this.hic.file,
+			url: this.hic.url,
+			pos1: this.hic.nochr ? lead.replace('chr', '') : lead,
+			pos2: this.hic.nochr ? follow.replace('chr', '') : follow,
+			nmeth: this.nmeth,
+			resolution: this.resolution
+		}
+
+		try {
+			const data = await client.dofetch2('/hicdata', {
+				method: 'POST',
+				body: JSON.stringify(arg)
+			})
+			if (data.error) throw `${lead} - ${follow}: ${data.error.error}` //Fix for error message displaying [Object object] instead of error message
+			if (!data.items || data.items.length == 0) return
+	
+			this.data.push({ items: data.items, lead: lead, follow: follow })
+			for (const [plead, pfollow, v] of data.items) {
+				vlst.push(v)
+			}
+		} catch (e: any) {
+			/** Collect all errors from the response and then call self.error() above.
+			 * This allows errors to appear in a single, expandable div.
+			 */
+			// self.errList.push(e.message || e)
+			// if (e.stack) console.log(e.stack)
+		}
+	
+	}
+}
 
 /*
 
@@ -543,7 +1004,7 @@ class Hicstat {
 				}
 			}
 
-			;(this.x.start = coordx), (this.x.stop = coordx + viewrangebpw)
+			; (this.x.start = coordx), (this.x.stop = coordx + viewrangebpw)
 			this.y.start = coordy
 			this.y.stop = coordy + viewrangebpw
 		}
@@ -1117,13 +1578,13 @@ function tooltip_sv(event: MouseEvent, self: any, item: any): void {
 
 function click_sv(hic: any, item: any): void {
 	const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-	;(pane.header as Pane['header']).text(
-		hic.name +
+		; (pane.header as Pane['header']).text(
+			hic.name +
 			' ' +
 			(item.chr1 == item.chr2
 				? `${item.chr1}:${item.position1}-${item.position2}`
 				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`)
-	)
+		)
 	const tracks = [
 		{
 			type: client.tkt.hicstraw,
@@ -1701,59 +2162,59 @@ export async function setViewCutoff(vlst: any, view: any, self: any) {
 
 	self.colorScale.updateScale()
 }
-/**
- * Fills the canvas with color based on the value from the straw response
- * Default color is red for positive values and blue for negative values.
- * When no negative values are present, no color is displayed (i.e. appears white)
- * Note the genome view renders two ctx objs, otherwise only one ctx obj is filled in.
- * @param lead lead chr
- * @param follow following chr
- * @param v returned value from straw
- * @param view either genomeview, chrpairview, or detailview
- * @param self
- * @param obj obj to color
- * @param width if no .binpx for the view, must provied width
- * @param height if no .binpx for the view, must provied width
- */
-export async function colorizeElement(
-	lead: number,
-	follow: number,
-	v: number,
-	view: any,
-	self: any,
-	obj: any,
-	width?: number,
-	height?: number
-) {
-	if (v >= 0) {
-		// positive or zero, use red
-		const p = v >= view.bpmaxv ? 0 : Math.floor((255 * (view.bpmaxv - v)) / view.bpmaxv)
-		const positiveFill = `rgb(255, ${p}, ${p})`
-		if (self.ingenome == true) {
-			obj.ctx.fillStyle = positiveFill
-			obj.ctx2.fillStyle = positiveFill
-		} else {
-			/** ctx for the chrpair and detail view */
-			obj.fillStyle = positiveFill
-		}
-	} else {
-		// negative, use blue
-		const p = Math.floor((255 * (view.bpmaxv + v)) / view.bpmaxv)
-		const negativeFill = `rgb(${p}, ${p}, 255)`
-		if (self.ingenome == true) {
-			obj.ctx.fillStyle = negativeFill
-			obj.ctx2.fillStyle = negativeFill
-		} else {
-			obj.fillStyle = negativeFill
-		}
-	}
-	const w = width || view.binpx
-	const h = height || view.binpx
+// /**
+//  * Fills the canvas with color based on the value from the straw response
+//  * Default color is red for positive values and blue for negative values.
+//  * When no negative values are present, no color is displayed (i.e. appears white)
+//  * Note the genome view renders two ctx objs, otherwise only one ctx obj is filled in.
+//  * @param lead lead chr
+//  * @param follow following chr
+//  * @param v returned value from straw
+//  * @param view either genomeview, chrpairview, or detailview
+//  * @param self
+//  * @param obj obj to color
+//  * @param width if no .binpx for the view, must provied width
+//  * @param height if no .binpx for the view, must provied width
+//  */
+// export async function colorizeElement(
+// 	lead: number,
+// 	follow: number,
+// 	v: number,
+// 	view: any,
+// 	self: any,
+// 	obj: any,
+// 	width?: number,
+// 	height?: number
+// ) {
+// 	if (v >= 0) {
+// 		// positive or zero, use red
+// 		const p = v >= view.bpmaxv ? 0 : Math.floor((255 * (view.bpmaxv - v)) / view.bpmaxv)
+// 		const positiveFill = `rgb(255, ${p}, ${p})`
+// 		if (self.ingenome == true) {
+// 			obj.ctx.fillStyle = positiveFill
+// 			obj.ctx2.fillStyle = positiveFill
+// 		} else {
+// 			/** ctx for the chrpair and detail view */
+// 			obj.fillStyle = positiveFill
+// 		}
+// 	} else {
+// 		// negative, use blue
+// 		const p = Math.floor((255 * (view.bpmaxv + v)) / view.bpmaxv)
+// 		const negativeFill = `rgb(${p}, ${p}, 255)`
+// 		if (self.ingenome == true) {
+// 			obj.ctx.fillStyle = negativeFill
+// 			obj.ctx2.fillStyle = negativeFill
+// 		} else {
+// 			obj.fillStyle = negativeFill
+// 		}
+// 	}
+// 	const w = width || view.binpx
+// 	const h = height || view.binpx
 
-	if (self.ingenome == true) {
-		obj.ctx.fillRect(follow, lead, w, h)
-		obj.ctx2.fillRect(lead, follow, w, h)
-	} else {
-		obj.fillRect(lead, follow, w, h)
-	}
-}
+// 	if (self.ingenome == true) {
+// 		obj.ctx.fillRect(follow, lead, w, h)
+// 		obj.ctx2.fillRect(lead, follow, w, h)
+// 	} else {
+// 		obj.fillRect(lead, follow, w, h)
+// 	}
+// }
