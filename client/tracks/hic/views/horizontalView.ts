@@ -1,7 +1,5 @@
-import { HicView } from './view'
-
-export default class HorizontalView extends HicView {
+export class HorizontalView {
 	constructor() {
-		super()
+		//TODO
 	}
 }

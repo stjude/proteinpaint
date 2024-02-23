@@ -32,6 +32,7 @@ class HicApp {
 		name: string
 		tklist?: any[]
 		state?: any
+		jwt?: any
 	}
 	state: any
 	/** Required for rx */
@@ -48,8 +49,11 @@ class HicApp {
 			genome: opts.genome,
 			holder: opts.holder,
 			hostUrl: opts.hostUrl,
+			jwt: opts.jwt,
 			name: 'name' in opts ? opts.name : 'Hi-C',
-			tklist: opts.tklst || []
+			tklist: opts.tklst || [],
+			//determine view here??
+			state: opts.state || {}
 		}
 		this.dom = {
 			errorDiv: opts.holder.append('div').classed('sjpp-hic-error', true),
@@ -76,9 +80,9 @@ class HicApp {
 		return appState
 	}
 
-	async init(opts) {
+	async init() {
 		try {
-			this.store = await hicStoreInit({ app: this.api })
+			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
 			this.state = await this.store.copyState()
 			await hicParseFile(this.hic, true, this.errList)
 			if (this.errList.length) this.error(this.errList)
@@ -93,17 +97,22 @@ class HicApp {
 					state: this.state,
 					controlsDiv: this.dom.controlsDiv,
 					hic: this.hic
+				}),
+				view: await hicViewInit({
+					app: this.api,
+					state: this.state,
+					plotDiv: this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true),
+					hic: this.hic
 				})
-				// view: await hicViewInit({
-				// 	app: this.api,
-				// 	state: this.state,
-				// 	plotDiv: this.dom.plotDiv
-				// })
 			}
 			await this.api.dispatch()
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 		}
+	}
+
+	main() {
+		// console.log(this)
 	}
 }
 
