@@ -435,6 +435,42 @@ async function renderSamplesTable(div, self, state) {
 		else return elem1.sample.localeCompare(elem2.sample)
 	})
 
+	const [rows, columns] = await getTableData(self, samples, state)
+
+	const selectedRows = []
+	let maxHeight = '40vh'
+	if (self.tableOnPlot) {
+		selectedRows.push(0)
+		self.samples = samples
+		maxHeight = '30vh'
+	}
+
+	renderTable({
+		rows,
+		columns,
+		resize: true,
+		singleMode: true,
+		div,
+		maxHeight,
+		noButtonCallback: index => {
+			const sample = rows[index][0].value
+			const config = { chartType: 'singleCellPlot', sample }
+			if (rows[index][0].__experimentID) {
+				config.experimentID = rows[index][0].__experimentID
+			}
+			if (self.tableOnPlot) {
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
+			} else {
+				// please explain
+				self.dom.tip.hide()
+				self.app.dispatch({ type: 'plot_create', config })
+			}
+		},
+		selectedRows
+	})
+}
+
+async function getTableData(self, samples, state) {
 	const rows = []
 
 	for (const sample of samples) {
@@ -469,40 +505,6 @@ async function renderSamplesTable(div, self, state) {
 		}
 	}
 
-	const selectedRows = []
-	let maxHeight = '40vh'
-	if (self.tableOnPlot) {
-		selectedRows.push(0)
-		self.samples = samples
-		maxHeight = '30vh'
-	}
-
-	renderTable({
-		rows,
-		columns: await getTableColumns(self, samples, state),
-		resize: true,
-		singleMode: true,
-		div,
-		maxHeight,
-		noButtonCallback: index => {
-			const sample = rows[index][0].value
-			const config = { chartType: 'singleCellPlot', sample }
-			if (rows[index][0].__experimentID) {
-				config.experimentID = rows[index][0].__experimentID
-			}
-			if (self.tableOnPlot) {
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
-			} else {
-				// please explain
-				self.dom.tip.hide()
-				self.app.dispatch({ type: 'plot_create', config })
-			}
-		},
-		selectedRows
-	})
-}
-
-async function getTableColumns(self, samples, state) {
 	// first column is sample and is hardcoded
 	const columns = [{ label: state.termdbConfig.queries.singleCell.samples.firstColumnName || 'Sample' }]
 
@@ -526,7 +528,7 @@ async function getTableColumns(self, samples, state) {
 
 	//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
 	//columns[index].width = '25vw'
-	return columns
+	return [rows, columns]
 }
 
 export const scatterInit = getCompInit(singleCellPlot)
