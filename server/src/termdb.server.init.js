@@ -493,8 +493,8 @@ export function server_init_db_queries(ds) {
 			}
 		}
 
+		// determine eligible chart types based on optional genomic queries
 		if (ds.queries) {
-			// has genomic data queries
 			if (ds.queries.snvindel || ds.queries.trackLst) {
 				// suitable datatypes are present, enable genomeBrowser chart
 				for (const cohort in supportedChartTypes) {
@@ -507,6 +507,9 @@ export function server_init_db_queries(ds) {
 			}
 			if (ds.queries.rnaseqGeneCount) {
 				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('DEanalysis')
+			}
+			if (ds.queries.singleCell) {
+				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('singleCellPlot')
 			}
 		}
 

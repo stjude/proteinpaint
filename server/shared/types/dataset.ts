@@ -301,10 +301,6 @@ export type GeneExpressionQueryNative = {
 }
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
-export type SingleCellSamplesGdc = {
-	src: 'gdcapi'
-	get?: (q: any) => any
-}
 export type SingleCellSamplesNative = {
 	src: 'native'
 	/*
@@ -312,10 +308,29 @@ export type SingleCellSamplesNative = {
 	TODO change to hasScTerm:string
 	*/
 	isSampleTerm: string
-	fields: string[]
-	columnNames: string[]
+
+	/** 
+	logic to decide sample table columns:
+	a sample table will always have a sample column, to show sample.sample value
+	firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
+	the other two properties allow to declare additional columns to be shown in table, that are for display only
+	when sample.experiments[] are used, a last column of experiment id will be auto added
+	*/
+	firstColumnName?: string
+	/** any other columns to be added to sample table. each is a term id */
+	sampleColumns?: { termid: string }[]
+	experimentColumns?: { label: string }[]
+
 	get?: (q: any) => any
 }
+export type SingleCellSamplesGdc = {
+	src: 'gdcapi'
+	get?: (q: any) => any
+	firstColumnName?: string
+	sampleColumns?: { termid: string }[]
+	experimentColumns?: { label: string }[]
+}
+
 export type SingleCellDataGdc = {
 	src: 'gdcapi'
 	sameLegend: boolean

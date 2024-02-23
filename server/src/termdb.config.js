@@ -72,7 +72,6 @@ export function make(q, res, ds, genome) {
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addGenomicQueries(c, ds, genome)
-	addSinglecellData(c, ds)
 
 	res.send({ termdbConfig: c })
 }
@@ -98,12 +97,6 @@ function addMatrixplots(c, ds) {
 	c.matrixplots = ds.cohort.matrixplots.plots.map(p => {
 		return { name: p.name }
 	})
-}
-
-function addSinglecellData(c, ds) {
-	if (!ds.queries?.singleCell?.data) return
-	// this dataset has premade scatterplots. reveal to client
-	c.singleCell = ds.queries.singleCell.data
 }
 
 function addGenomicQueries(c, ds, genome) {
@@ -158,6 +151,19 @@ function addGenomicQueries(c, ds, genome) {
 	}
 	if (q.rnaseqGeneCount) {
 		q2.rnaseqGeneCount = true
+	}
+	if (q.singleCell) {
+		q2.singleCell = {
+			samples: {
+				firstColumnName: q.singleCell.samples.firstColumnName,
+				sampleColumns: q.singleCell.samples.sampleColumns,
+				experimentColumns: q.singleCell.samples.experimentColumns
+			},
+			data: {
+				sameLegend: q.singleCell.data.sameLegend,
+				refName: q.singleCell.data.refName
+			}
+		}
 	}
 }
 

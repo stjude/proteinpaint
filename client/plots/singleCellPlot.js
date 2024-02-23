@@ -11,6 +11,24 @@ import { controlsInit } from './controls'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 
+/*
+this
+	.tableOnPlot=bool
+
+	.samples[]
+		datastructure returned by /termdb/singlecellSamples
+		only attached when tableOnPlot=true
+
+	.config{}
+		if a sample is already selected, config is {sample:str} or {sample:str, experimentID:str}
+		if config.sample is undefined, use 
+
+	.legendRendered=bool
+	.state{}
+		.config{}
+			.sample
+*/
+
 export const minDotSize = 9
 export const maxDotSize = 300
 
@@ -19,6 +37,7 @@ class singleCellPlot {
 		this.type = 'singleCellPlot'
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')
+		window.sc = this
 	}
 
 	async init(appState) {
@@ -131,29 +150,26 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.config = structuredClone(this.state.config) // ?
 
 		this.dom.tableDiv.selectAll('*').remove()
 		this.plots = []
 		copyMerge(this.settings, this.config.settings.singleCellPlot)
 
-		let sample = this.state.config.sample
 		this.legendRendered = false
-		if (!this.tableOnPlot) {
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: this.state.config.sample }
-			this.renderPlots(body)
+
+		const body = { genome: this.state.genome, dslabel: this.state.dslabel }
+		let sample
+		if (this.state.config.sample) {
+			// a sample has already been selected
+			sample = this.state.config.sample
+			body.sample = this.state.config.experimentID || this.state.config.sample
 		} else {
-			let file
-			if (!this.state.config.file) {
-				sample = this.samples[0].sample
-				file = this.samples[0].files[0].fileId
-			} else {
-				sample = this.state.config.sample
-				file = this.state.config.file
-			}
-			const body = { genome: this.state.genome, dslabel: this.state.dslabel, sample: file }
-			this.renderPlots(body)
+			// no given sample in state.config{}, assume that this.samples[] are already loaded, then use 1st sample
+			sample = this.samples[0].sample
+			body.sample = this.samples[0].experiments?.[0]?.experimentID || this.samples[0].sample
 		}
+		this.renderPlots(body)
 		if (this.dom.header) this.dom.header.html(`${sample} Single Cell Data`)
 	}
 
@@ -241,7 +257,7 @@ class singleCellPlot {
 	}
 
 	renderLegend(plot, colorMap) {
-		if (this.state.termdbConfig.singleCell.sameLegend && this.legendRendered) return
+		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
 		this.legendRendered = true
 		const legendSVG = plot.plotDiv
 			.append('svg')
@@ -274,7 +290,7 @@ class singleCellPlot {
 				.text(
 					`${
 						cluster == 'ref'
-							? this.state.termdbConfig.singleCell.refName
+							? this.state.termdbConfig.queries.singleCell.data.refName
 							: cluster == 'query'
 							? this.state.config.sample
 							: cluster
@@ -419,35 +435,8 @@ async function renderSamplesTable(div, self, state) {
 		else return elem1.sample.localeCompare(elem2.sample)
 	})
 
-	const rows = []
-	let columns = []
-	const fields = result.fields
-	const columnNames = result.columnNames
-	for (const column of columnNames) columns.push({ label: column, width: '20vw' })
-	const index = columnNames.length == 1 ? 0 : columnNames.length - 1
-	columns[index].width = '25vw'
+	const [rows, columns] = await getTableData(self, samples, state)
 
-	for (const sample of samples) {
-		if (sample.files)
-			for (const file of sample.files) {
-				const row = []
-				addFields(row, fields, sample)
-				row.push({ value: file.sampleType })
-				row.push({ value: file.fileId })
-				rows.push(row)
-			}
-		else {
-			const row = []
-			addFields(row, fields, sample)
-			rows.push(row)
-		}
-	}
-
-	function addFields(row, fields, sample) {
-		for (const field of fields) {
-			row.push({ value: sample[field] })
-		}
-	}
 	const selectedRows = []
 	let maxHeight = '40vh'
 	if (self.tableOnPlot) {
@@ -464,18 +453,82 @@ async function renderSamplesTable(div, self, state) {
 		div,
 		maxHeight,
 		noButtonCallback: index => {
-			const sample = samples[index].sample
-			const file = rows[index][columns.length - 1].value
-			let config = { chartType: 'singleCellPlot', sample, file }
-			let type = 'plot_edit'
-			if (!self.tableOnPlot) {
+			const sample = rows[index][0].value
+			const config = { chartType: 'singleCellPlot', sample }
+			if (rows[index][0].__experimentID) {
+				config.experimentID = rows[index][0].__experimentID
+			}
+			if (self.tableOnPlot) {
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config })
+			} else {
+				// please explain
 				self.dom.tip.hide()
-				type = 'plot_create'
-				self.app.dispatch({ type, config })
-			} else self.app.dispatch({ type, id: self.id, config })
+				self.app.dispatch({ type: 'plot_create', config })
+			}
 		},
 		selectedRows
 	})
+}
+
+async function getTableData(self, samples, state) {
+	const rows = []
+
+	for (const sample of samples) {
+		if (sample.experiments)
+			for (const exp of sample.experiments) {
+				// first cell is always sample name. sneak in experiment object to be accessed in click callback
+				const row = [{ value: sample.sample, __experimentID: exp.experimentID }]
+
+				// optional sample and experiment columns
+				for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+					row.push({ value: sample[c.termid] })
+				}
+				for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
+					row.push({ value: sample[c.label] })
+				}
+
+				// hardcode to always add in experiment id column
+				row.push({ value: exp.experimentID })
+				rows.push(row)
+			}
+		else {
+			// sample does not use experiment
+
+			// first cell is sample name
+			const row = [{ value: sample.sample }]
+
+			// optional sample columns
+			for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+				row.push({ value: sample[c.termid] })
+			}
+			rows.push(row)
+		}
+	}
+
+	// first column is sample and is hardcoded
+	const columns = [{ label: state.termdbConfig.queries.singleCell.samples.firstColumnName || 'Sample' }]
+
+	// add in optional sample columns
+	for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+		columns.push({
+			label: (await self.app.vocabApi.getterm(c.termid)).name,
+			width: '20vw'
+		})
+	}
+
+	// add in optional experiment columns
+	for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
+		columns.push({ label: c.label, width: '20vw' })
+	}
+
+	// if samples are using experiments, add the last hardcoded experiment column
+	if (samples.some(i => i.experiments)) {
+		columns.push({ label: 'Experiment' })
+	}
+
+	//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
+	//columns[index].width = '25vw'
+	return [rows, columns]
 }
 
 export const scatterInit = getCompInit(singleCellPlot)
