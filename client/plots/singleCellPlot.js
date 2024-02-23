@@ -257,13 +257,13 @@ class singleCellPlot {
 	}
 
 	renderLegend(plot, colorMap) {
-		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
-		this.legendRendered = true
 		const legendSVG = plot.plotDiv
 			.append('svg')
 			.attr('width', 250)
 			.attr('height', this.settings.svgh)
 			.style('vertical-align', 'top')
+		if (this.state.termdbConfig.queries.singleCell.data.sameLegend && this.legendRendered) return
+		this.legendRendered = true
 
 		const legendG = legendSVG.append('g').attr('transform', `translate(20, 50)`).style('font-size', '0.8em')
 
@@ -558,8 +558,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 400,
-		svgh: 400,
+		svgw: 420,
+		svgh: 420,
 		showBorders: false
 	}
 }
