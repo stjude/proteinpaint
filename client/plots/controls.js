@@ -115,7 +115,13 @@ function setInteractivity(self) {
 					controls: { isOpen }
 				}
 			},
-			_scope_: 'none'
+			_scope_: 'none',
+			// TODO: may combine _scope_ with _skipNotification_, optimal approach tbd
+			_skipNotification_(componentApi) {
+				// do not notify a plot of this dispatched action, to avoid unnecessary rerender
+				// but all child components of a plot will still be notified
+				return self.app.getState().plots.find(p => p.type === componentApi.type || p.chartType === componentApi.type)
+			}
 		})
 	}
 }

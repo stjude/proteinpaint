@@ -445,7 +445,15 @@ export function getComponentApi(self) {
 		type: self.type,
 		id: self.id,
 		async update(current) {
-			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
+			if (current.action) {
+				const affected = self.reactsTo ? self.reactsTo(current.action) : true
+				if (!affected) return
+				if (current.action._skipNotification_?.(api)) {
+					// option to skip notification of a parent component, but still nofify subcomponents
+					await notifyComponents(self.components, current)
+					return
+				}
+			}
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
