@@ -226,11 +226,28 @@ export function prepStore(self, opts) {
 // is already stale/superseded by a subsequent state update
 let sequenceId = 0
 
+/*
+type RxAction = {
+  type: string          // one of the methods in [StoreClass].prototype.actions, for example see mass/store.js
+  id?: string           // a component identifier to help with routing the dispatched action
+  [key=string]: any     // the payload, depends on the action.type, can make this action into a union
+
+  _notificationRoot_?: RxComponentApi[]  
+												// may be used to directly notify pecific components that are known to be affected by an action,
+    										// and skip
+
+  _scope_?: 'none' | 'local' | 'global'
+  											// indicates where this action should be tracked by a history tracker such as a recover component
+                        // NOTE: may be deprecated(???) in favor of ._notificationRoot_
+}
+*/
+
 export function getStoreApi(self) {
 	self.history = []
 	self.currIndex = -1
 	let numPromisedWrites = 0
 	const api = {
+		// action: RxAction
 		async write(action) {
 			// to allow an app or chart code to fail due to race condition,
 			// hardcode a constant value or comment out the ++ for the sequenceID
@@ -249,7 +266,7 @@ export function getStoreApi(self) {
 			}
 			await actions[action.type].call(self, action)
 			// quick fix?? add custom state properties to the state to trigger special action-related handling
-			// _scope_: 'none' | 'local' | 'global', indicates where this action should be tracked by a history tracker such as a recover component
+			// _scope_:
 			self.state._scope_ = action._scope_
 			if (!self.opts.debounceInterval) return api.copyState()
 
@@ -297,6 +314,7 @@ export function getAppApi(self) {
 	const api = {
 		type: self.type,
 		opts: self.opts,
+		// action: RxAction
 		async dispatch(action) {
 			self.bus.emit('preDispatch')
 			try {
@@ -321,7 +339,7 @@ export function getAppApi(self) {
 				// in order to debounce correctly
 				if (self.main) await self.main()
 				const current = { action, appState: self.state }
-				await notifyComponents(self.components, current)
+				await notifyComponents(current.action?._notificationRoot_ || self.components, current)
 			} catch (e) {
 				if (self.bus && latestActionSequenceId == action?.sequenceId) self.bus.emit('error')
 				if (self.printError) self.printError(e)
@@ -330,6 +348,7 @@ export function getAppApi(self) {
 			// do not emit a postRender event if the action has become stale
 			if (self.bus && latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
 		},
+		// action: RxAction
 		async save(action) {
 			// save changes to store, do not notify components
 			self.state = await self.store.write(action)
@@ -345,11 +364,12 @@ export function getAppApi(self) {
 		getState() {
 			return self.state
 		},
+		// fxn: RxAction => void
 		middle(fxn) {
 			/*
 			add middlewares prior to calling dispatch()
-
-			fxn(action) 
+			
+			fxn(action: RxAction) 
 			- called in the order of being added to middlewares array
 			- must accept an action{} argument
 			- do not return any value to eventually reach dispatch()
@@ -444,16 +464,9 @@ export function getComponentApi(self) {
 	const api = {
 		type: self.type,
 		id: self.id,
+		// current: {action: RxAction, appState}
 		async update(current) {
-			if (current.action) {
-				const affected = self.reactsTo ? self.reactsTo(current.action) : true
-				if (!affected) return
-				if (current.action._skipNotification_?.(api)) {
-					// option to skip notification of a parent component, but still nofify subcomponents
-					await notifyComponents(self.components, current)
-					return
-				}
-			}
+			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
