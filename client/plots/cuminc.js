@@ -1220,7 +1220,6 @@ function setInteractivity(self) {
 
 const defaultSettings = JSON.stringify({
 	controls: {
-		isOpen: false, // control panel is hidden by default
 		term2: null, // the previous overlay value may be displayed as a convenience for toggling
 		term0: null
 	},

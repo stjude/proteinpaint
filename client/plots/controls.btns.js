@@ -45,7 +45,7 @@ class TdbControlsTopBar {
 
 	main() {
 		const plot = this.state.config
-		const isOpen = plot.settings.controls.isOpen
+		const isOpen = this.opts.isOpen()
 		this.dom.button_bar.style('display', isOpen ? 'inline-block' : 'block').style('float', isOpen ? 'right' : 'none')
 
 		for (const name in this.features) {

@@ -34,12 +34,12 @@ const runpp = helpers.getRunPp('mass', {
 /**************
  test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- plots/survival -***-')
 	test.end()
 })
 
-tape('survival term as term1', function(test) {
+tape('survival term as term1', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -75,7 +75,7 @@ tape('survival term as term1', function(test) {
 	}
 })
 
-tape('survival term as term1, with overlay', function(test) {
+tape('survival term as term1, with overlay', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -113,7 +113,7 @@ tape('survival term as term1, with overlay', function(test) {
 	}
 })
 
-tape('survival term as term1, with divide by', function(test) {
+tape('survival term as term1, with divide by', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -161,7 +161,7 @@ tape('survival term as term1, with divide by', function(test) {
 	}
 })
 
-tape('survival term as overlay', function(test) {
+tape('survival term as overlay', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -199,7 +199,7 @@ tape('survival term as overlay', function(test) {
 	}
 })
 
-tape('survival term as term1, term2 = genetic_race, categorical groupsetting', function(test) {
+tape('survival term as term1, term2 = genetic_race, categorical groupsetting', function (test) {
 	test.timeoutAfter(3000)
 
 	const groups = [
@@ -278,7 +278,7 @@ tape('survival term as term1, term2 = genetic_race, categorical groupsetting', f
 	}
 })
 
-tape('survival term as term1, term0 = genetic_race, categorical groupsetting', function(test) {
+tape('survival term as term1, term0 = genetic_race, categorical groupsetting', function (test) {
 	test.timeoutAfter(10000)
 
 	const groups = [
@@ -363,7 +363,7 @@ tape('survival term as term1, term0 = genetic_race, categorical groupsetting', f
 	}
 })
 
-tape('survival term as term1, term2 = agedx, regular bins', function(test) {
+tape('survival term as term1, term2 = agedx, regular bins', function (test) {
 	test.timeoutAfter(10000)
 	test.plan(4)
 
@@ -393,11 +393,6 @@ tape('survival term as term1, term2 = agedx, regular bins', function(test) {
 								}
 							},
 							label_offset: 1
-						}
-					},
-					settings: {
-						controls: {
-							isOpen: true
 						}
 					}
 				}
@@ -458,7 +453,7 @@ tape('survival term as term1, term2 = agedx, regular bins', function(test) {
 	}
 })
 
-tape('survival term as term1, term2 = agedx, custom bins', function(test) {
+tape('survival term as term1, term2 = agedx, custom bins', function (test) {
 	test.timeoutAfter(10000)
 
 	runpp({
@@ -482,10 +477,7 @@ tape('survival term as term1, term2 = agedx, custom bins', function(test) {
 						}
 					},
 					settings: {
-						survival: {},
-						controls: {
-							isOpen: true
-						}
+						survival: {}
 					}
 				}
 			]
@@ -543,7 +535,7 @@ tape('survival term as term1, term2 = agedx, custom bins', function(test) {
 	}
 })
 
-tape('survival term as term1, term0 = agedx, custom bins', function(test) {
+tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 	test.timeoutAfter(20000)
 
 	runpp({
@@ -593,11 +585,6 @@ tape('survival term as term1, term0 = agedx, custom bins', function(test) {
 								}
 							],
 							hiddenValues: {}
-						}
-					},
-					settings: {
-						controls: {
-							isOpen: true
 						}
 					}
 				}

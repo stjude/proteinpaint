@@ -59,8 +59,7 @@ const open_state = {
 		{
 			chartType: 'sampleScatter',
 			colorTW: { id: 'diaggrp' },
-			name: 'TermdbTest TSNE',
-			settings: { controls: { isOpen: true } }
+			name: 'TermdbTest TSNE'
 		}
 	]
 }
@@ -176,7 +175,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 		await testOpenSurvivalPlot()
 		await testOpenSummaryPlot()
 
-		if (test._ok) holder.remove()
+		//if (test._ok) holder.remove()
 		test.end()
 
 		function testPlot() {

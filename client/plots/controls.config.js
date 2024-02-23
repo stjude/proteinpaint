@@ -110,7 +110,7 @@ class TdbConfigUiInit {
 
 	main() {
 		const plot = this.state.config
-		const isOpen = plot.settings.controls.isOpen
+		const isOpen = this.opts.isOpen()
 		this.render(isOpen)
 		for (const name in this.inputs) {
 			const o = this.inputs[name]

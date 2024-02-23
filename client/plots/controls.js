@@ -19,6 +19,7 @@ class TdbPlotControls {
 		this.opts = opts
 		this.type = 'plotControls'
 		this.customEvents = ['downloadClick', 'infoClick', 'helpClick']
+		this.isOpen = false
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -32,6 +33,7 @@ class TdbPlotControls {
 					id: this.id,
 					holder: this.dom.topbar,
 					callback: this.toggleVisibility,
+					isOpen: () => this.isOpen,
 					downloadHandler: () => this.bus.emit('downloadClick'),
 					infoHandler: isOpen =>
 						this.app.dispatch({
@@ -51,6 +53,7 @@ class TdbPlotControls {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.config_div,
+					isOpen: () => this.isOpen,
 					tip: this.app.tip,
 					inputs: this.opts.inputs
 				})
@@ -86,9 +89,14 @@ class TdbPlotControls {
 		}
 	}
 
-	main(arg) {
+	main(isOpen = undefined) {
 		if (!this.state) return
-		this.isOpen = this.state.config.settings.controls.isOpen
+		if (typeof isOpen == 'boolean') this.isOpen = isOpen
+		else {
+			const controls = this.state.config.settings.controls
+			if (controls && 'isOpen' in controls) this.isOpen = controls.isOpen
+		}
+
 		this.render()
 		for (const name in this.features) {
 			this.features[name].main(this.state, this.isOpen)
@@ -106,17 +114,24 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.toggleVisibility = () => {
-		const isOpen = !self.isOpen
-		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: {
-				settings: {
-					controls: { isOpen }
-				}
-			},
-			_scope_: 'none',
-			_notificationRoot_: [self.api]
-		})
+		const controls = self.state.config.settings.controls
+		if (controls && 'isOpen' in controls) {
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					settings: {
+						controls: { isOpen: !controls.isOpen }
+					}
+				},
+				_scope_: 'none'
+
+				// may be used to limit the dispatch notification, if it is reliably known
+				// that no components above or outside the _notificationRoot_ should react to this action
+				//_notificationRoot_: [self.api]
+			})
+		} else {
+			self.main(!self.isOpen)
+		}
 	}
 }

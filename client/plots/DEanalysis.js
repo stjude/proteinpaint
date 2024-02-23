@@ -445,9 +445,6 @@ export async function getPlotConfig(opts, app) {
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
 					method: undefined
-				},
-				controls: {
-					isOpen: false // control panel is hidden by default
 				}
 			}
 		}

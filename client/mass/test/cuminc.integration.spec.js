@@ -267,8 +267,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 						}
 					},
 					settings: {
-						cuminc: { minSampleSize: 1, minAtRisk: 0 },
-						controls: { isOpen: true }
+						cuminc: { minSampleSize: 1, minAtRisk: 0 }
 					}
 				}
 			]
@@ -442,8 +441,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 						}
 					},
 					settings: {
-						cuminc: { minSampleSize: 1, minAtRisk: 0 },
-						controls: { isOpen: true }
+						cuminc: { minSampleSize: 1, minAtRisk: 0 }
 					}
 				}
 			]
@@ -562,8 +560,7 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 						}
 					},
 					settings: {
-						cuminc: { minSampleSize: 1, minAtRisk: 0 },
-						controls: { isOpen: true }
+						cuminc: { minSampleSize: 1, minAtRisk: 0 }
 					}
 				}
 			]

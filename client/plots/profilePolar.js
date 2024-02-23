@@ -188,9 +188,6 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePlotSettings()
 		settings.showTable = true
 		config.settings = {
-			controls: {
-				isOpen: true // control panel is hidden by default
-			},
 			profilePolar: settings
 		}
 		const twlst = []

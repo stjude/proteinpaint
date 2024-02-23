@@ -255,9 +255,6 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePlotSettings()
 
 		config.settings = {
-			controls: {
-				isOpen: true // control panel is hidden by default
-			},
 			profileRadar: settings
 		}
 		const terms = config[opts.plot].terms

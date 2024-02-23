@@ -35,9 +35,6 @@ export async function getPlotConfig(opts = {}, app) {
 
 		// rendering options
 		settings: {
-			controls: {
-				isOpen: false // control panel is hidden by default
-			},
 			matrix: {
 				svgCanvasSwitch: 1000, // the number of samples to trigger switching between svg and canvas
 				useMinPixelWidth: true, // canvas may be hazy if false, but more accurately reflects column density
