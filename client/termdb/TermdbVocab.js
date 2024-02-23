@@ -332,6 +332,17 @@ export class TermdbVocab extends Vocab {
 		if (targetType) body.targetType = targetType
 		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
+		// sort results
+		const n = str.toUpperCase()
+		const r = { equals: [], startsWith: [], startsWord: [], includes: [] }
+		for (const i of data.lst) {
+			const name = i.name.toUpperCase()
+			if (name === n) r.equals.push(i)
+			else if (name.startsWith(n)) r.startsWith.push(i)
+			else if (name.includes(' ' + n)) r.startsWord.push(i)
+			else r.includes.push(i)
+		}
+		data.lst = [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes]
 		return data
 	}
 
