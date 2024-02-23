@@ -223,11 +223,11 @@ export function rangequery_rglst(tk, block, par) {
 			r.stop = r.stop == null ? j.stop : Math.max(r.stop, j.stop)
 		}
 		rglst.push(r)
-		par.isoform = block.usegm.isoform
-		par.gene = block.usegm.name
 		if (block.gmmode == 'genomic') {
-			// TODO if can delete the isoform parameter to simply make the query by genomic pos
-			par.atgenomic = 1
+			// in genomic mode for a gene. do not pass isoform and force backend to query via "byrange{}" rather than byisoform which incorrectly limits result to those on isoform but not region
+		} else {
+			par.isoform = block.usegm.isoform
+			par.gene = block.usegm.name
 		}
 	} else {
 		rglst = block.tkarg_rglst(tk)
