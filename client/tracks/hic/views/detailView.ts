@@ -1,7 +1,5 @@
-import { HicView } from './view'
-
-export default class DetailView extends HicView {
+export class DetailView {
 	constructor() {
-		super()
+		//TODO
 	}
 }

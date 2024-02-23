@@ -1,7 +1,5 @@
-import { HicView } from './view'
-
-export default class ChrPairView extends HicView {
+export class ChrPairView {
 	constructor() {
-		super()
+		//TODO
 	}
 }
