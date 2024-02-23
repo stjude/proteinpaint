@@ -308,7 +308,7 @@ export function server_init_db_queries(ds) {
 				const lst = []
 				for (const i of tmp) {
 					if (!i.jsondata) continue
-					const name = i.name.toLowerCase()
+					const name = i.name.toUpperCase()
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.name = i.name || j.name
