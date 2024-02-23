@@ -300,27 +300,19 @@ export function server_init_db_queries(ds) {
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		q.findTermByName = (n, cohortStr = '', treeFilter = null, usecase = null, matches = null) => {
-			const vals = []
+		q.findTermByName = (n, cohortStr = '', treeFilter = null, usecase = null) => {
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
-				const r = matches || { equals: [], startsWith: [], startsWord: [], includes: [] }
-				const lst = []
+				const r = []
 				for (const i of tmp) {
 					if (!i.jsondata) continue
-					const name = i.name.toUpperCase()
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.name = i.name || j.name
 					j.included_types = i.included_types ? i.included_types.split(',') : []
-					if (!usecase || isUsableTerm(j, usecase).has('plot')) {
-						if (name === n) r.equals.push(j)
-						else if (name.startsWith(n)) r.startsWith.push(j)
-						else if (name.includes(' ' + n)) r.startsWord.push(j)
-						else r.includes.push(j)
-					}
+					if (!usecase || isUsableTerm(j, usecase).has('plot')) r.push(j)
 				}
-				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes]
+				return r
 			}
 			return undefined
 		}
