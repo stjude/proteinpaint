@@ -48,12 +48,7 @@ const open_state = {
 		{
 			chartType: 'sampleScatter',
 			colorTW: { id: 'TSNE Category' },
-			name: 'Methylome TSNE',
-			settings: {
-				controls: {
-					isOpen: true
-				}
-			}
+			name: 'Methylome TSNE'
 		}
 	]
 }
@@ -141,9 +136,9 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('PNET plot + filter + colorTW=gene', function (test) {
+tape.only('PNET plot + filter + colorTW=gene', async function (test) {
 	test.timeoutAfter(3000)
-
+	test.plan(2)
 	const s2 = JSON.parse(JSON.stringify(state))
 	s2.termfilter = {
 		filter: {
@@ -155,33 +150,37 @@ tape('PNET plot + filter + colorTW=gene', function (test) {
 	}
 	s2.plots[0].colorTW = { term: { type: 'geneVariant', name: 'TP53' } }
 
-	runpp({
+	const app = await runpp({
 		state: s2,
 		sampleScatter: {
 			callbacks: {
-				'postRender.test': runTests
+				//'postRender.test': runTests
 			}
 		}
 	})
+	console.log(161, app)
+	const plots = app.getComponents('plots')
+	const scatter = Object.values(plots).find(p => p.type == 'scatter')
+	console.log()
 
-	function runTests(scatter) {
-		scatter.on('postRender.test', null)
-		const scatterDiv = scatter.Inner.charts[0].chartDiv
+	//function runTests(scatter) {
+	scatter.on('postRender.test', null)
+	const scatterDiv = scatter.Inner.charts[0].chartDiv
 
-		testPlot()
+	testPlot()
 
-		if (test._ok) scatter.Inner.app.destroy()
-		test.end()
+	//if (test._ok) scatter.Inner.app.destroy()
+	//test.end()
 
-		function testPlot() {
-			const serieG = scatterDiv.select('.sjpcb-scatter-series')
-			const numSymbols = serieG.selectAll('path').size()
-			test.true(
-				numSymbols == scatter.Inner.charts[0].data.samples.length,
-				`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
-			)
-		}
+	function testPlot() {
+		const serieG = scatterDiv.select('.sjpcb-scatter-series')
+		const numSymbols = serieG.selectAll('path').size()
+		test.true(
+			numSymbols == scatter.Inner.charts[0].data.samples.length,
+			`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
+		)
 	}
+	//}
 })
 
 tape.skip('Add shape, clicking term and replace by search', function (test) {

@@ -59,8 +59,7 @@ const open_state = {
 		{
 			chartType: 'sampleScatter',
 			colorTW: { id: 'diaggrp' },
-			name: 'TermdbTest TSNE',
-			settings: { controls: { isOpen: true } }
+			name: 'TermdbTest TSNE'
 		}
 	]
 }
@@ -151,7 +150,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Render TermdbTest scatter plot and open survival and summary', function (test) {
+tape.only('Render TermdbTest scatter plot and open survival and summary', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(4)
 	const holder = getHolder()
@@ -176,7 +175,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 		await testOpenSurvivalPlot()
 		await testOpenSummaryPlot()
 
-		if (test._ok) holder.remove()
+		//if (test._ok) holder.remove()
 		test.end()
 
 		function testPlot() {

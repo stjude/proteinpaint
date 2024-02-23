@@ -233,8 +233,9 @@ type RxAction = {
   [key=string]: any     // the payload, depends on the action.type, can make this action into a union
 
   _notificationRoot_?: RxComponentApi[]  
-												// may be used to directly notify pecific components that are known to be affected by an action,
-    										// and skip
+												// may be used to directly notify specific components that are known to be affected by an action,
+    										// this will cause the dispatch notification to skip all components above or outside the 
+    										// _notificationRoot_, !!! use only rarely when absolutely sure of excluding other components !!!
 
   _scope_?: 'none' | 'local' | 'global'
   											// indicates where this action should be tracked by a history tracker such as a recover component
