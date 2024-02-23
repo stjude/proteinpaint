@@ -1,1 +1,2 @@
-
+Fixes:
+- switching GDC mds3 track from gene to genomic mode it can properly display ssm now

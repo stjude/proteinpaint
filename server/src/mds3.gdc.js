@@ -19,7 +19,6 @@ GDC API
 ****************** EXPORTED
 validate_variant2sample
 validate_query_snvindel_byrange
-	makeSampleObj
 validate_query_snvindel_byisoform
 	snvindel_byisoform
 	snvindel_addclass
@@ -91,75 +90,9 @@ export function validate_variant2sample(a) {
 }
 
 export function validate_query_snvindel_byrange(ds) {
-	/*
-q{}
-	.rglst[]
-	.hiddenmclass: Set
-	.isoform:
-*/
 	ds.queries.snvindel.byrange.get = async q => {
+		// no longer uses graphql query; byisoform.get() now works to pull ssm by rglst[]
 		return await ds.queries.snvindel.byisoform.get(q)
-
-		/*********
-
-		the graphql query is not used; byisoform.get() now works to pull ssm by rglst[]
-
-		previous reason for using graphql instead of Rest api is assumption that intergenic ssm (not on any isoform) are not available from s/ssms and /ssm_occurrences endpoints
-		now that these endpoints actually support range query, will use them for now
-		and look into enabling genomic mode on gdc view
-		to confirm that whether intergenic ssm are indeed indexed on Rest; if so can delete graphql below
-		
-		const {host, headers} = ds.getHostHeaders(q)
-		const response = await got.post(host.graphql, {
-			headers,
-			body: JSON.stringify({ query: query_range2ssm, variables: variables_range2ssm(q) })
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid JSON from GDC range2ssm'
-		}
-		if (!Array.isArray(re?.data?.explore?.ssms?.hits?.edges)) throw 'data.explore.ssms.hits.edges not array'
-		const mlst = []
-		for (const h of re.data.explore.ssms.hits.edges) {
-			const m = {
-				dt: common.dtsnvindel,
-				ssm_id: h.node.ssm_id,
-				chr: h.node.chromosome,
-				pos: h.node.start_position - 1,
-				ref: h.node.reference_allele,
-				alt: h.node.tumor_allele,
-				samples: []
-			}
-			if(!Array.isArray(h.node?.consequence?.hits?.edges)) throw 'h.node.consequence.hits.edges[] not array'
-			m.csqcount = h.node.consequence.hits.edges.length
-			{
-				let c // consequence
-				if (q.isoform) {
-					c = h.node.consequence.hits.edges.find(i => i.node.transcript.transcript_id == opts.isoform)
-				} else {
-					c = h.node.consequence.hits.edges.find(i => i.node.transcript.is_canonical)
-				}
-				snvindel_addclass(m, (c || h.node.consequence.hits.edges[0]).node)
-				if(q.hiddenmclass && q.hiddenmclass.has(m.class)) {
-					// m filtered by class
-					continue
-				}
-			}
-			if(!Array.isArray(h.node?.occurrence?.hits?.edges)) throw 'h.node.occurrence.hits.edges[] not array'
-			for (const c of h.node.occurrence.hits.edges) {
-				const sample = makeSampleObj(c.node.case, ds)
-				/ currently query only returns case uuid; when the query is fixed to be able to return both aliquot and case id,
-				can change getter to return either based on q{} setting
-				/
-				sample.sample_id = c.node.case.case_id
-				m.samples.push(sample)
-			}
-			mlst.push(m)
-		}
-		return mlst
-	*/
 	}
 }
 
@@ -523,38 +456,6 @@ function mayMapRefseq2ensembl(q, ds) {
 		}
 	}
 	return refseq
-}
-
-function makeSampleObj(c, ds) {
-	// c: {project:{project_id}} as returned by api call
-	const sample = {}
-	if (ds.sampleSummaries) {
-		// At the snvindel query, each sample obj will only carry a subset of attributes
-		// as defined here, for producing sub-labels
-		for (const i of ds.sampleSummaries.lst) {
-			{
-				const t = ds.cohort.termdb.q.termjsonByOneid(i.label1)
-				if (t) {
-					sample[i.label1] = c[t.fields[0]]
-					for (let j = 1; j < t.fields.length; j++) {
-						if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
-					}
-				}
-			}
-			if (i.label2) {
-				const t = ds.cohort.termdb.q.termjsonByOneid(i.label2)
-				if (t) {
-					sample[i.label2] = c[t.fields[0]]
-					for (let j = 1; j < t.fields.length; j++) {
-						if (sample[i.label2]) sample[i.label2] = sample[i.label2][t.fields[j]]
-					}
-				}
-			}
-		}
-	} else {
-		// alternative methods for building samples
-	}
-	return sample
 }
 
 function snvindel_addclass(m, consequence) {
@@ -2519,98 +2420,4 @@ function addTid2value_to_filter(tid2value, content, ds) {
 			}
 		}
 	}
-}
-
-/*
-GRAPHQL  query ssm by range
-
-TODO if can be done in protein_mutations
-query list of variants by genomic range (of a gene/transcript)
-does not include info on individual tumors
-the "filter" name is hardcoded and used in app.js
-
-FIXME change query to return aliquot uuid alongside case_id
-*/
-const query_range2ssm = `query range2variants($filters: FiltersArgument) {
-  explore {
-    ssms {
-      hits(first: 100000, filters: $filters) {
-        total
-        edges {
-          node {
-            ssm_id
-            chromosome
-            start_position
-            end_position
-            genomic_dna_change
-			reference_allele
-            tumor_allele
-            occurrence {
-              hits {
-                total
-				edges {
-				  node {
-				    case {
-					  case_id
-					}
-				  }
-				}
-              }
-            }
-			consequence{
-              hits{
-                total
-                edges{
-                  node{
-                    transcript{
-                      transcript_id
-					  aa_change
-					  consequence_type
-					  is_canonical
-					  gene{
-					  	symbol
-					  }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`
-function variables_range2ssm(p) {
-	// TODO hardcoded for only one region; may extend to handle multiple ones
-	if (!p.rglst) throw '.rglst missing'
-	const r = p.rglst[0]
-	if (!r) throw '.rglst[0] missing'
-	if (typeof r.chr != 'string') throw '.rglst[0].chr not string'
-	if (!Number.isInteger(r.start)) throw '.rglst[0].start not integer'
-	if (!Number.isInteger(r.stop)) throw '.rglst[0].stop not integer'
-	const f = {
-		filters: {
-			op: 'and',
-			content: [
-				{ op: '=', content: { field: 'chromosome', value: [r.chr] } },
-				{ op: '>=', content: { field: 'start_position', value: [r.start] } },
-				{ op: '<=', content: { field: 'end_position', value: [r.stop] } }
-			]
-		}
-	}
-	if (p.set_id) {
-		if (typeof p.set_id != 'string') throw '.set_id value not string'
-		f.filters.content.push({
-			op: 'in',
-			content: { field: 'cases.case_id', value: [p.set_id] }
-		})
-	}
-	if (p.filter0) {
-		f.filters.content.push(p.filter0)
-	}
-	if (p.filterObj) {
-		f.filters.content.push(filter2GDCfilter(p.filterObj))
-	}
-	return f
 }

@@ -278,11 +278,6 @@ async function load_driver(q, ds) {
 async function query_snvindel(q, ds) {
 	if (q.isoform) {
 		// client supplies isoform, see if isoform query is supported
-		if (q.atgenomic) {
-			// in genomic mode
-			if (!ds.queries.snvindel.byrange) throw '.atgenomic but missing byrange query method'
-			return await ds.queries.snvindel.byrange.get(q)
-		}
 		if (ds.queries.snvindel.byisoform) {
 			// querying by isoform is supported
 			return await ds.queries.snvindel.byisoform.get(q)

@@ -237,12 +237,8 @@ function loadTk_finish_closure(tk, block) {
 				if (data.cnv) totalCount += data.cnv.length
 				if (totalCount == 0) {
 					// show blank tk with msg
-					let context
-					if (block.pannedpx != undefined || block.zoomedin == true) {
-						context = 'view range'
-					} else if (block.usegm && block.gmmode != 'genomic') {
-						context = block.usegm.name || block.usegm.isoform
-					}
+					let context = 'view range'
+					if (block.usegm && block.gmmode != 'genomic') context = block.usegm.name || block.usegm.isoform
 					tk.skewer.g
 						.append('text')
 						.text('No mutation in ' + context)
