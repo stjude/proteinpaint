@@ -197,7 +197,7 @@ function setRenderers(self) {
 			self.dom.resultDiv_terms.append('table').selectAll().data(dictTerms).enter().append('tr').each(self.showTerm)
 		}
 
-		self.dom.resultCntDiv.style('display', 'inline-block').text(`${data.lst.length} results`)
+		if (data.lst.length > 1) self.dom.resultCntDiv.style('display', 'inline-block').text(`${data.lst.length} results`)
 
 		self.focusableResults = [...self.dom.resultDiv.node().querySelectorAll('.sja_tree_click_term, .sja_menuoption')]
 	}
