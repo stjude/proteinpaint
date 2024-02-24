@@ -27,7 +27,9 @@ class TdbPlotControls {
 	async init() {
 		try {
 			this.setDom()
-			this.components = await multiInit({
+			// not using this.components since these will be manually updated later in main(),
+			// instead of updating these via notifyComponents() from app.dispatch
+			this.features = await multiInit({
 				topbar: topBarInit({
 					app: this.app,
 					id: this.id,
@@ -98,8 +100,9 @@ class TdbPlotControls {
 		}
 
 		this.render()
+		const appState = this.app.getState()
 		for (const name in this.features) {
-			this.features[name].main(this.state, this.isOpen)
+			this.features[name].update({ state: this.state, appState })
 		}
 	}
 }
@@ -126,8 +129,8 @@ function setInteractivity(self) {
 				},
 				_scope_: 'none'
 
-				// may be used to limit the dispatch notification, if it is reliably known
-				// that no components above or outside the _notificationRoot_ should react to this action
+				// may be used to limit the dispatch notification, if it is reliably known that
+				// no components above or outside the _notificationRoot_ should react to this action
 				//_notificationRoot_: [self.api]
 			})
 		} else {
