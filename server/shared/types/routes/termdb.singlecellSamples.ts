@@ -11,6 +11,7 @@ export type Sample = {
 
 	if no exp, then each sample will just have one experiment identifiable by its sample name, and this name is used in request
 	*/
+	[key: string]: any //sample column/term value
 	experiments?: { experimentID: string }[]
 
 	// a sample may have additional fields that will be displayed in table, see singleCell.samples.sampleColumns[]
