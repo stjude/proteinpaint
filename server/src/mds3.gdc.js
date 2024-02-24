@@ -62,6 +62,25 @@ export function convertSampleId_addGetter(tdb, ds) {
 	}
 }
 
+export function fetch2(url, opts) {
+	// wrap fetch common steps; throw gdc-tailored message on http error status
+	return fetch(url, opts)
+		.then(response => {
+			if (response.status > 399) {
+				console.log(`${url} status=${response.status}`, response) // show on server log
+				throw `GDC API error (${response.status}) Please try again` // return to client
+			}
+			if (opts.headers['Content-Type'] == 'application/json') {
+				return response.json() // key and value are hardcoded for gdc ds
+			}
+			return response.text() // TODO
+		})
+		.catch(e => {
+			console.log(e)
+			throw e.message || e
+		})
+}
+
 export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 	const fields = ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 	api.get = async q => {
@@ -1469,19 +1488,14 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
-	const response = await got.post(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), {
+	const re = await fetch2(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), {
+		method: 'POST',
 		headers,
 		body: JSON.stringify(param)
 	})
 
 	delete q.isoforms
 
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples query'
-	}
 	if (!re.data || !re.data.hits) throw 'variant2samples data structure not data.hits[]'
 	if (!Array.isArray(re.data.hits)) throw 'variant2samples re.data.hits is not array for query'
 
@@ -2082,7 +2096,9 @@ async function getSingleSampleMutations(query, ds, genome) {
 	// ssm
 	{
 		const { host, headers } = ds.getHostHeaders(query)
-		const response = await got.post(path.join(host.rest, isoform2ssm_query1_getvariant.endpoint), {
+		const url = path.join(host.rest, isoform2ssm_query1_getvariant.endpoint)
+		const re = await fetch2(url, {
+			method: 'POST',
 			headers,
 			body: JSON.stringify({
 				size: 10000, // ssm max!
@@ -2090,7 +2106,6 @@ async function getSingleSampleMutations(query, ds, genome) {
 				filters: isoform2ssm_query1_getvariant.filters(query).filters
 			})
 		})
-		const re = JSON.parse(response.body)
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total not integer'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
