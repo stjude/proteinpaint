@@ -152,6 +152,31 @@ export function getSamplelstTW(groups: any, name = 'groups', notIn = true) {
 	}
 }
 
+export function getSamplelstTWFromIds(ids: number[]) {
+	const qgroups: any = []
+	let samples: any
+	const name = 'group'
+	const values = ids.map(id => {
+		return { sampleId: id }
+	})
+	const qgroup = {
+		name: name,
+		in: true,
+		values
+	}
+
+	const $id = get$id()
+	const tw = {
+		$id,
+		isAtomic: true,
+		term: { $id, name, type: 'samplelst', values: { [name]: { key: name, list: values } } },
+		q: {
+			groups: [qgroup]
+		}
+	}
+	return tw
+}
+
 export function getSampleFilter(sampleId: number) {
 	const group = { name: '', index: 0, items: [{ sampleId }] }
 	const samplelst = getSamplelstTW([group], '', false)

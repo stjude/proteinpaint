@@ -16,6 +16,8 @@ import {
 } from '#shared/types/routes/termdb.singlecellSamples.ts'
 import { Cell, Plot } from '#shared/types/routes/termdb.singlecellData.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
+import { getData } from '../src/termdb.matrix'
+import { getSamplelstTW, getSamplelstTWFromIds, getSamplesFilter } from '../../client/termsetting/handlers/samplelst'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -70,7 +72,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.samples.src == 'gdcapi') {
 		gdc_validate_query_singleCell_samples(ds, genome)
 	} else if (q.samples.src == 'native') {
-		validateSamplesNative(q.samples as SingleCellSamplesNative, ds)
+		getSamplesNative(q.samples as SingleCellSamplesNative, ds)
 	} else {
 		throw 'unknown singleCell.samples.src'
 	}
@@ -86,14 +88,42 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	// q.data.get() added
 }
 
-function validateSamplesNative(S: SingleCellSamplesNative, ds: any) {
+async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	// for now use this quick fix method to pull sample ids annotated by this term
 	// to support situation where not all samples from a dataset has sc data
-	const samples = [] as Sample[] // list of sample ids with sc data
-	const s = ds.cohort.termdb.q.getAllValues4term(S.isSampleTerm)
-	for (const id of s.keys()) {
-		samples.push({ sample: ds.cohort.termdb.q.id2sampleName(id) })
+	const samplesNotCells = ds.cohort.termdb.q.getAllValues4term(S.isSampleTerm)
+	const terms = [] as any[]
+	if (S.sampleColumns)
+		for (const term of S.sampleColumns) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(term.termid)
+			const tw = { id: term.termid, term: t }
+			if (!t) throw 'invalid term id from queries.singleCell.samples.sampleColumns[].termid'
+			terms.push(tw)
+		}
+
+	const samplelstTW = getSamplelstTWFromIds(Array.from(samplesNotCells.keys()))
+	const tvslst = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: { term: samplelstTW.term }
+			}
+		]
 	}
+	const data = await getData({ filter: tvslst, terms }, ds, ds.genome)
+	console.log(data)
+	const samples = [] as any[]
+	for (const s in data.samples) {
+		const sample = { sample: data.refs.bySampleId[s].label }
+		for (const tw of terms) {
+			sample[tw.id] = data.samples[s][tw.id].value
+			samples.push(sample)
+		}
+	}
+	console.log(samples)
 	if (samples.length == 0) throw 'no sample with sc data'
 	// getter returns array of {sample:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
 	S.get = () => {
