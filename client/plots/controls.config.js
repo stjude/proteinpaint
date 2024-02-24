@@ -104,7 +104,8 @@ class TdbConfigUiInit {
 			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config
+			config,
+			isOpen: this.opts.isOpen()
 		}
 	}
 

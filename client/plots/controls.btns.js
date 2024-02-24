@@ -39,7 +39,8 @@ class TdbControlsTopBar {
 
 	getState(appState) {
 		return {
-			config: appState.plots.find(p => p.id === this.id)
+			config: appState.plots.find(p => p.id === this.id),
+			isOpen: this.opts.isOpen()
 		}
 	}
 
