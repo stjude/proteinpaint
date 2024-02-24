@@ -131,19 +131,11 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 
 	// scoped and cached for runtime
 	const _terms = [] as any
-	const _tid2cellvalue = {} as any
 
 	for (const tid of D.termIds) {
 		const t = ds.cohort.termdb.q.termjsonByOneid(tid)
 		if (!t) throw 'invalid term id from queries.singleCell.data.termIds[]'
 		_terms.push(t)
-		// _tid2cellvalue[tid] = {}
-		// const clusterMap = ds.cohort.termdb.q.getAllValues4term(tid)
-		// for(const [id, cluster] of clusterMap)
-		// {
-		// 	const name = ds.cohort.termdb.q.id2sampleName(id)
-		// 	_tid2cellvalue[tid][name] = cluster
-		// }
 	}
 	D.get = async q => {
 		// if sample is int, may convert to string

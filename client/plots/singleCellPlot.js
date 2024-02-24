@@ -178,11 +178,7 @@ class singleCellPlot {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
 			for (const plot of result.plots) {
-				for (const tid in result.tid2cellvalue) {
-					plot.clusterMap = result.tid2cellvalue[tid]
-					plot.tid = tid
-					this.renderPlot(plot)
-				}
+				this.renderPlot(plot)
 			}
 			this.refName = result.refName
 		} catch (e) {
