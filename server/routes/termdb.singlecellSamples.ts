@@ -108,7 +108,7 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 		]
 	}
 	const data = await getData({ filter: tvslst, terms }, ds, ds.genome)
-	const samples = [] as any[]
+	const samples = [] as Sample[]
 	for (const s in data.samples) {
 		const sample = { sample: data.refs.bySampleId[s].label }
 		for (const tw of terms) {
