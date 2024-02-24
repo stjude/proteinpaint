@@ -114,7 +114,6 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 		]
 	}
 	const data = await getData({ filter: tvslst, terms }, ds, ds.genome)
-	console.log(data)
 	const samples = [] as any[]
 	for (const s in data.samples) {
 		const sample = { sample: data.refs.bySampleId[s].label }
@@ -123,7 +122,6 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 			samples.push(sample)
 		}
 	}
-	console.log(samples)
 	if (samples.length == 0) throw 'no sample with sc data'
 	// getter returns array of {sample:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
 	S.get = () => {
