@@ -2,13 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { read_file } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import {
-	SingleCellQuery,
-	SingleCellSamplesNative,
-	SingleCellSamplesGdc,
-	SingleCellDataNative,
-	SingleCellDataGdc
-} from '#shared/types/dataset.ts'
+import { SingleCellQuery, SingleCellSamplesNative, SingleCellDataNative } from '#shared/types/dataset.ts'
 import {
 	Sample,
 	TermdbSinglecellsamplesRequest,
@@ -17,7 +11,7 @@ import {
 import { Cell, Plot } from '#shared/types/routes/termdb.singlecellData.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import { getData } from '../src/termdb.matrix'
-import { getSamplelstTW, getSamplelstTWFromIds, getSamplesFilter } from '../../client/termsetting/handlers/samplelst'
+import { getSamplelstTWFromIds } from '../../client/termsetting/handlers/samplelst'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -123,7 +117,6 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 		}
 	}
 	if (samples.length == 0) throw 'no sample with sc data'
-	// getter returns array of {sample:<samplename>, files:[]} where files is gdc specific. each sample is an obj and allows to add ds-specific stuff
 	S.get = () => {
 		return { samples, fields: ['sample'], columnNames: ['Sample'] }
 	}
