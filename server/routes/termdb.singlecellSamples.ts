@@ -10,8 +10,6 @@ import {
 } from '#shared/types/routes/termdb.singlecellSamples.ts'
 import { Cell, Plot } from '#shared/types/routes/termdb.singlecellData.ts'
 import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
-import { getData } from '../src/termdb.matrix'
-import { getSamplelstTWFromIds } from '../../client/termsetting/handlers/samplelst'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -86,39 +84,27 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	// for now use this quick fix method to pull sample ids annotated by this term
 	// to support situation where not all samples from a dataset has sc data
 	const samplesNotCells = ds.cohort.termdb.q.getAllValues4term(S.isSampleTerm)
-	const terms = [] as any[]
-	if (S.sampleColumns)
+	if (samplesNotCells.size == 0) throw 'no samples found that are identified by isSampleTerm'
+	const samples = [] as any // array of samples with sc data to be sent to client and list in table; cannot use Sample type for the use of "sampleid" temp property
+	for (const sampleid of samplesNotCells.keys()) {
+		samples.push({
+			sample: ds.cohort.termdb.q.id2sampleName(sampleid), // string name for display
+			sampleid // temporarily kept to assign term value to each sample
+		})
+	}
+	if (S.sampleColumns) {
+		// has optional terms to show as table columns and annotate samples
 		for (const term of S.sampleColumns) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(term.termid)
-			const tw = { id: term.termid, term: t }
-			if (!t) throw 'invalid term id from queries.singleCell.samples.sampleColumns[].termid'
-			terms.push(tw)
-		}
-
-	const samplelstTW = getSamplelstTWFromIds(Array.from(samplesNotCells.keys()))
-	const tvslst = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: [
-			{
-				type: 'tvs',
-				tvs: { term: samplelstTW.term }
+			const s2v = ds.cohort.termdb.q.getAllValues4term(term.termid) // map. k: sampleid, v: term value
+			for (const s of samples) {
+				if (s2v.has(s.sampleid)) s[term.termid] = s2v.get(s.sampleid)
 			}
-		]
-	}
-	const data = await getData({ filter: tvslst, terms }, ds, ds.genome)
-	const samples = [] as Sample[]
-	for (const s in data.samples) {
-		const sample = { sample: data.refs.bySampleId[s].label }
-		for (const tw of terms) {
-			sample[tw.id] = data.samples[s][tw.id].value
-			samples.push(sample)
 		}
 	}
-	if (samples.length == 0) throw 'no sample with sc data'
+	for (const s of samples) delete s.sampleid
+
 	S.get = () => {
-		return { samples, fields: ['sample'], columnNames: ['Sample'] }
+		return { samples: samples as Sample[] }
 	}
 }
 
