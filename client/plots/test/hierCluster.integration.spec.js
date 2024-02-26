@@ -1,6 +1,6 @@
 import * as helpers from '../../test/front.helpers.js'
 import tape from 'tape'
-import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
+import { sleep, detectOne, detectGte, detectLst, detectAttr } from '../../test/test.helpers.js'
 import { select } from 'd3-selection'
 import { appInit } from '../plot.app.js'
 import { fillTermWrapper } from '#termsetting'
@@ -25,6 +25,11 @@ async function getHierClusterApp(_opts = {}) {
 					settings: {
 						hierCluster: {
 							termGroupName: 'Gene Expression (CGC genes only)'
+						},
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
 						}
 					},
 					// force empty termgroups, genes since the instance requestData() will not have expression data,
@@ -146,7 +151,7 @@ tape('avoid race condition', async test => {
 
 tape('dendrogram click', async function (test) {
 	test.timeoutAfter(5000)
-	test.plan(2)
+	test.plan(3)
 
 	let numRenders = 0
 	const { app, hc } = await getHierClusterApp({
@@ -156,7 +161,7 @@ tape('dendrogram click', async function (test) {
 	const img = await detectOne({ elem: hc.dom.topDendrogram.node(), selector: 'image' })
 	const svgBox = hc.dom.svg.node().getBoundingClientRect()
 	const imgBox = img.getBBox()
-	// helper to see where the x, y position of the click
+	// helper to see onscreen the x, y position of the click
 	// select('body')
 	// 	.append('div')
 	// 	.style('position', 'absolute')
@@ -165,17 +170,30 @@ tape('dendrogram click', async function (test) {
 	// 	.style('width', '5px').style('height', '5px')
 	// 	.style('background-color', '#00f')
 
-	img.dispatchEvent(
-		new MouseEvent('click', {
-			//'view': window,
-			bubbles: true,
-			cancelable: true,
-			clientX: svgBox.x + hc.dimensions.xOffset + imgBox.x + imgBox.width / 2,
-			clientY: svgBox.y + imgBox.y + imgBox.height / 2
-		})
-	)
+	await detectLst({
+		elem: hc.dom.topDendrogram.node(),
+		trigger() {
+			img.dispatchEvent(
+				new MouseEvent('click', {
+					//'view': window,
+					bubbles: true,
+					cancelable: true,
+					clientX: svgBox.x + hc.dimensions.xOffset + imgBox.x + imgBox.width / 2,
+					clientY: svgBox.y + imgBox.y + imgBox.height / 2
+				})
+			)
+		}
+	})
 
-	// TODO: low priority - find a way to test the red lines vs black lines in the dendrogram branches?
+	const dataUriEnd = hc.dom.topDendrogram.select('image')?.attr('href').slice(-60) || ''
+	const expectedUriEnd =
+		window.devicePixelRatio === 1
+			? `IyHnD+cP5w/nj/4CjhfHS/9qObXnl/8PkgA61yIPYtsAAAAASUVORK5CYII=`
+			: window.navigator.userAgent?.includes(`Electron`) // headless
+			? `PgFeeOlp0S+88MJLnwAvvPS06Je9vfwCG6yWyx1uowQAAAAASUVORK5CYII=`
+			: `8NLTol944YWXPgFeeOlp0S+88HK+lx/PjoLLYOCCJQAAAABJRU5ErkJggg==` // retina screen
+
+	test.equal(dataUriEnd, expectedUriEnd, `should rerender with the expected dataURI after a dendrogram click`)
 
 	test.deepEqual(
 		['Zoom in', 'List 50 samples'],
@@ -191,7 +209,7 @@ tape('dendrogram click', async function (test) {
 		'should list the expected number of samples'
 	)
 	if (test._ok) {
-		hc.dom.dendroClickMenu.clear().hide()
-		app.destroy()
+		//hc.dom.dendroClickMenu.clear().hide()
+		//app.destroy()
 	}
 })
