@@ -462,15 +462,14 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 		//Test data correctly appears
 		test.equal(inner?.config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
 
-		//Overlay is no longer component of controls
-		// const overlayConfig =
-		// 	inner.components.controls.Inner.components?.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
+		const overlayConfig =
+			inner.components.controls.Inner.features?.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
 
-		// test.equal(
-		// 	JSON.stringify(inner.config.term2.q.lst),
-		// 	JSON.stringify(overlayConfig),
-		// 	`Should correctly pass the custom list to overlay component`
-		// )
+		test.equal(
+			JSON.stringify(inner.config.term2.q.lst),
+			JSON.stringify(overlayConfig),
+			`Should correctly pass the custom list to overlay component`
+		)
 
 		//Test overlay changes are applied
 		const config = structuredClone(cuminc.Inner.config)
@@ -582,14 +581,13 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 
 		//Test data correctly appears
 		test.equal(inner.config.term0.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
-		//Divide by is no longer a component of controls
-		// const divideConfig =
-		// 	inner.components.controls.Inner.components.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
-		// test.equal(
-		// 	JSON.stringify(inner.config.term0.q.lst),
-		// 	JSON.stringify(divideConfig),
-		// 	`Should correctly pass the custom list to divide by component`
-		// )
+		const divideConfig =
+			inner.components.controls.Inner.features.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
+		test.equal(
+			JSON.stringify(inner.config.term0.q.lst),
+			JSON.stringify(divideConfig),
+			`Should correctly pass the custom list to divide by component`
+		)
 
 		//***Test divide by changes are applied
 		const config = structuredClone(inner.config)

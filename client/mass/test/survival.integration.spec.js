@@ -394,11 +394,6 @@ tape('survival term as term1, term2 = agedx, regular bins', function (test) {
 							},
 							label_offset: 1
 						}
-					},
-					settings: {
-						controls: {
-							isOpen: true
-						}
 					}
 				}
 			]
@@ -482,10 +477,7 @@ tape('survival term as term1, term2 = agedx, custom bins', function (test) {
 						}
 					},
 					settings: {
-						survival: {},
-						controls: {
-							isOpen: true
-						}
+						survival: {}
 					}
 				}
 			]
@@ -505,14 +497,13 @@ tape('survival term as term1, term2 = agedx, custom bins', function (test) {
 
 		//Test data correctly appears
 		test.equal(config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
-		//Overlay is no longer a component of controls
-		// const overlayConfig =
-		// 	inner.components.controls.Inner.components.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
-		// test.equal(
-		// 	JSON.stringify(config.term2.q.lst),
-		// 	JSON.stringify(overlayConfig),
-		// 	`Should correctly pass the custom list to overlay component`
-		// )
+		const overlayConfig =
+			inner.components.controls.Inner.features.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
+		test.equal(
+			JSON.stringify(config.term2.q.lst),
+			JSON.stringify(overlayConfig),
+			`Should correctly pass the custom list to overlay component`
+		)
 
 		// Create a copy of the state config to modify, otherwise
 		// a dispatch may not propagate to this survival component instance
@@ -595,11 +586,6 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 							],
 							hiddenValues: {}
 						}
-					},
-					settings: {
-						controls: {
-							isOpen: true
-						}
 					}
 				}
 			]
@@ -619,14 +605,13 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 
 		//Test data correctly appears
 		test.equal(config.term0.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
-		//Overlay is no longer component of controls
-		// const overlayConfig =
-		// 	inner.components.controls.Inner.components.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
-		// test.equal(
-		// 	JSON.stringify(config.term0.q.lst),
-		// 	JSON.stringify(overlayConfig),
-		// 	`Should correctly pass the custom list to divide by component`
-		// )
+		const overlayConfig =
+			inner.components.controls.Inner.features.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
+		test.equal(
+			JSON.stringify(config.term0.q.lst),
+			JSON.stringify(overlayConfig),
+			`Should correctly pass the custom list to divide by component`
+		)
 
 		// Create a copy of the state config to modify, otherwise
 		// a dispatch may not propagate to this survival component instance
