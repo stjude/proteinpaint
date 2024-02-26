@@ -1,6 +1,6 @@
 import * as common from '#shared/common'
 import { compute_bins } from '#shared/termdb.bins'
-import got from 'got'
+import ky from 'ky'
 import path from 'path'
 import { combineSamplesById } from './mds3.variant2samples'
 import { filter2GDCfilter } from './mds3.gdc.filter'
@@ -25,7 +25,6 @@ validate_query_snvindel_byisoform
 gdcValidate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
-validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
@@ -68,18 +67,15 @@ export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 		// q is client request object
 		if (!q.ssm_id) throw '.ssm_id missing'
 		const { host, headers } = getHostHeaders(q)
-		const response = await got(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
-			method: 'GET',
-			headers
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid json in response'
-		}
-		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
-		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
+		const re = await ky(
+			path.join(
+				host.rest,
+				'ssms',
+				q.ssm_id + '?fields=consequence.transcript.is_canonical,consequence.transcript.transcript_id'
+			),
+			{ headers }
+		).json()
+		if (!Array.isArray(re?.data?.consequence)) throw '.data.consequence not array'
 		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
 		return canonical ? canonical.transcript.transcript_id : re.data.consequence[0].transcript.transcript_id
 	}
@@ -193,15 +189,16 @@ async function geneExpression_getGenes(genes, genome, case_ids, ds, q) {
 	// https://docs.gdc.cancer.gov/Encyclopedia/pages/FPKM-UQ/
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const response = await got.post(`${host.geneExp}/gene_expression/gene_selection`, {
-			headers,
-			body: JSON.stringify({
-				case_ids,
-				gene_ids: ensgLst,
-				selection_size: ensgLst.length
+		const re = await ky
+			.post(`${host.geneExp}/gene_expression/gene_selection`, {
+				headers,
+				json: {
+					case_ids,
+					gene_ids: ensgLst,
+					selection_size: ensgLst.length
+				}
 			})
-		})
-		const re = JSON.parse(response.body)
+			.json()
 		if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] not array'
 		const ensgLst2 = []
 		for (const i of re.gene_selection) {
@@ -229,13 +226,12 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 	if (q.filter) {
 		f.content.push(filter2GDCfilter(q.filter))
 	}
-	const body = { size: 10000, fields: 'case_id' }
-	if (f.content.length) body.case_filters = f
+	const json = { size: 10000, fields: 'case_id' }
+	if (f.content.length) json.case_filters = f
 
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const response = await got.post(path.join(host.rest, 'cases'), { headers, body: JSON.stringify(body) })
-		const re = JSON.parse(response.body)
+		const re = await ky.post(path.join(host.rest, 'cases'), { headers, json }).json()
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
 		for (const h of re.data.hits) {
@@ -256,18 +252,19 @@ export async function gdcGetCasesWithExressionDataFromCohort(q, ds) {
 
 async function getExpressionData(q, gene_ids, case_ids, ensg2symbol, gene2sample2value, ds) {
 	const { host, headers } = ds.getHostHeaders(q)
-	const response = await got.post(`${host.geneExp}/gene_expression/values`, {
-		headers,
-		body: JSON.stringify({
-			case_ids,
-			gene_ids,
-			format: 'tsv',
-			tsv_units: 'uqfpkm'
-			//tsv_units: 'median_centered_log2_uqfpkm'
+	const re = await ky
+		.post(`${host.geneExp}/gene_expression/values`, {
+			headers,
+			json: {
+				case_ids,
+				gene_ids,
+				format: 'tsv',
+				tsv_units: 'uqfpkm'
+				//tsv_units: 'median_centered_log2_uqfpkm'
+			}
 		})
-	})
-	if (typeof response.body != 'string') throw 'response.body is not tsv text'
-	const lines = response.body.trim().split('\n')
+		.text()
+	const lines = re.trim().split('\n')
 	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
 
 	// header line:
@@ -383,61 +380,6 @@ export function validate_query_snvindel_byisoform(ds) {
 	}
 }
 
-// "protein_mutations" graphql api, just occurrence and without case info
-// not in use!!
-export function validate_query_snvindel_byisoform_2(ds) {
-	const api = ds.queries.snvindel.byisoform.gdcapi
-	if (!api.query) throw '.query missing for byisoform.gdcapi'
-	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
-	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not function'
-	ds.queries.snvindel.byisoform.get = async opts => {
-		const refseq = mayMapRefseq2ensembl(opts, ds)
-		const { host, headers } = ds.getHostHeaders(opts)
-		const response = await got.post(host.rest, {
-			headers,
-			body: JSON.stringify({ query: api.query, variables: api.filters(opts) })
-		})
-		const tmp = JSON.parse(response.body)
-		if (
-			!tmp.data ||
-			!tmp.data.analysis ||
-			!tmp.data.analysis.protein_mutations ||
-			!tmp.data.analysis.protein_mutations.data
-		)
-			throw 'data not .data.analysis.protein_mutations.data'
-		const re = JSON.parse(tmp.data.analysis.protein_mutations.data)
-		if (!re.hits) throw 're.hits missing'
-		const mlst = []
-		for (const a of re.hits) {
-			const b = a._source
-			const m = {
-				ssm_id: b.ssm_id,
-				dt: common.dtsnvindel,
-				chr: b.chromosome,
-				pos: b.start_position - 1,
-				ref: b.reference_allele,
-				alt: b.tumor_allele,
-				isoform: opts.isoform,
-				occurrence: a._score,
-				csqcount: b.consequence.length
-			}
-			snvindel_addclass(
-				m,
-				b.consequence.find(i => i.transcript.transcript_id == opts.isoform)
-			)
-			mlst.push(m)
-		}
-
-		if (refseq) {
-			// replace ensembl back to refseq
-			opts.isoform = refseq
-			for (const m of mlst) m.isoform = refseq
-		}
-
-		return mlst
-	}
-}
-
 function mayMapRefseq2ensembl(q, ds) {
 	/*
 	q: { isoform: str }
@@ -520,15 +462,16 @@ export function validate_query_geneCnv(ds) {
 	*/
 	ds.queries.geneCnv.bygene.get = async opts => {
 		const { host, headers } = ds.getHostHeaders(opts)
-		const tmp = await got.post(path.join(host.rest, 'cnvs'), {
-			headers,
-			body: JSON.stringify({
-				size: 100000,
-				fields: getFields(opts),
-				filters: getFilter(opts)
+		const re = await ky
+			.post(path.join(host.rest, 'cnvs'), {
+				headers,
+				json: {
+					size: 100000,
+					fields: getFields(opts),
+					filters: getFilter(opts)
+				}
 			})
-		})
-		const re = JSON.parse(tmp.body)
+			.json()
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
 
 		const cnvevents = [] // collect list of cnv events to return
@@ -644,11 +587,12 @@ export function validate_query_geneCnv2(ds) {
 	*/
 	ds.queries.geneCnv.bygene.get = async opts => {
 		const { host, headers } = ds.getHostHeaders(opts)
-		const tmp = await got.post(path.join(host.rest, 'cnv_occurrences'), {
-			headers,
-			body: JSON.stringify(Object.assign({ size: 100000, fields: getFields(opts) }, getFilters(opts)))
-		})
-		const re = JSON.parse(tmp.body)
+		const re = await ky
+			.post(path.join(host.rest, 'cnv_occurrences'), {
+				headers,
+				json: Object.assign({ size: 100000, fields: getFields(opts) }, getFilters(opts))
+			})
+			.json()
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
 
 		const gainEvent = {
@@ -748,71 +692,6 @@ export function validate_query_geneCnv2(ds) {
 }
 
 /*
-not in use
-get genome-wide gene-level cnv data for one case
-opts{}
-	.case_id=str
-*/
-async function getGeneCnv4oneCase(opts, ds) {
-	const fields = [
-		'cnv.chromosome',
-		'cnv.start_position',
-		'cnv.end_position',
-		'cnv.cnv_change',
-		'cnv.gene_level_cn',
-		'cnv.consequence.gene.symbol' // turn on later if gene is needed
-	]
-	const { host, headers } = getHostHeaders(opts)
-	const tmp = await got.post(path.join(host.rest, 'cnv_occurrences'), {
-		headers,
-		body: JSON.stringify({
-			size: 10000,
-			fields: fields.join(','),
-			filters: getFilter(opts)
-		})
-	})
-	const re = JSON.parse(tmp.body)
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
-	const cnvs = []
-	for (const h of re.data.hits) {
-		if (!h.id) throw '.id missing from cnv hit'
-		if (typeof h.cnv != 'object') throw 'h.cnv{} not object'
-		if (!h.cnv.gene_level_cn) throw 'h.cnv.gene_level_cn not true'
-		if (!Number.isInteger(h.cnv.start_position)) throw 'h.cnv.start_position not integer'
-		if (!Number.isInteger(h.cnv.end_position)) throw 'h.cnv.end_position not integer'
-		if (!h.cnv.chromosome) throw 'h.cnv.chromosome missing'
-		const m = {
-			dt: common.dtcnv,
-			ssm_id: h.id,
-			chr: 'chr' + h.cnv.chromosome,
-			start: h.cnv.start_position,
-			stop: h.cnv.end_position
-		}
-		if (h.cnv.cnv_change == 'Gain') {
-			m.value = 1
-			//m.class = common.mclass.mclasscnvgain
-		} else if (h.cnv.cnv_change == 'Loss') {
-			m.value = -1
-			//m.class=common.mclass.mclasscnvloss
-		} else {
-			throw 'h.cnv.cnv_change value not Gain or Loss'
-		}
-		if (h.cnv.consequence?.gene?.symbol) m.gene = h.cnv.consequence.gene.symbol
-		cnvs.push(m)
-	}
-	return cnvs
-
-	function getFilter(p) {
-		/* p={}
-		.case_id=str
-		*/
-		if (!p.case_id) throw '.case_id missing'
-		const filters = { op: 'and', content: [{ op: 'in', content: { field: 'case.case_id', value: [p.case_id] } }] }
-		return filters
-	}
-}
-
-/*
 get a text file with genome-wide cnv segment data from one case, and read the file content
 opts{}
 	.case_id=str
@@ -827,15 +706,16 @@ async function getCnvFusion4oneCase(opts, ds) {
 		'analysis.workflow_type'
 	]
 	const { host, headers } = ds.getHostHeaders(opts)
-	const tmp = await got.post(path.join(host.rest, 'files'), {
-		headers,
-		body: JSON.stringify({
-			size: 10000,
-			fields: fields.join(','),
-			filters: getFilter(opts)
+	const re = await ky
+		.post(path.join(host.rest, 'files'), {
+			headers,
+			json: {
+				size: 10000,
+				fields: fields.join(','),
+				filters: getFilter(opts)
+			}
 		})
-	})
-	const re = JSON.parse(tmp.body)
+		.json()
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
 	let snpFile, wgsFile, arribaFile // detect result files from accepted assays
@@ -872,8 +752,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const events = [] // collect cnv and fusion events into one array
 
 	if (wgsFile) {
-		const re = await got(path.join(host.rest, 'data') + '/' + wgsFile, { method: 'GET', headers })
-		const lines = re.body.split('\n')
+		const re = await ky(path.join(host.rest, 'data', wgsFile), { headers }).text()
+		const lines = re.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
 		for (let i = 1; i < lines.length; i++) {
@@ -927,8 +807,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 	} else if (snpFile) {
 		// only load available snp file if no wgs cnv
 
-		const re = await got(path.join(host.rest, 'data') + '/' + snpFile, { method: 'GET', headers })
-		const lines = re.body.split('\n')
+		const re = await ky(path.join(host.rest, 'data', snpFile), { headers }).text()
+		const lines = re.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Num_Probes	Segment_Mean
 		for (let i = 1; i < lines.length; i++) {
@@ -949,8 +829,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 	if (arribaFile) {
 		try {
-			const re = await got(path.join(host.rest, 'data') + '/' + arribaFile, { method: 'GET', headers })
-			const lines = re.body.split('\n')
+			const re = await ky(path.join(host.rest, 'data', arribaFile), { headers }).text()
+			const lines = re.split('\n')
 			// first line is header
 			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
 			for (let i = 1; i < lines.length; i++) {
@@ -1024,27 +904,21 @@ async function snvindel_byisoform(opts, ds) {
 	const { host, headers } = ds.getHostHeaders(opts)
 
 	// must use POST as filter can be too long for GET
-	const p1 = got.post(path.join(host.rest, query1.endpoint), {
-		headers,
-		body: JSON.stringify(Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts)))
-	})
-	const p2 = got.post(path.join(host.rest, query2.endpoint), {
-		headers,
-		body: JSON.stringify(
-			Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
-		)
-	})
-	const [tmp1, tmp2] = await Promise.all([p1, p2])
-	let re_ssms, re_cases
-	try {
-		re_ssms = JSON.parse(tmp1.body)
-		re_cases = JSON.parse(tmp2.body)
-	} catch (e) {
-		throw 'invalid JSON returned by GDC'
-	}
-	if (!re_ssms.data || !re_ssms.data.hits) throw 'query1 did not return .data.hits'
-	if (!re_cases.data || !re_cases.data.hits) throw 'query2 did not return .data.hits[]'
-	if (!Array.isArray(re_ssms.data.hits) || !Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
+	const p1 = ky
+		.post(path.join(host.rest, query1.endpoint), {
+			headers,
+			json: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
+		})
+		.json()
+	const p2 = ky
+		.post(path.join(host.rest, query2.endpoint), {
+			headers,
+			json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
+		})
+		.json()
+	const [re_ssms, re_cases] = await Promise.all([p1, p2])
+	if (!Array.isArray(re_ssms?.data?.hits) || !Array.isArray(re_cases?.data?.hits))
+		throw 'ssm tandem query not returning data.hits[]'
 
 	// hash ssm by ssm_id
 	const id2ssm = new Map() // key: ssm_id, value: ssm {}
@@ -1469,21 +1343,11 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
-	const response = await got.post(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), {
-		headers,
-		body: JSON.stringify(param)
-	})
+	const re = await ky.post(path.join(host.rest, isoform2ssm_query2_getcase.endpoint), { headers, json: param }).json()
 
 	delete q.isoforms
 
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples query'
-	}
-	if (!re.data || !re.data.hits) throw 'variant2samples data structure not data.hits[]'
-	if (!Array.isArray(re.data.hits)) throw 'variant2samples re.data.hits is not array for query'
+	if (!Array.isArray(re?.data?.hits)) throw 'variant2samples re.data.hits is not array for query'
 
 	const samples = []
 
@@ -1619,15 +1483,16 @@ async function querySamplesTwlst4hierCluster(q, twLst, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	const response = await got.post(path.join(host.rest, 'cases'), {
-		headers,
-		body: JSON.stringify({
-			size: ds.__gdc.casesWithExpData.size,
-			fields: fields.join(','),
-			case_filters: filters.content.length ? filters : undefined
+	const re = await ky
+		.post(path.join(host.rest, 'cases'), {
+			headers,
+			json: {
+				size: ds.__gdc.casesWithExpData.size,
+				fields: fields.join(','),
+				case_filters: filters.content.length ? filters : undefined
+			}
 		})
-	})
-	const re = JSON.parse(response.body)
+		.json()
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	const samples = []
@@ -1713,17 +1578,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	const query = termid2size_query(termPaths)
 	const variables = termid2size_filters(q, ds)
 	const { host, headers } = ds.getHostHeaders(q)
-	const response = await got.post(host.graphql, {
-		headers,
-		body: JSON.stringify({ query, variables })
-	})
-
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC for cohortTotal for query :' + query + ' and filter: ' + filter
-	}
+	const re = await ky.post(host.graphql, { headers, json: { query, variables } }).json()
 
 	// levels to traverse in api return
 	const keys = ['data', 'explore', 'cases', 'aggregations']
@@ -1771,16 +1626,7 @@ export function validate_m2csq(ds) {
 	ds.queries.snvindel.m2csq.get = async q => {
 		// q is client request object
 		const { host, headers } = ds.getHostHeaders(q)
-		const response = await got(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
-			method: 'GET',
-			headers
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid json in response'
-		}
+		const re = await ky(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), { headers }).json()
 		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
 		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
 		return re.data.consequence.map(i => i.transcript)
@@ -1888,22 +1734,24 @@ async function convert2caseId(n, ds) {
 	- sample submitter id (TCGA-B5-A1MR-01A)
 	*/
 	const { host, headers } = ds.getHostHeaders(q)
-	const response = await got.post(`${host.rest}/cases`, {
-		headers,
-		body: JSON.stringify({
-			size: 1,
-			fields: 'case_id,submitter_id',
-			filters: {
-				op: 'or',
-				content: [
-					{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: [n] } },
-					{ op: '=', content: { field: 'submitter_id', value: [n] } },
-					{ op: '=', content: { field: 'samples.submitter_id', value: [n] } }
-				]
+	const re = await ky
+		.post(path.join(host.rest, 'cases'), {
+			headers,
+			json: {
+				size: 1,
+				fields: 'case_id,submitter_id',
+				filters: {
+					op: 'or',
+					content: [
+						{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: [n] } },
+						{ op: '=', content: { field: 'submitter_id', value: [n] } },
+						{ op: '=', content: { field: 'samples.submitter_id', value: [n] } }
+					]
+				}
 			}
 		})
-	})
-	const re = JSON.parse(response.body)
+		.json()
+	console.log(re)
 	for (const h of re.data.hits) {
 		if (h.case_id) return h.case_id
 	}
@@ -1931,12 +1779,11 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			case_filters.content.push(q.filter0)
 		}
 
-		const body = {
+		const json = {
 			filters,
 			case_filters,
 			size: 100,
 			fields: [
-				'id',
 				'cases.submitter_id',
 				'cases.project.project_id', // for display only NOTE it will be replaced to 'case.project.project_id' to be consistent with dict term id and used in sample obj property
 				'cases.samples.sample_type',
@@ -1946,17 +1793,7 @@ export function gdc_validate_query_singleCell_samples(ds, genome) {
 			].join(',')
 		}
 		const { host, headers } = ds.getHostHeaders(q)
-		const response = await got.post(path.join(host.rest, 'files'), {
-			headers,
-			body: JSON.stringify(body)
-		})
-
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid JSON from ' + api.endpoint
-		}
+		const re = await ky.post(path.join(host.rest, 'files'), { headers, json }).json()
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
@@ -2021,8 +1858,8 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 	*/
 	ds.queries.singleCell.data.get = async q => {
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await got(path.join(host.rest, 'data', q.sample), { method: 'GET', headers })
-		const lines = re.body.trim().split('\n')
+		const re = await ky(path.join(host.rest, 'data', q.sample), { headers }).text()
+		const lines = re.trim().split('\n')
 
 		// first line is header
 		// cell_barcode	read_count	gene_count	seurat_cluster	UMAP_1	UMAP_2	UMAP3d_1	UMAP3d_2	UMAP3d_3	tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3	PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
@@ -2082,15 +1919,16 @@ async function getSingleSampleMutations(query, ds, genome) {
 	// ssm
 	{
 		const { host, headers } = ds.getHostHeaders(query)
-		const response = await got.post(path.join(host.rest, isoform2ssm_query1_getvariant.endpoint), {
-			headers,
-			body: JSON.stringify({
-				size: 10000, // ssm max!
-				fields: isoform2ssm_query1_getvariant.fields.join(','),
-				filters: isoform2ssm_query1_getvariant.filters(query).filters
+		const re = await ky
+			.post(path.join(host.rest, isoform2ssm_query1_getvariant.endpoint), {
+				headers,
+				json: {
+					size: 10000, // ssm max!
+					fields: isoform2ssm_query1_getvariant.fields.join(','),
+					filters: isoform2ssm_query1_getvariant.filters(query).filters
+				}
 			})
-		})
-		const re = JSON.parse(response.body)
+			.json()
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total not integer'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
