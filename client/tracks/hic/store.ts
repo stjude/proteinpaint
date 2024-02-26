@@ -18,7 +18,7 @@ class HicStore {
 	}
 
 	determineView(opts) {
-		console.log(opts) // so ts stops complaining
+		//console.log(opts) // so ts stops complaining
 		//TODO figure out view based on opts
 		//Will be useful when runpp() for chrPair and detailed view is implemented
 		return 'genome'

@@ -1,20 +1,21 @@
 import { Elem } from '../../../types/d3'
 
 export class MatrixTypeControl {
+	app: any
 	holder: Elem
-	values: { label: string; value: string }[]
+	values = [
+		{ label: 'Observed', value: 'observed' },
+		{ label: 'Expected', value: 'expected' },
+		{ label: 'Observed/Expected', value: 'oe' },
+		{ label: 'Log(Observed/Expected)', value: 'log(oe)' }
+		// TODO: add server side logic to support these options
+		// { label: 'Log(Observed + 1)', value: 'log(obs+1)'},
+		// { label: 'Observed Pearson', value: 'op'}
+	]
 
-	constructor(holder: Elem) {
+	constructor(app: any, holder: Elem) {
+		this.app = app
 		this.holder = holder
-		this.values = [
-			{ label: 'Observed', value: 'observed' },
-			{ label: 'Expected', value: 'expected' },
-			{ label: 'Observed/Expected', value: 'oe' },
-			{ label: 'Log(Observed/Expected)', value: 'log(oe)' }
-			// TODO: add server side logic to support these options
-			// { label: 'Log(Observed + 1)', value: 'log(obs+1)'},
-			// { label: 'Observed Pearson', value: 'op'}
-		]
 	}
 
 	render() {

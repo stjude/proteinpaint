@@ -80,10 +80,20 @@ class HicApp {
 		return appState
 	}
 
+	determineView(opts) {
+		//console.log(opts) // so ts stops complaining
+		//TODO figure out view based on opts
+		//Will be useful when runpp() for chrPair and detailed view is implemented
+		return 'genome'
+	}
+
 	async init() {
+		if (!this.hic.state.currView) this.hic.state.currView = 'genome'
 		try {
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
 			this.state = await this.store.copyState()
+			//TODO: replace with HiCDataRequest class here
+			//data should be available to all components on init()
 			await hicParseFile(this.hic, true, this.errList)
 			if (this.errList.length) this.error(this.errList)
 			this.components = {
