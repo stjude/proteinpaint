@@ -1,11 +1,13 @@
 import { Elem } from '../../../types/d3'
 
 export class CutoffControl {
+	app: any
 	view: any
 	holder: Elem
 	value: number
 
-	constructor(state: any, holder: Elem, value: number) {
+	constructor(app: any, state: any, holder: Elem, value: number) {
+		this.app = app
 		this.view = state[state.currView]
 		this.holder = holder
 		this.value = value

@@ -61,7 +61,7 @@ class ControlPanel {
 	hic: any
 	type: 'controlPanel'
 	state: any
-	hasStatePreMain: boolean
+	hasStatePreMain = true
 
 	constructor(opts) {
 		this.type = 'controlPanel'
@@ -69,7 +69,7 @@ class ControlPanel {
 		this.controls = {}
 		this.controlsDiv = opts.controlsDiv
 		this.hic = opts.hic
-		;(this.state = opts.state), (this.hasStatePreMain = true)
+		this.state = opts.state
 	}
 
 	addLabel(tr: Tr, text: string) {
@@ -113,25 +113,25 @@ class ControlPanel {
 		const normalizationRow = menuTable.append('tr') as any
 		this.addLabel(normalizationRow, 'NORMALIZATION')
 		this.controls.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select') as any
-		new NormalizationMethodControl(this.state, this.controls.nmeth, this.hic.normalization).render()
+		new NormalizationMethodControl(this.app, this.state, this.controls.nmeth, this.hic.normalization).render()
 
 		//***Cutoffs
 		//Min CUTOFF
 		const minCutoffRow = menuTable.append('tr') as any
 		this.addLabel(minCutoffRow, 'Min CUTOFF')
 		//**** CHANGE TO THE VIEW VALUE */
-		this.controls.inputBpMinV = new CutoffControl(this.state, minCutoffRow.append('td'), 0).render()
+		this.controls.inputBpMinV = new CutoffControl(this.app, this.state, minCutoffRow.append('td'), 0).render()
 
 		//Max CUTOFF
 		const maxCutoffRow = menuTable.append('tr') as any
 		this.addLabel(maxCutoffRow, 'Max CUTOFF')
 		//**** CHANGE TO THE VIEW VALUE */
-		this.controls.inputBpMaxV = new CutoffControl(this.state, maxCutoffRow.append('td'), 0).render()
+		this.controls.inputBpMaxV = new CutoffControl(this.app, this.state, maxCutoffRow.append('td'), 0).render()
 
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
 		this.addLabel(matrixTypeRow, 'matrix type')
-		this.controls.matrixType = new MatrixTypeControl(matrixTypeRow.append('td')).render()
+		this.controls.matrixType = new MatrixTypeControl(this.app, matrixTypeRow.append('td')).render()
 
 		const viewRow = menuTable.append('tr') as any
 		this.addLabel(viewRow, 'VIEW')
