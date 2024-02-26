@@ -498,7 +498,7 @@ tape('survival term as term1, term2 = agedx, custom bins', function (test) {
 		//Test data correctly appears
 		test.equal(config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
 		const overlayConfig =
-			inner.components.controls.Inner.components.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
+			inner.components.controls.Inner.features.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
 		test.equal(
 			JSON.stringify(config.term2.q.lst),
 			JSON.stringify(overlayConfig),
@@ -606,7 +606,7 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 		//Test data correctly appears
 		test.equal(config.term0.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
 		const overlayConfig =
-			inner.components.controls.Inner.components.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
+			inner.components.controls.Inner.features.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
 		test.equal(
 			JSON.stringify(config.term0.q.lst),
 			JSON.stringify(overlayConfig),

@@ -460,9 +460,11 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 		const div = inner.dom.chartsDiv
 
 		//Test data correctly appears
-		test.equal(inner.config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
+		test.equal(inner?.config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
+
 		const overlayConfig =
-			inner.components.controls.Inner.components.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
+			inner.components.controls.Inner.features?.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
+
 		test.equal(
 			JSON.stringify(inner.config.term2.q.lst),
 			JSON.stringify(overlayConfig),
@@ -580,7 +582,7 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 		//Test data correctly appears
 		test.equal(inner.config.term0.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
 		const divideConfig =
-			inner.components.controls.Inner.components.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
+			inner.components.controls.Inner.features.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
 		test.equal(
 			JSON.stringify(inner.config.term0.q.lst),
 			JSON.stringify(divideConfig),
