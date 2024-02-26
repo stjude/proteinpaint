@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.43.1
 
 Fixes:
 - switching GDC mds3 track from gene to genomic mode it can properly display ssm now
