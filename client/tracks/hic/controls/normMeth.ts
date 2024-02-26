@@ -1,12 +1,14 @@
 import { Elem } from '../../../types/d3'
 
 export class NormalizationMethodControl {
+	app: any
 	defaultNmeth: string
 	holder: Elem
 	normalization: string[]
 	nmethselect: any
 
-	constructor(state: any, dom: any, normalization: string[]) {
+	constructor(app: any, state: any, dom: any, normalization: string[]) {
+		this.app = app
 		this.defaultNmeth = state.defaultNmeth
 		this.holder = dom
 		this.normalization = normalization

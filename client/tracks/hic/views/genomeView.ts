@@ -1,6 +1,9 @@
-import { colorizeElement,  } from './view' //add setViewCutoff
+import { SvgSvg, SvgG } from '../../../types/d3'
+//import { Selection } from 'd3-selection'
+import { colorizeElement } from './view' //add setViewCutoff
 //import * as client from '#src/client'
 //import blocklazyload from '#src/block.lazyload'
+import { HicDataRequest } from '../data/getHicData'
 
 import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'
@@ -27,57 +30,51 @@ import { init_hicInfoBar } from '../dom/info.bar.ts'
 import { Div } from '../../../types/d3'
 
 export class GenomeView {
+	/** opts */
+	app: any
 	hic: any
 	state: any
 	plotDiv: MainPlotDiv
-	binpx: number
-	genomeView: any
 	resolution: number
-	svg: any
-	atdev_chrnum: number
-	lead2follow: any //Map<string, Map<string, { x: number; y: number }>>
-	borderwidth: number
-	chr2px: any
-	app: any
-	layer_map: any
-	layer_sv: any
-	pica_x: any
-	pica_y: any
-	tip: any
-	default_maxVPerc: number
-	defaultChrLabWidth: number
-	fontsize: number
-	xoff: number
-	yoff: number
 	nmeth: string
 	matrixType: string
-	data: any[]
+
+	/** Dom */
+	tip = new client.Menu()
+	pica_x = new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
+	pica_y = new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
+	svg: SvgSvg
+	layer_map: SvgG
+	layer_sv: SvgG
+
+	/** Data */
+	/** px width for each chr */
+	chr2px = {}
+	lead2follow = new Map() //Map<string, Map<string, { x: number; y: number }>>
+	data: any = []
+	values: number[] = []
+
+	/** Defaults */
+	defaultChrLabWidth = 100
+	borderwidth = 1
+	default_maxVPerc = 5
+	fontsize = 15
+	xoff = 0
+	yoff = 0
+	binpx = 1
+	atdev_chrnum = 8
 
 	constructor(opts) {
 		this.hic = opts.hic
 		this.state = opts.state
-		this.lead2follow = new Map()
-		this.chr2px = {}
-		/**Dom */
 		this.plotDiv = opts.plotDiv
 		this.svg = this.plotDiv.plot.append('svg')
-		this.tip = new client.Menu()
-		this.pica_x = new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 }),
-			this.pica_y = new client.Menu({ border: 'solid 1px #ccc', padding: '0px', offsetX: 0, offsetY: 0 })
-		/** Defaults */
+		this.layer_map = this.svg.append('g')
+		this.layer_sv = this.svg.append('g')
 		this.resolution = opts.hic.bpresolution[0]
-		this.binpx = 1
-		this.atdev_chrnum = 8
-		this.defaultChrLabWidth = 100
-		this.borderwidth = 1
-		this.default_maxVPerc = 5
-		this.fontsize = 15
-		this.xoff = 0
-		this.yoff = 0
 		this.app = opts.app
-		this.matrixType = 'observed'
+		this.matrixType = opts.matrixType || 'observed'
 		this.nmeth = opts.state.defaultNmeth
-		this.data = []
 	}
 
 	renderGrid() {
@@ -86,19 +83,15 @@ export class GenomeView {
 		const checker_fill = '#DEF3FA'
 
 		// heatmap layer underneath sv
-		this.layer_map = this.svg.append('g').attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
-		this.layer_sv = this.svg
-			.append('g')
-			.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
+		this.layer_map.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
+		this.layer_sv.attr('transform', `translate(${this.defaultChrLabWidth}, ${this.fontsize})`)
 
 		let checker_row = true
 
-		// px width for each chr
-		const chr2px = {}
 		let totalpx = this.hic.chrlst.length
 		for (const chr of this.hic.chrlst) {
 			const w = Math.ceil(this.hic.genome.chrlookup[chr.toUpperCase()].len / this.resolution) * this.binpx
-			chr2px[chr] = w
+			this.chr2px[chr] = w
 			totalpx += w
 		}
 
@@ -106,7 +99,7 @@ export class GenomeView {
 
 		// column labels
 		for (const chr of this.hic.chrlst) {
-			const chrw = chr2px[chr]
+			const chrw = this.chr2px[chr]
 			if (checker_row) {
 				this.layer_map
 					.append('rect')
@@ -142,7 +135,7 @@ export class GenomeView {
 
 		// row labels
 		for (const chr of this.hic.chrlst) {
-			const chrh = chr2px[chr]
+			const chrh = this.chr2px[chr]
 			if (checker_row) {
 				this.layer_map
 					.append('rect')
@@ -249,7 +242,7 @@ export class GenomeView {
 				.on('click', async () => {
 					await this.app.dispatch({
 						type: 'view_change',
-						view: 'chrpair',
+						view: 'chrpair'
 					})
 				})
 				.on('mouseover', () => {
@@ -332,7 +325,6 @@ export class GenomeView {
 					})
 			}
 		}
-
 	}
 
 	tooltipSv(event: MouseEvent, item: any) {
@@ -347,19 +339,19 @@ export class GenomeView {
 			)
 	}
 
-	clickSv(item) {
+	clickSv(item: any) {
 		const default_svpointspan = 500000
 		const default_subpanelpxwidth = 600
 		const subpanel_bordercolor = 'rgba(200,0,0,.1)'
 
 		const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-			; (pane.header as Pane['header']).text(
-				this.hic.name +
+		;(pane.header as Pane['header']).text(
+			this.hic.name +
 				' ' +
 				(item.chr1 == item.chr2
 					? `${item.chr1}:${item.position1}-${item.position2}`
 					: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`)
-			)
+		)
 		const tracks = [
 			{
 				type: client.tkt.hicstraw,
@@ -390,17 +382,26 @@ export class GenomeView {
 			arg.chr = item.chr1
 			const w = Math.abs(item.position2 - item.position1)
 			arg.start = Math.max(1, Math.min(item.position1, item.position2) - w)
-			arg.stop = Math.min(this.hic.genome.chrlookup[item.chr1.toUpperCase()].len, Math.max(item.position1, item.position2) + w)
+			arg.stop = Math.min(
+				this.hic.genome.chrlookup[item.chr1.toUpperCase()].len,
+				Math.max(item.position1, item.position2) + w
+			)
 		} else {
 			arg.chr = item.chr1
 			arg.start = Math.max(1, item.position1 - default_svpointspan / 2)
-			arg.stop = Math.min(this.hic.genome.chrlookup[item.chr1.toUpperCase()].len, item.position1 + default_svpointspan / 2)
+			arg.stop = Math.min(
+				this.hic.genome.chrlookup[item.chr1.toUpperCase()].len,
+				item.position1 + default_svpointspan / 2
+			)
 			arg.width = default_subpanelpxwidth
 			arg.subpanels = [
 				{
 					chr: item.chr2,
 					start: Math.max(1, item.position2 - default_svpointspan / 2),
-					stop: Math.min(this.hic.genome.chrlookup[item.chr2.toUpperCase()].len, item.position2 + default_svpointspan / 2),
+					stop: Math.min(
+						this.hic.genome.chrlookup[item.chr2.toUpperCase()].len,
+						item.position2 + default_svpointspan / 2
+					),
 					width: default_subpanelpxwidth,
 					leftpad: 10,
 					leftborder: subpanel_bordercolor
@@ -412,6 +413,8 @@ export class GenomeView {
 
 	async render() {
 		//Update info bar
+		await this.getData('chr17', 'chr17')
+		console.log(this.data, this.values)
 		this.renderGrid()
 
 		if (this.hic.sv && this.hic.sv.items) {
@@ -423,7 +426,7 @@ export class GenomeView {
 		await this.update()
 	}
 
-	async update(){
+	async update() {
 		/* after the ui is created, load data for each chr pair,
 		await on each request to finish to avoid server lockup
 	
@@ -445,41 +448,13 @@ export class GenomeView {
 			}
 		}
 		// await setViewCutoff(vlst, self.genomeview, self)
-	
+
 		// await colorizeGenomeElements(self)
 	}
 
-	async getData(lead: string, follow: string, vlst: any) {
-		const arg = {
-			matrixType: this.matrixType,
-			file: this.hic.file,
-			url: this.hic.url,
-			pos1: this.hic.nochr ? lead.replace('chr', '') : lead,
-			pos2: this.hic.nochr ? follow.replace('chr', '') : follow,
-			nmeth: this.nmeth,
-			resolution: this.resolution
-		}
-
-		try {
-			const data = await client.dofetch2('/hicdata', {
-				method: 'POST',
-				body: JSON.stringify(arg)
-			})
-			if (data.error) throw `${lead} - ${follow}: ${data.error.error}` //Fix for error message displaying [Object object] instead of error message
-			if (!data.items || data.items.length == 0) return
-	
-			this.data.push({ items: data.items, lead: lead, follow: follow })
-			for (const [plead, pfollow, v] of data.items) {
-				vlst.push(v)
-			}
-		} catch (e: any) {
-			/** Collect all errors from the response and then call self.error() above.
-			 * This allows errors to appear in a single, expandable div.
-			 */
-			// self.errList.push(e.message || e)
-			// if (e.stack) console.log(e.stack)
-		}
-	
+	async getData(lead: string, follow: string) {
+		const x = new HicDataRequest()
+		this.data = await x.getHicData(this.hic, this.nmeth, this.resolution, lead, follow, this.values)
 	}
 }
 
@@ -1004,7 +979,7 @@ class Hicstat {
 				}
 			}
 
-			; (this.x.start = coordx), (this.x.stop = coordx + viewrangebpw)
+			;(this.x.start = coordx), (this.x.stop = coordx + viewrangebpw)
 			this.y.start = coordy
 			this.y.stop = coordy + viewrangebpw
 		}
@@ -1578,13 +1553,13 @@ function tooltip_sv(event: MouseEvent, self: any, item: any): void {
 
 function click_sv(hic: any, item: any): void {
 	const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-		; (pane.header as Pane['header']).text(
-			hic.name +
+	;(pane.header as Pane['header']).text(
+		hic.name +
 			' ' +
 			(item.chr1 == item.chr2
 				? `${item.chr1}:${item.position1}-${item.position2}`
 				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`)
-		)
+	)
 	const tracks = [
 		{
 			type: client.tkt.hicstraw,
