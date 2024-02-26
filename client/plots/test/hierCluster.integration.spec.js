@@ -187,10 +187,12 @@ tape('dendrogram click', async function (test) {
 
 	const dataUriEnd = hc.dom.topDendrogram.select('image')?.attr('href').slice(-60) || ''
 	const expectedUriEnd =
-		window.devicePixelRatio === 1
+		window.devicePixelRatio === 1 && window.navigator.userAgent.includes('Electron')
+			? `VXLf89aL9WK9WC/DBawX62X4bDm168v/A9duR9df7eS8AAAAAElFTkSuQmCC`
+			: window.devicePixelRatio === 1
 			? `IyHnD+cP5w/nj/4CjhfHS/9qObXnl/8PkgA61yIPYtsAAAAASUVORK5CYII=`
-			: window.navigator.userAgent?.includes(`Electron`) // headless
-			? `PgFeeOlp0S+88MJLnwAvvPS06Je9vfwCG6yWyx1uowQAAAAASUVORK5CYII=`
+			: window.navigator.userAgent?.includes(`Electron`) // headless test
+			? `PgFeeOlp0S+88MJLnwAvvPS06Je9vfwCG6yWyx1uowQAAAAASUVORK5CYII=` // retina screen, headless
 			: `8NLTol944YWXPgFeeOlp0S+88HK+lx/PjoLLYOCCJQAAAABJRU5ErkJggg==` // retina screen
 
 	test.equal(dataUriEnd, expectedUriEnd, `should rerender with the expected dataURI after a dendrogram click`)
