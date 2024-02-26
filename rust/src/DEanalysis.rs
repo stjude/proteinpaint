@@ -1,5 +1,5 @@
 // cd .. && cargo build --release && json='{"case":"SJMB030827,SJMB030838,SJMB032893,SJMB031131,SJMB031227","control":"SJMB030488,SJMB030825,SJMB031110","input_file":"/Users/rpaul1/pp_data/files/hg38/sjmb12/rnaseq/geneCounts.txt"}' && time echo $json | target/release/DEanalysis
-// cd .. && cargo build --release && cat ~/sjpp/test.txt | target/release/DEanalysis
+// cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/DEanalysis
 #![allow(non_snake_case)]
 use json;
 use nalgebra::base::dimension::Const;
@@ -18,6 +18,8 @@ use std::cmp::Ordering;
 use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
+use std::sync::{Arc, Mutex}; // Multithreading library
+use std::thread;
 use std::time::Instant;
 //use std::cmp::Ordering;
 //use std::env;
@@ -72,7 +74,9 @@ fn input_data(
     let mut buffer = String::new();
     file.read_to_string(&mut buffer).unwrap();
     // Check headers for samples
-    let lines: Vec<&str> = buffer.split('\n').collect::<Vec<&str>>();
+    let buffer_clone = buffer.clone();
+    let lines: Vec<&str> = buffer_clone.split('\n').collect::<Vec<&str>>();
+    let total_lines = lines.len();
     let headers: Vec<&str> = lines[0].split('\t').collect::<Vec<&str>>();
     //println!("headers:{:?}", headers);
     let mut case_indexes_original: Vec<usize> = Vec::with_capacity(case_list.len());
@@ -93,6 +97,7 @@ fn input_data(
             }
         }
     }
+    let num_cases = case_list.len();
 
     for item in control_list {
         //println!("item:{}", item);
@@ -105,69 +110,219 @@ fn input_data(
             }
         }
     }
+    let num_controls = control_list.len();
     //println!("case_indexes_original:{:?}", case_indexes_original);
     //println!("control_indexes_original:{:?}", control_indexes_original);
     case_indexes_original.sort();
     case_indexes_original.dedup();
     control_indexes_original.sort();
     control_indexes_original.dedup();
-
+    let input_time = Instant::now();
     let mut case_indexes: Vec<usize> = Vec::with_capacity(case_list.len());
     let mut control_indexes: Vec<usize> = Vec::with_capacity(control_list.len());
-    let lines_slice = &lines[..];
-    for line_iter in 1..lines_slice.len() - 1 {
-        // Subtracting 1 from total length of lines_slice because the last one will be empty
-        let line = lines_slice[line_iter];
-        let mut index = 0;
-        for field in line.split('\t').collect::<Vec<&str>>() {
-            if index == gene_name_index.unwrap() {
-                gene_names.push(field.to_string());
-            } else if index == gene_symbol_index.unwrap() {
-                gene_symbols.push(field.to_string());
-            } else if binary_search(&case_indexes_original, index) != -1 {
-                let num = FromStr::from_str(field);
-                match num {
-                    Ok(n) => {
-                        //println!("n:{}", n);
-                        input_vector.push(n);
-                        if num_lines == 0 {
-                            case_indexes.push(num_columns);
-                            num_columns += 1;
+    const PAR_CUTOFF: usize = 100000;
+    //const PAR_CUTOFF: usize = 1000000000000000;
+    if lines.len() * (case_indexes_original.len() + control_indexes_original.len()) < PAR_CUTOFF {
+        // If number of lines is below this number
+        let lines_slice = &lines[..];
+        for line_iter in 1..lines_slice.len() - 1 {
+            // Subtracting 1 from total length of lines_slice because the last one will be empty
+            let line = lines_slice[line_iter];
+            let mut index = 0;
+            for field in line.split('\t').collect::<Vec<&str>>() {
+                if index == gene_name_index.unwrap() {
+                    gene_names.push(field.to_string());
+                } else if index == gene_symbol_index.unwrap() {
+                    gene_symbols.push(field.to_string());
+                } else if binary_search(&case_indexes_original, index) != -1 {
+                    let num = FromStr::from_str(field);
+                    match num {
+                        Ok(n) => {
+                            //println!("n:{}", n);
+                            input_vector.push(n);
+                            if num_lines == 0 {
+                                case_indexes.push(num_columns);
+                                num_columns += 1;
+                            }
+                        }
+                        Err(_n) => {
+                            panic!(
+                                "Number {} in line {} and column {} is not a decimal number",
+                                field,
+                                num_lines + 1,
+                                index + 1
+                            );
                         }
                     }
-                    Err(_n) => {
-                        panic!(
-                            "Number {} in line {} and column {} is not a decimal number",
-                            field,
-                            num_lines + 1,
-                            index + 1
-                        );
-                    }
-                }
-            } else if binary_search(&control_indexes_original, index) != -1 {
-                let num = FromStr::from_str(field);
-                match num {
-                    Ok(n) => {
-                        //println!("n:{}", n);
-                        input_vector.push(n);
-                        if num_lines == 0 {
-                            control_indexes.push(num_columns);
-                            num_columns += 1;
+                } else if binary_search(&control_indexes_original, index) != -1 {
+                    let num = FromStr::from_str(field);
+                    match num {
+                        Ok(n) => {
+                            //println!("n:{}", n);
+                            input_vector.push(n);
+                            if num_lines == 0 {
+                                control_indexes.push(num_columns);
+                                num_columns += 1;
+                            }
+                        }
+                        Err(_n) => {
+                            panic!(
+                                "Number {} in line {} and column {} is not a decimal number",
+                                field,
+                                num_lines + 1,
+                                index + 1
+                            );
                         }
                     }
-                    Err(_n) => {
-                        panic!(
-                            "Number {} in line {} and column {} is not a decimal number",
-                            field,
-                            num_lines + 1,
-                            index + 1
-                        );
-                    }
                 }
+                index += 1;
             }
-            index += 1;
+            num_lines += 1;
         }
-        num_lines += 1;
+    } else {
+        // Multithreaded implementation for parsing data in parallel starts from here
+        // Generally in rust one variable only own a data at a time, but `Arc` keyword is special and allows for multiple threads to access the same data.
+        let case_indexes_original = Arc::new(case_indexes_original);
+        let control_indexes_original = Arc::new(control_indexes_original);
+        let buffer = Arc::new(buffer);
+        let case_indexes_temp = Arc::new(Mutex::new(Vec::<usize>::with_capacity(case_list.len())));
+        let control_indexes_temp =
+            Arc::new(Mutex::new(Vec::<usize>::with_capacity(control_list.len())));
+        let num_lines_temp = Arc::new(Mutex::<usize>::new(0));
+        let num_columns_temp = Arc::new(Mutex::<usize>::new(0));
+        let genes_names_temp = Arc::new(Mutex::new(Vec::<String>::new()));
+        let genes_symbols_temp = Arc::new(Mutex::new(Vec::<String>::new()));
+        let input_vector_temp = Arc::new(Mutex::new(Vec::<f64>::new()));
+        let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
+        let max_threads: usize = 6; // Max number of threads in case the parallel processing of reads is invoked
+        println!("Number of threads used:{}", max_threads);
+        for thread_num in 0..max_threads {
+            let case_indexes_original = Arc::clone(&case_indexes_original);
+            let control_indexes_original = Arc::clone(&control_indexes_original);
+            let case_indexes_temp = Arc::clone(&case_indexes_temp);
+            let control_indexes_temp = Arc::clone(&control_indexes_temp);
+            let input_vector_temp = Arc::clone(&input_vector_temp);
+            let genes_names_temp = Arc::clone(&genes_names_temp);
+            let genes_symbols_temp = Arc::clone(&genes_symbols_temp);
+            let num_lines_temp = Arc::clone(&num_lines_temp);
+            let num_columns_temp = Arc::clone(&num_columns_temp);
+            let buffer = Arc::clone(&buffer);
+            let handle = thread::spawn(move || {
+                let mut case_indexes_thread: Vec<usize> = Vec::with_capacity(num_cases);
+                let mut control_indexes_thread: Vec<usize> = Vec::with_capacity(num_controls);
+                let mut genes_names_thread: Vec<String> = Vec::with_capacity(65000);
+                let mut genes_symbols_thread: Vec<String> = Vec::with_capacity(65000);
+                let mut input_vector_thread: Vec<f64> = Vec::with_capacity(65000);
+                let mut num_columns_thread: usize = 0;
+                let mut num_lines_thread: usize = 0;
+                let lines: Vec<&str> = buffer.split('\n').collect();
+                //println!("case_indexes_original:{:?}", case_indexes_original);
+                //println!("control_indexes:{:?}", control_indexes);
+                for line_iter in 1..total_lines - 1 {
+                    let remainder: usize = line_iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
+                    if remainder == thread_num {
+                        //println!("buffer:{}", buffer);
+                        // Thread analyzing a particular line must have the same remainder as the thread_num, this avoids multiple threads from parsing the same line
+                        let line = lines[line_iter];
+                        let mut index = 0;
+                        for field in line.split('\t').collect::<Vec<&str>>() {
+                            if index == gene_name_index.unwrap() {
+                                genes_names_thread.push(field.to_string());
+                            } else if index == gene_symbol_index.unwrap() {
+                                genes_symbols_thread.push(field.to_string());
+                            } else if binary_search(&case_indexes_original, index) != -1 {
+                                let num = FromStr::from_str(field);
+                                match num {
+                                    Ok(n) => {
+                                        //println!("n:{}", n);
+                                        input_vector_thread.push(n);
+                                        if line_iter == 1 {
+                                            case_indexes_thread.push(num_columns_thread);
+                                            num_columns_thread += 1;
+                                        }
+                                    }
+                                    Err(_n) => {
+                                        panic!(
+                                        "Number {} in line {} and column {} is not a decimal number",
+                                        field,
+                                        num_lines_thread + 1,
+                                        index + 1
+                                    );
+                                    }
+                                }
+                            } else if binary_search(&control_indexes_original, index) != -1 {
+                                let num = FromStr::from_str(field);
+                                match num {
+                                    Ok(n) => {
+                                        //println!("n:{}", n);
+                                        input_vector_thread.push(n);
+                                        if line_iter == 1 {
+                                            control_indexes_thread.push(num_columns_thread);
+                                            num_columns_thread += 1;
+                                        }
+                                    }
+                                    Err(_n) => {
+                                        panic!(
+                                        "Number {} in line {} and column {} is not a decimal number",
+                                        field,
+                                        num_lines_thread + 1,
+                                        index + 1
+                                    );
+                                    }
+                                }
+                            }
+                            index += 1;
+                        }
+                        num_lines_thread += 1;
+                    }
+                }
+                input_vector_temp
+                    .lock()
+                    .unwrap()
+                    .append(&mut input_vector_thread);
+                case_indexes_temp
+                    .lock()
+                    .unwrap()
+                    .append(&mut case_indexes_thread);
+                control_indexes_temp
+                    .lock()
+                    .unwrap()
+                    .append(&mut control_indexes_thread);
+                genes_names_temp
+                    .lock()
+                    .unwrap()
+                    .append(&mut genes_names_thread);
+                genes_symbols_temp
+                    .lock()
+                    .unwrap()
+                    .append(&mut genes_symbols_thread);
+                *num_lines_temp.lock().unwrap() += num_lines_thread;
+                if num_columns_thread > 0 {
+                    *num_columns_temp.lock().unwrap() += num_columns_thread;
+                }
+                drop(input_vector_temp);
+                drop(case_indexes_temp);
+                drop(control_indexes_temp);
+                drop(genes_names_temp);
+                drop(genes_symbols_temp);
+                drop(num_lines_temp);
+                drop(num_columns_temp);
+            });
+            handles.push(handle); // The handle (which contains the thread) is stored in the handles vector
+        }
+        for handle in handles {
+            // Wait for all threads to finish before proceeding further
+            handle.join().unwrap();
+        }
+        // Combining data from all different threads
+        input_vector.append(&mut *input_vector_temp.lock().unwrap());
+        case_indexes.append(&mut *case_indexes_temp.lock().unwrap());
+        control_indexes.append(&mut *control_indexes_temp.lock().unwrap());
+        gene_names.append(&mut *genes_names_temp.lock().unwrap());
+        gene_symbols.append(&mut *genes_symbols_temp.lock().unwrap());
+
+        num_lines += *num_lines_temp.lock().unwrap();
+        num_columns += *num_columns_temp.lock().unwrap();
     }
     //println!("case_indexes:{:?}", case_indexes);
     //println!("control_indexes:{:?}", control_indexes);
@@ -175,7 +330,7 @@ fn input_data(
     //println!("num_columns:{}", num_columns);
     //println!("num_lines * num_columns:{}", num_lines * num_columns);
     //println!("input_vector:{:?}", input_vector.len());
-
+    println!("Time for inputting data:{:?}", input_time.elapsed());
     let dm = DMatrix::from_row_slice(num_lines, num_columns, &input_vector);
     //println!("dm:{:?}", dm);
     (dm, case_indexes, control_indexes, gene_names, gene_symbols)
@@ -230,6 +385,7 @@ fn main() {
                     let control_list: Vec<&str> = control_string.split(",").collect();
                     let (input_matrix, case_indexes, control_indexes, gene_names, gene_symbols) =
                         input_data(file_name, &case_list, &control_list);
+                    let filtering_time = Instant::now();
                     let (filtered_matrix, lib_sizes, filtered_genes, filtered_gene_symbols) =
                         filter_by_expr(
                             &input_matrix,
@@ -238,10 +394,21 @@ fn main() {
                             gene_names,
                             gene_symbols,
                         );
+                    println!("filtering time:{:?}", filtering_time.elapsed());
                     //println!("filtered_matrix_rows:{:?}", filtered_matrix.nrows());
                     //println!("filtered_matrix_cols:{:?}", filtered_matrix.ncols());
+                    let cpm_normalization_time = Instant::now();
                     let mut normalized_matrix = cpm(&filtered_matrix);
+                    println!(
+                        "cpm normalization time:{:?}",
+                        cpm_normalization_time.elapsed()
+                    );
+                    let tmm_normalization_time = Instant::now();
                     let norm_factors = tmm_normalization(filtered_matrix, &lib_sizes);
+                    println!(
+                        "tmm normalization time:{:?}",
+                        tmm_normalization_time.elapsed()
+                    );
                     //println!("norm_factors:{:?}", norm_factors);
 
                     for col in 0..normalized_matrix.ncols() {
