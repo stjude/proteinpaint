@@ -73,7 +73,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else if (q.data.src == 'native') {
-		validateDataNative(q.data as SingleCellDataNative, ds)
+		getDataNative(q.data as SingleCellDataNative, ds)
 	} else {
 		throw 'unknown singleCell.data.src'
 	}
@@ -83,14 +83,15 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	// for now use this quick fix method to pull sample ids annotated by this term
 	// to support situation where not all samples from a dataset has sc data
-	const samplesNotCells = ds.cohort.termdb.q.getAllValues4term(S.isSampleTerm)
-	if (samplesNotCells.size == 0) throw 'no samples found that are identified by isSampleTerm'
+	const isSamples = ds.cohort.termdb.q.getAllValues4term(S.isSampleTerm)
+	if (isSamples.size == 0) throw 'no samples found that are identified by isSampleTerm'
 	const samples = [] as any // array of samples with sc data to be sent to client and list in table; cannot use Sample type for the use of "sampleid" temp property
-	for (const sampleid of samplesNotCells.keys()) {
-		samples.push({
-			sample: ds.cohort.termdb.q.id2sampleName(sampleid), // string name for display
-			sampleid // temporarily kept to assign term value to each sample
-		})
+	for (const sampleid of isSamples.keys()) {
+		if (isSamples.get(sampleid) == '1')
+			samples.push({
+				sample: ds.cohort.termdb.q.id2sampleName(sampleid), // string name for display
+				sampleid // temporarily kept to assign term value to each sample
+			})
 	}
 	if (S.sampleColumns) {
 		// has optional terms to show as table columns and annotate samples
@@ -108,7 +109,7 @@ async function getSamplesNative(S: SingleCellSamplesNative, ds: any) {
 	}
 }
 
-function validateDataNative(D: SingleCellDataNative, ds: any) {
+function getDataNative(D: SingleCellDataNative, ds: any) {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
