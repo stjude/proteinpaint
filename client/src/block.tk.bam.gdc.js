@@ -82,6 +82,12 @@ const baminfo_rows = [
 const noPermissionMessage =
 	'You are attempting to access a Sequence Read file that you are not authorized to access. <a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>Please request dbGaP Access to the project</a>.'
 
+// https://samtools.github.io/hts-specs/SAMv1.pdf, section 4.1.2
+const bamEOF = [
+	0x1f, 0x8b, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x06, 0x00, 0x42, 0x43, 0x02, 0x00, 0x1b, 0x00, 0x03,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+]
+
 /*
 Arguments:
 
@@ -919,7 +925,15 @@ export async function bamsliceui({
 				// TODO support unmapped in this mode
 				body.stream2download = true
 				const data = await dofetch3('tkbam', { headers, body })
-				if (data.error) throw data.error
+
+				if (!(await endsWithBytes(data, bamEOF))) {
+					// incorrect bam and missing EOF
+					sayerror(
+						saydiv,
+						'BAM slice exceeds max file size limit and is truncated. Please use with caution, or reduce query region size and try again.'
+					)
+					// still let it download
+				}
 
 				// download the file to client
 				const a = document.createElement('a')
@@ -991,6 +1005,37 @@ export async function bamsliceui({
 	}
 
 	return publicApi
+}
+
+function endsWithBytes(blob, byteSequence) {
+	if (!blob || !byteSequence || byteSequence.length > blob.size) {
+		return false // Handle invalid inputs or sequence exceeding blob size
+	}
+
+	const sliceSize = byteSequence.length
+	const start = blob.size - sliceSize
+	const end = blob.size
+
+	// Read the last slice of the blob
+	const reader = new FileReader()
+	reader.readAsArrayBuffer(blob.slice(start, end))
+
+	return new Promise(resolve => {
+		reader.onload = function (event) {
+			const arrayBuffer = event.target.result
+			const view = new Uint8Array(arrayBuffer)
+
+			// Compare the last bytes of the view with the byte sequence
+			let match = true
+			for (let i = 0; i < byteSequence.length; i++) {
+				if (view[i] !== byteSequence[i]) {
+					match = false
+					break
+				}
+			}
+			resolve(match)
+		}
+	})
 }
 
 function geneSearchInstruction(d) {
