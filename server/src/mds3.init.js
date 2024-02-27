@@ -83,11 +83,26 @@ mayAdd_mayGetGeneVariantData
 	getProbe2cnvByTw
 	mayAddDataAvailability
 		addDataAvailability
+
+
+arguments:
+	_servconfig
+		bootstrap object for this ds
 */
 
 const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/legend.js
 
 export async function init(ds, genome, _servconfig, app = null, basepath = null) {
+	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
+	// overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
+	for (const k in ds.serverconfigFeatures || {}) {
+		if (k in serverconfig.features) {
+			console.warn(`!!! NO OVERWRITING SERVERCONFIG.FEATURES.${k} (from ${ds.label}) !!!`)
+		} else {
+			serverconfig.features[k] = ds.serverconfigFeatures[k]
+		}
+	}
+
 	// must validate termdb first
 	await validate_termdb(ds)
 

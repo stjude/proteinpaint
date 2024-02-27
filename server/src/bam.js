@@ -3547,7 +3547,7 @@ async function streamGdcBam2response(req, res) {
 		let totalBytes = 0
 		sourceStream.on('data', chunk => {
 			totalBytes += chunk.length
-			if (totalBytes > serverconfig.features.gdcBamStreamMaxSize) {
+			if (totalBytes > serverconfig.features.gdcBam.streamMaxSize) {
 				sourceStream.destroy()
 				res.end()
 				// no need to add further text in end() or try to signal to client in any other means, client will detect missing BAM EOF
@@ -3581,9 +3581,11 @@ async function streamGdcBam2response(req, res) {
 
 	Another setTimeout() may also be triggered at the end of mayDeleteCacheFiles(),
 	if there are remaining files, with the wait time set to the oldest mtime.
+
+	must not move features.bamCache{} into gdc ds serverconfigFeatures{}! that prevents bamtk to work in an instance without gdc ds
 */
 
-const bamCache = serverconfig.features?.bamCache || {}
+const bamCache = serverconfig.features.bamCache || {}
 // the max age for the modified time, will delete files whose modified time exceeds this "aged" access
 const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
 // maximum allowed cache size in bytes
@@ -3601,7 +3603,7 @@ let cacheCheckTimeout,
 	nextCheckTime = 0
 // only run this loop if configured, otherwise will only rely on
 // cleanup as new bam requests come in
-if (serverconfig.features?.bamCache) mayResetCacheCheckTimeout(checkWait)
+if (serverconfig.features.bamCache) mayResetCacheCheckTimeout(checkWait)
 
 function mayResetCacheCheckTimeout(wait = 0) {
 	const checkTime = Date.now() + wait
@@ -3716,7 +3718,7 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 			const transformStream = new Transform({
 				transform(chunk, encoding, callback) {
 					totalBytes += chunk.length
-					if (totalBytes > serverconfig.features.gdcBamCacheMaxSize) {
+					if (totalBytes > serverconfig.features.gdcBam.cacheMaxSize) {
 						callback(null, null) // stop the pipeline
 						tooBigTerminated = true // set flag to true to signal this state to later code
 					} else {
@@ -3737,8 +3739,8 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 				}
 
 				// message client
-				throw `Error: slice file size exceeds ${fileSize(
-					serverconfig.features.gdcBamCacheMaxSize
+				throw `slice file size exceeds ${fileSize(
+					serverconfig.features.gdcBam.cacheMaxSize
 				)}. Please reduce query region size and try again.`
 			}
 
