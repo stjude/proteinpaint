@@ -3,7 +3,7 @@ import path from 'path'
 import * as utils from './utils'
 import serverconfig from './serverconfig'
 import { spawn } from 'child_process'
-import { Readable } from 'stream'
+import { Readable, Transform } from 'stream'
 import { pipeline } from 'node:stream/promises'
 import { createCanvas } from 'canvas'
 import * as bamcommon from './bam.common'
@@ -3711,29 +3711,32 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 			const writeStream = fs.createWriteStream(fullpath)
 			let totalBytes = 0,
 				tooBigTerminated = false
-			sourceStream.on('data', chunk => {
-				totalBytes += chunk.length
-				if (totalBytes > serverconfig.features.gdcBamCacheMaxSize) {
-					tooBigTerminated = true
-					sourceStream.destroy()
-					writeStream.close()
-					fs.promises.unlink(fullpath)
+
+			// not doing sourceStream.on('data'), since it always ends in ERR_STREAM_WRITE_AFTER_END, in that data are still being written to write stream that's already closed
+			const transformStream = new Transform({
+				transform(chunk, encoding, callback) {
+					totalBytes += chunk.length
+					if (totalBytes > serverconfig.features.gdcBamCacheMaxSize) {
+						callback(null, null) // stop the pipeline
+						tooBigTerminated = true // set flag to true to signal this state to later code
+					} else {
+						callback(null, chunk) // continue with the current chunk
+					}
 				}
 			})
-			try {
-				// not using sourceStream.pipe() so no need to deal with those callbacks as on(close) and on(error)
-				await pipeline(sourceStream, writeStream)
-			} catch (e) {
-				if (e.code == 'ERR_STREAM_WRITE_AFTER_END') {
-					// ignore this err. somehow it always happen when tooBigTerminated is true
-				} else {
-					// unknown error
-					throw e
-				}
-			}
+
+			// not using sourceStream.pipe() so no need to deal with those callbacks as on(close) and on(error)
+			await pipeline(sourceStream, transformStream, writeStream)
 
 			if (tooBigTerminated) {
-				// send this message to client
+				try {
+					await fs.promises.stat(fullpath)
+					await fs.promises.unlink(fullpath) // do it after successful stat to be safe
+				} catch (e) {
+					// ignore case e.g. file is not found or error deleting it
+				}
+
+				// message client
 				throw `Error: slice file size exceeds ${fileSize(
 					serverconfig.features.gdcBamCacheMaxSize
 				)}. Please reduce query region size and try again.`
