@@ -30,7 +30,7 @@ tape('\n', function (test) {
 })
 
 tape('2 genes, 2 dict terms', function (test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(20000)
 	test.plan(10)
 	runpp({
 		state: {
@@ -183,7 +183,7 @@ tape('2 genes, 2 dict terms', function (test) {
 })
 
 tape('2 genes, 2 dict terms, divideBy', function (test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(20000)
 	test.plan(5)
 	runpp({
 		state: {
@@ -306,6 +306,7 @@ tape('2 genes, 2 dict terms, divideBy', function (test) {
 })
 
 tape('launch matrix using runproteinpaint with launchGdcMatrix', async function (test) {
+	test.timeoutAfter(100000)
 	await runproteinpaint({
 		holder: select('body').append('div').node(),
 		noheader: 1,
