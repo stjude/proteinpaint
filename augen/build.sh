@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # call from the project root
 #
 
@@ -27,6 +29,8 @@ echo "[$PWD] [$ROUTESDIR] [$TYPESDIR] [$CHECKERSDIR] [$DOCSDIR]"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # echo "SCRIPT_DIR=[$SCRIPT_DIR]"
 
+npm run pretest
+
 # skipping the typeChecker step since ts-node(-esm) sometimes breaks on mixed esm import/cjs require between files 
 # !!! NOTE 
 # !!! - in dev, the current solution is for server/src/run.sh to call augen.setRoutes(), 
@@ -36,6 +40,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 #
 echo "npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR"
 npx typia generate --input $CHECKERSRAW --output $CHECKERSDIR # --project ./shared/checkers/tsconfig.json
+sed -i.bak 's|.ts"|.js"|g' $CHECKERSDIR/index.ts
 
 echo "building documentation at $DOCSDIR ..."
 rm -rf $DOCSDIR/*
@@ -52,7 +57,14 @@ rm -rf $DOCSDIR/*.*-e
 rm -rf $DOCSDIR/**/.*-e
 rm -rf $DOCSDIR/.*-e
 
+echo "extract types from html in $DOCSDIR"
 $SCRIPT_DIR/src/extractTypesFromHtml.js $PWD/$DOCSDIR > $DOCSDIR/extracts.json
-npx tsc $CHECKERSDIR/index.ts
-# echo "npx webpack --config=$SCRIPT_DIR/webpack.config.cjs --env entry=$PWD/$CHECKERSDIR/index.js --env outdir=$PWD/$DOCSDIR"
+
+echo "transpiling $CHECKERSDIR/index.ts"
+sed -i.bak 's|.ts"|.js"|g' $CHECKERSDIR/index.ts
+# do not specify a single or list of files to compile,
+# so that the tsconfig.json will be used
+npx tsc
+
+echo "npx webpack --config=$SCRIPT_DIR/webpack.config.cjs --env entry=$PWD/$CHECKERSDIR/index.js --env outdir=$PWD/$DOCSDIR"
 npx webpack --config=$SCRIPT_DIR/webpack.config.cjs --env entry=$PWD/$CHECKERSDIR/index.js --env outdir=$PWD/$DOCSDIR

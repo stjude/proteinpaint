@@ -10,13 +10,22 @@ module.exports = function getPortalConfig(env = {}) {
 		mode: 'development', //env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
 		entry,
+
+		experiments: {
+	    outputModule: true,
+	  },
+
 		output: {
+			module: true,
 			path: outdir,
 			publicPath: '__PP_URL__',
 			filename: 'checkers.js',
 			chunkLoadingGlobal: 'ppCheckersJsonp',
 			// the library name exposed by this bundle
-			library: 'ppcheckers',
+			library: {
+				name: 'ppcheckers',
+				type: 'module'
+			},
 			// the target context to which the library is 'attached' or assigned
 			// e.g., window.checkers
 			libraryTarget: 'window'

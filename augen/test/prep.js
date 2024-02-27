@@ -8,7 +8,7 @@ prep()
 
 async function prep() {
 	const files = readdirSync(join(__dirname, './routes'))
-	const endpoints = files.filter(f => f.endsWith('.ts') || f.endsWith('.js'))
+	const endpoints = files.filter(f => f.endsWith('.ts')) // || f.endsWith('.js'))
 
 	const routes = await Promise.all(
 		endpoints.map(async file => {
