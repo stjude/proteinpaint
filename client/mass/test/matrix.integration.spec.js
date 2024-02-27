@@ -1,7 +1,7 @@
 const tape = require('tape')
 const termjson = require('../../test/testdata/termjson').termjson
 const helpers = require('../../test/front.helpers.js')
-const { sleep } = require('../../test/test.helpers.js')
+const { sleep, detectLst } = require('../../test/test.helpers.js')
 
 /*************************
  reusable helper functions
@@ -1344,5 +1344,1126 @@ tape('avoid race condition', function (test) {
 			test.fail('error: ' + e)
 			throw e
 		}
+	}
+})
+
+// legend filter tests
+tape('apply "hide" legend filters to a dictionary term', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(10)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{
+									id: 'aaclassic_5',
+									q: {
+										mode: 'continuous'
+									}
+								},
+								{
+									id: 'genetic_race'
+									//q: { mode: 'values' } // or 'groupsetting'
+								},
+								{
+									id: 'agedx',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 5,
+										first_bin: {
+											startunbounded: true,
+											stop: 5,
+											stopinclusive: true
+										}
+									} // or 'continuous'
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		// 1. Hide
+		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('Asian')
+		)
+		legendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(options[0].innerText, 'Hide', `First option should be Hide`)
+		test.equal(options[1].innerText, 'Show only', `second option should be Show only`)
+		test.equal(options[2].innerText, 'Show all', `third option should be Show all`)
+
+		const rects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 177,
+			trigger: () => {
+				options[0].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		// 2. Show
+		const legendTexts2 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('Asian')
+		)
+		legendTexts2.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options2 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(options2[0].innerText, 'Show', `First option should be Show`)
+		test.equal(options2[1].innerText, 'Show only', `second option should be Show only`)
+		test.equal(options2[2].innerText, 'Show all', `third option should be Show all`)
+
+		const rects2 = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 180,
+			trigger: () => {
+				options2[0].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('apply "show only" and "show all" legend filters to dictionary terms', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(14)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{
+									id: 'aaclassic_5',
+									q: {
+										mode: 'continuous'
+									}
+								},
+								{
+									id: 'sex'
+									//q: { mode: 'values' } // or 'groupsetting'
+								},
+								{
+									id: 'agedx',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 5,
+										first_bin: {
+											startunbounded: true,
+											stop: 5,
+											stopinclusive: true
+										}
+									} // or 'continuous'
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		// 1. Show only
+		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('Male')
+		)
+		legendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		const rects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 75,
+			trigger: () => {
+				options[1].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		// 2. second Show only
+		const secondLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('<5')
+		)
+		secondLegendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const secondOptions = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(secondOptions[0].innerText, 'Hide', `First option should be Hide`)
+		test.equal(secondOptions[1].innerText, 'Show only', `second option should be Show only`)
+		test.equal(secondOptions[2].innerText, 'Show all', `third option should be Show all`)
+
+		const secondRects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 30,
+			trigger: () => {
+				secondOptions[1].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		// 3. hide
+		const thirdLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('<5')
+		)
+		thirdLegendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+		const thirdOptions = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(thirdOptions[0].innerText, 'Hide', `First option should be Hide`)
+		test.equal(thirdOptions[2].innerText, 'Show all', `third option should be Show all`)
+
+		const thirdRects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 0,
+			trigger: () => {
+				thirdOptions[0].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			0,
+			`should render the expected number of serieses`
+		)
+
+		// 4. Show all
+		const fourthLegendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
+			d?.__data__?.text?.startsWith('<5')
+		)
+		fourthLegendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+		const fourthOptions = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(fourthOptions[0].innerText, 'Show', `first option should be Show`)
+		test.equal(fourthOptions[2].innerText, 'Show all', `third option should be Show all`)
+
+		const fourthRects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 75,
+			trigger: () => {
+				fourthOptions[2].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			3,
+			`should render the expected number of serieses`
+		)
+		test.equal(
+			matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+			1,
+			`should render the expected number of cluster rects`
+		)
+
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape(
+	'apply "Hide samples with" and "Do not show" legend filters to a geneVariant term in geneVariant term only matrix',
+	function (test) {
+		test.timeoutAfter(5000)
+		test.plan(12)
+
+		runpp({
+			state: {
+				nav: {
+					activeTab: 1
+				},
+				plots: [
+					{
+						chartType: 'matrix',
+						settings: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							matrix: {
+								availContentWidth: 1200
+							}
+						},
+						termgroups: [
+							{
+								name: '',
+								lst: [{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } }]
+							}
+						]
+					}
+				]
+			},
+			matrix: {
+				callbacks: {
+					'postRender.test': runTests
+				}
+			}
+		})
+
+		async function runTests(matrix) {
+			matrix.on('postRender.test', null)
+
+			// 1. Hide
+			const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.$id?.startsWith('Germline Mutations') && d.__data__.text?.startsWith('FRAMESHIFT')
+			)
+
+			legendTexts.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options[0].innerText,
+				'Hide samples with FRAMESHIFT',
+				`First option should be "Hide samples with FRAMESHIFT"`
+			)
+			test.equal(options[1].innerText, 'Do not show FRAMESHIFT', `second option should be "Do not show FRAMESHIFT"`)
+
+			test.equal(options.length, 2, `Should only show two options`)
+
+			const rects = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 236,
+				trigger: () => {
+					options[0].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			test.equal(
+				matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+				1,
+				`should render the expected number of serieses`
+			)
+			test.equal(
+				matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+				1,
+				`should render the expected number of cluster rects`
+			)
+
+			// 2. Show
+			const legendTexts2 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.$id?.startsWith('Germline Mutations') && d.__data__.text?.startsWith('FRAMESHIFT')
+			)
+
+			legendTexts2.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options2 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options2[0].innerText,
+				'Show samples with FRAMESHIFT',
+				`First option should be "Show samples with FRAMESHIFT"`
+			)
+			test.equal(options2.length, 1, `Should only show one option`)
+
+			const rects2 = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 240,
+				trigger: () => {
+					options2[0].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			test.equal(
+				matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+				1,
+				`should render the expected number of serieses`
+			)
+			test.equal(
+				matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect').size(),
+				1,
+				`should render the expected number of cluster rects`
+			)
+
+			// 3. Do not show
+
+			const legendTexts3 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.$id?.startsWith('Germline Mutations') && d.__data__.text?.startsWith('FRAMESHIFT')
+			)
+
+			legendTexts3.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options3 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(options3.length, 2, `Should only show two options`)
+
+			const rects3 = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 239,
+				trigger: () => {
+					options3[1].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			// 4. Show
+			const legendTexts4 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.$id?.startsWith('Germline Mutations') && d.__data__.text?.startsWith('FRAMESHIFT')
+			)
+
+			legendTexts4.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options4 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options4[0].innerText,
+				'Show samples with FRAMESHIFT',
+				`First option should be "Show samples with FRAMESHIFT"`
+			)
+			test.equal(options4.length, 1, `Should only show one option`)
+
+			const rects4 = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 240,
+				trigger: () => {
+					options4[0].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			if (test._ok) matrix.Inner.app.destroy()
+			test.end()
+		}
+	}
+)
+
+tape('apply legend group filters to a geneVariant term in geneVariant term only matrix', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(15)
+
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: [{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } }]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		// 1. Show only truncating mutations
+		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+			d => d?.__data__?.name == 'Somatic Mutations' && !d.__data__.isLegendItem
+		)
+
+		legendTexts.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(
+			options[0].innerText,
+			'Show only truncating mutations',
+			`First option should be "Show only truncating mutations"`
+		)
+		test.equal(
+			options[1].innerText,
+			'Show only protein-changing mutations',
+			`second option should be "Show only protein-changing mutations"`
+		)
+		test.equal(
+			options[2].innerText,
+			'Do not show Somatic Mutations',
+			`third option should be "Do not show Somatic Mutations"`
+		)
+		test.equal(options.length, 3, `Should show three options`)
+		const rects = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 181,
+			trigger: () => {
+				options[0].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+
+		// 2. Show only protein-changing mutations
+		const legendTexts2 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+			d => d?.__data__?.name == 'Somatic Mutations' && !d.__data__.isLegendItem
+		)
+
+		legendTexts2.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options2 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(
+			options2[2].innerText,
+			'Do not show Somatic Mutations',
+			`third option should be "Do not show Somatic Mutations"`
+		)
+		test.equal(
+			options2[3].innerText,
+			'Show all Somatic Mutations',
+			`fourth option should be "Show all Somatic Mutations"`
+		)
+		test.equal(options2.length, 4, `Should show four options`)
+		const rects2 = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 183,
+			trigger: () => {
+				options2[1].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+
+		// 3. Do not show somatic mutations
+		const legendTexts3 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+			d => d?.__data__?.name == 'Somatic Mutations' && !d.__data__.isLegendItem
+		)
+
+		legendTexts3.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options3 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(
+			options3[2].innerText,
+			'Do not show Somatic Mutations',
+			`third option should be "Do not show Somatic Mutations"`
+		)
+
+		test.equal(options3.length, 4, `Should show four options`)
+		const rects3 = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 180,
+			trigger: () => {
+				options3[2].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+
+		// 4. Show all somatic mutations
+		const legendTexts4 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+			d => d?.__data__?.name == 'Somatic Mutations' && !d.__data__.isLegendItem
+		)
+
+		legendTexts4.dispatchEvent(
+			new MouseEvent('mouseup', {
+				bubbles: true,
+				cancelable: true
+			})
+		)
+
+		const options4 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+		test.equal(
+			options4[0].innerText,
+			'Show all Somatic Mutations',
+			`first option should be "Show all Somatic Mutations"`
+		)
+
+		test.equal(options4.length, 1, `Should show one option`)
+		const rects4 = await detectLst({
+			elem: matrix.Inner.dom.seriesesG.node(),
+			selector: '.sjpp-mass-series-g rect',
+			count: 240,
+			trigger: () => {
+				options4[0].dispatchEvent(
+					new MouseEvent('click', {
+						bubbles: true,
+						cancelable: true
+					})
+				)
+			}
+		})
+
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape(
+	'apply legend group filters and legend filters to a matrix with both geneVariant and dictionary terms',
+	function (test) {
+		test.timeoutAfter(5000)
+		test.plan(13)
+
+		runpp({
+			state: {
+				nav: {
+					activeTab: 1
+				},
+				plots: [
+					{
+						chartType: 'matrix',
+						settings: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							matrix: {
+								availContentWidth: 1200
+							}
+						},
+						termgroups: [
+							{
+								name: '',
+								lst: [
+									{ term: { name: 'TP53', type: 'geneVariant', isleaf: true } },
+									{ term: { name: 'KRAS', type: 'geneVariant', isleaf: true } },
+									{ term: { name: 'AKT1', type: 'geneVariant', isleaf: true } },
+									{ id: 'agedx', term: termjson['agedx'] },
+									{ id: 'diaggrp', term: termjson['diaggrp'] },
+									{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }
+								]
+							}
+						]
+					}
+				]
+			},
+			matrix: {
+				callbacks: {
+					'postRender.test': runTests
+				}
+			}
+		})
+
+		async function runTests(matrix) {
+			matrix.on('postRender.test', null)
+
+			// 1. Show only truncating mutations
+			const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.name == 'Somatic Mutations' && !d.__data__.isLegendItem
+			)
+
+			legendTexts.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options[0].innerText,
+				'Show only truncating mutations',
+				`First option should be "Show only truncating mutations"`
+			)
+			test.equal(options.length, 3, `Should show three options`)
+			const rects = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 721,
+				trigger: () => {
+					options[0].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			test.equal(
+				matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+				6,
+				`should render the expected number of serieses`
+			)
+
+			// 2. Show only protein-changing mutations
+			const legendTexts2 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.name == 'Somatic Mutations' && !d.__data__.isLegendItem
+			)
+
+			legendTexts2.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options2 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options2[1].innerText,
+				'Show only protein-changing mutations',
+				`second option should be "Show only protein-changing mutations"`
+			)
+			test.equal(
+				options2[3].innerText,
+				'Show all Somatic Mutations',
+				`fourth option should be "Show all Somatic Mutations"`
+			)
+			test.equal(options2.length, 4, `Should show four options`)
+			const rects2 = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 724,
+				trigger: () => {
+					options2[1].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			// 3. Hide
+			const legendTexts3 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.$id?.startsWith('Somatic Mutations') && d.__data__.text?.startsWith('FRAMESHIFT')
+			)
+
+			legendTexts3.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options3 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options3[0].innerText,
+				'Hide samples with FRAMESHIFT',
+				`First option should be "Hide samples with FRAMESHIFT"`
+			)
+			test.equal(options3[1].innerText, 'Do not show FRAMESHIFT', `second option should be "Do not show FRAMESHIFT"`)
+
+			const rects3 = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 711,
+				trigger: () => {
+					options3[0].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			test.equal(
+				matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+				6,
+				`should render the expected number of serieses`
+			)
+
+			// 4. Show
+			const legendTexts4 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.$id?.startsWith('Somatic Mutations') && d.__data__.text?.startsWith('FRAMESHIFT')
+			)
+
+			legendTexts4.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options4 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options4[0].innerText,
+				'Show samples with FRAMESHIFT',
+				`First option should be "Show samples with FRAMESHIFT"`
+			)
+			test.equal(options4.length, 1, `Should only show one option`)
+
+			const rects4 = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 724,
+				trigger: () => {
+					options4[0].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			// 5. Show all somatic mutations
+			const legendTexts5 = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(
+				d => d?.__data__?.name == 'Somatic Mutations' && !d.__data__.isLegendItem
+			)
+
+			legendTexts5.dispatchEvent(
+				new MouseEvent('mouseup', {
+					bubbles: true,
+					cancelable: true
+				})
+			)
+
+			const options5 = matrix.Inner.dom.legendMenu.d.node().querySelectorAll('div.sja_menuoption.sja_sharp_border')
+
+			test.equal(
+				options5[3].innerText,
+				'Show all Somatic Mutations',
+				`fourth option should be "Show all Somatic Mutations"`
+			)
+
+			test.equal(options5.length, 4, `Should show four options`)
+			const rects5 = await detectLst({
+				elem: matrix.Inner.dom.seriesesG.node(),
+				selector: '.sjpp-mass-series-g rect',
+				count: 900,
+				trigger: () => {
+					options5[3].dispatchEvent(
+						new MouseEvent('click', {
+							bubbles: true,
+							cancelable: true
+						})
+					)
+				}
+			})
+
+			if (test._ok) matrix.Inner.app.destroy()
+			test.end()
+		}
+	}
+)
+
+// cell brush zoom in
+tape('cell brush zoom in', function (test) {
+	test.timeoutAfter(5000)
+	test.plan(1)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 300
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{
+									id: 'aaclassic_5',
+									q: {
+										mode: 'continuous'
+									}
+								},
+								{
+									id: 'sex'
+									//q: { mode: 'values' } // or 'groupsetting'
+								},
+								{
+									id: 'agedx',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 5,
+										first_bin: {
+											startunbounded: true,
+											stop: 5,
+											stopinclusive: true
+										}
+									} // or 'continuous'
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+
+		const startCell = matrix.Inner.serieses[1].cells[10]
+		const endCell = matrix.Inner.serieses[1].cells[14]
+
+		matrix.Inner.clickedSeriesCell = {
+			startCell,
+			endCell
+		}
+		matrix.Inner.zoomWidth = Math.abs(startCell.totalIndex - endCell.totalIndex) * matrix.Inner.dimensions.colw
+
+		matrix.Inner.triggerZoomArea()
+		await sleep(5)
+
+		test.deepEqual(matrix.Inner.settings.matrix.zoomLevel, 4, 'should have the expected zoom level after zoom in')
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
 	}
 })
