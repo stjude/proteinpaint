@@ -432,58 +432,154 @@ fn main() {
 
                     //println!("case_indexes:{:?}", case_indexes);
                     //println!("control_indexes:{:?}", control_indexes);
-                    for i in 0..normalized_matrix.nrows() {
-                        let row = normalized_matrix.row(i);
-                        //println!("row:{:?}", row);
-                        let mut treated = Vec::<f64>::new();
-                        let mut control = Vec::<f64>::new();
-                        //println!("conditions:{:?}", conditions);
-                        for j in 0..(case_indexes.len() + control_indexes.len()) {
-                            //println!("row[(0, j)]:{}", row[(0, j)]);
-                            if case_indexes.contains(&j) {
-                                treated.push(row[(0, j)]);
-                                //println!("{},{}", input_data_vec.0[i][j], "Diseased");
-                            } else if control_indexes.contains(&j) {
-                                // + 1 was added because in the input file the first column of thw first row is blank as the first column consists of gene names
-                                control.push(row[(0, j)]);
-                                //println!("{},{}", input_data_vec.0[i][j], "Control");
-                            } else {
-                                panic!("Column {} could not be classified into case/control", j);
+                    let num_normalized_rows = normalized_matrix.nrows();
+                    if normalized_matrix.nrows() * normalized_matrix.ncols() < PAR_CUTOFF {
+                        for i in 0..normalized_matrix.nrows() {
+                            let row = normalized_matrix.row(i);
+                            //println!("row:{:?}", row);
+                            let mut treated = Vec::<f64>::new();
+                            let mut control = Vec::<f64>::new();
+                            //println!("conditions:{:?}", conditions);
+                            for j in 0..(case_indexes.len() + control_indexes.len()) {
+                                //println!("row[(0, j)]:{}", row[(0, j)]);
+                                if case_indexes.contains(&j) {
+                                    treated.push(row[(0, j)]);
+                                    //println!("{},{}", input_data_vec.0[i][j], "Diseased");
+                                } else if control_indexes.contains(&j) {
+                                    // + 1 was added because in the input file the first column of thw first row is blank as the first column consists of gene names
+                                    control.push(row[(0, j)]);
+                                    //println!("{},{}", input_data_vec.0[i][j], "Control");
+                                } else {
+                                    panic!(
+                                        "Column {} could not be classified into case/control",
+                                        j
+                                    );
+                                }
+                            }
+                            //println!("treated{:?}", treated);
+                            //println!("control{:?}", control);
+                            let p_value = wilcoxon_rank_sum_test(
+                                treated.clone(),
+                                control.clone(),
+                                THRESHOLD,
+                                't',
+                                true,
+                            ); // Setting continuity correction to true in case of normal approximation
+                            let treated_mean = Data::new(treated).mean();
+                            let control_mean = Data::new(control).mean();
+                            if (treated_mean.unwrap() / control_mean.unwrap())
+                                .log2()
+                                .is_nan()
+                                == false
+                                && (treated_mean.unwrap() / control_mean.unwrap())
+                                    .log2()
+                                    .is_infinite()
+                                    == false
+                            {
+                                p_values.push(PValueIndexes {
+                                    index: i,
+                                    gene_name: filtered_genes[i].to_owned(),
+                                    gene_symbol: filtered_gene_symbols[i].to_owned(),
+                                    fold_change: (treated_mean.unwrap() / control_mean.unwrap())
+                                        .log2(),
+                                    p_value: p_value,
+                                });
                             }
                         }
-                        //println!("treated{:?}", treated);
-                        //println!("control{:?}", control);
-                        let p_value = wilcoxon_rank_sum_test(
-                            treated.clone(),
-                            control.clone(),
-                            THRESHOLD,
-                            't',
-                            true,
-                        ); // Setting continuity correction to true in case of normal approximation
-                        let treated_mean = Data::new(treated).mean();
-                        let control_mean = Data::new(control).mean();
-                        if (treated_mean.unwrap() / control_mean.unwrap())
-                            .log2()
-                            .is_nan()
-                            == false
-                            && (treated_mean.unwrap() / control_mean.unwrap())
-                                .log2()
-                                .is_infinite()
-                                == false
-                        {
-                            p_values.push(PValueIndexes {
-                                index: i,
-                                gene_name: filtered_genes[i].to_owned(),
-                                gene_symbol: filtered_gene_symbols[i].to_owned(),
-                                fold_change: (treated_mean.unwrap() / control_mean.unwrap()).log2(),
-                                p_value: p_value,
+                    } else {
+                        // Multithreaded implementation of calculating wilcoxon p-values
+                        let normalized_matrix_temp = Arc::new(normalized_matrix);
+                        let filtered_genes_temp = Arc::new(filtered_genes);
+                        let filtered_gene_symbols_temp = Arc::new(filtered_gene_symbols);
+                        let case_indexes_temp = Arc::new(case_indexes);
+                        let control_indexes_temp = Arc::new(control_indexes);
+                        let p_values_temp = Arc::new(Mutex::new(Vec::<PValueIndexes>::new()));
+                        let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
+                        for thread_num in 0..max_threads {
+                            let normalized_matrix_temp = Arc::clone(&normalized_matrix_temp);
+                            let case_indexes_temp = Arc::clone(&case_indexes_temp);
+                            let control_indexes_temp = Arc::clone(&control_indexes_temp);
+                            let p_values_temp = Arc::clone(&p_values_temp);
+                            let filtered_genes_temp = Arc::clone(&filtered_genes_temp);
+                            let filtered_gene_symbols_temp =
+                                Arc::clone(&filtered_gene_symbols_temp);
+                            let handle = thread::spawn(move || {
+                                let mut p_values_thread: Vec<PValueIndexes> = Vec::with_capacity(
+                                    normalized_matrix_temp.nrows() / max_threads,
+                                );
+                                for i in 0..normalized_matrix_temp.nrows() {
+                                    let remainder: usize = i % max_threads; // Calculate remainder of iteration number divided by max_threads to decide which thread parses the row
+                                    if remainder == thread_num {
+                                        let row = normalized_matrix_temp.row(i);
+                                        //println!("row:{:?}", row);
+                                        let mut treated = Vec::<f64>::new();
+                                        let mut control = Vec::<f64>::new();
+                                        //println!("conditions:{:?}", conditions);
+                                        for j in 0..(case_indexes_temp.len()
+                                            + control_indexes_temp.len())
+                                        {
+                                            //println!("row[(0, j)]:{}", row[(0, j)]);
+                                            if case_indexes_temp.contains(&j) {
+                                                treated.push(row[(0, j)]);
+                                                //println!("{},{}", input_data_vec.0[i][j], "Diseased");
+                                            } else if control_indexes_temp.contains(&j) {
+                                                // + 1 was added because in the input file the first column of thw first row is blank as the first column consists of gene names
+                                                control.push(row[(0, j)]);
+                                                //println!("{},{}", input_data_vec.0[i][j], "Control");
+                                            } else {
+                                                panic!(
+                                        "Column {} could not be classified into case/control",
+                                        j
+                                    );
+                                            }
+                                        }
+                                        //println!("treated{:?}", treated);
+                                        //println!("control{:?}", control);
+                                        let p_value = wilcoxon_rank_sum_test(
+                                            treated.clone(),
+                                            control.clone(),
+                                            THRESHOLD,
+                                            't',
+                                            true,
+                                        ); // Setting continuity correction to true in case of normal approximation
+                                        let treated_mean = Data::new(treated).mean();
+                                        let control_mean = Data::new(control).mean();
+                                        if (treated_mean.unwrap() / control_mean.unwrap())
+                                            .log2()
+                                            .is_nan()
+                                            == false
+                                            && (treated_mean.unwrap() / control_mean.unwrap())
+                                                .log2()
+                                                .is_infinite()
+                                                == false
+                                        {
+                                            p_values_thread.push(PValueIndexes {
+                                                index: i,
+                                                gene_name: filtered_genes_temp[i].to_owned(),
+                                                gene_symbol: filtered_gene_symbols_temp[i]
+                                                    .to_owned(),
+                                                fold_change: (treated_mean.unwrap()
+                                                    / control_mean.unwrap())
+                                                .log2(),
+                                                p_value: p_value,
+                                            });
+                                        }
+                                    }
+                                }
+                                p_values_temp.lock().unwrap().append(&mut p_values_thread);
                             });
+                            handles.push(handle);
                         }
+                        for handle in handles {
+                            // Wait for all threads to finish before proceeding further
+                            handle.join().unwrap();
+                        }
+                        p_values.append(&mut *p_values_temp.lock().unwrap());
                     }
                     //println!("p_values:{:?}", p_values);
                     println!(
                         "Time for running {} wilcoxon tests:{:?}",
-                        normalized_matrix.nrows(),
+                        num_normalized_rows,
                         now2.elapsed()
                     );
                     let adjusted_p_values = adjust_p_values(p_values);
