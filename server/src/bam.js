@@ -3,7 +3,7 @@ import path from 'path'
 import * as utils from './utils'
 import serverconfig from './serverconfig'
 import { spawn } from 'child_process'
-import { Readable, pipeline, PassThrough } from 'stream'
+import { Readable, pipeline } from 'stream'
 import { createCanvas } from 'canvas'
 import * as bamcommon from './bam.common'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -3545,8 +3545,6 @@ async function downloadGdcBam2cacheFile_withDenial(req) {
 	return gdc_bam_filenames
 }
 
-const maxStreamSize = 50000 // fixme change to real size before merging
-
 async function streamGdcBam2response(req, res) {
 	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false // see comments in get_gdc_bam()
@@ -3560,13 +3558,11 @@ async function streamGdcBam2response(req, res) {
 		let totalBytes = 0
 		sourceStream.on('data', chunk => {
 			totalBytes += chunk.length
-			if (totalBytes > maxStreamSize) {
-				res.destroy()
-				res.end(
-					`BAM slice size exceeds ${fileSize(
-						maxStreamSize
-					)} and is terminated. Please reduce the size of your query region and try again.`
-				)
+			// 200mb
+			if (totalBytes > (serverconfig.features.gdcBamStreamMaxSize || 200000000)) {
+				sourceStream.destroy()
+				res.end()
+				// no need to add further text in end() or try to signal to client in any other means, client will detect missing BAM EOF
 			}
 		})
 
