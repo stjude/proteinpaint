@@ -178,6 +178,14 @@ if (!serverconfig.features) {
 	// mdjsonform: true, healthcheck_keys: ["w", "rs"], etc.
 	serverconfig.features = {}
 }
+
+/////////////////////////////////////////////////////////////////////
+//        mandatory settings! set default if missing               //
+/////////////////////////////////////////////////////////////////////
+
+if (!serverconfig.features.gdcBamStreamMaxSize) serverconfig.features.gdcBamStreamMaxSize = 200 * 1000000 // allow to stream a bam slice up to this size. 200mb default. need this on both server and client
+if (!serverconfig.features.gdcBamCacheMaxSize) serverconfig.features.gdcBamCacheMaxSize = 100 * 1000000 // allow to cache a bam slice up to this size. 100mb default. only used on server
+
 if (process.argv.find(a => a == 'validate')) {
 	// issues in the GDC API (like its servers being under maintenance) should not affect
 	// the ability of the PP server to launch itself, so skip GDC-caching during validation
