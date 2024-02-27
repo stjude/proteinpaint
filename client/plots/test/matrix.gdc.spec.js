@@ -305,10 +305,13 @@ tape('2 genes, 2 dict terms, divideBy', function (test) {
 	}
 })
 
-tape('launch matrix using runproteinpaint with launchGdcMatrix', async function (test) {
+tape('launch matrix using runproteinpaint with launchGdcMatrix', function (test) {
 	test.timeoutAfter(100000)
-	await runproteinpaint({
-		holder: select('body').append('div').node(),
+	test.plan(1)
+	const holder = select('body').append('div').node()
+
+	runproteinpaint({
+		holder,
 		noheader: 1,
 		launchGdcMatrix: true,
 		filter0: {
@@ -317,7 +320,7 @@ tape('launch matrix using runproteinpaint with launchGdcMatrix', async function 
 		},
 		settings: {
 			matrix: {
-				maxGenes: 50,
+				maxGenes: 10,
 				maxSample: 10000
 			}
 		},
@@ -330,7 +333,22 @@ tape('launch matrix using runproteinpaint with launchGdcMatrix', async function 
 					{ id: 'case.diagnoses.age_at_diagnosis' }
 				]
 			}
-		]
+		],
+		opts: {
+			matrix: {
+				callbacks: {
+					'postRender.test': runTests
+				}
+			}
+		}
 	})
-	test.end()
+
+	function runTests(matrix) {
+		test.true(
+			holder.querySelectorAll('svg text').length > 200,
+			'should have the expected number of rendered svg text elements'
+		)
+		if (test._ok && matrix?.destroy) setTimeout(matrix.destroy, 1000)
+		test.end()
+	}
 })
