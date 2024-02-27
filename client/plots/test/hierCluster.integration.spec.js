@@ -170,32 +170,37 @@ tape('dendrogram click', async function (test) {
 	// 	.style('width', '5px').style('height', '5px')
 	// 	.style('background-color', '#00f')
 
-	await detectLst({
-		elem: hc.dom.topDendrogram.node(),
-		trigger() {
-			img.dispatchEvent(
-				new MouseEvent('click', {
-					//'view': window,
-					bubbles: true,
-					cancelable: true,
-					clientX: svgBox.x + hc.dimensions.xOffset + imgBox.x + imgBox.width / 2,
-					clientY: svgBox.y + imgBox.y + imgBox.height / 2
-				})
-			)
-		}
-	})
+	img.dispatchEvent(
+		new MouseEvent('click', {
+			//'view': window,
+			bubbles: true,
+			cancelable: true,
+			clientX: svgBox.x + hc.dimensions.xOffset + imgBox.x + imgBox.width / 2,
+			clientY: svgBox.y + imgBox.y + imgBox.height / 2
+		})
+	)
 
-	const dataUriEnd = hc.dom.topDendrogram.select('image')?.attr('href').slice(-60) || ''
-	const expectedUriEnd =
-		window.devicePixelRatio === 1 && window.navigator.userAgent.includes('Electron')
-			? `VXLf89aL9WK9WC/DBawX62X4bDm168v/A9duR9df7eS8AAAAAElFTkSuQmCC`
-			: window.devicePixelRatio === 1
-			? `IyHnD+cP5w/nj/4CjhfHS/9qObXnl/8PkgA61yIPYtsAAAAASUVORK5CYII=`
-			: window.navigator.userAgent?.includes(`Electron`) // headless test
-			? `PgFeeOlp0S+88MJLnwAvvPS06Je9vfwCG6yWyx1uowQAAAAASUVORK5CYII=` // retina screen, headless
-			: `8NLTol944YWXPgFeeOlp0S+88HK+lx/PjoLLYOCCJQAAAABJRU5ErkJggg==` // retina screen
+	// not able to nail down all the expected dataURI strings based on env
+	// const dataUriEnd = hc.dom.topDendrogram.select('image')?.attr('href').slice(-60) || ''
+	// const expectedUriEnd =
+	// 	window.devicePixelRatio === 1 && window.navigator.userAgent.includes('Electron')
+	// 		? `VXLf89aL9WK9WC/DBawX62X4bDm168v/A9duR9df7eS8AAAAAElFTkSuQmCC`
+	// 		: window.devicePixelRatio === 1
+	// 		? `IyHnD+cP5w/nj/4CjhfHS/9qObXnl/8PkgA61yIPYtsAAAAASUVORK5CYII=`
+	// 		: window.navigator.userAgent?.includes(`Electron`) // headless test
+	// 		? `PgFeeOlp0S+88MJLnwAvvPS06Je9vfwCG6yWyx1uowQAAAAASUVORK5CYII=` // retina screen, headless
+	// 		: `8NLTol944YWXPgFeeOlp0S+88HK+lx/PjoLLYOCCJQAAAABJRU5ErkJggg==` // retina screen
+	//
+	// test.equal(dataUriEnd, expectedUriEnd, `should rerender with the expected dataURI after a dendrogram click`)
 
-	test.equal(dataUriEnd, expectedUriEnd, `should rerender with the expected dataURI after a dendrogram click`)
+	test.deepEqual(
+		hc.clickedClusterIds,
+		[
+			46, 54, 37, 28, 27, 51, 53, 44, 49, 25, 34, 11, 20, 41, 45, 29, 33, 17, 15, 2, 38, 42, 30, 36, 22, 9, 14, 3, 4,
+			31, 13, 26, 1, 16, 8, 10, 5, 6, 7, 23, 47, 48, 35, 43, 21, 32, 18, 24, 56
+		],
+		`should give the expected clickedClusterIds`
+	)
 
 	test.deepEqual(
 		['Zoom in', 'List 50 samples'],
