@@ -8,6 +8,7 @@ import { Menu } from '#dom/menu'
 import { Tabs } from '../dom/toggleButtons'
 import { renderTable } from '../dom/table'
 import { table2col } from '../dom/table2col'
+import { fileSize } from '#shared/fileSize'
 
 /*
 
@@ -925,12 +926,16 @@ export async function bamsliceui({
 				// TODO support unmapped in this mode
 				body.stream2download = true
 				const data = await dofetch3('tkbam', { headers, body })
+				// data is binary blob
 
-				if (!(await endsWithBytes(data, bamEOF))) {
-					// incorrect bam and missing EOF
+				if (!(await blobEndsWithBytes(data, bamEOF))) {
+					// incorrect bam and missing EOF, must be from truncated oversized file
+					// indicate cutoff to user to be helpful. access optionalFeatures to get cutoff size because not possible to pass it from this response here
 					sayerror(
 						saydiv,
-						'BAM slice exceeds max file size limit and is truncated. Please use with caution, or reduce query region size and try again.'
+						`BAM slice exceeds
+						${fileSize(JSON.parse(sessionStorage.getItem('optionalFeatures')).gdcBamStreamMaxSize)}
+						and is truncated. Please use with caution, or reduce query region size and try again.`
 					)
 					// still let it download
 				}
@@ -1007,7 +1012,7 @@ export async function bamsliceui({
 	return publicApi
 }
 
-function endsWithBytes(blob, byteSequence) {
+function blobEndsWithBytes(blob, byteSequence) {
 	if (!blob || !byteSequence || byteSequence.length > blob.size) {
 		return false // Handle invalid inputs or sequence exceeding blob size
 	}
