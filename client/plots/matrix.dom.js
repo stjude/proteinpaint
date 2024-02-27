@@ -31,11 +31,8 @@ export function setMatrixDom(opts) {
 	// parent g for sample, term labels g
 	const sampleLabelsPG = mainG.append('g')
 	const termLabelsPG = mainG.append('g')
-
 	const tip = new Menu({ padding: '5px' })
-	const clickMenu = new Menu({ padding: '0px' })
-	const brushMenu = new Menu({ padding: '0px' })
-	const dendroClickMenu = new Menu({ padding: '0px' })
+
 	this.dom = {
 		header: opts.header,
 		holder,
@@ -117,9 +114,10 @@ export function setMatrixDom(opts) {
 		tip,
 		menutop: tip.d.append('div'),
 		menubody: tip.d.append('div'),
-		clickMenu,
-		brushMenu,
-		dendroClickMenu
+		clickMenu: new Menu({ padding: '0px' }),
+		brushMenu: new Menu({ padding: '0px' }),
+		dendroClickMenu: new Menu({ padding: '0px' }),
+		legendMenu: new Menu({ padding: '0px' })
 	}
 
 	this.dom.colBeam = this.dom.highlightBeamG

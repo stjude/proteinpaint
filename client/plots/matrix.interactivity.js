@@ -197,9 +197,9 @@ export function setInteractivity(self) {
 		//when clicking a cell in SV, CNV, mutation panels
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null
 
-		self.dom.clickMenu.d.selectAll('*').remove()
-		self.dom.dendroClickMenu.d.selectAll('*').remove()
-		self.dom.brushMenu.d.selectAll('*').remove()
+		self.dom.clickMenu.clear()
+		self.dom.dendroClickMenu.clear()
+		self.dom.brushMenu.clear()
 
 		if (self.dom.sampleListMenu) self.dom.sampleListMenu.destroy()
 
@@ -2281,6 +2281,13 @@ function setZoomPanActions(self) {
 		const zoomLevel = Math.max(minZoomLevel, Math.min(tentativeZoomLevel, maxZoomLevel))
 		const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
 
+		console.log('self.zoomWidth', self.zoomWidth)
+		console.log({
+			zoomIndex,
+			zoomLevel,
+			zoomCenter,
+			tentativeZoomLevel
+		})
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -2339,6 +2346,7 @@ function setLengendActions(self) {
 		}
 
 		const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
+		const menuGrp = self.dom.legendMenu.clear()
 
 		// When clicking a legend group name
 		if (!targetData.isLegendItem) {
@@ -2361,7 +2369,6 @@ function setLengendActions(self) {
 					l.legendGrpName == targetData.name &&
 					l.tvs.values.find(v => targetData.dt.includes(v.dt) && (!byOrigin || v.origin == targetData.origin))
 			)
-			const menuGrp = new Menu({ padding: '0px' })
 			const div = menuGrp.d.append('div')
 
 			// when the legend group is not hidden
@@ -2544,8 +2551,8 @@ function setLengendActions(self) {
 			}
 		}
 		const controlLabels = self.settings.matrix.controlLabels
-		const menu = new Menu({ padding: '0px' })
-		const div = menu.d.append('div')
+
+		const div = menuGrp.d.append('div')
 
 		//Add the hard filter option
 		if (!targetData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1) {
@@ -2567,7 +2574,7 @@ function setLengendActions(self) {
 						: 'Show'
 				)
 				.on('click', () => {
-					menu.hide()
+					menuGrp.hide()
 					if (legendFilterIndex == -1) {
 						// when its shown and now hide it
 						if (targetData.dt) {
@@ -2656,7 +2663,7 @@ function setLengendActions(self) {
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(`Do not show ${mclass[targetData.key].label}`)
 					.on('click', () => {
-						menu.hide()
+						menuGrp.hide()
 						// add a new "soft filter" to filter out the legend's origin + legend's dt + legend's class
 						// add a new "soft filter" to filter out samples that only have mutation match with (the legend's origin + legend's dt + legend's class) and no other mutation
 						// and then hide the selected mutation on samples that have this selected mutation if the sample was not filtered out by this soft filter.
@@ -2688,7 +2695,7 @@ function setLengendActions(self) {
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Show only')
 					.on('click', () => {
-						menu.hide()
+						menuGrp.hide()
 						const term = self.termOrder.find(t => t.tw.$id == targetData.$id)?.tw?.term
 						const legendGrp =
 							self.legendData.find(lg => lg.name == targetData.termid) ||
@@ -2777,7 +2784,7 @@ function setLengendActions(self) {
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text('Show all')
 					.on('click', () => {
-						menu.hide()
+						menuGrp.hide()
 						self.config.legendValueFilter.lst = self.config.legendValueFilter.lst.filter(
 							l => l.legendGrpName !== targetData.termid
 						)
@@ -2789,7 +2796,7 @@ function setLengendActions(self) {
 						})
 					})
 			}
-			menu.showunder(event.target)
+			menuGrp.showunder(event.target)
 		}
 	}
 }
