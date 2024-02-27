@@ -934,7 +934,7 @@ export async function bamsliceui({
 					sayerror(
 						saydiv,
 						`BAM slice exceeds
-						${fileSize(JSON.parse(sessionStorage.getItem('optionalFeatures')).gdcBamStreamMaxSize)}
+						${fileSize(JSON.parse(sessionStorage.getItem('optionalFeatures')).gdcBam.streamMaxSize)}
 						and is truncated. Please use with caution, or reduce query region size and try again.`
 					)
 					// still let it download

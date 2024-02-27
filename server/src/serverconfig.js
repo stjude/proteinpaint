@@ -173,18 +173,16 @@ if (process.env.PP_MODE?.startsWith('container')) {
 }
 
 if (!serverconfig.features) {
-	// default to having an empty object value for
-	// examples of end-user-accessible features are:
-	// mdjsonform: true, healthcheck_keys: ["w", "rs"], etc.
+	/*
+	default to having an empty object value for end-user-accessible features
+	necessary to ensure features{} object is set, as later when bootstraping a dataset, ds.serverconfigFeatures{} will be copied over
+	NOTE  serverconfig.json settings takes highest priority!! these are instance-level setting, e.g. on your dev computer
+	and overwrites default values from ds.serverconfigFeatures{} to assist e.g. dev work
+	*/
 	serverconfig.features = {}
 }
 
-/////////////////////////////////////////////////////////////////////
-//        mandatory settings! set default if missing               //
-/////////////////////////////////////////////////////////////////////
-
-if (!serverconfig.features.gdcBamStreamMaxSize) serverconfig.features.gdcBamStreamMaxSize = 200 * 1000000 // allow to stream a bam slice up to this size. 200mb default. need this on both server and client
-if (!serverconfig.features.gdcBamCacheMaxSize) serverconfig.features.gdcBamCacheMaxSize = 100 * 1000000 // allow to cache a bam slice up to this size. 100mb default. only used on server
+// when a mandatory setting is not defined in any ds, declare its default here
 
 if (process.argv.find(a => a == 'validate')) {
 	// issues in the GDC API (like its servers being under maintenance) should not affect
@@ -218,5 +216,4 @@ if (fs.existsSync('./package.json')) {
 	serverconfig.version = JSON.parse(pkg).version
 }
 
-//Object.freeze(serverconfig)
 module.exports = serverconfig

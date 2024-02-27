@@ -97,7 +97,7 @@ export const tabixnoterror = s => {
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
-export const features = Object.freeze(serverconfig.features || {})
+export const features = serverconfig.features
 
 //////////////////////////////
 // Global variable (storing things in memory)
