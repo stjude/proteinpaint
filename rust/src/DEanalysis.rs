@@ -25,6 +25,11 @@ use std::time::Instant;
 //use std::env;
 use std::io;
 //mod stats_functions; // Importing Wilcoxon function from stats_functions.rs
+const PAR_CUTOFF: usize = 100000; // Cutoff for triggering multithreading processing of data
+
+//const PAR_CUTOFF: usize = 1000000000000000;
+#[allow(non_upper_case_globals)]
+const max_threads: usize = 6; // Max number of threads in case the parallel processing of reads is invoked
 
 fn binary_search(input: &Vec<usize>, y: usize) -> i64 {
     let input_dup = &input[..];
@@ -62,6 +67,7 @@ fn input_data(
     Vec<String>,
     Vec<String>,
 ) {
+    let input_time = Instant::now();
     //let mut rdr = csv::Reader::from_path(path).unwrap();
     let mut file = File::open(filename).unwrap();
     let mut num_lines: usize = 0;
@@ -74,8 +80,7 @@ fn input_data(
     let mut buffer = String::new();
     file.read_to_string(&mut buffer).unwrap();
     // Check headers for samples
-    let buffer_clone = buffer.clone();
-    let lines: Vec<&str> = buffer_clone.split('\n').collect::<Vec<&str>>();
+    let lines: Vec<&str> = buffer.split('\n').collect::<Vec<&str>>();
     let total_lines = lines.len();
     let headers: Vec<&str> = lines[0].split('\t').collect::<Vec<&str>>();
     //println!("headers:{:?}", headers);
@@ -117,11 +122,8 @@ fn input_data(
     case_indexes_original.dedup();
     control_indexes_original.sort();
     control_indexes_original.dedup();
-    let input_time = Instant::now();
     let mut case_indexes: Vec<usize> = Vec::with_capacity(case_list.len());
     let mut control_indexes: Vec<usize> = Vec::with_capacity(control_list.len());
-    const PAR_CUTOFF: usize = 100000;
-    //const PAR_CUTOFF: usize = 1000000000000000;
     if lines.len() * (case_indexes_original.len() + control_indexes_original.len()) < PAR_CUTOFF {
         // If number of lines is below this number
         let lines_slice = &lines[..];
@@ -194,7 +196,6 @@ fn input_data(
         let genes_symbols_temp = Arc::new(Mutex::new(Vec::<String>::new()));
         let input_vector_temp = Arc::new(Mutex::new(Vec::<f64>::new()));
         let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
-        let max_threads: usize = 6; // Max number of threads in case the parallel processing of reads is invoked
         println!("Number of threads used:{}", max_threads);
         for thread_num in 0..max_threads {
             let case_indexes_original = Arc::clone(&case_indexes_original);
@@ -219,7 +220,7 @@ fn input_data(
                 //println!("case_indexes_original:{:?}", case_indexes_original);
                 //println!("control_indexes:{:?}", control_indexes);
                 for line_iter in 1..total_lines - 1 {
-                    let remainder: usize = line_iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
+                    let remainder: usize = line_iter % max_threads; // Calculate remainder of line number divided by max_threads to decide which thread parses this line
                     if remainder == thread_num {
                         //println!("buffer:{}", buffer);
                         // Thread analyzing a particular line must have the same remainder as the thread_num, this avoids multiple threads from parsing the same line
@@ -607,24 +608,73 @@ fn tmm_normalization(
         }
     }
     //println!("ref_column:{}", ref_column);
-    let ref_data = input_matrix.column(ref_column);
-    let ref_lib_size = lib_sizes[ref_column];
+    let num_cols = input_matrix.ncols();
     let mut f: Vec<f64> = Vec::with_capacity(input_matrix.ncols());
-    for col in 0..input_matrix.ncols() {
-        let obs_data = input_matrix.column(col);
-        let obs_lib_size = lib_sizes[col];
-        f.push(calc_factor_tmm(
-            obs_data,
-            &ref_data,
-            ref_lib_size,
-            obs_lib_size,
-        ));
+    if input_matrix.nrows() * input_matrix.ncols() < PAR_CUTOFF {
+        let ref_data = input_matrix.column(ref_column);
+        let ref_lib_size = lib_sizes[ref_column];
+        for col in 0..input_matrix.ncols() {
+            let obs_data = input_matrix.column(col);
+            let obs_lib_size = lib_sizes[col];
+            f.push(calc_factor_tmm(
+                obs_data,
+                &ref_data,
+                ref_lib_size,
+                obs_lib_size,
+            ));
+        }
+    } else {
+        // Multithreaded implementation of TMM normalization
+        let f_temp = Arc::new(Mutex::new(Vec::<f_index>::new()));
+        let lib_sizes_temp = Arc::new(lib_sizes.to_owned());
+        let input_matrix_temp = Arc::new(input_matrix);
+        let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
+        for thread_num in 0..max_threads {
+            let f_temp = Arc::clone(&f_temp);
+            let lib_sizes_temp = Arc::clone(&lib_sizes_temp);
+            let input_matrix_temp = Arc::clone(&input_matrix_temp);
+            let handle = thread::spawn(move || {
+                let mut f_thread: Vec<f_index> =
+                    Vec::with_capacity(input_matrix_temp.ncols() / max_threads);
+                let ref_data = input_matrix_temp.column(ref_column);
+                let ref_lib_size = lib_sizes_temp[ref_column];
+                for col in 0..input_matrix_temp.ncols() {
+                    let remainder: usize = col % max_threads; // Calculate remainder of column number divided by max_threads to decide which thread parses this column
+                    if remainder == thread_num {
+                        let obs_data = input_matrix_temp.column(col);
+                        let obs_lib_size = lib_sizes_temp[col];
+                        f_thread.push(f_index {
+                            f: calc_factor_tmm(obs_data, &ref_data, ref_lib_size, obs_lib_size),
+                            ind: col,
+                        })
+                    }
+                }
+                f_temp.lock().unwrap().append(&mut f_thread);
+            });
+            handles.push(handle);
+        }
+        for handle in handles {
+            // Wait for all threads to finish before proceeding further
+            handle.join().unwrap();
+        }
+        let mut f_orig: Vec<f_index> = Vec::with_capacity(num_cols);
+        f_orig.append(&mut *f_temp.lock().unwrap());
+        // Need to sort vector because the vector will not be ordered accord to ind because of multithreading
+        f_orig
+            .as_mut_slice()
+            .sort_by(|a, b| (a.ind).partial_cmp(&b.ind).unwrap_or(Ordering::Equal));
+        f = f_orig.into_iter().map(|x| x.f).collect::<Vec<f64>>();
     }
     const NATURAL_E: f64 = 2.718281828459;
     let log_f: Vec<f64> = f.clone().into_iter().map(|x| x.log(NATURAL_E)).collect();
     let exp_mean_log_f = Data::new(log_f).mean().unwrap().exp();
     let final_f: Vec<f64> = f.into_iter().map(|x| x / exp_mean_log_f).collect();
     final_f
+}
+#[allow(non_camel_case_types)]
+struct f_index {
+    f: f64,
+    ind: usize,
 }
 
 fn calc_factor_tmm(
