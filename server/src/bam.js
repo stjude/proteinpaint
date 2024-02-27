@@ -3,7 +3,7 @@ import path from 'path'
 import * as utils from './utils'
 import serverconfig from './serverconfig'
 import { spawn } from 'child_process'
-import { Readable, pipeline } from 'stream'
+import { Readable, pipeline, PassThrough } from 'stream'
 import { createCanvas } from 'canvas'
 import * as bamcommon from './bam.common'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -124,6 +124,7 @@ box {}
 
 *********************** function cascade
 
+streamGdcBam2response
 downloadGdcBam2cacheFile_withDenial // download gdc bam slice and write to cache file securely and deny unauthorized access
 	get_gdc_bam
 		index_bam
@@ -3544,13 +3545,32 @@ async function downloadGdcBam2cacheFile_withDenial(req) {
 	return gdc_bam_filenames
 }
 
+const maxStreamSize = 50000 // fixme change to real size before merging
+
 async function streamGdcBam2response(req, res) {
 	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false // see comments in get_gdc_bam()
+	headers['Content-Type'] = 'application/octet-stream'
+	delete headers.Accept
+
 	const url = path.join(host.rest, '/slicing/view/', req.query.gdcFileUUID + '?region=' + req.query.gdcFilePosition)
-	res.statusCode = 200
 	try {
-		await pipelineProm(got.stream(url, { method: 'get', headers }), res)
+		const sourceStream = got.stream(url, { method: 'get', headers }) // source of data, will be streamed into res
+
+		let totalBytes = 0
+		sourceStream.on('data', chunk => {
+			totalBytes += chunk.length
+			if (totalBytes > maxStreamSize) {
+				res.destroy()
+				res.end(
+					`BAM slice size exceeds ${fileSize(
+						maxStreamSize
+					)} and is terminated. Please reduce the size of your query region and try again.`
+				)
+			}
+		})
+
+		await sourceStream.pipe(res)
 	} catch (e) {
 		if (e.code == 'ERR_STREAM_PREMATURE_CLOSE') {
 			// happens when client reload page in the mid of streaming bam data from backend. somehow the response header is already set. must not do res.send() again to avoid ERR_HTTP_HEADERS_SENT that crashes server
