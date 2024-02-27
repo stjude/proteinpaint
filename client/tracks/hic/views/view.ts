@@ -1,9 +1,9 @@
 import { getCompInit } from '#rx'
-import { Div, Elem } from '../../../types/d3'
+// import { Div, Elem } from '../../../types/d3'
 import { MainPlotDiv } from '../../../types/hic.ts'
-import { ChrPairView } from './chrPairView'
-import { HorizontalView } from './horizontalView'
-import { DetailView } from './detailView'
+// import { ChrPairView } from './chrPairView'
+// import { HorizontalView } from './horizontalView'
+// import { DetailView } from './detailView'
 import { GenomeView } from './genomeView.ts'
 
 /**
@@ -61,7 +61,7 @@ export class HicView {
 		} else if (this.state.currView === 'detail') {
 			//this.detailView = new DetailView.main()
 		} else {
-			throw Error(`Unknown view: ${this.state.currentView}`)
+			throw Error(`Unknown view: ${this.state.currView}`)
 		}
 	}
 }

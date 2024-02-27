@@ -1,11 +1,10 @@
 import { dofetch2 } from '#src/client'
 import { hicParseFile } from './parseData'
 
-export class HicDataRequest {
+export class HicDataMapper {
 	hic: any
 	debugmode: boolean
 	errList: string[]
-	values: number[] = []
 
 	constructor(hic: any, debugmode: boolean, errList: string[] = []) {
 		this.hic = hic
@@ -13,29 +12,65 @@ export class HicDataRequest {
 		this.errList = errList || []
 	}
 
-	async getHicStraw(hic: any) {
-		await hicParseFile(hic, this.debugmode, this.errList)
+	async getHicStraw() {
+		await hicParseFile(this.hic, this.debugmode, this.errList)
 	}
 
 	//helper function to return data per view requirement
 	//TODO: rm chrs without data from hic.chrlst in this function on init()
-	async getData(lead: string, follow: string) {
+
+	async getData(
+		currView: string,
+		nmeth: string,
+		resolution: number,
+		matrixType?: string,
+		lead?: string,
+		follow?: string
+	) {
 		const vlst = []
-		this.getHicData(this.hic, this.hic.nmeth, this.hic.resolution, lead, follow, vlst)
-		const [min, max] = this.getMinMax(vlst)
-		return [min, max]
+		const data = []
+		if (!matrixType) matrixType = 'observed'
+		if (lead && follow) {
+			await this.getHicData(nmeth, resolution, matrixType, lead, follow, vlst, data)
+		} else {
+			/** lead chr and follow chr not provided for genome view.
+			 * Loop through all the chrs, getData, and trim hic.chrLst on result
+			 */
+			const manychr = currView == 'genome' ? 8 : this.hic.chrlst.length
+
+			for (let i = 0; i < manychr; i++) {
+				const lead = this.hic.chrlst[i]
+				for (let j = 0; j <= i; j++) {
+					const follow = this.hic.chrlst[j]
+					await this.getHicData(nmeth, resolution, matrixType, lead, follow, vlst, data)
+				}
+			}
+		}
+		//Do not use Math.min() or Math.max().
+		//Causes stack overflow
+		const sortedVlst = vlst.sort((a: number, b: number) => a - b)
+		const max = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
+		const min = sortedVlst[0]
+		return [data, min, max]
 	}
 
-	//Should return this.data and this.vlist or a range for values
-	async getHicData(hic: any, nmeth: string, resolution: number, lead: string, follow: string, vlst: number[]) {
+	async getHicData(
+		nmeth: string,
+		resolution: number,
+		matrixType: string,
+		lead: string,
+		follow: string,
+		vlst: number[],
+		viewData: any
+	) {
 		const arg = {
-			//matrixType: state.view.matrixType???
-			file: hic.file,
-			url: hic.url,
-			pos1: hic.nochr ? lead.replace('chr', '') : lead,
-			pos2: hic.nochr ? follow.replace('chr', '') : follow,
-			nmeth: nmeth,
-			resolution: resolution
+			matrixType,
+			file: this.hic.file,
+			url: this.hic.url,
+			pos1: this.hic.nochr ? lead.replace('chr', '') : lead,
+			pos2: this.hic.nochr ? follow.replace('chr', '') : follow,
+			nmeth,
+			resolution
 		}
 
 		try {
@@ -48,21 +83,16 @@ export class HicDataRequest {
 				throw Error(`${lead} - ${follow}: ${data.error.error}`)
 			}
 			if (!data.items || data.items.length == 0) return
+			viewData.push({ items: data.items, lead: lead, follow: follow })
 			for (const v of data.items) {
-				this.values.push(v[2])
+				vlst.push(v[2])
 			}
 		} catch (e: any) {
 			/** Collect all errors from the response and then call self.error() above.
 			 * This allows errors to appear in a single, expandable div.
 			 */
-			// self.errList.push(e.message || e)
-			// if (e.stack) console.log(e.stack)
+			this.errList.push(e.message || e)
+			if (e.stack) console.log(e.stack)
 		}
-	}
-
-	getMinMax(values) {
-		const min = Math.min(...values)
-		const max = Math.max(...values)
-		return [min, max]
 	}
 }
