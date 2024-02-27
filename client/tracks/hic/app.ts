@@ -7,7 +7,7 @@ import { controlPanelInit } from './controls/controlPanel'
 import { hicViewInit } from './views/view'
 import * as client from '#src/client'
 import { select as d3select } from 'd3-selection'
-import { hicParseFile } from './data/parseData'
+import { HicDataMapper } from './data/dataMapper'
 
 class HicApp {
 	/** Required for rx */
@@ -39,6 +39,7 @@ class HicApp {
 	store: any
 	/** Required for rx */
 	type: 'app'
+	dataMapper: any
 
 	constructor(opts) {
 		this.type = 'app'
@@ -65,6 +66,7 @@ class HicApp {
 			tip: new client.Menu()
 		}
 		this.errList = []
+		this.dataMapper = new HicDataMapper(this.hic, true, this.errList)
 	}
 
 	async error(err: string | string[]) {
@@ -76,9 +78,9 @@ class HicApp {
 		//this.dom.loadingDiv.style('display', 'none')
 	}
 
-	getState(appState) {
-		return appState
-	}
+	// getState(appState) {
+	// 	return appState
+	// }
 
 	determineView(opts) {
 		//console.log(opts) // so ts stops complaining
@@ -92,9 +94,9 @@ class HicApp {
 		try {
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
 			this.state = await this.store.copyState()
-			//TODO: replace with HiCDataRequest class here
-			//data should be available to all components on init()
-			await hicParseFile(this.hic, true, this.errList)
+			await this.dataMapper.getHicStraw(this.hic, true, this.errList)
+			const nmeth = this.hic['normalization'].length ? this.hic['normalization'][0] : this.state.defaultNmeth
+			const [data, min, max] = await this.dataMapper.getData(this.state.currView, nmeth, this.hic['bpresolution'][0])
 			if (this.errList.length) this.error(this.errList)
 			this.components = {
 				// loadingOverlay: await loadingInit({
@@ -102,17 +104,20 @@ class HicApp {
 				// 	state: this.state,
 				// 	loadingDiv: this.dom.loadingDiv
 				// }),
-				controls: await controlPanelInit({
-					app: this.api,
-					state: this.state,
-					controlsDiv: this.dom.controlsDiv,
-					hic: this.hic
-				}),
 				view: await hicViewInit({
 					app: this.api,
 					state: this.state,
 					plotDiv: this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true),
-					hic: this.hic
+					hic: this.hic,
+					data
+				}),
+				controls: await controlPanelInit({
+					app: this.api,
+					state: this.state,
+					controlsDiv: this.dom.controlsDiv,
+					hic: this.hic,
+					min,
+					max
 				})
 			}
 			await this.api.dispatch()

@@ -3,7 +3,6 @@ import { SvgSvg, SvgG } from '../../../types/d3'
 import { colorizeElement } from './view' //add setViewCutoff
 //import * as client from '#src/client'
 //import blocklazyload from '#src/block.lazyload'
-import { HicDataRequest } from '../data/getHicData'
 
 import { axisRight, axisBottom } from 'd3-axis'
 import { select as d3select, pointer, Selection } from 'd3-selection'
@@ -413,8 +412,6 @@ export class GenomeView {
 
 	async render() {
 		//Update info bar
-		await this.getData('chr17', 'chr17')
-		console.log(this.data, this.values)
 		this.renderGrid()
 
 		if (this.hic.sv && this.hic.sv.items) {
@@ -438,23 +435,12 @@ export class GenomeView {
 
 	async makeElements(manychrArg?: number) {
 		const manychr = manychrArg || (this.hic.atdev ? atdev_chrnum : this.hic.chrlst.length)
-		const vlst = [] as number[]
 
-		for (let i = 0; i < manychr; i++) {
-			const lead = this.hic.chrlst[i]
-			for (let j = 0; j <= i; j++) {
-				const follow = this.hic.chrlst[j]
-				await this.getData(lead, follow, vlst)
-			}
-		}
+		//dataMapper.getData()
+
 		// await setViewCutoff(vlst, self.genomeview, self)
 
 		// await colorizeGenomeElements(self)
-	}
-
-	async getData(lead: string, follow: string) {
-		const x = new HicDataRequest()
-		this.data = await x.getHicData(this.hic, this.nmeth, this.resolution, lead, follow, this.values)
 	}
 }
 

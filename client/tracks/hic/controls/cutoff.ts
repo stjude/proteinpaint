@@ -22,7 +22,7 @@ export class CutoffControl {
 			.style('margin-left', '0px')
 			.attr('type', 'number')
 			//Replace with view value or passed value
-			.property('value', 0)
+			.property('value', this.value)
 			.on('change', async () => {
 				//Replace with get_data() -> app.dispatch()
 				//Maybe add setTimeout or Apply button for this?
