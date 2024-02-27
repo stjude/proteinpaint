@@ -85,10 +85,10 @@ export function setRenderers(self) {
 
 	function renderSVG(chart, s) {
 		const svg = chart.svg
-		let colorLegends = chart.colorLegend.size * 25
-		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
+		let colorLegendSize = chart.colorLegend.size * 25
+		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegendSize += 60
 		const scaleHeight = self.config.scaleDotTW ? 200 : 100
-		self.legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
+		self.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
 		const width = self.charts.length == 1 ? s.svgw + 800 : s.svgw + (self.config.shapeTW ? 600 : 350)
 		svg
 			.transition()
@@ -667,7 +667,7 @@ export function setRenderers(self) {
 	self.renderLegend = function (chart) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
-		const step = 25
+		const step = chart.colorLegend.size > 20 ? 18 : 25
 		let offsetX = 0
 		let offsetY = 25
 		if (!self.config.colorTW && !self.config.shapeTW) {
@@ -679,18 +679,12 @@ export function setRenderers(self) {
 		}
 
 		let title
-		const colorG = legendG.append('g')
+		const colorG = legendG.append('g').style('font-size', chart.colorLegend.size > 20 ? '0.7em' : '0.9em')
 
 		const title0 = self.config.term0
 			? `${chart.id}, n=${chart.cohortSamples.length}`
-			: `${chart.cohortSamples.length} samples`
-		colorG
-			.append('text')
-			.attr('x', 0)
-			.attr('y', offsetY)
-			.text(title0)
-			.style('font-size', '0.9em')
-			.style('font-weight', 'bold')
+			: `${chart.cohortSamples.length} items`
+		colorG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 		offsetY += step + 10
 		if (self.config.colorTW) {
 			title = `${getTitle(self.config.colorTW, self.config.shapeTW == undefined)}`

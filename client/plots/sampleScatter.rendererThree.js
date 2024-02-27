@@ -16,10 +16,11 @@ export function setRenderersThree(self) {
 		self.canvas.height = self.settings.svgh * 1.5
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const step = chart.colorLegend.size > 20 ? 18 : 25
 		chart.legendG = chart.legendDiv
 			.append('svg')
 			.attr('width', self.settings.svgw / 2)
-			.attr('height', self.settings.svgh * 1.5)
+			.attr('height', chart.colorLegend.size * step)
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
 		self.renderLegend(chart)
