@@ -2281,13 +2281,6 @@ function setZoomPanActions(self) {
 		const zoomLevel = Math.max(minZoomLevel, Math.min(tentativeZoomLevel, maxZoomLevel))
 		const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
 
-		console.log('self.zoomWidth', self.zoomWidth)
-		console.log({
-			zoomIndex,
-			zoomLevel,
-			zoomCenter,
-			tentativeZoomLevel
-		})
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
