@@ -1,2 +1,1 @@
-Fixes:
-- GDC BAM slicing will be terminated if slice file size exceeds a limit (user is informed)
+
