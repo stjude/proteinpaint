@@ -2,6 +2,7 @@ import { Elem } from '../../../types/d3'
 
 export class NormalizationMethodControl {
 	app: any
+	state: any
 	defaultNmeth: string
 	holder: Elem
 	normalization: string[]
@@ -9,6 +10,7 @@ export class NormalizationMethodControl {
 
 	constructor(app: any, state: any, dom: any, normalization: string[]) {
 		this.app = app
+		this.state = state
 		this.defaultNmeth = state.defaultNmeth
 		this.holder = dom
 		this.normalization = normalization
@@ -22,7 +24,10 @@ export class NormalizationMethodControl {
 				.style('margin-right', '10px')
 				.append('select')
 				.on('change', async () => {
-					//Replace with get_data() -> app.dispatch()
+					this.app.dispatch({
+						type: 'view_update',
+						view: this.state.currView
+					})
 				})
 			for (const n of this.normalization) {
 				this.nmethselect.append('option').text(n)

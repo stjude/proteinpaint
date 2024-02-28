@@ -77,25 +77,53 @@ class HicApp {
 		this.errList = []
 	}
 
-	// getState(appState) {
-	// 	return appState
-	// }
-
-	determineView(opts) {
-		//console.log(opts) // so ts stops complaining
+	determineView() {
 		//TODO figure out view based on opts
 		//Will be useful when runpp() for chrPair and detailed view is implemented
-		return 'genome'
+		if (!this.hic.state.currView) this.hic.state.currView = 'genome'
+	}
+
+	viewConfig() {
+		const views = ['genome', 'chrpair', 'detail', 'horizontal']
+
+		const nmeth = this.hic['normalization'].length ? this.hic['normalization'][0] : this.state.defaultNmeth
+
+		// if (this.hic.state.currView) {
+		//     if (!this.hic.state[this.hic.state.currView]?.matrixType) {
+		//         this.hic.state[this.hic.state.currView].matrixType = 'observed'
+		//     }
+		//     if (!this.hic.state[this.hic.state.currView]?.nemth) {
+		//         this.hic.state[this.hic.state.currView].nmeth = nmeth
+		//     }
+		// }
+
+		for (const v of views) {
+			if (!this.hic.state[v]) {
+				this.hic.state[v] = {
+					matrixType: 'observed',
+					nmeth: nmeth
+				}
+			}
+		}
 	}
 
 	async init() {
-		if (!this.hic.state.currView) this.hic.state.currView = 'genome'
+		this.determineView()
 		try {
+			await this.dataMapper.getHicStraw(this.hic, true, this.errList)
+			this.viewConfig()
+			const currView = this.hic.state[this.hic.state.currView]
+			const [data, min, max] = await this.dataMapper.getData(
+				this.hic.state.currView,
+				currView.nmeth,
+				this.hic['bpresolution'][0]
+			)
+			currView.min = min
+			currView.max = max
+
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
 			this.state = await this.store.copyState()
-			await this.dataMapper.getHicStraw(this.hic, true, this.errList)
-			const nmeth = this.hic['normalization'].length ? this.hic['normalization'][0] : this.state.defaultNmeth
-			const [data, min, max] = await this.dataMapper.getData(this.state.currView, nmeth, this.hic['bpresolution'][0])
+			console.log(this.state)
 			if (this.errList.length) this.error(this.errList)
 			this.components = {
 				// loadingOverlay: await loadingInit({
@@ -108,17 +136,13 @@ class HicApp {
 					state: this.state,
 					plotDiv: this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true),
 					hic: this.hic,
-					data,
-					min,
-					max
+					data
 				}),
 				controls: await controlPanelInit({
 					app: this.api,
 					state: this.state,
 					controlsDiv: this.dom.controlsDiv,
-					hic: this.hic,
-					min,
-					max
+					hic: this.hic
 				})
 			}
 			await this.api.dispatch()
