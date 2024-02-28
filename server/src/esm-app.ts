@@ -1,19 +1,22 @@
 // from the proteinpaint/server dir, run via
 // $ npx tsx src/esm-app.ts
 //
-
 import serverconfig from './serverconfig.js'
 import express from 'express'
-//import { basepath, app, genomes, phewas, startServer, pp_init } from './app'
+import { genomes, pp_init } from './pp_init.js'
 import * as augen from '@sjcrh/augen'
 import fs from 'fs'
 import path from 'path'
+
+const basepath = serverconfig.basepath || ''
 
 launch()
 
 async function launch() {
 	const app = express()
 	app.disable('x-powered-by')
+
+	await pp_init(serverconfig, app, basepath)
 
 	// start moving migrated route handler code here
 	const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
@@ -31,7 +34,7 @@ async function launch() {
 
 	augen.setRoutes(app, routes, {
 		app,
-		genomes: {},
+		genomes,
 		basepath: serverconfig.basepath || '',
 		apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
 		types: {

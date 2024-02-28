@@ -1,9 +1,9 @@
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
-import * as utils from './utils'
+import * as utils from './utils.js'
 import { createCanvas } from 'canvas'
-import { bplen } from '#shared/common'
+import { bplen } from '#shared/common.js'
 
 /*
 ********************** EXPORTED

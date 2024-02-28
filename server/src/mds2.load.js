@@ -1,10 +1,10 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
-import * as common from '#shared/common'
-import * as loader_vcf from './mds2.load.vcf'
-import * as loader_vcf_mafcov from './mds2.load.vcf.plot.mafcovplot'
-import * as loader_ld from './mds2.load.ld'
+import * as utils from './utils.js'
+import * as common from '#shared/common.js'
+import * as loader_vcf from './mds2.load.vcf.js'
+import * as loader_vcf_mafcov from './mds2.load.vcf.plot.mafcovplot.js'
+import * as loader_ld from './mds2.load.ld.js'
 // add loaders for other file types and requests
 
 /*
