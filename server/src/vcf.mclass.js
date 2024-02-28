@@ -1,7 +1,7 @@
-import { dissect_INFO } from '#shared/vcf.info'
-import { parse_CSQ } from '#shared/vcf.csq'
-import { getVariantType } from '#shared/vcf.type'
-import { vcfcopymclass } from '#shared/common'
+import { dissect_INFO } from '#shared/vcf.info.js'
+import { parse_CSQ } from '#shared/vcf.csq.js'
+import { getVariantType } from '#shared/vcf.type.js'
+import { vcfcopymclass } from '#shared/common.js'
 
 /*
 do not anticipate to share this function with client
