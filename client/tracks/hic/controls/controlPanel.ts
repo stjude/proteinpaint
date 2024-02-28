@@ -61,8 +61,6 @@ class ControlPanel {
 	hic: any
 	type: 'controlPanel'
 	state: any
-	min: number
-	max: number
 	hasStatePreMain = true
 
 	constructor(opts) {
@@ -72,8 +70,6 @@ class ControlPanel {
 		this.controlsDiv = opts.controlsDiv
 		this.hic = opts.hic
 		this.state = opts.state
-		this.min = opts.min
-		this.max = opts.max
 	}
 
 	addLabel(tr: Tr, text: string) {
@@ -86,6 +82,7 @@ class ControlPanel {
 	}
 
 	init() {
+		const currView = this.state[this.state.currView]
 		const menuWrapper = this.controlsDiv
 			.style('background', 'rgb(253, 250, 244)')
 			.style('vertical-align', 'top')
@@ -124,13 +121,23 @@ class ControlPanel {
 		const minCutoffRow = menuTable.append('tr') as any
 		this.addLabel(minCutoffRow, 'Min CUTOFF')
 		//**** CHANGE TO THE VIEW VALUE */
-		this.controls.inputBpMinV = new CutoffControl(this.app, this.state, minCutoffRow.append('td'), this.min).render()
+		this.controls.inputBpMinV = new CutoffControl(
+			this.app,
+			this.state,
+			minCutoffRow.append('td'),
+			currView.min
+		).render()
 
 		//Max CUTOFF
 		const maxCutoffRow = menuTable.append('tr') as any
 		this.addLabel(maxCutoffRow, 'Max CUTOFF')
 		//**** CHANGE TO THE VIEW VALUE */
-		this.controls.inputBpMaxV = new CutoffControl(this.app, this.state, maxCutoffRow.append('td'), this.max).render()
+		this.controls.inputBpMaxV = new CutoffControl(
+			this.app,
+			this.state,
+			maxCutoffRow.append('td'),
+			currView.max
+		).render()
 
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
