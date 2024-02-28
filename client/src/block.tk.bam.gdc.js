@@ -9,6 +9,7 @@ import { Tabs } from '../dom/toggleButtons'
 import { renderTable } from '../dom/table'
 import { table2col } from '../dom/table2col'
 import { fileSize } from '#shared/fileSize'
+import { keyupEnter } from './client'
 
 /*
 
@@ -293,8 +294,13 @@ export async function bamsliceui({
 			.attr('class', 'sja-gdcbam-input') // for testing
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
 			.on('search', searchByGdcInputString)
-			.on('keyup', () => {
-				// do not debounce search on keyup. this avoid an err when hitting Enter too fast after entering string, that will trigger both "search" and "keyup" listeners and cause it to search twice (and show ssm table twice). also by not listening to keyup it allows users to manually type in search string without being interrupted, thus should be okay..
+			.on('keyup', event => {
+				if (keyupEnter(event)) {
+					// press Enter to trigger search; this is needed as when embedded in GFF, "search" event above is not triggered by hitting Enter
+					searchByGdcInputString()
+					return
+				}
+				// not pressed Enter, and do not debounce search. this avoid an err when hitting Enter too fast after entering string, that will trigger both "search" and "keyup" listeners and cause it to search twice (and show ssm table twice). also by not listening to keyup it allows users to manually type in search string without being interrupted, thus should be okay..
 				gdc_loading.style('display', '').text('Press ENTER to search') // prompt
 				gdcid_error_div.style('display', 'none')
 			})
@@ -929,7 +935,7 @@ export async function bamsliceui({
 				// data is binary blob
 
 				if (!(await blobEndsWithBytes(data, bamEOF))) {
-					// incorrect bam and missing EOF, must be from truncated oversized file
+					// incorrect bam and missing EOF, must be truncating of an oversized file slice
 					// indicate cutoff to user to be helpful. access optionalFeatures to get cutoff size because not possible to pass it from this response here
 					sayerror(
 						saydiv,
