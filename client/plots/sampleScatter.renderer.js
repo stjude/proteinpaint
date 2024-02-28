@@ -85,7 +85,10 @@ export function setRenderers(self) {
 
 	function renderSVG(chart, s) {
 		const svg = chart.svg
-		let colorLegendSize = chart.colorLegend.size * 25
+
+		let step = Math.min((20 * 40) / chart.colorLegend.size, 25)
+		if (step < 10) step = 10
+		let colorLegendSize = chart.colorLegend.size * step
 		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegendSize += 60
 		const scaleHeight = self.config.scaleDotTW ? 200 : 100
 		self.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
@@ -104,7 +107,7 @@ export function setRenderers(self) {
 		else if (self.is2DLarge) self.render2DSerieLarge(chart)
 		else {
 			renderSerie(chart, s.duration)
-			self.renderLegend(chart)
+			self.renderLegend(chart, step)
 		}
 	}
 
@@ -170,7 +173,7 @@ export function setRenderers(self) {
 		}
 		chart.xAxis.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
 
-		chart.legendG.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
+		chart.legendG.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 20)`)
 		if (chart.axisBottom) {
 			chart.xAxis.call(chart.axisBottom)
 			chart.yAxis.call(chart.axisLeft)
@@ -664,10 +667,9 @@ export function setRenderers(self) {
 			})
 	}
 
-	self.renderLegend = function (chart) {
+	self.renderLegend = function (chart, step) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
-		const step = chart.colorLegend.size > 20 ? 18 : 25
 		let offsetX = 0
 		let offsetY = 25
 		if (!self.config.colorTW && !self.config.shapeTW) {
@@ -679,7 +681,9 @@ export function setRenderers(self) {
 		}
 
 		let title
-		const colorG = legendG.append('g').style('font-size', chart.colorLegend.size > 20 ? '0.7em' : '0.9em')
+		let fontSize = Math.min(0.8, 20 / chart.colorLegend.size)
+		if (fontSize < 0.5) fontSize = 0.5
+		const colorG = legendG.style('font-size', `${fontSize}em`)
 
 		const title0 = self.config.term0
 			? `${chart.id}, n=${chart.cohortSamples.length}`
@@ -708,7 +712,6 @@ export function setRenderers(self) {
 					.attr('y', offsetY)
 					.text(title)
 					.style('font-weight', 'bold')
-					.style('font-size', '0.8em')
 				offsetY += step
 
 				if (self.config.colorTW.q.mode === 'continuous') {
@@ -765,13 +768,7 @@ export function setRenderers(self) {
 			if (colorRefCategory.sampleCount > 0) {
 				offsetY = offsetY + step
 				const titleG = legendG.append('g')
-				titleG
-					.append('text')
-					.attr('x', offsetX)
-					.attr('y', offsetY)
-					.text('Reference')
-					.style('font-weight', 'bold')
-					.style('font-size', '0.8em')
+				titleG.append('text').attr('x', offsetX).attr('y', offsetY).text('Reference').style('font-weight', 'bold')
 
 				offsetY = offsetY + step
 
@@ -792,9 +789,7 @@ export function setRenderers(self) {
 					.attr('y', offsetY)
 					.text(`n=${colorRefCategory.sampleCount}`)
 					.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
-					.style('font-size', '15px')
 					.attr('alignment-baseline', 'middle')
-					.style('font-size', '0.8em')
 
 				refText.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', 'Ref', e, colorRefCategory))
 			}
@@ -811,13 +806,8 @@ export function setRenderers(self) {
 				self.renderGeneVariantLegend(chart, offsetX, offsetY, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
 				const shapeG = legendG.append('g')
-				shapeG
-					.append('text')
-					.attr('x', offsetX)
-					.attr('y', offsetY)
-					.text(title)
-					.style('font-weight', 'bold')
-					.style('font-size', '0.8em')
+
+				shapeG.append('text').attr('x', offsetX).attr('y', offsetY).text(title).style('font-weight', 'bold')
 				offsetY += step + 10
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
@@ -841,10 +831,8 @@ export function setRenderers(self) {
 						.attr('x', offsetX + 10)
 						.attr('y', offsetY)
 						.text(`${name}, n=${count}`)
-						.style('font-size', '15px')
 						.style('text-decoration', hidden ? 'line-through' : 'none')
 						.attr('alignment-baseline', 'middle')
-						.style('font-size', '0.8em')
 					offsetY += step
 					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event, shape))
 				}
@@ -858,7 +846,7 @@ export function setRenderers(self) {
 		}
 
 		function addLegendItem(g, category, name, x, y, hidden = false) {
-			const radius = 5
+			const radius = Math.min((5 * 40) / chart.colorLegend.size, 5)
 
 			const circleG = g.append('g')
 			circleG
@@ -877,10 +865,8 @@ export function setRenderers(self) {
 				.attr('x', x + 10)
 				.attr('y', y)
 				.text(`${name}, n=${category.sampleCount}`)
-				.style('font-size', '15px')
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
-				.style('font-size', '0.8em')
 
 			return [circleG, itemG]
 		}
@@ -896,7 +882,7 @@ export function setRenderers(self) {
 		const order = self.settings.scaleDotOrder
 		const titleG = scaleG.append('g')
 
-		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-size', '.8em').style('font-weight', 'bold')
+		titleG.append('text').text(self.config.scaleDotTW.term.name).style('font-weight', 'bold')
 		let start = chart.scaleMin
 		if (start % 1 != 0) start = start.toFixed(1)
 		let end = chart.scaleMax
