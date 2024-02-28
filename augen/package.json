@@ -24,7 +24,8 @@
   },
   "devDependencies": {
     "express": "^4.17.1",
-    "tape": "^5.2.2"
+    "tape": "^5.2.2",
+    "tsx": "^4.7.1"
   },
   "files": [
     "src",
