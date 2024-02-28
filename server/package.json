@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-server",
-  "version": "2.43.2",
+  "version": "2.43.3-0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
   "bin": "start.js",
@@ -57,7 +57,7 @@
     "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
-    "@sjcrh/augen": "2.35.0",
+    "@sjcrh/augen": "2.43.3-0",
     "@sjcrh/proteinpaint-rust": "2.40.6",
     "better-sqlite3": "^9.4.1",
     "body-parser": "^1.15.2",
