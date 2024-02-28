@@ -2,3 +2,4 @@ test/checkers
 test/types/*.js
 public/docs/*
 public/server-api.json
+**/*.js

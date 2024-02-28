@@ -6,10 +6,10 @@
   "main": "src/augen.js",
   "bin": "cli.js",
   "scripts": {
-    "predev": "ts-node-esm test/prep.js",
-    "dev": "ts-node-esm test/app.js",
-    "pretest": "ts-node-esm test/prep.js && typia generate --input test/checkers-raw --output test/checkers",
-    "test": "ts-node-esm test/unit.spec.js",
+    "predev": "tsx test/prep.js",
+    "dev": "npm run doc && tsx watch test/app.js",
+    "pretest": "tsx test/prep.js && typia generate --input test/checkers-raw --output test/checkers",
+    "test": "tsx test/unit.spec.js",
     "doc": "./build.sh test/routes test/types test/checkers public/docs"
   },
   "author": "",
@@ -24,7 +24,8 @@
   },
   "devDependencies": {
     "express": "^4.17.1",
-    "tape": "^5.2.2"
+    "tape": "^5.2.2",
+    "tsx": "^4.7.1"
   },
   "files": [
     "src",

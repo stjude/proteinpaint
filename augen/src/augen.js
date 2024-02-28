@@ -50,6 +50,7 @@ export function typeCheckers(fileRoutes, fromPath) {
 	const importLines = [`import { createValidate } from 'typia'`]
 	const createLines = []
 	for (const file in typeIdsByFile) {
+		if (file.endsWith('.js')) continue
 		const typeIds = Array.from(typeIdsByFile[file])
 		importLines.push(`import { ${typeIds.join(', ')} } from '${fromPath}/${file}'`)
 		for (const typeId of typeIds) {

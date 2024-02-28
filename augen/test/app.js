@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const files = readdirSync(join(__dirname, './routes'))
-const endpoints = files.filter(f => f.endsWith('.ts') || f.endsWith('.js'))
+const endpoints = files.filter(f => f.endsWith('.ts')) //|| f.endsWith('.js'))
 const port = 'PORT' in process.env ? Number(process.env.PORT) : 8999
 init({ port })
 
@@ -19,7 +19,6 @@ async function init(opts = {}) {
 			return Object.assign({ file, basepath }, route)
 		})
 	)
-	//console.log(endpoints, routes)
 
 	const app = express()
 	const staticService = express.static(join(__dirname, '../public'))
