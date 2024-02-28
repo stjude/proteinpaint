@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.43.2
 
 Fixes:
 - GDC BAM slicing will be terminated if slice file size exceeds a limit (user is informed)
