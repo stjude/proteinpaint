@@ -39,12 +39,22 @@ export function setAutoDimensions(xOffset) {
 		const totalColgspace = s.colgspace * Math.max(0, this.visibleSampleGrps.size - 1)
 		const tentativeGaps = this.sampleOrder.length * s.colspace + totalColgspace
 		const spacedColw = (this.availContentWidth - tentativeGaps) / this.sampleOrder.length
+		// tentativeColw is the colw after removing the colspace
 		const tentativeColw = Math.max(s.colwMin, Math.min(spacedColw, s.colwMax))
 		// detect if using colspace will cause the tentative computed widths to be exceeded
-		if (s.zoomLevel * tentativeColw < 2) {
-			this.computedSettings.colw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
-			this.computedSettings.colspace = s.zoomLevel <= 1 || s.zoomLevel * this.computedSettings.colw < 2 ? 0 : s.colspace
+
+		// noSpacedColw is the colw without removing the colspace
+		const noSpacedColw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
+		const colwNoSpace = Math.max(s.colwMin, Math.min(noSpacedColw, s.colwMax))
+
+		// when zoomlevel < 1 or when cell has very small width, do not show colspace,
+		// and set colw without considering colspace
+		if (s.zoomLevel < 1 || colwNoSpace * s.zoomLevel < 2) {
+			// do not show colspace
+			this.computedSettings.colw = noSpacedColw
+			this.computedSettings.colspace = 0
 		} else {
+			// show colspace
 			this.computedSettings.colw = tentativeColw
 			this.computedSettings.colspace = s.colspace
 		}
