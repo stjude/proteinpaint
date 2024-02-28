@@ -1,10 +1,10 @@
-import { stratinput } from '#shared/tree'
-import { querySamples_gdcapi } from './mds3.gdc'
-import { get_densityplot } from './mds3.densityPlot'
-import * as utils from './utils'
-import { dtfusionrna, dtsv } from '#shared/common'
-import * as geneDbSearch from './gene'
-import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix'
+import { stratinput } from '#shared/tree.js'
+import { querySamples_gdcapi } from './mds3.gdc.js'
+import { get_densityplot } from './mds3.densityPlot.js'
+import * as utils from './utils.js'
+import { dtfusionrna, dtsv } from '#shared/common.js'
+import * as geneDbSearch from './gene.js'
+import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix.js'
 
 export const ssmIdFieldsSeparator = '.'
 

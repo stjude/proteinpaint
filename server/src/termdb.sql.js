@@ -1,11 +1,11 @@
-import * as binsmodule from '#shared/termdb.bins'
-import { getFilterCTEs } from './termdb.filter'
-import * as numericSql from './termdb.sql.numeric'
-import * as categoricalSql from './termdb.sql.categorical'
-import * as conditionSql from './termdb.sql.condition'
-import { sampleLstSql } from './termdb.sql.samplelst'
-import * as serverconfig from './serverconfig'
-import { boxplot_getvalue } from './utils'
+import * as binsmodule from '#shared/termdb.bins.js'
+import { getFilterCTEs } from './termdb.filter.js'
+import * as numericSql from './termdb.sql.numeric.js'
+import * as categoricalSql from './termdb.sql.categorical.js'
+import * as conditionSql from './termdb.sql.condition.js'
+import { sampleLstSql } from './termdb.sql.samplelst.js'
+import * as serverconfig from './serverconfig.js'
+import { boxplot_getvalue } from './utils.js'
 /*
 
 ********************** EXPORTED

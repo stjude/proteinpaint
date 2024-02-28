@@ -1,11 +1,11 @@
-import * as common from '#shared/common'
-import { compute_bins } from '#shared/termdb.bins'
+import * as common from '#shared/common.js'
+import { compute_bins } from '#shared/termdb.bins.js'
 import ky from 'ky'
 import path from 'path'
-import { combineSamplesById } from './mds3.variant2samples'
-import { filter2GDCfilter } from './mds3.gdc.filter'
-import { write_tmpfile } from './utils'
-import serverconfig from './serverconfig'
+import { combineSamplesById } from './mds3.variant2samples.js'
+import { filter2GDCfilter } from './mds3.gdc.filter.js'
+import { write_tmpfile } from './utils.js'
+import serverconfig from './serverconfig.js'
 
 // convenient helper to only print log on dev environments, and reduce pollution on prod
 // TODO move to utils.js, also fix use of _serverconfig
