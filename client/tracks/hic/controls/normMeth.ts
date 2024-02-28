@@ -8,10 +8,10 @@ export class NormalizationMethodControl {
 	normalization: string[]
 	nmethselect: any
 
-	constructor(app: any, state: any, dom: any, normalization: string[]) {
+	constructor(app: any, dom: any, normalization: string[], state?: any) {
 		this.app = app
 		this.state = state
-		this.defaultNmeth = state.defaultNmeth
+		this.defaultNmeth = state.defaultNmeth || `NONE`
 		this.holder = dom
 		this.normalization = normalization
 	}
@@ -24,10 +24,18 @@ export class NormalizationMethodControl {
 				.style('margin-right', '10px')
 				.append('select')
 				.on('change', async () => {
-					this.app.dispatch({
-						type: 'view_update',
-						view: this.state.currView
-					})
+					const nmeth = this.nmethselect.node().value
+					if (this.state) {
+						this.app.dispatch({
+							type: 'view_update',
+							view: this.state.currView,
+							config: {
+								nmeth: nmeth
+							}
+						})
+					} else {
+						//stateless response
+					}
 				})
 			for (const n of this.normalization) {
 				this.nmethselect.append('option').text(n)

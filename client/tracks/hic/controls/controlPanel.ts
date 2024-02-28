@@ -114,7 +114,7 @@ class ControlPanel {
 		const normalizationRow = menuTable.append('tr') as any
 		this.addLabel(normalizationRow, 'NORMALIZATION')
 		this.controls.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select') as any
-		new NormalizationMethodControl(this.app, this.state, this.controls.nmeth, this.hic.normalization).render()
+		new NormalizationMethodControl(this.app, this.controls.nmeth, this.hic.normalization, this.state).render()
 
 		//***Cutoffs
 		//Min CUTOFF
@@ -142,7 +142,7 @@ class ControlPanel {
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
 		this.addLabel(matrixTypeRow, 'matrix type')
-		this.controls.matrixType = new MatrixTypeControl(this.app, matrixTypeRow.append('td')).render()
+		this.controls.matrixType = new MatrixTypeControl(this.app, matrixTypeRow.append('td'), this.state).render()
 
 		const viewRow = menuTable.append('tr') as any
 		this.addLabel(viewRow, 'VIEW')
