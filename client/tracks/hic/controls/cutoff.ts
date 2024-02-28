@@ -1,4 +1,5 @@
-import { Elem } from '../../../types/d3'
+import { Input, Elem } from '../../../types/d3'
+import { debounce } from 'debounce'
 
 export class CutoffControl {
 	app: any
@@ -14,19 +15,24 @@ export class CutoffControl {
 	}
 
 	render() {
-		this.holder
+		const cutoffDiv = this.holder
 			.style('margin-right', '10px')
 			.append('input')
 			.attr('type', 'number')
 			.style('width', '80px')
 			.style('margin-left', '0px')
 			.attr('type', 'number')
-			//Replace with view value or passed value
 			.property('value', this.value)
 			.on('change', async () => {
-				//Replace with get_data() -> app.dispatch()
-				//Maybe add setTimeout or Apply button for this?
-				//Probably a good idea to add a debounce function or Apply button for both cutoffs
+				debounce(() => {
+					this.app.dispatch({
+						type: 'view_update',
+						view: this.view,
+						config: {
+							cutoff: cutoffDiv.node()!.value
+						}
+					})
+				}, 300)
 			})
 	}
 }

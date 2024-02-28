@@ -25,6 +25,7 @@ HicStore.prototype.actions = {
 	},
 	view_update(action) {
 		if (!action.view) throw Error('view_update: missing view')
-		//TODO: when data in the view changes (e.g. user changes something in the control panel), the other components are notified of the change.
+		const opts = Object.assign(this.state[action.view], action.config)
+		this.state[action.view] = opts
 	}
 }
