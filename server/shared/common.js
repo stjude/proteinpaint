@@ -1061,13 +1061,19 @@ export const schemeCategory20 = [
 export const schemeCategory2 = ['#e75480', 'blue']
 
 export function getColorScheme(number) {
+	if (number > 20) {
+		const scheme = []
+		for (let i = 0; i < number; i++) scheme.push(d3.interpolateRainbow(i / number))
+		return scheme
+	}
 	if (number > 12) return schemeCategory20
 	else if (number > 8) return d3.schemePaired
 	else if (number > 2) return d3.schemeDark2
 	else return schemeCategory2
 }
 export function getColors(number) {
-	return d3scale.scaleOrdinal(getColorScheme(number))
+	const scheme = getColorScheme(number)
+	return d3scale.scaleOrdinal(scheme)
 }
 
 export const truncatingMutations = ['F', 'N', 'D', 'I', 'L']
