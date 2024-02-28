@@ -1,7 +1,7 @@
 import got from 'got'
 import path from 'path'
-import { isUsableTerm } from '#shared/termdb.usecase'
-import serverconfig from './serverconfig'
+import { isUsableTerm } from '#shared/termdb.usecase.js'
+import serverconfig from './serverconfig.js'
 import { cachedFetch } from './utils'
 
 /*

@@ -1,11 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
-import * as utils from './utils'
-import * as vcf from '#shared/vcf'
-import * as common from '#shared/common'
-import * as termdbsql from './termdb.sql'
-import * as lines2R from './lines2R'
+import * as utils from './utils.js'
+import * as vcf from '#shared/vcf.js'
+import * as common from '#shared/common.js'
+import * as termdbsql from './termdb.sql.js'
+import * as lines2R from './lines2R.js'
 
 /*
 ********************** EXPORTED

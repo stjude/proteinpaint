@@ -1,8 +1,8 @@
-import * as utils from './utils'
-import * as vcf from '#shared/vcf'
+import * as utils from './utils.js'
+import * as vcf from '#shared/vcf.js'
 import { scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
-import * as termdbsql from './termdb.sql'
+import * as termdbsql from './termdb.sql.js'
 
 /*
 ********************** EXPORTED
