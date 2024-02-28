@@ -18,6 +18,9 @@ export class HicView {
 	genomeView: any
 	//hasStatePreMain: boolean
 	app: any
+	data: number[][]
+	min: number
+	max: number
 
 	constructor(opts) {
 		this.type = 'view'
@@ -33,7 +36,9 @@ export class HicView {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		this.app = opts.app
-		//this.hasStatePreMain = true
+		this.data = opts.data
+		this.min = opts.min
+		this.max = opts.max
 	}
 
 	// getState(appState: any) {
@@ -50,7 +55,10 @@ export class HicView {
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				state: this.state,
-				app: this.app
+				app: this.app,
+				data: this.data,
+				min: this.min,
+				max: this.max
 			})
 			this.genomeView.render()
 		} else if (this.state.currView === 'chrpair') {
@@ -76,8 +84,6 @@ export const hicViewInit = getCompInit(HicView)
  * @param lead lead chr
  * @param follow following chr
  * @param v returned value from straw
- * @param view either genomeview, chrpairview, or detailview
- * @param self
  * @param obj obj to color
  * @param width if no .binpx for the view, must provied width
  * @param height if no .binpx for the view, must provied width
@@ -86,17 +92,17 @@ export async function colorizeElement(
 	lead: number,
 	follow: number,
 	v: number,
-	view: any,
-	self: any,
+	bpmaxv: number,
+	state: any,
 	obj: any,
 	width?: number,
 	height?: number
 ) {
 	if (v >= 0) {
 		// positive or zero, use red
-		const p = v >= view.bpmaxv ? 0 : Math.floor((255 * (view.bpmaxv - v)) / view.bpmaxv)
+		const p = v >= bpmaxv ? 0 : Math.floor((255 * (bpmaxv - v)) / bpmaxv)
 		const positiveFill = `rgb(255, ${p}, ${p})`
-		if (self.ingenome == true) {
+		if (state.currView === 'genome') {
 			obj.ctx.fillStyle = positiveFill
 			obj.ctx2.fillStyle = positiveFill
 		} else {
@@ -105,39 +111,22 @@ export async function colorizeElement(
 		}
 	} else {
 		// negative, use blue
-		const p = Math.floor((255 * (view.bpmaxv + v)) / view.bpmaxv)
+		const p = Math.floor((255 * (bpmaxv + v)) / bpmaxv)
 		const negativeFill = `rgb(${p}, ${p}, 255)`
-		if (self.ingenome == true) {
+		if (state.currView === 'genome') {
 			obj.ctx.fillStyle = negativeFill
 			obj.ctx2.fillStyle = negativeFill
 		} else {
 			obj.fillStyle = negativeFill
 		}
 	}
-	const w = width || view.binpx
-	const h = height || view.binpx
+	const w = width
+	const h = height
 
-	if (self.ingenome == true) {
+	if (state.currView === 'genome') {
 		obj.ctx.fillRect(follow, lead, w, h)
 		obj.ctx2.fillRect(lead, follow, w, h)
 	} else {
 		obj.fillRect(lead, follow, w, h)
 	}
-}
-
-export async function setViewCutoff(vlst: any, view: any, self: any) {
-	const sortedVlst = vlst.sort((a: number, b: number) => a - b)
-	const maxv = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
-	view.bpmaxv = maxv
-	self.dom.controlsDiv.inputBpMaxv.property('value', view.bpmaxv)
-
-	if (sortedVlst[0] < 0) {
-		self.colorScale.bar.startColor = self.colorBar.startColor = 'blue'
-		self.colorScale.data = [sortedVlst[0], maxv]
-	} else {
-		self.colorScale.bar.startColor = self.colorBar.startColor = 'white'
-		self.colorScale.data = [0, maxv]
-	}
-
-	self.colorScale.updateScale()
 }
