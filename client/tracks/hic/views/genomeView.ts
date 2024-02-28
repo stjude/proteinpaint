@@ -35,10 +35,6 @@ export class GenomeView {
 	state: any
 	plotDiv: MainPlotDiv
 	resolution: number
-	nmeth: string
-	matrixType: string
-	min: number
-	max: number
 
 	/** Dom */
 	tip = new client.Menu()
@@ -75,10 +71,6 @@ export class GenomeView {
 		this.layer_sv = this.svg.append('g')
 		this.resolution = opts.hic.bpresolution[0]
 		this.app = opts.app
-		this.matrixType = opts.matrixType || 'observed'
-		this.nmeth = opts.state.defaultNmeth
-		this.min = opts.min
-		this.max = opts.max
 	}
 
 	renderGrid() {
@@ -453,7 +445,7 @@ export class GenomeView {
 				const leadpx = Math.floor(plead / this.resolution) * this.binpx
 				const followpx = Math.floor(pfollow / this.resolution) * this.binpx
 				obj.data.push([leadpx, followpx, value])
-				colorizeElement(leadpx, followpx, value, this.max, this.state, obj, this.binpx, this.binpx)
+				colorizeElement(leadpx, followpx, value, this.state.genome.max, this.state, obj, this.binpx, this.binpx)
 			}
 			obj.img.attr('xlink:href', obj.canvas.toDataURL())
 			if (obj.canvas2) {
