@@ -1,6 +1,6 @@
 import { SvgSvg, SvgG } from '../../../types/d3'
 //import { Selection } from 'd3-selection'
-import { colorizeElement } from './view' //add setViewCutoff
+import { colorizeElement } from './view'
 //import * as client from '#src/client'
 //import blocklazyload from '#src/block.lazyload'
 
@@ -37,6 +37,8 @@ export class GenomeView {
 	resolution: number
 	nmeth: string
 	matrixType: string
+	min: number
+	max: number
 
 	/** Dom */
 	tip = new client.Menu()
@@ -49,7 +51,7 @@ export class GenomeView {
 	/** Data */
 	/** px width for each chr */
 	chr2px = {}
-	lead2follow = new Map() //Map<string, Map<string, { x: number; y: number }>>
+	lead2follow: any = new Map()
 	data: any = []
 	values: number[] = []
 
@@ -67,6 +69,7 @@ export class GenomeView {
 		this.hic = opts.hic
 		this.state = opts.state
 		this.plotDiv = opts.plotDiv
+		this.data = opts.data
 		this.svg = this.plotDiv.plot.append('svg')
 		this.layer_map = this.svg.append('g')
 		this.layer_sv = this.svg.append('g')
@@ -74,6 +77,8 @@ export class GenomeView {
 		this.app = opts.app
 		this.matrixType = opts.matrixType || 'observed'
 		this.nmeth = opts.state.defaultNmeth
+		this.min = opts.min
+		this.max = opts.max
 	}
 
 	renderGrid() {
@@ -138,8 +143,8 @@ export class GenomeView {
 			if (checker_row) {
 				this.layer_map
 					.append('rect')
-					.attr('x', -hardcode_wholegenomechrlabwidth)
-					.attr('width', hardcode_wholegenomechrlabwidth)
+					.attr('x', -this.defaultChrLabWidth)
+					.attr('width', this.defaultChrLabWidth)
 					.attr('height', chrh)
 					.attr('y', this.yoff)
 					.attr('fill', checker_fill)
@@ -168,10 +173,9 @@ export class GenomeView {
 	}
 
 	setLeadFollowMap() {
-		const manychr = this.hic.atdev ? this.atdev_chrnum : this.hic.chrlst.length
 		this.xoff = 0
 
-		for (let i = 0; i < manychr; i++) {
+		for (let i = 0; i < this.hic.chrlst.length; i++) {
 			const lead = this.hic.chrlst[i]
 			this.lead2follow.set(lead, new Map())
 
@@ -179,6 +183,7 @@ export class GenomeView {
 
 			for (let j = 0; j <= i; j++) {
 				const follow = this.hic.chrlst[j]
+
 				this.lead2follow!.get(lead)!.set(follow, {
 					x: this.xoff,
 					y: this.yoff
@@ -201,6 +206,8 @@ export class GenomeView {
 
 		obj.canvas = this.hic.holder.append('canvas').style('display', 'none').node()
 
+		obj.ctx = obj.canvas.getContext('2d')
+
 		obj.canvas.width = xbins * this.binpx
 		obj.canvas.height = ybins * this.binpx
 
@@ -221,7 +228,7 @@ export class GenomeView {
 				})
 			})
 			.on('mouseover', () => {
-				chrpair_mouseover(self, obj.img, lead, follow)
+				this.showChrPair_mouseover(obj.img, lead, follow)
 			})
 
 		if (lead != follow) {
@@ -295,13 +302,13 @@ export class GenomeView {
 				.attr('cy', obj.y + p2)
 				.attr('r', radius)
 				.on('mouseover', (event: MouseEvent) => {
-					tooltip_sv(event, this.hic, item)
+					this.tooltipSv(event, item)
 				})
 				.on('mouseout', () => {
 					this.tip.hide()
 				})
 				.on('click', () => {
-					click_sv(this.hic, item)
+					this.clickSv(item)
 				})
 
 			if (obj.img2) {
@@ -413,6 +420,7 @@ export class GenomeView {
 	async render() {
 		//Update info bar
 		this.renderGrid()
+		this.setLeadFollowMap()
 
 		if (this.hic.sv && this.hic.sv.items) {
 			this.makeSv()
@@ -433,65 +441,30 @@ export class GenomeView {
 		await this.makeElements()
 	}
 
-	async makeElements(manychrArg?: number) {
-		const manychr = manychrArg || (this.hic.atdev ? atdev_chrnum : this.hic.chrlst.length)
-
-		//dataMapper.getData()
-
-		// await setViewCutoff(vlst, self.genomeview, self)
-
-		// await colorizeGenomeElements(self)
+	async makeElements() {
+		for (const data of this.data) {
+			const obj = this.lead2follow.get(data.lead).get(data.follow)
+			obj.data = [] as any
+			obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
+			if (obj.canvas2) {
+				obj.ctx2.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
+			}
+			for (const [plead, pfollow, value] of data.items) {
+				const leadpx = Math.floor(plead / this.resolution) * this.binpx
+				const followpx = Math.floor(pfollow / this.resolution) * this.binpx
+				obj.data.push([leadpx, followpx, value])
+				colorizeElement(leadpx, followpx, value, this.max, this.state, obj, this.binpx, this.binpx)
+			}
+			obj.img.attr('xlink:href', obj.canvas.toDataURL())
+			if (obj.canvas2) {
+				obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
+			}
+		}
 	}
 }
 
-/*
-
-********************** EXPORTED
-
-init_hicstraw()
-showBtns()
-makeWholeGenomeElements()
-getdata_chrpair()
-nmeth2select()
-matrixType2select()
-getdata_detail()
-hicparsefragdata()
-setViewCutoff()
-
-********************** INTERNAL
-
-initialize views
-
-	init_wholeGenomeView()
-		.genomeView
-
-	init_chrPairView()
-		.chrpairview
-
-	init_horizontalView()
-		.horizontalview
-
-	init_detailView()
-		.detailview
-
-
-hic data getter and canvas painter
-
-	makeWholeGenomeElements()
-	getdata_chrpair()
-	getdata_detail()
-
-
-
-JumpTo:  __detail  __whole
-
-
-hic.atdev controls dev-shortings
-
-*/
-
-/** Default normalization method if none returned from the server. Exported to parsing and controls script*/
-export const defaultnmeth = 'NONE'
+// /** Default normalization method if none returned from the server. Exported to parsing and controls script*/
+// export const defaultnmeth = 'NONE'
 
 const atdev_chrnum = 8
 
@@ -662,163 +635,163 @@ class Hicstat {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		/** Open the whole genome view by default. User clicks within squares to launch the other views. */
-		await this.init_wholeGenomeView(hic)
+		//await this.init_wholeGenomeView(hic)
 	}
 
-	async init_wholeGenomeView(hic: any) {
-		this.dom.loadingDiv.style('display', '')
-		this.dom.controlsDiv.view.text('Genome')
-		const resolution = hic.bpresolution[0]
+	// async init_wholeGenomeView(hic: any) {
+	// 	this.dom.loadingDiv.style('display', '')
+	// 	this.dom.controlsDiv.view.text('Genome')
+	// 	const resolution = hic.bpresolution[0]
 
-		this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
+	// 	this.dom.infoBarDiv.resolution.text(common.bplen(resolution) + ' bp')
 
-		// # pixel per bin, may set according to resolution
-		const binpx = 1
+	// 	// # pixel per bin, may set according to resolution
+	// 	const binpx = 1
 
-		// for each chr, a row as canvas container
-		this.genomeview.svg = this.dom.plotDiv.plot.append('svg')
-		this.genomeview.resolution = resolution
+	// 	// for each chr, a row as canvas container
+	// 	this.genomeview.svg = this.dom.plotDiv.plot.append('svg')
+	// 	this.genomeview.resolution = resolution
 
-		const fontsize = 15 // chr labels
-		const borderwidth = 1
-		const spacecolor = '#ccc'
+	// 	const fontsize = 15 // chr labels
+	// 	const borderwidth = 1
+	// 	const spacecolor = '#ccc'
 
-		// heatmap layer underneath sv
-		const layer_map = this.genomeview.svg
-			.append('g')
-			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-		this.genomeview.layer_map = layer_map
-		const layer_sv = this.genomeview.svg
-			.append('g')
-			.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
-		this.genomeview.layer_sv = layer_sv
+	// 	// heatmap layer underneath sv
+	// 	const layer_map = this.genomeview.svg
+	// 		.append('g')
+	// 		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
+	// 	this.genomeview.layer_map = layer_map
+	// 	const layer_sv = this.genomeview.svg
+	// 		.append('g')
+	// 		.attr('transform', 'translate(' + hardcode_wholegenomechrlabwidth + ',' + fontsize + ')')
+	// 	this.genomeview.layer_sv = layer_sv
 
-		let checker_row = true
+	// 	let checker_row = true
 
-		const chr2px = {} // px width for each chr
-		let totalpx = hic.chrlst.length
-		for (const chr of hic.chrlst) {
-			const w = Math.ceil(hic.genome.chrlookup[chr.toUpperCase()].len / resolution) * binpx
-			chr2px[chr] = w
-			totalpx += w
-		}
-		const checker_fill = '#DEF3FA'
-		let xoff = 0
-		// column labels
-		for (const chr of hic.chrlst) {
-			const chrw = chr2px[chr]
-			if (checker_row) {
-				layer_map
-					.append('rect')
-					.attr('x', xoff)
-					.attr('width', chrw)
-					.attr('height', fontsize)
-					.attr('y', -fontsize)
-					.attr('fill', checker_fill)
-			}
-			checker_row = !checker_row
-			layer_map
-				.append('text')
-				.attr('font-family', client.font)
-				.attr('text-anchor', 'middle')
-				.attr('font-size', 12)
-				.attr('x', xoff + chrw / 2)
-				.text(chr)
+	// 	const chr2px = {} // px width for each chr
+	// 	let totalpx = hic.chrlst.length
+	// 	for (const chr of hic.chrlst) {
+	// 		const w = Math.ceil(hic.genome.chrlookup[chr.toUpperCase()].len / resolution) * binpx
+	// 		chr2px[chr] = w
+	// 		totalpx += w
+	// 	}
+	// 	const checker_fill = '#DEF3FA'
+	// 	let xoff = 0
+	// 	// column labels
+	// 	for (const chr of hic.chrlst) {
+	// 		const chrw = chr2px[chr]
+	// 		if (checker_row) {
+	// 			layer_map
+	// 				.append('rect')
+	// 				.attr('x', xoff)
+	// 				.attr('width', chrw)
+	// 				.attr('height', fontsize)
+	// 				.attr('y', -fontsize)
+	// 				.attr('fill', checker_fill)
+	// 		}
+	// 		checker_row = !checker_row
+	// 		layer_map
+	// 			.append('text')
+	// 			.attr('font-family', client.font)
+	// 			.attr('text-anchor', 'middle')
+	// 			.attr('font-size', 12)
+	// 			.attr('x', xoff + chrw / 2)
+	// 			.text(chr)
 
-			xoff += chrw
-			layer_sv
-				.append('line')
-				.attr('x1', xoff)
-				.attr('x2', xoff)
-				.attr('y2', totalpx)
-				.attr('stroke', spacecolor)
-				.attr('shape-rendering', 'crispEdges')
+	// 		xoff += chrw
+	// 		layer_sv
+	// 			.append('line')
+	// 			.attr('x1', xoff)
+	// 			.attr('x2', xoff)
+	// 			.attr('y2', totalpx)
+	// 			.attr('stroke', spacecolor)
+	// 			.attr('shape-rendering', 'crispEdges')
 
-			xoff += borderwidth
-		}
+	// 		xoff += borderwidth
+	// 	}
 
-		let yoff = 0
-		checker_row = true
+	// 	let yoff = 0
+	// 	checker_row = true
 
-		// row labels
-		for (const chr of hic.chrlst!) {
-			const chrh = chr2px[chr]
-			if (checker_row) {
-				layer_map
-					.append('rect')
-					.attr('x', -hardcode_wholegenomechrlabwidth)
-					.attr('width', hardcode_wholegenomechrlabwidth)
-					.attr('height', chrh)
-					.attr('y', yoff)
-					.attr('fill', checker_fill)
-			}
-			checker_row = !checker_row
-			layer_map
-				.append('text')
-				.attr('font-family', client.font)
-				.attr('text-anchor', 'end')
-				.attr('dominant-baseline', 'central')
-				.attr('font-size', 12)
-				.attr('y', yoff + chrh / 2)
-				.text(chr)
+	// 	// row labels
+	// 	for (const chr of hic.chrlst!) {
+	// 		const chrh = chr2px[chr]
+	// 		if (checker_row) {
+	// 			layer_map
+	// 				.append('rect')
+	// 				.attr('x', -hardcode_wholegenomechrlabwidth)
+	// 				.attr('width', hardcode_wholegenomechrlabwidth)
+	// 				.attr('height', chrh)
+	// 				.attr('y', yoff)
+	// 				.attr('fill', checker_fill)
+	// 		}
+	// 		checker_row = !checker_row
+	// 		layer_map
+	// 			.append('text')
+	// 			.attr('font-family', client.font)
+	// 			.attr('text-anchor', 'end')
+	// 			.attr('dominant-baseline', 'central')
+	// 			.attr('font-size', 12)
+	// 			.attr('y', yoff + chrh / 2)
+	// 			.text(chr)
 
-			yoff += chrh
-			layer_sv
-				.append('line')
-				.attr('x2', totalpx)
-				.attr('y1', yoff)
-				.attr('y2', yoff)
-				.attr('stroke', spacecolor)
-				.attr('shape-rendering', 'crispEdges')
+	// 		yoff += chrh
+	// 		layer_sv
+	// 			.append('line')
+	// 			.attr('x2', totalpx)
+	// 			.attr('y1', yoff)
+	// 			.attr('y2', yoff)
+	// 			.attr('stroke', spacecolor)
+	// 			.attr('shape-rendering', 'crispEdges')
 
-			yoff += borderwidth
-		}
+	// 		yoff += borderwidth
+	// 	}
 
-		const manychr = hic.atdev ? atdev_chrnum : hic.chrlst.length
-		xoff = 0
+	// 	const manychr = hic.atdev ? atdev_chrnum : hic.chrlst.length
+	// 	xoff = 0
 
-		for (let i = 0; i < manychr; i++) {
-			const lead = hic.chrlst[i]
-			this.genomeview!.lead2follow!.set(lead, new Map())
+	// 	for (let i = 0; i < manychr; i++) {
+	// 		const lead = hic.chrlst[i]
+	// 		this.genomeview!.lead2follow!.set(lead, new Map())
 
-			yoff = 0
+	// 		yoff = 0
 
-			for (let j = 0; j <= i; j++) {
-				const follow = hic.chrlst[j]
-				this.genomeview!.lead2follow!.get(lead)!.set(follow, {
-					x: xoff,
-					y: yoff
-				})
-				makewholegenome_chrleadfollow(hic, lead, follow, this)
-				yoff += chr2px[follow] + borderwidth
-			}
-			xoff += chr2px[lead] + borderwidth
-		}
+	// 		for (let j = 0; j <= i; j++) {
+	// 			const follow = hic.chrlst[j]
+	// 			this.genomeview!.lead2follow!.get(lead)!.set(follow, {
+	// 				x: xoff,
+	// 				y: yoff
+	// 			})
+	// 			makewholegenome_chrleadfollow(hic, lead, follow, this)
+	// 			yoff += chr2px[follow] + borderwidth
+	// 		}
+	// 		xoff += chr2px[lead] + borderwidth
+	// 	}
 
-		if (hic.sv && hic.sv.items) {
-			makewholegenome_sv(hic, this)
-		}
+	// 	if (hic.sv && hic.sv.items) {
+	// 		makewholegenome_sv(hic, this)
+	// 	}
 
-		this.genomeview.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
+	// 	this.genomeview.svg.attr('width', hardcode_wholegenomechrlabwidth + xoff).attr('height', fontsize + yoff)
 
-		/* after the ui is created, load data for each chr pair,
-		await on each request to finish to avoid server lockup
-	
-		There might be data inconsistency with hic file. It may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
-		do not flood ui with such errors, to tolerate, collect all errors and show in one place
-		*/
+	// 	/* after the ui is created, load data for each chr pair,
+	// 	await on each request to finish to avoid server lockup
 
-		await makeWholeGenomeElements(hic, this)
+	// 	There might be data inconsistency with hic file. It may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
+	// 	do not flood ui with such errors, to tolerate, collect all errors and show in one place
+	// 	*/
 
-		if (this.errList.length) {
-			//Loading div problematic with errors. Fix problem when it becomes a component
-			this.dom.loadingDiv.style('display', 'none')
-			this.error(this.errList)
-		}
-		this.dom.loadingDiv.style('display', 'none')
+	// 	await makeWholeGenomeElements(hic, this)
 
-		return
-	}
+	// 	if (this.errList.length) {
+	// 		//Loading div problematic with errors. Fix problem when it becomes a component
+	// 		this.dom.loadingDiv.style('display', 'none')
+	// 		this.error(this.errList)
+	// 	}
+	// 	this.dom.loadingDiv.style('display', 'none')
+
+	// 	return
+	// }
 
 	async init_chrPairView(hic: any, chrx: string, chry: string) {
 		this.dom.controlsDiv.view.text(`${chrx}-${chry} Pair`)
@@ -1283,13 +1256,13 @@ class Hicstat {
  * @param debugmode boolean
  */
 
-export async function init_hicstraw(hic: HicstrawInput, debugmode: boolean) {
-	const hicstat = new Hicstat(hic, debugmode)
-	await hicstat.render(hic)
-	if (debugmode) {
-		return hicstat.debug()
-	}
-}
+// export async function init_hicstraw(hic: HicstrawInput, debugmode: boolean) {
+// 	const hicstat = new Hicstat(hic, debugmode)
+// 	await hicstat.render(hic)
+// 	if (debugmode) {
+// 		return hicstat.debug()
+// 	}
+// }
 
 export function showBtns(self: any) {
 	//Show in any other view except whole genome
@@ -1319,282 +1292,282 @@ export function showBtns(self: any) {
 	}
 }
 
-//////////////////// __whole genome view__ ////////////////////
+// //////////////////// __whole genome view__ ////////////////////
 
-function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: any) {
-	const binpx = self.genomeview.binpx
-	const obj = self.genomeview.lead2follow.get(lead).get(follow)
+// function makewholegenome_chrleadfollow(hic: any, lead: any, follow: any, self: any) {
+// 	const binpx = self.genomeview.binpx
+// 	const obj = self.genomeview.lead2follow.get(lead).get(follow)
 
-	const leadchrlen = hic.genome.chrlookup[lead.toUpperCase()].len
-	const followchrlen = hic.genome.chrlookup[follow.toUpperCase()].len
+// 	const leadchrlen = hic.genome.chrlookup[lead.toUpperCase()].len
+// 	const followchrlen = hic.genome.chrlookup[follow.toUpperCase()].len
 
-	const xbins = Math.ceil(leadchrlen / self.genomeview.resolution)
-	const ybins = Math.ceil(followchrlen / self.genomeview.resolution)
+// 	const xbins = Math.ceil(leadchrlen / self.genomeview.resolution)
+// 	const ybins = Math.ceil(followchrlen / self.genomeview.resolution)
 
-	obj.canvas = hic.holder.append('canvas').style('display', 'none').node()
+// 	obj.canvas = hic.holder.append('canvas').style('display', 'none').node()
 
-	obj.ctx = obj.canvas.getContext('2d')
+// 	obj.ctx = obj.canvas.getContext('2d')
 
-	obj.canvas.width = xbins * binpx
-	obj.canvas.height = ybins * binpx
+// 	obj.canvas.width = xbins * binpx
+// 	obj.canvas.height = ybins * binpx
 
-	obj.img = self.genomeview.layer_map
-		.append('image')
-		.attr('width', obj.canvas.width)
-		.attr('height', obj.canvas.height)
-		.attr('x', obj.x)
-		.attr('y', obj.y)
-		.on('click', async () => {
-			self.x.chr = lead
-			self.y.chr = follow
-			await self.init_chrPairView(hic, lead, follow, self)
-		})
-		.on('mouseover', () => {
-			chrpair_mouseover(self, obj.img, lead, follow)
-		})
+// 	obj.img = self.genomeview.layer_map
+// 		.append('image')
+// 		.attr('width', obj.canvas.width)
+// 		.attr('height', obj.canvas.height)
+// 		.attr('x', obj.x)
+// 		.attr('y', obj.y)
+// 		.on('click', async () => {
+// 			self.x.chr = lead
+// 			self.y.chr = follow
+// 			await self.init_chrPairView(hic, lead, follow, self)
+// 		})
+// 		.on('mouseover', () => {
+// 			chrpair_mouseover(self, obj.img, lead, follow)
+// 		})
 
-	if (lead != follow) {
-		obj.canvas2 = hic.holder.append('canvas').style('display', 'none').node()
+// 	if (lead != follow) {
+// 		obj.canvas2 = hic.holder.append('canvas').style('display', 'none').node()
 
-		obj.ctx2 = obj.canvas2.getContext('2d')
+// 		obj.ctx2 = obj.canvas2.getContext('2d')
 
-		obj.canvas2.width = ybins * binpx
-		obj.canvas2.height = xbins * binpx
+// 		obj.canvas2.width = ybins * binpx
+// 		obj.canvas2.height = xbins * binpx
 
-		obj.img2 = self.genomeview.layer_map
-			.append('image')
-			.attr('width', obj.canvas2.width)
-			.attr('height', obj.canvas2.height)
-			.attr('x', obj.y)
-			.attr('y', obj.x)
-			.on('click', async () => {
-				await self.init_chrPairView(hic, follow, lead, self)
-			})
-			.on('mouseover', () => {
-				chrpair_mouseover(self, obj.img2, follow, lead)
-			})
-	} else {
-		obj.ctx2 = obj.ctx
-	}
-}
+// 		obj.img2 = self.genomeview.layer_map
+// 			.append('image')
+// 			.attr('width', obj.canvas2.width)
+// 			.attr('height', obj.canvas2.height)
+// 			.attr('x', obj.y)
+// 			.attr('y', obj.x)
+// 			.on('click', async () => {
+// 				await self.init_chrPairView(hic, follow, lead, self)
+// 			})
+// 			.on('mouseover', () => {
+// 				chrpair_mouseover(self, obj.img2, follow, lead)
+// 			})
+// 	} else {
+// 		obj.ctx2 = obj.ctx
+// 	}
+// }
 
-function chrpair_mouseover(self: any, img: any, x_chr: string, y_chr: string) {
-	const p = img.node().getBoundingClientRect()
-	self.genomeview.pica_x
-		.clear()
-		.show(p.left, p.top)
-		.d.style('top', null)
-		.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
-		.text(x_chr)
-	self.genomeview.pica_y
-		.clear()
-		.show(p.left, p.top)
-		.d.style('left', null)
-		.style('right', document.body.clientWidth - p.left - window.pageXOffset + 'px') // no scrollbar width
-		.text(y_chr)
-}
+// function chrpair_mouseover(self: any, img: any, x_chr: string, y_chr: string) {
+// 	const p = img.node().getBoundingClientRect()
+// 	self.genomeview.pica_x
+// 		.clear()
+// 		.show(p.left, p.top)
+// 		.d.style('top', null)
+// 		.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
+// 		.text(x_chr)
+// 	self.genomeview.pica_y
+// 		.clear()
+// 		.show(p.left, p.top)
+// 		.d.style('left', null)
+// 		.style('right', document.body.clientWidth - p.left - window.pageXOffset + 'px') // no scrollbar width
+// 		.text(y_chr)
+// }
 
-export async function makeWholeGenomeElements(hic: any, self: any, manychrArg?: number) {
-	self.dom.loadingDiv.style('display', '')
-	const manychr = manychrArg || (hic.atdev ? atdev_chrnum : hic.chrlst.length)
-	const vlst = [] as number[]
+// export async function makeWholeGenomeElements(hic: any, self: any, manychrArg?: number) {
+// 	self.dom.loadingDiv.style('display', '')
+// 	const manychr = manychrArg || (hic.atdev ? atdev_chrnum : hic.chrlst.length)
+// 	const vlst = [] as number[]
 
-	for (let i = 0; i < manychr; i++) {
-		const lead = hic.chrlst[i]
-		for (let j = 0; j <= i; j++) {
-			const follow = hic.chrlst[j]
-			await getWholeGenomeData(hic, self, lead, follow, vlst)
-		}
-	}
-	await setViewCutoff(vlst, self.genomeview, self)
+// 	for (let i = 0; i < manychr; i++) {
+// 		const lead = hic.chrlst[i]
+// 		for (let j = 0; j <= i; j++) {
+// 			const follow = hic.chrlst[j]
+// 			await getWholeGenomeData(hic, self, lead, follow, vlst)
+// 		}
+// 	}
+// 	await setViewCutoff(vlst, self.genomeview, self)
 
-	await colorizeGenomeElements(self)
-	self.dom.loadingDiv.style('display', 'none')
-}
+// 	await colorizeGenomeElements(self)
+// 	self.dom.loadingDiv.style('display', 'none')
+// }
 
-async function getWholeGenomeData(hic: any, self: any, lead: any, follow: any, vlst: any) {
-	const arg = {
-		matrixType: self.genomeview.matrixType,
-		file: hic.file,
-		url: hic.url,
-		pos1: hic.nochr ? lead.replace('chr', '') : lead,
-		pos2: hic.nochr ? follow.replace('chr', '') : follow,
-		nmeth: self.genomeview.nmeth,
-		resolution: self.genomeview.resolution
-	}
+// async function getWholeGenomeData(hic: any, self: any, lead: any, follow: any, vlst: any) {
+// 	const arg = {
+// 		matrixType: self.genomeview.matrixType,
+// 		file: hic.file,
+// 		url: hic.url,
+// 		pos1: hic.nochr ? lead.replace('chr', '') : lead,
+// 		pos2: hic.nochr ? follow.replace('chr', '') : follow,
+// 		nmeth: self.genomeview.nmeth,
+// 		resolution: self.genomeview.resolution
+// 	}
 
-	try {
-		const data = await client.dofetch2('/hicdata', {
-			method: 'POST',
-			body: JSON.stringify(arg)
-		})
-		if (data.error) throw `${lead} - ${follow}: ${data.error.error}` //Fix for error message displaying [Object object] instead of error message
-		if (!data.items || data.items.length == 0) return
+// 	try {
+// 		const data = await client.dofetch2('/hicdata', {
+// 			method: 'POST',
+// 			body: JSON.stringify(arg)
+// 		})
+// 		if (data.error) throw `${lead} - ${follow}: ${data.error.error}` //Fix for error message displaying [Object object] instead of error message
+// 		if (!data.items || data.items.length == 0) return
 
-		self.genomeview.data.push({ items: data.items, lead: lead, follow: follow })
-		for (const [plead, pfollow, v] of data.items) {
-			vlst.push(v)
-		}
-	} catch (e: any) {
-		/** Collect all errors from the response and then call self.error() above.
-		 * This allows errors to appear in a single, expandable div.
-		 */
-		self.errList.push(e.message || e)
-		if (e.stack) console.log(e.stack)
-	}
-}
+// 		self.genomeview.data.push({ items: data.items, lead: lead, follow: follow })
+// 		for (const [plead, pfollow, v] of data.items) {
+// 			vlst.push(v)
+// 		}
+// 	} catch (e: any) {
+// 		/** Collect all errors from the response and then call self.error() above.
+// 		 * This allows errors to appear in a single, expandable div.
+// 		 */
+// 		self.errList.push(e.message || e)
+// 		if (e.stack) console.log(e.stack)
+// 	}
+// }
 
-async function colorizeGenomeElements(self: any) {
-	for (const data of self.genomeview.data) {
-		const obj = self.genomeview.lead2follow.get(data.lead).get(data.follow)
-		obj.data = [] as any
-		obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
-		if (obj.canvas2) {
-			obj.ctx2.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
-		}
+// async function colorizeGenomeElements(self: any) {
+// 	for (const data of self.genomeview.data) {
+// 		const obj = self.genomeview.lead2follow.get(data.lead).get(data.follow)
+// 		obj.data = [] as any
+// 		obj.ctx.clearRect(0, 0, obj.canvas.width, obj.canvas.height)
+// 		if (obj.canvas2) {
+// 			obj.ctx2.clearRect(0, 0, obj.canvas2.width, obj.canvas.height)
+// 		}
 
-		for (const [plead, pfollow, value] of data.items) {
-			const leadpx = Math.floor(plead / self.genomeview.resolution) * self.genomeview.binpx
-			const followpx = Math.floor(pfollow / self.genomeview.resolution) * self.genomeview.binpx
-			obj.data.push([leadpx, followpx, value])
-			colorizeElement(leadpx, followpx, value, self.genomeview, self, obj)
-		}
-		obj.img.attr('xlink:href', obj.canvas.toDataURL())
-		if (obj.canvas2) {
-			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
-		}
-	}
-}
+// 		for (const [plead, pfollow, value] of data.items) {
+// 			const leadpx = Math.floor(plead / self.genomeview.resolution) * self.genomeview.binpx
+// 			const followpx = Math.floor(pfollow / self.genomeview.resolution) * self.genomeview.binpx
+// 			obj.data.push([leadpx, followpx, value])
+// 			colorizeElement(leadpx, followpx, value, self.genomeview, self, obj)
+// 		}
+// 		obj.img.attr('xlink:href', obj.canvas.toDataURL())
+// 		if (obj.canvas2) {
+// 			obj.img2.attr('xlink:href', obj.canvas2.toDataURL())
+// 		}
+// 	}
+// }
 
-function makewholegenome_sv(hic: any, self: any) {
-	const unknownchr = new Set()
+// function makewholegenome_sv(hic: any, self: any) {
+// 	const unknownchr = new Set()
 
-	const radius = 8
+// 	const radius = 8
 
-	for (const item of hic.sv.items) {
-		const _o = self.genomeview.lead2follow.get(item.chr1)
-		if (!_o) {
-			unknownchr.add(item.chr1)
-			continue
-		}
-		const obj = _o.get(item.chr2)
-		if (!obj) {
-			unknownchr.add(item.chr2)
-			continue
-		}
+// 	for (const item of hic.sv.items) {
+// 		const _o = self.genomeview.lead2follow.get(item.chr1)
+// 		if (!_o) {
+// 			unknownchr.add(item.chr1)
+// 			continue
+// 		}
+// 		const obj = _o.get(item.chr2)
+// 		if (!obj) {
+// 			unknownchr.add(item.chr2)
+// 			continue
+// 		}
 
-		const p1 = item.position1 / self.genomeview.resolution
-		const p2 = item.position2 / self.genomeview.resolution
-		self.genomeview.layer_sv
-			.append('circle')
-			.attr('stroke', 'black')
-			.attr('fill', 'white')
-			.attr('fill-opacity', 0)
-			.attr('cx', obj.x + p1)
-			.attr('cy', obj.y + p2)
-			.attr('r', radius)
-			.on('mouseover', (event: MouseEvent) => {
-				tooltip_sv(event, hic, item)
-			})
-			.on('mouseout', () => {
-				self.dom.tip.hide()
-			})
-			.on('click', () => {
-				click_sv(hic, item)
-			})
+// 		const p1 = item.position1 / self.genomeview.resolution
+// 		const p2 = item.position2 / self.genomeview.resolution
+// 		self.genomeview.layer_sv
+// 			.append('circle')
+// 			.attr('stroke', 'black')
+// 			.attr('fill', 'white')
+// 			.attr('fill-opacity', 0)
+// 			.attr('cx', obj.x + p1)
+// 			.attr('cy', obj.y + p2)
+// 			.attr('r', radius)
+// 			.on('mouseover', (event: MouseEvent) => {
+// 				tooltip_sv(event, hic, item)
+// 			})
+// 			.on('mouseout', () => {
+// 				self.dom.tip.hide()
+// 			})
+// 			.on('click', () => {
+// 				click_sv(hic, item)
+// 			})
 
-		if (obj.img2) {
-			self.genomeview.layer_sv
-				.append('circle')
-				.attr('stroke', 'black')
-				.attr('fill', 'whilte')
-				.attr('fill-opacity', 0)
-				.attr('cy', obj.x + p1)
-				.attr('cx', obj.y + p2)
-				.attr('r', radius)
-				.on('mouseover', (event: MouseEvent) => {
-					tooltip_sv(event, self, item)
-				})
-				.on('mouseout', () => {
-					self.dom.tip.hide()
-				})
-				.on('click', () => {
-					click_sv(hic, item)
-				})
-		}
-	}
-}
+// 		if (obj.img2) {
+// 			self.genomeview.layer_sv
+// 				.append('circle')
+// 				.attr('stroke', 'black')
+// 				.attr('fill', 'whilte')
+// 				.attr('fill-opacity', 0)
+// 				.attr('cy', obj.x + p1)
+// 				.attr('cx', obj.y + p2)
+// 				.attr('r', radius)
+// 				.on('mouseover', (event: MouseEvent) => {
+// 					tooltip_sv(event, self, item)
+// 				})
+// 				.on('mouseout', () => {
+// 					self.dom.tip.hide()
+// 				})
+// 				.on('click', () => {
+// 					click_sv(hic, item)
+// 				})
+// 		}
+// 	}
+// }
 
-function tooltip_sv(event: MouseEvent, self: any, item: any): void {
-	self.dom.tip
-		.clear()
-		.show(event.clientX, event.clientY)
-		.d.append('div')
-		.text(
-			item.chr1 == item.chr2
-				? `${item.chr1}:${item.position1}-${item.position2}`
-				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`
-		)
-}
+// function tooltip_sv(event: MouseEvent, self: any, item: any): void {
+// 	self.dom.tip
+// 		.clear()
+// 		.show(event.clientX, event.clientY)
+// 		.d.append('div')
+// 		.text(
+// 			item.chr1 == item.chr2
+// 				? `${item.chr1}:${item.position1}-${item.position2}`
+// 				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`
+// 		)
+// }
 
-function click_sv(hic: any, item: any): void {
-	const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
-	;(pane.header as Pane['header']).text(
-		hic.name +
-			' ' +
-			(item.chr1 == item.chr2
-				? `${item.chr1}:${item.position1}-${item.position2}`
-				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`)
-	)
-	const tracks = [
-		{
-			type: client.tkt.hicstraw,
-			file: hic.file,
-			enzyme: hic.enzyme,
-			maxpercentage: default_hicstrawmaxvperc,
-			pyramidup: 1,
-			name: hic.name
-		}
-	]
-	if (hic.tklst) {
-		for (const t of hic.tklst) {
-			tracks.push(t)
-		}
-	}
-	client.first_genetrack_tolist(hic.genome, tracks)
-	const arg: any = {
-		holder: pane.body,
-		hostURL: hic.hostURL,
-		jwt: hic.jwt,
-		genome: hic.genome,
-		nobox: 1,
-		tklst: tracks
-	}
+// function click_sv(hic: any, item: any): void {
+// 	const pane = client.newpane({ x: 100, y: 100 }) as Partial<Pane>
+// 	;(pane.header as Pane['header']).text(
+// 		hic.name +
+// 			' ' +
+// 			(item.chr1 == item.chr2
+// 				? `${item.chr1}:${item.position1}-${item.position2}`
+// 				: `${item.chr1}:${item.position1}>${item.chr2}:${item.position2}`)
+// 	)
+// 	const tracks = [
+// 		{
+// 			type: client.tkt.hicstraw,
+// 			file: hic.file,
+// 			enzyme: hic.enzyme,
+// 			maxpercentage: default_hicstrawmaxvperc,
+// 			pyramidup: 1,
+// 			name: hic.name
+// 		}
+// 	]
+// 	if (hic.tklst) {
+// 		for (const t of hic.tklst) {
+// 			tracks.push(t)
+// 		}
+// 	}
+// 	client.first_genetrack_tolist(hic.genome, tracks)
+// 	const arg: any = {
+// 		holder: pane.body,
+// 		hostURL: hic.hostURL,
+// 		jwt: hic.jwt,
+// 		genome: hic.genome,
+// 		nobox: 1,
+// 		tklst: tracks
+// 	}
 
-	if (item.chr1 == item.chr2 && Math.abs(item.position2 - item.position1) < default_svpointspan * 2) {
-		// two breakends overlap
-		arg.chr = item.chr1
-		const w = Math.abs(item.position2 - item.position1)
-		arg.start = Math.max(1, Math.min(item.position1, item.position2) - w)
-		arg.stop = Math.min(hic.genome.chrlookup[item.chr1.toUpperCase()].len, Math.max(item.position1, item.position2) + w)
-	} else {
-		arg.chr = item.chr1
-		arg.start = Math.max(1, item.position1 - default_svpointspan / 2)
-		arg.stop = Math.min(hic.genome.chrlookup[item.chr1.toUpperCase()].len, item.position1 + default_svpointspan / 2)
-		arg.width = default_subpanelpxwidth
-		arg.subpanels = [
-			{
-				chr: item.chr2,
-				start: Math.max(1, item.position2 - default_svpointspan / 2),
-				stop: Math.min(hic.genome.chrlookup[item.chr2.toUpperCase()].len, item.position2 + default_svpointspan / 2),
-				width: default_subpanelpxwidth,
-				leftpad: 10,
-				leftborder: subpanel_bordercolor
-			}
-		]
-	}
-	blocklazyload(arg)
-}
+// 	if (item.chr1 == item.chr2 && Math.abs(item.position2 - item.position1) < default_svpointspan * 2) {
+// 		// two breakends overlap
+// 		arg.chr = item.chr1
+// 		const w = Math.abs(item.position2 - item.position1)
+// 		arg.start = Math.max(1, Math.min(item.position1, item.position2) - w)
+// 		arg.stop = Math.min(hic.genome.chrlookup[item.chr1.toUpperCase()].len, Math.max(item.position1, item.position2) + w)
+// 	} else {
+// 		arg.chr = item.chr1
+// 		arg.start = Math.max(1, item.position1 - default_svpointspan / 2)
+// 		arg.stop = Math.min(hic.genome.chrlookup[item.chr1.toUpperCase()].len, item.position1 + default_svpointspan / 2)
+// 		arg.width = default_subpanelpxwidth
+// 		arg.subpanels = [
+// 			{
+// 				chr: item.chr2,
+// 				start: Math.max(1, item.position2 - default_svpointspan / 2),
+// 				stop: Math.min(hic.genome.chrlookup[item.chr2.toUpperCase()].len, item.position2 + default_svpointspan / 2),
+// 				width: default_subpanelpxwidth,
+// 				leftpad: 10,
+// 				leftborder: subpanel_bordercolor
+// 			}
+// 		]
+// 	}
+// 	blocklazyload(arg)
+// }
 
 //////////////////// __chrpair view__ ////////////////////
 

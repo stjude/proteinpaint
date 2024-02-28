@@ -36,9 +36,8 @@ export class HicDataMapper {
 			/** lead chr and follow chr not provided for genome view.
 			 * Loop through all the chrs, getData, and trim hic.chrLst on result
 			 */
-			const manychr = currView == 'genome' ? 8 : this.hic.chrlst.length
 
-			for (let i = 0; i < manychr; i++) {
+			for (let i = 0; i < this.hic.chrlst.length; i++) {
 				const lead = this.hic.chrlst[i]
 				for (let j = 0; j <= i; j++) {
 					const follow = this.hic.chrlst[j]

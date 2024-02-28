@@ -66,16 +66,15 @@ class HicApp {
 			tip: new client.Menu()
 		}
 		this.errList = []
+		//TODO: Add to api? Is that more appropriate?
 		this.dataMapper = new HicDataMapper(this.hic, true, this.errList)
 	}
 
 	async error(err: string | string[]) {
 		if (err && typeof err == 'string') this.errList.push(err)
-		//TODO: Change to dispatch? Show error, remove loading div, maybe show error over plot all at once?
 		showErrorsWithCounter(this.errList, this.dom.errorDiv)
 		//Remove errors after displaying
 		this.errList = []
-		//this.dom.loadingDiv.style('display', 'none')
 	}
 
 	// getState(appState) {
@@ -109,7 +108,9 @@ class HicApp {
 					state: this.state,
 					plotDiv: this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true),
 					hic: this.hic,
-					data
+					data,
+					min,
+					max
 				}),
 				controls: await controlPanelInit({
 					app: this.api,
