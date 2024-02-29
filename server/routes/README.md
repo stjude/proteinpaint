@@ -34,7 +34,7 @@ type initArg = {
 }
 
 /**
-	@param
+	@param endpoint    should be a noun (method is based on HTTP GET, POST, etc), don't add 'Data' as response is assumed to be data
 */
 type RouteApiMethod = {
 	endpoint: string
