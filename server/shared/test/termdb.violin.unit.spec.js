@@ -40,6 +40,7 @@ tape('compute bins given an array', function (test) {
 		{ x0: 10, x1: 10, density: 0 }
 	]
 	const result = getBinsDensity(axisScale, v, true, 20, 7)
+	console.log('result', result)
 	test.deepEqual(bins, result.bins, 'should match expected output')
 	test.end()
 })
