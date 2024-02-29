@@ -52,6 +52,7 @@ export type getViolinResponse = {
 			plotValueCount: number
 			src: string
 			bins: binsEntries[]
+			densityMax: number
 			biggestBin: number
 			summaryStats: {
 				values: valuesEntries[]
