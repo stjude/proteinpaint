@@ -1,10 +1,10 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
-import serverconfig from './serverconfig'
+import * as utils from './utils.js'
+import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 import { createCanvas } from 'canvas'
-import { bplen } from '#shared/common'
+import { bplen } from '#shared/common.js'
 
 /*
 req.query{}
