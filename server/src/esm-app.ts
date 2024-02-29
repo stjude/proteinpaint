@@ -10,6 +10,7 @@ import * as augen from '@sjcrh/augen'
 import serverconfig from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './esm-app-middlewares.js'
+import { authApi } from './auth.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -37,7 +38,9 @@ async function launch() {
 		console.log('setting app middlewares ...')
 		setAppMiddlewares(app)
 
-		console.log('initializing server routes ...')
+		console.log('setting server routes ...')
+		await setOptionalRoutes(app)
+		authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
 		// start moving migrated route handler code here
 		const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
@@ -152,5 +155,16 @@ async function startServer(app) {
 			console.log(message)
 		})
 		return server
+	}
+}
+
+async function setOptionalRoutes(app) {
+	// routeSetters is an array of "filepath/name.js"
+	if (!serverconfig.routeSetters) return
+	for (const fname of serverconfig.routeSetters) {
+		if (fname.endsWith('.js')) {
+			const setRoutes = (await import(fname)).default
+			setRoutes(app, basepath)
+		}
 	}
 }
