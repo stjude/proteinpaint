@@ -39,9 +39,13 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth
 
 	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, x1: valuesMax, density: 1 }], densityMax: valuesMax }
 
-	return isKDE
+	const result = isKDE
 		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMin, valuesMax, step)
 		: getBinsHist(scale, plot.values, ticks, valuesMin, valuesMax)
+
+	result.bins.unshift({ x0: valuesMin, x1: valuesMin, density: 0 }) //This allows to start the plot from prob 0, avoids rendering issues
+	result.bins.push({ x0: valuesMax, x1: valuesMax, density: 0 }) //This allows to finish the plot from prob 0
+	return result
 }
 
 function epanechnikov(bandwidth) {
@@ -56,10 +60,10 @@ function kde(kernel, thresholds, data, valuesMin, valuesMax, step) {
 		const bin = { x0: element[0], x1: element[0] + step, density: element[1] }
 		densityMax = Math.max(densityMax, bin.density)
 		if (bin.x1 < valuesMin) continue
-		if (bin.x0 > valuesMax) break
+		if (bin.x0 > valuesMax || bin.x1 > valuesMax) break
 		bins.push(bin)
 	}
-	console.log(bins, densityMax)
+
 	return { bins, densityMax }
 }
 
@@ -73,10 +77,9 @@ function getBinsHist(scale, values, ticks, valuesMin, valuesMax) {
 	let densityMax = 0
 	for (const bin of bins0) {
 		densityMax = Math.max(densityMax, bin.length)
-		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
 		if (bin.x1 < valuesMin) continue
 		if (bin.x0 > valuesMax) break
+		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
 	}
-	console.log(bins, densityMax)
 	return { bins, densityMax }
 }
