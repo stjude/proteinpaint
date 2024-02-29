@@ -32,18 +32,19 @@ output:
 const { bin } = require('d3-array')
 import * as d3 from 'd3'
 
-export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth = 5) {
+export function getBinsDensity(scale, plot, tryKDE = true, ticks = 20, bandwidth = 5) {
 	const [min, max] = scale.domain() //Min and max for all plots
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
 	const step = Math.abs(max - min) / ticks
 
 	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, x1: valuesMax, density: 1 }], densityMax: valuesMax }
 
-	let result = isKDE
+	let result = tryKDE
 		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMax, step)
 		: getBinsHist(scale, plot.values, ticks, valuesMax)
-	if (isKDE && result.densityMax == 0) {
-		console.log('using histogram as max density with KDE is 0')
+	const notCeroBins = result.bins.filter(b => b.density > 0)
+	if (tryKDE && notCeroBins.length < 3) {
+		//For these edge cases using histogram gives better results
 		result = getBinsHist(scale, plot.values, ticks, valuesMax)
 	}
 	result.bins.unshift({ x0: min, x1: min, density: 0 })

@@ -440,7 +440,7 @@ export class TermdbVocab extends Vocab {
 				dslabel: this.vocab.dslabel,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
-				isKDE: arg.isKDE || true,
+				tryKDE: arg.tryKDE || true,
 				ticks: arg.ticks,
 				bandwith: arg.bandwidth,
 				datasymbol: arg.datasymbol || 'rug',

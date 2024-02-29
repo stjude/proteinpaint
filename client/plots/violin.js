@@ -101,17 +101,17 @@ class ViolinPlot {
 					{ label: 'Horizontal', value: 'horizontal' }
 				]
 			},
-			{
-				label: 'Method',
-				title: `If selected uses the KDE method, otherwise uses a histogram`,
-				type: 'radio',
-				chartType: 'violin',
-				settingsKey: 'method',
-				options: [
-					{ label: 'KDE', value: 0 },
-					{ label: 'Histogram', value: 1 }
-				]
-			},
+			// {
+			// 	label: 'Method',
+			// 	title: `If selected uses the KDE method, otherwise uses a histogram`,
+			// 	type: 'radio',
+			// 	chartType: 'violin',
+			// 	settingsKey: 'method',
+			// 	options: [
+			// 		{ label: 'KDE', value: 0 },
+			// 		{ label: 'Histogram', value: 1 }
+			// 	]
+			// },
 			{
 				label: 'Bandwidth',
 				type: 'number',
@@ -331,7 +331,6 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
-			isKDE: s.method == 0,
 			ticks: s.ticks,
 			bandwidth: s.bandwidth
 		}
