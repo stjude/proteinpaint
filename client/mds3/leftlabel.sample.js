@@ -29,7 +29,7 @@ export function makeSampleLabel(data, tk, block, laby) {
 			.attr('class', 'sja_clbtext2')
 			.style('opacity', 1)
 			.text(`${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
-			.attr('data-testid', 'sja-samples-label')
+			.attr('data-testid', 'sjpp_mds3tk_samples_label')
 			.on('click', async event => {
 				tk.menutip.clear().showunder(event.target)
 
