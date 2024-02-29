@@ -21,8 +21,8 @@ output:
         [can be empty],
     bins:[                 //take this bins object and send to client. See implementation at termdb.violin.js and mds3.densityPlot.js
         {
-            { x0: 0, x1: 0.05, density: 121 },
-            { x0: 0.05, x1: 0.1, density: 2 },
+            { x0: density: 0.2 },
+            { x0, density: 0.3 },
         }
     ]
     ]
@@ -37,14 +37,14 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
 	const step = Math.abs(max - min) / ticks
 
-	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, x1: valuesMax, density: 1 }], densityMax: valuesMax }
+	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, density: 1 }], densityMax: valuesMax }
 
 	const result = isKDE
 		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMin, valuesMax, step)
 		: getBinsHist(scale, plot.values, ticks, valuesMin, valuesMax)
 
-	result.bins.unshift({ x0: valuesMin, x1: valuesMin, density: 0 }) //This allows to start the plot from prob 0, avoids rendering issues
-	result.bins.push({ x0: valuesMax, x1: valuesMax, density: 0 }) //This allows to finish the plot from prob 0
+	result.bins.unshift({ x0: valuesMin, density: 0 }) //This allows to start the plot from prob 0, avoids rendering issues
+	result.bins.push({ x0: valuesMax, density: 0 }) //This allows to finish the plot from prob 0
 	return result
 }
 
@@ -53,14 +53,15 @@ function epanechnikov(bandwidth) {
 }
 
 function kde(kernel, thresholds, data, valuesMin, valuesMax, step) {
+	console.log(data)
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
 	const bins = []
 	let densityMax = 0
 	for (const element of density) {
-		const bin = { x0: element[0], x1: element[0] + step, density: element[1] }
+		const bin = { x0: element[0], density: element[1] }
 		densityMax = Math.max(densityMax, bin.density)
 		if (bin.x0 < valuesMin) continue
-		if (bin.x0 > valuesMax || bin.x1 > valuesMax) break
+		if (bin.x0 > valuesMax) break
 		bins.push(bin)
 	}
 
@@ -79,7 +80,7 @@ function getBinsHist(scale, values, ticks, valuesMin, valuesMax) {
 		densityMax = Math.max(densityMax, bin.length)
 		if (bin.x0 < valuesMin) continue
 		if (bin.x0 > valuesMax) break
-		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
+		bins.push({ x0: bin.x0, density: bin.length })
 	}
 	return { bins, densityMax }
 }
