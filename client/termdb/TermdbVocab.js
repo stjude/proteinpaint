@@ -9,11 +9,10 @@ import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
 	async getTermdbConfig() {
-		const data = await dofetch3('termdb', {
+		const data = await dofetch3('termdb/config', {
 			body: {
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
-				gettermdbconfig: 1,
 				embedder: window.location.hostname
 			}
 		})
@@ -360,10 +359,9 @@ export class TermdbVocab extends Vocab {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
-			getcohortsamplecount: 1,
 			cohort
 		}
-		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+		const data = await dofetch3('termdb/cohort/summary', { body }, this.opts.fetchOpts)
 		if (!data) throw 'missing data'
 		if (data.error) throw data.error
 		return data[0]?.samplecount || data.count || 0
@@ -1075,11 +1073,10 @@ export class TermdbVocab extends Vocab {
 
 	async getCohortsData(opts) {
 		const body = {
-			getCohortsData: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel
 		}
-		return await dofetch3('termdb', { body })
+		return await dofetch3('termdb/cohorts', { body })
 	}
 
 	async getMds3queryDetails() {

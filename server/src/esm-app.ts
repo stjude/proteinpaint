@@ -8,7 +8,7 @@ import http from 'http'
 import https from 'https'
 import * as augen from '@sjcrh/augen'
 import serverconfig from './serverconfig.js'
-import { genomes, pp_init } from './pp_init.js'
+import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './esm-app-middlewares.js'
 
 const basepath = serverconfig.basepath || ''
@@ -20,7 +20,7 @@ async function launch() {
 		const app = express()
 		app.disable('x-powered-by')
 
-		await pp_init(serverconfig, app, basepath)
+		await initGenomesDs(serverconfig, app, basepath)
 
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)

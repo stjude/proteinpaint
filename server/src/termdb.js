@@ -1,4 +1,3 @@
-import * as termdbConfig from './termdb.config.js'
 import * as termdbsql from './termdb.sql.js'
 import * as phewas from './termdb.phewas.js'
 import { get_incidence } from './termdb.cuminc.js'
@@ -9,7 +8,6 @@ import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getSampleScatter } from './termdb.scatter.js'
 import { trigger_getLowessCurve } from './termdb.scatter.js'
 import { getData, getSamplesPerFilter } from './termdb.matrix.js'
-import { trigger_getCohortsData } from './termdb.cohort.js'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
@@ -48,8 +46,8 @@ export function handle_request_closure(genomes) {
 				if (q.getgroup) return await phewas.getgroup(q, res)
 				return await phewas.trigger(q, res, ds)
 			}
-			if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
-			if (q.getcohortsamplecount) return res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
+			//if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
+			//if (q.getcohortsamplecount) return res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
 			if (q.getsamplecount) return res.send(await getSampleCount(req, q, ds))
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
