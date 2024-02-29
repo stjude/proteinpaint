@@ -285,7 +285,7 @@ export class Block {
 				.style('display', 'inline-block')
 			this.svg = inlinediv
 				.append('svg')
-				.attr('data-testid', 'sja_plot_svg')
+				.attr('data-testid', 'sjpp_block_svg')
 				.on('mousedown', event => {
 					event.preventDefault()
 				})

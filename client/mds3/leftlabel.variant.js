@@ -169,7 +169,7 @@ function menu_variants(tk, block) {
 			.append('div')
 			.text('Download')
 			.attr('class', 'sja_menuoption')
-			.attr('data-testid', 'sja_download_menuoption')
+			.attr('data-testid', 'sjpp_mds3tk_variantdownload_menuoption')
 			.style('border-radius', '0px')
 			.on('click', () => {
 				downloadVariants(tk, block)
