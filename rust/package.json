@@ -1,37 +1,37 @@
 {
-  "version": "2.40.6",
-  "name": "@sjcrh/proteinpaint-rust",
-  "description": "Rust-based utilities for proteinpaint",
-  "main": "index.js",
-  "bin": {
-    "proteinpaint-rust": "index.js"
-  },
-  "scripts": {
-    "dev": "cargo build --release",
-    "build": "cargo build --release",
-    "postinstall": "if [ ! -d ./test ] & [ ! -d ./target/release ]; then cargo build --release; fi",
-    "test": "tape **/test/*.spec.js",
-    "test:unit": "tape **/test/*.unit.spec.js",
-    "test:integration": "echo 'TODO: rust integration tests'"
-  },
-  "author": "Robin Paul",
-  "license": "SEE LICENSE IN ./LICENSE",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/stjude/proteinpaint.git",
-    "directory": "rust"
-  },
-  "files": [
-    "index.js",
-    "Cargo.toml",
-    "src",
-    "LICENSE/*"
-  ],
-  "bugs": {
-    "url": "https://github.com/stjude/proteinpaint"
-  },
-  "homepage": "https://github.com/stjude/proteinpaint#readme",
-  "devDependencies": {
-    "tape": "^5.2.2"
-  }
+	"version": "2.40.6",
+	"name": "@sjcrh/proteinpaint-rust",
+	"description": "Rust-based utilities for proteinpaint",
+	"main": "index.js",
+	"bin": {
+		"proteinpaint-rust": "index.js"
+	},
+	"scripts": {
+		"dev": "cargo clean && cargo build --release",
+		"build": "cargo clean && cargo build --release",
+		"postinstall": "if [ ! -d ./test ] & [ ! -d ./target/release ]; then cargo clean && cargo build --release; fi",
+		"test": "tape **/test/*.spec.js",
+		"test:unit": "tape **/test/*.unit.spec.js",
+		"test:integration": "echo 'TODO: rust integration tests'"
+	},
+	"author": "Robin Paul",
+	"license": "SEE LICENSE IN ./LICENSE",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/stjude/proteinpaint.git",
+		"directory": "rust"
+	},
+	"files": [
+		"index.js",
+		"Cargo.toml",
+		"src",
+		"LICENSE/*"
+	],
+	"bugs": {
+		"url": "https://github.com/stjude/proteinpaint"
+	},
+	"homepage": "https://github.com/stjude/proteinpaint#readme",
+	"devDependencies": {
+		"tape": "^5.2.2"
+	}
 }
