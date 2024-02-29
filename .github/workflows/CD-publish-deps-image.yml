@@ -91,6 +91,7 @@ jobs:
             git config --global user.name "PPTeam CI"
             git add deps/package.json
             git commit -m "Update deps version to $TAG"
+            git pull --rebase
             git push origin master
           
           fi

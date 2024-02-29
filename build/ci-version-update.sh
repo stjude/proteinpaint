@@ -70,6 +70,7 @@ if [[ "$VERTYPE" == "pre"* ]]; then
   if [[ "$EXISTINGTAG" != "" ]]; then
     git tag -d $TAG
   fi
+  git pull --rebase
   git push origin :refs/tags/$TAG
 elif [[ "$EXISTINGTAG" != "" ]]; then
   echo "Tag='$TAG' already exists"
@@ -78,5 +79,6 @@ fi
 
 git tag $TAG
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
+git pull --rebase
 git push origin $BRANCH
 git push origin $TAG

@@ -109,6 +109,7 @@ jobs:
               # fatal: refusing to fetch into branch 'refs/heads/master' checked out at '/home/runner/work/proteinpaint/proteinpaint'
               git switch master
               git merge $BRANCH
+              git pull --rebase
               git push
               git push origin $TAG
             fi
