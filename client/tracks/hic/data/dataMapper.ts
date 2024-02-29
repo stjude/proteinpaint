@@ -50,7 +50,7 @@ export class HicDataMapper {
 		const sortedVlst = vlst.sort((a: number, b: number) => a - b)
 		const max = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
 		const min = sortedVlst[0]
-		return [data, min, max]
+		return [data, Math.floor(min), Math.floor(max)]
 	}
 
 	async getHicData(

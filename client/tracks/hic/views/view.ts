@@ -1,15 +1,10 @@
 import { getCompInit } from '#rx'
-// import { Div, Elem } from '../../../types/d3'
 import { MainPlotDiv } from '../../../types/hic.ts'
 // import { ChrPairView } from './chrPairView'
 // import { HorizontalView } from './horizontalView'
 // import { DetailView } from './detailView'
 import { GenomeView } from './genomeView.ts'
 
-/**
- * Super class for all views
- * Methods used for all views are defined here
- */
 export class HicView {
 	plotDiv: MainPlotDiv
 	type: 'view'
@@ -19,8 +14,7 @@ export class HicView {
 	//hasStatePreMain: boolean
 	app: any
 	data: number[][]
-	min: number
-	max: number
+	activeView: string
 
 	constructor(opts) {
 		this.type = 'view'
@@ -37,28 +31,21 @@ export class HicView {
 		} as MainPlotDiv
 		this.app = opts.app
 		this.data = opts.data
-		this.min = opts.min
-		this.max = opts.max
+		this.activeView = this.state.currView
 	}
 
 	// getState(appState: any) {
 	// 	return appState
 	// }
 
-	// init() {
-
-	// }
-
-	main() {
+	initView() {
 		if (this.state.currView == 'genome') {
 			this.genomeView = new GenomeView({
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				state: this.state,
 				app: this.app,
-				data: this.data,
-				min: this.min,
-				max: this.max
+				data: this.data
 			})
 			this.genomeView.render()
 		} else if (this.state.currView === 'chrpair') {
@@ -70,6 +57,19 @@ export class HicView {
 			//this.detailView = new DetailView.main()
 		} else {
 			throw Error(`Unknown view: ${this.state.currView}`)
+		}
+	}
+
+	init() {
+		this.initView()
+	}
+
+	main() {
+		if (this.activeView != this.state.currView) {
+			//remove old view
+			this.initView()
+		} else {
+			//update?
 		}
 	}
 }
@@ -84,6 +84,8 @@ export const hicViewInit = getCompInit(HicView)
  * @param lead lead chr
  * @param follow following chr
  * @param v returned value from straw
+ * @param bpmaxv
+ * @param state
  * @param obj obj to color
  * @param width if no .binpx for the view, must provied width
  * @param height if no .binpx for the view, must provied width
