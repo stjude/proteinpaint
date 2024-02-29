@@ -123,11 +123,7 @@ class HicApp {
 			await this.dataMapper.getHicStraw(this.hic, true, this.errList)
 			this.viewConfig()
 			const currView = this.hic.state[this.hic.state.currView]
-			const [data, min, max] = await this.dataMapper.getData(
-				this.hic.state.currView,
-				currView.nmeth,
-				this.hic['bpresolution'][0]
-			)
+			const [min, max] = await this.dataMapper.getData(currView.nmeth, this.hic['bpresolution'][0])
 			if (this.errList.length) this.error(this.errList)
 
 			currView.resolution = this.hic['bpresolution'][0]
@@ -148,7 +144,7 @@ class HicApp {
 					state: this.state,
 					plotDiv: this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true),
 					hic: this.hic,
-					data
+					dataMapper: this.dataMapper
 				}),
 				controls: await controlPanelInit({
 					app: this.api,
@@ -163,7 +159,6 @@ class HicApp {
 					hic: this.hic
 				})
 			}
-			console.log(this.dom.infoBarDiv)
 			await this.api.dispatch()
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -171,7 +166,7 @@ class HicApp {
 	}
 
 	main() {
-		//getData and pass to view
+		//I'm a comment so ts doesn't complain
 	}
 }
 

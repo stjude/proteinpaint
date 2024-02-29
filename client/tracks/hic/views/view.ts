@@ -13,8 +13,9 @@ export class HicView {
 	genomeView: any
 	//hasStatePreMain: boolean
 	app: any
-	data: number[][]
+	dataMapper: any
 	activeView: string
+	rendered = false
 
 	constructor(opts) {
 		this.type = 'view'
@@ -30,22 +31,24 @@ export class HicView {
 			blank: tr2.append('td')
 		} as MainPlotDiv
 		this.app = opts.app
-		this.data = opts.data
+		this.dataMapper = opts.dataMapper
 		this.activeView = this.state.currView
 	}
 
-	// getState(appState: any) {
-	// 	return appState
-	// }
+	getState(appState: any) {
+		return {
+			currView: appState.currView
+		}
+	}
 
-	initView() {
+	async initView() {
 		if (this.state.currView == 'genome') {
-			this.genomeView = new GenomeView({
+			this.genomeView = await new GenomeView({
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				state: this.state,
 				app: this.app,
-				data: this.data
+				data: this.dataMapper.data
 			})
 			this.genomeView.render()
 		} else if (this.state.currView === 'chrpair') {
@@ -60,16 +63,24 @@ export class HicView {
 		}
 	}
 
-	init() {
-		this.initView()
+	async init() {
+		await this.initView()
 	}
 
-	main() {
+	async main(appState: any) {
+		this.state = this.app.getState(appState)
+		const currView = this.state[this.activeView]
 		if (this.activeView != this.state.currView) {
-			//remove old view
+			this.plotDiv.xAxis.selectAll('*').remove()
+			this.plotDiv.yAxis.selectAll('*').remove()
+			this.plotDiv.plot.selectAll('*').remove()
 			this.initView()
+			this.activeView == this.state.currView
 		} else {
-			//update?
+			await this.dataMapper.getData(currView.nmeth, currView.resolution, currView.matrixType)
+			const viewText = `${this.activeView}View`
+			//console.log(this[viewText].update)
+			await this[viewText].update(this.dataMapper.data)
 		}
 	}
 }
