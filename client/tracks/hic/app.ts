@@ -1,9 +1,10 @@
 import { getAppInit } from '#rx'
 import { hicStoreInit } from './store'
-import { Div, Elem } from '../../types/d3'
+import { Div, Dom, Elem } from '../../types/d3'
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { loadingInit } from './dom/loadingOverlay'
 import { controlPanelInit } from './controls/controlPanel'
+import { infoBarInit } from './dom/infoBar'
 import { hicViewInit } from './views/view'
 import * as client from '#src/client'
 import { select as d3select } from 'd3-selection'
@@ -59,7 +60,13 @@ class HicApp {
 		this.dom = {
 			errorDiv: opts.holder.append('div').classed('sjpp-hic-error', true),
 			controlsDiv: opts.holder.append('div').classed('sjpp-hic-controls', true).style('display', 'inline-block'),
-			infoBarDiv: opts.holder.append('div').classed('sjpp-hic-infobar', true).style('display', 'inline-block'),
+			infoBarDiv: opts.holder
+				.append('div')
+				.classed('sjpp-hic-infobar', true)
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
+				.style('padding', '5px')
+				.style('border', 'solid 0.5px #ccc'),
 			loadingDiv: d3select('body').append('div'),
 			// .attr('id', 'sjpp-loading-overlay'),
 			plotDiv: opts.holder.append('div').classed('sjpp-hic-main', true).style('display', 'inline-block'),
@@ -88,15 +95,18 @@ class HicApp {
 
 		const nmeth = this.hic['normalization'].length ? this.hic['normalization'][0] : this.state.defaultNmeth
 
-		// if (this.hic.state.currView) {
-		//     if (!this.hic.state[this.hic.state.currView]?.matrixType) {
-		//         this.hic.state[this.hic.state.currView].matrixType = 'observed'
-		//     }
-		//     if (!this.hic.state[this.hic.state.currView]?.nemth) {
-		//         this.hic.state[this.hic.state.currView].nmeth = nmeth
-		//     }
-		// }
+		//If currView provided without state, add state
+		if (this.hic.state.currView) {
+			if (!this.hic.state[this.hic.state.currView]) this.hic.state[this.hic.state.currView] = {}
+			if (!this.hic.state[this.hic.state.currView]?.matrixType) {
+				this.hic.state[this.hic.state.currView].matrixType = 'observed'
+			}
+			if (!this.hic.state[this.hic.state.currView]?.nemth) {
+				this.hic.state[this.hic.state.currView].nmeth = nmeth
+			}
+		}
 
+		//Add default state for all views
 		for (const v of views) {
 			if (!this.hic.state[v]) {
 				this.hic.state[v] = {
@@ -118,13 +128,15 @@ class HicApp {
 				currView.nmeth,
 				this.hic['bpresolution'][0]
 			)
+			if (this.errList.length) this.error(this.errList)
+
+			currView.resolution = this.hic['bpresolution'][0]
 			currView.min = min
 			currView.max = max
 
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
 			this.state = await this.store.copyState()
-			console.log(this.state)
-			if (this.errList.length) this.error(this.errList)
+
 			this.components = {
 				// loadingOverlay: await loadingInit({
 				// 	app: this.api,
@@ -143,8 +155,15 @@ class HicApp {
 					state: this.state,
 					controlsDiv: this.dom.controlsDiv,
 					hic: this.hic
+				}),
+				infoBar: await infoBarInit({
+					app: this.api,
+					state: this.state,
+					infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
+					hic: this.hic
 				})
 			}
+			console.log(this.dom.infoBarDiv)
 			await this.api.dispatch()
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -152,7 +171,7 @@ class HicApp {
 	}
 
 	main() {
-		// console.log(this)
+		//getData and pass to view
 	}
 }
 
