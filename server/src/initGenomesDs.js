@@ -18,7 +18,7 @@ export const genomes = {} // { hg19: {...}, ... }
 
 const features = serverconfig.features
 
-export async function pp_init(serverconfig, app, basepath) {
+export async function initGenomesDs(serverconfig, app, basepath) {
 	// verify if tp directory is readable
 	// ppr has this situation where its tp/ is from a nfs mount and can go down...
 	try {
