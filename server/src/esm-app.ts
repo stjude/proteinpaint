@@ -9,6 +9,7 @@ import https from 'https'
 import * as augen from '@sjcrh/augen'
 import serverconfig from './serverconfig.js'
 import { genomes, pp_init } from './pp_init.js'
+import { setAppMiddlewares } from './esm-app-middlewares.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -33,6 +34,8 @@ async function launch() {
 			console.log(exitMessage)
 			return
 		}
+		console.log('setting app middlewares ...')
+		setAppMiddlewares(app)
 
 		console.log('initializing server routes ...')
 
