@@ -7,9 +7,10 @@ import { initLegacyDataset } from './initLegacyDataset'
 import serverconfig from './serverconfig.js'
 import { server_init_db_queries, listDbTables } from './termdb.server.init.js'
 import { server_updateAttr } from './dsUpdateAttr'
-import * as mds2_init from './mds2.init.js'
+//import * as mds2_load from './mds2.load.js'
+//import * as mds2_init from './mds2.init.js'
+//import * as mds_init from './mds.init.js' // !!! TODO: create a separate module ???
 import * as mds3_init from './mds3.init.js'
-import * as mds2_load from './mds2.load.js'
 
 // Global variable (storing things in memory)
 export const genomes = {} // { hg19: {...}, ... }
