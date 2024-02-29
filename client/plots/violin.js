@@ -165,11 +165,11 @@ class ViolinPlot {
 				min: 0.1
 			},
 			{
-				label: 'Ticks',
+				label: 'Bins',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'ticks',
-				title: 'Number of ticks used to build the plot',
+				title: 'Number of bins used to build the plot',
 				min: 1,
 				max: 50
 			},
