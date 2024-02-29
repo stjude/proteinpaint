@@ -67,7 +67,7 @@ export async function plotSingleSampleGenomeQuantification(
 		// description
 		holder
 			.append('div')
-			.attr('data-testid', 'methylation_array_sand_box')
+			.attr('data-testid', 'sjpp_ssgq_sandbox')
 			.text(q.description || queryKey)
 		if (q2) {
 			holder
