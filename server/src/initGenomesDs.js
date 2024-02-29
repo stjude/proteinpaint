@@ -18,7 +18,7 @@ export const genomes = {} // { hg19: {...}, ... }
 
 const features = serverconfig.features
 
-export async function initGenomesDs(serverconfig, app, basepath) {
+export async function initGenomesDs(serverconfig) {
 	// verify if tp directory is readable
 	// ppr has this situation where its tp/ is from a nfs mount and can go down...
 	try {
@@ -39,7 +39,6 @@ export async function initGenomesDs(serverconfig, app, basepath) {
 	checkDependenciesAndVersions(serverconfig)
 
 	// date updated
-
 	if (serverconfig.base_zindex != undefined) {
 		const v = Number.parseInt(serverconfig.base_zindex)
 		if (Number.isNaN(v) || v <= 0) throw 'base_zindex must be positive integer'
@@ -432,9 +431,9 @@ export async function initGenomesDs(serverconfig, app, basepath) {
 
 			if (ds.isMds3) {
 				try {
-					await mds3_init.init(ds, g, d, app, basepath)
+					await mds3_init.init(ds, g, d)
 				} catch (e) {
-					if (e.stack) console.log(e.stack)
+					console.trace(e)
 					throw 'Error with mds3 dataset ' + ds.label + ': ' + e
 				}
 				continue
@@ -443,6 +442,7 @@ export async function initGenomesDs(serverconfig, app, basepath) {
 				try {
 					await mds_init(ds, g, d)
 				} catch (e) {
+					console.trace(e)
 					throw 'Error with mds dataset ' + ds.label + ': ' + e
 				}
 				continue

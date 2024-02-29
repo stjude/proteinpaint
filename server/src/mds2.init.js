@@ -25,7 +25,7 @@ may_sum_samples
 
 const pc_termid_prefix = 'Ancestry_PC_' // may define in ds, must avoid conflicting with dictionary term ids
 
-export async function init_db(ds, app = null, basepath = null) {
+export async function init_db(ds) {
 	/* db should be required
 	must initiate db first, then process other things
 	as db may be needed (e.g. getting json of a term)
@@ -44,10 +44,7 @@ export async function init_db(ds, app = null, basepath = null) {
 	ds.mayGetGeneVariantData = mayGetGeneVariantData
 	ds.getTermTypes = getTermTypes
 	ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames
-
-	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
-	// for a genome dataset, using "updateAttr: [[...]]
-	if (ds.cohort?.db?.refresh && app) setDbRefreshRoute(ds, app, basepath)
+	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 }
 export async function init_track(ds, genome) {
 	/* initiate the mds2 track upon launching server

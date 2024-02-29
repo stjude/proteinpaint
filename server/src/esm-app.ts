@@ -18,10 +18,7 @@ launch()
 
 async function launch() {
 	try {
-		const app = express()
-		app.disable('x-powered-by')
-
-		await initGenomesDs(serverconfig, app, basepath)
+		await initGenomesDs(serverconfig)
 
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
@@ -36,6 +33,8 @@ async function launch() {
 			return
 		}
 		console.log('setting app middlewares ...')
+		const app = express()
+		app.disable('x-powered-by')
 		setAppMiddlewares(app)
 
 		console.log('setting server routes ...')
