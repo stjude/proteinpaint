@@ -24,7 +24,7 @@ import {
 } from '../../../types/hic.ts'
 import { showErrorsWithCounter } from '../../../dom/sayerror'
 import { hicParseFile } from '../data/parseData.ts'
-import { init_hicInfoBar } from '../dom/info.bar.ts'
+// import { init_hicInfoBar } from '../dom/info.bar.ts'
 //import { init_hicControls } from '../controls/controlPanel.ts'
 import { Div } from '../../../types/d3'
 
@@ -615,7 +615,7 @@ class Hicstat {
 			this.dom.loadingDiv.style('display', 'none')
 			return
 		}
-		await init_hicInfoBar(hic, this)
+		//await init_hicInfoBar(hic, this)
 		//init_hicControls(hic, this)
 		this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
 		const tr1 = this.dom.plotDiv.append('tr')
