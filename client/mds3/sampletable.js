@@ -163,7 +163,6 @@ async function feedSample2selectCallback(tk, block, _samples, sampleIdxLst) {
 
 async function make_singleSampleTable(s, arg) {
 	const table = arg.singleSampleDiv || table2col({ holder: arg.div })
-	table.attr()
 
 	if (s.sample_id) {
 		// sample_id is hardcoded
