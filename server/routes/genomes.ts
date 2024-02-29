@@ -1,7 +1,7 @@
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
-import { versionInfo } from '#src/health.js'
+import { versionInfo } from '#src/health.ts'
 
 export const api: any = {
 	endpoint: 'genomes',

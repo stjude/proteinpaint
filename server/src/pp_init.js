@@ -9,8 +9,9 @@ import { server_init_db_queries, listDbTables } from './termdb.server.init.js'
 import { server_updateAttr } from './dsUpdateAttr'
 //import * as mds2_load from './mds2.load.js'
 //import * as mds2_init from './mds2.init.js'
-//import * as mds_init from './mds.init.js' // !!! TODO: create a separate module ???
+import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
+import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 
 // Global variable (storing things in memory)
 export const genomes = {} // { hg19: {...}, ... }
@@ -96,13 +97,14 @@ export async function pp_init(serverconfig, app, basepath) {
 			Proteinpaint packaged files[] 
 		*/
 		const overrideFile = path.join(process.cwd(), g.file)
+		const genomeFile = fs.existsSync(overrideFile) ? overrideFile : path.join(serverconfig.binpath, g.file)
 
 		/* g is the object from serverconfig.json, for instance-specific customizations of this genome
 		g2 is the standard-issue obj loaded from the js file
 		settings in g will modify g2
 		g2 is registered in the global "genomes"
 		*/
-		const g2module = (await import(fs.existsSync(overrideFile) ? overrideFile : g.file)).default
+		const g2module = (await import(genomeFile)).default
 		const g2 = g2module.default || g2module
 		genomes[g.name] = g2
 
@@ -412,7 +414,8 @@ export async function pp_init(serverconfig, app, basepath) {
 				Proteinpaint packaged files[] 
 			*/
 			const overrideFile = path.join(process.cwd(), d.jsfile)
-			const _ds = (await import(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)).default
+			const dsFile = fs.existsSync(overrideFile) ? overrideFile : path.join(serverconfig.binpath, d.jsfile)
+			const _ds = (await import(dsFile)).default
 			const ds =
 				typeof _ds == 'function'
 					? _ds(common)
@@ -470,37 +473,6 @@ async function mayCreateSubdirInCache(subdir) {
 		}
 	}
 	return dir
-}
-
-function parse_textfilewithheader(text) {
-	/*
-    for sample annotation file, first line is header, skip lines start with #
-    parse each line as an item
-    */
-	const lines = text.split(/\r?\n/)
-	/*
-        if(lines.length<=1) return ['no content']
-        if(lines[0] == '') return ['empty header line']
-        */
-
-	// allow empty file
-	if (lines.length <= 1 || !lines[0]) return [null, []]
-
-	const header = lines[0].split('\t')
-	const items = []
-	for (let i = 1; i < lines.length; i++) {
-		if (lines[i][0] == '#') continue
-		const l = lines[i].split('\t')
-		const item = {}
-		for (let j = 0; j < header.length; j++) {
-			const value = l[j]
-			if (value) {
-				item[header[j]] = value
-			}
-		}
-		items.push(item)
-	}
-	return [null, items]
 }
 
 async function deleteSessionFiles() {
