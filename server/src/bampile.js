@@ -1,6 +1,6 @@
-import * as utils from './utils'
+import * as utils from './utils.js'
 import { createCanvas } from 'canvas'
-import { basecolor } from '#shared/common'
+import { basecolor } from '#shared/common.js'
 
 export default async function (req, res) {
 	try {

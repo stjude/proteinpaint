@@ -1,12 +1,12 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
+import * as utils from './utils.js'
 import serverconfig from './serverconfig'
 import { spawn } from 'child_process'
 import readline from 'readline'
-import * as common from '#shared/common'
-import * as vcf from '#shared/vcf'
-import lines2R from './lines2R'
+import * as common from '#shared/common.js'
+import * as vcf from '#shared/vcf.js'
+import lines2R from './lines2R.js'
 
 /*
 function cascade

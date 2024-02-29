@@ -1,9 +1,9 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
-import { nt2aa } from '#shared/common'
 import { createCanvas } from 'canvas'
-import { parseBedLine } from './bedj.parseBed'
+import * as utils from './utils.js'
+import { nt2aa } from '#shared/common.js'
+import { parseBedLine } from './bedj.parseBed.js'
 
 /*
 should guard against file content error e.g. two tabs separating columns

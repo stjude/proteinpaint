@@ -11,6 +11,7 @@ import serverconfig from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './esm-app-middlewares.js'
 import { authApi } from './auth.js'
+import * as oldApp from './app.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -43,7 +44,7 @@ async function launch() {
 
 		// start moving migrated route handler code here
 		const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-		const routeFiles = files.filter(f => f.endsWith('.ts'))
+		const routeFiles = files.filter(f => !f.startsWith('_') && f.endsWith('.ts'))
 		const routes = await Promise.all(
 			routeFiles
 				//.filter(file => file.includes('health'))
@@ -65,6 +66,9 @@ async function launch() {
 				outputFile: path.join(__dirname, './shared/checkers-raw/index.ts')
 			}
 		})
+
+		oldApp.setGenomes(genomes)
+		oldApp.setRoutes(app, genomes, serverconfig)
 
 		await startServer(app)
 	} catch (err) {
