@@ -59,7 +59,7 @@ function kde(kernel, thresholds, data, valuesMin, valuesMax, step) {
 	for (const element of density) {
 		const bin = { x0: element[0], x1: element[0] + step, density: element[1] }
 		densityMax = Math.max(densityMax, bin.density)
-		if (bin.x1 < valuesMin) continue
+		if (bin.x0 < valuesMin) continue
 		if (bin.x0 > valuesMax || bin.x1 > valuesMax) break
 		bins.push(bin)
 	}
@@ -77,7 +77,7 @@ function getBinsHist(scale, values, ticks, valuesMin, valuesMax) {
 	let densityMax = 0
 	for (const bin of bins0) {
 		densityMax = Math.max(densityMax, bin.length)
-		if (bin.x1 < valuesMin) continue
+		if (bin.x0 < valuesMin) continue
 		if (bin.x0 > valuesMax) break
 		bins.push({ x0: bin.x0, x1: bin.x1, density: bin.length })
 	}
