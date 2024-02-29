@@ -5,6 +5,7 @@ export class HicDataMapper {
 	hic: any
 	debugmode: boolean
 	errList: string[]
+	data = []
 
 	constructor(hic: any, debugmode: boolean, errList: string[] = []) {
 		this.hic = hic
@@ -19,19 +20,12 @@ export class HicDataMapper {
 	//helper function to return data per view requirement
 	//TODO: rm chrs without data from hic.chrlst in this function on init()
 
-	async getData(
-		currView: string,
-		nmeth: string,
-		resolution: number,
-		matrixType?: string,
-		lead?: string,
-		follow?: string
-	) {
+	async getData(nmeth: string, resolution: number, matrixType?: string, lead?: string, follow?: string) {
 		const vlst = []
-		const data = []
+		if (this.data.length) this.data = []
 		if (!matrixType) matrixType = 'observed'
 		if (lead && follow) {
-			await this.getHicData(nmeth, resolution, matrixType, lead, follow, vlst, data)
+			await this.getHicData(nmeth, resolution, matrixType, lead, follow, vlst, this.data)
 		} else {
 			/** lead chr and follow chr not provided for genome view.
 			 * Loop through all the chrs, getData, and trim hic.chrLst on result
@@ -41,7 +35,7 @@ export class HicDataMapper {
 				const lead = this.hic.chrlst[i]
 				for (let j = 0; j <= i; j++) {
 					const follow = this.hic.chrlst[j]
-					await this.getHicData(nmeth, resolution, matrixType, lead, follow, vlst, data)
+					await this.getHicData(nmeth, resolution, matrixType, lead, follow, vlst, this.data)
 				}
 			}
 		}
@@ -50,7 +44,7 @@ export class HicDataMapper {
 		const sortedVlst = vlst.sort((a: number, b: number) => a - b)
 		const max = sortedVlst[Math.floor(sortedVlst.length * 0.99)] as number
 		const min = sortedVlst[0]
-		return [data, Math.floor(min), Math.floor(max)]
+		return [Math.floor(min), Math.floor(max)]
 	}
 
 	async getHicData(

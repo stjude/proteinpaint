@@ -1,6 +1,6 @@
 import { ColorScale } from '../../../dom/colorScale'
 import { getCompInit } from '#rx'
-import { Elem, Table, Tr } from '../../../types/d3'
+import { Tr } from '../../../types/d3'
 import { bplen } from '#shared/common'
 
 export class InfoBar {
@@ -16,6 +16,7 @@ export class InfoBar {
 	colorScaleDiv: any
 	colorScale: any
 
+	/** Defaults **/
 	//Color shown on the left of the color scale
 	startColor = 'white'
 	//Color shown on the right of the color scale
@@ -66,6 +67,7 @@ export class InfoBar {
 		this.colorScaleLabel = this.addLabel('Scale')
 		this.colorScaleDiv = this.valueRow.append('td')
 
+		//TODO: Include upper line to show min cutoff when min < 0
 		this.colorScale = new ColorScale({
 			barheight: 10,
 			barwidth: 85,
