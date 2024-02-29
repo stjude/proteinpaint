@@ -27,7 +27,6 @@ import {
 import { get_samples } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.js'
 import { barchart_data } from './termdb.barchart.js'
-import { setDbRefreshRoute } from './dsUpdateAttr.js'
 import { mayInitiateScatterplots } from './termdb.scatter.js'
 import { mayInitiateMatrixplots } from './termdb.matrix.js'
 import { add_bcf_variant_filter } from './termdb.snp.js'
@@ -85,13 +84,13 @@ mayAdd_mayGetGeneVariantData
 
 
 arguments:
-	_servconfig
+	_servconfig // should rename this and not imply serverconfig, also not used in the function
 		bootstrap object for this ds
 */
 
 const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/legend.js
 
-export async function init(ds, genome, _servconfig, app = null, basepath = null) {
+export async function init(ds, genome, _servconfig) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
 	// overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
 	for (const k in ds.serverconfigFeatures || {}) {
@@ -132,10 +131,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 
 	await mayValidateAssayAvailability(ds)
 	await mayValidateViewModes(ds)
-
-	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
-	// for a genome dataset, using "updateAttr: [[...]]
-	if (ds.cohort?.db?.refresh && app) await setDbRefreshRoute(ds, app, basepath)
+	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 }
 
 export function client_copy(ds) {
