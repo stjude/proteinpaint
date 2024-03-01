@@ -10,8 +10,10 @@ export class InfoBar {
 	state: any
 	labelRow: Tr
 	valueRow: Tr
+	range: [number, number]
+	resolution: number
 
-	resolution: any
+	resolutionDiv: any
 	colorScaleLabel: any
 	colorScaleDiv: any
 	colorScale: any
@@ -30,6 +32,8 @@ export class InfoBar {
 		const table = opts.infoBarDiv
 		this.labelRow = table.append('tr')
 		this.valueRow = table.append('tr')
+		this.range = opts.range
+		this.resolution = opts.resolution
 	}
 
 	addLabel = (text: string) => {
@@ -60,7 +64,7 @@ export class InfoBar {
 
 		this.addLabel('Resolution')
 		//Text dynamically updates from state in main()
-		this.resolution = this.addValue('')
+		this.resolutionDiv = this.addValue('')
 
 		//Color scale appears dynamically based on the state
 		//Eventually this can be used in tandem with a color picker
@@ -84,8 +88,8 @@ export class InfoBar {
 
 	async main() {
 		//need to account for fragments in detail view later
-		const resolutionText = bplen(this.state[this.state.currView].resolution)
-		this.resolution.text(`${resolutionText} bp`)
+		const resolutionText = bplen(this.resolution)
+		this.resolutionDiv.text(`${resolutionText} bp`)
 		if (this.state.currView == 'horizontal') {
 			this.colorScaleLabel.style('display', 'none')
 			this.colorScaleDiv.style('display', 'none')
@@ -93,8 +97,8 @@ export class InfoBar {
 			this.colorScaleLabel.style('display', '')
 			this.colorScaleDiv.style('display', '')
 
-			const min = this.state[this.state.currView].min
-			const max = this.state[this.state.currView].max
+			const min = this.range[0]
+			const max = this.range[1]
 
 			if (min < 0) {
 				this.colorScale.bar.startColor = 'blue'
