@@ -122,7 +122,13 @@ function addScatterplots(c, ds) {
 	if (!ds.cohort.scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
 	c.scatterplots = ds.cohort.scatterplots.plots.map(p => {
-		return { name: p.name, dimensions: p.dimensions, colorTW: p.colorTW, shapeTW: p.shapeTW }
+		return {
+			name: p.name,
+			dimensions: p.dimensions,
+			colorTW: p.colorTW,
+			shapeTW: p.shapeTW,
+			colorColumn: p.colorColumn
+		}
 	})
 }
 

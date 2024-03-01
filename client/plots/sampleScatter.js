@@ -124,6 +124,7 @@ class Scatter {
 			filter: this.state.termfilter.filter,
 			coordTWs
 		}
+		if (c.colorColumn) opts.colorColumn = c.colorColumn
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		if (c.scaleDotTW) {
 			if (!c.scaleDotTW.q) c.scaleDotTW.q = {}
@@ -153,6 +154,7 @@ class Scatter {
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
+		console.log(results)
 		if (results.error) throw results.error
 		this.charts = []
 		let i = 0
@@ -163,7 +165,7 @@ class Scatter {
 		}
 		this.initRanges()
 		this.is3D = this.config.term && this.config.term0?.q.mode == 'continuous'
-		await this.setControls()
+		if (!this.config.colorColumn) await this.setControls()
 		await this.processData()
 		this.render()
 		this.dom.loadingDiv.style('display', 'none')
@@ -543,9 +545,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				.on('click', () => {
 					let config = {
 						chartType: 'sampleScatter',
-						colorTW: JSON.parse(JSON.stringify(plot.colorTW)),
 						name: plot.name
 					}
+					if (plot.colorTW) config.colorTW = JSON.parse(JSON.stringify(plot.colorTW))
+					else if (plot.colorColumn) config.colorColumn = JSON.parse(JSON.stringify(plot.colorColumn))
+
 					if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
 					chartsInstance.app.dispatch({
 						type: 'plot_create',
