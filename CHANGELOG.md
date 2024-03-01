@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.45.0
 
 Features:
 - Add test-data-ids to enable mds3 e2e testing
