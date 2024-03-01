@@ -36,7 +36,7 @@ export function setInteractivity(self) {
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
 		// TODO: svg-rendered cell rects may be thin and hard to mouse over,
 		// but the tooltip should still display info
-		if (!d || !d.term || !d.sample || !d.siblingCells?.length) {
+		if (!d || !d.term || !d.sample) {
 			self.dom.tip.hide()
 			self.mouseout()
 			return
@@ -72,29 +72,30 @@ export function setInteractivity(self) {
 					</td>
 				</tr>`
 			)
-		} else if (d.term.type == 'geneVariant' && d.value) {
-			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label || d.value.sample}</td></tr>`)
+		} else if (d.term.type == 'geneVariant') {
+			rows.push(`<tr><td>${l.Sample}:</td><td>${d.row._ref_.label || d.value?.sample}</td></tr>`)
 			rows.push(`<tr><td>Gene:</td><td>${d.term.name}</td></tr>`)
 
 			const siblingCellLabels = {}
-			for (const c of d.siblingCells) {
-				if (c.$id != d.$id) continue
-				const v = c.value
-				const p = v.pairlst
-				const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
-				// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
-				// list that label only once but with a hit count, instead of listing that same label
-				// as multiple table rows in the mouseover
-				const label =
-					c.label == self.config.settings.hierCluster?.termGroupName || v.value
-						? v.value
-						: p
-						? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
-						: v.mname
-						? `${v.mname} ${mclass[v.class].label}`
-						: mclass[v.class].label
+			if (d.siblingCells)
+				for (const c of d.siblingCells) {
+					if (c.$id != d.$id) continue
+					const v = c.value
+					const p = v.pairlst
+					const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
+					// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
+					// list that label only once but with a hit count, instead of listing that same label
+					// as multiple table rows in the mouseover
+					const label =
+						c.label == self.config.settings.hierCluster?.termGroupName || v.value
+							? v.value
+							: p
+							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+							: v.mname
+							? `${v.mname} ${mclass[v.class].label}`
+							: mclass[v.class].label
 
-				/* display as two column tabel, do not display these info and do not show gradient CNV anymore
+					/* display as two column tabel, do not display these info and do not show gradient CNV anymore
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
 				if ('value' in v) info.push(`${s.cnvUnit}=${v.value}`)
@@ -108,14 +109,14 @@ export function setInteractivity(self) {
 					? `<td colspan='2' style='text-align: center'>${label}</td>`
 					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
 				*/
-				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+					const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
 
-				if (!siblingCellLabels[dtLabel]) {
-					siblingCellLabels[dtLabel] = [{ label, color }]
-				} else {
-					siblingCellLabels[dtLabel].push({ label, color })
-				}
-				/*
+					if (!siblingCellLabels[dtLabel]) {
+						siblingCellLabels[dtLabel] = [{ label, color }]
+					} else {
+						siblingCellLabels[dtLabel].push({ label, color })
+					}
+					/*
 				do not use gradient CNV anymore
 				if (v.dt == 4 && 'value' in v) {
 					const textColor = Math.abs(v.value) < 0.5 ? '#000' : '#fff'
@@ -126,7 +127,7 @@ export function setInteractivity(self) {
 					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
 				}
 				*/
-			}
+				}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
 				rows.push(`<tr>
 						   		<td>${dtLabel}:</td>
@@ -146,9 +147,9 @@ export function setInteractivity(self) {
 				}
 			}
 		}
-		self.dom.menutop.selectAll('*').remove()
-		self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		self.dom.tip.show(event.clientX, event.clientY)
+		self.dom.matrixCellHoverOver.clear()
+		self.dom.matrixCellHoverOver.d.append('div').html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+		self.dom.matrixCellHoverOver.show(event.clientX, event.clientY)
 		self.dom.mainG.on('mouseout', self.mouseout)
 	}
 
@@ -176,6 +177,7 @@ export function setInteractivity(self) {
 		delete self.imgBox
 		self.dom.colBeam.style('display', 'none')
 		self.dom.rowBeam.style('display', 'none')
+		self.dom.matrixCellHoverOver.clear()
 	}
 
 	self.mouseclick = function (event, data) {
@@ -200,6 +202,7 @@ export function setInteractivity(self) {
 		self.dom.clickMenu.clear()
 		self.dom.dendroClickMenu.clear()
 		self.dom.brushMenu.clear()
+		self.dom.matrixCellHoverOver.clear()
 
 		if (self.dom.sampleListMenu) self.dom.sampleListMenu.destroy()
 
@@ -2210,11 +2213,11 @@ function setZoomPanActions(self) {
 			}
 		}
 
-		self.dom.dendroClickMenu.d.selectAll('*').remove() // close the dendrogram clicking menu when brushing
-		self.dom.clickMenu.d.selectAll('*').remove() // close the matrix cell click menu when brushing
+		self.dom.dendroClickMenu.clear() // close the dendrogram clicking menu when brushing
+		self.dom.clickMenu.clear() // close the matrix cell click menu when brushing
 		self.mouseout()
 		self.dom.tip.hide()
-		self.dom.brushMenu.d.selectAll('*').remove()
+		self.dom.brushMenu.clear()
 		self.dom.brushMenu.d
 			.selectAll('div')
 			.data(optionArr)
