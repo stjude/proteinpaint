@@ -89,7 +89,7 @@ export function setRenderers(self) {
 		let step = Math.min((20 * 40) / chart.colorLegend.size, 25)
 		if (step < 12) step = 12
 		let colorLegendSize = chart.colorLegend.size * step
-		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegendSize += 60
+		if (chart.colorLegend.get('Ref')?.sampleCount > 0) colorLegendSize += 60
 		const scaleHeight = self.config.scaleDotTW ? 200 : 100
 		self.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
 		const width = self.charts.length == 1 ? s.svgw + 800 : s.svgw + (self.config.shapeTW ? 600 : 350)

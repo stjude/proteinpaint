@@ -967,6 +967,7 @@ export class TermdbVocab extends Vocab {
 			filter: getNormalRoot(opts.filter),
 			embedder: window.location.hostname
 		}
+		if (opts.colorColumn) body.colorColumn = opts.colorColumn
 		if (opts.colorTW) body.colorTW = opts.colorTW
 		if (opts.shapeTW) body.shapeTW = opts.shapeTW
 		if (opts.divideByTW) body.divideByTW = opts.divideByTW

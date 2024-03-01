@@ -51,7 +51,6 @@ export async function mayInitiateScatterplots(ds) {
 
 			let invalidXY = 0,
 				sampleCount = 0
-
 			for (let i = 1; i < lines.length; i++) {
 				const l = lines[i].split('\t')
 				// sampleName \t x \t y ...
@@ -61,9 +60,11 @@ export async function mayInitiateScatterplots(ds) {
 					invalidXY++
 					continue
 				}
-
 				const sample = { sample: l[0], x, y }
-
+				if (p.colorColumn) {
+					sample.category = l[p.colorColumn.index]
+					sample.shape = 'Ref'
+				}
 				const id = ds.cohort.termdb.q.sampleName2id(l[0])
 				if (id == undefined) {
 					// no integer sample id found, this is a reference sample
@@ -142,6 +143,21 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			const result = await getSamples(req, ds, plot)
 			refSamples = result[0]
 			cohortSamples = result[1]
+			if (q.colorColumn) {
+				//Samples are marked as ref as they dont have a db mapping
+				let categories = new Set(refSamples.map(s => s.category))
+				categories = Array.from(categories)
+				console.log(categories)
+				const colorMap = {}
+				const k2c = getColors(categories.size)
+				for (const category of categories)
+					colorMap[category] = {
+						sampleCount: cohortSamples.filter(s => s.category == category).length,
+						color: k2c[category]
+					}
+				res.send({ Default: { samples: refSamples, colorMap: Object.entries(colorMap), shapeMap: {} } })
+				return
+			}
 		}
 		const terms = []
 		if (q.coordTWs) terms.push(...q.coordTWs)
@@ -152,7 +168,6 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 
 		const data = await getData({ filter: q.filter, terms }, ds, genome)
 		if (data.error) throw data.error
-
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
 	} catch (e) {
@@ -188,6 +203,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const results = {}
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
+
 		if (!dbSample) {
 			//console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
@@ -234,18 +250,17 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 		if (q.shapeTW) processSample(dbSample, sample, q.shapeTW, results[divideBy].shapeMap, 'shape')
 		else sample.shape = 'Ref'
-
 		results[divideBy].samples.push(sample)
 	}
 	//To choose a color scheme we pass the max number of categories
 	let max = 0
 	for (const [divideBy, result] of Object.entries(results)) max = Math.max(max, Object.keys(result.colorMap).length)
 	const k2c = getColors(max)
+	const scheme = schemeCategory20
 
 	for (const [divideBy, result] of Object.entries(results)) {
-		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
+		if (q.colorTW && q.colorTW?.q.mode !== 'continuous') {
 			let i = 20
-			const scheme = schemeCategory20
 			const colorEntries = Object.entries(result.colorMap)
 
 			for (const [category, value] of colorEntries) {
