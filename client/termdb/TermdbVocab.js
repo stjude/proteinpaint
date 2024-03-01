@@ -442,7 +442,6 @@ export class TermdbVocab extends Vocab {
 				devicePixelRatio: window.devicePixelRatio,
 				isKDE: arg.isKDE || true,
 				ticks: arg.ticks,
-				bandwith: arg.bandwidth,
 				datasymbol: arg.datasymbol || 'rug',
 				orientation: arg.orientation || 'horizontal',
 				radius: arg.radius || 3,

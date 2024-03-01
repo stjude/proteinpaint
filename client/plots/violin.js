@@ -112,16 +112,7 @@ class ViolinPlot {
 					{ label: 'Histogram', value: 1 }
 				]
 			},
-			{
-				label: 'Bandwidth',
-				type: 'number',
-				title:
-					'It only applies to the KDE method. If the bandwidth is too small, the estimate may include spurious bumps and wiggles; too large, and the estimate reveals little about the underlying distribution',
-				chartType: 'violin',
-				settingsKey: 'bandwidth',
-				min: 1,
-				max: 20
-			},
+
 			{
 				label: 'Data symbol',
 				title: 'Symbol type',
@@ -332,8 +323,7 @@ class ViolinPlot {
 			rightMargin: s.rightMargin,
 			unit: s.unit,
 			isKDE: s.method == 0,
-			ticks: s.ticks,
-			bandwidth: s.bandwidth
+			ticks: s.ticks
 		}
 
 		if (this.opts.mode == 'minimal') {
@@ -385,7 +375,6 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		medianLength: 7,
 		medianThickness: 3,
 		ticks: 20,
-		bandwidth: 5,
 		defaultColor: plotColor,
 		method: 0
 	}
