@@ -37,7 +37,8 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
 	const step = Math.abs(max - min) / ticks
 
-	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, density: 1 }], densityMax: valuesMax }
+	//Commented out as it seems to be handled by kde with automatic bandwidth
+	//if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, density: 1 }], densityMax: valuesMax, densityMin: 0}
 
 	const result = isKDE
 		? kde(gaussianKernel, scale.ticks(ticks), plot.values, valuesMin, valuesMax, step)
