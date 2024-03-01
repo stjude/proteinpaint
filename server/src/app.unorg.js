@@ -87,14 +87,6 @@ const ch_genemcount = {} // genome name - gene name - ds name - mutation class -
 const ch_dbtable = new Map() // k: db path, v: db stuff
 
 export const features = serverconfig.features
-
-//////////////////////////////
-// Global variable (storing things in memory)
-export let genomes // { hg19: {...}, ... }, legacy, should use closure
-export function setGenomes(_genomes) {
-	genomes = _genomes
-}
-
 const tabix = serverconfig.tabix
 const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
@@ -106,8 +98,15 @@ const hicstraw = serverconfig.hicstraw
     */
 const infoFilter_unannotated = 'Unannotated'
 
-export function setRoutes(app, genomes, serverconfig) {
-	console.log(109, 'setting routes from old app.js')
+//////////////////////////////
+// Global variable (storing things in memory)
+//
+export let genomes // { hg19: {...}, ... }, legacy, should use closure
+
+export function setRoutes(app, _genomes, serverconfig) {
+	genomes = _genomes
+
+	console.log(109, 'setting routes from app.unorg.js')
 	const basepath = serverconfig.basepath || ''
 	// has to set optional routes before app.get() or app.post()
 	// otherwise next() may not be called for a middleware in the optional routes
@@ -121,6 +120,7 @@ export function setRoutes(app, genomes, serverconfig) {
 	app.get(basepath + '/blat', blat_request_closure(genomes))
 	app.all(basepath + '/mds3', mds3_request_closure(genomes))
 	app.get(basepath + '/tkbampile', bampile_request)
+	app.post(basepath + '/tkbigwig', handle_tkbigwig)
 	app.post(basepath + '/tkld', handle_tkld(genomes))
 	app.get(basepath + '/tabixheader', handle_tabixheader)
 	app.get(basepath + '/img', handle_img)
@@ -149,7 +149,7 @@ export function setRoutes(app, genomes, serverconfig) {
 	app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
 	app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
 	app.post(basepath + '/fimo', fimo.handle_closure(genomes))
-	//app.all(basepath + '/termdb', termdb.handle_request_closure(genomes))
+	app.all(basepath + '/termdb', termdb.handle_request_closure(genomes))
 	app.all(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
 	app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
 	app.post(basepath + '/massSession', massSession.save)

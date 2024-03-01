@@ -1,3 +1,5 @@
+import serverconfig from '#src/serverconfig.js'
+
 export const api: any = {
 	// route endpoint
 	// - no need for trailing slash
@@ -63,7 +65,7 @@ function init({ genomes }) {
 				}
 
 				if (query.makequery) {
-					const d = handle_dsdata_makequery(ds, query, req)
+					const d = handle_dsdata_makequery(ds, query, req, genomes)
 					data.push(d)
 					continue
 				}
@@ -79,7 +81,7 @@ function init({ genomes }) {
 	}
 }
 
-function handle_dsdata_makequery(ds, query, req) {
+function handle_dsdata_makequery(ds, query, req, genomes) {
 	// query from ds.newconn
 
 	if (req.query.isoform) {
