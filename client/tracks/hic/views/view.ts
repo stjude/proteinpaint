@@ -4,8 +4,12 @@ import { MainPlotDiv } from '../../../types/hic.ts'
 // import { HorizontalView } from './horizontalView'
 // import { DetailView } from './detailView'
 import { GenomeView } from './genomeView.ts'
+import { HicDataMapper } from '../data/dataMapper'
+import { controlPanelInit } from '../controls/controlPanel'
+import { infoBarInit } from '../dom/infoBar'
 
 export class HicView {
+	dom: any
 	plotDiv: MainPlotDiv
 	type: 'view'
 	hic: any
@@ -16,12 +20,21 @@ export class HicView {
 	dataMapper: any
 	activeView: string
 	rendered = false
+	errList: string[]
+	components = {
+		controls: [],
+		infoBar: []
+	}
+	error: any
+	skipMain = true
 
 	constructor(opts) {
 		this.type = 'view'
 		this.hic = opts.hic
 		this.state = opts.state
-		this.plotDiv = opts.plotDiv
+		this.dom = opts.dom
+		this.errList = opts.errList
+		this.plotDiv = this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true)
 		const tr1 = this.plotDiv.append('tr')
 		const tr2 = this.plotDiv.append('tr')
 		this.plotDiv = {
@@ -33,22 +46,23 @@ export class HicView {
 		this.app = opts.app
 		this.dataMapper = opts.dataMapper
 		this.activeView = this.state.currView
+		this.error = opts.error
 	}
 
 	getState(appState: any) {
-		return {
-			currView: appState.currView
-		}
+		return appState
 	}
 
-	async initView() {
+	async initView(min, max) {
 		if (this.state.currView == 'genome') {
 			this.genomeView = await new GenomeView({
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				state: this.state,
 				app: this.app,
-				data: this.dataMapper.data
+				data: this.dataMapper.data,
+				min,
+				max
 			})
 			this.genomeView.render()
 		} else if (this.state.currView === 'chrpair') {
@@ -62,26 +76,61 @@ export class HicView {
 			throw Error(`Unknown view: ${this.state.currView}`)
 		}
 	}
-
 	async init() {
-		await this.initView()
+		try {
+			const currView = this.state[this.state.currView]
+
+			const [min, max] = await this.dataMapper.getData(currView.nmeth, this.hic['bpresolution'][0])
+			if (this.errList.length) this.error(this.errList)
+
+			await this.initView(min, max)
+
+			this.components = {
+				controls: await controlPanelInit({
+					app: this.app,
+					state: this.state,
+					controlsDiv: this.dom.controlsDiv,
+					hic: this.hic,
+					range: [min, max]
+				}),
+				infoBar: await infoBarInit({
+					app: this.app,
+					state: this.state,
+					infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
+					hic: this.hic,
+					range: [min, max],
+					resolution: this.hic['bpresolution'][0]
+				})
+			}
+		} catch (e: any) {
+			this.errList.push(e.message || e)
+		}
 	}
 
 	async main(appState: any) {
-		this.state = this.app.getState(appState)
-		const currView = this.state[this.activeView]
-		if (this.activeView != this.state.currView) {
-			this.plotDiv.xAxis.selectAll('*').remove()
-			this.plotDiv.yAxis.selectAll('*').remove()
-			this.plotDiv.plot.selectAll('*').remove()
-			this.initView()
-			this.activeView == this.state.currView
+		if (this.skipMain == false) {
+			this.state = this.app.getState(appState)
+			const currView = this.state[this.state.currView]
+			const [min, max] = await this.dataMapper.getData(currView.nmeth, currView.resolution, currView.matrixType)
+			if (this.activeView != this.state.currView) {
+				this.plotDiv.xAxis.selectAll('*').remove()
+				this.plotDiv.yAxis.selectAll('*').remove()
+				this.plotDiv.plot.selectAll('*').remove()
+				this.initView(min, max)
+				this.activeView == this.state.currView
+			} else {
+				// this.components.controls.updateRange([min, max])
+				// this.components.infoBar.updateRange([min, max])
+
+				const viewText = `${this.activeView}View`
+				await this[viewText].update(this.dataMapper.data)
+			}
 		} else {
-			await this.dataMapper.getData(currView.nmeth, currView.resolution, currView.matrixType)
-			const viewText = `${this.activeView}View`
-			//console.log(this[viewText].update)
-			await this[viewText].update(this.dataMapper.data)
+			//main() skipped on init() to avoid confusing behavior
+			this.skipMain = false
 		}
+
+		if (this.errList.length) this.error(this.errList)
 	}
 }
 

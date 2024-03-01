@@ -62,14 +62,16 @@ class ControlPanel {
 	type: 'controlPanel'
 	state: any
 	hasStatePreMain = true
+	range: number[]
 
 	constructor(opts) {
 		this.type = 'controlPanel'
-		this.app = opts.app
 		this.controls = {}
+		this.app = opts.app
 		this.controlsDiv = opts.controlsDiv
 		this.hic = opts.hic
 		this.state = opts.state
+		this.range = opts.range
 	}
 
 	addLabel(tr: Tr, text: string) {
@@ -114,35 +116,48 @@ class ControlPanel {
 		const normalizationRow = menuTable.append('tr') as any
 		this.addLabel(normalizationRow, 'NORMALIZATION')
 		this.controls.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select') as any
-		new NormalizationMethodControl(this.app, this.controls.nmeth, this.hic.normalization, this.state).render()
+		const nmethCallback = (v: string) => {
+			this.app.dispatch({
+				type: 'view_update',
+				view: this.state.currView,
+				config: { nmeth: v }
+			})
+		}
+		new NormalizationMethodControl(
+			this.controls.nmeth,
+			this.hic.normalization,
+			this.state.defaultNmeth,
+			nmethCallback
+		).render()
 
 		//***Cutoffs
 		//Min CUTOFF
 		const minCutoffRow = menuTable.append('tr') as any
 		this.addLabel(minCutoffRow, 'Min CUTOFF')
-		//**** CHANGE TO THE VIEW VALUE */
-		this.controls.inputBpMinV = new CutoffControl(
-			this.app,
-			this.state,
-			minCutoffRow.append('td'),
-			currView.min
-		).render()
+		const minCallback = v => {
+			//TODO
+		}
+		this.controls.inputBpMinV = new CutoffControl(minCutoffRow.append('td'), this.range[0], minCallback).render()
 
 		//Max CUTOFF
 		const maxCutoffRow = menuTable.append('tr') as any
 		this.addLabel(maxCutoffRow, 'Max CUTOFF')
-		//**** CHANGE TO THE VIEW VALUE */
-		this.controls.inputBpMaxV = new CutoffControl(
-			this.app,
-			this.state,
-			maxCutoffRow.append('td'),
-			currView.max
-		).render()
+		const maxCallback = v => {
+			//TODO
+		}
+		this.controls.inputBpMaxV = new CutoffControl(maxCutoffRow.append('td'), this.range[1], maxCallback).render()
 
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
 		this.addLabel(matrixTypeRow, 'matrix type')
-		this.controls.matrixType = new MatrixTypeControl(this.app, matrixTypeRow.append('td'), this.state).render()
+		const matrixTypeCallback = (v: string) => {
+			this.app.dispatch({
+				type: 'view_update',
+				view: this.state.currView,
+				config: { matrixType: v }
+			})
+		}
+		this.controls.matrixType = new MatrixTypeControl(matrixTypeRow.append('td'), matrixTypeCallback).render()
 
 		const viewRow = menuTable.append('tr') as any
 		this.addLabel(viewRow, 'VIEW')
