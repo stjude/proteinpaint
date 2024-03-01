@@ -80,6 +80,7 @@ export class InfoBar {
 			endColor: this.endColor,
 			position: '20,0',
 			tickPosition: 'bottom',
+			data: [this.parent.min, this.parent.max],
 			ticks: 2,
 			width: 120
 		})

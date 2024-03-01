@@ -244,3 +244,29 @@ export function hicparsestat(hic: any, j: any) {
 		}
 	}
 }
+
+export function hicparsefragdata(items: any) {
+	const id2coord = new Map()
+	let min: number | null = null,
+		max: number | any
+
+	for (const i of items) {
+		// id of first fragment
+		if (!i.rest || !i.rest[0]) {
+			return ['items[].rest data problem']
+		}
+		const id = Number.parseInt(i.rest[0])
+		if (Number.isNaN(id)) {
+			return [i.start + '.' + i.stop + ' invalid fragment id: ' + i.rest[0]]
+		}
+		id2coord.set(id, [i.start, i.stop])
+		if (min == null) {
+			min = id
+			max = id
+		} else {
+			min = Math.min(min, id)
+			max = Math.max(max, id)
+		}
+	}
+	return [null, id2coord, min, max]
+}

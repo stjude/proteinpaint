@@ -127,18 +127,12 @@ class ControlPanel {
 		//Min CUTOFF
 		const minCutoffRow = menuTable.append('tr') as any
 		this.addLabel(minCutoffRow, 'Min CUTOFF')
-		const minCallback = v => {
-			//TODO
-		}
-		this.controls.inputBpMinV = new CutoffControl(minCutoffRow.append('td'), this.parent.min, minCallback).render()
+		this.controls.inputBpMinV = new CutoffControl(minCutoffRow.append('td'), this.parent.min, this.minCallback).render()
 
 		//Max CUTOFF
 		const maxCutoffRow = menuTable.append('tr') as any
 		this.addLabel(maxCutoffRow, 'Max CUTOFF')
-		const maxCallback = v => {
-			//TODO
-		}
-		this.controls.inputBpMaxV = new CutoffControl(maxCutoffRow.append('td'), this.parent.max, maxCallback).render()
+		this.controls.inputBpMaxV = new CutoffControl(maxCutoffRow.append('td'), this.parent.max, this.maxCallback).render()
 
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
@@ -240,6 +234,46 @@ class ControlPanel {
 			this.controls.horizontalViewBtn.style('display', 'none')
 			this.controls.detailViewBtn.style('display', 'none')
 			this.controls.zoomDiv.style('display', 'none')
+		}
+	}
+
+	minCallback = (v: string | number) => {
+		this.parent.min = v
+		if (v > this.parent.max) {
+			this.parent.error('Min cutoff cannot be greater than max cutoff')
+		}
+		this.reColorHeatmap()
+		//update infoBar somehow
+	}
+
+	maxCallback = (v: string | number) => {
+		this.parent.max = v
+		if (v < this.parent.min) {
+			this.parent.error('Max cutoff cannot be less than min cutoff')
+		}
+		this.reColorHeatmap()
+		//update infoBar somehow
+	}
+
+	reColorHeatmap = () => {
+		if (this.parent.activeView == 'genome') {
+			const genomeView = this.parent.genome
+			if (!genomeView.lead2follow) return
+			for (const [lead, a] of genomeView.lead2follow) {
+				for (const [follow, b] of a) {
+					//Fix for when chr present in the header but no data in the hic file
+					if (!b.data) continue
+					for (const [leadpx, followpx, val] of b.data) {
+						this.parent.colorizeElement(leadpx, followpx, val, b, 1, 1)
+					}
+					b.img.attr('xlink:href', b.canvas.toDataURL())
+					if (b.canvas2) {
+						b.img2.attr('xlink:href', b.canvas2.toDataURL())
+					}
+				}
+			}
+		} else {
+			console.log('You still need to finish me dummy')
 		}
 	}
 
