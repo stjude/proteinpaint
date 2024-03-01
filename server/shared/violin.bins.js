@@ -32,7 +32,7 @@ output:
 const { bin } = require('d3-array')
 import * as d3 from 'd3'
 
-export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth = 5) {
+export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
 	const [min, max] = scale.domain() //Min and max for all plots
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
 	const step = Math.abs(max - min) / ticks
@@ -40,7 +40,7 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20, bandwidth
 	if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, density: 1 }], densityMax: valuesMax }
 
 	const result = isKDE
-		? kde(epanechnikov(bandwidth), scale.ticks(ticks), plot.values, valuesMin, valuesMax, step)
+		? kde(gaussianKernel, scale.ticks(ticks), plot.values, valuesMin, valuesMax, step)
 		: getBinsHist(scale, plot.values, ticks, valuesMin, valuesMax)
 
 	result.bins.unshift({ x0: valuesMin, density: result.densityMin }) //This allows to start the plot from min prob, avoids rendering issues
@@ -52,8 +52,13 @@ function epanechnikov(bandwidth) {
 	return x => (Math.abs((x /= bandwidth)) <= 1 ? (0.75 * (1 - x * x)) / bandwidth : 0)
 }
 
+function gaussianKernel(u, bandwidth) {
+	return Math.abs((u /= bandwidth)) <= 1 ? (0.75 * (1 - u * u) * Math.exp((-u * u) / 2)) / Math.sqrt(2 * Math.PI) : 0
+}
+
 function kde(kernel, thresholds, data, valuesMin, valuesMax, step) {
-	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))])
+	const bandwidth = silvermanBandwidth(data)
+	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d, bandwidth))])
 	const bins = []
 	let densityMax = 0,
 		densityMin = 1
@@ -67,6 +72,32 @@ function kde(kernel, thresholds, data, valuesMin, valuesMax, step) {
 	}
 
 	return { bins, densityMin, densityMax }
+}
+
+function mean(data) {
+	return data.reduce((sum, value) => sum + value, 0) / data.length
+}
+
+function stdDev(data) {
+	const meanValue = mean(data)
+	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
+	const variance = squaredDifferences.reduce((sum, value) => sum + value, 0) / data.length
+	return Math.sqrt(variance)
+}
+
+function quantileSeq(data, p) {
+	const sortedData = data.slice().sort((a, b) => a - b)
+	const index = Math.floor(p * (sortedData.length - 1))
+	const fraction = p * (sortedData.length - 1) - index
+	return (1 - fraction) * sortedData[index] + fraction * sortedData[index + 1]
+}
+
+function silvermanBandwidth(data) {
+	const std = stdDev(data)
+	const iqr = quantileSeq(data, 0.75) - quantileSeq(data, 0.25)
+	const n = data.length
+	const h = 1.06 * Math.min(std, iqr / 1.34) * Math.pow(n, -1 / 5)
+	return h
 }
 
 function getBinsHist(scale, values, ticks, valuesMin, valuesMax) {
