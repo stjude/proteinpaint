@@ -28,5 +28,6 @@ export class CutoffControl {
 				this.callback(v)
 				// }, 300)
 			})
+		return cutoffDiv
 	}
 }

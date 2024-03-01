@@ -41,6 +41,7 @@ import { MatrixTypeControl } from './matrixType'
 //  */
 
 class ControlPanel {
+	type: 'controlPanel'
 	app: any
 	controls: {
 		nmeth?: any
@@ -59,10 +60,10 @@ class ControlPanel {
 	controlsDiv: Elem
 	/** replace with type arg */
 	hic: any
-	type: 'controlPanel'
+	parent: any
+
 	state: any
 	hasStatePreMain = true
-	range: number[]
 
 	constructor(opts) {
 		this.type = 'controlPanel'
@@ -71,7 +72,7 @@ class ControlPanel {
 		this.controlsDiv = opts.controlsDiv
 		this.hic = opts.hic
 		this.state = opts.state
-		this.range = opts.range
+		this.parent = opts.parent
 	}
 
 	addLabel(tr: Tr, text: string) {
@@ -84,7 +85,6 @@ class ControlPanel {
 	}
 
 	init() {
-		const currView = this.state[this.state.currView]
 		const menuWrapper = this.controlsDiv
 			.style('background', 'rgb(253, 250, 244)')
 			.style('vertical-align', 'top')
@@ -116,18 +116,11 @@ class ControlPanel {
 		const normalizationRow = menuTable.append('tr') as any
 		this.addLabel(normalizationRow, 'NORMALIZATION')
 		this.controls.nmeth = normalizationRow.append('td').attr('class', 'sjpp-nmeth-select') as any
-		const nmethCallback = (v: string) => {
-			this.app.dispatch({
-				type: 'view_update',
-				view: this.state.currView,
-				config: { nmeth: v }
-			})
-		}
 		new NormalizationMethodControl(
 			this.controls.nmeth,
 			this.hic.normalization,
 			this.state.defaultNmeth,
-			nmethCallback
+			this.nmethCallback
 		).render()
 
 		//***Cutoffs
@@ -137,7 +130,7 @@ class ControlPanel {
 		const minCallback = v => {
 			//TODO
 		}
-		this.controls.inputBpMinV = new CutoffControl(minCutoffRow.append('td'), this.range[0], minCallback).render()
+		this.controls.inputBpMinV = new CutoffControl(minCutoffRow.append('td'), this.parent.min, minCallback).render()
 
 		//Max CUTOFF
 		const maxCutoffRow = menuTable.append('tr') as any
@@ -145,19 +138,12 @@ class ControlPanel {
 		const maxCallback = v => {
 			//TODO
 		}
-		this.controls.inputBpMaxV = new CutoffControl(maxCutoffRow.append('td'), this.range[1], maxCallback).render()
+		this.controls.inputBpMaxV = new CutoffControl(maxCutoffRow.append('td'), this.parent.max, maxCallback).render()
 
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
 		this.addLabel(matrixTypeRow, 'matrix type')
-		const matrixTypeCallback = (v: string) => {
-			this.app.dispatch({
-				type: 'view_update',
-				view: this.state.currView,
-				config: { matrixType: v }
-			})
-		}
-		this.controls.matrixType = new MatrixTypeControl(matrixTypeRow.append('td'), matrixTypeCallback).render()
+		this.controls.matrixType = new MatrixTypeControl(matrixTypeRow.append('td'), this.matrixTypeCallback).render()
 
 		const viewRow = menuTable.append('tr') as any
 		this.addLabel(viewRow, 'VIEW')
@@ -257,10 +243,27 @@ class ControlPanel {
 		}
 	}
 
-	//Acts as the update method
-	//Maybe separate if need something differences from init()
+	nmethCallback = (v: string) => {
+		this.app.dispatch({
+			type: 'view_update',
+			view: this.state.currView,
+			config: { nmeth: v }
+		})
+	}
+
+	matrixTypeCallback = (v: string) => {
+		this.app.dispatch({
+			type: 'view_update',
+			view: this.state.currView,
+			config: { matrixType: v }
+		})
+	}
+
 	main() {
 		this.controls.zoomDiv.style('display', this.state.currView == 'detail' ? 'contents' : 'none')
+
+		this.controls.inputBpMinV.property('value', this.parent.min)
+		this.controls.inputBpMaxV.property('value', this.parent.max)
 
 		this.showBtns()
 	}

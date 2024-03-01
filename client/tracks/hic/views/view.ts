@@ -14,12 +14,11 @@ export class HicView {
 	type: 'view'
 	hic: any
 	state: any
-	genomeView: any
+	genome: any
 	//hasStatePreMain: boolean
 	app: any
 	dataMapper: any
 	activeView: string
-	rendered = false
 	errList: string[]
 	components = {
 		controls: [],
@@ -27,6 +26,8 @@ export class HicView {
 	}
 	error: any
 	skipMain = true
+	min = 0
+	max = 0
 
 	constructor(opts) {
 		this.type = 'view'
@@ -53,18 +54,17 @@ export class HicView {
 		return appState
 	}
 
-	async initView(min, max) {
+	async initView() {
 		if (this.state.currView == 'genome') {
-			this.genomeView = await new GenomeView({
+			this.genome = await new GenomeView({
 				plotDiv: this.plotDiv,
 				hic: this.hic,
 				state: this.state,
 				app: this.app,
 				data: this.dataMapper.data,
-				min,
-				max
+				parent: this
 			})
-			this.genomeView.render()
+			this.genome.render()
 		} else if (this.state.currView === 'chrpair') {
 			//this.chrPairView = new ChrPairView
 			//this.chrPairView.main()
@@ -79,27 +79,28 @@ export class HicView {
 	async init() {
 		try {
 			const currView = this.state[this.state.currView]
-
 			const [min, max] = await this.dataMapper.getData(currView.nmeth, this.hic['bpresolution'][0])
-			if (this.errList.length) this.error(this.errList)
 
-			await this.initView(min, max)
+			this.min = min
+			this.max = max
+
+			await this.initView()
 
 			this.components = {
 				controls: await controlPanelInit({
 					app: this.app,
-					state: this.state,
 					controlsDiv: this.dom.controlsDiv,
 					hic: this.hic,
-					range: [min, max]
+					state: this.state,
+					parent: this
 				}),
 				infoBar: await infoBarInit({
 					app: this.app,
 					state: this.state,
 					infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
 					hic: this.hic,
-					range: [min, max],
-					resolution: this.hic['bpresolution'][0]
+					parent: this,
+					resolution: this[this.activeView].resolution
 				})
 			}
 		} catch (e: any) {
@@ -111,19 +112,22 @@ export class HicView {
 		if (this.skipMain == false) {
 			this.state = this.app.getState(appState)
 			const currView = this.state[this.state.currView]
-			const [min, max] = await this.dataMapper.getData(currView.nmeth, currView.resolution, currView.matrixType)
+			const [min, max] = await this.dataMapper.getData(
+				currView.nmeth,
+				this[this.state.currView].resolution,
+				currView.matrixType
+			)
+			this.min = min
+			this.max = max
+			console.log('new min and max', min, max)
 			if (this.activeView != this.state.currView) {
 				this.plotDiv.xAxis.selectAll('*').remove()
 				this.plotDiv.yAxis.selectAll('*').remove()
 				this.plotDiv.plot.selectAll('*').remove()
-				this.initView(min, max)
+				this.initView()
 				this.activeView == this.state.currView
 			} else {
-				// this.components.controls.updateRange([min, max])
-				// this.components.infoBar.updateRange([min, max])
-
-				const viewText = `${this.activeView}View`
-				await this[viewText].update(this.dataMapper.data)
+				await this[this.state.currView].update(this.dataMapper.data)
 			}
 		} else {
 			//main() skipped on init() to avoid confusing behavior
