@@ -10,7 +10,7 @@ export class InfoBar {
 	state: any
 	labelRow: Tr
 	valueRow: Tr
-	range: [number, number]
+	parent: any
 	resolution: number
 
 	resolutionDiv: any
@@ -32,7 +32,7 @@ export class InfoBar {
 		const table = opts.infoBarDiv
 		this.labelRow = table.append('tr')
 		this.valueRow = table.append('tr')
-		this.range = opts.range
+		this.parent = opts.parent
 		this.resolution = opts.resolution
 	}
 
@@ -97,8 +97,8 @@ export class InfoBar {
 			this.colorScaleLabel.style('display', '')
 			this.colorScaleDiv.style('display', '')
 
-			const min = this.range[0]
-			const max = this.range[1]
+			const min = this.parent.min
+			const max = this.parent.max
 
 			if (min < 0) {
 				this.colorScale.bar.startColor = 'blue'
