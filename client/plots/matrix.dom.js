@@ -117,7 +117,8 @@ export function setMatrixDom(opts) {
 		clickMenu: new Menu({ padding: '0px' }),
 		brushMenu: new Menu({ padding: '0px' }),
 		dendroClickMenu: new Menu({ padding: '0px' }),
-		legendMenu: new Menu({ padding: '0px' })
+		legendMenu: new Menu({ padding: '0px' }),
+		matrixCellHoverOver: new Menu({ padding: '0px' })
 	}
 
 	this.dom.colBeam = this.dom.highlightBeamG
