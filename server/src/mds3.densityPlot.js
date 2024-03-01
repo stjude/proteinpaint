@@ -48,6 +48,7 @@ export async function get_densityplot(term, samples) {
 		minvalue,
 		maxvalue,
 		densityMax: density.densityMax,
+		densityMin: density.densityMin,
 		density: density.bins,
 		samplecount: values.length,
 		unit: term.unit,

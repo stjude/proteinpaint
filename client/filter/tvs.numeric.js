@@ -214,6 +214,7 @@ export function convertViolinData(vd) {
 		maxvalue: vd.max,
 		samplecount: p.plotValueCount,
 		densityMax: p.density.densityMax,
+		densityMin: p.density.densityMin,
 		density: p.density.bins,
 		valuesImg: p.src
 	}
