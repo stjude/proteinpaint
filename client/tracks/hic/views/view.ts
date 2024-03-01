@@ -54,6 +54,44 @@ export class HicView {
 		return appState
 	}
 
+	async colorizeElement(lead: number, follow: number, v: number, obj: any, width?: number, height?: number) {
+		const bpMinV = this.min
+		const bpMaxV = this.max
+		const currView = this.activeView
+
+		if (v >= 0) {
+			// positive or zero, use red
+			const p = v >= bpMaxV || v <= bpMinV ? 0 : Math.floor((255 * (bpMaxV - v)) / bpMaxV)
+			const positiveFill = `rgb(255, ${p}, ${p})`
+			if (currView === 'genome') {
+				obj.ctx.fillStyle = positiveFill
+				obj.ctx2.fillStyle = positiveFill
+			} else {
+				/** ctx for the chrpair and detail view */
+				obj.fillStyle = positiveFill
+			}
+		} else {
+			// negative, use blue
+			const p = Math.floor((255 * (bpMaxV + v)) / bpMaxV)
+			const negativeFill = `rgb(${p}, ${p}, 255)`
+			if (currView === 'genome') {
+				obj.ctx.fillStyle = negativeFill
+				obj.ctx2.fillStyle = negativeFill
+			} else {
+				obj.fillStyle = negativeFill
+			}
+		}
+		const w = width
+		const h = height
+
+		if (currView === 'genome') {
+			obj.ctx.fillRect(follow, lead, w, h)
+			obj.ctx2.fillRect(lead, follow, w, h)
+		} else {
+			obj.fillRect(lead, follow, w, h)
+		}
+	}
+
 	async initView() {
 		if (this.state.currView == 'genome') {
 			this.genome = await new GenomeView({
@@ -119,7 +157,7 @@ export class HicView {
 			)
 			this.min = min
 			this.max = max
-			console.log('new min and max', min, max)
+
 			if (this.activeView != this.state.currView) {
 				this.plotDiv.xAxis.selectAll('*').remove()
 				this.plotDiv.yAxis.selectAll('*').remove()
@@ -148,51 +186,9 @@ export const hicViewInit = getCompInit(HicView)
  * @param lead lead chr
  * @param follow following chr
  * @param v returned value from straw
- * @param bpmaxv
+ * @param bpMaxV
  * @param state
  * @param obj obj to color
  * @param width if no .binpx for the view, must provied width
  * @param height if no .binpx for the view, must provied width
  */
-export async function colorizeElement(
-	lead: number,
-	follow: number,
-	v: number,
-	bpmaxv: number,
-	state: any,
-	obj: any,
-	width?: number,
-	height?: number
-) {
-	if (v >= 0) {
-		// positive or zero, use red
-		const p = v >= bpmaxv ? 0 : Math.floor((255 * (bpmaxv - v)) / bpmaxv)
-		const positiveFill = `rgb(255, ${p}, ${p})`
-		if (state.currView === 'genome') {
-			obj.ctx.fillStyle = positiveFill
-			obj.ctx2.fillStyle = positiveFill
-		} else {
-			/** ctx for the chrpair and detail view */
-			obj.fillStyle = positiveFill
-		}
-	} else {
-		// negative, use blue
-		const p = Math.floor((255 * (bpmaxv + v)) / bpmaxv)
-		const negativeFill = `rgb(${p}, ${p}, 255)`
-		if (state.currView === 'genome') {
-			obj.ctx.fillStyle = negativeFill
-			obj.ctx2.fillStyle = negativeFill
-		} else {
-			obj.fillStyle = negativeFill
-		}
-	}
-	const w = width
-	const h = height
-
-	if (state.currView === 'genome') {
-		obj.ctx.fillRect(follow, lead, w, h)
-		obj.ctx2.fillRect(lead, follow, w, h)
-	} else {
-		obj.fillRect(lead, follow, w, h)
-	}
-}

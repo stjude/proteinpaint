@@ -3,7 +3,7 @@ import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { hicparsestat } from '../tracks/hic/data/parseData.ts'
+import { hicparsestat, hicparsefragdata } from '../tracks/hic/data/parseData.ts'
 
 /*
 single-sample hic
@@ -204,7 +204,7 @@ function setResolution(tk: any, block: any) {
 						if (data.error) throw data.error
 						if (!data.items) throw '.items[] missing at mapping coord to fragment index'
 
-						const [err, map, start, stop] = hicstraw.hicparsefragdata(data.items)
+						const [err, map, start, stop] = hicparsefragdata(data.items)
 						if (err) throw err
 						r.frag = {
 							id2coord: map,
