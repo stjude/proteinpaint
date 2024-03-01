@@ -20,7 +20,7 @@
     "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
     "bundle": "cd client; webpack --env NODE_ENV=development --watch --color; cd ..",
     "dev": "npm run transpileDynLoaded & npm run bundle -- --progress",
-    "start": "tsx watch server/src/app.ts",
+    "start": "cd server; npm start",
     "dev1": "trap 'kill %1' INT; npm run transpileDynLoaded & npm run bundle & npm start",
     "server": "trap 'kill %1' INT; npm run dev -w @sjcrh/proteinpaint-server & npm start",
     "client": "npm run dev -w @sjcrh/proteinpaint-client",

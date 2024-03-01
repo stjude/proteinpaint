@@ -106,7 +106,7 @@ export let genomes // { hg19: {...}, ... }, legacy, should use closure
 export function setRoutes(app, _genomes, serverconfig) {
 	genomes = _genomes
 
-	console.log(109, 'setting routes from app.unorg.js')
+	console.log('setting routes from app.unorg.js ...')
 	const basepath = serverconfig.basepath || ''
 	// has to set optional routes before app.get() or app.post()
 	// otherwise next() may not be called for a middleware in the optional routes

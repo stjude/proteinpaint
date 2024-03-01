@@ -23,7 +23,7 @@ server/shared/types/**/**.js
 server/shared/types/terms/*.js
 server/shared/types/routes/checkers/*
 server/test/*.bundle.js
-server/test/*serverTests.js
+server/**/*serverTests.js
 server/routes/*.js
 
 **/public/bin/*

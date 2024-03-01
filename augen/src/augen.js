@@ -51,7 +51,8 @@ export function typeCheckers(fileRoutes, fromPath) {
 	const createLines = []
 	for (const file in typeIdsByFile) {
 		if (file.endsWith('.js')) continue
-		const typeIds = Array.from(typeIdsByFile[file])
+		const typeIds = Array.from(typeIdsByFile[file]).filter(t => t !== 'any')
+		if (!typeIds.length) continue
 		importLines.push(`import { ${typeIds.join(', ')} } from '${fromPath}/${file}'`)
 		for (const typeId of typeIds) {
 			createLines.push(`export const valid${typeId} = createValidate<${typeId}>()`)
