@@ -33,15 +33,13 @@ const { bin } = require('d3-array')
 import * as d3 from 'd3'
 
 export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
-	const [min, max] = scale.domain() //Min and max for all plots
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
-	const step = Math.abs(max - min) / ticks
 
 	//Commented out as it seems to be handled by kde with automatic bandwidth
 	//if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, density: 1 }], densityMax: valuesMax, densityMin: 0}
 
 	const result = isKDE
-		? kde(gaussianKernel, scale.ticks(ticks), plot.values, valuesMin, valuesMax, step)
+		? kde(gaussianKernel, scale.ticks(ticks), plot.values, valuesMin, valuesMax)
 		: getBinsHist(scale, plot.values, ticks, valuesMin, valuesMax)
 
 	result.bins.unshift({ x0: valuesMin, density: result.densityMin }) //This allows to start the plot from min prob, avoids rendering issues
@@ -57,8 +55,9 @@ function gaussianKernel(u, bandwidth) {
 	return Math.abs((u /= bandwidth)) <= 1 ? (0.75 * (1 - u * u) * Math.exp((-u * u) / 2)) / Math.sqrt(2 * Math.PI) : 0
 }
 
-function kde(kernel, thresholds, data, valuesMin, valuesMax, step) {
-	const bandwidth = silvermanBandwidth(data)
+function kde(kernel, thresholds, data, valuesMin, valuesMax) {
+	let bandwidth = silvermanBandwidth(data)
+	if (bandwidth == 0 || isNaN(bandwidth)) bandwidth = 1
 	const density = thresholds.map(t => [t, d3.mean(data, d => kernel(t - d, bandwidth))])
 	const bins = []
 	let densityMax = 0,
