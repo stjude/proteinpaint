@@ -29,7 +29,7 @@ Bundles were also tested to run in Node v12.21+ in a SJ host machine.
 
 ```bash
 # develop BOTH server and client code using 2 terminal windows/tabs
-npm run dev # rebundles backend and frontend code
+npm run dev # rebundles frontend code
 npm start # in separate terminal runs the ProteinPaint server, requires a serverconfig.json at the project root
 
 # --- OR --- 

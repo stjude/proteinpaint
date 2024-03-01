@@ -9,9 +9,9 @@ import https from 'https'
 import * as augen from '@sjcrh/augen'
 import serverconfig from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
-import { setAppMiddlewares } from './esm-app-middlewares.js'
+import { setAppMiddlewares } from './app.middlewares.js'
+import * as oldApp from './app.unorg.js'
 import { authApi } from './auth.js'
-import * as oldApp from './app.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -67,7 +67,6 @@ async function launch() {
 			}
 		})
 
-		oldApp.setGenomes(genomes)
 		oldApp.setRoutes(app, genomes, serverconfig)
 
 		await startServer(app)
