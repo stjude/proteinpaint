@@ -49,8 +49,7 @@ export class GenomeView {
 	chr2px = {}
 	lead2follow: any = new Map()
 	data: any
-	min: number
-	max: number
+	parent: any
 	values: number[] = []
 
 	/** Defaults */
@@ -68,8 +67,7 @@ export class GenomeView {
 		this.state = opts.state
 		this.plotDiv = opts.plotDiv
 		this.data = opts.data
-		this.min = opts.min
-		this.max = opts.max
+		this.parent = opts.parent
 		this.svg = this.plotDiv.plot.append('svg')
 		this.layer_map = this.svg.append('g')
 		this.layer_sv = this.svg.append('g')
@@ -450,7 +448,7 @@ export class GenomeView {
 				const leadpx = Math.floor(plead / this.resolution) * this.binpx
 				const followpx = Math.floor(pfollow / this.resolution) * this.binpx
 				obj.data.push([leadpx, followpx, value])
-				colorizeElement(leadpx, followpx, value, this.max, this.state, obj, this.binpx, this.binpx)
+				colorizeElement(leadpx, followpx, value, this.parent.max, this.state, obj, this.binpx, this.binpx)
 			}
 			obj.img.attr('xlink:href', obj.canvas.toDataURL())
 			if (obj.canvas2) {

@@ -28,5 +28,7 @@ export class MatrixTypeControl {
 		for (const matrixType of this.values) {
 			dropdown.append('option').text(matrixType.label).attr('value', matrixType.value)
 		}
+
+		return dropdown
 	}
 }
