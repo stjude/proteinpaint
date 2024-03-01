@@ -47,6 +47,7 @@ export class DiscoRenderer {
 		const svg = svgDiv
 			.append('svg')
 			.attr('data-testid', 'sjpp_disco_plot')
+			.attr('width', viewModel.width)
 			.attr('height', viewModel.height + viewModel.legendHeight)
 
 		const mainG = svg
