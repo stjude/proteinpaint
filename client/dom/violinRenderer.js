@@ -20,7 +20,7 @@ export class violinRenderer {
 			.range([0, width])
 
 		this.wScale = scaleLinear()
-			.domain([plot.densityMax, 0])
+			.domain([plot.densityMax, plot.densityMin])
 			.range([height * 0.45, 0])
 	}
 
