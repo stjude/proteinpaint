@@ -1,5 +1,5 @@
 // from the proteinpaint/server dir, run via
-// $ npx tsx src/esm-app.ts
+// $ npx tsx watch src/app.ts
 //
 import express from 'express'
 import fs from 'fs'
@@ -63,7 +63,7 @@ async function launch() {
 			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
 			types: {
 				importDir: '../types/routes',
-				outputFile: path.join(__dirname, './shared/checkers-raw/index.ts')
+				outputFile: path.join(__dirname, '../shared/checkers-raw/index.ts')
 			}
 		})
 
