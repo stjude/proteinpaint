@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Fix disco plot width issue
+
+
 ## 2.45.0
 
 Features:
