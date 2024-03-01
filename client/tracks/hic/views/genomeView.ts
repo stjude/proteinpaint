@@ -1,6 +1,5 @@
 import { SvgSvg, SvgG } from '../../../types/d3'
 //import { Selection } from 'd3-selection'
-import { colorizeElement } from './view'
 //import * as client from '#src/client'
 //import blocklazyload from '#src/block.lazyload'
 
@@ -448,7 +447,7 @@ export class GenomeView {
 				const leadpx = Math.floor(plead / this.resolution) * this.binpx
 				const followpx = Math.floor(pfollow / this.resolution) * this.binpx
 				obj.data.push([leadpx, followpx, value])
-				colorizeElement(leadpx, followpx, value, this.parent.max, this.state, obj, this.binpx, this.binpx)
+				this.parent.colorizeElement(leadpx, followpx, value, obj, this.binpx, this.binpx)
 			}
 			obj.img.attr('xlink:href', obj.canvas.toDataURL())
 			if (obj.canvas2) {
