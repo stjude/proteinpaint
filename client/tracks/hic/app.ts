@@ -3,8 +3,8 @@ import { hicStoreInit } from './store'
 import { Div, Dom, Elem } from '../../types/d3'
 import { showErrorsWithCounter } from '../../dom/sayerror'
 import { loadingInit } from './dom/loadingOverlay'
-import { controlPanelInit } from './controls/controlPanel'
-import { infoBarInit } from './dom/infoBar'
+// import { controlPanelInit } from './controls/controlPanel'
+// import { infoBarInit } from './dom/infoBar'
 import { hicViewInit } from './views/view'
 import * as client from '#src/client'
 import { select as d3select } from 'd3-selection'
@@ -41,6 +41,7 @@ class HicApp {
 	/** Required for rx */
 	type: 'app'
 	dataMapper: any
+	views = ['genome', 'chrpair', 'detail', 'horizontal']
 
 	constructor(opts) {
 		this.type = 'app'
@@ -53,9 +54,8 @@ class HicApp {
 			hostUrl: opts.hostUrl,
 			jwt: opts.jwt,
 			name: 'name' in opts ? opts.name : 'Hi-C',
-			tklist: opts.tklst || [],
-			//determine view here??
-			state: opts.state || {}
+			tklist: 'tklst' in opts ? opts.tklst : [],
+			state: 'state' in opts ? opts.state : {}
 		}
 		this.dom = {
 			errorDiv: opts.holder.append('div').classed('sjpp-hic-error', true),
@@ -73,8 +73,6 @@ class HicApp {
 			tip: new client.Menu()
 		}
 		this.errList = []
-		//TODO: Add to api? Is that more appropriate?
-		this.dataMapper = new HicDataMapper(this.hic, true, this.errList)
 	}
 
 	async error(err: string | string[]) {
@@ -88,11 +86,13 @@ class HicApp {
 		//TODO figure out view based on opts
 		//Will be useful when runpp() for chrPair and detailed view is implemented
 		if (!this.hic.state.currView) this.hic.state.currView = 'genome'
+		else {
+			if (!this.views.some(v => v === this.hic.state.currView)) this.error(`Unknown view: ${this.hic.state.currView}`)
+			else return this.hic.state.currView
+		}
 	}
 
-	viewConfig() {
-		const views = ['genome', 'chrpair', 'detail', 'horizontal']
-
+	getViewsConfig() {
 		const nmeth = this.hic['normalization'].length ? this.hic['normalization'][0] : this.state.defaultNmeth
 
 		//If currView provided without state, add state
@@ -107,7 +107,7 @@ class HicApp {
 		}
 
 		//Add default state for all views
-		for (const v of views) {
+		for (const v of this.views) {
 			if (!this.hic.state[v]) {
 				this.hic.state[v] = {
 					matrixType: 'observed',
@@ -120,15 +120,9 @@ class HicApp {
 	async init() {
 		this.determineView()
 		try {
+			this.dataMapper = new HicDataMapper(this.hic, true, this.errList)
 			await this.dataMapper.getHicStraw(this.hic, true, this.errList)
-			this.viewConfig()
-			const currView = this.hic.state[this.hic.state.currView]
-			const [min, max] = await this.dataMapper.getData(currView.nmeth, this.hic['bpresolution'][0])
-			if (this.errList.length) this.error(this.errList)
-
-			currView.resolution = this.hic['bpresolution'][0]
-			currView.min = min
-			currView.max = max
+			this.getViewsConfig()
 
 			this.store = await hicStoreInit({ app: this.api, state: this.hic.state })
 			this.state = await this.store.copyState()
@@ -142,21 +136,11 @@ class HicApp {
 				view: await hicViewInit({
 					app: this.api,
 					state: this.state,
-					plotDiv: this.dom.plotDiv.append('table').classed('sjpp-hic-plot-main', true),
+					dom: this.dom,
 					hic: this.hic,
-					dataMapper: this.dataMapper
-				}),
-				controls: await controlPanelInit({
-					app: this.api,
-					state: this.state,
-					controlsDiv: this.dom.controlsDiv,
-					hic: this.hic
-				}),
-				infoBar: await infoBarInit({
-					app: this.api,
-					state: this.state,
-					infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
-					hic: this.hic
+					dataMapper: this.dataMapper,
+					errList: this.errList,
+					error: this.error
 				})
 			}
 			await this.api.dispatch()

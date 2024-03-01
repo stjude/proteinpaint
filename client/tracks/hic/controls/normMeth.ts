@@ -1,44 +1,32 @@
-import { Elem } from '../../../types/d3'
+import { Dom, Elem } from '../../../types/d3'
 
 export class NormalizationMethodControl {
-	app: any
-	state: any
 	defaultNmeth: string
 	holder: Elem
 	normalization: string[]
-	nmethselect: any
+	callback: (nmeth: string) => void
 
-	constructor(app: any, dom: any, normalization: string[], state?: any) {
-		this.app = app
-		this.state = state
-		this.defaultNmeth = state.defaultNmeth || `NONE`
-		this.holder = dom
+	constructor(holder: Elem, normalization: string[], defaultNmeth: string, callback: (nmeth: string) => void) {
+		this.holder = holder
 		this.normalization = normalization
+		this.defaultNmeth = defaultNmeth
+		this.callback = callback
 	}
 
 	render() {
+		let nmethselect
 		if (!this.normalization?.length) {
-			this.nmethselect = this.holder.text(this.defaultNmeth)
+			nmethselect = this.holder.text(this.defaultNmeth)
 		} else {
-			this.nmethselect = this.holder
+			nmethselect = this.holder
 				.style('margin-right', '10px')
 				.append('select')
 				.on('change', async () => {
-					const nmeth = this.nmethselect.node().value
-					if (this.state) {
-						this.app.dispatch({
-							type: 'view_update',
-							view: this.state.currView,
-							config: {
-								nmeth: nmeth
-							}
-						})
-					} else {
-						//stateless response
-					}
+					const nmeth = nmethselect.node()!.value
+					this.callback(nmeth)
 				})
 			for (const n of this.normalization) {
-				this.nmethselect.append('option').text(n)
+				nmethselect.append('option').text(n)
 			}
 		}
 	}

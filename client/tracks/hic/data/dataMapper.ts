@@ -1,4 +1,5 @@
 import { dofetch2 } from '#src/client'
+import { min } from 'd3'
 import { hicParseFile } from './parseData'
 
 export class HicDataMapper {
@@ -20,7 +21,7 @@ export class HicDataMapper {
 	//helper function to return data per view requirement
 	//TODO: rm chrs without data from hic.chrlst in this function on init()
 
-	async getData(nmeth: string, resolution: number, matrixType?: string, lead?: string, follow?: string) {
+	async getData(nmeth: string, resolution: any, matrixType?: string, lead?: string, follow?: string) {
 		const vlst = []
 		if (this.data.length) this.data = []
 		if (!matrixType) matrixType = 'observed'
