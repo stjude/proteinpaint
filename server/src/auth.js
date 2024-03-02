@@ -750,9 +750,9 @@ export const authApi = {
 		return authApi.userCanAccess(req, ds)
 	},
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
-	getDsAuth: () => [],
+	getDsAuth: (req = undefined) => [],
 	getForbiddenRoutesForDsEmbedder: () => [],
 	userCanAccess: () => true,
-	getRequiredCredForDsEmbedder: () => undefined,
+	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
 	getPayloadFromHeaderAuth: () => ({})
 }

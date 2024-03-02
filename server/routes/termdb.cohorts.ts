@@ -28,7 +28,7 @@ function init({ genomes }) {
 			const [ds] = get_ds_tdb(genome, q)
 			const result = getCohortsData(ds)
 			res.send(result)
-		} catch (e) {
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 			else console.log(e)

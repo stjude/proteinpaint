@@ -27,12 +27,12 @@ function init({ genomes }) {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome'
 			if (!Array.isArray(req.query.lst)) throw '.lst missing'
-			const lst = []
+			const lst: any[] = []
 			for (const isoform of req.query.lst) {
 				if (g.genomicNameRegexp.test(isoform)) continue
-				const tmp = g.genedb.getjsonbyisoform.all(isoform)
+				const tmp: any[] = g.genedb.getjsonbyisoform.all(isoform)
 				lst.push(
-					tmp.map(i => {
+					tmp.map((i: any) => {
 						const j = JSON.parse(i.genemodel)
 						if (i.isdefault) j.isdefault = true
 						return j
@@ -40,7 +40,7 @@ function init({ genomes }) {
 				)
 			}
 			res.send({ lst })
-		} catch (e) {
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 			else console.trace(e)

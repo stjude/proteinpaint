@@ -30,7 +30,7 @@ function init({ genomes }) {
 			res.send({
 				seq: seq.split('\n').slice(1).join('')
 			})
-		} catch (e) {
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 		}

@@ -27,7 +27,7 @@ function init({ genomes }) {
 			const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
 			// data = { isoform: str }
 			res.send(data)
-		} catch (e) {
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 		}

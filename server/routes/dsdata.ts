@@ -1,4 +1,7 @@
+import path from 'path'
+import { spawn } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
+import * as common from '#shared/common.js'
 
 export const api: any = {
 	// route endpoint
@@ -35,7 +38,7 @@ function init({ genomes }) {
 			const ds = genomes[req.query.genome].datasets[req.query.dsname]
 			if (!ds) throw 'invalid dsname'
 
-			const data = []
+			const data: any = []
 
 			for (const query of ds.queries) {
 				if (req.query.expressiononly && !query.isgeneexpression) {
@@ -74,7 +77,7 @@ function init({ genomes }) {
 			}
 
 			res.send({ data })
-		} catch (e) {
+		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
 		}
@@ -101,7 +104,7 @@ function handle_dsdata_makequery(ds, query, req, genomes) {
 	} else {
 		lst = rows
 	}
-	const result = {}
+	const result: any = {}
 	if (query.isgeneexpression) {
 		result.lst = lst
 		result.isgeneexpression = true
@@ -140,9 +143,9 @@ function handle_dsdata_vcf(query, req) {
 			req.query.range.stop
 	]
 	return new Promise((resolve, reject) => {
-		const ps = spawn(tabix, par)
-		const out = [],
-			out2 = []
+		const ps = spawn(serverconfig.tabix, par)
+		const out: any[] = [],
+			out2: any[] = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.stderr.on('data', i => out2.push(i))
 		ps.on('close', code => {

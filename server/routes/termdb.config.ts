@@ -31,14 +31,13 @@ function init({ genomes }) {
 
 			const [ds, tdb] = get_ds_tdb(genome, q)
 			return make(q, res, ds, genome)
-		} catch(e) {
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 			else console.log(e)
 		}
 	}
 }
-
 
 /*
 the "termdbConfig" object is returned to client side that uses vocabApi
@@ -74,7 +73,7 @@ function make(q, res, ds, genome) {
 	// add attributes to this object to reveal to client
 
 	// add required attributes
-	const c = {
+	const c: any = {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
 		hiddenChartTypes: ds.cohort.hiddenChartTypes,
@@ -232,4 +231,3 @@ function getAllowedTermTypes(ds) {
 
 	return [...typeSet]
 }
-
