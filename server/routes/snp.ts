@@ -30,7 +30,7 @@ function init({ genomes }) {
 			const n = req.query.genome
 			if (!n) throw 'no genome'
 			res.send({ results: await searchSNP(req.query, genomes[n]) })
-		} catch (e) {
+		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			return res.send({ error: e.message || e })
 		}
@@ -56,7 +56,7 @@ function init({ genomes }) {
 export async function searchSNP(q, genome) {
 	if (!genome) throw 'invalid genome'
 	if (!genome.snp) throw 'snp is not configured for this genome'
-	const hits = []
+	const hits: any[] = []
 	if (q.byCoord) {
 		// query dbSNP bigbed file by coordinate
 		// input query coordinates need to be 0-based

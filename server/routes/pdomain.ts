@@ -33,7 +33,7 @@ function init({ genomes }) {
 				return res.send({ lst: [] })
 			}
 			if (!Array.isArray(req.query.isoforms)) throw 'isoforms[] missing'
-			const lst = []
+			const lst: any[] = []
 			for (const isoform of req.query.isoforms) {
 				if (g.genomicNameRegexp.test(isoform)) continue
 				const tmp = g.proteindomain.getbyisoform.all(isoform)
@@ -48,7 +48,7 @@ function init({ genomes }) {
 				})
 			}
 			res.send({ lst })
-		} catch (e) {
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 		}

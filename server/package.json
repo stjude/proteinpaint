@@ -18,6 +18,7 @@
     "pretest:integration": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
     "test:integration": "echo 'TODO: server integration tests'",
     "prepack": "tsc --esModuleInterop genome/*.ts dataset/*.ts && webpack --env NODE_ENV=production",
+    "postpack": "rm *.server.*",
     "getconf": "../build/getConfigProp.js",
     "doc": "../augen/build.sh routes shared/types/routes shared/checkers ../public/docs/server",
     "//todo": "refactor or deprecate the scripts below",

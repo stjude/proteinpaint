@@ -1,4 +1,6 @@
+import * as mds2_init from '#src/mds2.init.js'
 import * as mds3_init from '#src/mds3.init.js'
+import * as common from '#shared/common.js'
 
 export const api: any = {
 	endpoint: 'getDataset', // should rename to simply 'dataset', method is based on HTTP method
@@ -46,7 +48,7 @@ function init({ genomes }) {
 				return res.send({ ds: mds_clientcopy(ds) })
 			}
 			return res.send({ ds: copy_legacyDataset(ds) }) // to be replaced by mds3
-		} catch (e) {
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 		}
 	}
@@ -55,7 +57,7 @@ function init({ genomes }) {
 function mds_clientcopy(ds) {
 	// make client-side copy of a mds
 
-	const ds2 = {
+	const ds2: any = {
 		isMds: true,
 		noHandleOnClient: ds.noHandleOnClient,
 		label: ds.label,
@@ -146,7 +148,7 @@ function mds_clientcopy(ds) {
 	for (const k in ds.queries) {
 		const q = ds.queries[k]
 
-		const clientquery = {
+		const clientquery: any = {
 			// revealed to client
 			name: q.name,
 			hideforthemoment: q.hideforthemoment // hide track not ready to show on client
@@ -209,7 +211,7 @@ function mds_clientcopy(ds) {
 						// quick fix!!
 						// array element 0 is boxplotbysamplegroup.attributes
 						// rest of array, one ele for each of .additionals
-						const lst = []
+						const lst: any[] = []
 						if (e.boxplotbysamplegroup.attributes)
 							lst.push(e.boxplotbysamplegroup.attributes.map(i => i.label).join(', '))
 						for (const i of e.boxplotbysamplegroup.additionals) lst.push(i.label)
@@ -246,7 +248,7 @@ function mds_clientcopy(ds) {
 }
 
 function copy_legacyDataset(ds) {
-	const ds2 = {
+	const ds2: any = {
 		noHandleOnClient: ds.noHandleOnClient,
 		sampleselectable: ds.sampleselectable,
 		label: ds.label,
@@ -263,7 +265,7 @@ function copy_legacyDataset(ds) {
 	if (ds.snvindel_attributes) {
 		ds2.snvindel_attributes = []
 		for (const at of ds.snvindel_attributes) {
-			const rep = {}
+			const rep: any = {}
 			for (const k in at) {
 				if (k == 'lst') {
 					rep.lst = []
@@ -282,7 +284,7 @@ function copy_legacyDataset(ds) {
 	if (ds.snvindel_legend) {
 		ds2.snvindel_legend = ds.snvindel_legend
 	}
-	const vcfinfo = {}
+	const vcfinfo: any = {}
 	let hasvcf = false
 	for (const q of ds.queries) {
 		if (q.vcf) {

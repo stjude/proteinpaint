@@ -6,12 +6,14 @@ import fs from 'fs'
 import path from 'path'
 import http from 'http'
 import https from 'https'
+import { spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
 import { authApi } from './auth.js'
+import * as phewas from './termdb.phewas.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -70,7 +72,7 @@ async function launch() {
 		oldApp.setRoutes(app, genomes, serverconfig)
 
 		await startServer(app)
-	} catch (err) {
+	} catch (err: any) {
 		let exitCode = 1
 		if (!fs.existsSync(serverconfig.tpmasterdir)) {
 			const m = serverconfig.maintenance || {}
@@ -121,7 +123,7 @@ function handle_argv(argv) {
 async function startServer(app) {
 	if (serverconfig.preListenScript) {
 		const { cmd, args } = serverconfig.preListenScript
-		const ps = child_process.spawnSync(cmd, args, { encoding: 'utf-8' })
+		const ps = spawnSync(cmd, args, { encoding: 'utf-8' })
 		if (ps.stderr.trim()) throw ps.stderr.trim()
 		console.log(ps.stdout)
 	}

@@ -26,7 +26,7 @@ function init({ genomes }) {
 	return async function handle_genomes(req, res) {
 		try {
 			await fs.promises.stat(serverconfig.tpmasterdir)
-		} catch (e) {
+		} catch (e: any) {
 			/* dir is inaccessible
 			return error message as the service is out
 			*/
@@ -78,7 +78,7 @@ function init({ genomes }) {
 
 function clientcopy_genome(genomename, genomes) {
 	const g = genomes[genomename]
-	const g2 = {
+	const g2: any = {
 		species: g.species,
 		name: genomename,
 		hasSNP: g.snp ? true : false,

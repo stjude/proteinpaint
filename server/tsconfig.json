@@ -5,7 +5,7 @@
   },
   "types": ["node"],
   "include": ["./**/*.ts"],
-  "exclude": ["./**/*.type.spec.ts"],
+  "exclude": ["./**/*.type.spec.ts", "./package/*"],
   "paths": {
     "#shared/*": ["./shared/*"],
     "#shared/types/*": ["./shared/types/*"],
