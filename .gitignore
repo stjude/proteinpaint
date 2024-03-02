@@ -11,6 +11,7 @@ dist/*
 */*/dist/
 */*/*/dist/
 
+server/app.js
 server/dataset/*.js
 server/genome/*.js
 server/shared/doc.js

@@ -1,14 +1,14 @@
 /* these routes are for testing only */
 
-const fs = require('fs')
-const path = require('path')
-const serverconfig = require('../../serverconfig')
+import fs from 'fs'
+import path from 'path'
+import serverconfig from '../../serverconfig.js'
 
 // simulate GDC sessionid to token mapping
 // sessionid will be the index of the entry in the array
 const sessions = [0]
 
-module.exports = async function setRoutes(app, basepath) {
+export default async function setRoutes(app, basepath) {
 	app.use(basepath + '/mds3', (req, res, next) => {
 		if (req.cookies.gdcsessionid) {
 			req.headers['X-Auth-Token'] = sessions[+req.cookies.gdcsessionid]

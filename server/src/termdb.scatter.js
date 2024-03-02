@@ -1,6 +1,5 @@
 import { getData } from './termdb.matrix.js'
 import path from 'path'
-import utils from './utils.js'
 import serverconfig from './serverconfig.js'
 import { schemeCategory20, getColors } from '#shared/common.js'
 import { interpolateSqlValues } from './termdb.sql.js'

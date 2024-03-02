@@ -1,7 +1,9 @@
 import { existsSync, promises as fs } from 'fs'
 import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
-import { isMatch } from 'micromatch'
+import mm from 'micromatch'
+
+const { isMatch } = mm
 // TODO: may use this once babel is configured to transpile es6 node_modules
 //const sleep = require('./utils').sleep
 

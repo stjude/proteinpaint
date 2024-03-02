@@ -3,15 +3,15 @@
 	including generating and applying overrides as needed
 */
 
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
 // or when calling a pp utility script from a tp data directory
 const workdirconfig = process.cwd() ? process.cwd() + '/serverconfig.json' : ''
-const serverdirconfig = path.join(__dirname, '../serverconfig.json')
-const pprootdirconfig = path.join(__dirname, '../../serverconfig.json')
+const serverdirconfig = path.join(import.meta.dirname, '../serverconfig.json')
+const pprootdirconfig = path.join(import.meta.dirname, '../../serverconfig.json')
 // check which config file exists in order of usage priority
 const serverconfigfile =
 	workdirconfig && fs.existsSync(workdirconfig)
@@ -26,6 +26,7 @@ const serverconfigfile =
  GET SERVERCONFIG
 ********************/
 let serverconfig
+
 if (!serverconfigfile) {
 	throw 'missing serverconfig.json'
 } else {
@@ -71,7 +72,7 @@ if (!serverconfig.binpath) {
 	} else {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
-			serverconfig.binpath = path.dirname(__dirname)
+			serverconfig.binpath = path.dirname(import.meta.dirname)
 		} else {
 			const jsfile = process.argv.find(
 				n =>
@@ -90,8 +91,9 @@ if (!serverconfig.binpath) {
 			} else {
 				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
 				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src/..')
-				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
-				else if (__dirname.includes('/proteinpaint')) serverconfig.binpath = __dirname
+				else if (import.meta.dirname.includes('/server/'))
+					serverconfig.binpath = import.meta.dirname.split('/server/')[0] + '/server'
+				else if (import.meta.dirname.includes('/proteinpaint')) serverconfig.binpath = import.meta.dirname
 				else throw 'unable to determine the serverconfig.binpath'
 			}
 		}
@@ -216,4 +218,4 @@ if (fs.existsSync('./package.json')) {
 	serverconfig.version = JSON.parse(pkg).version
 }
 
-module.exports = serverconfig
+export default serverconfig

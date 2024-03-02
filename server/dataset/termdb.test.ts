@@ -1,5 +1,5 @@
 import { Mds3 } from '../shared/types'
-import * as serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
+import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
 import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'
 
@@ -265,7 +265,7 @@ function copyDataFilesFromRepo2Tp() {
 	// the server/test/tp dir as serverconfig.tpmasterdir, and do not trigger
 	// the symlinks below
 	if (existsSync('/home/root/pp')) return
-
+	console.log(268, serverconfig.binpath)
 	const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 

@@ -14,13 +14,13 @@ const serverconfig = require('../../src/serverconfig')
 const path = require('path')
 const read_file = require('../../src/utils').read_file
 
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- R scripts specs -***-')
 	test.end()
 })
 
 // hwe.R tests
-tape('hwe.R', async function(test) {
+tape('hwe.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	const invalidInput = '68\t28\t4,5\t40\t3,56\t4\t43,83\t45\t13'
@@ -41,7 +41,7 @@ tape('hwe.R', async function(test) {
 })
 
 // fisher.R tests
-tape('fisher.R', async function(test) {
+tape('fisher.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	const invalidInput = 'gene1\t2\t10\t15\t3,gene2\t4\t74\t67\t9,gene3\t12\t17\t1000\t1012,gene4\t13\t25\t37\t19'
@@ -74,7 +74,7 @@ tape('fisher.R', async function(test) {
 })
 
 // fisher.2x3.R tests
-tape('fisher.2x3.R', async function(test) {
+tape('fisher.2x3.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	const invalidInput =
@@ -108,7 +108,7 @@ tape('fisher.2x3.R', async function(test) {
 })
 
 // km.R tests
-tape('km.R', async function(test) {
+tape('km.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 	const invalidInput = 'futime\tfustat\trx,410\t1\t0,443\t0\t0,2819\t0\t0,496\t1\t0,2803\t0\t0,2983\t0\t0'
@@ -207,7 +207,7 @@ tape('km.R', async function(test) {
 })
 
 // survival.R tests
-tape('survival.R', async function(test) {
+tape('survival.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(1)
 	const infile = path.join(serverconfig.binpath, 'test/testdata/R/survival_input.json')
@@ -220,7 +220,7 @@ tape('survival.R', async function(test) {
 })
 
 // cuminc.R tests
-tape('cuminc.R', async function(test) {
+tape('cuminc.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(1)
 	const infile = path.join(serverconfig.binpath, 'test/testdata/R/cuminc_input.json')
@@ -233,7 +233,7 @@ tape('cuminc.R', async function(test) {
 })
 
 // regression.R tests
-tape('regression.R', async function(test) {
+tape('regression.R', async function (test) {
 	test.timeoutAfter(10000)
 	test.plan(3)
 	for (const type of ['linear', 'logistic', 'cox']) {
@@ -249,7 +249,7 @@ tape('regression.R', async function(test) {
 })
 
 // wilcoxon.R tests
-tape('wilcoxon.R', async function(test) {
+tape('wilcoxon.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(1)
 	const infile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_input.json')

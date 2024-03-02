@@ -312,7 +312,7 @@ export async function validate_termdb(ds) {
 		// !!! TODO !!!
 		// handle different sources/formats for gene variant data
 		// instead of assumed mutation text files
-		const { mayGetGeneVariantData, getTermTypes, mayGetMatchingGeneNames } = require('./bulk.mset')
+		const { mayGetGeneVariantData, getTermTypes, mayGetMatchingGeneNames } = await import('./bulk.mset')
 		ds.mayGetGeneVariantData = mayGetGeneVariantData
 		ds.getTermTypes = getTermTypes
 		ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames

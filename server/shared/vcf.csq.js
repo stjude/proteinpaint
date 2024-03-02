@@ -1,4 +1,4 @@
-import { vepinfo } from './common'
+import { vepinfo } from './common.js'
 /*
 parse csq field from a variant line, not header
 CSQ header must have already been parsed

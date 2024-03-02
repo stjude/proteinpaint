@@ -12,10 +12,11 @@ import glob from 'glob'
 import fs from 'fs'
 import path from 'path'
 
-//console.log(15, __dirname, process.argv)
+//console.log(15, __dirname  , process.argv)
 
 const mode = process.argv[2]
 const cwd = process.cwd()
+const __dirname = import.meta.dirname
 let relpath = __dirname
 	.replace(cwd, '')
 	.split('/')

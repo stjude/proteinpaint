@@ -588,7 +588,7 @@ async function get_genevalue(samples, q, ds) {
 	return [genenumquery, samplewithvalue]
 }
 
-function do_plot(s) {
+export function do_plot(s) {
 	/*
     .name
     .lst[]
@@ -629,8 +629,6 @@ function do_plot(s) {
 		})
 	}
 }
-
-exports.do_plot = do_plot
 
 function get_samples(q, ds, plottype) {
 	if (!q.samplerule) throw '.samplerule missing'

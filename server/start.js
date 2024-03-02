@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { launch } = require('./src/app.js')
+import { launch } from './src/app.ts'
 console.log(`starting the server ...`)
 launch()
 console.log('server code loaded ...')

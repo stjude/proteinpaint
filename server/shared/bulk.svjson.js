@@ -4,8 +4,8 @@
 //
 /////////////////////////////////
 
-import * as common from './common'
-import * as bulk from './bulk'
+import * as common from './common.js'
+import * as bulk from './bulk.js'
 
 // work for both sv/fusion
 // must tell if the data is fusion or sv

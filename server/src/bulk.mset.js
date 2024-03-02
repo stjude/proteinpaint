@@ -38,7 +38,7 @@ const handlers = {
 
 
 */
-exports.mayGetGeneVariantData = async function (tw, q) {
+export async function mayGetGeneVariantData(tw, q) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
 	const ds = this
 	const tname = tw.term.name
@@ -122,7 +122,7 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin, filterSamples
 	}
 }
 
-exports.getTermTypes = async function getData(q) {
+export async function getTermTypes(q) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
 	const ds = this
 	try {
@@ -165,7 +165,7 @@ exports.getTermTypes = async function getData(q) {
 
 	maxGeneNameLength: optional, useful to avoid long fused gene strings
 */
-exports.mayGetMatchingGeneNames = async function (matches, str, q, maxGeneNameLength = 25) {
+export async function mayGetMatchingGeneNames(matches, str, q, maxGeneNameLength = 25) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
 	const ds = this
 	let unmatched = 0
@@ -214,8 +214,6 @@ async function get_flagset(ds, genome) {
 		throw e
 	}
 }
-
-exports.get_flagset = get_flagset
 
 async function process_mset(index, mset, genome) {
 	const flag = bulk.init_bulk_flag(genome)

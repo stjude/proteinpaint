@@ -1,11 +1,10 @@
-import { jStat } from 'jstat'
 import fs from 'fs'
 import path from 'path'
 import * as utils from './utils'
 import serverconfig from './serverconfig'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
-import { readline } from 'readline'
+import readline from 'readline'
 import * as bamcommon from './bam.common'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 

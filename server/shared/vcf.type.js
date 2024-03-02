@@ -1,4 +1,4 @@
-import { mclassdeletion, mclasssnv, mclassmnv, mclassinsertion, mclassnonstandard } from './common'
+import { mclassdeletion, mclasssnv, mclassmnv, mclassinsertion, mclassnonstandard } from './common.js'
 
 export function getVariantType(ref, alt) {
 	if (ref.length == 1 && alt.length == 1) {

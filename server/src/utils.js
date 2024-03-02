@@ -6,13 +6,11 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import fetch from 'node-fetch' // adding .default allows webpack bundle to work
 import bettersqlite from 'better-sqlite3'
-import _serverconfig from './serverconfig'
+import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
 import minimatch from 'minimatch'
 import crypto from 'crypto'
 import got from 'got'
-
-export const serverconfig = _serverconfig
 
 const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 

@@ -1,5 +1,6 @@
-const tape = require('tape')
-const b = require('../termdb.bins')
+import tape from 'tape'
+import * as b from '../termdb.bins.js'
+console.log(2, b)
 
 /*************************
  reusable helper functions
@@ -35,12 +36,12 @@ function tryBin(test, arg, testMssg, expectedErrMssg) {
 /**************
  test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb.bins specs -***-')
 	test.end()
 })
 
-tape('compute_bins() error handling, type=regular-bin', function(test) {
+tape('compute_bins() error handling, type=regular-bin', function (test) {
 	tryBin(test, null, 'should throw on empty config', 'bin schema must be an object')
 
 	tryBin(test, {}, 'should throw on missing bin_size', 'non-numeric bin_size')
@@ -75,7 +76,7 @@ tape('compute_bins() error handling, type=regular-bin', function(test) {
 	test.end()
 })
 
-tape('compute_bins() error handling, type=custom-bin', function(test) {
+tape('compute_bins() error handling, type=custom-bin', function (test) {
 	tryBin(test, null, 'should throw on empty config', 'bin schema must be an object')
 
 	tryBin(test, { type: 'custom-bin' }, 'should throw on missing lst', 'binconfig.lst must be an array')
@@ -130,7 +131,10 @@ tape('compute_bins() error handling, type=custom-bin', function(test) {
 		test,
 		{
 			type: 'custom-bin',
-			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 'abc' }]
+			lst: [
+				{ startinclusive: 1, stop: 2 },
+				{ startinclusive: 1, start: 'abc' }
+			]
 		},
 		'should throw on non-numeric start for a bounded last bin',
 		'a custom last bin.start must be numeric'
@@ -140,7 +144,10 @@ tape('compute_bins() error handling, type=custom-bin', function(test) {
 		test,
 		{
 			type: 'custom-bin',
-			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 6 }]
+			lst: [
+				{ startinclusive: 1, stop: 2 },
+				{ startinclusive: 1, start: 3, stop: 6 }
+			]
 		},
 		'should throw on a custom last bin having a .stop value',
 		'a custom last bin must not set a bin.stop value'
@@ -150,7 +157,10 @@ tape('compute_bins() error handling, type=custom-bin', function(test) {
 		test,
 		{
 			type: 'custom-bin',
-			lst: [{ startinclusive: 1, stop: 3 }, { startinclusive: 1, start: 3, stopunbounded: false }]
+			lst: [
+				{ startinclusive: 1, stop: 3 },
+				{ startinclusive: 1, start: 3, stopunbounded: false }
+			]
 		},
 		'should throw on a custom last bin having .stopunbounded: false',
 		'a custom last bin must not set bin.stopunbounded to false'
@@ -161,7 +171,11 @@ tape('compute_bins() error handling, type=custom-bin', function(test) {
 		test,
 		{
 			type: 'custom-bin',
-			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, stop: 6 }, { startinclusive: 1, start: 7 }]
+			lst: [
+				{ startinclusive: 1, stop: 2 },
+				{ startinclusive: 1, stop: 6 },
+				{ startinclusive: 1, start: 7 }
+			]
 		},
 		'should throw on a non-numeric middle bin.start value',
 		'bin.start must be numeric for a non-first bin'
@@ -184,7 +198,7 @@ tape('compute_bins() error handling, type=custom-bin', function(test) {
 	test.end()
 })
 
-tape('get_bin_label(), label_offset>0', function(test) {
+tape('get_bin_label(), label_offset>0', function (test) {
 	// test smaller helper functions first since they
 	// tend to get used in larger functions and the
 	// testing sequence would help isolate the cause(s)
@@ -280,7 +294,7 @@ tape('get_bin_label(), label_offset>0', function(test) {
 	test.end()
 })
 
-tape('get_bin_label(), label_offset=0', function(test) {
+tape('get_bin_label(), label_offset=0', function (test) {
 	const binconfig = {
 		bin_size: 3,
 		startinclusive: true,
@@ -399,7 +413,7 @@ tape('get_bin_label(), last bin start === stop', test => {
 	test.end()
 })
 
-tape('get_bin_label(), force label_offset == 1', function(test) {
+tape('get_bin_label(), force label_offset == 1', function (test) {
 	const binconfig = {
 		termtype: 'integer',
 		bin_size: 1,
@@ -427,7 +441,7 @@ tape('get_bin_label(), force label_offset == 1', function(test) {
 	test.end()
 })
 
-tape('compute_bins() unbounded', function(test) {
+tape('compute_bins() unbounded', function (test) {
 	let bins = b.compute_bins({ bin_size: 5, label_offset: 1, first_bin: { startunbounded: 1, stop: 5 } }, get_summary)
 	removeColorAttr(bins)
 	test.deepLooseEqual(
@@ -492,7 +506,7 @@ function removeColorAttr(bins) {
 	for (const bin of bins) delete bin.color
 }
 
-tape('compute_bins() non-percentile', function(test) {
+tape('compute_bins() non-percentile', function (test) {
 	let bins = b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop: 8 } }, get_summary)
 	removeColorAttr(bins)
 	test.deepLooseEqual(
@@ -562,7 +576,7 @@ tape('compute_bins() non-percentile', function(test) {
 	test.end()
 })
 
-tape('target_percentiles()', function(test) {
+tape('target_percentiles()', function (test) {
 	test.deepLooseEqual(
 		b.target_percentiles(
 			{ bin_size: 3, label_offset: 1, first_bin: { startunbounded: 1, stop_percentile: 4 } },
@@ -603,7 +617,7 @@ tape('target_percentiles()', function(test) {
 	test.end()
 })
 
-tape('compute_bins() percentile', function(test) {
+tape('compute_bins() percentile', function (test) {
 	let bins = b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop_percentile: 25 } }, get_summary)
 	removeColorAttr(bins)
 	test.deepLooseEqual(
@@ -657,7 +671,7 @@ tape('compute_bins() percentile', function(test) {
 	test.end()
 })
 
-tape('compute_bins() wgs_sample_age', function(test) {
+tape('compute_bins() wgs_sample_age', function (test) {
 	const stop = 17.1834269032
 	const binconfig = {
 		type: 'regular-bin',
@@ -680,7 +694,7 @@ tape('compute_bins() wgs_sample_age', function(test) {
 	test.end()
 })
 
-tape('compute_bins() custom', function(test) {
+tape('compute_bins() custom', function (test) {
 	const binconfig = {
 		type: 'custom-bin',
 		lst: [
@@ -700,7 +714,7 @@ tape('compute_bins() custom', function(test) {
 	test.end()
 })
 
-tape('compute_bins() single unique value (0)', function(test) {
+tape('compute_bins() single unique value (0)', function (test) {
 	const binconfig = {
 		type: 'custom-bin',
 		lst: [
@@ -723,7 +737,7 @@ tape('compute_bins() single unique value (0)', function(test) {
 	test.end()
 })
 
-tape('compute_bins() single unique value (3)', function(test) {
+tape('compute_bins() single unique value (3)', function (test) {
 	const binconfig = {
 		type: 'custom-bin',
 		lst: [

@@ -1,18 +1,23 @@
 /* these routes are for testing only */
-const fs = require('fs')
-const path = require('path')
-const serverconfig = require('../../serverconfig')
-const clientTestDir = path.join(serverconfig.binpath, '../client/test')
-const helpers = require(`${clientTestDir}/specHelpers.js`)
-// the target file will be dynamically imported by runproteinpaint(),
-// if there is a 'testInternals' argument
-const targetFile = `${clientTestDir}/internals.js`
+import fs from 'fs'
+import path from 'path'
+import serverconfig from '../../serverconfig.js'
 
-module.exports = function setRoutes(app, basepath) {
+let helpers, targetFile
+async function setHelpers() {
+	const clientTestDir = path.join(serverconfig.binpath, '../client/test')
+	// the target file will be dynamically imported by runproteinpaint(),
+	// if there is a 'testInternals' argument
+	targetFile = `${clientTestDir}/internals.js`
+	helpers = await import(`${clientTestDir}/specHelpers.js`)
+}
+setHelpers()
+
+export default function setRoutes(app, basepath) {
 	app.get(basepath + '/specs', async (req, res) => {
 		try {
 			const specs = helpers.findMatchingSpecs(req.query).matched.map(replaceFilePath)
-			const active = helpers.getImportedSpecs(targetFile, (format = 'array')).map(replaceFilePath)
+			const active = helpers.getImportedSpecs(targetFile, 'array').map(replaceFilePath)
 			res.send({ specs, active })
 		} catch (e) {
 			throw e

@@ -4,8 +4,8 @@
 //
 ///////////////////////////////
 
-import * as common from './common'
-import * as bulk from './bulk'
+import * as common from './common.js'
+import * as bulk from './bulk.js'
 
 export function parseheader(line, flag) {
 	const header = line.toLowerCase().split('\t')

@@ -1,11 +1,10 @@
 import fs from 'fs'
 import path from 'path'
 import * as utils from './utils'
-import * as termdbsql from './termdb.sql'
-import termdb from './termdb'
+import * as termdbsql from './termdb.sql.js'
 import readline from 'readline'
-import serverconfig from './serverconfig'
-import { compute_mclass } from './vcf.mclass'
+import serverconfig from './serverconfig.js'
+import { compute_mclass } from './vcf.mclass.js'
 
 /*
 cache file has a header line, with one line per valid snp. columns: 

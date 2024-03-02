@@ -1,8 +1,8 @@
 import { format } from 'd3-format'
 import { getColors } from '#shared/common.js'
-import { isNumeric, convertUnits } from './helpers'
+import { isNumeric, convertUnits } from './helpers.js'
 
-export function validate_bins(binconfig) {
+export default function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
 
 	const bc = binconfig

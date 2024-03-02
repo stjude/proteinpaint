@@ -4,7 +4,7 @@
 //
 ////////////////////////////////////
 
-import * as common from './common'
+import * as common from './common.js'
 
 export default {}
 

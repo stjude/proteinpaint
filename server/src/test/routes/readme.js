@@ -1,9 +1,9 @@
-const glob = require('glob')
-const path = require('path')
-const serverconfig = require('../../serverconfig')
-const fs = require('fs/promises')
+import glob from 'glob'
+import path from 'path'
+import fs from 'fs/promises'
+import serverconfig from '../../serverconfig.js'
 
-module.exports = function setRoutes(app, basepath) {
+export default function setRoutes(app, basepath) {
 	const cwd = path.join(serverconfig.binpath, '..')
 
 	app.get(basepath + '/readme', async (req, res) => {

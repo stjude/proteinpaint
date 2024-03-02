@@ -5,7 +5,6 @@ import * as utils from './utils.js'
 import { server_init_db_queries } from './termdb.server.init.js'
 import { validate_single_numericrange } from '#shared/mds.termdb.termvaluesetting.js'
 import serverconfig from './serverconfig.js'
-import { setDbRefreshRoute } from './dsUpdateAttr.js'
 
 /*
 ********************** EXPORTED
