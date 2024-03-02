@@ -25,6 +25,9 @@ server/shared/types/routes/checkers/*
 server/test/*.bundle.js
 server/**/*serverTests.js
 server/routes/*.js
+server/src/app.js
+server/src/health.js
+server/src/hicstat.js
 
 **/public/bin/*
 public/tmp/*
