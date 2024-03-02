@@ -37,7 +37,8 @@ if (mode == 'dev') {
 		}
 	}
 
-	imports.push(`import * as app from './src/app.ts'`)
+	imports.push(`import {launch} from './src/app.ts'`)
+	imports.push(`launch()`)
 	console.log(imports.join('\n'))
 } else if (mode == 'unit') {
 	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })

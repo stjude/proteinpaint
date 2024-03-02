@@ -17,9 +17,7 @@ import * as phewas from './termdb.phewas.js'
 
 const basepath = serverconfig.basepath || ''
 
-launch()
-
-async function launch() {
+export async function launch() {
 	try {
 		await initGenomesDs(serverconfig)
 
@@ -72,6 +70,7 @@ async function launch() {
 		oldApp.setRoutes(app, genomes, serverconfig)
 
 		await startServer(app)
+		return app
 	} catch (err: any) {
 		let exitCode = 1
 		if (!fs.existsSync(serverconfig.tpmasterdir)) {
