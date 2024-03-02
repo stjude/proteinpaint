@@ -7,7 +7,7 @@ import path from 'path'
 import http from 'http'
 import https from 'https'
 import { spawnSync } from 'child_process'
-import * as augen from '@sjcrh/augen'
+//import * as augen from '@sjcrh/augen'
 import serverconfig from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
@@ -40,6 +40,7 @@ export async function launch() {
 
 		console.log('setting server routes ...')
 		await setOptionalRoutes(app)
+		console.log('may set auth routes ...')
 		authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
 		// start moving migrated route handler code here
@@ -50,20 +51,22 @@ export async function launch() {
 				//.filter(file => file.includes('health'))
 				.map(async file => {
 					console.log('route: ', file)
-					const route = await import(`../routes/${file}`)
+					const _ = await import(`../routes/${file}`)
+					const route = Object.assign({}, _)
 					route.file = file
 					return route
 				})
 		)
 
+		const augen = await import('@sjcrh/augen')
 		augen.setRoutes(app, routes, {
 			app,
 			genomes,
 			basepath: serverconfig.basepath || '',
-			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
+			apiJson: path.join(import.meta.dirname, '../../public/docs/server-api.json'),
 			types: {
 				importDir: '../types/routes',
-				outputFile: path.join(__dirname, '../shared/checkers-raw/index.ts')
+				outputFile: path.join(import.meta.dirname, '../shared/checkers-raw/index.ts')
 			}
 		})
 
@@ -166,8 +169,8 @@ async function setOptionalRoutes(app) {
 	if (!serverconfig.routeSetters) return
 	for (const fname of serverconfig.routeSetters) {
 		if (fname.endsWith('.js')) {
-			const setRoutes = (await import(fname)).default
-			setRoutes(app, basepath)
+			const _ = await import(fname)
+			_.default(app, basepath)
 		}
 	}
 }

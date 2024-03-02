@@ -5,7 +5,8 @@ import * as utils from './utils.js'
 import * as vcf from '#shared/vcf.js'
 import * as common from '#shared/common.js'
 import * as termdbsql from './termdb.sql.js'
-import * as lines2R from './lines2R.js'
+import lines2R from './lines2R.js'
+import serverconfig from './serverconfig.js'
 
 /*
 ********************** EXPORTED
@@ -25,7 +26,6 @@ parseline_AFtest
 		getallelecount_samplegroup_vcfline
 */
 
-const serverconfig = require('./serverconfig')
 const bcfformatbase = '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\t%INFO'
 
 export async function handle_ssidbyonem(q, genome, ds, result) {

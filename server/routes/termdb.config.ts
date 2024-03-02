@@ -1,5 +1,4 @@
 import fs from 'fs'
-import { isMatch } from 'micromatch'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { copy_term, get_ds_tdb } from '#src/termdb.js'

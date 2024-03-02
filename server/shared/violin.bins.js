@@ -29,7 +29,7 @@ output:
 }
 
 */
-const { bin } = require('d3-array')
+import { bin } from 'd3-array'
 import * as d3 from 'd3'
 
 export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {

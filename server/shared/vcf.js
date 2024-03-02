@@ -1,8 +1,8 @@
-import { mclass } from './common'
-import { dissect_INFO } from './vcf.info'
-import { parse_CSQ } from './vcf.csq'
-import { parse_ANN } from './vcf.ann'
-import { getVariantType } from './vcf.type'
+import { mclass } from './common.js'
+import { dissect_INFO } from './vcf.info.js'
+import { parse_CSQ } from './vcf.csq.js'
+import { parse_ANN } from './vcf.ann.js'
+import { getVariantType } from './vcf.type.js'
 
 /*
 Only for parsing vcf files

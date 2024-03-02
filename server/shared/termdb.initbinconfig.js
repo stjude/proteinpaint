@@ -5,7 +5,7 @@ Initialize a bin configuration for a numeric dataset
     {}: output bin config as JavaScript object (default)
     {format: 'string'}: output bin config as JSON string
 */
-module.exports = function initBinConfig(data, opts = {}) {
+export default function initBinConfig(data, opts = {}) {
 	if (data.find(d => !Number.isFinite(d))) throw 'non-numeric values found'
 	let binConfig
 	const s = new Set(data)

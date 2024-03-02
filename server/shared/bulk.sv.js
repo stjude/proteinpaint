@@ -1,5 +1,5 @@
-import * as bulk from './bulk'
-import * as common from './common'
+import * as bulk from './bulk.js'
+import * as common from './common.js'
 
 /////////////////////////////////
 //

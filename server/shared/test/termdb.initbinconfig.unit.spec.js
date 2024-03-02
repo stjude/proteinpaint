@@ -1,15 +1,15 @@
-const tape = require('tape')
-const initBinConfig = require('../termdb.initbinconfig')
+import tape from 'tape'
+import initBinConfig from '../termdb.initbinconfig'
 
 /**************
  Test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb init bin config specs -***-')
 	test.end()
 })
 
-tape('integers: round to nearest ones', function(test) {
+tape('integers: round to nearest ones', function (test) {
 	const input = [23, 26, 28, 37, 33, 44, 41, 49, 53, 55]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -25,7 +25,7 @@ tape('integers: round to nearest ones', function(test) {
 	test.end()
 })
 
-tape('integers: round to nearest tens', function(test) {
+tape('integers: round to nearest tens', function (test) {
 	const input = [12, 15, 26, 47, 42, 61, 94, 77, 107, 120]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -41,7 +41,7 @@ tape('integers: round to nearest tens', function(test) {
 	test.end()
 })
 
-tape('integers: round to nearest hundreds', function(test) {
+tape('integers: round to nearest hundreds', function (test) {
 	const input = [362, 391, 213, 841, 247, 538, 1004, 692, 436, 951]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -58,7 +58,7 @@ tape('integers: round to nearest hundreds', function(test) {
 	test.end()
 })
 
-tape('integers: single unique value (0)', function(test) {
+tape('integers: single unique value (0)', function (test) {
 	const input = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -76,7 +76,7 @@ tape('integers: single unique value (0)', function(test) {
 	test.end()
 })
 
-tape('integers: single unique value (3)', function(test) {
+tape('integers: single unique value (3)', function (test) {
 	const input = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -94,7 +94,7 @@ tape('integers: single unique value (3)', function(test) {
 	test.end()
 })
 
-tape('fractions: round to nearest tenths', function(test) {
+tape('fractions: round to nearest tenths', function (test) {
 	const input = [0.715, 0.423, 0.417, 0.152, 0.836, 1.672, 1.291, 0.371, 2.357, 0.263]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -111,7 +111,7 @@ tape('fractions: round to nearest tenths', function(test) {
 	test.end()
 })
 
-tape('fractions: round to nearest hundredths', function(test) {
+tape('fractions: round to nearest hundredths', function (test) {
 	const input = [0.715, 0.413, 0.025, 0.147, 0.072, 0.945, 0.036, 0.371, 0.831, 0.263]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -129,7 +129,7 @@ tape('fractions: round to nearest hundredths', function(test) {
 	test.end()
 })
 
-tape('floats greater than 1', function(test) {
+tape('floats greater than 1', function (test) {
 	const input = [58.3157, 76.3912, 24.5121, 27.1343, 89.4312, 77.2327, 51.6689, 43.7342, 34.5281, 37.8262]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -145,7 +145,7 @@ tape('floats greater than 1', function(test) {
 	test.end()
 })
 
-tape('floats: single unique value (8.2317)', function(test) {
+tape('floats: single unique value (8.2317)', function (test) {
 	const input = [8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -163,7 +163,7 @@ tape('floats: single unique value (8.2317)', function(test) {
 	test.end()
 })
 
-tape('negative integers', function(test) {
+tape('negative integers', function (test) {
 	const input = [10, 16, -12, -3, 5, -7, 2, 9, 4, -1]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -179,7 +179,7 @@ tape('negative integers', function(test) {
 	test.end()
 })
 
-tape('negative fractions', function(test) {
+tape('negative fractions', function (test) {
 	const input = [-0.4, 0.6, -0.7, 1.5, 1.1, -0.2, 0.1, 1.3, -0.3, 0.8]
 	const output = initBinConfig(input)
 	test.deepEqual(
@@ -196,7 +196,7 @@ tape('negative fractions', function(test) {
 	test.end()
 })
 
-tape('JSON string output', function(test) {
+tape('JSON string output', function (test) {
 	const input = [23, 26, 28, 37, 33, 44, 41, 49, 53, 55]
 	const output = initBinConfig(input, { format: 'string' })
 	test.equal(
@@ -207,7 +207,7 @@ tape('JSON string output', function(test) {
 	test.end()
 })
 
-tape('large test data: integers', function(test) {
+tape('large test data: integers', function (test) {
 	const input = []
 	// mimic data from an actual variable
 	for (let i = 0; i < 200; i++) input.push(0)
@@ -235,7 +235,7 @@ tape('large test data: integers', function(test) {
 	test.end()
 })
 
-tape('large test data: floats', function(test) {
+tape('large test data: floats', function (test) {
 	const input = []
 	// mimic data from an actual variable
 	for (let i = 0; i < 300; i++) input.push(0)

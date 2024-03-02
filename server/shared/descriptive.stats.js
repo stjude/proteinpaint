@@ -1,5 +1,5 @@
-import computePercentile from './compute.percentile'
-import roundValue from './roundValue'
+import computePercentile from './compute.percentile.js'
+import roundValue from './roundValue.js'
 
 /* This file generates summary statistics on any given array of numbers*/
 

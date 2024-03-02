@@ -1,4 +1,5 @@
-import { vepinfo } from './common'
+import { vepinfo } from './common.js'
+
 export function parse_ANN(str, header, m) {
 	// snpEff
 	if (!header) {

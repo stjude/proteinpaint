@@ -2,14 +2,14 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "baseUrl": "./",
+    "paths": {
+      "#shared/*": ["./shared/*"],
+      "#shared/types/*": ["./shared/types/*"],
+      "#src/*": ["./src/*"],
+      "#routes/*": ["./routes/*"]
+    }
   },
   "types": ["node"],
   "include": ["./**/*.ts"],
-  "exclude": ["./**/*.type.spec.ts", "./package/*"],
-  "paths": {
-    "#shared/*": ["./shared/*"],
-    "#shared/types/*": ["./shared/types/*"],
-    "#src/*": ["./src/*"],
-    "#routes/*": ["./routes/*"]
-  }
+  "exclude": ["./**/*.type.spec.ts", "./package/*"]
 }
