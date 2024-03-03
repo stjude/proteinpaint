@@ -30,8 +30,6 @@
     "//todo": "refactor or deprecate the scripts below",
     "pretest": "tsc --esModuleInterop genome/*.ts dataset/*.ts && ./test/pretest.js",
     "prepare": "ts-patch install",
-    "precheckers": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
-    "checkers": "webpack --config=./test/webpack.config.js && node test/emitPrepFiles.bundle.js && typia generate --input shared/checkers-raw --output shared/checkers",
     "pretest:type": "npm run checkers",
     "test:tsc": "tsc --esModuleInterop --noEmit --allowImportingTsExtensions ./shared/types/test/*.type.spec.ts"
   },
@@ -44,10 +42,11 @@
     "@babel/preset-env": "^7.9.6",
     "@babel/preset-typescript": "^7.21.4",
     "@babel/register": "^7.14.5",
+    "@types/node": "^20.11.24",
     "@typescript-eslint/eslint-plugin": "^5.60.0",
-    "@types/node": "^20.2.4",
     "babel-loader": "^8.2.2",
     "esbuild": "^0.19.12",
+    "glob": "^7.2.3",
     "node-watch": "^0.7.1",
     "nodemon": "^2.0.19",
     "prettier": "^2.8.8",
@@ -57,11 +56,7 @@
     "tsx": "^4.7.1",
     "typedoc": "^0.24.8",
     "typescript": "^5.0.3",
-    "typia": "^4.1.14",
-    "webpack": "^5.76.0",
-    "webpack-cli": "^4.9.2",
-    "webpack-node-externals": "^3.0.0",
-    "webpack-notifier": "^1.15.0"
+    "typia": "^4.1.14"
   },
   "dependencies": {
     "@sjcrh/augen": "2.43.3-0",

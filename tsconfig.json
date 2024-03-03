@@ -111,6 +111,9 @@
     "node_modules",
     "./**/tmpbuild",
     "./**/tmppack",
-    "./**/public"
+    "./**/public",
+    "./**/checkers-raw",
+    "./container/dataset",
+    "./**/*.type.spec.ts"
   ]
 }
