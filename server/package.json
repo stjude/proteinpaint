@@ -45,6 +45,7 @@
     "@babel/register": "^7.14.5",
     "@typescript-eslint/eslint-plugin": "^5.60.0",
     "babel-loader": "^8.2.2",
+    "esbuild": "^0.19.12",
     "node-watch": "^0.7.1",
     "nodemon": "^2.0.19",
     "prettier": "^2.8.8",
