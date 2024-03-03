@@ -27,7 +27,7 @@ if (mode == 'dev') {
 	const imports = [`import serverconfig from '${relpath}/serverconfig.json'`] //; console.log()
 	for (const dir of ['genome', 'dataset']) {
 		const genomes = glob.sync('*.ts', { cwd: path.join(__dirname, dir) })
-		imports.push(...genomes.map(f => `import * as ${normalizeName(f)} from './${dir}/${f}'`))
+		imports.push(...genomes.map(f => `import './${dir}/${f}'`))
 
 		if (__dirname !== cwd) {
 			// assumes there are no filename collissions between dataset files in cwd and proteinpaint/server/genomes
