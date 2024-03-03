@@ -1,7 +1,7 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const serverconfig = require('../serverconfig')
-const setRoutes = require('./routes/cacheMiddleware')
+import express from 'express'
+import bodyParser from 'body-parser'
+import serverconfig from '../serverconfig'
+import setRoutes from './routes/cacheMiddleware'
 
 const app = express()
 app.use(bodyParser.json({}))

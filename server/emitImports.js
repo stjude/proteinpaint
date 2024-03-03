@@ -1,8 +1,8 @@
 /*
 	Usage:
-	tsx [path/]emitImports [app | unit] > ["server.js" | "unit.test.js"]
+	tsx [path/]emitImports [app | unit] > ["server.js" | "serverTests.js"]
 
-	- emit imports for dev server process or running tests
+	- emit imports for dev server process (app) or running tests (unit)
 	- the imports will trigger server restart when the target file is used with `tsx watch $targefile`
   - call from the working dir with a serverconfig.json
 
@@ -11,8 +11,6 @@
 import glob from 'glob'
 import fs from 'fs'
 import path from 'path'
-
-//console.log(15, __dirname  , process.argv)
 
 const mode = process.argv[2]
 const cwd = process.cwd()
@@ -34,7 +32,7 @@ if (mode == 'dev') {
 		if (__dirname !== cwd) {
 			// assumes there are no filename collissions between dataset files in cwd and proteinpaint/server/genomes
 			const genomes = glob.sync('*.ts', { cwd: path.join(cwd, dir) })
-			imports.push(...genomes.map(f => `import * as ${normalizeName(f)} from '${relpath}/${dir}/${f}'`))
+			imports.push(...genomes.map(f => `import '${relpath}/${dir}/${f}'`))
 		}
 	}
 
@@ -43,7 +41,7 @@ if (mode == 'dev') {
 	console.log(imports.join('\n'))
 } else if (mode == 'unit') {
 	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })
-	const imports = specs.map(f => `import * as ${normalizeName(f)} from '${f}'`)
+	const imports = specs.map(f => `import '${f}'`)
 	console.log(imports.join('\n'))
 }
 

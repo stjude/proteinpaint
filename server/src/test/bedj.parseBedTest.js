@@ -1,5 +1,5 @@
-const tape = require('tape')
-const parseBedLine = require('../bedj.parseBed').parseBedLine
+import tape from 'tape'
+import { parseBedLine } from '../bedj.parseBed'
 
 // tape('\n', function (test) {
 // 	test.pass('-***- server/bedj.parseBed test -***-')
@@ -8,7 +8,7 @@ const parseBedLine = require('../bedj.parseBed').parseBedLine
 
 tape(
 	'test #1: parsing a line from hg38 gencodeV41.bb file: https://hgdownload.soe.ucsc.edu/gbdb/hg38/gencode/gencodeV41.bb',
-	function(test) {
+	function (test) {
 		const bedLine = [
 			'chr17',
 			'7661778',
@@ -81,7 +81,7 @@ tape(
 
 tape(
 	'test #2: parsing a line from dbsnp.hg19.bb file: https://hgdownload.soe.ucsc.edu/gbdb/hg19/snp/dbSnp153.bb',
-	function(test) {
+	function (test) {
 		const bedLine = [
 			'chr17',
 			'7579867',
@@ -107,50 +107,51 @@ tape(
 	}
 )
 
-tape('test #3: parsing a line from lrg.bb file: https://hgdownload.soe.ucsc.edu/gbdb/hg38/bbi/lrg.bb', async function(
-	test
-) {
-	const bedLine = [
-		'chr17',
-		'7681070',
-		'7705502',
-		'LRG_375',
-		'0',
-		'+',
-		'7681070',
-		'7705502',
-		'0',
-		'1',
-		'24432,',
-		'0,',
-		'',
-		'',
-		'24432',
-		'25522',
-		'WRAP53',
-		'NG_028245.1',
-		'RAPID: Resource of Asian Primary Immunodeficiency Diseases',
-		'http://web16.kazusa.or.jp/rapid/browseByPIDGenes',
-		'2013-01-16'
-	]
-	const expected = {
-		name: 'NG_028245.1',
-		isoform: 'LRG_375',
-		strand: '+',
-		exon: [[7681070, 7705502]],
-		rnalen: 24432,
-		cdslen: 24432,
-		codingstart: 7681070,
-		codingstop: 7705502,
-		coding: [[7681070, 7705502]]
+tape(
+	'test #3: parsing a line from lrg.bb file: https://hgdownload.soe.ucsc.edu/gbdb/hg38/bbi/lrg.bb',
+	async function (test) {
+		const bedLine = [
+			'chr17',
+			'7681070',
+			'7705502',
+			'LRG_375',
+			'0',
+			'+',
+			'7681070',
+			'7705502',
+			'0',
+			'1',
+			'24432,',
+			'0,',
+			'',
+			'',
+			'24432',
+			'25522',
+			'WRAP53',
+			'NG_028245.1',
+			'RAPID: Resource of Asian Primary Immunodeficiency Diseases',
+			'http://web16.kazusa.or.jp/rapid/browseByPIDGenes',
+			'2013-01-16'
+		]
+		const expected = {
+			name: 'NG_028245.1',
+			isoform: 'LRG_375',
+			strand: '+',
+			exon: [[7681070, 7705502]],
+			rnalen: 24432,
+			cdslen: 24432,
+			codingstart: 7681070,
+			codingstop: 7705502,
+			coding: [[7681070, 7705502]]
+		}
+		test.deepEqual(parseBedLine(bedLine), expected)
+		test.end()
 	}
-	test.deepEqual(parseBedLine(bedLine), expected)
-	test.end()
-})
+)
 
 tape(
 	'test #4: parsing the line for gene IGKC from hg38 gencodeV41.bb file: https://hgdownload.soe.ucsc.edu/gbdb/hg38/gencode/gencodeV41.bb',
-	function(test) {
+	function (test) {
 		// uses a non-0 reading frame
 		const bedLine = [
 			'chr2',
@@ -199,7 +200,7 @@ tape(
 	}
 )
 
-tape('test #5: parsing a line from genCC.bb: https://hgdownload.soe.ucsc.edu/gbdb/hg38/bbi/genCC.bb', function(test) {
+tape('test #5: parsing a line from genCC.bb: https://hgdownload.soe.ucsc.edu/gbdb/hg38/bbi/genCC.bb', function (test) {
 	const bedLine = [
 		'chr17',
 		'7668420',
@@ -251,7 +252,7 @@ tape('test #5: parsing a line from genCC.bb: https://hgdownload.soe.ucsc.edu/gbd
 
 tape(
 	'test #6: parsing a line from dbSnp153BadCoords.bb, four columns : https://hgdownload.soe.ucsc.edu/gbdb/hg19/snp/dbSnp153BadCoords.bb',
-	function(test) {
+	function (test) {
 		const bedLine = ['chr17', '22078995', '22078998', 'rs587632675']
 		const expected = { name: 'rs587632675' }
 		test.deepEqual(parseBedLine(bedLine), expected)
@@ -261,7 +262,7 @@ tape(
 
 tape(
 	'test #7: parsing a line from hgmd.bb: https://hgdownload.soe.ucsc.edu/gbdb/hg38/bbi/hgmd.bb, strand == .',
-	function(test) {
+	function (test) {
 		const bedLine = [
 			'chr17',
 			'7687375',
@@ -284,7 +285,7 @@ tape(
 
 tape(
 	'test #8: parsing a line from interactions.bb: https://hgdownload.soe.ucsc.edu/gbdb/hg38/bbi/interactions.bb',
-	function(test) {
+	function (test) {
 		const bedLine = [
 			'chr17',
 			'7687439',
@@ -306,7 +307,7 @@ tape(
 
 tape(
 	'test#9: parsing a line from miRnaAtlasSample1.bb: https://hgdownload.soe.ucsc.edu/gbdb/hg38/bbi/miRnaAtlasSample1.bb',
-	function(test) {
+	function (test) {
 		const bedLine = [
 			'chr17',
 			'8088066',

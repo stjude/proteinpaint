@@ -1,10 +1,10 @@
-const tape = require('tape')
-const isUsableTerm = require('../termdb.usecase').isUsableTerm
+import tape from 'tape'
+import { isUsableTerm } from '../termdb.usecase.js'
 
 /**************
  test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- termdb.usecase specs -***-')
 	test.end()
 })

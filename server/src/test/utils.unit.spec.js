@@ -1,7 +1,7 @@
-const tape = require('tape')
-const utils = require('../utils')
-const fs = require('fs')
-const serverconfig = require('../serverconfig')
+import tape from 'tape'
+import fs from 'fs'
+import serverconfig from '../serverconfig.js'
+import * as utils from '../utils.js'
 
 tape('\n', function (test) {
 	test.pass('-***- server/utils specs -***-')

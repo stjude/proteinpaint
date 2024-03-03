@@ -4,18 +4,22 @@ $ npx tape modules/test/*.spec.js
 
 */
 
-const tape = require('tape')
-const getFilterCTEs = require('../termdb.filter').getFilterCTEs
-const tdb = require('./load.testds').init('termdb.test.js')
-const { server_init_db_queries } = require('../termdb.server.init')
-server_init_db_queries(tdb.ds)
+import tape from 'tape'
+import { getFilterCTEs } from '../termdb.filter.js'
+import { init } from './load.testds.js'
+import { server_init_db_queries } from '../termdb.server.init.js'
 
 tape('\n', function (test) {
 	test.pass('-***- modules/termdb.filter specs -***-')
 	test.end()
 })
 
+let tdb
+
 tape('simple filter', async function (test) {
+	tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+
 	const filter = await getFilterCTEs(
 		{
 			type: 'tvslst',

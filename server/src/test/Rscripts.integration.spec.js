@@ -1,8 +1,8 @@
-const tape = require('tape')
-const fetch = require('node-fetch').default
-const path = require('path')
-const serverconfig = require('../serverconfig')
-const fs = require('fs')
+import tape from 'tape'
+import fetch from 'node-fetch'
+import path from 'path'
+import fs from 'fs'
+import serverconfig from '../serverconfig.js'
 
 // Note: these integration tests are dependant on clinical datasets that are subject to change.
 
