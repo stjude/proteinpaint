@@ -1,6 +1,6 @@
-import { Term } from './terms/tw'
-import { Filter } from './filter'
-import { UseCase } from './termsetting'
+import { Term } from './terms/tw.ts'
+import { Filter } from './filter.ts'
+import { UseCase } from './termsetting.ts'
 
 /*
 --------EXPORTED--------

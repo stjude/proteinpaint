@@ -1,4 +1,4 @@
-import { Filter } from '../filter'
+import { Filter } from '../filter.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms

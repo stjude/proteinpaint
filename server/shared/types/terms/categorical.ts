@@ -8,7 +8,7 @@ import {
 	EmptyGroupSetting,
 	PredefinedGroupSetting,
 	CustomGroupSetting
-} from './term'
+} from './term.ts'
 
 /*
 --------EXPORTED--------

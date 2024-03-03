@@ -1,31 +1,31 @@
-import { Genome } from '../shared/types'
+import { Genome } from '#types'
 
-export default <Genome> {
-    species:'Chinese hamster ovary cells',
-    genomefile:'genomes/CriGri.fa.gz',
-    genedb:{
-        dbfile:'anno/genes.CriGri.db',
-    },
+export default <Genome>{
+	species: 'Chinese hamster ovary cells',
+	genomefile: 'genomes/CriGri.fa.gz',
+	genedb: {
+		dbfile: 'anno/genes.CriGri.db'
+	},
 
-    tracks:[
-        {
-            __isgene:true,
-            translatecoding:true,
-            file:'anno/CriGri.gz',
-            type:'bedj',
-            name:'Ensembl genes',
-            stackheight:16,
-            stackspace:1,
-            vpad:4,
-            color:'#1D591D',
-        }
-    ],
-    defaultcoord:{
-        chr:'RAZU01000265.1',
-        start:3866092,
-        stop:4073253
-    },
-majorchr:`
+	tracks: [
+		{
+			__isgene: true,
+			translatecoding: true,
+			file: 'anno/CriGri.gz',
+			type: 'bedj',
+			name: 'Ensembl genes',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
+		}
+	],
+	defaultcoord: {
+		chr: 'RAZU01000265.1',
+		start: 3866092,
+		stop: 4073253
+	},
+	majorchr: `
 RAZU01000074.1	80584097
 RAZU01000200.1	73766248
 RAZU01000234.1	72605805
@@ -1856,5 +1856,5 @@ RAZU01000160.1	4636
 RAZU01001097.1	4614
 RAZU01000036.1	2936
 RAZU01000037.1	568
-`,
+`
 }

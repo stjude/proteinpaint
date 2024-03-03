@@ -1,58 +1,70 @@
-import { Genome } from '../shared/types'
+import { Genome } from '#types'
 
-export default <Genome> {
-	species:'fruit fly',
-	genomefile:'genomes/dm6.gz',
-	genedb:{
-		dbfile:'anno/genes.dm6.db',
+export default <Genome>{
+	species: 'fruit fly',
+	genomefile: 'genomes/dm6.gz',
+	genedb: {
+		dbfile: 'anno/genes.dm6.db'
 	},
-	tracks:[
+	tracks: [
 		{
-			__isgene:true, // only for initialization 
-			translatecoding:true,
-			file:'anno/refGene.dm6.gz',
-			type:'bedj',
-			name:'RefGene',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
+			__isgene: true, // only for initialization
+			translatecoding: true,
+			file: 'anno/refGene.dm6.gz',
+			type: 'bedj',
+			name: 'RefGene',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
 		},
 		{
-			__isgene:true, // only for initialization 
-			translatecoding:true,
-			file:'anno/ensGene.dm6.gz',
-			type:'bedj',
-			name:'Ensembl genes',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#004D99'
+			__isgene: true, // only for initialization
+			translatecoding: true,
+			file: 'anno/ensGene.dm6.gz',
+			type: 'bedj',
+			name: 'Ensembl genes',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#004D99'
 		},
 		{
-			"type":"bedj",
-			"name":"RepeatMasker",
-			"stackheight":14,
-			"file":"anno/rmsk.dm6.gz",
-			"onerow":true,
-			categories:{ "LINE":{"color":"#EDCB8C","label":"LINE"},"LTR":{"color":"#E38CED","label":"LTR"},"DNA":{"color":"#8C8EED","label":"DNA transposon"},"simple":{"color":"#8EB88C","label":"Simple repeats"},"low_complexity":{"color":"#ACEBA9","label":"Low complexity"},"satellite":{"color":"#B59A84","label":"Satellite"},"RNA":{"color":"#9DE0E0","label":"RNA repeat"},"other":{"color":"#9BADC2","label":"Other"},"unknown":{"color":"#858585","label":"Unknown"}}
+			type: 'bedj',
+			name: 'RepeatMasker',
+			stackheight: 14,
+			file: 'anno/rmsk.dm6.gz',
+			onerow: true,
+			categories: {
+				LINE: { color: '#EDCB8C', label: 'LINE' },
+				LTR: { color: '#E38CED', label: 'LTR' },
+				DNA: { color: '#8C8EED', label: 'DNA transposon' },
+				simple: { color: '#8EB88C', label: 'Simple repeats' },
+				low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
+				satellite: { color: '#B59A84', label: 'Satellite' },
+				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
+				other: { color: '#9BADC2', label: 'Other' },
+				unknown: { color: '#858585', label: 'Unknown' }
+			}
 		}
 	],
-	defaultcoord:{
-		chr:'chr2L',
-		start:6718684,
-		stop:6723875,
+	defaultcoord: {
+		chr: 'chr2L',
+		start: 6718684,
+		stop: 6723875
 	},
 
-	majorchr:`chr3R	32079331
+	majorchr:
+		`chr3R	32079331
 chr3L	28110227
-chr2R	25286936` /* pragma: allowlist secret */ + `
+chr2R	25286936` /* pragma: allowlist secret */ +
+		`
 chrX	23542271
 chr2L	23513712
 chrY	3667352
 chr4	1348131`,
 
-	minorchr:`chrUn_CP007081v1	88768
+	minorchr: `chrUn_CP007081v1	88768
 chrUn_CP007076v1	87365
 chrUn_CP007080v1	86267
 chrUn_CP007120v1	76973
@@ -1914,5 +1926,5 @@ chrUn_DS486005v1	1001
 chrUn_DS486008v1	1001
 chrY_DS486003v1_random	1001
 chrUn_DS485695v2	564
-chrUn_DS485566v2	544`,
+chrUn_DS485566v2	544`
 }

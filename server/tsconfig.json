@@ -3,8 +3,9 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "#shared/*": ["./shared/*"],
+      "#types": ["./shared/types/index.ts"],
       "#shared/types/*": ["./shared/types/*"],
+      "#shared/*": ["./shared/*"],
       "#src/*": ["./src/*"],
       "#routes/*": ["./routes/*"]
     }

@@ -1,4 +1,4 @@
-import { ErrorResponse } from './errorResponse'
+import { ErrorResponse } from './errorResponse.ts'
 
 export type Cell = {
 	/** Cell id or barcode */

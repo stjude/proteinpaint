@@ -59,14 +59,15 @@ export async function launch() {
 		)
 
 		const augen = await import('@sjcrh/augen')
+		const __dirname = import.meta.dirname
 		augen.setRoutes(app, routes, {
 			app,
 			genomes,
 			basepath: serverconfig.basepath || '',
-			apiJson: path.join(import.meta.dirname, '../../public/docs/server-api.json'),
+			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
 			types: {
 				importDir: '../types/routes',
-				outputFile: path.join(import.meta.dirname, '../shared/checkers-raw/index.ts')
+				outputFile: path.join(__dirname, '../shared/checkers-raw/index.ts')
 			}
 		})
 

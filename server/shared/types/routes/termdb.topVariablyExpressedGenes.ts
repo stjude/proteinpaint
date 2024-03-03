@@ -1,5 +1,5 @@
 //import GdcFilter0 from './filter.gdc'
-import { Filter } from '../filter'
+import { Filter } from '../filter.ts'
 
 export type TermdbTopVariablyExpressedGenesRequest = {
 	/** Ref genome */
