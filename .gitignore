@@ -13,8 +13,6 @@ dist/*
 
 server/app.js
 server/**/*.mjs
-server/dataset/*.js
-server/genome/*.js
 server/shared/doc.js
 server/shared/checkers/transformed/*
 server/shared/checkers/bin/*
@@ -83,6 +81,7 @@ pixman-*/*
 !/server/test/serverconfig.json
 !/container/ci/serverconfig.json
 **/server.js*
+**/server.ts*
 !client/rx/server.js
 setup/*gz*
 setup/*

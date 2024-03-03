@@ -1,4 +1,4 @@
-import serverconfig from '../serverconfig'
+import serverconfig from '../serverconfig.js'
 import path from 'path'
 import bettersqlite from 'better-sqlite3'
 

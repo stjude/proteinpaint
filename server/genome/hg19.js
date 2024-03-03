@@ -1,6 +1,4 @@
-import { Genome } from '#types'
-
-export default <Genome>{
+export default {
 	species: 'human',
 	genomefile: 'genomes/hg19.gz',
 	genedb: {

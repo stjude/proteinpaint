@@ -1,6 +1,5 @@
-import { MinGenome } from '#types'
-
-export default <MinGenome>{
+export default {
+  isMinGenome: true,
 	species: 'human',
 	genomefile: 'genomes/hgvirus.gz',
 	genedb: {

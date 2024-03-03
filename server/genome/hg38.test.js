@@ -1,6 +1,4 @@
-import { Genome } from '#types'
-
-const genome: Genome = {
+export default {
 	species: 'human',
 	genomefile: 'NA',
 	genedb: {
@@ -406,5 +404,3 @@ chrM	16569`,
 	chrUn_KI270392v1	971
 	chrUn_KI270394v1	970`
 }
-
-export default genome

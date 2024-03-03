@@ -1,6 +1,4 @@
-import { ClinvarClinsig, ClinvarAF } from '#types'
-
-export const clinsig: ClinvarClinsig = {
+export const clinsig = {
 	Affects: {
 		color: '#ccc',
 		label: 'Affects',
@@ -139,7 +137,7 @@ export const clinsig: ClinvarClinsig = {
 	}
 }
 
-export const AF: ClinvarAF = {
+export const AF = {
 	AF_EXAC: {
 		name: 'ExAC frequency',
 		locusinfo: { key: 'AF_EXAC' },

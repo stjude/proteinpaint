@@ -1,5 +1,7 @@
 /*** General usage types ***/
-type FileObj = { file: string }
+type FileObj = {
+	file: string
+}
 
 type KeyVal = {
 	k: string
@@ -46,8 +48,8 @@ export type ClinvarAF = {
 type InfoFieldsEntry = {
 	name: string
 	key: string
-	categories: ClinvarClinsig
-	separator: string
+	categories?: ClinvarClinsig
+	separator?: string
 }
 
 /*
@@ -206,7 +208,7 @@ type SvFusion = {
 }
 
 type SingleSampleMutationQuery = {
-	src: 'native' | 'gdcapi'
+	src: 'native' | 'gdcapi' | string
 	/** which property of client mutation object to retrieve sample identifier for querying single sample data with */
 	sample_id_key: string
 	/** only required for src=native */
@@ -216,7 +218,7 @@ type SingleSampleMutationQuery = {
 }
 
 type TopVariablyExpressedGenesQuery = {
-	src: 'gdcapi' | 'native'
+	src: 'gdcapi' | 'native' | string
 	// to add optional parameters
 }
 
@@ -267,7 +269,7 @@ type CnvSegment = {
 	cnvLossCutoff?: number
 }
 type CnvSegmentByRange = {
-	src: 'native' | 'gdcapi'
+	src: 'native' | 'gdcapi' | string
 	// only for src=native
 	file?: string
 }
@@ -287,12 +289,12 @@ type RnaseqGeneCount = {
 }
 
 // the geneExpression query
-type GeneExpressionQueryGdc = {
-	src: 'gdcapi'
+export type GeneExpressionQueryGdc = {
+	src: 'gdcapi' | string
 }
 
 export type GeneExpressionQueryNative = {
-	src: 'native'
+	src: 'native' | string
 	file: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
@@ -302,7 +304,7 @@ export type GeneExpressionQueryNative = {
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
 export type SingleCellSamplesNative = {
-	src: 'native'
+	src: 'native' | string
 	/*
 	a way to query anno_cat table to find those samples labeled with this term for having sc data
 	TODO change to hasScTerm:string
@@ -324,7 +326,7 @@ export type SingleCellSamplesNative = {
 	get?: (q: any) => any
 }
 export type SingleCellSamplesGdc = {
-	src: 'gdcapi'
+	src: 'gdcapi' | string
 	get?: (q: any) => any
 	firstColumnName?: string
 	sampleColumns?: { termid: string }[]
@@ -332,7 +334,7 @@ export type SingleCellSamplesGdc = {
 }
 
 export type SingleCellDataGdc = {
-	src: 'gdcapi'
+	src: 'gdcapi' | string
 	sameLegend: boolean
 	get?: (q: any) => any
 }
@@ -349,7 +351,7 @@ type SingleCellPlot = {
 	colorMap?: { [index: string]: string }
 }
 export type SingleCellDataNative = {
-	src: 'native'
+	src: 'native' | string
 	sameLegend: boolean
 	plots: SingleCellPlot[]
 	termIds: string[]
@@ -603,7 +605,7 @@ type UrlTemplateBase = {
 export type UrlTemplateSsm = UrlTemplateBase & {
 	/** to create separate link, but not directly on chr.pos.ref.alt string.
 	name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
-	shownSeparately?: true
+	shownSeparately?: boolean
 	/** optional name of link, if set, same name will be used for all links. e.g. "ClinVar".
 	if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsid) */
 	linkText?: string
@@ -654,6 +656,7 @@ type Termdb = {
 	termid2totalsize2?: GdcApi
 	dictionary?: GdcApi
 	allowCaseDetails?: AllowCaseDetails
+	isGeneSetTermdb?: boolean
 }
 
 type ChartConfigByType = {
@@ -989,7 +992,7 @@ type LocusAttribute = {
 type ViewMode = {
 	byAttribute?: string
 	byInfo?: string
-	inuse: boolean
+	inuse?: boolean
 }
 
 /*** types supporting Mds Dataset types ***/

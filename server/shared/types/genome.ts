@@ -41,7 +41,7 @@ type TrackCategoryEntry = {
 }
 
 type TrackCategories = {
-	[index: string]: TrackCategoryEntry
+	[index: string]: TrackCategoryEntry | undefined
 }
 
 type Track = {
@@ -101,6 +101,7 @@ type HicDomain = {
 
 //Separated to force g.tracks as required, see hgvirus.ts
 export type MinGenome = {
+	isMinGenome?: boolean
 	species: string
 	genomefile: string
 	genedb: GeneDb
@@ -115,7 +116,7 @@ export type Genome = MinGenome & {
 	repeatmasker?: DbStatement
 	snp?: Snp
 	fimo_motif?: FimoMotif
-	tracks: Track[]
+	tracks?: Track[]
 	geneset?: GeneSet[]
 	hicdomain?: HicDomain
 	minorchr?: string
