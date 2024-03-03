@@ -1,5 +1,5 @@
-import { Term, BaseQ, BaseValue, EmptyGroupSetting } from './term'
-import { TermWrapper } from './tw'
+import { Term, BaseQ, BaseValue, EmptyGroupSetting } from './term.ts'
+import { TermWrapper } from './tw.ts'
 
 /*
 --------EXPORTED--------

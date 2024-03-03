@@ -1,10 +1,10 @@
-import { Tvs, Filter } from './filter'
-import { CategoricalQ } from './terms/categorical'
-import { ConditionQ } from './terms/condition'
-import { NumericQ } from './terms/numeric'
-import { GeneVariantQ } from './terms/geneVariant'
-import { SampleLstQ } from './terms/samplelst'
-import { SnpsQ } from './terms/snps'
+import { Tvs, Filter } from './filter.ts'
+import { CategoricalQ } from './terms/categorical.ts'
+import { ConditionQ } from './terms/condition.ts'
+import { NumericQ } from './terms/numeric.ts'
+import { GeneVariantQ } from './terms/geneVariant.ts'
+import { SampleLstQ } from './terms/samplelst.ts'
+import { SnpsQ } from './terms/snps.ts'
 
 /*
 --------EXPORTED--------

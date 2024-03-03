@@ -1,4 +1,4 @@
-import { ErrorResponse } from './errorResponse'
+import { ErrorResponse } from './errorResponse.ts'
 
 export type Sample = {
 	/** Sample name, required */

@@ -1,8 +1,8 @@
-import { BaseValue } from './terms/term'
-import { NumericTerm, NumericBin } from './terms/numeric'
-import { CategoricalTerm } from './terms/categorical'
-import { GeneVariantTerm } from './terms/geneVariant'
-import { ConditionTerm } from './terms/condition'
+import { BaseValue } from './terms/term.ts'
+import { NumericTerm, NumericBin } from './terms/numeric.ts'
+import { CategoricalTerm } from './terms/categorical.ts'
+import { GeneVariantTerm } from './terms/geneVariant.ts'
+import { ConditionTerm } from './terms/condition.ts'
 
 /*
 --------EXPORTED--------

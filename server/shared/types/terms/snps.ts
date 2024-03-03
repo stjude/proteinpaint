@@ -1,8 +1,8 @@
-import { BaseTW, BaseQ, Term } from './term'
-import { TermWrapper } from './tw'
-import { TermSettingInstance, InstanceDom, UseCase } from '../termsetting'
-import { VocabApi } from '../vocab'
-import { Tvs, Filter } from '../filter'
+import { BaseTW, BaseQ, Term } from './term.ts'
+import { TermWrapper } from './tw.ts'
+import { TermSettingInstance, InstanceDom, UseCase } from '../termsetting.ts'
+import { VocabApi } from '../vocab.ts'
+import { Tvs, Filter } from '../filter.ts'
 
 /*
 --------EXPORTED--------

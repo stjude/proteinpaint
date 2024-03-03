@@ -1,4 +1,4 @@
-import { Cohort } from './dataset'
+import { Cohort } from './dataset.ts'
 
 /********* server/genome ********
  

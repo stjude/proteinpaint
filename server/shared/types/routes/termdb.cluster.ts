@@ -1,5 +1,5 @@
-import { ErrorResponse } from './errorResponse'
-import { Filter } from '../filter'
+import { ErrorResponse } from './errorResponse.ts'
+import { Filter } from '../filter.ts'
 
 export type Gene = {
 	/** gene symbol, required */

@@ -1,4 +1,4 @@
-import { Filter } from '../filter'
+import { Filter } from '../filter.ts'
 
 export type getViolinRequest = {
 	genome: string
@@ -43,22 +43,22 @@ interface pvalueEntries {
 	html?: string
 }
 
+type plot = {
+	label: string
+	plotValueCount: number
+	src: string
+	bins: binsEntries[]
+	densityMax: number
+	biggestBin: number
+	summaryStats: {
+		values: valuesEntries[]
+	}
+}
+
 export type getViolinResponse = {
 	min: number
 	max: number
-	plots: [
-		{
-			label: string
-			plotValueCount: number
-			src: string
-			bins: binsEntries[]
-			densityMax: number
-			biggestBin: number
-			summaryStats: {
-				values: valuesEntries[]
-			}
-		}
-	]
+	plots: plot[]
 	pvalues?: pvalueEntries[][]
 	uncomputableValueObj: any
 }
