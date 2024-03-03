@@ -1,6 +1,6 @@
-const serverconfig = require('../serverconfig')
-const path = require('path')
-const bettersqlite = require('better-sqlite3')
+import serverconfig from '../serverconfig'
+import path from 'path'
+import bettersqlite from 'better-sqlite3'
 
 /* 
   Load the dataset given a dataset label,
@@ -11,8 +11,8 @@ const bettersqlite = require('better-sqlite3')
 // may call as script from command line
 // if (process.argv[2]) load_dataset(process.argv[2])
 
-function init(dslabel) {
-	const ds = get_dataset(dslabel)
+export async function init(dslabel) {
+	const ds = await get_dataset(dslabel)
 	const db = bettersqlite(path.join(serverconfig.tpmasterdir, ds.cohort.db.file), {
 		readonly: true,
 		fileMustExist: true
@@ -34,10 +34,8 @@ function init(dslabel) {
 	}
 }
 
-exports.init = init
-
-function get_dataset(dslabel) {
-	const _ds = require('../../dataset/' + dslabel)
+async function get_dataset(dslabel) {
+	const _ds = await import('../../dataset/' + dslabel)
 	const ds =
 		typeof _ds == 'function' ? _ds({}) : typeof _ds.default == 'function' ? _ds.default({}) : _ds.default || _ds
 	if (!ds) throw 'invalid dslabel'

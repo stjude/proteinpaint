@@ -1,6 +1,5 @@
 import tape from 'tape'
 import * as b from '../termdb.bins.js'
-console.log(2, b)
 
 /*************************
  reusable helper functions

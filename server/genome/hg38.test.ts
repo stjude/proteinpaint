@@ -407,4 +407,4 @@ chrM	16569`,
 	chrUn_KI270394v1	970`
 }
 
-module.exports = genome
+export default genome
