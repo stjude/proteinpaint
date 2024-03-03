@@ -65,7 +65,7 @@ jobs:
         run: sudo apt-get install xvfb
 
       - name: TSC
-        run: tsc --esModuleInterop server/genome/*.ts server/dataset/*.ts
+        run: cd server; npx tsc; cd .. 
 
       - name: CP termdb
         run: |
