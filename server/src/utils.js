@@ -4,7 +4,7 @@ import { spawn } from 'child_process'
 import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
-import fetch from 'node-fetch' // adding .default allows webpack bundle to work
+import fetch from 'node-fetch'
 import bettersqlite from 'better-sqlite3'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
