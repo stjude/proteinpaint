@@ -26,7 +26,7 @@ export class DiscoRenderer {
 		this.fusionRenderer = new FusionRenderer()
 		this.downloadButtonRenderer = new DownloadButtonRenderer(downloadClickListener)
 		this.prioritizeGenesCheckboxRenderer = new PrioritizeGenesCheckboxRenderer(prioritizedGenesCheckboxListener)
-		this.mainManuRenderer = new MainMenuRender(() => {})
+		this.mainManuRenderer = new MainMenuRender(() => undefined)
 	}
 
 	render(holder: any, viewModel: ViewModel) {
