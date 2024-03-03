@@ -3,7 +3,8 @@
   "version": "2.44.0",
   "type": "module",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
-  "main": "app/src.js",
+  "main": "src/app.ts",
+  "module": "src/app.ts",
   "bin": "server.js",
   "imports": {
     "#types": "./shared/types/index.ts",

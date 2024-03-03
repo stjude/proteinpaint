@@ -1,6 +1,4 @@
-import { Genome } from '#types'
-
-export default <Genome>{
+export default {
 	species: 'zebrafish',
 	genomefile: 'genomes/danRer10.gz',
 	genedb: {

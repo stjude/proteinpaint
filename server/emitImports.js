@@ -15,30 +15,49 @@ import path from 'path'
 const mode = process.argv[2]
 const cwd = process.cwd()
 const __dirname = import.meta.dirname
-let relpath = __dirname
-	.replace(cwd, '')
-	.split('/')
-	.filter(p => p && true)
-	.map(p => '..')
-	.join('/')
+// assume that the proteinpaint dir is a submodule under cwd,
+let relpath = __dirname.replace(cwd, '.')
 if (!relpath) relpath = '.'
 
 if (mode == 'dev') {
-	const imports = [`import serverconfig from '${relpath}/serverconfig.json'`] //; console.log()
+	const imports = [
+		`import { Genome, MinGenome, Mds3, Mds, ClinvarClinsig, ClinvarAF } from '#types'`,
+		`import serverconfig from './serverconfig.json'`
+	]
+	const vartypes = []
+	let i = 0
 	for (const dir of ['genome', 'dataset']) {
-		const genomes = glob.sync('*.ts', { cwd: path.join(__dirname, dir) })
-		imports.push(...genomes.map(f => `import './${dir}/${f}'`))
+		const cwds = { [path.join(__dirname, dir)]: relpath }
+		if (__dirname !== cwd) cwds[path.join(cwd, dir)] = '.'
 
-		if (__dirname !== cwd) {
-			// assumes there are no filename collissions between dataset files in cwd and proteinpaint/server/genomes
-			const genomes = glob.sync('*.ts', { cwd: path.join(cwd, dir) })
-			imports.push(...genomes.map(f => `import '${relpath}/${dir}/${f}'`))
+		for (const cwd in cwds) {
+			const files = glob.sync('*.js', { cwd })
+			for (const f of files) {
+				if (f == 'cgc.js') continue
+				const abspath = `${cwd}/${f}`
+				const dotpath = cwds[cwd]
+				const frelpath = `${dotpath}/${dir}/${f}`
+				if (!fs.existsSync(abspath)) continue
+				const vname = f == 'clinvar.js' ? '* as clinvar' : normalizeName(f)
+				imports.push(`import ${vname} from '${frelpath}'`)
+				const v = await import(abspath) //; if (f == 'termdb.test.js') console.log(v)
+				const { isMds3, isMds2, isMds, isMinGenome } = v.default || v
+				const vtype = isMds3 ? 'Mds3' : isMds2 ? 'any' : isMds ? 'Mds' : isMinGenome ? 'MinGenome' : 'Genome'
+				if (f == 'clinvar.js') {
+					vartypes.push(`const v${i}a: ClinvarClinsig = clinvar.clinsig`)
+					vartypes.push(`const v${i}b: ClinvarAF = clinvar.AF`)
+				} else {
+					vartypes.push(`const v${i}: ${vtype} = ${vname}`)
+				}
+				i++
+			}
 		}
 	}
 
-	imports.push(`import {launch} from './src/app.ts'`)
-	imports.push(`launch()`)
+	imports.push(`import { launch } from '${relpath}/src/app.ts'`)
 	console.log(imports.join('\n'))
+	console.log(vartypes.join('\n'))
+	console.log('launch()')
 } else if (mode == 'unit') {
 	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })
 	const imports = specs.map(f => `import '${f}'`)

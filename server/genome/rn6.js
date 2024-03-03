@@ -1,6 +1,4 @@
-import { Genome } from '#types'
-
-export default <Genome>{
+export default {
 	species: 'rat',
 	genomefile: 'genomes/rn6.gz',
 	genedb: {

@@ -65,7 +65,11 @@ jobs:
         run: sudo apt-get install xvfb
 
       - name: TSC
-        run: cd server; npx tsc; cd .. 
+        run: |
+          cd server
+          node emitImports.js dev > server.ts
+          npx tsc
+          cd ..
 
       - name: CP termdb
         run: |

@@ -10,7 +10,7 @@ import {
 } from '#shared/types/routes/termdb.cluster.ts'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
-import { GeneExpressionQuery, GeneExpressionQueryNative } from '#shared/types/dataset.ts'
+import { GeneExpressionQuery, GeneExpressionQueryNative, GeneExpressionQueryGdc } from '#shared/types/dataset.ts'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { dtgeneexpression } from '#shared/common.js'
@@ -146,16 +146,16 @@ function getZscore(l: number[]) {
 }
 
 export async function validate_query_geneExpression(ds: any, genome: any) {
-	const q = ds.queries.geneExpression as GeneExpressionQuery
+	const q: GeneExpressionQuery = ds.queries.geneExpression
 	if (!q) return
 
 	if (q.src == 'gdcapi') {
-		gdc_validate_query_geneExpression(ds, genome)
+		gdc_validate_query_geneExpression(ds as GeneExpressionQueryGdc, genome)
 		// q.get() added
 		return
 	}
 	if (q.src == 'native') {
-		await validateNative(q, ds, genome)
+		await validateNative(q as GeneExpressionQueryNative, ds, genome)
 		return
 	}
 	throw 'unknown queries.geneExpression.src'
