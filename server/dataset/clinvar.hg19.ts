@@ -1,4 +1,4 @@
-import { clinsig } from './clinvar.js'
+import { clinsig } from './clinvar.ts'
 import { Mds3 } from '../shared/types'
 
 export default <Mds3>{
