@@ -20,10 +20,10 @@ let relpath = __dirname.replace(cwd, '.')
 if (!relpath) relpath = '.'
 
 if (mode == 'dev') {
-	const imports = [
-		`import { Genome, MinGenome, Mds3, Mds, ClinvarClinsig, ClinvarAF } from '#types'`,
-		`import serverconfig from './serverconfig.json'`
-	]
+	const imports = [`import { Genome, MinGenome, Mds3, Mds, ClinvarClinsig, ClinvarAF } from '#types'`]
+	const hasServerConfig = fs.existsSync(`./serverconfig.json`)
+	if (hasServerConfig) imports.push(`import serverconfig from './serverconfig.json'`)
+
 	const vartypes = []
 	let i = 0
 	for (const dir of ['genome', 'dataset']) {
@@ -54,10 +54,10 @@ if (mode == 'dev') {
 		}
 	}
 
-	imports.push(`import { launch } from '${relpath}/src/app.ts'`)
+	if (hasServerConfig) imports.push(`import { launch } from '${relpath}/src/app.ts'`)
 	console.log(imports.join('\n'))
 	console.log(vartypes.join('\n'))
-	console.log('launch()')
+	if (hasServerConfig) console.log('launch()')
 } else if (mode == 'unit') {
 	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })
 	const imports = specs.map(f => `import '${f}'`)
