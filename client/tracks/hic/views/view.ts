@@ -4,9 +4,8 @@ import { MainPlotDiv } from '../../../types/hic.ts'
 // import { HorizontalView } from './horizontalView'
 // import { DetailView } from './detailView'
 import { GenomeView } from './genomeView.ts'
-import { HicDataMapper } from '../data/dataMapper'
 import { controlPanelInit } from '../controls/controlPanel'
-import { infoBarInit } from '../dom/infoBar'
+import { InfoBar } from '../dom/infoBar'
 
 export class HicView {
 	dom: any
@@ -15,15 +14,14 @@ export class HicView {
 	hic: any
 	state: any
 	genome: any
-	//hasStatePreMain: boolean
 	app: any
 	dataMapper: any
 	activeView: string
 	errList: string[]
 	components = {
-		controls: [],
-		infoBar: []
+		controls: []
 	}
+	infoBar: any
 	error: any
 	skipMain = true
 	min = 0
@@ -61,7 +59,7 @@ export class HicView {
 
 		if (v >= 0) {
 			// positive or zero, use red
-			const p = v >= bpMaxV || v <= bpMinV ? 0 : Math.floor((255 * (bpMaxV - v)) / bpMaxV)
+			const p = v >= bpMaxV ? 0 : v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV - v)) / bpMaxV)
 			const positiveFill = `rgb(255, ${p}, ${p})`
 			if (currView === 'genome') {
 				obj.ctx.fillStyle = positiveFill
@@ -72,7 +70,7 @@ export class HicView {
 			}
 		} else {
 			// negative, use blue
-			const p = Math.floor((255 * (bpMaxV + v)) / bpMaxV)
+			const p = v <= bpMinV ? 255 : Math.floor((255 * (bpMaxV + v)) / bpMaxV)
 			const negativeFill = `rgb(${p}, ${p}, 255)`
 			if (currView === 'genome') {
 				obj.ctx.fillStyle = negativeFill
@@ -81,14 +79,12 @@ export class HicView {
 				obj.fillStyle = negativeFill
 			}
 		}
-		const w = width
-		const h = height
 
 		if (currView === 'genome') {
-			obj.ctx.fillRect(follow, lead, w, h)
-			obj.ctx2.fillRect(lead, follow, w, h)
+			obj.ctx.fillRect(follow, lead, width, height)
+			obj.ctx2.fillRect(lead, follow, width, height)
 		} else {
-			obj.fillRect(lead, follow, w, h)
+			obj.fillRect(lead, follow, width, height)
 		}
 	}
 
@@ -97,7 +93,6 @@ export class HicView {
 			this.genome = await new GenomeView({
 				plotDiv: this.plotDiv,
 				hic: this.hic,
-				state: this.state,
 				app: this.app,
 				data: this.dataMapper.data,
 				parent: this
@@ -131,16 +126,17 @@ export class HicView {
 					hic: this.hic,
 					state: this.state,
 					parent: this
-				}),
-				infoBar: await infoBarInit({
-					app: this.app,
-					state: this.state,
-					infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
-					hic: this.hic,
-					parent: this,
-					resolution: this[this.activeView].resolution
 				})
 			}
+			this.infoBar = new InfoBar({
+				app: this.app,
+				state: this.state,
+				infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
+				hic: this.hic,
+				parent: this,
+				resolution: this[this.activeView].resolution
+			})
+			this.infoBar.render()
 		} catch (e: any) {
 			this.errList.push(e.message || e)
 		}
@@ -163,9 +159,11 @@ export class HicView {
 				this.plotDiv.yAxis.selectAll('*').remove()
 				this.plotDiv.plot.selectAll('*').remove()
 				this.initView()
+				this.infoBar.update()
 				this.activeView == this.state.currView
 			} else {
 				await this[this.state.currView].update(this.dataMapper.data)
+				this.infoBar.update()
 			}
 		} else {
 			//main() skipped on init() to avoid confusing behavior

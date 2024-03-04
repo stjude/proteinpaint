@@ -31,7 +31,6 @@ export class GenomeView {
 	/** opts */
 	app: any
 	hic: any
-	state: any
 	plotDiv: MainPlotDiv
 	resolution: number
 
@@ -63,7 +62,6 @@ export class GenomeView {
 
 	constructor(opts) {
 		this.hic = opts.hic
-		this.state = opts.state
 		this.plotDiv = opts.plotDiv
 		this.data = opts.data
 		this.parent = opts.parent
@@ -1628,7 +1626,7 @@ export async function getdata_chrpair(hic: any, self: any) {
 		await setViewCutoff(vlst, self.chrpairview, self)
 
 		for (const [x, y, v] of self.chrpairview.data) {
-			await colorizeElement(x, y, v, self.chrpairview, self, ctx)
+			//await colorizeElement(x, y, v, self.chrpairview, self, ctx)
 		}
 	} catch (err: any) {
 		self.errList.push(err.message || err)
@@ -2018,7 +2016,7 @@ export function getdata_detail(hic: any, self: any) {
 			setViewCutoff(vlst, self.detailview, self)
 
 			for (const [x, y, w, h, v] of lst) {
-				colorizeElement(x, y, v, self.detailview, self, ctx, w, h)
+				//colorizeElement(x, y, v, self.detailview, self, ctx, w, h)
 			}
 
 			self.detailview.data = lst
