@@ -1,6 +1,7 @@
+import { Genome } from '../shared/types'
 import { CancerGeneCensusLst } from './cgc.js'
 
-export default {
+export default <Genome>{
 	species: 'human',
 	genomefile: 'genomes/hg38.gz',
 	genedb: {

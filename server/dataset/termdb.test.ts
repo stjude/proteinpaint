@@ -1,3 +1,4 @@
+import { Mds3 } from '../shared/types'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
 import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'
@@ -24,7 +25,7 @@ reason:
 
 copyDataFilesFromRepo2Tp()
 
-export default {
+export default <Mds3>{
 	isMds3: true,
 	cohort: {
 		db: {
@@ -179,6 +180,12 @@ export default {
 				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
 			}
 		},
+		/*
+		on the fly cnv calls from gene body probe signals are no longer used
+		probe2cnv:{
+			file: 'files/hg19/pnet/PNET.probesignals.gz'
+		}
+		*/
 		singleSampleMutation: {
 			src: 'native',
 			sample_id_key: 'sample_id',
@@ -258,7 +265,6 @@ function copyDataFilesFromRepo2Tp() {
 	// the server/test/tp dir as serverconfig.tpmasterdir, and do not trigger
 	// the symlinks below
 	if (existsSync('/home/root/pp')) return
-
 	const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 

@@ -67,8 +67,6 @@ jobs:
       - name: TSC
         run: |
           cd server
-          cp test/serverconfig.json .
-          node emitImports.js dev > server.ts
           npx tsc
           cd ..
 

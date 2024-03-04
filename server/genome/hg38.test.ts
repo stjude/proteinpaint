@@ -1,4 +1,6 @@
-export default {
+import { Genome } from '../shared/types'
+
+const genome: Genome = {
 	species: 'human',
 	genomefile: 'NA',
 	genedb: {
@@ -404,3 +406,5 @@ chrM	16569`,
 	chrUn_KI270392v1	971
 	chrUn_KI270394v1	970`
 }
+
+module.exports = genome
