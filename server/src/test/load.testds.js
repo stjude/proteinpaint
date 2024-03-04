@@ -12,6 +12,7 @@ import bettersqlite from 'better-sqlite3'
 // if (process.argv[2]) load_dataset(process.argv[2])
 
 export async function init(dslabel) {
+	serverconfig.tpmasterdir = path.join(import.meta.dirname, '../../test/tp')
 	const ds = await get_dataset(dslabel)
 	const db = bettersqlite(path.join(serverconfig.tpmasterdir, ds.cohort.db.file), {
 		readonly: true,
