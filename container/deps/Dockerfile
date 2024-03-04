@@ -155,7 +155,7 @@ WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY ./app-server.js ./
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-server.js"]
+CMD ["sh", "-c", "node --enable-source-maps app-server.js && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
 
 #################
@@ -200,5 +200,5 @@ WORKDIR /home/root/pp/app/active
 COPY ./app-full.js ./
 COPY public ./public
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-full.js"]
+CMD ["sh", "-c", "node --enable-source-maps app-full.js && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-const path = require('path')
-const spawnSync = require('child_process').spawnSync
+import path from 'path'
+import { spawnSync } from 'child_process'
 
 // from the current working directory
 spawnSync(`rm -rf public/cards`)
 
 const mode = process.argv[2] || 'full'
-const run = path.join(__dirname, 'run.sh')
+const run = path.join(import.meta.dirname, 'run.sh')
 
 try {
 	const img = `ghcr.io/stjude/pp${mode}:latest`
