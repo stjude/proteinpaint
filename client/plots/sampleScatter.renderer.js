@@ -672,7 +672,7 @@ export function setRenderers(self) {
 		legendG.selectAll('*').remove()
 		let offsetX = 0
 		let offsetY = 25
-		if (!self.config.colorTW && !self.config.shapeTW) {
+		if (!self.config.colorTW && !self.config.shapeTW && !self.config.colorColumn) {
 			if (self.config.scaleDotTW) {
 				chart.scaleG = legendG.append('g').attr('transform', `translate(${offsetX},${self.legendHeight - 120})`)
 				self.drawScaleDotLegend(chart)
@@ -690,11 +690,14 @@ export function setRenderers(self) {
 			: `${chart.cohortSamples.length} items`
 		colorG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 		offsetY += step + 10
-		if (self.config.colorTW) {
-			title = `${getTitle(self.config.colorTW, self.config.shapeTW == undefined)}`
+		if (self.config.colorTW || self.config.colorColumn) {
+			title = `${getTitle(
+				self.config.colorTW?.term?.name || self.config.colorColumn.name,
+				self.config.shapeTW == undefined
+			)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
 
-			if (self.config.colorTW.term.type == 'geneVariant')
+			if (self.config.colorTW?.term?.type == 'geneVariant')
 				offsetY = self.renderGeneVariantLegend(
 					chart,
 					offsetX,
@@ -714,7 +717,7 @@ export function setRenderers(self) {
 					.style('font-weight', 'bold')
 				offsetY += step
 
-				if (self.config.colorTW.q.mode === 'continuous') {
+				if (self.config.colorTW?.q?.mode === 'continuous') {
 					const gradientWidth = 150
 					const [min, max] = chart.colorGenerator.domain()
 					const gradientScale = d3Linear().domain([min, max]).range([0, gradientWidth])
@@ -757,15 +760,17 @@ export function setRenderers(self) {
 					for (const [key, category] of chart.colorLegend) {
 						if (key == 'Ref') continue
 						const name = key
-						const hidden = self.config.colorTW.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
+						const hidden = self.config.colorTW?.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
 						const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
-						circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
+						if (!self.config.colorColumn) {
+							circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
+							itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event, category))
+						}
 						offsetY += step
-						itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event, category))
 					}
 				}
 			}
-			if (colorRefCategory.sampleCount > 0) {
+			if (colorRefCategory?.sampleCount > 0) {
 				offsetY = offsetY + step
 				const titleG = legendG.append('g')
 				titleG.append('text').attr('x', offsetX).attr('y', offsetY).text('Reference').style('font-weight', 'bold')
@@ -801,7 +806,7 @@ export function setRenderers(self) {
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
 			offsetY = 60
-			title = `${getTitle(self.config.shapeTW)}`
+			title = `${getTitle(self.config.shapeTW.term.name)}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
 				self.renderGeneVariantLegend(chart, offsetX, offsetY, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
@@ -839,8 +844,7 @@ export function setRenderers(self) {
 			}
 		}
 
-		function getTitle(tw, complete = false) {
-			let name = tw.term.name
+		function getTitle(name, complete = false) {
 			if (name.length > 25 && !complete) name = name.slice(0, 25) + '...'
 			return name
 		}
@@ -856,8 +860,8 @@ export function setRenderers(self) {
 				.attr('r', radius)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
-
-			circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
+			if (!self.config.colorColumn)
+				circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
 			const itemG = g.append('g')
 			itemG
 				.append('text')
@@ -1068,14 +1072,14 @@ export function setRenderers(self) {
 		const step = 125
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		let title = `${name}, n=${chart.cohortSamples.length}`
-		const G = legendG.append('g')
+		const G = legendG.append('g').style('font-size', '0.9em')
+
 		G.append('text')
 			.attr('id', 'legendTitle')
 			.attr('x', offsetX)
 			.attr('y', offsetY)
 			.text(title)
 			.style('font-weight', 'bold')
-			.style('font-size', '0.8em')
 
 		offsetX += step
 		const mutations = chart.cohortSamples[0]['cat_info'][cname]
@@ -1091,7 +1095,6 @@ export function setRenderers(self) {
 				.attr('y', offsetY - 25)
 				.text(origin ? `${origin} ${dt2label[dt]}` : dt2label[dt])
 				.style('font-weight', 'bold')
-				.style('font-size', '0.8em')
 
 			for (const [key, category] of map) {
 				if (key == 'Ref') continue
@@ -1124,7 +1127,6 @@ export function setRenderers(self) {
 					.attr('name', 'sjpp-scatter-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(mkey)
-					.style('font-size', '0.8em')
 					.on('click', event =>
 						self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
 					)
@@ -1135,7 +1137,6 @@ export function setRenderers(self) {
 						.attr('x', offsetX)
 						.attr('y', offsetY)
 						.text(`${category.sampleCount}${category.hasOrigin ? assay[0] : ''}`)
-						.style('font-size', '0.8em')
 				offsetY += 25
 			}
 		}

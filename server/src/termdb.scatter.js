@@ -146,12 +146,11 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			refSamples = result[0]
 			cohortSamples = result[1]
 			if (q.colorColumn) {
-				//Samples are marked as ref as they dont have a db mapping
+				//Samples are marked as ref as they dont have a db mapping, but they are not necessarily ref samples
 				let categories = new Set(refSamples.map(s => s.category))
 				categories = Array.from(categories)
-				console.log(categories)
 				const colorMap = {}
-				const k2c = getColors(categories.size)
+				const k2c = getColors(categories.length)
 				for (const category of categories) {
 					colorMap[category] = {
 						sampleCount: refSamples.filter(s => s.category == category).length,
@@ -265,7 +264,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const scheme = schemeCategory20
 
 	for (const [divideBy, result] of Object.entries(results)) {
-		if (q.colorTW && q.colorTW?.q.mode !== 'continuous') {
+		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 			let i = 20
 			const colorEntries = Object.entries(result.colorMap)
 
