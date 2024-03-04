@@ -17,7 +17,7 @@
     "dev": "npm run start",
     "prestart": "tsx emitImports.js dev > server.js",
     "start": "tsx watch src/app.ts",
-    "pretest:unit": "cp test/serverconfig.json",
+    "pretest:unit": "cp test/serverconfig.json .",
     "test:unit": "tsx emitImports.js unit > serverTests.js && tsx serverTests.js",
     "pretest:integration": "tsc --esModuleInterop genome/*.ts dataset/*.ts",
     "test:integration": "echo 'TODO: server integration tests'",
