@@ -2,5 +2,5 @@
 
 set -e
 
-sed -i.bak 's|clinvar.ts|clinvar.mjs|g' dataset/clinvar.hg19.mjs
-sed -i.bak 's|clinvar.ts|clinvar.mjs|g' dataset/clinvar.hg38.mjs
+sed -i '' 's|clinvar.ts|clinvar.js|g' dataset/clinvar.hg19.js
+sed -i '' 's|clinvar.ts|clinvar.js|g' dataset/clinvar.hg38.js
