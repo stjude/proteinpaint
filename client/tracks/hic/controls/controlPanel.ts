@@ -238,21 +238,23 @@ class ControlPanel {
 	}
 
 	minCallback = (v: string | number) => {
-		this.parent.min = v
-		if (v > this.parent.max) {
+		this.parent.min = Number(v)
+		if (Number(v) > Number(this.parent.max)) {
 			this.parent.error('Min cutoff cannot be greater than max cutoff')
+		} else {
+			this.reColorHeatmap()
+			this.parent.infoBar.update()
 		}
-		this.reColorHeatmap()
-		//update infoBar somehow
 	}
 
 	maxCallback = (v: string | number) => {
-		this.parent.max = v
-		if (v < this.parent.min) {
+		this.parent.max = Number(v)
+		if (Number(v) < Number(this.parent.min)) {
 			this.parent.error('Max cutoff cannot be less than min cutoff')
+		} else {
+			this.reColorHeatmap()
+			this.parent.infoBar.update()
 		}
-		this.reColorHeatmap()
-		//update infoBar somehow
 	}
 
 	reColorHeatmap = () => {
