@@ -877,9 +877,9 @@ function setRenderers(self) {
 			for (const term2 of visibleTerm2Data) {
 				rows.push([
 					{ value: `${term1.term1Label}` },
-					{ value: 'not ' + term1.term1Label },
+					{ value: negateTermLabel(term1.term1Label) },
 					{ value: term2.term2Label },
-					{ value: 'not ' + term2.term2Label },
+					{ value: negateTermLabel(term2.term2Label) },
 					//if both chi-square and Fisher's exact tests were used. for the tests computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
 					{
 						html: term2.skipped
@@ -920,6 +920,16 @@ function setRenderers(self) {
 			.style('font-size', '10px')
 			.style('font-weight', 'normal')
 			.html(noSkipped ? '' : 'N/A: association test skipped because of limited sample size <br>')
+	}
+
+	// a function used by generatePvalueTable to negate a term label
+	// TODO: add more conditions for better negation than "not termLable"
+	function negateTermLabel(termLabel) {
+		if (termLabel.toUpperCase().startsWith('NOT ')) {
+			return termLabel.substring(4) // Remove the "not" prefix
+		} else {
+			return 'not ' + termLabel // Otherwise, add "not" prefix
+		}
 	}
 }
 
