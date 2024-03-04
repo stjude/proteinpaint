@@ -25,5 +25,5 @@ RUN npm install --omit=dev --prefer-offline --cache=/root/.npm
 COPY ./server/app-server.js  ./
 
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-server.js"]
+CMD ["sh", "-c", "node --enable-source-maps app-server.js && npx @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
