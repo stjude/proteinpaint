@@ -419,7 +419,13 @@ type ScatterPlotsEntry = {
 	name: string
 	dimension: number
 	file: string
-	colorTW: { id: string }
+	/** this plot use a dict term to fetch sample values and color dots */
+	colorTW?: { id: string }
+	/** this plot use a file column to color dots */
+	colorColumn?: {
+		index: number
+		name: string
+	}
 }
 
 type Scatterplots = {
