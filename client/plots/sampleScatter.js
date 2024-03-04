@@ -81,7 +81,8 @@ class Scatter {
 			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
-			controlsHolder
+			controlsHolder,
+			toolsDiv: controlsHolder.insert('div')
 		}
 
 		this.settings = {}
@@ -154,7 +155,6 @@ class Scatter {
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
 		const results = await this.app.vocabApi.getScatterData(reqOpts)
-		console.log(results)
 		if (results.error) throw results.error
 		this.charts = []
 		let i = 0
@@ -346,6 +346,7 @@ class Scatter {
 				settingsKey: 'svgh'
 			}
 		]
+
 		if (!this.is2DLarge) {
 			inputs.unshift({
 				type: 'term',
@@ -467,7 +468,6 @@ class Scatter {
 				downloadImage(url)
 			} else for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
 		})
-		this.dom.toolsDiv = this.dom.controlsHolder.insert('div')
 	}
 }
 

@@ -62,8 +62,10 @@ export async function mayInitiateScatterplots(ds) {
 				}
 				const sample = { sample: l[0], x, y }
 				if (p.colorColumn) {
+					sample.sampleId = l[0]
 					sample.category = l[p.colorColumn.index]
 					sample.shape = 'Ref'
+					sample.z = 0
 				}
 				const id = ds.cohort.termdb.q.sampleName2id(l[0])
 				if (id == undefined) {
@@ -150,12 +152,16 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 				console.log(categories)
 				const colorMap = {}
 				const k2c = getColors(categories.size)
-				for (const category of categories)
+				for (const category of categories) {
 					colorMap[category] = {
-						sampleCount: cohortSamples.filter(s => s.category == category).length,
-						color: k2c[category]
+						sampleCount: refSamples.filter(s => s.category == category).length,
+						color: k2c(category)
 					}
-				res.send({ Default: { samples: refSamples, colorMap: Object.entries(colorMap), shapeMap: {} } })
+				}
+				const shapeMap = { Ref: { shape: 0, sampleCount: refSamples.length } }
+				res.send({
+					Default: { samples: refSamples, colorLegend: Object.entries(colorMap), shapeLegend: Object.entries(shapeMap) }
+				})
 				return
 			}
 		}

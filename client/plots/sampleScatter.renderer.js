@@ -342,10 +342,10 @@ export function setRenderers(self) {
 				if (group.showOnly) {
 					for (const sample of group.items)
 						if (c.sampleId == sample.sampleId)
-							return c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
+							return c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
 					return 0
 				}
-			const opacity = c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
+			const opacity = c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
 			return opacity
 		}
 		const refOpacity = self.settings.showRef ? self.settings.opacity : 0
