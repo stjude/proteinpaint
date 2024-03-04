@@ -1,6 +1,6 @@
-import { Genome } from '../shared/types'
+import { Genome } from '#types'
 
-export default <Genome> {
+export default <Genome>{
 	species: 'mouse',
 	genomefile: 'genomes/mm10.gz',
 	genedb: {
@@ -66,9 +66,11 @@ export default <Genome> {
 		}
 	],
 
-	majorchr: `
+	majorchr:
+		`
 chr1	195471971
-chr2	182113224` /* pragma: allowlist secret */ + `
+chr2	182113224` /* pragma: allowlist secret */ +
+		`
 chrX	171031299
 chr3	160039680
 chr4	156508116

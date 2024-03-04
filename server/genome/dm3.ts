@@ -1,4 +1,4 @@
-import { Genome } from '../shared/types'
+import { Genome } from '#types'
 
 export default <Genome>{
 	species: 'fruit fly',

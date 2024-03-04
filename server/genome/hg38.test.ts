@@ -1,4 +1,4 @@
-import { Genome } from '../shared/types'
+import { Genome } from '#types'
 
 const genome: Genome = {
 	species: 'human',
