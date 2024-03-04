@@ -17,7 +17,7 @@ tape('\n', function (test) {
 let tdb
 
 tape('simple filter', async function (test) {
-	tdb = await init('termdb.test.js')
+	tdb = await init('termdb.test.ts')
 	server_init_db_queries(tdb.ds)
 
 	const filter = await getFilterCTEs(
