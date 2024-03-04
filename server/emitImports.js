@@ -20,9 +20,9 @@ let relpath = __dirname.replace(cwd, '.')
 if (!relpath) relpath = '.'
 
 if (mode == 'dev') {
-	const imports = [`import serverconfig from '${relpath}/serverconfig.json'`]
+	const imports = []
 	const hasServerConfig = fs.existsSync(`./serverconfig.json`)
-	if (hasServerConfig) imports.push(`import serverconfig from './serverconfig.json'`)
+	if (hasServerConfig) imports.push(`import './serverconfig.json'`)
 
 	for (const dir of ['genome', 'dataset']) {
 		const cwds = { [path.join(__dirname, dir)]: relpath }
