@@ -45,7 +45,7 @@ export async function launch() {
 
 		// start moving migrated route handler code here
 		const files = fs.readdirSync(path.join(serverconfig.binpath, '/routes'))
-		const routeFiles = files.filter(f => !f.startsWith('_') && f.endsWith(serverconfig.features?.routesExt || '.mjs'))
+		const routeFiles = files.filter(f => !f.startsWith('_')) // && f.endsWith(serverconfig.features?.routesExt || '.mjs'))
 		const routes = await Promise.all(
 			routeFiles
 				//.filter(file => file.includes('health'))

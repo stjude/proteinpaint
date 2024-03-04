@@ -12,7 +12,8 @@ dist/*
 */*/*/dist/
 
 server/app.js
-server/**/*.mjs
+server/genome/*.js
+server/dataset/*.js
 server/shared/doc.js
 server/shared/checkers/transformed/*
 server/shared/checkers/bin/*

@@ -20,43 +20,41 @@ let relpath = __dirname.replace(cwd, '.')
 if (!relpath) relpath = '.'
 
 if (mode == 'dev') {
-	const imports = [`import { Genome, MinGenome, Mds3, Mds, ClinvarClinsig, ClinvarAF } from '#types'`]
+	const imports = [`import serverconfig from '${relpath}/serverconfig.json'`]
 	const hasServerConfig = fs.existsSync(`./serverconfig.json`)
 	if (hasServerConfig) imports.push(`import serverconfig from './serverconfig.json'`)
 
-	const vartypes = []
-	let i = 0
 	for (const dir of ['genome', 'dataset']) {
 		const cwds = { [path.join(__dirname, dir)]: relpath }
 		if (__dirname !== cwd) cwds[path.join(cwd, dir)] = '.'
 
 		for (const cwd in cwds) {
-			const files = glob.sync('*.js', { cwd })
+			const files = glob.sync('*.ts', { cwd })
 			for (const f of files) {
-				if (f == 'cgc.js') continue
+				//if (f == 'cgc.ts') continue
 				const abspath = `${cwd}/${f}`
 				const dotpath = cwds[cwd]
 				const frelpath = `${dotpath}/${dir}/${f}`
 				if (!fs.existsSync(abspath)) continue
-				const vname = f == 'clinvar.js' ? '* as clinvar' : normalizeName(f)
-				imports.push(`import ${vname} from '${frelpath}'`)
-				const v = await import(abspath) //; if (f == 'termdb.test.js') console.log(v)
-				const { isMds3, isMds2, isMds, isMinGenome } = v.default || v
-				const vtype = isMds3 ? 'Mds3' : isMds2 ? 'any' : isMds ? 'Mds' : isMinGenome ? 'MinGenome' : 'Genome'
-				if (f == 'clinvar.js') {
-					vartypes.push(`const v${i}a: ClinvarClinsig = clinvar.clinsig`)
-					vartypes.push(`const v${i}b: ClinvarAF = clinvar.AF`)
-				} else {
-					vartypes.push(`const v${i}: ${vtype} = ${vname}`)
-				}
-				i++
+				//const vname = f == 'clinvar.js' ? '* as clinvar' : normalizeName(f)
+				imports.push(`import '${frelpath}'`)
+				// const v = await import(abspath) //; if (f == 'termdb.test.js') console.log(v)
+				// const { isMds3, isMds2, isMds, isMinGenome } = v.default || v
+				// const vtype = isMds3 ? 'Mds3' : isMds2 ? 'any' : isMds ? 'Mds' : isMinGenome ? 'MinGenome' : 'Genome'
+				// if (f == 'clinvar.js') {
+				// 	vartypes.push(`const v${i}a: ClinvarClinsig = clinvar.clinsig`)
+				// 	vartypes.push(`const v${i}b: ClinvarAF = clinvar.AF`)
+				// } else {
+				// 	vartypes.push(`const v${i}: ${vtype} = ${vname}`)
+				// }
+				// i++
 			}
 		}
 	}
 
 	if (hasServerConfig) imports.push(`import { launch } from '${relpath}/src/app.ts'`)
 	console.log(imports.join('\n'))
-	console.log(vartypes.join('\n'))
+	//console.log(vartypes.join('\n'))
 	if (hasServerConfig) console.log('launch()')
 } else if (mode == 'unit') {
 	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })
