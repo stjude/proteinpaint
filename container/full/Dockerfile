@@ -26,4 +26,5 @@ COPY ./full/app-full.js .
 COPY ./public .
 
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-full.js"]
+CMD ["sh", "-c", "node --enable-source-maps app-full.js && npx @sjcrh/proteinpaint-server"]
+# CMD ["sleep", "3600"]

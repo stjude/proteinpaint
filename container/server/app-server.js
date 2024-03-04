@@ -1,13 +1,14 @@
-const fs = require('fs')
-const spawnSync = require('child_process').spawnSync
-const path = require('path')
-const serverconfigFile = path.join(__dirname, './serverconfig.json')
+import fs from 'fs'
+import { spawnSync } from 'child_process'
+import path from 'path'
+
+const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
 if (!fs.existsSync(serverconfigFile)) {
 	throw `missing serverconfig.json: did you forget to mount?`
 }
 
-const serverconfig = require(serverconfigFile)
+const { default: serverconfig } = await import(serverconfigFile, { assert: { type: 'json' } })
 
 if (!serverconfig.genomes) {
 	serverconfig.genomes = [
@@ -44,4 +45,4 @@ if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
 	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
 }
 
-require('@sjcrh/proteinpaint-server')
+console.log('to start the server: npx @sjcrh/proteinpaint-server')
