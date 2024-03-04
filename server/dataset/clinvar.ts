@@ -1,4 +1,4 @@
-import { ClinvarClinsig, ClinvarAF } from '../shared/types'
+import { ClinvarClinsig, ClinvarAF } from '#types'
 
 export const clinsig: ClinvarClinsig = {
 	Affects: {
