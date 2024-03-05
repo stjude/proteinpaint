@@ -192,8 +192,8 @@ arg
 				const width = this.width
 				const height = this.height
 				const b = d3select(document.body)
-				b.on('mousemove', () => {
-					this.render(width + event.clientX - x, height + event.clientY - y)
+				b.on('mousemove', e2 => {
+					this.render(width + e2.clientX - x, height + e2.clientY - y)
 				})
 				b.on('mouseup', () => {
 					b.on('mousemove', null).on('mouseup', null)
@@ -369,11 +369,7 @@ arg
 				})
 			})
 		// dots
-		this.epdotg = this.graph
-			.selectAll()
-			.data(this.data)
-			.enter()
-			.append('g')
+		this.epdotg = this.graph.selectAll().data(this.data).enter().append('g')
 		this.epdot = this.epdotg
 			.append('circle')
 			.attr('fill', this.p.hlcolor)
@@ -381,7 +377,7 @@ arg
 			.attr('stroke', 'black')
 			.attr('stroke-width', 2)
 			.attr('stroke-opacity', normal_strokeopacity)
-			.each(function(d) {
+			.each(function (d) {
 				d.circle = this
 			})
 			.on('mouseover', (event, d) => {
@@ -517,11 +513,7 @@ arg
 					.style('border', 'solid 1px transparent')
 					.attr('class', 'sja_clb')
 				for (let i = 1; i < n.depth; i++) {
-					row
-						.append('span')
-						.style('color', '#ccc')
-						.style('padding', '0px 15px')
-						.text('|')
+					row.append('span').style('color', '#ccc').style('padding', '0px 15px').text('|')
 				}
 				const d = n.data.data
 				row.append('span').html(d.name + '&nbsp;') // somehow no longer n.data.name
@@ -548,10 +540,7 @@ arg
 				}
 			})
 		} else {
-			this.treediv
-				.append('div')
-				.style('margin', '10px')
-				.text('Cannot stratify sample: no cohort information.')
+			this.treediv.append('div').style('margin', '10px').text('Cannot stratify sample: no cohort information.')
 		}
 		newboxplot(this, this.data, '', 'all', allsamplerow)
 		// end of constructor
@@ -587,17 +576,11 @@ arg
 	makescale_ep() {
 		const axish = this.axish - 2
 		if (this.uselog) {
-			this.x_scale = scaleLog()
-				.domain([1, this.maxvalue])
-				.range([0, this.width])
+			this.x_scale = scaleLog().domain([1, this.maxvalue]).range([0, this.width])
 		} else {
-			this.x_scale = scaleLinear()
-				.domain([this.minvalue, this.maxvalue])
-				.range([0, this.width])
+			this.x_scale = scaleLinear().domain([this.minvalue, this.maxvalue]).range([0, this.width])
 		}
-		const scale = axisTop()
-			.scale(this.x_scale)
-			.tickSizeInner(this.tickh)
+		const scale = axisTop().scale(this.x_scale).tickSizeInner(this.tickh)
 		if (this.uselog) {
 			scale.ticks(6, ',.0f')
 		} else {
@@ -607,7 +590,7 @@ arg
 				.append('text')
 				.text(Math.ceil(this.maxvalue))
 				.attr('font-size', axish - this.tickh)
-				.each(function() {
+				.each(function () {
 					fontwidth = this.getBBox().width
 				})
 				.remove()
@@ -657,11 +640,7 @@ arg
 			.attr('font-size', this.sf_boxlabelfontsize(Math.log(this.data.length)))
 		this.width2_ = tmp.node().getBBox().width + 3
 		tmp.remove()
-		const tmp2 = this.svgg
-			.append('text')
-			.text('COUNT')
-			.attr('font-size', 1)
-			.attr('font-family', client.font)
+		const tmp2 = this.svgg.append('text').text('COUNT').attr('font-size', 1).attr('font-family', client.font)
 		const size2 = Math.max(8, (this.width2_ - 3) / tmp2.node().getBBox().width)
 		tmp2.remove()
 		this.axispad = 5 + size2 + this.dotsize / 2
@@ -810,7 +789,7 @@ arg
 			.text(d => lookup.get(d[this.p.sampletype]))
 			.attr('font-family', client.font)
 			.attr('font-size', this.dotsize)
-			.each(function(d) {
+			.each(function (d) {
 				d.bb = this.getBBox()
 			})
 			.each(d => {
@@ -1057,14 +1036,8 @@ function makeButtons(ep) {
 					.transition()
 					.duration(dur)
 					.attr('transform', 'translate(' + x1 + ',' + ep.grab.y + ')')
-				ep.grab.shadebox
-					.transition()
-					.duration(dur)
-					.attr('width', ep.grab.width)
-				ep.grab.shadehandle2
-					.transition()
-					.duration(dur)
-					.attr('x', ep.grab.width)
+				ep.grab.shadebox.transition().duration(dur).attr('width', ep.grab.width)
+				ep.grab.shadehandle2.transition().duration(dur).attr('x', ep.grab.width)
 			}
 		})
 
