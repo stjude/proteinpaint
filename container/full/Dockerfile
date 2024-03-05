@@ -22,9 +22,9 @@ WORKDIR /home/root/pp/app/active
 RUN npm i --package-lock-only
 COPY ./full/package.json  ./
 RUN npm install --omit=dev --prefer-offline --cache=/root/.npm
-COPY ./full/app-full.js .
+COPY ./full/app-full.mjs .
 COPY ./public .
 
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-full.js && npx @sjcrh/proteinpaint-server"]
+CMD ["sh", "-c", "node --enable-source-maps app-full.mjs"]
 # CMD ["sleep", "3600"]

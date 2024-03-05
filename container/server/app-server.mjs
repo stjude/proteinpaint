@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { spawnSync } from 'child_process'
 import path from 'path'
+import { launch } from '@sjcrh/proteinpaint-server'
 
 const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
@@ -45,4 +46,5 @@ if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
 	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
 }
 
-console.log('to start the server: npx @sjcrh/proteinpaint-server')
+console.log('starting the server ...')
+launch()

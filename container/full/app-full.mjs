@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { spawnSync } from 'child_process'
 import path from 'path'
+import { launch } from '@sjcrh/proteinpaint-server'
 
 const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
@@ -57,4 +58,6 @@ console.log(`generating public/bin for ${serverconfig.URL}`)
 spawnSync('npx', ['proteinpaint-front', serverconfig.URL], { encoding: 'utf-8' })
 // since the npx command generated non-root owned js files inside the public/bin folder , we need to change the owner of the folder and files to root
 spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
-console.log('to start the server: npx @sjcrh/proteinpaint-server')
+
+console.log('starting the server ...')
+launch()
