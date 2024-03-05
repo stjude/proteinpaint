@@ -246,7 +246,7 @@ export function setInteractivity(self) {
 						sandbox.body,
 						self.app.opts.genome,
 						{
-							label: {
+							Disco: {
 								prioritizeGeneLabelsByGeneSets: true // TODO control this at dataset-level
 							}
 						}

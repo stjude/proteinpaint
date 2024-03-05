@@ -15,6 +15,7 @@ export default class Legend {
 
 	fusionTitle: string
 	fusionLegend: boolean
+	cnvRenderingType: string
 
 	constructor(
 		snvTitle: string,
@@ -23,6 +24,7 @@ export default class Legend {
 		fusionTitle: string,
 		snvClassMap: Map<string, SnvLegendElement>,
 		cnvClassMap: Map<CnvType, CnvLegend>,
+		cnvRenderingType: string,
 		fusionLegend: boolean,
 		lohLegend?: LohLegend
 	) {
@@ -32,6 +34,7 @@ export default class Legend {
 		this.fusionTitle = fusionTitle
 		this.snvClassMap = snvClassMap
 		this.cnvClassMap = cnvClassMap
+		this.cnvRenderingType = cnvRenderingType
 		this.lohLegend = lohLegend
 		this.fusionLegend = fusionLegend
 	}

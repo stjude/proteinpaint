@@ -4,6 +4,7 @@ import { RingType } from '#plots/disco/ring/RingType.ts'
 import Arc from '#plots/disco/arc/Arc.ts'
 import Settings from '#plots/disco/Settings.ts'
 import Fusion from '#plots/disco/fusion/Fusion.ts'
+import { DataHolder } from '#plots/disco/data/DataHolder.ts'
 
 export default class ViewModel {
 	width: number
@@ -16,20 +17,25 @@ export default class ViewModel {
 	fusions: Array<Fusion>
 
 	settings: Settings
-	svnDataLength: number
+	snvDataLength: number
 	filteredSnvDataLength: number
-	snvDataLength
+	snvDataLengthAll: number
 	genesetName: string
+	cnvMaxValue?: number
+	cnvMinValue?: number
+	cappedCnvMaxAbsValue?: number
+	negativePercentile80?: number
+	positivePercentile80?: number
 
 	constructor(
 		settings: Settings,
 		rings: Rings,
 		legend: Legend,
 		fusions: Array<Fusion>,
-		filteredSnvDataLength: number,
-		svnDataLength: number,
+		dataHolder: DataHolder,
 		genesetName: string,
-		snvDataLength: number
+		// TODO do we need this?
+		snvDataLengthAll: number
 	) {
 		this.settings = settings
 		this.rings = rings
@@ -49,9 +55,15 @@ export default class ViewModel {
 				this.settings.verticalPadding)
 
 		this.legendHeight = this.calculateLegendHeight(legend)
-		this.svnDataLength = svnDataLength
-		this.filteredSnvDataLength = filteredSnvDataLength
-		this.snvDataLength = snvDataLength
+		this.snvDataLength = dataHolder.snvData.length
+		this.filteredSnvDataLength = dataHolder.filteredSnvData.length
+		this.snvDataLengthAll = snvDataLengthAll
+
+		this.cnvMaxValue = dataHolder.cnvGainMaxValue
+		this.cnvMinValue = dataHolder.cnvLossMaxValue
+		this.cappedCnvMaxAbsValue = dataHolder.cappedCnvMaxAbsValue
+		this.negativePercentile80 = dataHolder.percentileNegative
+		this.positivePercentile80 = dataHolder.percentilePositive
 	}
 
 	getElements(ringType: RingType): Array<Arc> {

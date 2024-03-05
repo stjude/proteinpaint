@@ -1,9 +1,19 @@
 import Settings from './Settings'
 import { copyMerge } from '#rx'
+import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
 export default function discoDefaults(overrides = {}): Settings {
 	const defaults = {
 		downloadImgName: 'disco.plot',
+
+		Disco: {
+			cnvCapping: 5,
+			isOpen: false,
+			prioritizeGeneLabelsByGeneSets: false,
+			showPrioritizeGeneLabelsByGeneSets: false,
+			cnvRenderingType: CnvRenderingType.heatmap,
+			cnvPercentile: 80
+		},
 
 		rings: {
 			nonExonicRingWidth: 20,
@@ -34,9 +44,7 @@ export default function discoDefaults(overrides = {}): Settings {
 			fontSize: 12,
 			maxDeltaAngle: 0.05,
 			animationDuration: 1000,
-			overlapAngleFactor: 5, // 5 is set by testing, because label height is not known before rendering
-			prioritizeGeneLabelsByGeneSets: false,
-			showPrioritizeGeneLabelsByGeneSets: false
+			overlapAngleFactor: 5 // 5 is set by testing, because label height is not known before rendering
 		},
 
 		cnv: {

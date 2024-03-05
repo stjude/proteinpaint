@@ -5,6 +5,7 @@ import Settings from '#plots/disco/Settings.ts'
 import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper.ts'
 import { DataHolder } from '#plots/disco/data/DataHolder.ts'
 import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common'
+import { PercentileMapper } from '#plots/disco/data/PercentileMapper.ts'
 
 export default class DataMapper {
 	// remove fields and extract filters to seperate classes
@@ -33,8 +34,14 @@ export default class DataMapper {
 
 	private hasPrioritizedGenes = false
 
-	private cnvMaxValue?: number = undefined
-	private cnvMinValue?: number = undefined
+	private cnvLossMaxValue = 0
+	private cnvGainMaxValue = 0
+	private gainCapped: number
+	private lossCapped: number
+	private cappedCnvMaxAbsValue?: number
+	private percentilePositive = 0
+	private percentileNegative = 0
+	private cnvMaxPercentileAbs = 0
 
 	private lohMaxValue?: number = undefined
 	private lohMinValue?: number = undefined
@@ -73,8 +80,11 @@ export default class DataMapper {
 		this.sample = sample
 		this.lastInnerRadious = this.settings.rings.chromosomeInnerRadius
 
+		this.gainCapped = this.settings.Disco.cnvCapping
+		this.lossCapped = -1 * this.settings.Disco.cnvCapping
+
 		this.nonExonicFilter = (data: Data) => {
-			if (prioritizedGenes.length > 0 && this.settings.label.prioritizeGeneLabelsByGeneSets) {
+			if (prioritizedGenes.length > 0 && this.settings.Disco.prioritizeGeneLabelsByGeneSets) {
 				return (
 					prioritizedGenes.includes(data.gene) &&
 					settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
@@ -85,7 +95,7 @@ export default class DataMapper {
 		}
 
 		this.snvRingFilter = (data: Data) => {
-			if (prioritizedGenes.length > 0 && this.settings.label.prioritizeGeneLabelsByGeneSets) {
+			if (prioritizedGenes.length > 0 && this.settings.Disco.prioritizeGeneLabelsByGeneSets) {
 				return (
 					prioritizedGenes.includes(data.gene) &&
 					settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])
@@ -154,6 +164,26 @@ export default class DataMapper {
 		if (this.cnvData.length > 0) {
 			this.cnvInnerRadius = this.lastInnerRadious - this.settings.rings.cnvRingWidth
 			this.lastInnerRadious = this.cnvInnerRadius
+
+			this.cappedCnvMaxAbsValue = Math.min(
+				this.settings.Disco.cnvCapping,
+				Math.max(
+					Math.abs(DataMapper.capMaxValue(this.cnvLossMaxValue, this.gainCapped, this.lossCapped)),
+					Math.abs(DataMapper.capMaxValue(this.cnvGainMaxValue, this.gainCapped, this.lossCapped))
+				)
+			)
+
+			const percentilePair = new PercentileMapper().map(
+				this.cnvData.map(data => data.value),
+				this.settings.Disco.cnvPercentile
+			)
+			this.percentilePositive = DataMapper.capMaxValue(percentilePair.positive, this.gainCapped, this.lossCapped)
+			this.percentileNegative = DataMapper.capMaxValue(percentilePair.negative, this.gainCapped, this.lossCapped)
+
+			this.cnvMaxPercentileAbs = Math.min(
+				this.settings.Disco.cnvCapping,
+				Math.max(this.percentilePositive, Math.abs(this.percentileNegative))
+			)
 		}
 
 		sortedData.forEach(data => {
@@ -187,8 +217,12 @@ export default class DataMapper {
 
 			hasPrioritizedGenes: this.hasPrioritizedGenes,
 
-			cnvMaxValue: this.cnvMaxValue,
-			cnvMinValue: this.cnvMinValue,
+			cnvGainMaxValue: this.cnvGainMaxValue,
+			cnvLossMaxValue: this.cnvLossMaxValue,
+			cappedCnvMaxAbsValue: this.cappedCnvMaxAbsValue,
+			percentilePositive: this.percentilePositive,
+			percentileNegative: this.percentileNegative,
+			cnvMaxPercentileAbs: this.cnvMaxPercentileAbs,
 
 			lohMaxValue: this.lohMaxValue,
 			lohMinValue: this.lohMinValue
@@ -225,6 +259,7 @@ export default class DataMapper {
 					this.lastInnerRadious = this.snvInnerRadius
 
 					// number of base pairs per pixel
+					// TODO verify place of bpx calculation
 					this.bpx = Math.floor(this.reference.totalSize / (this.reference.totalChromosomesAngle * this.snvInnerRadius))
 					this.onePxArcAngle = 1 / this.snvInnerRadius
 				}
@@ -267,12 +302,12 @@ export default class DataMapper {
 
 	private filterCnvs(data: Data) {
 		if (this.cnvFilter(data)) {
-			if (this.cnvMaxValue == undefined || this.cnvMaxValue < data.value) {
-				this.cnvMaxValue = data.value
+			if (this.cnvGainMaxValue == undefined || this.cnvGainMaxValue < data.value) {
+				this.cnvGainMaxValue = data.value
 			}
 
-			if (this.cnvMinValue == undefined || this.cnvMinValue > data.value) {
-				this.cnvMinValue = data.value
+			if (this.cnvLossMaxValue == undefined || this.cnvLossMaxValue > data.value) {
+				this.cnvLossMaxValue = data.value
 			}
 
 			this.cnvData.push(data)
@@ -288,5 +323,29 @@ export default class DataMapper {
 		const dataAnglePos = Math.floor(data.position / this.bpx)
 
 		return currentChromosome.startAngle + dataAnglePos * this.onePxArcAngle
+	}
+
+	static capMaxValue(value: number, gainCapped: number, lossCapped: number) {
+		if (value && Math.sign(value) == 1) {
+			return value > gainCapped ? gainCapped : value
+		}
+
+		if (Math.sign(value) == -1) {
+			return value < lossCapped ? lossCapped : value
+		}
+
+		return 0
+	}
+
+	static capMinValue(value: number, capMinValue = 1) {
+		if (Math.sign(value) == 1) {
+			return value > capMinValue ? value : capMinValue
+		}
+
+		if (Math.sign(value) == -1) {
+			return value < -1 * capMinValue ? value : -1 * capMinValue
+		}
+
+		return 1
 	}
 }

@@ -1,10 +1,15 @@
 import Settings from '#plots/disco/Settings.ts'
+import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
 export default class CnvColorProvider {
-	static getColor(value: number, settings: Settings) {
+	static getColor(value: number, settings: Settings, cnvMaxPercentileAbs = 0) {
 		const cnv = settings.cnv
-		const gainCapped = settings.cnv.capping
-		const lossCapped = -1 * settings.cnv.capping
+		const gainCapped =
+			settings.Disco.cnvRenderingType == CnvRenderingType.heatmap ? settings.Disco.cnvCapping : cnvMaxPercentileAbs
+		const lossCapped =
+			settings.Disco.cnvRenderingType == CnvRenderingType.heatmap
+				? -1 * settings.Disco.cnvCapping
+				: -1 * cnvMaxPercentileAbs
 		if (value < lossCapped) {
 			return cnv.cappedLossColor
 		} else if (value >= lossCapped && value <= 0) {

@@ -211,6 +211,7 @@ export default function svgLegend(opts) {
 				.text(d.minLabel || d.domain[0])
 				.attr('x', bbox.width + 25)
 				.attr('y', 0.82 * settings.fontsize)
+				.style('font-size', settings.fontsize)
 				.attr('text-anchor', 'start')
 			minLabelBBox = minLabel.node().getBBox()
 			currlinex += minLabelBBox.width + 5
@@ -229,6 +230,7 @@ export default function svgLegend(opts) {
 				.text(d.maxLabel || d.domain[1])
 				.attr('x', bbox.width + minLabelBBox.width + 135)
 				.attr('y', 0.8 * settings.fontsize)
+				.style('font-size', settings.fontsize)
 				.attr('text-anchor', 'start')
 			currlinex += maxLabel.node().getBBox().width + 2.5 * settings.padx + 50
 		} else {

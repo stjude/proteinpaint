@@ -4,6 +4,15 @@ export default interface Settings {
 
 	downloadImgName: string // file name of downloaded svg
 
+	Disco: {
+		cnvCapping: number
+		isOpen: boolean
+		showPrioritizeGeneLabelsByGeneSets: boolean
+		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
+		cnvRenderingType: string
+		cnvPercentile: number
+	}
+
 	rings: {
 		snvRingFilters: Array<string>
 
@@ -39,8 +48,6 @@ export default interface Settings {
 		fontSize: number
 		animationDuration: number
 		overlapAngleFactor: number
-		showPrioritizeGeneLabelsByGeneSets: boolean
-		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
 	}
 	legend: {
 		snvTitle: string

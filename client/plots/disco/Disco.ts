@@ -9,10 +9,16 @@ import discoDefaults from './defaults.ts'
 import NonExonicSnvRenderer from './snv/NonExonicSnvRenderer.ts'
 import SnvRenderer from './snv/SnvRenderer.ts'
 import LohRenderer from './loh/LohRenderer.ts'
-import CnvRenderer from './cnv/CnvRenderer.ts'
+import CnvBarRenderer from './cnv/CnvBarRenderer.ts'
 import IRenderer from './IRenderer.ts'
 import { RingType } from './ring/RingType.ts'
 import Settings from './Settings.ts'
+import { multiInit } from '../../rx'
+import { topBarInit } from '#plots/controls.btns.js'
+import { configUiInit } from '#plots/controls.config.js'
+import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
+import ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
+import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -21,44 +27,130 @@ export default class Disco {
 	private state: any
 	private id: any
 	private app: any
-
+	private features: any
+	private isOpen: boolean
+	private discoInteractions: DiscoInteractions
 	constructor(opts: any) {
 		this.type = 'Disco'
 		this.opts = opts
+		this.isOpen = false
+		this.discoInteractions = new DiscoInteractions(this)
+	}
+
+	async init() {
+		const holder = this.opts.holder
+		// Figure out why we need to set the background color here
+		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const topbar = controlsHolder.append('div')
+		const config_div = controlsHolder.append('div')
+
+		this.features = await multiInit({
+			topbar: topBarInit({
+				app: this.app,
+				id: this.id,
+				// TODO change the way svg is selected
+				downloadHandler: () =>
+					this.discoInteractions.downloadClickListener(holder.select('svg[id="sjpp_disco_plot"]').node()),
+				callback: () => this.toggleVisibility(this.isOpen),
+				isOpen: () => this.isOpen,
+				holder: topbar
+			}),
+
+			config: configUiInit({
+				app: this.app,
+				id: this.id,
+				holder: config_div,
+				isOpen: () => this.isOpen,
+				inputs: [
+					{
+						boxLabel: 'Cancer Gene Census genes',
+						label: `Filter mutations`,
+						type: 'checkbox',
+						chartType: 'Disco',
+						settingsKey: 'prioritizeGeneLabelsByGeneSets',
+						title: 'Only show mutations for Cancer Gene Census genes'
+					},
+					{
+						label: 'CNV capping',
+						type: 'number',
+						chartType: 'Disco',
+						settingsKey: 'cnvCapping',
+						title: 'Cnv capping',
+						min: 0
+					},
+					{
+						boxLabel: '',
+						label: 'CNV rendering type',
+						type: 'radio',
+						chartType: 'Disco',
+						settingsKey: 'cnvRenderingType',
+						title: 'CNV rendering type',
+						options: [
+							{ label: 'Heatmap', value: CnvRenderingType.heatmap },
+							{ label: 'Bar', value: CnvRenderingType.bar }
+						]
+					},
+					{
+						label: 'CNV percentile',
+						type: 'number',
+						chartType: 'Disco',
+						settingsKey: 'cnvPercentile',
+						title: 'Cnv percentile',
+						min: 1,
+						max: 100
+					}
+				]
+			})
+		})
+	}
+
+	async main(): Promise<void> {
+		// run this only when this.state{} is set; cannot do this step in constructor()
+		const settings: Settings = this.state.settings
+
+		this.isOpen = settings.Disco.isOpen
+
+		const stateViewModelMapper = new ViewModelMapper(settings)
+		const viewModel = stateViewModelMapper.map(this.app.getState())
+
+		const holder = this.opts.holder
+		// TODO change this
+		holder.select('div[id="sjpp_disco_plot_holder_div"]').remove()
+		const svgDiv = holder.append('div').attr('id', 'sjpp_disco_plot_holder_div').style('display', 'inline-block')
+
+		// TODO render this in the legend
+		const displayedElementsCount =
+			viewModel.settings.Disco.prioritizeGeneLabelsByGeneSets &&
+			viewModel.settings.Disco.showPrioritizeGeneLabelsByGeneSets
+				? viewModel.filteredSnvDataLength
+				: viewModel.snvDataLengthAll
+
+		// TODO calculate viewModel.filteredSnvDataLength always
+		const appState = this.app.getState()
+
+		for (const name in this.features) {
+			this.features[name].update({ state: this.state, appState })
+		}
+
+		const legendRenderer = new LegendRenderer(viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
+
+		const discoRenderer = new DiscoRenderer(
+			this.getRingRenderers(settings, viewModel, this.discoInteractions.geneClickListener),
+			legendRenderer
+		)
+
+		discoRenderer.render(svgDiv, viewModel)
 	}
 
 	getState(appState: any) {
 		return appState.plots.find(p => p.id === this.id)
 	}
 
-	async main(): Promise<void> {
-		// run this only when this.state{} is set; cannot do this step in constructor()
-		const discoInteractions = new DiscoInteractions(this)
-
-		const settings: Settings = this.state.settings
-		const stateViewModelMapper = new ViewModelMapper(settings)
-		const viewModel = stateViewModelMapper.map(this.app.getState())
-
-		const holder = this.opts.holder
-		holder.selectAll('*').remove()
-
-		const legendRenderer = new LegendRenderer(
-			settings.cnv.capping,
-			settings.label.fontSize,
-			discoInteractions.cappingClickCallback
-		)
-
-		const discoRenderer = new DiscoRenderer(
-			this.getRingRenderers(settings, discoInteractions.geneClickListener),
-			legendRenderer,
-			discoInteractions.downloadClickListener,
-			discoInteractions.prioritizeGenesCheckboxListener
-		)
-
-		discoRenderer.render(holder, viewModel)
-	}
-
-	getRingRenderers(settings: Settings, geneClickListener: (gene: string, mnames: Array<string>) => void) {
+	getRingRenderers(
+		settings: Settings,
+		viewModel: ViewModel,
+		geneClickListener: (gene: string, mnames: Array<string>) => void
+	) {
 		const chromosomesRenderer = new ChromosomesRenderer(
 			settings.padAngle,
 			settings.rings.chromosomeInnerRadius,
@@ -67,7 +159,10 @@ export default class Disco {
 		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer(geneClickListener)
 		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)
-		const cnvRenderer = new CnvRenderer(settings.menu.padding)
+		const cnvRenderer =
+			settings.Disco.cnvRenderingType === CnvRenderingType.heatmap
+				? new CnvHeatmapRenderer(viewModel.positivePercentile80, viewModel.negativePercentile80)
+				: new CnvBarRenderer()
 		const lohRenderer = new LohRenderer()
 
 		const renderersMap: Map<RingType, IRenderer> = new Map()
@@ -79,6 +174,17 @@ export default class Disco {
 		renderersMap.set(RingType.LOH, lohRenderer)
 
 		return renderersMap
+	}
+	toggleVisibility(isOpen: boolean) {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.opts.id,
+			config: {
+				settings: {
+					Disco: { isOpen: !isOpen }
+				}
+			}
+		})
 	}
 }
 
