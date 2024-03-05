@@ -52,7 +52,7 @@ export async function mayInitiateScatterplots(ds) {
 			let invalidXY = 0,
 				sampleCount = 0
 			for (let i = 1; i < lines.length; i++) {
-				const l = lines[i].split('\t')
+				const l = lines[i].trim().split('\t')
 				// sampleName \t x \t y ...
 				const x = Number(l[1]),
 					y = Number(l[2])
@@ -152,9 +152,10 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 				const colorMap = {}
 				const k2c = getColors(categories.length)
 				for (const category of categories) {
+					const color = q.colorColumn.colorMap?.[category] || k2c(category)
 					colorMap[category] = {
 						sampleCount: refSamples.filter(s => s.category == category).length,
-						color: k2c(category)
+						color
 					}
 				}
 				const shapeMap = { Ref: { shape: 0, sampleCount: refSamples.length } }
