@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - Fix disco plot width issue
+- Restore drag to resize on legacy ds gene exp panel
 
 
 ## 2.45.0

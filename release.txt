@@ -1,2 +1,1 @@
-Fixes:
-- Restore drag to resize on legacy ds gene exp panel
+
