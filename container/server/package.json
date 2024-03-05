@@ -2,7 +2,6 @@
 	"private": true,
 	"name": "@sjcrh/ppserver",
 	"version": "2.44.0",
-	"type": "module",
 	"bin": "app-server.js",
 	"scripts": {
 		"release": ""

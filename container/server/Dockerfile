@@ -22,8 +22,8 @@ WORKDIR /home/root/pp/app/active
 RUN npm i --package-lock-only
 COPY ./server/package.json  ./
 RUN npm install --omit=dev --prefer-offline --cache=/root/.npm
-COPY ./server/app-server.js  ./
+COPY ./server/app-server.mjs  ./
 
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-server.js && npx @sjcrh/proteinpaint-server"]
+CMD ["sh", "-c", "node --enable-source-maps app-server.mjs"]
 # CMD ["sleep", "3600"]

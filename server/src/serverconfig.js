@@ -73,11 +73,15 @@ if (!serverconfig.binpath) {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
 			serverconfig.binpath = path.dirname(import.meta.dirname)
+		} else if (import.meta.filename.includes('node_modules/@sjcrh/proteinpaint-server')) {
+			const p = import.meta.filename.split('/proteinpaint-server')[0]
+			serverconfig.binpath = `${p}/proteinpaint-server`
 		} else {
 			const jsfile = process.argv.find(
 				n =>
 					n.endsWith('/bin.js') ||
 					n.endsWith('/server.js') ||
+					n.endsWith('/start.js') ||
 					n.endsWith('/proteinpaint') ||
 					n.endsWith('/proteinpaint-server')
 			)
