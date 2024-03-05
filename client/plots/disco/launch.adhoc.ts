@@ -127,7 +127,7 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
 					extension: 'ts'
 					/*
 					overrides: {
-						label: {
+						Disco: {
 							showPrioritizeGeneLabelsByGeneSets: !!genomeObj.geneset
 						}
 					}

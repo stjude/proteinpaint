@@ -49,7 +49,12 @@ export default class ViewModelProvider {
 	map(data: Array<any>) {
 		const dataHolder = this.dataMapper.map(data)
 
-		const labelsMapper = new LabelsMapper(this.settings, this.sampleName, this.reference)
+		const labelsMapper = new LabelsMapper(
+			this.settings,
+			this.sampleName,
+			this.reference,
+			dataHolder.cnvMaxPercentileAbs
+		)
 
 		const labelsData = labelsMapper.map(dataHolder.labelData, dataHolder.cnvData)
 
@@ -106,9 +111,12 @@ export default class ViewModelProvider {
 			this.settings,
 			this.sampleName,
 			this.reference,
-			dataHolder.cnvMaxValue,
-			dataHolder.cnvMinValue,
-			this.settings.cnv.unit
+			dataHolder.percentilePositive,
+			dataHolder.percentileNegative,
+			dataHolder.cappedCnvMaxAbsValue,
+			dataHolder.cnvMaxPercentileAbs,
+			this.settings.cnv.unit,
+			this.settings.Disco.cnvRenderingType
 		)
 
 		const cnvData = this.cnvArcsMapper.map(dataHolder.cnvData)
@@ -133,6 +141,7 @@ export default class ViewModelProvider {
 			this.settings.legend.fusionTitle,
 			this.snvArcsMapper ? this.snvArcsMapper.snvClassMap : new Map(),
 			this.cnvArcsMapper ? this.cnvArcsMapper.cnvClassMap : new Map(),
+			this.settings.Disco.cnvRenderingType,
 			fusions.length > 0,
 			lohLegend
 		)
@@ -151,8 +160,7 @@ export default class ViewModelProvider {
 			rings,
 			legend,
 			fusions,
-			dataHolder.filteredSnvData.length,
-			dataHolder.snvData.length,
+			dataHolder,
 			this.genesetName,
 			data.filter(i => i.dt == dtsnvindel).length
 		)

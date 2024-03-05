@@ -3,6 +3,7 @@ import discoDefaults from '#plots/disco/defaults.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
 import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
+import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
 const overriders = { padAngle: 0.0 }
 const settings = discoDefaults(overriders)
@@ -42,8 +43,12 @@ test('CnvArcsMapper.map() should return an array of CnvArc objects', t => {
 		settings,
 		'Sample',
 		reference,
-		dataHolder.cnvMaxValue,
-		dataHolder.cnvMinValue
+		dataHolder.percentilePositive,
+		dataHolder.percentileNegative,
+		dataHolder.cappedCnvMaxAbsValue,
+		dataHolder.cnvMaxPercentileAbs,
+		'Unit',
+		CnvRenderingType.bar
 	)
 	const arcs = cnvArcsMapper.map(data)
 

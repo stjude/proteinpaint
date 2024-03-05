@@ -57,7 +57,8 @@ export default class SnvArcsMapper {
 						dataClass: mLabel.label,
 						mname: data.mname,
 						chr: data.chr,
-						pos: data.position
+						pos: data.position,
+						sampleName: [data.sampleName]
 					}
 					snvArray.push(arc)
 				}

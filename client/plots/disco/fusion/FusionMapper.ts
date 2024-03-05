@@ -32,7 +32,8 @@ export default class FusionMapper {
 				{
 					chromosome: data.chrA,
 					position: data.posA
-				}
+				},
+				data.strandA
 			)
 
 			const target = new FusionSubgroup(
@@ -45,7 +46,8 @@ export default class FusionMapper {
 				{
 					chromosome: data.chrB,
 					position: data.posB
-				}
+				},
+				data.strandB
 			)
 
 			const fusion = new Fusion(source, target, 'genes', -1, 'Endpoints')

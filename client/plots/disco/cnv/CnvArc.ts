@@ -6,4 +6,5 @@ export default interface CnvArc extends Arc {
 	readonly stop: number
 	readonly value: number
 	readonly unit: string
+	readonly sampleName: string[]
 }

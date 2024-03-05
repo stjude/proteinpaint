@@ -6,9 +6,9 @@ export default class LegendRenderer {
 	private legendJSONMapper: LegendJSONMapper
 	private fontSize: number
 
-	constructor(capped: number, fontSize: number, onClickCallback: (d: any, t: any) => void) {
+	constructor(cappedCnvMaxAbsValue = 0, fontSize: number) {
 		this.fontSize = fontSize
-		this.legendJSONMapper = new LegendJSONMapper(capped, onClickCallback)
+		this.legendJSONMapper = new LegendJSONMapper(cappedCnvMaxAbsValue)
 	}
 
 	render(holder: any, legend: Legend, xOffset: number, svgw, svgh) {

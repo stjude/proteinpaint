@@ -17,11 +17,13 @@ export default class LabelsMapper {
 	private reference: Reference
 
 	private labelMap: Map<string, Label> = new Map()
+	private cnvMaxPercentileAbs: number
 
-	constructor(settings: Settings, sampleName: string, reference: Reference) {
+	constructor(settings: Settings, sampleName: string, reference: Reference, cnvMaxPercentileAbs = 0) {
 		this.settings = settings
 		this.sampleName = sampleName
 		this.reference = reference
+		this.cnvMaxPercentileAbs = cnvMaxPercentileAbs
 	}
 
 	map(data: Array<Data>, cnvData: Array<Data> = []): Array<Label> {
@@ -90,7 +92,7 @@ export default class LabelsMapper {
 				if (label.stop >= cnv.start && cnv.stop >= label.start && label.chr == cnv.chr) {
 					const mutation: CnvTooltip = {
 						value: cnv.value,
-						color: CnvColorProvider.getColor(cnv.value, this.settings),
+						color: CnvColorProvider.getColor(cnv.value, this.settings, this.cnvMaxPercentileAbs),
 						chr: cnv.chr,
 						start: cnv.start,
 						stop: cnv.stop

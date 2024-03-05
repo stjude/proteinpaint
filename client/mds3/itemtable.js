@@ -128,7 +128,7 @@ multiple variants
 show an option for each, click one to run above single-variant code
 mlst table has optional columns, only the first column is clickable menu option, rest of columns are info only
 1. basic info about the variant, as menu option
-2. occurrence if present, as text 
+2. occurrence if present, as text
 3. numeric value if used, as text
 */
 async function itemtable_multiItems(arg) {

@@ -5,4 +5,5 @@ export default interface SnvArc extends Arc {
 	readonly mname: string
 	readonly chr: string
 	readonly pos: number
+	readonly sampleName: string[]
 }

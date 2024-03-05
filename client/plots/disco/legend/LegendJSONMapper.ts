@@ -1,14 +1,14 @@
 import Legend from './Legend.ts'
 import { CnvType } from '#plots/disco/cnv/CnvType.ts'
 import { FusionLegend } from '#plots/disco/fusion/FusionLegend.ts'
+import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
+import { scaleLinear } from 'd3-scale'
 
 export default class LegendJSONMapper {
-	private cvnCapping: number
-	private onClickCallback: (d: any, t: any) => any
+	private cappedCnvMaxAbsValue: number
 
-	constructor(cvnCapping: number, onClickCallback: (d: any, t: any) => any) {
-		this.cvnCapping = cvnCapping
-		this.onClickCallback = onClickCallback
+	constructor(cappedCnvMaxAbsValue: number) {
+		this.cappedCnvMaxAbsValue = cappedCnvMaxAbsValue
 	}
 
 	map(legend: Legend) {
@@ -19,8 +19,12 @@ export default class LegendJSONMapper {
 			this.mapSnv(legend, legendJSON, order++)
 		}
 
-		if (legend.cnvClassMap) {
-			this.mapCnv(legend, legendJSON, order++)
+		if (legend.cnvRenderingType == CnvRenderingType.heatmap) {
+			this.mapCnvHeatmap(legend, legendJSON, order++)
+		} else if (legend.cnvRenderingType == CnvRenderingType.bar) {
+			if (legend.cnvClassMap) {
+				this.mapCnvBar(legend, legendJSON, order++)
+			}
 		}
 
 		if (legend.lohLegend) {
@@ -57,7 +61,7 @@ export default class LegendJSONMapper {
 		})
 	}
 
-	private mapCnv(legend: Legend, legendJSON: Array<any>, order: number) {
+	private mapCnvBar(legend: Legend, legendJSON: Array<any>, order: number) {
 		if (!legend.cnvClassMap) return
 		const gain = legend.cnvClassMap.get(CnvType.Gain)
 		const loss = legend.cnvClassMap.get(CnvType.Loss)
@@ -94,8 +98,68 @@ export default class LegendJSONMapper {
 				text: `Capping: ${cap.value}`,
 				color: cap.color,
 				order: cnvOrder++,
-				border: '1px solid #ccc',
-				onClickCallback: this.onClickCallback
+				border: '1px solid #ccc'
+				// ,
+				// onClickCallback: this.onClickCallback
+			})
+
+			legendJSON.push({
+				name: legend.cnvTitle,
+				order: order,
+				items: cnvItems
+			})
+		}
+	}
+
+	private mapCnvHeatmap(legend: Legend, legendJSON: Array<any>, order: number) {
+		if (!legend.cnvClassMap) return
+		const gain = legend.cnvClassMap.get(CnvType.Gain)
+		const loss = legend.cnvClassMap.get(CnvType.Loss)
+		const cap = legend.cnvClassMap.get(CnvType.Cap)
+
+		if (gain && loss && cap) {
+			let cnvOrder = 0
+
+			const cnvItems: Array<any> = []
+			if (gain.value > 0) {
+				cnvItems.push({
+					termid: legend.cnvTitle,
+					key: CnvType.Gain,
+					text: 'Copy number gain',
+					width: 100,
+					domain: [0, 1],
+					minLabel: 0,
+					maxLabel: gain.value,
+					order: cnvOrder++,
+					isLegendItem: true,
+					dt: 4,
+					scale: scaleLinear([0, 1], ['white', gain.color])
+				})
+			}
+
+			if (loss.value < 0) {
+				cnvItems.push({
+					termid: legend.cnvTitle,
+					key: CnvType.Loss,
+					text: 'Copy number loss',
+					width: 100,
+					domain: [0, 1],
+					minLabel: 0,
+					maxLabel: loss.value,
+					order: cnvOrder++,
+					isLegendItem: true,
+					dt: 4,
+					scale: scaleLinear([0, 1], ['white', loss.color])
+				})
+			}
+
+			cnvItems.push({
+				termid: legend.cnvTitle,
+				key: CnvType.Cap,
+				text: `Capping: ${cap.value}`,
+				color: cap.color,
+				order: cnvOrder++,
+				border: '1px solid #ccc'
 			})
 
 			legendJSON.push({

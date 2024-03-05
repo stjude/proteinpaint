@@ -5,6 +5,7 @@ import Label from './Label.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
 import FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
+import { table2col } from '#dom/table2col'
 import CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
@@ -51,10 +52,12 @@ export default class LabelsRenderer implements IRenderer {
 						}
 					})
 					.on('mouseover', (mouseEvent: MouseEvent) => {
-						menu.d.style('padding', '2px').html(this.createTooltipHtml(label))
+						const table = table2col({ holder: menu.d })
+						this.createTooltip(table, label)
 						menu.show(mouseEvent.x, mouseEvent.y)
 					})
 					.on('mouseout', () => {
+						menu.clear()
 						menu.hide()
 					})
 
@@ -87,35 +90,59 @@ export default class LabelsRenderer implements IRenderer {
 		})
 	}
 
-	createTooltipHtml(label: Label) {
-		let tooltipHtml = ''
-
+	createTooltip(table: any, label: Label) {
 		if (label.mutationsTooltip) {
-			tooltipHtml += `Gene: ${label.text} <br />`
+			const [td1, td2] = table.addRow()
+			td1.text('Gene')
+			td2.append('span').style('margin-left', '5px').text(label.text)
+
 			label.mutationsTooltip.forEach((mutation: MutationTooltip) => {
-				tooltipHtml += `Consequence: ${mutation.mname} <span style="color: ${mutation.color}" >${mutation.dataClass}</span> <br />Mutation: ${mutation.chr}:${mutation.position} <br />`
+				{
+					const [td1, td2] = table.addRow()
+
+					td1.text('Consequence')
+					td2.append('span').text(mutation.mname)
+					td2.append('span').style('margin-left', '5px').style('color', mutation.color).text(mutation.dataClass)
+				}
+				{
+					const [td1, td2] = table.addRow()
+					td1.text('Mutation')
+					td2.append('span').text(`${mutation.chr}:${mutation.position}`)
+				}
 			})
 		}
 
 		if (label.fusionTooltip) {
-			tooltipHtml += `Data type: Fusion transcript <br />`
+			const [td1, td2] = table.addRow()
+
+			td1.text('Data type')
+			td2.append('span').text('Fusion transcript')
 			label.fusionTooltip.forEach((fusionTooltip: FusionTooltip) => {
-				tooltipHtml +=
-					`Break points: ${fusionTooltip.geneA ? fusionTooltip.geneA : ''} ${fusionTooltip.chrA}:${
-						fusionTooltip.posA
-					} ${fusionTooltip.strandA == '+' ? 'forward' : 'reverse'} > ` +
-					`${fusionTooltip.geneB ? fusionTooltip.geneB : ''} ${fusionTooltip.chrB}:${fusionTooltip.posB} ${
-						fusionTooltip.strandB == '+' ? 'forward' : 'reverse'
-					} <br /> `
+				const [td1, td2] = table.addRow()
+
+				td1.text('Break points')
+				td2.append('span').text(
+					` ${fusionTooltip.geneA ? fusionTooltip.geneA : ''} ${fusionTooltip.chrA}:${fusionTooltip.posA} 
+						${fusionTooltip.strandA == '+' ? 'forward' : 'reverse'} > ` +
+						`${fusionTooltip.geneB ? fusionTooltip.geneB : ''} ${fusionTooltip.chrB}:${fusionTooltip.posB} ${
+							fusionTooltip.strandB == '+' ? 'forward' : 'reverse'
+						} `
+				)
 			})
 		}
 
 		if (label.cnvTooltip) {
 			label.cnvTooltip.forEach((cnv: CnvTooltip) => {
-				tooltipHtml += `CNV: <span style="color: ${cnv.color}">${cnv.value}</span> ${cnv.chr}:${cnv.start}-${cnv.stop}`
+				const [td1, td2] = table.addRow()
+				td1.text('CNV')
+				td2
+					.append('span')
+					.style('color', cnv.color)
+					.text(cnv.value)
+					.append('span')
+					.style('margin-left', '5px')
+					.text(`${cnv.chr}:${cnv.start}-${cnv.stop}`)
 			})
 		}
-
-		return tooltipHtml
 	}
 }

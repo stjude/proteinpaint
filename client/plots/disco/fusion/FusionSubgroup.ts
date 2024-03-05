@@ -10,6 +10,8 @@ export default class FusionSubgroup implements RibbonSubgroup {
 	value: number
 	genes: Set<string>
 	positionInChromosome: PositionInChromosome
+	strand: string
+
 	constructor(
 		startAngle: number,
 		endAngle: number,
@@ -17,7 +19,8 @@ export default class FusionSubgroup implements RibbonSubgroup {
 		gene: string,
 		value: number,
 		genes: Set<string>,
-		positionInChromosome: PositionInChromosome
+		positionInChromosome: PositionInChromosome,
+		strand: string
 	) {
 		this.startAngle = startAngle
 		this.endAngle = endAngle
@@ -26,5 +29,6 @@ export default class FusionSubgroup implements RibbonSubgroup {
 		this.value = value
 		this.genes = genes
 		this.positionInChromosome = positionInChromosome
+		this.strand = strand
 	}
 }

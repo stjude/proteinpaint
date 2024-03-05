@@ -25,8 +25,12 @@ export interface DataHolder {
 
 	hasPrioritizedGenes: boolean
 
-	cnvMaxValue?: number
-	cnvMinValue?: number
+	cnvGainMaxValue?: number
+	cnvLossMaxValue?: number
+	cappedCnvMaxAbsValue?: number
+	percentilePositive?: number
+	percentileNegative?: number
+	cnvMaxPercentileAbs: number
 
 	lohMaxValue?: number
 	lohMinValue?: number

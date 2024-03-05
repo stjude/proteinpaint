@@ -5,6 +5,8 @@ import CnvLegend from './CnvLegend.ts'
 import { CnvType } from './CnvType.ts'
 import Settings from '#plots/disco/Settings.ts'
 import CnvColorProvider from '#plots/disco/cnv/CnvColorProvider.ts'
+import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
+import DataMapper from '#plots/disco/data/DataMapper.ts'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()
@@ -21,9 +23,11 @@ export default class CnvArcsMapper {
 	private gainOnly: boolean
 	private gainCapped: number
 	private lossCapped: number
-	private maxAbsValue: number
+	private cnvMaxAbsValue: number
 	private cnvInnerRadius: number
 	private cnvWidth: number
+	private cnvRenderingType: string
+	private cnvAbsPercentile: number
 
 	constructor(
 		cnvInnerRadius: number,
@@ -33,7 +37,10 @@ export default class CnvArcsMapper {
 		reference: Reference,
 		cnvMaxValue = 0,
 		cnvMinValue = 0,
-		cnvUnit = ''
+		cnvMaxAbsValue = 0,
+		cnvAbsPercentile = 0,
+		cnvUnit = '',
+		cnvRenderingType: string
 	) {
 		this.cnvInnerRadius = cnvInnerRadius
 		this.cnvWidth = cnvWidth
@@ -42,9 +49,14 @@ export default class CnvArcsMapper {
 		this.reference = reference
 		this.cnvMaxValue = cnvMaxValue
 		this.cnvMinValue = cnvMinValue
+		this.cnvMaxAbsValue = cnvMaxAbsValue
+		this.cnvAbsPercentile = cnvAbsPercentile
 		this.cnvUnit = cnvUnit
-		this.gainCapped = this.settings.cnv.capping
-		this.lossCapped = -1 * this.settings.cnv.capping
+		this.cnvRenderingType = cnvRenderingType
+
+		this.gainCapped = Math.min(cnvAbsPercentile, this.settings.Disco.cnvCapping)
+		this.lossCapped = -1 * Math.min(cnvAbsPercentile, this.settings.Disco.cnvCapping)
+
 		this.lossOnly = cnvMaxValue <= 0
 		this.gainOnly = cnvMinValue >= 0
 
@@ -66,14 +78,12 @@ export default class CnvArcsMapper {
 			'Capping',
 			CnvType.Loss,
 			this.getColor(cnvMinValue > 0 ? cnvMinValue : cnvMaxValue),
-			this.settings.cnv.capping
+			this.settings.Disco.cnvCapping
 		)
 
 		this.cnvClassMap.set(CnvType.Gain, gain)
 		this.cnvClassMap.set(CnvType.Loss, loss)
 		this.cnvClassMap.set(CnvType.Cap, cap)
-
-		this.maxAbsValue = Math.max(Math.abs(this.capMaxValue(cnvMinValue)), Math.abs(this.capMaxValue(cnvMaxValue)))
 	}
 
 	map(arcData: Array<Data>): Array<CnvArc> {
@@ -106,7 +116,8 @@ export default class CnvArcsMapper {
 				start: data.start,
 				stop: data.stop,
 				value: data.value,
-				unit: this.cnvUnit
+				unit: this.cnvUnit,
+				sampleName: [this.sampleName]
 			}
 
 			arcs.push(arc)
@@ -130,17 +141,27 @@ export default class CnvArcsMapper {
 	}
 
 	getColor(value: number) {
-		return CnvColorProvider.getColor(value, this.settings)
+		return CnvColorProvider.getColor(value, this.settings, this.cnvAbsPercentile)
 	}
 
 	private calculateInnerRadius(data: Data) {
+		if (this.cnvRenderingType == CnvRenderingType.heatmap) {
+			return this.cnvInnerRadius
+		}
+
 		if (this.gainOnly) {
 			return this.cnvInnerRadius
 		}
 
 		if (this.lossOnly) {
 			const outerRadius = this.cnvInnerRadius + this.cnvWidth
-			return outerRadius + this.capMinValue((this.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
+
+			return (
+				outerRadius +
+				DataMapper.capMinValue(
+					(this.cnvWidth * DataMapper.capMaxValue(data.value, this.gainCapped, this.lossCapped)) / this.cnvAbsPercentile
+				)
+			)
 		}
 
 		const centerRadius = this.cnvInnerRadius + this.cnvWidth / 2
@@ -150,7 +171,13 @@ export default class CnvArcsMapper {
 		}
 
 		if (Math.sign(data.value) == -1) {
-			return centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.cnvWidth / 2))
+			return (
+				centerRadius +
+				DataMapper.capMinValue(
+					(DataMapper.capMaxValue(data.value, this.gainCapped, this.lossCapped) / this.cnvAbsPercentile) *
+						(this.cnvWidth / 2)
+				)
+			)
 		}
 
 		return 1
@@ -158,8 +185,18 @@ export default class CnvArcsMapper {
 
 	private calculateOuterRadius(data: Data) {
 		const maxOuterRadius = this.cnvInnerRadius + this.cnvWidth
+
+		if (this.cnvRenderingType == CnvRenderingType.heatmap) {
+			return maxOuterRadius
+		}
+
 		if (this.gainOnly) {
-			return this.cnvInnerRadius + this.capMinValue((this.cnvWidth * this.capMaxValue(data.value)) / this.maxAbsValue)
+			return (
+				this.cnvInnerRadius +
+				DataMapper.capMinValue(
+					(this.cnvWidth * DataMapper.capMaxValue(data.value, this.gainCapped, this.lossCapped)) / this.cnvAbsPercentile
+				)
+			)
 		}
 
 		if (this.lossOnly) {
@@ -169,36 +206,18 @@ export default class CnvArcsMapper {
 		const centerRadius = this.cnvInnerRadius + this.cnvWidth / 2
 
 		if (Math.sign(data.value) == 1) {
-			return centerRadius + this.capMinValue((this.capMaxValue(data.value) / this.maxAbsValue) * (this.cnvWidth / 2))
+			return (
+				centerRadius +
+				DataMapper.capMinValue(
+					(DataMapper.capMaxValue(data.value, this.gainCapped, this.lossCapped) / this.cnvMaxAbsValue) *
+						(this.cnvWidth / 2)
+				)
+			)
 		}
 
 		if (Math.sign(data.value) == -1) {
 			return centerRadius
 		}
-		return 1
-	}
-
-	private capMaxValue(value: number) {
-		if (Math.sign(value) == 1) {
-			return value > this.gainCapped ? this.gainCapped : value
-		}
-
-		if (Math.sign(value) == -1) {
-			return value < this.lossCapped ? this.lossCapped : value
-		}
-
-		return 0
-	}
-
-	private capMinValue(value: number, capMinValue = 1) {
-		if (Math.sign(value) == 1) {
-			return value > capMinValue ? value : capMinValue
-		}
-
-		if (Math.sign(value) == -1) {
-			return value < -1 * capMinValue ? value : -1 * capMinValue
-		}
-
 		return 1
 	}
 }
