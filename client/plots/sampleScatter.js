@@ -494,8 +494,8 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
-
-		const settings = getDefaultScatterSettings()
+		let settings = getDefaultScatterSettings()
+		if (opts.name) settings.svgw = 600 //If predefined use 600x500
 		if (!opts.term && !opts.term2) settings.showAxes = false
 		const config = {
 			groups: [],
