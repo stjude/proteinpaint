@@ -879,13 +879,19 @@ function setRenderers(self) {
 			const visibleTerm2Data = term1.term2tests.filter(term2Data =>
 				visibleTerm1Data.visibleData.some(visibleTerm2 => visibleTerm2.dataId === term2Data.term2id)
 			)
-			for (const term2 of visibleTerm2Data) {
+			for (const [index2, term2] of visibleTerm2Data.entries()) {
+				if (visibleTerm2Data.length == 2 && index2 == 1) {
+					// when term2 has only 2 categories, then only a single category needs to be tested in the
+					// association test (because the other category will get tested in that same test).
+					break
+				}
 				rows.push([
 					{ value: `${term1.term1Label}` },
 					// when term1 has only 2 categories, Row2 would be the other category instead of "not Row1"
 					{ value: visibleTests.length == 2 ? visibleTests[1].term1Label : negateTermLabel(term1.term1Label) },
 					{ value: term2.term2Label },
-					{ value: negateTermLabel(term2.term2Label) },
+					// when term2 has only 2 categories, Col2 would be the other category instead of "not Col1"
+					{ value: visibleTerm2Data.length == 2 ? visibleTerm2Data[1].term2Label : negateTermLabel(term2.term2Label) },
 					//if both chi-square and Fisher's exact tests were used. for the tests computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
 					{
 						html: term2.skipped
