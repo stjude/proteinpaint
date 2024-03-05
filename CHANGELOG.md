@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.46.0
 
 Features:
 - Migrate the CJS server workspace into an ESM package
