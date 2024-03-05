@@ -69,7 +69,7 @@ async function click2sunburst(d, tk, block, tippos) {
 		nodes: data.nodes,
 		occurrence: d.occurrence,
 		boxyoff: tk.yoff,
-		boxheight: tk.height,
+		boxheight: Math.min(800, tk.height), // guard against very tall track
 		boxwidth: block.width,
 		svgheight: Number.parseFloat(block.svg.attr('height')),
 		g: tk.skewer.g.append('g'),
