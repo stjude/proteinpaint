@@ -70,14 +70,6 @@ jobs:
           npx tsc
           cd ..
 
-      - name: CP termdb
-        run: |
-          mkdir -p container/dataset
-          cd server
-          DIR=dataset npm run mjs
-          cp ./dataset/termdb.test.js ../container/dataset
-          npm run dedup
-
       - name: Login to Github
         uses: docker/login-action@v3
         with:
