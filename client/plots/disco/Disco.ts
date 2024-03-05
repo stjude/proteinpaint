@@ -13,6 +13,9 @@ import CnvRenderer from './cnv/CnvRenderer.ts'
 import IRenderer from './IRenderer.ts'
 import { RingType } from './ring/RingType.ts'
 import Settings from './Settings.ts'
+import { multiInit } from '../../rx'
+import { topBarInit } from '#plots/controls.btns.js'
+import { configUiInit } from '#plots/controls.config.js'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -21,7 +24,6 @@ export default class Disco {
 	private state: any
 	private id: any
 	private app: any
-
 	constructor(opts: any) {
 		this.type = 'Disco'
 		this.opts = opts
@@ -36,11 +38,58 @@ export default class Disco {
 		const discoInteractions = new DiscoInteractions(this)
 
 		const settings: Settings = this.state.settings
+
 		const stateViewModelMapper = new ViewModelMapper(settings)
 		const viewModel = stateViewModelMapper.map(this.app.getState())
 
 		const holder = this.opts.holder
 		holder.selectAll('*').remove()
+
+		console.log('settings.Disco.isOpen', settings.Disco)
+
+		const topbar = holder.append('div')
+		const config_div = holder.append('div')
+
+		const features = await multiInit({
+			topbar: topBarInit({
+				app: this.app,
+				id: this.id,
+				callback: () => this.toggleVisibility(settings.Disco.isOpen),
+				isOpen: () => settings.Disco.isOpen,
+				holder: topbar
+			}),
+
+			config: configUiInit({
+				app: this.app,
+				id: this.id,
+				holder: config_div,
+				isOpen: () => settings.Disco.isOpen,
+				inputs: [
+					{
+						label: 'Cnv capping',
+						type: 'number',
+						chartType: 'Disco',
+						settingsKey: 'cnvCapping',
+						title: 'Cnv capping',
+						min: 0
+					},
+					{
+						boxLabel: 'Visible',
+						label: 'Only show mutations for Cancer Gene Census genes',
+						type: 'checkbox',
+						chartType: 'Disco',
+						settingsKey: 'showOnlyCgc',
+						title: 'Only show mutations for Cancer Gene Census genes'
+					}
+				]
+			})
+		})
+
+		const appState = this.app.getState()
+
+		for (const name in features) {
+			features[name].update({ state: this.state, appState })
+		}
 
 		const legendRenderer = new LegendRenderer(
 			settings.cnv.capping,
@@ -79,6 +128,17 @@ export default class Disco {
 		renderersMap.set(RingType.LOH, lohRenderer)
 
 		return renderersMap
+	}
+	toggleVisibility(isOpen: boolean) {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.opts.id,
+			config: {
+				settings: {
+					Disco: { isOpen: !isOpen }
+				}
+			}
+		})
 	}
 }
 

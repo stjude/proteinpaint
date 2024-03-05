@@ -5,6 +5,12 @@ export default function discoDefaults(overrides = {}): Settings {
 	const defaults = {
 		downloadImgName: 'disco.plot',
 
+		Disco: {
+			cnvCapping: 5,
+			showOnlyCgc: false,
+			isOpen: false
+		},
+
 		rings: {
 			nonExonicRingWidth: 20,
 			snvRingWidth: 20,

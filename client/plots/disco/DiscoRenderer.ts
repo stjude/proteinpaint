@@ -29,21 +29,24 @@ export class DiscoRenderer {
 	render(holder: any, viewModel: ViewModel) {
 		const rootDiv = holder.append('div')
 		const svgDiv = rootDiv.append('div').style('display', 'inline-block').style('font-family', 'Arial')
-		const controlsDiv = svgDiv.append('div')
 
 		this.downloadButtonRenderer.render(controlsDiv, svgDiv)
+		// TODO move controls to the menu
+		// const controlsDiv = svgDiv.append('div')
 
-		this.prioritizeGenesCheckboxRenderer.render(
-			controlsDiv,
-			viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
-			viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets,
-			viewModel.settings.label.prioritizeGeneLabelsByGeneSets &&
-				viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets
-				? viewModel.filteredSnvDataLength
-				: viewModel.snvDataLength,
-			viewModel.snvDataLength,
-			viewModel.genesetName
-		)
+		// this.downloadButtonRenderer.render(controlsDiv, svgDiv)
+
+		// this.prioritizeGenesCheckboxRenderer.render(
+		// 	controlsDiv,
+		// 	viewModel.settings.label.prioritizeGeneLabelsByGeneSets,
+		// 	viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets,
+		// 	viewModel.settings.label.prioritizeGeneLabelsByGeneSets &&
+		// 		viewModel.settings.label.showPrioritizeGeneLabelsByGeneSets
+		// 		? viewModel.filteredSnvDataLength
+		// 		: viewModel.snvDataLength,
+		// 	viewModel.snvDataLength,
+		// 	viewModel.genesetName
+		// )
 
 		const svg = svgDiv
 			.append('svg')

@@ -4,6 +4,12 @@ export default interface Settings {
 
 	downloadImgName: string // file name of downloaded svg
 
+	Disco: {
+		cnvCapping: number
+		showOnlyCgc: boolean
+		isOpen: boolean
+	}
+
 	rings: {
 		snvRingFilters: Array<string>
 
