@@ -14,7 +14,7 @@ do
 	for f in *.js
 	do 
 		if [ -f "${f%.js}.ts" ]; then
-			echo "deleting $dir/$f ..."
+			echo "deleting $dir/$f"
 	 		rm "$f" 
 	 	fi
 	done

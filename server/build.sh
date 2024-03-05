@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+DIR=genome npm run mjs; DIR=dataset npm run mjs; DIR=routes npm run mjs
+npx esbuild src/app.ts --bundle --platform=node --packages=external --format=esm --sourcemap > src/app.js
+# npx esbuild src/checkReadingFrame --outdir=dist/cjs --bundle --platform=node --packages=external --format=cjs
+
+sed -i '' 's|clinvar.ts|clinvar.js|g' dataset/clinvar.hg19.js
+sed -i '' 's|clinvar.ts|clinvar.js|g' dataset/clinvar.hg38.js
