@@ -341,6 +341,7 @@ export type SingleCellDataGdc = {
 type ColorColumn = {
 	index: number
 	name: string
+	colorMap?: { [index: string]: string }
 }
 type SingleCellPlot = {
 	name: string
