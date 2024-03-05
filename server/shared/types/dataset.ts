@@ -349,7 +349,6 @@ type SingleCellPlot = {
 	fileSuffix: string
 	colorColumn: ColorColumn
 	coordsColumns: { x: number; y: number }
-	colorMap?: { [index: string]: string }
 }
 export type SingleCellDataNative = {
 	src: 'native' | string
@@ -423,10 +422,7 @@ type ScatterPlotsEntry = {
 	/** this plot use a dict term to fetch sample values and color dots */
 	colorTW?: { id: string }
 	/** this plot use a file column to color dots */
-	colorColumn?: {
-		index: number
-		name: string
-	}
+	colorColumn?: ColorColumn
 }
 
 type Scatterplots = {
