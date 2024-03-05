@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Migrate the CJS server workspace into an ESM package
+
 Fixes:
 - Fix disco plot width issue
 
