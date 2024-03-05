@@ -1,1 +1,3 @@
 
+Fixes:
+- when term1 has only 2 categories, then only a single category needs to be tested in the association test
