@@ -867,7 +867,12 @@ function setRenderers(self) {
 		const visibleTests = self.chartsData.tests[chart.chartId].filter(term1Data =>
 			chart.visibleSerieses.some(visibleTerm1 => visibleTerm1.seriesId === term1Data.term1comparison)
 		)
-		for (const term1 of visibleTests) {
+		for (const [index, term1] of visibleTests.entries()) {
+			if (visibleTests.length == 2 && index == 1) {
+				// when term1 has only 2 categories, then only a single category needs to be tested in the
+				// association test (because the other category will get tested in that same test).
+				break
+			}
 			const visibleTerm1Data = chart.visibleSerieses.find(
 				visibleTerm1 => visibleTerm1.seriesId === term1.term1comparison
 			)
@@ -877,7 +882,8 @@ function setRenderers(self) {
 			for (const term2 of visibleTerm2Data) {
 				rows.push([
 					{ value: `${term1.term1Label}` },
-					{ value: negateTermLabel(term1.term1Label) },
+					// when term1 has only 2 categories, Row2 would be the other category instead of "not Row1"
+					{ value: visibleTests.length == 2 ? visibleTests[1].term1Label : negateTermLabel(term1.term1Label) },
 					{ value: term2.term2Label },
 					{ value: negateTermLabel(term2.term2Label) },
 					//if both chi-square and Fisher's exact tests were used. for the tests computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
