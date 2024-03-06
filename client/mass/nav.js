@@ -204,6 +204,8 @@ function setRenderers(self) {
 			tip: new Menu({ padding: '5px' })
 		}
 
+		if (appState.nav.header_mode == 'only_buttons') self.dom.controlsDiv.style('display', 'none')
+
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
 			// not part of filter div
 			self.dom.cohortStandaloneDiv = header
