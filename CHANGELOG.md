@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- when a term has only 2 categories, then only a single category needs to be tested in the association test
+
+
 ## 2.46.0
 
 Features:
