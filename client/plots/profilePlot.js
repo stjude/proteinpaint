@@ -261,9 +261,10 @@ export class profilePlot {
 				inputs
 			})
 		}
-		this.components.controls.on(`downloadClick.${chartType}`, () =>
-			downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
-		)
+		if (this.state.isLoggedIn)
+			this.components.controls.on(`downloadClick.${chartType}`, () =>
+				downloadSingleSVG(this.svg, this.getDownloadFilename(), this.dom.holder.node())
+			)
 		this.components.controls.on(`helpClick.${chartType}`, () =>
 			window.open(
 				'https://docs.google.com/document/d/1hsxqTrfHcDqhCjaYbOldz7kWffR_kM9KDk3Xrxa4glk/edit?usp=sharing',
