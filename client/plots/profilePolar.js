@@ -188,7 +188,8 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePlotSettings()
 		settings.showTable = true
 		config.settings = {
-			profilePolar: settings
+			profilePolar: settings,
+			controls: { isOpen: true }
 		}
 		const twlst = []
 		for (const data of config.terms) {
