@@ -45,8 +45,6 @@ export default class Disco {
 		const holder = this.opts.holder
 		holder.selectAll('*').remove()
 
-		console.log('settings.Disco.isOpen', settings.Disco)
-
 		const topbar = holder.append('div')
 		const config_div = holder.append('div')
 
@@ -54,6 +52,9 @@ export default class Disco {
 			topbar: topBarInit({
 				app: this.app,
 				id: this.id,
+				// TODO change the way svg is selected
+				downloadHandler: () =>
+					discoInteractions.downloadClickListener(holder.select('svg[data-testid="sjpp_disco_plot"]').node()),
 				callback: () => this.toggleVisibility(settings.Disco.isOpen),
 				isOpen: () => settings.Disco.isOpen,
 				holder: topbar
