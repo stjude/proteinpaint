@@ -7,8 +7,9 @@ export default function discoDefaults(overrides = {}): Settings {
 
 		Disco: {
 			cnvCapping: 5,
-			showOnlyCgc: false,
-			isOpen: false
+			isOpen: false,
+			prioritizeGeneLabelsByGeneSets: false,
+			showPrioritizeGeneLabelsByGeneSets: false
 		},
 
 		rings: {
@@ -40,9 +41,7 @@ export default function discoDefaults(overrides = {}): Settings {
 			fontSize: 12,
 			maxDeltaAngle: 0.05,
 			animationDuration: 1000,
-			overlapAngleFactor: 5, // 5 is set by testing, because label height is not known before rendering
-			prioritizeGeneLabelsByGeneSets: false,
-			showPrioritizeGeneLabelsByGeneSets: false
+			overlapAngleFactor: 5 // 5 is set by testing, because label height is not known before rendering
 		},
 
 		cnv: {

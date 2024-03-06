@@ -74,7 +74,7 @@ export default class DataMapper {
 		this.lastInnerRadious = this.settings.rings.chromosomeInnerRadius
 
 		this.nonExonicFilter = (data: Data) => {
-			if (prioritizedGenes.length > 0 && this.settings.label.prioritizeGeneLabelsByGeneSets) {
+			if (prioritizedGenes.length > 0 && this.settings.Disco.prioritizeGeneLabelsByGeneSets) {
 				return (
 					prioritizedGenes.includes(data.gene) &&
 					settings.rings.nonExonicFilterValues.includes(ViewModelMapper.snvClassLayer[data.mClass])
@@ -85,7 +85,7 @@ export default class DataMapper {
 		}
 
 		this.snvRingFilter = (data: Data) => {
-			if (prioritizedGenes.length > 0 && this.settings.label.prioritizeGeneLabelsByGeneSets) {
+			if (prioritizedGenes.length > 0 && this.settings.Disco.prioritizeGeneLabelsByGeneSets) {
 				return (
 					prioritizedGenes.includes(data.gene) &&
 					settings.rings.snvRingFilters.includes(ViewModelMapper.snvClassLayer[data.mClass])

@@ -357,7 +357,7 @@ async function createDiscoInSandbox(tk, block, sample, thisMutation) {
 	try {
 		;(await import('#plots/plot.disco.js')).default(tk.mds, tk.mds.label, sample, sandbox.body, block.genome, {
 			downloadImgName: headerTexts.join('') + ' Disco', // file name of svg downloaded from disco
-			label: {
+			Disco: {
 				prioritizeGeneLabelsByGeneSets: true // TODO control this at dataset
 			}
 		})

@@ -3,8 +3,8 @@ import Settings from '#plots/disco/Settings.ts'
 export default class CnvColorProvider {
 	static getColor(value: number, settings: Settings) {
 		const cnv = settings.cnv
-		const gainCapped = settings.cnv.capping
-		const lossCapped = -1 * settings.cnv.capping
+		const gainCapped = settings.Disco.cnvCapping
+		const lossCapped = -1 * settings.Disco.cnvCapping
 		if (value < lossCapped) {
 			return cnv.cappedLossColor
 		} else if (value >= lossCapped && value <= 0) {

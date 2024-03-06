@@ -43,8 +43,8 @@ export default class CnvArcsMapper {
 		this.cnvMaxValue = cnvMaxValue
 		this.cnvMinValue = cnvMinValue
 		this.cnvUnit = cnvUnit
-		this.gainCapped = this.settings.cnv.capping
-		this.lossCapped = -1 * this.settings.cnv.capping
+		this.gainCapped = this.settings.Disco.cnvCapping
+		this.lossCapped = -1 * this.settings.Disco.cnvCapping
 		this.lossOnly = cnvMaxValue <= 0
 		this.gainOnly = cnvMinValue >= 0
 
@@ -66,7 +66,7 @@ export default class CnvArcsMapper {
 			'Capping',
 			CnvType.Loss,
 			this.getColor(cnvMinValue > 0 ? cnvMinValue : cnvMaxValue),
-			this.settings.cnv.capping
+			this.settings.Disco.cnvCapping
 		)
 
 		this.cnvClassMap.set(CnvType.Gain, gain)

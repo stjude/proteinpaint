@@ -75,11 +75,11 @@ export default class Disco {
 						min: 0
 					},
 					{
-						boxLabel: 'Visible',
+						boxLabel: '',
 						label: 'Only show mutations for Cancer Gene Census genes',
 						type: 'checkbox',
 						chartType: 'Disco',
-						settingsKey: 'showOnlyCgc',
+						settingsKey: 'prioritizeGeneLabelsByGeneSets',
 						title: 'Only show mutations for Cancer Gene Census genes'
 					}
 				]
@@ -93,7 +93,7 @@ export default class Disco {
 		}
 
 		const legendRenderer = new LegendRenderer(
-			settings.cnv.capping,
+			settings.Disco.cnvCapping,
 			settings.label.fontSize,
 			discoInteractions.cappingClickCallback
 		)

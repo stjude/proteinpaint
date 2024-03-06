@@ -6,8 +6,9 @@ export default interface Settings {
 
 	Disco: {
 		cnvCapping: number
-		showOnlyCgc: boolean
 		isOpen: boolean
+		showPrioritizeGeneLabelsByGeneSets: boolean
+		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
 	}
 
 	rings: {
@@ -45,8 +46,6 @@ export default interface Settings {
 		fontSize: number
 		animationDuration: number
 		overlapAngleFactor: number
-		showPrioritizeGeneLabelsByGeneSets: boolean
-		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
 	}
 	legend: {
 		snvTitle: string

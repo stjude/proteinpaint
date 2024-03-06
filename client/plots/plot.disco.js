@@ -108,8 +108,8 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 function computeOverrides(o, termdbConfig, genomeObj, sample) {
 	// parameter is duplicated into a new object; this script computes new attributes and add to the new obj
 	const overrides = structuredClone(o)
-	if (!overrides.label) overrides.label = {}
-	overrides.label.showPrioritizeGeneLabelsByGeneSets = !!genomeObj.geneset
+	if (!overrides.Disco) overrides.Disco = {}
+	overrides.Disco.showPrioritizeGeneLabelsByGeneSets = !!genomeObj.geneset
 	if (!overrides.downloadImgName) {
 		overrides.downloadImgName = sample[termdbConfig.queries.singleSampleMutation.sample_id_key] + ' Disco'
 	}

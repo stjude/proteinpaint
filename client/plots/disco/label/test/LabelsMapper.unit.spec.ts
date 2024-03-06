@@ -198,7 +198,7 @@ test('When there is a cnv event which position intercepts gene position should r
 test('When Two mutations on two genes LabelsMapper.map() and only one gene is prioritized should return 1 label', t => {
 	const settingsOverride: Settings = _.cloneDeep(settings)
 	const prioritizedGenes = ['Gene1']
-	settingsOverride.label.prioritizeGeneLabelsByGeneSets = true
+	settingsOverride.Disco.prioritizeGeneLabelsByGeneSets = true
 	const rawData = [
 		{
 			dt: 1,
