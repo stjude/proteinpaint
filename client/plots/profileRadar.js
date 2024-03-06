@@ -255,7 +255,8 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePlotSettings()
 
 		config.settings = {
-			profileRadar: settings
+			profileRadar: settings,
+			controls: { isOpen: true }
 		}
 		const terms = config[opts.plot].terms
 		const twlst = []

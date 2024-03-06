@@ -310,7 +310,8 @@ export async function getPlotConfig(opts, app) {
 		const settings = getDefaultProfilePlotSettings()
 
 		config.settings = {
-			profileBarchart: settings
+			profileBarchart: settings,
+			controls: { isOpen: true }
 		}
 		const twlst = []
 		for (const component of config.plotByComponent) {
