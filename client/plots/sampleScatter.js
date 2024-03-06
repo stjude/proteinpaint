@@ -495,7 +495,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
 		let settings = getDefaultScatterSettings()
-		if (opts.name) settings.svgw = 600 //If predefined use 600x500
+		if (opts.settings) copyMerge(settings, opts.settings)
 		if (!opts.term && !opts.term2) settings.showAxes = false
 		const config = {
 			groups: [],
@@ -551,6 +551,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					else if (plot.colorColumn) config.colorColumn = JSON.parse(JSON.stringify(plot.colorColumn))
 
 					if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
+					if (plot.settings) config.settings = JSON.parse(JSON.stringify(plot.settings))
 					chartsInstance.app.dispatch({
 						type: 'plot_create',
 						config: config

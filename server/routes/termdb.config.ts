@@ -127,7 +127,8 @@ function addScatterplots(c, ds) {
 			dimensions: p.dimensions,
 			colorTW: p.colorTW,
 			shapeTW: p.shapeTW,
-			colorColumn: p.colorColumn
+			colorColumn: p.colorColumn,
+			settings: p.settings
 		}
 	})
 }
