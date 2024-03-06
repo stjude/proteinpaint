@@ -394,6 +394,7 @@ export class profilePlot {
 		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
 			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.id])
 			this.filterG
+				.attr('font-size', '0.9em')
 				.append('text')
 				.attr('text-anchor', 'left')
 				.style('font-weight', 'bold')
@@ -411,9 +412,9 @@ export class profilePlot {
 		if (!value) return
 		this.filtersCount++
 
-		const text = this.filterG
+		const itemG = this.filterG.append('g').attr('font-size', '0.8em')
+		const text = itemG
 			.append('text')
-			.attr('font-size', '0.9em')
 			.attr('transform', `translate(0, ${this.filtersCount * 22})`)
 			.attr('text-anchor', 'left')
 		text.append('tspan').attr('font-size', 'bold').text(filter)

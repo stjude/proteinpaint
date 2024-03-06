@@ -165,18 +165,20 @@ class profileBarchart extends profilePlot {
 		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
 		this.addLegendItem('B', '50-75% of possible scorable items', 2)
 		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
-		const textElem = this.legendG.append('text').attr('transform', `translate(0, 120)`).attr('font-size', '0.9em')
+		let textElem = this.legendG.append('text').attr('transform', `translate(0, 120)`).attr('font-size', '0.9em')
 		this.addFilterLegend()
 		if (this.state.dslabel == 'ProfileAbbrev') {
-			textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression:')
-			textElem
-				.append('tspan')
-				.text(
-					'It is provided by the local liaison who completed the assessment in consultation with the PHO medical director or directly by the PHO medical director.'
-				)
-			this.legendG
+			const enduserComment = this.legendG.append('g').attr('font-size', '0.8em')
+			let textElem = enduserComment.append('text').attr('transform', `translate(420, 115)`)
+			textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression: ')
+			textElem.append('tspan').text('It is provided by the local liaison who completed the assessment in consultation')
+			enduserComment
 				.append('text')
-				.attr('transform', `translate(0, 140)`)
+				.attr('transform', `translate(420, 140)`)
+				.text('with the PHO medical director or directly by the PHO medical director.')
+			enduserComment
+				.append('text')
+				.attr('transform', `translate(420, 165)`)
 				.text(
 					'The end-user was asked to rate the current status of the domains and subdomains included for this module.'
 				)
