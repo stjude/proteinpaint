@@ -1,3 +1,5 @@
+import { index } from 'd3'
+
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -423,6 +425,7 @@ type ScatterPlotsEntry = {
 	colorTW?: { id: string }
 	/** this plot use a file column to color dots */
 	colorColumn?: ColorColumn
+	settings: { [index: string]: any }
 }
 
 type Scatterplots = {
