@@ -1,5 +1,3 @@
-import { index } from 'd3'
-
 /*** General usage types ***/
 type FileObj = {
 	file: string
