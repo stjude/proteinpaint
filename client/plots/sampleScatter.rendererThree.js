@@ -12,8 +12,8 @@ export function setRenderersThree(self) {
 		self.mainDiv.selectAll('*').remove()
 
 		self.canvas = self.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
-		self.canvas.width = self.settings.svgw * 1.5
-		self.canvas.height = self.settings.svgh * 1.5
+		self.canvas.width = self.settings.svgw
+		self.canvas.height = self.settings.svgh
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		let step = Math.min((20 * 40) / chart.colorLegend.size, 20)
@@ -27,7 +27,7 @@ export function setRenderersThree(self) {
 			.attr('transform', 'translate(20, 0)')
 		self.renderLegend(chart, step)
 
-		const fov = 50
+		const fov = 66
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
@@ -58,6 +58,8 @@ export function setRenderersThree(self) {
 
 		scene.add(particles)
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
+		renderer.setPixelRatio(window.devicePixelRatio)
+
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 
 		document.addEventListener('mousewheel', event => {
@@ -73,7 +75,7 @@ export function setRenderersThree(self) {
 				let x = (chart.xAxisScale(sample.x) - chart.xScaleMin) / self.canvas.width
 				let y = (chart.yAxisScale(sample.y) - chart.yScaleMax) / -self.canvas.height
 				let z = (chart.zAxisScale(sample.z) - chart.zScaleMin) / self.settings.svgd
-				vertices.push(x - 0.5, y + 0.5, z)
+				vertices.push(x - 0.5, y + 0.7, z)
 				const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
 				colors.push(color.r, color.g, color.b)
 			}
