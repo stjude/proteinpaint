@@ -50,6 +50,10 @@ function server_stat(name, g) {
 			}
 			resolve(name + ' ON, ' + c + ' requests')
 		})
+
+		ps.on('error', err => {
+			reject('Error spawning gfServer: ' + err.message)
+		})
 	})
 }
 
@@ -225,6 +229,10 @@ function run_blat2(genome, infile) {
 				reject('blat server problem')
 			}
 			resolve(outfile)
+		})
+
+		ps.on('error', err => {
+			resolve('Error spawning gfClient: ' + err.message)
 		})
 	})
 }
