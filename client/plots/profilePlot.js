@@ -421,6 +421,21 @@ export class profilePlot {
 		text.append('tspan').text(`: ${value ? value : 'None'}`)
 	}
 
+	addEndUserImpressionNote(uiG) {
+		uiG.attr('font-size', '0.8em')
+		let textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
+		textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression: ')
+		textElem.append('tspan').text('It is provided by the local liaison who completed the assessment in consultation')
+		uiG
+			.append('text')
+			.attr('transform', `translate(0, 140)`)
+			.text('with the PHO medical director or directly by the PHO medical director.')
+		uiG
+			.append('text')
+			.attr('transform', `translate(0, 165)`)
+			.text('The end-user was asked to rate the current status of the domains and subdomains included for this module.')
+	}
+
 	addLegendItem(category, description, index) {
 		const text = this.legendG
 			.append('text')
