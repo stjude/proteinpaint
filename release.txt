@@ -1,1 +1,2 @@
-
+Fixes:
+- preliminary fix for mds3 tk using custom bcf file to pull mutated smples

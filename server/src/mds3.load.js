@@ -1,5 +1,6 @@
 import { mayCopyFromCookie, fileurl } from './utils'
 import { snvindelByRangeGetter_bcf } from './mds3.init'
+import { validate_variant2samples } from './mds3.variant2samples.js'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -177,6 +178,12 @@ async function get_ds(q, genome) {
 		}
 		ds.queries.snvindel = { byrange: { _tk } }
 		ds.queries.snvindel.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
+		// bcf header should have been parsed, allow to know if if there's sample
+		if (ds.queries.snvindel.byrange._tk.samples?.length) {
+			// add v2s
+			ds.variant2samples = { variantkey: 'ssm_id' }
+			await validate_variant2samples(ds)
+		}
 	}
 	// add new file types
 

@@ -691,7 +691,8 @@ type ChartConfig = {
 	[key: string]: any
 }
 
-type SimpleTermEntry = {
+// modified version of termwrapper
+type Tw = {
 	id: string
 	q: unknown
 	baseURL?: string //Only appears as a quick fix in SAMD9-SAMD9L.hg19?
@@ -699,8 +700,8 @@ type SimpleTermEntry = {
 
 type Variant2Samples = GdcApi & {
 	variantkey: string
-	twLst: SimpleTermEntry[]
-	sunburst_twLst?: SimpleTermEntry[]
+	twLst?: Tw[]
+	sunburst_twLst?: Tw[]
 }
 
 type MutationSet = {
