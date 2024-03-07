@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- preliminary fix for mds3 tk using custom bcf file to pull mutated smples
+
 
 ## 2.46.2
 
