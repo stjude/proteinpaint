@@ -237,7 +237,6 @@ class profileBarchart extends profilePlot {
 		const isFirst = field == 'sc' || (field == 'poc' && !row.sc)
 		const pairValue = field == 'sc' ? this.getPercentage(row.poc) : this.getPercentage(row.sc)
 		const width = value ? (value / 100) * barwidth : 0
-
 		if (value) {
 			const rect = g
 				.append('rect')
@@ -249,7 +248,7 @@ class profileBarchart extends profilePlot {
 				.attr('height', 20)
 			if (!subjectiveTerm && (pairValue || !hasSubjectiveData)) rect.attr('fill', termColor)
 			else {
-				const termid = this.id + d.score.term.name.replace(/[^a-zA-Z0-9]/g, '')
+				const termid = this.id + d.score.term.id
 				g.append('defs')
 					.append('pattern')
 					.attr('id', termid)
