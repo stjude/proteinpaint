@@ -49,13 +49,17 @@ class MassSearch {
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
 					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
-			search: appState.search
+			search: appState.search,
+			nav: appState.nav
 		}
 	}
 
 	async main() {
 		// show/hide search input from the tree
-		this.dom.holder.style('display', this.state.search.isVisible ? 'inline-block' : 'none')
+		this.dom.holder.style(
+			'display',
+			this.state.search.isVisible && !this.state.nav.header_mode == 'only_buttons' ? 'inline-block' : 'none'
+		)
 	}
 
 	async doSearch(str) {
