@@ -1186,7 +1186,7 @@ sandbox header
     z-index: 10;
     top: 0px;
     left: 0px;
-    padding: 30px 0;
+    padding: 0px 0px 15px 0px;
 }
 
 .add_term_btn {
