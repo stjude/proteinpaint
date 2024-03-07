@@ -51,7 +51,7 @@ class profileRadarFacility extends profilePlot {
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
 		if (this.data.lst.length == 0) return
-		const widht = 1250
+		const widht = 1450
 		const height = 650
 		this.svg = this.dom.plotDiv
 			.append('div')
@@ -77,8 +77,8 @@ class profileRadarFacility extends profilePlot {
 		const polarG = this.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.polarG = polarG
 
-		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 380},${y - 200})`)
-		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 380},${y - 70})`)
+		this.legendG = this.svg.append('g').attr('transform', `translate(${x + 350},${y + 120})`)
+		this.filterG = this.svg.append('g').attr('transform', `translate(${x + 420},${y - 200})`)
 
 		const rows = []
 		const columns = [{ label: 'Module' }, { label: `Facility` }, { label: 'Global' }]
@@ -157,6 +157,11 @@ class profileRadarFacility extends profilePlot {
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
+		}
+
+		if (this.state.dslabel == 'ProfileAbbrev') {
+			const uiG = this.legendG.append('g').attr('transform', `translate(0, -15)`)
+			this.addEndUserImpressionNote(uiG)
 		}
 
 		this.addFilterLegend()
