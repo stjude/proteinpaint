@@ -12,6 +12,7 @@ import { server_updateAttr } from './dsUpdateAttr'
 import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
+import { clinsig } from '../dataset/clinvar.ts'
 
 // Global variable (storing things in memory)
 export const genomes = {} // { hg19: {...}, ... }
@@ -417,9 +418,9 @@ export async function initGenomesDs(serverconfig) {
 			const _ds = (await import(dsFile)).default
 			const ds =
 				typeof _ds == 'function'
-					? _ds(common)
+					? await _ds(common, { serverconfig, clinsig })
 					: typeof _ds?.default == 'function'
-					? _ds.default(common)
+					? await _ds.default(common, { serverconfig, clinsig })
 					: _ds.default || _ds
 
 			// !!! TODO: is this unnecessarily repeated at a later time? !!!

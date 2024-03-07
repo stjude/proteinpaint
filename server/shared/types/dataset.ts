@@ -201,6 +201,10 @@ type SnvIndelQuery = {
 	this definition can appear either in queries.snvindel{} or termdb{}
 	so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig cannot be made */
 	ssmUrl?: UrlTemplateSsm
+	m2csq?: {
+		gdcapi?: boolean
+		by: string
+	}
 }
 
 type SvFusion = {
@@ -378,6 +382,11 @@ type Mds3Queries = {
 	trackLst?: TrackLstEntry[]
 	// TODO singleSampleGbtk
 	singleCell?: SingleCellQuery
+	geneCnv?: {
+		bygene?: {
+			gdcapi: true
+		}
+	}
 }
 
 /*** types supporting Termdb ***/
@@ -431,8 +440,11 @@ type Scatterplots = {
 }
 
 type MatrixSettingsControlLabels = {
-	samples: string
-	sample: string
+	samples?: string
+	sample?: string
+	Samples?: string
+	Sample?: string
+	Mutations?: string
 }
 
 type ExcludeClasses = {
@@ -538,6 +550,8 @@ type MatrixSettings = {
 	geneVariantCountSamplesSkipMclass?: Array<string>
 	truncatingMutations?: Array<string>
 	proteinChangingMutations?: Array<string>
+	showHints?: string[]
+	displayDictRowWithNoValues?: boolean
 }
 
 type Mclass = {
@@ -661,6 +675,12 @@ type Termdb = {
 	dictionary?: GdcApi
 	allowCaseDetails?: AllowCaseDetails
 	isGeneSetTermdb?: boolean
+	// !!! TODO: improve this type definition !!!
+	getGeneAlias?: (q: any, tw: any) => any
+	convertSampleId?: {
+		gdcapi: boolean
+	}
+	hierCluster?: any
 }
 
 type ChartConfigByType = {
@@ -1018,6 +1038,15 @@ export type Mds = BaseMds & {
 	gene2mutcount?: Gene2MutCount
 	aaaannotationsampleset2matrix?: AaaAnnotationSampleset2Matrix
 	locusAttribute?: LocusAttribute
+	alleleAttribute?: {
+		attributes: {
+			[attrName: string]: {
+				label: string
+				isnumeric: number
+				filter: number
+			}
+		}
+	}
 }
 
 export type Mds3 = BaseMds & {
@@ -1030,4 +1059,7 @@ export type Mds3 = BaseMds & {
 	validate_filter0?: (f: any) => void
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
+	// !!! TODO: improve these type definitions below !!!
+	getHostHeaders?: (q: any) => any
+	serverconfigFeatures?: any
 }
