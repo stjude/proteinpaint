@@ -61,6 +61,7 @@ class TdbNav {
 			this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
 			this.initUI(appState)
 			this.initCohort(appState)
+
 			this.components = await multiInit({
 				search: searchInit({
 					app: this.app,
@@ -206,7 +207,8 @@ function setRenderers(self) {
 
 		if (appState.nav.header_mode == 'only_buttons') {
 			// should only show chart buttons
-			self.dom.controlsDiv.style('display', 'none')
+			self.dom.tabDiv.style('display', 'none')
+			self.dom.recoverDiv.style('display', 'none')
 		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
