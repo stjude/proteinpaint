@@ -50,6 +50,7 @@ function server_stat(name, g) {
 			}
 			resolve(name + ' ON, ' + c + ' requests')
 		})
+		ps.on('error', e => reject(e.message || 'Error calling gfServer'))
 	})
 }
 
@@ -226,5 +227,6 @@ function run_blat2(genome, infile) {
 			}
 			resolve(outfile)
 		})
+		ps.on('error', e => reject(e.message || 'Error calling gfClient'))
 	})
 }
