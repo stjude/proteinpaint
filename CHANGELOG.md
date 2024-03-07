@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.46.1
 
 Fixes:
 - when a term has only 2 categories, then only a single category needs to be tested in the association test
