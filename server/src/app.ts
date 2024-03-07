@@ -105,12 +105,12 @@ export async function launch() {
 }
 
 function handle_argv(argv) {
-	if (!argv[2])
-		if (argv[2] == 'validate')
-			// exit early if only doing a validation of configuration + data + startup code
-			return `You may now run the server.`
+	if (!argv?.length) return
+	if (argv.includes('validate'))
+		// exit early if only doing a validation of configuration + data + startup code
+		return `You may now run the server.`
 
-	if (argv[2] == 'phewas-precompute') {
+	if (argv.includes('phewas-precompute')) {
 		// argv[3] is genome, argv[4] is dslabel
 		const gn = argv[3],
 			dslabel = argv[4]
