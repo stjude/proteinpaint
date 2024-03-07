@@ -47,6 +47,8 @@ class SampleView {
 		await this.setSampleSelect(appState)
 		const state = this.getState(appState)
 		const q = state.termdbConfig.queries
+		const hasPlots = q ? q.singleSampleGenomeQuantification || q.singleSampleMutation : false
+		if (hasPlots) this.setControls()
 		await this.renderPlots(state, state.samples)
 	}
 
@@ -233,10 +235,8 @@ class SampleView {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.state.config.settings.sampleView
 		if (this.state.samples.length == 1 && this.state.sample == null) return
-		if (this.state.hasPlots) {
-			await this.setControls()
-			this.showVisiblePlots()
-		}
+		if (this.state.hasPlots) this.showVisiblePlots()
+
 		this.termsById = this.getTermsById(this.state)
 		this.sampleDataByTermId = {}
 		const root = this.termsById[root_ID]
