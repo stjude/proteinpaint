@@ -552,9 +552,9 @@ function addV2Sgetter_custom(tk, block) {
 }
 
 function addV2Sgetter_native(tk, block) {
-	// same getters implemented for server-hosted official dataset
-
 	/*
+	works for both official and custom bcf
+
 	call v2s.get() with querytype=?
 	based on querytype, get() finds terms from appropriate places to retrieve attributes
 	thus no need to directly supply list of terms to get()
@@ -569,10 +569,19 @@ function addV2Sgetter_native(tk, block) {
 	tk.mds.variant2samples.get = async arg => {
 		const par = {
 			genome: block.genome.name,
-			dslabel: tk.mds.label,
 			variant2samples: 1,
 			get: arg.querytype
 		}
+		if (tk.mds.label) {
+			par.dslabel = tk.mds.label
+		} else if (tk.bcf) {
+			if (tk.bcf.file) par.bcffile = tk.bcf.file
+			else if (tk.bcf.url) par.bcfurl = tk.bcf.url
+			else throw 'tk.bcf{}: file/url missing'
+		} else {
+			throw 'no dslabel or tk.bcf'
+		}
+
 		if (arg.groupSsmBySample) {
 			// from getSamples(), is a modifier of querytype=samples, to return .ssm_id_lst[] with each sample
 			par.groupSsmBySample = 1
@@ -930,9 +939,20 @@ async function getbcfheader_customtk(tk, genome) {
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
 	tk.mds.bcf = {
 		info,
-		format,
-		samples
+		format // can be null
 	}
+	if (samples?.length) {
+		// bcf file has samples
+		tk.mds.bcf.samples = samples
+		// add v2s; later getter will be added
+		tk.mds.variant2samples = {
+			//twLst:[], // TODO should not be required
+			type_samples: 'samples',
+			variantkey: 'ssm_id'
+		}
+	}
+	if (!tk.mds.queries) tk.mds.queries = {}
+	tk.mds.queries.snvindel = { forTrack: true }
 }
 
 function validateSelectSamples(tk) {
