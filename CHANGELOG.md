@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.46.2
 
 Fixes:
 - Dataset configuration should have limited access to server code
