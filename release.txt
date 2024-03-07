@@ -1,1 +1,2 @@
-
+Fixes:
+- Return early on server validation instead of proceeding with startup
