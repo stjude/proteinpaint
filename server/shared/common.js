@@ -51,7 +51,7 @@ export const mclass = {
 		label: 'MISSENSE',
 		color: '#3987CC',
 		dt: dtsnvindel,
-		desc: 'A substitution variant in the coding region resulting in altered protein coding.',
+		desc: 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
 		key: 'M'
 	},
 	E: { label: 'EXON', color: '#bcbd22', dt: dtsnvindel, desc: 'A variant in the exon of a non-coding RNA.', key: 'E' },
@@ -59,49 +59,49 @@ export const mclass = {
 		label: 'FRAMESHIFT',
 		color: '#db3d3d',
 		dt: dtsnvindel,
-		desc: 'An insertion or deletion variant that alters the protein coding frame.',
+		desc: 'A sequence variant which causes a disruption of the translational reading frame, because the number of nucleotides inserted or deleted is not a multiple of three',
 		key: 'F'
 	},
 	N: {
 		label: 'NONSENSE',
 		color: '#ff7f0e',
 		dt: dtsnvindel,
-		desc: 'A variant altering protein coding to produce a premature stopgain or stoploss.',
+		desc: 'A sequence variant whereby at least one base of a codon is changed, resulting in a premature stop codon, leading to a shortened transcript',
 		key: 'N'
 	},
 	S: {
 		label: 'SILENT',
 		color: '#2ca02c',
 		dt: dtsnvindel,
-		desc: 'A substitution variant in the coding region that does not alter protein coding.',
+		desc: 'A sequence variant where there is no resulting change to the encoded amino acid',
 		key: 'S'
 	},
 	D: {
 		label: 'PROTEINDEL',
 		color: '#7f7f7f',
 		dt: dtsnvindel,
-		desc: 'A deletion resulting in a loss of one or more codons from the product, but not altering the protein coding frame.',
+		desc: 'An inframe non synonymous variant that deletes bases from the coding sequence without altering the protein coding frame',
 		key: 'D'
 	},
 	I: {
 		label: 'PROTEININS',
 		color: '#8c564b',
 		dt: dtsnvindel,
-		desc: 'An insertion introducing one or more codons into the product, but not altering the protein coding frame.',
+		desc: 'An inframe non synonymous variant that inserts bases into in the coding sequence without altering the protein coding frame',
 		key: 'I'
 	},
 	P: {
 		label: 'SPLICE_REGION',
 		color: '#9467bd',
 		dt: dtsnvindel,
-		desc: 'A variant in an intron within 10 nt of an exon boundary.',
+		desc: 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
 		key: 'P'
 	},
 	L: {
 		label: 'SPLICE',
 		color: '#6633FF',
 		dt: dtsnvindel,
-		desc: 'A variant near an exon edge that may affect splicing functionality.',
+		desc: 'A variant near an exon edge that may affect splicing functionality',
 		key: 'L'
 	},
 	Intron: { label: 'INTRON', color: '#656565', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
@@ -361,7 +361,7 @@ export const vepinfo = function (s) {
 	rank++
 	if (l.indexOf('missense_variant') != -1) return [dtsnvindel, 'M', rank]
 	rank++
-	if (l.indexOf('protein_altering_variant') != -1) return [dtsnvindel, 'N', rank]
+	if (l.indexOf('protein_altering_variant') != -1) return [dtsnvindel, 'I' || 'F', rank]
 	rank++
 	if (l.indexOf('splice_region_variant') != -1) return [dtsnvindel, 'P', rank]
 	rank++
