@@ -1,10 +1,8 @@
 import { getAppInit } from '#rx'
 import { hicStoreInit } from './store'
-import { Div, Dom, Elem } from '../../types/d3'
+import { Div, Elem } from '../../types/d3'
 import { showErrorsWithCounter } from '../../dom/sayerror'
-import { loadingInit } from './dom/loadingOverlay'
-// import { controlPanelInit } from './controls/controlPanel'
-// import { infoBarInit } from './dom/infoBar'
+//import { loadingInit } from './dom/loadingOverlay'
 import { hicViewInit } from './views/view'
 import * as client from '#src/client'
 import { select as d3select } from 'd3-selection'
@@ -76,6 +74,10 @@ class HicApp {
 	}
 
 	async error(err: string | string[]) {
+		/** There might be data inconsistency with hic file.
+		 * It may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown.
+		 * do not flood ui with such errors, to tolerate, collect all errors and show in one place
+		 */
 		if (err && typeof err == 'string') this.errList.push(err)
 		showErrorsWithCounter(this.errList, this.dom.errorDiv)
 		//Remove errors after displaying
@@ -93,7 +95,7 @@ class HicApp {
 	}
 
 	getViewsConfig() {
-		const nmeth = this.hic['normalization'].length ? this.hic['normalization'][0] : this.state.defaultNmeth
+		const nmeth = this.hic['normalization'].length > 0 ? this.hic['normalization'][0] : 'NONE'
 
 		//If currView provided without state, add state
 		if (this.hic.state.currView) {
