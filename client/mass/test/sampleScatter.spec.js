@@ -136,9 +136,9 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('PNET plot + filter + colorTW=gene', async function (test) {
+tape('PNET plot + filter + colorTW=gene', function (test) {
 	test.timeoutAfter(3000)
-	test.plan(2)
+	test.plan(1)
 	const s2 = JSON.parse(JSON.stringify(state))
 	s2.termfilter = {
 		filter: {
@@ -150,37 +150,32 @@ tape.only('PNET plot + filter + colorTW=gene', async function (test) {
 	}
 	s2.plots[0].colorTW = { term: { type: 'geneVariant', name: 'TP53' } }
 
-	const app = await runpp({
+	runpp({
 		state: s2,
 		sampleScatter: {
 			callbacks: {
-				//'postRender.test': runTests
+				'postRender.test': runTests
 			}
 		}
 	})
-	console.log(161, app)
-	const plots = app.getComponents('plots')
-	const scatter = Object.values(plots).find(p => p.type == 'scatter')
-	console.log()
 
-	//function runTests(scatter) {
-	scatter.on('postRender.test', null)
-	const scatterDiv = scatter.Inner.charts[0].chartDiv
+	function runTests(scatter) {
+		testPlot()
 
-	testPlot()
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
 
-	//if (test._ok) scatter.Inner.app.destroy()
-	//test.end()
-
-	function testPlot() {
-		const serieG = scatterDiv.select('.sjpcb-scatter-series')
-		const numSymbols = serieG.selectAll('path').size()
-		test.true(
-			numSymbols == scatter.Inner.charts[0].data.samples.length,
-			`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
-		)
+		function testPlot() {
+			const scatterDiv = scatter.Inner.charts[0].chartDiv
+			const serieG = scatterDiv.select('.sjpcb-scatter-series')
+			const numSymbols = serieG.selectAll('path').size()
+			console.log(numSymbols == scatter.Inner.charts[0].data.samples.length)
+			test.true(
+				numSymbols == scatter.Inner.charts[0].data.samples.length,
+				`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
+			)
+		}
 	}
-	//}
 })
 
 tape.skip('Add shape, clicking term and replace by search', function (test) {
