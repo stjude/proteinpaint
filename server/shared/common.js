@@ -80,15 +80,22 @@ export const mclass = {
 		label: 'PROTEINDEL',
 		color: '#7f7f7f',
 		dt: dtsnvindel,
-		desc: 'An inframe non synonymous variant that deletes bases from the coding sequence without altering the protein coding frame',
+		desc: 'An inframe non synonymous variant that deletes bases from the coding sequence',
 		key: 'D'
 	},
 	I: {
 		label: 'PROTEININS',
 		color: '#8c564b',
 		dt: dtsnvindel,
-		desc: 'An inframe non synonymous variant that inserts bases into in the coding sequence without altering the protein coding frame',
+		desc: 'An inframe non synonymous variant that inserts bases into in the coding sequence',
 		key: 'I'
+	},
+	ProteinAltering: {
+		label: 'PROTEINALTERING',
+		color: '#b3523e',
+		dt: dtsnvindel,
+		desc: 'An inframe complex change to the coding sequence',
+		key: 'ProteinAltering'
 	},
 	P: {
 		label: 'SPLICE_REGION',
@@ -202,6 +209,8 @@ export function mclasstester(s) {
 			return 'D'
 		case 'in_frame_ins':
 			return 'I'
+		case 'protein_altering_variant':
+			return 'ProteinAltering'
 		case 'translation_start_site':
 			return mclassnonstandard
 		case 'nonstop_mutation':
@@ -361,7 +370,7 @@ export const vepinfo = function (s) {
 	rank++
 	if (l.indexOf('missense_variant') != -1) return [dtsnvindel, 'M', rank]
 	rank++
-	if (l.indexOf('protein_altering_variant') != -1) return [dtsnvindel, 'I' || 'F', rank]
+	if (l.indexOf('protein_altering_variant') != -1) return [dtsnvindel, 'ProteinAltering', rank]
 	rank++
 	if (l.indexOf('splice_region_variant') != -1) return [dtsnvindel, 'P', rank]
 	rank++
