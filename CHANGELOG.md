@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- updated mclass definitions and rank for protein_altering_variant
+
+
 ## 2.46.3
 
 Fixes:
