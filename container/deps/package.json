@@ -15,7 +15,7 @@
 	"files": [
 		"build.sh",
 		"Dockerfile",
-		"app-full.js",
+		"app-full.mjs",
 		"app-server.js",
 		"launch.js",
 		"public",
