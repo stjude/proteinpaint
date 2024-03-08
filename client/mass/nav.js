@@ -175,6 +175,14 @@ export const navInit = getCompInit(TdbNav)
 function setRenderers(self) {
 	self.initUI = appState => {
 		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
+		let titleDiv = header
+			.append('div')
+			.style('display', 'inline-block')
+			.style('float', 'right')
+			.style('font-size', '1.5em')
+			.style('margin-top', '44px')
+			.text(appState.termdbConfig.title)
+
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
 		const controlsDiv = header
 			//Fix for adding message underneath the search bar and buttons
@@ -202,6 +210,7 @@ function setRenderers(self) {
 				.style('padding-top', '5px')
 				.style('border-bottom', '1px solid #000'),
 			messageDiv: self.opts.holder.append('div').style('margin', '30px').style('display', 'none'),
+			titleDiv,
 			tip: new Menu({ padding: '5px' })
 		}
 
@@ -209,6 +218,7 @@ function setRenderers(self) {
 			// should only show chart buttons
 			self.dom.tabDiv.style('display', 'none')
 			self.dom.recoverDiv.style('display', 'none')
+			titleDiv.style('margin-top', '90px')
 		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
