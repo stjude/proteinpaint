@@ -429,7 +429,12 @@ must use a gene with both single and multi occurrence mutations to test
 			.find(i => i.__data__.occurrence == 1)
 		singletonMutationDisc.dispatchEvent(new Event('click'))
 		await whenVisible(tk.itemtip.d)
-		{
+
+		/*** !!! temporarily disabled test.
+		mds3 no longer shows select button for single sample
+		reenable when mds3 change is reverted
+		*/
+		if (0) {
 			const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass })
 			test.equal(button.innerHTML, buttonText, buttonText + ' button created in single-sample menu')
 			// TODO trigger click on selection button
