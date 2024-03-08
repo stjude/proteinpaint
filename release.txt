@@ -1,1 +1,2 @@
-
+Fixes: 
+- updated mclass definitions and rank for protein_altering_variant 
