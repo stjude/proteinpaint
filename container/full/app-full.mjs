@@ -2,6 +2,7 @@ import fs from 'fs'
 import { spawnSync } from 'child_process'
 import path from 'path'
 import { launch } from '@sjcrh/proteinpaint-server'
+import {exec, execSync} from "node:child_process";
 
 const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
@@ -59,5 +60,15 @@ spawnSync('npx', ['proteinpaint-front', serverconfig.URL], { encoding: 'utf-8' }
 // since the npx command generated non-root owned js files inside the public/bin folder , we need to change the owner of the folder and files to root
 spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
 
+
 console.log('starting the server ...')
 launch()
+
+// FIXME: this is not working. It works when run manually like:  docker exec -i [container] /bin/bash -c "nohup /path/to/gfServer start 127.0.0.1 1234 -stepSize=5 /path/to/hg19.2bit &"
+// It takes about 5 mins for blat server to start
+// if (serverconfig.gfServer) {
+// 	console.log('starting the bam server ...')
+// 	spawnSync( 'nohup /path/to/gfServer start 127.0.0.1 1234 -stepSize=5 /path/to/hg19.2bit &')
+// 	spawnSync( 'nohup /path/to/gfServer start 127.0.0.1 1235 -stepSize=5 /path/to/hg38.2bit &')
+// }
+

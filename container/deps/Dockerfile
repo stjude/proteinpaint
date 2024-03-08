@@ -75,6 +75,8 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
+        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/blat/gfServer -P /home/root/pp/tools/ && \
+        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/blat/gfClient -P /home/root/pp/tools/ && \
         chmod -R 755 /home/root/pp/tools; \
     elif [ "$ARCH" = "aarch64" ]; then \
         curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz && \
@@ -131,7 +133,7 @@ RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz 
     fi
 
 # enable ssh into this stage, for troubleshooting
-CMD ["sh", "-c", "node app-server.js"]
+CMD ["sh", "-c", "node app-server.mjs"]
 
 #####################
 # Server-only app
@@ -153,9 +155,9 @@ COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./app-server.js ./
+COPY ./app-server.mjs ./
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-server.js && @sjcrh/proteinpaint-server"]
+CMD ["sh", "-c", "node --enable-source-maps app-server.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
 
 #################
@@ -197,8 +199,8 @@ COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./app-full.js ./
+COPY ./app-full.mjs ./
 COPY public ./public
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-full.js && @sjcrh/proteinpaint-server"]
+CMD ["sh", "-c", "node --enable-source-maps app-full.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
