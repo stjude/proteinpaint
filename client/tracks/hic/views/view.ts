@@ -1,6 +1,6 @@
 import { getCompInit } from '#rx'
 import { MainPlotDiv } from '../../../types/hic.ts'
-// import { ChrPairView } from './chrPairView'
+import { ChrPairView } from './chrPairView'
 // import { HorizontalView } from './horizontalView'
 // import { DetailView } from './detailView'
 import { GenomeView } from './genomeView.ts'
@@ -14,6 +14,7 @@ export class HicView {
 	hic: any
 	state: any
 	genome: any
+	chrpair: any
 	app: any
 	dataMapper: any
 	activeView: string
@@ -52,7 +53,7 @@ export class HicView {
 		return appState
 	}
 
-	async colorizeElement(lead: number, follow: number, v: number, obj: any, width?: number, height?: number) {
+	async colorizeElement(lead: number, follow: number, v: number, obj: any, width: number, height: number) {
 		const bpMinV = this.min
 		const bpMaxV = this.max
 		const currView = this.activeView
@@ -99,8 +100,14 @@ export class HicView {
 			})
 			this.genome.render()
 		} else if (this.state.currView === 'chrpair') {
-			//this.chrPairView = new ChrPairView
-			//this.chrPairView.main()
+			this.chrpair = new ChrPairView({
+				plotDiv: this.plotDiv,
+				hic: this.hic,
+				app: this.app,
+				data: this.dataMapper.data,
+				parent: this
+			})
+			this.chrpair.render()
 		} else if (this.state.currView === 'horizontal') {
 			//this.horizonalView = new HorizontalView.main()
 		} else if (this.state.currView === 'detail') {
@@ -109,10 +116,102 @@ export class HicView {
 			throw Error(`Unknown view: ${this.state.currView}`)
 		}
 	}
+
+	getResolution() {
+		//Move to data mapper?
+		//TODO: resolution for detail and horizontal view
+		if (this[this.state.currView]?.resolution) return this[this.state.currView].resolution
+		if (this.state.currView == 'chrpair') {
+			const chrxlen = this.hic.genome.chrlookup[this.state.x.chr.toUpperCase()].len
+			const chrylen = this.hic.genome.chrlookup[this.state.y.chr.toUpperCase()].len
+			const maxchrlen = Math.max(chrxlen, chrylen)
+
+			let resolution = null
+			for (let i = 0; i < this.hic.bpresolution.length; i++) {
+				const res = this.hic.bpresolution[i]
+				if (maxchrlen / res > 200) {
+					resolution = res
+					break
+				}
+			}
+			if (resolution == null) {
+				this.error('no suitable resolution')
+				return
+			}
+			return resolution
+		}
+	}
+
+	setPositions(x: number, y: number, binpx: number) {
+		const initialbinnum_detail = 20
+
+		const state = this.app.getState()
+		const chrx = state.x.chr
+		const chry = state.y.chr
+
+		const resolution = this.getResolution()
+
+		const viewrangebpw = resolution! * initialbinnum_detail
+
+		let coordx = Math.max(1, Math.floor((x * resolution!) / binpx) - viewrangebpw / 2)
+		let coordy = Math.max(1, Math.floor((y * resolution!) / binpx) - viewrangebpw / 2)
+
+		// make sure positions are not out of bounds
+		{
+			const lenx = this.hic.genome.chrlookup[chrx.toUpperCase()].len
+			if (coordx + viewrangebpw >= lenx) {
+				coordx = lenx - viewrangebpw
+			}
+			const leny = this.hic.genome.chrlookup[chry.toUpperCase()].len
+			if (coordy + viewrangebpw > leny) {
+				coordy = leny - viewrangebpw
+			}
+		}
+
+		const xObj = {
+			chr: chrx,
+			start: coordx,
+			stop: coordx + viewrangebpw
+		}
+
+		const yObj = {
+			chr: chry,
+			start: coordx,
+			stop: coordx + viewrangebpw
+		}
+
+		return [xObj, yObj]
+	}
+
+	setDataArgs(appState) {
+		this.state = this.app.getState(appState)
+		const currView = this.state[this.state.currView]
+		const args = {
+			nmeth: currView.nmeth,
+			resolution: this.getResolution(),
+			matrixType: currView.matrixType
+		}
+
+		if (currView == 'chrpair') {
+			//pos1
+			args['lead'] = this.state.x.chr
+			//pos2
+			args['follow'] = this.state.y.chr
+		}
+		return args
+	}
+
 	async init() {
 		try {
 			const currView = this.state[this.state.currView]
-			const [min, max] = await this.dataMapper.getData(currView.nmeth, this.hic['bpresolution'][0])
+			//This only works for genome view.
+			//Will need to make it compatible with other views
+			const obj = {
+				nmeth: currView.nmeth,
+				resolution: this.hic['bpresolution'][0]
+			}
+
+			const [min, max] = await this.dataMapper.getData(obj)
 
 			this.min = min
 			this.max = max
@@ -125,18 +224,21 @@ export class HicView {
 					controlsDiv: this.dom.controlsDiv,
 					hic: this.hic,
 					state: this.state,
-					parent: this
+					parent: () => {
+						return this.min, this.max
+					}
 				})
 			}
-			this.infoBar = new InfoBar({
-				app: this.app,
-				state: this.state,
-				infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
-				hic: this.hic,
-				parent: this,
-				resolution: this[this.activeView].resolution
-			})
-			this.infoBar.render()
+			// this.infoBar = new InfoBar({
+			// 	app: this.app,
+			// 	infoBarDiv: this.dom.infoBarDiv.append('table').style('border-spacing', '3px'),
+			// 	hic: this.hic,
+			// 	parent: (prop: string) => {
+			// 		return this[prop]
+			// 	},
+			// 	resolution: this[this.activeView].resolution
+			// })
+			// this.infoBar.render()
 		} catch (e: any) {
 			this.errList.push(e.message || e)
 		}
@@ -144,27 +246,25 @@ export class HicView {
 
 	async main(appState: any) {
 		if (this.skipMain == false) {
-			this.state = this.app.getState(appState)
-			const currView = this.state[this.state.currView]
-			const [min, max] = await this.dataMapper.getData(
-				currView.nmeth,
-				this[this.state.currView].resolution,
-				currView.matrixType
-			)
+			const args = this.setDataArgs(appState)
+			const [min, max] = await this.dataMapper.getData(args)
 			this.min = min
 			this.max = max
 
 			if (this.activeView != this.state.currView) {
-				this.plotDiv.xAxis.selectAll('*').remove()
-				this.plotDiv.yAxis.selectAll('*').remove()
-				this.plotDiv.plot.selectAll('*').remove()
+				if (this.activeView == 'genome') {
+					this.genome.svg.remove()
+				} else {
+					this.plotDiv.xAxis.selectAll('*').remove()
+					this.plotDiv.yAxis.selectAll('*').remove()
+					this.plotDiv.plot.selectAll('*').remove()
+				}
 				this.initView()
-				this.infoBar.update()
 				this.activeView == this.state.currView
 			} else {
 				await this[this.state.currView].update(this.dataMapper.data)
-				this.infoBar.update()
 			}
+			this.infoBar.update()
 		} else {
 			//main() skipped on init() to avoid confusing behavior
 			this.skipMain = false
@@ -175,18 +275,3 @@ export class HicView {
 }
 
 export const hicViewInit = getCompInit(HicView)
-
-/**
- * Fills the canvas with color based on the value from the straw response
- * Default color is red for positive values and blue for negative values.
- * When no negative values are present, no color is displayed (i.e. appears white)
- * Note the genome view renders two ctx objs, otherwise only one ctx obj is filled in.
- * @param lead lead chr
- * @param follow following chr
- * @param v returned value from straw
- * @param bpMaxV
- * @param state
- * @param obj obj to color
- * @param width if no .binpx for the view, must provied width
- * @param height if no .binpx for the view, must provied width
- */

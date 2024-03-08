@@ -27,12 +27,20 @@ import { hicParseFile } from '../data/parseData.ts'
 //import { init_hicControls } from '../controls/controlPanel.ts'
 import { Div } from '../../../types/d3'
 
+type Pane = {
+	pain: Selection<HTMLDivElement, any, any, any>
+	mini: boolean
+	header: Selection<HTMLDivElement, any, any, any>
+	body: Selection<any, any, any, any>
+}
+
 export class GenomeView {
 	/** opts */
 	app: any
 	hic: any
 	plotDiv: MainPlotDiv
 	resolution: number
+	parent: any
 
 	/** Dom */
 	tip = new client.Menu()
@@ -47,7 +55,6 @@ export class GenomeView {
 	chr2px = {}
 	lead2follow: any = new Map()
 	data: any
-	parent: any
 	values: number[] = []
 
 	/** Defaults */
@@ -61,15 +68,15 @@ export class GenomeView {
 	atdev_chrnum = 8
 
 	constructor(opts) {
+		this.app = opts.app
 		this.hic = opts.hic
 		this.plotDiv = opts.plotDiv
 		this.data = opts.data
 		this.parent = opts.parent
+		this.resolution = opts.hic.bpresolution[0]
 		this.svg = this.plotDiv.plot.append('svg')
 		this.layer_map = this.svg.append('g')
 		this.layer_sv = this.svg.append('g')
-		this.resolution = opts.hic.bpresolution[0]
-		this.app = opts.app
 	}
 
 	renderGrid() {
@@ -209,13 +216,17 @@ export class GenomeView {
 			.attr('x', obj.x)
 			.attr('y', obj.y)
 			.on('click', async () => {
-				//state????
-				// self.x.chr = lead
-				// self.y.chr = follow
 				await this.app.dispatch({
 					type: 'view_change',
-					view: 'chrpair'
-					//need to add state changes
+					view: 'chrpair',
+					config: {
+						x: {
+							chr: lead
+						},
+						y: {
+							chr: follow
+						}
+					}
 				})
 			})
 			.on('mouseover', () => {
@@ -423,12 +434,6 @@ export class GenomeView {
 	}
 
 	async update(data) {
-		/* after the ui is created, load data for each chr pair,
-		await on each request to finish to avoid server lockup
-	
-		There might be data inconsistency with hic file. It may be missing data for chromosomes that are present in the header; querying such chr will result in error being thrown
-		do not flood ui with such errors, to tolerate, collect all errors and show in one place
-		*/
 		this.data = data
 		await this.makeElements()
 	}
@@ -478,12 +483,6 @@ const default_subpanelpxwidth = 600
 
 const subpanel_bordercolor = 'rgba(200,0,0,.1)'
 
-type Pane = {
-	pain: Selection<HTMLDivElement, any, any, any>
-	mini: boolean
-	header: Selection<HTMLDivElement, any, any, any>
-	body: Selection<any, any, any, any>
-}
 /**
  * Parses input file and renders plot. Whole genome view renders as the default.
  * Clicking on chr-chr svg within the whole genonme view launches the chr-pair view.

@@ -75,6 +75,10 @@ class ControlPanel {
 		this.parent = opts.parent
 	}
 
+	getState(appState) {
+		return appState
+	}
+
 	addLabel(tr: Tr, text: string) {
 		return tr
 			.append('td')
@@ -127,12 +131,20 @@ class ControlPanel {
 		//Min CUTOFF
 		const minCutoffRow = menuTable.append('tr') as any
 		this.addLabel(minCutoffRow, 'Min CUTOFF')
-		this.controls.inputBpMinV = new CutoffControl(minCutoffRow.append('td'), this.parent.min, this.minCallback).render()
+		this.controls.inputBpMinV = new CutoffControl(
+			minCutoffRow.append('td'),
+			this.parent('min'),
+			this.minCallback
+		).render()
 
 		//Max CUTOFF
 		const maxCutoffRow = menuTable.append('tr') as any
 		this.addLabel(maxCutoffRow, 'Max CUTOFF')
-		this.controls.inputBpMaxV = new CutoffControl(maxCutoffRow.append('td'), this.parent.max, this.maxCallback).render()
+		this.controls.inputBpMaxV = new CutoffControl(
+			maxCutoffRow.append('td'),
+			this.parent('max'),
+			this.maxCallback
+		).render()
 
 		//Matrix type
 		const matrixTypeRow = menuTable.append('tr') as any
@@ -142,11 +154,7 @@ class ControlPanel {
 		const viewRow = menuTable.append('tr') as any
 		this.addLabel(viewRow, 'VIEW')
 		const viewBtnDiv = viewRow.append('td')
-		this.controls.view = viewBtnDiv
-			.append('span')
-			.style('padding-right', '5px')
-			.style('display', 'block')
-			.text(this.state.currView.charAt(0).toUpperCase() + this.state.currView.slice(1))
+		this.controls.view = viewBtnDiv.append('span').style('padding-right', '5px').style('display', 'block')
 
 		this.controls.genomeViewBtn = viewBtnDiv
 			.append('button')
@@ -210,10 +218,10 @@ class ControlPanel {
 
 	showBtns() {
 		this.controls.genomeViewBtn.style('display', this.state.currView === 'genome' ? 'none' : 'inline-block')
-
 		if (this.state.currView === 'detail') {
-			//state.x and state.y?
-			// this.controls.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
+			this.controls.chrpairViewBtn
+				.html(`&#8810; Entire ${this.state.x.chr}-${this.state.y.chr}`)
+				.style('display', 'block')
 			//Only show horizontalViewBtn and zoom buttons in detail view
 			this.controls.horizontalViewBtn.style('display', 'block')
 			this.controls.zoomDiv.style('display', 'contents')
@@ -222,8 +230,9 @@ class ControlPanel {
 		} else if (this.state.currView === 'horizontal') {
 			//Only show chrpairViewBtn if in horizonal or detail view
 			//Include chr x and chr y in the button text
-			//state.x and state.y?
-			//this.controls.chrpairViewBtn.html(`&#8810; Entire ${self.x.chr}-${self.y.chr}`).style('display', 'block')
+			this.controls.chrpairViewBtn
+				.html(`&#8810; Entire ${this.state.x.chr}-${this.state.y.chr}`)
+				.style('display', 'block')
 			//Only show detailViewBtn in horizontal view
 			this.controls.detailViewBtn.style('display', 'block')
 			//Hide if horizontal and zoom btns if previously displayed
@@ -275,7 +284,7 @@ class ControlPanel {
 				}
 			}
 		} else {
-			console.log('You still need to finish me dummy')
+			console.log('You still need to finish ya goof')
 		}
 	}
 
@@ -295,8 +304,15 @@ class ControlPanel {
 		})
 	}
 
-	main() {
+	main(appState) {
+		this.state = this.app.getState(appState)
+
 		this.controls.zoomDiv.style('display', this.state.currView == 'detail' ? 'contents' : 'none')
+		if (this.state.currView == 'chrpair') {
+			this.controls.view.text(`${this.state.x.chr}-${this.state.y.chr} Pair`)
+		} else {
+			this.controls.view.text(this.state.currView.charAt(0).toUpperCase() + this.state.currView.slice(1))
+		}
 
 		this.controls.inputBpMinV.property('value', this.parent.min)
 		this.controls.inputBpMaxV.property('value', this.parent.max)

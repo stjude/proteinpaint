@@ -24,6 +24,8 @@ HicStore.prototype.actions = {
 		if (!action.view) throw Error('view_change: missing view')
 		if (!this.views.some((v: string) => v == action.view)) throw Error(`view_change: unknown view = ${action.view}`)
 		this.state.currView = action.view
+		const opts = Object.assign(this.state, action.config)
+		this.state = opts
 	},
 	view_update(action: { view?: string; config: any }) {
 		if (action.view) {
