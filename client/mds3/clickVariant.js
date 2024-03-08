@@ -130,7 +130,11 @@ async function click2sunburst(d, tk, block, tippos) {
 			only need to show sample display
 			*/
 			await init_sampletable(param)
-			tk.itemtip.show(x, y, false, false)
+			// the last 2 boolean arguments causes the sample table to be
+			// positioned relative to the bottom of the div, which may not be visible
+			// relative to the screen/window bottom and so the sample table is rendered
+			// below the screen and not visible unless the user scrolls down
+			tk.itemtip.show(x, y) //, false, false)
 		}
 	}
 	if (d.aa) {
