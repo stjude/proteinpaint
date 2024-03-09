@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - updated mclass definitions and rank for protein_altering_variant
 - mds3 tk temporarily disables sample selection button in single sample table, to avoid creating single-case cohort in GDC
+- deprecated term "sample_type" is dropped from GDC dictionary
 
 
 ## 2.46.3
