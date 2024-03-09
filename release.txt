@@ -1,1 +1,2 @@
-
+Fixes:
+- deprecated term "sample_type" is dropped from GDC dictionary

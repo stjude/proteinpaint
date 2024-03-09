@@ -618,7 +618,13 @@ async function getNumericTermRange(id, ds) {
 
 // hardcoded rules to skip some lines from re.fields[]
 // one thing or the other we do not want these to show up in dictionary
-const skipFieldLines = new Set(['case.consent_type', 'case.days_to_consent', 'case.days_to_index'])
+const skipFieldLines = new Set([
+	'case.consent_type',
+	'case.days_to_consent',
+	'case.days_to_index',
+	// 3-8-2024 sample_type has been deprecated from the data dictionary but will remain available in the  GDC API  response until v1 is retired
+	'case.samples.sample_type'
+])
 function maySkipFieldLine(line) {
 	if (
 		line.startsWith('ssm') ||
