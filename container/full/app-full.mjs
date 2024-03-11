@@ -64,11 +64,3 @@ spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
 console.log('starting the server ...')
 launch()
 
-// FIXME: this is not working. It works when run manually like:  docker exec -i [container] /bin/bash -c "nohup /path/to/gfServer start 127.0.0.1 1234 -stepSize=5 /path/to/hg19.2bit &"
-// It takes about 5 mins for blat server to start
-// if (serverconfig.gfServer) {
-// 	console.log('starting the bam server ...')
-// 	spawnSync( 'nohup /path/to/gfServer start 127.0.0.1 1234 -stepSize=5 /path/to/hg19.2bit &')
-// 	spawnSync( 'nohup /path/to/gfServer start 127.0.0.1 1235 -stepSize=5 /path/to/hg38.2bit &')
-// }
-
