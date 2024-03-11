@@ -2,7 +2,6 @@ import fs from 'fs'
 import { spawnSync } from 'child_process'
 import path from 'path'
 import { launch } from '@sjcrh/proteinpaint-server'
-import {exec, execSync} from "node:child_process";
 
 const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
