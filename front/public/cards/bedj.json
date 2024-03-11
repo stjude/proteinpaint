@@ -292,6 +292,28 @@
             "testSpec": {
                 "expected": {"image": 1 }
             }
+        },
+        {
+            "label": "Remote File",
+            "urlparam": "?block=on&genome=hg19&bedjurl=Remote%20file,https://hgdownload.soe.ucsc.edu/gbdb/hg19/knownGene.bb",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "bedj",
+                    "name": "Remote file demo",
+                    "url": "https://hgdownload.soe.ucsc.edu/gbdb/hg19/knownGene.bb",
+                    "stackheight": 16,
+                    "stackspace": 1
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
         }
     ],
     "buttons": [

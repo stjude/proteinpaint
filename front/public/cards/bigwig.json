@@ -64,6 +64,27 @@
             "testSpec": {
                 "expected": {"image": 2 }
             }
+        },
+        {
+            "label": "Remote File",
+            "urlparam": "?block=on&genome=hg19&bigwigurl=BigWig%20remote%20file,https://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw",
+            "runargs":{
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "bigwig",
+                    "url": "https://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw",
+                    "name": "Remote file demo",
+                    "height": 100
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
         }
     ],
     "ribbonMessage": "<p style='display: inline-block;'>Create your own bigwig track! Use the new form on the <span style='color:#1575ad; font-weight:600;'>Add Your Data</span> tab to create your own bigwig track. Additional configuration options coming soon.</p>"
