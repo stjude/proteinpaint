@@ -83,8 +83,8 @@ SERVERPKGVER="$(node -p "require('./package.json').containerDeps.server")"
 FRONTPKGVER="$(node -p "require('./package.json').containerDeps.front")"
 
 cp -r ../public ./
-cp ../full/app-full.js .
-cp ../server/app-server.js .
+cp ../full/app-full.mjs .
+cp ../server/app-server.mjs .
 
 echo "building ${MODE}ppbase image"
 docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
@@ -112,4 +112,4 @@ if [[ "$MODE" != "" ]]; then
 fi
 
 rm -rf public
-rm ./app-*.js
+rm ./app-*.mjs
