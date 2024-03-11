@@ -7,7 +7,6 @@
 		"release": ""
 	},
 	"dependencies": {
-		"@sjcrh/proteinpaint-front": "2.46.3",
 		"@sjcrh/proteinpaint-server": "2.46.3"
 	},
 	"files": [
