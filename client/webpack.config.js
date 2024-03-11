@@ -39,20 +39,13 @@ module.exports = function (env = {}) {
 			libraryTarget: 'window'
 		},
 		resolve: {
-			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin */
-			/*fallback: {
-				//stream: false,
-				//fs: false,
-				path: require.resolve('path-browserify'),
-				process: require.resolve('process')
-			},*/
 			extensions: ['*', '.js', '.jsx', '.tsx', '.ts']
 		},
 		plugins: [
 			new NodePolyfillPlugin(),
 			// ignore spec files by default
 			new webpack.IgnorePlugin({
-				resourceRegExp: /\.spec.js$/
+				resourceRegExp: /(.mjs|.spec.js)$/
 			})
 		],
 		module: {
