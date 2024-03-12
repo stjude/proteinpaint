@@ -16,7 +16,7 @@ export type HicdataRequest = {
 	/** Normalization method for the queried data */
 	nmeth: string
 	/** Minimum value cutoff */
-	mincutoff: number
+	mincutoff?: number
 }
 
 /** array of 3 numbers */
